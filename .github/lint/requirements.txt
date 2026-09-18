@@ -1,4 +1,4 @@
 # The lint job's two tools, pinned so a new release cannot reformat the tree or
 # fail the gate without a commit saying so. Dependabot watches this file.
-clang-format==22.1.8
+clang-format==23.1.1
 clang-tidy==22.1.8
