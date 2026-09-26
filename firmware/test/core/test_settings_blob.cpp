@@ -70,3 +70,9 @@ TEST_CASE("settings blob: the framing is checked whole without knowing the paylo
     CHECK_FALSE(settings::sealed(blob, sizeof(blob)));
     CHECK_FALSE(settings::sealed(blob, settings::kBlobOverhead - 1));
 }
+
+TEST_CASE("settings blob: the fallback is named for the link") {
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::None), "none") == 0);
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::Prior), "prior") == 0);
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::Defaults), "defaults") == 0);
+}

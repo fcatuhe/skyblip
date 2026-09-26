@@ -221,6 +221,7 @@ void ConfigLinkService::load() {
         remember(blob, n);
         fallback_ = settings::Fallback::Defaults;
     }
+    config_.set_settings_fallback(fallback_);
 }
 
 bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t n) {

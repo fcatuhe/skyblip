@@ -4,6 +4,7 @@
 
 #include "core/settings/blob.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "test/support/product_rig.h"
 
@@ -85,6 +86,13 @@ struct Rebooted {
         rig.platform.dfu().image_confirmed = confirmed;
     }
 };
+
+const go::BootPart& storage_row(Rig& rig) {
+    for (int i = 0; i < go::kBootPartCount; i++)
+        if (std::string(rig.product.boot_rows()[i].name) == "STORAGE")
+            return rig.product.boot_rows()[i];
+    return rig.product.boot_rows()[0];
+}
 
 // What a later image stores: one layout ahead of this one, sealed the way every blob is.
 struct NewerBlob {
@@ -334,6 +342,20 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 
+TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(std::string(storage_row(rig).detail) == go::kStorageOnDefaults);
+
+    rig.raise_link();
+    rig.run(0, 200);
+    const std::string frame = update_frame(rig);
+    CHECK(frame.find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(frame.find("\"settings\":\"defaults\"") != std::string::npos);
+}
+
 TEST_CASE("product: a sector that lost a bit is written over, not kept as a newer image's") {
     Rig rig;
     NewerBlob torn;
@@ -371,4 +393,10 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     CHECK(config(reverted.rig).image_state() == dfu::ImageState::Reverted);
     CHECK(std::string(reverted.rig.settings().callsign) == "D-KXYZ");
     CHECK(reverted.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+
+    reverted.rig.raise_link();
+    reverted.rig.run(0, 200);
+    const std::string frame = update_frame(reverted.rig);
+    CHECK(frame.find("\"image\":\"reverted\"") != std::string::npos);
+    CHECK(frame.find("\"settings\":\"prior\"") != std::string::npos);
 }

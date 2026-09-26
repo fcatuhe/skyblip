@@ -178,6 +178,28 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
 }
 
+TEST_CASE("comms: the update report fits it too, widest versions and a settings fallback") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.raise_link(1);
+    link.declare_payload_bytes(kSmallestSupportedPayload);
+    go::Settings s = widest_settings();
+    go::SettingsStore store_cs(s, kWidestAddr);
+    ConfigService cs(link, store_cs);
+    constexpr ports::ImageVersion kWidest{255, 255, 65535, 4294967295u};
+    cs.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{kWidest, kWidest});
+    cs.set_settings_fallback(settings::Fallback::Defaults);
+
+    cs.on_rx(frame("{\"cmd\":\"update\"}"));
+    REQUIRE(link.sent.size() == 1);
+    const std::string body = link.last().bytes;
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.find("\"from\":\"255.255.65535+4294967295\"") != std::string::npos);
+    CHECK(body.find("\"to\":\"255.255.65535+4294967295\"") != std::string::npos);
+    CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
+    CHECK(body.find("\"swap_powered\"") != std::string::npos);
+}
+
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {
     platform::host::Link link;
     link.raise_link(1);
