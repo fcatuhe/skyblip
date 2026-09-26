@@ -113,7 +113,7 @@ TEST_CASE("radio: an NSS edge 499 us after SetSleep interrupts the save, 500 us 
         chip.select(true);
         chip.transfer(sleep, nullptr, sizeof(sleep));
         chip.select(false);
-        chip.busy_wait_us(waited_us);
+        chip.wait_at_least_us(waited_us);
         chip.select(true);
         CHECK(chip.wakes == 1);
         CHECK((chip.fault == models::Sx1262::Fault::SpiBeforeSleepSettled) == (waited_us < 500));

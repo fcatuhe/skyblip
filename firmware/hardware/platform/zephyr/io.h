@@ -36,7 +36,7 @@ class Gpio : public io::Gpio {
 
 class Delay : public io::Delay {
    public:
-    void busy_wait_us(uint32_t us) override { k_busy_wait(us); }
+    void wait_at_least_us(uint32_t us) override { k_busy_wait(us); }
 };
 
 // Manual-CS SPI: the drivers drive CS themselves via select(), so CS stays out

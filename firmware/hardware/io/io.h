@@ -44,7 +44,7 @@ class Gpio {
 class Delay {
    public:
     virtual ~Delay() = default;
-    virtual void busy_wait_us(uint32_t us) = 0;
+    virtual void wait_at_least_us(uint32_t us) = 0;
 };
 
 class Spi {

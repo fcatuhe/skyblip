@@ -23,9 +23,9 @@ class Delay : public io::Delay {
    public:
     explicit Delay(Chips& chips) : chips_(chips) {}
 
-    void busy_wait_us(uint32_t us) override {
-        chips_.radio.busy_wait_us(us);
-        chips_.epd.busy_wait_us(us);
+    void wait_at_least_us(uint32_t us) override {
+        chips_.radio.wait_at_least_us(us);
+        chips_.epd.wait_at_least_us(us);
     }
 
    private:
