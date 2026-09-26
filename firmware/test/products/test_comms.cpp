@@ -363,6 +363,20 @@ TEST_CASE(
     CHECK(link.last().bytes.find("\"image\":\"probation\"") != std::string::npos);
 }
 
+TEST_CASE("comms: a link that comes up on settings that fell back is told, on a confirmed image") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_settings_fallback(settings::Fallback::Defaults);
+    cs.on_link_up(events::LinkUp{1, 244});
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"settings\":\"defaults\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"from\"") == std::string::npos);
+}
+
 // The product paints the recovery page first, so a confirmed recovery is a latch the sequencer
 // spends.
 TEST_CASE("comms: recovery routed through confirmation, latched and never entered inline") {

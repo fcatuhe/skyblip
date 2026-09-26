@@ -18,7 +18,7 @@ None of this is anybody's to change, because none of it is stored. The address i
 
 What survives is the pair of values that mean something else to every decoder that reads one: 0x000000 is "no address" and 0xFFFFFF is what a dead chip-id read produces. `air_address` answers either with `kFallbackAddress`, and it is called last, where the address goes on the air, because a stored blob can hold what a chip id never would.
 
-`blob.h` is a version byte, a payload and a CRC32 over both. It knows nothing about fields: what a product stores, what it defaults to, what it refuses and how an older layout migrates forward are the product's, in `products/skyblip_go/settings.{h,cpp}`. That is where `units`, `aircraft_type` and `callsign` belong, because they are what a pilot of that device can change and what `schemas/config.v1.schema.json` pins.
+`blob.h` is a version byte, a payload and a CRC32 over both. `sealed()` checks that CRC over whatever length was stored, which is how a product tells a layout written by a later image from a torn sector without knowing either layout. It knows nothing about fields: what a product stores, what it defaults to, what it refuses and how an older layout migrates forward are the product's, in `products/skyblip_go/settings.{h,cpp}`. That is where `units`, `aircraft_type` and `callsign` belong, because they are what a pilot of that device can change and what `schemas/config.v1.schema.json` pins.
 
 The split is what lets two products keep different settings without two copies of the framing, and it is why the CRC is tested here against a payload that is not anybody's `Settings`.
 
