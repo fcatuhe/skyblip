@@ -31,7 +31,7 @@ namespace {
 struct Pass {
     platform::host::Platform platform{};
     models::Sx1262& chip{platform.chips().radio};
-    parts::Sx1262 radio{chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
+    parts::Sx1262 radio{chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
     bus::Bus bus{};
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
@@ -102,7 +102,7 @@ uint32_t tuned_khz(const models::Sx1262& chip) { return (chip.freq_hz + 500) / 1
 // The draw chooses the instant and nothing on air moves it: core/timing/README.md has the argument.
 TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a quiet one") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -163,7 +163,7 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
 // the transmitter on its way to the new channel.
 TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is the backstop") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     REQUIRE(radio.begin() == Status::Ok);
     parts::RadioConfig cfg{};
     cfg.freq_hz = timing::kMband0Hz;
@@ -352,7 +352,7 @@ TEST_CASE("rf: the floor the service publishes is a window of reads, and moves n
 // while a dwell is using it.
 TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor that owns it") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -391,7 +391,7 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
 // Every dwell restarts the receiver, and restarting it once zeroed the rope: no unit ever got here.
 TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it hears nothing") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -416,7 +416,7 @@ TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it he
 // A reinit that failed left the radio out of Rx, where the rope stops counting: dead for good.
 TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -446,7 +446,7 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
 // A radio half configured may still sit on the last dwell's channel, and it keyed there.
 TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -484,7 +484,7 @@ TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so
 // Slot 0's burst was added by a second arm at 450, read at 799, expired, and called the band busy.
 TEST_CASE("rf: a plan armed mid-dwell waits for it, and an expired one is missed, not busy") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);
@@ -673,7 +673,7 @@ TEST_CASE("rf: a burst whose gates clear inside the dwell is armed into that dwe
 // the next dwell, and queueing it behind the one flying meant it never keyed.
 TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
     models::Sx1262 chip;
-    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
     bus::Queue<events::RfEvent, 8> events;
     platform::host::Rf rf(radio, clock, events);

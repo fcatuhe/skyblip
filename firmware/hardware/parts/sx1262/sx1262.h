@@ -48,8 +48,14 @@ struct RadioConfig {
 
 class Sx1262 {
    public:
-    Sx1262(io::Spi& spi, io::Gpio& gpio, int busy_pin, int reset_pin, int dio1_pin)
-        : spi_(spi), gpio_(gpio), busy_(busy_pin), reset_(reset_pin), dio1_(dio1_pin) {}
+    Sx1262(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int busy_pin, int reset_pin,
+           int dio1_pin)
+        : spi_(spi),
+          gpio_(gpio),
+          delay_(delay),
+          busy_(busy_pin),
+          reset_(reset_pin),
+          dio1_(dio1_pin) {}
 
     // Is there a radio on the other end of this bus at all? Answers only what a
     // register round-trip can prove, and leaves the chip in standby.
@@ -87,7 +93,6 @@ class Sx1262 {
     void cmd_read(uint8_t opcode, uint8_t* out, size_t n);
     void write_register(uint16_t addr, const uint8_t* data, size_t n);
     void read_register(uint16_t addr, uint8_t* out, size_t n);
-    void hold_reset_low();
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
@@ -101,7 +106,6 @@ class Sx1262 {
     uint8_t read_payload(uint8_t* rx_buf, uint8_t cap);
     Status check_device_errors();
     void clear_device_errors();
-    void hold_sleep_settle();
     void configure_frame(const RadioConfig& cfg);
     uint32_t tx_timeout_ticks(uint8_t len) const;
     void recover_tx();
@@ -109,6 +113,7 @@ class Sx1262 {
 
     io::Spi& spi_;
     io::Gpio& gpio_;
+    io::Delay& delay_;
     int busy_, reset_, dio1_;
     RadioMode mode_{RadioMode::Sleep};
     RadioConfig cfg_{};
@@ -326,15 +331,10 @@ constexpr uint32_t kTimeoutStepNs = 15625;
 constexpr uint32_t kTimeoutTicksMax = 0xFFFFFF;
 constexpr uint32_t kTxGuardUs = 25000;
 
-// INFO: wr 02aug26 DS 8.1: NRESET must be held low >= 100 us. io::Gpio has no
-// delay primitive, so the pulse is a bounded spin on BUSY sized against the
-// slowest credible cost of one such read on nRF52840 at 64 MHz.
+// INFO: wr 02aug26 DS 8.1: NRESET must be held low >= 100 us
 constexpr uint32_t kResetLowUs = 100;
-constexpr uint32_t kResetSpinNsFloor = 125;
-constexpr uint32_t kResetLowSpins = kResetLowUs * 1000u / kResetSpinNsFloor;
 // INFO: fc 05sep26 DS 13.1.2: no SPI for 500 us after SetSleep, while the configuration saves
 constexpr uint32_t kSleepSettleUs = 500;
-constexpr uint32_t kSleepSettleSpins = kSleepSettleUs * 1000u / kResetSpinNsFloor;
 // §C.2 puts 16 chips of preamble before the sync word. Eight of them are enough
 // for the detector to declare a preamble.
 constexpr uint16_t kPreambleChips = 16;

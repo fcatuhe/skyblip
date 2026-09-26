@@ -38,16 +38,6 @@ void Sx1262::cmd_read(uint8_t opcode, uint8_t* out, size_t n) {
     spi_.select(false);
 }
 
-// The only delay this driver can spend: io::Gpio offers no sleep, so the pulse
-// is counted in BUSY reads, each one a virtual call the compiler cannot fold.
-void Sx1262::hold_reset_low() {
-    for (uint32_t i = 0; i < sx::kResetLowSpins; i++) (void)gpio_.get(busy_);
-}
-
-void Sx1262::hold_sleep_settle() {
-    for (uint32_t i = 0; i < sx::kSleepSettleSpins; i++) (void)gpio_.get(busy_);
-}
-
 Status Sx1262::enter_standby() {
     uint8_t stby = 0;  // STDBY_RC
     cmd(sx::kSetStandby, &stby, 1);
@@ -61,7 +51,7 @@ Status Sx1262::reset_to_standby() {
     gpio_.mode_input(busy_, false);
     gpio_.mode_input(dio1_, false);
     gpio_.set(reset_, false);
-    hold_reset_low();
+    delay_.busy_wait_us(sx::kResetLowUs);
     gpio_.set(reset_, true);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     return enter_standby();
@@ -342,7 +332,7 @@ void Sx1262::sleep() {
     uint8_t config = sx::kSleepWarmStartNoRtc;
     cmd(sx::kSetSleep, &config, 1);
     mode_ = RadioMode::Sleep;
-    hold_sleep_settle();
+    delay_.busy_wait_us(sx::kSleepSettleUs);
 }
 
 // DS 9.3: a falling edge on NSS is what wakes the part; it comes back in
