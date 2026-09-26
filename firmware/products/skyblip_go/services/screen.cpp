@@ -15,6 +15,7 @@
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "products/skyblip_go/pages/recovery.h"
 #include "ui/widgets/wordmark.h"
 
 namespace skyblip::go {
@@ -439,6 +440,7 @@ void ScreenService::settle_park(uint32_t now_ms) {
 void ScreenService::draw_park_frame(ParkFrame frame) {
     switch (frame) {
         case ParkFrame::Installing: draw_installing(fb_); return;
+        case ParkFrame::Recovery: draw_recovery(fb_, recovery_path_); return;
         // INFO: fc 12sep26 months of one image is the ghosting an e-paper never fully loses
         case ParkFrame::Blank: fb_.clear(/*white=*/true); return;
         case ParkFrame::FlatCell:
@@ -475,6 +477,11 @@ bool ScreenService::may_present_park_frame() const {
 
 // INFO: fc 07sep26 the glass wears this through the swap; a frozen prompt invites a reset
 void ScreenService::park_for_install() { park(ParkFrame::Installing); }
+
+void ScreenService::park_for_recovery(ports::RecoveryPath path) {
+    recovery_path_ = path;
+    park(ParkFrame::Recovery);
+}
 
 void ScreenService::park_for_stow() { park(ParkFrame::Blank); }
 

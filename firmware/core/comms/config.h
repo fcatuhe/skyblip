@@ -219,6 +219,9 @@ class ConfigService {
     bool install_requested() const { return install_requested_; }
     void clear_install_request() { install_requested_ = false; }
 
+    bool recovery_requested() const { return recovery_requested_; }
+    void clear_recovery_request() { recovery_requested_ = false; }
+
     const char* pending_json() const { return pending_buf_; }
 
     // INFO: fc 04aug26 Every frame this service could not put on the link: one
@@ -289,6 +292,7 @@ class ConfigService {
     bool status_push_due_{false};
     bool power_off_requested_{false};
     bool install_requested_{false};
+    bool recovery_requested_{false};
     bool log_erase_requested_{false};
     bool gnss_cold_requested_{false};
     Pending pending_{Pending::None};

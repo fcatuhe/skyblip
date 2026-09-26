@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 
+#include <optional>
+
 #include "boards/lilygo/t_echo_plus/board.h"
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
@@ -125,10 +127,15 @@ class Product {
                 config_.config().clear_install_request();
                 shutdown_.request(power::ShutdownReason::Install, now_ms);
             }
+            if (config_.config().recovery_requested()) {
+                config_.config().clear_recovery_request();
+                shutdown_.request(power::ShutdownReason::Recovery, now_ms);
+            }
         }
         shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) screen_.settle_park(now_ms);
+        enter_recovery_once_parked();
         remember_glass();
     }
 
@@ -173,9 +180,11 @@ class Product {
     const power::ShutdownSequencer& shutdown() const { return shutdown_; }
     // INFO: fc 12sep26 rails cut mid-frame leave the ink half-driven, and the sun develops it
     bool ready_to_power_off() const {
-        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking();
+        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
+               (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
     }
     bool installing() const { return shutdown_.reason() == power::ShutdownReason::Install; }
+    bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
     bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
     bool cell_ran_out() const { return shutdown_.reason() == power::ShutdownReason::LowBattery; }
 
@@ -317,12 +326,20 @@ class Product {
         board_.park();
         if (installing())
             screen_.park_for_install();
+        else if (recovering())
+            screen_.park_for_recovery(roles_.dfu.recovery_path());
         else if (stowing())
             screen_.park_for_stow();
         else if (cell_ran_out())
             screen_.park_for_flat_cell();
         else
             screen_.set_power(false);
+    }
+
+    void enter_recovery_once_parked() {
+        if (!recovering() || recovery_taken_ || !shutdown_.ready_to_power_off()) return;
+        if (screen_.parking()) return;
+        recovery_taken_ = roles_.dfu.enter_recovery();
     }
 
     void publish_radio_asleep() {
@@ -384,6 +401,7 @@ class Product {
     power::BootPath boot_path_{power::BootPath::Run};
     power::BootCell boot_cell_{};
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
+    std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
     bool refusal_asked_{false};
     bool flat_remembered_{false};
