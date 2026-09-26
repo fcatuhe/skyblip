@@ -1,7 +1,10 @@
 #include "products/skyblip_go/services/record_store.h"
 
+#include <cstring>
+
 #include "core/events/link.h"
 #include "core/util/span.h"
+#include "ports/link.h"
 
 namespace skyblip::go {
 
@@ -103,15 +106,38 @@ int RecordPool::reply_cap(uint16_t to) const {
     return room < comms::kLogReplyCap ? room : comms::kLogReplyCap;
 }
 
-void RecordPool::send(uint16_t to, int len) {
-    if (len <= 0 || len > payload_bytes(to)) {
+bool RecordPool::send(uint16_t to, int len) {
+    if (len <= 0 || len > payload_bytes(to) || holding()) {
         link_drops_++;
-        return;
+        return false;
     }
-    if (!is_ok(context_.roles.link.send_to(
-            to, events::Endpoint::Log,
-            ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)))))
-        link_drops_++;
+    const Status sent = context_.roles.link.send_to(
+        to, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)));
+    if (sent == Status::WouldBlock) {
+        std::memcpy(held_, reply_, static_cast<size_t>(len));
+        held_len_ = len;
+        held_to_ = to;
+        held_since_ms_ = now_ms_;
+        return true;
+    }
+    if (is_ok(sent)) return true;
+    link_drops_++;
+    return false;
+}
+
+Status RecordPool::deliver_held(uint32_t now_ms) {
+    now_ms_ = now_ms;
+    if (!holding()) return Status::Ok;
+    const Status sent = context_.roles.link.send_to(
+        held_to_, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
+    if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs)
+        return Status::WouldBlock;
+    held_len_ = 0;
+    if (is_ok(sent)) return Status::Ok;
+    link_drops_++;
+    return sent == Status::WouldBlock ? Status::Timeout : sent;
 }
 
 bool RecordStore::open() {
@@ -426,15 +452,25 @@ void RecordStore::answer_read(const comms::LogRequest& request) {
                                       request.from, pool_.chunk_buffer(), 0, true, selector()));
         return;
     }
-    for (int nth = 0; nth < window.chunks; nth++) {
-        const comms::LogChunkSpan span = window.at(nth);
-        if (!read_records(request.session, span.from, span.records)) {
+    reading_ = Reading{true, to, request.session, window, 0};
+    continue_read();
+}
+
+void RecordStore::continue_read() {
+    while (reading_.active && !pool_.holding()) {
+        const uint16_t to = reading_.to;
+        const comms::LogChunkSpan span = reading_.window.at(reading_.next);
+        if (!read_records(reading_.session, span.from, span.records)) {
+            reading_.active = false;
             ack(to, false, "read_failed");
             return;
         }
-        reply(to, comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to),
-                                          request.session, span.from, pool_.chunk_buffer(),
-                                          span.records, span.eof, selector()));
+        const bool sent = pool_.send(
+            to, comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to), reading_.session,
+                                        span.from, pool_.chunk_buffer(), span.records, span.eof,
+                                        selector()));
+        reading_.next++;
+        if (!sent || reading_.next == reading_.window.chunks) reading_.active = false;
     }
 }
 
