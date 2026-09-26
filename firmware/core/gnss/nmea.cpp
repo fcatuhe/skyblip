@@ -23,10 +23,16 @@ long parse_long(const char* s, int len) {
     return v;
 }
 int d2(const char* s) { return (s[0] - '0') * 10 + (s[1] - '0'); }
+bool digits(const char* s, int n) {
+    for (int i = 0; i < n; i++)
+        if (s[i] < '0' || s[i] > '9') return false;
+    return true;
+}
 
 constexpr int64_t kMillimetresPerSecPerKnotE3 = 514444;
 
 constexpr int kMinuteDigits = 2;
+constexpr int kRmcStampDigits = 6;
 constexpr int kLongitudeDegreeDigits = 3;
 
 // INFO: fc 25sep26 long is 32 bits on the nRF52, and ten times this still fits one
@@ -63,8 +69,9 @@ uint32_t to_epoch(int y, int mon, int day, int hh, int mm, int ss) {
     unsigned yoe = static_cast<unsigned>(y - era * 400);
     unsigned doy = (153 * (mon + (mon > 2 ? -3 : 9)) + 2) / 5 + day - 1;
     unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    long days = era * 146097L + static_cast<long>(doe) - 719468L;
-    return static_cast<uint32_t>(days * 86400L + hh * 3600L + mm * 60L + ss);
+    const int64_t days = int64_t{era} * 146097 + doe - 719468;
+    const int second_of_day = hh * 3600 + mm * 60 + ss;
+    return static_cast<uint32_t>(days * 86400 + second_of_day);
 }
 }
 
@@ -238,7 +245,7 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
     bool valid = f[2][0] == 'A';
     solution_.is_fix = valid;
     solution_.utc_valid = false;
-    if (f[1][0] && f[9][0] && strlen(f[1]) >= 6 && strlen(f[9]) >= 6) {
+    if (digits(f[1], kRmcStampDigits) && digits(f[9], kRmcStampDigits)) {
         int hh = d2(f[1]), mm = d2(f[1] + 2), ss = d2(f[1] + 4);
         int day = d2(f[9]), mon = d2(f[9] + 2), yy = d2(f[9] + 4);
         // The MTK 1980 lie and its neighbours: a two-digit year of 70 or more is
