@@ -19,7 +19,7 @@ constexpr ports::Capabilities kNoGlass =
 
 constexpr uint16_t kFirstApp = 1;
 constexpr uint16_t kSecondApp = 2;
-constexpr uint32_t kGroundSeconds = 3;
+constexpr uint32_t kGroundSeconds = 1;
 constexpr uint32_t kWriteGapMs = 100;
 constexpr int kMaxLines = 16;
 

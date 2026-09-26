@@ -16,9 +16,9 @@ Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each
 
 A mutation that breaks a checksum stops at the checksum, and the fuzzer never sees the parser behind it. Each harness therefore seals what an honest transmitter would seal, and leaves the corruption to the fuzzer:
 
-- `fuzz_air` builds the frame a transmitter would send, seals its CRC or its Reed-Solomon parity when the input asks, Manchester-encodes it past the shared sync window, then XORs the rest of the input over the chips. Noise over a clean burst can reach any chip stream, so framing, the sync tail, the error map and the forward correction are all in play, then the decoders in the order `TrafficService` calls them.
+- `fuzz_air` builds the frame a transmitter would send, Manchester-encodes it past the shared sync window, then XORs the rest of the input over the chips. Noise over a clean burst can reach any chip stream, so framing, the sync tail, the error map and the forward correction are all in play, then the decoders in the order `TrafficService` calls them. The input picks the transmitter: raw sends its bytes as they are, sealed fixes their CRC or Reed-Solomon parity, encoded builds an ALP-TAS frame from fields with `alptas_encode`. ALP-TAS is encrypted under the second it was sent, so only the encoder gets a mutation past the decrypt check to the position arithmetic behind it.
 - `fuzz_nmea` rewrites the two hex digits after every `*` to the checksum of the sentence before it. `nmea_checksum_ok` itself is the suite's to test.
-- `fuzz_link` boots a product with no panel onto a log partition that already holds one flight, taxis it for three seconds so it is on the ground, and connects two apps.
+- `fuzz_link` boots a product with no panel onto a log partition that already holds one flight, gives it a second of fixes on the ground, and connects two apps.
 
 ## The link's input
 
@@ -42,5 +42,5 @@ The input is in `build/fuzz/crashes/` (or `build/fuzz-ilp32/crashes/`), and CI u
 
 ## What these cannot see
 
-- An ALP-TAS frame is encrypted with a key taken from the second it was sent, so a mutation rarely gets past the decrypt check in `alptas_decode`, and the fields behind it are reached far less often than the rest.
-- `fuzz_link` runs at about 60 inputs a second, because every input boots a product. A short CI run is a smoke test for this one, and the cached corpus is what makes it worth more over time.
+- The ALP-TAS fields `alptas_encode` always writes the same way (turn rate, GNSS accuracy, the constant nibbles) reach the decoder only through a raw frame, which the decrypt check refuses almost every time.
+- `fuzz_link` runs at about 300 inputs a second, where the others run in the thousands, because every input boots a product and copies a 1.35 MB log partition into it. The cached corpus is what makes a one-minute CI run worth more over time.

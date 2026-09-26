@@ -30,6 +30,9 @@ struct Receiver {
     int32_t lon_1e7;
 };
 
+// Raw sends the input's bytes, Sealed fixes their checksum, Encoded builds the frame from fields.
+enum class Transmitter : uint8_t { Raw, Sealed, Encoded };
+
 void seal_adsl(uint8_t* frame) {
     protocol::AdslPacket p{};
     p.init();
@@ -38,23 +41,48 @@ void seal_adsl(uint8_t* frame) {
     std::memcpy(frame, p.Data, protocol::kAdslFrameBytes);
 }
 
+// ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
+void encode_alptas(FuzzedDataProvider& in, const Receiver& at, uint8_t* frame) {
+    model::AircraftObs obs{};
+    obs.addr = in.ConsumeIntegral<uint32_t>();
+    obs.addr_table = in.ConsumeIntegral<uint8_t>();
+    obs.aircraft_cat = in.ConsumeIntegral<uint8_t>();
+    obs.flight_state = in.ConsumeIntegral<uint8_t>();
+    obs.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
+    obs.lon_1e7 = in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
+    obs.alt_m = in.ConsumeIntegral<int16_t>();
+    obs.climb_e8 = in.ConsumeIntegral<int16_t>();
+    obs.speed_q = in.ConsumeIntegral<uint16_t>();
+    obs.track_c9 = in.ConsumeIntegral<uint16_t>();
+    obs.climb_valid = in.ConsumeBool();
+    obs.speed_valid = in.ConsumeBool();
+    obs.position_valid = true;
+    const int32_t keyed_off_s = in.ConsumeIntegralInRange<int32_t>(-protocol::kAlptasKeyWindowS,
+                                                                   protocol::kAlptasKeyWindowS);
+    protocol::alptas_encode(frame, obs, at.utc + static_cast<uint32_t>(keyed_off_s), at.lat_1e7,
+                            at.lon_1e7);
+}
+
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.
-size_t transmit_mband(FuzzedDataProvider& in, bool sealed, uint8_t* chips) {
+size_t transmit_mband(FuzzedDataProvider& in, Transmitter tx, const Receiver& at, uint8_t* chips) {
     const bool adsl = in.ConsumeBool();
     const uint32_t sync_word = adsl ? protocol::kAdslSyncWord : protocol::kAlptasSyncWord;
     const uint8_t frame_len = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
     uint8_t frame[protocol::kAlptasFrameBytes]{};
-    in.ConsumeData(frame, frame_len);
-    if (sealed && adsl) seal_adsl(frame);
-    if (sealed && !adsl) protocol::alptas_set_crc(frame);
+    if (tx == Transmitter::Encoded && !adsl)
+        encode_alptas(in, at, frame);
+    else
+        in.ConsumeData(frame, frame_len);
+    if (tx != Transmitter::Raw && adsl) seal_adsl(frame);
+    if (tx == Transmitter::Sealed && !adsl) protocol::alptas_set_crc(frame);
     protocol::mband_payload(sync_word, frame, frame_len, chips);
     return protocol::kRxChipBytes;
 }
 
-size_t transmit_uplink(FuzzedDataProvider& in, bool sealed, uint8_t* codeword) {
+size_t transmit_uplink(FuzzedDataProvider& in, Transmitter tx, uint8_t* codeword) {
     static const fec::ReedSolomon255 parity;
     in.ConsumeData(codeword, fec::ReedSolomon255::kK);
-    if (sealed) parity.encode(codeword, codeword + fec::ReedSolomon255::kK);
+    if (tx != Transmitter::Raw) parity.encode(codeword, codeword + fec::ReedSolomon255::kK);
     return protocol::kUplinkFrameBytes;
 }
 
@@ -100,12 +128,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     at.utc = in.ConsumeIntegral<uint32_t>();
     at.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
     at.lon_1e7 = in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
-    const bool sealed = in.ConsumeBool();
+    const Transmitter tx =
+        in.PickValueInArray({Transmitter::Raw, Transmitter::Sealed, Transmitter::Encoded});
     const model::Band band = in.ConsumeBool() ? model::Band::O : model::Band::M;
 
     uint8_t burst[events::kRfEventBytes]{};
-    const size_t len = band == model::Band::O ? transmit_uplink(in, sealed, burst)
-                                              : transmit_mband(in, sealed, burst);
+    const size_t len =
+        band == model::Band::O ? transmit_uplink(in, tx, burst) : transmit_mband(in, tx, at, burst);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
     for (size_t i = 0; i < noise.size() && i < sizeof(burst); i++) burst[i] ^= noise[i];
 
