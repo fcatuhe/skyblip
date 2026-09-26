@@ -226,26 +226,39 @@ TEST_CASE("traffic: a takeoff shortens the lease on the burst that announces it"
 
 // A slot outliving the table holds a dismissal for an aeroplane off the screen.
 TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft together") {
-    const model::OwnState own = flying(30, 0);
     TrafficTable tbl;
     AlarmTracker tracker;
-    formation::Tracker formation;
+    formation::Tracker wingmen;
 
-    const model::AircraftObs target = neighbour(own, 400, 0, 0, 30, 180, 1000);
-    tbl.update(target, 1);
-    tracker.update(own, target, 1000);
-    formation.observe(own, target, 1000);
+    model::AircraftObs wingman{};
+    uint32_t heard_ms = 0;
+    for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
+        const model::OwnState own = flying(40, 90, 0, t);
+        wingman = neighbour(own, -60, -120, 10, 40, 90, t);
+        tbl.update(wingman, wingman.received.at_s);
+        tracker.update(own, wingman, t);
+        wingmen.observe(own, wingman, t);
+        heard_ms = t;
+    }
+    tracker.dismiss();
+    REQUIRE(wingmen.together(6, 0x314159));
+    REQUIRE(tracker.dismissed());
 
-    const uint32_t lease_ms = traffic::forget_ms(target);
-    CHECK(lease_ms == kAirborneTargetForgetS * 1000);
+    const uint32_t heard_s = wingman.received.at_s;
+    const uint32_t lease_ms = forget_ms(wingman);
+    tbl.age_out(heard_s + forget_s(wingman));
+    tracker.forget_stale(heard_ms + lease_ms);
+    wingmen.forget_stale(heard_ms + lease_ms);
+    CHECK(tbl.find(6, 0x314159) >= 0);
+    CHECK(tracker.dismissed());
+    CHECK(wingmen.together(6, 0x314159));
 
-    tbl.age_out(1 + lease_ms / 1000 + 1);
-    tracker.forget_stale(1000 + lease_ms + 1);
-    formation.forget_stale(1000 + lease_ms + 1);
-
-    CHECK(tbl.count() == 0);
-    CHECK(tracker.announced_level(1000 + lease_ms + 1) == Level::None);
-    CHECK(formation.members() == 0);
+    tbl.age_out(heard_s + forget_s(wingman) + 1);
+    tracker.forget_stale(heard_ms + lease_ms + 1);
+    wingmen.forget_stale(heard_ms + lease_ms + 1);
+    CHECK(tbl.find(6, 0x314159) == -1);
+    CHECK_FALSE(tracker.dismissed());
+    CHECK_FALSE(wingmen.together(6, 0x314159));
 }
 
 TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
