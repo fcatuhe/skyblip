@@ -283,6 +283,8 @@ TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two
     REQUIRE(merged != nullptr);
     CHECK(merged->obs.source == model::Source::AdslDirect);
     CHECK(merged->obs.lat_1e7 == direct_lat);
+    CHECK(merged->obs.alt_valid);
+    CHECK(merged->obs.alt_m == stale.alt_m);
 }
 
 // And the other side of that rule, so the hold is a hold and not a block: an
