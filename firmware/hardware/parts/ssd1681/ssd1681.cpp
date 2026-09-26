@@ -144,9 +144,9 @@ void Ssd1681::set_backlight(bool on) {
 void Ssd1681::init_panel() {
     gpio_.set(rst_, true);
     gpio_.set(rst_, false);
-    delay_.busy_wait_us(epd::kResetHoldUs);
+    delay_.wait_at_least_us(epd::kResetHoldUs);
     gpio_.set(rst_, true);
-    delay_.busy_wait_us(epd::kResetHoldUs);
+    delay_.wait_at_least_us(epd::kResetHoldUs);
     wait_busy();
 
     cmd(kSwReset);

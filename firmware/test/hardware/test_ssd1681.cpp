@@ -77,13 +77,13 @@ TEST_CASE("epd: a RES# pulse one microsecond under 10 ms leaves a sleeping panel
     REQUIRE_FALSE(f.powered);
 
     f.set(f.rst, false);
-    f.busy_wait_us(9999);
+    f.wait_at_least_us(9999);
     f.set(f.rst, true);
     CHECK_FALSE(f.powered);
     CHECK(f.short_resets == 1);
 
     f.set(f.rst, false);
-    f.busy_wait_us(10000);
+    f.wait_at_least_us(10000);
     f.set(f.rst, true);
     CHECK(f.powered);
     CHECK(f.reset_pulses == 1);

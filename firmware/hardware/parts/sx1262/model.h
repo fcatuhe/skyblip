@@ -64,7 +64,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
-    void busy_wait_us(uint32_t us) override { elapsed_us += us; }
+    void wait_at_least_us(uint32_t us) override { elapsed_us += us; }
 
     void select(bool on) override {
         if (on) {

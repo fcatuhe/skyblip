@@ -61,7 +61,7 @@ TEST_CASE("radio: a chip that was never taken off its LDO is not believed") {
     REQUIRE(r.begin() == Status::Ok);
     REQUIRE(restarted.regulator_dcdc);
     restarted.set(restarted.reset_pin, false);
-    restarted.busy_wait_us(models::Sx1262::kResetLowFloorUs);
+    restarted.wait_at_least_us(models::Sx1262::kResetLowFloorUs);
     restarted.set(restarted.reset_pin, true);
     CHECK_FALSE(restarted.regulator_dcdc);
     CHECK(restarted.regulator_mode == sx::kRegulatorLdo);
@@ -132,7 +132,7 @@ TEST_CASE("radio: a reinitialised radio is on the boosted gain again") {
     REQUIRE(chip.rx_gain == sx::kRxGainBoosted);
 
     chip.set(chip.reset_pin, false);
-    chip.busy_wait_us(models::Sx1262::kResetLowFloorUs);
+    chip.wait_at_least_us(models::Sx1262::kResetLowFloorUs);
     chip.set(chip.reset_pin, true);
     CHECK(chip.rx_gain == sx::kRxGainPowerSaving);
 
@@ -586,13 +586,13 @@ TEST_CASE("radio: NRESET is held low for the datasheet's 100 us") {
 TEST_CASE("radio: a reset pulse one microsecond under 100 us is a fault, 100 us is not") {
     models::Sx1262 held;
     held.set(held.reset_pin, false);
-    held.busy_wait_us(100);
+    held.wait_at_least_us(100);
     held.set(held.reset_pin, true);
     CHECK(held.fault == models::Sx1262::Fault::None);
 
     models::Sx1262 rushed;
     rushed.set(rushed.reset_pin, false);
-    rushed.busy_wait_us(99);
+    rushed.wait_at_least_us(99);
     rushed.set(rushed.reset_pin, true);
     CHECK(rushed.fault == models::Sx1262::Fault::ShortReset);
 }

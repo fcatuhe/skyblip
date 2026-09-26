@@ -51,7 +51,7 @@ Status Sx1262::reset_to_standby() {
     gpio_.mode_input(busy_, false);
     gpio_.mode_input(dio1_, false);
     gpio_.set(reset_, false);
-    delay_.busy_wait_us(sx::kResetLowUs);
+    delay_.wait_at_least_us(sx::kResetLowUs);
     gpio_.set(reset_, true);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     return enter_standby();
@@ -355,7 +355,7 @@ void Sx1262::sleep() {
     cmd(sx::kSetSleep, &config, 1);
     mode_ = RadioMode::Sleep;
     tuned_ = false;
-    delay_.busy_wait_us(sx::kSleepSettleUs);
+    delay_.wait_at_least_us(sx::kSleepSettleUs);
 }
 
 // DS 9.3: a falling edge on NSS is what wakes the part; it comes back in
