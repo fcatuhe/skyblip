@@ -1,5 +1,7 @@
 #include "products/skyblip_go/services/radio.h"
 
+#include <algorithm>
+
 #include "core/model/ownship.h"
 
 namespace skyblip::go {
@@ -12,6 +14,7 @@ Status RadioService::setup() {
 }
 
 void RadioService::tick(uint32_t now_ms) {
+    accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
     take_carrier_samples();
@@ -35,6 +38,15 @@ void RadioService::publish_dwell(uint32_t now_ms) {
     dwell.burst_armed = tx_armed_;
     context_.state.rf.noise_dbm = noise_.dbm();
     context_.state.rf.duty_permille = duty_permille(now_ms);
+}
+
+void RadioService::accrue_armed() {
+    const uint64_t now_us = context_.roles.clock.micros();
+    const uint64_t from = std::clamp(accounted_us_, armed_from_us_, armed_until_us_);
+    const uint64_t to = std::clamp(now_us, armed_from_us_, armed_until_us_);
+    accounted_us_ = now_us;
+    armed_us_ += to - from;
+    context_.state.duty.rx_armed_ms = static_cast<uint32_t>(armed_us_ / 1000);
 }
 
 // From the latched edge, at the instant it is asked for. Deriving it from a
@@ -220,8 +232,11 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, uint32_t now_ms) {
         record_dwell(slot, a, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
         return;
     }
+    accrue_armed();
     armed_ = plan.mode;
     armed_freq_ = plan.freq_hz;
+    armed_from_us_ = plan.start_us;
+    armed_until_us_ = plan.end_us;
     arm_count_++;
     tx_armed_ = carries_tx;
     if (carries_tx) {
@@ -293,6 +308,7 @@ void RadioService::collect_outcome(uint32_t now_ms) {
         seen_tx_ok_ = context_.state.air.tx_ok;
         held_logged_ = false;
         transmitter_.sent(tx_utc_, now_ms, tx_payload_);
+        context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
         if (tx_payload_ == timing::Transmitter::Payload::Callsign) context_.state.air.tx_named++;
         // The executor's own report against the deadline this dwell was armed
         // for: both absolute instants on the same clock, so slot 1's wrap

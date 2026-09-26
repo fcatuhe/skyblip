@@ -4,6 +4,7 @@
 #include "core/annunciation/pattern.h"
 #include "core/diag/payload.h"
 #include "core/indication/lamp.h"
+#include "core/power/duty.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/formation.h"
 #include "core/traffic/table.h"
@@ -60,6 +61,8 @@ class AlarmService : public runtime::Service {
     formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
     void drive(const annunciation::Situation& situation, uint32_t now_ms);
     void drive_lamp(uint32_t now_ms, bool running);
+    void accrue_annunciator(uint32_t now_ms);
+    void pulse_haptic();
 
     static constexpr uint16_t kHapticFeltThroughAHarnessMs = 400;
 
@@ -78,6 +81,8 @@ class AlarmService : public runtime::Service {
     static_assert(runtime::kServiceStepMs * kPassesPerShortestFlash <= indication::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest flash");
 
+    power::OnTime sounding_{};
+    uint32_t haptic_ms_{0};
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
     uint32_t recorded_obs_ms_[traffic::TrafficTable::kCapacity]{};

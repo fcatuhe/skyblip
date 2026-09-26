@@ -62,6 +62,7 @@ class RadioService : public runtime::Service {
                              bool carries_tx) const;
     void log_refusal(radio::Event outcome, const timing::SlotPlan& slot, uint32_t now_ms);
     void publish_dwell(uint32_t now_ms);
+    void accrue_armed();
     void collect_outcome(uint32_t now_ms);
     void take_carrier_samples();
 
@@ -82,6 +83,10 @@ class RadioService : public runtime::Service {
     uint8_t outgoing_chips_[protocol::kTxPayloadChipBytes]{};
     ports::RfMode armed_{ports::RfMode::Idle};
     uint32_t armed_freq_{0};
+    uint64_t armed_from_us_{0};
+    uint64_t armed_until_us_{0};
+    uint64_t accounted_us_{0};
+    uint64_t armed_us_{0};
     uint32_t arm_count_{0};
     uint64_t tx_end_us_{0};
     uint32_t tx_utc_{0};

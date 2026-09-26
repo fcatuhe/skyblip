@@ -13,13 +13,14 @@ uint32_t span_ms(const Instant& from, const Instant& to) {
 
 }  // namespace
 
-void Recorder::arm() {
+void Recorder::arm(Profile profile) {
     if (armed_) return;
     head_ = 0;
     count_ = 0;
     written_ = 0;
     dropped_ = 0;
     gap_dropped_ = 0;
+    profile_ = profile;
     armed_ = true;
 }
 
@@ -36,6 +37,8 @@ bool Recorder::record(const radio::Entry& entry) {
 }
 
 bool Recorder::push(const Record& record) {
+    // INFO: fc 21sep26 a type the profile never wanted is not a hole, so it is no drop
+    if (!lists(profile_, record.type)) return false;
     flush_gap();
     if (full()) {
         note_drop(record);

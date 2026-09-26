@@ -255,4 +255,30 @@ bool read(const Record& record, End& out) {
     return true;
 }
 
+Record record_of(const Duty& value, const Instant& at) {
+    Record r = framed(Type::Duty, at);
+    // INFO: fc 21sep26 the low half, not clamp_u16: readers subtract, and a clamp loses the delta
+    put_u16(r.payload + 0, static_cast<uint16_t>(value.panel_partial_refreshes));
+    put_u16(r.payload + 2, static_cast<uint16_t>(value.panel_full_refreshes));
+    put_u16(r.payload + 4, static_cast<uint16_t>(value.backlight_ms));
+    put_u16(r.payload + 6, static_cast<uint16_t>(value.rx_armed_ms));
+    put_u16(r.payload + 8, static_cast<uint16_t>(value.tx_keyed_ms));
+    put_u16(r.payload + 10, static_cast<uint16_t>(value.ble_connected_ms));
+    put_u16(r.payload + 12, static_cast<uint16_t>(value.annunciator_ms));
+    return r;
+}
+
+bool read(const Record& record, Duty& out) {
+    if (record.type != Type::Duty) return false;
+    out = Duty{};
+    out.panel_partial_refreshes = get_u16(record.payload + 0);
+    out.panel_full_refreshes = get_u16(record.payload + 2);
+    out.backlight_ms = get_u16(record.payload + 4);
+    out.rx_armed_ms = get_u16(record.payload + 6);
+    out.tx_keyed_ms = get_u16(record.payload + 8);
+    out.ble_connected_ms = get_u16(record.payload + 10);
+    out.annunciator_ms = get_u16(record.payload + 12);
+    return true;
+}
+
 }  // namespace skyblip::diag

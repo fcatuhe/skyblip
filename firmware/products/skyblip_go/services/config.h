@@ -4,6 +4,7 @@
 #include "core/comms/config.h"
 #include "core/diag/payload.h"
 #include "core/power/cutoff.h"
+#include "core/power/duty.h"
 #include "core/timing/durable_write.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/settings_store.h"
@@ -77,6 +78,7 @@ class ConfigLinkService : public runtime::Service {
     void record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms);
     void watch_claim(uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
+    void accrue_connected(uint32_t now_ms);
 
     static constexpr size_t kBlobCap = 64;
     static constexpr const char* kUpdateKey = "update";
@@ -108,6 +110,7 @@ class ConfigLinkService : public runtime::Service {
     comms::ConfigService config_;
     const PowerService& power_;
     timing::DurableWriteWindow writes_{};
+    power::OnTime connected_{};
     uint16_t recorded_holder_{0};
     bool recorded_claim_held_{false};
     uint32_t recorded_drops_{0};

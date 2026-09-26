@@ -4,6 +4,7 @@
 #include "core/comms/config.h"
 #include "core/diag/payload.h"
 #include "core/flight/state.h"
+#include "core/power/duty.h"
 #include "core/units/units.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
@@ -22,6 +23,7 @@
 #include "products/skyblip_go/pages/sixpack.h"
 #include "products/skyblip_go/pages/status.h"
 #include "products/skyblip_go/services/alarm.h"
+#include "products/skyblip_go/services/capture.h"
 #include "runtime/service.h"
 
 namespace skyblip::go {
@@ -43,11 +45,12 @@ class ScreenService : public runtime::Service {
     static constexpr traffic::Level kAlarmTakesGlass = traffic::Level::Advisory;
 
     ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                  AlarmService& alarm, const BootSnapshot& self_test)
+                  AlarmService& alarm, const CaptureService& capture, const BootSnapshot& self_test)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           alarm_(alarm),
+          capture_(capture),
           self_test_(self_test) {}
 
     void tick(uint32_t now_ms) override;
@@ -87,6 +90,8 @@ class ScreenService : public runtime::Service {
     RawSnapshot raw_snapshot(uint32_t now_ms) const;
     CaptureSnapshot capture_snapshot(uint32_t now_ms) const;
     bool on_capture_page() const { return mode_ == Mode::Page && page_ == Page::Capture; }
+    bool picking_a_capture() const;
+    bool step_capture_focus();
     void sync_arming(uint32_t now_ms);
     void toggle_capture();
     void change_screen();
@@ -122,6 +127,8 @@ class ScreenService : public runtime::Service {
     static constexpr int kGlyphCols = 6;
     static constexpr int kGlyphRows = 7;
     void note_presented(uint32_t now_ms);
+    void count_refresh(ports::Refresh mode);
+    void accrue_backlight(uint32_t now_ms);
 
     int32_t climb_fpm() const {
         return to_feet_per_minute(MillimetresPerSec(context_.state.own.climb_mm_s)).v;
@@ -174,7 +181,9 @@ class ScreenService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     AlarmService& alarm_;
+    const CaptureService& capture_;
     const BootSnapshot& self_test_;
+    diag::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     Controls controls_{};
     ConfirmGesture confirm_{};
@@ -209,6 +218,7 @@ class ScreenService : public runtime::Service {
     ParkStep park_{ParkStep::None};
     ParkFrame park_frame_{ParkFrame::Wordmark};
     bool flat_on_glass_{false};
+    power::OnTime lit_{};
     bool backlight_{false};
     bool powered_{true};
 };

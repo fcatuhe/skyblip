@@ -122,7 +122,19 @@ void ScreenService::toggle_capture() {
     if (context_.diag.armed())
         context_.diag.disarm();
     else
-        context_.diag.arm();
+        context_.diag.arm(capture_in_focus_);
+}
+
+bool ScreenService::picking_a_capture() const {
+    return on_capture_page() && !context_.diag.armed() && context_.state.capture.available;
+}
+
+bool ScreenService::step_capture_focus() {
+    if (!picking_a_capture()) return false;
+    capture_in_focus_ = next_capture(capture_in_focus_);
+    dirty_ = true;
+    const bool walked_off_the_last_capture = capture_in_focus_ == kFirstCapture;
+    return !walked_off_the_last_capture;
 }
 
 void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
@@ -136,6 +148,7 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 
 void ScreenService::tap(uint32_t now_ms) {
     if (answering()) return;
+    if (step_capture_focus()) return;
     page_forward(now_ms);
 }
 
@@ -277,6 +290,7 @@ void ScreenService::resolve(Answer answer) {
 
 void ScreenService::tick(uint32_t now_ms) {
     last_tick_ms_ = now_ms;
+    accrue_backlight(now_ms);
     handle_input(now_ms);
     context_.state.gnss.levels_wanted = showing_sky();
 
@@ -319,6 +333,7 @@ void ScreenService::tick(uint32_t now_ms) {
     if (!changed) return;
 
     context_.roles.display.present(fb_, ports::Refresh::Partial, now_ms);
+    count_refresh(ports::Refresh::Partial);
     note_presented(now_ms);
     flash_alarm();
 }
@@ -346,6 +361,7 @@ ScreenService::Thermal ScreenService::thermal() const {
 void ScreenService::wipe_glass(uint32_t now_ms) {
     fb_.clear(/*white=*/false);
     context_.roles.display.paint_black(now_ms);
+    count_refresh(ports::Refresh::Partial);
     note_presented(now_ms);
     prompt_on_glass_ = false;
     capture_on_glass_ = false;
@@ -363,6 +379,19 @@ void ScreenService::note_presented(uint32_t now_ms) {
     prompt_on_glass_ = answering();
     capture_on_glass_ = on_capture_page();
     last_present_ms_ = now_ms;
+}
+
+void ScreenService::count_refresh(ports::Refresh mode) {
+    bus::DutyState& duty = context_.state.duty;
+    if (mode == ports::Refresh::Full)
+        duty.panel_full_refreshes++;
+    else
+        duty.panel_partial_refreshes++;
+}
+
+void ScreenService::accrue_backlight(uint32_t now_ms) {
+    lit_.observe(backlight_, now_ms);
+    context_.state.duty.backlight_ms = lit_.ms();
 }
 
 void ScreenService::set_backlight(bool on) {
@@ -397,11 +426,13 @@ void ScreenService::settle_park(uint32_t now_ms) {
         park_ = ParkStep::Sleep;
         draw_park_frame(park_frame_);
         context_.roles.display.present(fb_, ports::Refresh::Full, now_ms);
+        count_refresh(ports::Refresh::Full);
         flat_on_glass_ = park_frame_ == ParkFrame::FlatCell;
         return;
     }
     park_ = ParkStep::None;
     context_.roles.display.power_off();
+    accrue_backlight(now_ms);
     set_backlight(false);
 }
 
@@ -538,6 +569,9 @@ CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
     CaptureSnapshot snap;
     snap.uptime_s = now_ms / 1000;
     snap.capture = context_.state.capture;
+    snap.focus = capture_in_focus_;
+    snap.running = context_.diag.profile();
+    snap.focus_keeps_s = capture_.keeps_s(capture_in_focus_);
     snap.arming = arming_.pressed();
     return snap;
 }

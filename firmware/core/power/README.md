@@ -1,6 +1,6 @@
 # core/power
 
-What a terminal voltage means, what the device does about it, and the order it goes dark in. `battery.*` is the gauge a pilot reads, `cutoff.*` the rule that acts, `trim.*` the one calibration the device can perform on itself, `charging.*` the temperature window, `wake.*` whether a boot becomes a device, `shutdown.*` the road out, `reset_reason.*` what the last one was.
+What a terminal voltage means, what the device does about it, and the order it goes dark in. `battery.*` is the gauge a pilot reads, `cutoff.*` the rule that acts, `trim.*` the one calibration the device can perform on itself, `charging.*` the temperature window, `wake.*` whether a boot becomes a device, `shutdown.*` the road out, `reset_reason.*` what the last one was, `duty.h` how long a consumer was on.
 
 The cell is a 4.2 V LiPo pouch: 2400 mAh on this board, and LilyGO fits the same footprint with an 850 mAh pack on the plain T-Echo. Nothing below changes between them. A pouch cell's voltage says what fraction of the charge is left; only its capacity says how long each fraction lasts, and capacity is the thing no reading here can see.
 
@@ -57,6 +57,14 @@ The cable is the way out of both. On the cable the device is an ordinary switche
 What the panel wears has to outlive the rails for that comparison to exist, so one bit does: `ports::SystemPower::flat_on_glass`. A platform with nowhere to keep it answers false, which costs a repeated frame and nothing else.
 
 The cable leaving cannot be noticed. VBUS rising wakes this SoC and VBUS falling does not, so a device unplugged still flat keeps the wordmark until the next press, which is the moment a pilot asks the question anyway - and that press is a refusal, so it is answered with the flat frame.
+
+## Time in state, because there is no current
+
+`duty.h` is one accumulator, `OnTime`: a thing was on, and this is how many milliseconds of it have gone by. It is what the backlight, the annunciator and the companion link are counted with, each by the service that drives that consumer and each published on `bus::State::duty` (`../bus/README.md`).
+
+It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::millis()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
+
+What these buy is the second half of a budget nothing else on this board can supply. Milliamps per consumer come from a datasheet or a bench; how long each was on comes from here, and multiplying the two is the only power figure this device can produce.
 
 ## What is still unmeasured
 

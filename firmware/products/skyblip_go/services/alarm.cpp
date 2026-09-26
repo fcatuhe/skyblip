@@ -27,6 +27,7 @@ formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t
 }
 
 void AlarmService::tick(uint32_t now_ms) {
+    accrue_annunciator(now_ms);
     traffic::Level worst = traffic::Level::None;
     traffic::Level live = traffic::Level::None;
     bool announced = false;
@@ -70,7 +71,17 @@ void AlarmService::tick(uint32_t now_ms) {
     drive_lamp(now_ms, running_);
 
     if (!situation.enabled || !running_) return;
-    if (announced) context_.roles.annunciator.vibrate(kHapticFeltThroughAHarnessMs);
+    if (announced) pulse_haptic();
+}
+
+void AlarmService::accrue_annunciator(uint32_t now_ms) {
+    sounding_.observe(policy_.sounding(), now_ms);
+    context_.state.duty.annunciator_ms = sounding_.ms() + haptic_ms_;
+}
+
+void AlarmService::pulse_haptic() {
+    context_.roles.annunciator.vibrate(kHapticFeltThroughAHarnessMs);
+    haptic_ms_ += kHapticFeltThroughAHarnessMs;
 }
 
 // INFO: fc 20sep26 one record per reception: between two of them nothing new is known about it
@@ -101,6 +112,7 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
 }
 
 void AlarmService::park(uint32_t now_ms) {
+    accrue_annunciator(now_ms);
     running_ = false;
     annunciation::Situation situation{};
     situation.running = false;

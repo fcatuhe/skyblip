@@ -9,6 +9,7 @@
 #include "hardware/platform/host/clock.h"
 #include "ports/null.h"
 #include "products/skyblip_go/services/alarm.h"
+#include "products/skyblip_go/services/capture.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings_store.h"
 
@@ -37,7 +38,11 @@ struct Rig {
     comms::ConfigService config{null.link, store};
     go::BootSnapshot self_test{};
     go::AlarmService alarm_service{context, settings};
-    go::ScreenService screen{context, settings, config, alarm_service, self_test};
+    go::RecordPool pool{context};
+    go::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
+    go::RecordStore flights_store{pool, store::SectorOwner::Flights};
+    go::CaptureService capture{context, capture_store, flights_store, settings, config};
+    go::ScreenService screen{context, settings, config, alarm_service, capture, self_test};
 
     Rig() {
         chip.attach_clock(clock);

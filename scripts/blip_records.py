@@ -184,6 +184,11 @@ DIAG_TYPES = {
         ("dropped", u32(0)), ("span_ms", u32(4)), ("total", u32(8)), ("capacity", u16(12)))),
     17: ("end", (
         ("records", u32(0)), ("dropped", u32(4)))),
+    # INFO: fc 21sep26 duty counters wrap at 65536 on purpose: a reader subtracts, never clamps
+    18: ("duty", (
+        ("panel_partial_refreshes", u16(0)), ("panel_full_refreshes", u16(2)),
+        ("backlight_ms", u16(4)), ("rx_armed_ms", u16(6)), ("tx_keyed_ms", u16(8)),
+        ("ble_connected_ms", u16(10)), ("annunciator_ms", u16(12)))),
 }
 
 FLIGHT_FIELDS = (
