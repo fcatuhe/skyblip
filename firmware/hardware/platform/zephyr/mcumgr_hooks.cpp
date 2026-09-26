@@ -35,17 +35,33 @@ mgmt_cb_return on_command(uint32_t event, mgmt_cb_return, int32_t* rc, uint16_t*
     return dfu::smp_permitted(command, UploadGate::allowed()) ? MGMT_CB_OK : refuse(rc, abort_more);
 }
 
+// INFO: fc 26sep26 img_mgmt raises PENDING only once the last chunk is on flash
+mgmt_cb_return on_upload(uint32_t event, mgmt_cb_return, int32_t*, uint16_t*, bool*, void*,
+                         size_t) {
+    if (event == MGMT_EVT_OP_IMG_MGMT_DFU_PENDING)
+        UploadGate::note_finished();
+    else
+        UploadGate::forget_finished();
+    return MGMT_CB_OK;
+}
+
 mgmt_callback g_command_callback{};
+mgmt_callback g_upload_callback{};
 
 // INFO: fc 23sep26 installed before main() and before Bluetooth, while the gate is still closed
-int register_command_hook() {
+int register_hooks() {
     g_command_callback.callback = on_command;
     g_command_callback.event_id = MGMT_EVT_OP_CMD_RECV;
     mgmt_callback_register(&g_command_callback);
+    g_upload_callback.callback = on_upload;
+    g_upload_callback.event_id = MGMT_EVT_OP_IMG_MGMT_DFU_STARTED |
+                                 MGMT_EVT_OP_IMG_MGMT_DFU_STOPPED |
+                                 MGMT_EVT_OP_IMG_MGMT_DFU_PENDING;
+    mgmt_callback_register(&g_upload_callback);
     return 0;
 }
 
-SYS_INIT(register_command_hook, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+SYS_INIT(register_hooks, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 }  // namespace
 }  // namespace skyblip::platform::zephyr

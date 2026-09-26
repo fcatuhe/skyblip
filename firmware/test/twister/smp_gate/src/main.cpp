@@ -125,7 +125,16 @@ bool refused(const Reply& reply) {
 
 void open_gate() { platform::zephyr::UploadGate::publish(true); }
 
-void before_each(void*) { platform::zephyr::UploadGate::publish(false); }
+void before_each(void*) {
+    platform::zephyr::UploadGate::publish(false);
+    platform::zephyr::UploadGate::forget_finished();
+}
+
+bool upload_whole() {
+    for (size_t off = 0; off < kImageBytes; off += kChunkBytes)
+        if (upload_chunk(off, kChunkBytes).off != off + kChunkBytes) return false;
+    return true;
+}
 
 }  // namespace
 
@@ -183,4 +192,28 @@ ZTEST(smp_gate, test_image_state_read_is_answered_with_the_gate_closed) {
     const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOp::Read, empty());
     zassert_true(reply.answered);
     zassert_false(refused(reply), "a read was refused");
+}
+
+ZTEST(smp_gate, test_an_upload_written_whole_is_finished) {
+    open_gate();
+    zassert_true(upload_whole(), "the upload did not reach its last chunk");
+    zassert_true(platform::zephyr::UploadGate::finished());
+}
+
+ZTEST(smp_gate, test_an_upload_that_stopped_short_is_not_finished) {
+    open_gate();
+    zassert_equal(upload_chunk(0, kChunkBytes).off, kChunkBytes);
+    zassert_false(platform::zephyr::UploadGate::finished());
+}
+
+ZTEST(smp_gate, test_a_new_upload_forgets_the_one_that_finished) {
+    open_gate();
+    zassert_true(upload_whole());
+    zassert_equal(upload_chunk(0, kChunkBytes).off, kChunkBytes);
+    zassert_false(platform::zephyr::UploadGate::finished());
+}
+
+ZTEST(smp_gate, test_a_refused_upload_finishes_nothing) {
+    zassert_true(refused(upload_chunk(0, kChunkBytes)));
+    zassert_false(platform::zephyr::UploadGate::finished());
 }

@@ -76,6 +76,7 @@ void stage_versions(Rig& rig) {
     rig.platform.dfu().running = kRunning;
     rig.platform.dfu().has_staged = true;
     rig.platform.dfu().staged = kStaged;
+    rig.platform.dfu().finished_upload = true;
 }
 
 void apply_and_swap(Rig& rig) {
@@ -311,6 +312,26 @@ TEST_CASE("product: a trailer that will not take the confirmation leaves the ima
     CHECK(rig.platform.dfu().confirms == 3);
     CHECK_FALSE(rig.platform.dfu().confirmed());
     CHECK(config(rig).image_state() == dfu::ImageState::Probation);
+}
+
+// The finished upload is held in RAM, so a restart costs the pilot the upload and not a boot.
+TEST_CASE("product: an image staged before a restart is refused as unfinished, not swapped into") {
+    Rig before;
+    stage_versions(before);
+    REQUIRE(before.setup() == Status::Ok);
+
+    Rebooted after(before, kRunning, /*confirmed=*/true);
+    after.rig.platform.dfu().has_staged = true;
+    after.rig.platform.dfu().staged = kStaged;
+    REQUIRE(after.rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(after.rig, t);
+    after.rig.send("{\"cmd\":\"apply\"}");
+    after.rig.run(t, t + 200);
+    CHECK(config(after.rig).pending() == comms::Pending::None);
+    CHECK(after.rig.last_on(events::Endpoint::Config).find("upload_unfinished") !=
+          std::string::npos);
+    CHECK(after.rig.platform.dfu().triggered == 0);
 }
 
 TEST_CASE("product: an image nobody staged over the air clears a stale attempt") {

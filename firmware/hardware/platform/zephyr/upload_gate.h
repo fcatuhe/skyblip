@@ -6,14 +6,19 @@
 
 namespace skyblip::platform::zephyr {
 
-// INFO: fc 26sep26 the main loop publishes, the MCUmgr work queue reads: one atomic word, no lock
+// INFO: fc 26sep26 the one word the main loop and the MCUmgr work queue share, atomic so no lock
 class UploadGate {
    public:
     static void publish(bool allowed) { atomic_set_bit_to(&word_, kAllowedBit, allowed); }
     static bool allowed() { return atomic_test_bit(&word_, kAllowedBit); }
 
+    static void note_finished() { atomic_set_bit(&word_, kFinishedBit); }
+    static void forget_finished() { atomic_clear_bit(&word_, kFinishedBit); }
+    static bool finished() { return atomic_test_bit(&word_, kFinishedBit); }
+
    private:
     static constexpr int kAllowedBit = 0;
+    static constexpr int kFinishedBit = 1;
     inline static atomic_t word_ = ATOMIC_INIT(0);
 };
 

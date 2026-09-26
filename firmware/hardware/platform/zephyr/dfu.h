@@ -89,6 +89,8 @@ class Dfu : public ports::Dfu {
     }
 
     void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
+    bool upload_finished() override { return UploadGate::finished(); }
+    void forget_upload() override { UploadGate::forget_finished(); }
 
     // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF; it would cut the UF2 session
     ports::RecoveryPath enter_recovery() override {

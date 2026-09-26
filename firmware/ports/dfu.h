@@ -37,6 +37,8 @@ class Dfu {
 
     // INFO: fc 26sep26 the SMP hook runs on another thread and reads only what was published
     virtual void publish_upload_allowed(bool) {}
+    virtual bool upload_finished() { return false; }
+    virtual void forget_upload() {}
 };
 
 }  // namespace skyblip::ports
