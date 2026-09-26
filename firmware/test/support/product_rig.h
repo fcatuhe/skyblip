@@ -23,8 +23,9 @@ struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
-        : platform(fitted) {}
+    explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
+                 uint32_t device_addr = platform::host::Platform::kDeviceAddr)
+        : platform(fitted, device_addr) {}
 
     Status setup() { return product.setup(); }
 

@@ -14,6 +14,8 @@
 // cases go red - which is exactly how the second bug on this branch was found:
 // the dwell was armed for a length byte of 0x18, the M band's 24-byte ADS-L
 // frame, behind an O-band sync word whose frame is 255 bytes.
+#include <initializer_list>
+
 #include "core/events/rf.h"
 #include "core/model/aircraft.h"
 #include "core/model/band.h"
@@ -335,6 +337,30 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     CHECK(rig.state().air.uplink_targets == 1);
     CHECK(target_for(rig, own_addr) == nullptr);
     CHECK(target_for(rig, 0x4D0001) != nullptr);
+}
+
+// A chip address air_address() replaces went on air as 0x5BCAFE and came back as traffic.
+TEST_CASE("uplink: own-ship with a replaced chip address, relayed back, is not traffic") {
+    for (uint32_t chip : {0x000000u, 0xFFFFFFu}) {
+        CAPTURE(chip);
+        Rig rig(platform::host::Platform::kFullyFitted, chip);
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t t = 0;
+        fly(rig, t, 3);
+
+        const uint32_t on_air = settings::air_address(chip);
+        REQUIRE(on_air != chip);
+        model::AircraftObs echo[2] = {
+            relayed_aircraft(rig, on_air, 0, 0, 0),
+            relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
+        };
+        echo[0].addr_table = settings::kAddrTableSkyblip;
+        REQUIRE(relay(rig, t, echo, 2));
+
+        CHECK(rig.state().traffic.count() == 1);
+        CHECK(target_for(rig, on_air) == nullptr);
+        CHECK(target_for(rig, 0x4D0001) != nullptr);
+    }
 }
 
 // The feature is what turns the path on, following the pattern the companion
