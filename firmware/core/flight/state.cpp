@@ -56,7 +56,7 @@ bool taxi_evidence(const FlightSample& sample) { return sample.speed_mm_s < kLan
 
 FlightState state_from(uint8_t adsl_code) {
     switch (static_cast<FlightState>(adsl_code)) {
-        case FlightState::OnGround: return FlightState::OnGround;
+        case FlightState::Ground: return FlightState::Ground;
         case FlightState::Airborne: return FlightState::Airborne;
         case FlightState::Unknown: break;
     }
@@ -64,7 +64,7 @@ FlightState state_from(uint8_t adsl_code) {
 }
 
 uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat) {
-    if (state_from(adsl_code) == FlightState::OnGround && flies_at_no_ground_speed(aircraft_cat))
+    if (state_from(adsl_code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_cat))
         return static_cast<uint8_t>(FlightState::Unknown);
     return adsl_code;
 }
@@ -109,12 +109,12 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
     last_speed_mm_s_ = sample.speed_mm_s;
 
     if (state_ == FlightState::Unknown) {
-        state_ = flight_evidence(sample) ? FlightState::Airborne : FlightState::OnGround;
+        state_ = flight_evidence(sample) ? FlightState::Airborne : FlightState::Ground;
         return state_;
     }
 
     if (state_ == FlightState::Airborne) {
-        if (ground_evidence(sample) || taxi_sustained(now_ms)) state_ = FlightState::OnGround;
+        if (ground_evidence(sample) || taxi_sustained(now_ms)) state_ = FlightState::Ground;
         return state_;
     }
 

@@ -119,7 +119,7 @@ uint8_t wire(diag::Refusal value) {
 uint8_t wire(flight::FlightState value) {
     switch (value) {
         case flight::FlightState::Unknown: return 0;
-        case flight::FlightState::OnGround: return 1;
+        case flight::FlightState::Ground: return 1;
         case flight::FlightState::Airborne: return 2;
     }
     return kUnpinned;

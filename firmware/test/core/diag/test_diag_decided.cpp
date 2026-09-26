@@ -127,7 +127,7 @@ TEST_CASE("diag record: a flight decision keeps the inputs that were one thresho
     in.alt_msl_m = 1487;
     in.hdop_e2 = 240;
     in.vdop_e2 = 310;
-    in.declared = flight::FlightState::OnGround;
+    in.declared = flight::FlightState::Ground;
     in.confirmed = flight::FlightState::Airborne;
     in.fix_valid = true;
     in.rolling = true;

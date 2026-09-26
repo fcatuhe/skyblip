@@ -87,10 +87,10 @@ int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model:
     return nmea_finish(out, n);
 }
 
-// INFO: fc 19sep26 Unknown is not a claim of being on the ground, so only OnGround answers 1.
+// INFO: fc 19sep26 Unknown is not a claim of being on the ground, so only Ground answers 1.
 uint8_t pflau_gps(const model::OwnState& own) {
     if (!own.fix_valid) return 0;
-    return flight::state_from(own.flight_state) == flight::FlightState::OnGround ? 1 : 2;
+    return flight::state_from(own.flight_state) == flight::FlightState::Ground ? 1 : 2;
 }
 
 int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmitting,

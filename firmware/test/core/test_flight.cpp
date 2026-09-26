@@ -53,7 +53,7 @@ struct Stream {
 // 23 kt is a speed no aircraft taxis at and every takeoff roll passes it well before it flies.
 // A paraglider soaring a ridge at walking pace went on air landed, once every ten seconds.
 TEST_CASE("flight: a craft that can hover is never announced landed, only undefined") {
-    const uint8_t on_ground = static_cast<uint8_t>(FlightState::OnGround);
+    const uint8_t on_ground = static_cast<uint8_t>(FlightState::Ground);
     const uint8_t airborne_code = static_cast<uint8_t>(FlightState::Airborne);
     const uint8_t undefined = static_cast<uint8_t>(FlightState::Unknown);
     for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
@@ -71,22 +71,22 @@ TEST_CASE("flight: a craft that can hover is never announced landed, only undefi
 
 TEST_CASE("flight: a takeoff is the speed no taxi holds, and it waits for nothing") {
     Stream sky;
-    REQUIRE(sky.hold(3, 0.0) == FlightState::OnGround);
+    REQUIRE(sky.hold(3, 0.0) == FlightState::Ground);
 
-    CHECK(sky.hold(1, 6.0) == FlightState::OnGround);   // a brisk taxi
-    CHECK(sky.hold(1, 11.0) == FlightState::OnGround);  // the roll, accelerating
+    CHECK(sky.hold(1, 6.0) == FlightState::Ground);   // a brisk taxi
+    CHECK(sky.hold(1, 11.0) == FlightState::Ground);  // the roll, accelerating
     CHECK(sky.hold(1, 12.0) == FlightState::Airborne);
 }
 
 // A glider towed to the grid, a tug taxiing back, a trailer on the perimeter track.
 TEST_CASE("flight: a taxi does not take off, and one bad solution does not either") {
     Stream sky;
-    REQUIRE(sky.hold(3, 0.0) == FlightState::OnGround);
+    REQUIRE(sky.hold(3, 0.0) == FlightState::Ground);
     // A tug hurrying back to the grid does 10 m/s, and it is what this threshold is set over.
-    CHECK(sky.hold(30, 10.0) == FlightState::OnGround);
+    CHECK(sky.hold(30, 10.0) == FlightState::Ground);
 
-    CHECK(sky.one(45.0) == FlightState::OnGround);
-    CHECK(sky.hold(20, 10.0) == FlightState::OnGround);
+    CHECK(sky.one(45.0) == FlightState::Ground);
+    CHECK(sky.hold(20, 10.0) == FlightState::Ground);
 }
 
 // A stop is a landing on the solution that shows it, with no hold to wait out.
@@ -97,7 +97,7 @@ TEST_CASE("flight: a landing is a standstill, and a fast rollout is not one yet"
     CHECK(sky.hold(1, 20.0) == FlightState::Airborne);
     CHECK(sky.hold(1, 8.0) == FlightState::Airborne);
     CHECK(sky.hold(1, 2.0) == FlightState::Airborne);
-    CHECK(sky.hold(1, 0.5) == FlightState::OnGround);
+    CHECK(sky.hold(1, 0.5) == FlightState::Ground);
 }
 
 // The other landing: a tug that rolls in and taxis back has landed, and the glass says TAXI.
@@ -106,11 +106,11 @@ TEST_CASE("flight: a taxi held for the landing hold is a landing, stop or no sto
     REQUIRE(sky.hold(3, 25.0) == FlightState::Airborne);
 
     CHECK(sky.hold(10, 5.0) == FlightState::Airborne);  // the hold runs from the first slow fix
-    CHECK(sky.hold(1, 5.0) == FlightState::OnGround);
+    CHECK(sky.hold(1, 5.0) == FlightState::Ground);
     // Landed while still rolling, which is the pair the word TAXI is drawn from.
     CHECK(sky.rolling());
 
-    CHECK(sky.hold(60, 6.0) == FlightState::OnGround);
+    CHECK(sky.hold(60, 6.0) == FlightState::Ground);
     CHECK(sky.rolling());
 }
 
@@ -142,14 +142,14 @@ TEST_CASE("flight: an outage does not count towards the landing hold") {
     CHECK(sky.hold(10, 4.0) == FlightState::Airborne);
     CHECK(sky.blind(30) == FlightState::Unknown);
     CHECK(sky.hold(10, 4.0) == FlightState::Airborne);
-    CHECK(sky.hold(1, 4.0) == FlightState::OnGround);
+    CHECK(sky.hold(1, 4.0) == FlightState::Ground);
 }
 
 // Evidence is worth what the fix behind it is worth, so OGN divides by any DOP above 1.0.
 TEST_CASE("flight: a fix nobody should trust does not take off on its own") {
     Stream sky;
-    REQUIRE(sky.hold(3, 0.0, 3000) == FlightState::OnGround);
-    CHECK(sky.hold(20, 12.0, 3000) == FlightState::OnGround);
+    REQUIRE(sky.hold(3, 0.0, 3000) == FlightState::Ground);
+    CHECK(sky.hold(20, 12.0, 3000) == FlightState::Ground);
 
     // The same movement on a fix worth trusting is a takeoff.
     CHECK(sky.hold(1, 12.0, 90) == FlightState::Airborne);
@@ -168,10 +168,10 @@ TEST_CASE("flight: the dilution of precision cannot land an aircraft") {
     CHECK(flight_evidence(solution(12.0, 0)));
 }
 
-// The third band: stopped or moving, which is the word the glass prints while ADS-L says OnGround.
+// The third band: stopped or moving, which is the word the glass prints while ADS-L says ground.
 TEST_CASE("flight: a parked receiver's noise is not a taxi, and a slowing taxi still is") {
     Stream sky;
-    REQUIRE(sky.hold(3, 0.2) == FlightState::OnGround);
+    REQUIRE(sky.hold(3, 0.2) == FlightState::Ground);
     CHECK_FALSE(sky.rolling());
 
     // A metre a second of multipath on a device nobody has touched.
@@ -191,7 +191,7 @@ TEST_CASE("flight: a parked receiver's noise is not a taxi, and a slowing taxi s
 // A taxi does not stop because the antenna did.
 TEST_CASE("flight: an outage leaves the aircraft rolling as it was") {
     Stream sky;
-    REQUIRE(sky.one(6.0) == FlightState::OnGround);
+    REQUIRE(sky.one(6.0) == FlightState::Ground);
     REQUIRE(sky.rolling());
 
     CHECK(sky.blind() == FlightState::Unknown);
@@ -205,10 +205,10 @@ TEST_CASE("flight: a device switched on in the air says so at once") {
 
     // Switched on while being towed to the grid, which is the common half of this.
     Stream rolling;
-    CHECK(rolling.one(6.0) == FlightState::OnGround);
+    CHECK(rolling.one(6.0) == FlightState::Ground);
 
     Stream parked;
-    CHECK(parked.one(0.4) == FlightState::OnGround);
+    CHECK(parked.one(0.4) == FlightState::Ground);
 }
 
 // Without a fix there is no claim to make, and the aircraft is still where it was.
@@ -225,18 +225,18 @@ TEST_CASE("flight: no fix is not a landing") {
 // The jerk gate compares two consecutive solutions, so an outage must not arm it.
 TEST_CASE("flight: the first solution after an outage is not judged as a jerk") {
     Stream sky;
-    REQUIRE(sky.hold(3, 0.0) == FlightState::OnGround);
+    REQUIRE(sky.hold(3, 0.0) == FlightState::Ground);
 
     REQUIRE(sky.blind() == FlightState::Unknown);
     CHECK(sky.one(30.0) == FlightState::Airborne);
 }
 
 TEST_CASE("flight: only the two ADS-L G.1.2 codes name a state, every other value is unknown") {
-    CHECK(state_from(static_cast<uint8_t>(FlightState::OnGround)) == FlightState::OnGround);
+    CHECK(state_from(static_cast<uint8_t>(FlightState::Ground)) == FlightState::Ground);
     CHECK(state_from(static_cast<uint8_t>(FlightState::Airborne)) == FlightState::Airborne);
     CHECK(state_from(static_cast<uint8_t>(FlightState::Unknown)) == FlightState::Unknown);
     CHECK(airborne(static_cast<uint8_t>(FlightState::Airborne)));
-    CHECK_FALSE(airborne(static_cast<uint8_t>(FlightState::OnGround)));
+    CHECK_FALSE(airborne(static_cast<uint8_t>(FlightState::Ground)));
 
     // Two bits, and we own neither the sender nor the future: an unknown code unlocks nothing.
     for (uint16_t code = 3; code < 256; code++)
@@ -248,7 +248,7 @@ TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airbor
     CHECK(latch.state() == FlightState::Unknown);
     CHECK_FALSE(latch.on_ground());
 
-    latch.update(FlightState::OnGround);
+    latch.update(FlightState::Ground);
     CHECK(latch.on_ground());
 
     // Unknown before anything was confirmed is not a ground: every gate behind this fails closed.
@@ -260,6 +260,6 @@ TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airbor
     latch.update(FlightState::Unknown);
     CHECK(latch.state() == FlightState::Airborne);
 
-    latch.update(FlightState::OnGround);
+    latch.update(FlightState::Ground);
     CHECK(latch.on_ground());
 }

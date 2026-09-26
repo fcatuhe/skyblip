@@ -144,7 +144,7 @@ void clear_behind(ui::Canvas& fb, int x, int y, int w, int h, int pad) {
     fb.rect(b.x, b.y, b.w, b.h, false, true);
 }
 
-bool flight_over(const RadarSnapshot& snap) { return snap.flight_time_valid && !snap.airborne; }
+bool flight_over(const RadarSnapshot& snap) { return snap.flight_time_valid && !snap.in_flight; }
 
 Box clock_box(const RadarSnapshot& snap, int pad) {
     char buf[8];
@@ -203,7 +203,7 @@ void range_label(ui::Canvas& fb, const RadarSnapshot& snap) {
 }
 
 void flight_word(ui::Canvas& fb, const RadarSnapshot& snap) {
-    if (!snap.fix_valid || !snap.airborne) return;
+    if (!snap.fix_valid || !snap.in_flight) return;
     const char* state = "FLIGHT";
     clear_behind(fb, kMargin, kStateY, text_width(state, kStateScale), kGlyphH * kStateScale,
                  kLabelPad);
@@ -212,7 +212,7 @@ void flight_word(ui::Canvas& fb, const RadarSnapshot& snap) {
 
 const char* state_word(const RadarSnapshot& snap) {
     if (!snap.fix_valid) return "NO FIX";
-    if (snap.airborne) return nullptr;
+    if (snap.in_flight) return nullptr;
     return snap.taxiing ? "TAXI" : "GROUND";
 }
 

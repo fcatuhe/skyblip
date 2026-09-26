@@ -13,7 +13,7 @@ TEST_CASE("flight timer: nothing has flown until something takes off") {
     FlightTimer timer;
     CHECK_FALSE(timer.flown());
 
-    timer.update(FlightState::OnGround, 10000);
+    timer.update(FlightState::Ground, 10000);
     CHECK_FALSE(timer.flown());
 
     timer.update(FlightState::Airborne, 20000);
@@ -23,7 +23,7 @@ TEST_CASE("flight timer: nothing has flown until something takes off") {
 
 TEST_CASE("flight timer: the count runs from the takeoff, not from the boot") {
     FlightTimer timer;
-    timer.update(FlightState::OnGround, 5 * kMinute);
+    timer.update(FlightState::Ground, 5 * kMinute);
     timer.update(FlightState::Airborne, 8 * kMinute);
     timer.update(FlightState::Airborne, 15 * kMinute);
     CHECK(timer.seconds() == 7 * 60);
@@ -37,8 +37,8 @@ TEST_CASE("flight timer: a landing holds the figure and the next takeoff carries
     REQUIRE(timer.seconds() == 42 * 60);
 
     // An hour on the ground adds nothing, and does not take anything away either.
-    timer.update(FlightState::OnGround, 43 * kMinute);
-    timer.update(FlightState::OnGround, 100 * kMinute);
+    timer.update(FlightState::Ground, 43 * kMinute);
+    timer.update(FlightState::Ground, 100 * kMinute);
     CHECK(timer.seconds() == 42 * 60);
     CHECK(timer.flown());
     CHECK_FALSE(timer.running());
