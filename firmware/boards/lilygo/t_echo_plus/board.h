@@ -40,7 +40,7 @@ class TEchoPlus {
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
                  t_echo_plus::kRadioBusy, t_echo_plus::kRadioRst, t_echo_plus::kRadioDio1),
-          epd_(platform.spi(io::BusId::Epd), platform.gpio(), t_echo_plus::kEpdDc,
+          epd_(platform.spi(io::BusId::Epd), platform.gpio(), platform.delay(), t_echo_plus::kEpdDc,
                t_echo_plus::kEpdRst, t_echo_plus::kEpdBusy, t_echo_plus::kEpdBacklight,
                platform.glass_rotation()),
           gnss_(platform.uart(io::BusId::Gnss), platform.uart_rate(io::BusId::Gnss)),

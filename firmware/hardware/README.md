@@ -4,6 +4,8 @@ What fills the roles `ports/` declares. `parts/` is a chip and its datasheet, `p
 
 A part is written against `io::Spi`, `io::I2c` and `io::Uart`, never against Zephyr or against a platform. That is what lets `models/` stand in for the chip on the host and what makes `make test` exercise the SX1262 driver's real register writes.
 
+A window the datasheet asks the host to hold, a reset pulse or a save the part must not be interrupted in, is waited out on `io::Delay` and stated in microseconds. On silicon that is `k_busy_wait`, which does not depend on what a GPIO read happens to cost. On the host it advances every part model's own clock, and the model refuses a hold that came up short: the SX1262 model raises `Fault::ShortReset` or `Fault::SpiBeforeSleepSettled`, the SSD1681 model stays in deep sleep.
+
 ## The platform contract
 
 `boards/` is a template over a platform rather than a consumer of a base class, so a platform proves itself by compiling, not by overriding. The cost is that the contract is nowhere in the type system, which is what this section is for. A platform is what `platform/host/platform.h` and `platform/zephyr/platform.h` both are, and there are exactly two of them.

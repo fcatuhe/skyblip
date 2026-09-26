@@ -141,16 +141,12 @@ void Ssd1681::set_backlight(bool on) {
     gpio_.set(backlight_, on);
 }
 
-void Ssd1681::hold_reset() {
-    for (uint32_t i = 0; i < epd::kResetHoldSpins; i++) (void)gpio_.get(busy_);
-}
-
 void Ssd1681::init_panel() {
     gpio_.set(rst_, true);
     gpio_.set(rst_, false);
-    hold_reset();
+    delay_.busy_wait_us(epd::kResetHoldUs);
     gpio_.set(rst_, true);
-    hold_reset();
+    delay_.busy_wait_us(epd::kResetHoldUs);
     wait_busy();
 
     cmd(kSwReset);
