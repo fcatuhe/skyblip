@@ -23,15 +23,9 @@ Go g_product{g_platform};
 // service: it consumes the product rather than being stepped by it.
 go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 
-// Capture-less so it converts to the plain function pointer the hook takes.
-bool dfu_gate() { return g_product.config().config().upload_allowed(); }
-
 }  // namespace
 
 int main(void) {
-    // Until this runs, the MCUmgr hooks fail closed and refuse every upload.
-    platform::zephyr::set_dfu_gate(dfu_gate);
-
     const Status started = g_product.setup();
     LOG_INF("reset reason: %s", power::to_string(g_product.reset_reason()));
 

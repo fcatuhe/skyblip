@@ -47,6 +47,7 @@ class Dfu : public ports::Dfu {
         recoveries++;
         return recovery_path;
     }
+    void publish_upload_allowed(bool allowed) override { upload_allowed_published = allowed; }
     ports::RecoveryPath recovery_path{ports::RecoveryPath::Rebooted};
 
     int triggered{0};
@@ -56,6 +57,7 @@ class Dfu : public ports::Dfu {
     bool confirm_fails{false};
     bool has_running{false};
     bool has_staged{false};
+    bool upload_allowed_published{false};
     ports::ImageVersion running{};
     ports::ImageVersion staged{};
 };

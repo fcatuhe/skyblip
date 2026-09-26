@@ -43,6 +43,34 @@ bool glass_reads(const ui::Canvas& fb, int x, int y, const char* text, int scale
 
 comms::ConfigService& config(Rig& rig) { return rig.product.config().config(); }
 
+void pass(Rig& rig, uint32_t& t) {
+    t += 50;
+    rig.run(t, t);
+}
+
+void open_upload_window(Rig& rig, uint32_t& t) {
+    on_ground(rig, t);
+    rig.send("{\"cmd\":\"dfu\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+}
+
+void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
+    for (int second = 0; second < 20; second++) {
+        gnss::GnssSolution climbing{};
+        climbing.fix_valid = true;
+        climbing.speed_mm_s = 50000;
+        climbing.alt_msl_mm = 1200 * 1000;
+        climbing.updates = 1;
+        rig.product.bus().gnss.push(climbing);
+        for (int i = 0; i < 10; i++) {
+            pass(rig, t);
+            if (config(rig).flight_state() == flight::FlightState::Airborne) return;
+        }
+    }
+}
+
 void stage_versions(Rig& rig) {
     rig.platform.dfu().has_running = true;
     rig.platform.dfu().running = kRunning;
@@ -182,6 +210,32 @@ TEST_CASE("product: a confirmed apply parks the device and paints the glass befo
     REQUIRE(dfu::from_blob(blob, n, record));
     CHECK(record.from == kRunning);
     CHECK(record.to == kStaged);
+}
+
+TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    open_upload_window(rig, t);
+    REQUIRE(config(rig).upload_allowed());
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+
+    pass(rig, t);
+    CHECK(rig.platform.dfu().upload_allowed_published);
+}
+
+// A chunk the MCUmgr work queue reads against a stale gate is a chunk written in flight.
+TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's gate in that pass") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    open_upload_window(rig, t);
+    pass(rig, t);
+    REQUIRE(rig.platform.dfu().upload_allowed_published);
+
+    climb_until_the_link_sees_it(rig, t);
+    REQUIRE(config(rig).flight_state() == flight::FlightState::Airborne);
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 }
 
 TEST_CASE("product: apply is refused below the low-battery warning and nothing parks") {

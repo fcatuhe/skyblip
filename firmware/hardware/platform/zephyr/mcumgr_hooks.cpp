@@ -5,7 +5,7 @@
 #include <zephyr/mgmt/mcumgr/mgmt/mgmt_defines.h>
 
 #include "core/dfu/smp_policy.h"
-#include "hardware/platform/zephyr/dfu.h"
+#include "hardware/platform/zephyr/upload_gate.h"
 
 namespace skyblip::platform::zephyr {
 namespace {
@@ -17,10 +17,6 @@ static_assert(static_cast<uint16_t>(dfu::SmpGroup::Image) == MGMT_GROUP_ID_IMAGE
 static_assert(dfu::kSmpOsEcho == OS_MGMT_ID_ECHO);
 static_assert(dfu::kSmpOsReset == OS_MGMT_ID_RESET);
 // INFO: fc 07sep26 img_mgmt.h drags in bootutil/image.h, off the app include path; ids are 0/1/5
-
-DfuGate g_gate = nullptr;
-
-bool upload_allowed() { return g_gate != nullptr && g_gate(); }
 
 mgmt_cb_return refuse(int32_t* rc, bool* abort_more) {
     *rc = MGMT_ERR_EACCESSDENIED;
@@ -36,12 +32,12 @@ mgmt_cb_return on_command(uint32_t event, mgmt_cb_return, int32_t* rc, uint16_t*
         return refuse(rc, abort_more);
     const auto* received = static_cast<const mgmt_evt_op_cmd_arg*>(data);
     const dfu::SmpCommand command{received->group, received->id, received->op};
-    return dfu::smp_permitted(command, upload_allowed()) ? MGMT_CB_OK : refuse(rc, abort_more);
+    return dfu::smp_permitted(command, UploadGate::allowed()) ? MGMT_CB_OK : refuse(rc, abort_more);
 }
 
 mgmt_callback g_command_callback{};
 
-// INFO: fc 23sep26 installed before main() and before Bluetooth, so no gate means no upload
+// INFO: fc 23sep26 installed before main() and before Bluetooth, while the gate is still closed
 int register_command_hook() {
     g_command_callback.callback = on_command;
     g_command_callback.event_id = MGMT_EVT_OP_CMD_RECV;
@@ -52,7 +48,4 @@ int register_command_hook() {
 SYS_INIT(register_command_hook, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 }  // namespace
-
-void set_dfu_gate(DfuGate gate) { g_gate = gate; }
-
 }  // namespace skyblip::platform::zephyr

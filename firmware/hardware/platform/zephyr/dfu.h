@@ -13,6 +13,7 @@
 #include <hal/nrf_wdt.h>
 #endif
 
+#include "hardware/platform/zephyr/upload_gate.h"
 #include "ports/dfu.h"
 
 namespace skyblip::platform::zephyr {
@@ -70,10 +71,6 @@ inline bool write_boot_magic(uint8_t magic) {
 #endif
 }
 
-// INFO: fc 07sep26 the one predicate every SMP write is gated on; products/ wires it to core/
-using DfuGate = bool (*)();
-void set_dfu_gate(DfuGate gate);
-
 class Dfu : public ports::Dfu {
    public:
     void trigger() override {
@@ -90,6 +87,8 @@ class Dfu : public ports::Dfu {
     bool staged_version(ports::ImageVersion& out) override {
         return read_version(PARTITION_ID(slot1_partition), out);
     }
+
+    void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
 
     // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF; it would cut the UF2 session
     ports::RecoveryPath enter_recovery() override {

@@ -8,7 +8,7 @@
 #include <zephyr/ztest.h>
 
 #include "core/dfu/smp_policy.h"
-#include "hardware/platform/zephyr/dfu.h"
+#include "hardware/platform/zephyr/upload_gate.h"
 
 using namespace skyblip;
 
@@ -19,9 +19,6 @@ constexpr uint8_t kSmpHeaderBytes = 8;
 constexpr uint32_t kImageMagic = 0x96f3b83d;
 constexpr size_t kImageBytes = 128;
 constexpr size_t kChunkBytes = 64;
-
-bool g_upload_allowed = false;
-bool upload_gate() { return g_upload_allowed; }
 
 struct Reply {
     bool answered{false};
@@ -126,10 +123,9 @@ bool refused(const Reply& reply) {
     return reply.answered && reply.has_rc && reply.rc == MGMT_ERR_EACCESSDENIED;
 }
 
-void before_each(void*) {
-    g_upload_allowed = false;
-    platform::zephyr::set_dfu_gate(upload_gate);
-}
+void open_gate() { platform::zephyr::UploadGate::publish(true); }
+
+void before_each(void*) { platform::zephyr::UploadGate::publish(false); }
 
 }  // namespace
 
@@ -142,7 +138,7 @@ ZTEST(smp_gate, test_image_upload_is_refused_while_the_gate_is_closed) {
 }
 
 ZTEST(smp_gate, test_image_upload_reaches_the_handler_while_the_gate_is_open) {
-    g_upload_allowed = true;
+    open_gate();
     const Reply reply = upload_chunk(0, kChunkBytes);
     zassert_true(reply.answered);
     zassert_false(reply.has_rc && reply.rc != MGMT_ERR_EOK, "rc %d", reply.rc);
@@ -151,7 +147,7 @@ ZTEST(smp_gate, test_image_upload_reaches_the_handler_while_the_gate_is_open) {
 }
 
 ZTEST(smp_gate, test_image_state_write_is_refused_inside_the_window) {
-    g_upload_allowed = true;
+    open_gate();
     const Reply reply = send(
         dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOp::Write, body([](zcbor_state_t* zse) {
             return zcbor_tstr_put_lit(zse, "confirm") && zcbor_bool_put(zse, true);
@@ -160,7 +156,7 @@ ZTEST(smp_gate, test_image_state_write_is_refused_inside_the_window) {
 }
 
 ZTEST(smp_gate, test_image_erase_is_refused_inside_the_window) {
-    g_upload_allowed = true;
+    open_gate();
     const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageErase, dfu::SmpOp::Write,
                              body([](zcbor_state_t* zse) {
                                  return zcbor_tstr_put_lit(zse, "slot") && zcbor_uint32_put(zse, 1);
@@ -169,7 +165,7 @@ ZTEST(smp_gate, test_image_erase_is_refused_inside_the_window) {
 }
 
 ZTEST(smp_gate, test_os_reset_is_refused_inside_the_window) {
-    g_upload_allowed = true;
+    open_gate();
     const Reply reply = send(dfu::SmpGroup::Os, dfu::kSmpOsReset, dfu::SmpOp::Write, empty());
     zassert_true(refused(reply), "rc %d", reply.rc);
 }
