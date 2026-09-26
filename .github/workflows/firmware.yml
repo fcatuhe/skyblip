@@ -125,6 +125,47 @@ jobs:
         working-directory: firmware
         run: make test-sanitize CXX="ccache g++"
 
+  # The radio, the GNSS UART and the companion link, a minute each (firmware/test/fuzz/README.md).
+  fuzz:
+    name: libFuzzer (radio, NMEA, companion link)
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ubuntu-26.04-arm
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - uses: actions/checkout@v7
+      # libFuzzer's runtime is libclang-rt-dev, which clang only recommends.
+      - name: install clang and ccache
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq --no-install-recommends clang libclang-rt-dev ccache
+      # Its own cache key: -fsanitize=fuzzer-no-link instruments every object.
+      - name: cache the compiled objects
+        uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-fuzz-${{ github.sha }}
+          restore-keys: ccache-fuzz-
+      # A minute from the seeds alone finds little, a minute on top of every earlier run finds more.
+      - name: cache the corpus
+        uses: actions/cache@v6
+        with:
+          path: firmware/build/fuzz/corpus
+          key: fuzz-corpus-${{ github.sha }}
+          restore-keys: fuzz-corpus-
+      - name: build & run the fuzzers
+        working-directory: firmware
+        run: make fuzz FUZZ_CXX="ccache clang++"
+      - name: upload the crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashes
+          path: firmware/build/fuzz/crashes/
+          if-no-files-found: ignore
+
   lint:
     name: clang-format + clang-tidy
     needs: changes
