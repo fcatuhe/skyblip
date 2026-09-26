@@ -7,13 +7,13 @@
 
 namespace skyblip {
 
-inline bool checksum_ok(const std::string& s) {
-    auto star = s.find('*');
-    if (star == std::string::npos) return false;
-    uint8_t cs = 0;
-    for (size_t i = 1; i < star; i++) cs ^= static_cast<uint8_t>(s[i]);
-    char hh[3] = {s[star + 1], s[star + 2], 0};
-    return static_cast<uint8_t>(std::stoi(hh, nullptr, 16)) == cs;
+inline bool checksum_ok(const std::string& sentence) {
+    const size_t star = sentence.find('*');
+    if (star == std::string::npos || sentence.size() < star + 3) return false;
+    uint8_t sum = 0;
+    for (size_t i = 1; i < star; i++) sum ^= static_cast<uint8_t>(sentence[i]);
+    const std::string hex = sentence.substr(star + 1, 2);
+    return static_cast<uint8_t>(std::stoi(hex, nullptr, 16)) == sum;
 }
 
 }  // namespace skyblip
