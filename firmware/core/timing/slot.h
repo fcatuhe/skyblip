@@ -89,6 +89,9 @@ struct ClockState {
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
 
+// Unlocked since an edge recent enough that the slot map still flies on it, receive only.
+bool in_pps_holdover(const ClockState& clock);
+
 struct SlotPlan {
     SlotState state{SlotState::UplinkRxO};
     Band band{Band::O};

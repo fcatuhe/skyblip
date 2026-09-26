@@ -163,7 +163,7 @@ Three columns left this page rather than shrinking it. The byte count, because t
 
 The stamp is UTC as `hh:mm:ss` once the receiver has given us a second, and `T+<seconds>` since boot before that. Two shapes rather than one, so a reading is never taken for a wall clock it is not. A bench indoors never gets a fix and would otherwise have a column of dashes.
 
-The second line is the radio's half of the receiver, and it explains the tape under it. Without a latched PPS edge nothing may transmit at all (`timing::own_ship_transmits`) and no row carries a phase, so `PPS LOCK`, `PPS HOLD 12` and `PPS NONE` answer a column of stamps that suddenly lost its milliseconds before the reader has to wonder. `BAND` is the noise floor the dwells measured, above the column of levels it is the floor under: a device hearing nothing at -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons.
+The second line is the radio's half of the receiver, and it explains the tape under it. Without a latched PPS edge nothing may transmit at all (`timing::own_ship_transmits`) and no row carries a phase, so `PPS LOCK`, `PPS HOLD 12` and `PPS NONE` answer a column of stamps that suddenly lost its milliseconds before the reader has to wonder. `HOLD` is `timing::in_pps_holdover`, the same test the slot map flies on: the edge is gone, the dwells keep their places receive only, and `NONE` comes once `kPpsHoldoverMs` has run out. `BAND` is the noise floor the dwells measured, above the column of levels it is the floor under: a device hearing nothing at -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons.
 
 ## sixpack
 
