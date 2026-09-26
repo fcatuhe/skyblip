@@ -84,6 +84,10 @@ jobs:
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards
         run: python3 scripts/test_mkuf2.py
+      # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
+      # device then sits in DFU mode until someone drops a .uf2 on it by hand.
+      - name: no Nordic DFU package
+        run: python3 scripts/check_no_dfu_package.py
       # The host decoder and the firmware's record layout are one layout written
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume
@@ -92,6 +96,10 @@ jobs:
       # a field that moves in payload.h must fail here, not read as a quiet zero.
       - name: power budget deltas, postures and caveats
         run: python3 scripts/test_power_budget.py
+      # The link budget pairs Burst records and reads Config's transmitter bytes: a field
+      # that moves in payload.h, or a figure that moves in sx1262.h, must fail here.
+      - name: link budget pairing, free space and what it sets
+        run: python3 scripts/test_link_budget.py
       # The console page's line reassembly and checksum: ble.js has no other test.
       - name: simulator transport
         working-directory: simulator

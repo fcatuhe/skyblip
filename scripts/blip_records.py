@@ -116,8 +116,8 @@ DIAG_TYPES = {
     2: ("config", (
         ("addr", u32(0)), ("battery_offset_mv", i16(4)), ("freq_trim_e1_ppm", i16(6)),
         ("aircraft_type", u8(8)), ("addr_table", u8(9)), ("alarm_volume", u8(10)),
-        ("settings_version", u8(11)), ("alarm_enabled", flag(2)), ("metric", flag(3)),
-        ("battery_trim_manual", flag(4)))),
+        ("settings_version", u8(11)), ("tx_power_dbm", i8(12)), ("pa_rated_dbm", i8(13)),
+        ("alarm_enabled", flag(2)), ("metric", flag(3)), ("battery_trim_manual", flag(4)))),
     3: ("gnss", (
         ("nav_ms", u16(0)), ("resid_m", u16(2)), ("hdop_e2", u16(4)), ("vdop_e2", u16(6)),
         ("stage_s", u16(8)), ("sats", u8(10)), ("sats_in_view", u8(11)), ("fix_mode", u8(12)),

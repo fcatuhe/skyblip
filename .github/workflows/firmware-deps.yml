@@ -57,10 +57,19 @@ jobs:
             \`firmware/vendor/doctest/doctest.h\`. Re-apply the four comment patches recorded in
             \`firmware/vendor/doctest/LOCAL-CHANGES.md\`, or drop the vendored copy and fetch it
             at configure time."
-          [ "$have_zephyr" != "$want_zephyr" ] && body="${body}
-          - **Zephyr** \`$have_zephyr\` -> \`$want_zephyr\`: pinned in \`firmware/west.yml\`. A minor
+          if [ "${have_zephyr%.*}" = "${want_zephyr%.*}" ]; then
+            zephyr_advice="A patch
+            bump is bugfixes on the same minor and usually leaves the modules where they were:
+            diff Zephyr's west.yml for the modules we allow, read the release notes for BLE,
+            MCUmgr, MCUboot, NVS, the task watchdog and the nRF52 drivers, build, and check
+            the flash budget."
+          else
+            zephyr_advice="A minor
             bump moves every module with it (hal_nordic, mbedtls, MCUboot), so treat it as a
             migration: build, check the flash budget, and exercise the device before merging."
+          fi
+          [ "$have_zephyr" != "$want_zephyr" ] && body="${body}
+          - **Zephyr** \`$have_zephyr\` -> \`$want_zephyr\`: pinned in \`firmware/west.yml\`. ${zephyr_advice}"
 
           # Do NOT reword: the open issue is found by this exact title, and a new
           # wording opens a duplicate beside the one already tracking the bump.

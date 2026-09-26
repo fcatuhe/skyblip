@@ -91,11 +91,12 @@ class DiagnosticsPayloads(unittest.TestCase):
             reset="WATCHDOG", image_state="probation"))
 
     def test_config_reads_signed_trims_and_its_three_flag_bits(self):
-        payload = struct.pack("<I2h4B", 0xABCDEF, -120, -35, 9, 7, 3, 2)
+        payload = struct.pack("<I2h4B2b", 0xABCDEF, -120, -35, 9, 7, 3, 2, -9, 22)
         self.assertEqual(decoded(2, payload, 0b1_1100), whole(
             "config", 0b1_1100, addr=0xABCDEF, battery_offset_mv=-120, freq_trim_e1_ppm=-35,
             aircraft_type=9, addr_table=7, alarm_volume=3, settings_version=2,
-            alarm_enabled=True, metric=True, battery_trim_manual=True))
+            tx_power_dbm=-9, pa_rated_dbm=22, alarm_enabled=True, metric=True,
+            battery_trim_manual=True))
 
     def test_gnss_reads_its_five_words_two_enums_and_five_flags(self):
         payload = struct.pack("<5H5B", 350, 12, 120, 180, 900, 11, 17, 3, 4, 2)
@@ -230,6 +231,15 @@ class DiagnosticsPayloads(unittest.TestCase):
         self.assertEqual((before["backlight_ms"], after["backlight_ms"]), (65_000, 29_464))
         self.assertEqual((after["backlight_ms"] - before["backlight_ms"]) & 0xFFFF, 30_000)
         self.assertEqual((after["rx_armed_ms"] - before["rx_armed_ms"]) & 0xFFFF, 30_000)
+
+
+    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to.
+    def test_a_config_record_names_the_transmitter_it_was_captured_on(self):
+        decoded = records.decode_diag_record(bytes.fromhex(
+            "0202000040f9a16afeca5b0000000000000700010e160000"))
+        self.assertEqual(decoded["addr"], 0x5BCAFE)
+        self.assertEqual(decoded["tx_power_dbm"], 14)
+        self.assertEqual(decoded["pa_rated_dbm"], 22)
 
 
 class TablesAgainstTheSchema(unittest.TestCase):
