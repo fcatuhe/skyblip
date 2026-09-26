@@ -6,6 +6,7 @@
 #include "core/flight/state.h"
 #include "core/power/duty.h"
 #include "core/units/units.h"
+#include "ports/dfu.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/input/gesture.h"
@@ -62,6 +63,7 @@ class ScreenService : public runtime::Service {
     void set_power(bool on);
     void settle_park(uint32_t now_ms);
     void park_for_install();
+    void park_for_recovery(ports::RecoveryPath path);
     void park_for_stow();
     void park_for_off();
     void park_for_flat_cell();
@@ -117,7 +119,7 @@ class ScreenService : public runtime::Service {
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
     bool may_present_park_frame() const;
-    enum class ParkFrame : uint8_t { Wordmark, Installing, Blank, FlatCell };
+    enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell };
     enum class ParkStep : uint8_t { None, Frame, Sleep };
     void park(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
@@ -217,6 +219,7 @@ class ScreenService : public runtime::Service {
     bool presented_once_{false};
     ParkStep park_{ParkStep::None};
     ParkFrame park_frame_{ParkFrame::Wordmark};
+    ports::RecoveryPath recovery_path_{ports::RecoveryPath::Rebooted};
     bool flat_on_glass_{false};
     power::OnTime lit_{};
     bool backlight_{false};

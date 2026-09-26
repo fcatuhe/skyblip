@@ -18,4 +18,4 @@ A command travels in one write because it is parsed per frame. `ble.js` writes c
 
 ## Next
 
-A settings page and an update page belong beside these, sharing `ble.js`. The update path is already decided on the firmware side: MCUmgr/SMP carries the image, and authorisation is the physical confirmation window `ConfigService::upload_allowed()` opens, because encrypted GATT characteristics are unreliable under Web Bluetooth. `dfu` opens that window, `apply` swaps an image already staged, and both refuse on a cell too low to survive the swap.
+A settings page and an update page belong beside these, sharing `ble.js`. The update path is already decided on the firmware side: MCUmgr/SMP carries the image, and authorisation is the physical confirmation window `ConfigService::upload_allowed()` opens, because encrypted GATT characteristics are unreliable under Web Bluetooth. `dfu` opens that window, `apply` swaps an image the device watched arrive whole since that window opened (refused as `nothing_staged` for an empty slot and `upload_unfinished` for an upload that stopped short or came before a restart), and both refuse on a cell too low to survive the swap.

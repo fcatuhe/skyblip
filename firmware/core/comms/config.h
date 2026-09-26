@@ -196,6 +196,7 @@ class ConfigService {
     // a watchdog bite in the field is diagnosable without the panel in hand.
     void set_reset_reason(power::ResetReason reason) { diag_.reset = reason; }
     power::ResetReason reset_reason() const { return diag_.reset; }
+    void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -221,6 +222,9 @@ class ConfigService {
 
     bool install_requested() const { return install_requested_; }
     void clear_install_request() { install_requested_ = false; }
+
+    bool recovery_requested() const { return recovery_requested_; }
+    void clear_recovery_request() { recovery_requested_ = false; }
 
     const char* pending_json() const { return pending_buf_; }
 
@@ -259,8 +263,7 @@ class ConfigService {
     // its own, because a companion page that only draws the air picture should not
     // have to read the receiver's firmware string to get the noise floor. Not four
     // more keys on "status": that reply is the one this service PUSHES
-    // unsolicited and is already sized against the narrowest phone in the field at
-    // its worst case, with eleven bytes left.
+    // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update(uint16_t session_id);
     // And the whole dump, which is the same table as the console's: one frame per
@@ -275,7 +278,7 @@ class ConfigService {
     void drop_replies();
     static const char* flight_name(flight::FlightState fs);
     static bool needs_swap_power(Pending pending);
-    bool image_staged() const;
+    const char* staging_refusal() const;
     bool on_ground() const { return flight_ == flight::FlightState::OnGround; }
 
     ports::Link& link_;
@@ -286,12 +289,14 @@ class ConfigService {
     flight::FlightState flight_{flight::FlightState::Unknown};
     Diagnostics diag_{};
     bool supply_warned_{false};
+    bool went_dark_flat_{false};
     uint16_t up_[LinkSessions::kMaxSessions]{};
     int links_{0};
     LinkClaim claim_{};
     bool status_push_due_{false};
     bool power_off_requested_{false};
     bool install_requested_{false};
+    bool recovery_requested_{false};
     bool log_erase_requested_{false};
     bool gnss_cold_requested_{false};
     Pending pending_{Pending::None};

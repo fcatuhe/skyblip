@@ -36,6 +36,8 @@ Record record_of(const Config& value, const Instant& at) {
     r.payload[9] = value.addr_table;
     r.payload[10] = value.alarm_volume;
     r.payload[11] = value.settings_version;
+    put_i8(r.payload + 12, value.tx_power_dbm);
+    put_i8(r.payload + 13, value.pa_rated_dbm);
     set_flag(r.flags, kConfigFlagAlarmEnabled, value.alarm_enabled);
     set_flag(r.flags, kConfigFlagMetric, value.metric);
     set_flag(r.flags, kConfigFlagBatteryTrimManual, value.battery_trim_manual);
@@ -52,6 +54,8 @@ bool read(const Record& record, Config& out) {
     out.addr_table = record.payload[9];
     out.alarm_volume = record.payload[10];
     out.settings_version = record.payload[11];
+    out.tx_power_dbm = get_i8(record.payload + 12);
+    out.pa_rated_dbm = get_i8(record.payload + 13);
     out.alarm_enabled = record.flagged(kConfigFlagAlarmEnabled);
     out.metric = record.flagged(kConfigFlagMetric);
     out.battery_trim_manual = record.flagged(kConfigFlagBatteryTrimManual);

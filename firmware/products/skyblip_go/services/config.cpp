@@ -12,10 +12,12 @@ Status ConfigLinkService::setup() {
 }
 
 void ConfigLinkService::tick(uint32_t now_ms) {
+    publish_upload_verdict();
     accrue_connected(now_ms);
     drain_link_events(now_ms);
     // INFO: cf 02aug26 nobody calling this leaves the gate at Unknown, which refuses everything
     config_.set_flight_state(context_.state.flight.confirmed_state);
+    publish_upload_verdict();
 
     // INFO: cf 02aug26 core/power decided what the divider reading means and
     // what a low cell is; this hands the already-decided numbers to the link
@@ -48,6 +50,10 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+void ConfigLinkService::publish_upload_verdict() {
+    context_.roles.dfu.publish_upload_allowed(config_.upload_allowed());
 }
 
 void ConfigLinkService::accrue_connected(uint32_t now_ms) {

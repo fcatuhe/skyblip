@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PRODUCT_H
 
+#include <optional>
+
 #include "boards/lilygo/t_echo_plus/board.h"
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
@@ -90,6 +92,8 @@ class Product {
         boot_cell_ = read_boot_cell();
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
         flat_remembered_ = platform_.system_power().flat_on_glass();
+        take_went_dark_flat();
+        config_.config().set_went_dark_flat(went_dark_flat_);
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, flat_remembered_);
             return Status::Ok;
@@ -127,10 +131,15 @@ class Product {
                 config_.config().clear_install_request();
                 shutdown_.request(power::ShutdownReason::Install, now_ms);
             }
+            if (config_.config().recovery_requested()) {
+                config_.config().clear_recovery_request();
+                shutdown_.request(power::ShutdownReason::Recovery, now_ms);
+            }
         }
         shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) screen_.settle_park(now_ms);
+        enter_recovery_once_parked();
         remember_glass();
     }
 
@@ -140,7 +149,7 @@ class Product {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
             if (refused_frame_ == power::RefusedFrame::FlatCell)
-                screen_.park_for_flat_cell();
+                park_flat_cell();
             else
                 screen_.park_for_off();
         }
@@ -162,6 +171,7 @@ class Product {
     // self-test page stays on the glass and the button still works.
     bool flyable() const { return flyable_; }
     power::ResetReason reset_reason() const { return reset_reason_; }
+    bool went_dark_flat() const { return went_dark_flat_; }
     // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
     // setup() and performs the second one.
     power::BootPath boot_path() const { return boot_path_; }
@@ -175,9 +185,11 @@ class Product {
     const power::ShutdownSequencer& shutdown() const { return shutdown_; }
     // INFO: fc 12sep26 rails cut mid-frame leave the ink half-driven, and the sun develops it
     bool ready_to_power_off() const {
-        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking();
+        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
+               (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
     }
     bool installing() const { return shutdown_.reason() == power::ShutdownReason::Install; }
+    bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
     bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
     bool cell_ran_out() const { return shutdown_.reason() == power::ShutdownReason::LowBattery; }
 
@@ -250,11 +262,22 @@ class Product {
         return cell;
     }
 
+    void take_went_dark_flat() {
+        ports::SystemPower& retained = platform_.system_power();
+        went_dark_flat_ = flat_remembered_ || retained.went_dark_flat();
+        retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
+    }
+
     void remember_glass() {
         const bool flat = screen_.flat_on_glass();
         if (flat == flat_remembered_) return;
         flat_remembered_ = flat;
         platform_.system_power().set_flat_on_glass(flat);
+    }
+
+    void park_flat_cell() {
+        platform_.system_power().set_went_dark_flat(true);
+        screen_.park_for_flat_cell();
     }
 
     void guard_cell(uint32_t now_ms) {
@@ -276,6 +299,7 @@ class Product {
 
         boot_snapshot_.device_addr = roles_.device_addr;
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
+        boot_snapshot_.went_dark_flat = went_dark_flat_;
         boot_snapshot_.parts = boot_parts_;
         boot_snapshot_.n_parts = kBootPartCount;
         boot_snapshot_.flyable = flyable_;
@@ -323,12 +347,20 @@ class Product {
         board_.park();
         if (installing())
             screen_.park_for_install();
+        else if (recovering())
+            screen_.park_for_recovery(roles_.dfu.recovery_path());
         else if (stowing())
             screen_.park_for_stow();
         else if (cell_ran_out())
-            screen_.park_for_flat_cell();
+            park_flat_cell();
         else
             screen_.set_power(false);
+    }
+
+    void enter_recovery_once_parked() {
+        if (!recovering() || recovery_taken_ || !shutdown_.ready_to_power_off()) return;
+        if (screen_.parking()) return;
+        recovery_taken_ = roles_.dfu.enter_recovery();
     }
 
     void publish_radio_asleep() {
@@ -390,9 +422,11 @@ class Product {
     power::BootPath boot_path_{power::BootPath::Run};
     power::BootCell boot_cell_{};
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
+    std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
     bool refusal_asked_{false};
     bool flat_remembered_{false};
+    bool went_dark_flat_{false};
     bool flyable_{false};
 };
 
