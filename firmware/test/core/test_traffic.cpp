@@ -60,7 +60,7 @@ model::AircraftObs neighbour(const model::OwnState& own, int north_m, int east_m
     t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
         static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
-    const int64_t east_scaled = (static_cast<int64_t>(east_m) << 14) / icos(ang);
+    const int64_t east_scaled = static_cast<int64_t>(east_m) * 16384 / icos(ang);
     t.lon_1e7 = own.lon_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     t.received.at_s = at_ms / 1000;
     t.received.into_ms = static_cast<uint16_t>(at_ms % 1000);
@@ -174,12 +174,15 @@ TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one
 // the radar is a permanent collision with the aircraft the device is bolted to.
 TEST_CASE("traffic: our own address is not traffic, whoever reports it") {
     TrafficTable tbl;
-    tbl.set_own_address(0xC5D804);
-    CHECK(tbl.update(obs(0xC5D804, 6, 100, model::Source::AdslUplink), 100) < 0);
-    CHECK(tbl.update(obs(0xC5D804, 6, 100, model::Source::AdslDirect), 100) < 0);
+    tbl.set_own_address(58, 0xC5D804);
+    CHECK(tbl.update(obs(0xC5D804, 58, 100, model::Source::AdslUplink), 100) < 0);
+    CHECK(tbl.update(obs(0xC5D804, 58, 100, model::Source::AdslDirect), 100) < 0);
     CHECK(tbl.count() == 0);
-    CHECK(tbl.update(obs(0xC5D805, 6, 100, model::Source::AdslUplink), 100) >= 0);
+    CHECK(tbl.update(obs(0xC5D805, 58, 100, model::Source::AdslUplink), 100) >= 0);
     CHECK(tbl.count() == 1);
+    // The same 24 bits under FLARM's table are another aircraft, and it is traffic.
+    CHECK(tbl.update(obs(0xC5D804, 6, 100, model::Source::AdslDirect), 100) >= 0);
+    CHECK(tbl.count() == 2);
 }
 
 TEST_CASE("traffic: age-out removes stale entries") {
@@ -261,6 +264,32 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
     CHECK_FALSE(wingmen.together(6, 0x314159));
 }
 
+// A relay names thirteen aircraft a frame, and a burst of them evicted one flying a kilometre away.
+TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in farther away") {
+    const model::OwnState own = flying(30, 0);
+    TrafficTable tbl;
+    tbl.set_own_reference(own);
+    const auto at = [&](uint32_t addr, int north_m, model::Source src, uint32_t t) {
+        model::AircraftObs o = neighbour(own, north_m, 0, 0, 30, 0);
+        o.addr = addr;
+        o.source = src;
+        o.received.at_s = t;
+        return o;
+    };
+    REQUIRE(tbl.update(at(0xAAAAAA, 1000, model::Source::AdslDirect, 100), 100) >= 0);
+    for (int i = 1; i < TrafficTable::kCapacity; i++)
+        REQUIRE(tbl.update(at(0x100000u + i, 10000 + i * 100, model::Source::AdslUplink, 101),
+                           101) >= 0);
+    for (uint32_t i = 0; i < 20; i++)
+        CHECK(tbl.update(at(0x200000u + i, 25000, model::Source::AdslUplink, 102), 102) < 0);
+    CHECK(tbl.find(6, 0xAAAAAA) >= 0);
+
+    // A newcomer nearer than the farthest takes that slot, and the nearest stays.
+    CHECK(tbl.update(at(0x300000, 2000, model::Source::AdslUplink, 103), 103) >= 0);
+    CHECK(tbl.find(6, 0x100000u + TrafficTable::kCapacity - 1) < 0);
+    CHECK(tbl.find(6, 0xAAAAAA) >= 0);
+}
+
 TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     TrafficTable tbl;
     // fill capacity
@@ -321,6 +350,17 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a contact and nev
     CHECK(graded.level == Level::None);
     CHECK(graded.valid);
     CHECK(graded.rel_dist_m == doctest::Approx(400).epsilon(0.02));
+}
+
+TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at our level") {
+    const model::OwnState own = flying(30, 0);
+    model::AircraftObs no_altitude = neighbour(own, 55, 0, 0, 30, 180);
+    no_altitude.alt_valid = false;
+    no_altitude.alt_m = 61116;
+    int32_t slant_m = 0;
+    CHECK(range_check(own, no_altitude, slant_m) == Plausibility::Believable);
+    CHECK(slant_m == doctest::Approx(55).epsilon(0.05));
+    CHECK(assess(own, no_altitude, 0).level == Level::Advisory);
 }
 
 TEST_CASE("alarm: an aircraft leaving is as much an advisory as one arriving") {

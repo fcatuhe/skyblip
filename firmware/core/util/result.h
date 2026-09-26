@@ -5,7 +5,7 @@
 
 namespace skyblip {
 
-enum class Status : uint8_t {
+enum class [[nodiscard]] Status : uint8_t {
     Ok = 0,
     Invalid,
     OutOfRange,

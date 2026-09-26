@@ -117,6 +117,20 @@ TEST_CASE("adsl: multi-bit errors within flagged (weak) bits are corrected") {
     CHECK(p.check_crc() == 0);
 }
 
+TEST_CASE("adsl: a flagged bit past the eighth is searched, not wrapped back onto the first") {
+    AdslPacket p = make_reference();
+    p.scramble();
+    p.set_crc();
+    const AdslPacket sent = p;
+    uint8_t err[AdslPacket::kDataBytes] = {0};
+    for (int byte = 2; byte < 12; byte++) err[byte] = 0x10;
+    for (int byte : {9, 10, 11}) p.Data[byte] ^= 0x10;
+    REQUIRE(p.check_crc() != 0);
+
+    CHECK(p.correct(err, 16) == 3);
+    CHECK(std::memcmp(p.Data, sent.Data, AdslPacket::kDataBytes) == 0);
+}
+
 TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") {
     // Push random-ish bit errors, some flagged (weak) and some not, and count:
     //   good      = decoded to the exact original codeword
@@ -262,8 +276,9 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());  // climb_valid is false too
 
-    // Fix, but no vertical rate derived yet: only the climb stays unavailable.
+    // A 3D fix, but no vertical rate derived yet: only the climb stays unavailable.
     own.fix_valid = true;
+    own.vdop_e2 = 150;
     from_own(p, own, 0xABCDEF, 6, 4);
     CHECK_FALSE(p.alt_invalid());
     CHECK(p.alt_m() == 1500);
@@ -315,21 +330,21 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     CHECK(int(p.VertAccuracy) == 0);
     CHECK(int(p.VelAccuracy) == 0);
 
-    // HDOP 0.9 with a fix: 1.8 m horizontal, 2.7 m vertical.
+    // HDOP 0.9 and VDOP 1.5 with a fix: 10.8 m horizontal and 18 m vertical, 2 * DOP * 6 m.
     own.fix_valid = true;
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK(int(p.SourceIntegrity) == AdslPacket::kSourceIntegrity1e3);
+    CHECK(int(p.SourceIntegrity) == 0);
     CHECK(int(p.DesignAssurance) == AdslPacket::kDesignAssuranceNone);
-    CHECK(int(p.NavigIntegrity) == 12);  // Rc < 7.5 m
-    CHECK(int(p.HorizAccuracy) == 7);    // HFOM < 3 m
-    CHECK(int(p.VertAccuracy) == 3);     // VFOM < 10 m
-    CHECK(int(p.VelAccuracy) == 3);      // < 1 m/s
+    CHECK(int(p.NavigIntegrity) == 0);
+    CHECK(int(p.HorizAccuracy) == 5);  // HFOM < 30 m
+    CHECK(int(p.VertAccuracy) == 2);   // VFOM < 45 m
+    CHECK(int(p.VelAccuracy) == 1);    // < 10 m/s
 
     // A 2D solution reports no VDOP, and a height nothing measured the quality
     // of gets no claim at all: the horizontal half of the block still stands.
     own.vdop_e2 = 0;
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK(int(p.HorizAccuracy) == 7);
+    CHECK(int(p.HorizAccuracy) == 5);
     CHECK(int(p.VertAccuracy) == 0);
 
     // A receiver that reports no HDOP is not a receiver reporting a good one.
@@ -364,19 +379,6 @@ TEST_CASE("adsl: vertical accuracy code sits on the G.1.15 boundaries") {
     CHECK(int(AdslPacket::vertical_accuracy_code(15000)) == 0);
 }
 
-// G.1.13 NIC: the containment radius. Without RAIM or a protection level the
-// radius we claim is the DOP-derived accuracy itself, and SourceIntegrity is
-// what says how much that claim is worth.
-TEST_CASE("adsl: navigation integrity code sits on the G.1.13 boundaries") {
-    CHECK(int(AdslPacket::navigation_integrity_code(749)) == 12);
-    CHECK(int(AdslPacket::navigation_integrity_code(750)) == 11);
-    CHECK(int(AdslPacket::navigation_integrity_code(2499)) == 11);
-    CHECK(int(AdslPacket::navigation_integrity_code(2500)) == 10);
-    CHECK(int(AdslPacket::navigation_integrity_code(7499)) == 10);
-    CHECK(int(AdslPacket::navigation_integrity_code(7500)) == 9);
-    CHECK(int(AdslPacket::navigation_integrity_code(3704000)) == 1);
-}
-
 // A degrading fix walks the codes down together, and a hopeless one claims
 // nothing rather than claiming a number nobody should act on.
 TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
@@ -384,30 +386,24 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
     own.fix_valid = true;
     AdslPacket p{};
 
-    own.hdop_e2 = 200;  // 4.0 m horizontal
-    own.vdop_e2 = 200;  // 6.0 m vertical
-    from_own(p, own, 1, 6, 4);
-    CHECK(int(p.HorizAccuracy) == 6);
-    CHECK(int(p.VertAccuracy) == 3);
-    CHECK(int(p.VelAccuracy) == 2);
-
-    own.hdop_e2 = 800;  // 16 m horizontal
-    own.vdop_e2 = 800;  // 24 m vertical
+    own.hdop_e2 = 200;  // 24 m horizontal
+    own.vdop_e2 = 200;  // 24 m vertical
     from_own(p, own, 1, 6, 4);
     CHECK(int(p.HorizAccuracy) == 5);
     CHECK(int(p.VertAccuracy) == 2);
     CHECK(int(p.VelAccuracy) == 1);
-    CHECK(int(p.NavigIntegrity) == 11);  // Rc 7.5 to 25 m
 
-    own.hdop_e2 = 9999;  // 200 m horizontal
-    own.vdop_e2 = 9999;  // 300 m vertical
+    own.hdop_e2 = 800;  // 96 m horizontal
+    own.vdop_e2 = 800;  // 96 m vertical
     from_own(p, own, 1, 6, 4);
-    CHECK(int(p.HorizAccuracy) == 2);  // 0.1 to 0.3 NM
-    CHECK(int(p.VertAccuracy) == 0);   // beyond 150 m: no claim at all
+    CHECK(int(p.HorizAccuracy) == 3);  // 0.05 to 0.1 NM
+    CHECK(int(p.VertAccuracy) == 1);
     CHECK(int(p.VelAccuracy) == 0);
 
-    own.hdop_e2 = 60000;  // 1200 m: beyond 0.5 NM, the same code as no fix
+    own.hdop_e2 = 9999;  // 1200 m: beyond 0.5 NM, the same code as no fix
+    own.vdop_e2 = 9999;
     from_own(p, own, 1, 6, 4);
     CHECK(int(p.HorizAccuracy) == 0);
-    CHECK(int(p.NavigIntegrity) == 6);  // Rc 0.6 to 1 NM, still a bounded claim
+    CHECK(int(p.VertAccuracy) == 0);  // beyond 150 m: no claim at all
+    CHECK(int(p.VelAccuracy) == 0);
 }

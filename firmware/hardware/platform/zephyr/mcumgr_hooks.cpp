@@ -1,3 +1,4 @@
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/mgmt/mcumgr/grp/os_mgmt/os_mgmt.h>
 #include <zephyr/mgmt/mcumgr/mgmt/callbacks.h>
@@ -40,19 +41,18 @@ mgmt_cb_return on_command(uint32_t event, mgmt_cb_return, int32_t* rc, uint16_t*
 
 mgmt_callback g_command_callback{};
 
-}  // namespace
-
-void set_dfu_gate(DfuGate gate) {
-    g_gate = gate;
-
-    static bool registered = false;
-    if (registered) return;
-
+// INFO: fc 23sep26 installed before main() and before Bluetooth, so no gate means no upload
+int register_command_hook() {
     g_command_callback.callback = on_command;
     g_command_callback.event_id = MGMT_EVT_OP_CMD_RECV;
     mgmt_callback_register(&g_command_callback);
-
-    registered = true;
+    return 0;
 }
+
+SYS_INIT(register_command_hook, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+
+}  // namespace
+
+void set_dfu_gate(DfuGate gate) { g_gate = gate; }
 
 }  // namespace skyblip::platform::zephyr

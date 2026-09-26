@@ -64,8 +64,10 @@ void NmeaService::tick(uint32_t now_ms) {
         // starting from the top, on its first pass.
         cursor_ = 0;
         passed_once_ = false;
+        pass_len_ = pass_sent_ = resume_count_ = 0;
         return;
     }
+    drain();
     if (passed_once_) {
         const uint32_t since = now_ms - last_pass_ms_;
         if (since < kMovingTargetRedrawMs) return;
@@ -86,14 +88,14 @@ void NmeaService::run_pass(uint32_t now_ms) {
     payload_ = negotiated < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload
                : negotiated > kFrameBytesCap           ? kFrameBytesCap
                                                        : negotiated;
-    frame_len_ = 0;
-    stalled_ = false;
+    if (pass_sent_ < pass_len_) abandon_pass();
+    pass_len_ = pass_sent_ = resume_count_ = 0;
     emit_status(now_ms);
     emit_ownship();
     emit_altitude();
     emit_vario_and_battery();
     emit_targets(now_ms);
-    flush();
+    drain();
 }
 
 // $PFLAU: how many we hear, whether we have a fix, and the one contact that
@@ -185,29 +187,29 @@ void NmeaService::emit_vario_and_battery() {
 
     if (context_.state.baro.active) {
         v.pressure_pa = div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000);
-        v.has_pressure = true;
+        v.pressure_valid = true;
         // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
         // carries and for the same reason: the consumer applies its own
         // subscale. A consumer that read field 1 recomputes this and ignores it.
         v.alt_m = div_round(
             flight::pressure_to_alt_cm(div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000)),
             100);
-        v.has_alt = true;
+        v.alt_valid = true;
     }
 
     if (context_.state.baro.temperature_valid) {
         v.temperature_c = div_round<int32_t>(context_.state.baro.temperature_decicelsius, 10);
-        v.has_temperature = true;
+        v.temperature_valid = true;
     }
 
     if (own.climb_valid) {
         const int32_t mm_s = own.climb_mm_s;
         v.vario_cm_s = (mm_s >= 0 ? mm_s + 5 : mm_s - 5) / 10;
-        v.has_vario = true;
+        v.vario_valid = true;
     }
 
     v.battery_percent = context_.state.power.battery.percent;
-    v.has_battery = context_.state.power.battery.valid;
+    v.battery_valid = context_.state.power.battery.valid;
 
     write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), v));
 }
@@ -223,8 +225,7 @@ void NmeaService::emit_targets(uint32_t now_ms) {
 
     int sent = 0;
     const int from = cursor_;
-    for (int step = 0;
-         step < traffic::TrafficTable::kCapacity && sent < kTargetsPerPass && !stalled_; step++) {
+    for (int step = 0; step < traffic::TrafficTable::kCapacity && sent < kTargetsPerPass; step++) {
         const int slot = (from + step) % traffic::TrafficTable::kCapacity;
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
@@ -234,8 +235,8 @@ void NmeaService::emit_targets(uint32_t now_ms) {
             context_.state.callsigns.find(target->obs.addr_table, target->obs.addr));
         if (len <= 0) continue;
         write(sentence_, len);
+        resumes_[resume_count_++] = {pass_len_, (slot + 1) % traffic::TrafficTable::kCapacity};
         sent++;
-        cursor_ = (slot + 1) % traffic::TrafficTable::kCapacity;
     }
 }
 
@@ -247,30 +248,38 @@ void NmeaService::emit_targets(uint32_t now_ms) {
 // resynchronises on CRLF, which is why both SoftRF forks push their whole NMEA
 // output through a 20-byte BLE chunker. The cost is round trips, not integrity:
 // a measured full-table pass is 549 bytes, which is three notifications at a
-// negotiated 244, four at an iPhone's 182 and twenty-eight at the guaranteed 20
-// - one second of a connection interval either way.
+// negotiated 244, four at an iPhone's 182 and twenty-eight at the guaranteed 20.
+// INFO: fc 25sep26 more than the link's notify share, so the pass is held here and drained per tick
 void NmeaService::write(const char* bytes, int len) {
-    for (int at = 0; at < len && !stalled_;) {
-        const int room = payload_ - frame_len_;
-        const int take = len - at < room ? len - at : room;
-        std::memcpy(frame_ + frame_len_, bytes + at, static_cast<size_t>(take));
-        frame_len_ += take;
-        at += take;
-        if (frame_len_ == payload_) flush();
+    if (len <= 0 || pass_len_ + len > kPassBytesCap) return;
+    std::memcpy(pass_ + pass_len_, bytes, static_cast<size_t>(len));
+    pass_len_ += len;
+}
+
+// A link that refuses outright ends the pass rather than being argued with: what
+// is left unsent is a second-old picture, and the next pass has a current one.
+void NmeaService::drain() {
+    while (pass_sent_ < pass_len_) {
+        const int rest = pass_len_ - pass_sent_;
+        const int take = rest < payload_ ? rest : payload_;
+        const Status sent = context_.roles.link.send(
+            events::Endpoint::Nmea,
+            ConstByteSpan(reinterpret_cast<const uint8_t*>(pass_) + pass_sent_,
+                          static_cast<size_t>(take)));
+        if (sent == Status::WouldBlock) return;
+        if (!is_ok(sent)) {
+            abandon_pass();
+            return;
+        }
+        pass_sent_ += take;
+        for (int i = 0; i < resume_count_ && resumes_[i].end <= pass_sent_; i++)
+            cursor_ = resumes_[i].cursor;
     }
 }
 
-// A link that refuses ends the pass rather than being argued with: what is left
-// unsent is a second-old picture, and the next pass has a current one.
-void NmeaService::flush() {
-    if (frame_len_ == 0) return;
-    const Status sent = context_.roles.link.send(
-        events::Endpoint::Nmea,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(frame_), static_cast<size_t>(frame_len_)));
-    frame_len_ = 0;
-    if (is_ok(sent)) return;
+void NmeaService::abandon_pass() {
     link_drops_++;
-    stalled_ = true;
+    pass_len_ = pass_sent_ = 0;
 }
 
 }  // namespace skyblip::go

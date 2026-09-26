@@ -1,7 +1,7 @@
 // One terminal voltage, two meanings: on the cable the charger holds the cell
 // above its own resting voltage, so the same reading is a far emptier cell. These
 // pin down that the gauge says which curve it read, never walks the wrong way, and
-// ignores the sag of a 22 dBm burst. A percentage that jumps when the radio keys
+// ignores the sag of a 14 dBm burst. A percentage that jumps when the radio keys
 // is a gauge a pilot stops believing.
 #include <initializer_list>
 #include <string>
@@ -77,7 +77,7 @@ TEST_CASE("gauge: one transmit burst does not move the gauge") {
     settle(gauge, 3900);
     const uint8_t before = gauge.state().percent;
 
-    // A 22 dBm burst sags the rail for a single reading. The median throws it out
+    // A 14 dBm burst sags the rail for a single reading. The median throws it out
     // whole: 200 mV of transient must not read as a fifth of the pack gone.
     gauge.apply(sample(3700));
     CHECK(gauge.state().millivolts == 3900);
@@ -703,12 +703,28 @@ TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask
     CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/true, flat) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::Pin, false, flat) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::PowerOn, false, flat) == BootPath::SleepAgain);
-    CHECK(boot_path(ResetCause::Watchdog, false, flat) == BootPath::SleepAgain);
+    CHECK(boot_path(ResetCause::Watchdog, false, healthy(power::kCutoffMv - 1)) ==
+          BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::Brownout, false, flat) == BootPath::SleepAgain);
 
     CHECK(boot_path(ResetCause::PowerOn, false, healthy(kBootLockoutMv - 1)) ==
           BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::PowerOn, false, healthy(kBootLockoutMv)) == BootPath::Run);
+}
+
+// A fault reset in flight met the switch-on lockout and left the pilot dark until a cable.
+TEST_CASE("wake: a unit that reset itself runs on any cell the cutoff would have kept flying") {
+    const BootCell low = healthy((power::kCutoffMv + kBootLockoutMv) / 2);
+    for (const ResetCause fault :
+         {ResetCause::Watchdog, ResetCause::Lockup, ResetCause::Software}) {
+        CAPTURE(static_cast<uint32_t>(fault));
+        CHECK(boot_path(fault, false, low) == BootPath::Run);
+        CHECK(boot_path(fault, false, healthy(power::kCutoffMv)) == BootPath::Run);
+        CHECK(boot_path(fault, false, healthy(power::kCutoffMv - 1)) == BootPath::SleepAgain);
+    }
+    CHECK(boot_path(ResetCause::PowerOn, false, low) == BootPath::SleepAgain);
+    CHECK(boot_path(ResetCause::LowPowerWake, true, low) == BootPath::SleepAgain);
+    CHECK(boot_path(ResetCause::Pin, false, low) == BootPath::SleepAgain);
 }
 
 // SENSE is a level detect: a button held in a bag re-wakes what it just refused.

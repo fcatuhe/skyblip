@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "core/power/battery.h"
+#include "core/protocol/adsl.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
 #include "core/util/json_min.h"
@@ -254,13 +255,15 @@ void migrate_v7(const SettingsV7& old, Settings& out) {
     out.callsign[kCallsignCap - 1] = 0;
 }
 
-bool callsign_is_printable(const char* s) {
+bool callsign_is_typeable(const char* s) {
     for (size_t i = 0; i < kCallsignCap; i++) {
         if (s[i] == 0) return true;
-        if (s[i] < 0x20 || s[i] > 0x7E) return false;
+        if (!protocol::is_callsign_char(s[i])) return false;
     }
     return false;
 }
+
+bool fits_u8(long v) { return v >= 0 && v <= UINT8_MAX; }
 
 }  // namespace
 
@@ -276,7 +279,7 @@ Status validate(const Settings& s) {
     if (s.freq_trim_e1_ppm > kFreqTrimLimitTenthsPpm ||
         s.freq_trim_e1_ppm < -kFreqTrimLimitTenthsPpm)
         return Status::OutOfRange;
-    if (!callsign_is_printable(s.callsign)) return Status::Invalid;
+    if (!callsign_is_typeable(s.callsign)) return Status::Invalid;
     return Status::Ok;
 }
 
@@ -336,6 +339,8 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out) {
     } else {
         return Status::Unsupported;
     }
+    // INFO: fc 23sep26 a name an older build took over the link is dropped, not the trims beside it
+    if (!callsign_is_typeable(out.callsign)) out.callsign[0] = 0;
     if (validate(out) != Status::Ok) return Status::Invalid;
     return Status::Ok;
 }
@@ -362,9 +367,15 @@ Status apply_json(Settings& s, const char* json, int len) {
     long v;
     bool b;
     Settings n = s;
-    if (r.get_int("aircraft_type", v)) n.aircraft_type = static_cast<uint8_t>(v);
+    if (r.get_int("aircraft_type", v)) {
+        if (!fits_u8(v)) return Status::OutOfRange;
+        n.aircraft_type = static_cast<uint8_t>(v);
+    }
     if (r.get_bool("alarm", b)) n.alarm_enabled = b;
-    if (r.get_int("alarm_volume", v)) n.alarm_volume = static_cast<uint8_t>(v);
+    if (r.get_int("alarm_volume", v)) {
+        if (!fits_u8(v)) return Status::OutOfRange;
+        n.alarm_volume = static_cast<uint8_t>(v);
+    }
     if (r.get_int("units", v)) n.units = v ? Units::Metric : Units::Nautical;
     // Narrowed before it is validated, not after: 65536 truncates to 0 in an
     // int16 and would pass a bound check that never saw the value sent.
@@ -378,7 +389,11 @@ Status apply_json(Settings& s, const char* json, int len) {
         if (v < -kFreqTrimLimitTenthsPpm || v > kFreqTrimLimitTenthsPpm) return Status::OutOfRange;
         n.freq_trim_e1_ppm = static_cast<int16_t>(v);
     }
-    r.get_str("callsign", n.callsign, sizeof(n.callsign));
+    char callsign[kCallsignCap + 1] = {0};
+    if (r.get_str("callsign", callsign, sizeof(callsign))) {
+        if (std::strlen(callsign) >= kCallsignCap) return Status::OutOfRange;
+        std::memcpy(n.callsign, callsign, kCallsignCap);
+    }
     Status st = validate(n);
     if (st != Status::Ok) return st;
     s = n;

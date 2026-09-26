@@ -6,7 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="<%= site_name %>">
     <meta name="mobile-web-app-capable" content="yes">
-    <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= render 'layouts/og_meta_tags', tags: {
@@ -45,6 +44,8 @@
   <body>
     <%= render "layouts/nav" %>
 
-    <%= yield %>
+    <main>
+      <%= yield %>
+    </main>
   </body>
 </html>

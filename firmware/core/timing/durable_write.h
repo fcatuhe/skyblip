@@ -127,6 +127,8 @@ class DurableWriteWindow {
 
     // The write happened. `forced` is the verdict that placed it, not a guess.
     void placed(uint32_t now_ms, bool forced);
+    // INFO: fc 25sep26 stays pending with its bound restarted, and counts in neither ratio term
+    void refused(uint32_t now_ms, bool forced);
 
     bool pending() const { return pending_; }
 

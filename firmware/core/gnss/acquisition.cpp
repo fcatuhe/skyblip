@@ -15,7 +15,7 @@ const char* stage_name(Stage stage) {
 }
 
 Stage stage_of(const GnssSolution& solution) {
-    if (solution.is_fix) return Stage::Fixed;
+    if (solution.fix_valid) return Stage::Fixed;
     if (solution.utc_valid) return Stage::Solving;
     return Stage::Blind;
 }

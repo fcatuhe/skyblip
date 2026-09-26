@@ -157,9 +157,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp is a quarter second inside a 15-s
     CHECK(protocol::timestamp_code(15, -250) == 59);
 }
 
-// TODO: fc 18sep26 the code is the burst instant floored to 250 ms, so it can name one 249 ms early
-TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms" *
-          doctest::skip()) {
+// A burst at 613 ms named 500 while carrying the position to 613: 113 ms apart, 14 m at 120 kt.
+TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms") {
     model::OwnState own = flying();
     own.utc = 1785628800;
     const int32_t into_utc_ms = 613;
@@ -168,7 +167,15 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position
                        protocol::BurstInstant{own.utc, into_utc_ms, into_utc_ms});
     const int32_t named_ms = static_cast<int32_t>(p.TimeStamp % 4u) *
                              static_cast<int32_t>(protocol::kTimeStampQuarterMs);
-    CHECK(std::abs(named_ms - into_utc_ms % 1000) <= 10);
+    CHECK(named_ms == 500);
+
+    protocol::AdslPacket at_named{};
+    at_named.init();
+    const flight::Prediction there = flight::extrapolate(own, named_ms);
+    at_named.set_lat_1e7(there.lat_1e7);
+    at_named.set_lon_1e7(there.lon_1e7);
+    CHECK(p.lat_1e7() == at_named.lat_1e7());
+    CHECK(p.lon_1e7() == at_named.lon_1e7());
 }
 
 // It dates the navigation solution, and the position is carried to it, so the pair is one moment.
@@ -315,6 +322,32 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked exampl
     CHECK(alt_code(p) == 0x3FFFu);
     CHECK(p.alt_invalid());
     CHECK(protocol::AdslPacket::kAltOffsetM == 320);
+}
+
+// The invalid code decoded as 61116 m, and the range gate threw a 2D neighbour 60 km up.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: an altitude marked invalid decodes as no altitude, not 61 km") {
+    protocol::AdslPacket p = traffic_packet();
+    p.set_alt_invalid();
+    model::AircraftObs obs{};
+    REQUIRE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
+    CHECK(obs.position_valid);
+    CHECK_FALSE(obs.alt_valid);
+    CHECK(obs.alt_m == 0);
+
+    REQUIRE(
+        protocol::to_obs(traffic_packet(), events::Stamp{}, -80, model::Source::AdslDirect, obs));
+    CHECK(obs.alt_valid);
+}
+
+// A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
+    model::OwnState own = flying();
+    own.vdop_e2 = 0;
+    protocol::AdslPacket p{};
+    protocol::from_own(p, own, 0x123456, 6, 4);
+    CHECK(p.has_position());
+    CHECK(p.alt_invalid());
+    CHECK(p.has_speed());
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.8: the ground speed encodes the clause's worked examples") {

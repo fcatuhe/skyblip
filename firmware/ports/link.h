@@ -17,6 +17,9 @@ namespace skyblip::ports {
 // is the only reason payload_bytes() exists.
 constexpr uint16_t kMinimumLinkPayload = 20;
 
+// INFO: fc 25sep26 WouldBlock is a link at its share of notifications, and a reply waits this long
+constexpr uint32_t kReplyHoldMs = 2000;
+
 class Link {
    public:
     virtual ~Link() = default;
@@ -30,6 +33,7 @@ class Link {
     //
     // INFO: fc 18sep26 With several centrals this is the smallest, one frame goes to all.
     virtual uint16_t payload_bytes() const { return kMinimumLinkPayload; }
+    virtual uint16_t payload_bytes_to(uint16_t /*session_id*/) const { return payload_bytes(); }
 
     // INFO: fc 04aug26 Longer than payload_bytes() is refused, never truncated:
     // a controller does not shorten an oversized notification, it fails it, and

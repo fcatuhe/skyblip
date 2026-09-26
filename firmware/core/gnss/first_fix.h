@@ -41,7 +41,7 @@ class FirstFix {
     bool take_acquired();
 
     bool ever_fixed() const { return ever_fixed_; }
-    bool has_fix() const { return has_fix_; }
+    bool has_fix() const { return fix_valid_; }
     uint32_t fix_since_ms() const { return fix_since_ms_; }
 
     bool settled(uint32_t now_ms) const;
@@ -54,7 +54,7 @@ class FirstFix {
     uint32_t fix_since_ms_{0};
     uint32_t settle_ms_{kFirstFixSettleMs};
     uint8_t converged_{0};
-    bool has_fix_{false};
+    bool fix_valid_{false};
     bool ever_fixed_{false};
     bool acquired_pending_{false};
 };

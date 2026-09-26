@@ -61,7 +61,7 @@ struct StoreRig {
         request.command = comms::LogCommand::List;
         request.store = owner;
         request.link_session = link.session_id();
-        request.has_index = true;
+        request.index_valid = true;
         request.index = index;
         request.understood = true;
         link.clear();

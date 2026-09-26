@@ -2,6 +2,26 @@
 
 set -eu
 
+base=
+base_follows=false
+for arg in "$@"; do
+  if [ "$base_follows" = true ]; then
+    base=$arg
+    base_follows=false
+  fi
+  case $arg in
+    --base) base_follows=true ;;
+    --base=*) base=${arg#--base=} ;;
+  esac
+done
+
+case $base in
+  "" | -*)
+    echo "FAIL: bin/static-build needs --base, e.g. bin/static-build --base https://skyblip.eu" >&2
+    exit 1
+    ;;
+esac
+
 # Run the app in production mode to ensure correct asset URLs are generated.
 export RAILS_ENV=production
 
