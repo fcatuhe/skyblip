@@ -232,7 +232,7 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
       </p>
     </div>
     <figure class="shot">
-      <%= pages_image_tag "menu-radar.png", alt: "Le menu du radar : type d’aéronef, unités, portée, alarme et volume, avec l’aide PAD MOVES - BUTTON CHANGES en bas" %>
+      <%= pages_image_tag "menu-radar.png", alt: "Le menu du radar : type d’aéronef, indicatif, unités, portée, alarme et volume, avec l’aide PAD MOVES - BUTTON CHANGES en bas" %>
       <figcaption>Le menu du radar</figcaption>
     </figure>
   </div>
@@ -245,6 +245,46 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
     <li>Après la dernière ligne&nbsp;: retour à l&rsquo;image</li>
     <li>Une minute sans rien&nbsp;: elle revient seule</li>
   </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Votre indicatif, <span class="highlight">tapé avec deux contacts</span>.</h3>
+      <p>
+        <span class="mono">CALLSIGN</span> est la seule ligne qui ouvre un champ
+        au lieu de faire avancer une valeur, et les deux gestes s&rsquo;y
+        inversent&nbsp;: le pavé fait défiler le caractère sous la barre, le
+        bouton passe au suivant. Le cycle est un blanc, un tiret,
+        <span class="mono">A</span> à <span class="mono">Z</span>,
+        <span class="mono">0</span> à <span class="mono">9</span>, puis de
+        nouveau le blanc, si bien qu&rsquo;un pouce qui dépasse une lettre y
+        revient sans second geste.
+      </p>
+      <p>
+        Le bouton sur le dernier caractère enregistre le nom, et les blancs
+        laissés à la fin sont retirés. Pour effacer un indicatif, ramenez le
+        premier caractère sur un blanc et pressez&nbsp;: l&rsquo;écran dit
+        <span class="mono">BLANK THE FIRST TO CLEAR</span> tant que le nom est
+        là, et <span class="mono">BUTTON CLEARS</span> une fois le blanc sous la
+        barre. Quittez le champ sans le terminer, ou laissez-le une minute, et
+        rien n&rsquo;est enregistré.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= pages_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, PAD ROLLS au-dessus de BUTTON NEXT, et BLANK THE FIRST TO CLEAR en bas" %>
+      <figcaption>Le champ indicatif</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= pages_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif, le premier caractère ramené sur un blanc, la barre dessous, et l’aide qui dit maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <figcaption>Le premier caractère effacé</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= pages_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, la ligne CALLSIGN sélectionnée et qui affiche NONE" %>
+      <figcaption>Une pression plus tard</figcaption>
+    </figure>
+  </div>
 
   <div class="feature feature--reverse">
     <div>
@@ -262,8 +302,10 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
         rend la page où vous étiez. Les écrans ci-dessous sont ceux de
         l&rsquo;établi, du parking et du rapport de bug&nbsp;: aucun n&rsquo;est
         une image sur laquelle tomber avec le pouce. Le dernier enregistre un
-        vol pour ce rapport, et annonce ce que l&rsquo;enregistrement coûte à la
-        mémoire flash avant qu&rsquo;on le lance.
+        vol pour ce rapport, tous les sujets pour un bug ou seulement la
+        batterie et les temps d&rsquo;activité pour une décharge, et annonce ce
+        que celui que vous choisissez coûte à la mémoire flash avant qu&rsquo;on
+        le lance.
       </p>
     </div>
     <figure class="shot">
@@ -282,7 +324,7 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
       <figcaption>Satellites</figcaption>
     </figure>
     <figure class="shot">
-      <%= pages_image_tag "radio-log.png", alt: "Le journal radio : une ligne par trame reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, son adresse et son niveau" %>
+      <%= pages_image_tag "radio-log.png", alt: "Le journal radio : sous le point, l’état du PPS et le bruit de fond, une ligne par trame reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, ce qu’elle portait, son adresse et son niveau" %>
       <figcaption>Journal radio</figcaption>
     </figure>
     <figure class="shot">
@@ -290,7 +332,7 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
       <figcaption>Autotest</figcaption>
     </figure>
     <figure class="shot">
-      <%= pages_image_tag "capture.png", alt: "La page capture, rien en cours d’enregistrement : l’état à l’arrêt, puis le prix d’un enregistrement, les secteurs de flash qu’il prendrait, les vols enregistrés qu’il effacerait et les heures d’enregistrement qu’il garderait, et PRESS TWICE TO ARM en bas" %>
+      <%= pages_image_tag "capture.png", alt: "La page capture, rien en cours d’enregistrement : l’état à l’arrêt, les deux captures au choix, FULL pour tous les sujets et POWER RUN pour la batterie et les temps d’activité, puis le prix de celle choisie, les secteurs de flash qu’elle prendrait, les vols enregistrés qu’elle effacerait et les heures d’enregistrement qu’elle garderait, et PAD PICKS, PRESS TWICE TO ARM en bas" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>
@@ -303,7 +345,7 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
       <tbody>
         <tr>
           <th>Une tape sur le pavé</th>
-          <td>la page suivante</td>
+          <td>la page suivante, et sur la page capture la capture suivante</td>
           <td>la ligne suivante, et après la dernière, la page à laquelle le menu appartient</td>
         </tr>
         <tr>
@@ -381,16 +423,50 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
     </figure>
   </div>
 
+  <div class="feature">
+    <div>
+      <h3>Une batterie qui se vide <span class="highlight">le dit en partant</span>.</h3>
+      <p>
+        À 3,2&nbsp;V l&rsquo;appareil s&rsquo;éteint seul, et la dernière chose
+        qu&rsquo;il écrit est pourquoi. Vous n&rsquo;avez rien pressé, donc
+        l&rsquo;écran est le seul à pouvoir vous le dire&nbsp;: sans lui, un
+        appareil qui s&rsquo;arrête seul est un appareil qui a planté ou qui est
+        mort. Le bouton cesse de répondre au même moment, parce qu&rsquo;une
+        pression ne ferait que ramener à la même coupure.
+      </p>
+      <p>
+        Le câble est la sortie, et c&rsquo;est un seul geste. Le brancher
+        réveille l&rsquo;électronique, qui refuse de redevenir un appareil et
+        remet le logo&nbsp;: un appareil éteint ordinaire, en charge, que la
+        prochaine pression démarre. Une batterie qui s&rsquo;est vidée sur une
+        étagère n&rsquo;a rien écrit, alors c&rsquo;est la pression qui reçoit
+        la réponse, avec la même ligne.
+      </p>
+      <p>
+        Le démarrage suivant s&rsquo;en souvient. Son autotest affiche
+        <span class="mono">WAS FLAT</span> à côté de la tension, et un téléphone
+        qui s&rsquo;y connecte tant qu&rsquo;il tourne l&rsquo;apprend aussi, si
+        bien qu&rsquo;un appareil qui s&rsquo;est éteint ne revient pas comme si
+        de rien n&rsquo;était.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= pages_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil qui s’est éteint seul, batterie vide : le logo skyBlip avec les mots FLAT BATTERY dessous" %>
+      <figcaption>Batterie vide</figcaption>
+    </figure>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
         <tr><th>Appareil éteint</th><th>Ce qui se passe</th></tr>
       </thead>
       <tbody>
-        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur</td></tr>
+        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: l&rsquo;écran le dit déjà, et le câble est le chemin du retour</td></tr>
         <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
+        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">FLAT BATTERY</span></td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
-        <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: branchez le chargeur</td></tr>
         <tr><th>Pression sur <span class="mono">RST</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
       </tbody>
     </table>
@@ -435,19 +511,63 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
   <h3>Deux pressions autorisent, <span class="highlight">une pression refuse</span>.</h3>
   <p class="lede">
     Quand une application demande quelque chose qui touche à l&rsquo;appareil
-    que vous avez à bord, un nouveau firmware, une écriture de réglages,
-    l&rsquo;effacement de vos vols, une extinction, l&rsquo;appareil ne croit
-    pas le téléphone sur parole. Il pose la question sur son propre écran, la
-    nomme, et attend trente secondes&nbsp;:
+    que vous avez à bord, un nouveau firmware, un redémarrage dans le
+    bootloader USB, une écriture de réglages, l&rsquo;effacement de vos vols,
+    une extinction, l&rsquo;appareil ne croit pas le téléphone sur parole. Il
+    pose la question sur son propre écran, la nomme, et attend trente
+    secondes&nbsp;:
     <span class="mono">PRESS TWICE TO ALLOW</span>,
     <span class="mono">ONE PRESS REFUSES</span>. Pas de réponse dans la fenêtre
     vaut refus.
+  </p>
+
+  <figure class="shot">
+    <%= pages_image_tag "confirm.png", alt: "La demande d’autorisation : AUTHORISE, SETTINGS, appliquer les réglages envoyés par le téléphone, PRESS TWICE TO ALLOW au-dessus de ONE PRESS REFUSES, refus après 30 s" %>
+    <figcaption>Une écriture de réglages, demandée à l&rsquo;écran</figcaption>
+  </figure>
+
+  <p class="lede">
+    Votre indicatif est l&rsquo;une de ces écritures. L&rsquo;application
+    l&rsquo;envoie, l&rsquo;écran demande, et dès lors il est sur la page état,
+    sur les ondes une fois toutes les dix secondes, et sur les écrans des
+    aéronefs autour de vous. Vous pouvez aussi le taper sur l&rsquo;appareil
+    lui-même, dans le champ indicatif plus haut.
   </p>
   <p class="lede">
     Les pressions ne comptent qu&rsquo;une fois la question arrivée à
     l&rsquo;écran et votre pouce arrêté&nbsp;: une série de pressions qui
     faisait avancer un réglage ne peut pas être dépensée en autorisation. Le
     pavé est inerte tant qu&rsquo;une question est posée.
+  </p>
+
+  <h3>Le nouveau firmware vient <span class="highlight">d&rsquo;une page web</span>.</h3>
+  <p class="lede">
+    <%= link_to_page "manage", label: "La page de mise à jour" %> envoie une
+    image signée par le même Bluetooth, depuis Chrome ou Edge, et l&rsquo;écran
+    demande deux fois&nbsp;: avant de prendre l&rsquo;image, et avant de
+    l&rsquo;installer. Le nouveau firmware doit ensuite démarrer sa radio,
+    entendre son récepteur et dessiner son écran avant de se garder. Sinon,
+    l&rsquo;appareil revient au firmware qu&rsquo;il avait, et aux réglages que
+    vous aviez quand la mise à jour a commencé.
+  </p>
+  <p class="lede">
+    Des réglages que l&rsquo;appareil ne sait pas lire ne passent jamais pour
+    les vôtres. Il tourne sur ses valeurs par défaut, la ligne
+    <span class="mono">STORAGE</span> de l&rsquo;autotest affiche
+    <span class="mono">NVS+NOR DEFAULTS</span>, et le téléphone est
+    prévenu&nbsp;: vérifiez l&rsquo;indicatif et le type d&rsquo;aéronef avant
+    de voler.
+  </p>
+  <p class="lede">
+    Quand le firmware ne prend pas du tout, la même page redémarre
+    l&rsquo;appareil dans son bootloader USB, après les mêmes deux pressions.
+    L&rsquo;écran affiche <span class="mono">USB BOOTLOADER</span> et
+    <span class="mono">PRESS THE BUTTON TO START IT</span>&nbsp;: une pression,
+    et sur un câble USB l&rsquo;appareil est un lecteur nommé
+    <span class="mono">TECHOBOOT</span>. Un <span class="mono">.uf2</span>
+    déposé dessus est un nouveau firmware, <span class="mono">RST</span> ramène
+    à skyBlip, et rien n&rsquo;est émis pendant ce temps. Deux pressions sur
+    <span class="mono">RST</span> mènent au même lecteur sans téléphone.
   </p>
 </section>
 
