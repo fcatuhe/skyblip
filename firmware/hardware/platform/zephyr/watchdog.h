@@ -8,6 +8,7 @@
 #include <zephyr/task_wdt/task_wdt.h>
 
 #include "ports/watchdog.h"
+#include "runtime/tasks.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -21,7 +22,10 @@ class Watchdog : public ports::Watchdog {
     static constexpr uint32_t kRopeMs =
         CONFIG_TASK_WDT_MIN_TIMEOUT + CONFIG_TASK_WDT_HW_FALLBACK_DELAY;
     // INFO: fc 23sep26 under MIN_TIMEOUT, so task_wdt's background feed never renews the rope
+    static_assert(CONFIG_TASK_WDT_MIN_TIMEOUT > 1000, "kChannelMs would wrap below zero");
     static constexpr uint32_t kChannelMs = CONFIG_TASK_WDT_MIN_TIMEOUT - 1000;
+    static_assert(kRopeMs == runtime::kHardwareWatchdogMs,
+                  "prj.conf's task_wdt window must be the rope the loop is supervised by");
 
     Status arm(uint32_t timeout_ms) override {
         if (armed_) return Status::Ok;
