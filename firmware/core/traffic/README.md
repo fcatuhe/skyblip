@@ -45,7 +45,13 @@ Six is where a fade stops being a fade. At 1 Hz, six consecutive misses is a lin
 
 A contact whose G.1.2 code says it is on the ground is drawn, named and listed, and never graded: `assess` returns `Level::None` for it whatever the geometry. A ring of 3 km and 300 m over an airfield is every aeroplane on the apron, and a 0.1 Hz emitter is inside `kAlertMaxAgeMs` for five seconds in every ten anyway, so half of those advisories would be decided on a position the same layer calls too old. `formation` ignores the same contacts, because a tug and its glider hold station on the apron as well as they do on tow.
 
-Unknown is not ground: ALP-TAS carries no state at all, and an emitter that does not say where it is gets the airborne treatment in both places.
+Unknown is not ground: a sender that does not say where it is gets the airborne treatment everywhere, the six-second lease included.
+
+## Whichever system heard it
+
+The ground rules above read one field, `AircraftObs::flight_state`, and never ask which system a report came from. The field holds the ADS-L G.1.2 code whatever the wire was, and `flight::state_from` is its only reader, so a code nobody named is `Unknown`. Each decoder fills it: ADS-L copies G.1.2, the uplink record carries the same two bits, and ALP-TAS maps its own two-bit field in `alptas_flight_state` (1 on the ground, 2 airborne, 3 airborne and circling, and 0, which no known sender transmits, `Unknown`). The lease, the grade, the direct hold and the formation all key off that field and nothing else.
+
+A new inbound source owes this directory one thing: write the field, `Unknown` when its wire has no state, and it inherits everything above without a line changing here. `test/core/test_traffic_sources.cpp` flies one parked aircraft through every decoder and holds them all to the same answers, so a source added to its table is checked the day it lands.
 
 ## Dismissal
 
