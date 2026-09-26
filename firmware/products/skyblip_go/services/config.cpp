@@ -196,7 +196,7 @@ void ConfigLinkService::load() {
     if (loaded_) return;
     load_image_state();
     settings_ = go::defaults();
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Storage)) {
+    if (!storable()) {
         loaded_ = true;
         return;
     }
@@ -214,7 +214,7 @@ void ConfigLinkService::load() {
 }
 
 bool ConfigLinkService::persist() {
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Storage)) return true;
+    if (!storable()) return true;
     uint8_t blob[kBlobCap];
     go::to_blob(settings_, blob, sizeof(blob));
     const size_t len = go::blob_size();
@@ -231,7 +231,7 @@ void ConfigLinkService::load_image_state() {
     const ports::Capabilities fitted = context_.roles.capabilities;
     const bool has_dfu = ports::has(fitted, ports::Capability::Dfu);
     update_recorded_ = false;
-    if (ports::has(fitted, ports::Capability::Storage)) {
+    if (storable()) {
         uint8_t blob[dfu::kUpdateRecordBytes];
         size_t n = 0;
         update_recorded_ = is_ok(context_.roles.kv.read(kUpdateKey, blob, sizeof(blob), n)) &&
@@ -260,10 +260,7 @@ void ConfigLinkService::load_image_state() {
 }
 
 void ConfigLinkService::record_update() {
-    const ports::Capabilities fitted = context_.roles.capabilities;
-    if (!ports::has(fitted, ports::Capability::Storage) ||
-        !ports::has(fitted, ports::Capability::Dfu))
-        return;
+    if (!storable() || !ports::has(context_.roles.capabilities, ports::Capability::Dfu)) return;
     dfu::UpdateRecord record;
     if (!context_.roles.dfu.running_version(record.from)) return;
     if (!context_.roles.dfu.staged_version(record.to)) return;

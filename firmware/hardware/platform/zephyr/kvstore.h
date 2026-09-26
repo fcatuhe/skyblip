@@ -27,10 +27,14 @@ class KvStore : public ports::KvStore {
             return Status::Down;
         fs_.sector_size = info.size;
         fs_.sector_count = 3U;
-        return nvs_mount(&fs_) == 0 ? Status::Ok : Status::Down;
+        mounted_ = nvs_mount(&fs_) == 0;
+        return mounted_ ? Status::Ok : Status::Down;
     }
 
+    bool ready() const override { return mounted_; }
+
     Status read(const char* key, uint8_t* buf, size_t cap, size_t& out_len) override {
+        if (!mounted_) return Status::Down;
         ssize_t n = nvs_read(&fs_, id(key), buf, cap);
         if (n <= 0) return Status::NotFound;
         // INFO: fc 23sep26 nvs_read answers the stored length, and copies only cap of it
@@ -39,10 +43,12 @@ class KvStore : public ports::KvStore {
         return Status::Ok;
     }
     Status write(const char* key, const uint8_t* buf, size_t len) override {
+        if (!mounted_) return Status::Down;
         ssize_t n = nvs_write(&fs_, id(key), buf, len);
         return (n == static_cast<ssize_t>(len) || n == 0) ? Status::Ok : Status::Full;
     }
     Status erase(const char* key) override {
+        if (!mounted_) return Status::Down;
         return nvs_delete(&fs_, id(key)) == 0 ? Status::Ok : Status::NotFound;
     }
 
@@ -53,6 +59,7 @@ class KvStore : public ports::KvStore {
         return static_cast<uint16_t>(h & 0xFFFF) | 1u;  // avoid id 0
     }
     struct nvs_fs fs_{};
+    bool mounted_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

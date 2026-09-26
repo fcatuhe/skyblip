@@ -334,6 +334,19 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
     CHECK(stored.alarm_volume == 5);
 }
 
+TEST_CASE("flash window: a store that did not mount is never written, and nothing is owed to it") {
+    Rig rig;
+    rig.platform.kv().refuse_mount = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    fly(rig, t);
+    change_volume(rig, 5);
+    step_until(rig, t, t + 2 * timing::DurableWriteWindow::kMaxDeferMs);
+    CHECK(rig.platform.kv().writes() == 0);
+    CHECK(rig.product.config().failed_writes() == 0);
+    CHECK_FALSE(rig.product.config().durable_writes().pending());
+}
+
 // E1 at product scale. The cell is below the warning, so the settings sector is
 // not touched at all - and the change is not thrown away either: it stays dirty,
 // which is what makes a charger arriving still save it.

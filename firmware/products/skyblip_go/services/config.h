@@ -96,6 +96,10 @@ class ConfigLinkService : public runtime::Service {
     // knows what the cell is doing. A reference, not a pointer: the product wires
     // it at construction and there is no version of this device where the
     // question has no owner.
+    bool storable() const {
+        return ports::has(context_.roles.capabilities, ports::Capability::Storage) &&
+               context_.roles.kv.ready();
+    }
     bool may_persist() const { return power_.may_write(power::DurableWrite::Settings); }
     bool hold_for_power();
 
