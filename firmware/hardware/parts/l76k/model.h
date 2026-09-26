@@ -11,9 +11,6 @@
 #include <string>
 
 #include "core/gnss/nmea.h"
-#include "core/protocol/nmea_out.h"
-#include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "hardware/io/io.h"
 #include "hardware/parts/l76k/l76k.h"
 
@@ -365,17 +362,6 @@ class L76k : public io::Uart, public io::UartRate {
         sod_ms_ %= 1000u;
     }
 
-    // INFO: fc 13sep26 the part emits the cycle in $PCAS03's own field order, so RMC closes a burst
-    void emit_burst() {
-        step_walk();
-        if (gga_enabled) emit_gga();
-        if (gll_enabled) emit_gll();
-        if (gsa_enabled) emit_gsa();
-        if (gsv_enabled) emit_gsv();
-        if (rmc_enabled) emit_rmc();
-        if (vtg_enabled) emit_vtg();
-    }
-
     // $PCAS10,n: 0 hot, 1 warm, 2 cold, 3 factory. The module reboots either
     // way; a cold start also throws the orbit data away, and a factory reset
     // takes every setting we applied with it.
@@ -430,201 +416,23 @@ class L76k : public io::Uart, public io::UartRate {
     bool cold() const { return cold_ && last_tick_ms_ - cold_since_ms_ < kColdStartTtffMs; }
     bool solving() const { return fix && !cold(); }
 
-    // $GPTXT,01,01,02,SW=<version>: the reply SoftRF matches on
-    // (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:981-1010, 1015-1025).
-    void emit_version() {
-        char s[128];
-        int n = fmt_string(s, "$GPTXT,01,01,02,SW=");
-        n += fmt_string(s + n, firmware_version);
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
-
-    // INFO: fc 19sep26 a real receiver reports hundredths of a knot and of a degree, and decimetres
-    uint32_t knots_e2() const {
-        return static_cast<uint32_t>(div_round<int64_t>(
-            static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 194384, 1000000));
-    }
-
-    uint32_t kmh_e2() const {
-        return static_cast<uint32_t>(
-            div_round<int64_t>(static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 36, 100));
-    }
-
-    uint32_t heading_e2() const {
-        const double wrapped = heading_deg() - 360.0 * static_cast<int>(heading_deg() / 360.0);
-        const double positive = wrapped < 0 ? wrapped + 360.0 : wrapped;
-        return static_cast<uint32_t>(std::lround(positive * 100.0)) % 36000u;
-    }
-
-    int32_t msl_dm() const {
-        const int32_t mm = alt_mm() - geoid_separation_m * 1000;
-        return (mm >= 0 ? mm + 50 : mm - 50) / 100;
-    }
-
-    int put_time(char* s) const {
-        int n = 0;
-        n += fmt_uint(s + n, utc_sod / 3600u, 2);
-        n += fmt_uint(s + n, (utc_sod / 60u) % 60u, 2);
-        n += fmt_uint(s + n, utc_sod % 60u, 2);
-        return n;
-    }
-
-    // $GPRMC,hhmmss,A,ddmm.mmmm,N,dddmm.mmmm,E,speed_kn,track,ddmmyy,,,A*cs
-    void emit_rmc() {
-        char s[128];
-        int n = fmt_string(s, "$GPRMC,");
-        n += put_time(s + n);
-        n += fmt_string(s + n, solving() ? ",A," : ",V,");
-        n += fmt_nmea_lat(s + n, walked_lat_1e7());
-        s[n++] = ',';
-        n += fmt_nmea_lon(s + n, lon_1e7);
-        s[n++] = ',';
-        n += fmt_uint(s + n, knots_e2(), 1, 2);
-        s[n++] = ',';
-        n += fmt_uint(s + n, heading_e2(), 1, 2);
-        s[n++] = ',';
-        n += fmt_string(s + n, date);
-        n += fmt_string(s + n, ",,,A");
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
-
-    // INFO: fc 18sep26 one GSA per constellation, each naming its own satellites and system id
-    void emit_gsa() {
-        const uint8_t budget = solving() ? sats : uint8_t{0};
-        const uint8_t in_view =
-            static_cast<uint8_t>(gps_in_view + beidou_in_view + glonass_in_view);
-        const uint8_t gps = share_of_solution(budget, gps_in_view, in_view);
-        const uint8_t beidou = share_of_solution(budget, beidou_in_view, in_view);
-        emit_gsa_for(1, 1, gps_in_view, gps);
-        emit_gsa_for(4, 7, beidou_in_view, beidou);
-        emit_gsa_for(2, 65, glonass_in_view, static_cast<uint8_t>(budget - gps - beidou));
-    }
-
-    static uint8_t share_of_solution(uint8_t budget, uint8_t in_view, uint8_t total_in_view) {
-        if (total_in_view == 0) return 0;
-        return static_cast<uint8_t>(budget * in_view / total_in_view);
-    }
-
-    void emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_view, uint8_t budget) {
-        const uint8_t used = budget < in_view ? budget : in_view;
-        char s[128];
-        int n = fmt_string(s, "$GNGSA,A,");
-        n += fmt_uint(s + n, solving() ? 3u : 1u, 1);
-        for (int slot = 0; slot < kGsaSlots; slot++) {
-            s[n++] = ',';
-            if (slot < used) n += fmt_uint(s + n, static_cast<uint32_t>(first_id + slot), 2);
-        }
-        s[n++] = ',';
-        if (solving() && used > 0) {
-            n += fmt_uint(s + n, pdop_e2, 3, 2);
-            s[n++] = ',';
-            n += fmt_uint(s + n, hdop_e2, 3, 2);
-            s[n++] = ',';
-            n += fmt_uint(s + n, vdop_e2, 3, 2);
-        } else {
-            n += fmt_string(s + n, ",,");
-        }
-        s[n++] = ',';
-        n += fmt_uint(s + n, system_id, 1);
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
-
-    void emit_gll() {
-        char s[128];
-        int n = fmt_string(s, "$GPGLL,");
-        n += fmt_nmea_lat(s + n, walked_lat_1e7());
-        s[n++] = ',';
-        n += fmt_nmea_lon(s + n, lon_1e7);
-        s[n++] = ',';
-        n += put_time(s + n);
-        n += fmt_string(s + n, solving() ? ",A,A" : ",V,N");
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
-
-    // INFO: fc 18sep26 one set per talker, four satellites a sentence, and no C/N0 on one not
-    // tracked
-    void emit_gsv() {
-        emit_gsv_set("GP", gps_in_view, 1);
-        emit_gsv_set("BD", beidou_in_view, 7);
-        emit_gsv_set("GL", glonass_in_view, 65);
-    }
-
-    void emit_gsv_set(const char* talker, uint8_t in_view, uint8_t first_id) {
-        if (in_view == 0) return;
-        const int sentences = (in_view + 3) / 4;
-        uint8_t at = 0;
-        for (int sentence = 1; sentence <= sentences; sentence++) {
-            char s[128];
-            int n = fmt_string(s, "$");
-            n += fmt_string(s + n, talker);
-            n += fmt_string(s + n, "GSV,");
-            n += fmt_uint(s + n, static_cast<uint32_t>(sentences), 1);
-            s[n++] = ',';
-            n += fmt_uint(s + n, static_cast<uint32_t>(sentence), 1);
-            s[n++] = ',';
-            n += fmt_uint(s + n, in_view, 2);
-            for (int slot = 0; slot < 4 && at < in_view; slot++, at++) {
-                const uint8_t id = static_cast<uint8_t>(first_id + at);
-                s[n++] = ',';
-                n += fmt_uint(s + n, id, 2);
-                s[n++] = ',';
-                n += fmt_uint(s + n, static_cast<uint32_t>(15 + (at * 7) % 70), 2);
-                s[n++] = ',';
-                n += fmt_uint(s + n, static_cast<uint32_t>((at * 47) % 360), 3);
-                s[n++] = ',';
-                if (at < tracked_of(in_view))
-                    n += fmt_uint(s + n, static_cast<uint32_t>(cn0_dbhz_base - at), 2);
-            }
-            n += fmt_string(s + n, ",0");
-            n = protocol::nmea_finish(s, n);
-            pending_.append(s, static_cast<size_t>(n));
-        }
-    }
-
-    uint8_t tracked_of(uint8_t in_view) const {
-        return solving() ? in_view : static_cast<uint8_t>(in_view / 2);
-    }
-
-    void emit_vtg() {
-        char s[128];
-        int n = fmt_string(s, "$GPVTG,");
-        n += fmt_uint(s + n, heading_e2(), 1, 2);
-        n += fmt_string(s + n, ",T,,M,");
-        n += fmt_uint(s + n, knots_e2(), 1, 2);
-        n += fmt_string(s + n, ",N,");
-        n += fmt_uint(s + n, kmh_e2(), 1, 2);
-        n += fmt_string(s + n, ",K,A");
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
-
-    // $GPGGA,hhmmss,ddmm.mmmm,N,dddmm.mmmm,E,q,sats,hdop,msl,M,separation,M,,*cs
-    void emit_gga() {
-        char s[128];
-        int n = fmt_string(s, "$GPGGA,");
-        n += put_time(s + n);
-        s[n++] = ',';
-        n += fmt_nmea_lat(s + n, walked_lat_1e7());
-        s[n++] = ',';
-        n += fmt_nmea_lon(s + n, lon_1e7);
-        s[n++] = ',';
-        n += fmt_uint(s + n, solving() ? 1u : 0u, 1);
-        s[n++] = ',';
-        n += fmt_uint(s + n, solving() ? sats : uint8_t{0}, 2);
-        s[n++] = ',';
-        n += fmt_uint(s + n, hdop_e2, 3, 2);
-        s[n++] = ',';
-        n += fmt_int(s + n, msl_dm(), 1, 1, true);
-        n += fmt_string(s + n, ",M,");
-        if (emit_geoid_separation) n += fmt_int(s + n, geoid_separation_m * 10, 1, 1, true);
-        n += fmt_string(s + n, ",M,,");
-        n = protocol::nmea_finish(s, n);
-        pending_.append(s, static_cast<size_t>(n));
-    }
+    void emit_burst();
+    void emit_version();
+    uint32_t knots_e2() const;
+    uint32_t kmh_e2() const;
+    uint32_t heading_e2() const;
+    int32_t msl_dm() const;
+    int put_time(char* s) const;
+    void emit_rmc();
+    void emit_gsa();
+    static uint8_t share_of_solution(uint8_t budget, uint8_t in_view, uint8_t total_in_view);
+    void emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_view, uint8_t budget);
+    void emit_gll();
+    void emit_gsv();
+    void emit_gsv_set(const char* talker, uint8_t in_view, uint8_t first_id);
+    uint8_t tracked_of(uint8_t in_view) const;
+    void emit_vtg();
+    void emit_gga();
 
     std::string pending_;
     uint32_t last_ms_{0};
@@ -633,5 +441,7 @@ class L76k : public io::Uart, public io::UartRate {
 };
 
 }  // namespace skyblip::models
+
+#include "hardware/parts/l76k/model_sentences.h"
 
 #endif

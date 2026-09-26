@@ -1,68 +1,30 @@
 #include "products/skyblip_go/pages/radar.h"
 
-#include "core/flight/arc.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
-#include "ui/widgets/blip.h"
+#include "products/skyblip_go/pages/radar_geometry.h"
+#include "products/skyblip_go/pages/radar_traffic.h"
 #include "ui/widgets/skyship.h"
 
 namespace skyblip::go {
 
+using namespace radar;
+
 namespace {
-// The screen is 200x200, an EVEN grid: there is no middle pixel. The centre is
-// the POINT where four pixels meet, so each axis has a near-side and a far-side
-// middle pixel - 99 and 100. Everything on this screen is built around that
-// point rather than around a pixel:
-//
-//   kNear = 99   the pixel just before the centre (left, and above)
-//   kFar  = 100  the pixel just after it (right, and below)
-//
-// A feature at distance d from the centre therefore occupies kNear-(d-1) on one
-// side and kFar+(d-1) on the other. A feature ON the centre is a PAIR of
-// pixels, never one. That makes the own ship exactly centred (its fuselage
-// straddles 99|100), the rings exactly concentric with it, and every target
-// offset measured from the same point in both directions.
-constexpr int kNear = kGlassW / 2 - 1;
-constexpr int kFar = kGlassW / 2;
 constexpr int kCx = kFar;  // only for centring text, which has no such nicety
-constexpr int kMargin = 4;
-constexpr int kOuterR = 92;
-constexpr int kRingW = 2;
-constexpr int kGlyphH = 7;
 constexpr int kCellW = 6;
-constexpr int kClockScale = 2;
 constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
 constexpr int kRangeScale = 2;
-constexpr int kStateScale = 1;
 constexpr int kTrafficScale = 3;
 constexpr int kRangePad = 6;
 constexpr int kKeepOutPad = 3;
 constexpr int kReadingCorner = 3;
-constexpr int kLabelPad = 2;
-constexpr int kStackGap = 2;
-constexpr int kFooterBottom = kGlassH - kMargin;
 constexpr int kFooterY = kFooterBottom - kGlyphH;
-constexpr int kClockY = kFooterBottom - kGlyphH * kClockScale;
-constexpr int kStateY = kClockY - kStackGap - kGlyphH * kStateScale;
 constexpr int kRangeY = kFooterBottom - kGlyphH * kRangeScale;
 constexpr int kUnitGap = 3;
-constexpr int32_t kQ14One = 16384;
 constexpr int32_t kTurn16 = 65536;
-constexpr int16_t kCaretClimbE8 = 20;
-constexpr int32_t kLevelM = 60;
-constexpr int32_t kLeaderSeconds = 60;
-constexpr uint32_t kLeaderStepMs = 5000;
-constexpr int kStepsPerMinute = static_cast<int>((kLeaderSeconds * 1000) / kLeaderStepMs);
-constexpr int kMinLeaderPx = 3;
-constexpr int kOwnNoseAhead = ui::kSkyshipRowsToNose + 1;
-constexpr int kMinuteClearPx = kOwnNoseAhead + kMinLeaderPx;
-constexpr int kFooterTop = kStateY - kLabelPad;
-constexpr int kMinuteBallR = 3;
-constexpr int kBallClearR = kOuterR - kRingW - kMinuteBallR;
-constexpr int kDashPx = 3;
-constexpr int kDashGapPx = 3;
 constexpr int kWedgeInnerR = 15;
 constexpr int kWedgeOuterR = kOuterR - kRingW;
 constexpr int64_t kTanScale = 10000;
@@ -79,7 +41,6 @@ constexpr int kNoteScale = 1;
 constexpr int kNotePad = 2;
 constexpr int kNoteGap = 5;
 constexpr int kNoteY = kBannerY + kGlyphH * kBannerScale + kBannerPad + kNoteGap;
-constexpr int kMinutesMarked = 2;
 
 int half_chord_in_half_pixels(int r, int b) {
     const int32_t v = 4 * r * r - (2 * b + 1) * (2 * b + 1);
@@ -107,20 +68,6 @@ int16_t c16(int32_t deg) {
     if (d >= 180) d -= 360;  // keep the cordic value inside int16_t
     return static_cast<int16_t>((d * kTurn16) / 360);
 }
-
-struct HeadingUp {
-    int32_t ahead;
-    int32_t right;
-};
-
-HeadingUp heading_up(int32_t north, int32_t east, int16_t track) {
-    const int64_t c = icos(track), s = isin(track);
-    return {static_cast<int32_t>((north * c + east * s) / kQ14One),
-            static_cast<int32_t>((east * c - north * s) / kQ14One)};
-}
-
-int px_of(int32_t right) { return right >= 0 ? kFar + right : kNear + right + 1; }
-int py_of(int32_t ahead) { return ahead <= 0 ? kFar - ahead : kNear - ahead + 1; }
 
 int text_width(const char* s, int scale) {
     int n = 0;
@@ -271,73 +218,6 @@ void state_banner(ui::Canvas& fb, const char* word) {
     fb.draw_text(b.x + kBannerPad, b.y + kBannerPad, word, true, kBannerScale);
 }
 
-struct Plotted {
-    int32_t right;
-    int32_t ahead;
-    int x;
-    int y;
-    bool in_ring;
-    ui::Vertical vertical;
-    ui::Trend trend;
-};
-
-ui::Vertical vertical_of(int32_t up_m) {
-    const int32_t apart = up_m < 0 ? -up_m : up_m;
-    if (apart <= kLevelM) return ui::Vertical::Level;
-    const bool beyond = apart > traffic::kAdvisoryAltM;
-    if (up_m > 0) return beyond ? ui::Vertical::FarAbove : ui::Vertical::Above;
-    return beyond ? ui::Vertical::FarBelow : ui::Vertical::Below;
-}
-
-ui::Trend trend_of(const RadarTarget& t) {
-    if (!t.climb_valid) return ui::Trend::Steady;
-    if (t.climb_e8 >= kCaretClimbE8) return ui::Trend::Climbing;
-    if (t.climb_e8 <= -kCaretClimbE8) return ui::Trend::Sinking;
-    return ui::Trend::Steady;
-}
-
-int64_t ring_metres(const RadarSnapshot& snap) {
-    return go::range_metres(snap.range_step, snap.units);
-}
-
-int32_t to_px(int32_t metres, int64_t range) {
-    return static_cast<int32_t>((static_cast<int64_t>(metres) * kOuterR) / range);
-}
-
-bool inside_ring(int32_t right, int32_t ahead) {
-    return right * right + ahead * ahead <= kOuterR * kOuterR;
-}
-
-bool on_glass(int x, int y) { return x >= 0 && x < kGlassW && y >= 0 && y < kGlassH; }
-
-bool plot_point(const RadarSnapshot& snap, const RadarTarget& t, int16_t track, Plotted& out) {
-    const int64_t range = ring_metres(snap);
-    const HeadingUp at = heading_up(t.north_m, t.east_m, track);
-    const int32_t dx = to_px(at.right, range), dy = to_px(at.ahead, range);
-    const int x = px_of(dx), y = py_of(dy);
-    if (!on_glass(x, y)) return false;
-    const ui::Vertical vertical = vertical_of(t.up_m);
-    const ui::Trend trend = trend_of(t);
-    if (!inside_ring(dx, dy) && y + ui::blip_below(vertical, trend) >= kFooterTop) return false;
-    out = {dx, dy, x, y, inside_ring(dx, dy), vertical, trend};
-    return true;
-}
-
-flight::Motion motion_of(int32_t speed_mm_s, int32_t track_cdeg, int16_t turn_cdps, bool turning) {
-    flight::Motion m{};
-    m.speed_mm_s = speed_mm_s;
-    m.track_cdeg = track_cdeg;
-    m.turn_cdps = turn_cdps;
-    m.turning = turning;
-    return m;
-}
-
-HeadingUp on_glass_at(const flight::Position& p, const RadarSnapshot& snap, int16_t track) {
-    const HeadingUp at = heading_up(p.north_m, p.east_m, track);
-    const int64_t range = ring_metres(snap);
-    return {to_px(at.ahead, range), to_px(at.right, range)};
-}
-
 Box formation_box() {
     return {kNear - kFormationD, kNear - kFormationD, 2 * kFormationD + 2, 2 * kFormationD + 2};
 }
@@ -382,152 +262,6 @@ void formation_counts(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) 
         buf[fmt_uint(buf, static_cast<uint32_t>(count[q] > 9 ? 9 : count[q]))] = 0;
         fb.draw_text(x[q], y[q], buf, true, 1);
     }
-}
-
-void minute_ball(ui::Canvas& fb, int x, int y) {
-    const int r = kMinuteBallR;
-    for (int dy = -r; dy < r; dy++)
-        for (int dx = -r; dx < r; dx++) {
-            const int px = 2 * dx + 1, py = 2 * dy + 1;
-            if (px * px + py * py <= 4 * r * r) fb.set_pixel(x + dx, y + dy, true);
-        }
-}
-
-struct DashPen {
-    ui::Canvas& fb;
-    int phase{0};
-    int x{0};
-    int y{0};
-    bool down{false};
-    bool fresh{false};
-
-    void lift() { down = false; }
-
-    void to(int x1, int y1) {
-        if (down)
-            stroke(x1, y1);
-        else
-            fresh = down = true;
-        x = x1;
-        y = y1;
-    }
-
-   private:
-    void dash(int at_x, int at_y, bool steep) {
-        if (phase++ % (kDashPx + kDashGapPx) >= kDashPx) return;
-        fb.set_pixel(at_x, at_y, true);
-        fb.set_pixel(steep ? at_x - 1 : at_x, steep ? at_y : at_y - 1, true);
-    }
-
-    void stroke(int x1, int y1) {
-        int at_x = x, at_y = y;
-        const int dx = x1 > at_x ? x1 - at_x : at_x - x1;
-        const int dy = y1 > at_y ? y1 - at_y : at_y - y1;
-        const int sx = at_x < x1 ? 1 : -1, sy = at_y < y1 ? 1 : -1;
-        const bool steep = dy >= dx;
-        int err = dx - dy;
-        if (fresh) dash(at_x, at_y, steep);
-        fresh = false;
-        while (at_x != x1 || at_y != y1) {
-            const int e2 = 2 * err;
-            if (e2 > -dy) {
-                err -= dy;
-                at_x += sx;
-            }
-            if (e2 < dx) {
-                err += dx;
-                at_y += sy;
-            }
-            dash(at_x, at_y, steep);
-        }
-    }
-};
-
-void own_vector(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
-    if (snap.speed_mm_s <= 0) return;
-    flight::Arc arc(motion_of(snap.speed_mm_s, snap.track_cdeg, snap.turn_cdps, true),
-                    kLeaderStepMs);
-    DashPen pen{fb};
-    for (int step = 1; step <= kMinutesMarked * kStepsPerMinute; step++) {
-        const HeadingUp at = on_glass_at(arc.advance(), snap, track);
-        if (!inside_ring(at.right, at.ahead)) return;
-        const int32_t out = at.right * at.right + at.ahead * at.ahead;
-        if (out < kMinuteClearPx * kMinuteClearPx) {
-            pen.lift();
-            continue;
-        }
-        const int x = px_of(at.right), y = py_of(at.ahead);
-        pen.to(x, y);
-        if (step % kStepsPerMinute != 0) continue;
-        if (out <= kBallClearR * kBallClearR) minute_ball(fb, x, y);
-    }
-}
-
-struct Leader {
-    int32_t right;
-    int32_t ahead;
-    bool valid;
-};
-
-Leader leader_of(const RadarSnapshot& snap, const RadarTarget& t, int16_t track) {
-    if (t.speed_mm_s <= 0) return {0, 0, false};
-    flight::Arc arc(motion_of(t.speed_mm_s, t.track_cdeg, t.turn_cdps, t.turn_valid),
-                    kLeaderStepMs);
-    HeadingUp end{0, 0};
-    for (int step = 0; step < kStepsPerMinute; step++)
-        end = on_glass_at(arc.advance(), snap, track);
-    if (end.right * end.right + end.ahead * end.ahead < kMinLeaderPx * kMinLeaderPx)
-        return {0, 0, false};
-    return {end.right, end.ahead, true};
-}
-
-void draw_leader(ui::Canvas& fb, const RadarSnapshot& snap, const RadarTarget& t, int16_t track,
-                 const Plotted& p, const Leader& v) {
-    if (!v.valid) return;
-    flight::Arc arc(motion_of(t.speed_mm_s, t.track_cdeg, t.turn_cdps, t.turn_valid),
-                    kLeaderStepMs);
-    int from_x = p.x, from_y = p.y;
-    for (int step = 0; step < kStepsPerMinute; step++) {
-        const HeadingUp at = on_glass_at(arc.advance(), snap, track);
-        const int to_x = px_of(p.right + at.right), to_y = py_of(p.ahead + at.ahead);
-        fb.line(from_x, from_y, to_x, to_y, true);
-        from_x = to_x;
-        from_y = to_y;
-    }
-}
-
-void plot_blip(ui::Canvas& fb, const Plotted& p, traffic::Level alarm_level) {
-    ui::draw_blip(fb, p.x, p.y, p.vertical, p.trend, alarm_level >= traffic::Level::Advisory);
-}
-
-int plot(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
-    Plotted shown[kMaxRadarTargets];
-    const RadarTarget* in_view[kMaxRadarTargets];
-    int n = 0;
-    int in_ring = 0;
-    for (int i = 0; i < snap.n_targets && n < kMaxRadarTargets; i++) {
-        Plotted p;
-        if (!plot_point(snap, snap.targets[i], track, p)) continue;
-        // A member of the formation is drawn once, as the square around own ship
-        // and the count in its quadrant. Twice is two aircraft.
-        if (snap.targets[i].in_formation) {
-            if (p.in_ring) in_ring++;
-            continue;
-        }
-        shown[n] = p;
-        in_view[n] = &snap.targets[i];
-        n++;
-    }
-
-    for (int i = 0; i < n; i++)
-        if (shown[i].in_ring) in_ring++;
-
-    for (int i = 0; i < n; i++)
-        draw_leader(fb, snap, *in_view[i], track, shown[i], leader_of(snap, *in_view[i], track));
-    if (in_ring > 0) own_vector(fb, snap, track);
-
-    for (int i = 0; i < n; i++) plot_blip(fb, shown[i], in_view[i]->alarm_level);
-    return in_ring;
 }
 
 struct Wedge {
