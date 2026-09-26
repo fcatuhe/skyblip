@@ -62,8 +62,13 @@ static_assert(CONFIG_BT_MAX_CONN <= static_cast<int>(comms::LinkSessions::kMaxSe
 
 // INFO: fc 23sep26 a notify off the sysworkq waits forever for a buffer, so each link gets a share
 constexpr atomic_val_t kNotifyInFlightMax = 4;
-static_assert(CONFIG_BT_ATT_TX_COUNT >= (kNotifyInFlightMax + 1) * CONFIG_BT_MAX_CONN,
-              "the ATT pool must hold every link's notifications in flight and one response each");
+constexpr int kAttResponsesPerLink = 1;
+// INFO: fc 25sep26 smp_bt.c waits on each notification's sent callback before the next
+constexpr int kSmpNotifiesPerLink = 1;
+static_assert(CONFIG_BT_ATT_TX_COUNT >=
+                  (kNotifyInFlightMax + kAttResponsesPerLink + kSmpNotifiesPerLink) *
+                      CONFIG_BT_MAX_CONN,
+              "the ATT pool must hold every link's notifications, a response and an SMP reply");
 atomic_t g_in_flight[CONFIG_BT_MAX_CONN];
 
 void notified(struct bt_conn* conn, void* /*user_data*/) {
@@ -210,17 +215,18 @@ void resume_advertising() {
 // both onto the bus from the service loop. A Bluetooth callback runs on the host
 // stack's own thread, so calling into a service from here would be a second path
 // into core/ with no critical section around it.
+// INFO: fc 25sep26 Zephyr drops a gone link's sent callbacks, so a new link starts at zero
 void connected(struct bt_conn* conn, uint8_t err) {
     if (err) return;
     const uint8_t index = bt_conn_index(conn);
     struct bt_conn* held = bt_conn_ref(conn);
+    atomic_set(&g_in_flight[index], 0);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     g_conns[index] = held;
     g_sessions.connected(session_of(conn), payload_from_mtu(bt_gatt_get_mtu(conn)));
     k_spin_unlock(&g_lock, key);
     resume_advertising();
 }
-// INFO: fc 23sep26 Zephyr drops a gone link's sent callbacks, so its count is cleared here
 void disconnected(struct bt_conn* conn, uint8_t /*reason*/) {
     const uint8_t index = bt_conn_index(conn);
     if (g_conns[index] != conn) return;
@@ -228,7 +234,6 @@ void disconnected(struct bt_conn* conn, uint8_t /*reason*/) {
     g_conns[index] = nullptr;
     g_sessions.disconnected(session_of(conn));
     k_spin_unlock(&g_lock, key);
-    atomic_set(&g_in_flight[index], 0);
     bt_conn_unref(conn);
 }
 // INFO: fc 18sep26 Advertising stops on connect, and only recycled() has a free connection object.
