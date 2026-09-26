@@ -276,6 +276,28 @@ TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     CHECK(tbl.find(6, 0x1000) >= 0);  // protected alarm still present
 }
 
+// Nearest-first eviction refused an airborne arrival beyond a full apron of parked aircraft.
+TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air, however far") {
+    const model::OwnState own = flying(30, 0);
+    TrafficTable tbl;
+    tbl.set_own_reference(own);
+    for (int i = 0; i < TrafficTable::kCapacity; i++) {
+        model::AircraftObs apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
+        apron.addr = 0x100000u + static_cast<uint32_t>(i);
+        apron.received.at_s = 100;
+        apron.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+        REQUIRE(tbl.update(apron, 100) >= 0);
+    }
+
+    model::AircraftObs arriving = neighbour(own, 8000, 0, 0, 40, 180);
+    arriving.addr = 0x200000;
+    arriving.received.at_s = 100;
+    arriving.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
+    CHECK(tbl.update(arriving, 100) >= 0);
+    CHECK(tbl.find(6, 0x200000) >= 0);
+    CHECK(tbl.count() == TrafficTable::kCapacity);
+}
+
 // The advisory is a place, not a prediction: inside 3 km and 300 m, an aircraft
 // is one whatever it is doing, and outside it is none however fast it closes.
 TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres is an advisory") {
