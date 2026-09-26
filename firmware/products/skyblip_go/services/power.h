@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
 
+#include "core/diag/profile.h"
 #include "core/power/battery.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
@@ -24,6 +25,7 @@ class PowerService : public runtime::Service {
         : runtime::Service(context), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
+    void record_last_pass(uint32_t now_ms);
 
     bool cutoff() const { return cutoff_.cutoff(); }
     uint32_t implausible_samples() const { return cutoff_.implausible(); }
@@ -62,6 +64,11 @@ class PowerService : public runtime::Service {
     // INFO: fc 20sep26 the cadence the cell is sampled at, so no record repeats a reading
     static constexpr uint32_t kRecordPeriodMs = runtime::kBatteryPeriodMs;
 
+    // INFO: fc 21sep26 a counter of screen, receiver and buzzer seconds needs no finer grain
+    static constexpr uint32_t kDutyRecordPeriodMs = 10000;
+    static_assert(kDutyRecordPeriodMs <= diag::kDutyMaxPeriodMs,
+                  "two Duty records this far apart cannot be subtracted");
+
    private:
     // INFO: fc 05aug26 Die temperature moves in minutes: it is the temperature of
     // a lump of plastic in the sun, low-passed by its own mass. Ten seconds is
@@ -76,7 +83,11 @@ class PowerService : public runtime::Service {
 
     void sample_die_temperature(uint32_t now_ms);
     void watch_charge();
-    void record_power(uint32_t now_ms);
+    void record_pass(uint32_t now_ms);
+    void record_power(const diag::Instant& at);
+    void record_duty(const diag::Instant& at);
+    uint32_t power_period_ms() const;
+    uint32_t duty_period_ms() const;
 
     power::Gauge gauge_{};
     power::CutoffMonitor cutoff_{};
@@ -84,6 +95,7 @@ class PowerService : public runtime::Service {
     power::ChargeCondition charge_{power::ChargeCondition::Unknown};
     uint32_t charge_warnings_{0};
     uint32_t recorded_ms_{0};
+    uint32_t duty_recorded_ms_{0};
     uint32_t die_read_ms_{0};
     uint32_t die_valid_ms_{0};
     int16_t die_dc_{0};

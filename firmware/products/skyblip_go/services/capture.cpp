@@ -33,6 +33,8 @@ void CaptureService::open(uint32_t now_ms) {
     }
     session_id_ = context_.state.traffic_now(now_ms);
     opened_ms_ = now_ms;
+    steady_records_ = 0;
+    steady_written_ms_ = now_ms;
     open_ = true;
     ended_ = false;
     lost_records_ = 0;
@@ -108,6 +110,7 @@ void CaptureService::drain(uint32_t now_ms) {
             case Append::Ok: break;
         }
         context_.diag.commit();
+        count_toward_rate(record.type, now_ms);
         written++;
         if (!announce_rotation(now_ms)) return;
     }
@@ -169,13 +172,37 @@ uint32_t CaptureService::growth_sectors() const {
     return pool.free_sectors() + from_flights + store_.sectors_owned();
 }
 
-uint32_t CaptureService::records_per_second(uint32_t now_ms) const {
-    if (!open_) return diag::Recorder::kPeriodicRecordsPerSecond;
-    const uint32_t elapsed_s = (now_ms - opened_ms_) / 1000;
-    const uint32_t written = store_.session_records();
-    if (elapsed_s == 0 || written == 0) return diag::Recorder::kPeriodicRecordsPerSecond;
-    const uint32_t measured = written / elapsed_s;
-    return measured == 0 ? 1 : measured;
+uint32_t CaptureService::growth_slots() const {
+    return growth_sectors() * store_.pool().slots_per_sector();
+}
+
+uint32_t CaptureService::keeps_s(diag::Profile profile) const {
+    return span_s(growth_slots(), diag::Recorder::records_per_hour(profile));
+}
+
+uint32_t CaptureService::span_s(uint32_t slots, uint32_t records_per_hour) {
+    if (records_per_hour == 0) return 0;
+    return static_cast<uint32_t>(static_cast<uint64_t>(slots) * diag::Recorder::kSecondsPerHour /
+                                 records_per_hour);
+}
+
+void CaptureService::count_toward_rate(diag::Type type, uint32_t now_ms) {
+    if (!diag::recurs(type)) return;
+    steady_records_++;
+    steady_written_ms_ = now_ms;
+}
+
+uint32_t CaptureService::records_per_hour() const {
+    const uint32_t measured = measured_records_per_hour();
+    return measured != 0 ? measured : diag::Recorder::records_per_hour(context_.diag.profile());
+}
+
+uint32_t CaptureService::measured_records_per_hour() const {
+    if (!open_) return 0;
+    const uint32_t span_ms = steady_written_ms_ - opened_ms_;
+    if (span_ms == 0) return 0;
+    return static_cast<uint32_t>(static_cast<uint64_t>(steady_records_) *
+                                 diag::Recorder::kMsPerHour / span_ms);
 }
 
 void CaptureService::publish(uint32_t now_ms) {
@@ -202,7 +229,7 @@ void CaptureService::publish(uint32_t now_ms) {
     out.price_flights =
         flights_.sessions_within(flights > floor_sectors ? flights - floor_sectors : 0);
     // INFO: fc 20sep26 the ring rotates: this is what survives, not a deadline
-    out.keeps_s = growth * pool.slots_per_sector() / records_per_second(now_ms);
+    out.keeps_s = span_s(growth * pool.slots_per_sector(), records_per_hour());
 }
 
 }  // namespace skyblip::go

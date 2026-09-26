@@ -57,14 +57,29 @@ void PowerService::tick(uint32_t now_ms) {
     context_.state.power.die_dc = die_dc_;
     context_.state.power.die_valid = die_reading_fresh(now_ms);
     watch_charge();
-    record_power(now_ms);
+    record_pass(now_ms);
 }
 
-void PowerService::record_power(uint32_t now_ms) {
-    if (now_ms - recorded_ms_ < kRecordPeriodMs) return;
+void PowerService::record_pass(uint32_t now_ms) {
+    if (now_ms - recorded_ms_ < power_period_ms()) return;
     recorded_ms_ = now_ms;
     if (!context_.diag.armed()) return;
 
+    const diag::Instant at = context_.instant(now_ms);
+    record_power(at);
+    if (now_ms - duty_recorded_ms_ < duty_period_ms()) return;
+    duty_recorded_ms_ = now_ms;
+    record_duty(at);
+}
+
+void PowerService::record_last_pass(uint32_t now_ms) {
+    if (!context_.diag.armed()) return;
+    const diag::Instant at = context_.instant(now_ms);
+    record_power(at);
+    record_duty(at);
+}
+
+void PowerService::record_power(const diag::Instant& at) {
     const bus::PowerState& power = context_.state.power;
     diag::Power value{};
     value.cell_mv = power.battery.millivolts;
@@ -82,7 +97,30 @@ void PowerService::record_power(uint32_t now_ms) {
     value.die_valid = power.die_valid;
     value.caution = power.caution;
     value.trim_learned = trim_.learned();
-    context_.diag.record(value, context_.instant(now_ms));
+    context_.diag.record(value, at);
+}
+
+void PowerService::record_duty(const diag::Instant& at) {
+    const bus::DutyState& duty = context_.state.duty;
+    diag::Duty value{};
+    value.panel_partial_refreshes = duty.panel_partial_refreshes;
+    value.panel_full_refreshes = duty.panel_full_refreshes;
+    value.backlight_ms = duty.backlight_ms;
+    value.rx_armed_ms = duty.rx_armed_ms;
+    value.tx_keyed_ms = duty.tx_keyed_ms;
+    value.ble_connected_ms = duty.ble_connected_ms;
+    value.annunciator_ms = duty.annunciator_ms;
+    context_.diag.record(value, at);
+}
+
+uint32_t PowerService::power_period_ms() const {
+    return context_.diag.profile() == diag::Profile::PowerRun ? diag::kPowerRunRecordPeriodMs
+                                                              : kRecordPeriodMs;
+}
+
+uint32_t PowerService::duty_period_ms() const {
+    return context_.diag.profile() == diag::Profile::PowerRun ? diag::kPowerRunRecordPeriodMs
+                                                              : kDutyRecordPeriodMs;
 }
 
 }  // namespace skyblip::go

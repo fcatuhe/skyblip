@@ -131,6 +131,16 @@ void arm_from_the_page(Rig& rig, uint32_t& t) {
     t += 200;
 }
 
+void arm_the_power_run(Rig& rig, uint32_t& t) {
+    open_capture_page(rig, t);
+    rig.tap(t);
+    rig.run(t, t + 200);
+    t += 200;
+    rig.double_press(t);
+    rig.run(t, t + 200);
+    t += 200;
+}
+
 diag::Record bench_record(uint32_t at_s) {
     diag::Instant at{};
     at.at_s = at_s;
@@ -193,9 +203,64 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     rig.run(t, t + 1200);
     t += 1200;
     CHECK(rig.product.diag().armed());
+    CHECK(rig.product.diag().profile() == diag::Profile::Full);
     CHECK(rig.product.capture().capturing());
-    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED FULL", 0, 0, 200, 200));
     CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO STOP", 0, 0, 200, 200));
+}
+
+TEST_CASE("capture: the page prices both captures, and the pad picks between them") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    taxi(rig, t, 5);
+    open_capture_page(rig, t);
+
+    const go::CaptureService& capture = rig.product.capture();
+    CHECK(capture.keeps_s(diag::Profile::Full) > 0);
+    CHECK(capture.keeps_s(diag::Profile::PowerRun) > 100 * capture.keeps_s(diag::Profile::Full));
+
+    const go::Glass& glass = rig.product.screen().framebuffer();
+    CHECK(reads_in(glass, "FULL", 0, 0, 200, 200, 1, /*ink=*/false));
+    CHECK(reads_in(glass, "POWER RUN", 0, 0, 200, 200));
+
+    rig.tap(t);
+    rig.run(t, t + 1200);
+    t += 1200;
+    CHECK(rig.product.screen().page() == go::Page::Capture);
+    CHECK(reads_in(glass, "POWER RUN", 0, 0, 200, 200, 1, /*ink=*/false));
+    CHECK(reads_in(glass, "FULL", 0, 0, 200, 200));
+}
+
+TEST_CASE("capture: the double press arms the capture in focus, and no other") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    taxi(rig, t, 5);
+    arm_the_power_run(rig, t);
+
+    CHECK(rig.product.diag().armed());
+    CHECK(rig.product.diag().profile() == diag::Profile::PowerRun);
+    CHECK(rig.product.capture().capturing());
+
+    taxi(rig, t, 5);
+    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED POWER RUN", 0, 0, 200, 200));
+    // A capture recording two subjects every 30 s outlasts one recording eleven a second.
+    CHECK(rig.state().capture.keeps_s > 10 * rig.product.capture().keeps_s(diag::Profile::Full));
+}
+
+// The pad walks off the last capture rather than trapping the thumb on the page.
+TEST_CASE("capture: a second tap hands the page back to the menu it was opened from") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    taxi(rig, t, 5);
+    open_capture_page(rig, t);
+
+    rig.tap(t);
+    CHECK(rig.product.screen().page() == go::Page::Capture);
+    rig.tap(t);
+    CHECK(rig.product.screen().page() == go::page_after(go::Page::Capture));
 }
 
 TEST_CASE("capture: what an armed device recorded comes back through the offload") {
@@ -317,7 +382,8 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     REQUIRE(flight.setup() == Status::Ok);
     uint32_t t = 100;
     taxi(flight, t, 5);
-    arm_from_the_page(flight, t);
+    arm_the_power_run(flight, t);
+    REQUIRE(flight.product.diag().profile() == diag::Profile::PowerRun);
     taxi(flight, t, 20);
     const uint32_t session = flight.product.capture().session_id();
     const uint32_t written = flight.product.capture().records_written();
@@ -331,6 +397,7 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     taxi(rebooted, rt, 20);
 
     CHECK_FALSE(rebooted.product.diag().armed());
+    CHECK(rebooted.product.diag().profile() == diag::Profile::Full);
     CHECK_FALSE(rebooted.product.capture().capturing());
     CHECK(rebooted.product.capture().records_written() == 0);
 

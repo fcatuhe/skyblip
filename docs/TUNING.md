@@ -38,6 +38,13 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDiagnosticsRefreshMs` | 1000 (1 s) | milliseconds | - | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
 | `kDiagnosticsDumpMs` | 10000 (10 s) | milliseconds | - | - |
 
+## [`firmware/core/diag`](../firmware/core/diag/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kDutyMaxPeriodMs` | 60000 (1 min) | milliseconds | Period | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
+| `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
+
 ## [`firmware/core/events`](../firmware/core/events/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -221,6 +228,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
 | `kRecordPeriodMs` | `runtime::kBatteryPeriodMs` = 1000 (1 s) | milliseconds | Period | the cadence the cell is sampled at, so no record repeats a reading |
+| `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 | `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
 | `kSlotWriteCostMs` | 2 | milliseconds | - | - |
@@ -242,4 +250,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-147 constants over 16 folders.
+150 constants over 17 folders.

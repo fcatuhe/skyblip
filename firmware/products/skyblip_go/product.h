@@ -304,6 +304,7 @@ class Product {
         // flash here rather than dying with the rails. From this point the service
         // loop no longer runs, so this is the last chance there is.
         config_.flush_settings(now_ms);
+        power_.record_last_pass(now_ms);
         capture_.park(now_ms);
         // Every peripheral that can be left driven is switched off by the owner
         // that drives it, because from here the service loop no longer runs: a
@@ -354,7 +355,7 @@ class Product {
     NmeaService nmea_{ctx_, kFeatures, config_.config()};
     FlightLogService flight_log_{ctx_, flights_store_, &capture_store_, config_.config()};
     CaptureService capture_{ctx_, capture_store_, flights_store_, settings_, config_.config()};
-    ScreenService screen_{ctx_, settings_, config_.config(), alarm_, boot_snapshot_};
+    ScreenService screen_{ctx_, settings_, config_.config(), alarm_, capture_, boot_snapshot_};
 
     // The log ticks after own-ship has published the fix and after the radio has
     // published the slot plan it defers to, and before the screen, which is the

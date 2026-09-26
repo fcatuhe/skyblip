@@ -229,3 +229,50 @@ TEST_CASE("diag recorder: everything the ring holds is drained once, gaps includ
     CHECK(drain(recorder) == diag::Recorder::kCapacity + 1);
     CHECK(drain(recorder) == 0);
 }
+
+TEST_CASE("diag recorder: a power run records the cell and the duty, and refuses the rest") {
+    diag::Recorder recorder;
+    recorder.arm(diag::Profile::PowerRun);
+    CHECK(recorder.profile() == diag::Profile::PowerRun);
+
+    CHECK(recorder.record(diag::Power{}, at_ms(0)));
+    CHECK(recorder.record(diag::Duty{}, at_ms(0)));
+    CHECK_FALSE(recorder.record(fix(9), at_ms(1000)));
+    CHECK_FALSE(recorder.record(diag::Screen{}, at_ms(1000)));
+
+    CHECK(recorder.queued() == 2);
+    CHECK(recorder.written() == 2);
+}
+
+TEST_CASE("diag recorder: a type the profile never wanted is not counted as a hole") {
+    diag::Recorder recorder;
+    recorder.arm(diag::Profile::PowerRun);
+    for (int i = 0; i < diag::Recorder::kCapacity * 2; i++) recorder.record(fix(9), at_ms(0));
+
+    CHECK(recorder.dropped() == 0);
+    CHECK(recorder.queued() == 0);
+}
+
+TEST_CASE("diag recorder: a full capture records every subject the device decides") {
+    diag::Recorder recorder;
+    recorder.arm();
+    CHECK(recorder.profile() == diag::Profile::Full);
+    CHECK(recorder.record(fix(9), at_ms(0)));
+    CHECK(recorder.record(diag::Screen{}, at_ms(0)));
+    CHECK(recorder.record(diag::Duty{}, at_ms(0)));
+    CHECK(recorder.queued() == 3);
+}
+
+TEST_CASE("diag recorder: a disarmed recorder refuses whatever profile it last held") {
+    diag::Recorder recorder;
+    recorder.arm(diag::Profile::PowerRun);
+    recorder.disarm();
+    CHECK_FALSE(recorder.record(diag::Power{}, at_ms(0)));
+}
+
+// The figure the capture page divides its estimate by: one profile fills the ring in an hour,
+// the other keeps a discharge run to cutoff whole.
+TEST_CASE("diag recorder: a power run writes two records a pass and a capture eleven a second") {
+    CHECK(diag::Recorder::records_per_hour(diag::Profile::Full) == 11 * 3600);
+    CHECK(diag::Recorder::records_per_hour(diag::Profile::PowerRun) == 240);
+}

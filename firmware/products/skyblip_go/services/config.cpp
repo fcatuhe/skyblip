@@ -12,6 +12,7 @@ Status ConfigLinkService::setup() {
 }
 
 void ConfigLinkService::tick(uint32_t now_ms) {
+    accrue_connected(now_ms);
     drain_link_events(now_ms);
     // INFO: cf 02aug26 nobody calling this leaves the gate at Unknown, which refuses everything
     config_.set_flight_state(context_.state.flight.confirmed_state);
@@ -47,6 +48,11 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+void ConfigLinkService::accrue_connected(uint32_t now_ms) {
+    connected_.observe(config_.link_up(), now_ms);
+    context_.state.duty.ble_connected_ms = connected_.ms();
 }
 
 void ConfigLinkService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,

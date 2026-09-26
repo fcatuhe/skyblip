@@ -32,7 +32,8 @@ TEST_CASE("diag record: the type tag is the corpus, and these numbers never move
     CHECK(static_cast<uint8_t>(diag::Type::Screen) == 15);
     CHECK(static_cast<uint8_t>(diag::Type::Gap) == 16);
     CHECK(static_cast<uint8_t>(diag::Type::End) == 17);
-    CHECK(diag::kHighestType == 17);
+    CHECK(static_cast<uint8_t>(diag::Type::Duty) == 18);
+    CHECK(diag::kHighestType == 18);
 }
 
 TEST_CASE("diag record: the header is written where a host decoder reads it") {

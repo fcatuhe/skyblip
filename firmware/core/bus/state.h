@@ -113,6 +113,16 @@ struct ImuState {
     uint8_t errored_sensor{0};
 };
 
+struct DutyState {
+    uint32_t panel_partial_refreshes{0};
+    uint32_t panel_full_refreshes{0};
+    uint32_t backlight_ms{0};
+    uint32_t rx_armed_ms{0};
+    uint32_t tx_keyed_ms{0};
+    uint32_t annunciator_ms{0};
+    uint32_t ble_connected_ms{0};
+};
+
 enum class CaptureStop : uint8_t { None, Pilot, NoSectors, NoStorage };
 
 struct CaptureState {
@@ -148,6 +158,7 @@ struct State {
     ImuState imu{};
     FormationState formation{};
     CaptureState capture{};
+    DutyState duty{};
 
     traffic::Level alarm_level{traffic::Level::None};
     traffic::Level alarm_live{traffic::Level::None};

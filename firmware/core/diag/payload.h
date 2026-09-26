@@ -294,6 +294,19 @@ struct End {
     uint32_t dropped{0};
 };
 
+// INFO: fc 21sep26 a counter crosses the wire as its low half, so 65.536 s of it is the ceiling
+constexpr uint32_t kDutyMaxPeriodMs = 60000;
+
+struct Duty {
+    uint32_t panel_partial_refreshes{0};
+    uint32_t panel_full_refreshes{0};
+    uint32_t backlight_ms{0};
+    uint32_t rx_armed_ms{0};
+    uint32_t tx_keyed_ms{0};
+    uint32_t ble_connected_ms{0};
+    uint32_t annunciator_ms{0};
+};
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -311,6 +324,7 @@ Record record_of(const Write& value, const Instant& at);
 Record record_of(const Screen& value, const Instant& at);
 Record record_of(const Gap& value, const Instant& at);
 Record record_of(const End& value, const Instant& at);
+Record record_of(const Duty& value, const Instant& at);
 
 bool read(const Record& record, Boot& out);
 bool read(const Record& record, Config& out);
@@ -329,6 +343,7 @@ bool read(const Record& record, Write& out);
 bool read(const Record& record, Screen& out);
 bool read(const Record& record, Gap& out);
 bool read(const Record& record, End& out);
+bool read(const Record& record, Duty& out);
 
 }  // namespace skyblip::diag
 

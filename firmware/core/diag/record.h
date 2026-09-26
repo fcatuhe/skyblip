@@ -32,9 +32,10 @@ enum class Type : uint8_t {
     Screen = 15,
     Gap = 16,
     End = 17,
+    Duty = 18,
 };
 
-constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::End);
+constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Duty);
 
 const char* type_name(Type type);
 
