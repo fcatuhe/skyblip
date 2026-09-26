@@ -411,6 +411,17 @@ TEST_CASE("shutdown: an install parks the panel like a power-off and is named as
     CHECK(seq.ready_to_power_off());
 }
 
+TEST_CASE("shutdown: a recovery leaves the button armed, since a press may be what finishes it") {
+    ShutdownSequencer seq;
+    seq.request(ShutdownReason::Recovery, 0);
+    CHECK(std::string(to_string(ShutdownReason::Recovery)) == "RECOVERY");
+    CHECK(button_wake_after(ShutdownReason::Recovery, /*external_power=*/false) ==
+          ButtonWake::Armed);
+    uint32_t t = 0;
+    for (; t < kParkMs + kReleaseSettleMs + 50; t += 10) seq.tick(t, false);
+    CHECK(seq.ready_to_power_off());
+}
+
 TEST_CASE("shutdown: a device woken by the button does not switch itself off again") {
     // SYSTEM OFF is left by a press, so the first thing the sequencer ever sees
     // is a button that is already down. Counting that as a hold powers the

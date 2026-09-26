@@ -35,7 +35,6 @@ struct SpyDfu : ports::Dfu {
     int confirmed = 0;
     int recovery = 0;
     bool staged = true;
-    ports::RecoveryPath recovery_path = ports::RecoveryPath::Rebooted;
     void trigger() override { triggered++; }
     bool confirm() override {
         confirmed++;
@@ -47,7 +46,7 @@ struct SpyDfu : ports::Dfu {
     }
     ports::RecoveryPath enter_recovery() override {
         recovery++;
-        return recovery_path;
+        return ports::RecoveryPath::Rebooted;
     }
 };
 }  // namespace
@@ -305,7 +304,9 @@ TEST_CASE(
     CHECK(link.last().bytes.find("\"image\":\"probation\"") != std::string::npos);
 }
 
-TEST_CASE("comms: recovery reboots into the drag-and-drop bootloader after confirm") {
+// The product paints the recovery page first, so a confirmed recovery is a latch the sequencer
+// spends.
+TEST_CASE("comms: recovery routed through confirmation, latched and never entered inline") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -315,25 +316,15 @@ TEST_CASE("comms: recovery reboots into the drag-and-drop bootloader after confi
     cs.set_flight_state(flight::FlightState::OnGround);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
     CHECK(cs.pending() == Pending::Recovery);
+    CHECK_FALSE(cs.recovery_requested());
+    cs.confirm();
+    CHECK(cs.recovery_requested());
     CHECK(dfu.recovery == 0);
-    cs.confirm();
-    CHECK(dfu.recovery == 1);
     CHECK_FALSE(cs.power_off_requested());
-}
+    CHECK(link.last().bytes.find("\"reason\":\"recovery\"") != std::string::npos);
 
-TEST_CASE("comms: a recovery a reboot cannot carry finishes through power off") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings s = go::defaults();
-    SpyDfu dfu;
-    dfu.recovery_path = ports::RecoveryPath::PowerOffToFinish;
-    go::SettingsStore store_cs(s, kTestAddr);
-    ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
-    cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
-    cs.confirm();
-    CHECK(dfu.recovery == 1);
-    CHECK(cs.power_off_requested());
+    cs.clear_recovery_request();
+    CHECK_FALSE(cs.recovery_requested());
 }
 
 TEST_CASE("comms: recovery refused in flight") {

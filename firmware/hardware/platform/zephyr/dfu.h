@@ -92,8 +92,13 @@ class Dfu : public ports::Dfu {
     }
 
     // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF; it would cut the UF2 session
+    ports::RecoveryPath recovery_path() const override {
+        return watchdog_running() ? ports::RecoveryPath::PowerOffToFinish
+                                  : ports::RecoveryPath::Rebooted;
+    }
+
     ports::RecoveryPath enter_recovery() override {
-        if (watchdog_running()) {
+        if (recovery_path() == ports::RecoveryPath::PowerOffToFinish) {
             recovery_armed_ = true;
             return ports::RecoveryPath::PowerOffToFinish;
         }

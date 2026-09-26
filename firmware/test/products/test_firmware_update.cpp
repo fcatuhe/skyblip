@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "products/skyblip_go/pages/recovery.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -182,6 +183,61 @@ TEST_CASE("product: a confirmed apply parks the device and paints the glass befo
     REQUIRE(dfu::from_blob(blob, n, record));
     CHECK(record.from == kRunning);
     CHECK(record.to == kStaged);
+}
+
+TEST_CASE("product: a recovery by reboot paints the bootloader page before it reboots") {
+    Rig rig;
+    rig.platform.dfu().recovery_route = ports::RecoveryPath::Rebooted;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(rig, t);
+
+    rig.send("{\"cmd\":\"recovery\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    REQUIRE(config(rig).pending() == comms::Pending::Recovery);
+
+    config(rig).confirm();
+    rig.run(t, t + 200);
+    t += 200;
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
+    CHECK(rig.product.board().rf().sleeps() == 1);
+    CHECK(rig.platform.dfu().recoveries == 0);
+
+    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning,
+                      1));
+    CHECK(rig.platform.dfu().recoveries == 1);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+}
+
+TEST_CASE("product: a recovery by power off asks for the press, then drops the rails") {
+    Rig rig;
+    rig.platform.dfu().recovery_route = ports::RecoveryPath::PowerOffToFinish;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(rig, t);
+
+    rig.send("{\"cmd\":\"recovery\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+    rig.run(t, t + 200);
+    t += 200;
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+    CHECK(rig.platform.dfu().recoveries == 0);
+
+    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0),
+                      go::kRecoveryAwaitsPress, 1));
+    CHECK(rig.platform.dfu().recoveries == 1);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
 }
 
 TEST_CASE("product: apply is refused below the low-battery warning and nothing parks") {
