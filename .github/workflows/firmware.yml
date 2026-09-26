@@ -92,10 +92,11 @@ jobs:
       # a field that moves in payload.h must fail here, not read as a quiet zero.
       - name: power budget deltas, postures and caveats
         run: python3 scripts/test_power_budget.py
-      # The console page's line reassembly and checksum: ble.js has no other test.
-      - name: simulator transport
+      # The console's line reassembly and the update page's CBOR, SMP and flow against
+      # a fake device: the browser pages have no other test.
+      - name: simulator transport and update client
         working-directory: simulator
-        run: node --test test_ble.mjs
+        run: node --test test_*.mjs
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite
