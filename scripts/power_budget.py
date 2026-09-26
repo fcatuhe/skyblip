@@ -6,13 +6,15 @@
 
 No current is sensed anywhere on the board (firmware/core/power/README.md), so
 nothing here measures milliamps. Two halves meet instead. The Duty records say
-how long each consumer was on; the table below says what one costs; the Power
-records say how far the cell actually fell over the same span. The difference
-between the modelled draw and the measured one is the table's error, and
-printing it is the point of the tool: every row marked (est) is a bench
-measurement this project still owes. scripts/README.md says how to run one.
+how long each consumer was on, the table below says what one costs, and the
+Power records say how far the cell actually fell. The difference between the
+modelled draw and the measured one is the table's error, and printing it is the
+point of the tool: no current in the table was metered on this board, and the
+rows marked (est) do not even have a datasheet figure behind them.
+scripts/README.md says how to run one.
 """
 import argparse
+import collections
 import pathlib
 import sys
 
@@ -24,6 +26,8 @@ WRAP = 1 << 16
 
 ELAPSED = ("elapsed", None, 0)
 
+Consumer = collections.namedtuple("Consumer", "name milliamps counter cited source")
+
 
 def on_ms(field):
     return ("ms", field, 0)
@@ -34,29 +38,29 @@ def events(field, each_ms):
 
 
 CONSUMERS = (
-    ("GNSS receiver", 29.0, ELAPSED, True,
-     "L76K hardware design V1.0 table 2, tracking"),
-    ("nRF52840, flash, rails", 3.5, ELAPSED, False,
-     "10 ms service pass, UARTE at 115200, no CONFIG_PM"),
-    ("IMU hub", 0.6, ELAPSED, False,
-     "BHI260AP accelerometer only, the gyroscope is never read"),
-    ("barometer, lamp, divider", 0.3, ELAPSED, False,
-     "BME280 forced mode at 1 Hz"),
-    ("868 MHz receive", 4.8, on_ms("rx_armed_ms"), True,
-     "SX1262 DS 1.2 table 3-5, Rx boosted FSK on the DC-DC"),
-    ("radio TCXO", 2.0, on_ms("rx_armed_ms"), False,
-     "DS 1.2 excludes the TCXO from every figure it gives"),
-    ("868 MHz transmit", 90.0, on_ms("tx_keyed_ms"), True,
-     "DS 1.2 table 3-6, +14 dBm through the +22 dBm PA config sx1262.h writes"),
-    ("panel partial refresh", 8.0, events("panel_partial_refreshes", 460), False,
-     "460 ms is GxEPD2's D67 partial settle, ssd1681.h"),
-    ("panel full refresh", 8.0, events("panel_full_refreshes", 2500), False,
-     "2.5 s full settle, ssd1681.h and shutdown.h kParkMs"),
-    ("backlight", 20.0, on_ms("backlight_ms"), False, "an LED nobody has metered"),
-    ("Bluetooth connected", 1.5, on_ms("ble_connected_ms"), False,
-     "three connections at a 498-byte MTU"),
-    ("buzzer and haptic", 40.0, on_ms("annunciator_ms"), False,
-     "a motor and a magnet nobody has metered"),
+    Consumer("GNSS receiver", 29.0, ELAPSED, True,
+             "L76K hardware design V1.0 table 2, tracking"),
+    Consumer("nRF52840, flash, rails", 3.5, ELAPSED, False,
+             "10 ms service pass, UARTE at 115200, no CONFIG_PM"),
+    Consumer("IMU hub", 0.6, ELAPSED, False,
+             "BHI260AP accelerometer only, the gyroscope is never read"),
+    Consumer("barometer, lamp, divider", 0.3, ELAPSED, False,
+             "BME280 forced mode at 1 Hz"),
+    Consumer("868 MHz receive", 4.8, on_ms("rx_armed_ms"), True,
+             "SX1262 DS 1.2 table 3-5, Rx boosted FSK on the DC-DC"),
+    Consumer("radio TCXO", 2.0, on_ms("rx_armed_ms"), False,
+             "DS 1.2 excludes the TCXO from every figure it gives"),
+    Consumer("868 MHz transmit", 90.0, on_ms("tx_keyed_ms"), True,
+             "DS 1.2 table 3-6, +14 dBm through the +22 dBm PA config sx1262.h writes"),
+    Consumer("panel partial refresh", 8.0, events("panel_partial_refreshes", 460), False,
+             "460 ms is GxEPD2's D67 partial settle, ssd1681.h"),
+    Consumer("panel full refresh", 8.0, events("panel_full_refreshes", 2500), False,
+             "2.5 s full settle, ssd1681.h and shutdown.h kParkMs"),
+    Consumer("backlight", 20.0, on_ms("backlight_ms"), False, "an LED nobody has metered"),
+    Consumer("Bluetooth connected", 1.5, on_ms("ble_connected_ms"), False,
+             "three connections at a 498-byte MTU"),
+    Consumer("buzzer and haptic", 40.0, on_ms("annunciator_ms"), False,
+             "a motor and a magnet nobody has metered"),
 )
 
 # INFO: fc 21sep26 the callsign burst is not gated on airborne, so parked keys 58 ms a minute
@@ -138,14 +142,15 @@ def refused(run, before, after):
 def interval_charge(before, after, seconds):
     """Milliamp-seconds per consumer over one interval."""
     charge = {}
-    for name, milliamps, (kind, field, each_ms), _, _ in CONSUMERS:
+    for consumer in CONSUMERS:
+        kind, field, each_ms = consumer.counter
         if kind == "elapsed":
             on_seconds = seconds
         elif kind == "ms":
             on_seconds = delta(before, after, field) / 1000.0
         else:
             on_seconds = delta(before, after, field) * each_ms / 1000.0
-        charge[name] = milliamps * on_seconds
+        charge[consumer.name] = consumer.milliamps * on_seconds
     return charge
 
 
@@ -157,7 +162,7 @@ def posture(before, after, seconds):
 
 def model(run):
     """The modelled draw over every interval the corpus can vouch for."""
-    charge = {name: 0.0 for name, *_ in CONSUMERS}
+    charge = {consumer.name: 0.0 for consumer in CONSUMERS}
     held = {"airborne": 0.0, "parked": 0.0}
     seconds = 0.0
     skipped = []
@@ -215,8 +220,9 @@ def caveats(run, skipped, out):
             % (gap["dropped"], gap["span_ms"] / 1000.0))
     for reason in dict.fromkeys(skipped):
         out("  %d intervals dropped: %s" % (skipped.count(reason), reason))
-    estimated = sum(1 for _, _, _, measured, _ in CONSUMERS if not measured)
-    out("  %d of the %d rows below are estimated, not measured" % (estimated, len(CONSUMERS)))
+    cited = sum(1 for consumer in CONSUMERS if consumer.cited)
+    out("  no current in the table was metered on this board: %d of %d cite a datasheet, "
+        "%d are estimates" % (cited, len(CONSUMERS), len(CONSUMERS) - cited))
 
 
 def report(run, pack_mah, out):
@@ -243,13 +249,13 @@ def report(run, pack_mah, out):
 
     modelled_mas = sum(charge.values())
     out("%-26s %8s %7s %6s  %s" % ("consumer", "mAh", "mA", "share", "milliamps from"))
-    for name, _, _, measured, source in CONSUMERS:
-        mas = charge[name]
+    for consumer in CONSUMERS:
+        mas = charge[consumer.name]
         if mas <= 0:
             continue
         out("%-26s %8.1f %7.2f %5.0f%%  %s%s"
-            % (name, mas / 3600.0, mas / seconds, 100.0 * mas / modelled_mas,
-               "" if measured else "(est) ", source))
+            % (consumer.name, mas / 3600.0, mas / seconds, 100.0 * mas / modelled_mas,
+               "" if consumer.cited else "(est) ", consumer.source))
     out("%-26s %8.1f %7.2f %5.0f%%" % ("modelled", modelled_mas / 3600.0,
                                        modelled_mas / seconds, 100.0))
 

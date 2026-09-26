@@ -189,19 +189,19 @@ class Measured(unittest.TestCase):
 
 
 class Caveats(unittest.TestCase):
-    def test_every_estimated_row_is_counted_out_loud(self):
-        estimated = sum(1 for *_, measured, _ in power_budget.CONSUMERS if not measured)
-        run = only_run([duty(0), duty(30)])
-        self.assertIn("%d of the %d rows below are estimated" % (estimated,
-                                                                 len(power_budget.CONSUMERS)),
-                      text(run))
+    def test_every_uncited_current_is_counted_out_loud(self):
+        cited = sum(1 for consumer in power_budget.CONSUMERS if consumer.cited)
+        self.assertEqual(cited, 3)
+        report = text(only_run([duty(0), duty(30)]))
+        self.assertIn("no current in the table was metered on this board: 3 of 12 cite a "
+                      "datasheet, 9 are estimates", report)
 
-    def test_a_row_claiming_a_measurement_names_the_datasheet_table_it_came_from(self):
-        for name, milliamps, _, measured, source in power_budget.CONSUMERS:
-            self.assertGreater(milliamps, 0, name)
-            self.assertTrue(source, name)
-            if measured:
-                self.assertIn("table", source.lower(), name)
+    def test_a_row_citing_a_datasheet_names_the_table_it_came_from(self):
+        for consumer in power_budget.CONSUMERS:
+            self.assertGreater(consumer.milliamps, 0, consumer.name)
+            self.assertTrue(consumer.source, consumer.name)
+            if consumer.cited:
+                self.assertIn("table", consumer.source.lower(), consumer.name)
 
     def test_a_file_with_no_diagnostics_session_is_an_error_and_not_an_empty_budget(self):
         empty = tempfile.NamedTemporaryFile("w", suffix=".ndjson", delete=False)
@@ -212,7 +212,8 @@ class Caveats(unittest.TestCase):
 class Fields(unittest.TestCase):
     def test_every_duty_field_the_budget_reads_is_a_field_the_decoder_decodes(self):
         decoded = records.decode_diag_record(duty(0))
-        for _, _, (kind, field, _), _, _ in power_budget.CONSUMERS:
+        for consumer in power_budget.CONSUMERS:
+            kind, field, _ = consumer.counter
             if kind != "elapsed":
                 self.assertIn(field, decoded)
 
