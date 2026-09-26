@@ -88,6 +88,7 @@ class Platform {
     io::Uart& uart(io::BusId) { return gnss_uart_; }
     io::UartRate& uart_rate(io::BusId) { return gnss_uart_; }
     io::Gpio& gpio() { return gpio_; }
+    io::Delay& delay() { return delay_; }
     io::I2c& i2c(io::BusId) { return sensor_i2c_; }
 
     zephyr::Clock& clock() { return clock_; }
@@ -202,6 +203,7 @@ class Platform {
 
     zephyr::Clock clock_{};
     Gpio gpio_{gpio0_, gpio1_};
+    Delay delay_{};
     Spi radio_spi_{radio_spi_dev_, kSpiCfg, radio_cs_};
     Spi epd_spi_{epd_spi_dev_, kSpiCfg, epd_cs_};
     Uart gnss_uart_{gnss_uart_dev_};

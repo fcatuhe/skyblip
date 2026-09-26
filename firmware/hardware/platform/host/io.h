@@ -18,6 +18,20 @@ struct Chips {
     models::Bhi260 imu;
 };
 
+// INFO: fc 26sep26 not the world clock: a hold that advanced it would make set_millis() wrap
+class Delay : public io::Delay {
+   public:
+    explicit Delay(Chips& chips) : chips_(chips) {}
+
+    void busy_wait_us(uint32_t us) override {
+        chips_.radio.busy_wait_us(us);
+        chips_.epd.busy_wait_us(us);
+    }
+
+   private:
+    Chips& chips_;
+};
+
 // The virtual I2C bus. Two kinds of thing hang off it, which is the truth of
 // this board: parts we drive, which get a model, and parts that are fitted and
 // deliberately unused - the RTC, the touch controller - which answer
