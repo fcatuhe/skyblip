@@ -10,6 +10,7 @@
 #include "core/model/ownship.h"
 #include "core/power/cutoff.h"
 #include "core/protocol/nmea_out.h"
+#include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
@@ -24,12 +25,9 @@ bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
     return now_ms - since_ms >= ConfirmGesture::kDoublePressMs;
 }
 
-// INFO: fc 17sep26 one edge a second, so a phase older than this is an edge that never came
-constexpr uint32_t kPpsEdgeMissedMs = 1500;
-
 PpsState pps_state(const timing::ClockState& clock) {
-    if (!clock.pps_locked) return PpsState::None;
-    return clock.ms_since_pps >= kPpsEdgeMissedMs ? PpsState::Holdover : PpsState::Lock;
+    if (clock.pps_locked) return PpsState::Lock;
+    return timing::in_pps_holdover(clock) ? PpsState::Holdover : PpsState::None;
 }
 }  // namespace
 
