@@ -531,16 +531,20 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
     check the callsign and the aircraft type before you fly.
   </p>
   <p class="lede">
-    When the firmware will not take at all, the same page restarts the device
-    into its USB bootloader, after the same two presses. The glass reads
-    <span class="mono">USB BOOTLOADER</span> and
-    <span class="mono">PRESS THE BUTTON TO START IT</span>: one press, and on a
-    USB cable the device is a drive named <span class="mono">TECHOBOOT</span>.
+    When the firmware will not take at all, the same page hands the device to
+    its USB bootloader, after the same two presses. The device switches itself
+    off on the page below, and the next press starts the bootloader: on a USB
+    cable the device is a drive named <span class="mono">TECHOBOOT</span>.
     A <span class="mono">.uf2</span> dropped on it is new firmware,
     <span class="mono">RST</span> goes back to skyBlip, and nothing transmits
     meanwhile. Two presses of <span class="mono">RST</span> reach the same
     drive without a phone.
   </p>
+
+  <figure class="shot">
+    <%= pages_image_tag "recovery.png", alt: "The recovery page: RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, then a drive named TECHOBOOT on USB, a .uf2 dropped there is new firmware, RST goes back to skyBlip, and nothing transmits meanwhile" %>
+    <figcaption>Handed to the USB bootloader</figcaption>
+  </figure>
 </section>
 
 <section>

@@ -200,10 +200,14 @@ const OWN_CALLSIGN = "S-BLIP";
 // endpoint, the glass asks, and two presses allow it. A write is refused unless
 // the device knows it is on the ground, so the aircraft is parked first.
 function asks(device, callsign) {
+  return asksFor(device, `{"cmd":"set","callsign":"${callsign}"}`);
+}
+
+function asksFor(device, command) {
   device.fly({ ...CRUISE, kt: 0 }).run(GROUND_MS);
-  device.sim.sendConfig(`{"cmd":"set","callsign":"${callsign}"}`);
+  device.sim.sendConfig(command);
   device.run(PROMPT_MS);
-  if (!device.sim.prompt()) throw new Error("the settings write never reached the glass");
+  if (!device.sim.prompt()) throw new Error(`${command} never reached the glass`);
   return device;
 }
 
@@ -447,6 +451,12 @@ const scenes = [
       device.sim.setBatteryMv(3400);
       device.run(20_000);
     }
+  },
+  // The update page's last resort: off on this page, and the next press starts the bootloader.
+  {
+    name: "recovery",
+    powered: false,
+    shot: device => asksFor(device, `{"cmd":"recovery"}`).allow().run(6000)
   },
   {
     name: "off",

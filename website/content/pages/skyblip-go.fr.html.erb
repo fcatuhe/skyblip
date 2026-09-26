@@ -559,16 +559,21 @@ description: Le traceur de poche, écran par écran · le trafic tracé comme vo
     de voler.
   </p>
   <p class="lede">
-    Quand le firmware ne prend pas du tout, la même page redémarre
-    l&rsquo;appareil dans son bootloader USB, après les mêmes deux pressions.
-    L&rsquo;écran affiche <span class="mono">USB BOOTLOADER</span> et
-    <span class="mono">PRESS THE BUTTON TO START IT</span>&nbsp;: une pression,
-    et sur un câble USB l&rsquo;appareil est un lecteur nommé
-    <span class="mono">TECHOBOOT</span>. Un <span class="mono">.uf2</span>
-    déposé dessus est un nouveau firmware, <span class="mono">RST</span> ramène
-    à skyBlip, et rien n&rsquo;est émis pendant ce temps. Deux pressions sur
-    <span class="mono">RST</span> mènent au même lecteur sans téléphone.
+    Quand le firmware ne prend pas du tout, la même page confie
+    l&rsquo;appareil à son bootloader USB, après les mêmes deux pressions.
+    L&rsquo;appareil s&rsquo;éteint sur la page ci-dessous, et la pression
+    suivante démarre le bootloader&nbsp;: sur un câble USB l&rsquo;appareil est
+    un lecteur nommé <span class="mono">TECHOBOOT</span>. Un
+    <span class="mono">.uf2</span> déposé dessus est un nouveau firmware,
+    <span class="mono">RST</span> ramène à skyBlip, et rien n&rsquo;est émis
+    pendant ce temps. Deux pressions sur <span class="mono">RST</span> mènent au
+    même lecteur sans téléphone.
   </p>
+
+  <figure class="shot">
+    <%= pages_image_tag "recovery.png", alt: "La page de récupération : RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, puis un lecteur nommé TECHOBOOT sur USB, un .uf2 déposé dessus est un nouveau firmware, RST ramène à skyBlip, et rien n’est émis pendant ce temps" %>
+    <figcaption>Confié au bootloader USB</figcaption>
+  </figure>
 </section>
 
 <section>
