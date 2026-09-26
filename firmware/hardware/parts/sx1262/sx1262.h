@@ -285,8 +285,8 @@ constexpr int8_t kSrd868ErpLimitDbm = 14;
 // 2.15 dB and rounding it away is how a compliance argument goes quietly wrong.
 //
 // TODO: fc 03aug26 Both antenna figures are the paper part of gate G8
-// (project/research/antenna-868-go.md: ANT-868-CW-QW-SMA, 1.6 dBi peak, and an
-// unmeasured 0.5 dB allowance for the U.FL-to-SMA feed). Replace them with the
+// (the ANT-868-CW-QW-SMA datasheet's 1.6 dBi peak, and an unmeasured 0.5 dB
+// allowance for the U.FL-to-SMA feed). Replace them with the
 // VNA measurement before the regulatory file is filed; the assertion below is
 // what tells you the moment the answer stops holding.
 constexpr int16_t kDbiToDbdCentiDb = 215;
