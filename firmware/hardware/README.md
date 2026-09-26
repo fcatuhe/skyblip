@@ -4,7 +4,7 @@ What fills the roles `ports/` declares. `parts/` is a chip and its datasheet, `p
 
 A part is written against `io::Spi`, `io::I2c` and `io::Uart`, never against Zephyr or against a platform. That is what lets `models/` stand in for the chip on the host and what makes `make test` exercise the SX1262 driver's real register writes.
 
-A window the datasheet asks the host to hold, a reset pulse or a save the part must not be interrupted in, is waited out on `io::Delay` and stated in microseconds. On silicon that is `k_busy_wait`, which does not depend on what a GPIO read happens to cost. On the host it advances every part model's own clock, and the model refuses a hold that came up short: the SX1262 model raises `Fault::ShortReset` or `Fault::SpiBeforeSleepSettled`, the SSD1681 model stays in deep sleep.
+A window the datasheet asks the host to hold, a reset pulse or a save the part must not be interrupted in, is waited out on `io::Delay` and stated in microseconds. On silicon the calling thread sleeps for at least the window (`k_usleep`, resumed if the thread is woken early), so the service loop and the radio thread give the CPU back for the 10 ms panel reset rather than burning it. It spins with `k_busy_wait` only for a hold shorter than one kernel tick or where no thread may sleep (an interrupt, interrupts locked, before the kernel runs). Neither depends on what a GPIO read happens to cost. On the host it advances every part model's own clock, and the model refuses a hold that came up short: the SX1262 model raises `Fault::ShortReset` or `Fault::SpiBeforeSleepSettled`, the SSD1681 model stays in deep sleep.
 
 ## The platform contract
 
