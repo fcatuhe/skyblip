@@ -289,7 +289,8 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
         the page you were on. The screens below are the bench&rsquo;s, the
         apron&rsquo;s and the bug report&rsquo;s: none of them is a picture to
         land on with a thumb. The last of them records a flight for that report,
-        and states what the recording costs the flash before you start it.
+        every subject for a bug or only power and duty for a discharge run, and
+        states what the one you pick costs the flash before you start it.
       </p>
     </div>
     <figure class="shot">
@@ -308,7 +309,7 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
       <figcaption>Satellites</figcaption>
     </figure>
     <figure class="shot">
-      <%= pages_image_tag "radio-log.png", alt: "The radio log: one row per burst heard or sent, newest first, with its time, direction, channel, address and level" %>
+      <%= pages_image_tag "radio-log.png", alt: "The radio log: under the fix, the PPS state and the noise floor, one row per burst heard or sent, newest first, with its time, direction, channel, what it carried, address and level" %>
       <figcaption>Radio log</figcaption>
     </figure>
     <figure class="shot">
@@ -316,7 +317,7 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
       <figcaption>Self test</figcaption>
     </figure>
     <figure class="shot">
-      <%= pages_image_tag "capture.png", alt: "The capture page with nothing recording: the state off, then the price of a capture, the sectors of flash it would take, the stored flights it would evict and the hours of recording it would keep, and PRESS TWICE TO ARM along the foot" %>
+      <%= pages_image_tag "capture.png", alt: "The capture page with nothing recording: the state off, the two captures to pick from, FULL for every subject and POWER RUN for power and duty, then the price of the one picked, the sectors of flash it would take, the stored flights it would evict and the hours of recording it would keep, and PAD PICKS, PRESS TWICE TO ARM along the foot" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>
@@ -329,7 +330,7 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
       <tbody>
         <tr>
           <th>Tap the pad</th>
-          <td>the next page</td>
+          <td>the next page, and on the capture page the next capture</td>
           <td>the next row, and off the last row the page the menu belongs to</td>
         </tr>
         <tr>
@@ -422,6 +423,12 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
         it. A cell that emptied itself on a shelf wrote nothing, so there the
         press is what gets answered, with the same line.
       </p>
+      <p>
+        The boot that follows remembers it. Its self test reads
+        <span class="mono">WAS FLAT</span> beside the voltage, and a phone that
+        connects during that boot is told the same, so a unit that went dark
+        does not come back as if nothing happened.
+      </p>
     </div>
     <figure class="shot">
       <%= pages_image_tag "off-flat-battery.png", alt: "The screen of a device that switched itself off on an empty cell: the skyBlip wordmark with the words FLAT BATTERY under it" %>
@@ -482,9 +489,10 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
   <h3>Two presses allow, <span class="highlight">one press refuses</span>.</h3>
   <p class="lede">
     When an app asks for something that touches the device you have on board,
-    new firmware, a settings write, erasing your flights, switching it off, the
-    device does not take the phone at its word. It puts the question on its own
-    glass, names it, and waits thirty seconds:
+    new firmware, a restart into the USB bootloader, a settings write, erasing
+    your flights, switching it off, the device does not take the phone at its
+    word. It puts the question on its own glass, names it, and waits thirty
+    seconds:
     <span class="mono">PRESS TWICE TO ALLOW</span>,
     <span class="mono">ONE PRESS REFUSES</span>. No answer inside the window
     counts as a refusal.
@@ -499,12 +507,39 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
     Your callsign is one of those writes. The app sends it, the glass asks, and
     from then on it is on the status screen, on the air once every ten seconds,
     and on the screens of the aircraft around you. You can also type it on the
-    device itself, which is the section below.
+    device itself, in the callsign field above.
   </p>
   <p class="lede">
     Presses only count once the question has reached the glass and your thumb
     has stopped: a run of presses that was stepping a setting cannot be spent on
     an authorisation. The pad is inert while a question stands.
+  </p>
+
+  <h3>New firmware comes <span class="highlight">from a web page</span>.</h3>
+  <p class="lede">
+    <%= link_to_page "manage", label: "The update page" %> sends a signed
+    image over the same Bluetooth, from Chrome or Edge, and the glass asks
+    twice: before it takes the image, and before it installs it. The new
+    firmware then has to bring its radio up, hear its receiver and draw its
+    screen before it keeps itself. If it does not, the device goes back to the
+    firmware it had, and to the settings you had when the update began.
+  </p>
+  <p class="lede">
+    Settings the device cannot read are never passed off as yours. It runs on
+    its defaults, the self test&rsquo;s <span class="mono">STORAGE</span> row
+    reads <span class="mono">NVS+NOR DEFAULTS</span>, and the phone is told:
+    check the callsign and the aircraft type before you fly.
+  </p>
+  <p class="lede">
+    When the firmware will not take at all, the same page restarts the device
+    into its USB bootloader, after the same two presses. The glass reads
+    <span class="mono">USB BOOTLOADER</span> and
+    <span class="mono">PRESS THE BUTTON TO START IT</span>: one press, and on a
+    USB cable the device is a drive named <span class="mono">TECHOBOOT</span>.
+    A <span class="mono">.uf2</span> dropped on it is new firmware,
+    <span class="mono">RST</span> goes back to skyBlip, and nothing transmits
+    meanwhile. Two presses of <span class="mono">RST</span> reach the same
+    drive without a phone.
   </p>
 </section>
 
