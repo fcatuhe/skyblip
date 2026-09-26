@@ -22,12 +22,16 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import blip_records as records  # noqa: E402
 import power_budget  # noqa: E402
 
+BOOT = 1
 POWER = 8
 GAP = 16
+END = 17
 DUTY = 18
 
 PHASE_VALID = 0x01
 UTC_DATED = 0x02
+CHARGING = 0x04
+EXTERNAL_POWER = 0x08
 GAUGE_VALID = 0x10
 
 FIX_DATED_AT = 1_700_000_000
@@ -66,6 +70,32 @@ def gap(at_s, dropped=12, span_ms=360000):
     payload[0:4] = dropped.to_bytes(4, "little")
     payload[4:8] = span_ms.to_bytes(4, "little")
     return slot(GAP, bytes(payload), PHASE_VALID, at_s)
+
+
+def boot(at_s):
+    return slot(BOOT, bytes(16), PHASE_VALID, at_s)
+
+
+def end(at_s, flags=PHASE_VALID):
+    return slot(END, bytes(16), flags, at_s)
+
+
+def discharging(seconds, from_percent=100, to_percent=0, closing_level="cutoff", rx_share=0.0,
+                start_s=0, clock=0, period_s=30):
+    """A Power and a Duty record every period, then the pair a parking capture closes on."""
+    raws = []
+    for at in list(range(0, seconds, period_s)) + [seconds]:
+        percent = round(from_percent + (to_percent - from_percent) * at / seconds)
+        level = closing_level if at == seconds else "normal" if percent > 20 else "low"
+        raws.append(power(start_s + at, cell_mv=4187 - 986 * at // seconds, percent=percent,
+                          level=level, flags=PHASE_VALID | GAUGE_VALID | clock))
+        raws.append(duty(start_s + at, rx_armed_ms=int(rx_share * at * 1000),
+                         flags=PHASE_VALID | clock))
+    return raws
+
+
+def whole_run(seconds, **kwargs):
+    return [boot(0)] + discharging(seconds, **kwargs) + [end(seconds)]
 
 
 def session_lines(raws, session=1, closed=True, truncated=False):
@@ -170,35 +200,89 @@ class Holes(Case):
 
 
 class Measured(Case):
+    def measure(self, raws, pack_mah=2400):
+        return power_budget.measure(self.only_run(raws), pack_mah)
+
     def test_a_run_from_full_to_cutoff_spends_the_pack_and_needs_no_curve(self):
-        run = self.only_run([power(0, percent=100), duty(0),
-                             power(7200, cell_mv=3201, percent=0, level="cutoff"), duty(7200)])
-        cell = power_budget.measure(run, 2400)
+        cell, _ = self.measure(whole_run(7200))
         self.assertTrue(cell["whole"])
         self.assertAlmostEqual(cell["mah"], 2400)
         self.assertAlmostEqual(cell["milliamps"], 1200)
 
+    def test_a_run_a_fix_dated_after_it_started_is_timed_on_the_clock_it_ended_on(self):
+        head = [boot(0), power(0), duty(0), power(30), duty(30)]
+        tail = discharging(7200, start_s=FIX_DATED_AT, clock=UTC_DATED)
+        cell, _ = self.measure(head + tail + [end(FIX_DATED_AT + 7200, flags=UTC_DATED)])
+        self.assertTrue(cell["whole"])
+        self.assertAlmostEqual(cell["hours"], 2)
+        self.assertAlmostEqual(cell["milliamps"], 1200)
+
+    def test_a_cutoff_whose_reading_failed_the_sanity_floor_still_ends_a_whole_run(self):
+        raws = whole_run(7200)
+        raws[-3] = power(7200, cell_mv=2100, percent=0, level="cutoff", flags=PHASE_VALID)
+        cell, _ = self.measure(raws)
+        self.assertTrue(cell["whole"])
+        self.assertAlmostEqual(cell["milliamps"], 1200)
+
+    def test_a_run_that_did_not_end_at_cutoff_says_it_is_not_a_whole_run(self):
+        run = self.only_run(whole_run(7200, to_percent=40, closing_level="normal"))
+        cell, _ = power_budget.measure(run, 2400)
+        self.assertFalse(cell["whole"])
+        self.assertIn("not a whole run: it did not end at cutoff, the last level read normal",
+                      self.text(run, 2400))
+
+    def test_a_run_that_did_not_start_full_says_it_is_not_a_whole_run(self):
+        run = self.only_run(whole_run(7200, from_percent=70))
+        self.assertIn("not a whole run: it did not start full", self.text(run, 2400))
+
     def test_a_partial_run_is_read_off_the_gauge_and_says_that_it_was(self):
-        run = self.only_run([power(0, percent=80), duty(0),
-                             power(3600, cell_mv=3800, percent=60), duty(3600)])
-        cell = power_budget.measure(run, 2400)
+        run = self.only_run(whole_run(3600, from_percent=80, to_percent=60, closing_level="normal"))
+        cell, _ = power_budget.measure(run, 2400)
         self.assertFalse(cell["whole"])
         self.assertAlmostEqual(cell["mah"], 480)
         self.assertIn("points of the gauge's own curve", self.text(run, 2400))
 
+    def test_a_gauge_that_did_not_fall_is_no_measurement_and_says_so(self):
+        run = self.only_run(whole_run(3600, from_percent=80, to_percent=80, closing_level="normal"))
+        cell, why = power_budget.measure(run, 2400)
+        self.assertIsNone(cell)
+        self.assertEqual(why, "the gauge did not fall, 80% to 80%")
+        self.assertIn("no measured draw: the gauge did not fall", self.text(run, 2400))
+
+    def test_a_gauge_that_rose_is_no_measurement_and_never_a_negative_draw(self):
+        cell, why = self.measure(whole_run(3600, from_percent=60, to_percent=65,
+                                           closing_level="normal"))
+        self.assertIsNone(cell)
+        self.assertEqual(why, "the gauge did not fall, 60% to 65%")
+
+    def test_a_run_on_the_charger_throughout_is_no_measurement(self):
+        raws = [power(at, percent=40 + at // 90, flags=PHASE_VALID | GAUGE_VALID | CHARGING)
+                for at in range(0, 3600, 30)]
+        cell, why = self.measure(raws)
+        self.assertIsNone(cell)
+        self.assertEqual(why, "fewer than two believable readings on battery alone")
+
+    def test_a_run_unplugged_after_an_hour_is_measured_from_the_unplug(self):
+        plugged = [power(at, percent=100, flags=PHASE_VALID | GAUGE_VALID | EXTERNAL_POWER)
+                   for at in range(0, 3600, 30)]
+        cell, _ = self.measure([boot(0)] + plugged + discharging(7200, start_s=3600))
+        self.assertTrue(cell["whole"])
+        self.assertAlmostEqual(cell["hours"], 2)
+
     def test_a_reading_the_sanity_floor_threw_away_is_not_a_measurement(self):
         run = self.only_run([power(0, flags=PHASE_VALID), duty(0),
-                             power(3600, flags=PHASE_VALID), duty(3600)])
-        self.assertIsNone(power_budget.measure(run, 2400))
+                             power(30, flags=PHASE_VALID), duty(30)])
+        self.assertIsNone(power_budget.measure(run, 2400)[0])
         self.assertIn("no measured draw", self.text(run, 2400))
 
     def test_the_residual_is_what_the_table_does_not_explain(self):
-        run = self.only_run([power(0, percent=100), duty(0),
-                             power(3600, cell_mv=3201, percent=0, level="cutoff"),
-                             duty(3600, rx_armed_ms=3560, tx_keyed_ms=19)])
+        run = self.only_run(whole_run(3600, rx_share=0.5))
+        charge, seconds, _, _ = power_budget.model(run)
+        # GNSS 29 + MCU 3.5 + IMU 0.6 + baro 0.3 + half of receive 4.8 and TCXO 2.0 = 36.8 mA
+        self.assertAlmostEqual(sum(charge.values()) / seconds, 36.8, places=6)
+        self.assertAlmostEqual(power_budget.measure(run, 40.0)[0]["milliamps"], 40.0)
         report = self.text(run, 40.0)
-        self.assertIn("residual", report)
-        self.assertIn("the table explains", report)
+        self.assertRegex(report, r"residual +-3\.20 +the table explains 92% of what the cell lost")
 
 
 class Caveats(Case):
@@ -220,6 +304,14 @@ class Caveats(Case):
         empty = self.capture([])
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(power_budget.main([empty]), 1)
+
+    def test_a_pack_of_no_capacity_is_refused_at_the_command_line(self):
+        path = self.capture(session_lines(whole_run(3600)))
+        for mah in ("0", "-2400", "nan"):
+            with self.assertRaises(SystemExit) as refused, \
+                    contextlib.redirect_stderr(io.StringIO()):
+                power_budget.main([path, "--pack-mah", mah])
+            self.assertEqual(refused.exception.code, 2, mah)
 
 
 class Fields(Case):

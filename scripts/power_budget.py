@@ -83,10 +83,6 @@ class Run:
         return [r for r in self.records if r["type"] == "duty"]
 
     @property
-    def power(self):
-        return [r for r in self.records if r["type"] == "power" and r["valid"]]
-
-    @property
     def gaps(self):
         return [r for r in self.records if r["type"] == "gap"]
 
@@ -110,7 +106,7 @@ def read(path):
         if line.get("type") == "session":
             run.closed = bool(line.get("closed"))
             run.truncated = bool(line.get("truncated"))
-        elif "index" in line and line.get("type") in ("duty", "power", "gap", "end"):
+        elif "index" in line and line.get("type") in ("boot", "duty", "power", "gap", "end"):
             run.records.append(line)
     for run in runs.values():
         run.records.sort(key=lambda r: r["index"])
@@ -126,6 +122,10 @@ def stamp(record):
 def delta(before, after, field):
     """A counter's movement, across the wrap the firmware chose over saturation."""
     return (after[field] - before[field]) % WRAP
+
+
+def on_battery_alone(power):
+    return not (power["external_power"] or power["charging"])
 
 
 def refused(run, before, after):
@@ -180,17 +180,52 @@ def model(run):
     return charge, seconds, held, skipped
 
 
+def discharge(run):
+    """The Power records of the last stretch on battery alone, on one clock, since the last boot."""
+    stretch = []
+    for record in run.records:
+        if record["type"] == "boot":
+            stretch = []
+        elif record["type"] == "power":
+            if not on_battery_alone(record):
+                stretch = []
+            elif stretch and stretch[-1]["utc_dated"] != record["utc_dated"]:
+                stretch = [record]
+            else:
+                stretch.append(record)
+    return stretch
+
+
+def short_of_whole(stretch):
+    """Why this stretch is not a run from full to cutoff, or None when it is one."""
+    readings = [r for r in stretch if r["valid"]]
+    if not readings:
+        return "no believable reading on battery alone"
+    if stretch[-1]["level"] != "cutoff":
+        return "it did not end at cutoff, the last level read %s" % stretch[-1]["level"]
+    if readings[0]["percent"] < FULL_PERCENT:
+        return "it did not start full, the first reading on battery alone is %d%%" % (
+            readings[0]["percent"])
+    return None
+
+
 def measure(run, pack_mah):
-    """What the cell says it spent, which needs the pack's capacity from outside."""
-    power = run.power
-    if len(power) < 2 or pack_mah is None:
-        return None
-    first, last = power[0], power[-1]
+    """What the cell says it spent, or None and why not: the pack's capacity comes from outside."""
+    if pack_mah is None:
+        return None, "pass --pack-mah, the device cannot know the pack it runs on"
+    stretch = discharge(run)
+    readings = [r for r in stretch if r["valid"]]
+    whole = short_of_whole(stretch) is None
+    if len(readings) < 2 and not whole:
+        return None, "fewer than two believable readings on battery alone"
+    first = readings[0]
+    last = stretch[-1] if whole else readings[-1]
     hours = (stamp(last) - stamp(first)) / 3600.0
     if hours <= 0:
-        return None
-    whole = first["percent"] >= FULL_PERCENT and last["level"] == "cutoff"
+        return None, "the readings on battery alone span no time"
     points = first["percent"] - last["percent"]
+    if not whole and points <= 0:
+        return None, "the gauge did not fall, %d%% to %d%%" % (first["percent"], last["percent"])
     mah = pack_mah if whole else pack_mah * points / 100.0
     return {
         "hours": hours,
@@ -199,10 +234,10 @@ def measure(run, pack_mah):
         "whole": whole,
         "points": points,
         "from_mv": first["cell_mv"],
-        "to_mv": last["cell_mv"],
+        "to_mv": readings[-1]["cell_mv"],
         "from_level": first["level"],
         "to_level": last["level"],
-    }
+    }, None
 
 
 def clock(seconds):
@@ -218,6 +253,9 @@ def caveats(run, skipped, out):
     for gap in run.gaps:
         out("  a gap record: %d records the ring had to refuse, over %.1f s"
             % (gap["dropped"], gap["span_ms"] / 1000.0))
+    shortfall = short_of_whole(discharge(run))
+    if shortfall:
+        out("  not a whole run: %s" % shortfall)
     for reason in dict.fromkeys(skipped):
         out("  %d intervals dropped: %s" % (skipped.count(reason), reason))
     cited = sum(1 for consumer in CONSUMERS if consumer.cited)
@@ -227,7 +265,7 @@ def caveats(run, skipped, out):
 
 def report(run, pack_mah, out):
     charge, seconds, held, skipped = model(run)
-    cell = measure(run, pack_mah)
+    cell, unmeasured = measure(run, pack_mah)
 
     out("run %d, %d records" % (run.session, len(run.records)))
     out("")
@@ -238,12 +276,11 @@ def report(run, pack_mah, out):
         return
     out("")
 
+    out("span      %s of Duty intervals" % clock(seconds))
     if cell:
-        out("span      %s   %d -> %d mV   %s -> %s"
-            % (clock(seconds), cell["from_mv"], cell["to_mv"],
+        out("cell      %s   %d -> %d mV   %s -> %s"
+            % (clock(cell["hours"] * 3600), cell["from_mv"], cell["to_mv"],
                cell["from_level"], cell["to_level"]))
-    else:
-        out("span      %s" % clock(seconds))
     out("posture   airborne %s, parked %s" % (clock(held["airborne"]), clock(held["parked"])))
     out("")
 
@@ -261,7 +298,7 @@ def report(run, pack_mah, out):
 
     if not cell:
         out("")
-        out("no measured draw: pass --pack-mah, and a run with two believable readings")
+        out("no measured draw: %s" % unmeasured)
         return
     out("%-26s %8.1f %7.2f         %s"
         % ("measured", cell["mah"], cell["milliamps"],
@@ -278,10 +315,17 @@ def report(run, pack_mah, out):
         out("capacity instead of assuming it")
 
 
+def capacity(text):
+    mah = float(text)
+    if not mah > 0:
+        raise argparse.ArgumentTypeError("a pack holds more than zero mAh, not %s" % text)
+    return mah
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("capture", help="NDJSON from blip.py fetch --log diagnostics")
-    parser.add_argument("--pack-mah", type=float, default=None,
+    parser.add_argument("--pack-mah", type=capacity, default=None,
                         help="the cell's rated capacity, which the device cannot know")
     parser.add_argument("--session", type=int, default=None, help="one session, not every one")
     args = parser.parse_args(argv)
