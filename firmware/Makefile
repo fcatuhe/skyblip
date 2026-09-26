@@ -4,6 +4,7 @@
 #   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
 #   make fuzz        every libFuzzer harness for FUZZ_SECONDS, in build/fuzz/ (clang)
 #   make fuzz-nmea   one of them: nmea, air or link
+#   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
 #   make tidy        clang-tidy the sources the host build compiles
 #   make simulator   terminal simulator
 #   make browser     compile the WASM the browser page drives
@@ -36,15 +37,23 @@ SANITIZE_FLAGS := -fsanitize=address,undefined,float-cast-overflow \
 
 # One switch for the flags and the tree, so instrumented objects never mix with plain ones.
 BUILD := build
+
+# The nRF52 is ILP32 with an unsigned char: ABI=ilp32 builds for i386 with both, in its own trees.
+ifeq ($(ABI),ilp32)
+ABI_SUFFIX := -ilp32
+BUILD := build/ilp32
+CXXFLAGS += -m32 -funsigned-char
+endif
+
 ifdef SANITIZE
-BUILD := build/sanitize
+BUILD := build/sanitize$(ABI_SUFFIX)
 CXXFLAGS += $(SANITIZE_FLAGS)
 endif
 
 # libFuzzer ships with clang only, GCC has no -fsanitize=fuzzer.
 FUZZ_CXX ?= clang++
 FUZZ_SECONDS ?= 60
-FUZZ_BUILD := build/fuzz
+FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
 ifdef FUZZ
 BUILD := $(FUZZ_BUILD)
 CXX := $(FUZZ_CXX)

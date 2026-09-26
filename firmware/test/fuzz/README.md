@@ -10,6 +10,8 @@ Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each
 
 `make fuzz` builds all three in `build/fuzz/` and runs each for `FUZZ_SECONDS` (60 by default). `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
 
+`make fuzz ABI=ilp32` builds the same harnesses for i386 in `build/fuzz-ilp32/`, with `-m32 -funsigned-char`: a 32-bit `long` and an unsigned `char`, as on the nRF52. The 64-bit host cannot see an overflow that only a 32-bit `long` reaches, and the i386 build found one in its first minutes: the RMC date's seconds were a `long`, which a garbage date overflowed at once and a real one would have from 2038. CI runs both builds, the i386 one on an x86_64 runner with `g++-multilib`.
+
 ## What each harness does to reach the code
 
 A mutation that breaks a checksum stops at the checksum, and the fuzzer never sees the parser behind it. Each harness therefore seals what an honest transmitter would seal, and leaves the corruption to the fuzzer:
@@ -36,10 +38,9 @@ A write longer than an `events::RxFrame` is dropped, because the ATT layer refus
 
 ## When one crashes
 
-The input is in `build/fuzz/crashes/`, and CI uploads that directory. Run the harness on it to reproduce: `build/fuzz/fuzz_link build/fuzz/crashes/link-crash-<sha>`. The fix lands with a regression case in the suite beside the code, whose one-line comment names the harness that found it.
+The input is in `build/fuzz/crashes/` (or `build/fuzz-ilp32/crashes/`), and CI uploads that directory. Run the harness on it to reproduce: `build/fuzz/fuzz_link build/fuzz/crashes/link-crash-<sha>`. The fix lands with a regression case in the suite beside the code, whose one-line comment names the harness that found it.
 
 ## What these cannot see
 
-- A `long` is 64 bits here and 32 on the nRF52. An overflow that only a 32-bit `long` reaches passes on the host.
 - An ALP-TAS frame is encrypted with a key taken from the second it was sent, so a mutation rarely gets past the decrypt check in `alptas_decode`, and the fields behind it are reached far less often than the rest.
 - `fuzz_link` runs at about 60 inputs a second, because every input boots a product. A short CI run is a smoke test for this one, and the cached corpus is what makes it worth more over time.
