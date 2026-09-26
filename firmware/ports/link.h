@@ -17,6 +17,9 @@ namespace skyblip::ports {
 // is the only reason payload_bytes() exists.
 constexpr uint16_t kMinimumLinkPayload = 20;
 
+// INFO: fc 25sep26 WouldBlock is a link at its share of notifications, and a reply waits this long
+constexpr uint32_t kReplyHoldMs = 2000;
+
 class Link {
    public:
     virtual ~Link() = default;

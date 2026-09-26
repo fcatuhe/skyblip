@@ -103,6 +103,7 @@ void ConfigService::on_link_down(const events::LinkDown& down) {
     pending_len_ = 0;
     upload_window_open_ = false;
     status_push_due_ = false;
+    drop_replies();
 }
 
 namespace {
@@ -149,16 +150,37 @@ Status ConfigService::broadcast(const char* json, int len) {
     return sent;
 }
 
+// INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
 Status ConfigService::reply_to(uint16_t session_id, const char* json, int len) {
-    if (len <= 0 || len > payload_to(session_id)) {
+    if (len <= 0 || len > payload_to(session_id) || held_len_ > 0) {
         diag_.link_drops++;
-        return Status::OutOfRange;
+        return held_len_ > 0 ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(
         session_id, events::Endpoint::Config,
         ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(len)));
-    if (!is_ok(sent)) diag_.link_drops++;
+    if (sent == Status::WouldBlock)
+        hold(session_id, json, len);
+    else if (!is_ok(sent))
+        diag_.link_drops++;
     return sent;
+}
+
+void ConfigService::hold(uint16_t session_id, const char* json, int len) {
+    if (len > kHeldFrameCap) {
+        diag_.link_drops++;
+        return;
+    }
+    std::memcpy(held_, json, static_cast<size_t>(len));
+    held_len_ = len;
+    held_to_ = session_id;
+    held_since_ms_ = now_ms_;
+}
+
+void ConfigService::drop_replies() {
+    held_len_ = 0;
+    report_.reset();
+    timing_.reset();
 }
 
 Status ConfigService::reply(const char* json) {

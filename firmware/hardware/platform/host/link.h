@@ -76,6 +76,10 @@ class Link : public ports::Link {
         return record(session_id, ep, bytes);
     }
 
+    // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
+    void hold_after(int frames) { share_ = frames; }
+    void serve() { in_flight_ = 0; }
+
     void force_status(Status s, bool once = true) {
         next_status_ = s;
         once_ = once;
@@ -113,6 +117,8 @@ class Link : public ports::Link {
             if (once_) next_status_ = Status::Ok;
             return s;
         }
+        if (share_ > 0 && in_flight_ >= share_) return Status::WouldBlock;
+        in_flight_++;
         sent.push_back({ep, std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
                         session_id});
         return Status::Ok;
@@ -125,6 +131,8 @@ class Link : public ports::Link {
     uint16_t last_{0};
     Status next_status_{Status::Ok};
     bool once_{true};
+    int share_{0};
+    int in_flight_{0};
 };
 
 }

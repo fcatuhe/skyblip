@@ -33,8 +33,9 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible_count());
 
+    config_.resume_replies(now_ms);
     events::RxFrame frame{};
-    while (context_.bus.link_rx.pop(frame)) {
+    while (!config_.replying() && context_.bus.link_rx.pop(frame)) {
         config_.on_rx(frame);
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }

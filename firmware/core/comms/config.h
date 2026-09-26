@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_CORE_COMMS_CONFIG_H
 #define SKYBLIP_CORE_COMMS_CONFIG_H
 
+#include <optional>
+
 #include "core/comms/config_store.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/link_claim.h"
@@ -78,6 +80,11 @@ class ConfigService {
 
     // Drives the upload-window timeout. Called once per App::step().
     void tick(uint32_t now_ms);
+
+    // INFO: fc 25sep26 a reply the link refused with WouldBlock goes out here, and a report resumes
+    void resume_replies(uint32_t now_ms);
+    // While true the next command waits on the bus: its answer would have nowhere to go.
+    bool replying() const { return held_len_ > 0 || report_ || timing_; }
 
     // Consulted by the MCUmgr image-upload hook. An unauthenticated SMP
     // transport is what makes the browser update page possible (encrypted GATT
@@ -257,7 +264,12 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
-    void send_report(DiagnosticsReport& report);
+    template <class Report, class... Args>
+    void start_report(std::optional<Report>& report, int frame_cap, const Args&... args);
+    template <class Report>
+    void continue_report(std::optional<Report>& report);
+    void hold(uint16_t session_id, const char* json, int len);
+    void drop_replies();
     static const char* flight_name(flight::FlightState fs);
     static bool needs_swap_power(Pending pending);
     bool image_staged() const;
@@ -286,6 +298,16 @@ class ConfigService {
     uint32_t window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
     char pending_buf_[sizeof(events::RxFrame::data) + 1]{0};
+    static constexpr int kHeldFrameCap = kTimingFrameCap;
+    static_assert(kHeldFrameCap >= DiagnosticsReport::kFrameCap, "a report frame must be holdable");
+    char held_[kHeldFrameCap]{};
+    int held_len_{0};
+    uint16_t held_to_{0};
+    uint32_t held_since_ms_{0};
+    std::optional<DiagnosticsReport> report_{};
+    std::optional<TimingReport> timing_{};
+    int report_payload_{0};
+    int report_frame_cap_{0};
     int pending_len_{0};
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
