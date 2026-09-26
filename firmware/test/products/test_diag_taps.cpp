@@ -5,34 +5,15 @@
 #include "core/diag/payload.h"
 #include "core/diag/profile.h"
 #include "core/settings/address.h"
-#include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/screen.h"
+#include "test/support/diag_corpus.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
 
 namespace {
-
-// The corpus as a laptop reads it: every slot of every sector the diagnostics ring owns.
-std::vector<diag::Record> captured(Rig& rig) {
-    std::vector<diag::Record> out;
-    platform::host::FlashRegion& flash = rig.platform.log_flash();
-    std::vector<uint8_t> raw(flash.sector_bytes());
-    for (uint32_t sector = 0; sector < flash.sector_count(); sector++) {
-        REQUIRE(is_ok(flash.read(sector * flash.sector_bytes(), raw.data(), flash.sector_bytes())));
-        store::SectorHeader header{};
-        if (store::decode_sector_header(raw.data(), header) != Status::Ok) continue;
-        if (header.owner != store::SectorOwner::Diagnostics) continue;
-        for (uint32_t at = store::kSectorHeaderBytes; at + diag::kRecordBytes <= raw.size();
-             at += diag::kRecordBytes) {
-            diag::Record record{};
-            if (diag::decode_record(raw.data() + at, record) == Status::Ok) out.push_back(record);
-        }
-    }
-    return out;
-}
 
 int count_of(const std::vector<diag::Record>& records, diag::Type type) {
     int n = 0;

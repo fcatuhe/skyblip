@@ -72,6 +72,13 @@ void PowerService::record_pass(uint32_t now_ms) {
     record_duty(at);
 }
 
+void PowerService::record_last_pass(uint32_t now_ms) {
+    if (!context_.diag.armed()) return;
+    const diag::Instant at = context_.instant(now_ms);
+    record_power(at);
+    record_duty(at);
+}
+
 void PowerService::record_power(const diag::Instant& at) {
     const bus::PowerState& power = context_.state.power;
     diag::Power value{};

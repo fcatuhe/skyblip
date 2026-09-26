@@ -255,7 +255,7 @@
     "records": {"type": "integer", "minimum": 0, "description": "end. Records the session wrote before this marker, as the device counted them"},
 
     "panel_partial_refreshes": {"type": "integer", "minimum": 0, "maximum": 65535,
-                                "description": "duty. Partial panel refreshes the device has done, low 16 bits of a 32-bit counter. Every duty field wraps rather than saturating, because a reader takes the difference between two records and unsigned subtraction crosses a wrap correctly: the emitting cadence is bounded at 60 s (firmware/core/diag/payload.h kDutyMaxPeriodMs) so one interval's delta cannot reach 65536"},
+                                "description": "duty. Partial panel refreshes the device has done, low 16 bits of a 32-bit counter. Every duty field wraps rather than saturating, because a reader takes the difference between two records and unsigned subtraction crosses a wrap correctly: the emitting cadence is bounded at 60 s (firmware/core/diag/payload.h kDutyMaxPeriodMs) so one interval's delta cannot reach 65536. A capture that parks writes one last power record then one last duty record, off the cadence, before its end record"},
     "panel_full_refreshes": {"type": "integer", "minimum": 0, "maximum": 65535,
                              "description": "duty. Full panel refreshes, the expensive ones: a full clear costs seconds of the e-paper controller and several times the charge of a partial. Wraps, like every duty field"},
     "backlight_ms": {"type": "integer", "minimum": 0, "maximum": 65535,
