@@ -25,6 +25,8 @@ namespace skyblip::platform::host {
 
 class Dfu : public ports::Dfu {
    public:
+    explicit Dfu(const ports::Watchdog& watchdog) : watchdog_(watchdog) {}
+
     void trigger() override { triggered++; }
     bool confirm() override {
         confirms++;
@@ -43,15 +45,17 @@ class Dfu : public ports::Dfu {
         out = staged;
         return true;
     }
-    ports::RecoveryPath recovery_path() const override { return recovery_route; }
+    ports::RecoveryPath recovery_path() const override {
+        return watchdog_.armed() ? ports::RecoveryPath::PowerOffToFinish
+                                 : ports::RecoveryPath::Rebooted;
+    }
     ports::RecoveryPath enter_recovery() override {
         recoveries++;
-        return recovery_route;
+        return recovery_path();
     }
     void publish_upload_allowed(bool allowed) override { upload_allowed_published = allowed; }
     bool upload_finished() override { return finished_upload; }
     void forget_upload() override { finished_upload = false; }
-    ports::RecoveryPath recovery_route{ports::RecoveryPath::Rebooted};
 
     int triggered{0};
     int confirms{0};
@@ -64,6 +68,9 @@ class Dfu : public ports::Dfu {
     bool finished_upload{false};
     ports::ImageVersion running{};
     ports::ImageVersion staged{};
+
+   private:
+    const ports::Watchdog& watchdog_;
 };
 
 class Baro {
@@ -240,12 +247,12 @@ class Platform {
     host::FlashRegion log_flash_{};
     host::Annunciator annunciator_{};
     host::Indicator indicator_{};
-    host::Dfu dfu_{};
+    host::Watchdog watchdog_{};
+    host::Dfu dfu_{watchdog_};
     host::Baro baro_{};
     host::Battery battery_{};
     host::DieTemperature die_temperature_{};
     host::Pps pps_{clock_};
-    host::Watchdog watchdog_{};
     host::SystemPower system_power_{};
     ports::Capabilities fitted_;
     uint32_t device_addr_;
