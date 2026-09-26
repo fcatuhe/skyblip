@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "runtime/tasks.h"
 #include "test/support/product_rig.h"
+#include "test/support/update_rig.h"
 
 using namespace skyblip;
 
@@ -16,19 +17,6 @@ namespace {
 
 constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
 constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
-
-void on_ground(Rig& rig, uint32_t& t) {
-    rig.push_fix(/*alt_m=*/0, /*updates=*/1);
-    rig.run(t, t + 200);
-    t += 200;
-}
-
-void receiver_speaks_without_a_fix(Rig& rig) {
-    gnss::GnssSolution f{};
-    f.fix_valid = false;
-    f.updates = 1;
-    rig.product.bus().gnss.push(f);
-}
 
 int length(const char* s) {
     int n = 0;
@@ -45,8 +33,6 @@ bool glass_reads(const ui::Canvas& fb, int x, int y, const char* text, int scale
             if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
     return true;
 }
-
-comms::ConfigService& config(Rig& rig) { return rig.product.config().config(); }
 
 void pass(Rig& rig, uint32_t& t) {
     t += 50;
@@ -156,59 +142,6 @@ void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
 }
 
 }  // namespace
-
-TEST_CASE("product: a fresh image confirms itself once the receiver has spoken, fix or no fix") {
-    Rig rig;
-    rig.platform.dfu().image_confirmed = false;
-    REQUIRE(rig.setup() == Status::Ok);
-    CHECK(config(rig).image_state() == dfu::ImageState::Probation);
-
-    // Indoors: radio up, panel drawn, nothing off the UART yet
-    rig.run(0, 30000);
-    CHECK(rig.platform.dfu().confirms == 0);
-    CHECK(rig.state().panel_presented);
-
-    receiver_speaks_without_a_fix(rig);
-    rig.run(30000, 30500);
-    CHECK(rig.platform.dfu().confirms == 1);
-    CHECK(rig.platform.dfu().confirmed());
-    CHECK(config(rig).image_state() == dfu::ImageState::Confirmed);
-
-    rig.run(30500, 60000);
-    CHECK(rig.platform.dfu().confirms == 1);
-}
-
-TEST_CASE("product: a receiver that never speaks keeps the image on probation") {
-    Rig rig;
-    rig.platform.dfu().image_confirmed = false;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.run(0, 120000);
-    CHECK(rig.platform.dfu().confirms == 0);
-    CHECK(config(rig).image_state() == dfu::ImageState::Probation);
-}
-
-TEST_CASE("product: an image that was installed confirmed is never confirmed again") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    on_ground(rig, t);
-    rig.run(t, t + 5000);
-    CHECK(rig.platform.dfu().confirms == 0);
-    CHECK(config(rig).image_state() == dfu::ImageState::Confirmed);
-}
-
-TEST_CASE("product: a board with no panel does not wait for one to confirm") {
-    constexpr ports::Capabilities kNoPanel = static_cast<ports::Capabilities>(
-        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
-        ~static_cast<uint32_t>(ports::Capability::Display));
-    Rig rig(kNoPanel);
-    rig.platform.dfu().image_confirmed = false;
-    REQUIRE(rig.setup() == Status::Ok);
-    receiver_speaks_without_a_fix(rig);
-    rig.run(0, 500);
-    CHECK_FALSE(rig.state().panel_presented);
-    CHECK(rig.platform.dfu().confirms == 1);
-}
 
 TEST_CASE("product: a confirmed apply parks the device and paints the glass before the swap") {
     Rig rig;
@@ -396,18 +329,6 @@ TEST_CASE("product: the image that lands forgets the attempt once it has confirm
     CHECK(after.rig.platform.dfu().confirms == 1);
     CHECK(config(after.rig).image_state() == dfu::ImageState::Confirmed);
     CHECK_FALSE(attempt_recorded(after.rig));
-}
-
-TEST_CASE("product: a trailer that will not take the confirmation leaves the image on probation") {
-    Rig rig;
-    rig.platform.dfu().image_confirmed = false;
-    rig.platform.dfu().confirm_fails = true;
-    REQUIRE(rig.setup() == Status::Ok);
-    receiver_speaks_without_a_fix(rig);
-    rig.run(0, 10000);
-    CHECK(rig.platform.dfu().confirms == 3);
-    CHECK_FALSE(rig.platform.dfu().confirmed());
-    CHECK(config(rig).image_state() == dfu::ImageState::Probation);
 }
 
 // The finished upload is held in RAM, so a restart costs the pilot the upload and not a boot.
