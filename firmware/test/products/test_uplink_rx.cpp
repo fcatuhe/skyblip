@@ -22,6 +22,7 @@
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "core/timing/slot.h"
+#include "core/traffic/lease.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -296,8 +297,10 @@ TEST_CASE("uplink: the relay takes over once the direct report has gone stale") 
 
     hear_directly(rig, t, 0x4C0002, 1200, 300, 40);
     REQUIRE(rig.state().traffic.count() == 1);
+    const traffic::Target* direct = target_for(rig, 0x4C0002);
+    REQUIRE(direct != nullptr);
 
-    fly(rig, t, traffic::kAlertMaxAgeMs / 1000 + 1);
+    fly(rig, t, traffic::direct_preferred_max_age_s(direct->obs) + 1);
 
     model::AircraftObs later = relayed_aircraft(rig, 0x4C0002, 500, 300, 40);
     REQUIRE(relay(rig, t, &later, 1));
