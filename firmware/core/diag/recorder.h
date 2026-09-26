@@ -33,7 +33,6 @@ class Recorder {
 
     bool record(const Record& record);
     bool record(const radio::Entry& entry);
-    bool records(Type type) const { return armed_ && lists(profile_, type); }
 
     template <class T>
     bool record(const T& value, const Instant& at) {

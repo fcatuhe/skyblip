@@ -155,7 +155,6 @@ void arm(Profile = Full);                   a capture starts, and the ring start
 void disarm();                              nothing more is accepted, what is buffered still drains
 bool armed() const;
 Profile profile() const;
-bool records(Type) const;                   armed, and this type is one the profile wants
 bool record(const Record&);                 false when disarmed, refused by the profile, or dropped
 bool record(const radio::Entry&);           a tape entry carries its own instant
 template <class T> bool record(const T&, const Instant&);
