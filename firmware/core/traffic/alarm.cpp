@@ -6,6 +6,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/nmea_out.h"
+#include "core/traffic/lease.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 
@@ -68,7 +69,7 @@ AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs&
         div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(brg)) * 360, 65536) % 360);
     a.rel_bearing_deg = static_cast<uint16_t>(((brg_deg - own_deg) % 360 + 360) % 360);
 
-    a.level = level_for(a);
+    a.level = flight::on_ground(reported.flight_state) ? Level::None : level_for(a);
     return a;
 }
 
@@ -86,6 +87,7 @@ AlarmTracker::Decision AlarmTracker::update(const model::OwnState& own,
         slot->obs_key = key;
         slot->seen_ms = now_ms;
     }
+    slot->forget_ms = forget_ms(target);
 
     if (now_ms - target.at_ms <= kAlertMaxAgeMs)
         d.notify = notify_for(*slot, d.assessment.level, now_ms);
@@ -161,7 +163,7 @@ bool AlarmTracker::dismissed() const {
 
 void AlarmTracker::forget_stale(uint32_t now_ms) {
     for (Slot& s : slots_) {
-        if (s.used && now_ms - s.seen_ms > kTargetForgetMs) s = Slot{};
+        if (s.used && now_ms - s.seen_ms > s.forget_ms) s = Slot{};
     }
 }
 

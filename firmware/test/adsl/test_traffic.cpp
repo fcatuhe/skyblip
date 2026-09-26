@@ -437,6 +437,13 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz on the ground") {
     CHECK(timing::Transmitter::period_s(/*airborne=*/true) == 1u);
     CHECK(timing::Transmitter::period_s(/*airborne=*/false) == 10u);
+    CHECK(flight::report_period_s(flight::FlightState::Airborne) == 1u);
+    CHECK(flight::report_period_s(flight::FlightState::OnGround) == 10u);
+}
+
+// An emitter that does not say which state it is in is heard at the airborne rate or not at all.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a target of unknown state is held to the airborne interval") {
+    CHECK(flight::report_period_s(flight::FlightState::Unknown) == 1u);
 }
 
 // A fix older than half a second is replaced, not transmitted: the clause's own deadline.

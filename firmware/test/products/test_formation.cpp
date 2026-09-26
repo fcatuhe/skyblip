@@ -1,5 +1,6 @@
 // What a formation the device found by itself does to the annunciator, and what takes it back.
 #include "core/traffic/formation.h"
+#include "core/traffic/lease.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 #include "doctest/doctest.h"
@@ -143,7 +144,7 @@ TEST_CASE("formation: a contact nobody has heard from is forgotten, membership a
     const uint32_t after = flight.hold_station(1000);
     REQUIRE(flight.rig.alarm_service.formation_members() == 1);
 
-    const uint32_t gone = after + formation::kContactForgetMs + 1;
+    const uint32_t gone = after + traffic::kAirborneTargetForgetS * 1000 + 1;
     flight.rig.state.traffic.age_out(gone / 1000);
     flight.rig.alarm_service.tick(gone);
     CHECK(flight.rig.alarm_service.formation_members() == 0);

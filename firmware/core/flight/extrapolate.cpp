@@ -17,7 +17,6 @@ constexpr int64_t kCentiDegreeMsPerTurn = 36000000;
 constexpr int64_t kMicrometresPerE7 = 11132;
 constexpr int64_t kMicrometresPerMetre = 1000000;
 constexpr int64_t kMicrometresPerMillimetre = 1000;
-constexpr int64_t kMsPerS = 1000;
 // Below this cosine a metre of easting is more than a degree of longitude and
 // the scaling stops meaning anything. 88 degrees of latitude is 500 km further
 // north than anything this device will fly over.
@@ -73,16 +72,17 @@ Prediction carry(const Motion& m, int32_t dt_ms) {
         static_cast<uint16_t>(to_angle16(CentiDegrees(m.track_cdeg)) + turn16 / 2));
 
     const int64_t scale = kTrigOne * kMicrometresPerE7;
-    const int64_t travel = div_round<int64_t>(
-        static_cast<int64_t>(m.speed_mm_s) * dt_ms * kMicrometresPerMillimetre, kMsPerS);
+    const int64_t travel =
+        div_round<int64_t>(static_cast<int64_t>(m.speed_mm_s) * dt_ms * kMicrometresPerMillimetre,
+                           kMillisecondsPerSecond);
     out.lat_1e7 = m.lat_1e7 + static_cast<int32_t>(div_round(travel * icos(heading), scale));
     const int64_t east = div_round(travel * isin(heading), scale);
     out.lon_1e7 = wrapped_lon_1e7(static_cast<int64_t>(m.lon_1e7) +
                                   div_round(east * kTrigOne, lat_cosine(m.lat_1e7)));
 
     if (m.climbs) {
-        const int32_t rise =
-            static_cast<int32_t>(div_round(static_cast<int64_t>(m.climb_mm_s) * dt_ms, kMsPerS));
+        const int32_t rise = static_cast<int32_t>(
+            div_round<int64_t>(static_cast<int64_t>(m.climb_mm_s) * dt_ms, kMillisecondsPerSecond));
         out.alt_mm = m.alt_mm + rise;
         out.alt_msl_mm = m.alt_msl_mm + rise;
     }

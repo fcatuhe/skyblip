@@ -8,6 +8,7 @@
 #include <cstring>
 #include <initializer_list>
 
+#include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/alptas.h"
 #include "core/protocol/nmea_out.h"
@@ -114,6 +115,14 @@ TEST_CASE("alptas: on-ground and airborne flight state survive the 2-bit field")
         REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
         CHECK(int(got.flight_state) == int(state));
     }
+}
+
+// SoftRF latest_encode never sends 0, and reading it as parked silenced the alarm.
+TEST_CASE("alptas: the airborne field is 1 on the ground, 2 or 3 airborne, and 0 unknown") {
+    CHECK(alptas_flight_state(0) == uint8_t(flight::FlightState::Unknown));
+    CHECK(alptas_flight_state(1) == uint8_t(flight::FlightState::OnGround));
+    CHECK(alptas_flight_state(2) == uint8_t(flight::FlightState::Airborne));
+    CHECK(alptas_flight_state(3) == uint8_t(flight::FlightState::Airborne));
 }
 
 TEST_CASE("alptas: an ICAO address keeps its table, an unknown one degrades to 0") {

@@ -72,6 +72,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTaxiSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
+| `kAirborneReportPeriodS` | 1 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
+| `kGroundReportPeriodS` | 10 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
 | `kTurnWindowMs` | 1000 (1 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
 
 ## [`firmware/core/gnss`](../firmware/core/gnss/README.md)
@@ -155,8 +157,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word, then 25 Manchester-encoded bytes = 4.8 ms, rounded up. |
-| `kGroundPeriodS` | 10 | seconds | Period | §G.1.16: at least 1 Hz airborne, 0.1 Hz on the ground. |
-| `kAirbornePeriodS` | 1 | seconds | Period | - |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
 | `kFixLagMaxMs` | 500 | milliseconds | - | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
 | `kCompletionSlackMs` | 5 | milliseconds | - | Ours, not the spec's: §C.5 gives the direct slot 450..1000 and requires a burst to complete before the slot ends. |
@@ -170,21 +170,20 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kUnknownTargetSpeedMps` | 30 | metres per second | - | a relayed target arrives with no velocity, and zero would make it the safest dot |
 | `kAlertMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | SoftRF alerts only on targets seen within ALERT_EXPIRATION_TIME (5 s) and re-checks no more often than every 2 s (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260). |
 | `kRenotifyFloorMs` | 2000 (2 s) | milliseconds | Floor | [README](../firmware/core/traffic/README.md) argues it |
-| `kTargetForgetMs` | 12000 (12 s) | milliseconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kCallsignForgetS` | 600 | seconds | Forget | a name outlives the target it belongs to, which ages out in seconds |
 | `kRangeM` | 1000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kVertM` | 100 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kDriftM` | 60 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kVertDriftM` | 30 | metres | - | - |
 | `kTogetherHoldMs` | 6000 (6 s) | milliseconds | Hold | [README](../firmware/core/traffic/README.md) argues it |
-| `kBreakFixes` | 2 | fixes | Fixes | - |
-| `kContactForgetMs` | 12000 (12 s) | milliseconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kBreakFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kClosingMps` | 3 | metres per second | - | [README](../firmware/core/traffic/README.md) argues it |
+| `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kAirborneTargetForgetS` | `kTargetForgetReports * flight::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kGroundTargetForgetS` | `kTargetForgetReports * flight::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kMaxPlausibleRangeM` | 30000 | metres | - | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
 | `kMaxRelayedRangeM` | `2 * kMaxPlausibleRangeM` = 60000 | metres | - | A relayed target did not travel that path. |
 | `kTurnMaxGapMs` | 3000 (3 s) | milliseconds | - | [README](../firmware/core/traffic/README.md) argues it |
-| `kDirectPreferredMaxAgeSec` | 5 | seconds | MaxAge | How long a first-hand reception keeps a target to itself before a ground relay of the same aircraft is allowed to refresh it. |
-| `kDefaultMaxAgeSec` | 12 | seconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
@@ -250,4 +249,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-150 constants over 17 folders.
+149 constants over 17 folders.

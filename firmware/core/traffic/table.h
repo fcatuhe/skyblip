@@ -7,6 +7,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/traffic/alarm.h"
+#include "core/traffic/lease.h"
 #include "core/traffic/sanity.h"
 
 namespace skyblip::traffic {
@@ -30,28 +31,9 @@ struct Target {
 
 constexpr uint32_t kTurnMaxGapMs = 3000;
 
-// How long a first-hand reception keeps a target to itself before a ground
-// relay of the same aircraft is allowed to refresh it.
-//
-// A relay is a rebroadcast: the ground station heard the aircraft, put it in a
-// frame with everything else it heard, and sent that on in the next uplink
-// slot, so a relayed position is one hop and up to a second older than the
-// direct reception it duplicates - and it is a subset of what the direct frame
-// carries (no climb rate, no track, a quantised speed). While we are hearing
-// the aircraft ourselves, the relay has nothing to add and must not overwrite
-// the better report. Once the direct track has gone stale the relay is all
-// there is, and it takes over rather than letting the target age out.
-//
-// The figure is core/traffic/alarm.h's own patience with a contact
-// (kAlertMaxAgeMs): a direct report the alarm layer would no longer act on is
-// exactly a direct report a relay should be allowed past. test/core/test_traffic.cpp
-// pins the two together.
-constexpr uint32_t kDirectPreferredMaxAgeSec = 5;
-
 class TrafficTable {
    public:
     static constexpr int kCapacity = 48;
-    static constexpr uint32_t kDefaultMaxAgeSec = 12;
 
     // Our own 24-bit address. A ground station relays every aircraft it heard,
     // and it heard us: without this the uplink puts own-ship on the radar, at
@@ -79,7 +61,7 @@ class TrafficTable {
 
     int update(const model::AircraftObs& obs, uint32_t now);
 
-    void age_out(uint32_t now, uint32_t max_age = kDefaultMaxAgeSec);
+    void age_out(uint32_t now);
 
     int count() const;
     const Target* at(int i) const { return (i >= 0 && i < kCapacity) ? &slots_[i] : nullptr; }
@@ -96,6 +78,7 @@ class TrafficTable {
     uint32_t implausible_{0};
 
     struct Weight {
+        bool on_ground;
         int32_t slant_m;
         int rank;
         uint32_t age_s;

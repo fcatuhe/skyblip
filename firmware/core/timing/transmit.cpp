@@ -43,7 +43,7 @@ int Transmitter::instant_between(int first, int last, uint32_t utc) const {
            static_cast<int>(mix(addr_ ^ mix(utc)) % static_cast<uint32_t>(last - first + 1));
 }
 
-uint32_t Transmitter::ground_second() const { return mix(addr_) % kGroundPeriodS; }
+uint32_t Transmitter::ground_second() const { return mix(addr_) % flight::kGroundReportPeriodS; }
 
 uint32_t Transmitter::callsign_second() const {
     const uint32_t ground = ground_second();

@@ -2,6 +2,7 @@
 #ifndef SKYBLIP_CORE_TIMING_TRANSMIT_H
 #define SKYBLIP_CORE_TIMING_TRANSMIT_H
 
+#include "core/flight/state.h"
 #include "core/model/ownship.h"
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
@@ -17,9 +18,6 @@ class Transmitter {
     // §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word, then
     // 25 Manchester-encoded bytes = 4.8 ms, rounded up.
     static constexpr uint32_t kAirTimeMs = 5;
-    // §G.1.16: at least 1 Hz airborne, 0.1 Hz on the ground.
-    static constexpr uint32_t kGroundPeriodS = 10;
-    static constexpr uint32_t kAirbornePeriodS = 1;
     // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a contact is hex
     static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
@@ -53,7 +51,10 @@ class Transmitter {
 
     uint32_t sent_count() const { return sent_; }
     const AirTime& air_time() const { return air_; }
-    static uint32_t period_s(bool airborne) { return airborne ? kAirbornePeriodS : kGroundPeriodS; }
+    static uint32_t period_s(bool airborne) {
+        return flight::report_period_s(airborne ? flight::FlightState::Airborne
+                                                : flight::FlightState::OnGround);
+    }
     // INFO: fc 16sep26 §C.2.5 alternates the channel per transmission, and the clock counts them
     static int slot_in(uint32_t utc, bool airborne) {
         return static_cast<int>((utc / period_s(airborne)) & 1u);

@@ -18,7 +18,6 @@ constexpr int32_t kVertDriftM = 30;
 constexpr uint32_t kTogetherHoldMs = 6000;
 constexpr int kBreakFixes = 2;
 constexpr int kTrackedContacts = 8;
-constexpr uint32_t kContactForgetMs = 12000;
 constexpr int32_t kClosingMps = 3;
 
 struct Report {
@@ -43,6 +42,7 @@ class Tracker {
    private:
     struct Slot {
         bool used{false};
+        bool anchored{false};
         uint8_t addr_table{0};
         uint32_t addr{0};
         uint32_t seen_ms{0};
@@ -54,6 +54,9 @@ class Tracker {
         State state{State::None};
     };
 
+    static void anchor(Slot& slot, const Report& station, uint32_t now_ms);
+    static void off_station(Slot& slot, const Report& fix, uint32_t now_ms);
+    void drop(uint8_t addr_table, uint32_t addr);
     Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
     const Slot* find(uint8_t addr_table, uint32_t addr) const;
     Slot* find(uint8_t addr_table, uint32_t addr);

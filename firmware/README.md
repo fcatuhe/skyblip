@@ -42,7 +42,7 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 
 ## Naming a tuning constant
 
-A constant that tunes a behavior reads `k<Subject><Mechanism><Unit>`, unit last and always spelled: `kLandingHoldMs`, `kPresentFloorMs`, `kTargetForgetMs`. `scripts/check_tuning_names.py` holds the tree to it and CI runs it; [`docs/TUNING.md`](../docs/TUNING.md) is generated from the same parse, so every number below is listed with its value and the line that justifies it.
+A constant that tunes a behavior reads `k<Subject><Mechanism><Unit>`, unit last and always spelled: `kLandingHoldMs`, `kPresentFloorMs`, `kTargetForgetReports`. `scripts/check_tuning_names.py` holds the tree to it and CI runs it; [`docs/TUNING.md`](../docs/TUNING.md) is generated from the same parse, so every number below is listed with its value and the line that justifies it.
 
 The mechanism is the half people get wrong, because four different things all read as "a delay" in conversation and behave nothing alike:
 
@@ -55,7 +55,7 @@ The mechanism is the half people get wrong, because four different things all re
 | `Window` | the span a measurement or a budget is taken over | nothing | `kTurnWindowMs` |
 | `MaxAge` | past this an input stops counting as evidence | a fresh report | `kAlertMaxAgeMs` |
 | `Stale` | past this a reading leaves the glass | a fresh reading | `kIndicatedStaleMs` |
-| `Forget` | past this the record itself is dropped | a fresh report | `kTargetForgetMs` |
+| `Forget` | past this the record itself is dropped | a fresh report | `kTargetForgetReports`, `kCallsignForgetS` |
 | `Samples`, `Fixes` | consecutive readings that must agree | one reading the other way | `kCutoffSamples`, `kConvergedFixes` |
 
 Hysteresis is not on the list and never becomes a constant: it is the gap between two named thresholds, like the 12.0 m/s a takeoff needs and the 1.0 m/s a landing does, and naming the gap would be a third number nobody reads.

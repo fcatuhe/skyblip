@@ -5,6 +5,7 @@
 // once UTC is gone does it blind. Without a clock the answer is listen only.
 #include <initializer_list>
 
+#include "core/flight/state.h"
 #include "core/model/ownship.h"
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
@@ -401,10 +402,10 @@ TEST_CASE("transmit: the ground second is the address's, not the boot's") {
     CHECK(airborne_transmitter(0x5B7E57).ground_second() ==
           airborne_transmitter(0x5B7E57).ground_second());
 
-    int taken[Transmitter::kGroundPeriodS] = {0};
+    int taken[skyblip::flight::kGroundReportPeriodS] = {0};
     for (uint32_t addr = 0x5B0000; addr < 0x5B1000; addr++)
         taken[airborne_transmitter(addr).ground_second()]++;
-    for (uint32_t second = 0; second < Transmitter::kGroundPeriodS; second++) {
+    for (uint32_t second = 0; second < skyblip::flight::kGroundReportPeriodS; second++) {
         CAPTURE(second);
         CHECK(taken[second] > 0x1000 / 20);
     }

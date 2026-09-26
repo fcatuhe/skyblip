@@ -10,7 +10,6 @@ namespace {
 constexpr int64_t kTrigOne = 16384;
 constexpr int64_t kTurn16 = 65536;
 constexpr int64_t kCentiDegreeMsPerTurn = 36000000;
-constexpr int64_t kMsPerS = 1000;
 constexpr int64_t kMmPerM = 1000;
 
 int16_t turn_angle16(int16_t turn_cdps, int32_t dt_ms) {
@@ -81,9 +80,12 @@ void Arc::rotate_half() {
 
 Position Arc::advance() {
     rotate_half();
-    north_mm_ += div_round(static_cast<int64_t>(vel_north_mm_s_) * step_ms_, kMsPerS);
-    east_mm_ += div_round(static_cast<int64_t>(vel_east_mm_s_) * step_ms_, kMsPerS);
-    up_mm_ += div_round(static_cast<int64_t>(climb_mm_s_) * step_ms_, kMsPerS);
+    north_mm_ += div_round<int64_t>(static_cast<int64_t>(vel_north_mm_s_) * step_ms_,
+                                    kMillisecondsPerSecond);
+    east_mm_ +=
+        div_round<int64_t>(static_cast<int64_t>(vel_east_mm_s_) * step_ms_, kMillisecondsPerSecond);
+    up_mm_ +=
+        div_round<int64_t>(static_cast<int64_t>(climb_mm_s_) * step_ms_, kMillisecondsPerSecond);
     rotate_half();
     return here();
 }

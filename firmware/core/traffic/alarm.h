@@ -35,7 +35,6 @@ constexpr uint32_t kAlertMaxAgeMs = 5000;
 constexpr uint32_t kRenotifyFloorMs = 2000;
 
 constexpr int kTrackedTargets = 48;
-constexpr uint32_t kTargetForgetMs = 12000;
 
 // INFO: fc 13sep26 now_ms is the instant both sides are carried to, on ports::Clock
 AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
@@ -66,6 +65,7 @@ class AlarmTracker {
         uint32_t addr{0};
         uint32_t obs_key{0};
         uint32_t seen_ms{0};
+        uint32_t forget_ms{0};
         Level notified_level{Level::None};
         bool dismissed{false};
         bool falling{false};

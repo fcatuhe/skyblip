@@ -48,6 +48,7 @@ UNITS = {
     "Samples": "samples",
     "Fixes": "fixes",
     "Records": "records",
+    "Reports": "reports of the aircraft's own",
 }
 
 DIMENSIONED = ("Hold", "Settle", "Period", "Window", "MaxAge", "Stale", "Forget")

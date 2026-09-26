@@ -30,6 +30,15 @@ bool taxi_evidence(const FlightSample& sample);
 
 FlightState state_from(uint8_t adsl_code);
 inline bool airborne(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::Airborne; }
+inline bool on_ground(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::OnGround; }
+
+constexpr uint32_t kAirborneReportPeriodS = 1;
+constexpr uint32_t kGroundReportPeriodS = 10;
+
+// INFO: fc 21sep26 G.1.16 asks for at least 1 Hz airborne and 0.1 Hz on the ground
+constexpr uint32_t report_period_s(FlightState state) {
+    return state == FlightState::OnGround ? kGroundReportPeriodS : kAirborneReportPeriodS;
+}
 
 // INFO: fc 23sep26 G.1.2's Undefined: no ground speed shows that a craft able to hover has landed
 uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat);

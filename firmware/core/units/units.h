@@ -28,6 +28,7 @@ struct Feet {
 };
 
 constexpr int32_t kMillimetresPerMetre = 1000;
+constexpr int32_t kMillisecondsPerSecond = 1000;
 
 constexpr Millimetres to_millimetres(Metres m) { return Millimetres(m.v * kMillimetresPerMetre); }
 constexpr Metres to_metres(Millimetres mm) { return Metres(div_round(mm.v, kMillimetresPerMetre)); }

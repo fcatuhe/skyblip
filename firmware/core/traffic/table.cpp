@@ -1,5 +1,6 @@
 #include "core/traffic/table.h"
 
+#include "core/flight/state.h"
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 
@@ -32,7 +33,8 @@ bool TrafficTable::prefer_new(const model::AircraftObs& in, const model::Aircraf
     // would still act on. Being newer is not enough: a relayed frame is always
     // newer than the direct one it repeats, which is how a relay would
     // otherwise walk a target backwards once a second, for ever.
-    if (rank_in < rank_ex && tin >= tex && tin - tex <= kDirectPreferredMaxAgeSec) return false;
+    if (rank_in < rank_ex && tin >= tex && tin - tex <= direct_preferred_max_age_s(ex))
+        return false;
     if (tin != tex) return tin > tex;
     return rank_in >= rank_ex;
 }
@@ -57,6 +59,7 @@ void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObs& obs) 
 
 // INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
 bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
+    if (a.on_ground != b.on_ground) return a.on_ground;
     if (a.slant_m != b.slant_m) return a.slant_m > b.slant_m;
     if (a.rank != b.rank) return a.rank < b.rank;
     return a.age_s > b.age_s;
@@ -65,7 +68,8 @@ bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
 TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObs& obs, uint32_t now) const {
     int32_t slant_m = 0;
     if (range_check(own_, obs, slant_m) == Plausibility::NoReference) slant_m = 0;
-    return Weight{slant_m, source_rank(obs.source), now - obs_time(obs)};
+    return Weight{flight::on_ground(obs.flight_state), slant_m, source_rank(obs.source),
+                  now - obs_time(obs)};
 }
 
 int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now) {
@@ -116,10 +120,10 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
     return idx;
 }
 
-void TrafficTable::age_out(uint32_t now, uint32_t max_age) {
+void TrafficTable::age_out(uint32_t now) {
     for (int i = 0; i < kCapacity; i++) {
         if (!slots_[i].used) continue;
-        if (now - obs_time(slots_[i].obs) > max_age) {
+        if (now - obs_time(slots_[i].obs) > forget_s(slots_[i].obs)) {
             slots_[i].used = false;
             slots_[i].turn = TargetTurn{};
             slots_[i].alarm_level = Level::None;

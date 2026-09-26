@@ -20,6 +20,12 @@ SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/
 
 What that costs: this device's own table, 58 (`settings::kAddrTableSkyblip`), and an OGN-Tracker address (7) both draw on the tablet as if they were FLARM. That is a lie about provenance too, and a cheaper one than claiming ICAO, because nothing downstream correlates a FLARM ID against an aircraft register the way it might an ICAO one.
 
+## The flight state every decoder owes
+
+Every decoder here writes `AircraftObs::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself.
+
+ALP-TAS carries a two-bit state of its own, with no public specification and one reference: SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) sends 1 on the ground, 2 airborne, 3 airborne and circling, and never 0. `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
+
 ## Two things an ALP-TAS frame is given before it is refused
 
 `alptas_correct` runs the erasure correction the ADS-L path has always had. §C.2.1 is Manchester, so a chip pair that decoded to neither symbol is an error whose position the receiver already knows: `fec::manchester_decode` marks it, `protocol::Frame` carries the map, and the frame CRC says which combination of those flips was transmitted. The search is a Gray-code walk over the marked bits with the CRC syndrome of each one precomputed, so a combination costs one XOR rather than a pass over the frame, and a frame no combination repairs is restored to exactly the bytes that arrived. Up to six marked bits, which is 63 combinations; beyond that the burst is refused as damaged. The syndromes are computed rather than tabled, out of the CRC's own linearity: flipping a data bit moves the check by `crc16_ccitt(that bit alone, init 0)`, and flipping a carried CRC bit moves it by the bit itself.
