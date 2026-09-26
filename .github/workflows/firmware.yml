@@ -104,10 +104,11 @@ jobs:
       # that moves in payload.h, or a figure that moves in sx1262.h, must fail here.
       - name: link budget pairing, free space and what it sets
         run: python3 scripts/test_link_budget.py
-      # The console page's line reassembly and checksum: ble.js has no other test.
-      - name: simulator transport
+      # The console's line reassembly and the update page's CBOR, SMP and flow against
+      # a fake device: the browser pages have no other test.
+      - name: simulator transport and update client
         working-directory: simulator
-        run: node --test test_ble.mjs
+        run: node --test test_*.mjs
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite
