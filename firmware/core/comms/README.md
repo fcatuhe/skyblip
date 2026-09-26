@@ -30,7 +30,7 @@ What a claim is not is access control. `CONFIG_BT_SMP` is off on this product, d
 
 What a support case reads lives where it is asked for. The address and the callsign are the config reply's. Why the device came up is `reset` in the diag sys group, and whether the board has a gauge at all is `valid` in the diag power group. One boot fact stays, `went_dark_flat`, because "the battery went flat" is the answer a pilot is owed for a unit that switched itself off (`core/power/README.md`). A key with no reading behind it is left out, never sent as a zero: `battery_percent` without a gauge sample, `die_temp_c` without a fresh die reading.
 
-The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
+[`schemas/status.v1.schema.json`](../../../schemas/status.v1.schema.json) is the contract, and `scripts/check_status_schema.py` holds `format_status` to its keys, their order, their types and which of them may be absent. The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
 
 ## The log dialect
 
