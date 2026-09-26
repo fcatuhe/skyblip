@@ -41,6 +41,12 @@ class Gpio {
     virtual void mode_input(int pin, bool pullup) = 0;
 };
 
+class Delay {
+   public:
+    virtual ~Delay() = default;
+    virtual void busy_wait_us(uint32_t us) = 0;
+};
+
 class Spi {
    public:
     virtual ~Spi() = default;

@@ -13,7 +13,7 @@
 
 namespace skyblip::models {
 
-class Sx1262 : public io::Spi, public io::Gpio {
+class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
    public:
     // What this chip refuses to do, and why. The model is the datasheet's half
     // of the contract: the driver either honours it or lands here.
@@ -63,6 +63,7 @@ class Sx1262 : public io::Spi, public io::Gpio {
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
+    void busy_wait_us(uint32_t us) override { elapsed_us += us; }
 
     void select(bool on) override {
         if (on) {
@@ -222,6 +223,7 @@ class Sx1262 : public io::Spi, public io::Gpio {
     uint16_t device_errors{0};
     uint16_t fail_calibration{0};
     uint32_t sleep_settle_spins{0};
+    uint64_t elapsed_us{0};
     bool tcxo_powered{false};
     bool calibrated{false};
     bool image_calibrated{false};

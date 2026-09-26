@@ -7,6 +7,7 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
 
 #include "core/util/result.h"
@@ -31,6 +32,11 @@ class Gpio : public io::Gpio {
     const struct device* dev(int pin) const { return port_[(pin >> 5) & 1]; }
     static gpio_pin_t bit(int pin) { return static_cast<gpio_pin_t>(pin & 31); }
     const struct device* port_[2];
+};
+
+class Delay : public io::Delay {
+   public:
+    void busy_wait_us(uint32_t us) override { k_busy_wait(us); }
 };
 
 // Manual-CS SPI: the drivers drive CS themselves via select(), so CS stays out
