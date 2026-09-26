@@ -1,5 +1,7 @@
 #include "core/util/json_min.h"
 
+#include <limits>
+
 namespace skyblip::json {
 
 namespace {
@@ -49,7 +51,11 @@ bool Reader::get_int(const char* key, long& out) const {
     }
     if (o >= len_ || data_[o] < '0' || data_[o] > '9') return false;
     long v = 0;
-    while (o < len_ && data_[o] >= '0' && data_[o] <= '9') v = v * 10 + (data_[o++] - '0');
+    while (o < len_ && data_[o] >= '0' && data_[o] <= '9') {
+        const int digit = data_[o++] - '0';
+        if (v > (std::numeric_limits<long>::max() - digit) / 10) return false;
+        v = v * 10 + digit;
+    }
     out = neg ? -v : v;
     return true;
 }

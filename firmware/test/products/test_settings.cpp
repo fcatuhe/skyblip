@@ -8,6 +8,7 @@
 // every other tracker that mints its identity the same way.
 #include <cstring>
 #include <initializer_list>
+#include <limits>
 #include <string>
 
 #include "core/fec/crc.h"
@@ -721,6 +722,17 @@ TEST_CASE("json_min: the reader parses ints, bools and strings, the writer emits
     w.kv_bool("y", false);
     w.finish();
     CHECK(std::string(out) == "{\"x\":5,\"y\":false}");
+}
+
+// Found by test/fuzz/fuzz_link: a session id wider than a long once overflowed on the way in.
+TEST_CASE("json_min: an integer wider than a long is refused, not wrapped") {
+    const std::string widest = std::to_string(std::numeric_limits<long>::max());
+    const std::string j = "{\"n\":99999999999999999999,\"m\":" + widest + "}";
+    json::Reader r(j.c_str(), static_cast<int>(j.size()));
+    long v = 0;
+    CHECK_FALSE(r.get_int("n", v));
+    CHECK(r.get_int("m", v));
+    CHECK(v == std::numeric_limits<long>::max());
 }
 
 // core/comms's status reply is a fixed-size stack buffer with no heap behind
