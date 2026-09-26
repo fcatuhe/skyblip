@@ -2,7 +2,7 @@
 #
 #   make test        build + run all host doctest suites
 #   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
-#   make fuzz        every libFuzzer harness for FUZZ_SECONDS, in build/fuzz/ (clang)
+#   make fuzz        every libFuzzer harness in turn, in build/fuzz/ (clang)
 #   make fuzz-nmea   one of them: nmea, air or link
 #   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
 #   make tidy        clang-tidy the sources the host build compiles
@@ -52,7 +52,10 @@ endif
 
 # libFuzzer ships with clang only, GCC has no -fsanitize=fuzzer.
 FUZZ_CXX ?= clang++
-FUZZ_SECONDS ?= 60
+# INFO: fc 26sep26 fuzz_nmea runs about 20000 inputs a second and fuzz_link 300, so link gets the minutes
+FUZZ_SECONDS_nmea ?= 30
+FUZZ_SECONDS_air ?= 60
+FUZZ_SECONDS_link ?= 90
 FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
 ifdef FUZZ
 BUILD := $(FUZZ_BUILD)
@@ -119,7 +122,7 @@ fuzzers: $(FUZZERS)
 fuzz-%:
 	@$(MAKE) --no-print-directory $(FUZZ_BUILD)/fuzz_$* FUZZ=1
 	@mkdir -p $(FUZZ_BUILD)/corpus/$* $(FUZZ_BUILD)/crashes
-	UBSAN_OPTIONS=print_stacktrace=1 $(FUZZ_BUILD)/fuzz_$* -max_total_time=$(FUZZ_SECONDS) \
+	UBSAN_OPTIONS=print_stacktrace=1 $(FUZZ_BUILD)/fuzz_$* -max_total_time=$(or $(FUZZ_SECONDS),$(FUZZ_SECONDS_$*)) \
 	  -artifact_prefix=$(FUZZ_BUILD)/crashes/$*- \
 	  $(addprefix -dict=,$(wildcard test/fuzz/$*.dict)) \
 	  $(FUZZ_BUILD)/corpus/$* $(wildcard test/fuzz/corpus/$*)

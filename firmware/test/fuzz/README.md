@@ -8,7 +8,7 @@ Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each
 | `fuzz_nmea` | the L76K's UART | the byte stream, as the parser's `feed()` sees it |
 | `fuzz_link` | the companion link's Config and Log writes | one write per line, on a whole product |
 
-`make fuzz` builds all three in `build/fuzz/` and runs each for `FUZZ_SECONDS` (60 by default). `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
+`make fuzz` builds all three in `build/fuzz/` and runs them in turn, 30 s for `fuzz_nmea`, 60 s for `fuzz_air` and 90 s for `fuzz_link`, which is the slow one. `FUZZ_SECONDS` sets all three at once, and `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
 
 `make fuzz ABI=ilp32` builds the same harnesses for i386 in `build/fuzz-ilp32/`, with `-m32 -funsigned-char`: a 32-bit `long` and an unsigned `char`, as on the nRF52. The 64-bit host cannot see an overflow that only a 32-bit `long` reaches, and the i386 build found one in its first minutes: the RMC date's seconds were a `long`, which a garbage date overflowed at once and a real one would have from 2038. CI runs both builds, the i386 one on an x86_64 runner with `g++-multilib`.
 
@@ -42,5 +42,5 @@ The input is in `build/fuzz/crashes/` (or `build/fuzz-ilp32/crashes/`), and CI u
 
 ## What these cannot see
 
-- The ALP-TAS fields `alptas_encode` always writes the same way (turn rate, GNSS accuracy, the constant nibbles) reach the decoder only through a raw frame, which the decrypt check refuses almost every time.
-- `fuzz_link` runs at about 300 inputs a second, where the others run in the thousands, because every input boots a product and copies a 1.35 MB log partition into it. The cached corpus is what makes a one-minute CI run worth more over time.
+- `alptas_decode` reads no field the encoder cannot write, except a course of 360 to 511 and the two constants behind the decrypt check. Each is one comparison and a refusal, reached only through a raw frame. Turn rate and GNSS accuracy are on the wire and not decoded at all.
+- `fuzz_link` runs about 300 inputs a second. The same input takes 0.4 ms uninstrumented and about 4 ms under ASan, UBSan and coverage. Under callgrind a third of it is `Product::setup()`, most of that drawing the self-test page into a framebuffer no panel shows, and the rest is the product stepping. A 32-sector partition would buy 1.5 times and a device that does not exist; leaving `ui/`, the pages, the simulator and `hardware/` without coverage would buy 1.1 times. It gets the most seconds instead.
