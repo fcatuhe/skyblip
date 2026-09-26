@@ -2,11 +2,14 @@
 // drivers) links and runs on the host platform with zero framework code. If any
 // of it leaks a Zephyr include, this stops compiling.
 
+#include <cstdlib>
 #include <string>
 
 #include "core/annunciation/pattern.h"
 #include "core/events/link.h"
 #include "core/model/aircraft.h"
+#include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
 #include "doctest/doctest.h"
 #include "test/support/product_rig.h"
 
@@ -187,6 +190,56 @@ TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") 
     rig.product.bus().gnss.push(gnss::GnssSolution{});
     rig.run(4000, 4000);
     CHECK_FALSE(rig.state().own.climb_valid);
+}
+
+// A 2D fix differentiated the height it held and sent a climb of zero as valid.
+TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-L G.1.9)") {
+    Rig rig{kBaroByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_fix(1000, 1);
+    rig.run(1000, 1000);
+    rig.push_fix(1010, 2);
+    rig.run(3000, 3000);
+    REQUIRE(rig.state().own.climb_valid);
+
+    rig.push_2d_fix(1010, 3);
+    rig.run(4000, 4000);
+    CHECK(rig.state().own.fix_valid);
+    CHECK_FALSE(rig.state().own.climb_valid);
+    protocol::AdslPacket burst{};
+    protocol::from_own(burst, rig.state().own, rig.product.board().roles().device_addr, 6, 4);
+    CHECK_FALSE(burst.has_climb());
+}
+
+// The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
+TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a climb") {
+    Rig rig{kBaroByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    int32_t steepest_mm_s = 0;
+    const auto apply_at = [&](uint32_t t) {
+        rig.run(t, t);
+        const model::OwnState& own = rig.state().own;
+        if (own.climb_valid && std::abs(own.climb_mm_s) > steepest_mm_s)
+            steepest_mm_s = std::abs(own.climb_mm_s);
+    };
+
+    uint32_t t = 1000;
+    for (; t <= 3000; t += 1000) {
+        rig.push_fix(1000, ++updates);
+        apply_at(t);
+    }
+    for (; t <= 6000; t += 1000) {
+        rig.push_2d_fix(1000, ++updates);
+        apply_at(t);
+    }
+    for (; t <= 12000; t += 1000) {
+        rig.push_fix(1100, ++updates);
+        apply_at(t);
+    }
+
+    CHECK(steepest_mm_s == 0);
+    CHECK(rig.state().own.climb_valid);
 }
 
 TEST_CASE("product: the board reads the cell and the gauge publishes it") {

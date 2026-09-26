@@ -56,6 +56,7 @@ class OwnshipService : public runtime::Service {
     void update_turn_rate(uint32_t now_ms);
     void update_residual(const model::OwnState& previous);
     static gnss::Convergence convergence_of(const model::OwnState& own);
+    static bool height_solved(const model::OwnState& own);
     void adopt_climb(int32_t mm_s);
     static bool vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
                                int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s);

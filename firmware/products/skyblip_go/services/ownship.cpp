@@ -79,12 +79,13 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     publish_solution_phase(now_ms);
 
     int32_t mm_s = 0;
-    if (!solution.fix_valid) vs_ref_ms_ = 0;
-    const bool have = solution.fix_valid && vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs,
-                                                           vs_ref_alt_mm_, vs_ref_ms_, mm_s);
+    const bool height_fixed = own.fix_valid && height_solved(own);
+    if (!height_fixed) vs_ref_ms_ = 0;
+    const bool have = height_fixed && vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs,
+                                                     vs_ref_alt_mm_, vs_ref_ms_, mm_s);
     if (!baro_live_) {
         if (have) adopt_climb(mm_s);
-        if (!solution.fix_valid) own.climb_valid = false;
+        if (!height_fixed) own.climb_valid = false;
     }
 
     const flight::FlightState declared = flight_state_from(own, now_ms);
@@ -167,10 +168,12 @@ gnss::Convergence OwnshipService::convergence_of(const model::OwnState& own) {
     gnss::Convergence c{};
     c.fix_valid = own.fix_valid;
     c.resid_valid = own.pred_resid_valid;
-    c.height_solved = own.vdop_e2 != 0;
+    c.height_solved = height_solved(own);
     c.resid_m = own.pred_resid_m;
     return c;
 }
+
+bool OwnshipService::height_solved(const model::OwnState& own) { return own.vdop_e2 != 0; }
 
 void OwnshipService::update_residual(const model::OwnState& previous) {
     model::OwnState& own = context_.state.own;
