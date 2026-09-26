@@ -259,12 +259,12 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
         solution_.lat_1e7 = lat_1e7;
         solution_.lon_1e7 = lon_1e7;
         int64_t knots_e2 = 0;
-        if (parse_scaled(f[7], 100, knots_e2)) {
-            const int64_t speed_mm_s =
-                div_round<int64_t>(knots_e2 * kMillimetresPerSecPerKnotE3, 100000);
-            if (speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS)
-                solution_.speed_mm_s = static_cast<int32_t>(speed_mm_s);
-        }
+        int64_t speed_mm_s = -1;
+        if (parse_scaled(f[7], 100, knots_e2))
+            speed_mm_s = div_round<int64_t>(knots_e2 * kMillimetresPerSecPerKnotE3, 100000);
+        solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
+                                   ? static_cast<int32_t>(speed_mm_s)
+                                   : 0;
         int64_t track_cdeg = 0;
         if (parse_scaled(f[8], 100, track_cdeg))
             solution_.track_cdeg =

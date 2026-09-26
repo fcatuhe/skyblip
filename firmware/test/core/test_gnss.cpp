@@ -110,6 +110,21 @@ TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, ne
     }
 }
 
+// A refused speed kept the one before it, and the case beside it only ever fed a fresh parser.
+TEST_CASE("gnss: a refused speed after a good one is not the good one carried over") {
+    for (const char* speed : {"1000.1", "99999999999999999999.9", ""}) {
+        CAPTURE(speed);
+        NmeaParser p;
+        REQUIRE(
+            parse(p, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,,")));
+        REQUIRE(p.solution().speed_mm_s == 11524);
+        const std::string body =
+            std::string("GPRMC,123520,A,4807.038,N,01131.000,E,") + speed + ",084.4,230825,,";
+        REQUIRE(parse(p, checksummed(body.c_str())));
+        CHECK(p.solution().speed_mm_s == 0);
+    }
+}
+
 TEST_CASE("gnss: a date past January 2038 is still the right UTC second") {
     NmeaParser p;
     REQUIRE(parse(p, checksummed("GPRMC,000000,A,4807.038,N,01131.000,E,022.4,084.4,010140,,")));
