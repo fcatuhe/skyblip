@@ -154,9 +154,9 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
       await exclusive(() => config.writeValueWithResponse(bytes));
     },
 
-    async sendSmp(packet) {
+    async sendSmp(packet, writeBytes = GATT_WRITE_BYTES) {
       if (!smp) throw new Error('This device has no SMP service.');
-      for (const chunk of chunks(packet)) {
+      for (const chunk of chunks(packet, writeBytes)) {
         await exclusive(() => smp.writeValueWithoutResponse(chunk));
       }
     },

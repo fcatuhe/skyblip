@@ -54,9 +54,15 @@ export class FakeSkyblip {
     mtu = 185,
     claimedBy = null,
     smp = true,
+    echo = true,
+    writeCeiling = mtu - ATT_HEADER_BYTES,
+    oversize = 'truncate',
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, onGround, swapPowered, bufSize, mtu, claimedBy });
+    Object.assign(this, { echo, writeCeiling, oversize });
     this.hasSmp = smp;
+    this.writesInPacket = 0;
+    this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
     this.windowOpen = false;
@@ -66,6 +72,7 @@ export class FakeSkyblip {
     this.commands = [];
     this.uploadOffsets = [];
     this.longestWrite = 0;
+    this.longestAttempt = 0;
     this.longestPacket = 0;
     this.overlaps = 0;
     this.writing = false;
@@ -123,10 +130,13 @@ export class FakeSkyblip {
     if (!this.connected) throw new Error('GATT Server is disconnected.');
     if (this.writing) this.overlaps++;
     this.writing = true;
-    this.longestWrite = Math.max(this.longestWrite, bytes.length);
+    this.longestAttempt = Math.max(this.longestAttempt, bytes.length);
     await tick();
     this.writing = false;
-    characteristic.onWrite(Uint8Array.from(bytes));
+    if (bytes.length > this.writeCeiling && this.oversize === 'reject') throw new Error('GATT operation failed for unknown reason.');
+    const landed = Uint8Array.from(bytes.subarray(0, this.writeCeiling));
+    this.longestWrite = Math.max(this.longestWrite, landed.length);
+    characteristic.onWrite(landed);
   }
 
   drop() {
@@ -222,6 +232,7 @@ export class FakeSkyblip {
   }
 
   onSmp(bytes) {
+    this.writesInPacket++;
     const joined = new Uint8Array(this.held.length + bytes.length);
     joined.set(this.held);
     joined.set(bytes, this.held.length);
@@ -232,6 +243,8 @@ export class FakeSkyblip {
     const request = this.held.slice(0, end);
     this.held = this.held.slice(end);
     this.longestPacket = Math.max(this.longestPacket, request.length);
+    if (request[7] === 1 && ((request[4] << 8) | request[5]) === 1) this.uploadWrites.push(this.writesInPacket);
+    this.writesInPacket = 0;
     this.answerSmp(request);
   }
 
@@ -243,6 +256,7 @@ export class FakeSkyblip {
     const upload = group === 1 && id === 1 && op === 2;
     let answer;
     if (request.length > this.bufSize) answer = { rc: MGMT_ERR_EMSGSIZE };
+    else if (group === 0 && id === 0) answer = this.echo ? { r: body.d } : { rc: MGMT_ERR_ENOTSUP };
     else if (group === 0 && id === 6) answer = { buf_size: this.bufSize, buf_count: 4 };
     else if (group === 1 && id === 0) answer = { images: [{ slot: 0, version: this.running, active: true, confirmed: true }] };
     else if (upload) answer = this.imageUpload(body);

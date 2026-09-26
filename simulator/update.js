@@ -1,6 +1,9 @@
-import { connect, hasWebBluetooth } from './ble.js';
+import { GATT_WRITE_BYTES, connect, hasWebBluetooth } from './ble.js';
 import { compareVersions, parseVersion, readImage, sha256, versionText } from './image.js';
-import { GROUP, RC, SmpClient, SmpError, SmpTimeout, packetBudget, runningVersion, upload } from './smp.js';
+import {
+  GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
+  dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
+} from './smp.js';
 
 export { hasWebBluetooth };
 
@@ -14,6 +17,9 @@ const IMAGE_REFUSALS = {
   27: 'not_newer',
   30: 'too_large',
 };
+
+// INFO: fc 26sep26 the ATT payloads of MTU 247 and 185, where Android and iOS commonly settle
+const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
 const DROPPED_UPLOAD = new Set(['nothing_staged', 'upload_unfinished']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
@@ -60,8 +66,10 @@ function statusOf(reply) {
 export class Updater {
   #onChange;
   #device = null;
-  #smp = new SmpClient(bytes => this.#device.sendSmp(bytes));
+  #smp = new SmpClient(bytes => this.#device.sendSmp(bytes, this.#writeBytes));
   #packetBytes = null;
+  #writeBytes = GATT_WRITE_BYTES;
+  #probed = false;
   #running = null;
   #image = null;
   #sha = null;
@@ -208,15 +216,44 @@ export class Updater {
     const total = this.#image.length;
     this.#set({ phase: 'uploading', task: null, progress: { sent: 0, total } });
     try {
-      await upload(this.#smp, this.#image, this.#sha, this.#packetBytes, sent => {
-        this.#set({ progress: { sent, total } });
-      });
+      await this.#measureWrites();
+      await this.#sendImage(total);
     } catch (error) {
       if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowOpen = false;
       return this.#fail(error);
     }
     this.#uploaded = true;
     await this.#ask('apply');
+  }
+
+  async #measureWrites() {
+    if (this.#probed) return;
+    try {
+      this.#writeBytes = await probeWriteBytes(this.#smp, this.#packetBytes);
+    } catch (error) {
+      if (error instanceof LinkLost) throw error;
+      this.#writeBytes = GATT_WRITE_BYTES;
+    }
+    this.#probed = true;
+  }
+
+  async #sendImage(total) {
+    for (;;) {
+      try {
+        return await upload(this.#smp, this.#image, this.#sha, this.#uploadPacketBytes(), sent => {
+          this.#set({ progress: { sent, total } });
+        });
+      } catch (error) {
+        const smaller = SMALLER_WRITES.find(size => size < this.#writeBytes);
+        if (!(error instanceof SmpWriteRejected) || !this.#device || !smaller) throw error;
+        this.#writeBytes = smaller;
+      }
+    }
+  }
+
+  #uploadPacketBytes() {
+    const oneWrite = this.#writeBytes > GATT_WRITE_BYTES && dataRoom(this.#image, this.#sha, 0, this.#writeBytes) > 0;
+    return oneWrite ? Math.min(this.#packetBytes, this.#writeBytes) : this.#packetBytes;
   }
 
   #fail(error) {
@@ -231,6 +268,8 @@ export class Updater {
     this.#uploaded = false;
     this.#running = null;
     this.#packetBytes = null;
+    this.#writeBytes = GATT_WRITE_BYTES;
+    this.#probed = false;
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';

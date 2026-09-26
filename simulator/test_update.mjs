@@ -72,6 +72,45 @@ test('an install asks twice on the glass and lands the whole image in the slot',
   assert.deepEqual(device.commands.filter(cmd => cmd !== 'update' && cmd !== 'status'), ['dfu', 'apply']);
 });
 
+async function uploaded(options) {
+  const link = await chosen(options);
+  link.updater.install();
+  await link.until(asking('dfu'));
+  link.device.press();
+  await link.until(asking('apply'));
+  assert.deepEqual(link.device.slot, signedImage(NEWER, IMAGE_BYTES));
+  return link;
+}
+
+test('at the MTU Chrome settles on with this device, every upload request is one write of 495 bytes', async () => {
+  const { device } = await uploaded({ bufSize: 2475, mtu: 498 });
+  assert.equal(device.longestAttempt, 495);
+  assert.ok(device.uploadWrites.every(writes => writes === 1), `writes per request: ${device.uploadWrites}`);
+});
+
+test('at an iPhone MTU the requests shrink to the 182 bytes it carries, and nothing is cut short', async () => {
+  const { device } = await uploaded({ bufSize: 2475, mtu: 185 });
+  assert.equal(device.longestAttempt, 182);
+  assert.ok(device.uploadWrites.every(writes => writes === 1));
+});
+
+test('a link whose MTU was never exchanged sends the whole buffer in 20-byte slices', async () => {
+  const { device } = await uploaded({ bufSize: 2475, mtu: 23 });
+  assert.equal(device.longestAttempt, 20);
+  assert.ok(device.longestPacket > 2000, `packet of ${device.longestPacket}`);
+});
+
+test('a device that does not echo is written in 20-byte slices', async () => {
+  const { device } = await uploaded({ bufSize: 2475, mtu: 498, echo: false });
+  assert.equal(device.longestAttempt, 20);
+});
+
+test('a write the browser refuses steps down to a smaller one, and the upload carries on', async () => {
+  const { device } = await uploaded({ bufSize: 2475, mtu: 498, writeCeiling: 244, oversize: 'reject' });
+  assert.equal(device.longestWrite, 244);
+  assert.equal(device.overlaps, 0);
+});
+
 test('no GATT write is longer than BLE guarantees, none overlaps, no packet overflows the buffer', async () => {
   const { device, updater, until } = await chosen({ bufSize: 300, mtu: 23 });
   updater.install();

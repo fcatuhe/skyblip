@@ -2,7 +2,7 @@ import { decode, encode } from './cbor.js';
 
 export const OP = { read: 0, readResponse: 1, write: 2, writeResponse: 3 };
 export const GROUP = { os: 0, image: 1 };
-export const ID = { imageState: 0, imageUpload: 1, osParams: 6 };
+export const ID = { echo: 0, imageState: 0, imageUpload: 1, osParams: 6 };
 export const RC = { accessDenied: 11 };
 
 export const HEADER_BYTES = 8;
@@ -10,12 +10,20 @@ export const HEADER_BYTES = 8;
 const SMP_V2 = 1;
 const SEQ_MODULO = 256;
 const REPLY_TIMEOUT_MS = 15_000;
+// INFO: fc 26sep26 517, the ATT MTU Chrome asks for, less the 3-byte ATT header
+export const LARGEST_ATT_PAYLOAD = 514;
 
 export class SmpError extends Error {
   constructor(rc, group = null) {
     super(group === null ? `SMP rc ${rc}` : `SMP group ${group} rc ${rc}`);
     this.rc = rc;
     this.group = group;
+  }
+}
+
+export class SmpWriteRejected extends Error {
+  constructor(cause) {
+    super(`the browser refused the write: ${cause.message}`, { cause });
   }
 }
 
@@ -77,6 +85,7 @@ export class SmpClient {
   #seq = 0;
   #waiting = null;
   #tail = Promise.resolve();
+  #largestNotification = 0;
 
   constructor(write) {
     this.#write = write;
@@ -84,7 +93,12 @@ export class SmpClient {
   }
 
   receive(bytes) {
+    this.#largestNotification = Math.max(this.#largestNotification, bytes.length);
     this.#feed(bytes);
+  }
+
+  get largestNotification() {
+    return this.#largestNotification;
   }
 
   request(op, group, id, body = {}) {
@@ -94,6 +108,7 @@ export class SmpClient {
   }
 
   close(error) {
+    this.#largestNotification = 0;
     if (this.#waiting) this.#settle(null, error);
   }
 
@@ -109,7 +124,7 @@ export class SmpClient {
         if (this.#waiting === waiting) waiting.timer = setTimeout(() => this.#settle(null, new SmpTimeout()), REPLY_TIMEOUT_MS);
       },
       error => {
-        if (this.#waiting === waiting) this.#settle(null, error);
+        if (this.#waiting === waiting) this.#settle(null, new SmpWriteRejected(error));
       },
     );
     return reply;
@@ -149,6 +164,15 @@ export async function packetBudget(client) {
   return size;
 }
 
+// INFO: fc 26sep26 smp_bt cuts a reply at MTU-3, so an echo longer than any payload measures the link
+export async function probeWriteBytes(client, packetBytes) {
+  const length = Math.min(LARGEST_ATT_PAYLOAD, packetBytes - HEADER_BYTES - encode({ d: '' }).length - 2);
+  const d = 'x'.repeat(length);
+  const { r } = await client.request(OP.write, GROUP.os, ID.echo, { d });
+  if (r !== d) throw new Error('the device echoed something else');
+  return Math.min(client.largestNotification, LARGEST_ATT_PAYLOAD);
+}
+
 export async function runningVersion(client) {
   const { images = [] } = await client.request(OP.read, GROUP.image, ID.imageState);
   const active = images.find(image => image.active) || images.find(image => image.slot === 0);
@@ -164,12 +188,19 @@ function largestData(room) {
   return Math.min(room - 1, BSTR_ONE_BYTE_HEAD_MAX);
 }
 
-export function uploadBody(image, sha, off, packetBytes) {
+function emptyBody(image, sha, off) {
   const empty = new Uint8Array(0);
-  const body = off === 0 ? { len: image.length, off, sha, data: empty } : { off, data: empty };
-  const room = packetBytes - HEADER_BYTES - (encode(body).length - 1);
-  const length = largestData(room);
+  return off === 0 ? { len: image.length, off, sha, data: empty } : { off, data: empty };
+}
+
+export function dataRoom(image, sha, off, packetBytes) {
+  return largestData(packetBytes - HEADER_BYTES - (encode(emptyBody(image, sha, off)).length - 1));
+}
+
+export function uploadBody(image, sha, off, packetBytes) {
+  const length = dataRoom(image, sha, off, packetBytes);
   if (length <= 0) throw new Error(`an SMP packet of ${packetBytes} bytes has no room for image data`);
+  const body = emptyBody(image, sha, off);
   body.data = image.subarray(off, Math.min(off + length, image.length));
   return body;
 }

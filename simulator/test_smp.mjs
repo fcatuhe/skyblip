@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 
 import { decode, encode } from './cbor.js';
 import {
-  GROUP, HEADER_BYTES, ID, OP, SmpClient, SmpError, SmpTimeout,
-  packet, parseHeader, reassemblePackets, upload, uploadBody,
+  GROUP, HEADER_BYTES, ID, LARGEST_ATT_PAYLOAD, OP, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
+  packet, parseHeader, probeWriteBytes, reassemblePackets, upload, uploadBody,
 } from './smp.js';
 
 const reply = (request, body) => packet({ ...parseHeader(request), op: parseHeader(request).op + 1, body });
@@ -137,4 +137,35 @@ test('closing the link fails the request in flight', async () => {
   await new Promise(setImmediate);
   client.close(new Error('gone'));
   await assert.rejects(answer, /gone/);
+});
+
+const slicing = payload => {
+  const client = new SmpClient(async bytes => {
+    const answer = reply(bytes, { r: decode(bytes.subarray(HEADER_BYTES)).d });
+    queueMicrotask(() => {
+      for (let at = 0; at < answer.length; at += payload) client.receive(answer.slice(at, at + payload));
+    });
+  });
+  return client;
+};
+
+test('the echo probe reads the write size off the first slice of its reply', async () => {
+  assert.equal(await probeWriteBytes(slicing(495), 2475), 495);
+  assert.equal(await probeWriteBytes(slicing(182), 2475), 182);
+  assert.equal(await probeWriteBytes(slicing(20), 2475), 20);
+});
+
+test('the echo probe never claims more than the largest payload Chrome asks for', async () => {
+  assert.equal(await probeWriteBytes(slicing(1000), 2475), LARGEST_ATT_PAYLOAD);
+});
+
+test('the echo probe fits a small device buffer, and reads the reply it got whole as a lower bound', async () => {
+  assert.equal(await probeWriteBytes(slicing(495), 300), 300);
+});
+
+test('a write the browser refuses is told apart from a refusal by the device', async () => {
+  const client = new SmpClient(async () => {
+    throw new Error('GATT operation failed for unknown reason.');
+  });
+  await assert.rejects(client.request(OP.read, GROUP.os, ID.osParams), SmpWriteRejected);
 });
