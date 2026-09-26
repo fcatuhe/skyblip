@@ -20,7 +20,8 @@ void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
 }
 
 bool in_pps_holdover(const ClockState& clock) {
-    return clock.utc_valid && !clock.pps_locked && clock.ms_since_pps <= kPpsHoldoverMs;
+    return clock.utc_valid && !clock.pps_locked && clock.pps_edge_us != 0 &&
+           clock.ms_since_pps <= kPpsHoldoverMs;
 }
 
 SlotState Scheduler::state_at(int phase_ms) {

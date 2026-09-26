@@ -89,7 +89,7 @@ struct ClockState {
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
 
-// Unlocked but recent enough that the slot map still flies, receive only, on the last edge.
+// Unlocked since an edge recent enough that the slot map still flies on it, receive only.
 bool in_pps_holdover(const ClockState& clock);
 
 struct SlotPlan {

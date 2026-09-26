@@ -7,10 +7,13 @@ namespace {
 
 constexpr uint32_t kSecondMs = 1000;
 
+constexpr uint64_t kLastEdgeUs = 12'000'000;
+
 void edge_lost(Rig& rig, uint32_t ms_ago, bool locked) {
     rig.state.clock.utc_valid = true;
     rig.state.clock.pps_locked = locked;
     rig.state.clock.ms_since_pps = ms_ago;
+    rig.state.clock.pps_edge_us = kLastEdgeUs;
 }
 
 bool radio_log_reads(Rig& rig, const char* text) {
@@ -66,4 +69,22 @@ TEST_CASE("screen pps: an edge 61 s old is past holdover and reads NONE") {
     rig.show(t, go::Page::Raw);
     rig.run_seconds(t, 3);
     CHECK(raw_reads(rig, "PPS NONE"));
+}
+
+// Pps::ms_since() reads 0 before the first edge, which the pages once showed as HOLD 0.
+TEST_CASE("screen pps: a clock with UTC and no edge ever reads NONE, and transmits nothing") {
+    Rig rig;
+    uint32_t t = 0;
+    edge_lost(rig, 0, false);
+    rig.state.clock.pps_edge_us = 0;
+    for (int phase = 0; phase < 1000; phase++)
+        REQUIRE_FALSE(timing::Scheduler::plan(phase, rig.state.clock).tx_allowed);
+
+    rig.show(t, go::Page::RadioLog);
+    rig.run_seconds(t, 3);
+    CHECK(radio_log_reads(rig, "PPS NONE"));
+
+    rig.show(t, go::Page::Raw);
+    rig.run_seconds(t, 3);
+    CHECK(raw_reads(rig, "PPS NONE 0MS"));
 }
