@@ -472,6 +472,7 @@ TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before 
     CHECK(chip.pa_config[1] == 0x07);
     CHECK(chip.pa_config[2] == 0x00);
     CHECK(chip.pa_config[3] == 0x01);
+    CHECK(sx::kPaConfigHighPowerRatedDbm == 22);
     CHECK(chip.cmd_order(sx::kSetPaConfig) < chip.cmd_order(sx::kSetTxParams));
 }
 

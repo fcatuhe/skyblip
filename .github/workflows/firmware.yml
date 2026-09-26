@@ -96,6 +96,10 @@ jobs:
       # a field that moves in payload.h must fail here, not read as a quiet zero.
       - name: power budget deltas, postures and caveats
         run: python3 scripts/test_power_budget.py
+      # The link budget pairs Burst records and reads Config's transmitter bytes: a field
+      # that moves in payload.h, or a figure that moves in sx1262.h, must fail here.
+      - name: link budget pairing, free space and what it sets
+        run: python3 scripts/test_link_budget.py
       # The console page's line reassembly and checksum: ble.js has no other test.
       - name: simulator transport
         working-directory: simulator

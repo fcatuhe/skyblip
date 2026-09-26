@@ -49,6 +49,10 @@
                          "description": "config. The radio's centre-frequency trim, tenths of a ppm, applied to every dwell in this corpus"},
     "settings_version": {"type": "integer", "minimum": 0, "maximum": 255,
                          "description": "config. The settings struct version the device was running, so a decoder knows which fields existed"},
+    "tx_power_dbm": {"type": "integer", "minimum": -128, "maximum": 127,
+                     "description": "config. The power the transmitter was asked for, in dBm: the SX1262's SetTxParams argument, a nominal the part delivers within its own TXACC. 0 on a device with no radio, and on a capture older than the field"},
+    "pa_rated_dbm": {"type": "integer", "minimum": -128, "maximum": 127,
+                     "description": "config. The output the PA configuration is rated for, in dBm: the row of SX1262 DS table 13-21 the executor writes. With tx_power_dbm it says which way the part was asked for its power, and a nominal conducted figure is the lower of the two. 0 on a device with no radio, and on a capture older than the field"},
 
     "nav_ms": {"type": "integer", "minimum": 0, "maximum": 65535,
                "description": "gnss. How far into its own second the navigation solution landed, from the PPS edge. ADS-L G.1.16 refuses a solution older than 500 ms at the transmit instant, so this is the figure the whole transmit schedule stands on"},
