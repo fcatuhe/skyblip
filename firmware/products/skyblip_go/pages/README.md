@@ -16,6 +16,8 @@ Vertical is feet whatever the setting says, on every page that shows it: the alt
 
 Heading up, not north up. The own ship is drawn nose-up and cannot turn, so the picture turns instead: a target is plotted by how far ahead of the nose and how far right of it it lies, which is the bearing a pilot then looks along. Which way that nose points is not written anywhere on the page: the plot is already nose-up, and `sixpack` is where the track reads in figures.
 
+`radar_geometry.h` is where the scope sits on the glass: the centre of the even grid, the ring, the top of the footer, and the heading-up turn every plot goes through. `radar_traffic.cpp` plots the aircraft on it, each blip with its leader, and own-ship's path. `radar.cpp` draws the rest, the ring, the readings, the formation and the alarm wedges, and composes the frame.
+
 ### One blip, three ways up
 
 Traffic is a blip, `ui/widgets/blip.*`. A diamond is an aircraft at your level, the same mark pointing up is one above you, and pointing down - the same sprite flipped about the plot point - one below. The three are one mark turned rather than three shapes to tell apart, so the sign of the separation is read before anything is read: the mark points where the aeroplane is.
