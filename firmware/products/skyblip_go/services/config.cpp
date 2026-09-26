@@ -157,13 +157,14 @@ void ConfigLinkService::drain_settings(uint32_t now_ms) {
     write_settings(now_ms, verdict == timing::DurableWriteVerdict::Forced);
 }
 
-// INFO: fc 23sep26 placed either way, so a store that keeps refusing is forced once per bound
+// INFO: fc 25sep26 a refusal restarts the bound, so a refusing store is forced once per bound
 void ConfigLinkService::write_settings(uint32_t now_ms, bool forced) {
-    const bool stored = persist();
-    writes_.placed(now_ms, forced);
-    if (stored) return;
-    failed_++;
-    writes_.request(now_ms);
+    if (persist()) {
+        writes_.placed(now_ms, forced);
+    } else {
+        failed_++;
+        writes_.refused(now_ms, forced);
+    }
 }
 
 void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms) {
