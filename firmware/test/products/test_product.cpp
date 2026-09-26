@@ -593,13 +593,19 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     CHECK(die.reads() <= 6);
 
     // A refused measurement leaves the last good reading standing rather than
-    // publishing a zero: the number is minutes old by design anyway.
+    // publishing a zero, but only for as long as the panel and the charge window
+    // still believe it: past kDieStaleMs the tablet is shown no temperature either.
     const int before = die.reads();
     die.refuse();
-    rig.run(t, t + 30000);
-    t += 30050;
+    rig.run(t, t + 10000);
+    t += 10050;
     CHECK(die.reads() > before);
     CHECK(status_of(rig, t).find("\"die_temp_c\":41") != std::string::npos);
+
+    rig.run(t, t + go::PowerService::kDieStaleMs);
+    t += go::PowerService::kDieStaleMs + 50;
+    CHECK_FALSE(rig.product.power().die_temperature_valid());
+    CHECK(status_of(rig, t).find("die_temp_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
