@@ -385,7 +385,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
     t = 500;
 
     rig.on_ground(t);
-    CHECK(rig.config().flight_state() == flight::FlightState::OnGround);
+    CHECK(rig.config().flight_state() == flight::FlightState::Ground);
     rig.send("{\"cmd\":\"dfu\"}");
     rig.run(t, t + 500);
     t += 500;

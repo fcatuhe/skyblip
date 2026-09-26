@@ -200,7 +200,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp and the position name the same in
 
 TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airborne, never 3") {
     CHECK(static_cast<uint8_t>(flight::FlightState::Unknown) == 0);
-    CHECK(static_cast<uint8_t>(flight::FlightState::OnGround) == 1);
+    CHECK(static_cast<uint8_t>(flight::FlightState::Ground) == 1);
     CHECK(static_cast<uint8_t>(flight::FlightState::Airborne) == 2);
 
     for (uint8_t state : {uint8_t(0), uint8_t(1), uint8_t(2)}) {
@@ -438,7 +438,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz o
     CHECK(timing::Transmitter::period_s(/*airborne=*/true) == 1u);
     CHECK(timing::Transmitter::period_s(/*airborne=*/false) == 10u);
     CHECK(flight::report_period_s(flight::FlightState::Airborne) == 1u);
-    CHECK(flight::report_period_s(flight::FlightState::OnGround) == 10u);
+    CHECK(flight::report_period_s(flight::FlightState::Ground) == 10u);
 }
 
 // An emitter that does not say which state it is in is heard at the airborne rate or not at all.

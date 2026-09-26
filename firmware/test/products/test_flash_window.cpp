@@ -32,7 +32,7 @@ void step_until(Rig& rig, uint32_t& t, uint32_t until_ms) {
     while (t < until_ms) step_one(rig, t);
 }
 
-// Stationary timed solutions: core/flight answers OnGround to those, and the UTC
+// Stationary timed solutions: core/flight answers Ground to those, and the UTC
 // they carry is what anchors the second the write has to be placed inside. Both
 // helpers leave t on a whole second, so a case can name the phase it wants.
 void stand_on_the_ground(Rig& rig, uint32_t& t) { rig.seconds(t, 3, /*speed_mm_s=*/0, 0); }
@@ -189,7 +189,7 @@ TEST_CASE("flash window: a change made on the ground is written promptly") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     stand_on_the_ground(rig, t);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::OnGround);
+    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Ground);
 
     const uint32_t asked_at = t;
     change_volume(rig, 3);

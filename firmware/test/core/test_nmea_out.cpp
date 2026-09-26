@@ -204,7 +204,7 @@ TEST_CASE("nmea: PFLAU reports rx count, gps and threat") {
 // FTD-012 defines the GPS field as 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving.
 TEST_CASE("nmea: PFLAU's GPS field is the flight state, as FLARM defines it") {
     auto own = own_at(481000000, 81000000, 1000);
-    own.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     CHECK(pflau_gps(own) == 1);
 
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
@@ -221,7 +221,7 @@ TEST_CASE("nmea: PFLAU's GPS field is the flight state, as FLARM defines it") {
 // XCSoar names value 1 GPS_2D (src/FLARM/Status.hpp), so a device on the apron shows a 2D fix.
 TEST_CASE("nmea: PFLAU GPS 1 on the ground reads as a 2D fix on XCSoar, and is still sent") {
     auto own = own_at(481000000, 81000000, 1000);
-    own.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     char buf[128];
     const int n = format_pflau(buf, sizeof(buf), own, true, 0, nullptr, 0, 0, 0, 0);
     CHECK(std::string(buf, n).rfind("$PFLAU,0,1,1,1,0,", 0) == 0);

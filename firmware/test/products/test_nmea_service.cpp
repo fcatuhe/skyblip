@@ -258,7 +258,7 @@ TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix"
     rig.raise_link();
     park(rig, t, 3);
     REQUIRE(rig.state().own.fix_valid);
-    REQUIRE(flight::state_from(rig.state().own.flight_state) == flight::FlightState::OnGround);
+    REQUIRE(flight::state_from(rig.state().own.flight_state) == flight::FlightState::Ground);
     CHECK(fields(last_of(rig, "$PFLAU"))[3] == "1");
 
     // The fix dimension is elsewhere and unaffected: $PGRMZ still says 3D.

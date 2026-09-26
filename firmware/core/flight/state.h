@@ -6,7 +6,7 @@
 namespace skyblip::flight {
 
 // INFO: fc 18sep26 ADS-L 4 SRD860 issue 2 G.1.2 codes, the wire values themselves
-enum class FlightState : uint8_t { Unknown = 0, OnGround = 1, Airborne = 2 };
+enum class FlightState : uint8_t { Unknown = 0, Ground = 1, Airborne = 2 };
 
 struct FlightSample {
     int32_t speed_mm_s{0};
@@ -30,21 +30,19 @@ bool taxi_evidence(const FlightSample& sample);
 
 FlightState state_from(uint8_t adsl_code);
 inline bool airborne(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::Airborne; }
-inline bool on_ground(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::OnGround; }
+inline bool on_ground(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::Ground; }
 
 constexpr uint32_t kAirborneReportPeriodS = 1;
 constexpr uint32_t kGroundReportPeriodS = 10;
 
 // INFO: fc 21sep26 G.1.16 asks for at least 1 Hz airborne and 0.1 Hz on the ground
 constexpr uint32_t report_period_s(FlightState state) {
-    return state == FlightState::OnGround ? kGroundReportPeriodS : kAirborneReportPeriodS;
+    return state == FlightState::Ground ? kGroundReportPeriodS : kAirborneReportPeriodS;
 }
 
 // INFO: fc 23sep26 G.1.2's Undefined: no ground speed shows that a craft able to hover has landed
 uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat);
-inline bool reduced_rate(uint8_t announced) {
-    return state_from(announced) == FlightState::OnGround;
-}
+inline bool reduced_rate(uint8_t announced) { return state_from(announced) == FlightState::Ground; }
 
 class FlightMonitor {
    public:

@@ -162,7 +162,7 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     taxi(rig, t, 20);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::OnGround);
+    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
     rig.send("{\"cmd\":\"dfu\"}");

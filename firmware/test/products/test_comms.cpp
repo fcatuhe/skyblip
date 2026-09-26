@@ -64,7 +64,7 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last_on(events::Endpoint::Config));
@@ -77,7 +77,7 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
     CHECK(cs.pending() == Pending::Set);
@@ -97,7 +97,7 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     const std::string head = "{\"cmd\":\"set\",";
     const std::string tail = "\"aircraft_type\":4}";
@@ -133,8 +133,8 @@ TEST_CASE("comms: unknown flight-state refuses") {
     cs.on_rx(frame("{\"cmd\":\"set\",\"alarm\":false}"));
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 
-    cs.set_flight_state(flight::FlightState::OnGround);
-    CHECK(cs.flight_state() == flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
+    CHECK(cs.flight_state() == flight::FlightState::Ground);
 }
 
 TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") {
@@ -143,7 +143,7 @@ TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") 
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
     cs.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
     cs.confirm();
@@ -161,7 +161,7 @@ TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation")
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     CHECK_FALSE(cs.upload_allowed());
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
@@ -183,7 +183,7 @@ TEST_CASE(
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
     CHECK(cs.pending() == Pending::Apply);
     CHECK_FALSE(cs.install_requested());
@@ -204,14 +204,14 @@ TEST_CASE("comms: apply with nothing in the secondary slot is refused, not reboo
     dfu.staged = false;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
     CHECK(cs.pending() == Pending::None);
     CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
 
     go::SettingsStore store_without_dfu(s, kTestAddr);
     ConfigService without_dfu(link, store_without_dfu);
-    without_dfu.set_flight_state(flight::FlightState::OnGround);
+    without_dfu.set_flight_state(flight::FlightState::Ground);
     without_dfu.on_rx(frame("{\"cmd\":\"apply\"}"));
     CHECK(without_dfu.pending() == Pending::None);
     CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
@@ -226,7 +226,7 @@ TEST_CASE("comms: apply after an upload that stopped short is refused, not reboo
     dfu.finished = false;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
     CHECK(cs.pending() == Pending::None);
     CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
@@ -240,7 +240,7 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
     CHECK(dfu.forgotten == 0);
     cs.confirm();
@@ -258,7 +258,7 @@ TEST_CASE("comms: an upload restarted under the install prompt refuses the confi
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
     REQUIRE(cs.pending() == Pending::Apply);
 
@@ -277,7 +277,7 @@ TEST_CASE("comms: dfu and apply are refused at the door below the low-battery wa
         SpyDfu dfu;
         go::SettingsStore store_cs(s, kTestAddr);
         ConfigService cs(link, store_cs, &dfu);
-        cs.set_flight_state(flight::FlightState::OnGround);
+        cs.set_flight_state(flight::FlightState::Ground);
         power::BatteryState low{};
         low.valid = true;
         low.millivolts = 3400;
@@ -300,7 +300,7 @@ TEST_CASE("comms: a cell that falls through the warning inside the prompt refuse
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     power::BatteryState healthy{};
     healthy.valid = true;
     healthy.millivolts = 4000;
@@ -386,7 +386,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
     CHECK(cs.pending() == Pending::Recovery);
     CHECK_FALSE(cs.recovery_requested());
@@ -422,7 +422,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     cs.on_rx(frame("{\"cmd\":\"power_off\"}"));
     CHECK(cs.pending() == Pending::PowerOff);
@@ -451,7 +451,7 @@ TEST_CASE("comms: power_off refused in flight") {
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 
     // And a confirmation that arrives after takeoff does not turn it off either.
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"power_off\"}"));
     REQUIRE(cs.pending() == Pending::PowerOff);
     cs.set_flight_state(flight::FlightState::Airborne);
@@ -473,7 +473,7 @@ TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
@@ -492,7 +492,7 @@ TEST_CASE("comms: upload window expires") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
     cs.confirm();
@@ -518,7 +518,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(before);
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
     cs.confirm();
@@ -535,7 +535,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     second_link.raise_link(1);
     go::SettingsStore store_prompt(s, kTestAddr);
     ConfigService prompt(second_link, store_prompt);
-    prompt.set_flight_state(flight::FlightState::OnGround);
+    prompt.set_flight_state(flight::FlightState::Ground);
     prompt.tick(before);
     prompt.on_rx(frame("{\"cmd\":\"dfu\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
@@ -552,7 +552,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
@@ -596,7 +596,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
 
     cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
@@ -620,7 +620,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
     REQUIRE(cs.pending() == Pending::Recovery);
 
@@ -653,7 +653,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"set\",\"alarm\":false}"));
     CHECK(cs.pending() == Pending::Set);
     cs.on_link_down(events::LinkDown{1});
@@ -676,7 +676,7 @@ TEST_CASE("comms: a set is refused below the low-battery warning, with the reaso
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     power::BatteryState low{};
     low.valid = true;
@@ -716,7 +716,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
     REQUIRE(cs.pending() == Pending::Set);
 
@@ -740,7 +740,7 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     power::BatteryState healthy{};
     healthy.valid = true;
     healthy.millivolts = 4000;

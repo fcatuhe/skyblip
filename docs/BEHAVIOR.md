@@ -757,7 +757,7 @@ Airborne or not, from the fix stream: it gates the DFU lockout and the transmit 
   > A stop is a landing on the solution that shows it, with no hold to wait out.
 - a lost fix is not a landing, so the ground latch holds airborne
 - a parked receiver's noise is not a taxi, and a slowing taxi still is
-  > The third band: stopped or moving, which is the word the glass prints while ADS-L says OnGround.
+  > The third band: stopped or moving, which is the word the glass prints while ADS-L says ground.
 - a takeoff is the speed no taxi holds, and it waits for nothing
 - a taxi does not take off, and one bad solution does not either
   > A glider towed to the grid, a tug taxiing back, a trailer on the perimeter track.

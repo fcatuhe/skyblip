@@ -55,7 +55,7 @@ model::OwnState flying(uint32_t utc, int32_t speed_mm_s) {
 
 model::OwnState parked(uint32_t utc) {
     model::OwnState own = flying(utc, 0);
-    own.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return own;
 }
 
@@ -209,7 +209,7 @@ TEST_CASE("log session: the file opens before the criterion agreed, so the roll 
     REQUIRE(session.peek(first));
     session.commit();
     CHECK(first.utc == kBaseUtc + 4);
-    CHECK(first.flight_state == static_cast<uint8_t>(flight::FlightState::OnGround));
+    CHECK(first.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
 }
 
 TEST_CASE("log session: a landing closes the session with a record that says so") {

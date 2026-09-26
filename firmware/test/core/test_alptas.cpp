@@ -120,7 +120,7 @@ TEST_CASE("alptas: on-ground and airborne flight state survive the 2-bit field")
 // SoftRF latest_encode never sends 0, and reading it as parked silenced the alarm.
 TEST_CASE("alptas: the airborne field is 1 on the ground, 2 or 3 airborne, and 0 unknown") {
     CHECK(alptas_flight_state(0) == uint8_t(flight::FlightState::Unknown));
-    CHECK(alptas_flight_state(1) == uint8_t(flight::FlightState::OnGround));
+    CHECK(alptas_flight_state(1) == uint8_t(flight::FlightState::Ground));
     CHECK(alptas_flight_state(2) == uint8_t(flight::FlightState::Airborne));
     CHECK(alptas_flight_state(3) == uint8_t(flight::FlightState::Airborne));
 }

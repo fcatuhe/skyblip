@@ -247,7 +247,7 @@ TEST_CASE("formation: an aircraft that says it is on the ground is never a wingm
     for (uint32_t t = 1000; t <= 1000 + kTogetherHoldMs + 1000; t += 1000) {
         const model::OwnState own = flying(40, 90, t);
         model::AircraftObs parked = neighbour(own, -60, -120, 10, 40, 90, t);
-        parked.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+        parked.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         r = tracker.observe(own, parked, t);
     }
     CHECK(r.state == State::None);
@@ -262,7 +262,7 @@ TEST_CASE("formation: a member that reports itself on the ground leaves at once"
 
     const model::OwnState own = flying(40, 90, t);
     model::AircraftObs landed = neighbour(own, -60, -120, 10, 40, 90, t);
-    landed.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    landed.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     CHECK(tracker.observe(own, landed, t).state == State::None);
     CHECK(tracker.members() == 0);
     CHECK_FALSE(tracker.together(6, 0x424242));

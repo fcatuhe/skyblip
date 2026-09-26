@@ -5,7 +5,7 @@ namespace skyblip::flight {
 void FlightTimer::update(FlightState state, uint32_t now_ms) {
     if (state == FlightState::Unknown && !running_) return;
 
-    if (state == FlightState::OnGround) {
+    if (state == FlightState::Ground) {
         running_ = false;
         return;
     }

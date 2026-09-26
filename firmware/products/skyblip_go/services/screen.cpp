@@ -608,7 +608,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.turn_cdps = own.turn_cdps;
             snap.flight_seconds = context_.state.flight.seconds;
             snap.flight_time_valid = context_.state.flight.time_valid;
-            snap.airborne = context_.state.flight.running;
+            snap.in_flight = context_.state.flight.running;
             snap.taxiing = taxiing();
             snap.receiver_listening = receiver_listening();
             snap.alarm_flash = alarm_flash_;

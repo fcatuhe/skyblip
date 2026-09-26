@@ -32,7 +32,7 @@ RadarSnapshot flying(uint16_t track_deg) {
     snap.range_step = kDefaultRangeStep;
     snap.track_cdeg = track_deg * 100;
     snap.flight_time_valid = true;
-    snap.airborne = true;
+    snap.in_flight = true;
     snap.flight_seconds = 42 * 60;
     snap.receiver_listening = true;
     return snap;
@@ -615,14 +615,14 @@ TEST_CASE("radar: the flight time reads in the bottom-left, and dashes before a 
 // Back on the ground the clock is a logbook entry, and a logbook is filled to the second.
 TEST_CASE("radar: a finished flight carries its seconds, a running one does not") {
     RadarSnapshot landed = flying(0);
-    landed.airborne = false;
+    landed.in_flight = false;
     landed.flight_seconds = 42 * 60 + 37;
     const Glass fb = radar(landed);
     CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
     CHECK(reads_in(fb, "37", 45, 183, 80, 198));
 
     RadarSnapshot airborne_again = landed;
-    airborne_again.airborne = true;
+    airborne_again.in_flight = true;
     CHECK_FALSE(reads_in(radar(airborne_again), "37", 0, 170, 80, 199));
 
     RadarSnapshot never_flown;
@@ -632,7 +632,7 @@ TEST_CASE("radar: a finished flight carries its seconds, a running one does not"
 // The seconds are half the height of the minutes and clear only their own row of the ring.
 TEST_CASE("radar: the seconds take no more ring than they cover") {
     RadarSnapshot landed = flying(0);
-    landed.airborne = false;
+    landed.in_flight = false;
     landed.flight_seconds = 42 * 60 + 37;
     const Glass fb = radar(landed);
     const Glass no_seconds = radar(flying(0));
@@ -730,14 +730,14 @@ TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass e
 // A pilot must not have to read the footer to learn the plot is not being fed.
 TEST_CASE("radar: anything but a flight is said in the ring, and a flight over the clock") {
     RadarSnapshot searching;
-    searching.airborne = true;  // stale from the last flight: no fix outranks it
+    searching.in_flight = true;  // stale from the last flight: no fix outranks it
     const Glass no_fix = radar(searching);
     CHECK(reads_in(no_fix, "NO FIX", 40, 120, 160, 160, 2));
     CHECK_FALSE(reads_in(no_fix, "NO FIX", 0, 160, 60, 199));
     CHECK_FALSE(reads_in(no_fix, "FLIGHT", 0, 160, 60, 199));
 
     RadarSnapshot parked = flying(0);
-    parked.airborne = false;
+    parked.in_flight = false;
     const Glass ground = radar(parked);
     CHECK(reads_in(ground, "GROUND", 40, 120, 160, 160, 2));
     CHECK_FALSE(reads_in(ground, "GROUND", 0, 160, 60, 199));
@@ -767,7 +767,7 @@ TEST_CASE("radar: a warned cell takes the ring, at the size the ring is read at"
     // The stack moves down a slot rather than losing a reading: the cell takes the
     // banner, the state word takes the small line, and the receiver's stage drops.
     RadarSnapshot parked = low;
-    parked.airborne = false;
+    parked.in_flight = false;
     const Glass ground = radar(parked);
     CHECK(reads_in(ground, "BAT 4%", 40, 120, 160, 160, 2));
     CHECK(reads_in(ground, "GROUND", 40, 145, 160, 170));
@@ -826,7 +826,7 @@ TEST_CASE("radar: a blip lands off the state word rather than erasing it") {
     // 4428 m behind is 54 px on the 4 NM ring, which is where the word stands.
     RadarTarget behind[1] = {{-4428, 0, 100, Level::None}};
     RadarSnapshot parked = flying(0);
-    parked.airborne = false;
+    parked.in_flight = false;
     parked.n_targets = 1;
     parked.targets = behind;
 

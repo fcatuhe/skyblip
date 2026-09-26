@@ -46,7 +46,7 @@ void FlightLogService::drain(uint32_t now_ms) {
 }
 
 bool FlightLogService::on_ground() const {
-    return context_.state.flight.confirmed_state == flight::FlightState::OnGround;
+    return context_.state.flight.confirmed_state == flight::FlightState::Ground;
 }
 
 void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {

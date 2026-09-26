@@ -68,7 +68,7 @@ class ConfigService {
                   const timing::SlotTimingStats* timing_stats = nullptr)
         : link_(link), store_(store), dfu_(dfu), timing_stats_(timing_stats) {}
 
-    // INFO: cf 02aug26 OnGround opens this door, latched in core/flight/ground.h
+    // INFO: cf 02aug26 Ground opens this door, latched in core/flight/ground.h
     void set_flight_state(flight::FlightState fs);
     flight::FlightState flight_state() const { return flight_; }
 
@@ -279,7 +279,7 @@ class ConfigService {
     static const char* flight_name(flight::FlightState fs);
     static bool needs_swap_power(Pending pending);
     const char* staging_refusal() const;
-    bool on_ground() const { return flight_ == flight::FlightState::OnGround; }
+    bool on_ground() const { return flight_ == flight::FlightState::Ground; }
 
     ports::Link& link_;
     ConfigStore& store_;
