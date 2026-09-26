@@ -102,13 +102,31 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     void reboot() override { sys_reboot(SYS_REBOOT_WARM); }
 
-    bool flat_on_glass() const override { return read_glass_byte() == kFlatOnGlassMagic; }
-
-    void set_flat_on_glass(bool flat) override { write_glass_byte(flat ? kFlatOnGlassMagic : 0); }
+    bool flat_on_glass() const override { return retained(kFlatOnGlassBit); }
+    void set_flat_on_glass(bool flat) override { retain(kFlatOnGlassBit, flat); }
+    bool went_dark_flat() const override { return retained(kWentDarkFlatBit); }
+    void set_went_dark_flat(bool flat) override { retain(kWentDarkFlatBit, flat); }
 
    private:
     // INFO: fc 21sep26 a power-on clears GPREGRET2, and a magic makes anything else read as no
-    static constexpr uint8_t kFlatOnGlassMagic = 0x5f;
+    static constexpr uint8_t kGlassMagic = 0x5c;
+    static constexpr uint8_t kGlassMagicMask = 0xfc;
+    static constexpr uint8_t kFlatOnGlassBit = 0x01;
+    static constexpr uint8_t kWentDarkFlatBit = 0x02;
+
+    static uint8_t retained_bits() {
+        const uint8_t byte = read_glass_byte();
+        if ((byte & kGlassMagicMask) != kGlassMagic) return 0;
+        return static_cast<uint8_t>(byte & ~kGlassMagicMask);
+    }
+
+    static bool retained(uint8_t bit) { return (retained_bits() & bit) != 0; }
+
+    static void retain(uint8_t bit, bool on) {
+        const uint8_t was = retained_bits();
+        const uint8_t bits = static_cast<uint8_t>(on ? was | bit : was & ~bit);
+        write_glass_byte(bits == 0 ? 0 : static_cast<uint8_t>(kGlassMagic | bits));
+    }
 
     static uint8_t read_glass_byte() {
 #if DT_NODE_EXISTS(DT_NODELABEL(glass_retention))

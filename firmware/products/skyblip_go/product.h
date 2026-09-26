@@ -88,6 +88,7 @@ class Product {
         boot_cell_ = read_boot_cell();
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
         flat_remembered_ = platform_.system_power().flat_on_glass();
+        take_went_dark_flat();
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, flat_remembered_);
             return Status::Ok;
@@ -160,6 +161,7 @@ class Product {
     // self-test page stays on the glass and the button still works.
     bool flyable() const { return flyable_; }
     power::ResetReason reset_reason() const { return reset_reason_; }
+    bool went_dark_flat() const { return went_dark_flat_; }
     // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
     // setup() and performs the second one.
     power::BootPath boot_path() const { return boot_path_; }
@@ -244,11 +246,18 @@ class Product {
         return cell;
     }
 
+    void take_went_dark_flat() {
+        ports::SystemPower& retained = platform_.system_power();
+        went_dark_flat_ = flat_remembered_ || retained.went_dark_flat();
+        retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
+    }
+
     void remember_glass() {
         const bool flat = screen_.flat_on_glass();
         if (flat == flat_remembered_) return;
         flat_remembered_ = flat;
         platform_.system_power().set_flat_on_glass(flat);
+        if (flat) platform_.system_power().set_went_dark_flat(true);
     }
 
     void guard_cell(uint32_t now_ms) {
@@ -270,6 +279,7 @@ class Product {
 
         boot_snapshot_.device_addr = roles_.device_addr;
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
+        boot_snapshot_.went_dark_flat = went_dark_flat_;
         boot_snapshot_.parts = boot_parts_;
         boot_snapshot_.n_parts = kBootPartCount;
         boot_snapshot_.flyable = flyable_;
@@ -387,6 +397,7 @@ class Product {
     uint32_t refusal_since_ms_{0};
     bool refusal_asked_{false};
     bool flat_remembered_{false};
+    bool went_dark_flat_{false};
     bool flyable_{false};
 };
 
