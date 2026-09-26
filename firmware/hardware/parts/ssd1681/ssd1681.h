@@ -13,10 +13,11 @@ enum class GlassRotation : uint8_t { Deg0, Deg270 };
 
 class Ssd1681 : public ports::Display {
    public:
-    Ssd1681(io::Spi& spi, io::Gpio& gpio, int dc, int rst, int busy, int backlight = -1,
-            GlassRotation rotation = GlassRotation::Deg0)
+    Ssd1681(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int dc, int rst, int busy,
+            int backlight = -1, GlassRotation rotation = GlassRotation::Deg0)
         : spi_(spi),
           gpio_(gpio),
+          delay_(delay),
           dc_(dc),
           rst_(rst),
           busy_(busy),
@@ -64,7 +65,6 @@ class Ssd1681 : public ports::Display {
 
    private:
     void init_panel();
-    void hold_reset();
     void ensure_awake();
     void activate(uint8_t sequence, bool full, uint32_t now_ms);
     void abort_refresh();
@@ -82,6 +82,7 @@ class Ssd1681 : public ports::Display {
 
     io::Spi& spi_;
     io::Gpio& gpio_;
+    io::Delay& delay_;
     int dc_, rst_, busy_, backlight_;
     GlassRotation rotation_;
     // INFO: fc 01aug25 the glass image, into bank 0x26 each present, so a partial diffs on truth
@@ -100,8 +101,6 @@ using Ssd1681Glass = ui::Panel<Ssd1681::kGlassW, Ssd1681::kGlassH>;
 namespace epd {
 // INFO: fc 04sep26 GxEPD2, Good Display, SoftRF hold RES# 10 ms; only this reset ends deep sleep
 constexpr uint32_t kResetHoldUs = 10000;
-constexpr uint32_t kResetSpinNsFloor = 125;
-constexpr uint32_t kResetHoldSpins = kResetHoldUs * 1000u / kResetSpinNsFloor;
 }  // namespace epd
 
 }
