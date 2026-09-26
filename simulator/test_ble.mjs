@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { nmeaChecksum, nmeaSentence, reassembleLines } from './ble.js';
+import { GATT_WRITE_BYTES, chunks, nmeaChecksum, nmeaSentence, reassembleLines } from './ble.js';
 
 const notification = text => ({ target: { value: new TextEncoder().encode(text) } });
 
@@ -44,3 +44,11 @@ test('a bare newline ends a line and an empty one is dropped', () => {
   feed(notification('$PGRMZ,1000,f,3*1A\n\n$PFLAU,0*4F\n'));
   assert.deepEqual(lines, ['$PGRMZ,1000,f,3*1A', '$PFLAU,0*4F']);
 });
+
+test('a packet leaves in slices BLE guarantees, in order and whole', () => {
+  const packet = Uint8Array.from({ length: 45 }, (_, at) => at);
+  const slices = [...chunks(packet)];
+  assert.deepEqual(slices.map(slice => slice.length), [GATT_WRITE_BYTES, GATT_WRITE_BYTES, 5]);
+  assert.deepEqual(new Uint8Array(slices.flatMap(slice => [...slice])), packet);
+});
+
