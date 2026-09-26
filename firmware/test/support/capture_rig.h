@@ -1,4 +1,4 @@
-// Harness, not a test: a product rig taxied or flown, its capture armed from the page, and fed.
+// Harness, not a test: a product rig with its capture armed from the page, and bench records fed.
 #ifndef SKYBLIP_TEST_SUPPORT_CAPTURE_RIG_H
 #define SKYBLIP_TEST_SUPPORT_CAPTURE_RIG_H
 
@@ -7,11 +7,9 @@
 #include "core/diag/payload.h"
 #include "doctest/doctest.h"
 #include "test/support/product_rig.h"
+#include "test/support/rig_moves.h"
 
 namespace skyblip {
-
-inline void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
-inline void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 50000, 800); }
 
 inline void open_capture_page(Rig& rig, uint32_t& t) {
     rig.show(t, go::Page::Capture);

@@ -8,9 +8,9 @@
 #include "core/diag/payload.h"
 #include "core/diag/profile.h"
 #include "doctest/doctest.h"
-#include "test/support/capture_rig.h"
 #include "test/support/diag_corpus.h"
 #include "test/support/product_rig.h"
+#include "test/support/rig_moves.h"
 
 namespace skyblip {
 
