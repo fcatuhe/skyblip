@@ -272,7 +272,7 @@ class ConfigService {
     void drop_replies();
     static const char* flight_name(flight::FlightState fs);
     static bool needs_swap_power(Pending pending);
-    bool image_staged() const;
+    const char* staging_refusal() const;
     bool on_ground() const { return flight_ == flight::FlightState::OnGround; }
 
     ports::Link& link_;

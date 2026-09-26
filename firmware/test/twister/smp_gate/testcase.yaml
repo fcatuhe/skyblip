@@ -1,0 +1,5 @@
+tests:
+  platform.smp_gate:
+    tags: platform mcumgr dfu
+    platform_allow:
+      - native_sim

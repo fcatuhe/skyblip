@@ -34,7 +34,9 @@ struct SpyDfu : ports::Dfu {
     int triggered = 0;
     int confirmed = 0;
     int recovery = 0;
+    int forgotten = 0;
     bool staged = true;
+    bool finished = true;
     ports::RecoveryPath recovery_path = ports::RecoveryPath::Rebooted;
     void trigger() override { triggered++; }
     bool confirm() override {
@@ -48,6 +50,11 @@ struct SpyDfu : ports::Dfu {
     ports::RecoveryPath enter_recovery() override {
         recovery++;
         return recovery_path;
+    }
+    bool upload_finished() override { return finished; }
+    void forget_upload() override {
+        forgotten++;
+        finished = false;
     }
 };
 }  // namespace
@@ -209,6 +216,58 @@ TEST_CASE("comms: apply with nothing in the secondary slot is refused, not reboo
     without_dfu.on_rx(frame("{\"cmd\":\"apply\"}"));
     CHECK(without_dfu.pending() == Pending::None);
     CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
+}
+
+// A header survives an upload that died after its first chunk, and MCUboot reverts what follows.
+TEST_CASE("comms: apply after an upload that stopped short is refused, not rebooted into") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    dfu.finished = false;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    CHECK(cs.pending() == Pending::None);
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+    CHECK_FALSE(cs.install_requested());
+}
+
+TEST_CASE("comms: opening an upload window forgets the upload an earlier one finished") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    CHECK(dfu.forgotten == 0);
+    cs.confirm();
+    CHECK(dfu.forgotten == 1);
+
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    CHECK(cs.pending() == Pending::None);
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+}
+
+TEST_CASE("comms: an upload restarted under the install prompt refuses the confirmation") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    REQUIRE(cs.pending() == Pending::Apply);
+
+    dfu.finished = false;
+    cs.confirm();
+    CHECK(cs.pending() == Pending::None);
+    CHECK_FALSE(cs.install_requested());
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
 }
 
 TEST_CASE("comms: dfu and apply are refused at the door below the low-battery warning") {
