@@ -68,7 +68,7 @@ int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model:
         n += fmt_string(out + n, callsign);
     }
     out[n++] = ',';
-    if (t.flight_state != 1) {
+    if (!flight::on_ground(t.flight_state)) {
         uint16_t deg = to_degrees(Cordic9(t.track_c9)).v;
         n += fmt_uint(out + n, deg);
     }
