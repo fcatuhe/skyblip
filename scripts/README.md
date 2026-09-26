@@ -7,11 +7,12 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
+| [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
 | `build_local.sh` | build the device image off a committed ref |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs |
-| `test_mkuf2.py`, `test_blip.py`, `test_blip_offload.py`, `test_power_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_blip.py`, `test_blip_offload.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
 
@@ -112,6 +113,52 @@ They wrap at 65536 rather than saturating, because a reader subtracts two record
 
 Posture is read off the air the transmitter spent, because a power run records no flight record to ask. Parked is three position bursts and three callsign bursts in every 30 s, about 58 ms of air a minute, because the callsign burst is not gated on flight state. Airborne is thirty and three, about 318. The threshold sits at 160, and a device with no callsign set, which drops the callsign bursts from both figures (about 29 and 289), still lands on the right side of it.
 
+## link_budget.py
+
+The e.r.p. assertion in `firmware/hardware/parts/sx1262/sx1262.h` is a chain of four figures and none of them is measured: `kConductedDbm` is the band limit written to `SetTxParams` (SoftRF writes the same 14 dBm through the same PA row on this board), the antenna gain is a vendor peak, and `kFeedLossCentiDb` is an allowance nobody measured. There is no RF meter on this bench yet. What there is, is two units that each record what they sent and what they heard, and a tape measure. This script is the field run that turns those into a number.
+
+Each unit's `burst` records carry the instant it transmitted and every burst it heard, with the sender's address, the channel and the level (`RssiAvg` out of `GetPacketStatus`; GFSK reports no SNR). Its `config` record carries its own address and what the transmitter was asked for: the `SetTxParams` argument and the row of DS table 13-21 the PA configuration is. A burst sent by one unit and heard by the other is one instant read twice, so the two captures pair burst by burst.
+
+### One run, in a garden
+
+Charge both units. Fit the same antenna on each and note its name. Stand them upright, antennas vertical, on two supports at the same height, with nothing between them and nothing within a couple of metres around them. Measure the height of the middle of each whip above the ground and the distance between the two whips with a tape.
+
+The ground reflects, and at these heights the reflection is the largest error in the run. `quiet_distance_m()` is where it arrives half a wave late, so it can only strengthen the path and the e.r.p. ceiling carries no ground term: 16.7 m apart at 1.2 m up, 11.6 m at 1.0 m. The script prints how far the ground can move the path at whatever geometry it is given, so a garden that cannot fit that distance still gives an answer, only a wider one.
+
+Switch both on, wait for a fix and a PPS lock on each (the `SATS` page), then arm `FULL` on the `CAPTURE` page of each. Leave them for 30 minutes. On the ground a unit sends a position every 10 s and its callsign every 10 s, so that is about 180 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures with the same double press and fetch each, while still switched on:
+
+```
+./scripts/blip.py --address <unit a> fetch --log diagnostics --out a.ndjson
+./scripts/blip.py --address <unit b> fetch --log diagnostics --out b.ndjson
+python3 scripts/link_budget.py a.ndjson b.ndjson --distance 16.7 --height 1.2 \
+    --antenna-a ANT-868-CW-QW-SMA --antenna-b ANT-868-CW-QW-SMA
+```
+
+The antenna, the distance and the height come from the command line because the device cannot know any of them, for the reason `--pack-mah` does: nothing on the board can tell which whip is screwed on. A setting the pilot types would be a claim stored in flash that stays true until someone swaps the antenna, and nothing could notice it going stale. On the command line it is typed by the person who fitted the antenna, on the day. An antenna the script has no gain for is refused: add it to `ANTENNAS` with its source.
+
+No capture profile of its own either. `FULL` already records every `burst` and the `config`, and 30 minutes is under half of what it keeps. Its `traffic` records come along too, and the script prints the distance each unit's GNSS put the other at beside the tape, which catches a mistyped `--distance`.
+
+### What it prints
+
+Caveats first, the way `power_budget.py` does: every hole in either capture, then how many of the uncertainty terms cite a datasheet. Then one block per direction: how many bursts were sent and heard, the level they arrived at, the path loss against free space at that distance, the band the ground can move it by, and the e.r.p. of the sender with its interval.
+
+The e.r.p. is what the receiver heard, plus the free-space loss, less the receiver's own antenna gain and feed loss, less 2.15 dB to reference a dipole. It never uses the sender's programmed power, so the transmitter's own tolerance (TXACC, DS table 3-9) is inside the measurement and not on top of it. The path loss does use it, which is why the path's interval is wider. The level is corrected for `packet_rssi_dbm()` truncating the chip's half-dB steps upwards.
+
+The interval is every term of `TERMS` that applies, added in quadrature with the 95% interval of the mean, and the ground band beside it. Only TXACC cites a datasheet. The SX1262 datasheet states no absolute RSSI accuracy, and the RSSI term is the largest: the reason this is an estimate and not a measurement is that nothing in the run calibrates the receiver.
+
+### What it sets
+
+The last block turns the two estimates into the two constants the field run owns, taking the unit that radiates more:
+
+| Line | Rule |
+|---|---|
+| `kFeedLossCentiDb` | the loss the chain may claim once the uncertainty is spent: the chain with no feed loss, less the higher unit's e.r.p. ceiling, never below 0 |
+| `kConductedDbm` | holds while that ceiling is at or under 14 dBm, otherwise comes down by what it is over |
+
+Then one more line, because two units are not the production line: a third unit at the top of TXACC would sit 2 dB higher. Whether the assertion carries that margin is the owner's decision, not the script's.
+
+Done is a run whose ceiling is printed for both directions: the `kFeedLossCentiDb` it prints goes into `sx1262.h`, the test pinning the chain in `firmware/test/hardware/test_sx1262.cpp` moves with it, and `kConductedDbm` comes down if the script says so.
+
 ## The decoders
 
 `blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`u16(4)`, `i8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diag/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
@@ -129,6 +176,8 @@ for record in records.read_ndjson("capture.ndjson"):
 ```
 python3 scripts/test_blip.py
 python3 scripts/test_mkuf2.py
+python3 scripts/test_power_budget.py
+python3 scripts/test_link_budget.py
 ```
 
 No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, the NMEA checksum and line reassembly, the chunk framing and the resume logic. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_offload.py` with it, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued.
