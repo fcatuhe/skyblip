@@ -1475,7 +1475,7 @@ What the device decided: the build it booted, the dwell, the flight state, the a
 - the end marker counts the session it closes
   > The one record that says the tail is not torn: a session without it was cut.
 - the glass keeps what was on it and how long it had been
-- two duty records subtract to the true interval across a wrap
+- two duty records a wrap apart subtract to the true interval
 
 ### test/core/diag/test_diag_ordinals.cpp
 

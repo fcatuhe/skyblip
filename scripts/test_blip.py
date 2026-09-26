@@ -220,10 +220,16 @@ class DiagnosticsPayloads(unittest.TestCase):
             backlight_ms=41_250, rx_armed_ms=58_300, tx_keyed_ms=1420, ble_connected_ms=22_700,
             annunciator_ms=640))
 
-    def test_two_duty_records_subtract_to_the_true_interval_across_a_wrap(self):
-        before = decoded(18, struct.pack("<7H", 0, 0, 65_000, 0, 0, 0, 0))
-        after = decoded(18, struct.pack("<7H", 0, 0, 95_000 % 65_536, 0, 0, 0, 0))
-        self.assertEqual((after["backlight_ms"] - before["backlight_ms"]) % 65_536, 30_000)
+    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to, 30 s apart.
+    def test_two_duty_records_a_wrap_apart_subtract_to_the_true_interval(self):
+        before = records.decode_diag_record(bytes.fromhex(
+            "1202000040f9a16a00000000e8fd60ea0000000000000000"))
+        after = records.decode_diag_record(bytes.fromhex(
+            "120200005ef9a16a000000001873905f0000000000000000"))
+        self.assertEqual(after["at_s"] - before["at_s"], 30)
+        self.assertEqual((before["backlight_ms"], after["backlight_ms"]), (65_000, 29_464))
+        self.assertEqual((after["backlight_ms"] - before["backlight_ms"]) & 0xFFFF, 30_000)
+        self.assertEqual((after["rx_armed_ms"] - before["rx_armed_ms"]) & 0xFFFF, 30_000)
 
 
 class TablesAgainstTheSchema(unittest.TestCase):

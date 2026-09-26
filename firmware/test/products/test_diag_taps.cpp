@@ -49,6 +49,19 @@ int paired_with_power(const std::vector<diag::Record>& records) {
     return paired;
 }
 
+std::vector<uint32_t> duty_spacing_ms(const std::vector<diag::Record>& records) {
+    std::vector<uint32_t> out;
+    const diag::Record* previous = nullptr;
+    for (const diag::Record& record : records) {
+        if (record.type != diag::Type::Duty) continue;
+        if (previous != nullptr)
+            out.push_back((record.at_s - previous->at_s) * 1000 + record.into_ms -
+                          previous->into_ms);
+        previous = &record;
+    }
+    return out;
+}
+
 std::vector<diag::Power> every_power_record(const std::vector<diag::Record>& records) {
     std::vector<diag::Power> out;
     for (const diag::Record& record : records) {
@@ -338,11 +351,14 @@ TEST_CASE("diag duty: a power run writes the pair every 30 s and lists nothing e
     stop(rig, t);
     const std::vector<diag::Record> records = captured(rig);
 
-    const int duty = count_of(records, diag::Type::Duty);
-    CHECK(duty >= 2);
-    CHECK(duty <= 4);
-    CHECK(count_of(records, diag::Type::Power) == duty);
-    CHECK(paired_with_power(records) == duty);
+    // pairs land about 30, 60 and 90 s after arming, and the pilot's stop at 95 s writes none
+    CHECK(count_of(records, diag::Type::Duty) == 3);
+    CHECK(count_of(records, diag::Type::Power) == 3);
+    CHECK(paired_with_power(records) == 3);
+    const std::vector<uint32_t> spacing = duty_spacing_ms(records);
+    REQUIRE(spacing.size() == 2);
+    CHECK(spacing[0] == diag::kPowerRunRecordPeriodMs);
+    CHECK(spacing[1] == diag::kPowerRunRecordPeriodMs);
     CHECK(count_of(records, diag::Type::Gnss) == 0);
     CHECK(count_of(records, diag::Type::Dwell) == 0);
 }
