@@ -46,7 +46,6 @@ class Tracker {
         uint8_t addr_table{0};
         uint32_t addr{0};
         uint32_t seen_ms{0};
-        uint32_t forget_ms{0};
         int32_t ref_ahead_m{0};
         int32_t ref_right_m{0};
         int32_t ref_up_m{0};
@@ -57,6 +56,7 @@ class Tracker {
 
     static void anchor(Slot& slot, const Report& station, uint32_t now_ms);
     static void off_station(Slot& slot, const Report& fix, uint32_t now_ms);
+    void drop(uint8_t addr_table, uint32_t addr);
     Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
     const Slot* find(uint8_t addr_table, uint32_t addr) const;
     Slot* find(uint8_t addr_table, uint32_t addr);

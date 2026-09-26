@@ -83,7 +83,7 @@ The break is measured from the station, and `kBreakFixes` is what one bad soluti
 
 The station does not move while the contact is Parting either. A slow peel-off holds any box for six fixes, 10 m/s being exactly 60 m in six seconds, so a Parting slot re-anchored on the break rejoined every six seconds until it crossed `kRangeM`, and the square flickered. Only the station it left takes it back: a wingman sliding back into its slot rejoins, and one that settles 500 m out stays Parting, quiet and drawn on its own, until it closes or leaves the band.
 
-The lease ends by itself: a contact nobody has heard for its own lease (`lease.h`) is forgotten with its membership, and a neighbour that settles back on station for `kTogetherHoldMs` rejoins. Addresses rotate only between flights, so a slot reallocated to another aircraft starts at `State::None`.
+The lease ends by itself: a contact nobody has heard for its own lease (`lease.h`) is forgotten with its membership, and a member that reports itself on the ground leaves on that report rather than counting on the square until the lease runs out. Addresses rotate only between flights, so a slot reallocated to another aircraft starts at `State::None`.
 
 What this design gives up, deliberately, is the slow merge. A member drifting in at less than `kClosingMps` stays silent, and 3 m/s across a 30 m gap is ten seconds. The alarm is not the thing protecting that pair: they have been in formation for at least `kTogetherHoldMs`, the pilot is looking out at an aircraft they chose to fly next to, and an annunciator that shouts through the whole flight to cover those ten seconds is an annunciator switched off before them.
 

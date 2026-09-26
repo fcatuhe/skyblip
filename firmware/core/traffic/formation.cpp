@@ -37,7 +37,10 @@ void Tracker::anchor(Slot& slot, const Report& station, uint32_t now_ms) {
 Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs& reported,
                         uint32_t now_ms) {
     Report out{};
-    if (flight::on_ground(reported.flight_state)) return out;
+    if (flight::on_ground(reported.flight_state)) {
+        drop(reported.addr_table, reported.addr);
+        return out;
+    }
     const model::OwnState own = flight::carried_to(own_fix, now_ms);
     const model::AircraftObs target = flight::carried_to(reported, now_ms);
     int32_t north_m, east_m, up_m;
@@ -50,7 +53,6 @@ Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs
     Slot* slot = slot_for(target, now_ms);
     if (slot == nullptr) return out;
     slot->seen_ms = now_ms;
-    slot->forget_ms = traffic::forget_ms(target);
 
     const int32_t range_m = static_cast<int32_t>(idistance(north_m, east_m));
     if (range_m > kRangeM || iabs32(up_m) > kVertM) {
@@ -108,8 +110,14 @@ int Tracker::members() const {
 }
 
 void Tracker::forget_stale(uint32_t now_ms) {
+    constexpr uint32_t lease_ms = traffic::kAirborneTargetForgetS * kMillisecondsPerSecond;
     for (Slot& s : slots_)
-        if (s.used && now_ms - s.seen_ms > s.forget_ms) s = Slot{};
+        if (s.used && now_ms - s.seen_ms > lease_ms) s = Slot{};
+}
+
+void Tracker::drop(uint8_t addr_table, uint32_t addr) {
+    Slot* slot = find(addr_table, addr);
+    if (slot != nullptr) *slot = Slot{};
 }
 
 Tracker::Slot* Tracker::slot_for(const model::AircraftObs& target, uint32_t now_ms) {

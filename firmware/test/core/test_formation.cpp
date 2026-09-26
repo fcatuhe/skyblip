@@ -253,3 +253,17 @@ TEST_CASE("formation: an aircraft that says it is on the ground is never a wingm
     CHECK(r.state == State::None);
     CHECK(tracker.members() == 0);
 }
+
+// A landing is the end of a formation, not six seconds of it counted on the square.
+TEST_CASE("formation: a member that reports itself on the ground leaves at once") {
+    Tracker tracker;
+    const uint32_t t = fly_on_station(tracker) + 1000;
+    REQUIRE(tracker.members() == 1);
+
+    const model::OwnState own = flying(40, 90, t);
+    model::AircraftObs landed = neighbour(own, -60, -120, 10, 40, 90, t);
+    landed.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    CHECK(tracker.observe(own, landed, t).state == State::None);
+    CHECK(tracker.members() == 0);
+    CHECK_FALSE(tracker.together(6, 0x424242));
+}
