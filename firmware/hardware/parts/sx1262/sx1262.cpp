@@ -39,7 +39,7 @@ void Sx1262::cmd_read(uint8_t opcode, uint8_t* out, size_t n) {
 }
 
 Status Sx1262::enter_standby() {
-    uint8_t stby = 0;  // STDBY_RC
+    const uint8_t stby = sx::kStandbyRc;
     cmd(sx::kSetStandby, &stby, 1);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     mode_ = RadioMode::Standby;

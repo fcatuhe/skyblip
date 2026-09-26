@@ -143,7 +143,10 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         rx_rssi_dbm = rssi;
         irq_flags = crc_error ? parts::sx::kIrqCrcErr : parts::sx::kIrqRxDone;
     }
-    void signal_tx_done() { irq_flags = parts::sx::kIrqTxDone; }
+    void signal_tx_done() {
+        irq_flags = parts::sx::kIrqTxDone;
+        fall_back();
+    }
 
     void set_rssi_sequence(const int8_t* levels, uint8_t n) {
         rssi_sequence_len = n < kRssiSequenceCap ? n : kRssiSequenceCap;
@@ -156,6 +159,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     bool expire_tx() {
         if (tx_timeout_ticks == 0) return false;
         irq_flags = parts::sx::kIrqTimeout;
+        fall_back();
         return true;
     }
 
@@ -225,7 +229,10 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint16_t fail_calibration{0};
     uint64_t slept_us{0};
     uint64_t elapsed_us{0};
-    bool tcxo_powered{false};
+    bool tcxo_on_dio3{false};
+    bool tcxo_running{false};
+    uint32_t tcxo_starts{0};
+    uint8_t fallback_mode{parts::sx::kFallbackStdbyRc};
     bool calibrated{false};
     bool image_calibrated{false};
     uint8_t image_band[2]{};
@@ -266,6 +273,18 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return level;
     }
 
+    // INFO: fc 26sep26 DS 13.3.6: DIO3 powers the TCXO in STDBY_XOSC, FS, TX and RX, not STDBY_RC
+    void start_tcxo() {
+        if (!tcxo_on_dio3 || tcxo_running) return;
+        tcxo_running = true;
+        tcxo_starts++;
+    }
+
+    void fall_back() {
+        standby = fallback_mode != parts::sx::kFallbackFs;
+        if (fallback_mode == parts::sx::kFallbackStdbyRc) tcxo_running = false;
+    }
+
     void note_fault(Fault f) {
         if (fault == Fault::None) fault = f;
         faults++;
@@ -292,7 +311,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         ocp = kOcpReset;
         tx_clamp = kTxClampReset;
         tx_modulation = kTxModulationReset;
-        tcxo_powered = calibrated = image_calibrated = false;
+        tcxo_on_dio3 = tcxo_running = calibrated = image_calibrated = false;
+        fallback_mode = parts::sx::kFallbackStdbyRc;
         modulation_set = pa_set = tx_power_set = false;
         irq_mask = dio1_mask = 0;
         irq_flags = 0;
@@ -323,12 +343,13 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
                 sleeping = true;
                 slept_since_us_ = elapsed_us;
                 standby = false;
+                tcxo_running = false;
                 receiving = false;
                 if (!rx_gain_retained()) rx_gain = parts::sx::kRxGainPowerSaving;
             }
             // INFO: fc 05sep26 DS 13.3.6: a TCXO part always flags this, and must be cleared
             if (opcode_ == parts::sx::kSetDio3AsTcxoCtrl) {
-                tcxo_powered = true;
+                tcxo_on_dio3 = true;
                 device_errors = static_cast<uint16_t>(device_errors | parts::sx::kErrXoscStart);
             }
             if (opcode_ == parts::sx::kCalibrate && !regulator_dcdc)
@@ -338,17 +359,19 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
                 device_errors = static_cast<uint16_t>(device_errors | fail_calibration);
             }
             if (opcode_ == parts::sx::kCalibrateImage) {
-                if (!tcxo_powered || !calibrated) note_fault(Fault::ImageCalibrationTooEarly);
+                if (!tcxo_on_dio3 || !calibrated) note_fault(Fault::ImageCalibrationTooEarly);
                 image_calibrated = true;
                 device_errors = static_cast<uint16_t>(device_errors | fail_calibration);
             }
             if (opcode_ == parts::sx::kSetRx) {
+                start_tcxo();
                 if (!modulation_set) note_fault(Fault::FrameWithoutModulation);
                 if (!regulator_dcdc) note_fault(Fault::RegulatorLeftOnLdo);
                 receiving = true;
                 standby = false;
             }
             if (opcode_ == parts::sx::kSetTx) {
+                start_tcxo();
                 receiving = false;
                 standby = false;
                 tx_timeout_ticks = 0;
@@ -371,6 +394,15 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         }
         if (opcode_ == parts::sx::kSetSleep) {
             if (seq_ == 1) sleep_config = in;
+            return 0;
+        }
+        if (opcode_ == parts::sx::kSetStandby) {
+            if (seq_ == 1 && in == parts::sx::kStandbyXosc) start_tcxo();
+            if (seq_ == 1 && in == parts::sx::kStandbyRc) tcxo_running = false;
+            return 0;
+        }
+        if (opcode_ == parts::sx::kSetRxTxFallbackMode) {
+            if (seq_ == 1) fallback_mode = in;
             return 0;
         }
         if (opcode_ == parts::sx::kSetRegulatorMode) {

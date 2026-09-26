@@ -128,6 +128,13 @@ class Sx1262 {
 
 namespace sx {
 constexpr uint8_t kSetStandby = 0x80;
+constexpr uint8_t kStandbyRc = 0x00;
+constexpr uint8_t kStandbyXosc = 0x01;
+// INFO: fc 26sep26 DS 13.1.15: where the part goes after TX, STDBY_RC unless told otherwise
+constexpr uint8_t kSetRxTxFallbackMode = 0x93;
+constexpr uint8_t kFallbackFs = 0x40;
+constexpr uint8_t kFallbackStdbyXosc = 0x30;
+constexpr uint8_t kFallbackStdbyRc = 0x20;
 constexpr uint8_t kSetRegulatorMode = 0x96;
 // DS 13.1.4 regModeParam. The part comes out of reset on its LDO alone and the
 // converter roughly halves the supply current in receive and in transmit, which
