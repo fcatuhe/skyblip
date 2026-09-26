@@ -14,7 +14,7 @@
 
 namespace skyblip::models {
 
-class Ssd1681 : public io::Spi, public io::Gpio {
+class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
    public:
     int dc{0}, rst{1}, busy{2}, backlight_pin{3};
 
@@ -51,6 +51,7 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
+    void busy_wait_us(uint32_t us) override { elapsed_us += us; }
 
     void select(bool) override {}
     void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
@@ -130,6 +131,7 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     std::vector<uint8_t> ram_previous;
     int reset_pulses{0};
     uint32_t reads_while_in_reset{0};
+    uint64_t elapsed_us{0};
     int present_count{0};
     int deep_sleeps{0};
     int commands_while_busy{0};
