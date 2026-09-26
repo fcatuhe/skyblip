@@ -12,10 +12,12 @@ Status ConfigLinkService::setup() {
 }
 
 void ConfigLinkService::tick(uint32_t now_ms) {
+    publish_upload_verdict();
     accrue_connected(now_ms);
     drain_link_events(now_ms);
     // INFO: cf 02aug26 nobody calling this leaves the gate at Unknown, which refuses everything
     config_.set_flight_state(context_.state.flight.confirmed_state);
+    publish_upload_verdict();
 
     // INFO: cf 02aug26 core/power decided what the divider reading means and
     // what a low cell is; this hands the already-decided numbers to the link
@@ -48,6 +50,10 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+void ConfigLinkService::publish_upload_verdict() {
+    context_.roles.dfu.publish_upload_allowed(config_.upload_allowed());
 }
 
 void ConfigLinkService::accrue_connected(uint32_t now_ms) {
@@ -210,14 +216,46 @@ void ConfigLinkService::load() {
 
     uint8_t blob[kBlobCap];
     size_t n = 0;
-    if (!is_ok(context_.roles.kv.read("settings", blob, sizeof(blob), n))) return;
+    if (!is_ok(context_.roles.kv.read(kSettingsKey, blob, sizeof(blob), n))) return;
     loaded_ = true;
-    go::Settings loaded;
-    if (is_ok(go::from_blob(blob, n, loaded)) && is_ok(go::validate(loaded))) settings_ = loaded;
-    if (n <= kBlobCap) {
-        std::memcpy(stored_, blob, n);
-        stored_len_ = n;
+    if (adopt(blob, n)) {
+        remember(blob, n);
+    } else if (newer_layout(blob, n)) {
+        newer_kept_ = true;
+        load_prior();
+    } else {
+        remember(blob, n);
+        fallback_ = settings::Fallback::Defaults;
     }
+    config_.set_settings_fallback(fallback_);
+}
+
+bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t n) {
+    return settings::sealed(blob, n) && settings::blob_version(blob) > go::kBlobVersion;
+}
+
+void ConfigLinkService::load_prior() {
+    uint8_t blob[kBlobCap];
+    size_t n = 0;
+    if (is_ok(context_.roles.kv.read(kPriorSettingsKey, blob, sizeof(blob), n)) && adopt(blob, n)) {
+        remember(blob, n);
+        fallback_ = settings::Fallback::Prior;
+    } else {
+        fallback_ = settings::Fallback::Defaults;
+    }
+}
+
+bool ConfigLinkService::adopt(const uint8_t* blob, size_t n) {
+    go::Settings loaded;
+    if (!is_ok(go::from_blob(blob, n, loaded))) return false;
+    settings_ = loaded;
+    return true;
+}
+
+void ConfigLinkService::remember(const uint8_t* blob, size_t n) {
+    if (n > kBlobCap) return;
+    std::memcpy(stored_, blob, n);
+    stored_len_ = n;
 }
 
 bool ConfigLinkService::persist() {
@@ -226,7 +264,7 @@ bool ConfigLinkService::persist() {
     go::to_blob(settings_, blob, sizeof(blob));
     const size_t len = go::blob_size();
     if (stored_len_ == len && std::memcmp(stored_, blob, len) == 0) return true;
-    if (!is_ok(context_.roles.kv.write("settings", blob, len))) return false;
+    if (!is_ok(context_.roles.kv.write(settings_key(), blob, len))) return false;
     std::memcpy(stored_, blob, len);
     stored_len_ = len;
     return true;
@@ -276,6 +314,17 @@ void ConfigLinkService::record_update() {
     if (!is_ok(context_.roles.kv.write(kUpdateKey, blob, n))) return;
     update_record_ = record;
     update_recorded_ = true;
+    keep_settings_for_a_revert();
+}
+
+// INFO: fc 26sep26 a snapshot that failed costs only the restore, and the reverted image says
+// defaults
+void ConfigLinkService::keep_settings_for_a_revert() {
+    uint8_t blob[kBlobCap];
+    go::to_blob(settings_, blob, sizeof(blob));
+    const size_t len = go::blob_size();
+    if (!is_ok(context_.roles.kv.write(kPriorSettingsKey, blob, len))) return;
+    if (newer_kept_) remember(blob, len);
 }
 
 void ConfigLinkService::forget_update() {

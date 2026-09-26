@@ -31,6 +31,8 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     bool flat_on_glass() const override { return flat_glass; }
     void set_flat_on_glass(bool flat) override { flat_glass = flat; }
+    bool went_dark_flat() const override { return dark_flat; }
+    void set_went_dark_flat(bool flat) override { dark_flat = flat; }
 
     // Where a step ended up in what actually ran, -1 if it never did.
     int order_of(power::PowerDownStep step) const {
@@ -47,8 +49,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // What a collapsing rail does to this platform: a case sets it, the product
     // polls it exactly as it polls the silicon.
     bool supply_warning{false};
-    // INFO: fc 21sep26 survives a rig's system_off the way GPREGRET2 survives SYSTEM OFF
+    // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     bool flat_glass{false};
+    bool dark_flat{false};
     int offs{0};
     int reboots{0};
     power::PowerDownStep sequence[power::kPowerDownStepCount]{};

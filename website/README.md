@@ -29,6 +29,8 @@ Look and layout come from the token sets in `app/assets/stylesheets/`. Colors, s
 
 The one exception is the simulated device. Its case is `simulator/device.css` at the repo root, drawn once for the development harness and for this site, and `bin/simulator-build` copies it into `public/simulator/<commit>/` beside the WASM. The page links it directly, so it is unlayered CSS and the few rules here that override it are unlayered too.
 
+The update page (`manage.*`) takes the rest of what the site uses from `simulator/`: `ble.js`, `cbor.js`, `smp.js`, `image.js` and `update.js`, the Web Bluetooth client and the device's update dialect, described in `simulator/README.md`. `bin/simulator-build` copies them into `public/simulator/<commit>/` before it looks for Emscripten, so a laptop without the toolchain still serves the update page once it has run that script, and the page's Stimulus controller imports `update.js` from there. Its words are the page's own: every refusal the device can answer is a row in the page's tables, marked `data-manage-word`, and the controller reads the sentence out of the row, so the explanation and the live message cannot say two different things. `simulator/test_words.mjs`, which `bin/ci` runs, fails when `firmware/core/comms/config.cpp` gains a refusal that either page has no row for.
+
 ## Building and deploying
 
 ```sh

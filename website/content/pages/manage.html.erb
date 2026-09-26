@@ -1,0 +1,178 @@
+---
+title: Update a skyBlip Go
+nav_title: Update
+description: New firmware for a skyBlip Go from your browser, over Bluetooth · two presses on the device allow it, and the page says in plain words why it stopped when it does.
+---
+
+<section id="update">
+  <p class="kicker">skyBlip Go</p>
+  <h1>New firmware, from this page, over Bluetooth.</h1>
+  <p class="lede">
+    Nothing to install and nothing to pair. The page sends the image, and the
+    device asks you on its own glass twice: before it takes the image, and
+    before it installs it. A phone cannot update it on its own.
+  </p>
+
+  <%= render "shared/manage",
+        unsupported: "This browser has no Web Bluetooth, so this page cannot reach the device. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.",
+        connect: "Connect",
+        disconnect: "Disconnect",
+        connecting: "Your browser lists the devices in range: pick skyBlip Go followed by its address.",
+        device: "Device",
+        firmware: "Running",
+        battery: "Battery",
+        charging: "charging",
+        chosen: "Chosen image",
+        file: "The firmware file, ending in .signed.bin",
+        install: "Install",
+        steps: {
+          dfu: "Allow the upload: the glass says FIRMWARE, press twice.",
+          upload: "The image travels. Keep this page open and the device close.",
+          apply: "Allow the install: the glass says INSTALL, press twice.",
+          install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
+        },
+        remaining: "about %{minutes} min left",
+        recovery: "If the firmware will not take: the USB drive",
+        confirm_recovery: "The glass says RECOVERY, REBOOT INTO THE USB BOOTLOADER: press twice.",
+        recovering: "The glass now says USB BOOTLOADER. If it reads PRESS THE BUTTON TO START IT, press the button once. On a computer the device is then a USB drive named TECHOBOOT: drop the .uf2 file on it for new firmware, or press RST to go back to skyBlip. Nothing transmits meanwhile.",
+        recover: "Restart into the USB drive",
+        missing: "The update page is not part of this build of the site." %>
+</section>
+
+<section>
+  <h2 class="kicker">Before you start</h2>
+
+  <ul class="points">
+    <li>Chrome or Edge, on a computer or on Android</li>
+    <li>The device on the ground, with a GPS fix</li>
+    <li>A battery above the warning, or charging</li>
+    <li>The release file ending in .signed.bin</li>
+    <li>No other app holding the device&rsquo;s settings</li>
+    <li>Ten minutes, with the device close to you</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">What happens</h2>
+
+  <h3>Two questions on the glass, <span class="highlight">one upload between them</span>.</h3>
+  <p class="lede">
+    Install first asks the device to accept an image. The glass says
+    <span class="mono">FIRMWARE</span>,
+    <span class="mono">LET THE PHONE WRITE A NEW IMAGE</span>: press twice. That
+    opens a window of ten minutes, and only while the device knows it is on the
+    ground.
+  </p>
+  <p class="lede">
+    The image travels next, and the page shows how much of it has arrived. The
+    window closes at ten minutes, at a take-off, or when the link drops. Install
+    again and the upload picks up where it stopped, as long as the device has
+    not restarted in between.
+  </p>
+  <p class="lede">
+    Once the last byte is in, the page asks for the install. The glass says
+    <span class="mono">INSTALL</span>,
+    <span class="mono">REBOOT INTO THE STAGED IMAGE</span>: press twice again.
+    The device paints <span class="mono">INSTALLING</span> and restarts into the
+    new firmware, which takes about thirty seconds, and the link drops.
+  </p>
+  <p class="lede">
+    Connect again. The new firmware starts on probation: it has to bring its
+    radio up, hear its GPS receiver and draw its screen before it keeps itself.
+    If it does not, the device goes back to the firmware it had, and this page
+    says so rather than leave you looking at an old version number.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">What it tells you about itself</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The device reports</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">probation</th><td data-manage-word="probation">The new firmware is proving itself: radio up, receiver talking, screen drawn. This resolves on its own within seconds, there is nothing to do.</td></tr>
+        <tr><th class="mono">reverted</th><td data-manage-word="reverted">The last update did not take, and the device went back to the firmware it had. Nothing is broken: the version number is the old one on purpose. Try again, and if it happens twice, tell us which version you tried.</td></tr>
+        <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Your settings are the ones from before that update: what you changed while the newer firmware ran stayed with it.</td></tr>
+        <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">The stored settings could not be read, so the device runs on its defaults. Check the callsign and the aircraft type before you fly.</td></tr>
+        <tr><th class="mono">swap_powered: false</th><td data-manage-word="swap_unpowered">The battery is below the warning, too low to install. Charge it first.</td></tr>
+        <tr><th class="mono">went_dark_flat</th><td data-manage-word="went_dark_flat">The last time it switched off, it was for a flat battery. Charge it before you update.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When it says no</h2>
+
+  <p class="lede">
+    Every refusal comes with a reason, and the page puts it in the words below.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The device answers</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">It has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
+        <tr><th class="mono">low_power</th><td data-manage-word="low_power">The battery is below the warning. Installing is 15 to 25 seconds of flash erases, and the device does not start one on a cell that might not finish it. Charge it, then try again.</td></tr>
+        <tr><th class="mono">expired</th><td data-manage-word="expired">Nobody answered the question on the glass within thirty seconds, which counts as a refusal. Try again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The question was refused on the device: one press says no.</td></tr>
+        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">No new firmware is waiting on the device. Install again to send the image.</td></tr>
+        <tr><th class="mono">upload_unfinished</th><td data-manage-word="upload_unfinished">The image did not arrive whole since the window opened, or the device restarted after it arrived. Install again to send it.</td></tr>
+        <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
+        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">The upload window closed: it lasts ten minutes, and a take-off, a refusal on the glass or a dropped link closes it sooner. Install again: the upload picks up where it stopped, unless the device restarted.</td></tr>
+        <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">The device already runs this version or a newer one, and it never goes back to an older one.</td></tr>
+        <tr><th class="mono">too_large</th><td data-manage-word="too_large">This image is bigger than the room the device keeps for an update, so it is not a skyBlip Go image.</td></tr>
+        <tr><th class="mono">not_image</th><td data-manage-word="not_image">This file is not a signed firmware image. Choose the one ending in .signed.bin: the .uf2 is for the USB drive.</td></tr>
+        <tr><th class="mono">flash</th><td data-manage-word="flash">The device could not write the image to its memory. Try again, and if it happens again, use the USB drive.</td></tr>
+        <tr><th class="mono">unknown_cmd</th><td data-manage-word="unknown_cmd">The firmware on the device is older than this page and does not know the question. Update it with the USB drive.</td></tr>
+        <tr><th class="mono">anything else</th><td data-manage-word="refused">The device refused, with a reason this page does not know:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When the page stops</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>No Web Bluetooth</th><td data-manage-word="no_bluetooth">This browser has no Web Bluetooth. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.</td></tr>
+        <tr><th>Not a skyBlip</th><td data-manage-word="not_skyblip">The device you picked has no firmware update service: it is not a skyBlip, or its firmware predates updates over Bluetooth.</td></tr>
+        <tr><th>No file</th><td data-manage-word="no_file">Choose the firmware file first.</td></tr>
+        <tr><th>Link lost</th><td data-manage-word="link_lost">The link dropped. Bring the device closer and connect again: an upload under way picks up where it stopped.</td></tr>
+        <tr><th>No answer</th><td data-manage-word="timeout">The device stopped answering. Disconnect, connect again, and install again.</td></tr>
+        <tr><th>No room given</th><td data-manage-word="no_params">The device did not say how much of the image it takes at once. Disconnect and connect again.</td></tr>
+        <tr><th>Refused</th><td data-manage-word="smp">The device refused the image with an error this page does not know:</td></tr>
+        <tr><th>Anything else</th><td data-manage-word="failed">Something failed on the way:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Without this page</h2>
+
+  <h3>Press <span class="mono">RST</span> twice, and <span class="highlight">it is a USB drive</span>.</h3>
+  <p class="lede">
+    Twice inside half a second, with the device on a USB cable. It shows up on
+    the computer as a drive named <span class="mono">TECHOBOOT</span>: drop the
+    <span class="mono">.uf2</span> file of a release on it, and the device
+    restarts on that firmware. That road needs no browser at all, and it is the
+    one to take when the firmware on the device will not answer this page.
+  </p>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "skyblip-go", class: "cta cta--previous" %>
+  </p>
+</section>

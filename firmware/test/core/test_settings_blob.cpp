@@ -57,3 +57,22 @@ TEST_CASE("settings blob: a blob shorter than its payload is refused, not read p
     settings::seal(1, &written, sizeof(Payload), small, sizeof(small));
     CHECK(small[0] == 0);
 }
+
+// A layout this build cannot read is a later image's, or a sector that lost a bit, and only one is
+// kept.
+TEST_CASE("settings blob: the framing is checked whole without knowing the payload's layout") {
+    const Payload written{0x5BCAFE, 3};
+    uint8_t blob[settings::blob_bytes(sizeof(Payload))]{};
+    settings::seal(200, &written, sizeof(Payload), blob, sizeof(blob));
+    CHECK(settings::sealed(blob, sizeof(blob)));
+
+    blob[2] ^= 0x01;
+    CHECK_FALSE(settings::sealed(blob, sizeof(blob)));
+    CHECK_FALSE(settings::sealed(blob, settings::kBlobOverhead - 1));
+}
+
+TEST_CASE("settings blob: the fallback is named for the link") {
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::None), "none") == 0);
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::Prior), "prior") == 0);
+    CHECK(std::strcmp(settings::to_string(settings::Fallback::Defaults), "defaults") == 0);
+}

@@ -28,8 +28,9 @@ void PowerService::sample_die_temperature(uint32_t now_ms) {
 
 void PowerService::watch_charge() {
     const power::ChargeCondition was = charge_;
-    charge_ =
-        power::charge_condition(context_.state.power.battery.external_power, die_valid_, die_dc_);
+    const bus::PowerState& published = context_.state.power;
+    charge_ = power::charge_condition(published.battery.external_power, published.die_valid,
+                                      published.die_dc);
     const bool out_of_window =
         charge_ == power::ChargeCondition::TooCold || charge_ == power::ChargeCondition::TooHot;
     if (out_of_window && charge_ != was) charge_warnings_++;

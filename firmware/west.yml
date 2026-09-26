@@ -21,7 +21,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject-rtos
-      revision: v4.4.1
+      revision: v4.4.2
       import:
         name-allowlist:
           # Cortex-M core headers. CMSIS 5 (`cmsis`) is the Cortex-A/R one.

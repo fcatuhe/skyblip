@@ -28,6 +28,7 @@ struct BootPart {
 struct BootSnapshot {
     uint32_t device_addr{0};
     const char* reset_reason{"UNKNOWN"};
+    bool went_dark_flat{false};
     const BootPart* parts{nullptr};
     int n_parts{0};
     // False when a required part is missing. The device stays up and keeps this

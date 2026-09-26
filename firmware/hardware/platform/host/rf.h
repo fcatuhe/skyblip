@@ -57,6 +57,10 @@ class Rf : public ports::Rf {
 
     ports::RfCarrier carrier() const override { return carrier_; }
 
+    ports::RfTransmitter transmitter() const override {
+        return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
+    }
+
     void service(uint32_t now_ms) {
         const uint64_t now_us = clock_.micros();
         const uint32_t dt = now_ms - last_ms_;

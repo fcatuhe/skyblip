@@ -5,7 +5,7 @@
 #                /index.html is the simulator, /console.html talks to a real device
 #   make serve   serve what is already built
 #   make build   copy the page and the firmware's WASM into build/
-#   make test    the console's transport, on node's own runner
+#   make test    the transport and the update client, on node's own runner
 #   make clean
 #
 # 5114 = SImuLAtor, the same leet trick as the website's 8119 = BLIP.
@@ -76,10 +76,9 @@ dev: build
 	  watcher=$$!; trap "kill $$watcher 2>/dev/null" EXIT INT TERM; \
 	  $(MAKE) --no-print-directory serve
 
-# The stream reassembly the console depends on: a sentence is what lies between
-# two line ends, and a notification is a slice of the stream, not a sentence.
+# The transport both pages depend on, and the update client against a fake device.
 test:
-	node --test test_ble.mjs
+	node --test test_*.mjs
 
 clean:
 	rm -rf $(BUILD)

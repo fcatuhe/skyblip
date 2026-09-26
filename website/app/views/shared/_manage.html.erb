@@ -1,0 +1,52 @@
+<% if update_module_path %>
+  <div class="manage card"
+       data-controller="manage"
+       data-manage-src-value="<%= update_module_path %>"
+       data-manage-remaining-value="<%= remaining %>"
+       data-manage-charging-value="<%= charging %>">
+    <p class="manage-unsupported" data-manage-target="unsupported" hidden><%= unsupported %></p>
+
+    <div class="manage-row">
+      <button type="button" class="manage-button" data-manage-target="connect" data-action="manage#link" disabled><%= connect %></button>
+      <button type="button" class="manage-button manage-button--quiet" data-manage-target="disconnect" data-action="manage#unlink" hidden><%= disconnect %></button>
+      <p class="note" data-manage-target="hint" data-manage-word="connecting"><%= connecting %></p>
+    </div>
+
+    <dl class="manage-facts">
+      <div><dt><%= device %></dt><dd data-manage-target="device">-</dd></div>
+      <div><dt><%= firmware %></dt><dd data-manage-target="firmware">-</dd></div>
+      <div><dt><%= battery %></dt><dd data-manage-target="battery">-</dd></div>
+      <div><dt><%= chosen %></dt><dd data-manage-target="chosen">-</dd></div>
+    </dl>
+
+    <div class="manage-notes" data-manage-target="notes"></div>
+
+    <div class="manage-row">
+      <label class="manage-file">
+        <span><%= file %></span>
+        <input type="file" accept=".bin" data-manage-target="file" data-action="manage#choose">
+      </label>
+      <button type="button" class="manage-button" data-manage-target="install" data-action="manage#install" disabled><%= install %></button>
+    </div>
+
+    <ol class="manage-steps">
+      <% steps.each do |step, words| %>
+        <li data-manage-target="step" data-step="<%= step %>" data-manage-word="step_<%= step %>"><%= words %></li>
+      <% end %>
+    </ol>
+
+    <progress class="manage-progress" data-manage-target="progress" max="1" value="0" hidden></progress>
+    <p class="manage-progress-text" data-manage-target="progressText" hidden></p>
+
+    <p class="manage-message" role="status" data-manage-target="message"></p>
+
+    <details class="manage-recovery">
+      <summary><%= recovery %></summary>
+      <p data-manage-word="confirm_recovery"><%= confirm_recovery %></p>
+      <p data-manage-word="recovering"><%= recovering %></p>
+      <button type="button" class="manage-button manage-button--quiet" data-manage-target="recover" data-action="manage#recover" disabled><%= recover %></button>
+    </details>
+  </div>
+<% else %>
+  <p class="note"><%= missing %></p>
+<% end %>

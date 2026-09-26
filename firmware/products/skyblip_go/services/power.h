@@ -42,12 +42,13 @@ class PowerService : public runtime::Service {
     // yes, which is the point of asking through it rather than around it.
     bool may_write(power::DurableWrite kind) const { return cutoff_.may_write(kind); }
 
-    // Tenths of a degree, and whether anyone has read one. False on a board with
-    // no sensor for ever, which is what the reply reads to decide whether the key
-    // exists at all - never a zero standing in for absent, because 0.0 C is a
-    // plausible hangar morning.
-    bool die_temperature_valid() const { return die_valid_; }
-    int16_t die_temperature_dc() const { return die_dc_; }
+    // Tenths of a degree, and whether a reading younger than kDieStaleMs stands:
+    // the one freshness the panel, the charge window and the reply all read.
+    // False on a board with no sensor for ever, which is what the reply reads to
+    // decide whether the key exists at all - never a zero standing in for absent,
+    // because 0.0 C is a plausible hangar morning.
+    bool die_temperature_valid() const { return context_.state.power.die_valid; }
+    int16_t die_temperature_dc() const { return context_.state.power.die_dc; }
 
     power::ChargeCondition charge_condition() const { return charge_; }
     uint32_t charge_warnings() const { return charge_warnings_; }

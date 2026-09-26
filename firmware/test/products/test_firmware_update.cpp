@@ -1,8 +1,12 @@
 // The whole product taking an update; the bootloader is the one thing the host cannot run.
+#include <cstring>
 #include <string>
 
+#include "core/settings/blob.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "products/skyblip_go/pages/recovery.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -43,11 +47,40 @@ bool glass_reads(const ui::Canvas& fb, int x, int y, const char* text, int scale
 
 comms::ConfigService& config(Rig& rig) { return rig.product.config().config(); }
 
+void pass(Rig& rig, uint32_t& t) {
+    t += 50;
+    rig.run(t, t);
+}
+
+void open_upload_window(Rig& rig, uint32_t& t) {
+    on_ground(rig, t);
+    rig.send("{\"cmd\":\"dfu\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+}
+
+void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
+    for (int second = 0; second < 20; second++) {
+        gnss::GnssSolution climbing{};
+        climbing.fix_valid = true;
+        climbing.speed_mm_s = 50000;
+        climbing.alt_msl_mm = 1200 * 1000;
+        climbing.updates = 1;
+        rig.product.bus().gnss.push(climbing);
+        for (int i = 0; i < 10; i++) {
+            pass(rig, t);
+            if (config(rig).flight_state() == flight::FlightState::Airborne) return;
+        }
+    }
+}
+
 void stage_versions(Rig& rig) {
     rig.platform.dfu().has_running = true;
     rig.platform.dfu().running = kRunning;
     rig.platform.dfu().has_staged = true;
     rig.platform.dfu().staged = kStaged;
+    rig.platform.dfu().finished_upload = true;
 }
 
 void apply_and_swap(Rig& rig) {
@@ -83,6 +116,43 @@ struct Rebooted {
         rig.platform.dfu().image_confirmed = confirmed;
     }
 };
+
+const go::BootPart& storage_row(Rig& rig) {
+    for (int i = 0; i < go::kBootPartCount; i++)
+        if (std::string(rig.product.boot_rows()[i].name) == "STORAGE")
+            return rig.product.boot_rows()[i];
+    return rig.product.boot_rows()[0];
+}
+
+// What a later image stores: one layout ahead of this one, sealed the way every blob is.
+struct NewerBlob {
+    uint8_t bytes[settings::blob_bytes(40)]{};
+    NewerBlob() {
+        uint8_t payload[40];
+        for (size_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(0xA0 + i);
+        settings::seal(go::kBlobVersion + 1, payload, sizeof(payload), bytes, sizeof(bytes));
+    }
+};
+
+bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t len) {
+    uint8_t stored[64];
+    size_t n = 0;
+    if (rig.platform.kv().read(key, stored, sizeof(stored), n) != Status::Ok) return false;
+    return n == len && std::memcmp(stored, blob, len) == 0;
+}
+
+void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
+    on_ground(rig, t);
+    std::string json = "{\"cmd\":\"set\",\"callsign\":\"";
+    json += callsign;
+    json += "\"}";
+    rig.send(json.c_str());
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+    rig.run(t, t + 3000);
+    t += 3000;
+}
 
 }  // namespace
 
@@ -184,6 +254,87 @@ TEST_CASE("product: a confirmed apply parks the device and paints the glass befo
     CHECK(record.to == kStaged);
 }
 
+TEST_CASE("product: a recovery by reboot paints the bootloader page before it reboots") {
+    Rig rig;
+    rig.platform.dfu().recovery_route = ports::RecoveryPath::Rebooted;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(rig, t);
+
+    rig.send("{\"cmd\":\"recovery\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    REQUIRE(config(rig).pending() == comms::Pending::Recovery);
+
+    config(rig).confirm();
+    rig.run(t, t + 200);
+    t += 200;
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
+    CHECK(rig.product.board().rf().sleeps() == 1);
+    CHECK(rig.platform.dfu().recoveries == 0);
+
+    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning,
+                      1));
+    CHECK(rig.platform.dfu().recoveries == 1);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+}
+
+TEST_CASE("product: a recovery by power off asks for the press, then drops the rails") {
+    Rig rig;
+    rig.platform.dfu().recovery_route = ports::RecoveryPath::PowerOffToFinish;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(rig, t);
+
+    rig.send("{\"cmd\":\"recovery\"}");
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+    rig.run(t, t + 200);
+    t += 200;
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+    CHECK(rig.platform.dfu().recoveries == 0);
+
+    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0),
+                      go::kRecoveryAwaitsPress, 1));
+    CHECK(rig.platform.dfu().recoveries == 1);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
+}
+
+TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    open_upload_window(rig, t);
+    REQUIRE(config(rig).upload_allowed());
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+
+    pass(rig, t);
+    CHECK(rig.platform.dfu().upload_allowed_published);
+}
+
+// A chunk the MCUmgr work queue reads against a stale gate is a chunk written in flight.
+TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's gate in that pass") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    open_upload_window(rig, t);
+    pass(rig, t);
+    REQUIRE(rig.platform.dfu().upload_allowed_published);
+
+    climb_until_the_link_sees_it(rig, t);
+    REQUIRE(config(rig).flight_state() == flight::FlightState::Airborne);
+    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+}
+
 TEST_CASE("product: apply is refused below the low-battery warning and nothing parks") {
     Rig rig;
     stage_versions(rig);
@@ -259,6 +410,26 @@ TEST_CASE("product: a trailer that will not take the confirmation leaves the ima
     CHECK(config(rig).image_state() == dfu::ImageState::Probation);
 }
 
+// The finished upload is held in RAM, so a restart costs the pilot the upload and not a boot.
+TEST_CASE("product: an image staged before a restart is refused as unfinished, not swapped into") {
+    Rig before;
+    stage_versions(before);
+    REQUIRE(before.setup() == Status::Ok);
+
+    Rebooted after(before, kRunning, /*confirmed=*/true);
+    after.rig.platform.dfu().has_staged = true;
+    after.rig.platform.dfu().staged = kStaged;
+    REQUIRE(after.rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(after.rig, t);
+    after.rig.send("{\"cmd\":\"apply\"}");
+    after.rig.run(t, t + 200);
+    CHECK(config(after.rig).pending() == comms::Pending::None);
+    CHECK(after.rig.last_on(events::Endpoint::Config).find("upload_unfinished") !=
+          std::string::npos);
+    CHECK(after.rig.platform.dfu().triggered == 0);
+}
+
 TEST_CASE("product: an image nobody staged over the air clears a stale attempt") {
     Rig before;
     stage_versions(before);
@@ -271,4 +442,92 @@ TEST_CASE("product: an image nobody staged over the air clears a stale attempt")
     REQUIRE(flashed.rig.setup() == Status::Ok);
     CHECK(config(flashed.rig).image_state() == dfu::ImageState::Confirmed);
     CHECK_FALSE(attempt_recorded(flashed.rig));
+}
+
+// A reverted image that wrote over a newer blob lost the pilot's settings for good.
+TEST_CASE("product: a set on an image older than its settings never writes over them") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+
+    set_callsign_over_the_link(rig, t, "F-JABC");
+    CHECK(std::string(rig.settings().callsign) == "F-JABC");
+    CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
+
+    Rebooted after(rig, kRunning, /*confirmed=*/true);
+    REQUIRE(after.rig.setup() == Status::Ok);
+    CHECK(std::string(after.rig.settings().callsign) == "F-JABC");
+    CHECK(after.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+    CHECK(holds(after.rig, "settings", newer.bytes, sizeof(newer.bytes)));
+}
+
+TEST_CASE("product: an image with nothing of its own beside a newer blob starts from defaults") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    CHECK(rig.settings().alarm_volume == go::defaults().alarm_volume);
+    CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
+}
+
+TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(std::string(storage_row(rig).detail) == go::kStorageOnDefaults);
+
+    rig.raise_link();
+    rig.run(0, 200);
+    const std::string frame = update_frame(rig);
+    CHECK(frame.find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(frame.find("\"settings\":\"defaults\"") != std::string::npos);
+}
+
+TEST_CASE("product: a sector that lost a bit is written over, not kept as a newer image's") {
+    Rig rig;
+    NewerBlob torn;
+    torn.bytes[3] ^= 0x01;
+    REQUIRE(rig.platform.kv().write("settings", torn.bytes, sizeof(torn.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    uint32_t t = 0;
+
+    set_callsign_over_the_link(rig, t, "F-JABC");
+    uint8_t blob[64];
+    size_t n = 0;
+    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    go::Settings stored;
+    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
+    CHECK(std::string(stored.callsign) == "F-JABC");
+}
+
+TEST_CASE("product: a revert puts back the settings the pilot had when the swap began") {
+    Rig before;
+    stage_versions(before);
+    REQUIRE(before.setup() == Status::Ok);
+    uint32_t t = 0;
+    set_callsign_over_the_link(before, t, "D-KXYZ");
+    apply_and_swap(before);
+    REQUIRE(before.platform.dfu().triggered == 1);
+
+    Rebooted landed(before, kStaged, /*confirmed=*/false);
+    const NewerBlob newer;
+    REQUIRE(landed.rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+            Status::Ok);
+
+    Rebooted reverted(landed.rig, kRunning, /*confirmed=*/true);
+    REQUIRE(reverted.rig.setup() == Status::Ok);
+    CHECK(config(reverted.rig).image_state() == dfu::ImageState::Reverted);
+    CHECK(std::string(reverted.rig.settings().callsign) == "D-KXYZ");
+    CHECK(reverted.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+
+    reverted.rig.raise_link();
+    reverted.rig.run(0, 200);
+    const std::string frame = update_frame(reverted.rig);
+    CHECK(frame.find("\"image\":\"reverted\"") != std::string::npos);
+    CHECK(frame.find("\"settings\":\"prior\"") != std::string::npos);
 }

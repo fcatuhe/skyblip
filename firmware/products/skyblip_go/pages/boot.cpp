@@ -91,15 +91,17 @@ void draw_boot(ui::Canvas& fb, const BootSnapshot& s) {
     fb.hline(kLeft, y, kGlassW - 2 * kLeft, true);
     y += kBootFooterGap;
 
+    n = 0;
     if (s.battery_valid) {
         // Centivolts: at boot the number that matters is whether the pack can
         // carry a flight, and two decimals is what a cell is judged on.
         n = fmt_string(buf, "BAT ");
         n += fmt_uint(buf + n, (s.battery_mv + 5u) / 10u, 1, 2);
         n += fmt_string(buf + n, " V");
-        buf[n] = 0;
-        fb.draw_text(kLeft, y, buf, true, 1);
     }
+    if (s.went_dark_flat) n += fmt_string(buf + n, n > 0 ? " WAS FLAT" : "WAS FLAT");
+    buf[n] = 0;
+    fb.draw_text(kLeft, y, buf, true, 1);
 
     // The verdict, inverted so it cannot be read as one more row.
     const char* status = s.flyable ? "READY" : "GROUNDED";

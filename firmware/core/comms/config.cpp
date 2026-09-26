@@ -90,7 +90,9 @@ void ConfigService::note_down(uint16_t session_id) {
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
 void ConfigService::on_link_up(const events::LinkUp& up) {
     note_up(up.session_id);
-    if (image_state_ != dfu::ImageState::Confirmed) send_update(up.session_id);
+    if (image_state_ != dfu::ImageState::Confirmed ||
+        settings_fallback_ != settings::Fallback::None)
+        send_update(up.session_id);
 }
 
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
@@ -218,9 +220,11 @@ void ConfigService::ack(bool ok, const char* reason) {
     (void)reply(buf);
 }
 
-bool ConfigService::image_staged() const {
+const char* ConfigService::staging_refusal() const {
     ports::ImageVersion staged;
-    return dfu_ != nullptr && dfu_->staged_version(staged);
+    if (dfu_ == nullptr || !dfu_->staged_version(staged)) return "nothing_staged";
+    if (!dfu_->upload_finished()) return "upload_unfinished";
+    return nullptr;
 }
 
 bool ConfigService::needs_swap_power(Pending pending) {
@@ -355,8 +359,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
             ack(false, "low_power");
             return;
         }
-        if (requested == Pending::Apply && !image_staged()) {
-            ack(false, "nothing_staged");
+        if (requested == Pending::Apply && staging_refusal() != nullptr) {
+            ack(false, staging_refusal());
             return;
         }
         stage(requested, reason);
@@ -407,7 +411,11 @@ void ConfigService::confirm() {
         pending_ = Pending::None;
         upload_window_open_ = true;
         window_opened_ms_ = now_ms_;
+        if (dfu_) dfu_->forget_upload();
         ack(true, "dfu");
+    } else if (pending_ == Pending::Apply && staging_refusal() != nullptr) {
+        pending_ = Pending::None;
+        ack(false, staging_refusal());
     } else if (pending_ == Pending::Apply) {
         pending_ = Pending::None;
         upload_window_open_ = false;
@@ -416,9 +424,8 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
         upload_window_open_ = false;
+        recovery_requested_ = true;
         ack(true, "recovery");
-        if (dfu_ && dfu_->enter_recovery() == ports::RecoveryPath::PowerOffToFinish)
-            power_off_requested_ = true;
     } else if (pending_ == Pending::PowerOff) {
         pending_ = Pending::None;
         upload_window_open_ = false;

@@ -34,8 +34,9 @@ struct SpyDfu : ports::Dfu {
     int triggered = 0;
     int confirmed = 0;
     int recovery = 0;
+    int forgotten = 0;
     bool staged = true;
-    ports::RecoveryPath recovery_path = ports::RecoveryPath::Rebooted;
+    bool finished = true;
     void trigger() override { triggered++; }
     bool confirm() override {
         confirmed++;
@@ -47,7 +48,12 @@ struct SpyDfu : ports::Dfu {
     }
     ports::RecoveryPath enter_recovery() override {
         recovery++;
-        return recovery_path;
+        return ports::RecoveryPath::Rebooted;
+    }
+    bool upload_finished() override { return finished; }
+    void forget_upload() override {
+        forgotten++;
+        finished = false;
     }
 };
 }  // namespace
@@ -211,6 +217,58 @@ TEST_CASE("comms: apply with nothing in the secondary slot is refused, not reboo
     CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
 }
 
+// A header survives an upload that died after its first chunk, and MCUboot reverts what follows.
+TEST_CASE("comms: apply after an upload that stopped short is refused, not rebooted into") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    dfu.finished = false;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    CHECK(cs.pending() == Pending::None);
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+    CHECK_FALSE(cs.install_requested());
+}
+
+TEST_CASE("comms: opening an upload window forgets the upload an earlier one finished") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    CHECK(dfu.forgotten == 0);
+    cs.confirm();
+    CHECK(dfu.forgotten == 1);
+
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    CHECK(cs.pending() == Pending::None);
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+}
+
+TEST_CASE("comms: an upload restarted under the install prompt refuses the confirmation") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
+    REQUIRE(cs.pending() == Pending::Apply);
+
+    dfu.finished = false;
+    cs.confirm();
+    CHECK(cs.pending() == Pending::None);
+    CHECK_FALSE(cs.install_requested());
+    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+}
+
 TEST_CASE("comms: dfu and apply are refused at the door below the low-battery warning") {
     for (const char* cmd : {"dfu", "apply"}) {
         platform::host::Link link;
@@ -305,7 +363,23 @@ TEST_CASE(
     CHECK(link.last().bytes.find("\"image\":\"probation\"") != std::string::npos);
 }
 
-TEST_CASE("comms: recovery reboots into the drag-and-drop bootloader after confirm") {
+TEST_CASE("comms: a link that comes up on settings that fell back is told, on a confirmed image") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_settings_fallback(settings::Fallback::Defaults);
+    cs.on_link_up(events::LinkUp{1, 244});
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"settings\":\"defaults\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"from\"") == std::string::npos);
+}
+
+// The product paints the recovery page first, so a confirmed recovery is a latch the sequencer
+// spends.
+TEST_CASE("comms: recovery routed through confirmation, latched and never entered inline") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -315,25 +389,15 @@ TEST_CASE("comms: recovery reboots into the drag-and-drop bootloader after confi
     cs.set_flight_state(flight::FlightState::OnGround);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
     CHECK(cs.pending() == Pending::Recovery);
+    CHECK_FALSE(cs.recovery_requested());
+    cs.confirm();
+    CHECK(cs.recovery_requested());
     CHECK(dfu.recovery == 0);
-    cs.confirm();
-    CHECK(dfu.recovery == 1);
     CHECK_FALSE(cs.power_off_requested());
-}
+    CHECK(link.last().bytes.find("\"reason\":\"recovery\"") != std::string::npos);
 
-TEST_CASE("comms: a recovery a reboot cannot carry finishes through power off") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings s = go::defaults();
-    SpyDfu dfu;
-    dfu.recovery_path = ports::RecoveryPath::PowerOffToFinish;
-    go::SettingsStore store_cs(s, kTestAddr);
-    ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::OnGround);
-    cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
-    cs.confirm();
-    CHECK(dfu.recovery == 1);
-    CHECK(cs.power_off_requested());
+    cs.clear_recovery_request();
+    CHECK_FALSE(cs.recovery_requested());
 }
 
 TEST_CASE("comms: recovery refused in flight") {
@@ -753,47 +817,8 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
 }
 
-// The ceiling test/core/test_link_payload.cpp holds for the whole dialect, asked
-// again here for the one key that was added to the reply a phone is PUSHED: the
-// widest device state there is, plus the widest temperature the driver will pass
-// (its own gate is -50 to +125 C), inside the 182 bytes an iPhone carries.
-TEST_CASE("comms: the status reply still fits the narrowest phone with the temperature on it") {
-    for (const int16_t decicelsius : {int16_t(-500), int16_t(1250)}) {
-        platform::host::Link link;
-        link.raise_link(1);
-        link.declare_payload_bytes(kSmallestSupportedPayload);
-        go::Settings s = go::defaults();
-        go::SettingsStore store_cs(s, kTestAddr);
-        ConfigService cs(link, store_cs);
-        cs.set_reset_reason(power::ResetReason::Lockup);
-        cs.set_flight_state(flight::FlightState::Airborne);
-        power::BatteryState full{};
-        full.millivolts = 4200;
-        full.percent = 100;
-        full.external_power = true;
-        full.charging = true;
-        full.valid = true;
-        cs.set_battery_state(full, power::PowerLevel::Cutoff);
-        cs.set_die_temperature(decicelsius, true);
-
-        cs.on_rx(frame("{\"cmd\":\"status\"}"));
-        REQUIRE(link.sent.size() == 1);
-        const std::string body = link.last().bytes;
-        CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
-        CHECK(cs.link_drops() == 0);
-        // Whole, not merely valid JSON: json::Writer drops a field rather than
-        // cutting it, so the last key has to be there.
-        CHECK(body.find("\"die_temp_c\":") != std::string::npos);
-        CHECK(body.back() == '}');
-    }
-}
-
-// J and L. The range gate's counter, and why it is not on the reply above: it is a
-// ten-digit unsigned counter, the status reply has eleven bytes of headroom at its
-// worst case, and a push that vanished whenever a unit was both hot and refusing
-// packets would be the exact failure the payload ceiling exists to prevent. It
-// reads out with the rest of the radio's counters instead, on the question that
-// already asked for it.
+// J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
+// reads out with the rest of the radio's counters, not on the pushed status.
 TEST_CASE("comms: the range gate's refusals read out with the radio's own counters") {
     platform::host::Link link;
     link.raise_link(1);
