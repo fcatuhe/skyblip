@@ -10,13 +10,10 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/sx1262_rig.h"
 
 using namespace skyblip;
 using namespace skyblip::parts;
-
-static Sx1262 make(models::Sx1262& f) {
-    return Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
-}
 
 TEST_CASE("radio: the tuned channel is what the PLL word resolves back to") {
     models::Sx1262 chip;

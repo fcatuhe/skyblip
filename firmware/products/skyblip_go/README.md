@@ -20,6 +20,8 @@ Everything a service needs arrives at construction: the `runtime::Context` with 
 
 The recorder is in the Context rather than on either of the other two because it is neither kind of thing they hold: it has many producers and one consumer, where `core/bus`'s queues have one producer each, and the blackboard's one-writer rule forbids a field every service writes. A tap is one call behind `armed()`, and a disarmed device pays one branch for it (`../../core/diag/README.md`).
 
+`ScreenService` is the one service in two files. `screen.cpp` is what a contact means, when the glass may refresh and how it parks. `screen_pages.cpp` is what each page is drawn from, the snapshot it takes out of `bus::State`.
+
 ## The partition, and the two logs on it
 
 `record_store.h` is the flash half of a log, and it is not a service: `RecordPool` is the partition - one `store::SectorAllocator`, one boot scan of the labels, one set of reply buffers, one drop counter for the link - and `RecordStore` is one ring on it: recovery, the prepared sector, append, the session index, the erase, and the answers to the Log endpoint. The product owns one pool and two stores, and hands them to the two services that bracket sessions differently.

@@ -4,13 +4,10 @@
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "test/support/sx1262_rig.h"
 
 using namespace skyblip;
 using namespace skyblip::parts;
-
-static Sx1262 make(models::Sx1262& f) {
-    return Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
-}
 
 TEST_CASE("radio: SetPaConfig widens the current limit to 140 mA and the driver takes it back") {
     models::Sx1262 chip;
