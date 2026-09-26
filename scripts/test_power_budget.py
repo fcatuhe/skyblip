@@ -214,9 +214,9 @@ class Holes(Case):
         self.assertEqual(skipped, ["a slot inside the interval is unreadable"])
         self.assertIn("unreadable at index 1: erased", self.text(run))
 
-    def test_an_interval_the_device_rebooted_inside_is_not_budgeted(self):
+    def test_an_interval_with_a_boot_record_inside_is_not_budgeted(self):
         self.assertEqual(self.refusal([duty(0), boot(10), duty(30)]),
-                         ["the device booted inside the interval"])
+                         ["the ring recycled under the session inside the interval"])
 
     def test_two_duty_records_further_apart_than_a_counter_can_span_are_not_subtracted(self):
         self.assertEqual(self.refusal([duty(0), duty(61, rx_armed_ms=100)]),
@@ -227,6 +227,32 @@ class Holes(Case):
             self.refusal([duty(0), power(30, flags=PHASE_VALID | GAUGE_VALID | EXTERNAL_POWER),
                           duty(30)]),
             ["the cell was on external power or charging"])
+
+    # The park pair skips the cadence gate, so it can share the last regular pair's instant.
+    def test_a_park_pair_on_the_instant_of_the_last_regular_pair_drops_no_interval(self):
+        raws = whole_run(3600)
+        raws[-3:-3] = [power(3600, percent=0, level="low"), duty(3600)]
+        run = self.only_run(raws)
+        _, seconds, _, skipped = power_budget.model(run)
+        self.assertEqual(skipped, [])
+        self.assertEqual(seconds, 3600)
+        self.assertTrue(power_budget.measure(run, 2400)[0]["whole"])
+
+    def test_a_park_pair_in_the_same_second_keeps_what_the_counters_moved_since(self):
+        run = self.only_run([duty(0, flags=0), duty(30, rx_armed_ms=1000, flags=0),
+                             duty(30, rx_armed_ms=1400, flags=0)])
+        charge, seconds, _, skipped = power_budget.model(run)
+        self.assertEqual(skipped, [])
+        self.assertEqual(seconds, 30)
+        self.assertAlmostEqual(charge["868 MHz receive"], 4.8 * 1.4, places=6)
+
+    def test_a_park_that_writes_a_gap_after_its_pair_still_ends_on_it(self):
+        raws = whole_run(3600)
+        raws[-1:-1] = [gap(3600)]
+        run = self.only_run(raws)
+        _, seconds, _, skipped = power_budget.model(run)
+        self.assertEqual((seconds, skipped), (3600, []))
+        self.assertTrue(power_budget.measure(run, 2400)[0]["whole"])
 
     def test_two_sessions_are_never_subtracted_across(self):
         path = self.capture(session_lines([duty(0)], session=1)
@@ -313,6 +339,13 @@ class Measured(Case):
         cell, _ = self.measure([boot(0)] + plugged + discharging(7200, start_s=3600))
         self.assertTrue(cell["whole"])
         self.assertAlmostEqual(cell["hours"], 2)
+
+    def test_a_run_the_ring_recycled_under_is_measured_across_the_rotation(self):
+        raws = whole_run(3600, from_percent=80, to_percent=60, closing_level="normal")
+        raws[121:121] = [gap(1800), boot(1800)]
+        cell, _ = self.measure(raws)
+        self.assertAlmostEqual(cell["hours"], 1)
+        self.assertAlmostEqual(cell["mah"], 480)
 
     def test_a_reading_the_sanity_floor_threw_away_is_not_a_measurement(self):
         run = self.only_run([power(0, flags=PHASE_VALID), duty(0),

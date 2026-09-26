@@ -140,7 +140,7 @@ def refused(before, after, between):
     if any(r["type"] == "gap" for r in between):
         return "the ring refused records inside the interval"
     if any(r["type"] == "boot" for r in between):
-        return "the device booted inside the interval"
+        return "the ring recycled under the session inside the interval"
     if before["utc_dated"] != after["utc_dated"]:
         return "the clock became UTC-dated inside the interval"
     if stamp(after) <= stamp(before):
@@ -152,9 +152,16 @@ def refused(before, after, between):
     return None
 
 
+def superseded(duty, following):
+    """A Duty the parking capture wrote again within the same instant says less than its repeat."""
+    return duty["utc_dated"] == following["utc_dated"] and stamp(duty) == stamp(following)
+
+
 def duty_pairs(run):
     """Each Duty record with the next one and every record between them."""
     at = [position for position, r in enumerate(run.records) if r["type"] == "duty"]
+    at = [p for p, q in zip(at, at[1:])
+          if not superseded(run.records[p], run.records[q])] + at[-1:]
     for start, end in zip(at, at[1:]):
         yield run.records[start], run.records[end], run.records[start + 1:end]
 
@@ -200,18 +207,15 @@ def model(run):
 
 
 def discharge(run):
-    """The Power records of the last stretch on battery alone, on one clock, since the last boot."""
+    """The Power records of the last stretch on battery alone and on one clock."""
     stretch = []
-    for record in run.records:
-        if record["type"] == "boot":
+    for power in (r for r in run.records if r["type"] == "power"):
+        if not on_battery_alone(power):
             stretch = []
-        elif record["type"] == "power":
-            if not on_battery_alone(record):
-                stretch = []
-            elif stretch and stretch[-1]["utc_dated"] != record["utc_dated"]:
-                stretch = [record]
-            else:
-                stretch.append(record)
+        elif stretch and stretch[-1]["utc_dated"] != power["utc_dated"]:
+            stretch = [power]
+        else:
+            stretch.append(power)
     return stretch
 
 
