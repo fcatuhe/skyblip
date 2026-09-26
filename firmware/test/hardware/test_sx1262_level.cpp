@@ -14,7 +14,9 @@
 using namespace skyblip;
 using namespace skyblip::parts;
 
-static Sx1262 make(models::Sx1262& f) { return Sx1262(f, f, f.busy_pin, f.reset_pin, f.dio1_pin); }
+static Sx1262 make(models::Sx1262& f) {
+    return Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
+}
 
 TEST_CASE("radio: the tuned channel is what the PLL word resolves back to") {
     models::Sx1262 chip;

@@ -7,6 +7,7 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
 
 #include "core/util/result.h"
@@ -31,6 +32,25 @@ class Gpio : public io::Gpio {
     const struct device* dev(int pin) const { return port_[(pin >> 5) & 1]; }
     static gpio_pin_t bit(int pin) { return static_cast<gpio_pin_t>(pin & 31); }
     const struct device* port_[2];
+};
+
+class Delay : public io::Delay {
+   public:
+    void wait_at_least_us(uint32_t us) override {
+        if (!may_sleep_through(us)) {
+            k_busy_wait(us);
+            return;
+        }
+        // INFO: fc 26sep26 k_usleep returns early, with the time still owed, if the thread is woken
+        int32_t owed_us = static_cast<int32_t>(us);
+        while (owed_us > 0) owed_us = k_usleep(owed_us);
+    }
+
+   private:
+    static constexpr uint32_t kTickUs =
+        (1000000u + CONFIG_SYS_CLOCK_TICKS_PER_SEC - 1) / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
+
+    static bool may_sleep_through(uint32_t us) { return us >= kTickUs && k_can_yield(); }
 };
 
 // Manual-CS SPI: the drivers drive CS themselves via select(), so CS stays out
