@@ -158,6 +158,18 @@ TEST_CASE("alptas: position round trips across the 20-bit coding wrap") {
     check_position_round_trip(-(kWrap + 1300), 50000000, -(kWrap - 7000), 50000000);
 }
 
+// Found by test/fuzz/fuzz_air: near the pole, a longitude unwrapped past -180 overflowed int32.
+TEST_CASE("alptas: a longitude unwrapped past the antimeridian comes back onto the globe") {
+    // 31.3 deg east is 30 km from 180 deg west at 89.5 deg north, and past half the 20-bit period.
+    model::AircraftObs obs = make_obs(895000000, 313314768);
+    uint8_t frame[kAlptasFrameBytes];
+    REQUIRE(alptas_encode(frame, obs, kUtc, 895000000, -1799990000) == Status::Ok);
+    model::AircraftObs got{};
+    REQUIRE(alptas_decode(frame, kUtc, 895000000, -1799990000, got) == Status::Ok);
+    CHECK(got.lon_1e7 >= -1800000000);
+    CHECK(got.lon_1e7 < 1800000000);
+}
+
 TEST_CASE("alptas: speed, climb and track round trip over their ranges") {
     static const uint16_t kSpeeds[] = {0, 4, 40, 180, 400, 800};
     static const int16_t kClimbs[] = {0, 8, -8, 44, -44, 80, -80, 200};
