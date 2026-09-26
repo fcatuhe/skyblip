@@ -265,6 +265,22 @@ TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot
     CHECK_FALSE(reads_in(ordinary.product.boot_page(), "WAS FLAT", 0, 0, 200, 199));
 }
 
+// The note is the cell's, not the frame's: a panel held off in the heat parks nothing.
+TEST_CASE("product: a cutoff too hot to park a frame still notes the flat cell") {
+    constexpr ports::Capabilities kWithDie = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
+        static_cast<uint32_t>(ports::Capability::DieTemperature));
+    Rig dying{kWithDie};
+    dying.platform.die_temperature().hold(go::ScreenService::kHoldAboveDeciCelsius + 10);
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+    REQUIRE_FALSE(dying.platform.system_power().flat_on_glass());
+    CHECK(dying.platform.system_power().went_dark_flat());
+}
+
 TEST_CASE("product: powering the panel down leaves the wordmark on it") {
     // An e-paper holds its last image with the rails down, so what is written
     // immediately before power_off is what the device wears while it is off.

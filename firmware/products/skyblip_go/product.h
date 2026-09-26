@@ -140,7 +140,7 @@ class Product {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
             if (refused_frame_ == power::RefusedFrame::FlatCell)
-                screen_.park_for_flat_cell();
+                park_flat_cell();
             else
                 screen_.park_for_off();
         }
@@ -258,7 +258,11 @@ class Product {
         if (flat == flat_remembered_) return;
         flat_remembered_ = flat;
         platform_.system_power().set_flat_on_glass(flat);
-        if (flat) platform_.system_power().set_went_dark_flat(true);
+    }
+
+    void park_flat_cell() {
+        platform_.system_power().set_went_dark_flat(true);
+        screen_.park_for_flat_cell();
     }
 
     void guard_cell(uint32_t now_ms) {
@@ -331,7 +335,7 @@ class Product {
         else if (stowing())
             screen_.park_for_stow();
         else if (cell_ran_out())
-            screen_.park_for_flat_cell();
+            park_flat_cell();
         else
             screen_.set_power(false);
     }
