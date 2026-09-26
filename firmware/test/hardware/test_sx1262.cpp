@@ -236,7 +236,7 @@ TEST_CASE("radio: a reinit that failed after the reset keys nothing until one su
     REQUIRE(r.service(30000, 30000));
     CHECK(r.reinit_count() == 2);
     CHECK(r.mode() == RadioMode::Rx);
-    CHECK(chip.tcxo_powered);
+    CHECK(chip.tcxo_on_dio3);
     CHECK(r.configure_radio(RadioConfig{}) == Status::Ok);
 }
 
