@@ -7,6 +7,7 @@
 #include "core/events/link.h"
 #include "hardware/platform/host/platform.h"
 #include "products/skyblip_go/product.h"
+#include "runtime/tasks.h"
 #include "simulator/world/world.h"
 
 namespace skyblip::simulator {
@@ -17,7 +18,11 @@ class Simulator {
    public:
     using Product = go::Product<platform::host::Platform>;
 
-    Status setup() { return product_.setup(); }
+    Status setup() {
+        const Status started = product_.setup();
+        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogMs);
+        return started == Status::Ok ? armed : started;
+    }
 
     void step(uint32_t now_ms) {
         platform_.clock().set_millis(now_ms);

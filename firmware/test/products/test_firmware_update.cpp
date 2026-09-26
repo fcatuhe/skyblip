@@ -7,6 +7,7 @@
 #include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/recovery.h"
+#include "runtime/tasks.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -254,9 +255,8 @@ TEST_CASE("product: a confirmed apply parks the device and paints the glass befo
     CHECK(record.to == kStaged);
 }
 
-TEST_CASE("product: a recovery by reboot paints the bootloader page before it reboots") {
+TEST_CASE("product: with no watchdog running a recovery paints the bootloader page, then reboots") {
     Rig rig;
-    rig.platform.dfu().recovery_route = ports::RecoveryPath::Rebooted;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     on_ground(rig, t);
@@ -282,10 +282,10 @@ TEST_CASE("product: a recovery by reboot paints the bootloader page before it re
     CHECK_FALSE(rig.product.ready_to_power_off());
 }
 
-TEST_CASE("product: a recovery by power off asks for the press, then drops the rails") {
+TEST_CASE("product: under a running watchdog a recovery asks for the press, then drops the rails") {
     Rig rig;
-    rig.platform.dfu().recovery_route = ports::RecoveryPath::PowerOffToFinish;
     REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.platform.watchdog().arm(runtime::kHardwareWatchdogMs) == Status::Ok);
     uint32_t t = 0;
     on_ground(rig, t);
 

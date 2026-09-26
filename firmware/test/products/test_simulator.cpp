@@ -11,6 +11,8 @@
 #include "core/model/aircraft.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/recovery.h"
 #include "simulator/simulator.h"
 
 using namespace skyblip;
@@ -52,6 +54,13 @@ uint32_t show_sats(simulator::Simulator& h, uint32_t t) {
          i++)
         t = page(h, t);
     return press(h, t);
+}
+
+bool glass_is(const ui::Canvas& glass, const ui::Canvas& expected) {
+    for (int y = 0; y < go::kGlassH; y++)
+        for (int x = 0; x < go::kGlassW; x++)
+            if (glass.get_pixel(x, y) != expected.get_pixel(x, y)) return false;
+    return true;
 }
 
 }  // namespace
@@ -449,4 +458,26 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     CHECK(h.product().state().gnss.sky.in_use() > 0);
     CHECK(h.product().state().gnss.sky.in_use_of(gnss::System::Gps) > 0);
     CHECK(h.product().state().gnss.sky.in_use_of(gnss::System::Beidou) > 0);
+}
+
+// The board arms its watchdog before a pilot can ask, so a real recovery waits for the press.
+TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does") {
+    simulator::Simulator h;
+    REQUIRE(h.setup() == Status::Ok);
+    h.world().set_fix(true);
+    h.world().set_speed_kt(0);
+    run(h, 0, 20000);
+    h.world().connect_companion();
+    run(h, 20000, 20200);
+    h.world().send_config("{\"cmd\":\"recovery\"}");
+    run(h, 20200, 20400);
+    REQUIRE(h.product().config().config().pending() == comms::Pending::Recovery);
+
+    h.product().config().config().confirm();
+    run(h, 20400, 20400 + power::kParkMs + power::kReleaseSettleMs + 5000);
+
+    go::Glass expected;
+    go::draw_recovery(expected, ports::RecoveryPath::PowerOffToFinish);
+    CHECK(glass_is(h.panel(), expected));
+    CHECK(h.product().ready_to_power_off());
 }
