@@ -51,6 +51,41 @@ TEST_CASE("diag record: config carries the settings a replay has to assume") {
     CHECK(out.metric);
 }
 
+TEST_CASE("diag record: config carries the power the transmitter was asked for and its PA row") {
+    diag::Config in{};
+    in.tx_power_dbm = -9;
+    in.pa_rated_dbm = 22;
+
+    const diag::Config out = diag_round_trip(in);
+    CHECK(out.tx_power_dbm == -9);
+    CHECK(out.pa_rated_dbm == 22);
+}
+
+namespace {
+
+// The same 24 bytes scripts/test_blip.py decodes, so both ends of the wire read one transmitter.
+constexpr uint8_t kConfigOfATransmitter[diag::kRecordBytes] = {
+    0x02, 0x02, 0x00, 0x00, 0x40, 0xf9, 0xa1, 0x6a, 0xfe, 0xca, 0x5b, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x01, 0x0e, 0x16, 0x00, 0x00};
+
+}  // namespace
+
+TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 on the wire") {
+    diag::Config in{};
+    in.addr = 0x5BCAFE;
+    in.addr_table = 7;
+    in.settings_version = 1;
+    in.tx_power_dbm = 14;
+    in.pa_rated_dbm = 22;
+    diag::Instant at{};
+    at.at_s = kDiagTestUtc;
+    at.utc_dated = true;
+
+    uint8_t raw[diag::kRecordBytes]{};
+    diag::encode_record(diag::record_of(in, at), raw);
+    CHECK(std::memcmp(raw, kConfigOfATransmitter, diag::kRecordBytes) == 0);
+}
+
 TEST_CASE("diag record: a dwell carries the plan the second ran under and its refusal") {
     diag::Dwell in{};
     in.freq_hz = timing::kMband1Hz;

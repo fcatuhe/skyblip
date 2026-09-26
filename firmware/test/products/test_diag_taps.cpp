@@ -6,6 +6,7 @@
 #include "core/diag/profile.h"
 #include "core/settings/address.h"
 #include "doctest/doctest.h"
+#include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/screen.h"
 #include "test/support/diag_corpus.h"
@@ -159,6 +160,17 @@ TEST_CASE("diag config: arming names the settings every other record was decided
     CHECK(config.metric);
     CHECK(config.alarm_enabled);
     CHECK(config.settings_version == go::Settings::kCurrentVersion);
+}
+
+TEST_CASE("diag config: arming names the power the radio transmits at, as its executor set it") {
+    Rig rig;
+    uint32_t t = 100;
+    const std::vector<diag::Record> records = armed_taxi(rig, t, 2);
+
+    diag::Config config{};
+    REQUIRE(first_of(records, config));
+    CHECK(config.tx_power_dbm == parts::sx::kConductedDbm);
+    CHECK(config.pa_rated_dbm == parts::sx::kPaConfigHighPowerRatedDbm);
 }
 
 TEST_CASE("diag gnss: every solution is recorded with what the sky gave it") {

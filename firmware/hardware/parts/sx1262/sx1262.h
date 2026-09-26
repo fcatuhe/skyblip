@@ -256,6 +256,8 @@ constexpr int kRxBandwidthCount =
 // DS 13.1.14 SetPaConfig for the SX1262 high-power PA. This is also the write
 // that raises the over-current protection to 140 mA.
 constexpr uint8_t kPaConfigHighPower[4] = {0x04, 0x07, 0x00, 0x01};
+// INFO: fc 26sep26 DS table 13-21: those four bytes are the +22 dBm row
+constexpr int8_t kPaConfigHighPowerRatedDbm = 22;
 constexpr uint8_t kRampTime200Us = 0x04;
 // TODO: fc 05sep26 DS 13-21 halves the 90 mA of +14 dBm, once this PA match is measured
 

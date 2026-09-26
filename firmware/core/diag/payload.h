@@ -44,6 +44,8 @@ struct Config {
     uint8_t addr_table{0};
     uint8_t alarm_volume{0};
     uint8_t settings_version{0};
+    int8_t tx_power_dbm{0};
+    int8_t pa_rated_dbm{0};
     bool alarm_enabled{false};
     bool metric{false};
     bool battery_trim_manual{false};

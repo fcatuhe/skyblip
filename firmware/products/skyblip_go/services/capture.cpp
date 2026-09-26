@@ -71,6 +71,9 @@ void CaptureService::record_config(uint32_t now_ms) {
     value.alarm_enabled = settings_.alarm_enabled;
     value.metric = settings_.units == Units::Metric;
     value.battery_trim_manual = settings_.battery_offset_manual;
+    const ports::RfTransmitter transmitter = context_.roles.rf.transmitter();
+    value.tx_power_dbm = transmitter.power_dbm;
+    value.pa_rated_dbm = transmitter.pa_rated_dbm;
     context_.diag.record(value, context_.instant(now_ms));
 }
 
