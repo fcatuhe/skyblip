@@ -415,6 +415,39 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
               (static_cast<int>(go::NmeaService::kTargetRefreshBoundMs / 1000) + 1));
 }
 
+// The notify share ended each pass at four 20-byte frames: no $PFLAA reached a 20-byte tablet.
+TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE minimum whole") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    fly(rig, t, 3);
+    rig.raise_link();
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
+    fly(rig, t, 1);
+    for (int i = 0; i < 4; i++)
+        hear(rig, 0x300000u + static_cast<uint32_t>(i), 500 + 100 * i, 200, 40 + 5 * i);
+    fly(rig, t, 1);
+    REQUIRE(rig.state().traffic.count() == 4);
+
+    rig.platform.link().hold_after(4);
+    rig.platform.link().clear();
+    for (int second = 0; second < 2; second++) {
+        rig.push_timed_fix(25000, 900);
+        for (uint32_t ms = 0; ms < 1000; ms += 10) {
+            rig.platform.link().serve();
+            rig.run(t + ms, t + ms, 10);
+        }
+        t += 1000;
+        rig.utc_offset_s++;
+    }
+
+    const std::vector<std::string> heard = sentences(rig);
+    for (const std::string& s : heard) CHECK(checksum_ok(s));
+    CHECK(count_of(rig, "$PFLAU") >= 2);
+    CHECK(count_of(rig, "$PFLAA") >= 4);
+    CHECK(rig.product.nmea().link_drops() == 0);
+}
+
 TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
