@@ -60,6 +60,16 @@ The glass forgets on the cable, and a support case must not. A second bit, `went
 
 The cable leaving cannot be noticed. VBUS rising wakes this SoC and VBUS falling does not, so a device unplugged still flat keeps the wordmark until the next press, which is the moment a pilot asks the question anyway - and that press is a refusal, so it is answered with the flat frame.
 
+## Charge mode, considered and refused
+
+A charger plugged into a switched-off unit wakes it, and `boot_path` sends that boot straight back to SYSTEM OFF. SoftRF-moshe-braner does something else there (`src/platform/nRF52.cpp:2512-2560`): it beeps the battery level out of the buzzer, then sleeps. That answers the question a pilot asks, "is it charging?", and it is not done here, for three reasons.
+
+What the device says out loud is one table, `core/indication/lamp.h`, and charge is deliberately not a row of it: this board's charger IC drives its own LED, which already answers the question. A buzzer ladder in the wake path would be a second vocabulary beside that table.
+
+What it would beep is not yet trustworthy. The gauge medians three samples before it states a percentage (`battery.h`) and the trim is a setting, so an honest level exists most of a boot later, on every cable wiggle in a flight bag, which is the case the refusal exists for.
+
+The refusal is complete without it. A charge mode would be a third `BootPath` value beside the other two, with the rule and the sleep path untouched.
+
 ## Time in state, because there is no current
 
 `duty.h` is one accumulator, `OnTime`: a thing was on, and this is how many milliseconds of it have gone by. It is what the backlight, the annunciator and the companion link are counted with, each by the service that drives that consumer and each published on `bus::State::duty` (`../bus/README.md`).
