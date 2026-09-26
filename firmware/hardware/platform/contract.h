@@ -48,6 +48,8 @@ constexpr bool fills_the_platform_contract() {
                   "platform: uart_rate(io::BusId) -> io::UartRate&, the receiver's baud");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().gpio()), io::Gpio&>,
                   "platform: gpio() -> io::Gpio&");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().delay()), io::Delay&>,
+                  "platform: delay() -> io::Delay&, the windows a datasheet asks a part to hold");
     static_assert(
         std::is_void_v<decltype(std::declval<Self>().wire(std::declval<const io::PinMap&>()))>,
         "platform: wire(const io::PinMap&), the board's map of the lines a part drives");

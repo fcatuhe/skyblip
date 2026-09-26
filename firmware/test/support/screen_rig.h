@@ -22,7 +22,7 @@ namespace {
 // them.
 struct Rig {
     models::Ssd1681 chip;
-    parts::Ssd1681 epd{chip, chip, chip.dc, chip.rst, chip.busy};
+    parts::Ssd1681 epd{chip, chip, chip, chip.dc, chip.rst, chip.busy};
     platform::host::Clock clock;
     ports::NullRoles null;
     ports::Roles roles{
