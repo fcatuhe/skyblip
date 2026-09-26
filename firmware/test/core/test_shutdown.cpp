@@ -53,6 +53,22 @@ TEST_CASE("shutdown: a pad that was not held throughout is an ordinary power-off
     CHECK(brushed.reason() == ShutdownReason::LongPress);
 }
 
+// A pad line that reads touched at rest would turn every power-off into a stow (#60).
+TEST_CASE("shutdown: a pad never seen up since boot is not a stow") {
+    ShutdownSequencer stuck;
+    uint32_t t = 0;
+    stuck.tick(t, false, /*pad_down=*/true);
+    for (t = 10; t <= 10 + kLongPressMs; t += 10) stuck.tick(t, true, /*pad_down=*/true);
+    CHECK(stuck.phase() == ShutdownPhase::Parking);
+    CHECK(stuck.reason() == ShutdownReason::LongPress);
+
+    ShutdownSequencer seen_up;
+    seen_up.tick(0, false, /*pad_down=*/false);
+    seen_up.tick(10, false, /*pad_down=*/true);
+    for (t = 20; t <= 20 + kLongPressMs; t += 10) seen_up.tick(t, true, /*pad_down=*/true);
+    CHECK(seen_up.reason() == ShutdownReason::Stow);
+}
+
 // A cheek, a raindrop or a bag rests on the pad: it may never switch anything off.
 TEST_CASE("shutdown: the pad on its own switches nothing off") {
     ShutdownSequencer seq;

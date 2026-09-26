@@ -197,6 +197,7 @@ class ShutdownSequencer {
     // the sequencer sees after a wake is a button that is already down. Counting
     // that as a hold powers the device off again before the panel has drawn.
     bool hold_armed_{false};
+    bool pad_armed_{false};
 };
 
 }  // namespace skyblip::power
