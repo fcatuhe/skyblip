@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Self-check for mkuf2.py: the range guards and the Intel HEX round trip.
+"""Self-check for mkuf2.py: the range guards, the Intel HEX round trip, and the
+gate that keeps a Nordic DFU package out (check_no_dfu_package.py).
 
     python3 scripts/test_mkuf2.py
 
@@ -18,6 +19,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import check_no_dfu_package  # noqa: E402
 import mkuf2  # noqa: E402
 
 
@@ -159,6 +161,38 @@ class IntelHex(unittest.TestCase):
             back = {}
             mkuf2.read_hex(path, back)
             self.assertEqual(back, {0x10000: 0x41})
+
+
+def tree_with(directory, relative, text):
+    path = pathlib.Path(directory) / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return directory
+
+
+class NoNordicDfuPackage(unittest.TestCase):
+    def test_the_tree_as_committed_ships_no_dfu_package(self):
+        self.assertEqual(check_no_dfu_package.findings(), [])
+
+    def test_a_workflow_staging_a_zip_is_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            tree_with(d, ".github/workflows/release.yml", "  path: build/out/skyblip-go.zip\n")
+            found = check_no_dfu_package.findings(d)
+        self.assertEqual(found, [(".github/workflows/release.yml", 1,
+                                  "stages a .zip firmware package")])
+
+    def test_a_script_calling_adafruit_nrfutil_genpkg_is_refused_on_both_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            tree_with(d, "scripts/package.sh", "echo ok\nadafruit-nrfutil dfu genpkg --dev-type 0x0052\n")
+            found = check_no_dfu_package.findings(d)
+        self.assertEqual([(path, line) for path, line, _ in found],
+                         [("scripts/package.sh", 2), ("scripts/package.sh", 2)])
+
+    def test_the_uf2_install_path_is_not_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            tree_with(d, ".github/workflows/release.yml",
+                      "  run: python3 ../scripts/mkuf2.py build/skyblip-go.uf2 a.hex b.hex\n")
+            self.assertEqual(check_no_dfu_package.findings(d), [])
 
 
 if __name__ == "__main__":
