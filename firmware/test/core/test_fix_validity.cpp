@@ -120,6 +120,19 @@ TEST_CASE("fix validity: a position no aircraft could have flown to is refused o
     CHECK(b.validity.valid(1400));
 }
 
+TEST_CASE("fix validity: crossing the antimeridian is flight, not a jump") {
+    Burst b;
+    b.feed(kRmc, 1000);
+    b.feed(kGga, 1000);
+    GnssSolution west_edge = b.parser.solution();
+    west_edge.lon_1e7 = 1799999000;
+    b.validity.observe(west_edge, Sentence::Rmc, 1200);
+    GnssSolution east_edge = west_edge;
+    east_edge.lon_1e7 = -1799999000;
+    b.validity.observe(east_edge, Sentence::Rmc, 1400);
+    CHECK(b.validity.valid(1400));
+}
+
 TEST_CASE("fix validity: the jump gate is drawn where moshe-braner draws it") {
     // A step just inside the gate is 16.7 km in a second: receiver faults, not implausible flight.
     Burst b;

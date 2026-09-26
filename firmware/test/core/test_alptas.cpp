@@ -158,18 +158,6 @@ TEST_CASE("alptas: position round trips across the 20-bit coding wrap") {
     check_position_round_trip(-(kWrap + 1300), 50000000, -(kWrap - 7000), 50000000);
 }
 
-// Found by test/fuzz/fuzz_air: near the pole, a longitude unwrapped past -180 overflowed int32.
-TEST_CASE("alptas: a longitude unwrapped past the antimeridian comes back onto the globe") {
-    // 31.3 deg east is 30 km from 180 deg west at 89.5 deg north, and past half the 20-bit period.
-    model::AircraftObs obs = make_obs(895000000, 313314768);
-    uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, obs, kUtc, 895000000, -1799990000) == Status::Ok);
-    model::AircraftObs got{};
-    REQUIRE(alptas_decode(frame, kUtc, 895000000, -1799990000, got) == Status::Ok);
-    CHECK(got.lon_1e7 >= -1800000000);
-    CHECK(got.lon_1e7 < 1800000000);
-}
-
 TEST_CASE("alptas: speed, climb and track round trip over their ranges") {
     static const uint16_t kSpeeds[] = {0, 4, 40, 180, 400, 800};
     static const int16_t kClimbs[] = {0, 8, -8, 44, -44, 80, -80, 200};
@@ -300,6 +288,23 @@ TEST_CASE("alptas: a non-position message type is not decoded as traffic") {
     alptas_set_crc(frame);
     model::AircraftObs got{};
     CHECK(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Unsupported);
+}
+
+TEST_CASE("alptas: a position that unwraps past the pole or the antimeridian is not a target") {
+    constexpr int32_t kRefLat = 895000000;
+    constexpr int32_t kRefLon = 1799900000;
+    check_position_round_trip(895000000, 1799000000, kRefLat, kRefLon);
+
+    uint8_t frame[kAlptasFrameBytes];
+    model::AircraftObs got{};
+    // 635974 quanta of 806e-7 deg, unwrapped against 179.99E, is 2 * 2^20 further east: 220 deg
+    REQUIRE(alptas_encode(frame, make_obs(kRefLat, 512595044), kUtc, kRefLat, kRefLon) ==
+            Status::Ok);
+    CHECK(alptas_decode(frame, kUtc, kRefLat, kRefLon, got) == Status::Invalid);
+
+    // 722784 quanta of 52e-7 deg, unwrapped against 89.99N, is 16 * 2^20 further north: 91 deg
+    REQUIRE(alptas_encode(frame, make_obs(37584768, 0), kUtc, 899900000, 0) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtc, 899900000, 0, got) == Status::Invalid);
 }
 
 TEST_CASE("alptas: encoding refuses to claim a position it does not have") {

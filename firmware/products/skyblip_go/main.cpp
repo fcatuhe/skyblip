@@ -46,6 +46,11 @@ int main(void) {
         g_platform.system_power().system_off(power::button_wake_after_refusal(cell));
     }
 
+    if (!g_platform.pps_armed()) LOG_ERR("PPS: no edge interrupt, so no slot is ever keyed");
+    if (!g_platform.storage_mounted())
+        LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
+    if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
+
     // Not fatal and not silent: without the comparator the write rule still
     // holds, on the divider alone, and a cell that collapses between two samples
     // can land inside a settings write. See hardware/platform/zephyr/

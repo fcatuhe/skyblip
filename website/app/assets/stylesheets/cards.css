@@ -21,7 +21,7 @@
     font-weight: 400;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--quiet);
+    color: var(--quiet-text);
     margin-block-start: var(--space-2xs);
   }
 

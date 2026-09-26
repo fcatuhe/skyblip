@@ -18,7 +18,6 @@ constexpr int64_t kMicrometresPerE7 = 11132;
 constexpr int64_t kMicrometresPerMetre = 1000000;
 constexpr int64_t kMicrometresPerMillimetre = 1000;
 constexpr int64_t kMsPerS = 1000;
-constexpr int64_t kE7PerTurn = 3600000000LL;
 // Below this cosine a metre of easting is more than a degree of longitude and
 // the scaling stops meaning anything. 88 degrees of latitude is 500 km further
 // north than anything this device will fly over.
@@ -78,8 +77,8 @@ Prediction carry(const Motion& m, int32_t dt_ms) {
         static_cast<int64_t>(m.speed_mm_s) * dt_ms * kMicrometresPerMillimetre, kMsPerS);
     out.lat_1e7 = m.lat_1e7 + static_cast<int32_t>(div_round(travel * icos(heading), scale));
     const int64_t east = div_round(travel * isin(heading), scale);
-    out.lon_1e7 =
-        m.lon_1e7 + static_cast<int32_t>(div_round(east * kTrigOne, lat_cosine(m.lat_1e7)));
+    out.lon_1e7 = wrapped_lon_1e7(static_cast<int64_t>(m.lon_1e7) +
+                                  div_round(east * kTrigOne, lat_cosine(m.lat_1e7)));
 
     if (m.climbs) {
         const int32_t rise =
@@ -149,7 +148,7 @@ model::AircraftObs carried_to(const model::AircraftObs& obs, uint32_t now_ms) {
 uint32_t prediction_residual_m(const Prediction& predicted, int32_t lat_1e7, int32_t lon_1e7,
                                int32_t alt_mm) {
     const int64_t dlat = static_cast<int64_t>(lat_1e7) - predicted.lat_1e7;
-    const int64_t dlon = static_cast<int64_t>(lon_1e7) - predicted.lon_1e7;
+    const int64_t dlon = wrapped_lon_1e7(static_cast<int64_t>(lon_1e7) - predicted.lon_1e7);
     const int64_t north = div_round(dlat * kMicrometresPerE7, kMicrometresPerMetre);
     const int64_t east = div_round(dlon * kMicrometresPerE7 * lat_cosine(predicted.lat_1e7),
                                    kMicrometresPerMetre * kTrigOne);

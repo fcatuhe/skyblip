@@ -92,7 +92,7 @@ class SlotTimingStats {
     uint32_t missed_{0};
     uint32_t refused_{0};
     uint64_t prev_edge_us_{0};
-    bool have_prev_edge_{false};
+    bool prev_edge_valid_{false};
 };
 
 }  // namespace skyblip::timing

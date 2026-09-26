@@ -11,6 +11,39 @@ int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     return div_round(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
 
+enum class AdslG13Category : uint8_t {
+    LightRotorcraft = 3,
+    LighterThanAir = 5,
+    Paraglider = 7,
+    Parachutist = 8,
+    Evtol = 9,
+    Gyrocopter = 10,
+    UasOpen = 11,
+    UasSpecific = 12,
+    UasCertified = 13,
+    HeavyRotorcraft = 15,
+    HangGlider = 16,
+    Paramotor = 17,
+};
+
+bool flies_at_no_ground_speed(uint8_t aircraft_cat) {
+    switch (static_cast<AdslG13Category>(aircraft_cat)) {
+        case AdslG13Category::LightRotorcraft:
+        case AdslG13Category::LighterThanAir:
+        case AdslG13Category::Paraglider:
+        case AdslG13Category::Parachutist:
+        case AdslG13Category::Evtol:
+        case AdslG13Category::Gyrocopter:
+        case AdslG13Category::UasOpen:
+        case AdslG13Category::UasSpecific:
+        case AdslG13Category::UasCertified:
+        case AdslG13Category::HeavyRotorcraft:
+        case AdslG13Category::HangGlider:
+        case AdslG13Category::Paramotor: return true;
+    }
+    return false;
+}
+
 }  // namespace
 
 bool flight_evidence(const FlightSample& sample) {
@@ -28,6 +61,12 @@ FlightState state_from(uint8_t adsl_code) {
         case FlightState::Unknown: break;
     }
     return FlightState::Unknown;
+}
+
+uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat) {
+    if (state_from(adsl_code) == FlightState::OnGround && flies_at_no_ground_speed(aircraft_cat))
+        return static_cast<uint8_t>(FlightState::Unknown);
+    return adsl_code;
 }
 
 bool FlightMonitor::jerky(int32_t previous_mm_s, int32_t now_mm_s) {

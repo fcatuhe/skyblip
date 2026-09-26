@@ -59,6 +59,7 @@ class Transmitter {
         return static_cast<int>((utc / period_s(airborne)) & 1u);
     }
     uint32_t ground_second() const;
+    uint32_t callsign_second() const;
     static constexpr int kCallsignSlot = 1;
     static int last_callsign_instant();
 

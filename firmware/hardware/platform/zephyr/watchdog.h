@@ -8,6 +8,7 @@
 #include <zephyr/task_wdt/task_wdt.h>
 
 #include "ports/watchdog.h"
+#include "runtime/tasks.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -18,8 +19,17 @@ namespace skyblip::platform::zephyr {
 // period so the channel is always the first thing to expire.
 class Watchdog : public ports::Watchdog {
    public:
+    static constexpr uint32_t kRopeMs =
+        CONFIG_TASK_WDT_MIN_TIMEOUT + CONFIG_TASK_WDT_HW_FALLBACK_DELAY;
+    // INFO: fc 23sep26 under MIN_TIMEOUT, so task_wdt's background feed never renews the rope
+    static_assert(CONFIG_TASK_WDT_MIN_TIMEOUT > 1000, "kChannelMs would wrap below zero");
+    static constexpr uint32_t kChannelMs = CONFIG_TASK_WDT_MIN_TIMEOUT - 1000;
+    static_assert(kRopeMs == runtime::kHardwareWatchdogMs,
+                  "prj.conf's task_wdt window must be the rope the loop is supervised by");
+
     Status arm(uint32_t timeout_ms) override {
         if (armed_) return Status::Ok;
+        if (timeout_ms != kRopeMs) return Status::Invalid;
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(wdt0))
         const struct device* hardware = DEVICE_DT_GET(DT_NODELABEL(wdt0));
         if (!device_is_ready(hardware)) return Status::Down;
@@ -27,7 +37,7 @@ class Watchdog : public ports::Watchdog {
         const struct device* hardware = nullptr;
 #endif
         if (task_wdt_init(hardware) != 0) return Status::Down;
-        channel_ = task_wdt_add(timeout_ms, &Watchdog::bite, nullptr);
+        channel_ = task_wdt_add(kChannelMs, &Watchdog::bite, nullptr);
         if (channel_ < 0) return Status::Down;
         armed_ = true;
         return Status::Ok;

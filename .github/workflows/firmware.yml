@@ -88,6 +88,10 @@ jobs:
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume
         run: python3 scripts/test_blip.py
+      # The console page's line reassembly and checksum: ble.js has no other test.
+      - name: simulator transport
+        working-directory: simulator
+        run: node --test test_ble.mjs
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite
@@ -380,8 +384,8 @@ jobs:
 #           if-no-files-found: error
 
   platform-adapters:
-    # What the pure-host suite cannot link: NVS, SMP, the GATT plumbing. It is
-    # about the platform, not any one product, hence its own job.
+    # What the pure-host suite cannot build: the Zephyr adapters, run where
+    # native_sim can and compiled into the product image where it cannot.
     name: platform adapters (native_sim)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -416,3 +420,19 @@ jobs:
           # ZEPHYR_BASE is not in this step's env, so ask west for the workspace.
           python3 "$(west topdir)/zephyr/scripts/twister" \
             -T test/twister -p native_sim --inline-logs
+
+      # The one CI build of rf.h, link.cpp and main.cpp while product-image is off.
+      - name: compile the product image, unsigned
+        working-directory: firmware
+        run: west build -b t_echo_plus products/skyblip_go -d build/product
+
+      # The flash budget on the one image CI builds. The SDK's size tool is not on PATH.
+      - name: check the flash budget
+        working-directory: firmware
+        run: |
+          sdk="$(west topdir)/zephyr-sdk"
+          for size in "$sdk"/gnu/arm-zephyr-eabi/bin/arm-zephyr-eabi-size \
+                      "$sdk"/arm-zephyr-eabi/bin/arm-zephyr-eabi-size; do
+            [ -x "$size" ] && export SIZE="$size" && break
+          done
+          python3 ../scripts/size_check.py build/product/zephyr/zephyr.elf

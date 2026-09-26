@@ -20,7 +20,7 @@
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--quiet);
+    color: var(--quiet-text);
   }
 
   .table-scroll tbody th {
@@ -48,7 +48,7 @@
     display: block;
     font-weight: 400;
     font-size: var(--text-xs);
-    color: var(--quiet);
+    color: var(--quiet-text);
   }
 
   .blips td img {
@@ -60,6 +60,6 @@
   .blips .blips-none {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
-    color: var(--quiet);
+    color: var(--quiet-text);
   }
 }

@@ -235,16 +235,6 @@ int32_t unwrap20(uint32_t coded, int32_t reference) {
 
 int32_t abs32(int32_t v) { return v < 0 ? -v : v; }
 
-constexpr int64_t kLon1e7PerTurn = 3600000000LL;
-constexpr int64_t kAntimeridianLon1e7 = 1800000000LL;
-
-// Half the 20-bit period is 42 degrees near the pole, so an unwrap can step past 180 by that much.
-int32_t onto_globe(int64_t lon_1e7) {
-    if (lon_1e7 >= kAntimeridianLon1e7) lon_1e7 -= kLon1e7PerTurn;
-    if (lon_1e7 < -kAntimeridianLon1e7) lon_1e7 += kLon1e7PerTurn;
-    return static_cast<int32_t>(lon_1e7);
-}
-
 uint16_t carried_crc(const uint8_t* frame) {
     return static_cast<uint16_t>(static_cast<uint16_t>(frame[kAlptasDataBytes] << 8) |
                                  static_cast<uint16_t>(frame[kAlptasDataBytes + 1]));
@@ -390,9 +380,11 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
 
     int32_t lat_ref = div_nearest(ref_lat_1e7, 52);
     int32_t lat_1e7 = unwrap20(get_field(data, kFLat), lat_ref) * 52;
+    if (lat_1e7 < -900000000 || lat_1e7 > 900000000) return Status::Invalid;
     int32_t divisor = londiv(abs32(lat_1e7) / 10000000);
     int32_t lon_ref = div_nearest(ref_lon_1e7, divisor);
-    int32_t lon_1e7 = onto_globe(int64_t{unwrap20(get_field(data, kFLon), lon_ref)} * divisor);
+    int64_t lon_1e7 = static_cast<int64_t>(unwrap20(get_field(data, kFLon), lon_ref)) * divisor;
+    if (lon_1e7 < -1800000000 || lon_1e7 > 1800000000) return Status::Invalid;
 
     int32_t speed_10 = descale(get_field(data, kFSpeed), 8, 2, 0);
     int32_t vs_10 = descale(get_field(data, kFVs), 6, 2, 1);
@@ -405,7 +397,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     out.flight_state = get_field(data, kFAirborne) > 1 ? 2 : 1;
     out.emergency = 1;  // INFO: fc 09mar26 no emergency field on the wire; 1 is ADS-L "OK"
     out.lat_1e7 = lat_1e7;
-    out.lon_1e7 = lon_1e7;
+    out.lon_1e7 = static_cast<int32_t>(lon_1e7);
     out.alt_m = descale(get_field(data, kFAlt), 12, 1, 0) - 1000;
     out.speed_q = static_cast<uint16_t>(div_nearest(speed_10 * 2, 5));
     out.climb_e8 = static_cast<int16_t>(div_nearest(vs_10 * 4, 5));

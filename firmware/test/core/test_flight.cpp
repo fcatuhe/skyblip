@@ -1,5 +1,7 @@
 // Airborne or not, from the fix stream: it gates the DFU lockout and the transmit rate, never a
 // page.
+#include <initializer_list>
+
 #include "core/flight/ground.h"
 #include "core/flight/state.h"
 #include "doctest/doctest.h"
@@ -49,6 +51,24 @@ struct Stream {
 }  // namespace
 
 // 23 kt is a speed no aircraft taxis at and every takeoff roll passes it well before it flies.
+// A paraglider soaring a ridge at walking pace went on air landed, once every ten seconds.
+TEST_CASE("flight: a craft that can hover is never announced landed, only undefined") {
+    const uint8_t on_ground = static_cast<uint8_t>(FlightState::OnGround);
+    const uint8_t airborne_code = static_cast<uint8_t>(FlightState::Airborne);
+    const uint8_t undefined = static_cast<uint8_t>(FlightState::Unknown);
+    for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
+        CAPTURE(int(hovers));
+        CHECK(announced_state(on_ground, hovers) == undefined);
+        CHECK_FALSE(reduced_rate(announced_state(on_ground, hovers)));
+        CHECK(announced_state(airborne_code, hovers) == airborne_code);
+    }
+    for (const uint8_t fixed_wing : {0, 1, 2, 4, 6, 14}) {
+        CAPTURE(int(fixed_wing));
+        CHECK(announced_state(on_ground, fixed_wing) == on_ground);
+        CHECK(reduced_rate(announced_state(on_ground, fixed_wing)));
+    }
+}
+
 TEST_CASE("flight: a takeoff is the speed no taxi holds, and it waits for nothing") {
     Stream sky;
     REQUIRE(sky.hold(3, 0.0) == FlightState::OnGround);

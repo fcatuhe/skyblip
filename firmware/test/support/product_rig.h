@@ -23,8 +23,9 @@ struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
-        : platform(fitted) {}
+    explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
+                 uint32_t device_addr = platform::host::Platform::kDeviceAddr)
+        : platform(fitted, device_addr) {}
 
     Status setup() { return product.setup(); }
 
@@ -47,7 +48,18 @@ struct Rig {
 
     void push_fix(int32_t alt_m, uint32_t updates) {
         gnss::GnssSolution f{};
-        f.is_fix = true;
+        f.fix_valid = true;
+        f.alt_mm = alt_m * 1000;
+        f.vdop_e2 = 150;
+        f.updates = updates;
+        product.bus().gnss.push(f);
+    }
+
+    // A receiver that lost its vertical solution: no VDOP, and the last height it solved.
+    void push_2d_fix(int32_t alt_m, uint32_t updates) {
+        gnss::GnssSolution f{};
+        f.fix_valid = true;
+        f.fix_mode = gnss::kFixMode2D;
         f.alt_mm = alt_m * 1000;
         f.updates = updates;
         product.bus().gnss.push(f);
@@ -57,11 +69,11 @@ struct Rig {
     // helpers below carry one and advance it a second at a time.
     static constexpr uint32_t kUtcBase = 1785628800;
 
-    // A solution as a receiver reports one in flight: moving, timed, and
+    // A solution as a receiver reports one in flight: moving, timed, solved in 3D, and
     // referenced to both datums. core/flight decides what it means.
     void push_timed_fix(int32_t speed_mm_s, int32_t alt_msl_m) {
         gnss::GnssSolution f{};
-        f.is_fix = true;
+        f.fix_valid = true;
         f.utc_valid = true;
         f.utc = kUtcBase + utc_offset_s;
         f.lat_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
@@ -73,6 +85,7 @@ struct Rig {
         f.track_cdeg = 9000;
         f.sats = 10;
         f.hdop_e2 = 100;
+        f.vdop_e2 = 150;
         f.updates = ++fix_updates;
         product.bus().gnss.push(f);
     }
@@ -88,7 +101,7 @@ struct Rig {
     // What the driver publishes once the receiver has gone quiet: not a fix.
     void blind_second(uint32_t& t) {
         gnss::GnssSolution f{};
-        f.is_fix = false;
+        f.fix_valid = false;
         f.updates = ++fix_updates;
         product.bus().gnss.push(f);
         run(t, t + 950);

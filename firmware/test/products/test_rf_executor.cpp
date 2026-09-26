@@ -171,7 +171,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(cfg) == Status::Ok);
-    radio.start_receive();
+    REQUIRE(radio.start_receive() == Status::Ok);
 
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
@@ -386,6 +386,99 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
         rf.service(t);
     }
     CHECK(radio.reinit_count() == 1);
+}
+
+// Every dwell restarts the receiver, and restarting it once zeroed the rope: no unit ever got here.
+TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it hears nothing") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    for (uint32_t t = 0; t <= runtime::kRadioNoRxReinitMs + 1000; t += 10) {
+        if (t % 400 == 0) {
+            ports::RfPlan plan{};
+            plan.mode = ports::RfMode::RxMband;
+            plan.freq_hz = timing::kMband0Hz;
+            plan.start_us = static_cast<uint64_t>(t) * 1000;
+            plan.end_us = plan.start_us + 390000;
+            REQUIRE(rf.arm(plan) == Status::Ok);
+        }
+        clock.set_millis(t);
+        rf.service(t);
+    }
+    CHECK(radio.reinit_count() == 1);
+    CHECK(rf.armed_count() > runtime::kRadioNoRxReinitMs / 400);
+}
+
+// A reinit that failed left the radio out of Rx, where the rope stops counting: dead for good.
+TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    ports::RfPlan plan{};
+    plan.mode = ports::RfMode::RxMband;
+    plan.freq_hz = timing::kMband0Hz;
+    plan.start_us = 0;
+    plan.end_us = 400000;
+    REQUIRE(rf.arm(plan) == Status::Ok);
+    for (uint32_t t = 0; t <= 400; t += 10) {
+        clock.set_millis(t);
+        rf.service(t);
+    }
+    REQUIRE(radio.mode() == parts::RadioMode::Rx);
+
+    // It resets to standby, then its reads come back as nothing: out of Rx, and failed.
+    chip.miso_dead = true;
+    for (uint32_t t = 410; t <= 2 * runtime::kRadioNoRxReinitMs + 1000; t += 10) {
+        clock.set_millis(t);
+        rf.service(t);
+    }
+    CHECK(radio.reinit_count() >= 2);
+}
+
+// A radio half configured may still sit on the last dwell's channel, and it keyed there.
+TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    ports::RfPlan plan{};
+    plan.mode = ports::RfMode::RxMband;
+    plan.freq_hz = timing::kMband1Hz;
+    plan.start_us = 400000;
+    plan.end_us = 799000;
+    plan.tx = frame;
+    plan.tx_len = sizeof(frame);
+    plan.tx_at_us = 600000;
+    REQUIRE(rf.arm(plan) == Status::Ok);
+
+    chip.busy_stuck = true;
+    for (uint32_t t = 390; t <= 410; t += 10) {
+        clock.set_millis(t);
+        rf.service(t);
+    }
+    chip.busy_stuck = false;
+    for (uint32_t t = 420; t <= 800; t += 10) {
+        clock.set_millis(t);
+        rf.service(t);
+    }
+
+    CHECK_FALSE(chip.saw_cmd(parts::sx::kSetTx));
+    events::RfEvent e{};
+    bool missed = false;
+    while (events.pop(e)) missed = missed || e.type == events::RfEventType::Missed;
+    CHECK(missed);
 }
 
 // Slot 0's burst was added by a second arm at 450, read at 799, expired, and called the band busy.

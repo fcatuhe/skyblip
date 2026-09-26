@@ -59,8 +59,8 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& at, uint8_t* frame) {
     obs.position_valid = true;
     const int32_t keyed_off_s = in.ConsumeIntegralInRange<int32_t>(-protocol::kAlptasKeyWindowS,
                                                                    protocol::kAlptasKeyWindowS);
-    protocol::alptas_encode(frame, obs, at.utc + static_cast<uint32_t>(keyed_off_s), at.lat_1e7,
-                            at.lon_1e7);
+    (void)protocol::alptas_encode(frame, obs, at.utc + static_cast<uint32_t>(keyed_off_s),
+                                  at.lat_1e7, at.lon_1e7);
 }
 
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.
@@ -108,16 +108,17 @@ void hear_alptas(protocol::Frame& frame, const Receiver& at) {
     if (protocol::alptas_correct(frame.data, frame.err) < 0) return;
     protocol::alptas_address(frame.data);
     model::AircraftObs obs{};
-    protocol::alptas_decode(frame.data, at.utc, at.lat_1e7, at.lon_1e7, obs);
+    if (protocol::alptas_decode(frame.data, at.utc, at.lat_1e7, at.lon_1e7, obs) == Status::Ok)
+        return;
     uint32_t keyed = 0;
-    protocol::alptas_keyed_second(frame.data, at.utc, keyed);
+    (void)protocol::alptas_keyed_second(frame.data, at.utc, keyed);
 }
 
 void hear_uplink(const uint8_t* codeword) {
     static const protocol::AdslUplink uplink;
     model::AircraftObs relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStats stats{};
-    uplink.decode(codeword, relayed, protocol::AdslUplink::kMaxTargets, stats);
+    (void)uplink.decode(codeword, relayed, protocol::AdslUplink::kMaxTargets, stats);
 }
 
 }  // namespace

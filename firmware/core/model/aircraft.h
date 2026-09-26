@@ -51,6 +51,8 @@ struct AircraftObs {
     bool climb_valid;
     bool speed_valid;
     bool position_valid;
+    // INFO: fc 23sep26 G.1.7 lets a 2D position mark its altitude invalid, so decoders say which
+    bool alt_valid{true};
 };
 
 }  // namespace skyblip::model

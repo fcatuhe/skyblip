@@ -7,7 +7,7 @@
   .locale-switcher span {
     padding: var(--space-2xs) var(--space-inline-2xs);
     text-decoration: none;
-    color: var(--quiet);
+    color: var(--quiet-text);
   }
   .locale-switcher span[aria-current="true"] { color: var(--ink); font-weight: 700; }
   .locale-switcher span[aria-disabled="true"] { opacity: .45; }

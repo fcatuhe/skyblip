@@ -8,7 +8,6 @@
 // every other tracker that mints its identity the same way.
 #include <cstring>
 #include <initializer_list>
-#include <limits>
 #include <string>
 
 #include "core/fec/crc.h"
@@ -684,6 +683,50 @@ TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is no
     CHECK(std::string(s.callsign) == "123456789");
 }
 
+TEST_CASE("settings: a callsign longer than the field is refused, not cut to fit") {
+    Settings s = defaults();
+    const char* ten = "{\"callsign\":\"1234567890\"}";
+    CHECK(apply_json(s, ten, static_cast<int>(strlen(ten))) == Status::OutOfRange);
+    CHECK(std::string(s.callsign).empty());
+}
+
+TEST_CASE("settings: a callsign is only what the menu can type, so a comma or a star is refused") {
+    for (const char* patch :
+         {"{\"callsign\":\"D,KXYZ\"}", "{\"callsign\":\"D*KXYZ\"}", "{\"callsign\":\"$DKXYZ\"}",
+          "{\"callsign\":\"D!KXYZ\"}", "{\"callsign\":\"d-kxyz\"}"}) {
+        CAPTURE(patch);
+        Settings s = defaults();
+        CHECK(apply_json(s, patch, static_cast<int>(strlen(patch))) == Status::Invalid);
+        CHECK(std::string(s.callsign).empty());
+    }
+}
+
+// Older builds took any printable name over the link, and refusing the whole blob lost the trims.
+TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trims beside it kept") {
+    Settings s = defaults();
+    s.battery_offset_mv = 120;
+    s.freq_trim_e1_ppm = -35;
+    std::strncpy(s.callsign, "d-kxyz", kCallsignCap - 1);
+    uint8_t blob[128];
+    to_blob(s, blob, sizeof(blob));
+    Settings out;
+    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
+    CHECK(std::string(out.callsign).empty());
+    CHECK(out.battery_offset_mv == 120);
+    CHECK(out.freq_trim_e1_ppm == -35);
+}
+
+TEST_CASE("settings: a type or a volume is refused before it is narrowed, never stored wrapped") {
+    for (const char* patch : {"{\"aircraft_type\":260}", "{\"aircraft_type\":-252}",
+                              "{\"alarm_volume\":256}", "{\"alarm_volume\":-253}"}) {
+        CAPTURE(patch);
+        Settings s = defaults();
+        CHECK(apply_json(s, patch, static_cast<int>(strlen(patch))) == Status::OutOfRange);
+        CHECK(int(s.aircraft_type) == int(defaults().aircraft_type));
+        CHECK(int(s.alarm_volume) == int(defaults().alarm_volume));
+    }
+}
+
 TEST_CASE("settings: a patch that names an identity changes nothing and refuses nothing") {
     Settings s = defaults();
     const char* icao = "{\"addr\":14488116,\"addr_table\":5,\"alarm_volume\":1}";  // 0xDD1234
@@ -724,15 +767,30 @@ TEST_CASE("json_min: the reader parses ints, bools and strings, the writer emits
     CHECK(std::string(out) == "{\"x\":5,\"y\":false}");
 }
 
-// Found by test/fuzz/fuzz_link: a session id wider than a long once overflowed on the way in.
-TEST_CASE("json_min: an integer wider than a long is refused, not wrapped") {
-    const std::string widest = std::to_string(std::numeric_limits<long>::max());
-    const std::string j = "{\"n\":99999999999999999999,\"m\":" + widest + "}";
-    json::Reader r(j.c_str(), static_cast<int>(j.size()));
+TEST_CASE("json_min: a frame that ends on a colon has no value, and nothing past it is read") {
+    const char frame[] = {'{', '"', 'c', 'm', 'd', '"', ':'};
+    json::Reader r(frame, static_cast<int>(sizeof(frame)));
     long v = 0;
-    CHECK_FALSE(r.get_int("n", v));
-    CHECK(r.get_int("m", v));
-    CHECK(v == std::numeric_limits<long>::max());
+    bool b = false;
+    char s[8];
+    CHECK_FALSE(r.get_int("cmd", v));
+    CHECK_FALSE(r.get_bool("cmd", b));
+    CHECK_FALSE(r.get_str("cmd", s, sizeof(s)));
+}
+
+TEST_CASE("json_min: an integer past 32 bits is refused, so the host reads what the device reads") {
+    const char* j =
+        "{\"max\":2147483647,\"min\":-2147483648,\"over\":2147483648,\"under\":-2147483649,"
+        "\"huge\":99999999999999999999999}";
+    json::Reader r(j, static_cast<int>(strlen(j)));
+    long v = 0;
+    CHECK(r.get_int("max", v));
+    CHECK(v == 2147483647L);
+    CHECK(r.get_int("min", v));
+    CHECK(v == -2147483647L - 1);
+    CHECK_FALSE(r.get_int("over", v));
+    CHECK_FALSE(r.get_int("under", v));
+    CHECK_FALSE(r.get_int("huge", v));
 }
 
 // core/comms's status reply is a fixed-size stack buffer with no heap behind

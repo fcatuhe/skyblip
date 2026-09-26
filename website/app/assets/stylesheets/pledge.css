@@ -11,4 +11,5 @@
   .pledge p { color: var(--pledge-ink); max-inline-size: 64ch; }
   .pledge strong { color: var(--paper); }
   .pledge .cta { color: var(--quiet); }
+  .pledge .kicker { color: var(--blip); }
 }

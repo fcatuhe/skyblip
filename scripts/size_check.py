@@ -50,8 +50,8 @@ def main():
             print(f"ERROR: {size_tool} failed on {elf}: {e}")
             return 1
     if out is None:
-        print("WARN: no *-size tool found; skipping size check")
-        return 0
+        print("ERROR: no *-size tool found, so the flash budget went unchecked")
+        return 1
     # text data bss dec hex filename
     line = out.strip().splitlines()[-1].split()
     text, data = int(line[0]), int(line[1])

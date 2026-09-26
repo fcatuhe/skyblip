@@ -2,6 +2,7 @@
 // the same part models the silicon build uses, over a flash fake that keeps
 // NOR's two awkward truths and knows how to die mid-program.
 #include <string>
+#include <vector>
 
 #include "core/events/link.h"
 #include "core/flight/log_record.h"
@@ -431,6 +432,48 @@ TEST_CASE(
     CHECK(last_log_frame(rig) == nullptr);
     CHECK(rig.product.flight_log().link_drops() > drops_before);
     CHECK(rig.platform.link().refused_oversize == 0);
+}
+
+// The link's notify share refused chunk five of eight, and blip.py waited for it until it gave up.
+TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive whole") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    taxi(rig, t, 20);
+    fly(rig, t, 200);
+    taxi(rig, t, 40);
+    const uint32_t session = rig.product.flight_log().session_id();
+    REQUIRE(rig.product.flight_log().records_written() > 8 * 5);
+
+    rig.platform.link().hold_after(4);
+    rig.platform.link().clear();
+    char command[96];
+    std::snprintf(command, sizeof(command),
+                  "{\"cmd\":\"read\",\"session\":%u,\"from\":0,\"count\":8}", session);
+    rig.send_log(command);
+    rig.send_log("{\"cmd\":\"list\"}");
+    rig.run(t, t + 100);
+    t += 100;
+    CHECK(rig.platform.link().count_on(events::Endpoint::Log) <= 4);
+    for (int served = 0; served < 20 && rig.platform.link().count_on(events::Endpoint::Log) < 9;
+         served++) {
+        rig.platform.link().serve();
+        rig.run(t, t + 100);
+        t += 100;
+    }
+
+    std::vector<std::string> sent;
+    for (const auto& frame : rig.platform.link().sent)
+        if (frame.endpoint == events::Endpoint::Log) sent.push_back(frame.bytes);
+    REQUIRE(sent.size() == 9);
+    uint32_t from = 0;
+    for (size_t i = 0; i < 8 && i < sent.size(); i++) {
+        CHECK(field(sent[i], "cmd") == "chunk");
+        CHECK(field(sent[i], "from") == std::to_string(from));
+        from += static_cast<uint32_t>(std::atoi(field(sent[i], "n").c_str()));
+    }
+    CHECK(field(sent.back(), "sessions") == "1");
+    CHECK(rig.product.flight_log().link_drops() == 0);
 }
 
 // The flights ring stops being contiguous the moment the other ring takes a sector out of it.

@@ -51,8 +51,8 @@ bool FlightLogService::on_ground() const {
 
 void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(reply_to_,
-              comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(), ok, reason, store));
+    pool.send(reply_to_, comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(reply_to_), ok,
+                                               reason, store));
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {
@@ -62,11 +62,26 @@ RecordStore* FlightLogService::store_for(comms::LogStore store) {
 }
 
 void FlightLogService::serve_link(uint32_t now_ms) {
+    const Status held = flights_.pool().deliver_held(now_ms);
+    if (held == Status::WouldBlock) return;
+    if (!is_ok(held)) abandon_reads();
+    flights_.continue_read();
+    if (diagnostics_ != nullptr) diagnostics_->continue_read();
     events::RxFrame frame{};
-    while (context_.bus.log_rx.pop(frame)) {
+    while (!replying() && context_.bus.log_rx.pop(frame)) {
         handle(comms::parse_log_request(frame));
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }
+}
+
+void FlightLogService::abandon_reads() {
+    flights_.abandon_read();
+    if (diagnostics_ != nullptr) diagnostics_->abandon_read();
+}
+
+bool FlightLogService::replying() const {
+    return flights_.pool().holding() || flights_.reading() ||
+           (diagnostics_ != nullptr && diagnostics_->reading());
 }
 
 void FlightLogService::watch_link_drops(uint32_t now_ms) {

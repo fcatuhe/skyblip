@@ -51,13 +51,13 @@ class Rf : public ports::Rf {
             return Status::OutOfRange;
         // A dwell that cannot start before its own end is refused here rather
         // than truncated on air.
-        if (clock_.micros() >= plan.end_us) {
-            if (plan.tx != nullptr) emit(events::RfEventType::Missed, clock_.micros());
-            return Status::WouldBlock;
+        if (clock_.micros() >= plan.end_us) return Status::WouldBlock;
+        k_sched_lock();
+        if (!joins_flying_dwell(plan)) {
+            plan_ = plan;
+            k_sem_give(&armed_);
         }
-        if (joins_flying_dwell(plan)) return Status::Ok;
-        plan_ = plan;
-        k_sem_give(&armed_);
+        k_sched_unlock();
         return Status::Ok;
     }
 
@@ -85,16 +85,14 @@ class Rf : public ports::Rf {
    private:
     static void entry(void* self, void*, void*) { static_cast<Rf*>(self)->run(); }
 
-    // INFO: fc 15sep26 the dwell loop owns the burst fields, so the publish is ordered by the flag
+    // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
     bool joins_flying_dwell(const ports::RfPlan& plan) {
         if (!flying_ || plan.tx == nullptr || burst_ != nullptr) return false;
         if (plan.mode != flying_mode_ || plan.freq_hz != flying_freq_) return false;
         if (plan.tx_at_us < clock_.micros() || plan.tx_at_us >= flying_end_us_) return false;
-        k_sched_lock();
         burst_at_us_ = plan.tx_at_us;
         burst_len_ = plan.tx_len;
         burst_ = plan.tx;
-        k_sched_unlock();
         return true;
     }
 
@@ -122,8 +120,10 @@ class Rf : public ports::Rf {
             flying_freq_ = plan.freq_hz;
             flying_end_us_ = plan.end_us;
             flying_ = true;
-            start(plan);
-            dwell(plan);
+            if (start(plan))
+                dwell(plan);
+            else if (plan.tx != nullptr)
+                emit(events::RfEventType::Missed, clock_.micros());
             flying_ = false;
             health();
         }
@@ -150,12 +150,14 @@ class Rf : public ports::Rf {
         while (clock_.micros() < deadline_us) k_busy_wait(10);
     }
 
-    void start(const ports::RfPlan& plan) {
-        radio_.wake();
+    // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
+    bool start(const ports::RfPlan& plan) {
         band_ = plan.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
         freq_hz_ = plan.freq_hz;
-        if (plan.freq_hz != 0) radio_.configure_radio(dwell_config(plan));
-        radio_.start_receive();
+        if (radio_.wake() != Status::Ok) return false;
+        if (plan.freq_hz != 0 && radio_.configure_radio(dwell_config(plan)) != Status::Ok)
+            return false;
+        return radio_.start_receive() == Status::Ok;
     }
 
     // The whole modem, not just the synthesiser: the two bands are two
@@ -205,7 +207,7 @@ class Rf : public ports::Rf {
             case parts::RadioEventType::TxDone:
                 completed = true;
                 emit(events::RfEventType::TxDone, polled_us);
-                radio_.start_receive();
+                (void)radio_.start_receive();
                 return true;
             default:
                 emit(events::RfEventType::Missed, polled_us);
@@ -233,7 +235,7 @@ class Rf : public ports::Rf {
             }
             if (tx != nullptr && !transmitted && clock_.micros() >= tx_at_us) {
                 transmitted = true;
-                radio_.transmit(tx, tx_len);
+                (void)radio_.transmit(tx, tx_len);
                 keyed_at_us_ = clock_.micros();
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.micros();
