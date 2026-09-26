@@ -43,11 +43,15 @@ class Dfu : public ports::Dfu {
         out = staged;
         return true;
     }
+    ports::RecoveryPath recovery_path() const override { return recovery_route; }
     ports::RecoveryPath enter_recovery() override {
         recoveries++;
-        return recovery_path;
+        return recovery_route;
     }
-    ports::RecoveryPath recovery_path{ports::RecoveryPath::Rebooted};
+    void publish_upload_allowed(bool allowed) override { upload_allowed_published = allowed; }
+    bool upload_finished() override { return finished_upload; }
+    void forget_upload() override { finished_upload = false; }
+    ports::RecoveryPath recovery_route{ports::RecoveryPath::Rebooted};
 
     int triggered{0};
     int confirms{0};
@@ -56,6 +60,8 @@ class Dfu : public ports::Dfu {
     bool confirm_fails{false};
     bool has_running{false};
     bool has_staged{false};
+    bool upload_allowed_published{false};
+    bool finished_upload{false};
     ports::ImageVersion running{};
     ports::ImageVersion staged{};
 };

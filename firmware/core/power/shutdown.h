@@ -12,7 +12,15 @@
 namespace skyblip::power {
 
 // INFO: fc 12sep26 Stow is the long press with the pad held: same road out, blank glass
-enum class ShutdownReason : uint8_t { None, LongPress, Stow, LowBattery, LinkRequest, Install };
+enum class ShutdownReason : uint8_t {
+    None,
+    LongPress,
+    Stow,
+    LowBattery,
+    LinkRequest,
+    Install,
+    Recovery
+};
 enum class ShutdownPhase : uint8_t { Running, Parking, AwaitRelease, Off };
 
 const char* to_string(ShutdownReason reason);
@@ -197,6 +205,7 @@ class ShutdownSequencer {
     // the sequencer sees after a wake is a button that is already down. Counting
     // that as a hold powers the device off again before the panel has drawn.
     bool hold_armed_{false};
+    bool pad_armed_{false};
 };
 
 }  // namespace skyblip::power

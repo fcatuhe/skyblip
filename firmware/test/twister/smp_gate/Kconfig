@@ -1,0 +1,5 @@
+# INFO: fc 26sep26 img_mgmt finds the running slot from FLASH_LOAD_OFFSET, which native_sim never offers
+config HAS_FLASH_LOAD_OFFSET
+	default y
+
+source "Kconfig.zephyr"

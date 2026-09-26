@@ -19,6 +19,7 @@ constexpr int kInstallingBodyRows = 4;
 
 constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineH; }
 
+void draw_notice_heading(ui::Canvas& fb, const char* header, const char* title);
 void draw_installing(ui::Canvas& fb);
 
 }  // namespace skyblip::go

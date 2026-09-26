@@ -59,7 +59,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | Type | Payload | The tuning question it answers |
 |---|---|---|
 | `Boot` 1 | capabilities, firmware version, reset reason, image state | which build and which parts produced the rest of the corpus, and whether the device came up from a fault |
-| `Config` 2 | address, address table, aircraft type, alarm volume, battery and frequency trims, whose the battery trim is, units, alarm enabled | what the firmware was assuming while it decided everything else |
+| `Config` 2 | address, address table, aircraft type, alarm volume, battery and frequency trims, whose the battery trim is, units, alarm enabled, the power the transmitter was asked for and the PA row it was asked through | what the firmware was assuming while it decided everything else |
 | `Gnss` 3 | nav_ms, residual, HDOP, VDOP, stage and its age, sats used and in view, fix mode, reject reason | where in its own second a solution lands (`kFixLagMaxMs`, 500 ms of §G.1.16 nav age), and what the rejects cost |
 | `Pps` 4 | edge interval, signed error against a nominal second, samples, holdover events, ms since the edge, lock | whether `kPpsHoldoverMs` is the right patience, and what the slot map is really anchored to |
 | `Burst` 5 | the whole of `radio::Entry`: verdict, band, channel, address, length, RSSI, key offset, tx_keyed_us, tx_span_us, airborne, callsign | every verdict `radio::Event` declares against the second it happened in: two devices on one bench read one link twice |
@@ -82,6 +82,10 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 Own-ship puts a callsign on the air once every ten seconds, in slot 1's tail, and a position every second in the air or every ten on the ground (`../timing/README.md`). On the air those are two different payloads. In a capture they were the same record, so a corpus could not tell the ident from the positions it sits between, nor say what the ident cost in air time. `kBurstFlagCallsign` is bit 6 of the burst record's flag byte, straight off `radio::Entry::callsign`, and it says this burst carried a name.
 
 The name itself is not recorded. Nine characters do not fit a payload whose sixteen bytes are spoken for, and they would say nothing a reader does not have: own-ship's address is on the same record, and what that address is called is `Config`'s business on this device and `core/traffic/callsigns.h`'s for everybody else. A name heard rather than sent needs no flag either, because the verdict already is one: `Named` is what `TrafficService::decode_adsl` returns for a registration frame, and it sits beside the address the name was filed under.
+
+### The transmitter, and a link two captures measure
+
+A burst one unit sent and the burst another heard it as are one instant read twice (`../radio/README.md`), and between them the two `Burst` records hold the level, the channel and the sender. What neither holds is what the sender was asked to put out, so `Config` carries it: `tx_power_dbm` is the `SetTxParams` argument and `pa_rated_dbm` is the row of SX1262 DS table 13-21 the PA configuration is, both read off `ports::Rf::transmitter()` into payload bytes 12 and 13. Two numbers, because the datasheet reaches +14 dBm two ways and a nominal conducted figure is the lower of the two. It is the session's fact and not the burst's: the executor programs it once at bring-up. A device with no radio writes zero for both, and so does every capture older than the field. `scripts/link_budget.py` is the reader.
 
 ### The battery ladder, and what a replay works out for itself
 

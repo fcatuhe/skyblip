@@ -70,11 +70,13 @@ What survives a failed self test is a device that still shows why: the page stay
 
 ## What the glass wears while the device is off
 
-E-paper holds its last image with the rails down, so the frame pushed immediately before the rails drop is what the device wears in a flight bag for as long as it sits there. There are four, and `product.h` picks between them by why the device is going down.
+E-paper holds its last image with the rails down, so the frame pushed immediately before the rails drop is what the device wears in a flight bag for as long as it sits there. There are five, and `product.h` picks between them by why the device is going down.
 
 The wordmark is the ordinary one: a long press, or the companion link asking. A stow, which is the long press with the pad held, leaves the glass blank instead, because months of one image is ghosting an e-paper never fully loses. An install says so, because the bootloader is about to take the device and a pilot watching a blank panel would think it had died.
 
-The fourth is the cell, `FLAT BATTERY` under the mark, and it is the only one that says something happened rather than naming a state. It is pushed by the cutoff, on the way down, because nobody asked for that power-off and the frame is the only thing left that can say why the device stopped. The same shutdown withholds the wake pin (`button_wake_after`), so the press that follows does nothing at all, and the frame it would have answered is already on the glass.
+A recovery says more, because the frame pushed on the way in is what the glass wears while the bootloader runs: the device is a USB drive named TECHOBOOT, a `.uf2` dropped on it replaces the firmware, RST comes back to skyBlip, and nothing transmits meanwhile. `ports::RecoveryPath` decides the one line that differs. With the watchdog running, which is every boot on silicon, a reboot would carry the watchdog into the bootloader and cut its USB session, so the device powers off with the recovery magic set and the page asks for the press that finishes it. Without it the device reboots straight in and the page says it is running. Either way `enter_recovery()` is called only once the park frame is on the glass.
+
+The fifth is the cell, `FLAT BATTERY` under the mark, and it is the only one that says something happened rather than naming a state. It is pushed by the cutoff, on the way down, because nobody asked for that power-off and the frame is the only thing left that can say why the device stopped. The same shutdown withholds the wake pin (`button_wake_after`), so the press that follows does nothing at all, and the frame it would have answered is already on the glass.
 
 A cell that empties itself on a shelf over a winter runs no shutdown and writes nothing, and that unit is the one a refused boot is for: the press gets no device, so the refusal pushes the same frame instead (`core/power/README.md`). Both roads end on the same glass and the same withheld button.
 
