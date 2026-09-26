@@ -88,6 +88,10 @@ jobs:
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume
         run: python3 scripts/test_blip.py
+      # The budget reads the Duty counters by name and subtracts across their wrap:
+      # a field that moves in payload.h must fail here, not read as a quiet zero.
+      - name: power budget deltas, postures and caveats
+        run: python3 scripts/test_power_budget.py
       # The console page's line reassembly and checksum: ble.js has no other test.
       - name: simulator transport
         working-directory: simulator
