@@ -3,6 +3,7 @@
 // numbers a laboratory copies into a compliance report. A link model and
 // scripted JSON, no device, exactly as in test_comms.cpp - which keeps the
 // authorisation state machine and nothing else.
+#include <cstdint>
 #include <cstring>
 #include <string>
 
@@ -48,7 +49,7 @@ power::BatteryState battery_of(uint8_t percent, bool charging, bool valid = true
 }
 }  // namespace
 
-TEST_CASE("comms: status reports why the device came up") {
+TEST_CASE("comms: status carries state, and why the device came up is the dump's") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -57,28 +58,25 @@ TEST_CASE("comms: status reports why the device came up") {
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::OnGround);
     cs.set_reset_reason(power::ResetReason::Watchdog);
+    cs.diagnostics().refreshes = 1;
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.find("\"cmd\":\"status\"") != std::string::npos);
-    CHECK(body.find("\"reset\":\"WATCHDOG\"") != std::string::npos);
     CHECK(body.find("\"flight\":\"ground\"") != std::string::npos);
     // State, and only state. The callsign and the device address are what the
-    // "config" reply answers, and carrying them here as well is what used to push
-    // the one unsolicited frame past what an iPhone will accept.
+    // "config" reply answers, and the reset reason never changes inside a session:
+    // carrying any of them here is what used to crowd the one unsolicited frame.
     CHECK(body.find("D-KXYZ") == std::string::npos);
     CHECK(body.find("\"addr\"") == std::string::npos);
+    CHECK(body.find("\"reset\"") == std::string::npos);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     CHECK(link.last().bytes.find("D-KXYZ") != std::string::npos);
 
-    // Unknown until the shell says otherwise, and never a stale answer.
-    platform::host::Link fresh_link;
-    fresh_link.raise_link(1);
-    go::SettingsStore store_fresh(s, kTestAddr);
-    ConfigService fresh(fresh_link, store_fresh);
-    fresh.on_rx(frame("{\"cmd\":\"status\"}"));
-    CHECK(fresh_link.last().bytes.find("\"reset\":\"UNKNOWN\"") != std::string::npos);
+    link.clear();
+    cs.on_rx(frame("{\"cmd\":\"diag\"}"));
+    CHECK(joined(link).find("\"reset\":\"WATCHDOG\"") != std::string::npos);
 }
 
 TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
@@ -122,7 +120,7 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     CHECK(link.last().bytes.find("no_stats") != std::string::npos);
 }
 
-TEST_CASE("comms: status carries state of charge, the charging flag, the level and its validity") {
+TEST_CASE("comms: status carries state of charge, the charging flag and the level") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -136,11 +134,10 @@ TEST_CASE("comms: status carries state of charge, the charging flag, the level a
     const std::string body = link.last().bytes;
     CHECK(body.find("\"battery_percent\":61") != std::string::npos);
     CHECK(body.find("\"charging\":false") != std::string::npos);
-    CHECK(body.find("\"battery_valid\":true") != std::string::npos);
     CHECK(body.find("\"power_level\":\"OK\"") != std::string::npos);
 }
 
-TEST_CASE("comms: an invalid battery is reported as invalid, never as a false zero percent") {
+TEST_CASE("comms: a battery nobody has read has no percentage, never a false zero") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -151,8 +148,7 @@ TEST_CASE("comms: an invalid battery is reported as invalid, never as a false ze
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
     const std::string body = link.last().bytes;
-    CHECK(body.find("\"battery_valid\":false") != std::string::npos);
-    CHECK(body.find("\"battery_percent\":0") != std::string::npos);
+    CHECK(body.find("battery_percent") == std::string::npos);
     CHECK(body.find("\"power_level\":\"--\"") != std::string::npos);
 }
 
@@ -197,9 +193,10 @@ TEST_CASE(
     CHECK(link.sent.size() == 3);
 }
 
-TEST_CASE("comms: status has room for every worst-case field, and the last key survives whole") {
+TEST_CASE("comms: status at its widest is this frame, field for field, inside 182 bytes") {
     platform::host::Link link;
     link.raise_link(1);
+    link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = go::defaults();
     std::memcpy(s.callsign, "ABCDEFGHI", 10);
     go::SettingsStore store_cs(s, kTestAddr);
@@ -213,15 +210,17 @@ TEST_CASE("comms: status has room for every worst-case field, and the last key s
     battery.charging = true;
     battery.valid = true;
     cs.set_battery_state(battery, power::PowerLevel::Cutoff);
+    // The driver gates -50 to +125 C, the formatter does not: int16 prints widest.
+    cs.set_die_temperature(INT16_MIN, true);
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    // Truncation would have dropped this whole last key, not cut it short.
-    CHECK(body.substr(body.size() - 23) == "\"power_level\":\"CUTOFF\"}");
-    CHECK(body.find("\"battery_percent\":100") != std::string::npos);
-    CHECK(body.find("\"charging\":true") != std::string::npos);
-    CHECK(body.find("\"battery_valid\":true") != std::string::npos);
+    CHECK(body ==
+          "{\"cmd\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
+          "\"charging\":true,\"power_level\":\"CUTOFF\",\"die_temp_c\":-3277}");
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(cs.link_drops() == 0);
 }
 
 TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure") {

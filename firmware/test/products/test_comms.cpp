@@ -753,47 +753,8 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
 }
 
-// The ceiling test/core/test_link_payload.cpp holds for the whole dialect, asked
-// again here for the one key that was added to the reply a phone is PUSHED: the
-// widest device state there is, plus the widest temperature the driver will pass
-// (its own gate is -50 to +125 C), inside the 182 bytes an iPhone carries.
-TEST_CASE("comms: the status reply still fits the narrowest phone with the temperature on it") {
-    for (const int16_t decicelsius : {int16_t(-500), int16_t(1250)}) {
-        platform::host::Link link;
-        link.raise_link(1);
-        link.declare_payload_bytes(kSmallestSupportedPayload);
-        go::Settings s = go::defaults();
-        go::SettingsStore store_cs(s, kTestAddr);
-        ConfigService cs(link, store_cs);
-        cs.set_reset_reason(power::ResetReason::Lockup);
-        cs.set_flight_state(flight::FlightState::Airborne);
-        power::BatteryState full{};
-        full.millivolts = 4200;
-        full.percent = 100;
-        full.external_power = true;
-        full.charging = true;
-        full.valid = true;
-        cs.set_battery_state(full, power::PowerLevel::Cutoff);
-        cs.set_die_temperature(decicelsius, true);
-
-        cs.on_rx(frame("{\"cmd\":\"status\"}"));
-        REQUIRE(link.sent.size() == 1);
-        const std::string body = link.last().bytes;
-        CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
-        CHECK(cs.link_drops() == 0);
-        // Whole, not merely valid JSON: json::Writer drops a field rather than
-        // cutting it, so the last key has to be there.
-        CHECK(body.find("\"die_temp_c\":") != std::string::npos);
-        CHECK(body.back() == '}');
-    }
-}
-
-// J and L. The range gate's counter, and why it is not on the reply above: it is a
-// ten-digit unsigned counter, the status reply has eleven bytes of headroom at its
-// worst case, and a push that vanished whenever a unit was both hot and refusing
-// packets would be the exact failure the payload ceiling exists to prevent. It
-// reads out with the rest of the radio's counters instead, on the question that
-// already asked for it.
+// J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
+// reads out with the rest of the radio's counters, not on the pushed status.
 TEST_CASE("comms: the range gate's refusals read out with the radio's own counters") {
     platform::host::Link link;
     link.raise_link(1);

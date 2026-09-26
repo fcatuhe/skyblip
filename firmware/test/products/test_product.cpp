@@ -330,28 +330,20 @@ TEST_CASE("product: the reset reason is read once at boot and kept") {
 }
 
 // D5. The panel has the reason at boot and then it is gone; the field diagnosis
-// happens over the link, days later, with the device in a bag.
-TEST_CASE("product: the status reply over the link names why the device came up") {
+// happens over the link, days later, with the device in a bag. The dump's sys
+// group reads it off the config service, so that is where the boot has to leave it.
+TEST_CASE("product: the link is told at boot why the device came up") {
     Rig rig;
     rig.platform.system_power().causes = power::ResetCause::Watchdog;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.link().clear();
-
-    rig.send("{\"cmd\":\"status\"}");
-    rig.run(0, 200);
-    REQUIRE(rig.platform.link().count_on(events::Endpoint::Config) == 1);
-    CHECK(rig.last_on(events::Endpoint::Config).find("WATCHDOG") != std::string::npos);
+    CHECK(rig.product.config().config().reset_reason() == power::ResetReason::Watchdog);
 
     // A device that came up because someone pressed the button says that, and
     // not the UNKNOWN a reason nobody passed on would read as.
     Rig pressed;
     pressed.platform.system_power().causes = power::ResetCause::Pin;
     REQUIRE(pressed.setup() == Status::Ok);
-    pressed.platform.link().clear();
-    pressed.send("{\"cmd\":\"status\"}");
-    pressed.run(0, 200);
-    CHECK(pressed.last_on(events::Endpoint::Config).find("RESET PIN") != std::string::npos);
-    CHECK(pressed.last_on(events::Endpoint::Config).find("UNKNOWN") == std::string::npos);
+    CHECK(pressed.product.config().config().reset_reason() == power::ResetReason::Pin);
 }
 
 // B3. The slot map is specified against the PPS edge, and the transmit plan is

@@ -256,8 +256,7 @@ class ConfigService {
     // its own, because a companion page that only draws the air picture should not
     // have to read the receiver's firmware string to get the noise floor. Not four
     // more keys on "status": that reply is the one this service PUSHES
-    // unsolicited and is already sized against the narrowest phone in the field at
-    // its worst case, with eleven bytes left.
+    // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update(uint16_t session_id);
     // And the whole dump, which is the same table as the console's: one frame per
