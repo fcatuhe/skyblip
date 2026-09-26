@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "core/fec/crc.h"
+#include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/nmea_out.h"
 
@@ -337,6 +338,15 @@ uint8_t alptas_type_to_adsl_cat(uint8_t alptas_type) {
     return alptas_type < 16 ? kMap[alptas_type] : 0;
 }
 
+uint8_t alptas_flight_state(uint8_t alptas_airborne) {
+    switch (alptas_airborne) {
+        case 1: return static_cast<uint8_t>(flight::FlightState::OnGround);
+        case 2:
+        case 3: return static_cast<uint8_t>(flight::FlightState::Airborne);
+        default: return static_cast<uint8_t>(flight::FlightState::Unknown);
+    }
+}
+
 uint8_t alptas_addr_type_to_table(uint8_t alptas_addr_type) {
     switch (alptas_addr_type & 3) {
         case 1: return 0x05;
@@ -392,7 +402,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     out.addr_table = alptas_addr_type_to_table(static_cast<uint8_t>(get_field(data, kFAddrType)));
     out.aircraft_cat =
         alptas_type_to_adsl_cat(static_cast<uint8_t>(get_field(data, kFAircraftType)));
-    out.flight_state = get_field(data, kFAirborne) > 1 ? 2 : 1;
+    out.flight_state = alptas_flight_state(static_cast<uint8_t>(get_field(data, kFAirborne)));
     out.emergency = 1;  // INFO: fc 09mar26 no emergency field on the wire; 1 is ADS-L "OK"
     out.lat_1e7 = lat_1e7;
     out.lon_1e7 = lon_1e7;

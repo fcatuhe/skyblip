@@ -39,6 +39,8 @@ Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc, uint32_t& keye
 uint32_t alptas_address(const uint8_t* frame);
 
 uint8_t alptas_type_to_adsl_cat(uint8_t alptas_type);  // inverse of adsl_cat_to_alptas
+// INFO: fc 26sep26 SoftRF latest_encode sends 1 on ground, 2 airborne, 3 circling, and never 0
+uint8_t alptas_flight_state(uint8_t alptas_airborne);
 uint8_t alptas_addr_type_to_table(uint8_t alptas_addr_type);
 uint8_t adsl_table_to_alptas_addr_type(uint8_t addr_table);
 
