@@ -39,25 +39,26 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         CommandWhileBusy,
     };
 
+    // INFO: fc 26sep26 DS 8.1 and 13.1.2, as literals: parts::sx's own figures are what is on trial
+    static constexpr uint32_t kResetLowFloorUs = 100;
+    static constexpr uint32_t kSleepSettleFloorUs = 500;
+
     void set(int pin, bool level) override {
         if (pin != reset_pin) return;
         if (!level) {
             reset_low = true;
-            reset_low_spins = 0;
+            reset_low_since_us_ = elapsed_us;
             return;
         }
         if (!reset_low) return;
         reset_low = false;
-        if (reset_low_spins < parts::sx::kResetLowSpins) note_fault(Fault::ShortReset);
+        reset_low_us = elapsed_us - reset_low_since_us_;
+        if (reset_low_us < kResetLowFloorUs) note_fault(Fault::ShortReset);
         reset_pulses++;
         power_on_reset();
     }
     bool get(int pin) override {
-        if (pin == busy_pin) {
-            if (reset_low) reset_low_spins++;
-            if (sleeping) sleep_settle_spins++;
-            return busy_stuck;
-        }
+        if (pin == busy_pin) return busy_stuck;
         if (pin == dio1_pin) return (irq_flags & dio1_mask) != 0;
         return false;
     }
@@ -71,8 +72,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
             // DS 9.3: the falling edge on NSS is the wake-up. Whatever the host
             // meant to send, the first thing it does is bring the part back.
             if (sleeping) {
-                if (sleep_settle_spins < parts::sx::kSleepSettleSpins)
-                    note_fault(Fault::SpiBeforeSleepSettled);
+                slept_us = elapsed_us - slept_since_us_;
+                if (slept_us < kSleepSettleFloorUs) note_fault(Fault::SpiBeforeSleepSettled);
                 sleeping = false;
                 standby = true;
                 wakes++;
@@ -204,7 +205,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint16_t irq_flags{0};
     int reset_pulses{0};
     bool reset_low{false};
-    uint32_t reset_low_spins{0};
+    uint64_t reset_low_us{0};
     bool standby{false};
     bool regulator_dcdc{false};
     uint8_t regulator_mode{parts::sx::kRegulatorLdo};
@@ -222,7 +223,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint8_t tx_modulation{kTxModulationReset};
     uint16_t device_errors{0};
     uint16_t fail_calibration{0};
-    uint32_t sleep_settle_spins{0};
+    uint64_t slept_us{0};
     uint64_t elapsed_us{0};
     bool tcxo_powered{false};
     bool calibrated{false};
@@ -320,7 +321,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
             if (opcode_ == parts::sx::kSetSleep) {
                 if (!standby) note_fault(Fault::SleepOutsideStandby);
                 sleeping = true;
-                sleep_settle_spins = 0;
+                slept_since_us_ = elapsed_us;
                 standby = false;
                 receiving = false;
                 if (!rx_gain_retained()) rx_gain = parts::sx::kRxGainPowerSaving;
@@ -508,6 +509,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         }
     }
 
+    uint64_t reset_low_since_us_{0};
+    uint64_t slept_since_us_{0};
     size_t seq_{0};
     uint8_t opcode_{0xFF};
     uint16_t reg_addr_{0};

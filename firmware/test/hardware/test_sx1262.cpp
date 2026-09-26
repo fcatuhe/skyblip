@@ -11,7 +11,9 @@
 using namespace skyblip;
 using namespace skyblip::parts;
 
-static Sx1262 make(models::Sx1262& f) { return Sx1262(f, f, f.busy_pin, f.reset_pin, f.dio1_pin); }
+static Sx1262 make(models::Sx1262& f) {
+    return Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
+}
 
 TEST_CASE("radio: begin configures the TCXO (DIO3) and RF switch (DIO2) for T-Echo wiring") {
     models::Sx1262 chip;
@@ -59,7 +61,7 @@ TEST_CASE("radio: a chip that was never taken off its LDO is not believed") {
     REQUIRE(r.begin() == Status::Ok);
     REQUIRE(restarted.regulator_dcdc);
     restarted.set(restarted.reset_pin, false);
-    for (uint32_t i = 0; i < sx::kResetLowSpins; i++) (void)restarted.get(restarted.busy_pin);
+    restarted.busy_wait_us(models::Sx1262::kResetLowFloorUs);
     restarted.set(restarted.reset_pin, true);
     CHECK_FALSE(restarted.regulator_dcdc);
     CHECK(restarted.regulator_mode == sx::kRegulatorLdo);
@@ -130,7 +132,7 @@ TEST_CASE("radio: a reinitialised radio is on the boosted gain again") {
     REQUIRE(chip.rx_gain == sx::kRxGainBoosted);
 
     chip.set(chip.reset_pin, false);
-    for (uint32_t i = 0; i < sx::kResetLowSpins; i++) (void)chip.get(chip.busy_pin);
+    chip.busy_wait_us(models::Sx1262::kResetLowFloorUs);
     chip.set(chip.reset_pin, true);
     CHECK(chip.rx_gain == sx::kRxGainPowerSaving);
 
@@ -571,18 +573,26 @@ TEST_CASE("radio: a standby-only command issued while the receiver runs is a chi
     CHECK(chip.fault == models::Sx1262::Fault::ConfigOutsideStandby);
 }
 
-// A6. NRESET low for at least 100 us (DS 8.1). io::Gpio has no delay, so the
-// pulse is a bounded spin and the model counts it.
-TEST_CASE("radio: NRESET is held low for the datasheet minimum, and a shorter pulse is a fault") {
+// DS 8.1, as a literal: a constant compared with itself passes at any value.
+TEST_CASE("radio: NRESET is held low for the datasheet's 100 us") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
     CHECK(chip.reset_pulses == 1);
-    CHECK(chip.reset_low_spins >= sx::kResetLowSpins);
+    CHECK(chip.reset_low_us >= 100);
     CHECK(chip.fault == models::Sx1262::Fault::None);
+}
+
+TEST_CASE("radio: a reset pulse one microsecond under 100 us is a fault, 100 us is not") {
+    models::Sx1262 held;
+    held.set(held.reset_pin, false);
+    held.busy_wait_us(100);
+    held.set(held.reset_pin, true);
+    CHECK(held.fault == models::Sx1262::Fault::None);
 
     models::Sx1262 rushed;
     rushed.set(rushed.reset_pin, false);
+    rushed.busy_wait_us(99);
     rushed.set(rushed.reset_pin, true);
     CHECK(rushed.fault == models::Sx1262::Fault::ShortReset);
 }
