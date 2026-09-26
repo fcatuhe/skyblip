@@ -146,6 +146,8 @@ export default class extends Controller {
   }
 
   async start() {
+    clearTimeout(this.bootTimer)
+    this.#stop()
     const generation = ++this.#generation
     const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return
@@ -207,7 +209,6 @@ export default class extends Controller {
   }
 
   restart() {
-    this.#stop()
     this.sim = null
     this.element.classList.remove("simulator--off")
     this.start()
