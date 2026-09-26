@@ -1,13 +1,14 @@
 #!/usr/bin/env sh
 
-# The simulator the skyBlip Go page embeds: a WASM build of the firmware next
-# door and the case the development harness draws with, dropped into public/
-# under the commit they were built from. public/ is copied into the Parklife
-# build verbatim, so nothing here goes through the asset pipeline.
+# What the pages take from simulator/, dropped into public/ under the commit it
+# was built from: the Bluetooth update client the manage page loads, then the
+# WASM build of the firmware and the case the skyBlip Go page embeds. public/ is
+# copied into the Parklife build verbatim, so nothing here goes through the asset
+# pipeline, and the client's modules can import each other by relative path.
 #
-# Without Emscripten this only clears public/simulator and the page renders its
-# fallback. CI sets SIMULATOR_REQUIRED=1, so a missing toolchain fails the build
-# that is meant to publish one.
+# Without Emscripten only the update client is copied and the simulator renders
+# its fallback. CI sets SIMULATOR_REQUIRED=1, so a missing toolchain fails the
+# build that is meant to publish one.
 
 set -eu
 
@@ -17,6 +18,11 @@ public="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)/public/simulator"
 build="$(git -C "$firmware" rev-parse --short HEAD)"
 
 rm -rf "$public"
+
+mkdir -p "$public/$build"
+cp "$harness/ble.js" "$harness/cbor.js" "$harness/smp.js" "$harness/image.js" "$harness/update.js" \
+   "$public/$build/"
+echo "update client: public/simulator/$build"
 
 if ! command -v emcc >/dev/null 2>&1; then
   if [ "${SIMULATOR_REQUIRED:-0}" = "1" ]; then
@@ -29,7 +35,6 @@ fi
 
 make -C "$firmware" browser
 
-mkdir -p "$public/$build"
 cp "$firmware/build/browser/skyblip_simulator.js" \
    "$firmware/build/browser/skyblip_simulator.wasm" \
    "$firmware/build/browser/embed.js" \

@@ -58,6 +58,14 @@ module SimulatorHelper
     "/#{SIMULATOR_ROOT}/#{simulator_build}/device.css" if simulator_build
   end
 
+  def update_client_build
+    @update_client_build ||= Rails.public_path.join(SIMULATOR_ROOT).glob("*/update.js").first&.dirname&.basename&.to_s
+  end
+
+  def update_module_path
+    "/#{SIMULATOR_ROOT}/#{update_client_build}/update.js" if update_client_build
+  end
+
   def gauge_marks(dial)
     return fixed_marks(dial) unless dial[:scale]
 
