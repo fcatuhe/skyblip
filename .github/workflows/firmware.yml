@@ -84,6 +84,10 @@ jobs:
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards
         run: python3 scripts/test_mkuf2.py
+      # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
+      # device then sits in DFU mode until someone drops a .uf2 on it by hand.
+      - name: no Nordic DFU package
+        run: python3 scripts/check_no_dfu_package.py
       # The host decoder and the firmware's record layout are one layout written
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume

@@ -65,6 +65,7 @@ uint32_t ShutdownSequencer::held_ms(uint32_t now_ms) const {
 void ShutdownSequencer::tick(uint32_t now_ms, bool button_down, bool pad_down) {
     switch (phase_) {
         case ShutdownPhase::Running:
+            if (!pad_down) pad_armed_ = true;
             if (!button_down) {
                 holding_ = false;
                 hold_armed_ = true;
@@ -73,7 +74,7 @@ void ShutdownSequencer::tick(uint32_t now_ms, bool button_down, bool pad_down) {
             if (!holding_) {
                 holding_ = true;
                 hold_since_ms_ = now_ms;
-                stowing_ = pad_down;
+                stowing_ = pad_armed_ && pad_down;
                 return;
             }
             if (!pad_down) stowing_ = false;
