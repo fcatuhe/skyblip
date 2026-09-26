@@ -96,6 +96,7 @@ class Sx1262 {
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
+    bool holds(const RadioConfig& cfg) const;
     void configure_modulation(const RadioConfig& cfg);
     void configure_rx_gain();
     void configure_tx_clamp();
@@ -119,6 +120,7 @@ class Sx1262 {
     RadioConfig cfg_{};
     bool brought_up_{false};
     bool configured_{false};
+    bool tuned_{false};
     uint32_t ms_since_rx_{0};
     uint32_t reinit_count_{0};
     bool reinit_owed_{false};
@@ -193,9 +195,9 @@ constexpr uint16_t kSyncWordRegister = 0x06C0;  // DS 13.4.9, 8 bytes
 // sleep IS a warm start, so a radio that slept and came back would be a radio on
 // the power-saving gain again, with no symptom beyond a shorter range. Both
 // halves are therefore written: the retention list once in begin(), and the
-// register itself in every configure_radio(), which is the standby bracket every
-// dwell passes through anyway (register access outside standby is what the model
-// refuses, DS 13.1).
+// register itself in every configure_radio() that writes a dwell, which is the
+// standby bracket a retune passes through anyway (register access outside
+// standby is what the model refuses, DS 13.1).
 constexpr uint16_t kRxGainRegister = 0x08AC;
 constexpr uint8_t kRxGainPowerSaving = 0x94;
 constexpr uint8_t kRxGainBoosted = 0x96;

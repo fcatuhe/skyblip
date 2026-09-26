@@ -1,6 +1,7 @@
 // The TCXO on DIO3: which modes keep it running, and which re-arms pay its 5 ms start.
 #include <algorithm>
 
+#include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -96,4 +97,51 @@ TEST_CASE("radio: a part told to fall back to STDBY_XOSC keeps its TCXO through 
     REQUIRE(r.start_receive() == Status::Ok);
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
+}
+
+TEST_CASE("radio: re-arming the dwell the radio is already tuned for keeps the TCXO running") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+    const auto standbys = std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetStandby);
+
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+    CHECK(std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetStandby) == standbys);
+    CHECK(chip.receiving);
+    CHECK(chip.tcxo_starts == 1);
+    CHECK(chip.fault == models::Sx1262::Fault::None);
+}
+
+TEST_CASE("radio: another sync word on the same channel is another dwell, and is written") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+
+    RadioConfig uplink = dwell(868200000);
+    uplink.sync = protocol::kUplinkSync;
+    uplink.sync_bits = protocol::kUplinkSyncBits;
+    REQUIRE(r.configure_radio(uplink) == Status::Ok);
+    CHECK(chip.sync_bits == protocol::kUplinkSyncBits);
+    CHECK(std::equal(chip.sync, chip.sync + protocol::kUplinkSyncBits / 8, protocol::kUplinkSync));
+    CHECK(chip.tcxo_starts == 2);
+}
+
+TEST_CASE("radio: after a sleep the same dwell is written again, not trusted to the warm start") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    r.sleep();
+    REQUIRE(r.wake() == Status::Ok);
+    const auto tunes =
+        std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetRfFrequency);
+
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    CHECK(std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetRfFrequency) ==
+          tunes + 1);
 }

@@ -31,7 +31,7 @@ TEST_CASE("radio: the current limit clears the 90 mA that +14 dBm costs, under S
     CHECK(sx::kOcpLimit * 5 / 2 == sx::kOcpLimitMa);
 }
 
-// Every dwell reconfigures, and every reconfiguration issues the SetPaConfig that widens it again.
+// Every retune reconfigures, and every reconfiguration issues the SetPaConfig that widens it again.
 TEST_CASE("radio: the current limit survives every dwell, not only the first") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
