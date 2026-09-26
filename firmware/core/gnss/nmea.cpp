@@ -26,6 +26,12 @@ int d2(const char* s) { return (s[0] - '0') * 10 + (s[1] - '0'); }
 
 constexpr int64_t kMillimetresPerSecPerKnotE3 = 514444;
 
+constexpr int kMinuteDigits = 2;
+constexpr int kLongitudeDegreeDigits = 3;
+
+// INFO: fc 25sep26 long is 32 bits on the nRF52, and ten times this still fits one
+constexpr long kScaledReadingCeiling = 100000000;
+
 // Rounded, not truncated: "46.9" is 47 m of geoid separation, not 46.
 bool parse_scaled(const char* s, long scale, long& out) {
     if (!s || !s[0]) return false;
@@ -33,7 +39,10 @@ bool parse_scaled(const char* s, long scale, long& out) {
     if (*s == '-' || *s == '+') neg = *s++ == '-';
     if (*s < '0' || *s > '9') return false;
     long whole = 0;
-    while (*s >= '0' && *s <= '9') whole = whole * 10 + (*s++ - '0');
+    while (*s >= '0' && *s <= '9') {
+        whole = whole * 10 + (*s++ - '0');
+        if (whole > kScaledReadingCeiling / scale) return false;
+    }
     long value = whole * scale * 10;
     if (*s == '.') {
         s++;
@@ -83,10 +92,11 @@ int32_t nmea_parse_coord(const char* dm, char hemi) {
             dot = i;
             break;
         }
-    if (dot < 2) return 0;
-    int deg_digits = dot - 2;
+    if (dot < kMinuteDigits) return 0;
+    int deg_digits = dot - kMinuteDigits;
+    if (deg_digits > kLongitudeDegreeDigits) return 0;
     long deg = parse_long(dm, deg_digits);
-    long min_whole = parse_long(dm + deg_digits, 2);
+    long min_whole = parse_long(dm + deg_digits, kMinuteDigits);
     long frac = 0, scale = 1;
     for (int i = 0; i < 4; i++) {
         char c = dm[dot + 1 + i];

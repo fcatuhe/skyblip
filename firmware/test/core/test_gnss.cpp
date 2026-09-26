@@ -26,6 +26,12 @@ TEST_CASE("gnss: coord parse DDMM.mmmm -> 1e-7 deg") {
     CHECK(std::abs(lon + 115166667) < 30000);
 }
 
+// Found by test/fuzz/fuzz_nmea: thirteen degree digits once overflowed the 1e-7 product.
+TEST_CASE("gnss: a coordinate with more degrees than DDDMM holds is no coordinate") {
+    CHECK(nmea_parse_coord("480555555555507.4", 'N') == 0);
+    CHECK(nmea_parse_coord("4807.038", 'N') != 0);
+}
+
 TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
     NmeaParser p;
     const char* rmc = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,003.1,W*6B";
@@ -297,6 +303,20 @@ TEST_CASE("gnss: a truncated GGA is refused, checksum or no checksum") {
     // Neither of them touched the solution we already had.
     CHECK(p.solution().alt_msl_mm == 545400);
     CHECK(p.solution().updates == 1);
+}
+
+// Found by test/fuzz/fuzz_nmea: twenty digits once overflowed a long on the way to millimetres.
+TEST_CASE("gnss: a number too long to be a reading is refused, not wrapped") {
+    NmeaParser p;
+    const char* gga =
+        "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,99999999999999999999,M,46.9,M,,*69";
+    REQUIRE(p.parse_line(gga, static_cast<int>(strlen(gga))));
+    CHECK_FALSE(p.solution().alt_msl_valid);
+
+    const char* rmc =
+        "$GPRMC,123519,A,4807.038,N,01131.000,E,99999999999999999999,084.4,230394,003.1,W*40";
+    REQUIRE(p.parse_line(rmc, static_cast<int>(strlen(rmc))));
+    CHECK(p.solution().speed_mm_s == 0);
 }
 
 // I, row "Receiver identification". $PCAS06 is answered with a $GPTXT banner and
