@@ -193,6 +193,7 @@ class ConfigService {
     // a watchdog bite in the field is diagnosable without the panel in hand.
     void set_reset_reason(power::ResetReason reason) { diag_.reset = reason; }
     power::ResetReason reset_reason() const { return diag_.reset; }
+    void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -256,8 +257,7 @@ class ConfigService {
     // its own, because a companion page that only draws the air picture should not
     // have to read the receiver's firmware string to get the noise floor. Not four
     // more keys on "status": that reply is the one this service PUSHES
-    // unsolicited and is already sized against the narrowest phone in the field at
-    // its worst case, with eleven bytes left.
+    // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update(uint16_t session_id);
     // And the whole dump, which is the same table as the console's: one frame per
@@ -283,6 +283,7 @@ class ConfigService {
     flight::FlightState flight_{flight::FlightState::Unknown};
     Diagnostics diag_{};
     bool supply_warned_{false};
+    bool went_dark_flat_{false};
     uint16_t up_[LinkSessions::kMaxSessions]{};
     int links_{0};
     LinkClaim claim_{};

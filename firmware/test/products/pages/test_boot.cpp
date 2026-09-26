@@ -275,3 +275,21 @@ TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it")
         for (int x = 0; x < Glass::kW; x++) footer_ink += fb.get_pixel(x, y) ? 1 : 0;
     CHECK(footer_ink > 100);
 }
+
+TEST_CASE("boot: a unit that last went dark on a flat cell says so beside the cell's voltage") {
+    const BootPart parts[] = {{"RADIO", PartState::Pass}};
+    const int footer_y = boot_row_y(1) + kBootDividerGap + kBootFooterGap;
+    BootSnapshot s = page(parts, 1, /*flyable=*/true);
+    s.battery_valid = true;
+    s.battery_mv = 4050;
+    s.went_dark_flat = true;
+    Glass fb;
+    draw_boot(fb, s);
+    CHECK(reads_from(fb, kBootLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+
+    s.went_dark_flat = false;
+    Glass ordinary;
+    draw_boot(ordinary, s);
+    CHECK(reads_from(ordinary, kBootLeftX, footer_y, "BAT 4.05 V"));
+    CHECK_FALSE(reads_from(ordinary, kBootLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+}

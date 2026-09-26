@@ -214,6 +214,73 @@ TEST_CASE("product: the cable after a cutoff puts the mark back and arms the but
           power::ButtonWake::Armed);
 }
 
+// The support half of a flat cell: the glass forgets it on the cable, the boot that runs does not.
+TEST_CASE("product: the boot after a flat cell names it, though the cable took the word away") {
+    Rig refused;
+    refused.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    REQUIRE(refused.setup() == Status::Ok);
+    refused.sleep_again();
+    CHECK(refused.platform.system_power().went_dark_flat());
+
+    Rig plugged;
+    plugged.platform.system_power().flat_glass = refused.platform.system_power().flat_on_glass();
+    plugged.platform.system_power().dark_flat = refused.platform.system_power().went_dark_flat();
+    plugged.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    plugged.platform.battery().external_power = true;
+    plugged.platform.system_power().causes =
+        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    REQUIRE(plugged.setup() == Status::Ok);
+    plugged.sleep_again();
+    REQUIRE_FALSE(plugged.platform.system_power().flat_on_glass());
+    CHECK(plugged.platform.system_power().went_dark_flat());
+
+    Rig pressed;
+    pressed.platform.system_power().dark_flat = plugged.platform.system_power().went_dark_flat();
+    pressed.platform.battery().external_power = true;
+    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    pressed.platform.board_gpio().button_down = true;
+    REQUIRE(pressed.setup() == Status::Ok);
+    REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
+    CHECK(pressed.product.went_dark_flat());
+    CHECK(reads_in(pressed.product.boot_page(), "WAS FLAT", 0, 150, 200, 199));
+    CHECK_FALSE(pressed.platform.system_power().went_dark_flat());
+    pressed.send("{\"cmd\":\"status\"}");
+    pressed.run(0, 200);
+    CHECK(pressed.last_on(events::Endpoint::Config).find("\"went_dark_flat\":true") !=
+          std::string::npos);
+}
+
+TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot has none") {
+    Rig dying;
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+    CHECK(dying.platform.system_power().went_dark_flat());
+
+    Rig ordinary;
+    REQUIRE(ordinary.setup() == Status::Ok);
+    CHECK_FALSE(ordinary.product.went_dark_flat());
+    CHECK_FALSE(reads_in(ordinary.product.boot_page(), "WAS FLAT", 0, 0, 200, 199));
+}
+
+// The note is the cell's, not the frame's: a panel held off in the heat parks nothing.
+TEST_CASE("product: a cutoff too hot to park a frame still notes the flat cell") {
+    constexpr ports::Capabilities kWithDie = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
+        static_cast<uint32_t>(ports::Capability::DieTemperature));
+    Rig dying{kWithDie};
+    dying.platform.die_temperature().hold(go::ScreenService::kHoldAboveDeciCelsius + 10);
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+    REQUIRE_FALSE(dying.platform.system_power().flat_on_glass());
+    CHECK(dying.platform.system_power().went_dark_flat());
+}
+
 TEST_CASE("product: powering the panel down leaves the wordmark on it") {
     // An e-paper holds its last image with the rails down, so what is written
     // immediately before power_off is what the device wears while it is off.

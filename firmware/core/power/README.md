@@ -56,7 +56,19 @@ The cable is the way out of both. On the cable the device is an ordinary switche
 
 What the panel wears has to outlive the rails for that comparison to exist, so one bit does: `ports::SystemPower::flat_on_glass`. A platform with nowhere to keep it answers false, which costs a repeated frame and nothing else.
 
+The glass forgets on the cable, and a support case must not. A second bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame, whether or not the panel could draw it, and it survives the refusal that takes the word off the glass. The boot that runs reads it, prints `WAS FLAT` beside the cell's voltage on the self-test page and answers `went_dark_flat` in the status reply, then drops it, so it names the one boot that followed the flat cell and no other.
+
 The cable leaving cannot be noticed. VBUS rising wakes this SoC and VBUS falling does not, so a device unplugged still flat keeps the wordmark until the next press, which is the moment a pilot asks the question anyway - and that press is a refusal, so it is answered with the flat frame.
+
+## Charge mode, considered and refused
+
+A charger plugged into a switched-off unit wakes it, and `boot_path` sends that boot straight back to SYSTEM OFF. SoftRF-moshe-braner does something else there (`src/platform/nRF52.cpp:2512-2560`): it beeps the battery level out of the buzzer, then sleeps. That answers the question a pilot asks, "is it charging?", and it is not done here, for three reasons.
+
+What the device says out loud is one table, `core/indication/lamp.h`, and charge is deliberately not a row of it: this board's charger IC drives its own LED, which already answers the question. A buzzer ladder in the wake path would be a second vocabulary beside that table.
+
+What it would beep is not yet trustworthy. The gauge medians three samples before it states a percentage (`battery.h`) and the trim is a setting, so an honest level exists most of a boot later, on every cable wiggle in a flight bag, which is the case the refusal exists for.
+
+The refusal is complete without it. A charge mode would be a third `BootPath` value beside the other two, with the rule and the sleep path untouched.
 
 ## Time in state, because there is no current
 

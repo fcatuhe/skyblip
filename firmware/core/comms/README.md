@@ -24,6 +24,14 @@ So `LinkClaim` grants config and log to the first session that writes a command,
 
 What a claim is not is access control. `CONFIG_BT_SMP` is off on this product, deliberately (see `products/skyblip_go/prj.conf`), so there is no identity behind a session id. The claim stops two cooperating apps from stepping on each other. What stops a hostile one is the MCUboot signature on the image and the confirmation gesture on the device itself.
 
+## The status reply
+
+`{"cmd":"status"}` is the one frame the device also sends without being asked: `set_battery_state` pushes it on a charging flip, a level change or a five-percent step. So it carries what a pilot's screen shows and nothing a bench reads, and it has to fit `kSmallestSupportedPayload`, the 182 bytes an iPhone commonly settles at, with every field at its widest. The buffer is that limit: `json::Writer` leaves a field out whole rather than cutting it, and `format_status` then refuses the frame and counts a `link_drops`.
+
+What a support case reads lives where it is asked for. The address and the callsign are the config reply's. Why the device came up is `reset` in the diag sys group, and whether the board has a gauge at all is `valid` in the diag power group. One boot fact stays, `went_dark_flat`, because "the battery went flat" is the answer a pilot is owed for a unit that switched itself off (`core/power/README.md`). A key with no reading behind it is left out, never sent as a zero: `battery_percent` without a gauge sample, `die_temp_c` without a fresh die reading.
+
+[`schemas/status.v1.schema.json`](../../../schemas/status.v1.schema.json) is the contract, and `scripts/check_status_schema.py` holds `format_status` to its keys, their order, their types and which of them may be absent. The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
+
 ## The log dialect
 
 `log_link.h` is the log partition's half of the link: the same JSON `config.h` speaks, on its own endpoint, with three commands, list, read and erase. Every reply fits one frame and carries the record index it starts at, which is what makes the transfer acknowledged by construction: the next command IS the acknowledgement, a host that lost chunks asks again from the index it kept, and a chunk that never left the device consumed nothing, so asking again is the whole recovery.
