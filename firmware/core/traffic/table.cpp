@@ -1,5 +1,6 @@
 #include "core/traffic/table.h"
 
+#include "core/flight/state.h"
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 
@@ -58,6 +59,7 @@ void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObs& obs) 
 
 // INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
 bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
+    if (a.on_ground != b.on_ground) return a.on_ground;
     if (a.slant_m != b.slant_m) return a.slant_m > b.slant_m;
     if (a.rank != b.rank) return a.rank < b.rank;
     return a.age_s > b.age_s;
@@ -66,7 +68,8 @@ bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
 TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObs& obs, uint32_t now) const {
     int32_t slant_m = 0;
     if (range_check(own_, obs, slant_m) == Plausibility::NoReference) slant_m = 0;
-    return Weight{slant_m, source_rank(obs.source), now - obs_time(obs)};
+    return Weight{flight::on_ground(obs.flight_state), slant_m, source_rank(obs.source),
+                  now - obs_time(obs)};
 }
 
 int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now) {

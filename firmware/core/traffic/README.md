@@ -45,6 +45,8 @@ Six is where a fade stops being a fade. At 1 Hz, six consecutive misses is a lin
 
 A contact whose G.1.2 code says it is on the ground is drawn, named and listed, and never graded: `assess` returns `Level::None` for it whatever the geometry. A ring of 3 km and 300 m over an airfield is every aeroplane on the apron, and a 0.1 Hz emitter is inside `kAlertMaxAgeMs` for five seconds in every ten anyway, so half of those advisories would be decided on a position the same layer calls too old. `formation` ignores the same contacts, because a tug and its glider hold station on the apron as well as they do on tow.
 
+A full table evicts anything on the ground before anything in the air, however near the one and far the other. A parked aircraft is held for a minute, and a table that kept its nearest regardless would let a busy apron keep an arrival off the plot.
+
 Unknown is not ground: a sender that does not say where it is gets the airborne treatment everywhere, the six-second lease included.
 
 ## Whichever system heard it

@@ -78,6 +78,7 @@ class TrafficTable {
     uint32_t implausible_{0};
 
     struct Weight {
+        bool on_ground;
         int32_t slant_m;
         int rank;
         uint32_t age_s;
