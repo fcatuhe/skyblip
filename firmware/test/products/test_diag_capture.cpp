@@ -11,49 +11,13 @@
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
 #include "test/support/glass_text.h"
+#include "test/support/log_transfer.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
 using skyblip::reads_in;
 
 namespace {
-
-int base64_decode(const std::string& in, uint8_t* out, int cap) {
-    auto value = [](char c) -> int {
-        if (c >= 'A' && c <= 'Z') return c - 'A';
-        if (c >= 'a' && c <= 'z') return c - 'a' + 26;
-        if (c >= '0' && c <= '9') return c - '0' + 52;
-        if (c == '+') return 62;
-        if (c == '/') return 63;
-        return -1;
-    };
-    int n = 0;
-    uint32_t buffer = 0;
-    int bits = 0;
-    for (char c : in) {
-        const int v = value(c);
-        if (v < 0) continue;
-        buffer = (buffer << 6) | static_cast<uint32_t>(v);
-        bits += 6;
-        if (bits < 8) continue;
-        bits -= 8;
-        if (n < cap) out[n++] = static_cast<uint8_t>((buffer >> bits) & 0xFF);
-    }
-    return n;
-}
-
-std::string field(const std::string& json, const char* key) {
-    const std::string needle = std::string("\"") + key + "\":";
-    const size_t at = json.find(needle);
-    if (at == std::string::npos) return "";
-    size_t start = at + needle.size();
-    if (json[start] == '"') {
-        const size_t end = json.find('"', start + 1);
-        return json.substr(start + 1, end - start - 1);
-    }
-    const size_t end = json.find_first_of(",}", start);
-    return json.substr(start, end - start);
-}
 
 std::string last_log(Rig& rig) {
     const auto& sent = rig.platform.link().sent;
