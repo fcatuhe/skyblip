@@ -9,6 +9,7 @@ const char* to_string(ShutdownReason reason) {
         case ShutdownReason::LowBattery: return "LOW BATTERY";
         case ShutdownReason::LinkRequest: return "LINK";
         case ShutdownReason::Install: return "INSTALL";
+        case ShutdownReason::Recovery: return "RECOVERY";
         case ShutdownReason::None: break;
     }
     return "NONE";

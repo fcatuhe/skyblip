@@ -416,9 +416,8 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
         upload_window_open_ = false;
+        recovery_requested_ = true;
         ack(true, "recovery");
-        if (dfu_ && dfu_->enter_recovery() == ports::RecoveryPath::PowerOffToFinish)
-            power_off_requested_ = true;
     } else if (pending_ == Pending::PowerOff) {
         pending_ = Pending::None;
         upload_window_open_ = false;

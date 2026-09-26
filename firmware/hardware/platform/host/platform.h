@@ -43,11 +43,12 @@ class Dfu : public ports::Dfu {
         out = staged;
         return true;
     }
+    ports::RecoveryPath recovery_path() const override { return recovery_route; }
     ports::RecoveryPath enter_recovery() override {
         recoveries++;
-        return recovery_path;
+        return recovery_route;
     }
-    ports::RecoveryPath recovery_path{ports::RecoveryPath::Rebooted};
+    ports::RecoveryPath recovery_route{ports::RecoveryPath::Rebooted};
 
     int triggered{0};
     int confirms{0};
