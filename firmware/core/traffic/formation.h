@@ -56,6 +56,7 @@ class Tracker {
     };
 
     static void anchor(Slot& slot, const Report& station, uint32_t now_ms);
+    static void off_station(Slot& slot, const Report& fix, uint32_t now_ms);
     Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
     const Slot* find(uint8_t addr_table, uint32_t addr) const;
     Slot* find(uint8_t addr_table, uint32_t addr);

@@ -72,16 +72,19 @@ Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs
         slot->drift_fixes = 0;
         if (slot->state != State::Together && now_ms - slot->steady_since_ms >= kTogetherHoldMs)
             slot->state = State::Together;
-        out.state = slot->state;
-        return out;
+    } else {
+        off_station(*slot, out, now_ms);
     }
-
-    slot->drift_fixes++;
-    const bool breaking = slot->state == State::Together && slot->drift_fixes >= kBreakFixes;
-    if (slot->state != State::Together || breaking) anchor(*slot, out, now_ms);
-    if (breaking) slot->state = State::Parting;
     out.state = slot->state;
     return out;
+}
+
+void Tracker::off_station(Slot& slot, const Report& fix, uint32_t now_ms) {
+    slot.steady_since_ms = now_ms;
+    if (slot.state == State::None)
+        anchor(slot, fix, now_ms);
+    else if (slot.state == State::Together && ++slot.drift_fixes >= kBreakFixes)
+        slot.state = State::Parting;
 }
 
 void Tracker::release(uint8_t addr_table, uint32_t addr, uint32_t now_ms) {
