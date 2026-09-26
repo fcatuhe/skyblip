@@ -218,9 +218,25 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     const std::string body = link.last().bytes;
     CHECK(body ==
           "{\"cmd\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
-          "\"charging\":true,\"power_level\":\"CUTOFF\",\"die_temp_c\":-3277}");
+          "\"charging\":true,\"power_level\":\"CUTOFF\",\"went_dark_flat\":false,"
+          "\"die_temp_c\":-3277}");
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
     CHECK(cs.link_drops() == 0);
+}
+
+TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+
+    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"went_dark_flat\":false") != std::string::npos);
+
+    cs.set_went_dark_flat(true);
+    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"went_dark_flat\":true") != std::string::npos);
 }
 
 TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure") {

@@ -89,6 +89,7 @@ class Product {
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
         flat_remembered_ = platform_.system_power().flat_on_glass();
         take_went_dark_flat();
+        config_.config().set_went_dark_flat(went_dark_flat_);
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, flat_remembered_);
             return Status::Ok;

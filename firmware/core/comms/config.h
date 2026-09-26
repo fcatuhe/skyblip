@@ -193,6 +193,7 @@ class ConfigService {
     // a watchdog bite in the field is diagnosable without the panel in hand.
     void set_reset_reason(power::ResetReason reason) { diag_.reset = reason; }
     power::ResetReason reset_reason() const { return diag_.reset; }
+    void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -282,6 +283,7 @@ class ConfigService {
     flight::FlightState flight_{flight::FlightState::Unknown};
     Diagnostics diag_{};
     bool supply_warned_{false};
+    bool went_dark_flat_{false};
     uint16_t up_[LinkSessions::kMaxSessions]{};
     int links_{0};
     LinkClaim claim_{};

@@ -80,6 +80,6 @@ A cell that empties itself on a shelf over a winter runs no shutdown and writes 
 
 The cable is the way back, and it is one act. VBUS wakes this SoC out of SYSTEM OFF and the reset cause carries the bit, but `core/power/wake.h` refuses that boot on purpose: a charger found in a flight bag must not switch a device on. What the cable does is charge the cell and, through the refusal, leave the button armed - so that refusal also takes `FLAT BATTERY` back off the glass and puts the wordmark there, the frame every armed, switched-off device wears. The press after it is the pilot asking for a device, and it gets one even while the cell is still filling.
 
-That boot is also the one that says the cell had been flat, because the glass no longer does: `went_dark_flat()` is read in `setup()` off a second retained bit the cable's refusal leaves alone, drawn on the self-test page, and dropped for the boot after (`core/power/README.md`).
+That boot is also the one that says the cell had been flat, because the glass no longer does: `went_dark_flat()` is read in `setup()` off a second retained bit the cable's refusal leaves alone, drawn on the self-test page, handed to the status reply, and dropped for the boot after (`core/power/README.md`).
 
 What the frame does not carry is the percentage. It would be the reading the device died at, frozen at zero, standing there unchanged through the whole charge that follows, and a figure that cannot update is a figure that lies the moment it matters.

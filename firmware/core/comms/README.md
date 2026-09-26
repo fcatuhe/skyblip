@@ -26,9 +26,9 @@ What a claim is not is access control. `CONFIG_BT_SMP` is off on this product, d
 
 ## The status reply
 
-`{"cmd":"status"}` is the one frame the device also sends without being asked: `set_battery_state` pushes it on a charging flip, a level change or a five-percent step. So it carries what a pilot's screen has to react to between polls and nothing else, and it has to fit `kSmallestSupportedPayload`, the 182 bytes an iPhone commonly settles at, with every field at its widest. The buffer is that limit: `json::Writer` leaves a field out whole rather than cutting it, and `format_status` then refuses the frame and counts a `link_drops`.
+`{"cmd":"status"}` is the one frame the device also sends without being asked: `set_battery_state` pushes it on a charging flip, a level change or a five-percent step. So it carries what a pilot's screen shows and nothing a bench reads, and it has to fit `kSmallestSupportedPayload`, the 182 bytes an iPhone commonly settles at, with every field at its widest. The buffer is that limit: `json::Writer` leaves a field out whole rather than cutting it, and `format_status` then refuses the frame and counts a `link_drops`.
 
-What a phone can read once lives where it is asked for. The address and the callsign are the config reply's. Why the device came up is `reset` in the diag sys group, and whether the board has a gauge at all is `valid` in the diag power group. A key with no reading behind it is left out, never sent as a zero: `battery_percent` without a gauge sample, `die_temp_c` without a fresh die reading.
+What a support case reads lives where it is asked for. The address and the callsign are the config reply's. Why the device came up is `reset` in the diag sys group, and whether the board has a gauge at all is `valid` in the diag power group. One boot fact stays, `went_dark_flat`, because "the battery went flat" is the answer a pilot is owed for a unit that switched itself off (`core/power/README.md`). A key with no reading behind it is left out, never sent as a zero: `battery_percent` without a gauge sample, `die_temp_c` without a fresh die reading.
 
 The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
 

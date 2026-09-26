@@ -15,6 +15,7 @@ int ConfigService::format_status(char* buf, int cap) {
     if (diag_.battery.valid) w.kv_int("battery_percent", static_cast<long>(diag_.battery.percent));
     w.kv_bool("charging", diag_.battery.charging);
     w.kv_str("power_level", power::to_string(diag_.level));
+    w.kv_bool("went_dark_flat", went_dark_flat_);
     if (diag_.die_valid) w.kv_int("die_temp_c", whole_celsius(diag_.die_decicelsius));
     const int len = w.finish();
     return w.overflowed() ? 0 : len;
