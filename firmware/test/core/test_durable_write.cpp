@@ -33,6 +33,7 @@ SlotPlan holdover_plan(int phase_ms) {
     clock.utc_valid = true;
     clock.pps_locked = false;
     clock.ms_since_pps = 10000;
+    clock.pps_edge_us = 12'000'000;
     Scheduler scheduler{};
     return scheduler.plan(phase_ms, clock);
 }

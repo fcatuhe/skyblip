@@ -19,6 +19,11 @@ void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
     clock.utc_edge_us = edge_us;
 }
 
+bool in_pps_holdover(const ClockState& clock) {
+    return clock.utc_valid && !clock.pps_locked && clock.pps_edge_us != 0 &&
+           clock.ms_since_pps <= kPpsHoldoverMs;
+}
+
 SlotState Scheduler::state_at(int phase_ms) {
     // The tail first: before anything else in a second, the radio is still in
     // the slot 1 that opened 800 ms into the previous one.
@@ -87,13 +92,11 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     }
 
     const bool anchored = clock.utc_valid && clock.pps_locked;
-    const bool within_holdover =
-        clock.utc_valid && !clock.pps_locked && clock.ms_since_pps <= kPpsHoldoverMs;
 
     if (anchored) {
         p.listen_only = false;
         p.tx_allowed = (p.band == Band::M) && p.own_tx_dwell;
-    } else if (within_holdover) {
+    } else if (in_pps_holdover(clock)) {
         p.listen_only = false;
         p.tx_allowed = false;
     } else {

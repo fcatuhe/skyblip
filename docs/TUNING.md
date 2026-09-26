@@ -231,7 +231,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 | `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
 | `kSlotWriteCostMs` | 2 | milliseconds | - | - |
-| `kPpsEdgeMissedMs` | 1500 (1.5 s) | milliseconds | - | one edge a second, so a phase older than this is an edge that never came |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
@@ -249,4 +248,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-149 constants over 17 folders.
+148 constants over 17 folders.

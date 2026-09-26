@@ -16,6 +16,8 @@ using namespace skyblip::timing;
 
 static ClockState anchored() { return ClockState{true, true, 0}; }
 
+constexpr uint64_t kLastEdgeUs = 12'000'000;
+
 // Our cut of the second: two 400 ms M-band dwells, one channel each, so slot 1
 // runs 800..1200 and its tail is the head of the next second. The uplink dwell
 // is framed on the window our own ground station transmits in (210..390 ms, a
@@ -129,7 +131,7 @@ TEST_CASE("timing: TX only in M-band direct slots when clock is anchored") {
 
 TEST_CASE("timing: PPS lost within holdover, still receiving, no slotted TX") {
     Scheduler s;
-    ClockState c{true, false, 5000};
+    ClockState c{true, false, 5000, kLastEdgeUs};
     SlotPlan p = s.plan(500, c);
     CHECK_FALSE(p.listen_only);
     CHECK_FALSE(p.tx_allowed);
@@ -173,6 +175,32 @@ TEST_CASE("timing: past holdover or no UTC, listen only, fail closed") {
     ClockState no_utc{false, true, 0};
     CHECK(s.plan(500, no_utc).listen_only);
     CHECK_FALSE(s.plan(500, no_utc).tx_allowed);
+}
+
+namespace {
+
+bool same_dwell(const SlotPlan& a, const SlotPlan& b) {
+    return a.state == b.state && a.band == b.band && a.freq_hz == b.freq_hz &&
+           a.start_ms == b.start_ms && a.end_ms == b.end_ms && a.tx_allowed == b.tx_allowed &&
+           a.own_tx_dwell == b.own_tx_dwell;
+}
+
+}  // namespace
+
+// Pps::ms_since() reads 0 before the first edge, which used to pass for an edge just now.
+TEST_CASE("timing: an edge never seen is no holdover, and plans the same dwells as before") {
+    const ClockState never{true, false, 0, 0};
+    const ClockState past{true, false, kPpsHoldoverMs + 1, kLastEdgeUs};
+    const ClockState held{true, false, 5000, kLastEdgeUs};
+    CHECK_FALSE(in_pps_holdover(never));
+    CHECK(in_pps_holdover(held));
+    for (int phase = 0; phase < 1000; phase++) {
+        const SlotPlan p = Scheduler::plan(phase, never);
+        CHECK(same_dwell(p, Scheduler::plan(phase, past)));
+        CHECK(same_dwell(p, Scheduler::plan(phase, held)));
+        CHECK_FALSE(p.tx_allowed);
+        CHECK(p.listen_only == Scheduler::plan(phase, past).listen_only);
+    }
 }
 
 namespace {
