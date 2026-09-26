@@ -12,7 +12,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `build_local.sh` | build the device image off a committed ref |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs |
-| `test_mkuf2.py`, `test_blip.py`, `test_blip_offload.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
 
@@ -180,4 +180,4 @@ python3 scripts/test_power_budget.py
 python3 scripts/test_link_budget.py
 ```
 
-No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, the NMEA checksum and line reassembly, the chunk framing and the resume logic. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_offload.py` with it, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued.
+No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, and `test_blip_offload.py`, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued.
