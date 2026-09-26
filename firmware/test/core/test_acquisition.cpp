@@ -21,7 +21,7 @@ GnssSolution timed() {
 
 GnssSolution fixed() {
     GnssSolution s = timed();
-    s.is_fix = true;
+    s.fix_valid = true;
     return s;
 }
 

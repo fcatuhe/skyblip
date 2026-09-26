@@ -1,7 +1,10 @@
 #include "products/skyblip_go/services/record_store.h"
 
+#include <cstring>
+
 #include "core/events/link.h"
 #include "core/util/span.h"
+#include "ports/link.h"
 
 namespace skyblip::go {
 
@@ -94,24 +97,47 @@ bool RecordPool::noted(bool ok) {
     return ok;
 }
 
-int RecordPool::payload_bytes() const {
-    return static_cast<int>(context_.roles.link.payload_bytes());
+int RecordPool::payload_bytes(uint16_t to) const {
+    return static_cast<int>(context_.roles.link.payload_bytes_to(to));
 }
 
-int RecordPool::reply_cap() const {
-    const int room = payload_bytes() + 1;
+int RecordPool::reply_cap(uint16_t to) const {
+    const int room = payload_bytes(to) + 1;
     return room < comms::kLogReplyCap ? room : comms::kLogReplyCap;
 }
 
-void RecordPool::send(uint16_t to, int len) {
-    if (len <= 0 || len > payload_bytes()) {
+bool RecordPool::send(uint16_t to, int len) {
+    if (len <= 0 || len > payload_bytes(to) || holding()) {
         link_drops_++;
-        return;
+        return false;
     }
-    if (!is_ok(context_.roles.link.send_to(
-            to, events::Endpoint::Log,
-            ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)))))
-        link_drops_++;
+    const Status sent = context_.roles.link.send_to(
+        to, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)));
+    if (sent == Status::WouldBlock) {
+        std::memcpy(held_, reply_, static_cast<size_t>(len));
+        held_len_ = len;
+        held_to_ = to;
+        held_since_ms_ = now_ms_;
+        return true;
+    }
+    if (is_ok(sent)) return true;
+    link_drops_++;
+    return false;
+}
+
+Status RecordPool::deliver_held(uint32_t now_ms) {
+    now_ms_ = now_ms;
+    if (!holding()) return Status::Ok;
+    const Status sent = context_.roles.link.send_to(
+        held_to_, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
+    if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs)
+        return Status::WouldBlock;
+    held_len_ = 0;
+    if (is_ok(sent)) return Status::Ok;
+    link_drops_++;
+    return sent == Status::WouldBlock ? Status::Timeout : sent;
 }
 
 bool RecordStore::open() {
@@ -367,7 +393,7 @@ void RecordStore::reply(uint16_t to, int len) { pool_.send(to, len); }
 
 void RecordStore::ack(uint16_t to, bool ok, const char* reason) {
     reply(to,
-          comms::format_log_ack(pool_.reply_buffer(), pool_.reply_cap(), ok, reason, selector()));
+          comms::format_log_ack(pool_.reply_buffer(), pool_.reply_cap(to), ok, reason, selector()));
 }
 
 void RecordStore::serve(const comms::LogRequest& request) {
@@ -380,62 +406,71 @@ void RecordStore::serve(const comms::LogRequest& request) {
 }
 
 void RecordStore::answer_list(const comms::LogRequest& request) {
-    if (!request.has_index) {
+    const uint16_t to = request.link_session;
+    if (!request.index_valid) {
         rebuild_index();
-        reply(request.link_session,
-              comms::format_log_count(pool_.reply_buffer(), pool_.reply_cap(), session_count_,
-                                      index_truncated_, selector()));
+        reply(to, comms::format_log_count(pool_.reply_buffer(), pool_.reply_cap(to), session_count_,
+                                          index_truncated_, selector()));
         return;
     }
     if (request.index >= session_count_) {
-        ack(request.link_session, false, "no_session");
+        ack(to, false, "no_session");
         return;
     }
     const SessionInfo& entry = index_[request.index];
-    reply(request.link_session,
-          comms::format_log_session(pool_.reply_buffer(), pool_.reply_cap(), request.index,
-                                    session_count_, entry.session_id, entry.records, entry.closed,
-                                    entry.truncated, selector()));
+    reply(to, comms::format_log_session(pool_.reply_buffer(), pool_.reply_cap(to), request.index,
+                                        session_count_, entry.session_id, entry.records,
+                                        entry.closed, entry.truncated, selector()));
 }
 
 void RecordStore::answer_read(const comms::LogRequest& request) {
+    const uint16_t to = request.link_session;
     const SessionInfo* entry = find(request.session);
     if (entry == nullptr) {
         rebuild_index();
         entry = find(request.session);
     }
     if (entry == nullptr) {
-        ack(request.link_session, false, "no_session");
+        ack(to, false, "no_session");
         return;
     }
-    const int per_chunk = comms::log_records_per_chunk(pool_.payload_bytes(), selector());
+    const int per_chunk = comms::log_records_per_chunk(pool_.payload_bytes(to), selector());
     if (per_chunk == 0) {
-        ack(request.link_session, false, "payload");
+        ack(to, false, "payload");
         return;
     }
     if (ring_.slots_per_sector() == 0 || ring_.sector_count() == 0) {
-        ack(request.link_session, false, "no_storage");
+        ack(to, false, "no_storage");
         return;
     }
 
     const comms::LogWindow window =
         comms::plan_log_window(request.from, request.count, per_chunk, entry->records);
     if (window.chunks == 0) {
-        reply(request.link_session,
-              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(), request.session,
+        reply(to,
+              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to), request.session,
                                       request.from, pool_.chunk_buffer(), 0, true, selector()));
         return;
     }
-    for (int nth = 0; nth < window.chunks; nth++) {
-        const comms::LogChunkSpan span = window.at(nth);
-        if (!read_records(request.session, span.from, span.records)) {
-            ack(request.link_session, false, "read_failed");
+    reading_ = Reading{true, to, request.session, window, 0};
+    continue_read();
+}
+
+void RecordStore::continue_read() {
+    while (reading_.active && !pool_.holding()) {
+        const uint16_t to = reading_.to;
+        const comms::LogChunkSpan span = reading_.window.at(reading_.next);
+        if (!read_records(reading_.session, span.from, span.records)) {
+            reading_.active = false;
+            ack(to, false, "read_failed");
             return;
         }
-        reply(request.link_session,
-              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(), request.session,
-                                      span.from, pool_.chunk_buffer(), span.records, span.eof,
-                                      selector()));
+        const bool sent = pool_.send(
+            to, comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to), reading_.session,
+                                        span.from, pool_.chunk_buffer(), span.records, span.eof,
+                                        selector()));
+        reading_.next++;
+        if (!sent || reading_.next == reading_.window.chunks) reading_.active = false;
     }
 }
 

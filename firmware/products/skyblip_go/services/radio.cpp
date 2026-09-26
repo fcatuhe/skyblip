@@ -143,8 +143,10 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     // says the solution behind it has settled.
     if (!timing::own_ship_transmits(own, context_.state.clock))
         return timing::Transmitter::Attempt{};
-    const timing::Transmitter::Attempt a = transmitter_.attempt(
-        plan, slot_utc(now_ms), now_ms, flight::airborne(own.flight_state), fix_lag_ms());
+    const bool full_rate =
+        !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_cat));
+    const timing::Transmitter::Attempt a =
+        transmitter_.attempt(plan, slot_utc(now_ms), now_ms, full_rate, fix_lag_ms());
     if (a.payload == timing::Transmitter::Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
     return a;

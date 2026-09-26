@@ -133,7 +133,8 @@ class Platform {
 
     // A host board can be fitted with less than everything, which is how the
     // degraded paths get exercised without a soldering iron.
-    explicit Platform(ports::Capabilities fitted = kFullyFitted) : fitted_(fitted) {
+    explicit Platform(ports::Capabilities fitted = kFullyFitted, uint32_t device_addr = kDeviceAddr)
+        : fitted_(fitted), device_addr_(device_addr) {
         chips_.epd.attach_clock(clock_);
         buzzer_pin_held_low_ = ports::has(fitted, ports::Capability::Buzzer);
         baro_.present = ports::has(fitted, ports::Capability::Baro);
@@ -195,7 +196,7 @@ class Platform {
     bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() const { return battery_.external_power; }
     static constexpr uint32_t kDeviceAddr = 0x5B5AFEu;
-    static uint32_t device_addr() { return kDeviceAddr; }
+    uint32_t device_addr() const { return device_addr_; }
     Chips& chips() { return chips_; }
     Gpio& board_gpio() { return gpio_; }
     // The bus itself, so a test can fit a unit that came off the line with the
@@ -239,6 +240,7 @@ class Platform {
     host::Watchdog watchdog_{};
     host::SystemPower system_power_{};
     ports::Capabilities fitted_;
+    uint32_t device_addr_;
     bool buzzer_pin_held_low_{false};
 };
 

@@ -5,9 +5,9 @@
 # under the commit they were built from. public/ is copied into the Parklife
 # build verbatim, so nothing here goes through the asset pipeline.
 #
-# Without Emscripten this is a no-op and the page renders its fallback. CI sets
-# SIMULATOR_REQUIRED=1, so a missing toolchain fails the build that is meant to
-# publish one.
+# Without Emscripten this only clears public/simulator and the page renders its
+# fallback. CI sets SIMULATOR_REQUIRED=1, so a missing toolchain fails the build
+# that is meant to publish one.
 
 set -eu
 
@@ -15,6 +15,8 @@ firmware="$(CDPATH='' cd -- "$(dirname -- "$0")/../../firmware" && pwd)"
 harness="$(CDPATH='' cd -- "$(dirname -- "$0")/../../simulator" && pwd)"
 public="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)/public/simulator"
 build="$(git -C "$firmware" rev-parse --short HEAD)"
+
+rm -rf "$public"
 
 if ! command -v emcc >/dev/null 2>&1; then
   if [ "${SIMULATOR_REQUIRED:-0}" = "1" ]; then
@@ -27,7 +29,6 @@ fi
 
 make -C "$firmware" browser
 
-rm -rf "$public"
 mkdir -p "$public/$build"
 cp "$firmware/build/browser/skyblip_simulator.js" \
    "$firmware/build/browser/skyblip_simulator.wasm" \

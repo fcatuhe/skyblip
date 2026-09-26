@@ -5,6 +5,7 @@
 #include "core/fec/crc.h"
 #include "core/fec/scramble.h"
 #include "core/flight/extrapolate.h"
+#include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
@@ -227,10 +228,10 @@ int AdslPacket::correct(const uint8_t* err, int max_bad_bits) {
     if (bad > max_bad_bits) return -1;
 
     int loops = 1 << bad;
-    uint8_t prev_gray = 0;
+    uint16_t prev_gray = 0;
     for (int i = 1; i < loops; i++) {
-        uint8_t gray = static_cast<uint8_t>(i ^ (i >> 1));
-        uint8_t bit_exp = gray ^ prev_gray;
+        uint16_t gray = static_cast<uint16_t>(i ^ (i >> 1));
+        uint16_t bit_exp = gray ^ prev_gray;
         int bit = 0;
         while (bit_exp >>= 1) bit++;
         data[idx[bit]] ^= mask[bit];
@@ -257,7 +258,8 @@ bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
     out.emergency = p.Emergency;
     out.lat_1e7 = p.lat_1e7();
     out.lon_1e7 = p.lon_1e7();
-    out.alt_m = p.alt_m();
+    out.alt_valid = !p.alt_invalid();
+    out.alt_m = out.alt_valid ? p.alt_m() : 0;
     out.climb_valid = p.has_climb();
     out.climb_e8 = out.climb_valid ? p.climb_e8() : 0;
     out.speed_valid = p.has_speed();
@@ -270,7 +272,7 @@ bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
     return true;
 }
 
-// ADS-L 4 SRD860 issue 2 G.1.13, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
+// ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
 uint8_t AdslPacket::horizontal_accuracy_code(uint32_t hfom_cm) {
     static constexpr uint32_t kLimitCm[] = {300, 1000, 3000, 9260, 18520, 55560, 92600};
     for (int i = 0; i < 7; i++)
@@ -278,7 +280,7 @@ uint8_t AdslPacket::horizontal_accuracy_code(uint32_t hfom_cm) {
     return 0;
 }
 
-// G.1.14, GVA. 3 = VFOM < 10 m, 2 = < 45 m, 1 = < 150 m, 0 = unknown or worse.
+// G.1.15, GVA. 3 = VFOM < 10 m, 2 = < 45 m, 1 = < 150 m, 0 = unknown or worse.
 uint8_t AdslPacket::vertical_accuracy_code(uint32_t vfom_cm) {
     if (vfom_cm < 1000) return 3;
     if (vfom_cm < 4500) return 2;
@@ -286,21 +288,11 @@ uint8_t AdslPacket::vertical_accuracy_code(uint32_t vfom_cm) {
     return 0;
 }
 
-// G.1.15, NACv. A GNSS-only velocity is as good as the position fix behind it,
+// G.1.16, NACv. A GNSS-only velocity is as good as the position fix behind it,
 // which is the relation the reference encoder uses verbatim
 // (oss/SoftRF-moshe-braner .../libraries/OGN/ads-l.h:453).
 uint8_t AdslPacket::velocity_accuracy_code(uint8_t horizontal_code) {
     return horizontal_code >= 4 ? static_cast<uint8_t>(horizontal_code - 4) : 0;
-}
-
-// G.1.12, NIC: the containment radius Rc the position is claimed to lie within.
-// 12 = Rc < 7.5 m, 11 = < 25 m, 10 = < 75 m, 9 = < 0.1 NM, down to 1.
-uint8_t AdslPacket::navigation_integrity_code(uint32_t containment_cm) {
-    static constexpr uint32_t kLimitCm[] = {750,    2500,   7500,   18520,   37040,  111120,
-                                            185200, 370400, 740800, 1481600, 3704000};
-    for (int i = 0; i < 11; i++)
-        if (containment_cm < kLimitCm[i]) return static_cast<uint8_t>(12 - i);
-    return 1;
 }
 
 void AdslPacket::set_integrity_unknown() {
@@ -314,21 +306,10 @@ void AdslPacket::set_integrity_unknown() {
 
 // INFO: fc 13sep26 no VDOP is a 2D solution, whose height is not a figure to claim accuracy for
 void AdslPacket::set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
-    if (hdop_e2 == 0) {
-        set_integrity_unknown();
-        return;
-    }
-    const uint32_t hfom_cm = div_round<uint32_t>(hdop_e2 * kHorizontalErrorPerDopCm, 100);
-    const uint32_t vfom_cm = div_round<uint32_t>(vdop_e2 * kVerticalErrorPerDopCm, 100);
-
-    // No RAIM and no protection level from this receiver, so the containment
-    // radius we claim is the accuracy itself, and SourceIntegrity says how much
-    // that claim is worth: 1e-3 per flight hour, the honest figure for an
-    // unaugmented, unmonitored GNSS. DesignAssurance stays 0 because this
-    // firmware carries no design assurance credit.
-    SourceIntegrity = kSourceIntegrity1e3;
-    DesignAssurance = kDesignAssuranceNone;
-    NavigIntegrity = navigation_integrity_code(hfom_cm);
+    set_integrity_unknown();
+    if (hdop_e2 == 0) return;
+    const uint32_t hfom_cm = div_round<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
+    const uint32_t vfom_cm = div_round<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
     HorizAccuracy = horizontal_accuracy_code(hfom_cm);
     VertAccuracy = vdop_e2 == 0 ? 0 : vertical_accuracy_code(vfom_cm);
     VelAccuracy = velocity_accuracy_code(HorizAccuracy);
@@ -342,9 +323,9 @@ uint8_t timestamp_code(uint32_t utc, int32_t lead_ms) {
     return static_cast<uint8_t>(ms / kTimeStampQuarterMs);
 }
 
-namespace {
-bool printable(char c) { return c >= 0x20 && c <= 0x7E; }
-}  // namespace
+bool is_callsign_char(char c) {
+    return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
 
 void from_own_callsign(AdslPacket& p, uint32_t addr, uint8_t addr_table, const char* callsign) {
     p.init(AdslPacket::kTypeOgnDiagnostics);
@@ -354,7 +335,7 @@ void from_own_callsign(AdslPacket& p, uint32_t addr, uint8_t addr_table, const c
 
     char* msg = p.info_msg();
     int n = 0;
-    while (n < AdslPacket::kInfoMsgBytes && callsign[n] != 0 && printable(callsign[n])) {
+    while (n < AdslPacket::kInfoMsgBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
         msg[n] = callsign[n];
         n++;
     }
@@ -367,7 +348,7 @@ int callsign_of(const AdslPacket& p, char* out, int cap) {
     const char* msg = p.info_msg();
     int n = 0;
     while (n < AdslPacket::kInfoMsgBytes && msg[n] != 0) {
-        if (!printable(msg[n])) return 0;
+        if (!is_callsign_char(msg[n])) return 0;
         n++;
     }
     if (n >= cap) n = cap - 1;
@@ -391,10 +372,12 @@ void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t 
     // forward to the instant the timestamp names. Past the model's bound the
     // fix goes out as it stands, dated when it was solved: neither half of the
     // pair is allowed to describe an instant the other does not.
-    const flight::Prediction where = flight::extrapolate(own, at.since_fix_ms);
-    p.TimeStamp =
-        timestamp_code(at.utc, where.valid ? at.into_utc_ms : at.into_utc_ms - at.since_fix_ms);
-    p.FlightState = own.flight_state;
+    const int32_t named_ms =
+        at.into_utc_ms - at.into_utc_ms % static_cast<int32_t>(kTimeStampQuarterMs);
+    const flight::Prediction where =
+        flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
+    p.TimeStamp = timestamp_code(at.utc, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
+    p.FlightState = flight::announced_state(own.flight_state, aircraft_cat);
     p.AcftCat = aircraft_cat;
     p.Emergency = 1;
     p.set_lat_1e7(where.lat_1e7);
@@ -405,7 +388,10 @@ void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t 
     // altitude as if it were valid is worse than transmitting nothing: a receiver
     // would compute relative vertical separation against it.
     if (own.fix_valid) {
-        p.set_alt_m(to_metres(Millimetres(where.alt_mm)).v);
+        if (own.vdop_e2 != 0)
+            p.set_alt_m(to_metres(Millimetres(where.alt_mm)).v);
+        else
+            p.set_alt_invalid();
         p.set_speed_q(to_speed_q(MillimetresPerSec(own.speed_mm_s)).v);
         p.set_integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
     } else {

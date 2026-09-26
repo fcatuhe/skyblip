@@ -25,7 +25,7 @@ namespace skyblip::go {
 // The other half is core/power's write rule. Below the low-battery warning the
 // settings sector is not touched: NVS survives an interrupted write by design,
 // but the sector it garbage-collects is the internal flash the running image
-// executes from, and the moment a write lands is the moment a 22 dBm burst sags a
+// executes from, and the moment a write lands is the moment a 14 dBm burst sags a
 // 3.3 V cell. So a change arriving from a phone is refused at the door, out loud,
 // with the reason on the link (core/comms/config.cpp), and a change already
 // pending when the cell falls through the warning is HELD rather than dropped: it
@@ -55,6 +55,7 @@ class ConfigLinkService : public runtime::Service {
     // charger". Not a fault of the placement policy above - it means something
     // else entirely, which is why it is not one of its counters.
     uint32_t refused_writes() const { return refused_; }
+    uint32_t failed_writes() const { return failed_; }
     bool holding_for_power() const { return held_; }
 
     // The one caller that may skip the WINDOW - not the power rule above, which
@@ -83,7 +84,8 @@ class ConfigLinkService : public runtime::Service {
     void drain_link_events(uint32_t now_ms);
     void take_request(uint32_t now_ms);
     void drain_settings(uint32_t now_ms);
-    void persist();
+    void write_settings(uint32_t now_ms, bool forced);
+    bool persist();
     void load_image_state();
     void forget_update();
     void confirm_image_once_healthy();
@@ -94,6 +96,10 @@ class ConfigLinkService : public runtime::Service {
     // knows what the cell is doing. A reference, not a pointer: the product wires
     // it at construction and there is no version of this device where the
     // question has no owner.
+    bool storable() const {
+        return ports::has(context_.roles.capabilities, ports::Capability::Storage) &&
+               context_.roles.kv.ready();
+    }
     bool may_persist() const { return power_.may_write(power::DurableWrite::Settings); }
     bool hold_for_power();
 
@@ -106,6 +112,7 @@ class ConfigLinkService : public runtime::Service {
     bool recorded_claim_held_{false};
     uint32_t recorded_drops_{0};
     uint32_t refused_{0};
+    uint32_t failed_{0};
     bool held_{false};
     bool loaded_{false};
     // The blob as flash already holds it. A pilot who steps a value up and back

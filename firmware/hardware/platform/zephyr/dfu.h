@@ -85,10 +85,10 @@ class Dfu : public ports::Dfu {
     bool confirmed() override { return boot_is_img_confirmed(); }
 
     bool running_version(ports::ImageVersion& out) override {
-        return read_version(FIXED_PARTITION_ID(slot0_partition), out);
+        return read_version(PARTITION_ID(slot0_partition), out);
     }
     bool staged_version(ports::ImageVersion& out) override {
-        return read_version(FIXED_PARTITION_ID(slot1_partition), out);
+        return read_version(PARTITION_ID(slot1_partition), out);
     }
 
     // INFO: fc 04sep26 the WDT survives a soft reset, not SYSTEM OFF; it would cut the UF2 session

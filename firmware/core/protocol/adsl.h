@@ -196,18 +196,13 @@ struct __attribute__((packed)) AdslPacket {
     // zero code that means "unknown / no fix", so leaving the block at its
     // initialised value is not a neutral act: it tells a receiver we claim
     // nothing. What we can honestly claim comes out of the receiver's DOP.
-    static constexpr uint8_t kSourceIntegrity1e3 = 1;
     static constexpr uint8_t kDesignAssuranceNone = 0;
-    // Metres of position error per unit of DOP, the figure OGN uses to turn DOP
-    // into an accuracy claim (oss/nrf52-ogn-tracker src/ogn.h:1589-1591:
-    // setHorAcc(HDOP*2), setVerAcc(VDOP*3), both DOP in tenths).
-    static constexpr uint32_t kHorizontalErrorPerDopCm = 200;
-    static constexpr uint32_t kVerticalErrorPerDopCm = 300;
+    // INFO: fc 23sep26 G.1.14: a figure of merit is 2 * DOP * 6 m, and VFOM takes the same model
+    static constexpr uint32_t kMeritPerDopCm = 1200;
 
     static uint8_t horizontal_accuracy_code(uint32_t hfom_cm);
     static uint8_t vertical_accuracy_code(uint32_t vfom_cm);
     static uint8_t velocity_accuracy_code(uint8_t horizontal_code);
-    static uint8_t navigation_integrity_code(uint32_t containment_cm);
 
     void set_integrity_unknown();
     void set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2);
@@ -245,6 +240,8 @@ void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t 
 void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t addr_table,
               uint8_t aircraft_cat, const BurstInstant& at);
 
+// INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
+bool is_callsign_char(char c);
 void from_own_callsign(AdslPacket& p, uint32_t addr, uint8_t addr_table, const char* callsign);
 int callsign_of(const AdslPacket& p, char* out, int cap);
 

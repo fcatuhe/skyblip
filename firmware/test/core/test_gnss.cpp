@@ -2,14 +2,30 @@
 // radar, what we transmit about ourselves) is this parser's output, so a sentence
 // that fails its checksum must leave the fix untouched rather than half-applied,
 // and a sentence arriving one byte at a time must reconstruct exactly.
+#include <cstdio>
 #include <cstdlib>  // std::abs
 #include <cstring>
+#include <string>
 
 #include "core/gnss/nmea.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip::gnss;
+
+namespace {
+std::string checksummed(const char* body) {
+    uint8_t cs = 0;
+    for (const char* c = body; *c; c++) cs ^= static_cast<uint8_t>(*c);
+    char tail[4];
+    std::snprintf(tail, sizeof(tail), "*%02X", cs);
+    return std::string("$") + body + tail;
+}
+
+bool parse(NmeaParser& p, const std::string& line) {
+    return p.parse_line(line.c_str(), static_cast<int>(line.size()));
+}
+}  // namespace
 
 TEST_CASE("gnss: checksum validation") {
     const char* good = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A";
@@ -19,9 +35,11 @@ TEST_CASE("gnss: checksum validation") {
 }
 
 TEST_CASE("gnss: coord parse DDMM.mmmm -> 1e-7 deg") {
-    int32_t lat = nmea_parse_coord("4807.038", 'N');  // 48 deg 07.038' = 48.1173
+    int32_t lat = 0;
+    REQUIRE(nmea_parse_coord("4807.038", 'N', lat));  // 48 deg 07.038' = 48.1173
     CHECK(std::abs(lat - 481173000) < 20000);
-    int32_t lon = nmea_parse_coord("01131.000", 'W');  // -11.51667
+    int32_t lon = 0;
+    REQUIRE(nmea_parse_coord("01131.000", 'W', lon));  // -11.51667
     CHECK(lon < 0);
     CHECK(std::abs(lon + 115166667) < 30000);
 }
@@ -32,7 +50,7 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
     CHECK(p.parse_line(rmc, static_cast<int>(strlen(rmc))));
     CHECK(p.last_sentence() == Sentence::Rmc);
     const GnssSolution& f = p.solution();
-    CHECK(f.is_fix);
+    CHECK(f.fix_valid);
     CHECK(f.utc_valid);
     CHECK(f.lat_1e7 > 480000000);
     CHECK(f.lon_1e7 > 0);
@@ -42,6 +60,76 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
     CHECK(f.track_cdeg == 8440);
     // 2025-08-23 12:35:19 UTC epoch
     CHECK(f.utc == 1755952519u);
+}
+
+TEST_CASE("gnss: an RMC that claims a fix with no position is not a fix, whatever came before") {
+    NmeaParser p;
+    REQUIRE(parse(p, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,,")));
+    REQUIRE(p.solution().fix_valid);
+
+    REQUIRE(parse(p, checksummed("GPRMC,123520,A,,,,,022.4,084.4,230825,,")));
+    CHECK_FALSE(p.solution().fix_valid);
+
+    REQUIRE(parse(p, checksummed("GPRMC,123521,A,4807.038,N,,,022.4,084.4,230825,,")));
+    CHECK_FALSE(p.solution().fix_valid);
+}
+
+TEST_CASE("gnss: a latitude past 90, a longitude past 180 or a 60th minute is not a fix") {
+    for (const char* body : {"GPRMC,123519,A,9000.001,N,01131.000,E,022.4,084.4,230825,,",
+                             "GPRMC,123519,A,4807.038,N,18000.001,W,022.4,084.4,230825,,",
+                             "GPRMC,123519,A,4860.000,N,01131.000,E,022.4,084.4,230825,,",
+                             "GPRMC,123519,A,99999999999.000,N,01131.000,E,022.4,084.4,230825,,",
+                             "GPRMC,123519,A,4807.038,,01131.000,E,022.4,084.4,230825,,"}) {
+        CAPTURE(body);
+        NmeaParser p;
+        REQUIRE(parse(p, checksummed(body)));
+        CHECK_FALSE(p.solution().fix_valid);
+    }
+
+    NmeaParser p;
+    REQUIRE(parse(p, checksummed("GPRMC,123519,A,9000.000,S,18000.000,W,022.4,084.4,230825,,")));
+    CHECK(p.solution().fix_valid);
+    CHECK(p.solution().lat_1e7 == -900000000);
+    CHECK(p.solution().lon_1e7 == -1800000000);
+}
+
+TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, never overflowed") {
+    NmeaParser p;
+    REQUIRE(parse(p, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,1000.1,084.4,230825,,")));
+    CHECK(p.solution().speed_mm_s == 0);
+    REQUIRE(parse(p, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,99999999999999999999.9,"
+                                 "084.4,230825,,")));
+    CHECK(p.solution().speed_mm_s == 0);
+
+    for (const char* altitude : {"100000.1", "-1000.1", "99999999999999999999.9"}) {
+        CAPTURE(altitude);
+        const std::string body =
+            std::string("GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,") + altitude + ",M,46.9,M,,";
+        REQUIRE(parse(p, checksummed(body.c_str())));
+        CHECK_FALSE(p.solution().alt_msl_valid);
+    }
+}
+
+// A refused speed kept the one before it, and the case beside it only ever fed a fresh parser.
+TEST_CASE("gnss: a refused speed after a good one is not the good one carried over") {
+    for (const char* speed : {"1000.1", "99999999999999999999.9", ""}) {
+        CAPTURE(speed);
+        NmeaParser p;
+        REQUIRE(
+            parse(p, checksummed("GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230825,,")));
+        REQUIRE(p.solution().speed_mm_s == 11524);
+        const std::string body =
+            std::string("GPRMC,123520,A,4807.038,N,01131.000,E,") + speed + ",084.4,230825,,";
+        REQUIRE(parse(p, checksummed(body.c_str())));
+        CHECK(p.solution().speed_mm_s == 0);
+    }
+}
+
+TEST_CASE("gnss: a date past January 2038 is still the right UTC second") {
+    NmeaParser p;
+    REQUIRE(parse(p, checksummed("GPRMC,000000,A,4807.038,N,01131.000,E,022.4,084.4,010140,,")));
+    CHECK(p.solution().utc_valid);
+    CHECK(p.solution().utc == 2208988800u);
 }
 
 // I, row "Date and jump sanity". An MTK-lineage receiver with no almanac reports
@@ -55,7 +143,7 @@ TEST_CASE("gnss: the MTK year-1980 date is refused, and so is anything before 20
     NmeaParser p;
     const char* lie = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230380,003.1,W*6F";
     REQUIRE(p.parse_line(lie, static_cast<int>(strlen(lie))));
-    CHECK(p.solution().is_fix);  // the receiver still claims a solution
+    CHECK(p.solution().fix_valid);  // the receiver still claims a solution
     CHECK_FALSE(p.solution().utc_valid);
     CHECK(p.solution().utc == 0);
 
@@ -159,7 +247,7 @@ TEST_CASE("gnss: GGA carries HDOP in hundredths") {
     CHECK(p.solution().hdop_e2 == 480);
 }
 
-// GSA is asked for to carry VDOP: G.1.12's vertical claim has no other source on this part.
+// GSA is asked for to carry VDOP: G.1.15's vertical claim has no other source on this part.
 TEST_CASE("gnss: GSA carries VDOP in hundredths") {
     NmeaParser p;
     const char* gsa = "$GPGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10*0D";

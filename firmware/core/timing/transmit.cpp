@@ -45,6 +45,11 @@ int Transmitter::instant_between(int first, int last, uint32_t utc) const {
 
 uint32_t Transmitter::ground_second() const { return mix(addr_) % kGroundPeriodS; }
 
+uint32_t Transmitter::callsign_second() const {
+    const uint32_t ground = ground_second();
+    return ground % 2 == 0 ? (ground + 2) % kCallsignPeriodS : ground - 1;
+}
+
 bool Transmitter::on_schedule(uint32_t utc, bool airborne) const {
     return utc % period_s(airborne) == (airborne ? 0u : ground_second());
 }
@@ -54,7 +59,7 @@ bool Transmitter::spoke_in(uint32_t utc) const { return ever_sent_ && utc == las
 bool Transmitter::named_in(uint32_t utc) const { return ever_named_ && utc == last_callsign_utc_; }
 
 bool Transmitter::on_callsign_schedule(uint32_t utc) const {
-    return utc % kCallsignPeriodS == ground_second();
+    return utc % kCallsignPeriodS == callsign_second();
 }
 
 int Transmitter::last_callsign_instant() {

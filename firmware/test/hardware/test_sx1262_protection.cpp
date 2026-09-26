@@ -58,7 +58,7 @@ TEST_CASE("radio: the PA clamp is widened out of reset, and only its own four bi
 TEST_CASE("radio: the GFSK modulation-quality bit is set before anything is transmitted") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) == 0);
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) != 0);
@@ -68,7 +68,7 @@ TEST_CASE("radio: the GFSK modulation-quality bit is set before anything is tran
 TEST_CASE("radio: a dwell reprogrammed on the other band keeps the modulation-quality bit") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868400000;
     cfg.gaussian_bt_e2 = 50;
@@ -80,9 +80,9 @@ TEST_CASE("radio: a dwell reprogrammed on the other band keeps the modulation-qu
 TEST_CASE("radio: waking straight after sleeping does not interrupt the configuration save") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     r.sleep();
     REQUIRE(chip.sleeping);
     REQUIRE(r.wake() == Status::Ok);
@@ -94,8 +94,8 @@ TEST_CASE("radio: waking straight after sleeping does not interrupt the configur
 TEST_CASE("radio: the model catches an NSS edge that arrives inside the save window") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     chip.select(true);
     chip.select(false);
     CHECK(chip.fault == models::Sx1262::Fault::None);
@@ -110,9 +110,9 @@ TEST_CASE("radio: the model catches an NSS edge that arrives inside the save win
 TEST_CASE("radio: the part is parked in standby before it is told to sleep") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     REQUIRE(chip.receiving);
 
     r.sleep();

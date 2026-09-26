@@ -59,6 +59,15 @@ TEST_CASE("extrapolate: a straight leg moves the fix along its own track") {
     CHECK(extrapolate(own, 0).lat_1e7 == own.lat_1e7);
 }
 
+TEST_CASE("extrapolate: flying east across the antimeridian comes out at 180 west") {
+    const model::OwnState own = flying(10.0, 179.9999, 60.0, 90.0);
+    const Prediction at = extrapolate(own, 1000);
+    REQUIRE(at.valid);
+    CHECK(at.lon_1e7 < -1799990000);
+    CHECK(prediction_residual_m(at, own.lat_1e7, own.lon_1e7, own.alt_mm) ==
+          doctest::Approx(60).epsilon(0.05));
+}
+
 // A neighbour is carried by the three things its burst states: position, ground speed and track.
 TEST_CASE("extrapolate: a reported target moves along its reported track") {
     const model::OwnState own = flying(48.5, 8.5, 40.0, 90.0);
@@ -187,7 +196,7 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
 }
 
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
-TEST_CASE("adsl: the transmitted position is the position at the instant transmitted") {
+TEST_CASE("adsl: the transmitted position is the position at the quarter second it names") {
     model::OwnState own{};
     own.fix_valid = true;
     own.lat_1e7 = 485000000;
@@ -197,27 +206,23 @@ TEST_CASE("adsl: the transmitted position is the position at the instant transmi
     own.track_cdeg = 9000;  // due east
     own.climb_mm_s = 2000;
     own.climb_valid = true;
+    own.vdop_e2 = 150;
     own.utc = 1000;  // 1000 % 15 == 10 s into the timestamp cycle
 
     AdslPacket at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
     CHECK(int(at_fix.TimeStamp) == 40);  // 10 s, quarter zero
 
-    // 600 ms later: the timestamp advances by two whole quarters and one that
-    // rounds down, and the position advances with it.
+    // A burst 600 ms later names the quarter at 500 ms, and the position goes to it.
     AdslPacket in_flight{};
     from_own(in_flight, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, 600, 600});
     CHECK(int(in_flight.TimeStamp) == 42);
     CHECK(in_flight.alt_m() == at_fix.alt_m() + 1);
     CHECK(in_flight.lat_1e7() == at_fix.lat_1e7());
 
-    // 30 m of easting at 50 m/s, inside the 2.4 m the longitude field quantises
-    // to at this latitude.
+    // 25 m of easting at 50 m/s over 500 ms, inside the 2.4 m the longitude field quantises to.
     const double east_m = (in_flight.lon_1e7() - at_fix.lon_1e7()) * 0.011132 * 0.6626;
-    CHECK(east_m == doctest::Approx(30.0).epsilon(0.1));
-    // Thirty metres is what the encoder used to put on air, every second, in
-    // the direction of travel, under a timestamp that claimed otherwise.
-    CHECK(east_m > 25.0);
+    CHECK(east_m == doctest::Approx(25.0).epsilon(0.1));
 }
 
 // The bound, and the side of it we chose: a gap the model cannot cover is not
@@ -242,8 +247,9 @@ TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix"
     CHECK(inside.lon_1e7() != at_fix.lon_1e7());
     CHECK(int(inside.TimeStamp) == timestamp_code(own.utc, bound));
 
+    const int32_t past = bound + static_cast<int32_t>(kTimeStampQuarterMs);
     AdslPacket beyond{};
-    from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, bound + 1, bound + 1});
+    from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, past, past});
     CHECK(beyond.lon_1e7() == at_fix.lon_1e7());
     CHECK(beyond.lat_1e7() == at_fix.lat_1e7());
     CHECK(int(beyond.TimeStamp) == int(at_fix.TimeStamp));

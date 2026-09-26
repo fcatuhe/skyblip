@@ -337,10 +337,10 @@ TEST_CASE("product: the self-test page names the part, not just the failure") {
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Gnss));
     Rig missing{kNoGnss};
-    missing.setup();
+    REQUIRE(missing.setup() == Status::Down);
 
     Rig whole;
-    whole.setup();
+    REQUIRE(whole.setup() == Status::Ok);
 
     // Row 1 is GNSS (products/skyblip_go/product.h::kBootParts). The two pages
     // differ there and nowhere else in that row's band.

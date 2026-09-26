@@ -4,6 +4,7 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
 
 namespace skyblip::go {
@@ -19,7 +20,8 @@ bool utc_dated(const bus::State& state) {
 // this one. A ground relay rebroadcasts everything it heard, us included, and
 // the table is where that is refused (core/traffic/table.h).
 Status TrafficService::setup() {
-    context_.state.traffic.set_own_address(context_.roles.device_addr);
+    context_.state.traffic.set_own_address(settings::kAddrTableSkyblip,
+                                           settings::air_address(context_.roles.device_addr));
     uplink_ = has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
     return Status::Ok;
 }

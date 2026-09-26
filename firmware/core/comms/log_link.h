@@ -26,7 +26,7 @@ struct LogRequest {
     // A bare list asks how many flights there are; a list with an index asks
     // about one of them. One command, one frame, either way.
     uint32_t index{0};
-    bool has_index{false};
+    bool index_valid{false};
     bool understood{false};
     const char* reason{nullptr};
 };

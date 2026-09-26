@@ -12,6 +12,7 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/nmea_out.h"
 #include "doctest/doctest.h"
 #include "ports/link.h"
@@ -84,6 +85,21 @@ TEST_CASE("nmea: relative geometry, target due north is +north, ~0 east") {
     CHECK(u_m == 200);
 }
 
+// Longitude was differenced raw, so a neighbour one meridian over was 40,000 km east and refused.
+TEST_CASE("nmea: a target across the antimeridian is metres away, not the width of the earth") {
+    auto own = own_at(0, 1799999000, 1000);
+    model::AircraftObs t{};
+    t.position_valid = true;
+    t.lat_1e7 = own.lat_1e7;
+    t.lon_1e7 = -1799999000;
+    t.alt_m = 1000;
+    int32_t n_m, e_m, u_m;
+    REQUIRE(relative_ned(own, t, n_m, e_m, u_m));
+    CHECK(n_m == 0);
+    // 0.0002 deg of longitude at the equator
+    CHECK(e_m == doctest::Approx(22).epsilon(0.05));
+}
+
 TEST_CASE("nmea: PFLAA carries id, relative pos, checksum") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObs t{};
@@ -131,6 +147,35 @@ TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's doe
     std::string unnamed(buf, n);
     CHECK(unnamed.find(",2,C5D804,") != std::string::npos);
     CHECK(checksum_ok(unnamed));
+}
+
+TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver accepts") {
+    auto own = own_at(481000000, 81000000, 1000);
+    model::AircraftObs t{};
+    t.position_valid = true;
+    t.addr = 0xC5D804;
+    t.addr_table = 0x06;
+    t.lat_1e7 = own.lat_1e7 + 100000;
+    t.lon_1e7 = own.lon_1e7;
+    t.alt_m = 1000;
+
+    for (int c = 1; c < 256; c++) {
+        AdslPacket p{};
+        from_own_callsign(p, 0x123456, 58, "D-KXYZ");
+        p.info_msg()[1] = static_cast<char>(c);
+        char name[AdslPacket::kInfoMsgBytes + 1] = {0};
+        if (callsign_of(p, name, sizeof(name)) == 0) continue;
+
+        CAPTURE(c);
+        char buf[128];
+        const int n = format_pflaa(buf, sizeof(buf), own, t, 0, name);
+        REQUIRE(n > 0);
+        const std::string s(buf, n);
+        CHECK(data_fields(s) == 11);
+        CHECK(s.find('$', 1) == std::string::npos);
+        CHECK(s.find('*') == s.rfind('*'));
+        CHECK(checksum_ok(s));
+    }
 }
 
 TEST_CASE("nmea: PFLAA returns 0 without own position") {
@@ -344,8 +389,8 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     widest.vario_cm_s = -2000000;
     widest.temperature_c = -2000;
     widest.battery_percent = 255;
-    widest.has_pressure = widest.has_alt = widest.has_vario = true;
-    widest.has_temperature = widest.has_battery = true;
+    widest.pressure_valid = widest.alt_valid = widest.vario_valid = true;
+    widest.temperature_valid = widest.battery_valid = true;
     const int lk8 = format_lk8ex1(buf, sizeof(buf), widest);
     CHECK(lk8 > 0);
     CHECK(lk8 <= comms::kSmallestSupportedPayload);
@@ -361,15 +406,15 @@ TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the c
     char buf[128];
     Lk8Ex1 v{};
     v.pressure_pa = 90000;
-    v.has_pressure = true;
+    v.pressure_valid = true;
     v.alt_m = 988;
-    v.has_alt = true;
+    v.alt_valid = true;
     v.vario_cm_s = -125;
-    v.has_vario = true;
+    v.vario_valid = true;
     v.temperature_c = -7;
-    v.has_temperature = true;
+    v.temperature_valid = true;
     v.battery_percent = 38;
-    v.has_battery = true;
+    v.battery_valid = true;
 
     const int n = format_lk8ex1(buf, sizeof(buf), v);
     const std::string s(buf, static_cast<size_t>(n));
@@ -389,7 +434,7 @@ TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the c
 TEST_CASE("nmea: LK8EX1 battery is a percentage plus 1000, never a bare percentage") {
     char buf[128];
     Lk8Ex1 v{};
-    v.has_battery = true;
+    v.battery_valid = true;
 
     v.battery_percent = 0;
     format_lk8ex1(buf, sizeof(buf), v);
@@ -427,19 +472,19 @@ TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defi
     // here rather than reading as a 999-metre climb on someone's vario.
     Lk8Ex1 v{};
     v.pressure_pa = 101325;
-    v.has_pressure = true;
+    v.pressure_valid = true;
     format_lk8ex1(buf, sizeof(buf), v);
     CHECK(std::string(buf).rfind("$LK8EX1,101325,99999,9999,99,999*", 0) == 0);
 
     v = Lk8Ex1{};
     v.alt_m = -300;
-    v.has_alt = true;
+    v.alt_valid = true;
     format_lk8ex1(buf, sizeof(buf), v);
     CHECK(std::string(buf).rfind("$LK8EX1,999999,-300,9999,99,999*", 0) == 0);
 
     v = Lk8Ex1{};
     v.vario_cm_s = 250;
-    v.has_vario = true;
+    v.vario_valid = true;
     format_lk8ex1(buf, sizeof(buf), v);
     CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,250,99,999*", 0) == 0);
 
@@ -447,13 +492,13 @@ TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defi
     // stops at 98 and this is the boundary that proves the two never collide.
     v = Lk8Ex1{};
     v.temperature_c = 21;
-    v.has_temperature = true;
+    v.temperature_valid = true;
     format_lk8ex1(buf, sizeof(buf), v);
     CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,9999,21,999*", 0) == 0);
 
     v = Lk8Ex1{};
     v.battery_percent = 92;
-    v.has_battery = true;
+    v.battery_valid = true;
     format_lk8ex1(buf, sizeof(buf), v);
     CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,9999,99,1092*", 0) == 0);
 }
@@ -465,7 +510,7 @@ TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defi
 TEST_CASE("nmea: LK8EX1 clamps every field short of its own 'not available' value") {
     char buf[128];
     Lk8Ex1 v{};
-    v.has_pressure = v.has_alt = v.has_vario = v.has_temperature = true;
+    v.pressure_valid = v.alt_valid = v.vario_valid = v.temperature_valid = true;
     v.pressure_pa = 999999;
     v.alt_m = 99999;
     v.vario_cm_s = 9999;

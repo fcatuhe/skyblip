@@ -319,6 +319,23 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     CHECK(rig.product.config().config().pending() == comms::Pending::None);
 }
 
+// A central that never exchanged its MTU once capped every reply, and silenced the app that asked.
+TEST_CASE("companion link: a reply is sized for the app that asked, not the narrowest link") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    taxi(rig, t, 20);
+
+    rig.raise_link(1);
+    rig.raise_link(2);
+    rig.platform.link().declare_payload_bytes(2, ports::kMinimumLinkPayload);
+    rig.send_from(1, "{\"cmd\":\"get\"}");
+    rig.run(t, t + 200);
+    REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
+    CHECK(rig.last_on(events::Endpoint::Config).size() > ports::kMinimumLinkPayload);
+    CHECK(rig.platform.link().refused_oversize == 0);
+}
+
 // The prompt on the glass belongs to the app that raised it, so the other phone
 // walking out of range must not answer it or take it away.
 TEST_CASE("companion link: a second app leaving does not cancel the holder's prompt") {

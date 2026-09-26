@@ -19,15 +19,15 @@ static Sx1262 make(models::Sx1262& f) { return Sx1262(f, f, f.busy_pin, f.reset_
 TEST_CASE("radio: the tuned channel is what the PLL word resolves back to") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     // Both ADS-L M-band channels, 200 kHz apart (SRD-860 issue 2 C.2).
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    r.configure_radio(cfg);
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz > 868199000);
     CHECK(chip.freq_hz < 868201000);
     cfg.freq_hz = 868400000;
-    r.configure_radio(cfg);
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz > 868399000);
     CHECK(chip.freq_hz < 868401000);
 }
@@ -35,9 +35,9 @@ TEST_CASE("radio: the tuned channel is what the PLL word resolves back to") {
 TEST_CASE("radio: carrier sense reads the level on the tuned channel") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     chip.rssi_dbm = -110;
     CHECK(r.rssi_inst() == -110);
     chip.rssi_dbm = -48;
@@ -47,9 +47,9 @@ TEST_CASE("radio: carrier sense reads the level on the tuned channel") {
 TEST_CASE("radio: an assessment interval is a run of reads, each answering for its own instant") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
 
     const int8_t levels[4] = {-112, -112, -44, -112};
     chip.set_rssi_sequence(levels, 4);
@@ -70,9 +70,9 @@ TEST_CASE("radio: an assessment interval is a run of reads, each answering for i
 TEST_CASE("radio: a delivered packet carries the level it arrived with") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, 4, /*crc_error=*/false, /*rssi=*/-73);
     uint8_t buf[8];
@@ -84,7 +84,7 @@ TEST_CASE("radio: a delivered packet carries the level it arrived with") {
 TEST_CASE("radio: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 kHz, unshaped") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
@@ -107,7 +107,7 @@ TEST_CASE("radio: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 
 TEST_CASE("radio: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 869525000;
     cfg.bitrate = protocol::kUplinkChipRateBps;
@@ -153,7 +153,7 @@ TEST_CASE("radio: a modem left on its reset defaults frames nothing off the air"
 TEST_CASE("radio: with no frequency trim the PLL word is exactly the channel asked for") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
     REQUIRE(r.configure_radio(cfg) == Status::Ok);
@@ -167,7 +167,7 @@ TEST_CASE("radio: with no frequency trim the PLL word is exactly the channel ask
 TEST_CASE("radio: a frequency trim moves the programmed carrier by its own ppm, both ways") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
 
@@ -203,7 +203,7 @@ TEST_CASE("radio: a trim past the band's own limit is clamped, not programmed") 
 
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
     cfg.freq_corr_e1_ppm = sx::kFreqTrimLimitTenthsPpm;

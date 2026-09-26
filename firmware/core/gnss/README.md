@@ -2,7 +2,7 @@
 
 A receiver produces a solution every second whether or not it can see the sky. A fix is a solution that survived `validity.h`. The two are different words here because they were the same word for a while, and a struct called `GnssFix` carrying `valid == false` is a fix that is not a fix: `nmea.h` parses `GnssSolution`, `FixValidity` judges it, and only what comes out the far side of that judgement is called a fix anywhere downstream.
 
-`GnssSolution::is_fix` is filled twice, and it means the same thing both times. The parser sets it from RMC status `A`, which is the receiver's own claim. `parts::L76k::poll` overwrites it with `FixValidity`'s verdict before publishing, which is ours: both sentences present, neither stale, a date that is not the MTK 1980 lie, and a position no aircraft could have flown to. The receiver's claim never reaches the bus.
+`GnssSolution::fix_valid` is filled twice, and it means the same thing both times. The parser sets it from RMC status `A`, which is the receiver's own claim. `parts::L76k::poll` overwrites it with `FixValidity`'s verdict before publishing, which is ours: both sentences present, neither stale, a date that is not the MTK 1980 lie, and a position no aircraft could have flown to. The receiver's claim never reaches the bus.
 
 ## How far a receiver with no fix has got
 

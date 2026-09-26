@@ -308,3 +308,76 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
     CHECK(cs.link_drops() == 1);
     CHECK(link.sent.empty());
 }
+
+// The notify share cut a report at its first refusal, and the phone waited on "more".
+TEST_CASE("comms: a report the link takes one frame at a time arrives whole and in order") {
+    timing::SlotTimingStats stats;
+    run_bench(stats);
+    go::Settings s = go::defaults();
+
+    platform::host::Link free_link;
+    free_link.raise_link(1);
+    free_link.declare_payload_bytes(kSmallestSupportedPayload);
+    go::SettingsStore store_free(s, kWidestAddr);
+    ConfigService on_free(free_link, store_free, nullptr, &stats);
+    on_free.on_rx(frame("{\"cmd\":\"timing\"}"));
+    REQUIRE(free_link.sent.size() > 1);
+
+    platform::host::Link busy;
+    busy.raise_link(1);
+    busy.declare_payload_bytes(kSmallestSupportedPayload);
+    busy.hold_after(1);
+    go::SettingsStore store_busy(s, kWidestAddr);
+    ConfigService on_busy(busy, store_busy, nullptr, &stats);
+    on_busy.on_rx(frame("{\"cmd\":\"timing\"}"));
+    CHECK(busy.sent.size() == 1);
+    CHECK(on_busy.replying());
+    for (uint32_t t = 10; t < 1000 && on_busy.replying(); t += 10) {
+        busy.serve();
+        on_busy.resume_replies(t);
+    }
+    CHECK_FALSE(on_busy.replying());
+    CHECK(joined(busy) == joined(free_link));
+    CHECK(on_busy.link_drops() == 0);
+}
+
+TEST_CASE("comms: a reply the link refused goes out once the central is served, not dropped") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.hold_after(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store(s, kWidestAddr);
+    ConfigService cs(link, store);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"get\"}"));
+    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    REQUIRE(link.sent.size() == 1);
+    CHECK(cs.replying());
+
+    cs.resume_replies(10);
+    CHECK(link.sent.size() == 1);
+    link.serve();
+    cs.resume_replies(20);
+    REQUIRE(link.sent.size() == 2);
+    CHECK(link.last().bytes.find("\"cmd\":\"status\"") != std::string::npos);
+    CHECK_FALSE(cs.replying());
+    CHECK(cs.link_drops() == 0);
+}
+
+TEST_CASE("comms: a central that never takes its reply loses it, counted, and frees the service") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.hold_after(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store(s, kWidestAddr);
+    ConfigService cs(link, store);
+    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.on_rx(frame("{\"cmd\":\"get\"}"));
+    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    cs.resume_replies(ports::kReplyHoldMs - 1);
+    CHECK(cs.replying());
+    cs.resume_replies(ports::kReplyHoldMs);
+    CHECK_FALSE(cs.replying());
+    CHECK(cs.link_drops() == 1);
+    CHECK(link.sent.size() == 1);
+}

@@ -31,7 +31,7 @@ int Reader::value_offset(const char* key) const {
         if (i < len_ && data_[i] == ':') {
             i++;
             while (i < len_ && is_ws(data_[i])) i++;
-            if (match) return i;
+            if (match) return i < len_ ? i : -1;
         }
     }
     return -1;
@@ -40,6 +40,20 @@ int Reader::value_offset(const char* key) const {
 bool Reader::has(const char* key) const { return value_offset(key) >= 0; }
 
 bool Reader::get_int(const char* key, long& out) const {
+    int64_t v = 0;
+    if (!get_number(key, v) || v < INT32_MIN || v > INT32_MAX) return false;
+    out = static_cast<long>(v);
+    return true;
+}
+
+bool Reader::get_uint(const char* key, uint32_t& out) const {
+    int64_t v = 0;
+    if (!get_number(key, v) || v < 0 || v > UINT32_MAX) return false;
+    out = static_cast<uint32_t>(v);
+    return true;
+}
+
+bool Reader::get_number(const char* key, int64_t& out) const {
     int o = value_offset(key);
     if (o < 0) return false;
     bool neg = false;
@@ -48,8 +62,11 @@ bool Reader::get_int(const char* key, long& out) const {
         o++;
     }
     if (o >= len_ || data_[o] < '0' || data_[o] > '9') return false;
-    long v = 0;
-    while (o < len_ && data_[o] >= '0' && data_[o] <= '9') v = v * 10 + (data_[o++] - '0');
+    int64_t v = 0;
+    while (o < len_ && data_[o] >= '0' && data_[o] <= '9') {
+        v = v * 10 + (data_[o++] - '0');
+        if (v > UINT32_MAX) return false;
+    }
     out = neg ? -v : v;
     return true;
 }
@@ -100,11 +117,11 @@ void Writer::raw_str(const char* s) {
     }
     buf_[n_++] = '"';
 }
-void Writer::kv_int(const char* key, long v) {
-    char tmp[16];
+void Writer::kv_int(const char* key, int64_t v) {
+    char tmp[20];
     int t = 0;
     bool neg = v < 0;
-    unsigned long uv = neg ? static_cast<unsigned long>(-v) : static_cast<unsigned long>(v);
+    uint64_t uv = neg ? 0 - static_cast<uint64_t>(v) : static_cast<uint64_t>(v);
     do {
         tmp[t++] = static_cast<char>('0' + uv % 10);
         uv /= 10;

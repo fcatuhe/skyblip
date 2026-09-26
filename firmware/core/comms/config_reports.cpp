@@ -1,6 +1,8 @@
 #include "core/comms/config.h"
 #include "core/comms/timing_report.h"
 #include "core/util/json_min.h"
+#include "core/util/span.h"
+#include "ports/link.h"
 
 namespace skyblip::comms {
 
@@ -37,7 +39,7 @@ void ConfigService::send_status() {
         status_push_due_ = false;
         return;
     }
-    status_push_due_ = reply(buf, len) == Status::WouldBlock;
+    (void)reply(buf, len);
 }
 
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
@@ -62,20 +64,7 @@ void ConfigService::send_timing() {
         ack(false, "no_stats");
         return;
     }
-    TimingReport report(*timing_stats_);
-    if (!report.fits(payload())) {
-        diag_.link_drops++;
-        return;
-    }
-    char buf[kTimingFrameCap];
-    while (!report.exhausted()) {
-        const int len = report.next_frame(payload(), buf, static_cast<int>(sizeof(buf)));
-        if (len <= 0) {
-            diag_.link_drops++;
-            return;
-        }
-        if (reply(buf, len) != Status::Ok) return;
-    }
+    start_report(timing_, kTimingFrameCap, *timing_stats_);
 }
 
 // The durable-write half of the same bench: the settings writes the device made,
@@ -105,7 +94,7 @@ void ConfigService::send_flash() {
     w.kv_int("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
     w.kv_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kMaxDeferMs));
     w.finish();
-    reply(buf);
+    (void)reply(buf);
 }
 
 // The radio's half of the same bench, still its own question rather than four
@@ -114,8 +103,8 @@ void ConfigService::send_flash() {
 // case. A status push that vanished whenever a unit was hot AND refusing packets
 // would be the exact failure the payload ceiling exists to prevent.
 void ConfigService::send_radio() {
-    DiagnosticsReport report(diag_, "radio", DiagnosticsReport::Group::Radio);
-    send_report(report);
+    start_report(report_, DiagnosticsReport::kFrameCap, diag_, "radio",
+                 DiagnosticsReport::Group::Radio);
 }
 
 void ConfigService::send_update(uint16_t session_id) {
@@ -133,7 +122,7 @@ void ConfigService::send_update(uint16_t session_id) {
     }
     w.kv_bool("swap_powered", swap_powered());
     const int len = w.finish();
-    reply_to(session_id, buf, len);
+    (void)reply_to(session_id, buf, len);
 }
 
 // A whole dump nobody has collected is a dump of zeros, and zeros here read as a
@@ -148,24 +137,55 @@ void ConfigService::send_diagnostics() {
         ack(false, "no_stats");
         return;
     }
-    DiagnosticsReport report(diag_, "diag");
-    send_report(report);
+    start_report(report_, DiagnosticsReport::kFrameCap, diag_, "diag");
 }
 
-void ConfigService::send_report(DiagnosticsReport& report) {
-    if (!report.fits(payload())) {
+template <class Report, class... Args>
+void ConfigService::start_report(std::optional<Report>& report, int frame_cap,
+                                 const Args&... args) {
+    report_payload_ = payload_to(claim_.holder());
+    report_frame_cap_ = frame_cap;
+    if (!report.emplace(args...).fits(report_payload_)) {
         diag_.link_drops++;
+        report.reset();
         return;
     }
-    char buf[DiagnosticsReport::kFrameCap];
-    while (!report.exhausted()) {
-        const int len = report.next_frame(payload(), buf, static_cast<int>(sizeof(buf)));
+    continue_report(report);
+}
+
+// INFO: fc 25sep26 a frame held for the link still counts as sent, so the next one follows it
+template <class Report>
+void ConfigService::continue_report(std::optional<Report>& report) {
+    char buf[kHeldFrameCap];
+    while (report && held_len_ == 0) {
+        const int len = report->next_frame(report_payload_, buf, report_frame_cap_);
         if (len <= 0) {
             diag_.link_drops++;
+            report.reset();
             return;
         }
-        if (reply(buf, len) != Status::Ok) return;
+        const Status sent = reply(buf, len);
+        if (report->exhausted() || (sent != Status::Ok && sent != Status::WouldBlock))
+            report.reset();
     }
+}
+
+void ConfigService::resume_replies(uint32_t now_ms) {
+    now_ms_ = now_ms;
+    if (held_len_ > 0) {
+        const Status sent = link_.send_to(
+            held_to_, events::Endpoint::Config,
+            ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
+        if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs) return;
+        held_len_ = 0;
+        if (!is_ok(sent)) {
+            diag_.link_drops++;
+            drop_replies();
+            return;
+        }
+    }
+    continue_report(report_);
+    continue_report(timing_);
 }
 
 }  // namespace skyblip::comms

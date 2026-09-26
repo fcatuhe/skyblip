@@ -37,6 +37,7 @@ class NullLink : public Link {
 
 class NullKvStore : public KvStore {
    public:
+    bool ready() const override { return false; }
     Status read(const char*, uint8_t*, size_t, size_t&) override { return Status::NotFound; }
     Status write(const char*, const uint8_t*, size_t) override { return Status::Down; }
     Status erase(const char*) override { return Status::Ok; }

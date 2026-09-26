@@ -70,6 +70,10 @@ class NmeaService : public runtime::Service {
     // sentences, and checked at the point of use rather than assumed.
     static constexpr int kSentenceBytesCap = 128;
 
+    // PFLAU, RMC, GGA, PGRMZ and LK8EX1, then the rotation's targets.
+    static constexpr int kPassSentencesMax = 5 + kTargetsPerPass;
+    static constexpr int kPassBytesCap = kPassSentencesMax * kSentenceBytesCap;
+
     NmeaService(runtime::Context& context, Feature declared, const comms::ConfigService& config)
         : runtime::Service(context), config_(config), declared_(declared) {}
 
@@ -90,19 +94,28 @@ class NmeaService : public runtime::Service {
     void emit_vario_and_battery();
     void emit_targets(uint32_t now_ms);
     void write(const char* bytes, int len);
-    void flush();
+    void drain();
+    void abandon_pass();
+
+    // Where the rotation resumes once the pass has gone out up to `end`.
+    struct Resume {
+        int end;
+        int cursor;
+    };
 
     const comms::ConfigService& config_;
-    char frame_[kFrameBytesCap]{};
+    char pass_[kPassBytesCap]{};
     char sentence_[kSentenceBytesCap]{};
+    Resume resumes_[kTargetsPerPass]{};
+    int resume_count_{0};
+    int pass_len_{0};
+    int pass_sent_{0};
     uint32_t last_pass_ms_{0};
     uint32_t link_drops_{0};
     int payload_{ports::kMinimumLinkPayload};
-    int frame_len_{0};
     // Where the rotation resumes. It advances only past a target that actually
     // went out, so a pass cut short by a refusing link resends its tail first.
     int cursor_{0};
-    bool stalled_{false};
     bool passed_once_{false};
     const Feature declared_;
     bool enabled_{false};

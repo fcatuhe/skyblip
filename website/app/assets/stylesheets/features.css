@@ -58,7 +58,7 @@
     font-size: var(--text-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--quiet);
+    color: var(--quiet-text);
     margin-block-start: var(--space-2xs);
   }
 

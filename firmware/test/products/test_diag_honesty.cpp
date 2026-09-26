@@ -47,7 +47,7 @@ struct ServiceRig {
     // A receiver holding station: each solution predicts the next exactly, so the settle converges.
     void solve(uint32_t now_ms) {
         gnss::GnssSolution fix{};
-        fix.is_fix = true;
+        fix.fix_valid = true;
         fix.utc_valid = true;
         fix.utc = kUtc + now_ms / 1000;
         fix.lat_1e7 = 485000000;

@@ -70,7 +70,7 @@ WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
 # ~30 s every save; this makes the edit->reload loop a couple of seconds).
 WEB_BUILD := $(BUILD)/web
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC))
-WEB_CXXFLAGS := -std=c++17 -O2 -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
+WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
 .PHONY: test test-sanitize all clean simulator browser watch tidy
 all: test
