@@ -48,29 +48,7 @@ static_assert(kImplausibleFloorMv < kCutoffMv,
 // src/main.cpp:517-532 (T_Echo_StayOffOnChargerWake) and SoftRF-lyusupov
 // src/platform/nRF52.cpp:944-951.
 //
-// INFO: fc 05aug26 CHARGE MODE WAS CONSIDERED AND REFUSED, for now.
-// SoftRF-moshe-braner offers one instead of sleeping (src/platform/nRF52.cpp:
-// 2512-2560): beep the battery level out of the buzzer, then sleep. It is a
-// better answer to the question a pilot actually asks - "is it charging?" - and
-// on this hardware the e-paper holds its last image with the rails down, so an
-// off device and a charging device look identical (item F of the same spec). It
-// is not implemented here, and the reason is not cost:
-//
-//   1. The audible half would be the only alive-and-charging indicator on the
-//      device, and item F is still open and asks for the state-to-indicator
-//      mapping to be ONE table in core/, the charging case included. A buzzer
-//      ladder invented in the wake path would be a second indicator vocabulary
-//      that item F would then have to unpick.
-//   2. What it would beep is not yet trustworthy. The gauge medians three
-//      samples before it says anything (core/power/battery.h) and the per-unit
-//      trim (item H) is a settings value, so an honest level is available after
-//      the store is up and three samples in - which is most of a boot, on every
-//      cable wiggle in a flight bag. The bag is the case this item exists for.
-//   3. Refusing the boot is the whole of the P1 finding and it is complete on its
-//      own. Charge mode is an addition to it, not an alternative: BootPath gains
-//      a third value, the rule below is untouched, and the sleep path stays.
-//
-// So: sleep again, and when item F lands its table, add the announcement.
+// INFO: fc 05aug26 charge mode was considered and refused: README.md
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);
 
 ButtonWake button_wake_after_refusal(const BootCell& cell);

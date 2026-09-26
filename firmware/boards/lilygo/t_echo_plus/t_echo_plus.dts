@@ -643,8 +643,9 @@ zephyr_udc0: &usbd {
  * The second retention byte, and it is the application's alone: the factory
  * bootloader reads GPREGRET and never this one. It survives SYSTEM OFF, which is
  * the whole reason it is used - it carries what the e-paper is wearing while the
- * rails are down, so a refused boot knows whether it owes the glass a frame
- * (core/power/README.md).
+ * rails are down, so a refused boot knows whether it owes the glass a frame, and
+ * whether the unit last went dark on a flat cell, so the boot that runs can say
+ * so (core/power/README.md).
  */
 &gpregret2 {
 	glass_retention: retention@0 {

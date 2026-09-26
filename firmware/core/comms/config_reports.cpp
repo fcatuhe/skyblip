@@ -6,26 +6,16 @@
 
 namespace skyblip::comms {
 
-// INFO: fc 04aug26 Sized to fit the narrowest phone in the field, at its worst
-// case, by carrying state and nothing else: the device address and the callsign
-// left this frame for the "config" reply that already answers them, because
-// duplicating identity in the one frame that gets pushed unsolicited is what put
-// it over an iPhone's 182 bytes. The buffer is the limit itself, so a field added
-// later cannot quietly overflow it - the writer leaves the field out whole and
-// overflowed() refuses the frame instead.
+// INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
 int ConfigService::format_status(char* buf, int cap) {
     json::Writer w(buf, cap);
     w.kv_str("cmd", "status");
-    w.kv_str("reset", power::to_string(diag_.reset));
     w.kv_str("flight", flight_name(flight_));
     w.kv_bool("upload", upload_allowed());
-    w.kv_int("battery_percent", static_cast<long>(diag_.battery.percent));
-    w.kv_bool("battery_valid", diag_.battery.valid);
+    if (diag_.battery.valid) w.kv_int("battery_percent", static_cast<long>(diag_.battery.percent));
     w.kv_bool("charging", diag_.battery.charging);
     w.kv_str("power_level", power::to_string(diag_.level));
-    // Last, and only when a reading exists. Whole degrees, rounded by the one
-    // rule the dump uses too (core/comms/diagnostics.h): a support case must not
-    // read a different temperature depending on which surface answered it.
+    w.kv_bool("went_dark_flat", went_dark_flat_);
     if (diag_.die_valid) w.kv_int("die_temp_c", whole_celsius(diag_.die_decicelsius));
     const int len = w.finish();
     return w.overflowed() ? 0 : len;

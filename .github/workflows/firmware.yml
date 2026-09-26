@@ -80,6 +80,10 @@ jobs:
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
         run: python3 scripts/check_tuning_names.py
+      # The status frame is pushed to phones unasked, and its schema is what a
+      # companion app pins: a key renamed, reordered or dropped must fail here.
+      - name: status frame matches its schema
+        run: python3 scripts/check_status_schema.py
       # All that stands between a partition edit and an install that erases the
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards
