@@ -8,7 +8,9 @@
 using namespace skyblip;
 using namespace skyblip::parts;
 
-static Sx1262 make(models::Sx1262& f) { return Sx1262(f, f, f.busy_pin, f.reset_pin, f.dio1_pin); }
+static Sx1262 make(models::Sx1262& f) {
+    return Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
+}
 
 TEST_CASE("radio: SetPaConfig widens the current limit to 140 mA and the driver takes it back") {
     models::Sx1262 chip;
@@ -91,19 +93,31 @@ TEST_CASE("radio: waking straight after sleeping does not interrupt the configur
     CHECK(chip.faults == 0);
 }
 
-TEST_CASE("radio: the model catches an NSS edge that arrives inside the save window") {
+// DS 13.1.2, as a literal: a constant compared with itself passes at any value.
+TEST_CASE("radio: the configuration save is given the datasheet's 500 us before the wake") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    chip.select(true);
-    chip.select(false);
-    CHECK(chip.fault == models::Sx1262::Fault::None);
-
     r.sleep();
-    chip.sleep_settle_spins = 0;
-    chip.select(true);
-    CHECK(chip.fault == models::Sx1262::Fault::SpiBeforeSleepSettled);
+    REQUIRE(r.wake() == Status::Ok);
+    CHECK(chip.slept_us >= 500);
+    CHECK(chip.fault == models::Sx1262::Fault::None);
+}
+
+TEST_CASE("radio: an NSS edge 499 us after SetSleep interrupts the save, 500 us does not") {
+    const uint8_t sleep[2] = {sx::kSetSleep, sx::kSleepWarmStartNoRtc};
+    for (const uint32_t waited_us : {499u, 500u}) {
+        models::Sx1262 chip;
+        chip.standby = true;
+        chip.select(true);
+        chip.transfer(sleep, nullptr, sizeof(sleep));
+        chip.select(false);
+        chip.busy_wait_us(waited_us);
+        chip.select(true);
+        CHECK(chip.wakes == 1);
+        CHECK((chip.fault == models::Sx1262::Fault::SpiBeforeSleepSettled) == (waited_us < 500));
+    }
 }
 
 // DS 13.1.1: SetSleep is STDBY-only, and the dwell that just ended left the part receiving.
