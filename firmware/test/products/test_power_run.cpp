@@ -1,4 +1,4 @@
-// A power run end to end: the pair it closes on, whatever takes the device down.
+// A power run end to end: the span it quotes while running, and the pair it closes on at park.
 #include <cstddef>
 #include <vector>
 
@@ -44,7 +44,43 @@ bool same_instant(const diag::Record& a, const diag::Record& b) {
     return a.at_s == b.at_s && a.into_ms == b.into_ms;
 }
 
+uint32_t quoted_keeps_s(Rig& rig) { return rig.state().capture.keeps_s; }
+
+uint32_t nominal_keeps_s(Rig& rig) {
+    return rig.product.capture().keeps_s(diag::Profile::PowerRun);
+}
+
 }  // namespace
+
+// The Boot and Config a session opens with are not a rate: counted as one, they cut KEEPS sixfold.
+TEST_CASE("power run: before its first pair lands, the span quoted is the nominal one") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    taxi(rig, t, 3);
+    arm_power_run(rig, t);
+    rig.run(t, t + 5000);
+    t += 5000;
+
+    CHECK(rig.product.capture().records_written() == 2);
+    CHECK(quoted_keeps_s(rig) == nominal_keeps_s(rig));
+}
+
+TEST_CASE("power run: once pairs land, the span quoted is the one they are landing at") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    taxi(rig, t, 3);
+    arm_power_run(rig, t);
+
+    for (uint32_t elapsed_s = 7; elapsed_s <= 91; elapsed_s += 7) {
+        rig.run(t, t + 7000);
+        t += 7000;
+        // the first pair reaches the flash within a second of 30 s after the session opened
+        CHECK(quoted_keeps_s(rig) >= nominal_keeps_s(rig) * 29 / 30);
+        CHECK(quoted_keeps_s(rig) <= nominal_keeps_s(rig) * 31 / 30);
+    }
+}
 
 // Cutoff stops the service loop on the pass the level turns: the 30 s gate never opens again.
 TEST_CASE("park: a power run taken down by its cell ends on a cutoff power record, then duty") {
