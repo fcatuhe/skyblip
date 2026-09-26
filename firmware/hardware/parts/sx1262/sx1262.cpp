@@ -86,6 +86,8 @@ Status Sx1262::probe() {
 }
 
 Status Sx1262::begin() {
+    brought_up_ = false;
+    configured_ = false;
     const Status reset = reset_to_standby();
     if (reset != Status::Ok) return reset;
     const Status link = verify_link();
@@ -124,9 +126,10 @@ Status Sx1262::begin() {
     configure_rx_gain();
     configure_tx_clamp();
 
-    configured_ = false;
     mode_ = RadioMode::Standby;
-    return check_device_errors();
+    const Status errors = check_device_errors();
+    brought_up_ = errors == Status::Ok;
+    return errors;
 }
 
 void Sx1262::clear_device_errors() {
@@ -265,6 +268,7 @@ void Sx1262::configure_frame(const RadioConfig& cfg) {
 // commands, and the previous dwell leaves the chip in continuous RX. Bracket the
 // whole sequence and hand the caller back the mode it had.
 Status Sx1262::configure_radio(const RadioConfig& cfg) {
+    if (!brought_up_) return Status::Down;
     const RadioMode was = mode_;
     if (was != RadioMode::Standby && enter_standby() != Status::Ok) return Status::Timeout;
     cfg_ = cfg;

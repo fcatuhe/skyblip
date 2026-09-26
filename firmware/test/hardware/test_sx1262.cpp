@@ -214,6 +214,30 @@ TEST_CASE("radio: health watchdog reinitialises after no-RX timeout (no-RX-in-N 
     CHECK_FALSE(r.service(29000, 30000));
 }
 
+TEST_CASE("radio: a reinit that failed after the reset keys nothing until one succeeds") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+    chip.miso_dead = true;
+    REQUIRE(r.service(31000, 30000));
+    chip.miso_dead = false;
+
+    CHECK(r.configure_radio(RadioConfig{}) == Status::Down);
+    const uint8_t frame[4] = {1, 2, 3, 4};
+    CHECK(r.transmit(frame, sizeof(frame)) == Status::Invalid);
+    CHECK(r.start_receive() == Status::Invalid);
+    CHECK_FALSE(chip.tx_pending);
+    CHECK_FALSE(chip.receiving);
+
+    REQUIRE(r.service(30000, 30000));
+    CHECK(r.reinit_count() == 2);
+    CHECK(r.mode() == RadioMode::Rx);
+    CHECK(chip.tcxo_powered);
+    CHECK(r.configure_radio(RadioConfig{}) == Status::Ok);
+}
+
 // EN 300 220-2 V3.3.1 §4.6.3.2 wants the assessment averaged over an interval,
 // and this part has nothing to average it with: GetRssiInst is an instant by
 // definition (DS 13.5.2) and channel activity detection answers for a LoRa
