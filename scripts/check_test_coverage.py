@@ -82,7 +82,7 @@ def main():
         # The point of a part test is the driver running against its own model,
         # so a file that includes neither is not one.
         for header in (f"hardware/parts/{part}/{part}.h", f"hardware/parts/{part}/model.h"):
-            if header not in body:
+            if f'#include "{header}"' not in body:
                 missing.append(f"{PART_TEST_DIR}/test_{part}.cpp (does not include {header})")
 
     misplaced = strays()
