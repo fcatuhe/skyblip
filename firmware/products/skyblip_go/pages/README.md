@@ -289,7 +289,7 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 | `HAPTIC` | the DRV2605 waveform driver at 0x5A, or `PIN` for a motor driven straight off a pin |
 | `LAMP` | the RGB status LEDs, the only thing that says "alive" with the glass parked |
 | `LINK` | Bluetooth LE, the connection a phone or a tablet arrives over |
-| `STORAGE` | the settings in internal NVS and the flight log on the external SPI NOR |
+| `STORAGE` | the settings in internal NVS and the flight log on the external SPI NOR, and `DEFAULTS` after the parts when a stored settings blob could not be read (`../README.md`) |
 | `DFU` | MCUboot, the path a firmware update is written through |
 
 Required first, then what the device senses with, then what it says things with, then what it talks and remembers through. `RADIO` and `GNSS` are the two the product cannot fly without (`kRequired`), which is why they are at the top and why only they can read `FAIL`.
@@ -412,6 +412,6 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `sats` | what is above the antenna, how loud, and which satellites solved |
 | `nearby` | every emitter placed, nearest first: who, how far, how far above |
 | `menu` | the other side of a page: what it is made of, and what a pilot can change |
-| `confirm`, `installing` | the two moments that are not pages: being asked, being written |
+| `confirm`, `installing`, `recovery` | the three moments that are not pages: being asked, being written, being handed to the USB bootloader |
 
 `go::Page` lists the four the pad walks first - `Radar`, `Nearby`, `SixPack`, `GMeter` - and `go::kWalkedPages` is where the walk ends and the pages opened by name begin. All four always stand: there was a `page_mask` that could hide pages from the rotation, and with six of them on one walk it was worth having. Four is already the short list it was meant to produce, and two of them are doors - the radar is home, the nearby menu is how every page off the walk is opened - so a mask could only have made the device harder to get around. It left the settings, the JSON and the schema together (`../README.md`). A long touch of the pad goes back to `Radar` from anywhere, once no alarm is standing to be silenced first. Every page arrives the same way, through one call that takes the page by name, and that call draws what it is given: a page asked for while it is already on the glass still goes through the wipe, because the pilot holding the pad at home is asking for exactly that black (`../input/README.md`). The one place that must not spend it is the alarm taking the glass, which asks for the radar only when the radar is not already there.

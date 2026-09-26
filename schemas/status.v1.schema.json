@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://skyblip.eu/schemas/status.v1.schema.json",
+  "title": "skyBlip device status (v1)",
+  "description": "The answer to {\"cmd\":\"status\"} on the config endpoint, and the one frame the device also sends without being asked: while a link is up, a charging flip, a change of power level or a five-percent step of the state of charge pushes it to every subscribed central. One flat object in one notification, sized against the 182-byte payload the narrowest phone in the field carries with every key at its widest (154 bytes, pinned byte for byte in firmware/test/products/test_comms_report.cpp). It carries what a pilot's screen shows and nothing a bench reads: why the device came up is 'reset' and whether a gauge is fitted is 'valid' in diagnostics.v1, the address and the callsign are config.v1's. A key with no reading behind it is ABSENT, never a zero. Keys arrive in the order listed here, which scripts/check_status_schema.py holds the firmware to (firmware/core/comms/config_reports.cpp). The producer (firmware) owns this schema; consumers pin a version.",
+  "type": "object",
+  "required": ["cmd", "flight", "upload", "charging", "power_level", "went_dark_flat"],
+  "properties": {
+    "cmd": {"type": "string", "const": "status"},
+    "flight": {"type": "string", "enum": ["ground", "airborne", "unknown"],
+               "description": "The confirmed flight state. Every settings change and upload is refused unless this reads ground, so 'unknown' refuses too"},
+    "upload": {"type": "boolean",
+               "description": "A firmware upload window is open: granted by the confirmation gesture on the device, true only on the ground, closed for good by a takeoff"},
+    "battery_percent": {"type": "integer", "minimum": 0, "maximum": 100,
+                        "description": "State of charge, 0 where the device takes itself down rather than where a datasheet calls the cell empty, read on the charging curve while the charger holds the rail. ABSENT until the gauge has a sample, and for ever on a board with no divider"},
+    "charging": {"type": "boolean",
+                 "description": "The charger is holding the rail"},
+    "power_level": {"type": "string", "enum": ["OK", "LOW", "CUTOFF", "--"],
+                    "description": "What core/power's cutoff rule made of the same samples. LOW refuses every durable write but the flight record, CUTOFF is the device taking itself down. '--' is Unknown: no believable reading yet"},
+    "went_dark_flat": {"type": "boolean",
+                       "description": "The last time this unit went dark it was for a flat cell: the cutoff took it down, or a switch-on was refused below the boot lockout. The glass says FLAT BATTERY until a charger wakes the unit, and this outlives that frame: true for the whole of the one boot that followed, false from the boot after. The self-test page prints the same fact as WAS FLAT"},
+    "die_temp_c": {"type": "integer", "minimum": -50, "maximum": 125,
+                   "description": "Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading younger than 30 seconds exists, because 0.0 C is a plausible hangar morning. Same key and same value as diagnostics.v1's"}
+  },
+  "additionalProperties": false
+}

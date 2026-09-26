@@ -10,6 +10,7 @@
 //
 // A link model and scripted JSON, no device: the product's own two ends of the
 // range are walked in test/products/test_flight_log.cpp.
+#include <cstdint>
 #include <cstring>
 #include <string>
 
@@ -61,12 +62,12 @@ power::BatteryState full_battery() {
     return b;
 }
 
-// A device at its most talkative: the longest reset reason there is, the longest
-// flight word, the longest power level, a full cell.
+// A device at its most talkative: the longest flight word, the longest power
+// level, a full cell, and the widest temperature an int16 of tenths can print.
 void make_worst_case(ConfigService& cs) {
-    cs.set_reset_reason(power::ResetReason::Lockup);
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.set_battery_state(full_battery(), power::PowerLevel::Cutoff);
+    cs.set_die_temperature(INT16_MIN, true);
 }
 
 // Two weeks of bench: one PPS edge a second puts a bucket into seven figures,
@@ -139,16 +140,8 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     CHECK(cs.link_drops() == 0);
 
     // Every field whole. json::Writer leaves a field out rather than cutting it,
-    // so "fits" has to mean all of them and not merely valid JSON.
-    CHECK(body.find("\"cmd\":\"status\"") != std::string::npos);
-    CHECK(body.find("\"reset\":\"CPU LOCKUP\"") != std::string::npos);
-    CHECK(body.find("\"flight\":\"airborne\"") != std::string::npos);
-    CHECK(body.find("\"upload\":false") != std::string::npos);
-    CHECK(body.find("\"battery_percent\":100") != std::string::npos);
-    CHECK(body.find("\"battery_valid\":true") != std::string::npos);
-    CHECK(body.find("\"charging\":true") != std::string::npos);
-    CHECK(body.find("\"power_level\":\"CUTOFF\"") != std::string::npos);
-    CHECK(body.back() == '}');
+    // so "fits" has to mean the last key is there and not merely valid JSON.
+    CHECK(body.find("\"die_temp_c\":-3277}") != std::string::npos);
 }
 
 TEST_CASE("comms: the config reply fits it too, as one flat object instead of an escaped one") {
@@ -176,6 +169,28 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
+}
+
+TEST_CASE("comms: the update report fits it too, widest versions and a settings fallback") {
+    platform::host::Link link;
+    link.raise_link(1);
+    link.raise_link(1);
+    link.declare_payload_bytes(kSmallestSupportedPayload);
+    go::Settings s = widest_settings();
+    go::SettingsStore store_cs(s, kWidestAddr);
+    ConfigService cs(link, store_cs);
+    constexpr ports::ImageVersion kWidest{255, 255, 65535, 4294967295u};
+    cs.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{kWidest, kWidest});
+    cs.set_settings_fallback(settings::Fallback::Defaults);
+
+    cs.on_rx(frame("{\"cmd\":\"update\"}"));
+    REQUIRE(link.sent.size() == 1);
+    const std::string body = link.last().bytes;
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.find("\"from\":\"255.255.65535+4294967295\"") != std::string::npos);
+    CHECK(body.find("\"to\":\"255.255.65535+4294967295\"") != std::string::npos);
+    CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
+    CHECK(body.find("\"swap_powered\"") != std::string::npos);
 }
 
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {

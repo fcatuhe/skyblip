@@ -24,7 +24,7 @@ The update is two channels, and the device refuses the usual mcumgr sequence on 
 
 1. `{"cmd":"dfu"}` on the config endpoint. The device answers `confirm_dfu` and asks on its glass; two presses answer `{"ack":true,"reason":"dfu"}` and open a ten-minute upload window, on the ground only.
 2. The image over MCUmgr/SMP, image group, upload command: the only SMP write the device accepts, and only inside that window. `smp.js` sends SMP v2 headers, so the image group's own error codes come back (`err`) rather than the generic `rc` the original protocol folds them into; a refusal by the command hook is still a bare `rc` 11.
-3. `{"cmd":"apply"}`, `confirm_apply`, two presses again. An SMP `image state` write or `os reset` is refused, so none is sent.
+3. `{"cmd":"apply"}`, `confirm_apply`, two presses again. The device swaps only an image it watched arrive whole since the window opened: it refuses `nothing_staged` for an empty slot, `upload_unfinished` for an upload that stopped short or came before a restart, and, as `dfu` does, a cell too low to survive the swap. An SMP `image state` write or `os reset` is refused, so none is sent.
 4. The device paints INSTALLING, reboots into the swap, and the link drops. On the next connect it pushes the `update` frame unasked whenever the image is not confirmed, or (with #90) its settings fell back, and `update.js` reads that frame whenever it comes.
 
 Every refusal is a `reason` on the config endpoint or an error on the SMP one, and the state machine passes it on as a notice key without deciding what it means. A key the page has no words for is still shown, under its own name.

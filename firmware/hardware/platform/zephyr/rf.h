@@ -75,6 +75,10 @@ class Rf : public ports::Rf {
 
     ports::RfCarrier carrier() const override { return carrier_; }
 
+    ports::RfTransmitter transmitter() const override {
+        return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
+    }
+
     // The board calls this from the service pass, and there is deliberately
     // nothing here: the radio belongs to the thread below, and reinitialising it
     // from the service list would put a second writer on the SPI bus while a

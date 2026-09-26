@@ -19,7 +19,7 @@ namespace skyblip::platform::zephyr {
 //
 // WHERE THIS API COMES FROM, because it is not a Zephyr driver and that had to be
 // established rather than assumed. Checked against upstream at the exact
-// revisions this tree pins (firmware/west.yml: zephyr v4.4.1, whose west.yml
+// revisions this tree pins (firmware/west.yml: zephyr v4.4.2, whose west.yml
 // pins hal_nordic 44fd3d44b15cb75f80a25b4679f91d2787e28664):
 //
 //   1. Zephyr 4.4 has NO power-failure comparator driver and no binding for one.

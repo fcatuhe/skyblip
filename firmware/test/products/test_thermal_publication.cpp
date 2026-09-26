@@ -1,4 +1,5 @@
 // What the power service publishes about temperature, and how long a reading stands.
+#include "core/events/sensor.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/die_temperature.h"
@@ -25,6 +26,11 @@ struct Rig {
     go::PowerService power{context, settings};
 
     Rig() { roles.capabilities = ports::Capability::DieTemperature; }
+
+    void tick_on_cable(uint32_t now_ms) {
+        bus.battery.push(events::BatterySample{4100, /*external_power=*/true});
+        power.tick(now_ms);
+    }
 };
 
 constexpr uint32_t kPeriod = go::PowerService::kDieStaleMs / 3;
@@ -70,6 +76,36 @@ TEST_CASE("thermal: a sensor that stops answering stops gating the panel") {
     rig.power.tick(t + go::PowerService::kDieStaleMs + kPeriod);
     CHECK_FALSE(rig.state.power.die_valid);
     CHECK(rig.state.power.die_dc == 700);
+}
+
+TEST_CASE("thermal: one reading and then silence, and the charge window stops saying Ok") {
+    Rig rig;
+    rig.sensor.hold(250);
+    const uint32_t t = 1000;
+    rig.tick_on_cable(t);
+    REQUIRE(rig.state.power.charge == power::ChargeCondition::Ok);
+
+    rig.sensor.refuse();
+    rig.tick_on_cable(t + kPeriod);
+    CHECK(rig.state.power.charge == power::ChargeCondition::Ok);
+
+    rig.tick_on_cable(t + go::PowerService::kDieStaleMs + kPeriod);
+    CHECK(rig.state.power.charge != power::ChargeCondition::Ok);
+}
+
+// Go's charger has no enable pin, so the window can only warn: stale means say nothing, not stop.
+TEST_CASE("thermal: a stale reading on Go's cable cannot say, and never counts as a warning") {
+    Rig rig;
+    rig.sensor.hold(20);
+    const uint32_t t = 1000;
+    rig.tick_on_cable(t);
+    REQUIRE(rig.state.power.charge == power::ChargeCondition::TooCold);
+    REQUIRE(rig.power.charge_warnings() == 1);
+
+    rig.sensor.refuse();
+    rig.tick_on_cable(t + go::PowerService::kDieStaleMs + kPeriod);
+    CHECK(rig.state.power.charge == power::ChargeCondition::Unknown);
+    CHECK(rig.power.charge_warnings() == 1);
 }
 
 TEST_CASE("thermal: a sensor that answers again is believed again") {

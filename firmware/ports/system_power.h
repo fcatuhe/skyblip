@@ -39,9 +39,11 @@ class SystemPower {
     // latches it for good.
     virtual bool take_supply_warning() { return false; }
 
-    // INFO: fc 21sep26 the bit that outlives the rails; nowhere to keep it reads false: README.md
+    // INFO: fc 21sep26 the bits that outlive the rails; nowhere to keep them reads false: README.md
     virtual bool flat_on_glass() const { return false; }
     virtual void set_flat_on_glass(bool flat) { (void)flat; }
+    virtual bool went_dark_flat() const { return false; }
+    virtual void set_went_dark_flat(bool flat) { (void)flat; }
 };
 
 }  // namespace skyblip::ports

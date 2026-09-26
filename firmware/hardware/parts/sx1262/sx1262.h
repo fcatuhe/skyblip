@@ -256,6 +256,8 @@ constexpr int kRxBandwidthCount =
 // DS 13.1.14 SetPaConfig for the SX1262 high-power PA. This is also the write
 // that raises the over-current protection to 140 mA.
 constexpr uint8_t kPaConfigHighPower[4] = {0x04, 0x07, 0x00, 0x01};
+// INFO: fc 26sep26 DS table 13-21: those four bytes are the +22 dBm row
+constexpr int8_t kPaConfigHighPowerRatedDbm = 22;
 constexpr uint8_t kRampTime200Us = 0x04;
 // TODO: fc 05sep26 DS 13-21 halves the 90 mA of +14 dBm, once this PA match is measured
 
@@ -273,22 +275,13 @@ constexpr uint8_t kTxClampWidenBits = 0x1E;
 // 25 mW e.r.p., which is 14 dBm. The ceiling, not a chip default.
 constexpr int8_t kSrd868ErpLimitDbm = 14;
 
-// What the chip is told is CONDUCTED power at its own output, and the limit
-// above is radiated, referenced to a half-wave dipole. The two differ by the
-// feed and by the antenna, so the register value is only defensible with the
-// arithmetic written down. Hundredths of a dB, because the dBi-to-dBd step is
-// 2.15 dB and rounding it away is how a compliance argument goes quietly wrong.
-//
-// TODO: fc 03aug26 Both antenna figures are the paper part of gate G8
-// (project/research/antenna-868-go.md: ANT-868-CW-QW-SMA, 1.6 dBi peak, and an
-// unmeasured 0.5 dB allowance for the U.FL-to-SMA feed). Replace them with the
-// VNA measurement before the regulatory file is filed; the assertion below is
-// what tells you the moment the answer stops holding.
+// INFO: fc 26sep26 e.r.p. is referenced to a half-wave dipole, 2.15 dBi above isotropic
 constexpr int16_t kDbiToDbdCentiDb = 215;
+// INFO: fc 26sep26 the vendor's datasheet peak for ANT-868-CW-QW-SMA, never measured here
 constexpr int16_t kAntennaPeakGainDbiCentiDb = 160;
+// INFO: fc 26sep26 an unmeasured allowance, and SoftRF takes none: the field run sets it
 constexpr int16_t kFeedLossCentiDb = 50;
-// What SetTxParams is given. A quarter-wave whip sits below a dipole, so the
-// part runs out of power before the regulation does.
+// INFO: fc 26sep26 nominal, TXACC +-2 dB, and SoftRF's too (almic.cpp:330): the field run sets it
 constexpr int8_t kConductedDbm = 14;
 constexpr int16_t kResultingErpCentiDb = static_cast<int16_t>(
     kConductedDbm * 100 - kFeedLossCentiDb + kAntennaPeakGainDbiCentiDb - kDbiToDbdCentiDb);

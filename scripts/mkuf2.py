@@ -18,6 +18,9 @@ bootloader never goes through a swap, so it never gets a chance to mark itself
 good, and an unconfirmed image would be reverted on the second boot.
 
 The result is the single file a pilot drops on the TECHOBOOT volume.
+It stays the only install artifact: a Nordic DFU package stores a real
+bank_0_crc, which fails bootloader_app_is_valid() after the first MCUboot swap
+(check_no_dfu_package.py).
 
 The two range assertions are the point of this script. The factory Adafruit
 bootloader will write any address inside
