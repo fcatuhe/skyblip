@@ -24,6 +24,8 @@ import blip_records as records  # noqa: E402
 
 WRAP = 1 << 16
 
+DUTY_MAX_PERIOD_S = 60
+
 ELAPSED = ("elapsed", None, 0)
 
 Consumer = collections.namedtuple("Consumer", "name milliamps counter cited source")
@@ -72,10 +74,9 @@ FULL_PERCENT = 99
 class Run:
     """One session out of a capture, as the budget reads it."""
 
-    def __init__(self, session, closed=True, truncated=False):
+    def __init__(self, session):
         self.session = session
-        self.closed = closed
-        self.truncated = truncated
+        self.notes = []
         self.records = []
 
     @property
@@ -85,6 +86,10 @@ class Run:
     @property
     def gaps(self):
         return [r for r in self.records if r["type"] == "gap"]
+
+    @property
+    def unreadable(self):
+        return [r for r in self.records if r.get("error")]
 
 
 def read(path):
@@ -102,12 +107,10 @@ def read(path):
         if number not in runs:
             runs[number] = Run(number)
             order.append(number)
-        run = runs[number]
-        if line.get("type") == "session":
-            run.closed = bool(line.get("closed"))
-            run.truncated = bool(line.get("truncated"))
-        elif "index" in line and line.get("type") in ("boot", "duty", "power", "gap", "end"):
-            run.records.append(line)
+        if records.is_note(line):
+            runs[number].notes.append(line)
+        elif "index" in line:
+            runs[number].records.append(line)
     for run in runs.values():
         run.records.sort(key=lambda r: r["index"])
     return [runs[number] for number in order]
@@ -128,15 +131,32 @@ def on_battery_alone(power):
     return not (power["external_power"] or power["charging"])
 
 
-def refused(run, before, after):
+def refused(before, after, between):
     """Why this pair of Duty records cannot be subtracted, or None."""
-    if any(before["index"] < gap["index"] < after["index"] for gap in run.gaps):
+    if after["index"] - before["index"] - 1 > len(between):
+        return "indices are missing inside the interval"
+    if any(r.get("error") for r in between):
+        return "a slot inside the interval is unreadable"
+    if any(r["type"] == "gap" for r in between):
         return "the ring refused records inside the interval"
-    if before.get("utc_dated") != after.get("utc_dated"):
+    if any(r["type"] == "boot" for r in between):
+        return "the device booted inside the interval"
+    if before["utc_dated"] != after["utc_dated"]:
         return "the clock became UTC-dated inside the interval"
     if stamp(after) <= stamp(before):
         return "the interval does not move forwards"
+    if stamp(after) - stamp(before) > DUTY_MAX_PERIOD_S:
+        return "the interval is longer than the %d s a counter can span" % DUTY_MAX_PERIOD_S
+    if not all(on_battery_alone(r) for r in between if r["type"] == "power"):
+        return "the cell was on external power or charging"
     return None
+
+
+def duty_pairs(run):
+    """Each Duty record with the next one and every record between them."""
+    at = [position for position, r in enumerate(run.records) if r["type"] == "duty"]
+    for start, end in zip(at, at[1:]):
+        yield run.records[start], run.records[end], run.records[start + 1:end]
 
 
 def interval_charge(before, after, seconds):
@@ -166,9 +186,8 @@ def model(run):
     held = {"airborne": 0.0, "parked": 0.0}
     seconds = 0.0
     skipped = []
-    duty = run.duty
-    for before, after in zip(duty, duty[1:]):
-        reason = refused(run, before, after)
+    for before, after, between in duty_pairs(run):
+        reason = refused(before, after, between)
         if reason:
             skipped.append(reason)
             continue
@@ -246,10 +265,12 @@ def clock(seconds):
 
 def caveats(run, skipped, out):
     out("caveats")
-    if not run.closed:
-        out("  the device did not close this session: it stopped where the power did")
-    if run.truncated:
-        out("  truncated: the sector this run opened in was recycled, the start is gone")
+    for line in records.caveat_lines(run.notes):
+        out("  " + line)
+    for line in records.missing_index_lines(run.records):
+        out("  " + line)
+    for bad in run.unreadable:
+        out("  unreadable at index %d: %s" % (bad["index"], bad["error"]))
     for gap in run.gaps:
         out("  a gap record: %d records the ring had to refuse, over %.1f s"
             % (gap["dropped"], gap["span_ms"] / 1000.0))

@@ -13,6 +13,7 @@ import contextlib
 import io
 import json
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -21,6 +22,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip_records as records  # noqa: E402
 import power_budget  # noqa: E402
+
+PAYLOAD_H = pathlib.Path(__file__).resolve().parents[1] / "firmware" / "core" / "diag" / "payload.h"
 
 BOOT = 1
 POWER = 8
@@ -35,6 +38,8 @@ EXTERNAL_POWER = 0x08
 GAUGE_VALID = 0x10
 
 FIX_DATED_AT = 1_700_000_000
+
+ERASED = b"\xff" * 24
 
 LEVELS = {name: code for code, name in enumerate(records.POWER_LEVEL)}
 
@@ -98,7 +103,7 @@ def whole_run(seconds, **kwargs):
     return [boot(0)] + discharging(seconds, **kwargs) + [end(seconds)]
 
 
-def session_lines(raws, session=1, closed=True, truncated=False):
+def session_lines(raws, session=1, closed=True, truncated=False, missing=()):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
     encoded = base64.b64encode(b"".join(raws)).decode("ascii")
     decoded = records.decode_chunk("diagnostics", encoded, 0, 0)
@@ -107,7 +112,8 @@ def session_lines(raws, session=1, closed=True, truncated=False):
                                                "closed": closed, "truncated": truncated},
                                lines.append)
     for record in decoded:
-        sink.write(record)
+        if record["index"] not in missing:
+            sink.write(record)
     sink.finish(complete=True)
     return lines
 
@@ -173,12 +179,15 @@ class Postures(Case):
 
 
 class Holes(Case):
-    def test_an_interval_the_ring_refused_records_inside_is_not_budgeted(self):
-        run = self.only_run([duty(0), gap(15), duty(30, rx_armed_ms=29670)])
-        charge, seconds, _, skipped = power_budget.model(run)
+    def refusal(self, raws, **kwargs):
+        charge, seconds, _, skipped = power_budget.model(self.only_run(raws, **kwargs))
         self.assertEqual(seconds, 0)
         self.assertEqual(sum(charge.values()), 0)
-        self.assertEqual(skipped, ["the ring refused records inside the interval"])
+        return skipped
+
+    def test_an_interval_the_ring_refused_records_inside_is_not_budgeted(self):
+        self.assertEqual(self.refusal([duty(0), gap(15), duty(30, rx_armed_ms=29670)]),
+                         ["the ring refused records inside the interval"])
 
     def test_a_gap_is_named_before_any_number_is_printed(self):
         report = self.text(self.only_run([duty(0), gap(15, dropped=412), duty(30)]))
@@ -186,17 +195,53 @@ class Holes(Case):
         self.assertIn("nothing to budget", report)
 
     def test_the_interval_a_fix_dated_mid_run_cannot_be_subtracted(self):
-        run = self.only_run([duty(10), duty(FIX_DATED_AT, flags=PHASE_VALID | UTC_DATED)])
+        dated = duty(FIX_DATED_AT, flags=PHASE_VALID | UTC_DATED)
+        self.assertEqual(self.refusal([duty(10), dated]),
+                         ["the clock became UTC-dated inside the interval"])
+
+    # A missing Duty record hides a wrap: the pair either side can be 60 s of receiver apart.
+    def test_an_interval_with_an_index_missing_inside_is_not_budgeted(self):
+        run = self.only_run([duty(0), power(15), duty(30, rx_armed_ms=100)], missing=(1,))
         _, seconds, _, skipped = power_budget.model(run)
         self.assertEqual(seconds, 0)
-        self.assertEqual(skipped, ["the clock became UTC-dated inside the interval"])
+        self.assertEqual(skipped, ["indices are missing inside the interval"])
+        self.assertIn("missing indices 1..1", self.text(run))
 
-    def test_a_session_the_device_did_not_close_says_so(self):
-        self.assertIn("did not close this session",
-                      self.text(self.only_run([duty(0), duty(30), duty(60)], closed=False)))
+    def test_an_interval_with_an_unreadable_slot_inside_is_not_budgeted(self):
+        run = self.only_run([duty(0), ERASED, duty(30, rx_armed_ms=100)])
+        _, seconds, _, skipped = power_budget.model(run)
+        self.assertEqual(seconds, 0)
+        self.assertEqual(skipped, ["a slot inside the interval is unreadable"])
+        self.assertIn("unreadable at index 1: erased", self.text(run))
+
+    def test_an_interval_the_device_rebooted_inside_is_not_budgeted(self):
+        self.assertEqual(self.refusal([duty(0), boot(10), duty(30)]),
+                         ["the device booted inside the interval"])
+
+    def test_two_duty_records_further_apart_than_a_counter_can_span_are_not_subtracted(self):
+        self.assertEqual(self.refusal([duty(0), duty(61, rx_armed_ms=100)]),
+                         ["the interval is longer than the 60 s a counter can span"])
+
+    def test_an_interval_on_usb_is_not_budgeted_as_drain(self):
+        self.assertEqual(
+            self.refusal([duty(0), power(30, flags=PHASE_VALID | GAUGE_VALID | EXTERNAL_POWER),
+                          duty(30)]),
+            ["the cell was on external power or charging"])
+
+    def test_two_sessions_are_never_subtracted_across(self):
+        path = self.capture(session_lines([duty(0)], session=1)
+                            + session_lines([duty(30, rx_armed_ms=100)], session=2))
+        for run in power_budget.read(path):
+            self.assertEqual(power_budget.model(run)[1], 0)
+
+    def test_a_session_the_device_did_not_close_says_so_and_names_the_dropped_tail(self):
+        report = self.text(self.only_run([duty(0), duty(30), duty(60)], closed=False))
+        self.assertIn("session 1: not closed", report)
+        self.assertIn("session 1: index 2 dropped", report)
 
     def test_a_run_whose_first_sector_was_recycled_says_so(self):
-        self.assertIn("truncated", self.text(self.only_run([duty(0), duty(30)], truncated=True)))
+        report = self.text(self.only_run([duty(0), duty(30)], truncated=True))
+        self.assertIn("session 1: truncated", report)
 
 
 class Measured(Case):
@@ -321,6 +366,11 @@ class Fields(Case):
             kind, field, _ = consumer.counter
             if kind != "elapsed":
                 self.assertIn(field, decoded)
+
+    def test_the_longest_interval_the_budget_subtracts_is_the_firmwares_bound(self):
+        bound = re.search(r"kDutyMaxPeriodMs = (\d+);", PAYLOAD_H.read_text(encoding="utf-8"))
+        self.assertIsNotNone(bound, "kDutyMaxPeriodMs moved out of %s" % PAYLOAD_H)
+        self.assertEqual(power_budget.DUTY_MAX_PERIOD_S * 1000, int(bound.group(1)))
 
 
 if __name__ == "__main__":
