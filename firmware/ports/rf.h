@@ -56,6 +56,11 @@ struct RfCarrier {
     uint32_t samples{0};
 };
 
+struct RfTransmitter {
+    int8_t power_dbm{0};
+    int8_t pa_rated_dbm{0};
+};
+
 class Rf {
    public:
     virtual ~Rf() = default;
@@ -66,6 +71,8 @@ class Rf {
     virtual void abort() = 0;
 
     virtual RfCarrier carrier() const { return RfCarrier{}; }
+
+    virtual RfTransmitter transmitter() const { return RfTransmitter{}; }
 
     // Put the transceiver in its lowest-power state until the next begin().
     // Called on the way to SYSTEM OFF: the receiver is armed through most of

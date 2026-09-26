@@ -35,6 +35,11 @@ class Dfu {
 
     virtual RecoveryPath recovery_path() const { return RecoveryPath::Rebooted; }
     virtual RecoveryPath enter_recovery() { return recovery_path(); }
+
+    // INFO: fc 26sep26 the SMP hook runs on another thread and reads only what was published
+    virtual void publish_upload_allowed(bool) {}
+    virtual bool upload_finished() { return false; }
+    virtual void forget_upload() {}
 };
 
 }  // namespace skyblip::ports

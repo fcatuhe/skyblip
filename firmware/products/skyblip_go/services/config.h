@@ -79,6 +79,7 @@ class ConfigLinkService : public runtime::Service {
     void watch_claim(uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     void accrue_connected(uint32_t now_ms);
+    void publish_upload_verdict();
 
     static constexpr size_t kBlobCap = 64;
     static constexpr const char* kUpdateKey = "update";
