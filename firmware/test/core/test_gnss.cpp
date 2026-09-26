@@ -247,7 +247,7 @@ TEST_CASE("gnss: GGA carries HDOP in hundredths") {
     CHECK(p.solution().hdop_e2 == 480);
 }
 
-// GSA is asked for to carry VDOP: G.1.12's vertical claim has no other source on this part.
+// GSA is asked for to carry VDOP: G.1.15's vertical claim has no other source on this part.
 TEST_CASE("gnss: GSA carries VDOP in hundredths") {
     NmeaParser p;
     const char* gsa = "$GPGSA,A,3,04,05,,09,12,,,24,,,,,2.50,1.25,2.10*0D";

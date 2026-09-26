@@ -272,7 +272,7 @@ bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
     return true;
 }
 
-// ADS-L 4 SRD860 issue 2 G.1.13, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
+// ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
 uint8_t AdslPacket::horizontal_accuracy_code(uint32_t hfom_cm) {
     static constexpr uint32_t kLimitCm[] = {300, 1000, 3000, 9260, 18520, 55560, 92600};
     for (int i = 0; i < 7; i++)
@@ -280,7 +280,7 @@ uint8_t AdslPacket::horizontal_accuracy_code(uint32_t hfom_cm) {
     return 0;
 }
 
-// G.1.14, GVA. 3 = VFOM < 10 m, 2 = < 45 m, 1 = < 150 m, 0 = unknown or worse.
+// G.1.15, GVA. 3 = VFOM < 10 m, 2 = < 45 m, 1 = < 150 m, 0 = unknown or worse.
 uint8_t AdslPacket::vertical_accuracy_code(uint32_t vfom_cm) {
     if (vfom_cm < 1000) return 3;
     if (vfom_cm < 4500) return 2;
@@ -288,7 +288,7 @@ uint8_t AdslPacket::vertical_accuracy_code(uint32_t vfom_cm) {
     return 0;
 }
 
-// G.1.15, NACv. A GNSS-only velocity is as good as the position fix behind it,
+// G.1.16, NACv. A GNSS-only velocity is as good as the position fix behind it,
 // which is the relation the reference encoder uses verbatim
 // (oss/SoftRF-moshe-braner .../libraries/OGN/ads-l.h:453).
 uint8_t AdslPacket::velocity_accuracy_code(uint8_t horizontal_code) {
