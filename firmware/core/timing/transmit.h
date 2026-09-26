@@ -53,7 +53,7 @@ class Transmitter {
     const AirTime& air_time() const { return air_; }
     static uint32_t period_s(bool airborne) {
         return flight::report_period_s(airborne ? flight::FlightState::Airborne
-                                                : flight::FlightState::OnGround);
+                                                : flight::FlightState::Ground);
     }
     // INFO: fc 16sep26 §C.2.5 alternates the channel per transmission, and the clock counts them
     static int slot_in(uint32_t utc, bool airborne) {

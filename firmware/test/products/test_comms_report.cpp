@@ -56,7 +56,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     std::memcpy(s.callsign, "D-KXYZ", 7);
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.set_reset_reason(power::ResetReason::Watchdog);
     cs.diagnostics().refreshes = 1;
 
@@ -126,7 +126,7 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.set_battery_state(battery_of(61, false), power::PowerLevel::Normal);
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
@@ -143,7 +143,7 @@ TEST_CASE("comms: a battery nobody has read has no percentage, never a false zer
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     // No set_battery_state call at all: no sample has ever arrived.
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
@@ -160,7 +160,7 @@ TEST_CASE(
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     // A baseline, and then a real change, both before the link comes up.
     cs.set_battery_state(battery_of(50, false), power::PowerLevel::Normal);

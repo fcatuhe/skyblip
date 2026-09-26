@@ -340,7 +340,7 @@ uint8_t alptas_type_to_adsl_cat(uint8_t alptas_type) {
 
 uint8_t alptas_flight_state(uint8_t alptas_airborne) {
     switch (alptas_airborne) {
-        case 1: return static_cast<uint8_t>(flight::FlightState::OnGround);
+        case 1: return static_cast<uint8_t>(flight::FlightState::Ground);
         case 2:
         case 3: return static_cast<uint8_t>(flight::FlightState::Airborne);
         default: return static_cast<uint8_t>(flight::FlightState::Unknown);

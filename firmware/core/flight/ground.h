@@ -10,7 +10,7 @@ class GroundLatch {
     void update(FlightState reported);
 
     FlightState state() const { return state_; }
-    bool on_ground() const { return state_ == FlightState::OnGround; }
+    bool on_ground() const { return state_ == FlightState::Ground; }
 
    private:
     FlightState state_{FlightState::Unknown};

@@ -233,7 +233,7 @@ bool ConfigService::needs_swap_power(Pending pending) {
 
 const char* ConfigService::flight_name(flight::FlightState fs) {
     switch (fs) {
-        case flight::FlightState::OnGround: return "ground";
+        case flight::FlightState::Ground: return "ground";
         case flight::FlightState::Airborne: return "airborne";
         case flight::FlightState::Unknown: break;
     }

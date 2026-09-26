@@ -201,7 +201,7 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
     go::Settings s = widest_settings();
     go::SettingsStore store_cs(s, kWidestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
 
     // Nothing in this dialect fits twenty bytes, not even a refusal, so the
     // honest answer is silence and a number - never a notification the
@@ -283,7 +283,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kWidestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
 
     // Out of buffers for one pass - an upload sharing the connection will do
@@ -312,7 +312,7 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kWidestAddr);
     ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
 
     cs.set_battery_state(full_battery(), power::PowerLevel::Normal);
@@ -363,7 +363,7 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     go::Settings s = go::defaults();
     go::SettingsStore store(s, kWidestAddr);
     ConfigService cs(link, store);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -386,7 +386,7 @@ TEST_CASE("comms: a central that never takes its reply loses it, counted, and fr
     go::Settings s = go::defaults();
     go::SettingsStore store(s, kWidestAddr);
     ConfigService cs(link, store);
-    cs.set_flight_state(flight::FlightState::OnGround);
+    cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
     cs.resume_replies(ports::kReplyHoldMs - 1);

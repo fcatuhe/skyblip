@@ -117,8 +117,8 @@ bool joins_formation(const model::AircraftObs& heard) {
 TEST_CASE("traffic: every system hands a parked aircraft over as on the ground") {
     for (const System& system : kSystems) {
         CAPTURE(system.name);
-        const model::AircraftObs parked = system.heard(sender(flight::FlightState::OnGround));
-        CHECK(flight::state_from(parked.flight_state) == flight::FlightState::OnGround);
+        const model::AircraftObs parked = system.heard(sender(flight::FlightState::Ground));
+        CHECK(flight::state_from(parked.flight_state) == flight::FlightState::Ground);
         const model::AircraftObs airborne = system.heard(sender(flight::FlightState::Airborne));
         CHECK(flight::state_from(airborne.flight_state) == flight::FlightState::Airborne);
     }
@@ -132,7 +132,7 @@ TEST_CASE("traffic: a parked aircraft is never graded, whichever system heard it
         REQUIRE(assess(own, airborne, 1000).level == Level::Advisory);
 
         const AlarmAssessment parked =
-            assess(own, system.heard(sender(flight::FlightState::OnGround)), 1000);
+            assess(own, system.heard(sender(flight::FlightState::Ground)), 1000);
         CHECK(parked.valid);
         CHECK(parked.level == Level::None);
     }
@@ -142,7 +142,7 @@ TEST_CASE(
     "traffic: a parked aircraft is held for six of its own reports, whichever system heard it") {
     for (const System& system : kSystems) {
         CAPTURE(system.name);
-        const model::AircraftObs parked = system.heard(sender(flight::FlightState::OnGround));
+        const model::AircraftObs parked = system.heard(sender(flight::FlightState::Ground));
         TrafficTable tbl;
         REQUIRE(tbl.update(parked, kUtc) >= 0);
 
@@ -157,6 +157,6 @@ TEST_CASE("traffic: a parked aircraft is never a wingman, whichever system heard
     for (const System& system : kSystems) {
         CAPTURE(system.name);
         CHECK(joins_formation(system.heard(sender(flight::FlightState::Airborne))));
-        CHECK_FALSE(joins_formation(system.heard(sender(flight::FlightState::OnGround))));
+        CHECK_FALSE(joins_formation(system.heard(sender(flight::FlightState::Ground))));
     }
 }

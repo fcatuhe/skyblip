@@ -87,7 +87,7 @@ static model::AircraftObs obs(uint32_t addr, uint8_t tbl, uint32_t t,
 static model::AircraftObs parked(uint32_t addr, uint8_t tbl, uint32_t t,
                                  model::Source src = model::Source::AdslDirect) {
     model::AircraftObs o = obs(addr, tbl, t, src);
-    o.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    o.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return o;
 }
 
@@ -314,7 +314,7 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
         model::AircraftObs apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
         apron.addr = 0x100000u + static_cast<uint32_t>(i);
         apron.received.at_s = 100;
-        apron.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+        apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         REQUIRE(tbl.update(apron, 100) >= 0);
     }
 
@@ -345,7 +345,7 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a contact and nev
     model::AircraftObs apron = neighbour(own, 400, 0, 0, 0, 0);
     CHECK(assess(own, apron, 0).level == Level::Advisory);
 
-    apron.flight_state = static_cast<uint8_t>(flight::FlightState::OnGround);
+    apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     const AlarmAssessment graded = assess(own, apron, 0);
     CHECK(graded.level == Level::None);
     CHECK(graded.valid);

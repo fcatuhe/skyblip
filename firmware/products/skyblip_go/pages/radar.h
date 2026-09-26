@@ -40,7 +40,7 @@ struct RadarSnapshot {
     int32_t speed_mm_s{0};
     uint32_t flight_seconds{0};
     bool flight_time_valid{false};
-    bool airborne{false};
+    bool in_flight{false};
     bool taxiing{false};
     bool receiver_listening{false};
     int n_targets{0};

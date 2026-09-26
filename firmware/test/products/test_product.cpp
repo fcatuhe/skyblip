@@ -288,7 +288,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm_volume = 5;
     // The only way the device can be told it is on the ground: one stationary
-    // solution, which core/flight answers OnGround to and the link's gate reads.
+    // solution, which core/flight answers Ground to and the link's gate reads.
     rig.push_fix(/*alt_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
