@@ -289,7 +289,7 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 | `HAPTIC` | the DRV2605 waveform driver at 0x5A, or `PIN` for a motor driven straight off a pin |
 | `LAMP` | the RGB status LEDs, the only thing that says "alive" with the glass parked |
 | `LINK` | Bluetooth LE, the connection a phone or a tablet arrives over |
-| `STORAGE` | the settings in internal NVS and the flight log on the external SPI NOR |
+| `STORAGE` | the settings in internal NVS and the flight log on the external SPI NOR, and `DEFAULTS` after the parts when a stored settings blob could not be read (`../README.md`) |
 | `DFU` | MCUboot, the path a firmware update is written through |
 
 Required first, then what the device senses with, then what it says things with, then what it talks and remembers through. `RADIO` and `GNSS` are the two the product cannot fly without (`kRequired`), which is why they are at the top and why only they can read `FAIL`.

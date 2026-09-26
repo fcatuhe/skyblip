@@ -90,7 +90,9 @@ void ConfigService::note_down(uint16_t session_id) {
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
 void ConfigService::on_link_up(const events::LinkUp& up) {
     note_up(up.session_id);
-    if (image_state_ != dfu::ImageState::Confirmed) send_update(up.session_id);
+    if (image_state_ != dfu::ImageState::Confirmed ||
+        settings_fallback_ != settings::Fallback::None)
+        send_update(up.session_id);
 }
 
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a

@@ -57,6 +57,8 @@ constexpr BootPartSpec kBootParts[] = {
     {"DFU", ports::Capability::Dfu, "MCUBOOT"},
 };
 
+constexpr const char* kStorageOnDefaults = "NVS+NOR DEFAULTS";
+
 constexpr int kBootPartCount = static_cast<int>(sizeof(kBootParts) / sizeof(kBootParts[0]));
 static_assert(kBootPartCount < kBootRows, "the self-test page would drop the bus scan");
 
@@ -223,6 +225,10 @@ class Product {
                            : spec.wired_part;
             case ports::Capability::Haptic:
                 return found.haptic == ports::HapticKind::PinMotor ? "PIN" : spec.wired_part;
+            case ports::Capability::Storage:
+                return config_.settings_fallback() == settings::Fallback::Defaults
+                           ? kStorageOnDefaults
+                           : spec.wired_part;
             default: return spec.wired_part;
         }
     }

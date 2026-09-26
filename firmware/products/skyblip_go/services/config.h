@@ -5,6 +5,7 @@
 #include "core/diag/payload.h"
 #include "core/power/cutoff.h"
 #include "core/power/duty.h"
+#include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/settings_store.h"
@@ -57,6 +58,7 @@ class ConfigLinkService : public runtime::Service {
     // else entirely, which is why it is not one of its counters.
     uint32_t refused_writes() const { return refused_; }
     uint32_t failed_writes() const { return failed_; }
+    settings::Fallback settings_fallback() const { return fallback_; }
     bool holding_for_power() const { return held_; }
 
     // The one caller that may skip the WINDOW - not the power rule above, which
@@ -82,12 +84,20 @@ class ConfigLinkService : public runtime::Service {
 
     static constexpr size_t kBlobCap = 64;
     static constexpr const char* kUpdateKey = "update";
+    static constexpr const char* kSettingsKey = "settings";
+    static constexpr const char* kPriorSettingsKey = "settings.prior";
 
     void drain_link_events(uint32_t now_ms);
     void take_request(uint32_t now_ms);
     void drain_settings(uint32_t now_ms);
     void write_settings(uint32_t now_ms, bool forced);
     bool persist();
+    static bool newer_layout(const uint8_t* blob, size_t n);
+    void load_prior();
+    bool adopt(const uint8_t* blob, size_t n);
+    void remember(const uint8_t* blob, size_t n);
+    void keep_settings_for_a_revert();
+    const char* settings_key() const { return newer_kept_ ? kPriorSettingsKey : kSettingsKey; }
     void load_image_state();
     void forget_update();
     void confirm_image_once_healthy();
@@ -125,6 +135,8 @@ class ConfigLinkService : public runtime::Service {
     // for no reason.
     uint8_t stored_[kBlobCap]{};
     size_t stored_len_{0};
+    bool newer_kept_{false};
+    settings::Fallback fallback_{settings::Fallback::None};
     static constexpr int kConfirmAttempts = 3;
     bool image_confirmed_{false};
     bool image_state_loaded_{false};

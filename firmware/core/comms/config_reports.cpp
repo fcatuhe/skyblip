@@ -112,7 +112,7 @@ void ConfigService::send_update(uint16_t session_id) {
     char to[dfu::kVersionTextCap];
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
-    char buf[128];
+    char buf[kSmallestSupportedPayload + 1];
     json::Writer w(buf, sizeof(buf));
     w.kv_str("cmd", "update");
     w.kv_str("image", dfu::to_string(image_state_));
@@ -120,6 +120,8 @@ void ConfigService::send_update(uint16_t session_id) {
         w.kv_str("from", from);
         w.kv_str("to", to);
     }
+    if (settings_fallback_ != settings::Fallback::None)
+        w.kv_str("settings", settings::to_string(settings_fallback_));
     w.kv_bool("swap_powered", swap_powered());
     const int len = w.finish();
     (void)reply_to(session_id, buf, len);
