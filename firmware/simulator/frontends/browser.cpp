@@ -15,7 +15,8 @@ simulator::Simulator g_simulator;
 
 extern "C" {
 
-KEEPALIVE void simulator_setup() { g_simulator.setup(); }
+// INFO: fc 25sep26 a setup that failed draws the self-test page, which is the answer the page shows
+KEEPALIVE void simulator_setup() { (void)g_simulator.setup(); }
 KEEPALIVE void simulator_step(unsigned ms) { g_simulator.step(ms); }
 KEEPALIVE int simulator_park_refusal(unsigned ms) { return g_simulator.park_refusal(ms) ? 1 : 0; }
 KEEPALIVE int simulator_load_scenario(const char* json, int len) {

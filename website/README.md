@@ -37,7 +37,7 @@ bin/static-build --base https://skyblip.eu   # -> build/
 
 `bin/static-build` precompiles assets, runs Parklife, then copies `public/` over the result, which is how anything that must not be fingerprinted gets served verbatim.
 
-Deployment is `.github/workflows/website.yml` at the repo root: a push to `main` that touches `website/` builds and publishes to Pages. Nothing else triggers a deployment, and `workflow_dispatch` forces one.
+Deployment is `.github/workflows/website.yml` at the repo root: a push to `main` that touches `website/`, `firmware/` or `simulator/` (the page embeds the firmware as WASM, in the simulator's case) builds and publishes to Pages. Nothing else triggers a deployment, and `workflow_dispatch` forces one.
 
 ## License
 

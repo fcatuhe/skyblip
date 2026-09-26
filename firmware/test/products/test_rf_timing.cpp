@@ -72,7 +72,7 @@ struct Peer {
     parts::Sx1262 radio{chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
 
     Peer() {
-        radio.begin();
+        REQUIRE(radio.begin() == Status::Ok);
         parts::RadioConfig cfg{};
         cfg.sync = protocol::kSharedSync;
         cfg.sync_bits = protocol::kSharedSyncBits;
@@ -81,7 +81,7 @@ struct Peer {
         cfg.fdev_hz = protocol::kMbandDeviationHz;
         cfg.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
         REQUIRE(radio.configure_radio(cfg) == Status::Ok);
-        radio.start_receive();
+        REQUIRE(radio.start_receive() == Status::Ok);
     }
 
     bool frames(const simulator::AirRecord& burst, protocol::Frame& out) {
@@ -90,7 +90,7 @@ struct Peer {
             return false;
         uint8_t buf[events::kRfEventBytes];
         const parts::RadioEvent ev = radio.poll(buf, sizeof(buf));
-        radio.start_receive();
+        REQUIRE(radio.start_receive() == Status::Ok);
         if (ev.type != parts::RadioEventType::RxDone) return false;
         return protocol::receive_mband(buf, ev.len, out);
     }
@@ -208,6 +208,39 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
         framed++;
     }
     CHECK(framed > 0);
+}
+
+TEST_CASE("rf: a paraglider below the flight speed transmits every second, flight undefined") {
+    for (const uint8_t type : {uint8_t{7}, uint8_t{1}}) {
+        CAPTURE(int(type));
+        simulator::Simulator h;
+        REQUIRE(h.setup() == Status::Ok);
+        h.product().settings().aircraft_type = type;
+        h.world().set_fix(true);
+        h.world().set_speed_kt(15);
+        run_on(h, past_settling(h), 20000);
+
+        const simulator::Air& air = h.world().air();
+        Peer peer;
+        int positions = 0;
+        for (int i = 0; i < air.record_count(); i++) {
+            const simulator::AirRecord& mine = air.record(i);
+            if (mine.event != simulator::AirEvent::Tx) continue;
+            protocol::Frame heard{};
+            REQUIRE(peer.frames(mine, heard));
+            protocol::AdslPacket p{};
+            p.init();
+            std::memcpy(&p.Version, heard.data, protocol::kAdslFrameBytes);
+            p.descramble();
+            if (!p.is_position()) continue;
+            positions++;
+            CHECK(p.FlightState == (type == 7 ? 0 : 1));
+        }
+        if (type == 7)
+            CHECK(positions >= 19);
+        else
+            CHECK(positions <= 3);
+    }
 }
 
 TEST_CASE("rf: a burst is heard only inside the dwell that owns its channel") {

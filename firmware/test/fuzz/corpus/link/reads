@@ -1,0 +1,8 @@
+C{"cmd":"get"}
+C{"cmd":"status"}
+c{"cmd":"get"}
+C{"cmd":"timing"}
+C{"cmd":"radio"}
+C{"cmd":"flash"}
+C{"cmd":"update"}
+C{"cmd":"diag"}

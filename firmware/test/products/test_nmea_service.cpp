@@ -112,6 +112,7 @@ void hear(Rig& rig, uint32_t addr, int32_t north_m, int32_t east_m, int32_t up_m
     transmitter.alt_mm += up_m * 1000;
     transmitter.track_cdeg = to_centi_degrees(Cordic9(track_c9)).v;
     transmitter.speed_mm_s = 40000;
+    transmitter.vdop_e2 = 150;
 
     protocol::AdslPacket packet;
     protocol::from_own(packet, transmitter, addr, /*addr_table=*/6, /*aircraft_cat=*/4);
@@ -414,6 +415,39 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
               (static_cast<int>(go::NmeaService::kTargetRefreshBoundMs / 1000) + 1));
 }
 
+// The notify share ended each pass at four 20-byte frames: no $PFLAA reached a 20-byte tablet.
+TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE minimum whole") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    fly(rig, t, 3);
+    rig.raise_link();
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
+    fly(rig, t, 1);
+    for (int i = 0; i < 4; i++)
+        hear(rig, 0x300000u + static_cast<uint32_t>(i), 500 + 100 * i, 200, 40 + 5 * i);
+    fly(rig, t, 1);
+    REQUIRE(rig.state().traffic.count() == 4);
+
+    rig.platform.link().hold_after(4);
+    rig.platform.link().clear();
+    for (int second = 0; second < 2; second++) {
+        rig.push_timed_fix(25000, 900);
+        for (uint32_t ms = 0; ms < 1000; ms += 10) {
+            rig.platform.link().serve();
+            rig.run(t + ms, t + ms, 10);
+        }
+        t += 1000;
+        rig.utc_offset_s++;
+    }
+
+    const std::vector<std::string> heard = sentences(rig);
+    for (const std::string& s : heard) CHECK(checksum_ok(s));
+    CHECK(count_of(rig, "$PFLAU") >= 2);
+    CHECK(count_of(rig, "$PFLAA") >= 4);
+    CHECK(rig.product.nmea().link_drops() == 0);
+}
+
 TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -606,7 +640,7 @@ struct FeatureRig {
         state.own.lat_1e7 = 485000000;
         state.own.lon_1e7 = 85000000;
         config.on_link_up(events::LinkUp{1, platform::host::Link::kDefaultPayloadBytes});
-        nmea.setup();
+        REQUIRE(nmea.setup() == Status::Ok);
     }
 
     int frames() { return link.count_on(events::Endpoint::Nmea); }

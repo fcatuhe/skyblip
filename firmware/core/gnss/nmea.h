@@ -52,7 +52,7 @@ constexpr uint8_t kFixMode2D = 2;
 constexpr uint8_t kFixMode3D = 3;
 
 struct GnssSolution {
-    bool is_fix{false};
+    bool fix_valid{false};
     bool utc_valid{false};
     int32_t lat_1e7{0};
     int32_t lon_1e7{0};
@@ -126,7 +126,7 @@ class NmeaParser {
 };
 
 bool nmea_checksum_ok(const char* line, int len);
-int32_t nmea_parse_coord(const char* dm, char hemi);
+bool nmea_parse_coord(const char* dm, char hemi, int32_t& out_1e7);
 
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms) {
     return arrival_ms - solution.pps_latency_ms;

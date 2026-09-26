@@ -55,26 +55,39 @@ void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObs& obs) 
     turn.ref_track_c9 = obs.track_c9;
 }
 
-int TrafficTable::allocate_slot(uint32_t now) {
+// INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
+bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
+    if (a.slant_m != b.slant_m) return a.slant_m > b.slant_m;
+    if (a.rank != b.rank) return a.rank < b.rank;
+    return a.age_s > b.age_s;
+}
+
+TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObs& obs, uint32_t now) const {
+    int32_t slant_m = 0;
+    if (range_check(own_, obs, slant_m) == Plausibility::NoReference) slant_m = 0;
+    return Weight{slant_m, source_rank(obs.source), now - obs_time(obs)};
+}
+
+int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now) {
     for (int i = 0; i < kCapacity; i++)
         if (!slots_[i].used) return i;
     int victim = -1;
-    uint32_t oldest = 0xFFFFFFFF;
+    Weight least{};
     for (int i = 0; i < kCapacity; i++) {
         if (slots_[i].alarm_level != Level::None) continue;
-        uint32_t age = now - obs_time(slots_[i].obs);
-        if (age >= oldest || victim < 0) {
-            if (victim < 0 || age > oldest) {
-                oldest = age;
-                victim = i;
-            }
+        const Weight w = weight_of(slots_[i].obs, now);
+        if (victim < 0 || matters_less(w, least)) {
+            victim = i;
+            least = w;
         }
     }
+    if (victim >= 0 && !matters_less(least, weight_of(incoming, now))) return -1;
     return victim;
 }
 
 int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
-    if (own_addr_ != 0 && (obs.addr & 0x00FFFFFF) == own_addr_) return -1;
+    if (own_addr_ != 0 && obs.addr_table == own_addr_table_ && (obs.addr & 0x00FFFFFF) == own_addr_)
+        return -1;
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about
     // the other twelve, so a ghost is refused without taking a good report with
@@ -93,7 +106,7 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
         }
         return idx;
     }
-    idx = allocate_slot(now);
+    idx = allocate_slot(obs, now);
     if (idx < 0) return -1;
     slots_[idx].used = true;
     slots_[idx].obs = obs;

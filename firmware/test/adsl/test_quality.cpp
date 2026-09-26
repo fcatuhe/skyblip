@@ -46,26 +46,11 @@ TEST_CASE("ADS-L.4.SRD860.G.1.12: the design assurance transmitted is 0, none") 
     CHECK(from_dop(0, 0, /*fix=*/false).DesignAssurance == 0);
 }
 
-// Every boundary of the containment-radius table, in centimetres, from Rc < 7.5 m down to 20 NM.
-TEST_CASE("ADS-L.4.SRD860.G.1.13: the navigation integrity code sits on the table's boundaries") {
-    CHECK(protocol::AdslPacket::navigation_integrity_code(749) == 12);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(750) == 11);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(2499) == 11);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(2500) == 10);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(7499) == 10);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(7500) == 9);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(18519) == 9);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(18520) == 8);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(37039) == 8);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(37040) == 7);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(111119) == 7);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(111120) == 6);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(185200) == 5);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(370400) == 4);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(740800) == 3);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(1481600) == 2);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(3703999) == 2);
-    CHECK(protocol::AdslPacket::navigation_integrity_code(3704000) == 1);
+// The table asks for a protection level, and a receiver that reports none leaves it at 0 (G.1.17).
+TEST_CASE("ADS-L.4.SRD860.G.1.13: without a protection level the navigation integrity is 0") {
+    CHECK(from_dop(90, 150).NavigIntegrity == 0);
+    CHECK(from_dop(900, 1500).NavigIntegrity == 0);
+    CHECK(from_dop(0, 0, /*fix=*/false).NavigIntegrity == 0);
 }
 
 // The NACp table, in centimetres of 95% horizontal error bound.
@@ -86,8 +71,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.14: the horizontal accuracy code sits on the table
     CHECK(protocol::AdslPacket::horizontal_accuracy_code(92600) == 0);
 }
 
-// TODO: fc 18sep26 HFOM here is 2 m per DOP unit (OGN's figure), the clause's formula gives 12
-TEST_CASE("ADS-L.4.SRD860.G.1.14: HFOM is derived from HDOP as 2 * HDOP * 6 m" * doctest::skip()) {
+TEST_CASE("ADS-L.4.SRD860.G.1.14: HFOM is derived from HDOP as 2 * HDOP * 6 m") {
     const uint16_t hdop_e2 = 90;
     const uint32_t spec_hfom_cm = 2u * hdop_e2 * kSpecUereM;
     CHECK(from_dop(hdop_e2, 150).HorizAccuracy ==
@@ -148,9 +132,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static z
     CHECK(good.VelAccuracy > poor.VelAccuracy);
 }
 
-// TODO: fc 18sep26 SIL is 1 and NIC is DOP-derived, the clause wants both 0 with no HPL
-TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance" *
-          doctest::skip()) {
+TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
     const protocol::AdslPacket p = from_dop(90, 150);
     CHECK(p.SourceIntegrity == 0);
     CHECK(p.DesignAssurance == 0);

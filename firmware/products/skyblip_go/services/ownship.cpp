@@ -22,6 +22,7 @@ flight::FlightState OwnshipService::flight_state_from(const model::OwnState& own
 }
 
 void OwnshipService::tick(uint32_t now_ms) {
+    baro_live_ = baro_heard_within_max_age(now_ms);
     gnss::GnssSolution solution{};
     while (context_.bus.gnss.pop(solution)) apply_solution(solution, now_ms);
 
@@ -45,7 +46,7 @@ void OwnshipService::tick(uint32_t now_ms) {
     context_.state.gnss.stage = acquisition_.stage();
     context_.state.gnss.stage_s = acquisition_.stage_ms(now_ms) / 1000;
 
-    context_.state.baro.active = baro_active();
+    context_.state.baro.active = baro_live_;
     context_.state.own.tx_settled = settle_.settled(now_ms);
     context_.state.own.fix_acquired = settle_.take_acquired();
 }
@@ -57,7 +58,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     acquisition_.observe(solution, now_ms);
     context_.state.gnss.fix_mode = solution.fix_mode;
 
-    own.fix_valid = solution.is_fix;
+    own.fix_valid = solution.fix_valid;
     own.utc_valid = solution.utc_valid;
     own.lat_1e7 = solution.lat_1e7;
     own.lon_1e7 = solution.lon_1e7;
@@ -77,12 +78,15 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     anchor_utc(solution);
     publish_solution_phase(now_ms);
 
-    // A barometer, once it has spoken, owns vertical speed. The GNSS reference
-    // keeps moving anyway so losing the sensor falls back seamlessly.
     int32_t mm_s = 0;
-    const bool have =
-        vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs, vs_ref_alt_mm_, vs_ref_ms_, mm_s);
-    if (have && !baro_active()) adopt_climb(mm_s);
+    const bool height_fixed = own.fix_valid && height_solved(own);
+    if (!height_fixed) vs_ref_ms_ = 0;
+    const bool have = height_fixed && vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs,
+                                                     vs_ref_alt_mm_, vs_ref_ms_, mm_s);
+    if (!baro_live_) {
+        if (have) adopt_climb(mm_s);
+        if (!height_fixed) own.climb_valid = false;
+    }
 
     const flight::FlightState declared = flight_state_from(own, now_ms);
     own.flight_state = static_cast<uint8_t>(declared);
@@ -164,10 +168,12 @@ gnss::Convergence OwnshipService::convergence_of(const model::OwnState& own) {
     gnss::Convergence c{};
     c.fix_valid = own.fix_valid;
     c.resid_valid = own.pred_resid_valid;
-    c.height_solved = own.vdop_e2 != 0;
+    c.height_solved = height_solved(own);
     c.resid_m = own.pred_resid_m;
     return c;
 }
+
+bool OwnshipService::height_solved(const model::OwnState& own) { return own.vdop_e2 != 0; }
 
 void OwnshipService::update_residual(const model::OwnState& previous) {
     model::OwnState& own = context_.state.own;
@@ -222,6 +228,9 @@ void OwnshipService::apply_baro(const events::BaroSample& sample, uint32_t now_m
     context_.state.baro.temperature_decicelsius = sample.temperature_decicelsius;
     context_.state.baro.temperature_valid = sample.temperature_valid;
     const int32_t alt_mm = flight::pressure_to_alt_mm(sample.pressure_mpa);
+    if (!baro_heard_within_max_age(now_ms)) baro_ref_ms_ = 0;
+    baro_heard_ms_ = now_ms == 0 ? 1 : now_ms;
+    baro_live_ = true;
     int32_t mm_s = 0;
     const bool adopted =
         vs_from_alt_mm(alt_mm, sample.at_ms, kBaroVsWindowMs, baro_ref_alt_mm_, baro_ref_ms_, mm_s);
@@ -305,6 +314,10 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
         flight::turn_rate_cdps(track, CentiDegrees(turn_ref_track_cdeg_), dt));
     turn_ref_ms_ = now_ms;
     turn_ref_track_cdeg_ = track.v;
+}
+
+bool OwnshipService::baro_heard_within_max_age(uint32_t now_ms) const {
+    return baro_heard_ms_ != 0 && now_ms - baro_heard_ms_ <= kBaroMaxAgeMs;
 }
 
 bool OwnshipService::vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,

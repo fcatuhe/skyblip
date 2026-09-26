@@ -85,11 +85,11 @@ struct Lk8Ex1 {
     int32_t vario_cm_s{0};
     int32_t temperature_c{0};
     uint8_t battery_percent{0};
-    bool has_pressure{false};
-    bool has_alt{false};
-    bool has_vario{false};
-    bool has_temperature{false};
-    bool has_battery{false};
+    bool pressure_valid{false};
+    bool alt_valid{false};
+    bool vario_valid{false};
+    bool temperature_valid{false};
+    bool battery_valid{false};
 };
 
 int format_lk8ex1(char* out, size_t cap, const Lk8Ex1& v);

@@ -86,4 +86,10 @@ void DurableWriteWindow::placed(uint32_t now_ms, bool forced) {
     pending_ = false;
 }
 
+void DurableWriteWindow::refused(uint32_t now_ms, bool forced) {
+    if (forced) forced_++;
+    first_request_ms_ = now_ms;
+    last_request_ms_ = now_ms;
+}
+
 }  // namespace skyblip::timing

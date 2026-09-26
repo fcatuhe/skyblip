@@ -60,12 +60,35 @@ struct bt_conn* g_conns[CONFIG_BT_MAX_CONN] = {};
 static_assert(CONFIG_BT_MAX_CONN <= static_cast<int>(comms::LinkSessions::kMaxSessions),
               "the controller admits more centrals than core will serve");
 
+// INFO: fc 23sep26 a notify off the sysworkq waits forever for a buffer, so each link gets a share
+constexpr atomic_val_t kNotifyInFlightMax = 4;
+constexpr int kAttResponsesPerLink = 1;
+// INFO: fc 25sep26 smp_bt.c waits on each notification's sent callback before the next
+constexpr int kSmpNotifiesPerLink = 1;
+static_assert(CONFIG_BT_ATT_TX_COUNT >=
+                  (kNotifyInFlightMax + kAttResponsesPerLink + kSmpNotifiesPerLink) *
+                      CONFIG_BT_MAX_CONN,
+              "the ATT pool must hold every link's notifications, a response and an SMP reply");
+atomic_t g_in_flight[CONFIG_BT_MAX_CONN];
+
+void notified(struct bt_conn* conn, void* /*user_data*/) {
+    atomic_dec(&g_in_flight[bt_conn_index(conn)]);
+}
+
 // INFO: fc 18sep26 bt_conn_index() is the controller's own slot, so session ids never collide.
 uint16_t session_of(struct bt_conn* conn) { return static_cast<uint16_t>(bt_conn_index(conn) + 1); }
 
+// INFO: fc 23sep26 referenced under the callbacks' lock, so a released connection is never notified
+struct bt_conn* conn_ref(size_t index) {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    struct bt_conn* conn = g_conns[index] != nullptr ? bt_conn_ref(g_conns[index]) : nullptr;
+    k_spin_unlock(&g_lock, key);
+    return conn;
+}
+
 struct bt_conn* conn_of(uint16_t session_id) {
     if (session_id == 0 || session_id > ARRAY_SIZE(g_conns)) return nullptr;
-    return g_conns[session_id - 1];
+    return conn_ref(session_id - 1);
 }
 
 uint16_t payload_from_mtu(uint16_t mtu) {
@@ -73,7 +96,7 @@ uint16_t payload_from_mtu(uint16_t mtu) {
                                     : static_cast<uint16_t>(0);
 }
 
-void push_rx(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_t len) {
+Status push_rx(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_t len) {
     RxFrame f{};
     f.session_id = session_of(conn);
     f.endpoint = endpoint;
@@ -81,8 +104,9 @@ void push_rx(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_t 
     const uint8_t* p = static_cast<const uint8_t*>(buf);
     for (uint16_t i = 0; i < f.len; i++) f.data[i] = p[i];
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    g_rx.push(f);
+    const Status queued = g_rx.push(f);
     k_spin_unlock(&g_lock, key);
+    return queued;
 }
 
 // INFO: fc 04aug26 The inbound half of the same rule. With an ATT_MTU of 498 a
@@ -93,18 +117,22 @@ void push_rx(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_t 
 constexpr size_t kMaxInboundBytes = sizeof(RxFrame::data);
 bool too_long(uint16_t len) { return len > kMaxInboundBytes; }
 
+// INFO: fc 23sep26 a write with response learns the queue was full, one without is dropped unseen
+ssize_t accept_write(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_t len) {
+    if (too_long(len)) return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    if (!is_ok(push_rx(conn, endpoint, buf, len)))
+        return BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
+    return len;
+}
+
 ssize_t on_cfg_write(struct bt_conn* conn, const struct bt_gatt_attr*, const void* buf,
                      uint16_t len, uint16_t /*offset*/, uint8_t /*flags*/) {
-    if (too_long(len)) return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
-    push_rx(conn, Endpoint::Config, buf, len);
-    return len;
+    return accept_write(conn, Endpoint::Config, buf, len);
 }
 
 ssize_t on_log_write(struct bt_conn* conn, const struct bt_gatt_attr*, const void* buf,
                      uint16_t len, uint16_t /*offset*/, uint8_t /*flags*/) {
-    if (too_long(len)) return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
-    push_rx(conn, Endpoint::Log, buf, len);
-    return len;
+    return accept_write(conn, Endpoint::Log, buf, len);
 }
 
 // INFO: fc 18sep26 XCSoar refuses a UART service with no write characteristic, nothing reads this.
@@ -187,10 +215,14 @@ void resume_advertising() {
 // both onto the bus from the service loop. A Bluetooth callback runs on the host
 // stack's own thread, so calling into a service from here would be a second path
 // into core/ with no critical section around it.
+// INFO: fc 25sep26 Zephyr drops a gone link's sent callbacks, so a new link starts at zero
 void connected(struct bt_conn* conn, uint8_t err) {
     if (err) return;
-    g_conns[bt_conn_index(conn)] = bt_conn_ref(conn);
+    const uint8_t index = bt_conn_index(conn);
+    struct bt_conn* held = bt_conn_ref(conn);
+    atomic_set(&g_in_flight[index], 0);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
+    g_conns[index] = held;
     g_sessions.connected(session_of(conn), payload_from_mtu(bt_gatt_get_mtu(conn)));
     k_spin_unlock(&g_lock, key);
     resume_advertising();
@@ -198,11 +230,11 @@ void connected(struct bt_conn* conn, uint8_t err) {
 void disconnected(struct bt_conn* conn, uint8_t /*reason*/) {
     const uint8_t index = bt_conn_index(conn);
     if (g_conns[index] != conn) return;
-    bt_conn_unref(g_conns[index]);
-    g_conns[index] = nullptr;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
+    g_conns[index] = nullptr;
     g_sessions.disconnected(session_of(conn));
     k_spin_unlock(&g_lock, key);
+    bt_conn_unref(conn);
 }
 // INFO: fc 18sep26 Advertising stops on connect, and only recycled() has a free connection object.
 void recycled() { resume_advertising(); }
@@ -254,24 +286,43 @@ void Link::name_after(uint32_t device_addr) {
 // stops.
 uint16_t Link::payload_bytes() const {
     uint16_t smallest = 0;
-    for (struct bt_conn* conn : g_conns) {
+    for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {
+        struct bt_conn* conn = conn_ref(i);
         if (conn == nullptr) continue;
         const uint16_t payload = payload_from_mtu(bt_gatt_get_mtu(conn));
+        bt_conn_unref(conn);
         if (smallest == 0 || payload < smallest) smallest = payload;
     }
     return smallest < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : smallest;
 }
 
+uint16_t Link::payload_bytes_to(uint16_t session_id) const {
+    struct bt_conn* conn = conn_of(session_id);
+    if (conn == nullptr) return ports::kMinimumLinkPayload;
+    const uint16_t payload = payload_from_mtu(bt_gatt_get_mtu(conn));
+    bt_conn_unref(conn);
+    return payload < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : payload;
+}
+
 Status Link::notify_one(struct bt_conn* conn, Endpoint ep, ConstByteSpan bytes) {
     const struct bt_gatt_attr* attrs[kMaxNotifyAttrs] = {};
     const int n = notify_attrs(ep, attrs);
+    atomic_t* in_flight = &g_in_flight[bt_conn_index(conn)];
     Status result = Status::WouldBlock;
     bool subscribed = false;
     for (int i = 0; i < n; i++) {
         if (!bt_gatt_is_subscribed(conn, attrs[i], BT_GATT_CCC_NOTIFY)) continue;
         subscribed = true;
-        const int rc = bt_gatt_notify(conn, attrs[i], bytes.data(), bytes.size());
+        if (atomic_get(in_flight) >= kNotifyInFlightMax) return Status::WouldBlock;
+        struct bt_gatt_notify_params params = {};
+        params.attr = attrs[i];
+        params.data = bytes.data();
+        params.len = static_cast<uint16_t>(bytes.size());
+        params.func = notified;
+        atomic_inc(in_flight);
+        const int rc = bt_gatt_notify_cb(conn, &params);
         if (rc == 0) return Status::Ok;
+        atomic_dec(in_flight);
         if (rc != -ENOMEM && rc != -EAGAIN) result = Status::Invalid;
     }
     return subscribed ? result : Status::WouldBlock;
@@ -280,20 +331,27 @@ Status Link::notify_one(struct bt_conn* conn, Endpoint ep, ConstByteSpan bytes) 
 Status Link::send(Endpoint ep, ConstByteSpan bytes) {
     if (bytes.size() > payload_bytes()) return Status::OutOfRange;
     Status result = Status::Down;
-    for (struct bt_conn* conn : g_conns) {
+    bool delivered = false;
+    for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {
+        struct bt_conn* conn = conn_ref(i);
         if (conn == nullptr) continue;
         const Status one = notify_one(conn, ep, bytes);
-        if (one == Status::Ok) return Status::Ok;
-        result = one;
+        bt_conn_unref(conn);
+        if (one == Status::Ok)
+            delivered = true;
+        else
+            result = one;
     }
-    return result;
+    return delivered ? Status::Ok : result;
 }
 
 Status Link::send_to(uint16_t session_id, Endpoint ep, ConstByteSpan bytes) {
+    if (bytes.size() > payload_bytes_to(session_id)) return Status::OutOfRange;
     struct bt_conn* conn = conn_of(session_id);
     if (conn == nullptr) return Status::Down;
-    if (bytes.size() > payload_bytes()) return Status::OutOfRange;
-    return notify_one(conn, ep, bytes);
+    const Status sent = notify_one(conn, ep, bytes);
+    bt_conn_unref(conn);
+    return sent;
 }
 
 bool Link::pop_rx(RxFrame& out) {

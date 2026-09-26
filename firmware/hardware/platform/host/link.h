@@ -65,6 +65,9 @@ class Link : public ports::Link {
     }
 
     uint16_t payload_bytes() const override { return sessions_.payload_bytes(); }
+    uint16_t payload_bytes_to(uint16_t session_id) const override {
+        return sessions_.payload_bytes(session_id);
+    }
 
     Status send(events::Endpoint ep, ConstByteSpan bytes) override { return record(0, ep, bytes); }
 
@@ -72,6 +75,10 @@ class Link : public ports::Link {
         if (!sessions_.up(session_id)) return Status::Down;
         return record(session_id, ep, bytes);
     }
+
+    // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
+    void hold_after(int frames) { share_ = frames; }
+    void serve() { in_flight_ = 0; }
 
     void force_status(Status s, bool once = true) {
         next_status_ = s;
@@ -101,7 +108,7 @@ class Link : public ports::Link {
     Status record(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) {
         // The controller's refusal, modelled: an oversized notification is not
         // shortened, it fails, so no case can pass by sending one.
-        if (bytes.size() > payload_bytes()) {
+        if (bytes.size() > (session_id == 0 ? payload_bytes() : payload_bytes_to(session_id))) {
             refused_oversize++;
             return Status::OutOfRange;
         }
@@ -110,6 +117,8 @@ class Link : public ports::Link {
             if (once_) next_status_ = Status::Ok;
             return s;
         }
+        if (share_ > 0 && in_flight_ >= share_) return Status::WouldBlock;
+        in_flight_++;
         sent.push_back({ep, std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
                         session_id});
         return Status::Ok;
@@ -122,6 +131,8 @@ class Link : public ports::Link {
     uint16_t last_{0};
     Status next_status_{Status::Ok};
     bool once_{true};
+    int share_{0};
+    int in_flight_{0};
 };
 
 }

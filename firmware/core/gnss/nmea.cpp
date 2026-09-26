@@ -23,21 +23,35 @@ long parse_long(const char* s, int len) {
     return v;
 }
 int d2(const char* s) { return (s[0] - '0') * 10 + (s[1] - '0'); }
+bool digits(const char* s, int n) {
+    for (int i = 0; i < n; i++)
+        if (s[i] < '0' || s[i] > '9') return false;
+    return true;
+}
 
 constexpr int64_t kMillimetresPerSecPerKnotE3 = 514444;
+constexpr int kRmcStampDigits = 6;
+
+// INFO: fc 23sep26 no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea
+constexpr int64_t kSpeedCeilingMmS = 514444;
+constexpr int64_t kAltitudeCeilingM = 100000;
+constexpr int64_t kAltitudeFloorM = -1000;
 
 // Rounded, not truncated: "46.9" is 47 m of geoid separation, not 46.
-bool parse_scaled(const char* s, long scale, long& out) {
+bool parse_scaled(const char* s, int64_t scale, int64_t& out) {
     if (!s || !s[0]) return false;
     bool neg = false;
     if (*s == '-' || *s == '+') neg = *s++ == '-';
     if (*s < '0' || *s > '9') return false;
-    long whole = 0;
-    while (*s >= '0' && *s <= '9') whole = whole * 10 + (*s++ - '0');
-    long value = whole * scale * 10;
+    int64_t whole = 0;
+    while (*s >= '0' && *s <= '9') {
+        whole = whole * 10 + (*s++ - '0');
+        if (whole > INT32_MAX) return false;
+    }
+    int64_t value = whole * scale * 10;
     if (*s == '.') {
         s++;
-        long place = scale * 10;
+        int64_t place = scale * 10;
         while (*s >= '0' && *s <= '9' && place > 0) {
             place /= 10;
             value += (*s++ - '0') * place;
@@ -54,8 +68,9 @@ uint32_t to_epoch(int y, int mon, int day, int hh, int mm, int ss) {
     unsigned yoe = static_cast<unsigned>(y - era * 400);
     unsigned doy = (153 * (mon + (mon > 2 ? -3 : 9)) + 2) / 5 + day - 1;
     unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    long days = era * 146097L + static_cast<long>(doe) - 719468L;
-    return static_cast<uint32_t>(days * 86400L + hh * 3600L + mm * 60L + ss);
+    int64_t days = static_cast<int64_t>(era) * 146097 + doe - 719468;
+    const int second_of_day = hh * 3600 + mm * 60 + ss;
+    return static_cast<uint32_t>(days * 86400 + second_of_day);
 }
 }
 
@@ -76,17 +91,20 @@ bool nmea_checksum_ok(const char* line, int len) {
     return cs == (hi << 4 | lo);
 }
 
-int32_t nmea_parse_coord(const char* dm, char hemi) {
+bool nmea_parse_coord(const char* dm, char hemi, int32_t& out_1e7) {
+    const bool latitude = hemi == 'N' || hemi == 'S';
+    if (!latitude && hemi != 'E' && hemi != 'W') return false;
     int dot = -1;
     for (int i = 0; dm[i] && i < 16; i++)
         if (dm[i] == '.') {
             dot = i;
             break;
         }
-    if (dot < 2) return 0;
+    if (dot < 2 || dot > 5) return false;
     int deg_digits = dot - 2;
     long deg = parse_long(dm, deg_digits);
     long min_whole = parse_long(dm + deg_digits, 2);
+    if (min_whole >= 60) return false;
     long frac = 0, scale = 1;
     for (int i = 0; i < 4; i++) {
         char c = dm[dot + 1 + i];
@@ -97,8 +115,9 @@ int32_t nmea_parse_coord(const char* dm, char hemi) {
     long min_e4 = min_whole * 10000 + (scale ? frac * (10000 / scale) : 0);
     int64_t v = static_cast<int64_t>(deg) * 10000000LL +
                 div_round<int64_t>(static_cast<int64_t>(min_e4) * 10000000LL, 600000LL);
-    if (hemi == 'S' || hemi == 'W') v = -v;
-    return static_cast<int32_t>(v);
+    if (v > (latitude ? 900000000 : 1800000000)) return false;
+    out_1e7 = static_cast<int32_t>(hemi == 'S' || hemi == 'W' ? -v : v);
+    return true;
 }
 
 bool NmeaParser::feed(char c) {
@@ -151,10 +170,10 @@ bool NmeaParser::apply_gsa(const char* f[], int nf) {
     if (nf <= kGsaVdopField) return false;
     last_ = Sentence::Gsa;
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
-    long pdop_e2 = 0;
+    int64_t pdop_e2 = 0;
     if (!parse_scaled(f[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
     solution_.fix_mode = static_cast<uint8_t>(parse_long(f[kGsaFixModeField], 1));
-    long vdop_e2 = 0;
+    int64_t vdop_e2 = 0;
     solution_.vdop_e2 =
         parse_scaled(f[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
             ? static_cast<uint16_t>(vdop_e2)
@@ -225,10 +244,12 @@ bool NmeaParser::apply_txt(const char* line, int len) {
 bool NmeaParser::apply_rmc(const char* f[], int nf) {
     if (nf < 10) return false;
     last_ = Sentence::Rmc;
-    bool valid = f[2][0] == 'A';
-    solution_.is_fix = valid;
+    int32_t lat_1e7 = 0;
+    int32_t lon_1e7 = 0;
+    solution_.fix_valid = f[2][0] == 'A' && nmea_parse_coord(f[3], f[4][0], lat_1e7) &&
+                          nmea_parse_coord(f[5], f[6][0], lon_1e7);
     solution_.utc_valid = false;
-    if (f[1][0] && f[9][0] && strlen(f[1]) >= 6 && strlen(f[9]) >= 6) {
+    if (digits(f[1], kRmcStampDigits) && digits(f[9], kRmcStampDigits)) {
         int hh = d2(f[1]), mm = d2(f[1] + 2), ss = d2(f[1] + 4);
         int day = d2(f[9]), mon = d2(f[9] + 2), yy = d2(f[9] + 4);
         // The MTK 1980 lie and its neighbours: a two-digit year of 70 or more is
@@ -240,14 +261,17 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
             solution_.utc_valid = true;
         }
     }
-    if (valid) {
-        if (f[3][0]) solution_.lat_1e7 = nmea_parse_coord(f[3], f[4][0]);
-        if (f[5][0]) solution_.lon_1e7 = nmea_parse_coord(f[5], f[6][0]);
-        long knots_e2 = 0;
+    if (solution_.fix_valid) {
+        solution_.lat_1e7 = lat_1e7;
+        solution_.lon_1e7 = lon_1e7;
+        int64_t knots_e2 = 0;
+        int64_t speed_mm_s = -1;
         if (parse_scaled(f[7], 100, knots_e2))
-            solution_.speed_mm_s = static_cast<int32_t>(
-                div_round<int64_t>(knots_e2 * kMillimetresPerSecPerKnotE3, 100000));
-        long track_cdeg = 0;
+            speed_mm_s = div_round<int64_t>(knots_e2 * kMillimetresPerSecPerKnotE3, 100000);
+        solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
+                                   ? static_cast<int32_t>(speed_mm_s)
+                                   : 0;
+        int64_t track_cdeg = 0;
         if (parse_scaled(f[8], 100, track_cdeg))
             solution_.track_cdeg =
                 static_cast<int32_t>(((track_cdeg % kCentiDegreesPerTurn) + kCentiDegreesPerTurn) %
@@ -266,12 +290,12 @@ bool NmeaParser::apply_gga(const char* f[], int nf, int len) {
     solution_.fix_quality = static_cast<uint8_t>(parse_long(f[6], 2));
     solution_.sats = static_cast<uint8_t>(parse_long(f[7], 2));
 
-    long hdop_e2 = 0;
+    int64_t hdop_e2 = 0;
     solution_.hdop_e2 = parse_scaled(f[8], 100, hdop_e2) && hdop_e2 > 0 && hdop_e2 <= 0xFFFF
                             ? static_cast<uint16_t>(hdop_e2)
                             : 0;
 
-    long separation_mm = 0;
+    int64_t separation_mm = 0;
     solution_.geoid_separation_measured = nf > 11 && parse_scaled(f[11], 1000, separation_mm) &&
                                           separation_mm != 0 && separation_mm > -200000 &&
                                           separation_mm < 200000;
@@ -279,8 +303,10 @@ bool NmeaParser::apply_gga(const char* f[], int nf, int len) {
                                         ? static_cast<int32_t>(separation_mm)
                                         : kDefaultGeoidSeparationMm;
 
-    long msl_mm = 0;
-    solution_.alt_msl_valid = parse_scaled(f[9], 1000, msl_mm);
+    int64_t msl_mm = 0;
+    solution_.alt_msl_valid = parse_scaled(f[9], 1000, msl_mm) &&
+                              msl_mm >= kAltitudeFloorM * 1000 &&
+                              msl_mm <= kAltitudeCeilingM * 1000;
     solution_.alt_hae_valid = solution_.alt_msl_valid;
     if (solution_.alt_msl_valid) {
         solution_.alt_msl_mm = static_cast<int32_t>(msl_mm);

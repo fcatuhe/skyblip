@@ -55,11 +55,15 @@ class RecordPool {
     bool write_header(uint32_t sector, const store::SectorHeader& header);
     bool erase(uint32_t sector);
 
-    int payload_bytes() const;
-    int reply_cap() const;
+    int payload_bytes(uint16_t to) const;
+    int reply_cap(uint16_t to) const;
     char* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
-    void send(uint16_t to, int len);
+    // False when the frame was dropped. A link at its share holds it for deliver_held().
+    bool send(uint16_t to, int len);
+    // Ok once nothing is held, WouldBlock while the link still refuses, anything else a drop.
+    Status deliver_held(uint32_t now_ms);
+    bool holding() const { return held_len_ > 0; }
     uint32_t link_drops() const { return link_drops_; }
 
    private:
@@ -80,6 +84,11 @@ class RecordPool {
     bool available_{false};
 
     char reply_[comms::kLogReplyCap]{};
+    char held_[comms::kLogReplyCap]{};
+    int held_len_{0};
+    uint16_t held_to_{0};
+    uint32_t held_since_ms_{0};
+    uint32_t now_ms_{0};
     uint8_t chunk_[comms::kLogChunkRawBytes]{};
 };
 
@@ -129,12 +138,24 @@ class RecordStore {
     uint32_t base_session() const { return claimed_ ? claimed_session_ : session_id_; }
 
     void serve(const comms::LogRequest& request);
+    // INFO: fc 25sep26 chunks go out as the link takes them, not all in the pass that asked
+    void continue_read();
+    void abandon_read() { reading_.active = false; }
+    bool reading() const { return reading_.active; }
     void ack(uint16_t to, bool ok, const char* reason);
 
    private:
     struct Tail {
         uint32_t records{0};
         bool closed{false};
+    };
+
+    struct Reading {
+        bool active{false};
+        uint16_t to{0};
+        uint32_t session{0};
+        comms::LogWindow window{};
+        int next{0};
     };
 
     void recover();
@@ -158,6 +179,7 @@ class RecordStore {
     flight::LogRing ring_{};
 
     SessionInfo index_[kMaxSessions]{};
+    Reading reading_{};
     uint32_t session_count_{0};
     uint32_t records_written_{0};
     uint32_t session_records_{0};

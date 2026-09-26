@@ -54,7 +54,7 @@ struct BatteryState {
     bool valid{false};
 };
 
-// Readings become something a pilot can read. A 22 dBm burst sags the rail for
+// Readings become something a pilot can read. A 14 dBm burst sags the rail for
 // exactly as long as it lasts, so the gauge takes the median of the last three
 // readings rather than an average: a transient is discarded whole, while a cell
 // that is really moving is followed within two samples. And a gauge that walks

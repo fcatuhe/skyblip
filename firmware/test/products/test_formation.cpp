@@ -24,7 +24,7 @@ model::AircraftObs contact(const model::OwnState& own, int north_m, int east_m, 
     t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
         static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
-    const int64_t east_scaled = (static_cast<int64_t>(east_m) << 14) / icos(ang);
+    const int64_t east_scaled = static_cast<int64_t>(east_m) * 16384 / icos(ang);
     t.lon_1e7 = own.lon_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     t.received.at_s = at_ms / 1000;
     t.at_ms = at_ms;

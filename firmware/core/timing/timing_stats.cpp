@@ -32,13 +32,13 @@ void SlotTimingStats::bump(uint32_t* buckets, uint32_t& samples, int32_t& worst_
 
 void SlotTimingStats::record_edge(uint64_t edge_us, bool locked) {
     if (!locked) {
-        if (have_prev_edge_) holdover_++;
-        have_prev_edge_ = false;
+        if (prev_edge_valid_) holdover_++;
+        prev_edge_valid_ = false;
         return;
     }
-    if (!have_prev_edge_) {
+    if (!prev_edge_valid_) {
         prev_edge_us_ = edge_us;
-        have_prev_edge_ = true;
+        prev_edge_valid_ = true;
         return;
     }
     if (edge_us == prev_edge_us_) return;

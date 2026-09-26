@@ -64,18 +64,18 @@ class Platform {
         // The gated rails are raised at board level so MCUboot sees them too;
         // what is still owed here is the SX1262 TCXO settling time.
         k_msleep(50);
-        kv_.begin();
+        storage_mounted_ = kv_.begin() == Status::Ok;
         // A log partition that refuses to open is a device that flies and logs
         // nothing, not a device that refuses to fly: the region reports its own
         // readiness and the flight log service reads it.
-        log_flash_.begin();
+        (void)log_flash_.begin();
         annunciator_.begin();
         indicator_.begin();
-        link_.begin(device_addr());
+        link_up_ = link_.begin(device_addr()) == Status::Ok;
         baro_ = baro76_.ready() ? &baro76_ : (baro77_.ready() ? &baro77_ : nullptr);
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
         gpio_pin_configure_dt(&pad_, GPIO_INPUT);
-        pps_.begin();
+        pps_armed_ = pps_.begin() == Status::Ok;
         return Status::Ok;
     }
 
@@ -98,6 +98,9 @@ class Platform {
     zephyr::Indicator& indicator() { return indicator_; }
     zephyr::Dfu& dfu() { return dfu_; }
     zephyr::Pps& pps() { return pps_; }
+    bool pps_armed() const { return pps_armed_; }
+    bool storage_mounted() const { return storage_mounted_; }
+    bool link_up() const { return link_up_; }
     zephyr::Baro* baro() { return baro_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
@@ -219,6 +222,9 @@ class Platform {
     zephyr::Battery battery_{battery_dev_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};
+    bool pps_armed_{false};
+    bool storage_mounted_{false};
+    bool link_up_{false};
     zephyr::Watchdog watchdog_{};
     zephyr::SystemPower system_power_{button_};
 };

@@ -184,10 +184,10 @@ bool L76k::poll(uint32_t now_ms) {
     // A receiver that stops talking publishes nothing, so nothing would ever
     // withdraw the last fix it managed to send. The validity edge is an update in
     // its own right, and it is the one that matters most.
-    if (!closed && valid == solution_.is_fix) return false;
+    if (!closed && valid == solution_.fix_valid) return false;
 
     solution_ = parser_.solution();
-    solution_.is_fix = valid;
+    solution_.fix_valid = valid;
     solution_.pps_latency_ms = pps_latency_ms();
     return true;
 }

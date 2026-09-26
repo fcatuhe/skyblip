@@ -6,7 +6,7 @@ The companion link, from the side that does not know what Bluetooth is. A platfo
 
 `events::Endpoint` splits the link in three because the three have different owners. NMEA is the traffic picture and it is broadcast: every subscribed central gets the same bytes, and `ports::Link::send()` reports Ok when one of them took it, so a phone whose controller buffers are full cannot end the pass for the tablet beside it. Config and Log are conversations, and they go out through `send_to()`, addressed to the session whose request they answer.
 
-That is why `payload_bytes()` with no argument is the *smallest* payload any connected central negotiated. One NMEA frame is formatted once and goes to all of them, so it has to fit the narrowest. An iPhone at ATT_MTU 185 sitting beside an Android at 247 pulls every broadcast frame down to 182 bytes, and that is correct, not a compromise: the alternative is formatting the picture once per central.
+That is why `payload_bytes()` with no argument is the *smallest* payload any connected central negotiated. One NMEA frame is formatted once and goes to all of them, so it has to fit the narrowest. An iPhone at ATT_MTU 185 sitting beside an Android at 247 pulls every broadcast frame down to 182 bytes, and that is correct, not a compromise: the alternative is formatting the picture once per central. A conversation is sized for its own session instead, by `payload_bytes_to()`, so a central that never exchanged its MTU narrows the broadcast and no one else's replies.
 
 ## Sessions
 
