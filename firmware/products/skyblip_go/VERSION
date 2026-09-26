@@ -6,9 +6,9 @@
 # 110-113). imgtool stamps that string into the image header, and it is what
 # the bootloader compares on the next OTA.
 #
-# The tweak stays 0 here. CI overrides the signing version with this triple plus
-# github.run_number instead of editing this file, because version.cmake:79-81
-# refuses a tweak above 255 and because a local build has no run number.
+# The tweak stays 0 here. The build overrides the signing version with this
+# triple plus a build number, the commit count in scripts/build_local.sh, instead
+# of editing this file, because version.cmake:79-81 refuses a tweak above 255.
 VERSION_MAJOR = 0
 VERSION_MINOR = 1
 PATCHLEVEL = 0

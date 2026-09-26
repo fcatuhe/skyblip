@@ -155,9 +155,9 @@ TEST_CASE("radio: begin + configure + receive brings the modem to Rx") {
 TEST_CASE("radio: a queued RX packet is delivered via poll") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     uint8_t pkt[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     chip.queue_rx(pkt, 8);
     uint8_t buf[32];
@@ -171,9 +171,9 @@ TEST_CASE("radio: a queued RX packet is delivered via poll") {
 TEST_CASE("radio: a CRC-error RX is reported as CrcError, NOT delivered") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, 4, /*crc_error=*/true);
     uint8_t buf[32];
@@ -184,9 +184,9 @@ TEST_CASE("radio: a CRC-error RX is reported as CrcError, NOT delivered") {
 TEST_CASE("radio: BUSY stuck high is surfaced as a fault, not a hang") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     chip.busy_stuck = true;
     uint8_t buf[32];
     RadioEvent ev = r.poll(buf, sizeof(buf));
@@ -196,9 +196,9 @@ TEST_CASE("radio: BUSY stuck high is surfaced as a fault, not a hang") {
 TEST_CASE("radio: health watchdog reinitialises after no-RX timeout (no-RX-in-N reinit, tested)") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     CHECK(r.reinit_count() == 0);
     // 29 s: no reinit yet
     CHECK_FALSE(r.service(29000, 30000));
@@ -214,6 +214,30 @@ TEST_CASE("radio: health watchdog reinitialises after no-RX timeout (no-RX-in-N 
     CHECK_FALSE(r.service(29000, 30000));
 }
 
+TEST_CASE("radio: a reinit that failed after the reset keys nothing until one succeeds") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+    chip.miso_dead = true;
+    REQUIRE(r.service(31000, 30000));
+    chip.miso_dead = false;
+
+    CHECK(r.configure_radio(RadioConfig{}) == Status::Down);
+    const uint8_t frame[4] = {1, 2, 3, 4};
+    CHECK(r.transmit(frame, sizeof(frame)) == Status::Invalid);
+    CHECK(r.start_receive() == Status::Invalid);
+    CHECK_FALSE(chip.tx_pending);
+    CHECK_FALSE(chip.receiving);
+
+    REQUIRE(r.service(30000, 30000));
+    CHECK(r.reinit_count() == 2);
+    CHECK(r.mode() == RadioMode::Rx);
+    CHECK(chip.tcxo_powered);
+    CHECK(r.configure_radio(RadioConfig{}) == Status::Ok);
+}
+
 // EN 300 220-2 V3.3.1 §4.6.3.2 wants the assessment averaged over an interval,
 // and this part has nothing to average it with: GetRssiInst is an instant by
 // definition (DS 13.5.2) and channel activity detection answers for a LoRa
@@ -222,10 +246,10 @@ TEST_CASE("radio: health watchdog reinitialises after no-RX timeout (no-RX-in-N 
 TEST_CASE("radio: what was written to the buffer is what goes on air") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[5] = {0x72, 0x4B, 0x18, 0xAA, 0x55};
-    r.transmit(frame, sizeof(frame));
+    REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK_FALSE(chip.receiving);
     uint8_t out[8] = {0};
     uint8_t len = 0;
@@ -240,7 +264,7 @@ TEST_CASE("radio: what was written to the buffer is what goes on air") {
 TEST_CASE("radio: what goes on air is the sync window the part inserts, then the buffer") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
@@ -252,7 +276,7 @@ TEST_CASE("radio: what goes on air is the sync window the part inserts, then the
     uint8_t buffer[protocol::kTxPayloadChipBytes] = {0};
     const size_t buffer_len =
         protocol::mband_payload(protocol::kAdslSyncWord, payload, sizeof(payload), buffer);
-    r.transmit(buffer, static_cast<uint8_t>(buffer_len));
+    REQUIRE(r.transmit(buffer, static_cast<uint8_t>(buffer_len)) == Status::Ok);
 
     uint8_t on_air[protocol::kTxChipBytes] = {0};
     uint8_t len = 0;
@@ -270,7 +294,7 @@ TEST_CASE("radio: what goes on air is the sync window the part inserts, then the
 TEST_CASE("radio: configure programs the sync window and the fixed read length") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
@@ -288,8 +312,8 @@ TEST_CASE("radio: configure programs the sync window and the fixed read length")
 TEST_CASE("radio: the interrupt line is readable without a word on the bus") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(r.start_receive() == Status::Ok);
     CHECK_FALSE(r.irq_asserted());
 
@@ -308,7 +332,7 @@ TEST_CASE("radio: the interrupt line is readable without a word on the bus") {
 TEST_CASE("radio: the packet the modem is told to expect carries no CRC of the chip's own") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
@@ -335,13 +359,13 @@ TEST_CASE("radio: the packet the modem is told to expect carries no CRC of the c
 TEST_CASE("radio: a burst is framed from the chips after the sync window, either system") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
-    r.configure_radio(cfg);
-    r.start_receive();
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
 
     for (uint32_t sync_word : {protocol::kAdslSyncWord, protocol::kAlptasSyncWord}) {
         uint8_t payload[protocol::kAlptasFrameBytes];
@@ -359,20 +383,20 @@ TEST_CASE("radio: a burst is framed from the chips after the sync window, either
         if (adsl) CHECK(frame.system == protocol::System::AdslDirect);
         if (!adsl) CHECK(frame.system == protocol::System::Alptas);
         CHECK(frame.data[0] == 1);
-        r.start_receive();
+        REQUIRE(r.start_receive() == Status::Ok);
     }
 }
 
 TEST_CASE("radio: a burst carrying a sync word the dwell is not armed for is not reported") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kUplinkSync;
     cfg.sync_bits = protocol::kUplinkSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
-    r.configure_radio(cfg);
-    r.start_receive();
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
 
     uint8_t payload[protocol::kAdslFrameBytes] = {0};
     uint8_t chips[protocol::kTxChipBytes] = {0};
@@ -395,8 +419,8 @@ TEST_CASE("radio: a burst carrying a sync word the dwell is not armed for is not
 TEST_CASE("radio: an IRQ bit that was never unmasked is never reported") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, 4);
     uint8_t buf[32];
@@ -408,10 +432,10 @@ TEST_CASE("radio: an IRQ bit that was never unmasked is never reported") {
 TEST_CASE("radio: the IRQ mask and the DIO1 mask are programmed before the receiver is started") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.irq_mask == 0);
-    r.start_receive();
+    REQUIRE(r.start_receive() == Status::Ok);
     CHECK(chip.cmd_order(sx::kSetDioIrqParams) < chip.cmd_order(sx::kSetRx));
     CHECK((chip.irq_mask & sx::kIrqRxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqCrcErr) != 0);
@@ -424,8 +448,8 @@ TEST_CASE("radio: the IRQ mask and the DIO1 mask are programmed before the recei
 TEST_CASE("radio: the IRQ mask is programmed before the transmitter is keyed") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
     REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.cmd_order(sx::kSetDioIrqParams) < chip.cmd_order(sx::kSetTx));
@@ -441,8 +465,8 @@ TEST_CASE("radio: the IRQ mask is programmed before the transmitter is keyed") {
 TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before the power") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.pa_set);
     CHECK(chip.pa_config[0] == 0x04);
     CHECK(chip.pa_config[1] == 0x07);
@@ -459,8 +483,8 @@ TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before 
 TEST_CASE("radio: output power is 14 dBm conducted, which is under 25 mW e.r.p. on our antenna") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.tx_power_set);
     CHECK(chip.tx_power_dbm == sx::kConductedDbm);
     CHECK(chip.tx_power_dbm == 14);
@@ -501,7 +525,7 @@ TEST_CASE("radio: image rejection is calibrated for 863-870 MHz after the TCXO i
     CHECK(chip.fault == models::Sx1262::Fault::None);
     // Once per band: the second dwell does not pay for it again.
     const int before = chip.cmd_order(sx::kCalibrateImage);
-    r.configure_radio(RadioConfig{});
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.cmd_order(sx::kCalibrateImage) == before);
 }
 
@@ -510,11 +534,11 @@ TEST_CASE("radio: image rejection is calibrated for 863-870 MHz after the TCXO i
 TEST_CASE("radio: retuning a receiving radio is bracketed by standby and returns to RX") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    r.configure_radio(cfg);
-    r.start_receive();
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     REQUIRE(r.mode() == RadioMode::Rx);
 
     int standbys = 0;
@@ -535,9 +559,9 @@ TEST_CASE("radio: retuning a receiving radio is bracketed by standby and returns
 TEST_CASE("radio: a standby-only command issued while the receiver runs is a chip fault") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     REQUIRE(chip.fault == models::Sx1262::Fault::None);
     const uint8_t retune[5] = {sx::kSetRfFrequency, 0x36, 0x40, 0x00, 0x00};
     chip.select(true);
@@ -566,12 +590,12 @@ TEST_CASE("radio: NRESET is held low for the datasheet minimum, and a shorter pu
 TEST_CASE("radio: SetTx carries a timeout past the frame's air time at the configured bitrate") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
+    REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
-    r.configure_radio(cfg);
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
     REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.tx_timeout_ticks != 0);
@@ -604,9 +628,9 @@ TEST_CASE("radio: presence is a register round-trip, and a dead MISO is an absen
 TEST_CASE("radio: sleep is a warm start with the RTC off, and an NSS edge brings it back") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     r.sleep();
     CHECK(r.mode() == RadioMode::Sleep);
     // DS 13.1.2 sleepConfig: bit 0 is the RTC wake-up, bit 2 the warm start.
@@ -622,9 +646,9 @@ TEST_CASE("radio: sleep is a warm start with the RTC off, and an NSS edge brings
 TEST_CASE("radio: a transmission that never completes is recovered to RX and counted") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
-    r.begin();
-    r.configure_radio(RadioConfig{});
-    r.start_receive();
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
     REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
     REQUIRE(r.mode() == RadioMode::Tx);

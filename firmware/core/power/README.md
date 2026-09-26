@@ -22,7 +22,9 @@ The gauge reads zero where the device stops, not where a datasheet calls the cel
 
 The lockout sits above the cutoff. A cell relaxes once the load goes away, so a device that shut itself down at 3200 reads about 3400 by the time a thumb reaches the button, and a lockout underneath the cutoff would hand back a device with one minute in it.
 
-The cutoff is a loaded reading, because a loaded reading is the only kind this device ever takes. A pouch datasheet puts the discharge floor at 3.0 V and its protection board trips near 2.5 V; stopping at 3.2 V under a receiver and a 22 dBm radio leaves the pack resting near 3.4 V, which is a voltage it can sit at in a flight bag for months without reaching either.
+The lockout guards a switch-on, not a restart. A watchdog, lockup or software reset means the device was running a moment ago, possibly in flight, so that boot is held to the cutoff the running device answers to, and a fault never leaves a flying unit dark with a cell the cutoff would have kept on air (`wake.cpp`).
+
+The cutoff is a loaded reading, because a loaded reading is the only kind this device ever takes. A pouch datasheet puts the discharge floor at 3.0 V and its protection board trips near 2.5 V; stopping at 3.2 V under a receiver and a 14 dBm radio leaves the pack resting near 3.4 V, which is a voltage it can sit at in a flight bag for months without reaching either.
 
 Caution is not a `PowerLevel`, and that is deliberate. The levels are what the device acts on: a write refused, a refresh withheld, a shutdown started. Nothing acts on the knee. It is what the lamp says while every action is still allowed, so it stays a predicate on the monitor rather than a fifth value every reader of the level would have to learn to ignore. It also keeps the diagnostics record's level byte meaning what it meant in every log already on a flash.
 

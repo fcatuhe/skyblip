@@ -32,7 +32,7 @@ void settle(Rig& rig, uint32_t& t) {
 
 void push_solution(Rig& rig, int32_t speed_mm_s, int32_t alt_msl_m) {
     gnss::GnssSolution solution{};
-    solution.is_fix = true;
+    solution.fix_valid = true;
     solution.speed_mm_s = speed_mm_s;
     solution.alt_msl_mm = alt_msl_m * 1000;
     solution.updates = 1;

@@ -79,7 +79,7 @@ class L76k : public ports::Gnss {
         "$PCAS02,1000*2E\r\n",
     };
 
-    // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.12 asks us to claim
+    // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
 
     // INFO: fc 18sep26 $PCAS03 takes a null per field meaning keep, so these two move nGSV alone

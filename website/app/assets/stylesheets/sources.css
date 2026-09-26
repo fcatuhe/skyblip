@@ -23,6 +23,6 @@
 
   .sources .support {
     display: block;
-    color: var(--quiet);
+    color: var(--quiet-text);
   }
 }

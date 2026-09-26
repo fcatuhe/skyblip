@@ -124,6 +124,21 @@ TEST_CASE("log link: a session line says how many records and whether the flight
     CHECK(std::strstr(buf, "\"closed\":false") != nullptr);
 }
 
+TEST_CASE("log link: a flight opened after January 2038 is read and named by its own second") {
+    constexpr uint32_t kNewYear2040 = 2208988800u;
+    const comms::LogRequest read =
+        comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":2208988800}"));
+    CHECK(read.understood);
+    CHECK(read.session == kNewYear2040);
+
+    char buf[comms::kLogReplyCap];
+    REQUIRE(comms::format_log_session(buf, sizeof(buf), 0, 1, kNewYear2040, 10, true, false) > 0);
+    CHECK(std::strstr(buf, "\"session\":2208988800,") != nullptr);
+    const uint8_t raw[flight::kLogRecordBytes] = {0};
+    REQUIRE(comms::format_log_chunk(buf, sizeof(buf), kNewYear2040, 0, raw, 1, true) > 0);
+    CHECK(std::strstr(buf, "\"session\":2208988800,") != nullptr);
+}
+
 TEST_CASE("log link: an absent store is the flights every client asks for today") {
     const comms::LogRequest list = comms::parse_log_request(log_frame("{\"cmd\":\"list\"}"));
     CHECK(list.store == store::SectorOwner::Flights);

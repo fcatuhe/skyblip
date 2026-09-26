@@ -74,13 +74,13 @@ class FixValidity {
     int32_t prev_lon_1e7_{0};
     uint32_t rejected_{0};
     FixReject last_reject_{FixReject::None};
-    bool have_rmc_{false};
-    bool have_gga_{false};
+    bool rmc_heard_{false};
+    bool gga_heard_{false};
     bool rmc_solution_{false};
     bool gga_solution_{false};
     bool date_ok_{false};
     bool jumped_{false};
-    bool have_previous_{false};
+    bool previous_valid_{false};
 };
 
 }  // namespace skyblip::gnss

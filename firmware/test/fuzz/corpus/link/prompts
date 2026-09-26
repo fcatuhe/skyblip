@@ -1,0 +1,6 @@
+C{"cmd":"dfu"}
+P
+C{"cmd":"update"}
+c{"cmd":"apply"}
+C{"cmd":"gnss_cold"}
+P

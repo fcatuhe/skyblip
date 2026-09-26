@@ -99,7 +99,15 @@ A reader turns it into energy by hand. Take two `Duty` records, subtract each fi
 
 All seven fields are `uint16_t` and the counters they come from on `bus::State` are `uint32_t`, so the codec keeps the low half. That is a wrap and not a clamp, and it is deliberate: every reader subtracts two records, and unsigned subtraction crosses a wrap correctly as long as one interval's delta stays under 65536. A clamp would stick at 65535 and report an interval that never happened. The `diag` dump already reads milliseconds the same way, across the 49.7-day wrap of the millisecond clock.
 
-What buys that is a bound on how far apart two records can be, so the bound is written down as `kDutyMaxPeriodMs`, 60 s, and the service that emits the record asserts its own period against it. At a 30 s cadence the worst interval holds about 30 partial refreshes, 30,000 ms of backlight, 30,000 ms of receiver armed, 30,000 ms of BLE connected and 150 ms of PA keyed (the 1% band M allowance over 30 s), every one of them with room to spare. At 60 s each doubles and the widest is still 60,000. Past that the arithmetic stops being true, which is why the cadence is a constant with an assertion behind it rather than a number chosen in a service.
+What buys that is a bound on how far apart two records can be, so the bound is written down as `kDutyMaxPeriodMs`, 60 s, and the service that emits the record asserts its own period against it. At a 30 s cadence the worst interval holds about 30 partial refreshes, 30,000 ms of backlight, 30,000 ms of receiver armed, 30,000 ms of BLE connected and 150 ms of PA keyed (one 5 ms burst a second airborne, half the 300 ms the 1% band M allowance grants over 30 s), every one of them with room to spare. At 60 s each doubles and the widest is still 60,000. Past that the arithmetic stops being true, which is why the cadence is a constant with an assertion behind it rather than a number chosen in a service.
+
+**A reader must not subtract two `Duty` records across a `Gap`, a `Boot`, a session boundary, a missing or unreadable record index, or a pair further apart than `kDutyMaxPeriodMs`.** A 16-bit millisecond counter wraps every 65.5 s, so one delta can only be recovered when nothing else could have happened between the two records: a hole may hold any number of wraps, a `Boot` follows a ring that recycled part of the session, and the counters start again at zero with every power-on. Two records whose instants are dated differently, one UTC and one since boot, have no spacing a reader can measure either, so they are the same case. The interval is dropped, never estimated.
+
+### The last pair, when the device goes down
+
+A capture that parks ends on one more `Power` and one more `Duty`, off the cadence gate, then its `End`. `Product` asks `PowerService::record_last_pass()` for them on the way down, after the radio sleeps and before `CaptureService::park()` disarms the recorder, whatever took the device down: the cell, a long press, the companion link, an install. The service loop stops on the pass a shutdown is asked for, so without that pair a power run would write a `Power` record at cutoff roughly one run in thirty, and lose up to 30 s of `Duty` from the stretch where the cell sags.
+
+The `Power` record carries the level at that instant, so a run to cutoff closes on `Power` with `level` `Cutoff`, then `Duty`, then `End`, the pair under one instant. Two cases break that sequence. When writing either record of the pair recycles one of the session's own sectors, which only a ring that has already wrapped does, the rotation's `Gap` follows that record, and the `Boot` and `Config` a rotation names the build with are refused, because the recorder is disarmed by then. When the partition refuses the slots the pair needs, the session ends on `Gap` then `End`, and the `Gap` counts the pair. A reader looks for the last `Power` and the last `Duty` before the `End`, not for the two slots in front of it. A pilot's stop is not a park and writes no pair: its last `Duty` is the one the cadence last wrote.
 
 ### The end marker, and the tail a reader must drop
 
@@ -124,7 +132,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Burst` | `services/traffic.cpp` `log`, `services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
 | `Flight` | `services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
-| `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at |
+| `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
 | `Baro` | `services/ownship.cpp` `record_baro` | every sample the board polls (`runtime::kBaroPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
@@ -134,7 +142,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
 | `End` | `services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
-| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diag::kPowerRunRecordPeriodMs` in a power run |
+| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diag::kPowerRunRecordPeriodMs` in a power run, and once more after the last `Power` as a capture parks |
 
 `Gnss::reject` is the receiver's own verdict and reaches the tap the way every other receiver fact does: `gnss::FixValidity` lives on the L76K driver, which no `runtime::Context` reaches, so the board publishes its reason and its count onto `bus::State` beside the sky view as it pushes the solution, and own-ship reads them there. The board is a writer of that group by the table in `core/bus/README.md`.
 
@@ -149,7 +157,6 @@ void arm(Profile = Full);                   a capture starts, and the ring start
 void disarm();                              nothing more is accepted, what is buffered still drains
 bool armed() const;
 Profile profile() const;
-bool records(Type) const;                   armed, and this type is one the profile wants
 bool record(const Record&);                 false when disarmed, refused by the profile, or dropped
 bool record(const radio::Entry&);           a tape entry carries its own instant
 template <class T> bool record(const T&, const Instant&);

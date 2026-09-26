@@ -3,7 +3,8 @@ name: website
 # skyblip.eu: a Parklife static build of website/, served from GitHub Pages.
 #
 # The site shares this tree with the firmware, so every job here is gated on the
-# commit having touched website/. A Zephyr-only merge must not spend a Pages
+# commit having touched website/, or firmware/ and simulator/ because the page
+# embeds the WASM and its case. A merge elsewhere must not spend a Pages
 # deployment, and a content typo must not wait on a 5-minute cross build.
 on:
   pull_request:
@@ -41,6 +42,7 @@ jobs:
             website:
               - 'website/**'
               - 'firmware/**'
+              - 'simulator/**'
               - '.github/workflows/website.yml'
 
   build:
@@ -50,7 +52,10 @@ jobs:
     # arm64 runners: cheaper per-minute and native aarch64 gem installs.
     runs-on: ubuntu-26.04-arm
     steps:
+      # Full history: the sitemap's lastmod is each page's own `git log -1` date.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # `working-directory` is what points bundler-cache at website/Gemfile.lock;
       # without it the cache key is computed from a lockfile that is not there.
@@ -58,6 +63,11 @@ jobs:
         with:
           bundler-cache: true
           working-directory: website
+
+      # Style and security gates from config/ci.rb, before anything is built.
+      - name: ci
+        working-directory: website
+        run: bin/ci
 
       - uses: actions/configure-pages@v6
         id: pages

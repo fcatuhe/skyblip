@@ -12,6 +12,7 @@ class Reader {
     Reader(const char* data, int len) : data_(data), len_(len) {}
 
     bool get_int(const char* key, long& out) const;
+    bool get_uint(const char* key, uint32_t& out) const;
     bool get_bool(const char* key, bool& out) const;
     bool get_str(const char* key, char* buf, int cap) const;
     bool has(const char* key) const;
@@ -20,6 +21,7 @@ class Reader {
     const char* data_;
     int len_;
     int value_offset(const char* key) const;
+    bool get_number(const char* key, int64_t& out) const;
 };
 
 // Every call either commits a complete key and value, or commits nothing at
@@ -30,7 +32,7 @@ class Reader {
 class Writer {
    public:
     Writer(char* buf, int cap) : buf_(buf), cap_(cap) { buf_[n_++] = '{'; }
-    void kv_int(const char* key, long v);
+    void kv_int(const char* key, int64_t v);
     void kv_bool(const char* key, bool v);
     void kv_str(const char* key, const char* v);
     int finish();

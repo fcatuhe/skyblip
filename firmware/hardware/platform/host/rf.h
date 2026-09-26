@@ -63,7 +63,7 @@ class Rf : public ports::Rf {
         last_ms_ = now_ms;
         radio_.service(dt, runtime::kRadioNoRxReinitMs);
 
-        if (armed_ && !started_ && now_us >= plan_.start_us) start();
+        if (armed_ && !started_ && now_us >= plan_.start_us && !start()) abandon(now_us);
         if (armed_ && started_ && plan_.tx != nullptr && !transmitted_ && now_us >= plan_.tx_at_us)
             transmit();
         // The receiver keeps reporting between dwells: a frame that arrived
@@ -107,14 +107,22 @@ class Rf : public ports::Rf {
         keyed_at_us_ = 0;
     }
 
-    void start() {
+    // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
+    bool start() {
         started_ = true;
         armed_count_++;
-        radio_.wake();
         band_ = plan_.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
         freq_hz_ = plan_.freq_hz;
-        if (plan_.freq_hz != 0) radio_.configure_radio(dwell_config(plan_));
-        radio_.start_receive();
+        if (radio_.wake() != Status::Ok) return false;
+        if (plan_.freq_hz != 0 && radio_.configure_radio(dwell_config(plan_)) != Status::Ok)
+            return false;
+        return radio_.start_receive() == Status::Ok;
+    }
+
+    void abandon(uint64_t now_us) {
+        if (plan_.tx != nullptr) emit(events::RfEventType::Missed, now_us);
+        armed_ = false;
+        started_ = false;
     }
 
     // The whole modem, not just the synthesiser: the two bands are two
@@ -136,7 +144,7 @@ class Rf : public ports::Rf {
 
     void transmit() {
         transmitted_ = true;
-        radio_.transmit(plan_.tx, plan_.tx_len);
+        (void)radio_.transmit(plan_.tx, plan_.tx_len);
         keyed_at_us_ = clock_.micros();
     }
 
@@ -162,7 +170,7 @@ class Rf : public ports::Rf {
                 case parts::RadioEventType::TxDone:
                     completed_ = true;
                     emit(events::RfEventType::TxDone, now_us);
-                    radio_.start_receive();
+                    (void)radio_.start_receive();
                     break;
                 default: emit(events::RfEventType::Missed, now_us); return;
             }

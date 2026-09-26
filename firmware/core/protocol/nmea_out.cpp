@@ -35,13 +35,13 @@ bool relative_ned(const model::OwnState& own, const model::AircraftObs& t, int32
                   int32_t& east_m, int32_t& up_m) {
     if (!own.fix_valid || !t.position_valid) return false;
     int64_t dlat = static_cast<int64_t>(t.lat_1e7) - own.lat_1e7;
-    int64_t dlon = static_cast<int64_t>(t.lon_1e7) - own.lon_1e7;
+    int64_t dlon = wrapped_lon_1e7(static_cast<int64_t>(t.lon_1e7) - own.lon_1e7);
     north_m = static_cast<int32_t>(div_round<int64_t>(dlat * 11132, 1000000));
     int16_t ang = static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
     int64_t coslat = icos(ang);
     int64_t east_um = div_round<int64_t>(dlon * 11132 * coslat, 16384);
     east_m = static_cast<int32_t>(div_round<int64_t>(east_um, 1000000));
-    up_m = t.alt_m - to_metres(Millimetres(own.alt_mm)).v;
+    up_m = t.alt_valid ? t.alt_m - to_metres(Millimetres(own.alt_mm)).v : 0;
     return true;
 }
 
@@ -159,17 +159,17 @@ int32_t clamp_i32(int32_t v, int32_t low, int32_t high) {
 int format_lk8ex1(char* out, size_t cap, const Lk8Ex1& v) {
     (void)cap;
     const uint32_t pressure =
-        v.has_pressure ? (v.pressure_pa > kLk8MaxPressurePa ? kLk8MaxPressurePa : v.pressure_pa)
-                       : kLk8NoPressurePa;
+        v.pressure_valid ? (v.pressure_pa > kLk8MaxPressurePa ? kLk8MaxPressurePa : v.pressure_pa)
+                         : kLk8NoPressurePa;
     const int32_t alt =
-        v.has_alt ? clamp_i32(v.alt_m, kLk8MinAltitudeM, kLk8MaxAltitudeM) : kLk8NoAltitudeM;
+        v.alt_valid ? clamp_i32(v.alt_m, kLk8MinAltitudeM, kLk8MaxAltitudeM) : kLk8NoAltitudeM;
     const int32_t vario =
-        v.has_vario ? clamp_i32(v.vario_cm_s, kLk8MinVarioCmS, kLk8MaxVarioCmS) : kLk8NoVarioCmS;
+        v.vario_valid ? clamp_i32(v.vario_cm_s, kLk8MinVarioCmS, kLk8MaxVarioCmS) : kLk8NoVarioCmS;
     const int32_t temperature =
-        v.has_temperature ? clamp_i32(v.temperature_c, kLk8MinTemperatureC, kLk8MaxTemperatureC)
-                          : kLk8NoTemperatureC;
+        v.temperature_valid ? clamp_i32(v.temperature_c, kLk8MinTemperatureC, kLk8MaxTemperatureC)
+                            : kLk8NoTemperatureC;
     const uint32_t percent = v.battery_percent > 100 ? 100u : v.battery_percent;
-    const uint32_t battery = v.has_battery ? kLk8BatteryPercentBase + percent : kLk8NoBattery;
+    const uint32_t battery = v.battery_valid ? kLk8BatteryPercentBase + percent : kLk8NoBattery;
 
     int n = 0;
     n += fmt_string(out + n, "$LK8EX1,");

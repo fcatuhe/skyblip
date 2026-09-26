@@ -34,8 +34,9 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible_count());
 
+    config_.resume_replies(now_ms);
     events::RxFrame frame{};
-    while (context_.bus.link_rx.pop(frame)) {
+    while (!config_.replying() && context_.bus.link_rx.pop(frame)) {
         config_.on_rx(frame);
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }
@@ -159,8 +160,17 @@ void ConfigLinkService::drain_settings(uint32_t now_ms) {
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
-    persist();
-    writes_.placed(now_ms, verdict == timing::DurableWriteVerdict::Forced);
+    write_settings(now_ms, verdict == timing::DurableWriteVerdict::Forced);
+}
+
+// INFO: fc 25sep26 a refusal restarts the bound, so a refusing store is forced once per bound
+void ConfigLinkService::write_settings(uint32_t now_ms, bool forced) {
+    if (persist()) {
+        writes_.placed(now_ms, forced);
+    } else {
+        failed_++;
+        writes_.refused(now_ms, forced);
+    }
 }
 
 void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms) {
@@ -186,15 +196,14 @@ void ConfigLinkService::flush_settings(uint32_t now_ms) {
     if (hold_for_power()) return;
     take_request(now_ms);
     if (!writes_.pending()) return;
-    persist();
-    writes_.placed(now_ms, /*forced=*/false);
+    write_settings(now_ms, /*forced=*/false);
 }
 
 void ConfigLinkService::load() {
     if (loaded_) return;
     load_image_state();
     settings_ = go::defaults();
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Storage)) {
+    if (!storable()) {
         loaded_ = true;
         return;
     }
@@ -211,15 +220,16 @@ void ConfigLinkService::load() {
     }
 }
 
-void ConfigLinkService::persist() {
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Storage)) return;
+bool ConfigLinkService::persist() {
+    if (!storable()) return true;
     uint8_t blob[kBlobCap];
     go::to_blob(settings_, blob, sizeof(blob));
     const size_t len = go::blob_size();
-    if (stored_len_ == len && std::memcmp(stored_, blob, len) == 0) return;
-    if (!is_ok(context_.roles.kv.write("settings", blob, len))) return;
+    if (stored_len_ == len && std::memcmp(stored_, blob, len) == 0) return true;
+    if (!is_ok(context_.roles.kv.write("settings", blob, len))) return false;
     std::memcpy(stored_, blob, len);
     stored_len_ = len;
+    return true;
 }
 
 void ConfigLinkService::load_image_state() {
@@ -228,7 +238,7 @@ void ConfigLinkService::load_image_state() {
     const ports::Capabilities fitted = context_.roles.capabilities;
     const bool has_dfu = ports::has(fitted, ports::Capability::Dfu);
     update_recorded_ = false;
-    if (ports::has(fitted, ports::Capability::Storage)) {
+    if (storable()) {
         uint8_t blob[dfu::kUpdateRecordBytes];
         size_t n = 0;
         update_recorded_ = is_ok(context_.roles.kv.read(kUpdateKey, blob, sizeof(blob), n)) &&
@@ -257,10 +267,7 @@ void ConfigLinkService::load_image_state() {
 }
 
 void ConfigLinkService::record_update() {
-    const ports::Capabilities fitted = context_.roles.capabilities;
-    if (!ports::has(fitted, ports::Capability::Storage) ||
-        !ports::has(fitted, ports::Capability::Dfu))
-        return;
+    if (!storable() || !ports::has(context_.roles.capabilities, ports::Capability::Dfu)) return;
     dfu::UpdateRecord record;
     if (!context_.roles.dfu.running_version(record.from)) return;
     if (!context_.roles.dfu.staged_version(record.to)) return;
@@ -272,7 +279,8 @@ void ConfigLinkService::record_update() {
 }
 
 void ConfigLinkService::forget_update() {
-    if (update_recorded_) context_.roles.kv.erase(kUpdateKey);
+    // INFO: fc 23sep26 a failed erase leaves the record for the next boot, which forgets it again
+    if (update_recorded_) (void)context_.roles.kv.erase(kUpdateKey);
     update_recorded_ = false;
     update_record_ = dfu::UpdateRecord{};
 }

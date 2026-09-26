@@ -12,6 +12,14 @@ constexpr T div_round(T num, T den) {
     return num >= 0 ? (num + den / 2) / den : -((-num + den / 2) / den);
 }
 
+constexpr int64_t kE7PerTurn = 3600000000LL;
+
+constexpr int32_t wrapped_lon_1e7(int64_t lon_1e7) {
+    const int64_t half_turn = kE7PerTurn / 2;
+    return static_cast<int32_t>(((lon_1e7 + half_turn) % kE7PerTurn + kE7PerTurn) % kE7PerTurn -
+                                half_turn);
+}
+
 int16_t isin(int16_t angle);
 inline int16_t icos(int16_t angle) { return isin(static_cast<int16_t>(angle + 0x4000)); }
 

@@ -5,34 +5,15 @@
 #include "core/diag/payload.h"
 #include "core/diag/profile.h"
 #include "core/settings/address.h"
-#include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/screen.h"
+#include "test/support/diag_corpus.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
 
 namespace {
-
-// The corpus as a laptop reads it: every slot of every sector the diagnostics ring owns.
-std::vector<diag::Record> captured(Rig& rig) {
-    std::vector<diag::Record> out;
-    platform::host::FlashRegion& flash = rig.platform.log_flash();
-    std::vector<uint8_t> raw(flash.sector_bytes());
-    for (uint32_t sector = 0; sector < flash.sector_count(); sector++) {
-        REQUIRE(is_ok(flash.read(sector * flash.sector_bytes(), raw.data(), flash.sector_bytes())));
-        store::SectorHeader header{};
-        if (store::decode_sector_header(raw.data(), header) != Status::Ok) continue;
-        if (header.owner != store::SectorOwner::Diagnostics) continue;
-        for (uint32_t at = store::kSectorHeaderBytes; at + diag::kRecordBytes <= raw.size();
-             at += diag::kRecordBytes) {
-            diag::Record record{};
-            if (diag::decode_record(raw.data() + at, record) == Status::Ok) out.push_back(record);
-        }
-    }
-    return out;
-}
 
 int count_of(const std::vector<diag::Record>& records, diag::Type type) {
     int n = 0;
@@ -66,6 +47,19 @@ int paired_with_power(const std::vector<diag::Record>& records) {
         paired++;
     }
     return paired;
+}
+
+std::vector<uint32_t> duty_spacing_ms(const std::vector<diag::Record>& records) {
+    std::vector<uint32_t> out;
+    const diag::Record* previous = nullptr;
+    for (const diag::Record& record : records) {
+        if (record.type != diag::Type::Duty) continue;
+        if (previous != nullptr)
+            out.push_back((record.at_s - previous->at_s) * 1000 + record.into_ms -
+                          previous->into_ms);
+        previous = &record;
+    }
+    return out;
 }
 
 std::vector<diag::Power> every_power_record(const std::vector<diag::Record>& records) {
@@ -357,11 +351,14 @@ TEST_CASE("diag duty: a power run writes the pair every 30 s and lists nothing e
     stop(rig, t);
     const std::vector<diag::Record> records = captured(rig);
 
-    const int duty = count_of(records, diag::Type::Duty);
-    CHECK(duty >= 2);
-    CHECK(duty <= 4);
-    CHECK(count_of(records, diag::Type::Power) == duty);
-    CHECK(paired_with_power(records) == duty);
+    // pairs land about 30, 60 and 90 s after arming, and the pilot's stop at 95 s writes none
+    CHECK(count_of(records, diag::Type::Duty) == 3);
+    CHECK(count_of(records, diag::Type::Power) == 3);
+    CHECK(paired_with_power(records) == 3);
+    const std::vector<uint32_t> spacing = duty_spacing_ms(records);
+    REQUIRE(spacing.size() == 2);
+    CHECK(spacing[0] == diag::kPowerRunRecordPeriodMs);
+    CHECK(spacing[1] == diag::kPowerRunRecordPeriodMs);
     CHECK(count_of(records, diag::Type::Gnss) == 0);
     CHECK(count_of(records, diag::Type::Dwell) == 0);
 }

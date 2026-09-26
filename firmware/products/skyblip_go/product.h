@@ -304,6 +304,7 @@ class Product {
         // flash here rather than dying with the rails. From this point the service
         // loop no longer runs, so this is the last chance there is.
         config_.flush_settings(now_ms);
+        power_.record_last_pass(now_ms);
         capture_.park(now_ms);
         // Every peripheral that can be left driven is switched off by the owner
         // that drives it, because from here the service loop no longer runs: a

@@ -8,7 +8,7 @@ An iConspicuity payload carries no callsign, so a target on the glass is six hex
 
 `from_own_callsign` writes the one record of it we speak. Type 66, the same 6+24 sender address our position frames carry, then a header byte of `TelemType` 1 and `InfoType` 5, then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
 
-`callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not printable, rather than drawn with a control character in it. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObs` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
+`callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_char` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObs` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
 
 An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pulls `getInfo(Call, 5)` out of it and hangs the name on the target of that address (`oss/nrf52-ogn-tracker/src/proc.cpp:715-733`), with no opinion about our AMT 58. It transmits the same record itself every 40 to 60 seconds, hopping between four channels, so we hear one of theirs perhaps once in four.
 
@@ -18,7 +18,7 @@ An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pu
 
 SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658`: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2"). Leaving an address at IDType 0 draws nothing on that app at all, which is the one failure worth never causing again. Between the two values left, 1 (ICAO) claims a permanent, registry-issued identity; 2 (FLARM) claims a device-class kinship that is at least true of the mechanism, self-assigned and transient. So ICAO is reported as ICAO and everything else becomes FLARM.
 
-What that costs: an OGN-Tracker address (7), which is what this device transmits by default, draws on the tablet as if it were FLARM. That is a lie about provenance too, and a cheaper one than claiming ICAO, because nothing downstream correlates a FLARM ID against an aircraft register the way it might an ICAO one.
+What that costs: this device's own table, 58 (`settings::kAddrTableSkyblip`), and an OGN-Tracker address (7) both draw on the tablet as if they were FLARM. That is a lie about provenance too, and a cheaper one than claiming ICAO, because nothing downstream correlates a FLARM ID against an aircraft register the way it might an ICAO one.
 
 ## Two things an ALP-TAS frame is given before it is refused
 

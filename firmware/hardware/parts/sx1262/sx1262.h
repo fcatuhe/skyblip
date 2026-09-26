@@ -112,9 +112,11 @@ class Sx1262 {
     int busy_, reset_, dio1_;
     RadioMode mode_{RadioMode::Sleep};
     RadioConfig cfg_{};
+    bool brought_up_{false};
     bool configured_{false};
     uint32_t ms_since_rx_{0};
     uint32_t reinit_count_{0};
+    bool reinit_owed_{false};
     uint32_t tx_recovery_count_{0};
     uint16_t device_errors_{0};
 };

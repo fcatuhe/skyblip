@@ -26,13 +26,18 @@
 using namespace skyblip;
 
 namespace {
-model::OwnState own_from_gnss(const char* rmc, const char* gga) {
+constexpr const char* kRmc = "$GPRMC,120000,A,4807.000,N,00800.000,E,050.0,000.0,230324,,*1C";
+constexpr const char* kGga = "$GPGGA,120000,4807.000,N,00800.000,E,1,09,0.8,1000.0,M,47,M,,*6F";
+constexpr const char* kGsa3d = "$GPGSA,A,3,04,05,09,12,15,17,20,24,25,,,,1.4,0.8,1.1*35";
+
+model::OwnState own_from_gnss(const char* rmc, const char* gga, const char* gsa) {
     gnss::NmeaParser p;
     p.parse_line(rmc, static_cast<int>(std::strlen(rmc)));
     p.parse_line(gga, static_cast<int>(std::strlen(gga)));
+    p.parse_line(gsa, static_cast<int>(std::strlen(gsa)));
     const gnss::GnssSolution& f = p.solution();
     model::OwnState o{};
-    o.fix_valid = f.is_fix;
+    o.fix_valid = f.fix_valid;
     o.utc_valid = f.utc_valid;
     o.pps_locked = true;
     o.lat_1e7 = f.lat_1e7;
@@ -40,6 +45,7 @@ model::OwnState own_from_gnss(const char* rmc, const char* gga) {
     o.alt_mm = f.alt_mm;
     o.speed_mm_s = f.speed_mm_s;
     o.track_cdeg = f.track_cdeg;
+    o.vdop_e2 = f.vdop_e2;
     o.utc = f.utc;
     o.sats = f.sats;
     o.flight_state = 2;
@@ -49,9 +55,7 @@ model::OwnState own_from_gnss(const char* rmc, const char* gga) {
 
 TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> NMEA") {
     // 1) own-ship from GNSS
-    model::OwnState own =
-        own_from_gnss("$GPRMC,120000,A,4807.000,N,00800.000,E,050.0,000.0,230324,,*1C",
-                      "$GPGGA,120000,4807.000,N,00800.000,E,1,09,0.8,1000.0,M,47,M,,*6F");
+    model::OwnState own = own_from_gnss(kRmc, kGga, kGsa3d);
     REQUIRE(own.fix_valid);
 
     // 2) an intruder ~800 m north, co-altitude, head-on. Own-ship is tracking
@@ -88,6 +92,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     REQUIRE(protocol::to_obs(rx, events::Stamp{own.utc, 500, true}, -80, model::Source::AdslDirect,
                              obs));
     CHECK(obs.addr == 0xC5D804u);
+    CHECK(obs.alt_valid);
 
     traffic::TrafficTable table;
     int idx = table.update(obs, own.utc);
@@ -100,6 +105,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     CHECK(a.valid);
     CHECK(a.rel_dist_m > 700);
     CHECK(a.rel_dist_m < 900);
+    CHECK(a.rel_alt_m == 0);
     CHECK(a.closing_mps > 40);
     CHECK(a.level == traffic::Level::Advisory);
 
@@ -120,19 +126,19 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     int n =
         protocol::format_pflaa(buf, sizeof(buf), own, obs, traffic::to_number(a.level), nullptr);
     REQUIRE(n > 0);
-    efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n));
+    REQUIRE(efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n)) ==
+            Status::Ok);
     n = protocol::format_pflau(buf, sizeof(buf), own, true, table.count(), &obs,
                                traffic::to_number(a.level), a.rel_bearing_deg, a.rel_alt_m,
                                a.rel_dist_m);
-    efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n));
+    REQUIRE(efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n)) ==
+            Status::Ok);
     CHECK(efb.count_on(events::Endpoint::Nmea) == 2);
     CHECK(efb.sent[0].bytes.find("C5D804") != std::string::npos);
 }
 
 TEST_CASE("scenario: uplink RX merges with direct RX (dedup, prefer direct)") {
-    model::OwnState own =
-        own_from_gnss("$GPRMC,120000,A,4807.000,N,00800.000,E,050.0,000.0,230324,,*1C",
-                      "$GPGGA,120000,4807.000,N,00800.000,E,1,09,0.8,1000.0,M,47,M,,*6F");
+    model::OwnState own = own_from_gnss(kRmc, kGga, kGsa3d);
 
     traffic::TrafficTable table;
 

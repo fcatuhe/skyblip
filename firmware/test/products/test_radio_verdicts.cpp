@@ -194,6 +194,7 @@ TEST_CASE("radio verdicts: an ADS-L Traffic frame carrying no position is a deco
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     protocol::AdslPacket p = adsl_from_neighbour(rig.state().own);
+    REQUIRE_FALSE(p.alt_invalid());
     p.set_position_invalid();
     hear_adsl(rig, p);
     settle(rig, t);

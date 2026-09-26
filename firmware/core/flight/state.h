@@ -31,6 +31,12 @@ bool taxi_evidence(const FlightSample& sample);
 FlightState state_from(uint8_t adsl_code);
 inline bool airborne(uint8_t adsl_code) { return state_from(adsl_code) == FlightState::Airborne; }
 
+// INFO: fc 23sep26 G.1.2's Undefined: no ground speed shows that a craft able to hover has landed
+uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat);
+inline bool reduced_rate(uint8_t announced) {
+    return state_from(announced) == FlightState::OnGround;
+}
+
 class FlightMonitor {
    public:
     FlightState update(const FlightSample& sample, uint32_t now_ms);

@@ -55,8 +55,9 @@ class CaptureService : public runtime::Service {
     bool write_gap(uint32_t now_ms);
     void publish(uint32_t now_ms);
     bool publish_due(uint32_t now_ms) const;
-    uint32_t records_per_hour(uint32_t now_ms) const;
-    uint32_t measured_records_per_hour(uint32_t now_ms) const;
+    void count_toward_rate(diag::Type type, uint32_t now_ms);
+    uint32_t records_per_hour() const;
+    uint32_t measured_records_per_hour() const;
     uint32_t growth_slots() const;
     uint32_t growth_sectors() const;
     static uint32_t span_s(uint32_t slots, uint32_t records_per_hour);
@@ -67,6 +68,8 @@ class CaptureService : public runtime::Service {
     const comms::ConfigService& config_;
     uint32_t session_id_{0};
     uint32_t opened_ms_{0};
+    uint32_t steady_records_{0};
+    uint32_t steady_written_ms_{0};
     uint32_t published_ms_{0};
     uint32_t lost_records_{0};
     bool published_{false};

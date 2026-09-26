@@ -1,7 +1,5 @@
-# Pinning actions only helps if something tells you when a pin is stale.
-# Dependabot rewrites SHA pins and their trailing version comments, so the Zephyr
-# setup action stays pinned AND current, as a reviewable PR rather than a silent
-# change under a mutable tag. Zephyr modules come from west.yml, which Dependabot
+# Actions ride their major tag (actions/checkout@v7), and Dependabot opens the
+# PR when a new major ships. Zephyr modules come from west.yml, which Dependabot
 # does not read (firmware-deps.yml reports those weekly), and the repo's own
 # scripts are stdlib-only Python.
 #

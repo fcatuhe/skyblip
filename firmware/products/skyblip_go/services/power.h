@@ -25,6 +25,7 @@ class PowerService : public runtime::Service {
         : runtime::Service(context), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
+    void record_last_pass(uint32_t now_ms);
 
     bool cutoff() const { return cutoff_.cutoff(); }
     uint32_t implausible_samples() const { return cutoff_.implausible(); }

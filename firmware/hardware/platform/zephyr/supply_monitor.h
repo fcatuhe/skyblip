@@ -61,7 +61,7 @@ class SupplyMonitor {
     // the earlier the warning the more of it there is, and everything above this
     // voltage is already the divider's business - our own cutoff is a 3.2 V cell
     // and this rail is at or below the cell. What it must not do is fire on a
-    // healthy pack, so what the bench has to confirm is that a 22 dBm burst on a
+    // healthy pack, so what the bench has to confirm is that a 14 dBm burst on a
     // 3.4 V cell leaves VDD above 2.8 V; if it does not, the answer is the
     // decoupling, not a lower threshold, because a threshold under 2.8 V is a
     // warning that arrives after the write it was meant to prevent.

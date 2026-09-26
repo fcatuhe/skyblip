@@ -43,6 +43,11 @@ constexpr bool lists(Profile profile, Type type) {
     return false;
 }
 
+constexpr bool recurs(Type type) {
+    return type != Type::None && type != Type::Boot && type != Type::Config && type != Type::Gap &&
+           type != Type::End;
+}
+
 }  // namespace skyblip::diag
 
 #endif

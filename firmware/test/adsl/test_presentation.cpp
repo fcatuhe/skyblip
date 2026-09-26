@@ -114,6 +114,16 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused
     CHECK(protocol::callsign_of(other, name, sizeof(name)) == 0);
 }
 
+TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not split into PFLAA") {
+    protocol::AdslPacket p{};
+    protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
+    p.info_msg()[1] = ',';
+
+    char name[protocol::AdslPacket::kInfoMsgBytes + 1] = {0};
+    CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
+    CHECK(name[0] == 0);
+}
+
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
     protocol::AdslPacket p{};
     p.init();

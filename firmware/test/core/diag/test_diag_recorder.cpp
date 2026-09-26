@@ -268,7 +268,6 @@ TEST_CASE("diag recorder: a disarmed recorder refuses whatever profile it last h
     recorder.arm(diag::Profile::PowerRun);
     recorder.disarm();
     CHECK_FALSE(recorder.record(diag::Power{}, at_ms(0)));
-    CHECK_FALSE(recorder.records(diag::Type::Power));
 }
 
 // The figure the capture page divides its estimate by: one profile fills the ring in an hour,

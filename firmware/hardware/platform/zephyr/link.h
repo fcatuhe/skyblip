@@ -19,6 +19,7 @@ class Link : public ports::Link {
     // cannot leave a stale figure behind. No exchange is requested from this
     // side - see link.cpp.
     uint16_t payload_bytes() const override;
+    uint16_t payload_bytes_to(uint16_t session_id) const override;
     Status send(events::Endpoint ep, ConstByteSpan bytes) override;
     Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) override;
 
