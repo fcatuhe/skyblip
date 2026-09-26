@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { nmeaChecksum, nmeaSentence, reassembleLines } from './ble.js';
+import { GATT_WRITE_BYTES, chunks, connect, nmeaChecksum, nmeaSentence, reassembleLines } from './ble.js';
+import { FakeSkyblip } from './fake_skyblip.mjs';
+import { GROUP, ID, OP, packet } from './smp.js';
 
 const notification = text => ({ target: { value: new TextEncoder().encode(text) } });
 
@@ -43,4 +45,24 @@ test('a bare newline ends a line and an empty one is dropped', () => {
   const { lines, feed } = collect();
   feed(notification('$PGRMZ,1000,f,3*1A\n\n$PFLAU,0*4F\n'));
   assert.deepEqual(lines, ['$PGRMZ,1000,f,3*1A', '$PFLAU,0*4F']);
+});
+
+test('a packet leaves in slices BLE guarantees, in order and whole', () => {
+  const packet = Uint8Array.from({ length: 45 }, (_, at) => at);
+  const slices = [...chunks(packet)];
+  assert.deepEqual(slices.map(slice => slice.length), [GATT_WRITE_BYTES, GATT_WRITE_BYTES, 5]);
+  assert.deepEqual(new Uint8Array(slices.flatMap(slice => [...slice])), packet);
+});
+
+test('config and SMP writes issued together never overlap on the link', async () => {
+  const device = new FakeSkyblip().install();
+  const link = await connect({ onReply: () => {}, onSmp: () => {}, onClose: () => {} });
+  await Promise.all([
+    link.sendConfig({ cmd: 'status' }),
+    link.sendSmp(packet({ op: OP.read, group: GROUP.image, id: ID.imageState, seq: 0, body: { pad: 'x'.repeat(40) } })),
+    link.sendConfig({ cmd: 'update' }),
+  ]);
+  assert.equal(device.overlaps, 0);
+  assert.deepEqual(device.commands, ['status', 'update']);
+  link.disconnect();
 });

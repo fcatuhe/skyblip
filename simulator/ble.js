@@ -7,10 +7,12 @@ export const UUID = {
   skyblip: '69c21301-0187-4204-a91d-02eb8858b440',
   config: '69c21302-0187-4204-a91d-02eb8858b440',
   log: '69c21303-0187-4204-a91d-02eb8858b440',
+  smp: '8d53dc1d-1db7-4cd3-868b-8a527460aa84',
+  smpChr: 'da2e7828-fbce-4e01-ae9e-261174997c48',
 };
 
 // INFO: fc 19sep26 Web Bluetooth exposes no MTU, and 20 is what BLE guarantees.
-const STREAM_CHUNK_BYTES = 20;
+export const GATT_WRITE_BYTES = 20;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -33,6 +35,31 @@ async function serviceOrNull(server, uuid) {
   } catch {
     return null;
   }
+}
+
+export function hasWebBluetooth() {
+  return Boolean(globalThis.navigator && navigator.bluetooth);
+}
+
+export function* chunks(bytes, size = GATT_WRITE_BYTES) {
+  for (let at = 0; at < bytes.length; at += size) yield bytes.slice(at, at + size);
+}
+
+// INFO: fc 26sep26 a write issued while another is in flight can fail as "operation already in progress"
+function gattQueue() {
+  let tail = Promise.resolve();
+  return operation => {
+    const run = tail.then(operation);
+    tail = run.then(settled, settled);
+    return run;
+  };
+}
+
+function settled() {}
+
+function bytesOf(event) {
+  const view = event.target.value;
+  return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
 }
 
 export function reassembleLines(onLine) {
@@ -77,8 +104,17 @@ async function openConfig(server, onReply) {
   return chr;
 }
 
-export async function connect({ onLine, onReply, onClose }) {
-  if (!navigator.bluetooth) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
+async function openSmp(server, onSmp) {
+  const svc = await serviceOrNull(server, UUID.smp);
+  if (!svc) return null;
+  const chr = await svc.getCharacteristic(UUID.smpChr);
+  await chr.startNotifications();
+  chr.addEventListener('characteristicvaluechanged', event => onSmp(bytesOf(event)));
+  return chr;
+}
+
+export async function connect({ onLine, onReply, onSmp, onClose }) {
+  if (!hasWebBluetooth()) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
   const device = await navigator.bluetooth.requestDevice({
     filters: [
       { services: [UUID.nus] },
@@ -86,33 +122,43 @@ export async function connect({ onLine, onReply, onClose }) {
       { namePrefix: 'skyBlip' },
       { namePrefix: 'SoftRF' },
     ],
-    optionalServices: [UUID.nus, UUID.hm10, UUID.skyblip],
+    optionalServices: [UUID.nus, UUID.hm10, UUID.skyblip, UUID.smp],
   });
   const server = await device.gatt.connect();
   device.addEventListener('gattserverdisconnected', () => onClose(device.name));
 
-  const stream = await openStream(server, onLine);
+  const stream = onLine ? await openStream(server, onLine) : null;
   const config = await openConfig(server, onReply);
+  const smp = onSmp ? await openSmp(server, onSmp) : null;
   if (!stream && !config) throw new Error('No serial or config service on this device.');
+  const exclusive = gattQueue();
 
   return {
     name: device.name || '(unnamed)',
     transport: stream ? stream.transport : 'none',
     hasStream: Boolean(stream),
     hasConfig: Boolean(config),
+    hasSmp: Boolean(smp),
 
     async sendLine(text) {
       if (!stream) throw new Error('This device has no serial endpoint.');
-      const bytes = encoder.encode(nmeaSentence(text) + '\r\n');
-      for (let at = 0; at < bytes.length; at += STREAM_CHUNK_BYTES) {
-        await stream.write.writeValueWithoutResponse(bytes.slice(at, at + STREAM_CHUNK_BYTES));
+      for (const chunk of chunks(encoder.encode(nmeaSentence(text) + '\r\n'))) {
+        await exclusive(() => stream.write.writeValueWithoutResponse(chunk));
       }
     },
 
     // INFO: fc 19sep26 One write is one command: a truncated "set" applies the fields that survived.
     async sendConfig(command) {
       if (!config) throw new Error('This device has no config endpoint.');
-      await config.writeValueWithResponse(encoder.encode(JSON.stringify(command)));
+      const bytes = encoder.encode(JSON.stringify(command));
+      await exclusive(() => config.writeValueWithResponse(bytes));
+    },
+
+    async sendSmp(packet, writeBytes = GATT_WRITE_BYTES) {
+      if (!smp) throw new Error('This device has no SMP service.');
+      for (const chunk of chunks(packet, writeBytes)) {
+        await exclusive(() => smp.writeValueWithoutResponse(chunk));
+      }
     },
 
     disconnect() {

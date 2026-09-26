@@ -1,0 +1,185 @@
+---
+title: Mettre à jour un skyBlip Go
+nav_title: Mise à jour
+slug: mise-a-jour
+description: Un nouveau firmware pour un skyBlip Go depuis votre navigateur, en Bluetooth · deux pressions sur l’appareil l’autorisent, et la page dit en clair pourquoi elle s’est arrêtée quand elle s’arrête.
+---
+
+<section id="update">
+  <p class="kicker">skyBlip Go</p>
+  <h1>Un nouveau firmware, depuis cette page, en Bluetooth.</h1>
+  <p class="lede">
+    Rien à installer, rien à appairer. La page envoie l&rsquo;image, et
+    l&rsquo;appareil vous le demande deux fois sur son propre écran&nbsp;: avant
+    de prendre l&rsquo;image, et avant de l&rsquo;installer. Un téléphone ne peut
+    pas le mettre à jour tout seul.
+  </p>
+
+  <%= render "shared/manage",
+        unsupported: "Ce navigateur n’a pas Web Bluetooth, cette page ne peut donc pas joindre l’appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d’iPhone et d’iPad n’en ont pas.",
+        connect: "Connecter",
+        disconnect: "Déconnecter",
+        connecting: "Votre navigateur liste les appareils à portée : choisissez skyBlip Go suivi de son adresse.",
+        device: "Appareil",
+        firmware: "En service",
+        battery: "Batterie",
+        charging: "en charge",
+        chosen: "Image choisie",
+        file: "Le fichier du firmware, en .signed.bin",
+        install: "Installer",
+        steps: {
+          dfu: "Autorisez l’envoi : l’écran dit FIRMWARE, pressez deux fois.",
+          upload: "L’image voyage. Gardez cette page ouverte et l’appareil près de vous.",
+          apply: "Autorisez l’installation : l’écran dit INSTALL, pressez deux fois.",
+          install: "L’appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
+        },
+        remaining: "environ %{minutes} min restantes",
+        recovery: "Si le firmware ne prend pas : le lecteur USB",
+        confirm_recovery: "L’écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER : pressez deux fois.",
+        recovering: "L’écran dit maintenant USB BOOTLOADER. S’il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l’appareil est alors un lecteur USB nommé TECHOBOOT : déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n’est émis pendant ce temps.",
+        recover: "Redémarrer en lecteur USB",
+        missing: "La page de mise à jour ne fait pas partie de cette version du site." %>
+</section>
+
+<section>
+  <h2 class="kicker">Avant de commencer</h2>
+
+  <ul class="points">
+    <li>Chrome ou Edge, sur un ordinateur ou sur Android</li>
+    <li>L&rsquo;appareil au sol, avec un fix GPS</li>
+    <li>Une batterie au-dessus de l&rsquo;alerte, ou en charge</li>
+    <li>Le fichier de la version, en .signed.bin</li>
+    <li>Aucune autre application ne tient les réglages de l&rsquo;appareil</li>
+    <li>Dix minutes, l&rsquo;appareil près de vous</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">Ce qui se passe</h2>
+
+  <h3>Deux questions à l&rsquo;écran, <span class="highlight">un envoi entre les deux</span>.</h3>
+  <p class="lede">
+    Installer demande d&rsquo;abord à l&rsquo;appareil d&rsquo;accepter une
+    image. L&rsquo;écran dit <span class="mono">FIRMWARE</span>,
+    <span class="mono">LET THE PHONE WRITE A NEW IMAGE</span>&nbsp;: pressez deux
+    fois. Cela ouvre une fenêtre de dix minutes, et seulement tant que
+    l&rsquo;appareil sait qu&rsquo;il est au sol.
+  </p>
+  <p class="lede">
+    L&rsquo;image voyage ensuite, et la page montre ce qui en est arrivé. La
+    fenêtre se ferme au bout de dix minutes, au décollage, ou quand la liaison
+    tombe. Installez de nouveau et l&rsquo;envoi reprend là où il s&rsquo;était
+    arrêté, tant que l&rsquo;appareil n&rsquo;a pas redémarré entre-temps.
+  </p>
+  <p class="lede">
+    Une fois le dernier octet arrivé, la page demande l&rsquo;installation.
+    L&rsquo;écran dit <span class="mono">INSTALL</span>,
+    <span class="mono">REBOOT INTO THE STAGED IMAGE</span>&nbsp;: pressez deux
+    fois encore. L&rsquo;appareil affiche <span class="mono">INSTALLING</span> et
+    redémarre sur le nouveau firmware, ce qui prend une trentaine de secondes, et
+    la liaison tombe.
+  </p>
+  <p class="lede">
+    Reconnectez. Le nouveau firmware démarre à l&rsquo;essai&nbsp;: il doit
+    allumer sa radio, entendre son récepteur GPS et dessiner son écran avant de
+    se garder. Sinon l&rsquo;appareil revient au firmware qu&rsquo;il avait, et
+    cette page le dit plutôt que de vous laisser devant un ancien numéro de
+    version.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce qu&rsquo;il dit de lui-même</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>L&rsquo;appareil indique</th><th>Ce que cela veut dire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">probation</th><td data-manage-word="probation">Le nouveau firmware fait ses preuves&nbsp;: radio allumée, récepteur qui parle, écran dessiné. Cela se règle tout seul en quelques secondes, il n&rsquo;y a rien à faire.</td></tr>
+        <tr><th class="mono">reverted</th><td data-manage-word="reverted">La dernière mise à jour n&rsquo;a pas pris, et l&rsquo;appareil est revenu au firmware qu&rsquo;il avait. Rien n&rsquo;est cassé&nbsp;: le numéro de version est l&rsquo;ancien à dessein. Réessayez, et si cela se répète, dites-nous quelle version vous avez essayée.</td></tr>
+        <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Vos réglages sont ceux d&rsquo;avant cette mise à jour&nbsp;: ce que vous avez changé sous le firmware plus récent est resté avec lui.</td></tr>
+        <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">Les réglages enregistrés n&rsquo;ont pas pu être lus, l&rsquo;appareil tourne donc sur ses valeurs par défaut. Vérifiez l&rsquo;indicatif et le type d&rsquo;aéronef avant de voler.</td></tr>
+        <tr><th class="mono">swap_powered: false</th><td data-manage-word="swap_unpowered">La batterie est sous l&rsquo;alerte, trop faible pour installer. Chargez-la d&rsquo;abord.</td></tr>
+        <tr><th class="mono">went_dark_flat</th><td data-manage-word="went_dark_flat">La dernière fois qu&rsquo;il s&rsquo;est éteint, c&rsquo;était pour une batterie vide. Chargez-le avant la mise à jour.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Quand il dit non</h2>
+
+  <p class="lede">
+    Chaque refus vient avec une raison, et la page la dit avec les mots
+    ci-dessous.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et quoi faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">Il n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou il n&rsquo;a pas eu de fix GPS depuis qu&rsquo;il est allumé. Mettez-le là où il voit le ciel, attendez le fix, puis réessayez.</td></tr>
+        <tr><th class="mono">low_power</th><td data-manage-word="low_power">La batterie est sous l&rsquo;alerte. Installer, c&rsquo;est 15 à 25 secondes d&rsquo;effacements de mémoire flash, et l&rsquo;appareil n&rsquo;en commence pas un sur une batterie qui pourrait ne pas le finir. Chargez-la, puis réessayez.</td></tr>
+        <tr><th class="mono">expired</th><td data-manage-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, ce qui vaut refus. Réessayez, et pressez deux fois quand l&rsquo;écran demande.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">La question a été refusée sur l&rsquo;appareil&nbsp;: une pression dit non.</td></tr>
+        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">Aucun nouveau firmware n&rsquo;attend sur l&rsquo;appareil. Installez de nouveau pour envoyer l&rsquo;image.</td></tr>
+        <tr><th class="mono">upload_unfinished</th><td data-manage-word="upload_unfinished">L&rsquo;image n&rsquo;est pas arrivée entière depuis l&rsquo;ouverture de la fenêtre, ou l&rsquo;appareil a redémarré après son arrivée. Installez de nouveau pour l&rsquo;envoyer.</td></tr>
+        <tr><th class="mono">claimed</th><td data-manage-word="claimed">Une autre application tient les réglages de cet appareil. Déconnectez-la ou fermez-la, puis reconnectez.</td></tr>
+        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">La fenêtre d&rsquo;envoi s&rsquo;est fermée&nbsp;: elle dure dix minutes, et un décollage, un refus à l&rsquo;écran ou une liaison perdue la ferment plus tôt. Installez de nouveau&nbsp;: l&rsquo;envoi reprend là où il s&rsquo;était arrêté, sauf si l&rsquo;appareil a redémarré.</td></tr>
+        <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">L&rsquo;appareil a déjà cette version ou une plus récente, et il ne revient jamais à une plus ancienne.</td></tr>
+        <tr><th class="mono">too_large</th><td data-manage-word="too_large">Cette image est plus grande que la place que l&rsquo;appareil garde pour une mise à jour&nbsp;: ce n&rsquo;est pas une image de skyBlip Go.</td></tr>
+        <tr><th class="mono">not_image</th><td data-manage-word="not_image">Ce fichier n&rsquo;est pas une image de firmware signée. Choisissez celui en .signed.bin&nbsp;: le .uf2 est pour le lecteur USB.</td></tr>
+        <tr><th class="mono">flash</th><td data-manage-word="flash">L&rsquo;appareil n&rsquo;a pas pu écrire l&rsquo;image dans sa mémoire. Réessayez, et si cela se répète, passez par le lecteur USB.</td></tr>
+        <tr><th class="mono">unknown_cmd</th><td data-manage-word="unknown_cmd">Le firmware de l&rsquo;appareil est plus ancien que cette page et ne connaît pas la question. Mettez-le à jour par le lecteur USB.</td></tr>
+        <tr><th class="mono">autre chose</th><td data-manage-word="refused">L&rsquo;appareil a refusé, pour une raison que cette page ne connaît pas&nbsp;:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Quand la page s&rsquo;arrête</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>La page dit</th><th>Ce que cela veut dire, et quoi faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Pas de Web Bluetooth</th><td data-manage-word="no_bluetooth">Ce navigateur n&rsquo;a pas Web Bluetooth. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d&rsquo;iPhone et d&rsquo;iPad n&rsquo;en ont pas.</td></tr>
+        <tr><th>Pas un skyBlip</th><td data-manage-word="not_skyblip">L&rsquo;appareil choisi n&rsquo;a pas de service de mise à jour&nbsp;: ce n&rsquo;est pas un skyBlip, ou son firmware est antérieur aux mises à jour en Bluetooth.</td></tr>
+        <tr><th>Pas de fichier</th><td data-manage-word="no_file">Choisissez d&rsquo;abord le fichier du firmware.</td></tr>
+        <tr><th>Liaison perdue</th><td data-manage-word="link_lost">La liaison est tombée. Rapprochez l&rsquo;appareil et reconnectez&nbsp;: un envoi en cours reprend là où il s&rsquo;était arrêté.</td></tr>
+        <tr><th>Pas de réponse</th><td data-manage-word="timeout">L&rsquo;appareil ne répond plus. Déconnectez, reconnectez, et installez de nouveau.</td></tr>
+        <tr><th>Pas de taille donnée</th><td data-manage-word="no_params">L&rsquo;appareil n&rsquo;a pas dit quelle part de l&rsquo;image il prend à la fois. Déconnectez et reconnectez.</td></tr>
+        <tr><th>Refusé</th><td data-manage-word="smp">L&rsquo;appareil a refusé l&rsquo;image avec une erreur que cette page ne connaît pas&nbsp;:</td></tr>
+        <tr><th>Autre chose</th><td data-manage-word="failed">Quelque chose a échoué en route&nbsp;:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Sans cette page</h2>
+
+  <h3>Pressez <span class="mono">RST</span> deux fois, et <span class="highlight">c&rsquo;est un lecteur USB</span>.</h3>
+  <p class="lede">
+    Deux fois en moins d&rsquo;une demi-seconde, l&rsquo;appareil sur un câble
+    USB. Il apparaît sur l&rsquo;ordinateur comme un lecteur nommé
+    <span class="mono">TECHOBOOT</span>&nbsp;: déposez-y le fichier
+    <span class="mono">.uf2</span> d&rsquo;une version, et l&rsquo;appareil
+    redémarre sur ce firmware. Ce chemin ne demande aucun navigateur, et
+    c&rsquo;est celui à prendre quand le firmware de l&rsquo;appareil ne répond
+    pas à cette page.
+  </p>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "skyblip-go", class: "cta cta--previous" %>
+  </p>
+</section>
