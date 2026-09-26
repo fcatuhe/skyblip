@@ -13,10 +13,10 @@ using namespace skyblip;
 
 namespace {
 
-parts::Ssd1681 make(models::Ssd1681& f) { return parts::Ssd1681(f, f, f.dc, f.rst, f.busy); }
+parts::Ssd1681 make(models::Ssd1681& f) { return parts::Ssd1681(f, f, f, f.dc, f.rst, f.busy); }
 
 parts::Ssd1681 make_turned(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f.dc, f.rst, f.busy, -1, parts::GlassRotation::Deg270);
+    return parts::Ssd1681(f, f, f, f.dc, f.rst, f.busy, -1, parts::GlassRotation::Deg270);
 }
 
 // One pixel of panel RAM, addressed as the controller does: a source on a gate line, black at 0.
@@ -46,23 +46,47 @@ TEST_CASE("epd: begin() runs the SSD1681 init sequence and resets the panel") {
     CHECK(f.saw_cmd(0x18));  // temperature sensor
 }
 
-// A glitched RES# leaves a deep-sleeping SSD1681 asleep, BUSY high, first image forever.
-TEST_CASE("epd: the reset pulse is held low, not glitched") {
+// 10 ms as a literal: the test this replaced compared epd::kResetHoldSpins with itself.
+TEST_CASE("epd: RES# is held low for the vendor's 10 ms, at begin and at every wake") {
     models::Ssd1681 f;
     parts::Ssd1681 d = make(f);
     d.begin();
-    CHECK(f.reads_while_in_reset >= parts::epd::kResetHoldSpins);
+    CHECK(f.reset_low_us >= 10000);
+    CHECK(f.short_resets == 0);
 
     parts::Ssd1681Glass fb;
     fb.clear(true);
     d.present(fb, ports::Refresh::Full, 0);
     settle(d, 0);
     d.power_off();
-    CHECK_FALSE(f.powered);
+    REQUIRE_FALSE(f.powered);
 
-    const uint32_t before = f.reads_while_in_reset;
+    f.reset_low_us = 0;
     d.present(fb, ports::Refresh::Partial, 5000);
-    CHECK(f.reads_while_in_reset - before >= parts::epd::kResetHoldSpins);
+    CHECK(f.reset_low_us >= 10000);
+    CHECK(f.powered);
+    CHECK(f.short_resets == 0);
+}
+
+// A glitched RES# leaves a deep-sleeping SSD1681 asleep, BUSY high, first image forever.
+TEST_CASE("epd: a RES# pulse one microsecond under 10 ms leaves a sleeping panel asleep") {
+    models::Ssd1681 f;
+    const uint8_t deep_sleep = 0x10;
+    f.set(f.dc, false);
+    f.transfer(&deep_sleep, nullptr, 1);
+    REQUIRE_FALSE(f.powered);
+
+    f.set(f.rst, false);
+    f.busy_wait_us(9999);
+    f.set(f.rst, true);
+    CHECK_FALSE(f.powered);
+    CHECK(f.short_resets == 1);
+
+    f.set(f.rst, false);
+    f.busy_wait_us(10000);
+    f.set(f.rst, true);
+    CHECK(f.powered);
+    CHECK(f.reset_pulses == 1);
 }
 
 TEST_CASE("epd: present() writes a full framebuffer with correct black/white polarity") {
