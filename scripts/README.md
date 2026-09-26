@@ -125,7 +125,7 @@ Charge both units. Fit the same antenna on each and note its name. Stand them up
 
 The ground reflects, and at these heights the reflection is the largest error in the run. `quiet_distance_m()` is where it arrives half a wave late, so it can only strengthen the path and the e.r.p. ceiling carries no ground term: 16.7 m apart at 1.2 m up, 11.6 m at 1.0 m. The script prints how far the ground can move the path at whatever geometry it is given, so a garden that cannot fit that distance still gives an answer, only a wider one.
 
-Switch both on, wait for a fix and a PPS lock on each (the `SATS` page), then arm `FULL` on the `CAPTURE` page of each. Leave them for 30 minutes. On the ground a unit sends a position every 10 s and its callsign every 10 s, so that is about 180 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures with the same double press and fetch each, while still switched on:
+Switch both on, wait until each reads `TX ON` on the status page and `PPS LOCK` on the radio log page, then arm `FULL` on the `CAPTURE` page of each. Leave them for 30 minutes. On the ground a unit sends a position every 10 s, and its callsign every 10 s when one is set, so that is 180 to 360 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures with the same double press and fetch each, while still switched on:
 
 ```
 ./scripts/blip.py --address <unit a> fetch --log diagnostics --out a.ndjson
