@@ -78,6 +78,7 @@ Status Sx1262::probe() {
 Status Sx1262::begin() {
     brought_up_ = false;
     configured_ = false;
+    tuned_ = false;
     const Status reset = reset_to_standby();
     if (reset != Status::Ok) return reset;
     const Status link = verify_link();
@@ -179,7 +180,26 @@ uint8_t pulse_shape_index(uint16_t gaussian_bt_e2) {
     return sx::kGaussianBt1p0;
 }
 
+bool same_sync(const RadioConfig& a, const RadioConfig& b) {
+    if (a.sync_bits != b.sync_bits) return false;
+    const size_t bytes = (a.sync_bits + 7u) / 8u;
+    if (bytes == 0) return true;
+    return a.sync != nullptr && b.sync != nullptr && std::equal(a.sync, a.sync + bytes, b.sync);
+}
+
+bool same_dwell(const RadioConfig& a, const RadioConfig& b) {
+    return a.freq_hz == b.freq_hz && a.freq_corr_e1_ppm == b.freq_corr_e1_ppm &&
+           a.bitrate == b.bitrate && a.fdev_hz == b.fdev_hz && a.bandwidth_hz == b.bandwidth_hz &&
+           a.gaussian_bt_e2 == b.gaussian_bt_e2 && a.payload_bytes == b.payload_bytes &&
+           same_sync(a, b);
+}
+
 }  // namespace
+
+// INFO: fc 26sep26 DS 9.6: a warm start keeps only listed registers, so a slept part is rewritten
+bool Sx1262::holds(const RadioConfig& cfg) const {
+    return tuned_ && mode_ != RadioMode::Tx && same_dwell(cfg, cfg_);
+}
 
 // DS 13.4.6 SetModulationParams, GFSK, in the datasheet's order: bit rate,
 // pulse shape, RX bandwidth, frequency deviation.
@@ -259,6 +279,7 @@ void Sx1262::configure_frame(const RadioConfig& cfg) {
 // whole sequence and hand the caller back the mode it had.
 Status Sx1262::configure_radio(const RadioConfig& cfg) {
     if (!brought_up_) return Status::Down;
+    if (holds(cfg)) return Status::Ok;
     const RadioMode was = mode_;
     if (was != RadioMode::Standby && enter_standby() != Status::Ok) return Status::Timeout;
     cfg_ = cfg;
@@ -279,6 +300,7 @@ Status Sx1262::configure_radio(const RadioConfig& cfg) {
     configure_frame(cfg);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     configured_ = true;
+    tuned_ = true;
     if (was == RadioMode::Rx) return start_receive();
     return Status::Ok;
 }
@@ -332,6 +354,7 @@ void Sx1262::sleep() {
     uint8_t config = sx::kSleepWarmStartNoRtc;
     cmd(sx::kSetSleep, &config, 1);
     mode_ = RadioMode::Sleep;
+    tuned_ = false;
     delay_.busy_wait_us(sx::kSleepSettleUs);
 }
 
