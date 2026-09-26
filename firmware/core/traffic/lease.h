@@ -6,14 +6,13 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/traffic/alarm.h"
+#include "core/units/units.h"
 
 namespace skyblip::traffic {
 
 constexpr uint32_t kTargetForgetReports = 6;
 constexpr uint32_t kAirborneTargetForgetS = kTargetForgetReports * flight::kAirborneReportPeriodS;
 constexpr uint32_t kGroundTargetForgetS = kTargetForgetReports * flight::kGroundReportPeriodS;
-
-constexpr uint32_t kMillisecondsPerSecond = 1000;
 
 inline uint32_t report_period_s(const model::AircraftObs& obs) {
     return flight::report_period_s(flight::state_from(obs.flight_state));
