@@ -164,6 +164,14 @@ TEST_CASE("gnss: the MTK year-1980 date is refused, and so is anything before 20
     CHECK(p.solution().utc_valid);
 }
 
+// Found by test/fuzz/fuzz_nmea on ILP32: '/' is one below '0', so "/0" read as year -10.
+TEST_CASE("gnss: a date that is not six digits carries no UTC") {
+    NmeaParser p;
+    const char* rmc = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,0101/0,003.1,W*7A";
+    REQUIRE(p.parse_line(rmc, static_cast<int>(strlen(rmc))));
+    CHECK_FALSE(p.solution().utc_valid);
+}
+
 // I, row "Leap seconds": DOES NOT APPLY, and this is where it is written down.
 // RMC fields 1 and 9 are UTC as the receiver resolved them, so the GPS-UTC
 // offset (18 s in 2026) never enters our arithmetic. The moshe-braner fork

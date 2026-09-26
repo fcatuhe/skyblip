@@ -2,6 +2,9 @@
 #
 #   make test        build + run all host doctest suites
 #   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
+#   make fuzz        every libFuzzer harness in turn, in build/fuzz/ (clang)
+#   make fuzz-nmea   one of them: nmea, air or link
+#   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
 #   make tidy        clang-tidy the sources the host build compiles
 #   make simulator   terminal simulator
 #   make browser     compile the WASM the browser page drives
@@ -34,9 +37,30 @@ SANITIZE_FLAGS := -fsanitize=address,undefined,float-cast-overflow \
 
 # One switch for the flags and the tree, so instrumented objects never mix with plain ones.
 BUILD := build
+
+# The nRF52 is ILP32 with an unsigned char: ABI=ilp32 builds for i386 with both, in its own trees.
+ifeq ($(ABI),ilp32)
+ABI_SUFFIX := -ilp32
+BUILD := build/ilp32
+CXXFLAGS += -m32 -funsigned-char
+endif
+
 ifdef SANITIZE
-BUILD := build/sanitize
+BUILD := build/sanitize$(ABI_SUFFIX)
 CXXFLAGS += $(SANITIZE_FLAGS)
+endif
+
+# libFuzzer ships with clang only, GCC has no -fsanitize=fuzzer.
+FUZZ_CXX ?= clang++
+# INFO: fc 26sep26 fuzz_nmea runs about 20000 inputs a second and fuzz_link 300, so link gets the minutes
+FUZZ_SECONDS_nmea ?= 30
+FUZZ_SECONDS_air ?= 60
+FUZZ_SECONDS_link ?= 90
+FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
+ifdef FUZZ
+BUILD := $(FUZZ_BUILD)
+CXX := $(FUZZ_CXX)
+CXXFLAGS += $(SANITIZE_FLAGS) -fsanitize=fuzzer-no-link
 endif
 
 # Every layer is globbed: a file that exists is a file that is compiled and
@@ -49,7 +73,13 @@ SRC := $(filter-out products/skyblip_go/main.cpp %/test_%.cpp,$(SRC))
 
 # Test sources (mirrored tree): one folder per layer, tests never live beside
 # the code they test.
-TEST_SRC := $(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp)
+TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp))
+
+# One harness per file, each linked against every host source as the suite is.
+FUZZ_SRC := $(wildcard test/fuzz/fuzz_*.cpp)
+FUZZ_NAMES := $(patsubst test/fuzz/fuzz_%.cpp,%,$(FUZZ_SRC))
+FUZZ_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(FUZZ_SRC))
+FUZZERS := $(patsubst test/fuzz/%.cpp,$(BUILD)/%,$(FUZZ_SRC))
 
 OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) $(TEST_SRC))
 
@@ -72,7 +102,7 @@ WEB_BUILD := $(BUILD)/web
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC))
 WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
-.PHONY: test test-sanitize all clean simulator browser watch tidy
+.PHONY: test test-sanitize fuzz fuzzers all clean simulator browser watch tidy
 all: test
 
 test: $(BIN)
@@ -80,6 +110,25 @@ test: $(BIN)
 
 test-sanitize:
 	@UBSAN_OPTIONS=print_stacktrace=1 $(MAKE) --no-print-directory test SANITIZE=1
+
+# Built once, then run one at a time: three fuzzers printing at once is a log nobody can read.
+fuzz:
+	@$(MAKE) --no-print-directory fuzzers FUZZ=1
+	@$(MAKE) --no-print-directory -j1 $(addprefix fuzz-,$(FUZZ_NAMES))
+
+fuzzers: $(FUZZERS)
+
+# New inputs land in build/, the checked-in seeds and dictionary are only read.
+fuzz-%:
+	@$(MAKE) --no-print-directory $(FUZZ_BUILD)/fuzz_$* FUZZ=1
+	@mkdir -p $(FUZZ_BUILD)/corpus/$* $(FUZZ_BUILD)/crashes
+	UBSAN_OPTIONS=print_stacktrace=1 $(FUZZ_BUILD)/fuzz_$* -max_total_time=$(or $(FUZZ_SECONDS),$(FUZZ_SECONDS_$*)) \
+	  -artifact_prefix=$(FUZZ_BUILD)/crashes/$*- \
+	  $(addprefix -dict=,$(wildcard test/fuzz/$*.dict)) \
+	  $(FUZZ_BUILD)/corpus/$* $(wildcard test/fuzz/corpus/$*)
+
+$(BUILD)/fuzz_%: $(BUILD)/test/fuzz/fuzz_%.o $(patsubst %.cpp,$(BUILD)/%.o,$(SRC))
+	$(CXX) $(CXXFLAGS) -fsanitize=fuzzer $^ -o $@ $(LDFLAGS)
 
 # Same $(SRC) the host build compiles, so no workflow ever restates the list, and
 # the same flags less the ones that write dependency files. clang-tidy cannot
@@ -167,5 +216,6 @@ clean:
 # other target compiles, so renaming a driver method left it linking against a
 # symbol that no longer existed.
 -include $(OBJ:.o=.d)
+-include $(FUZZ_OBJ:.o=.d)
 -include $(SIMULATOR_OBJ:.o=.d)
 -include $(WEB_OBJ:.o=.d)

@@ -107,27 +107,101 @@ jobs:
 
   # Beside host-tests, not after it: a read past a frame passes a plain run by luck.
   host-tests-sanitized:
-    name: host unit tests (ASan + UBSan)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: host unit tests (ASan + UBSan)
+            runner: ubuntu-26.04-arm
+            abi: ''
+            tree: sanitize
+            cxx: g++
+            packages: ccache
+          # i386 is ILP32 like the nRF52, so a long that overflows past 2^31 there overflows here.
+          - name: host unit tests (ASan + UBSan, ILP32)
+            runner: ubuntu-26.04
+            abi: ilp32
+            tree: sanitize-ilp32
+            cxx: clang++
+            packages: ccache clang libclang-rt-dev g++-multilib
+    name: ${{ matrix.name }}
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
-    runs-on: ubuntu-26.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
+      - name: install the toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
       # Its own cache key: the sanitized objects share nothing with the plain ones.
-      - name: install ccache
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
           path: .ccache
-          key: ccache-sanitize-${{ github.sha }}
-          restore-keys: ccache-sanitize-
+          key: ccache-${{ matrix.tree }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.tree }}-
       - name: build & run host tests under sanitizers
         working-directory: firmware
-        run: make test-sanitize CXX="ccache g++"
+        run: make test-sanitize ABI=${{ matrix.abi }} CXX="ccache ${{ matrix.cxx }}"
+
+  # The radio, the GNSS UART and the companion link, a minute each (firmware/test/fuzz/README.md).
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: libFuzzer (radio, NMEA, companion link)
+            runner: ubuntu-26.04-arm
+            abi: ''
+            tree: fuzz
+            packages: clang libclang-rt-dev ccache
+          - name: libFuzzer (radio, NMEA, companion link, ILP32)
+            runner: ubuntu-26.04
+            abi: ilp32
+            tree: fuzz-ilp32
+            packages: clang libclang-rt-dev g++-multilib ccache
+    name: ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
+    runs-on: ${{ matrix.runner }}
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - uses: actions/checkout@v7
+      # libFuzzer's runtime is libclang-rt-dev, which clang only recommends.
+      - name: install clang and ccache
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq --no-install-recommends ${{ matrix.packages }}
+      # Its own cache key: -fsanitize=fuzzer-no-link instruments every object.
+      - name: cache the compiled objects
+        uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.tree }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.tree }}-
+      # A minute from the seeds alone finds little, a minute on top of every earlier run finds more.
+      - name: cache the corpus
+        uses: actions/cache@v6
+        with:
+          path: firmware/build/${{ matrix.tree }}/corpus
+          key: corpus-${{ matrix.tree }}-${{ github.sha }}
+          restore-keys: corpus-${{ matrix.tree }}-
+      - name: build & run the fuzzers
+        working-directory: firmware
+        run: make fuzz ABI=${{ matrix.abi }} FUZZ_CXX="ccache clang++"
+      - name: upload the crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: crashes-${{ matrix.tree }}
+          path: firmware/build/${{ matrix.tree }}/crashes/
+          if-no-files-found: ignore
 
   lint:
     name: clang-format + clang-tidy

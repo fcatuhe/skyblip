@@ -23,8 +23,14 @@ long parse_long(const char* s, int len) {
     return v;
 }
 int d2(const char* s) { return (s[0] - '0') * 10 + (s[1] - '0'); }
+bool digits(const char* s, int n) {
+    for (int i = 0; i < n; i++)
+        if (s[i] < '0' || s[i] > '9') return false;
+    return true;
+}
 
 constexpr int64_t kMillimetresPerSecPerKnotE3 = 514444;
+constexpr int kRmcStampDigits = 6;
 
 // INFO: fc 23sep26 no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea
 constexpr int64_t kSpeedCeilingMmS = 514444;
@@ -243,7 +249,7 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
     solution_.fix_valid = f[2][0] == 'A' && nmea_parse_coord(f[3], f[4][0], lat_1e7) &&
                           nmea_parse_coord(f[5], f[6][0], lon_1e7);
     solution_.utc_valid = false;
-    if (f[1][0] && f[9][0] && strlen(f[1]) >= 6 && strlen(f[9]) >= 6) {
+    if (digits(f[1], kRmcStampDigits) && digits(f[9], kRmcStampDigits)) {
         int hh = d2(f[1]), mm = d2(f[1] + 2), ss = d2(f[1] + 4);
         int day = d2(f[9]), mon = d2(f[9] + 2), yy = d2(f[9] + 4);
         // The MTK 1980 lie and its neighbours: a two-digit year of 70 or more is

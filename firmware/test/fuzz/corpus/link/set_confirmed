@@ -1,0 +1,3 @@
+C{"cmd":"set","aircraft_type":1,"alarm":true,"alarm_volume":2,"units":1,"callsign":"D-KXYZ","battery_offset_mv":-40,"freq_trim_e1_ppm":12}
+P
+C{"cmd":"get"}
