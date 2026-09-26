@@ -69,7 +69,7 @@ int count_of(const simulator::Air& air, simulator::AirEvent want) {
 // A device on the next bench: the real driver over its own part, armed for the M-band dwell.
 struct Peer {
     models::Sx1262 chip;
-    parts::Sx1262 radio{chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
+    parts::Sx1262 radio{chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
 
     Peer() {
         REQUIRE(radio.begin() == Status::Ok);

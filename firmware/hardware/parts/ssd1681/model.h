@@ -14,7 +14,7 @@
 
 namespace skyblip::models {
 
-class Ssd1681 : public io::Spi, public io::Gpio {
+class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
    public:
     int dc{0}, rst{1}, busy{2}, backlight_pin{3};
 
@@ -23,6 +23,9 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     static constexpr uint32_t kFullBusyMs = 2600;
     // INFO: fc 09mar26 the tail GxEPD2 counts for the power-down, and a rails-up sequence skips it
     static constexpr uint32_t kPowerDownMs = 140;
+
+    // INFO: fc 26sep26 the vendor 10 ms RES# hold as a literal: epd::kResetHoldUs is on trial
+    static constexpr uint32_t kResetLowFloorUs = 10000;
 
     void attach_clock(const ports::Clock& clock) { clock_ = &clock; }
 
@@ -35,22 +38,18 @@ class Ssd1681 : public io::Spi, public io::Gpio {
         if (pin == dc) dc_high_ = level;
         if (pin == backlight_pin) backlight = level;
         if (pin == rst) {
-            if (level && !rst_level_) {
-                reset_pulses++;
-                powered = true;
-                rails_on = false;
-                refresh_span_ms_ = 0;
-            }
+            if (!level && rst_level_) reset_low_since_us_ = elapsed_us;
+            if (level && !rst_level_) release_reset();
             rst_level_ = level;
         }
     }
     bool get(int pin) override {
         if (pin != busy) return false;
-        if (!rst_level_) reads_while_in_reset++;
         return busy_stuck || refreshing();
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
+    void busy_wait_us(uint32_t us) override { elapsed_us += us; }
 
     void select(bool) override {}
     void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
@@ -129,7 +128,9 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     std::vector<uint8_t> ram;
     std::vector<uint8_t> ram_previous;
     int reset_pulses{0};
-    uint32_t reads_while_in_reset{0};
+    int short_resets{0};
+    uint64_t reset_low_us{0};
+    uint64_t elapsed_us{0};
     int present_count{0};
     int deep_sleeps{0};
     int commands_while_busy{0};
@@ -152,6 +153,18 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     static constexpr uint8_t kDisplay = 0x04;
     static constexpr uint8_t kDisableAnalog = 0x02;
 
+    void release_reset() {
+        reset_low_us = elapsed_us - reset_low_since_us_;
+        if (reset_low_us < kResetLowFloorUs) {
+            short_resets++;
+            return;
+        }
+        reset_pulses++;
+        powered = true;
+        rails_on = false;
+        refresh_span_ms_ = 0;
+    }
+
     uint32_t partial_busy_ms() const {
         return (sequence_ & kDisableAnalog) ? kPartialBusyMs : kPartialBusyMs - kPowerDownMs;
     }
@@ -170,6 +183,7 @@ class Ssd1681 : public io::Spi, public io::Gpio {
     uint8_t sequence_{0};
     bool dc_high_{false};
     bool rst_level_{true};
+    uint64_t reset_low_since_us_{0};
     uint8_t pending_{0};
 };
 

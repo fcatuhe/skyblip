@@ -159,6 +159,7 @@ class Platform {
     // test/hardware/test_l76k.cpp.
     static io::UartRate& uart_rate(io::BusId) { return io::kFixedUartRate; }
     io::Gpio& gpio() { return gpio_; }
+    io::Delay& delay() { return delay_; }
     io::I2c& i2c(io::BusId) { return i2c_; }
 
     host::Clock& clock() { return clock_; }
@@ -225,6 +226,7 @@ class Platform {
 
     Chips chips_{};
     Gpio gpio_{chips_};
+    Delay delay_{chips_};
     I2cBus i2c_{};
     host::Clock clock_{};
     host::Link link_{};

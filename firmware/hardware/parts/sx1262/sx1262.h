@@ -48,8 +48,14 @@ struct RadioConfig {
 
 class Sx1262 {
    public:
-    Sx1262(io::Spi& spi, io::Gpio& gpio, int busy_pin, int reset_pin, int dio1_pin)
-        : spi_(spi), gpio_(gpio), busy_(busy_pin), reset_(reset_pin), dio1_(dio1_pin) {}
+    Sx1262(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int busy_pin, int reset_pin,
+           int dio1_pin)
+        : spi_(spi),
+          gpio_(gpio),
+          delay_(delay),
+          busy_(busy_pin),
+          reset_(reset_pin),
+          dio1_(dio1_pin) {}
 
     // Is there a radio on the other end of this bus at all? Answers only what a
     // register round-trip can prove, and leaves the chip in standby.
@@ -87,10 +93,10 @@ class Sx1262 {
     void cmd_read(uint8_t opcode, uint8_t* out, size_t n);
     void write_register(uint16_t addr, const uint8_t* data, size_t n);
     void read_register(uint16_t addr, uint8_t* out, size_t n);
-    void hold_reset_low();
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
+    bool holds(const RadioConfig& cfg) const;
     void configure_modulation(const RadioConfig& cfg);
     void configure_rx_gain();
     void configure_tx_clamp();
@@ -101,7 +107,6 @@ class Sx1262 {
     uint8_t read_payload(uint8_t* rx_buf, uint8_t cap);
     Status check_device_errors();
     void clear_device_errors();
-    void hold_sleep_settle();
     void configure_frame(const RadioConfig& cfg);
     uint32_t tx_timeout_ticks(uint8_t len) const;
     void recover_tx();
@@ -109,11 +114,13 @@ class Sx1262 {
 
     io::Spi& spi_;
     io::Gpio& gpio_;
+    io::Delay& delay_;
     int busy_, reset_, dio1_;
     RadioMode mode_{RadioMode::Sleep};
     RadioConfig cfg_{};
     bool brought_up_{false};
     bool configured_{false};
+    bool tuned_{false};
     uint32_t ms_since_rx_{0};
     uint32_t reinit_count_{0};
     bool reinit_owed_{false};
@@ -123,6 +130,13 @@ class Sx1262 {
 
 namespace sx {
 constexpr uint8_t kSetStandby = 0x80;
+constexpr uint8_t kStandbyRc = 0x00;
+constexpr uint8_t kStandbyXosc = 0x01;
+// INFO: fc 26sep26 DS 13.1.15: where the part goes after TX, STDBY_RC unless told otherwise
+constexpr uint8_t kSetRxTxFallbackMode = 0x93;
+constexpr uint8_t kFallbackFs = 0x40;
+constexpr uint8_t kFallbackStdbyXosc = 0x30;
+constexpr uint8_t kFallbackStdbyRc = 0x20;
 constexpr uint8_t kSetRegulatorMode = 0x96;
 // DS 13.1.4 regModeParam. The part comes out of reset on its LDO alone and the
 // converter roughly halves the supply current in receive and in transmit, which
@@ -181,9 +195,9 @@ constexpr uint16_t kSyncWordRegister = 0x06C0;  // DS 13.4.9, 8 bytes
 // sleep IS a warm start, so a radio that slept and came back would be a radio on
 // the power-saving gain again, with no symptom beyond a shorter range. Both
 // halves are therefore written: the retention list once in begin(), and the
-// register itself in every configure_radio(), which is the standby bracket every
-// dwell passes through anyway (register access outside standby is what the model
-// refuses, DS 13.1).
+// register itself in every configure_radio() that writes a dwell, which is the
+// standby bracket a retune passes through anyway (register access outside
+// standby is what the model refuses, DS 13.1).
 constexpr uint16_t kRxGainRegister = 0x08AC;
 constexpr uint8_t kRxGainPowerSaving = 0x94;
 constexpr uint8_t kRxGainBoosted = 0x96;
@@ -280,8 +294,8 @@ constexpr int8_t kSrd868ErpLimitDbm = 14;
 // 2.15 dB and rounding it away is how a compliance argument goes quietly wrong.
 //
 // TODO: fc 03aug26 Both antenna figures are the paper part of gate G8
-// (project/research/antenna-868-go.md: ANT-868-CW-QW-SMA, 1.6 dBi peak, and an
-// unmeasured 0.5 dB allowance for the U.FL-to-SMA feed). Replace them with the
+// (the ANT-868-CW-QW-SMA datasheet's 1.6 dBi peak, and an unmeasured 0.5 dB
+// allowance for the U.FL-to-SMA feed). Replace them with the
 // VNA measurement before the regulatory file is filed; the assertion below is
 // what tells you the moment the answer stops holding.
 constexpr int16_t kDbiToDbdCentiDb = 215;
@@ -326,15 +340,10 @@ constexpr uint32_t kTimeoutStepNs = 15625;
 constexpr uint32_t kTimeoutTicksMax = 0xFFFFFF;
 constexpr uint32_t kTxGuardUs = 25000;
 
-// INFO: wr 02aug26 DS 8.1: NRESET must be held low >= 100 us. io::Gpio has no
-// delay primitive, so the pulse is a bounded spin on BUSY sized against the
-// slowest credible cost of one such read on nRF52840 at 64 MHz.
+// INFO: wr 02aug26 DS 8.1: NRESET must be held low >= 100 us
 constexpr uint32_t kResetLowUs = 100;
-constexpr uint32_t kResetSpinNsFloor = 125;
-constexpr uint32_t kResetLowSpins = kResetLowUs * 1000u / kResetSpinNsFloor;
 // INFO: fc 05sep26 DS 13.1.2: no SPI for 500 us after SetSleep, while the configuration saves
 constexpr uint32_t kSleepSettleUs = 500;
-constexpr uint32_t kSleepSettleSpins = kSleepSettleUs * 1000u / kResetSpinNsFloor;
 // §C.2 puts 16 chips of preamble before the sync word. Eight of them are enough
 // for the detector to declare a preamble.
 constexpr uint16_t kPreambleChips = 16;
