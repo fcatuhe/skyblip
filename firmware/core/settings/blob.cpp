@@ -35,4 +35,10 @@ Status open(const uint8_t* in, size_t len, size_t payload_len, void* payload_out
     return Status::Ok;
 }
 
+bool sealed(const uint8_t* in, size_t len) {
+    if (len < kBlobOverhead) return false;
+    const size_t payload_len = len - kBlobOverhead;
+    return fec::crc32(in, 1 + payload_len) == stored_crc(in, payload_len);
+}
+
 }  // namespace skyblip::settings

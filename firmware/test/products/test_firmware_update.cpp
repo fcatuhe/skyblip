@@ -1,6 +1,8 @@
 // The whole product taking an update; the bootloader is the one thing the host cannot run.
+#include <cstring>
 #include <string>
 
+#include "core/settings/blob.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "test/support/product_rig.h"
@@ -83,6 +85,36 @@ struct Rebooted {
         rig.platform.dfu().image_confirmed = confirmed;
     }
 };
+
+// What a later image stores: one layout ahead of this one, sealed the way every blob is.
+struct NewerBlob {
+    uint8_t bytes[settings::blob_bytes(40)]{};
+    NewerBlob() {
+        uint8_t payload[40];
+        for (size_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(0xA0 + i);
+        settings::seal(go::kBlobVersion + 1, payload, sizeof(payload), bytes, sizeof(bytes));
+    }
+};
+
+bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t len) {
+    uint8_t stored[64];
+    size_t n = 0;
+    if (rig.platform.kv().read(key, stored, sizeof(stored), n) != Status::Ok) return false;
+    return n == len && std::memcmp(stored, blob, len) == 0;
+}
+
+void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
+    on_ground(rig, t);
+    std::string json = "{\"cmd\":\"set\",\"callsign\":\"";
+    json += callsign;
+    json += "\"}";
+    rig.send(json.c_str());
+    rig.run(t, t + 200);
+    t += 200;
+    config(rig).confirm();
+    rig.run(t, t + 3000);
+    t += 3000;
+}
 
 }  // namespace
 
@@ -271,4 +303,72 @@ TEST_CASE("product: an image nobody staged over the air clears a stale attempt")
     REQUIRE(flashed.rig.setup() == Status::Ok);
     CHECK(config(flashed.rig).image_state() == dfu::ImageState::Confirmed);
     CHECK_FALSE(attempt_recorded(flashed.rig));
+}
+
+// A reverted image that wrote over a newer blob lost the pilot's settings for good.
+TEST_CASE("product: a set on an image older than its settings never writes over them") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+
+    set_callsign_over_the_link(rig, t, "F-JABC");
+    CHECK(std::string(rig.settings().callsign) == "F-JABC");
+    CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
+
+    Rebooted after(rig, kRunning, /*confirmed=*/true);
+    REQUIRE(after.rig.setup() == Status::Ok);
+    CHECK(std::string(after.rig.settings().callsign) == "F-JABC");
+    CHECK(after.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+    CHECK(holds(after.rig, "settings", newer.bytes, sizeof(newer.bytes)));
+}
+
+TEST_CASE("product: an image with nothing of its own beside a newer blob starts from defaults") {
+    Rig rig;
+    const NewerBlob newer;
+    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    CHECK(rig.settings().alarm_volume == go::defaults().alarm_volume);
+    CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
+}
+
+TEST_CASE("product: a sector that lost a bit is written over, not kept as a newer image's") {
+    Rig rig;
+    NewerBlob torn;
+    torn.bytes[3] ^= 0x01;
+    REQUIRE(rig.platform.kv().write("settings", torn.bytes, sizeof(torn.bytes)) == Status::Ok);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    uint32_t t = 0;
+
+    set_callsign_over_the_link(rig, t, "F-JABC");
+    uint8_t blob[64];
+    size_t n = 0;
+    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    go::Settings stored;
+    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
+    CHECK(std::string(stored.callsign) == "F-JABC");
+}
+
+TEST_CASE("product: a revert puts back the settings the pilot had when the swap began") {
+    Rig before;
+    stage_versions(before);
+    REQUIRE(before.setup() == Status::Ok);
+    uint32_t t = 0;
+    set_callsign_over_the_link(before, t, "D-KXYZ");
+    apply_and_swap(before);
+    REQUIRE(before.platform.dfu().triggered == 1);
+
+    Rebooted landed(before, kStaged, /*confirmed=*/false);
+    const NewerBlob newer;
+    REQUIRE(landed.rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+            Status::Ok);
+
+    Rebooted reverted(landed.rig, kRunning, /*confirmed=*/true);
+    REQUIRE(reverted.rig.setup() == Status::Ok);
+    CHECK(config(reverted.rig).image_state() == dfu::ImageState::Reverted);
+    CHECK(std::string(reverted.rig.settings().callsign) == "D-KXYZ");
+    CHECK(reverted.rig.product.config().settings_fallback() == settings::Fallback::Prior);
 }
