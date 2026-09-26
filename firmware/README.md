@@ -6,7 +6,7 @@ A file lives in the narrowest layer that decides its content. A spec, a physical
 
 `ports/` is a port layer, not a hardware abstraction layer, and it is named for what it is: it declares the roles the core needs filled, in the core's own vocabulary, and `hardware/` is where a part or a platform fills one. A port is what the core calls; what the world does to a sensor arrives as an `events::` value on a queue instead, and `hardware/README.md` is where that half of the contract is written down. Register code belongs there, never here. `core/` and `ui/` compile with no framework headers at all, which is what buys the host suite and the WASM simulator; Zephyr is used freely below `ports/` and never above it.
 
-`make test` runs the host suite, `make simulator` builds the terminal one, `scripts/build_local.sh` from the repo root builds the device image.
+`make test` runs the host suite, `make test-sanitize` runs it again under ASan and UBSan in `build/sanitize/`, `make simulator` builds the terminal one, `scripts/build_local.sh` from the repo root builds the device image.
 
 `.clang-format` and `.clang-tidy` live here rather than at the root because this is the only C++ in the repository, and both tools read the nearest config above the file they are given. `make tidy` runs the linter over what the host build compiles; CI runs the same target.
 

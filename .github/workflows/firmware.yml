@@ -53,11 +53,23 @@ jobs:
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-26.04-arm
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
+      # A PR recompiles the few files it touched, not all 155 translation units.
+      - name: install ccache
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache
+      - name: cache the compiled objects
+        uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-plain-${{ github.sha }}
+          restore-keys: ccache-plain-
       - name: build & run host tests
         working-directory: firmware
-        run: make test
+        run: make test CXX="ccache g++"
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
       # firmware/test/adsl/ reads the published specification clause by clause, and a
@@ -93,22 +105,29 @@ jobs:
           python3 scripts/tuning_index.py
           git diff --exit-code docs/TUNING.md
 
-  # A memory error or undefined behaviour on any path the suite takes, which a
-  # plain build runs straight through. Leak checking is off: nothing allocates.
-  host-sanitizers:
+  # Beside host-tests, not after it: a read past a frame passes a plain run by luck.
+  host-tests-sanitized:
     name: host unit tests (ASan + UBSan)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-26.04-arm
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
-      - name: build & run host tests under ASan and UBSan
+      # Its own cache key: the sanitized objects share nothing with the plain ones.
+      - name: install ccache
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache
+      - name: cache the compiled objects
+        uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-sanitize-${{ github.sha }}
+          restore-keys: ccache-sanitize-
+      - name: build & run host tests under sanitizers
         working-directory: firmware
-        env:
-          ASAN_OPTIONS: detect_leaks=0
-        run: >-
-          make test
-          CXX="c++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+        run: make test-sanitize CXX="ccache g++"
 
   lint:
     name: clang-format + clang-tidy
