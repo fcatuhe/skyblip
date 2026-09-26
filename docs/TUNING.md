@@ -65,7 +65,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTaxiSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
-| `kAirborneReportPeriodS` | 1 | seconds | Period | G.1.16 asks for at least 1 Hz airborne and 0.1 Hz on the ground |
+| `kAirborneReportPeriodS` | 1 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundReportPeriodS` | 10 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
 | `kTurnWindowMs` | 1000 (1 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
 
