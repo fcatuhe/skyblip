@@ -23,6 +23,7 @@
 #include "ports/null.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
@@ -30,15 +31,6 @@ using namespace skyblip::comms;
 namespace {
 
 constexpr uint32_t kWidestAddr = 16777214;  // eight digits, the most air_address can emit
-
-events::RxFrame frame(const char* json) {
-    events::RxFrame f{};
-    f.session_id = 1;
-    f.endpoint = events::Endpoint::Config;
-    f.len = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(f.data.data(), json, f.len);
-    return f;
-}
 
 // The widest a unit can make its own answers: every field at the longest value
 // it is allowed to hold, so these cases measure the worst case rather than a

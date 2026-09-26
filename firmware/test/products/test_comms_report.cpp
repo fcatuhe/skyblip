@@ -13,21 +13,12 @@
 #include "hardware/platform/host/link.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
 
 namespace {
-constexpr uint32_t kTestAddr = 0x123456;
-events::RxFrame frame(const char* json) {
-    events::RxFrame f{};
-    f.session_id = 1;
-    f.endpoint = events::Endpoint::Config;
-    f.len = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(f.data.data(), json, f.len);
-    return f;
-}
-
 // The bench's timing answer as a laboratory reads it: every frame the service
 // put on the link, joined. It is one frame when the negotiated payload carries
 // it whole and several when it does not, and the frames arrive back to back -
