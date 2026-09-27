@@ -29,6 +29,11 @@ static_assert(t_echo_plus::kGlassW == parts::Ssd1681::kGlassW &&
                   t_echo_plus::kGlassH == parts::Ssd1681::kGlassH,
               "the glass on this board is what its controller drives");
 
+static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
+                      runtime::kServiceStepMs <
+                  timing::kSlot0Start,
+              "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
+
 // The T-Echo Plus, assembled once. P is the platform: silicon or host. Swapping
 // it changes which io/ backend the parts talk to and nothing else, so there is
 // no second copy of this wiring to keep in step.
