@@ -26,7 +26,6 @@ go::Glass expected_page(Rig& rig) {
     go::MenuSnapshot snapshot;
     snapshot.page = rig.product.screen().editor().page();
     snapshot.values.settings = rig.settings();
-    snapshot.values.range_step = rig.product.screen().range_step();
     snapshot.focus = rig.product.screen().editor().focus();
     go::Glass fb;
     go::draw_menu(fb, snapshot);
@@ -157,6 +156,36 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     REQUIRE(again.platform.kv().write("settings", blob, n) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
     CHECK(again.settings().alarm_volume == 4);
+}
+
+TEST_CASE("product: the range and the plot a pilot picks on the panel survive a boot") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    REQUIRE(rig.product.screen().range_step() == go::kDefaultRangeStep);
+    REQUIRE(rig.settings().plot == go::RadarPlot::All);
+
+    open_menu(rig, t);
+    focus_on(rig, t, go::MenuRow::Range);
+    change(rig, t);
+    focus_on(rig, t, go::MenuRow::Plot);
+    change(rig, t);
+    rig.run(t, t + 500);
+    t += 500;
+
+    go::Settings stored{};
+    REQUIRE(stored_settings(rig, stored));
+    CHECK(int(stored.range_step) == go::kDefaultRangeStep + 1);
+    CHECK(stored.plot == go::RadarPlot::ToScale);
+
+    Rig again;
+    uint8_t blob[64];
+    size_t n = 0;
+    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(again.platform.kv().write("settings", blob, n) == Status::Ok);
+    REQUIRE(again.setup() == Status::Ok);
+    CHECK(again.product.screen().range_step() == go::kDefaultRangeStep + 1);
+    CHECK(again.settings().plot == go::RadarPlot::ToScale);
 }
 
 TEST_CASE("product: the aircraft type set on the panel is the one that goes on the air") {

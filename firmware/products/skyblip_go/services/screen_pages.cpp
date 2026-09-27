@@ -133,8 +133,8 @@ void ScreenService::render(uint32_t now_ms) {
             snap.fix_valid = own.fix_valid;
             snap.stage = context_.state.gnss.stage;
             snap.units = settings.units;
-            snap.range_step = range_step_;
-            snap.plot = radar_plot_;
+            snap.range_step = settings.range_step;
+            snap.plot = settings.plot;
             snap.heard = context_.state.traffic.count();
             snap.track_cdeg = own.track_cdeg;
             snap.speed_mm_s = own.speed_mm_s;

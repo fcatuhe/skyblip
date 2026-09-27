@@ -147,12 +147,13 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
             n = fmt_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
             break;
         case MenuRow::Range:
-            n = fmt_uint(out, static_cast<uint32_t>(range_value(v.range_step, v.settings.units)));
+            n = fmt_uint(
+                out, static_cast<uint32_t>(range_value(v.settings.range_step, v.settings.units)));
             n += fmt_string(out + n, " ");
             n += fmt_string(out + n, range_unit(v.settings.units));
             break;
         case MenuRow::Plot:
-            n = fmt_string(out, v.plot == RadarPlot::All ? "ALL" : "TO SCALE");
+            n = fmt_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
         case MenuRow::Alarm: n = fmt_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
         case MenuRow::Volume:
@@ -324,8 +325,11 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             next.settings.units = current.settings.units == go::Units::Metric ? go::Units::Nautical
                                                                               : go::Units::Metric;
             break;
-        case MenuRow::Range: next.range_step = next_range_step(current.range_step); break;
-        case MenuRow::Plot: next.plot = next_radar_plot(current.plot); break;
+        case MenuRow::Range:
+            next.settings.range_step =
+                static_cast<uint8_t>(next_range_step(current.settings.range_step));
+            break;
+        case MenuRow::Plot: next.settings.plot = next_radar_plot(current.settings.plot); break;
         case MenuRow::Alarm: next.settings.alarm_enabled = !current.settings.alarm_enabled; break;
         case MenuRow::Volume:
             next.settings.alarm_volume =

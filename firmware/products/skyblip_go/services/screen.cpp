@@ -229,8 +229,6 @@ void ScreenService::leave_menu() {
 MenuValues ScreenService::menu_values() const {
     MenuValues values;
     values.settings = settings_;
-    values.range_step = range_step_;
-    values.plot = radar_plot_;
     return values;
 }
 
@@ -243,8 +241,6 @@ void ScreenService::step_editor(uint32_t now_ms) {
     switch (editor_.tick(now_ms, current, next)) {
         case MenuAction::Changed:
             settings_ = next.settings;
-            range_step_ = next.range_step;
-            radar_plot_ = next.plot;
             // INFO: cf 02aug26 One owner of the flash blob. The page changes the
             // struct the config service was already given a reference to and
             // says so with the same flag the companion link raises; the write

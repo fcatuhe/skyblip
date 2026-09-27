@@ -166,14 +166,14 @@ TEST_CASE("menu editor: moving the focus over a row is not editing it") {
     // The abandoned edit: nothing is staged, so nothing is half applied.
     Bench bench;
     const go::Settings before = bench.values.settings;
-    const int range_before = bench.values.range_step;
+    const int range_before = bench.values.settings.range_step;
     for (int i = 0; i < bench.rows(); i++) bench.move();
     CHECK_FALSE(bench.editor.active());
     CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
     CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
     CHECK(before.alarm_volume == bench.values.settings.alarm_volume);
     CHECK(before.units == bench.values.settings.units);
-    CHECK(range_before == bench.values.range_step);
+    CHECK(range_before == bench.values.settings.range_step);
 }
 
 TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft") {
@@ -222,35 +222,36 @@ TEST_CASE("menu editor: the volume a pilot can hear, and it stays inside what is
 TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle closes") {
     Bench bench;
     bench.focus_on(MenuRow::Range);
-    REQUIRE(bench.values.range_step == kDefaultRangeStep);
-    REQUIRE(range_value(bench.values.range_step, Units::Nautical) == 4);
+    REQUIRE(bench.values.settings.range_step == kDefaultRangeStep);
+    REQUIRE(range_value(bench.values.settings.range_step, Units::Nautical) == 4);
 
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(range_value(bench.values.range_step, Units::Nautical) == 8);
+    CHECK(range_value(bench.values.settings.range_step, Units::Nautical) == 8);
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(range_value(bench.values.range_step, Units::Nautical) == 1);
+    CHECK(range_value(bench.values.settings.range_step, Units::Nautical) == 1);
 
     // Every step is a range the radar can label, and the cycle comes back round.
     for (int i = 0; i < kRangeStepCount; i++) {
-        CHECK(bench.values.range_step >= 0);
-        CHECK(bench.values.range_step < kRangeStepCount);
+        CHECK(bench.values.settings.range_step >= 0);
+        CHECK(bench.values.settings.range_step < kRangeStepCount);
         bench.change();
     }
-    CHECK(range_value(bench.values.range_step, Units::Nautical) == 1);
+    CHECK(range_value(bench.values.settings.range_step, Units::Nautical) == 1);
 
     // A step a companion app invented is not on the cycle, and the first press comes back to it.
     CHECK(next_range_step(37) == (kDefaultRangeStep + 1) % kRangeStepCount);
 }
 
-TEST_CASE("menu editor: the plot flips between to scale and all, one press each way") {
+TEST_CASE("menu editor: the plot starts on all, and one press each way flips it to scale") {
     Bench bench;
     bench.focus_on(MenuRow::Plot);
-    REQUIRE(bench.values.plot == RadarPlot::ToScale);
+    REQUIRE(bench.values.settings.plot == RadarPlot::All);
 
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(bench.values.plot == RadarPlot::All);
+    CHECK(bench.values.settings.plot == RadarPlot::ToScale);
+    CHECK(go::validate(bench.values.settings) == Status::Ok);
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(bench.values.plot == RadarPlot::ToScale);
+    CHECK(bench.values.settings.plot == RadarPlot::All);
 }
 
 TEST_CASE("menu editor: a value that would not validate is never handed back") {

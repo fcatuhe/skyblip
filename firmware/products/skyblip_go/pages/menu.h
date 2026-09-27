@@ -35,8 +35,6 @@ Menu menu_for(Page page);
 
 struct MenuValues {
     go::Settings settings{};
-    int range_step{kDefaultRangeStep};
-    RadarPlot plot{RadarPlot::ToScale};
 };
 
 struct MenuSnapshot {

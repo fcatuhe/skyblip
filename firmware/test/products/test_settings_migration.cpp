@@ -127,7 +127,50 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(int(kBlobVersion) == 9);
+    CHECK(int(kBlobVersion) == 10);
+}
+
+// Until version 10 the range and the plot were the page's, so a stored unit had neither.
+TEST_CASE(
+    "settings: a blob written by version-9 firmware comes back on the range and plot a new unit "
+    "ships on") {
+    struct V9 {
+        uint8_t version{1};
+        int16_t battery_offset_mv{0};
+        int16_t freq_trim_e1_ppm{0};
+        bool battery_offset_manual{false};
+        uint8_t aircraft_type{4};
+        bool alarm_enabled{true};
+        uint8_t alarm_volume{3};
+        Units units{Units::Metric};
+        char callsign[10]{0};
+    };
+
+    V9 old{};
+    old.battery_offset_mv = 40;
+    old.battery_offset_manual = true;
+    old.freq_trim_e1_ppm = 12;
+    old.aircraft_type = 7;
+    old.alarm_volume = 1;
+    std::memcpy(old.callsign, "F-JABC", 7);
+
+    uint8_t blob[128] = {0};
+    blob[0] = 9;
+    std::memcpy(blob + 1, &old, sizeof(V9));
+    const uint32_t crc = fec::crc32(blob, 1 + sizeof(V9));
+    for (int i = 0; i < 4; i++) blob[1 + sizeof(V9) + i] = static_cast<uint8_t>(crc >> (8 * i));
+
+    Settings out;
+    REQUIRE(from_blob(blob, 1 + sizeof(V9) + 4, out) == Status::Ok);
+    CHECK(int(out.battery_offset_mv) == 40);
+    CHECK(out.battery_offset_manual);
+    CHECK(int(out.freq_trim_e1_ppm) == 12);
+    CHECK(int(out.aircraft_type) == 7);
+    CHECK(int(out.alarm_volume) == 1);
+    CHECK(out.units == Units::Metric);
+    CHECK(std::string(out.callsign) == "F-JABC");
+    CHECK(int(out.range_step) == kDefaultRangeStep);
+    CHECK(out.plot == RadarPlot::All);
 }
 
 // Before version 9 the only way to hold a trim was for somebody to measure one.

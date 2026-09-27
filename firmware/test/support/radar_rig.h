@@ -1,4 +1,5 @@
-// Harness, not a test: the radar snapshot of an aircraft in flight, and the glass it draws.
+// Harness, not a test: the radar snapshot of an aircraft in flight, to scale, and the glass it
+// draws.
 #ifndef SKYBLIP_TEST_SUPPORT_RADAR_RIG_H
 #define SKYBLIP_TEST_SUPPORT_RADAR_RIG_H
 
@@ -12,6 +13,7 @@ namespace skyblip::go {
 inline RadarSnapshot flying(uint16_t track_deg) {
     RadarSnapshot snap;
     snap.fix_valid = true;
+    snap.plot = RadarPlot::ToScale;
     snap.range_step = kDefaultRangeStep;
     snap.track_cdeg = track_deg * 100;
     snap.flight_time_valid = true;

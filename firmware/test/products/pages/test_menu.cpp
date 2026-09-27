@@ -74,7 +74,7 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(row_label_reads(fb, Page::Radar, MenuRow::Alarm, false));
     CHECK(row_value_reads(fb, Page::Radar, MenuRow::Alarm, "ON", false));
     CHECK(row_value_reads(fb, Page::Radar, MenuRow::Range, "4 NM", false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Plot, "TO SCALE", false));
+    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Plot, "ALL", false));
     CHECK(row_value_reads(fb, Page::Radar, MenuRow::Units, "NAUTICAL", false));
 
     // The focused row is white ink on a filled bar, told apart by shape before a word is read.
@@ -115,7 +115,7 @@ TEST_CASE("menu: no label and value a row can hold meet at double height") {
                 for (Units units : {Units::Nautical, Units::Metric}) {
                     values.settings.units = units;
                     for (int step = 0; step < kRangeStepCount; step++) {
-                        values.range_step = step;
+                        values.settings.range_step = step;
                         char value[kMenuValueCap];
                         const int n = menu_row_value(value, menu.rows[i], values);
                         CHECK(label_end <= kMenuRightX - n * kMenuCellW);
@@ -251,10 +251,10 @@ TEST_CASE("menu editor: a metric pilot steps whole kilometres, not a converted m
     CHECK(row_value_reads(fb, Page::Radar, MenuRow::Range, "8 KM", true));
 
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(range_value(bench.values.range_step, Units::Metric) == 16);
-    CHECK(range_metres(bench.values.range_step, Units::Metric) == 16000);
+    CHECK(range_value(bench.values.settings.range_step, Units::Metric) == 16);
+    CHECK(range_metres(bench.values.settings.range_step, Units::Metric) == 16000);
 
     // The same step read in the other unit is the ring it was drawn from.
-    CHECK(range_value(bench.values.range_step, Units::Nautical) == 8);
-    CHECK(range_metres(bench.values.range_step, Units::Nautical) == 8 * kMetresPerNm);
+    CHECK(range_value(bench.values.settings.range_step, Units::Nautical) == 8);
+    CHECK(range_metres(bench.values.settings.range_step, Units::Nautical) == 8 * kMetresPerNm);
 }

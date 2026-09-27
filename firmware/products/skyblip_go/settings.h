@@ -22,6 +22,11 @@ namespace skyblip::go {
 
 enum class Units : uint8_t { Nautical = 0, Metric = 1 };
 
+enum class RadarPlot : uint8_t { All = 0, ToScale = 1 };
+
+constexpr int kRangeStepCount = 4;
+constexpr int kDefaultRangeStep = 2;
+
 constexpr size_t kCallsignCap = 10;
 
 // The most the radio's centre frequency may be trimmed, in tenths of a ppm, and
@@ -74,6 +79,8 @@ struct Settings {
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     Units units{Units::Nautical};
+    uint8_t range_step{kDefaultRangeStep};
+    RadarPlot plot{RadarPlot::All};
     char callsign[kCallsignCap]{0};
 
     // The companion-link contract, which is what schemas/config.v1.schema.json
@@ -81,7 +88,7 @@ struct Settings {
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 9;
+constexpr uint8_t kBlobVersion = 10;
 
 Settings defaults();
 

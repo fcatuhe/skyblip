@@ -134,6 +134,18 @@ struct SettingsV8 {
     char callsign[kCallsignCap]{0};
 };
 
+struct SettingsV9 {
+    uint8_t version{1};
+    int16_t battery_offset_mv{0};
+    int16_t freq_trim_e1_ppm{0};
+    bool battery_offset_manual{false};
+    uint8_t aircraft_type{4};
+    bool alarm_enabled{true};
+    uint8_t alarm_volume{3};
+    Units units{Units::Metric};
+    char callsign[kCallsignCap]{0};
+};
+
 constexpr size_t kPayloadV1 = sizeof(SettingsV1);
 constexpr size_t kPayloadV2 = sizeof(SettingsV2);
 constexpr size_t kPayloadV3 = sizeof(SettingsV3);
@@ -142,6 +154,7 @@ constexpr size_t kPayloadV5 = sizeof(SettingsV5);
 constexpr size_t kPayloadV6 = sizeof(SettingsV6);
 constexpr size_t kPayloadV7 = sizeof(SettingsV7);
 constexpr size_t kPayloadV8 = sizeof(SettingsV8);
+constexpr size_t kPayloadV9 = sizeof(SettingsV9);
 constexpr size_t kPayload = sizeof(Settings);
 
 void migrate_v1(const SettingsV1& old, Settings& out) {
@@ -242,6 +255,22 @@ void migrate_v8(const SettingsV8& old, Settings& out) {
     out.callsign[kCallsignCap - 1] = 0;
 }
 
+// A unit from before the radar's range and plot were kept comes back on the ones a new unit ships
+// on.
+void migrate_v9(const SettingsV9& old, Settings& out) {
+    out = Settings{};
+    out.version = Settings::kCurrentVersion;
+    out.battery_offset_mv = old.battery_offset_mv;
+    out.battery_offset_manual = old.battery_offset_manual;
+    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.aircraft_type = old.aircraft_type;
+    out.alarm_enabled = old.alarm_enabled;
+    out.alarm_volume = old.alarm_volume;
+    out.units = old.units;
+    std::memcpy(out.callsign, old.callsign, kCallsignCap);
+    out.callsign[kCallsignCap - 1] = 0;
+}
+
 void migrate_v7(const SettingsV7& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
@@ -273,6 +302,8 @@ Status validate(const Settings& s) {
     if (s.version != Settings::kCurrentVersion) return Status::Unsupported;
     if (s.aircraft_type > 17) return Status::OutOfRange;
     if (s.alarm_volume > 5) return Status::OutOfRange;
+    if (s.range_step >= kRangeStepCount) return Status::OutOfRange;
+    if (s.plot != RadarPlot::All && s.plot != RadarPlot::ToScale) return Status::OutOfRange;
     if (s.battery_offset_mv > power::kCalibrationLimitMv ||
         s.battery_offset_mv < -power::kCalibrationLimitMv)
         return Status::OutOfRange;
@@ -296,6 +327,11 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out) {
     if (version == kBlobVersion) {
         const Status st = settings::open(in, len, kPayload, &out);
         if (st != Status::Ok) return st;
+    } else if (version == 9) {
+        SettingsV9 old;
+        const Status st = settings::open(in, len, kPayloadV9, &old);
+        if (st != Status::Ok) return st;
+        migrate_v9(old, out);
     } else if (version == 8) {
         SettingsV8 old;
         const Status st = settings::open(in, len, kPayloadV8, &old);

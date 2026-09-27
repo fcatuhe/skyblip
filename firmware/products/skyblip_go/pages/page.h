@@ -25,10 +25,8 @@ enum class Page : uint8_t {
 
 constexpr int kPageCount = static_cast<int>(Page::kCount);
 
-constexpr int32_t kRangeStepsNm[] = {1, 2, 4, 8};
-constexpr int32_t kRangeStepsKm[] = {2, 4, 8, 16};
-constexpr int kRangeStepCount = static_cast<int>(sizeof(kRangeStepsNm) / sizeof(kRangeStepsNm[0]));
-constexpr int kDefaultRangeStep = 2;
+constexpr int32_t kRangeStepsNm[kRangeStepCount] = {1, 2, 4, 8};
+constexpr int32_t kRangeStepsKm[kRangeStepCount] = {2, 4, 8, 16};
 constexpr int32_t kMetresPerKm = 1000;
 
 constexpr int clamped_range_step(int step) {
@@ -54,8 +52,6 @@ constexpr int32_t kClimbFigureStepFpm = 10;
 constexpr int32_t climb_figure_fpm(int32_t fpm) {
     return div_round(fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
 }
-
-enum class RadarPlot : uint8_t { ToScale, All };
 
 constexpr RadarPlot next_radar_plot(RadarPlot plot) {
     return plot == RadarPlot::All ? RadarPlot::ToScale : RadarPlot::All;
