@@ -123,8 +123,9 @@ TEST_CASE("duty: a dwell the executor refuses is not counted, whatever the slot 
     CHECK(rig.state.duty.rx_armed_ms == 0);
 }
 
-// The disagreement a pass that ran long makes on silicon: the map says 989 ms a second regardless.
-TEST_CASE("duty: a pass too coarse for the dwell edges reads below the slot map") {
+// A pass that ran long used to arm each dwell late by however long it ran, a second of receive in
+// ten.
+TEST_CASE("duty: a pass too coarse for the dwell edges still reads the slot map") {
     Rig fine;
     REQUIRE(fine.setup() == Status::Ok);
     fine.run(0, 10000, kPassMs);
@@ -133,9 +134,8 @@ TEST_CASE("duty: a pass too coarse for the dwell edges reads below the slot map"
     REQUIRE(coarse.setup() == Status::Ok);
     coarse.run(0, 10000, 250);
 
-    CHECK(coarse.state().duty.rx_armed_ms > 0);
-    // a whole second of receive lost over ten, with the same map in front of both
-    CHECK(coarse.state().duty.rx_armed_ms + 1000 < fine.state().duty.rx_armed_ms);
+    CHECK(coarse.state().duty.rx_armed_ms == fine.state().duty.rx_armed_ms);
+    CHECK(fine.state().duty.rx_armed_ms == 10 * kDwellMsPerSecond);
 }
 
 TEST_CASE("duty: the transmit counter is the air time the hour's own budget is spent from") {

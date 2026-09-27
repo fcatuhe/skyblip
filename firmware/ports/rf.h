@@ -61,16 +61,43 @@ struct RfTransmitter {
     int8_t pa_rated_dbm{0};
 };
 
+// What the executor measured of its own dwell changes, from the retune's first
+// command to the part reporting the new mode: the worst since boot for each kind
+// of change, and how many dwells armed ahead were still not listening at their start.
+struct RfSwitching {
+    uint32_t hop_us{0};
+    uint32_t to_oband_us{0};
+    uint32_t to_mband_us{0};
+    uint32_t late{0};
+
+    void note(RfMode from, uint32_t from_hz, RfMode to, uint32_t to_hz, uint32_t took_us,
+              bool late_start) {
+        if (late_start) late++;
+        uint32_t* worst = nullptr;
+        if (to == RfMode::RxOband && from == RfMode::RxMband) worst = &to_oband_us;
+        if (to == RfMode::RxMband && from == RfMode::RxOband) worst = &to_mband_us;
+        if (to == RfMode::RxMband && from == RfMode::RxMband && to_hz != from_hz) worst = &hop_us;
+        if (worst != nullptr && took_us > *worst) *worst = took_us;
+    }
+};
+
 class Rf {
    public:
     virtual ~Rf() = default;
 
     virtual Status begin() = 0;
-    // INFO: fc 13sep26 a plan armed while a dwell is flying queues behind it, abort() cuts it short
+    // A plan armed while a dwell is flying joins it when it is that dwell's burst,
+    // and otherwise queues behind it, replacing whatever was queued. One that ends
+    // inside the flying dwell could never run, and is refused rather than queued
+    // over the next dwell. A queued dwell is switched into as soon as the one
+    // before it ends, never more than timing::kSwitchLeadMs ahead of its start.
+    // abort() cuts the flying dwell short and drops the queued one.
     virtual Status arm(const RfPlan& plan) = 0;
     virtual void abort() = 0;
 
     virtual RfCarrier carrier() const { return RfCarrier{}; }
+
+    virtual RfSwitching switching() const { return RfSwitching{}; }
 
     virtual RfTransmitter transmitter() const { return RfTransmitter{}; }
 

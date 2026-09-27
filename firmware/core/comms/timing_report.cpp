@@ -54,6 +54,10 @@ TimingReport::TimingReport(const timing::SlotTimingStats& stats) {
     add("holdover", nullptr, frame::counter(stats.holdover_events()));
     add("missed", nullptr, frame::counter(stats.missed()));
     add("refused", nullptr, frame::counter(stats.refused()));
+    add("switch_hop_us", nullptr, frame::counter(stats.switch_hop_us()));
+    add("switch_to_o_us", nullptr, frame::counter(stats.switch_to_oband_us()));
+    add("switch_to_m_us", nullptr, frame::counter(stats.switch_to_mband_us()));
+    add("late_dwells", nullptr, frame::counter(stats.late_dwells()));
 }
 
 bool TimingReport::fits(int payload) const {

@@ -58,6 +58,11 @@ constexpr int kCallsignEnd = kSlot1End;
 // not tuning.
 constexpr int kJitterGuardMs = 5;
 constexpr int kHopGuardMs = 1;
+// The executors switch into a queued dwell as soon as the one before it ends,
+// so the guard in front of a dwell is spent retuning and the dwell listens from
+// its start. Never earlier than the widest guard, which is what bounds a dwell
+// taken while the radio sat idle.
+constexpr int kSwitchLeadMs = kJitterGuardMs;
 
 constexpr uint32_t kPpsHoldoverMs = 60000;
 

@@ -41,7 +41,7 @@ class TimingReport {
     // writer that does not have one, and just as readable on a bench terminal.
     // Room for the widest count a bucket can reach.
     static constexpr int kBucketsTextCap = timing::SlotTimingStats::kBuckets * 11 + 1;
-    static constexpr int kMaxFields = 12;
+    static constexpr int kMaxFields = 13;
 
     void add(const char* key, const char* text, long value);
     // "key":value, excluding the comma that joins it to the field before it.

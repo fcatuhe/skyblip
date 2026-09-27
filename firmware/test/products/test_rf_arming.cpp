@@ -22,7 +22,8 @@ uint32_t tuned_khz(const models::Sx1262& chip) { return (chip.freq_hz + 500) / 1
 }  // namespace
 
 // Slot 0's burst was added by a second arm at 450, read at 799, expired, and called the band busy.
-TEST_CASE("rf: a plan armed mid-dwell waits for it, and an expired one is missed, not busy") {
+// Queued, a plan like it would also have taken the place of the next dwell, which then never ran.
+TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, not queued") {
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
@@ -42,16 +43,28 @@ TEST_CASE("rf: a plan armed mid-dwell waits for it, and an expired one is missed
     }
     REQUIRE(tuned_khz(chip) == timing::kMband0Hz / 1000);
 
-    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
-    ports::RfPlan queued = flying;
-    queued.freq_hz = timing::kMband1Hz;
-    queued.start_us = 455000;
-    queued.tx = frame;
-    queued.tx_len = sizeof(frame);
-    queued.tx_at_us = 600000;
-    REQUIRE(rf.arm(queued) == Status::Ok);
+    ports::RfPlan next = flying;
+    next.freq_hz = timing::kMband1Hz;
+    next.start_us = 800000;
+    next.end_us = 1200000;
+    REQUIRE(rf.arm(next) == Status::Ok);
 
-    for (uint32_t t = 460; t <= 800; t += 10) {
+    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    ports::RfPlan stranded = flying;
+    stranded.freq_hz = timing::kMband1Hz;
+    stranded.start_us = 455000;
+    stranded.tx = frame;
+    stranded.tx_len = sizeof(frame);
+    stranded.tx_at_us = 600000;
+    CHECK(rf.arm(stranded) == Status::WouldBlock);
+
+    ports::RfPlan listening = flying;
+    listening.freq_hz = timing::kMband1Hz;
+    listening.start_us = 455000;
+    listening.end_us = 600000;
+    CHECK(rf.arm(listening) == Status::WouldBlock);
+
+    for (uint32_t t = 460; t <= 790; t += 10) {
         clock.set_millis(t);
         rf.service(t);
     }
@@ -59,35 +72,73 @@ TEST_CASE("rf: a plan armed mid-dwell waits for it, and an expired one is missed
     CHECK(tuned_khz(chip) == timing::kMband0Hz / 1000);
     CHECK_FALSE(chip.tx_pending);
 
+    for (uint32_t t = 800; t <= 850; t += 10) {
+        clock.set_millis(t);
+        rf.service(t);
+    }
+    CHECK(tuned_khz(chip) == timing::kMband1Hz / 1000);
     int missed = 0;
     events::RfEvent e{};
     while (events.pop(e))
         if (e.type == events::RfEventType::Missed) missed++;
-    CHECK(missed == 1);
-
-    // The same queueing with nothing to transmit is a receive dwell that did not
-    // happen, not a burst that was lost: the log would name it a failed
-    // transmission and send a reader after a fault that is not there.
-    ports::RfPlan next_dwell = flying;
-    next_dwell.start_us = 1400000;
-    next_dwell.end_us = 1799000;
-    REQUIRE(rf.arm(next_dwell) == Status::Ok);
-    for (uint32_t t = 1400; t <= 1450; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
-    }
-    ports::RfPlan listening = next_dwell;
-    listening.start_us = 1455000;
-    listening.end_us = 1600000;
-    REQUIRE(rf.arm(listening) == Status::Ok);
-    for (uint32_t t = 1460; t <= 1810; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
-    }
-    missed = 0;
-    while (events.pop(e))
-        if (e.type == events::RfEventType::Missed) missed++;
     CHECK(missed == 0);
+}
+
+// The next dwell is retuned into as soon as the one before it ends, so the guard
+// between them is spent switching and the dwell is listening at its start.
+TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahead of its start") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    ports::RfPlan uplink{};
+    uplink.mode = ports::RfMode::RxOband;
+    uplink.freq_hz = timing::kObandHz;
+    uplink.start_us = 205000;
+    uplink.end_us = 395000;
+    ports::RfPlan slot0 = uplink;
+    slot0.mode = ports::RfMode::RxMband;
+    slot0.freq_hz = timing::kMband0Hz;
+    slot0.start_us = 400000;
+    slot0.end_us = 799000;
+    clock.set_millis(200);
+    REQUIRE(rf.arm(uplink) == Status::Ok);
+    REQUIRE(rf.arm(slot0) == Status::Ok);
+    rf.service(200);
+    REQUIRE(tuned_khz(chip) == timing::kObandHz / 1000);
+
+    clock.set_millis(395);
+    rf.service(395);
+    CHECK(tuned_khz(chip) == timing::kMband0Hz / 1000);
+    CHECK(chip.receiving);
+    CHECK(rf.switching().late == 0);
+}
+
+// A dwell armed ahead that the executor only reached after its start is the fault this
+// counts, read out on the bench rather than inferred from a burst that went out late.
+TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    ports::RfPlan slot1{};
+    slot1.mode = ports::RfMode::RxMband;
+    slot1.freq_hz = timing::kMband1Hz;
+    slot1.start_us = 800000;
+    slot1.end_us = 1200000;
+    clock.set_millis(500);
+    REQUIRE(rf.arm(slot1) == Status::Ok);
+    clock.set_millis(810);
+    rf.service(810);
+
+    CHECK(tuned_khz(chip) == timing::kMband1Hz / 1000);
+    CHECK(rf.switching().late == 1);
 }
 
 namespace {
@@ -100,11 +151,23 @@ struct Armings {
         Status arm(const ports::RfPlan& plan) override {
             last = plan;
             arms++;
+            if (plan.tx != nullptr) with_tx++;
+            if (!refuse && handed < kKept) {
+                plans[handed] = plan;
+                armed_at_us[handed] = clock->micros();
+                handed++;
+            }
             return refuse ? Status::OutOfRange : Status::Ok;
         }
         void abort() override {}
+        static constexpr uint32_t kKept = 32;
+        platform::host::Clock* clock{nullptr};
         ports::RfPlan last{};
+        ports::RfPlan plans[kKept]{};
+        uint64_t armed_at_us[kKept]{};
+        uint32_t handed{0};
         uint32_t arms{0};
+        uint32_t with_tx{0};
         bool refuse{false};
     } rf{};
     bus::Bus bus{};
@@ -127,6 +190,8 @@ struct Armings {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio{context, settings};
+
+    Armings() { rf.clock = &clock; }
 
     static constexpr uint64_t kEdgeUs = 30000000;
 
@@ -157,26 +222,60 @@ struct Armings {
 // The guard phases between dwells report the dwell that has just closed, and a
 // window already behind the phase used to be armed as a 1 ms stub the executor
 // then dropped: one fabricated LOST per pass that landed in a guard.
-TEST_CASE("rf: the guard between two dwells is not a dwell, and nothing is armed inside it") {
+TEST_CASE("rf: every dwell is handed over whole, never as a stub inside a guard") {
     Armings a;
     a.clock.set_micros(Armings::kEdgeUs);
     REQUIRE(a.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 2000; phase++) a.tick_in(phase / 1000, phase % 1000);
 
-    a.tick_at(100);
-    const uint32_t armed_in_slot1 = a.rf.arms;
-    CHECK(a.rf.last.freq_hz == timing::kMband1Hz);
+    REQUIRE(a.rf.handed >= 6);
+    for (uint32_t i = 0; i < a.rf.handed; i++) {
+        const ports::RfPlan& plan = a.rf.plans[i];
+        CHECK(plan.end_us - plan.start_us >= 190000);
+    }
+}
 
-    a.tick_at(397);
-    CHECK(a.rf.arms == armed_in_slot1);
+// Armed at the edge by whichever pass noticed it, a dwell opened up to a pass
+// late and a burst drawn for its first milliseconds was gone before it was armed.
+TEST_CASE("rf: the next dwell is armed ahead of its edge, at the edge the latched PPS names") {
+    Armings a;
+    a.clock.set_micros(Armings::kEdgeUs);
+    REQUIRE(a.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 2000; phase += 7) a.tick_in(phase / 1000, phase % 1000);
 
-    a.tick_at(799);
-    CHECK(a.rf.arms == armed_in_slot1);
+    int slot1_dwells = 0;
+    for (uint32_t i = 1; i < a.rf.handed; i++) {
+        const ports::RfPlan& plan = a.rf.plans[i];
+        CHECK(a.rf.armed_at_us[i] < plan.start_us);
+        CHECK((plan.start_us - Armings::kEdgeUs) % 1000 == 0);
+        if (plan.freq_hz != timing::kMband1Hz) continue;
+        slot1_dwells++;
+        CHECK((plan.start_us - Armings::kEdgeUs) % 1000000 == 800000);
+        CHECK(plan.end_us - plan.start_us == 400000);
+    }
+    CHECK(slot1_dwells >= 2);
+}
 
-    // And the dwell that opens right after the guard is armed whole.
-    a.tick_at(400);
-    CHECK(a.rf.arms == armed_in_slot1 + 1);
-    CHECK(a.rf.last.freq_hz == timing::kMband0Hz);
-    CHECK(a.rf.last.end_us - a.rf.last.start_us > 300000);
+// A slot-1 burst drawn for 800 ms used to be dropped: its dwell was only armed by
+// the first pass after 800, and a burst whose instant had gone by was not armed.
+TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwell") {
+    Armings a;
+    a.clock.set_micros(Armings::kEdgeUs);
+    REQUIRE(a.radio.setup() == Status::Ok);
+    a.ready_to_transmit(1001);
+    a.state.clock.utc_s = 1001;
+    a.state.clock.utc_edge_us = Armings::kEdgeUs;
+
+    for (int phase = 0; phase < 800; phase += 10) a.tick_at(phase);
+
+    const ports::RfPlan* queued = nullptr;
+    for (uint32_t i = 0; i < a.rf.handed; i++)
+        if (a.rf.plans[i].freq_hz == timing::kMband1Hz && a.rf.plans[i].tx != nullptr)
+            queued = &a.rf.plans[i];
+    REQUIRE(queued != nullptr);
+    CHECK(queued->start_us == Armings::kEdgeUs + 800000);
+    CHECK(queued->tx_at_us >= queued->start_us);
+    CHECK(queued->tx_at_us < Armings::kEdgeUs + 1000000);
 }
 
 // Whether a burst may go out is decided on the fix, the rate and the slot, and
@@ -269,7 +368,7 @@ TEST_CASE("rf: a plan the radio refuses is a burst that never armed, not one tha
 
     a.tick_at(400);
 
-    REQUIRE(a.rf.last.tx != nullptr);
+    REQUIRE(a.rf.with_tx >= 1);
     REQUIRE(a.state.radio_log.count() == 1);
     CHECK(a.state.radio_log.newest(0).event == radio::Event::Unarmed);
     CHECK(a.state.rf.timing_stats.missed() == 1);
