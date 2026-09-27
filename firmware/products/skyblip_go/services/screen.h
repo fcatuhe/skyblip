@@ -133,7 +133,7 @@ class ScreenService : public runtime::Service {
     void accrue_backlight(uint32_t now_ms);
 
     int32_t climb_fpm() const {
-        return to_feet_per_minute(MillimetresPerSec(context_.state.own.climb_mm_s)).v;
+        return to_feet_per_minute(MillimetresPerSec(context_.state.indicated.climb_mm_s)).v;
     }
 
     bool climb_measured() const {

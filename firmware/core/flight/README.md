@@ -9,6 +9,7 @@ What the aircraft is doing, decided from the fix stream and the barometer. Pure,
 | `timer` | how long this flight has been running |
 | `atmosphere` | the standard atmosphere as integer math: pressure altitude, vertical speed |
 | `turn` | rate of turn from two reported tracks |
+| `indicated` | what the glass shows of the climb and the turn: the same rates, damped |
 | `force` | the specific force the case measures, in the axes a pilot names, and what every reading taken from it shares |
 | `slip` | where the ball hangs, from the acceleration the case measures |
 | `gload` | what the airframe is pulling, now and at its worst |
@@ -69,6 +70,16 @@ The gyroscope in the sensor hub would be neither, and it is deliberately not rea
 `kTurnWindowMs` is the shortest window a 1 Hz track says anything over, and it lives here because both callers differentiate a track with it: own-ship's own in `products/skyblip_go/services/ownship`, a target's in `core/traffic/table`.
 
 `own.turn_cdps` carries hundredths, where `own.turn_dps` rounds to whole degrees a second for the ADS-L extrapolation and the alarm's arcs, which is all those need.
+
+## indicated
+
+The climb and the turn are measured once a second, each a difference over the second before it, and each second's figure carries that second's noise whole: a BME280 differenced over one second jitters by about 11 ft/min on its own noise, the air in a cockpit or a hangar moves it by more, and a track differenced over a second carries every degree the receiver wanders. On a page that redraws once a second, that is a number that changes on every frame. `IndicatedRate` is the needle's damping, a first-order lag, which is what a vertical speed indicator is mechanically (a capsule behind a calibrated leak) and what a turn coordinator's damper is.
+
+`kIndicatedRateDampingMs` is its time constant, 2 s, and both rates take it because they arrive at the same cadence and are drawn on the same page: a needle that settled at a different speed from its neighbour would be two answers to one question about one glass. Each reading moves the needle `dt / (dt + damping)` of the way to it, a third at one reading a second, so a step shows a third of itself after a second, 70% after three and 94% after seven. White noise on the altitude comes out at about a quarter of what the one-second difference carries, so the barometer's own 11 ft/min is 3. The GNSS climb, taken over two seconds when there is no barometer, moves it half the way per reading and settles in about the same time, because the damping is in milliseconds rather than readings. The ball's filter is in samples, `kIndicatedSamples`, because the hub hands it one every 80 ms without fail; eight of them is two thirds of a second, and at one reading a second the same lag would pass each reading almost whole.
+
+A climb that stops being valid resets the damping, so the next one is shown as measured rather than blended with a climb from before the outage. A gap without a reset is handled by the arithmetic: a reading ten seconds after the last one moves the needle five sixths of the way.
+
+What is damped is the glass and only the glass: the six-pack, `status` and own-ship's leader on the radar read `state.indicated`. ADS-L G.1.9, the extrapolation of the position we transmit, `$LK8EX1` and the logs read `state.own`, which is the measurement, for the reason `force` gives: a receiver two kilometres away needs what the aircraft is doing now, and a tablet's vario damps what it is given by its own setting, so a second filter here would be a lag stacked on a lag.
 
 ## gload
 

@@ -136,7 +136,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.range_step = range_step_;
             snap.track_cdeg = own.track_cdeg;
             snap.speed_mm_s = own.speed_mm_s;
-            snap.turn_cdps = own.turn_cdps;
+            snap.turn_cdps = context_.state.indicated.turn_cdps;
             snap.flight_seconds = context_.state.flight.seconds;
             snap.flight_time_valid = context_.state.flight.time_valid;
             snap.in_flight = context_.state.flight.running;
@@ -185,7 +185,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.vs_fpm = climb_fpm();
             snap.vs_valid = climb_measured();
             snap.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
-            snap.turn_cdps = own.turn_cdps;
+            snap.turn_cdps = context_.state.indicated.turn_cdps;
             snap.battery_percent = context_.state.power.battery.percent;
             snap.battery_valid = context_.state.power.battery.valid;
             snap.inclinometer_fitted =
@@ -275,7 +275,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.alt_mm = own.alt_mm;
             snap.speed_mm_s = own.speed_mm_s;
             snap.track_cdeg = own.track_cdeg;
-            snap.climb_mm_s = own.climb_mm_s;
+            snap.climb_mm_s = context_.state.indicated.climb_mm_s;
             snap.utc = own.utc;
             snap.n_targets = context_.state.traffic.count();
             snap.imu_stage = context_.state.imu.stage;

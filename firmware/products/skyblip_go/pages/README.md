@@ -231,6 +231,8 @@ Four marks on the face and nothing else. Two at the horizontal, where the wings 
 
 The rate it leans on is the GNSS track differentiated once a second (`core/flight/turn.h`), in hundredths of a degree a second. That is 0.7 deg/s a step and a second old, so on a two-minute turn the symbol steps between three positions and arrives late. The gyroscope that would be neither costs the better part of a milliamp and is not read, which is the trade `core/flight/README.md` states.
 
+The symbol and the vertical speed needle, and the numbers under them, are damped: they read `state.indicated`, each rate through a first-order lag whose time constant is `kIndicatedRateDampingMs`, so a figure that jittered on every frame now leans towards the measurement over a couple of seconds (`core/flight/README.md`, under `indicated`). The bank and the flight-path angle the horizon draws are worked from the same damped pair, so the three dials cannot disagree about one turn.
+
 The symbol leans with the turn rate, not with bank: 20 degrees of lean per 3 deg/s, hard over at 45. That is what makes the marks mean anything. It used to lean by the bank inferred from the rate and the speed, which put the same turn at a different place on the dial at a different airspeed, and left the marks standing for a bank angle nobody had asked about.
 
 The title carries its unit, `TURN D/S`, because a number in degrees per second beside a picture of an aeroplane needs saying which it is. The tenth of a degree per second the digit would suggest is not there to show: `core/flight/turn.h` differentiates a cordic9 track, 45/64 of a degree per unit, over a one-second window, so the smallest step the sensor can express is 0.7 deg/s.

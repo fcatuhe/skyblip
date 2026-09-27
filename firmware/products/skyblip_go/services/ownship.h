@@ -7,6 +7,7 @@
 #include "core/flight/force.h"
 #include "core/flight/gload.h"
 #include "core/flight/ground.h"
+#include "core/flight/indicated.h"
 #include "core/flight/slip.h"
 #include "core/flight/state.h"
 #include "core/flight/timer.h"
@@ -57,13 +58,16 @@ class OwnshipService : public runtime::Service {
     void update_residual(const model::OwnState& previous);
     static gnss::Convergence convergence_of(const model::OwnState& own);
     static bool height_solved(const model::OwnState& own);
-    void adopt_climb(int32_t mm_s);
+    void adopt_climb(int32_t mm_s, uint32_t now_ms);
+    void withdraw_climb();
     static bool vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
                                int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s);
     bool baro_heard_within_max_age(uint32_t now_ms) const;
 
     flight::SlipBall ball_{};
     flight::GMeter gmeter_{};
+    flight::IndicatedRate indicated_climb_{};
+    flight::IndicatedRate indicated_turn_{};
     bool flying_{false};
     flight::FlightMonitor flight_{};
     flight::FlightTimer timer_{};

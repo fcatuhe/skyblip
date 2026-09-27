@@ -94,6 +94,11 @@ struct SlipState {
     bool valid{false};
 };
 
+struct IndicatedState {
+    int32_t climb_mm_s{0};
+    int16_t turn_cdps{0};
+};
+
 struct GLoadState {
     flight::GLoad now{};
     flight::GLoad most{};
@@ -154,6 +159,7 @@ struct State {
     GnssStatus gnss{};
     BaroState baro{};
     SlipState slip{};
+    IndicatedState indicated{};
     GLoadState gload{};
     ImuState imu{};
     FormationState formation{};

@@ -124,6 +124,26 @@ TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-
     CHECK_FALSE(burst.has_climb());
 }
 
+TEST_CASE("product: the glass reads the climb damped, the air reads it as measured") {
+    Rig rig{kBaroByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.push_baro(0, 500);
+    rig.run(500, 500);
+    rig.push_baro(0, 1500);
+    rig.run(1500, 1500);
+    REQUIRE(rig.state().indicated.climb_mm_s == 0);
+
+    rig.push_baro(300, 2500);  // +3 m in 1 s
+    rig.run(2500, 2500);
+
+    CHECK(rig.state().own.climb_mm_s == doctest::Approx(3000).epsilon(0.02));
+    CHECK(rig.state().indicated.climb_mm_s == doctest::Approx(1000).epsilon(0.02));
+    protocol::AdslPacket burst{};
+    protocol::from_own(burst, rig.state().own, rig.product.board().roles().device_addr, 6, 4);
+    // 3 m/s in ADS-L G.1.9 eighths
+    CHECK(burst.climb_e8() == 24);
+}
+
 // The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
 TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a climb") {
     Rig rig{kBaroByHand};

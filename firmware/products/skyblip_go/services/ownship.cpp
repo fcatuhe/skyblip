@@ -84,8 +84,8 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     const bool have = height_fixed && vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs,
                                                      vs_ref_alt_mm_, vs_ref_ms_, mm_s);
     if (!baro_live_) {
-        if (have) adopt_climb(mm_s);
-        if (!height_fixed) own.climb_valid = false;
+        if (have) adopt_climb(mm_s, now_ms);
+        if (!height_fixed) withdraw_climb();
     }
 
     const flight::FlightState declared = flight_state_from(own, now_ms);
@@ -234,7 +234,7 @@ void OwnshipService::apply_baro(const events::BaroSample& sample, uint32_t now_m
     int32_t mm_s = 0;
     const bool adopted =
         vs_from_alt_mm(alt_mm, sample.at_ms, kBaroVsWindowMs, baro_ref_alt_mm_, baro_ref_ms_, mm_s);
-    if (adopted) adopt_climb(mm_s);
+    if (adopted) adopt_climb(mm_s, now_ms);
     record_baro(sample, alt_mm, mm_s, adopted, now_ms);
 }
 
@@ -294,10 +294,17 @@ void OwnshipService::publish_inertial(uint32_t now_ms) {
     flying_ = flying;
 }
 
-void OwnshipService::adopt_climb(int32_t mm_s) {
+void OwnshipService::adopt_climb(int32_t mm_s, uint32_t now_ms) {
     model::OwnState& own = context_.state.own;
     own.climb_mm_s = mm_s;
     own.climb_valid = true;
+    indicated_climb_.observe(mm_s, now_ms);
+    context_.state.indicated.climb_mm_s = indicated_climb_.value();
+}
+
+void OwnshipService::withdraw_climb() {
+    context_.state.own.climb_valid = false;
+    indicated_climb_.reset();
 }
 
 void OwnshipService::update_turn_rate(uint32_t now_ms) {
@@ -312,6 +319,8 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
 
     context_.state.own.turn_cdps = flight::clamped_turn_cdps(
         flight::turn_rate_cdps(track, CentiDegrees(turn_ref_track_cdeg_), dt));
+    indicated_turn_.observe(context_.state.own.turn_cdps, now_ms);
+    context_.state.indicated.turn_cdps = static_cast<int16_t>(indicated_turn_.value());
     turn_ref_ms_ = now_ms;
     turn_ref_track_cdeg_ = track.v;
 }

@@ -51,7 +51,7 @@ UNITS = {
     "Reports": "reports of the aircraft's own",
 }
 
-DIMENSIONED = ("Hold", "Settle", "Period", "Window", "MaxAge", "Stale", "Forget")
+DIMENSIONED = ("Hold", "Settle", "Period", "Window", "Damping", "MaxAge", "Stale", "Forget")
 
 MECHANISMS = {
     "Hold": "evidence must persist this long before the state flips",
@@ -60,6 +60,7 @@ MECHANISMS = {
     "Ceiling": "an upper bound, in the unit the name ends in",
     "Period": "fixed cadence",
     "Window": "the span a measurement or a budget is taken over",
+    "Damping": "the time constant a reading is damped by, 63% of a step shown after it",
     "MaxAge": "past this an input stops counting as evidence",
     "Stale": "past this a reading leaves the glass",
     "Forget": "past this the record itself is dropped",

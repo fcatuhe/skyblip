@@ -63,6 +63,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedSamples` | 8 | samples | Samples | [README](../firmware/core/flight/README.md) argues it |
+| `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
 | `kLogRecordPeriodMs` | 4000 (4 s) | milliseconds | Period | Four seconds. It is the interval the moshe-braner SoftRF fork ships as its default (oss/SoftRF-moshe-braner .../src/driver/ Settings.cpp:838 loginterval = 4) and it is inside every fix-interval a badge, an OLC claim or a competition file is scored on. |
 | `kLogPreTakeoffRecords` | 8 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
@@ -248,4 +249,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-148 constants over 17 folders.
+149 constants over 17 folders.
