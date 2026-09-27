@@ -152,6 +152,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kViewStaleMs` | 100 | milliseconds | Stale | A published view older than this is not evidence about where the second is any more, so it refuses rather than guesses. |
 | `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
 | `kHopGuardMs` | 1 | milliseconds | - | - |
+| `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
 | `kRetuneUs` | 30 | microseconds | - | - |
 | `kHopGuardUs` | `kHopGuardMs * 1000` = 1000 (1 ms) | microseconds | - | - |
@@ -253,4 +254,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-153 constants over 17 folders.
+154 constants over 17 folders.

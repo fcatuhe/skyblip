@@ -62,6 +62,17 @@ class SlotTimingStats {
     // already spent (core/timing/transmit.h Transmitter::Attempt::over_budget).
     void record_refused();
 
+    // The executor's own measurement of its dwell changes, as it last reported
+    // it: the worst of each kind since boot, and how many dwells armed ahead were
+    // still not listening at their start. The figures the guards are sized from.
+    void record_switching(uint32_t hop_us, uint32_t to_oband_us, uint32_t to_mband_us,
+                          uint32_t late) {
+        switch_hop_us_ = hop_us;
+        switch_to_oband_us_ = to_oband_us;
+        switch_to_mband_us_ = to_mband_us;
+        late_dwells_ = late;
+    }
+
     uint32_t pps_bucket(int index) const { return bucket_at(pps_buckets_, index); }
     uint32_t dwell_bucket(int index) const { return bucket_at(dwell_buckets_, index); }
     uint32_t pps_samples() const { return pps_samples_; }
@@ -71,6 +82,10 @@ class SlotTimingStats {
     uint32_t holdover_events() const { return holdover_; }
     uint32_t missed() const { return missed_; }
     uint32_t refused() const { return refused_; }
+    uint32_t switch_hop_us() const { return switch_hop_us_; }
+    uint32_t switch_to_oband_us() const { return switch_to_oband_us_; }
+    uint32_t switch_to_mband_us() const { return switch_to_mband_us_; }
+    uint32_t late_dwells() const { return late_dwells_; }
 
     // Exposed for the bench arithmetic to be checked directly, not only
     // through record_edge()/record_dwell_phase()'s side effects.
@@ -91,6 +106,10 @@ class SlotTimingStats {
     uint32_t holdover_{0};
     uint32_t missed_{0};
     uint32_t refused_{0};
+    uint32_t switch_hop_us_{0};
+    uint32_t switch_to_oband_us_{0};
+    uint32_t switch_to_mband_us_{0};
+    uint32_t late_dwells_{0};
     uint64_t prev_edge_us_{0};
     bool prev_edge_valid_{false};
 };

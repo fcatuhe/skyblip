@@ -396,3 +396,21 @@ TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     // The signed figures stay signed: an error in microseconds has a direction.
     CHECK(body.find("\"pps_worst_us\":0") != std::string::npos);
 }
+
+// The executor measures its own dwell changes, and the bench had no way to read
+// the figure the slot map's guards are supposed to be sized from.
+TEST_CASE("comms: the timing report says what each dwell change cost the executor") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    timing::SlotTimingStats stats;
+    stats.record_switching(95, 310, 285, 2);
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, nullptr, &stats);
+    cs.on_rx(frame("{\"cmd\":\"timing\"}"));
+    const std::string body = joined(link);
+    CHECK(body.find("\"switch_hop_us\":95") != std::string::npos);
+    CHECK(body.find("\"switch_to_o_us\":310") != std::string::npos);
+    CHECK(body.find("\"switch_to_m_us\":285") != std::string::npos);
+    CHECK(body.find("\"late_dwells\":2") != std::string::npos);
+}

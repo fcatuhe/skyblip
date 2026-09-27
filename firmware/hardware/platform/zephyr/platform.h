@@ -86,6 +86,8 @@ class Platform {
         return radio_spi_;
     }
     io::Uart& uart(io::BusId) { return gnss_uart_; }
+    static_assert(IS_ENABLED(CONFIG_UART_USE_RUNTIME_CONFIGURE),
+                  "uart_rate() needs uart_configure(), which Nordic's SoC defconfig turns off");
     io::UartRate& uart_rate(io::BusId) { return gnss_uart_; }
     io::Gpio& gpio() { return gpio_; }
     io::Delay& delay() { return delay_; }

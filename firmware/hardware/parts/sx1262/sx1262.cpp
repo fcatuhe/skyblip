@@ -38,9 +38,13 @@ void Sx1262::cmd_read(uint8_t opcode, uint8_t* out, size_t n) {
     spi_.select(false);
 }
 
-Status Sx1262::enter_standby() {
-    const uint8_t stby = sx::kStandbyRc;
-    cmd(sx::kSetStandby, &stby, 1);
+Status Sx1262::enter_standby() { return enter_standby_on(sx::kStandbyRc); }
+
+// INFO: fc 27sep26 DS 13.3.6: STDBY_RC unpowers the TCXO, and the next RX waits its whole start
+Status Sx1262::enter_standby_on_tcxo() { return enter_standby_on(sx::kStandbyXosc); }
+
+Status Sx1262::enter_standby_on(uint8_t clock) {
+    cmd(sx::kSetStandby, &clock, 1);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     mode_ = RadioMode::Standby;
     return Status::Ok;
@@ -187,11 +191,14 @@ bool same_sync(const RadioConfig& a, const RadioConfig& b) {
     return a.sync != nullptr && b.sync != nullptr && std::equal(a.sync, a.sync + bytes, b.sync);
 }
 
-bool same_dwell(const RadioConfig& a, const RadioConfig& b) {
-    return a.freq_hz == b.freq_hz && a.freq_corr_e1_ppm == b.freq_corr_e1_ppm &&
-           a.bitrate == b.bitrate && a.fdev_hz == b.fdev_hz && a.bandwidth_hz == b.bandwidth_hz &&
+bool same_modem(const RadioConfig& a, const RadioConfig& b) {
+    return a.bitrate == b.bitrate && a.fdev_hz == b.fdev_hz && a.bandwidth_hz == b.bandwidth_hz &&
            a.gaussian_bt_e2 == b.gaussian_bt_e2 && a.payload_bytes == b.payload_bytes &&
            same_sync(a, b);
+}
+
+bool same_dwell(const RadioConfig& a, const RadioConfig& b) {
+    return a.freq_hz == b.freq_hz && a.freq_corr_e1_ppm == b.freq_corr_e1_ppm && same_modem(a, b);
 }
 
 }  // namespace
@@ -199,6 +206,10 @@ bool same_dwell(const RadioConfig& a, const RadioConfig& b) {
 // INFO: fc 26sep26 DS 9.6: a warm start keeps only listed registers, so a slept part is rewritten
 bool Sx1262::holds(const RadioConfig& cfg) const {
     return tuned_ && mode_ != RadioMode::Tx && same_dwell(cfg, cfg_);
+}
+
+bool Sx1262::hops_to(const RadioConfig& cfg) const {
+    return tuned_ && mode_ != RadioMode::Tx && same_modem(cfg, cfg_);
 }
 
 // DS 13.4.6 SetModulationParams, GFSK, in the datasheet's order: bit rate,
@@ -281,18 +292,14 @@ Status Sx1262::configure_radio(const RadioConfig& cfg) {
     if (!brought_up_) return Status::Down;
     if (holds(cfg)) return Status::Ok;
     const RadioMode was = mode_;
-    if (was != RadioMode::Standby && enter_standby() != Status::Ok) return Status::Timeout;
+    if (hops_to(cfg)) return retune(cfg, was);
+    if (was != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok) return Status::Timeout;
     cfg_ = cfg;
     uint8_t gfsk = 0x00;
     cmd(sx::kSetPacketType, &gfsk, 1);
-    // The reference's own error is taken out here, at the one place the PLL word
-    // is computed, so receive and transmit are trimmed by construction and
-    // nothing downstream carries a second copy of the correction.
-    const uint32_t tuned_hz = sx::trimmed_hz(cfg.freq_hz, cfg.freq_corr_e1_ppm);
-    uint64_t frf = (static_cast<uint64_t>(tuned_hz) << 25) / 32000000ULL;
-    uint8_t f[4] = {static_cast<uint8_t>(frf >> 24), static_cast<uint8_t>(frf >> 16),
-                    static_cast<uint8_t>(frf >> 8), static_cast<uint8_t>(frf)};
-    cmd(sx::kSetRfFrequency, f, 4);
+    write_frequency(cfg);
+    const uint8_t fallback = sx::kFallbackStdbyXosc;
+    cmd(sx::kSetRxTxFallbackMode, &fallback, 1);
     configure_power();
     configure_modulation(cfg);
     configure_rx_gain();
@@ -303,6 +310,27 @@ Status Sx1262::configure_radio(const RadioConfig& cfg) {
     tuned_ = true;
     if (was == RadioMode::Rx) return start_receive();
     return Status::Ok;
+}
+
+// The same modem on another channel, which is the M-band hop between the two dwells.
+Status Sx1262::retune(const RadioConfig& cfg, RadioMode was) {
+    if (was != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok) return Status::Timeout;
+    cfg_ = cfg;
+    write_frequency(cfg);
+    if (wait_busy_low() != Status::Ok) return Status::Timeout;
+    if (was == RadioMode::Rx) return start_receive();
+    return Status::Ok;
+}
+
+// The reference's own error is taken out here, at the one place the PLL word
+// is computed, so receive and transmit are trimmed by construction and
+// nothing downstream carries a second copy of the correction.
+void Sx1262::write_frequency(const RadioConfig& cfg) {
+    const uint32_t tuned_hz = sx::trimmed_hz(cfg.freq_hz, cfg.freq_corr_e1_ppm);
+    uint64_t frf = (static_cast<uint64_t>(tuned_hz) << 25) / 32000000ULL;
+    uint8_t f[4] = {static_cast<uint8_t>(frf >> 24), static_cast<uint8_t>(frf >> 16),
+                    static_cast<uint8_t>(frf >> 8), static_cast<uint8_t>(frf)};
+    cmd(sx::kSetRfFrequency, f, 4);
 }
 
 // Preamble, sync window and payload at the configured bit rate, plus the margin
@@ -442,7 +470,7 @@ RadioEvent Sx1262::poll(uint8_t* rx_buf, uint8_t cap) {
 // what notices; this is what puts the radio back where the dwell expects it.
 void Sx1262::recover_tx() {
     tx_recovery_count_++;
-    if (enter_standby() != Status::Ok) return;
+    if (enter_standby_on_tcxo() != Status::Ok) return;
     (void)start_receive();
 }
 

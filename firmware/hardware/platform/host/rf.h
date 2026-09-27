@@ -5,6 +5,7 @@
 #include "core/events/rf.h"
 #include "core/model/band.h"
 #include "core/timing/channel.h"
+#include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
@@ -36,16 +37,21 @@ class Rf : public ports::Rf {
             plan_.tx_at_us = plan.tx_at_us;
             return Status::Ok;
         }
+        if (armed_ && plan.end_us <= plan_.end_us) return Status::WouldBlock;
         if (armed_) {
             pending_ = plan;
+            pending_armed_at_us_ = clock_.micros();
             has_pending_ = true;
             return Status::Ok;
         }
-        adopt(plan);
+        adopt(plan, clock_.micros());
         return Status::Ok;
     }
 
-    void abort() override { armed_ = false; }
+    void abort() override {
+        armed_ = false;
+        has_pending_ = false;
+    }
 
     void sleep() override {
         armed_ = false;
@@ -61,20 +67,23 @@ class Rf : public ports::Rf {
         return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
     }
 
+    ports::RfSwitching switching() const override { return switching_; }
+
     void service(uint32_t now_ms) {
         const uint64_t now_us = clock_.micros();
         const uint32_t dt = now_ms - last_ms_;
         last_ms_ = now_ms;
         radio_.service(dt, runtime::kRadioNoRxReinitMs);
 
-        if (armed_ && !started_ && now_us >= plan_.start_us && !start()) abandon(now_us);
-        if (armed_ && started_ && plan_.tx != nullptr && !transmitted_ && now_us >= plan_.tx_at_us)
-            transmit();
+        fly(now_us);
         // The receiver keeps reporting between dwells: a frame that arrived
         // while the next plan was being armed is in the chip, not lost.
         if (started_ || radio_.mode() == parts::RadioMode::Rx) drain(now_us);
         if (armed_ && now_us >= plan_.end_us) finish(now_us);
-        if (!armed_ && has_pending_) take_pending(now_us);
+        if (!armed_ && has_pending_) {
+            take_pending(now_us);
+            fly(now_us);
+        }
     }
 
     uint32_t armed_count() const { return armed_count_; }
@@ -93,17 +102,26 @@ class Rf : public ports::Rf {
         started_ = false;
     }
 
+    void fly(uint64_t now_us) {
+        const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
+        if (armed_ && !started_ && now_us + lead_us >= plan_.start_us && !start(now_us))
+            abandon(now_us);
+        if (armed_ && started_ && plan_.tx != nullptr && !transmitted_ && now_us >= plan_.tx_at_us)
+            transmit();
+    }
+
     void take_pending(uint64_t now_us) {
         has_pending_ = false;
         if (now_us >= pending_.end_us) {
             if (pending_.tx != nullptr) emit(events::RfEventType::Missed, now_us);
             return;
         }
-        adopt(pending_);
+        adopt(pending_, pending_armed_at_us_);
     }
 
-    void adopt(const ports::RfPlan& plan) {
+    void adopt(const ports::RfPlan& plan, uint64_t armed_at_us) {
         plan_ = plan;
+        armed_at_us_ = armed_at_us;
         armed_ = true;
         started_ = false;
         transmitted_ = false;
@@ -112,7 +130,7 @@ class Rf : public ports::Rf {
     }
 
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
-    bool start() {
+    bool start(uint64_t now_us) {
         started_ = true;
         armed_count_++;
         band_ = plan_.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
@@ -120,7 +138,15 @@ class Rf : public ports::Rf {
         if (radio_.wake() != Status::Ok) return false;
         if (plan_.freq_hz != 0 && radio_.configure_radio(dwell_config(plan_)) != Status::Ok)
             return false;
-        return radio_.start_receive() == Status::Ok;
+        if (radio_.start_receive() != Status::Ok) return false;
+        const uint64_t ready_us = clock_.micros();
+        const bool armed_ahead = armed_at_us_ < plan_.start_us;
+        switching_.note(last_mode_, last_freq_hz_, plan_.mode, plan_.freq_hz,
+                        static_cast<uint32_t>(ready_us - now_us),
+                        armed_ahead && ready_us > plan_.start_us);
+        last_mode_ = plan_.mode;
+        last_freq_hz_ = plan_.freq_hz;
+        return true;
     }
 
     void abandon(uint64_t now_us) {
@@ -215,6 +241,11 @@ class Rf : public ports::Rf {
     ports::RfPlan plan_{};
     ports::RfPlan pending_{};
     ports::RfCarrier carrier_{};
+    ports::RfSwitching switching_{};
+    ports::RfMode last_mode_{ports::RfMode::Idle};
+    uint32_t last_freq_hz_{0};
+    uint64_t armed_at_us_{0};
+    uint64_t pending_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t freq_hz_{0};

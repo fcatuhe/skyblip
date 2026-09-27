@@ -8,6 +8,7 @@
 #include "core/events/rf.h"
 #include "core/model/band.h"
 #include "core/timing/channel.h"
+#include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
@@ -52,22 +53,37 @@ class Rf : public ports::Rf {
         // A dwell that cannot start before its own end is refused here rather
         // than truncated on air.
         if (clock_.micros() >= plan.end_us) return Status::WouldBlock;
+        Status verdict = Status::Ok;
         k_sched_lock();
-        if (!joins_flying_dwell(plan)) {
+        if (joins_flying_dwell(plan)) {
+        } else if (flying_ && plan.end_us <= flying_end_us_) {
+            verdict = Status::WouldBlock;
+        } else {
             plan_ = plan;
+            plan_armed_at_us_ = clock_.micros();
+            queued_ = true;
             k_sem_give(&armed_);
         }
         k_sched_unlock();
-        return Status::Ok;
+        return verdict;
     }
 
-    void abort() override { abort_ = true; }
+    void abort() override {
+        k_sched_lock();
+        queued_ = false;
+        flying_ = false;
+        k_sched_unlock();
+        abort_ = true;
+    }
 
     // The shutdown path runs on the service thread and the radio belongs to this
     // one, so what crosses the boundary is a request: abort the dwell, wake the
     // thread, and let it issue SetSleep itself. Nothing else may touch the SPI
     // while a dwell is on it.
     void sleep() override {
+        k_sched_lock();
+        queued_ = false;
+        k_sched_unlock();
         sleep_requested_ = true;
         abort_ = true;
         k_sem_give(&armed_);
@@ -78,6 +94,8 @@ class Rf : public ports::Rf {
     ports::RfTransmitter transmitter() const override {
         return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
     }
+
+    ports::RfSwitching switching() const override { return switching_; }
 
     // The board calls this from the service pass, and there is deliberately
     // nothing here: the radio belongs to the thread below, and reinitialising it
@@ -112,25 +130,46 @@ class Rf : public ports::Rf {
                 continue;
             }
             abort_ = false;
-            const ports::RfPlan plan = plan_;
+            ports::RfPlan plan{};
+            uint64_t armed_at_us = 0;
+            if (!take(plan, armed_at_us)) continue;
             if (clock_.micros() >= plan.end_us) {
                 if (plan.tx != nullptr) emit(events::RfEventType::Missed, clock_.micros());
+                flying_ = false;
                 continue;
             }
-            sleep_until(plan.start_us);
-            if (abort_) continue;
-            burst_ = nullptr;
-            flying_mode_ = plan.mode;
-            flying_freq_ = plan.freq_hz;
-            flying_end_us_ = plan.end_us;
-            flying_ = true;
-            if (start(plan))
+            const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
+            if (plan.start_us > lead_us) sleep_until(plan.start_us - lead_us);
+            if (abort_) {
+                flying_ = false;
+                continue;
+            }
+            if (start(plan, armed_at_us))
                 dwell(plan);
             else if (plan.tx != nullptr)
                 emit(events::RfEventType::Missed, clock_.micros());
             flying_ = false;
             health();
         }
+    }
+
+    // INFO: fc 27sep26 flying from the moment it is taken, so a burst armed during the retune joins
+    // it
+    bool take(ports::RfPlan& plan, uint64_t& armed_at_us) {
+        k_sched_lock();
+        const bool taken = queued_;
+        if (taken) {
+            plan = plan_;
+            armed_at_us = plan_armed_at_us_;
+            queued_ = false;
+            burst_ = nullptr;
+            flying_mode_ = plan.mode;
+            flying_freq_ = plan.freq_hz;
+            flying_end_us_ = plan.end_us;
+            flying_ = true;
+        }
+        k_sched_unlock();
+        return taken;
     }
 
     // A receiver that has heard nothing for 30 s is deaf, not lucky, and the
@@ -155,13 +194,22 @@ class Rf : public ports::Rf {
     }
 
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
-    bool start(const ports::RfPlan& plan) {
+    bool start(const ports::RfPlan& plan, uint64_t armed_at_us) {
+        const uint64_t from_us = clock_.micros();
         band_ = plan.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
         freq_hz_ = plan.freq_hz;
         if (radio_.wake() != Status::Ok) return false;
         if (plan.freq_hz != 0 && radio_.configure_radio(dwell_config(plan)) != Status::Ok)
             return false;
-        return radio_.start_receive() == Status::Ok;
+        if (radio_.start_receive() != Status::Ok) return false;
+        (void)radio_.wait_ready();
+        const uint64_t ready_us = clock_.micros();
+        switching_.note(last_mode_, last_freq_hz_, plan.mode, plan.freq_hz,
+                        static_cast<uint32_t>(ready_us - from_us),
+                        armed_at_us < plan.start_us && ready_us > plan.start_us);
+        last_mode_ = plan.mode;
+        last_freq_hz_ = plan.freq_hz;
+        return true;
     }
 
     // The whole modem, not just the synthesiser: the two bands are two
@@ -287,6 +335,10 @@ class Rf : public ports::Rf {
     bus::Queue<events::RfEvent, 8>& out_;
     ports::RfPlan plan_{};
     ports::RfCarrier carrier_{};
+    ports::RfSwitching switching_{};
+    ports::RfMode last_mode_{ports::RfMode::Idle};
+    uint32_t last_freq_hz_{0};
+    uint64_t plan_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t freq_hz_{0};
@@ -304,6 +356,7 @@ class Rf : public ports::Rf {
     ports::RfMode flying_mode_{ports::RfMode::Idle};
     uint8_t burst_len_{0};
     volatile bool flying_{false};
+    bool queued_{false};
     volatile bool abort_{false};
     volatile bool sleep_requested_{false};
 };
