@@ -143,9 +143,26 @@ TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late")
 
 namespace {
 
+// Silicon's clock moves while a pass runs, and the host's stands still unless told to creep.
+struct CreepingClock : platform::host::Clock {
+    uint64_t micros() const override {
+        const uint64_t now_us = Clock::micros() + crept_us_;
+        crept_us_ += creep_us;
+        return now_us;
+    }
+    void set_micros(uint64_t us) {
+        Clock::set_micros(us);
+        crept_us_ = 0;
+    }
+    uint64_t creep_us{0};
+
+   private:
+    mutable uint64_t crept_us_{0};
+};
+
 // The policy alone, with every plan it hands the executor kept for reading.
 struct Armings {
-    platform::host::Clock clock{};
+    CreepingClock clock{};
     struct Recorder : ports::Rf {
         Status begin() override { return Status::Ok; }
         Status arm(const ports::RfPlan& plan) override {
@@ -159,7 +176,7 @@ struct Armings {
             }
             return refuse ? Status::OutOfRange : Status::Ok;
         }
-        void abort() override {}
+        void abort() override { aborts++; }
         static constexpr uint32_t kKept = 32;
         platform::host::Clock* clock{nullptr};
         ports::RfPlan last{};
@@ -168,6 +185,7 @@ struct Armings {
         uint32_t handed{0};
         uint32_t arms{0};
         uint32_t with_tx{0};
+        uint32_t aborts{0};
         bool refuse{false};
     } rf{};
     bus::Bus bus{};
@@ -276,6 +294,26 @@ TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwel
     CHECK(queued->start_us == Armings::kEdgeUs + 800000);
     CHECK(queued->tx_at_us >= queued->start_us);
     CHECK(queued->tx_at_us < Armings::kEdgeUs + 1000000);
+}
+
+// A pass read the hop plan at 799.99 ms, promoted slot 1 after 800, and aborted it in flight.
+TEST_CASE("rf: a pass that straddles a dwell edge keeps the dwell already queued for it") {
+    Armings a;
+    a.clock.set_micros(Armings::kEdgeUs);
+    REQUIRE(a.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 800; phase += 10) a.tick_at(phase);
+    const uint32_t handed = a.rf.handed;
+
+    a.clock.set_micros(Armings::kEdgeUs + 799990);
+    a.clock.creep_us = 5;
+    a.radio.tick(static_cast<uint32_t>((Armings::kEdgeUs + 799990) / 1000));
+    a.clock.creep_us = 0;
+    a.tick_at(810);
+
+    CHECK(a.rf.aborts == 0);
+    REQUIRE(a.rf.handed > handed);
+    for (uint32_t i = handed; i < a.rf.handed; i++)
+        CHECK(a.rf.plans[i].freq_hz != timing::kMband1Hz);
 }
 
 // Whether a burst may go out is decided on the fix, the rate and the slot, and

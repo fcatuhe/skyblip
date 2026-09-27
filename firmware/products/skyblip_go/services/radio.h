@@ -61,6 +61,7 @@ class RadioService : public runtime::Service {
     // the radio believes it is inside the second reads the 32-bit millisecond
     // counter (ports/clock.h).
     int phase_ms() const;
+    int phase_at(uint64_t now_us) const;
     int64_t second_origin_us() const;
     // Slot 1 spans the UTC second, so inside its tail the dwell, the burst it
     // carries and the second they are accounted to all belong to the second the
@@ -118,6 +119,7 @@ class RadioService : public runtime::Service {
     uint64_t accounted_us_{0};
     uint64_t armed_us_{0};
     uint32_t arm_count_{0};
+    uint64_t pass_us_{0};
     uint32_t seen_tx_ok_{0};
     uint32_t seen_carrier_samples_{0};
     bool over_budget_{false};

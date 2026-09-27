@@ -9,6 +9,7 @@ namespace skyblip::go {
 Status RadioService::setup() {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf)) return Status::Down;
     transmitter_.configure(context_.roles.device_addr);
+    pass_us_ = context_.roles.clock.micros();
     arm_dwell(timing::Scheduler::plan(phase_ms(), context_.state.clock), dwell_origin_us(), 0,
               Role::Flying);
     return Status::Ok;
@@ -18,6 +19,7 @@ Status RadioService::setup() {
 // the edge between them is the executor's to keep, to the microsecond, on its own
 // thread. A pass of this loop only ever notices an edge after it went by.
 void RadioService::tick(uint32_t now_ms) {
+    pass_us_ = context_.roles.clock.micros();
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
@@ -25,7 +27,7 @@ void RadioService::tick(uint32_t now_ms) {
     take_switching();
     collect_outcome(now_ms);
 
-    if (has_next_ && context_.roles.clock.micros() >= next_.from_us) promote();
+    if (has_next_ && pass_us_ >= next_.from_us) promote();
     // INFO: fc 27sep26 200..205 is the one guard the map already names after the dwell it leads to
     if (has_next_ && holds(next_, plan)) {
         publish_dwell(now_ms);
@@ -51,7 +53,7 @@ void RadioService::tick(uint32_t now_ms) {
 void RadioService::publish_dwell(uint32_t now_ms) {
     timing::DwellPhase& dwell = context_.state.rf.dwell;
     dwell.at_ms = now_ms;
-    dwell.phase_ms = phase_ms();
+    dwell.phase_ms = phase_at(context_.roles.clock.micros());
     dwell.armed = flying_.mode != ports::RfMode::Idle;
     dwell.burst_armed = flying_.tx;
     context_.state.rf.noise_dbm = noise_.dbm();
@@ -71,18 +73,17 @@ uint64_t RadioService::armed_between(const Armed& dwell, uint64_t from_us, uint6
            std::clamp(from_us, dwell.from_us, dwell.until_us);
 }
 
-// From the latched edge, at the instant it is asked for. Deriving it from a
-// phase the board sampled at the top of the pass costs however long the pass
-// takes to reach this service, which is the whole jitter guard on a bad pass.
+// INFO: fc 27sep26 one read per pass: a plan and a promotion read apart straddled the 800 edge
 //
 // Both branches read micros(), which is 64-bit and does not wrap. The free-running
 // fallback used to be now_ms % 1000, and that is not a phase: 2^32 ms is not a
 // whole number of seconds, so at the 49.7-day wrap of ports::Clock::millis() the
 // second stepped 705 ms BACKWARDS and one dwell was armed out of order. It only
 // showed with the anchor already lost, which is the worst time to add a fault.
-int RadioService::phase_ms() const {
+int RadioService::phase_ms() const { return phase_at(pass_us_); }
+
+int RadioService::phase_at(uint64_t now_us) const {
     const timing::ClockState& clock = context_.state.clock;
-    const uint64_t now_us = context_.roles.clock.micros();
     if (clock.pps_locked && now_us >= clock.pps_edge_us)
         return static_cast<int>((now_us - clock.pps_edge_us) / 1000 % 1000);
     return static_cast<int>(now_us / 1000 % 1000);
@@ -104,7 +105,7 @@ void RadioService::take_carrier_samples() {
 // edge a whole number of seconds back, never the phase rounded to a millisecond.
 int64_t RadioService::second_origin_us() const {
     const timing::ClockState& clock = context_.state.clock;
-    const uint64_t now_us = context_.roles.clock.micros();
+    const uint64_t now_us = pass_us_;
     if (clock.pps_locked && now_us >= clock.pps_edge_us)
         return static_cast<int64_t>(clock.pps_edge_us +
                                     (now_us - clock.pps_edge_us) / kSecondUs * kSecondUs);
@@ -387,7 +388,7 @@ void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slo
 }
 
 void RadioService::collect_outcome(uint32_t now_ms) {
-    const uint64_t now_us = context_.roles.clock.micros();
+    const uint64_t now_us = pass_us_;
     if (context_.state.air.tx_ok != seen_tx_ok_) {
         seen_tx_ok_ = context_.state.air.tx_ok;
         held_logged_ = false;
