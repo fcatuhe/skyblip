@@ -2253,7 +2253,7 @@ The radar's frame: the ring, the plot's rotation, the footer and the words in th
 - everything is centred on the 99|100 point, not on a pixel
 - renders rings, own symbol and plots targets
 - the flight time reads in the bottom-left, and dashes before a flight
-- the footer counts every aircraft heard, placed or not, either side of the clock
+- the footer counts every aircraft heard, either side of the clock
 - the footer sits on one baseline, a margin clear of the glass edge
 - the plot turns with the track, so what is ahead is up the glass
 - the range labels the ring, centred on it and cleared off it

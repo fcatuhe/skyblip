@@ -231,7 +231,7 @@ TEST_CASE("radar: the ring is labelled and sized in the unit a pilot set") {
     CHECK(range_metres(metric.range_step, skyblip::go::Units::Nautical) == 4 * 1852);
 }
 
-TEST_CASE("radar: the footer counts every aircraft heard, placed or not, either side of the clock") {
+TEST_CASE("radar: the footer counts every aircraft heard, either side of the clock") {
     RadarTarget targets[3] = {
         {2000, 0, 0, Level::Advisory},
         {0, -3000, 0, Level::Advisory},

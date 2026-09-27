@@ -96,7 +96,7 @@ TEST_CASE("radar rim: a group wears the advisory's mark, else the closest in alt
 }
 
 TEST_CASE("radar rim: a count gives way to another aircraft's mark") {
-    // 12 degrees right of the nose is 18 px along the rim: its own mark, where the count wanted to go.
+    // 12 degrees right of the nose is 18 px along the rim: a mark where the count wanted to go.
     RadarTarget crowded[3] = {{6 * kMetresPerNm, 0, 0, Level::None},
                               {6 * kMetresPerNm + 800, 200, 250, Level::None},
                               {10870, 2310, 0, Level::None}};
