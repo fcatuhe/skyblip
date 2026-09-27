@@ -1,4 +1,4 @@
-// The TCXO on DIO3: which modes keep it running, and which re-arms pay its 5 ms start.
+// The TCXO on DIO3: it starts once, and no retune, burst or hop pays its 5 ms start again.
 #include <algorithm>
 
 #include "core/protocol/adsl_uplink.h"
@@ -54,7 +54,9 @@ TEST_CASE("radio: the TCXO starts when the receiver is first armed, and not agai
     CHECK(chip.tcxo_starts == 1);
 }
 
-TEST_CASE("radio: a retune through STDBY_RC stops the TCXO, and the receiver starts it again") {
+// Every dwell change went through STDBY_RC, which unpowers DIO3, and the part then
+// waited the whole TCXO start before it listened: about 5 ms deaf, three times a second.
+TEST_CASE("radio: a retune keeps the TCXO running, so the next dwell listens without its start") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
@@ -62,12 +64,16 @@ TEST_CASE("radio: a retune through STDBY_RC stops the TCXO, and the receiver sta
     REQUIRE(r.start_receive() == Status::Ok);
     REQUIRE(chip.tcxo_starts == 1);
 
-    REQUIRE(r.configure_radio(dwell(868400000)) == Status::Ok);
+    RadioConfig uplink = dwell(869525000);
+    uplink.bitrate = protocol::kUplinkChipRateBps;
+    REQUIRE(r.configure_radio(uplink) == Status::Ok);
     CHECK(chip.receiving);
-    CHECK(chip.tcxo_starts == 2);
+    CHECK((chip.freq_hz + 500) / 1000 == 869525);
+    CHECK(chip.tcxo_starts == 1);
+    CHECK(chip.fault == models::Sx1262::Fault::None);
 }
 
-TEST_CASE("radio: after a burst the part falls back to STDBY_RC and re-arms on a cold TCXO") {
+TEST_CASE("radio: after a burst the part falls back to STDBY_XOSC and re-arms on a running TCXO") {
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
@@ -77,9 +83,30 @@ TEST_CASE("radio: after a burst the part falls back to STDBY_RC and re-arms on a
 
     burst(r, chip);
     CHECK(chip.standby);
-    CHECK_FALSE(chip.tcxo_running);
+    CHECK(chip.tcxo_running);
     REQUIRE(r.start_receive() == Status::Ok);
-    CHECK(chip.tcxo_starts == 2);
+    CHECK(chip.tcxo_starts == 1);
+}
+
+// The two M-band dwells are one modulation on two channels, and rewriting the
+// whole modem to move 200 kHz was most of what the hop cost.
+TEST_CASE("radio: a hop between the M-band channels writes the frequency and nothing else") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+    chip.cmds_seen.clear();
+
+    REQUIRE(r.configure_radio(dwell(868400000)) == Status::Ok);
+    CHECK(chip.receiving);
+    CHECK((chip.freq_hz + 500) / 1000 == 868400);
+    CHECK(chip.saw_cmd(sx::kSetRfFrequency));
+    CHECK_FALSE(chip.saw_cmd(sx::kSetModulationParams));
+    CHECK_FALSE(chip.saw_cmd(sx::kSetPacketParams));
+    CHECK_FALSE(chip.saw_cmd(sx::kWriteRegister));
+    CHECK(chip.tcxo_starts == 1);
+    CHECK(chip.fault == models::Sx1262::Fault::None);
 }
 
 TEST_CASE("radio: a part told to fall back to STDBY_XOSC keeps its TCXO through a burst") {
@@ -128,7 +155,7 @@ TEST_CASE("radio: another sync word on the same channel is another dwell, and is
     REQUIRE(r.configure_radio(uplink) == Status::Ok);
     CHECK(chip.sync_bits == protocol::kUplinkSyncBits);
     CHECK(std::equal(chip.sync, chip.sync + protocol::kUplinkSyncBits / 8, protocol::kUplinkSync));
-    CHECK(chip.tcxo_starts == 2);
+    CHECK(chip.tcxo_starts == 1);
 }
 
 TEST_CASE("radio: after a sleep the same dwell is written again, not trusted to the warm start") {

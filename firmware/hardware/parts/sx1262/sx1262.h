@@ -74,6 +74,10 @@ class Sx1262 {
     // INFO: fc 15sep26 DS 13.5.2: an instant, and valid only while the receiver is running
     int8_t rssi_inst();
 
+    // The last command's switch, done: BUSY falls once the part has reached the mode it was sent
+    // to.
+    Status wait_ready() { return wait_busy_low(); }
+
     RadioEvent poll(uint8_t* rx_buf, uint8_t cap);
     // INFO: fc 16sep26 DIO1 is a level here, not an edge: a dwell is driven by a deadline
     bool irq_asserted() { return gpio_.get(dio1_); }
@@ -96,7 +100,12 @@ class Sx1262 {
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
+    Status enter_standby_on_tcxo();
+    Status enter_standby_on(uint8_t clock);
     bool holds(const RadioConfig& cfg) const;
+    bool hops_to(const RadioConfig& cfg) const;
+    Status retune(const RadioConfig& cfg, RadioMode was);
+    void write_frequency(const RadioConfig& cfg);
     void configure_modulation(const RadioConfig& cfg);
     void configure_rx_gain();
     void configure_tx_clamp();
