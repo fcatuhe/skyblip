@@ -1,7 +1,7 @@
 ---
 title: Every screen
 nav_title: Screens
-description: Every screen of a skyBlip Go as the firmware draws it, and the radar both ways, PLOT TO SCALE and PLOT ALL.
+description: Every screen of a skyBlip Go as the firmware draws it, and the radar both ways, PLOT ALL and PLOT TO SCALE.
 ---
 
 <section>
@@ -19,35 +19,35 @@ description: Every screen of a skyBlip Go as the firmware draws it, and the rada
   <h2 class="kicker" id="both-ways">The radar, both ways</h2>
   <p class="lede">
     <span class="mono">PLOT</span> on the settings menu draws the radar one of
-    two ways. <span class="mono">TO SCALE</span> puts every mark where the
-    ring&rsquo;s scale puts it, and leaves off what does not fit.
-    <span class="mono">ALL</span> shrinks the ring and stands every aircraft
-    past it on the band around it, on its bearing. Three skies, each captured
-    both ways off the same firmware.
+    two ways. <span class="mono">ALL</span>, the first choice and the one a
+    device ships on, shrinks the ring and stands every aircraft past it on the
+    band around it, on its bearing. <span class="mono">TO SCALE</span> puts
+    every mark where the ring&rsquo;s scale puts it, and leaves off what does
+    not fit. Three skies, each captured both ways off the same firmware.
   </p>
 
   <div class="plot" data-controller="plot" data-plot-view-value="both">
     <p class="plot-choices" data-plot-target="choices" hidden>
-      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
       <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
       <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Side by side</button>
     </p>
 
     <div class="plot-situation">
       <h3 id="quiet-sky">A sky that fits the ring.</h3>
       <p>
-        Three aircraft inside four miles. To scale they sit on the large ring;
-        with <span class="mono">ALL</span> the ring is smaller, and nothing
-        else changes.
+        Three aircraft inside four miles. With <span class="mono">ALL</span>
+        they sit in the smaller ring, and nothing else changes. To scale, the
+        ring is the large one.
       </p>
       <div class="shots">
-        <figure class="shot plot-to-scale">
-          <%= screen_image_tag "radar.png", alt: "The radar page to scale: three aircraft inside the four-mile ring, each with its one-minute leader line" %>
-          <figcaption>PLOT TO SCALE</figcaption>
-        </figure>
         <figure class="shot plot-all">
-          <%= screen_image_tag "radar-all.png", alt: "The radar page with PLOT ALL: the same three aircraft inside a smaller ring, and nothing on the band around it" %>
+          <%= screen_image_tag "radar.png", alt: "The radar page with PLOT ALL: the same three aircraft inside a smaller ring, and nothing on the band around it" %>
           <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar-to-scale.png", alt: "The radar page to scale: three aircraft inside the four-mile ring, each with its one-minute leader line" %>
+          <figcaption>PLOT TO SCALE</figcaption>
         </figure>
       </div>
     </div>
@@ -55,38 +55,38 @@ description: Every screen of a skyBlip Go as the firmware draws it, and the rada
       <h3 id="past-the-ring">Traffic past the ring.</h3>
       <p>
         One aircraft closing from five miles ahead, a gaggle of three eight
-        miles off the right of the nose, one eleven miles to the left. To scale,
-        only the one ahead reaches the glass. With <span class="mono">ALL</span>,
-        each stands on the band, the gaggle is one mark counted 3, and the
-        closing one&rsquo;s minute is already inside the ring.
+        miles off the right of the nose, one eleven miles to the left. With
+        <span class="mono">ALL</span>, each stands on the band, the gaggle is
+        one mark counted 3, and the closing one&rsquo;s minute is already inside
+        the ring. To scale, only the one ahead reaches the glass.
       </p>
       <div class="shots">
-        <figure class="shot plot-to-scale">
-          <%= screen_image_tag "far-to-scale.png", alt: "The radar page to scale: the aircraft in the ring, and one more at the very top of the glass; the gaggle and the aircraft to the left are not drawn" %>
-          <figcaption>PLOT TO SCALE</figcaption>
-        </figure>
         <figure class="shot plot-all">
           <%= screen_image_tag "far-all.png", alt: "The radar page with PLOT ALL: on the band, an aircraft ahead with its leader entering the ring, one mark counted 3 to the upper right, and one aircraft to the left" %>
           <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "The radar page to scale: the aircraft in the ring, and one more at the very top of the glass; the gaggle and the aircraft to the left are not drawn" %>
+          <figcaption>PLOT TO SCALE</figcaption>
         </figure>
       </div>
     </div>
     <div class="plot-situation">
       <h3 id="astern">Traffic astern.</h3>
       <p>
-        Three aircraft six to eight miles behind, and one inside the ring. To
-        scale, the three are off the glass. With <span class="mono">ALL</span>
-        they are one mark counted 3, stepped aside from the range label rather
-        than under it.
+        Three aircraft six to eight miles behind, and one inside the ring. With
+        <span class="mono">ALL</span> they are one mark counted 3, stepped aside
+        from the range label rather than under it. To scale, the three are off
+        the glass.
       </p>
       <div class="shots">
-        <figure class="shot plot-to-scale">
-          <%= screen_image_tag "astern-to-scale.png", alt: "The radar page to scale: one aircraft in the ring behind and to the left, nothing else" %>
-          <figcaption>PLOT TO SCALE</figcaption>
-        </figure>
         <figure class="shot plot-all">
           <%= screen_image_tag "astern-all.png", alt: "The radar page with PLOT ALL: the same aircraft in the ring, and beside the range label at the bottom one mark counted 3 for the aircraft astern" %>
           <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "The radar page to scale: one aircraft in the ring behind and to the left, nothing else" %>
+          <figcaption>PLOT TO SCALE</figcaption>
         </figure>
       </div>
     </div>

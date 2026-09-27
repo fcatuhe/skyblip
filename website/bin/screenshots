@@ -142,7 +142,7 @@ class Device {
     return this;
   }
 
-  plotAll() {
+  plotToScale() {
     return this.openMenu(PAGE.Radar, RADAR_MENU.Plot).press().closeMenu();
   }
 
@@ -323,29 +323,29 @@ const scenes = [
     shot: device => flying(device)
   },
   {
-    name: "radar-all",
+    name: "radar-to-scale",
     page: PAGE.Radar,
-    shot: device => flying(device.plotAll())
-  },
-  {
-    name: "far-to-scale",
-    page: PAGE.Radar,
-    shot: device => farSky(device)
+    shot: device => flying(device.plotToScale())
   },
   {
     name: "far-all",
     page: PAGE.Radar,
-    shot: device => farSky(device.plotAll())
+    shot: device => farSky(device)
   },
   {
-    name: "astern-to-scale",
+    name: "far-to-scale",
     page: PAGE.Radar,
-    shot: device => astern(device)
+    shot: device => farSky(device.plotToScale())
   },
   {
     name: "astern-all",
     page: PAGE.Radar,
-    shot: device => astern(device.plotAll())
+    shot: device => astern(device)
+  },
+  {
+    name: "astern-to-scale",
+    page: PAGE.Radar,
+    shot: device => astern(device.plotToScale())
   },
   {
     name: "alarm",
