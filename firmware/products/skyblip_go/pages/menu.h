@@ -14,6 +14,7 @@ enum class MenuRow : uint8_t {
     Callsign,
     Units,
     Range,
+    Plot,
     Alarm,
     Volume,
     Status,
@@ -35,6 +36,7 @@ Menu menu_for(Page page);
 struct MenuValues {
     go::Settings settings{};
     int range_step{kDefaultRangeStep};
+    RadarPlot plot{RadarPlot::ToScale};
 };
 
 struct MenuSnapshot {
@@ -77,10 +79,11 @@ constexpr int kMenuLeftX = 6;
 constexpr int kSmallCellW = 6;
 constexpr int kMenuCellW = kSmallCellW * kMenuScale;
 constexpr int kMenuRightX = 194;
-constexpr int kMenuRowsTop = 26;
-constexpr int kMenuRowHeight = 26;
-constexpr int kMenuTextInset = 7;
-constexpr int kMenuHintY = 190;
+constexpr int kMenuRowsTop = 23;
+constexpr int kMenuRowHeight = 23;
+constexpr int kMenuBarH = kMenuRowHeight - 1;
+constexpr int kMenuTextInset = (kMenuBarH - 7 * kMenuScale) / 2;
+constexpr int kMenuHintY = 188;
 constexpr const char* kMenuHintText = "PAD MOVES    BUTTON CHANGES";
 
 constexpr int text_cells(const char* s) {

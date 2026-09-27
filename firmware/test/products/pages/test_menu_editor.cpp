@@ -42,6 +42,8 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
     CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Range);
     CHECK(bench.move() == MenuAction::Moved);
+    CHECK(bench.editor.focus() == MenuRow::Plot);
+    CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Alarm);
 
     // The press acts on the row the focus is on, and leaves the focus there.
@@ -238,6 +240,17 @@ TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle clos
 
     // A step a companion app invented is not on the cycle, and the first press comes back to it.
     CHECK(next_range_step(37) == (kDefaultRangeStep + 1) % kRangeStepCount);
+}
+
+TEST_CASE("menu editor: the plot flips between to scale and all, one press each way") {
+    Bench bench;
+    bench.focus_on(MenuRow::Plot);
+    REQUIRE(bench.values.plot == RadarPlot::ToScale);
+
+    CHECK(bench.change() == MenuAction::Changed);
+    CHECK(bench.values.plot == RadarPlot::All);
+    CHECK(bench.change() == MenuAction::Changed);
+    CHECK(bench.values.plot == RadarPlot::ToScale);
 }
 
 TEST_CASE("menu editor: a value that would not validate is never handed back") {

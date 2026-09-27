@@ -55,6 +55,12 @@ constexpr int32_t climb_figure_fpm(int32_t fpm) {
     return div_round(fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
 }
 
+enum class RadarPlot : uint8_t { ToScale, All };
+
+constexpr RadarPlot next_radar_plot(RadarPlot plot) {
+    return plot == RadarPlot::All ? RadarPlot::ToScale : RadarPlot::All;
+}
+
 // INFO: fc 20sep26 four digits of seconds, so a clock with no UTC behind it still fits its column
 constexpr uint32_t kUptimeClockWrapS = 10000;
 

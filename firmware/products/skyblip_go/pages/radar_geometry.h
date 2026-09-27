@@ -5,6 +5,7 @@
 
 #include "core/util/intmath.h"
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/page.h"
 
 namespace skyblip::go::radar {
 
@@ -24,8 +25,12 @@ namespace skyblip::go::radar {
 constexpr int kNear = kGlassW / 2 - 1;
 constexpr int kFar = kGlassW / 2;
 constexpr int kMargin = 4;
-constexpr int kOuterR = 92;
+constexpr int kToScaleR = 92;
+constexpr int kAllR = 76;
 constexpr int kRingW = 2;
+constexpr int kRimR = kAllR + 11;
+
+constexpr int ring_r(RadarPlot plot) { return plot == RadarPlot::All ? kAllR : kToScaleR; }
 constexpr int kGlyphH = 7;
 constexpr int kClockScale = 2;
 constexpr int kStateScale = 1;

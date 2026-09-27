@@ -10,7 +10,8 @@ constexpr int kHeaderY = 3;
 constexpr int kHeaderRuleY = 21;
 
 constexpr MenuRow kRadarMenuRows[] = {MenuRow::AircraftType, MenuRow::Callsign, MenuRow::Units,
-                                      MenuRow::Range,        MenuRow::Alarm,    MenuRow::Volume};
+                                      MenuRow::Range,        MenuRow::Plot,     MenuRow::Alarm,
+                                      MenuRow::Volume};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Sats,    MenuRow::RadioLog,
                                        MenuRow::Raw,    MenuRow::Capture, MenuRow::SelfTest};
 
@@ -30,7 +31,7 @@ constexpr int kCallsignRowChars = 6;
 void row_text(ui::Canvas& fb, int line, const char* label, const char* value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
-    if (focused) fb.rect(2, top, kGlassW - 4, kMenuRowHeight - 1, true, /*fill=*/true);
+    if (focused) fb.rect(2, top, kGlassW - 4, kMenuBarH, true, /*fill=*/true);
     const bool ink = !focused;
     fb.draw_text(kMenuLeftX, y, label, ink, kMenuScale);
     fb.draw_text(kMenuRightX - text_cells(value) * kMenuCellW, y, value, ink, kMenuScale);
@@ -58,6 +59,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Callsign: return "CALLSIGN";
         case MenuRow::Units: return "UNITS";
         case MenuRow::Range: return "RANGE";
+        case MenuRow::Plot: return "PLOT";
         case MenuRow::Alarm: return "ALARM";
         case MenuRow::Volume: return "VOLUME";
         case MenuRow::Status: return "STATUS";
@@ -148,6 +150,9 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
             n = fmt_uint(out, static_cast<uint32_t>(range_value(v.range_step, v.settings.units)));
             n += fmt_string(out + n, " ");
             n += fmt_string(out + n, range_unit(v.settings.units));
+            break;
+        case MenuRow::Plot:
+            n = fmt_string(out, v.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
         case MenuRow::Alarm: n = fmt_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
         case MenuRow::Volume:
@@ -320,6 +325,7 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
                                                                               : go::Units::Metric;
             break;
         case MenuRow::Range: next.range_step = next_range_step(current.range_step); break;
+        case MenuRow::Plot: next.plot = next_radar_plot(current.plot); break;
         case MenuRow::Alarm: next.settings.alarm_enabled = !current.settings.alarm_enabled; break;
         case MenuRow::Volume:
             next.settings.alarm_volume =

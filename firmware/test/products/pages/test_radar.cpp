@@ -231,7 +231,7 @@ TEST_CASE("radar: the ring is labelled and sized in the unit a pilot set") {
     CHECK(range_metres(metric.range_step, skyblip::go::Units::Nautical) == 4 * 1852);
 }
 
-TEST_CASE("radar: the footer counts what is on the glass, either side of the clock") {
+TEST_CASE("radar: the footer counts every aircraft heard, placed or not, either side of the clock") {
     RadarTarget targets[3] = {
         {2000, 0, 0, Level::Advisory},
         {0, -3000, 0, Level::Advisory},
@@ -240,11 +240,12 @@ TEST_CASE("radar: the footer counts what is on the glass, either side of the clo
     RadarSnapshot snap = flying(0);
     snap.n_targets = 3;
     snap.targets = targets;
+    snap.heard = 4;  // three placed, one heard without a position
     const Glass fb = radar(snap);
 
     CHECK(reads_in(fb, "FLIGHT", 0, 168, 50, 182));
     CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
-    CHECK(reads_in(fb, "2", 170, 170, 200, 200, 3));
+    CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
     CHECK(reads_in(fb, "ACT", 140, 175, 190, 200));
 
     RadarSnapshot closer = flying(0);

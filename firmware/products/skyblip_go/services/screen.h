@@ -206,6 +206,7 @@ class ScreenService : public runtime::Service {
     Page page_{Page::Radar};
     Mode mode_{Mode::Page};
     int range_step_{kDefaultRangeStep};
+    RadarPlot radar_plot_{RadarPlot::ToScale};
     uint32_t last_tick_ms_{0};
     uint32_t screen_since_ms_{0};
     uint32_t recorded_ms_{0};
