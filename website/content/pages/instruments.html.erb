@@ -1,0 +1,66 @@
+---
+title: Instruments
+nav_title: Instruments
+description: The skyBlip Go instruments · six dials off the GNSS with the cell over the middle one, and a g-meter that keeps this flight's peaks.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Six dials, and what the airframe has taken.</h1>
+  <p class="lede">
+    Two pages of instruments, each figure a measurement or nothing.
+  </p>
+</section>
+
+<section>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="six-pack">Six dials, and <span class="highlight">what is left in the cell</span>.</h3>
+      <p>
+        Ground speed, horizon, altimeter, turn and slip, track, vertical speed.
+        Over the middle dial, the battery in percent: how much flying is left in
+        the device is the one thing the other five cannot say. The time since
+        takeoff, for the logbook, is on the radar.
+      </p>
+      <p>
+        The horizon rolls with the bank a coordinated turn would need at that
+        speed, because nothing on the board measures a bank. The ball is
+        measured, and it answers the rudder. Nothing here is certified, and it
+        is not an attitude indicator to fly in cloud.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "The six-pack page: ground speed, artificial horizon with the state of charge above it, altimeter, turn coordinator with its ball, track card and vertical speed" %>
+      <figcaption>Six-pack</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="g-meter">What the airframe <span class="highlight">has taken</span>.</h3>
+      <p>
+        The fourth page reads the accelerometer and infers nothing from it. The
+        marker says where the wing is now, the box around it says where it has
+        been: the most and the least it has pulled, and how far it has been
+        thrown to each hand.
+      </p>
+      <p>
+        The peaks belong to this flight and go back to zero when the clock
+        starts. Fore and aft has a strip of its own, because braking and a rough
+        landing are not a wing load.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "The g-meter page: the normal and lateral load as a marker in a field with the box of this flight's peaks around it, a fore-and-aft strip beside it, and three rows of figures in tenths of a g" %>
+      <figcaption>G-meter</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "controls", class: "cta cta--next" %>
+  </p>
+</section>

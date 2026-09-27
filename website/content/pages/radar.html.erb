@@ -1,0 +1,193 @@
+---
+title: Radar and traffic
+nav_title: Radar
+description: The skyBlip Go radar · heading up, a minute of track ahead of each aircraft, every aircraft heard on the glass with PLOT ALL, an alarm that says where to look, and the list of who is out there.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Where to look, and who is there.</h1>
+  <p class="lede">
+    The page a skyBlip Go is left on: where to look, who is there, and what the alarm means when it speaks.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">What you see in flight</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="heading-up">Traffic drawn <span class="highlight">the way you see it</span>.</h3>
+      <p>
+        You are in the middle, nose up, and the picture never turns: the sky
+        turns around you. Traffic drawn to the upper right is traffic to look
+        for off the right of the nose, with nothing to convert. Nothing at all
+        is written across the top of the glass, because that is the half you are
+        flying into.
+      </p>
+      <p>
+        Each aircraft is a shape, and the shape already says where to raise your
+        eyes: point up, it is above you; point down, below; a diamond, at your
+        level. A caret joins it if it is climbing or sinking, and the line out
+        of it leads where it will be in a minute.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "The radar page: three aircraft drawn as diamonds, one above, one below and one level and climbing, each with its one-minute leader line, own ship's dashed run with a ball at each of the next two minutes, the four-mile ring, the flight time and the count of aircraft heard" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Heading up, never north up</li>
+    <li>Ring of 1, 2, 4 or 8&nbsp;NM</li>
+    <li>The shape says above, level or below</li>
+    <li>A minute of track ahead of each target</li>
+    <li>The count of every aircraft heard</li>
+    <li>Flight time, for the logbook</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Every aircraft, <span class="highlight">however far</span>.</h3>
+      <p>
+        To scale, the picture ends at the glass: on the 4&nbsp;NM ring an
+        aircraft past about six miles is gone. Set
+        <span class="mono">PLOT</span> to <span class="mono">ALL</span> on the
+        settings menu and nothing heard with a position is left off. The ring
+        shrinks to leave a band around it, and an aircraft past the ring stands
+        on that band, on its bearing, wearing the shape it would wear inside.
+      </p>
+      <p>
+        Its distance is not drawn, its minute of track is: to scale, from where
+        the aircraft really is, and only the part inside the ring. An aircraft
+        closing fast from six miles is a mark on the band and a line already
+        inside the ring, ending where it will be in a minute.
+      </p>
+      <p>
+        Aircraft close together on the band become one mark with a count beside
+        it, and the mark shown is the one that matters first: an alarm, then the
+        closest to your altitude. The count never covers another aircraft, and
+        a mark behind you steps aside from the range label rather than hide
+        under it.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "The radar page with PLOT ALL: a smaller ring with two aircraft inside it, and on the band around it an aircraft ahead with its leader line entering the ring, a mark with the count 3 for a gaggle to the upper right, and one aircraft far to the left" %>
+      <figcaption>PLOT ALL</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>TO SCALE: the picture drawn to the ring</li>
+    <li>ALL: every aircraft with a position</li>
+    <li>On the band: the bearing, the shape, the alarm</li>
+    <li>A minute of track, where it enters the ring</li>
+    <li>Neighbours on the band share one mark and a count</li>
+    <li>The corner counts every aircraft heard</li>
+  </ul>
+
+  <p class="lede">
+    <%= link_to_page "displays", label: "The screens page", anchor: "both-ways" %>
+    shows the same skies both ways, one press of the button apart.
+  </p>
+
+  <div class="feature">
+    <div>
+      <h3 id="alarm">One alarm, and it says <span class="highlight">where to look</span>.</h3>
+      <p>
+        An aircraft inside 3&nbsp;km and 300&nbsp;m of you has its symbol filled
+        in, and a quarter of the screen centred on it goes black, once a second. You
+        have nothing to read: a corner of the glass flashing is caught out of
+        the corner of your eye, and that is the whole instruction, turn your
+        head that way. Whatever page you are on, the radar takes over.
+      </p>
+      <p>
+        The black sector catches the eye, the symbol gives you the angle.
+        Traffic 38° off the nose is not rounded up to &ldquo;ahead and
+        right&rdquo;: the sector leans on its 38°, and you look there rather
+        than through a quarter of the sky.
+      </p>
+      <p>
+        There is nothing above it, and there never will be. Climbing or
+        descending has to be coordinated with the other aircraft, and this
+        device has no link to do it over. The loudest thing it can say is look.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "The radar page during a traffic advisory: a 90-degree sector leaning on the bearing of the traffic, turned black, with the filled diamond of the converging aircraft and its leader line reversed out of it" %>
+      <figcaption>Traffic advisory</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>3&nbsp;km around you, 300&nbsp;m above and below</li>
+    <li>A quarter of the screen, centred on the traffic</li>
+    <li>One flash a second</li>
+    <li>The buzzer, the vibration and the lamp with it</li>
+    <li>One touch of the pad silences it</li>
+    <li>A caution, never an instruction</li>
+  </ul>
+
+  <h3 id="shapes">Five shapes, and <span class="highlight">you read them without learning them</span>.</h3>
+  <p class="lede">
+    Point up is traffic above you; point down is traffic below; the diamond is
+    someone inside your 60&nbsp;m. A full-size symbol sits within the 300&nbsp;m
+    the alarm cares about; a reduced one is further away vertically, and it
+    stays on the picture without ever asking for it. The caret joins from
+    2.5&nbsp;m/s of climb or descent, on the side the traffic is going.
+  </p>
+  <p class="lede">
+    Filled black belongs to the alarm. While no symbol is filled, nothing is
+    urgent: it is the one contrast the screen keeps in reserve.
+  </p>
+
+  <%= render "shared/blips",
+        plain: "Plain",
+        alarm: "Alarm",
+        climbing: "climbing",
+        steady: "steady",
+        sinking: "sinking",
+        above: "Point up",
+        above_when: "above you, to 300 m",
+        level: "Diamond",
+        level_when: "within 60 m of your level",
+        below: "Point down",
+        below_when: "below you, to 300 m",
+        far_above: "Point up, reduced",
+        far_above_when: "above you, beyond 300 m",
+        far_below: "Point down, reduced",
+        far_below_when: "below you, beyond 300 m",
+        out_of_window: "outside the alarm’s altitude window" %>
+
+  <div class="feature">
+    <div>
+      <h3 id="nearby">Who is out there, <span class="highlight">nearest first</span>.</h3>
+      <p>
+        The radar says where to look, this page says who that is. One row per
+        aircraft the device can place: its callsign if it broadcasts one and its
+        address otherwise, the ground distance between you, and how far above or
+        below you it is. On the top line, your own callsign with the address you
+        transmit under beside it, and the count of everything heard.
+      </p>
+      <p>
+        The letter at the head of the row says where the report came from.
+        <span class="mono">A</span> for a direct ADS-L frame,
+        <span class="mono">F</span> for FLARM-compatible traffic,
+        <span class="mono">U</span> for an aircraft relayed by a ground station.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "The nearby page: own callsign S-BLIP with its address beside it and the count of everything heard on the top line, then five aircraft listed nearest first, each with its source letter, its callsign or address, its ground distance and its relative altitude" %>
+      <figcaption>Nearby</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", class: "cta cta--next" %>
+  </p>
+</section>

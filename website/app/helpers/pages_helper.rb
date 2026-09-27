@@ -11,6 +11,10 @@ module PagesHelper
     image_tag "pages/#{@page.base_slug}/#{path}", options
   end
 
+  def screen_image_tag(path, options = {})
+    image_tag "pages/skyblip-go/#{path}", options
+  end
+
   private
     def find_page(slug)
       page = Page.find_by(base_slug: slug) || Page.find_by(base_slug: slug, locale: I18n.default_locale)

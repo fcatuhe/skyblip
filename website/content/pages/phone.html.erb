@@ -1,0 +1,134 @@
+---
+title: Phone and firmware
+nav_title: Phone
+description: A skyBlip Go with your phone · three apps at once with no pairing, every write asked on the glass, and new firmware from a web page.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>With your phone, and without trusting it.</h1>
+  <p class="lede">
+    What an app can see, what it can ask for, and the glass that has the last word.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="by-name">It appears by name, and <span class="highlight">three screens</span> read it at once.</h3>
+      <p>
+        <span class="mono">skyBlip Go 5B5AFE</span>: the product, then its own
+        24-bit address. Nothing to pair, no code to type. It carries the FLARM
+        NMEA stream on both of the Bluetooth serial profiles navigation software
+        looks for, so the app you already fly with finds it.
+      </p>
+      <p>
+        The tablet on the yoke, the phone in a pocket and the passenger&rsquo;s
+        iPad all see the same traffic. Configuration is the one thing that is
+        not shared: the first app to write keeps that right until it
+        disconnects, and the second is told who holds it.
+      </p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= image_tag "pages/index/skyblip-go-techo.jpg", alt: "A skyBlip Go, white case with its antenna, the wordmark on the e-paper screen" %>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>No pairing, no code, no account</li>
+    <li>Three connections at once</li>
+    <li>Nordic UART and FLARM-style profiles</li>
+    <li>SDVFR Next, SkyDemon, ForeFlight and the rest</li>
+    <li>Up to sixteen flights kept on the device</li>
+    <li>Collected over the same link on the ground</li>
+  </ul>
+
+  <h3 id="asked">Two presses allow, <span class="highlight">one press refuses</span>.</h3>
+  <p class="lede">
+    When an app asks for something that touches the device you have on board,
+    new firmware, a restart into the USB bootloader, a settings write, erasing
+    your flights, switching it off, the device does not take the phone at its
+    word. It puts the question on its own glass, names it, and waits thirty
+    seconds:
+    <span class="mono">PRESS TWICE TO ALLOW</span>,
+    <span class="mono">ONE PRESS REFUSES</span>. No answer inside the window
+    counts as a refusal.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "confirm.png", alt: "The authorisation prompt: AUTHORISE, SETTINGS, apply the settings the phone sent, PRESS TWICE TO ALLOW over ONE PRESS REFUSES, refused after 30 s" %>
+    <figcaption>A settings write, asked on the glass</figcaption>
+  </figure>
+
+  <p class="lede">
+    Your callsign is one of those writes. The app sends it, the glass asks, and
+    from then on it is on the status screen, on the air once every ten seconds,
+    and on the screens of the aircraft around you. You can also type it on the
+    device itself, in <%= link_to_page "controls", label: "the callsign field", anchor: "callsign" %>.
+  </p>
+  <p class="lede">
+    Presses only count once the question has reached the glass and your thumb
+    has stopped: a run of presses that was stepping a setting cannot be spent on
+    an authorisation. The pad is inert while a question stands.
+  </p>
+
+  <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
+  <p class="lede">
+    <%= link_to_page "manage", label: "The update page" %> sends a signed
+    image over the same Bluetooth, from Chrome or Edge, and the glass asks
+    twice: before it takes the image, and before it installs it. The new
+    firmware then has to bring its radio up, hear its receiver and draw its
+    screen before it keeps itself. If it does not, the device goes back to the
+    firmware it had, and to the settings you had when the update began.
+  </p>
+  <p class="lede">
+    Settings the device cannot read are never passed off as yours. It runs on
+    its defaults, the self test&rsquo;s <span class="mono">STORAGE</span> row
+    reads <span class="mono">NVS+NOR DEFAULTS</span>, and the phone is told:
+    check the callsign and the aircraft type before you fly.
+  </p>
+  <p class="lede">
+    When the firmware will not take at all, the same page hands the device to
+    its USB bootloader, after the same two presses. The device switches itself
+    off on the page below, and the next press starts the bootloader: on a USB
+    cable the device is a drive named <span class="mono">TECHOBOOT</span>.
+    A <span class="mono">.uf2</span> dropped on it is new firmware,
+    <span class="mono">RST</span> goes back to skyBlip, and nothing transmits
+    meanwhile. Two presses of <span class="mono">RST</span> reach the same
+    drive without a phone.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, then a drive named TECHOBOOT on USB, a .uf2 dropped there is new firmware, RST goes back to skyBlip, and nothing transmits meanwhile" %>
+    <figcaption>Handed to the USB bootloader</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Technical notes</h2>
+
+  <h3 id="no-pairing">Why there is no pairing.</h3>
+  <p class="lede">
+    Turning Bluetooth pairing on encrypts the GATT characteristics, which is a
+    known Web Bluetooth failure on Windows and would break
+    <%= link_to_page "manage", label: "the browser page that installs firmware" %>.
+    So the boundary is the image and not the link.
+  </p>
+
+  <ul class="points">
+    <li>The bootloader verifies a signature over our key</li>
+    <li>An older version than the installed one is refused</li>
+    <li>An open transport cannot install firmware</li>
+    <li>Anything else it could ask for is ground-only</li>
+    <li>Refused unless it is confirmed on the glass</li>
+    <li>Physical presence, where a pairing code would be</li>
+  </ul>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "radio", class: "cta cta--next" %>
+  </p>
+</section>

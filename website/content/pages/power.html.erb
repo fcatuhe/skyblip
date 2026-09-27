@@ -1,0 +1,167 @@
+---
+title: Power and battery
+nav_title: Power
+description: A skyBlip Go on the apron and in the bag · what it waits for, what off looks like, a cell that says so when it runs out, and the gauge.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>It says what it is doing, even off.</h1>
+  <p class="lede">
+    What the device says before it has a position, when it is off, and when its cell runs out.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">On the apron, and in the bag</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="waiting">It says <span class="highlight">what it is waiting for</span>.</h3>
+      <p>
+        One press and it is on, straight to the traffic picture. Until it has a
+        position the ring tells you so, and the word under it gives you how far
+        the receiver has got: gone quiet, solutions arriving with no date on
+        them yet, or a date read off a satellite.
+      </p>
+      <p>
+        That is the difference between a device to wait for and a device to
+        carry into the open. The first fix announces itself, and the picture
+        becomes a picture of the sky.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring carries the words NO FIX and, under them, how far the receiver has got" %>
+      <figcaption>Waiting for the sky</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="off">The wordmark on the glass <span class="highlight">means off</span>.</h3>
+      <p>
+        A hold of two seconds switches it off: the radio is parked, the panel
+        gets three seconds to draw the wordmark, and the rails drop when you let
+        go. E-paper keeps its image with no power at all, so that is what an off
+        device wears.
+      </p>
+      <p>
+        The same hold, a finger resting on the pad, leaves the glass blank
+        instead. An image left on e-paper for a winter leaves a shadow the panel
+        never loses again, and a device going into a cupboard should carry
+        nothing.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "The parked screen of a device that has been switched off: the skyBlip wordmark, held by the e-paper with no power" %>
+      <figcaption>Off</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="flat-battery">A cell that runs out <span class="highlight">says so as it goes</span>.</h3>
+      <p>
+        At 3.2&nbsp;V the device switches itself off, and the last thing it
+        writes is why. You pressed nothing, so the glass is the only thing that
+        can tell you: without it, a device that stopped on its own is a device
+        that crashed or died. The button stops working at the same moment,
+        because a press could only reach the same cutoff again.
+      </p>
+      <p>
+        The cable is the way out, and it is one act. Plugging it in wakes the
+        electronics, which refuse to become a device and put the wordmark back:
+        an ordinary switched-off unit again, charging, and the next press starts
+        it. A cell that emptied itself on a shelf wrote nothing, so there the
+        press is what gets answered, with the same line.
+      </p>
+      <p>
+        The boot that follows remembers it. Its self test reads
+        <span class="mono">WAS FLAT</span> beside the voltage, and a phone that
+        connects during that boot is told the same, so a unit that went dark
+        does not come back as if nothing happened.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that switched itself off on an empty cell: the skyBlip wordmark with the words FLAT BATTERY under it" %>
+      <figcaption>Out of battery</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>From off</th><th>What happens</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Press the button</th><td>boots, unless the cell is under 3.4&nbsp;V with no charger, and then the glass says <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Press after a flat-battery shutdown</th><td>nothing, by design: the glass already says it, and the cable is the way back</td></tr>
+        <tr><th>Plug the charger in</th><td>charges, stays off: a cable in a flight bag is not a request to transmit</td></tr>
+        <tr><th>Plug the charger into a flat device</th><td>charges, stays off, and the wordmark replaces <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Hold the button, plug the charger in</th><td>boots and charges</td></tr>
+        <tr><th>Press <span class="mono">RST</span></th><td>reboots, and twice inside half a second, the USB bootloader</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Technical notes</h2>
+
+  <h3 id="cell">Why the cell lasts the day.</h3>
+  <p class="lede">
+    Switching off is a sequence, not a rail drop, and the order is the content
+    of it. The external flash is told to sleep while it still has a supply to
+    hear the command: after the rail that command does nothing, and the part
+    draws its full standby current for the whole night the device spends in a
+    bag looking switched off.
+  </p>
+  <p class="lede">
+    The rest is the radio and the sensors. Airborne the device speaks once a
+    second, parked once every ten, and which of the ten seconds is its own comes
+    from its address, so a field full of aircraft spreads itself out.
+  </p>
+
+  <ul class="points">
+    <li>Radio asleep before its reset line</li>
+    <li>Flash, receiver, rails, pins, in that order</li>
+    <li>1&nbsp;Hz in the air, 0.1&nbsp;Hz on the ground</li>
+    <li>The hub&rsquo;s gyroscope is never read: it costs a milliamp</li>
+    <li>Charging refused outside 5 to 60&nbsp;&deg;C</li>
+    <li>The lamp winks, and is never held solid</li>
+  </ul>
+
+  <h3 id="gauge">What the gauge will not do.</h3>
+  <p class="lede">
+    It reads two curves, not one. On a charger the terminal sits above the
+    cell&rsquo;s own voltage, so the same reading means a far emptier cell, and
+    the percentage says which curve it read.
+  </p>
+  <p class="lede">
+    It never walks backwards, and a 22&nbsp;dBm burst sagging the rail does not
+    move it. A gauge that jumps when the radio keys is a gauge a pilot stops
+    believing.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Threshold</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>3.50&nbsp;V</th><td>the warning: from here nothing durable is written except the flight record, which is the evidence of the flight that is ending</td></tr>
+        <tr><th>3.40&nbsp;V</th><td>a boot on a cell this flat is refused, and the button is left unarmed so a bag cannot keep asking</td></tr>
+        <tr><th>3.20&nbsp;V</th><td>the cutoff: the device switches itself off, on three consecutive samples, so a transmit sag cannot act</td></tr>
+        <tr><th>1.80&nbsp;V</th><td>below this the reading is a floating divider, not a flat cell, and nothing acts on it</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "phone", class: "cta cta--next" %>
+  </p>
+</section>

@@ -1,0 +1,183 @@
+---
+title: Commandes et menus
+nav_title: Commandes
+slug: commandes
+description: La prise en main d'un skyBlip Go · deux contacts, les réglages sous le radar, un indicatif tapé sur l'appareil, et les pages de diagnostic ouvertes par leur nom.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Deux contacts, et rien à apprendre deux fois.</h1>
+  <p class="lede">
+    Un pavé et un bouton, les menus derrière eux, et les pages que l&rsquo;on cherche à l&rsquo;établi.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="two-contacts">Le pavé déplace, <span class="highlight">le bouton agit</span>.</h3>
+      <p>
+        Deux contacts, et le partage entre les deux est tout ce qu&rsquo;il y a
+        à retenir. Le pavé capacitif du bord haut fait défiler les quatre pages,
+        et ne peut rien changer. Le bouton du côté ouvre le menu de la page
+        affichée, et chaque pression suivante fait avancer la ligne.
+      </p>
+      <p>
+        Deux pages ont un menu. Tout ce qu&rsquo;un pouce peut régler tient sous
+        le radar, le premier écran sur lequel on installe un appareil. Rien
+        n&rsquo;est un brouillon à valider&nbsp;: chaque pression est un réglage
+        terminé.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d’aéronef, indicatif, unités, portée, tracé, alarme et volume, avec l’aide PAD MOVES - BUTTON CHANGES en bas" %>
+      <figcaption>Le menu du radar</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Une tape sur le pavé&nbsp;: la page suivante</li>
+    <li>Un contact d&rsquo;une seconde&nbsp;: le radar</li>
+    <li>Une pression&nbsp;: le menu, quand la page en a un</li>
+    <li>Les pressions suivantes&nbsp;: la ligne avance</li>
+    <li>Après la dernière ligne&nbsp;: retour à l&rsquo;image</li>
+    <li>Une minute sans rien&nbsp;: elle revient seule</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Votre indicatif, <span class="highlight">tapé avec deux contacts</span>.</h3>
+      <p>
+        <span class="mono">CALLSIGN</span> est la seule ligne qui ouvre un champ
+        au lieu de faire avancer une valeur, et les deux gestes s&rsquo;y
+        inversent&nbsp;: le pavé fait défiler le caractère sous la barre, le
+        bouton passe au suivant. Le cycle est un blanc, un tiret,
+        <span class="mono">A</span> à <span class="mono">Z</span>,
+        <span class="mono">0</span> à <span class="mono">9</span>, puis de
+        nouveau le blanc, si bien qu&rsquo;un pouce qui dépasse une lettre y
+        revient sans second geste.
+      </p>
+      <p>
+        Le bouton sur le dernier caractère enregistre le nom, et les blancs
+        laissés à la fin sont retirés. Pour effacer un indicatif, ramenez le
+        premier caractère sur un blanc et pressez&nbsp;: l&rsquo;écran dit
+        <span class="mono">BLANK THE FIRST TO CLEAR</span> tant que le nom est
+        là, et <span class="mono">BUTTON CLEARS</span> une fois le blanc sous la
+        barre. Quittez le champ sans le terminer, ou laissez-le une minute, et
+        rien n&rsquo;est enregistré.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, PAD ROLLS au-dessus de BUTTON NEXT, et BLANK THE FIRST TO CLEAR en bas" %>
+      <figcaption>Le champ indicatif</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif, le premier caractère ramené sur un blanc, la barre dessous, et l’aide qui dit maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <figcaption>Le premier caractère effacé</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, la ligne CALLSIGN sélectionnée et qui affiche NONE" %>
+      <figcaption>Une pression plus tard</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="diagnostics">Quatre pages qui défilent, <span class="highlight">le reste par son nom</span>.</h3>
+      <p>
+        Une tape passe du radar à la liste, aux instruments, puis au G-mètre, et
+        à rien d&rsquo;autre&nbsp;: un pilote qui fait défiler l&rsquo;écran en
+        vol ne doit pas tomber sur les barres de satellites. Une carte sans
+        capteur inertiel n&rsquo;a pas de G-mètre à dessiner, la tape
+        l&rsquo;enjambe plutôt que d&rsquo;afficher
+        <span class="mono">NO SENSOR</span> une fois sur quatre.
+      </p>
+      <p>
+        Le reste s&rsquo;ouvre par son nom depuis le menu de la liste, et vous
+        rend la page où vous étiez. Les écrans ci-dessous sont ceux de
+        l&rsquo;établi, du parking et du rapport de bug&nbsp;: aucun n&rsquo;est
+        une image sur laquelle tomber avec le pouce. Le dernier enregistre un
+        vol pour ce rapport, tous les sujets pour un bug ou seulement la
+        batterie et les temps d&rsquo;activité pour une décharge, et annonce ce
+        que celui que vous choisissez coûte à la mémoire flash avant qu&rsquo;on
+        le lance.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, raw, capture et autotest, les six pages qu’on ouvre par leur nom" %>
+      <figcaption>Le menu de la liste</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "La page état : point et satellites, position, route, trafic, émission, la centrale inertielle, pression, les deux altitudes, vitesse, vario et la batterie en volts et en pourcentage" %>
+      <figcaption>État</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "La page satellites : une barre par satellite groupée par constellation, contre une ligne pointillée à 40 dB-Hz" %>
+      <figcaption>Satellites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : sous le point, l’état du PPS et le bruit de fond, une ligne par trame reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, ce qu’elle portait, son adresse et son niveau" %>
+      <figcaption>Journal radio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "La page autotest : une ligne par pièce de la carte, avec la pièce qui a répondu et son verdict" %>
+      <figcaption>Autotest</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "capture.png", alt: "La page capture, rien en cours d’enregistrement : l’état à l’arrêt, les deux captures au choix, FULL pour tous les sujets et POWER RUN pour la batterie et les temps d’activité, puis le prix de celle choisie, les secteurs de flash qu’elle prendrait, les vols enregistrés qu’elle effacerait et les heures d’enregistrement qu’elle garderait, et PAD PICKS, PRESS TWICE TO ARM en bas" %>
+      <figcaption>Capture</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Geste</th><th>Sur une page</th><th>Dans un menu</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Une tape sur le pavé</th>
+          <td>la page suivante, et sur la page capture la capture suivante</td>
+          <td>la ligne suivante, et après la dernière, la page à laquelle le menu appartient</td>
+        </tr>
+        <tr>
+          <th>Contact d&rsquo;1&nbsp;s sur le pavé</th>
+          <td>fait taire une alarme en cours, et s&rsquo;il n&rsquo;y en a pas, ramène le radar</td>
+          <td>le radar</td>
+        </tr>
+        <tr>
+          <th>Une pression sur le bouton</th>
+          <td>ouvre le menu de cette page, ou refuse une question à l&rsquo;écran</td>
+          <td>agit sur la ligne sélectionnée, et chaque pression suivante la fait avancer</td>
+        </tr>
+        <tr>
+          <th>Deux pressions, à moins de 0,6&nbsp;s</th>
+          <td colspan="2">autorisent la question à l&rsquo;écran, lancent ou arrêtent un enregistrement sur la page capture, et ne veulent rien dire ailleurs</td>
+        </tr>
+        <tr>
+          <th>Appui de 2&nbsp;s sur le bouton</th>
+          <td colspan="2">éteint l&rsquo;appareil</td>
+        </tr>
+        <tr>
+          <th>Le même appui, doigt sur le pavé</th>
+          <td colspan="2">éteint l&rsquo;appareil et laisse l&rsquo;écran vierge, pour le rangement</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "power", class: "cta cta--next" %>
+  </p>
+</section>

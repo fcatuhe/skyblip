@@ -1,0 +1,207 @@
+---
+title: Radar et trafic
+nav_title: Radar
+slug: radar
+description: Le radar du skyBlip Go · route en haut, une minute de route devant chaque aéronef, tous les aéronefs reçus à l'écran avec PLOT ALL, une alarme qui dit où regarder, et la liste de qui est là.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Où regarder, et qui est là.</h1>
+  <p class="lede">
+    La page sur laquelle on laisse un skyBlip Go&nbsp;: où regarder, qui est là, et ce que dit l&rsquo;alarme quand elle parle.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que vous voyez en vol</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="heading-up">Le trafic dessiné <span class="highlight">comme vous le voyez</span>.</h3>
+      <p>
+        Vous êtes au centre, nez en haut, et l&rsquo;image ne tourne
+        jamais&nbsp;: c&rsquo;est le ciel qui tourne autour de vous. Un trafic
+        en haut à droite est un trafic à chercher à droite du nez, sans rien
+        convertir. Rien n&rsquo;est écrit en haut de l&rsquo;écran, parce que
+        c&rsquo;est la moitié vers laquelle vous volez.
+      </p>
+      <p>
+        Chaque aéronef est une forme, et la forme dit déjà où lever les
+        yeux&nbsp;: pointe en haut, il est au-dessus de vous&nbsp;; pointe en
+        bas, en dessous&nbsp;; losange, à votre niveau. Un chevron
+        s&rsquo;ajoute s&rsquo;il monte ou s&rsquo;il descend, et le trait qui
+        en part mène là où il sera dans une minute.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs dessinés en losanges, un au-dessus, un en dessous, un au même niveau en montée, chacun avec son trait d’une minute, la route de l’appareil en pointillés avec une bille à chacune des deux minutes suivantes, le cercle de quatre milles, le temps de vol et le nombre d’aéronefs reçus" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Route en haut, jamais le nord</li>
+    <li>Cercle de 1, 2, 4 ou 8&nbsp;NM</li>
+    <li>La forme dit au-dessus, au niveau, en dessous</li>
+    <li>Une minute de route devant chaque cible</li>
+    <li>Le nombre de tous les aéronefs reçus</li>
+    <li>Le temps de vol, pour le carnet</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Tous les aéronefs, <span class="highlight">aussi loin soient-ils</span>.</h3>
+      <p>
+        À l&rsquo;échelle, l&rsquo;image s&rsquo;arrête au bord de
+        l&rsquo;écran&nbsp;: sur le cercle de 4&nbsp;NM, un aéronef au-delà
+        d&rsquo;environ six milles disparaît. Réglez
+        <span class="mono">PLOT</span> sur <span class="mono">ALL</span> dans le
+        menu des réglages et plus rien de ce qui est reçu avec une position
+        n&rsquo;est laissé de côté. Le cercle rétrécit pour laisser une bande
+        autour de lui, et un aéronef au-delà du cercle se place sur cette bande,
+        dans son relèvement, avec la forme qu&rsquo;il aurait à
+        l&rsquo;intérieur.
+      </p>
+      <p>
+        Sa distance n&rsquo;est pas dessinée, sa minute de route l&rsquo;est&nbsp;:
+        à l&rsquo;échelle, depuis sa position réelle, et seulement la partie
+        qui tombe dans le cercle. Un aéronef qui arrive vite depuis six milles
+        est une marque sur la bande et un trait déjà dans le cercle, qui
+        s&rsquo;arrête là où il sera dans une minute.
+      </p>
+      <p>
+        Des aéronefs proches sur la bande ne font qu&rsquo;une marque, avec un
+        chiffre à côté, et la marque affichée est celle qui compte
+        d&rsquo;abord&nbsp;: une alarme, puis le plus proche de votre altitude.
+        Le chiffre ne couvre jamais un autre aéronef, et une marque derrière
+        vous s&rsquo;écarte de l&rsquo;étiquette de portée plutôt que de se
+        cacher dessous.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL : un cercle plus petit avec deux aéronefs à l’intérieur, et sur la bande autour un aéronef devant avec son trait qui entre dans le cercle, une marque avec le chiffre 3 pour un groupe en haut à droite, et un aéronef loin à gauche" %>
+      <figcaption>PLOT ALL</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>TO SCALE&nbsp;: l&rsquo;image dessinée à l&rsquo;échelle du cercle</li>
+    <li>ALL&nbsp;: tous les aéronefs qui ont une position</li>
+    <li>Sur la bande&nbsp;: le relèvement, la forme, l&rsquo;alarme</li>
+    <li>Une minute de route, là où elle entre dans le cercle</li>
+    <li>Des voisins sur la bande partagent une marque et un chiffre</li>
+    <li>Le coin compte tous les aéronefs reçus</li>
+  </ul>
+
+  <p class="lede">
+    <%= link_to_page "displays", label: "La page des écrans", anchor: "both-ways" %>
+    montre les mêmes ciels des deux façons, à une pression de bouton
+    d&rsquo;écart.
+  </p>
+
+  <div class="feature">
+    <div>
+      <h3 id="alarm">Une alarme, et elle dit <span class="highlight">où regarder</span>.</h3>
+      <p>
+        Un aéronef à moins de 3&nbsp;km et 300&nbsp;m de vous voit son symbole
+        se noircir, et un quart d&rsquo;écran centré sur lui passe au noir, une fois
+        par seconde. Vous n&rsquo;avez rien à lire&nbsp;: un coin
+        d&rsquo;écran qui clignote se voit du coin de l&rsquo;&oelig;il, et
+        c&rsquo;est toute l&rsquo;instruction, tournez la tête par là. Quelle
+        que soit la page affichée, le radar reprend la main.
+      </p>
+      <p>
+        Le secteur noir attrape l&rsquo;&oelig;il, le symbole donne
+        l&rsquo;angle. Un trafic à 38° du nez n&rsquo;est pas arrondi à
+        «&nbsp;devant à droite&nbsp;»&nbsp;: le secteur est penché sur ses 38°,
+        et vous cherchez là plutôt qu&rsquo;au milieu d&rsquo;un quart de ciel.
+      </p>
+      <p>
+        Au-dessus, il n&rsquo;y a rien, et il n&rsquo;y aura jamais rien. Monter
+        ou descendre se coordonne avec l&rsquo;autre aéronef, et cet appareil
+        n&rsquo;a aucune liaison pour le faire. Le plus fort qu&rsquo;il puisse
+        dire, c&rsquo;est regardez.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant un avis de trafic : un secteur de 90° penché sur le relèvement du trafic, passé au noir, avec le losange plein de l’aéronef convergent et son trait d’une minute en réserve" %>
+      <figcaption>Avis de trafic</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>3&nbsp;km autour de vous, 300&nbsp;m au-dessus et en dessous</li>
+    <li>Un quart d&rsquo;écran, centré sur le trafic</li>
+    <li>Un clignotement par seconde</li>
+    <li>Le buzzer, le vibreur et le voyant avec</li>
+    <li>Un contact sur le pavé le fait taire</li>
+    <li>Un avertissement, jamais un ordre</li>
+  </ul>
+
+  <h3 id="shapes">Cinq formes, et <span class="highlight">vous les lisez sans les apprendre</span>.</h3>
+  <p class="lede">
+    La pointe en haut, c&rsquo;est un trafic au-dessus&nbsp;; la pointe en bas,
+    un trafic en dessous&nbsp;; le losange, quelqu&rsquo;un dans vos 60&nbsp;m.
+    Un symbole à sa taille normale tient dans les 300&nbsp;m qui comptent pour
+    l&rsquo;alarme&nbsp;; un symbole réduit est plus loin verticalement, et il
+    reste sur l&rsquo;image sans jamais la réclamer. Le chevron s&rsquo;ajoute à
+    partir de 2,5&nbsp;m/s de montée ou de descente, du côté où le trafic va.
+  </p>
+  <p class="lede">
+    Le noirci est réservé à l&rsquo;alarme. Tant qu&rsquo;aucun symbole
+    n&rsquo;est noirci, rien n&rsquo;est urgent&nbsp;: c&rsquo;est le seul
+    contraste que l&rsquo;écran garde en réserve.
+  </p>
+
+  <%= render "shared/blips",
+        plain: "Normal",
+        alarm: "Alarme",
+        climbing: "monte",
+        steady: "stable",
+        sinking: "descend",
+        above: "Pointe en haut",
+        above_when: "au-dessus de vous, jusqu’à 300 m",
+        level: "Losange",
+        level_when: "à 60 m près de votre niveau",
+        below: "Pointe en bas",
+        below_when: "en dessous de vous, jusqu’à 300 m",
+        far_above: "Pointe en haut, réduite",
+        far_above_when: "au-dessus de vous, au-delà de 300 m",
+        far_below: "Pointe en bas, réduite",
+        far_below_when: "en dessous de vous, au-delà de 300 m",
+        out_of_window: "hors de la tranche d’altitude de l’alarme" %>
+
+  <div class="feature">
+    <div>
+      <h3 id="nearby">Qui est là, <span class="highlight">du plus proche au plus loin</span>.</h3>
+      <p>
+        Le radar dit où regarder, cette page dit qui c&rsquo;est. Une ligne par
+        aéronef que l&rsquo;appareil sait placer&nbsp;: son indicatif s&rsquo;il
+        en émet un et son adresse sinon, la distance au sol qui vous en sépare,
+        et de combien il est au-dessus ou en dessous de vous. En haut, votre
+        propre indicatif avec l&rsquo;adresse sous laquelle vous émettez à côté,
+        et le nombre d&rsquo;appareils entendus.
+      </p>
+      <p>
+        La lettre en tête de ligne dit d&rsquo;où vient le report.
+        <span class="mono">A</span> pour une trame ADS-L directe,
+        <span class="mono">F</span> pour un trafic compatible FLARM,
+        <span class="mono">U</span> pour un aéronef relayé par une station au
+        sol.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La page nearby : l’indicatif S-BLIP avec l’adresse de l’appareil à côté et le compte de tout ce qui a été entendu sur la ligne du haut, puis cinq aéronefs listés du plus proche au plus loin, chacun avec sa lettre de source, son indicatif ou son adresse, sa distance au sol et son altitude relative" %>
+      <figcaption>Nearby</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", class: "cta cta--next" %>
+  </p>
+</section>

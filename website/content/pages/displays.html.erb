@@ -1,0 +1,268 @@
+---
+title: Every screen
+nav_title: Screens
+description: Every screen of a skyBlip Go as the firmware draws it, and the radar both ways, PLOT TO SCALE and PLOT ALL.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Every screen, as the firmware draws it.</h1>
+  <p class="lede">
+    Each picture is the 200&times;200 framebuffer of the
+    <%= link_to_page "skyblip-go", label: "simulator", anchor: "simulator" %>,
+    driven into that state and read out pixel for pixel. A screen that changes
+    on the device is a capture taken again.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="both-ways">The radar, both ways</h2>
+  <p class="lede">
+    <span class="mono">PLOT</span> on the settings menu draws the radar one of
+    two ways. <span class="mono">TO SCALE</span> puts every mark where the
+    ring&rsquo;s scale puts it, and leaves off what does not fit.
+    <span class="mono">ALL</span> shrinks the ring and stands every aircraft
+    past it on the band around it, on its bearing. Three skies, each captured
+    both ways off the same firmware.
+  </p>
+
+  <div class="plot" data-controller="plot" data-plot-view-value="both">
+    <p class="plot-choices" data-plot-target="choices" hidden>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Side by side</button>
+    </p>
+
+    <div class="plot-situation">
+      <h3 id="quiet-sky">A sky that fits the ring.</h3>
+      <p>
+        Three aircraft inside four miles. To scale they sit on the large ring;
+        with <span class="mono">ALL</span> the ring is smaller, and nothing
+        else changes.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar.png", alt: "The radar page to scale: three aircraft inside the four-mile ring, each with its one-minute leader line" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+        <figure class="shot plot-all">
+          <%= screen_image_tag "radar-all.png", alt: "The radar page with PLOT ALL: the same three aircraft inside a smaller ring, and nothing on the band around it" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="past-the-ring">Traffic past the ring.</h3>
+      <p>
+        One aircraft closing from five miles ahead, a gaggle of three eight
+        miles off the right of the nose, one eleven miles to the left. To scale,
+        only the one ahead reaches the glass. With <span class="mono">ALL</span>,
+        each stands on the band, the gaggle is one mark counted 3, and the
+        closing one&rsquo;s minute is already inside the ring.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "The radar page to scale: the aircraft in the ring, and one more at the very top of the glass; the gaggle and the aircraft to the left are not drawn" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+        <figure class="shot plot-all">
+          <%= screen_image_tag "far-all.png", alt: "The radar page with PLOT ALL: on the band, an aircraft ahead with its leader entering the ring, one mark counted 3 to the upper right, and one aircraft to the left" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="astern">Traffic astern.</h3>
+      <p>
+        Three aircraft six to eight miles behind, and one inside the ring. To
+        scale, the three are off the glass. With <span class="mono">ALL</span>
+        they are one mark counted 3, stepped aside from the range label rather
+        than under it.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "The radar page to scale: one aircraft in the ring behind and to the left, nothing else" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+        <figure class="shot plot-all">
+          <%= screen_image_tag "astern-all.png", alt: "The radar page with PLOT ALL: the same aircraft in the ring, and beside the range label at the bottom one mark counted 3 for the aircraft astern" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <p><%= link_to_page "radar", label: "How the band reads", anchor: "every-aircraft", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <h2 class="kicker" id="in-flight">In flight</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "The radar page: three aircraft drawn as diamonds, one above, one below and one level and climbing, each with its one-minute leader line, own ship's dashed run with a ball at each of the next two minutes, the four-mile ring, the flight time and the count of aircraft heard" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "The radar page during a traffic advisory: a 90-degree sector leaning on the bearing of the traffic, turned black, with the filled diamond of the converging aircraft and its leader line reversed out of it" %>
+      <figcaption>Traffic advisory</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "The nearby page: own callsign S-BLIP with its address beside it and the count of everything heard on the top line, then five aircraft listed nearest first, each with its source letter, its callsign or address, its ground distance and its relative altitude" %>
+      <figcaption>Nearby</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "The six-pack page: ground speed, artificial horizon with the state of charge above it, altimeter, turn coordinator with its ball, track card and vertical speed" %>
+      <figcaption>Six-pack</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "The g-meter page: the normal and lateral load as a marker in a field with the box of this flight's peaks around it, a fore-and-aft strip beside it, and three rows of figures in tenths of a g" %>
+      <figcaption>G-meter</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "radar", label: "Radar and traffic", anchor: "heading-up", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", label: "Instruments", anchor: "six-pack", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="settings">Settings</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "The radar menu: aircraft type, callsign, units, range, plot, alarm and volume, with the hint PAD MOVES - BUTTON CHANGES at the foot" %>
+      <figcaption>The radar menu</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field: S-BLIP at triple height, a bar under the third character, PAD ROLLS over BUTTON NEXT, and BLANK THE FIRST TO CLEAR along the foot" %>
+      <figcaption>The callsign field</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "The callsign field with the first character rolled to a blank, the bar under it, and the hint now reading PAD ROLLS over BUTTON CLEARS" %>
+      <figcaption>The first character blanked</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "The radar menu after the press, the CALLSIGN row focused and reading NONE" %>
+      <figcaption>One press later</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Controls and menus", anchor: "two-contacts", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="diagnostics">Diagnostics</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "The nearby menu: status, satellites, radio log, raw, capture and self test, the six pages opened by name" %>
+      <figcaption>The list&rsquo;s menu</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "The status page: fix and satellites, position, track, traffic count, transmit state, the sensor hub, pressure, the two altitudes, speed, vertical speed, and the cell in volts and percent" %>
+      <figcaption>Status</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "The satellites page: one bar per satellite grouped by constellation, against a dotted line at 40 dB-Hz" %>
+      <figcaption>Satellites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "The radio log: under the fix, the PPS state and the noise floor, one row per burst heard or sent, newest first, with its time, direction, channel, what it carried, address and level" %>
+      <figcaption>Radio log</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "The self test page: one row per part of the board, each with the part that answered and its verdict" %>
+      <figcaption>Self test</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "capture.png", alt: "The capture page with nothing recording: the state off, the two captures to pick from, FULL for every subject and POWER RUN for power and duty, then the price of the one picked, the sectors of flash it would take, the stored flights it would evict and the hours of recording it would keep, and PAD PICKS, PRESS TWICE TO ARM along the foot" %>
+      <figcaption>Capture</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "The pages opened by name", anchor: "diagnostics", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="on-the-ground">On the ground, and off</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring carries the words NO FIX and, under them, how far the receiver has got" %>
+      <figcaption>Waiting for the sky</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery.png", alt: "The radar page in flight on a low cell: BAT and the percentage in the ring, where the state word would stand" %>
+      <figcaption>Low battery</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery-taxi.png", alt: "The radar page while taxiing on a low cell: BAT and the percentage in the ring, and TAXI under it" %>
+      <figcaption>Low battery, taxiing</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "The parked screen of a device that has been switched off: the skyBlip wordmark, held by the e-paper with no power" %>
+      <figcaption>Off</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that switched itself off on an empty cell: the skyBlip wordmark with the words FLAT BATTERY under it" %>
+      <figcaption>Out of battery</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "power", label: "Power and battery", anchor: "waiting", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="asked">Asked on the glass</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "The authorisation prompt: AUTHORISE, SETTINGS, apply the settings the phone sent, PRESS TWICE TO ALLOW over ONE PRESS REFUSES, refused after 30 s" %>
+      <figcaption>A settings write, asked on the glass</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, then a drive named TECHOBOOT on USB, a .uf2 dropped there is new firmware, RST goes back to skyBlip, and nothing transmits meanwhile" %>
+      <figcaption>Handed to the USB bootloader</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "phone", label: "Phone and firmware", anchor: "asked", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Technical notes</h2>
+
+  <h3 id="screen">Why the screen behaves the way it does.</h3>
+  <p class="lede">
+    The panel is a 1.54&Prime; e-paper, 200&times;200 pixels. It keeps its last
+    image with the rails down and draws nothing to keep it there, which is what
+    makes the parked wordmark an indicator and a blank screen the right thing to
+    store.
+  </p>
+  <p class="lede">
+    In flight, every frame is a partial refresh. The full waveform, the one that
+    flashes the panel black and white for a second and a half, is spent twice in
+    a session: at power on, and at power off. A page change goes through a
+    single black wipe instead, and the alarm&rsquo;s one flash a second is the
+    panel&rsquo;s own floor rather than a rate we picked. Faster is possible,
+    and a large black region toggled that hard marks the glass for good.
+  </p>
+
+  <ul class="points">
+    <li>Partial refresh on every frame</li>
+    <li>The full waveform twice a session</li>
+    <li>A page change is one black wipe, a third of a second</li>
+    <li>A frame identical to the last is never sent</li>
+    <li>Left alone above 50&nbsp;&deg;C, its maker&rsquo;s limit</li>
+    <li>Parked white at the cutoff, never mid-picture</li>
+  </ul>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "radar", class: "cta cta--next" %>
+  </p>
+</section>
