@@ -275,7 +275,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.alt_mm = own.alt_mm;
             snap.speed_mm_s = own.speed_mm_s;
             snap.track_cdeg = own.track_cdeg;
-            snap.climb_mm_s = context_.state.indicated.climb_mm_s;
+            snap.climb_mm_s = own.climb_mm_s;
             snap.utc = own.utc;
             snap.n_targets = context_.state.traffic.count();
             snap.imu_stage = context_.state.imu.stage;
@@ -288,19 +288,17 @@ void ScreenService::render(uint32_t now_ms) {
             snap.imu_sensor_error = context_.state.imu.sensor_error;
             snap.imu_errored_sensor = context_.state.imu.errored_sensor;
             snap.slip_valid = context_.state.slip.valid;
-            snap.slip_mg = context_.state.slip.lateral_mg;
+            snap.slip_mg = context_.state.slip.measured_mg;
             snap.baro_valid = context_.state.baro.active;
             snap.battery_valid = context_.state.power.battery.valid;
-            snap.battery_mv = context_.state.power.battery.millivolts;
+            snap.battery_mv = context_.state.power.battery.sample_mv;
             snap.battery_percent = context_.state.power.battery.percent;
             snap.charging = context_.state.power.battery.charging;
             snap.charge = context_.state.power.charge;
             snap.battery_low = battery_low();
             snap.pressure_mpa = context_.state.baro.pressure_mpa;
-            if (context_.state.baro.active) {
-                const uint32_t pa = div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000);
-                snap.alt_std_m = div_round(flight::pressure_to_alt_cm(pa), 100);
-            }
+            if (context_.state.baro.active)
+                snap.alt_std_mm = flight::pressure_to_alt_mm(context_.state.baro.pressure_mpa);
             draw_status(fb_, snap);
             break;
         }

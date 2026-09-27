@@ -23,8 +23,8 @@ struct StatusSnapshot {
     uint8_t fix_mode{0};
     int32_t lat_1e7{0};
     int32_t lon_1e7{0};
-    int32_t alt_mm{0};     // GNSS, WGS-84 ellipsoid
-    int32_t alt_std_m{0};  // pressure altitude, 1013.25 hPa datum (QNE)
+    int32_t alt_mm{0};      // GNSS, WGS-84 ellipsoid
+    int32_t alt_std_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
     uint32_t pressure_mpa{0};
     int32_t speed_mm_s{0};  // as measured, not as transmitted
     int32_t track_cdeg{0};  // hundredths of a degree

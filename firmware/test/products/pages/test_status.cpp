@@ -29,7 +29,7 @@ TEST_CASE("status: every value reads in the aeronautical unit first, then SI") {
     StatusSnapshot b = s;
     b.baro_valid = true;
     b.pressure_mpa = 84556000;
-    b.alt_std_m = 1500;
+    b.alt_std_mm = 1500000;
     draw_status(with_baro, b);
     CHECK(with_baro.count_black() > both.count_black());
 }
@@ -44,7 +44,29 @@ TEST_CASE("status: the barometer row reads what the sensor resolves") {
 
     CHECK(reads_in(fb, "1013.253", 0, 85, 200, 105));
     CHECK(reads_in(fb, "-243", 0, 149, 200, 169));
-    CHECK(reads_in(fb, "-1.23", 0, 149, 200, 169));
+    CHECK(reads_in(fb, "-1.234", 0, 149, 200, 169));
+}
+
+TEST_CASE("status: every reading is printed to the resolution it is held in") {
+    Glass fb;
+    StatusSnapshot s;
+    s.fix_valid = true;
+    s.baro_valid = true;
+    s.track_cdeg = 9025;
+    s.alt_mm = 1234500;  // GGA carries tenths of a metre
+    s.alt_std_mm = 1500123;
+    s.speed_mm_s = 12345;  // 44.442 km/h
+    s.climb_mm_s = 1234;
+    s.battery_valid = true;
+    s.battery_mv = 4123;
+    draw_status(fb, s);
+
+    CHECK(reads_in(fb, "090.25", 0, 55, 100, 70));
+    CHECK(reads_in(fb, "1234.5", 0, 101, 200, 121));
+    CHECK(reads_in(fb, "1500.12", 0, 117, 200, 137));
+    CHECK(reads_in(fb, "44.44", 0, 133, 200, 153));
+    CHECK(reads_in(fb, "+1.234", 0, 149, 200, 169));
+    CHECK(reads_in(fb, "4.123", 0, 165, 200, 185));
 }
 
 TEST_CASE("status: the IMU field reads the hub's own bring-up word and the ball it feeds") {

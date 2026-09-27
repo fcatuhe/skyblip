@@ -86,6 +86,14 @@ TEST_CASE("gauge: one transmit burst does not move the gauge") {
     CHECK(gauge.state().percent < before);
 }
 
+TEST_CASE("gauge: the reading the median threw out is still the reading the bench sees") {
+    Gauge gauge;
+    settle(gauge, 3900);
+    gauge.apply(sample(3700));
+    CHECK(gauge.state().millivolts == 3900);
+    CHECK(gauge.state().sample_mv == 3700);
+}
+
 TEST_CASE("gauge: the percentage only moves the way the current flows") {
     Gauge gauge;
     settle(gauge, 3800);

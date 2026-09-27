@@ -103,6 +103,7 @@ void Gauge::apply(const events::BatterySample& sample) {
         state_.percent = std::min(percent, state_.percent);
 
     state_.millivolts = millivolts;
+    state_.sample_mv = sample.millivolts;
     state_.external_power = sample.external_power;
     state_.charging = charging;
     state_.valid = true;

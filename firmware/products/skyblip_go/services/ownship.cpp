@@ -283,6 +283,7 @@ void OwnshipService::apply_accel(const events::AccelSample& sample) {
 void OwnshipService::publish_inertial(uint32_t now_ms) {
     context_.state.slip.valid = ball_.valid(now_ms);
     context_.state.slip.lateral_mg = ball_.mg();
+    context_.state.slip.measured_mg = ball_.measured_mg();
 
     context_.state.gload.valid = gmeter_.valid(now_ms);
     context_.state.gload.now = gmeter_.now();

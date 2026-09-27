@@ -47,7 +47,7 @@ One accelerometer, two instruments: the ball and the g-meter. What they share is
 
 `kIndicatedStaleMs` is two seconds, and it is how long any reading off the hub stands after its last sample. The hub is drained at 12.5 Hz, so two seconds is 25 missed samples: a part that has stopped answering takes its instrument off the glass rather than freezing it somewhere plausible.
 
-`kIndicatedSamples` is the length of the first-order filter the glass is fed through, eight samples, about two thirds of a second. It is a display figure and nothing else reads it. What ADS-L reports is the measurement, encoded by `core/units` and never damped: a receiver two kilometres away needs what the aircraft is doing, where a pilot a foot from the glass needs a needle that does not chatter. The two are the same number smoothed differently, and nothing in this file may be applied on the way to `core/protocol`.
+`kIndicatedSamples` is the length of the first-order filter the glass is fed through, eight samples, about two thirds of a second. It is a display figure and nothing else reads it: `status` prints `SlipBall::measured_mg`, the last sample as the hub gave it. What ADS-L reports is the measurement, encoded by `core/units` and never damped: a receiver two kilometres away needs what the aircraft is doing, where a pilot a foot from the glass needs a needle that does not chatter. The two are the same number smoothed differently, and nothing in this file may be applied on the way to `core/protocol`.
 
 ## slip
 
@@ -81,7 +81,7 @@ The climb and the turn are measured once a second, each a difference over the se
 
 A climb that stops being valid resets the damping, so the next one is shown as measured rather than blended with a climb from before the outage. A gap without a reset is handled by the arithmetic: a reading ten seconds after the last one moves the needle five sixths of the way.
 
-What is damped is the glass and only the glass: the six-pack, `status` and own-ship's leader on the radar read `state.indicated`. ADS-L G.1.9, the extrapolation of the position we transmit, `$LK8EX1` and the logs read `state.own`, which is the measurement, for the reason `force` gives: a receiver two kilometres away needs what the aircraft is doing now, and a tablet's vario damps what it is given by its own setting, so a second filter here would be a lag stacked on a lag.
+What is damped is the glass and only the glass: the six-pack and own-ship's leader on the radar read `state.indicated`. ADS-L G.1.9, the extrapolation of the position we transmit, `$LK8EX1`, the logs and the `status` page read `state.own`, which is the measurement, for the reason `force` gives: a receiver two kilometres away needs what the aircraft is doing now, and a tablet's vario damps what it is given by its own setting, so a second filter here would be a lag stacked on a lag.
 
 ## gload
 

@@ -45,7 +45,7 @@ constexpr uint8_t kImuMetaInitialised = 16;
 
 int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSec(speed_mm_s)).v; }
 
-int32_t kilometres_per_hour(int32_t speed_mm_s) { return to_kmh(MillimetresPerSec(speed_mm_s)).v; }
+int32_t centi_kilometres_per_hour(int32_t speed_mm_s) { return div_round(speed_mm_s * 36, 100); }
 
 // Draw "LABEL  value" on one row.
 void row(ui::Canvas& fb, int y, const char* label, const char* value) {
@@ -166,7 +166,7 @@ void battery_row(ui::Canvas& fb, int y, const StatusSnapshot& s) {
 
     // Centivolts, so the two decimals a cell is judged on fit the value field.
     char volts[8];
-    int n = fmt_uint(volts, (s.battery_mv + 5u) / 10u, 1, 2);
+    int n = fmt_uint(volts, s.battery_mv, 1, 3);
     volts[n] = 0;
 
     char percent[8];
@@ -247,7 +247,7 @@ void draw_status(ui::Canvas& fb, const StatusSnapshot& s) {
     }
     y += kLineH;
 
-    n = fmt_uint(buf, to_degrees(CentiDegrees(s.track_cdeg)).v, 3);
+    n = fmt_uint(buf, static_cast<uint32_t>(s.track_cdeg), 5, 2);
     buf[n] = 0;
     text_row(fb, y, "TRK", buf, " TRUE");
     imu_field(fb, y, s);
@@ -268,21 +268,21 @@ void draw_status(ui::Canvas& fb, const StatusSnapshot& s) {
         row(fb, y, "BARO", "no sensor");
     y += kLineH;
 
-    const int32_t alt_m = to_metres(Millimetres(s.alt_mm)).v;
-    dual_row(fb, y, "GNSS", {to_feet(Millimetres(s.alt_mm)).v, 0, " ft"}, {alt_m, 0, " m"}, true);
+    dual_row(fb, y, "GNSS", {to_feet(Millimetres(s.alt_mm)).v, 0, " ft"},
+             {div_round(s.alt_mm, 100), 1, " m"}, true);
     y += kLineH;
 
     if (s.baro_valid)
-        dual_row(fb, y, "STD", {to_feet(Metres(s.alt_std_m)).v, 0, " ft"}, {s.alt_std_m, 0, " m"},
-                 true);
+        dual_row(fb, y, "STD", {to_feet(Millimetres(s.alt_std_mm)).v, 0, " ft"},
+                 {div_round(s.alt_std_mm, 10), 2, " m"}, true);
     y += kLineH;
 
     dual_row(fb, y, "SPD", {knots(s.speed_mm_s), 0, " kt"},
-             {kilometres_per_hour(s.speed_mm_s), 0, " km/h"}, true);
+             {centi_kilometres_per_hour(s.speed_mm_s), 2, " km/h"}, true);
     y += kLineH;
 
     dual_row(fb, y, "VS", {to_feet_per_minute(MillimetresPerSec(s.climb_mm_s)).v, 0, " fpm"},
-             {div_round(s.climb_mm_s, 10), 2, " m/s"}, false);
+             {s.climb_mm_s, 3, " m/s"}, false);
     y += kLineH;
 
     battery_row(fb, y, s);

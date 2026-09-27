@@ -14,6 +14,7 @@ bool slip_from_specific_force(const SpecificForce& force, int16_t& out_mg) {
 void SlipBall::update(const SpecificForce& force, uint32_t at_ms) {
     int16_t sample_mg = 0;
     if (!slip_from_specific_force(force, sample_mg)) return;
+    measured_mg_ = sample_mg;
 
     const int32_t sampled = sample_mg * kIndicatedSamples;
     damped_acc_ = seen_ ? damped_acc_ + (sampled - damped_acc_) / kIndicatedSamples : sampled;

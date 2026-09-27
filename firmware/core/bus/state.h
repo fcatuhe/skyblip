@@ -91,6 +91,7 @@ struct FormationState {
 
 struct SlipState {
     int16_t lateral_mg{0};
+    int16_t measured_mg{0};
     bool valid{false};
 };
 

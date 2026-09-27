@@ -16,9 +16,11 @@ class SlipBall {
     void update(const SpecificForce& force, uint32_t at_ms);
     bool valid(uint32_t now_ms) const;
     int16_t mg() const;
+    int16_t measured_mg() const { return measured_mg_; }
 
    private:
     int32_t damped_acc_{0};
+    int16_t measured_mg_{0};
     uint32_t last_ms_{0};
     bool seen_{false};
 };

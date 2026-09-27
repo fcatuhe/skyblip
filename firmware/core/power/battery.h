@@ -48,6 +48,7 @@ uint8_t percent_from_mv(uint16_t millivolts, bool charging);
 
 struct BatteryState {
     uint16_t millivolts{0};
+    uint16_t sample_mv{0};
     uint8_t percent{0};
     bool external_power{false};
     bool charging{false};

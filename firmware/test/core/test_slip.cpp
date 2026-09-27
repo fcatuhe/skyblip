@@ -60,6 +60,14 @@ TEST_CASE("slip: the ball is damped, so turbulence does not throw it across the 
     CHECK(ball.mg() <= flight::kSlipFullScaleMg);
 }
 
+TEST_CASE("slip: the ball is damped, the sample it was damped from is not") {
+    flight::SlipBall ball;
+    for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * 80u);
+    ball.update(force_of(-200), 3300);
+    CHECK(ball.mg() < 100);
+    CHECK(ball.measured_mg() == slip_of(-200));
+}
+
 TEST_CASE("slip: a sensor that stops answering takes the ball with it") {
     flight::SlipBall ball;
     CHECK_FALSE(ball.valid(0));
