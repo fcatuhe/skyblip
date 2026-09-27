@@ -139,6 +139,7 @@ class Uart : public io::Uart, public io::UartRate {
         struct uart_config config{};
         if (uart_config_get(uart_, &config) != 0) return false;
         if (config.baudrate == baud) return true;
+        drain(config.baudrate);
         config.baudrate = baud;
         return uart_configure(uart_, &config) == 0;
     }
@@ -152,6 +153,14 @@ class Uart : public io::Uart, public io::UartRate {
     size_t available() override { return ring_buf_size_get(&rx_); }
 
    private:
+    // INFO: fc 27sep26 uarte_nrfx_poll_out returns once a byte's DMA starts, not once it has left
+    static constexpr uint32_t kBytesOnTheWire = 2;
+    static constexpr uint32_t kBitsPerByte = 10;  // 8N1
+
+    static void drain(uint32_t baud) {
+        k_busy_wait(kBytesOnTheWire * kBitsPerByte * 1000000u / baud);
+    }
+
     static void on_rx_ready(const struct device* dev, void* user_data) {
         Uart* self = static_cast<Uart*>(user_data);
         while (uart_irq_update(dev) == 1 && uart_irq_rx_ready(dev) == 1) {
