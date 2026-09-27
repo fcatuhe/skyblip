@@ -16,8 +16,9 @@ void SlipBall::update(const SpecificForce& force, uint32_t at_ms) {
     if (!slip_from_specific_force(force, sample_mg)) return;
     measured_mg_ = sample_mg;
 
-    const int32_t sampled = sample_mg * kIndicatedSamples;
-    damped_acc_ = seen_ ? damped_acc_ + (sampled - damped_acc_) / kIndicatedSamples : sampled;
+    const int32_t sampled = sample_mg * kIndicatedDampingSamples;
+    damped_acc_ =
+        seen_ ? damped_acc_ + (sampled - damped_acc_) / kIndicatedDampingSamples : sampled;
     last_ms_ = at_ms;
     seen_ = true;
 }
@@ -27,7 +28,7 @@ bool SlipBall::valid(uint32_t now_ms) const {
 }
 
 int16_t SlipBall::mg() const {
-    return static_cast<int16_t>(div_round(damped_acc_, kIndicatedSamples));
+    return static_cast<int16_t>(div_round(damped_acc_, kIndicatedDampingSamples));
 }
 
 }  // namespace skyblip::flight

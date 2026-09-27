@@ -106,7 +106,12 @@ class Constant:
 
     @property
     def mechanism(self):
-        words = self.subject_words + [self.unit]
+        return self._mechanism_in(self.subject_words) or self._mechanism_in(
+            self.subject_words + [self.unit]
+        )
+
+    @staticmethod
+    def _mechanism_in(words):
         pairs = [a + b for a, b in zip(words, words[1:])]
         for word in reversed(pairs + words):
             if word in MECHANISMS:

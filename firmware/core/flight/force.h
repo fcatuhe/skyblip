@@ -15,7 +15,7 @@ constexpr int16_t kLevelFlightMg = 1000;
 constexpr int32_t kResultantFloorMg = 200;
 
 constexpr uint32_t kIndicatedStaleMs = 2000;
-constexpr int32_t kIndicatedSamples = 8;
+constexpr int32_t kIndicatedDampingSamples = 8;
 
 int32_t resultant_mg(const SpecificForce& force);
 

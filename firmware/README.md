@@ -53,7 +53,7 @@ The mechanism is the half people get wrong, because four different things all re
 | `Floor`, `Ceiling` | a lower or upper bound, in the unit named | nothing | `kPresentFloorMs`, `kImplausibleFloorMv` |
 | `Period` | fixed cadence | nothing | `kLogRecordPeriodMs` |
 | `Window` | the span a measurement or a budget is taken over | nothing | `kTurnWindowMs` |
-| `Damping` | the time constant of the first-order lag a reading is shown through: a step shows 63% of itself after it | nothing | `kIndicatedRateDampingMs` |
+| `Damping` | the time constant of the first-order lag a reading is shown through: a step shows 63% of itself after it | nothing | `kIndicatedRateDampingMs`, `kIndicatedDampingSamples` |
 | `MaxAge` | past this an input stops counting as evidence | a fresh report | `kAlertMaxAgeMs` |
 | `Stale` | past this a reading leaves the glass | a fresh reading | `kIndicatedStaleMs` |
 | `Forget` | past this the record itself is dropped | a fresh report | `kTargetForgetReports`, `kCallsignForgetS` |
