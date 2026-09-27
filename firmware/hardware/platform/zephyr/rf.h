@@ -56,10 +56,15 @@ class Rf : public ports::Rf {
         Status verdict = Status::Ok;
         k_sched_lock();
         if (joins_flying_dwell(plan)) {
+            if (!flying_bursts_.add(burst_of(plan))) verdict = Status::WouldBlock;
         } else if (flying_ && plan.end_us <= flying_end_us_) {
             verdict = Status::WouldBlock;
+        } else if (queued_ && same_dwell(plan, plan_)) {
+            if (plan.tx != nullptr && !queued_bursts_.add(burst_of(plan)))
+                verdict = Status::WouldBlock;
         } else {
             plan_ = plan;
+            queued_bursts_ = ports::RfBursts::of(plan);
             plan_armed_at_us_ = clock_.micros();
             queued_ = true;
             k_sem_give(&armed_);
@@ -109,13 +114,32 @@ class Rf : public ports::Rf {
 
     // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
     bool joins_flying_dwell(const ports::RfPlan& plan) {
-        if (!flying_ || plan.tx == nullptr || burst_ != nullptr) return false;
+        if (!flying_ || plan.tx == nullptr) return false;
         if (plan.mode != flying_mode_ || plan.freq_hz != flying_freq_) return false;
-        if (plan.tx_at_us < clock_.micros() || plan.tx_at_us >= flying_end_us_) return false;
-        burst_at_us_ = plan.tx_at_us;
-        burst_len_ = plan.tx_len;
-        burst_ = plan.tx;
-        return true;
+        return plan.tx_at_us >= clock_.micros() && plan.tx_at_us < flying_end_us_;
+    }
+
+    static ports::RfBurst burst_of(const ports::RfPlan& plan) {
+        return ports::RfBurst{plan.tx, plan.tx_len, plan.tx_at_us};
+    }
+
+    static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
+        return one.mode == other.mode && one.freq_hz == other.freq_hz && one.end_us == other.end_us;
+    }
+
+    ports::RfBursts flying_bursts() {
+        k_sched_lock();
+        const ports::RfBursts bursts = flying_bursts_;
+        k_sched_unlock();
+        return bursts;
+    }
+
+    void miss_unfinished(const ports::RfBursts& bursts, uint8_t done, uint8_t keyed) {
+        for (uint8_t i = done; i < bursts.count; i++) {
+            tx_at_us_ = bursts.burst[i].at_us;
+            if (i >= keyed) keyed_at_us_ = 0;
+            emit(events::RfEventType::Missed, clock_.micros());
+        }
     }
 
     void run() {
@@ -134,7 +158,7 @@ class Rf : public ports::Rf {
             uint64_t armed_at_us = 0;
             if (!take(plan, armed_at_us)) continue;
             if (clock_.micros() >= plan.end_us) {
-                if (plan.tx != nullptr) emit(events::RfEventType::Missed, clock_.micros());
+                miss_unfinished(flying_bursts(), 0, 0);
                 flying_ = false;
                 continue;
             }
@@ -146,8 +170,8 @@ class Rf : public ports::Rf {
             }
             if (start(plan, armed_at_us))
                 dwell(plan);
-            else if (plan.tx != nullptr)
-                emit(events::RfEventType::Missed, clock_.micros());
+            else
+                miss_unfinished(flying_bursts(), 0, 0);
             flying_ = false;
             health();
         }
@@ -162,7 +186,7 @@ class Rf : public ports::Rf {
             plan = plan_;
             armed_at_us = plan_armed_at_us_;
             queued_ = false;
-            burst_ = nullptr;
+            flying_bursts_ = queued_bursts_;
             flying_mode_ = plan.mode;
             flying_freq_ = plan.freq_hz;
             flying_end_us_ = plan.end_us;
@@ -269,37 +293,36 @@ class Rf : public ports::Rf {
     }
 
     void dwell(const ports::RfPlan& plan) {
-        const uint8_t* tx = plan.tx;
-        uint8_t tx_len = plan.tx_len;
-        uint64_t tx_at_us = plan.tx_at_us;
+        ports::RfBursts bursts{};
+        uint8_t keyed = 0;
+        uint8_t done = 0;
         bool completed = false;
-        bool transmitted = false;
         bool fault = false;
         keyed_at_us_ = 0;
         irq_at_us_ = 0;
         while (!abort_ && clock_.micros() < plan.end_us) {
-            if (tx == nullptr && burst_ != nullptr) {
-                k_sched_lock();
-                tx = const_cast<const uint8_t*>(burst_);
-                tx_len = burst_len_;
-                tx_at_us = burst_at_us_;
-                k_sched_unlock();
-            }
-            if (tx != nullptr && !transmitted && clock_.micros() >= tx_at_us) {
-                transmitted = true;
-                (void)radio_.transmit(tx, tx_len);
+            bursts = flying_bursts();
+            if (keyed == done && keyed < bursts.count &&
+                clock_.micros() >= bursts.burst[keyed].at_us) {
+                tx_at_us_ = bursts.burst[keyed].at_us;
+                (void)radio_.transmit(bursts.burst[keyed].chips, bursts.burst[keyed].len);
                 keyed_at_us_ = clock_.micros();
+                keyed++;
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.micros();
-            if (collect(completed, fault)) continue;
+            completed = false;
+            if (collect(completed, fault)) {
+                if (completed) done++;
+                continue;
+            }
             if (fault) return;
             k_usleep(kSpinUs);
         }
-        while (collect(completed, fault)) {
-        }
+        for (completed = false; collect(completed, fault); completed = false)
+            if (completed) done++;
         if (fault) return;
         sample_carrier();
-        if (tx != nullptr && !completed) emit(events::RfEventType::Missed, clock_.micros());
+        miss_unfinished(flying_bursts(), done, keyed);
     }
 
     // The frame is already in the event that will carry it. An O-band uplink
@@ -327,6 +350,7 @@ class Rf : public ports::Rf {
         e.rssi_valid = ev.rssi_valid;
         e.at_us = at_us;
         e.keyed_at_us = keyed_at_us_;
+        e.tx_at_us = tx_at_us_;
         out_.push(e);
     }
 
@@ -347,14 +371,14 @@ class Rf : public ports::Rf {
     struct k_thread thread_{};
     k_tid_t tid_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackSize);
-    const uint8_t* volatile burst_{nullptr};
-    uint64_t burst_at_us_{0};
+    ports::RfBursts flying_bursts_{};
+    ports::RfBursts queued_bursts_{};
     uint64_t keyed_at_us_{0};
+    uint64_t tx_at_us_{0};
     uint64_t irq_at_us_{0};
     uint64_t flying_end_us_{0};
     uint32_t flying_freq_{0};
     ports::RfMode flying_mode_{ports::RfMode::Idle};
-    uint8_t burst_len_{0};
     volatile bool flying_{false};
     bool queued_{false};
     volatile bool abort_{false};

@@ -27,6 +27,8 @@ struct RfEvent {
     bool rssi_valid;
     uint64_t at_us;
     uint64_t keyed_at_us;
+    // INFO: fc 27sep26 the instant the burst was armed for, which names it: a dwell can carry two
+    uint64_t tx_at_us;
     uint32_t freq_hz;
     std::array<uint8_t, kRfEventBytes> data;
 };

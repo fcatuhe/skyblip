@@ -29,12 +29,10 @@ namespace skyblip::bus {
 struct RfState {
     timing::SlotPlan plan{};
     timing::DwellPhase dwell{};
-    // The bench accumulator G6 reads out: boards/ is the one writer of
-    // the PPS half, products/skyblip_go/services/radio.cpp of the dwell half.
+    // INFO: fc 27sep26 G6: boards/ writes the PPS half, services/traffic.cpp the dwell half
     timing::SlotTimingStats timing_stats{};
-    uint64_t tx_deadline_us{0};
-    // INFO: fc 20sep26 which payload the armed burst carries, for the row the tape writes
-    bool tx_callsign{false};
+    // INFO: fc 27sep26 names the callsign burst among a dwell's two, for the row the tape writes
+    uint64_t callsign_at_us{0};
     uint32_t duty_permille{0};
     uint16_t last_tx_keyed_us{0};
     uint16_t last_tx_span_us{0};
@@ -194,11 +192,6 @@ struct State {
         uint32_t uplink_frames{0};
         uint32_t uplink_bad{0};
         uint32_t uplink_targets{0};
-        // The instant the executor actually reported completion for, published by
-        // whoever already drains events::RfEvent (TrafficService) so the policy
-        // layer that owns the deadline (RadioService) can measure against it
-        // without a second reader of the bus.
-        uint64_t last_tx_done_at_us{0};
     } air{};
 
     bool panel_presented{false};

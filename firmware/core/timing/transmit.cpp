@@ -45,11 +45,6 @@ int Transmitter::instant_between(int first, int last, uint32_t utc) const {
 
 uint32_t Transmitter::ground_second() const { return mix(addr_) % flight::kGroundReportPeriodS; }
 
-uint32_t Transmitter::callsign_second() const {
-    const uint32_t ground = ground_second();
-    return ground % 2 == 0 ? (ground + 2) % kCallsignPeriodS : ground - 1;
-}
-
 bool Transmitter::on_schedule(uint32_t utc, bool airborne) const {
     return utc % period_s(airborne) == (airborne ? 0u : ground_second());
 }
@@ -59,7 +54,7 @@ bool Transmitter::spoke_in(uint32_t utc) const { return ever_sent_ && utc == las
 bool Transmitter::named_in(uint32_t utc) const { return ever_named_ && utc == last_callsign_utc_; }
 
 bool Transmitter::on_callsign_schedule(uint32_t utc) const {
-    return utc % kCallsignPeriodS == callsign_second();
+    return utc % kCallsignPeriodS == ground_second();
 }
 
 int Transmitter::last_callsign_instant() {
@@ -68,7 +63,18 @@ int Transmitter::last_callsign_instant() {
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms,
                                           bool airborne, int32_t fix_lag_ms) const {
+    const Attempt position = attempt(plan, utc, now_ms, airborne, fix_lag_ms, Payload::Position);
+    if (position.go || position.over_budget) return position;
+    const Attempt callsign = attempt(plan, utc, now_ms, airborne, fix_lag_ms, Payload::Callsign);
+    if (callsign.go || callsign.over_budget) return callsign;
+    return Attempt{};
+}
+
+Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms,
+                                          bool airborne, int32_t fix_lag_ms,
+                                          Payload payload) const {
     Attempt a{};
+    a.payload = payload;
     if (!plan.tx_allowed) return a;
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
 
@@ -76,7 +82,7 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc, ui
                               on_schedule(utc, airborne) && dwell_slot == slot_in(utc, airborne);
     const bool callsign_due =
         !named_in(utc) && on_callsign_schedule(utc) && dwell_slot == kCallsignSlot;
-    if (!position_due && !callsign_due) return a;
+    if (!(payload == Payload::Position ? position_due : callsign_due)) return a;
 
     if (!air_.may_spend(now_ms, kAirTimeMs)) {
         a.over_budget = true;
@@ -84,14 +90,12 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc, ui
     }
 
     a.go = true;
-    if (position_due) {
+    if (payload == Payload::Position) {
         const int slot = slot_in(utc, airborne);
-        a.payload = Payload::Position;
         a.at_ms = instant_in(slot, utc);
         a.freq_hz = Scheduler::slot_freq(slot);
         return a;
     }
-    a.payload = Payload::Callsign;
     a.at_ms = instant_between(kCallsignStart, last_callsign_instant(), utc);
     a.freq_hz = Scheduler::slot_freq(kCallsignSlot);
     return a;

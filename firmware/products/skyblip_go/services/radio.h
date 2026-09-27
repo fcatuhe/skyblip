@@ -38,18 +38,32 @@ class RadioService : public runtime::Service {
     static constexpr uint64_t kSecondUs = 1000000;
 
     enum class Role : uint8_t { Flying, Next };
+    using Payload = timing::Transmitter::Payload;
+    static constexpr int kPayloads = 2;
+    static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Callsign};
 
-    // One dwell as it was handed to the executor, and the burst it carries if any.
     struct Armed {
         ports::RfMode mode{ports::RfMode::Idle};
         uint32_t freq_hz{0};
         uint64_t from_us{0};
         uint64_t until_us{0};
-        bool tx{false};
-        timing::Transmitter::Payload payload{timing::Transmitter::Payload::Position};
         uint32_t utc{0};
-        uint64_t tx_at_us{0};
         uint8_t buffer{0};
+        bool carried[kPayloads]{};
+        uint64_t at_us[kPayloads]{};
+
+        bool carries(Payload p) const { return carried[static_cast<int>(p)]; }
+        bool carries_any() const { return carried[0] || carried[1]; }
+        void carry(Payload p, uint64_t tx_at_us) {
+            carried[static_cast<int>(p)] = true;
+            at_us[static_cast<int>(p)] = tx_at_us;
+        }
+        void drop(Payload p) { carried[static_cast<int>(p)] = false; }
+        Payload first() const {
+            if (!carries(Payload::Callsign)) return Payload::Position;
+            if (!carries(Payload::Position)) return Payload::Callsign;
+            return at_us[0] <= at_us[1] ? Payload::Position : Payload::Callsign;
+        }
     };
 
     struct Upcoming {
@@ -79,10 +93,18 @@ class RadioService : public runtime::Service {
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
     timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, uint32_t now_ms) const;
+    timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, uint32_t now_ms,
+                                         Payload payload) const;
+    bool owes(const Armed& dwell, const timing::SlotPlan& plan, int64_t origin_us,
+              uint32_t now_ms) const;
+    uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc,
+                   uint8_t* chips);
     bool transmit_due(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) const;
     void queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void promote();
     void arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms, Role role);
+    void refuse_dwell(const timing::SlotPlan& slot, const timing::Transmitter::Attempt& first,
+                      int phase, Role role, bool carried_tx, uint32_t now_ms);
     void record_dwell(const timing::SlotPlan& slot, const timing::Transmitter::Attempt& attempt,
                       int phase, bool armed, bool carries_tx, uint32_t now_ms);
     diag::Refusal refusal_of(const timing::SlotPlan& slot,
@@ -108,11 +130,9 @@ class RadioService : public runtime::Service {
     // nothing transmits from either. Adding the comparison would put work inside a
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
-    //
-    // Two chip buffers, one per dwell the executor holds: the burst queued on the
-    // next dwell is built while the flying one may still be waiting to key.
     protocol::AdslPacket outgoing_{};
-    uint8_t outgoing_chips_[2][protocol::kTxPayloadChipBytes]{};
+    // INFO: fc 27sep26 per dwell and payload: the queued bursts are built while the flying keys
+    uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed flying_{};
     Armed next_{};
     bool has_next_{false};

@@ -43,13 +43,10 @@ void TrafficService::tick(uint32_t now_ms) {
                 context_.state.air.tx_lost++;
                 log(event, stamp_for(event, now_ms), radio::Event::Lost);
                 break;
-            // The executor's own timestamp, carried alongside the counter it
-            // already bumps: RadioService owns the deadline this closes
-            // against, and reads it from here rather than a second drain of
-            // the same bus.
             case events::RfEventType::TxDone:
                 context_.state.air.tx_ok++;
-                context_.state.air.last_tx_done_at_us = event.at_us;
+                context_.state.rf.timing_stats.record_dwell_phase(
+                    static_cast<int64_t>(event.at_us) - static_cast<int64_t>(event.tx_at_us));
                 log(event, stamp_for(event, now_ms), radio::Event::Transmitted);
                 break;
         }
@@ -88,10 +85,10 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.rssi_valid = event.rssi_valid;
     if (event.type == events::RfEventType::RxDone) entry.len = event.len;
     if (event.type == events::RfEventType::TxDone || event.type == events::RfEventType::Missed)
-        entry.callsign = state.rf.tx_callsign;
-    if (outcome == radio::Event::Transmitted && state.rf.tx_deadline_us != 0) {
-        entry.tx_keyed_us = radio::tx_span_of(event.keyed_at_us, state.rf.tx_deadline_us);
-        entry.tx_span_us = radio::tx_span_of(event.at_us, state.rf.tx_deadline_us);
+        entry.callsign = event.tx_at_us != 0 && event.tx_at_us == state.rf.callsign_at_us;
+    if (outcome == radio::Event::Transmitted && event.tx_at_us != 0) {
+        entry.tx_keyed_us = radio::tx_span_of(event.keyed_at_us, event.tx_at_us);
+        entry.tx_span_us = radio::tx_span_of(event.at_us, event.tx_at_us);
         entry.tx_span_valid = true;
         context_.state.rf.last_tx_keyed_us = entry.tx_keyed_us;
         context_.state.rf.last_tx_span_us = entry.tx_span_us;

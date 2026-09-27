@@ -50,6 +50,41 @@ struct RfPlan {
     uint64_t tx_at_us{0};
 };
 
+struct RfBurst {
+    const uint8_t* chips{nullptr};
+    uint8_t len{0};
+    uint64_t at_us{0};
+};
+
+struct RfBursts {
+    static constexpr uint8_t kCapacity = 2;
+    RfBurst burst[kCapacity]{};
+    uint8_t count{0};
+
+    bool full() const { return count == kCapacity; }
+
+    bool holds(uint64_t at_us) const {
+        for (uint8_t i = 0; i < count; i++)
+            if (burst[i].at_us == at_us) return true;
+        return false;
+    }
+
+    bool add(const RfBurst& b) {
+        if (holds(b.at_us)) return true;
+        if (full()) return false;
+        uint8_t at = count++;
+        for (; at > 0 && burst[at - 1].at_us > b.at_us; at--) burst[at] = burst[at - 1];
+        burst[at] = b;
+        return true;
+    }
+
+    static RfBursts of(const RfPlan& plan) {
+        RfBursts bursts{};
+        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_len, plan.tx_at_us});
+        return bursts;
+    }
+};
+
 // INFO: fc 15sep26 a diagnostic the pilot reads, never a gate: core/timing/README.md
 struct RfCarrier {
     int8_t dbm{0};
@@ -86,12 +121,7 @@ class Rf {
     virtual ~Rf() = default;
 
     virtual Status begin() = 0;
-    // A plan armed while a dwell is flying joins it when it is that dwell's burst,
-    // and otherwise queues behind it, replacing whatever was queued. One that ends
-    // inside the flying dwell could never run, and is refused rather than queued
-    // over the next dwell. A queued dwell is switched into as soon as the one
-    // before it ends, never more than timing::kSwitchLeadMs ahead of its start.
-    // abort() cuts the flying dwell short and drops the queued one.
+    // INFO: fc 27sep26 the join, queue and refusal rules are core/timing/README.md's
     virtual Status arm(const RfPlan& plan) = 0;
     virtual void abort() = 0;
 

@@ -1,6 +1,7 @@
 #include "products/skyblip_go/services/radio.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "core/model/ownship.h"
 
@@ -55,7 +56,7 @@ void RadioService::publish_dwell(uint32_t now_ms) {
     dwell.at_ms = now_ms;
     dwell.phase_ms = phase_at(context_.roles.clock.micros());
     dwell.armed = flying_.mode != ports::RfMode::Idle;
-    dwell.burst_armed = flying_.tx;
+    dwell.burst_armed = flying_.carries_any();
     context_.state.rf.noise_dbm = noise_.dbm();
     context_.state.rf.duty_permille = duty_permille(now_ms);
 }
@@ -146,9 +147,6 @@ uint64_t RadioService::instant_us(const timing::Transmitter::Attempt& attempt, i
 void RadioService::promote() {
     flying_ = next_;
     has_next_ = false;
-    if (!flying_.tx) return;
-    context_.state.rf.tx_deadline_us = flying_.tx_at_us;
-    context_.state.rf.tx_callsign = flying_.payload == timing::Transmitter::Payload::Callsign;
 }
 
 // Two clocks meet here. The TimeStamp field counts quarter seconds from the top
@@ -205,9 +203,16 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
 // there
 bool RadioService::transmit_due(const timing::SlotPlan& plan, int64_t origin_us,
                                 uint32_t now_ms) const {
-    if (flying_.tx) return false;
-    const timing::Transmitter::Attempt a = attempt(plan, now_ms);
-    return a.go && instant_us(a, origin_us) > context_.roles.clock.micros();
+    return owes(flying_, plan, origin_us, now_ms);
+}
+
+bool RadioService::owes(const Armed& dwell, const timing::SlotPlan& plan, int64_t origin_us,
+                        uint32_t now_ms) const {
+    return std::any_of(std::begin(kEveryPayload), std::end(kEveryPayload), [&](Payload payload) {
+        if (dwell.carries(payload)) return false;
+        const timing::Transmitter::Attempt a = attempt(plan, now_ms, payload);
+        return a.go && instant_us(a, origin_us) > context_.roles.clock.micros();
+    });
 }
 
 // The next dwell is queued bare when its burst is not decided yet, and queued
@@ -215,12 +220,21 @@ bool RadioService::transmit_due(const timing::SlotPlan& plan, int64_t origin_us,
 void RadioService::queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) {
     if (flying_.mode == ports::RfMode::Idle) return;
     const Upcoming next = upcoming_after(plan, origin_us);
-    if (has_next_ && (next_.tx || !attempt(next.plan, now_ms).go)) return;
+    if (has_next_ && !owes(next_, next.plan, next.origin_us, now_ms)) return;
     arm_dwell(next.plan, next.origin_us, now_ms, Role::Next);
 }
 
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
                                                    uint32_t now_ms) const {
+    const timing::Transmitter::Attempt position = attempt(plan, now_ms, Payload::Position);
+    if (position.go || position.over_budget) return position;
+    const timing::Transmitter::Attempt callsign = attempt(plan, now_ms, Payload::Callsign);
+    if (callsign.go || callsign.over_budget) return callsign;
+    return timing::Transmitter::Attempt{};
+}
+
+timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan, uint32_t now_ms,
+                                                   Payload payload) const {
     const model::OwnState& own = context_.state.own;
     // F5: a cold receiver's first solutions walk, and the flight state derived
     // from them decides our transmit rate. Nothing goes on air until own-ship
@@ -229,11 +243,9 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
         return timing::Transmitter::Attempt{};
     const bool full_rate =
         !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_cat));
-    const timing::Transmitter::Attempt a =
-        transmitter_.attempt(plan, slot_utc(now_ms), now_ms, full_rate, fix_lag_ms());
-    if (a.payload == timing::Transmitter::Payload::Callsign && settings_.callsign[0] == 0)
+    if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    return a;
+    return transmitter_.attempt(plan, slot_utc(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
 }
 
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
@@ -262,75 +274,103 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
     const uint64_t opens_us = at_us(origin_us, slot.start_ms);
     plan.start_us = role == Role::Next ? opens_us : std::max(opens_us, now_us);
 
-    const timing::Transmitter::Attempt a = attempt(slot, now_ms);
-    over_budget_ = a.over_budget;
+    const timing::Transmitter::Attempt first = attempt(slot, now_ms);
+    over_budget_ = first.over_budget;
     // The one place this policy's own refusal is decided: a plan the hour's
     // air-time budget already refused to arm, counted apart from a dwell that
     // was armed and then missed its outcome.
-    if (a.over_budget) {
+    if (first.over_budget) {
         context_.state.rf.timing_stats.record_refused();
         if (!held_logged_) {
             log_refusal(radio::Event::Held, slot, now_ms);
             held_logged_ = true;
         }
     }
-    const uint64_t tx_at_us = instant_us(a, origin_us);
-    const bool carries_tx =
-        a.go && tx_at_us >= std::max(plan.start_us, now_us) && tx_at_us < plan.end_us;
-    const uint8_t buffer =
-        role == Role::Next ? static_cast<uint8_t>(flying_.buffer ^ 1u) : flying_.buffer;
-    const uint32_t utc = slot_utc(now_ms);
-    if (carries_tx) {
-        if (a.payload == timing::Transmitter::Payload::Callsign)
-            protocol::from_own_callsign(outgoing_, context_.roles.device_addr,
-                                        settings::kAddrTableSkyblip, settings_.callsign);
-        else
-            protocol::from_own(outgoing_, context_.state.own, context_.roles.device_addr,
-                               settings::kAddrTableSkyblip, context_.state.own.aircraft_cat,
-                               burst_instant(a, tx_at_us, utc));
-        outgoing_.scramble();
-        outgoing_.set_crc();
-        plan.tx = outgoing_chips_[buffer];
-        plan.tx_len = static_cast<uint8_t>(
-            protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.Data,
-                                    protocol::kAdslFrameBytes, outgoing_chips_[buffer]));
-        plan.tx_at_us = tx_at_us;
+
+    const Armed& current = role == Role::Next ? next_ : flying_;
+    const bool rearmed = (role == Role::Flying || has_next_) && current.mode == plan.mode &&
+                         current.freq_hz == plan.freq_hz && current.until_us == plan.end_us;
+    Armed armed{};
+    if (rearmed) {
+        armed = current;
+    } else {
+        armed.mode = plan.mode;
+        armed.freq_hz = plan.freq_hz;
+        armed.from_us = plan.start_us;
+        armed.until_us = plan.end_us;
+        armed.utc = slot_utc(now_ms);
+        armed.buffer =
+            role == Role::Next ? static_cast<uint8_t>(flying_.buffer ^ 1u) : flying_.buffer;
     }
 
-    if (context_.roles.rf.arm(plan) != Status::Ok) {
-        // The next dwell is asked for again on the next pass, and anything it
-        // loses by then is reported as the flying dwell it will have become.
-        if (role == Role::Next) return;
-        // A dwell refused before it could even start: ports::Rf's own "a plan
-        // that cannot complete before its end is refused here rather than
-        // truncated on air", read out on the bench.
-        context_.state.rf.timing_stats.record_missed();
-        if (carries_tx) log_refusal(radio::Event::Unarmed, slot, now_ms);
-        record_dwell(slot, a, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
+    bool carried_now = false;
+    bool dwell_armed = rearmed;
+    for (const Payload payload : kEveryPayload) {
+        if (armed.carries(payload)) continue;
+        const timing::Transmitter::Attempt a = attempt(slot, now_ms, payload);
+        const uint64_t tx_at_us = instant_us(a, origin_us);
+        if (!a.go || tx_at_us < std::max(plan.start_us, now_us) || tx_at_us >= plan.end_us)
+            continue;
+        uint8_t* chips = outgoing_chips_[armed.buffer][static_cast<int>(payload)];
+        ports::RfPlan with_burst = plan;
+        with_burst.tx = chips;
+        with_burst.tx_len = encode(a, tx_at_us, armed.utc, chips);
+        with_burst.tx_at_us = tx_at_us;
+        if (context_.roles.rf.arm(with_burst) != Status::Ok) {
+            if (!dwell_armed) {
+                refuse_dwell(slot, first, phase, role, true, now_ms);
+                return;
+            }
+            if (role == Role::Flying) {
+                context_.state.rf.timing_stats.record_missed();
+                log_refusal(radio::Event::Unarmed, slot, now_ms);
+            }
+            continue;
+        }
+        dwell_armed = true;
+        carried_now = true;
+        armed.carry(payload, tx_at_us);
+        if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
+    }
+    if (!dwell_armed && context_.roles.rf.arm(plan) != Status::Ok) {
+        refuse_dwell(slot, first, phase, role, false, now_ms);
         return;
     }
+    if (rearmed && !carried_now) return;
+
     arm_count_++;
-    Armed armed{};
-    armed.mode = plan.mode;
-    armed.freq_hz = plan.freq_hz;
-    armed.from_us = plan.start_us;
-    armed.until_us = plan.end_us;
-    armed.tx = carries_tx;
-    armed.payload = a.payload;
-    armed.utc = utc;
-    armed.tx_at_us = tx_at_us;
-    armed.buffer = buffer;
     if (role == Role::Next) {
         next_ = armed;
         has_next_ = true;
     } else {
         flying_ = armed;
-        if (carries_tx) {
-            context_.state.rf.tx_deadline_us = tx_at_us;
-            context_.state.rf.tx_callsign = a.payload == timing::Transmitter::Payload::Callsign;
-        }
     }
-    record_dwell(slot, a, phase, /*armed=*/true, carries_tx, now_ms);
+    record_dwell(slot, first, phase, /*armed=*/true, carried_now, now_ms);
+}
+
+// INFO: fc 27sep26 a refused next dwell is asked for again next pass, and reported once it flies
+void RadioService::refuse_dwell(const timing::SlotPlan& slot,
+                                const timing::Transmitter::Attempt& first, int phase, Role role,
+                                bool carried_tx, uint32_t now_ms) {
+    if (role == Role::Next) return;
+    context_.state.rf.timing_stats.record_missed();
+    if (carried_tx) log_refusal(radio::Event::Unarmed, slot, now_ms);
+    record_dwell(slot, first, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
+}
+
+uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_at_us, uint32_t utc,
+                             uint8_t* chips) {
+    if (a.payload == Payload::Callsign)
+        protocol::from_own_callsign(outgoing_, context_.roles.device_addr,
+                                    settings::kAddrTableSkyblip, settings_.callsign);
+    else
+        protocol::from_own(outgoing_, context_.state.own, context_.roles.device_addr,
+                           settings::kAddrTableSkyblip, context_.state.own.aircraft_cat,
+                           burst_instant(a, tx_at_us, utc));
+    outgoing_.scramble();
+    outgoing_.set_crc();
+    return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.Data,
+                                                        protocol::kAdslFrameBytes, chips));
 }
 
 void RadioService::record_dwell(const timing::SlotPlan& slot,
@@ -389,28 +429,30 @@ void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slo
 
 void RadioService::collect_outcome(uint32_t now_ms) {
     const uint64_t now_us = pass_us_;
-    if (context_.state.air.tx_ok != seen_tx_ok_) {
+    const uint32_t reported = context_.state.air.tx_ok - seen_tx_ok_;
+    if (reported != 0) {
         seen_tx_ok_ = context_.state.air.tx_ok;
         held_logged_ = false;
+    }
+    for (uint32_t i = 0; i < reported; i++) {
         // A pass slow enough that the queued dwell flew, and its burst went out, before this one
         // ran.
-        if (!flying_.tx && has_next_ && next_.tx && now_us >= next_.from_us) promote();
-        transmitter_.sent(flying_.utc, now_ms, flying_.payload);
-        context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
-        if (flying_.payload == timing::Transmitter::Payload::Callsign)
-            context_.state.air.tx_named++;
-        // The executor's own report against the deadline this dwell was armed
-        // for: both absolute instants on the same clock, so slot 1's wrap
-        // costs this nothing.
-        context_.state.rf.timing_stats.record_dwell_phase(
-            static_cast<int64_t>(context_.state.air.last_tx_done_at_us) -
-            static_cast<int64_t>(context_.state.rf.tx_deadline_us));
-        flying_.tx = false;
+        if (!flying_.carries_any() && has_next_ && next_.carries_any() && now_us >= next_.from_us)
+            promote();
+        // INFO: fc 27sep26 a TxDone nothing claims still spent air time, which the budget counts
+        const Payload payload = flying_.carries_any() ? flying_.first() : Payload::Position;
+        transmitter_.sent(flying_.utc, now_ms, payload);
+        if (payload == Payload::Callsign) context_.state.air.tx_named++;
+        flying_.drop(payload);
     }
+    if (reported != 0) context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
     // INFO: fc 15sep26 a dwell that ended unreported took the radio with it, and is counted here
-    if (flying_.tx && now_us >= flying_.until_us) {
-        context_.state.rf.timing_stats.record_missed();
-        flying_.tx = false;
+    if (flying_.carries_any() && now_us >= flying_.until_us) {
+        for (const Payload payload : kEveryPayload) {
+            if (!flying_.carries(payload)) continue;
+            context_.state.rf.timing_stats.record_missed();
+            flying_.drop(payload);
+        }
     }
 }
 

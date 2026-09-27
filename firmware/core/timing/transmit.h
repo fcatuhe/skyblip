@@ -45,6 +45,9 @@ class Transmitter {
     // The instant this device transmits in the second `utc`, or go=false. Pure:
     // calling it twice with the same arguments gives the same answer.
     Attempt attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms, bool airborne,
+                    int32_t fix_lag_ms, Payload payload) const;
+    // INFO: fc 27sep26 the first burst the dwell owes, position first: a slot-1 dwell can owe both
+    Attempt attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms) const;
 
     void sent(uint32_t utc, uint32_t now_ms, Payload payload = Payload::Position);
@@ -60,7 +63,6 @@ class Transmitter {
         return static_cast<int>((utc / period_s(airborne)) & 1u);
     }
     uint32_t ground_second() const;
-    uint32_t callsign_second() const;
     static constexpr int kCallsignSlot = 1;
     static int last_callsign_instant();
 

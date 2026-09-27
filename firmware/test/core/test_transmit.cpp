@@ -169,26 +169,51 @@ TEST_CASE("transmit: one burst per second airborne, one per ten on the ground") 
     CHECK(g.attempt(slot_plan(phase), owned + 10, (owned + 10) * 1000, false, 0).go);
 }
 
-TEST_CASE("transmit: the callsign goes out in a second of its own, once every ten") {
+TEST_CASE("transmit: the callsign goes out in the ground second, once every ten") {
+    constexpr Transmitter::Payload kName = Transmitter::Payload::Callsign;
     Transmitter t = airborne_transmitter();
-    const uint32_t owned = t.callsign_second();
+    const uint32_t owned = t.ground_second();
     const SlotPlan tail = slot_plan(kSlot1Start);
 
     for (uint32_t utc = owned + 1; utc < owned + Transmitter::kCallsignPeriodS; utc++) {
         CAPTURE(utc);
-        CHECK(t.attempt(tail, utc, utc * 1000, true, 0).payload != Transmitter::Payload::Callsign);
+        CHECK_FALSE(t.attempt(tail, utc, utc * 1000, true, 0, kName).go);
     }
 
     const uint32_t due = owned + Transmitter::kCallsignPeriodS;
-    const Transmitter::Attempt a = t.attempt(tail, due, due * 1000, true, 0);
+    const Transmitter::Attempt a = t.attempt(tail, due, due * 1000, true, 0, kName);
     REQUIRE(a.go);
-    CHECK(a.payload == Transmitter::Payload::Callsign);
+    CHECK(a.payload == kName);
     CHECK(a.freq_hz == kMband1Hz);
     CHECK(a.at_ms >= kCallsignStart);
     CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kCallsignEnd);
 
-    t.sent(due, due * 1000, Transmitter::Payload::Callsign);
-    CHECK_FALSE(t.attempt(tail, due, due * 1000, true, 0).go);
+    t.sent(due, due * 1000, kName);
+    CHECK_FALSE(t.attempt(tail, due, due * 1000, true, 0, kName).go);
+}
+
+// One slot-1 dwell carries both bursts, so the position has to be off the air before the name keys.
+TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never at once") {
+    int both = 0;
+    for (uint32_t addr = 0x5B0000; addr < 0x5B0400; addr++) {
+        Transmitter t = airborne_transmitter(addr);
+        const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
+        if (Transmitter::slot_in(due, false) != Transmitter::kCallsignSlot) continue;
+        CAPTURE(addr);
+        const SlotPlan slot1 = slot_plan(kSlot1Start);
+        const Transmitter::Attempt position =
+            t.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Position);
+        const Transmitter::Attempt name =
+            t.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Callsign);
+        REQUIRE(position.go);
+        REQUIRE(name.go);
+        CHECK(position.freq_hz == name.freq_hz);
+        CHECK(position.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
+                  Transmitter::kCompletionSlackMs <=
+              name.at_ms);
+        both++;
+    }
+    CHECK(both > 400);
 }
 
 // Half of all addresses once lost every name to their own slot-1 position burst.
@@ -199,16 +224,25 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
             CAPTURE(airborne);
             Transmitter t = airborne_transmitter(addr);
             int named = 0;
+            int positions = 0;
             for (uint32_t utc = 100; utc < 100 + 2 * Transmitter::kCallsignPeriodS; utc++) {
                 for (const int phase : {500, kSlot1Start}) {
-                    const Transmitter::Attempt a =
-                        t.attempt(slot_plan(phase), utc, utc * 1000, airborne, 0);
-                    if (!a.go) continue;
-                    t.sent(utc, utc * 1000 + static_cast<uint32_t>(phase), a.payload);
-                    if (a.payload == Transmitter::Payload::Callsign) named++;
+                    for (const Transmitter::Payload payload :
+                         {Transmitter::Payload::Position, Transmitter::Payload::Callsign}) {
+                        const Transmitter::Attempt a =
+                            t.attempt(slot_plan(phase), utc, utc * 1000, airborne, 0, payload);
+                        if (!a.go) continue;
+                        t.sent(utc, utc * 1000 + static_cast<uint32_t>(phase), a.payload);
+                        if (a.payload == Transmitter::Payload::Callsign)
+                            named++;
+                        else
+                            positions++;
+                    }
                 }
             }
             CHECK(named == 2);
+            // 20 s: one position a second airborne, two ground seconds on the ground.
+            CHECK(positions == (airborne ? 20 : 2));
         }
     }
 }
@@ -216,7 +250,7 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
 // The position burst is the one G.1.16 dates, and a name carries no instant to be stale.
 TEST_CASE("transmit: a late solution refuses the position burst and not the callsign") {
     Transmitter t = airborne_transmitter();
-    const uint32_t due = t.callsign_second() + Transmitter::kCallsignPeriodS;
+    const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
     const int32_t late = Transmitter::kFixLagMaxMs + 1;
 
     CHECK_FALSE(t.attempt(slot_plan(500), due, due * 1000, true, late).go);
@@ -228,7 +262,7 @@ TEST_CASE("transmit: a late solution refuses the position burst and not the call
 // Slot 0 is the other channel and the direct slot's own half of the second.
 TEST_CASE("transmit: the callsign burst belongs to slot 1 and to no other dwell") {
     Transmitter t = airborne_transmitter();
-    const uint32_t due = t.callsign_second() + Transmitter::kCallsignPeriodS;
+    const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
     t.sent(due, due * 1000);
     CHECK_FALSE(t.attempt(slot_plan(kSlot0Start), due, due * 1000, true, 0).go);
     CHECK(t.attempt(slot_plan(kSlot1Start), due, due * 1000, true, 0).go);

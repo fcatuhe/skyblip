@@ -31,20 +31,20 @@ class Rf : public ports::Rf {
         if (plan.end_us <= plan.start_us) return Status::OutOfRange;
         if (plan.tx != nullptr && (plan.tx_at_us < plan.start_us || plan.tx_at_us >= plan.end_us))
             return Status::OutOfRange;
-        if (armed_ && joins_flying_dwell(plan)) {
-            plan_.tx = plan.tx;
-            plan_.tx_len = plan.tx_len;
-            plan_.tx_at_us = plan.tx_at_us;
-            return Status::Ok;
-        }
+        if (armed_ && joins_flying_dwell(plan))
+            return bursts_.add(burst_of(plan)) ? Status::Ok : Status::WouldBlock;
         if (armed_ && plan.end_us <= plan_.end_us) return Status::WouldBlock;
+        if (armed_ && has_pending_ && same_dwell(plan, pending_))
+            return plan.tx == nullptr || pending_bursts_.add(burst_of(plan)) ? Status::Ok
+                                                                             : Status::WouldBlock;
         if (armed_) {
             pending_ = plan;
+            pending_bursts_ = ports::RfBursts::of(plan);
             pending_armed_at_us_ = clock_.micros();
             has_pending_ = true;
             return Status::Ok;
         }
-        adopt(plan, clock_.micros());
+        adopt(plan, ports::RfBursts::of(plan), clock_.micros());
         return Status::Ok;
     }
 
@@ -89,15 +89,24 @@ class Rf : public ports::Rf {
     uint32_t armed_count() const { return armed_count_; }
 
    private:
-    bool joins_flying_dwell(const ports::RfPlan& plan) const {
-        return plan.tx != nullptr && plan_.tx == nullptr && plan.mode == plan_.mode &&
-               plan.freq_hz == plan_.freq_hz && plan.tx_at_us >= clock_.micros() &&
-               plan.tx_at_us < plan_.end_us;
+    static ports::RfBurst burst_of(const ports::RfPlan& plan) {
+        return ports::RfBurst{plan.tx, plan.tx_len, plan.tx_at_us};
     }
+
+    static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
+        return one.mode == other.mode && one.freq_hz == other.freq_hz && one.end_us == other.end_us;
+    }
+
+    bool joins_flying_dwell(const ports::RfPlan& plan) const {
+        return plan.tx != nullptr && plan.mode == plan_.mode && plan.freq_hz == plan_.freq_hz &&
+               plan.tx_at_us >= clock_.micros() && plan.tx_at_us < plan_.end_us;
+    }
+
+    bool keying() const { return keyed_ > done_; }
 
     void finish(uint64_t now_us) {
         sample_carrier();
-        if (plan_.tx != nullptr && !completed_) emit(events::RfEventType::Missed, now_us);
+        miss_unfinished(bursts_, done_, keyed_, now_us);
         armed_ = false;
         started_ = false;
     }
@@ -106,27 +115,38 @@ class Rf : public ports::Rf {
         const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
         if (armed_ && !started_ && now_us + lead_us >= plan_.start_us && !start(now_us))
             abandon(now_us);
-        if (armed_ && started_ && plan_.tx != nullptr && !transmitted_ && now_us >= plan_.tx_at_us)
-            transmit();
+        if (armed_ && started_ && !keying() && keyed_ < bursts_.count &&
+            now_us >= bursts_.burst[keyed_].at_us)
+            transmit(bursts_.burst[keyed_]);
     }
 
     void take_pending(uint64_t now_us) {
         has_pending_ = false;
         if (now_us >= pending_.end_us) {
-            if (pending_.tx != nullptr) emit(events::RfEventType::Missed, now_us);
+            miss_unfinished(pending_bursts_, 0, 0, now_us);
             return;
         }
-        adopt(pending_, pending_armed_at_us_);
+        adopt(pending_, pending_bursts_, pending_armed_at_us_);
     }
 
-    void adopt(const ports::RfPlan& plan, uint64_t armed_at_us) {
+    void adopt(const ports::RfPlan& plan, const ports::RfBursts& bursts, uint64_t armed_at_us) {
         plan_ = plan;
+        bursts_ = bursts;
         armed_at_us_ = armed_at_us;
         armed_ = true;
         started_ = false;
-        transmitted_ = false;
-        completed_ = false;
+        keyed_ = 0;
+        done_ = 0;
         keyed_at_us_ = 0;
+    }
+
+    void miss_unfinished(const ports::RfBursts& bursts, uint8_t done, uint8_t keyed,
+                         uint64_t now_us) {
+        for (uint8_t i = done; i < bursts.count; i++) {
+            tx_at_us_ = bursts.burst[i].at_us;
+            if (i >= keyed) keyed_at_us_ = 0;
+            emit(events::RfEventType::Missed, now_us);
+        }
     }
 
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
@@ -150,7 +170,7 @@ class Rf : public ports::Rf {
     }
 
     void abandon(uint64_t now_us) {
-        if (plan_.tx != nullptr) emit(events::RfEventType::Missed, now_us);
+        miss_unfinished(bursts_, done_, keyed_, now_us);
         armed_ = false;
         started_ = false;
     }
@@ -172,9 +192,10 @@ class Rf : public ports::Rf {
         return cfg;
     }
 
-    void transmit() {
-        transmitted_ = true;
-        (void)radio_.transmit(plan_.tx, plan_.tx_len);
+    void transmit(const ports::RfBurst& burst) {
+        keyed_++;
+        tx_at_us_ = burst.at_us;
+        (void)radio_.transmit(burst.chips, burst.len);
         keyed_at_us_ = clock_.micros();
     }
 
@@ -198,7 +219,7 @@ class Rf : public ports::Rf {
                     emit(events::RfEventType::CrcError, now_us, ev);
                     break;
                 case parts::RadioEventType::TxDone:
-                    completed_ = true;
+                    done_++;
                     emit(events::RfEventType::TxDone, now_us);
                     (void)radio_.start_receive();
                     break;
@@ -232,6 +253,7 @@ class Rf : public ports::Rf {
         e.rssi_valid = ev.rssi_valid;
         e.at_us = now_us;
         e.keyed_at_us = keyed_at_us_;
+        e.tx_at_us = tx_at_us_;
         out_.push(e);
     }
 
@@ -240,6 +262,8 @@ class Rf : public ports::Rf {
     bus::Queue<events::RfEvent, 8>& out_;
     ports::RfPlan plan_{};
     ports::RfPlan pending_{};
+    ports::RfBursts bursts_{};
+    ports::RfBursts pending_bursts_{};
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
@@ -250,14 +274,15 @@ class Rf : public ports::Rf {
     model::Band band_{model::Band::M};
     uint32_t freq_hz_{0};
     uint64_t keyed_at_us_{0};
+    uint64_t tx_at_us_{0};
     uint32_t last_ms_{0};
     uint32_t armed_count_{0};
     int sleeps_{0};
     bool armed_{false};
     bool has_pending_{false};
     bool started_{false};
-    bool transmitted_{false};
-    bool completed_{false};
+    uint8_t keyed_{0};
+    uint8_t done_{0};
 };
 
 }  // namespace skyblip::platform::host
