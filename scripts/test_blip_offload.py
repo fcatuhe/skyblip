@@ -254,6 +254,25 @@ class TornTail(unittest.TestCase):
         self.assertEqual(blip.sessions_to_fetch([session], args, resume), [])
 
 
+LINK_TYPE = 12
+
+
+def link_slot(connection):
+    raw = bytearray(records.RECORD_BYTES)
+    raw[0] = LINK_TYPE
+    raw[records.PAYLOAD_OFFSET:records.PAYLOAD_OFFSET + 2] = connection.to_bytes(2, "little")
+    return bytes(raw)
+
+
+class LinkRecord(unittest.TestCase):
+    # the link record's connection id was once named session, and every capture with a connection in it crashed the fetch
+    def test_a_capture_holding_a_link_record_keeps_the_store_session_and_the_connection(self):
+        endpoint = LogEndpoint(2, slots=[link_slot(3), end_slot(2)])
+        link, = of_type(fetched_lines(endpoint), "link")
+        self.assertEqual(link["session"], 1_700_000_000)
+        self.assertEqual(link["link_session"], 3)
+
+
 class TruncatedSession(unittest.TestCase):
     def header_of(self, **fields):
         lines = fetched_lines(LogEndpoint(24, **fields))

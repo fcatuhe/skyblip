@@ -205,7 +205,7 @@
 
     "action": {"type": "string", "enum": ["up", "down", "claim_taken", "claim_released", "received", "sent", "dropped"],
                "description": "link. The lifecycle event or the transfer this record is about. Nothing emits sent: the firmware's outbound frames are written where the claim this record carries cannot be read, and the code is held rather than retired so the others keep their numbers. Codes: 0 up, 1 down, 2 claim_taken, 3 claim_released, 4 received, 5 sent, 6 dropped"},
-    "session": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "link. The connection this concerns"},
+    "link_session": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "link. The connection this concerns. Not session, which a fetched line already carries as the capture session it belongs to"},
     "payload_bytes": {"type": "integer", "minimum": 0, "maximum": 65535,
                       "description": "link. The notification payload the central negotiated, which is the ATT MTU less three. The narrowest phone in the field carries 182"},
     "endpoint": {"type": "string", "enum": ["config", "nmea", "log"],

@@ -165,7 +165,7 @@ DIAG_TYPES = {
         ("at_ms", u32(0)), ("held_ms", u32(4)), ("contact", enum8(8, CONTACT)),
         ("gesture", u8(9)), ("down", flag(2)))),
     12: ("link", (
-        ("session", u16(0)), ("payload_bytes", u16(2)), ("frame_bytes", u16(4)),
+        ("link_session", u16(0)), ("payload_bytes", u16(2)), ("frame_bytes", u16(4)),
         ("holder", u16(6)), ("drops", u16(8)), ("action", enum8(10, LINK_ACTION)),
         ("endpoint", enum8(11, ENDPOINT)), ("claim_held", flag(2)))),
     13: ("traffic", (

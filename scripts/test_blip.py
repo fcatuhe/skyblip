@@ -181,7 +181,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_link_names_the_action_the_endpoint_and_the_negotiated_payload(self):
         payload = struct.pack("<5H2B", 3, 182, 96, 3, 5, 2, 2)
         self.assertEqual(decoded(12, payload, 0b0100), whole(
-            "link", 0b0100, session=3, payload_bytes=182, frame_bytes=96, holder=3, drops=5,
+            "link", 0b0100, link_session=3, payload_bytes=182, frame_bytes=96, holder=3, drops=5,
             action="claim_taken", endpoint="log", claim_held=True))
 
     def test_traffic_reads_the_encounter_geometry_with_signed_altitude(self):
@@ -267,6 +267,12 @@ class TablesAgainstTheSchema(unittest.TestCase):
         for type_id in records.DIAG_TYPES:
             decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16))))
             self.assertLessEqual(set(decoded), allowed, "type %d" % type_id)
+
+    def test_no_decoded_key_collides_with_the_keys_a_fetch_wraps_each_record_in(self):
+        wrapper = {"log", "session", "index"}
+        for type_id in records.DIAG_TYPES:
+            decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16))))
+            self.assertEqual(set(decoded) & wrapper, set(), "type %d" % type_id)
 
     def test_no_field_reads_past_the_sixteen_byte_payload(self):
         for type_id, (name, fields) in records.DIAG_TYPES.items():
