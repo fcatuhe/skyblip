@@ -146,6 +146,9 @@ class L76k : public ports::Gnss {
 
     uint32_t port_overruns() const { return uart_.overruns(); }
 
+    uint32_t raises() const { return raises_; }
+    uint32_t raise_fallbacks() const { return raise_fallbacks_; }
+
     ports::GnssHealth health() const override {
         ports::GnssHealth h{};
         h.baud = baud_rate();
@@ -215,6 +218,8 @@ class L76k : public ports::Gnss {
     int baud_index_{0};
     uint32_t baud_before_raise_{kBaudRate};
     uint8_t baud_tried_{1};
+    uint32_t raises_{0};
+    uint32_t raise_fallbacks_{0};
     uint8_t attempts_{0};
     uint8_t pending_restart_{kNoRestart};
     bool gsv_wanted_{false};

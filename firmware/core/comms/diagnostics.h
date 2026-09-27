@@ -14,6 +14,7 @@
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
 #include "core/timing/channel.h"
+#include "ports/gnss.h"
 
 namespace skyblip::comms {
 
@@ -52,6 +53,9 @@ struct Diagnostics {
     uint32_t gnss_fixes{0};
     bool fix_valid{false};
     uint32_t gnss_baud{0};
+    ports::GnssConfig gnss_config{ports::GnssConfig::Idle};
+    uint32_t gnss_raises{0};
+    uint32_t gnss_raise_fallbacks{0};
     bool gnss_identified{false};
     // Points at the driver's own buffer, which outlives every reader of this.
     const char* gnss_firmware{""};
@@ -135,7 +139,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 41;
+    static constexpr int kMaxFields = 44;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_int(Group group, const char* key, long value);

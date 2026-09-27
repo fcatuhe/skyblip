@@ -35,6 +35,7 @@ bool L76k::raise_baud(uint32_t now_ms) {
     if (!port_can_retune()) return false;
     baud_before_raise_ = baud_rate();
     send(kBaudCommand, now_ms);
+    raises_++;
     return adopt_baud(kTargetBaudRate);
 }
 
@@ -151,6 +152,7 @@ void L76k::service(uint32_t now_ms) {
             }
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
             adopt_baud(baud_before_raise_);
+            raise_fallbacks_++;
             state_ = Config::Ready;
             break;
         case Config::Ready:

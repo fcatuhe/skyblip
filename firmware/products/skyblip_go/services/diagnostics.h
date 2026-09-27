@@ -82,6 +82,9 @@ class DiagnosticsDump {
         // not a role - there is no ports:: seam that could carry a firmware string.
         const auto& gnss = product.board().gnss();
         d.gnss_baud = gnss.baud_rate();
+        d.gnss_config = gnss.config_state();
+        d.gnss_raises = gnss.raises();
+        d.gnss_raise_fallbacks = gnss.raise_fallbacks();
         d.gnss_identified = gnss.identified();
         d.gnss_firmware = gnss.firmware_version();
         d.gnss_reject = gnss.reject_reason();

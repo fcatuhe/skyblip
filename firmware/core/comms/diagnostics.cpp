@@ -104,6 +104,9 @@ void DiagnosticsReport::build(const Diagnostics& d, const Group* only) {
         // A receiver silently at another rate is a GNSS-less device that looks
         // fitted, and it is the top support case this part will generate.
         add_int(Group::Gnss, "baud", counter(d.gnss_baud));
+        add_text(Group::Gnss, "config", ports::to_string(d.gnss_config));
+        add_int(Group::Gnss, "raises", counter(d.gnss_raises));
+        add_int(Group::Gnss, "raise_fallbacks", counter(d.gnss_raise_fallbacks));
         // INFO: fc 19sep26 the phase a solution lands at, which kFixLagMaxMs refuses a burst over
         if (d.gnss_nav_valid) add_int(Group::Gnss, "nav_ms", d.gnss_nav_ms);
         add_int(Group::Gnss, "overruns", counter(d.gnss_overruns));

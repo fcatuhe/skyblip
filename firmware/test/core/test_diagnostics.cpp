@@ -49,6 +49,8 @@ Diagnostics busy_device() {
     d.gnss_fixes = 5210;
     d.fix_valid = true;
     d.gnss_baud = 38400;
+    d.gnss_config = ports::GnssConfig::Ready;
+    d.gnss_raises = 1;
     d.gnss_identified = true;
     d.gnss_firmware = "URANUS5,V5.1.0.0";
     d.gnss_reject = gnss::FixReject::Stale;
@@ -100,6 +102,9 @@ Diagnostics widest_device() {
     d.alarm = 255;
     d.gnss_fixes = 0xFFFFFFFFu;
     d.gnss_baud = 921600;
+    d.gnss_config = ports::GnssConfig::Degraded;  // "DEGRADED"
+    d.gnss_raises = 0xFFFFFFFFu;
+    d.gnss_raise_fallbacks = 0xFFFFFFFFu;
     // The driver's version buffer is 24 bytes, so 23 characters is the longest
     // string a receiver can ever hand us (core/gnss/nmea.h::kVersionCap).
     d.gnss_firmware = "ABCDEFGHIJKLMNOPQRSTUVW";
@@ -179,7 +184,8 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "tx_named=41 tx_keyed_us=609 tx_span_us=5919 range_refused=5\n"));
     CHECK(has(text, "traffic tracked=4 alarm=2\n"));
     CHECK(has(text,
-              "gnss fixes=5210 valid=true baud=38400 nav_ms=98 overruns=0 identified=true "
+              "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "
+              "nav_ms=98 overruns=0 identified=true "
               "firmware=\"URANUS5,V5.1.0.0\" reject=\"STALE\" rejected=6 resid_m=13\n"));
     CHECK(has(text,
               "power mv=3812 percent=64 valid=true charging=false level=\"OK\" supply_warnings=1 "
@@ -293,6 +299,9 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
     d.gnss_identified = false;
     d.gnss_firmware = "";
     d.gnss_baud = 9600;
+    d.gnss_config = ports::GnssConfig::Degraded;
+    d.gnss_raises = 2;
+    d.gnss_raise_fallbacks = 2;
     d.gnss_reject = gnss::FixReject::NoDate;
     d.gnss_rejected = 41;
 
@@ -300,6 +309,7 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
     CHECK(has(text, "identified=false"));
     CHECK(has(text, "firmware=\"\""));
     CHECK(has(text, "baud=9600"));
+    CHECK(has(text, "config=\"DEGRADED\" raises=2 raise_fallbacks=2"));
     CHECK(has(text, "reject=\"NO DATE\""));
     CHECK(has(text, "rejected=41"));
 
