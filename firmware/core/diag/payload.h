@@ -158,6 +158,7 @@ struct Power {
     uint32_t charge_warnings{0};
     int16_t die_dc{0};
     int16_t trim_offset_mv{0};
+    int8_t sample_offset_mv{0};
     uint8_t percent{0};
     power::PowerLevel level{power::PowerLevel::Unknown};
     power::ChargeCondition charge{power::ChargeCondition::Unknown};

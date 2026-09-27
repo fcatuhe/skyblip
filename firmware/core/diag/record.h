@@ -104,6 +104,16 @@ inline int32_t get_i32(const uint8_t* raw) { return static_cast<int32_t>(get_u32
 
 inline uint16_t clamp_u16(uint32_t v) { return v > 0xFFFFu ? 0xFFFFu : static_cast<uint16_t>(v); }
 
+constexpr int8_t kSampleOffsetFloorMv = -128;
+constexpr int8_t kSampleOffsetCeilingMv = 127;
+
+inline int8_t sample_offset_mv(int32_t sample_mv, int32_t median_mv) {
+    const int32_t offset = sample_mv - median_mv;
+    if (offset > kSampleOffsetCeilingMv) return kSampleOffsetCeilingMv;
+    if (offset < kSampleOffsetFloorMv) return kSampleOffsetFloorMv;
+    return static_cast<int8_t>(offset);
+}
+
 inline int16_t clamp_i16(int32_t v) {
     if (v > 32767) return 32767;
     if (v < -32768) return -32768;

@@ -149,7 +149,7 @@ DIAG_TYPES = {
         ("cell_mv", u16(0)), ("supply_warnings", u16(2)), ("implausible", u16(4)),
         ("charge_warnings", u16(6)), ("die_dc", i16(8)), ("percent", u8(10)),
         ("level", enum8(11, POWER_LEVEL)), ("charge", enum8(12, CHARGE)),
-        ("trim_offset_mv", i16(13)), ("charging", flag(2)), ("external_power", flag(3)),
+        ("trim_offset_mv", i16(13)), ("sample_offset_mv", i8(15)), ("charging", flag(2)), ("external_power", flag(3)),
         ("valid", flag(4)), ("die_valid", flag(5)), ("caution", flag(6)),
         ("trim_learned", flag(7)))),
     9: ("baro", (

@@ -197,6 +197,7 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     in.charge_warnings = 1;
     in.die_dc = -206;
     in.trim_offset_mv = -40;
+    in.sample_offset_mv = -128;
     in.percent = 64;
     in.level = power::PowerLevel::Low;
     in.charge = power::ChargeCondition::TooHot;
@@ -214,6 +215,7 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     CHECK(out.charge_warnings == in.charge_warnings);
     CHECK(out.die_dc == in.die_dc);
     CHECK(out.trim_offset_mv == in.trim_offset_mv);
+    CHECK(out.sample_offset_mv == in.sample_offset_mv);
     CHECK(out.percent == in.percent);
     CHECK(out.level == in.level);
     CHECK(out.charge == in.charge);

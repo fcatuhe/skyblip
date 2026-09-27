@@ -147,7 +147,8 @@
                   "description": "flight. The same answer with the landing held back (core/flight/ground.h), which is what a permission gate reads. Codes: 0 unknown, 1 on_ground, 2 airborne"},
     "rolling": {"type": "boolean", "description": "flight. Moving on the ground rather than stopped on it"},
 
-    "cell_mv": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "power. The cell's terminal voltage in millivolts, after the per-unit trim"},
+    "cell_mv": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "power. The cell's terminal voltage in millivolts, after the per-unit trim: the median of the last three readings, the figure percent, level and caution were decided on"},
+    "sample_offset_mv": {"type": "integer", "minimum": -128, "maximum": 127, "description": "power. The last reading minus cell_mv, in millivolts, so cell_mv + sample_offset_mv is that reading, whether or not the median kept it. -128 and 127 are saturated and mean at least that far. Captures from builds before this field read 0, which the boot record's build tells apart"},
     "percent": {"type": "integer", "minimum": 0, "maximum": 100, "description": "power. State of charge on the cell's curve. Meaningless unless valid"},
     "level": {"type": "string", "enum": ["unknown", "normal", "low", "cutoff"],
               "description": "power. What core/power's cutoff rule made of the same samples. Codes: 0 unknown, 1 normal, 2 low, 3 cutoff"},

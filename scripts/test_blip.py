@@ -145,20 +145,20 @@ class DiagnosticsPayloads(unittest.TestCase):
             climb_valid=True, tx_settled=True))
 
     def test_power_reads_the_cell_the_die_and_the_saturating_counts(self):
-        payload = struct.pack("<4Hh3Bh", 3987, 1, 4, 2, -53, 74, 2, 3, 0)
+        payload = struct.pack("<4Hh3Bhb", 3987, 1, 4, 2, -53, 74, 2, 3, 0, -12)
         self.assertEqual(decoded(8, payload, 0b0011_0100), whole(
             "power", 0b0011_0100, cell_mv=3987, supply_warnings=1, implausible=4,
             charge_warnings=2, die_dc=-53, percent=74, level="low", charge="too_hot",
-            trim_offset_mv=0, charging=True, external_power=False, valid=True, die_valid=True,
-            caution=False, trim_learned=False))
+            trim_offset_mv=0, sample_offset_mv=-12, charging=True, external_power=False,
+            valid=True, die_valid=True, caution=False, trim_learned=False))
 
     def test_power_reads_the_caution_knee_and_the_trim_a_charger_taught_the_unit(self):
-        payload = struct.pack("<4Hh3Bh", 3550, 0, 0, 0, 210, 18, 1, 1, -40)
+        payload = struct.pack("<4Hh3Bhb", 3550, 0, 0, 0, 210, 18, 1, 1, -40, -128)
         self.assertEqual(decoded(8, payload, 0b1101_0100), whole(
             "power", 0b1101_0100, cell_mv=3550, supply_warnings=0, implausible=0,
             charge_warnings=0, die_dc=210, percent=18, level="normal", charge="ok",
-            trim_offset_mv=-40, charging=True, external_power=False, valid=True, die_valid=False,
-            caution=True, trim_learned=True))
+            trim_offset_mv=-40, sample_offset_mv=-128, charging=True, external_power=False,
+            valid=True, die_valid=False, caution=True, trim_learned=True))
 
     def test_baro_altitude_and_climb_are_signed_millimetres(self):
         payload = struct.pack("<I2ih", 95_432_100, -1234, -2500, -104)

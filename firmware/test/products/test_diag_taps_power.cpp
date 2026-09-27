@@ -91,6 +91,36 @@ TEST_CASE("diag power: the knee is recorded on both sides of it, and the level n
     for (const diag::Power& power : cell) CHECK(power.level == power::PowerLevel::Normal);
 }
 
+// The median kept the gauge still through a sag, and the corpus could not see the sag at all.
+TEST_CASE("diag power: the reading the median threw out rides beside it, to the millivolt") {
+    Rig rig;
+    uint32_t t = 100;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.battery().millivolts = 3800;
+    taxi(rig, t, 3);
+    arm(rig, t);
+    taxi(rig, t, 4);
+    rig.platform.battery().millivolts = 3737;
+    taxi(rig, t, 1);
+    rig.platform.battery().millivolts = 3800;
+    taxi(rig, t, 3);
+    rig.platform.battery().millivolts = 3500;
+    taxi(rig, t, 1);
+    rig.platform.battery().millivolts = 3800;
+    taxi(rig, t, 3);
+    stop(rig, t);
+
+    bool dip_seen = false, sag_seen = false;
+    for (const diag::Power& power : every_power_record(captured(rig))) {
+        CHECK(power.cell_mv == 3800);
+        dip_seen = dip_seen || power.sample_offset_mv == -63;
+        sag_seen = sag_seen || power.sample_offset_mv == diag::kSampleOffsetFloorMv;
+    }
+    CHECK(dip_seen);
+    // 300 mV under the median saturates: the record says at least that far
+    CHECK(sag_seen);
+}
+
 // Two minutes on a charger holding its float voltage, which is the only bench this unit gets.
 TEST_CASE("diag power: a trim the charger taught the unit reaches the corpus, not only settings") {
     Rig rig;
