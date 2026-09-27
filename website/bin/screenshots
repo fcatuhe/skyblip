@@ -135,6 +135,17 @@ class Device {
     return this;
   }
 
+  // The pad walks off the last row back to the page the menu belongs to.
+  closeMenu() {
+    for (let step = 0; step < MENU_ROWS_CEILING && this.sim.menuOpen(); step++) this.tap();
+    if (this.sim.menuOpen()) throw new Error("the pad never walked off the menu");
+    return this;
+  }
+
+  plotToScale() {
+    return this.openMenu(PAGE.Radar, RADAR_MENU.Plot).press().closeMenu();
+  }
+
   frame() {
     const base = this.sim.fb();
     return new Uint8Array(this.memory.buffer, base, this.sim.H * this.sim.STRIDE).slice();
@@ -281,12 +292,60 @@ const WALKED_PAGES = Number(
   inside(pageHeader, /constexpr int kWalkedPages = (\d+);/, "kWalkedPages")
 );
 const ADVISORY = 1;
+const MENU_ROWS_CEILING = 12;
+
+// The same sky both ways: what the ring holds, and what lies past it and past the glass.
+function farSky(device) {
+  return flying(device)
+    .traffic({ bearing: 8, range: 9800, ft: 400, kt: 150, track: 190, addr: 0x3d0a41 })
+    .traffic({ bearing: 48, range: 15000, ft: 900, kt: 60, track: 0, addr: 0x4a1102 })
+    .traffic({ bearing: 50, range: 15600, ft: 1500, kt: 60, track: 120, addr: 0x4a1103 })
+    .traffic({ bearing: 46, range: 15300, ft: 600, kt: 60, track: 240, addr: 0x4a1104 })
+    .traffic({ bearing: 285, range: 21000, ft: -1200, kt: 120, track: 90, addr: 0x3e5510 })
+    .run(HEARD_MS);
+}
+
+function astern(device) {
+  return device
+    .fly(CRUISE)
+    .run(LEG_MS)
+    .traffic({ bearing: 180, range: 11000, ft: -300, kt: 120, track: 0, addr: 0x3f0001 })
+    .traffic({ bearing: 172, range: 13500, ft: 500, kt: 110, track: 350, addr: 0x3f0002 })
+    .traffic({ bearing: 174, range: 14000, ft: 700, kt: 110, track: 350, addr: 0x3f0003 })
+    .traffic({ bearing: 205, range: 6400, ft: -100, kt: 150, track: 20, addr: 0x3f0004 })
+    .run(HEARD_MS);
+}
 
 const scenes = [
   {
     name: "radar",
     page: PAGE.Radar,
     shot: device => flying(device)
+  },
+  {
+    name: "radar-to-scale",
+    page: PAGE.Radar,
+    shot: device => flying(device.plotToScale())
+  },
+  {
+    name: "far-all",
+    page: PAGE.Radar,
+    shot: device => farSky(device)
+  },
+  {
+    name: "far-to-scale",
+    page: PAGE.Radar,
+    shot: device => farSky(device.plotToScale())
+  },
+  {
+    name: "astern-all",
+    page: PAGE.Radar,
+    shot: device => astern(device)
+  },
+  {
+    name: "astern-to-scale",
+    page: PAGE.Radar,
+    shot: device => astern(device.plotToScale())
   },
   {
     name: "alarm",

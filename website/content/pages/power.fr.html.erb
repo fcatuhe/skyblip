@@ -1,0 +1,175 @@
+---
+title: Alimentation et batterie
+nav_title: Alimentation
+slug: alimentation
+description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à quoi ressemble éteint, une batterie qui le dit quand elle se vide, et la jauge.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Il dit ce qu&rsquo;il fait, même éteint.</h1>
+  <p class="lede">
+    Ce que dit l&rsquo;appareil avant d&rsquo;avoir une position, quand il est éteint, et quand sa batterie se vide.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Au parking, et dans la sacoche</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="waiting">Il dit <span class="highlight">ce qu&rsquo;il attend</span>.</h3>
+      <p>
+        Une pression et il est allumé, directement sur l&rsquo;image du trafic.
+        Tant qu&rsquo;il n&rsquo;a pas de position, le cercle vous le dit, et le
+        mot en dessous vous donne où en est le récepteur&nbsp;: silencieux, des
+        solutions qui arrivent encore sans date, ou une date lue sur un
+        satellite.
+      </p>
+      <p>
+        C&rsquo;est la différence entre un appareil qu&rsquo;il faut attendre et
+        un appareil qu&rsquo;il faut sortir à découvert. Le premier point
+        s&rsquo;annonce, et l&rsquo;image devient une image du ciel.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : le cercle vide porte les mots NO FIX et, dessous, où en est le récepteur" %>
+      <figcaption>En attente du ciel</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="off">Le logo à l&rsquo;écran <span class="highlight">veut dire éteint</span>.</h3>
+      <p>
+        Un appui de deux secondes éteint&nbsp;: la radio est arrêtée,
+        l&rsquo;écran reçoit trois secondes pour dessiner le logo, et
+        l&rsquo;alimentation tombe quand vous relâchez. Le papier électronique
+        garde son image sans courant&nbsp;: c&rsquo;est donc ce qu&rsquo;un
+        appareil éteint porte.
+      </p>
+      <p>
+        Le même appui, un doigt posé sur le pavé, laisse l&rsquo;écran vierge.
+        Une image laissée tout un hiver sur du papier électronique y laisse une
+        ombre que la dalle ne perd plus, et un appareil qui part au placard ne
+        doit rien porter.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "L’écran garé d’un appareil éteint : le logo skyBlip, tenu par le papier électronique sans alimentation" %>
+      <figcaption>Éteint</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="flat-battery">Une batterie qui se vide <span class="highlight">le dit en partant</span>.</h3>
+      <p>
+        À 3,2&nbsp;V l&rsquo;appareil s&rsquo;éteint seul, et la dernière chose
+        qu&rsquo;il écrit est pourquoi. Vous n&rsquo;avez rien pressé, donc
+        l&rsquo;écran est le seul à pouvoir vous le dire&nbsp;: sans lui, un
+        appareil qui s&rsquo;arrête seul est un appareil qui a planté ou qui est
+        mort. Le bouton cesse de répondre au même moment, parce qu&rsquo;une
+        pression ne ferait que ramener à la même coupure.
+      </p>
+      <p>
+        Le câble est la sortie, et c&rsquo;est un seul geste. Le brancher
+        réveille l&rsquo;électronique, qui refuse de redevenir un appareil et
+        remet le logo&nbsp;: un appareil éteint ordinaire, en charge, que la
+        prochaine pression démarre. Une batterie qui s&rsquo;est vidée sur une
+        étagère n&rsquo;a rien écrit, alors c&rsquo;est la pression qui reçoit
+        la réponse, avec la même ligne.
+      </p>
+      <p>
+        Le démarrage suivant s&rsquo;en souvient. Son autotest affiche
+        <span class="mono">WAS FLAT</span> à côté de la tension, et un téléphone
+        qui s&rsquo;y connecte tant qu&rsquo;il tourne l&rsquo;apprend aussi, si
+        bien qu&rsquo;un appareil qui s&rsquo;est éteint ne revient pas comme si
+        de rien n&rsquo;était.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil qui s’est éteint seul, batterie vide : le logo skyBlip avec les mots FLAT BATTERY dessous" %>
+      <figcaption>Batterie vide</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Appareil éteint</th><th>Ce qui se passe</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: l&rsquo;écran le dit déjà, et le câble est le chemin du retour</td></tr>
+        <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
+        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
+        <tr><th>Pression sur <span class="mono">RST</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Notes techniques</h2>
+
+  <h3 id="cell">Pourquoi la batterie tient la journée.</h3>
+  <p class="lede">
+    Éteindre est une séquence, pas une coupure d&rsquo;alimentation, et
+    l&rsquo;ordre en est tout le contenu. La mémoire flash externe reçoit
+    l&rsquo;ordre de dormir pendant qu&rsquo;elle a encore de quoi
+    l&rsquo;entendre&nbsp;: après la coupure cet ordre ne fait rien, et le
+    composant tire son courant de veille complet toute la nuit que
+    l&rsquo;appareil passe dans une sacoche à avoir l&rsquo;air éteint.
+  </p>
+  <p class="lede">
+    Le reste, c&rsquo;est la radio et les capteurs. En vol l&rsquo;appareil
+    parle une fois par seconde, au sol une fois sur dix, et laquelle des dix
+    secondes est la sienne vient de son adresse, si bien qu&rsquo;un terrain
+    plein d&rsquo;aéronefs s&rsquo;étale de lui-même.
+  </p>
+
+  <ul class="points">
+    <li>Radio endormie avant sa ligne de reset</li>
+    <li>Flash, récepteur, alimentations, broches, dans cet ordre</li>
+    <li>1&nbsp;Hz en vol, 0,1&nbsp;Hz au sol</li>
+    <li>Le gyroscope du hub n&rsquo;est jamais lu&nbsp;: il coûte un milliampère</li>
+    <li>Charge refusée hors de 5 à 60&nbsp;&deg;C</li>
+    <li>Le voyant cligne, il n&rsquo;est jamais tenu fixe</li>
+  </ul>
+
+  <h3 id="gauge">Ce que la jauge ne fera pas.</h3>
+  <p class="lede">
+    Elle lit deux courbes, pas une. Sur un chargeur, la tension aux bornes est
+    tenue au-dessus de celle de la cellule&nbsp;: la même lecture signifie alors
+    une batterie bien plus vide, et le pourcentage dit quelle courbe il a lue.
+  </p>
+  <p class="lede">
+    Elle ne recule jamais, et l&rsquo;affaissement dû à une émission à
+    22&nbsp;dBm ne la fait pas bouger. Une jauge qui saute quand la radio émet
+    est une jauge qu&rsquo;un pilote cesse de croire.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Seuil</th><th>Ce qu&rsquo;il fait</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>3,50&nbsp;V</th><td>l&rsquo;alerte&nbsp;: à partir de là, plus rien n&rsquo;est écrit en mémoire sauf l&rsquo;enregistrement du vol, qui est la preuve du vol en train de finir</td></tr>
+        <tr><th>3,40&nbsp;V</th><td>un démarrage sur une batterie aussi vide est refusé, et le bouton est laissé désarmé pour qu&rsquo;un sac ne puisse pas redemander</td></tr>
+        <tr><th>3,20&nbsp;V</th><td>la coupure&nbsp;: l&rsquo;appareil s&rsquo;éteint, sur trois échantillons consécutifs, pour qu&rsquo;un affaissement d&rsquo;émission ne puisse pas agir</td></tr>
+        <tr><th>1,80&nbsp;V</th><td>en dessous, la lecture est un pont diviseur en l&rsquo;air, pas une batterie vide, et rien n&rsquo;agit dessus</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "phone", class: "cta cta--next" %>
+  </p>
+</section>

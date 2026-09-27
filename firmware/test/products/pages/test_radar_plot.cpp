@@ -130,6 +130,7 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
     snap.n_targets = 4;
     snap.targets = flight;
     snap.formation_members = 4;
+    snap.heard = 4;
     const Glass fb = radar(snap);
 
     // The square is 86..113 on both axes, one blank pixel clear of the wingtips.
@@ -157,7 +158,7 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
     CHECK_FALSE(separate.get_pixel(86, 100));
     CHECK_FALSE(separate.get_pixel(113, 100));
 
-    // The footer still counts them: they are aircraft, and they are on the glass.
+    // The footer still counts them: they are aircraft, and they were heard.
     CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
 }
 

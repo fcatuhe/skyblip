@@ -68,7 +68,7 @@ class ScreenService : public runtime::Service {
     void park_for_off();
     void park_for_flat_cell();
     void set_range_step(int step) {
-        range_step_ = clamped_range_step(step);
+        settings_.range_step = static_cast<uint8_t>(clamped_range_step(step));
         dirty_ = true;
     }
 
@@ -79,7 +79,7 @@ class ScreenService : public runtime::Service {
     Mode mode() const { return mode_; }
     comms::Pending prompt() const { return prompt_; }
     const MenuEditor& editor() const { return editor_; }
-    int range_step() const { return range_step_; }
+    int range_step() const { return settings_.range_step; }
     bool backlight() const { return backlight_; }
     bool powered() const { return powered_; }
     bool parking() const { return park_ != ParkStep::None; }
@@ -205,7 +205,6 @@ class ScreenService : public runtime::Service {
     traffic::RangeRow nearby_rows_[kNearbyRows]{};
     Page page_{Page::Radar};
     Mode mode_{Mode::Page};
-    int range_step_{kDefaultRangeStep};
     uint32_t last_tick_ms_{0};
     uint32_t screen_since_ms_{0};
     uint32_t recorded_ms_{0};

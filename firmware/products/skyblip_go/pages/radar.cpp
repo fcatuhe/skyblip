@@ -18,15 +18,13 @@ constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
 constexpr int kRangeScale = 2;
 constexpr int kTrafficScale = 3;
-constexpr int kRangePad = 6;
+constexpr int kRangeOnRingPad = 6;
 constexpr int kKeepOutPad = 3;
 constexpr int kReadingCorner = 3;
 constexpr int kFooterY = kFooterBottom - kGlyphH;
-constexpr int kRangeY = kFooterBottom - kGlyphH * kRangeScale;
 constexpr int kUnitGap = 3;
 constexpr int32_t kTurn16 = 65536;
 constexpr int kWedgeInnerR = 15;
-constexpr int kWedgeOuterR = kOuterR - kRingW;
 constexpr int64_t kTanScale = 10000;
 constexpr int64_t kWedgeEdgeTanE4 = 10000;
 constexpr int kFormationD = 13;
@@ -36,11 +34,34 @@ constexpr int kDigitW = 5;
 constexpr int kBannerScale = 2;
 constexpr int kBannerPad = 4;
 constexpr int kOwnShipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
-constexpr int kBannerY = (kOwnShipTail + kFooterTop - kGlyphH * kBannerScale) / 2;
 constexpr int kNoteScale = 1;
 constexpr int kNotePad = 2;
 constexpr int kNoteGap = 5;
-constexpr int kNoteY = kBannerY + kGlyphH * kBannerScale + kBannerPad + kNoteGap;
+
+struct Layout {
+    int outer_r;
+    int range_y;
+    int range_pad;
+    int banner_y;
+    int note_y;
+};
+
+constexpr Layout layout_with(int outer_r, int range_y, int range_pad, int banner_y) {
+    return {outer_r, range_y, range_pad, banner_y,
+            banner_y + kGlyphH * kBannerScale + kBannerPad + kNoteGap};
+}
+
+constexpr Layout kRangeOnTheRing =
+    layout_with(kToScaleR, kFooterBottom - kGlyphH * kRangeScale, kRangeOnRingPad,
+                (kOwnShipTail + kFooterTop - kGlyphH * kBannerScale) / 2);
+constexpr int kRangeOnRimY = kFar + kAllR - kRingW / 2 - kGlyphH * kRangeScale / 2;
+constexpr Layout kRangeOnTheRim =
+    layout_with(kAllR, kRangeOnRimY, kRangeOnRingPad,
+                (kOwnShipTail + kRangeOnRimY - kRangeOnRingPad - kGlyphH * kBannerScale) / 2);
+
+constexpr const Layout& layout_of(const RadarSnapshot& snap) {
+    return snap.plot == RadarPlot::All ? kRangeOnTheRim : kRangeOnTheRing;
+}
 
 int half_chord_in_half_pixels(int r, int b) {
     const int32_t v = 4 * r * r - (2 * b + 1) * (2 * b + 1);
@@ -137,16 +158,18 @@ RangeText range_text(const RadarSnapshot& snap) {
 
 Box range_box(const RadarSnapshot& snap, int pad) {
     const int w = range_text(snap).w;
-    return padded(kCx - w / 2, kRangeY, w, kGlyphH * kRangeScale, pad);
+    return padded(kCx - w / 2, layout_of(snap).range_y, w, kGlyphH * kRangeScale, pad);
 }
 
 void range_label(ui::Canvas& fb, const RadarSnapshot& snap) {
     const RangeText t = range_text(snap);
-    const Box b = range_box(snap, kRangePad);
-    const int x = b.x + kRangePad;
+    const Layout& at = layout_of(snap);
+    const Box b = range_box(snap, at.range_pad);
+    const int x = b.x + at.range_pad;
     fb.rect(b.x, b.y, b.w, b.h, false, true);
-    fb.draw_text(x, kRangeY, t.number, true, kRangeScale);
-    fb.draw_text(x + t.number_w + kUnitGap, kRangeY + kGlyphH * (kRangeScale - 1), t.unit, true, 1);
+    fb.draw_text(x, at.range_y, t.number, true, kRangeScale);
+    fb.draw_text(x + t.number_w + kUnitGap, at.range_y + kGlyphH * (kRangeScale - 1), t.unit, true,
+                 1);
 }
 
 void flight_word(ui::Canvas& fb, const RadarSnapshot& snap) {
@@ -183,22 +206,22 @@ const char* ring_note(const RadarSnapshot& snap, char* buf) {
     return snap.fix_valid ? nullptr : gnss::stage_name(snap.stage);
 }
 
-Box note_box(const char* note) {
+Box note_box(const char* note, int y) {
     const int w = text_width(note, kNoteScale);
-    return {kCx - w / 2 - kNotePad, kNoteY - kNotePad, w + 2 * kNotePad,
+    return {kCx - w / 2 - kNotePad, y - kNotePad, w + 2 * kNotePad,
             kGlyphH * kNoteScale + 2 * kNotePad};
 }
 
-void state_note(ui::Canvas& fb, const char* note) {
-    const Box b = note_box(note);
+void state_note(ui::Canvas& fb, const char* note, int y) {
+    const Box b = note_box(note, y);
     fb.rect(b.x, b.y, b.w, b.h, false, true);
     fb.draw_text(b.x + kNotePad, b.y + kNotePad, note, true, kNoteScale);
 }
 
-void aircraft(ui::Canvas& fb, int in_view, bool counting) {
+void aircraft(ui::Canvas& fb, int heard, bool counting) {
     char buf[4];
     if (counting)
-        buf[fmt_uint(buf, static_cast<uint32_t>(in_view))] = 0;
+        buf[fmt_uint(buf, static_cast<uint32_t>(heard))] = 0;
     else
         buf[fmt_string(buf, "-")] = 0;
     const int x = kGlassW - kMargin - text_width(buf, kTrafficScale);
@@ -206,14 +229,14 @@ void aircraft(ui::Canvas& fb, int in_view, bool counting) {
     fb.draw_text(x - kUnitGap - text_width("ACT", 1), kFooterY, "ACT", true, 1);
 }
 
-Box banner_box(const char* word) {
+Box banner_box(const char* word, int y) {
     const int w = text_width(word, kBannerScale);
-    return {kCx - w / 2 - kBannerPad, kBannerY - kBannerPad, w + 2 * kBannerPad,
+    return {kCx - w / 2 - kBannerPad, y - kBannerPad, w + 2 * kBannerPad,
             kGlyphH * kBannerScale + 2 * kBannerPad};
 }
 
-void state_banner(ui::Canvas& fb, const char* word) {
-    const Box b = banner_box(word);
+void state_banner(ui::Canvas& fb, const char* word, int y) {
+    const Box b = banner_box(word, y);
     fb.rect(b.x, b.y, b.w, b.h, false, true);
     fb.draw_text(b.x + kBannerPad, b.y + kBannerPad, word, true, kBannerScale);
 }
@@ -317,13 +340,14 @@ bool at_the_apex(const Box* formation, int64_t r2, int x, int y) {
     return r2 < 4 * static_cast<int64_t>(kWedgeInnerR) * kWedgeInnerR;
 }
 
-void invert_wedges(ui::Canvas& fb, const Wedge* wedges, int n_wedges, const Box* keep_out,
-                   int n_keep_out, const Box* formation) {
-    const int64_t outer2 = 4 * static_cast<int64_t>(kWedgeOuterR) * kWedgeOuterR;
-    const int bottom = kFar + kOuterR < kGlassH ? kFar + kOuterR : kGlassH;
-    for (int y = kFar - kOuterR; y < bottom; y++) {
+void invert_wedges(ui::Canvas& fb, int outer_r, const Wedge* wedges, int n_wedges,
+                   const Box* keep_out, int n_keep_out, const Box* formation) {
+    const int inside = outer_r - kRingW;
+    const int64_t outer2 = 4 * static_cast<int64_t>(inside) * inside;
+    const int bottom = kFar + outer_r < kGlassH ? kFar + outer_r : kGlassH;
+    for (int y = kFar - outer_r; y < bottom; y++) {
         const int64_t py = 2 * (y - kFar) + 1;
-        for (int x = kFar - kOuterR; x < kFar + kOuterR; x++) {
+        for (int x = kFar - outer_r; x < kFar + outer_r; x++) {
             const int64_t px = 2 * (x - kFar) + 1;
             const int64_t r2 = px * px + py * py;
             if (r2 > outer2 || at_the_apex(formation, r2, x, y)) continue;
@@ -339,25 +363,28 @@ void invert_wedges(ui::Canvas& fb, const Wedge* wedges, int n_wedges, const Box*
 void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap) {
     fb.clear(true);
 
-    ring(fb, kOuterR);
+    const Layout& layout = layout_of(snap);
+    ring(fb, layout.outer_r);
 
     const int16_t track = c16(to_degrees(CentiDegrees(snap.track_cdeg)).v);
 
     ui::draw_skyship(fb, kFar, kNear);
 
-    const int in_ring = snap.fix_valid ? plot(fb, snap, track) : 0;
+    if (snap.fix_valid) plot_leaders(fb, snap, track);
 
     flight_clock(fb, snap);
     flight_word(fb, snap);
     range_label(fb, snap);
-    aircraft(fb, in_ring, snap.fix_valid && snap.receiver_listening);
+    aircraft(fb, snap.heard, snap.fix_valid && snap.receiver_listening);
+
+    if (snap.fix_valid) plot_blips(fb, snap, track);
 
     Wedge wedges[kMaxRadarTargets];
     const int n_wedges = alarm_wedges(snap, track, wedges);
     if (n_wedges > 0) {
         const Box readings[] = {range_box(snap, kKeepOutPad), clock_box(snap, kKeepOutPad)};
         const Box square = formation_box();
-        invert_wedges(fb, wedges, n_wedges, readings, 2,
+        invert_wedges(fb, layout.outer_r, wedges, n_wedges, readings, 2,
                       snap.formation_members > 0 ? &square : nullptr);
     }
 
@@ -367,8 +394,13 @@ void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap) {
     }
 
     char ring[12], under[12];
-    if (const char* word = ring_word(snap, ring)) state_banner(fb, word);
-    if (const char* note = ring_note(snap, under)) state_note(fb, note);
+    if (const char* word = ring_word(snap, ring)) state_banner(fb, word, layout.banner_y);
+    if (const char* note = ring_note(snap, under)) state_note(fb, note, layout.note_y);
+
+    if (snap.fix_valid && snap.plot == RadarPlot::All) {
+        const Box label = range_box(snap, layout.range_pad);
+        plot_rim(fb, snap, track, {label.x, label.y, label.x + label.w - 1, label.y + label.h - 1});
+    }
 }
 
 }  // namespace skyblip::go

@@ -1,0 +1,177 @@
+---
+title: Controls and menus
+nav_title: Controls
+description: Working a skyBlip Go · two contacts, the settings under the radar, a callsign typed on the device, and the diagnostic pages opened by name.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Two contacts, and nothing to learn twice.</h1>
+  <p class="lede">
+    A pad and a button, the menus behind them, and the pages a bench reaches for.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="two-contacts">The pad moves, <span class="highlight">the button acts</span>.</h3>
+      <p>
+        Two contacts, and the split between them is all there is to remember.
+        The capacitive pad on the top edge walks the four pages, and can change
+        nothing. The button on the side opens the menu of the page you are on,
+        and every further press steps the row.
+      </p>
+      <p>
+        Two pages have a menu. Everything a thumb can set sits under the radar,
+        the first screen a device is set up on. Nothing is a draft to confirm:
+        each press is one finished change.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "The radar menu: aircraft type, callsign, units, range, plot, alarm and volume, with the hint PAD MOVES - BUTTON CHANGES at the foot" %>
+      <figcaption>The radar menu</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>A tap of the pad: the next page</li>
+    <li>A touch of a second: the radar</li>
+    <li>A press: the menu, where the page has one</li>
+    <li>Presses after that: the row steps</li>
+    <li>Past the last row: back to the picture</li>
+    <li>A minute untouched: it comes back on its own</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Your callsign, <span class="highlight">typed with two contacts</span>.</h3>
+      <p>
+        <span class="mono">CALLSIGN</span> is the one row that opens a field
+        rather than stepping a value, and the two gestures swap over inside it:
+        the pad rolls the character the bar is under, the button steps to the
+        next one. The ring is a blank, a dash, <span class="mono">A</span> to
+        <span class="mono">Z</span>, <span class="mono">0</span> to
+        <span class="mono">9</span>, and round to the blank again, so a thumb
+        that goes past a letter comes back to it without a second gesture.
+      </p>
+      <p>
+        The button on the last character is what stores the name, and the blanks
+        you left at the end are dropped. To remove a callsign, roll the first
+        character back to a blank and press: the screen says
+        <span class="mono">BLANK THE FIRST TO CLEAR</span> while the name is
+        there, and <span class="mono">BUTTON CLEARS</span> once the blank is
+        under the bar. Leave the field without finishing it, or let it sit for a
+        minute, and nothing is stored at all.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field: S-BLIP at triple height, a bar under the third character, PAD ROLLS over BUTTON NEXT, and BLANK THE FIRST TO CLEAR along the foot" %>
+      <figcaption>The callsign field</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "The callsign field with the first character rolled to a blank, the bar under it, and the hint now reading PAD ROLLS over BUTTON CLEARS" %>
+      <figcaption>The first character blanked</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "The radar menu after the press, the CALLSIGN row focused and reading NONE" %>
+      <figcaption>One press later</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="diagnostics">Four pages on the walk, <span class="highlight">the rest by name</span>.</h3>
+      <p>
+        A tap moves from the radar to the list, the instruments, then the
+        g-meter, and to nothing else: a pilot cycling the glass in flight should
+        not land on the satellite bars. A board with no inertial sensor has no
+        g-meter to draw, so the tap steps over it rather than showing
+        <span class="mono">NO SENSOR</span> every fourth time.
+      </p>
+      <p>
+        The rest opens by name, from the menu of the list, and hands you back
+        the page you were on. The screens below are the bench&rsquo;s, the
+        apron&rsquo;s and the bug report&rsquo;s: none of them is a picture to
+        land on with a thumb. The last of them records a flight for that report,
+        every subject for a bug or only power and duty for a discharge run, and
+        states what the one you pick costs the flash before you start it.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "The nearby menu: status, satellites, radio log, raw, capture and self test, the six pages opened by name" %>
+      <figcaption>The list&rsquo;s menu</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "The status page: fix and satellites, position, track, traffic count, transmit state, the sensor hub, pressure, the two altitudes, speed, vertical speed, and the cell in volts and percent" %>
+      <figcaption>Status</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "The satellites page: one bar per satellite grouped by constellation, against a dotted line at 40 dB-Hz" %>
+      <figcaption>Satellites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "The radio log: under the fix, the PPS state and the noise floor, one row per burst heard or sent, newest first, with its time, direction, channel, what it carried, address and level" %>
+      <figcaption>Radio log</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "The self test page: one row per part of the board, each with the part that answered and its verdict" %>
+      <figcaption>Self test</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "capture.png", alt: "The capture page with nothing recording: the state off, the two captures to pick from, FULL for every subject and POWER RUN for power and duty, then the price of the one picked, the sectors of flash it would take, the stored flights it would evict and the hours of recording it would keep, and PAD PICKS, PRESS TWICE TO ARM along the foot" %>
+      <figcaption>Capture</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Gesture</th><th>On a page</th><th>In a menu</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Tap the pad</th>
+          <td>the next page, and on the capture page the next capture</td>
+          <td>the next row, and off the last row the page the menu belongs to</td>
+        </tr>
+        <tr>
+          <th>Touch the pad, 1&nbsp;s</th>
+          <td>silences a standing alarm, and with none standing, brings back the radar</td>
+          <td>the radar</td>
+        </tr>
+        <tr>
+          <th>One press of the button</th>
+          <td>opens this page&rsquo;s menu, or refuses a question on the glass</td>
+          <td>acts on the focused row, and every further press steps it again</td>
+        </tr>
+        <tr>
+          <th>Two presses, under 0.6&nbsp;s apart</th>
+          <td colspan="2">allow the question on the glass, start or stop a capture on the capture page, and mean nothing anywhere else</td>
+        </tr>
+        <tr>
+          <th>Hold the button, 2&nbsp;s</th>
+          <td colspan="2">switches the device off</td>
+        </tr>
+        <tr>
+          <th>The same hold, finger on the pad</th>
+          <td colspan="2">switches it off and leaves the screen blank, for storage</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "power", class: "cta cta--next" %>
+  </p>
+</section>

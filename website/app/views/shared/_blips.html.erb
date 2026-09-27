@@ -32,12 +32,12 @@
             <span><%= band[:apart] %></span>
           </th>
           <% motions.each do |key, label| %>
-            <td><%= pages_image_tag "blips/#{band[:key]}-#{key}.png",
+            <td><%= screen_image_tag "blips/#{band[:key]}-#{key}.png",
                       alt: "#{band[:name]}, #{label}" %></td>
           <% end %>
           <% if band[:alarms] %>
             <% motions.each do |key, label| %>
-              <td><%= pages_image_tag "blips/#{band[:key]}-#{key}-alarm.png",
+              <td><%= screen_image_tag "blips/#{band[:key]}-#{key}-alarm.png",
                         alt: "#{band[:name]}, #{label}, #{alarm.downcase}" %></td>
             <% end %>
           <% else %>

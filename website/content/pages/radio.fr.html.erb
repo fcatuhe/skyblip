@@ -1,0 +1,87 @@
+---
+title: La seconde radio
+nav_title: Radio
+slug: radio
+description: Où passe la seconde d'un skyBlip Go · quatre fenêtres calées sur le GPS, les deux canaux 868, la liaison montante du sol, et une émission que rien ne déplace.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Une radio, et une seconde partagée par tous ceux à portée.</h1>
+  <p class="lede">
+    Une radio et une antenne, et une seconde découpée de la même façon par tous les appareils à portée.
+  </p>
+</section>
+
+<section>
+  <h3 id="second">Où passe la seconde.</h3>
+  <p class="lede">
+    Il y a une radio et une antenne dans l&rsquo;appareil, donc la seconde est
+    découpée en plages et chaque plage reçoit une fréquence. Le GPS donne le
+    haut de la seconde à la microseconde près, et chaque skyBlip, chaque skyPost
+    et chaque appareil de génération FLARM à portée découpe la même seconde de
+    la même façon.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Après le haut de la seconde</th><th>Accordée sur</th><th>Ce qui s&rsquo;y trouve</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>0 à 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fin de la plage ouverte à 800&nbsp;ms dans la seconde précédente&nbsp;: le trafic de génération FLARM émet encore ici, l&rsquo;appareil écoute donc encore. En réception seule</td></tr>
+        <tr><th>205 à 395&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>la liaison montante skyPost&nbsp;: le trafic ADS-B reçu par la station sol et la météo qu&rsquo;elle détient, à 200&nbsp;kbit/s. En réception seule, toujours</td></tr>
+        <tr><th>400 à 800&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>le trafic direct sur le canal bas, ADS-L et génération FLARM ensemble</td></tr>
+        <tr><th>800 à 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la même chose sur le canal haut, jusqu&rsquo;à 200&nbsp;ms dans la seconde suivante</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">
+    Passer sur les deux canaux 868 n&rsquo;est pas un raffinement. ADS-L alterne
+    les canaux d&rsquo;une émission à la suivante, et un appareil de génération
+    FLARM émet sur le canal bas dans la première moitié de la seconde et sur le
+    canal haut dans la seconde moitié. Un récepteur campé sur l&rsquo;un des
+    deux entendrait la moitié de ses voisins, sans savoir laquelle.
+  </p>
+  <p class="lede">
+    Sur ces deux canaux, l&rsquo;appareil entend deux systèmes dans une seule
+    plage. ADS-L et la liaison de génération FLARM cachent toutes deux leurs
+    trames derrière un mot de synchronisation de 32 bits, et les deux mots
+    coïncident sur leurs dix-huit premiers chips&nbsp;: le récepteur
+    s&rsquo;accroche aux chips qu&rsquo;ils partagent, et le logiciel nomme le
+    système d&rsquo;après ceux qui suivent. Les quelques millisecondes de part
+    et d&rsquo;autre de la plage 869,525&nbsp;MHz sont la marge qu&rsquo;exige
+    un changement de bande, parce que les deux bandes sont deux modulations et
+    non deux fréquences&nbsp;: 100&nbsp;kbit/s Manchester FSK en bas,
+    200&nbsp;kbit/s GMSK en haut.
+  </p>
+  <p class="lede">
+    L&rsquo;émission est la partie étroite. L&rsquo;appareil ne parle que sur
+    les canaux 868, entre 450 et 1000&nbsp;ms, sur celui des deux canaux à qui
+    revient cette seconde, et ce qui sort est toujours de l&rsquo;ADS-L&nbsp;:
+    le format de génération FLARM est reçu, jamais émis. Le 869,525&nbsp;MHz
+    appartient à la station sol pour parler et à nous pour écouter, donc rien
+    dans cet appareil n&rsquo;y passe jamais en émission. L&rsquo;instant de la
+    salve dans la plage est tiré de l&rsquo;adresse de l&rsquo;appareil et de la
+    seconde en cours, retiré à chaque seconde, ce qui empêche deux aéronefs dont
+    les salves se sont chevauchées une fois de recommencer à la suivante.
+  </p>
+
+  <ul class="points">
+    <li>Quatre plages par seconde, calées sur le GPS à la microseconde</li>
+    <li>868,200 et 868,400&nbsp;MHz, 400&nbsp;ms chacune</li>
+    <li>869,525&nbsp;MHz, 190&nbsp;ms, à l&rsquo;écoute du sol</li>
+    <li>Une fenêtre de synchronisation, deux systèmes décodés</li>
+    <li>Une salve d&rsquo;environ 5&nbsp;ms, à un instant que rien sur l&rsquo;air ne déplace</li>
+    <li>1&nbsp;% de l&rsquo;heure autorisé, la moitié utilisée</li>
+  </ul>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "displays", class: "cta cta--next" %>
+  </p>
+</section>

@@ -1,0 +1,273 @@
+---
+title: Tous les écrans
+nav_title: Écrans
+slug: ecrans
+description: Tous les écrans d'un skyBlip Go tels que le firmware les dessine, et le radar des deux façons, PLOT ALL et PLOT TO SCALE.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Tous les écrans, tels que le firmware les dessine.</h1>
+  <p class="lede">
+    Chaque image est le framebuffer 200&times;200 du
+    <%= link_to_page "skyblip-go", label: "simulateur", anchor: "simulator" %>,
+    amené dans cet état et relu pixel par pixel. Un écran qui change sur
+    l&rsquo;appareil est une capture à refaire.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="both-ways">Le radar, des deux façons</h2>
+  <p class="lede">
+    <span class="mono">PLOT</span>, dans le menu des réglages, dessine le radar
+    de deux façons. <span class="mono">ALL</span>, le premier choix et celui
+    sur lequel l&rsquo;appareil est livré, rétrécit le cercle et place chaque
+    aéronef au-delà sur la bande qui l&rsquo;entoure, dans son relèvement.
+    <span class="mono">TO SCALE</span> place chaque marque là où
+    l&rsquo;échelle du cercle la met, et laisse de côté ce qui ne tient pas.
+    Trois ciels, chacun capturé des deux façons sur le même firmware.
+  </p>
+
+  <div class="plot" data-controller="plot" data-plot-view-value="both">
+    <p class="plot-choices" data-plot-target="choices" hidden>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Côte à côte</button>
+    </p>
+
+    <div class="plot-situation">
+      <h3 id="quiet-sky">Un ciel qui tient dans le cercle.</h3>
+      <p>
+        Trois aéronefs à moins de quatre milles. En <span class="mono">ALL</span>,
+        ils sont dans le petit cercle, et rien d&rsquo;autre ne change. À
+        l&rsquo;échelle, le cercle est le grand.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "radar.png", alt: "La page radar en PLOT ALL : les trois mêmes aéronefs dans un cercle plus petit, et rien sur la bande autour" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar-to-scale.png", alt: "La page radar à l’échelle : trois aéronefs dans le cercle de quatre milles, chacun avec son trait d’une minute" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="past-the-ring">Du trafic au-delà du cercle.</h3>
+      <p>
+        Un aéronef qui arrive de cinq milles devant, un groupe de trois à huit
+        milles à droite du nez, un autre à onze milles sur la gauche. En
+        <span class="mono">ALL</span>, chacun est sur la bande, le groupe ne
+        fait qu&rsquo;une marque comptée 3, et la minute de celui qui arrive est
+        déjà dans le cercle. À l&rsquo;échelle, seul celui de devant atteint
+        l&rsquo;écran.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL : sur la bande, un aéronef devant avec son trait qui entre dans le cercle, une marque comptée 3 en haut à droite, et un aéronef à gauche" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "La page radar à l’échelle : les aéronefs du cercle, et un de plus tout en haut de l’écran ; le groupe et l’aéronef de gauche ne sont pas dessinés" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="astern">Du trafic derrière.</h3>
+      <p>
+        Trois aéronefs de six à huit milles derrière, et un dans le cercle. En
+        <span class="mono">ALL</span>, ils ne font qu&rsquo;une marque comptée
+        3, écartée de l&rsquo;étiquette de portée plutôt que cachée dessous. À
+        l&rsquo;échelle, les trois sont hors de l&rsquo;écran.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "astern-all.png", alt: "La page radar en PLOT ALL : le même aéronef dans le cercle, et à côté de l’étiquette de portée en bas une marque comptée 3 pour les aéronefs derrière" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "La page radar à l’échelle : un aéronef dans le cercle, derrière à gauche, et rien d’autre" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <p><%= link_to_page "radar", label: "Comment se lit la bande", anchor: "every-aircraft", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <h2 class="kicker" id="in-flight">En vol</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs dessinés en losanges, un au-dessus, un en dessous, un au même niveau en montée, chacun avec son trait d’une minute, la route de l’appareil en pointillés avec une bille à chacune des deux minutes suivantes, le cercle de quatre milles, le temps de vol et le nombre d’aéronefs reçus" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant un avis de trafic : un secteur de 90° penché sur le relèvement du trafic, passé au noir, avec le losange plein de l’aéronef convergent et son trait d’une minute en réserve" %>
+      <figcaption>Avis de trafic</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La page nearby : l’indicatif S-BLIP avec l’adresse de l’appareil à côté et le compte de tout ce qui a été entendu sur la ligne du haut, puis cinq aéronefs listés du plus proche au plus loin, chacun avec sa lettre de source, son indicatif ou son adresse, sa distance au sol et son altitude relative" %>
+      <figcaption>Nearby</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "La page six-pack : vitesse sol, horizon artificiel avec le niveau de batterie au-dessus, altimètre, coordinateur de virage avec sa bille, cap et vario" %>
+      <figcaption>Six-pack</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "La page G-mètre : la charge verticale et latérale en marqueur dans un champ, avec le cadre des extrêmes de ce vol autour, la bande avant-arrière à côté et trois lignes de chiffres en dixièmes de g" %>
+      <figcaption>G-mètre</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "radar", label: "Radar et trafic", anchor: "heading-up", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", label: "Instruments", anchor: "six-pack", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="settings">Réglages</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d’aéronef, indicatif, unités, portée, tracé, alarme et volume, avec l’aide PAD MOVES - BUTTON CHANGES en bas" %>
+      <figcaption>Le menu du radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, PAD ROLLS au-dessus de BUTTON NEXT, et BLANK THE FIRST TO CLEAR en bas" %>
+      <figcaption>Le champ indicatif</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif, le premier caractère ramené sur un blanc, la barre dessous, et l’aide qui dit maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <figcaption>Le premier caractère effacé</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, la ligne CALLSIGN sélectionnée et qui affiche NONE" %>
+      <figcaption>Une pression plus tard</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Commandes et menus", anchor: "two-contacts", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="diagnostics">Diagnostic</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, raw, capture et autotest, les six pages qu’on ouvre par leur nom" %>
+      <figcaption>Le menu de la liste</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "La page état : point et satellites, position, route, trafic, émission, la centrale inertielle, pression, les deux altitudes, vitesse, vario et la batterie en volts et en pourcentage" %>
+      <figcaption>État</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "La page satellites : une barre par satellite groupée par constellation, contre une ligne pointillée à 40 dB-Hz" %>
+      <figcaption>Satellites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : sous le point, l’état du PPS et le bruit de fond, une ligne par trame reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, ce qu’elle portait, son adresse et son niveau" %>
+      <figcaption>Journal radio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "La page autotest : une ligne par pièce de la carte, avec la pièce qui a répondu et son verdict" %>
+      <figcaption>Autotest</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "capture.png", alt: "La page capture, rien en cours d’enregistrement : l’état à l’arrêt, les deux captures au choix, FULL pour tous les sujets et POWER RUN pour la batterie et les temps d’activité, puis le prix de celle choisie, les secteurs de flash qu’elle prendrait, les vols enregistrés qu’elle effacerait et les heures d’enregistrement qu’elle garderait, et PAD PICKS, PRESS TWICE TO ARM en bas" %>
+      <figcaption>Capture</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Les pages ouvertes par leur nom", anchor: "diagnostics", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="on-the-ground">Au sol, et éteint</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : le cercle vide porte les mots NO FIX et, dessous, où en est le récepteur" %>
+      <figcaption>En attente du ciel</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery.png", alt: "La page radar en vol sur une batterie faible : BAT et le pourcentage dans le cercle, à la place du mot d’état" %>
+      <figcaption>Batterie faible</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery-taxi.png", alt: "La page radar au roulage sur une batterie faible : BAT et le pourcentage dans le cercle, et TAXI dessous" %>
+      <figcaption>Batterie faible, au roulage</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "L’écran garé d’un appareil éteint : le logo skyBlip, tenu par le papier électronique sans alimentation" %>
+      <figcaption>Éteint</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil qui s’est éteint seul, batterie vide : le logo skyBlip avec les mots FLAT BATTERY dessous" %>
+      <figcaption>Batterie vide</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "power", label: "Alimentation et batterie", anchor: "waiting", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="asked">Demandé à l&rsquo;écran</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "La demande d’autorisation : AUTHORISE, SETTINGS, appliquer les réglages envoyés par le téléphone, PRESS TWICE TO ALLOW au-dessus de ONE PRESS REFUSES, refus après 30 s" %>
+      <figcaption>Une écriture de réglages, demandée à l&rsquo;écran</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "recovery.png", alt: "La page de récupération : RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, puis un lecteur nommé TECHOBOOT sur USB, un .uf2 déposé dessus est un nouveau firmware, RST ramène à skyBlip, et rien n’est émis pendant ce temps" %>
+      <figcaption>Confié au bootloader USB</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "phone", label: "Téléphone et firmware", anchor: "asked", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Notes techniques</h2>
+
+  <h3 id="screen">Pourquoi l&rsquo;écran se comporte ainsi.</h3>
+  <p class="lede">
+    La dalle est un papier électronique de 1,54&Prime;, 200&times;200 pixels.
+    Elle garde sa dernière image alimentation coupée et ne consomme rien pour la
+    garder&nbsp;: c&rsquo;est ce qui fait du logo garé une indication, et de
+    l&rsquo;écran vierge la bonne image de rangement.
+  </p>
+  <p class="lede">
+    En vol, chaque image est un rafraîchissement partiel. La forme d&rsquo;onde
+    complète, celle qui fait clignoter la dalle en noir et blanc pendant une
+    seconde et demie, est dépensée deux fois par session&nbsp;: à
+    l&rsquo;allumage et à l&rsquo;extinction. Un changement de page passe par un
+    seul effacement au noir, et le clignotement d&rsquo;alarme, une fois par
+    seconde, est le plancher de la dalle plutôt qu&rsquo;un rythme choisi. Plus
+    vite est possible, et une grande zone noire basculée à ce rythme marque la
+    dalle pour de bon.
+  </p>
+
+  <ul class="points">
+    <li>Rafraîchissement partiel à chaque image</li>
+    <li>La forme d&rsquo;onde complète deux fois par session</li>
+    <li>Un changement de page&nbsp;: un tiers de seconde de noir</li>
+    <li>Une image identique à la précédente n&rsquo;est jamais envoyée</li>
+    <li>Laissée tranquille au-dessus de 50&nbsp;&deg;C, sa limite</li>
+    <li>Garée en blanc à la coupure, jamais en pleine image</li>
+  </ul>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "radar", class: "cta cta--next" %>
+  </p>
+</section>

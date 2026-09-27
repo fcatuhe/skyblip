@@ -39,6 +39,44 @@ TEST_CASE("settings: blob round-trips through version+crc framing") {
     CHECK(out.units == Units::Metric);
 }
 
+TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships on 4 NM and ALL") {
+    Settings s = defaults();
+    CHECK(int(s.range_step) == kDefaultRangeStep);
+    CHECK(s.plot == RadarPlot::All);
+
+    s.range_step = 0;
+    s.plot = RadarPlot::ToScale;
+    uint8_t blob[128];
+    to_blob(s, blob, sizeof(blob));
+    Settings out;
+    REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
+    CHECK(int(out.range_step) == 0);
+    CHECK(out.plot == RadarPlot::ToScale);
+
+    Settings past_the_last_ring = defaults();
+    past_the_last_ring.range_step = kRangeStepCount;
+    CHECK(validate(past_the_last_ring) == Status::OutOfRange);
+    Settings no_such_plot = defaults();
+    no_such_plot.plot = static_cast<RadarPlot>(2);
+    CHECK(validate(no_such_plot) == Status::OutOfRange);
+}
+
+// The "config" reply has nine bytes left at its worst case, and neither key fits in them.
+TEST_CASE(
+    "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
+    Settings s = defaults();
+    char buf[256];
+    const std::string json(buf, static_cast<size_t>(to_json(s, 0x123456, buf, sizeof(buf))));
+    CHECK(json.find("range") == std::string::npos);
+    CHECK(json.find("plot") == std::string::npos);
+
+    const char* patch = "{\"range_step\":0,\"plot\":1,\"alarm_volume\":2}";
+    CHECK(apply_json(s, patch, static_cast<int>(strlen(patch))) == Status::Ok);
+    CHECK(int(s.range_step) == kDefaultRangeStep);
+    CHECK(s.plot == RadarPlot::All);
+    CHECK(int(s.alarm_volume) == 2);
+}
+
 TEST_CASE("settings: a corrupted blob is detected (CRC), caller falls back") {
     Settings s = defaults();
     uint8_t blob[128];

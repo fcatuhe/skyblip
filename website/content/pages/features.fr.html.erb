@@ -1,0 +1,184 @@
+---
+title: Toutes les fonctions
+nav_title: Fonctions
+slug: fonctions
+description: Ce que fait un skyBlip Go, une ligne chacune, et où chacune est expliquée.
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <h1>Tout ce que fait un skyBlip Go.</h1>
+  <p class="lede">
+    Une ligne chacune, rangées par la page qui les explique. Chaque nom ouvre le paragraphe qui va avec.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "radar", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "radar", label: "Route en haut", anchor: "heading-up" %></dt>
+      <dd>Vous au centre, nez en haut, et le ciel qui tourne autour de vous&nbsp;: un trafic en haut à droite est à droite du nez.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Cercles de 1, 2, 4 ou 8 NM", anchor: "heading-up" %></dt>
+      <dd>Ou 2, 4, 8 et 16&nbsp;km, choisis dans l&rsquo;unité où on les lit.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Une minute de route", anchor: "heading-up" %></dt>
+      <dd>Un trait de chaque aéronef jusqu&rsquo;où il sera dans une minute, et vos deux minutes devant vous.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Tous les aéronefs, aussi loin soient-ils", anchor: "every-aircraft" %></dt>
+      <dd>PLOT ALL place le trafic au-delà du cercle sur une bande autour, dans son relèvement.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Tous les aéronefs comptés", anchor: "every-aircraft" %></dt>
+      <dd>Le chiffre du coin compte tout ce qui est reçu, placé ou non.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Avis de trafic", anchor: "alarm" %></dt>
+      <dd>À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran clignote vers le trafic, avec son, vibration et voyant.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Cinq formes", anchor: "shapes" %></dt>
+      <dd>Au-dessus, au niveau ou en dessous, proche ou loin en altitude, en montée ou en descente, lues sans légende.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radar", label: "Nearby, du plus proche au plus loin", anchor: "nearby" %></dt>
+      <dd>Indicatif ou adresse, distance au sol et altitude relative, une ligne par aéronef.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "instruments", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "instruments", label: "Six cadrans", anchor: "six-pack" %></dt>
+      <dd>Vitesse sol, horizon, altimètre, bille et virage, route et vitesse verticale, tirés du GNSS.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "instruments", label: "La batterie à l&rsquo;écran", anchor: "six-pack" %></dt>
+      <dd>L&rsquo;état de charge au-dessus du cadran du milieu.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "instruments", label: "G-mètre", anchor: "g-meter" %></dt>
+      <dd>Facteur de charge normal, latéral et longitudinal, avec les pics du vol.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "controls", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "controls", label: "Deux contacts", anchor: "two-contacts" %></dt>
+      <dd>Le pavé fait défiler les pages, le bouton agit, et rien ne demande de rythme.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "controls", label: "Réglages sur l&rsquo;appareil", anchor: "two-contacts" %></dt>
+      <dd>Type, indicatif, unités, portée, tracé, alarme et volume, sans téléphone.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "controls", label: "Champ indicatif", anchor: "callsign" %></dt>
+      <dd>Une immatriculation tapée avec deux contacts, et effacée d&rsquo;une pression.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "controls", label: "Diagnostic par son nom", anchor: "diagnostics" %></dt>
+      <dd>État, satellites, journal radio, compteurs bruts, capture et autotest.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "power", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "power", label: "Il dit ce qu&rsquo;il attend", anchor: "waiting" %></dt>
+      <dd>Pas de position, et où en est le récepteur.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "power", label: "Éteint, c&rsquo;est le logo", anchor: "off" %></dt>
+      <dd>L&rsquo;e-paper le garde sans courant, et un écran blanc est gardé pour le rangement.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "power", label: "Une batterie vide le dit", anchor: "flat-battery" %></dt>
+      <dd>La coupure écrit FLAT BATTERY avant que les rails tombent.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "power", label: "Une journée sur une batterie", anchor: "cell" %></dt>
+      <dd>Un arrêt dans l&rsquo;ordre, et une radio qui parle une fois toutes les dix secondes au sol.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "power", label: "Une jauge qui ne bouge pas pour rien", anchor: "gauge" %></dt>
+      <dd>Deux courbes, en charge ou non, et jamais déplacée par une émission.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "phone", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "phone", label: "Par son nom, sans appairage", anchor: "by-name" %></dt>
+      <dd>Le NMEA FLARM vers trois applications à la fois, sur les profils qu&rsquo;elles cherchent.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "phone", label: "Demandé à l&rsquo;écran", anchor: "asked" %></dt>
+      <dd>Deux pressions autorisent, une refuse, et le silence vaut refus.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "phone", label: "Le firmware depuis une page web", anchor: "firmware" %></dt>
+      <dd>Une image signée en Bluetooth, et un appareil qui revient en arrière si la nouvelle ne prend pas.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "phone", label: "Pourquoi pas d&rsquo;appairage", anchor: "no-pairing" %></dt>
+      <dd>La frontière est l&rsquo;image signée et le pouce sur l&rsquo;appareil, pas la liaison.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "radio", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "radio", label: "Quatre fenêtres par seconde", anchor: "second" %></dt>
+      <dd>Calées sur le GPS à la microseconde, les deux canaux 868 et la liaison montante du sol.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radio", label: "Deux systèmes dans une fenêtre", anchor: "second" %></dt>
+      <dd>Trames ADS-L et génération FLARM distinguées après une seule synchro.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "radio", label: "Une émission que rien ne déplace", anchor: "second" %></dt>
+      <dd>Environ 5&nbsp;ms, à un instant tiré de l&rsquo;adresse et de la seconde.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <h2 class="kicker"><%= link_to_page "displays", class: "cta" %></h2>
+  <dl class="catalog">
+    <div>
+      <dt><%= link_to_page "displays", label: "Le radar, des deux façons", anchor: "both-ways" %></dt>
+      <dd>Les mêmes ciels en PLOT ALL et en PLOT TO SCALE, à un bouton d&rsquo;écart.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "displays", label: "Tous les écrans", anchor: "in-flight" %></dt>
+      <dd>Chaque page, chaque menu et chaque question, tels que le firmware les dessine.</dd>
+    </div>
+    <div>
+      <dt><%= link_to_page "displays", label: "Pourquoi l&rsquo;écran se comporte ainsi", anchor: "screen" %></dt>
+      <dd>Rafraîchissement partiel, un balayage noir par page, et la forme d&rsquo;onde complète deux fois par session.</dd>
+    </div>
+  </dl>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "radar", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "skyblip-go", class: "cta cta--previous" %>
+  </p>
+</section>

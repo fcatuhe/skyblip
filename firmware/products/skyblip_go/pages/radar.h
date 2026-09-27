@@ -35,6 +35,7 @@ struct RadarSnapshot {
     gnss::Stage stage{gnss::Stage::Silent};
     go::Units units{go::Units::Nautical};
     int range_step{kDefaultRangeStep};
+    RadarPlot plot{RadarPlot::All};
     int32_t track_cdeg{0};
     int16_t turn_cdps{0};
     int32_t speed_mm_s{0};
@@ -43,6 +44,7 @@ struct RadarSnapshot {
     bool in_flight{false};
     bool taxiing{false};
     bool receiver_listening{false};
+    int heard{0};
     int n_targets{0};
     const RadarTarget* targets{nullptr};
     bool alarm_flash{false};
