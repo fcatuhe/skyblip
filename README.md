@@ -30,7 +30,7 @@ scripts/build_local.sh              # skyblip_go, the only product today
 SKYBLIP_REF=HEAD scripts/build_local.sh
 ```
 
-The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK. CI runs the tests and the linter but no longer builds the image: the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml) is commented out until it comes back.
+The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`. CI runs the tests and the linter but no longer builds the image: the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml) is commented out until it comes back.
 
 ## Acknowledgements
 

@@ -4,8 +4,8 @@
 #   scripts/build_local.sh [product]        product defaults to skyblip_go
 #
 # What the (currently commented-out) `product-image` CI job does, on this
-# machine. The first run bootstraps a Zephyr workspace and downloads the SDK,
-# which takes a while; every run after that is just the build.
+# machine. The first run bootstraps a Zephyr workspace and downloads the SDK into
+# ~/.local/opt, which takes a while; every run after that is just the build.
 #
 # The tree it builds is a detached worktree of SKYBLIP_REF, never the checkout
 # you are editing: an image that boots is worth a commit anyway, and the west
@@ -27,6 +27,8 @@ workspace=${SKYBLIP_WORKSPACE:-$HOME/.cache/skyblip/west}
 key=${SKYBLIP_SIGNING_KEY:-$HOME/.config/skyblip/local-signing.pem}
 west=$workspace/.venv/bin/west
 python=$workspace/.venv/bin/python3
+# One of the places Zephyr's CMake searches for an SDK, so the build needs no path to it.
+sdk_base=$HOME/.local/opt
 # What tells mkuf2.py where Zephyr's uf2conv.py is, outside a `west build` env.
 export ZEPHYR_BASE=$workspace/zephyr
 
@@ -84,20 +86,34 @@ update_workspace() {
   echo "$manifest" > "$stamp"
 }
 
-# `west sdk install` registers the SDK as a CMake package, which is how the build
-# finds it later without an environment variable.
+# What `west sdk install` does, minus the SDK's setup.sh, which refuses to run
+# without wget. The release's own sha256.sum vouches for both archives.
 install_sdk() {
-  if (cd "$workspace" && "$west" sdk list 2>/dev/null) \
-     | sed -n '/gnu-installed-toolchains/,/gnu-available-toolchains/p' \
-     | grep -q arm-zephyr-eabi; then
-    return
-  fi
-  # The SDK's setup.sh refuses to run without wget and pulls every toolchain
-  # tarball through it. The build itself never calls wget.
-  command -v wget >/dev/null \
-    || { echo "FAIL: the Zephyr SDK installer needs wget: sudo pacman -S wget"; exit 1; }
-  echo "== installing the Zephyr SDK (arm-zephyr-eabi)"
-  (cd "$workspace" && "$west" sdk install -t arm-zephyr-eabi)
+  local version sdk_dir host release downloads minimal toolchain file
+  version=$(cat "$workspace/zephyr/SDK_VERSION")
+  sdk_dir=$sdk_base/zephyr-sdk-$version
+  [ -x "$sdk_dir/gnu/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc" ] && return
+
+  echo "== installing the Zephyr SDK $version (arm-zephyr-eabi) into $sdk_base"
+  host=linux-$(uname -m)
+  release=https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v$version
+  minimal=zephyr-sdk-${version}_${host}_minimal.tar.xz
+  toolchain=toolchain_gnu_${host}_arm-zephyr-eabi.tar.xz
+  downloads=$workspace/.sdk-downloads
+  rm -rf "$downloads" && mkdir -p "$downloads" "$sdk_base"
+  for file in sha256.sum "$minimal" "$toolchain"; do
+    curl -fL --progress-bar -o "$downloads/$file" "$release/$file"
+  done
+  grep -e "  $minimal\$" -e "  $toolchain\$" "$downloads/sha256.sum" > "$downloads/expected.sum" || true
+  [ "$(wc -l < "$downloads/expected.sum")" = 2 ] \
+    || { echo "FAIL: sha256.sum of SDK $version does not list $minimal and $toolchain"; exit 1; }
+  (cd "$downloads" && sha256sum -c expected.sum)
+
+  [ -d "$sdk_dir" ] || tar -xf "$downloads/$minimal" -C "$sdk_base"
+  mkdir -p "$sdk_dir/gnu"
+  tar -xf "$downloads/$toolchain" -C "$sdk_dir/gnu"
+  cmake -P "$sdk_dir/cmake/zephyr_sdk_export.cmake"
+  rm -rf "$downloads"
 }
 
 # MCUboot's own sample key is published, so a signature against it proves
@@ -137,9 +153,22 @@ build_image() {
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$workspace/version.conf"
 
   if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$workspace/firmware/build"; fi
+  drop_build_of_moved_sdk
   (cd "$workspace/firmware" && "$west" build -b "$board" "products/$product" --sysbuild \
     -- -DSB_EXTRA_CONF_FILE="$workspace/signing.conf" \
        -D"${product}"_EXTRA_CONF_FILE="$workspace/version.conf")
+}
+
+# CMake caches the compiler by absolute path, so a build configured against an SDK
+# that has since moved can only fail to configure.
+drop_build_of_moved_sdk() {
+  local cache=$workspace/firmware/build/$product/CMakeCache.txt sdk
+  [ -f "$cache" ] || return 0
+  sdk=$(sed -n 's/^ZEPHYR_SDK_INSTALL_DIR:PATH=//p' "$cache")
+  if [ -n "$sdk" ] && [ ! -d "$sdk" ]; then
+    echo "== the last build used the SDK at $sdk, which is gone: building pristine"
+    rm -rf "$workspace/firmware/build"
+  fi
 }
 
 # 0.0.0+0 is what gets signed whenever the VERSION file stops being picked up,
@@ -168,7 +197,7 @@ assert_confirmed_image_differs() {
 size_tool() {
   local tool
   for tool in "${ZEPHYR_SDK_INSTALL_DIR:-}"/{gnu/,}arm-zephyr-eabi/bin/arm-zephyr-eabi-size \
-              "$HOME"/zephyr-sdk-*/{gnu/,}arm-zephyr-eabi/bin/arm-zephyr-eabi-size; do
+              "$sdk_base"/zephyr-sdk-*/{gnu/,}arm-zephyr-eabi/bin/arm-zephyr-eabi-size; do
     if [ -x "$tool" ]; then echo "$tool"; return; fi
   done
   echo "FAIL: no arm-zephyr-eabi-size in the Zephyr SDK" >&2
