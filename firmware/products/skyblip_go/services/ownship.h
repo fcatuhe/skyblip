@@ -55,6 +55,7 @@ class OwnshipService : public runtime::Service {
     void apply_accel(const events::AccelSample& sample);
     void publish_inertial(uint32_t now_ms);
     void update_turn_rate(uint32_t now_ms);
+    void publish_turn(int16_t turn_cdps, uint32_t now_ms);
     void update_residual(const model::OwnState& previous);
     static gnss::Convergence convergence_of(const model::OwnState& own);
     static bool height_solved(const model::OwnState& own);

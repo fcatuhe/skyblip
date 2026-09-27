@@ -308,6 +308,11 @@ void OwnshipService::withdraw_climb() {
 }
 
 void OwnshipService::update_turn_rate(uint32_t now_ms) {
+    if (!flight_.rolling()) {
+        turn_ref_ms_ = 0;
+        publish_turn(0, now_ms);
+        return;
+    }
     const CentiDegrees track{context_.state.own.track_cdeg};
     if (turn_ref_ms_ == 0) {
         turn_ref_ms_ = now_ms == 0 ? 1 : now_ms;
@@ -317,12 +322,17 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
     const uint32_t dt = now_ms - turn_ref_ms_;
     if (dt < flight::kTurnWindowMs) return;
 
-    context_.state.own.turn_cdps = flight::clamped_turn_cdps(
-        flight::turn_rate_cdps(track, CentiDegrees(turn_ref_track_cdeg_), dt));
-    indicated_turn_.observe(context_.state.own.turn_cdps, now_ms);
-    context_.state.indicated.turn_cdps = static_cast<int16_t>(indicated_turn_.value());
+    publish_turn(flight::clamped_turn_cdps(
+                     flight::turn_rate_cdps(track, CentiDegrees(turn_ref_track_cdeg_), dt)),
+                 now_ms);
     turn_ref_ms_ = now_ms;
     turn_ref_track_cdeg_ = track.v;
+}
+
+void OwnshipService::publish_turn(int16_t turn_cdps, uint32_t now_ms) {
+    context_.state.own.turn_cdps = turn_cdps;
+    indicated_turn_.observe(turn_cdps, now_ms);
+    context_.state.indicated.turn_cdps = static_cast<int16_t>(indicated_turn_.value());
 }
 
 bool OwnshipService::baro_heard_within_max_age(uint32_t now_ms) const {

@@ -144,6 +144,52 @@ TEST_CASE("product: the glass reads the climb damped, the air reads it as measur
     CHECK(burst.climb_e8() == 24);
 }
 
+namespace {
+
+void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t updates) {
+    gnss::GnssSolution f{};
+    f.fix_valid = true;
+    f.alt_mm = 1000000;
+    f.vdop_e2 = 150;
+    f.hdop_e2 = 100;
+    f.speed_mm_s = speed_mm_s;
+    f.track_cdeg = track_cdeg;
+    f.updates = updates;
+    rig.product.bus().gnss.push(f);
+}
+
+}  // namespace
+
+// A receiver at a standstill reports a track that wanders, and it read as a turn every second.
+TEST_CASE("product: a stopped aircraft is not turning, whatever track the receiver reports") {
+    Rig rig{kBaroByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    constexpr int32_t kStandstillMmS = 200;
+    int32_t widest = 0;
+    for (uint32_t i = 1; i <= 10; i++) {
+        push_moving_fix(rig, kStandstillMmS, static_cast<int32_t>(i % 3) * 4000, i);
+        rig.run(i * 1000, i * 1000);
+        const int32_t turn = std::abs(rig.state().own.turn_cdps);
+        if (turn > widest) widest = turn;
+    }
+    CHECK(widest == 0);
+    CHECK(rig.state().indicated.turn_cdps == 0);
+}
+
+TEST_CASE("product: rolling again, the turn is measured from the first fix that rolled") {
+    Rig rig{kBaroByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    push_moving_fix(rig, 200, 27000, 1);
+    rig.run(1000, 1000);
+    // 3 deg/s from 90 deg; the stopped track at 270 is no reference to turn from
+    push_moving_fix(rig, 5000, 9000, 2);
+    rig.run(2000, 2000);
+    CHECK(rig.state().own.turn_cdps == 0);
+    push_moving_fix(rig, 5000, 9300, 3);
+    rig.run(3000, 3000);
+    CHECK(rig.state().own.turn_cdps == 300);
+}
+
 // The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
 TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a climb") {
     Rig rig{kBaroByHand};

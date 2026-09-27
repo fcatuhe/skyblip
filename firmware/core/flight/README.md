@@ -69,6 +69,8 @@ The gyroscope in the sensor hub would be neither, and it is deliberately not rea
 
 `kTurnWindowMs` is the shortest window a 1 Hz track says anything over, and it lives here because both callers differentiate a track with it: own-ship's own in `products/skyblip_go/services/ownship`, a target's in `core/traffic/table`.
 
+A stopped aircraft is not turning, whatever its track says. Below walking pace the track is the receiver's noise rather than a direction, and differenced once a second it read as a turn on every frame of a device sitting on a bench. So the rate is zero whenever `FlightMonitor::rolling()` is false, and it restarts from the first fix that rolls rather than from the last one that did not. There is no constant of its own: `rolling` already decides moving from stopped, on `kTaxiSpeedMmS` and `kGroundSpeedMmS` with the hysteresis between them, and a second threshold here would be a second opinion about the same speed. It covers a paraglider hovering over one spot too, whose track means as little.
+
 `own.turn_cdps` carries hundredths, where `own.turn_dps` rounds to whole degrees a second for the ADS-L extrapolation and the alarm's arcs, which is all those need.
 
 ## indicated
