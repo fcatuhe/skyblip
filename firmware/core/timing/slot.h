@@ -57,7 +57,7 @@ constexpr int kCallsignEnd = kSlot1End;
 // safety-critical one - traffic is on air there and the radio has to be tuned,
 // not tuning.
 constexpr int kJitterGuardMs = 5;
-constexpr int kHopGuardMs = 1;
+constexpr int kHopGuardMs = 3;
 // The executors switch into a queued dwell as soon as the one before it ends,
 // so the guard in front of a dwell is spent retuning and the dwell listens from
 // its start. Never earlier than the widest guard, which is what bounds a dwell
@@ -135,6 +135,7 @@ class Scheduler {
     static uint32_t slot_freq(int slot) { return slot == 1 ? kMband1Hz : kMband0Hz; }
     static int slot_start(int slot) { return slot == 1 ? kSlot1Start : kSlot0Start; }
     static int slot_end(int slot) { return slot == 1 ? kSlot1End : kSlot0End; }
+    static int dwell_end(int slot) { return slot == 1 ? kSlot1End : kSlot0End - kHopGuardMs; }
 };
 
 }  // namespace skyblip::timing

@@ -77,11 +77,11 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
         case SlotState::Slot0:
         case SlotState::Hop:
             p.start_ms = kSlot0Start;
-            p.end_ms = kSlot0End - kHopGuardMs;
+            p.end_ms = dwell_end(0);
             break;
         case SlotState::Slot1:
             p.start_ms = kSlot1Start;
-            p.end_ms = kSlot1End;
+            p.end_ms = dwell_end(1);
             break;
         default:
             // One O-band dwell, framed 5 ms either side of the window our own

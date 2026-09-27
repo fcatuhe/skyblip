@@ -301,7 +301,8 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
     h.world().set_fix(true);
     h.world().set_speed_kt(90);
     h.world().set_track_deg(90);
-    run_on(h, past_settling(h), 6000);
+    constexpr uint32_t kStepThatKeysOnTheInstantMs = 1;
+    run_on(h, past_settling(h), 6000, kStepThatKeysOnTheInstantMs);
 
     const simulator::Air& air = h.world().air();
     int checked = 0;

@@ -28,7 +28,8 @@ TEST_CASE("timing: dwell map matches the decided band split") {
     CHECK(Scheduler::state_at(395) == SlotState::SwitchOtoM);
     CHECK(Scheduler::state_at(399) == SlotState::SwitchOtoM);
     CHECK(Scheduler::state_at(400) == SlotState::Slot0);
-    CHECK(Scheduler::state_at(798) == SlotState::Slot0);
+    CHECK(Scheduler::state_at(796) == SlotState::Slot0);
+    CHECK(Scheduler::state_at(797) == SlotState::Hop);
     CHECK(Scheduler::state_at(799) == SlotState::Hop);
     CHECK(Scheduler::state_at(800) == SlotState::Slot1);
     CHECK(Scheduler::state_at(999) == SlotState::Slot1);

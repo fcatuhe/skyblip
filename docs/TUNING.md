@@ -151,11 +151,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMaxDeferMs` | 3000 (3 s) | milliseconds | - | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |
 | `kViewStaleMs` | 100 | milliseconds | Stale | A published view older than this is not evidence about where the second is any more, so it refuses rather than guesses. |
 | `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
-| `kHopGuardMs` | 1 | milliseconds | - | - |
+| `kHopGuardMs` | 3 | milliseconds | - | - |
 | `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
 | `kRetuneUs` | 30 | microseconds | - | - |
-| `kHopGuardUs` | `kHopGuardMs * 1000` = 1000 (1 ms) | microseconds | - | - |
+| `kHopGuardUs` | `kHopGuardMs * 1000` = 3000 (3 ms) | microseconds | - | - |
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word, then 25 Manchester-encoded bytes = 4.8 ms, rounded up. |

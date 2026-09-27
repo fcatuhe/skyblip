@@ -25,8 +25,8 @@ int Transmitter::first_instant_in(int slot) {
 }
 
 int Transmitter::last_instant_in(int slot) {
-    const int slot_end = Scheduler::slot_end(slot);
-    const int closes = slot_end < kDirectEnd ? slot_end : kDirectEnd;
+    const int dwell_end = Scheduler::dwell_end(slot);
+    const int closes = dwell_end < kDirectEnd ? dwell_end : kDirectEnd;
     const int last = closes - kCompletionSlackMs - static_cast<int>(kAirTimeMs);
     const int first = first_instant_in(slot);
     return last > first ? last : first;

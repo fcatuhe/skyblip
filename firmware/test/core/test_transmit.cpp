@@ -51,11 +51,11 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
         REQUIRE(a.go);
         // Not from kSlot0Start: the dwell opens at 400, the direct slot at 450.
         CHECK(a.at_ms >= kDirectStart);
-        // The burst also has to end before the channel hop at 800, not just
+        // The burst also has to end before the dwell closes for the channel hop, not just
         // before the direct slot ends at 1000.
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
                   Transmitter::kCompletionSlackMs <=
-              kSlot0End);
+              Scheduler::dwell_end(0));
         CHECK(a.freq_hz == kMband0Hz);
         if (a.at_ms < earliest) earliest = a.at_ms;
         if (a.at_ms > latest) latest = a.at_ms;
@@ -63,8 +63,8 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
     // The whole slot is usable: an open dwell is a tuned dwell, so 450 itself is
     // a legal instant and no guard is owed at the front.
     CHECK(earliest == kDirectStart);
-    CHECK(latest ==
-          kSlot0End - Transmitter::kCompletionSlackMs - static_cast<int>(Transmitter::kAirTimeMs));
+    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionSlackMs -
+                        static_cast<int>(Transmitter::kAirTimeMs));
 }
 
 // The upper channel's dwell opens at 800 already tuned - the hop guard before it
@@ -100,8 +100,8 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
     constexpr uint32_t kOwn = 0x5B7E57;
     constexpr uint32_t kPeer = 0x5B01FF;
     CHECK(instant_at(kOwn, 1) == instant_at(kPeer, 1));
-    // 631 and 560, fourteen burst lengths apart, from the pair that shared 903 ms a second earlier.
-    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == 71);
+    // 546 and 775, 45 burst lengths apart, from the pair that shared 903 ms a second earlier.
+    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == -229);
 
     const int shared_ms = instant_at(kOwn, 1);
     const int own_next_ms = instant_at(kOwn, 2);
@@ -112,7 +112,7 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
         if (bursts_overlap(own_next_ms, instant_at(addr, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
-    // 11 of 202, the odds of two 5 ms bursts meeting in a 341 ms slot. A carried delta keeps 202.
+    // 14 of 329, the odds of two 5 ms bursts meeting in a 338 ms slot. A carried delta keeps 329.
     CHECK(still_overlapping * 10 < shared);
 }
 

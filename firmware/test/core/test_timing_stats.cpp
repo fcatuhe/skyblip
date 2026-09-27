@@ -43,7 +43,9 @@ TEST_CASE("timing_stats: a drifting edge walks the buckets outward, one guard at
     uint64_t edge_us = 0;
     stats.record_edge(edge_us, true);
 
-    const int64_t errors[] = {10, 200, 2000, 8000};
+    const int64_t between_guards =
+        (SlotTimingStats::kHopGuardUs + SlotTimingStats::kJitterGuardUs) / 2;
+    const int64_t errors[] = {10, 200, between_guards, 8000};
     const int expect_late[] = {3, 4, 5, 6};
     for (int64_t error : errors) {
         edge_us += static_cast<uint64_t>(1000000 + error);
