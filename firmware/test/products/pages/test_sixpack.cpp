@@ -525,4 +525,17 @@ TEST_CASE("sixpack: a zero rate carries no sign") {
     draw_sixpack(signed_fb, s);
     CHECK(value_matches(signed_fb, kTiles[3], "-2"));
     CHECK(value_matches(signed_fb, kTiles[5], "-200"));
+
+    s.vs_fpm = -4;
+    Glass jitter;
+    draw_sixpack(jitter, s);
+    CHECK(value_matches(jitter, kTiles[5], "0"));
+}
+
+TEST_CASE("sixpack: the vertical speed figure moves in tens of feet a minute") {
+    SixPackSnapshot s = flying();
+    s.vs_fpm = -243;
+    Glass fb;
+    draw_sixpack(fb, s);
+    CHECK(value_matches(fb, kTiles[5], "-240"));
 }

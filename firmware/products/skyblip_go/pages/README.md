@@ -223,6 +223,8 @@ The page reads outward from the middle. The six faces are a block: 66 px between
 
 `settings::units` decides the speed dial and nothing else here: knots, the unit the scale below is graduated in and the one this page is designed around. Altitude stays in feet and vertical speed in feet per minute, so the speed is the one place on this page a habit is asked for, which is the rule the section at the top of this file states for the device.
 
+The vertical speed figure moves in steps of `kClimbFigureStepFpm`, 10 ft/min. `status` does not round, and does not damp either: it prints the measurement to the millimetre a second (`status` below). The damped rate still wanders by a few feet a minute on a bench, and a units digit that changes on every frame is a digit that moves when nothing has; ten is under half of the 24.6 ft/min ADS-L resolves, so the figure still shows more than the wire carries. Only the figure is rounded: the needle and the horizon read the rate itself.
+
 A rate of zero prints as `0`, without the sign the other rates carry. `+0` and `-0` are the same number, and a sign a pilot's eye has to discard is a sign that should not have been drawn.
 
 The turn coordinator's symbol is an aeroplane seen from behind, the way the instrument draws it: wings out to three quarters of the face radius, a fuselage on the hub, a tailplane sitting on the fuselage and a fin standing just above it. It was a bare line through a hub, which on a page of needles read as one more needle.

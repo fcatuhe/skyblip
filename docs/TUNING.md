@@ -205,9 +205,13 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kLevelFlightMg` | `flight::kLevelFlightMg` = 1000 | thousandths of g | - | - |
 | `kIdleReturnMs` | 60000 (1 min) | milliseconds | - | a menu left open is the traffic picture taken away, and nobody dismissed it |
+| `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
 | `kUptimeClockWrapS` | 10000 | seconds | - | four digits of seconds, so a clock with no UTC behind it still fits its column |
 | `kLevelM` | 60 | metres | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
 | `kLeaderStepMs` | 5000 (5 s) | milliseconds | - | - |
+| `kVsiFullScaleFpm` | 2000 | feet per minute | - | - |
+| `kVsiKneeFpm` | 1000 | feet per minute | - | - |
+| `kVsiMarkFpm` | 500 | feet per minute | - | - |
 | `kStandardRateDps` | 3 | degrees per second | - | - |
 | `kSlipFullMg` | `flight::kSlipFullScaleMg` = 200 | thousandths of g | - | - |
 
@@ -249,4 +253,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-149 constants over 17 folders.
+153 constants over 17 folders.

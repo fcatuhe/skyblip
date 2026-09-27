@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/units/units.h"
+#include "core/util/intmath.h"
 #include "products/skyblip_go/settings.h"
 
 namespace skyblip::go {
@@ -47,6 +48,12 @@ constexpr int64_t range_metres(int step, Units units) {
 }
 
 constexpr const char* range_unit(Units units) { return units == Units::Metric ? "KM" : "NM"; }
+
+constexpr int32_t kClimbFigureStepFpm = 10;
+
+constexpr int32_t climb_figure_fpm(int32_t fpm) {
+    return div_round(fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
+}
 
 // INFO: fc 20sep26 four digits of seconds, so a clock with no UTC behind it still fits its column
 constexpr uint32_t kUptimeClockWrapS = 10000;

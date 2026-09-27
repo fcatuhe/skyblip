@@ -43,6 +43,7 @@ UNITS = {
     "MmS": "millimetres per second",
     "Mps": "metres per second",
     "Dps": "degrees per second",
+    "Fpm": "feet per minute",
     "M": "metres",
     "Mg": "thousandths of g",
     "Samples": "samples",

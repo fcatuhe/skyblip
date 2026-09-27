@@ -3,6 +3,7 @@
 #include "core/flight/slip.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
+#include "products/skyblip_go/pages/page.h"
 #include "ui/widgets/skyship.h"
 
 namespace skyblip::go {
@@ -324,7 +325,7 @@ void draw_sixpack(ui::Canvas& fb, const SixPackSnapshot& s) {
     dial(fb, kCx[2], 1, "VS FPM", 0);
     vsi_face(fb, kCx[2], kCy[1]);
     needle(fb, kCx[2], kCy[1], vsi_deg(vs_fpm), kNeedle, /*thick=*/false, /*cleared=*/true);
-    value_center(fb, kCx[2], 1, s.vs_valid, vs_fpm, false);
+    value_center(fb, kCx[2], 1, s.vs_valid, climb_figure_fpm(vs_fpm), false);
 }
 
 }  // namespace skyblip::go
