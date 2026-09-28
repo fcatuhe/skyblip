@@ -114,7 +114,8 @@ class I2c : public io::I2c {
 // INFO: fc 04sep26 polled UARTE receive holds 1 byte + a 4-byte FIFO, a 10 ms loop drops NMEA
 class Uart : public io::Uart, public io::UartRate {
    public:
-    static constexpr size_t kRxBufferBytes = 512;
+    // INFO: fc 28sep26 two seconds of GSV at 115200: 512 B overran whenever a pass stalled past 44 ms
+    static constexpr size_t kRxBufferBytes = 2048;
 
     explicit Uart(const struct device* uart) : uart_(uart) {
         ring_buf_init(&rx_, sizeof(rx_storage_), rx_storage_);
