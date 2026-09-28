@@ -277,13 +277,7 @@ void Link::name_after(uint32_t device_addr) {
     bt_set_name(g_name);
 }
 
-// INFO: fc 04aug26 Nothing here asks for an MTU exchange. ATT_EXCHANGE_MTU_REQ
-// is a client operation and this build is CONFIG_BT_PERIPHERAL with no GATT
-// client, so bt_gatt_exchange_mtu() is not even compiled in; the spec allows one
-// exchange per direction per connection, and every central we serve (iOS,
-// Android, Chrome's Web Bluetooth) initiates it itself on connect. Waiting is
-// correct as long as nothing assumes the result, which payload_bytes() is what
-// stops.
+// INFO: fc 28sep26 the central starts the MTU exchange, an Android app that never asks stays at 23
 uint16_t Link::payload_bytes() const {
     uint16_t smallest = 0;
     for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {

@@ -8,6 +8,8 @@ The companion link, from the side that does not know what Bluetooth is. A platfo
 
 That is why `payload_bytes()` with no argument is the *smallest* payload any connected central negotiated. One NMEA frame is formatted once and goes to all of them, so it has to fit the narrowest. An iPhone at ATT_MTU 185 sitting beside an Android at 247 pulls every broadcast frame down to 182 bytes, and that is correct, not a compromise: the alternative is formatting the picture once per central. A conversation is sized for its own session instead, by `payload_bytes_to()`, so a central that never exchanged its MTU narrows the broadcast and no one else's replies.
 
+That central is not hypothetical. Only the central starts the exchange: iOS always does and usually settles on 185, Android only when the app calls `requestMtu()` (XCSoar asks for 256, and Android 14 turns any request into 517). An Android app that never asks stays at 23, and every broadcast frame carries 20 bytes for everyone.
+
 ## Sessions
 
 `LinkSessions` is the table, and it is the same object on both platforms: Zephyr's `connected`/`disconnected`/`att_mtu_updated` callbacks drive it on silicon, `raise_link()`/`drop_link()` drive it in the host suite. It exists so the lifecycle rules are proved once by `make test` rather than living inside a Bluetooth callback nothing can reach.
