@@ -47,7 +47,7 @@ void TrafficService::tick(uint32_t now_ms) {
                 context_.state.rf.note_tx_done(context_.state.air.tx_ok, event.tx_at_us);
                 context_.state.air.tx_ok++;
                 context_.state.rf.timing_stats.record_dwell_phase(
-                    static_cast<int64_t>(event.at_us) - static_cast<int64_t>(event.tx_at_us));
+                    static_cast<int64_t>(event.keyed_at_us) - static_cast<int64_t>(event.tx_at_us));
                 log(event, stamp_for(event, now_ms), radio::Event::Transmitted);
                 break;
         }

@@ -175,9 +175,9 @@ TEST_CASE("rf: a completed burst lands in the bench's dwell-phase histogram") {
     CHECK(stats.dwell_samples() > 0);
     CHECK(stats.missed() == 0);
     CHECK(stats.refused() == 0);
-    // Never before the instant it was armed for, and never past the dwell that carried it.
+    // Never before the instant it was armed for, and never as late as the burst is long.
     CHECK(stats.dwell_worst_us() >= 0);
-    CHECK(stats.dwell_worst_us() < timing::kSlot0End * 1000);
+    CHECK(stats.dwell_worst_us() < static_cast<int32_t>(timing::Transmitter::kAirTimeMs * 1000));
 
     // host::Pps has no jitter model at all: every edge board.h latched is
     // exact, so the whole interval histogram sits in the centre bucket.

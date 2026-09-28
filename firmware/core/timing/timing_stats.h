@@ -47,11 +47,7 @@ class SlotTimingStats {
     // new edge value, or a transition of the lock flag, moves anything.
     void record_edge(uint64_t edge_us, bool locked);
 
-    // The signed microseconds between an armed deadline and the instant the
-    // outcome it was armed for actually landed. Both arguments are absolute
-    // instants on the clock ports::Rf deadlines are armed against, so this needs
-    // no phase and no knowledge of which second, or which half of slot 1's
-    // wrap, either one fell in.
+    // INFO: fc 28sep26 armed instant to the burst keying, both absolute, so no phase and no wrap
     void record_dwell_phase(int64_t error_us);
 
     // A dwell that carried a plan and closed without the outcome it was armed
