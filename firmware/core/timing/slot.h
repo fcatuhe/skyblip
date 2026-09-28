@@ -94,6 +94,11 @@ struct ClockState {
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us);
 
+// INFO: fc 28sep26 the edge interrupt can land between reading now and reading the edge
+constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
+    return now_us > edge_us ? now_us - edge_us : 0;
+}
+
 // Unlocked since an edge recent enough that the slot map still flies on it, receive only.
 bool in_pps_holdover(const ClockState& clock);
 

@@ -196,3 +196,11 @@ TEST_CASE("timing: an edge never seen is no holdover, and plans the same dwells 
         CHECK(p.listen_only == Scheduler::plan(phase, past).listen_only);
     }
 }
+
+// Bench, 28sep26: an edge latched between the two reads made the edge 584,000 years old for one
+// pass, so the clock called PPS lost and the radio re-planned against a free-running second.
+TEST_CASE("timing: an edge latched after now was read is no age at all, not an underflow") {
+    CHECK(since_edge_us(27000000, 27798000) == 798000);
+    CHECK(since_edge_us(28000000, 27999990) == 0);
+    CHECK(since_edge_us(28000000, 28000000) == 0);
+}

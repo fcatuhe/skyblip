@@ -5,6 +5,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
+#include "core/timing/slot.h"
+
 namespace skyblip::platform::zephyr {
 
 // The UTC-second phase, latched in the GPIO interrupt rather than derived from a
@@ -25,15 +27,23 @@ class Pps {
     // INFO: fc 14sep26 CASIC CFG-TP decides whether the pulse free-runs unfixed, undocumented on
     // the L76K: an edge is not a fix
     bool locked() const {
-        return edge_us_ != 0 && k_ticks_to_us_floor64(k_uptime_ticks()) - edge_us_ < kHoldoverUs;
+        const uint64_t edge_us = last_edge_us();
+        const uint64_t now_us = k_ticks_to_us_floor64(k_uptime_ticks());
+        return edge_us != 0 && timing::since_edge_us(edge_us, now_us) < kHoldoverUs;
     }
 
     uint32_t ms_since(uint64_t now_us) const {
-        if (edge_us_ == 0) return 0;
-        return static_cast<uint32_t>((now_us - edge_us_) / 1000);
+        const uint64_t edge_us = last_edge_us();
+        if (edge_us == 0) return 0;
+        return static_cast<uint32_t>(timing::since_edge_us(edge_us, now_us) / 1000);
     }
 
-    uint64_t last_edge_us() const { return edge_us_; }
+    uint64_t last_edge_us() const {
+        const unsigned int key = irq_lock();
+        const uint64_t edge_us = edge_us_;
+        irq_unlock(key);
+        return edge_us;
+    }
     uint32_t edges() const { return edges_; }
 
    private:
