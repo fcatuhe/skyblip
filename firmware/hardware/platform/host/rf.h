@@ -159,7 +159,8 @@ class Rf : public ports::Rf {
         if (radio_.wake() != Status::Ok) return false;
         if (plan_.freq_hz != 0 && radio_.configure_radio(dwell_config(plan_)) != Status::Ok)
             return false;
-        if (radio_.start_receive() != Status::Ok) return false;
+        if (radio_.mode() != parts::RadioMode::Rx && radio_.start_receive() != Status::Ok)
+            return false;
         ports::RfSwitch change{};
         change.from = last_mode_;
         change.to = plan_.mode;
