@@ -184,9 +184,9 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
         }
         names++;
         CAPTURE(r.at_us);
-        // Its own ground second's position, 450..990 ms into the second the name's tail closes.
+        // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
         CHECK(position_at_us != 0);
-        CHECK(r.at_us - position_at_us < 1000000 - timing::kDirectStart * 1000);
+        CHECK(r.at_us - position_at_us < (timing::kCallsignEnd - timing::kDirectStart) * 1000);
         if (position_on_channel1) shared_dwell++;
     }
     CHECK(names >= 3);

@@ -21,12 +21,8 @@ class Transmitter {
     static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
     static constexpr int32_t kFixLagMaxMs = 500;
-    // Ours, not the spec's: §C.5 gives the direct slot 450..1000 and requires a
-    // burst to complete before the slot ends. Margin between the burst's last
-    // chip and the end of the window, absorbing PPS error, the carrier sample
-    // and the SPI write. Nothing is owed at the front: a dwell that has opened
-    // is tuned, the retune was paid for by the guard before it.
-    static constexpr int kCompletionSlackMs = 5;
+    // INFO: fc 28sep26 §C.5: bench worst instant to last chip is 6.6 ms, 3 + 5 ms leaves 1.4
+    static constexpr int kCompletionSlackMs = 3;
 
     enum class Payload : uint8_t { Position, Callsign };
 
