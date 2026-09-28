@@ -391,3 +391,38 @@ TEST_CASE("product: with no fix the bus says how far the receiver has got") {
     rig.run(450, 450 + gnss::kSentenceMaxAgeMs);
     CHECK(rig.state().gnss.stage == gnss::Stage::Silent);
 }
+
+// Bench, 27sep26: a receiver that lost its fix kept naming the second of its last one, and the
+// clock the slot map runs on went three seconds back until the next fix put it right.
+TEST_CASE("product: a receiver restating its last fixed second does not wind the clock back") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 1000;
+    rig.seconds(t, 3, 0, 500);
+    const uint32_t anchored = rig.state().clock.utc_s;
+    REQUIRE(anchored == Rig::kUtcBase + 2);
+
+    gnss::GnssSolution solving{};
+    solving.utc_valid = true;
+    solving.utc = anchored;
+    solving.updates = ++rig.fix_updates;
+    rig.product.bus().gnss.push(solving);
+    rig.run(t, t + 950);
+
+    CHECK(rig.state().clock.utc_s == anchored + 1);
+}
+
+TEST_CASE("product: before any fix, the first dated sentence anchors the clock") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 950);
+
+    gnss::GnssSolution dated{};
+    dated.utc_valid = true;
+    dated.utc = Rig::kUtcBase;
+    dated.updates = ++rig.fix_updates;
+    rig.product.bus().gnss.push(dated);
+    rig.run(1000, 1950);
+
+    CHECK(rig.state().clock.utc_s == Rig::kUtcBase);
+}

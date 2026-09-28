@@ -199,10 +199,16 @@ void OwnshipService::update_residual(const model::OwnState& previous) {
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
 void OwnshipService::anchor_utc(const gnss::GnssSolution& solution) {
     timing::ClockState& clock = context_.state.clock;
-    if (!solution.utc_valid || !clock.pps_locked) return;
+    if (!dates_the_edge(solution, clock)) return;
     if (context_.state.own.fix_ms != static_cast<uint32_t>(clock.pps_edge_us / 1000)) return;
     clock.utc_s = solution.utc;
     clock.utc_edge_us = clock.pps_edge_us;
+}
+
+bool OwnshipService::dates_the_edge(const gnss::GnssSolution& solution,
+                                    const timing::ClockState& clock) {
+    if (!solution.utc_valid || !clock.pps_locked) return false;
+    return solution.fix_valid || clock.utc_s == 0;
 }
 
 // INFO: fc 19sep26 a pass late at worst, and the deadline it is read against is 450 ms wide

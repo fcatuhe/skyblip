@@ -51,6 +51,7 @@ class OwnshipService : public runtime::Service {
     uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) const;
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc(const gnss::GnssSolution& solution);
+    static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_baro(const events::BaroSample& sample, uint32_t now_ms);
     void apply_accel(const events::AccelSample& sample);
     void publish_inertial(uint32_t now_ms);
