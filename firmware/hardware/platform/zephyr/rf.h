@@ -28,6 +28,8 @@ class Rf : public ports::Rf {
     // radio's health instead. Short against the 30 s no-RX rope, long enough
     // that an idle device is not woken for nothing.
     static constexpr int kHealthTickMs = 250;
+    // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
+    static constexpr uint64_t kCarrierLeadUs = 2000;
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {
@@ -312,6 +314,7 @@ class Rf : public ports::Rf {
         uint8_t done = 0;
         bool completed = false;
         bool fault = false;
+        bool sampled = false;
         keyed_at_us_ = 0;
         irq_at_us_ = 0;
         while (!abort_ && clock_.micros() < plan.end_us) {
@@ -330,12 +333,17 @@ class Rf : public ports::Rf {
                 continue;
             }
             if (fault) return;
+            if (!sampled && keyed == done && keyed == bursts.count &&
+                clock_.micros() + kCarrierLeadUs >= plan.end_us) {
+                sample_carrier();
+                sampled = true;
+                continue;
+            }
             k_usleep(kSpinUs);
         }
         for (completed = false; collect(completed, fault); completed = false)
             if (completed) done++;
         if (fault) return;
-        sample_carrier();
         miss_unfinished(flying_bursts(), done, keyed);
     }
 
