@@ -14,8 +14,8 @@ class Recorder {
     // INFO: fc 20sep26 64 slots: ~30 records/s across a sector erase and the direct slot behind it
     static constexpr int kCapacity = 64;
 
-    // INFO: fc 20sep26 seven subjects a second, three dwells and own-ship's own burst
-    static constexpr uint32_t kPeriodicRecordsPerSecond = 11;
+    // INFO: fc 20sep26 seven subjects a second, three dwells and own-ship's own burst | 28sep26 three switches
+    static constexpr uint32_t kPeriodicRecordsPerSecond = 14;
 
     static constexpr uint32_t kSecondsPerHour = 3600;
     static constexpr uint32_t kMsPerHour = kSecondsPerHour * 1000;

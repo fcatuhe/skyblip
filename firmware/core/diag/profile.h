@@ -38,7 +38,8 @@ constexpr bool lists(Profile profile, Type type) {
         case Type::Link:
         case Type::Traffic:
         case Type::Write:
-        case Type::Screen: return false;
+        case Type::Screen:
+        case Type::Switch: return false;
     }
     return false;
 }

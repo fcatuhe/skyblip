@@ -272,7 +272,7 @@ TEST_CASE("diag recorder: a disarmed recorder refuses whatever profile it last h
 
 // The figure the capture page divides its estimate by: one profile fills the ring in an hour,
 // the other keeps a discharge run to cutoff whole.
-TEST_CASE("diag recorder: a power run writes two records a pass and a capture eleven a second") {
-    CHECK(diag::Recorder::records_per_hour(diag::Profile::Full) == 11 * 3600);
+TEST_CASE("diag recorder: a power run writes two records a pass and a capture fourteen a second") {
+    CHECK(diag::Recorder::records_per_hour(diag::Profile::Full) == 14 * 3600);
     CHECK(diag::Recorder::records_per_hour(diag::Profile::PowerRun) == 240);
 }

@@ -116,6 +116,17 @@ uint8_t wire(diag::Refusal value) {
     return kUnpinned;
 }
 
+uint8_t wire(diag::SwitchKind value) {
+    switch (value) {
+        case diag::SwitchKind::Retune: return 0;
+        case diag::SwitchKind::Hop: return 1;
+        case diag::SwitchKind::ToOband: return 2;
+        case diag::SwitchKind::ToMband: return 3;
+        case diag::SwitchKind::Wake: return 4;
+    }
+    return kUnpinned;
+}
+
 uint8_t wire(flight::FlightState value) {
     switch (value) {
         case flight::FlightState::Unknown: return 0;
@@ -268,6 +279,12 @@ TEST_CASE(
     "diag ordinals: diag::Refusal's codes are the dwell refusal byte, and a code changed here "
     "changes REFUSAL in scripts/blip_records.py and the schema's refusal enum with it") {
     codes_pinned<diag::Refusal>(5);
+}
+
+TEST_CASE(
+    "diag ordinals: diag::SwitchKind's codes are the switch change byte, and a code changed "
+    "here changes CHANGE in scripts/blip_records.py and the schema's change enum with it") {
+    codes_pinned<diag::SwitchKind>(5);
 }
 
 TEST_CASE(

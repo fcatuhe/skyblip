@@ -105,6 +105,7 @@ class Rf : public ports::Rf {
     bool keying() const { return keyed_ > done_; }
 
     void finish(uint64_t now_us) {
+        last_end_us_ = plan_.end_us;
         sample_carrier();
         miss_unfinished(bursts_, done_, keyed_, now_us);
         armed_ = false;
@@ -159,11 +160,17 @@ class Rf : public ports::Rf {
         if (plan_.freq_hz != 0 && radio_.configure_radio(dwell_config(plan_)) != Status::Ok)
             return false;
         if (radio_.start_receive() != Status::Ok) return false;
-        const uint64_t ready_us = clock_.micros();
-        const bool armed_ahead = armed_at_us_ < plan_.start_us;
-        switching_.note(last_mode_, last_freq_hz_, plan_.mode, plan_.freq_hz,
-                        static_cast<uint32_t>(ready_us - now_us),
-                        armed_ahead && ready_us > plan_.start_us);
+        ports::RfSwitch change{};
+        change.from = last_mode_;
+        change.to = plan_.mode;
+        change.from_hz = last_freq_hz_;
+        change.to_hz = plan_.freq_hz;
+        change.previous_end_us = last_end_us_;
+        change.began_us = now_us;
+        change.ready_us = clock_.micros();
+        change.start_us = plan_.start_us;
+        change.armed_ahead = armed_at_us_ < plan_.start_us;
+        switching_.note(change);
         last_mode_ = plan_.mode;
         last_freq_hz_ = plan_.freq_hz;
         return true;
@@ -268,6 +275,7 @@ class Rf : public ports::Rf {
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
     uint32_t last_freq_hz_{0};
+    uint64_t last_end_us_{0};
     uint64_t armed_at_us_{0};
     uint64_t pending_armed_at_us_{0};
     events::RfEvent rx_{};

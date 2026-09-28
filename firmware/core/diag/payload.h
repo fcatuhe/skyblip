@@ -310,6 +310,21 @@ struct Duty {
     uint32_t annunciator_ms{0};
 };
 
+enum class SwitchKind : uint8_t { Retune = 0, Hop = 1, ToOband = 2, ToMband = 3, Wake = 4 };
+
+constexpr uint8_t kSwitchFlagArmedAhead = 1u << 2;
+constexpr uint8_t kSwitchFlagLate = 1u << 3;
+
+struct Switch {
+    uint32_t to_hz{0};
+    int32_t margin_us{0};
+    uint16_t took_us{0};
+    uint16_t gap_us{0};
+    SwitchKind kind{SwitchKind::Retune};
+    bool armed_ahead{false};
+    bool late{false};
+};
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -328,6 +343,7 @@ Record record_of(const Screen& value, const Instant& at);
 Record record_of(const Gap& value, const Instant& at);
 Record record_of(const End& value, const Instant& at);
 Record record_of(const Duty& value, const Instant& at);
+Record record_of(const Switch& value, const Instant& at);
 
 bool read(const Record& record, Boot& out);
 bool read(const Record& record, Config& out);
@@ -347,6 +363,7 @@ bool read(const Record& record, Screen& out);
 bool read(const Record& record, Gap& out);
 bool read(const Record& record, End& out);
 bool read(const Record& record, Duty& out);
+bool read(const Record& record, Switch& out);
 
 }  // namespace skyblip::diag
 

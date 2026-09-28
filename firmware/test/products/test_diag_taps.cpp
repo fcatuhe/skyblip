@@ -197,6 +197,29 @@ TEST_CASE("diag dwell: every dwell the radio arms is a record, band edges and ho
     CHECK(slot1);
 }
 
+// The executor's worst-since-boot figures could not date the one 5.9 ms hop the bench saw.
+TEST_CASE("diag switch: every dwell change is recorded, with the channel it tuned to") {
+    Rig rig;
+    uint32_t t = 100;
+    const std::vector<diag::Record> records = armed_taxi(rig, t, 4);
+
+    CHECK(count_of(records, diag::Type::Switch) >= 3 * 3);
+    bool hop = false;
+    bool to_oband = false;
+    bool to_mband = false;
+    for (const diag::Record& record : records) {
+        diag::Switch change{};
+        if (!diag::read(record, change)) continue;
+        CHECK(change.armed_ahead);
+        if (change.kind == diag::SwitchKind::Hop) hop = change.to_hz == timing::kMband1Hz;
+        if (change.kind == diag::SwitchKind::ToOband) to_oband = change.to_hz == timing::kObandHz;
+        if (change.kind == diag::SwitchKind::ToMband) to_mband = change.to_hz == timing::kMband0Hz;
+    }
+    CHECK(hop);
+    CHECK(to_oband);
+    CHECK(to_mband);
+}
+
 TEST_CASE("diag baro: a sample carries the altitude and the rate taken from it") {
     Rig rig;
     uint32_t t = 100;

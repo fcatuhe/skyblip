@@ -267,4 +267,29 @@ bool read(const Record& record, Link& out) {
     return true;
 }
 
+Record record_of(const Switch& value, const Instant& at) {
+    Record r = framed(Type::Switch, at);
+    put_u32(r.payload + 0, value.to_hz);
+    put_i32(r.payload + 4, value.margin_us);
+    put_u16(r.payload + 8, value.took_us);
+    put_u16(r.payload + 10, value.gap_us);
+    r.payload[12] = static_cast<uint8_t>(value.kind);
+    set_flag(r.flags, kSwitchFlagArmedAhead, value.armed_ahead);
+    set_flag(r.flags, kSwitchFlagLate, value.late);
+    return r;
+}
+
+bool read(const Record& record, Switch& out) {
+    if (record.type != Type::Switch) return false;
+    out = Switch{};
+    out.to_hz = get_u32(record.payload + 0);
+    out.margin_us = get_i32(record.payload + 4);
+    out.took_us = get_u16(record.payload + 8);
+    out.gap_us = get_u16(record.payload + 10);
+    out.kind = static_cast<SwitchKind>(record.payload[12]);
+    out.armed_ahead = record.flagged(kSwitchFlagArmedAhead);
+    out.late = record.flagged(kSwitchFlagLate);
+    return true;
+}
+
 }  // namespace skyblip::diag

@@ -284,3 +284,23 @@ TEST_CASE("diag record: a counter past what the field holds saturates rather tha
     CHECK(out.supply_warnings == 65535);
     CHECK(out.implausible == 65535);
 }
+
+TEST_CASE("diag record: a dwell change carries how long it took and how early it listened") {
+    diag::Switch in{};
+    in.to_hz = 868400000;
+    in.margin_us = -2921;
+    in.took_us = 5921;
+    in.gap_us = 412;
+    in.kind = diag::SwitchKind::Hop;
+    in.armed_ahead = true;
+    in.late = true;
+
+    const diag::Switch out = diag_round_trip(in);
+    CHECK(out.to_hz == in.to_hz);
+    CHECK(out.margin_us == in.margin_us);
+    CHECK(out.took_us == in.took_us);
+    CHECK(out.gap_us == in.gap_us);
+    CHECK(out.kind == in.kind);
+    CHECK(out.armed_ahead);
+    CHECK(out.late);
+}

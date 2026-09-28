@@ -100,7 +100,12 @@ class Rf : public ports::Rf {
         return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
     }
 
-    ports::RfSwitching switching() const override { return switching_; }
+    ports::RfSwitching switching() const override {
+        k_sched_lock();
+        const ports::RfSwitching switching = switching_;
+        k_sched_unlock();
+        return switching;
+    }
 
     // The board calls this from the service pass, and there is deliberately
     // nothing here: the radio belongs to the thread below, and reinitialising it
@@ -172,6 +177,7 @@ class Rf : public ports::Rf {
                 dwell(plan);
             else
                 miss_unfinished(flying_bursts(), 0, 0);
+            last_end_us_ = plan.end_us;
             flying_ = false;
             health();
         }
@@ -227,10 +233,17 @@ class Rf : public ports::Rf {
             return false;
         if (radio_.start_receive() != Status::Ok) return false;
         (void)radio_.wait_ready();
-        const uint64_t ready_us = clock_.micros();
-        switching_.note(last_mode_, last_freq_hz_, plan.mode, plan.freq_hz,
-                        static_cast<uint32_t>(ready_us - from_us),
-                        armed_at_us < plan.start_us && ready_us > plan.start_us);
+        ports::RfSwitch change{};
+        change.from = last_mode_;
+        change.to = plan.mode;
+        change.from_hz = last_freq_hz_;
+        change.to_hz = plan.freq_hz;
+        change.previous_end_us = last_end_us_;
+        change.began_us = from_us;
+        change.ready_us = clock_.micros();
+        change.start_us = plan.start_us;
+        change.armed_ahead = armed_at_us < plan.start_us;
+        switching_.note(change);
         last_mode_ = plan.mode;
         last_freq_hz_ = plan.freq_hz;
         return true;
@@ -362,6 +375,7 @@ class Rf : public ports::Rf {
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
     uint32_t last_freq_hz_{0};
+    uint64_t last_end_us_{0};
     uint64_t plan_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};

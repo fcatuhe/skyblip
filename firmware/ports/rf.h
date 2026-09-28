@@ -96,6 +96,29 @@ struct RfTransmitter {
     int8_t pa_rated_dbm{0};
 };
 
+struct RfSwitch {
+    RfMode from{RfMode::Idle};
+    RfMode to{RfMode::Idle};
+    uint32_t from_hz{0};
+    uint32_t to_hz{0};
+    uint64_t previous_end_us{0};
+    uint64_t began_us{0};
+    uint64_t ready_us{0};
+    uint64_t start_us{0};
+    bool armed_ahead{false};
+
+    uint32_t took_us() const { return static_cast<uint32_t>(ready_us - began_us); }
+    uint32_t gap_us() const {
+        return previous_end_us != 0 && began_us > previous_end_us
+                   ? static_cast<uint32_t>(began_us - previous_end_us)
+                   : 0;
+    }
+    int64_t margin_us() const {
+        return static_cast<int64_t>(start_us) - static_cast<int64_t>(ready_us);
+    }
+    bool late_start() const { return armed_ahead && ready_us > start_us; }
+};
+
 // What the executor measured of its own dwell changes, from the retune's first
 // command to the part reporting the new mode: the worst since boot for each kind
 // of change, and how many dwells armed ahead were still not listening at their start.
@@ -104,15 +127,21 @@ struct RfSwitching {
     uint32_t to_oband_us{0};
     uint32_t to_mband_us{0};
     uint32_t late{0};
+    uint32_t count{0};
+    RfSwitch last{};
 
-    void note(RfMode from, uint32_t from_hz, RfMode to, uint32_t to_hz, uint32_t took_us,
-              bool late_start) {
-        if (late_start) late++;
+    void note(const RfSwitch& change) {
+        count++;
+        last = change;
+        if (change.late_start()) late++;
         uint32_t* worst = nullptr;
+        const RfMode from = change.from;
+        const RfMode to = change.to;
         if (to == RfMode::RxOband && from == RfMode::RxMband) worst = &to_oband_us;
         if (to == RfMode::RxMband && from == RfMode::RxOband) worst = &to_mband_us;
-        if (to == RfMode::RxMband && from == RfMode::RxMband && to_hz != from_hz) worst = &hop_us;
-        if (worst != nullptr && took_us > *worst) *worst = took_us;
+        if (to == RfMode::RxMband && from == RfMode::RxMband && change.to_hz != change.from_hz)
+            worst = &hop_us;
+        if (worst != nullptr && change.took_us() > *worst) *worst = change.took_us();
     }
 };
 

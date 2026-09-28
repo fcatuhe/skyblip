@@ -124,7 +124,9 @@ class RadioService : public runtime::Service {
     void accrue_armed();
     void collect_outcome(uint32_t now_ms);
     void take_carrier_samples();
-    void take_switching();
+    void take_switching(uint32_t now_ms);
+    void record_switch(const ports::RfSwitch& change, uint32_t now_ms);
+    static diag::SwitchKind kind_of(const ports::RfSwitch& change);
 
     timing::Transmitter transmitter_{};
     timing::NoiseFloor noise_{};
@@ -152,6 +154,7 @@ class RadioService : public runtime::Service {
     uint64_t pass_us_{0};
     uint32_t seen_tx_ok_{0};
     uint32_t seen_carrier_samples_{0};
+    uint32_t seen_switches_{0};
     bool over_budget_{false};
     bool held_logged_{false};
     const Settings& settings_;

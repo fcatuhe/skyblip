@@ -25,6 +25,7 @@ const char* type_name(Type type) {
         case Type::Gap: return "gap";
         case Type::End: return "end";
         case Type::Duty: return "duty";
+        case Type::Switch: return "switch";
     }
     return "?";
 }

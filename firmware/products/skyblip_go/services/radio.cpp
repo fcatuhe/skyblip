@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <limits>
 
 #include "core/model/ownship.h"
 
@@ -25,7 +26,7 @@ void RadioService::tick(uint32_t now_ms) {
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
     take_carrier_samples();
-    take_switching();
+    take_switching(now_ms);
     collect_outcome(now_ms);
 
     if (has_next_ && pass_us_ >= next_.from_us) promote();
@@ -90,9 +91,38 @@ int RadioService::phase_at(uint64_t now_us) const {
     return static_cast<int>(now_us / 1000 % 1000);
 }
 
-void RadioService::take_switching() {
+void RadioService::take_switching(uint32_t now_ms) {
     const ports::RfSwitching s = context_.roles.rf.switching();
     context_.state.rf.timing_stats.record_switching(s.hop_us, s.to_oband_us, s.to_mband_us, s.late);
+    if (s.count == seen_switches_) return;
+    seen_switches_ = s.count;
+    record_switch(s.last, now_ms);
+}
+
+void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms) {
+    if (!context_.diag.armed()) return;
+    diag::Switch value{};
+    value.to_hz = change.to_hz;
+    value.margin_us = static_cast<int32_t>(
+        std::clamp<int64_t>(change.margin_us(), std::numeric_limits<int32_t>::min(),
+                            std::numeric_limits<int32_t>::max()));
+    value.took_us = diag::clamp_u16(change.took_us());
+    value.gap_us = diag::clamp_u16(change.gap_us());
+    value.kind = kind_of(change);
+    value.armed_ahead = change.armed_ahead;
+    value.late = change.late_start();
+    const timing::ClockState& clock = context_.state.clock;
+    const events::Stamp stamp = events::stamp_of(change.ready_us, clock.pps_edge_us,
+                                                 clock.pps_locked, context_.state.traffic_now(now_ms));
+    context_.diag.record(value, diag::instant_of(stamp, context_.instant(now_ms).utc_dated));
+}
+
+diag::SwitchKind RadioService::kind_of(const ports::RfSwitch& change) {
+    if (change.from == ports::RfMode::Idle) return diag::SwitchKind::Wake;
+    if (change.from != change.to)
+        return change.to == ports::RfMode::RxOband ? diag::SwitchKind::ToOband
+                                                   : diag::SwitchKind::ToMband;
+    return change.from_hz != change.to_hz ? diag::SwitchKind::Hop : diag::SwitchKind::Retune;
 }
 
 void RadioService::take_carrier_samples() {

@@ -107,6 +107,7 @@ LINK_ACTION = ("up", "down", "claim_taken", "claim_released", "received", "sent"
 ENDPOINT = ("config", "nmea", "log")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
+CHANGE = ("retune", "hop", "to_oband", "to_mband", "wake")
 
 DIAG_TYPES = {
     1: ("boot", (
@@ -189,6 +190,9 @@ DIAG_TYPES = {
         ("panel_partial_refreshes", u16(0)), ("panel_full_refreshes", u16(2)),
         ("backlight_ms", u16(4)), ("rx_armed_ms", u16(6)), ("tx_keyed_ms", u16(8)),
         ("ble_connected_ms", u16(10)), ("annunciator_ms", u16(12)))),
+    19: ("switch", (
+        ("to_hz", u32(0)), ("margin_us", i32(4)), ("took_us", u16(8)), ("gap_us", u16(10)),
+        ("change", enum8(12, CHANGE)), ("armed_ahead", flag(2)), ("late", flag(3)))),
 }
 
 FLIGHT_FIELDS = (

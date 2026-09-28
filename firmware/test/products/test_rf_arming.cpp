@@ -118,6 +118,11 @@ TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahea
     CHECK(tuned_khz(chip) == timing::kMband0Hz / 1000);
     CHECK(chip.receiving);
     CHECK(rf.switching().late == 0);
+    const ports::RfSwitch& change = rf.switching().last;
+    CHECK(change.from == ports::RfMode::RxOband);
+    CHECK(change.to == ports::RfMode::RxMband);
+    CHECK(change.margin_us() == 5000);
+    CHECK(change.gap_us() == 0);
 }
 
 // A dwell armed ahead that the executor only reached after its start is the fault this
@@ -142,6 +147,8 @@ TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late")
 
     CHECK(tuned_khz(chip) == timing::kMband1Hz / 1000);
     CHECK(rf.switching().late == 1);
+    CHECK(rf.switching().last.late_start());
+    CHECK(rf.switching().last.margin_us() == -10000);
 }
 
 namespace {

@@ -9,8 +9,8 @@
     "type": {"type": "string",
              "enum": ["boot", "config", "gnss", "pps", "burst", "dwell", "flight", "power", "baro",
                       "motion", "contact", "link", "traffic", "write", "screen", "gap", "end",
-                      "duty"],
-             "description": "What this record is about, from the type byte: boot=1, config=2, gnss=3, pps=4, burst=5, dwell=6, flight=7, power=8, baro=9, motion=10, contact=11, link=12, traffic=13, write=14, screen=15, gap=16, end=17, duty=18. Type 0 is not a record, so an all-zero slot decodes as nothing"},
+                      "duty", "switch"],
+             "description": "What this record is about, from the type byte: boot=1, config=2, gnss=3, pps=4, burst=5, dwell=6, flight=7, power=8, baro=9, motion=10, contact=11, link=12, traffic=13, write=14, screen=15, gap=16, end=17, duty=18, switch=19. Type 0 is not a record, so an all-zero slot decodes as nothing"},
     "at_s": {"type": "integer", "minimum": 0,
              "description": "The second this happened in: a UTC second when utc_dated is true, seconds since boot when it is false. A capture outlives a first fix and the records either side of one are dated differently, which is why the flag is per record"},
     "into_ms": {"type": "integer", "minimum": 0, "maximum": 1999,
@@ -272,7 +272,22 @@
     "ble_connected_ms": {"type": "integer", "minimum": 0, "maximum": 65535,
                          "description": "duty. Milliseconds a central has been connected, advertising excluded. Wraps, like every duty field"},
     "annunciator_ms": {"type": "integer", "minimum": 0, "maximum": 65535,
-                       "description": "duty. Milliseconds the buzzer and the haptic have been driven, summed: the two are one consumer at this resolution. Wraps, like every duty field"}
+                       "description": "duty. Milliseconds the buzzer and the haptic have been driven, summed: the two are one consumer at this resolution. Wraps, like every duty field"},
+
+    "to_hz": {"type": "integer", "minimum": 0,
+              "description": "switch. The frequency the radio was retuned to, trim excluded. One record per dwell change the executor made, stamped where the part reported the new mode"},
+    "margin_us": {"type": "integer",
+                  "description": "switch. The dwell's start minus the instant the part was listening: positive is early, negative is late. Only a guard's worth when armed_ahead, a dwell armed after its own start is late by construction"},
+    "took_us": {"type": "integer", "minimum": 0, "maximum": 65535,
+                "description": "switch. The retune's first command to the part reporting the new mode, saturated. The figure timing's switch_hop_us, switch_to_o_us and switch_to_m_us keep the worst of"},
+    "gap_us": {"type": "integer", "minimum": 0, "maximum": 65535,
+               "description": "switch. The previous dwell's end to the retune's first command, saturated: the executor's own exit, the final IRQ read and the carrier sample. Zero after an idle radio or a dwell that ended early"},
+    "change": {"type": "string", "enum": ["retune", "hop", "to_oband", "to_mband", "wake"],
+               "description": "switch. What the dwell change was: the same mode on the same channel, an M-band channel hop, M to O, O to M, or out of idle. Codes: 0 retune, 1 hop, 2 to_oband, 3 to_mband, 4 wake"},
+    "armed_ahead": {"type": "boolean",
+                    "description": "switch. The dwell was handed to the executor before its start, so its margin measures the guard in front of it"},
+    "late": {"type": "boolean",
+             "description": "switch. armed_ahead and still not listening at its start: what timing's late_dwells counts"}
   },
   "additionalProperties": false
 }

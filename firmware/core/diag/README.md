@@ -76,6 +76,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Gap` 16 | records dropped, the span they cover, the total since arming, the ring capacity | nothing. It is the hole itself, written where the hole is |
 | `End` 17 | records written in the session, records dropped | nothing. It is the one record that says the session stopped rather than was stopped |
 | `Duty` 18 | panel partial and full refreshes, backlight ms, receiver armed ms, transmit keyed ms, BLE connected ms, annunciator ms | what each consumer cost over a flight, on a board that cannot measure current: time in state is the only half of a power budget this device holds |
+| `Switch` 19 | the change (hop, M to O, O to M, retune, wake), the frequency tuned to, how long the retune took, the gap from the previous dwell's end, the margin to the dwell's start, armed ahead, late | whether `kHopGuardMs` and `kJitterGuardMs` can shrink, from every change rather than the worst since boot, and when a slow one happened |
 
 ### The burst that carried a name, and why the name is not in it
 
