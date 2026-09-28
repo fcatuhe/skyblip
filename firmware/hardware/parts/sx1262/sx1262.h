@@ -95,6 +95,8 @@ class Sx1262 {
     void select_when_ready();
     void cmd(uint8_t opcode, const uint8_t* params, size_t n);
     void cmd_read(uint8_t opcode, uint8_t* out, size_t n);
+    void write_frame(const uint8_t* head, size_t head_n, const uint8_t* data, size_t n);
+    void read_frame(const uint8_t* head, size_t head_n, uint8_t* out, size_t n);
     void write_register(uint16_t addr, const uint8_t* data, size_t n);
     void read_register(uint16_t addr, uint8_t* out, size_t n);
     Status reset_to_standby();
@@ -121,9 +123,13 @@ class Sx1262 {
     void recover_tx();
     Status reinit();
 
+    static constexpr size_t kWriteFrameBytes = 3 + 255;
+    static constexpr size_t kReadFrameBytes = 16;
+
     io::Spi& spi_;
     io::Gpio& gpio_;
     io::Delay& delay_;
+    uint8_t frame_[kWriteFrameBytes]{};
     int busy_, reset_, dio1_;
     RadioMode mode_{RadioMode::Sleep};
     RadioConfig cfg_{};

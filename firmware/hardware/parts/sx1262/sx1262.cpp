@@ -1,6 +1,7 @@
 #include "hardware/parts/sx1262/sx1262.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace skyblip::parts {
 
@@ -18,22 +19,39 @@ void Sx1262::select_when_ready() {
 }
 
 void Sx1262::cmd(uint8_t opcode, const uint8_t* params, size_t n) {
-    select_when_ready();
-    uint8_t op = opcode;
-    spi_.transfer(&op, nullptr, 1);
-    if (n) spi_.transfer(params, nullptr, n);
-    spi_.select(false);
+    write_frame(&opcode, 1, params, n);
 }
 
 void Sx1262::cmd_read(uint8_t opcode, uint8_t* out, size_t n) {
+    const uint8_t head[2] = {opcode, 0};
+    read_frame(head, sizeof(head), out, n);
+}
+
+// INFO: fc 28sep26 one transfer per command: the bench hop's twelve took 794 us, 66 us apiece
+void Sx1262::write_frame(const uint8_t* head, size_t head_n, const uint8_t* data, size_t n) {
     select_when_ready();
-    uint8_t op = opcode;
-    spi_.transfer(&op, nullptr, 1);
-    uint8_t nop = 0;
-    spi_.transfer(&nop, nullptr, 1);
-    for (size_t i = 0; i < n; i++) {
-        uint8_t tx = 0;
-        spi_.transfer(&tx, &out[i], 1);
+    if (head_n + n <= sizeof(frame_)) {
+        std::memcpy(frame_, head, head_n);
+        if (n) std::memcpy(frame_ + head_n, data, n);
+        spi_.transfer(frame_, nullptr, head_n + n);
+    } else {
+        spi_.transfer(head, nullptr, head_n);
+        spi_.transfer(data, nullptr, n);
+    }
+    spi_.select(false);
+}
+
+void Sx1262::read_frame(const uint8_t* head, size_t head_n, uint8_t* out, size_t n) {
+    select_when_ready();
+    uint8_t tx[kReadFrameBytes]{};
+    uint8_t rx[kReadFrameBytes]{};
+    if (head_n + n <= kReadFrameBytes) {
+        std::memcpy(tx, head, head_n);
+        spi_.transfer(tx, rx, head_n + n);
+        std::memcpy(out, rx + head_n, n);
+    } else {
+        spi_.transfer(head, nullptr, head_n);
+        for (size_t i = 0; i < n; i++) spi_.transfer(tx, &out[i], 1);
     }
     spi_.select(false);
 }
@@ -142,26 +160,17 @@ Status Sx1262::check_device_errors() {
 }
 
 void Sx1262::write_register(uint16_t addr, const uint8_t* data, size_t n) {
-    select_when_ready();
-    uint8_t head[3] = {sx::kWriteRegister, static_cast<uint8_t>(addr >> 8),
-                       static_cast<uint8_t>(addr)};
-    spi_.transfer(head, nullptr, sizeof(head));
-    spi_.transfer(data, nullptr, n);
-    spi_.select(false);
+    const uint8_t head[3] = {sx::kWriteRegister, static_cast<uint8_t>(addr >> 8),
+                             static_cast<uint8_t>(addr)};
+    write_frame(head, sizeof(head), data, n);
 }
 
 // DS 13.2.2 ReadRegister: opcode, address, one NOP the chip answers nothing to,
 // then the bytes.
 void Sx1262::read_register(uint16_t addr, uint8_t* out, size_t n) {
-    select_when_ready();
-    uint8_t head[4] = {sx::kReadRegister, static_cast<uint8_t>(addr >> 8),
-                       static_cast<uint8_t>(addr), 0};
-    spi_.transfer(head, nullptr, sizeof(head));
-    for (size_t i = 0; i < n; i++) {
-        uint8_t tx = 0;
-        spi_.transfer(&tx, &out[i], 1);
-    }
-    spi_.select(false);
+    const uint8_t head[4] = {sx::kReadRegister, static_cast<uint8_t>(addr >> 8),
+                             static_cast<uint8_t>(addr), 0};
+    read_frame(head, sizeof(head), out, n);
 }
 
 namespace {
@@ -348,13 +357,8 @@ uint32_t Sx1262::tx_timeout_ticks(uint8_t len) const {
 Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
-    uint8_t offs = 0;
-    select_when_ready();
-    uint8_t op = sx::kWriteBuffer;
-    spi_.transfer(&op, nullptr, 1);
-    spi_.transfer(&offs, nullptr, 1);
-    spi_.transfer(data, nullptr, len);
-    spi_.select(false);
+    const uint8_t head[2] = {sx::kWriteBuffer, 0};
+    write_frame(head, sizeof(head), data, len);
     configure_irq();
     const uint32_t ticks = tx_timeout_ticks(len);
     uint8_t timeout[3] = {static_cast<uint8_t>(ticks >> 16), static_cast<uint8_t>(ticks >> 8),
