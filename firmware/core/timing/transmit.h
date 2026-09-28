@@ -15,8 +15,7 @@ inline bool own_ship_transmits(const model::OwnState& own, const ClockState& clo
 
 class Transmitter {
    public:
-    // §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word, then
-    // 25 Manchester-encoded bytes = 4.8 ms, rounded up.
+    // INFO: fc 28sep26 §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms
     static constexpr uint32_t kAirTimeMs = 5;
     // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a contact is hex
     static constexpr uint32_t kCallsignPeriodS = 10;

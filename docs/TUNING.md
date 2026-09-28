@@ -158,7 +158,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHopGuardUs` | `kHopGuardMs * 1000` = 3000 (3 ms) | microseconds | - | - |
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
-| `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16-chip preamble, 64-chip Manchester sync word, then 25 Manchester-encoded bytes = 4.8 ms, rounded up. |
+| `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
 | `kFixLagMaxMs` | 500 | milliseconds | - | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
 | `kCompletionSlackMs` | 5 | milliseconds | - | Ours, not the spec's: §C.5 gives the direct slot 450..1000 and requires a burst to complete before the slot ends. |
