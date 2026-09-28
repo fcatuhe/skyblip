@@ -4,6 +4,8 @@
 
 #include <zephyr/kernel.h>
 
+#include <limits>
+
 #include "core/bus/bus.h"
 #include "core/events/rf.h"
 #include "core/model/band.h"
@@ -153,7 +155,7 @@ class Rf : public ports::Rf {
         health_us_ = clock_.micros();
         for (;;) {
             const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
-            health();
+            health(reinit_affordable());
             if (armed != 0) continue;
             if (sleep_requested_) {
                 sleep_requested_ = false;
@@ -181,7 +183,7 @@ class Rf : public ports::Rf {
                 miss_unfinished(flying_bursts(), 0, 0);
             last_end_us_ = plan.end_us;
             flying_ = false;
-            health();
+            health(reinit_affordable());
         }
     }
 
@@ -208,13 +210,23 @@ class Rf : public ports::Rf {
     // only cure is a reinitialisation. It is accumulated here, between dwells,
     // because this thread owns the bus: the elapsed time comes off the same
     // clock the deadlines do, so a dwell that overran is counted, not lost.
-    void health() {
+    void health(bool may_reinit) {
         const uint64_t now_us = clock_.micros();
         if (now_us <= health_us_) return;
         const uint32_t elapsed_ms = static_cast<uint32_t>((now_us - health_us_) / 1000);
         if (elapsed_ms == 0) return;
         health_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
-        radio_.service(elapsed_ms, runtime::kRadioNoRxReinitMs);
+        const uint32_t rope_ms =
+            may_reinit ? runtime::kRadioNoRxReinitMs : std::numeric_limits<uint32_t>::max();
+        radio_.service(elapsed_ms, rope_ms);
+    }
+
+    // INFO: fc 28sep26 a no-RX reinit fits the bench's 23 ms stall, only the uplink dwell spares it
+    bool reinit_affordable() {
+        k_sched_lock();
+        const bool affordable = !queued_ || plan_.mode == ports::RfMode::RxOband;
+        k_sched_unlock();
+        return affordable;
     }
 
     void sleep_until(uint64_t deadline_us) {
