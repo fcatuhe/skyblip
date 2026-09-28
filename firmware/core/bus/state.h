@@ -33,6 +33,15 @@ struct RfState {
     timing::SlotTimingStats timing_stats{};
     // INFO: fc 27sep26 names the callsign burst among a dwell's two, for the row the tape writes
     uint64_t callsign_at_us{0};
+    // INFO: fc 28sep26 a TxDone can reach the radio after its dwell closed, its instant says whose
+    static constexpr uint32_t kTxDonesKept = 4;
+    uint64_t tx_done_at_us[kTxDonesKept]{};
+    void note_tx_done(uint32_t index, uint64_t tx_at_us) {
+        tx_done_at_us[index % kTxDonesKept] = tx_at_us;
+    }
+    uint64_t tx_done_at(uint32_t index, uint32_t count) const {
+        return count - index <= kTxDonesKept ? tx_done_at_us[index % kTxDonesKept] : 0;
+    }
     uint32_t duty_permille{0};
     uint16_t last_tx_keyed_us{0};
     uint16_t last_tx_span_us{0};

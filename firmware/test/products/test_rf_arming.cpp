@@ -1,6 +1,9 @@
 // What is armed into the radio and when: a burst goes into the dwell already on air, a guard
 // phase gets nothing, and a plan refused or held is counted as what it was.
+#include <algorithm>
+#include <cstring>
 #include <initializer_list>
+#include <vector>
 
 #include "core/events/rf.h"
 #include "core/model/band.h"
@@ -442,4 +445,99 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
 
     CHECK(a.state.radio_log.count() == 1);
     CHECK(a.state.rf.timing_stats.refused() == 2);
+}
+
+namespace {
+
+constexpr uint64_t kSecondOneUs = Armings::kEdgeUs + 1000000;
+constexpr uint64_t kBurstUs = 6000;
+
+struct Outcomes {
+    Armings& a;
+    uint64_t held_at_us{0};
+    std::vector<uint64_t> reported{};
+
+    void report_flown() {
+        const uint64_t now_us = a.clock.micros();
+        for (uint32_t i = 0; i < a.rf.handed; i++) {
+            const ports::RfPlan& plan = a.rf.plans[i];
+            if (plan.tx == nullptr || plan.tx_at_us + kBurstUs > now_us) continue;
+            if (plan.tx_at_us != held_at_us && !was_reported(plan.tx_at_us)) report(plan.tx_at_us);
+        }
+    }
+
+    void report(uint64_t tx_at_us) {
+        a.state.rf.note_tx_done(a.state.air.tx_ok, tx_at_us);
+        a.state.air.tx_ok++;
+        reported.push_back(tx_at_us);
+    }
+
+    bool was_reported(uint64_t tx_at_us) const {
+        return std::find(reported.begin(), reported.end(), tx_at_us) != reported.end();
+    }
+
+    uint64_t name_at_us() const {
+        for (uint32_t i = 0; i < a.rf.handed; i++) {
+            const ports::RfPlan& plan = a.rf.plans[i];
+            if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs &&
+                plan.tx_at_us < kSecondOneUs + timing::kSlot1Wrap * 1000)
+                return plan.tx_at_us;
+        }
+        return 0;
+    }
+};
+
+void fly_ground_second(Armings& a, Outcomes& outcomes) {
+    std::strncpy(a.settings.callsign, "D-KXYZ", go::kCallsignCap - 1);
+    a.clock.set_micros(Armings::kEdgeUs);
+    REQUIRE(a.radio.setup() == Status::Ok);
+    const uint32_t utc = 1000 + a.radio.transmitter().ground_second();
+    a.ready_to_transmit(utc);
+    a.state.clock.utc_s = utc;
+    for (int phase = 0; phase < 1000; phase += 10) {
+        a.tick_at(phase);
+        outcomes.report_flown();
+    }
+    outcomes.held_at_us = outcomes.name_at_us();
+    REQUIRE(outcomes.held_at_us != 0);
+    a.state.own.utc = utc + 1;
+    a.state.clock.utc_s = utc + 1;
+}
+
+}  // namespace
+
+// The name's dwell closes 5 ms after its latest instant, and its TxDone reaches the policy a pass
+// later: counted missed at the close, it was then credited to the next dwell as a position.
+TEST_CASE("rf: a TxDone that lands after its dwell closed is credited to the burst it names") {
+    Armings a;
+    Outcomes outcomes{a};
+    fly_ground_second(a, outcomes);
+
+    for (int phase = 0; phase <= 200; phase += 10) {
+        a.tick_in(1, phase);
+        outcomes.report_flown();
+    }
+    outcomes.report(outcomes.held_at_us);
+    a.tick_in(1, 210);
+
+    CHECK(a.state.rf.timing_stats.missed() == 0);
+    CHECK(a.state.air.tx_named == 1);
+    CHECK(a.radio.transmitter().sent_count() == outcomes.reported.size());
+}
+
+TEST_CASE("rf: a burst that never reports is counted missed once its report is overdue") {
+    Armings a;
+    Outcomes outcomes{a};
+    fly_ground_second(a, outcomes);
+
+    const int overdue_ms = timing::kSlot1Wrap + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
+    for (int phase = 0; phase < overdue_ms; phase += 10) {
+        a.tick_in(1, phase);
+        outcomes.report_flown();
+    }
+    CHECK(a.state.rf.timing_stats.missed() == 0);
+
+    a.tick_in(1, overdue_ms);
+    CHECK(a.state.rf.timing_stats.missed() == 1);
+    CHECK(a.state.air.tx_named == 0);
 }

@@ -145,8 +145,16 @@ uint64_t RadioService::instant_us(const timing::Transmitter::Attempt& attempt, i
 }
 
 void RadioService::promote() {
-    flying_ = next_;
+    fly(next_);
     has_next_ = false;
+}
+
+void RadioService::fly(const Armed& dwell) {
+    if (flying_.carries_any()) {
+        miss(retired_);
+        retired_ = flying_;
+    }
+    flying_ = dwell;
 }
 
 // Two clocks meet here. The TimeStamp field counts quarter seconds from the top
@@ -342,8 +350,10 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
     if (role == Role::Next) {
         next_ = armed;
         has_next_ = true;
-    } else {
+    } else if (rearmed) {
         flying_ = armed;
+    } else {
+        fly(armed);
     }
     record_dwell(slot, first, phase, /*armed=*/true, carried_now, now_ms);
 }
@@ -429,30 +439,56 @@ void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slo
 
 void RadioService::collect_outcome(uint32_t now_ms) {
     const uint64_t now_us = pass_us_;
-    const uint32_t reported = context_.state.air.tx_ok - seen_tx_ok_;
-    if (reported != 0) {
-        seen_tx_ok_ = context_.state.air.tx_ok;
-        held_logged_ = false;
-    }
-    for (uint32_t i = 0; i < reported; i++) {
+    const uint32_t tx_ok = context_.state.air.tx_ok;
+    const bool reported = tx_ok != seen_tx_ok_;
+    if (reported) held_logged_ = false;
+    for (; seen_tx_ok_ != tx_ok; seen_tx_ok_++) {
         // A pass slow enough that the queued dwell flew, and its burst went out, before this one
         // ran.
         if (!flying_.carries_any() && has_next_ && next_.carries_any() && now_us >= next_.from_us)
             promote();
-        // INFO: fc 27sep26 a TxDone nothing claims still spent air time, which the budget counts
-        const Payload payload = flying_.carries_any() ? flying_.first() : Payload::Position;
-        transmitter_.sent(flying_.utc, now_ms, payload);
-        if (payload == Payload::Callsign) context_.state.air.tx_named++;
-        flying_.drop(payload);
+        credit(context_.state.rf.tx_done_at(seen_tx_ok_, tx_ok), now_ms);
     }
-    if (reported != 0) context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
-    // INFO: fc 15sep26 a dwell that ended unreported took the radio with it, and is counted here
-    if (flying_.carries_any() && now_us >= flying_.until_us) {
+    if (reported) context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
+    expire(flying_, now_us);
+    expire(retired_, now_us);
+}
+
+void RadioService::credit(uint64_t tx_at_us, uint32_t now_ms) {
+    Armed* const dwells[] = {&flying_, &retired_, has_next_ ? &next_ : nullptr};
+    for (Armed* dwell : dwells) {
+        if (dwell == nullptr) continue;
         for (const Payload payload : kEveryPayload) {
-            if (!flying_.carries(payload)) continue;
-            context_.state.rf.timing_stats.record_missed();
-            flying_.drop(payload);
+            if (dwell->carries(payload) && dwell->at(payload) == tx_at_us) {
+                spend(*dwell, payload, now_ms);
+                return;
+            }
         }
+    }
+    // INFO: fc 27sep26 a TxDone nothing claims still spent air time, which the budget counts
+    if (flying_.carries_any())
+        spend(flying_, flying_.first(), now_ms);
+    else
+        transmitter_.sent(flying_.utc, now_ms, Payload::Position);
+}
+
+void RadioService::spend(Armed& dwell, Payload payload, uint32_t now_ms) {
+    transmitter_.sent(dwell.utc, now_ms, payload);
+    if (payload == Payload::Callsign) context_.state.air.tx_named++;
+    dwell.drop(payload);
+}
+
+// INFO: fc 15sep26 a dwell that ended unreported took the radio with it, and is counted here
+void RadioService::expire(Armed& dwell, uint64_t now_us) {
+    const uint64_t max_age_us = static_cast<uint64_t>(kTxOutcomeMaxAgeMs) * 1000;
+    if (dwell.carries_any() && now_us >= dwell.until_us + max_age_us) miss(dwell);
+}
+
+void RadioService::miss(Armed& dwell) {
+    for (const Payload payload : kEveryPayload) {
+        if (!dwell.carries(payload)) continue;
+        context_.state.rf.timing_stats.record_missed();
+        dwell.drop(payload);
     }
 }
 

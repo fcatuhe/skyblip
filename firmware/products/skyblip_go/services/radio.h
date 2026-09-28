@@ -18,6 +18,9 @@ namespace skyblip::go {
 // chip
 class RadioService : public runtime::Service {
    public:
+    // INFO: fc 28sep26 under the 403 ms between the two M dwells closing, so one retired dwell does
+    static constexpr uint32_t kTxOutcomeMaxAgeMs = 250;
+
     RadioService(runtime::Context& context, const Settings& settings)
         : runtime::Service(context), settings_(settings) {}
 
@@ -53,6 +56,7 @@ class RadioService : public runtime::Service {
         uint64_t at_us[kPayloads]{};
 
         bool carries(Payload p) const { return carried[static_cast<int>(p)]; }
+        uint64_t at(Payload p) const { return at_us[static_cast<int>(p)]; }
         bool carries_any() const { return carried[0] || carried[1]; }
         void carry(Payload p, uint64_t tx_at_us) {
             carried[static_cast<int>(p)] = true;
@@ -102,6 +106,11 @@ class RadioService : public runtime::Service {
     bool transmit_due(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) const;
     void queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void promote();
+    void fly(const Armed& dwell);
+    void credit(uint64_t tx_at_us, uint32_t now_ms);
+    void spend(Armed& dwell, Payload payload, uint32_t now_ms);
+    void expire(Armed& dwell, uint64_t now_us);
+    void miss(Armed& dwell);
     void arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms, Role role);
     void refuse_dwell(const timing::SlotPlan& slot, const timing::Transmitter::Attempt& first,
                       int phase, Role role, bool carried_tx, uint32_t now_ms);
@@ -135,6 +144,7 @@ class RadioService : public runtime::Service {
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed flying_{};
     Armed next_{};
+    Armed retired_{};
     bool has_next_{false};
     uint64_t accounted_us_{0};
     uint64_t armed_us_{0};
