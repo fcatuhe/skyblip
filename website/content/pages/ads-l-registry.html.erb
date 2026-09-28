@@ -1,7 +1,7 @@
 ---
 title: Application for an ADS-L address range
 nav_title: ADS-L registry
-description: "skyBlip applies for AMT entry 58 under ADS-L.4.SRD860.F.2.2, used flat over all 24 bits as OGN-Tracker uses entry 7: who is applying, what the equipment transmits and receives, why the manufacturer prefix does not fit a fleet that is built rather than bought, and one open question about aircraft callsigns, which are how a pilot ties a radio call to a target on the screen."
+description: "skyBlip applies for AMT entry 58 under ADS-L.4.SRD860.F.2.2, used flat over all 24 bits as OGN-Tracker uses entry 7: who is applying, what the equipment transmits and receives, why the manufacturer prefix does not fit a fleet that is built rather than bought, and one open question about aircraft callsigns, which are how a pilot ties a radio call to a target on the screen. As food for thought, three NMEA sentences that would hand a display what ADS-L carries on the air."
 ---
 
 <section>
@@ -231,7 +231,7 @@ description: "skyBlip applies for AMT entry 58 under ADS-L.4.SRD860.F.2.2, used 
 
 <section class="pledge">
   <h2 class="kicker">One question</h2>
-  <h3>Where does an aircraft&rsquo;s callsign go?</h3>
+  <h3 id="callsign">Where does an aircraft&rsquo;s callsign go?</h3>
   <p>
     In VFR the identity everyone uses &mdash; the pilot on the radio, the club,
     the EFB, the field &mdash; is the registration: F-GXXX on a certified
@@ -284,6 +284,20 @@ description: "skyBlip applies for AMT entry 58 under ADS-L.4.SRD860.F.2.2, used 
     Either is a small amount of work here. Neither is worth doing twice, and a
     manufacturer that invents its own answer is how a standard stops being one.
   </p>
+</section>
+
+<section>
+  <h2 class="kicker">Food for thought</h2>
+  <h3>What the air carries, a display could read as it is.</h3>
+  <p>
+    Not part of the application, and not a request. A display reads ADS-L
+    traffic today through FLARM&rsquo;s <code>$PFLAA</code>, which has no
+    field for most of the Traffic payload. We sketched three NMEA sentences
+    that mirror what goes on the air, <code>$PADSL</code>,
+    <code>$PADSI</code> and <code>$PADSO</code>, and wonder whether ADS-L
+    would want sentences of its own.
+  </p>
+  <p><%= link_to_page "ads-l-registry/nmea", class: "cta cta--next" %></p>
 </section>
 
 <section>

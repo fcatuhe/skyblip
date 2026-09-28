@@ -1,0 +1,281 @@
+---
+title: Three NMEA sentences for ADS-L
+nav_title: ADS-L NMEA sentences
+description: "Food for thought for the ADS-L registry: $PADSL, $PADSI and $PADSO, three NMEA 0183 sentences that hand a display the ADS-L Traffic payload field for field, the callsign beside it and the ownship identity, sent beside FLARM's $PFLAA and inside NMEA's 82 characters."
+---
+
+<section>
+  <p class="kicker">Food for thought, for the ADS-L registry</p>
+  <h1>What the air carries, a display could read as it is.</h1>
+  <p class="lede">
+    A display reads ADS-L traffic today through FLARM&rsquo;s
+    <code>$PFLAA</code>, a sentence designed for another protocol. This page
+    sketches three NMEA 0183 sentences that carry the Traffic payload of
+    <strong>ADS-L.4.SRD860.G.1</strong> field for field instead:
+    <strong><code>$PADSL</code></strong> for traffic,
+    <strong><code>$PADSI</code></strong> for identity and
+    <strong><code>$PADSO</code></strong> for ownship.
+  </p>
+  <p>
+    It is not part of the <%= link_to_page "ads-l-registry", label: "application for an address range" %>,
+    and it asks for nothing. skyBlip would send these sentences beside
+    <code>$PFLAA</code>, never instead of it, to a display that asks for them.
+    We publish the sketch because a display format is only worth having if it
+    is the same for every ADS-L device, and that is a question for the
+    specification&rsquo;s owners rather than for one of its implementers.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Why not <code>$PFLAA</code></h2>
+  <h3>Most of the Traffic payload has no field to go in.</h3>
+
+  <p>
+    skyBlip sends <code>$PFLAA</code>, as every FLARM-compatible device does,
+    and it is the traffic sentence an EFB with an NMEA input reads. This is what the Traffic
+    payload loses on the way:
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>On the air</th><th>In <code>$PFLAA</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><th>64 AMT entries (F.2.2)</th><td>an ID type of 1 (ICAO) or 2 (FLARM), so entry 7 and entry 58 both read as FLARM</td></tr>
+        <tr><th>18 aircraft categories (G.1.3)</th><td>16 FLARM types, some ADS-L categories merged</td></tr>
+        <tr><th>Flight state, emergency status (G.1.2, G.1.4)</th><td>no field</td></tr>
+        <tr><th>SIL, DA, NIC, HPA, VPA, VA (G.1.11 to G.1.16)</th><td>no field</td></tr>
+        <tr><th>Absolute position, altitude above the ellipsoid (G.1.5, G.1.7)</th><td>metres north, east and up from the receiving aircraft</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">The three sentences</h2>
+  <h3>One for what moves, one for what does not, one for ourselves.</h3>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Sentence</th><th>Carries</th><th>Sent</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th><code>$PADSL</code></th>
+          <td>a target&rsquo;s Traffic payload: address, state, position and motion</td>
+          <td>every second for each target</td>
+        </tr>
+        <tr>
+          <th><code>$PADSI</code></th>
+          <td>an address&rsquo;s quality indicators and callsign, for traffic and for ownship alike</td>
+          <td>every few seconds for each address</td>
+        </tr>
+        <tr>
+          <th><code>$PADSO</code></th>
+          <td>which address is ownship, its aircraft category and its emergency status</td>
+          <td>when a display subscribes, then every minute; every second while an emergency is declared</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Ownship&rsquo;s position already reaches the display in
+    <code>$GPRMC</code> and <code>$GPGGA</code>, so <code>$PADSO</code> carries
+    none. What it adds is the address, so a display can tell its own
+    <code>$PADSI</code> from a neighbour&rsquo;s, and the two fields a pilot
+    sets rather than flies. Emergency status is the one of them a display must
+    show at once, which is why a declared emergency (G.1.4 values 2 to 6)
+    brings <code>$PADSO</code> to the rate of a target.
+  </p>
+  <p>
+    Collision alerting stays in <code>$PFLAU</code>. ADS-L defines none, so
+    there is nothing on the air for a sentence of this family to mirror, and
+    FLARM&rsquo;s ICD already tells every display to take its alarms from
+    <code>$PFLAU</code>. A display that reads <code>$PADSL</code> finds the
+    threat by its address.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">The fields</h2>
+  <h3>The order of G.1, decoded into plain units.</h3>
+
+  <p>
+    The decimals are chosen so that every value converts back to the exact bits
+    it was decoded from. Rounding to five places of a degree moves a position
+    by less than half a step of G.1.5, and rounding to one place moves a speed,
+    a vertical rate or a track by less than half the smallest step of G.1.8 to
+    G.1.10. A table field keeps the specification&rsquo;s own value for
+    &ldquo;undefined&rdquo;. A number with no valid value is left empty, as
+    NMEA does.
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th><code>$PADSL</code></th><th>Field</th><th>Clause</th><th>Written as</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>1</th><td>Address Mapping Table</td><td>F.2.2</td><td>0 to 63</td></tr>
+        <tr><th>2</th><td>Address</td><td>F.2.2</td><td>6 hex digits</td></tr>
+        <tr><th>3</th><td>Relay/forward</td><td>F.2</td><td>0 or 1</td></tr>
+        <tr><th>4</th><td>Timestamp</td><td>G.1.1</td><td>seconds, 0.00 to 14.75 in quarters</td></tr>
+        <tr><th>5</th><td>Flight state</td><td>G.1.2</td><td>table value</td></tr>
+        <tr><th>6</th><td>Aircraft category</td><td>G.1.3</td><td>table value</td></tr>
+        <tr><th>7</th><td>Emergency status</td><td>G.1.4</td><td>table value</td></tr>
+        <tr><th>8</th><td>Latitude</td><td>G.1.5</td><td>degrees, 5 places, north positive</td></tr>
+        <tr><th>9</th><td>Longitude</td><td>G.1.5</td><td>degrees, 5 places, east positive</td></tr>
+        <tr><th>10</th><td>Ground speed</td><td>G.1.8</td><td>m/s, 1 place</td></tr>
+        <tr><th>11</th><td>Altitude above WGS-84 ellipsoid</td><td>G.1.7</td><td>m</td></tr>
+        <tr><th>12</th><td>Vertical rate</td><td>G.1.9</td><td>m/s, 1 place, climb positive</td></tr>
+        <tr><th>13</th><td>Ground track</td><td>G.1.10</td><td>degrees true, 1 place</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th><code>$PADSI</code></th><th>Field</th><th>Clause</th><th>Written as</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>1, 2</th><td>AMT and address</td><td>F.2.2</td><td>as in <code>$PADSL</code></td></tr>
+        <tr><th>3 to 8</th><td>SIL, DA, NIC, HPA, VPA, VA</td><td>G.1.11 to G.1.16</td><td>table values</td></tr>
+        <tr><th>9</th><td>Callsign</td><td>none</td><td>up to 14 characters: blank, dash, A to Z, 0 to 9</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th><code>$PADSO</code></th><th>Field</th><th>Clause</th><th>Written as</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>1, 2</th><td>AMT and address</td><td>F.2.2</td><td>as in <code>$PADSL</code></td></tr>
+        <tr><th>3</th><td>Aircraft category</td><td>G.1.3</td><td>table value</td></tr>
+        <tr><th>4</th><td>Emergency status</td><td>G.1.4</td><td>table value</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The callsign is the one field with no clause behind it, which is the
+    <%= link_to_page "ads-l-registry", label: "question the application asks", anchor: "callsign" %>
+    seen from the display&rsquo;s side. Today skyBlip fills it from the
+    OGN-Tracker record of payload type 66 when one is heard, and it would fill
+    it from whichever answer the registry settles on.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Examples</h2>
+  <h3>Three aircraft, and ourselves.</h3>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Example</th><th>Sentence</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>skyBlip glider, climbing</th><td>$PADSL,58,3A0012,0,7.25,2,4,1,45.21468,5.84731,31.5,1842,2.4,273.5*24</td></tr>
+        <tr><th>its identity</th><td>$PADSI,58,3A0012,0,0,0,6,2,2,F-CGXY*77</td></tr>
+        <tr><th>OGN paraglider</th><td>$PADSL,7,DD4F21,0,7.50,2,7,0,45.19832,5.80115,9.8,1523,-1.1,118.1*0F</td></tr>
+        <tr><th>its identity, nothing known</th><td>$PADSI,7,DD4F21,0,0,0,0,0,0,*25</td></tr>
+        <tr><th>ICAO aircraft on the ground, relayed</th><td>$PADSL,5,3C6589,1,14.75,1,1,1,45.36294,5.32906,0.0,402,0.0,211.6*24</td></tr>
+        <tr><th>its identity</th><td>$PADSI,5,3C6589,3,2,9,5,2,2,D-EABC*45</td></tr>
+        <tr><th>ownship, a glider</th><td>$PADSO,58,3A0012,4,1*30</td></tr>
+        <tr><th>ownship, emergency declared</th><td>$PADSO,58,3A0012,4,2*33</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Length and growth</h2>
+  <h3>Inside NMEA&rsquo;s 82 characters, with room where it is needed.</h3>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Sentence</th><th>Typical</th><th>Widest the field ranges permit</th></tr>
+      </thead>
+      <tbody>
+        <tr><th><code>$PADSL</code></th><td>about 70</td><td>82</td></tr>
+        <tr><th><code>$PADSI</code></th><td>about 40</td><td>49, with a 14-character callsign</td></tr>
+        <tr><th><code>$PADSO</code></th><td>25</td><td>26</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    NMEA 0183 allows a sentence 82 characters, CR and LF included, and all
+    three fit. <code>$PADSL</code> fits exactly: the widest one the field
+    ranges permit is 82, so its next version would be a new sentence rather
+    than a new field.
+  </p>
+  <p>
+    <code>$PADSI</code> and <code>$PADSO</code> would grow the way
+    <code>$PFLAA</code> grew, which gained its NoTrack, Source and RSSI fields
+    at the end, one data port version at a time, without breaking a display
+    that stopped reading before them. The Status payload of G.2 is the obvious
+    next set: appended to <code>$PADSI</code> after the callsign, its ten fields
+    bring the widest sentence to 72.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">A stretch goal</h2>
+  <h3>An NMEA code that belongs to ADS-L.</h3>
+  <p>
+    A proprietary NMEA sentence is <code>$P</code> followed by a three-letter
+    manufacturer code, and NMEA assigns the codes. FLARM holds FLA, which is
+    where <code>$PFLAA</code> comes from. OGN-Tracker&rsquo;s
+    <code>$POGNT</code> and SoftRF&rsquo;s <code>$PSRFC</code> were never
+    registered, and SRF is SiRF&rsquo;s. ADS was not a manufacturer code in
+    the 2013 list we could read, only the name of a standard sentence, and the
+    live register sits behind a login.
+  </p>
+  <p>
+    NMEA issues codes to companies only, for a $200 fee and the purchase of
+    the NMEA 0183 standard, which a non-marine company pays $7,500 or $10,000
+    for. That is a cost for whoever holds the specification rather than for
+    one of its implementers. If the registry, or the working group behind
+    Issue 2, ever held ADS, these sentences would belong to ADS-L instead of
+    to us, and we would hand them over unchanged.
+  </p>
+  <p>
+    We are not asking for that. The names are a suggestion of where the
+    sentences could end up, and skyBlip would ship them as described here
+    either way.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">References</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>,
+      ED Decision 2022/024/R, Issue 2.
+      <span class="support">F.2 header and sender address, G.1 Traffic, G.2 Status.</span>
+    </li>
+    <li>
+      <strong>FLARM</strong> &middot;
+      <a href="https://www.flarm.com/wp-content/uploads/2024/04/FTD-012-Data-Port-Interface-Control-Document-ICD-7.19.pdf">Data Port Interface Control Document</a>,
+      FTD-012, version 7.19.
+      <span class="support"><code>$PFLAA</code>, <code>$PFLAU</code>, and the FLA manufacturer code.</span>
+    </li>
+    <li>
+      <strong>NMEA</strong> &middot;
+      <a href="https://www.nmea.org/nmea-0183.html">NMEA 0183</a>.
+      <span class="support">The 82-character sentence, proprietary sentences, and how manufacturer codes are assigned.</span>
+    </li>
+  </ul>
+  <p>
+    <%= link_to_page "ads-l-registry", class: "cta cta--previous" %>
+  </p>
+</section>
