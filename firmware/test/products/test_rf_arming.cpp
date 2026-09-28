@@ -537,7 +537,8 @@ TEST_CASE("rf: a burst that never reports is counted missed once its report is o
     Outcomes outcomes{a};
     fly_ground_second(a, outcomes);
 
-    const int overdue_ms = timing::kSlot1Wrap + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
+    const int overdue_ms =
+        timing::kSlot1Wrap + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
     for (int phase = 0; phase < overdue_ms; phase += 10) {
         a.tick_in(1, phase);
         outcomes.report_flown();

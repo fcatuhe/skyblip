@@ -112,8 +112,8 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
     value.armed_ahead = change.armed_ahead;
     value.late = change.late_start();
     const timing::ClockState& clock = context_.state.clock;
-    const events::Stamp stamp = events::stamp_of(change.ready_us, clock.pps_edge_us,
-                                                 clock.pps_locked, context_.state.traffic_now(now_ms));
+    const events::Stamp stamp = events::stamp_of(
+        change.ready_us, clock.pps_edge_us, clock.pps_locked, context_.state.traffic_now(now_ms));
     context_.diag.record(value, diag::instant_of(stamp, context_.instant(now_ms).utc_dated));
 }
 
