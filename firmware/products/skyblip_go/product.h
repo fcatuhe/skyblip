@@ -91,11 +91,11 @@ class Product {
         // sits after board_.begin() rather than in front of it.
         boot_cell_ = read_boot_cell();
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
-        flat_remembered_ = platform_.system_power().flat_on_glass();
+        glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
         config_.config().set_went_dark_flat(went_dark_flat_);
         if (boot_path_ == power::BootPath::SleepAgain) {
-            refused_frame_ = power::refused_frame(boot_cell_, flat_remembered_);
+            refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
         }
 
@@ -192,6 +192,7 @@ class Product {
     bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
     bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
     bool cell_ran_out() const { return shutdown_.reason() == power::ShutdownReason::LowBattery; }
+    bool cell_low() const { return state_.power.level == power::PowerLevel::Low; }
 
     // Feeding through a deliberate shutdown is correct: the device is doing what
     // it was told, and a held button must not turn a power-off into a reboot.
@@ -264,15 +265,16 @@ class Product {
 
     void take_went_dark_flat() {
         ports::SystemPower& retained = platform_.system_power();
-        went_dark_flat_ = flat_remembered_ || retained.went_dark_flat();
+        went_dark_flat_ =
+            glass_remembered_ == power::CellOnGlass::Flat || retained.went_dark_flat();
         retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
     }
 
     void remember_glass() {
-        const bool flat = screen_.flat_on_glass();
-        if (flat == flat_remembered_) return;
-        flat_remembered_ = flat;
-        platform_.system_power().set_flat_on_glass(flat);
+        const power::CellOnGlass on_glass = screen_.cell_on_glass();
+        if (on_glass == glass_remembered_) return;
+        glass_remembered_ = on_glass;
+        platform_.system_power().set_cell_on_glass(on_glass);
     }
 
     void park_flat_cell() {
@@ -353,6 +355,8 @@ class Product {
             screen_.park_for_stow();
         else if (cell_ran_out())
             park_flat_cell();
+        else if (cell_low())
+            screen_.park_for_low_cell();
         else
             screen_.set_power(false);
     }
@@ -425,7 +429,7 @@ class Product {
     std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
     bool refusal_asked_{false};
-    bool flat_remembered_{false};
+    power::CellOnGlass glass_remembered_{power::CellOnGlass::None};
     bool went_dark_flat_{false};
     bool flyable_{false};
 };

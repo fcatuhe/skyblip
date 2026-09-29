@@ -5,6 +5,7 @@
 #include "core/diag/payload.h"
 #include "core/flight/state.h"
 #include "core/power/duty.h"
+#include "core/power/wake.h"
 #include "core/units/units.h"
 #include "ports/dfu.h"
 #include "products/skyblip_go/glass.h"
@@ -67,6 +68,7 @@ class ScreenService : public runtime::Service {
     void park_for_stow();
     void park_for_off();
     void park_for_flat_cell();
+    void park_for_low_cell();
     void set_range_step(int step) {
         settings_.range_step = static_cast<uint8_t>(clamped_range_step(step));
         dirty_ = true;
@@ -83,7 +85,7 @@ class ScreenService : public runtime::Service {
     bool backlight() const { return backlight_; }
     bool powered() const { return powered_; }
     bool parking() const { return park_ != ParkStep::None; }
-    bool flat_on_glass() const { return flat_on_glass_; }
+    power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return fb_; }
     void mark_dirty() { dirty_ = true; }
 
@@ -119,11 +121,11 @@ class ScreenService : public runtime::Service {
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
     bool may_present_park_frame() const;
-    enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell };
+    enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell, LowCell };
     enum class ParkStep : uint8_t { None, Frame, Sleep };
     void park(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
-    void draw_parked_flat_cell();
+    void draw_parked_cell(const char* said);
     void centred_text(int y, const char* text, int scale);
     static constexpr int kParkedSaidScale = 2;
     static constexpr int kGlyphCols = 6;
@@ -219,7 +221,7 @@ class ScreenService : public runtime::Service {
     ParkStep park_{ParkStep::None};
     ParkFrame park_frame_{ParkFrame::Wordmark};
     ports::RecoveryPath recovery_path_{ports::RecoveryPath::Rebooted};
-    bool flat_on_glass_{false};
+    power::CellOnGlass cell_on_glass_{power::CellOnGlass::None};
     power::OnTime lit_{};
     bool backlight_{false};
     bool powered_{true};

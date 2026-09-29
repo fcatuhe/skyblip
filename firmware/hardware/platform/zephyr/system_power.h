@@ -102,17 +102,25 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     void reboot() override { sys_reboot(SYS_REBOOT_WARM); }
 
-    bool flat_on_glass() const override { return retained(kFlatOnGlassBit); }
-    void set_flat_on_glass(bool flat) override { retain(kFlatOnGlassBit, flat); }
+    power::CellOnGlass cell_on_glass() const override {
+        if (retained(kFlatOnGlassBit)) return power::CellOnGlass::Flat;
+        if (retained(kLowOnGlassBit)) return power::CellOnGlass::Low;
+        return power::CellOnGlass::None;
+    }
+    void set_cell_on_glass(power::CellOnGlass word) override {
+        retain(kFlatOnGlassBit, word == power::CellOnGlass::Flat);
+        retain(kLowOnGlassBit, word == power::CellOnGlass::Low);
+    }
     bool went_dark_flat() const override { return retained(kWentDarkFlatBit); }
     void set_went_dark_flat(bool flat) override { retain(kWentDarkFlatBit, flat); }
 
    private:
     // INFO: fc 21sep26 a power-on clears GPREGRET2, and a magic makes anything else read as no
-    static constexpr uint8_t kGlassMagic = 0x5c;
-    static constexpr uint8_t kGlassMagicMask = 0xfc;
+    static constexpr uint8_t kGlassMagic = 0xa8;
+    static constexpr uint8_t kGlassMagicMask = 0xf8;
     static constexpr uint8_t kFlatOnGlassBit = 0x01;
     static constexpr uint8_t kWentDarkFlatBit = 0x02;
+    static constexpr uint8_t kLowOnGlassBit = 0x04;
 
     static uint8_t retained_bits() {
         const uint8_t byte = read_glass_byte();

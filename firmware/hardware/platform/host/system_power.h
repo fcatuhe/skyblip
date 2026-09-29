@@ -29,8 +29,8 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         return true;
     }
 
-    bool flat_on_glass() const override { return flat_glass; }
-    void set_flat_on_glass(bool flat) override { flat_glass = flat; }
+    power::CellOnGlass cell_on_glass() const override { return glass_cell; }
+    void set_cell_on_glass(power::CellOnGlass word) override { glass_cell = word; }
     bool went_dark_flat() const override { return dark_flat; }
     void set_went_dark_flat(bool flat) override { dark_flat = flat; }
 
@@ -50,7 +50,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // polls it exactly as it polls the silicon.
     bool supply_warning{false};
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
-    bool flat_glass{false};
+    power::CellOnGlass glass_cell{power::CellOnGlass::None};
     bool dark_flat{false};
     int offs{0};
     int reboots{0};

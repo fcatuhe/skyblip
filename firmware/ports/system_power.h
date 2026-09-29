@@ -6,6 +6,7 @@
 
 #include "core/power/reset_reason.h"
 #include "core/power/shutdown.h"
+#include "core/power/wake.h"
 
 namespace skyblip::ports {
 
@@ -40,8 +41,8 @@ class SystemPower {
     virtual bool take_supply_warning() { return false; }
 
     // INFO: fc 21sep26 the bits that outlive the rails; nowhere to keep them reads false: README.md
-    virtual bool flat_on_glass() const { return false; }
-    virtual void set_flat_on_glass(bool flat) { (void)flat; }
+    virtual power::CellOnGlass cell_on_glass() const { return power::CellOnGlass::None; }
+    virtual void set_cell_on_glass(power::CellOnGlass word) { (void)word; }
     virtual bool went_dark_flat() const { return false; }
     virtual void set_went_dark_flat(bool flat) { (void)flat; }
 };

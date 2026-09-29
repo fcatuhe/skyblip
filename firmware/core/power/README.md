@@ -54,7 +54,9 @@ The other way a cell arrives empty is a winter on a shelf. That unit ran no shut
 
 The cable is the way out of both. On the cable the device is an ordinary switched-off one again, because VBUS wakes the SoC, the boot is refused, and the refusal re-arms the button - so the wordmark replaces the flat frame, and the wordmark is the whole instruction. Anything else is `Leave`: the glass already says the right thing, and a full refresh is seconds of panel rail off a cell with none to spare.
 
-What the panel wears has to outlive the rails for that comparison to exist, so one bit does: `ports::SystemPower::flat_on_glass`. A platform with nowhere to keep it answers false, which costs a repeated frame and nothing else.
+A device switched off while the level is `Low` wears a milder word, `CHARGE BATTERY`, and the cable takes it off the same way. It asks for the cable and names nothing that happened, so a press on a cell that has drained past the lockout since does not leave it there: that refusal pushes `FLAT BATTERY` over it.
+
+What the panel wears has to outlive the rails for that comparison to exist, so it does: `ports::SystemPower::cell_on_glass`, one of `None`, `Low` and `Flat`. A platform with nowhere to keep it answers `None`, which costs a repeated frame and nothing else.
 
 The glass forgets on the cable, and a support case must not. A second bit, `went_dark_flat`, is set wherever the cutoff or a refused boot parks the flat frame, whether or not the panel could draw it, and it survives the refusal that takes the word off the glass. The boot that runs reads it, prints `WAS FLAT` beside the cell's voltage on the self-test page and answers `went_dark_flat` in the status reply, then drops it, so it names the one boot that followed the flat cell and no other.
 

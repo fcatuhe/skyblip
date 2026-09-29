@@ -148,24 +148,30 @@ TEST_CASE("wake: a cell nobody read never refuses a boot") {
 
 // A cell emptied on a shelf ran no shutdown, so the refusal is the only thing left to name it.
 TEST_CASE("wake: the boot a flat cell refuses names it for the unit that never shut down") {
-    CHECK(refused_frame(healthy(power::kCutoffMv), /*flat_on_glass=*/false) ==
-          RefusedFrame::FlatCell);
-    CHECK(refused_frame(healthy(kBootLockoutMv - 1), false) == RefusedFrame::FlatCell);
+    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::None) == RefusedFrame::FlatCell);
+    CHECK(refused_frame(healthy(kBootLockoutMv - 1), CellOnGlass::None) == RefusedFrame::FlatCell);
 
     // Pushing the frame it is already wearing is seconds of panel rail for no change.
-    CHECK(refused_frame(healthy(power::kCutoffMv), /*flat_on_glass=*/true) == RefusedFrame::Leave);
+    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::Flat) == RefusedFrame::Leave);
+}
+
+// A cell that went on draining after a switch-off asked for the cable has run past asking.
+TEST_CASE("wake: a flat cell refused under the low word names itself instead") {
+    CHECK(refused_frame(healthy(kBootLockoutMv - 1), CellOnGlass::Low) == RefusedFrame::FlatCell);
+    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::Low) == RefusedFrame::FlatCell);
 }
 
 // The cable arms the button again (button_wake_after_refusal), so the mark is the instruction.
 TEST_CASE("wake: the charger that wakes a flat device takes the word back off the glass") {
     BootCell on_charge = healthy(3000);
     on_charge.external_power = true;
-    CHECK(refused_frame(on_charge, /*flat_on_glass=*/true) == RefusedFrame::Wordmark);
-    CHECK(refused_frame(on_charge, /*flat_on_glass=*/false) == RefusedFrame::Leave);
+    CHECK(refused_frame(on_charge, CellOnGlass::Flat) == RefusedFrame::Wordmark);
+    CHECK(refused_frame(on_charge, CellOnGlass::Low) == RefusedFrame::Wordmark);
+    CHECK(refused_frame(on_charge, CellOnGlass::None) == RefusedFrame::Leave);
 
     // A cell nobody read is not a flat one, here as everywhere else in this file.
-    CHECK(refused_frame(BootCell{}, true) == RefusedFrame::Wordmark);
-    CHECK(refused_frame(healthy(200), false) == RefusedFrame::Leave);
+    CHECK(refused_frame(BootCell{}, CellOnGlass::Flat) == RefusedFrame::Wordmark);
+    CHECK(refused_frame(healthy(200), CellOnGlass::None) == RefusedFrame::Leave);
 
     CHECK(std::string(to_string(RefusedFrame::FlatCell)) == "FLAT CELL");
     CHECK(std::string(to_string(RefusedFrame::Wordmark)) == "WORDMARK");

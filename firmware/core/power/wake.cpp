@@ -41,9 +41,10 @@ ButtonWake button_wake_after_refusal(const BootCell& cell) {
     return too_flat_to_run(cell) ? ButtonWake::Withheld : ButtonWake::Armed;
 }
 
-RefusedFrame refused_frame(const BootCell& cell, bool flat_on_glass) {
-    if (too_flat_to_run(cell)) return flat_on_glass ? RefusedFrame::Leave : RefusedFrame::FlatCell;
-    return flat_on_glass ? RefusedFrame::Wordmark : RefusedFrame::Leave;
+RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass) {
+    if (too_flat_to_run(cell))
+        return on_glass == CellOnGlass::Flat ? RefusedFrame::Leave : RefusedFrame::FlatCell;
+    return on_glass == CellOnGlass::None ? RefusedFrame::Leave : RefusedFrame::Wordmark;
 }
 
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell) {

@@ -353,7 +353,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
 
 void ScreenService::note_presented(uint32_t now_ms) {
     change_ = Change::None;
-    flat_on_glass_ = false;
+    cell_on_glass_ = power::CellOnGlass::None;
     std::memcpy(presented_.data(), fb_.data(), Glass::kBytes);
     presented_once_ = true;
     context_.state.panel_presented = true;
@@ -408,7 +408,9 @@ void ScreenService::settle_park(uint32_t now_ms) {
         draw_park_frame(park_frame_);
         context_.roles.display.present(fb_, ports::Refresh::Full, now_ms);
         count_refresh(ports::Refresh::Full);
-        flat_on_glass_ = park_frame_ == ParkFrame::FlatCell;
+        cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
+                         : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low
+                                                             : power::CellOnGlass::None;
         return;
     }
     park_ = ParkStep::None;
@@ -423,11 +425,8 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
         case ParkFrame::Recovery: draw_recovery(fb_, recovery_path_); return;
         // INFO: fc 12sep26 months of one image is the ghosting an e-paper never fully loses
         case ParkFrame::Blank: fb_.clear(/*white=*/true); return;
-        case ParkFrame::FlatCell:
-            fb_.clear(/*white=*/true);
-            ui::draw_wordmark(fb_, kGlassW / 2, kGlassH / 2);
-            draw_parked_flat_cell();
-            return;
+        case ParkFrame::FlatCell: draw_parked_cell("FLAT BATTERY"); return;
+        case ParkFrame::LowCell: draw_parked_cell("CHARGE BATTERY"); return;
         case ParkFrame::Wordmark:
         default:
             fb_.clear(/*white=*/true);
@@ -436,10 +435,12 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
     }
 }
 
-void ScreenService::draw_parked_flat_cell() {
+void ScreenService::draw_parked_cell(const char* said) {
+    fb_.clear(/*white=*/true);
+    ui::draw_wordmark(fb_, kGlassW / 2, kGlassH / 2);
     const int wordmark_bottom = kGlassH / 2 + ui::wordmark_height() / 2;
     const int y = (wordmark_bottom + kGlassH) / 2 - kGlyphRows * kParkedSaidScale / 2;
-    centred_text(y, "FLAT BATTERY", kParkedSaidScale);
+    centred_text(y, said, kParkedSaidScale);
 }
 
 void ScreenService::centred_text(int y, const char* text, int scale) {
@@ -468,5 +469,7 @@ void ScreenService::park_for_stow() { park(ParkFrame::Blank); }
 void ScreenService::park_for_off() { park(ParkFrame::Wordmark); }
 
 void ScreenService::park_for_flat_cell() { park(ParkFrame::FlatCell); }
+
+void ScreenService::park_for_low_cell() { park(ParkFrame::LowCell); }
 
 }  // namespace skyblip::go

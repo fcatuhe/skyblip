@@ -74,7 +74,7 @@ What survives a failed self test is a device that still shows why: the page stay
 
 ## What the glass wears while the device is off
 
-E-paper holds its last image with the rails down, so the frame pushed immediately before the rails drop is what the device wears in a flight bag for as long as it sits there. There are five, and `product.h` picks between them by why the device is going down.
+E-paper holds its last image with the rails down, so the frame pushed immediately before the rails drop is what the device wears in a flight bag for as long as it sits there. There are six, and `product.h` picks between them by why the device is going down.
 
 The wordmark is the ordinary one: a long press, or the companion link asking. A stow, which is the long press with the pad held, leaves the glass blank instead, because months of one image is ghosting an e-paper never fully loses. An install says so, because the bootloader is about to take the device and a pilot watching a blank panel would think it had died.
 
@@ -84,7 +84,9 @@ The fifth is the cell, `FLAT BATTERY` under the mark, and it is the only one tha
 
 A cell that empties itself on a shelf over a winter runs no shutdown and writes nothing, and that unit is the one a refused boot is for: the press gets no device, so the refusal pushes the same frame instead (`core/power/README.md`). Both roads end on the same glass and the same withheld button.
 
-The cable is the way back, and it is one act. VBUS wakes this SoC out of SYSTEM OFF and the reset cause carries the bit, but `core/power/wake.h` refuses that boot on purpose: a charger found in a flight bag must not switch a device on. What the cable does is charge the cell and, through the refusal, leave the button armed - so that refusal also takes `FLAT BATTERY` back off the glass and puts the wordmark there, the frame every armed, switched-off device wears. The press after it is the pilot asking for a device, and it gets one even while the cell is still filling.
+The sixth is the warning the lamp was blinking, `CHARGE BATTERY` under the mark. A long press or the companion link switching the device off while the cell is `Low` gets it instead of the bare wordmark, because the lamp goes dark with the rails and the pilot who picks the unit up next would otherwise find a flight's worth of charge missing on the launch. It is not the flat frame: the device was asked to stop, the button stays armed, and a press still gets a device, so it asks for the cable rather than saying something happened. A stow stays blank at any level, and on the cable the level is never `Low`, so a unit switched off while charging wears the plain mark.
+
+The cable is the way back, and it is one act. VBUS wakes this SoC out of SYSTEM OFF and the reset cause carries the bit, but `core/power/wake.h` refuses that boot on purpose: a charger found in a flight bag must not switch a device on. What the cable does is charge the cell and, through the refusal, leave the button armed - so that refusal also takes `FLAT BATTERY` or `CHARGE BATTERY` back off the glass and puts the wordmark there, the frame every armed, switched-off device wears. The press after it is the pilot asking for a device, and it gets one even while the cell is still filling.
 
 That boot is also the one that says the cell had been flat, because the glass no longer does: `went_dark_flat()` is read in `setup()` off a second retained bit the cable's refusal leaves alone, drawn on the self-test page, handed to the status reply, and dropped for the boot after (`core/power/README.md`).
 
