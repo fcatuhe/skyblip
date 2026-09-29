@@ -18,8 +18,8 @@ const char* to_string(Condition condition) {
     switch (condition) {
         case Condition::Off: return "off";
         case Condition::Alarm: return "alarm";
+        case Condition::Critical: return "critical";
         case Condition::Low: return "low";
-        case Condition::Caution: return "caution";
         case Condition::NoFix: return "no-fix";
         case Condition::Alive: return "alive";
         default: return "?";
@@ -41,10 +41,13 @@ Condition condition_for(const Situation& situation) {
     // consulted, which is what makes the order the whole of the rule.
     if (!situation.running) return Condition::Off;
     if (situation.alarm_level >= kAlarmTakesLamp) return Condition::Alarm;
-    if (situation.power_level == power::PowerLevel::Low ||
-        situation.power_level == power::PowerLevel::Cutoff)
-        return Condition::Low;
-    if (situation.cell_caution) return Condition::Caution;
+    switch (situation.power_level) {
+        case power::PowerLevel::Critical:
+        case power::PowerLevel::Flat: return Condition::Critical;
+        case power::PowerLevel::Low: return Condition::Low;
+        case power::PowerLevel::Unknown:
+        case power::PowerLevel::Normal: break;
+    }
     return situation.fix_valid ? Condition::Alive : Condition::NoFix;
 }
 

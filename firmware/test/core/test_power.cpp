@@ -168,7 +168,7 @@ TEST_CASE("cutoff: two samples below the cutoff are not enough, the third acts")
     CHECK(monitor.apply(sample(3100)) == PowerLevel::Unknown);
     CHECK(monitor.apply(sample(3100)) == PowerLevel::Unknown);
     CHECK_FALSE(monitor.cutoff());
-    CHECK(monitor.apply(sample(3100)) == PowerLevel::Cutoff);
+    CHECK(monitor.apply(sample(3100)) == PowerLevel::Flat);
     CHECK(monitor.cutoff());
 }
 
@@ -177,7 +177,6 @@ TEST_CASE("cutoff: one good sample resets the count, so a transmit sag cannot ac
     monitor.apply(sample(3100));
     monitor.apply(sample(3100));
     monitor.apply(sample(3800));  // the burst ended, the rail came back
-    CHECK(monitor.below_cutoff() == 0);
     CHECK(monitor.level() == PowerLevel::Normal);
 
     monitor.apply(sample(3100));
@@ -185,78 +184,118 @@ TEST_CASE("cutoff: one good sample resets the count, so a transmit sag cannot ac
     CHECK_FALSE(monitor.cutoff());
 }
 
-TEST_CASE("cutoff: both thresholds are boundaries, not ranges") {
-    // Exactly at the warning: still normal. One millivolt under: warned.
-    CutoffMonitor at_warn;
-    for (int i = 0; i < 4; i++) at_warn.apply(sample(kLowWarnMv));
-    CHECK(at_warn.level() == PowerLevel::Normal);
-
-    CutoffMonitor under_warn;
-    for (int i = 0; i < 4; i++) under_warn.apply(sample(kLowWarnMv - 1));
-    CHECK(under_warn.level() == PowerLevel::Low);
-
-    // Exactly at the cutoff: warned, not cut off. One millivolt under: cut off.
-    CutoffMonitor at_cutoff;
-    for (int i = 0; i < 4; i++) at_cutoff.apply(sample(kCutoffMv));
-    CHECK(at_cutoff.level() == PowerLevel::Low);
-    CHECK_FALSE(at_cutoff.cutoff());
-
-    CutoffMonitor under_cutoff;
-    for (int i = 0; i < 4; i++) under_cutoff.apply(sample(kCutoffMv - 1));
-    CHECK(under_cutoff.cutoff());
+static PowerLevel settled_at(uint16_t millivolts) {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 4; i++) monitor.apply(sample(millivolts));
+    return monitor.level();
 }
 
-TEST_CASE("cutoff: the warning comes before the cutoff, never instead of it") {
+// Exactly on a step is the step above it, one millivolt under is the step itself.
+TEST_CASE("cutoff: every step is a boundary, not a range") {
+    CHECK(settled_at(kLowMv) == PowerLevel::Normal);
+    CHECK(settled_at(kLowMv - 1) == PowerLevel::Low);
+    CHECK(settled_at(kCriticalMv) == PowerLevel::Low);
+    CHECK(settled_at(kCriticalMv - 1) == PowerLevel::Critical);
+    CHECK(settled_at(kFlatMv) == PowerLevel::Critical);
+    CHECK(settled_at(kFlatMv - 1) == PowerLevel::Flat);
+}
+
+TEST_CASE("cutoff: critical comes before flat, never instead of it") {
     CutoffMonitor monitor;
     for (int i = 0; i < 3; i++) monitor.apply(sample(3400));
-    CHECK(monitor.level() == PowerLevel::Low);
-    CHECK(monitor.warned());
+    CHECK(monitor.level() == PowerLevel::Critical);
     CHECK_FALSE(monitor.cutoff());
 
     for (int i = 0; i < 3; i++) monitor.apply(sample(3100));
     CHECK(monitor.cutoff());
 }
 
-// The knee a pilot plans on, three samples deep like every other step of the ladder.
-TEST_CASE("cutoff: the caution comes before the warning, and acts on nothing") {
+// The knee a pilot plans on: the device says it everywhere, and still refuses nothing.
+TEST_CASE("cutoff: low comes before critical, three samples deep, and refuses nothing") {
     CutoffMonitor monitor;
-    for (int i = 0; i < 2; i++) monitor.apply(sample(kCautionMv - 1));
-    CHECK_FALSE(monitor.caution());
-
-    monitor.apply(sample(kCautionMv - 1));
-    CHECK(monitor.caution());
+    for (int i = 0; i < 4; i++) monitor.apply(sample(3900));
+    for (int i = 0; i < 2; i++) monitor.apply(sample(kLowMv - 1));
     CHECK(monitor.level() == PowerLevel::Normal);
+
+    monitor.apply(sample(kLowMv - 1));
+    CHECK(monitor.level() == PowerLevel::Low);
+    CHECK(needs_charge(monitor.level()));
     CHECK(monitor.may_write(DurableWrite::Settings));
     CHECK(monitor.may_refresh(PanelRefresh::Routine));
-
-    // Exactly at it is not under it, and a cell that comes back up clears it.
-    CutoffMonitor at_caution;
-    for (int i = 0; i < 4; i++) at_caution.apply(sample(kCautionMv));
-    CHECK_FALSE(at_caution.caution());
-
-    for (int i = 0; i < 4; i++) monitor.apply(sample(kCautionMv + 100));
-    CHECK_FALSE(monitor.caution());
 }
 
-TEST_CASE("cutoff: a cell on the cable is never in caution either") {
+TEST_CASE("cutoff: only low, critical and flat ask for the charger") {
+    CHECK_FALSE(needs_charge(PowerLevel::Unknown));
+    CHECK_FALSE(needs_charge(PowerLevel::Normal));
+    CHECK(needs_charge(PowerLevel::Low));
+    CHECK(needs_charge(PowerLevel::Critical));
+    CHECK(needs_charge(PowerLevel::Flat));
+}
+
+// The cell sits on a step for the minutes it takes to cross it, and noise straddles the line.
+TEST_CASE("cutoff: a level comes back up on three samples above its step, not on one") {
     CutoffMonitor monitor;
-    for (int i = 0; i < 4; i++) monitor.apply(sample(3400));
-    REQUIRE(monitor.caution());
-    monitor.apply(sample(3400, /*external_power=*/true));
-    CHECK_FALSE(monitor.caution());
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 10));
+    REQUIRE(monitor.level() == PowerLevel::Critical);
+
+    monitor.apply(sample(kCriticalMv + 5));
+    monitor.apply(sample(kCriticalMv + 5));
+    CHECK(monitor.level() == PowerLevel::Critical);
+    monitor.apply(sample(kCriticalMv - 10));
+    monitor.apply(sample(kCriticalMv + 5));
+    CHECK(monitor.level() == PowerLevel::Critical);
+
+    for (int i = 0; i < 2; i++) monitor.apply(sample(kCriticalMv + 5));
+    CHECK(monitor.level() == PowerLevel::Low);
+}
+
+TEST_CASE("cutoff: a cell that recovers far climbs every step it cleared at once") {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 3; i++) monitor.apply(sample(3400));
+    REQUIRE(monitor.level() == PowerLevel::Critical);
+
+    for (int i = 0; i < 3; i++) monitor.apply(sample(3900));
+    CHECK(monitor.level() == PowerLevel::Normal);
+}
+
+// A run counted in a byte wrapped to zero after 255 samples and read as a cell back up.
+TEST_CASE("cutoff: a cell resting on a step for many minutes stays on it") {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 1000; i++) {
+        monitor.apply(sample(kCriticalMv - 10));
+        if (i >= kLevelSamples - 1) REQUIRE(monitor.level() == PowerLevel::Critical);
+    }
+}
+
+TEST_CASE("cutoff: a first reading at or above low is a sound cell, one under it waits for three") {
+    CutoffMonitor sound;
+    CHECK(sound.apply(sample(kLowMv)) == PowerLevel::Normal);
+
+    CutoffMonitor low;
+    CHECK(low.apply(sample(kLowMv - 1)) == PowerLevel::Unknown);
+    CHECK(low.apply(sample(kLowMv - 1)) == PowerLevel::Unknown);
+    CHECK(low.apply(sample(kLowMv - 1)) == PowerLevel::Low);
+}
+
+TEST_CASE("cutoff: a cell on the cable is never low either") {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 4; i++) monitor.apply(sample(3550));
+    REQUIRE(monitor.level() == PowerLevel::Low);
+    monitor.apply(sample(3550, /*external_power=*/true));
+    CHECK(monitor.level() == PowerLevel::Normal);
 }
 
 // Every step of the ladder is read against the one under it, so a pilot meets them in order.
-TEST_CASE("cutoff: the ladder is caution, warning, boot lockout, cutoff") {
-    CHECK(kCautionMv > kLowWarnMv);
-    CHECK(kLowWarnMv > kBootLockoutMv);
-    CHECK(kBootLockoutMv > kCutoffMv);
-    CHECK(kCutoffMv > kImplausibleFloorMv);
+TEST_CASE("cutoff: the ladder is low, critical, boot lockout, flat") {
+    CHECK(kLowMv > kCriticalMv);
+    CHECK(kCriticalMv > kBootLockoutMv);
+    CHECK(kBootLockoutMv > kFlatMv);
+    CHECK(kFlatMv > kImplausibleFloorMv);
 
     // And the gauge reads zero where the device stops, not before it.
-    CHECK(kEmptyMv == kCutoffMv);
-    CHECK(percent_from_mv(kCutoffMv, false) == 0);
-    CHECK(percent_from_mv(kLowWarnMv, false) > 0);
+    CHECK(kEmptyMv == kFlatMv);
+    CHECK(percent_from_mv(kFlatMv, false) == 0);
+    CHECK(percent_from_mv(kCriticalMv, false) > 0);
     CHECK(percent_from_mv(kBootLockoutMv, false) > 0);
 }
 
@@ -294,20 +333,17 @@ TEST_CASE("cutoff: the decision latches once it is made") {
     CHECK(monitor.cutoff());
 }
 
-// E1. Below the warning level nothing durable is written except the record that
-// must survive. The rule is one function over the levels the monitor above
-// already publishes, so "stop writing" happens at the same voltage the panel says
-// LOW at, and there is no second threshold to keep in step with the first.
+// E1. From Critical down only the record that must survive is written, off the level alone.
 
-TEST_CASE("write gate: a settings write is refused below the warning, the log record is not") {
+TEST_CASE("write gate: a settings write is refused from critical down, the log record is not") {
     CHECK(may_write(PowerLevel::Normal, false, DurableWrite::Settings));
-    CHECK_FALSE(may_write(PowerLevel::Low, false, DurableWrite::Settings));
-    CHECK_FALSE(may_write(PowerLevel::Cutoff, false, DurableWrite::Settings));
+    CHECK_FALSE(may_write(PowerLevel::Critical, false, DurableWrite::Settings));
+    CHECK_FALSE(may_write(PowerLevel::Flat, false, DurableWrite::Settings));
 
     // The one write whose value is highest exactly when the cell is lowest. A
     // landing out with no log is the flight a pilot needed the log for.
     for (const PowerLevel level :
-         {PowerLevel::Unknown, PowerLevel::Normal, PowerLevel::Low, PowerLevel::Cutoff})
+         {PowerLevel::Unknown, PowerLevel::Normal, PowerLevel::Critical, PowerLevel::Flat})
         CHECK(may_write(level, /*supply_warned=*/true, DurableWrite::FlightRecord));
 }
 
@@ -327,8 +363,8 @@ TEST_CASE("write gate: the monitor answers it from the samples it already has") 
     CutoffMonitor monitor;
     CHECK(monitor.may_write(DurableWrite::Settings));
 
-    for (int i = 0; i < kCutoffSamples; i++) monitor.apply(sample(3400));
-    REQUIRE(monitor.level() == PowerLevel::Low);
+    for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(3400));
+    REQUIRE(monitor.level() == PowerLevel::Critical);
     CHECK_FALSE(monitor.may_write(DurableWrite::Settings));
     CHECK(monitor.may_write(DurableWrite::FlightRecord));
 
@@ -339,17 +375,17 @@ TEST_CASE("write gate: the monitor answers it from the samples it already has") 
     CHECK(monitor.may_write(DurableWrite::Settings));
 }
 
-TEST_CASE("refresh gate: a low cell still gets its traffic picture, a cut-off one does not") {
+TEST_CASE("refresh gate: a critical cell still gets its traffic picture, a flat one does not") {
     CHECK(may_refresh(PowerLevel::Normal, false, PanelRefresh::Routine));
-    CHECK(may_refresh(PowerLevel::Low, false, PanelRefresh::Routine));
-    CHECK_FALSE(may_refresh(PowerLevel::Cutoff, false, PanelRefresh::Routine));
+    CHECK(may_refresh(PowerLevel::Critical, false, PanelRefresh::Routine));
+    CHECK_FALSE(may_refresh(PowerLevel::Flat, false, PanelRefresh::Routine));
 
     CHECK(may_refresh(PowerLevel::Unknown, false, PanelRefresh::Routine));
 }
 
 TEST_CASE("refresh gate: the white field the glass wears while off is drawn at the cutoff") {
     for (const PowerLevel level :
-         {PowerLevel::Unknown, PowerLevel::Normal, PowerLevel::Low, PowerLevel::Cutoff})
+         {PowerLevel::Unknown, PowerLevel::Normal, PowerLevel::Critical, PowerLevel::Flat})
         CHECK(may_refresh(level, /*supply_warned=*/false, PanelRefresh::Park));
 }
 

@@ -102,7 +102,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kWindowSamples` | 3 | samples | Window | - |
-| `kCutoffSamples` | 3 | samples | Samples | More than two consecutive samples, so the third one acts. |
+| `kLevelSamples` | 3 | samples | Samples | More than two consecutive samples, so the third one acts. |
 | `kRailSettleMs` | 20 | milliseconds | Settle | the 20 ms MB spends between driving the enable pins low and releasing them (nRF52.cpp:2075). |
 | `kLongPressMs` | 2000 (2 s) | milliseconds | - | Long enough that it cannot be the page press, short enough to do with gloves on. |
 | `kParkMs` | 3000 (3 s) | milliseconds | - | The panel is parked with a full refresh and the SSD1681 clocks one out in about 2.5 s. |

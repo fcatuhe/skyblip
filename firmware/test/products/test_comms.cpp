@@ -209,7 +209,7 @@ TEST_CASE("comms: link down cancels a pending change") {
 // not touched - and a companion app that patches a value per keystroke is told
 // so, rather than being acknowledged for a write that will not happen.
 
-TEST_CASE("comms: a set is refused below the low-battery warning, with the reason") {
+TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -220,7 +220,7 @@ TEST_CASE("comms: a set is refused below the low-battery warning, with the reaso
     power::BatteryState low{};
     low.valid = true;
     low.millivolts = 3400;
-    cs.set_battery_state(low, power::PowerLevel::Low);
+    cs.set_battery_state(low, power::PowerLevel::Critical);
     CHECK_FALSE(cs.settings_writable());
 
     cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
@@ -262,7 +262,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
     power::BatteryState low{};
     low.valid = true;
     low.millivolts = 3100;
-    cs.set_battery_state(low, power::PowerLevel::Cutoff);
+    cs.set_battery_state(low, power::PowerLevel::Flat);
     cs.confirm();
     CHECK(cs.pending() == Pending::None);
     CHECK(int(s.aircraft_type) == 1);

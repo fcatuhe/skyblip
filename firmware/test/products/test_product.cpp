@@ -285,7 +285,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480, false));
     // The reader that matters: the same trimmed millivolts reached the rule that
     // decides when the device warns and when it goes down.
-    CHECK(trimmed.state().power.level == power::PowerLevel::Low);
+    CHECK(trimmed.state().power.level == power::PowerLevel::Critical);
 
     // The same board, the same divider, no trim: the gauge and the cutoff rule
     // agree with each other and both are wrong by the same 60 mV.
@@ -294,7 +294,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     raw.platform.battery().millivolts = 3540;
     raw.run(0, 12000);
     CHECK(raw.state().power.battery.millivolts == 3540);
-    CHECK(raw.state().power.level == power::PowerLevel::Normal);
+    CHECK(raw.state().power.level == power::PowerLevel::Low);
 }
 
 // Taken before any service runs, so it is the reader that could have been raw.

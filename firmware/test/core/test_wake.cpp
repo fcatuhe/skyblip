@@ -90,11 +90,11 @@ TEST_CASE("wake: on a cell that can run, the button and the reset pin ask for a 
 
 // Left to boot, each press costs the panel and kParkMs to reach the same cutoff.
 TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask") {
-    const BootCell flat = healthy(power::kCutoffMv);
+    const BootCell flat = healthy(power::kFlatMv);
     CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/true, flat) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::Pin, false, flat) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::PowerOn, false, flat) == BootPath::SleepAgain);
-    CHECK(boot_path(ResetCause::Watchdog, false, healthy(power::kCutoffMv - 1)) ==
+    CHECK(boot_path(ResetCause::Watchdog, false, healthy(power::kFlatMv - 1)) ==
           BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::Brownout, false, flat) == BootPath::SleepAgain);
 
@@ -105,13 +105,13 @@ TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask
 
 // A fault reset in flight met the switch-on lockout and left the pilot dark until a cable.
 TEST_CASE("wake: a unit that reset itself runs on any cell the cutoff would have kept flying") {
-    const BootCell low = healthy((power::kCutoffMv + kBootLockoutMv) / 2);
+    const BootCell low = healthy((power::kFlatMv + kBootLockoutMv) / 2);
     for (const ResetCause fault :
          {ResetCause::Watchdog, ResetCause::Lockup, ResetCause::Software}) {
         CAPTURE(static_cast<uint32_t>(fault));
         CHECK(boot_path(fault, false, low) == BootPath::Run);
-        CHECK(boot_path(fault, false, healthy(power::kCutoffMv)) == BootPath::Run);
-        CHECK(boot_path(fault, false, healthy(power::kCutoffMv - 1)) == BootPath::SleepAgain);
+        CHECK(boot_path(fault, false, healthy(power::kFlatMv)) == BootPath::Run);
+        CHECK(boot_path(fault, false, healthy(power::kFlatMv - 1)) == BootPath::SleepAgain);
     }
     CHECK(boot_path(ResetCause::PowerOn, false, low) == BootPath::SleepAgain);
     CHECK(boot_path(ResetCause::LowPowerWake, true, low) == BootPath::SleepAgain);
@@ -120,7 +120,7 @@ TEST_CASE("wake: a unit that reset itself runs on any cell the cutoff would have
 
 // SENSE is a level detect: a button held in a bag re-wakes what it just refused.
 TEST_CASE("wake: a boot refused for a flat cell leaves the button unarmed") {
-    CHECK(button_wake_after_refusal(healthy(power::kCutoffMv)) == ButtonWake::Withheld);
+    CHECK(button_wake_after_refusal(healthy(power::kFlatMv)) == ButtonWake::Withheld);
     BootCell on_charge = healthy(3000);
     on_charge.external_power = true;
     CHECK(button_wake_after_refusal(on_charge) == ButtonWake::Armed);
@@ -148,17 +148,17 @@ TEST_CASE("wake: a cell nobody read never refuses a boot") {
 
 // A cell emptied on a shelf ran no shutdown, so the refusal is the only thing left to name it.
 TEST_CASE("wake: the boot a flat cell refuses names it for the unit that never shut down") {
-    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::None) == RefusedFrame::FlatCell);
+    CHECK(refused_frame(healthy(power::kFlatMv), CellOnGlass::None) == RefusedFrame::FlatCell);
     CHECK(refused_frame(healthy(kBootLockoutMv - 1), CellOnGlass::None) == RefusedFrame::FlatCell);
 
     // Pushing the frame it is already wearing is seconds of panel rail for no change.
-    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::Flat) == RefusedFrame::Leave);
+    CHECK(refused_frame(healthy(power::kFlatMv), CellOnGlass::Flat) == RefusedFrame::Leave);
 }
 
 // A cell that went on draining after a switch-off asked for the cable has run past asking.
 TEST_CASE("wake: a flat cell refused under the low word names itself instead") {
     CHECK(refused_frame(healthy(kBootLockoutMv - 1), CellOnGlass::Low) == RefusedFrame::FlatCell);
-    CHECK(refused_frame(healthy(power::kCutoffMv), CellOnGlass::Low) == RefusedFrame::FlatCell);
+    CHECK(refused_frame(healthy(power::kFlatMv), CellOnGlass::Low) == RefusedFrame::FlatCell);
 }
 
 // The cable arms the button again (button_wake_after_refusal), so the mark is the instruction.

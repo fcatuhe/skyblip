@@ -16,10 +16,10 @@ TEST_CASE("product: a cable takes the cell's word off the radar, and no charge c
     rig.run(t, t + 2000);
     t += 2000;
 
-    rig.platform.battery().millivolts = power::kLowWarnMv - 100;
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
     rig.run(t, t + 8000);
     t += 8000;
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "BAT", 40, 120, 160, 160, 2));
 
     rig.platform.battery().external_power = true;
@@ -138,13 +138,13 @@ TEST_CASE("product: the cable after a cutoff puts the mark back and arms the but
 }
 
 // The lamp's warning dies with the rails, so the glass carries it to whoever picks the device up.
-TEST_CASE("product: a switch-off on a low cell asks for the charger under the mark") {
+TEST_CASE("product: a switch-off on a critical cell asks for the charger under the mark") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);
-    rig.platform.battery().millivolts = power::kLowWarnMv - 100;
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
     rig.run(2000, 10000);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
     rig.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
     rig.run(10000, 20000);
@@ -159,12 +159,50 @@ TEST_CASE("product: a switch-off on a low cell asks for the charger under the ma
           power::ButtonWake::Armed);
 }
 
+// The first step already winks the lamp red, so the glass has to carry that word too.
+TEST_CASE(
+    "product: a cell past the knee wears BAT in the ring and asks for the charger at switch-off") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 2000);
+    rig.platform.battery().millivolts = power::kLowMv - 50;
+    rig.run(2000, 10000);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "BAT", 40, 120, 160, 160, 2));
+
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
+    rig.run(10000, 20000);
+    REQUIRE(rig.product.ready_to_power_off());
+    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "CHARGE BATTERY", 0, 130, 200, 199, 2));
+    CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
+}
+
+// A cell reading 5% sat on the critical step, and one sample above it parked the bare mark.
+TEST_CASE(
+    "product: a switch-off on a cell resting at the critical step still asks for the charger") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 2000);
+    rig.platform.battery().millivolts = power::kCriticalMv - 10;
+    rig.run(2000, 10000);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
+
+    rig.platform.battery().millivolts = power::kCriticalMv + 5;
+    rig.run(10000, 11500);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
+
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, 11500);
+    rig.run(11500, 21500);
+    REQUIRE(rig.product.ready_to_power_off());
+    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "CHARGE BATTERY", 0, 130, 200, 199, 2));
+}
+
 // The same road out as the flat word: the cable is the instruction the word gave.
 TEST_CASE("product: the cable after a low switch-off puts the plain mark back") {
     Rig low;
     REQUIRE(low.setup() == Status::Ok);
     low.run(0, 2000);
-    low.platform.battery().millivolts = power::kLowWarnMv - 100;
+    low.platform.battery().millivolts = power::kCriticalMv - 100;
     low.run(2000, 10000);
     low.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
     low.run(10000, 20000);
@@ -172,7 +210,7 @@ TEST_CASE("product: the cable after a low switch-off puts the plain mark back") 
 
     Rig plugged;
     plugged.platform.system_power().glass_cell = low.platform.system_power().cell_on_glass();
-    plugged.platform.battery().millivolts = power::kLowWarnMv - 100;
+    plugged.platform.battery().millivolts = power::kCriticalMv - 100;
     plugged.platform.battery().external_power = true;
     plugged.platform.system_power().causes =
         power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
@@ -192,7 +230,7 @@ TEST_CASE("product: a switch-off on the cable wears the plain mark, however low 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);
-    rig.platform.battery().millivolts = power::kLowWarnMv - 100;
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
     rig.platform.battery().external_power = true;
     rig.run(2000, 10000);
 

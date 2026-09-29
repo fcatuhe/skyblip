@@ -85,7 +85,7 @@ def end(at_s, flags=PHASE_VALID):
     return slot(END, bytes(16), flags, at_s)
 
 
-def discharging(seconds, from_percent=100, to_percent=0, closing_level="cutoff", rx_share=0.0,
+def discharging(seconds, from_percent=100, to_percent=0, closing_level="flat", rx_share=0.0,
                 start_s=0, clock=0, period_s=30):
     """A Power and a Duty record every period, then the pair a parking capture closes on."""
     raws = []
@@ -290,7 +290,7 @@ class Measured(Case):
 
     def test_a_cutoff_whose_reading_failed_the_sanity_floor_still_ends_a_whole_run(self):
         raws = whole_run(7200)
-        raws[-3] = power(7200, cell_mv=2100, percent=0, level="cutoff", flags=PHASE_VALID)
+        raws[-3] = power(7200, cell_mv=2100, percent=0, level="flat", flags=PHASE_VALID)
         cell, _ = self.measure(raws)
         self.assertTrue(cell["whole"])
         self.assertAlmostEqual(cell["milliamps"], 1200)

@@ -117,7 +117,7 @@ Diagnostics widest_device() {
     d.resid_valid = true;
     d.battery.millivolts = 65535;
     d.battery.percent = 255;
-    d.level = power::PowerLevel::Cutoff;  // "CUTOFF"
+    d.level = power::PowerLevel::Critical;  // "CRITICAL"
     d.supply_warnings = 0xFFFFFFFFu;
     d.battery_implausible = 0xFFFFFFFFu;
     d.die_decicelsius = -1250;

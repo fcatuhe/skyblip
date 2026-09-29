@@ -356,11 +356,11 @@ TEST_CASE("product: the status page marks a low cell when the monitor says so, n
     // sags the rail for as long as it lasts, and the third sample is what
     // decides. The page says nothing while the monitor has not.
     rig.run(t, 2500);
-    REQUIRE(rig.state().power.level != power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level != power::PowerLevel::Critical);
     const int undecided = rig.product.screen().framebuffer().count_black();
 
     rig.run(2500, 6000);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     // The same voltage and the same state of charge, so the only thing that can
     // have changed on the glass is the marker.
     CHECK(rig.product.screen().framebuffer().count_black() > undecided);

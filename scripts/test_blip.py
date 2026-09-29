@@ -148,11 +148,19 @@ class DiagnosticsPayloads(unittest.TestCase):
         payload = struct.pack("<4Hh3Bhb", 3987, 1, 4, 2, -53, 74, 2, 3, 0, -12)
         self.assertEqual(decoded(8, payload, 0b0011_0100), whole(
             "power", 0b0011_0100, cell_mv=3987, supply_warnings=1, implausible=4,
-            charge_warnings=2, die_dc=-53, percent=74, level="low", charge="too_hot",
+            charge_warnings=2, die_dc=-53, percent=74, level="critical", charge="too_hot",
             trim_offset_mv=0, sample_offset_mv=-12, charging=True, external_power=False,
             valid=True, die_valid=True, caution=False, trim_learned=False))
 
-    def test_power_reads_the_caution_knee_and_the_trim_a_charger_taught_the_unit(self):
+    def test_power_reads_the_knee_as_the_level_that_joined_the_ladder_last(self):
+        payload = struct.pack("<4Hh3Bhb", 3550, 0, 0, 0, 210, 11, 4, 1, 0, 0)
+        self.assertEqual(decoded(8, payload, 0b0001_0000), whole(
+            "power", 0b0001_0000, cell_mv=3550, supply_warnings=0, implausible=0,
+            charge_warnings=0, die_dc=210, percent=11, level="low", charge="ok",
+            trim_offset_mv=0, sample_offset_mv=0, charging=False, external_power=False,
+            valid=True, die_valid=False, caution=False, trim_learned=False))
+
+    def test_power_reads_an_old_captures_caution_knee_and_the_trim_a_charger_taught_the_unit(self):
         payload = struct.pack("<4Hh3Bhb", 3550, 0, 0, 0, 210, 18, 1, 1, -40, -128)
         self.assertEqual(decoded(8, payload, 0b1101_0100), whole(
             "power", 0b1101_0100, cell_mv=3550, supply_warnings=0, implausible=0,

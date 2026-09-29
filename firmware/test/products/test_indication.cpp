@@ -82,7 +82,7 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
     CHECK(lamp_of(rig).lightings() >= 15);
 }
 
-TEST_CASE("product: a cell below the warning level blinks the lamp red") {
+TEST_CASE("product: a critical cell blinks the lamp red") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*alt_m=*/500, /*updates=*/1);
@@ -90,11 +90,11 @@ TEST_CASE("product: a cell below the warning level blinks the lamp red") {
     settle(rig, t);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
-    // Below kLowWarnMv and above the cutoff, so the device warns and keeps flying.
-    rig.platform.battery().millivolts = power::kLowWarnMv - 100;
+    // Below kCriticalMv and above the cutoff, so the device warns and keeps flying.
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
     settle(rig, t, 5000);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
-    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
+    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
     REQUIRE(step_until_lit(rig, t, 1000) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
 }
@@ -108,24 +108,22 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
     settle(rig, t);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
-    rig.platform.battery().millivolts = power::kCautionMv - 50;
+    rig.platform.battery().millivolts = power::kLowMv - 50;
     settle(rig, t, 5000);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
-    REQUIRE(rig.state().power.caution);
-    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Caution);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
     REQUIRE(step_until_lit(rig, t, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
 
-    const indication::Indication& caution =
-        indication::indication_for(indication::Condition::Caution);
+    const indication::Indication& low = indication::indication_for(indication::Condition::Low);
     const indication::Indication& alive = indication::indication_for(indication::Condition::Alive);
-    CHECK(caution.on_ms == alive.on_ms);
-    CHECK(caution.off_ms == alive.off_ms);
+    CHECK(low.on_ms == alive.on_ms);
+    CHECK(low.off_ms == alive.off_ms);
 
     // And the warning still outranks it, at its own rate.
-    rig.platform.battery().millivolts = power::kLowWarnMv - 100;
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
     settle(rig, t, 5000);
-    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
+    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
 }
 
 TEST_CASE("product: a divider that reads nothing does not blink like a flat cell") {
@@ -164,10 +162,10 @@ TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor i
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    rig.platform.battery().millivolts = power::kLowWarnMv - 200;
+    rig.platform.battery().millivolts = power::kCriticalMv - 200;
     settle(rig, t, 6000);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
-    REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
+    REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
 
     rig.platform.battery().external_power = true;
     settle(rig, t, 5000);

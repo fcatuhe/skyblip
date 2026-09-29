@@ -196,19 +196,19 @@ TEST_CASE("screen policy: nothing routine is refreshed once the cell is at its c
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
 
-    rig.state.power.level = power::PowerLevel::Cutoff;
+    rig.state.power.level = power::PowerLevel::Flat;
     rig.churn(t, 10);
     CHECK(rig.chip.present_count == before);
     CHECK_FALSE(rig.chip.rails_on);
 }
 
-TEST_CASE("screen policy: a low cell still gets its traffic picture") {
+TEST_CASE("screen policy: a critical cell still gets its traffic picture") {
     Rig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
 
-    rig.state.power.level = power::PowerLevel::Low;
+    rig.state.power.level = power::PowerLevel::Critical;
     rig.churn(t, 3);
     CHECK(rig.chip.present_count > before);
 }
@@ -219,7 +219,7 @@ TEST_CASE("screen policy: the white field the glass wears while off is drawn at 
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
 
-    rig.state.power.level = power::PowerLevel::Cutoff;
+    rig.state.power.level = power::PowerLevel::Flat;
     rig.screen.set_power(false);
     rig.run_seconds(t, 6);
     CHECK(rig.chip.present_count == before + 1);

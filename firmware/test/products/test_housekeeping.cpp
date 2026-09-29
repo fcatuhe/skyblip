@@ -222,14 +222,14 @@ TEST_CASE("product: a device that cannot fly still switches itself off on a flat
     CHECK(rig.product.ready_to_power_off());
 }
 
-TEST_CASE("product: a warning comes before the cutoff, and a floating sense never acts") {
+TEST_CASE("product: critical comes before the cutoff, and a floating sense never acts") {
     Rig warned;
     REQUIRE(warned.setup() == Status::Ok);
     warned.platform.battery().millivolts = 3400;
     warned.run(0, 8000);
     // The level is published on the bus, which is where the status page reads
     // it: nothing downstream compares millivolts a second time.
-    CHECK(warned.state().power.level == power::PowerLevel::Low);
+    CHECK(warned.state().power.level == power::PowerLevel::Critical);
     CHECK_FALSE(warned.product.power().cutoff());
     CHECK_FALSE(warned.product.shutdown().going_down());
 

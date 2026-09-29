@@ -177,10 +177,7 @@ class ScreenService : public runtime::Service {
     }
 
     // INFO: fc 20sep26 core/power debounced it, dropped a charged cell and a floating sense
-    bool battery_low() const {
-        return context_.state.power.level == power::PowerLevel::Low ||
-               context_.state.power.level == power::PowerLevel::Cutoff;
-    }
+    bool battery_low() const { return power::needs_charge(context_.state.power.level); }
 
     Settings& settings_;
     comms::ConfigService& config_;

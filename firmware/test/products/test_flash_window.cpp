@@ -370,7 +370,7 @@ TEST_CASE("flash window: a store that did not mount is never written, and nothin
 // E1 at product scale. The cell is below the warning, so the settings sector is
 // not touched at all - and the change is not thrown away either: it stays dirty,
 // which is what makes a charger arriving still save it.
-TEST_CASE("flash window: a change is held, not written, while the cell is below the warning") {
+TEST_CASE("flash window: a change is held, not written, while the cell is critical") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
@@ -378,7 +378,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is below 
     // The board samples the cell once a second and the monitor acts on the third
     // consecutive reading, so a low cell takes four seconds to become a decision.
     rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
     const uint32_t before = writes(rig);
     change_volume(rig, 5);
@@ -419,7 +419,7 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
     uint32_t t = 0;
     rig.platform.battery().millivolts = 3400;
     rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     const uint32_t before = writes(rig);
 
     // A change made on a cell that is already warning: held, never written.

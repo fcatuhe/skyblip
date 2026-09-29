@@ -70,24 +70,24 @@ TEST_CASE("battery: the trimmed sample is the same sample, charger state and all
     events::BatterySample raw{};
     raw.millivolts = 3540;
     const events::BatterySample trimmed = calibrated(raw, -60);
-    CHECK(raw.millivolts > kLowWarnMv);
-    CHECK(trimmed.millivolts < kLowWarnMv);
+    CHECK(raw.millivolts > kCriticalMv);
+    CHECK(trimmed.millivolts < kCriticalMv);
 
     Gauge gauge;
     CutoffMonitor monitor;
     Gauge untrimmed_gauge;
     CutoffMonitor untrimmed_monitor;
-    for (int i = 0; i < kCutoffSamples + 1; i++) {
+    for (int i = 0; i < kLevelSamples + 1; i++) {
         gauge.apply(trimmed);
         monitor.apply(trimmed);
         untrimmed_gauge.apply(raw);
         untrimmed_monitor.apply(raw);
     }
     CHECK(gauge.state().millivolts == 3480);
-    CHECK(monitor.warned());
+    CHECK(monitor.level() == PowerLevel::Critical);
     // The same unit, uncalibrated, says the cell is fine.
     CHECK(untrimmed_gauge.state().millivolts == 3540);
-    CHECK_FALSE(untrimmed_monitor.warned());
+    CHECK(untrimmed_monitor.level() != PowerLevel::Critical);
 }
 
 // The whole path, end to end, in the terms the line uses: a bench supply held at

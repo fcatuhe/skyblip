@@ -268,7 +268,7 @@ TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's g
     CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 }
 
-TEST_CASE("product: apply is refused below the low-battery warning and nothing parks") {
+TEST_CASE("product: apply is refused on a critical cell and nothing parks") {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
@@ -277,7 +277,7 @@ TEST_CASE("product: apply is refused below the low-battery warning and nothing p
     rig.platform.battery().millivolts = 3400;
     rig.run(t, t + 8000);
     t += 8000;
-    REQUIRE(rig.state().power.level == power::PowerLevel::Low);
+    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
     rig.send("{\"cmd\":\"apply\"}");
     rig.run(t, t + 200);

@@ -224,7 +224,7 @@ def short_of_whole(stretch):
     readings = [r for r in stretch if r["valid"]]
     if not readings:
         return "no believable reading on battery alone"
-    if stretch[-1]["level"] != "cutoff":
+    if stretch[-1]["level"] != "flat":
         return "it did not end at cutoff, the last level read %s" % stretch[-1]["level"]
     if readings[0]["percent"] < FULL_PERCENT:
         return "it did not start full, the first reading on battery alone is %d%%" % (

@@ -69,7 +69,7 @@ TEST_CASE("diag power: the cell is recorded on the cadence it is sampled at") {
     CHECK(power.level == rig.state().power.level);
 }
 
-TEST_CASE("diag power: the knee is recorded on both sides of it, and the level never moves") {
+TEST_CASE("diag power: the knee is recorded on both sides of it, as the level") {
     Rig rig;
     uint32_t t = 100;
     REQUIRE(rig.setup() == Status::Ok);
@@ -83,12 +83,11 @@ TEST_CASE("diag power: the knee is recorded on both sides of it, and the level n
 
     const std::vector<diag::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 8);
-    CHECK_FALSE(cell.front().caution);
+    CHECK(cell.front().level == power::PowerLevel::Normal);
     CHECK(cell.front().cell_mv == 3800);
-    CHECK(cell.back().caution);
+    CHECK(cell.back().level == power::PowerLevel::Low);
     CHECK(cell.back().cell_mv == 3550);
-    CHECK(cell.back().caution == rig.state().power.caution);
-    for (const diag::Power& power : cell) CHECK(power.level == power::PowerLevel::Normal);
+    CHECK(cell.back().level == rig.state().power.level);
 }
 
 // The median kept the gauge still through a sag, and the corpus could not see the sag at all.

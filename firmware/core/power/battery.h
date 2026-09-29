@@ -9,7 +9,7 @@
 
 namespace skyblip::power {
 
-constexpr uint16_t kEmptyMv = kCutoffMv;
+constexpr uint16_t kEmptyMv = kFlatMv;
 constexpr uint16_t kFullMv = 4200;
 // With external power present and the cell above this, the charger has finished:
 // it is holding the float voltage, not pushing current in. There is no charge

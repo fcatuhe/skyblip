@@ -135,7 +135,6 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.running = running;
     situation.alarm_level = context_.state.alarm_live;
     situation.power_level = context_.state.power.level;
-    situation.cell_caution = context_.state.power.caution;
     situation.fix_valid = context_.state.own.fix_valid;
 
     const indication::Command command = lamp_.update(situation, now_ms);

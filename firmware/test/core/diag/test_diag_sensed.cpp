@@ -199,13 +199,12 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     in.trim_offset_mv = -40;
     in.sample_offset_mv = -128;
     in.percent = 64;
-    in.level = power::PowerLevel::Low;
+    in.level = power::PowerLevel::Critical;
     in.charge = power::ChargeCondition::TooHot;
     in.charging = true;
     in.external_power = true;
     in.valid = true;
     in.die_valid = true;
-    in.caution = true;
     in.trim_learned = true;
 
     const diag::Power out = diag_round_trip(in);
@@ -223,19 +222,16 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     CHECK(out.external_power);
     CHECK(out.valid);
     CHECK(out.die_valid);
-    CHECK(out.caution);
     CHECK(out.trim_learned);
 }
 
-TEST_CASE("diag record: the knee rides beside the level rather than inside it") {
+TEST_CASE("diag record: the knee rides inside the level, and the bit it used to ride stays clear") {
     diag::Power in{};
     in.cell_mv = 3550;
-    in.level = power::PowerLevel::Normal;
-    in.caution = true;
+    in.level = power::PowerLevel::Low;
 
-    const diag::Power out = diag_round_trip(in);
-    CHECK(out.level == power::PowerLevel::Normal);
-    CHECK(out.caution);
+    CHECK((diag::record_of(in, diag_test_instant()).flags & (1u << 6)) == 0);
+    CHECK(diag_round_trip(in).level == power::PowerLevel::Low);
 }
 
 TEST_CASE("diag record: a contact keeps the instant the level moved, not the poll that saw it") {

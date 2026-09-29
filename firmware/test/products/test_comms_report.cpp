@@ -169,14 +169,15 @@ TEST_CASE(
     cs.set_battery_state(battery_of(50, false), power::PowerLevel::Normal);  // repeat: no storm
     CHECK(link.sent.size() == 1);
 
-    cs.set_battery_state(battery_of(50, false), power::PowerLevel::Low);  // level changes
+    cs.set_battery_state(battery_of(50, false), power::PowerLevel::Critical);  // level changes
     CHECK(link.sent.size() == 2);
 
-    cs.set_battery_state(battery_of(56, false), power::PowerLevel::Low);  // crosses a step (50->56)
+    cs.set_battery_state(battery_of(56, false),
+                         power::PowerLevel::Critical);  // crosses a step (50->56)
     CHECK(link.sent.size() == 3);
 
     cs.set_battery_state(battery_of(57, false),
-                         power::PowerLevel::Low);  // same step as 56: no push
+                         power::PowerLevel::Critical);  // same step as 56: no push
     CHECK(link.sent.size() == 3);
 
     cs.on_link_down(events::LinkDown{1});
@@ -200,7 +201,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     battery.external_power = true;
     battery.charging = true;
     battery.valid = true;
-    cs.set_battery_state(battery, power::PowerLevel::Cutoff);
+    cs.set_battery_state(battery, power::PowerLevel::Critical);
     // The driver gates -50 to +125 C, the formatter does not: int16 prints widest.
     cs.set_die_temperature(INT16_MIN, true);
 
@@ -209,7 +210,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     const std::string body = link.last().bytes;
     CHECK(body ==
           "{\"cmd\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
-          "\"charging\":true,\"power_level\":\"CUTOFF\",\"went_dark_flat\":false,"
+          "\"charging\":true,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
           "\"die_temp_c\":-3277}");
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
     CHECK(cs.link_drops() == 0);

@@ -38,12 +38,12 @@ struct BootCell {
 // INFO: fc 07sep26 meshcore NRF52Board.cpp:98-126 boot-locks at 3300 mV, against over-discharge
 constexpr uint16_t kBootLockoutMv = 3400;
 
-static_assert(kCutoffMv < kBootLockoutMv,
+static_assert(kFlatMv < kBootLockoutMv,
               "a cell recovers once the load stops: the shutdown would be undone by the next "
               "press");
-static_assert(kBootLockoutMv < kLowWarnMv,
+static_assert(kBootLockoutMv < kCriticalMv,
               "a boot refused before the pilot has been warned is a device that reads as dead");
-static_assert(kImplausibleFloorMv < kCutoffMv,
+static_assert(kImplausibleFloorMv < kFlatMv,
               "an unpopulated divider must fall through the lockout, not into it");
 
 // Same shape as the two references that fly on this hardware: nrf52-ogn-tracker

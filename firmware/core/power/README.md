@@ -11,14 +11,14 @@ Every other number about the cell hangs off these four, so they are declared tog
 | Step | mV | What it is for |
 |---|---|---|
 | float | 4200 | what a charger holds a full pouch at, and `kFullMv`, the gauge's 100% |
-| caution | 3600 | the knee: above it the cell spends 100 mV crossing ten points of charge, below it the same 100 mV costs twenty |
-| warn | 3500 | land. The panel says `LOW`, the lamp blinks every 600 ms, and no durable write but the flight record is allowed |
+| low | 3600 | the knee: above it the cell spends 100 mV crossing ten points of charge, below it the same 100 mV costs twenty. `kLowMv`, about 12% |
+| critical | 3500 | land. No durable write but the flight record is allowed. `kCriticalMv`, about 5% |
 | boot lockout | 3400 | a device this flat does not start a flight it cannot finish (`wake.h`) |
-| cutoff | 3200 | the device takes itself down, and `kEmptyMv`, the gauge's 0% |
+| flat | 3200 | the cutoff: the device takes itself down, and `kEmptyMv`, the gauge's 0%. `kFlatMv` |
 
 Three properties of that order are worth more than the numbers themselves.
 
-The gauge reads zero where the device stops, not where a datasheet calls the cell empty. A percentage that runs out while the aircraft is still transmitting teaches a pilot to distrust the number, and `battery.cpp` asserts the curve's first point against `kCutoffMv` so the two cannot drift apart.
+The gauge reads zero where the device stops, not where a datasheet calls the cell empty. A percentage that runs out while the aircraft is still transmitting teaches a pilot to distrust the number, and `battery.cpp` asserts the curve's first point against `kFlatMv` so the two cannot drift apart.
 
 The lockout sits above the cutoff. A cell relaxes once the load goes away, so a device that shut itself down at 3200 reads about 3400 by the time a thumb reaches the button, and a lockout underneath the cutoff would hand back a device with one minute in it.
 
@@ -26,7 +26,30 @@ The lockout guards a switch-on, not a restart. A watchdog, lockup or software re
 
 The cutoff is a loaded reading, because a loaded reading is the only kind this device ever takes. A pouch datasheet puts the discharge floor at 3.0 V and its protection board trips near 2.5 V; stopping at 3.2 V under a receiver and a 14 dBm radio leaves the pack resting near 3.4 V, which is a voltage it can sit at in a flight bag for months without reaching either.
 
-Caution is not a `PowerLevel`, and that is deliberate. The levels are what the device acts on: a write refused, a refresh withheld, a shutdown started. Nothing acts on the knee. It is what the lamp says while every action is still allowed, so it stays a predicate on the monitor rather than a fifth value every reader of the level would have to learn to ignore. It also keeps the diagnostics record's level byte meaning what it meant in every log already on a flash.
+## The levels, and what each one does
+
+Three of the steps are a `PowerLevel`, and the level is the one fact every reader of the cell takes: the lamp, the radar ring, the status row, the frame the glass wears once off, and the write rule. None of them compares millivolts again, so they cannot disagree about where the cell is.
+
+| Level | Entered under | Lamp | Radar ring | Status row | Glass once off | Refuses |
+|---|---|---|---|---|---|---|
+| `Normal` | | green or blue, one wink every 3 s | the state word | `%` | the wordmark | nothing |
+| `Low` | `kLowMv` | red, one wink every 3 s | `BAT n%` | `% LOW` | `CHARGE BATTERY` | nothing |
+| `Critical` | `kCriticalMv` | red, a blink every 600 ms | `BAT n%` | `% LOW` | `CHARGE BATTERY` | every durable write but the flight record |
+| `Flat` | `kFlatMv` | red, a blink every 600 ms, then dark | `BAT n%` | `% LOW` | `FLAT BATTERY` | everything: the device takes itself down and leaves the button unarmed |
+
+`needs_charge` is the one predicate the product asks, true from `Low` down, and it is what puts `BAT` in the ring, `LOW` on the status row and `CHARGE BATTERY` on the glass of a long press or a companion switch-off. A stow stays blank at any level. The lamp tells `Low` from `Critical` by cadence, because the first can stand for an hour and has to cost what the alive wink costs, and the second is the step a pilot is meant to act on.
+
+`CutoffMonitor` moves the level on runs of `kLevelSamples` consecutive readings, in both directions. Three under a step go down to it, which is what keeps a transmit burst from acting. Three at or above it come back up, which is what keeps a cell resting on a step from flickering across it: a pack spends minutes within a few millivolts of each line, and a level that rose on one good reading was a lamp, a ring and a switch-off frame that changed their minds every few seconds. A recovery climbs every step its readings cleared at once. The cable is the exception both ways, because the charge current holds the terminal above the cell: a cable puts the level at `Normal` on its first reading and nothing counts until it leaves. `Flat` latches, so a cell relaxing once the radio is quiet cannot cancel the shutdown it started.
+
+An `Unknown` monitor has seen no believable reading yet, which is also what an unpopulated divider reads for ever, and it acts like `Normal`. Its first reading at or above `kLowMv` makes it `Normal`; one under waits for the run like any other step.
+
+The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diag/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
+
+## The write rule, and the supply warning
+
+`may_write` is one function over the level and no second threshold: from `Critical` down nothing durable is written except the flight record. The settings blob is a rewrite of an NVS sector that garbage-collects the flash the image runs from, and a burst sagging the cell under it is the failure. The flight record is the exception because it is the one write whose value is highest exactly when the cell is lowest, and it is an append to the external NOR. A unit whose divider is unpopulated reads `Unknown` and keeps its settings page.
+
+A latched supply warning outranks the level entirely. POFCON compares the SoC's own rail, so once it has fired what the divider says about the cell is no longer the question, and every write but the flight record stops. It never drives the level to `Flat`, so it never starts a shutdown: POFCON warns about VDD, well under any healthy cell, so by the time it fires there is no orderly shutdown left to run, the panel park alone is 3 s and the brownout reset is milliseconds away. The one useful thing at that moment is not to be inside a write. The voltage rule keeps the shutdown, where three consecutive samples are the evidence.
 
 ## The two curves
 
@@ -48,13 +71,13 @@ The device has to be switched on across a charge for any of this to happen, whic
 
 ## What the glass says about a flat cell, and when it says it
 
-A device that reaches `kCutoffMv` in the air says so before the rails go: `FLAT BATTERY` under the mark, pushed by the shutdown the cutoff asked for. Nobody pressed anything, so the frame is the only thing that can tell a pilot what happened, and the alternatives they would otherwise pick between are a crash and a dead unit. The same shutdown withholds the wake pin (`button_wake_after`), so the press that follows is answered by the frame already on the glass and not by a boot the cell cannot pay for.
+A device that reaches `kFlatMv` in the air says so before the rails go: `FLAT BATTERY` under the mark, pushed by the shutdown the cutoff asked for. Nobody pressed anything, so the frame is the only thing that can tell a pilot what happened, and the alternatives they would otherwise pick between are a crash and a dead unit. The same shutdown withholds the wake pin (`button_wake_after`), so the press that follows is answered by the frame already on the glass and not by a boot the cell cannot pay for.
 
 The other way a cell arrives empty is a winter on a shelf. That unit ran no shutdown and painted nothing, so it is the refused boot that names it: `refused_frame` pushes the same `FLAT BATTERY` for the press that gets no device, and `button_wake_after_refusal` withholds the button after it. Both roads end at the same glass and the same dead button.
 
 The cable is the way out of both. On the cable the device is an ordinary switched-off one again, because VBUS wakes the SoC, the boot is refused, and the refusal re-arms the button - so the wordmark replaces the flat frame, and the wordmark is the whole instruction. Anything else is `Leave`: the glass already says the right thing, and a full refresh is seconds of panel rail off a cell with none to spare.
 
-A device switched off while the level is `Low` wears a milder word, `CHARGE BATTERY`, and the cable takes it off the same way. It asks for the cable and names nothing that happened, so a press on a cell that has drained past the lockout since does not leave it there: that refusal pushes `FLAT BATTERY` over it.
+A device switched off while the cell needs charge, `Low` or `Critical`, wears a milder word, `CHARGE BATTERY`, and the cable takes it off the same way. It asks for the cable and names nothing that happened, so a press on a cell that has drained past the lockout since does not leave it there: that refusal pushes `FLAT BATTERY` over it.
 
 What the panel wears has to outlive the rails for that comparison to exist, so it does: `ports::SystemPower::cell_on_glass`, one of `None`, `Low` and `Flat`. A platform with nowhere to keep it answers `None`, which costs a repeated frame and nothing else.
 

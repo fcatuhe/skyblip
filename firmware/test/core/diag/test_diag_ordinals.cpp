@@ -140,8 +140,9 @@ uint8_t wire(power::PowerLevel value) {
     switch (value) {
         case power::PowerLevel::Unknown: return 0;
         case power::PowerLevel::Normal: return 1;
-        case power::PowerLevel::Low: return 2;
-        case power::PowerLevel::Cutoff: return 3;
+        case power::PowerLevel::Critical: return 2;
+        case power::PowerLevel::Flat: return 3;
+        case power::PowerLevel::Low: return 4;
     }
     return kUnpinned;
 }
@@ -296,7 +297,7 @@ TEST_CASE(
 TEST_CASE(
     "diag ordinals: power::PowerLevel's codes are the power level byte, and a code changed "
     "here changes POWER_LEVEL in scripts/blip_records.py and the schema's level enum") {
-    codes_pinned<power::PowerLevel>(4);
+    codes_pinned<power::PowerLevel>(5);
 }
 
 TEST_CASE(

@@ -192,7 +192,7 @@ class Product {
     bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
     bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
     bool cell_ran_out() const { return shutdown_.reason() == power::ShutdownReason::LowBattery; }
-    bool cell_low() const { return state_.power.level == power::PowerLevel::Low; }
+    bool cell_needs_charge() const { return power::needs_charge(state_.power.level); }
 
     // Feeding through a deliberate shutdown is correct: the device is doing what
     // it was told, and a held button must not turn a power-off into a reboot.
@@ -355,7 +355,7 @@ class Product {
             screen_.park_for_stow();
         else if (cell_ran_out())
             park_flat_cell();
-        else if (cell_low())
+        else if (cell_needs_charge())
             screen_.park_for_low_cell();
         else
             screen_.set_power(false);

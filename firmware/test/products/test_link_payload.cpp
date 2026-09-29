@@ -58,7 +58,7 @@ power::BatteryState full_battery() {
 // level, a full cell, and the widest temperature an int16 of tenths can print.
 void make_worst_case(ConfigService& cs) {
     cs.set_flight_state(flight::FlightState::Airborne);
-    cs.set_battery_state(full_battery(), power::PowerLevel::Cutoff);
+    cs.set_battery_state(full_battery(), power::PowerLevel::Flat);
     cs.set_die_temperature(INT16_MIN, true);
 }
 

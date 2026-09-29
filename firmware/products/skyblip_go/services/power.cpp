@@ -52,7 +52,6 @@ void PowerService::tick(uint32_t now_ms) {
     }
     context_.state.power.battery = gauge_.state();
     context_.state.power.level = cutoff_.level();
-    context_.state.power.caution = cutoff_.caution();
     context_.state.power.supply_warned = cutoff_.supply_warned();
     sample_die_temperature(now_ms);
     context_.state.power.die_dc = die_dc_;
@@ -98,7 +97,6 @@ void PowerService::record_power(const diag::Instant& at) {
     value.external_power = power.battery.external_power;
     value.valid = power.battery.valid;
     value.die_valid = power.die_valid;
-    value.caution = power.caution;
     value.trim_learned = trim_.learned();
     context_.diag.record(value, at);
 }

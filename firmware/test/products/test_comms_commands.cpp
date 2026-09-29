@@ -163,7 +163,7 @@ TEST_CASE("comms: an upload restarted under the install prompt refuses the confi
     CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
 }
 
-TEST_CASE("comms: dfu and apply are refused at the door below the low-battery warning") {
+TEST_CASE("comms: dfu and apply are refused at the door on a critical cell") {
     for (const char* cmd : {"dfu", "apply"}) {
         platform::host::Link link;
         link.raise_link(1);
@@ -175,7 +175,7 @@ TEST_CASE("comms: dfu and apply are refused at the door below the low-battery wa
         power::BatteryState low{};
         low.valid = true;
         low.millivolts = 3400;
-        cs.set_battery_state(low, power::PowerLevel::Low);
+        cs.set_battery_state(low, power::PowerLevel::Critical);
         REQUIRE_FALSE(cs.swap_powered());
 
         const std::string json = std::string("{\"cmd\":\"") + cmd + "\"}";
@@ -187,7 +187,7 @@ TEST_CASE("comms: dfu and apply are refused at the door below the low-battery wa
     }
 }
 
-TEST_CASE("comms: a cell that falls through the warning inside the prompt refuses the swap") {
+TEST_CASE("comms: a cell that turns critical inside the prompt refuses the swap") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();

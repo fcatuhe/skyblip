@@ -192,7 +192,6 @@ Record record_of(const Power& value, const Instant& at) {
     set_flag(r.flags, kPowerFlagExternal, value.external_power);
     set_flag(r.flags, kPowerFlagValid, value.valid);
     set_flag(r.flags, kPowerFlagDieValid, value.die_valid);
-    set_flag(r.flags, kPowerFlagCaution, value.caution);
     set_flag(r.flags, kPowerFlagTrimLearned, value.trim_learned);
     return r;
 }
@@ -214,7 +213,6 @@ bool read(const Record& record, Power& out) {
     out.external_power = record.flagged(kPowerFlagExternal);
     out.valid = record.flagged(kPowerFlagValid);
     out.die_valid = record.flagged(kPowerFlagDieValid);
-    out.caution = record.flagged(kPowerFlagCaution);
     out.trim_learned = record.flagged(kPowerFlagTrimLearned);
     return true;
 }

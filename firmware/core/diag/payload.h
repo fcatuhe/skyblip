@@ -148,7 +148,7 @@ constexpr uint8_t kPowerFlagCharging = 1u << 2;
 constexpr uint8_t kPowerFlagExternal = 1u << 3;
 constexpr uint8_t kPowerFlagValid = 1u << 4;
 constexpr uint8_t kPowerFlagDieValid = 1u << 5;
-constexpr uint8_t kPowerFlagCaution = 1u << 6;
+// INFO: fc 30sep26 bit 6 was caution until the level carried Low, and is never reused
 constexpr uint8_t kPowerFlagTrimLearned = 1u << 7;
 
 struct Power {
@@ -166,7 +166,6 @@ struct Power {
     bool external_power{false};
     bool valid{false};
     bool die_valid{false};
-    bool caution{false};
     bool trim_learned{false};
 };
 

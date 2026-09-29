@@ -48,7 +48,7 @@ RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass) {
 }
 
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell) {
-    if (restarted(causes) ? below(cell, kCutoffMv) : too_flat_to_run(cell))
+    if (restarted(causes) ? below(cell, kFlatMv) : too_flat_to_run(cell))
         return BootPath::SleepAgain;
     if (button_down) return BootPath::Run;
     if (has_cause(causes, ResetCause::Pin)) return BootPath::Run;

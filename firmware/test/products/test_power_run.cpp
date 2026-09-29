@@ -14,7 +14,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint16_t kBelowCutoffMv = power::kCutoffMv - 100;
+constexpr uint16_t kBelowCutoffMv = power::kFlatMv - 100;
 
 void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
 
@@ -98,7 +98,7 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
     const std::vector<diag::Record> last = tail(captured(rig), 3);
     diag::Power power{};
     REQUIRE(diag::read(last[0], power));
-    CHECK(power.level == power::PowerLevel::Cutoff);
+    CHECK(power.level == power::PowerLevel::Flat);
     CHECK(last[1].type == diag::Type::Duty);
     CHECK(last[2].type == diag::Type::End);
     CHECK(same_instant(last[0], last[1]));

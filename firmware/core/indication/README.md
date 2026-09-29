@@ -26,7 +26,7 @@ SoftRF is the reference vocabulary and we keep its distinction and not its duty:
 
 ## Two red rows, one for each step of the ladder
 
-`Caution` is the cell past the knee, `core/power`'s `kCautionMv` and the predicate the same monitor publishes with the level (`core/power/README.md`). It is red at the alive cadence: one wink every 3 s, the same 1% the green and blue rows spend, because unlike the warning it can stand for an hour and a row held that long has to be free. Red says which kind of news it is, the cadence says how urgent, and `Low` keeps the 600 ms blink for the step where a pilot is meant to act.
+`Low` is the cell past the knee, `core/power`'s `PowerLevel::Low` under `kLowMv` (`core/power/README.md`). It is red at the alive cadence: one wink every 3 s, the same 1% the green and blue rows spend, because unlike `Critical` it can stand for an hour and a row held that long has to be free. Red says which kind of news it is, the cadence says how urgent, and `Critical`, which `Flat` shares on its way down, keeps the 600 ms blink for the step where a pilot is meant to act. `condition_for` switches on the level with no default, so a level added to the ladder does not build until the lamp says what it looks like.
 
 Blue was the obvious colour for a first battery step and it is the wrong one. It already means no fix, the lamp shows one thing at a time, and a colour with two meanings is a colour with none. The step is also a voltage and not a percentage: the percentage comes off a textbook curve (`core/power/README.md`), so keying the lamp to it would make the lamp exactly as trustworthy as a table nobody has measured yet.
 
@@ -36,4 +36,4 @@ The board already answers it in hardware. The charger IC drives its own LED, doc
 
 Until 2026-09-18 this table had `Charging` and `Charged` rows, held solid for as long as a cable was in. They cost the thing the lamp exists for: on a powered install the only indicator of a running device and a valid fix was replaced by a second opinion about the charger. `Charged` was worse than redundant, since it came from a float-voltage threshold (`core/power/battery.h`) and could contradict the LED beside it.
 
-Their priority rule was already dead code. `power::CutoffMonitor::apply` forces `PowerLevel::Normal` whenever external power is present, because the charger holds the terminal above the cell, so "charging outranks low" arbitrated a conflict that cannot occur. A cable in is never `Low`, and that is decided in `core/power`, once.
+Their priority rule was already dead code. `power::CutoffMonitor::apply` forces `PowerLevel::Normal` whenever external power is present, because the charger holds the terminal above the cell, so "charging outranks low" arbitrated a conflict that cannot occur. A cable in is never `Low` or `Critical`, and that is decided in `core/power`, once.

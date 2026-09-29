@@ -30,7 +30,7 @@ Situation everything_at_once() {
     Situation s{};
     s.running = true;
     s.alarm_level = Level::Advisory;
-    s.power_level = power::PowerLevel::Cutoff;
+    s.power_level = power::PowerLevel::Flat;
     s.fix_valid = false;
     return s;
 }
@@ -120,6 +120,9 @@ TEST_CASE("indication: the priority order is the table, top row first") {
     CHECK(condition_for(s) == Condition::Alarm);
     s.alarm_level = Level::None;
 
+    CHECK(condition_for(s) == Condition::Critical);
+    s.power_level = power::PowerLevel::Low;
+
     CHECK(condition_for(s) == Condition::Low);
     s.power_level = power::PowerLevel::Normal;
 
@@ -130,9 +133,11 @@ TEST_CASE("indication: the priority order is the table, top row first") {
 
 TEST_CASE("indication: the cutoff monitor decides what low means, not a second threshold") {
     Situation s{};
+    s.power_level = power::PowerLevel::Critical;
+    CHECK(condition_for(s) == Condition::Critical);
+    s.power_level = power::PowerLevel::Flat;
+    CHECK(condition_for(s) == Condition::Critical);
     s.power_level = power::PowerLevel::Low;
-    CHECK(condition_for(s) == Condition::Low);
-    s.power_level = power::PowerLevel::Cutoff;
     CHECK(condition_for(s) == Condition::Low);
     // A unit whose divider is unpopulated reads Unknown for ever. It is not a low
     // cell and must not blink like one: the whole point of reading the published
@@ -171,20 +176,20 @@ TEST_CASE("indication: no fix is the same wink in another colour") {
     CHECK(indication_for(Condition::NoFix).off_ms == indication_for(Condition::Alive).off_ms);
 }
 
-TEST_CASE("indication: a low cell keeps SoftRF's blink rate at a tenth of its duty") {
+TEST_CASE("indication: a critical cell keeps SoftRF's blink rate at a tenth of its duty") {
     // SoftRF toggles the status LED every 300 ms below the low threshold
     // (src/driver/LED.cpp:204-219), which is a 600 ms period at half duty. We keep
     // the rate, because that is the rate a pilot has been taught to read as
     // trouble, and not the duty: solid-ish is the term this item exists to avoid.
-    const Indication& low = indication_for(Condition::Low);
+    const Indication& low = indication_for(Condition::Critical);
     CHECK(low.on_ms + low.off_ms == 600);
     CHECK(indication::duty_permille(low) <= 100);
 
     Situation s{};
-    s.power_level = power::PowerLevel::Low;
+    s.power_level = power::PowerLevel::Critical;
     LampRig lamp;
     lamp.run(s, 0, 6000);
-    CHECK(lamp.policy.condition() == Condition::Low);
+    CHECK(lamp.policy.condition() == Condition::Critical);
     CHECK(lamp.flashes >= 9);
     CHECK(lamp.duty_permille() <= kTransientDutyCeilingPermille);
 }
@@ -216,7 +221,7 @@ TEST_CASE("indication: the lamp goes dark the moment the device starts going dow
     CHECK(lamp.policy.condition() == Condition::Off);
     // And it stays dark: nothing about the cell or the sky brings it back while
     // the device is on its way down.
-    s.power_level = power::PowerLevel::Low;
+    s.power_level = power::PowerLevel::Critical;
     lamp.run(s, 1010, 5000);
     CHECK(lamp.shown == indication::Lamp::None);
 }
