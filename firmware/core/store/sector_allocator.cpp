@@ -1,5 +1,7 @@
 #include "core/store/sector_allocator.h"
 
+#include <algorithm>
+
 namespace skyblip::store {
 
 namespace {
@@ -188,17 +190,66 @@ bool SectorAllocator::frontier(SectorOwner owner, uint32_t& sector, uint32_t& se
 }
 
 bool SectorAllocator::oldest(SectorOwner owner, uint32_t& sector, uint32_t& sequence) const {
-    return next_sector(owner, 0, sector, sequence);
+    return lowest_above(Match{owner, true, 0}, 0, sector, sequence);
 }
 
-bool SectorAllocator::next_sector(SectorOwner owner, uint32_t above_sequence, uint32_t& sector,
-                                  uint32_t& sequence) const {
-    return lowest_above(Match{owner, true, 0}, above_sequence, sector, sequence);
+// INFO: fc 29sep26 three scans a run, not one a sector: that walk stalled a bench list 340 ms
+bool SectorAllocator::session_run(SectorOwner owner, uint32_t above_sequence,
+                                  SessionRun& run) const {
+    uint32_t first_sector = 0;
+    uint32_t first_sequence = 0;
+    if (!lowest_above(Match{owner, true, 0}, above_sequence, first_sector, first_sequence))
+        return false;
+    run = SessionRun{};
+    run.session_id = session_of_[first_sector];
+    uint32_t until = UINT32_MAX;
+    for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
+        if (owner_of_[candidate] != static_cast<uint8_t>(owner)) continue;
+        if (session_of_[candidate] == run.session_id) continue;
+        const uint32_t sequence = sequence_of_[candidate];
+        if (sequence > above_sequence && sequence < until) until = sequence;
+    }
+    const Match match{owner, false, run.session_id};
+    for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
+        const uint32_t sequence = sequence_of_[candidate];
+        if (!matches(match, candidate) || sequence <= above_sequence || sequence >= until) continue;
+        run.sectors++;
+        run.last_sequence = std::max(run.last_sequence, sequence);
+    }
+    return true;
 }
 
+// INFO: fc 29sep26 bisected on the label, not a scan a sector: that cost a bench read 600 ms
 bool SectorAllocator::session_sector(SectorOwner owner, uint32_t session_id, uint32_t index,
                                      uint32_t& sector) const {
-    return nth_matching(Match{owner, false, session_id}, index, sector);
+    const Match match{owner, false, session_id};
+    uint32_t count = 0;
+    uint32_t lowest = UINT32_MAX;
+    uint32_t highest = 0;
+    for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
+        if (!matches(match, candidate)) continue;
+        count++;
+        lowest = std::min(lowest, sequence_of_[candidate]);
+        highest = std::max(highest, sequence_of_[candidate]);
+    }
+    if (index >= count) return false;
+    const uint32_t labels_before = index;
+    const uint32_t labels_after = count - 1 - index;
+    uint32_t low = lowest + labels_before;
+    uint32_t high = highest - labels_after;
+    while (low < high) {
+        const uint32_t mid = low + (high - low) / 2;
+        if (matching_up_to(match, mid) > index)
+            high = mid;
+        else
+            low = mid + 1;
+    }
+    for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
+        if (!matches(match, candidate) || sequence_of_[candidate] != low) continue;
+        sector = candidate;
+        return true;
+    }
+    return false;
 }
 
 bool SectorAllocator::choose(SectorOwner owner, uint32_t& sector) const {
@@ -249,16 +300,11 @@ void SectorAllocator::take(uint32_t sector, SectorOwner owner, uint32_t session_
     claimed_ = true;
 }
 
-bool SectorAllocator::nth_matching(const Match& match, uint32_t index, uint32_t& sector) const {
-    uint32_t above = 0;
-    uint32_t found = 0;
-    uint32_t sequence = 0;
-    for (uint32_t step = 0; step <= index; step++) {
-        if (!lowest_above(match, above, found, sequence)) return false;
-        above = sequence;
-    }
-    sector = found;
-    return true;
+uint32_t SectorAllocator::matching_up_to(const Match& match, uint32_t sequence) const {
+    uint32_t count = 0;
+    for (uint32_t candidate = 0; candidate < sector_count_; candidate++)
+        if (matches(match, candidate) && sequence_of_[candidate] <= sequence) count++;
+    return count;
 }
 
 bool SectorAllocator::lowest_above(const Match& match, uint32_t above, uint32_t& sector,
