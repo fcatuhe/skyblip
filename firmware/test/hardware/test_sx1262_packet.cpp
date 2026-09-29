@@ -179,3 +179,30 @@ TEST_CASE("radio: a burst carrying a sync word the dwell is not armed for is not
     uint8_t buf[64];
     CHECK(r.poll(buf, sizeof(buf)).type == RadioEventType::None);
 }
+
+// Bench, 28sep26: fixed length was the receive length, so every burst carried four stale bytes
+// and 0.32 ms of air it did not need.
+TEST_CASE("radio: a burst goes on air at its own length, and the receiver reads its own again") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    RadioConfig cfg{};
+    cfg.sync = protocol::kSharedSync;
+    cfg.sync_bits = protocol::kSharedSyncBits;
+    cfg.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(r.start_receive() == Status::Ok);
+
+    const uint8_t burst[protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes] = {0x55};
+    REQUIRE(r.transmit(burst, sizeof(burst)) == Status::Ok);
+    uint8_t on_air[64] = {0};
+    uint8_t len = 0;
+    REQUIRE(chip.take_tx(on_air, len));
+    CHECK(len == protocol::kSyncWindowChipBytes + sizeof(burst));
+
+    chip.signal_tx_done();
+    REQUIRE(r.start_receive() == Status::Ok);
+    CHECK(chip.receiving);
+    CHECK(chip.payload_bytes == protocol::kRxChipBytes);
+    CHECK(chip.faults == 0);
+}

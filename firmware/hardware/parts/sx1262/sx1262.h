@@ -119,6 +119,7 @@ class Sx1262 {
     Status check_device_errors();
     void clear_device_errors();
     void configure_frame(const RadioConfig& cfg);
+    void write_packet_params(uint8_t payload_bytes);
     uint32_t tx_timeout_ticks(uint8_t len) const;
     void recover_tx();
     Status reinit();
@@ -136,6 +137,7 @@ class Sx1262 {
     bool brought_up_{false};
     bool configured_{false};
     bool tuned_{false};
+    uint8_t packet_bytes_{0};
     uint32_t ms_since_rx_{0};
     uint32_t reinit_count_{0};
     bool reinit_owed_{false};

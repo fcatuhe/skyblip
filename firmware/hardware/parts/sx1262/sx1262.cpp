@@ -101,6 +101,7 @@ Status Sx1262::begin() {
     brought_up_ = false;
     configured_ = false;
     tuned_ = false;
+    packet_bytes_ = 0;
     const Status reset = reset_to_standby();
     if (reset != Status::Ok) return reset;
     const Status link = verify_link();
@@ -280,18 +281,23 @@ void Sx1262::configure_irq() {
 void Sx1262::configure_frame(const RadioConfig& cfg) {
     if (cfg.sync_bits == 0) return;
     write_register(sx::kSyncWordRegister, cfg.sync, (cfg.sync_bits + 7u) / 8u);
-    // DS 13.4.6 SetPacketParams, GFSK, in the datasheet's order.
+    write_packet_params(cfg.payload_bytes);
+}
+
+// DS 13.4.6 SetPacketParams, GFSK, in the datasheet's order.
+void Sx1262::write_packet_params(uint8_t payload_bytes) {
     uint8_t params[9] = {0};
     params[0] = static_cast<uint8_t>(sx::kPreambleChips >> 8);
     params[1] = static_cast<uint8_t>(sx::kPreambleChips);
     params[2] = sx::kPreambleDetect8Chips;
-    params[3] = cfg.sync_bits;
+    params[3] = cfg_.sync_bits;
     params[4] = sx::kAddrCompOff;
     params[5] = sx::kFixedLength;
-    params[6] = cfg.payload_bytes;
+    params[6] = payload_bytes;
     params[7] = sx::kCrcOff;
     params[8] = sx::kWhiteningOff;
     cmd(sx::kSetPacketParams, params, sizeof(params));
+    packet_bytes_ = payload_bytes;
 }
 
 // INFO: wr 02aug26 DS 13.1: SetPacketType and SetRfFrequency are standby-only
@@ -354,9 +360,13 @@ uint32_t Sx1262::tx_timeout_ticks(uint8_t len) const {
     return ticks > sx::kTimeoutTicksMax ? sx::kTimeoutTicksMax : static_cast<uint32_t>(ticks);
 }
 
+// INFO: fc 28sep26 DS 13.1: SetPacketParams is standby-only, so the burst's length leaves RX
 Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
+    if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
+        return Status::Timeout;
+    if (packet_bytes_ != len) write_packet_params(len);
     const uint8_t head[2] = {sx::kWriteBuffer, 0};
     write_frame(head, sizeof(head), data, len);
     configure_irq();
@@ -371,6 +381,11 @@ Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
 Status Sx1262::start_receive() {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
+    if (cfg_.sync_bits != 0 && packet_bytes_ != cfg_.payload_bytes) {
+        if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
+            return Status::Timeout;
+        write_packet_params(cfg_.payload_bytes);
+    }
     configure_irq();
     uint8_t cont[3] = {0xFF, 0xFF, 0xFF};
     cmd(sx::kSetRx, cont, 3);

@@ -172,8 +172,9 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         tx_pending = false;
         const size_t inserted = sync_bits / 8u;
         for (size_t i = 0; i < inserted; i++) out[i] = sync[i];
-        for (size_t i = 0; i < tx_buf_.size(); i++) out[inserted + i] = tx_buf_[i];
-        len = static_cast<uint8_t>(inserted + tx_buf_.size());
+        const size_t sent = payload_bytes != 0 ? payload_bytes : tx_buf_.size();
+        for (size_t i = 0; i < sent; i++) out[inserted + i] = i < tx_buf_.size() ? tx_buf_[i] : 0;
+        len = static_cast<uint8_t>(inserted + sent);
         return true;
     }
 
