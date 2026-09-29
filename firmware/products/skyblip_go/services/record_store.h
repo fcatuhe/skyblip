@@ -160,7 +160,7 @@ class RecordStore {
 
     void recover();
     const SessionInfo* find(uint32_t session_id) const;
-    void note_session(uint32_t session_id);
+    void note_session(const store::SessionRun& run);
     uint32_t frontier_slot(uint32_t sector);
     Tail tail_of(uint32_t sector, uint32_t session_id);
     Tail diagnostics_tail_of(uint32_t sector);

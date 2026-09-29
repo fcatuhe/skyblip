@@ -201,11 +201,7 @@ RecordStore::Tail RecordStore::diagnostics_tail_of(uint32_t sector) {
     return tail;
 }
 
-void RecordStore::note_session(uint32_t session_id) {
-    if (session_count_ > 0 && index_[session_count_ - 1].session_id == session_id) {
-        index_[session_count_ - 1].sectors++;
-        return;
-    }
+void RecordStore::note_session(const store::SessionRun& run) {
     if (session_count_ == kMaxSessions) {
         for (int i = 1; i < kMaxSessions; i++) index_[i - 1] = index_[i];
         session_count_--;
@@ -213,8 +209,8 @@ void RecordStore::note_session(uint32_t session_id) {
     }
     SessionInfo& entry = index_[session_count_++];
     entry = SessionInfo{};
-    entry.session_id = session_id;
-    entry.sectors = 1;
+    entry.session_id = run.session_id;
+    entry.sectors = run.sectors;
 }
 
 void RecordStore::rebuild_index() {
@@ -223,12 +219,11 @@ void RecordStore::rebuild_index() {
     index_stale_ = false;
     if (!available_) return;
 
-    uint32_t sector = 0;
-    uint32_t sequence = 0;
+    store::SessionRun run{};
     uint32_t walked = 0;
-    while (pool_.allocator().next_sector(owner_, walked, sector, sequence)) {
-        note_session(pool_.allocator().session_of(sector));
-        walked = sequence;
+    while (pool_.allocator().session_run(owner_, walked, run)) {
+        note_session(run);
+        walked = run.last_sequence;
     }
 
     const uint32_t slots = ring_.slots_per_sector();

@@ -1,5 +1,7 @@
 // The shared sector pool: what a label carries, and which sector a ring is handed next.
 #include <cstring>
+#include <utility>
+#include <vector>
 
 #include "core/store/sector.h"
 #include "core/store/sector_allocator.h"
@@ -381,18 +383,57 @@ TEST_CASE("sector pool: a session's sectors come back in the order they were wri
     CHECK(session_sector(pool, kBaseUtc + 600, 0) == next_flight);
     CHECK(pool.session_of(capture) == 99);
 
+    store::SessionRun run{};
+    REQUIRE(pool.session_run(SectorOwner::Flights, 0, run));
+    CHECK(run.session_id == kBaseUtc);
+    CHECK(run.sectors == 2);
+    REQUIRE(pool.session_run(SectorOwner::Flights, run.last_sequence, run));
+    CHECK(run.session_id == kBaseUtc + 600);
+    CHECK(run.sectors == 1);
+    CHECK_FALSE(pool.session_run(SectorOwner::Flights, run.last_sequence, run));
+}
+
+// The index of sessions is rebuilt from these runs, so a session written twice lists twice.
+TEST_CASE("sector pool: a ring is walked a session run at a time, the other ring between") {
+    store::SectorAllocator pool;
+    REQUIRE(pool.configure(12, 0));
+    fill(pool, SectorOwner::Diagnostics, 1);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    fill(pool, SectorOwner::Diagnostics, 2);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtc + 600);
+    fill(pool, SectorOwner::Diagnostics, 1);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtc + 600);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+
+    store::SessionRun run{};
     uint32_t walked = 0;
-    uint32_t sector = 0;
-    uint32_t sequence = 0;
-    REQUIRE(pool.next_sector(SectorOwner::Flights, walked, sector, sequence));
-    CHECK(sector == first);
-    walked = sequence;
-    REQUIRE(pool.next_sector(SectorOwner::Flights, walked, sector, sequence));
-    CHECK(sector == second);
-    walked = sequence;
-    REQUIRE(pool.next_sector(SectorOwner::Flights, walked, sector, sequence));
-    CHECK(sector == next_flight);
-    CHECK_FALSE(pool.next_sector(SectorOwner::Flights, sequence, sector, sequence));
+    std::vector<std::pair<uint32_t, uint32_t>> runs;
+    while (pool.session_run(SectorOwner::Flights, walked, run)) {
+        runs.emplace_back(run.session_id, run.sectors);
+        walked = run.last_sequence;
+    }
+    const std::vector<std::pair<uint32_t, uint32_t>> expected{
+        {kBaseUtc, 2}, {kBaseUtc + 600, 2}, {kBaseUtc, 1}};
+    CHECK(runs == expected);
+}
+
+// A fetch reads every sector of a long capture by index, one chunk at a time.
+TEST_CASE("sector pool: every sector of a long session is found by its index, gaps and all") {
+    store::SectorAllocator pool;
+    REQUIRE(pool.configure(330, 0));
+    fill(pool, SectorOwner::Diagnostics, 17);
+    std::vector<uint32_t> written;
+    for (uint32_t i = 0; i < 280; i++) {
+        written.push_back(claimed_sector(pool, SectorOwner::Flights, kBaseUtc));
+        if (i % 20 == 3) fill(pool, SectorOwner::Diagnostics, 1 + i / 20 % 2);
+    }
+
+    for (uint32_t index = 0; index < written.size(); index++)
+        CHECK(session_sector(pool, kBaseUtc, index) == written[index]);
+    uint32_t beyond = 0;
+    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtc, 280, beyond));
+    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtc + 1, 0, beyond));
 }
 
 TEST_CASE("sector pool: a session that wrapped is still walked in sequence order") {
