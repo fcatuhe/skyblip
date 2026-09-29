@@ -98,10 +98,10 @@ TEST_CASE("transmit: two devices do not pick the same instant every second") {
 // Two addresses differ by a fixed XOR delta forever: a mixer that carried it would marry the pair.
 TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next") {
     constexpr uint32_t kOwn = 0x5B7E57;
-    constexpr uint32_t kPeer = 0x5B0155;
+    constexpr uint32_t kPeer = 0x5B01A0;
     CHECK(instant_at(kOwn, 1) == instant_at(kPeer, 1));
-    // 631 and 470, 32 burst lengths apart, from the pair that shared 881 ms a second earlier.
-    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == 161);
+    // 532 and 573, 8 burst lengths apart, from the pair that shared 977 ms a second earlier.
+    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == -41);
 
     const int shared_ms = instant_at(kOwn, 1);
     const int own_next_ms = instant_at(kOwn, 2);
@@ -112,7 +112,7 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
         if (bursts_overlap(own_next_ms, instant_at(addr, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
-    // 14 of 333, the odds of two 5 ms bursts meeting in a 341 ms slot. A carried delta keeps 333.
+    // 4 of 376, the odds of two 5 ms bursts meeting in a 342 ms slot. A carried delta keeps 376.
     CHECK(still_overlapping * 10 < shared);
 }
 
