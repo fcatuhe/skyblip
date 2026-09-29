@@ -360,8 +360,14 @@ uint32_t Sx1262::tx_timeout_ticks(uint8_t len) const {
     return ticks > sx::kTimeoutTicksMax ? sx::kTimeoutTicksMax : static_cast<uint32_t>(ticks);
 }
 
-// INFO: fc 28sep26 DS 13.1: SetPacketParams is standby-only, so the burst's length leaves RX
 Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
+    const Status staged = stage_tx(data, len);
+    if (staged != Status::Ok) return staged;
+    return key_tx();
+}
+
+// INFO: fc 28sep26 DS 13.1: SetPacketParams is standby-only, so the burst's length leaves RX
+Status Sx1262::stage_tx(const uint8_t* data, uint8_t len) {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
@@ -370,11 +376,18 @@ Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
     const uint8_t head[2] = {sx::kWriteBuffer, 0};
     write_frame(head, sizeof(head), data, len);
     configure_irq();
-    const uint32_t ticks = tx_timeout_ticks(len);
+    staged_bytes_ = len;
+    return Status::Ok;
+}
+
+Status Sx1262::key_tx() {
+    if (staged_bytes_ == 0) return Status::Invalid;
+    const uint32_t ticks = tx_timeout_ticks(staged_bytes_);
     uint8_t timeout[3] = {static_cast<uint8_t>(ticks >> 16), static_cast<uint8_t>(ticks >> 8),
                           static_cast<uint8_t>(ticks)};
     cmd(sx::kSetTx, timeout, 3);
     mode_ = RadioMode::Tx;
+    staged_bytes_ = 0;
     return Status::Ok;
 }
 

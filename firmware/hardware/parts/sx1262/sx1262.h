@@ -65,6 +65,8 @@ class Sx1262 {
     Status configure_radio(const RadioConfig& cfg);
 
     Status transmit(const uint8_t* data, uint8_t len);
+    Status stage_tx(const uint8_t* data, uint8_t len);
+    Status key_tx();
     Status start_receive();
 
     // The lowest-power state the part has, and the way back out of it.
@@ -138,6 +140,7 @@ class Sx1262 {
     bool configured_{false};
     bool tuned_{false};
     uint8_t packet_bytes_{0};
+    uint8_t staged_bytes_{0};
     uint32_t ms_since_rx_{0};
     uint32_t reinit_count_{0};
     bool reinit_owed_{false};

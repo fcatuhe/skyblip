@@ -32,6 +32,8 @@ class Rf : public ports::Rf {
     static constexpr int kHealthTickMs = 250;
     // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
     static constexpr uint64_t kCarrierLeadUs = 2000;
+    // INFO: fc 28sep26 a 200 us spin plus staging's four commands, at the hop's 66 us a command
+    static constexpr uint64_t kTxStageLeadUs = 700;
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {
@@ -297,6 +299,15 @@ class Rf : public ports::Rf {
         return carrier_.dbm;
     }
 
+    // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx and not the whole buffer write
+    void key(const ports::RfBurst& burst) {
+        tx_at_us_ = burst.at_us;
+        (void)radio_.stage_tx(burst.chips, burst.len);
+        while (clock_.micros() < burst.at_us) k_busy_wait(1);
+        (void)radio_.key_tx();
+        keyed_at_us_ = clock_.micros();
+    }
+
     // INFO: fc 16sep26 the event is dated where the radio raised it, not where the read-out ended
     bool collect(bool& completed, bool& fault) {
         const uint64_t polled_us = irq_at_us_ != 0 ? irq_at_us_ : clock_.micros();
@@ -332,10 +343,8 @@ class Rf : public ports::Rf {
         while (!abort_ && clock_.micros() < plan.end_us) {
             bursts = flying_bursts();
             if (keyed == done && keyed < bursts.count &&
-                clock_.micros() >= bursts.burst[keyed].at_us) {
-                tx_at_us_ = bursts.burst[keyed].at_us;
-                (void)radio_.transmit(bursts.burst[keyed].chips, bursts.burst[keyed].len);
-                keyed_at_us_ = clock_.micros();
+                clock_.micros() + kTxStageLeadUs >= bursts.burst[keyed].at_us) {
+                key(bursts.burst[keyed]);
                 keyed++;
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.micros();
