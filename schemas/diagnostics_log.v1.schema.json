@@ -72,6 +72,7 @@
     "geoid_measured": {"type": "boolean",
                        "description": "gnss. The geoid separation behind the altitude came from the receiver rather than from a regional constant"},
     "tx_settled": {"type": "boolean", "description": "gnss, flight. The fix had settled far enough for this device to be allowed to transmit"},
+    "levels_fresh": {"type": "boolean", "description": "gnss. The burst this solution closed carried a GSV set, which puts its RMC and so nav_ms later in the second. One solution in five while the sats page is up, none otherwise"},
     "pps_locked": {"type": "boolean", "description": "gnss. A PPS lock stood when the solution arrived"},
     "hdop_e2": {"type": "integer", "minimum": 0, "maximum": 65535,
                 "description": "gnss, flight. Horizontal dilution of precision in hundredths. Zero means the receiver did not report it, which is not the same as a good one"},

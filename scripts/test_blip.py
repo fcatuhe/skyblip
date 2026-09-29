@@ -97,12 +97,13 @@ class DiagnosticsPayloads(unittest.TestCase):
             tx_power_dbm=-9, pa_rated_dbm=22, alarm_enabled=True, metric=True,
             battery_trim_manual=True))
 
-    def test_gnss_reads_its_five_words_two_enums_and_five_flags(self):
+    def test_gnss_reads_its_five_words_two_enums_and_six_flags(self):
         payload = struct.pack("<5H5B", 350, 12, 120, 180, 900, 11, 17, 3, 4, 2)
-        self.assertEqual(decoded(3, payload, 0b0111_1100), whole(
-            "gnss", 0b0111_1100, nav_ms=350, resid_m=12, hdop_e2=120, vdop_e2=180, stage_s=900,
+        self.assertEqual(decoded(3, payload, 0b1111_1100), whole(
+            "gnss", 0b1111_1100, nav_ms=350, resid_m=12, hdop_e2=120, vdop_e2=180, stage_s=900,
             sats=11, sats_in_view=17, fix_mode=3, reject="STALE", stage="solving", fix_valid=True,
-            resid_valid=True, pps_locked=True, geoid_measured=True, tx_settled=True))
+            resid_valid=True, pps_locked=True, geoid_measured=True, tx_settled=True,
+            levels_fresh=True))
 
     def test_pps_error_is_signed_so_a_slow_edge_reads_negative(self):
         payload = struct.pack("<IiI2H", 999_987, -13, 3600, 2, 450)

@@ -79,6 +79,7 @@ struct GnssStatus {
     bool levels_wanted{false};
     // INFO: fc 18sep26 false once GSV is switched off, so no page draws a level nobody measured
     bool levels_live{false};
+    bool levels_fresh{false};
     gnss::FixReject reject{gnss::FixReject::None};
     uint32_t rejected{0};
     gnss::SkyView sky{};

@@ -19,6 +19,7 @@ Record record_of(const Gnss& value, const Instant& at) {
     set_flag(r.flags, kGnssFlagPpsLocked, value.pps_locked);
     set_flag(r.flags, kGnssFlagGeoidMeasured, value.geoid_measured);
     set_flag(r.flags, kGnssFlagTxSettled, value.tx_settled);
+    set_flag(r.flags, kGnssFlagLevelsFresh, value.levels_fresh);
     return r;
 }
 
@@ -40,6 +41,7 @@ bool read(const Record& record, Gnss& out) {
     out.pps_locked = record.flagged(kGnssFlagPpsLocked);
     out.geoid_measured = record.flagged(kGnssFlagGeoidMeasured);
     out.tx_settled = record.flagged(kGnssFlagTxSettled);
+    out.levels_fresh = record.flagged(kGnssFlagLevelsFresh);
     return true;
 }
 

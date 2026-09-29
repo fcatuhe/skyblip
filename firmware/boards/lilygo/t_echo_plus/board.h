@@ -200,6 +200,7 @@ class TEchoPlus {
             if (gnss_.poll()) {
                 bus_.gnss.push(gnss_.solution());
                 state.gnss.sky = gnss_.sky();
+                state.gnss.levels_fresh = gnss_.levels_fresh();
                 state.gnss.reject = gnss_.reject_reason();
                 state.gnss.rejected = gnss_.rejected();
             }

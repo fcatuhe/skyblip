@@ -124,7 +124,7 @@ DIAG_TYPES = {
         ("stage_s", u16(8)), ("sats", u8(10)), ("sats_in_view", u8(11)), ("fix_mode", u8(12)),
         ("reject", enum8(13, REJECT)), ("stage", enum8(14, STAGE)), ("fix_valid", flag(2)),
         ("resid_valid", flag(3)), ("pps_locked", flag(4)), ("geoid_measured", flag(5)),
-        ("tx_settled", flag(6)))),
+        ("tx_settled", flag(6)), ("levels_fresh", flag(7)))),
     4: ("pps", (
         ("interval_us", u32(0)), ("error_us", i32(4)), ("samples", u32(8)),
         ("holdover_events", u16(12)), ("since_edge_ms", u16(14)), ("locked", flag(2)),
