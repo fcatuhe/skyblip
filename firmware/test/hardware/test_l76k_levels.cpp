@@ -92,6 +92,26 @@ TEST_CASE("l76k: satellites in view are asked for every solution until a set lan
     CHECK(chip.commands_seen == commands + 3);
 }
 
+// The pinned bug: a page 0 capture read 32 in view, the last set the sats page had asked for.
+TEST_CASE("l76k: given up, the satellites in view are forgotten, not kept at the last set") {
+    models::L76k chip;
+    parts::L76k gnss(chip, chip);
+    run(gnss, chip, 0, kBringUpLeadMs + 4000);
+    gnss.request_satellites_in_view(true);
+    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
+    REQUIRE(gnss.sky().count() == in_view(chip));
+
+    gnss.request_satellites_in_view(false);
+    run(gnss, chip, kBringUpLeadMs + 7010, kBringUpLeadMs + 9000);
+    CHECK(gnss.sky().count() == 0);
+    CHECK(gnss.sky().in_use() > 0);  // GSA still names the solution every second
+
+    chip.gps_in_view = 4;
+    gnss.request_satellites_in_view(true);
+    run(gnss, chip, kBringUpLeadMs + 9010, kBringUpLeadMs + 11000);
+    CHECK(gnss.sky().count() == in_view(chip));
+}
+
 // GSV rides between GSA and RMC, which is why the bench read nav_ms 55-65 ms late with sats up.
 TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst alone") {
     models::L76k chip;

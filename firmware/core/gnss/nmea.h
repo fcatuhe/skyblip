@@ -106,6 +106,7 @@ class NmeaParser {
     uint32_t unrequested() const { return unrequested_; }
 
     const SkyView& sky() const { return sky_; }
+    void forget_satellites_in_view() { sky_.forget_in_view(); }
 
    private:
     static constexpr int kVersionCap = 24;
