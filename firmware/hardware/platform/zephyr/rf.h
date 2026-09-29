@@ -4,6 +4,7 @@
 
 #include <zephyr/kernel.h>
 
+#include <algorithm>
 #include <limits>
 
 #include "core/bus/bus.h"
@@ -32,7 +33,7 @@ class Rf : public ports::Rf {
     static constexpr int kHealthTickMs = 250;
     // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
     static constexpr uint64_t kCarrierLeadUs = 2000;
-    // INFO: fc 28sep26 a 200 us spin plus staging's four commands, at the hop's 66 us a command
+    // INFO: fc 29sep26 staging's four commands took 0.25-0.7 ms on the 856 bench
     static constexpr uint64_t kTxStageLeadUs = 700;
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
@@ -342,8 +343,7 @@ class Rf : public ports::Rf {
         irq_at_us_ = 0;
         while (!abort_ && clock_.micros() < plan.end_us) {
             bursts = flying_bursts();
-            if (keyed == done && keyed < bursts.count &&
-                clock_.micros() + kTxStageLeadUs >= bursts.burst[keyed].at_us) {
+            if (clock_.micros() >= bursts.stage_at_us(keyed, done, kTxStageLeadUs)) {
                 key(bursts.burst[keyed]);
                 keyed++;
             }
@@ -360,7 +360,10 @@ class Rf : public ports::Rf {
                 sampled = true;
                 continue;
             }
-            k_usleep(kSpinUs);
+            // INFO: fc 29sep26 an absolute uptime wake: k_usleep lands a tick past the stage point
+            const uint64_t wake_us = std::min(clock_.micros() + kSpinUs,
+                                              bursts.stage_at_us(keyed, done, kTxStageLeadUs));
+            k_sleep(K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(wake_us))));
         }
         for (completed = false; collect(completed, fault); completed = false)
             if (completed) done++;
