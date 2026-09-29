@@ -74,6 +74,26 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     CHECK_FALSE(h.product().radio().over_budget());
 }
 
+// A step between the product keying and the air taking the burst spent 5 of a burst's 7 ms slack.
+TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed it") {
+    simulator::Simulator h;
+    REQUIRE(h.setup() == Status::Ok);
+    h.world().set_fix(true);
+    h.world().set_speed_kt(50);
+    run_on(h, past_settling(h), 6000);
+
+    const radio::Log& log = h.product().state().radio_log;
+    int done = 0;
+    for (int i = 0; i < log.count(); i++) {
+        const radio::Entry& e = log.newest(i);
+        if (e.event != radio::Event::Transmitted) continue;
+        done++;
+        // 4.8 ms of air from the keying step, read out on the next one.
+        CHECK(e.tx_span_us - e.tx_keyed_us <= simulator::Simulator::kStepMs * 1000);
+    }
+    CHECK(done >= 5);
+}
+
 // §C.5 reserves 0..200 and this is the one burst that goes there: core/timing/README.md.
 TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1") {
     simulator::Simulator h;
