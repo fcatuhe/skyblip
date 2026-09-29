@@ -9,6 +9,7 @@
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "ports/rf.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
 #include "test/support/simulator_run.h"
@@ -149,6 +150,19 @@ TEST_CASE("rf: a dwell that closes on two unfinished bursts reports each lost, b
     // The position never finished, so the name behind it never keyed.
     CHECK(lost[1].tx_at_us == 1150000);
     CHECK(lost[1].keyed_at_us == 0);
+}
+
+// The silicon executor sleeps until this instant, so a stage point it overslept keyed late.
+TEST_CASE("rf: a burst stages its lead before its instant, the next once the first is done") {
+    ports::RfBursts bursts{};
+    CHECK(bursts.stage_at_us(0, 0, 700) == ports::RfBursts::kNever);
+    bursts.add(ports::RfBurst{nullptr, 0, 900000});
+    bursts.add(ports::RfBurst{nullptr, 0, 1050000});
+
+    CHECK(bursts.stage_at_us(0, 0, 700) == 899300);
+    CHECK(bursts.stage_at_us(1, 0, 700) == ports::RfBursts::kNever);
+    CHECK(bursts.stage_at_us(1, 1, 700) == 1049300);
+    CHECK(bursts.stage_at_us(2, 2, 700) == ports::RfBursts::kNever);
 }
 
 TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
