@@ -161,7 +161,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
 | `kFixLagMaxMs` | 500 | milliseconds | - | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
-| `kCompletionSlackMs` | 3 | milliseconds | - | §C.5: bench worst instant to last chip is 6.6 ms, 3 + 5 ms leaves 1.4 |
+| `kCompletionSlackMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
