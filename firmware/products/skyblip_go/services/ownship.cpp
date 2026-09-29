@@ -119,6 +119,7 @@ void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t no
     sample.pps_locked = context_.state.clock.pps_locked;
     sample.geoid_measured = own.geoid_separation_measured;
     sample.tx_settled = own.tx_settled;
+    sample.levels_fresh = status.levels_fresh;
     context_.diag.record(sample, context_.instant(now_ms));
 }
 

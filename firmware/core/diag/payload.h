@@ -56,6 +56,7 @@ constexpr uint8_t kGnssFlagResidValid = 1u << 3;
 constexpr uint8_t kGnssFlagPpsLocked = 1u << 4;
 constexpr uint8_t kGnssFlagGeoidMeasured = 1u << 5;
 constexpr uint8_t kGnssFlagTxSettled = 1u << 6;
+constexpr uint8_t kGnssFlagLevelsFresh = 1u << 7;
 
 struct Gnss {
     uint16_t nav_ms{0};
@@ -73,6 +74,7 @@ struct Gnss {
     bool pps_locked{false};
     bool geoid_measured{false};
     bool tx_settled{false};
+    bool levels_fresh{false};
 };
 
 constexpr uint8_t kPpsFlagLocked = 1u << 2;

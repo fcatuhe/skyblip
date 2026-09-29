@@ -104,6 +104,7 @@ TEST_CASE("l76k: given up, the satellites in view are forgotten, not kept at the
     gnss.request_satellites_in_view(false);
     run(gnss, chip, kBringUpLeadMs + 7010, kBringUpLeadMs + 9000);
     CHECK(gnss.sky().count() == 0);
+    CHECK_FALSE(gnss.levels_fresh());
     CHECK(gnss.sky().in_use() > 0);  // GSA still names the solution every second
 
     chip.gps_in_view = 4;
@@ -139,6 +140,7 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
             clean++;
         }
         CHECK(gnss.sky().count() == in_view(chip));
+        CHECK(gnss.levels_fresh() == b.carried_levels);
     }
 
     CHECK(with_levels == 2);

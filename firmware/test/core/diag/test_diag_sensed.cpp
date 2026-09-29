@@ -22,6 +22,7 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     in.pps_locked = true;
     in.geoid_measured = true;
     in.tx_settled = true;
+    in.levels_fresh = true;
 
     const diag::Gnss out = diag_round_trip(in);
     CHECK(out.nav_ms == in.nav_ms);
@@ -38,6 +39,7 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     CHECK(out.resid_valid);
     CHECK(out.pps_locked);
     CHECK(out.geoid_measured);
+    CHECK(out.levels_fresh);
     CHECK(out.tx_settled);
 }
 

@@ -177,6 +177,8 @@ class L76k : public ports::Gnss {
 
     void request_satellites_in_view(bool wanted) { gsv_wanted_ = wanted; }
     bool satellites_in_view_live() const { return gsv_every_ != 0 && gsv_wanted_; }
+    // The last published solution closed a burst that carried a GSV set.
+    bool levels_fresh() const { return levels_fresh_; }
 
     const gnss::SkyView& sky() const { return parser_.sky(); }
 
@@ -231,6 +233,8 @@ class L76k : public ports::Gnss {
     bool gsv_wanted_{false};
     uint8_t gsv_every_{0};
     bool levels_heard_{false};
+    bool burst_levels_{false};
+    bool levels_fresh_{false};
 };
 
 }  // namespace skyblip::parts
