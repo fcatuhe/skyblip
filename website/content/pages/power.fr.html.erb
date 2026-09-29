@@ -157,9 +157,10 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
         <tr><th>Seuil</th><th>Ce qu&rsquo;il fait</th></tr>
       </thead>
       <tbody>
-        <tr><th>3,50&nbsp;V</th><td>l&rsquo;alerte&nbsp;: à partir de là, plus rien n&rsquo;est écrit en mémoire sauf l&rsquo;enregistrement du vol, qui est la preuve du vol en train de finir</td></tr>
+        <tr><th>3,60&nbsp;V</th><td>batterie faible, environ 12&nbsp;%&nbsp;: le voyant cligne en rouge, le radar affiche BAT et le pourcentage, et un arrêt laisse CHARGE BATTERY sur l&rsquo;écran</td></tr>
+        <tr><th>3,50&nbsp;V</th><td>batterie critique, environ 5&nbsp;%&nbsp;: le voyant clignote toutes les 600&nbsp;ms, et à partir de là, plus rien n&rsquo;est écrit en mémoire sauf l&rsquo;enregistrement du vol, qui est la preuve du vol en train de finir</td></tr>
         <tr><th>3,40&nbsp;V</th><td>un démarrage sur une batterie aussi vide est refusé, et le bouton est laissé désarmé pour qu&rsquo;un sac ne puisse pas redemander</td></tr>
-        <tr><th>3,20&nbsp;V</th><td>la coupure&nbsp;: l&rsquo;appareil s&rsquo;éteint, sur trois échantillons consécutifs, pour qu&rsquo;un affaissement d&rsquo;émission ne puisse pas agir</td></tr>
+        <tr><th>3,20&nbsp;V</th><td>batterie vide, la coupure&nbsp;: l&rsquo;appareil s&rsquo;éteint et laisse FLAT BATTERY sur l&rsquo;écran. Chaque seuil demande trois échantillons consécutifs pour être atteint et trois pour être quitté, pour qu&rsquo;un affaissement d&rsquo;émission ne puisse pas agir et qu&rsquo;une batterie posée sur un seuil ne puisse pas osciller autour</td></tr>
         <tr><th>1,80&nbsp;V</th><td>en dessous, la lecture est un pont diviseur en l&rsquo;air, pas une batterie vide, et rien n&rsquo;agit dessus</td></tr>
       </tbody>
     </table>

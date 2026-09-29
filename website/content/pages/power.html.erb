@@ -149,9 +149,10 @@ description: A skyBlip Go on the apron and in the bag · what it waits for, what
         <tr><th>Threshold</th><th>What it does</th></tr>
       </thead>
       <tbody>
-        <tr><th>3.50&nbsp;V</th><td>the warning: from here nothing durable is written except the flight record, which is the evidence of the flight that is ending</td></tr>
+        <tr><th>3.60&nbsp;V</th><td>low, about 12%: the lamp winks red, the radar says BAT and the percentage, and a switch-off leaves CHARGE BATTERY on the glass</td></tr>
+        <tr><th>3.50&nbsp;V</th><td>critical, about 5%: the lamp blinks every 600&nbsp;ms, and from here nothing durable is written except the flight record, which is the evidence of the flight that is ending</td></tr>
         <tr><th>3.40&nbsp;V</th><td>a boot on a cell this flat is refused, and the button is left unarmed so a bag cannot keep asking</td></tr>
-        <tr><th>3.20&nbsp;V</th><td>the cutoff: the device switches itself off, on three consecutive samples, so a transmit sag cannot act</td></tr>
+        <tr><th>3.20&nbsp;V</th><td>flat, the cutoff: the device switches itself off and leaves FLAT BATTERY on the glass. Every step takes three consecutive samples to reach and three to leave, so a transmit sag cannot act and a cell resting on a line cannot flicker across it</td></tr>
         <tr><th>1.80&nbsp;V</th><td>below this the reading is a floating divider, not a flat cell, and nothing acts on it</td></tr>
       </tbody>
     </table>
