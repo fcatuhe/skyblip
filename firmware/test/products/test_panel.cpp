@@ -34,6 +34,58 @@ TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 }
 
+// Every page is drawn and compared, and only a frame that differs reaches the glass.
+TEST_CASE("product: a still world leaves every picture on the walk alone") {
+    for (int p = 0; p < go::kWalkedPages; p++) {
+        const go::Page page = static_cast<go::Page>(p);
+        CAPTURE(p);
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.platform.chips().imu.set_acceleration(1000, 0, 0);
+        uint32_t t = 0;
+        rig.seconds(t, 5, 0, 300);
+        rig.show(t, page);
+        rig.seconds(t, 5, 0, 300);
+        REQUIRE(rig.product.screen().page() == page);
+
+        const uint32_t presented = rig.state().duty.panel_partial_refreshes;
+        rig.seconds(t, 60, 0, 300);
+        CHECK(rig.state().duty.panel_partial_refreshes == presented);
+    }
+}
+
+// A ball swinging every 200 ms would be five refreshes a second if the glass followed it.
+TEST_CASE("product: a ball that never stops is presented once a second, never faster") {
+    constexpr uint32_t kStepMs = 50;
+    constexpr uint32_t kSwingMs = 200;
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.chips().imu.set_acceleration(1000, 0, 0);
+    uint32_t t = 0;
+    rig.run(t, t + 4000);
+    t += 4000;
+    rig.show(t, go::Page::SixPack);
+    rig.run(t, t + 3000);
+    t += 3000;
+
+    uint32_t presents = 0;
+    uint32_t last_present_ms = 0;
+    uint32_t seen = rig.state().duty.panel_partial_refreshes;
+    for (const uint32_t end = t + 10000; t <= end; t += kStepMs) {
+        const bool left = (t / kSwingMs) % 2 == 0;
+        rig.platform.chips().imu.set_acceleration(1000, left ? -150 : 150, 0);
+        rig.platform.clock().set_millis(t);
+        rig.product.step(t);
+        if (rig.state().duty.panel_partial_refreshes == seen) continue;
+        seen = rig.state().duty.panel_partial_refreshes;
+        if (presents > 0) CHECK(t - last_present_ms >= go::ScreenService::kPresentFloorMs);
+        last_present_ms = t;
+        presents++;
+    }
+    CHECK(presents >= 5);
+    CHECK(presents <= 11);
+}
+
 // A page opened from a menu is a detour, not a fifth stop on the walk.
 TEST_CASE("product: the pad leaves a page it was sent to for the page that sent it") {
     Rig rig;
