@@ -62,7 +62,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLevelFlightMg` | 1000 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
-| `kIndicatedDampingSamples` | 8 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
+| `kIndicatedDampingSamples` | 4 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
 | `kLogRecordPeriodMs` | 4000 (4 s) | milliseconds | Period | Four seconds. It is the interval the moshe-braner SoftRF fork ships as its default (oss/SoftRF-moshe-braner .../src/driver/ Settings.cpp:838 loginterval = 4) and it is inside every fix-interval a badge, an OLC claim or a competition file is scored on. |

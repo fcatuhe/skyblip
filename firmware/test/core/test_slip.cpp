@@ -60,6 +60,18 @@ TEST_CASE("slip: the ball is damped, so turbulence does not throw it across the 
     CHECK(ball.mg() <= flight::kSlipFullScaleMg);
 }
 
+// The glass shows a frame a second: a ball still travelling at the next one is lag a pilot sees.
+TEST_CASE("slip: the ball is within a pixel of a step before the glass shows its next frame") {
+    constexpr uint32_t kSampleMs = 80;
+    constexpr uint32_t kFrameMs = 1000;
+    flight::SlipBall ball;
+    for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * kSampleMs);
+    REQUIRE(ball.mg() == 0);
+
+    for (uint32_t at = 0; at < kFrameMs; at += kSampleMs) ball.update(force_of(-200), 3300 + at);
+    CHECK(ball.mg() > flight::kSlipFullScaleMg - 13);
+}
+
 TEST_CASE("slip: the ball is damped, the sample it was damped from is not") {
     flight::SlipBall ball;
     for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * 80u);
