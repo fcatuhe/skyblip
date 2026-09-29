@@ -446,6 +446,7 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     REQUIRE(h.product().screen().page() != go::Page::Sats);
     CHECK_FALSE(h.world().gnss().gsv_enabled());
     CHECK_FALSE(h.product().state().gnss.levels_live);
+    CHECK(h.product().state().gnss.sky.count() == 0);
 
     t = show_sats(h, t + 3000);
     h.world().set_fix(true);

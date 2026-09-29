@@ -200,6 +200,8 @@ bool L76k::poll(uint32_t now_ms) {
         }
         if (n < sizeof(buf)) break;  // drained
     }
+    // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
+    if (closed && gsv_every_ == 0) parser_.forget_satellites_in_view();
 
     const bool valid = validity_.check(now_ms) == gnss::FixReject::None;
     // A receiver that stops talking publishes nothing, so nothing would ever

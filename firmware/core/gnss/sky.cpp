@@ -57,10 +57,7 @@ void SkyView::solving(System system, uint8_t id) {
 
 void SkyView::clear_solution() { used_n_ = 0; }
 
-void SkyView::clear() {
-    n_ = 0;
-    used_n_ = 0;
-}
+void SkyView::forget_in_view() { n_ = 0; }
 
 bool SkyView::used(System system, uint8_t id) const {
     for (int i = 0; i < used_n_; i++) {

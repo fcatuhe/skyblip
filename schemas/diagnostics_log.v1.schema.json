@@ -61,7 +61,7 @@
     "resid_valid": {"type": "boolean", "description": "gnss. There was a pair of consecutive fixes to measure the residual over"},
     "sats": {"type": "integer", "minimum": 0, "maximum": 255, "description": "gnss. Satellites in the solution"},
     "sats_in_view": {"type": "integer", "minimum": 0, "maximum": 255,
-                     "description": "gnss. Satellites the receiver reported seeing. Stops being refreshed once GSV is switched off, which the stage says"},
+                     "description": "gnss. Satellites in view in the receiver's last GSV set, up to five solutions old. Zero while GSV is off, which is whenever the sats page is not on the glass"},
     "fix_mode": {"type": "integer", "minimum": 0, "maximum": 3, "description": "gnss. GSA field 2: 1 no fix, 2 is 2D, 3 is 3D"},
     "stage": {"type": "string", "enum": ["silent", "blind", "solving", "fixed"],
               "description": "gnss. Where acquisition had got to (core/gnss/acquisition.h). Codes: 0 silent, 1 blind, 2 solving, 3 fixed"},
