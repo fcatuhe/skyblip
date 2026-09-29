@@ -100,8 +100,8 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
     constexpr uint32_t kOwn = 0x5B7E57;
     constexpr uint32_t kPeer = 0x5B0155;
     CHECK(instant_at(kOwn, 1) == instant_at(kPeer, 1));
-    // 788 and 605, 36 burst lengths apart, from the pair that shared 881 ms a second earlier.
-    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == 183);
+    // 631 and 470, 32 burst lengths apart, from the pair that shared 881 ms a second earlier.
+    CHECK(instant_at(kOwn, 2) - instant_at(kPeer, 2) == 161);
 
     const int shared_ms = instant_at(kOwn, 1);
     const int own_next_ms = instant_at(kOwn, 2);
@@ -112,7 +112,7 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
         if (bursts_overlap(own_next_ms, instant_at(addr, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
-    // 4 of 333, the odds of two 5 ms bursts meeting in a 340 ms slot. A carried delta keeps 333.
+    // 14 of 333, the odds of two 5 ms bursts meeting in a 341 ms slot. A carried delta keeps 333.
     CHECK(still_overlapping * 10 < shared);
 }
 

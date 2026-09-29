@@ -57,7 +57,8 @@ constexpr int kCallsignEnd = kSlot1End;
 // safety-critical one - traffic is on air there and the radio has to be tuned,
 // not tuning.
 constexpr int kJitterGuardMs = 5;
-constexpr int kHopGuardMs = 3;
+// INFO: fc 28sep26 bench worst dwell end to listening 1.16 ms over 2880 hops, 2 leaves 0.84
+constexpr int kHopGuardMs = 2;
 // The executors switch into a queued dwell as soon as the one before it ends,
 // so the guard in front of a dwell is spent retuning and the dwell listens from
 // its start. Never earlier than the widest guard, which is what bounds a dwell
