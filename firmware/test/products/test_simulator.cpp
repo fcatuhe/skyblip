@@ -428,14 +428,14 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     h.world().set_fix(false);
     run(h, 0, 6000);
 
-    CHECK_FALSE(h.world().gnss().gsv_enabled);
+    CHECK_FALSE(h.world().gnss().gsv_enabled());
     CHECK_FALSE(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.count() == 0);
 
     uint32_t t = show_sats(h, 6000);
     run(h, t, t + 3000);
     REQUIRE(h.product().screen().page() == go::Page::Sats);
-    CHECK(h.world().gnss().gsv_enabled);
+    CHECK(h.world().gnss().gsv_enabled());
     CHECK(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.count() > 0);
     CHECK(h.product().state().gnss.sky.in_use() == 0);
@@ -444,7 +444,7 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     t = page(h, t + 3000);
     run(h, t, t + 3000);
     REQUIRE(h.product().screen().page() != go::Page::Sats);
-    CHECK_FALSE(h.world().gnss().gsv_enabled);
+    CHECK_FALSE(h.world().gnss().gsv_enabled());
     CHECK_FALSE(h.product().state().gnss.levels_live);
 
     t = show_sats(h, t + 3000);
@@ -453,7 +453,7 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     REQUIRE(h.product().state().own.fix_valid);
     REQUIRE(h.product().state().own.tx_settled);
 
-    CHECK(h.world().gnss().gsv_enabled);
+    CHECK(h.world().gnss().gsv_enabled());
     CHECK(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.in_use() > 0);
     CHECK(h.product().state().gnss.sky.in_use_of(gnss::System::Gps) > 0);

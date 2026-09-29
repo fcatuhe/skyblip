@@ -14,10 +14,12 @@ namespace skyblip::models {
 // INFO: fc 13sep26 the part emits the cycle in $PCAS03's own field order, so RMC closes a burst
 inline void L76k::emit_burst() {
     step_walk();
+    const bool gsv_due = gsv_enabled() && solutions_ % gsv_every == 0;
+    solutions_++;
     if (gga_enabled) emit_gga();
     if (gll_enabled) emit_gll();
     if (gsa_enabled) emit_gsa();
-    if (gsv_enabled) emit_gsv();
+    if (gsv_due) emit_gsv();
     if (rmc_enabled) emit_rmc();
     if (vtg_enabled) emit_vtg();
 }
