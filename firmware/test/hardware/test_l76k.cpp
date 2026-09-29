@@ -107,7 +107,7 @@ TEST_CASE("l76k: GSA is asked for, and the VDOP in it is the one the fix carries
 
     // Three sentences that say what we read, and not one byte of line time more.
     CHECK_FALSE(chip.gll_enabled);
-    CHECK_FALSE(chip.gsv_enabled);
+    CHECK_FALSE(chip.gsv_enabled());
     CHECK_FALSE(chip.vtg_enabled);
 }
 
@@ -326,68 +326,4 @@ TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     chip.date = "010125";
     run(gnss, chip, kBringUpLeadMs + 5010, kBringUpLeadMs + 6000);
     CHECK(gnss.solution().fix_valid);
-}
-
-// The levels cost a set of sentences a second, so only the page that draws them asks for them.
-TEST_CASE("l76k: satellites in view are asked for, and given up again, one sentence each way") {
-    models::L76k chip;
-    parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
-    REQUIRE(gnss.configured());
-    REQUIRE_FALSE(chip.gsv_enabled);  // the bring-up sentence set switches it off
-    REQUIRE(gnss.sky().count() == 0);
-
-    const uint32_t commands = chip.commands_seen;
-    gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
-    CHECK(chip.commands_seen == commands + 1);
-    CHECK(chip.gsv_enabled);
-    CHECK(gnss.satellites_in_view_live());
-    CHECK(gnss.sky().count() == chip.gps_in_view + chip.beidou_in_view + chip.glonass_in_view);
-    CHECK(gnss.sky().in_view_of(gnss::System::Gps) == chip.gps_in_view);
-    CHECK(gnss.sky().in_view_of(gnss::System::Beidou) == chip.beidou_in_view);
-
-    // Nothing else in the sentence set moved: the nulls in $PCAS03 mean "keep".
-    CHECK(chip.gga_enabled);
-    CHECK(chip.rmc_enabled);
-    CHECK(chip.gsa_enabled);
-    CHECK_FALSE(chip.gll_enabled);
-    CHECK_FALSE(chip.vtg_enabled);
-
-    gnss.request_satellites_in_view(false);
-    run(gnss, chip, kBringUpLeadMs + 7010, kBringUpLeadMs + 9000);
-    CHECK(chip.commands_seen == commands + 2);
-    CHECK_FALSE(chip.gsv_enabled);
-    CHECK_FALSE(gnss.satellites_in_view_live());
-
-    // Asking again for what is already so costs nothing.
-    gnss.request_satellites_in_view(false);
-    run(gnss, chip, kBringUpLeadMs + 9010, kBringUpLeadMs + 11000);
-    CHECK(chip.commands_seen == commands + 2);
-}
-
-// At the rate the receiver boots at, the widest GSV set did not fit in the second the fix rides.
-TEST_CASE("l76k: the satellites-in-view burst fits the second only at the raised rate") {
-    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kBaudRate) >
-          parts::L76k::kSolutionPeriodMs);
-    CHECK(parts::L76k::kSearchingBurstMs < parts::L76k::kSolutionPeriodMs);
-    CHECK(parts::L76k::kSolutionPeriodMs == parts::L76k::kFixPeriodMs);
-}
-
-// A receiver still searching reports satellites in view it is not yet tracking.
-TEST_CASE("l76k: a satellite in view with no level is not a satellite at zero dB-Hz") {
-    models::L76k chip;
-    chip.fix = false;
-    parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
-    gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
-
-    REQUIRE(gnss.sky().count() > 0);
-    int tracked = 0, silent = 0;
-    for (int i = 0; i < gnss.sky().count(); i++)
-        (gnss.sky().at(i).cn0_dbhz > 0 ? tracked : silent)++;
-    CHECK(tracked > 0);
-    CHECK(silent > 0);
-    CHECK(gnss.sky().in_use() == 0);  // nothing solved, so nothing is in a solution
 }

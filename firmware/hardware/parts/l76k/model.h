@@ -102,7 +102,8 @@ class L76k : public io::Uart, public io::UartRate {
     bool gga_enabled{true};
     bool gll_enabled{true};
     bool gsa_enabled{true};
-    bool gsv_enabled{true};
+    // INFO: fc 29sep26 a $PCAS03 field counts solutions per sentence and 0 is off
+    uint8_t gsv_every{1};
     bool rmc_enabled{true};
     bool vtg_enabled{true};
     uint32_t commands_seen{0};
@@ -118,6 +119,7 @@ class L76k : public io::Uart, public io::UartRate {
     int last_restart_kind{-1};
 
     bool aviation_dynamic_model() const { return dynamic_model == kAviationDynamicModel; }
+    bool gsv_enabled() const { return gsv_every != 0; }
 
     // Everything the receiver heard, in the order it heard it: "WAKE,PCAS06,...".
     // A driver that sends the right sentences in the wrong order configures a
@@ -241,6 +243,7 @@ class L76k : public io::Uart, public io::UartRate {
     uint32_t port_baud_{parts::L76k::kBaudRate};
     uint32_t solving_since_ms_{0};
     uint32_t walk_step_{0};
+    uint32_t solutions_{0};
     bool solving_since_set_{false};
     std::string heard_;
 
@@ -297,13 +300,16 @@ class L76k : public io::Uart, public io::UartRate {
     // INFO: fc 18sep26 $PCAS03 fields are GGA,GLL,GSA,GSV,RMC,VTG and an empty one keeps its
     // setting
     void apply_sentence_set() {
+        static constexpr int kGsvField = 3;
         bool* flags[6] = {&gga_enabled, &gll_enabled, &gsa_enabled,
-                          &gsv_enabled, &rmc_enabled, &vtg_enabled};
+                          nullptr,      &rmc_enabled, &vtg_enabled};
         int field = 0;
         int at = 8;
         while (at < command_len_ && field < 6) {
             const bool empty = command_[at] == ',' || command_[at] == '*';
-            if (!empty) *flags[field] = command_[at] == '1';
+            const uint8_t every = static_cast<uint8_t>(argument(command_, command_len_, at));
+            if (!empty && field == kGsvField) gsv_every = every;
+            if (!empty && field != kGsvField) *flags[field] = every != 0;
             while (at < command_len_ && command_[at] != ',') at++;
             at++;
             field++;
@@ -381,7 +387,8 @@ class L76k : public io::Uart, public io::UartRate {
         dynamic_model = 0;
         sentence_set_applied = false;
         gga_enabled = gll_enabled = gsa_enabled = true;
-        gsv_enabled = rmc_enabled = vtg_enabled = true;
+        rmc_enabled = vtg_enabled = true;
+        gsv_every = 1;
         solution_period_ms = kFactoryPeriodMs;
     }
 
