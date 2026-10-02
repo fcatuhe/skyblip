@@ -8,6 +8,27 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 [`docs/TUNING.md`](docs/TUNING.md) is the other half: every number that behavior is tuned by, with the line of source that justifies it. Also generated, from the constants themselves.
 
+## The hardware
+
+skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. The other devices and the board they share are on [skyblip.eu/devices](https://skyblip.eu/devices).
+
+<img align="right" width="122" alt="skyBlip Go: white T-Echo Plus with its antenna, skyBlip shown on the e-paper screen" src="https://github.com/fcatuhe/skyblip/raw/4f44ff307a161aadb9ce767cb732e3f13576e5b1/readme/01-skyblip-go-techo.jpg">
+
+| | T-Echo Plus (skyBlip Go) |
+|---|---|
+| **Processor** | Nordic nRF52840, Cortex-M4F, 64 MHz |
+| **GNSS** | Quectel L76K, PPS |
+| **868 MHz radio** | Semtech SX1262 |
+| **Barometer** | Bosch BME280 |
+| **Inertial unit** | Bosch BHI260AP |
+| **Display** | 1.54" e-paper, 200x200 |
+| **Audible alarms** | buzzer + vibration motor |
+| **Bluetooth** | BLE 5.0, 3 connections, no pairing |
+| **USB** | USB-C |
+| **Battery** | 2400 mAh Li-ion |
+
+<br clear="right">
+
 ## The tree
 
 | Directory | What lives there |
