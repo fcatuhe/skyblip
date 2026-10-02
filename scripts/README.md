@@ -12,6 +12,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `build_local.sh` | build the device image off a committed ref |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs |
+| [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
 | `test_mkuf2.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
