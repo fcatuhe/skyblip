@@ -123,6 +123,7 @@ const TRAFFIC_KEY = "t"
 const WAKE_HOLD_MS = 1000
 const BOOT_DELAY_MS = 2000
 const FIRST_TRAFFIC_MS = 3000
+const GLASS_IN_VIEW = 0.5
 
 export default class extends Controller {
   static targets = ["canvas", "status", "pad", "alarm", "charge",
@@ -134,10 +135,16 @@ export default class extends Controller {
 
   connect() {
     this.bootTimer = setTimeout(() => this.start(), BOOT_DELAY_MS)
+    this.sight = new IntersectionObserver(
+      ([glass]) => { this.inView = glass.intersectionRatio >= GLASS_IN_VIEW },
+      { threshold: GLASS_IN_VIEW }
+    )
+    this.sight.observe(this.canvasTarget)
   }
 
   disconnect() {
     this.#generation++
+    this.sight.disconnect()
     this.#stop()
     clearTimeout(this.bootTimer)
     clearTimeout(this.wakeTimer)
@@ -166,7 +173,7 @@ export default class extends Controller {
   }
 
   fly(event) {
-    if (!this.sim || event.target !== this.padTarget) return
+    if (!this.sim || !this.inView || this.#typing(event.target)) return
     if (event.metaKey || event.ctrlKey || event.altKey) return
     if (event.key.toLowerCase() === TRAFFIC_KEY) {
       if (event.repeat) return
@@ -181,6 +188,10 @@ export default class extends Controller {
     const dial = this[`${axis}Target`]
     dial.value = Number(dial.value) + direction * Number(dial.step)
     this.#apply(axis)
+  }
+
+  #typing(target) {
+    return target.isContentEditable || target.matches("input, textarea, select")
   }
 
   #apply(axis) {
