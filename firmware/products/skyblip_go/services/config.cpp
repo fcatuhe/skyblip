@@ -291,9 +291,15 @@ void ConfigLinkService::load_image_state() {
         if (!has_dfu || !context_.roles.dfu.running_version(running)) {
             forget_update();
         } else {
-            switch (dfu::outcome(update_record_, running)) {
+            ports::ImageVersion staged;
+            const bool has_staged = context_.roles.dfu.staged_version(staged);
+            switch (dfu::outcome(update_record_, running,
+                                 has_staged ? std::optional(staged) : std::nullopt)) {
                 case dfu::Outcome::Reverted:
                     if (image_confirmed_) image_state_ = dfu::ImageState::Reverted;
+                    break;
+                case dfu::Outcome::Refused:
+                    if (image_confirmed_) image_state_ = dfu::ImageState::Refused;
                     break;
                 case dfu::Outcome::Landed:
                     if (image_confirmed_) forget_update();

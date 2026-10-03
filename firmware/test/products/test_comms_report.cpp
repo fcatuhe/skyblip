@@ -185,6 +185,26 @@ TEST_CASE(
     CHECK(link.sent.size() == 3);
 }
 
+TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat is not") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.on_link_up(events::LinkUp{1, 200});
+
+    cs.set_flight_state(flight::FlightState::Ground);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link.last().bytes.find("\"flight\":\"ground\"") != std::string::npos);
+
+    cs.set_flight_state(flight::FlightState::Ground);
+    CHECK(link.sent.size() == 1);
+
+    cs.set_flight_state(flight::FlightState::Airborne);
+    REQUIRE(link.sent.size() == 2);
+    CHECK(link.last().bytes.find("\"flight\":\"airborne\"") != std::string::npos);
+}
+
 TEST_CASE("comms: status at its widest is this frame, field for field, inside 182 bytes") {
     platform::host::Link link;
     link.raise_link(1);

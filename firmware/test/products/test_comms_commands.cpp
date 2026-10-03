@@ -1,5 +1,5 @@
 // The commands that take the device out of service, each behind a confirmation on the device:
-// dfu and the upload window it opens, apply, recovery and power off.
+// dfu with the upload window it opens and the install it ends in, recovery and power off.
 #include <cstring>
 #include <initializer_list>
 #include <string>
@@ -23,14 +23,15 @@ struct SpyDfu : ports::Dfu {
     int recovery = 0;
     int forgotten = 0;
     bool staged = true;
-    bool finished = true;
+    bool finished = false;
+    ports::ImageVersion version{0, 2, 0, 15};
     void trigger() override { triggered++; }
     bool confirm() override {
         confirmed++;
         return true;
     }
     bool staged_version(ports::ImageVersion& out) override {
-        out = ports::ImageVersion{0, 2, 0, 1};
+        out = version;
         return staged;
     }
     ports::RecoveryPath enter_recovery() override {
@@ -45,9 +46,16 @@ struct SpyDfu : ports::Dfu {
 };
 }  // namespace
 
-// "dfu" no longer reboots: under MCUmgr the image arrives over SMP afterwards,
-// so confirming opens a write window instead. The reboot is the client's
-// subsequent `os reset`, or an explicit "apply".
+constexpr const char* kDfu = "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}";
+
+ConfigService& upload_opened(ConfigService& cs, SpyDfu& dfu) {
+    cs.set_flight_state(flight::FlightState::Ground);
+    cs.on_rx(frame(kDfu));
+    cs.confirm();
+    dfu.finished = true;
+    return cs;
+}
+
 TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation") {
     platform::host::Link link;
     link.raise_link(1);
@@ -58,19 +66,49 @@ TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation")
     cs.set_flight_state(flight::FlightState::Ground);
 
     CHECK_FALSE(cs.upload_allowed());
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame(kDfu));
     CHECK(cs.pending() == Pending::Dfu);
     CHECK_FALSE(cs.upload_allowed());  // a remote request alone authorises nothing
 
     cs.confirm();
     CHECK(cs.upload_allowed());
+    CHECK(cs.receiving_firmware());
     CHECK(dfu.triggered == 0);
 }
 
+// The press is the whole authorisation, so the glass names what it authorises.
+TEST_CASE("comms: the firmware prompt names the version the phone is about to send") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_flight_state(flight::FlightState::Ground);
+    cs.on_rx(frame(kDfu));
+    REQUIRE(cs.pending() == Pending::Dfu);
+    CHECK(std::string(cs.prompt_detail()) == "INSTALL 0.2.0+15 FROM THE PHONE");
+
+    cs.on_rx(frame("{\"cmd\":\"power_off\"}"));
+    CHECK(std::string(cs.prompt_detail()) == pending_detail(Pending::PowerOff));
+}
+
+TEST_CASE("comms: a dfu that does not name its version is refused at the door") {
+    for (const char* json : {"{\"cmd\":\"dfu\"}", "{\"cmd\":\"dfu\",\"version\":\"0.2\"}"}) {
+        platform::host::Link link;
+        link.raise_link(1);
+        go::Settings s = go::defaults();
+        go::SettingsStore store_cs(s, kTestAddr);
+        ConfigService cs(link, store_cs);
+        cs.set_flight_state(flight::FlightState::Ground);
+        cs.on_rx(frame(json));
+        CHECK(cs.pending() == Pending::None);
+        CHECK(link.last().bytes.find("no_version") != std::string::npos);
+    }
+}
+
 // The swap is not started from here: the product parks the radio and paints the
-// panel first, so a confirmed apply is a latch the sequencer spends.
-TEST_CASE(
-    "comms: apply routed through confirmation, latches the install and never reboots itself") {
+// panel first, so a landed upload is a latch the sequencer spends.
+TEST_CASE("comms: an upload that lands whole latches the install with no second prompt") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -78,19 +116,39 @@ TEST_CASE(
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    CHECK(cs.pending() == Pending::Apply);
-    CHECK_FALSE(cs.install_requested());
+    cs.on_rx(frame(kDfu));
     cs.confirm();
+    cs.tick(100);
+    CHECK_FALSE(cs.install_requested());
+
+    dfu.finished = true;
+    cs.tick(200);
+    CHECK(cs.pending() == Pending::None);
     CHECK(cs.install_requested());
+    CHECK_FALSE(cs.receiving_firmware());
     CHECK(dfu.triggered == 0);
-    CHECK(link.last().bytes.find("\"apply\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"ack\":true,\"reason\":\"install\"") != std::string::npos);
 
     cs.clear_install_request();
+    cs.tick(300);
     CHECK_FALSE(cs.install_requested());
 }
 
-TEST_CASE("comms: apply with nothing in the secondary slot is refused, not rebooted into") {
+TEST_CASE("comms: an image other than the one the press named is refused, not installed") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    dfu.version = ports::ImageVersion{0, 3, 0, 1};
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    upload_opened(cs, dfu).tick(100);
+    CHECK_FALSE(cs.install_requested());
+    CHECK_FALSE(cs.receiving_firmware());
+    CHECK(link.last().bytes.find("not_approved") != std::string::npos);
+}
+
+TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebooted into") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -98,33 +156,9 @@ TEST_CASE("comms: apply with nothing in the secondary slot is refused, not reboo
     dfu.staged = false;
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    CHECK(cs.pending() == Pending::None);
-    CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
-
-    go::SettingsStore store_without_dfu(s, kTestAddr);
-    ConfigService without_dfu(link, store_without_dfu);
-    without_dfu.set_flight_state(flight::FlightState::Ground);
-    without_dfu.on_rx(frame("{\"cmd\":\"apply\"}"));
-    CHECK(without_dfu.pending() == Pending::None);
-    CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
-}
-
-// A header survives an upload that died after its first chunk, and MCUboot reverts what follows.
-TEST_CASE("comms: apply after an upload that stopped short is refused, not rebooted into") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings s = go::defaults();
-    SpyDfu dfu;
-    dfu.finished = false;
-    go::SettingsStore store_cs(s, kTestAddr);
-    ConfigService cs(link, store_cs, &dfu);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    CHECK(cs.pending() == Pending::None);
-    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+    upload_opened(cs, dfu).tick(100);
     CHECK_FALSE(cs.install_requested());
+    CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
 }
 
 TEST_CASE("comms: opening an upload window forgets the upload an earlier one finished") {
@@ -133,19 +167,20 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
     go::Settings s = go::defaults();
     SpyDfu dfu;
     go::SettingsStore store_cs(s, kTestAddr);
+    dfu.finished = true;
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame(kDfu));
     CHECK(dfu.forgotten == 0);
     cs.confirm();
     CHECK(dfu.forgotten == 1);
 
-    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    CHECK(cs.pending() == Pending::None);
-    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+    cs.tick(100);
+    CHECK(cs.receiving_firmware());
+    CHECK_FALSE(cs.install_requested());
 }
 
-TEST_CASE("comms: an upload restarted under the install prompt refuses the confirmation") {
+TEST_CASE("comms: apply is no longer a command") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -154,40 +189,12 @@ TEST_CASE("comms: an upload restarted under the install prompt refuses the confi
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    REQUIRE(cs.pending() == Pending::Apply);
-
-    dfu.finished = false;
-    cs.confirm();
     CHECK(cs.pending() == Pending::None);
     CHECK_FALSE(cs.install_requested());
-    CHECK(link.last().bytes.find("upload_unfinished") != std::string::npos);
+    CHECK(link.last().bytes.find("unknown_cmd") != std::string::npos);
 }
 
-TEST_CASE("comms: dfu and apply are refused at the door on a critical cell") {
-    for (const char* cmd : {"dfu", "apply"}) {
-        platform::host::Link link;
-        link.raise_link(1);
-        go::Settings s = go::defaults();
-        SpyDfu dfu;
-        go::SettingsStore store_cs(s, kTestAddr);
-        ConfigService cs(link, store_cs, &dfu);
-        cs.set_flight_state(flight::FlightState::Ground);
-        power::BatteryState low{};
-        low.valid = true;
-        low.millivolts = 3400;
-        cs.set_battery_state(low, power::PowerLevel::Critical);
-        REQUIRE_FALSE(cs.swap_powered());
-
-        const std::string json = std::string("{\"cmd\":\"") + cmd + "\"}";
-        cs.on_rx(frame(json.c_str()));
-        CHECK(cs.pending() == Pending::None);
-        CHECK(link.last().bytes.find("low_power") != std::string::npos);
-        CHECK_FALSE(cs.upload_allowed());
-        CHECK_FALSE(cs.install_requested());
-    }
-}
-
-TEST_CASE("comms: a cell that turns critical inside the prompt refuses the swap") {
+TEST_CASE("comms: dfu is refused at the door on a critical cell") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
@@ -195,17 +202,36 @@ TEST_CASE("comms: a cell that turns critical inside the prompt refuses the swap"
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
+    power::BatteryState low{};
+    low.valid = true;
+    low.millivolts = 3400;
+    cs.set_battery_state(low, power::PowerLevel::Critical);
+    REQUIRE_FALSE(cs.swap_powered());
+
+    cs.on_rx(frame(kDfu));
+    CHECK(cs.pending() == Pending::None);
+    CHECK(link.last().bytes.find("low_power") != std::string::npos);
+    CHECK_FALSE(cs.upload_allowed());
+}
+
+// The upload takes minutes, and a cell can cross the warning inside them.
+TEST_CASE("comms: a cell that turns critical during the upload refuses the swap") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
     power::BatteryState healthy{};
     healthy.valid = true;
     healthy.millivolts = 4000;
     cs.set_battery_state(healthy, power::PowerLevel::Normal);
-    cs.on_rx(frame("{\"cmd\":\"apply\"}"));
-    REQUIRE(cs.pending() == Pending::Apply);
+    upload_opened(cs, dfu);
 
     cs.set_supply_warned(true);
-    cs.confirm();
-    CHECK(cs.pending() == Pending::None);
+    cs.tick(100);
     CHECK_FALSE(cs.install_requested());
+    CHECK_FALSE(cs.receiving_firmware());
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
 
     // A power-off is not a swap: the same cell is allowed to switch the device off.
@@ -213,6 +239,20 @@ TEST_CASE("comms: a cell that turns critical inside the prompt refuses the swap"
     REQUIRE(cs.pending() == Pending::PowerOff);
     cs.confirm();
     CHECK(cs.power_off_requested());
+}
+
+TEST_CASE("comms: a landed upload on a device no longer proven on the ground is not installed") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    SpyDfu dfu;
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs, &dfu);
+    upload_opened(cs, dfu);
+    cs.set_flight_state(flight::FlightState::Unknown);
+    cs.tick(100);
+    CHECK_FALSE(cs.install_requested());
+    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 }
 
 TEST_CASE("comms: the update question names the image state and the versions of the attempt") {
@@ -368,7 +408,7 @@ TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
 
@@ -388,7 +428,7 @@ TEST_CASE("comms: upload window expires") {
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
 
@@ -414,7 +454,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(before);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
 
@@ -431,7 +471,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     ConfigService prompt(second_link, store_prompt);
     prompt.set_flight_state(flight::FlightState::Ground);
     prompt.tick(before);
-    prompt.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    prompt.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
     prompt.tick(before + kConfirmWindowMs - 1u);
     CHECK(prompt.pending() == Pending::Dfu);
@@ -447,7 +487,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     cs.confirm();
     REQUIRE(cs.upload_allowed());
 
@@ -464,7 +504,7 @@ TEST_CASE("comms: DFU refused in flight") {
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Airborne);
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(cs.pending() == Pending::None);
     CHECK(dfu.triggered == 0);
 }

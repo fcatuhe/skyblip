@@ -1,15 +1,22 @@
 import { decode, encode } from './cbor.js';
 import { UUID } from './ble.js';
+import { compareVersions, parseVersion, readImage, versionText } from './image.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const SMP_HEADER_BYTES = 8;
 const ATT_HEADER_BYTES = 3;
+const PREPARE_HEADER_BYTES = 5;
+// INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments
+const PREPARE_COUNT = 2;
 const MGMT_ERR_EMSGSIZE = 7;
 const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
 const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
+export const DEVELOPMENT_KEY = 0xa1;
+export const PRODUCTION_KEY = 0xb2;
+export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 3, units: 0, callsign: '' };
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -18,6 +25,7 @@ class Characteristic {
     this.link = link;
     this.onWrite = onWrite;
     this.listeners = [];
+    this.longestAttempt = 0;
   }
 
   async startNotifications() {}
@@ -32,7 +40,7 @@ class Characteristic {
   }
 
   writeValueWithResponse(bytes) {
-    return this.link.write(this, bytes);
+    return this.link.write(this, bytes, { long: true });
   }
 
   writeValueWithoutResponse(bytes) {
@@ -57,14 +65,21 @@ export class FakeSkyblip {
     echo = true,
     writeCeiling = mtu - ATT_HEADER_BYTES,
     oversize = 'truncate',
+    stored = DEFAULTS,
+    knowsDefaults = true,
+    verdictFirst = false,
+    key = PRODUCTION_KEY,
+    downgrade = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { echo, writeCeiling, oversize });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
+    this.staged = null;
     this.windowOpen = false;
     this.slot = null;
     this.finished = false;
@@ -76,8 +91,10 @@ export class FakeSkyblip {
     this.longestPacket = 0;
     this.overlaps = 0;
     this.writing = false;
-    this.refuseApply = null;
+    this.approved = null;
+    this.refuseInstall = null;
     this.refuseUpload = null;
+    this.refuseAfterPackets = Infinity;
     this.closeWindowAfterPackets = Infinity;
     this.dropAfterPackets = Infinity;
     this.held = new Uint8Array(0);
@@ -126,17 +143,31 @@ export class FakeSkyblip {
     };
   }
 
-  async write(characteristic, bytes) {
+  async write(characteristic, bytes, { long = false } = {}) {
     if (!this.connected) throw new Error('GATT Server is disconnected.');
+    if (long && bytes.length > this.mtu - ATT_HEADER_BYTES) return this.longWrite(characteristic, bytes);
     if (this.writing) this.overlaps++;
     this.writing = true;
     this.longestAttempt = Math.max(this.longestAttempt, bytes.length);
+    characteristic.longestAttempt = Math.max(characteristic.longestAttempt, bytes.length);
     await tick();
     this.writing = false;
     if (bytes.length > this.writeCeiling && this.oversize === 'reject') throw new Error('GATT operation failed for unknown reason.');
     const landed = Uint8Array.from(bytes.subarray(0, this.writeCeiling));
     this.longestWrite = Math.max(this.longestWrite, landed.length);
     characteristic.onWrite(landed);
+  }
+
+  async longWrite(characteristic, bytes) {
+    const segment = this.mtu - PREPARE_HEADER_BYTES;
+    if (this.writing) this.overlaps++;
+    this.writing = true;
+    this.longestAttempt = Math.max(this.longestAttempt, Math.min(bytes.length, segment));
+    await tick();
+    this.writing = false;
+    if (Math.ceil(bytes.length / segment) > PREPARE_COUNT) throw new Error('GATT Error: Prepare queue full.');
+    this.longestWrite = Math.max(this.longestWrite, Math.min(bytes.length, segment));
+    characteristic.onWrite(Uint8Array.from(bytes));
   }
 
   drop() {
@@ -162,24 +193,54 @@ export class FakeSkyblip {
   }
 
   onConfig(bytes) {
-    const { cmd } = JSON.parse(decoder.decode(bytes));
+    const { cmd, ...fields } = JSON.parse(decoder.decode(bytes));
     this.commands.push(cmd);
     if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
     if (cmd === 'update') return this.sendUpdate();
     if (cmd === 'status') return this.sendStatus();
-    if (!['dfu', 'apply', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
+    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, addr: 0x5b5afe, addr_table: 58, ...this.stored });
+    if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
+    if (!['set', 'dfu', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
     if (!this.onGround) return this.ack(false, 'in_flight');
     if (cmd !== 'recovery' && !this.swapPowered) return this.ack(false, 'low_power');
-    if (cmd === 'apply' && this.stagingRefusal()) return this.ack(false, this.stagingRefusal());
+    if (cmd === 'dfu' && !fields.version) return this.ack(false, 'no_version');
+    if (cmd === 'dfu' && this.older(parseVersion(fields.version))) return this.ack(false, 'older');
+    if (cmd === 'dfu') this.approved = fields.version;
     this.pending = cmd;
+    if (cmd === 'set') {
+      this.staged = fields;
+      return this.reply({ ack: false, pending: true, reason: 'confirm' });
+    }
     this.reply({ ack: false, pending: true, reason: `confirm_${cmd}` });
   }
 
-  stagingRefusal() {
-    if (this.refuseApply) return this.refuseApply;
-    if (!this.slot) return 'nothing_staged';
-    if (!this.finished) return 'upload_unfinished';
-    return null;
+  takeOff() {
+    this.onGround = false;
+    this.windowOpen = false;
+    if (this.pending) {
+      this.pending = null;
+      this.ack(false, 'in_flight');
+    }
+    this.sendStatus();
+  }
+
+  land() {
+    this.onGround = true;
+    this.sendStatus();
+  }
+
+  installLanded() {
+    this.windowOpen = false;
+    const image = readImage(this.slot);
+    if (this.refuseInstall) return this.ack(false, this.refuseInstall);
+    if (!image || versionText(image.version) !== this.approved) return this.ack(false, 'not_approved');
+    if (this.key !== null && image.key !== keyName(this.key)) return this.ack(false, 'wrong_key');
+    this.ack(true, 'install');
+    setImmediate(() => setImmediate(() => this.drop()));
+  }
+
+  older(version) {
+    return !this.downgrade && compareVersions(version, parseVersion(this.running)) < 0;
   }
 
   sendUpdate() {
@@ -187,6 +248,8 @@ export class FakeSkyblip {
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
     frame.swap_powered = this.swapPowered;
+    if (this.downgrade) frame.downgrade = true;
+    if (this.key !== null) frame.key = keyName(this.key);
     this.reply(frame);
   }
 
@@ -206,12 +269,15 @@ export class FakeSkyblip {
   press() {
     const task = this.pending;
     this.pending = null;
+    if (task === 'set') {
+      Object.assign(this.stored, this.staged);
+      return this.reply({ ack: true });
+    }
     if (task === 'dfu') {
       this.windowOpen = true;
       this.finished = false;
       return this.ack(true, 'dfu');
     }
-    if (task === 'apply' && this.stagingRefusal()) return this.ack(false, this.stagingRefusal());
     this.ack(true, task);
     setImmediate(() => setImmediate(() => this.drop()));
   }
@@ -263,6 +329,7 @@ export class FakeSkyblip {
     else answer = { rc: MGMT_ERR_ENOTSUP };
     this.sendSmp(request, answer);
     if (upload && --this.dropAfterPackets === 0) setImmediate(() => this.drop());
+    if (upload && --this.refuseAfterPackets === 0) this.refuse();
   }
 
   imageUpload({ off, len, sha, data }) {
@@ -272,6 +339,8 @@ export class FakeSkyblip {
     if (off === 0) {
       if (this.upload && sha && this.upload.sha.join() === sha.join()) return { off: this.upload.off };
       if (this.refuseUpload) return { err: { group: IMAGE_GROUP, rc: this.refuseUpload } };
+      const header = readImage(data);
+      if (header && this.older(header.version)) return { err: { group: IMAGE_GROUP, rc: IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER } };
       this.upload = { sha, len, off: 0 };
       this.slot = new Uint8Array(len);
       this.finished = false;
@@ -283,6 +352,8 @@ export class FakeSkyblip {
     if (reached === this.upload.len) {
       this.finished = true;
       this.upload = null;
+      if (this.verdictFirst) this.installLanded();
+      else setImmediate(() => this.installLanded());
     }
     return { off: reached };
   }
@@ -316,14 +387,28 @@ function indefiniteMap(object) {
   return out;
 }
 
-export function signedImage({ major, minor, revision, build }, size) {
+const TLV_BYTES = 4 + 4 + 32;
+
+export function signedImage({ major, minor, revision, build }, size, key = PRODUCTION_KEY) {
   const bytes = new Uint8Array(size);
   for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
   const view = new DataView(bytes.buffer);
   view.setUint32(0, 0x96f3b83d, true);
+  view.setUint16(8, 32, true);
+  view.setUint32(12, size - 32 - TLV_BYTES, true);
   view.setUint8(20, major);
   view.setUint8(21, minor);
   view.setUint16(22, revision, true);
   view.setUint32(24, build, true);
+  const tlvs = size - TLV_BYTES;
+  view.setUint16(tlvs, 0x6907, true);
+  view.setUint16(tlvs + 2, TLV_BYTES, true);
+  view.setUint16(tlvs + 4, 0x01, true);
+  view.setUint16(tlvs + 6, 32, true);
+  bytes.fill(key, tlvs + 8);
   return bytes;
+}
+
+function keyName(byte) {
+  return byte.toString(16).padStart(2, '0').repeat(4).toUpperCase();
 }

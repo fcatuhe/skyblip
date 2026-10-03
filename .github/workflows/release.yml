@@ -1,0 +1,132 @@
+name: release
+
+# A `v*` tag on main becomes a draft release: the image signed with the production
+# key, its checksums and its provenance. The draft is published by hand, and once
+# published its files cannot change: immutable releases are on for this repo.
+#
+# Every action is pinned by commit, and nothing is restored from a cache: the
+# image job holds the production key, and a cache or a moved tag is code that
+# would run beside it.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  PRODUCT: skyblip_go
+  SLUG: skyblip-go
+
+jobs:
+  # Before the approval is asked for, so a tag that can never release fails in seconds.
+  tag:
+    name: tag names a release of main
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: the tag is the product's VERSION
+        run: |
+          file=firmware/products/$PRODUCT/VERSION
+          triple=$(sed -n \
+            -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
+            -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
+            -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
+          test "v$triple" = "$GITHUB_REF_NAME" \
+            || { echo "FAIL: tag $GITHUB_REF_NAME, but $file says $triple"; exit 1; }
+
+      - name: the tag is on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "FAIL: $GITHUB_REF_NAME is not on main"; exit 1; }
+
+      - name: the production key is committed, and is not the development one
+        run: |
+          test -f firmware/keys/production.pub.pem \
+            || { echo "FAIL: no firmware/keys/production.pub.pem (firmware/keys/README.md)"; exit 1; }
+          ! cmp -s firmware/keys/production.pub.pem firmware/keys/development.pub.pem \
+            || { echo "FAIL: production.pub.pem is the development key"; exit 1; }
+
+  # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
+  # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
+  image:
+    name: signed image
+    needs: tag
+    environment: production
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      # The build number is the commit count, which a shallow clone gets wrong.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: install the host build tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq --no-install-recommends cmake ninja-build device-tree-compiler gperf
+
+      - name: provision the signing key
+        env:
+          PRODUCTION_KEY: ${{ secrets.SKYBLIP_RELEASE_SIGNING_KEY }}
+        run: |
+          test -n "$PRODUCTION_KEY" \
+            || { echo "FAIL: the production environment has no SKYBLIP_RELEASE_SIGNING_KEY"; exit 1; }
+          (umask 077 && printf '%s\n' "$PRODUCTION_KEY" > "$RUNNER_TEMP/signing.pem")
+
+      - name: build, sign and check the image
+        env:
+          SKYBLIP_REF: ${{ github.sha }}
+          SKYBLIP_WORKSPACE: ${{ runner.temp }}/west
+          SKYBLIP_SIGNING_KEY: ${{ runner.temp }}/signing.pem
+          SKYBLIP_PUBLIC_KEY: ${{ github.workspace }}/firmware/keys/production.pub.pem
+          SKYBLIP_CHANNEL: production
+        run: scripts/build_local.sh "$PRODUCT"
+
+      # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
+      - name: name the files after the release
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          mkdir release
+          cp "builds/$SLUG.uf2" "release/$SLUG-$version.uf2"
+          cp "builds/$SLUG.signed.bin" "release/$SLUG-$version.signed.bin"
+          (cd release && sha256sum -- * > SHA256SUMS)
+          cat "builds/$SLUG.version" release/SHA256SUMS
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: release/SHA256SUMS
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: release/*
+          if-no-files-found: error
+
+  # Its own job, so the token that can write a release never shares a runner with the key.
+  draft:
+    name: draft release
+    needs: image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: release
+
+      - name: create the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes

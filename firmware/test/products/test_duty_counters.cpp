@@ -84,6 +84,26 @@ TEST_CASE("duty: the parked frame is the only full refresh a page swap or a pres
     CHECK(rig.state().duty.panel_partial_refreshes == partials);
 }
 
+// The install and recovery frames are worn for seconds, so they change like a page.
+TEST_CASE("duty: an install or a recovery parks through black, never on a full refresh") {
+    for (int recovery = 0; recovery < 2; recovery++) {
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t t = 0;
+        rig.run(t, t + 2000, kPassMs);
+        t += 2000;
+        const uint32_t partials = rig.state().duty.panel_partial_refreshes;
+        if (recovery)
+            rig.product.screen().park_for_recovery(ports::RecoveryPath::Rebooted);
+        else
+            rig.product.screen().park_for_install();
+        rig.run(t, t + 3000, kPassMs);
+        CHECK(rig.state().duty.panel_full_refreshes == 0);
+        // the black, then the frame over it
+        CHECK(rig.state().duty.panel_partial_refreshes == partials + 2);
+    }
+}
+
 TEST_CASE("duty: the backlight counter runs while the lamp is lit and stops with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

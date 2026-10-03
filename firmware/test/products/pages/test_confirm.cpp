@@ -58,7 +58,7 @@ TEST_CASE("confirm page: the pilot is told which operation they are authorising"
 }
 
 TEST_CASE("confirm page: what it will do is on the page, in words, and not clipped") {
-    for (comms::Pending pending : {comms::Pending::Set, comms::Pending::Dfu, comms::Pending::Apply,
+    for (comms::Pending pending : {comms::Pending::Set, comms::Pending::Dfu,
                                    comms::Pending::Recovery, comms::Pending::PowerOff}) {
         Glass fb;
         draw_confirm(fb, prompt(pending));
@@ -78,9 +78,19 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
     }
 }
 
+TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {
+    ConfirmSnapshot s = prompt(comms::Pending::Set);
+    s.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
+    Glass fb;
+    draw_confirm(fb, s);
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));
+}
+
 TEST_CASE("confirm page: the allowing gesture and the refusing one are both spelled out") {
     Glass fb;
-    draw_confirm(fb, prompt(comms::Pending::Apply));
+    draw_confirm(fb, prompt(comms::Pending::Dfu));
 
     // The allowing line is reversed out of a filled block, so it is white ink.
     CHECK_FALSE(reads_at(fb, kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, 1));

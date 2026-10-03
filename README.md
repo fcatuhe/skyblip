@@ -44,14 +44,30 @@ The firmware and the site share a tree so that a change in behavior and the page
 
 The host test suite and the simulator need nothing but a C++ compiler: `make -C firmware test`, `make -C firmware simulator`.
 
-The device image is built locally for now, off the committed tip of `main`, into `builds/`:
+The device image is built off a committed ref, `main` by default, into `builds/`:
 
 ```
 scripts/build_local.sh              # skyblip_go, the only product today
 SKYBLIP_REF=HEAD scripts/build_local.sh
 ```
 
-The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`. CI runs the tests and the linter but no longer builds the image: the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml) is commented out until it comes back.
+The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`.
+
+CI builds it too, and which key signs it decides which units it can update over Bluetooth ([`firmware/keys/`](firmware/keys)):
+
+- a pull request: a key made for the run, so the build is proven and the image updates nothing;
+- `main`, or a branch run by hand: the development key, published by [`firmware.yml`](.github/workflows/firmware.yml) as a pre-release on the Releases page, `dev-<build number>` for `main` (the last three kept) and `dev-<build number>-<branch>` for a branch (its newest kept until its pull request closes);
+- a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal the product's `VERSION`.
+
+The build number after the `+` is the commit count. A unit on the production key refuses an image older than the one it runs, so it only goes up or installs the same version again. A unit on the development key takes any development image, older ones included. Drag-and-drop of a `.uf2` takes either anywhere.
+
+## Identifiers
+
+Three identifiers name skyBlip to the outside world, and one of them is ours so far.
+
+- **ADS-L address table**: entry 58, applied for at `registry@ads-l.aero` and described on [skyblip.eu/ads-l-registry](https://skyblip.eu/ads-l-registry). Pending: until the registry answers, 58 is a value we chose, held in one constant in [`firmware/core/settings/address.h`](firmware/core/settings/address.h).
+- **USB**: Vendor ID 0x1209, Product ID 0x5AFE, granted by [pid.codes](https://pid.codes/1209/5AFE/) ([pidcodes/pidcodes.github.com#1282](https://github.com/pidcodes/pidcodes.github.com/pull/1282)) and set in [`firmware/products/skyblip_go/prj.conf`](firmware/products/skyblip_go/prj.conf). It names the running application only: the bootloader presents Adafruit's factory descriptors.
+- **NMEA manufacturer code**: open. The `$PADSL`, `$PADSI` and `$PADSO` sentences sketched on [skyblip.eu/ads-l-registry/nmea](https://skyblip.eu/ads-l-registry/nmea) need a three-letter code that NMEA assigns: either one of our own, or an ADS code held by ADS-L's registry or working group, so the sentences belong to the specification rather than to one implementer.
 
 ## Acknowledgements
 

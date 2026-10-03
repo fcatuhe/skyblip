@@ -1,5 +1,7 @@
 #include "core/comms/config.h"
 #include "core/comms/timing_report.h"
+#include "core/dfu/image.h"
+#include "core/util/format.h"
 #include "core/util/json_min.h"
 #include "core/util/span.h"
 #include "ports/link.h"
@@ -27,6 +29,19 @@ void ConfigService::send_status() {
     if (len == 0) {
         diag_.link_drops++;
         status_push_due_ = false;
+        return;
+    }
+    (void)reply(buf, len);
+}
+
+void ConfigService::send_defaults() {
+    char buf[kSmallestSupportedPayload + 1];
+    json::Writer w(buf, sizeof(buf));
+    w.kv_str("cmd", "defaults");
+    store_.write_default_fields(w);
+    const int len = w.finish();
+    if (w.overflowed()) {
+        diag_.link_drops++;
         return;
     }
     (void)reply(buf, len);
@@ -113,6 +128,13 @@ void ConfigService::send_update(uint16_t session_id) {
     if (settings_fallback_ != settings::Fallback::None)
         w.kv_str("settings", settings::to_string(settings_fallback_));
     w.kv_bool("swap_powered", swap_powered());
+    if (dfu_ != nullptr && dfu_->downgrade_allowed()) w.kv_bool("downgrade", true);
+    ports::SigningKeyHash trusted;
+    if (dfu_ != nullptr && dfu_->running_key(trusted)) {
+        char key[9];
+        key[fmt_hex(key, dfu::key_prefix(trusted), 8)] = 0;
+        w.kv_str("key", key);
+    }
     const int len = w.finish();
     (void)reply_to(session_id, buf, len);
 }

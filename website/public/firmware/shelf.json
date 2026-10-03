@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "tag": "dev-883-feat-dfu-refusals-dev-builds",
+      "name": "skyBlip dev 0.1.0+883 (feat/dfu-refusals-dev-builds)",
+      "channel": "development",
+      "version": "0.1.0+883",
+      "build": 883,
+      "key": "212602F2",
+      "published": "2026-10-03T14:59:09Z",
+      "file": "dev-883-feat-dfu-refusals-dev-builds/skyblip-go-dev-883-feat-dfu-refusals-dev-builds.signed.bin"
+    }
+  ]
+}

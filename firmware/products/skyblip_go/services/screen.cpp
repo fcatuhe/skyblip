@@ -47,6 +47,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
         if (readable && quiet) confirm_.arm(now_ms);
     }
 
+    sync_receiving(now_ms);
     sync_editor(now_ms);
     sync_arming(now_ms);
 
@@ -64,6 +65,14 @@ void ScreenService::handle_input(uint32_t now_ms) {
     }
     if (arming_.tick(now_ms) != Answer::None) dirty_ = true;
     step_editor(now_ms);
+}
+
+void ScreenService::sync_receiving(uint32_t now_ms) {
+    const bool receiving = config_.receiving_firmware();
+    if (receiving == receiving_) return;
+    receiving_ = receiving;
+    receiving_since_ms_ = now_ms;
+    change_screen();
 }
 
 void ScreenService::record_contact(const events::ContactEvent& event, Gesture gesture,
@@ -143,13 +152,13 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 }
 
 void ScreenService::tap(uint32_t now_ms) {
-    if (answering()) return;
+    if (answering() || receiving_) return;
     if (step_capture_focus()) return;
     page_forward(now_ms);
 }
 
 void ScreenService::long_touch() {
-    if (answering()) return;
+    if (answering() || receiving_) return;
     if (alarm_stands()) {
         alarm_.dismiss();
         return;
@@ -162,6 +171,11 @@ void ScreenService::press(uint32_t now_ms) {
     pressed_once_ = true;
     if (answering()) {
         if (confirm_.armed()) resolve(confirm_.press(now_ms));
+        return;
+    }
+    if (receiving_) {
+        // INFO: fc 03oct26 the press that confirmed the upload must not be the one that cancels it
+        if (settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
         return;
     }
     if (editor_.active()) {
@@ -178,7 +192,7 @@ void ScreenService::press(uint32_t now_ms) {
 
 // INFO: cf 02aug26 the menu owns the button until a prompt takes it away unasked
 void ScreenService::sync_editor(uint32_t now_ms) {
-    const bool wanted = mode_ == Mode::Menu && !answering();
+    const bool wanted = mode_ == Mode::Menu && !answering() && !receiving_;
     if (wanted == editor_.active()) return;
     if (wanted) {
         editor_.enter(page_, now_ms);
@@ -360,17 +374,21 @@ ScreenService::Thermal ScreenService::thermal() const {
     return Thermal::Refresh;
 }
 
-// INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
 void ScreenService::wipe_glass(uint32_t now_ms) {
-    fb_.clear(/*white=*/false);
-    context_.roles.display.paint_black(now_ms);
-    count_refresh(ports::Refresh::Partial);
+    paint_black(now_ms);
     note_presented(now_ms);
     prompt_on_glass_ = false;
     capture_on_glass_ = false;
     last_render_ms_ = now_ms;
     dirty_ = true;
     change_ = Change::Wiped;
+}
+
+// INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
+void ScreenService::paint_black(uint32_t now_ms) {
+    fb_.clear(/*white=*/false);
+    context_.roles.display.paint_black(now_ms);
+    count_refresh(ports::Refresh::Partial);
 }
 
 void ScreenService::note_presented(uint32_t now_ms) {
@@ -418,18 +436,33 @@ void ScreenService::set_power(bool on) {
 void ScreenService::park(ParkFrame frame) {
     powered_ = false;
     park_frame_ = frame;
-    park_ = may_present_park_frame() ? ParkStep::Frame : ParkStep::Sleep;
+    if (!may_present_park_frame())
+        park_ = ParkStep::Sleep;
+    else
+        park_ = worn_powered_off(frame) ? ParkStep::Frame : ParkStep::Wipe;
 }
 
-// INFO: fc 12sep26 both steps are commands, and a command sent over a live BUSY is lost
+// INFO: fc 03oct26 months off earn the full waveform, a frame worn through a reboot does not
+bool ScreenService::worn_powered_off(ParkFrame frame) {
+    return frame != ParkFrame::Installing && frame != ParkFrame::Recovery;
+}
+
+// INFO: fc 12sep26 every step is a command, and a command sent over a live BUSY is lost
 void ScreenService::settle_park(uint32_t now_ms) {
     if (park_ == ParkStep::None) return;
     if (!context_.roles.display.ready(now_ms)) return;
+    if (park_ == ParkStep::Wipe) {
+        park_ = ParkStep::Frame;
+        paint_black(now_ms);
+        return;
+    }
     if (park_ == ParkStep::Frame) {
         park_ = ParkStep::Sleep;
         draw_park_frame(park_frame_);
-        context_.roles.display.present(fb_, ports::Refresh::Full, now_ms);
-        count_refresh(ports::Refresh::Full);
+        const ports::Refresh mode =
+            worn_powered_off(park_frame_) ? ports::Refresh::Full : ports::Refresh::Partial;
+        context_.roles.display.present(fb_, mode, now_ms);
+        count_refresh(mode);
         cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
                          : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low
                                                              : power::CellOnGlass::None;

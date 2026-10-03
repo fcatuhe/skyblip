@@ -1,5 +1,6 @@
 // The whole product taking an update; the bootloader is the one thing the host cannot run.
 #include <cstring>
+#include <optional>
 #include <string>
 
 #include "core/settings/blob.h"
@@ -41,7 +42,7 @@ void pass(Rig& rig, uint32_t& t) {
 
 void open_upload_window(Rig& rig, uint32_t& t) {
     on_ground(rig, t);
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
     config(rig).confirm();
@@ -67,16 +68,17 @@ void stage_versions(Rig& rig) {
     rig.platform.dfu().running = kRunning;
     rig.platform.dfu().has_staged = true;
     rig.platform.dfu().staged = kStaged;
-    rig.platform.dfu().finished_upload = true;
 }
 
-void apply_and_swap(Rig& rig) {
+void land_upload(Rig& rig, uint32_t& t) {
+    rig.platform.dfu().finished_upload = true;
+    pass(rig, t);
+}
+
+void install_and_swap(Rig& rig) {
     uint32_t t = 0;
-    on_ground(rig, t);
-    rig.send("{\"cmd\":\"apply\"}");
-    rig.run(t, t + 200);
-    t += 200;
-    config(rig).confirm();
+    open_upload_window(rig, t);
+    land_upload(rig, t);
     rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 500);
 }
 
@@ -93,14 +95,17 @@ bool attempt_recorded(Rig& rig) {
     return rig.platform.kv().read("update", blob, sizeof(blob), n) == Status::Ok;
 }
 
-// The device after the bootloader has run: same flash, a fresh boot.
+// The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.
 struct Rebooted {
     Rig rig;
-    Rebooted(Rig& before, ports::ImageVersion running, bool confirmed) {
+    Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
+             std::optional<ports::ImageVersion> slot1 = std::nullopt) {
         rig.platform.kv() = before.platform.kv();
         rig.platform.dfu().has_running = true;
         rig.platform.dfu().running = running;
         rig.platform.dfu().image_confirmed = confirmed;
+        rig.platform.dfu().has_staged = slot1.has_value();
+        if (slot1) rig.platform.dfu().staged = *slot1;
     }
 };
 
@@ -143,22 +148,19 @@ void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
 
 }  // namespace
 
-TEST_CASE("product: a confirmed apply parks the device and paints the glass before the swap") {
+TEST_CASE("product: an upload that lands parks the device and paints the glass before the swap") {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    on_ground(rig, t);
-    rig.run(t, t + 1000);
-    t += 1000;
-
-    rig.send("{\"cmd\":\"apply\"}");
-    rig.run(t, t + 200);
-    t += 200;
-    REQUIRE(config(rig).pending() == comms::Pending::Apply);
+    open_upload_window(rig, t);
+    rig.run(t, t + 3000);
+    t += 3000;
+    CHECK(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
+                      go::kInstallingTitleY, go::kReceivingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 0);
 
-    config(rig).confirm();
+    land_upload(rig, t);
     rig.run(t, t + 200);
     t += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Install);
@@ -268,21 +270,43 @@ TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's g
     CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 }
 
-TEST_CASE("product: apply is refused on a critical cell and nothing parks") {
+TEST_CASE("product: a single press on the receiving page closes the window, and nothing installs") {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    on_ground(rig, t);
+    open_upload_window(rig, t);
+    rig.run(t, t + 3000);
+    t += 3000;
+    REQUIRE(config(rig).receiving_firmware());
+
+    rig.press(t);
+    rig.run(t, t + 3000);
+    t += 3000;
+    CHECK_FALSE(config(rig).receiving_firmware());
+    CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
+    CHECK_FALSE(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
+                            go::kInstallingTitleY, go::kReceivingTitle, 2));
+
+    land_upload(rig, t);
+    rig.run(t, t + 200);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    CHECK(rig.platform.dfu().triggered == 0);
+}
+
+TEST_CASE("product: an upload that lands on a critical cell is refused and nothing parks") {
+    Rig rig;
+    stage_versions(rig);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    open_upload_window(rig, t);
     rig.platform.battery().millivolts = 3400;
     rig.run(t, t + 8000);
     t += 8000;
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
-    rig.send("{\"cmd\":\"apply\"}");
+    land_upload(rig, t);
     rig.run(t, t + 200);
-    t += 200;
-    CHECK(config(rig).pending() == comms::Pending::None);
     CHECK(rig.last_on(events::Endpoint::Config).find("low_power") != std::string::npos);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.platform.dfu().triggered == 0);
@@ -293,10 +317,10 @@ TEST_CASE(
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
-    apply_and_swap(before);
+    install_and_swap(before);
     REQUIRE(before.platform.dfu().triggered == 1);
 
-    Rebooted after(before, kRunning, /*confirmed=*/true);
+    Rebooted after(before, kRunning, /*confirmed=*/true, kStaged);
     REQUIRE(after.rig.setup() == Status::Ok);
     CHECK(config(after.rig).image_state() == dfu::ImageState::Reverted);
 
@@ -307,16 +331,35 @@ TEST_CASE(
     CHECK(frame.find("\"from\":\"0.1.0+12\"") != std::string::npos);
     CHECK(frame.find("\"to\":\"0.2.0+15\"") != std::string::npos);
 
-    Rebooted later(after.rig, kRunning, /*confirmed=*/true);
+    Rebooted later(after.rig, kRunning, /*confirmed=*/true, kStaged);
     REQUIRE(later.rig.setup() == Status::Ok);
     CHECK(config(later.rig).image_state() == dfu::ImageState::Reverted);
+}
+
+TEST_CASE(
+    "product: an update the bootloader threw away is told apart from one that ran and failed") {
+    Rig before;
+    stage_versions(before);
+    REQUIRE(before.setup() == Status::Ok);
+    install_and_swap(before);
+    REQUIRE(before.platform.dfu().triggered == 1);
+
+    Rebooted after(before, kRunning, /*confirmed=*/true);
+    REQUIRE(after.rig.setup() == Status::Ok);
+    CHECK(config(after.rig).image_state() == dfu::ImageState::Refused);
+
+    after.rig.raise_link();
+    after.rig.run(0, 200);
+    const std::string frame = update_frame(after.rig);
+    CHECK(frame.find("\"image\":\"refused\"") != std::string::npos);
+    CHECK(frame.find("\"to\":\"0.2.0+15\"") != std::string::npos);
 }
 
 TEST_CASE("product: the image that lands forgets the attempt once it has confirmed itself") {
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
-    apply_and_swap(before);
+    install_and_swap(before);
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted after(before, kStaged, /*confirmed=*/false);
@@ -332,7 +375,7 @@ TEST_CASE("product: the image that lands forgets the attempt once it has confirm
 }
 
 // The finished upload is held in RAM, so a restart costs the pilot the upload and not a boot.
-TEST_CASE("product: an image staged before a restart is refused as unfinished, not swapped into") {
+TEST_CASE("product: an image staged before a restart is not installed by the next window") {
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
@@ -342,20 +385,109 @@ TEST_CASE("product: an image staged before a restart is refused as unfinished, n
     after.rig.platform.dfu().staged = kStaged;
     REQUIRE(after.rig.setup() == Status::Ok);
     uint32_t t = 0;
-    on_ground(after.rig, t);
-    after.rig.send("{\"cmd\":\"apply\"}");
-    after.rig.run(t, t + 200);
-    CHECK(config(after.rig).pending() == comms::Pending::None);
-    CHECK(after.rig.last_on(events::Endpoint::Config).find("upload_unfinished") !=
-          std::string::npos);
+    open_upload_window(after.rig, t);
+    after.rig.run(t, t + 2000);
+    CHECK(config(after.rig).receiving_firmware());
     CHECK(after.rig.platform.dfu().triggered == 0);
+}
+
+namespace {
+std::string ask_for(Rig& rig, const char* version) {
+    uint32_t t = 0;
+    on_ground(rig, t);
+    std::string json = "{\"cmd\":\"dfu\",\"version\":\"";
+    json += version;
+    json += "\"}";
+    rig.send(json.c_str());
+    rig.run(t, t + 200);
+    return rig.last_on(events::Endpoint::Config);
+}
+
+std::string land(Rig& rig) {
+    uint32_t t = 0;
+    open_upload_window(rig, t);
+    land_upload(rig, t);
+    return rig.last_on(events::Endpoint::Config);
+}
+
+void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
+    rig.platform.dfu().has_running_key = true;
+    rig.platform.dfu().trusted_key.fill(trusted);
+    rig.platform.dfu().has_staged_key = true;
+    rig.platform.dfu().staged_signer.fill(signer);
+}
+}  // namespace
+
+TEST_CASE(
+    "product: an image signed by a key the bootloader does not trust lands and is not installed") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x42);
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
+    CHECK_FALSE(config(rig).receiving_firmware());
+    CHECK(rig.platform.dfu().triggered == 0);
+}
+
+TEST_CASE("product: an image with no key hash at all is refused as the wrong key") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x21);
+    rig.platform.dfu().has_staged_key = false;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
+    CHECK(rig.platform.dfu().triggered == 0);
+}
+
+TEST_CASE("product: a release unit refuses to ask for an older image, and asks for the same one") {
+    Rig older;
+    stage_versions(older);
+    REQUIRE(older.setup() == Status::Ok);
+    CHECK(ask_for(older, "0.1.0+11").find("\"reason\":\"older\"") != std::string::npos);
+    CHECK(config(older).pending() == comms::Pending::None);
+
+    Rig same;
+    stage_versions(same);
+    REQUIRE(same.setup() == Status::Ok);
+    CHECK(ask_for(same, "0.1.0+12").find("confirm_dfu") != std::string::npos);
+    CHECK(config(same).pending() == comms::Pending::Dfu);
+}
+
+TEST_CASE("product: a development unit asks for an older image") {
+    Rig rig;
+    stage_versions(rig);
+    rig.platform.dfu().downgrades = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(ask_for(rig, "0.1.0+3").find("confirm_dfu") != std::string::npos);
+    CHECK(config(rig).pending() == comms::Pending::Dfu);
+}
+
+TEST_CASE("product: the update frame names the trusted key and, on a development unit, the rule") {
+    Rig release;
+    sign(release, 0x21, 0x21);
+    release.platform.dfu().trusted_key[1] = 0x26;
+    REQUIRE(release.setup() == Status::Ok);
+    release.send("{\"cmd\":\"update\"}");
+    release.run(0, 200);
+    const std::string said = release.last_on(events::Endpoint::Config);
+    CHECK(said.find("\"key\":\"21262121\"") != std::string::npos);
+    CHECK(said.find("\"downgrade\"") == std::string::npos);
+
+    Rig development;
+    sign(development, 0x21, 0x21);
+    development.platform.dfu().downgrades = true;
+    REQUIRE(development.setup() == Status::Ok);
+    development.send("{\"cmd\":\"update\"}");
+    development.run(0, 200);
+    CHECK(development.last_on(events::Endpoint::Config).find("\"downgrade\":true") !=
+          std::string::npos);
 }
 
 TEST_CASE("product: an image nobody staged over the air clears a stale attempt") {
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
-    apply_and_swap(before);
+    install_and_swap(before);
     REQUIRE(attempt_recorded(before));
 
     // a .uf2 dropped on the bootloader volume is neither side of the attempt
@@ -432,7 +564,7 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     REQUIRE(before.setup() == Status::Ok);
     uint32_t t = 0;
     set_callsign_over_the_link(before, t, "D-KXYZ");
-    apply_and_swap(before);
+    install_and_swap(before);
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted landed(before, kStaged, /*confirmed=*/false);
@@ -440,7 +572,7 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     REQUIRE(landed.rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) ==
             Status::Ok);
 
-    Rebooted reverted(landed.rig, kRunning, /*confirmed=*/true);
+    Rebooted reverted(landed.rig, kRunning, /*confirmed=*/true, kStaged);
     REQUIRE(reverted.rig.setup() == Status::Ok);
     CHECK(config(reverted.rig).image_state() == dfu::ImageState::Reverted);
     CHECK(std::string(reverted.rig.settings().callsign) == "D-KXYZ");

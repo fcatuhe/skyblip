@@ -9,10 +9,12 @@
 // pushed, and a phone walking out of range left its prompt and its upload window
 // standing. Nothing below the services is stubbed here: a case connects the way a
 // central does and asserts what a pilot would see.
+#include <cstring>
 #include <string>
 
 #include "core/events/link.h"
 #include "doctest/doctest.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -133,6 +135,14 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     // Staged, not applied: the glass has the question and nothing is stored yet.
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Set);
     CHECK(rig.settings().callsign[0] == 0);
+    go::ConfirmSnapshot expect;
+    expect.title = comms::pending_title(comms::Pending::Set);
+    expect.detail = "CALLSIGN F-JABC";
+    expect.timeout_s = comms::kConfirmWindowMs / 1000;
+    go::Glass prompt_page;
+    go::draw_confirm(prompt_page, expect);
+    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),
+                      go::Glass::kBytes) == 0);
 
     rig.double_press(t);
     rig.run(t, t + 1000);
@@ -165,7 +175,7 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -188,7 +198,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     taxi(rig, t, 20);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -254,7 +264,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
 
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
     rig.raise_link(5);
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -308,7 +318,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
-    rig.send_from(2, "{\"cmd\":\"dfu\"}");
+    rig.send_from(2, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
     // Refused, with a reason and to the app that asked. Not silence, which a page
@@ -346,7 +356,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.send_from(1, "{\"cmd\":\"dfu\"}");
+    rig.send_from(1, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);

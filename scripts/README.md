@@ -9,7 +9,8 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
-| `build_local.sh` | build the device image off a committed ref |
+| `build_local.sh` | build the device image off a committed ref, from a bare machine |
+| `build_image.sh` | build, sign and check the image in a ready workspace: what `build_local.sh`, CI and a release share |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |

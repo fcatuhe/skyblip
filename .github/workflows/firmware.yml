@@ -38,6 +38,8 @@ jobs:
       pull-requests: read
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      # main signs with the development key, and so does any branch run by hand: a pull request never.
+      signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -242,167 +244,170 @@ jobs:
       - name: check the C++ subset rules
         run: make -C firmware tidy
 
-# TODO: fc 12sep26 uncomment once the image is built in CI again, local for now: scripts/build_local.sh
-#   product-image:
-#     strategy:
-#       fail-fast: false
-#       # `slug` is the product as a human writes it: the board name carries an
-#       # underscore Zephyr requires, and expressions have no replace().
-#       matrix:
-#         include:
-#           - product: skyblip_go
-#             slug: skyblip-go
-#     name: product image (${{ matrix.product }})
-#     needs: changes
-#     if: needs.changes.outputs.firmware == 'true'
-#     # x86_64, unlike the host jobs: the cross output is identical either way, and
-#     # on arm runners the Zephyr SDK fails to register its CMake package
-#     # (FindZephyr-sdk.cmake:57 dies on an empty variable).
-#     runs-on: ubuntu-24.04
-#     steps:
-#       - uses: actions/checkout@v7
-#
-#       - name: set up Zephyr
-#         uses: zephyrproject-rtos/action-zephyr-setup@v1
-#         with:
-#           app-path: firmware
-#           manifest-file-name: west.yml
-#           toolchains: arm-zephyr-eabi
-#
-#       # MCUboot's default signing key is its own published root-ec-p256.pem, which
-#       # everyone has, so a signature against it proves nothing. Without the release
-#       # secret this builds an ephemeral one: the path is exercised end to end and
-#       # the artifact will not boot a production unit.
-#       - name: provision a signing key
-#         run: |
-#           python3 -m pip install --quiet imgtool
-#           if [ -n "${{ secrets.SKYBLIP_SIGNING_KEY_PEM }}" ]; then
-#             echo "${{ secrets.SKYBLIP_SIGNING_KEY_PEM }}" > "$RUNNER_TEMP/signing.pem"
-#             echo "using the release signing key"
-#           else
-#             imgtool keygen -k "$RUNNER_TEMP/signing.pem" -t ecdsa-p256
-#             echo "using an EPHEMERAL signing key (artifacts will not boot a production unit)"
-#           fi
-#           chmod 600 "$RUNNER_TEMP/signing.pem"
-#           echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$RUNNER_TEMP/signing.pem\"" \
-#             > "$RUNNER_TEMP/signing.conf"
-#           cat "$RUNNER_TEMP/signing.conf"
-#
-#       # The build number orders two images of one release and is NOT in the VERSION
-#       # file: Zephyr rejects a tweak above 255 (cmake/modules/version.cmake:79-81).
-#       - name: stamp the image version
-#         working-directory: firmware
-#         run: |
-#           file=products/${{ matrix.product }}/VERSION
-#           major=$(sed -n 's/^VERSION_MAJOR *= *\([0-9][0-9]*\).*/\1/p' "$file")
-#           minor=$(sed -n 's/^VERSION_MINOR *= *\([0-9][0-9]*\).*/\1/p' "$file")
-#           patch=$(sed -n 's/^PATCHLEVEL *= *\([0-9][0-9]*\).*/\1/p' "$file")
-#           test -n "$major" && test -n "$minor" && test -n "$patch" \
-#             || { echo "FAIL: no version triple in $file"; exit 1; }
-#           version="$major.$minor.$patch+${{ github.run_number }}"
-#           echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" \
-#             > "$RUNNER_TEMP/version.conf"
-#           echo "IMAGE_VERSION=$version" >> "$GITHUB_ENV"
-#           cat "$RUNNER_TEMP/version.conf"
-#
-#       # The board is read from the product's own CMakeLists so CI never becomes a
-#       # second place the product/board pair is asserted.
-#       - name: west build (sysbuild -> MCUboot + app)
-#         working-directory: firmware
-#         run: |
-#           product=${{ matrix.product }}
-#           board=$(sed -n 's/^skyblip_product_board(\(.*\))$/\1/p' \
-#                   products/$product/CMakeLists.txt)
-#           test -n "$board" || { echo "FAIL: $product declares no board"; exit 1; }
-#           echo "building $product for $board"
-#           # -D<image>_ is sysbuild's namespace for one image, named after the app dir.
-#           west build -b "$board" products/$product --sysbuild \
-#             -- -DSB_EXTRA_CONF_FILE="$RUNNER_TEMP/signing.conf" \
-#                -D${product}_EXTRA_CONF_FILE="$RUNNER_TEMP/version.conf"
-#
-#       - name: assert the image was not signed with MCUboot's published key
-#         working-directory: firmware
-#         run: |
-#           key=$(grep -h '^CONFIG_BOOT_SIGNATURE_KEY_FILE=' build/mcuboot/zephyr/.config | cut -d'"' -f2)
-#           echo "signing key: $key"
-#           case "$key" in
-#             "") echo "FAIL: no signing key configured"; exit 1 ;;
-#             *bootloader/mcuboot*|*root-ec-p256.pem|*root-rsa-2048.pem|*root-ed25519.pem)
-#               echo "FAIL: signed with an MCUboot sample key"; exit 1 ;;
-#           esac
-#
-#       # 0.0.0+0 is what gets signed whenever the VERSION file stops being picked up
-#       # (modules/Kconfig.mcuboot:110-113), and it silently disables downgrade
-#       # prevention: every unit then reports a version MCUboot cannot order.
-#       - name: assert the signed image carries a real version
-#         working-directory: firmware
-#         run: |
-#           image=build/${{ matrix.product }}/zephyr/zephyr.signed.bin
-#           stamped=$(imgtool verify "$image" | sed -n 's/^Image version: //p')
-#           echo "imgtool stamped: ${stamped:-<nothing>}"
-#           case "$stamped" in
-#             "") echo "FAIL: imgtool verify printed no version for $image"; exit 1 ;;
-#             0.0.0+0) echo "FAIL: signed 0.0.0+0, the VERSION file was not used"; exit 1 ;;
-#           esac
-#           test "$stamped" = "$IMAGE_VERSION" \
-#             || { echo "FAIL: expected $IMAGE_VERSION"; exit 1; }
-#
-#       - name: flash-size budget
-#         working-directory: firmware
-#         run: python3 ../scripts/size_check.py build/${{ matrix.product }}/zephyr/zephyr.elf
-#
-#       - name: list build artifacts
-#         if: always()
-#         working-directory: firmware
-#         run: find build -maxdepth 3 -name '*.hex' -o -name '*.bin' -o -name '*.uf2' | sort
-#
-#       - name: assert the confirmed image exists and is not the plain signed one
-#         working-directory: firmware
-#         run: |
-#           out=build/${{ matrix.product }}/zephyr
-#           if [ ! -f "$out/zephyr.signed.confirmed.hex" ]; then
-#             echo "FAIL: no zephyr.signed.confirmed.hex"
-#             echo "is CONFIG_MCUBOOT_GENERATE_CONFIRMED_IMAGE still y?"
-#             exit 1
-#           fi
-#           if cmp -s "$out/zephyr.signed.hex" "$out/zephyr.signed.confirmed.hex"; then
-#             echo "FAIL: the confirmed hex is byte-identical to the unconfirmed one"
-#             exit 1
-#           fi
-#
-#       # The application image must be the CONFIRMED one: a slot0 written directly
-#       # never swaps, so it never marks itself good and the bootloader reverts it.
-#       # Not SB_CONFIG_MERGED_HEX_FILES, which merges each image's default hex.
-#       - name: build the drag-and-drop .uf2
-#         working-directory: firmware
-#         run: |
-#           python3 ../scripts/mkuf2.py "build/${{ matrix.slug }}.uf2" \
-#             build/mcuboot/zephyr/zephyr.hex \
-#             "build/${{ matrix.product }}/zephyr/zephyr.signed.confirmed.hex"
-#
-#       # One staging directory, so the artifact unzips flat and every file says
-#       # which product it came off: zephyr.signed.bin does not, three deep. It
-#       # leaves mkuf2's intermediate .merged.hex behind in build/.
-#       - name: stage the artifact
-#         working-directory: firmware
-#         run: |
-#           mkdir -p build/out
-#           zephyr=build/${{ matrix.product }}/zephyr
-#           slug=build/out/${{ matrix.slug }}
-#           cp "build/${{ matrix.slug }}.uf2" build/out/
-#           cp "$zephyr/zephyr.signed.bin" "$slug.signed.bin"
-#           cp "$zephyr/zephyr.signed.confirmed.bin" "$slug.signed.confirmed.bin"
-#
-#       - name: upload firmware artifacts
-#         uses: actions/upload-artifact@v7
-#         with:
-#           name: ${{ matrix.slug }}_firmware
-#           path: firmware/build/out/*
-#           if-no-files-found: error
+  # A pull request is signed with a key made for the run: the build and the signing
+  # are proven end to end, and the image updates no unit. main, and a branch run by
+  # hand (Run workflow, or gh workflow run firmware.yml --ref <branch>), are signed
+  # with the development key. Releases are release.yml's, with the production key.
+  product-image:
+    strategy:
+      fail-fast: false
+      # `slug` is the product as a human writes it: the board name carries an
+      # underscore Zephyr requires, and expressions have no replace().
+      matrix:
+        include:
+          - product: skyblip_go
+            slug: skyblip-go
+    name: product image (${{ matrix.product }})
+    needs: changes
+    if: needs.changes.outputs.firmware == 'true'
+    # x86_64, unlike the host jobs: the cross output is identical either way, and
+    # on arm runners the Zephyr SDK fails to register its CMake package
+    # (FindZephyr-sdk.cmake:57 dies on an empty variable).
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ needs.changes.outputs.signing }}
+      deployment: false
+    steps:
+      # The build number is the commit count, which a shallow clone gets wrong.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: cache the west workspace
+        uses: actions/cache@v6
+        with:
+          path: |
+            zephyr
+            modules
+            bootloader
+          key: west-${{ hashFiles('firmware/west.yml') }}
+
+      - name: set up Zephyr
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: firmware
+          manifest-file-name: west.yml
+          toolchains: arm-zephyr-eabi
+
+      - name: provision the signing key
+        working-directory: firmware
+        env:
+          DEVELOPMENT_KEY: ${{ secrets.SKYBLIP_DEV_SIGNING_KEY }}
+          SIGNED_FOR: ${{ needs.changes.outputs.signing }}
+        run: |
+          key=$RUNNER_TEMP/signing.pem
+          if [ -n "$SIGNED_FOR" ]; then
+            test -n "$DEVELOPMENT_KEY" \
+              || { echo "FAIL: the development environment has no SKYBLIP_DEV_SIGNING_KEY"; exit 1; }
+            (umask 077 && printf '%s\n' "$DEVELOPMENT_KEY" > "$key")
+            echo "PUBLIC_KEY=firmware/keys/development.pub.pem" >> "$GITHUB_ENV"
+          else
+            python3 "$(west topdir)/bootloader/mcuboot/scripts/imgtool.py" keygen -k "$key" -t ecdsa-p256
+            echo "signed with a key made for this run: the image updates no unit"
+          fi
+
+      - name: build, sign and check the image
+        run: scripts/build_image.sh ${{ matrix.product }} "$RUNNER_TEMP/signing.pem" "${PUBLIC_KEY:-}"
+
+      - name: name the artifact after its version
+        if: env.PUBLIC_KEY != ''
+        run: echo "IMAGE_VERSION=$(cut -d' ' -f2 firmware/build/out/${{ matrix.slug }}.version)" >> "$GITHUB_ENV"
+
+      - name: upload the development image
+        if: env.PUBLIC_KEY != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.slug }}-${{ env.IMAGE_VERSION }}
+          path: firmware/build/out/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Each development image becomes a pre-release, one click from the Releases page:
+  # dev-<build> for main, the newest three kept, dev-<build>-<branch> for a branch
+  # run by hand, the newest kept until its pull request closes. A new tag per build,
+  # because immutable releases lock a published one, and a deleted name is never reused.
+  dev-release:
+    name: dev pre-release
+    needs: [changes, product-image]
+    if: needs.changes.outputs.signing == 'development'
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SLUG: skyblip-go
+      KEEP_MAIN: 3
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: skyblip-go-*
+          path: image
+          merge-multiple: true
+
+      # A rerun of one commit stamps the same number, which a unit would refuse anyway.
+      - name: create the pre-release
+        run: |
+          read -r _ version _ < "image/$SLUG.version"
+          build=${version#*+}
+          if [ "$GITHUB_REF_NAME" = main ]; then
+            tag=dev-$build
+            title="skyBlip dev $version"
+          else
+            tag=dev-$build-$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9.' '-')
+            title="skyBlip dev $version ($GITHUB_REF_NAME)"
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "$tag is already released, nothing to do"
+            exit 0
+          fi
+
+          mkdir release
+          cp "image/$SLUG.uf2" "release/$SLUG-$tag.uf2"
+          cp "image/$SLUG.signed.bin" "release/$SLUG-$tag.signed.bin"
+          (cd release && sha256sum -- * > SHA256SUMS)
+
+          notes=$(printf '%s\n\n%s\n%s\n' \
+            "skyBlip $version from $GITHUB_REF_NAME, built from $GITHUB_SHA and signed with the development key." \
+            "- \`.signed.bin\` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/$GH_REPO/tree/main/firmware/keys)), older builds included." \
+            "- \`.uf2\` installs on any unit by drag-and-drop, and moves it to the development key.")
+          previous=""
+          if [ "$GITHUB_REF_NAME" = main ]; then
+            previous=$(gh release list -L 100 --json tagName --jq '.[].tagName | select(test("^dev-[0-9]+$"))' \
+                         | sort -t- -k2 -rn | head -1)
+          fi
+          gh release create "$tag" release/* --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "$title" --notes "$notes" ${previous:+--generate-notes --notes-start-tag "$previous"}
+
+      # main keeps three, a branch keeps its newest, and a branch with no open pull request keeps none.
+      - name: prune the pre-releases
+        run: |
+          gh release list -L 100 --json tagName --jq '.[].tagName | select(startswith("dev-"))' > tags
+          open=$(gh pr list --state open --json headRefName --jq '.[].headRefName' | tr -c 'A-Za-z0-9.\n' '-')
+          {
+            grep -E '^dev-[0-9]+$' tags | sort -t- -k2 -rn | tail -n +$((KEEP_MAIN + 1))
+            grep -E '^dev-[0-9]+-.' tags | sed -E 's/^dev-([0-9]+)-(.*)$/\2 \1/' | sort -k1,1 -k2,2rn \
+              | awk -v open="$open" -v current="$TAG" '
+                  BEGIN { n = split(open, names, "\n"); for (i = 1; i <= n; i++) alive[names[i]] = 1 }
+                  { tag = "dev-" $2 "-" $1 }
+                  tag == current { seen[$1] = 1; next }
+                  !alive[$1] || seen[$1]++ { print tag }'
+          } | while read -r stale; do
+            echo "deleting $stale"
+            gh release delete "$stale" --cleanup-tag --yes
+          done
+
+      # The update page serves what this job just shelved, and a release made with
+      # this token starts no workflow of its own: so this asks for the site on main.
+      - name: restock the site
+        run: gh workflow run website.yml --ref main
 
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where
-    # native_sim can and compiled into the product image where it cannot.
+    # native_sim can. product-image compiles the ones it cannot.
     name: platform adapters (native_sim)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -437,19 +442,3 @@ jobs:
           # ZEPHYR_BASE is not in this step's env, so ask west for the workspace.
           python3 "$(west topdir)/zephyr/scripts/twister" \
             -T test/twister -p native_sim --inline-logs
-
-      # The one CI build of rf.h, link.cpp and main.cpp while product-image is off.
-      - name: compile the product image, unsigned
-        working-directory: firmware
-        run: west build -b t_echo_plus products/skyblip_go -d build/product
-
-      # The flash budget on the one image CI builds. The SDK's size tool is not on PATH.
-      - name: check the flash budget
-        working-directory: firmware
-        run: |
-          sdk="$(west topdir)/zephyr-sdk"
-          for size in "$sdk"/gnu/arm-zephyr-eabi/bin/arm-zephyr-eabi-size \
-                      "$sdk"/arm-zephyr-eabi/bin/arm-zephyr-eabi-size; do
-            [ -x "$size" ] && export SIZE="$size" && break
-          done
-          python3 ../scripts/size_check.py build/product/zephyr/zephyr.elf
