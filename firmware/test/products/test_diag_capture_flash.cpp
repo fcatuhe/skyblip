@@ -300,6 +300,142 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
           queued - static_cast<int>(go::CaptureService::kDrainCeilingRecords));
 }
 
+namespace {
+
+constexpr uint32_t kRecordsPerPage =
+    platform::host::FlashRegion::kPageBytes / static_cast<uint32_t>(diag::kRecordBytes);
+
+uint32_t frontier_slot(SmallPoolRig& rig) {
+    return rig.pool.slots_per_sector() - rig.capture_store.slots_left();
+}
+
+uint32_t frontier_sector(SmallPoolRig& rig) {
+    uint32_t sector = 0;
+    uint32_t sequence = 0;
+    REQUIRE(rig.pool.allocator().frontier(store::SectorOwner::Diagnostics, sector, sequence));
+    return sector;
+}
+
+SmallPoolRig& armed(SmallPoolRig& rig, uint32_t& t) {
+    rig.setup();
+    rig.recorder.arm();
+    rig.capture.tick(t);
+    REQUIRE(rig.capture.capturing());
+    return rig;
+}
+
+void drain_to_slot(SmallPoolRig& rig, uint32_t& t, uint32_t slot) {
+    while (frontier_slot(rig) < slot) {
+        REQUIRE(rig.recorder.record(bench_record(Rig::kUtcBase)));
+        rig.capture.tick(t += 50);
+    }
+    REQUIRE(frontier_slot(rig) == slot);
+}
+
+diag::Record numbered(uint32_t i) { return bench_record(Rig::kUtcBase + 1000 + i); }
+
+void queue_numbered(SmallPoolRig& rig, uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) REQUIRE(rig.recorder.record(numbered(i)));
+}
+
+void check_numbered(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t from,
+                    uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) {
+        uint8_t want[diag::kRecordBytes];
+        diag::encode_record(numbered(from + i), want);
+        uint8_t got[diag::kRecordBytes];
+        REQUIRE(rig.pool.read_slot(sector, slot + i, got));
+        CHECK(std::memcmp(got, want, sizeof(want)) == 0);
+    }
+}
+
+void check_erased(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t count) {
+    for (uint32_t i = 0; i < count; i++) {
+        uint8_t got[diag::kRecordBytes];
+        REQUIRE(rig.pool.read_slot(sector, slot + i, got));
+        CHECK(store::erased(got, sizeof(got)));
+    }
+}
+
+}  // namespace
+
+// Build 895: one 24 B program per record held the loop ~2.5 ms each, ~40 ms in the uplink dwell.
+TEST_CASE("capture: a drained second costs one flash write per NOR page, not one per record") {
+    SmallPoolRig rig;
+    uint32_t t = 1000;
+    armed(rig, t);
+    // Slot 10 is the first of page 1: the 16 B label and slots 0-9 fill page 0 exactly.
+    drain_to_slot(rig, t, kRecordsPerPage);
+    const uint32_t sector = frontier_sector(rig);
+    const uint32_t writes = rig.flash.writes;
+    const uint32_t programs = rig.flash.programs;
+
+    const uint32_t second = diag::Recorder::kPeriodicRecordsPerSecond;
+    queue_numbered(rig, second);
+    rig.capture.tick(t += 50);
+
+    CHECK(rig.recorder.queued() == 0);
+    CHECK(rig.flash.writes - writes == (second + kRecordsPerPage - 1) / kRecordsPerPage);
+    // Slot 20 straddles pages 1 and 2, so the second write is two page programs.
+    CHECK(rig.flash.programs - programs == 3);
+    check_numbered(rig, sector, kRecordsPerPage, 0, second);
+}
+
+TEST_CASE("capture: a write stops at the sector's end, and the next sector opens with its claim") {
+    SmallPoolRig rig;
+    uint32_t t = 1000;
+    armed(rig, t);
+    const uint32_t slots = rig.pool.slots_per_sector();
+    drain_to_slot(rig, t, slots - 5);
+    const uint32_t first = frontier_sector(rig);
+    const uint32_t writes = rig.flash.writes;
+
+    queue_numbered(rig, 10);
+    rig.capture.tick(t += 50);
+
+    CHECK(rig.recorder.queued() == 0);
+    const uint32_t second = frontier_sector(rig);
+    REQUIRE(second != first);
+    // The old sector's last five, the new label, the claim's first record, then its next four.
+    CHECK(rig.flash.writes - writes == 4);
+    check_numbered(rig, first, slots - 5, 0, 5);
+    check_numbered(rig, second, 0, 5, 5);
+    check_erased(rig, second, 5, 1);
+}
+
+// The window closes between two writes of one drain: the second write's records stay in the ring.
+TEST_CASE("capture: a window that closes mid-drain commits only the records the flash took") {
+    SmallPoolRig rig;
+    uint32_t t = 1000;
+    armed(rig, t);
+    drain_to_slot(rig, t, kRecordsPerPage);
+    const uint32_t sector = frontier_sector(rig);
+    const uint32_t written = rig.capture.records_written();
+    queue_numbered(rig, 15);
+
+    // Room for one page program and not for the two the straddling write needs after it.
+    constexpr int kPhase =
+        timing::kUplinkRxEnd - timing::kJitterGuardMs - static_cast<int>(go::kSlotWriteCostMs) - 1;
+    t = 20'000 + kPhase;
+    timing::ClockState anchored{};
+    anchored.utc_valid = true;
+    anchored.pps_locked = true;
+    rig.state.rf.plan = timing::Scheduler::plan(kPhase, anchored);
+    rig.state.rf.dwell = timing::DwellPhase{t, kPhase, true, false};
+    rig.clock.set_millis(t);
+    rig.capture.tick(t);
+
+    CHECK(rig.recorder.queued() == 5);
+    CHECK(rig.capture.records_written() == written + kRecordsPerPage);
+    check_numbered(rig, sector, kRecordsPerPage, 0, kRecordsPerPage);
+    check_erased(rig, sector, 2 * kRecordsPerPage, 5);
+
+    rig.state.rf.dwell = timing::DwellPhase{};
+    rig.capture.tick(t += 1000);
+    CHECK(rig.recorder.queued() == 0);
+    check_numbered(rig, sector, kRecordsPerPage, 0, 15);
+}
+
 TEST_CASE("capture: nothing reaches the flash in the slot own-ship may be keying the PA in") {
     SmallPoolRig rig;
     rig.setup();

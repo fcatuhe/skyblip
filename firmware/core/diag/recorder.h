@@ -42,6 +42,7 @@ class Recorder {
     }
 
     bool peek(Record& out);
+    int peek(Record* out, int most);
     void commit();
 
     int queued() const { return count_; }
