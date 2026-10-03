@@ -127,6 +127,25 @@ TEST_CASE("radio: every event a poll can report raises the interrupt line first"
     CHECK(raised(RadioEventType::Timeout));
 }
 
+// The silicon executor reads the status every 60 us from here on: too long dates TxDone late.
+TEST_CASE("radio: a burst's air time is its preamble, sync window and payload at the chip rate") {
+    models::Sx1262 chip;
+    Sx1262 r = make(chip);
+    REQUIRE(r.begin() == Status::Ok);
+    RadioConfig cfg{};
+    cfg.sync = protocol::kSharedSync;
+    cfg.sync_bits = protocol::kSharedSyncBits;
+    cfg.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+
+    const uint8_t adsl_burst = protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes;
+    // 16 preamble + 16 sync + 54 x 8 payload chips at 100 kchip/s: transmit.h's 4.64 ms.
+    CHECK(r.air_us(adsl_burst) == 4640);
+    cfg.bitrate = 50000;
+    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    CHECK(r.air_us(adsl_burst) == 9280);
+}
+
 // DS table 13-70 spells CRC off 0x01, and 0x00, which every other radio means it with, a CRC byte.
 TEST_CASE("radio: the packet the modem is told to expect carries no CRC of the chip's own") {
     models::Sx1262 chip;

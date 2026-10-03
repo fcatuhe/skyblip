@@ -46,6 +46,9 @@ struct Diagnostics {
     uint32_t tx_named{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
+    bool dio1_armed{false};
+    uint32_t dio1_edges{0};
+    uint32_t dio1_missed{0};
 
     uint32_t tracked{0};
     uint8_t alarm{0};
@@ -103,11 +106,11 @@ class DiagnosticsReport {
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
     // trusting it.
-    static constexpr int kLineCap = 315;
+    static constexpr int kLineCap = 377;
     // Enough for one frame at its widest on a link that can carry a whole group;
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
-    static constexpr int kFrameCap = 320;
+    static constexpr int kFrameCap = 384;
 
     // cmd is the name the reply answers under, because the link already has a
     // question that asks for the radio group alone.
@@ -139,7 +142,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 44;
+    static constexpr int kMaxFields = 47;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_int(Group group, const char* key, long value);

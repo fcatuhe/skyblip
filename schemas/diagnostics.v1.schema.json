@@ -48,6 +48,12 @@
                 "description": "radio. Bursts of ours that were armed and never completed: the dwell ran out, or the radio's transmit timeout did. Never a reception"},
     "range_refused": {"type": "integer", "minimum": 0,
                       "description": "radio. Receptions core/traffic refused because the position they claimed was further away than this radio can hear (core/traffic/sanity.h). A rate that climbs is a receiver at the edge of its link budget or a decoder that is silently miscorrecting"},
+    "dio1_armed": {"type": "boolean",
+                   "description": "radio. The executor holds a rising-edge interrupt on the SX1262's DIO1 and sleeps on it between events. False on the host executor, which has no interrupt line, and on silicon when the GPIO driver refused the trigger: the executor then reads DIO1 every 200 us instead"},
+    "dio1_edges": {"type": "integer", "minimum": 0,
+                   "description": "radio. DIO1 rising edges the interrupt handler saw since boot. Near rx and tx events combined on a healthy line; zero with dio1_armed true is a trigger that never fires"},
+    "dio1_missed": {"type": "integer", "minimum": 0,
+                    "description": "radio. Events a status read found while DIO1 still read low: a TxDone read in the tail of a burst, the 4 ms safety poll, or the drain at a dwell's end. Rising with tx_ok means DIO1 trails TxDone, rising with rx_ok means it trails RxDone too"},
 
     "tracked": {"type": "integer", "minimum": 0, "maximum": 48,
                 "description": "traffic. Aircraft currently in the table, after ageing out"},

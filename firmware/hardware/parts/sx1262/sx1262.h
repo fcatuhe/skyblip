@@ -67,6 +67,7 @@ class Sx1262 {
     Status transmit(const uint8_t* data, uint8_t len);
     Status stage_tx(const uint8_t* data, uint8_t len);
     Status key_tx();
+    uint32_t air_us(uint8_t len) const;
     Status start_receive();
 
     // The lowest-power state the part has, and the way back out of it.

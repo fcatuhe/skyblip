@@ -104,6 +104,12 @@ struct RfTransmitter {
     int8_t pa_rated_dbm{0};
 };
 
+struct RfDio1 {
+    bool armed{false};
+    uint32_t edges{0};
+    uint32_t missed{0};
+};
+
 struct RfSwitch {
     RfMode from{RfMode::Idle};
     RfMode to{RfMode::Idle};
@@ -167,6 +173,8 @@ class Rf {
     virtual RfSwitching switching() const { return RfSwitching{}; }
 
     virtual RfTransmitter transmitter() const { return RfTransmitter{}; }
+
+    virtual RfDio1 dio1() const { return RfDio1{}; }
 
     // Put the transceiver in its lowest-power state until the next begin().
     // Called on the way to SYSTEM OFF: the receiver is armed through most of

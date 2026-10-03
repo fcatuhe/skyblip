@@ -22,9 +22,10 @@ namespace skyblip::platform::zephyr {
 
 // The radio executor on silicon: its own thread, above every other application
 // thread, waking on an armed absolute deadline or on the radio's DIO1 edge, and
-// reading the radio's status only once DIO1 is up. Nothing on this thread writes
-// flash or touches the BLE stack: a deferred internal-flash write blocks for
-// milliseconds, which is more than the whole guard budget.
+// reading the radio's status only once DIO1 is up or a burst's air time has run
+// out. Nothing on this thread writes flash or touches the BLE stack: a deferred
+// internal-flash write blocks for milliseconds, which is more than the whole
+// guard budget.
 class Rf : public ports::Rf {
    public:
     static constexpr int kStackSize = 2048;
@@ -37,8 +38,12 @@ class Rf : public ports::Rf {
     static constexpr int kHealthTickMs = 250;
     // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
     static constexpr uint64_t kCarrierLeadUs = 2000;
-    // INFO: fc 29sep26 staging's four commands took 0.25-0.7 ms on the 856 bench
+    // INFO: fc 03oct26 build 892 staged 0.42-0.66 ms past the stage point: 700 left 40 us spare
     static constexpr uint64_t kTxStageLeadUs = 700;
+    // INFO: fc 03oct26 builds 875 and 892 dated TxDone 0.3-0.7 ms past the air time
+    static constexpr uint64_t kTxTailUs = 1000;
+    // INFO: fc 03oct26 two RTC ticks: at most 17 status reads a burst, none outside its tail
+    static constexpr uint64_t kTxTailPollUs = 60;
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {
@@ -120,6 +125,8 @@ class Rf : public ports::Rf {
         return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
     }
 
+    ports::RfDio1 dio1() const override { return {dio1_wakes_, dio1_edges_, dio1_missed_}; }
+
     ports::RfSwitching switching() const override {
         k_sched_lock();
         const ports::RfSwitching switching = switching_;
@@ -138,6 +145,7 @@ class Rf : public ports::Rf {
     static void entry(void* self, void*, void*) { static_cast<Rf*>(self)->run(); }
 
     static void on_dio1(const struct device*, struct gpio_callback*, gpio_port_pins_t) {
+        self_->dio1_edges_++;
         k_sem_give(&self_->wake_);
     }
 
@@ -328,13 +336,22 @@ class Rf : public ports::Rf {
         while (clock_.micros() < burst.at_us) k_busy_wait(1);
         (void)radio_.key_tx();
         keyed_at_us_ = clock_.micros();
+        tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.len);
+    }
+
+    // INFO: fc 03oct26 build 892's TxDone edge woke 0.3 ms after the status bit, RxDone's on time
+    uint64_t tail_poll_at(uint64_t now_us) const {
+        if (now_us >= tail_from_us_ + kTxTailUs) return ports::RfBursts::kNever;
+        return std::max(tail_from_us_, now_us + kTxTailPollUs);
     }
 
     // INFO: fc 16sep26 the event is dated where the radio raised it, not where the read-out ended
     bool collect(bool& completed, bool& fault) {
+        const bool line_up = irq_at_us_ != 0 || radio_.irq_asserted();
         const uint64_t polled_us = irq_at_us_ != 0 ? irq_at_us_ : clock_.micros();
         irq_at_us_ = 0;
         const parts::RadioEvent ev = radio_.poll(rx_.data.data(), events::kRfEventBytes);
+        if (ev.type != parts::RadioEventType::None && !line_up) dio1_missed_++;
         switch (ev.type) {
             case parts::RadioEventType::None: return false;
             case parts::RadioEventType::RxDone: push_rx(ev, polled_us); return true;
@@ -385,6 +402,7 @@ class Rf : public ports::Rf {
                 sampled = true;
                 continue;
             }
+            if (keyed > done) poll_due_us = std::min(poll_due_us, tail_poll_at(clock_.micros()));
             uint64_t wake_us = std::min(
                 {plan.end_us, poll_due_us, bursts.stage_at_us(keyed, done, kTxStageLeadUs)});
             if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.micros() + kSpinUs);
@@ -447,7 +465,9 @@ class Rf : public ports::Rf {
     struct k_sem wake_{};
     struct gpio_dt_spec dio1_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_dio1_gpio), gpios);
     struct gpio_callback dio1_cb_{};
-    bool dio1_wakes_{false};
+    volatile bool dio1_wakes_{false};
+    volatile uint32_t dio1_edges_{0};
+    uint32_t dio1_missed_{0};
     struct k_thread thread_{};
     k_tid_t tid_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackSize);
@@ -457,6 +477,7 @@ class Rf : public ports::Rf {
     uint64_t staged_at_us_{0};
     uint64_t tx_at_us_{0};
     uint64_t irq_at_us_{0};
+    uint64_t tail_from_us_{0};
     uint64_t flying_end_us_{0};
     uint32_t flying_freq_{0};
     ports::RfMode flying_mode_{ports::RfMode::Idle};
