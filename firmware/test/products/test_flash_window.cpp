@@ -53,6 +53,15 @@ uint32_t writes(Rig& rig) { return rig.platform.kv().writes(); }
 // published view rather than recomputed here.
 int published_phase(Rig& rig) { return rig.state().rf.dwell.phase_ms; }
 
+// The radio's view of the second, published at the instant a pass began.
+void publish_dwell(Rig& rig, uint32_t pass_ms, int phase_ms) {
+    timing::ClockState anchored{};
+    anchored.utc_valid = true;
+    anchored.pps_locked = true;
+    rig.state().rf.plan = timing::Scheduler::plan(phase_ms, anchored);
+    rig.state().rf.dwell = timing::DwellPhase{pass_ms, phase_ms, true, false};
+}
+
 // Runs until the write count moves, and answers the millisecond it moved on.
 uint32_t wait_for_write(Rig& rig, uint32_t& t, uint32_t give_up_after_ms) {
     const uint32_t before = writes(rig);
@@ -93,6 +102,59 @@ TEST_CASE("flash window: a change made inside a dwell is not written until the w
     CHECK(timing::DurableWriteWindow::free_at(rig.state().rf.plan, phase,
                                               timing::DurableWriteWindow::kWorstWriteMs));
     CHECK(rig.product.config().durable_writes().forced() == 0);
+}
+
+// Work earlier in the pass left the settings write deciding on the phase the pass began at.
+TEST_CASE("flash window: a settings write is placed at the instant it starts, not its pass") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    stand_on_the_ground(rig, t);
+    const uint32_t before = writes(rig);
+    change_volume(rig, 4);
+    rig.platform.clock().set_millis(t);
+    rig.product.config().tick(t);
+    REQUIRE(rig.product.config().durable_writes().pending());
+
+    // The last phase of the uplink dwell a worst-case write still clears a guard before its end.
+    constexpr int kLastWritePhase = timing::kUplinkRxEnd - timing::kJitterGuardMs -
+                                    static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
+    constexpr int kRanLongMs = 50;
+    constexpr int kPassPhase = kLastWritePhase - kRanLongMs;
+    const uint32_t pass_ms = t + 1000 + kPassPhase;
+    publish_dwell(rig, pass_ms, kPassPhase);
+    rig.platform.clock().set_millis(pass_ms + kRanLongMs + 1);
+    rig.product.config().tick(pass_ms);
+    CHECK(writes(rig) == before);
+    CHECK(rig.product.config().durable_writes().pending());
+
+    publish_dwell(rig, pass_ms + 1000, kPassPhase);
+    rig.platform.clock().set_millis(pass_ms + 1000 + kRanLongMs);
+    rig.product.config().tick(pass_ms + 1000);
+    CHECK(writes(rig) - before == 1);
+    CHECK(rig.product.config().durable_writes().forced() == 0);
+}
+
+// The view was stamped at the pass start and read off the clock later, so projections ran late.
+TEST_CASE("flash window: the radio's view of the second is stamped when its phase was read") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.pps().set_locked(false);
+    uint64_t us = 10'000'000;
+    rig.run_span_from_us(us, 200);
+    REQUIRE_FALSE(rig.state().clock.pps_locked);
+
+    constexpr uint32_t kRadioTurnMs = 40;
+    const uint32_t pass_ms = rig.platform.clock().millis() + 50;
+    rig.platform.clock().set_millis(pass_ms + kRadioTurnMs);
+    rig.product.step(pass_ms);
+
+    const timing::DwellPhase& dwell = rig.state().rf.dwell;
+    const uint32_t later_ms = pass_ms + 90;
+    // Free-running, the phase is the clock's own millisecond within the second.
+    CHECK(dwell.at_ms == pass_ms + kRadioTurnMs);
+    CHECK((dwell.phase_ms + static_cast<int>(later_ms - dwell.at_ms)) % 1000 ==
+          static_cast<int>(later_ms % 1000));
 }
 
 // Six taps stepping the alarm volume through six values. One write.

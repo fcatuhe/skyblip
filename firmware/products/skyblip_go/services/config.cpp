@@ -160,8 +160,9 @@ bool ConfigLinkService::hold_for_power() {
 void ConfigLinkService::drain_settings(uint32_t now_ms) {
     if (hold_for_power()) return;
     take_request(now_ms);
-    const timing::DurableWriteVerdict verdict =
-        writes_.decide(context_.state.rf.plan, context_.state.rf.dwell, now_ms);
+    // INFO: fc 03oct26 the stall starts at the clock, not where the pass began
+    const timing::DurableWriteVerdict verdict = writes_.decide(
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
     if (verdict != timing::DurableWriteVerdict::Idle) record_write(verdict, now_ms);
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
