@@ -29,7 +29,7 @@ Status Bme280::begin() {
                  s16_le(raw + 16), s16_le(raw + 18), s16_le(raw + 20), s16_le(raw + 22)};
 
     if (!write_register(kRegCtrlHum, kOversamplingSkipped)) return Status::Down;
-    if (!write_register(kRegConfig, kConfigFilter4)) return Status::Down;
+    if (!write_register(kRegConfig, kConfigFilter8)) return Status::Down;
     ready_ = true;
     return Status::Ok;
 }
@@ -46,7 +46,7 @@ bool Bme280::read(Reading& out) {
     if (!converting_) return false;
     uint8_t status[kStatusBytes] = {};
     if (!read_registers(address_, kRegStatus, status, sizeof(status)) ||
-        status[2] != kConfigFilter4)
+        status[2] != kConfigFilter8)
         return forget_configuration();
     if ((status[0] & kStatusBusy) != 0) return false;
     converting_ = false;

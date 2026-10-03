@@ -28,7 +28,7 @@ constexpr uint32_t kRadioNoRxReinitMs = 30000;
 constexpr uint32_t kPpsLossListenOnlyMs = 60000;
 constexpr uint32_t kBaroPeriodMs = 1000;
 constexpr uint32_t kBaroPpsWindowMs = 2 * kServiceStepMs;
-// INFO: fc 03oct26 four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA
+// INFO: fc 03oct26 four forced conversions a second feed IIR 8: 1.75 s of lag for 0.1 mA
 constexpr uint32_t kBaroConversionPeriodMs = 250;
 // INFO: fc 03oct26 Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case
 constexpr uint32_t kBaroConversionCeilingMs = 150;
