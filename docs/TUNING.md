@@ -237,10 +237,12 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
-| `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
-| `kSlotWriteCostMs` | 2 | milliseconds | - | - |
+| `kSectorEraseCostMs` | 42 | milliseconds | - | MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell |
+| `kSlotWriteCostMs` | 2 | milliseconds | - | budget for the external NOR on spi1, bench-settled, not a datasheet figure |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
+| `kLockedRedrawMs` | 600 | milliseconds | - | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
+| `kLockedRedrawEndMs` | 800 | milliseconds | - | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
 
 ## `firmware/runtime`
@@ -248,6 +250,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kServiceStepMs` | 10 | milliseconds | - | - |
+| `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
 | `kTaskWatchdogMs` | 5000 (5 s) | milliseconds | - | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
 | `kHardwareWatchdogMs` | 12000 (12 s) | milliseconds | - | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
 | `kRadioNoRxReinitMs` | 30000 (30 s) | milliseconds | - | - |
@@ -256,4 +259,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-156 constants over 17 folders.
+159 constants over 17 folders.
