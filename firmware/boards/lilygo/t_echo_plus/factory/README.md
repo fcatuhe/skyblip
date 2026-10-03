@@ -1,6 +1,8 @@
 # What the factory bootloader reports
 
-`INFO_UF2.TXT` is copied verbatim off the TECHOBOOT volume of our own T-Echo Plus, read on 12 September 2026 before anything had been installed on it. It is the only evidence we have for what the partition map in `../t_echo_plus.dts` assumes, so it is kept rather than quoted.
+`INFO_UF2.TXT` is copied verbatim off the TECHOBOOT volume of our own T-Echo Plus, read on 12 September 2026 before anything had been installed on it. It is the evidence for what the partition map in `../t_echo_plus.dts` assumes, so it is kept rather than quoted.
+
+`t_echo/INFO_UF2.TXT` is the same file off our plain T-Echo, and it is byte for byte identical: the same bootloader, the same SoftDevice, and `Model: LilyGo T-Echo` on both. So the partition map holds on either board, and the bootloader cannot tell a Plus from a plain T-Echo. What is fitted is read by the bus scan instead (`../board.h`).
 
 What it pins down:
 
