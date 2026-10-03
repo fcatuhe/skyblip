@@ -2,6 +2,7 @@
 #define SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_RF_H
 #if defined(__ZEPHYR__)
 
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
 #include <algorithm>
@@ -20,13 +21,16 @@
 namespace skyblip::platform::zephyr {
 
 // The radio executor on silicon: its own thread, above every other application
-// thread, waking on an armed absolute deadline. Nothing on this thread writes
+// thread, waking on an armed absolute deadline or on the radio's DIO1 edge, and
+// reading the radio's status only once DIO1 is up. Nothing on this thread writes
 // flash or touches the BLE stack: a deferred internal-flash write blocks for
 // milliseconds, which is more than the whole guard budget.
 class Rf : public ports::Rf {
    public:
     static constexpr int kStackSize = 2048;
     static constexpr int kSpinUs = 200;
+    // INFO: fc 03oct26 under a burst's 4.64 ms of air: a dead DIO1 still reads each frame in turn
+    static constexpr uint64_t kSafetyPollUs = 4000;
     // How long the thread waits for the next dwell before it looks at the
     // radio's health instead. Short against the 30 s no-RX rope, long enough
     // that an idle device is not woken for nothing.
@@ -39,6 +43,7 @@ class Rf : public ports::Rf {
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {
         k_sem_init(&armed_, 0, 1);
+        k_sem_init(&wake_, 0, 1);
     }
 
     Status begin() override {
@@ -46,6 +51,9 @@ class Rf : public ports::Rf {
         if (s != Status::Ok) return s;
         s = radio_.configure_radio(parts::RadioConfig{});
         if (s != Status::Ok) return s;
+        self_ = this;
+        gpio_init_callback(&dio1_cb_, on_dio1, BIT(dio1_.pin));
+        dio1_wakes_ = gpio_add_callback(dio1_.port, &dio1_cb_) == 0 && arm_dio1();
         tid_ = k_thread_create(&thread_, stack_, K_THREAD_STACK_SIZEOF(stack_), entry, this,
                                nullptr, nullptr,
                                K_PRIO_COOP(static_cast<int>(runtime::TaskPrio::Rf)), 0, K_NO_WAIT);
@@ -63,7 +71,10 @@ class Rf : public ports::Rf {
         Status verdict = Status::Ok;
         k_sched_lock();
         if (joins_flying_dwell(plan)) {
-            if (!flying_bursts_.add(burst_of(plan))) verdict = Status::WouldBlock;
+            if (flying_bursts_.add(burst_of(plan)))
+                k_sem_give(&wake_);
+            else
+                verdict = Status::WouldBlock;
         } else if (flying_ && plan.end_us <= flying_end_us_) {
             verdict = Status::WouldBlock;
         } else if (queued_ && same_dwell(plan, plan_)) {
@@ -86,6 +97,7 @@ class Rf : public ports::Rf {
         flying_ = false;
         k_sched_unlock();
         abort_ = true;
+        k_sem_give(&wake_);
     }
 
     // The shutdown path runs on the service thread and the radio belongs to this
@@ -98,6 +110,7 @@ class Rf : public ports::Rf {
         k_sched_unlock();
         sleep_requested_ = true;
         abort_ = true;
+        k_sem_give(&wake_);
         k_sem_give(&armed_);
     }
 
@@ -123,6 +136,12 @@ class Rf : public ports::Rf {
 
    private:
     static void entry(void* self, void*, void*) { static_cast<Rf*>(self)->run(); }
+
+    static void on_dio1(const struct device*, struct gpio_callback*, gpio_port_pins_t) {
+        k_sem_give(&self_->wake_);
+    }
+
+    bool arm_dio1() { return gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_EDGE_RISING) == 0; }
 
     // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
     bool joins_flying_dwell(const ports::RfPlan& plan) {
@@ -221,7 +240,8 @@ class Rf : public ports::Rf {
         health_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
         const uint32_t rope_ms =
             may_reinit ? runtime::kRadioNoRxReinitMs : std::numeric_limits<uint32_t>::max();
-        radio_.service(elapsed_ms, rope_ms);
+        // INFO: fc 03oct26 a reinit reconfigures DIO1 as an input, and nrfx GPIO drops its trigger
+        if (radio_.service(elapsed_ms, rope_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
     }
 
     // INFO: fc 28sep26 a no-RX reinit fits the bench's 23 ms stall, only the uplink dwell spares it
@@ -342,6 +362,7 @@ class Rf : public ports::Rf {
         bool sampled = false;
         keyed_at_us_ = 0;
         irq_at_us_ = 0;
+        uint64_t poll_due_us = 0;
         while (!abort_ && clock_.micros() < plan.end_us) {
             bursts = flying_bursts();
             if (clock_.micros() >= bursts.stage_at_us(keyed, done, kTxStageLeadUs)) {
@@ -349,22 +370,28 @@ class Rf : public ports::Rf {
                 keyed++;
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.micros();
-            completed = false;
-            if (collect(completed, fault)) {
-                if (completed) done++;
-                continue;
+            if (irq_at_us_ != 0 || clock_.micros() >= poll_due_us) {
+                poll_due_us = clock_.micros() + kSafetyPollUs;
+                completed = false;
+                if (collect(completed, fault)) {
+                    if (completed) done++;
+                    continue;
+                }
+                if (fault) return;
             }
-            if (fault) return;
-            if (!sampled && keyed == done && keyed == bursts.count &&
-                clock_.micros() + kCarrierLeadUs >= plan.end_us) {
+            const bool sent_all = keyed == done && keyed == bursts.count;
+            if (!sampled && sent_all && clock_.micros() + kCarrierLeadUs >= plan.end_us) {
                 sample_carrier();
                 sampled = true;
                 continue;
             }
+            uint64_t wake_us = std::min(
+                {plan.end_us, poll_due_us, bursts.stage_at_us(keyed, done, kTxStageLeadUs)});
+            if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.micros() + kSpinUs);
+            if (!sampled && sent_all) wake_us = std::min(wake_us, plan.end_us - kCarrierLeadUs);
             // INFO: fc 29sep26 an absolute uptime wake: k_usleep lands a tick past the stage point
-            const uint64_t wake_us = std::min(clock_.micros() + kSpinUs,
-                                              bursts.stage_at_us(keyed, done, kTxStageLeadUs));
-            k_sleep(K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(wake_us))));
+            (void)k_sem_take(
+                &wake_, K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(wake_us))));
         }
         for (completed = false; collect(completed, fault); completed = false)
             if (completed) done++;
@@ -417,6 +444,10 @@ class Rf : public ports::Rf {
     uint32_t freq_hz_{0};
     uint64_t health_us_{0};
     struct k_sem armed_{};
+    struct k_sem wake_{};
+    struct gpio_dt_spec dio1_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_dio1_gpio), gpios);
+    struct gpio_callback dio1_cb_{};
+    bool dio1_wakes_{false};
     struct k_thread thread_{};
     k_tid_t tid_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackSize);
@@ -433,7 +464,10 @@ class Rf : public ports::Rf {
     bool queued_{false};
     volatile bool abort_{false};
     volatile bool sleep_requested_{false};
+    static Rf* self_;
 };
+
+inline Rf* Rf::self_ = nullptr;
 
 }  // namespace skyblip::platform::zephyr
 #endif  // __ZEPHYR__
