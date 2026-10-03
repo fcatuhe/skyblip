@@ -31,3 +31,6 @@
 
 # The simulator, built into public/ by bin/simulator-build.
 /public/simulator
+
+# The firmware images the update page offers, copied into public/ by bin/firmware-shelf.
+/public/firmware

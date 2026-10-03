@@ -156,10 +156,10 @@ void power_down(PowerDownSink& sink, ButtonWake button_wake);
 // on. A short press pages; this is the only other thing the one button does.
 constexpr uint32_t kLongPressMs = 2000;
 
-// The panel is parked through black and then the frame, two partials the SSD1681
-// clocks out in about a second, slower on a cold glass. Dropping the rails before
-// they finish leaves half an image on the glass, which is what the device then
-// wears until someone turns it back on.
+// A power-off parks the panel with a full refresh, which the SSD1681 clocks out
+// in about 2.5 s, and an install or a recovery through black, about a second.
+// Dropping the rails before it finishes leaves half an image on the glass,
+// which is what the device then wears until someone turns it back on.
 constexpr uint32_t kParkMs = 3000;
 
 // INFO: hk 02aug26 nRF52 SENSE is a level detect, not an edge, so arming the

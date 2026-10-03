@@ -1,6 +1,6 @@
 import { decode, encode } from './cbor.js';
 import { UUID } from './ble.js';
-import { readImage, versionText } from './image.js';
+import { compareVersions, parseVersion, readImage, versionText } from './image.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -14,10 +14,14 @@ const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
 const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
+export const DEVELOPMENT_KEY = 0xa1;
+export const PRODUCTION_KEY = 0xb2;
 export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 3, units: 0, callsign: '' };
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const IMAGE_HEADER_BYTES = 32;
 const TLV_INFO = 0x6907;
+const TLV_KEYHASH = 0x01;
+const KEY_HASH_BYTES = 32;
 const PROTECTED_TLV_INFO = 0x6908;
 const TLV_IMU_PIN = 0x00a0;
 const TLV_IMU_FULL = 0x00a1;
@@ -73,9 +77,11 @@ export class FakeSkyblip {
     stored = DEFAULTS,
     knowsDefaults = true,
     verdictFirst = false,
+    key = PRODUCTION_KEY,
+    downgrade = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -207,6 +213,7 @@ export class FakeSkyblip {
     if (!this.onGround) return this.ack(false, 'in_flight');
     if (cmd !== 'recovery' && !this.swapPowered) return this.ack(false, 'low_power');
     if (cmd === 'dfu' && !fields.version) return this.ack(false, 'no_version');
+    if (cmd === 'dfu' && this.older(parseVersion(fields.version))) return this.ack(false, 'older');
     if (cmd === 'dfu') this.approved = fields.version;
     this.pending = cmd;
     if (cmd === 'set') {
@@ -236,8 +243,13 @@ export class FakeSkyblip {
     const image = readImage(this.slot);
     if (this.refuseInstall) return this.ack(false, this.refuseInstall);
     if (!image || versionText(image.version) !== this.approved) return this.ack(false, 'not_approved');
+    if (this.key !== null && image.key !== keyName(this.key)) return this.ack(false, 'wrong_key');
     this.ack(true, 'install');
     setImmediate(() => setImmediate(() => this.drop()));
+  }
+
+  older(version) {
+    return !this.downgrade && compareVersions(version, parseVersion(this.running)) < 0;
   }
 
   sendUpdate() {
@@ -246,6 +258,8 @@ export class FakeSkyblip {
     if (this.settings) frame.settings = this.settings;
     if (this.imu !== null) frame.imu = this.imu;
     frame.swap_powered = this.swapPowered;
+    if (this.downgrade) frame.downgrade = true;
+    if (this.key !== null) frame.key = keyName(this.key);
     this.reply(frame);
   }
 
@@ -335,6 +349,8 @@ export class FakeSkyblip {
     if (off === 0) {
       if (this.upload && sha && this.upload.sha.join() === sha.join()) return { off: this.upload.off };
       if (this.refuseUpload) return { err: { group: IMAGE_GROUP, rc: this.refuseUpload } };
+      const header = readImage(data);
+      if (header && this.older(header.version)) return { err: { group: IMAGE_GROUP, rc: IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER } };
       this.upload = { sha, len, off: 0 };
       this.slot = new Uint8Array(len);
       this.finished = false;
@@ -381,11 +397,11 @@ function indefiniteMap(object) {
   return out;
 }
 
-export function signedImage({ major, minor, revision, build }, size, imu = null) {
+export function signedImage({ major, minor, revision, build }, size, { imu = null, key = PRODUCTION_KEY } = {}) {
   const bytes = new Uint8Array(size);
   for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
   const protectedArea = imu ? protectedTlvs(imu) : new Uint8Array(0);
-  const trailer = tlvArea(TLV_INFO, []);
+  const trailer = tlvArea(TLV_INFO, [[TLV_KEYHASH, new Uint8Array(KEY_HASH_BYTES).fill(key)]]);
   const view = new DataView(bytes.buffer);
   view.setUint32(0, 0x96f3b83d, true);
   view.setUint16(8, IMAGE_HEADER_BYTES, true);
@@ -420,4 +436,8 @@ function tlvArea(magic, entries) {
     at += 4 + value.length;
   }
   return area;
+}
+
+function keyName(byte) {
+  return byte.toString(16).padStart(2, '0').repeat(4).toUpperCase();
 }

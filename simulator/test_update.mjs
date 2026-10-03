@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { BLOB_PIN, DEFAULTS, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage } from './fake_skyblip.mjs';
+import {
+  BLOB_PIN, DEFAULTS, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
+} from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from './ble.js';
 import { SmpError } from './smp.js';
 import { Updater, noticeOf } from './update.js';
@@ -249,29 +251,65 @@ test('a disconnect asked for is not reported as a lost link', async () => {
   assert.equal(state.notice, null);
 });
 
-test('an image older than the running one is refused before the window opens', async () => {
-  const { device, updater } = await connected({ running: '0.3.0.2' });
+test('a release unit refuses an older image before the window opens', async () => {
+  const { device, updater } = await connected({ running: '0.2.0.16' });
   await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'older.signed.bin');
   await updater.install();
-  assert.equal(updater.state.notice.key, 'not_newer');
+  assert.equal(updater.state.notice.key, 'older');
+  assert.equal(device.commands.includes('dfu'), false);
+});
+
+test('a release unit takes the version it already runs, to install it again', async () => {
+  const { updater, until } = await connected({ running: '0.2.0.15' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'same.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+});
+
+test('a development unit takes an older image all the way to the swap', async () => {
+  const { device, updater, until } = await connected({ running: '0.3.0.40', downgrade: true, key: DEVELOPMENT_KEY });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'older.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+});
+
+test('an image signed by another key is refused before the window opens', async () => {
+  const { device, updater } = await connected();
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'wrong_key');
   assert.equal(device.commands.includes('dfu'), false);
 });
 
 // The slim and full images of one release share its version, and the full one is how a device gets its blob.
 test('an image of the running version is sent', async () => {
   const { updater, until } = await connected({ running: '0.2.0.15', imu: 'missing' });
-  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { pin: BLOB_PIN, full: true }), 'skyblip-go.full.signed.bin');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: true } }), 'skyblip-go.full.signed.bin');
   updater.install();
   await until(asking('dfu'));
 });
 
-test('the device refusing a downgrade reads as not newer too', async () => {
+test('a device that does not name its key refuses a foreign one once it lands, in its own words', async () => {
+  const { device, updater, until } = await connected();
+  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  await until(state => state.image.key === null);
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'wrong_key');
+  assert.equal(device.finished, true);
+});
+
+test('the device refusing an older image at the first chunk reads as older', async () => {
   const { device, updater, until } = await chosen();
   device.refuseUpload = IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER;
   updater.install();
   await until(asking('dfu'));
   device.press();
-  assert.equal((await until(settled)).notice.key, 'not_newer');
+  assert.equal((await until(settled)).notice.key, 'older');
 });
 
 test('a file that is not an MCUboot image is refused before anything is sent', async () => {
@@ -292,6 +330,7 @@ test('an update frame pushed on connect is read without being asked', async () =
   const { image } = await until(state => state.image);
   assert.deepEqual(image, {
     state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, imu: BLOB_PIN.slice(0, 16),
+    downgrade: false, key: 'B2B2B2B2',
   });
 });
 
@@ -438,7 +477,7 @@ test('taking off while the glass asks takes the question away, and the page says
 
 test('the SMP refusals the page words are the ones Zephyr sends', () => {
   assert.equal(noticeOf(new SmpError(11)).key, 'window_closed');
-  assert.equal(noticeOf(new SmpError(27, 1)).key, 'not_newer');
+  assert.equal(noticeOf(new SmpError(27, 1)).key, 'older');
   assert.equal(noticeOf(new SmpError(30, 1)).key, 'too_large');
   assert.equal(noticeOf(new SmpError(23, 1)).key, 'not_image');
   assert.equal(noticeOf(new SmpError(12, 1)).key, 'flash');
@@ -450,7 +489,7 @@ const FULL = { pin: BLOB_PIN, full: true };
 
 async function choosing(options, imu, name) {
   const link = await connected(options);
-  await link.updater.choose(signedImage(NEWER, IMAGE_BYTES, imu), name);
+  await link.updater.choose(signedImage(NEWER, IMAGE_BYTES, { imu }), name);
   return link;
 }
 

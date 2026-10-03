@@ -3,10 +3,14 @@ const HEADER_BYTES = 32;
 const HEADER_SIZE_OFFSET = 8;
 const IMAGE_SIZE_OFFSET = 12;
 const VERSION_OFFSET = 20;
+const TLV_MAGIC = 0x6907;
 const PROTECTED_TLV_MAGIC = 0x6908;
 const TLV_INFO_BYTES = 4;
+const TLV_KEYHASH = 0x01;
 const TLV_IMU_PIN = 0x00a0;
 const TLV_IMU_FULL = 0x00a1;
+const KEY_HASH_BYTES = 32;
+const KEY_PREFIX_BYTES = 4;
 const PIN_BYTES = 32;
 const DIGEST_PREFIX = /^[0-9a-f]{16}$/;
 
@@ -21,6 +25,7 @@ export function readImage(bytes) {
       revision: view.getUint16(VERSION_OFFSET + 2, true),
       build: view.getUint32(VERSION_OFFSET + 4, true),
     },
+    key: signingKey(view),
     bytes: bytes.length,
     imu: imuOf(view),
   };
@@ -52,6 +57,22 @@ export function fullImageNeeded(deviceImu, pin) {
   if (deviceImu === 'none') return false;
   const verified = DIGEST_PREFIX.test(deviceImu ?? '');
   return !(verified && pin?.startsWith(deviceImu));
+}
+
+// INFO: fc 03oct26 the first four bytes of the KEYHASH TLV, as the device names the key it trusts
+function signingKey(view) {
+  let at = view.getUint16(HEADER_SIZE_OFFSET, true) + view.getUint32(IMAGE_SIZE_OFFSET, true);
+  if (at + TLV_INFO_BYTES <= view.byteLength && view.getUint16(at, true) === PROTECTED_TLV_MAGIC) at += view.getUint16(at + 2, true);
+  if (at + TLV_INFO_BYTES > view.byteLength || view.getUint16(at, true) !== TLV_MAGIC) return null;
+  const end = Math.min(at + view.getUint16(at + 2, true), view.byteLength);
+  for (at += TLV_INFO_BYTES; at + TLV_INFO_BYTES <= end; ) {
+    const type = view.getUint16(at, true);
+    const length = view.getUint16(at + 2, true);
+    at += TLV_INFO_BYTES;
+    if (type === TLV_KEYHASH && length === KEY_HASH_BYTES && at + length <= end) return hex(new Uint8Array(view.buffer, view.byteOffset + at, KEY_PREFIX_BYTES)).toUpperCase();
+    at += length;
+  }
+  return null;
 }
 
 export function versionText({ major, minor, revision, build }) {

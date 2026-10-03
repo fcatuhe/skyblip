@@ -18,6 +18,10 @@ function(skyblip_shared_layers)
   )
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
   target_sources(app PRIVATE ${shared})
+  # mcumgr_hooks.cpp reads an upload request, whose header includes MCUboot's bootutil/image.h.
+  if(CONFIG_MCUMGR_GRP_IMG)
+    target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
+  endif()
   skyblip_imu_image()
 endfunction()
 

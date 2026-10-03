@@ -56,6 +56,17 @@ class Dfu : public ports::Dfu {
         out = staged_image_hash;
         return true;
     }
+    bool running_key(ports::SigningKeyHash& out) override {
+        if (!has_running_key) return false;
+        out = trusted_key;
+        return true;
+    }
+    bool staged_key(ports::SigningKeyHash& out) override {
+        if (!has_staged_key) return false;
+        out = staged_signer;
+        return true;
+    }
+    bool downgrade_allowed() const override { return downgrades; }
     ports::RecoveryPath recovery_path() const override {
         return watchdog_.armed() ? ports::RecoveryPath::PowerOffToFinish
                                  : ports::RecoveryPath::Rebooted;
@@ -79,6 +90,11 @@ class Dfu : public ports::Dfu {
     bool has_staged_hash{false};
     bool upload_allowed_published{false};
     bool finished_upload{false};
+    bool has_running_key{false};
+    bool has_staged_key{false};
+    bool downgrades{false};
+    ports::SigningKeyHash trusted_key{};
+    ports::SigningKeyHash staged_signer{};
     ports::ImageVersion running{};
     ports::ImageVersion staged{};
     ports::ImageHash running_image_hash{};

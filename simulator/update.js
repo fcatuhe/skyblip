@@ -14,7 +14,7 @@ const IMAGE_REFUSALS = {
   13: 'flash',
   22: 'not_image',
   23: 'not_image',
-  27: 'not_newer',
+  27: 'older',
   30: 'too_large',
 };
 
@@ -50,6 +50,8 @@ function imageOf(reply) {
     settings: reply.settings ?? null,
     swapPowered: reply.swap_powered !== false,
     imu: reply.imu ?? null,
+    downgrade: reply.downgrade === true,
+    key: reply.key ?? null,
   };
 }
 
@@ -90,6 +92,7 @@ export class Updater {
   #image = null;
   #sha = null;
   #version = null;
+  #key = null;
   #windowOpen = false;
   #leaving = false;
   #state = {
@@ -160,15 +163,15 @@ export class Updater {
     this.#sha = await sha256(bytes);
     this.#version = image.version;
     const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
+    this.#key = image.key;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
   }
 
   async install() {
     if (!this.#image) return this.#set({ notice: { key: 'no_file' } });
     if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
-    if (this.#running && compareVersions(this.#version, this.#running) < 0) {
-      return this.#set({ notice: { key: 'not_newer' } });
-    }
+    const refusal = this.#refusal();
+    if (refusal) return this.#set({ notice: { key: refusal } });
     this.#set({ notice: null });
     if (this.#windowOpen) return this.#upload();
     return this.#ask('dfu', { version: versionText(this.#version) });
@@ -195,6 +198,13 @@ export class Updater {
 
   resetSettings() {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
+  }
+
+  #refusal() {
+    const unit = this.#state.image;
+    if (unit?.key && this.#key !== unit.key) return 'wrong_key';
+    if (this.#running && !unit?.downgrade && compareVersions(this.#version, this.#running) < 0) return 'older';
+    return null;
   }
 
   async #learn() {

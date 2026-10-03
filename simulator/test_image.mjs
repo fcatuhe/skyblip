@@ -9,9 +9,9 @@ const IMAGE_BYTES = 6000;
 const PREFIX = BLOB_PIN.slice(0, 16);
 
 test('the protected TLVs give the blob an image pins and whether it carries it', () => {
-  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { pin: BLOB_PIN, full: false })).imu, { pin: BLOB_PIN, full: false });
-  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { pin: BLOB_PIN, full: true })).imu, { pin: BLOB_PIN, full: true });
-  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { full: true })).imu, { pin: null, full: true });
+  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: false } })).imu, { pin: BLOB_PIN, full: false });
+  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: true } })).imu, { pin: BLOB_PIN, full: true });
+  assert.deepEqual(readImage(signedImage(VERSION, IMAGE_BYTES, { imu: { full: true } })).imu, { pin: null, full: true });
 });
 
 test('an image from before the split has no protected area, so no pin is known', () => {
@@ -21,11 +21,11 @@ test('an image from before the split has no protected area, so no pin is known',
 });
 
 test('a protected area cut short or with an entry overrunning it reads as no pin, never throws', () => {
-  const bytes = signedImage(VERSION, IMAGE_BYTES, { pin: BLOB_PIN, full: false });
-  assert.deepEqual(readImage(bytes.subarray(0, bytes.length - 10)).imu, { pin: null, full: null });
+  const bytes = signedImage(VERSION, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: false } });
+  assert.deepEqual(readImage(bytes.subarray(0, bytes.length - 50)).imu, { pin: null, full: null });
   const overrun = Uint8Array.from(bytes);
-  // The pin's length field ends 4 (trailer) + 5 (full entry) + 32 (pin) bytes from the end.
-  new DataView(overrun.buffer).setUint16(overrun.length - (4 + 5 + 32 + 2), 0x4000, true);
+  // The pin's length field ends 40 (trailer with its key hash) + 5 (full entry) + 32 (pin) bytes from the end.
+  new DataView(overrun.buffer).setUint16(overrun.length - (40 + 5 + 32 + 2), 0x4000, true);
   assert.deepEqual(readImage(overrun).imu, { pin: null, full: null });
   assert.deepEqual(readImage(Uint8Array.from(bytes).fill(0xff, 8, 16)).imu, { pin: null, full: null });
 });

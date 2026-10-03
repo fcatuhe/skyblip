@@ -286,15 +286,24 @@ void ConfigLinkService::load_image_state() {
     image_confirmed_ = !has_dfu || context_.roles.dfu.confirmed();
     image_state_ = image_confirmed_ ? dfu::ImageState::Confirmed : dfu::ImageState::Probation;
 
-    dfu::RunningImage running;
+    dfu::SlotImage running;
     if (update_recorded_) {
         if (!has_dfu || !context_.roles.dfu.running_version(running.version)) {
             forget_update();
         } else {
             running.hashed = context_.roles.dfu.running_hash(running.hash);
-            switch (dfu::outcome(update_record_, running)) {
+            std::optional<dfu::SlotImage> staged;
+            dfu::SlotImage held;
+            if (context_.roles.dfu.staged_version(held.version)) {
+                held.hashed = context_.roles.dfu.staged_hash(held.hash);
+                staged = held;
+            }
+            switch (dfu::outcome(update_record_, running, staged)) {
                 case dfu::Outcome::Reverted:
                     if (image_confirmed_) image_state_ = dfu::ImageState::Reverted;
+                    break;
+                case dfu::Outcome::Refused:
+                    if (image_confirmed_) image_state_ = dfu::ImageState::Refused;
                     break;
                 case dfu::Outcome::Landed:
                     if (image_confirmed_) forget_update();

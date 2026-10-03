@@ -88,6 +88,7 @@ jobs:
           SKYBLIP_WORKSPACE: ${{ runner.temp }}/west
           SKYBLIP_SIGNING_KEY: ${{ runner.temp }}/signing.pem
           SKYBLIP_PUBLIC_KEY: ${{ github.workspace }}/firmware/keys/production.pub.pem
+          SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
       # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.

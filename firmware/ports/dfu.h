@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PORTS_DFU_H
 #define SKYBLIP_PORTS_DFU_H
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -33,6 +34,8 @@ constexpr bool operator==(const ImageHash& a, const ImageHash& b) {
 }
 constexpr bool operator!=(const ImageHash& a, const ImageHash& b) { return !(a == b); }
 
+using SigningKeyHash = std::array<uint8_t, 32>;
+
 class Dfu {
    public:
     virtual ~Dfu() = default;
@@ -45,6 +48,12 @@ class Dfu {
 
     virtual bool running_version(ImageVersion&) { return false; }
     virtual bool staged_version(ImageVersion&) { return false; }
+    virtual bool running_key(SigningKeyHash&) { return false; }
+    virtual bool staged_key(SigningKeyHash&) { return false; }
+
+    // INFO: fc 03oct26 the bootloader's rule, built into both images: a release refuses an older
+    // one
+    virtual bool downgrade_allowed() const { return false; }
 
     // INFO: fc 03oct26 slim and full images of a release share a version, not a hash
     virtual bool running_hash(ImageHash&) { return false; }

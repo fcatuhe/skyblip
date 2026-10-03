@@ -51,7 +51,10 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         chosen: "Chosen image",
         full: "full",
         slim: "slim",
-        file: "The firmware file, ending in .signed.bin",
+        shelf: "A published image, signed with the key this device trusts",
+        shelf_prompt: "Choose an image",
+        shelf_release: "Its release on GitHub, with the .uf2",
+        file: "Or a firmware file of your own, ending in .signed.bin",
         install: "Install",
         steps: {
           dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
@@ -73,7 +76,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
     <li>Chrome or Edge, on a computer or on Android</li>
     <li>The device on the ground, with a GPS fix</li>
     <li>A battery above the warning, or charging</li>
-    <li>The release file ending in .signed.bin, the one this page names</li>
+    <li>An image from the list, or a file ending in .signed.bin, the one this page names</li>
     <li>No other app holding the device&rsquo;s settings</li>
     <li>Ten minutes, with the device close to you</li>
   </ul>
@@ -134,9 +137,9 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
   <p class="lede">
     Save sends only what you changed. Back to defaults sends the firmware&rsquo;s
     own values for what differs. Either way the glass says
-    <span class="mono">SETTINGS</span>,
-    <span class="mono">APPLY THE SETTINGS THE PHONE SENT</span>: press twice,
-    and the page reads the settings back from the device.
+    <span class="mono">SETTINGS</span> and lists each change in the words of
+    its own menu, such as <span class="mono">CALLSIGN F-JXYZ</span>, up to four
+    rows: press twice, and the page reads the settings back from the device.
   </p>
   <p class="lede">
     The radar&rsquo;s range and plot are set on the device&rsquo;s own menu,
@@ -165,7 +168,8 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
       </thead>
       <tbody>
         <tr><th class="mono">probation</th><td data-manage-word="probation">The new firmware is proving itself: radio up, receiver talking, screen drawn. This resolves on its own within seconds, there is nothing to do.</td></tr>
-        <tr><th class="mono">reverted</th><td data-manage-word="reverted">The last update did not take, and the device went back to the firmware it had. Nothing is broken: the version number is the old one on purpose. Try again, and if it happens twice, tell us which version you tried.</td></tr>
+        <tr><th class="mono">reverted</th><td data-manage-word="reverted">The last update started but did not prove itself, so the device went back to the firmware it had. Nothing is broken: the version number is the old one on purpose. Try again, and if it happens twice, tell us which version you tried.</td></tr>
+        <tr><th class="mono">refused</th><td data-manage-word="image_refused">The bootloader would not start the last update, and the device kept the firmware it had: the image did not pass its signature check. Download it again, and if it happens twice, tell us which file you used.</td></tr>
         <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Your settings are the ones from before that update: what you changed while the newer firmware ran stayed with it.</td></tr>
         <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">The stored settings could not be read, so the device runs on its defaults. Check the callsign and the aircraft type before you fly.</td></tr>
         <tr><th class="mono">swap_powered: false</th><td data-manage-word="swap_unpowered">The battery is critical, too low to install. Charge it first.</td></tr>
@@ -197,7 +201,8 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th class="mono">not_approved</th><td data-manage-word="not_approved">The image that arrived is not the version the glass asked you about, so the device did not install it. Install again.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
         <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">The upload window closed: it lasts ten minutes, and a take-off, one press on the glass or a dropped link closes it sooner. Install again: the upload picks up where it stopped, unless the device restarted.</td></tr>
-        <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">The device runs a newer version than this one, and it never goes back to an older one.</td></tr>
+        <tr><th class="mono">older</th><td data-manage-word="older">This image is older than the firmware on the device, and a device on released firmware never goes back over Bluetooth. The same version installs again, a newer one too.</td></tr>
+        <tr><th class="mono">wrong_key</th><td data-manage-word="wrong_key">This image is not signed with the key the device trusts: a development build for a released device, or the other way round. Choose an image of the device&rsquo;s kind, or change kinds with a .uf2 on the USB drive.</td></tr>
         <tr><th class="mono">too_large</th><td data-manage-word="too_large">This image is bigger than the room the device keeps for an update, so it is not a skyBlip Go image.</td></tr>
         <tr><th class="mono">not_image</th><td data-manage-word="not_image">This file is not a signed firmware image. Choose the one ending in .signed.bin: the .uf2 is for the USB drive.</td></tr>
         <tr><th class="mono">flash</th><td data-manage-word="flash">The device could not write the image to its memory. Try again, and if it happens again, use the USB drive.</td></tr>
@@ -225,6 +230,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th>No answer</th><td data-manage-word="timeout">The device stopped answering. Disconnect, connect again, and install again.</td></tr>
         <tr><th>No room given</th><td data-manage-word="no_params">The device did not say how much of the image it takes at once. Disconnect and connect again.</td></tr>
         <tr><th>Refused</th><td data-manage-word="smp">The device refused the image with an error this page does not know:</td></tr>
+        <tr><th>Image not downloaded</th><td data-manage-word="shelf_failed">The chosen image did not download from this site. Reload the page and choose it again, or download it from its release and choose the file.</td></tr>
         <tr><th>Anything else</th><td data-manage-word="failed">Something failed on the way:</td></tr>
       </tbody>
     </table>

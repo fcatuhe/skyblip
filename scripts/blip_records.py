@@ -90,7 +90,7 @@ def track_degrees(at):
 
 RESET = ("UNKNOWN", "POWER ON", "RESET PIN", "BROWNOUT", "SOFT RESET", "WATCHDOG", "CPU LOCKUP",
          "CHARGER WAKE", "BUTTON WAKE", "DEBUGGER")
-IMAGE_STATE = ("confirmed", "probation", "reverted")
+IMAGE_STATE = ("confirmed", "probation", "reverted", "refused")
 REJECT = ("NONE", "NO SOLUTION", "NO RMC", "NO GGA", "STALE", "NO DATE", "JUMP")
 STAGE = ("silent", "blind", "solving", "fixed")
 VERDICT = ("transmitted", "lost", "held", "unarmed", "received", "named", "bad_crc", "unframed",

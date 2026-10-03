@@ -60,9 +60,8 @@ TEST_CASE("product: a boot refused on a flat cell writes the reason under the ma
     rig.sleep_again();
 
     const go::Glass& parked = rig.platform.chips().epd.framebuffer();
-    // the black, then the frame over it
-    CHECK(rig.platform.chips().epd.present_count == 2);
-    CHECK_FALSE(rig.platform.chips().epd.last_full);
+    CHECK(rig.platform.chips().epd.present_count == 1);
+    CHECK(rig.platform.chips().epd.last_full);
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK(reads_in(parked, "FLAT BATTERY", 10, 130, 190, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);

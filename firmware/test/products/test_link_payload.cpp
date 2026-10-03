@@ -20,6 +20,7 @@
 #include "core/events/link.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
+#include "hardware/platform/host/platform.h"
 #include "ports/null.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
@@ -164,14 +165,20 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
 }
 
 TEST_CASE(
-    "comms: the update report fits it too, widest versions, a settings fallback, a hub image") {
+    "comms: the update report fits it too, widest versions, a settings fallback, a hub image "
+    "and a key") {
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = widest_settings();
     go::SettingsStore store_cs(s, kWidestAddr);
-    ConfigService cs(link, store_cs);
+    platform::host::Watchdog watchdog;
+    platform::host::Dfu dfu(watchdog);
+    dfu.has_running_key = true;
+    dfu.trusted_key.fill(0xff);
+    dfu.downgrades = true;
+    ConfigService cs(link, store_cs, &dfu);
     constexpr ports::ImageVersion kWidest{255, 255, 65535, 4294967295u};
     cs.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{kWidest, kWidest});
     cs.set_settings_fallback(settings::Fallback::Defaults);
@@ -188,8 +195,10 @@ TEST_CASE(
     CHECK(body.find("\"to\":\"255.255.65535+4294967295\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
     CHECK(body.find("\"swap_powered\"") != std::string::npos);
-    // The last field written, so its presence is the proof nothing was dropped.
     CHECK(body.find("\"imu\":\"abababababababab\"") != std::string::npos);
+    CHECK(body.find("\"downgrade\":true") != std::string::npos);
+    // The last field written, so its presence is the proof nothing was dropped.
+    CHECK(body.find("\"key\":\"FFFFFFFF\"") != std::string::npos);
 }
 
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {

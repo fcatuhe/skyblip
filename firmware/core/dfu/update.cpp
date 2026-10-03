@@ -11,6 +11,7 @@ const char* to_string(ImageState state) {
         case ImageState::Confirmed: return "confirmed";
         case ImageState::Probation: return "probation";
         case ImageState::Reverted: return "reverted";
+        case ImageState::Refused: return "refused";
     }
     return "confirmed";
 }
@@ -52,6 +53,12 @@ const char* parse_field(const char* at, uint32_t max, char end, uint32_t& out) {
     return end == 0 ? at : at + 1;
 }
 
+bool is_image(const SlotImage& slot, const ports::ImageVersion& version,
+              const ports::ImageHash& hash, bool hashed) {
+    if (hashed && slot.hashed) return slot.hash == hash;
+    return slot.version == version;
+}
+
 ports::ImageVersion get_version(const uint8_t* in) {
     ports::ImageVersion v;
     v.major = in[0];
@@ -88,15 +95,27 @@ bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out) {
     return true;
 }
 
-Outcome outcome(const UpdateRecord& record, const RunningImage& running) {
-    if (record.hashed && running.hashed) {
-        if (running.hash == record.to_hash) return Outcome::Landed;
-        if (running.hash == record.from_hash) return Outcome::Reverted;
-        return Outcome::Unrelated;
-    }
-    if (running.version == record.to) return Outcome::Landed;
-    if (running.version == record.from) return Outcome::Reverted;
-    return Outcome::Unrelated;
+// INFO: fc 03oct26 a revert swaps the image back into slot 1, a bootloader refusal scrambles it
+Outcome outcome(const UpdateRecord& record, const SlotImage& running,
+                const std::optional<SlotImage>& staged) {
+    if (is_image(running, record.to, record.to_hash, record.hashed)) return Outcome::Landed;
+    if (!is_image(running, record.from, record.from_hash, record.hashed)) return Outcome::Unrelated;
+    const bool swapped_back = staged && is_image(*staged, record.to, record.to_hash, record.hashed);
+    return swapped_back ? Outcome::Reverted : Outcome::Refused;
+}
+
+int compare(const ports::ImageVersion& a, const ports::ImageVersion& b) {
+    if (a.major != b.major) return a.major < b.major ? -1 : 1;
+    if (a.minor != b.minor) return a.minor < b.minor ? -1 : 1;
+    if (a.revision != b.revision) return a.revision < b.revision ? -1 : 1;
+    if (a.build != b.build) return a.build < b.build ? -1 : 1;
+    return 0;
+}
+
+const char* version_refusal(const ports::ImageVersion& running, const ports::ImageVersion& incoming,
+                            bool downgrade_allowed) {
+    if (!downgrade_allowed && compare(incoming, running) < 0) return "older";
+    return nullptr;
 }
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
