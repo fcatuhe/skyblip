@@ -205,6 +205,7 @@ void ConfigService::refuse_unclaimed(uint16_t session_id) {
 void ConfigService::stage(Pending pending, const char* reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
+    prompt_detail_[0] = 0;
     char buf[64];
     json::Writer w(buf, sizeof(buf));
     w.kv_bool("ack", false);
@@ -224,7 +225,7 @@ void ConfigService::ack(bool ok, const char* reason) {
 }
 
 const char* ConfigService::prompt_detail() const {
-    return pending_ == Pending::Dfu ? prompt_detail_ : pending_detail(pending_);
+    return prompt_detail_[0] != 0 ? prompt_detail_ : pending_detail(pending_);
 }
 
 // INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
@@ -236,11 +237,11 @@ void ConfigService::request_firmware(const json::Reader& r) {
         return;
     }
     approved_ = version;
+    stage(Pending::Dfu, "confirm_dfu");
     int n = fmt_string(prompt_detail_, "INSTALL ");
     n += dfu::format_version(version, prompt_detail_ + n, sizeof(prompt_detail_) - n);
     n += fmt_string(prompt_detail_ + n, " FROM THE PHONE");
     prompt_detail_[n] = 0;
-    stage(Pending::Dfu, "confirm_dfu");
 }
 
 // INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
@@ -358,6 +359,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         std::memcpy(pending_buf_, data, static_cast<size_t>(pending_len_));
         pending_buf_[pending_len_] = 0;
         stage(Pending::Set, "confirm");
+        (void)store_.describe_changes(pending_buf_, pending_len_, prompt_detail_,
+                                      static_cast<int>(sizeof(prompt_detail_)));
         return;
     }
 

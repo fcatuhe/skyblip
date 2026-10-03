@@ -78,6 +78,16 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
     }
 }
 
+TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {
+    ConfirmSnapshot s = prompt(comms::Pending::Set);
+    s.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
+    Glass fb;
+    draw_confirm(fb, s);
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
+    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));
+}
+
 TEST_CASE("confirm page: the allowing gesture and the refusing one are both spelled out") {
     Glass fb;
     draw_confirm(fb, prompt(comms::Pending::Dfu));

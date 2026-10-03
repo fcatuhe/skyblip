@@ -62,6 +62,8 @@ constexpr uint8_t kBatteryPushStepPercent = 5;
 // a notification the controller will fail.
 constexpr int kSmallestSupportedPayload = 182;
 
+constexpr int kPromptDetailCap = 128;
+
 class ConfigService {
    public:
     ConfigService(ports::Link& link, ConfigStore& store, ports::Dfu* dfu = nullptr,
@@ -309,7 +311,7 @@ class ConfigService {
     uint32_t window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
     ports::ImageVersion approved_{};
-    char prompt_detail_[48]{};
+    char prompt_detail_[kPromptDetailCap]{};
     char pending_buf_[sizeof(events::RxFrame::data) + 1]{0};
     static constexpr int kHeldFrameCap = kTimingFrameCap;
     static_assert(kHeldFrameCap >= DiagnosticsReport::kFrameCap, "a report frame must be holdable");
