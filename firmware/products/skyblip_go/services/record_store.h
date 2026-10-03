@@ -16,14 +16,10 @@ static_assert(flight::kLogRecordBytes == diag::kRecordBytes,
               "the two rings share a partition and must share its slot size");
 constexpr uint32_t kStoreRecordBytes = flight::kLogRecordBytes;
 
-// INFO: fc 20sep26 budgets for the external NOR on spi1, bench-settled, not datasheet figures
-constexpr uint32_t kSectorEraseCostMs = 40;
-constexpr uint32_t kSlotWriteCostMs = 2;
-
 // INFO: fc 20sep26 a bulk erase still owes the dwell map its re-arm, so it goes a window at a time
 constexpr uint32_t kEraseCeilingSectors = 8;
 
-static_assert(kSectorEraseCostMs + 2 * kSlotWriteCostMs +
+static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
                       static_cast<uint32_t>(timing::kJitterGuardMs) <
                   static_cast<uint32_t>(timing::kUplinkRxEnd - timing::kUplinkRxStart),
               "claiming a sector no longer fits inside the narrowest dwell the map offers");
@@ -47,7 +43,7 @@ class RecordPool {
     uint32_t unreadable_sectors() const { return unreadable_sectors_; }
     uint32_t faults() const { return faults_; }
 
-    bool window_open(uint32_t cost_ms, uint32_t now_ms) const;
+    bool claim_window(uint32_t cost_ms, uint32_t now_ms);
 
     bool read_slot(uint32_t sector, uint32_t slot, uint8_t* out);
     bool write_slot(uint32_t sector, uint32_t slot, const uint8_t* in);
@@ -184,9 +180,6 @@ class RecordStore {
     uint32_t records_written_{0};
     uint32_t session_records_{0};
     uint32_t lost_sectors_seen_{0};
-    uint32_t pass_ms_{0};
-    uint32_t pass_cost_ms_{0};
-    bool pass_seen_{false};
     uint32_t erase_next_{0};
     uint32_t session_id_{0};
     uint32_t claimed_session_{0};

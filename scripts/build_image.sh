@@ -8,7 +8,9 @@
 # has to pass before it leaves. With a public key, the image must verify
 # against it: that is how CI knows it signed with the key the units trust.
 #
-# The image, its .uf2 and a .version line land in firmware/build/out/.
+# Two images of one commit land in firmware/build/out/: the slim .signed.bin, which
+# leaves the BHI260AP image on the external flash, and the .full.signed.bin, which
+# carries it. The .uf2 is always the full one, with a .version line beside them.
 #
 #   SKYBLIP_CHANNEL     development (default): MCUboot takes any image signed by its key
 #                       production: products/<product>/release/ adds the refusal of an older one
@@ -28,7 +30,10 @@ python=${PYTHON:-python3}
 west=${WEST:-west}
 firmware=$tree/firmware
 build=$firmware/build
+slim_build=$firmware/build-slim
 app=$build/$product/zephyr
+slim_app=$slim_build/$product/zephyr
+hub_image=$firmware/hardware/parts/bhi260/firmware/BHI260AP.fw
 out=$build/out
 topdir=$(cd "$firmware" && "$west" topdir)
 imgtool=$topdir/bootloader/mcuboot/scripts/imgtool.py
@@ -48,10 +53,16 @@ main() {
   local version
   version=$(image_version)
   echo "== building $product $version, $channel ($(git -C "$tree" rev-parse --short HEAD))"
-  build_image "$version"
-  assert_version_stamped "$version"
-  assert_downgrade_rule
-  if [ -n "$public_key" ]; then assert_signed_by "$public_key"; fi
+  build_image "$version" "$build" y
+  build_image "$version" "$slim_build" n
+  for image in "$app" "$slim_app"; do
+    assert_version_stamped "$version" "$image"
+    if [ -n "$public_key" ]; then assert_signed_by "$public_key" "$image"; fi
+  done
+  assert_downgrade_rule "$build" "$app"
+  assert_downgrade_rule "$slim_build" "$slim_app"
+  "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
+  "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
   assert_confirmed_image_differs
   check_flash_budget
   stage_artifacts "$version"
@@ -61,7 +72,7 @@ main() {
 # file: Zephyr rejects a tweak above 255 (cmake/modules/version.cmake:79-81).
 # Commit count: it only ever goes up on a branch that only moves forward.
 image_version() {
-  local file=$firmware/products/$product/VERSION triple
+  local file=$firmware/products/$product/VERSION triple build major minor patch
   test -f "$file" || { echo "FAIL: no such product: $product" >&2; exit 1; }
   if [ "$(git -C "$tree" rev-parse --is-shallow-repository)" = true ]; then
     echo "FAIL: shallow clone, the commit count would be wrong (checkout with fetch-depth: 0)" >&2
@@ -72,11 +83,19 @@ image_version() {
     -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
     -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
   test -n "${triple//./}" || { echo "FAIL: no version triple in $file" >&2; exit 1; }
-  echo "$triple+$(git -C "$tree" rev-list --count HEAD)"
+  build=$(git -C "$tree" rev-list --count HEAD)
+  # The update frame fits one notification on the narrowest phone only up to dfu::kWidestVersion.
+  IFS=. read -r major minor patch <<< "$triple"
+  if [ "$major" -gt 9 ] || [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ] || [ "$build" -gt 99999 ]; then
+    echo "FAIL: $triple+$build is wider than 9.99.99+99999, the widest version the update frame fits" >&2
+    exit 1
+  fi
+  echo "$triple+$build"
 }
 
+# A full image and a slim one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
 build_image() {
-  local version=$1 board conf=$firmware/build-conf
+  local version=$1 dir=$2 linked=$3 board conf=$firmware/build-conf
   # The board is a fact about the SKU, declared by the product, never passed in.
   board=$(sed -n 's/^skyblip_product_board(\(.*\))$/\1/p' \
           "$firmware/products/$product/CMakeLists.txt")
@@ -94,32 +113,33 @@ build_image() {
     mcuboot_conf="$mcuboot_conf;$product_dir/release/mcuboot.conf"
   fi
 
-  if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$build"; fi
-  drop_build_of_moved_sdk
+  if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$dir"; fi
+  drop_build_of_moved_sdk "$dir"
   # -D<image>_ is sysbuild's namespace for one image, named after the app dir.
-  (cd "$firmware" && "$west" build -b "$board" "products/$product" --sysbuild \
+  (cd "$firmware" && "$west" build -b "$board" -d "$dir" "products/$product" --sysbuild \
     -- -DSB_EXTRA_CONF_FILE="$conf/signing.conf" \
        -D"${product}"_EXTRA_CONF_FILE="$app_conf" \
-       -Dmcuboot_EXTRA_CONF_FILE="$mcuboot_conf")
+       -Dmcuboot_EXTRA_CONF_FILE="$mcuboot_conf" \
+       -DSB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED="$linked")
 }
 
 # CMake caches the compiler by absolute path, so a build configured against an SDK
 # that has since moved can only fail to configure.
 drop_build_of_moved_sdk() {
-  local cache=$build/$product/CMakeCache.txt sdk
+  local dir=$1 cache=$1/$product/CMakeCache.txt sdk
   [ -f "$cache" ] || return 0
   sdk=$(sed -n 's/^ZEPHYR_SDK_INSTALL_DIR:PATH=//p' "$cache")
   if [ -n "$sdk" ] && [ ! -d "$sdk" ]; then
     echo "== the last build used the SDK at $sdk, which is gone: building pristine"
-    rm -rf "$build"
+    rm -rf "$dir"
   fi
 }
 
 # 0.0.0+0 is what gets signed whenever the VERSION file stops being picked up,
 # and it silently disables downgrade prevention on every unit that takes it.
 assert_version_stamped() {
-  local version=$1 stamped
-  stamped=$("$python" "$imgtool" verify "$app/zephyr.signed.bin" | sed -n 's/^Image version: //p')
+  local version=$1 image=$2 stamped
+  stamped=$("$python" "$imgtool" verify "$image/zephyr.signed.bin" | sed -n 's/^Image version: //p')
   test "$stamped" = "$version" \
     || { echo "FAIL: signed ${stamped:-nothing}, expected $version"; exit 1; }
 }
@@ -127,19 +147,19 @@ assert_version_stamped() {
 # The bootloader enforces the rule and the app predicts it: the two disagreeing is
 # an app that promises an install its bootloader then throws away.
 assert_downgrade_rule() {
-  local in_bootloader in_app expected=n
+  local dir=$1 image=$2 in_bootloader in_app expected=n
   [ "$channel" = production ] && expected=y
-  in_bootloader=$(sed -n 's/^CONFIG_MCUBOOT_DOWNGRADE_PREVENTION=//p' "$build/mcuboot/zephyr/.config")
-  in_app=$(sed -n 's/^CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE=//p' "$app/.config")
+  in_bootloader=$(sed -n 's/^CONFIG_MCUBOOT_DOWNGRADE_PREVENTION=//p' "$dir/mcuboot/zephyr/.config")
+  in_app=$(sed -n 's/^CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE=//p' "$image/.config")
   test "${in_bootloader:-n}" = "$expected" && test "${in_app:-n}" = "$expected" \
-    || { echo "FAIL: $channel wants downgrade prevention $expected, MCUboot has ${in_bootloader:-n}, the app ${in_app:-n}"; exit 1; }
-  echo "downgrade prevention: $expected ($channel)"
+    || { echo "FAIL: $channel wants downgrade prevention $expected in $dir, MCUboot has ${in_bootloader:-n}, the app ${in_app:-n}"; exit 1; }
+  echo "downgrade prevention in $dir: $expected ($channel)"
 }
 
 assert_signed_by() {
-  "$python" "$imgtool" verify -k "$1" "$app/zephyr.signed.bin" >/dev/null \
-    || { echo "FAIL: the image does not verify against $1"; exit 1; }
-  echo "signed by the key in $1"
+  "$python" "$imgtool" verify -k "$1" "$2/zephyr.signed.bin" >/dev/null \
+    || { echo "FAIL: $2/zephyr.signed.bin does not verify against $1"; exit 1; }
+  echo "$2/zephyr.signed.bin: signed by the key in $1"
 }
 
 # A slot0 written straight by the bootloader never swaps, so it never gets to
@@ -158,6 +178,7 @@ check_flash_budget() {
   objcopy=$(sed -n 's/^CMAKE_OBJCOPY:FILEPATH=//p' "$build/$product/CMakeCache.txt")
   test -n "$objcopy" || { echo "FAIL: the build cached no CMAKE_OBJCOPY to find the SDK's size by"; exit 1; }
   SIZE=${objcopy%objcopy}size "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
+  echo "slim image: $(stat -c %s "$slim_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
 }
 
 # The application image must be the CONFIRMED one: a slot0 written directly
@@ -170,7 +191,8 @@ stage_artifacts() {
     "$build/mcuboot/zephyr/zephyr.hex" "$app/zephyr.signed.confirmed.hex"
   rm -rf "$out" && mkdir -p "$out"
   cp "$build/$slug.uf2" "$out/$slug.uf2"
-  cp "$app/zephyr.signed.bin" "$out/$slug.signed.bin"
+  cp "$slim_app/zephyr.signed.bin" "$out/$slug.signed.bin"
+  cp "$app/zephyr.signed.bin" "$out/$slug.full.signed.bin"
   cp "$app/zephyr.signed.confirmed.bin" "$out/$slug.signed.confirmed.bin"
   echo "$slug $version $(git -C "$tree" rev-parse --short HEAD) $channel" > "$out/$slug.version"
 }

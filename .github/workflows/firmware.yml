@@ -90,6 +90,9 @@ jobs:
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards
         run: python3 scripts/test_mkuf2.py
+      # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
+      - name: the image says which hub image it pins
+        run: python3 scripts/test_check_imu_image.py
       # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
@@ -368,11 +371,13 @@ jobs:
           mkdir release
           cp "image/$SLUG.uf2" "release/$SLUG-$tag.uf2"
           cp "image/$SLUG.signed.bin" "release/$SLUG-$tag.signed.bin"
+          cp "image/$SLUG.full.signed.bin" "release/$SLUG-$tag.full.signed.bin"
           (cd release && sha256sum -- * > SHA256SUMS)
 
-          notes=$(printf '%s\n\n%s\n%s\n' \
+          notes=$(printf '%s\n\n%s\n%s\n%s\n' \
             "skyBlip $version from $GITHUB_REF_NAME, built from $GITHUB_SHA and signed with the development key." \
             "- \`.signed.bin\` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/$GH_REPO/tree/main/firmware/keys)), older builds included." \
+            "- \`.full.signed.bin\` is the same image with the sensor hub's firmware, for a unit the update page asks it for." \
             "- \`.uf2\` installs on any unit by drag-and-drop, and moves it to the development key.")
           previous=""
           if [ "$GITHUB_REF_NAME" = main ]; then

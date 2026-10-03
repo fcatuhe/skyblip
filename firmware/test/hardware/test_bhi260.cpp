@@ -11,11 +11,11 @@ using Stage = parts::Bhi260::Stage;
 
 constexpr uint8_t kImage[] = {0x2B, 0x66, 0x00, 0x00, 0x11, 0x22, 0x33, 0x44};
 
-ConstByteSpan image() { return ConstByteSpan(kImage); }
+parts::LinkedImage linked{ConstByteSpan(kImage)};
 
 uint32_t bring_up(parts::Bhi260& imu, uint32_t from_ms = 0) {
     uint32_t now_ms = from_ms;
-    imu.load(image(), now_ms);
+    imu.load(linked, now_ms);
     while (imu.stage() != Stage::Running && imu.stage() != Stage::Failed &&
            now_ms < from_ms + 60000) {
         now_ms += 10;
@@ -142,7 +142,8 @@ TEST_CASE("bhi260: an image with no Bosch magic is refused before the bus is tou
     REQUIRE(imu.probe() == Status::Ok);
 
     const uint8_t rubbish[] = {0x00, 0x00, 0x00, 0x00};
-    imu.load(ConstByteSpan(rubbish), 0);
+    parts::LinkedImage image{ConstByteSpan(rubbish)};
+    imu.load(image, 0);
 
     CHECK(imu.stage() == Stage::Failed);
     CHECK(imu.fault() == Status::Invalid);
@@ -181,7 +182,8 @@ TEST_CASE("bhi260: the upload is paced, so no single pass of the loop owns the b
     parts::Bhi260 imu{chip};
     REQUIRE(imu.probe() == Status::Ok);
 
-    imu.load(ConstByteSpan(big, sizeof(big)), 0);
+    parts::LinkedImage image{ConstByteSpan(big, sizeof(big))};
+    imu.load(image, 0);
     uint32_t now_ms = 0;
     int passes_while_uploading = 0;
     while (imu.stage() != Stage::Running && now_ms < 60000) {

@@ -15,6 +15,7 @@ export function shelfEntry(bytes, file, release) {
     version: versionText(image.version),
     build: image.version.build,
     key: image.key,
+    full: image.imu.full !== false,
     published: release.publishedAt,
     file: `${release.tagName}/${file}`,
   };
@@ -22,19 +23,19 @@ export function shelfEntry(bytes, file, release) {
 
 export function ordered(entries) {
   const rank = entry => (entry.channel === 'release' ? 0 : 1);
-  return [...entries].sort((a, b) => rank(a) - rank(b) || b.build - a.build);
+  return [...entries].sort((a, b) => rank(a) - rank(b) || b.build - a.build || a.full - b.full);
 }
 
 export function stock(dir, releases) {
   const byTag = new Map(releases.map(release => [release.tagName, release]));
   const entries = readdirSync(dir, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
-    .map(({ name: tag }) => {
+    .flatMap(({ name: tag }) => {
       const release = byTag.get(tag);
       if (!release) throw new Error(`${tag} is on the shelf but not among the releases`);
       const files = readdirSync(join(dir, tag)).filter(file => file.endsWith('.signed.bin'));
-      if (files.length !== 1) throw new Error(`${tag}: ${files.length} .signed.bin files, expected one`);
-      return shelfEntry(new Uint8Array(readFileSync(join(dir, tag, files[0]))), files[0], release);
+      if (files.length === 0) throw new Error(`${tag}: no .signed.bin file`);
+      return files.map(file => shelfEntry(new Uint8Array(readFileSync(join(dir, tag, file))), file, release));
     });
   writeFileSync(join(dir, 'shelf.json'), `${JSON.stringify({ images: ordered(entries) }, null, 2)}\n`);
   return entries.length;

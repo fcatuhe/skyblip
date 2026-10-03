@@ -4,7 +4,7 @@
 // ports/kvstore.h is the other storage port and it is not this one. A key/value
 // store owns its own layout, garbage-collects when it feels like it, and is
 // mounted on the 32 KB internal partition where a write stalls the CPU. A flight
-// log is an append-only stream on a 1.29 MB external partition where a write
+// log is an append-only stream on a 1.16 MB external partition where a write
 // does not. The two have nothing in common but the word storage, so they are two
 // ports and not one with a mode flag.
 #ifndef SKYBLIP_PORTS_FLASH_REGION_H

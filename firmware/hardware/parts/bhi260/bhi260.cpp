@@ -43,8 +43,8 @@ Status Bhi260::probe() {
     return answer;
 }
 
-void Bhi260::load(ConstByteSpan image, uint32_t now_ms) {
-    image_ = image;
+void Bhi260::load(Image& image, uint32_t now_ms) {
+    image_ = &image;
     uploaded_ = 0;
     wakeup_ = Fifo{kRegFifoWakeup};
     non_wakeup_ = Fifo{kRegFifoNonWakeup};
@@ -55,7 +55,9 @@ void Bhi260::load(ConstByteSpan image, uint32_t now_ms) {
     errored_sensor_ = 0;
     interrupt_ = 0;
 
-    if (image.size() < kCommandHeaderBytes || le16(image.data()) != kFirmwareMagic) {
+    uint8_t magic[2] = {0};
+    if (image.size() < kCommandHeaderBytes || !image.read(0, magic, sizeof(magic)) ||
+        le16(magic) != kFirmwareMagic) {
         fail(Status::Invalid);
         return;
     }
@@ -143,20 +145,24 @@ void Bhi260::step_host_interface(uint32_t now_ms) {
 void Bhi260::step_upload(uint32_t now_ms) {
     const bool first = uploaded_ == 0;
     const uint16_t header = first ? kCommandHeaderBytes : 0;
-    const uint32_t left = static_cast<uint32_t>(image_.size()) - uploaded_;
+    const uint32_t left = image_->size() - uploaded_;
     uint16_t payload = static_cast<uint16_t>(kUploadChunkBytes - header);
     if (payload > left) payload = static_cast<uint16_t>(left);
 
     uint16_t n = 0;
     frame_[n++] = kRegCommand;
     if (first) {
-        const uint32_t words = (static_cast<uint32_t>(image_.size()) + 3) / 4;
+        const uint32_t words = (image_->size() + 3) / 4;
         frame_[n++] = static_cast<uint8_t>(kCmdUploadToProgramRam & 0xFF);
         frame_[n++] = static_cast<uint8_t>(kCmdUploadToProgramRam >> 8);
         frame_[n++] = static_cast<uint8_t>(words & 0xFF);
         frame_[n++] = static_cast<uint8_t>((words >> 8) & 0xFF);
     }
-    for (uint16_t i = 0; i < payload; i++) frame_[n++] = image_[uploaded_ + i];
+    if (!image_->read(uploaded_, frame_ + n, payload)) {
+        fail(Status::Down);
+        return;
+    }
+    n = static_cast<uint16_t>(n + payload);
     while ((n - 1) % 4 != 0) frame_[n++] = 0;
 
     if (!bus_.write(address_, frame_, n)) {
@@ -164,7 +170,7 @@ void Bhi260::step_upload(uint32_t now_ms) {
         return;
     }
     uploaded_ += payload;
-    if (uploaded_ < image_.size()) return;
+    if (uploaded_ < image_->size()) return;
 
     if (!command(kCmdBootProgramRam, nullptr, 0)) {
         fail(Status::Down);
@@ -462,6 +468,12 @@ void Bhi260::fail(Status why) {
     failed_stage_ = stage_;
     stage_ = Stage::Failed;
     fault_ = why;
+}
+
+bool LinkedImage::read(uint32_t offset, uint8_t* out, uint16_t len) {
+    if (offset > bytes_.size() || len > bytes_.size() - offset) return false;
+    for (uint16_t i = 0; i < len; i++) out[i] = bytes_[offset + i];
+    return true;
 }
 
 }  // namespace skyblip::parts

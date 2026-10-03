@@ -22,6 +22,20 @@ function(skyblip_shared_layers)
   if(CONFIG_MCUMGR_GRP_IMG)
     target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
   endif()
+  skyblip_imu_image()
+endfunction()
+
+# The hub boots from our copy of its image: every build pins the digest, only a full one carries it.
+function(skyblip_imu_image)
+  set(image ${SKYBLIP_FIRMWARE}/hardware/parts/bhi260/firmware/BHI260AP.fw)
+  set(generated ${ZEPHYR_BINARY_DIR}/include/generated)
+  if(CONFIG_SKYBLIP_IMU_IMAGE_LINKED)
+    generate_inc_file_for_target(app ${image} ${generated}/bhi260ap_fw.inc)
+  endif()
+  file(SHA256 ${image} digest)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " digest_bytes ${digest})
+  file(GENERATE OUTPUT ${generated}/bhi260ap_fw_sha256.inc CONTENT "${digest_bytes}\n")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${image})
 endfunction()
 
 # One product, one board. Called before find_package(Zephyr) so a mismatched

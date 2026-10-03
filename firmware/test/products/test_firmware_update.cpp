@@ -336,6 +336,44 @@ TEST_CASE(
     CHECK(config(later.rig).image_state() == dfu::ImageState::Reverted);
 }
 
+// The full image of the running version, sent to give a fitted hub its image: by version it landed.
+TEST_CASE("product: a same-version image the bootloader reverted reads as reverted by its hash") {
+    constexpr ports::ImageHash kSlim{{0x51, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
+    constexpr ports::ImageHash kFull{{0xF0, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}};
+    Rig before;
+    stage_versions(before);
+    before.platform.dfu().staged = kRunning;
+    before.platform.dfu().has_running_hash = true;
+    before.platform.dfu().running_image_hash = kSlim;
+    before.platform.dfu().has_staged_hash = true;
+    before.platform.dfu().staged_image_hash = kFull;
+    REQUIRE(before.setup() == Status::Ok);
+    uint32_t t = 0;
+    on_ground(before, t);
+    before.send("{\"cmd\":\"dfu\",\"version\":\"0.1.0+12\"}");
+    before.run(t, t + 200);
+    t += 200;
+    config(before).confirm();
+    land_upload(before, t);
+    before.run(t, t + power::kParkMs + power::kReleaseSettleMs + 500);
+    REQUIRE(before.platform.dfu().triggered == 1);
+
+    Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
+    after.rig.platform.dfu().has_running_hash = true;
+    after.rig.platform.dfu().running_image_hash = kSlim;
+    after.rig.platform.dfu().has_staged_hash = true;
+    after.rig.platform.dfu().staged_image_hash = kFull;
+    REQUIRE(after.rig.setup() == Status::Ok);
+    CHECK(config(after.rig).image_state() == dfu::ImageState::Reverted);
+
+    Rebooted landed(before, kRunning, /*confirmed=*/true);
+    landed.rig.platform.dfu().has_running_hash = true;
+    landed.rig.platform.dfu().running_image_hash = kFull;
+    REQUIRE(landed.rig.setup() == Status::Ok);
+    CHECK(config(landed.rig).image_state() == dfu::ImageState::Confirmed);
+    CHECK_FALSE(attempt_recorded(landed.rig));
+}
+
 TEST_CASE(
     "product: an update the bootloader threw away is told apart from one that ran and failed") {
     Rig before;

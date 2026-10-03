@@ -10,7 +10,7 @@
 
 namespace skyblip::platform::zephyr {
 
-// The devicetree log_partition: 0x14A000 on the external SPI NOR, on spi1.
+// A devicetree partition on the external SPI NOR, on spi1: log_partition or imu_image_partition.
 //
 // Not the radio's bus (the SX1262 has spi3) and not the internal NVMC, whose
 // erases and writes halt the CPU while the flash controller owns the bus. A
@@ -18,8 +18,10 @@ namespace skyblip::platform::zephyr {
 // own time, so a dwell armed against a PPS deadline is never waiting on it.
 class FlashRegion : public ports::FlashRegion {
    public:
+    explicit FlashRegion(uint8_t partition_id) : partition_id_(partition_id) {}
+
     Status begin() {
-        if (flash_area_open(PARTITION_ID(log_partition), &area_) != 0) return Status::Down;
+        if (flash_area_open(partition_id_, &area_) != 0) return Status::Down;
         const struct device* dev = flash_area_get_device(area_);
         if (dev == nullptr || !device_is_ready(dev)) return Status::Down;
         struct flash_pages_info info;
@@ -57,6 +59,7 @@ class FlashRegion : public ports::FlashRegion {
     }
 
    private:
+    uint8_t partition_id_;
     const struct flash_area* area_{nullptr};
     uint32_t sector_bytes_{0};
     uint32_t sector_count_{0};

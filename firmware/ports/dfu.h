@@ -2,6 +2,7 @@
 #define SKYBLIP_PORTS_DFU_H
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace skyblip::ports {
@@ -20,6 +21,18 @@ constexpr bool operator==(const ImageVersion& a, const ImageVersion& b) {
            a.build == b.build;
 }
 constexpr bool operator!=(const ImageVersion& a, const ImageVersion& b) { return !(a == b); }
+
+struct ImageHash {
+    static constexpr size_t kBytes = 8;
+    uint8_t bytes[kBytes]{};
+};
+
+constexpr bool operator==(const ImageHash& a, const ImageHash& b) {
+    for (size_t i = 0; i < ImageHash::kBytes; i++)
+        if (a.bytes[i] != b.bytes[i]) return false;
+    return true;
+}
+constexpr bool operator!=(const ImageHash& a, const ImageHash& b) { return !(a == b); }
 
 using SigningKeyHash = std::array<uint8_t, 32>;
 
@@ -41,6 +54,10 @@ class Dfu {
     // INFO: fc 03oct26 the bootloader's rule, built into both images: a release refuses an older
     // one
     virtual bool downgrade_allowed() const { return false; }
+
+    // INFO: fc 03oct26 slim and full images of a release share a version, not a hash
+    virtual bool running_hash(ImageHash&) { return false; }
+    virtual bool staged_hash(ImageHash&) { return false; }
 
     virtual RecoveryPath recovery_path() const { return RecoveryPath::Rebooted; }
     virtual RecoveryPath enter_recovery() { return recovery_path(); }

@@ -1,11 +1,18 @@
 const MCUBOOT_MAGIC = 0x96f3b83d;
 const HEADER_BYTES = 32;
+const HEADER_SIZE_OFFSET = 8;
+const IMAGE_SIZE_OFFSET = 12;
 const VERSION_OFFSET = 20;
 const TLV_MAGIC = 0x6907;
 const PROTECTED_TLV_MAGIC = 0x6908;
+const TLV_INFO_BYTES = 4;
 const TLV_KEYHASH = 0x01;
+const TLV_IMU_PIN = 0x00a0;
+const TLV_IMU_FULL = 0x00a1;
 const KEY_HASH_BYTES = 32;
 const KEY_PREFIX_BYTES = 4;
+const PIN_BYTES = 32;
+const DIGEST_PREFIX = /^[0-9a-f]{16}$/;
 
 export function readImage(bytes) {
   if (bytes.length < HEADER_BYTES) return null;
@@ -20,29 +27,52 @@ export function readImage(bytes) {
     },
     key: signingKey(view),
     bytes: bytes.length,
+    imu: imuOf(view),
   };
+}
+
+function imuOf(view) {
+  const imu = { pin: null, full: null };
+  const start = view.getUint16(HEADER_SIZE_OFFSET, true) + view.getUint32(IMAGE_SIZE_OFFSET, true);
+  if (start + TLV_INFO_BYTES > view.byteLength || view.getUint16(start, true) !== PROTECTED_TLV_MAGIC) return imu;
+  const end = start + view.getUint16(start + 2, true);
+  if (end > view.byteLength) return imu;
+  for (let at = start + TLV_INFO_BYTES; at + TLV_INFO_BYTES <= end;) {
+    const type = view.getUint16(at, true);
+    const length = view.getUint16(at + 2, true);
+    const value = at + TLV_INFO_BYTES;
+    if (value + length > end) return { pin: null, full: null };
+    if (type === TLV_IMU_PIN && length === PIN_BYTES) imu.pin = hex(new Uint8Array(view.buffer, view.byteOffset + value, length));
+    if (type === TLV_IMU_FULL && length === 1) imu.full = view.getUint8(value) === 1;
+    at = value + length;
+  }
+  return imu;
+}
+
+function hex(bytes) {
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export function fullImageNeeded(deviceImu, pin) {
+  if (deviceImu === 'none') return false;
+  const verified = DIGEST_PREFIX.test(deviceImu ?? '');
+  return !(verified && pin?.startsWith(deviceImu));
 }
 
 // INFO: fc 03oct26 the first four bytes of the KEYHASH TLV, as the device names the key it trusts
 function signingKey(view) {
-  let at = view.getUint16(8, true) + view.getUint32(12, true);
-  if (at + 4 <= view.byteLength && view.getUint16(at, true) === PROTECTED_TLV_MAGIC) at += view.getUint16(at + 2, true);
-  if (at + 4 > view.byteLength || view.getUint16(at, true) !== TLV_MAGIC) return null;
+  let at = view.getUint16(HEADER_SIZE_OFFSET, true) + view.getUint32(IMAGE_SIZE_OFFSET, true);
+  if (at + TLV_INFO_BYTES <= view.byteLength && view.getUint16(at, true) === PROTECTED_TLV_MAGIC) at += view.getUint16(at + 2, true);
+  if (at + TLV_INFO_BYTES > view.byteLength || view.getUint16(at, true) !== TLV_MAGIC) return null;
   const end = Math.min(at + view.getUint16(at + 2, true), view.byteLength);
-  for (at += 4; at + 4 <= end; ) {
+  for (at += TLV_INFO_BYTES; at + TLV_INFO_BYTES <= end; ) {
     const type = view.getUint16(at, true);
     const length = view.getUint16(at + 2, true);
-    at += 4;
-    if (type === TLV_KEYHASH && length === KEY_HASH_BYTES && at + length <= end) return hex(view, at, KEY_PREFIX_BYTES);
+    at += TLV_INFO_BYTES;
+    if (type === TLV_KEYHASH && length === KEY_HASH_BYTES && at + length <= end) return hex(new Uint8Array(view.buffer, view.byteOffset + at, KEY_PREFIX_BYTES)).toUpperCase();
     at += length;
   }
   return null;
-}
-
-function hex(view, at, count) {
-  let text = '';
-  for (let i = 0; i < count; i++) text += view.getUint8(at + i).toString(16).padStart(2, '0');
-  return text.toUpperCase();
 }
 
 export function versionText({ major, minor, revision, build }) {

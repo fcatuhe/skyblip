@@ -18,6 +18,13 @@ struct Acceleration {
 
 class Bhi260 {
    public:
+    class Image {
+       public:
+        virtual ~Image() = default;
+        virtual uint32_t size() const = 0;
+        virtual bool read(uint32_t offset, uint8_t* out, uint16_t len) = 0;
+    };
+
     static constexpr uint8_t kAddress = 0x28;
     static constexpr uint8_t kAddressAlternate = 0x29;
     static constexpr uint8_t kProductId = 0x89;
@@ -51,7 +58,7 @@ class Bhi260 {
     explicit Bhi260(io::I2c& bus) : bus_(bus) {}
 
     Status probe();
-    void load(ConstByteSpan image, uint32_t now_ms);
+    void load(Image& image, uint32_t now_ms);
     void service(uint32_t now_ms);
     bool poll();
 
@@ -155,7 +162,7 @@ class Bhi260 {
     static int16_t to_milli_g(const uint8_t* le16);
 
     io::I2c& bus_;
-    ConstByteSpan image_{};
+    Image* image_{nullptr};
     Stage stage_{Stage::Absent};
     Status fault_{Status::Ok};
     uint8_t address_{kAddress};
@@ -177,6 +184,17 @@ class Bhi260 {
     uint8_t frame_[1 + kCommandHeaderBytes + kUploadChunkBytes]{};
     Fifo wakeup_{kRegFifoWakeup};
     Fifo non_wakeup_{kRegFifoNonWakeup};
+};
+
+class LinkedImage : public Bhi260::Image {
+   public:
+    explicit LinkedImage(ConstByteSpan bytes) : bytes_(bytes) {}
+
+    uint32_t size() const override { return static_cast<uint32_t>(bytes_.size()); }
+    bool read(uint32_t offset, uint8_t* out, uint16_t len) override;
+
+   private:
+    ConstByteSpan bytes_;
 };
 
 }  // namespace skyblip::parts

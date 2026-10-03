@@ -1,5 +1,5 @@
 import { GATT_WRITE_BYTES, connect, hasWebBluetooth } from './ble.js';
-import { compareVersions, parseVersion, readImage, sha256, versionText } from './image.js';
+import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from './image.js';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
@@ -49,6 +49,7 @@ function imageOf(reply) {
     to: reply.to ?? null,
     settings: reply.settings ?? null,
     swapPowered: reply.swap_powered !== false,
+    imu: reply.imu ?? null,
     downgrade: reply.downgrade === true,
     key: reply.key ?? null,
   };
@@ -56,6 +57,17 @@ function imageOf(reply) {
 
 function settingsOf(reply) {
   return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
+}
+
+function adviceOf({ image, file }) {
+  if (!image) return null;
+  // INFO: fc 03oct26 before a file is chosen, the blob the device verified stands in for the release's pin
+  const pin = file ? file.pin : image.imu;
+  return fullImageNeeded(image.imu, pin) ? 'full' : 'slim';
+}
+
+function settlingOf({ phase, image }) {
+  return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
 
 function statusOf(reply) {
@@ -93,6 +105,8 @@ export class Updater {
     settings: null,
     defaults: null,
     file: null,
+    advice: null,
+    settling: false,
     progress: null,
     notice: null,
   };
@@ -148,8 +162,9 @@ export class Updater {
     this.#image = bytes;
     this.#sha = await sha256(bytes);
     this.#version = image.version;
+    const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
     this.#key = image.key;
-    this.#set({ file: { name, version: versionText(image.version), bytes: bytes.length }, notice: null });
+    this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
   }
 
   async install() {
@@ -204,6 +219,11 @@ export class Updater {
       return this.#fail(error);
     }
     this.#set({ running: this.#running && versionText(this.#running) });
+  }
+
+  #needsFull({ full, pin }) {
+    const { image } = this.#state;
+    return full === false && Boolean(image) && fullImageNeeded(image.imu, pin);
   }
 
   async #send(command) {
@@ -324,7 +344,8 @@ export class Updater {
   }
 
   #set(patch) {
-    this.#state = { ...this.#state, ...patch };
+    const state = { ...this.#state, ...patch };
+    this.#state = { ...state, advice: adviceOf(state), settling: settlingOf(state) };
     this.#onChange(this.#state);
   }
 }

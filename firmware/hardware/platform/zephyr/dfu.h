@@ -9,6 +9,8 @@
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 
+#include <cstring>
+
 #if defined(CONFIG_SOC_FAMILY_NORDIC_NRF)
 #include <hal/nrf_wdt.h>
 #endif
@@ -16,6 +18,11 @@
 #include "core/dfu/image.h"
 #include "hardware/platform/zephyr/upload_gate.h"
 #include "ports/dfu.h"
+
+// INFO: fc 03oct26 img_mgmt.h drags in bootutil/image.h, off the app include path
+struct image_version;
+extern "C" int img_mgmt_read_info(int image_slot, struct image_version* ver, uint8_t* hash,
+                                  uint32_t* flags);
 
 namespace skyblip::platform::zephyr {
 
@@ -98,6 +105,9 @@ class Dfu : public ports::Dfu {
         return !IS_ENABLED(CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE);
     }
 
+    bool running_hash(ports::ImageHash& out) override { return read_hash(kPrimarySlot, out); }
+    bool staged_hash(ports::ImageHash& out) override { return read_hash(kSecondarySlot, out); }
+
     void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
     bool upload_finished() override { return UploadGate::finished(); }
     void forget_upload() override { UploadGate::forget_finished(); }
@@ -123,6 +133,17 @@ class Dfu : public ports::Dfu {
     }
 
    private:
+    static constexpr int kPrimarySlot = 0;
+    static constexpr int kSecondarySlot = 1;
+    static constexpr size_t kWidestImageHashBytes = 64;
+
+    static bool read_hash(int slot, ports::ImageHash& out) {
+        uint8_t hash[kWidestImageHashBytes];
+        if (img_mgmt_read_info(slot, nullptr, hash, nullptr) != 0) return false;
+        std::memcpy(out.bytes, hash, ports::ImageHash::kBytes);
+        return true;
+    }
+
     static bool read_version(uint8_t area_id, ports::ImageVersion& out) {
         mcuboot_img_header header{};
         if (boot_read_bank_header(area_id, &header, sizeof(header)) != 0) return false;

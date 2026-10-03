@@ -55,7 +55,7 @@
     color: var(--quiet-text);
   }
 
-  .manage-facts dd { margin: 0; color: var(--card-ink); font-variant-numeric: tabular-nums; }
+  .manage-facts dd { margin: 0; color: var(--card-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
   .manage-notes { display: grid; gap: var(--space-xs); }
   .manage-notes:empty { display: none; }

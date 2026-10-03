@@ -14,6 +14,13 @@ constexpr uint8_t kSectorVersion = 2;
 
 constexpr uint32_t kSectorHeaderBytes = 16;
 
+// INFO: fc 20sep26 budgets for the external NOR on spi1, bench-settled, not datasheet figures
+constexpr uint32_t kSectorEraseCostMs = 40;
+constexpr uint32_t kSlotWriteCostMs = 2;
+// INFO: fc 03oct26 one program operation, as the slot write, plus 256 bytes more of SPI at 8 MHz
+constexpr uint32_t kPageWriteCostMs = kSlotWriteCostMs + 1;
+constexpr uint32_t kPageBytes = 256;
+
 // INFO: fc 20sep26 byte 13, under the CRC: a suffix whose first sector was recycled cannot claim it
 constexpr uint8_t kSectorFlagSessionStart = 1u << 0;
 

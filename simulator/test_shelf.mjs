@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { DEVELOPMENT_KEY, PRODUCTION_KEY, signedImage } from './fake_skyblip.mjs';
+import { BLOB_PIN, DEVELOPMENT_KEY, PRODUCTION_KEY, signedImage } from './fake_skyblip.mjs';
 import { ordered, shelfEntry, stock } from './shelf.mjs';
 
 const IMAGE_BYTES = 2000;
@@ -17,14 +17,22 @@ const BRANCH = {
 function shelve(dir, release, version, key) {
   mkdirSync(join(dir, release.tagName));
   const file = `skyblip-go-${release.tagName}.signed.bin`;
-  writeFileSync(join(dir, release.tagName, file), signedImage(version, IMAGE_BYTES, key));
+  writeFileSync(join(dir, release.tagName, file), signedImage(version, IMAGE_BYTES, { key }));
   return file;
+}
+
+function shelveBoth(dir, release, version, key) {
+  mkdirSync(join(dir, release.tagName));
+  for (const [ending, full] of [['.signed.bin', false], ['.full.signed.bin', true]]) {
+    const image = signedImage(version, IMAGE_BYTES, { key, imu: { pin: BLOB_PIN, full } });
+    writeFileSync(join(dir, release.tagName, `skyblip-go-${release.tagName}${ending}`), image);
+  }
 }
 
 test('an image is described by what its header and TLVs say, not by its tag', () => {
   const entry = shelfEntry(signedImage({ major: 0, minor: 2, revision: 0, build: 899 }, IMAGE_BYTES), 'x.signed.bin', RELEASE);
   assert.deepEqual(entry, {
-    tag: 'v0.2.0', name: 'v0.2.0', channel: 'release', version: '0.2.0+899', build: 899, key: 'B2B2B2B2',
+    tag: 'v0.2.0', name: 'v0.2.0', channel: 'release', version: '0.2.0+899', build: 899, key: 'B2B2B2B2', full: true,
     published: '2026-10-03T10:00:00Z', file: 'v0.2.0/x.signed.bin',
   });
 });
@@ -54,6 +62,16 @@ test('a stocked shelf lists every tag it holds, with the key each was signed wit
   const { images } = JSON.parse(readFileSync(join(dir, 'shelf.json'), 'utf8'));
   assert.deepEqual(images.map(image => [image.tag, image.key]), [
     ['v0.2.0', 'B2B2B2B2'], ['dev-905-feat-x', 'A1A1A1A1'], ['dev-900', 'A1A1A1A1'],
+  ]);
+});
+
+test('a release with a slim and a full image offers both, the slim one first', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shelf-'));
+  shelveBoth(dir, RELEASE, { major: 0, minor: 2, revision: 0, build: 870 }, PRODUCTION_KEY);
+  assert.equal(stock(dir, [RELEASE]), 2);
+  const { images } = JSON.parse(readFileSync(join(dir, 'shelf.json'), 'utf8'));
+  assert.deepEqual(images.map(image => [image.file, image.full]), [
+    ['v0.2.0/skyblip-go-v0.2.0.signed.bin', false], ['v0.2.0/skyblip-go-v0.2.0.full.signed.bin', true],
   ]);
 });
 
