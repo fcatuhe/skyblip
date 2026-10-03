@@ -21,7 +21,6 @@ const IMAGE_REFUSALS = {
 // INFO: fc 26sep26 the ATT payloads of MTU 247 and 185, where Android and iOS commonly settle
 const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
-const DROPPED_UPLOAD = new Set(['nothing_staged', 'upload_unfinished']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const SETTING_KEYS = ['aircraft_type', 'alarm', 'alarm_volume', 'units', 'callsign'];
@@ -80,7 +79,6 @@ export class Updater {
   #sha = null;
   #version = null;
   #windowOpen = false;
-  #uploaded = false;
   #leaving = false;
   #state = {
     phase: 'offline',
@@ -140,7 +138,6 @@ export class Updater {
 
   async choose(bytes, name) {
     const image = readImage(bytes);
-    this.#uploaded = false;
     if (!image) {
       this.#image = null;
       return this.#set({ file: null, notice: { key: 'not_image' } });
@@ -158,9 +155,8 @@ export class Updater {
       return this.#set({ notice: { key: 'not_newer' } });
     }
     this.#set({ notice: null });
-    if (this.#uploaded) return this.#ask('apply');
     if (this.#windowOpen) return this.#upload();
-    return this.#ask('dfu');
+    return this.#ask('dfu', { version: versionText(this.#version) });
   }
 
   recover() {
@@ -225,11 +221,11 @@ export class Updater {
   #acked(reply) {
     const { phase, task } = this.#state;
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
-    if (phase !== 'asking' && phase !== 'confirming') return;
+    if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
     if (reply.ack && task === 'set' && !reply.reason) return this.#saved();
     if (reply.ack && reply.reason === task) return this.#granted(task);
-    if (task === 'apply' && DROPPED_UPLOAD.has(reply.reason)) this.#uploaded = false;
+    if (task === 'install') this.#windowOpen = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
   }
 
@@ -238,9 +234,8 @@ export class Updater {
       this.#windowOpen = true;
       return this.#upload();
     }
-    this.#uploaded = false;
     this.#windowOpen = false;
-    return this.#set({ phase: task === 'apply' ? 'installing' : 'recovering', task: null });
+    return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
   }
 
   #saved() {
@@ -251,16 +246,17 @@ export class Updater {
   async #upload() {
     if (!this.#packetBytes) return this.#set({ notice: { key: 'no_params' } });
     const total = this.#image.length;
-    this.#set({ phase: 'uploading', task: null, progress: { sent: 0, total } });
+    this.#set({ phase: 'uploading', task: 'install', progress: { sent: 0, total } });
     try {
       await this.#measureWrites();
       await this.#sendImage(total);
     } catch (error) {
       if (error instanceof SmpError && error.rc === RC.accessDenied) this.#windowOpen = false;
-      return this.#fail(error);
+      if (this.#state.phase === 'uploading') this.#fail(error);
+      return;
     }
-    this.#uploaded = true;
-    await this.#ask('apply');
+    // INFO: fc 03oct26 the device's verdict can land before the reply to the last chunk
+    if (this.#state.phase === 'uploading') this.#set({ phase: 'asking' });
   }
 
   async #measureWrites() {
@@ -302,7 +298,6 @@ export class Updater {
     const leaving = this.#leaving;
     this.#device = null;
     this.#windowOpen = false;
-    this.#uploaded = false;
     this.#running = null;
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;

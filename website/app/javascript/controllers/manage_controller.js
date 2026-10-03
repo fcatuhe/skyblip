@@ -5,7 +5,7 @@ const KILOBYTE = 1000
 const MS_PER_MINUTE = 60_000
 const ESTIMATE_AFTER_SHARE = 0.05
 
-const ASKED_STEPS = new Set(["dfu", "apply"])
+const ASKED_STEPS = new Set(["dfu", "install"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])

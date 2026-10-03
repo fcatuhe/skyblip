@@ -10,9 +10,9 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
   <h1>Un nouveau firmware et des réglages, depuis cette page, en Bluetooth.</h1>
   <p class="lede">
     Rien à installer, rien à appairer. La page envoie l&rsquo;image, et
-    l&rsquo;appareil vous le demande deux fois sur son propre écran&nbsp;: avant
-    de prendre l&rsquo;image, et avant de l&rsquo;installer. Un téléphone ne peut
-    pas le mettre à jour tout seul.
+    l&rsquo;appareil vous le demande une fois sur son propre écran, en nommant la
+    version, avant de la prendre. Un téléphone ne peut pas le mettre à jour tout
+    seul.
   </p>
   <p class="lede">
     La page lit aussi les réglages que l&rsquo;appareil contient, montre ceux
@@ -54,9 +54,8 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         file: "Le fichier du firmware, en .signed.bin",
         install: "Installer",
         steps: {
-          dfu: "Autorisez l’envoi : l’écran dit FIRMWARE, pressez deux fois.",
-          upload: "L’image voyage. Gardez cette page ouverte et l’appareil près de vous.",
-          apply: "Autorisez l’installation : l’écran dit INSTALL, pressez deux fois.",
+          dfu: "Autorisez la mise à jour : l’écran dit FIRMWARE et la version, pressez deux fois.",
+          upload: "L’image voyage et l’écran dit RECEIVING. Gardez cette page ouverte et l’appareil près de vous.",
           install: "L’appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
         },
         remaining: "environ %{minutes} min restantes",
@@ -83,27 +82,29 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
 <section>
   <h2 class="kicker">Ce qui se passe</h2>
 
-  <h3>Deux questions à l&rsquo;écran, <span class="highlight">un envoi entre les deux</span>.</h3>
+  <h3>Une question à l&rsquo;écran, <span class="highlight">puis il s&rsquo;installe tout seul</span>.</h3>
   <p class="lede">
-    Installer demande d&rsquo;abord à l&rsquo;appareil d&rsquo;accepter une
-    image. L&rsquo;écran dit <span class="mono">FIRMWARE</span>,
-    <span class="mono">LET THE PHONE WRITE A NEW IMAGE</span>&nbsp;: pressez deux
+    Installer demande à l&rsquo;appareil de prendre l&rsquo;image choisie.
+    L&rsquo;écran dit <span class="mono">FIRMWARE</span>, puis
+    <span class="mono">INSTALL</span> et la version, par exemple
+    <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>&nbsp;: pressez deux
     fois. Cela ouvre une fenêtre de dix minutes, et seulement tant que
     l&rsquo;appareil sait qu&rsquo;il est au sol.
   </p>
   <p class="lede">
-    L&rsquo;image voyage ensuite, et la page montre ce qui en est arrivé. La
-    fenêtre se ferme au bout de dix minutes, au décollage, ou quand la liaison
-    tombe. Installez de nouveau et l&rsquo;envoi reprend là où il s&rsquo;était
-    arrêté, tant que l&rsquo;appareil n&rsquo;a pas redémarré entre-temps.
+    L&rsquo;image voyage ensuite. L&rsquo;écran dit
+    <span class="mono">RECEIVING</span> et la page montre ce qui en est arrivé.
+    Une pression sur l&rsquo;appareil l&rsquo;arrête. La fenêtre se ferme aussi
+    au bout de dix minutes, au décollage, ou quand la liaison tombe. Installez de
+    nouveau et l&rsquo;envoi reprend là où il s&rsquo;était arrêté, tant que
+    l&rsquo;appareil n&rsquo;a pas redémarré entre-temps.
   </p>
   <p class="lede">
-    Une fois le dernier octet arrivé, la page demande l&rsquo;installation.
-    L&rsquo;écran dit <span class="mono">INSTALL</span>,
-    <span class="mono">REBOOT INTO THE STAGED IMAGE</span>&nbsp;: pressez deux
-    fois encore. L&rsquo;appareil affiche <span class="mono">INSTALLING</span> et
-    redémarre sur le nouveau firmware, ce qui prend une trentaine de secondes, et
-    la liaison tombe.
+    Une fois le dernier octet arrivé, l&rsquo;appareil vérifie qu&rsquo;il tient
+    bien la version qu&rsquo;il vous a nommée, qu&rsquo;il est toujours au sol et
+    que la batterie tiendra, puis il installe sans redemander. Il affiche
+    <span class="mono">INSTALLING</span> et redémarre sur le nouveau firmware, ce
+    qui prend une trentaine de secondes, et la liaison tombe.
   </p>
   <p class="lede">
     Reconnectez. Le nouveau firmware démarre à l&rsquo;essai&nbsp;: il doit
@@ -185,11 +186,11 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">Il n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou il n&rsquo;a pas eu de fix GPS depuis qu&rsquo;il est allumé. Mettez-le là où il voit le ciel, attendez le fix, puis réessayez.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">La batterie est critique. Installer, c&rsquo;est 15 à 25 secondes d&rsquo;effacements de mémoire flash, et l&rsquo;appareil n&rsquo;en commence pas un sur une batterie qui pourrait ne pas le finir. Chargez-la, puis réessayez.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, ce qui vaut refus. Réessayez, et pressez deux fois quand l&rsquo;écran demande.</td></tr>
-        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">La question a été refusée sur l&rsquo;appareil&nbsp;: une pression dit non.</td></tr>
-        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">Aucun nouveau firmware n&rsquo;attend sur l&rsquo;appareil. Installez de nouveau pour envoyer l&rsquo;image.</td></tr>
-        <tr><th class="mono">upload_unfinished</th><td data-manage-word="upload_unfinished">L&rsquo;image n&rsquo;est pas arrivée entière depuis l&rsquo;ouverture de la fenêtre, ou l&rsquo;appareil a redémarré après son arrivée. Installez de nouveau pour l&rsquo;envoyer.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">L&rsquo;appareil a dit non&nbsp;: une pression refuse la question, et une pression sur RECEIVING arrête l&rsquo;envoi.</td></tr>
+        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">L&rsquo;envoi s&rsquo;est terminé, mais l&rsquo;appareil n&rsquo;a pas pu relire l&rsquo;image. Installez de nouveau pour l&rsquo;envoyer.</td></tr>
+        <tr><th class="mono">not_approved</th><td data-manage-word="not_approved">L&rsquo;image arrivée n&rsquo;est pas la version que l&rsquo;écran vous a nommée, donc l&rsquo;appareil ne l&rsquo;a pas installée. Installez de nouveau.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Une autre application tient les réglages de cet appareil. Déconnectez-la ou fermez-la, puis reconnectez.</td></tr>
-        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">La fenêtre d&rsquo;envoi s&rsquo;est fermée&nbsp;: elle dure dix minutes, et un décollage, un refus à l&rsquo;écran ou une liaison perdue la ferment plus tôt. Installez de nouveau&nbsp;: l&rsquo;envoi reprend là où il s&rsquo;était arrêté, sauf si l&rsquo;appareil a redémarré.</td></tr>
+        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">La fenêtre d&rsquo;envoi s&rsquo;est fermée&nbsp;: elle dure dix minutes, et un décollage, une pression sur l&rsquo;appareil ou une liaison perdue la ferment plus tôt. Installez de nouveau&nbsp;: l&rsquo;envoi reprend là où il s&rsquo;était arrêté, sauf si l&rsquo;appareil a redémarré.</td></tr>
         <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">L&rsquo;appareil a déjà cette version ou une plus récente, et il ne revient jamais à une plus ancienne.</td></tr>
         <tr><th class="mono">too_large</th><td data-manage-word="too_large">Cette image est plus grande que la place que l&rsquo;appareil garde pour une mise à jour&nbsp;: ce n&rsquo;est pas une image de skyBlip Go.</td></tr>
         <tr><th class="mono">not_image</th><td data-manage-word="not_image">Ce fichier n&rsquo;est pas une image de firmware signée. Choisissez celui en .signed.bin&nbsp;: le .uf2 est pour le lecteur USB.</td></tr>

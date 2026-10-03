@@ -29,6 +29,7 @@ function session() {
 
 const READS = new Set(['update', 'status', 'get', 'defaults']);
 const asking = task => state => state.phase === 'confirming' && state.task === task;
+const installing = state => state.phase === 'installing';
 const settled = state => state.phase === 'ready' && state.notice;
 
 async function connected(options = {}) {
@@ -55,22 +56,30 @@ test('connecting reads the running version, the image state and the status', asy
   });
 });
 
-test('an install asks twice on the glass and lands the whole image in the slot', async () => {
+test('an install asks once on the glass, naming the version, and installs once the image lands', async () => {
   const { device, updater, until } = await chosen();
   updater.install();
   await until(asking('dfu'));
+  assert.equal(device.approved, '0.2.0+15');
   device.press();
   const uploading = await until(state => state.phase === 'uploading');
   assert.equal(uploading.progress.total, IMAGE_BYTES);
-  await until(asking('apply'));
+  await until(installing);
   assert.deepEqual(device.slot, signedImage(NEWER, IMAGE_BYTES));
   assert.equal(device.finished, true);
-  device.press();
-  await until(state => state.phase === 'installing');
   const after = await until(state => state.phase === 'rebooting');
   assert.equal(after.notice, null);
   assert.equal(after.running, null, 'the version that ran before the install is not shown as running');
-  assert.deepEqual(device.commands.filter(cmd => !READS.has(cmd)), ['dfu', 'apply']);
+  assert.deepEqual(device.commands.filter(cmd => !READS.has(cmd)), ['dfu']);
+});
+
+test('a verdict that lands before the reply to the last chunk still reads as installing', async () => {
+  const { device, updater, until } = await chosen({ verdictFirst: true });
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(installing);
+  assert.equal((await until(state => state.phase === 'rebooting')).notice, null);
 });
 
 async function uploaded(options) {
@@ -78,7 +87,7 @@ async function uploaded(options) {
   link.updater.install();
   await link.until(asking('dfu'));
   link.device.press();
-  await link.until(asking('apply'));
+  await link.until(installing);
   assert.deepEqual(link.device.slot, signedImage(NEWER, IMAGE_BYTES));
   return link;
 }
@@ -103,7 +112,7 @@ test('a link whose MTU was never exchanged sends the whole buffer in 20-byte sli
 
 test('a device that does not echo is written in 20-byte slices', async () => {
   const { device } = await uploaded({ bufSize: 2475, mtu: 498, echo: false });
-  assert.equal(device.longestAttempt, 20);
+  assert.equal(device.smp.longestAttempt, 20);
 });
 
 test('a write the browser refuses steps down to a smaller one, and the upload carries on', async () => {
@@ -117,7 +126,7 @@ test('no GATT write is longer than BLE guarantees, none overlaps, no packet over
   updater.install();
   await until(asking('dfu'));
   device.press();
-  await until(asking('apply'));
+  await until(installing);
   assert.equal(device.longestWrite, GATT_WRITE_BYTES);
   assert.ok(device.longestPacket <= 300, `packet of ${device.longestPacket}`);
   assert.equal(device.overlaps, 0);
@@ -131,7 +140,7 @@ test('progress only moves forward and ends at the image size', async () => {
   device.press();
   await until(state => {
     if (state.progress) seen.push(state.progress.sent);
-    return state.phase === 'confirming' && state.task === 'apply';
+    return installing(state);
   });
   assert.deepEqual(seen, [...seen].sort((a, b) => a - b));
   assert.equal(seen.at(-1), IMAGE_BYTES);
@@ -167,47 +176,41 @@ test('one press on the glass reads as cancelled', async () => {
   assert.equal((await until(settled)).notice.key, 'cancelled');
 });
 
-for (const reason of ['nothing_staged', 'upload_unfinished']) {
-  test(`an install refused as ${reason} sends the whole image again next time`, async () => {
+for (const reason of ['not_approved', 'nothing_staged', 'low_power', 'in_flight']) {
+  test(`an upload the device will not install as ${reason} is said, and the next install asks again`, async () => {
     const { device, updater, until } = await chosen();
+    device.refuseInstall = reason;
     updater.install();
     await until(asking('dfu'));
-    device.refuseApply = reason;
     device.press();
     assert.equal((await until(settled)).notice.key, reason);
-    device.refuseApply = null;
-    const packets = device.uploadOffsets.length;
+    device.refuseInstall = null;
     updater.install();
-    await until(asking('apply'));
-    assert.equal(device.uploadOffsets[packets], 0);
-    assert.equal(device.finished, true);
+    await until(asking('dfu'));
+    device.press();
+    await until(installing);
   });
 }
 
-// #89 refuses at the confirmation too: a second upload can start while INSTALL stands on the glass.
-test('an install refused at the press, after the prompt, is still said', async () => {
+test('an image other than the one the glass named is not installed', async () => {
   const { device, updater, until } = await chosen();
   updater.install();
   await until(asking('dfu'));
+  device.approved = '0.3.0+1';
   device.press();
-  await until(asking('apply'));
-  device.finished = false;
-  device.press();
-  assert.equal((await until(settled)).notice.key, 'upload_unfinished');
+  assert.equal((await until(settled)).notice.key, 'not_approved');
 });
 
-test('an apply prompt that expired is asked again without uploading again', async () => {
+test('one press on the glass during the upload reads as cancelled, not as a closed window', async () => {
   const { device, updater, until } = await chosen();
+  device.refuseAfterPackets = 3;
   updater.install();
   await until(asking('dfu'));
   device.press();
-  await until(asking('apply'));
-  const packets = device.uploadOffsets.length;
-  device.expire();
-  await until(settled);
-  updater.install();
-  await until(asking('apply'));
-  assert.equal(device.uploadOffsets.length, packets);
+  assert.equal((await until(settled)).notice.key, 'cancelled');
+  await new Promise(resolve => setImmediate(() => setImmediate(() => setImmediate(resolve))));
+  assert.equal(updater.state.notice.key, 'cancelled');
+  assert.equal(device.finished, false);
 });
 
 test('the window closing mid-upload says so, and the next window resumes at the device offset', async () => {
@@ -223,7 +226,7 @@ test('the window closing mid-upload says so, and the next window resumes at the 
   updater.install();
   await until(asking('dfu'));
   device.press();
-  await until(asking('apply'));
+  await until(installing);
   const resumed = device.uploadOffsets.slice(device.uploadOffsets.lastIndexOf(0) + 1);
   assert.equal(resumed[0], reached);
   assert.deepEqual(device.slot, signedImage(NEWER, IMAGE_BYTES));

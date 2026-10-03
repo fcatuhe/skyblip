@@ -9,8 +9,8 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
   <h1>New firmware and settings, from this page, over Bluetooth.</h1>
   <p class="lede">
     Nothing to install and nothing to pair. The page sends the image, and the
-    device asks you on its own glass twice: before it takes the image, and
-    before it installs it. A phone cannot update it on its own.
+    device asks you once, on its own glass and naming the version, before it
+    takes it. A phone cannot update it on its own.
   </p>
   <p class="lede">
     The page also reads the settings the device holds, shows which differ from
@@ -51,9 +51,8 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         file: "The firmware file, ending in .signed.bin",
         install: "Install",
         steps: {
-          dfu: "Allow the upload: the glass says FIRMWARE, press twice.",
-          upload: "The image travels. Keep this page open and the device close.",
-          apply: "Allow the install: the glass says INSTALL, press twice.",
+          dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
+          upload: "The image travels and the glass says RECEIVING. Keep this page open and the device close.",
           install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
         },
         remaining: "about %{minutes} min left",
@@ -80,26 +79,28 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
 <section>
   <h2 class="kicker">What happens</h2>
 
-  <h3>Two questions on the glass, <span class="highlight">one upload between them</span>.</h3>
+  <h3>One question on the glass, <span class="highlight">then it installs itself</span>.</h3>
   <p class="lede">
-    Install first asks the device to accept an image. The glass says
-    <span class="mono">FIRMWARE</span>,
-    <span class="mono">LET THE PHONE WRITE A NEW IMAGE</span>: press twice. That
+    Install asks the device to take the image you chose. The glass says
+    <span class="mono">FIRMWARE</span>, then
+    <span class="mono">INSTALL</span> and the version, for example
+    <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>: press twice. That
     opens a window of ten minutes, and only while the device knows it is on the
     ground.
   </p>
   <p class="lede">
-    The image travels next, and the page shows how much of it has arrived. The
-    window closes at ten minutes, at a take-off, or when the link drops. Install
-    again and the upload picks up where it stopped, as long as the device has
-    not restarted in between.
+    The image travels next. The glass says <span class="mono">RECEIVING</span>
+    and the page shows how much of the image has arrived. One press on the
+    device stops it. The window also closes at ten minutes, at a take-off, or
+    when the link drops. Install again and the upload picks up where it
+    stopped, as long as the device has not restarted in between.
   </p>
   <p class="lede">
-    Once the last byte is in, the page asks for the install. The glass says
-    <span class="mono">INSTALL</span>,
-    <span class="mono">REBOOT INTO THE STAGED IMAGE</span>: press twice again.
-    The device paints <span class="mono">INSTALLING</span> and restarts into the
-    new firmware, which takes about thirty seconds, and the link drops.
+    Once the last byte is in, the device checks that it holds the version it
+    asked you about, that it is still on the ground and that the battery can
+    finish the job, then installs without asking again. It paints
+    <span class="mono">INSTALLING</span> and restarts into the new firmware,
+    which takes about thirty seconds, and the link drops.
   </p>
   <p class="lede">
     Connect again. The new firmware starts on probation: it has to bring its
@@ -178,11 +179,11 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">It has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">The battery is critical. Installing is 15 to 25 seconds of flash erases, and the device does not start one on a cell that might not finish it. Charge it, then try again.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Nobody answered the question on the glass within thirty seconds, which counts as a refusal. Try again, and press twice when the glass asks.</td></tr>
-        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The question was refused on the device: one press says no.</td></tr>
-        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">No new firmware is waiting on the device. Install again to send the image.</td></tr>
-        <tr><th class="mono">upload_unfinished</th><td data-manage-word="upload_unfinished">The image did not arrive whole since the window opened, or the device restarted after it arrived. Install again to send it.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The device said no: one press refuses the question, and one press on RECEIVING stops the upload.</td></tr>
+        <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">The upload ended, but the device could not read the image back. Install again to send it.</td></tr>
+        <tr><th class="mono">not_approved</th><td data-manage-word="not_approved">The image that arrived is not the version the glass asked you about, so the device did not install it. Install again.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
-        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">The upload window closed: it lasts ten minutes, and a take-off, a refusal on the glass or a dropped link closes it sooner. Install again: the upload picks up where it stopped, unless the device restarted.</td></tr>
+        <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">The upload window closed: it lasts ten minutes, and a take-off, one press on the glass or a dropped link closes it sooner. Install again: the upload picks up where it stopped, unless the device restarted.</td></tr>
         <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">The device already runs this version or a newer one, and it never goes back to an older one.</td></tr>
         <tr><th class="mono">too_large</th><td data-manage-word="too_large">This image is bigger than the room the device keeps for an update, so it is not a skyBlip Go image.</td></tr>
         <tr><th class="mono">not_image</th><td data-manage-word="not_image">This file is not a signed firmware image. Choose the one ending in .signed.bin: the .uf2 is for the USB drive.</td></tr>
