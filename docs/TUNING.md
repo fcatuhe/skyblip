@@ -105,7 +105,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLevelSamples` | 3 | samples | Samples | More than two consecutive samples, so the third one acts. |
 | `kRailSettleMs` | 20 | milliseconds | Settle | the 20 ms MB spends between driving the enable pins low and releasing them (nRF52.cpp:2075). |
 | `kLongPressMs` | 2000 (2 s) | milliseconds | - | Long enough that it cannot be the page press, short enough to do with gloves on. |
-| `kParkMs` | 3000 (3 s) | milliseconds | - | The panel is parked through black and then the frame, two partials the SSD1681 clocks out in about a second, slower on a cold glass. |
+| `kParkMs` | 3000 (3 s) | milliseconds | - | A power-off parks the panel with a full refresh, which the SSD1681 clocks out in about 2.5 s, and an install or a recovery through black, about a second. |
 | `kReleaseSettleMs` | 100 | milliseconds | Settle | nRF52 SENSE is a level detect, not an edge, so arming the wake pin while the button is still down wakes the device the instant SYSTEM OFF latches. |
 | `kPlateauHoldMs` | 120000 (2 min) | milliseconds | Hold | [README](../firmware/core/power/README.md) argues it |
 

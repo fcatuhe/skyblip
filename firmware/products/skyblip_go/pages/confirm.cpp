@@ -15,8 +15,15 @@ int length(const char* s) {
     return n;
 }
 
+int break_within(const char* text, int from, int to) {
+    for (int i = from; i < to; i++)
+        if (text[i] == '\n') return i;
+    return -1;
+}
+
 // One line of at most kConfirmDetailCols characters, broken on a space so a
-// sentence a pilot has to read in a hurry does not split a word.
+// sentence a pilot has to read in a hurry does not split a word, or where the
+// detail breaks it with '\n', one setting to a row.
 int take_line(const char* text, int from, char* out) {
     const int len = length(text);
     if (from >= len) {
@@ -24,7 +31,10 @@ int take_line(const char* text, int from, char* out) {
         return from;
     }
     int end = from + kConfirmDetailCols;
-    if (end >= len) {
+    const int newline = break_within(text, from, end < len ? end + 1 : len);
+    if (newline >= 0) {
+        end = newline;
+    } else if (end >= len) {
         end = len;
     } else {
         int space = end;
@@ -34,7 +44,7 @@ int take_line(const char* text, int from, char* out) {
     int n = 0;
     for (int i = from; i < end; i++) out[n++] = text[i];
     out[n] = 0;
-    return text[end] == ' ' ? end + 1 : end;
+    return text[end] == ' ' || text[end] == '\n' ? end + 1 : end;
 }
 
 }  // namespace

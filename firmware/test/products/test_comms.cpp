@@ -80,6 +80,23 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     CHECK(link.last().bytes.find("\"ack\":true") != std::string::npos);
 }
 
+// The press authorises what the glass says, so the glass says what the phone sent.
+TEST_CASE("comms: the settings prompt lists what the set changes, and only that") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_flight_state(flight::FlightState::Ground);
+
+    cs.on_rx(frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":5}"));
+    REQUIRE(cs.pending() == Pending::Set);
+    CHECK(std::string(cs.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME 5 OF 5");
+
+    cs.on_rx(frame("{\"cmd\":\"set\",\"units\":0}"));
+    CHECK(std::string(cs.prompt_detail()) == pending_detail(Pending::Set));
+}
+
 TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") {
     platform::host::Link link;
     link.raise_link(1);
