@@ -298,7 +298,8 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
         worst_kt = std::max(worst_kt, std::abs(to_knots(MillimetresPerSec(own.speed_mm_s)).v - 60));
     }
     CHECK(worst_turn <= 10);
-    CHECK(worst_vs <= 5);
+    // An ADC count is 0.17 Pa, 1.5 cm up here, and a climb may be two counts off: 6 ft/min.
+    CHECK(worst_vs <= 6);
     CHECK(worst_kt == 0);
 }
 

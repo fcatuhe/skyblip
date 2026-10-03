@@ -161,7 +161,7 @@ class Deltas(Case):
     def test_the_whole_budget_of_one_flying_interval(self):
         run = self.only_run([duty(0), duty(30, partial=1, rx_armed_ms=29670, tx_keyed_ms=159)])
         charge, seconds, _, _ = power_budget.model(run)
-        self.assertAlmostEqual(sum(charge.values()) / seconds, 40.725, places=3)
+        self.assertAlmostEqual(sum(charge.values()) / seconds, 40.825, places=3)
 
 
 class Postures(Case):
@@ -356,11 +356,11 @@ class Measured(Case):
     def test_the_residual_is_what_the_table_does_not_explain(self):
         run = self.only_run(whole_run(3600, rx_share=0.5))
         charge, seconds, _, _ = power_budget.model(run)
-        # GNSS 29 + MCU 3.5 + IMU 0.6 + baro 0.3 + half of receive 4.8 and TCXO 2.0 = 36.8 mA
-        self.assertAlmostEqual(sum(charge.values()) / seconds, 36.8, places=6)
+        # GNSS 29 + MCU 3.5 + IMU 0.6 + baro 0.4 + half of receive 4.8 and TCXO 2.0 = 36.9 mA
+        self.assertAlmostEqual(sum(charge.values()) / seconds, 36.9, places=6)
         self.assertAlmostEqual(power_budget.measure(run, 40.0)[0]["milliamps"], 40.0)
         report = self.text(run, 40.0)
-        self.assertRegex(report, r"residual +-3\.20 +the table explains 92% of what the cell lost")
+        self.assertRegex(report, r"residual +-3\.10 +the table explains 92% of what the cell lost")
 
 
 class Caveats(Case):

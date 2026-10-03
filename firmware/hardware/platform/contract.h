@@ -89,12 +89,15 @@ constexpr bool fills_the_platform_contract() {
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().device_addr()), uint32_t>,
                   "platform: device_addr() -> uint32_t");
 
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().start_baro()), bool>,
+                  "platform: start_baro() -> bool, one conversion started, never waited on");
     static_assert(
         std::is_convertible_v<
             decltype(std::declval<Self>().read_baro(std::declval<BaroReading&>())), bool>,
-        "platform: read_baro(BaroReading&) -> bool, one fetch of the part, which becomes "
-        "events::BaroSample. Temperature carries its own validity: a part that answers with "
-        "pressure and no temperature still answers true");
+        "platform: read_baro(BaroReading&) -> bool, the started conversion once it is done, "
+        "which becomes events::BaroSample. False while it is still converting. Temperature "
+        "carries its own validity: a part that answers with pressure and no temperature "
+        "still answers true");
     static_assert(
         std::is_convertible_v<
             decltype(std::declval<Self>().read_battery_mv(std::declval<uint16_t&>())), bool>,

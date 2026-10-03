@@ -502,10 +502,10 @@
  * The BME280 is "optional, selected" in our BOM, AND its address is disputed:
  * Our BOM says 0x76, LilyGO's own README I2C table and SoftRF's
  * platform/nRF52.h both say 0x77. Nobody has checked a unit. So BOTH are
- * declared: Zephyr's driver verifies the chip id at init, the absent one simply
- * never becomes ready, and the application takes whichever answered. Two device
- * instances cost a few hundred bytes and buy one image that boots on either
- * variant instead of silently having no barometer on half of them.
+ * declared, and hardware/parts/bme280 probes 0x76 then 0x77 for the chip id and
+ * takes whichever answered: one image that boots on either variant instead of
+ * silently having no barometer on half of them. Zephyr's driver is off
+ * (CONFIG_BME280=n), its fetch sleeps through each conversion.
  *
  * The IMU header (0x28 BHI260AP / 0x68 ICM-20948) is not declared, for the same
  * reason the DRV2605 below is not: Zephyr has no driver for a sensor hub that is
