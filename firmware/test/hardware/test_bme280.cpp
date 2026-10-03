@@ -31,14 +31,14 @@ struct Bench {
 
 }  // namespace
 
-TEST_CASE("bme280: bring-up sets the IIR filter to 8 and humidity off, and converts nothing") {
+TEST_CASE("bme280: bring-up sets the IIR filter to 4 and humidity off, and converts nothing") {
     Bench b;
 
     REQUIRE(b.baro.begin() == Status::Ok);
 
     CHECK(int(b.chip.mode()) == 0);
     CHECK(b.chip.conversions == 0);
-    CHECK(b.chip.filter_coefficient() == 8);
+    CHECK(b.chip.filter_coefficient() == 4);
     CHECK(b.chip.humidity_oversampling() == 0);
 }
 
@@ -148,7 +148,7 @@ TEST_CASE("bme280: a part that reset under us is configured again before its nex
 
     b.chip.set_pressure_mpa(95000000);
     CHECK(std::abs(int64_t{b.convert().pressure_mpa} - 95000000) <= 600);
-    CHECK(b.chip.filter_coefficient() == 8);
+    CHECK(b.chip.filter_coefficient() == 4);
 }
 
 TEST_CASE("bme280: a read with no conversion in flight reports nothing and touches no bus") {

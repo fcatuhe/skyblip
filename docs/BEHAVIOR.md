@@ -1793,7 +1793,7 @@ The barometer triggered without waiting, read once converted, dated at its conve
 - a trigger starts one forced conversion and does not wait for it
   > The Zephyr fetch wrote ctrl_meas and slept out the conversion: 43 ms of the loop at every PPS.
 - an address that names another chip is not a barometer
-- bring-up sets the IIR filter to 8 and humidity off, and converts nothing
+- bring-up sets the IIR filter to 4 and humidity off, and converts nothing
 - the air is the air at the trigger, not at the read
 - the pressure read is the one the part was given, within six tenths of a pascal
 

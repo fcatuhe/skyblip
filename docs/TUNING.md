@@ -257,7 +257,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPpsLossListenOnlyMs` | 60000 (1 min) | milliseconds | - | - |
 | `kBaroPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
-| `kBaroConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 8: 1.75 s of lag for 0.1 mA |
+| `kBaroConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 

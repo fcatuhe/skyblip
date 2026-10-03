@@ -55,10 +55,10 @@ class Bme280 {
     static constexpr uint8_t kOversamplingSkipped = 0b000;
     static constexpr uint8_t kOversamplingX2 = 0b010;
     static constexpr uint8_t kOversamplingX16 = 0b101;
-    static constexpr uint8_t kFilter8 = 0b011;
+    static constexpr uint8_t kFilter4 = 0b010;
     static constexpr uint8_t kCtrlMeasForced =
         kOversamplingX2 << 5 | kOversamplingX16 << 2 | kModeForced;
-    static constexpr uint8_t kConfigFilter8 = kFilter8 << 2;
+    static constexpr uint8_t kConfigFilter4 = kFilter4 << 2;
 
     static constexpr int64_t kMinPlausibleMpa = int64_t{1000} * 1000;
     static constexpr int64_t kMaxPlausibleMpa = int64_t{200000} * 1000;
