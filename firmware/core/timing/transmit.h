@@ -21,8 +21,8 @@ class Transmitter {
     static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
     static constexpr int32_t kFixLagMaxMs = 500;
-    // INFO: fc 28sep26 §C.5: bench worst instant to last chip is 6.6 ms, 3 + 5 ms leaves 1.4
-    static constexpr int kCompletionSlackMs = 3;
+    // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
+    static constexpr int kCompletionSlackMs = 2;
 
     enum class Payload : uint8_t { Position, Callsign };
 

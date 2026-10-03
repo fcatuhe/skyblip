@@ -35,7 +35,7 @@ class SkyView {
     void add(SatelliteView sat);
     void solving(System system, uint8_t id);
     void clear_solution();
-    void clear();
+    void forget_in_view();
 
     int count() const { return n_; }
     const SatelliteView& at(int i) const { return sats_[i]; }

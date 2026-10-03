@@ -12,11 +12,11 @@
 #include <cstddef>
 
 #include "core/util/span.h"
+#include "hardware/parts/bme280/bme280.h"
 #include "hardware/parts/ssd1681/panel.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
 #include "hardware/platform/contract.h"
 #include "hardware/platform/zephyr/annunciator.h"
-#include "hardware/platform/zephyr/baro.h"
 #include "hardware/platform/zephyr/battery.h"
 #include "hardware/platform/zephyr/clock.h"
 #include "hardware/platform/zephyr/dfu.h"
@@ -73,7 +73,7 @@ class Platform {
         annunciator_.begin();
         indicator_.begin();
         link_up_ = link_.begin(device_addr()) == Status::Ok;
-        baro_ = baro76_.ready() ? &baro76_ : (baro77_.ready() ? &baro77_ : nullptr);
+        (void)bme280_.begin();
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
         gpio_pin_configure_dt(&pad_, GPIO_INPUT);
         pps_armed_ = pps_.begin() == Status::Ok;
@@ -106,7 +106,6 @@ class Platform {
     bool pps_armed() const { return pps_armed_; }
     bool storage_mounted() const { return storage_mounted_; }
     bool link_up() const { return link_up_; }
-    zephyr::Baro* baro() { return baro_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
     zephyr::Watchdog& watchdog() { return watchdog_; }
@@ -136,7 +135,15 @@ class Platform {
 
     // INFO: fc 18sep26 our Plus reads this pin low and our plain T-Echo reads it high
     bool buzzer_pin_held_low() const { return board_buzzer_pin_held_low() != 0; }
-    bool read_baro(BaroReading& out) { return baro_ != nullptr && baro_->read_baro(out); }
+    bool start_baro() { return bme280_.trigger(); }
+    bool read_baro(BaroReading& out) {
+        parts::Bme280::Reading reading{};
+        if (!bme280_.read(reading)) return false;
+        out.pressure_mpa = reading.pressure_mpa;
+        out.temperature_decicelsius = reading.temperature_decicelsius;
+        out.temperature_valid = true;
+        return true;
+    }
     bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() { return zephyr::Battery::external_power(); }
 
@@ -147,8 +154,7 @@ class Platform {
         if (gpio_is_ready_dt(&button_) && gpio_is_ready_dt(&pad_)) c |= ports::Capability::Contacts;
         if (device_is_ready(epd_spi_dev_)) c |= ports::Capability::Display;
         if (device_is_ready(gnss_uart_dev_)) c |= ports::Capability::Gnss;
-        if (device_is_ready(baro76_dev_) || device_is_ready(baro77_dev_))
-            c |= ports::Capability::Baro;
+        if (bme280_.answers()) c |= ports::Capability::Baro;
         if (device_is_ready(battery_dev_)) c |= ports::Capability::Battery;
         // Only when the driver answered. A build with no CONFIG_TEMP_NRF5, or a
         // devicetree without the node, is a device with no die reading - and
@@ -184,10 +190,6 @@ class Platform {
     const struct device* radio_spi_dev_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
     const struct device* epd_spi_dev_{DEVICE_DT_GET(DT_ALIAS(epd_spi))};
     const struct device* gnss_uart_dev_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
-    // Both candidate barometer addresses are declared. Whichever part is fitted
-    // becomes ready, the other never does.
-    const struct device* baro76_dev_{DEVICE_DT_GET(DT_NODELABEL(bme280_76))};
-    const struct device* baro77_dev_{DEVICE_DT_GET(DT_NODELABEL(bme280_77))};
     const struct device* battery_dev_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
     const struct device* sensor_i2c_dev_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
     // Assigned, not brace-initialised: the DT_SPEC macros ARE brace lists, so
@@ -213,6 +215,7 @@ class Platform {
     Spi epd_spi_{epd_spi_dev_, kSpiCfg, epd_cs_};
     Uart gnss_uart_{gnss_uart_dev_};
     I2c sensor_i2c_{sensor_i2c_dev_};
+    parts::Bme280 bme280_{sensor_i2c_};
     // The default haptic: the pin, driven directly. The board replaces it the
     // moment it finds a waveform driver on the bus, which on this board is the
     // only way a pulse is ever produced.
@@ -224,9 +227,6 @@ class Platform {
     FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
-    zephyr::Baro baro76_{baro76_dev_};
-    zephyr::Baro baro77_{baro77_dev_};
-    zephyr::Baro* baro_{nullptr};
     zephyr::Battery battery_{battery_dev_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};

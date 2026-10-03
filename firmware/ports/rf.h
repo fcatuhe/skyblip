@@ -58,10 +58,18 @@ struct RfBurst {
 
 struct RfBursts {
     static constexpr uint8_t kCapacity = 2;
+    static constexpr uint64_t kNever = UINT64_MAX;
     RfBurst burst[kCapacity]{};
     uint8_t count{0};
 
     bool full() const { return count == kCapacity; }
+
+    // INFO: fc 29sep26 none while one is on air: the next stages into the buffer it is sent from
+    uint64_t stage_at_us(uint8_t keyed, uint8_t done, uint64_t lead_us) const {
+        if (keyed != done || keyed >= count) return kNever;
+        const uint64_t at_us = burst[keyed].at_us;
+        return at_us > lead_us ? at_us - lead_us : 0;
+    }
 
     bool holds(uint64_t at_us) const {
         for (uint8_t i = 0; i < count; i++)
@@ -94,6 +102,12 @@ struct RfCarrier {
 struct RfTransmitter {
     int8_t power_dbm{0};
     int8_t pa_rated_dbm{0};
+};
+
+struct RfDio1 {
+    bool armed{false};
+    uint32_t edges{0};
+    uint32_t missed{0};
 };
 
 struct RfSwitch {
@@ -159,6 +173,8 @@ class Rf {
     virtual RfSwitching switching() const { return RfSwitching{}; }
 
     virtual RfTransmitter transmitter() const { return RfTransmitter{}; }
+
+    virtual RfDio1 dio1() const { return RfDio1{}; }
 
     // Put the transceiver in its lowest-power state until the next begin().
     // Called on the way to SYSTEM OFF: the receiver is armed through most of

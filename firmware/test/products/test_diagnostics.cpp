@@ -116,6 +116,8 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     CHECK(has(radio, "noise_dbm=-"));
     CHECK(has(radio, "duty_permille="));
     CHECK(has(radio, "range_refused=0"));
+    // The host executor drains the radio every pass and has no interrupt line to arm.
+    CHECK(has(radio, "dio1_armed=false dio1_edges=0 dio1_missed=0"));
 
     // And the two the shell already knew and could not say out loud.
     CHECK(has(console.with("sys "), "reset=\"POWER ON\""));

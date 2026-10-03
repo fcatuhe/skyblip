@@ -44,6 +44,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kDutyMaxPeriodMs` | 60000 (1 min) | milliseconds | Period | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
 | `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
+| `kStageMarginStepUs` | 10 | microseconds | - | a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms |
 
 ## [`firmware/core/events`](../firmware/core/events/README.md)
 
@@ -136,8 +137,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
-| `kSlotWriteCostMs` | 2 | milliseconds | - | - |
+| `kSectorEraseCostMs` | 42 | milliseconds | - | MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell |
+| `kSlotWriteCostMs` | 2 | milliseconds | - | one page program on the spi1 NOR, bench-settled, not a datasheet figure |
 | `kPageWriteCostMs` | `kSlotWriteCostMs + 1` = 3 | milliseconds | - | one program operation, as the slot write, plus 256 bytes more of SPI at 8 MHz |
 
 ## [`firmware/core/timing`](../firmware/core/timing/README.md)
@@ -169,7 +170,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
 | `kFixLagMaxMs` | 500 | milliseconds | - | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
-| `kCompletionSlackMs` | 3 | milliseconds | - | §C.5: bench worst instant to last chip is 6.6 ms, 3 + 5 ms leaves 1.4 |
+| `kCompletionSlackMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -246,6 +247,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
+| `kLockedRedrawMs` | 600 | milliseconds | - | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
+| `kLockedRedrawEndMs` | 800 | milliseconds | - | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
 
 ## `firmware/runtime`
@@ -253,12 +256,15 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kServiceStepMs` | 10 | milliseconds | - | - |
+| `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
 | `kTaskWatchdogMs` | 5000 (5 s) | milliseconds | - | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
 | `kHardwareWatchdogMs` | 12000 (12 s) | milliseconds | - | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
 | `kRadioNoRxReinitMs` | 30000 (30 s) | milliseconds | - | - |
 | `kPpsLossListenOnlyMs` | 60000 (1 min) | milliseconds | - | - |
 | `kBaroPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
+| `kBaroConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
+| `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-156 constants over 18 folders.
+162 constants over 18 folders.

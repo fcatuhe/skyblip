@@ -56,6 +56,7 @@ constexpr uint8_t kGnssFlagResidValid = 1u << 3;
 constexpr uint8_t kGnssFlagPpsLocked = 1u << 4;
 constexpr uint8_t kGnssFlagGeoidMeasured = 1u << 5;
 constexpr uint8_t kGnssFlagTxSettled = 1u << 6;
+constexpr uint8_t kGnssFlagLevelsFresh = 1u << 7;
 
 struct Gnss {
     uint16_t nav_ms{0};
@@ -73,6 +74,7 @@ struct Gnss {
     bool pps_locked{false};
     bool geoid_measured{false};
     bool tx_settled{false};
+    bool levels_fresh{false};
 };
 
 constexpr uint8_t kPpsFlagLocked = 1u << 2;
@@ -281,6 +283,8 @@ struct Screen {
     bool backlight{false};
     bool powered{false};
     bool holding{false};
+    uint32_t render_us{0};
+    uint32_t present_us{0};
 };
 
 struct Gap {
@@ -324,6 +328,20 @@ struct Switch {
     bool late{false};
 };
 
+// INFO: fc 03oct26 the service loop's index of each service, then the board poll that precedes them
+constexpr uint8_t kLoopBoardPoll = 10;
+
+struct Loop {
+    uint16_t passes{0};
+    uint16_t busy_ms{0};
+    uint32_t worst_pass_us{0};
+    uint16_t worst_pass_phase_ms{0};
+    uint16_t worst_gap_ms{0};
+    uint16_t worst_gap_phase_ms{0};
+    uint8_t worst_service{0};
+    uint8_t worst_tick_ms{0};
+};
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -343,6 +361,7 @@ Record record_of(const Gap& value, const Instant& at);
 Record record_of(const End& value, const Instant& at);
 Record record_of(const Duty& value, const Instant& at);
 Record record_of(const Switch& value, const Instant& at);
+Record record_of(const Loop& value, const Instant& at);
 
 bool read(const Record& record, Boot& out);
 bool read(const Record& record, Config& out);
@@ -363,6 +382,7 @@ bool read(const Record& record, Gap& out);
 bool read(const Record& record, End& out);
 bool read(const Record& record, Duty& out);
 bool read(const Record& record, Switch& out);
+bool read(const Record& record, Loop& out);
 
 }  // namespace skyblip::diag
 

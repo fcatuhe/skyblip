@@ -67,6 +67,7 @@ class Sx1262 {
     Status transmit(const uint8_t* data, uint8_t len);
     Status stage_tx(const uint8_t* data, uint8_t len);
     Status key_tx();
+    uint32_t air_us(uint8_t len) const;
     Status start_receive();
 
     // The lowest-power state the part has, and the way back out of it.
@@ -81,7 +82,7 @@ class Sx1262 {
     Status wait_ready() { return wait_busy_low(); }
 
     RadioEvent poll(uint8_t* rx_buf, uint8_t cap);
-    // INFO: fc 16sep26 DIO1 is a level here, not an edge: a dwell is driven by a deadline
+    // INFO: fc 16sep26 DIO1 is a level here, not an edge | 03oct26 an edge only wakes the executor
     bool irq_asserted() { return gpio_.get(dio1_); }
 
     bool service(uint32_t elapsed_ms, uint32_t no_rx_reinit_ms = 30000);

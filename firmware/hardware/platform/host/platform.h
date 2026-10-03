@@ -3,6 +3,7 @@
 
 #include "core/util/sha256.h"
 #include "core/util/span.h"
+#include "hardware/parts/bme280/bme280.h"
 #include "hardware/parts/bme280/model.h"
 #include "hardware/parts/ssd1681/panel.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
@@ -104,15 +105,13 @@ class Dfu : public ports::Dfu {
     const ports::Watchdog& watchdog_;
 };
 
-class Baro {
+class Baro : public io::I2c {
    public:
-    bool ready() const { return present; }
-    bool read_baro(BaroReading& out) const {
-        if (!present) return false;
-        out.pressure_mpa = chip.pressure_mpa();
-        out.temperature_decicelsius = chip.temperature_decicelsius();
-        out.temperature_valid = true;
-        return true;
+    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
+        return present && chip.write(addr, data, len);
+    }
+    bool read(uint8_t addr, uint8_t* data, size_t len) override {
+        return present && chip.read(addr, data, len);
     }
 
     models::Bme280 chip;
@@ -182,13 +181,17 @@ class Platform {
         chips_.epd.attach_clock(clock_);
         buzzer_pin_held_low_ = ports::has(fitted, ports::Capability::Buzzer);
         baro_.present = ports::has(fitted, ports::Capability::Baro);
+        baro_.chip.attach_clock(clock_);
         battery_.present = ports::has(fitted, ports::Capability::Battery);
         log_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
         imu_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
         wire_i2c();
     }
 
-    static Status begin() { return Status::Ok; }
+    Status begin() {
+        (void)bme280_.begin();
+        return Status::Ok;
+    }
     void wire(const io::PinMap& map) { gpio_.wire(map); }
 
     io::Spi& spi(io::BusId id) {
@@ -244,7 +247,15 @@ class Platform {
 
     bool buzzer_pin_held_low() const { return buzzer_pin_held_low_; }
     void set_buzzer_pin_held_low(bool held) { buzzer_pin_held_low_ = held; }
-    bool read_baro(BaroReading& out) { return baro_.read_baro(out); }
+    bool start_baro() { return bme280_.trigger(); }
+    bool read_baro(BaroReading& out) {
+        parts::Bme280::Reading reading{};
+        if (!bme280_.read(reading)) return false;
+        out.pressure_mpa = reading.pressure_mpa;
+        out.temperature_decicelsius = reading.temperature_decicelsius;
+        out.temperature_valid = true;
+        return true;
+    }
     bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() const { return battery_.external_power; }
     static constexpr uint32_t kDeviceAddr = 0x5B5AFEu;
@@ -259,7 +270,8 @@ class Platform {
 
    private:
     void wire_i2c() {
-        if (ports::has(fitted_, ports::Capability::Baro)) i2c_.answer(kBaroAddress, true);
+        if (ports::has(fitted_, ports::Capability::Baro))
+            i2c_.attach(models::Bme280::kAddress, baro_);
         if (ports::has(fitted_, ports::Capability::Haptic))
             i2c_.attach(models::Drv2605::kAddress, chips_.haptic);
         if (ports::has(fitted_, ports::Capability::Inclinometer))
@@ -273,7 +285,6 @@ class Platform {
     inline static const Sha256::Digest kImuFirmwareDigest =
         Sha256::of(kImuFirmware, sizeof(kImuFirmware));
 
-    static constexpr uint8_t kBaroAddress = 0x76;
     static constexpr uint8_t kImuAddress = 0x28;
     static constexpr uint8_t kRtcAddress = 0x51;
 
@@ -281,6 +292,7 @@ class Platform {
     Gpio gpio_{chips_};
     Delay delay_{chips_};
     I2cBus i2c_{};
+    parts::Bme280 bme280_{i2c_};
     host::Clock clock_{};
     host::Link link_{};
     host::KvStore kv_{};

@@ -22,6 +22,8 @@ class FlashRegion : public ports::FlashRegion {
     // boards/lilygo/t_echo_plus/t_echo_plus.dts.
     static constexpr uint32_t kSectorBytes = 4096;
     static constexpr uint32_t kSectorCount = 298;
+    // INFO: fc 03oct26 the driver programs a write one 256 B page at a time (spi_nor.c write)
+    static constexpr uint32_t kPageBytes = 256;
 
     explicit FlashRegion(uint32_t sector_count = kSectorCount)
         : sector_count_(sector_count),
@@ -54,6 +56,7 @@ class FlashRegion : public ports::FlashRegion {
         }
         for (uint32_t i = 0; i < n; i++) bytes_[offset + i] &= buf[i];
         writes++;
+        if (n > 0) programs += (offset + n - 1) / kPageBytes - offset / kPageBytes + 1;
         write_bytes += n;
         return dead_ ? Status::Down : Status::Ok;
     }
@@ -79,6 +82,7 @@ class FlashRegion : public ports::FlashRegion {
 
     uint32_t reads{0};
     uint32_t writes{0};
+    uint32_t programs{0};
     uint32_t erases{0};
     uint32_t read_bytes{0};
     uint32_t write_bytes{0};

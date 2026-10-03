@@ -14,6 +14,7 @@
 #include "core/timing/transmit.h"
 #include "hardware/parts/bhi260/bhi260.h"
 #include "hardware/parts/bhi260/image_store.h"
+#include "hardware/parts/bme280/bme280.h"
 #include "hardware/parts/drv2605/drv2605.h"
 #include "hardware/parts/l76k/l76k.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
@@ -31,6 +32,9 @@ constexpr const char* kImuWithoutImage = "NOBLOB";
 static_assert(t_echo_plus::kGlassW == parts::Ssd1681::kGlassW &&
                   t_echo_plus::kGlassH == parts::Ssd1681::kGlassH,
               "the glass on this board is what its controller drives");
+
+static_assert(runtime::kBaroConversionCeilingMs < runtime::kBaroConversionPeriodMs,
+              "a barometer conversion is read or given up before the next one is triggered");
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                       runtime::kServiceStepMs <
@@ -94,6 +98,7 @@ class TEchoPlus {
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }
+    uint32_t baro_faults() const { return baro_faults_; }
 
     // What answered, by name and address, behind the capability bits. The
     // self-test page reads it: two BME280 addresses, five shipped e-paper
@@ -142,13 +147,44 @@ class TEchoPlus {
 
     void poll_baro_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
         if (!ports::has(capabilities_, ports::Capability::Baro)) return;
-        if (!baro_due(clock, now_ms)) return;
-        last_baro_ms_ = now_ms;
+        if (baro_converting_) settle_baro(now_ms);
+        if (baro_converting_) return;
+        if (baro_due(clock, now_ms)) {
+            last_baro_ms_ = now_ms;
+            baro_slot_ = 0;
+            trigger_baro(now_ms, true);
+        } else if (baro_filler_due(clock, now_ms)) {
+            baro_slot_ = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
+            trigger_baro(now_ms, false);
+        }
+    }
+
+    void trigger_baro(uint32_t now_ms, bool published) {
+        baro_triggered_ms_ = now_ms;
+        baro_published_ = published;
+        baro_converting_ = platform_.start_baro();
+        if (!baro_converting_) baro_faults_++;
+    }
+
+    void settle_baro(uint32_t now_ms) {
         platform::BaroReading reading{};
-        if (platform_.read_baro(reading))
-            bus_.baro.push(events::BaroSample{reading.pressure_mpa, now_ms,
-                                              reading.temperature_decicelsius,
-                                              reading.temperature_valid});
+        if (baro_published_ && platform_.read_baro(reading)) {
+            baro_converting_ = false;
+            bus_.baro.push(events::BaroSample{
+                reading.pressure_mpa, baro_triggered_ms_ + parts::Bme280::kConversionMidpointMs,
+                reading.temperature_decicelsius, reading.temperature_valid});
+            return;
+        }
+        if (now_ms - baro_triggered_ms_ < runtime::kBaroConversionCeilingMs) return;
+        baro_converting_ = false;
+        if (baro_published_) baro_faults_++;
+    }
+
+    bool baro_filler_due(const timing::ClockState& clock, uint32_t now_ms) const {
+        if (!clock.pps_locked)
+            return now_ms - baro_triggered_ms_ >= runtime::kBaroConversionPeriodMs;
+        const uint32_t slot = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
+        return slot > baro_slot_ && slot < kBaroConversionsPerSecond;
     }
 
     bool baro_due(const timing::ClockState& clock, uint32_t now_ms) const {
@@ -205,6 +241,7 @@ class TEchoPlus {
             if (gnss_.poll()) {
                 bus_.gnss.push(gnss_.solution());
                 state.gnss.sky = gnss_.sky();
+                state.gnss.levels_fresh = gnss_.levels_fresh();
                 state.gnss.reject = gnss_.reject_reason();
                 state.gnss.rejected = gnss_.rejected();
             }
@@ -242,6 +279,9 @@ class TEchoPlus {
     parts::Drv2605& haptic() { return haptic_; }
 
    private:
+    static constexpr uint32_t kBaroConversionsPerSecond =
+        runtime::kBaroPeriodMs / runtime::kBaroConversionPeriodMs;
+
     // ports::missing(a, b) is "b without a", which is what this board needs when a
     // probe contradicts what the platform declared.
     ports::Capabilities without(ports::Capability bit) const {
@@ -362,7 +402,9 @@ class TEchoPlus {
         }
         for (uint32_t step = 0; step < kImuImageStepsPerPass && stored_image_.writing(); step++) {
             const uint32_t cost_ms = stored_image_.next_cost_ms();
-            if (cost_ms > 0 && !state.rf.claim_flash_window(now_ms, cost_ms)) return;
+            if (cost_ms > 0 &&
+                !state.rf.book_flash_window(now_ms, platform_.clock().millis(), cost_ms))
+                return;
             stored_image_.step();
         }
     }
@@ -415,6 +457,11 @@ class TEchoPlus {
     ports::NullRoles null_{};
     ports::Capabilities capabilities_;
     uint32_t last_baro_ms_{0};
+    uint32_t baro_triggered_ms_{0};
+    uint32_t baro_slot_{0};
+    uint32_t baro_faults_{0};
+    bool baro_converting_{false};
+    bool baro_published_{false};
     uint32_t last_battery_ms_{0};
 };
 

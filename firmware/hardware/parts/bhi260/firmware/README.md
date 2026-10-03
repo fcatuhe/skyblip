@@ -33,7 +33,7 @@ A full image carries it and a slim one does not. Both are built from one commit,
 - **Checked before use.** The board hashes the whole payload once at bring-up, before the self test is drawn, and a slim image boots the hub from it only if the header's digest is the one the image pins and the payload hashes to it. The hub's own verify (`VERIFY`) stays behind that as a second check.
 - **Header last.** A write erases the header's sector first, programs the payload a page at a time, writes the header, then reads it all back and hashes it. A power cut anywhere before the header leaves an erased header, which reads as nothing held rather than as something plausible.
 - **Written by a confirmed full image only.** The board writes when a hub answered the bus scan, the partition does not hold the image's own digest, and the image is confirmed. A full image on probation writes nothing: if the bootloader reverts it, the slim image before it is never left facing a copy it does not pin. The rule is checked on every boot, so a hub fitted after the fact, a replaced flash part and a Bosch update are all the same case.
-- **Paced like the log.** Every erase and page asks `bus::RfState::claim_flash_window()` for the same window the flight log uses, at most eight steps a pass. The whole write takes tens of seconds and never costs the radio a dwell.
+- **Paced like the log.** Every erase and page asks `bus::RfState::book_flash_window()` for the same window the flight log books, at most eight steps a pass. The whole write takes tens of seconds and never costs the radio a dwell.
 
 ## What a unit without it does
 

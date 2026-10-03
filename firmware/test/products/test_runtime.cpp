@@ -89,6 +89,78 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     CHECK(order[2] == 2);
 }
 
+namespace {
+
+struct SteppedClock : ports::Clock {
+    uint32_t millis() const override { return static_cast<uint32_t>(us / 1000); }
+    uint64_t micros() const override { return us; }
+    uint64_t us{0};
+};
+
+struct Slow : runtime::Service {
+    Slow(runtime::Context& ctx, SteppedClock& clock, uint64_t cost)
+        : runtime::Service(ctx), cost_us(cost), clock_(clock) {}
+    void tick(uint32_t) override { clock_.us += cost_us; }
+    uint64_t cost_us;
+
+   private:
+    SteppedClock& clock_;
+};
+
+}  // namespace
+
+// The bench saw the fix processed later every second, and only this says which wait it was.
+TEST_CASE("runtime: the loop meter names the slowest service and dates the longest wait") {
+    SteppedClock clock;
+    ports::NullRoles null;
+    ports::Roles roles{clock,
+                       null.rf,
+                       null.link,
+                       null.display,
+                       null.kv,
+                       null.log_flash,
+                       null.annunciator,
+                       null.dfu,
+                       null.die_temperature,
+                       null.indicator,
+                       null.gnss,
+                       ports::Capability::None,
+                       0};
+    bus::Bus bus;
+    bus::State state;
+    diag::Recorder recorder{};
+    runtime::Context ctx{roles, bus, state, recorder};
+    Slow quick(ctx, clock, 300);
+    Slow render(ctx, clock, 2000);
+    runtime::Service* services[] = {&quick, &render};
+    runtime::Loop loop(services, 2);
+    runtime::LoopMeter meter(clock);
+
+    const uint16_t phases[] = {10, 22, 230, 242};
+    // The third pass starts 200 ms after the second instead of the usual 10 ms sleep.
+    const uint64_t sleeps_us[] = {10000, 200000, 10000, 10000};
+    for (int i = 0; i < 4; i++) {
+        render.cost_us = i == 2 ? 190000 : 2000;
+        meter.begin_pass(phases[i]);
+        meter.timed(diag::kLoopBoardPoll, [&] { clock.us += 100; });
+        loop.step(clock.millis(), &meter);
+        meter.end_pass();
+        clock.us += sleeps_us[i];
+    }
+
+    const diag::Loop window = meter.take();
+    CHECK(window.passes == 4);
+    CHECK(window.worst_service == 1);
+    CHECK(window.worst_tick_ms == 190);
+    CHECK(window.worst_pass_us == 190400);
+    CHECK(window.worst_pass_phase_ms == 230);
+    // 2.4 ms of work and the 200 ms nap that followed the second pass.
+    CHECK(window.worst_gap_ms == 202);
+    CHECK(window.worst_gap_phase_ms == 230);
+    CHECK(window.busy_ms == 197);
+    CHECK(meter.take().passes == 0);
+}
+
 TEST_CASE("runtime: setup reports the first failure but still sets up the rest") {
     struct : ports::Clock {
         uint32_t millis() const override { return 0; }

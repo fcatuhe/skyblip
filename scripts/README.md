@@ -13,6 +13,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `build_image.sh` | build, sign and check the slim and full images in a ready workspace: what `build_local.sh`, CI and a release share |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images |
+| [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
 | `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
@@ -63,7 +64,7 @@ The round trip is stamped before the write goes out, not when `write_gatt_char` 
 
 `count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 96 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer ending in `eof`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
 
-A dead fetch resumes. The next command is the acknowledgement in this protocol, so the recovery is to ask again from the last index kept: run the same line, and `fetch` reads the tail of `--out`, skips the sessions already whole and restarts the interrupted one at the record after its last line. `--restart` ignores what the file holds.
+A dead fetch resumes. The next command is the acknowledgement in this protocol, so the recovery is to ask again from the last index kept: run the same line, and `fetch` reads the tail of `--out`, skips the sessions already whole and restarts the interrupted one at the record after its last line. Sessions the device opened since follow it, so a capture re-armed between two fetches loses nothing. `--restart` ignores what the file holds.
 
 ### The two records a fetch will not hand you
 

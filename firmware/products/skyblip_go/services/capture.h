@@ -50,6 +50,7 @@ class CaptureService : public runtime::Service {
     bool close(uint32_t now_ms);
     bool write_end(uint32_t now_ms);
     void drain(uint32_t now_ms);
+    uint32_t next_run(uint32_t most);
     bool announce_rotation(uint32_t now_ms);
     void stop_on_refusal(uint32_t now_ms);
     bool write_gap(uint32_t now_ms);
@@ -77,7 +78,8 @@ class CaptureService : public runtime::Service {
     bool open_{false};
     bool ended_{false};
 
-    uint8_t scratch_[kStoreRecordBytes]{};
+    diag::Record run_[kRunMostSlots]{};
+    uint8_t scratch_[kRunMostSlots * kStoreRecordBytes]{};
 };
 
 }  // namespace skyblip::go

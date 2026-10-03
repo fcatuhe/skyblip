@@ -82,9 +82,12 @@ class L76k : public ports::Gnss {
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
 
-    // INFO: fc 18sep26 $PCAS03 takes a null per field meaning keep, so these two move nGSV alone
-    static constexpr const char* kSatellitesInViewOn = "$PCAS03,,,,1,,,,,,,,,,*33\r\n";
+    // INFO: fc 18sep26 $PCAS03 takes a null per field meaning keep, so these move nGSV alone
     static constexpr const char* kSatellitesInViewOff = "$PCAS03,,,,0,,,,,,,,,,*32\r\n";
+    static constexpr const char* kSatellitesInViewEverySolution = "$PCAS03,,,,1,,,,,,,,,,*33\r\n";
+    static constexpr const char* kSatellitesInViewPaced = "$PCAS03,,,,5,,,,,,,,,,*37\r\n";
+    // INFO: fc 29sep26 GSV precedes RMC: nav_ms +55-65 ms on bench 0B1B2C, so one set in five
+    static constexpr uint8_t kSatellitesInViewPeriodSolutions = 5;
 
     // INFO: fc 18sep26 four talkers, up to 32 satellites, four to a sentence and 72 bytes each
     static constexpr uint32_t kSatellitesInViewBytes = 648;
@@ -173,7 +176,9 @@ class L76k : public ports::Gnss {
     void request_restart(ports::Restart kind) override;
 
     void request_satellites_in_view(bool wanted) { gsv_wanted_ = wanted; }
-    bool satellites_in_view_live() const { return gsv_on_ && gsv_wanted_; }
+    bool satellites_in_view_live() const { return gsv_every_ != 0 && gsv_wanted_; }
+    // The last published solution closed a burst that carried a GSV set.
+    bool levels_fresh() const { return levels_fresh_; }
 
     const gnss::SkyView& sky() const { return parser_.sky(); }
 
@@ -198,6 +203,9 @@ class L76k : public ports::Gnss {
     bool port_can_retune();
     bool adopt_baud(uint32_t baud);
     bool next_baud();
+    void pace_satellites_in_view(uint32_t now_ms);
+    uint8_t satellites_in_view_every() const;
+    static const char* satellites_in_view_command(uint8_t every);
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -223,7 +231,10 @@ class L76k : public ports::Gnss {
     uint8_t attempts_{0};
     uint8_t pending_restart_{kNoRestart};
     bool gsv_wanted_{false};
-    bool gsv_on_{false};
+    uint8_t gsv_every_{0};
+    bool levels_heard_{false};
+    bool burst_levels_{false};
+    bool levels_fresh_{false};
 };
 
 }  // namespace skyblip::parts

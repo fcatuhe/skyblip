@@ -15,56 +15,10 @@
 #include "products/skyblip_go/input/gesture.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "test/support/product_rig.h"
+#include "test/support/settings_writes.h"
 
 using namespace skyblip;
-
-namespace {
-
-// One service pass at a time, so a case can say which millisecond of the second
-// the write landed on.
-void step_one(Rig& rig, uint32_t& t, uint32_t by_ms = 10) {
-    rig.platform.clock().set_millis(t);
-    rig.product.step(t);
-    t += by_ms;
-}
-
-void step_until(Rig& rig, uint32_t& t, uint32_t until_ms) {
-    while (t < until_ms) step_one(rig, t);
-}
-
-// Stationary timed solutions: core/flight answers Ground to those, and the UTC
-// they carry is what anchors the second the write has to be placed inside. Both
-// helpers leave t on a whole second, so a case can name the phase it wants.
-void stand_on_the_ground(Rig& rig, uint32_t& t) { rig.seconds(t, 3, /*speed_mm_s=*/0, 0); }
-
-void fly(Rig& rig, uint32_t& t) { rig.seconds(t, 16, /*speed_mm_s=*/50000, 1200); }
-
-// The change a pilot makes on the panel, and the one a phone makes over the link,
-// arrive at the same flag: comms::ConfigService is the single writer of the blob
-// and this is how both editors say the struct moved.
-void change_volume(Rig& rig, uint8_t to) {
-    rig.settings().alarm_volume = to;
-    rig.product.config().config().note_settings_changed();
-}
-
-uint32_t writes(Rig& rig) { return rig.platform.kv().writes(); }
-
-// The phase of the second the device believes it is at, read off the radio's own
-// published view rather than recomputed here.
-int published_phase(Rig& rig) { return rig.state().rf.dwell.phase_ms; }
-
-// Runs until the write count moves, and answers the millisecond it moved on.
-uint32_t wait_for_write(Rig& rig, uint32_t& t, uint32_t give_up_after_ms) {
-    const uint32_t before = writes(rig);
-    const uint32_t deadline = t + give_up_after_ms;
-    while (t < deadline) {
-        step_one(rig, t);
-        if (writes(rig) != before) return t;
-    }
-    return 0;
-}
-
-}  // namespace
+using namespace skyblip::settings_writes;
 
 // The case the finding is about: a value changed with a dwell armed and the
 // transmitter allowed on air. The blob must not reach flash there, and when it
@@ -93,6 +47,59 @@ TEST_CASE("flash window: a change made inside a dwell is not written until the w
     CHECK(timing::DurableWriteWindow::free_at(rig.state().rf.plan, phase,
                                               timing::DurableWriteWindow::kWorstWriteMs));
     CHECK(rig.product.config().durable_writes().forced() == 0);
+}
+
+// Work earlier in the pass left the settings write deciding on the phase the pass began at.
+TEST_CASE("flash window: a settings write is placed at the instant it starts, not its pass") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    stand_on_the_ground(rig, t);
+    const uint32_t before = writes(rig);
+    change_volume(rig, 4);
+    rig.platform.clock().set_millis(t);
+    rig.product.config().tick(t);
+    REQUIRE(rig.product.config().durable_writes().pending());
+
+    // The last phase of the uplink dwell a worst-case write still clears a guard before its end.
+    constexpr int kLastWritePhase = timing::kUplinkRxEnd - timing::kJitterGuardMs -
+                                    static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
+    constexpr int kRanLongMs = 50;
+    constexpr int kPassPhase = kLastWritePhase - kRanLongMs;
+    const uint32_t pass_ms = t + 1000 + kPassPhase;
+    publish_dwell(rig, pass_ms, kPassPhase);
+    rig.platform.clock().set_millis(pass_ms + kRanLongMs + 1);
+    rig.product.config().tick(pass_ms);
+    CHECK(writes(rig) == before);
+    CHECK(rig.product.config().durable_writes().pending());
+
+    publish_dwell(rig, pass_ms + 1000, kPassPhase);
+    rig.platform.clock().set_millis(pass_ms + 1000 + kRanLongMs);
+    rig.product.config().tick(pass_ms + 1000);
+    CHECK(writes(rig) - before == 1);
+    CHECK(rig.product.config().durable_writes().forced() == 0);
+}
+
+// The view was stamped at the pass start and read off the clock later, so projections ran late.
+TEST_CASE("flash window: the radio's view of the second is stamped when its phase was read") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.pps().set_locked(false);
+    uint64_t us = 10'000'000;
+    rig.run_span_from_us(us, 200);
+    REQUIRE_FALSE(rig.state().clock.pps_locked);
+
+    constexpr uint32_t kRadioTurnMs = 40;
+    const uint32_t pass_ms = rig.platform.clock().millis() + 50;
+    rig.platform.clock().set_millis(pass_ms + kRadioTurnMs);
+    rig.product.step(pass_ms);
+
+    const timing::DwellPhase& dwell = rig.state().rf.dwell;
+    const uint32_t later_ms = pass_ms + 90;
+    // Free-running, the phase is the clock's own millisecond within the second.
+    CHECK(dwell.at_ms == pass_ms + kRadioTurnMs);
+    CHECK((dwell.phase_ms + static_cast<int>(later_ms - dwell.at_ms)) % 1000 ==
+          static_cast<int>(later_ms % 1000));
 }
 
 // Six taps stepping the alarm volume through six values. One write.
@@ -365,124 +372,4 @@ TEST_CASE("flash window: a store that did not mount is never written, and nothin
     CHECK(rig.platform.kv().writes() == 0);
     CHECK(rig.product.config().failed_writes() == 0);
     CHECK_FALSE(rig.product.config().durable_writes().pending());
-}
-
-// E1 at product scale. The cell is below the warning, so the settings sector is
-// not touched at all - and the change is not thrown away either: it stays dirty,
-// which is what makes a charger arriving still save it.
-TEST_CASE("flash window: a change is held, not written, while the cell is critical") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.platform.battery().millivolts = 3400;
-    // The board samples the cell once a second and the monitor acts on the third
-    // consecutive reading, so a low cell takes four seconds to become a decision.
-    rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
-
-    const uint32_t before = writes(rig);
-    change_volume(rig, 5);
-    step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
-    CHECK(writes(rig) == before);
-    // Refused, counted once, and never handed to the placement policy - a pending
-    // change is one the bound would eventually force onto flash, which is the
-    // write this refuses.
-    CHECK(rig.product.config().refused_writes() == 1);
-    CHECK(rig.product.config().holding_for_power());
-    CHECK(rig.product.config().durable_writes().requests() == 0);
-    CHECK(rig.product.config().durable_writes().forced() == 0);
-
-    // The cable arrives. The terminal is held above the cell, core/power reports
-    // Normal, and the change a pilot made is still there to write.
-    rig.platform.battery().external_power = true;
-    rig.seconds(t, 3, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
-    CHECK_FALSE(rig.product.config().holding_for_power());
-    CHECK(writes(rig) - before == 1);
-    CHECK(rig.product.config().durable_writes().forced() == 0);
-
-    uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
-    go::Settings stored{};
-    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == 5);
-}
-
-// The one power-off that does not flush, and it is the whole trade: a cell at its
-// cutoff takes the flight log record with it and leaves the settings sector
-// alone. What is lost is the change a pilot was making; what is protected is
-// every change they ever made.
-TEST_CASE("flash window: a cell at its cutoff powers off without touching the settings") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.platform.battery().millivolts = 3400;
-    rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
-    const uint32_t before = writes(rig);
-
-    // A change made on a cell that is already warning: held, never written.
-    change_volume(rig, 5);
-    rig.seconds(t, 2, /*speed_mm_s=*/0, 0);
-    REQUIRE(writes(rig) == before);
-
-    // And now the cell reaches its cutoff, which is the flush this refuses.
-    rig.platform.battery().millivolts = 3100;
-    rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
-    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
-    REQUIRE(rig.product.shutdown().phase() != power::ShutdownPhase::Running);
-    CHECK(writes(rig) == before);
-    CHECK(rig.product.config().refused_writes() == 1);
-    CHECK(rig.product.config().holding_for_power());
-}
-
-// A deliberate power-off on a healthy cell is the other half of the same rule,
-// and it does flush: a pilot who changed a setting and switched the device off
-// must not find the old value.
-TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    fly(rig, t);
-    step_until(rig, t, t + static_cast<uint32_t>(timing::kDirectStart) + 20);
-    REQUIRE(rig.state().rf.plan.tx_allowed);
-    const uint32_t before = writes(rig);
-
-    change_volume(rig, 5);
-    step_one(rig, t);
-    REQUIRE(writes(rig) == before);
-
-    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, t);
-    step_one(rig, t);
-    CHECK(writes(rig) - before == 1);
-    CHECK(rig.product.config().refused_writes() == 0);
-}
-
-// POFCON, through the whole product: the comparator fires in interrupt context on
-// the silicon, the product polls the latch once a pass, and the settings writer
-// stops. Nothing on this path re-reads the divider.
-TEST_CASE("flash window: a fired power-failure comparator stops settings writes") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    stand_on_the_ground(rig, t);
-    REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
-    REQUIRE(rig.platform.system_power().supply_monitor_armed());
-
-    const uint32_t before = writes(rig);
-    rig.platform.system_power().supply_warning = true;
-    step_one(rig, t);
-    CHECK(rig.product.power().supply_warned());
-    CHECK(rig.product.power().supply_warnings() == 1);
-    // Read and cleared, so one warning is one warning however many passes run.
-    step_until(rig, t, t + 200);
-    CHECK(rig.product.power().supply_warnings() == 1);
-
-    change_volume(rig, 5);
-    step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
-    CHECK(writes(rig) == before);
-    // Latching: a rail that came back up does not make it un-happen.
-    CHECK_FALSE(rig.product.power().may_write(power::DurableWrite::Settings));
-    CHECK(rig.product.power().may_write(power::DurableWrite::FlightRecord));
 }

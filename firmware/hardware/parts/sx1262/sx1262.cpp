@@ -351,13 +351,15 @@ void Sx1262::write_frequency(const RadioConfig& cfg) {
 // Preamble, sync window and payload at the configured bit rate, plus the margin
 // SoftRF uses to decide a burst is never going to end (almic.cpp:510).
 uint32_t Sx1262::tx_timeout_ticks(uint8_t len) const {
+    const uint64_t ticks =
+        (static_cast<uint64_t>(air_us(len)) + sx::kTxGuardUs) * 1000ULL / sx::kTimeoutStepNs;
+    return ticks > sx::kTimeoutTicksMax ? sx::kTimeoutTicksMax : static_cast<uint32_t>(ticks);
+}
+
+uint32_t Sx1262::air_us(uint8_t len) const {
     const uint32_t bitrate = cfg_.bitrate != 0 ? cfg_.bitrate : 100000u;
     const uint32_t bits = sx::kPreambleChips + cfg_.sync_bits + static_cast<uint32_t>(len) * 8u;
-    const uint32_t air_us =
-        static_cast<uint32_t>(static_cast<uint64_t>(bits) * 1000000ULL / bitrate);
-    const uint64_t ticks =
-        (static_cast<uint64_t>(air_us) + sx::kTxGuardUs) * 1000ULL / sx::kTimeoutStepNs;
-    return ticks > sx::kTimeoutTicksMax ? sx::kTimeoutTicksMax : static_cast<uint32_t>(ticks);
+    return static_cast<uint32_t>(static_cast<uint64_t>(bits) * 1000000ULL / bitrate);
 }
 
 Status Sx1262::transmit(const uint8_t* data, uint8_t len) {

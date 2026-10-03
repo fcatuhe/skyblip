@@ -298,7 +298,8 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
         worst_kt = std::max(worst_kt, std::abs(to_knots(MillimetresPerSec(own.speed_mm_s)).v - 60));
     }
     CHECK(worst_turn <= 10);
-    CHECK(worst_vs <= 5);
+    // An ADC count is 0.17 Pa, 1.5 cm up here, and a climb may be two counts off: 6 ft/min.
+    CHECK(worst_vs <= 6);
     CHECK(worst_kt == 0);
 }
 
@@ -428,14 +429,14 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     h.world().set_fix(false);
     run(h, 0, 6000);
 
-    CHECK_FALSE(h.world().gnss().gsv_enabled);
+    CHECK_FALSE(h.world().gnss().gsv_enabled());
     CHECK_FALSE(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.count() == 0);
 
     uint32_t t = show_sats(h, 6000);
     run(h, t, t + 3000);
     REQUIRE(h.product().screen().page() == go::Page::Sats);
-    CHECK(h.world().gnss().gsv_enabled);
+    CHECK(h.world().gnss().gsv_enabled());
     CHECK(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.count() > 0);
     CHECK(h.product().state().gnss.sky.in_use() == 0);
@@ -444,8 +445,9 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     t = page(h, t + 3000);
     run(h, t, t + 3000);
     REQUIRE(h.product().screen().page() != go::Page::Sats);
-    CHECK_FALSE(h.world().gnss().gsv_enabled);
+    CHECK_FALSE(h.world().gnss().gsv_enabled());
     CHECK_FALSE(h.product().state().gnss.levels_live);
+    CHECK(h.product().state().gnss.sky.count() == 0);
 
     t = show_sats(h, t + 3000);
     h.world().set_fix(true);
@@ -453,7 +455,7 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     REQUIRE(h.product().state().own.fix_valid);
     REQUIRE(h.product().state().own.tx_settled);
 
-    CHECK(h.world().gnss().gsv_enabled);
+    CHECK(h.world().gnss().gsv_enabled());
     CHECK(h.product().state().gnss.levels_live);
     CHECK(h.product().state().gnss.sky.in_use() > 0);
     CHECK(h.product().state().gnss.sky.in_use_of(gnss::System::Gps) > 0);

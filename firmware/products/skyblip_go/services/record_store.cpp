@@ -1,141 +1,8 @@
 #include "products/skyblip_go/services/record_store.h"
 
-#include <cstring>
-
-#include "core/events/link.h"
-#include "core/util/span.h"
-#include "ports/link.h"
+#include <algorithm>
 
 namespace skyblip::go {
-
-bool RecordPool::open() {
-    if (opened_) return available_;
-    opened_ = true;
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Storage) ||
-        !context_.roles.log_flash.ready())
-        return false;
-
-    sector_bytes_ = context_.roles.log_flash.sector_bytes();
-    sector_count_ = context_.roles.log_flash.sector_count();
-    slots_per_sector_ = flight::log_slots_per_sector(sector_bytes_);
-    const uint32_t floor_sectors =
-        store::flights_floor_sectors(flight::log_seconds_per_sector(slots_per_sector_));
-    if (slots_per_sector_ == 0 || !allocator_.configure(sector_count_, floor_sectors)) return false;
-
-    available_ = true;
-    scan();
-    return true;
-}
-
-// INFO: fc 20sep26 a sector this build cannot read or cannot parse is quarantined, never reclaimed
-void RecordPool::scan() {
-    for (uint32_t sector = 0; sector < sector_count_; sector++) {
-        store::SectorHeader header{};
-        scan_bytes_read_ += store::kSectorHeaderBytes;
-        const Status decoded = read_header(sector, header);
-        if (decoded == Status::Down) {
-            unreadable_sectors_++;
-            allocator_.quarantine(sector);
-            continue;
-        }
-        if (decoded == Status::Unsupported) {
-            allocator_.quarantine(sector);
-            continue;
-        }
-        if (!is_ok(decoded)) continue;
-        if (header.record_bytes != kStoreRecordBytes) {
-            allocator_.quarantine(sector);
-            continue;
-        }
-        allocator_.note_sector(sector, header);
-    }
-}
-
-uint32_t RecordPool::free_sectors() const {
-    const uint32_t spoken_for = allocator_.owned(store::SectorOwner::Flights) +
-                                allocator_.owned(store::SectorOwner::Diagnostics) +
-                                allocator_.quarantined();
-    return spoken_for >= sector_count_ ? 0 : sector_count_ - spoken_for;
-}
-
-bool RecordPool::claim_window(uint32_t cost_ms, uint32_t now_ms) {
-    return context_.state.rf.claim_flash_window(now_ms, cost_ms);
-}
-
-Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {
-    uint8_t raw[store::kSectorHeaderBytes];
-    if (!is_ok(context_.roles.log_flash.read(offset_of(sector), raw, sizeof(raw))))
-        return Status::Down;
-    return store::decode_sector_header(raw, out);
-}
-
-bool RecordPool::write_header(uint32_t sector, const store::SectorHeader& header) {
-    uint8_t raw[store::kSectorHeaderBytes];
-    store::encode_sector_header(header, raw);
-    return noted(is_ok(context_.roles.log_flash.write(offset_of(sector), raw, sizeof(raw))));
-}
-
-bool RecordPool::read_slot(uint32_t sector, uint32_t slot, uint8_t* out) {
-    return is_ok(context_.roles.log_flash.read(offset_of(sector) + flight::log_record_offset(slot),
-                                               out, kStoreRecordBytes));
-}
-
-bool RecordPool::write_slot(uint32_t sector, uint32_t slot, const uint8_t* in) {
-    return noted(is_ok(context_.roles.log_flash.write(
-        offset_of(sector) + flight::log_record_offset(slot), in, kStoreRecordBytes)));
-}
-
-bool RecordPool::erase(uint32_t sector) {
-    return noted(is_ok(context_.roles.log_flash.erase_sector(sector)));
-}
-
-bool RecordPool::noted(bool ok) {
-    if (!ok) faults_++;
-    return ok;
-}
-
-int RecordPool::payload_bytes(uint16_t to) const {
-    return static_cast<int>(context_.roles.link.payload_bytes_to(to));
-}
-
-int RecordPool::reply_cap(uint16_t to) const {
-    const int room = payload_bytes(to) + 1;
-    return room < comms::kLogReplyCap ? room : comms::kLogReplyCap;
-}
-
-bool RecordPool::send(uint16_t to, int len) {
-    if (len <= 0 || len > payload_bytes(to) || holding()) {
-        link_drops_++;
-        return false;
-    }
-    const Status sent = context_.roles.link.send_to(
-        to, events::Endpoint::Log,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)));
-    if (sent == Status::WouldBlock) {
-        std::memcpy(held_, reply_, static_cast<size_t>(len));
-        held_len_ = len;
-        held_to_ = to;
-        held_since_ms_ = now_ms_;
-        return true;
-    }
-    if (is_ok(sent)) return true;
-    link_drops_++;
-    return false;
-}
-
-Status RecordPool::deliver_held(uint32_t now_ms) {
-    now_ms_ = now_ms;
-    if (!holding()) return Status::Ok;
-    const Status sent = context_.roles.link.send_to(
-        held_to_, events::Endpoint::Log,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
-    if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs)
-        return Status::WouldBlock;
-    held_len_ = 0;
-    if (is_ok(sent)) return Status::Ok;
-    link_drops_++;
-    return sent == Status::WouldBlock ? Status::Timeout : sent;
-}
 
 bool RecordStore::open() {
     pool_.open();
@@ -198,11 +65,7 @@ RecordStore::Tail RecordStore::diagnostics_tail_of(uint32_t sector) {
     return tail;
 }
 
-void RecordStore::note_session(uint32_t session_id) {
-    if (session_count_ > 0 && index_[session_count_ - 1].session_id == session_id) {
-        index_[session_count_ - 1].sectors++;
-        return;
-    }
+void RecordStore::note_session(const store::SessionRun& run) {
     if (session_count_ == kMaxSessions) {
         for (int i = 1; i < kMaxSessions; i++) index_[i - 1] = index_[i];
         session_count_--;
@@ -210,8 +73,8 @@ void RecordStore::note_session(uint32_t session_id) {
     }
     SessionInfo& entry = index_[session_count_++];
     entry = SessionInfo{};
-    entry.session_id = session_id;
-    entry.sectors = 1;
+    entry.session_id = run.session_id;
+    entry.sectors = run.sectors;
 }
 
 void RecordStore::rebuild_index() {
@@ -220,12 +83,11 @@ void RecordStore::rebuild_index() {
     index_stale_ = false;
     if (!available_) return;
 
-    uint32_t sector = 0;
-    uint32_t sequence = 0;
+    store::SessionRun run{};
     uint32_t walked = 0;
-    while (pool_.allocator().next_sector(owner_, walked, sector, sequence)) {
-        note_session(pool_.allocator().session_of(sector));
-        walked = sequence;
+    while (pool_.allocator().session_run(owner_, walked, run)) {
+        note_session(run);
+        walked = run.last_sequence;
     }
 
     const uint32_t slots = ring_.slots_per_sector();
@@ -274,29 +136,41 @@ void RecordStore::begin_session(uint32_t session_id) {
     claimed_ = false;
 }
 
-Append RecordStore::append(const uint8_t* record, uint32_t now_ms) {
+Append RecordStore::append(const uint8_t* records, uint32_t count, uint32_t now_ms) {
     if (!available_) return Append::Fault;
+    if (count == 0 || count > run_slots()) return Append::Fault;
     const bool claim_wanted = !claimed_ || ring_.sector_exhausted();
-    if (!room_in_window(append_cost_ms(claim_wanted), now_ms)) return Append::Deferred;
+    if (!pool_.book_window(append_cost_ms(claim_wanted, count), now_ms)) return Append::Deferred;
     if (claim_wanted) {
         const Append claimed = claim_sector(base_session());
         if (claimed != Append::Ok) return claimed;
     }
-    if (!pool_.write_slot(ring_.sector(), ring_.slot(), record)) return Append::Fault;
-    ring_.took_slot();
-    records_written_++;
-    session_records_++;
+    if (!pool_.write_slots(ring_.sector(), ring_.slot(), records, count)) return Append::Fault;
+    ring_.restore(ring_.sector(), ring_.slot() + count);
+    records_written_ += count;
+    session_records_ += count;
     return Append::Ok;
 }
 
-uint32_t RecordStore::append_cost_ms(bool claim_wanted) const {
-    if (!claim_wanted) return store::kSlotWriteCostMs;
-    const uint32_t erase_ms = spare_ready_ ? 0 : store::kSectorEraseCostMs;
-    return erase_ms + 2 * store::kSlotWriteCostMs;
+// INFO: fc 03oct26 a claim writes one record, so a rotation's gap lands where it always did
+uint32_t RecordStore::run_slots() const {
+    if (!claimed_ || ring_.sector_exhausted()) return 1;
+    const uint32_t first = ring_.slot();
+    const uint32_t page_end =
+        (flight::log_record_offset(first + 1) - 1) / store::kPageBytes * store::kPageBytes +
+        store::kPageBytes;
+    const uint32_t fits = (page_end - store::kSectorHeaderBytes) / kStoreRecordBytes - first;
+    return std::min({fits, ring_.slots_per_sector() - first, kRunMostSlots});
 }
 
-bool RecordStore::room_in_window(uint32_t cost_ms, uint32_t now_ms) {
-    return pool_.claim_window(cost_ms, now_ms);
+uint32_t RecordStore::append_cost_ms(bool claim_wanted, uint32_t count) const {
+    const uint32_t first = claim_wanted ? 0 : ring_.slot();
+    const uint32_t from_page = flight::log_record_offset(first) / store::kPageBytes;
+    const uint32_t to_page = (flight::log_record_offset(first + count) - 1) / store::kPageBytes;
+    const uint32_t write_ms = (to_page - from_page + 1) * store::kSlotWriteCostMs;
+    if (!claim_wanted) return write_ms;
+    const uint32_t erase_ms = spare_ready_ ? 0 : store::kSectorEraseCostMs;
+    return erase_ms + store::kSlotWriteCostMs + write_ms;
 }
 
 uint32_t RecordStore::take_lost_records() {
@@ -309,7 +183,7 @@ uint32_t RecordStore::take_lost_records() {
 void RecordStore::prepare_spare(uint32_t now_ms) {
     if (!available_) return;
     if (spare_ready_) return;
-    if (!room_in_window(store::kSectorEraseCostMs, now_ms)) return;
+    if (!pool_.book_window(store::kSectorEraseCostMs, now_ms)) return;
     const store::Claim spare = pool_.allocator().prepare(owner_);
     if (!spare.granted) return;
     if (!pool_.erase(spare.sector)) return;
@@ -343,7 +217,7 @@ void RecordStore::step_erase(uint32_t now_ms) {
     for (uint32_t erased = 0; erased < kEraseCeilingSectors; erased++) {
         while (erase_next_ < pool_.sector_count() && !erasable(erase_next_)) erase_next_++;
         if (erase_next_ >= pool_.sector_count()) break;
-        if (!room_in_window(store::kSectorEraseCostMs, now_ms)) return;
+        if (!pool_.book_window(store::kSectorEraseCostMs, now_ms)) return;
         pool_.erase(erase_next_);
         erase_next_++;
     }

@@ -1,5 +1,7 @@
 #include "products/skyblip_go/services/capture.h"
 
+#include <algorithm>
+
 namespace skyblip::go {
 
 Status CaptureService::setup() {
@@ -99,25 +101,40 @@ bool CaptureService::write_end(uint32_t now_ms) {
 void CaptureService::drain(uint32_t now_ms) {
     uint32_t written = 0;
     while (context_.diag.queued() > 0 && written < kDrainCeilingRecords) {
-        if (store_.slots_left() <= kTailSlotsReserved && !store_.room_beyond_this_sector()) {
+        const uint32_t run = next_run(kDrainCeilingRecords - written);
+        if (run == 0) {
             stop_on_refusal(now_ms);
             return;
         }
-        diag::Record record{};
-        if (!context_.diag.peek(record)) return;
-        diag::encode_record(record, scratch_);
-        switch (store_.append(scratch_, now_ms)) {
+        const int peeked = context_.diag.peek(run_, static_cast<int>(run));
+        if (peeked == 0) return;
+        const uint32_t count = static_cast<uint32_t>(peeked);
+        for (size_t i = 0; i < count; i++)
+            diag::encode_record(run_[i], scratch_ + i * size_t{kStoreRecordBytes});
+        switch (store_.append(scratch_, count, now_ms)) {
             case Append::Deferred: return;
             case Append::NoSector: stop_on_refusal(now_ms); return;
             case Append::Fault: return;
             case Append::Ok: break;
         }
-        context_.diag.commit();
-        count_toward_rate(record.type, now_ms);
-        written++;
+        for (uint32_t i = 0; i < count; i++) {
+            context_.diag.commit();
+            count_toward_rate(run_[i].type, now_ms);
+        }
+        written += count;
         if (!announce_rotation(now_ms)) return;
     }
     store_.prepare_spare(now_ms);
+}
+
+// INFO: fc 03oct26 a run reaches the two tail slots only while a sector waits beyond them
+uint32_t CaptureService::next_run(uint32_t most) {
+    const uint32_t queued = static_cast<uint32_t>(context_.diag.queued());
+    const uint32_t run = std::min({store_.run_slots(), most, queued});
+    const uint32_t left = store_.slots_left();
+    if (left > kTailSlotsReserved && run <= left - kTailSlotsReserved) return run;
+    if (store_.room_beyond_this_sector()) return run;
+    return left > kTailSlotsReserved ? left - kTailSlotsReserved : 0;
 }
 
 // INFO: fc 20sep26 the ring recycled under the session: say what went, then name the build again

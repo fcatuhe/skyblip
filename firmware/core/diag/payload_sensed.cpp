@@ -19,6 +19,7 @@ Record record_of(const Gnss& value, const Instant& at) {
     set_flag(r.flags, kGnssFlagPpsLocked, value.pps_locked);
     set_flag(r.flags, kGnssFlagGeoidMeasured, value.geoid_measured);
     set_flag(r.flags, kGnssFlagTxSettled, value.tx_settled);
+    set_flag(r.flags, kGnssFlagLevelsFresh, value.levels_fresh);
     return r;
 }
 
@@ -40,6 +41,7 @@ bool read(const Record& record, Gnss& out) {
     out.pps_locked = record.flagged(kGnssFlagPpsLocked);
     out.geoid_measured = record.flagged(kGnssFlagGeoidMeasured);
     out.tx_settled = record.flagged(kGnssFlagTxSettled);
+    out.levels_fresh = record.flagged(kGnssFlagLevelsFresh);
     return true;
 }
 
@@ -85,6 +87,7 @@ Record record_of(const radio::Entry& value) {
     r.payload[12] = value.len;
     put_i8(r.payload + 13, value.rssi_dbm);
     put_i8(r.payload + 14, value.key_offset_s);
+    put_i8(r.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
     set_flag(r.flags, kBurstFlagAddrValid, value.addr_valid);
     set_flag(r.flags, kBurstFlagRssiValid, value.rssi_valid);
     set_flag(r.flags, kBurstFlagAirborne, value.airborne);
@@ -110,6 +113,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.len = record.payload[12];
     out.rssi_dbm = get_i8(record.payload + 13);
     out.key_offset_s = get_i8(record.payload + 14);
+    out.tx_stage_margin_us = static_cast<int16_t>(get_i8(record.payload + 15) * kStageMarginStepUs);
     out.addr_valid = record.flagged(kBurstFlagAddrValid);
     out.rssi_valid = record.flagged(kBurstFlagRssiValid);
     out.airborne = record.flagged(kBurstFlagAirborne);

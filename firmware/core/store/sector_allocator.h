@@ -18,6 +18,12 @@ constexpr uint32_t flights_floor_sectors(uint32_t seconds_per_sector) {
                : (kFlightsFloorHours * 3600u + seconds_per_sector - 1) / seconds_per_sector;
 }
 
+struct SessionRun {
+    uint32_t session_id{0};
+    uint32_t sectors{0};
+    uint32_t last_sequence{0};
+};
+
 struct Claim {
     uint32_t sector{0};
     uint32_t sequence{0};
@@ -53,8 +59,7 @@ class SectorAllocator {
     uint32_t lost_sectors(SectorOwner owner) const;
     bool frontier(SectorOwner owner, uint32_t& sector, uint32_t& sequence) const;
     bool oldest(SectorOwner owner, uint32_t& sector, uint32_t& sequence) const;
-    bool next_sector(SectorOwner owner, uint32_t above_sequence, uint32_t& sector,
-                     uint32_t& sequence) const;
+    bool session_run(SectorOwner owner, uint32_t above_sequence, SessionRun& run) const;
     bool session_sector(SectorOwner owner, uint32_t session_id, uint32_t index,
                         uint32_t& sector) const;
 
@@ -79,7 +84,7 @@ class SectorAllocator {
     void take(uint32_t sector, SectorOwner owner, uint32_t session_id);
     void note_taken(uint32_t sector);
     bool owns_session(SectorOwner owner, uint32_t session_id) const;
-    bool nth_matching(const Match& match, uint32_t index, uint32_t& sector) const;
+    uint32_t matching_up_to(const Match& match, uint32_t sequence) const;
     bool lowest_above(const Match& match, uint32_t above, uint32_t& sector,
                       uint32_t& sequence) const;
     bool matches(const Match& match, uint32_t sector) const;

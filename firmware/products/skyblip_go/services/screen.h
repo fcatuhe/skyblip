@@ -36,6 +36,9 @@ class ScreenService : public runtime::Service {
    public:
     static constexpr uint32_t kRenderPeriodMs = 1000;
     static constexpr uint32_t kPresentFloorMs = 1000;
+    // INFO: fc 03oct26 after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000
+    static constexpr uint32_t kLockedRedrawMs = 600;
+    static constexpr uint32_t kLockedRedrawEndMs = 800;
 
     // INFO: fc 20sep26 the render cadence: a capture says what was on the glass, not what was drawn
     static constexpr uint32_t kRecordPeriodMs = kRenderPeriodMs;
@@ -110,6 +113,7 @@ class ScreenService : public runtime::Service {
     void sync_receiving(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
+    uint32_t micros_since(uint64_t began_us) const;
     void obey(Gesture gesture, uint32_t now_ms);
     void tap(uint32_t now_ms);
     void long_touch();
@@ -214,6 +218,8 @@ class ScreenService : public runtime::Service {
     uint32_t recorded_ms_{0};
     uint32_t contact_edge_ms_[2]{};
     uint32_t last_render_ms_{0};
+    uint32_t render_us_{0};
+    uint32_t present_us_{0};
     uint32_t last_present_ms_{0};
     traffic::Level last_live_{traffic::Level::None};
     bool alarm_flash_{false};

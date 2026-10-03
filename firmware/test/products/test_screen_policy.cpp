@@ -309,3 +309,133 @@ TEST_CASE("screen policy: an alarm flashes the wedge at a flip a second") {
     for (int i = 0; i < 100; i++) rig.tick(t += 100);
     CHECK(rig.chip.present_count == held);
 }
+
+namespace {
+
+constexpr uint32_t kPassMs = 11;
+constexpr uint32_t kSecondMs = 1000;
+
+void locked_tick(Rig& rig, uint32_t t) {
+    rig.state.clock.utc_valid = true;
+    rig.state.clock.pps_locked = true;
+    rig.state.clock.ms_since_pps = t % kSecondMs;
+    rig.tick(t);
+}
+
+bool on_the_redraw_phase(uint32_t t) {
+    return t % kSecondMs >= go::ScreenService::kLockedRedrawMs &&
+           t % kSecondMs < go::ScreenService::kLockedRedrawMs + kPassMs;
+}
+
+int locked_presents(Rig& rig, uint32_t& t, uint32_t ms) {
+    int presents = 0;
+    for (const uint32_t end = t + ms; t < end; t += kPassMs) {
+        if (t % kSecondMs < kPassMs) rig.state.flight.seconds += 60;
+        const int before = rig.chip.present_count;
+        locked_tick(rig, t);
+        if (rig.chip.present_count == before) continue;
+        presents++;
+        CAPTURE(t);
+        CHECK(on_the_redraw_phase(t));
+    }
+    return presents;
+}
+
+}  // namespace
+
+// Bench 2026-09-29: a redraw a pass after the last walked ~7 ms/s into the fix and the uplink
+// dwell.
+TEST_CASE("screen policy: under a PPS lock a moving page is redrawn once a second, on one phase") {
+    Rig rig;
+    uint32_t t = 0;
+    rig.run_seconds(t, 3);
+
+    const int presents = locked_presents(rig, t, 100 * kSecondMs);
+    CHECK(presents >= 99);
+    CHECK(presents <= 101);
+}
+
+// Every present used to ask for the next, so a flashing wedge set its own drifting cadence.
+TEST_CASE("screen policy: under a PPS lock an alarm flashes the wedge on the redraw phase") {
+    Rig rig;
+    uint32_t t = 0;
+    rig.run_seconds(t, 3);
+    rig.threat(traffic::Level::Advisory, 0, 1500, t);
+    for (const uint32_t end = t + 2 * kSecondMs; t < end; t += kPassMs) locked_tick(rig, t);
+
+    int flips = 0;
+    for (const uint32_t end = t + 60 * kSecondMs; t < end; t += kPassMs) {
+        const int before = rig.chip.present_count;
+        locked_tick(rig, t);
+        if (rig.chip.present_count == before) continue;
+        flips++;
+        CAPTURE(t);
+        CHECK(on_the_redraw_phase(t));
+    }
+    CHECK(flips >= 59);
+    CHECK(flips <= 61);
+}
+
+// A present just ahead of the phase holds the glass busy through it: that second is lost, no more.
+TEST_CASE("screen policy: under a PPS lock a redraw the busy glass refused lands the next second") {
+    Rig rig;
+    uint32_t t = 0;
+    rig.run_seconds(t, 3);
+    for (const uint32_t end = t + 3 * kSecondMs; t < end; t += kPassMs) locked_tick(rig, t);
+
+    t = (t / kSecondMs + 1) * kSecondMs + go::ScreenService::kLockedRedrawMs - 50;
+    const int before = rig.chip.present_count;
+    rig.state.flight.seconds += 60;
+    rig.screen.mark_dirty();
+    locked_tick(rig, t);
+    REQUIRE(rig.chip.present_count == before + 1);
+    t += kPassMs;
+
+    // the second the glass was busy through, then four on the phase
+    CHECK(locked_presents(rig, t, 5 * kSecondMs) == 4);
+}
+
+// The screen record rode the same drifting rule, so a corpus showed it walking through the second.
+TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second, on one phase") {
+    Rig rig;
+    uint32_t t = 0;
+    rig.recorder.arm();
+    rig.run_seconds(t, 3);
+    diag::Record record{};
+    while (rig.recorder.peek(record)) rig.recorder.commit();
+
+    int recorded = 0;
+    for (const uint32_t end = t + 30 * kSecondMs; t < end; t += kPassMs) {
+        locked_tick(rig, t);
+        while (rig.recorder.peek(record)) {
+            rig.recorder.commit();
+            if (record.type != diag::Type::Screen) continue;
+            recorded++;
+            CAPTURE(t);
+            CHECK(record.phase_valid());
+            CHECK(record.into_ms >= go::ScreenService::kLockedRedrawMs);
+            CHECK(record.into_ms < go::ScreenService::kLockedRedrawMs + kPassMs);
+        }
+    }
+    CHECK(recorded >= 29);
+    CHECK(recorded <= 31);
+}
+
+// A pass held up past the phase would push the glass into the next second's fix.
+TEST_CASE(
+    "screen policy: under a PPS lock a pass that reaches the phase too late leaves it alone") {
+    Rig rig;
+    uint32_t t = 0;
+    rig.run_seconds(t, 3);
+    locked_presents(rig, t, 3 * kSecondMs);
+
+    t = (t / kSecondMs + 1) * kSecondMs;
+    locked_tick(rig, t + go::ScreenService::kLockedRedrawMs - 10);
+    const int before = rig.chip.present_count;
+    rig.state.flight.seconds += 60;
+    locked_tick(rig, t + go::ScreenService::kLockedRedrawEndMs);
+    CHECK(rig.chip.present_count == before);
+
+    t += kSecondMs;
+    CHECK(locked_presents(rig, t, kSecondMs) == 1);
+}

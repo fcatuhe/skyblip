@@ -91,6 +91,9 @@ void DiagnosticsReport::build(const Diagnostics& d, const Group* only) {
         // that climbs is a decoder correcting a frame into a position no radio
         // this size could have heard (core/traffic/sanity.h).
         add_int(Group::Radio, "range_refused", counter(d.range_refused));
+        add_bool(Group::Radio, "dio1_armed", d.dio1_armed);
+        add_int(Group::Radio, "dio1_edges", counter(d.dio1_edges));
+        add_int(Group::Radio, "dio1_missed", counter(d.dio1_missed));
     }
 
     if (traffic) {

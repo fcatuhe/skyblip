@@ -48,23 +48,26 @@ struct RfState {
     uint16_t last_tx_span_us{0};
     int8_t noise_dbm{timing::NoiseFloor::kSeedDbm};
 
-    // INFO: fc 20sep26 one published phase per pass, so the pass spends one window rather than many
-    bool claim_flash_window(uint32_t now_ms, uint32_t cost_ms) {
-        if (!flash_pass_seen || now_ms != flash_pass_ms) {
+    // INFO: fc 03oct26 every flash writer stalls one loop on one bus, so a pass books one window
+    bool book_flash_window(uint32_t pass_ms, uint32_t now_ms, uint32_t cost_ms) {
+        if (!flash_pass_seen || pass_ms != flash_pass_ms) {
             flash_pass_seen = true;
-            flash_pass_ms = now_ms;
-            flash_pass_spent_ms = 0;
+            flash_pass_ms = pass_ms;
+            flash_pass_booked_ms = 0;
         }
         // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
         if (plan.tx_allowed) return false;
-        if (!timing::DurableWriteWindow::free_now(plan, dwell, now_ms,
-                                                  flash_pass_spent_ms + cost_ms))
+        // INFO: fc 03oct26 work starts at the clock or after what the pass booked, if later
+        const uint32_t elapsed_ms = now_ms - pass_ms;
+        const uint32_t into_pass_ms =
+            elapsed_ms > flash_pass_booked_ms ? elapsed_ms : flash_pass_booked_ms;
+        if (!timing::DurableWriteWindow::free_now(plan, dwell, pass_ms + into_pass_ms, cost_ms))
             return false;
-        flash_pass_spent_ms += cost_ms;
+        flash_pass_booked_ms = into_pass_ms + cost_ms;
         return true;
     }
     uint32_t flash_pass_ms{0};
-    uint32_t flash_pass_spent_ms{0};
+    uint32_t flash_pass_booked_ms{0};
     bool flash_pass_seen{false};
 };
 
@@ -99,6 +102,7 @@ struct GnssStatus {
     bool levels_wanted{false};
     // INFO: fc 18sep26 false once GSV is switched off, so no page draws a level nobody measured
     bool levels_live{false};
+    bool levels_fresh{false};
     gnss::FixReject reject{gnss::FixReject::None};
     uint32_t rejected{0};
     gnss::SkyView sky{};

@@ -52,7 +52,6 @@ bool Air::detected_by(models::Sx1262& radio, Burst& b) {
 }
 
 void Air::step(uint64_t now_us, models::Sx1262& radio) {
-    take_own_transmission(now_us, radio);
     if (tx_in_flight_ && now_us >= tx_done_at_us_) {
         tx_in_flight_ = false;
         radio.signal_tx_done();

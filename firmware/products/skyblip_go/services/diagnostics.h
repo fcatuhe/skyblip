@@ -3,6 +3,7 @@
 
 #include "core/bus/state.h"
 #include "core/comms/diagnostics.h"
+#include "ports/rf.h"
 
 namespace skyblip::go {
 
@@ -66,6 +67,10 @@ class DiagnosticsDump {
         d.tx_named = state.air.tx_named;
         d.tx_keyed_us = state.rf.last_tx_keyed_us;
         d.tx_span_us = state.rf.last_tx_span_us;
+        const ports::RfDio1 dio1 = product.board().roles().rf.dio1();
+        d.dio1_armed = dio1.armed;
+        d.dio1_edges = dio1.edges;
+        d.dio1_missed = dio1.missed;
 
         d.tracked = static_cast<uint32_t>(state.traffic.count());
         d.alarm = traffic::to_number(state.alarm_level);

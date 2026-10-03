@@ -8,6 +8,14 @@ uint16_t tx_span_of(uint64_t done_at_us, uint64_t deadline_us) {
     return span_us > kTxSpanLimitUs ? kTxSpanLimitUs : static_cast<uint16_t>(span_us);
 }
 
+int16_t tx_stage_margin_of(uint64_t staged_at_us, uint64_t deadline_us) {
+    const int64_t margin_us =
+        static_cast<int64_t>(deadline_us) - static_cast<int64_t>(staged_at_us);
+    if (margin_us > INT16_MAX) return INT16_MAX;
+    if (margin_us < INT16_MIN) return INT16_MIN;
+    return static_cast<int16_t>(margin_us);
+}
+
 void Log::record(const Entry& entry) {
     entry_[written_ % kCapacity] = entry;
     written_++;

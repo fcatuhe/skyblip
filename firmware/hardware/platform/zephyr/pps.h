@@ -6,6 +6,7 @@
 #include <zephyr/kernel.h>
 
 #include "core/timing/slot.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -53,6 +54,7 @@ class Pps {
         if (self_ == nullptr) return;
         self_->edge_us_ = k_ticks_to_us_floor64(k_uptime_ticks());
         self_->edges_++;
+        g_loop_wake.wake();
     }
 
     static Pps* self_;

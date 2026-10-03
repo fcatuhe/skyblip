@@ -203,6 +203,7 @@ class Rf : public ports::Rf {
     void transmit(const ports::RfBurst& burst) {
         keyed_++;
         tx_at_us_ = burst.at_us;
+        staged_at_us_ = clock_.micros();
         (void)radio_.transmit(burst.chips, burst.len);
         keyed_at_us_ = clock_.micros();
     }
@@ -261,6 +262,7 @@ class Rf : public ports::Rf {
         e.rssi_valid = ev.rssi_valid;
         e.at_us = now_us;
         e.keyed_at_us = keyed_at_us_;
+        e.staged_at_us = staged_at_us_;
         e.tx_at_us = tx_at_us_;
         out_.push(e);
     }
@@ -283,6 +285,7 @@ class Rf : public ports::Rf {
     model::Band band_{model::Band::M};
     uint32_t freq_hz_{0};
     uint64_t keyed_at_us_{0};
+    uint64_t staged_at_us_{0};
     uint64_t tx_at_us_{0};
     uint32_t last_ms_{0};
     uint32_t armed_count_{0};

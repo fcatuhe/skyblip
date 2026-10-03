@@ -81,7 +81,7 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
     REQUIRE(f.size() == 6);
     // Field 1 is the raw pressure in pascals, which is what a consumer prefers
     // over field 2 because it can apply its own datum to it.
-    CHECK(std::stol(f[1]) == static_cast<long>(rig.state().baro.pressure_mpa / 1000));
+    CHECK(std::stol(f[1]) == static_cast<long>((rig.state().baro.pressure_mpa + 500) / 1000));
     // Field 2 is metres on 1013.25, the same datum-free figure $PGRMZ carries.
     CHECK(std::abs(std::stol(f[2]) -
                    flight::pressure_to_alt_cm(rig.state().baro.pressure_mpa / 1000) / 100) <= 1);

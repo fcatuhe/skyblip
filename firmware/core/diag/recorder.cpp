@@ -72,11 +72,13 @@ void Recorder::flush_gap() {
     store(record_of(gap, gap_from_));
 }
 
-bool Recorder::peek(Record& out) {
+bool Recorder::peek(Record& out) { return peek(&out, 1) == 1; }
+
+int Recorder::peek(Record* out, int most) {
     flush_gap();
-    if (count_ == 0) return false;
-    out = ring_[head_];
-    return true;
+    const int run = count_ < most ? count_ : most;
+    for (int i = 0; i < run; i++) out[i] = ring_[(head_ + i) % kCapacity];
+    return run;
 }
 
 void Recorder::commit() {

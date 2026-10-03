@@ -14,11 +14,13 @@ constexpr uint8_t kSectorVersion = 2;
 
 constexpr uint32_t kSectorHeaderBytes = 16;
 
-// INFO: fc 20sep26 budgets for the external NOR on spi1, bench-settled, not datasheet figures
-constexpr uint32_t kSectorEraseCostMs = 40;
+// INFO: fc 03oct26 MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell
+constexpr uint32_t kSectorEraseCostMs = 42;
+// INFO: fc 03oct26 one page program on the spi1 NOR, bench-settled, not a datasheet figure
 constexpr uint32_t kSlotWriteCostMs = 2;
 // INFO: fc 03oct26 one program operation, as the slot write, plus 256 bytes more of SPI at 8 MHz
 constexpr uint32_t kPageWriteCostMs = kSlotWriteCostMs + 1;
+// INFO: fc 03oct26 both candidate parts program 256 B pages: the driver splits a write at each
 constexpr uint32_t kPageBytes = 256;
 
 // INFO: fc 20sep26 byte 13, under the CRC: a suffix whose first sector was recycled cannot claim it

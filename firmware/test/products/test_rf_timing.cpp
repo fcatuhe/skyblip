@@ -136,14 +136,20 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
         const radio::Entry& entry = log.newest(i);
         REQUIRE(entry.phase_valid);
         CHECK(entry.into_ms < 1000);
+        const bool own = entry.event == radio::Event::Transmitted;
+        // A host step dates a burst ending at 999.8 ms, the direct slot's last, on the next edge.
+        const int ended_ms = own && entry.into_ms < simulator::Simulator::kStepMs
+                                 ? entry.into_ms + 1000
+                                 : entry.into_ms;
         // The phase is where the burst ENDED, so only a dwell it cannot have run into names one.
-        if (entry.band == model::Band::M && entry.into_ms < timing::kSlot0End - 100) {
+        if (entry.band == model::Band::M && ended_ms < timing::kSlot0End - 100) {
             CHECK(entry.channel == 0);
             channelled++;
         }
-        if (entry.event != radio::Event::Transmitted) continue;
+        if (!own) continue;
         dated++;
-        CHECK(entry.into_ms >= timing::kDirectStart);
+        CHECK(ended_ms >= timing::kDirectStart);
+        CHECK(ended_ms <= timing::kDirectEnd);
         CHECK(entry.tx_span_valid);
         CHECK(entry.tx_span_us > 0);
     }

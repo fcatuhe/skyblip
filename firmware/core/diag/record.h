@@ -34,9 +34,10 @@ enum class Type : uint8_t {
     End = 17,
     Duty = 18,
     Switch = 19,
+    Loop = 20,
 };
 
-constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Switch);
+constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Loop);
 
 const char* type_name(Type type);
 
@@ -113,6 +114,16 @@ inline int8_t sample_offset_mv(int32_t sample_mv, int32_t median_mv) {
     if (offset > kSampleOffsetCeilingMv) return kSampleOffsetCeilingMv;
     if (offset < kSampleOffsetFloorMv) return kSampleOffsetFloorMv;
     return static_cast<int8_t>(offset);
+}
+
+// INFO: fc 03oct26 a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms
+constexpr int32_t kStageMarginStepUs = 10;
+
+inline int8_t stage_margin_steps(int32_t margin_us) {
+    const int32_t steps = margin_us / kStageMarginStepUs;
+    if (steps > INT8_MAX) return INT8_MAX;
+    if (steps < INT8_MIN) return INT8_MIN;
+    return static_cast<int8_t>(steps);
 }
 
 inline int16_t clamp_i16(int32_t v) {

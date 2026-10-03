@@ -54,8 +54,10 @@ void RadioService::tick(uint32_t now_ms) {
 // queued on the next dwell is not in flight yet.
 void RadioService::publish_dwell(uint32_t now_ms) {
     timing::DwellPhase& dwell = context_.state.rf.dwell;
-    dwell.at_ms = now_ms;
-    dwell.phase_ms = phase_at(context_.roles.clock.micros());
+    // INFO: fc 03oct26 one clock read: millis() is the low 32 bits of micros() / 1000
+    const uint64_t read_us = context_.roles.clock.micros();
+    dwell.at_ms = static_cast<uint32_t>(read_us / 1000);
+    dwell.phase_ms = phase_at(read_us);
     dwell.armed = flying_.mode != ports::RfMode::Idle;
     dwell.burst_armed = flying_.carries_any();
     context_.state.rf.noise_dbm = noise_.dbm();

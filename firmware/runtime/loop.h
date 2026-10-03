@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_RUNTIME_LOOP_H
 #define SKYBLIP_RUNTIME_LOOP_H
 
+#include "runtime/loop_meter.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 #include "runtime/watchdog.h"
@@ -25,12 +26,15 @@ class Loop {
         return first;
     }
 
-    void step(uint32_t now_ms) {
+    void step(uint32_t now_ms, LoopMeter* meter = nullptr) {
         // Registration happens at construction, before there is a time base to
         // stamp, so the deadlines start counting from the first pass.
         if (!feed_.started()) feed_.begin(now_ms);
         for (int i = 0; i < n_; i++) {
-            s_[i]->tick(now_ms);
+            if (meter != nullptr)
+                meter->timed(static_cast<uint8_t>(i), [&] { s_[i]->tick(now_ms); });
+            else
+                s_[i]->tick(now_ms);
             if (s_[i]->progressing(now_ms)) feed_.check_in(i, now_ms);
         }
     }

@@ -42,6 +42,9 @@ Diagnostics busy_device() {
     d.tx_keyed_us = 609;
     d.tx_span_us = 5919;
     d.range_refused = 5;
+    d.dio1_armed = true;
+    d.dio1_edges = 1500;
+    d.dio1_missed = 4;
 
     d.tracked = 4;
     d.alarm = 2;
@@ -98,6 +101,9 @@ Diagnostics widest_device() {
     d.tx_keyed_us = 65535;
     d.tx_span_us = 65535;
     d.range_refused = 0xFFFFFFFFu;
+    d.dio1_armed = false;
+    d.dio1_edges = 0xFFFFFFFFu;
+    d.dio1_missed = 0xFFFFFFFFu;
     d.tracked = 0xFFFFFFFFu;
     d.alarm = 255;
     d.gnss_fixes = 0xFFFFFFFFu;
@@ -181,7 +187,8 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
     CHECK(has(text,
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
               "rx_unframed=11 rx_miskeyed=7 rx_noise=96 rx_named=12 tx_ok=880 tx_lost=3 "
-              "tx_named=41 tx_keyed_us=609 tx_span_us=5919 range_refused=5\n"));
+              "tx_named=41 tx_keyed_us=609 tx_span_us=5919 range_refused=5 dio1_armed=true "
+              "dio1_edges=1500 dio1_missed=4\n"));
     CHECK(has(text, "traffic tracked=4 alarm=2\n"));
     CHECK(has(text,
               "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "

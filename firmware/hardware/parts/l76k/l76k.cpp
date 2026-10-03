@@ -11,7 +11,8 @@ void L76k::send(const char* sentence, uint32_t now_ms) {
 
 void L76k::start_sequence(uint32_t now_ms) {
     next_command_ = 0;
-    gsv_on_ = false;  // kCommands sets nGSV to 0, whatever the receiver was doing
+    gsv_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
+    levels_heard_ = false;
     state_ = Config::Sending;
     send_next(now_ms);
 }
@@ -159,10 +160,26 @@ void L76k::service(uint32_t now_ms) {
         case Config::Degraded: break;
     }
 
-    if (state_ == Config::Ready && gsv_on_ != gsv_wanted_) {
-        send(gsv_wanted_ ? kSatellitesInViewOn : kSatellitesInViewOff, now_ms);
-        gsv_on_ = gsv_wanted_;
-    }
+    if (state_ == Config::Ready) pace_satellites_in_view(now_ms);
+}
+
+void L76k::pace_satellites_in_view(uint32_t now_ms) {
+    const uint8_t every = satellites_in_view_every();
+    if (every == gsv_every_) return;
+    send(satellites_in_view_command(every), now_ms);
+    gsv_every_ = every;
+    if (every == 0) levels_heard_ = false;
+}
+
+// INFO: fc 29sep26 every solution until the first set lands, so the page still fills in a second
+uint8_t L76k::satellites_in_view_every() const {
+    if (!gsv_wanted_) return 0;
+    return levels_heard_ ? kSatellitesInViewPeriodSolutions : 1;
+}
+
+const char* L76k::satellites_in_view_command(uint8_t every) {
+    if (every == 0) return kSatellitesInViewOff;
+    return every == 1 ? kSatellitesInViewEverySolution : kSatellitesInViewPaced;
 }
 
 // INFO: fc 13sep26 a $PCAS sentence is acknowledged only by what the receiver stops saying
@@ -176,11 +193,16 @@ bool L76k::poll(uint32_t now_ms) {
         if (n == 0) break;
         for (size_t i = 0; i < n; i++) {
             if (!parser_.feed(static_cast<char>(buf[i]))) continue;
-            validity_.observe(parser_.solution(), parser_.last_sentence(), now_ms);
-            closed = closed || parser_.last_sentence() == kBurstClosingSentence;
+            const gnss::Sentence sentence = parser_.last_sentence();
+            validity_.observe(parser_.solution(), sentence, now_ms);
+            burst_levels_ = burst_levels_ || (sentence == gnss::Sentence::Gsv && gsv_every_ != 0);
+            closed = closed || sentence == kBurstClosingSentence;
         }
         if (n < sizeof(buf)) break;  // drained
     }
+    // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
+    if (closed && gsv_every_ == 0) parser_.forget_satellites_in_view();
+    levels_heard_ = levels_heard_ || burst_levels_;
 
     const bool valid = validity_.check(now_ms) == gnss::FixReject::None;
     // A receiver that stops talking publishes nothing, so nothing would ever
@@ -188,6 +210,8 @@ bool L76k::poll(uint32_t now_ms) {
     // its own right, and it is the one that matters most.
     if (!closed && valid == solution_.fix_valid) return false;
 
+    levels_fresh_ = closed && burst_levels_ && gsv_every_ != 0;
+    if (closed) burst_levels_ = false;
     solution_ = parser_.solution();
     solution_.fix_valid = valid;
     solution_.pps_latency_ms = pps_latency_ms();

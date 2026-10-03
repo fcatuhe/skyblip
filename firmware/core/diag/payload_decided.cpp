@@ -205,6 +205,8 @@ Record record_of(const Screen& value, const Instant& at) {
     r.payload[5] = value.mode;
     r.payload[6] = value.prompt;
     r.payload[7] = static_cast<uint8_t>(value.alarm);
+    put_u32(r.payload + 8, value.render_us);
+    put_u32(r.payload + 12, value.present_us);
     set_flag(r.flags, kScreenFlagBacklight, value.backlight);
     set_flag(r.flags, kScreenFlagPowered, value.powered);
     set_flag(r.flags, kScreenFlagHolding, value.holding);
@@ -219,9 +221,38 @@ bool read(const Record& record, Screen& out) {
     out.mode = record.payload[5];
     out.prompt = record.payload[6];
     out.alarm = static_cast<traffic::Level>(record.payload[7]);
+    out.render_us = get_u32(record.payload + 8);
+    out.present_us = get_u32(record.payload + 12);
     out.backlight = record.flagged(kScreenFlagBacklight);
     out.powered = record.flagged(kScreenFlagPowered);
     out.holding = record.flagged(kScreenFlagHolding);
+    return true;
+}
+
+Record record_of(const Loop& value, const Instant& at) {
+    Record r = framed(Type::Loop, at);
+    put_u16(r.payload + 0, value.passes);
+    put_u16(r.payload + 2, value.busy_ms);
+    put_u32(r.payload + 4, value.worst_pass_us);
+    put_u16(r.payload + 8, value.worst_pass_phase_ms);
+    put_u16(r.payload + 10, value.worst_gap_ms);
+    put_u16(r.payload + 12, value.worst_gap_phase_ms);
+    r.payload[14] = value.worst_service;
+    r.payload[15] = value.worst_tick_ms;
+    return r;
+}
+
+bool read(const Record& record, Loop& out) {
+    if (record.type != Type::Loop) return false;
+    out = Loop{};
+    out.passes = get_u16(record.payload + 0);
+    out.busy_ms = get_u16(record.payload + 2);
+    out.worst_pass_us = get_u32(record.payload + 4);
+    out.worst_pass_phase_ms = get_u16(record.payload + 8);
+    out.worst_gap_ms = get_u16(record.payload + 10);
+    out.worst_gap_phase_ms = get_u16(record.payload + 12);
+    out.worst_service = record.payload[14];
+    out.worst_tick_ms = record.payload[15];
     return true;
 }
 
