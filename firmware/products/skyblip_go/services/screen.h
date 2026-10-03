@@ -126,6 +126,7 @@ class ScreenService : public runtime::Service {
     enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell, LowCell };
     enum class ParkStep : uint8_t { None, Wipe, Frame, Sleep };
     void park(ParkFrame frame);
+    static bool worn_powered_off(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
     void draw_parked_cell(const char* said);
     void centred_text(int y, const char* text, int scale);

@@ -414,7 +414,15 @@ void ScreenService::set_power(bool on) {
 void ScreenService::park(ParkFrame frame) {
     powered_ = false;
     park_frame_ = frame;
-    park_ = may_present_park_frame() ? ParkStep::Wipe : ParkStep::Sleep;
+    if (!may_present_park_frame())
+        park_ = ParkStep::Sleep;
+    else
+        park_ = worn_powered_off(frame) ? ParkStep::Frame : ParkStep::Wipe;
+}
+
+// INFO: fc 03oct26 months off earn the full waveform, a frame worn through a reboot does not
+bool ScreenService::worn_powered_off(ParkFrame frame) {
+    return frame != ParkFrame::Installing && frame != ParkFrame::Recovery;
 }
 
 // INFO: fc 12sep26 every step is a command, and a command sent over a live BUSY is lost
@@ -429,8 +437,10 @@ void ScreenService::settle_park(uint32_t now_ms) {
     if (park_ == ParkStep::Frame) {
         park_ = ParkStep::Sleep;
         draw_park_frame(park_frame_);
-        context_.roles.display.present(fb_, ports::Refresh::Partial, now_ms);
-        count_refresh(ports::Refresh::Partial);
+        const ports::Refresh mode =
+            worn_powered_off(park_frame_) ? ports::Refresh::Full : ports::Refresh::Partial;
+        context_.roles.display.present(fb_, mode, now_ms);
+        count_refresh(mode);
         cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
                          : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low
                                                              : power::CellOnGlass::None;
