@@ -15,6 +15,9 @@ class ConfigStore {
     virtual void write_default_fields(json::Writer& w) const = 0;
 
     virtual Status apply(const char* json, int len) = 0;
+
+    // INFO: fc 03oct26 the prompt's detail: what apply() would change, rows split by '\n'
+    virtual int describe_changes(const char* json, int len, char* out, int cap) const = 0;
 };
 
 }  // namespace skyblip::comms
