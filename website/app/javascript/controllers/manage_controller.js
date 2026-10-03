@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-const PROBATION_RECHECK_MS = 5000
+const RECHECK_MS = 5000
 const KILOBYTE = 1000
 const MS_PER_MINUTE = 60_000
 const ESTIMATE_AFTER_SHARE = 0.05
@@ -10,12 +10,13 @@ const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "ins
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const NUMBERS = new Set(["aircraft_type", "units", "alarm_volume"])
+const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "install", "recover",
-                    "device", "firmware", "battery", "flight", "chosen", "notes", "step",
+                    "device", "firmware", "battery", "flight", "advice", "chosen", "notes", "step",
                     "progress", "progressText", "message", "settings", "fields", "default", "save", "reset"]
-  static values = { src: String, remaining: String, charging: String, labels: Object }
+  static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
     const { Updater, hasWebBluetooth } = await import(this.srcValue)
@@ -82,23 +83,34 @@ export default class extends Controller {
     this.#progress(state)
     this.messageTarget.textContent = this.#message(state)
     this.messageTarget.classList.toggle("visually-hidden", !state.notice && Boolean(this.#step(state)))
-    this.#recheckProbation(state)
+    this.#recheck(state)
   }
 
-  #facts({ device, running, status, file }) {
+  #facts({ device, running, status, advice, file }) {
     this.deviceTarget.textContent = device || "-"
     this.firmwareTarget.textContent = running || "-"
-    this.chosenTarget.textContent = file ? file.version : "-"
+    this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
+    this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
     const percent = status?.batteryPercent
     const charging = status?.charging ? ` ${this.chargingValue}` : ""
     this.batteryTarget.textContent = percent === null || percent === undefined ? "-" : `${percent} %${charging}`
     this.flightTarget.textContent = status?.flight ? this.labelsValue.flight[status.flight] ?? status.flight : "-"
   }
 
+  #chosen({ version, full }) {
+    if (full === null) return version
+    return `${version}, ${this.#kind(full)}`
+  }
+
+  #kind(full) {
+    return full ? this.fullValue : this.slimValue
+  }
+
   #notes({ image, status }) {
     const notes = []
     if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (image?.state === "probation" || image?.state === "reverted") notes.push([image.state, image.to])
+    if (image?.imu === "writing") notes.push(["imu_writing"])
     if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])
@@ -221,10 +233,8 @@ export default class extends Controller {
     return key === "refused" ? key : `${this.#word("refused")} ${key}`
   }
 
-  #recheckProbation({ phase, image }) {
+  #recheck({ settling }) {
     clearTimeout(this.recheck)
-    if (phase === "ready" && image?.state === "probation") {
-      this.recheck = setTimeout(() => this.updater.refresh(), PROBATION_RECHECK_MS)
-    }
+    if (settling) this.recheck = setTimeout(() => this.updater.refresh(), RECHECK_MS)
   }
 }

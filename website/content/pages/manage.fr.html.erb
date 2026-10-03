@@ -50,7 +50,10 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
           none: "aucun",
           confirm_set: "Autorisez le changement : l’écran dit SETTINGS, pressez deux fois."
         },
+        advice: "Fichier à envoyer",
         chosen: "Image choisie",
+        full: "complète",
+        slim: "allégée",
         file: "Le fichier du firmware, en .signed.bin",
         install: "Installer",
         steps: {
@@ -73,10 +76,20 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
     <li>Chrome ou Edge, sur un ordinateur ou sur Android</li>
     <li>L&rsquo;appareil au sol, avec un fix GPS</li>
     <li>Une batterie au-dessus de l&rsquo;alerte, ou en charge</li>
-    <li>Le fichier de la version, en .signed.bin</li>
+    <li>Le fichier de la version, en .signed.bin, celui que cette page nomme</li>
     <li>Aucune autre application ne tient les réglages de l&rsquo;appareil</li>
     <li>Dix minutes, l&rsquo;appareil près de vous</li>
   </ul>
+
+  <p class="lede">
+    Une version en a deux, nommés d&rsquo;après son numéro&nbsp;: l&rsquo;image
+    allégée finit en <span class="mono">.signed.bin</span>, l&rsquo;image
+    complète en <span class="mono">.full.signed.bin</span>. Envoyez
+    l&rsquo;allégée, sauf si la page demande la complète, qui porte aussi le
+    firmware de la centrale inertielle&nbsp;: l&rsquo;appareil en a besoin quand
+    sa centrale n&rsquo;en a pas encore, quand une nouvelle centrale est montée,
+    ou quand une version le change.
+  </p>
 </section>
 
 <section>
@@ -163,6 +176,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Vos réglages sont ceux d&rsquo;avant cette mise à jour&nbsp;: ce que vous avez changé sous le firmware plus récent est resté avec lui.</td></tr>
         <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">Les réglages enregistrés n&rsquo;ont pas pu être lus, l&rsquo;appareil tourne donc sur ses valeurs par défaut. Vérifiez l&rsquo;indicatif et le type d&rsquo;aéronef avant de voler.</td></tr>
         <tr><th class="mono">swap_powered: false</th><td data-manage-word="swap_unpowered">La batterie est critique, trop faible pour installer. Chargez-la d&rsquo;abord.</td></tr>
+        <tr><th class="mono">imu: writing</th><td data-manage-word="imu_writing">L&rsquo;appareil écrit le firmware de sa centrale inertielle dans sa mémoire, jusqu&rsquo;à une minute. Laissez-le allumé&nbsp;: la page redemande jusqu&rsquo;à ce que ce soit fini.</td></tr>
         <tr><th class="mono">went_dark_flat</th><td data-manage-word="went_dark_flat">La dernière fois qu&rsquo;il s&rsquo;est éteint, c&rsquo;était pour une batterie vide. Chargez-le avant la mise à jour.</td></tr>
       </tbody>
     </table>
@@ -191,7 +205,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         <tr><th class="mono">not_approved</th><td data-manage-word="not_approved">L&rsquo;image arrivée n&rsquo;est pas la version que l&rsquo;écran vous a nommée, donc l&rsquo;appareil ne l&rsquo;a pas installée. Installez de nouveau.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Une autre application tient les réglages de cet appareil. Déconnectez-la ou fermez-la, puis reconnectez.</td></tr>
         <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">La fenêtre d&rsquo;envoi s&rsquo;est fermée&nbsp;: elle dure dix minutes, et un décollage, une pression sur l&rsquo;appareil ou une liaison perdue la ferment plus tôt. Installez de nouveau&nbsp;: l&rsquo;envoi reprend là où il s&rsquo;était arrêté, sauf si l&rsquo;appareil a redémarré.</td></tr>
-        <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">L&rsquo;appareil a déjà cette version ou une plus récente, et il ne revient jamais à une plus ancienne.</td></tr>
+        <tr><th class="mono">not_newer</th><td data-manage-word="not_newer">L&rsquo;appareil a une version plus récente que celle-ci, et il ne revient jamais à une plus ancienne.</td></tr>
         <tr><th class="mono">too_large</th><td data-manage-word="too_large">Cette image est plus grande que la place que l&rsquo;appareil garde pour une mise à jour&nbsp;: ce n&rsquo;est pas une image de skyBlip Go.</td></tr>
         <tr><th class="mono">not_image</th><td data-manage-word="not_image">Ce fichier n&rsquo;est pas une image de firmware signée. Choisissez celui en .signed.bin&nbsp;: le .uf2 est pour le lecteur USB.</td></tr>
         <tr><th class="mono">flash</th><td data-manage-word="flash">L&rsquo;appareil n&rsquo;a pas pu écrire l&rsquo;image dans sa mémoire. Réessayez, et si cela se répète, passez par le lecteur USB.</td></tr>
@@ -213,6 +227,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
       <tbody>
         <tr><th>Pas de Web Bluetooth</th><td data-manage-word="no_bluetooth">Ce navigateur n&rsquo;a pas Web Bluetooth. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d&rsquo;iPhone et d&rsquo;iPad n&rsquo;en ont pas.</td></tr>
         <tr><th>Pas un skyBlip</th><td data-manage-word="not_skyblip">L&rsquo;appareil choisi n&rsquo;a pas de service de mise à jour&nbsp;: ce n&rsquo;est pas un skyBlip, ou son firmware est antérieur aux mises à jour en Bluetooth.</td></tr>
+        <tr><th>Image complète requise</th><td data-manage-word="needs_full">C&rsquo;est l&rsquo;image allégée, et la centrale inertielle de cet appareil n&rsquo;a pas le firmware que cette image attend. Choisissez plutôt le fichier en <span class="mono">.full.signed.bin</span>&nbsp;: l&rsquo;image allégée s&rsquo;installerait, puis ne se garderait pas, et l&rsquo;appareil reviendrait au firmware qu&rsquo;il avait.</td></tr>
         <tr><th>Pas de fichier</th><td data-manage-word="no_file">Choisissez d&rsquo;abord le fichier du firmware.</td></tr>
         <tr><th>Liaison perdue</th><td data-manage-word="link_lost">La liaison est tombée. Rapprochez l&rsquo;appareil et reconnectez&nbsp;: un envoi en cours reprend là où il s&rsquo;était arrêté.</td></tr>
         <tr><th>Pas de réponse</th><td data-manage-word="timeout">L&rsquo;appareil ne répond plus. Déconnectez, reconnectez, et installez de nouveau.</td></tr>
