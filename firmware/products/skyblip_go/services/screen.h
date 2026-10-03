@@ -36,6 +36,9 @@ class ScreenService : public runtime::Service {
    public:
     static constexpr uint32_t kRenderPeriodMs = 1000;
     static constexpr uint32_t kPresentFloorMs = 1000;
+    // INFO: fc 03oct26 after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000
+    static constexpr uint32_t kLockedRedrawMs = 600;
+    static constexpr uint32_t kLockedRedrawEndMs = 800;
 
     // INFO: fc 20sep26 the render cadence: a capture says what was on the glass, not what was drawn
     static constexpr uint32_t kRecordPeriodMs = kRenderPeriodMs;

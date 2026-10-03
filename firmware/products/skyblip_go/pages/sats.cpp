@@ -163,7 +163,6 @@ void draw_used_by_system(ui::Canvas& fb, const SatsSnapshot& s) {
 }  // namespace
 
 void draw_sats(ui::Canvas& fb, const SatsSnapshot& s) {
-    fb.clear(true);
     fb.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
     draw_counts(fb, s);
     fb.hline(kLeft, kRuleY, kRight - kLeft, true);
