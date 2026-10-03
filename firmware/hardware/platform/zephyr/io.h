@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
 
-#include <cstring>
+#include <string.h>
 
 #include "core/util/result.h"
 #include "hardware/io/io.h"
@@ -174,7 +174,7 @@ class Uart : public io::Uart, public io::UartRate {
             if (n <= 0) break;
             const uint32_t placed = ring_buf_put(&self->rx_, chunk, static_cast<uint32_t>(n));
             if (placed < static_cast<uint32_t>(n)) self->overruns_++;
-            line_ended = line_ended || std::memchr(chunk, '\n', static_cast<size_t>(n)) != nullptr;
+            line_ended = line_ended || memchr(chunk, '\n', static_cast<size_t>(n)) != nullptr;
         }
         // INFO: fc 03oct26 RMC ends the second's burst: parse it now, not up to a pass later
         if (line_ended) g_loop_wake.wake();
