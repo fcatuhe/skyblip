@@ -34,6 +34,32 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     CHECK(link.last().bytes.find("config") != std::string::npos);
 }
 
+TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a set restores it") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    s.aircraft_type = 7;
+    s.alarm_volume = 5;
+    std::memcpy(s.callsign, "D-KXYZ", 7);
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_flight_state(flight::FlightState::Ground);
+
+    cs.on_rx(frame("{\"cmd\":\"defaults\"}"));
+    const std::string body = link.last().bytes;
+    CHECK(body ==
+          "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":3,"
+          "\"units\":0,\"callsign\":\"\"}");
+
+    const std::string set = "{\"cmd\":\"set\"" + body.substr(body.find(','));
+    cs.on_rx(frame(set.c_str()));
+    cs.confirm();
+    const go::Settings shipped = go::defaults();
+    CHECK(s.aircraft_type == shipped.aircraft_type);
+    CHECK(s.alarm_volume == shipped.alarm_volume);
+    CHECK(std::string(s.callsign).empty());
+}
+
 TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     platform::host::Link link;
     link.raise_link(1);
@@ -122,10 +148,10 @@ TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::state_from(0));
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(cs.pending() == Pending::None);
     cs.set_flight_state(flight::state_from(1));
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(cs.pending() == Pending::Dfu);
 }
 
@@ -138,7 +164,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
 
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(cs.pending() == Pending::Dfu);
     cs.tick(1000 + kConfirmWindowMs - 1);
     CHECK(cs.pending() == Pending::Dfu);
@@ -171,8 +197,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
 // The prompt is the whole security boundary, so it has to say what it is: a
 // panel that shows an unlabelled question is a panel a pilot answers blind.
 TEST_CASE("comms: every operation that needs authorising names itself and what it will do") {
-    const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Apply, Pending::Recovery,
-                           Pending::PowerOff};
+    const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Recovery, Pending::PowerOff};
     for (Pending p : all) {
         CHECK(std::strlen(pending_title(p)) > 0);
         CHECK(std::strlen(pending_detail(p)) > 8);

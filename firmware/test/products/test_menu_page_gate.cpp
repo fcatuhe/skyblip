@@ -57,7 +57,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
     // up. The prompt takes the glass at once.
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 300);
     t += 300;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
@@ -81,7 +81,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     t += 4000;
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Dfu);
-    expect.detail = comms::pending_detail(comms::Pending::Dfu);
+    expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
     expect.timeout_s = comms::kConfirmWindowMs / 1000;
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);

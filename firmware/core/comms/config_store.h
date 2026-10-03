@@ -12,6 +12,8 @@ class ConfigStore {
 
     virtual void write_fields(json::Writer& w) const = 0;
 
+    virtual void write_default_fields(json::Writer& w) const = 0;
+
     virtual Status apply(const char* json, int len) = 0;
 };
 

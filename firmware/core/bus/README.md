@@ -45,8 +45,8 @@ No current is sensed anywhere on this board (`../power/README.md`), so what a fl
 
 | Field | What it counts | How it is accumulated |
 |---|---|---|
-| `panel_partial_refreshes` | frames the screen service asked for on the partial waveform, about 460 ms each | one per `present()` asked for `Refresh::Partial`, plus the black wipe a page swap costs, which the SSD1681 also drives partial |
-| `panel_full_refreshes` | frames asked for on the full waveform, about 2.5 s each | one per `present()` asked for `Refresh::Full`, which on this product is the frame the glass wears parked |
+| `panel_partial_refreshes` | frames the screen service asked for on the partial waveform, about 460 ms each | one per `present()` asked for `Refresh::Partial`, plus the black wipe a page swap or a park costs, which the SSD1681 also drives partial |
+| `panel_full_refreshes` | frames asked for on the full waveform, about 2.5 s each | one per `present()` asked for `Refresh::Full`. The screen asks for none, since a park goes through black like a page swap, so a count here is a regression |
 | `backlight_ms` | time lit | the span since the screen service last looked, credited while the lamp was on |
 | `rx_armed_ms` | time the radio was in an armed receive dwell | the overlap of each pass with the window the executor was handed, taken in microseconds and published in milliseconds |
 | `tx_keyed_ms` | time the transmitter was on air | the nominal length of each burst the executor reported sent, read off the `timing::AirTime` the hour's budget is already spent from |

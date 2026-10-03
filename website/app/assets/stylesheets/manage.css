@@ -67,6 +67,60 @@
     border-inline-start: 3px solid var(--signal);
   }
 
+  .manage-settings { display: grid; gap: var(--space-s); }
+  .manage-settings[hidden] { display: none; }
+
+  .manage-settings fieldset {
+    display: grid;
+    gap: var(--space-s);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .manage-settings legend {
+    padding: 0;
+    margin-block-end: var(--space-xs);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .manage-field {
+    display: grid;
+    gap: var(--space-2xs);
+    justify-items: start;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+
+  .manage-field--check {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: var(--space-inline-xs);
+  }
+  .manage-field--check p { grid-column: 1 / -1; }
+
+  .manage-field input:not([type="checkbox"]),
+  .manage-field select {
+    min-inline-size: 22ch;
+    padding: var(--space-2xs) var(--space-inline-xs);
+    border: 1px solid var(--card-border);
+    border-radius: var(--space-inline-2xs);
+    background: var(--card-bg);
+    color: var(--ink);
+  }
+  .manage-field input[name="callsign"] { font-family: var(--font-mono); text-transform: uppercase; }
+  .manage-field input[type="checkbox"] { accent-color: var(--blip); }
+  .manage-field :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .manage-field :user-invalid { border-color: var(--blip-text); }
+  .manage-settings fieldset:disabled .manage-field { opacity: 0.6; }
+
+  .manage .manage-hint,
+  .manage .manage-default { margin: 0; font-size: var(--text-xs); }
+  .manage-hint { color: var(--quiet-text); }
+  .manage-default { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
+  .manage-default[hidden] { display: none; }
+
   .manage-file {
     display: grid;
     gap: var(--space-2xs);

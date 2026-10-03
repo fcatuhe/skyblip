@@ -107,6 +107,7 @@ class ScreenService : public runtime::Service {
     void show_radar();
     void show_page(Page page);
     void handle_input(uint32_t now_ms);
+    void sync_receiving(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
     void obey(Gesture gesture, uint32_t now_ms);
@@ -120,9 +121,10 @@ class ScreenService : public runtime::Service {
     enum class Change : uint8_t { None, Asked, Wiped };
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
+    void paint_black(uint32_t now_ms);
     bool may_present_park_frame() const;
     enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell, LowCell };
-    enum class ParkStep : uint8_t { None, Frame, Sleep };
+    enum class ParkStep : uint8_t { None, Wipe, Frame, Sleep };
     void park(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
     void draw_parked_cell(const char* said);
@@ -197,6 +199,8 @@ class ScreenService : public runtime::Service {
     bool pressed_once_{false};
     bool prompt_on_glass_{false};
     bool capture_on_glass_{false};
+    bool receiving_{false};
+    uint32_t receiving_since_ms_{0};
 
     Glass fb_{};
     Glass presented_{};

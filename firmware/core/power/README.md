@@ -75,7 +75,7 @@ A device that reaches `kFlatMv` in the air says so before the rails go: `FLAT BA
 
 The other way a cell arrives empty is a winter on a shelf. That unit ran no shutdown and painted nothing, so it is the refused boot that names it: `refused_frame` pushes the same `FLAT BATTERY` for the press that gets no device, and `button_wake_after_refusal` withholds the button after it. Both roads end at the same glass and the same dead button.
 
-The cable is the way out of both. On the cable the device is an ordinary switched-off one again, because VBUS wakes the SoC, the boot is refused, and the refusal re-arms the button - so the wordmark replaces the flat frame, and the wordmark is the whole instruction. Anything else is `Leave`: the glass already says the right thing, and a full refresh is seconds of panel rail off a cell with none to spare.
+The cable is the way out of both. On the cable the device is an ordinary switched-off one again, because VBUS wakes the SoC, the boot is refused, and the refusal re-arms the button - so the wordmark replaces the flat frame, and the wordmark is the whole instruction. Anything else is `Leave`: the glass already says the right thing, and a refresh is panel rail off a cell with none to spare.
 
 A device switched off while the cell needs charge, `Low` or `Critical`, wears a milder word, `CHARGE BATTERY`, and the cable takes it off the same way. It asks for the cable and names nothing that happened, so a press on a cell that has drained past the lockout since does not leave it there: that refusal pushes `FLAT BATTERY` over it.
 

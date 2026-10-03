@@ -222,8 +222,9 @@ TEST_CASE("screen policy: the white field the glass wears while off is drawn at 
     rig.state.power.level = power::PowerLevel::Flat;
     rig.screen.set_power(false);
     rig.run_seconds(t, 6);
-    CHECK(rig.chip.present_count == before + 1);
-    CHECK(rig.chip.last_full);
+    // the black, then the parked frame over it
+    CHECK(rig.chip.present_count == before + 2);
+    CHECK_FALSE(rig.chip.last_full);
     CHECK_FALSE(rig.chip.powered);
 }
 
@@ -259,8 +260,9 @@ TEST_CASE("screen policy: a park mid-refresh waits for the glass, it does not ta
     rig.screen.set_power(false);
     rig.run_seconds(t, 6);
     CHECK(rig.chip.commands_while_busy == 0);
-    CHECK(rig.chip.present_count == before + 1);
-    CHECK(rig.chip.last_full);
+    // the black, then the parked frame over it
+    CHECK(rig.chip.present_count == before + 2);
+    CHECK_FALSE(rig.chip.last_full);
     CHECK_FALSE(rig.chip.powered);
 }
 

@@ -7,6 +7,7 @@
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
+#include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/services/screen.h"
 
 namespace skyblip::go {
@@ -21,7 +22,7 @@ PpsState pps_state(const timing::ClockState& clock) {
 void ScreenService::draw_prompt() {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(prompt_);
-    snapshot.detail = comms::pending_detail(prompt_);
+    snapshot.detail = config_.prompt_detail();
     snapshot.timeout_s = comms::kConfirmWindowMs / 1000;
     draw_confirm(fb_, snapshot);
 }
@@ -115,6 +116,10 @@ CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
 void ScreenService::render(uint32_t now_ms) {
     if (answering()) {
         draw_prompt();
+        return;
+    }
+    if (receiving_) {
+        draw_receiving(fb_);
         return;
     }
     if (mode_ == Mode::Menu) {

@@ -17,10 +17,16 @@ constexpr const char* kInstallingBody[] = {"LEAVE THE DEVICE ON", "IT RESTARTS B
                                            "IN ABOUT 30 S", "THE SCREEN STAYS STILL"};
 constexpr int kInstallingBodyRows = 4;
 
+constexpr const char* kReceivingTitle = "RECEIVING";
+constexpr const char* kReceivingBody[] = {"KEEP THE PHONE NEAR", "IT INSTALLS BY ITSELF",
+                                          "ONCE THE IMAGE IS IN", "ONE PRESS CANCELS"};
+constexpr int kReceivingBodyRows = 4;
+
 constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineH; }
 
 void draw_notice_heading(ui::Canvas& fb, const char* header, const char* title);
 void draw_installing(ui::Canvas& fb);
+void draw_receiving(ui::Canvas& fb);
 
 }  // namespace skyblip::go
 

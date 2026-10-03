@@ -24,7 +24,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
     // No solution yet: the device does not know where it is, so it is not on
     // the ground, so it authorises nothing. This is the state a bench device
     // was stuck in - Unknown, forever.
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, 500);
     CHECK(rig.config().flight_state() == flight::FlightState::Unknown);
     CHECK(rig.config().pending() == comms::Pending::None);
@@ -32,7 +32,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
 
     rig.on_ground(t);
     CHECK(rig.config().flight_state() == flight::FlightState::Ground);
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 500);
     t += 500;
     CHECK(rig.config().pending() == comms::Pending::Dfu);
@@ -57,7 +57,7 @@ TEST_CASE("product: paging does not authorise a firmware upload") {
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
 
     // Long enough for the question to have reached the glass.
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
@@ -89,7 +89,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     uint32_t t = 0;
     rig.on_ground(t);
 
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
@@ -108,7 +108,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     // and no gesture reopens it.
     rig.airborne(t);
     CHECK_FALSE(rig.config().upload_allowed());
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     rig.double_press(t);
