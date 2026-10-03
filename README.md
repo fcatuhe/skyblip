@@ -44,14 +44,22 @@ The firmware and the site share a tree so that a change in behavior and the page
 
 The host test suite and the simulator need nothing but a C++ compiler: `make -C firmware test`, `make -C firmware simulator`.
 
-The device image is built locally for now, off the committed tip of `main`, into `builds/`:
+The device image is built off a committed ref, `main` by default, into `builds/`:
 
 ```
 scripts/build_local.sh              # skyblip_go, the only product today
 SKYBLIP_REF=HEAD scripts/build_local.sh
 ```
 
-The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`. CI runs the tests and the linter but no longer builds the image: the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml) is commented out until it comes back.
+The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`.
+
+CI builds it too, and which key signs it decides which units it can update over Bluetooth ([`firmware/keys/`](firmware/keys)):
+
+- a pull request: a key made for the run, so the build is proven and the image updates nothing;
+- `main`: the development key, and the image is an artifact of the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml);
+- a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal the product's `VERSION`.
+
+The build number after the `+` is the commit count, so a later commit on one line of history always installs over an earlier one. Two branches are not ordered: a unit refuses a build whose count is not above the one it runs, and drag-and-drop of a `.uf2` takes it anywhere.
 
 ## Acknowledgements
 
