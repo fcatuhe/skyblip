@@ -31,7 +31,6 @@ class RecordPool {
     uint32_t unreadable_sectors() const { return unreadable_sectors_; }
     uint32_t faults() const { return faults_; }
 
-    // INFO: fc 03oct26 both rings stall one loop on one bus, so they book one window per pass
     bool book_window(uint32_t cost_ms, uint32_t pass_ms);
 
     bool read_slot(uint32_t sector, uint32_t slot, uint8_t* out);
@@ -53,7 +52,6 @@ class RecordPool {
 
    private:
     void scan();
-    bool window_open(uint32_t cost_ms, uint32_t at_ms) const;
     bool noted(bool ok);
     uint32_t offset_of(uint32_t sector) const { return sector * sector_bytes_; }
 
@@ -66,9 +64,6 @@ class RecordPool {
     uint32_t unreadable_sectors_{0};
     uint32_t faults_{0};
     uint32_t link_drops_{0};
-    uint32_t pass_ms_{0};
-    uint32_t pass_booked_ms_{0};
-    bool pass_seen_{false};
     bool opened_{false};
     bool available_{false};
 

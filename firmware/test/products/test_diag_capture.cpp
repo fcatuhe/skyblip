@@ -103,7 +103,7 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     CHECK(price.pool_sectors == platform::host::FlashRegion::kSectorCount);
     CHECK(price.price_sectors == platform::host::FlashRegion::kSectorCount);
     CHECK(price.keeps_s > 0);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "TAKES 330 OF 330 SECTORS", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "TAKES 298 OF 298 SECTORS", 0, 0, 200, 200));
     CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO ARM", 0, 0, 200, 200));
 
     rig.press(t);

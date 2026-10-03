@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_BUS_STATE_H
 #define SKYBLIP_CORE_BUS_STATE_H
 
+#include "core/dfu/update.h"
 #include "core/events/rf.h"
 #include "core/flight/atmosphere.h"
 #include "core/flight/gload.h"
@@ -46,6 +47,28 @@ struct RfState {
     uint16_t last_tx_keyed_us{0};
     uint16_t last_tx_span_us{0};
     int8_t noise_dbm{timing::NoiseFloor::kSeedDbm};
+
+    // INFO: fc 03oct26 every flash writer stalls one loop on one bus, so a pass books one window
+    bool book_flash_window(uint32_t pass_ms, uint32_t now_ms, uint32_t cost_ms) {
+        if (!flash_pass_seen || pass_ms != flash_pass_ms) {
+            flash_pass_seen = true;
+            flash_pass_ms = pass_ms;
+            flash_pass_booked_ms = 0;
+        }
+        // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
+        if (plan.tx_allowed) return false;
+        // INFO: fc 03oct26 work starts at the clock or after what the pass booked, if later
+        const uint32_t elapsed_ms = now_ms - pass_ms;
+        const uint32_t into_pass_ms =
+            elapsed_ms > flash_pass_booked_ms ? elapsed_ms : flash_pass_booked_ms;
+        if (!timing::DurableWriteWindow::free_now(plan, dwell, pass_ms + into_pass_ms, cost_ms))
+            return false;
+        flash_pass_booked_ms = into_pass_ms + cost_ms;
+        return true;
+    }
+    uint32_t flash_pass_ms{0};
+    uint32_t flash_pass_booked_ms{0};
+    bool flash_pass_seen{false};
 };
 
 struct PowerState {
@@ -117,6 +140,8 @@ struct GLoadState {
 struct ImuState {
     const char* stage{"NONE"};
     const char* fault{""};
+    dfu::HubImageReport image{};
+    bool bootable{true};
     uint32_t fifo_bytes{0};
     uint32_t unparsed{0};
     uint8_t error{0};

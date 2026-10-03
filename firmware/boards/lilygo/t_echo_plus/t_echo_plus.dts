@@ -807,10 +807,16 @@ zephyr_udc0: &usbd {
 				reg = <0x00000000 0x000B6000>;
 			};
 
-			/* ~1.29 MB left for flight logging. */
+			/* ~1.16 MB left for flight logging, 298 sectors. */
 			log_partition: partition@b6000 {
 				label = "logs";
-				reg = <0x000B6000 0x0014A000>;
+				reg = <0x000B6000 0x0012A000>;
+			};
+
+			/* The BHI260AP image a slim OTA image boots the hub from, last so the log keeps its offset. */
+			imu_image_partition: partition@1e0000 {
+				label = "imu-image";
+				reg = <0x001E0000 0x00020000>;
 			};
 		};
 	};

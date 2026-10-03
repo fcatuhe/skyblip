@@ -250,13 +250,14 @@ TEST_CASE("flight log: a session whose middle sector went to diagnostics still r
     const uint32_t session = Rig::kUtcBase - 7200;
     const uint32_t slots = flight::kLogSlotsPerSector;
     const uint32_t tail = 5;
+    const uint32_t last = platform::host::FlashRegion::kSectorCount - 1;
 
     // Written across the end of the partition; the capture took the middle one.
-    label_sector(rig, 328, store::SectorOwner::Flights, 1, session);
-    write_records(rig, 328, session, session, slots, false);
+    label_sector(rig, last - 1, store::SectorOwner::Flights, 1, session);
+    write_records(rig, last - 1, session, session, slots, false);
     label_sector(rig, 0, store::SectorOwner::Flights, 3, session);
     write_records(rig, 0, session, session + 2 * slots * 4, tail, true);
-    label_sector(rig, 329, store::SectorOwner::Diagnostics, 4, 77);
+    label_sector(rig, last, store::SectorOwner::Diagnostics, 4, 77);
     REQUIRE(rig.setup() == Status::Ok);
 
     uint32_t t = 0;
@@ -340,7 +341,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     t += 100;
     CHECK(rig.product.flight_log().erasing());
 
-    // 330 sectors at the rate one durable-write window a second allows: about 45 s.
+    // 298 sectors at the rate one durable-write window a second allows: about 40 s.
     rig.platform.link().clear();
     rig.run(t, t + 60000, 50);
     t += 60000;

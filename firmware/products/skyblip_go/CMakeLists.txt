@@ -16,12 +16,6 @@ project(skyblip_go LANGUAGES C CXX)
 
 skyblip_shared_layers()
 
-# The BHI260AP has no program of its own: the image is uploaded at every boot,
-# so it is linked into ours (hardware/parts/bhi260/firmware/README.md).
-generate_inc_file_for_target(app
-  ${CMAKE_CURRENT_LIST_DIR}/../../hardware/parts/bhi260/firmware/BHI260AP.fw
-  ${ZEPHYR_BINARY_DIR}/include/generated/bhi260ap_fw.inc)
-
 file(GLOB SKYBLIP_GO_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/*.cpp
   ${CMAKE_CURRENT_LIST_DIR}/pages/*.cpp

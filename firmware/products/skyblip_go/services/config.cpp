@@ -35,6 +35,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     // The range gate's own counter, read off the table that keeps it rather than
     // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible_count());
+    config_.set_hub_image(context_.state.imu.image);
 
     config_.resume_replies(now_ms);
     events::RxFrame frame{};
@@ -286,15 +287,19 @@ void ConfigLinkService::load_image_state() {
     image_confirmed_ = !has_dfu || context_.roles.dfu.confirmed();
     image_state_ = image_confirmed_ ? dfu::ImageState::Confirmed : dfu::ImageState::Probation;
 
-    ports::ImageVersion running;
+    dfu::SlotImage running;
     if (update_recorded_) {
-        if (!has_dfu || !context_.roles.dfu.running_version(running)) {
+        if (!has_dfu || !context_.roles.dfu.running_version(running.version)) {
             forget_update();
         } else {
-            ports::ImageVersion staged;
-            const bool has_staged = context_.roles.dfu.staged_version(staged);
-            switch (dfu::outcome(update_record_, running,
-                                 has_staged ? std::optional(staged) : std::nullopt)) {
+            running.hashed = context_.roles.dfu.running_hash(running.hash);
+            std::optional<dfu::SlotImage> staged;
+            dfu::SlotImage held;
+            if (context_.roles.dfu.staged_version(held.version)) {
+                held.hashed = context_.roles.dfu.staged_hash(held.hash);
+                staged = held;
+            }
+            switch (dfu::outcome(update_record_, running, staged)) {
                 case dfu::Outcome::Reverted:
                     if (image_confirmed_) image_state_ = dfu::ImageState::Reverted;
                     break;
@@ -316,6 +321,8 @@ void ConfigLinkService::record_update() {
     dfu::UpdateRecord record;
     if (!context_.roles.dfu.running_version(record.from)) return;
     if (!context_.roles.dfu.staged_version(record.to)) return;
+    record.hashed = context_.roles.dfu.running_hash(record.from_hash) &&
+                    context_.roles.dfu.staged_hash(record.to_hash);
     uint8_t blob[dfu::kUpdateRecordBytes];
     const size_t n = dfu::to_blob(record, blob, sizeof(blob));
     if (!is_ok(context_.roles.kv.write(kUpdateKey, blob, n))) return;
@@ -349,6 +356,8 @@ void ConfigLinkService::publish_image_state() {
 bool ConfigLinkService::hardware_proven() const {
     const bus::State& state = context_.state;
     if (!state.started || state.flight.gnss_solutions == 0) return false;
+    // INFO: fc 03oct26 a slim image that cannot boot its hub is reverted, to the image that could
+    if (!state.imu.bootable) return false;
     if (!ports::has(context_.roles.capabilities, ports::Capability::Display)) return true;
     return state.panel_presented;
 }

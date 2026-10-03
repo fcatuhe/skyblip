@@ -157,19 +157,20 @@ uint32_t RecordStore::run_slots() const {
     if (!claimed_ || ring_.sector_exhausted()) return 1;
     const uint32_t first = ring_.slot();
     const uint32_t page_end =
-        (flight::log_record_offset(first + 1) - 1) / kNorPageBytes * kNorPageBytes + kNorPageBytes;
+        (flight::log_record_offset(first + 1) - 1) / store::kPageBytes * store::kPageBytes +
+        store::kPageBytes;
     const uint32_t fits = (page_end - store::kSectorHeaderBytes) / kStoreRecordBytes - first;
     return std::min({fits, ring_.slots_per_sector() - first, kRunMostSlots});
 }
 
 uint32_t RecordStore::append_cost_ms(bool claim_wanted, uint32_t count) const {
     const uint32_t first = claim_wanted ? 0 : ring_.slot();
-    const uint32_t from_page = flight::log_record_offset(first) / kNorPageBytes;
-    const uint32_t to_page = (flight::log_record_offset(first + count) - 1) / kNorPageBytes;
-    const uint32_t write_ms = (to_page - from_page + 1) * kSlotWriteCostMs;
+    const uint32_t from_page = flight::log_record_offset(first) / store::kPageBytes;
+    const uint32_t to_page = (flight::log_record_offset(first + count) - 1) / store::kPageBytes;
+    const uint32_t write_ms = (to_page - from_page + 1) * store::kSlotWriteCostMs;
     if (!claim_wanted) return write_ms;
-    const uint32_t erase_ms = spare_ready_ ? 0 : kSectorEraseCostMs;
-    return erase_ms + kSlotWriteCostMs + write_ms;
+    const uint32_t erase_ms = spare_ready_ ? 0 : store::kSectorEraseCostMs;
+    return erase_ms + store::kSlotWriteCostMs + write_ms;
 }
 
 uint32_t RecordStore::take_lost_records() {
@@ -182,7 +183,7 @@ uint32_t RecordStore::take_lost_records() {
 void RecordStore::prepare_spare(uint32_t now_ms) {
     if (!available_) return;
     if (spare_ready_) return;
-    if (!pool_.book_window(kSectorEraseCostMs, now_ms)) return;
+    if (!pool_.book_window(store::kSectorEraseCostMs, now_ms)) return;
     const store::Claim spare = pool_.allocator().prepare(owner_);
     if (!spare.granted) return;
     if (!pool_.erase(spare.sector)) return;
@@ -216,7 +217,7 @@ void RecordStore::step_erase(uint32_t now_ms) {
     for (uint32_t erased = 0; erased < kEraseCeilingSectors; erased++) {
         while (erase_next_ < pool_.sector_count() && !erasable(erase_next_)) erase_next_++;
         if (erase_next_ >= pool_.sector_count()) break;
-        if (!pool_.book_window(kSectorEraseCostMs, now_ms)) return;
+        if (!pool_.book_window(store::kSectorEraseCostMs, now_ms)) return;
         pool_.erase(erase_next_);
         erase_next_++;
     }

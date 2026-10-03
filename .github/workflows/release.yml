@@ -98,6 +98,7 @@ jobs:
           mkdir release
           cp "builds/$SLUG.uf2" "release/$SLUG-$version.uf2"
           cp "builds/$SLUG.signed.bin" "release/$SLUG-$version.signed.bin"
+          cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$version.full.signed.bin"
           (cd release && sha256sum -- * > SHA256SUMS)
           cat "builds/$SLUG.version" release/SHA256SUMS
 

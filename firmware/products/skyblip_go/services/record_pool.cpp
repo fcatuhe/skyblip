@@ -1,11 +1,9 @@
 #include "products/skyblip_go/services/record_pool.h"
 
-#include <algorithm>
 #include <cstring>
 
 #include "core/events/link.h"
 #include "core/flight/log_session.h"
-#include "core/timing/durable_write.h"
 #include "core/util/span.h"
 #include "ports/link.h"
 
@@ -61,25 +59,8 @@ uint32_t RecordPool::free_sectors() const {
     return spoken_for >= sector_count_ ? 0 : sector_count_ - spoken_for;
 }
 
-// INFO: fc 03oct26 work starts at the clock or after what this pass booked, whichever is later
 bool RecordPool::book_window(uint32_t cost_ms, uint32_t pass_ms) {
-    if (!pass_seen_ || pass_ms != pass_ms_) {
-        pass_seen_ = true;
-        pass_ms_ = pass_ms;
-        pass_booked_ms_ = 0;
-    }
-    const uint32_t into_pass_ms =
-        std::max(context_.roles.clock.millis() - pass_ms_, pass_booked_ms_);
-    if (!window_open(cost_ms, pass_ms_ + into_pass_ms)) return false;
-    pass_booked_ms_ = into_pass_ms + cost_ms;
-    return true;
-}
-
-bool RecordPool::window_open(uint32_t cost_ms, uint32_t at_ms) const {
-    const bus::RfState& rf = context_.state.rf;
-    // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
-    if (rf.plan.tx_allowed) return false;
-    return timing::DurableWriteWindow::free_now(rf.plan, rf.dwell, at_ms, cost_ms);
+    return context_.state.rf.book_flash_window(pass_ms, context_.roles.clock.millis(), cost_ms);
 }
 
 Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {

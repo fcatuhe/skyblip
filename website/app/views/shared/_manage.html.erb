@@ -4,6 +4,8 @@
        data-manage-src-value="<%= update_module_path %>"
        data-manage-remaining-value="<%= remaining %>"
        data-manage-charging-value="<%= charging %>"
+       data-manage-full-value="<%= full %>"
+       data-manage-slim-value="<%= slim %>"
        data-manage-labels-value="<%= settings.slice(:default, :on, :off, :none).merge(flight: flight).to_json %>">
     <p class="manage-unsupported" data-manage-target="unsupported" hidden><%= unsupported %></p>
 
@@ -18,6 +20,7 @@
       <div><dt><%= firmware %></dt><dd data-manage-target="firmware">-</dd></div>
       <div><dt><%= battery %></dt><dd data-manage-target="battery">-</dd></div>
       <div><dt><%= flight[:label] %></dt><dd data-manage-target="flight">-</dd></div>
+      <div><dt><%= advice %></dt><dd data-manage-target="advice">-</dd></div>
       <div><dt><%= chosen %></dt><dd data-manage-target="chosen">-</dd></div>
     </dl>
 
@@ -82,7 +85,7 @@
           <select data-manage-target="shelf" data-action="manage#take" disabled>
             <option value=""><%= shelf_prompt %></option>
             <% firmware_shelf.each do |image| %>
-              <option value="<%= firmware_image_path(image) %>" data-key="<%= image["key"] %>" data-release="<%= firmware_release_url(image) %>" hidden><%= image["name"] %></option>
+              <option value="<%= firmware_image_path(image) %>" data-key="<%= image["key"] %>" data-release="<%= firmware_release_url(image) %>" hidden><%= image["name"] %>, <%= image["full"] ? full : slim %></option>
             <% end %>
           </select>
         </label>

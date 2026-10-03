@@ -8,8 +8,8 @@
 
 namespace skyblip::platform::host {
 
-// The log partition as the silicon has it, with NOR's two awkward truths kept
-// rather than smoothed away: erased flash reads 0xFF, and a program can only
+// A partition of the external NOR as the silicon has it, with NOR's two awkward
+// truths kept rather than smoothed away: erased flash reads 0xFF, and a program can only
 // clear bits. A fake that lets a caller overwrite a byte would pass tests the
 // device fails.
 //
@@ -18,10 +18,10 @@ namespace skyblip::platform::host {
 // half-written when the cell went.
 class FlashRegion : public ports::FlashRegion {
    public:
-    // 0x14A000 of log_partition in 4 KB sectors, from
+    // 0x12A000 of log_partition in 4 KB sectors, from
     // boards/lilygo/t_echo_plus/t_echo_plus.dts.
     static constexpr uint32_t kSectorBytes = 4096;
-    static constexpr uint32_t kSectorCount = 330;
+    static constexpr uint32_t kSectorCount = 298;
     // INFO: fc 03oct26 the driver programs a write one 256 B page at a time (spi_nor.c write)
     static constexpr uint32_t kPageBytes = 256;
 

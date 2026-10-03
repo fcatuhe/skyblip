@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  DEFAULTS, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
+  BLOB_PIN, DEFAULTS, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
 } from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from './ble.js';
 import { SmpError } from './smp.js';
@@ -268,7 +268,7 @@ test('a release unit takes the version it already runs, to install it again', as
 
 test('a development unit takes an older image all the way to the swap', async () => {
   const { device, updater, until } = await connected({ running: '0.3.0.40', downgrade: true, key: DEVELOPMENT_KEY });
-  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'older.signed.bin');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'older.signed.bin');
   updater.install();
   await until(asking('dfu'));
   device.press();
@@ -277,17 +277,25 @@ test('a development unit takes an older image all the way to the swap', async ()
 
 test('an image signed by another key is refused before the window opens', async () => {
   const { device, updater } = await connected();
-  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'dev.signed.bin');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
   await updater.install();
   assert.equal(updater.state.notice.key, 'wrong_key');
   assert.equal(device.commands.includes('dfu'), false);
+});
+
+// The slim and full images of one release share its version, and the full one is how a device gets its blob.
+test('an image of the running version is sent', async () => {
+  const { updater, until } = await connected({ running: '0.2.0.15', imu: 'missing' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: true } }), 'skyblip-go.full.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
 });
 
 test('a device that does not name its key refuses a foreign one once it lands, in its own words', async () => {
   const { device, updater, until } = await connected();
   device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
   await until(state => state.image.key === null);
-  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'dev.signed.bin');
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
   updater.install();
   await until(asking('dfu'));
   device.press();
@@ -321,7 +329,8 @@ test('an update frame pushed on connect is read without being asked', async () =
   await updater.connect();
   const { image } = await until(state => state.image);
   assert.deepEqual(image, {
-    state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, downgrade: false, key: 'B2B2B2B2',
+    state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, imu: BLOB_PIN.slice(0, 16),
+    downgrade: false, key: 'B2B2B2B2',
   });
 });
 
@@ -474,3 +483,82 @@ test('the SMP refusals the page words are the ones Zephyr sends', () => {
   assert.equal(noticeOf(new SmpError(12, 1)).key, 'flash');
   assert.deepEqual(noticeOf(new SmpError(9, 1)), { key: 'smp', detail: 'SMP group 1 rc 9' });
 });
+
+const SLIM = { pin: BLOB_PIN, full: false };
+const FULL = { pin: BLOB_PIN, full: true };
+
+async function choosing(options, imu, name) {
+  const link = await connected(options);
+  await link.updater.choose(signedImage(NEWER, IMAGE_BYTES, { imu }), name);
+  return link;
+}
+
+for (const [reported, advice] of [
+  ['none', 'slim'],
+  [BLOB_PIN.slice(0, 16), 'slim'],
+  ['missing', 'full'],
+  ['corrupt', 'full'],
+  ['unreadable', 'full'],
+  ['writing', 'full'],
+  [null, 'full'],
+]) {
+  test(`a device reporting imu ${reported} is advised the ${advice} image before any file is chosen`, async () => {
+    const { updater } = await connected({ imu: reported });
+    assert.equal(updater.state.image.imu, reported);
+    assert.equal(updater.state.advice, advice);
+  });
+}
+
+test('no advice is given before the device answered the update question', () => {
+  const { updater } = session();
+  assert.equal(updater.state.advice, null);
+});
+
+test('a verified blob other than the one the chosen file pins turns the advice to the full image', async () => {
+  const { updater } = await choosing({}, { pin: 'a'.repeat(64), full: false }, 'skyblip-go.signed.bin');
+  assert.equal(updater.state.advice, 'full');
+  assert.equal(updater.state.notice.key, 'needs_full');
+});
+
+for (const reported of ['missing', 'corrupt', 'unreadable', 'writing', null]) {
+  test(`a slim file chosen for a device reporting imu ${reported} says it needs the full one, and still installs`, async () => {
+    const { updater, until } = await choosing({ imu: reported }, SLIM, 'skyblip-go.signed.bin');
+    assert.equal(updater.state.notice.key, 'needs_full');
+    assert.equal(updater.state.file.full, false);
+    updater.install();
+    await until(asking('dfu'));
+  });
+}
+
+for (const [reported, imu, name] of [
+  [BLOB_PIN.slice(0, 16), SLIM, 'skyblip-go.signed.bin'],
+  ['none', SLIM, 'skyblip-go.signed.bin'],
+  [BLOB_PIN.slice(0, 16), FULL, 'skyblip-go.full.signed.bin'],
+  ['missing', FULL, 'skyblip-go.full.signed.bin'],
+]) {
+  test(`${name} chosen for a device reporting imu ${reported} raises no notice`, async () => {
+    const { updater } = await choosing({ imu: reported }, imu, name);
+    assert.equal(updater.state.notice, null);
+    assert.equal(updater.state.file.full, imu.full);
+    assert.equal(updater.state.file.pin, BLOB_PIN);
+  });
+}
+
+test('a device writing its blob is asked again until the blob is verified', async () => {
+  const { device, updater, until } = await connected({ imu: 'writing' });
+  assert.equal(updater.state.settling, true);
+  device.imu = BLOB_PIN.slice(0, 16);
+  updater.refresh();
+  const state = await until(state => state.image.imu !== 'writing');
+  assert.equal(state.settling, false);
+  assert.equal(state.advice, 'slim');
+});
+
+test('a device on probation is asked again, a confirmed one is not', async () => {
+  const { device, updater, until } = await connected({ image: 'probation', from: '0.1.0+12', to: '0.2.0+15' });
+  assert.equal(updater.state.settling, true);
+  device.image = 'confirmed';
+  updater.refresh();
+  assert.equal((await until(state => state.image.state === 'confirmed')).settling, false);
+});
+

@@ -8,20 +8,13 @@
 
 namespace skyblip::go {
 
-// INFO: fc 03oct26 MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell
-constexpr uint32_t kSectorEraseCostMs = 42;
-// INFO: fc 03oct26 one page program on the spi1 NOR, bench-settled, not a datasheet figure
-constexpr uint32_t kSlotWriteCostMs = 2;
-
-// INFO: fc 03oct26 both candidate parts program 256 B pages: the driver splits a write at each
-constexpr uint32_t kNorPageBytes = 256;
 // INFO: fc 03oct26 the record that straddles into a page, then the ten the page holds
-constexpr uint32_t kRunMostSlots = (kNorPageBytes + kStoreRecordBytes - 1) / kStoreRecordBytes;
+constexpr uint32_t kRunMostSlots = (store::kPageBytes + kStoreRecordBytes - 1) / kStoreRecordBytes;
 
 // INFO: fc 20sep26 a bulk erase still owes the dwell map its re-arm, so it goes a window at a time
 constexpr uint32_t kEraseCeilingSectors = 8;
 
-static_assert(kSectorEraseCostMs + 2 * kSlotWriteCostMs +
+static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
                       static_cast<uint32_t>(timing::kJitterGuardMs) <
                   static_cast<uint32_t>(timing::kUplinkRxEnd - timing::kUplinkRxStart),
               "claiming a sector no longer fits inside the narrowest dwell the map offers");

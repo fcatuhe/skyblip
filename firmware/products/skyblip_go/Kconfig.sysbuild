@@ -1,0 +1,5 @@
+source "share/sysbuild/Kconfig"
+
+config SKYBLIP_IMU_IMAGE_LINKED
+	bool "Build the full image, which carries the BHI260AP image"
+	default y

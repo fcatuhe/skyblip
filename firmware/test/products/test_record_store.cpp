@@ -14,7 +14,8 @@ namespace {
 
 constexpr uint32_t kFlightSession = 1785628800;
 constexpr uint32_t kCaptureSession = 9000;
-constexpr int kClaimCostMs = static_cast<int>(go::kSectorEraseCostMs + 2 * go::kSlotWriteCostMs);
+constexpr int kClaimCostMs =
+    static_cast<int>(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs);
 // The last phase of the uplink dwell a claim still finishes a guard's width before its end.
 constexpr int kLastClaimPhase = timing::kUplinkRxEnd - timing::kJitterGuardMs - kClaimCostMs;
 
@@ -398,13 +399,13 @@ TEST_CASE("record store: a write that spans a page edge is booked as two page pr
     advance_to_slot(rig.capture, 20);
 
     constexpr int kOneProgramLeft =
-        timing::kUplinkRxEnd - timing::kJitterGuardMs - static_cast<int>(go::kSlotWriteCostMs);
+        timing::kUplinkRxEnd - timing::kJitterGuardMs - static_cast<int>(store::kSlotWriteCostMs);
     constexpr uint32_t kPassMs = 10'000;
     rig.publish_dwell(kPassMs, kOneProgramLeft);
     const uint32_t programs = flash.programs;
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
 
-    rig.publish_dwell(kPassMs + 1000, kOneProgramLeft - static_cast<int>(go::kSlotWriteCostMs));
+    rig.publish_dwell(kPassMs + 1000, kOneProgramLeft - static_cast<int>(store::kSlotWriteCostMs));
     CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
     CHECK(flash.programs - programs == 2);
 }

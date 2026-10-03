@@ -17,6 +17,14 @@ export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
 export const PRODUCTION_KEY = 0xb2;
 export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 3, units: 0, callsign: '' };
+export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
+const IMAGE_HEADER_BYTES = 32;
+const TLV_INFO = 0x6907;
+const TLV_KEYHASH = 0x01;
+const KEY_HASH_BYTES = 32;
+const PROTECTED_TLV_INFO = 0x6908;
+const TLV_IMU_PIN = 0x00a0;
+const TLV_IMU_FULL = 0x00a1;
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -56,6 +64,7 @@ export class FakeSkyblip {
     from = null,
     to = null,
     settings = null,
+    imu = BLOB_PIN.slice(0, 16),
     onGround = true,
     swapPowered = true,
     bufSize = 2475,
@@ -71,7 +80,7 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
   } = {}) {
-    Object.assign(this, { running, image, from, to, settings, onGround, swapPowered, bufSize, mtu, claimedBy });
+    Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
@@ -247,6 +256,7 @@ export class FakeSkyblip {
     const frame = { cmd: 'update', image: this.image };
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
+    if (this.imu !== null) frame.imu = this.imu;
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
@@ -387,26 +397,45 @@ function indefiniteMap(object) {
   return out;
 }
 
-const TLV_BYTES = 4 + 4 + 32;
-
-export function signedImage({ major, minor, revision, build }, size, key = PRODUCTION_KEY) {
+export function signedImage({ major, minor, revision, build }, size, { imu = null, key = PRODUCTION_KEY } = {}) {
   const bytes = new Uint8Array(size);
   for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
+  const protectedArea = imu ? protectedTlvs(imu) : new Uint8Array(0);
+  const trailer = tlvArea(TLV_INFO, [[TLV_KEYHASH, new Uint8Array(KEY_HASH_BYTES).fill(key)]]);
   const view = new DataView(bytes.buffer);
   view.setUint32(0, 0x96f3b83d, true);
-  view.setUint16(8, 32, true);
-  view.setUint32(12, size - 32 - TLV_BYTES, true);
+  view.setUint16(8, IMAGE_HEADER_BYTES, true);
+  view.setUint16(10, protectedArea.length, true);
+  view.setUint32(12, size - IMAGE_HEADER_BYTES - protectedArea.length - trailer.length, true);
   view.setUint8(20, major);
   view.setUint8(21, minor);
   view.setUint16(22, revision, true);
   view.setUint32(24, build, true);
-  const tlvs = size - TLV_BYTES;
-  view.setUint16(tlvs, 0x6907, true);
-  view.setUint16(tlvs + 2, TLV_BYTES, true);
-  view.setUint16(tlvs + 4, 0x01, true);
-  view.setUint16(tlvs + 6, 32, true);
-  bytes.fill(key, tlvs + 8);
+  bytes.set(protectedArea, size - protectedArea.length - trailer.length);
+  bytes.set(trailer, size - trailer.length);
   return bytes;
+}
+
+function protectedTlvs({ pin, full }) {
+  const entries = [];
+  if (pin !== undefined) entries.push([TLV_IMU_PIN, Uint8Array.from(pin.match(/../g), pair => parseInt(pair, 16))]);
+  if (full !== undefined) entries.push([TLV_IMU_FULL, Uint8Array.of(full ? 1 : 0)]);
+  return tlvArea(PROTECTED_TLV_INFO, entries);
+}
+
+function tlvArea(magic, entries) {
+  const area = new Uint8Array(4 + entries.reduce((sum, [, value]) => sum + 4 + value.length, 0));
+  const view = new DataView(area.buffer);
+  view.setUint16(0, magic, true);
+  view.setUint16(2, area.length, true);
+  let at = 4;
+  for (const [type, value] of entries) {
+    view.setUint16(at, type, true);
+    view.setUint16(at + 2, value.length, true);
+    area.set(value, at + 4);
+    at += 4 + value.length;
+  }
+  return area;
 }
 
 function keyName(byte) {

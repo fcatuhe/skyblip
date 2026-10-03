@@ -133,6 +133,14 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kTxSpanLimitUs` | 65535 (65.535 ms) | microseconds | - | the field's own ceiling: a burst this late is a dwell that already ended |
 
+## [`firmware/core/store`](../firmware/core/store/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kSectorEraseCostMs` | 42 | milliseconds | - | MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell |
+| `kSlotWriteCostMs` | 2 | milliseconds | - | one page program on the spi1 NOR, bench-settled, not a datasheet figure |
+| `kPageWriteCostMs` | `kSlotWriteCostMs + 1` = 3 | milliseconds | - | one program operation, as the slot write, plus 256 bytes more of SPI at 8 MHz |
+
 ## [`firmware/core/timing`](../firmware/core/timing/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -237,8 +245,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
-| `kSectorEraseCostMs` | 42 | milliseconds | - | MX25R tSE 40 ms typ (prj.conf), +1 ms poll, +commands; 240 max fits no dwell |
-| `kSlotWriteCostMs` | 2 | milliseconds | - | one page program on the spi1 NOR, bench-settled, not a datasheet figure |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kLockedRedrawMs` | 600 | milliseconds | - | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
@@ -261,4 +267,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-161 constants over 17 folders.
+162 constants over 18 folders.

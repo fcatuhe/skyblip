@@ -166,7 +166,7 @@ TEST_CASE("flight log: the write frontier is found from the labels, not by readi
 
     const uint32_t partition =
         platform::host::FlashRegion::kSectorBytes * platform::host::FlashRegion::kSectorCount;
-    // One 16-byte label per sector: 5280 bytes of a 1.29 MB partition, which is
+    // One 16-byte label per sector: 4768 bytes of a 1.16 MB partition, which is
     // the difference between a boot that is instant and a boot that is a
     // quarter of a second of SPI.
     CHECK(rebooted.product.flight_log().recovery_bytes_read() ==

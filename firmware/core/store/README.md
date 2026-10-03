@@ -6,7 +6,7 @@ Pure, framework-free, host-tested, and it never touches flash. `SectorAllocator`
 
 ## The label
 
-`sector.h` is the 16 bytes at the head of every claimed sector, and the boot scan reads nothing else: one 16-byte read per sector finds both rings in 5280 bytes of a 1.29 MB partition, where reading the partition to find the end of it would be a quarter of a second of SPI on every boot.
+`sector.h` is the 16 bytes at the head of every claimed sector, and the boot scan reads nothing else: one 16-byte read per sector finds both rings in 4768 bytes of a 1.16 MB partition, where reading the partition to find the end of it would be a quarter of a second of SPI on every boot.
 
 | Byte | Field |
 |---|---|
@@ -55,7 +55,7 @@ Both run on the service loop that also arms the radio and parses the GNSS, so ne
 | Diagnostics, Flights at the floor | its own oldest |
 | Diagnostics, Flights at the floor and owning nothing to recycle | nothing, and the caller counts the refusal |
 
-Flights eats Diagnostics before it eats itself, because a flight is the thing the device exists to record and a capture is a debugging aid with a session in front of it. Diagnostics grows the other way round: it takes from Flights down to the floor and only then recycles itself, so a device that captures once fills the whole partition above the protected hours rather than stopping at the two sectors it happened to be holding. On a 330-sector pool the steady state is 64 sectors of flights and 266 of diagnostics: 45,220 slots, which is about 68 minutes of a full capture at eleven records a second and 188 hours of a power run.
+Flights eats Diagnostics before it eats itself, because a flight is the thing the device exists to record and a capture is a debugging aid with a session in front of it. Diagnostics grows the other way round: it takes from Flights down to the floor and only then recycles itself, so a device that captures once fills the whole partition above the protected hours rather than stopping at the two sectors it happened to be holding. On a 298-sector pool the steady state is 64 sectors of flights and 234 of diagnostics: 39,780 slots, which is about 60 minutes of a full capture at eleven records a second and 166 hours of a power run.
 
 `Claim::session_start` says whether the sector handed out is the first the session owns, which is what the service writes into the label. The allocator decides it rather than the caller: a session with no sector on the partition yet is opening, and one that already has a sector is continuing, even if what it is continuing is a suffix of itself.
 
@@ -63,7 +63,7 @@ A ring's frontier is never handed out: it is the sector being written into, and 
 
 ## The floor
 
-`kFlightsFloorHours` is 12, and it is the promise the pool makes: twelve hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record every 4 s, a sector is 11 min 20 s, so twelve hours is 64 of the partition's 330 sectors: a device that has flown all season keeps its last dozen hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 266 sectors is told no.
+`kFlightsFloorHours` is 12, and it is the promise the pool makes: twelve hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record every 4 s, a sector is 11 min 20 s, so twelve hours is 64 of the partition's 298 sectors: a device that has flown all season keeps its last dozen hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 234 sectors is told no.
 
 ## The prepared spare
 

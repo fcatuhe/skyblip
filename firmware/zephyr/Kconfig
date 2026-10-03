@@ -1,0 +1,7 @@
+config SKYBLIP_IMU_IMAGE_LINKED
+	bool "Carry the BHI260AP image in the application"
+	default y
+	help
+	  A full image links the sensor hub's firmware, boots the hub from it and
+	  keeps a copy on imu_image_partition. Without it, a slim image boots the
+	  hub from that copy and is 101 KB lighter over the air.

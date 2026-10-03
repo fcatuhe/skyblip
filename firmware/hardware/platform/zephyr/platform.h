@@ -69,6 +69,7 @@ class Platform {
         // nothing, not a device that refuses to fly: the region reports its own
         // readiness and the flight log service reads it.
         (void)log_flash_.begin();
+        (void)imu_flash_.begin();
         annunciator_.begin();
         indicator_.begin();
         link_up_ = link_.begin(device_addr()) == Status::Ok;
@@ -97,6 +98,7 @@ class Platform {
     zephyr::Link& link() { return link_; }
     zephyr::KvStore& kv() { return kv_; }
     zephyr::FlashRegion& log_flash() { return log_flash_; }
+    zephyr::FlashRegion& imu_flash() { return imu_flash_; }
     zephyr::Annunciator& annunciator() { return annunciator_; }
     zephyr::Indicator& indicator() { return indicator_; }
     zephyr::Dfu& dfu() { return dfu_; }
@@ -129,6 +131,7 @@ class Platform {
     }
 
     static ConstByteSpan imu_firmware() { return ConstByteSpan(kImuFirmware, kImuFirmwareBytes); }
+    static const Sha256::Digest& imu_firmware_digest() { return kImuFirmwareDigest; }
 
     // INFO: fc 18sep26 our Plus reads this pin low and our plain T-Echo reads it high
     bool buzzer_pin_held_low() const { return board_buzzer_pin_held_low() != 0; }
@@ -220,7 +223,8 @@ class Platform {
     Annunciator annunciator_{buzzer_, motor_};
     Indicator indicator_{led_green_, led_red_, led_blue_};
     KvStore kv_{};
-    FlashRegion log_flash_{};
+    FlashRegion log_flash_{PARTITION_ID(log_partition)};
+    FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
     zephyr::Battery battery_{battery_dev_};

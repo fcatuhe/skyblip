@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "core/util/result.h"
+#include "core/util/sha256.h"
 #include "core/util/span.h"
 #include "hardware/io/io.h"
 #include "hardware/parts/ssd1681/panel.h"
@@ -119,7 +120,15 @@ constexpr bool fills_the_platform_contract() {
                   "platform: read_panel_signature(parts::PanelSignature&) -> bool");
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().imu_firmware()), ConstByteSpan>,
-        "platform: imu_firmware() -> ConstByteSpan, the image the BHI260AP is booted from");
+        "platform: imu_firmware() -> ConstByteSpan, the BHI260AP image this build carries, empty "
+        "in a build that leaves it on the external flash");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().imu_firmware_digest()),
+                                        const Sha256::Digest&>,
+                  "platform: imu_firmware_digest() -> const Sha256::Digest&, the SHA-256 of the "
+                  "BHI260AP image this build was made with, carried or not");
+    static_assert(
+        std::is_convertible_v<decltype(std::declval<Self>().imu_flash()), ports::FlashRegion&>,
+        "platform: imu_flash() -> ports::FlashRegion&, where the BHI260AP image is kept");
 
     static_assert(std::is_void_v<decltype(void(std::declval<Self>().pps()))>,
                   "platform: pps(), the edge the clock's phase is carried from");

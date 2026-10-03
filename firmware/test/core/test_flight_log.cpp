@@ -92,9 +92,9 @@ TEST_CASE("log record: the budget the partition was sized on") {
     CHECK(store::kSectorHeaderBytes + flight::kLogSlotsPerSector * flight::kLogRecordBytes ==
           flight::kLogSectorBytes);
     // A four-second record period puts 11 minutes 20 seconds in a sector, so the
-    // 330 sectors of log_partition hold 62 hours and a mebibyte holds 48.
+    // 298 sectors of log_partition hold 56 hours and a mebibyte holds 48.
     CHECK(flight::log_seconds_per_sector(flight::kLogSlotsPerSector) == 680);
-    CHECK(flight::log_seconds_for(330, flight::kLogSlotsPerSector) == 224400);
+    CHECK(flight::log_seconds_for(298, flight::kLogSlotsPerSector) == 202640);
     CHECK(
         flight::log_seconds_for(1024 * 1024 / flight::kLogSectorBytes, flight::kLogSlotsPerSector) /
             3600 ==

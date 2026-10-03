@@ -156,7 +156,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 
 Two fields have no producer on this device and are left at their default rather than filled with a number nobody measured. `LinkAction::Sent` is never written: an outbound frame exists in `RecordPool::send` and in `core/comms`, and neither can see the claim the record carries, so a `Sent` emitted from the one a recorder reaches would cover the log endpoint's chunks and miss every reply the config endpoint sends - a corpus that reads as a device which answered nothing. The action keeps its number rather than being retired, because a decoder has nothing but the number. `Gap::span_ms` is zero on the marker the writer leaves when the partition is full, because the records still queued are the ring's and it does not hand out their instants.
 
-`Write::kind` is always `Settings`: it records the verdicts of `timing::DurableWriteWindow` itself, and only the settings blob asks that object to place a write. Both rings do reach the same window, through `RecordPool::window_open()`, but they ask it whether a phase is free rather than handing it a write to schedule, so there is no verdict to record.
+`Write::kind` is always `Settings`: it records the verdicts of `timing::DurableWriteWindow` itself, and only the settings blob asks that object to place a write. Both rings do reach the same window, through `RecordPool::book_window()`, but they ask it whether a phase is free rather than handing it a write to schedule, so there is no verdict to record.
 
 ## The recorder
 

@@ -47,7 +47,10 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
           none: "none",
           confirm_set: "Allow the change: the glass says SETTINGS, press twice."
         },
+        advice: "File to send",
         chosen: "Chosen image",
+        full: "full",
+        slim: "slim",
         shelf: "A published image, signed with the key this device trusts",
         shelf_prompt: "Choose an image",
         shelf_release: "Its release on GitHub, with the .uf2",
@@ -73,10 +76,19 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
     <li>Chrome or Edge, on a computer or on Android</li>
     <li>The device on the ground, with a GPS fix</li>
     <li>A battery above the warning, or charging</li>
-    <li>An image from the list, or a file ending in .signed.bin</li>
+    <li>An image from the list, or a file ending in .signed.bin, the one this page names</li>
     <li>No other app holding the device&rsquo;s settings</li>
     <li>Ten minutes, with the device close to you</li>
   </ul>
+
+  <p class="lede">
+    A release has two of them, both named after its version: the slim one ends
+    in <span class="mono">.signed.bin</span>, the full one in
+    <span class="mono">.full.signed.bin</span>. Send the slim one unless the page
+    asks for the full one, which also carries the firmware of the sensor hub: a
+    board needs it when its hub has none yet, when a new hub is fitted, or when a
+    release changes it.
+  </p>
 </section>
 
 <section>
@@ -161,6 +173,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Your settings are the ones from before that update: what you changed while the newer firmware ran stayed with it.</td></tr>
         <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">The stored settings could not be read, so the device runs on its defaults. Check the callsign and the aircraft type before you fly.</td></tr>
         <tr><th class="mono">swap_powered: false</th><td data-manage-word="swap_unpowered">The battery is critical, too low to install. Charge it first.</td></tr>
+        <tr><th class="mono">imu: writing</th><td data-manage-word="imu_writing">The device is writing the sensor hub&rsquo;s firmware to its memory, for up to a minute. Leave it on: the page asks again until it is done.</td></tr>
         <tr><th class="mono">went_dark_flat</th><td data-manage-word="went_dark_flat">The last time it switched off, it was for a flat battery. Charge it before you update.</td></tr>
       </tbody>
     </table>
@@ -211,6 +224,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
       <tbody>
         <tr><th>No Web Bluetooth</th><td data-manage-word="no_bluetooth">This browser has no Web Bluetooth. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.</td></tr>
         <tr><th>Not a skyBlip</th><td data-manage-word="not_skyblip">The device you picked has no firmware update service: it is not a skyBlip, or its firmware predates updates over Bluetooth.</td></tr>
+        <tr><th>Full image needed</th><td data-manage-word="needs_full">This is the slim image, and the sensor hub of this device lacks the firmware this image expects. Choose the file ending in <span class="mono">.full.signed.bin</span> instead: the slim one would install, then fail to keep itself, and the device would go back to the firmware it had.</td></tr>
         <tr><th>No file</th><td data-manage-word="no_file">Choose the firmware file first.</td></tr>
         <tr><th>Link lost</th><td data-manage-word="link_lost">The link dropped. Bring the device closer and connect again: an upload under way picks up where it stopped.</td></tr>
         <tr><th>No answer</th><td data-manage-word="timeout">The device stopped answering. Disconnect, connect again, and install again.</td></tr>

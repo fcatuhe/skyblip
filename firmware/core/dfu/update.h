@@ -16,24 +16,48 @@ const char* to_string(ImageState state);
 struct UpdateRecord {
     ports::ImageVersion from{};
     ports::ImageVersion to{};
+    ports::ImageHash from_hash{};
+    ports::ImageHash to_hash{};
+    bool hashed{false};
 };
 
-constexpr size_t kUpdateRecordBytes = 16;
+constexpr size_t kVersionsOnlyRecordBytes = 16;
+constexpr size_t kUpdateRecordBytes = kVersionsOnlyRecordBytes + 2 * ports::ImageHash::kBytes;
 
 size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t cap);
 bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out);
 
 enum class Outcome : uint8_t { Landed, Reverted, Refused, Unrelated };
 
-Outcome outcome(const UpdateRecord& record, const ports::ImageVersion& running,
-                std::optional<ports::ImageVersion> staged);
+struct SlotImage {
+    ports::ImageVersion version{};
+    ports::ImageHash hash{};
+    bool hashed{false};
+};
+
+Outcome outcome(const UpdateRecord& record, const SlotImage& running,
+                const std::optional<SlotImage>& staged);
 
 int compare(const ports::ImageVersion& a, const ports::ImageVersion& b);
 
 const char* version_refusal(const ports::ImageVersion& running, const ports::ImageVersion& incoming,
                             bool downgrade_allowed);
 
-constexpr size_t kVersionTextCap = 25;
+enum class HubImage : uint8_t { None, Missing, Corrupt, Unreadable, Writing, Held };
+
+struct HubImageReport {
+    static constexpr size_t kDigestBytes = 8;
+    HubImage holding{HubImage::None};
+    uint8_t digest[kDigestBytes]{};
+};
+
+constexpr size_t kHubImageTextCap = 2 * HubImageReport::kDigestBytes + 1;
+
+int format_hub_image(const HubImageReport& report, char* out, size_t cap);
+
+// INFO: fc 03oct26 the update frame is sized for this version, build_image.sh signs nothing wider
+constexpr ports::ImageVersion kWidestVersion{9, 99, 99, 99999};
+constexpr size_t kVersionTextCap = 14;
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap);
 
