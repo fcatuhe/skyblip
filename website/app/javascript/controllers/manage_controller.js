@@ -9,6 +9,7 @@ const ASKED_STEPS = new Set(["dfu", "apply"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
+const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "install", "recover",
@@ -81,7 +82,7 @@ export default class extends Controller {
 
   #notes({ image, status }) {
     const notes = []
-    if (image?.state === "probation" || image?.state === "reverted") notes.push([image.state, image.to])
+    if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])

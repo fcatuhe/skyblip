@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage } from './fake_skyblip.mjs';
+import {
+  DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
+} from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from './ble.js';
 import { SmpError } from './smp.js';
 import { Updater, noticeOf } from './update.js';
@@ -245,21 +247,59 @@ test('a disconnect asked for is not reported as a lost link', async () => {
   assert.equal(state.notice, null);
 });
 
-test('an image no newer than the running one is refused before the window opens', async () => {
-  const { device, updater } = await connected({ running: '0.2.0.15' });
-  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'same.signed.bin');
+test('a release unit refuses an older image before the window opens', async () => {
+  const { device, updater } = await connected({ running: '0.2.0.16' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'older.signed.bin');
   await updater.install();
-  assert.equal(updater.state.notice.key, 'not_newer');
+  assert.equal(updater.state.notice.key, 'older');
   assert.equal(device.commands.includes('dfu'), false);
 });
 
-test('the device refusing a downgrade reads as not newer too', async () => {
+test('a release unit takes the version it already runs, to install it again', async () => {
+  const { updater, until } = await connected({ running: '0.2.0.15' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'same.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+});
+
+test('a development unit takes an older image all the way to the swap', async () => {
+  const { device, updater, until } = await connected({ running: '0.3.0.40', downgrade: true, key: DEVELOPMENT_KEY });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'older.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(asking('apply'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+});
+
+test('an image signed by another key is refused before the window opens', async () => {
+  const { device, updater } = await connected();
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'dev.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'wrong_key');
+  assert.equal(device.commands.includes('dfu'), false);
+});
+
+test('a device that does not name its key refuses a foreign one at apply, in its own words', async () => {
+  const { device, updater, until } = await connected();
+  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  await until(state => state.image.key === null);
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, DEVELOPMENT_KEY), 'dev.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'wrong_key');
+  assert.equal(device.commands.includes('apply'), true);
+});
+
+test('the device refusing an older image at the first chunk reads as older', async () => {
   const { device, updater, until } = await chosen();
   device.refuseUpload = IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER;
   updater.install();
   await until(asking('dfu'));
   device.press();
-  assert.equal((await until(settled)).notice.key, 'not_newer');
+  assert.equal((await until(settled)).notice.key, 'older');
 });
 
 test('a file that is not an MCUboot image is refused before anything is sent', async () => {
@@ -278,7 +318,9 @@ test('an update frame pushed on connect is read without being asked', async () =
   const { updater, until } = session();
   await updater.connect();
   const { image } = await until(state => state.image);
-  assert.deepEqual(image, { state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true });
+  assert.deepEqual(image, {
+    state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, downgrade: false, key: 'B2B2B2B2',
+  });
 });
 
 test('an update frame arriving later replaces the one before it', async () => {
@@ -342,7 +384,7 @@ test('a browser with no Web Bluetooth says so before any picker', async () => {
 
 test('the SMP refusals the page words are the ones Zephyr sends', () => {
   assert.equal(noticeOf(new SmpError(11)).key, 'window_closed');
-  assert.equal(noticeOf(new SmpError(27, 1)).key, 'not_newer');
+  assert.equal(noticeOf(new SmpError(27, 1)).key, 'older');
   assert.equal(noticeOf(new SmpError(30, 1)).key, 'too_large');
   assert.equal(noticeOf(new SmpError(23, 1)).key, 'not_image');
   assert.equal(noticeOf(new SmpError(12, 1)).key, 'flash');

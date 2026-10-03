@@ -1,5 +1,6 @@
 import { decode, encode } from './cbor.js';
 import { UUID } from './ble.js';
+import { compareVersions, parseVersion, readImage } from './image.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -10,6 +11,8 @@ const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
 const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
+export const DEVELOPMENT_KEY = 0xa1;
+export const PRODUCTION_KEY = 0xb2;
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -57,8 +60,11 @@ export class FakeSkyblip {
     echo = true,
     writeCeiling = mtu - ATT_HEADER_BYTES,
     oversize = 'truncate',
+    key = PRODUCTION_KEY,
+    downgrade = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, onGround, swapPowered, bufSize, mtu, claimedBy });
+    Object.assign(this, { key, downgrade });
     Object.assign(this, { echo, writeCeiling, oversize });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -179,7 +185,14 @@ export class FakeSkyblip {
     if (this.refuseApply) return this.refuseApply;
     if (!this.slot) return 'nothing_staged';
     if (!this.finished) return 'upload_unfinished';
+    const staged = readImage(this.slot);
+    if (this.key !== null && staged.key !== keyName(this.key)) return 'wrong_key';
+    if (this.older(staged.version)) return 'older';
     return null;
+  }
+
+  older(version) {
+    return !this.downgrade && compareVersions(version, parseVersion(this.running)) < 0;
   }
 
   sendUpdate() {
@@ -187,6 +200,8 @@ export class FakeSkyblip {
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
     frame.swap_powered = this.swapPowered;
+    if (this.downgrade) frame.downgrade = true;
+    if (this.key !== null) frame.key = keyName(this.key);
     this.reply(frame);
   }
 
@@ -272,6 +287,8 @@ export class FakeSkyblip {
     if (off === 0) {
       if (this.upload && sha && this.upload.sha.join() === sha.join()) return { off: this.upload.off };
       if (this.refuseUpload) return { err: { group: IMAGE_GROUP, rc: this.refuseUpload } };
+      const header = readImage(data);
+      if (header && this.older(header.version)) return { err: { group: IMAGE_GROUP, rc: IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER } };
       this.upload = { sha, len, off: 0 };
       this.slot = new Uint8Array(len);
       this.finished = false;
@@ -316,14 +333,28 @@ function indefiniteMap(object) {
   return out;
 }
 
-export function signedImage({ major, minor, revision, build }, size) {
+const TLV_BYTES = 4 + 4 + 32;
+
+export function signedImage({ major, minor, revision, build }, size, key = PRODUCTION_KEY) {
   const bytes = new Uint8Array(size);
   for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
   const view = new DataView(bytes.buffer);
   view.setUint32(0, 0x96f3b83d, true);
+  view.setUint16(8, 32, true);
+  view.setUint32(12, size - 32 - TLV_BYTES, true);
   view.setUint8(20, major);
   view.setUint8(21, minor);
   view.setUint16(22, revision, true);
   view.setUint32(24, build, true);
+  const tlvs = size - TLV_BYTES;
+  view.setUint16(tlvs, 0x6907, true);
+  view.setUint16(tlvs + 2, TLV_BYTES, true);
+  view.setUint16(tlvs + 4, 0x01, true);
+  view.setUint16(tlvs + 6, 32, true);
+  bytes.fill(key, tlvs + 8);
   return bytes;
+}
+
+function keyName(byte) {
+  return byte.toString(16).padStart(2, '0').repeat(4).toUpperCase();
 }

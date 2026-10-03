@@ -8,10 +8,10 @@ const PAGES = ['../website/content/pages/manage.html.erb', '../website/content/p
 const CONFIG = '../firmware/core/comms/config.cpp';
 
 const PAGE_NOTICES = [
-  'claimed', 'window_closed', 'not_newer', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
+  'claimed', 'window_closed', 'older', 'wrong_key', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
   'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'upload_unfinished',
 ];
-const DEVICE_NOTES = ['probation', 'reverted', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat'];
+const DEVICE_NOTES = ['probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat'];
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd']);
 
 const words = path => new Set([...read(path).matchAll(/data-manage-word="(\w+)"/g)].map(match => match[1]));
