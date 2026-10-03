@@ -53,6 +53,11 @@ const char* parse_field(const char* at, uint32_t max, char end, uint32_t& out) {
     return end == 0 ? at : at + 1;
 }
 
+bool within_widest(const ports::ImageVersion& v) {
+    return v.major <= kWidestVersion.major && v.minor <= kWidestVersion.minor &&
+           v.revision <= kWidestVersion.revision && v.build <= kWidestVersion.build;
+}
+
 bool is_image(const SlotImage& slot, const ports::ImageVersion& version,
               const ports::ImageHash& hash, bool hashed) {
     if (hashed && slot.hashed) return slot.hash == hash;
@@ -119,7 +124,7 @@ const char* version_refusal(const ports::ImageVersion& running, const ports::Ima
 }
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
-    if (cap < kVersionTextCap) {
+    if (cap < kVersionTextCap || !within_widest(version)) {
         if (cap > 0) out[0] = 0;
         return 0;
     }
@@ -136,10 +141,10 @@ int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
 
 bool parse_version(const char* text, ports::ImageVersion& out) {
     uint32_t major = 0, minor = 0, revision = 0, build = 0;
-    const char* at = parse_field(text, 0xff, '.', major);
-    if (at) at = parse_field(at, 0xff, '.', minor);
-    if (at) at = parse_field(at, 0xffff, '+', revision);
-    if (at) at = parse_field(at, 0xffffffffu, 0, build);
+    const char* at = parse_field(text, kWidestVersion.major, '.', major);
+    if (at) at = parse_field(at, kWidestVersion.minor, '.', minor);
+    if (at) at = parse_field(at, kWidestVersion.revision, '+', revision);
+    if (at) at = parse_field(at, kWidestVersion.build, 0, build);
     if (!at) return false;
     out.major = static_cast<uint8_t>(major);
     out.minor = static_cast<uint8_t>(minor);

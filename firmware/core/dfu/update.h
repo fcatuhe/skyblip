@@ -55,7 +55,9 @@ constexpr size_t kHubImageTextCap = 2 * HubImageReport::kDigestBytes + 1;
 
 int format_hub_image(const HubImageReport& report, char* out, size_t cap);
 
-constexpr size_t kVersionTextCap = 25;
+// INFO: fc 03oct26 the update frame is sized for this version, build_image.sh signs nothing wider
+constexpr ports::ImageVersion kWidestVersion{9, 99, 99, 99999};
+constexpr size_t kVersionTextCap = 14;
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap);
 

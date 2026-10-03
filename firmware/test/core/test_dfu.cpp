@@ -125,9 +125,8 @@ TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits th
     char text[kVersionTextCap];
     CHECK(format_version(ports::ImageVersion{0, 1, 0, 12}, text, sizeof(text)) == 8);
     CHECK(std::string(text) == "0.1.0+12");
-    const int widest =
-        format_version(ports::ImageVersion{255, 255, 65535, 4294967295u}, text, sizeof(text));
-    CHECK(std::string(text) == "255.255.65535+4294967295");
+    const int widest = format_version(kWidestVersion, text, sizeof(text));
+    CHECK(std::string(text) == "9.99.99+99999");
     CHECK(widest == static_cast<int>(kVersionTextCap) - 1);
 
     char tight[8];
@@ -135,10 +134,22 @@ TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits th
     CHECK(tight[0] == 0);
 }
 
-TEST_CASE("dfu: a version reads back from the text format_version writes, and nothing looser") {
+// An image from someone else's build can carry any version, and the frame sized for ours must hold.
+TEST_CASE("dfu: a version wider than the widest we sign is written as nothing") {
     char text[kVersionTextCap];
     for (const ports::ImageVersion& v :
-         {ports::ImageVersion{0, 2, 0, 15}, ports::ImageVersion{255, 255, 65535, 4294967295u}}) {
+         {ports::ImageVersion{10, 0, 0, 1}, ports::ImageVersion{0, 100, 0, 1},
+          ports::ImageVersion{0, 0, 100, 1}, ports::ImageVersion{0, 0, 0, 100000},
+          ports::ImageVersion{255, 255, 65535, 4294967295u}}) {
+        text[0] = 'x';
+        CHECK(format_version(v, text, sizeof(text)) == 0);
+        CHECK(text[0] == 0);
+    }
+}
+
+TEST_CASE("dfu: a version reads back from the text format_version writes, and nothing looser") {
+    char text[kVersionTextCap];
+    for (const ports::ImageVersion& v : {ports::ImageVersion{0, 2, 0, 15}, kWidestVersion}) {
         format_version(v, text, sizeof(text));
         ports::ImageVersion read;
         REQUIRE(parse_version(text, read));
@@ -146,8 +157,8 @@ TEST_CASE("dfu: a version reads back from the text format_version writes, and no
     }
 
     ports::ImageVersion untouched{9, 9, 9, 9};
-    for (const char* bad : {"", "0.2.0", "0.2.0+", "0.2.0.15", "0.2.0+15x", "256.0.0+1",
-                            "0.0.65536+1", "0.0.0+4294967296", "-1.2.0+15", "0..0+1"}) {
+    for (const char* bad : {"", "0.2.0", "0.2.0+", "0.2.0.15", "0.2.0+15x", "10.0.0+1", "0.100.0+1",
+                            "0.0.100+1", "0.0.0+100000", "-1.2.0+15", "0..0+1"}) {
         CHECK_FALSE(parse_version(bad, untouched));
     }
     CHECK(untouched == ports::ImageVersion{9, 9, 9, 9});

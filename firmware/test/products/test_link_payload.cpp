@@ -179,8 +179,8 @@ TEST_CASE(
     dfu.trusted_key.fill(0xff);
     dfu.downgrades = true;
     ConfigService cs(link, store_cs, &dfu);
-    constexpr ports::ImageVersion kWidest{255, 255, 65535, 4294967295u};
-    cs.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{kWidest, kWidest});
+    cs.set_image_state(dfu::ImageState::Probation,
+                       dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
     cs.set_settings_fallback(settings::Fallback::Defaults);
     dfu::HubImageReport held{};
     held.holding = dfu::HubImage::Held;
@@ -191,8 +191,8 @@ TEST_CASE(
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
-    CHECK(body.find("\"from\":\"255.255.65535+4294967295\"") != std::string::npos);
-    CHECK(body.find("\"to\":\"255.255.65535+4294967295\"") != std::string::npos);
+    CHECK(body.find("\"from\":\"9.99.99+99999\"") != std::string::npos);
+    CHECK(body.find("\"to\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
     CHECK(body.find("\"swap_powered\"") != std::string::npos);
     CHECK(body.find("\"imu\":\"abababababababab\"") != std::string::npos);

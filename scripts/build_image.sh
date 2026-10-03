@@ -72,7 +72,7 @@ main() {
 # file: Zephyr rejects a tweak above 255 (cmake/modules/version.cmake:79-81).
 # Commit count: it only ever goes up on a branch that only moves forward.
 image_version() {
-  local file=$firmware/products/$product/VERSION triple
+  local file=$firmware/products/$product/VERSION triple build major minor patch
   test -f "$file" || { echo "FAIL: no such product: $product" >&2; exit 1; }
   if [ "$(git -C "$tree" rev-parse --is-shallow-repository)" = true ]; then
     echo "FAIL: shallow clone, the commit count would be wrong (checkout with fetch-depth: 0)" >&2
@@ -83,7 +83,14 @@ image_version() {
     -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
     -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
   test -n "${triple//./}" || { echo "FAIL: no version triple in $file" >&2; exit 1; }
-  echo "$triple+$(git -C "$tree" rev-list --count HEAD)"
+  build=$(git -C "$tree" rev-list --count HEAD)
+  # The update frame fits one notification on the narrowest phone only up to dfu::kWidestVersion.
+  IFS=. read -r major minor patch <<< "$triple"
+  if [ "$major" -gt 9 ] || [ "$minor" -gt 99 ] || [ "$patch" -gt 99 ] || [ "$build" -gt 99999 ]; then
+    echo "FAIL: $triple+$build is wider than 9.99.99+99999, the widest version the update frame fits" >&2
+    exit 1
+  fi
+  echo "$triple+$build"
 }
 
 # A full image and a slim one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
