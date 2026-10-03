@@ -1,5 +1,6 @@
 #include "products/skyblip_go/services/record_store.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "core/events/link.h"
@@ -58,11 +59,25 @@ uint32_t RecordPool::free_sectors() const {
     return spoken_for >= sector_count_ ? 0 : sector_count_ - spoken_for;
 }
 
-bool RecordPool::window_open(uint32_t cost_ms, uint32_t now_ms) const {
+// INFO: fc 03oct26 work starts at the clock or after what this pass booked, whichever is later
+bool RecordPool::book_window(uint32_t cost_ms, uint32_t pass_ms) {
+    if (!pass_seen_ || pass_ms != pass_ms_) {
+        pass_seen_ = true;
+        pass_ms_ = pass_ms;
+        pass_booked_ms_ = 0;
+    }
+    const uint32_t into_pass_ms =
+        std::max(context_.roles.clock.millis() - pass_ms_, pass_booked_ms_);
+    if (!window_open(cost_ms, pass_ms_ + into_pass_ms)) return false;
+    pass_booked_ms_ = into_pass_ms + cost_ms;
+    return true;
+}
+
+bool RecordPool::window_open(uint32_t cost_ms, uint32_t at_ms) const {
     const bus::RfState& rf = context_.state.rf;
     // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
     if (rf.plan.tx_allowed) return false;
-    return timing::DurableWriteWindow::free_now(rf.plan, rf.dwell, now_ms, cost_ms);
+    return timing::DurableWriteWindow::free_now(rf.plan, rf.dwell, at_ms, cost_ms);
 }
 
 Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {
@@ -275,7 +290,7 @@ void RecordStore::begin_session(uint32_t session_id) {
 Append RecordStore::append(const uint8_t* record, uint32_t now_ms) {
     if (!available_) return Append::Fault;
     const bool claim_wanted = !claimed_ || ring_.sector_exhausted();
-    if (!room_in_window(append_cost_ms(claim_wanted), now_ms)) return Append::Deferred;
+    if (!pool_.book_window(append_cost_ms(claim_wanted), now_ms)) return Append::Deferred;
     if (claim_wanted) {
         const Append claimed = claim_sector(base_session());
         if (claimed != Append::Ok) return claimed;
@@ -293,18 +308,6 @@ uint32_t RecordStore::append_cost_ms(bool claim_wanted) const {
     return erase_ms + 2 * kSlotWriteCostMs;
 }
 
-// INFO: fc 20sep26 one published phase per pass, so the pass spends one window rather than many
-bool RecordStore::room_in_window(uint32_t cost_ms, uint32_t now_ms) {
-    if (!pass_seen_ || now_ms != pass_ms_) {
-        pass_seen_ = true;
-        pass_ms_ = now_ms;
-        pass_cost_ms_ = 0;
-    }
-    if (!pool_.window_open(pass_cost_ms_ + cost_ms, now_ms)) return false;
-    pass_cost_ms_ += cost_ms;
-    return true;
-}
-
 uint32_t RecordStore::take_lost_records() {
     const uint32_t lost = pool_.allocator().lost_sectors(owner_);
     const uint32_t since = lost - lost_sectors_seen_;
@@ -315,7 +318,7 @@ uint32_t RecordStore::take_lost_records() {
 void RecordStore::prepare_spare(uint32_t now_ms) {
     if (!available_) return;
     if (spare_ready_) return;
-    if (!room_in_window(kSectorEraseCostMs, now_ms)) return;
+    if (!pool_.book_window(kSectorEraseCostMs, now_ms)) return;
     const store::Claim spare = pool_.allocator().prepare(owner_);
     if (!spare.granted) return;
     if (!pool_.erase(spare.sector)) return;
@@ -349,7 +352,7 @@ void RecordStore::step_erase(uint32_t now_ms) {
     for (uint32_t erased = 0; erased < kEraseCeilingSectors; erased++) {
         while (erase_next_ < pool_.sector_count() && !erasable(erase_next_)) erase_next_++;
         if (erase_next_ >= pool_.sector_count()) break;
-        if (!room_in_window(kSectorEraseCostMs, now_ms)) return;
+        if (!pool_.book_window(kSectorEraseCostMs, now_ms)) return;
         pool_.erase(erase_next_);
         erase_next_++;
     }
