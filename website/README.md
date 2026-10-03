@@ -41,7 +41,14 @@ bin/static-build --base https://skyblip.eu   # -> build/
 
 `bin/static-build` precompiles assets, runs Parklife, then copies `public/` over the result, which is how anything that must not be fingerprinted gets served verbatim.
 
-Deployment is `.github/workflows/website.yml` at the repo root: a push to `main` that touches `website/`, `firmware/` or `simulator/` (the page embeds the firmware as WASM, in the simulator's case) builds and publishes to Pages. Nothing else triggers a deployment, and `workflow_dispatch` forces one.
+Before Parklife it runs `bin/firmware-shelf`, which stocks `public/firmware/` with the images the update page offers by name: the latest release and every kept development pre-release, each checked against its release's `SHA256SUMS`, and the release against its build provenance. A browser cannot fetch a release asset from GitHub, so the site serves its own copy. `simulator/shelf.mjs` reads each image's version and signing key with the update client's own `image.js` and writes `shelf.json`, which `FirmwareShelfHelper` renders into the page. The page shows only the images signed with the key the connected device names. Without `gh` the shelf stays empty and the page offers the file picker alone.
+
+Deployment is `.github/workflows/website.yml` at the repo root, and publishes to Pages from `main` only:
+
+- a push to `main` that touches `website/` and nothing else deploys at once;
+- a push that touches anything else runs `firmware.yml`, whose `dev-release` job starts this workflow on `main` once the new development image is released, so the site is built once and with it on the shelf. A branch build started by hand does the same;
+- a release published by hand starts it on `main` too, through the `restock` job;
+- `workflow_dispatch` forces a deployment.
 
 ## License
 

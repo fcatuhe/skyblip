@@ -48,7 +48,10 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
           confirm_set: "Allow the change: the glass says SETTINGS, press twice."
         },
         chosen: "Chosen image",
-        file: "The firmware file, ending in .signed.bin",
+        shelf: "A published image, signed with the key this device trusts",
+        shelf_prompt: "Choose an image",
+        shelf_release: "Its release on GitHub, with the .uf2",
+        file: "Or a firmware file of your own, ending in .signed.bin",
         install: "Install",
         steps: {
           dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
@@ -70,7 +73,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
     <li>Chrome or Edge, on a computer or on Android</li>
     <li>The device on the ground, with a GPS fix</li>
     <li>A battery above the warning, or charging</li>
-    <li>The release file ending in .signed.bin</li>
+    <li>An image from the list, or a file ending in .signed.bin</li>
     <li>No other app holding the device&rsquo;s settings</li>
     <li>Ten minutes, with the device close to you</li>
   </ul>
@@ -213,6 +216,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th>No answer</th><td data-manage-word="timeout">The device stopped answering. Disconnect, connect again, and install again.</td></tr>
         <tr><th>No room given</th><td data-manage-word="no_params">The device did not say how much of the image it takes at once. Disconnect and connect again.</td></tr>
         <tr><th>Refused</th><td data-manage-word="smp">The device refused the image with an error this page does not know:</td></tr>
+        <tr><th>Image not downloaded</th><td data-manage-word="shelf_failed">The chosen image did not download from this site. Reload the page and choose it again, or download it from its release and choose the file.</td></tr>
         <tr><th>Anything else</th><td data-manage-word="failed">Something failed on the way:</td></tr>
       </tbody>
     </table>

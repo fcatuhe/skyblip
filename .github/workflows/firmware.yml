@@ -334,6 +334,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+      actions: write
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -398,6 +399,11 @@ jobs:
             echo "deleting $stale"
             gh release delete "$stale" --cleanup-tag --yes
           done
+
+      # The update page serves what this job just shelved, and a release made with
+      # this token starts no workflow of its own: so this asks for the site on main.
+      - name: restock the site
+        run: gh workflow run website.yml --ref main
 
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where

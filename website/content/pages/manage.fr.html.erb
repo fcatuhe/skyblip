@@ -51,7 +51,10 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
           confirm_set: "Autorisez le changement : l’écran dit SETTINGS, pressez deux fois."
         },
         chosen: "Image choisie",
-        file: "Le fichier du firmware, en .signed.bin",
+        shelf: "Une image publiée, signée avec la clé que cet appareil reconnaît",
+        shelf_prompt: "Choisissez une image",
+        shelf_release: "Sa version sur GitHub, avec le .uf2",
+        file: "Ou votre propre fichier de firmware, en .signed.bin",
         install: "Installer",
         steps: {
           dfu: "Autorisez la mise à jour : l’écran dit FIRMWARE et la version, pressez deux fois.",
@@ -73,7 +76,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
     <li>Chrome ou Edge, sur un ordinateur ou sur Android</li>
     <li>L&rsquo;appareil au sol, avec un fix GPS</li>
     <li>Une batterie au-dessus de l&rsquo;alerte, ou en charge</li>
-    <li>Le fichier de la version, en .signed.bin</li>
+    <li>Une image de la liste, ou un fichier en .signed.bin</li>
     <li>Aucune autre application ne tient les réglages de l&rsquo;appareil</li>
     <li>Dix minutes, l&rsquo;appareil près de vous</li>
   </ul>
@@ -221,6 +224,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         <tr><th>Pas de réponse</th><td data-manage-word="timeout">L&rsquo;appareil ne répond plus. Déconnectez, reconnectez, et installez de nouveau.</td></tr>
         <tr><th>Pas de taille donnée</th><td data-manage-word="no_params">L&rsquo;appareil n&rsquo;a pas dit quelle part de l&rsquo;image il prend à la fois. Déconnectez et reconnectez.</td></tr>
         <tr><th>Refusé</th><td data-manage-word="smp">L&rsquo;appareil a refusé l&rsquo;image avec une erreur que cette page ne connaît pas&nbsp;:</td></tr>
+        <tr><th>Image non téléchargée</th><td data-manage-word="shelf_failed">L&rsquo;image choisie ne s&rsquo;est pas téléchargée depuis ce site. Rechargez la page et choisissez-la de nouveau, ou téléchargez-la depuis sa version et choisissez le fichier.</td></tr>
         <tr><th>Autre chose</th><td data-manage-word="failed">Quelque chose a échoué en route&nbsp;:</td></tr>
       </tbody>
     </table>
