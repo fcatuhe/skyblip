@@ -74,6 +74,14 @@
     color: var(--ink-muted);
   }
 
+  .manage-file select {
+    font: inherit;
+    color: var(--ink);
+    max-inline-size: 100%;
+  }
+
+  .manage-release { font-size: var(--text-s); }
+
   .manage-steps {
     margin: 0;
     padding-inline-start: var(--space-inline-l);

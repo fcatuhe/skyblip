@@ -21,6 +21,21 @@
 
     <div class="manage-notes" data-manage-target="notes"></div>
 
+    <% if firmware_shelf.any? %>
+      <div class="manage-row">
+        <label class="manage-file">
+          <span><%= shelf %></span>
+          <select data-manage-target="shelf" data-action="manage#take" disabled>
+            <option value=""><%= shelf_prompt %></option>
+            <% firmware_shelf.each do |image| %>
+              <option value="<%= firmware_image_path(image) %>" data-key="<%= image["key"] %>" data-release="<%= firmware_release_url(image) %>" hidden><%= image["name"] %></option>
+            <% end %>
+          </select>
+        </label>
+        <a class="manage-release" data-manage-target="release" hidden><%= shelf_release %></a>
+      </div>
+    <% end %>
+
     <div class="manage-row">
       <label class="manage-file">
         <span><%= file %></span>

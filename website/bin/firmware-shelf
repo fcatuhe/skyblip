@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+
+# The images the update page offers by name: the latest release and every kept
+# development pre-release, copied into public/firmware/ with a shelf.json the page
+# is rendered from. A browser cannot fetch a release asset from GitHub, whose
+# download host sends no CORS headers, so the site serves its own copy.
+#
+# Each file is checked against its release's SHA256SUMS, and the release against
+# its build provenance. Without gh this leaves the shelf empty and the page offers
+# the file picker alone; CI sets FIRMWARE_SHELF_REQUIRED=1, so a shelf it cannot
+# stock fails the build that is meant to publish one.
+
+set -eu
+
+repo=${GITHUB_REPOSITORY:-fcatuhe/skyblip}
+website="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+shelf="$website/public/firmware"
+
+rm -rf "$shelf"
+
+if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+  if [ "${FIRMWARE_SHELF_REQUIRED:-0}" = "1" ]; then
+    echo "FAIL: gh is missing or logged out and FIRMWARE_SHELF_REQUIRED=1" >&2
+    exit 1
+  fi
+  echo "firmware shelf: no gh, the page will offer the file picker alone"
+  exit 0
+fi
+
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+mkdir -p "$shelf"
+
+gh release list -R "$repo" -L 100 --exclude-drafts --json tagName,name,isPrerelease,publishedAt \
+  > "$scratch/releases.json"
+release=$(gh release list -R "$repo" -L 100 --exclude-drafts --exclude-pre-releases \
+            --json tagName --jq '[.[].tagName | select(startswith("v"))][0] // empty')
+development=$(gh release list -R "$repo" -L 100 --exclude-drafts --json tagName,isPrerelease \
+                --jq '.[] | select(.isPrerelease) | .tagName | select(test("^dev-[0-9]+"))')
+
+for tag in $release $development; do
+  gh release download "$tag" -R "$repo" -p '*.signed.bin' -p SHA256SUMS -D "$scratch/$tag"
+  (cd "$scratch/$tag" && sha256sum --check --ignore-missing --quiet SHA256SUMS)
+  mkdir "$shelf/$tag"
+  cp "$scratch/$tag"/*.signed.bin "$shelf/$tag/"
+done
+
+if [ -n "$release" ]; then
+  gh attestation verify "$shelf/$release"/*.signed.bin -R "$repo"
+fi
+
+node "$website/../simulator/shelf.mjs" "$shelf" "$scratch/releases.json"

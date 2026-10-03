@@ -12,7 +12,7 @@ const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installin
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 
 export default class extends Controller {
-  static targets = ["unsupported", "connect", "disconnect", "hint", "file", "install", "recover",
+  static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
                     "device", "firmware", "battery", "chosen", "notes", "step",
                     "progress", "progressText", "message"]
   static values = { src: String, remaining: String, charging: String }
@@ -41,7 +41,22 @@ export default class extends Controller {
 
   async choose() {
     const [file] = this.fileTarget.files
-    if (file) await this.updater.choose(new Uint8Array(await file.arrayBuffer()), file.name)
+    if (!file) return
+    this.#shelve(null)
+    await this.updater.choose(new Uint8Array(await file.arrayBuffer()), file.name)
+  }
+
+  async take() {
+    const option = this.shelfTarget.selectedOptions[0]
+    if (!option?.value) return this.#shelve(null)
+    this.fileTarget.value = ""
+    this.#shelve(option)
+    const response = await fetch(option.value)
+    if (!response.ok) {
+      this.messageTarget.textContent = this.#word("shelf_failed")
+      return
+    }
+    await this.updater.choose(new Uint8Array(await response.arrayBuffer()), option.value.split("/").pop())
   }
 
   install() {
@@ -61,6 +76,7 @@ export default class extends Controller {
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
     this.installTarget.disabled = !idle || !state.file
+    this.#offer(state, idle)
     this.recoverTarget.disabled = !idle
     this.#facts(state)
     this.#notes(state)
@@ -69,6 +85,24 @@ export default class extends Controller {
     this.messageTarget.textContent = this.#message(state)
     this.messageTarget.classList.toggle("visually-hidden", !state.notice && Boolean(this.#step(state)))
     this.#recheckProbation(state)
+  }
+
+  #offer({ image }, idle) {
+    if (!this.hasShelfTarget) return
+    const options = [...this.shelfTarget.options].filter(option => option.value)
+    for (const option of options) option.hidden = !image?.key || option.dataset.key !== image.key
+    if (this.shelfTarget.selectedOptions[0]?.hidden) {
+      this.shelfTarget.value = ""
+      this.#shelve(null)
+    }
+    this.shelfTarget.disabled = !idle || options.every(option => option.hidden)
+  }
+
+  #shelve(option) {
+    if (!this.hasShelfTarget) return
+    if (!option) this.shelfTarget.value = ""
+    this.releaseTarget.hidden = !option
+    if (option) this.releaseTarget.href = option.dataset.release
   }
 
   #facts({ device, running, status, file }) {
