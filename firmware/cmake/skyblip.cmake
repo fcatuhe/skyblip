@@ -18,6 +18,15 @@ function(skyblip_shared_layers)
   )
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
   target_sources(app PRIVATE ${shared})
+
+  # Hot every pass: the per-byte NMEA parser and the redraw. Source options land after Zephyr's -Os, so -O2 wins.
+  set_source_files_properties(
+    ${SKYBLIP_FIRMWARE}/core/gnss/nmea.cpp
+    ${SKYBLIP_FIRMWARE}/ui/canvas.cpp
+    ${SKYBLIP_FIRMWARE}/hardware/parts/ssd1681/ssd1681.cpp
+    TARGET_DIRECTORY app
+    PROPERTIES COMPILE_OPTIONS -O2
+  )
 endfunction()
 
 # One product, one board. Called before find_package(Zephyr) so a mismatched
