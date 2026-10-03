@@ -1,16 +1,21 @@
 ---
-title: Update a skyBlip Go
+title: Update and set up a skyBlip Go
 nav_title: Update
-description: New firmware for a skyBlip Go from your browser, over Bluetooth · two presses on the device allow it, and the page says in plain words why it stopped when it does.
+description: New firmware and settings for a skyBlip Go from your browser, over Bluetooth · two presses on the device allow each change, and the page says in plain words why it stopped when it does.
 ---
 
 <section id="update">
   <p class="kicker">skyBlip Go</p>
-  <h1>New firmware, from this page, over Bluetooth.</h1>
+  <h1>New firmware and settings, from this page, over Bluetooth.</h1>
   <p class="lede">
     Nothing to install and nothing to pair. The page sends the image, and the
     device asks you on its own glass twice: before it takes the image, and
     before it installs it. A phone cannot update it on its own.
+  </p>
+  <p class="lede">
+    The page also reads the settings the device holds, shows which differ from
+    the ones it ships on, and changes them, each change asked on the glass.
+    Nothing is asked while the device is not on the ground.
   </p>
 
   <%= render "shared/manage",
@@ -22,6 +27,26 @@ description: New firmware for a skyBlip Go from your browser, over Bluetooth · 
         firmware: "Running",
         battery: "Battery",
         charging: "charging",
+        flight: { label: "Flight", ground: "on the ground", airborne: "airborne", unknown: "not yet known" },
+        settings: {
+          legend: "Settings on the device",
+          aircraft_type: "Aircraft type",
+          aircraft_types: ["Unknown", "Light aircraft", "Heavy aircraft", "Helicopter", "Glider", "Balloon",
+                           "Microlight", "Paraglider", "Skydiver", "VTOL", "Gyrocopter"],
+          callsign: "Callsign",
+          callsign_hint: "Up to nine letters, digits, dashes or blanks. Empty transmits no name.",
+          units: "Units",
+          unit_names: ["Nautical: NM and kt", "Metric: km and km/h"],
+          alarm: "Alarm sound",
+          alarm_volume: "Alarm volume, 0 to 5",
+          save: "Save",
+          reset: "Back to defaults",
+          default: "Default: %{value}",
+          on: "on",
+          off: "off",
+          none: "none",
+          confirm_set: "Allow the change: the glass says SETTINGS, press twice."
+        },
         chosen: "Chosen image",
         file: "The firmware file, ending in .signed.bin",
         install: "Install",
@@ -82,6 +107,39 @@ description: New firmware for a skyBlip Go from your browser, over Bluetooth · 
     If it does not, the device goes back to the firmware it had, and this page
     says so rather than leave you looking at an old version number.
   </p>
+</section>
+
+<section>
+  <h2 class="kicker">Settings</h2>
+
+  <h3>What it holds, <span class="highlight">beside what it ships on</span>.</h3>
+  <p class="lede">
+    Once connected, the page reads the aircraft type, the callsign, the units
+    and the alarm from the device, and asks the firmware for the values a new
+    unit ships on. A setting that differs from those says so under its field.
+  </p>
+  <p class="lede">
+    Save sends only what you changed. Back to defaults sends the firmware&rsquo;s
+    own values for what differs. Either way the glass says
+    <span class="mono">SETTINGS</span>,
+    <span class="mono">APPLY THE SETTINGS THE PHONE SENT</span>: press twice,
+    and the page reads the settings back from the device.
+  </p>
+  <p class="lede">
+    The radar&rsquo;s range and plot are set on the device&rsquo;s own menu,
+    and the page leaves them as they are.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Saved</th><td data-manage-word="saved">The device stored the settings, and the form shows them as the device read them back.</td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section>

@@ -9,12 +9,13 @@ const ASKED_STEPS = new Set(["dfu", "apply"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
+const NUMBERS = new Set(["aircraft_type", "units", "alarm_volume"])
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "install", "recover",
-                    "device", "firmware", "battery", "chosen", "notes", "step",
-                    "progress", "progressText", "message"]
-  static values = { src: String, remaining: String, charging: String }
+                    "device", "firmware", "battery", "flight", "chosen", "notes", "step",
+                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset"]
+  static values = { src: String, remaining: String, charging: String, labels: Object }
 
   async connect() {
     const { Updater, hasWebBluetooth } = await import(this.srcValue)
@@ -52,9 +53,22 @@ export default class extends Controller {
     this.updater.recover()
   }
 
+  edit() {
+    this.#settings(this.updater.state)
+  }
+
+  save(event) {
+    event.preventDefault()
+    this.updater.saveSettings(this.#edited())
+  }
+
+  reset() {
+    this.updater.resetSettings()
+  }
+
   #render(state) {
     const linked = LINKED.has(state.phase)
-    const idle = state.phase === "ready"
+    const idle = state.phase === "ready" && this.updater.onGround
     this.connectTarget.hidden = linked
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
@@ -63,6 +77,7 @@ export default class extends Controller {
     this.recoverTarget.disabled = !idle
     this.#facts(state)
     this.#notes(state)
+    this.#settings(state)
     this.#steps(state)
     this.#progress(state)
     this.messageTarget.textContent = this.#message(state)
@@ -77,10 +92,12 @@ export default class extends Controller {
     const percent = status?.batteryPercent
     const charging = status?.charging ? ` ${this.chargingValue}` : ""
     this.batteryTarget.textContent = percent === null || percent === undefined ? "-" : `${percent} %${charging}`
+    this.flightTarget.textContent = status?.flight ? this.labelsValue.flight[status.flight] ?? status.flight : "-"
   }
 
   #notes({ image, status }) {
     const notes = []
+    if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (image?.state === "probation" || image?.state === "reverted") notes.push([image.state, image.to])
     if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
@@ -98,6 +115,61 @@ export default class extends Controller {
       note.append(" ", tried)
     }
     return note
+  }
+
+  #settings({ phase, settings, defaults }) {
+    this.settingsTarget.hidden = !settings
+    if (!settings) return
+    if (settings !== this.shown) this.#fill(settings)
+    const edited = this.#edited()
+    const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
+    const idle = phase === "ready" && this.updater.onGround
+    this.fieldsTarget.disabled = !idle
+    this.saveTarget.disabled = !idle || !changed
+    this.resetTarget.hidden = !defaults
+    this.resetTarget.disabled = !idle || !defaults || Object.keys(defaults).every(key => defaults[key] === settings[key])
+    for (const note of this.defaultTargets) this.#default(note, settings, defaults)
+  }
+
+  #fill(settings) {
+    this.shown = settings
+    const { elements } = this.settingsTarget
+    const type = elements.aircraft_type
+    if (![...type.options].some(option => Number(option.value) === settings.aircraft_type)) {
+      type.add(new Option(String(settings.aircraft_type), settings.aircraft_type))
+    }
+    type.value = settings.aircraft_type
+    elements.callsign.value = settings.callsign
+    elements.units.value = settings.units
+    elements.alarm.checked = settings.alarm
+    elements.alarm_volume.value = settings.alarm_volume
+  }
+
+  #edited() {
+    const { elements } = this.settingsTarget
+    const edited = {}
+    for (const key of Object.keys(this.shown ?? {})) {
+      const field = elements[key]
+      if (field.type === "checkbox") edited[key] = field.checked
+      else if (NUMBERS.has(key)) edited[key] = Number(field.value)
+      else edited[key] = field.value.toUpperCase().trimEnd()
+    }
+    return edited
+  }
+
+  #default(note, settings, defaults) {
+    const key = note.dataset.setting
+    const differs = Boolean(defaults) && key in defaults && defaults[key] !== settings[key]
+    note.hidden = !differs
+    note.textContent = differs ? this.labelsValue.default.replace("%{value}", this.#shown(key, defaults[key])) : ""
+  }
+
+  #shown(key, value) {
+    const field = this.settingsTarget.elements[key]
+    if (field.type === "checkbox") return value ? this.labelsValue.on : this.labelsValue.off
+    if (field.tagName === "SELECT") return [...field.options].find(option => Number(option.value) === value)?.text ?? String(value)
+    if (value === "") return this.labelsValue.none
+    return String(value)
   }
 
   #steps(state) {
@@ -137,6 +209,7 @@ export default class extends Controller {
   #message(state) {
     if (state.notice) return [this.#word(state.notice.key), state.notice.detail].filter(Boolean).join(" ")
     if (state.task === "recovery") return this.#word("confirm_recovery")
+    if (state.task === "set") return this.#word("confirm_set")
     const step = this.#step(state)
     if (step) return this.#word(`step_${step}`)
     return PHASE_WORD[state.phase] ? this.#word(PHASE_WORD[state.phase]) : ""

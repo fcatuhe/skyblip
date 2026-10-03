@@ -10,6 +10,7 @@ const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
 const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
+export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 3, units: 0, callsign: '' };
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -57,14 +58,18 @@ export class FakeSkyblip {
     echo = true,
     writeCeiling = mtu - ATT_HEADER_BYTES,
     oversize = 'truncate',
+    stored = DEFAULTS,
+    knowsDefaults = true,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, onGround, swapPowered, bufSize, mtu, claimedBy });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults });
     Object.assign(this, { echo, writeCeiling, oversize });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
+    this.staged = null;
     this.windowOpen = false;
     this.slot = null;
     this.finished = false;
@@ -162,17 +167,38 @@ export class FakeSkyblip {
   }
 
   onConfig(bytes) {
-    const { cmd } = JSON.parse(decoder.decode(bytes));
+    const { cmd, ...fields } = JSON.parse(decoder.decode(bytes));
     this.commands.push(cmd);
     if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
     if (cmd === 'update') return this.sendUpdate();
     if (cmd === 'status') return this.sendStatus();
-    if (!['dfu', 'apply', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
+    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, addr: 0x5b5afe, addr_table: 58, ...this.stored });
+    if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
+    if (!['set', 'dfu', 'apply', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
     if (!this.onGround) return this.ack(false, 'in_flight');
     if (cmd !== 'recovery' && !this.swapPowered) return this.ack(false, 'low_power');
     if (cmd === 'apply' && this.stagingRefusal()) return this.ack(false, this.stagingRefusal());
     this.pending = cmd;
+    if (cmd === 'set') {
+      this.staged = fields;
+      return this.reply({ ack: false, pending: true, reason: 'confirm' });
+    }
     this.reply({ ack: false, pending: true, reason: `confirm_${cmd}` });
+  }
+
+  takeOff() {
+    this.onGround = false;
+    this.windowOpen = false;
+    if (this.pending) {
+      this.pending = null;
+      this.ack(false, 'in_flight');
+    }
+    this.sendStatus();
+  }
+
+  land() {
+    this.onGround = true;
+    this.sendStatus();
   }
 
   stagingRefusal() {
@@ -206,6 +232,10 @@ export class FakeSkyblip {
   press() {
     const task = this.pending;
     this.pending = null;
+    if (task === 'set') {
+      Object.assign(this.stored, this.staged);
+      return this.reply({ ack: true });
+    }
     if (task === 'dfu') {
       this.windowOpen = true;
       this.finished = false;

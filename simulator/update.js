@@ -24,6 +24,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 const DROPPED_UPLOAD = new Set(['nothing_staged', 'upload_unfinished']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
+const SETTING_KEYS = ['aircraft_type', 'alarm', 'alarm_volume', 'units', 'callsign'];
 
 class LinkLost extends Error {
   constructor() {
@@ -50,6 +51,10 @@ function imageOf(reply) {
     settings: reply.settings ?? null,
     swapPowered: reply.swap_powered !== false,
   };
+}
+
+function settingsOf(reply) {
+  return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
 }
 
 function statusOf(reply) {
@@ -84,6 +89,8 @@ export class Updater {
     image: null,
     running: null,
     status: null,
+    settings: null,
+    defaults: null,
     file: null,
     progress: null,
     notice: null,
@@ -95,6 +102,11 @@ export class Updater {
 
   get state() {
     return this.#state;
+  }
+
+  get onGround() {
+    const { status } = this.#state;
+    return !status || status.flight === 'ground';
   }
 
   async connect() {
@@ -141,6 +153,7 @@ export class Updater {
 
   async install() {
     if (!this.#image) return this.#set({ notice: { key: 'no_file' } });
+    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
     if (this.#running && compareVersions(this.#version, this.#running) <= 0) {
       return this.#set({ notice: { key: 'not_newer' } });
     }
@@ -151,6 +164,7 @@ export class Updater {
   }
 
   recover() {
+    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
     this.#set({ notice: null });
     return this.#ask('recovery');
   }
@@ -159,9 +173,24 @@ export class Updater {
     return this.#send({ cmd: 'update' });
   }
 
+  saveSettings(values) {
+    const { settings } = this.#state;
+    const changed = Object.entries(values).filter(([key, value]) => SETTING_KEYS.includes(key) && settings?.[key] !== value);
+    if (changed.length === 0) return;
+    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
+    this.#set({ notice: null });
+    return this.#ask('set', Object.fromEntries(changed));
+  }
+
+  resetSettings() {
+    if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
+  }
+
   async #learn() {
     await this.#send({ cmd: 'update' });
     await this.#send({ cmd: 'status' });
+    await this.#send({ cmd: 'get' });
+    await this.#send({ cmd: 'defaults' });
     try {
       this.#packetBytes = await packetBudget(this.#smp);
       this.#running = parseVersion(await runningVersion(this.#smp));
@@ -179,15 +208,17 @@ export class Updater {
     }
   }
 
-  #ask(task) {
+  #ask(task, fields = {}) {
     this.#set({ phase: 'asking', task });
-    return this.#send({ cmd: task });
+    return this.#send({ cmd: task, ...fields });
   }
 
   #receive(reply) {
     if (!reply) return;
     if (reply.cmd === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.cmd === 'status') this.#set({ status: statusOf(reply) });
+    else if (reply.cmd === 'config') this.#set({ settings: settingsOf(reply) });
+    else if (reply.cmd === 'defaults') this.#set({ defaults: settingsOf(reply) });
     else if ('ack' in reply) this.#acked(reply);
   }
 
@@ -196,6 +227,7 @@ export class Updater {
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
     if (phase !== 'asking' && phase !== 'confirming') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
+    if (reply.ack && task === 'set' && !reply.reason) return this.#saved();
     if (reply.ack && reply.reason === task) return this.#granted(task);
     if (task === 'apply' && DROPPED_UPLOAD.has(reply.reason)) this.#uploaded = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
@@ -209,6 +241,11 @@ export class Updater {
     this.#uploaded = false;
     this.#windowOpen = false;
     return this.#set({ phase: task === 'apply' ? 'installing' : 'recovering', task: null });
+  }
+
+  #saved() {
+    this.#set({ phase: 'ready', task: null, notice: { key: 'saved' } });
+    return this.#send({ cmd: 'get' });
   }
 
   async #upload() {
@@ -273,10 +310,12 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, defaults: null, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
-    this.#set({ phase: 'offline', task: null, device: null, running: null, status: null, progress: null, notice });
+    this.#set({
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, defaults: null, progress: null, notice,
+    });
   }
 
   #set(patch) {

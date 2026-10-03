@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage } from './fake_skyblip.mjs';
+import { DEFAULTS, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage } from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from './ble.js';
 import { SmpError } from './smp.js';
 import { Updater, noticeOf } from './update.js';
@@ -27,6 +27,7 @@ function session() {
   return { updater, until };
 }
 
+const READS = new Set(['update', 'status', 'get', 'defaults']);
 const asking = task => state => state.phase === 'confirming' && state.task === task;
 const settled = state => state.phase === 'ready' && state.notice;
 
@@ -69,7 +70,7 @@ test('an install asks twice on the glass and lands the whole image in the slot',
   const after = await until(state => state.phase === 'rebooting');
   assert.equal(after.notice, null);
   assert.equal(after.running, null, 'the version that ran before the install is not shown as running');
-  assert.deepEqual(device.commands.filter(cmd => cmd !== 'update' && cmd !== 'status'), ['dfu', 'apply']);
+  assert.deepEqual(device.commands.filter(cmd => !READS.has(cmd)), ['dfu', 'apply']);
 });
 
 async function uploaded(options) {
@@ -338,6 +339,88 @@ test('a browser with no Web Bluetooth says so before any picker', async () => {
   await updater.connect();
   assert.equal(updater.state.phase, 'offline');
   assert.equal(updater.state.notice.key, 'no_bluetooth');
+});
+
+const FLOWN = { aircraft_type: 7, alarm: true, alarm_volume: 5, units: 1, callsign: 'F-JABC' };
+
+async function withSettings(options = {}) {
+  const link = await connected({ stored: FLOWN, ...options });
+  await link.until(state => state.settings && (state.defaults || !link.device.knowsDefaults));
+  return link;
+}
+
+test('connecting reads the stored settings and the ones the firmware ships on', async () => {
+  const { updater } = await withSettings();
+  assert.deepEqual(updater.state.settings, FLOWN);
+  assert.deepEqual(updater.state.defaults, DEFAULTS);
+});
+
+test('a save sends only what changed, is asked on the glass, and reads the device back', async () => {
+  const { device, updater, until } = await withSettings();
+  updater.saveSettings({ ...FLOWN, callsign: 'F-JXYZ' });
+  await until(asking('set'));
+  assert.deepEqual(device.staged, { callsign: 'F-JXYZ' });
+  device.press();
+  const saved = await until(state => state.notice?.key === 'saved' && state.settings.callsign === 'F-JXYZ');
+  assert.equal(saved.phase, 'ready');
+});
+
+test('a save with nothing changed sends nothing', async () => {
+  const { device, updater } = await withSettings();
+  updater.saveSettings({ ...FLOWN });
+  assert.equal(device.commands.includes('set'), false);
+});
+
+test('back to defaults sends the defaults the device named, and lands it on them', async () => {
+  const { device, updater, until } = await withSettings();
+  updater.resetSettings();
+  await until(asking('set'));
+  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 3, units: 0, callsign: '' });
+  device.press();
+  const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 0);
+  assert.deepEqual(settings, DEFAULTS);
+});
+
+test('a firmware that does not know its defaults offers no reset', async () => {
+  const { device, updater } = await withSettings({ knowsDefaults: false });
+  assert.equal(updater.state.defaults, null);
+  updater.resetSettings();
+  assert.equal(device.commands.includes('set'), false);
+});
+
+test('a save refused on the glass says so, and the settings stay as stored', async () => {
+  const { device, updater, until } = await withSettings();
+  updater.saveSettings({ units: 0 });
+  await until(asking('set'));
+  device.refuse();
+  assert.equal((await until(settled)).notice.key, 'cancelled');
+  assert.deepEqual(device.stored, FLOWN);
+});
+
+test('off the ground the page asks nothing at all, and landing gives it back', async () => {
+  const { device, updater, until } = await chosen({ stored: FLOWN });
+  device.takeOff();
+  await until(state => state.status.flight === 'airborne');
+  assert.equal(updater.onGround, false);
+  const sent = device.commands.length;
+  updater.saveSettings({ units: 0 });
+  updater.recover();
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'in_flight');
+  assert.equal(device.commands.length, sent);
+  device.land();
+  await until(state => state.status.flight === 'ground');
+  updater.saveSettings({ units: 0 });
+  await until(asking('set'));
+});
+
+test('taking off while the glass asks takes the question away, and the page says why', async () => {
+  const { device, updater, until } = await withSettings();
+  updater.saveSettings({ units: 0 });
+  await until(asking('set'));
+  device.takeOff();
+  assert.equal((await until(settled)).notice.key, 'in_flight');
+  assert.deepEqual(device.stored, FLOWN);
 });
 
 test('the SMP refusals the page words are the ones Zephyr sends', () => {

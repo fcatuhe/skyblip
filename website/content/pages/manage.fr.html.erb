@@ -1,18 +1,24 @@
 ---
-title: Mettre à jour un skyBlip Go
+title: Mettre à jour et régler un skyBlip Go
 nav_title: Mise à jour
 slug: mise-a-jour
-description: Un nouveau firmware pour un skyBlip Go depuis votre navigateur, en Bluetooth · deux pressions sur l’appareil l’autorisent, et la page dit en clair pourquoi elle s’est arrêtée quand elle s’arrête.
+description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votre navigateur, en Bluetooth · deux pressions sur l’appareil autorisent chaque changement, et la page dit en clair pourquoi elle s’est arrêtée quand elle s’arrête.
 ---
 
 <section id="update">
   <p class="kicker">skyBlip Go</p>
-  <h1>Un nouveau firmware, depuis cette page, en Bluetooth.</h1>
+  <h1>Un nouveau firmware et des réglages, depuis cette page, en Bluetooth.</h1>
   <p class="lede">
     Rien à installer, rien à appairer. La page envoie l&rsquo;image, et
     l&rsquo;appareil vous le demande deux fois sur son propre écran&nbsp;: avant
     de prendre l&rsquo;image, et avant de l&rsquo;installer. Un téléphone ne peut
     pas le mettre à jour tout seul.
+  </p>
+  <p class="lede">
+    La page lit aussi les réglages que l&rsquo;appareil contient, montre ceux
+    qui diffèrent de ceux avec lesquels il est livré, et les change, chaque
+    changement demandé à l&rsquo;écran. Rien n&rsquo;est demandé tant que
+    l&rsquo;appareil n&rsquo;est pas au sol.
   </p>
 
   <%= render "shared/manage",
@@ -24,6 +30,26 @@ description: Un nouveau firmware pour un skyBlip Go depuis votre navigateur, en 
         firmware: "En service",
         battery: "Batterie",
         charging: "en charge",
+        flight: { label: "Vol", ground: "au sol", airborne: "en vol", unknown: "pas encore connu" },
+        settings: {
+          legend: "Réglages de l’appareil",
+          aircraft_type: "Type d’aéronef",
+          aircraft_types: ["Inconnu", "Avion léger", "Avion lourd", "Hélicoptère", "Planeur", "Ballon",
+                           "ULM", "Parapente", "Parachutiste", "VTOL", "Autogire"],
+          callsign: "Indicatif",
+          callsign_hint: "Jusqu’à neuf lettres, chiffres, tirets ou blancs. Vide, aucun nom n’est émis.",
+          units: "Unités",
+          unit_names: ["Aéronautiques : NM et kt", "Métriques : km et km/h"],
+          alarm: "Son de l’alarme",
+          alarm_volume: "Volume de l’alarme, de 0 à 5",
+          save: "Enregistrer",
+          reset: "Revenir aux réglages d’origine",
+          default: "D’origine : %{value}",
+          on: "activé",
+          off: "désactivé",
+          none: "aucun",
+          confirm_set: "Autorisez le changement : l’écran dit SETTINGS, pressez deux fois."
+        },
         chosen: "Image choisie",
         file: "Le fichier du firmware, en .signed.bin",
         install: "Installer",
@@ -86,6 +112,40 @@ description: Un nouveau firmware pour un skyBlip Go depuis votre navigateur, en 
     cette page le dit plutôt que de vous laisser devant un ancien numéro de
     version.
   </p>
+</section>
+
+<section>
+  <h2 class="kicker">Réglages</h2>
+
+  <h3>Ce qu&rsquo;il contient, <span class="highlight">à côté de ce qu&rsquo;il avait à la livraison</span>.</h3>
+  <p class="lede">
+    Une fois connectée, la page lit le type d&rsquo;aéronef, l&rsquo;indicatif,
+    les unités et l&rsquo;alarme de l&rsquo;appareil, et demande au firmware les
+    valeurs d&rsquo;un appareil neuf. Un réglage qui en diffère le dit sous son
+    champ.
+  </p>
+  <p class="lede">
+    Enregistrer n&rsquo;envoie que ce que vous avez changé. Revenir aux réglages
+    d&rsquo;origine envoie les valeurs du firmware pour ce qui diffère. Dans les
+    deux cas l&rsquo;écran dit <span class="mono">SETTINGS</span>,
+    <span class="mono">APPLY THE SETTINGS THE PHONE SENT</span>&nbsp;: pressez
+    deux fois, et la page relit les réglages sur l&rsquo;appareil.
+  </p>
+  <p class="lede">
+    La portée et l&rsquo;affichage du radar se règlent dans le menu de
+    l&rsquo;appareil, et la page n&rsquo;y touche pas.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>La page dit</th><th>Ce que cela veut dire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Enregistré</th><td data-manage-word="saved">L&rsquo;appareil a enregistré les réglages, et le formulaire les montre tels que l&rsquo;appareil les a relus.</td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section>
