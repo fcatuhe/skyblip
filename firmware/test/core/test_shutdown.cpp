@@ -94,7 +94,7 @@ TEST_CASE("shutdown: the wake pin waits for the button to come up") {
     for (t = 10; t <= 10 + kLongPressMs; t += 10) seq.tick(t, true);
     REQUIRE(seq.phase() == ShutdownPhase::Parking);
 
-    // The panel needs its full refresh before the rails may go.
+    // The panel needs its park frame before the rails may go.
     for (; t < 10 + kLongPressMs + kParkMs; t += 10) seq.tick(t, true);
     CHECK(seq.phase() == ShutdownPhase::Parking);
 
@@ -131,7 +131,7 @@ TEST_CASE("shutdown: a low-battery shutdown does not wait for a button it will n
     CHECK(pressed.phase() == ShutdownPhase::AwaitRelease);
 }
 
-// The swap takes the same road out as a power-off: the panel gets its full refresh
+// The swap takes the same road out as a power-off: the panel gets its park frame
 // before the bootloader is handed the device, and the reason is spelled for the log.
 TEST_CASE("shutdown: an install parks the panel like a power-off and is named as one") {
     ShutdownSequencer seq;

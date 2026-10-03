@@ -65,8 +65,8 @@ TEST_CASE("duty: a presented frame counts a partial refresh and a still glass co
     CHECK(rig.state().duty.panel_partial_refreshes > presented);
 }
 
-// A page swap wipes the glass black on the partial waveform: pricing it as a full is five partials.
-TEST_CASE("duty: the parked frame is the only full refresh a page swap or a present pays for") {
+// A page swap and a park both go through black on partials: a full refresh costs five of them.
+TEST_CASE("duty: a page swap and a park pay for partials, never a full refresh") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
@@ -80,8 +80,9 @@ TEST_CASE("duty: the parked frame is the only full refresh a page swap or a pres
     const uint32_t partials = rig.state().duty.panel_partial_refreshes;
     rig.product.screen().park_for_off();
     rig.run(t, t + 3000, kPassMs);
-    CHECK(rig.state().duty.panel_full_refreshes == 1);
-    CHECK(rig.state().duty.panel_partial_refreshes == partials);
+    CHECK(rig.state().duty.panel_full_refreshes == 0);
+    // the black, then the parked frame over it
+    CHECK(rig.state().duty.panel_partial_refreshes == partials + 2);
 }
 
 TEST_CASE("duty: the backlight counter runs while the lamp is lit and stops with it") {

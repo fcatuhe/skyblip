@@ -33,7 +33,7 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
     // so it is the first thing told to stop.
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK_FALSE(rig.product.screen().powered());
-    CHECK(rig.platform.chips().epd.last_full);
+    CHECK_FALSE(rig.platform.chips().epd.last_full);
 
     // Still held: the rails must not go, or a level-sensed wake pin brings the
     // device straight back up.
@@ -64,7 +64,7 @@ TEST_CASE("product: the rails wait for the park frame, not only for the park win
     CHECK(rig.platform.chips().epd.powered);
 
     rig.platform.chips().epd.busy_stuck = false;
-    rig.hold_button(t, 200, /*down=*/false);
+    rig.hold_button(t, 2000, /*down=*/false);
     CHECK(rig.product.ready_to_power_off());
     CHECK_FALSE(rig.platform.chips().epd.powered);
 }

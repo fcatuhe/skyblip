@@ -165,7 +165,7 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -188,7 +188,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     taxi(rig, t, 20);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -254,7 +254,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
 
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
     rig.raise_link(5);
-    rig.send("{\"cmd\":\"dfu\"}");
+    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
@@ -308,7 +308,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
-    rig.send_from(2, "{\"cmd\":\"dfu\"}");
+    rig.send_from(2, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
     // Refused, with a reason and to the app that asked. Not silence, which a page
@@ -346,7 +346,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.send_from(1, "{\"cmd\":\"dfu\"}");
+    rig.send_from(1, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
     REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);

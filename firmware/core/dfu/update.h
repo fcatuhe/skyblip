@@ -37,6 +37,8 @@ constexpr size_t kVersionTextCap = 25;
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap);
 
+bool parse_version(const char* text, ports::ImageVersion& out);
+
 }  // namespace skyblip::dfu
 
 #endif

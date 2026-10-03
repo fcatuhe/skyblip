@@ -3,7 +3,8 @@
        data-controller="manage"
        data-manage-src-value="<%= update_module_path %>"
        data-manage-remaining-value="<%= remaining %>"
-       data-manage-charging-value="<%= charging %>">
+       data-manage-charging-value="<%= charging %>"
+       data-manage-labels-value="<%= settings.slice(:default, :on, :off, :none).merge(flight: flight).to_json %>">
     <p class="manage-unsupported" data-manage-target="unsupported" hidden><%= unsupported %></p>
 
     <div class="manage-row">
@@ -16,10 +17,63 @@
       <div><dt><%= device %></dt><dd data-manage-target="device">-</dd></div>
       <div><dt><%= firmware %></dt><dd data-manage-target="firmware">-</dd></div>
       <div><dt><%= battery %></dt><dd data-manage-target="battery">-</dd></div>
+      <div><dt><%= flight[:label] %></dt><dd data-manage-target="flight">-</dd></div>
       <div><dt><%= chosen %></dt><dd data-manage-target="chosen">-</dd></div>
     </dl>
 
     <div class="manage-notes" data-manage-target="notes"></div>
+
+    <form class="manage-settings" data-manage-target="settings" data-action="input->manage#edit change->manage#edit submit->manage#save" hidden>
+      <fieldset data-manage-target="fields">
+        <legend><%= settings[:legend] %></legend>
+
+        <div class="manage-field">
+          <label for="manage-aircraft-type"><%= settings[:aircraft_type] %></label>
+          <select id="manage-aircraft-type" name="aircraft_type">
+            <% settings[:aircraft_types].each_with_index do |name, code| %>
+              <option value="<%= code %>"><%= name %></option>
+            <% end %>
+          </select>
+          <p class="manage-default" data-manage-target="default" data-setting="aircraft_type" hidden></p>
+        </div>
+
+        <div class="manage-field">
+          <label for="manage-callsign"><%= settings[:callsign] %></label>
+          <input type="text" id="manage-callsign" name="callsign" maxlength="9" pattern="[A-Za-z0-9 \-]*"
+                 autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="manage-callsign-hint">
+          <p class="manage-hint" id="manage-callsign-hint"><%= settings[:callsign_hint] %></p>
+          <p class="manage-default" data-manage-target="default" data-setting="callsign" hidden></p>
+        </div>
+
+        <div class="manage-field">
+          <label for="manage-units"><%= settings[:units] %></label>
+          <select id="manage-units" name="units">
+            <% settings[:unit_names].each_with_index do |name, code| %>
+              <option value="<%= code %>"><%= name %></option>
+            <% end %>
+          </select>
+          <p class="manage-default" data-manage-target="default" data-setting="units" hidden></p>
+        </div>
+
+        <div class="manage-field manage-field--check">
+          <input type="checkbox" id="manage-alarm" name="alarm">
+          <label for="manage-alarm"><%= settings[:alarm] %></label>
+          <p class="manage-default" data-manage-target="default" data-setting="alarm" hidden></p>
+        </div>
+
+        <div class="manage-field">
+          <label for="manage-alarm-volume"><%= settings[:alarm_volume] %></label>
+          <input type="number" id="manage-alarm-volume" name="alarm_volume" min="0" max="5" step="1" required>
+          <p class="manage-default" data-manage-target="default" data-setting="alarm_volume" hidden></p>
+        </div>
+      </fieldset>
+
+      <div class="manage-row">
+        <button type="submit" class="manage-button" data-manage-target="save" disabled><%= settings[:save] %></button>
+        <button type="button" class="manage-button manage-button--quiet" data-manage-target="reset" data-action="manage#reset" disabled><%= settings[:reset] %></button>
+      </div>
+      <p class="note" data-manage-word="confirm_set"><%= settings[:confirm_set] %></p>
+    </form>
 
     <% if firmware_shelf.any? %>
       <div class="manage-row">

@@ -9,23 +9,21 @@ const CONFIG = '../firmware/core/comms/config.cpp';
 
 const PAGE_NOTICES = [
   'claimed', 'window_closed', 'older', 'wrong_key', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
-  'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'upload_unfinished', 'shelf_failed',
+  'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'saved', 'shelf_failed',
 ];
 const DEVICE_NOTES = ['probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat'];
-const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd']);
+const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
 
 const words = path => new Set([...read(path).matchAll(/data-manage-word="(\w+)"/g)].map(match => match[1]));
 
 function firmwareRefusals() {
   const source = read(CONFIG);
   const acked = [...source.matchAll(/ack\(false, "(\w+)"\)/g)].map(match => match[1]);
-  const staging = /ConfigService::staging_refusal\(\) const \{([\s\S]*?)\n\}/.exec(source);
-  const returned = staging ? [...staging[1].matchAll(/return "(\w+)";/g)].map(match => match[1]) : [];
-  return [...new Set([...acked, ...returned])].filter(reason => !NEVER_ASKED_BY_THE_PAGE.has(reason));
+  return [...new Set(acked)].filter(reason => !NEVER_ASKED_BY_THE_PAGE.has(reason));
 }
 
 test('the firmware still refuses with the reasons this test reads', () => {
-  assert.ok(firmwareRefusals().includes('nothing_staged'), `${CONFIG} no longer reads as it did`);
+  assert.ok(firmwareRefusals().includes('not_approved'), `${CONFIG} no longer reads as it did`);
 });
 
 for (const page of PAGES) {

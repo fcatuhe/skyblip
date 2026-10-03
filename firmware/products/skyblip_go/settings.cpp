@@ -385,6 +385,10 @@ void write_json_fields(json::Writer& w, const Settings& s, uint32_t device_addr)
     w.kv_int("version", s.version);
     w.kv_int("addr", static_cast<long>(settings::air_address(device_addr)));
     w.kv_int("addr_table", settings::kAddrTableSkyblip);
+    write_json_settings(w, s);
+}
+
+void write_json_settings(json::Writer& w, const Settings& s) {
     w.kv_int("aircraft_type", s.aircraft_type);
     w.kv_bool("alarm", s.alarm_enabled);
     w.kv_int("alarm_volume", s.alarm_volume);
