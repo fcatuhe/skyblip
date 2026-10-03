@@ -58,11 +58,8 @@ uint32_t RecordPool::free_sectors() const {
     return spoken_for >= sector_count_ ? 0 : sector_count_ - spoken_for;
 }
 
-bool RecordPool::window_open(uint32_t cost_ms, uint32_t now_ms) const {
-    const bus::RfState& rf = context_.state.rf;
-    // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
-    if (rf.plan.tx_allowed) return false;
-    return timing::DurableWriteWindow::free_now(rf.plan, rf.dwell, now_ms, cost_ms);
+bool RecordPool::claim_window(uint32_t cost_ms, uint32_t now_ms) {
+    return context_.state.rf.claim_flash_window(now_ms, cost_ms);
 }
 
 Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {
@@ -293,21 +290,13 @@ Append RecordStore::append(const uint8_t* record, uint32_t now_ms) {
 }
 
 uint32_t RecordStore::append_cost_ms(bool claim_wanted) const {
-    if (!claim_wanted) return kSlotWriteCostMs;
-    const uint32_t erase_ms = spare_ready_ ? 0 : kSectorEraseCostMs;
-    return erase_ms + 2 * kSlotWriteCostMs;
+    if (!claim_wanted) return store::kSlotWriteCostMs;
+    const uint32_t erase_ms = spare_ready_ ? 0 : store::kSectorEraseCostMs;
+    return erase_ms + 2 * store::kSlotWriteCostMs;
 }
 
-// INFO: fc 20sep26 one published phase per pass, so the pass spends one window rather than many
 bool RecordStore::room_in_window(uint32_t cost_ms, uint32_t now_ms) {
-    if (!pass_seen_ || now_ms != pass_ms_) {
-        pass_seen_ = true;
-        pass_ms_ = now_ms;
-        pass_cost_ms_ = 0;
-    }
-    if (!pool_.window_open(pass_cost_ms_ + cost_ms, now_ms)) return false;
-    pass_cost_ms_ += cost_ms;
-    return true;
+    return pool_.claim_window(cost_ms, now_ms);
 }
 
 uint32_t RecordStore::take_lost_records() {
@@ -320,7 +309,7 @@ uint32_t RecordStore::take_lost_records() {
 void RecordStore::prepare_spare(uint32_t now_ms) {
     if (!available_) return;
     if (spare_ready_) return;
-    if (!room_in_window(kSectorEraseCostMs, now_ms)) return;
+    if (!room_in_window(store::kSectorEraseCostMs, now_ms)) return;
     const store::Claim spare = pool_.allocator().prepare(owner_);
     if (!spare.granted) return;
     if (!pool_.erase(spare.sector)) return;
@@ -354,7 +343,7 @@ void RecordStore::step_erase(uint32_t now_ms) {
     for (uint32_t erased = 0; erased < kEraseCeilingSectors; erased++) {
         while (erase_next_ < pool_.sector_count() && !erasable(erase_next_)) erase_next_++;
         if (erase_next_ >= pool_.sector_count()) break;
-        if (!room_in_window(kSectorEraseCostMs, now_ms)) return;
+        if (!room_in_window(store::kSectorEraseCostMs, now_ms)) return;
         pool_.erase(erase_next_);
         erase_next_++;
     }

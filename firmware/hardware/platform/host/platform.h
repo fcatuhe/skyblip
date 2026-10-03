@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 
+#include "core/util/sha256.h"
 #include "core/util/span.h"
 #include "hardware/parts/bme280/model.h"
 #include "hardware/parts/ssd1681/panel.h"
@@ -45,6 +46,16 @@ class Dfu : public ports::Dfu {
         out = staged;
         return true;
     }
+    bool running_hash(ports::ImageHash& out) override {
+        if (!has_running_hash) return false;
+        out = running_image_hash;
+        return true;
+    }
+    bool staged_hash(ports::ImageHash& out) override {
+        if (!has_staged_hash) return false;
+        out = staged_image_hash;
+        return true;
+    }
     ports::RecoveryPath recovery_path() const override {
         return watchdog_.armed() ? ports::RecoveryPath::PowerOffToFinish
                                  : ports::RecoveryPath::Rebooted;
@@ -64,10 +75,14 @@ class Dfu : public ports::Dfu {
     bool confirm_fails{false};
     bool has_running{false};
     bool has_staged{false};
+    bool has_running_hash{false};
+    bool has_staged_hash{false};
     bool upload_allowed_published{false};
     bool finished_upload{false};
     ports::ImageVersion running{};
     ports::ImageVersion staged{};
+    ports::ImageHash running_image_hash{};
+    ports::ImageHash staged_image_hash{};
 
    private:
     const ports::Watchdog& watchdog_;
@@ -153,6 +168,7 @@ class Platform {
         baro_.present = ports::has(fitted, ports::Capability::Baro);
         battery_.present = ports::has(fitted, ports::Capability::Battery);
         log_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
+        imu_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
         wire_i2c();
     }
 
@@ -202,7 +218,13 @@ class Platform {
         return out.read;
     }
 
-    static ConstByteSpan imu_firmware() { return ConstByteSpan(kImuFirmware); }
+    ConstByteSpan imu_firmware() const {
+        return imu_firmware_linked_ ? ConstByteSpan(kImuFirmware) : ConstByteSpan{};
+    }
+    static const Sha256::Digest& imu_firmware_digest() { return kImuFirmwareDigest; }
+    void set_imu_firmware_linked(bool linked) { imu_firmware_linked_ = linked; }
+    host::FlashRegion& imu_flash() { return imu_flash_; }
+    static constexpr uint32_t kImuFlashSectors = 32;
 
     bool buzzer_pin_held_low() const { return buzzer_pin_held_low_; }
     void set_buzzer_pin_held_low(bool held) { buzzer_pin_held_low_ = held; }
@@ -232,6 +254,8 @@ class Platform {
     }
 
     static constexpr uint8_t kImuFirmware[] = {0x2B, 0x66, 0x00, 0x00, 0x11, 0x22, 0x33, 0x44};
+    inline static const Sha256::Digest kImuFirmwareDigest =
+        Sha256::of(kImuFirmware, sizeof(kImuFirmware));
 
     static constexpr uint8_t kBaroAddress = 0x76;
     static constexpr uint8_t kImuAddress = 0x28;
@@ -245,6 +269,7 @@ class Platform {
     host::Link link_{};
     host::KvStore kv_{};
     host::FlashRegion log_flash_{};
+    host::FlashRegion imu_flash_{kImuFlashSectors};
     host::Annunciator annunciator_{};
     host::Indicator indicator_{};
     host::Watchdog watchdog_{};
@@ -257,6 +282,7 @@ class Platform {
     ports::Capabilities fitted_;
     uint32_t device_addr_;
     bool buzzer_pin_held_low_{false};
+    bool imu_firmware_linked_{true};
 };
 
 static_assert(fills_the_platform_contract<Platform>());

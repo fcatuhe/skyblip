@@ -35,7 +35,7 @@ And what the board asks about the unit it is running on: `begin()`, `capabilitie
 
 `read_baro()` is one fetch because the BME280 measures pressure and ambient temperature in the same conversion, and asking twice would pay for two. The temperature carries its own validity beside it: a part that answers with a pressure and no temperature is still a pressure, and the `$LK8EX1` a tablet reads has a sentinel for the field that is missing. What the sensor reads is what goes out - it sits inside the case, so it reads warm, and no correction is invented for it.
 
-`imu_firmware()` is the odd one: not a reading, but a hundred kilobytes of vendor firmware the BHI260AP has to be given before it is a sensor at all. It is a platform member rather than a constant in the part because only the device image should carry it - the host build hands over eight bytes and its part model boots on them, and the WASM the browser downloads stays the size it was (`parts/bhi260/firmware/README.md`).
+`imu_firmware()` is the odd one: not a reading, but a hundred kilobytes of vendor firmware the BHI260AP has to be given before it is a sensor at all. It is a platform member rather than a constant in the part because only the device image should carry it - the host build hands over eight bytes and its part model boots on them, and the WASM the browser downloads stays the size it was. A slim image carries none and hands over an empty span: it has `imu_firmware_digest()`, the SHA-256 of the image it was built against, and `imu_flash()`, the partition where a full image left a copy (`parts/bhi260/firmware/README.md`).
 
 ## The two questions a pin and a register answer
 

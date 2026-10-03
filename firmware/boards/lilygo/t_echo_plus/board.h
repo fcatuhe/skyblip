@@ -13,6 +13,7 @@
 #include "core/input/contact.h"
 #include "core/timing/transmit.h"
 #include "hardware/parts/bhi260/bhi260.h"
+#include "hardware/parts/bhi260/image_store.h"
 #include "hardware/parts/drv2605/drv2605.h"
 #include "hardware/parts/l76k/l76k.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
@@ -24,6 +25,8 @@
 #include "runtime/tasks.h"
 
 namespace skyblip::boards {
+
+constexpr const char* kImuWithoutImage = "NOBLOB";
 
 static_assert(t_echo_plus::kGlassW == parts::Ssd1681::kGlassW &&
                   t_echo_plus::kGlassH == parts::Ssd1681::kGlassH,
@@ -51,6 +54,7 @@ class TEchoPlus {
           gnss_(platform.uart(io::BusId::Gnss), platform.uart_rate(io::BusId::Gnss)),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), t_echo_plus::kHapticEnable),
           imu_(platform.i2c(io::BusId::Sensor)),
+          stored_image_(platform.imu_flash()),
           rf_(radio_, platform.clock(), bus.rf),
           capabilities_(platform.capabilities()) {
         platform_.wire(t_echo_plus::kPinMap);
@@ -77,6 +81,7 @@ class TEchoPlus {
         const Status s = platform_.begin();
         if (s != Status::Ok) return s;
         if (ports::has(capabilities_, ports::Capability::Display)) epd_.begin();
+        read_stored_imu_image();
         if (!ports::has(capabilities_, ports::Capability::Rf)) return Status::Ok;
         return rf_.begin();
     }
@@ -229,6 +234,10 @@ class TEchoPlus {
     typename P::Rf& rf() { return rf_; }
     parts::L76k& gnss() { return gnss_; }
     parts::Bhi260& imu() { return imu_; }
+    parts::Bhi260ImageStore& imu_store() { return stored_image_; }
+    bool imu_without_image() const {
+        return ports::has(capabilities_, ports::Capability::Inclinometer) && !imu_image_bootable();
+    }
     parts::Ssd1681& display() { return epd_; }
     parts::Drv2605& haptic() { return haptic_; }
 
@@ -311,11 +320,83 @@ class TEchoPlus {
         state.imu.meta = imu_.meta_event();
         state.imu.sensor_error = imu_.sensor_error();
         state.imu.errored_sensor = imu_.errored_sensor();
-        if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return;
-        if (imu_.stage() == parts::Bhi260::Stage::Idle) imu_.load(platform_.imu_firmware(), now_ms);
-        imu_.service(now_ms);
-        if (imu_.poll()) bus_.accel.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
+        if (ports::has(capabilities_, ports::Capability::Inclinometer)) {
+            read_stored_imu_image();
+            keep_imu_image_stored(state, now_ms);
+            if (imu_.stage() == parts::Bhi260::Stage::Idle) load_imu(now_ms);
+            imu_.service(now_ms);
+            if (imu_.poll())
+                bus_.accel.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
+        }
+        publish_imu_image(state);
     }
+
+    void read_stored_imu_image() {
+        if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return;
+        if (stored_image_.holding() == parts::Bhi260ImageStore::Holding::Unread)
+            stored_image_.check();
+    }
+
+    bool imu_image_linked() const { return !platform_.imu_firmware().empty(); }
+
+    bool imu_image_bootable() const {
+        return imu_image_linked() || stored_image_.holds(platform_.imu_firmware_digest());
+    }
+
+    void load_imu(uint32_t now_ms) {
+        if (imu_image_linked()) {
+            linked_image_ = parts::LinkedImage{platform_.imu_firmware()};
+            imu_.load(linked_image_, now_ms);
+        } else if (imu_image_bootable()) {
+            imu_.load(stored_image_, now_ms);
+        }
+    }
+
+    // INFO: fc 03oct26 only a confirmed image writes: a reverted one must not leave its blob behind
+    void keep_imu_image_stored(bus::State& state, uint32_t now_ms) {
+        if (!imu_image_linked()) return;
+        if (!imu_image_store_tried_ && !stored_image_.holds(platform_.imu_firmware_digest()) &&
+            platform_.dfu().confirmed()) {
+            imu_image_store_tried_ = true;
+            stored_image_.begin_write(platform_.imu_firmware(), platform_.imu_firmware_digest());
+        }
+        for (uint32_t step = 0; step < kImuImageStepsPerPass && stored_image_.writing(); step++) {
+            const uint32_t cost_ms = stored_image_.next_cost_ms();
+            if (cost_ms > 0 && !state.rf.claim_flash_window(now_ms, cost_ms)) return;
+            stored_image_.step();
+        }
+    }
+
+    void publish_imu_image(bus::State& state) const {
+        state.imu.bootable = !imu_without_image();
+        if (state.imu.fault[0] == 0 && !state.imu.bootable) state.imu.fault = kImuWithoutImage;
+        dfu::HubImageReport& report = state.imu.image;
+        report = dfu::HubImageReport{};
+        if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return;
+        switch (stored_image_.holding()) {
+            case parts::Bhi260ImageStore::Holding::Unread:
+            case parts::Bhi260ImageStore::Holding::Blank:
+                report.holding = dfu::HubImage::Missing;
+                return;
+            case parts::Bhi260ImageStore::Holding::Corrupt:
+                report.holding = dfu::HubImage::Corrupt;
+                return;
+            case parts::Bhi260ImageStore::Holding::Unreadable:
+                report.holding = dfu::HubImage::Unreadable;
+                return;
+            case parts::Bhi260ImageStore::Holding::Writing:
+                report.holding = dfu::HubImage::Writing;
+                return;
+            case parts::Bhi260ImageStore::Holding::Held:
+                report.holding = dfu::HubImage::Held;
+                for (size_t i = 0; i < dfu::HubImageReport::kDigestBytes; i++)
+                    report.digest[i] = stored_image_.digest()[i];
+                return;
+        }
+    }
+
+    // INFO: fc 03oct26 as the record store's bulk erase: a window at a time, eight steps at most
+    static constexpr uint32_t kImuImageStepsPerPass = 8;
 
     P& platform_;
     bus::Bus& bus_;
@@ -324,6 +405,9 @@ class TEchoPlus {
     parts::L76k gnss_;
     parts::Drv2605 haptic_;
     parts::Bhi260 imu_;
+    parts::Bhi260ImageStore stored_image_;
+    parts::LinkedImage linked_image_{ConstByteSpan{}};
+    bool imu_image_store_tried_{false};
     typename P::Rf rf_;
     ports::Inventory inventory_{};
     input::Contact button_{t_echo_plus::kButtonDebounceMs};

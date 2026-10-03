@@ -4,10 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "core/util/sha256.h"
+
 namespace skyblip::platform::zephyr {
 
-extern const uint8_t kImuFirmware[];
+extern const uint8_t* const kImuFirmware;
 extern const size_t kImuFirmwareBytes;
+extern const Sha256::Digest kImuFirmwareDigest;
 
 }  // namespace skyblip::platform::zephyr
 

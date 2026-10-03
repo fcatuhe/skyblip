@@ -132,6 +132,14 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kTxSpanLimitUs` | 65535 (65.535 ms) | microseconds | - | the field's own ceiling: a burst this late is a dwell that already ended |
 
+## [`firmware/core/store`](../firmware/core/store/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
+| `kSlotWriteCostMs` | 2 | milliseconds | - | - |
+| `kPageWriteCostMs` | `kSlotWriteCostMs + 1` = 3 | milliseconds | - | one program operation, as the slot write, plus 256 bytes more of SPI at 8 MHz |
+
 ## [`firmware/core/timing`](../firmware/core/timing/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -236,8 +244,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
-| `kSectorEraseCostMs` | 40 | milliseconds | - | budgets for the external NOR on spi1, bench-settled, not datasheet figures |
-| `kSlotWriteCostMs` | 2 | milliseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
@@ -255,4 +261,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-155 constants over 17 folders.
+156 constants over 18 folders.

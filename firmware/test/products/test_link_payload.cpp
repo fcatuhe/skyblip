@@ -163,7 +163,8 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
 }
 
-TEST_CASE("comms: the update report fits it too, widest versions and a settings fallback") {
+TEST_CASE(
+    "comms: the update report fits it too, widest versions, a settings fallback, a hub image") {
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
@@ -174,6 +175,10 @@ TEST_CASE("comms: the update report fits it too, widest versions and a settings 
     constexpr ports::ImageVersion kWidest{255, 255, 65535, 4294967295u};
     cs.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{kWidest, kWidest});
     cs.set_settings_fallback(settings::Fallback::Defaults);
+    dfu::HubImageReport held{};
+    held.holding = dfu::HubImage::Held;
+    for (uint8_t& byte : held.digest) byte = 0xAB;
+    cs.set_hub_image(held);
 
     cs.on_rx(frame("{\"cmd\":\"update\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -183,6 +188,8 @@ TEST_CASE("comms: the update report fits it too, widest versions and a settings 
     CHECK(body.find("\"to\":\"255.255.65535+4294967295\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
     CHECK(body.find("\"swap_powered\"") != std::string::npos);
+    // The last field written, so its presence is the proof nothing was dropped.
+    CHECK(body.find("\"imu\":\"abababababababab\"") != std::string::npos);
 }
 
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {

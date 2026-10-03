@@ -1,5 +1,7 @@
 #include "core/dfu/update.h"
 
+#include <cstring>
+
 #include "core/util/format.h"
 
 namespace skyblip::dfu {
@@ -62,22 +64,38 @@ ports::ImageVersion get_version(const uint8_t* in) {
 }  // namespace
 
 size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t cap) {
-    if (cap < kUpdateRecordBytes) return 0;
+    const size_t len = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
+    if (cap < len) return 0;
     put_version(out, record.from);
     put_version(out + 8, record.to);
+    if (!record.hashed) return len;
+    std::memcpy(out + kVersionsOnlyRecordBytes, record.from_hash.bytes, ports::ImageHash::kBytes);
+    std::memcpy(out + kVersionsOnlyRecordBytes + ports::ImageHash::kBytes, record.to_hash.bytes,
+                ports::ImageHash::kBytes);
     return kUpdateRecordBytes;
 }
 
 bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out) {
-    if (len != kUpdateRecordBytes) return false;
+    if (len != kVersionsOnlyRecordBytes && len != kUpdateRecordBytes) return false;
+    out = UpdateRecord{};
     out.from = get_version(blob);
     out.to = get_version(blob + 8);
+    if (len == kVersionsOnlyRecordBytes) return true;
+    std::memcpy(out.from_hash.bytes, blob + kVersionsOnlyRecordBytes, ports::ImageHash::kBytes);
+    std::memcpy(out.to_hash.bytes, blob + kVersionsOnlyRecordBytes + ports::ImageHash::kBytes,
+                ports::ImageHash::kBytes);
+    out.hashed = true;
     return true;
 }
 
-Outcome outcome(const UpdateRecord& record, const ports::ImageVersion& running) {
-    if (running == record.to) return Outcome::Landed;
-    if (running == record.from) return Outcome::Reverted;
+Outcome outcome(const UpdateRecord& record, const RunningImage& running) {
+    if (record.hashed && running.hashed) {
+        if (running.hash == record.to_hash) return Outcome::Landed;
+        if (running.hash == record.from_hash) return Outcome::Reverted;
+        return Outcome::Unrelated;
+    }
+    if (running.version == record.to) return Outcome::Landed;
+    if (running.version == record.from) return Outcome::Reverted;
     return Outcome::Unrelated;
 }
 
@@ -109,6 +127,35 @@ bool parse_version(const char* text, ports::ImageVersion& out) {
     out.revision = static_cast<uint16_t>(revision);
     out.build = build;
     return true;
+}
+
+int format_hub_image(const HubImageReport& report, char* out, size_t cap) {
+    if (cap < kHubImageTextCap) {
+        if (cap > 0) out[0] = 0;
+        return 0;
+    }
+    const char* word = nullptr;
+    switch (report.holding) {
+        case HubImage::None: word = "none"; break;
+        case HubImage::Missing: word = "missing"; break;
+        case HubImage::Corrupt: word = "corrupt"; break;
+        case HubImage::Unreadable: word = "unreadable"; break;
+        case HubImage::Writing: word = "writing"; break;
+        case HubImage::Held: break;
+    }
+    if (word != nullptr) {
+        const int n = fmt_string(out, word);
+        out[n] = 0;
+        return n;
+    }
+    static constexpr char kLowerHex[] = "0123456789abcdef";
+    int n = 0;
+    for (uint8_t byte : report.digest) {
+        out[n++] = kLowerHex[byte >> 4];
+        out[n++] = kLowerHex[byte & 0x0F];
+    }
+    out[n] = 0;
+    return n;
 }
 
 }  // namespace skyblip::dfu

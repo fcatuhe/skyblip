@@ -113,8 +113,10 @@ void ConfigService::send_radio() {
 void ConfigService::send_update(uint16_t session_id) {
     char from[dfu::kVersionTextCap];
     char to[dfu::kVersionTextCap];
+    char hub[dfu::kHubImageTextCap];
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
+    dfu::format_hub_image(hub_image_, hub, sizeof(hub));
     char buf[kSmallestSupportedPayload + 1];
     json::Writer w(buf, sizeof(buf));
     w.kv_str("cmd", "update");
@@ -126,6 +128,7 @@ void ConfigService::send_update(uint16_t session_id) {
     if (settings_fallback_ != settings::Fallback::None)
         w.kv_str("settings", settings::to_string(settings_fallback_));
     w.kv_bool("swap_powered", swap_powered());
+    w.kv_str("imu", hub);
     const int len = w.finish();
     (void)reply_to(session_id, buf, len);
 }

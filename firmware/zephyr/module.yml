@@ -7,3 +7,5 @@ build:
   # build, sysbuild's MCUboot image and twister.
   settings:
     board_root: .
+  # The options the shared layers read, whichever product builds them.
+  kconfig: zephyr/Kconfig

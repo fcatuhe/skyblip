@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_BUS_STATE_H
 #define SKYBLIP_CORE_BUS_STATE_H
 
+#include "core/dfu/update.h"
 #include "core/events/rf.h"
 #include "core/flight/atmosphere.h"
 #include "core/flight/gload.h"
@@ -46,6 +47,25 @@ struct RfState {
     uint16_t last_tx_keyed_us{0};
     uint16_t last_tx_span_us{0};
     int8_t noise_dbm{timing::NoiseFloor::kSeedDbm};
+
+    // INFO: fc 20sep26 one published phase per pass, so the pass spends one window rather than many
+    bool claim_flash_window(uint32_t now_ms, uint32_t cost_ms) {
+        if (!flash_pass_seen || now_ms != flash_pass_ms) {
+            flash_pass_seen = true;
+            flash_pass_ms = now_ms;
+            flash_pass_spent_ms = 0;
+        }
+        // INFO: fc 20sep26 a plan may allow the PA before any dwell view has been published
+        if (plan.tx_allowed) return false;
+        if (!timing::DurableWriteWindow::free_now(plan, dwell, now_ms,
+                                                  flash_pass_spent_ms + cost_ms))
+            return false;
+        flash_pass_spent_ms += cost_ms;
+        return true;
+    }
+    uint32_t flash_pass_ms{0};
+    uint32_t flash_pass_spent_ms{0};
+    bool flash_pass_seen{false};
 };
 
 struct PowerState {
@@ -116,6 +136,8 @@ struct GLoadState {
 struct ImuState {
     const char* stage{"NONE"};
     const char* fault{""};
+    dfu::HubImageReport image{};
+    bool bootable{true};
     uint32_t fifo_bytes{0};
     uint32_t unparsed{0};
     uint8_t error{0};

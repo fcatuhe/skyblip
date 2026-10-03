@@ -15,7 +15,18 @@ UpdateRecord attempt() {
     UpdateRecord r;
     r.from = ports::ImageVersion{0, 1, 0, 12};
     r.to = ports::ImageVersion{0, 2, 0, 15};
+    r.from_hash = ports::ImageHash{{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}};
+    r.to_hash = ports::ImageHash{{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28}};
+    r.hashed = true;
     return r;
+}
+
+RunningImage running(const ports::ImageVersion& version) {
+    return RunningImage{version, {}, false};
+}
+
+RunningImage running(const ports::ImageVersion& version, const ports::ImageHash& hash) {
+    return RunningImage{version, hash, true};
 }
 }  // namespace
 
@@ -27,12 +38,30 @@ TEST_CASE("dfu: the update record survives the blob byte for byte") {
     REQUIRE(from_blob(blob, sizeof(blob), after));
     CHECK(after.from == before.from);
     CHECK(after.to == before.to);
+    CHECK(after.from_hash == before.from_hash);
+    CHECK(after.to_hash == before.to_hash);
+    CHECK(after.hashed);
+}
+
+// The record an image from before the hashes wrote, read by the image that boots after the swap.
+TEST_CASE("dfu: a record of versions alone is still read, and classified by version") {
+    UpdateRecord before = attempt();
+    before.hashed = false;
+    uint8_t blob[kUpdateRecordBytes];
+    REQUIRE(to_blob(before, blob, sizeof(blob)) == kVersionsOnlyRecordBytes);
+    UpdateRecord after;
+    REQUIRE(from_blob(blob, kVersionsOnlyRecordBytes, after));
+    CHECK(after.from == before.from);
+    CHECK(after.to == before.to);
+    CHECK_FALSE(after.hashed);
+    CHECK(outcome(after, running(before.to, before.to_hash)) == Outcome::Landed);
 }
 
 TEST_CASE("dfu: a blob of the wrong length is refused rather than half read") {
     uint8_t blob[kUpdateRecordBytes] = {0};
     UpdateRecord out;
     CHECK_FALSE(from_blob(blob, kUpdateRecordBytes - 1, out));
+    CHECK_FALSE(from_blob(blob, kVersionsOnlyRecordBytes + 1, out));
     CHECK_FALSE(from_blob(blob, 0, out));
     uint8_t small[kUpdateRecordBytes - 1];
     CHECK(to_blob(attempt(), small, sizeof(small)) == 0);
@@ -40,10 +69,17 @@ TEST_CASE("dfu: a blob of the wrong length is refused rather than half read") {
 
 TEST_CASE("dfu: the image that boots after the swap is classified by what it is running") {
     const UpdateRecord r = attempt();
-    CHECK(outcome(r, r.to) == Outcome::Landed);
-    CHECK(outcome(r, r.from) == Outcome::Reverted);
-    CHECK(outcome(r, ports::ImageVersion{0, 3, 0, 1}) == Outcome::Unrelated);
-    CHECK(outcome(r, ports::ImageVersion{0, 2, 0, 16}) == Outcome::Unrelated);
+    CHECK(outcome(r, running(r.to, r.to_hash)) == Outcome::Landed);
+    CHECK(outcome(r, running(r.from, r.from_hash)) == Outcome::Reverted);
+    CHECK(outcome(r, running(ports::ImageVersion{0, 3, 0, 1}, ports::ImageHash{})) ==
+          Outcome::Unrelated);
+}
+
+TEST_CASE("dfu: a running image that cannot read its own hash is classified by version") {
+    const UpdateRecord r = attempt();
+    CHECK(outcome(r, running(r.to)) == Outcome::Landed);
+    CHECK(outcome(r, running(r.from)) == Outcome::Reverted);
+    CHECK(outcome(r, running(ports::ImageVersion{0, 2, 0, 16})) == Outcome::Unrelated);
 }
 
 TEST_CASE("dfu: two builds of one release are two images") {
@@ -51,7 +87,15 @@ TEST_CASE("dfu: two builds of one release are two images") {
     ports::ImageVersion other_build = r.to;
     other_build.build++;
     CHECK(r.to != other_build);
-    CHECK(outcome(r, other_build) == Outcome::Unrelated);
+    CHECK(outcome(r, running(other_build)) == Outcome::Unrelated);
+}
+
+// The full image of the running version, reverted: by version alone it would read as landed.
+TEST_CASE("dfu: an image of the same version is told apart by its hash") {
+    UpdateRecord r = attempt();
+    r.to = r.from;
+    CHECK(outcome(r, running(r.from, r.from_hash)) == Outcome::Reverted);
+    CHECK(outcome(r, running(r.to, r.to_hash)) == Outcome::Landed);
 }
 
 TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits the cap") {
@@ -130,4 +174,27 @@ TEST_CASE(
     CHECK_FALSE(smp_permitted({kOs, kSmpOsEcho, static_cast<uint8_t>(SmpOp::WriteResponse)}, true));
     CHECK_FALSE(
         smp_permitted({kImage, kSmpImageUpload, static_cast<uint8_t>(SmpOp::ReadResponse)}, true));
+}
+
+TEST_CASE("dfu: the hub's image is reported as a word, or as the digest a page compares with") {
+    char text[kHubImageTextCap];
+    HubImageReport report{};
+    format_hub_image(report, text, sizeof(text));
+    CHECK(std::string(text) == "none");
+    report.holding = HubImage::Missing;
+    format_hub_image(report, text, sizeof(text));
+    CHECK(std::string(text) == "missing");
+    report.holding = HubImage::Writing;
+    format_hub_image(report, text, sizeof(text));
+    CHECK(std::string(text) == "writing");
+
+    report.holding = HubImage::Held;
+    const uint8_t digest[] = {0x31, 0x8d, 0xef, 0x51, 0x1f, 0xd8, 0xeb, 0x76};
+    std::memcpy(report.digest, digest, sizeof(digest));
+    CHECK(format_hub_image(report, text, sizeof(text)) == 16);
+    CHECK(std::string(text) == "318def511fd8eb76");
+
+    char tight[kHubImageTextCap - 1];
+    CHECK(format_hub_image(report, tight, sizeof(tight)) == 0);
+    CHECK(tight[0] == 0);
 }
