@@ -88,7 +88,14 @@ void ScreenService::record_screen(uint32_t now_ms) {
     value.backlight = backlight_;
     value.powered = powered_;
     value.holding = thermal() == Thermal::Hold;
+    value.render_us = render_us_;
+    value.present_us = present_us_;
     context_.diag.record(value, context_.instant(now_ms));
+}
+
+uint32_t ScreenService::micros_since(uint64_t began_us) const {
+    const uint64_t took_us = context_.roles.clock.micros() - began_us;
+    return took_us > 0xFFFFFFFFu ? 0xFFFFFFFFu : static_cast<uint32_t>(took_us);
 }
 
 // INFO: fc 20sep26 the price has to be on the glass before a press can be spent arming
@@ -307,13 +314,17 @@ void ScreenService::tick(uint32_t now_ms) {
 
     last_render_ms_ = now_ms;
     dirty_ = false;
+    const uint64_t render_began_us = context_.roles.clock.micros();
     render(now_ms);
+    render_us_ = micros_since(render_began_us);
 
     const bool changed = !presented_once_ || change_ == Change::Wiped ||
                          std::memcmp(fb_.data(), presented_.data(), Glass::kBytes) != 0;
     if (!changed) return;
 
+    const uint64_t present_began_us = context_.roles.clock.micros();
     context_.roles.display.present(fb_, ports::Refresh::Partial, now_ms);
+    present_us_ = micros_since(present_began_us);
     count_refresh(ports::Refresh::Partial);
     note_presented(now_ms);
     flash_alarm();

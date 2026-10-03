@@ -304,6 +304,7 @@ class Rf : public ports::Rf {
     void key(const ports::RfBurst& burst) {
         tx_at_us_ = burst.at_us;
         (void)radio_.stage_tx(burst.chips, burst.len);
+        staged_at_us_ = clock_.micros();
         while (clock_.micros() < burst.at_us) k_busy_wait(1);
         (void)radio_.key_tx();
         keyed_at_us_ = clock_.micros();
@@ -396,6 +397,7 @@ class Rf : public ports::Rf {
         e.rssi_valid = ev.rssi_valid;
         e.at_us = at_us;
         e.keyed_at_us = keyed_at_us_;
+        e.staged_at_us = staged_at_us_;
         e.tx_at_us = tx_at_us_;
         out_.push(e);
     }
@@ -421,6 +423,7 @@ class Rf : public ports::Rf {
     ports::RfBursts flying_bursts_{};
     ports::RfBursts queued_bursts_{};
     uint64_t keyed_at_us_{0};
+    uint64_t staged_at_us_{0};
     uint64_t tx_at_us_{0};
     uint64_t irq_at_us_{0};
     uint64_t flying_end_us_{0};

@@ -212,6 +212,8 @@ TEST_CASE("diag record: the glass keeps what was on it and how long it had been"
     in.backlight = true;
     in.powered = true;
     in.holding = true;
+    in.render_us = 187430;
+    in.present_us = 41210;
 
     const diag::Screen out = diag_round_trip(in);
     CHECK(out.since_ms == in.since_ms);
@@ -222,6 +224,30 @@ TEST_CASE("diag record: the glass keeps what was on it and how long it had been"
     CHECK(out.backlight);
     CHECK(out.powered);
     CHECK(out.holding);
+    CHECK(out.render_us == in.render_us);
+    CHECK(out.present_us == in.present_us);
+}
+
+TEST_CASE("diag record: a loop window keeps its longest pass and its longest wait, each dated") {
+    diag::Loop in{};
+    in.passes = 87;
+    in.busy_ms = 231;
+    in.worst_pass_us = 191204;
+    in.worst_pass_phase_ms = 203;
+    in.worst_gap_ms = 201;
+    in.worst_gap_phase_ms = 394;
+    in.worst_service = 9;
+    in.worst_tick_ms = 190;
+
+    const diag::Loop out = diag_round_trip(in);
+    CHECK(out.passes == in.passes);
+    CHECK(out.busy_ms == in.busy_ms);
+    CHECK(out.worst_pass_us == in.worst_pass_us);
+    CHECK(out.worst_pass_phase_ms == in.worst_pass_phase_ms);
+    CHECK(out.worst_gap_ms == in.worst_gap_ms);
+    CHECK(out.worst_gap_phase_ms == in.worst_gap_phase_ms);
+    CHECK(out.worst_service == in.worst_service);
+    CHECK(out.worst_tick_ms == in.worst_tick_ms);
 }
 
 TEST_CASE("diag record: a gap names its own size, so a hole is never silent") {

@@ -396,6 +396,21 @@ TEST_CASE("diag screen: what was on the glass is recorded on the render cadence"
     CHECK(screen.since_ms > 0);
 }
 
+// The fix processed later every second was the loop's lateness, so the capture has to carry it.
+TEST_CASE("diag loop: a capture carries one loop window a second, with the passes that ran") {
+    Rig rig;
+    uint32_t t = 100;
+    const int seconds = 8;
+    const std::vector<diag::Record> records = armed_taxi(rig, t, seconds);
+
+    CHECK(count_of(records, diag::Type::Loop) >= seconds - 1);
+    CHECK(count_of(records, diag::Type::Loop) <= seconds + 1);
+    diag::Loop window{};
+    REQUIRE(last_of(records, window));
+    CHECK(window.passes > 0);
+    CHECK(window.worst_service <= diag::kLoopBoardPoll);
+}
+
 // The page turns this into the hours a partition lasts, so it is a claim about the taps.
 TEST_CASE("diag: the rate the capture page quotes covers a quiet airborne second") {
     Rig rig;

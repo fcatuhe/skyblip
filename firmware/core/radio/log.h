@@ -33,6 +33,7 @@ struct Entry {
     uint16_t into_ms{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
+    int16_t tx_stage_margin_us{0};
     int8_t rssi_dbm{0};
     int8_t key_offset_s{0};
     uint8_t channel{0};
@@ -50,6 +51,9 @@ struct Entry {
 constexpr uint16_t kTxSpanLimitUs = 65535;
 
 uint16_t tx_span_of(uint64_t done_at_us, uint64_t deadline_us);
+
+// INFO: fc 03oct26 positive: the burst was staged before its instant, negative: staging overran it
+int16_t tx_stage_margin_of(uint64_t staged_at_us, uint64_t deadline_us);
 
 class Log {
    public:

@@ -109,6 +109,7 @@ class ScreenService : public runtime::Service {
     void handle_input(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
+    uint32_t micros_since(uint64_t began_us) const;
     void obey(Gesture gesture, uint32_t now_ms);
     void tap(uint32_t now_ms);
     void long_touch();
@@ -209,6 +210,8 @@ class ScreenService : public runtime::Service {
     uint32_t recorded_ms_{0};
     uint32_t contact_edge_ms_[2]{};
     uint32_t last_render_ms_{0};
+    uint32_t render_us_{0};
+    uint32_t present_us_{0};
     uint32_t last_present_ms_{0};
     traffic::Level last_live_{traffic::Level::None};
     bool alarm_flash_{false};

@@ -44,6 +44,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kDutyMaxPeriodMs` | 60000 (1 min) | milliseconds | Period | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
 | `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
+| `kStageMarginStepUs` | 10 | microseconds | - | a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms |
 
 ## [`firmware/core/events`](../firmware/core/events/README.md)
 
@@ -255,4 +256,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-155 constants over 17 folders.
+156 constants over 17 folders.

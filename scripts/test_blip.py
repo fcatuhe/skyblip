@@ -112,11 +112,11 @@ class DiagnosticsPayloads(unittest.TestCase):
             since_edge_ms=450, locked=True, utc_valid=True))
 
     def test_burst_reads_the_radio_entry_with_its_signed_rssi_and_key_offset(self):
-        payload = struct.pack("<I2H5B2b", 0x0102AB, 410, 960, 8, 2, 1, 1, 26, -97, -2)
+        payload = struct.pack("<I2H5B3b", 0x0102AB, 410, 960, 8, 2, 1, 1, 26, -97, -2, -23)
         self.assertEqual(decoded(5, payload, 0b0011_1100), whole(
             "burst", 0b0011_1100, addr=0x0102AB, tx_keyed_us=410, tx_span_us=960,
             verdict="miskeyed", source="alptas", band="O", channel=1, len=26, rssi_dbm=-97,
-            key_offset_s=-2, addr_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
+            key_offset_s=-2, tx_stage_margin_us=-230, addr_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
             callsign=False))
 
     def test_a_transmitted_burst_says_whether_it_carried_the_callsign_or_a_position(self):
@@ -207,10 +207,16 @@ class DiagnosticsPayloads(unittest.TestCase):
             placement="forced", kind="flight_record", pending=True))
 
     def test_screen_reads_the_page_codes_the_product_owns(self):
-        payload = struct.pack("<I4B", 2500, 6, 1, 4, 1)
+        payload = struct.pack("<I4B2I", 2500, 6, 1, 4, 1, 187430, 41210)
         self.assertEqual(decoded(15, payload, 0b0001_1100), whole(
             "screen", 0b0001_1100, since_ms=2500, page=6, mode=1, prompt=4, alarm=1,
-            backlight=True, powered=True, holding=True))
+            render_us=187430, present_us=41210, backlight=True, powered=True, holding=True))
+
+    def test_loop_names_the_service_that_held_it(self):
+        payload = struct.pack("<2HI3H2B", 87, 231, 191204, 203, 201, 394, 9, 190)
+        self.assertEqual(decoded(20, payload), whole(
+            "loop", 0, passes=87, busy_ms=231, worst_pass_us=191204, worst_pass_phase_ms=203,
+            worst_gap_ms=201, worst_gap_phase_ms=394, worst_service="screen", worst_tick_ms=190))
 
     def test_gap_carries_the_hole_itself(self):
         payload = struct.pack("<3IH", 17, 830, 41, 64)
@@ -258,7 +264,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
         named = [name for name, _ in
                  (records.DIAG_TYPES[key] for key in sorted(records.DIAG_TYPES))]
         self.assertEqual(named, self.schema["properties"]["type"]["enum"])
-        self.assertEqual(sorted(records.DIAG_TYPES), list(range(1, 20)))
+        self.assertEqual(sorted(records.DIAG_TYPES), list(range(1, 21)))
 
     def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
         for field, names in records.enum_fields():

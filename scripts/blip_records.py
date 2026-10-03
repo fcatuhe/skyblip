@@ -108,6 +108,8 @@ ENDPOINT = ("config", "nmea", "log")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
 CHANGE = ("retune", "hop", "to_oband", "to_mband", "wake")
+SERVICE = ("config", "ownship", "power", "radio", "traffic", "alarm", "nmea", "flight_log",
+           "capture", "screen", "board_poll")
 
 DIAG_TYPES = {
     1: ("boot", (
@@ -133,7 +135,7 @@ DIAG_TYPES = {
         ("addr", u32(0)), ("tx_keyed_us", u16(4)), ("tx_span_us", u16(6)),
         ("verdict", enum8(8, VERDICT)), ("source", enum8(9, SOURCE)), ("band", enum8(10, BAND)),
         ("channel", u8(11)), ("len", u8(12)), ("rssi_dbm", i8(13)), ("key_offset_s", i8(14)),
-        ("addr_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
+        ("tx_stage_margin_us", scaled(i8(15), 10)), ("addr_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
         ("tx_span_valid", flag(5)), ("callsign", flag(6)))),
     6: ("dwell", (
         ("freq_hz", u32(0)), ("start_ms", u16(4)), ("end_ms", u16(6)), ("phase_ms", u16(8)),
@@ -180,7 +182,8 @@ DIAG_TYPES = {
         ("pending", flag(2)))),
     15: ("screen", (
         ("since_ms", u32(0)), ("page", u8(4)), ("mode", u8(5)), ("prompt", u8(6)),
-        ("alarm", u8(7)), ("backlight", flag(2)), ("powered", flag(3)), ("holding", flag(4)))),
+        ("alarm", u8(7)), ("render_us", u32(8)), ("present_us", u32(12)), ("backlight", flag(2)),
+        ("powered", flag(3)), ("holding", flag(4)))),
     16: ("gap", (
         ("dropped", u32(0)), ("span_ms", u32(4)), ("total", u32(8)), ("capacity", u16(12)))),
     17: ("end", (
@@ -193,6 +196,10 @@ DIAG_TYPES = {
     19: ("switch", (
         ("to_hz", u32(0)), ("margin_us", i32(4)), ("took_us", u16(8)), ("gap_us", u16(10)),
         ("change", enum8(12, CHANGE)), ("armed_ahead", flag(2)), ("late", flag(3)))),
+    20: ("loop", (
+        ("passes", u16(0)), ("busy_ms", u16(2)), ("worst_pass_us", u32(4)),
+        ("worst_pass_phase_ms", u16(8)), ("worst_gap_ms", u16(10)), ("worst_gap_phase_ms", u16(12)),
+        ("worst_service", enum8(14, SERVICE)), ("worst_tick_ms", u8(15)))),
 }
 
 FLIGHT_FIELDS = (

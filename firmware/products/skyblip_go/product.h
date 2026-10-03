@@ -115,13 +115,16 @@ class Product {
     void step(uint32_t now_ms) {
         if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
         if (flyable_ && !shutdown_.going_down()) {
-            board_.poll(state_, now_ms);
+            meter_.begin_pass(ctx_.instant(now_ms).into_ms);
+            meter_.timed(diag::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
             // Polled before the services run, so the pass that may write flash is
             // the pass that already knows the rail is going. One atomic read on
             // the silicon side; nothing here is allowed to be slower than that,
             // because the warning's whole value is the milliseconds it is early.
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.step(now_ms);
+            loop_.step(now_ms, &meter_);
+            meter_.end_pass();
+            record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             if (config_.config().power_off_requested()) {
                 config_.config().clear_power_off_request();
@@ -367,6 +370,14 @@ class Product {
         recovery_taken_ = roles_.dfu.enter_recovery();
     }
 
+    void record_loop(uint32_t now_ms) {
+        const diag::Instant at = ctx_.instant(now_ms);
+        if (at.at_s == loop_window_s_) return;
+        loop_window_s_ = at.at_s;
+        const diag::Loop window = meter_.take();
+        if (diag_.armed()) diag_.record(window, at);
+    }
+
     void publish_radio_asleep() {
         state_.rf.plan = timing::SlotPlan{};
         state_.rf.dwell = timing::DwellPhase{};
@@ -382,6 +393,8 @@ class Product {
     Board board_;
     ports::Roles roles_{board_.roles()};
     runtime::Context ctx_{roles_, bus_, state_, diag_};
+    runtime::LoopMeter meter_{roles_.clock};
+    uint32_t loop_window_s_{0};
     RecordPool pool_{ctx_};
     RecordStore flights_store_{pool_, store::SectorOwner::Flights};
     RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};

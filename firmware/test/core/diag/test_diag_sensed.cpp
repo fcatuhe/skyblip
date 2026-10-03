@@ -73,6 +73,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.into_ms = 462;
     in.tx_keyed_us = 619;
     in.tx_span_us = 6014;
+    in.tx_stage_margin_us = -230;
     in.rssi_dbm = -97;
     in.key_offset_s = -18;
     in.channel = 1;
@@ -101,6 +102,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.into_ms == in.into_ms);
     CHECK(out.tx_keyed_us == in.tx_keyed_us);
     CHECK(out.tx_span_us == in.tx_span_us);
+    CHECK(out.tx_stage_margin_us == in.tx_stage_margin_us);
     CHECK(out.rssi_dbm == in.rssi_dbm);
     CHECK(out.key_offset_s == in.key_offset_s);
     CHECK(out.channel == in.channel);
@@ -301,4 +303,18 @@ TEST_CASE("diag record: a dwell change carries how long it took and how early it
     CHECK(out.kind == in.kind);
     CHECK(out.armed_ahead);
     CHECK(out.late);
+}
+
+// The byte holds 10 us steps, so a margin past +-1.27 ms reads as the ceiling and not as noise.
+TEST_CASE("diag record: a stage margin past what the byte holds saturates at its ends") {
+    radio::Entry late{};
+    late.tx_stage_margin_us = -4000;
+    radio::Entry early{};
+    early.tx_stage_margin_us = 1999;
+
+    radio::Entry out{};
+    CHECK(diag::read(diag::record_of(late), out));
+    CHECK(out.tx_stage_margin_us == -1280);
+    CHECK(diag::read(diag::record_of(early), out));
+    CHECK(out.tx_stage_margin_us == 1270);
 }

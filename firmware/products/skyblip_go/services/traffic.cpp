@@ -90,6 +90,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     if (outcome == radio::Event::Transmitted && event.tx_at_us != 0) {
         entry.tx_keyed_us = radio::tx_span_of(event.keyed_at_us, event.tx_at_us);
         entry.tx_span_us = radio::tx_span_of(event.at_us, event.tx_at_us);
+        entry.tx_stage_margin_us = radio::tx_stage_margin_of(event.staged_at_us, event.tx_at_us);
         entry.tx_span_valid = true;
         context_.state.rf.last_tx_keyed_us = entry.tx_keyed_us;
         context_.state.rf.last_tx_span_us = entry.tx_span_us;

@@ -123,3 +123,9 @@ TEST_CASE("radio log: a cleared log holds nothing and starts over") {
     REQUIRE(log.count() == 1);
     CHECK(log.newest(0).addr == 0xBBBBBB);
 }
+
+// Staging that ends after the instant is what keys a burst late, so the sign is the finding.
+TEST_CASE("radio log: a stage margin is how early the burst was staged, negative when it overran") {
+    CHECK(radio::tx_stage_margin_of(11'999'420, 12'000'000) == 580);
+    CHECK(radio::tx_stage_margin_of(12'000'150, 12'000'000) == -150);
+}
