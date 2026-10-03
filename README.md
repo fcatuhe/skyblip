@@ -56,7 +56,7 @@ The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace 
 CI builds it too, and which key signs it decides which units it can update over Bluetooth ([`firmware/keys/`](firmware/keys)):
 
 - a pull request: a key made for the run, so the build is proven and the image updates nothing;
-- `main`: the development key, and the image is an artifact of the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml);
+- `main`, or a branch run by hand: the development key, published by [`firmware.yml`](.github/workflows/firmware.yml) as a pre-release on the Releases page, `dev-<build number>` for `main` (the last three kept) and `dev-<build number>-<branch>` for a branch (its newest kept until its pull request closes);
 - a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal the product's `VERSION`.
 
 The build number after the `+` is the commit count. A unit on the production key refuses an image older than the one it runs, so it only goes up or installs the same version again. A unit on the development key takes any development image, older ones included. Drag-and-drop of a `.uf2` takes either anywhere.
