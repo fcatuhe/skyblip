@@ -221,7 +221,7 @@ def sessions_to_fetch(sessions, args, resume):
     if args.session is not None:
         chosen = [entry for entry in sessions if entry["session"] == args.session]
     elif not args.all:
-        chosen = sessions[-1:]
+        chosen = sessions_from(sessions, resume) or sessions[-1:]
     if resume is None:
         return [(entry, 0) for entry in chosen]
 
@@ -236,6 +236,15 @@ def sessions_to_fetch(sessions, args, resume):
         elif reached:
             plan.append((entry, 0))
     return plan if reached else [(entry, 0) for entry in chosen]
+
+
+def sessions_from(sessions, resume):
+    """The session a resume point names and every one after it, or none if it is not listed."""
+    ids = [entry["session"] for entry in sessions]
+    if resume is not None and resume[0] in ids:
+        return sessions[ids.index(resume[0]):]
+    else:
+        return []
 
 
 async def fetch_session(link, args, session, start, out):

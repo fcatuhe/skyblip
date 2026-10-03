@@ -109,6 +109,11 @@ class Resume(unittest.TestCase):
         self.assertEqual([(entry["session"], start) for entry, start in plan],
                          [(100, 0), (200, 0), (300, 0)])
 
+    def test_a_session_left_unfinished_before_a_new_one_opened_is_finished_first(self):
+        plan = blip.sessions_to_fetch(SESSIONS, fetch_args(), (200, 17))
+        self.assertEqual([(entry["session"], start) for entry, start in plan],
+                         [(200, 18), (300, 0)])
+
     def test_the_default_is_the_last_session_on_the_device(self):
         plan = blip.sessions_to_fetch(SESSIONS, fetch_args(), None)
         self.assertEqual([entry["session"] for entry, _ in plan], [300])
