@@ -11,8 +11,12 @@ on:
   push:
     branches: [main]
   # The escape hatch: a Pages setting or a domain change the tree cannot see.
-  # Always builds, whatever the filter below says.
+  # Always builds, whatever the filter below says. firmware.yml's dev-release
+  # starts it too, on main, once a new development image is on the Releases page.
   workflow_dispatch:
+  # A release published by hand, which the update page then offers.
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -27,12 +31,16 @@ jobs:
   # reports and satisfies it.
   changes:
     name: what changed
+    if: github.event_name != 'release'
     runs-on: ubuntu-26.04-arm
     permissions:
       contents: read
       pull-requests: read
     outputs:
       website: ${{ steps.filter.outputs.website }}
+      # The inverse of firmware.yml's filter: a push that touched anything else is
+      # deployed by firmware.yml's dev-release, after the image it built is released.
+      outside: ${{ steps.filter.outputs.outside }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -44,13 +52,22 @@ jobs:
               - 'firmware/**'
               - 'simulator/**'
               - '.github/workflows/website.yml'
+            outside:
+              - '!(website)/**'
 
   build:
     name: parklife build
     needs: changes
-    if: needs.changes.outputs.website == 'true' || github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (needs.changes.outputs.website == 'true' &&
+       !(github.event_name == 'push' && needs.changes.outputs.outside == 'true'))
     # arm64 runners: cheaper per-minute and native aarch64 gem installs.
     runs-on: ubuntu-26.04-arm
+    # The firmware shelf downloads release assets and checks a release's provenance.
+    permissions:
+      contents: read
+      attestations: read
     steps:
       # Full history: the sitemap's lastmod is each page's own `git log -1` date.
       - uses: actions/checkout@v7
@@ -89,6 +106,8 @@ jobs:
         working-directory: website
         env:
           SIMULATOR_REQUIRED: 1
+          FIRMWARE_SHELF_REQUIRED: 1
+          GH_TOKEN: ${{ github.token }}
         run: bin/static-build --base "${{ steps.pages.outputs.base_url }}"
 
       - name: upload artifact
@@ -117,3 +136,17 @@ jobs:
       - name: deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Pages deploys from main alone, and a published release runs on its tag: so it
+  # asks for the build on main, which stocks the shelf with the new release.
+  restock:
+    name: restock after a release
+    if: github.event_name == 'release'
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      actions: write
+    steps:
+      - name: build and deploy main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run website.yml --ref main -R "$GITHUB_REPOSITORY"
