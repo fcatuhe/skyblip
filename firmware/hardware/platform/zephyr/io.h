@@ -2,6 +2,7 @@
 #define SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_IO_H
 #if defined(__ZEPHYR__)
 
+#include <string.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
@@ -9,8 +10,6 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/ring_buffer.h>
-
-#include <string.h>
 
 #include "core/util/result.h"
 #include "hardware/io/io.h"
