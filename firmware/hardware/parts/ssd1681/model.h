@@ -53,6 +53,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
 
     void select(bool) override {}
     void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
+        transfers++;
         for (size_t i = 0; i < len; i++) {
             uint8_t b = tx ? tx[i] : 0;
             if (rx) rx[i] = 0;
@@ -132,6 +133,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     uint64_t reset_low_us{0};
     uint64_t elapsed_us{0};
     int present_count{0};
+    int transfers{0};
     int deep_sleeps{0};
     int commands_while_busy{0};
     bool busy_stuck{false};

@@ -70,12 +70,10 @@ class Ssd1681 : public ports::Display {
     void abort_refresh();
     void finish_refresh();
     void enter_sleep();
-    const uint8_t* previous_bank(const ui::Canvas& fb, bool full) const;
     void cmd(uint8_t c);
     void data(uint8_t d);
-    void write_bank(uint8_t command, const uint8_t* fb_bytes);
-    void fill_bank(uint8_t command, uint8_t ram_value);
-    uint8_t ram_byte(const uint8_t* fb_bytes, int gate, int column) const;
+    void write_bank(uint8_t command);
+    void stage(const uint8_t* fb_bytes);
     void set_window(int x0, int y0, int x1, int y1);
     void set_cursor(int x, int y);
     bool wait_busy(uint32_t max_spins = 200000);
@@ -85,7 +83,7 @@ class Ssd1681 : public ports::Display {
     io::Delay& delay_;
     int dc_, rst_, busy_, backlight_;
     GlassRotation rotation_;
-    // INFO: fc 01aug25 the glass image, into bank 0x26 each present, so a partial diffs on truth
+    // INFO: fc 03oct26 the glass as sent, in RAM order: a partial's 0x26, staging for every bank
     uint8_t shadow_[kGlassBytes]{};
     bool glass_known_{false};
     bool asleep_{false};
