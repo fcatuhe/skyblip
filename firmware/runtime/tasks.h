@@ -14,6 +14,8 @@ enum class TaskPrio : uint8_t {
 };
 
 constexpr uint32_t kServiceStepMs = 10;
+// INFO: fc 03oct26 a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second
+constexpr uint32_t kServicePassFloorMs = 2;
 // The longest a supervised service may go without reporting progress before the
 // loop stops feeding the dog. Five hundred passes: nothing healthy is that slow,
 // and it is well inside the hardware rope below.

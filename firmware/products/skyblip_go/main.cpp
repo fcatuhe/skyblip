@@ -2,6 +2,7 @@
 #include <zephyr/logging/log.h>
 
 #include "hardware/platform/zephyr/console.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/platform.h"
 #include "products/skyblip_go/product.h"
 #include "products/skyblip_go/services/diagnostics.h"
@@ -71,7 +72,8 @@ int main(void) {
 
     bool reported_stall = false;
     for (;;) {
-        const uint32_t now_ms = static_cast<uint32_t>(k_uptime_get());
+        const int64_t began_ticks = k_uptime_ticks();
+        const uint32_t now_ms = static_cast<uint32_t>(k_ticks_to_ms_floor64(began_ticks));
         g_product.step(now_ms);
         g_diagnostics.step(g_product, now_ms);
 
@@ -91,7 +93,7 @@ int main(void) {
                 power::button_wake_after(reason, g_platform.external_power()));
         }
 
-        k_sleep(K_MSEC(runtime::kServiceStepMs));
+        platform::zephyr::g_loop_wake.rest_after(began_ticks);
     }
     return 0;
 }
