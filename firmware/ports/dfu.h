@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PORTS_DFU_H
 #define SKYBLIP_PORTS_DFU_H
 
+#include <array>
 #include <cstdint>
 
 namespace skyblip::ports {
@@ -20,6 +21,8 @@ constexpr bool operator==(const ImageVersion& a, const ImageVersion& b) {
 }
 constexpr bool operator!=(const ImageVersion& a, const ImageVersion& b) { return !(a == b); }
 
+using SigningKeyHash = std::array<uint8_t, 32>;
+
 class Dfu {
    public:
     virtual ~Dfu() = default;
@@ -32,6 +35,12 @@ class Dfu {
 
     virtual bool running_version(ImageVersion&) { return false; }
     virtual bool staged_version(ImageVersion&) { return false; }
+    virtual bool running_key(SigningKeyHash&) { return false; }
+    virtual bool staged_key(SigningKeyHash&) { return false; }
+
+    // INFO: fc 03oct26 the bootloader's rule, built into both images: a release refuses an older
+    // one
+    virtual bool downgrade_allowed() const { return false; }
 
     virtual RecoveryPath recovery_path() const { return RecoveryPath::Rebooted; }
     virtual RecoveryPath enter_recovery() { return recovery_path(); }

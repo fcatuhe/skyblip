@@ -30,8 +30,8 @@
               "enum": ["UNKNOWN", "POWER ON", "RESET PIN", "BROWNOUT", "SOFT RESET", "WATCHDOG",
                        "CPU LOCKUP", "CHARGER WAKE", "BUTTON WAKE", "DEBUGGER"],
               "description": "boot. Why the device came up, as core/power/reset_reason.cpp spells it. A corpus that opens on WATCHDOG is a corpus whose first seconds are evidence. Codes: 0 UNKNOWN, 1 POWER ON, 2 RESET PIN, 3 BROWNOUT, 4 SOFT RESET, 5 WATCHDOG, 6 CPU LOCKUP, 7 CHARGER WAKE, 8 BUTTON WAKE, 9 DEBUGGER"},
-    "image_state": {"type": "string", "enum": ["confirmed", "probation", "reverted"],
-                    "description": "boot. Whether the running image had been confirmed, was still on probation after an OTA, or had just been reverted by the bootloader. Codes: 0 confirmed, 1 probation, 2 reverted"},
+    "image_state": {"type": "string", "enum": ["confirmed", "probation", "reverted", "refused"],
+                    "description": "boot. Whether the running image had been confirmed, was still on probation after an OTA, had just been reverted by the bootloader after it ran, or was kept because the bootloader refused the new one. Codes: 0 confirmed, 1 probation, 2 reverted, 3 refused"},
 
     "addr": {"type": "integer", "minimum": 0, "maximum": 16777215,
              "description": "config: own 24-bit address. burst: the sender's, where the frame named one (addr_valid). traffic: the target's"},

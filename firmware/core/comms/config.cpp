@@ -236,6 +236,12 @@ void ConfigService::request_firmware(const json::Reader& r) {
         ack(false, "no_version");
         return;
     }
+    ports::ImageVersion running;
+    if (dfu_ != nullptr && dfu_->running_version(running) &&
+        dfu::version_refusal(running, version, dfu_->downgrade_allowed()) != nullptr) {
+        ack(false, "older");
+        return;
+    }
     approved_ = version;
     stage(Pending::Dfu, "confirm_dfu");
     int n = fmt_string(prompt_detail_, "INSTALL ");
@@ -252,6 +258,8 @@ void ConfigService::install_received_image() {
         ack(false, "nothing_staged");
     } else if (staged != approved_) {
         ack(false, "not_approved");
+    } else if (!signed_by_trusted_key()) {
+        ack(false, "wrong_key");
     } else if (!on_ground()) {
         ack(false, "in_flight");
     } else if (!swap_powered()) {
@@ -260,6 +268,15 @@ void ConfigService::install_received_image() {
         install_requested_ = true;
         ack(true, "install");
     }
+}
+
+// INFO: fc 03oct26 the bootloader verifies against this key, so a foreign image stops before the
+// reboot
+bool ConfigService::signed_by_trusted_key() const {
+    ports::SigningKeyHash trusted;
+    ports::SigningKeyHash signer;
+    if (!dfu_->running_key(trusted)) return true;
+    return dfu_->staged_key(signer) && signer == trusted;
 }
 
 const char* ConfigService::flight_name(flight::FlightState fs) {

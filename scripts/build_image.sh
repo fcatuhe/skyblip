@@ -10,6 +10,8 @@
 #
 # The image, its .uf2 and a .version line land in firmware/build/out/.
 #
+#   SKYBLIP_CHANNEL     development (default): MCUboot takes any image signed by its key
+#                       production: products/<product>/release/ adds the refusal of an older one
 #   SKYBLIP_TREE        the checkout to build (default: the one holding this script)
 #   SKYBLIP_PRISTINE=1  throw the build directory away first
 #   PYTHON, WEST        default python3 and west
@@ -19,6 +21,7 @@ product=${1:?usage: build_image.sh <product> <signing-key.pem> [public-key.pem]}
 key=${2:?usage: build_image.sh <product> <signing-key.pem> [public-key.pem]}
 public_key=${3:-}
 slug=${product//_/-}
+channel=${SKYBLIP_CHANNEL:-development}
 
 tree=${SKYBLIP_TREE:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}
 python=${PYTHON:-python3}
@@ -33,6 +36,10 @@ imgtool=$topdir/bootloader/mcuboot/scripts/imgtool.py
 export ZEPHYR_BASE=${ZEPHYR_BASE:-$topdir/zephyr}
 
 main() {
+  case "$channel" in
+    development|production) ;;
+    *) echo "FAIL: SKYBLIP_CHANNEL is $channel, not development or production"; exit 1 ;;
+  esac
   test -f "$key" || { echo "FAIL: no signing key at $key"; exit 1; }
   if [ -n "$public_key" ]; then
     test -f "$public_key" || { echo "FAIL: no public key at $public_key"; exit 1; }
@@ -40,9 +47,10 @@ main() {
 
   local version
   version=$(image_version)
-  echo "== building $product $version ($(git -C "$tree" rev-parse --short HEAD))"
+  echo "== building $product $version, $channel ($(git -C "$tree" rev-parse --short HEAD))"
   build_image "$version"
   assert_version_stamped "$version"
+  assert_downgrade_rule
   if [ -n "$public_key" ]; then assert_signed_by "$public_key"; fi
   assert_confirmed_image_differs
   check_flash_budget
@@ -77,13 +85,22 @@ build_image() {
   mkdir -p "$conf"
   echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(realpath "$key")\"" > "$conf/signing.conf"
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$conf/version.conf"
+  # Passed every time, sysbuild/mcuboot.conf too: a -D replaces it, and a list left out stays cached.
+  local product_dir=$firmware/products/$product
+  local app_conf=$conf/version.conf
+  local mcuboot_conf=$product_dir/sysbuild/mcuboot.conf
+  if [ "$channel" = production ]; then
+    app_conf="$app_conf;$product_dir/release/app.conf"
+    mcuboot_conf="$mcuboot_conf;$product_dir/release/mcuboot.conf"
+  fi
 
   if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$build"; fi
   drop_build_of_moved_sdk
   # -D<image>_ is sysbuild's namespace for one image, named after the app dir.
   (cd "$firmware" && "$west" build -b "$board" "products/$product" --sysbuild \
     -- -DSB_EXTRA_CONF_FILE="$conf/signing.conf" \
-       -D"${product}"_EXTRA_CONF_FILE="$conf/version.conf")
+       -D"${product}"_EXTRA_CONF_FILE="$app_conf" \
+       -Dmcuboot_EXTRA_CONF_FILE="$mcuboot_conf")
 }
 
 # CMake caches the compiler by absolute path, so a build configured against an SDK
@@ -105,6 +122,18 @@ assert_version_stamped() {
   stamped=$("$python" "$imgtool" verify "$app/zephyr.signed.bin" | sed -n 's/^Image version: //p')
   test "$stamped" = "$version" \
     || { echo "FAIL: signed ${stamped:-nothing}, expected $version"; exit 1; }
+}
+
+# The bootloader enforces the rule and the app predicts it: the two disagreeing is
+# an app that promises an install its bootloader then throws away.
+assert_downgrade_rule() {
+  local in_bootloader in_app expected=n
+  [ "$channel" = production ] && expected=y
+  in_bootloader=$(sed -n 's/^CONFIG_MCUBOOT_DOWNGRADE_PREVENTION=//p' "$build/mcuboot/zephyr/.config")
+  in_app=$(sed -n 's/^CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE=//p' "$app/.config")
+  test "${in_bootloader:-n}" = "$expected" && test "${in_app:-n}" = "$expected" \
+    || { echo "FAIL: $channel wants downgrade prevention $expected, MCUboot has ${in_bootloader:-n}, the app ${in_app:-n}"; exit 1; }
+  echo "downgrade prevention: $expected ($channel)"
 }
 
 assert_signed_by() {
@@ -143,7 +172,7 @@ stage_artifacts() {
   cp "$build/$slug.uf2" "$out/$slug.uf2"
   cp "$app/zephyr.signed.bin" "$out/$slug.signed.bin"
   cp "$app/zephyr.signed.confirmed.bin" "$out/$slug.signed.confirmed.bin"
-  echo "$slug $version $(git -C "$tree" rev-parse --short HEAD)" > "$out/$slug.version"
+  echo "$slug $version $(git -C "$tree" rev-parse --short HEAD) $channel" > "$out/$slug.version"
 }
 
 main

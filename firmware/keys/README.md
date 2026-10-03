@@ -7,7 +7,9 @@ The public halves of the keys MCUboot is built to trust. A unit takes an update 
 | `development.pub.pem` | builds of `main` (the `product-image` job) and `scripts/build_local.sh` on the maintainer's machine | the `development` environment's secret, and `~/.config/skyblip/local-signing.pem` |
 | `production.pub.pem` | releases, from a `v*` tag (`.github/workflows/release.yml`) | the `production` environment's secret, and an offline copy |
 
-CI signs, then fails unless the image verifies against the file named for its environment. A pull request is signed with a key made for that run and checked against nothing: it proves the build, and its image updates no unit.
+CI signs, then fails unless the image verifies against the file named for its environment.
+
+The key also decides the bootloader's rule. A release is built with `products/<product>/release/`, which refuses an image older than the running one: a unit on the production key only goes up, or installs the same version again. A development build leaves those fragments out, and its bootloader takes any image signed by the development key, older ones included. A pull request is signed with a key made for that run and checked against nothing: it proves the build, and its image updates no unit.
 
 A unit moves from one key to the other by drag-and-drop of a `.uf2` signed by the new one, which replaces the bootloader along with the image.
 

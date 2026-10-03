@@ -9,6 +9,7 @@ const ASKED_STEPS = new Set(["dfu", "install"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
+const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 const NUMBERS = new Set(["aircraft_type", "units", "alarm_volume"])
 
 export default class extends Controller {
@@ -98,7 +99,7 @@ export default class extends Controller {
   #notes({ image, status }) {
     const notes = []
     if (status && status.flight !== "ground") notes.push(["in_flight"])
-    if (image?.state === "probation" || image?.state === "reverted") notes.push([image.state, image.to])
+    if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])

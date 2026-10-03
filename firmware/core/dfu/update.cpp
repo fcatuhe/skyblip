@@ -9,6 +9,7 @@ const char* to_string(ImageState state) {
         case ImageState::Confirmed: return "confirmed";
         case ImageState::Probation: return "probation";
         case ImageState::Reverted: return "reverted";
+        case ImageState::Refused: return "refused";
     }
     return "confirmed";
 }
@@ -75,10 +76,26 @@ bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out) {
     return true;
 }
 
-Outcome outcome(const UpdateRecord& record, const ports::ImageVersion& running) {
+// INFO: fc 03oct26 a revert swaps the image back into slot 1, a bootloader refusal scrambles it
+Outcome outcome(const UpdateRecord& record, const ports::ImageVersion& running,
+                std::optional<ports::ImageVersion> staged) {
     if (running == record.to) return Outcome::Landed;
-    if (running == record.from) return Outcome::Reverted;
-    return Outcome::Unrelated;
+    if (running != record.from) return Outcome::Unrelated;
+    return staged == record.to ? Outcome::Reverted : Outcome::Refused;
+}
+
+int compare(const ports::ImageVersion& a, const ports::ImageVersion& b) {
+    if (a.major != b.major) return a.major < b.major ? -1 : 1;
+    if (a.minor != b.minor) return a.minor < b.minor ? -1 : 1;
+    if (a.revision != b.revision) return a.revision < b.revision ? -1 : 1;
+    if (a.build != b.build) return a.build < b.build ? -1 : 1;
+    return 0;
+}
+
+const char* version_refusal(const ports::ImageVersion& running, const ports::ImageVersion& incoming,
+                            bool downgrade_allowed) {
+    if (!downgrade_allowed && compare(incoming, running) < 0) return "older";
+    return nullptr;
 }
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap) {

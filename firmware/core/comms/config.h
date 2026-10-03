@@ -284,6 +284,7 @@ class ConfigService {
     static const char* flight_name(flight::FlightState fs);
     void request_firmware(const json::Reader& r);
     void install_received_image();
+    bool signed_by_trusted_key() const;
     bool on_ground() const { return flight_ == flight::FlightState::Ground; }
 
     ports::Link& link_;
