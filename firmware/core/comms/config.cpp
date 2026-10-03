@@ -220,10 +220,18 @@ void ConfigService::ack(bool ok, const char* reason) {
     (void)reply(buf);
 }
 
+// INFO: fc 03oct26 what the bootloader would refuse after the reboot, refused here before it
 const char* ConfigService::staging_refusal() const {
     ports::ImageVersion staged;
     if (dfu_ == nullptr || !dfu_->staged_version(staged)) return "nothing_staged";
     if (!dfu_->upload_finished()) return "upload_unfinished";
+    ports::SigningKeyHash trusted;
+    ports::SigningKeyHash signer;
+    if (dfu_->running_key(trusted) && (!dfu_->staged_key(signer) || signer != trusted))
+        return "wrong_key";
+    ports::ImageVersion running;
+    if (dfu_->running_version(running))
+        return dfu::version_refusal(running, staged, dfu_->downgrade_allowed());
     return nullptr;
 }
 

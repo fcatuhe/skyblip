@@ -30,6 +30,7 @@ uint8_t wire(dfu::ImageState value) {
         case dfu::ImageState::Confirmed: return 0;
         case dfu::ImageState::Probation: return 1;
         case dfu::ImageState::Reverted: return 2;
+        case dfu::ImageState::Refused: return 3;
     }
     return kUnpinned;
 }
@@ -243,7 +244,7 @@ TEST_CASE(
 TEST_CASE(
     "diag ordinals: dfu::ImageState's codes are the boot image_state byte, and a code changed "
     "here changes IMAGE_STATE in scripts/blip_records.py and the schema's image_state enum") {
-    codes_pinned<dfu::ImageState>(3);
+    codes_pinned<dfu::ImageState>(4);
 }
 
 TEST_CASE(

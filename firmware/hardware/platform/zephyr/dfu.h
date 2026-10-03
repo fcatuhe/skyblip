@@ -13,6 +13,7 @@
 #include <hal/nrf_wdt.h>
 #endif
 
+#include "core/dfu/image.h"
 #include "hardware/platform/zephyr/upload_gate.h"
 #include "ports/dfu.h"
 
@@ -87,6 +88,15 @@ class Dfu : public ports::Dfu {
     bool staged_version(ports::ImageVersion& out) override {
         return read_version(PARTITION_ID(slot1_partition), out);
     }
+    bool running_key(ports::SigningKeyHash& out) override {
+        return read_key(PARTITION_ID(slot0_partition), out);
+    }
+    bool staged_key(ports::SigningKeyHash& out) override {
+        return read_key(PARTITION_ID(slot1_partition), out);
+    }
+    bool downgrade_allowed() const override {
+        return !IS_ENABLED(CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE);
+    }
 
     void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
     bool upload_finished() override { return UploadGate::finished(); }
@@ -123,6 +133,29 @@ class Dfu : public ports::Dfu {
         out.build = header.h.v1.sem_ver.build_num;
         return true;
     }
+
+    static bool read_key(uint8_t area_id, ports::SigningKeyHash& out) {
+        const struct flash_area* area = nullptr;
+        if (flash_area_open(area_id, &area) != 0) return false;
+        const size_t start = boot_get_image_start_offset(area_id);
+        uint8_t header_bytes[dfu::kImageHeaderBytes];
+        dfu::ImageHeader header;
+        bool found = false;
+        if (flash_area_read(area, start, header_bytes, sizeof(header_bytes)) == 0 &&
+            dfu::read_header(header_bytes, sizeof(header_bytes), header)) {
+            const size_t at = start + header.tlv_offset();
+            uint8_t tlvs[kTlvReadBytes];
+            const size_t len = at < area->fa_size ? MIN(sizeof(tlvs), area->fa_size - at) : 0;
+            found = len > 0 && flash_area_read(area, at, tlvs, len) == 0 &&
+                    dfu::find_key_hash(tlvs, len, out);
+        }
+        flash_area_close(area);
+        return found;
+    }
+
+    // INFO: fc 03oct26 an ECDSA-P256 image's TLV area is 152 bytes, a protected area comes before
+    // it
+    static constexpr size_t kTlvReadBytes = 256;
 
     static bool watchdog_running() {
 #if defined(CONFIG_SOC_FAMILY_NORDIC_NRF) && defined(NRF_WDT)
