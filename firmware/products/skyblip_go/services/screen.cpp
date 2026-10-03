@@ -352,17 +352,21 @@ ScreenService::Thermal ScreenService::thermal() const {
     return Thermal::Refresh;
 }
 
-// INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
 void ScreenService::wipe_glass(uint32_t now_ms) {
-    fb_.clear(/*white=*/false);
-    context_.roles.display.paint_black(now_ms);
-    count_refresh(ports::Refresh::Partial);
+    paint_black(now_ms);
     note_presented(now_ms);
     prompt_on_glass_ = false;
     capture_on_glass_ = false;
     last_render_ms_ = now_ms;
     dirty_ = true;
     change_ = Change::Wiped;
+}
+
+// INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
+void ScreenService::paint_black(uint32_t now_ms) {
+    fb_.clear(/*white=*/false);
+    context_.roles.display.paint_black(now_ms);
+    count_refresh(ports::Refresh::Partial);
 }
 
 void ScreenService::note_presented(uint32_t now_ms) {
@@ -410,18 +414,23 @@ void ScreenService::set_power(bool on) {
 void ScreenService::park(ParkFrame frame) {
     powered_ = false;
     park_frame_ = frame;
-    park_ = may_present_park_frame() ? ParkStep::Frame : ParkStep::Sleep;
+    park_ = may_present_park_frame() ? ParkStep::Wipe : ParkStep::Sleep;
 }
 
-// INFO: fc 12sep26 both steps are commands, and a command sent over a live BUSY is lost
+// INFO: fc 12sep26 every step is a command, and a command sent over a live BUSY is lost
 void ScreenService::settle_park(uint32_t now_ms) {
     if (park_ == ParkStep::None) return;
     if (!context_.roles.display.ready(now_ms)) return;
+    if (park_ == ParkStep::Wipe) {
+        park_ = ParkStep::Frame;
+        paint_black(now_ms);
+        return;
+    }
     if (park_ == ParkStep::Frame) {
         park_ = ParkStep::Sleep;
         draw_park_frame(park_frame_);
-        context_.roles.display.present(fb_, ports::Refresh::Full, now_ms);
-        count_refresh(ports::Refresh::Full);
+        context_.roles.display.present(fb_, ports::Refresh::Partial, now_ms);
+        count_refresh(ports::Refresh::Partial);
         cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
                          : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low
                                                              : power::CellOnGlass::None;

@@ -1293,7 +1293,7 @@ The road from running to SYSTEM OFF: what starts a shutdown, and the order the r
 - a short press is not a shutdown, a long one is
 - a stow waits for the button like any other press
 - an install parks the panel like a power-off and is named as one
-  > The swap takes the same road out as a power-off: the panel gets its full refresh before the bootloader is handed the device, and the reason is spelled for the log.
+  > The swap takes the same road out as a power-off: the panel gets its park frame before the bootloader is handed the device, and the reason is spelled for the log.
 - low battery and the link take the same road as the button
 - nothing cancels a shutdown once it has started
 - the hold is readable while it fills up
@@ -2880,14 +2880,14 @@ The seven cumulative duty counters on bus::State, through the service that owns 
   > F5 holds every burst until the first solutions settle: nothing on air is nothing counted.
 - a dwell the executor refuses is not counted, whatever the slot map says
   > The counter follows the radio, not the map: a refused plan was never armed.
+- a page swap and a park pay for partials, never a full refresh
+  > A page swap and a park both go through black on partials: a full refresh costs five of them.
 - a pass too coarse for the dwell edges still reads the slot map
   > A pass that ran long used to arm each dwell late by however long it ran, a second of receive in ten.
 - a presented frame counts a partial refresh and a still glass counts none
 - the BLE counter runs while a central is connected and stops when it goes
 - the annunciator counter runs while it sounds and stands still while muted
 - the backlight counter runs while the lamp is lit and stops with it
-- the parked frame is the only full refresh a page swap or a present pays for
-  > A page swap wipes the glass black on the partial waveform: pricing it as a full is five partials.
 - the receiver counter advances by what the executor was armed for
 - the transmit counter is the air time the hour's own budget is spent from
 

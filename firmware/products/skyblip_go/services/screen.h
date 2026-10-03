@@ -121,9 +121,10 @@ class ScreenService : public runtime::Service {
     enum class Change : uint8_t { None, Asked, Wiped };
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
+    void paint_black(uint32_t now_ms);
     bool may_present_park_frame() const;
     enum class ParkFrame : uint8_t { Wordmark, Installing, Recovery, Blank, FlatCell, LowCell };
-    enum class ParkStep : uint8_t { None, Frame, Sleep };
+    enum class ParkStep : uint8_t { None, Wipe, Frame, Sleep };
     void park(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
     void draw_parked_cell(const char* said);

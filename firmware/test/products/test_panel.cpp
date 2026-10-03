@@ -136,7 +136,7 @@ TEST_CASE("product: powering the panel down leaves the wordmark on it") {
     rig.product.screen().set_power(false);
     rig.run(1000, 7000);
     CHECK_FALSE(rig.platform.chips().epd.powered);
-    CHECK(rig.platform.chips().epd.last_full);
+    CHECK_FALSE(rig.platform.chips().epd.last_full);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() == expected.count_black());
     CHECK(expected.count_black() > 200);
 
@@ -169,7 +169,7 @@ TEST_CASE("product: the pad held through the press leaves the glass blank") {
     rig.run(t, t + power::kParkMs);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Stow);
     CHECK_FALSE(rig.platform.chips().epd.powered);
-    CHECK(rig.platform.chips().epd.last_full);
+    CHECK_FALSE(rig.platform.chips().epd.last_full);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() == 0);
 }
 
@@ -181,7 +181,7 @@ TEST_CASE("product: the front light goes out after the park frame, not before it
     rig.product.screen().set_backlight(true);
 
     rig.product.screen().set_power(false);
-    rig.run(1000, 2000);
+    rig.run(1000, 1200);
     CHECK(rig.platform.chips().epd.backlight);
     CHECK(rig.platform.chips().epd.powered);
 
