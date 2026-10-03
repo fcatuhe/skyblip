@@ -88,6 +88,9 @@ jobs:
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards
         run: python3 scripts/test_mkuf2.py
+      # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
+      - name: the image says which hub image it pins
+        run: python3 scripts/test_check_imu_image.py
       # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
