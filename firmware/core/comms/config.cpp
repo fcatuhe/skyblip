@@ -65,7 +65,10 @@ void ConfigService::set_flight_state(flight::FlightState fs) {
             ack(false, "in_flight");
         }
     }
+    const bool changed = fs != flight_;
     flight_ = fs;
+    // INFO: fc 03oct26 a page holding its buttons for the ground learns it landed without polling
+    if (changed && link_up()) push_status();
 }
 
 bool ConfigService::up(uint16_t session_id) const {
@@ -272,6 +275,11 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
             return;
         }
         (void)reply(buf, reply_len);
+        return;
+    }
+
+    if (std::strcmp(cmd, "defaults") == 0) {
+        send_defaults();
         return;
     }
 

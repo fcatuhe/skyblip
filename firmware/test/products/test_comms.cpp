@@ -34,6 +34,32 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     CHECK(link.last().bytes.find("config") != std::string::npos);
 }
 
+TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a set restores it") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings s = go::defaults();
+    s.aircraft_type = 7;
+    s.alarm_volume = 5;
+    std::memcpy(s.callsign, "D-KXYZ", 7);
+    go::SettingsStore store_cs(s, kTestAddr);
+    ConfigService cs(link, store_cs);
+    cs.set_flight_state(flight::FlightState::Ground);
+
+    cs.on_rx(frame("{\"cmd\":\"defaults\"}"));
+    const std::string body = link.last().bytes;
+    CHECK(body ==
+          "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":3,"
+          "\"units\":0,\"callsign\":\"\"}");
+
+    const std::string set = "{\"cmd\":\"set\"" + body.substr(body.find(','));
+    cs.on_rx(frame(set.c_str()));
+    cs.confirm();
+    const go::Settings shipped = go::defaults();
+    CHECK(s.aircraft_type == shipped.aircraft_type);
+    CHECK(s.alarm_volume == shipped.alarm_volume);
+    CHECK(std::string(s.callsign).empty());
+}
+
 TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     platform::host::Link link;
     link.raise_link(1);

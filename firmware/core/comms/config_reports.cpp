@@ -32,6 +32,19 @@ void ConfigService::send_status() {
     (void)reply(buf, len);
 }
 
+void ConfigService::send_defaults() {
+    char buf[kSmallestSupportedPayload + 1];
+    json::Writer w(buf, sizeof(buf));
+    w.kv_str("cmd", "defaults");
+    store_.write_default_fields(w);
+    const int len = w.finish();
+    if (w.overflowed()) {
+        diag_.link_drops++;
+        return;
+    }
+    (void)reply(buf, len);
+}
+
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
 void ConfigService::push_status() {
     char buf[kSmallestSupportedPayload + 1];

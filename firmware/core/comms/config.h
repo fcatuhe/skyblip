@@ -248,6 +248,7 @@ class ConfigService {
     void stage(Pending pending, const char* reason);
     void ack(bool ok, const char* reason);
     void send_status();
+    void send_defaults();
     void push_status();
     int format_status(char* buf, int cap);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that

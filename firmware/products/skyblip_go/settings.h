@@ -104,6 +104,9 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out);
 // which is what pushed that reply past what an iPhone will carry.
 void write_json_fields(json::Writer& w, const Settings& s, uint32_t device_addr);
 
+// INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
+void write_json_settings(json::Writer& w, const Settings& s);
+
 int to_json(const Settings& s, uint32_t device_addr, char* buf, int cap);
 Status apply_json(Settings& s, const char* json, int len);
 
