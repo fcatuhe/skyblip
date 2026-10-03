@@ -47,7 +47,7 @@ CONSUMERS = (
     Consumer("IMU hub", 0.6, ELAPSED, False,
              "BHI260AP accelerometer only, the gyroscope is never read"),
     Consumer("barometer, lamp, divider", 0.4, ELAPSED, False,
-             "BME280 forced 4/s, IIR 4, our driver, non-blocking"),
+             "BME280 forced 4/s, IIR 8, our driver, non-blocking"),
     Consumer("868 MHz receive", 4.8, on_ms("rx_armed_ms"), True,
              "SX1262 DS 1.2 table 3-5, Rx boosted FSK on the DC-DC"),
     Consumer("radio TCXO", 2.0, on_ms("rx_armed_ms"), False,
