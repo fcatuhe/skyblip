@@ -244,7 +244,7 @@
     "page": {"type": "integer", "minimum": 0, "maximum": 255,
              "description": "screen. Which page was on the glass, as the product's go::Page declares it: 0 radar, 1 nearby, 2 six-pack, 3 g-meter, 4 status, 5 sats, 6 radio log, 7 raw, 8 capture, 9 self-test. A product code and an ordinal, so it is read against the firmware version in the boot record and not against this list alone"},
     "mode": {"type": "integer", "minimum": 0, "maximum": 1, "description": "screen. 0 the page itself, 1 the menu over it, as go::Mode declares them"},
-    "prompt": {"type": "integer", "minimum": 0, "maximum": 255, "description": "screen. The standing prompt waiting for a thumb, as comms::Pending declares it: 0 none, 1 set, 2 firmware upload, 3 apply, 4 recovery, 5 power off, 6 erase log, 7 GNSS cold start. A code this record does not own, read the way page is"},
+    "prompt": {"type": "integer", "minimum": 0, "maximum": 255, "description": "screen. The standing prompt waiting for a thumb, as comms::Pending declares it: 0 none, 1 set, 2 firmware update, 3 retired (was apply), 4 recovery, 5 power off, 6 erase log, 7 GNSS cold start. A code this record does not own, read the way page is"},
     "since_ms": {"type": "integer", "minimum": 0,
                  "description": "screen. How long that page had been up. ScreenService::kPresentFloorMs is 1000, and this is what says whether a pilot was ever shown less"},
     "backlight": {"type": "boolean", "description": "screen. The backlight was on"},

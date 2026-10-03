@@ -11,10 +11,20 @@ void draw_notice_heading(ui::Canvas& fb, const char* header, const char* title) 
     fb.hline(kInstallingLeftX, kInstallingTitleY + 22, kGlassW - 2 * kInstallingLeftX, true);
 }
 
+namespace {
+void draw_notice(ui::Canvas& fb, const char* title, const char* const* body, int rows) {
+    draw_notice_heading(fb, kInstallingHeader, title);
+    for (int row = 0; row < rows; row++)
+        fb.draw_text(kInstallingLeftX, installing_body_y(row), body[row], true, 1);
+}
+}  // namespace
+
 void draw_installing(ui::Canvas& fb) {
-    draw_notice_heading(fb, kInstallingHeader, kInstallingTitle);
-    for (int row = 0; row < kInstallingBodyRows; row++)
-        fb.draw_text(kInstallingLeftX, installing_body_y(row), kInstallingBody[row], true, 1);
+    draw_notice(fb, kInstallingTitle, kInstallingBody, kInstallingBodyRows);
+}
+
+void draw_receiving(ui::Canvas& fb) {
+    draw_notice(fb, kReceivingTitle, kReceivingBody, kReceivingBodyRows);
 }
 
 }  // namespace skyblip::go

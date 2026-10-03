@@ -26,7 +26,7 @@ enum class Pending : uint8_t {
     None = 0,
     Set = 1,
     Dfu = 2,
-    Apply = 3,
+    // INFO: fc 03oct26 3 was apply, retired: captures and the diagnostics schema keep its number
     Recovery = 4,
     PowerOff = 5,
     EraseLog = 6,
@@ -96,6 +96,7 @@ class ConfigService {
     // check. This stops a stranger in range wasting the secondary slot.
     bool upload_allowed() const { return upload_window_open_ && on_ground(); }
     void close_upload_window() { upload_window_open_ = false; }
+    bool receiving_firmware() const { return upload_window_open_; }
 
     void on_link_up(const events::LinkUp& up);
     void on_link_down(const events::LinkDown& down);
@@ -178,6 +179,7 @@ class ConfigService {
     void cancel();
 
     Pending pending() const { return pending_; }
+    const char* prompt_detail() const;
     bool settings_dirty() const { return dirty_; }
     void clear_dirty() { dirty_ = false; }
 
@@ -278,8 +280,8 @@ class ConfigService {
     void hold(uint16_t session_id, const char* json, int len);
     void drop_replies();
     static const char* flight_name(flight::FlightState fs);
-    static bool needs_swap_power(Pending pending);
-    const char* staging_refusal() const;
+    void request_firmware(const json::Reader& r);
+    void install_received_image();
     bool on_ground() const { return flight_ == flight::FlightState::Ground; }
 
     ports::Link& link_;
@@ -306,6 +308,8 @@ class ConfigService {
     uint32_t now_ms_{0};
     uint32_t window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
+    ports::ImageVersion approved_{};
+    char prompt_detail_[48]{};
     char pending_buf_[sizeof(events::RxFrame::data) + 1]{0};
     static constexpr int kHeldFrameCap = kTimingFrameCap;
     static_assert(kHeldFrameCap >= DiagnosticsReport::kFrameCap, "a report frame must be holdable");

@@ -148,10 +148,10 @@ TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::state_from(0));
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(cs.pending() == Pending::None);
     cs.set_flight_state(flight::state_from(1));
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(cs.pending() == Pending::Dfu);
 }
 
@@ -164,7 +164,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
 
-    cs.on_rx(frame("{\"cmd\":\"dfu\"}"));
+    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(cs.pending() == Pending::Dfu);
     cs.tick(1000 + kConfirmWindowMs - 1);
     CHECK(cs.pending() == Pending::Dfu);
@@ -197,8 +197,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
 // The prompt is the whole security boundary, so it has to say what it is: a
 // panel that shows an unlabelled question is a panel a pilot answers blind.
 TEST_CASE("comms: every operation that needs authorising names itself and what it will do") {
-    const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Apply, Pending::Recovery,
-                           Pending::PowerOff};
+    const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Recovery, Pending::PowerOff};
     for (Pending p : all) {
         CHECK(std::strlen(pending_title(p)) > 0);
         CHECK(std::strlen(pending_detail(p)) > 8);

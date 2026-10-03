@@ -54,7 +54,6 @@ uint8_t wire(comms::Pending value) {
         case comms::Pending::None: return 0;
         case comms::Pending::Set: return 1;
         case comms::Pending::Dfu: return 2;
-        case comms::Pending::Apply: return 3;
         case comms::Pending::Recovery: return 4;
         case comms::Pending::PowerOff: return 5;
         case comms::Pending::EraseLog: return 6;
@@ -64,7 +63,7 @@ uint8_t wire(comms::Pending value) {
 }
 
 template <class E>
-void codes_pinned(int count) {
+void codes_pinned(int count, int retired = 0) {
     int found = 0;
     for (int value = 0; value < 256; value++) {
         const uint8_t code = wire(static_cast<E>(value));
@@ -73,7 +72,7 @@ void codes_pinned(int count) {
         CHECK(value < count);
         found++;
     }
-    CHECK(found == count);
+    CHECK(found == count - retired);
 }
 
 }  // namespace
@@ -100,5 +99,6 @@ TEST_CASE(
 TEST_CASE(
     "diag product codes: comms::Pending's codes are the screen record's prompt byte, and a "
     "code changed or added here moves the prompt list in the schema") {
-    codes_pinned<comms::Pending>(8);
+    // 3 was apply, and stays out of use so a capture written before still reads
+    codes_pinned<comms::Pending>(8, /*retired=*/1);
 }

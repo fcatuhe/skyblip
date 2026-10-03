@@ -38,6 +38,18 @@ void put_version(uint8_t* out, const ports::ImageVersion& v) {
     put_u32(out + 4, v.build);
 }
 
+const char* parse_field(const char* at, uint32_t max, char end, uint32_t& out) {
+    if (*at < '0' || *at > '9') return nullptr;
+    uint64_t value = 0;
+    for (; *at >= '0' && *at <= '9'; at++) {
+        value = value * 10 + static_cast<uint64_t>(*at - '0');
+        if (value > max) return nullptr;
+    }
+    if (*at != end) return nullptr;
+    out = static_cast<uint32_t>(value);
+    return end == 0 ? at : at + 1;
+}
+
 ports::ImageVersion get_version(const uint8_t* in) {
     ports::ImageVersion v;
     v.major = in[0];
@@ -83,6 +95,20 @@ int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
     n += fmt_uint(out + n, version.build);
     out[n] = 0;
     return n;
+}
+
+bool parse_version(const char* text, ports::ImageVersion& out) {
+    uint32_t major = 0, minor = 0, revision = 0, build = 0;
+    const char* at = parse_field(text, 0xff, '.', major);
+    if (at) at = parse_field(at, 0xff, '.', minor);
+    if (at) at = parse_field(at, 0xffff, '+', revision);
+    if (at) at = parse_field(at, 0xffffffffu, 0, build);
+    if (!at) return false;
+    out.major = static_cast<uint8_t>(major);
+    out.minor = static_cast<uint8_t>(minor);
+    out.revision = static_cast<uint16_t>(revision);
+    out.build = build;
+    return true;
 }
 
 }  // namespace skyblip::dfu

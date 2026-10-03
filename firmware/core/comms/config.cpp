@@ -4,6 +4,7 @@
 
 #include "core/comms/timing_report.h"
 #include "core/events/link.h"
+#include "core/util/format.h"
 #include "core/util/json_min.h"
 #include "core/util/span.h"
 
@@ -13,7 +14,6 @@ const char* pending_title(Pending pending) {
     switch (pending) {
         case Pending::Set: return "SETTINGS";
         case Pending::Dfu: return "FIRMWARE";
-        case Pending::Apply: return "INSTALL";
         case Pending::Recovery: return "RECOVERY";
         case Pending::PowerOff: return "POWER OFF";
         case Pending::EraseLog: return "ERASE LOGS";
@@ -26,8 +26,7 @@ const char* pending_title(Pending pending) {
 const char* pending_detail(Pending pending) {
     switch (pending) {
         case Pending::Set: return "APPLY THE SETTINGS THE PHONE SENT";
-        case Pending::Dfu: return "LET THE PHONE WRITE A NEW IMAGE";
-        case Pending::Apply: return "REBOOT INTO THE STAGED IMAGE";
+        case Pending::Dfu: return "INSTALL THE IMAGE THE PHONE SENDS";
         case Pending::Recovery: return "REBOOT INTO THE USB BOOTLOADER";
         case Pending::PowerOff: return "SHUT THE DEVICE DOWN";
         case Pending::EraseLog: return "DELETE EVERY FLIGHT ON THE DEVICE";
@@ -47,6 +46,7 @@ void ConfigService::tick(uint32_t now_ms) {
     if (upload_window_open_ && now_ms - window_opened_ms_ >= kUploadWindowMs) {
         upload_window_open_ = false;
     }
+    if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kConfirmWindowMs) {
         pending_ = Pending::None;
         pending_len_ = 0;
@@ -223,15 +223,42 @@ void ConfigService::ack(bool ok, const char* reason) {
     (void)reply(buf);
 }
 
-const char* ConfigService::staging_refusal() const {
-    ports::ImageVersion staged;
-    if (dfu_ == nullptr || !dfu_->staged_version(staged)) return "nothing_staged";
-    if (!dfu_->upload_finished()) return "upload_unfinished";
-    return nullptr;
+const char* ConfigService::prompt_detail() const {
+    return pending_ == Pending::Dfu ? prompt_detail_ : pending_detail(pending_);
 }
 
-bool ConfigService::needs_swap_power(Pending pending) {
-    return pending == Pending::Dfu || pending == Pending::Apply;
+// INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
+void ConfigService::request_firmware(const json::Reader& r) {
+    char text[dfu::kVersionTextCap];
+    ports::ImageVersion version;
+    if (!r.get_str("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
+        ack(false, "no_version");
+        return;
+    }
+    approved_ = version;
+    int n = fmt_string(prompt_detail_, "INSTALL ");
+    n += dfu::format_version(version, prompt_detail_ + n, sizeof(prompt_detail_) - n);
+    n += fmt_string(prompt_detail_ + n, " FROM THE PHONE");
+    prompt_detail_[n] = 0;
+    stage(Pending::Dfu, "confirm_dfu");
+}
+
+// INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
+void ConfigService::install_received_image() {
+    upload_window_open_ = false;
+    ports::ImageVersion staged;
+    if (!dfu_->staged_version(staged)) {
+        ack(false, "nothing_staged");
+    } else if (staged != approved_) {
+        ack(false, "not_approved");
+    } else if (!on_ground()) {
+        ack(false, "in_flight");
+    } else if (!swap_powered()) {
+        ack(false, "low_power");
+    } else {
+        install_requested_ = true;
+        ack(true, "install");
+    }
 }
 
 const char* ConfigService::flight_name(flight::FlightState fs) {
@@ -334,19 +361,12 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
 
-    // "dfu" opens an upload window. The image itself then travels over MCUmgr
-    // /SMP, not over this channel. "apply" swaps an image already staged in the
-    // secondary slot. "recovery" reboots into the factory drag-and-drop
-    // bootloader. "power_off" asks the shutdown sequencer for the rails. All
-    // four take the same route: refuse in flight, then wait for a button press.
+    // INFO: fc 03oct26 the dfu image travels over SMP, not this channel (simulator/README.md)
     Pending requested = Pending::None;
     const char* reason = nullptr;
     if (std::strcmp(cmd, "dfu") == 0) {
         requested = Pending::Dfu;
         reason = "confirm_dfu";
-    } else if (std::strcmp(cmd, "apply") == 0) {
-        requested = Pending::Apply;
-        reason = "confirm_apply";
     } else if (std::strcmp(cmd, "recovery") == 0) {
         requested = Pending::Recovery;
         reason = "confirm_recovery";
@@ -363,15 +383,14 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
             ack(false, "in_flight");
             return;
         }
-        if (needs_swap_power(requested) && !swap_powered()) {
+        if (requested == Pending::Dfu && !swap_powered()) {
             ack(false, "low_power");
             return;
         }
-        if (requested == Pending::Apply && staging_refusal() != nullptr) {
-            ack(false, staging_refusal());
-            return;
-        }
-        stage(requested, reason);
+        if (requested == Pending::Dfu)
+            request_firmware(r);
+        else
+            stage(requested, reason);
         return;
     }
 
@@ -411,7 +430,7 @@ void ConfigService::confirm() {
         } else {
             ack(false, to_string(st));
         }
-    } else if (needs_swap_power(pending_) && !swap_powered()) {
+    } else if (pending_ == Pending::Dfu && !swap_powered()) {
         pending_ = Pending::None;
         upload_window_open_ = false;
         ack(false, "low_power");
@@ -421,14 +440,6 @@ void ConfigService::confirm() {
         window_opened_ms_ = now_ms_;
         if (dfu_) dfu_->forget_upload();
         ack(true, "dfu");
-    } else if (pending_ == Pending::Apply && staging_refusal() != nullptr) {
-        pending_ = Pending::None;
-        ack(false, staging_refusal());
-    } else if (pending_ == Pending::Apply) {
-        pending_ = Pending::None;
-        upload_window_open_ = false;
-        install_requested_ = true;
-        ack(true, "apply");
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
         upload_window_open_ = false;

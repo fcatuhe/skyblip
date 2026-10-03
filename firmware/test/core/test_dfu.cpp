@@ -68,6 +68,24 @@ TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits th
     CHECK(tight[0] == 0);
 }
 
+TEST_CASE("dfu: a version reads back from the text format_version writes, and nothing looser") {
+    char text[kVersionTextCap];
+    for (const ports::ImageVersion& v :
+         {ports::ImageVersion{0, 2, 0, 15}, ports::ImageVersion{255, 255, 65535, 4294967295u}}) {
+        format_version(v, text, sizeof(text));
+        ports::ImageVersion read;
+        REQUIRE(parse_version(text, read));
+        CHECK(read == v);
+    }
+
+    ports::ImageVersion untouched{9, 9, 9, 9};
+    for (const char* bad : {"", "0.2.0", "0.2.0+", "0.2.0.15", "0.2.0+15x", "256.0.0+1",
+                            "0.0.65536+1", "0.0.0+4294967296", "-1.2.0+15", "0..0+1"}) {
+        CHECK_FALSE(parse_version(bad, untouched));
+    }
+    CHECK(untouched == ports::ImageVersion{9, 9, 9, 9});
+}
+
 TEST_CASE("dfu: every image state has a name a phone can switch on") {
     CHECK(std::string(to_string(ImageState::Confirmed)) == "confirmed");
     CHECK(std::string(to_string(ImageState::Probation)) == "probation");

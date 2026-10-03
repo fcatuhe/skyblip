@@ -38,6 +38,17 @@ TEST_CASE("installing page: it says what is happening and what not to do, unclip
     CHECK(installing_body_y(kInstallingBodyRows - 1) + 7 < Glass::kH);
 }
 
+TEST_CASE("receiving page: it says the install follows on its own, and how to stop it, unclipped") {
+    Glass fb;
+    draw_receiving(fb);
+    CHECK(reads_at(fb, kInstallingLeftX, kInstallingTitleY, kReceivingTitle, 2));
+    for (int row = 0; row < kReceivingBodyRows; row++) {
+        CHECK(length(kReceivingBody[row]) * kInstallingCellW + kInstallingLeftX <= Glass::kW);
+        CHECK(reads_at(fb, kInstallingLeftX, installing_body_y(row), kReceivingBody[row], 1));
+    }
+    CHECK_FALSE(reads_at(fb, kInstallingLeftX, kInstallingTitleY, kInstallingTitle, 2));
+}
+
 TEST_CASE("installing page: it cannot be read as the prompt it replaced") {
     Glass fb;
     draw_installing(fb);

@@ -107,6 +107,7 @@ class ScreenService : public runtime::Service {
     void show_radar();
     void show_page(Page page);
     void handle_input(uint32_t now_ms);
+    void sync_receiving(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
     void obey(Gesture gesture, uint32_t now_ms);
@@ -197,6 +198,8 @@ class ScreenService : public runtime::Service {
     bool pressed_once_{false};
     bool prompt_on_glass_{false};
     bool capture_on_glass_{false};
+    bool receiving_{false};
+    uint32_t receiving_since_ms_{0};
 
     Glass fb_{};
     Glass presented_{};

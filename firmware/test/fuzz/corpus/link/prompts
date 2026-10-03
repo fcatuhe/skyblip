@@ -1,4 +1,4 @@
-C{"cmd":"dfu"}
+C{"cmd":"dfu","version":"0.2.0+15"}
 P
 C{"cmd":"update"}
 c{"cmd":"apply"}
