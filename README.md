@@ -59,7 +59,7 @@ CI builds it too, and which key signs it decides which units it can update over 
 - `main`: the development key, and the image is an artifact of the `product-image` job in [`firmware.yml`](.github/workflows/firmware.yml);
 - a `v*` tag on `main`: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal the product's `VERSION`.
 
-The build number after the `+` is the commit count, so a later commit on one line of history always installs over an earlier one. Two branches are not ordered: a unit refuses a build whose count is not above the one it runs, and drag-and-drop of a `.uf2` takes it anywhere.
+The build number after the `+` is the commit count. A unit on the production key refuses an image older than the one it runs, so it only goes up or installs the same version again. A unit on the development key takes any development image, older ones included. Drag-and-drop of a `.uf2` takes either anywhere.
 
 ## Acknowledgements
 

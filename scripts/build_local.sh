@@ -15,6 +15,7 @@
 #   SKYBLIP_WORKSPACE    worktree + west workspace (default ~/.cache/skyblip/west)
 #   SKYBLIP_SIGNING_KEY  MCUboot signing key, generated once if absent
 #   SKYBLIP_PUBLIC_KEY   fail unless the image verifies against it (release.yml)
+#   SKYBLIP_CHANNEL      development (default) or production, read by build_image.sh
 #   SKYBLIP_PRISTINE=1   throw the build directory away first
 #   SKYBLIP_UPDATE=1     re-run west update even if the manifest has not moved
 set -euo pipefail
