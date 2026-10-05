@@ -4,6 +4,7 @@
 // ignores the sag of a 14 dBm burst. A percentage that jumps when the radio keys
 // is a gauge a pilot stops believing.
 #include <initializer_list>
+#include <vector>
 
 #include "core/events/sensor.h"
 #include "core/power/battery.h"
@@ -233,20 +234,34 @@ TEST_CASE("cutoff: only low, critical and flat ask for the charger") {
 }
 
 // The cell sits on a step for the minutes it takes to cross it, and noise straddles the line.
-TEST_CASE("cutoff: a level comes back up on three samples above its step, not on one") {
+TEST_CASE("cutoff: a level comes back up on three samples clear of its step by the margin") {
     CutoffMonitor monitor;
     for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 10));
     REQUIRE(monitor.level() == PowerLevel::Critical);
 
-    monitor.apply(sample(kCriticalMv + 5));
-    monitor.apply(sample(kCriticalMv + 5));
-    CHECK(monitor.level() == PowerLevel::Critical);
-    monitor.apply(sample(kCriticalMv - 10));
-    monitor.apply(sample(kCriticalMv + 5));
+    for (int i = 0; i < 10; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv - 1));
     CHECK(monitor.level() == PowerLevel::Critical);
 
-    for (int i = 0; i < 2; i++) monitor.apply(sample(kCriticalMv + 5));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    CHECK(monitor.level() == PowerLevel::Critical);
+    monitor.apply(sample(kCriticalMv - 10));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    CHECK(monitor.level() == PowerLevel::Critical);
+
+    for (int i = 0; i < 2; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
     CHECK(monitor.level() == PowerLevel::Low);
+}
+
+// A falling cell is not slowed: the margin is only on the way up.
+TEST_CASE("cutoff: a level goes down on three samples under its step, with no margin") {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 10));
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    REQUIRE(monitor.level() == PowerLevel::Low);
+
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 1));
+    CHECK(monitor.level() == PowerLevel::Critical);
 }
 
 TEST_CASE("cutoff: a cell that recovers far climbs every step it cleared at once") {
@@ -265,6 +280,24 @@ TEST_CASE("cutoff: a cell resting on a step for many minutes stays on it") {
         monitor.apply(sample(kCriticalMv - 10));
         if (i >= kLevelSamples - 1) REQUIRE(monitor.level() == PowerLevel::Critical);
     }
+}
+
+// E68BD9's run to cutoff, its cell_mv every 30 s on 5 Oct, 02:39-02:45 and 03:39-03:43 UTC.
+TEST_CASE("cutoff: a parked cell drifting across a step changes level once") {
+    constexpr uint16_t kRunMv[] = {3607, 3598, 3591, 3600, 3600, 3600, 3600, 3594,
+                                   3600, 3591, 3601, 3596, 3598, 3513, 3492, 3517,
+                                   3501, 3496, 3492, 3505, 3487, 3498, 3492};
+    CutoffMonitor monitor;
+    PowerLevel previous = monitor.apply(sample(kRunMv[0]));
+    REQUIRE(previous == PowerLevel::Normal);
+
+    std::vector<PowerLevel> changes;
+    for (const uint16_t millivolts : kRunMv) {
+        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(millivolts));
+        if (monitor.level() != previous) changes.push_back(monitor.level());
+        previous = monitor.level();
+    }
+    CHECK(changes == std::vector<PowerLevel>{PowerLevel::Low, PowerLevel::Critical});
 }
 
 TEST_CASE("cutoff: a first reading at or above low is a sound cell, one under it waits for three") {

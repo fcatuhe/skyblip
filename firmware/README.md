@@ -59,7 +59,7 @@ The mechanism is the half people get wrong, because four different things all re
 | `Forget` | past this the record itself is dropped | a fresh report | `kTargetForgetReports`, `kCallsignForgetS` |
 | `Samples`, `Fixes` | consecutive readings that must agree | one reading the other way | `kLevelSamples`, `kConvergedFixes` |
 
-Hysteresis is not on the list and never becomes a constant: it is the gap between two named thresholds, like the 12.0 m/s a takeoff needs and the 1.0 m/s a landing does, and naming the gap would be a third number nobody reads.
+Hysteresis is not on the list and is usually no constant: it is the gap between two named thresholds, like the 12.0 m/s a takeoff needs and the 1.0 m/s a landing does, and naming the gap would be a third number nobody reads. The exception is a gap measured once and shared by every step of a ladder, which is named for what was measured: `kRecoveryMarginMv` is the spread a parked cell reads across, and each battery level is left upwards by that much above the step it was entered under (`core/power/README.md`).
 
 The subject comes first because a mechanism on its own is ambiguous where it is used: `kForgetMs` forgets what? Two of those existed, in two namespaces, 30 s each by coincidence. A constant inside a class takes the class as its subject, so `ScreenService::kPresentFloorMs` needs no more. `Delay`, `Grace`, `Debounce` and `Steady` are spelled as one of the words above, so that a grep for every hold in the tree finds every hold.
 
