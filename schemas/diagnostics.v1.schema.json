@@ -19,6 +19,8 @@
              "description": "sys. Seconds since boot, from hal::Clock::millis(). Wraps with the 32-bit millisecond counter at 49.7 days"},
     "reset": {"type": "string",
               "description": "sys. Why the device came up, as core/power/reset_reason.cpp spells it: POWER ON, RESET PIN, BROWNOUT, SOFTWARE, WATCHDOG, CPU LOCKUP, CHARGER, WAKE, DEBUGGER, UNKNOWN"},
+    "charger_woke": {"type": "boolean",
+                     "description": "sys. Since the last boot that ran, a charger woke the unit out of SYSTEM OFF and that boot was refused: the cable reached the application. Kept through the rails in GPREGRET2, true for the one boot that follows and false from the boot after. The self-test page prints the same fact as USB WOKE (firmware/core/power/README.md)"},
     "link_drops": {"type": "integer", "minimum": 0,
                    "description": "sys. Frames the companion link could not send: over the negotiated payload, refused by the controller, or left incomplete by a writer. Silence towards a phone is a fault worth a number"},
 

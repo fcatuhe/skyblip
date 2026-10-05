@@ -81,6 +81,7 @@ struct Diagnostics {
 
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
+    bool charger_woke{false};
     uint32_t link_drops{0};
     uint32_t range_refused{0};
     power::BatteryState battery{};
@@ -142,7 +143,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 47;
+    static constexpr int kMaxFields = 48;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_int(Group group, const char* key, long value);

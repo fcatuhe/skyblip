@@ -148,6 +148,11 @@ enum class ButtonWake : uint8_t { Armed, Withheld };
 // INFO: fc 07sep26 meshcore arms voltage recovery, not the button, on a low-voltage shutdown
 ButtonWake button_wake_after(ShutdownReason reason, bool external_power);
 
+// INFO: fc 05oct26 the factory bootloader hands on a button wake or a charger wake, never both
+enum class BootloaderPasses : uint8_t { Button, Charger };
+
+BootloaderPasses bootloader_passes(ButtonWake button_wake);
+
 // Walks kPowerDownOrder once, in order. The caller enters SYSTEM OFF after it
 // returns.
 void power_down(PowerDownSink& sink, ButtonWake button_wake);

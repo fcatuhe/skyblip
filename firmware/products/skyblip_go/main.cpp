@@ -27,8 +27,13 @@ go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 }  // namespace
 
 int main(void) {
+    // INFO: fc 05oct26 before setup, so a refused boot cannot hang awake; SYSTEM OFF stops it
+    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogMs) != Status::Ok)
+        LOG_ERR("watchdog: not armed, the loop is unsupervised");
+
     const Status started = g_product.setup();
-    LOG_INF("reset reason: %s", power::to_string(g_product.reset_reason()));
+    LOG_INF("reset reason: %s, setup done at %u ms", power::to_string(g_product.reset_reason()),
+            static_cast<unsigned>(k_uptime_get()));
 
     // INFO: fc 21sep26 the refusal performed: no service, at most one frame, and it never returns
     if (g_product.boot_path() == power::BootPath::SleepAgain) {
@@ -36,11 +41,15 @@ int main(void) {
         LOG_INF("back to sleep at %u mV (lockout %u mV, external power %d), glass: %s",
                 cell.millivolts, power::kBootLockoutMv, static_cast<int>(cell.external_power),
                 power::to_string(g_product.refused_frame()));
-        while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get())))
+        while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get()))) {
+            g_platform.watchdog().feed();
             k_sleep(K_MSEC(runtime::kServiceStepMs));
+        }
         g_platform.system_power().system_off(power::button_wake_after_refusal(cell));
     }
 
+    if (g_product.charger_woke())
+        LOG_INF("a charger woke this unit while it was off, and that boot was refused");
     if (!g_platform.pps_armed()) LOG_ERR("PPS: no edge interrupt, so no slot is ever keyed");
     if (!g_platform.storage_mounted())
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
@@ -63,12 +72,6 @@ int main(void) {
         LOG_ERR("self test %s: missing=%u", to_string(started),
                 static_cast<unsigned>(ports::missing(g_product.capabilities(), go::kRequired)));
     }
-
-    // Armed last, after every part is up: bring-up is slower than any
-    // steady-state pass, and on the nRF52 a watchdog that has started can never
-    // be stopped again.
-    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogMs) != Status::Ok)
-        LOG_ERR("watchdog: not armed, the loop is unsupervised");
 
     bool reported_stall = false;
     for (;;) {

@@ -45,6 +45,8 @@ class SystemPower {
     virtual void set_cell_on_glass(power::CellOnGlass word) { (void)word; }
     virtual bool went_dark_flat() const { return false; }
     virtual void set_went_dark_flat(bool flat) { (void)flat; }
+    virtual bool charger_woke() const { return false; }
+    virtual void set_charger_woke(bool woke) { (void)woke; }
 };
 
 }  // namespace skyblip::ports

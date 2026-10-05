@@ -64,14 +64,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // The order is core/power's, not this file's: everything here is one step
     // of it, and which step happens when is decided and tested on the host.
     void system_off(power::ButtonWake button_wake) override {
-        // Before anything else, because it is the one step that survives the
-        // rails: the factory bootloader must not make its own decision about DFU
-        // on the next boot. See kSkipBootloaderMagic for what that buys and what
-        // it costs the double-click gesture on exactly one boot. A board with no
-        // retention area says so by returning false, and there is nothing to do
-        // about it here - it is the same board on which ports::Dfu::enter_recovery
-        // cannot work either, and that is the path that reports it.
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off());
+        // INFO: fc 05oct26 first, as it outlives the rails; no retention area, no recovery either
+        (void)write_boot_magic(
+            Dfu::boot_magic_for_system_off(power::bootloader_passes(button_wake)));
         power::power_down(*this, button_wake);
         // AFTER the walk above, not before: every step of it reconfigures pins,
         // and the last one arms a level-sensed wake. A DETECT that was latched
@@ -113,14 +108,21 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     }
     bool went_dark_flat() const override { return retained(kWentDarkFlatBit); }
     void set_went_dark_flat(bool flat) override { retain(kWentDarkFlatBit, flat); }
+    bool charger_woke() const override { return retained(kChargerWokeBit); }
+    void set_charger_woke(bool woke) override { retain(kChargerWokeBit, woke); }
 
    private:
     // INFO: fc 21sep26 a power-on clears GPREGRET2, and a magic makes anything else read as no
-    static constexpr uint8_t kGlassMagic = 0xa8;
-    static constexpr uint8_t kGlassMagicMask = 0xf8;
+    static constexpr uint8_t kGlassMagic = 0x50;
+    static constexpr uint8_t kGlassMagicMask = 0xf0;
+    // INFO: fc 05oct26 the five-bit layout before the charger bit must read as nothing
+    static constexpr uint8_t kEarlierGlassMagic = 0xa8;
     static constexpr uint8_t kFlatOnGlassBit = 0x01;
     static constexpr uint8_t kWentDarkFlatBit = 0x02;
     static constexpr uint8_t kLowOnGlassBit = 0x04;
+    static constexpr uint8_t kChargerWokeBit = 0x08;
+    static_assert((kGlassMagic & ~kGlassMagicMask) == 0);
+    static_assert((kEarlierGlassMagic & kGlassMagicMask) != kGlassMagic);
 
     static uint8_t retained_bits() {
         const uint8_t byte = read_glass_byte();

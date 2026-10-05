@@ -54,6 +54,9 @@ void draw_boot(ui::Canvas& fb, const BootSnapshot& s) {
     buf[n] = 0;
     fb.draw_text(kLeft, kBootHeaderY, buf, true, 1);
     right_aligned(fb, kRight, kBootHeaderY, s.reset_reason);
+    if (s.charger_woke)
+        right_aligned(fb, kRight - (length(s.reset_reason) + 1) * kCellW, kBootHeaderY,
+                      kChargerWokeWord);
 
     int y = kBootFirstRowY;
     const int rows = s.n_parts < kBootRows ? s.n_parts : kBootRows;

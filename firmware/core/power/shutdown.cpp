@@ -37,6 +37,10 @@ ButtonWake button_wake_after(ShutdownReason reason, bool external_power) {
     return reason == ShutdownReason::LowBattery ? ButtonWake::Withheld : ButtonWake::Armed;
 }
 
+BootloaderPasses bootloader_passes(ButtonWake button_wake) {
+    return button_wake == ButtonWake::Armed ? BootloaderPasses::Button : BootloaderPasses::Charger;
+}
+
 void power_down(PowerDownSink& sink, ButtonWake button_wake) {
     for (int i = 0; i < kPowerDownStepCount; i++) {
         if (kPowerDownOrder[i] == PowerDownStep::WakePinArmed &&

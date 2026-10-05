@@ -120,10 +120,23 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     CHECK(has(radio, "dio1_armed=false dio1_edges=0 dio1_missed=0"));
 
     // And the two the shell already knew and could not say out loud.
-    CHECK(has(console.with("sys "), "reset=\"POWER ON\""));
+    CHECK(has(console.with("sys "), "reset=\"POWER ON\" charger_woke=false"));
     CHECK(has(console.with("power "), "supply_warnings=0"));
     CHECK(has(console.with("power "), "implausible=0"));
     CHECK(has(console.with("traffic "), "tracked=0"));
+}
+
+// A laptop on the first boot after a charger is how a bench learns the cable got through.
+TEST_CASE("diagnostics: the boot after a refused charger wake names it on the console") {
+    Rig rig;
+    rig.platform.system_power().woke_on_charger = true;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    Dump dump;
+    uint32_t t = 0;
+    pass(rig, dump, t, 100);
+    CHECK(has(dump.sink().with("sys "), "reset=\"BUTTON WAKE\" charger_woke=true"));
 }
 
 // The counters that only move when something is wrong. Each one is somebody else's

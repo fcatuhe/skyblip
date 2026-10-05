@@ -203,6 +203,7 @@ class ConfigService {
     void set_reset_reason(power::ResetReason reason) { diag_.reset = reason; }
     power::ResetReason reset_reason() const { return diag_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
+    void set_charger_woke(bool woke) { diag_.charger_woke = woke; }
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the

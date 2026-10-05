@@ -95,6 +95,8 @@ class Product {
         glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
         config_.config().set_went_dark_flat(went_dark_flat_);
+        take_charger_woke(causes);
+        config_.config().set_charger_woke(charger_woke_);
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
@@ -176,6 +178,7 @@ class Product {
     bool flyable() const { return flyable_; }
     power::ResetReason reset_reason() const { return reset_reason_; }
     bool went_dark_flat() const { return went_dark_flat_; }
+    bool charger_woke() const { return charger_woke_; }
     // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
     // setup() and performs the second one.
     power::BootPath boot_path() const { return boot_path_; }
@@ -276,6 +279,14 @@ class Product {
         retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
     }
 
+    void take_charger_woke(power::ResetCause causes) {
+        ports::SystemPower& retained = platform_.system_power();
+        charger_woke_ = retained.charger_woke();
+        const bool charger = power::has_cause(causes, power::ResetCause::UsbVbus);
+        retained.set_charger_woke(boot_path_ == power::BootPath::SleepAgain &&
+                                  (charger_woke_ || charger));
+    }
+
     void remember_glass() {
         const power::CellOnGlass on_glass = screen_.cell_on_glass();
         if (on_glass == glass_remembered_) return;
@@ -308,6 +319,7 @@ class Product {
         boot_snapshot_.device_addr = roles_.device_addr;
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
         boot_snapshot_.went_dark_flat = went_dark_flat_;
+        boot_snapshot_.charger_woke = charger_woke_;
         boot_snapshot_.parts = boot_parts_;
         boot_snapshot_.n_parts = kBootPartCount;
         boot_snapshot_.flyable = flyable_;
@@ -447,6 +459,7 @@ class Product {
     bool refusal_asked_{false};
     power::CellOnGlass glass_remembered_{power::CellOnGlass::None};
     bool went_dark_flat_{false};
+    bool charger_woke_{false};
     bool flyable_{false};
 };
 

@@ -137,6 +137,46 @@ TEST_CASE("product: the cable after a cutoff puts the mark back and arms the but
           power::ButtonWake::Armed);
 }
 
+// #113: the cutoff told the factory bootloader to skip, and a skip puts a VBUS wake back to sleep.
+TEST_CASE("product: a cutoff lets the charger through, and the refusal hands the wake back") {
+    Rig dying;
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+    dying.platform.system_power().system_off(power::button_wake_after(
+        dying.product.shutdown().reason(), dying.platform.external_power()));
+    CHECK(dying.platform.system_power().passes == power::BootloaderPasses::Charger);
+
+    Rig plugged;
+    plugged.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
+    plugged.platform.battery().external_power = true;
+    plugged.platform.system_power().causes =
+        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    REQUIRE(plugged.setup() == Status::Ok);
+    plugged.sleep_again();
+    plugged.platform.system_power().system_off(
+        power::button_wake_after_refusal(plugged.product.boot_cell()));
+    CHECK(plugged.platform.system_power().passes == power::BootloaderPasses::Button);
+}
+
+// The bootloader reads the button as its DFU button, so an armed one always asks it to skip.
+TEST_CASE("product: a switch-off that arms the button keeps the press out of the bootloader") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 2000);
+    rig.platform.battery().millivolts = power::kCriticalMv - 100;
+    rig.run(2000, 10000);
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
+    rig.run(10000, 20000);
+    REQUIRE(rig.product.ready_to_power_off());
+    rig.platform.system_power().system_off(
+        power::button_wake_after(rig.product.shutdown().reason(), rig.platform.external_power()));
+    CHECK(rig.platform.system_power().passes == power::BootloaderPasses::Button);
+    CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
+}
+
 // The lamp's warning dies with the rails, so the glass carries it to whoever picks the device up.
 TEST_CASE("product: a switch-off on a critical cell asks for the charger under the mark") {
     Rig rig;
@@ -275,6 +315,50 @@ TEST_CASE("product: the boot after a flat cell names it, though the cable took t
     pressed.run(0, 200);
     CHECK(pressed.last_on(events::Endpoint::Config).find("\"went_dark_flat\":true") !=
           std::string::npos);
+}
+
+// Whether a cable reached the application at all, the question #113 could not answer.
+TEST_CASE("product: the boot after a refused charger wake says the cable got through") {
+    Rig plugged;
+    plugged.platform.battery().external_power = true;
+    plugged.platform.system_power().causes =
+        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    REQUIRE(plugged.setup() == Status::Ok);
+    REQUIRE(plugged.product.boot_path() == power::BootPath::SleepAgain);
+    plugged.sleep_again();
+    CHECK(plugged.platform.system_power().charger_woke());
+
+    Rig wiggled;
+    wiggled.platform.system_power().woke_on_charger = true;
+    wiggled.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    REQUIRE(wiggled.setup() == Status::Ok);
+    REQUIRE(wiggled.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK(wiggled.platform.system_power().charger_woke());
+
+    Rig pressed;
+    pressed.platform.system_power().woke_on_charger = true;
+    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    pressed.platform.board_gpio().button_down = true;
+    REQUIRE(pressed.setup() == Status::Ok);
+    REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
+    CHECK(pressed.product.charger_woke());
+    CHECK(reads_in(pressed.product.boot_page(), go::kChargerWokeWord, 0, 20, 200, 35));
+    CHECK_FALSE(pressed.platform.system_power().charger_woke());
+}
+
+// A refusal that no cable caused is a button on a flat cell, and says nothing about the charger.
+TEST_CASE("product: a refused press and an ordinary boot leave no charger note") {
+    Rig flat;
+    flat.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    flat.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(flat.setup() == Status::Ok);
+    REQUIRE(flat.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK_FALSE(flat.platform.system_power().charger_woke());
+
+    Rig ordinary;
+    REQUIRE(ordinary.setup() == Status::Ok);
+    CHECK_FALSE(ordinary.product.charger_woke());
+    CHECK_FALSE(reads_in(ordinary.product.boot_page(), go::kChargerWokeWord, 0, 0, 200, 199));
 }
 
 TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot has none") {

@@ -364,3 +364,13 @@ TEST_CASE("power down: a low-battery shutdown drops the rails without arming the
     CHECK(sink.at(PowerDownStep::WakePinArmed) == -1);
     for (int i = 0; i < kPowerDownStepCount - 1; i++) CHECK(sink.steps[i] == kPowerDownOrder[i]);
 }
+
+// #113: told to skip, the factory bootloader put the cable after a cutoff straight back to sleep.
+TEST_CASE("power down: a button that cannot wake leaves the next wake to the charger") {
+    CHECK(bootloader_passes(button_wake_after(ShutdownReason::LowBattery, false)) ==
+          BootloaderPasses::Charger);
+    CHECK(bootloader_passes(button_wake_after(ShutdownReason::LowBattery, true)) ==
+          BootloaderPasses::Button);
+    CHECK(bootloader_passes(button_wake_after(ShutdownReason::LongPress, false)) ==
+          BootloaderPasses::Button);
+}
