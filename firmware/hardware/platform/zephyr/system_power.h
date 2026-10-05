@@ -63,16 +63,10 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     // The order is core/power's, not this file's: everything here is one step
     // of it, and which step happens when is decided and tested on the host.
-    void system_off(power::ButtonWake button_wake) override {
-        // Before anything else, because it is the one step that survives the
-        // rails: the factory bootloader must not make its own decision about DFU
-        // on the next boot. See kSkipBootloaderMagic for what that buys and what
-        // it costs the double-click gesture on exactly one boot. A board with no
-        // retention area says so by returning false, and there is nothing to do
-        // about it here - it is the same board on which ports::Dfu::enter_recovery
-        // cannot work either, and that is the path that reports it.
+    void system_off() override {
+        // INFO: fc 05oct26 first, as it outlives the rails; no retention area, no recovery either
         (void)write_boot_magic(Dfu::boot_magic_for_system_off());
-        power::power_down(*this, button_wake);
+        power::power_down(*this);
         // AFTER the walk above, not before: every step of it reconfigures pins,
         // and the last one arms a level-sensed wake. A DETECT that was latched
         // before or during that is a device that comes straight back up and looks

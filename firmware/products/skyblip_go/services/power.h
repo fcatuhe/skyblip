@@ -5,7 +5,6 @@
 #include "core/power/battery.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
-#include "core/power/trim.h"
 #include "ports/capabilities.h"
 #include "ports/die_temperature.h"
 #include "products/skyblip_go/settings.h"
@@ -28,7 +27,7 @@ class PowerService : public runtime::Service {
     void record_last_pass(uint32_t now_ms);
 
     bool cutoff() const { return cutoff_.cutoff(); }
-    uint32_t implausible_samples() const { return cutoff_.implausible(); }
+    uint32_t implausible_samples() const { return gauge_.refused(); }
 
     // The power-failure comparator fired. Polled off ports::SystemPower by the
     // product and handed here, because this service owns the cutoff monitor and
@@ -52,9 +51,6 @@ class PowerService : public runtime::Service {
 
     power::ChargeCondition charge_condition() const { return charge_; }
     uint32_t charge_warnings() const { return charge_warnings_; }
-
-    bool trim_learned() const { return trim_.learned(); }
-    int16_t learned_offset_mv() const { return trim_.offset_mv(); }
 
     // INFO: fc 06sep26 a sensor that stopped answering must neither hold nor drive the glass
     static constexpr uint32_t kDieStaleMs = 30000;
@@ -92,7 +88,6 @@ class PowerService : public runtime::Service {
 
     power::Gauge gauge_{};
     power::CutoffMonitor cutoff_{};
-    power::FloatTrim trim_{};
     power::ChargeCondition charge_{power::ChargeCondition::Unknown};
     uint32_t charge_warnings_{0};
     uint32_t recorded_ms_{0};

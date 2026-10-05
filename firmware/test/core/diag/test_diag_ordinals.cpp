@@ -25,6 +25,15 @@ uint8_t wire(power::ResetReason value) {
     return kUnpinned;
 }
 
+uint8_t wire(diag::Profile value) {
+    switch (value) {
+        case diag::Profile::Full: return 0;
+        case diag::Profile::PowerRun: return 1;
+        case diag::Profile::FlightRun: return 2;
+    }
+    return kUnpinned;
+}
+
 uint8_t wire(dfu::ImageState value) {
     switch (value) {
         case dfu::ImageState::Confirmed: return 0;
@@ -245,6 +254,12 @@ TEST_CASE(
     "diag ordinals: dfu::ImageState's codes are the boot image_state byte, and a code changed "
     "here changes IMAGE_STATE in scripts/blip_records.py and the schema's image_state enum") {
     codes_pinned<dfu::ImageState>(4);
+}
+
+TEST_CASE(
+    "diag ordinals: diag::Profile's codes are the boot profile byte, and a code changed here "
+    "changes PROFILE in scripts/blip_records.py and the schema's profile enum with it") {
+    codes_pinned<diag::Profile>(3);
 }
 
 TEST_CASE(

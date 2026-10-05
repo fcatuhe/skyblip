@@ -1,9 +1,9 @@
-// One terminal voltage, two meanings: on the cable the charger holds the cell
-// above its own resting voltage, so the same reading is a far emptier cell. These
-// pin down that the gauge says which curve it read, never walks the wrong way, and
-// ignores the sag of a 14 dBm burst. A percentage that jumps when the radio keys
-// is a gauge a pilot stops believing.
+// One curve, read off the cable only: on it the divider reads the USB rail and
+// not the cell. These pin down that the gauge never walks the wrong way, ignores
+// the sag of a 14 dBm burst, and shows no cell it cannot see. A percentage that
+// jumps when the radio keys is a gauge a pilot stops believing.
 #include <initializer_list>
+#include <vector>
 
 #include "core/events/sensor.h"
 #include "core/power/battery.h"
@@ -25,35 +25,34 @@ static void settle(Gauge& gauge, uint16_t millivolts, bool external_power = fals
 }
 
 TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
-    CHECK(percent_from_mv(3000, false) == 0);
-    CHECK(percent_from_mv(kEmptyMv, false) == 0);
-    CHECK(percent_from_mv(kFullMv, false) == 100);
-    CHECK(percent_from_mv(4500, false) == 100);
+    CHECK(percent_from_mv(3000) == 0);
+    CHECK(percent_from_mv(kEmptyMv) == 0);
+    CHECK(percent_from_mv(kFullMv) == 100);
+    CHECK(percent_from_mv(4500) == 100);
 
     uint8_t previous = 0;
     for (uint16_t mv = kEmptyMv; mv <= kFullMv; mv += 10) {
-        const uint8_t percent = percent_from_mv(mv, false);
+        const uint8_t percent = percent_from_mv(mv);
         CHECK(percent >= previous);
         previous = percent;
     }
 }
 
-// The point of the whole module: the same reading means two different states of
-// charge, because on charge the terminal sits above the cell's own voltage.
-TEST_CASE("battery: charging reads lower than resting at the same voltage") {
-    for (uint16_t mv = 3600; mv <= 4150; mv += 50)
-        CHECK(percent_from_mv(mv, true) < percent_from_mv(mv, false));
-
-    // 4.00 V is nearly full on the bench and barely half full with a charger on it.
-    CHECK(percent_from_mv(4000, false) == 89);
-    CHECK(percent_from_mv(4000, true) == 55);
-}
-
 TEST_CASE("battery: the flat middle of the cell is not a straight line") {
     // 3.70 -> 3.80 V is a quarter of the capacity; 4.10 -> 4.20 V is a twentieth.
-    const int mid = percent_from_mv(3800, false) - percent_from_mv(3700, false);
-    const int top = percent_from_mv(4200, false) - percent_from_mv(4100, false);
+    const int mid = percent_from_mv(3800) - percent_from_mv(3700);
+    const int top = percent_from_mv(4200) - percent_from_mv(4100);
     CHECK(mid > top);
+}
+
+// The window the gauge believes: a floating divider under it, a rail over it.
+TEST_CASE("battery: a reading is the cell only between the floor and the ceiling") {
+    CHECK_FALSE(plausible_mv(0));
+    CHECK_FALSE(plausible_mv(kImplausibleFloorMv));
+    CHECK(plausible_mv(kImplausibleFloorMv + 1));
+    CHECK(plausible_mv(kFullMv));
+    CHECK(plausible_mv(kImplausibleCeilingMv));
+    CHECK_FALSE(plausible_mv(kImplausibleCeilingMv + 1));
 }
 
 TEST_CASE("gauge: nothing is reported before the first reading") {
@@ -65,7 +64,7 @@ TEST_CASE("gauge: nothing is reported before the first reading") {
     CHECK(gauge.state().valid);
     // The first reading stands on its own rather than being mixed with zeroes.
     CHECK(gauge.state().millivolts == 3900);
-    CHECK(gauge.state().percent == percent_from_mv(3900, false));
+    CHECK(gauge.state().percent == percent_from_mv(3900));
     CHECK_FALSE(gauge.state().charging);
 }
 
@@ -94,7 +93,7 @@ TEST_CASE("gauge: the reading the median threw out is still the reading the benc
     CHECK(gauge.state().sample_mv == 3700);
 }
 
-TEST_CASE("gauge: the percentage only moves the way the current flows") {
+TEST_CASE("gauge: off the cable the percentage only falls") {
     Gauge gauge;
     settle(gauge, 3800);
     const uint8_t discharging = gauge.state().percent;
@@ -111,47 +110,55 @@ TEST_CASE("gauge: the percentage only moves the way the current flows") {
     CHECK(gauge.state().percent < discharging);
 }
 
-TEST_CASE("gauge: plugging in re-seats on the charge curve, unplugging on the other") {
+// E68BD9 read 4670 to 4700 mV for 3.5 h of charging from 45 %, and called it 100 % (#114).
+TEST_CASE("gauge: on the cable the divider reads the rail, so there is no cell to show") {
     Gauge gauge;
-    settle(gauge, 4000);
-    const uint8_t resting = gauge.state().percent;
-    CHECK(resting == percent_from_mv(4000, false));
+    settle(gauge, 3750);
+    REQUIRE(gauge.state().valid);
 
-    // Same cell, cable in: the charger is pushing, so the honest number drops.
-    settle(gauge, 4000, /*external_power=*/true);
+    settle(gauge, 4690, /*external_power=*/true);
+    CHECK_FALSE(gauge.state().valid);
     CHECK(gauge.state().charging);
     CHECK(gauge.state().external_power);
-    CHECK(gauge.state().percent == percent_from_mv(4000, true));
-    CHECK(gauge.state().percent < resting);
-
-    // Cable out: the charge current stops, the cell relaxes, and the gauge is
-    // allowed to jump back up rather than being held down by the old curve.
-    settle(gauge, 4000, /*external_power=*/false);
-    CHECK_FALSE(gauge.state().charging);
-    CHECK(gauge.state().percent == resting);
+    CHECK(gauge.state().percent == 0);
+    CHECK(gauge.state().millivolts == 4690);
+    CHECK(gauge.refused() == 0);
 }
 
-TEST_CASE("gauge: charging never walks backwards") {
+// Charged on the cable, the cell is where the first reading off it says, not under the old median.
+TEST_CASE("gauge: unplugging starts the median over on the charged cell") {
     Gauge gauge;
-    settle(gauge, 3900, /*external_power=*/true);
-    const uint8_t climbing = gauge.state().percent;
+    settle(gauge, 3750);
+    settle(gauge, 4690, /*external_power=*/true);
 
-    gauge.apply(sample(3870, /*external_power=*/true));
-    CHECK(gauge.state().percent == climbing);
-
-    settle(gauge, 4100, /*external_power=*/true);
-    CHECK(gauge.state().percent > climbing);
+    gauge.apply(sample(4150));
+    CHECK(gauge.state().valid);
+    CHECK_FALSE(gauge.state().charging);
+    CHECK(gauge.state().millivolts == 4150);
+    CHECK(gauge.state().percent == percent_from_mv(4150));
 }
 
-TEST_CASE("gauge: a full cell on the cable is charged, not charging") {
+// 0B1B2C's rail sat above the ceiling for 7 h, and nothing said which bound it crossed (#114).
+TEST_CASE("gauge: a refused reading is counted, and its value is what the gauge shows") {
     Gauge gauge;
-    settle(gauge, kFullMv, /*external_power=*/true);
-    CHECK(gauge.state().external_power);
-    // No charge current can be measured, so the float plateau is the signal that
-    // the charger has finished.
-    CHECK(gauge.state().millivolts >= kChargeCompleteMv);
-    CHECK_FALSE(gauge.state().charging);
-    CHECK(gauge.state().percent == 100);
+    settle(gauge, 3900);
+
+    gauge.apply(sample(4812, /*external_power=*/true));
+    CHECK(gauge.refused() == 1);
+    CHECK_FALSE(gauge.state().valid);
+    CHECK(gauge.state().millivolts == 4812);
+    CHECK(gauge.state().sample_mv == 4812);
+
+    gauge.apply(sample(312));
+    CHECK(gauge.refused() == 2);
+    CHECK_FALSE(gauge.state().valid);
+    CHECK(gauge.state().millivolts == 312);
+    CHECK_FALSE(gauge.state().external_power);
+
+    gauge.apply(sample(3880));
+    CHECK(gauge.state().valid);
+    CHECK(gauge.state().millivolts == 3880);
+    CHECK(gauge.refused() == 2);
 }
 
 // The acting half. The gauge above says what the cell holds; this says when that
@@ -233,20 +240,34 @@ TEST_CASE("cutoff: only low, critical and flat ask for the charger") {
 }
 
 // The cell sits on a step for the minutes it takes to cross it, and noise straddles the line.
-TEST_CASE("cutoff: a level comes back up on three samples above its step, not on one") {
+TEST_CASE("cutoff: a level comes back up on three samples clear of its step by the margin") {
     CutoffMonitor monitor;
     for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 10));
     REQUIRE(monitor.level() == PowerLevel::Critical);
 
-    monitor.apply(sample(kCriticalMv + 5));
-    monitor.apply(sample(kCriticalMv + 5));
-    CHECK(monitor.level() == PowerLevel::Critical);
-    monitor.apply(sample(kCriticalMv - 10));
-    monitor.apply(sample(kCriticalMv + 5));
+    for (int i = 0; i < 10; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv - 1));
     CHECK(monitor.level() == PowerLevel::Critical);
 
-    for (int i = 0; i < 2; i++) monitor.apply(sample(kCriticalMv + 5));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    CHECK(monitor.level() == PowerLevel::Critical);
+    monitor.apply(sample(kCriticalMv - 10));
+    monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    CHECK(monitor.level() == PowerLevel::Critical);
+
+    for (int i = 0; i < 2; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
     CHECK(monitor.level() == PowerLevel::Low);
+}
+
+// A falling cell is not slowed: the margin is only on the way up.
+TEST_CASE("cutoff: a level goes down on three samples under its step, with no margin") {
+    CutoffMonitor monitor;
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 10));
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv + kRecoveryMarginMv));
+    REQUIRE(monitor.level() == PowerLevel::Low);
+
+    for (int i = 0; i < 3; i++) monitor.apply(sample(kCriticalMv - 1));
+    CHECK(monitor.level() == PowerLevel::Critical);
 }
 
 TEST_CASE("cutoff: a cell that recovers far climbs every step it cleared at once") {
@@ -265,6 +286,24 @@ TEST_CASE("cutoff: a cell resting on a step for many minutes stays on it") {
         monitor.apply(sample(kCriticalMv - 10));
         if (i >= kLevelSamples - 1) REQUIRE(monitor.level() == PowerLevel::Critical);
     }
+}
+
+// E68BD9's run to cutoff, its cell_mv every 30 s on 5 Oct, 02:39-02:45 and 03:39-03:43 UTC.
+TEST_CASE("cutoff: a parked cell drifting across a step changes level once") {
+    constexpr uint16_t kRunMv[] = {3607, 3598, 3591, 3600, 3600, 3600, 3600, 3594,
+                                   3600, 3591, 3601, 3596, 3598, 3513, 3492, 3517,
+                                   3501, 3496, 3492, 3505, 3487, 3498, 3492};
+    CutoffMonitor monitor;
+    PowerLevel previous = monitor.apply(sample(kRunMv[0]));
+    REQUIRE(previous == PowerLevel::Normal);
+
+    std::vector<PowerLevel> changes;
+    for (const uint16_t millivolts : kRunMv) {
+        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(millivolts));
+        if (monitor.level() != previous) changes.push_back(monitor.level());
+        previous = monitor.level();
+    }
+    CHECK(changes == std::vector<PowerLevel>{PowerLevel::Low, PowerLevel::Critical});
 }
 
 TEST_CASE("cutoff: a first reading at or above low is a sound cell, one under it waits for three") {
@@ -294,9 +333,9 @@ TEST_CASE("cutoff: the ladder is low, critical, boot lockout, flat") {
 
     // And the gauge reads zero where the device stops, not before it.
     CHECK(kEmptyMv == kFlatMv);
-    CHECK(percent_from_mv(kFlatMv, false) == 0);
-    CHECK(percent_from_mv(kCriticalMv, false) > 0);
-    CHECK(percent_from_mv(kBootLockoutMv, false) > 0);
+    CHECK(percent_from_mv(kFlatMv) == 0);
+    CHECK(percent_from_mv(kCriticalMv) > 0);
+    CHECK(percent_from_mv(kBootLockoutMv) > 0);
 }
 
 TEST_CASE("cutoff: a floating ADC cannot power the device off") {

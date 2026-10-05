@@ -73,7 +73,6 @@ class ConfigLinkService : public runtime::Service {
     void record_update();
 
    private:
-    void adopt_learned_trim();
     void spend_gnss_cold_start();
     void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);

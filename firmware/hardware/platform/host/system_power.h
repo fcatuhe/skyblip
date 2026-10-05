@@ -13,9 +13,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
    public:
     power::ResetCause reset_causes() const override { return causes; }
 
-    void system_off(power::ButtonWake button_wake) override {
+    void system_off() override {
         performed = 0;
-        power::power_down(*this, button_wake);
+        power::power_down(*this);
         offs++;
     }
 

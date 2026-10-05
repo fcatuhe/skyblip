@@ -118,16 +118,6 @@ TEST_CASE("wake: a unit that reset itself runs on any cell the cutoff would have
     CHECK(boot_path(ResetCause::Pin, false, low) == BootPath::SleepAgain);
 }
 
-// SENSE is a level detect: a button held in a bag re-wakes what it just refused.
-TEST_CASE("wake: a boot refused for a flat cell leaves the button unarmed") {
-    CHECK(button_wake_after_refusal(healthy(power::kFlatMv)) == ButtonWake::Withheld);
-    BootCell on_charge = healthy(3000);
-    on_charge.external_power = true;
-    CHECK(button_wake_after_refusal(on_charge) == ButtonWake::Armed);
-    CHECK(button_wake_after_refusal(healthy()) == ButtonWake::Armed);
-    CHECK(button_wake_after_refusal(BootCell{}) == ButtonWake::Armed);
-}
-
 // A refusal with no way out is a brick, and this way out also fills the cell.
 TEST_CASE("wake: a flat cell on the cable gets a device when a person asks for one") {
     BootCell on_charge = healthy(3000);
@@ -161,8 +151,8 @@ TEST_CASE("wake: a flat cell refused under the low word names itself instead") {
     CHECK(refused_frame(healthy(power::kFlatMv), CellOnGlass::Low) == RefusedFrame::FlatCell);
 }
 
-// The cable arms the button again (button_wake_after_refusal), so the mark is the instruction.
-TEST_CASE("wake: the charger that wakes a flat device takes the word back off the glass") {
+// A bootloader that let a charger wake through would get the frame of every armed device.
+TEST_CASE("wake: a charger wake that reaches the refusal takes the word back off the glass") {
     BootCell on_charge = healthy(3000);
     on_charge.external_power = true;
     CHECK(refused_frame(on_charge, CellOnGlass::Flat) == RefusedFrame::Wordmark);

@@ -32,18 +32,21 @@ const char* to_string(PowerDownStep step) {
     return "NONE";
 }
 
-ButtonWake button_wake_after(ShutdownReason reason, bool external_power) {
-    if (external_power) return ButtonWake::Armed;
-    return reason == ShutdownReason::LowBattery ? ButtonWake::Withheld : ButtonWake::Armed;
+void power_down(PowerDownSink& sink) {
+    for (const PowerDownStep step : kPowerDownOrder) sink.perform(step);
 }
 
-void power_down(PowerDownSink& sink, ButtonWake button_wake) {
-    for (int i = 0; i < kPowerDownStepCount; i++) {
-        if (kPowerDownOrder[i] == PowerDownStep::WakePinArmed &&
-            button_wake == ButtonWake::Withheld)
-            continue;
-        sink.perform(kPowerDownOrder[i]);
+bool ButtonRelease::settled(uint32_t now_ms, bool button_down) {
+    if (button_down) {
+        released_ = false;
+        return false;
     }
+    if (!released_) {
+        released_ = true;
+        released_at_ms_ = now_ms;
+        return false;
+    }
+    return now_ms - released_at_ms_ >= kReleaseSettleMs;
 }
 
 void ShutdownSequencer::enter(ShutdownPhase phase, uint32_t now_ms) {
@@ -54,7 +57,7 @@ void ShutdownSequencer::enter(ShutdownPhase phase, uint32_t now_ms) {
 void ShutdownSequencer::request(ShutdownReason reason, uint32_t now_ms) {
     if (going_down() || reason == ShutdownReason::None) return;
     reason_ = reason;
-    released_ = false;
+    release_ = ButtonRelease{};
     enter(ShutdownPhase::Parking, now_ms);
 }
 
@@ -85,20 +88,11 @@ void ShutdownSequencer::tick(uint32_t now_ms, bool button_down, bool pad_down) {
 
         case ShutdownPhase::Parking:
             if (now_ms - since_ms_ < kParkMs) return;
-            enter(waits_for_release() ? ShutdownPhase::AwaitRelease : ShutdownPhase::Off, now_ms);
+            enter(ShutdownPhase::AwaitRelease, now_ms);
             return;
 
         case ShutdownPhase::AwaitRelease:
-            if (button_down) {
-                released_ = false;
-                return;
-            }
-            if (!released_) {
-                released_ = true;
-                released_at_ms_ = now_ms;
-                return;
-            }
-            if (now_ms - released_at_ms_ >= kReleaseSettleMs) enter(ShutdownPhase::Off, now_ms);
+            if (release_.settled(now_ms, button_down)) enter(ShutdownPhase::Off, now_ms);
             return;
 
         case ShutdownPhase::Off: return;

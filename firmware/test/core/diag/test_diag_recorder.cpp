@@ -244,6 +244,19 @@ TEST_CASE("diag recorder: a power run records the cell and the duty, and refuses
     CHECK(recorder.written() == 2);
 }
 
+TEST_CASE("diag recorder: a flight run records what a power run records, and nothing more") {
+    diag::Recorder recorder;
+    recorder.arm(diag::Profile::FlightRun);
+    CHECK(recorder.profile() == diag::Profile::FlightRun);
+
+    CHECK(recorder.record(diag::Power{}, at_ms(0)));
+    CHECK(recorder.record(diag::Duty{}, at_ms(0)));
+    CHECK_FALSE(recorder.record(diag::Flight{}, at_ms(1000)));
+    CHECK_FALSE(recorder.record(diag::Screen{}, at_ms(1000)));
+    CHECK(recorder.dropped() == 0);
+    CHECK(recorder.queued() == 2);
+}
+
 TEST_CASE("diag recorder: a type the profile never wanted is not counted as a hole") {
     diag::Recorder recorder;
     recorder.arm(diag::Profile::PowerRun);
@@ -275,4 +288,5 @@ TEST_CASE("diag recorder: a disarmed recorder refuses whatever profile it last h
 TEST_CASE("diag recorder: a power run writes two records a pass and a capture fifteen a second") {
     CHECK(diag::Recorder::records_per_hour(diag::Profile::Full) == 15 * 3600);
     CHECK(diag::Recorder::records_per_hour(diag::Profile::PowerRun) == 240);
+    CHECK(diag::Recorder::records_per_hour(diag::Profile::FlightRun) == 240);
 }

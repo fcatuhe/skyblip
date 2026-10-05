@@ -121,7 +121,7 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO STOP", 0, 0, 200, 200));
 }
 
-TEST_CASE("capture: the page prices both captures, and the pad picks between them") {
+TEST_CASE("capture: the page prices every capture, and the pad picks between them") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
@@ -131,6 +131,7 @@ TEST_CASE("capture: the page prices both captures, and the pad picks between the
     const go::CaptureService& capture = rig.product.capture();
     CHECK(capture.keeps_s(diag::Profile::Full) > 0);
     CHECK(capture.keeps_s(diag::Profile::PowerRun) > 100 * capture.keeps_s(diag::Profile::Full));
+    CHECK(capture.keeps_s(diag::Profile::FlightRun) == capture.keeps_s(diag::Profile::PowerRun));
 
     const go::Glass& glass = rig.product.screen().framebuffer();
     CHECK(reads_in(glass, "FULL", 0, 0, 200, 200, 1, /*ink=*/false));
@@ -142,6 +143,12 @@ TEST_CASE("capture: the page prices both captures, and the pad picks between the
     CHECK(rig.product.screen().page() == go::Page::Capture);
     CHECK(reads_in(glass, "POWER RUN", 0, 0, 200, 200, 1, /*ink=*/false));
     CHECK(reads_in(glass, "FULL", 0, 0, 200, 200));
+
+    rig.tap(t);
+    rig.run(t, t + 1200);
+    t += 1200;
+    CHECK(rig.product.screen().page() == go::Page::Capture);
+    CHECK(reads_in(glass, "FLIGHT RUN", 0, 0, 200, 200, 1, /*ink=*/false));
 }
 
 TEST_CASE("capture: the double press arms the capture in focus, and no other") {
@@ -162,13 +169,14 @@ TEST_CASE("capture: the double press arms the capture in focus, and no other") {
 }
 
 // The pad walks off the last capture rather than trapping the thumb on the page.
-TEST_CASE("capture: a second tap hands the page back to the menu it was opened from") {
+TEST_CASE("capture: a tap off the last capture hands the page back to the menu it came from") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
     taxi(rig, t, 5);
     open_capture_page(rig, t);
 
+    rig.tap(t);
     rig.tap(t);
     CHECK(rig.product.screen().page() == go::Page::Capture);
     rig.tap(t);

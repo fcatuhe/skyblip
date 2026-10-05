@@ -13,7 +13,7 @@ struct Point {
     uint8_t percent;
 };
 
-// INFO: fc 09mar26 both curves are textbook, not this pack on this board | 20sep26 README.md
+// INFO: fc 09mar26 textbook, not this pack on this board | 20sep26 README.md
 constexpr Point kDischargeCurve[] = {
     {3200, 0},  {3300, 2},  {3500, 5},  {3600, 12}, {3700, 25}, {3750, 40},  {3800, 55},
     {3850, 65}, {3900, 75}, {3950, 83}, {4000, 89}, {4100, 95}, {4200, 100},
@@ -26,11 +26,6 @@ static_assert(kDischargeCurve[0].percent == 0 &&
                   kDischargeCurve[sizeof(kDischargeCurve) / sizeof(Point) - 1].millivolts ==
                       kFullMv,
               "a curve that does not span empty to full is read past its ends");
-
-constexpr Point kChargeCurve[] = {
-    {3400, 0},  {3600, 5},  {3700, 12}, {3800, 25}, {3900, 40}, {4000, 55},
-    {4050, 65}, {4100, 75}, {4150, 82}, {4180, 90}, {4190, 95}, {4200, 100},
-};
 
 uint16_t median_of(uint16_t a, uint16_t b, uint16_t c) {
     if (a > b) {
@@ -72,12 +67,23 @@ events::BatterySample calibrated(const events::BatterySample& raw, int16_t offse
     return out;
 }
 
-uint8_t percent_from_mv(uint16_t millivolts, bool charging) {
-    return charging ? percent_on(kChargeCurve, millivolts)
-                    : percent_on(kDischargeCurve, millivolts);
-}
+uint8_t percent_from_mv(uint16_t millivolts) { return percent_on(kDischargeCurve, millivolts); }
 
 void Gauge::apply(const events::BatterySample& sample) {
+    state_.sample_mv = sample.millivolts;
+    state_.external_power = sample.external_power;
+    state_.charging = sample.external_power;
+
+    const bool plausible = plausible_mv(sample.millivolts);
+    if (!plausible) refused_++;
+    if (!plausible || sample.external_power) {
+        seen_ = 0;
+        state_.millivolts = sample.millivolts;
+        state_.percent = 0;
+        state_.valid = false;
+        return;
+    }
+
     for (int i = kWindowSamples - 1; i > 0; i--) recent_[i] = recent_[i - 1];
     recent_[0] = sample.millivolts;
     if (seen_ < kWindowSamples) seen_++;
@@ -86,26 +92,9 @@ void Gauge::apply(const events::BatterySample& sample) {
     // everything the gauge knows.
     const uint16_t millivolts =
         seen_ < kWindowSamples ? recent_[0] : median_of(recent_[0], recent_[1], recent_[2]);
-    const bool was_charging = state_.charging;
-    const bool charging = sample.external_power && millivolts < kChargeCompleteMv;
-    const uint8_t percent = percent_from_mv(millivolts, charging);
-
-    // Unplugging swaps the curve under the reading, and the cell relaxes upwards
-    // once the charge current stops: both are direction changes, so the gauge
-    // re-seats on the new curve instead of holding the old number.
-    const bool reseat = !state_.valid || charging != was_charging;
-    const bool topped_off = sample.external_power && !charging;
-    if (reseat || topped_off)
-        state_.percent = percent;
-    else if (charging)
-        state_.percent = std::max(percent, state_.percent);
-    else
-        state_.percent = std::min(percent, state_.percent);
-
+    const uint8_t percent = percent_from_mv(millivolts);
+    state_.percent = state_.valid ? std::min(percent, state_.percent) : percent;
     state_.millivolts = millivolts;
-    state_.sample_mv = sample.millivolts;
-    state_.external_power = sample.external_power;
-    state_.charging = charging;
     state_.valid = true;
 }
 
