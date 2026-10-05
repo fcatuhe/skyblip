@@ -15,7 +15,7 @@ const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
-                    "device", "firmware", "battery", "flight", "advice", "chosen", "notes", "step",
+                    "device", "firmware", "track", "battery", "flight", "advice", "chosen", "notes", "step",
                     "progress", "progressText", "message", "settings", "fields", "default", "save", "reset"]
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
@@ -121,9 +121,10 @@ export default class extends Controller {
     if (option) this.releaseTarget.href = option.dataset.release
   }
 
-  #facts({ device, running, status, advice, file }) {
+  #facts({ device, running, image, status, advice, file }) {
     this.deviceTarget.textContent = device || "-"
     this.firmwareTarget.textContent = running || "-"
+    this.trackTarget.textContent = image?.key ? this.labelsValue.track[image.downgrade ? "development" : "release"] : "-"
     this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
     this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
     const percent = status?.batteryPercent
