@@ -200,7 +200,6 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     in.implausible = 12;
     in.charge_warnings = 1;
     in.die_dc = -206;
-    in.trim_offset_mv = -40;
     in.sample_offset_mv = -128;
     in.percent = 64;
     in.level = power::PowerLevel::Critical;
@@ -209,7 +208,6 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     in.external_power = true;
     in.valid = true;
     in.die_valid = true;
-    in.trim_learned = true;
 
     const diag::Power out = diag_round_trip(in);
     CHECK(out.cell_mv == in.cell_mv);
@@ -217,7 +215,6 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     CHECK(out.implausible == in.implausible);
     CHECK(out.charge_warnings == in.charge_warnings);
     CHECK(out.die_dc == in.die_dc);
-    CHECK(out.trim_offset_mv == in.trim_offset_mv);
     CHECK(out.sample_offset_mv == in.sample_offset_mv);
     CHECK(out.percent == in.percent);
     CHECK(out.level == in.level);
@@ -226,7 +223,6 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     CHECK(out.external_power);
     CHECK(out.valid);
     CHECK(out.die_valid);
-    CHECK(out.trim_learned);
 }
 
 TEST_CASE("diag record: the knee rides inside the level, and the bit it used to ride stays clear") {
@@ -236,6 +232,19 @@ TEST_CASE("diag record: the knee rides inside the level, and the bit it used to 
 
     CHECK((diag::record_of(in, diag_test_instant()).flags & (1u << 6)) == 0);
     CHECK(diag_round_trip(in).level == power::PowerLevel::Low);
+}
+
+TEST_CASE("diag record: the retired trim bit and bytes are written clear and never reused") {
+    diag::Power in{};
+    in.cell_mv = 4812;
+    in.sample_offset_mv = -5;
+    in.external_power = true;
+    in.charging = true;
+
+    const diag::Record r = diag::record_of(in, diag_test_instant());
+    CHECK((r.flags & (1u << 7)) == 0);
+    CHECK(r.payload[13] == 0);
+    CHECK(r.payload[14] == 0);
 }
 
 TEST_CASE("diag record: a contact keeps the instant the level moved, not the poll that saw it") {

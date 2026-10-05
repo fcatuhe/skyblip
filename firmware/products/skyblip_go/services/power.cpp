@@ -45,10 +45,10 @@ void PowerService::tick(uint32_t now_ms) {
         // cutoff that fired 40 mV early on a trimmed unit would be the
         // calibration causing the failure it exists to prevent. See
         // core/power/battery.h for what the offset is and where it comes from.
-        trim_.apply(raw, now_ms);
         const events::BatterySample sample = power::calibrated(raw, settings_.battery_offset_mv);
         gauge_.apply(sample);
-        cutoff_.apply(sample);
+        // INFO: fc 05oct26 a refused reading is no step on the ladder, the cable still overrides it
+        if (sample.external_power || power::plausible_mv(sample.millivolts)) cutoff_.apply(sample);
     }
     context_.state.power.battery = gauge_.state();
     context_.state.power.level = cutoff_.level();
@@ -86,10 +86,9 @@ void PowerService::record_power(const diag::Instant& at) {
     value.sample_offset_mv =
         diag::sample_offset_mv(power.battery.sample_mv, power.battery.millivolts);
     value.supply_warnings = cutoff_.supply_warnings();
-    value.implausible = cutoff_.implausible();
+    value.implausible = gauge_.refused();
     value.charge_warnings = charge_warnings_;
     value.die_dc = power.die_dc;
-    value.trim_offset_mv = trim_.offset_mv();
     value.percent = power.battery.percent;
     value.level = power.level;
     value.charge = power.charge;
@@ -97,7 +96,6 @@ void PowerService::record_power(const diag::Instant& at) {
     value.external_power = power.battery.external_power;
     value.valid = power.battery.valid;
     value.die_valid = power.die_valid;
-    value.trim_learned = trim_.learned();
     context_.diag.record(value, at);
 }
 

@@ -28,7 +28,10 @@ DUTY_MAX_PERIOD_S = 60
 
 ELAPSED = ("elapsed", None, 0)
 
-Consumer = collections.namedtuple("Consumer", "name milliamps counter cited source")
+Consumer = collections.namedtuple("Consumer", "name milliamps counter cited source fitted",
+                                  defaults=(None,))
+
+INCLINOMETER = 1 << 14
 
 
 def on_ms(field):
@@ -45,7 +48,7 @@ CONSUMERS = (
     Consumer("nRF52840, flash, rails", 3.5, ELAPSED, False,
              "10 ms service pass, UARTE at 115200, no CONFIG_PM"),
     Consumer("IMU hub", 0.6, ELAPSED, False,
-             "BHI260AP accelerometer only, the gyroscope is never read"),
+             "BHI260AP accelerometer only, the gyroscope is never read", INCLINOMETER),
     Consumer("barometer, lamp, divider", 0.4, ELAPSED, False,
              "BME280 forced 4/s, IIR 4, our driver, non-blocking"),
     Consumer("868 MHz receive", 4.8, on_ms("rx_armed_ms"), True,
@@ -82,6 +85,12 @@ class Run:
     @property
     def duty(self):
         return [r for r in self.records if r["type"] == "duty"]
+
+    @property
+    def capabilities(self):
+        """What the unit found fitted at boot, or None when no Boot record survived."""
+        boots = [r for r in self.records if r["type"] == "boot"]
+        return boots[0]["capabilities"] if boots else None
 
     @property
     def gaps(self):
@@ -166,10 +175,18 @@ def duty_pairs(run):
         yield run.records[start], run.records[end], run.records[start + 1:end]
 
 
-def interval_charge(before, after, seconds):
+def fitted(consumer, capabilities):
+    """A part the unit did not find at boot draws nothing; an unknown unit is charged everything."""
+    return consumer.fitted is None or capabilities is None or bool(capabilities & consumer.fitted)
+
+
+def interval_charge(before, after, seconds, capabilities=None):
     """Milliamp-seconds per consumer over one interval."""
     charge = {}
     for consumer in CONSUMERS:
+        if not fitted(consumer, capabilities):
+            charge[consumer.name] = 0.0
+            continue
         kind, field, each_ms = consumer.counter
         if kind == "elapsed":
             on_seconds = seconds
@@ -199,7 +216,7 @@ def model(run):
             skipped.append(reason)
             continue
         span = stamp(after) - stamp(before)
-        for name, spent in interval_charge(before, after, span).items():
+        for name, spent in interval_charge(before, after, span, run.capabilities).items():
             charge[name] += spent
         held[posture(before, after, span)] += span
         seconds += span
@@ -278,6 +295,8 @@ def caveats(run, skipped, out):
     for gap in run.gaps:
         out("  a gap record: %d records the ring had to refuse, over %.1f s"
             % (gap["dropped"], gap["span_ms"] / 1000.0))
+    if run.capabilities is None:
+        out("  no boot record: every row is charged as if the unit had every part")
     shortfall = short_of_whole(discharge(run))
     if shortfall:
         out("  not a whole run: %s" % shortfall)
@@ -335,7 +354,7 @@ def report(run, pack_mah, out):
            100.0 * modelled_ma / cell["milliamps"]))
     if not cell["whole"]:
         out("")
-        out("that measured figure leans on the two curves in core/power/battery.cpp, a")
+        out("that measured figure leans on the discharge curve in core/power/battery.cpp, a")
         out("textbook cell and not this pack: only a run from full to cutoff measures the")
         out("capacity instead of assuming it")
 

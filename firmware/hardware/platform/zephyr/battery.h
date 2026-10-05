@@ -6,9 +6,10 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 
+#include <algorithm>
 #include <cstdint>
 
-#include "core/power/cutoff.h"
+#include "core/power/battery.h"
 
 namespace skyblip::platform::zephyr {
 
@@ -26,25 +27,22 @@ class Battery {
 
     bool ready() const { return device_is_ready(dev_); }
 
+    // INFO: fc 05oct26 out_mv is what the divider read, refused or not: core/power counts it
     bool read_mv(uint16_t& out_mv) {
+        out_mv = 0;
         if (!ready()) return false;
         if (sensor_sample_fetch(dev_) != 0) return false;
         struct sensor_value volts{};
         if (sensor_channel_get(dev_, SENSOR_CHAN_VOLTAGE, &volts) != 0) return false;
 
         const int32_t millivolts = volts.val1 * 1000 + volts.val2 / 1000;
-        if (millivolts < kPlausibleMinMv || millivolts > kPlausibleMaxMv) return false;
-        out_mv = static_cast<uint16_t>(millivolts);
-        return true;
+        out_mv = static_cast<uint16_t>(std::clamp<int32_t>(millivolts, 0, UINT16_MAX));
+        return power::plausible_mv(out_mv);
     }
 
     static bool external_power() { return nrf_power_usbregstatus_vbusdet_get(NRF_POWER); }
 
    private:
-    // INFO: fc 07sep26 nothing here charges past the 4.2 V float, the low end is core/power's
-    static constexpr int32_t kPlausibleMinMv = power::kImplausibleFloorMv;
-    static constexpr int32_t kPlausibleMaxMv = 4700;
-
     const struct device* dev_;
 };
 

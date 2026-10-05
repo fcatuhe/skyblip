@@ -9,7 +9,6 @@
 #include "core/events/sensor.h"
 #include "core/power/battery.h"
 #include "core/power/cutoff.h"
-#include "core/power/trim.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/product_rig.h"
@@ -22,9 +21,9 @@ using namespace skyblip::power;
 // it is twelve percentage points of state of charge - the difference between a
 // pilot flying another hour and a pilot landing.
 TEST_CASE("battery: tens of millivolts are tens of percent in the flat middle") {
-    CHECK(int(percent_from_mv(3800, false)) == 55);
-    CHECK(int(percent_from_mv(3760, false)) == 43);
-    CHECK(int(percent_from_mv(3840, false)) == 63);
+    CHECK(int(percent_from_mv(3800)) == 55);
+    CHECK(int(percent_from_mv(3760)) == 43);
+    CHECK(int(percent_from_mv(3840)) == 63);
 }
 
 TEST_CASE("battery: the trim is a signed millivolt offset, and zero is the identity") {
@@ -55,9 +54,9 @@ TEST_CASE("battery: a trim can never push a reading out of the range a reading h
 // were trimmed, a calibrated unit would cut off at a voltage its own gauge never
 // showed - the calibration causing the failure it exists to prevent.
 TEST_CASE("battery: the trimmed sample is the same sample, charger state and all") {
-    // Nothing but the millivolts moves: the charger flag decides which curve the
-    // gauge reads and whether the cutoff monitor may act at all, and a trim has
-    // no opinion about either.
+    // Nothing but the millivolts moves: the charger flag decides whether the gauge
+    // and the cutoff monitor read the cell at all, and a trim has no opinion
+    // about it.
     events::BatterySample on_the_cable{};
     on_the_cable.millivolts = 4000;
     on_the_cable.external_power = true;
@@ -112,37 +111,17 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     }
     CHECK(uncalibrated.state().millivolts == kThisUnitReadsMv);
     CHECK(trimmed.state().millivolts == kBenchMv);
-    CHECK(trimmed.state().percent == percent_from_mv(kBenchMv, false));
+    CHECK(trimmed.state().percent == percent_from_mv(kBenchMv));
     // Ten percentage points of gauge error, from a divider inside tolerance.
     CHECK(int(uncalibrated.state().percent) == 65);
     CHECK(int(trimmed.state().percent) == 55);
 }
 
-// The bench step, done by a charger: a unit that never saw a supply still gets a trim.
-TEST_CASE("product: a charge held at the float voltage trims the unit that watched it") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(int(rig.settings().battery_offset_mv) == 0);
-    REQUIRE_FALSE(rig.settings().battery_offset_manual);
-
-    uint32_t t = 0;
-    rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 3960;
-    rig.run(t, t + 10000);
-    t += 10000;
-
-    // This unit reads 40 mV under the 4200 mV its charger is holding.
-    rig.platform.battery().millivolts = 4160;
-    rig.run(t, t + kPlateauHoldMs + 5000);
-    CHECK(int(rig.settings().battery_offset_mv) == 40);
-    CHECK_FALSE(rig.settings().battery_offset_manual);
-}
-
-TEST_CASE("product: a trim somebody measured outranks the one the charger offers") {
+// On the cable the divider reads the USB rail: a plateau there says nothing of this unit (#114).
+TEST_CASE("product: a charge however long leaves the trim where the line set it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().battery_offset_mv = -15;
-    rig.settings().battery_offset_manual = true;
 
     uint32_t t = 0;
     rig.platform.battery().external_power = true;
@@ -150,6 +129,6 @@ TEST_CASE("product: a trim somebody measured outranks the one the charger offers
     rig.run(t, t + 10000);
     t += 10000;
     rig.platform.battery().millivolts = 4160;
-    rig.run(t, t + kPlateauHoldMs + 5000);
+    rig.run(t, t + 300000);
     CHECK(int(rig.settings().battery_offset_mv) == -15);
 }

@@ -169,6 +169,15 @@ class DiagnosticsPayloads(unittest.TestCase):
             trim_offset_mv=-40, sample_offset_mv=-128, charging=True, external_power=False,
             valid=True, die_valid=False, caution=True, trim_learned=True))
 
+    # 0B1B2C on its charger: the rail over 4700 mV, refused and counted, with the cable seen (#114)
+    def test_power_on_the_cable_reads_the_rail_it_refused_and_no_cell(self):
+        payload = struct.pack("<4Hh3Bhb", 4812, 0, 360, 0, 305, 0, 1, 1, 0, 0)
+        self.assertEqual(decoded(8, payload, 0b0010_1100), whole(
+            "power", 0b0010_1100, cell_mv=4812, supply_warnings=0, implausible=360,
+            charge_warnings=0, die_dc=305, percent=0, level="normal", charge="ok",
+            trim_offset_mv=0, sample_offset_mv=0, charging=True, external_power=True,
+            valid=False, die_valid=True, caution=False, trim_learned=False))
+
     def test_baro_altitude_and_climb_are_signed_millimetres(self):
         payload = struct.pack("<I2ih", 95_432_100, -1234, -2500, -104)
         self.assertEqual(decoded(9, payload, 0b0001_1100), whole(

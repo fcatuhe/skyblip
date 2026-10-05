@@ -109,23 +109,26 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
     rig.run(0, 12000);
     CHECK(rig.state().power.battery.valid);
     CHECK(rig.state().power.battery.millivolts == 3800);
-    CHECK(rig.state().power.battery.percent == power::percent_from_mv(3800, false));
+    CHECK(rig.state().power.battery.percent == power::percent_from_mv(3800));
     CHECK_FALSE(rig.state().power.battery.charging);
     CHECK_FALSE(rig.state().power.battery.external_power);
 }
 
-TEST_CASE("product: the same cell on USB power reports a lower state of charge") {
+// E68BD9 told its phone 100 % for 3.5 h of charging from 45 %, off the USB rail (#114).
+TEST_CASE("product: on USB power the gauge shows the cable and no state of charge") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 4000;
+    rig.platform.battery().millivolts = 3750;
     rig.run(0, 12000);
-    const uint8_t resting = rig.state().power.battery.percent;
+    REQUIRE(rig.state().power.battery.valid);
 
     rig.platform.battery().external_power = true;
+    rig.platform.battery().millivolts = 4690;
     rig.run(12000, 24000);
     CHECK(rig.state().power.battery.charging);
-    CHECK(rig.state().power.battery.millivolts == 4000);
-    CHECK(rig.state().power.battery.percent < resting);
+    CHECK(rig.state().power.battery.external_power);
+    CHECK_FALSE(rig.state().power.battery.valid);
+    CHECK(rig.state().power.battery.percent == 0);
 }
 
 TEST_CASE("product: a board with no battery sense says so instead of reporting empty") {
@@ -282,7 +285,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     trimmed.platform.battery().millivolts = 3540;
     trimmed.run(0, 12000);
     CHECK(trimmed.state().power.battery.millivolts == 3480);
-    CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480, false));
+    CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480));
     // The reader that matters: the same trimmed millivolts reached the rule that
     // decides when the device warns and when it goes down.
     CHECK(trimmed.state().power.level == power::PowerLevel::Critical);

@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 
+#include "core/power/battery.h"
 #include "core/util/sha256.h"
 #include "core/util/span.h"
 #include "hardware/parts/bme280/bme280.h"
@@ -124,9 +125,8 @@ class Battery {
    public:
     bool ready() const { return present; }
     bool read_mv(uint16_t& out_mv) const {
-        if (!present) return false;
-        out_mv = millivolts;
-        return true;
+        out_mv = present ? millivolts : 0;
+        return present && power::plausible_mv(out_mv);
     }
 
     bool present{true};
