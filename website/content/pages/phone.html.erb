@@ -5,7 +5,7 @@ description: A skyBlip Go with your phone · three apps at once with no pairing,
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>With your phone, and without trusting it.</h1>
   <p class="lede">
     What an app can see, what it can ask for, and the glass that has the last word.
@@ -30,7 +30,7 @@ description: A skyBlip Go with your phone · three apps at once with no pairing,
       </p>
     </div>
     <figure class="shot shot--photo">
-      <%= image_tag "pages/index/skyblip-go-techo.jpg", alt: "A skyBlip Go, white case with its antenna, the wordmark on the e-paper screen" %>
+      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "A skyBlip Go, white case with its antenna, the traffic radar on the e-paper screen" %>
     </figure>
   </div>
 
@@ -127,10 +127,6 @@ description: A skyBlip Go with your phone · three apps at once with no pairing,
   </ul>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "radio", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

@@ -1,0 +1,26 @@
+en:
+  nav:
+    label: "Site"
+    manage: "Manage"
+    try: "Try it"
+  cta:
+    prompt: "Want to try it now, or get one?"
+    try: "Try it online"
+    try_note: "the real firmware, in your browser"
+    get: "Get one"
+    get_note: "from €68, no subscription"
+  simulator:
+    keys:
+      pitch: "climb, descend"
+      turn: "turn left, right"
+      speed: "faster, slower"
+      traffic: "add an aircraft"
+  footer:
+    description: "Electronic conspicuity for light aviation. skyBlip Go broadcasts your position in ADS-L, receives everyone else's position and tells you where to look."
+    open_source: "Open source, no subscription, no account."
+    product: "skyBlip Go"
+    guides: "Guides"
+    project: "skyBlip"
+    question: "A question? A remark?"
+    write: "Write to us on GitHub"
+    license: "Code under the MIT and GPL-3.0 licenses."

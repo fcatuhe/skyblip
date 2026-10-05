@@ -40,10 +40,10 @@ module SimulatorHelper
   ].freeze
 
   SIMULATOR_KEYS = [
-    { keys: "&uarr; &darr;", dial: "VS" },
-    { keys: "&larr; &rarr;", dial: "TURN" },
-    { keys: "F S", dial: "GS" },
-    { keys: "T", dial: "TFC" }
+    { keys: "&darr; &uarr;", action: :pitch },
+    { keys: "&larr; &rarr;", action: :turn },
+    { keys: "F S", action: :speed },
+    { keys: "T", action: :traffic }
   ].freeze
 
   def simulator_build

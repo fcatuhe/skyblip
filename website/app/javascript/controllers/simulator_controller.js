@@ -18,6 +18,10 @@ const TRAFFIC_STRONG_MIN_CLIMB_MM_S = 4000
 const TRAFFIC_STRONG_MAX_CLIMB_MM_S = 8000
 const TRAFFIC_EXCEPTIONAL_SHARE = 0.2
 const TRAFFIC_ADDRESS_MAX = 0xffffff
+const TRAFFIC_NAMED_SHARE = 0.6
+const CALLSIGN_PREFIXES = ["F-G", "F-H", "F-J", "F-C", "D-E", "D-K", "G-", "HB-", "OO-", "EC-", "I-"]
+const REGISTRATION_LENGTH = 6
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const ADSL = 0
 
 const FEET_PER_METRE = 3.28084
@@ -111,8 +115,8 @@ const AXES = {
 }
 
 const FLIGHT_KEYS = {
-  ArrowUp: ["climb", +1],
-  ArrowDown: ["climb", -1],
+  ArrowUp: ["climb", -1],
+  ArrowDown: ["climb", +1],
   ArrowRight: ["turn", +1],
   ArrowLeft: ["turn", -1],
   f: ["speed", +1],
@@ -227,6 +231,7 @@ export default class extends Controller {
 
   addTraffic() {
     if (!this.sim) return
+    const index = this.sim.aircraftCount()
     const bearing = Math.random() * 2 * Math.PI
     const range = this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
     this.sim.addAircraft(
@@ -240,6 +245,14 @@ export default class extends Controller {
       ADSL,
       this.#address()
     )
+    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, this.#callsign())
+  }
+
+  #callsign() {
+    const prefix = CALLSIGN_PREFIXES[Math.floor(Math.random() * CALLSIGN_PREFIXES.length)]
+    let callsign = prefix
+    while (callsign.length < REGISTRATION_LENGTH) callsign += LETTERS[Math.floor(Math.random() * LETTERS.length)]
+    return callsign
   }
 
   #address() {

@@ -1,17 +1,23 @@
 ---
-title: skyBlip Go
-nav_title: skyBlip Go
-description: The pocket tracker, screen by screen · traffic drawn the way you see it, an alarm that gives you the angle, the four pages, the two contacts, and what the device does on the apron.
+title: Try it online
+nav_title: Try it
+slug: try
+description: skyBlip Go firmware runs in your browser. Switch it on, add traffic, press the keys.
 ---
 
-<section id="simulator">
-  <p class="kicker">skyBlip Go</p>
-  <h1>Switch one on. It is a real one&rsquo;s firmware running.</h1>
+<header class="page-hero">
+  <h1>Try it. It is the real firmware.</h1>
+  <p class="page-hero-subtitle">
+    The device&rsquo;s code runs in your browser, as is.<br>
+    Switch it on, add traffic, press the keys.
+  </p>
+</header>
 
+<section id="simulator">
   <%= render "shared/simulator",
         wake: "Hold the lower key to switch it back on.",
         traffic: "Put an aircraft in the sky",
-        keys: "Once it is on, the keyboard flies it while it is on screen, and T puts another aircraft in the sky.",
+        keys: "Once it is on, the keyboard flies it while it is on screen. The arrows work like a stick: down to climb, up to descend.",
         on: "running",
         off: "off",
         menu: "menu",
@@ -26,69 +32,29 @@ description: The pocket tracker, screen by screen · traffic drawn the way you s
     The sky is empty until you ask for something. Every aircraft you add
     transmits real ADS-L frames, which the firmware receives, decodes and plots
     exactly as it would in flight. The lamp on the left is the firmware&rsquo;s:
-    it lights when a contact is worth an alarm. The one on the right belongs to
+    it lights when traffic sets off the alarm. The one on the right belongs to
     the charger, so it stays dark here. Every capture on these pages comes off this same
     firmware.
   </p>
 </section>
 
-<section>
-  <h2 class="kicker">Page by page</h2>
-  <p class="lede">
-    The rest of the device, one subject to a page.
-    <%= link_to_page "features", label: "Every feature" %> is the list, one line
-    each, and <%= link_to_page "displays", label: "every screen" %> is the
-    picture, as the firmware draws it.
-  </p>
-
-  <div class="cards">
-    <article class="card card--screen">
-      <%= screen_image_tag "far-all.png", alt: "The radar page with PLOT ALL, traffic inside the ring and on the band around it" %>
-      <h3><%= link_to_page "radar" %></h3>
-      <p>Heading up, a minute of track ahead of each aircraft, an alarm that says where to look, and every aircraft heard on the glass.</p>
+<section class="band band--tint">
+  <h2 class="section-title">What next?</h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Everything it does.</h3>
+      <p>The radar, the alarm, the broadcast, the phone, the instruments.</p>
+      <p><%= link_to_page "features", label: "See the features" %></p>
     </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "sixpack.png", alt: "The six-pack page" %>
-      <h3><%= link_to_page "instruments" %></h3>
-      <p>Six dials off the GNSS with the cell over the middle one, and a g-meter that keeps this flight's peaks.</p>
+    <article>
+      <h3>Screen by screen.</h3>
+      <p>Seven guides, one per subject, with captures from this same firmware.</p>
+      <p><%= link_to_page "guides", label: "Read the guides" %></p>
     </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "menu-radar.png", alt: "The settings menu" %>
-      <h3><%= link_to_page "controls" %></h3>
-      <p>Two contacts, the settings under the radar, a callsign typed on the device, and the diagnostic pages by name.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "off-flat-battery.png", alt: "The glass of a device that switched itself off on an empty cell" %>
-      <h3><%= link_to_page "power" %></h3>
-      <p>What it waits for on the apron, what off looks like, and a cell that says so when it runs out.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "confirm.png", alt: "The authorisation prompt on the glass" %>
-      <h3><%= link_to_page "phone" %></h3>
-      <p>Three apps at once with no pairing, every write asked on the glass, and firmware from a web page.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "radio-log.png", alt: "The radio log" %>
-      <h3><%= link_to_page "radio" %></h3>
-      <p>One radio, four dwells a second, and two systems heard in one of them.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "astern-all.png", alt: "The radar page with PLOT ALL and a group of aircraft astern" %>
-      <h3><%= link_to_page "displays" %></h3>
-      <p>Every screen in one place, and the radar drawn both ways.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "alarm.png", alt: "The radar page during a traffic advisory" %>
-      <h3><%= link_to_page "features" %></h3>
-      <p>Everything the device does, one line each, and where each one is explained.</p>
+    <article>
+      <h3>Your own.</h3>
+      <p>A LilyGO T-Echo or T-Echo Plus, the skyBlip firmware, and it is ready.</p>
+      <p><%= link_to_page "buy", label: "Get one" %></p>
     </article>
   </div>
-</section>
-
-<section>
-  <p>
-    <%= link_to_page "devices", class: "cta" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "index", label: "skyBlip", class: "cta cta--previous" %>
-  </p>
 </section>

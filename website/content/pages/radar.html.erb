@@ -1,11 +1,11 @@
 ---
 title: Radar and traffic
 nav_title: Radar
-description: The skyBlip Go radar · heading up, a minute of track ahead of each aircraft, every aircraft heard on the glass with PLOT ALL, an alarm that says where to look, and the list of who is out there.
+description: skyBlip Go radar · heading up, a minute of track ahead of each aircraft, every aircraft heard on the glass with PLOT ALL, an alarm that says where to look, and the list of who is out there.
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Where to look, and who is there.</h1>
   <p class="lede">
     The page a skyBlip Go is left on: where to look, who is there, and what the alarm means when it speaks.
@@ -185,10 +185,6 @@ description: The skyBlip Go radar · heading up, a minute of track ahead of each
   </div>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "instruments", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

@@ -1,184 +1,308 @@
 ---
-title: Toutes les fonctions
-nav_title: Fonctions
-slug: fonctions
-description: Ce que fait un skyBlip Go, une ligne chacune, et où chacune est expliquée.
+title: Fonctionnalités
+nav_title: Fonctionnalités
+slug: fonctionnalites
+description: Radar route en haut, alarme qui donne la direction, émission ADS-L, trafic dans votre application de navigation, six cadrans. Tout ce que fait skyBlip Go.
 ---
 
-<section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
-  <h1>Tout ce que fait un skyBlip Go.</h1>
-  <p class="lede">
-    Une ligne chacune, rangées par la page qui les explique. Chaque nom ouvre le paragraphe qui va avec.
+<header class="page-hero">
+  <h1>Tout ce que fait skyBlip Go.</h1>
+  <p class="page-hero-subtitle">
+    Radar, alarme, émission ADS-L, Bluetooth, instruments.<br>
+    Dans un boîtier de poche, sans abonnement.
   </p>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">Le trafic</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="radar">Un radar <span class="highlight">route en haut</span>.</h3>
+      <p>
+        Vous êtes au centre, route en haut, et c&rsquo;est le ciel qui tourne
+        autour de vous. Un trafic en haut à droite se cherche à droite du nez,
+        sans rien convertir.
+      </p>
+      <p>
+        Chaque aéronef est une forme&nbsp;: pointe en haut, il est
+        au-dessus&nbsp;; pointe en bas, en dessous&nbsp;; losange, à votre
+        niveau. Un chevron s&rsquo;ajoute s&rsquo;il monte ou descend, et un
+        trait mène là où il sera dans une minute.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "radar", label: "Lire le radar", anchor: "heading-up" %>
+        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec son trait d’une minute, et votre route en pointillés" %>
+    </figure>
+  </div>
+
+  <ul class="points points--center">
+    <li>Route en haut, jamais le nord</li>
+    <li>Cercle de 1, 2, 4 ou 8&nbsp;NM</li>
+    <li>Au-dessus, au niveau, en dessous</li>
+    <li>Une minute de route devant chaque aéronef</li>
+    <li>Le nombre d&rsquo;aéronefs reçus</li>
+    <li>Le temps de vol, pour le carnet</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Tous les aéronefs, <span class="highlight">aussi loin soient-ils</span>.</h3>
+      <p>
+        Avec <span class="mono">PLOT ALL</span>, le réglage d&rsquo;origine, le
+        cercle laisse une bande autour de lui. Un aéronef au-delà du cercle
+        s&rsquo;y place, dans son relèvement, avec sa forme. Rien de ce qui est
+        reçu avec une position n&rsquo;est laissé de côté.
+      </p>
+      <p>
+        Avec <span class="mono">PLOT TO SCALE</span>, l&rsquo;image est à
+        l&rsquo;échelle du cercle, et s&rsquo;arrête au bord de l&rsquo;écran.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "displays", label: "Le radar, des deux façons", anchor: "both-ways" %>
+        <small>Extrait du guide «&nbsp;Tous les écrans&nbsp;»</small>
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL : deux aéronefs dans le cercle, et sur la bande autour un aéronef devant, un groupe de trois en haut à droite et un aéronef à gauche" %>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="alarm">Une alarme <span class="highlight">qui dit où regarder</span>.</h3>
+      <p>
+        À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran centré
+        sur le trafic clignote, une fois par seconde, et le radar reprend la main
+        quelle que soit la page affichée.
+      </p>
+      <p>
+        Le secteur est penché sur l&rsquo;angle exact du trafic. L&rsquo;appareil
+        ne dit jamais de monter ou de descendre&nbsp;: il dit de regarder.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "radar", label: "L&rsquo;alarme en détail".html_safe, anchor: "alarm" %>
+        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : un secteur de 90° penché sur le trafic, passé au noir" %>
+    </figure>
+  </div>
+
+  <ul class="points points--center">
+    <li>3&nbsp;km autour, 300&nbsp;m au-dessus et en dessous</li>
+    <li>Un quart d&rsquo;écran, centré sur le trafic</li>
+    <li>Un clignotement par seconde</li>
+    <li>Un contact sur le pavé la fait taire</li>
+    <li>Le radar reprend la main</li>
+    <li>Un avertissement, jamais un ordre</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="nearby">Qui est là, <span class="highlight">du plus proche au plus loin</span>.</h3>
+      <p>
+        Une ligne par aéronef&nbsp;: la source, ADS-L ou FLARM, l&rsquo;indicatif
+        ou l&rsquo;adresse, la distance au sol et l&rsquo;altitude relative.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "radar", label: "La liste Nearby", anchor: "nearby" %>
+        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source, leur indicatif, leur distance et leur altitude relative" %>
+    </figure>
+  </div>
+
+  <%= render "shared/cta" %>
 </section>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "radar", class: "cta" %></h2>
-  <dl class="catalog">
+<section class="band">
+  <h2 class="section-title">Être vu</h2>
+
+  <div class="feature">
     <div>
-      <dt><%= link_to_page "radar", label: "Route en haut", anchor: "heading-up" %></dt>
-      <dd>Vous au centre, nez en haut, et le ciel qui tourne autour de vous&nbsp;: un trafic en haut à droite est à droite du nez.</dd>
+      <h3 id="broadcast">Votre position, <span class="highlight">chaque seconde</span>.</h3>
+      <p>
+        En vol, il émet votre position en ADS-L une fois par seconde, au sol une
+        fois toutes les dix secondes. L&rsquo;émission dure environ 5&nbsp;ms, à
+        un instant tiré de son adresse et de la seconde en cours.
+      </p>
+      <p>
+        Le reste de la seconde, il écoute&nbsp;: les deux canaux 868&nbsp;MHz pour
+        l&rsquo;ADS-L et le FLARM, et 869,525&nbsp;MHz, réservé à la liaison
+        montante des futures stations skyPost.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "radio", label: "Où passe la seconde", anchor: "second" %>
+        <small>Extrait du guide «&nbsp;La seconde radio&nbsp;»</small>
+      </p>
     </div>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : une ligne par trame reçue ou émise, avec son heure, son canal, son adresse et son niveau" %>
+    </figure>
+  </div>
+
+  <ul class="points points--center">
+    <li>ADS-L, le standard ouvert de l&rsquo;EASA</li>
+    <li>1&nbsp;Hz en vol, 0,1&nbsp;Hz au sol</li>
+    <li>Calé sur le GPS à la microseconde</li>
+    <li>Réception ADS-L et FLARM</li>
+    <li>À l&rsquo;écoute des futures stations sol</li>
+    <li>La moitié du temps d&rsquo;émission autorisé</li>
+  </ul>
+
+  <div class="feature feature--reverse">
     <div>
-      <dt><%= link_to_page "radar", label: "Cercles de 1, 2, 4 ou 8 NM", anchor: "heading-up" %></dt>
-      <dd>Ou 2, 4, 8 et 16&nbsp;km, choisis dans l&rsquo;unité où on les lit.</dd>
+      <h3 id="callsign">Votre indicatif <span class="highlight">chez les autres</span>.</h3>
+      <p>
+        Tapé sur l&rsquo;appareil avec deux contacts, envoyé depuis votre
+        téléphone ou réglé depuis le navigateur. Il part sur les ondes une fois
+        toutes les dix secondes, et s&rsquo;affiche sur l&rsquo;écran des
+        aéronefs autour de vous.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "controls", label: "Taper son indicatif", anchor: "callsign" %>
+        <small>Extrait du guide «&nbsp;Commandes et menus&nbsp;»</small>
+      </p>
     </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Une minute de route", anchor: "heading-up" %></dt>
-      <dd>Un trait de chaque aéronef jusqu&rsquo;où il sera dans une minute, et vos deux minutes devant vous.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Tous les aéronefs, aussi loin soient-ils", anchor: "every-aircraft" %></dt>
-      <dd>PLOT ALL place le trafic au-delà du cercle sur une bande autour, dans son relèvement.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Tous les aéronefs comptés", anchor: "every-aircraft" %></dt>
-      <dd>Le chiffre du coin compte tout ce qui est reçu, placé ou non.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Avis de trafic", anchor: "alarm" %></dt>
-      <dd>À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran clignote vers le trafic, avec son, vibration et voyant.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Cinq formes", anchor: "shapes" %></dt>
-      <dd>Au-dessus, au niveau ou en dessous, proche ou loin en altitude, en montée ou en descente, lues sans légende.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radar", label: "Nearby, du plus proche au plus loin", anchor: "nearby" %></dt>
-      <dd>Indicatif ou adresse, distance au sol et altitude relative, une ligne par aéronef.</dd>
-    </div>
-  </dl>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en grand, une barre sous le caractère en cours" %>
+    </figure>
+  </div>
+
+  <%= render "shared/cta" %>
 </section>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "instruments", class: "cta" %></h2>
-  <dl class="catalog">
+<section class="band band--tint">
+  <h2 class="section-title">Avec votre téléphone</h2>
+
+  <div class="feature">
     <div>
-      <dt><%= link_to_page "instruments", label: "Six cadrans", anchor: "six-pack" %></dt>
-      <dd>Vitesse sol, horizon, altimètre, bille et virage, route et vitesse verticale, tirés du GNSS.</dd>
+      <h3 id="apps">Trois applications, <span class="highlight">sans appairage</span>.</h3>
+      <p>
+        Il apparaît sous son nom, skyBlip Go suivi de son adresse. Le flux FLARM
+        NMEA part vers SDVFR Next, SkyDemon, ForeFlight et les autres&nbsp;: la
+        tablette, le téléphone et l&rsquo;iPad du passager voient le même trafic.
+      </p>
+      <p>
+        Ses seize derniers vols se téléchargent au sol par la même liaison.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "phone", label: "Avec votre téléphone", anchor: "by-name" %>
+        <small>Extrait du guide «&nbsp;Téléphone et firmware&nbsp;»</small>
+      </p>
     </div>
+    <figure class="shot shot--photo">
+      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, boîtier blanc avec son antenne, le radar du trafic à l’écran" %>
+    </figure>
+  </div>
+
+  <ul class="points points--center">
+    <li>Pas d&rsquo;appairage, pas de code, pas de compte</li>
+    <li>Trois connexions à la fois</li>
+    <li>SDVFR Next, SkyDemon, ForeFlight</li>
+    <li>Ses seize derniers vols en mémoire</li>
+  </ul>
+
+  <div class="feature feature--reverse">
     <div>
-      <dt><%= link_to_page "instruments", label: "La batterie à l&rsquo;écran", anchor: "six-pack" %></dt>
-      <dd>L&rsquo;état de charge au-dessus du cadran du milieu.</dd>
+      <h3 id="asked">Chaque changement <span class="highlight">demandé à l&rsquo;écran</span>.</h3>
+      <p>
+        Un nouveau firmware, des réglages, l&rsquo;effacement de vos vols&nbsp;:
+        l&rsquo;appareil ne croit pas le téléphone sur parole. Il pose la question
+        sur son écran. Deux pressions autorisent, une refuse, le silence vaut
+        refus.
+      </p>
+      <p>
+        Les mises à jour passent par le navigateur, en Bluetooth. Si la nouvelle
+        version ne démarre pas, l&rsquo;appareil revient à l&rsquo;ancienne.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "manage", label: "Gérer mon skyBlip" %>
+        <small>Mise à jour et réglages, depuis Chrome ou Edge</small>
+      </p>
     </div>
-    <div>
-      <dt><%= link_to_page "instruments", label: "G-mètre", anchor: "g-meter" %></dt>
-      <dd>Facteur de charge normal, latéral et longitudinal, avec les pics du vol.</dd>
-    </div>
-  </dl>
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "La demande d’autorisation : AUTHORISE SETTINGS, PRESS TWICE TO ALLOW, ONE PRESS REFUSES" %>
+    </figure>
+  </div>
+
+  <%= render "shared/cta" %>
 </section>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "controls", class: "cta" %></h2>
-  <dl class="catalog">
-    <div>
-      <dt><%= link_to_page "controls", label: "Deux contacts", anchor: "two-contacts" %></dt>
-      <dd>Le pavé fait défiler les pages, le bouton agit, et rien ne demande de rythme.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "controls", label: "Réglages sur l&rsquo;appareil", anchor: "two-contacts" %></dt>
-      <dd>Type, indicatif, unités, portée, tracé, alarme et volume, sans téléphone.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "controls", label: "Champ indicatif", anchor: "callsign" %></dt>
-      <dd>Une immatriculation tapée avec deux contacts, et effacée d&rsquo;une pression.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "controls", label: "Diagnostic par son nom", anchor: "diagnostics" %></dt>
-      <dd>État, satellites, journal radio, compteurs bruts, capture et autotest.</dd>
-    </div>
-  </dl>
-</section>
+<section class="band">
+  <h2 class="section-title">Au quotidien</h2>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "power", class: "cta" %></h2>
-  <dl class="catalog">
+  <div class="feature">
     <div>
-      <dt><%= link_to_page "power", label: "Il dit ce qu&rsquo;il attend", anchor: "waiting" %></dt>
-      <dd>Pas de position, et où en est le récepteur.</dd>
+      <h3 id="instruments">Six cadrans <span class="highlight">tirés du GNSS</span>.</h3>
+      <p>
+        Vitesse sol, horizon, altimètre, virage, route et vario, avec la
+        batterie au-dessus du cadran central.
+      </p>
+      <p>
+        Rien n&rsquo;est certifié&nbsp;: ce n&rsquo;est pas un horizon pour voler
+        en nuage.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "instruments", label: "Les instruments", anchor: "six-pack" %>
+        <small>Extrait du guide «&nbsp;Instruments&nbsp;»</small>
+      </p>
     </div>
-    <div>
-      <dt><%= link_to_page "power", label: "Éteint, c&rsquo;est le logo", anchor: "off" %></dt>
-      <dd>L&rsquo;e-paper le garde sans courant, et un écran blanc est gardé pour le rangement.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "power", label: "Une batterie vide le dit", anchor: "flat-battery" %></dt>
-      <dd>La coupure écrit FLAT BATTERY avant que les rails tombent.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "power", label: "Une journée sur une batterie", anchor: "cell" %></dt>
-      <dd>Un arrêt dans l&rsquo;ordre, et une radio qui parle une fois toutes les dix secondes au sol.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "power", label: "Une jauge qui ne bouge pas pour rien", anchor: "gauge" %></dt>
-      <dd>Deux courbes, en charge ou non, et jamais déplacée par une émission.</dd>
-    </div>
-  </dl>
-</section>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "La page des six cadrans : vitesse sol, horizon, altimètre, bille, route et vario" %>
+    </figure>
+  </div>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "phone", class: "cta" %></h2>
-  <dl class="catalog">
+  <div class="feature feature--reverse">
     <div>
-      <dt><%= link_to_page "phone", label: "Par son nom, sans appairage", anchor: "by-name" %></dt>
-      <dd>Le NMEA FLARM vers trois applications à la fois, sur les profils qu&rsquo;elles cherchent.</dd>
+      <h3 id="controls">Deux contacts, <span class="highlight">sans téléphone</span>.</h3>
+      <p>
+        Une tape sur le pavé change de page, un contact d&rsquo;une seconde
+        ramène le radar. Le bouton ouvre le menu&nbsp;: type d&rsquo;aéronef,
+        indicatif, unités, portée, tracé, alarme et volume.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "controls", label: "Les commandes", anchor: "two-contacts" %>
+        <small>Extrait du guide «&nbsp;Commandes et menus&nbsp;»</small>
+      </p>
     </div>
-    <div>
-      <dt><%= link_to_page "phone", label: "Demandé à l&rsquo;écran", anchor: "asked" %></dt>
-      <dd>Deux pressions autorisent, une refuse, et le silence vaut refus.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "phone", label: "Le firmware depuis une page web", anchor: "firmware" %></dt>
-      <dd>Une image signée en Bluetooth, et un appareil qui revient en arrière si la nouvelle ne prend pas.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "phone", label: "Pourquoi pas d&rsquo;appairage", anchor: "no-pairing" %></dt>
-      <dd>La frontière est l&rsquo;image signée et le pouce sur l&rsquo;appareil, pas la liaison.</dd>
-    </div>
-  </dl>
-</section>
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d’aéronef, indicatif, unités, portée, tracé, alarme et volume" %>
+    </figure>
+  </div>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "radio", class: "cta" %></h2>
-  <dl class="catalog">
+  <div class="feature">
     <div>
-      <dt><%= link_to_page "radio", label: "Quatre fenêtres par seconde", anchor: "second" %></dt>
-      <dd>Calées sur le GPS à la microseconde, les deux canaux 868 et la liaison montante du sol.</dd>
+      <h3 id="power">Une batterie <span class="highlight">qui prévient</span>.</h3>
+      <p>
+        Sans position, il dit où en est le récepteur. Éteint, l&rsquo;écran
+        e-paper garde le logo sans courant. Batterie vide, il
+        l&rsquo;écrit à l&rsquo;écran avant de couper.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "power", label: "La batterie", anchor: "waiting" %>
+        <small>Extrait du guide «&nbsp;Alimentation et batterie&nbsp;»</small>
+      </p>
     </div>
-    <div>
-      <dt><%= link_to_page "radio", label: "Deux systèmes dans une fenêtre", anchor: "second" %></dt>
-      <dd>Trames ADS-L et génération FLARM distinguées après une seule synchro.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "radio", label: "Une émission que rien ne déplace", anchor: "second" %></dt>
-      <dd>Environ 5&nbsp;ms, à un instant tiré de l&rsquo;adresse et de la seconde.</dd>
-    </div>
-  </dl>
-</section>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil éteint sur une batterie vide : le logo skyBlip et FLAT BATTERY" %>
+    </figure>
+  </div>
 
-<section>
-  <h2 class="kicker"><%= link_to_page "displays", class: "cta" %></h2>
-  <dl class="catalog">
-    <div>
-      <dt><%= link_to_page "displays", label: "Le radar, des deux façons", anchor: "both-ways" %></dt>
-      <dd>Les mêmes ciels en PLOT ALL et en PLOT TO SCALE, à un bouton d&rsquo;écart.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "displays", label: "Tous les écrans", anchor: "in-flight" %></dt>
-      <dd>Chaque page, chaque menu et chaque question, tels que le firmware les dessine.</dd>
-    </div>
-    <div>
-      <dt><%= link_to_page "displays", label: "Pourquoi l&rsquo;écran se comporte ainsi", anchor: "screen" %></dt>
-      <dd>Rafraîchissement partiel, un balayage noir par page, et la forme d&rsquo;onde complète deux fois par session.</dd>
-    </div>
-  </dl>
-</section>
+  <ul class="points points--center">
+    <li>Batterie 850&nbsp;mAh</li>
+    <li>Recharge en USB-C</li>
+    <li>Écran e-paper 200&times;200</li>
+    <li>Baromètre BME280</li>
+  </ul>
 
-<section>
-  <p>
-    <%= link_to_page "radar", class: "cta cta--next" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "skyblip-go", class: "cta cta--previous" %>
-  </p>
+  <%= render "shared/cta" %>
 </section>

@@ -54,6 +54,8 @@
     mix-blend-mode: multiply;
   }
 
+  .shot--app img { mix-blend-mode: normal; }
+
   .shot figcaption {
     font-size: var(--text-xs);
     letter-spacing: 0.14em;

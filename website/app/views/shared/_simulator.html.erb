@@ -59,7 +59,7 @@
         <p class="simulator-keys"><%= keys %></p>
         <% SimulatorHelper::SIMULATOR_KEYS.each do |binding| %>
           <span class="simulator-binding">
-            <kbd><%= binding[:keys].html_safe %></kbd><%= binding[:dial] %>
+            <kbd><%= binding[:keys].html_safe %></kbd><%= t "simulator.keys.#{binding[:action]}" %>
           </span>
         <% end %>
       </div>
