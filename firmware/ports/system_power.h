@@ -5,7 +5,6 @@
 #define SKYBLIP_PORTS_SYSTEM_POWER_H
 
 #include "core/power/reset_reason.h"
-#include "core/power/shutdown.h"
 #include "core/power/wake.h"
 
 namespace skyblip::ports {
@@ -18,7 +17,7 @@ class SystemPower {
     // the same reason after every following reset until it is cleared.
     virtual power::ResetCause reset_causes() const { return power::ResetCause::None; }
 
-    virtual void system_off(power::ButtonWake button_wake) { (void)button_wake; }
+    virtual void system_off() {}
 
     virtual void reboot() {}
 
@@ -45,8 +44,6 @@ class SystemPower {
     virtual void set_cell_on_glass(power::CellOnGlass word) { (void)word; }
     virtual bool went_dark_flat() const { return false; }
     virtual void set_went_dark_flat(bool flat) { (void)flat; }
-    virtual bool charger_woke() const { return false; }
-    virtual void set_charger_woke(bool woke) { (void)woke; }
 };
 
 }  // namespace skyblip::ports

@@ -24,7 +24,6 @@ Diagnostics busy_device() {
     d.refreshes = 12;
     d.uptime_s = 3725;
     d.reset = power::ResetReason::Watchdog;
-    d.charger_woke = true;
     d.link_drops = 2;
 
     d.noise_dbm = -101;
@@ -184,7 +183,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
 
     // Five subsystems, in the order a bench eye wants them: how long it has been
     // up, then the radio, then what it heard, then what it knows about itself.
-    CHECK(has(text, "sys up_s=3725 reset=\"WATCHDOG\" charger_woke=true link_drops=2\n"));
+    CHECK(has(text, "sys up_s=3725 reset=\"WATCHDOG\" link_drops=2\n"));
     CHECK(has(text,
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
               "rx_unframed=11 rx_miskeyed=7 rx_noise=96 rx_named=12 tx_ok=880 tx_lost=3 "

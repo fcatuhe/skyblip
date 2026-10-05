@@ -230,8 +230,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
 
     // What the shell does with that: the rails go down the same way a long press
     // takes them down, in the order core/power owns.
-    rig.platform.system_power().system_off(
-        power::button_wake_after_refusal(rig.product.boot_cell()));
+    rig.platform.system_power().system_off();
     CHECK(rig.platform.system_power().offs == 1);
     CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
           power::kPowerDownStepCount - 1);

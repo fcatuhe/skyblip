@@ -45,11 +45,9 @@ int main(void) {
             g_platform.watchdog().feed();
             k_sleep(K_MSEC(runtime::kServiceStepMs));
         }
-        g_platform.system_power().system_off(power::button_wake_after_refusal(cell));
+        g_platform.system_power().system_off();
     }
 
-    if (g_product.charger_woke())
-        LOG_INF("a charger woke this unit while it was off, and that boot was refused");
     if (!g_platform.pps_armed()) LOG_ERR("PPS: no edge interrupt, so no slot is ever keyed");
     if (!g_platform.storage_mounted())
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
@@ -92,8 +90,7 @@ int main(void) {
         if (g_product.ready_to_power_off()) {
             const power::ShutdownReason reason = g_product.shutdown().reason();
             LOG_INF("power off: %s", power::to_string(reason));
-            g_platform.system_power().system_off(
-                power::button_wake_after(reason, g_platform.external_power()));
+            g_platform.system_power().system_off();
         }
 
         platform::zephyr::g_loop_wake.rest_after(began_ticks);

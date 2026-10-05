@@ -143,19 +143,17 @@ class PowerDownSink {
     virtual void perform(PowerDownStep step) = 0;
 };
 
-enum class ButtonWake : uint8_t { Armed, Withheld };
-
-// INFO: fc 07sep26 meshcore arms voltage recovery, not the button, on a low-voltage shutdown
-ButtonWake button_wake_after(ShutdownReason reason, bool external_power);
-
-// INFO: fc 05oct26 the factory bootloader hands on a button wake or a charger wake, never both
-enum class BootloaderPasses : uint8_t { Button, Charger };
-
-BootloaderPasses bootloader_passes(ButtonWake button_wake);
-
 // Walks kPowerDownOrder once, in order. The caller enters SYSTEM OFF after it
 // returns.
-void power_down(PowerDownSink& sink, ButtonWake button_wake);
+void power_down(PowerDownSink& sink);
+
+// INFO: fc 05oct26 GPREGRET for the factory bootloader: t_echo_plus/factory/README.md
+constexpr uint8_t kSkipBootloaderMagic = 0x6d;
+constexpr uint8_t kUf2MassStorageMagic = 0x57;
+
+constexpr uint8_t boot_magic_for_system_off(bool recovery_armed) {
+    return recovery_armed ? kUf2MassStorageMagic : kSkipBootloaderMagic;
+}
 
 // Long enough that it cannot be the page press, short enough to do with gloves
 // on. A short press pages; this is the only other thing the one button does.
@@ -172,6 +170,15 @@ constexpr uint32_t kParkMs = 3000;
 // OFF latches. SoftRF spins on the pin and waits 100 ms before arming it
 // (src/platform/nRF52.cpp:3199-3203).
 constexpr uint32_t kReleaseSettleMs = 100;
+
+class ButtonRelease {
+   public:
+    bool settled(uint32_t now_ms, bool button_down);
+
+   private:
+    bool released_{false};
+    uint32_t released_at_ms_{0};
+};
 
 class ShutdownSequencer {
    public:
@@ -192,10 +199,6 @@ class ShutdownSequencer {
     // hold filling up. Zero when it is not down or the hold is not armed yet.
     uint32_t held_ms(uint32_t now_ms) const;
 
-    bool waits_for_release() const {
-        return button_wake_after(reason_, /*external_power=*/false) == ButtonWake::Armed;
-    }
-
    private:
     void enter(ShutdownPhase phase, uint32_t now_ms);
 
@@ -203,9 +206,8 @@ class ShutdownSequencer {
     ShutdownReason reason_{ShutdownReason::None};
     uint32_t since_ms_{0};
     uint32_t hold_since_ms_{0};
-    uint32_t released_at_ms_{0};
+    ButtonRelease release_{};
     bool holding_{false};
-    bool released_{false};
     bool stowing_{false};
     // A press is what wakes the device from SYSTEM OFF, so the very first thing
     // the sequencer sees after a wake is a button that is already down. Counting

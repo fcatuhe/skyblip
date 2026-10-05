@@ -29,7 +29,6 @@ struct BootSnapshot {
     uint32_t device_addr{0};
     const char* reset_reason{"UNKNOWN"};
     bool went_dark_flat{false};
-    bool charger_woke{false};
     const BootPart* parts{nullptr};
     int n_parts{0};
     // False when a required part is missing. The device stays up and keeps this
@@ -61,8 +60,6 @@ constexpr int kBootFirstRowY = 36;
 constexpr int kBootHeaderY = 26;
 
 constexpr int boot_row_y(int row) { return kBootFirstRowY + row * kBootRowH; }
-
-constexpr const char* kChargerWokeWord = "USB WOKE";
 
 constexpr int kBootDividerGap = 3;
 constexpr int kBootFooterGap = 5;

@@ -45,10 +45,10 @@ TEST_CASE("product: a cell that takes the device down names itself on the way ou
     CHECK_FALSE(reads_in(parked, "%", 0, 0, 200, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
 
-    // The press after it gets nothing: the frame is the answer and the wake pin is never armed.
-    rig.platform.system_power().system_off(
-        power::button_wake_after(rig.product.shutdown().reason(), rig.platform.external_power()));
-    CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) == -1);
+    // The button stays armed, so a press after it reaches the lockout and not a dead unit.
+    rig.platform.system_power().system_off();
+    CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
+          power::kPowerDownStepCount - 1);
 }
 
 // The other road to the same empty cell: a winter on a shelf, which runs no shutdown at all.
@@ -82,8 +82,89 @@ TEST_CASE("product: a refused boot pushes no frame the glass is already wearing"
     CHECK(rig.platform.chips().epd.present_count == 0);
 }
 
-// The cable re-arms the button, so the mark is the whole instruction again.
-TEST_CASE("product: the charger that wakes a flat device takes the word back off the glass") {
+// The cutoff left FLAT BATTERY on the glass, and the press that follows needs no other answer.
+TEST_CASE("product: a press after a cutoff is refused and leaves the flat frame where it is") {
+    Rig dying;
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+    REQUIRE(dying.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
+
+    Rig pressed;
+    pressed.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
+    pressed.platform.system_power().dark_flat = dying.platform.system_power().went_dark_flat();
+    pressed.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    pressed.platform.board_gpio().button_down = true;
+    REQUIRE(pressed.setup() == Status::Ok);
+    REQUIRE(pressed.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK(pressed.product.refused_frame() == power::RefusedFrame::Leave);
+    pressed.platform.board_gpio().button_down = false;
+    pressed.sleep_again();
+    CHECK(pressed.platform.chips().epd.present_count == 0);
+    CHECK(pressed.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
+    CHECK(pressed.platform.system_power().went_dark_flat());
+
+    pressed.platform.system_power().system_off();
+    CHECK(pressed.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
+          power::kPowerDownStepCount - 1);
+}
+
+// SENSE is a level detect: armed under the finger it refused, the wake pin fires at once.
+TEST_CASE("product: a refused press goes dark only once the button has come up") {
+    Rig rig;
+    rig.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::FlatCell);
+
+    bool dark = false;
+    uint32_t t = 0;
+    for (; t <= go::kRefusalParkCeilingMs + 2000; t += 50) {
+        rig.platform.clock().set_millis(t);
+        dark = dark || rig.product.park_refusal(t);
+    }
+    CHECK_FALSE(dark);
+    CHECK(rig.platform.chips().epd.present_count == 1);
+
+    rig.platform.board_gpio().button_down = false;
+    CHECK_FALSE(rig.product.park_refusal(t));
+    CHECK_FALSE(rig.product.park_refusal(t + power::kReleaseSettleMs - 1));
+    CHECK(rig.product.park_refusal(t + power::kReleaseSettleMs));
+}
+
+// The lockout spares external power, so the cable and a press are the way out of a flat cell.
+TEST_CASE("product: a press on the cable after a cutoff starts the device and clears the word") {
+    Rig dying;
+    REQUIRE(dying.setup() == Status::Ok);
+    dying.run(0, 2000);
+    dying.platform.battery().millivolts = 3100;
+    dying.run(2000, 20000);
+    REQUIRE(dying.product.ready_to_power_off());
+
+    Rig plugged;
+    plugged.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
+    plugged.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    plugged.platform.battery().external_power = true;
+    plugged.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    plugged.platform.board_gpio().button_down = true;
+    REQUIRE(plugged.setup() == Status::Ok);
+    CHECK(plugged.product.boot_path() == power::BootPath::Run);
+    CHECK(plugged.state().started);
+
+    plugged.platform.board_gpio().button_down = false;
+    plugged.run(0, 5000);
+    CHECK_FALSE(plugged.product.shutdown().going_down());
+    CHECK_FALSE(
+        reads_in(plugged.platform.chips().epd.framebuffer(), "FLAT BATTERY", 0, 0, 200, 199, 2));
+    CHECK(plugged.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
+}
+
+// The factory bootloader swallows a charger wake: one that got through would get the armed frame.
+TEST_CASE("product: a charger wake past the bootloader takes the word back off the glass") {
     Rig rig;
     rig.platform.battery().millivolts = power::kBootLockoutMv - 1;
     rig.platform.battery().external_power = true;
@@ -111,72 +192,6 @@ TEST_CASE("product: the charger that wakes a flat device takes the word back off
     CHECK(again.platform.chips().epd.present_count == 0);
 }
 
-// The whole road, on the one bit that survives the rails: the cutoff writes it, the cable reads it.
-TEST_CASE("product: the cable after a cutoff puts the mark back and arms the button") {
-    Rig dying;
-    REQUIRE(dying.setup() == Status::Ok);
-    dying.run(0, 2000);
-    dying.platform.battery().millivolts = 3100;
-    dying.run(2000, 20000);
-    REQUIRE(dying.product.ready_to_power_off());
-
-    Rig plugged;
-    plugged.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
-    plugged.platform.battery().millivolts = power::kBootLockoutMv - 1;
-    plugged.platform.battery().external_power = true;
-    plugged.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
-    REQUIRE(plugged.setup() == Status::Ok);
-    REQUIRE(plugged.product.refused_frame() == power::RefusedFrame::Wordmark);
-    plugged.sleep_again();
-
-    const go::Glass& parked = plugged.platform.chips().epd.framebuffer();
-    CHECK_FALSE(reads_in(parked, "FLAT BATTERY", 0, 0, 200, 199, 2));
-    CHECK(plugged.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
-    CHECK(power::button_wake_after_refusal(plugged.product.boot_cell()) ==
-          power::ButtonWake::Armed);
-}
-
-// #113: the cutoff told the factory bootloader to skip, and a skip puts a VBUS wake back to sleep.
-TEST_CASE("product: a cutoff lets the charger through, and the refusal hands the wake back") {
-    Rig dying;
-    REQUIRE(dying.setup() == Status::Ok);
-    dying.run(0, 2000);
-    dying.platform.battery().millivolts = 3100;
-    dying.run(2000, 20000);
-    REQUIRE(dying.product.ready_to_power_off());
-    dying.platform.system_power().system_off(power::button_wake_after(
-        dying.product.shutdown().reason(), dying.platform.external_power()));
-    CHECK(dying.platform.system_power().passes == power::BootloaderPasses::Charger);
-
-    Rig plugged;
-    plugged.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
-    plugged.platform.battery().external_power = true;
-    plugged.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
-    REQUIRE(plugged.setup() == Status::Ok);
-    plugged.sleep_again();
-    plugged.platform.system_power().system_off(
-        power::button_wake_after_refusal(plugged.product.boot_cell()));
-    CHECK(plugged.platform.system_power().passes == power::BootloaderPasses::Button);
-}
-
-// The bootloader reads the button as its DFU button, so an armed one always asks it to skip.
-TEST_CASE("product: a switch-off that arms the button keeps the press out of the bootloader") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.run(0, 2000);
-    rig.platform.battery().millivolts = power::kCriticalMv - 100;
-    rig.run(2000, 10000);
-    rig.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
-    rig.run(10000, 20000);
-    REQUIRE(rig.product.ready_to_power_off());
-    rig.platform.system_power().system_off(
-        power::button_wake_after(rig.product.shutdown().reason(), rig.platform.external_power()));
-    CHECK(rig.platform.system_power().passes == power::BootloaderPasses::Button);
-    CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
-}
-
 // The lamp's warning dies with the rails, so the glass carries it to whoever picks the device up.
 TEST_CASE("product: a switch-off on a critical cell asks for the charger under the mark") {
     Rig rig;
@@ -195,8 +210,6 @@ TEST_CASE("product: a switch-off on a critical cell asks for the charger under t
     CHECK_FALSE(reads_in(parked, "FLAT BATTERY", 0, 0, 200, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
     CHECK_FALSE(rig.platform.system_power().went_dark_flat());
-    CHECK(power::button_wake_after(rig.product.shutdown().reason(), false) ==
-          power::ButtonWake::Armed);
 }
 
 // The first step already winks the lamp red, so the glass has to carry that word too.
@@ -237,34 +250,6 @@ TEST_CASE(
     CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "CHARGE BATTERY", 0, 130, 200, 199, 2));
 }
 
-// The same road out as the flat word: the cable is the instruction the word gave.
-TEST_CASE("product: the cable after a low switch-off puts the plain mark back") {
-    Rig low;
-    REQUIRE(low.setup() == Status::Ok);
-    low.run(0, 2000);
-    low.platform.battery().millivolts = power::kCriticalMv - 100;
-    low.run(2000, 10000);
-    low.product.shutdown().request(power::ShutdownReason::LongPress, 10000);
-    low.run(10000, 20000);
-    REQUIRE(low.product.ready_to_power_off());
-
-    Rig plugged;
-    plugged.platform.system_power().glass_cell = low.platform.system_power().cell_on_glass();
-    plugged.platform.battery().millivolts = power::kCriticalMv - 100;
-    plugged.platform.battery().external_power = true;
-    plugged.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
-    REQUIRE(plugged.setup() == Status::Ok);
-    REQUIRE(plugged.product.refused_frame() == power::RefusedFrame::Wordmark);
-    plugged.sleep_again();
-
-    go::Glass expected;
-    expected.clear(true);
-    ui::draw_wordmark(expected, go::kGlassW / 2, go::kGlassH / 2);
-    CHECK(plugged.platform.chips().epd.framebuffer().count_black() == expected.count_black());
-    CHECK(plugged.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
-}
-
 // A cable in says the charge is already coming, so the mark alone is the frame.
 TEST_CASE("product: a switch-off on the cable wears the plain mark, however low the cell") {
     Rig rig;
@@ -281,28 +266,18 @@ TEST_CASE("product: a switch-off on the cable wears the plain mark, however low 
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
 }
 
-// The support half of a flat cell: the glass forgets it on the cable, the boot that runs does not.
-TEST_CASE("product: the boot after a flat cell names it, though the cable took the word away") {
+// The support half of a flat cell: the boot the cable lets run says so, once.
+TEST_CASE("product: the press on the cable after a flat cell names it on the self-test page") {
     Rig refused;
     refused.platform.battery().millivolts = power::kBootLockoutMv - 1;
     REQUIRE(refused.setup() == Status::Ok);
     refused.sleep_again();
     CHECK(refused.platform.system_power().went_dark_flat());
 
-    Rig plugged;
-    plugged.platform.system_power().glass_cell = refused.platform.system_power().cell_on_glass();
-    plugged.platform.system_power().dark_flat = refused.platform.system_power().went_dark_flat();
-    plugged.platform.battery().millivolts = power::kBootLockoutMv - 1;
-    plugged.platform.battery().external_power = true;
-    plugged.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
-    REQUIRE(plugged.setup() == Status::Ok);
-    plugged.sleep_again();
-    REQUIRE(plugged.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
-    CHECK(plugged.platform.system_power().went_dark_flat());
-
     Rig pressed;
-    pressed.platform.system_power().dark_flat = plugged.platform.system_power().went_dark_flat();
+    pressed.platform.system_power().glass_cell = refused.platform.system_power().cell_on_glass();
+    pressed.platform.system_power().dark_flat = refused.platform.system_power().went_dark_flat();
+    pressed.platform.battery().millivolts = power::kBootLockoutMv - 1;
     pressed.platform.battery().external_power = true;
     pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
     pressed.platform.board_gpio().button_down = true;
@@ -315,50 +290,6 @@ TEST_CASE("product: the boot after a flat cell names it, though the cable took t
     pressed.run(0, 200);
     CHECK(pressed.last_on(events::Endpoint::Config).find("\"went_dark_flat\":true") !=
           std::string::npos);
-}
-
-// Whether a cable reached the application at all, the question #113 could not answer.
-TEST_CASE("product: the boot after a refused charger wake says the cable got through") {
-    Rig plugged;
-    plugged.platform.battery().external_power = true;
-    plugged.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
-    REQUIRE(plugged.setup() == Status::Ok);
-    REQUIRE(plugged.product.boot_path() == power::BootPath::SleepAgain);
-    plugged.sleep_again();
-    CHECK(plugged.platform.system_power().charger_woke());
-
-    Rig wiggled;
-    wiggled.platform.system_power().woke_on_charger = true;
-    wiggled.platform.battery().millivolts = power::kBootLockoutMv - 1;
-    REQUIRE(wiggled.setup() == Status::Ok);
-    REQUIRE(wiggled.product.boot_path() == power::BootPath::SleepAgain);
-    CHECK(wiggled.platform.system_power().charger_woke());
-
-    Rig pressed;
-    pressed.platform.system_power().woke_on_charger = true;
-    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
-    pressed.platform.board_gpio().button_down = true;
-    REQUIRE(pressed.setup() == Status::Ok);
-    REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
-    CHECK(pressed.product.charger_woke());
-    CHECK(reads_in(pressed.product.boot_page(), go::kChargerWokeWord, 0, 20, 200, 35));
-    CHECK_FALSE(pressed.platform.system_power().charger_woke());
-}
-
-// A refusal that no cable caused is a button on a flat cell, and says nothing about the charger.
-TEST_CASE("product: a refused press and an ordinary boot leave no charger note") {
-    Rig flat;
-    flat.platform.battery().millivolts = power::kBootLockoutMv - 1;
-    flat.platform.system_power().causes = power::ResetCause::LowPowerWake;
-    REQUIRE(flat.setup() == Status::Ok);
-    REQUIRE(flat.product.boot_path() == power::BootPath::SleepAgain);
-    CHECK_FALSE(flat.platform.system_power().charger_woke());
-
-    Rig ordinary;
-    REQUIRE(ordinary.setup() == Status::Ok);
-    CHECK_FALSE(ordinary.product.charger_woke());
-    CHECK_FALSE(reads_in(ordinary.product.boot_page(), go::kChargerWokeWord, 0, 0, 200, 199));
 }
 
 TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot has none") {

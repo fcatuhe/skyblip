@@ -67,7 +67,6 @@ void DiagnosticsReport::build(const Diagnostics& d, const Group* only) {
     if (sys) {
         add_int(Group::Sys, "up_s", counter(d.uptime_s));
         add_text(Group::Sys, "reset", power::to_string(d.reset));
-        add_bool(Group::Sys, "charger_woke", d.charger_woke);
         add_int(Group::Sys, "link_drops", counter(d.link_drops));
     }
 

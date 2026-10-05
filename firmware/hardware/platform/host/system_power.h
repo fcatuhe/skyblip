@@ -13,10 +13,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
    public:
     power::ResetCause reset_causes() const override { return causes; }
 
-    void system_off(power::ButtonWake button_wake) override {
-        passes = power::bootloader_passes(button_wake);
+    void system_off() override {
         performed = 0;
-        power::power_down(*this, button_wake);
+        power::power_down(*this);
         offs++;
     }
 
@@ -34,8 +33,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     void set_cell_on_glass(power::CellOnGlass word) override { glass_cell = word; }
     bool went_dark_flat() const override { return dark_flat; }
     void set_went_dark_flat(bool flat) override { dark_flat = flat; }
-    bool charger_woke() const override { return woke_on_charger; }
-    void set_charger_woke(bool woke) override { woke_on_charger = woke; }
 
     // Where a step ended up in what actually ran, -1 if it never did.
     int order_of(power::PowerDownStep step) const {
@@ -55,8 +52,6 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     power::CellOnGlass glass_cell{power::CellOnGlass::None};
     bool dark_flat{false};
-    bool woke_on_charger{false};
-    power::BootloaderPasses passes{power::BootloaderPasses::Button};
     int offs{0};
     int reboots{0};
     power::PowerDownStep sequence[power::kPowerDownStepCount]{};

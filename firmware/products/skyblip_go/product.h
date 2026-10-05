@@ -95,8 +95,6 @@ class Product {
         glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
         config_.config().set_went_dark_flat(went_dark_flat_);
-        take_charger_woke(causes);
-        config_.config().set_charger_woke(charger_woke_);
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
@@ -150,7 +148,9 @@ class Product {
     }
 
     bool park_refusal(uint32_t now_ms) {
-        if (refused_frame_ == power::RefusedFrame::Leave) return true;
+        // INFO: fc 05oct26 the refused press may still be down, and the wake pin senses a level
+        const bool released = refusal_release_.settled(now_ms, platform_.button_down());
+        if (refused_frame_ == power::RefusedFrame::Leave) return released;
         if (!refusal_asked_) {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
@@ -161,9 +161,10 @@ class Product {
         }
         screen_.settle_park(now_ms);
         remember_glass();
-        if (!screen_.parking()) return true;
         // INFO: fc 21sep26 a panel that never reports ready must not hold a flat cell awake
-        return now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs;
+        const bool parked =
+            !screen_.parking() || now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs;
+        return parked && released;
     }
 
     power::RefusedFrame refused_frame() const { return refused_frame_; }
@@ -178,7 +179,6 @@ class Product {
     bool flyable() const { return flyable_; }
     power::ResetReason reset_reason() const { return reset_reason_; }
     bool went_dark_flat() const { return went_dark_flat_; }
-    bool charger_woke() const { return charger_woke_; }
     // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
     // setup() and performs the second one.
     power::BootPath boot_path() const { return boot_path_; }
@@ -279,14 +279,6 @@ class Product {
         retained.set_went_dark_flat(boot_path_ == power::BootPath::SleepAgain && went_dark_flat_);
     }
 
-    void take_charger_woke(power::ResetCause causes) {
-        ports::SystemPower& retained = platform_.system_power();
-        charger_woke_ = retained.charger_woke();
-        const bool charger = power::has_cause(causes, power::ResetCause::UsbVbus);
-        retained.set_charger_woke(boot_path_ == power::BootPath::SleepAgain &&
-                                  (charger_woke_ || charger));
-    }
-
     void remember_glass() {
         const power::CellOnGlass on_glass = screen_.cell_on_glass();
         if (on_glass == glass_remembered_) return;
@@ -319,7 +311,6 @@ class Product {
         boot_snapshot_.device_addr = roles_.device_addr;
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
         boot_snapshot_.went_dark_flat = went_dark_flat_;
-        boot_snapshot_.charger_woke = charger_woke_;
         boot_snapshot_.parts = boot_parts_;
         boot_snapshot_.n_parts = kBootPartCount;
         boot_snapshot_.flyable = flyable_;
@@ -456,10 +447,10 @@ class Product {
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
     std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
+    power::ButtonRelease refusal_release_{};
     bool refusal_asked_{false};
     power::CellOnGlass glass_remembered_{power::CellOnGlass::None};
     bool went_dark_flat_{false};
-    bool charger_woke_{false};
     bool flyable_{false};
 };
 

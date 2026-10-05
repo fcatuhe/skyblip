@@ -276,24 +276,6 @@ TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it")
     CHECK(footer_ink > 100);
 }
 
-// The longest reason a charger can leave on the header still leaves the address readable.
-TEST_CASE("boot: a unit a charger woke while it was off says so beside the reset reason") {
-    const BootPart parts[] = {{"RADIO", PartState::Pass}};
-    BootSnapshot s = page(parts, 1, /*flyable=*/true);
-    s.reset_reason = "CHARGER WAKE";
-    s.charger_woke = true;
-    Glass fb;
-    draw_boot(fb, s);
-    CHECK(reads_at(fb, kBootHeaderY, "CHARGER WAKE"));
-    CHECK(reads_at(fb, kBootHeaderY, "USB WOKE CHARGER WAKE"));
-    CHECK(reads_from(fb, kBootLeftX, kBootHeaderY, "ID 5B7E57"));
-
-    s.charger_woke = false;
-    Glass ordinary;
-    draw_boot(ordinary, s);
-    CHECK_FALSE(reads_at(ordinary, kBootHeaderY, "USB WOKE CHARGER WAKE"));
-}
-
 TEST_CASE("boot: a unit that last went dark on a flat cell says so beside the cell's voltage") {
     const BootPart parts[] = {{"RADIO", PartState::Pass}};
     const int footer_y = boot_row_y(1) + kBootDividerGap + kBootFooterGap;

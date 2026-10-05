@@ -40,11 +40,6 @@ namespace skyblip::platform::zephyr {
 // for a device whose reset button is awkward or enclosed; the other route is a
 // double-click on RESET within 0.5 s, which is the bootloader's own and works
 // whatever state this firmware is in.
-constexpr uint8_t kUf2MassStorageMagic = 0x57;
-
-// INFO: fc 05oct26 skips DFU on a button wake, swallows a VBUS wake: t_echo_plus/factory/README.md
-constexpr uint8_t kSkipBootloaderMagic = 0x6d;
-constexpr uint8_t kNoBootloaderRequest = 0x00;
 
 // One writer for both. False when the board declares no retention area or the
 // device is not ready: the caller decides what that means, and neither caller
@@ -104,15 +99,13 @@ class Dfu : public ports::Dfu {
             recovery_armed_ = true;
             return ports::RecoveryPath::PowerOffToFinish;
         }
-        write_boot_magic(kUf2MassStorageMagic);
+        write_boot_magic(power::kUf2MassStorageMagic);
         sys_reboot(SYS_REBOOT_WARM);
         return ports::RecoveryPath::Rebooted;
     }
 
-    static uint8_t boot_magic_for_system_off(power::BootloaderPasses passes) {
-        if (recovery_armed_) return kUf2MassStorageMagic;
-        return passes == power::BootloaderPasses::Button ? kSkipBootloaderMagic
-                                                         : kNoBootloaderRequest;
+    static uint8_t boot_magic_for_system_off() {
+        return power::boot_magic_for_system_off(recovery_armed_);
     }
 
    private:
