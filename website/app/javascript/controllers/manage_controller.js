@@ -146,6 +146,7 @@ export default class extends Controller {
     if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
+    if (image && !image.key && this.hasShelfTarget) notes.push(["no_key"])
     if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])
