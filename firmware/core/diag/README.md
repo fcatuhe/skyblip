@@ -58,7 +58,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 
 | Type | Payload | The tuning question it answers |
 |---|---|---|
-| `Boot` 1 | capabilities, firmware version, reset reason, image state | which build and which parts produced the rest of the corpus, and whether the device came up from a fault |
+| `Boot` 1 | capabilities, firmware version, reset reason, image state, the capture profile | which build and which parts produced the rest of the corpus, whether the device came up from a fault, and which capture the session is |
 | `Config` 2 | address, address table, aircraft type, alarm volume, battery and frequency trims, whose the battery trim is, units, alarm enabled, the power the transmitter was asked for and the PA row it was asked through | what the firmware was assuming while it decided everything else |
 | `Gnss` 3 | nav_ms, residual, HDOP, VDOP, stage and its age, sats used and in view, fix mode, reject reason | where in its own second a solution lands (`kFixLagMaxMs`, 500 ms of §G.1.16 nav age), and what the rejects cost |
 | `Pps` 4 | edge interval, signed error against a nominal second, samples, holdover events, ms since the edge, lock | whether `kPpsHoldoverMs` is the right patience, and what the slot map is really anchored to |
@@ -152,7 +152,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
 | `End` | `services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
-| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diag::kPowerRunRecordPeriodMs` in a power run, and once more after the last `Power` as a capture parks |
+| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diag::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
 
 `Gnss::reject` is the receiver's own verdict and reaches the tap the way every other receiver fact does: `gnss::FixValidity` lives on the L76K driver, which no `runtime::Context` reaches, so the board publishes its reason and its count onto `bus::State` beside the sky view as it pushes the solution, and own-ship reads them there. The board is a writer of that group by the table in `core/bus/README.md`.
 
@@ -179,13 +179,17 @@ uint32_t dropped() const;
 
 `record()` returns on the armed flag before it encodes anything, so a disarmed device pays one branch per tap. A tap that has to gather its fields first checks `armed()` itself.
 
-### The two profiles
+### The three profiles
 
-A profile is what a capture is for, chosen when it is armed and held in RAM beside the armed flag, so a boot comes up with neither. `Full` lists every type: it is the corpus the tuning work replays, and at eleven records a second it fills the ring in about an hour. `PowerRun` lists `Boot`, `Config`, `Power`, `Duty`, `Gap` and `End`, and nothing else.
+A profile is what a capture is for, chosen when it is armed and held in RAM beside the armed flag, so a boot comes up with neither. `Full` lists every type: it is the corpus the tuning work replays, and at eleven records a second it fills the ring in about an hour. `PowerRun` lists `Boot`, `Config`, `Power`, `Duty`, `Gap` and `End`, and nothing else. `FlightRun` lists the same six at the same cadence (`paced()`), and is the one profile that changes what the device does as well as what it records (`simulates_flight()`).
 
 PowerRun exists because a discharge run to cutoff on the 2400 mAh pack is 35 to 50 hours and a full capture keeps 68 minutes. Two records every 30 s is 240 an hour, so the 45,220 slots of the diagnostics ring hold 188 hours: a run to cutoff fits whole, with its start intact, which is the part of the curve a power budget is built from. The cadence is one constant with that arithmetic behind it rather than a divider a bench can turn, because a number is defensible where a knob is not, and `Power` and `Duty` go out on the same pass so a reader divides one pair of records by another without interpolating between two clocks.
 
-A type the profile does not list is refused and **not counted as a drop**: a `Gap` naming records the profile never wanted would be a lie about a hole. What the profile cannot do is change what a record means, which is why `Boot`, `Config` and `End` are in both: a corpus that cannot say which build and which settings produced it, or whether it ended or died, is not evidence.
+FlightRun exists because a power run measures a parked unit, and the question a pilot asks is how long one lasts in the air. While a flight run is armed the product runs the glass as in flight and nothing else: the radar's flight clock and `FLIGHT` word, and the g-meter's extremes cleared at the simulated takeoff (`../../products/skyblip_go/README.md`). The rest of what flight changes reads own-ship's flight state, which is what goes on air, so it stays the unit's real one. A parked unit keeps transmitting at the ground cadence and says it is on ground, because ADS-L G.1.16 holds an on-ground report to 0.1 Hz and an airborne flag on a parked unit would put a false aircraft in front of every receiver in range. The flight log follows the real state too, so a parked unit writes no flight: a simulated one among a pilot's flights could not be told apart from a real one, and a run to cutoff would evict the real ones from the ring. What that leaves out of the draw is a 24-byte program every 4 s and a sector erase every 11 minutes. Offload and updates stay open, because the gates that refuse them in flight read the same real state. `scripts/power_budget.py` prints the transmit the run could not send beside its model, read off the profile `Boot` names.
+
+The profile reaches the corpus as payload byte 14 of `Boot`, with flag bit 2 set to say the byte was written. Every `Boot` before that left both zero, and zero is `Full`, so a reader takes the byte only when the flag is set: an older power run decodes with no profile rather than as a full capture.
+
+A type the profile does not list is refused and **not counted as a drop**: a `Gap` naming records the profile never wanted would be a lie about a hole. What the profile cannot do is change what a record means, which is why `Boot`, `Config` and `End` are in all three: a corpus that cannot say which build and which settings produced it, or whether it ended or died, is not evidence.
 
 The writer peeks and commits rather than taking, because the two failures it can meet are different. A flash that refused the write still owes that record: it stays at the head of the ring and the next pass tries again, where a `take()` in front of the write would have dropped it somewhere no counter can see. Only a record the flash has taken leaves the ring. `flight::LogSession` drains the same way, for the same reason.
 

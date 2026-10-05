@@ -53,6 +53,18 @@ def enum8(at, names):
     return read
 
 
+def vouched_enum8(at, bit, names):
+    """An ordinal read only when a flag bit says the firmware wrote it, and absent otherwise."""
+
+    def read(raw, flags):
+        if not flags & (1 << bit):
+            return None
+        return names[raw[at]] if raw[at] < len(names) else raw[at]
+
+    read.names = names
+    return read
+
+
 def flag(bit):
     return lambda raw, flags: bool(flags & (1 << bit))
 
@@ -91,6 +103,7 @@ def track_degrees(at):
 RESET = ("UNKNOWN", "POWER ON", "RESET PIN", "BROWNOUT", "SOFT RESET", "WATCHDOG", "CPU LOCKUP",
          "CHARGER WAKE", "BUTTON WAKE", "DEBUGGER")
 IMAGE_STATE = ("confirmed", "probation", "reverted", "refused")
+PROFILE = ("full", "power_run", "flight_run")
 REJECT = ("NONE", "NO SOLUTION", "NO RMC", "NO GGA", "STALE", "NO DATE", "JUMP")
 STAGE = ("silent", "blind", "solving", "fixed")
 VERDICT = ("transmitted", "lost", "held", "unarmed", "received", "named", "bad_crc", "unframed",
@@ -115,7 +128,7 @@ DIAG_TYPES = {
     1: ("boot", (
         ("capabilities", u32(0)), ("fw_build", u32(4)), ("fw_revision", u16(8)),
         ("fw_major", u8(10)), ("fw_minor", u8(11)), ("reset", enum8(12, RESET)),
-        ("image_state", enum8(13, IMAGE_STATE)))),
+        ("image_state", enum8(13, IMAGE_STATE)), ("profile", vouched_enum8(14, 2, PROFILE)))),
     2: ("config", (
         ("addr", u32(0)), ("battery_offset_mv", i16(4)), ("freq_trim_e1_ppm", i16(6)),
         ("aircraft_type", u8(8)), ("addr_table", u8(9)), ("alarm_volume", u8(10)),
@@ -246,7 +259,9 @@ def decode_diag_record(raw):
         "utc_dated": bool(flags & 0x02),
     }
     for field, read in fields:
-        decoded[field] = read(payload, flags)
+        value = read(payload, flags)
+        if value is not None:
+            decoded[field] = value
     return decoded
 
 

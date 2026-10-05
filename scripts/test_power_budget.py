@@ -26,6 +26,7 @@ import power_budget  # noqa: E402
 FIRMWARE = pathlib.Path(__file__).resolve().parents[1] / "firmware"
 PAYLOAD_H = FIRMWARE / "core" / "diag" / "payload.h"
 CAPABILITIES_H = FIRMWARE / "ports" / "capabilities.h"
+TRANSMIT_H = FIRMWARE / "core" / "timing" / "transmit.h"
 
 BOOT = 1
 POWER = 8
@@ -35,6 +36,7 @@ DUTY = 18
 
 PHASE_VALID = 0x01
 UTC_DATED = 0x02
+PROFILE_RECORDED = 0x04
 CHARGING = 0x04
 EXTERNAL_POWER = 0x08
 GAUGE_VALID = 0x10
@@ -83,8 +85,12 @@ def gap(at_s, dropped=12, span_ms=360000):
     return slot(GAP, bytes(payload), PHASE_VALID, at_s)
 
 
-def boot(at_s, capabilities=FULLY_FITTED):
-    return slot(BOOT, capabilities.to_bytes(4, "little") + bytes(12), PHASE_VALID, at_s)
+def boot(at_s, capabilities=FULLY_FITTED, profile=None):
+    payload = bytearray(capabilities.to_bytes(4, "little") + bytes(12))
+    if profile is None:
+        return slot(BOOT, bytes(payload), PHASE_VALID, at_s)
+    payload[14] = records.PROFILE.index(profile)
+    return slot(BOOT, bytes(payload), PHASE_VALID | PROFILE_RECORDED, at_s)
 
 
 def end(at_s, flags=PHASE_VALID):
@@ -203,6 +209,44 @@ class Postures(Case):
         _, _, held, _ = power_budget.model(run)
         self.assertEqual(held["airborne"], 60)
         self.assertEqual(held["parked"], 0)
+
+
+class FlightRuns(Case):
+    def test_a_flight_run_keyed_as_parked_reads_as_simulated_flight_not_parked(self):
+        run = self.only_run([boot(0, profile="flight_run"), duty(0), duty(60, tx_keyed_ms=58)])
+        _, _, held, _ = power_budget.model(run)
+        self.assertEqual(held["simulated flight"], 60)
+        self.assertEqual(held["parked"], 0)
+
+    def test_a_flight_run_actually_flown_still_reads_airborne(self):
+        run = self.only_run([boot(0, profile="flight_run"), duty(0), duty(60, tx_keyed_ms=318)])
+        _, _, held, _ = power_budget.model(run)
+        self.assertEqual(held["airborne"], 60)
+
+    def test_a_boot_older_than_the_profile_byte_reads_parked_as_before(self):
+        run = self.only_run([boot(0), duty(0), duty(60, tx_keyed_ms=58)])
+        self.assertIsNone(run.profile)
+        _, _, held, _ = power_budget.model(run)
+        self.assertEqual(held["parked"], 60)
+
+    def test_a_power_run_keyed_as_parked_reads_parked(self):
+        run = self.only_run([boot(0, profile="power_run"), duty(0), duty(60, tx_keyed_ms=58)])
+        _, _, held, _ = power_budget.model(run)
+        self.assertEqual(held["parked"], 60)
+
+    def test_the_transmit_a_flight_run_could_not_send_is_printed_beside_the_model(self):
+        report = self.text(self.only_run([boot(0, profile="flight_run"), duty(0),
+                                          duty(60, tx_keyed_ms=58)]))
+        self.assertIn("simulated flight 0h 01m", report)
+        # 54 bursts of 5 ms a minute is 0.45% of the time at the transmit row's 90 mA
+        self.assertIn("transmit not sent", report)
+        self.assertIn("+0.40", report)
+        self.assertAlmostEqual(power_budget.unsent_transmit_milliamps(60, 60), 0.405)
+
+    def test_a_burst_keys_for_the_air_time_the_firmware_books(self):
+        booked = re.search(r"kAirTimeMs = (\d+);", TRANSMIT_H.read_text(encoding="utf-8"))
+        self.assertIsNotNone(booked, "kAirTimeMs moved out of %s" % TRANSMIT_H)
+        self.assertEqual(power_budget.BURST_KEYED_MS, int(booked.group(1)))
 
 
 class Holes(Case):

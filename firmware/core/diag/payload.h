@@ -22,6 +22,10 @@
 
 namespace skyblip::diag {
 
+enum class Profile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2 };
+
+constexpr uint8_t kBootFlagProfileRecorded = 1u << 2;
+
 struct Boot {
     uint32_t capabilities{0};
     uint32_t fw_build{0};
@@ -30,6 +34,8 @@ struct Boot {
     uint8_t fw_minor{0};
     power::ResetReason reset{power::ResetReason::Unknown};
     dfu::ImageState image_state{dfu::ImageState::Confirmed};
+    Profile profile{Profile::Full};
+    bool profile_recorded{false};
 };
 
 constexpr uint8_t kConfigFlagAlarmEnabled = 1u << 2;

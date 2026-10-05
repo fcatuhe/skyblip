@@ -16,6 +16,8 @@ TEST_CASE("diag record: boot carries the image and the parts the corpus was take
     in.fw_minor = 7;
     in.reset = power::ResetReason::Watchdog;
     in.image_state = dfu::ImageState::Probation;
+    in.profile = diag::Profile::FlightRun;
+    in.profile_recorded = true;
 
     const diag::Boot out = diag_round_trip(in);
     CHECK(out.capabilities == in.capabilities);
@@ -25,6 +27,25 @@ TEST_CASE("diag record: boot carries the image and the parts the corpus was take
     CHECK(out.fw_minor == in.fw_minor);
     CHECK(out.reset == in.reset);
     CHECK(out.image_state == in.image_state);
+    CHECK(out.profile == diag::Profile::FlightRun);
+    CHECK(out.profile_recorded);
+}
+
+// A capture from before the byte has a zero there, and zero is Full: the flag says it was never
+// set.
+TEST_CASE("diag record: a boot older than its profile byte reads as unrecorded, not as full") {
+    diag::Boot in{};
+    in.profile = diag::Profile::PowerRun;
+    in.profile_recorded = true;
+    const diag::Record written = diag::record_of(in, diag::Instant{});
+    CHECK(written.payload[14] == 1);
+    CHECK(written.flagged(diag::kBootFlagProfileRecorded));
+
+    const diag::Record older = diag::record_of(diag::Boot{}, diag::Instant{});
+    CHECK(older.payload[14] == 0);
+    diag::Boot out{};
+    REQUIRE(diag::read(older, out));
+    CHECK_FALSE(out.profile_recorded);
 }
 
 TEST_CASE("diag record: config carries the settings a replay has to assume") {

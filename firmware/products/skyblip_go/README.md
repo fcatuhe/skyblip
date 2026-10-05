@@ -40,9 +40,11 @@ What that costs is a rate, and the rate follows the dwell map. Since own-ship's 
 
 ### Which capture is armed
 
-A capture is `Full` or `PowerRun` (`../../core/diag/README.md`), and the glass is the only place either is chosen: nothing arms a capture over Bluetooth. The focus a pilot moves with the pad lives in `ScreenService`, the profile that is running lives in `diag::Recorder` and is read back from there, so a boot comes up armed with nothing and remembering nothing.
+A capture is `Full`, `PowerRun` or `FlightRun` (`../../core/diag/README.md`), and the glass is the only place one is chosen: nothing arms a capture over Bluetooth. The focus a pilot moves with the pad lives in `ScreenService`, the profile that is running lives in `diag::Recorder` and is read back from there, so a boot comes up armed with nothing and remembering nothing.
 
-`CaptureService::keeps_s(profile)` is the span the page quotes before arming: the slots the claim buys over `diag::Recorder::records_per_hour(profile)`. The screen service holds the capture service by const reference for that one figure, because `bus::CaptureState` carries a single span and it belongs to the capture that is running, measured at the rate that capture is producing. Two captures at rest need two figures, and only the service that owns the partition knows how many slots a sector holds.
+A flight run flies the glass and nothing else, and `OwnshipService` is the one place that does it. While the recorder is armed with it, the `bus::FlightStatus` clock (`running`, `seconds`, `time_valid`) is published from a second `flight::FlightTimer` held airborne, and the g-meter clears its extremes on that clock's takeoff as it does on a real one. Those three fields have no reader but the glass and the g-meter, which is what makes them the seam. Everything else that flight changes reads `state.own.flight_state` or the ground latch, and those stay the machine's own: the transmit cadence and the payload are on air, the flight log is the pilot's, and the offload and update gates are what let a bench fetch the run it is taking. Disarming the recorder, for any of the reasons a capture ends, puts the real timer back on the next pass.
+
+`CaptureService::keeps_s(profile)` is the span the page quotes before arming: the slots the claim buys over `diag::Recorder::records_per_hour(profile)`. The screen service holds the capture service by const reference for that one figure, because `bus::CaptureState` carries a single span and it belongs to the capture that is running, measured at the rate that capture is producing. Three captures at rest need three figures, and only the service that owns the partition knows how many slots a sector holds.
 
 ### How a capture ends
 

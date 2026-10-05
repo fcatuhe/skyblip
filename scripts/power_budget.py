@@ -71,6 +71,12 @@ CONSUMERS = (
 # INFO: fc 21sep26 the callsign burst is not gated on airborne, so parked keys 58 ms a minute
 AIRBORNE_KEYED_MS_PER_MINUTE = 160
 
+# INFO: fc 05oct26 G.1.16 holds the ground to 0.1 Hz, 27 positions in 30 s a flight run never sends
+FLIGHT_RUN_UNSENT_BURSTS_PER_MINUTE = 54
+BURST_KEYED_MS = 5
+
+PARKED, AIRBORNE, SIMULATED = "parked", "airborne", "simulated flight"
+
 FULL_PERCENT = 99
 
 
@@ -81,6 +87,14 @@ class Run:
         self.session = session
         self.notes = []
         self.records = []
+
+    @property
+    def profile(self):
+        """The capture the boot record names, or None from a build older than the field."""
+        for record in self.records:
+            if record["type"] == "boot" and "profile" in record:
+                return record["profile"]
+        return None
 
     @property
     def duty(self):
@@ -198,16 +212,26 @@ def interval_charge(before, after, seconds, capabilities=None):
     return charge
 
 
-def posture(before, after, seconds):
-    """Airborne or parked, read off the air the transmitter spent."""
+def posture(before, after, seconds, simulating=False):
+    """Airborne or parked, read off the air the transmitter spent, a flight run's ground apart."""
     keyed_per_minute = delta(before, after, "tx_keyed_ms") * 60.0 / seconds
-    return "airborne" if keyed_per_minute >= AIRBORNE_KEYED_MS_PER_MINUTE else "parked"
+    if keyed_per_minute >= AIRBORNE_KEYED_MS_PER_MINUTE:
+        return AIRBORNE
+    return SIMULATED if simulating else PARKED
+
+
+def unsent_transmit_milliamps(simulated_s, seconds):
+    """What a flier keys over a flight run's grounded intervals, averaged over the whole span."""
+    transmit = next(c for c in CONSUMERS if c.counter == on_ms("tx_keyed_ms"))
+    keyed_share = FLIGHT_RUN_UNSENT_BURSTS_PER_MINUTE * BURST_KEYED_MS / 60000.0
+    return transmit.milliamps * keyed_share * simulated_s / seconds
 
 
 def model(run):
     """The modelled draw over every interval the corpus can vouch for."""
     charge = {consumer.name: 0.0 for consumer in CONSUMERS}
-    held = {"airborne": 0.0, "parked": 0.0}
+    held = {AIRBORNE: 0.0, PARKED: 0.0, SIMULATED: 0.0}
+    simulating = run.profile == "flight_run"
     seconds = 0.0
     skipped = []
     for before, after, between in duty_pairs(run):
@@ -218,7 +242,7 @@ def model(run):
         span = stamp(after) - stamp(before)
         for name, spent in interval_charge(before, after, span, run.capabilities).items():
             charge[name] += spent
-        held[posture(before, after, span)] += span
+        held[posture(before, after, span, simulating)] += span
         seconds += span
     return charge, seconds, held, skipped
 
@@ -325,7 +349,10 @@ def report(run, pack_mah, out):
         out("cell      %s   %d -> %d mV   %s -> %s"
             % (clock(cell["hours"] * 3600), cell["from_mv"], cell["to_mv"],
                cell["from_level"], cell["to_level"]))
-    out("posture   airborne %s, parked %s" % (clock(held["airborne"]), clock(held["parked"])))
+    out("posture   airborne %s, parked %s" % (clock(held[AIRBORNE]), clock(held[PARKED])))
+    if held[SIMULATED]:
+        out("          simulated flight %s: the glass flew, the air and the flight log stayed on "
+            "the ground" % clock(held[SIMULATED]))
     out("")
 
     modelled_mas = sum(charge.values())
@@ -339,6 +366,10 @@ def report(run, pack_mah, out):
                "" if consumer.cited else "(est) ", consumer.source))
     out("%-26s %8.1f %7.2f %5.0f%%" % ("modelled", modelled_mas / 3600.0,
                                        modelled_mas / seconds, 100.0))
+    if held[SIMULATED]:
+        out("%-26s %8s %+7.2f         %d bursts a minute a flier keys and a grounded unit may not"
+            % ("transmit not sent", "", unsent_transmit_milliamps(held[SIMULATED], seconds),
+               FLIGHT_RUN_UNSENT_BURSTS_PER_MINUTE))
 
     if not cell:
         out("")

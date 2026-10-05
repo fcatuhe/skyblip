@@ -113,13 +113,12 @@ void PowerService::record_duty(const diag::Instant& at) {
 }
 
 uint32_t PowerService::power_period_ms() const {
-    return context_.diag.profile() == diag::Profile::PowerRun ? diag::kPowerRunRecordPeriodMs
-                                                              : kRecordPeriodMs;
+    return diag::paced(context_.diag.profile()) ? diag::kPowerRunRecordPeriodMs : kRecordPeriodMs;
 }
 
 uint32_t PowerService::duty_period_ms() const {
-    return context_.diag.profile() == diag::Profile::PowerRun ? diag::kPowerRunRecordPeriodMs
-                                                              : kDutyRecordPeriodMs;
+    return diag::paced(context_.diag.profile()) ? diag::kPowerRunRecordPeriodMs
+                                                : kDutyRecordPeriodMs;
 }
 
 }  // namespace skyblip::go
