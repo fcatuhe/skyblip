@@ -1,14 +1,17 @@
+<% try = local_assigns.fetch(:try, true) %>
 <div class="cta-pair">
   <% if local_assigns.fetch(:prompt, true) %>
     <p><%= t "cta.prompt" %></p>
   <% end %>
   <div class="cta-pair-buttons">
+    <% if try %>
+      <div>
+        <%= link_to_page "skyblip-go", label: t("cta.try"), class: "button button--primary" %>
+        <small><%= t "cta.try_note" %></small>
+      </div>
+    <% end %>
     <div>
-      <%= link_to_page "skyblip-go", label: t("cta.try"), class: "button button--primary" %>
-      <small><%= t "cta.try_note" %></small>
-    </div>
-    <div>
-      <%= link_to_page "buy", label: t("cta.get"), class: "button button--secondary" %>
+      <%= link_to_page "buy", label: t("cta.get"), class: try ? "button button--secondary" : "button button--primary" %>
       <small><%= t "cta.get_note" %></small>
     </div>
   </div>

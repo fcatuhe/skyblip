@@ -5,37 +5,29 @@ slug: essayer
 description: Le firmware de skyBlip Go tourne dans votre navigateur. Allumez-le, ajoutez du trafic, appuyez sur les touches.
 ---
 
-<header class="page-hero">
-  <h1>Essayez-le. C&rsquo;est le vrai firmware.</h1>
-  <p class="page-hero-subtitle">
-    Le code de l&rsquo;appareil tourne dans votre navigateur, tel quel.<br>
-    Allumez-le, ajoutez du trafic, appuyez sur les touches.
-  </p>
+<header class="page-hero page-hero--compact">
+  <h1>Essayez-le.</h1>
+  <p class="page-hero-subtitle">C&rsquo;est le logiciel qui équipe skyBlip.</p>
 </header>
 
 <section id="simulator">
   <%= render "shared/simulator",
         wake: "Maintenez la touche du bas pour le rallumer.",
-        traffic: "Mettre un aéronef dans le ciel",
-        keys: "Une fois allumé, le clavier le pilote tant qu’il est à l’écran. Les flèches se tiennent comme un manche : bas pour monter, haut pour descendre.",
-        on: "en marche",
-        off: "éteint",
-        menu: "menu",
+        traffic: "Ajouter un trafic dans le ciel",
+        keys: "Pilotez au clavier, les flèches comme un manche : bas pour monter.",
         glass: "L’écran e-paper simulé d’un skyBlip Go",
         key: "Le bouton de l’appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume",
         pad: "Le pavé tactile : une tape change de page, un contact d’une seconde ramène le radar",
         reset: "RST : redémarrer l’appareil",
-        caption: "Les capteurs sont simulés, le firmware ne l’est pas : c’est la version depuis laquelle ce site a été publié.",
         missing: "Le simulateur ne fait pas partie de cette version du site." %>
 
   <p class="note">
-    Le ciel est vide tant que vous ne demandez rien. Chaque aéronef que vous
-    ajoutez émet de vraies trames ADS-L, que le firmware reçoit, décode et
-    trace comme il le ferait en vol. Le voyant de gauche est celui du
-    firmware&nbsp;: il s&rsquo;allume quand un trafic déclenche l&rsquo;alarme. Celui
-    de droite est celui du chargeur, il reste éteint ici. Toutes les captures
-    de ces pages sortent de ce même firmware.
+    Un à huit trafics vont et viennent, chacun émettant de vraies trames ADS-L,
+    tracées comme en vol. Le voyant de gauche s&rsquo;allume quand l&rsquo;un
+    d&rsquo;eux déclenche l&rsquo;alarme.
   </p>
+
+  <%= render "shared/cta", prompt: false, try: false %>
 </section>
 
 <section class="band band--tint">

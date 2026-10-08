@@ -5,37 +5,28 @@ slug: try
 description: skyBlip Go firmware runs in your browser. Switch it on, add traffic, press the keys.
 ---
 
-<header class="page-hero">
-  <h1>Try it. It is the real firmware.</h1>
-  <p class="page-hero-subtitle">
-    The device&rsquo;s code runs in your browser, as is.<br>
-    Switch it on, add traffic, press the keys.
-  </p>
+<header class="page-hero page-hero--compact">
+  <h1>Try it.</h1>
+  <p class="page-hero-subtitle">It is the software inside skyBlip.</p>
 </header>
 
 <section id="simulator">
   <%= render "shared/simulator",
         wake: "Hold the lower key to switch it back on.",
-        traffic: "Put an aircraft in the sky",
-        keys: "Once it is on, the keyboard flies it while it is on screen. The arrows work like a stick: down to climb, up to descend.",
-        on: "running",
-        off: "off",
-        menu: "menu",
+        traffic: "Add traffic to the sky",
+        keys: "Fly it from the keyboard, the arrows like a stick: down to climb.",
         glass: "The simulated e-paper panel of a skyBlip Go",
         key: "The device button: press to open the menu of the page you are on, hold two seconds to switch off, hold it again to switch on",
         pad: "The capacitive pad: tap to change page, hold one second to come back to the radar",
         reset: "RST: reboot the device",
-        caption: "Sensors are simulated, the firmware is not. It is the build this site was published from.",
         missing: "The simulator is not part of this build of the site." %>
 
   <p class="note">
-    The sky is empty until you ask for something. Every aircraft you add
-    transmits real ADS-L frames, which the firmware receives, decodes and plots
-    exactly as it would in flight. The lamp on the left is the firmware&rsquo;s:
-    it lights when traffic sets off the alarm. The one on the right belongs to
-    the charger, so it stays dark here. Every capture on these pages comes off this same
-    firmware.
+    One to eight aircraft come and go, each sending real ADS-L frames, plotted
+    as in flight. The lamp on the left lights when one sets off the alarm.
   </p>
+
+  <%= render "shared/cta", prompt: false, try: false %>
 </section>
 
 <section class="band band--tint">
