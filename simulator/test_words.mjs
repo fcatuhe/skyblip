@@ -13,7 +13,7 @@ const PAGE_NOTICES = [
 ];
 const DEVICE_NOTES = [
   'probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat',
-  'imu_writing',
+  'imu_writing', 'no_key',
 ];
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
 

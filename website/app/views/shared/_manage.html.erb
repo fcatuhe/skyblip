@@ -6,7 +6,7 @@
        data-manage-charging-value="<%= charging %>"
        data-manage-full-value="<%= full %>"
        data-manage-slim-value="<%= slim %>"
-       data-manage-labels-value="<%= settings.slice(:default, :on, :off, :none).merge(flight: flight).to_json %>">
+       data-manage-labels-value="<%= settings.slice(:default, :on, :off, :none).merge(flight: flight, track: track).to_json %>">
     <p class="manage-unsupported" data-manage-target="unsupported" hidden><%= unsupported %></p>
 
     <div class="manage-row">
@@ -18,6 +18,7 @@
     <dl class="manage-facts">
       <div><dt><%= device %></dt><dd data-manage-target="device">-</dd></div>
       <div><dt><%= firmware %></dt><dd data-manage-target="firmware">-</dd></div>
+      <div><dt><%= track[:label] %></dt><dd data-manage-target="track">-</dd></div>
       <div><dt><%= battery %></dt><dd data-manage-target="battery">-</dd></div>
       <div><dt><%= flight[:label] %></dt><dd data-manage-target="flight">-</dd></div>
       <div><dt><%= advice %></dt><dd data-manage-target="advice">-</dd></div>
