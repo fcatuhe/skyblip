@@ -6,7 +6,7 @@ en:
   cta:
     prompt: "Want to try it now, or get one?"
     try: "Try it online"
-    try_note: "the real firmware, in your browser"
+    try_note: "the software in your browser"
     get: "Get one"
     get_note: "from €68, no subscription"
   simulator:

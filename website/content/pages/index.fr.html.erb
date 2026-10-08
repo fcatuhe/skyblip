@@ -1,11 +1,11 @@
 ---
-title: Le trafic autour de vous, dans votre poche
+title: Le trafic alentour, dans votre poche
 description: skyBlip Go émet votre position en ADS-L, le standard européen ouvert, léger et interopérable, reçoit celle des autres et vous dit où regarder. De l'avion léger au parachutiste, sans installation ni abonnement.
 ---
 
 <header class="page-hero">
   <p class="kicker">ADS-L &middot; ouvert, léger, interopérable</p>
-  <h1>Le trafic autour de vous, dans votre poche.</h1>
+  <h1>Le trafic alentour, dans votre poche.</h1>
   <p class="page-hero-subtitle">
     skyBlip Go émet votre position en ADS-L, reçoit celle des autres et vous
     dit où regarder.
@@ -20,34 +20,10 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
     <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go : un boîtier blanc avec son antenne, le radar du trafic sur son écran e-paper" %>
   </figure>
 
-  <%= render "shared/cta" %>
+  <%= render "shared/cta", prompt: false %>
 </header>
 
 <section class="band band--tint">
-  <h2 class="section-title">ADS-L, <span class="highlight">le langage commun</span> de tout ce qui vole</h2>
-  <p class="section-intro">
-    Le standard européen de visibilité électronique, publié par l&rsquo;EASA.
-    Il couvre l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
-    l&rsquo;ULM, le planeur, l&rsquo;autogire, l&rsquo;hélicoptère, le ballon
-    et le parapente, et demain les drones.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Ouvert.</h3>
-      <p>Une spécification publique, que chacun peut lire et mettre en œuvre, et que skyBlip implémente en open source.</p>
-    </div>
-    <div>
-      <h3>Léger.</h3>
-      <p>Une trame de quelques millisecondes, une fois par seconde, sur la bande libre des 868&nbsp;MHz. Un boîtier de poche sur batterie suffit.</p>
-    </div>
-    <div>
-      <h3>Interopérable.</h3>
-      <p>Ses canaux reprennent ceux de FLARM et de PilotAware. skyBlip Go reçoit aussi le trafic FLARM.</p>
-    </div>
-  </div>
-</section>
-
-<section class="band">
   <h2 class="section-title">Voir et être vu</h2>
 
   <div class="feature">
@@ -55,10 +31,9 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <p class="eyebrow">Voyez le trafic</p>
       <h3>Un radar <span class="highlight">lisible d&rsquo;un coup d&rsquo;œil</span>.</h3>
       <p>
-        Vous êtes au centre, route en haut. Un trafic en haut à droite se cherche
-        à droite du nez, sans rien convertir. La forme dit s&rsquo;il est
-        au-dessus, à votre niveau ou en dessous, et un trait montre où il sera
-        dans une minute.
+        Vous êtes au centre, route en haut. L&rsquo;icône du trafic dit
+        s&rsquo;il est au-dessus, à votre niveau ou en dessous, et sa
+        trajectoire est projetée sur une minute.
       </p>
     </div>
     <figure class="shot">
@@ -72,8 +47,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <h3>Une alarme <span class="highlight">qui donne la direction</span>.</h3>
       <p>
         À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran clignote
-        du côté du trafic, et le radar reprend la main quelle que soit la page
-        affichée.
+        du côté du trafic.
       </p>
     </div>
     <figure class="shot">
@@ -101,7 +75,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <h3>Le trafic <span class="highlight">dans votre application</span>.</h3>
       <p>
         En Bluetooth, le trafic s&rsquo;affiche dans SDVFR Next, SkyDemon,
-        ForeFlight et les autres. Trois appareils à la fois, sans appairage.
+        ForeFlight et les autres applications.
       </p>
     </div>
     <figure class="shot shot--photo shot--app">
@@ -115,7 +89,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
   <%= render "shared/cta" %>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">À chaque étape <span class="highlight">du vol</span></h2>
   <div class="columns">
     <div>
@@ -129,20 +103,21 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <h3>En vol</h3>
       <p>
         Il émet votre position chaque seconde, trace le trafic route en haut, et
-        signale le trafic qui s&rsquo;approche.
+        signale le trafic qui s&rsquo;approche. Son écran à encre électronique
+        est lisible en plein soleil.
       </p>
     </div>
     <div>
       <h3>Après l&rsquo;atterrissage</h3>
       <p>
-        Il garde ses seize derniers vols et se met à jour depuis le navigateur.
-        Éteint, l&rsquo;écran garde le logo sans consommer.
+        Il permet de télécharger les derniers vols et se met à jour depuis le
+        navigateur. Éteint, l&rsquo;écran affiche le logo sans consommer.
       </p>
     </div>
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title"><span class="highlight">À partir de 68&nbsp;€</span>, et c&rsquo;est tout</h2>
   <div class="columns">
     <div>
@@ -151,17 +126,17 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
     </div>
     <div>
       <h3>Aucun abonnement.</h3>
-      <p>Émission, réception, alarme et mises à jour, sans rien payer ensuite.</p>
+      <p>Émission, réception, alarme et mises à jour, sans rien payer.</p>
     </div>
     <div>
       <h3>Open source, pour de bon.</h3>
-      <p>Le code est public. Ce qui touche à la sécurité le restera.</p>
+      <p>Le code est public. Transparence totale en faveur de la sécurité.</p>
     </div>
   </div>
   <p class="more"><%= link_to_page "buy", label: "Acheter et installer" %></p>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Prêt en quatre étapes</h2>
   <ol class="steps-grid">
     <li>
@@ -170,7 +145,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
     </li>
     <li>
       <h3>Installation.</h3>
-      <p>Deux pressions sur RST, puis le fichier skyBlip déposé sur le lecteur USB qui apparaît.</p>
+      <p>Le fichier skyBlip déposé sur le lecteur USB qui apparaît.</p>
     </li>
     <li>
       <h3>Réglages.</h3>
@@ -185,7 +160,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
   <%= render "shared/cta" %>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">On répond à vos questions</h2>
   <div class="faq">
     <details>
@@ -223,7 +198,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <summary>Existe-t-il une autre version&nbsp;?</summary>
       <p>
         Oui, skyBlip Go+, sur un LilyGO T-Echo Plus&nbsp;: alarme au buzzer et au
-        vibreur, bille et g-mètre, batterie plus grande.
+        vibreur, batterie plus grande.
         <%= link_to_page "buy", label: "Comparer", anchor: "compare" %>.
       </p>
     </details>
@@ -231,9 +206,34 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <summary>Et si je veux revenir en arrière&nbsp;?</summary>
       <p>
         Le firmware skyBlip ne touche pas au bootloader d&rsquo;origine du
-        T-Echo. Meshtastic se réinstalle comme avant.
+        T-Echo. Les autres logiciels disponibles sur l&rsquo;appareil se
+        réinstallent comme avant.
       </p>
     </details>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">ADS-L, <span class="highlight">le langage commun</span> de tout ce qui vole</h2>
+  <p class="section-intro">
+    Le standard européen de visibilité électronique, publié par l&rsquo;EASA.
+    Il couvre l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
+    l&rsquo;ULM, le planeur, l&rsquo;autogire, l&rsquo;hélicoptère, le ballon
+    et le parapente, et demain les drones.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>Ouvert.</h3>
+      <p>Une spécification publique, que chacun peut lire et mettre en œuvre, et que skyBlip implémente en open source.</p>
+    </div>
+    <div>
+      <h3>Léger.</h3>
+      <p>Une trame de quelques millisecondes, une fois par seconde, sur la bande libre des 868&nbsp;MHz. Un boîtier de poche sur batterie suffit.</p>
+    </div>
+    <div>
+      <h3>Interopérable.</h3>
+      <p>Ses canaux reprennent ceux de FLARM et de PilotAware. skyBlip Go reçoit aussi le trafic FLARM.</p>
+    </div>
   </div>
 </section>
 

@@ -20,34 +20,10 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
     <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go: a white case with its antenna, the traffic radar on its e-paper screen" %>
   </figure>
 
-  <%= render "shared/cta" %>
+  <%= render "shared/cta", prompt: false %>
 </header>
 
 <section class="band band--tint">
-  <h2 class="section-title">ADS-L, <span class="highlight">the common language</span> of everything that flies</h2>
-  <p class="section-intro">
-    The European electronic conspicuity standard, published by EASA. It
-    covers everything from light aircraft to skydivers, by way of
-    microlights, gliders, gyroplanes, helicopters, balloons and paragliders,
-    and tomorrow drones.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Open.</h3>
-      <p>A public specification that anyone can read and implement, and that skyBlip implements as open source.</p>
-    </div>
-    <div>
-      <h3>Lightweight.</h3>
-      <p>A frame of a few milliseconds, once a second, on the licence-free 868&nbsp;MHz band. A pocket device on a battery is enough.</p>
-    </div>
-    <div>
-      <h3>Interoperable.</h3>
-      <p>Its channels follow those of FLARM and PilotAware. skyBlip Go also receives FLARM traffic.</p>
-    </div>
-  </div>
-</section>
-
-<section class="band">
   <h2 class="section-title">See and be seen</h2>
 
   <div class="feature">
@@ -55,9 +31,8 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <p class="eyebrow">See the traffic</p>
       <h3>A radar <span class="highlight">read at a glance</span>.</h3>
       <p>
-        You are in the centre, track up. Traffic at the upper right is off the
-        right of the nose, nothing to convert. The shape tells you whether it is
-        above, level or below, and a line shows where it will be in a minute.
+        You are in the centre, track up. The traffic icon tells you whether it
+        is above, level or below, and its track is projected a minute ahead.
       </p>
     </div>
     <figure class="shot">
@@ -71,7 +46,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <h3>An alarm <span class="highlight">that gives the direction</span>.</h3>
       <p>
         Within 3&nbsp;km and 300&nbsp;m, a quarter of the screen flashes on the
-        side of the traffic, and the radar takes over whatever page is showing.
+        side of the traffic.
       </p>
     </div>
     <figure class="shot">
@@ -99,7 +74,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <h3>The traffic <span class="highlight">in your app</span>.</h3>
       <p>
         Over Bluetooth, the traffic shows up in SDVFR Next, SkyDemon,
-        ForeFlight and the others. Three devices at once, no pairing.
+        ForeFlight and other apps.
       </p>
     </div>
     <figure class="shot shot--photo shot--app">
@@ -113,7 +88,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
   <%= render "shared/cta" %>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">At every stage <span class="highlight">of the flight</span></h2>
   <div class="columns">
     <div>
@@ -127,20 +102,21 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <h3>In flight</h3>
       <p>
         It broadcasts your position every second, plots the traffic track up,
-        and warns you of traffic closing in.
+        and warns you of traffic closing in. Its e-ink screen reads in full
+        sunlight.
       </p>
     </div>
     <div>
       <h3>After landing</h3>
       <p>
-        It keeps its sixteen most recent flights and updates from the browser. Switched
-        off, the screen keeps the logo without drawing power.
+        It lets you download its latest flights and updates from the browser.
+        Switched off, the screen shows the logo without drawing power.
       </p>
     </div>
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title"><span class="highlight">From €68</span>, and that is all</h2>
   <div class="columns">
     <div>
@@ -149,17 +125,17 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
     </div>
     <div>
       <h3>No subscription.</h3>
-      <p>Transmitting, receiving, the alarm and updates, with nothing more to pay.</p>
+      <p>Transmitting, receiving, the alarm and updates, with nothing to pay.</p>
     </div>
     <div>
       <h3>Open source, for good.</h3>
-      <p>The code is public. What touches safety will stay that way.</p>
+      <p>The code is public. Full transparency, for the sake of safety.</p>
     </div>
   </div>
   <p class="more"><%= link_to_page "buy", label: "Buy and install" %></p>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Ready in four steps</h2>
   <ol class="steps-grid">
     <li>
@@ -168,7 +144,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
     </li>
     <li>
       <h3>Install.</h3>
-      <p>Press RST twice, then drop the skyBlip file on the USB drive that shows up.</p>
+      <p>Drop the skyBlip file on the USB drive that shows up.</p>
     </li>
     <li>
       <h3>Set up.</h3>
@@ -183,7 +159,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
   <%= render "shared/cta" %>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">Your questions, answered</h2>
   <div class="faq">
     <details>
@@ -220,7 +196,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <summary>Is there another version?</summary>
       <p>
         Yes, skyBlip Go+, on a LilyGO T-Echo Plus: an alarm with buzzer and
-        vibration, slip ball and g-meter, a bigger battery.
+        vibration, a bigger battery.
         <%= link_to_page "buy", label: "Compare", anchor: "compare" %>.
       </p>
     </details>
@@ -228,9 +204,34 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <summary>What if I want to go back?</summary>
       <p>
         The skyBlip firmware leaves the T-Echo&rsquo;s factory bootloader
-        alone. Meshtastic installs again as before.
+        alone. The other software available for the device installs again as
+        before.
       </p>
     </details>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">ADS-L, <span class="highlight">the common language</span> of everything that flies</h2>
+  <p class="section-intro">
+    The European electronic conspicuity standard, published by EASA. It
+    covers everything from light aircraft to skydivers, by way of
+    microlights, gliders, gyroplanes, helicopters, balloons and paragliders,
+    and tomorrow drones.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>Open.</h3>
+      <p>A public specification that anyone can read and implement, and that skyBlip implements as open source.</p>
+    </div>
+    <div>
+      <h3>Lightweight.</h3>
+      <p>A frame of a few milliseconds, once a second, on the licence-free 868&nbsp;MHz band. A pocket device on a battery is enough.</p>
+    </div>
+    <div>
+      <h3>Interoperable.</h3>
+      <p>Its channels follow those of FLARM and PilotAware. skyBlip Go also receives FLARM traffic.</p>
+    </div>
   </div>
 </section>
 

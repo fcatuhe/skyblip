@@ -1,5 +1,7 @@
 <div class="cta-pair">
-  <p><%= t "cta.prompt" %></p>
+  <% if local_assigns.fetch(:prompt, true) %>
+    <p><%= t "cta.prompt" %></p>
+  <% end %>
   <div class="cta-pair-buttons">
     <div>
       <%= link_to_page "skyblip-go", label: t("cta.try"), class: "button button--primary" %>

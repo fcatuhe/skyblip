@@ -6,7 +6,7 @@ fr:
   cta:
     prompt: "Envie d’essayer maintenant ou de vous équiper ?"
     try: "Essayer en ligne"
-    try_note: "le vrai firmware, dans le navigateur"
+    try_note: "le logiciel dans votre navigateur"
     get: "S’équiper"
     get_note: "à partir de 68 €, sans abonnement"
   simulator:
