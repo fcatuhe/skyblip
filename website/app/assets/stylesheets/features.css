@@ -60,8 +60,15 @@
     font-size: var(--text-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
+    text-align: center;
     color: var(--quiet-text);
     margin-block-start: var(--space-2xs);
+  }
+
+  .shot figcaption a {
+    display: block;
+    letter-spacing: normal;
+    text-transform: none;
   }
 
   .shots {
