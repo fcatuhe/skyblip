@@ -37,7 +37,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
       <ul class="points">
         <li>Everything in skyBlip Go</li>
         <li>Alarm with buzzer and vibration motor</li>
-        <li>Slip ball and g-meter</li>
+        <li>G-meter</li>
         <li>2400&nbsp;mAh battery</li>
       </ul>
       <p class="offer-buy">
@@ -66,11 +66,11 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
           <tr><th>Device</th><td>LilyGO T-Echo</td><td>LilyGO T-Echo Plus</td></tr>
           <tr><th>Price</th><td>from €68</td><td>from €84</td></tr>
           <tr><th>ADS-L transmit and receive, FLARM receive</th><td>yes</td><td>yes</td></tr>
-          <tr><th>Radar, traffic list, six dials</th><td>yes</td><td>yes</td></tr>
+          <tr><th>Radar and traffic list</th><td>yes</td><td>yes</td></tr>
           <tr><th>Traffic in your app, 3 devices</th><td>yes</td><td>yes</td></tr>
           <tr><th>Alarm</th><td>on screen</td><td>on screen, buzzer and vibration motor</td></tr>
           <tr><th>Inertial unit</th><td>no</td><td>Bosch BHI260AP</td></tr>
-          <tr><th>Slip ball and g-meter</th><td>no</td><td>yes</td></tr>
+          <tr><th>G-meter</th><td>no</td><td>yes</td></tr>
           <tr><th>Battery</th><td>850&nbsp;mAh</td><td>2400&nbsp;mAh</td></tr>
           <tr><th>Barometer</th><td>BME280, pick it when ordering</td><td>BME280, pick it when ordering</td></tr>
           <tr><th>Screen</th><td>1.54&Prime; e-paper</td><td>1.54&Prime; e-paper</td></tr>
@@ -118,28 +118,27 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
 </section>
 
 <section id="install" class="band band--tint">
-  <h2 class="section-title">Install in four steps</h2>
+  <h2 class="section-title">Ready in four steps</h2>
   <ol class="steps-grid">
     <li>
-      <h3>Plug in.</h3>
-      <p>The T-Echo or the T-Echo Plus into a computer, over USB-C.</p>
+      <h3>Order.</h3>
+      <p>A LilyGO T-Echo or T-Echo Plus, in 868&nbsp;MHz with the BME280 barometer.</p>
     </li>
     <li>
-      <h3>Open.</h3>
-      <p>Press <span class="mono">RST</span> twice within half a second. A <span class="mono">TECHOBOOT</span> drive shows up.</p>
-    </li>
-    <li>
-      <h3>Drop.</h3>
-      <p>The <span class="mono">.uf2</span> file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> on that drive. The device restarts on skyBlip.</p>
+      <h3>Install.</h3>
+      <p>Drop the skyBlip file on the USB drive that shows up. With the device plugged in over USB-C, two presses of <span class="mono">RST</span> open the <span class="mono">TECHOBOOT</span> drive, where the <span class="mono">.uf2</span> of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> goes.</p>
     </li>
     <li>
       <h3>Set up.</h3>
-      <p>The aircraft type and your callsign, in the menu under the radar.</p>
+      <p>Your aircraft type and your callsign, in the device&rsquo;s menu.</p>
+    </li>
+    <li>
+      <h3>Update.</h3>
+      <p>From the browser, over Bluetooth, each one approved on the screen.</p>
     </li>
   </ol>
   <p class="signature">
-    The same file works on both devices. After that, updates go through the
-    browser, over Bluetooth:
+    The same file works on both devices. Updates go through
     <%= link_to_page "manage", label: "Manage my skyBlip" %>. For now, only
     development builds are published.
   </p>
@@ -192,11 +191,11 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
       </p>
     </details>
     <details>
-      <summary>Can I go back to Meshtastic?</summary>
+      <summary>What if I want to go back?</summary>
       <p>
-        Yes. The skyBlip firmware leaves the factory bootloader alone:
-        Meshtastic installs again the same way, through the
-        <span class="mono">TECHOBOOT</span> drive.
+        The skyBlip firmware leaves the T-Echo&rsquo;s factory bootloader
+        alone. The other software available for the device installs again as
+        before.
       </p>
     </details>
   </div>
