@@ -305,7 +305,7 @@
 
   .offers .offer {
     display: grid;
-    grid-row: span 7;
+    grid-row: span 6;
     grid-template-rows: subgrid;
     row-gap: 0;
     justify-items: center;
@@ -328,7 +328,6 @@
   .offers .offer-tagline { margin-block-end: var(--space-m); }
   .offers .points { align-content: start; grid-template-columns: 1fr; margin-block: 0 var(--space-l); justify-self: stretch; }
   .offer-buy { margin: 0; }
-  .offer-alt { margin: var(--space-s) 0 0; font-size: var(--text-s); color: var(--ink-soft); }
 
   .offer-warning {
     max-inline-size: 52rem;
@@ -345,6 +344,7 @@
   .table-scroll .compare td { font-family: var(--font-sans); }
   .table-scroll .compare :is(thead th:not(:first-child), td) { text-align: center; }
   .table-scroll .compare tbody th { white-space: normal; }
+  .table-scroll .compare td small { display: block; color: var(--quiet-text); }
 
   .offer-price {
     text-align: center;
