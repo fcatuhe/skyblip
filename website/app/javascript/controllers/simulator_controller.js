@@ -18,6 +18,10 @@ const TRAFFIC_STRONG_MIN_CLIMB_MM_S = 4000
 const TRAFFIC_STRONG_MAX_CLIMB_MM_S = 8000
 const TRAFFIC_EXCEPTIONAL_SHARE = 0.2
 const TRAFFIC_ADDRESS_MAX = 0xffffff
+const TRAFFIC_NAMED_SHARE = 0.6
+const CALLSIGN_PREFIXES = ["F-G", "F-H", "F-J", "F-C", "D-E", "D-K", "G-", "HB-", "OO-", "EC-", "I-"]
+const REGISTRATION_LENGTH = 6
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const ADSL = 0
 
 const FEET_PER_METRE = 3.28084
@@ -111,8 +115,8 @@ const AXES = {
 }
 
 const FLIGHT_KEYS = {
-  ArrowUp: ["climb", +1],
-  ArrowDown: ["climb", -1],
+  ArrowUp: ["climb", -1],
+  ArrowDown: ["climb", +1],
   ArrowRight: ["turn", +1],
   ArrowLeft: ["turn", -1],
   f: ["speed", +1],
@@ -123,13 +127,21 @@ const TRAFFIC_KEY = "t"
 const WAKE_HOLD_MS = 1000
 const BOOT_DELAY_MS = 2000
 const FIRST_TRAFFIC_MS = 3000
+const TRAFFIC_MIN = 1
+// INFO: fc 08oct26 the world's own ceiling, World::kMaxAircraft
+const TRAFFIC_MAX = 8
+const TRAFFIC_TICK_MIN_MS = 10_000
+const TRAFFIC_TICK_MAX_MS = 30_000
+const TRAFFIC_ARRIVAL_SHARE = 0.5
+const TRAFFIC_STAY_MIN_MS = 60_000
+const TRAFFIC_STAY_MAX_MS = 180_000
 const GLASS_IN_VIEW = 0.5
 
 export default class extends Controller {
   static targets = ["canvas", "status", "pad", "alarm", "charge",
                     "horizonGauge", "attitudeReadout",
                     ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`, `${axis}Gauge`])]
-  static values = { src: String, on: String, off: String, menu: String }
+  static values = { src: String, screens: Object }
 
   #generation = 0
 
@@ -162,10 +174,26 @@ export default class extends Controller {
     const sim = await load()
     if (generation !== this.#generation) return
     this.sim = sim
+    this.departures = new Map()
+    this.nextTrafficMs = FIRST_TRAFFIC_MS
     this.element.classList.add("simulator--running")
     for (const axis in AXES) this.#apply(axis)
     this.#run()
-    this.trafficTimer = setTimeout(() => this.addTraffic(), FIRST_TRAFFIC_MS)
+  }
+
+  #comeAndGo() {
+    const now = this.sim.elapsedMs()
+    if (now < this.nextTrafficMs) return
+    this.nextTrafficMs = now + this.#between(TRAFFIC_TICK_MIN_MS, TRAFFIC_TICK_MAX_MS)
+    for (const [index, due] of this.departures) {
+      if (due <= now) {
+        this.sim.removeAircraft(index)
+        this.departures.delete(index)
+      }
+    }
+    const count = this.departures.size
+    if (count < TRAFFIC_MIN || (count < TRAFFIC_MAX && Math.random() < TRAFFIC_ARRIVAL_SHARE))
+      this.addTraffic()
   }
 
   steer(event) {
@@ -229,7 +257,7 @@ export default class extends Controller {
     if (!this.sim) return
     const bearing = Math.random() * 2 * Math.PI
     const range = this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
-    this.sim.addAircraft(
+    const index = this.sim.addAircraft(
       Math.round(Math.cos(bearing) * range),
       Math.round(Math.sin(bearing) * range),
       Math.round(this.#between(-TRAFFIC_VERT_SPREAD_M, TRAFFIC_VERT_SPREAD_M)),
@@ -240,6 +268,16 @@ export default class extends Controller {
       ADSL,
       this.#address()
     )
+    if (index < 0) return
+    this.departures.set(index, this.sim.elapsedMs() + this.#between(TRAFFIC_STAY_MIN_MS, TRAFFIC_STAY_MAX_MS))
+    if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, this.#callsign())
+  }
+
+  #callsign() {
+    const prefix = CALLSIGN_PREFIXES[Math.floor(Math.random() * CALLSIGN_PREFIXES.length)]
+    let callsign = prefix
+    while (callsign.length < REGISTRATION_LENGTH) callsign += LETTERS[Math.floor(Math.random() * LETTERS.length)]
+    return callsign
   }
 
   #address() {
@@ -318,6 +356,7 @@ export default class extends Controller {
     this.lastMs = performance.now()
     const frame = () => {
       this.#advance()
+      this.#comeAndGo()
       this.#paint()
       this.timer = requestAnimationFrame(frame)
     }
@@ -336,7 +375,7 @@ export default class extends Controller {
     this.#flownState()
     const powered = this.sim.powered() === 1
     this.element.classList.toggle("simulator--off", !powered)
-    this.statusTarget.textContent = `${this.#screen()} · ${powered ? this.onValue : this.offValue}`
+    this.statusTarget.textContent = this.#screen()
     this.alarmTarget.classList.toggle("sb-led--lit", this.sim.alarm() > 0)
     this.chargeTarget.classList.toggle("sb-led--lit", this.sim.batteryCharging() === 1)
   }
@@ -347,11 +386,11 @@ export default class extends Controller {
   }
 
   #screen() {
-    return this.sim.menuOpen() === 1 ? this.menuValue : this.pages[this.sim.page()]
+    const screen = this.sim.menuOpen() === 1 ? "menu" : this.pages[this.sim.page()]
+    return this.screensValue[screen] ?? screen
   }
 
   #stop() {
-    clearTimeout(this.trafficTimer)
     if (this.timer) cancelAnimationFrame(this.timer)
     this.timer = null
   }

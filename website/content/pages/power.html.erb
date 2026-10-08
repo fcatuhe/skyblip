@@ -5,7 +5,7 @@ description: A skyBlip Go on the apron and in the bag · what it waits for, what
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>It says what it is doing, even off.</h1>
   <p class="lede">
     What the device says before it has a position, when it is off, and when its cell runs out.
@@ -159,10 +159,6 @@ description: A skyBlip Go on the apron and in the bag · what it waits for, what
   </div>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Every feature", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "phone", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

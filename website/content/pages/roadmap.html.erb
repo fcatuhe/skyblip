@@ -1,0 +1,60 @@
+---
+title: Coming next
+nav_title: Roadmap
+description: skyBlip Go is available today. Next come the skyBlip Panel for glass cockpits, and the skyPost ground stations, which will relay airliners and weather.
+---
+
+<header class="page-hero">
+  <h1>Today skyBlip Go. Next, these three.</h1>
+  <p class="page-hero-subtitle">
+    skyBlip Go is the only device available. The next three are in
+    design, on the same code base.
+  </p>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">In the aircraft</h2>
+  <div class="feature">
+    <div>
+      <p class="eyebrow">For glass cockpits</p>
+      <h3>skyBlip <span class="highlight">Panel</span>.</h3>
+      <p>
+        A fixed box behind the instrument panel, powered by the aircraft. No
+        screen: the traffic shows on the panel display, Garmin G3X, Dynon
+        SkyView and the others, like a factory traffic source.
+      </p>
+      <p>
+        ADS-L transmit and receive. RS-232 outputs (FLARM NMEA or GDL90) to the
+        EFIS, GDL90 over Wi-Fi, FLARM NMEA over Bluetooth.
+      </p>
+      <p class="feature-guide"><small>Hardware: LilyGO T-Beam Supreme, MAX3232 RS-232 adapter.</small></p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= pages_image_tag "skyblip-panel-board.avif", alt: "skyBlip Panel: the board in its case, with its antenna" %>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">On the ground</h2>
+  <p class="section-intro">
+    Airliners and many touring aircraft transmit ADS-B on 1090&nbsp;MHz, which
+    skyBlip Go does not receive. A skyPost station will receive them, add the
+    traffic of the Open Glider Network and the weather (QNH, METAR, TAF), and
+    relay it all in ADS-L to the skyBlips in flight.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>skyPost Helio.</h3>
+      <p>The solar station. Self-powered, in a weatherproof case on a mast. Will receive ADS-B, ADS-L and FLARM.</p>
+      <p class="note">LilyGO T-Beam Supreme, Ebyte E80-900MBL 1090 receiver, LilyGO T-Solar kit.</p>
+    </div>
+    <div>
+      <h3>skyPost Bridge.</h3>
+      <p>For existing stations: OGN, PiAware, adsb.lol. Will relay in ADS-L the traffic they already decode, without touching their feeds.</p>
+      <p class="note">LilyGO T-Beam Supreme.</p>
+    </div>
+  </div>
+
+  <%= render "shared/cta" %>
+</section>

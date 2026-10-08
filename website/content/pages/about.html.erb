@@ -1,0 +1,97 @@
+---
+title: About
+nav_title: About
+description: Why skyBlip exists. Safety in flight should depend neither on budget nor on a supplier. Affordable equipment, open code, and every flight visible to all.
+---
+
+<header class="page-hero">
+  <h1>Safety is not a premium option.</h1>
+  <p class="page-hero-subtitle">
+    skyBlip exists so that every aircraft is visible to the others, whatever
+    its budget.
+  </p>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">The problem</h2>
+  <p class="section-intro">
+    Mid-air collision remains one of the most serious accidents in light
+    aviation, and one of the most avoidable. Making yourself visible has been
+    possible for years. But it is expensive, the systems do not talk to each
+    other, and it often takes a subscription.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>Affordable.</h3>
+      <p>Equipment only helps if it is on board. We start from consumer hardware, mass-produced, and nothing costs anything afterwards.</p>
+    </div>
+    <div>
+      <h3>Open source.</h3>
+      <p>The code that broadcasts your position, receives the traffic and sounds the alarm is public. Anyone can read it, check it, fix it.</p>
+    </div>
+    <div>
+      <h3>Compatible.</h3>
+      <p>ADS-L is the open standard published by EASA. skyBlip also receives FLARM traffic, rather than going its own way.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">The vision: <span class="highlight">every flight visible to all</span></h2>
+  <ol class="steps-grid">
+    <li>
+      <h3>Aircraft to aircraft.</h3>
+      <p>Two skyBlips see each other with no infrastructure at all. Every equipped device makes the sky easier to read for the others.</p>
+    </li>
+    <li>
+      <h3>With the gliders.</h3>
+      <p>They already fly with FLARM, tracked by the Open Glider Network. skyBlip receives them, and skyPost stations will exchange with OGN.</p>
+    </li>
+    <li>
+      <h3>Club by club.</h3>
+      <p>A skyPost station on the roof of a flying club will cover the field and the circuit, and relay airliners.</p>
+    </li>
+    <li>
+      <h3>Every flight.</h3>
+      <p>From the light aircraft to the paramotor, broadcast in ADS-L. Not because it is mandatory, because it is useful from the first flight.</p>
+    </li>
+  </ol>
+  <p class="more"><%= link_to_page "roadmap", label: "What comes next" %></p>
+</section>
+
+<section class="band band--blip quote">
+  <blockquote>
+    &ldquo;Position broadcast, traffic reception, alarms and ground uplink
+    are and will stay <span class="highlight">open source</span>, free and
+    <span class="highlight">without subscription</span>.&rdquo;
+  </blockquote>
+  <p>The skyBlip commitment</p>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Thanks</h2>
+  <p class="section-intro">
+    skyBlip builds on ten years of open work by the free-flight community.
+    Thanks to the authors of the projects we learned from.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>Paweł Jałocha</h3>
+      <p>The ADS-L reference implementation and <a href="https://github.com/pjalocha/nrf52-ogn-tracker">nrf52-ogn-tracker</a>.</p>
+    </div>
+    <div>
+      <h3>Linar Yusupov</h3>
+      <p><a href="https://github.com/lyusupov/SoftRF">SoftRF</a>.</p>
+    </div>
+    <div>
+      <h3>Moshe Braner</h3>
+      <p>The <a href="https://github.com/moshe-braner/SoftRF">SoftRF fork</a>.</p>
+    </div>
+  </div>
+  <p class="signature">
+    skyBlip is developed by François Catuhe, open source
+    <a href="https://github.com/fcatuhe/skyblip">on GitHub</a>.
+  </p>
+
+  <%= render "shared/cta" %>
+</section>

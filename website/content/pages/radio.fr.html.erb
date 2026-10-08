@@ -6,7 +6,7 @@ description: Où passe la seconde d'un skyBlip Go · quatre fenêtres calées su
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Une radio, et une seconde partagée par tous ceux à portée.</h1>
   <p class="lede">
     Une radio et une antenne, et une seconde découpée de la même façon par tous les appareils à portée.
@@ -78,10 +78,6 @@ description: Où passe la seconde d'un skyBlip Go · quatre fenêtres calées su
   </ul>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "displays", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

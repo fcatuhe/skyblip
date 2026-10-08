@@ -6,45 +6,50 @@
   <figure class="simulator"
           data-controller="simulator"
           data-simulator-src-value="<%= simulator_module_path %>"
-          data-simulator-on-value="<%= on %>"
-          data-simulator-off-value="<%= off %>"
-          data-simulator-menu-value="<%= menu %>"
+          data-simulator-screens-value="<%= t("simulator.screens").to_json %>"
           data-action="keydown@document->simulator#fly">
-    <div class="sb-case">
-      <button class="sb-pad" type="button" aria-label="<%= pad %>"
-              data-simulator-target="pad"
-              data-action="pointerdown->simulator#touch
-                           pointerup->simulator#lift
-                           pointerleave->simulator#lift
-                           pointercancel->simulator#lift
-                           keydown->simulator#touch
-                           keyup->simulator#lift"></button>
+    <div class="simulator-device">
+      <p class="simulator-status" aria-live="polite"><%= t "simulator.screen" %> <strong data-simulator-target="status"></strong></p>
 
-      <button class="sb-key sb-key--reset" type="button" aria-label="<%= reset %>"
-              data-action="simulator#restart"></button>
+      <div class="sb-case">
+        <button class="sb-pad" type="button" aria-label="<%= pad %>"
+                data-simulator-target="pad"
+                data-action="pointerdown->simulator#touch
+                             pointerup->simulator#lift
+                             pointerleave->simulator#lift
+                             pointercancel->simulator#lift
+                             keydown->simulator#touch
+                             keyup->simulator#lift"></button>
 
-      <button class="sb-key sb-key--action" type="button" aria-label="<%= key %>"
-              data-action="pointerdown->simulator#hold
-                           pointerup->simulator#release
-                           pointerleave->simulator#release
-                           pointercancel->simulator#release
-                           keydown->simulator#hold
-                           keyup->simulator#release"></button>
+        <button class="sb-key sb-key--reset" type="button" aria-label="<%= reset %>"
+                data-action="simulator#restart"></button>
 
-      <canvas class="sb-glass" width="200" height="200"
-              data-simulator-target="canvas" role="img" aria-label="<%= glass %>"></canvas>
+        <button class="sb-key sb-key--action" type="button" aria-label="<%= key %>"
+                data-action="pointerdown->simulator#hold
+                             pointerup->simulator#release
+                             pointerleave->simulator#release
+                             pointercancel->simulator#release
+                             keydown->simulator#hold
+                             keyup->simulator#release"></button>
 
-      <span class="simulator-placeholder wordmark" aria-hidden="true"><span class="quiet">sky</span><span class="loud">Bl<span class="glyph">&#305;<svg class="overlay overlay-blip" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="5.5" fill="#FF4F1F"/><path d="M10 25 A14 14 0 0 1 30 25" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".65"/><path d="M4 15 A22 22 0 0 1 36 15" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".3"/></svg></span>p</span></span>
+        <canvas class="sb-glass" width="200" height="200"
+                data-simulator-target="canvas" role="img" aria-label="<%= glass %>"></canvas>
 
-      <span class="sb-led sb-led--alarm" aria-hidden="true" data-simulator-target="alarm"></span>
-      <span class="sb-led sb-led--charge" aria-hidden="true" data-simulator-target="charge"></span>
+        <span class="simulator-placeholder wordmark" aria-hidden="true"><span class="quiet">sky</span><span class="loud">Bl<span class="glyph">&#305;<svg class="overlay overlay-blip" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="5.5" fill="#FF4F1F"/><path d="M10 25 A14 14 0 0 1 30 25" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".65"/><path d="M4 15 A22 22 0 0 1 36 15" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".3"/></svg></span>p</span></span>
+
+        <span class="sb-mark sb-mark--pad" aria-hidden="true"><%= t "simulator.marks.pad" %></span>
+        <span class="sb-mark sb-mark--reset" aria-hidden="true"><%= t "simulator.marks.reset" %></span>
+        <span class="sb-mark sb-mark--button" aria-hidden="true"><%= t "simulator.marks.button" %></span>
+
+        <span class="sb-led sb-led--alarm" aria-hidden="true" data-simulator-target="alarm"></span>
+        <span class="sb-led sb-led--charge" aria-hidden="true" data-simulator-target="charge"></span>
+      </div>
     </div>
 
     <div class="simulator-controls">
       <p class="simulator-wake"><%= wake %></p>
-      <button class="simulator-traffic" type="button"
+      <button class="simulator-traffic button button--secondary button--small" type="button"
               data-action="simulator#addTraffic"><%= traffic %></button>
-      <p class="simulator-status mono" data-simulator-target="status" aria-live="polite"></p>
     </div>
 
     <div class="simulator-panel">
@@ -59,13 +64,11 @@
         <p class="simulator-keys"><%= keys %></p>
         <% SimulatorHelper::SIMULATOR_KEYS.each do |binding| %>
           <span class="simulator-binding">
-            <kbd><%= binding[:keys].html_safe %></kbd><%= binding[:dial] %>
+            <kbd><%= binding[:keys].html_safe %></kbd><%= t "simulator.keys.#{binding[:action]}" %>
           </span>
         <% end %>
       </div>
     </div>
-
-    <figcaption class="note"><%= caption %></figcaption>
   </figure>
 <% else %>
   <p class="note"><%= missing %></p>

@@ -1,128 +1,269 @@
 ---
-title: Visibilité électronique open source pour l'aviation légère
-description: skyBlip rend votre avion, ULM ou planeur visible des autres et affiche le trafic autour de vous, sur votre tablette ou votre écran de bord. Open source et abordable.
+title: Le trafic alentour, dans votre poche
+description: skyBlip Go émet votre position en ADS-L, le standard européen ouvert, léger et interopérable, reçoit celle des autres et vous dit où regarder. De l'avion léger au parachutiste, sans installation ni abonnement.
 ---
 
-<header class="hero">
-  <h1 class="wordmark wordmark-hero"><span role="img" aria-label="skyBlip"><span class="quiet">sky</span><span class="loud">Bl<span class="glyph">&#305;<svg class="overlay overlay-blip" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="5.5" fill="#FF4F1F"/><path d="M10 25 A14 14 0 0 1 30 25" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".65"/><path d="M4 15 A22 22 0 0 1 36 15" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".3"/></svg></span>p</span></span></h1>
-  <p class="tagline">Visibilité électronique open source pour l&rsquo;aviation légère.</p>
-  <p class="lede">
-    En vol à vue, chacun guette les autres par la verrière. skyBlip y ajoute
-    une seconde paire d&rsquo;yeux&nbsp;: un petit boîtier qui annonce votre
-    position par radio et reçoit celle des autres. Le trafic proche
-    s&rsquo;affiche sur l&rsquo;écran du skyBlip, sur votre tablette ou sur
-    votre écran de bord, et une alarme vous prévient quand un aéronef
-    converge.
+<header class="page-hero">
+  <p class="kicker">ADS-L &middot; ouvert, léger, interopérable</p>
+  <h1>Le trafic alentour, dans votre poche.</h1>
+  <p class="page-hero-subtitle">
+    skyBlip Go émet votre position en ADS-L, reçoit celle des autres et vous
+    dit où regarder.
   </p>
+  <p class="page-hero-audience">
+    De l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
+    l&rsquo;ULM, le planeur, l&rsquo;autogire et le parapente.<br>Sans
+    installation à bord, sans abonnement.
+  </p>
+
+  <figure class="hero-figure">
+    <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go : un boîtier blanc avec son antenne, le radar du trafic sur son écran e-paper" %>
+  </figure>
+
+  <%= render "shared/cta", prompt: false %>
 </header>
 
-<section>
-  <h2 class="kicker">Dans l&rsquo;avion</h2>
-  <div class="wordmark wordmark-section" role="img" aria-label="skyBlip"><span class="quiet">sky</span><span class="loud">Bl<span class="glyph">&#305;<svg class="overlay overlay-blip" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="5.5" fill="#FF4F1F"/><path d="M10 25 A14 14 0 0 1 30 25" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".65"/><path d="M4 15 A22 22 0 0 1 36 15" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".3"/></svg></span>p</span></div>
-  <p class="product-tagline">Voir et être vu.</p>
-  <p>Un skyBlip rend votre aéronef visible des autres et affiche le trafic environnant.</p>
+<section class="band band--tint">
+  <h2 class="section-title">Voir et être vu</h2>
 
-  <div class="cards">
-    <article class="card card-featured">
-      <div class="card-featured-body">
-      <h3>skyBlip Go <span class="tag">le tracker de poche</span></h3>
+  <div class="feature">
+    <div>
+      <p class="eyebrow">Voyez le trafic</p>
+      <h3>Un radar <span class="highlight">lisible d&rsquo;un coup d&rsquo;œil</span>.</h3>
       <p>
-        Un boîtier autonome, sur batterie, sans installation&nbsp;: il se glisse
-        dans une poche de blouson et se pose dans le cockpit. Il émet votre
-        position, reçoit celle des autres (y compris les planeurs équipés
-        FLARM), affiche un radar sur son propre écran et alerte en cas de
-        trafic convergent. Connecté en Bluetooth,
-        il fait apparaître les aéronefs autour de vous dans votre application
-        de navigation habituelle&nbsp;: SDVFR Next, SkyDemon, ForeFlight et les
-        autres, sur trois appareils à la fois.
+        Vous êtes au centre, route en haut. L&rsquo;icône du trafic dit
+        s&rsquo;il est au-dessus, à votre niveau ou en dessous, et sa
+        trajectoire est projetée sur une minute.
       </p>
-      <p class="note">
-        Fonctionne partout, sans infrastructure ni abonnement. Sous
-        couverture sol skyPost, l&rsquo;image s&rsquo;enrichit du trafic
-        détecté depuis le sol (avions de ligne et de voyage en ADS-B) et de
-        la météo (QNH, METAR, TAF).
-      </p>
-      <p>
-        <%= link_to_page "skyblip-go", label: "Allumez-en un dans votre navigateur",
-              anchor: "simulator", class: "cta cta--next" %>
-      </p>
-      </div>
-      <%= pages_image_tag "skyblip-go-techo.jpg", alt: "skyBlip Go : boîtier blanc avec antenne, skyBlip affiché sur l'écran e-paper" %>
-    </article>
-
-    <article class="card card-featured card-featured--reverse">
-      <div class="card-featured-body">
-      <h3>skyBlip Panel <span class="tag">pour les glass cockpits</span></h3>
-      <p>
-        Pour les avions équipés d&rsquo;un écran de bord&nbsp;: Garmin G3X, Dynon
-        SkyView et autres. Un boîtier discret, installé derrière la planche de bord et
-        alimenté par l&rsquo;avion — sans écran propre, il affiche le trafic
-        sur l&rsquo;écran que vous utilisez déjà, comme une source trafic
-        d&rsquo;origine. Sans abonnement, sans carte SIM.
-      </p>
-      </div>
-      <%= pages_image_tag "skyblip-panel-board.jpg", alt: "skyBlip Panel : la passerelle avionique installée derrière la planche de bord" %>
-    </article>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec son trait d’une minute" %>
+    </figure>
   </div>
 
-  <p class="note">
-    Chaque skyBlip garde en mémoire la trace de vos vols. De retour au sol,
-    ouvrez votre navigateur et connectez-vous en Bluetooth&nbsp;: vos vols se
-    téléchargent en quelques secondes, sans application ni compte.
-  </p>
+  <div class="feature feature--reverse">
+    <div>
+      <p class="eyebrow">Sachez où regarder</p>
+      <h3>Une alarme <span class="highlight">qui donne la direction</span>.</h3>
+      <p>
+        À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran clignote
+        du côté du trafic.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : le quart de l’écran tourné vers le trafic est passé au noir" %>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <p class="eyebrow">Soyez vu</p>
+      <h3>Votre position <span class="highlight">émise chaque seconde</span>.</h3>
+      <p>
+        En vol, chaque seconde, il émet votre position en ADS-L. Tout aéronef
+        équipé vous voit, avec votre indicatif.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source ADS-L ou FLARM, leur indicatif, leur distance et leur altitude relative" %>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <p class="eyebrow">Gardez vos habitudes</p>
+      <h3>Le trafic <span class="highlight">dans votre application</span>.</h3>
+      <p>
+        En Bluetooth, le trafic s&rsquo;affiche dans SDVFR Next, SkyDemon,
+        ForeFlight et les autres applications.
+      </p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next : la carte avec le trafic reçu de skyBlip Go, chaque aéronef étiqueté de son indicatif" %>
+      <figcaption>SkyDreamSoft SDVFR Next <a href="https://skydreamsoft.fr">skydreamsoft.fr</a></figcaption>
+    </figure>
+  </div>
+
+  <p class="more"><%= link_to_page "features", label: "Voir toutes les fonctionnalités" %></p>
+
+  <%= render "shared/cta" %>
 </section>
 
-<section>
-  <h2 class="kicker">Au sol</h2>
-  <div class="wordmark wordmark-section" role="img" aria-label="skyPost"><span class="quiet">sky</span><span class="loud">P<span class="glyph"><span class="o-ring"></span><svg class="overlay overlay-post" viewBox="-25 -25 50 50" aria-hidden="true"><path d="M-11.8 -18 A21.5 21.5 0 0 1 11.8 -18" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".65"/><path d="M-15.9 -26 A30.5 30.5 0 0 1 15.9 -26" fill="none" stroke="#FF4F1F" stroke-width="3.5" stroke-linecap="round" opacity=".3"/></svg></span>st</span></div>
-  <p class="product-tagline">Reçu au sol, relayé en vol.</p>
-  <p>
-    Les avions de ligne et une grande partie des avions de voyage annoncent
-    déjà leur position en ADS-B. Les stations sol skyPost reçoivent ces
-    annonces, y ajoutent le trafic des réseaux en ligne, comme l&rsquo;Open
-    Glider Network (OGN), et retransmettent l&rsquo;ensemble aux skyBlips en
-    vol.
-    Une station sur le toit d&rsquo;un club couvre le terrain, le circuit et
-    les environs&#8239;; la version solaire s&rsquo;installe sur un simple mât.
-  </p>
+<section class="band">
+  <h2 class="section-title">À chaque étape <span class="highlight">du vol</span></h2>
+  <div class="columns">
+    <div>
+      <h3>Avant le décollage</h3>
+      <p>
+        Posé dans le cockpit, il cherche sa position et vous dit où il en est.
+        Type d&rsquo;aéronef et indicatif se règlent sur l&rsquo;appareil.
+      </p>
+    </div>
+    <div>
+      <h3>En vol</h3>
+      <p>
+        Il émet votre position chaque seconde, trace le trafic route en haut, et
+        signale le trafic qui s&rsquo;approche. Son écran à encre électronique
+        est lisible en plein soleil.
+      </p>
+    </div>
+    <div>
+      <h3>Après l&rsquo;atterrissage</h3>
+      <p>
+        Il permet de télécharger les derniers vols et se met à jour depuis le
+        navigateur. Éteint, l&rsquo;écran affiche le logo sans consommer.
+      </p>
+    </div>
+  </div>
 </section>
 
-<section>
-  <h2 class="kicker">Les équipements</h2>
-  <p>
-    Deux boîtiers au choix pour l&rsquo;avion (skyBlip Go, skyBlip Panel)
-    et deux modèles de stations sol (skyPost Helio, skyPost Bridge).
-  </p>
-  <p><%= link_to_page "devices", class: "cta cta--next" %></p>
+<section class="band band--tint">
+  <h2 class="section-title"><span class="highlight">À partir de 68&nbsp;€</span>, et c&rsquo;est tout</h2>
+  <div class="columns">
+    <div>
+      <h3>Un matériel grand public.</h3>
+      <p>Un LilyGO T-Echo, produit en série.</p>
+    </div>
+    <div>
+      <h3>Aucun abonnement.</h3>
+      <p>Émission, réception, alarme et mises à jour, sans rien payer.</p>
+    </div>
+    <div>
+      <h3>Open source, pour de bon.</h3>
+      <p>Le code est public. Transparence totale en faveur de la sécurité.</p>
+    </div>
+  </div>
+  <p class="more"><%= link_to_page "buy", label: "Acheter et installer" %></p>
 </section>
 
-<section>
-  <h2 class="kicker">Pour les techniciens</h2>
-  <h3>En deux mots</h3>
-  <p>
-    skyBlip et skyPost mettent en œuvre l&rsquo;<strong>ADS-L</strong>
-    (<em><a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860, Issue&nbsp;2</a></em>),
-    le protocole de visibilité électronique publié par l&rsquo;EASA pour la
-    bande de libre utilisation <span class="mono">868&nbsp;MHz</span>.
-  </p>
-  <p>
-    L&rsquo;ADS-B n&rsquo;est ni
-    réimplémenté ni émis sur <span class="mono">1090&nbsp;MHz</span>&nbsp;: il est reçu au sol par les
-    skyPosts, puis relayé en ADS-L. Les skyPosts
-    échangent le trafic avec l&rsquo;Open Glider Network dans les deux sens.
-  </p>
+<section class="band">
+  <h2 class="section-title">Prêt en quatre étapes</h2>
+  <ol class="steps-grid">
+    <li>
+      <h3>Commande.</h3>
+      <p>Un LilyGO T-Echo, en 868&nbsp;MHz avec baromètre BME280.</p>
+    </li>
+    <li>
+      <h3>Installation.</h3>
+      <p>Le fichier skyBlip déposé sur le lecteur USB qui apparaît.</p>
+    </li>
+    <li>
+      <h3>Réglages.</h3>
+      <p>Votre type d&rsquo;aéronef et votre indicatif, dans le menu de l&rsquo;appareil.</p>
+    </li>
+    <li>
+      <h3>Mises à jour.</h3>
+      <p>Depuis le navigateur, en Bluetooth, chacune validée sur l&rsquo;écran.</p>
+    </li>
+  </ol>
+
+  <%= render "shared/cta" %>
 </section>
 
-<section class="pledge">
-  <h2 class="kicker">Notre engagement</h2>
-  <h3>La sécurité n&rsquo;est pas une option premium.</h3>
-  <p>
-    Tout ce qui relève de la sécurité dans skyBlip et skyPost est open
-    source. <strong>Et le restera.</strong>
+<section class="band band--tint">
+  <h2 class="section-title">On répond à vos questions</h2>
+  <div class="faq">
+    <details>
+      <summary>Qui me voit&nbsp;?</summary>
+      <p>Les aéronefs équipés ADS-L. skyBlip Go reçoit aussi le FLARM, mais n&rsquo;émet qu&rsquo;en ADS-L.</p>
+    </details>
+    <details>
+      <summary>Est-ce que je vois les avions de ligne&nbsp;?</summary>
+      <p>
+        Pas encore. Ils émettent en ADS-B sur 1090&nbsp;MHz, que skyBlip Go
+        ne reçoit pas. Les stations sol skyPost les relaieront en ADS-L&nbsp;:
+        <%= link_to_page "roadmap", label: "ce qui vient ensuite" %>.
+      </p>
+    </details>
+    <details>
+      <summary>Faut-il un abonnement&nbsp;?</summary>
+      <p>Non. Une fois le boîtier acheté, tout fonctionne&nbsp;: émission, réception, alarme, mises à jour.</p>
+    </details>
+    <details>
+      <summary>Est-ce certifié&nbsp;?</summary>
+      <p>
+        Non. C&rsquo;est une aide à la veille visuelle. Il ne remplace ni la
+        veille ni le transpondeur là où il est exigé.
+      </p>
+    </details>
+    <details>
+      <summary>Faut-il un téléphone&nbsp;?</summary>
+      <p>
+        Non. Le radar, l&rsquo;alarme et les réglages sont sur
+        l&rsquo;appareil. Le téléphone sert à voir le trafic dans votre application
+        de navigation.
+      </p>
+    </details>
+    <details>
+      <summary>Existe-t-il une autre version&nbsp;?</summary>
+      <p>
+        Oui, skyBlip Go+, sur un LilyGO T-Echo Plus&nbsp;: alarme au buzzer et au
+        vibreur, batterie plus grande.
+        <%= link_to_page "buy", label: "Comparer", anchor: "compare" %>.
+      </p>
+    </details>
+    <details>
+      <summary>Et si je veux revenir en arrière&nbsp;?</summary>
+      <p>
+        Le firmware skyBlip ne touche pas au bootloader d&rsquo;origine du
+        T-Echo. Les autres logiciels disponibles sur l&rsquo;appareil se
+        réinstallent comme avant.
+      </p>
+    </details>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">ADS-L, <span class="highlight">le langage commun</span> de tout ce qui vole</h2>
+  <p class="section-intro">
+    Le standard européen de visibilité électronique, publié par l&rsquo;EASA.
+    Il couvre l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
+    l&rsquo;ULM, le planeur, l&rsquo;autogire, l&rsquo;hélicoptère, le ballon
+    et le parapente, et demain les drones.
   </p>
-  <p>
-    <%= link_to_page "safety", class: "cta" %>
-    &nbsp;·&nbsp;
-    <%= link_to_page "vision", class: "cta" %>
-  </p>
+  <div class="columns">
+    <div>
+      <h3>Ouvert.</h3>
+      <p>Une spécification publique, que chacun peut lire et mettre en œuvre, et que skyBlip implémente en open source.</p>
+    </div>
+    <div>
+      <h3>Léger.</h3>
+      <p>Une trame de quelques millisecondes, une fois par seconde, sur la bande libre des 868&nbsp;MHz. Un boîtier de poche sur batterie suffit.</p>
+    </div>
+    <div>
+      <h3>Interopérable.</h3>
+      <p>Ses canaux reprennent ceux de FLARM et de PilotAware. skyBlip Go reçoit aussi le trafic FLARM.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Pour aller plus loin</h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Sept guides.</h3>
+      <p>Le radar, les instruments, les commandes, la batterie, le téléphone, la radio et tous les écrans.</p>
+      <p><%= link_to_page "guides", label: "Lire les guides" %></p>
+    </article>
+    <article>
+      <h3>Voir et éviter.</h3>
+      <p>Ce qu&rsquo;un pilote voit vraiment, avec les chiffres publiés à l&rsquo;appui.</p>
+      <p><%= link_to_page "see-and-avoid", label: "Lire l&rsquo;article".html_safe %></p>
+    </article>
+    <article>
+      <h3>Le code.</h3>
+      <p>Le firmware, ses tests et ses versions, en open source sur GitHub.</p>
+      <p><a href="https://github.com/fcatuhe/skyblip">Voir le code</a></p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--blip quote">
+  <blockquote>
+    «&nbsp;La sécurité n&rsquo;est pas une <span class="highlight">option premium</span>.
+    Tout ce qui la touche reste <span class="highlight">open source</span>.&nbsp;»
+  </blockquote>
+  <p><%= link_to_page "about", label: "Notre engagement" %></p>
+
+  <%= render "shared/cta" %>
 </section>
