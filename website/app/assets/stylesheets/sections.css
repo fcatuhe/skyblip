@@ -125,7 +125,6 @@
   }
 
   .columns h3 {
-    align-self: end;
     font-size: var(--text-xl);
     max-inline-size: 16ch;
     margin-inline: auto;
