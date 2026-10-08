@@ -1,0 +1,62 @@
+---
+title: À venir
+nav_title: À venir
+slug: a-venir
+description: skyBlip Go est disponible aujourd'hui. Viennent ensuite le skyBlip Panel pour les planches de bord à écrans, et les stations sol skyPost, qui relaieront les avions de ligne et la météo.
+---
+
+<header class="page-hero">
+  <h1>Aujourd&rsquo;hui skyBlip Go. Ensuite, ces trois-là.</h1>
+  <p class="page-hero-subtitle">
+    skyBlip Go est le seul appareil disponible. Les trois suivants sont en
+    conception, sur la même base de code.
+  </p>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">Dans l&rsquo;avion</h2>
+  <div class="feature">
+    <div>
+      <p class="eyebrow">Pour les planches de bord à écrans</p>
+      <h3>skyBlip <span class="highlight">Panel</span>.</h3>
+      <p>
+        Un boîtier fixe derrière la planche de bord, alimenté par
+        l&rsquo;avion. Pas d&rsquo;écran&nbsp;: le trafic s&rsquo;affiche sur
+        l&rsquo;écran de bord, Garmin G3X, Dynon SkyView et les autres, comme
+        une source trafic d&rsquo;origine.
+      </p>
+      <p>
+        Émission et réception ADS-L. Sorties RS-232 (FLARM NMEA ou GDL90) vers
+        l&rsquo;EFIS, GDL90 en Wi-Fi, FLARM NMEA en Bluetooth.
+      </p>
+      <p class="feature-guide"><small>Matériel&nbsp;: LilyGO T-Beam Supreme, adaptateur RS-232 MAX3232.</small></p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= pages_image_tag "skyblip-panel-board.avif", alt: "skyBlip Panel : la carte dans son boîtier, avec son antenne" %>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Au sol</h2>
+  <p class="section-intro">
+    Les avions de ligne et beaucoup d&rsquo;avions de voyage émettent en ADS-B
+    sur 1090&nbsp;MHz, que skyBlip Go ne reçoit pas. Une station skyPost les
+    recevra, ajoutera le trafic de l&rsquo;Open Glider Network et la météo (QNH,
+    METAR, TAF), et relaiera le tout en ADS-L aux skyBlips en vol.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>skyPost Helio.</h3>
+      <p>La station solaire. Autonome, en boîtier étanche monté sur mât. Recevra l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM.</p>
+      <p class="note">LilyGO T-Beam Supreme, récepteur 1090 Ebyte E80-900MBL, kit solaire LilyGO T-Solar.</p>
+    </div>
+    <div>
+      <h3>skyPost Bridge.</h3>
+      <p>Pour les stations existantes&nbsp;: OGN, PiAware, adsb.lol. Relaiera en ADS-L le trafic qu&rsquo;elles décodent déjà, sans toucher à leurs flux.</p>
+      <p class="note">LilyGO T-Beam Supreme.</p>
+    </div>
+  </div>
+
+  <%= render "shared/cta" %>
+</section>

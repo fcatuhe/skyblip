@@ -2,11 +2,11 @@
 title: Radar et trafic
 nav_title: Radar
 slug: radar
-description: Le radar du skyBlip Go · route en haut, une minute de route devant chaque aéronef, tous les aéronefs reçus à l'écran avec PLOT ALL, une alarme qui dit où regarder, et la liste de qui est là.
+description: Le radar de skyBlip Go · route en haut, une minute de route devant chaque aéronef, tous les aéronefs reçus à l'écran avec PLOT ALL, une alarme qui dit où regarder, et la liste de qui est là.
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Où regarder, et qui est là.</h1>
   <p class="lede">
     La page sur laquelle on laisse un skyBlip Go&nbsp;: où regarder, qui est là, et ce que dit l&rsquo;alarme quand elle parle.
@@ -199,10 +199,6 @@ description: Le radar du skyBlip Go · route en haut, une minute de route devant
   </div>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "instruments", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

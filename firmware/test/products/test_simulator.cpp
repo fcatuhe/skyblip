@@ -213,6 +213,22 @@ TEST_CASE("simulator: clearing traffic empties the table and silences the alarm"
     CHECK(int(h.buzzer_level()) == 0);
 }
 
+TEST_CASE("simulator: removing one aircraft silences it alone and frees its slot") {
+    simulator::Simulator h;
+    REQUIRE(h.setup() == Status::Ok);
+    run(h, 0, 2000);
+    h.world().add_aircraft(2000, 0, 0);
+    const int leaving = h.world().add_aircraft(0, 2000, 0);
+    run(h, 2000, 6000);
+    REQUIRE(h.product().state().traffic.count() == 2);
+
+    h.world().remove_aircraft(leaving);
+    run(h, 6000, 42000);
+    CHECK(h.product().state().traffic.count() == 1);
+    CHECK(h.world().aircraft_count() == 1);
+    CHECK(h.world().add_aircraft(0, -2000, 0) == leaving);
+}
+
 TEST_CASE("simulator: every page renders ink to the panel") {
     simulator::Simulator h;
     REQUIRE(h.setup() == Status::Ok);

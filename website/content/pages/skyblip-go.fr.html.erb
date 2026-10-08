@@ -1,94 +1,52 @@
 ---
-title: skyBlip Go
-nav_title: skyBlip Go
-description: Le traceur de poche, écran par écran · le trafic tracé comme vous le voyez, l’alarme qui donne l’angle, les quatre pages, les deux touches, et ce que l’appareil fait au parking.
+title: Essayer en ligne
+nav_title: Essayer
+slug: essayer
+description: Le firmware de skyBlip Go tourne dans votre navigateur. Allumez-le, ajoutez du trafic, appuyez sur les touches.
 ---
 
-<section id="simulator">
-  <p class="kicker">skyBlip Go</p>
-  <h1>Allumez-en un. C&rsquo;est le firmware d&rsquo;un vrai qui tourne.</h1>
+<header class="page-hero page-hero--compact">
+  <h1>Essayez-le.</h1>
+  <p class="page-hero-subtitle">C&rsquo;est le logiciel qui équipe skyBlip.</p>
+</header>
 
+<section id="simulator">
   <%= render "shared/simulator",
         wake: "Maintenez la touche du bas pour le rallumer.",
-        traffic: "Mettre un aéronef dans le ciel",
-        keys: "Une fois allumé, le clavier le pilote tant qu’il est à l’écran, et T met un autre aéronef dans le ciel.",
-        on: "en marche",
-        off: "éteint",
-        menu: "menu",
+        traffic: "Ajouter un trafic dans le ciel",
+        keys: "Pilotez au clavier, les flèches comme un manche : bas pour monter.",
         glass: "L’écran e-paper simulé d’un skyBlip Go",
         key: "Le bouton de l’appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume",
         pad: "Le pavé tactile : une tape change de page, un contact d’une seconde ramène le radar",
         reset: "RST : redémarrer l’appareil",
-        caption: "Les capteurs sont simulés, le firmware ne l’est pas : c’est la version depuis laquelle ce site a été publié.",
         missing: "Le simulateur ne fait pas partie de cette version du site." %>
 
   <p class="note">
-    Le ciel est vide tant que vous ne demandez rien. Chaque aéronef que vous
-    ajoutez émet de vraies trames ADS-L, que le firmware reçoit, décode et
-    trace comme il le ferait en vol. Le voyant de gauche est celui du
-    firmware&nbsp;: il s&rsquo;allume quand un contact mérite une alarme. Celui
-    de droite est celui du chargeur, il reste éteint ici. Toutes les captures
-    de ces pages sortent de ce même firmware.
+    Un à huit trafics vont et viennent, chacun émettant de vraies trames ADS-L,
+    tracées comme en vol. Le voyant de gauche s&rsquo;allume quand l&rsquo;un
+    d&rsquo;eux déclenche l&rsquo;alarme.
   </p>
+
+  <%= render "shared/cta", prompt: false, try: false %>
 </section>
 
-<section>
-  <h2 class="kicker">Page par page</h2>
-  <p class="lede">
-    Le reste de l&rsquo;appareil, un sujet par page.
-    <%= link_to_page "features", label: "Toutes les fonctions" %> en donne la
-    liste, une ligne chacune, et <%= link_to_page "displays", label: "tous les écrans" %>
-    l&rsquo;image, telle que le firmware la dessine.
-  </p>
-
-  <div class="cards">
-    <article class="card card--screen">
-      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL, du trafic dans le cercle et sur la bande autour" %>
-      <h3><%= link_to_page "radar" %></h3>
-      <p>Route en haut, une minute de route devant chaque aéronef, une alarme qui dit où regarder, et tous les aéronefs reçus à l&rsquo;écran.</p>
+<section class="band band--tint">
+  <h2 class="section-title">Et ensuite&nbsp;?</h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Tout ce qu&rsquo;il fait.</h3>
+      <p>Le radar, l&rsquo;alarme, l&rsquo;émission, le téléphone, les instruments.</p>
+      <p><%= link_to_page "features", label: "Voir les fonctionnalités" %></p>
     </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "sixpack.png", alt: "La page des six cadrans" %>
-      <h3><%= link_to_page "instruments" %></h3>
-      <p>Six cadrans tirés du GNSS avec la batterie au-dessus de celui du milieu, et un g-mètre qui garde les pics du vol.</p>
+    <article>
+      <h3>Écran par écran.</h3>
+      <p>Sept guides, un par sujet, avec les captures de ce même firmware.</p>
+      <p><%= link_to_page "guides", label: "Lire les guides" %></p>
     </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "menu-radar.png", alt: "Le menu des réglages" %>
-      <h3><%= link_to_page "controls" %></h3>
-      <p>Deux contacts, les réglages sous le radar, un indicatif tapé sur l&rsquo;appareil, et les pages de diagnostic par leur nom.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil qui s’est éteint sur une batterie vide" %>
-      <h3><%= link_to_page "power" %></h3>
-      <p>Ce qu&rsquo;il attend au parking, à quoi ressemble éteint, et une batterie qui le dit quand elle se vide.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "confirm.png", alt: "La demande d’autorisation à l’écran" %>
-      <h3><%= link_to_page "phone" %></h3>
-      <p>Trois applications à la fois sans appairage, chaque écriture demandée à l&rsquo;écran, et le firmware depuis une page web.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "radio-log.png", alt: "Le journal radio" %>
-      <h3><%= link_to_page "radio" %></h3>
-      <p>Une radio, quatre fenêtres par seconde, et deux systèmes entendus dans l&rsquo;une d&rsquo;elles.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "astern-all.png", alt: "La page radar en PLOT ALL et un groupe d’aéronefs derrière" %>
-      <h3><%= link_to_page "displays" %></h3>
-      <p>Tous les écrans au même endroit, et le radar dessiné des deux façons.</p>
-    </article>
-    <article class="card card--screen">
-      <%= screen_image_tag "alarm.png", alt: "La page radar pendant un avis de trafic" %>
-      <h3><%= link_to_page "features" %></h3>
-      <p>Tout ce que fait l&rsquo;appareil, une ligne chacune, et où chacune est expliquée.</p>
+    <article>
+      <h3>Le vôtre.</h3>
+      <p>Un LilyGO T-Echo ou T-Echo Plus, le firmware skyBlip, et c&rsquo;est prêt.</p>
+      <p><%= link_to_page "buy", label: "S&rsquo;équiper".html_safe %></p>
     </article>
   </div>
-</section>
-
-<section>
-  <p>
-    <%= link_to_page "devices", class: "cta" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "index", label: "skyBlip", class: "cta cta--previous" %>
-  </p>
 </section>

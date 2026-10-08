@@ -10,7 +10,7 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 ## The hardware
 
-skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. The other devices and the board they share are on [skyblip.eu/devices](https://skyblip.eu/devices).
+skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. The devices that come next are on [skyblip.eu/roadmap](https://skyblip.eu/roadmap).
 
 <img align="right" width="122" alt="skyBlip Go: white T-Echo Plus with its antenna, skyBlip shown on the e-paper screen" src="https://github.com/fcatuhe/skyblip/raw/4f44ff307a161aadb9ce767cb732e3f13576e5b1/readme/01-skyblip-go-techo.jpg">
 

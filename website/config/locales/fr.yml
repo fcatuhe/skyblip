@@ -1,0 +1,43 @@
+fr:
+  nav:
+    label: "Site"
+    manage: "Gérer"
+    try: "Essayer"
+  cta:
+    prompt: "Envie d’essayer maintenant ou de vous équiper ?"
+    try: "Essayer en ligne"
+    try_note: "le logiciel dans votre navigateur"
+    get: "S’équiper"
+    get_note: "à partir de 68 €, sans abonnement"
+  simulator:
+    keys:
+      pitch: "monter, descendre"
+      turn: "tourner à gauche, à droite"
+      speed: "accélérer, ralentir"
+      traffic: "ajouter un trafic"
+    marks:
+      pad: "pavé tactile"
+      reset: "reset"
+      button: "bouton"
+    screen: "Écran :"
+    screens:
+      radar: "Radar"
+      nearby: "Nearby"
+      6-pack: "Six-pack"
+      g meter: "G-mètre"
+      status: "État"
+      satellites: "Satellites"
+      radio log: "Journal radio"
+      raw: "Brut"
+      capture: "Capture"
+      self test: "Autotest"
+      menu: "Menu"
+  footer:
+    description: "Visibilité électronique pour l’aviation légère. skyBlip Go annonce votre position en ADS-L, reçoit celle des autres et vous dit où regarder."
+    open_source: "Open source, sans abonnement, sans compte."
+    product: "skyBlip Go"
+    guides: "Guides"
+    project: "skyBlip"
+    question: "Une question ? Une remarque ?"
+    write: "Écrivez-nous sur GitHub"
+    license: "Code sous licence MIT et GPL-3.0."
