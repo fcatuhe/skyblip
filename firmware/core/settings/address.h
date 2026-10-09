@@ -11,7 +11,7 @@ constexpr uint32_t kUnusableLow = 0x000000u;
 constexpr uint32_t kUnusableHigh = kAddressMask;
 constexpr uint32_t kFallbackAddress = 0x5BCAFEu;
 
-// TODO: fc 20sep26 confirm 58 once registry@ads-l.aero answers our F.2.2 application
+// TODO: fc 09oct26 assigned page 49 prefix 0x00: address becomes 0x00 plus a dense 16-bit serial, blocked on issuing serials per unit
 constexpr uint8_t kAddrTableSkyblip = 58;
 
 uint32_t air_address(uint32_t addr);
