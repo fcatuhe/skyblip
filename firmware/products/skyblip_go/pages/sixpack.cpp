@@ -272,8 +272,8 @@ void battery_dial(ui::Canvas& fb, int cx, int row, const SixPackSnapshot& s) {
     char buf[8];
     int n = 0;
     if (s.charging) {
-        dial(fb, cx, row, "CHG V", 0);
-        n = fmt_uint(buf, static_cast<uint32_t>(div_round<int32_t>(s.battery_mv, 100)), 1, 1);
+        dial(fb, cx, row, "CHARGE V", 0);
+        n = fmt_uint(buf, static_cast<uint32_t>(div_round<int32_t>(s.battery_mv, 10)), 1, 2);
     } else {
         dial(fb, cx, row, "BATTERY", 0);
         n = s.battery_valid ? fmt_uint(buf, s.battery_percent) : fmt_string(buf, "--");

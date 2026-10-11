@@ -266,18 +266,18 @@ TEST_CASE("sixpack: on the cable the middle dial reads the charge rail in volts,
     cable.battery_mv = 4802;
     Glass fb;
     draw_sixpack(fb, cable);
-    CHECK(title_matches(fb, kTiles[1], "CHG V"));
-    CHECK(value_matches(fb, kTiles[1], "4.8"));
+    CHECK(title_matches(fb, kTiles[1], "CHARGE V"));
+    CHECK(value_matches(fb, kTiles[1], "4.80"));
 
-    // Tenths are rounded, not truncated: 4750 mV is 4.75 V, which reads 4.8.
+    // Hundredths are rounded, not truncated: 4755 mV is 4.755 V, which reads 4.76.
     cable.battery_mv = 4717;
-    Glass f47;
-    draw_sixpack(f47, cable);
-    CHECK(value_matches(f47, kTiles[1], "4.7"));
-    cable.battery_mv = 4750;
-    Glass f48;
-    draw_sixpack(f48, cable);
-    CHECK(value_matches(f48, kTiles[1], "4.8"));
+    Glass f472;
+    draw_sixpack(f472, cable);
+    CHECK(value_matches(f472, kTiles[1], "4.72"));
+    cable.battery_mv = 4755;
+    Glass f476;
+    draw_sixpack(f476, cable);
+    CHECK(value_matches(f476, kTiles[1], "4.76"));
 
     // The horizon is the same instrument on the cable as off it.
     Glass off;

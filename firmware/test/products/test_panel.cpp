@@ -353,13 +353,13 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
     };
 
     const go::Glass cable = sixpack(true);
-    CHECK(reads_in(cable, "CHG V", 60, 0, 140, 14));
-    CHECK(reads_in(cable, "4.8", 60, 10, 140, 34, 2));
+    CHECK(reads_in(cable, "CHARGE V", 60, 0, 140, 14));
+    CHECK(reads_in(cable, "4.79", 60, 10, 140, 34, 2));
     CHECK_FALSE(reads_in(cable, "BATTERY", 60, 0, 140, 14));
 
     const go::Glass cell = sixpack(false);
     CHECK(reads_in(cell, "BATTERY", 60, 0, 140, 14));
-    CHECK_FALSE(reads_in(cell, "CHG V", 60, 0, 140, 14));
+    CHECK_FALSE(reads_in(cell, "CHARGE V", 60, 0, 140, 14));
 }
 
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
