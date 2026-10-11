@@ -100,7 +100,7 @@
   @media (min-width: 58rem) {
     .page-hero-split {
       display: grid;
-      grid-template-columns: minmax(0, 52ch) auto;
+      grid-template-columns: minmax(0, 28ch) auto;
       justify-content: center;
       align-items: center;
       gap: var(--space-inline-2xl);
@@ -109,6 +109,8 @@
     }
 
     .page-hero-split :is(.page-hero-subtitle, .page-hero-audience) { margin-inline: 0; }
+    .page-hero-split .page-hero-subtitle { font-size: var(--text-xl); }
+    .page-hero-split .page-hero-audience { font-size: var(--text-l); }
     .page-hero-split .hero-figure { margin: 0; }
   }
 
