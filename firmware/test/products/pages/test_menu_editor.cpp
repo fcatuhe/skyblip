@@ -33,8 +33,10 @@ TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
 
 TEST_CASE("menu editor: the pad moves down a row, the button changes the row it is on") {
     Bench bench;
-    CHECK(bench.editor.focus() == MenuRow::AircraftType);
+    CHECK(bench.editor.focus() == MenuRow::Light);
 
+    CHECK(bench.move() == MenuAction::Moved);
+    CHECK(bench.editor.focus() == MenuRow::AircraftType);
     CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Callsign);
     CHECK(bench.move() == MenuAction::Moved);
@@ -55,6 +57,30 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
     // The next press toggles it back: one press, one step, no rhythm to get right.
     CHECK(bench.change() == MenuAction::Changed);
     CHECK(bench.values.settings.alarm_enabled);
+}
+
+// Reached in the dark, so it is the top row, and the press that sets it closes the menu.
+TEST_CASE("menu editor: the light is the first row, and a press on it switches it and leaves") {
+    Bench bench;
+    REQUIRE(bench.editor.focus() == MenuRow::Light);
+    REQUIRE_FALSE(bench.values.light);
+    const go::Settings before = bench.values.settings;
+
+    CHECK(bench.change() == MenuAction::Light);
+    CHECK(bench.values.light);
+    CHECK_FALSE(bench.editor.active());
+    CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
+    CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
+
+    char value[kMenuValueCap];
+    menu_row_value(value, MenuRow::Light, bench.values);
+    CHECK(std::string(value) == "ON");
+
+    bench.editor.enter(Page::Radar, bench.t);
+    CHECK(bench.change() == MenuAction::Light);
+    CHECK_FALSE(bench.values.light);
+    menu_row_value(value, MenuRow::Light, bench.values);
+    CHECK(std::string(value) == "OFF");
 }
 
 TEST_CASE("menu editor: the callsign is rolled a character at a time and stored at the end") {
@@ -158,7 +184,7 @@ TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu"
 
     // The next entry starts at the top again, so the focus cycle is closed.
     bench.editor.enter(Page::Radar, bench.t);
-    CHECK(bench.editor.focus() == MenuRow::AircraftType);
+    CHECK(bench.editor.focus() == MenuRow::Light);
     CHECK(bench.editor.active());
 }
 
@@ -279,6 +305,7 @@ TEST_CASE("menu editor: a menu nobody is pressing hands the traffic picture back
 
     // Either contact resets the clock: a pilot working the rows is never dropped.
     bench.editor.enter(Page::Radar, bench.t);
+    bench.focus_on(MenuRow::AircraftType);
     for (int i = 0; i < 3; i++) {
         bench.run(MenuEditor::kIdleReturnMs - 5000);
         bench.editor.button(bench.t);

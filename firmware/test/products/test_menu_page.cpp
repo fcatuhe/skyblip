@@ -7,6 +7,7 @@
 // doing it cannot spend the other two things the one button says - the double
 // press that authorises a firmware upload, and the hold that switches the
 // device off.
+#include <cstring>
 #include <string>
 
 #include "core/timing/durable_write.h"
@@ -26,6 +27,7 @@ go::Glass expected_page(Rig& rig) {
     go::MenuSnapshot snapshot;
     snapshot.page = rig.product.screen().editor().page();
     snapshot.values.settings = rig.settings();
+    snapshot.values.light = rig.product.screen().backlight();
     snapshot.focus = rig.product.screen().editor().focus();
     go::Glass fb;
     go::draw_menu(fb, snapshot);
@@ -45,9 +47,9 @@ TEST_CASE("product: a press opens the menu of the page a pilot is standing on") 
     CHECK(rig.product.screen().editor().active());
 
     // On the rows the pad still navigates: it walks them one at a time.
-    REQUIRE(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
+    REQUIRE(rig.product.screen().editor().focus() == go::MenuRow::Light);
     move(rig, t);
-    CHECK(rig.product.screen().editor().focus() == go::MenuRow::Callsign);
+    CHECK(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
 
     // The pad past the last row hands the glass back to the page the menu belongs to.
     focus_on(rig, t, go::MenuRow::Volume);
@@ -64,6 +66,39 @@ TEST_CASE("product: a press opens the menu of the page a pilot is standing on") 
     settle(rig, t);
     CHECK(rig.product.screen().editor().page() == go::Page::Nearby);
     CHECK(rig.product.screen().editor().focus() == go::MenuRow::Status);
+}
+
+// Two presses from the radar: the first opens the menu on LIGHT, the second switches it.
+TEST_CASE("product: a press on the light row switches the front light and gives the page back") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    REQUIRE_FALSE(rig.product.screen().backlight());
+    REQUIRE_FALSE(rig.platform.chips().epd.backlight);
+
+    open_menu(rig, t);
+    change(rig, t);
+    CHECK(rig.product.screen().backlight());
+    CHECK(rig.platform.chips().epd.backlight);
+    CHECK(rig.product.screen().mode() == go::Mode::Page);
+    CHECK(rig.product.screen().page() == go::Page::Radar);
+
+    // The row reads what the panel is doing, and the same two presses put it out.
+    open_menu(rig, t);
+    rig.run(t, t + 4000);
+    t += 4000;
+    const go::Glass lit = expected_page(rig);
+    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), lit.data(), go::Glass::kBytes) ==
+          0);
+    change(rig, t);
+    CHECK_FALSE(rig.product.screen().backlight());
+    CHECK_FALSE(rig.platform.chips().epd.backlight);
+    CHECK(rig.product.screen().mode() == go::Mode::Page);
+
+    // A switch, not a setting: nothing goes to flash.
+    run_past_the_write_settle(rig, t);
+    go::Settings stored{};
+    CHECK_FALSE(stored_settings(rig, stored));
 }
 
 // The pad's gestures are one long press apart from the stow, and this one takes the device off.

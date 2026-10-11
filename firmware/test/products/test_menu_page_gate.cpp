@@ -99,7 +99,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 
     // Back on the rows, at the top: the pilot was reading something else in between.
     CHECK(rig.product.screen().mode() == go::Mode::Menu);
-    CHECK(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
+    CHECK(rig.product.screen().editor().focus() == go::MenuRow::Light);
 }
 
 TEST_CASE("product: a long press in the middle of an edit still switches the device off") {
