@@ -195,6 +195,8 @@ void ScreenService::render(uint32_t now_ms) {
             snap.turn_cdps = context_.state.indicated.turn_cdps;
             snap.battery_percent = context_.state.power.battery.percent;
             snap.battery_valid = context_.state.power.battery.valid;
+            snap.charging = context_.state.power.battery.charging;
+            snap.battery_mv = context_.state.power.battery.sample_mv;
             snap.inclinometer_fitted =
                 ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
             snap.lateral_valid = context_.state.slip.valid;

@@ -337,6 +337,31 @@ TEST_CASE("product: the status page carries the device's name and a cell that is
     CHECK(status_ink("", 3450, /*on_cable=*/true) != low);
 }
 
+// The dial reads the gauge's verdict: on the cable there is no cell to show, only the rail.
+TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell off it") {
+    auto sixpack = [](bool on_cable) {
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.platform.battery().millivolts = on_cable ? 4790 : 4050;
+        rig.platform.battery().external_power = on_cable;
+        uint32_t t = 100;
+        rig.show(t, go::Page::SixPack);
+        rig.run(t, t + 8000);
+        REQUIRE(rig.product.screen().page() == go::Page::SixPack);
+        REQUIRE(rig.state().power.battery.charging == on_cable);
+        return rig.product.screen().framebuffer();
+    };
+
+    const go::Glass cable = sixpack(true);
+    CHECK(reads_in(cable, "CHG V", 60, 0, 140, 14));
+    CHECK(reads_in(cable, "4.8", 60, 10, 140, 34, 2));
+    CHECK_FALSE(reads_in(cable, "BATTERY", 60, 0, 140, 14));
+
+    const go::Glass cell = sixpack(false);
+    CHECK(reads_in(cell, "BATTERY", 60, 0, 140, 14));
+    CHECK_FALSE(reads_in(cell, "CHG V", 60, 0, 140, 14));
+}
+
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
 // verdict, published on the bus: the page does not compare millivolts a second
 // time, so it cannot disagree with the thing that can switch the device off.
