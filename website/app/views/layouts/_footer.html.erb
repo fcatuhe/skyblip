@@ -1,0 +1,45 @@
+<footer class="site-footer">
+  <div class="site-footer-main">
+    <div class="site-footer-brand">
+      <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-footer"), class: "site-footer-home" %>
+      <p><%= t "footer.description" %></p>
+      <p><%= t "footer.open_source" %></p>
+      <p><%= link_to_page "skyblip-go", label: t("nav.try"), class: "button button--primary button--small" %></p>
+    </div>
+
+    <nav class="site-footer-columns" aria-label="<%= t "footer.project" %>">
+      <div>
+        <h2><%= t "footer.product" %></h2>
+        <ul>
+          <% %w[features buy skyblip-go].each do |slug| %>
+            <li><%= link_to_page slug, label_type: :nav %></li>
+          <% end %>
+          <li><%= link_to_page "manage", label: t("nav.manage") %></li>
+        </ul>
+      </div>
+      <div>
+        <h2><%= t "footer.guides" %></h2>
+        <ul>
+          <% %w[radar instruments controls power phone radio displays].each do |slug| %>
+            <li><%= link_to_page slug, label_type: :nav %></li>
+          <% end %>
+        </ul>
+      </div>
+      <div>
+        <h2><%= t "footer.project" %></h2>
+        <ul>
+          <% %w[about roadmap see-and-avoid ads-l-registry].each do |slug| %>
+            <li><%= link_to_page slug, label_type: :nav %></li>
+          <% end %>
+          <li><%= link_to "GitHub", "https://github.com/fcatuhe/skyblip" %></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+
+  <p class="site-footer-contact">
+    <%= t "footer.question" %>
+    <%= link_to t("footer.write"), "https://github.com/fcatuhe/skyblip/issues" %>
+  </p>
+  <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= t "footer.license" %></p>
+</footer>

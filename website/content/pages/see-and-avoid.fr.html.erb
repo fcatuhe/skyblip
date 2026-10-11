@@ -263,11 +263,11 @@ description: "L'œil embrasse près de 200°, identifie un trafic dans un cône 
     l&rsquo;<strong>ADS-L</strong>, publié par l&rsquo;AESA et déjà reconnu comme
     moyen de se rendre visible électroniquement en espace U-space. Un skyBlip émet et
     reçoit en ADS-L, et reçoit également les trafics équipés de matériel de type
-    FLARM&nbsp;; sous couverture skyPost, il y ajoute les aéronefs qui émettent
-    en ADS-B.
+    FLARM. Les stations skyPost y ajouteront les aéronefs qui émettent en
+    ADS-B.
   </p>
   <p>
-    <%= link_to_page "devices", class: "cta cta--next" %>
+    <%= link_to_page "index", label: "skyBlip Go", class: "cta cta--next" %>
   </p>
 </section>
 
@@ -334,10 +334,6 @@ description: "L'œil embrasse près de 200°, identifie un trafic dans un cône 
   </ul>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "safety", class: "cta" %>
-    &nbsp;·&nbsp;
-    <%= link_to_page "index", label: "skyBlip", class: "cta cta--previous" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

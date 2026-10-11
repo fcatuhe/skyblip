@@ -6,7 +6,7 @@ description: Un skyBlip Go avec votre téléphone · trois applications à la fo
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Avec votre téléphone, sans lui faire confiance.</h1>
   <p class="lede">
     Ce qu&rsquo;une application peut voir, ce qu&rsquo;elle peut demander, et l&rsquo;écran qui a le dernier mot.
@@ -33,7 +33,7 @@ description: Un skyBlip Go avec votre téléphone · trois applications à la fo
       </p>
     </div>
     <figure class="shot shot--photo">
-      <%= image_tag "pages/index/skyblip-go-techo.jpg", alt: "Un skyBlip Go, boîtier blanc avec son antenne, le logo affiché sur l’écran e-paper" %>
+      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "Un skyBlip Go, boîtier blanc avec son antenne, le radar du trafic sur l’écran e-paper" %>
     </figure>
   </div>
 
@@ -42,7 +42,7 @@ description: Un skyBlip Go avec votre téléphone · trois applications à la fo
     <li>Trois connexions à la fois</li>
     <li>Profils Nordic UART et façon FLARM</li>
     <li>SDVFR Next, SkyDemon, ForeFlight et les autres</li>
-    <li>Jusqu&rsquo;à seize vols gardés dans l&rsquo;appareil</li>
+    <li>Les derniers vols gardés dans l&rsquo;appareil</li>
     <li>Récupérés au sol par la même liaison</li>
   </ul>
 
@@ -137,10 +137,6 @@ description: Un skyBlip Go avec votre téléphone · trois applications à la fo
   </ul>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "radio", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

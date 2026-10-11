@@ -149,6 +149,11 @@ void World::clear_aircraft() {
     for (auto& a : aircraft_) a.used = false;
 }
 
+void World::remove_aircraft(int index) {
+    if (index < 0 || index >= kMaxAircraft) return;
+    aircraft_[index].used = false;
+}
+
 int World::aircraft_count() const {
     int n = 0;
     for (const auto& a : aircraft_)

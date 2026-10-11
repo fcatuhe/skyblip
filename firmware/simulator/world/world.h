@@ -69,6 +69,7 @@ class World {
         return add_aircraft(0, 1000, 30, 40, 270, -1, -1, system, 0, kThreatSinkMps);
     }
     void clear_aircraft();
+    void remove_aircraft(int index);
     void name_aircraft(int index, const char* callsign);
     int aircraft_count() const;
     // Where the world says the two aircraft actually are, which is not what the

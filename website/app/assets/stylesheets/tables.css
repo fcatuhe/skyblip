@@ -44,7 +44,7 @@
   }
 
   .blips tbody th { white-space: normal; min-inline-size: 9rem; }
-  .blips tbody th span {
+  :is(.blips, .compare) tbody th span {
     display: block;
     font-weight: 400;
     font-size: var(--text-xs);

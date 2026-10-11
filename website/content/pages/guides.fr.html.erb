@@ -1,0 +1,73 @@
+---
+title: Les guides
+nav_title: Guides
+slug: guides
+description: skyBlip Go sujet par sujet, écran par écran. Radar, instruments, commandes, batterie, téléphone, radio, et tous les écrans.
+---
+
+<header class="page-hero">
+  <h1>skyBlip Go, sujet par sujet.</h1>
+  <p class="page-hero-subtitle">
+    Sept guides, avec les écrans tels que le firmware les dessine.
+  </p>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">En vol</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL, du trafic dans le cercle et sur la bande autour" %>
+      <h3><%= link_to_page "radar" %></h3>
+      <p>Route en haut, une minute de route devant chaque aéronef, l&rsquo;alarme qui dit où regarder, et la liste de qui est là.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "sixpack.png", alt: "La page des six cadrans" %>
+      <h3><%= link_to_page "instruments" %></h3>
+      <p>Les mesures du GPS et du baromètre en six cadrans, pour le plaisir, la batterie au-dessus de celui du milieu, et sur le Go+ un g-mètre qui garde les pics du vol.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "astern-all.png", alt: "La page radar en PLOT ALL et un groupe d’aéronefs derrière" %>
+      <h3><%= link_to_page "displays" %></h3>
+      <p>Chaque page, chaque menu et chaque question, et le radar dessiné des deux façons.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Au sol</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu des réglages" %>
+      <h3><%= link_to_page "controls" %></h3>
+      <p>Deux contacts, les réglages sous le radar, l&rsquo;indicatif tapé sur l&rsquo;appareil, et les pages de diagnostic.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "off-flat-battery.png", alt: "L’écran d’un appareil éteint sur une batterie vide" %>
+      <h3><%= link_to_page "power" %></h3>
+      <p>Ce qu&rsquo;il attend au parking, à quoi il ressemble éteint, et une batterie qui prévient quand elle se vide.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "confirm.png", alt: "La demande d’autorisation à l’écran" %>
+      <h3><%= link_to_page "phone" %></h3>
+      <p>Trois applications sans appairage, chaque changement demandé à l&rsquo;écran, et le firmware depuis le navigateur.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Pour les curieux</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "radio" %></h3>
+      <p>Une radio, quatre plages par seconde, et deux systèmes entendus dans la même plage.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "see-and-avoid" %></h3>
+      <p>Champ de vision, secteur balayé, taille apparente d&rsquo;un avion, temps de réaction&nbsp;: les chiffres publiés du voir et éviter.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "roadmap" %></h3>
+      <p>Le skyBlip Panel pour les planches de bord à écrans, et les stations sol skyPost.</p>
+    </article>
+  </div>
+</section>

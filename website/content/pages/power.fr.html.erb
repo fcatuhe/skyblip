@@ -6,7 +6,7 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Il dit ce qu&rsquo;il fait, même éteint.</h1>
   <p class="lede">
     Ce que dit l&rsquo;appareil avant d&rsquo;avoir une position, quand il est éteint, et quand sa batterie se vide.
@@ -167,10 +167,6 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
   </div>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "phone", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

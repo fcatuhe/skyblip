@@ -6,7 +6,7 @@ description: La prise en main d'un skyBlip Go · deux contacts, les réglages so
 ---
 
 <section>
-  <p class="kicker"><%= link_to_page "skyblip-go", label: "skyBlip Go", class: "cta" %></p>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Deux contacts, et rien à apprendre deux fois.</h1>
   <p class="lede">
     Un pavé et un bouton, les menus derrière eux, et les pages que l&rsquo;on cherche à l&rsquo;établi.
@@ -174,10 +174,6 @@ description: La prise en main d'un skyBlip Go · deux contacts, les réglages so
   </div>
 </section>
 
-<section>
-  <p>
-    <%= link_to_page "features", label: "Toutes les fonctions", class: "cta cta--previous" %>
-    &nbsp;&middot;&nbsp;
-    <%= link_to_page "power", class: "cta cta--next" %>
-  </p>
+<section class="band">
+  <%= render "shared/cta" %>
 </section>

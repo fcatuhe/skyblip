@@ -7,6 +7,10 @@ module PagesHelper
     link_to label, page_url_for(page, only_path: true, anchor:), { lang: }.merge(html_options)
   end
 
+  def on_page?(slug)
+    @page&.base_slug == slug
+  end
+
   def pages_image_tag(path, options = {})
     image_tag "pages/#{@page.base_slug}/#{path}", options
   end

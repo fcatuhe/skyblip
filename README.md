@@ -10,7 +10,7 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 ## The hardware
 
-skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. The other devices and the board they share are on [skyblip.eu/devices](https://skyblip.eu/devices).
+skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. The devices that come next are on [skyblip.eu/roadmap](https://skyblip.eu/roadmap).
 
 <img align="right" width="122" alt="skyBlip Go: white T-Echo Plus with its antenna, skyBlip shown on the e-paper screen" src="https://github.com/fcatuhe/skyblip/raw/4f44ff307a161aadb9ce767cb732e3f13576e5b1/readme/01-skyblip-go-techo.jpg">
 
@@ -63,10 +63,10 @@ The build number after the `+` is the commit count. A unit on the production key
 
 ## Identifiers
 
-Three identifiers name skyBlip to the outside world, and one of them is ours so far.
+Three identifiers name skyBlip to the outside world, and two of them are ours so far.
 
-- **ADS-L address table**: entry 58, applied for at `registry@ads-l.aero` and described on [skyblip.eu/ads-l-registry](https://skyblip.eu/ads-l-registry). Pending: until the registry answers, 58 is a value we chose, held in one constant in [`firmware/core/settings/address.h`](firmware/core/settings/address.h).
-- **USB**: Vendor ID 0x1209, Product ID 0x5AFE, granted by [pid.codes](https://pid.codes/1209/5AFE/) ([pidcodes/pidcodes.github.com#1282](https://github.com/pidcodes/pidcodes.github.com/pull/1282)) and set in [`firmware/products/skyblip_go/prj.conf`](firmware/products/skyblip_go/prj.conf). It names the running application only: the bootloader presents Adafruit's factory descriptors.
+- **ADS-L address table**: manufacturer page 49, which is AMT entry 58, with manufacturer prefix 0, assigned by the ADS-L registry on 5 October 2026 (ticket #228794). The assignment carries a prefix, so it is the structured scheme of F.2.2 rather than the flat 24-bit space we applied for: the 16 bits below the prefix are ours to fill densely, one per unit. The entry is held in one constant in [`firmware/core/settings/address.h`](firmware/core/settings/address.h). The exchange with the registry is logged on [skyblip.eu/ads-l-registry](https://skyblip.eu/ads-l-registry).
+- **USB**: Vendor ID 0x1209, Product ID 0x5AFE, granted by [pid.codes](https://pid.codes/1209/5AFE/) on 2 October 2026 ([pull request #1282](https://github.com/pidcodes/pidcodes.github.com/pull/1282)) and set in [`firmware/products/skyblip_go/prj.conf`](firmware/products/skyblip_go/prj.conf). It names the running application only: the bootloader presents Adafruit's factory descriptors.
 - **NMEA manufacturer code**: open. The `$PADSL`, `$PADSI` and `$PADSO` sentences sketched on [skyblip.eu/ads-l-registry/nmea](https://skyblip.eu/ads-l-registry/nmea) need a three-letter code that NMEA assigns: either one of our own, or an ADS code held by ADS-L's registry or working group, so the sentences belong to the specification rather than to one implementer.
 
 ## Acknowledgements
