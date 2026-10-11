@@ -193,7 +193,9 @@ The cell is here because it is nowhere else a pilot looks. `status` has the volt
 
 What it replaced is the flight time, and nothing was lost: the radar carries the same clock bottom-left at double height, with the seconds joining it after a landing, and the radar is the page that is left on the glass. What went with the clock is the state word this dial's title used to carry. The radar says `NO FIX`, `GROUND` and `TAXI` in its ring and `FLIGHT` over its clock, so all four still have a home, and the five dials here still withhold with `---` the moment the fix goes, which is the same news in the place it is read.
 
-`--%` is a unit with no divider fitted, one whose gauge has had no reading yet, or one on the cable, whose divider reads the USB rail and not the cell (`core/power/README.md`). It withholds in the shape of the reading it stands in for, sign and all, the way the clock used to withhold as `-:--`.
+`--%` is a unit with no divider fitted, one whose gauge has had no reading yet, or one whose last reading fell outside `power::plausible_mv`. It withholds in the shape of the reading it stands in for, sign and all, the way the clock used to withhold as `-:--`.
+
+On the cable the dial is retitled `CHARGE V` and reads the divider to a hundredth of a volt, `4.80`. That figure is the USB rail and not the cell: on the cable the divider sits on the switched supply, so it reads 4.7 to 4.8 V whatever the cell holds, and the gauge has no percentage to give (`core/power/README.md`). The title changes rather than the figure alone because a volt figure under `BATTERY` would read as the cell. It is spelled out rather than `CHG` as on `status`, because this title is read at arm's length and `CHARGE V` fits the dial. Hundredths, because the rail sits between 4.7 and 4.8 V on both bench units, where tenths leave two figures to read. What it shows is that the cable is in and the rail is up, not how full the cell is. Off the cable the next reading of the cell brings `BATTERY` and the percentage back.
 
 It replaced a derived QNH, the one place on the device that number was shown. What that was worth is in `git log`: the derivation assumed the ISA lapse rate all the way down to the sea, so it was the setting that would make this altimeter agree with GNSS rather than the one a controller would give, drifting about 1.5 hPa per 1000 ft in cold air. The subscale went with it: the altimeter here reads the GNSS altitude, and the pressure altitude a flight level counts in is on `status`.
 
@@ -429,7 +431,7 @@ The pad picks and the button arms, which is the division of labour the menus alr
 |---|---|
 | `capture` | what a diagnostics capture costs, and what it has written so far |
 | `raw` | every counter and phase behind a burst that did not happen |
-| `sixpack` | what own-ship is doing: speed, altitude, vertical speed, track, turn, and what the cell has left |
+| `sixpack` | what own-ship is doing: speed, altitude, vertical speed, track, turn, and what the cell has left, or the charge rail on the cable |
 | `status` | what the sensors say: fix, position, pressure, battery, UTC, and whether we transmit |
 | `sats` | what is above the antenna, how loud, and which satellites solved |
 | `nearby` | every emitter placed, nearest first: who, how far, how far above |

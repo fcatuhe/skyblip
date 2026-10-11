@@ -258,6 +258,33 @@ TEST_CASE("sixpack: a cell nobody measured withholds the figure and keeps the si
     CHECK(value_matches(fb, kTiles[1], "--%"));
 }
 
+// On the cable the divider reads the USB rail, which drawn as a percentage reads as the cell.
+TEST_CASE("sixpack: on the cable the middle dial reads the charge rail in volts, not the cell") {
+    SixPackSnapshot cable = flying();
+    cable.battery_valid = false;
+    cable.charging = true;
+    cable.battery_mv = 4802;
+    Glass fb;
+    draw_sixpack(fb, cable);
+    CHECK(title_matches(fb, kTiles[1], "CHARGE V"));
+    CHECK(value_matches(fb, kTiles[1], "4.80"));
+
+    // Hundredths are rounded, not truncated: 4755 mV is 4.755 V, which reads 4.76.
+    cable.battery_mv = 4717;
+    Glass f472;
+    draw_sixpack(f472, cable);
+    CHECK(value_matches(f472, kTiles[1], "4.72"));
+    cable.battery_mv = 4755;
+    Glass f476;
+    draw_sixpack(f476, cable);
+    CHECK(value_matches(f476, kTiles[1], "4.76"));
+
+    // The horizon is the same instrument on the cable as off it.
+    Glass off;
+    draw_sixpack(off, flying());
+    CHECK(black_in(fb, kTiles[1], 28) == black_in(off, kTiles[1], 28));
+}
+
 // Two dashes and a hub read as a needle: what leans here is an aeroplane seen from behind.
 TEST_CASE("sixpack: the turn coordinator flies an aeroplane between four marks") {
     const Tile turn = kTiles[3];

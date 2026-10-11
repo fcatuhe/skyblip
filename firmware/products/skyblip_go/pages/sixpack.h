@@ -19,6 +19,8 @@ struct SixPackSnapshot {
     int16_t turn_cdps{0};  // rate of turn in hundredths of a degree a second, positive = right
     uint8_t battery_percent{0};
     bool battery_valid{false};
+    bool charging{false};
+    uint16_t battery_mv{0};
     int16_t lateral_mg{0};  // right-positive, thousandths of g across the wings
     bool inclinometer_fitted{false};
     bool lateral_valid{false};

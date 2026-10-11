@@ -267,10 +267,18 @@ int32_t inferred_bank_deg(int32_t turn_dps, int32_t speed_kt) {
     return (static_cast<int32_t>(iatan2(turn_dps * speed_kt, 1093)) * 360) / kTurn;
 }
 
-void battery_value(ui::Canvas& fb, int cx, int row, const SixPackSnapshot& s) {
+// INFO: fc 11oct26 on the cable the divider reads the USB rail, so the dial reads it as that
+void battery_dial(ui::Canvas& fb, int cx, int row, const SixPackSnapshot& s) {
     char buf[8];
-    int n = s.battery_valid ? fmt_uint(buf, s.battery_percent) : fmt_string(buf, "--");
-    n += fmt_string(buf + n, "%");
+    int n = 0;
+    if (s.charging) {
+        dial(fb, cx, row, "CHARGE V", 0);
+        n = fmt_uint(buf, static_cast<uint32_t>(div_round<int32_t>(s.battery_mv, 10)), 1, 2);
+    } else {
+        dial(fb, cx, row, "BATTERY", 0);
+        n = s.battery_valid ? fmt_uint(buf, s.battery_percent) : fmt_string(buf, "--");
+        n += fmt_string(buf + n, "%");
+    }
     buf[n] = 0;
     value_text(fb, cx, row, buf);
 }
@@ -300,9 +308,8 @@ void draw_sixpack(ui::Canvas& fb, const SixPackSnapshot& s) {
            /*thick=*/false, /*cleared=*/true);
     value_center(fb, kCx[0], 0, s.data_valid, speed, true);
 
-    dial(fb, kCx[1], 0, "BATTERY", 0);
+    battery_dial(fb, kCx[1], 0, s);
     horizon(fb, kCx[1], kCy[0], pitch, bank);
-    battery_value(fb, kCx[1], 0, s);
 
     dial(fb, kCx[2], 0, "ALT FT", kAltTicks);
     const int32_t on_scale = alt_ft < 0 ? 0 : alt_ft;
