@@ -5,6 +5,7 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/boot.h"
 #include "test/support/glass_text.h"
+#include "test/support/menu_rig.h"
 #include "test/support/product_rig.h"
 #include "ui/widgets/wordmark.h"
 
@@ -186,6 +187,46 @@ TEST_CASE("product: the front light goes out after the park frame, not before it
     CHECK(rig.platform.chips().epd.powered);
 
     rig.run(2000, 8000);
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK_FALSE(rig.platform.chips().epd.backlight);
+}
+
+// A lit unit that runs its cell down is put away by the cutoff, and a lamp left on drains a bag.
+TEST_CASE("product: a flat cell takes the front light down with the panel") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    open_menu(rig, t);
+    change(rig, t);
+    REQUIRE(rig.platform.chips().epd.backlight);
+
+    rig.platform.battery().millivolts = 3100;
+    rig.run(t, t + 20000);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 10, 130, 190, 199, 2));
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK_FALSE(rig.platform.chips().epd.backlight);
+    CHECK_FALSE(rig.product.screen().backlight());
+}
+
+// A fired supply comparator refuses the park frame, so the park goes straight to its last step.
+TEST_CASE("product: a park with no frame to push still puts the front light out") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 100;
+    open_menu(rig, t);
+    change(rig, t);
+    REQUIRE(rig.platform.chips().epd.backlight);
+
+    rig.platform.system_power().supply_warning = true;
+    rig.platform.battery().millivolts = 3100;
+    rig.run(t, t + 20000);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
+    REQUIRE(rig.product.power().supply_warned());
+    CHECK(rig.product.ready_to_power_off());
+    CHECK_FALSE(
+        reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 0, 0, 200, 199, 2));
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK_FALSE(rig.platform.chips().epd.backlight);
 }
