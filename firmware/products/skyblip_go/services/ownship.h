@@ -41,6 +41,8 @@ class OwnshipService : public runtime::Service {
     bool take_fix_acquired() { return settle_.take_acquired(); }
 
    private:
+    const flight::FlightTimer& timer_on_glass(uint32_t now_ms);
+    bool simulating_flight() const;
     void apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms);
     void record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms);
     void record_flight(uint32_t now_ms);
@@ -73,6 +75,7 @@ class OwnshipService : public runtime::Service {
     bool flying_{false};
     flight::FlightMonitor flight_{};
     flight::FlightTimer timer_{};
+    flight::FlightTimer simulated_{};
     flight::GroundLatch ground_{};
     gnss::FirstFix settle_{};
     gnss::Acquisition acquisition_{};

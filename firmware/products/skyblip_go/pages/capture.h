@@ -12,7 +12,12 @@ namespace skyblip::go {
 constexpr diag::Profile kFirstCapture = diag::Profile::Full;
 
 constexpr diag::Profile next_capture(diag::Profile profile) {
-    return profile == diag::Profile::Full ? diag::Profile::PowerRun : kFirstCapture;
+    switch (profile) {
+        case diag::Profile::Full: return diag::Profile::PowerRun;
+        case diag::Profile::PowerRun: return diag::Profile::FlightRun;
+        case diag::Profile::FlightRun: break;
+    }
+    return kFirstCapture;
 }
 
 const char* capture_name(diag::Profile profile);

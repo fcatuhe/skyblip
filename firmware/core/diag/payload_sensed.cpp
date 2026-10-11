@@ -190,13 +190,11 @@ Record record_of(const Power& value, const Instant& at) {
     r.payload[10] = value.percent;
     r.payload[11] = static_cast<uint8_t>(value.level);
     r.payload[12] = static_cast<uint8_t>(value.charge);
-    put_i16(r.payload + 13, value.trim_offset_mv);
     r.payload[15] = static_cast<uint8_t>(value.sample_offset_mv);
     set_flag(r.flags, kPowerFlagCharging, value.charging);
     set_flag(r.flags, kPowerFlagExternal, value.external_power);
     set_flag(r.flags, kPowerFlagValid, value.valid);
     set_flag(r.flags, kPowerFlagDieValid, value.die_valid);
-    set_flag(r.flags, kPowerFlagTrimLearned, value.trim_learned);
     return r;
 }
 
@@ -211,13 +209,11 @@ bool read(const Record& record, Power& out) {
     out.percent = record.payload[10];
     out.level = static_cast<power::PowerLevel>(record.payload[11]);
     out.charge = static_cast<power::ChargeCondition>(record.payload[12]);
-    out.trim_offset_mv = get_i16(record.payload + 13);
     out.sample_offset_mv = get_i8(record.payload + 15);
     out.charging = record.flagged(kPowerFlagCharging);
     out.external_power = record.flagged(kPowerFlagExternal);
     out.valid = record.flagged(kPowerFlagValid);
     out.die_valid = record.flagged(kPowerFlagDieValid);
-    out.trim_learned = record.flagged(kPowerFlagTrimLearned);
     return true;
 }
 

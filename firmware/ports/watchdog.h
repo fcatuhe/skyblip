@@ -14,8 +14,7 @@ class Watchdog {
    public:
     virtual ~Watchdog() = default;
 
-    // Arm with the longest the loop may go unheard. Armed last, after every
-    // part is up, because bring-up is slower than any steady-state pass.
+    // Arm with the longest the loop may go unheard.
     //
     // INFO: hk 02aug26 an nRF52 watchdog cannot be disarmed once started: CRV,
     // RREN and CONFIG are blocked while RUNSTATUS is set (nRF52840 PS v1.8

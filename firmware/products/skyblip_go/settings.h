@@ -73,7 +73,7 @@ struct Settings {
     // and its spectrum analyser - which is the instrument that had to be there
     // to know the number in the first place.
     int16_t freq_trim_e1_ppm{0};
-    // INFO: fc 20sep26 a trim a person set outranks the charger the device trims itself against
+    // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
     bool alarm_enabled{true};

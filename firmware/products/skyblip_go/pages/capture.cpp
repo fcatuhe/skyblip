@@ -22,10 +22,10 @@ constexpr int kHintY = 182;
 constexpr int kStateLine = 0;
 constexpr int kProgressLine = 1;
 constexpr int kOfferLine = 1;
-constexpr int kPriceLine = 3;
-constexpr int kWroteLine = 6;
+constexpr int kPriceLine = 4;
+constexpr int kWroteLine = 7;
 constexpr int kArmedFaultsLine = 5;
-constexpr int kOfferedFaultsLine = 7;
+constexpr int kOfferedFaultsLine = 8;
 
 int line_y(int line) { return kTopY + line * kLineH; }
 
@@ -48,7 +48,7 @@ int fmt_span(char* out, uint32_t seconds) {
 }
 
 const char* capture_subjects(diag::Profile profile) {
-    return profile == diag::Profile::PowerRun ? "POWER AND DUTY" : "EVERY SUBJECT";
+    return diag::paced(profile) ? "POWER AND DUTY" : "EVERY SUBJECT";
 }
 
 const char* stopped_word(bus::CaptureStop stopped) {
@@ -124,9 +124,12 @@ void draw_wrote(ui::Canvas& fb, const bus::CaptureState& c) {
 
 void draw_offer(ui::Canvas& fb, const CaptureSnapshot& s) {
     if (s.capture.available) {
-        draw_offered_capture(fb, kOfferLine, diag::Profile::Full, s.focus == diag::Profile::Full);
-        draw_offered_capture(fb, kOfferLine + 1, diag::Profile::PowerRun,
-                             s.focus == diag::Profile::PowerRun);
+        int line = kOfferLine;
+        diag::Profile profile = kFirstCapture;
+        do {
+            draw_offered_capture(fb, line++, profile, s.focus == profile);
+            profile = next_capture(profile);
+        } while (profile != kFirstCapture);
     }
     draw_price(fb, s);
     draw_wrote(fb, s.capture);
@@ -173,7 +176,12 @@ void draw_hint(ui::Canvas& fb, const CaptureSnapshot& s) {
 }  // namespace
 
 const char* capture_name(diag::Profile profile) {
-    return profile == diag::Profile::PowerRun ? "POWER RUN" : "FULL";
+    switch (profile) {
+        case diag::Profile::PowerRun: return "POWER RUN";
+        case diag::Profile::FlightRun: return "FLIGHT RUN";
+        case diag::Profile::Full: break;
+    }
+    return "FULL";
 }
 
 void draw_capture(ui::Canvas& fb, const CaptureSnapshot& s) {

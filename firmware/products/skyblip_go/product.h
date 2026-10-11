@@ -148,7 +148,9 @@ class Product {
     }
 
     bool park_refusal(uint32_t now_ms) {
-        if (refused_frame_ == power::RefusedFrame::Leave) return true;
+        // INFO: fc 05oct26 the refused press may still be down, and the wake pin senses a level
+        const bool released = refusal_release_.settled(now_ms, platform_.button_down());
+        if (refused_frame_ == power::RefusedFrame::Leave) return released;
         if (!refusal_asked_) {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
@@ -159,9 +161,10 @@ class Product {
         }
         screen_.settle_park(now_ms);
         remember_glass();
-        if (!screen_.parking()) return true;
         // INFO: fc 21sep26 a panel that never reports ready must not hold a flat cell awake
-        return now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs;
+        const bool parked =
+            !screen_.parking() || now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs;
+        return parked && released;
     }
 
     power::RefusedFrame refused_frame() const { return refused_frame_; }
@@ -444,6 +447,7 @@ class Product {
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
     std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
+    power::ButtonRelease refusal_release_{};
     bool refusal_asked_{false};
     power::CellOnGlass glass_remembered_{power::CellOnGlass::None};
     bool went_dark_flat_{false};

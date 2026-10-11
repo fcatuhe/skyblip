@@ -89,6 +89,12 @@ class DiagnosticsPayloads(unittest.TestCase):
             "boot", 0, capabilities=0x1FFF, fw_build=4242, fw_revision=7, fw_major=1, fw_minor=2,
             reset="WATCHDOG", image_state="probation"))
 
+    def test_boot_names_its_profile_only_where_the_flag_says_it_was_written(self):
+        payload = struct.pack("<2IH5B", 0x1FFF, 4242, 7, 1, 2, 5, 1, 2)
+        self.assertEqual(decoded(1, payload, 0b100)["profile"], "flight_run")
+        older = struct.pack("<2IH5B", 0x1FFF, 4242, 7, 1, 2, 5, 1, 0)
+        self.assertNotIn("profile", decoded(1, older))
+
     def test_config_reads_signed_trims_and_its_three_flag_bits(self):
         payload = struct.pack("<I2h4B2b", 0xABCDEF, -120, -35, 9, 7, 3, 2, -9, 22)
         self.assertEqual(decoded(2, payload, 0b1_1100), whole(
@@ -168,6 +174,15 @@ class DiagnosticsPayloads(unittest.TestCase):
             charge_warnings=0, die_dc=210, percent=18, level="normal", charge="ok",
             trim_offset_mv=-40, sample_offset_mv=-128, charging=True, external_power=False,
             valid=True, die_valid=False, caution=True, trim_learned=True))
+
+    # 0B1B2C on its charger: the rail over 4700 mV, refused and counted, with the cable seen (#114)
+    def test_power_on_the_cable_reads_the_rail_it_refused_and_no_cell(self):
+        payload = struct.pack("<4Hh3Bhb", 4812, 0, 360, 0, 305, 0, 1, 1, 0, 0)
+        self.assertEqual(decoded(8, payload, 0b0010_1100), whole(
+            "power", 0b0010_1100, cell_mv=4812, supply_warnings=0, implausible=360,
+            charge_warnings=0, die_dc=305, percent=0, level="normal", charge="ok",
+            trim_offset_mv=0, sample_offset_mv=0, charging=True, external_power=True,
+            valid=False, die_valid=True, caution=False, trim_learned=False))
 
     def test_baro_altitude_and_climb_are_signed_millimetres(self):
         payload = struct.pack("<I2ih", 95_432_100, -1234, -2500, -104)
@@ -280,7 +295,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
     def test_every_decoded_key_is_a_key_the_schema_declares(self):
         allowed = set(self.schema["properties"])
         for type_id in records.DIAG_TYPES:
-            decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16))))
+            decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16)), flags=0xFF))
             self.assertLessEqual(set(decoded), allowed, "type %d" % type_id)
 
     def test_no_decoded_key_collides_with_the_keys_a_fetch_wraps_each_record_in(self):
@@ -291,7 +306,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
 
     def test_no_field_reads_past_the_sixteen_byte_payload(self):
         for type_id, (name, fields) in records.DIAG_TYPES.items():
-            short = diag_record(type_id, bytes(16))[:23] + b"\x00"
+            short = diag_record(type_id, bytes(16), flags=0xFF)[:23] + b"\x00"
             decoded = records.decode_diag_record(short)
             self.assertEqual(decoded["type"], name)
             self.assertEqual(len(decoded), len(fields) + 5)

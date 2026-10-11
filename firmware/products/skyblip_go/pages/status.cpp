@@ -155,23 +155,22 @@ void imu_field(ui::Canvas& fb, int y, const StatusSnapshot& s) {
     right_aligned(fb, kGlassW - kLeft, y, buf, n);
 }
 
-// Volts and state of charge, and the fact that decides which of the two curves
-// the percentage came from. A pilot who cannot see "CHG" cannot tell a cell that
-// is filling from one that is holding 4.1 V on its way down.
+// INFO: fc 05oct26 on the cable the divider reads the USB rail, so CHG stands in for the numbers
 void battery_row(ui::Canvas& fb, int y, const StatusSnapshot& s) {
-    if (!s.battery_valid) {
+    if (!s.battery_valid && !s.charging) {
         row(fb, y, "BAT", "no sensor");
         return;
     }
 
     // Centivolts, so the two decimals a cell is judged on fit the value field.
-    char volts[8];
-    int n = fmt_uint(volts, s.battery_mv, 1, 3);
-    volts[n] = 0;
-
-    char percent[8];
-    n = fmt_uint(percent, s.battery_percent, 1);
-    percent[n] = 0;
+    char volts[8] = "--";
+    char percent[8] = "--";
+    if (s.battery_valid) {
+        int n = fmt_uint(volts, s.battery_mv, 1, 3);
+        volts[n] = 0;
+        n = fmt_uint(percent, s.battery_percent, 1);
+        percent[n] = 0;
+    }
 
     // A cell on the cable is not low whatever it reads, so the charger wins the
     // marker. Off it, the warning is the whole reason this row is on the page.

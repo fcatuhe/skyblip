@@ -1,6 +1,7 @@
 #include "products/skyblip_go/services/ownship.h"
 
 #include "core/diag/payload.h"
+#include "core/diag/profile.h"
 #include "core/events/sensor.h"
 #include "core/flight/arc.h"
 #include "core/flight/atmosphere.h"
@@ -36,10 +37,11 @@ void OwnshipService::tick(uint32_t now_ms) {
     record_pps(now_ms);
 
     timer_.update(flight_.state(), now_ms);
+    const flight::FlightTimer& timer = timer_on_glass(now_ms);
     context_.state.flight.confirmed_state = ground_.state();
-    context_.state.flight.seconds = timer_.seconds();
-    context_.state.flight.time_valid = timer_.flown();
-    context_.state.flight.running = timer_.running();
+    context_.state.flight.seconds = timer.seconds();
+    context_.state.flight.time_valid = timer.flown();
+    context_.state.flight.running = timer.running();
     context_.state.flight.rolling = flight_.rolling();
 
     acquisition_.tick(now_ms);
@@ -49,6 +51,20 @@ void OwnshipService::tick(uint32_t now_ms) {
     context_.state.baro.active = baro_live_;
     context_.state.own.tx_settled = settle_.settled(now_ms);
     context_.state.own.fix_acquired = settle_.take_acquired();
+}
+
+// INFO: fc 05oct26 a flight run flies the glass alone: air, flight log and gates read flight_
+const flight::FlightTimer& OwnshipService::timer_on_glass(uint32_t now_ms) {
+    if (simulating_flight()) {
+        simulated_.update(flight::FlightState::Airborne, now_ms);
+        return simulated_;
+    }
+    simulated_ = {};
+    return timer_;
+}
+
+bool OwnshipService::simulating_flight() const {
+    return context_.diag.armed() && diag::simulates_flight(context_.diag.profile());
 }
 
 void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms) {
@@ -297,7 +313,7 @@ void OwnshipService::publish_inertial(uint32_t now_ms) {
     context_.state.gload.most = gmeter_.most();
     context_.state.gload.least = gmeter_.least();
 
-    const bool flying = timer_.running();
+    const bool flying = context_.state.flight.running;
     if (flying && !flying_) gmeter_.reset();
     flying_ = flying;
 }

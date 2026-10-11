@@ -187,10 +187,7 @@ TEST_CASE("status: the widest IMU failure still leaves the track's datum readabl
     CHECK(reads_in(fb, "TRUE", 0, 55, 200, 70));
 }
 
-TEST_CASE("status: the battery row states the voltage, the charge and which curve") {
-    // 4.00 V is nearly full off charge and about half full on it, so the two rows
-    // must not read the same - and the charging one carries the CHG marker, which
-    // is more ink either way.
+TEST_CASE("status: the battery row states the voltage and the charge, and on the cable only CHG") {
     StatusSnapshot s;
     s.battery_valid = true;
     s.battery_mv = 4000;
@@ -198,22 +195,25 @@ TEST_CASE("status: the battery row states the voltage, the charge and which curv
 
     Glass resting;
     draw_status(resting, s);
+    CHECK(reads_in(resting, "89", 0, 160, 200, 194));
 
-    StatusSnapshot c = s;
+    // On the cable the divider reads the USB rail, so the row shows no number at all.
+    StatusSnapshot c;
     c.charging = true;
-    c.battery_percent = 55;
     Glass charging;
     draw_status(charging, c);
-    CHECK(charging.count_black() != resting.count_black());
+    CHECK(reads_in(charging, "CHG", 0, 160, 200, 194));
+    CHECK(reads_in(charging, "--", 0, 160, 200, 194));
+    CHECK_FALSE(reads_in(charging, "no sensor", 0, 160, 200, 194));
 
     // A board with no divider fitted says so rather than reading empty.
     StatusSnapshot absent;
     Glass no_sensor;
     draw_status(no_sensor, absent);
-    CHECK(no_sensor.count_black() != resting.count_black());
+    CHECK(reads_in(no_sensor, "no sensor", 0, 160, 200, 194));
 
     // The cutoff monitor's warning, on the page: a cell at 3.45 V is low and
-    // says so, and the same cell on the cable is charging, not low.
+    // says so, and the cable takes the word off.
     StatusSnapshot l = s;
     l.battery_mv = 3450;
     l.battery_percent = 12;
@@ -225,12 +225,13 @@ TEST_CASE("status: the battery row states the voltage, the charge and which curv
     Glass quiet;
     draw_status(quiet, q);
     CHECK(low.count_black() > quiet.count_black());
+    CHECK(reads_in(low, "LOW", 0, 160, 200, 194));
 
-    StatusSnapshot on_cable = l;
-    on_cable.charging = true;
+    StatusSnapshot on_cable = c;
+    on_cable.battery_low = true;
     Glass cable;
     draw_status(cable, on_cable);
-    CHECK(cable.count_black() != low.count_black());
+    CHECK_FALSE(reads_in(cable, "LOW", 0, 160, 200, 194));
 
     // The row is the last one on the panel: it has to fit inside it.
     for (int y = 194; y < Glass::kH; y++)

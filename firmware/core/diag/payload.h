@@ -22,6 +22,10 @@
 
 namespace skyblip::diag {
 
+enum class Profile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2 };
+
+constexpr uint8_t kBootFlagProfileRecorded = 1u << 2;
+
 struct Boot {
     uint32_t capabilities{0};
     uint32_t fw_build{0};
@@ -30,6 +34,8 @@ struct Boot {
     uint8_t fw_minor{0};
     power::ResetReason reset{power::ResetReason::Unknown};
     dfu::ImageState image_state{dfu::ImageState::Confirmed};
+    Profile profile{Profile::Full};
+    bool profile_recorded{false};
 };
 
 constexpr uint8_t kConfigFlagAlarmEnabled = 1u << 2;
@@ -151,7 +157,7 @@ constexpr uint8_t kPowerFlagExternal = 1u << 3;
 constexpr uint8_t kPowerFlagValid = 1u << 4;
 constexpr uint8_t kPowerFlagDieValid = 1u << 5;
 // INFO: fc 30sep26 bit 6 was caution until the level carried Low, and is never reused
-constexpr uint8_t kPowerFlagTrimLearned = 1u << 7;
+// INFO: fc 05oct26 bit 7 and payload bytes 13-14 were the learned trim, and are never reused
 
 struct Power {
     uint16_t cell_mv{0};
@@ -159,7 +165,6 @@ struct Power {
     uint32_t implausible{0};
     uint32_t charge_warnings{0};
     int16_t die_dc{0};
-    int16_t trim_offset_mv{0};
     int8_t sample_offset_mv{0};
     uint8_t percent{0};
     power::PowerLevel level{power::PowerLevel::Unknown};
@@ -168,7 +173,6 @@ struct Power {
     bool external_power{false};
     bool valid{false};
     bool die_valid{false};
-    bool trim_learned{false};
 };
 
 constexpr uint8_t kBaroFlagActive = 1u << 2;

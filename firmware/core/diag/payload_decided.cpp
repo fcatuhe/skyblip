@@ -11,6 +11,8 @@ Record record_of(const Boot& value, const Instant& at) {
     r.payload[11] = value.fw_minor;
     r.payload[12] = static_cast<uint8_t>(value.reset);
     r.payload[13] = static_cast<uint8_t>(value.image_state);
+    r.payload[14] = static_cast<uint8_t>(value.profile);
+    set_flag(r.flags, kBootFlagProfileRecorded, value.profile_recorded);
     return r;
 }
 
@@ -24,6 +26,8 @@ bool read(const Record& record, Boot& out) {
     out.fw_minor = record.payload[11];
     out.reset = static_cast<power::ResetReason>(record.payload[12]);
     out.image_state = static_cast<dfu::ImageState>(record.payload[13]);
+    out.profile = static_cast<Profile>(record.payload[14]);
+    out.profile_recorded = record.flagged(kBootFlagProfileRecorded);
     return true;
 }
 

@@ -18,8 +18,8 @@ struct AccelSample {
     uint32_t at_ms;
 };
 
-// The cell's terminal voltage, and whether something is feeding the charger.
-// What that pair means is core/power's problem, not the board's.
+// What the divider read, and whether something is feeding the charger. Whether
+// that reading is the cell at all is core/power's problem, not the board's.
 struct BatterySample {
     uint16_t millivolts;
     bool external_power;

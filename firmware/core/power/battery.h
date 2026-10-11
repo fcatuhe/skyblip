@@ -11,10 +11,14 @@ namespace skyblip::power {
 
 constexpr uint16_t kEmptyMv = kFlatMv;
 constexpr uint16_t kFullMv = 4200;
-// With external power present and the cell above this, the charger has finished:
-// it is holding the float voltage, not pushing current in. There is no charge
-// status pin to ask, so the plateau is the signal.
-constexpr uint16_t kChargeCompleteMv = 4190;
+// INFO: fc 05oct26 no 4.2 V cell reads this high, a USB rail does: README.md
+constexpr uint16_t kImplausibleCeilingMv = 4700;
+
+static_assert(kFullMv < kImplausibleCeilingMv, "a full cell is a reading the gauge believes");
+
+constexpr bool plausible_mv(uint16_t millivolts) {
+    return millivolts > kImplausibleFloorMv && millivolts <= kImplausibleCeilingMv;
+}
 
 // INFO: fc 03aug26 The per-unit trim, in millivolts, added to a reading before
 // anything reads meaning into it. The divider ratio is a devicetree fact and
@@ -40,17 +44,15 @@ constexpr int16_t kCalibrationLimitMv = 250;
 uint16_t calibrated_mv(uint16_t raw_mv, int16_t offset_mv);
 events::BatterySample calibrated(const events::BatterySample& raw, int16_t offset_mv);
 
-// One reading, one meaning. Charging is not a modifier on a percentage, it is a
-// different curve: a charger holds the terminal above the cell's open-circuit
-// voltage by the drop across its internal resistance, so 4.00 V on charge is a
-// cell far emptier than 4.00 V on the bench.
-uint8_t percent_from_mv(uint16_t millivolts, bool charging);
+// INFO: fc 05oct26 off the cable only: on it the divider reads the USB rail, README.md
+uint8_t percent_from_mv(uint16_t millivolts);
 
 struct BatteryState {
     uint16_t millivolts{0};
     uint16_t sample_mv{0};
     uint8_t percent{0};
     bool external_power{false};
+    // INFO: fc 05oct26 the cable is in: no pin says when the charger is done, README.md
     bool charging{false};
     bool valid{false};
 };
@@ -58,21 +60,22 @@ struct BatteryState {
 // Readings become something a pilot can read. A 14 dBm burst sags the rail for
 // exactly as long as it lasts, so the gauge takes the median of the last three
 // readings rather than an average: a transient is discarded whole, while a cell
-// that is really moving is followed within two samples. And a gauge that walks
-// backwards while the cable is in is a bug report, so the percentage only moves
-// the way the current flows until the direction itself changes.
+// that is really moving is followed within two samples. Off the cable the
+// percentage only falls. On the cable, or on a reading outside plausible_mv, the
+// gauge has no cell to show: valid drops, millivolts is what the divider read,
+// and the next reading of the cell starts the median over.
 //
 // INFO: fc 03aug26 No time-remaining estimate here, and that is a decision, not
 // an omission. OGN derives a drift rate from a 32-deep delay line on the voltage
 // (nrf52-ogn-tracker src/proc.cpp:326-345) and a "40 minutes" reading is worth
 // more to a pilot than "38%", so the reason has to be better than cost.
 //
-// It is this: minutes-remaining is percent divided by the SLOPE of the curves
-// above, and those curves are the textbook shape for a generic Li-ion cell, not
+// It is this: minutes-remaining is percent divided by the SLOPE of the curve
+// above, and that curve is the textbook shape for a generic Li-ion cell, not
 // this pack measured on this board (the note on kDischargeCurve says so). An
 // error of a few percent in the level is a few percent; the same error in the
 // slope is a factor. Nothing else here is a guess about the future - the
-// median-of-three, the two curves and the direction rule all describe a reading
+// median-of-three, the curve and the direction rule all describe a reading
 // that has already happened - and a percentage is a statement of state a pilot
 // discounts for himself, while a duration is a promise he plans a leg on. Two
 // facts make the promise unbackable today: the fitted cell has no identified
@@ -85,7 +88,7 @@ struct BatteryState {
 // What unblocks it, and it is one bench day, not a quarter: a logged discharge
 // of a fitted unit under the real dwell map, which the power budget needs
 // anyway. That
-// log fixes the curves, and with real curves percent falls linearly in time
+// log fixes the curve, and with a real curve percent falls linearly in time
 // under a constant load, so the estimator is small and needs no new sampling -
 // a fixed-depth ring of (percent, millisecond) pairs recorded on each whole
 // percent step, rate taken across the ring, published only once the ring spans
@@ -97,12 +100,14 @@ class Gauge {
     void apply(const events::BatterySample& sample);
 
     const BatteryState& state() const { return state_; }
+    uint32_t refused() const { return refused_; }
 
    private:
     static constexpr int kWindowSamples = 3;
 
     uint16_t recent_[kWindowSamples]{};
     int seen_{0};
+    uint32_t refused_{0};
     BatteryState state_{};
 };
 

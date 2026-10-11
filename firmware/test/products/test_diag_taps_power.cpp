@@ -1,4 +1,4 @@
-// The power and duty records: the cell on its cadence, the knee, the trim, and the duty pair.
+// The power and duty records: the cell on its cadence, the knee, the cable, and the duty pair.
 #include <vector>
 
 #include "core/bus/state.h"
@@ -120,27 +120,32 @@ TEST_CASE("diag power: the reading the median threw out rides beside it, to the 
     CHECK(sag_seen);
 }
 
-// Two minutes on a charger holding its float voltage, which is the only bench this unit gets.
-TEST_CASE("diag power: a trim the charger taught the unit reaches the corpus, not only settings") {
+// 0B1B2C charged for 7 h with every record reading no cable and no cell (#114).
+TEST_CASE("diag power: on the cable the record carries the cable and what the divider read") {
     Rig rig;
     uint32_t t = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 3960;
+    rig.platform.battery().millivolts = 4812;
     taxi(rig, t, 3);
     arm(rig, t);
-    rig.run(t, t + 10000);
-    t += 10000;
-    rig.platform.battery().millivolts = 4160;
-    rig.run(t, t + power::kPlateauHoldMs + 5000);
-    t += power::kPlateauHoldMs + 5000;
+    taxi(rig, t, 4);
+    rig.platform.battery().present = false;
+    taxi(rig, t, 3);
     stop(rig, t);
 
     const std::vector<diag::Power> cell = every_power_record(captured(rig));
-    REQUIRE_FALSE(cell.empty());
-    CHECK(cell.back().trim_learned);
-    CHECK(cell.back().trim_offset_mv == 40);
-    CHECK(cell.back().trim_offset_mv == rig.settings().battery_offset_mv);
+    REQUIRE(cell.size() >= 6);
+    for (const diag::Power& power : cell) {
+        CHECK(power.external_power);
+        CHECK(power.charging);
+        CHECK_FALSE(power.valid);
+        CHECK(power.level == power::PowerLevel::Normal);
+    }
+    CHECK(cell.front().cell_mv == 4812);
+    CHECK(cell.front().implausible >= 4);
+    CHECK(cell.back().cell_mv == 0);
+    CHECK(cell.back().implausible > cell.front().implausible);
 }
 
 // A reader divides a duty delta by a power delta: interpolating between two instants is not that.

@@ -12,7 +12,6 @@
 
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
-#include "core/power/shutdown.h"
 
 namespace skyblip::power {
 
@@ -52,8 +51,6 @@ static_assert(kImplausibleFloorMv < kFlatMv,
 //
 // INFO: fc 05aug26 charge mode was considered and refused: README.md
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);
-
-ButtonWake button_wake_after_refusal(const BootCell& cell);
 
 RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass);
 

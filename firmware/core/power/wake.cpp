@@ -37,10 +37,6 @@ bool restarted(ResetCause causes) {
 
 }  // namespace
 
-ButtonWake button_wake_after_refusal(const BootCell& cell) {
-    return too_flat_to_run(cell) ? ButtonWake::Withheld : ButtonWake::Armed;
-}
-
 RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass) {
     if (too_flat_to_run(cell))
         return on_glass == CellOnGlass::Flat ? RefusedFrame::Leave : RefusedFrame::FlatCell;

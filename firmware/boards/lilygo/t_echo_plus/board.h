@@ -208,8 +208,9 @@ class TEchoPlus {
         if (now_ms - last_battery_ms_ < runtime::kBatteryPeriodMs) return;
         last_battery_ms_ = now_ms;
         uint16_t millivolts = 0;
-        if (platform_.read_battery_mv(millivolts))
-            bus_.battery.push(events::BatterySample{millivolts, platform_.external_power()});
+        // INFO: fc 05oct26 refused or not, the reading and VBUS go out: core/power judges it
+        platform_.read_battery_mv(millivolts);
+        bus_.battery.push(events::BatterySample{millivolts, platform_.external_power()});
     }
 
     // The producer side: everything hardware says arrives on the bus, and the

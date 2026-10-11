@@ -102,7 +102,9 @@ constexpr bool fills_the_platform_contract() {
     static_assert(
         std::is_convertible_v<
             decltype(std::declval<Self>().read_battery_mv(std::declval<uint16_t&>())), bool>,
-        "platform: read_battery_mv(uint16_t&) -> bool, which becomes events::BatterySample");
+        "platform: read_battery_mv(uint16_t&) -> bool, whether power::plausible_mv believes the "
+        "reading. It writes what the divider read either way, 0 when the ADC gave nothing, and "
+        "that becomes events::BatterySample");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().external_power()), bool>,
                   "platform: external_power() -> bool");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().button_down()), bool>,

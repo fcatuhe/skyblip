@@ -108,7 +108,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLongPressMs` | 2000 (2 s) | milliseconds | - | Long enough that it cannot be the page press, short enough to do with gloves on. |
 | `kParkMs` | 3000 (3 s) | milliseconds | - | A power-off parks the panel with a full refresh, which the SSD1681 clocks out in about 2.5 s, and an install or a recovery through black, about a second. |
 | `kReleaseSettleMs` | 100 | milliseconds | Settle | nRF52 SENSE is a level detect, not an edge, so arming the wake pin while the button is still down wakes the device the instant SYSTEM OFF latches. |
-| `kPlateauHoldMs` | 120000 (2 min) | milliseconds | Hold | [README](../firmware/core/power/README.md) argues it |
 
 ## [`firmware/core/protocol`](../firmware/core/protocol/README.md)
 
@@ -267,4 +266,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-162 constants over 18 folders.
+161 constants over 18 folders.

@@ -16,6 +16,7 @@
 #endif
 
 #include "core/dfu/image.h"
+#include "core/power/shutdown.h"
 #include "hardware/platform/zephyr/upload_gate.h"
 #include "ports/dfu.h"
 
@@ -39,31 +40,6 @@ namespace skyblip::platform::zephyr {
 // for a device whose reset button is awkward or enclosed; the other route is a
 // double-click on RESET within 0.5 s, which is the bootloader's own and works
 // whatever state this firmware is in.
-constexpr uint8_t kUf2MassStorageMagic = 0x57;
-
-// 0x6d is the opposite request: skip DFU entirely on the next boot. Written on
-// the way to SYSTEM OFF (hardware/platform/zephyr/system_power.h), which is what
-// SoftRF does before sleeping (src/platform/nRF52.cpp:3213-3226, magic at
-// nRF52.h:128).
-//
-// WHAT IT BUYS. dfu_skip is tested before anything else in check_dfu_mode and
-// returns immediately, so it wins over the bootloader's double-reset detector -
-// and that detector reads a word of plain RAM at 0x20007F7C (DFU_DBL_RESET_MEM),
-// whose contents through SYSTEM OFF are not defined. Without the magic, the first
-// reset after a shutdown enters USB DFU if that word happens to hold 0x5A1AD5 and
-// the reset pin was the cause. That is the "at the factory bootloader's
-// discretion" this closes.
-//
-// WHAT IT COSTS, and §3 R1 has to keep working exactly as documented, so it is
-// written down rather than discovered: taking the skip path also skips the 500 ms
-// double-reset window on that ONE boot, and leaves DFU_DBL_RESET_MEM untouched
-// instead of arming it. So a double-click of RESET performed on the very first
-// boot after a deliberate power-off does not arm, and the pair after it does -
-// the bootloader cleared the magic on that boot, so every later reset is the
-// documented behaviour. R1's actual job is unaffected: it is the escape hatch for
-// a device whose application is broken, and a broken application never reached a
-// shutdown, so its GPREGRET is 0 and the first double-click works.
-constexpr uint8_t kSkipBootloaderMagic = 0x6d;
 
 // One writer for both. False when the board declares no retention area or the
 // device is not ready: the caller decides what that means, and neither caller
@@ -123,13 +99,13 @@ class Dfu : public ports::Dfu {
             recovery_armed_ = true;
             return ports::RecoveryPath::PowerOffToFinish;
         }
-        write_boot_magic(kUf2MassStorageMagic);
+        write_boot_magic(power::kUf2MassStorageMagic);
         sys_reboot(SYS_REBOOT_WARM);
         return ports::RecoveryPath::Rebooted;
     }
 
     static uint8_t boot_magic_for_system_off() {
-        return recovery_armed_ ? kUf2MassStorageMagic : kSkipBootloaderMagic;
+        return power::boot_magic_for_system_off(recovery_armed_);
     }
 
    private:

@@ -8,7 +8,9 @@
 
 namespace skyblip::diag {
 
-enum class Profile : uint8_t { Full = 0, PowerRun = 1 };
+constexpr bool paced(Profile profile) { return profile != Profile::Full; }
+
+constexpr bool simulates_flight(Profile profile) { return profile == Profile::FlightRun; }
 
 // INFO: fc 21sep26 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff
 constexpr uint32_t kPowerRunRecordPeriodMs = 30000;

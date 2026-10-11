@@ -58,6 +58,8 @@ void CaptureService::record_boot(uint32_t now_ms) {
     }
     value.reset = config_.reset_reason();
     value.image_state = config_.image_state();
+    value.profile = context_.diag.profile();
+    value.profile_recorded = true;
     context_.diag.record(value, context_.instant(now_ms));
 }
 

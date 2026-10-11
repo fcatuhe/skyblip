@@ -9,7 +9,7 @@ using skyblip::diag::Profile;
 
 namespace {
 
-// 266 sectors of 170 slots is 45,220: 4110 s at Full's 39,600 an hour, 678,300 s at PowerRun's 240.
+// 266 sectors of 170 slots is 45,220: 4110 s at Full's 39,600 an hour, 678,300 s at a run's 240.
 constexpr uint32_t kFullKeepsS = 4110;
 constexpr uint32_t kPowerRunKeepsS = 678300;
 
@@ -27,7 +27,7 @@ CaptureSnapshot disarmed_device() {
 CaptureSnapshot offering(Profile focus) {
     CaptureSnapshot snap = disarmed_device();
     snap.focus = focus;
-    snap.focus_keeps_s = focus == Profile::PowerRun ? kPowerRunKeepsS : kFullKeepsS;
+    snap.focus_keeps_s = focus == Profile::Full ? kFullKeepsS : kPowerRunKeepsS;
     return snap;
 }
 
@@ -44,7 +44,7 @@ CaptureSnapshot armed_device() {
 }
 
 bool focused(const Glass& fb, const char* name) {
-    return reads_in(fb, name, 0, 28, 200, 60, 1, /*ink=*/false);
+    return reads_in(fb, name, 0, 28, 200, 74, 1, /*ink=*/false);
 }
 
 }  // namespace
@@ -57,22 +57,35 @@ TEST_CASE("capture page: a disarmed device states the price before it is paid") 
     CHECK(reads_in(fb, "T+812", 100, 0, 200, 14));
     CHECK(reads_in(fb, "STATE OFF", 0, 14, 200, 40));
     CHECK(reads_in(fb, "POWER RUN", 0, 42, 200, 70));
-    CHECK(reads_in(fb, "TAKES 266 OF 330 SECTORS", 0, 56, 200, 84));
-    CHECK(reads_in(fb, "EVICTS 3 FLIGHTS", 0, 70, 200, 98));
-    CHECK(reads_in(fb, "KEEPS 1H08 ROLLING", 0, 84, 200, 112));
+    CHECK(reads_in(fb, "FLIGHT RUN", 0, 56, 200, 84));
+    CHECK(reads_in(fb, "TAKES 266 OF 330 SECTORS", 0, 70, 200, 98));
+    CHECK(reads_in(fb, "EVICTS 3 FLIGHTS", 0, 84, 200, 112));
+    CHECK(reads_in(fb, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
     CHECK(reads_in(fb, "PAD PICKS", 0, 170, 200, 200));
     CHECK(reads_in(fb, "PRESS TWICE TO ARM", 0, 170, 200, 200));
 }
 
-TEST_CASE("capture page: the two captures quote spans two orders of magnitude apart") {
+TEST_CASE("capture page: the full capture and the two runs quote spans two orders apart") {
     Glass full;
     draw_capture(full, offering(Profile::Full));
     Glass power_run;
     draw_capture(power_run, offering(Profile::PowerRun));
+    Glass flight_run;
+    draw_capture(flight_run, offering(Profile::FlightRun));
 
-    CHECK(reads_in(full, "KEEPS 1H08 ROLLING", 0, 84, 200, 112));
-    CHECK(reads_in(power_run, "KEEPS 188H25 ROLLING", 0, 84, 200, 112));
+    CHECK(reads_in(full, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
+    CHECK(reads_in(power_run, "KEEPS 188H25 ROLLING", 0, 98, 200, 126));
     CHECK_FALSE(reads_in(power_run, "KEEPS 1H08 ROLLING", 0, 0, 200, 200));
+    CHECK(reads_in(flight_run, "KEEPS 188H25 ROLLING", 0, 98, 200, 126));
+}
+
+TEST_CASE("capture page: the flight run records power and duty, as the power run does") {
+    Glass fb;
+    draw_capture(fb, offering(Profile::FlightRun));
+    CHECK(focused(fb, "FLIGHT RUN"));
+    CHECK(reads_in(fb, "POWER AND DUTY", 100, 56, 200, 84, 1, /*ink=*/false));
+    CHECK(reads_in(fb, "POWER AND DUTY", 100, 42, 200, 70));
+    CHECK(reads_in(fb, "EVERY SUBJECT", 100, 28, 200, 56));
 }
 
 TEST_CASE("capture page: the capture in focus is the one under the bar") {
@@ -87,6 +100,7 @@ TEST_CASE("capture page: the capture in focus is the one under the bar") {
     CHECK(focused(power_run, "POWER RUN"));
     CHECK(reads_in(power_run, "FULL", 0, 28, 200, 56));
     CHECK_FALSE(focused(power_run, "FULL"));
+    CHECK_FALSE(focused(power_run, "FLIGHT RUN"));
 }
 
 TEST_CASE("capture page: an armed device shows what it wrote, what it lost and what it holds") {
@@ -109,6 +123,11 @@ TEST_CASE("capture page: an armed device names the capture that is running") {
     CHECK(reads_in(fb, "STATE ARMED POWER RUN", 0, 14, 200, 40));
     CHECK_FALSE(reads_in(fb, "STATE ARMED FULL", 0, 0, 200, 200));
     CHECK_FALSE(reads_in(fb, "PAD PICKS", 0, 0, 200, 200));
+
+    snap.running = Profile::FlightRun;
+    Glass flight_run;
+    draw_capture(flight_run, snap);
+    CHECK(reads_in(flight_run, "STATE ARMED FLIGHT RUN", 0, 14, 200, 40));
 }
 
 // A capture that stopped on its own says so: the pilot did not ask for it.
@@ -120,7 +139,7 @@ TEST_CASE("capture page: a capture the allocator refused says it stopped and why
     draw_capture(fb, snap);
 
     CHECK(reads_in(fb, "STATE STOPPED NO SECTORS", 0, 14, 200, 40));
-    CHECK(reads_in(fb, "WROTE 45220 DROP 0", 0, 98, 200, 126));
+    CHECK(reads_in(fb, "WROTE 45220 DROP 0", 0, 112, 200, 140));
 }
 
 // A storage fault the pilot cannot see is a corpus with holes nobody accounted for.
@@ -143,4 +162,5 @@ TEST_CASE("capture page: a device with no partition offers no gesture at all") {
     CHECK(reads_in(fb, "NO FLASH FITTED", 0, 170, 200, 200));
     CHECK_FALSE(reads_in(fb, "PRESS TWICE TO ARM", 0, 0, 200, 200));
     CHECK_FALSE(reads_in(fb, "POWER RUN", 0, 0, 200, 200));
+    CHECK_FALSE(reads_in(fb, "FLIGHT RUN", 0, 0, 200, 200));
 }

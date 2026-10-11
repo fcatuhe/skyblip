@@ -18,6 +18,12 @@ constexpr uint16_t kFlatMv = 3200;
 static_assert(kFlatMv < kCriticalMv && kCriticalMv < kLowMv,
               "the ladder is read downwards: a step out of order is a step nobody reaches");
 
+// INFO: fc 05oct26 a parked reading spreads 35 mV per half hour on E68BD9's run: README.md
+constexpr uint16_t kRecoveryMarginMv = 35;
+
+static_assert(kCriticalMv + kRecoveryMarginMv < kLowMv,
+              "a cell climbing out of Critical must land in Low, not need to clear Low too");
+
 // INFO: hk 02aug26 an unpopulated or unconnected divider reads as a slow drift
 // near zero, not as a flat cell. SoftRF calls the same floor
 // BATTERY_THRESHOLD_INVALID (src/driver/Battery.h:24) and refuses to act below
@@ -97,11 +103,11 @@ class CutoffMonitor {
     static constexpr int kSteps = 3;
     void count(uint16_t millivolts);
     void forget_runs();
-    PowerLevel settled() const;
+    PowerLevel settled(uint16_t millivolts) const;
 
     PowerLevel level_{PowerLevel::Unknown};
     uint8_t below_[kSteps]{};
-    uint8_t at_or_above_[kSteps]{};
+    uint8_t cleared_[kSteps]{};
     uint32_t implausible_{0};
     uint32_t supply_warnings_{0};
     bool supply_warned_{false};

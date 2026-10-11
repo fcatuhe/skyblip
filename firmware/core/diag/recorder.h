@@ -22,9 +22,8 @@ class Recorder {
     static constexpr uint32_t kMsPerHour = kSecondsPerHour * 1000;
 
     static constexpr uint32_t records_per_hour(Profile profile) {
-        return profile == Profile::PowerRun
-                   ? kPowerRunRecordsPerPass * kMsPerHour / kPowerRunRecordPeriodMs
-                   : kPeriodicRecordsPerSecond * kSecondsPerHour;
+        return paced(profile) ? kPowerRunRecordsPerPass * kMsPerHour / kPowerRunRecordPeriodMs
+                              : kPeriodicRecordsPerSecond * kSecondsPerHour;
     }
 
     void arm(Profile profile = Profile::Full);
