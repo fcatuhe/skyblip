@@ -256,6 +256,7 @@ void ScreenService::leave_menu() {
 MenuValues ScreenService::menu_values() const {
     MenuValues values;
     values.settings = settings_;
+    values.light = backlight_;
     return values;
 }
 
@@ -279,6 +280,10 @@ void ScreenService::step_editor(uint32_t now_ms) {
         case MenuAction::Moved: dirty_ = true; break;
         case MenuAction::Open: show_page(editor_.opening()); break;
         case MenuAction::Leave: leave_menu(); break;
+        case MenuAction::Light:
+            set_backlight(next.light);
+            leave_menu();
+            break;
         case MenuAction::None:
         default: break;
     }

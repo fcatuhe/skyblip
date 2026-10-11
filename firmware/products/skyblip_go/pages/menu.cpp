@@ -9,9 +9,9 @@ namespace {
 constexpr int kHeaderY = 3;
 constexpr int kHeaderRuleY = 21;
 
-constexpr MenuRow kRadarMenuRows[] = {MenuRow::AircraftType, MenuRow::Callsign, MenuRow::Units,
-                                      MenuRow::Range,        MenuRow::Plot,     MenuRow::Alarm,
-                                      MenuRow::Volume};
+constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::AircraftType, MenuRow::Callsign,
+                                      MenuRow::Units, MenuRow::Range,        MenuRow::Plot,
+                                      MenuRow::Alarm, MenuRow::Volume};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Sats,    MenuRow::RadioLog,
                                        MenuRow::Raw,    MenuRow::Capture, MenuRow::SelfTest};
 
@@ -53,8 +53,15 @@ int menu_row_index(const Menu& menu, MenuRow row) {
     return -1;
 }
 
+int menu_first_row(const Menu& menu, MenuRow focus) {
+    const int last_line = kMenuLines - 1;
+    const int focused = menu_row_index(menu, focus);
+    return focused > last_line ? focused - last_line : 0;
+}
+
 const char* menu_row_label(MenuRow row) {
     switch (row) {
+        case MenuRow::Light: return "LIGHT";
         case MenuRow::AircraftType: return "TYPE";
         case MenuRow::Callsign: return "CALLSIGN";
         case MenuRow::Units: return "UNITS";
@@ -155,6 +162,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
         case MenuRow::Plot:
             n = fmt_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
+        case MenuRow::Light: n = fmt_string(out, v.light ? "ON" : "OFF"); break;
         case MenuRow::Alarm: n = fmt_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
         case MenuRow::Volume:
             n = fmt_uint(out, v.settings.alarm_volume);
@@ -172,15 +180,15 @@ void draw_menu(ui::Canvas& fb, const MenuSnapshot& s) {
     fb.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
 
     const Menu menu = menu_for(s.page);
+    const int first = menu_first_row(menu, s.focus);
     char value[kMenuValueCap];
-    for (int i = 0; i < menu.n; i++) {
-        const MenuRow row = menu.rows[i];
+    for (int line = 0; line < kMenuLines && first + line < menu.n; line++) {
+        const MenuRow row = menu.rows[first + line];
         menu_row_value(value, row, s.values);
-        row_text(fb, i, menu_row_label(row), value, row == s.focus);
+        row_text(fb, line, menu_row_label(row), value, row == s.focus);
     }
 
-    if (menu_line_top(menu.n) <= kMenuHintY)
-        fb.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
+    fb.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
 }
 
 void draw_callsign(ui::Canvas& fb, const CallsignSnapshot& s) {
@@ -317,6 +325,10 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
         return MenuAction::Open;
     }
     switch (row) {
+        case MenuRow::Light:
+            next.light = !current.light;
+            leave();
+            return MenuAction::Light;
         case MenuRow::Callsign: edit(current); return MenuAction::Moved;
         case MenuRow::AircraftType:
             next.settings.aircraft_type = next_aircraft_type(current.settings.aircraft_type);

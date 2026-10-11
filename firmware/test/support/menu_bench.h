@@ -31,7 +31,7 @@ struct Bench {
             t += 10;
             MenuValues next;
             const MenuAction action = editor.tick(t, values, next);
-            if (action == MenuAction::Changed) values = next;
+            if (action == MenuAction::Changed || action == MenuAction::Light) values = next;
             if (action != MenuAction::None) seen = action;
         }
         return seen;

@@ -23,6 +23,7 @@ enum class MenuRow : uint8_t {
     Raw,
     Capture,
     SelfTest,
+    Light,
     kCount
 };
 
@@ -35,12 +36,13 @@ Menu menu_for(Page page);
 
 struct MenuValues {
     go::Settings settings{};
+    bool light{false};
 };
 
 struct MenuSnapshot {
     Page page{Page::Radar};
     MenuValues values{};
-    MenuRow focus{MenuRow::AircraftType};
+    MenuRow focus{MenuRow::Light};
 };
 
 constexpr uint8_t kMaxAlarmVolume = 5;
@@ -56,7 +58,7 @@ int callsign_stored(char* out, const char* edited);
 // INFO: fc 12sep26 ADS-L G.1.3 codes 11 up are UAV and reserved, nothing a pilot sits in
 constexpr uint8_t kNamedAircraftTypes = 11;
 
-enum class MenuAction : uint8_t { None, Moved, Changed, Open, Leave };
+enum class MenuAction : uint8_t { None, Moved, Changed, Open, Leave, Light };
 
 const char* menu_row_label(MenuRow row);
 const char* aircraft_type_name(uint8_t code);
@@ -91,11 +93,13 @@ constexpr int text_cells(const char* s) {
 }
 
 constexpr int kMenuHintX = (kGlassW - text_cells(kMenuHintText) * kSmallCellW) / 2;
+constexpr int kMenuLines = (kMenuHintY - kMenuRowsTop) / kMenuRowHeight;
 
 constexpr int menu_line_top(int line) { return kMenuRowsTop + line * kMenuRowHeight; }
 constexpr int menu_line_text_y(int line) { return menu_line_top(line) + kMenuTextInset; }
 
 int menu_row_index(const Menu& menu, MenuRow row);
+int menu_first_row(const Menu& menu, MenuRow focus);
 
 void draw_menu(ui::Canvas& fb, const MenuSnapshot& snapshot);
 

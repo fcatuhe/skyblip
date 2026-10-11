@@ -38,26 +38,38 @@ bool hint_reads(const Glass& fb, int y, const char* text, int scale) {
     return reads_at(fb, centred_x(text, scale), y, text, true, scale);
 }
 
-int line_of(Page page, MenuRow row) { return menu_row_index(menu_for(page), row); }
+// A menu as drawn, with the focus that decided which of its rows are on the glass.
+struct Drawn {
+    Glass fb;
+    Page page{Page::Radar};
+    MenuRow focus{MenuRow::Light};
+};
 
-bool row_label_reads(const Glass& fb, Page page, MenuRow row, bool focused) {
-    return reads_at(fb, kMenuLeftX, menu_line_text_y(line_of(page, row)), menu_row_label(row),
-                    !focused, kMenuScale);
+int line_of(const Drawn& drawn, MenuRow row) {
+    const Menu menu = menu_for(drawn.page);
+    return menu_row_index(menu, row) - menu_first_row(menu, drawn.focus);
 }
 
-bool row_value_reads(const Glass& fb, Page page, MenuRow row, const char* value, bool focused) {
-    return reads_at(fb, kMenuRightX - length(value) * kMenuCellW,
-                    menu_line_text_y(line_of(page, row)), value, !focused, kMenuScale);
+bool row_label_reads(const Drawn& drawn, MenuRow row, bool focused) {
+    return reads_at(drawn.fb, kMenuLeftX, menu_line_text_y(line_of(drawn, row)),
+                    menu_row_label(row), !focused, kMenuScale);
 }
 
-Glass page_of(Page page, const MenuValues& values, MenuRow focus) {
+bool row_value_reads(const Drawn& drawn, MenuRow row, const char* value, bool focused) {
+    return reads_at(drawn.fb, kMenuRightX - length(value) * kMenuCellW,
+                    menu_line_text_y(line_of(drawn, row)), value, !focused, kMenuScale);
+}
+
+Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
     MenuSnapshot snapshot;
     snapshot.page = page;
     snapshot.values = values;
     snapshot.focus = focus;
-    Glass fb;
-    draw_menu(fb, snapshot);
-    return fb;
+    Drawn drawn;
+    drawn.page = page;
+    drawn.focus = focus;
+    draw_menu(drawn.fb, snapshot);
+    return drawn;
 }
 
 }  // namespace
@@ -67,31 +79,30 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     values.settings.aircraft_type = 4;
     values.settings.alarm_volume = 3;
 
-    const Glass fb = page_of(Page::Radar, values, MenuRow::Volume);
+    const Drawn drawn = page_of(Page::Radar, values, MenuRow::Alarm);
 
-    CHECK(row_label_reads(fb, Page::Radar, MenuRow::AircraftType, false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::AircraftType, "GLIDER", false));
-    CHECK(row_label_reads(fb, Page::Radar, MenuRow::Alarm, false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Alarm, "ON", false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Range, "4 NM", false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Plot, "ALL", false));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Units, "NAUTICAL", false));
+    CHECK(row_label_reads(drawn, MenuRow::Light, false));
+    CHECK(row_value_reads(drawn, MenuRow::Light, "OFF", false));
+    CHECK(row_label_reads(drawn, MenuRow::AircraftType, false));
+    CHECK(row_value_reads(drawn, MenuRow::AircraftType, "GLIDER", false));
+    CHECK(row_value_reads(drawn, MenuRow::Range, "4 NM", false));
+    CHECK(row_value_reads(drawn, MenuRow::Plot, "ALL", false));
+    CHECK(row_value_reads(drawn, MenuRow::Units, "NAUTICAL", false));
 
     // The focused row is white ink on a filled bar, told apart by shape before a word is read.
-    CHECK(row_label_reads(fb, Page::Radar, MenuRow::Volume, true));
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Volume, "3 OF 5", true));
-    CHECK_FALSE(row_label_reads(fb, Page::Radar, MenuRow::Volume, false));
+    CHECK(row_label_reads(drawn, MenuRow::Alarm, true));
+    CHECK(row_value_reads(drawn, MenuRow::Alarm, "ON", true));
+    CHECK_FALSE(row_label_reads(drawn, MenuRow::Alarm, false));
 
     // Exactly one bar, and the page says how the two contacts work.
-    const Menu menu = menu_for(Page::Radar);
     int bars = 0;
-    for (int i = 0; i < menu.n; i++)
-        if (row_label_reads(fb, Page::Radar, menu.rows[i], true)) bars++;
+    for (int line = 0; line < kMenuLines; line++)
+        if (row_label_reads(drawn, menu_for(Page::Radar).rows[line], true)) bars++;
     CHECK(bars == 1);
-    CHECK(reads_at(fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(drawn.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
 
     // And nothing falls off a 200 pixel panel, on either axis.
-    CHECK(menu_line_top(menu.n - 1) + kMenuRowHeight <= kMenuHintY);
+    CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kMenuHintY);
     CHECK(kMenuHintY + kGlyphH < Glass::kH);
 
     // The hint is centred: the same air either side of it.
@@ -101,6 +112,28 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
 
     // And a row's words stand in the middle of its bar, the same air above and below.
     CHECK(2 * kMenuTextInset + kGlyphH * kMenuScale == kMenuBarH);
+}
+
+// Eight rows and seven lines: the rows slide up under the focus, one line at a time.
+TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
+    MenuValues values = fresh();
+    values.settings.alarm_volume = 3;
+    const Menu menu = menu_for(Page::Radar);
+    REQUIRE(menu.n == kMenuLines + 1);
+
+    const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
+    CHECK(line_of(top, MenuRow::Light) == 0);
+    CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
+    CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
+    CHECK(reads_at(top.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+
+    const Drawn slid = page_of(Page::Radar, values, MenuRow::Volume);
+    CHECK(line_of(slid, MenuRow::Volume) == kMenuLines - 1);
+    CHECK(row_label_reads(slid, MenuRow::Volume, true));
+    CHECK(row_value_reads(slid, MenuRow::Volume, "3 OF 5", true));
+    CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
+    CHECK(line_of(slid, MenuRow::AircraftType) == 0);
+    CHECK(reads_at(slid.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
 }
 
 TEST_CASE("menu: no label and value a row can hold meet at double height") {
@@ -132,14 +165,14 @@ TEST_CASE("menu: a menu is titled what it holds, not the page a thumb came from"
 
     const MenuValues values = fresh();
     for (Page page : {Page::Radar, Page::Nearby}) {
-        const Glass fb = page_of(page, values, menu_for(page).rows[0]);
+        const Drawn drawn = page_of(page, values, menu_for(page).rows[0]);
         CHECK(kMenuLeftX - 2 + length(menu_title(page)) * kMenuCellW <= Glass::kW);
         Glass expected;
         expected.clear(true);
         expected.draw_text(kMenuLeftX - 2, 3, menu_title(page), true, 2);
         for (int y = 3; y < 3 + kGlyphH * kMenuScale; y++)
             for (int x = 0; x < Glass::kW; x++)
-                CHECK(fb.get_pixel(x, y) == expected.get_pixel(x, y));
+                CHECK(drawn.fb.get_pixel(x, y) == expected.get_pixel(x, y));
     }
 }
 
@@ -156,8 +189,8 @@ TEST_CASE("menu: a page with nothing behind it opens no menu at all") {
 TEST_CASE("menu: a category the phone stored but the page does not name is still shown") {
     MenuValues values = fresh();
     values.settings.aircraft_type = 13;
-    const Glass fb = page_of(Page::Radar, values, MenuRow::Alarm);
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::AircraftType, "CODE 13", false));
+    const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
+    CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 13", false));
 
     // The first change moves it into the list the page can name.
     CHECK(next_aircraft_type(13) == 0);
@@ -166,8 +199,8 @@ TEST_CASE("menu: a category the phone stored but the page does not name is still
 TEST_CASE("menu: the UAV categories are not a choice a pilot can make on the panel") {
     MenuValues values = fresh();
     values.settings.aircraft_type = 11;
-    const Glass fb = page_of(Page::Radar, values, MenuRow::Alarm);
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::AircraftType, "CODE 11", false));
+    const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
+    CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 11", false));
     CHECK(next_aircraft_type(11) == 0);
 }
 
@@ -247,8 +280,8 @@ TEST_CASE("menu editor: a metric pilot steps whole kilometres, not a converted m
     bench.values.settings.units = Units::Metric;
     bench.focus_on(MenuRow::Range);
 
-    const Glass fb = page_of(Page::Radar, bench.values, MenuRow::Range);
-    CHECK(row_value_reads(fb, Page::Radar, MenuRow::Range, "8 KM", true));
+    const Drawn menu = page_of(Page::Radar, bench.values, MenuRow::Range);
+    CHECK(row_value_reads(menu, MenuRow::Range, "8 KM", true));
 
     CHECK(bench.change() == MenuAction::Changed);
     CHECK(range_value(bench.values.settings.range_step, Units::Metric) == 16);
