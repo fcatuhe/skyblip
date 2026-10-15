@@ -115,6 +115,25 @@ TEST_CASE("radar rim: an aircraft astern steps out from under the range label") 
     RadarTarget astern[1] = {{-6 * kMetresPerNm, 0, 0, Level::None}};
     const Glass fb = radar(plotting_all(astern, 1));
     const Glass empty = radar(plotting_all(nullptr, 0));
-    CHECK(ink_in(fb, 82, 162, 119, 188) == ink_in(empty, 82, 162, 119, 188));
+    // the label's patch on the rim layout: x 84..115, y 164..185
+    CHECK(ink_in(fb, 84, 164, 116, 186) == ink_in(empty, 84, 164, 116, 186));
     CHECK(ink_in(fb, 119, 172, 137, 192) > 0);
+}
+
+// A mark is ink on the glass and never a patch: FLIGHT, the clock and the next mark stay whole.
+TEST_CASE("radar rim: a mark and its count take no ink off the glass") {
+    RadarTarget astern[6] = {{-11000, -9000, 0, Level::None}, {-11300, -9100, 200, Level::None},
+                             {-14000, -4000, 0, Level::None}, {-14000, 4000, 0, Level::None},
+                             {-11000, 9000, 0, Level::None},  {-9000, 12000, 0, Level::None}};
+    const Glass fb = radar(plotting_all(astern, 6));
+    RadarSnapshot unplotted = plotting_all(nullptr, 0);
+    unplotted.heard = 6;
+    const Glass empty = radar(unplotted);
+
+    int erased = 0;
+    for (int y = 0; y < kGlassH; y++)
+        for (int x = 0; x < kGlassW; x++)
+            if (empty.get_pixel(x, y) && !fb.get_pixel(x, y)) erased++;
+    CHECK(erased == 0);
+    CHECK(ink_in(fb, 0, 150, 200, 200) > ink_in(empty, 0, 150, 200, 200));
 }
