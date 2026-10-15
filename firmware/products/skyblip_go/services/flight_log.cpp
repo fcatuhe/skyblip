@@ -27,7 +27,8 @@ void FlightLogService::tick(uint32_t now_ms) {
     }
     if (!flights_.available()) return;
 
-    const flight::LogAction action = session_.update(context_.state.own, now_ms);
+    const flight::LogAction action =
+        session_.update(context_.state.own, context_.state.flight.rolling, now_ms);
     if (action == flight::LogAction::OpenSession) flights_.begin_session(session_.session_id());
     if (action == flight::LogAction::CloseSession) flights_.end_session();
     drain(now_ms);

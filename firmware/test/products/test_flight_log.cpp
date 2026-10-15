@@ -6,6 +6,7 @@
 
 #include "core/events/link.h"
 #include "core/flight/log_record.h"
+#include "core/flight/log_session.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
 #include "ports/link.h"
@@ -60,6 +61,28 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
     CHECK(rig.product.flight_log().records_written() == after_landing);
     CHECK(rig.product.flight_log().records_dropped() == 0);
     CHECK(rig.product.flight_log().sessions_on_flash() == 1);
+}
+
+// A paraglider soaring into wind never reaches the 12 m/s a takeoff needs, nor Airborne.
+TEST_CASE("flight log: a paraglider soaring at walking pace is logged, and its landing closes it") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.settings().aircraft_type = 7;
+    uint32_t t = 0;
+
+    taxi(rig, t, 30);
+    REQUIRE_FALSE(rig.product.flight_log().recording());
+
+    rig.seconds(t, 300, 5000, 1200);
+    CHECK(rig.product.flight_log().recording());
+    CHECK(rig.product.flight_log().records_written() >= 300000 / flight::kLogRecordPeriodMs);
+
+    taxi(rig, t, flight::kLogStillHoldMs / 1000 + 5);
+    CHECK_FALSE(rig.product.flight_log().recording());
+    CHECK(rig.product.flight_log().sessions_on_flash() == 1);
+    const uint32_t landed = rig.product.flight_log().records_written();
+    taxi(rig, t, 60);
+    CHECK(rig.product.flight_log().records_written() == landed);
 }
 
 TEST_CASE("flight log: the sector behind the one being filled is erased before it is needed") {

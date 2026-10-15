@@ -69,6 +69,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
 | `kLogRecordPeriodMs` | 4000 (4 s) | milliseconds | Period | Four seconds. It is the interval the moshe-braner SoftRF fork ships as its default (oss/SoftRF-moshe-braner .../src/driver/ Settings.cpp:838 loginterval = 4) and it is inside every fix-interval a badge, an OLC claim or a competition file is scored on. |
 | `kLogPreTakeoffRecords` | 8 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
+| `kLogStillHoldMs` | 120000 (2 min) | milliseconds | Hold | a wing that flies at no ground speed has landed once it has stood this long |
 | `kSlipFullScaleMg` | 200 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kFlightSpeedMmS` | 12000 (12 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingSpeedMmS` | 8000 (8 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
@@ -270,4 +271,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-165 constants over 18 folders.
+166 constants over 18 folders.

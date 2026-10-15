@@ -26,6 +26,8 @@ enum class AdslG13Category : uint8_t {
     Paramotor = 17,
 };
 
+}  // namespace
+
 bool flies_at_no_ground_speed(uint8_t aircraft_cat) {
     switch (static_cast<AdslG13Category>(aircraft_cat)) {
         case AdslG13Category::LightRotorcraft:
@@ -43,8 +45,6 @@ bool flies_at_no_ground_speed(uint8_t aircraft_cat) {
     }
     return false;
 }
-
-}  // namespace
 
 bool flight_evidence(const FlightSample& sample) {
     return derated(sample.speed_mm_s, sample.hdop_e2) >= kFlightSpeedMmS;

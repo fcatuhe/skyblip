@@ -27,13 +27,16 @@ constexpr uint32_t kLogRecordPeriodMs = 4000;
 // INFO: fl 03aug26 a takeoff is declared at 12 m/s, so the roll is behind the log when it opens
 constexpr int kLogPreTakeoffRecords = 8;
 
+// INFO: fc 15oct26 a wing that flies at no ground speed has landed once it has stood this long
+constexpr uint32_t kLogStillHoldMs = 120000;
+
 enum class LogAction : uint8_t { Idle, OpenSession, AppendRecord, CloseSession };
 
 // Fed own-ship every service pass. Holds the records it wants written in a
 // bounded ring; the writer drains them when the radio is not keying.
 class LogSession {
    public:
-    LogAction update(const model::OwnState& own, uint32_t now_ms);
+    LogAction update(const model::OwnState& own, bool rolling, uint32_t now_ms);
 
     bool open() const { return open_; }
     // A closed session whose last record has not reached flash yet.
@@ -58,6 +61,7 @@ class LogSession {
 
    private:
     void push(const LogRecord& record);
+    bool flying(const model::OwnState& own, bool rolling, uint32_t now_ms);
 
     LogRecord ring_[kLogPreTakeoffRecords]{};
     int head_{0};
@@ -66,6 +70,7 @@ class LogSession {
     uint32_t dropped_{0};
     uint32_t session_id_{0};
     uint32_t last_sample_ms_{0};
+    uint32_t rolled_ms_{0};
     bool sampled_{false};
     bool open_{false};
     bool closing_{false};
