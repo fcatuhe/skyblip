@@ -937,15 +937,19 @@ Aircraft flying together, told from geometry alone: no flying style is named, no
 **formation**
 
 - a break is counted in receptions, not in passes of the loop
+  > The service loop re-read one report every 10 ms, so one bad solution was two fixes 10 ms apart.
 - a contact beside us as we lift off is joining until it holds station
+  > Every takeoff as a pair re-formed it through an advisory, because a fresh slot is traffic.
 - a contact crossing our path never joins
 - a contact first heard in the air is traffic, not a joiner
 - a contact nobody has heard from is forgotten, membership and all
 - a contact that appears alongside is anchored where it was first seen
   > The anchor was own-ship until the first drifting fix, so a contact inside the box never moved.
 - a contact that lifts off beside us is joining
+  > A tug lifts off after the glider it tows, so own-ship's liftoff is not the one that counts.
 - a formation ends when own-ship lands
 - a joiner closing on us is traffic after two fixes of it
+  > An interval takeoff: the second aircraft catches up with the first, and that is a closure.
 - a joiner that leaves its station is traffic on that fix, and stays it
 - a member drifting away is parting, and it takes two fixes
 - a member peeling off at any speed parts once and stays parted to the band
@@ -960,7 +964,9 @@ Aircraft flying together, told from geometry alone: no flying style is named, no
 - an aircraft that says it is on the ground is never a wingman
   > A tug and its glider hold station on the apron as well as they do on tow.
 - nothing flies in formation while own-ship is on the ground
+  > A parked pair holds station better than any patrol, and the apron would be one formation.
 - one fix of closure is noise, two release the member and re-arm the window
+  > Four metres apart the line of sight is GNSS noise, and a car trip put 3.1 m/s of closure on it.
 - two gliders on one thermal circle are flying together
 
 ### test/core/test_gload.cpp
@@ -3207,14 +3213,17 @@ What a formation the device found by itself does to the annunciator, and what ta
 - a contact nobody has heard from is forgotten, membership and all
 - a member closing on us alarms on the second fix, and is no longer a member
 - a member under three metres a second of closure stays a member
+  > The closing figure was rounded to whole metres a second, so 2.5 m/s of noise took it back.
 - a neighbour holding station joins by itself, and takes its level with it
 - a pair lifting off together is never announced, and joins
+  > The car trip: every stop was a landing, and every pull-away re-formed the pair with a beep.
 - a pair splitting is not alarmed while it separates
 - a second aircraft catching up after the takeoff is announced
 - a split that turns back into a closure is alarmed again
 - a tight pair that settles down stops the alarm its joining raised
   > A pair this close alarms on every fix for as long as it flies, which is the device switched off.
 - a tug lifting off ahead of its glider is never announced, and joins
+  > The glider leaves the ground first, so the tug is a ground contact until it lifts off itself.
 
 ### test/products/test_housekeeping.cpp
 

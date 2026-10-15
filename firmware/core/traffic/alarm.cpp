@@ -22,24 +22,6 @@ void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& ea
     east = static_cast<int64_t>(speed_mm_s) * isin(angle);
 }
 
-int32_t closing_from_vectors(const model::OwnState& own, const model::AircraftObs& target,
-                             int32_t n_m, int32_t e_m, int32_t dist_m) {
-    if (dist_m <= 0) return kUnknownTargetSpeedMps;
-
-    int64_t own_n = 0, own_e = 0;
-    velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
-    int64_t target_n = 0, target_e = 0;
-    if (target.speed_valid)
-        velocity_ned(to_mm_s(QuarterMetresPerSec(target.speed_q)).v,
-                     to_angle16(Cordic9(target.track_c9)), target_n, target_e);
-
-    const int64_t along = (target_n - own_n) * n_m + (target_e - own_e) * e_m;
-    const int64_t scale = static_cast<int64_t>(dist_m) * kTrigOne * kMillimetresPerMetre;
-    int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
-    if (!target.speed_valid) closing += kUnknownTargetSpeedMps;
-    return closing;
-}
-
 int32_t iabs32(int32_t v) { return v < 0 ? -v : v; }
 
 Level level_for(const AlarmAssessment& a) {
@@ -48,6 +30,25 @@ Level level_for(const AlarmAssessment& a) {
 }
 
 }  // namespace
+
+int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
+                     int32_t east_m, int32_t dist_m) {
+    constexpr int32_t unknown_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
+    if (dist_m <= 0) return unknown_mm_s;
+
+    int64_t own_n = 0, own_e = 0;
+    velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
+    int64_t target_n = 0, target_e = 0;
+    if (target.speed_valid)
+        velocity_ned(to_mm_s(QuarterMetresPerSec(target.speed_q)).v,
+                     to_angle16(Cordic9(target.track_c9)), target_n, target_e);
+
+    const int64_t along = (target_n - own_n) * north_m + (target_e - own_e) * east_m;
+    const int64_t scale = static_cast<int64_t>(dist_m) * kTrigOne;
+    int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
+    if (!target.speed_valid) closing += unknown_mm_s;
+    return closing;
+}
 
 // INFO: fc 13sep26 two positions from different instants are not a separation, so both are carried
 // to now
@@ -61,7 +62,8 @@ AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs&
     a.valid = true;
     a.rel_alt_m = u_m;
     a.rel_dist_m = static_cast<int32_t>(idistance(n_m, e_m));
-    a.closing_mps = closing_from_vectors(own, target, n_m, e_m, a.rel_dist_m);
+    a.closing_mps =
+        div_round(closing_mm_s(own, target, n_m, e_m, a.rel_dist_m), kMillimetresPerMetre);
 
     const int16_t brg = iatan2(e_m, n_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;

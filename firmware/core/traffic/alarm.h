@@ -38,6 +38,9 @@ constexpr uint32_t kGroundRenotifyFloorMs = 60000;
 
 constexpr int kTrackedTargets = 48;
 
+int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
+                     int32_t east_m, int32_t dist_m);
+
 // INFO: fc 13sep26 now_ms is the instant both sides are carried to, on ports::Clock
 AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
                        uint32_t now_ms);

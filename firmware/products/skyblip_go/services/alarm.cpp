@@ -4,14 +4,8 @@
 
 namespace skyblip::go {
 
-bool AlarmService::silenced(traffic::Target& target, formation::State state,
-                            const traffic::AlarmAssessment& a, uint32_t now_ms) {
+bool AlarmService::silenced(traffic::Target& target, formation::State state) {
     if (state == formation::State::None) return false;
-    if (a.closing_mps >= formation::kClosingMps) {
-        formation_.release(target.obs.addr_table, target.obs.addr, now_ms);
-        target.in_formation = false;
-        return false;
-    }
     tracker_.withdraw(target.obs.addr_table, target.obs.addr);
     target.alarm_level = traffic::Level::None;
     target.alarm_dismissed = false;
@@ -19,7 +13,8 @@ bool AlarmService::silenced(traffic::Target& target, formation::State state,
 }
 
 formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t now_ms) {
-    const formation::Report r = formation_.observe(context_.state.own, target.obs, now_ms);
+    const formation::Report r =
+        formation_.observe(context_.state.own, target.obs, target.liftoff, now_ms);
     const bool was = target.in_formation;
     target.in_formation = r.state == formation::State::Together;
     if (target.in_formation != was) dirty_ = true;
@@ -31,6 +26,7 @@ void AlarmService::tick(uint32_t now_ms) {
     traffic::Level worst = traffic::Level::None;
     traffic::Level live = traffic::Level::None;
     bool announced = false;
+    formation_.observe_own(context_.state.own, now_ms);
     if (context_.state.own.fix_valid) {
         for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
             traffic::Target* t = context_.state.traffic.at(i);
@@ -40,7 +36,7 @@ void AlarmService::tick(uint32_t now_ms) {
                 tracker_.update(context_.state.own, t->obs, now_ms);
             t->alarm_level = d.assessment.level;
             t->alarm_dismissed = d.dismissed;
-            const bool quiet = silenced(*t, f, d.assessment, now_ms);
+            const bool quiet = silenced(*t, f);
             record_traffic(i, *t, d, now_ms);
             if (quiet) continue;
             worst = std::max(d.assessment.level, worst);
