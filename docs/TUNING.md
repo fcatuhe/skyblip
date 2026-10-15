@@ -180,6 +180,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kUnknownTargetSpeedMps` | 30 | metres per second | - | a relayed target arrives with no velocity, and zero would make it the safest dot |
 | `kAlertMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | SoftRF alerts only on targets seen within ALERT_EXPIRATION_TIME (5 s) and re-checks no more often than every 2 s (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260). |
 | `kRenotifyFloorMs` | 2000 (2 s) | milliseconds | Floor | [README](../firmware/core/traffic/README.md) argues it |
+| `kGroundRenotifyFloorMs` | 60000 (1 min) | milliseconds | Floor | a touch-and-go or a stop-and-go is back in the air well inside a minute |
 | `kCallsignForgetS` | 600 | seconds | Forget | a name outlives the target it belongs to, which ages out in seconds |
 | `kRangeM` | 1000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kVertM` | 100 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
@@ -266,4 +267,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-161 constants over 18 folders.
+162 constants over 18 folders.

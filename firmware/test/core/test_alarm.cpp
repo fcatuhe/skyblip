@@ -282,3 +282,64 @@ TEST_CASE("alarm: the announcement stands while the contact does, and falls a wi
     }
     CHECK(tracker.announced_level(t) == Level::None);
 }
+
+// A unit at the hold beeped for every aircraft that climbed out or joined the circuit above it.
+TEST_CASE("alarm: nothing is an advisory while own-ship is on the ground") {
+    model::OwnState own = flying(0, 0);
+    const model::AircraftObs overhead = neighbour(own, 400, 0, 150, 40, 180);
+    REQUIRE(assess(own, overhead, 0).level == Level::Advisory);
+
+    own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    const AlarmAssessment graded = assess(own, overhead, 0);
+    CHECK(graded.level == Level::None);
+    CHECK(graded.valid);
+}
+
+namespace {
+
+model::AircraftObs on_the_runway(model::AircraftObs obs) {
+    obs.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    return obs;
+}
+
+// Announced in the air, then on the ground from `t` for `ground_ms`, reporting every ten seconds.
+uint32_t announce_then_land(AlarmTracker& tracker, const model::OwnState& own, uint32_t ground_ms) {
+    uint32_t t = 1000;
+    REQUIRE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
+    for (const uint32_t until = t + ground_ms; t < until; t += 100) {
+        const uint32_t heard = t - t % 10000;
+        tracker.update(own, on_the_runway(neighbour(own, 1500, 0, 0, 20, 180, heard)), t);
+    }
+    return t;
+}
+
+}  // namespace
+
+// A touch-and-go never left the ring, and the climb-out announced it again on every lap.
+TEST_CASE("alarm: an aircraft back in the air from a touch-and-go is not announced again") {
+    AlarmTracker tracker;
+    const model::OwnState own = flying(30, 0);
+    const uint32_t t = announce_then_land(tracker, own, 20000);
+    CHECK_FALSE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
+}
+
+TEST_CASE("alarm: an aircraft that sat on the ground past a minute is announced as it lifts off") {
+    AlarmTracker tracker;
+    const model::OwnState own = flying(30, 0);
+    const uint32_t t = announce_then_land(tracker, own, kGroundRenotifyFloorMs + 10000);
+    CHECK(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
+}
+
+TEST_CASE("alarm: our own touch-and-go does not announce again what it had already said") {
+    AlarmTracker tracker;
+    const model::OwnState own = flying(30, 0);
+    uint32_t t = 1000;
+    REQUIRE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
+
+    model::OwnState rolling = flying(20, 0);
+    rolling.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    for (const uint32_t until = t + 20000; t < until; t += 100)
+        tracker.update(rolling, neighbour(rolling, 1500, 0, 0, 30, 180, t), t);
+
+    CHECK_FALSE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
+}

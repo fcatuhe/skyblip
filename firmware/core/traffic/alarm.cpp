@@ -69,7 +69,9 @@ AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs&
         div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(brg)) * 360, 65536) % 360);
     a.rel_bearing_deg = static_cast<uint16_t>(((brg_deg - own_deg) % 360 + 360) % 360);
 
-    a.level = flight::on_ground(reported.flight_state) ? Level::None : level_for(a);
+    const bool grounded =
+        flight::on_ground(reported.flight_state) || flight::on_ground(own.flight_state);
+    a.level = grounded ? Level::None : level_for(a);
     return a;
 }
 
@@ -89,22 +91,25 @@ AlarmTracker::Decision AlarmTracker::update(const model::OwnState& own,
     }
     slot->forget_ms = forget_ms(target);
 
+    const bool grounded =
+        flight::on_ground(target.flight_state) || flight::on_ground(own.flight_state);
+    const uint32_t floor_ms = grounded ? kGroundRenotifyFloorMs : kRenotifyFloorMs;
     if (now_ms - target.at_ms <= kAlertMaxAgeMs)
-        d.notify = notify_for(*slot, d.assessment.level, now_ms);
+        d.notify = notify_for(*slot, d.assessment.level, floor_ms, now_ms);
     if (d.notify) slot->dismissed = false;
     if (slot->dismissed) d.notify = false;
     d.dismissed = slot->dismissed;
     return d;
 }
 
-bool AlarmTracker::notify_for(Slot& slot, Level level, uint32_t now_ms) {
+bool AlarmTracker::notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms) {
     const bool speak = level > slot.notified_level;
 
     if (level < slot.notified_level) {
         if (!slot.falling) {
             slot.falling = true;
             slot.falling_since_ms = now_ms;
-        } else if (now_ms - slot.falling_since_ms >= kRenotifyFloorMs) {
+        } else if (now_ms - slot.falling_since_ms >= floor_ms) {
             slot.notified_level = level;
             slot.falling = false;
         }

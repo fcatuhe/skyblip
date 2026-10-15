@@ -33,6 +33,8 @@ constexpr int32_t kUnknownTargetSpeedMps = 30;
 // (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260).
 constexpr uint32_t kAlertMaxAgeMs = 5000;
 constexpr uint32_t kRenotifyFloorMs = 2000;
+// INFO: fc 11oct26 a touch-and-go or a stop-and-go is back in the air well inside a minute
+constexpr uint32_t kGroundRenotifyFloorMs = 60000;
 
 constexpr int kTrackedTargets = 48;
 
@@ -73,7 +75,7 @@ class AlarmTracker {
     };
 
     Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
-    static bool notify_for(Slot& slot, Level level, uint32_t now_ms);
+    static bool notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms);
 
     std::array<Slot, kTrackedTargets> slots_{};
 };

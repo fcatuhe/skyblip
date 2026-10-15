@@ -49,6 +49,12 @@ A full table evicts anything on the ground before anything in the air, however n
 
 Unknown is not ground: a sender that does not say where it is gets the airborne treatment everywhere, the six-second lease included.
 
+## Own-ship on the ground grades nothing
+
+The same rule turned around: while own-ship's flight state is on the ground, `assess` returns `Level::None` for every contact, however close and whatever it says about itself. A unit at the hold beside a busy circuit is inside 3 km and 300 m of every aircraft flying it, and it announced each one that climbed out, turned in or came back into reception, for as long as it sat there. FLARM does the same: its warnings are disabled while the own aircraft is taxiing or stationary on the ground.
+
+The liftoff is when the device starts talking. Every contact inside the ring becomes an advisory on the same pass, and the annunciator plays one pattern for a pass however many arrived on it, so a departure into a full circuit is one pair of beeps and not one per aircraft.
+
 ## Whichever system heard it
 
 The ground rules above read one field, `AircraftObs::flight_state`, and never ask which system a report came from. The field holds the ADS-L G.1.2 code whatever the wire was, and `flight::state_from` is its only reader, so a code nobody named is `Unknown`. Each decoder fills it: ADS-L copies G.1.2, the uplink record carries the same two bits, and ALP-TAS maps its own two-bit field in `alptas_flight_state` (1 on the ground, 2 airborne, 3 airborne and circling, and 0, which no known sender transmits, `Unknown`). The lease, the grade, the direct hold and the formation all key off that field and nothing else.
@@ -62,6 +68,8 @@ A pilot who has the aircraft in sight has everything the device was trying to gi
 It is spent per aircraft, on the slot rather than on the tracker: one touch marks every contact that has been announced, and a contact the device has not spoken about yet is not covered, because the claim a pilot makes is about the aeroplanes they were told of. It takes back everything the device is saying about them: the tone, the sector on the glass and the lamp. The grade stands and the target keeps its symbol, its leader and its tag, because the dismissal is a claim about what the pilot has seen and not a claim about the sky - which is also why `bus::State` carries two levels, `alarm_level` for the sky and `alarm_live` for what is still being said about it. The tablet is told the first, over NMEA and from the target's own grade; the lamp and the panel read the second.
 
 An aircraft says it again by arriving again: a contact that leaves the window and comes back is announced, and clears its own dismissal, while one that has been there all along stays quiet. Leaving is not instant either, because the level the tracker last said falls back only after a whole `kRenotifyFloorMs` outside, so an aeroplane sitting on the boundary is one announcement and not a stutter. An aircraft heard for the first time was never dismissed. The rest of the sky stays quiet, which is what makes one touch in a busy circuit hold. That is also why there is no timer on it: a dismissal that expired would shout again about the aeroplane the pilot is looking at.
+
+A ground roll is not leaving. While either side is on the ground the level falls back only after `kGroundRenotifyFloorMs`, a minute: a touch-and-go, a stop-and-go or own-ship's own is back in the air well inside it, and the climb-out used to announce again an aircraft that never left the ring, once a lap. An aircraft parked for longer than that is announced as it lifts off, and so is the circuit when own-ship lifts off after a longer stop.
 
 An advisory is announced once and never repeats itself. A ring can stand for a whole climb, and a tone that came back every two seconds for as long as a glider shared the thermal is the device switched off.
 
