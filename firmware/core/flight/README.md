@@ -15,7 +15,7 @@ What the aircraft is doing, decided from the fix stream and the barometer. Pure,
 | `gload` | what the airframe is pulling, now and at its worst |
 | `extrapolate` | where an aircraft is now, when the fix it came from is older than now |
 | `arc` | where an aircraft will be, out to the look-ahead the radar draws |
-| `log_record`, `log_session` | what a flight leaves behind, and when a session runs |
+| `log_record`, `log_session`, `log_events` | what a flight leaves behind, when a session runs, and what was around it |
 
 ## atmosphere
 
@@ -182,6 +182,42 @@ The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `por
 ## log_record
 
 A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label is not this module's: the log partition is a pool shared with the diagnostics ring, and which sector either ring is handed next is [`core/store`](../store/README.md)'s decision. What lives here is the record and where in a sector it sits.
+
+Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its track there as the high byte of a nine-bit cordic word, so the byte is only ever 0 or 1; an event sets its top bit and names its kind in the other seven. Bytes 0-1, the seconds since the session opened, and bytes 22-23, the CRC, are the same in both, so recovery, the torn-tail check and the offload never ask which one a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, so neither is ever read as the other, and a kind a later build adds is refused rather than guessed at. The kinds are a wire format: a flight on the partition outlives the firmware that wrote it, so a kind is retired and never renumbered.
+
+| Byte | Fix | Status | Alarm, encounter |
+|---|---|---|---|
+| 0-1 | seconds since the session opened | the same | the same |
+| 2-5 | latitude, 1e-7 deg | cell mV (2-3), percent, power level | address (2-4), address table |
+| 6-9 | longitude, 1e-7 deg | charge, aircraft heard, the most heard since the last status, flags | distance m, relative altitude m |
+| 10-11 | altitude MSL, m | | bearing from own track, deg |
+| 12 | ellipsoid minus MSL, m | | closing m/s (12-13) |
+| 13-14 | ground speed, G.1.8 | | alarm level (14) |
+| 15-16 | track, G.1.10 nine bits | `0x81` in 16 | aircraft category (15), `0x82` alarm or `0x83` encounter (16) |
+| 17-18 | climb, G.1.9 | | source, RSSI dBm |
+| 19-20 | satellites, HDOP tenths | | flags (19), seconds heard (20-21, encounter) |
+| 21 | flags and the G.1.2 flight state | | |
+| 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
+
+The enum codes are the diagnostics capture's, pinned by the same tests (`../diag/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
+
+## log_events
+
+The track says where the flight went. `LogEvents` says what was around it and what the cell did, in the same session and the same sectors, so one read offloads both and one eviction loses both together. It is sampled with the fix, once a second while a session is open and never on the ground, so every event is dated by a second the track holds.
+
+| Kind | When | What |
+|---|---|---|
+| status | the first second of the session, every `kLogStatusPeriodMs` after it, and whenever the cell changes level | cell voltage, percent, power level, charge condition, aircraft heard now and the most heard at once since the last one |
+| alarm | a contact's alarm level changes, either way | the contact and its geometry at that second |
+| encounter | a contact leaves the table, another aircraft takes its slot, or the flight ends | the contact at its closest pass, dated at that pass, with the highest level it reached and how long it was heard |
+
+A status a minute is one record in sixty of the track's. An alarm and an encounter cost one record each, so a busy sky costs what it has in it rather than a record per target per second, which at ten targets would have filled the partition in under two hours.
+
+The geometry is `traffic::assess`, the function the alarm and `$PFLAU` already read, carried to the same instant for both aircraft, and the level is the one the alarm service published on the target, so the log, the buzzer and the tablet cannot disagree about whether a contact was a threat. A target whose report carries no valid position cannot be placed, so it is not tracked until it does.
+
+The events are drained before the fixes. That is what keeps the landing's `session_end` fix the last record of the file, which is how `list` tells a flight that ended from one the power ended: a landing ends every encounter still running, and those are written ahead of the fix that closes the session. Records are therefore in the order they were written and not the order they describe, since an encounter is dated at its closest pass and written when it is over: a reader sorts by `utc`.
+
+`kLogEventBacklogRecords` is sixteen alarms and encounters waiting on a writer that drains every pass. A backlog that overflows loses its oldest and counts it, the same accounting the fix ring keeps.
 
 ## log_session
 

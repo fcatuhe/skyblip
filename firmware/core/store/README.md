@@ -65,7 +65,7 @@ A ring's frontier is never handed out: it is the sector being written into, and 
 
 `kFlightsFloorHours` is 6, and it is the promise the pool makes: six hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record a second, a sector is 2 min 50 s, so six hours is 128 of the partition's 298 sectors: a device that has flown all season keeps its last six hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 170 sectors is told no.
 
-It was twelve hours when a record went every four seconds, 64 sectors. At one a second twelve hours is 255 of the 298, which would leave a capture 43 sectors, about 11 minutes. Six hours keeps the floor under half the partition and leaves a capture about 44 minutes.
+It was twelve hours when a record went every four seconds, 64 sectors. At one a second twelve hours is 255 of the 298, which would leave a capture 43 sectors, about 11 minutes. Six hours keeps the floor under half the partition and leaves a capture about 44 minutes. A flight's events ride in its sectors (`../flight/README.md`), so the six hours are a little shorter for a flight with a busy sky: a status is one record in sixty, and each alarm and each aircraft heard one more.
 
 ## The prepared spare
 

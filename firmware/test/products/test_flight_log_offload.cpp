@@ -11,6 +11,7 @@
 #include "test/support/log_transfer.h"
 #include "test/support/product_rig.h"
 #include "test/support/rig_moves.h"
+#include "test/support/traffic_scene.h"
 
 using namespace skyblip;
 
@@ -20,6 +21,8 @@ namespace {
 // what the negotiated payload changed about the transfer without repeating it.
 struct Offload {
     uint32_t records{0};
+    uint32_t events{0};
+    std::vector<flight::LogEvent> event_log{};
     int chunks{0};
     int widest_frame{0};
     int most_records_in_a_chunk{0};
@@ -89,16 +92,23 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
         if (bytes != n * static_cast<int>(flight::kLogRecordBytes)) walk.decoded = false;
 
         for (int i = 0; i < n; i++) {
+            const uint8_t* slot = raw + i * flight::kLogRecordBytes;
             flight::LogRecord record{};
+            flight::LogEvent event{};
             // Every record carries the checksum it was written with, so the
             // transfer is verified against the flash and not against the link.
-            if (flight::decode_log_record(raw + i * flight::kLogRecordBytes, session, record) !=
-                Status::Ok) {
+            const Status fix = flight::decode_log_record(slot, session, record);
+            if (fix == Status::Unsupported &&
+                flight::decode_log_event(slot, session, event) == Status::Ok) {
+                walk.events++;
+                walk.event_log.push_back(event);
+            } else if (fix != Status::Ok) {
                 walk.decoded = false;
                 return walk;
+            } else {
+                if (record.utc < last_utc) walk.ordered = false;
+                last_utc = record.utc;
             }
-            if (record.utc < last_utc) walk.ordered = false;
-            last_utc = record.utc;
             walk.records++;
         }
         from += static_cast<uint32_t>(n);
@@ -108,7 +118,62 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
     return walk;
 }
 
+// One second of flight with a glider parked in the sky north of own-ship, at this range.
+void fly_past(Rig& rig, uint32_t& t, int north_m) {
+    fly(rig, t, 1);
+    const model::OwnState& own = rig.state().own;
+    model::AircraftObs glider = neighbour(own, north_m, 0, 0, 0, 0, t);
+    glider.addr = 0xDD5EED;
+    const uint32_t now_s = rig.state().traffic_now(t);
+    glider.received.at_s = now_s;
+    rig.state().traffic.update(glider, now_s);
+}
+
+const flight::LogEvent* first_of(const Offload& walk, flight::LogKind kind) {
+    for (const flight::LogEvent& event : walk.event_log)
+        if (event.kind == kind) return &event;
+    return nullptr;
+}
+
 }  // namespace
+
+// The track says where the flight went; these say what was around it and what the cell did.
+TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride in the flight") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    taxi(rig, t, 20);
+    fly(rig, t, 20);
+    for (int i = 0; i <= 38; i++) fly_past(rig, t, i <= 19 ? 4000 - 200 * i : 200 * (i - 18));
+    fly(rig, t, 20);
+    taxi(rig, t, 40);
+    REQUIRE_FALSE(rig.product.flight_log().recording());
+
+    const Offload walk = offload(rig, t, rig.product.flight_log().session_id());
+    CHECK(walk.eof);
+    CHECK(walk.decoded);
+    CHECK(walk.ordered);
+    CHECK(walk.records == rig.product.flight_log().records_written());
+    CHECK(rig.product.flight_log().events_dropped() == 0);
+
+    const flight::LogEvent* status = first_of(walk, flight::LogKind::Status);
+    REQUIRE(status != nullptr);
+    CHECK(status->utc >= rig.product.flight_log().session_id());
+
+    const flight::LogEvent* alarm = first_of(walk, flight::LogKind::Alarm);
+    REQUIRE(alarm != nullptr);
+    CHECK(alarm->contact.addr == 0xDD5EED);
+    CHECK(alarm->contact.alarm == traffic::to_number(traffic::Level::Advisory));
+    CHECK(alarm->contact.dist_m <= traffic::kAdvisoryDistM);
+
+    const flight::LogEvent* pass = first_of(walk, flight::LogKind::Encounter);
+    REQUIRE(pass != nullptr);
+    CHECK(pass->contact.addr == 0xDD5EED);
+    CHECK(pass->contact.alarm == traffic::to_number(traffic::Level::Advisory));
+    // Placed 200 m north at its closest; own-ship's second of flight since the fix moves that.
+    CHECK(pass->contact.dist_m < 300);
+    CHECK(pass->contact.heard_s >= 30);
+}
 
 TEST_CASE("flight log: the tablet lists a flight and reads it back five records at a time") {
     Rig rig;

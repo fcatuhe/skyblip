@@ -2,7 +2,8 @@
 
 Byte-exact against firmware/core/diag/record.h with firmware/core/diag/payload.h
 (the diagnostics capture) and firmware/core/flight/log_record.h (the flights
-log). Field names and enum spellings follow schemas/diagnostics_log.v1.schema.json.
+log). Field names and enum spellings follow schemas/diagnostics_log.v1.schema.json
+and schemas/flight_log.v1.schema.json.
 
 Importable on its own: an analysis script wants these tables without the BLE
 transport in blip.py.
@@ -26,6 +27,10 @@ def u8(at):
 
 def i8(at):
     return lambda raw, flags: int.from_bytes(raw[at:at + 1], "little", signed=True)
+
+
+def u24(at):
+    return lambda raw, flags: int.from_bytes(raw[at:at + 3], "little")
 
 
 def u16(at):
@@ -226,6 +231,41 @@ FLIGHT_FIELDS = (
 )
 
 
+# INFO: fc 15oct26 a fix's track is nine bits, so the top bit of byte 16 marks an event instead
+FLIGHT_EVENT_MARK = 0x80
+FLIGHT_KIND_OFFSET = 16
+
+CONTACT_FIELDS = (
+    ("addr", u24(2)), ("addr_table", u8(5)), ("dist_m", u16(6)), ("rel_alt_m", i16(8)),
+    ("rel_bearing_deg", u16(10)), ("closing_mps", i16(12)), ("alarm", u8(14)),
+    ("aircraft_cat", u8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", i8(18)),
+    ("dismissed", flag(0)), ("in_formation", flag(1)),
+)
+
+# INFO: fc 15oct26 kind: (name, the byte its flags are read from, its fields)
+FLIGHT_EVENTS = {
+    1: ("status", 9, (
+        ("cell_mv", u16(2)), ("percent", u8(4)), ("level", enum8(5, POWER_LEVEL)),
+        ("charge", enum8(6, CHARGE)), ("tracked", u8(7)), ("tracked_peak", u8(8)),
+        ("valid", flag(0)), ("charging", flag(1)), ("external_power", flag(2)))),
+    2: ("alarm", 19, CONTACT_FIELDS),
+    3: ("encounter", 19, CONTACT_FIELDS + (("heard_s", u16(20)),)),
+}
+
+
+def flight_enum_fields():
+    """Every flights field an ordinal is read through, as (field, names) pairs."""
+    for field, read in FLIGHT_FIELDS:
+        names = getattr(read, "names", None)
+        if names is not None:
+            yield field, names
+    for _, _, fields in FLIGHT_EVENTS.values():
+        for field, read in fields:
+            names = getattr(read, "names", None)
+            if names is not None:
+                yield field, names
+
+
 def enum_fields():
     """Every diagnostics field an ordinal is read through, as (field, names) pairs."""
     for _, fields in DIAG_TYPES.values():
@@ -272,9 +312,23 @@ def decode_flight_record(raw, base_utc):
         raise RecordError("erased")
     if crc16_ccitt(raw[:22]) != int.from_bytes(raw[22:24], "little"):
         raise RecordError("crc")
+    if raw[FLIGHT_KIND_OFFSET] & FLIGHT_EVENT_MARK:
+        return decode_flight_event(raw, base_utc)
     flags = raw[21]
     decoded = {"type": "fix", "utc": base_utc + int.from_bytes(raw[0:2], "little")}
     for field, read in FLIGHT_FIELDS:
+        decoded[field] = read(raw, flags)
+    return decoded
+
+
+def decode_flight_event(raw, base_utc):
+    kind = raw[FLIGHT_KIND_OFFSET] & ~FLIGHT_EVENT_MARK & 0xFF
+    if kind not in FLIGHT_EVENTS:
+        raise RecordError("unknown event kind %d" % kind)
+    name, flags_at, fields = FLIGHT_EVENTS[kind]
+    flags = raw[flags_at]
+    decoded = {"type": name, "utc": base_utc + int.from_bytes(raw[0:2], "little")}
+    for field, read in fields:
         decoded[field] = read(raw, flags)
     return decoded
 

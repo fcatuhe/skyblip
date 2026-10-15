@@ -24,6 +24,7 @@ import blip  # noqa: E402
 import blip_records as records  # noqa: E402
 
 SCHEMA = pathlib.Path(__file__).resolve().parents[1] / "schemas" / "diagnostics_log.v1.schema.json"
+FLIGHT_SCHEMA = SCHEMA.with_name("flight_log.v1.schema.json")
 
 
 def diag_record(type_id, payload, flags=0, into_ms=0, at_s=0):
@@ -41,6 +42,16 @@ def flight_record(fields=b"", flags=0, offset_s=0):
     raw[0:2] = offset_s.to_bytes(2, "little")
     raw[2:2 + len(fields)] = fields
     raw[21] = flags
+    raw[22:24] = records.crc16_ccitt(raw[:22]).to_bytes(2, "little")
+    return bytes(raw)
+
+
+def event_record(kind, fields=b"", flags=0xFF, offset_s=0):
+    raw = bytearray(24)
+    raw[0:2] = offset_s.to_bytes(2, "little")
+    raw[2:2 + len(fields)] = fields
+    raw[records.FLIGHT_KIND_OFFSET] = records.FLIGHT_EVENT_MARK | kind
+    raw[records.FLIGHT_EVENTS[kind][1]] = flags
     raw[22:24] = records.crc16_ccitt(raw[:22]).to_bytes(2, "little")
     return bytes(raw)
 
@@ -351,6 +362,63 @@ class GoldenVectors(unittest.TestCase):
         self.assertEqual(decoded["flight_state"], "airborne")
         self.assertTrue(decoded["session_end"])
 
+    # The bytes firmware/test/core/test_log_events.cpp pins the encoder to.
+    def test_a_status_encoded_by_the_firmware(self):
+        decoded = records.decode_flight_record(
+            bytes.fromhex("3d00480f400401030505000000000000810000000000b84d"), 1_785_628_800)
+        self.assertEqual(decoded["type"], "status")
+        self.assertEqual(decoded["utc"], 1_785_628_861)
+        self.assertEqual(decoded["cell_mv"], 3912)
+        self.assertEqual(decoded["level"], "low")
+        self.assertEqual(decoded["tracked"], 3)
+        self.assertEqual(decoded["tracked_peak"], 5)
+        self.assertTrue(decoded["external_power"])
+        self.assertFalse(decoded["charging"])
+
+    def test_an_encounter_encoded_by_the_firmware(self):
+        decoded = records.decode_flight_record(
+            bytes.fromhex("2c013412dd06b400d6ff3b010c0001028300a8005f002eb1"), 1_785_628_800)
+        self.assertEqual(decoded["type"], "encounter")
+        self.assertEqual(decoded["utc"], 1_785_629_100)
+        self.assertEqual(decoded["addr"], 0xDD1234)
+        self.assertEqual(decoded["dist_m"], 180)
+        self.assertEqual(decoded["rel_alt_m"], -42)
+        self.assertEqual(decoded["rel_bearing_deg"], 315)
+        self.assertEqual(decoded["alarm"], 1)
+        self.assertEqual(decoded["rssi_dbm"], -88)
+        self.assertEqual(decoded["heard_s"], 95)
+
+
+class FlightLogAgainstTheSchema(unittest.TestCase):
+    def setUp(self):
+        self.schema = json.loads(FLIGHT_SCHEMA.read_text(encoding="utf-8"))
+
+    def decoded_samples(self):
+        yield records.decode_flight_record(flight_record(flags=0xFF), 0)
+        for kind in records.FLIGHT_EVENTS:
+            yield records.decode_flight_record(event_record(kind), 0)
+
+    def test_the_types_are_the_schema_enum_in_the_order_of_their_kind(self):
+        named = ["fix"] + [records.FLIGHT_EVENTS[kind][0] for kind in sorted(records.FLIGHT_EVENTS)]
+        self.assertEqual(named, self.schema["properties"]["type"]["enum"])
+        self.assertEqual(sorted(records.FLIGHT_EVENTS), list(range(1, len(named))))
+
+    def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
+        for field, names in records.flight_enum_fields():
+            self.assertEqual(list(names), self.schema["properties"][field]["enum"], field)
+
+    def test_the_keys_decoded_are_the_keys_the_schema_declares(self):
+        allowed = set(self.schema["properties"])
+        seen = set()
+        for decoded in self.decoded_samples():
+            self.assertLessEqual(set(decoded), allowed, decoded["type"])
+            seen |= set(decoded)
+        self.assertEqual(seen, allowed)
+
+    def test_no_decoded_key_collides_with_the_keys_a_fetch_wraps_each_record_in(self):
+        for decoded in self.decoded_samples():
+            self.assertEqual(set(decoded) & {"log", "session", "index"}, set(), decoded["type"])
+
 
 class FlightRecords(unittest.TestCase):
     def test_the_crc_is_ccitt_over_the_first_twenty_two_bytes(self):
@@ -362,6 +430,22 @@ class FlightRecords(unittest.TestCase):
         with self.assertRaises(records.RecordError) as caught:
             records.decode_flight_record(bytes(raw), 1_700_000_000)
         self.assertEqual(str(caught.exception), "crc")
+
+    def test_an_event_is_told_from_a_fix_by_the_top_bit_of_byte_sixteen(self):
+        fix = records.decode_flight_record(flight_record(struct.pack("<13xH", 511)), 0)
+        self.assertEqual(fix["type"], "fix")
+        self.assertEqual(fix["track_c9"], 511)
+        alarm = records.decode_flight_record(event_record(2, flags=0), 0)
+        self.assertEqual(alarm["type"], "alarm")
+        self.assertNotIn("lat_1e7", alarm)
+
+    def test_an_event_kind_this_decoder_does_not_know_is_unreadable_not_guessed(self):
+        raw = bytearray(event_record(1))
+        raw[records.FLIGHT_KIND_OFFSET] = records.FLIGHT_EVENT_MARK | 0x7F
+        raw[22:24] = records.crc16_ccitt(raw[:22]).to_bytes(2, "little")
+        with self.assertRaises(records.RecordError) as caught:
+            records.decode_flight_record(bytes(raw), 0)
+        self.assertEqual(str(caught.exception), "unknown event kind 127")
 
     def test_an_erased_slot_is_not_a_fix_at_the_epoch(self):
         with self.assertRaises(records.RecordError):

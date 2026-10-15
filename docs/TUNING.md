@@ -66,6 +66,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedDampingSamples` | 4 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
+| `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty of the track's |
+| `kLogEventBacklogRecords` | 16 | records | - | alarms and encounters waiting on a writer that drains every pass |
 | `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
 | `kLogRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told |
 | `kLogPreTakeoffRecords` | 60 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
@@ -271,4 +273,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-166 constants over 18 folders.
+168 constants over 18 folders.

@@ -1,0 +1,252 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://skyblip.eu/schemas/flight_log.v1.schema.json",
+  "title": "skyBlip flight log record (v1)",
+  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's base64 chunks. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a contact's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
+  "type": "object",
+  "required": [
+    "type",
+    "utc"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "fix",
+        "status",
+        "alarm",
+        "encounter"
+      ],
+      "description": "What this record is. A fix carries byte 16 as the high byte of its nine-bit track, so the byte is 0 or 1; an event sets its top bit and names its kind in the other seven: status=0x81, alarm=0x82, encounter=0x83. A kind is retired, never renumbered, because a flight on the partition outlives the firmware that wrote it."
+    },
+    "utc": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Every type. The UTC second this record describes: the session id, which is the first second of the session, plus the 16-bit offset in bytes 0-1, saturating 18 hours in. An encounter is dated at its closest approach, so it is written after records later than it: sort by utc, not by index."
+    },
+    "lat_1e7": {
+      "type": "integer",
+      "description": "fix. Latitude, 1e-7 degrees, bytes 2-5"
+    },
+    "lon_1e7": {
+      "type": "integer",
+      "description": "fix. Longitude, 1e-7 degrees, bytes 6-9"
+    },
+    "alt_msl_m": {
+      "type": "integer",
+      "description": "fix. Altitude above mean sea level, metres, bytes 10-11"
+    },
+    "alt_hae_m": {
+      "type": "integer",
+      "description": "fix. Height above the WGS84 ellipsoid, metres: alt_msl_m plus the signed geoid separation in byte 12"
+    },
+    "speed_q": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "fix. Ground speed in quarter metres per second, the ADS-L G.1.8 unit, bytes 13-14"
+    },
+    "speed_mm_s": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "fix. speed_q in millimetres per second"
+    },
+    "track_c9": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 511,
+      "description": "fix. Track over the ground on the 512-unit circle of ADS-L G.1.10, bytes 15-16"
+    },
+    "track_deg": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 359,
+      "description": "fix. track_c9 in whole degrees, rounded as core/units does"
+    },
+    "climb_e8": {
+      "type": "integer",
+      "description": "fix. Vertical speed in eighths of a metre per second, the ADS-L G.1.9 unit, bytes 17-18. Meaningless unless climb_valid"
+    },
+    "climb_mm_s": {
+      "type": "integer",
+      "description": "fix. climb_e8 in millimetres per second"
+    },
+    "sats": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "fix. Satellites in the solution, byte 19"
+    },
+    "hdop_e2": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2550,
+      "description": "fix. Horizontal dilution of precision in hundredths, stored in tenths in byte 20"
+    },
+    "flight_state": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "on_ground",
+        "airborne"
+      ],
+      "description": "fix. The ADS-L G.1.2 flight state when the fix was taken, bits 5-6 of byte 21. Codes: 0 unknown, 1 on_ground, 2 airborne"
+    },
+    "fix_valid": {
+      "type": "boolean",
+      "description": "fix. Bit 0 of byte 21"
+    },
+    "utc_valid": {
+      "type": "boolean",
+      "description": "fix. Bit 1 of byte 21"
+    },
+    "pps_locked": {
+      "type": "boolean",
+      "description": "fix. Bit 2 of byte 21: the clock was disciplined to the receiver's PPS"
+    },
+    "climb_valid": {
+      "type": "boolean",
+      "description": "fix. Bit 3 of byte 21"
+    },
+    "geoid_measured": {
+      "type": "boolean",
+      "description": "fix. Bit 4 of byte 21: the receiver reported the geoid separation rather than the device assuming one"
+    },
+    "session_end": {
+      "type": "boolean",
+      "description": "fix. Bit 7 of byte 21: the landing's last record. A session whose last record does not carry it ended with the power"
+    },
+    "cell_mv": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "status. The cell's voltage in millivolts when valid, what the divider last read otherwise, bytes 2-3"
+    },
+    "percent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "status. State of charge the gauge shows, byte 4"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "normal",
+        "critical",
+        "flat",
+        "low"
+      ],
+      "description": "status. core/power's cutoff level, byte 5. Codes: 0 unknown, 1 normal, 2 critical, 3 flat, 4 low, the same as the diagnostics power record"
+    },
+    "charge": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "ok",
+        "too_cold",
+        "too_hot"
+      ],
+      "description": "status. Whether the die temperature allowed charging, byte 6. Codes: 0 unknown, 1 ok, 2 too_cold, 3 too_hot"
+    },
+    "tracked": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "status. Aircraft in the traffic table at this second, byte 7"
+    },
+    "tracked_peak": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "status. The most aircraft in the table at once since the previous status, byte 8"
+    },
+    "valid": {
+      "type": "boolean",
+      "description": "status. Bit 0 of byte 9: cell_mv and percent are the cell's"
+    },
+    "charging": {
+      "type": "boolean",
+      "description": "status. Bit 1 of byte 9"
+    },
+    "external_power": {
+      "type": "boolean",
+      "description": "status. Bit 2 of byte 9: the cable is in"
+    },
+    "addr": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16777215,
+      "description": "alarm, encounter. The aircraft's 24-bit address, bytes 2-4"
+    },
+    "addr_table": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "alarm, encounter. The address table it belongs to, byte 5"
+    },
+    "dist_m": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "alarm, encounter. Horizontal distance in metres, both positions carried to the same instant, bytes 6-7"
+    },
+    "rel_alt_m": {
+      "type": "integer",
+      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9"
+    },
+    "rel_bearing_deg": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 359,
+      "description": "alarm, encounter. Bearing to it, degrees clockwise from own-ship's track, bytes 10-11"
+    },
+    "closing_mps": {
+      "type": "integer",
+      "description": "alarm, encounter. Closing speed, metres per second, positive closing, bytes 12-13"
+    },
+    "alarm": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "alarm, encounter. On an alarm the level the contact just took, on an encounter the highest it reached: 0 none, 1 advisory, byte 14"
+    },
+    "aircraft_cat": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "alarm, encounter. Its ADS-L G.1.3 aircraft category, byte 15"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "adsl_direct",
+        "adsl_uplink",
+        "alptas",
+        "own"
+      ],
+      "description": "alarm, encounter. Which path it was heard on, byte 17. Codes: 0 adsl_direct, 1 adsl_uplink, 2 alptas, 3 own"
+    },
+    "rssi_dbm": {
+      "type": "integer",
+      "minimum": -128,
+      "maximum": 127,
+      "description": "alarm, encounter. Signal strength of the reception, byte 18"
+    },
+    "dismissed": {
+      "type": "boolean",
+      "description": "alarm, encounter. Bit 0 of byte 19: the pilot had dismissed its alarm"
+    },
+    "in_formation": {
+      "type": "boolean",
+      "description": "alarm, encounter. Bit 1 of byte 19: flying in formation with own-ship, so its alarm was withheld"
+    },
+    "heard_s": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "encounter. Seconds from the first assessment of this aircraft to the last, bytes 20-21"
+    }
+  }
+}
