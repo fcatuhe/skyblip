@@ -28,6 +28,14 @@ const char* const kAircraftNames[kNamedAircraftTypes] = {
 // CALLSIGN at double height is eight cells, and the row holds fifteen.
 constexpr int kCallsignRowChars = 6;
 
+const char* alarm_volume_name(go::AlarmVolume volume) {
+    switch (volume) {
+        case go::AlarmVolume::Off: return "OFF";
+        case go::AlarmVolume::Soft: return "SOFT";
+        default: return "LOUD";
+    }
+}
+
 void row_text(ui::Canvas& fb, int line, const char* label, const char* value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
@@ -165,8 +173,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
         case MenuRow::Light: n = fmt_string(out, v.light ? "ON" : "OFF"); break;
         case MenuRow::Alarm: n = fmt_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
         case MenuRow::Volume:
-            n = fmt_uint(out, v.settings.alarm_volume);
-            n += fmt_string(out + n, " OF 5");
+            n = fmt_string(out, alarm_volume_name(v.settings.alarm_volume));
             break;
         default: break;
     }
@@ -344,8 +351,7 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
         case MenuRow::Plot: next.settings.plot = next_radar_plot(current.settings.plot); break;
         case MenuRow::Alarm: next.settings.alarm_enabled = !current.settings.alarm_enabled; break;
         case MenuRow::Volume:
-            next.settings.alarm_volume =
-                static_cast<uint8_t>((current.settings.alarm_volume + 1) % (kMaxAlarmVolume + 1));
+            next.settings.alarm_volume = next_alarm_volume(current.settings.alarm_volume);
             break;
         default: leave(); return MenuAction::Leave;
     }

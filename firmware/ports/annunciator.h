@@ -1,16 +1,4 @@
 // ports/annunciator.h: capability port: buzzer + vibration motor (T-Echo Plus).
-//
-// alarm() opens a CONTINUOUS tone and it runs until silence(): there is no
-// cadence in the port, no timer behind it and no duration argument, because a
-// pattern a driver plays is a pattern nothing can test. On times, off times,
-// repeats and re-announcement are core/annunciation's, driven by exactly one
-// service - which is also the one that has to release the tone when the level
-// falls, the target goes, the pilot switches alarms off or the device goes down.
-// vibrate() is the exception: it is a single pulse of a stated length and the
-// implementation owns its end, because a motor left on is a flat battery. What
-// the pulse reaches is ports/haptic.h - a motor on a pin on one board, a DRV2605
-// over I2C on another - and which of those is fitted is a capability, not
-// something any caller of this port ever sees.
 #ifndef SKYBLIP_PORTS_ANNUNCIATOR_H
 #define SKYBLIP_PORTS_ANNUNCIATOR_H
 
@@ -18,11 +6,12 @@
 
 namespace skyblip::ports {
 
+enum class Loudness : uint8_t { Soft, Loud };
+
 class Annunciator {
    public:
     virtual ~Annunciator() = default;
-    virtual void alarm(uint8_t level, uint8_t volume) = 0;
-    virtual void tone(uint16_t hz, uint8_t volume) = 0;
+    virtual void tone(uint16_t hz, Loudness loudness) = 0;
     virtual void vibrate(uint16_t ms) = 0;
     virtual void silence() = 0;
 };

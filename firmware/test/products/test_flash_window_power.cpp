@@ -27,7 +27,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
     const uint32_t before = writes(rig);
-    change_volume(rig, 5);
+    change_volume(rig, go::AlarmVolume::Soft);
     step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
     CHECK(writes(rig) == before);
     // Refused, counted once, and never handed to the placement policy - a pending
@@ -52,7 +52,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
     REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == 5);
+    CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
 }
 
 // The one power-off that does not flush, and it is the whole trade: a cell at its
@@ -69,7 +69,7 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
     const uint32_t before = writes(rig);
 
     // A change made on a cell that is already warning: held, never written.
-    change_volume(rig, 5);
+    change_volume(rig, go::AlarmVolume::Soft);
     rig.seconds(t, 2, /*speed_mm_s=*/0, 0);
     REQUIRE(writes(rig) == before);
 
@@ -95,7 +95,7 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 
-    change_volume(rig, 5);
+    change_volume(rig, go::AlarmVolume::Soft);
     step_one(rig, t);
     REQUIRE(writes(rig) == before);
 
@@ -125,7 +125,7 @@ TEST_CASE("flash window: a fired power-failure comparator stops settings writes"
     step_until(rig, t, t + 200);
     CHECK(rig.product.power().supply_warnings() == 1);
 
-    change_volume(rig, 5);
+    change_volume(rig, go::AlarmVolume::Soft);
     step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
     CHECK(writes(rig) == before);
     // Latching: a rail that came back up does not make it un-happen.

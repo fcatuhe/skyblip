@@ -57,6 +57,14 @@ constexpr RadarPlot next_radar_plot(RadarPlot plot) {
     return plot == RadarPlot::All ? RadarPlot::ToScale : RadarPlot::All;
 }
 
+constexpr AlarmVolume next_alarm_volume(AlarmVolume volume) {
+    switch (volume) {
+        case AlarmVolume::Loud: return AlarmVolume::Soft;
+        case AlarmVolume::Soft: return AlarmVolume::Off;
+        default: return AlarmVolume::Loud;
+    }
+}
+
 // INFO: fc 20sep26 four digits of seconds, so a clock with no UTC behind it still fits its column
 constexpr uint32_t kUptimeClockWrapS = 10000;
 

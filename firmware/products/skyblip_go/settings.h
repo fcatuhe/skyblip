@@ -24,6 +24,8 @@ enum class Units : uint8_t { Nautical = 0, Metric = 1 };
 
 enum class RadarPlot : uint8_t { All = 0, ToScale = 1 };
 
+enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
+
 constexpr int kRangeStepCount = 4;
 constexpr int kDefaultRangeStep = 2;
 
@@ -77,7 +79,7 @@ struct Settings {
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
     bool alarm_enabled{true};
-    uint8_t alarm_volume{3};
+    AlarmVolume alarm_volume{AlarmVolume::Loud};
     Units units{Units::Nautical};
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
@@ -88,7 +90,7 @@ struct Settings {
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 10;
+constexpr uint8_t kBlobVersion = 11;
 
 Settings defaults();
 

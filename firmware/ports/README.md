@@ -2,7 +2,7 @@
 
 The roles a product needs filled, declared in the core's own vocabulary. `hardware/` is where a part or a platform fills one.
 
-This is not a hardware abstraction layer, which is why it stopped being called one. A HAL wraps a chip: GPIO, SPI, timers. These types wrap nothing. `Rf::arm()` takes a dwell with a sync word, a chip rate and an instant the burst has to key at, because that is what ADS-L 4 SRD-860 §C.5 requires of a slot, not because an SX1262 has a register that shape. `Link` speaks in endpoints and sessions. `Annunciator` is asked for an alarm, not for a PWM duty cycle. The vocabulary belongs to `core/`, and a port is where the core states what it needs.
+This is not a hardware abstraction layer, which is why it stopped being called one. A HAL wraps a chip: GPIO, SPI, timers. These types wrap nothing. `Rf::arm()` takes a dwell with a sync word, a chip rate and an instant the burst has to key at, because that is what ADS-L 4 SRD-860 §C.5 requires of a slot, not because an SX1262 has a register that shape. `Link` speaks in endpoints and sessions. `Annunciator` is asked for a pitch at a loudness, not for a PWM duty cycle. The vocabulary belongs to `core/`, and a port is where the core states what it needs.
 
 Register code belongs in `hardware/parts/` and `hardware/platform/`. Zephyr headers belong there too: nothing above this line includes a framework, which is what buys the host suite and the WASM simulator.
 
@@ -31,3 +31,11 @@ One word for the thing that shakes, and it is `haptic`. `Capability::Haptic` say
 `Capability::Indicator` says a lamp exists, not which colours it can make. A board fitted with one green LED reports the capability and lights nothing on the red rows, and that is survivable because `core/indication` tells its states apart by rhythm as well as by colour: the wink rate carries the reading, the colour confirms it. A lamp set in `capabilities.h` would be a bit nothing branches on today, so there is none until a board differs.
 
 The colours themselves are `indication::Lamp`, declared in `core/indication/lamps.h` rather than here. A colour is what a pilot reads, so the vocabulary belongs to the layer that decides what the device is saying; this port is where it is asked for.
+
+## The annunciator has no cadence
+
+`tone()` opens a continuous tone and it runs until `silence()`: there is no cadence in the port, no timer behind it and no duration argument, because a pattern a driver plays is a pattern nothing can test. On times, off times, pitches, repeats and re-announcement are `core/annunciation`'s, driven by exactly one service, which is also the one that has to release the tone when the level falls, the target goes, the pilot switches alarms off or the device goes down.
+
+`vibrate()` is the exception: it is a single pulse of a stated length and the implementation owns its end, because a motor left on is a flat battery. What the pulse reaches is `haptic.h`, a motor on a pin on one board and a DRV2605 over I2C on another, and which of those is fitted is a capability, not something any caller of this port ever sees.
+
+`Loudness` is two words, `Soft` and `Loud`, and not a number: the core says how loud it wants to be heard and the platform says what that costs in duty cycle. There is no `Off`, because off is `silence()`.

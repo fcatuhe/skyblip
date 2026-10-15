@@ -255,7 +255,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 500);
     CHECK_FALSE(rig.product.ownship().first_fix().ever_fixed());
-    CHECK(int(rig.platform.annunciator().level()) == 0);
+    CHECK_FALSE(rig.platform.annunciator().sounding());
 
     rig.push_fix(1000, 1);
     uint16_t first_note_hz = 0;

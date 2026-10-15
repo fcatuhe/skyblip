@@ -39,7 +39,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     link.raise_link(1);
     go::Settings s = go::defaults();
     s.aircraft_type = 7;
-    s.alarm_volume = 5;
+    s.alarm_volume = go::AlarmVolume::Soft;
     std::memcpy(s.callsign, "D-KXYZ", 7);
     go::SettingsStore store_cs(s, kTestAddr);
     ConfigService cs(link, store_cs);
@@ -48,7 +48,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     cs.on_rx(frame("{\"cmd\":\"defaults\"}"));
     const std::string body = link.last().bytes;
     CHECK(body ==
-          "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":3,"
+          "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":2,"
           "\"units\":0,\"callsign\":\"\"}");
 
     const std::string set = "{\"cmd\":\"set\"" + body.substr(body.find(','));
@@ -89,9 +89,9 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
 
-    cs.on_rx(frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":5}"));
+    cs.on_rx(frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
     REQUIRE(cs.pending() == Pending::Set);
-    CHECK(std::string(cs.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME 5 OF 5");
+    CHECK(std::string(cs.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
 
     cs.on_rx(frame("{\"cmd\":\"set\",\"units\":0}"));
     CHECK(std::string(cs.prompt_detail()) == pending_detail(Pending::Set));

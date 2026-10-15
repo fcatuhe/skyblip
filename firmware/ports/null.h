@@ -23,8 +23,7 @@ class NullDisplay : public Display {
 
 class NullAnnunciator : public Annunciator {
    public:
-    void alarm(uint8_t, uint8_t) override {}
-    void tone(uint16_t, uint8_t) override {}
+    void tone(uint16_t, Loudness) override {}
     void vibrate(uint16_t) override {}
     void silence() override {}
 };

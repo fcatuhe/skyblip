@@ -29,13 +29,13 @@ TEST_CASE("settings: defaults are valid") {
 
 TEST_CASE("settings: blob round-trips through version+crc framing") {
     Settings s = defaults();
-    s.alarm_volume = 4;
+    s.alarm_volume = AlarmVolume::Soft;
     s.units = Units::Metric;
     uint8_t blob[128];
     to_blob(s, blob, sizeof(blob));
     Settings out;
     CHECK(from_blob(blob, blob_size(), out) == Status::Ok);
-    CHECK(int(out.alarm_volume) == 4);
+    CHECK(out.alarm_volume == AlarmVolume::Soft);
     CHECK(out.units == Units::Metric);
 }
 
@@ -70,11 +70,11 @@ TEST_CASE(
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
-    const char* patch = "{\"range_step\":0,\"plot\":1,\"alarm_volume\":2}";
+    const char* patch = "{\"range_step\":0,\"plot\":1,\"alarm_volume\":1}";
     CHECK(apply_json(s, patch, static_cast<int>(strlen(patch))) == Status::Ok);
     CHECK(int(s.range_step) == kDefaultRangeStep);
     CHECK(s.plot == RadarPlot::All);
-    CHECK(int(s.alarm_volume) == 2);
+    CHECK(s.alarm_volume == AlarmVolume::Soft);
 }
 
 TEST_CASE("settings: a corrupted blob is detected (CRC), caller falls back") {
@@ -109,10 +109,10 @@ TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
     CHECK(v == kAircraftTypeLight);
 
     // apply a patch: change type + alarm volume + units
-    const char* patch = "{\"aircraft_type\":4,\"alarm_volume\":5,\"units\":1}";
+    const char* patch = "{\"aircraft_type\":4,\"alarm_volume\":0,\"units\":1}";
     CHECK(apply_json(s, patch, static_cast<int>(strlen(patch))) == Status::Ok);
     CHECK(int(s.aircraft_type) == 4);
-    CHECK(int(s.alarm_volume) == 5);
+    CHECK(s.alarm_volume == AlarmVolume::Off);
     CHECK(s.units == Units::Metric);
 }
 
@@ -122,6 +122,11 @@ TEST_CASE("settings: apply_json rejects out-of-range atomically") {
     const char* bad = "{\"aircraft_type\":99}";  // > 17
     CHECK(apply_json(s, bad, static_cast<int>(strlen(bad))) == Status::OutOfRange);
     CHECK(s.aircraft_type == before);  // unchanged (atomic)
+
+    // The six-step scale an older companion sent tops out past loud.
+    const char* six_step = "{\"alarm_volume\":3}";
+    CHECK(apply_json(s, six_step, static_cast<int>(strlen(six_step))) == Status::OutOfRange);
+    CHECK(s.alarm_volume == AlarmVolume::Loud);
 }
 
 // F4. The table says which space the address came from, so no prefix is ours to move.
@@ -202,7 +207,7 @@ TEST_CASE("settings: the battery trim is set over the link and refused whole whe
     const char* far_out = "{\"alarm_volume\":1,\"battery_offset_mv\":900}";
     CHECK(apply_json(s, far_out, static_cast<int>(strlen(far_out))) == Status::OutOfRange);
     CHECK(int(s.battery_offset_mv) == -40);
-    CHECK(int(s.alarm_volume) == 3);
+    CHECK(s.alarm_volume == AlarmVolume::Loud);
 
     // The boundary a narrowing cast would hide: 65536 truncates to 0 in an
     // int16, and 65576 truncates to 40 - both inside the bound, neither what
@@ -245,18 +250,18 @@ TEST_CASE("settings: the frequency trim is bounded at the boundary, in both fram
 
 TEST_CASE("settings: the frequency trim is set over the link and refused whole when it is not") {
     Settings s = defaults();
-    const char* set = "{\"freq_trim_e1_ppm\":-25,\"alarm_volume\":2}";
+    const char* set = "{\"freq_trim_e1_ppm\":-25,\"alarm_volume\":1}";
     REQUIRE(apply_json(s, set, static_cast<int>(strlen(set))) == Status::Ok);
     CHECK(int(s.freq_trim_e1_ppm) == -25);
-    CHECK(int(s.alarm_volume) == 2);
+    CHECK(s.alarm_volume == AlarmVolume::Soft);
 
     // Out of range is refused as a whole patch, not clamped and not partly
     // applied: a bench that asked for 500 ppm has the wrong number written down,
     // and silently storing 10 ppm instead would hide that.
-    const char* far = "{\"freq_trim_e1_ppm\":5000,\"alarm_volume\":5}";
+    const char* far = "{\"freq_trim_e1_ppm\":5000,\"alarm_volume\":2}";
     CHECK(apply_json(s, far, static_cast<int>(strlen(far))) == Status::OutOfRange);
     CHECK(int(s.freq_trim_e1_ppm) == -25);
-    CHECK(int(s.alarm_volume) == 2);
+    CHECK(s.alarm_volume == AlarmVolume::Soft);
 
     // Narrowed before it is validated: 65536 tenths of a ppm truncates to 0 in
     // an int16 and would pass a bound check that never saw the value sent.
@@ -322,7 +327,7 @@ TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     // of its patch applies, and the keys nothing reads are ignored.
     const char* stale = "{\"region\":3,\"rotation\":2,\"power_save\":true,\"alarm_volume\":1}";
     CHECK(apply_json(s, stale, static_cast<int>(strlen(stale))) == Status::Ok);
-    CHECK(int(s.alarm_volume) == 1);
+    CHECK(s.alarm_volume == AlarmVolume::Soft);
 }
 
 TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is not is refused") {
@@ -389,7 +394,7 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     Settings s = defaults();
     const char* icao = "{\"addr\":14488116,\"addr_table\":5,\"alarm_volume\":1}";  // 0xDD1234
     CHECK(apply_json(s, icao, static_cast<int>(strlen(icao))) == Status::Ok);
-    CHECK(int(s.alarm_volume) == 1);
+    CHECK(s.alarm_volume == AlarmVolume::Soft);
 
     char buf[256];
     const int n = to_json(s, 0x5B7E57, buf, static_cast<int>(sizeof(buf)));

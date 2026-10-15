@@ -1,12 +1,4 @@
 // core/annunciation/pattern.h: what the buzzer should be doing right now.
-//
-// One decision, in one place. The traffic tracker says which level stands and
-// whether it just got worse; this says how that sounds - on times, off times,
-// how many, and how often it is said again - and it is the only thing allowed
-// to hand the buzzer from one voice to another. ports::Annunciator::alarm() opens
-// a continuous tone that runs until silence(), so a level with no off time is a
-// level that never stops: every pattern here ends by itself.
-//
 // INFO: al 02aug26 the pair is SoftRF's fork's look cadence (oss/SoftRF-moshe-braner
 // Buzzer.cpp:172-215)
 #ifndef SKYBLIP_CORE_ANNUNCIATION_PATTERN_H
@@ -26,6 +18,17 @@ constexpr uint16_t kShortestBlipEarCanPlaceMs = 90;
 constexpr uint16_t kAdvisoryPairBeepMs = 250;
 constexpr uint16_t kAdvisoryPairGapSameAsBeepMs = 250;
 constexpr uint8_t kAdvisoryPairBeepCount = 2;
+
+// INFO: fc 15oct26 piezo part unknown, 9x9 mm ones peak at 4 kHz +/- 500 Hz: the pair straddles it
+constexpr uint16_t kAdvisoryWarbleLowHz = 3600;
+constexpr uint16_t kAdvisoryWarbleHighHz = 4400;
+constexpr uint16_t kAdvisoryWarblePeriodMs = kAdvisoryPairBeepMs;
+
+constexpr uint16_t advisory_warble_hz(uint32_t into_beep_ms) {
+    return (into_beep_ms % kAdvisoryWarblePeriodMs) < kAdvisoryWarblePeriodMs / 2
+               ? kAdvisoryWarbleLowHz
+               : kAdvisoryWarbleHighHz;
+}
 
 // INFO: fc 12sep26 written C5 E5 G5, played two octaves up: a 4 kHz piezo whispers at 500 Hz
 constexpr uint16_t kNoteC7Hz = 2093;
@@ -67,6 +70,7 @@ constexpr uint16_t first_fix_jingle_ms() {
 // step rate.
 constexpr uint16_t kShortestPhaseMs = kShortestBlipEarCanPlaceMs;
 static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
+static_assert(kAdvisoryWarblePeriodMs / 2 >= kShortestPhaseMs, "a pitch the loop cannot resolve");
 
 struct Pattern {
     uint16_t tone_ms{0};
@@ -101,7 +105,6 @@ struct Situation {
 // the service acts on changed and on nothing else.
 struct Command {
     bool tone_on{false};
-    uint8_t tone_level{0};
     uint16_t tone_hz{0};
     bool changed{false};
 };
@@ -122,6 +125,7 @@ class Policy {
    private:
     void begin(Voice voice, traffic::Level level, uint32_t now_ms);
     void advance(uint32_t now_ms);
+    void play_pattern(uint32_t now_ms);
     void play_jingle(uint32_t now_ms);
     void release();
     Command emit();
@@ -137,7 +141,6 @@ class Policy {
     uint32_t phase_ms_{0};
     bool phase_on_{false};
     bool commanded_on_{false};
-    uint8_t commanded_level_{0};
 };
 
 }  // namespace skyblip::annunciation

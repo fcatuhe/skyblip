@@ -58,7 +58,7 @@ TEST_CASE("diag config: arming names the settings every other record was decided
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
     rig.settings().aircraft_type = 9;
-    rig.settings().alarm_volume = 4;
+    rig.settings().alarm_volume = go::AlarmVolume::Soft;
     rig.settings().battery_offset_mv = -30;
     rig.settings().battery_offset_manual = true;
     rig.settings().units = go::Units::Metric;
@@ -74,7 +74,7 @@ TEST_CASE("diag config: arming names the settings every other record was decided
     CHECK(config.addr == rig.platform.device_addr());
     CHECK(config.addr_table == settings::kAddrTableSkyblip);
     CHECK(config.aircraft_type == 9);
-    CHECK(config.alarm_volume == 4);
+    CHECK(config.alarm_volume == 1);
     CHECK(config.battery_offset_mv == -30);
     CHECK(config.battery_trim_manual);
     CHECK(config.metric);
@@ -359,7 +359,7 @@ TEST_CASE("diag write: a pending settings write is recorded every evaluation, no
     uint32_t t = 100;
     taxi(rig, t, 3);
     arm(rig, t);
-    rig.settings().alarm_volume = 5;
+    rig.settings().alarm_volume = go::AlarmVolume::Soft;
     rig.product.config().config().note_settings_changed();
     taxi(rig, t, 6);
     stop(rig, t);
@@ -435,7 +435,7 @@ TEST_CASE("diag: a device nobody armed records nothing at all") {
     taxi(rig, t, 3);
     rig.raise_link(3);
     rig.press(t);
-    rig.settings().alarm_volume = 2;
+    rig.settings().alarm_volume = go::AlarmVolume::Soft;
     rig.product.config().config().note_settings_changed();
     taxi(rig, t, 6);
 

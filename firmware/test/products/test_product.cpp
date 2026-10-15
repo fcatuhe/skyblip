@@ -77,13 +77,13 @@ TEST_CASE("product: the e-paper refreshes on change, not on cadence") {
 TEST_CASE("product: persisted settings are loaded on setup") {
     Rig rig;
     go::Settings s = go::defaults();
-    s.alarm_volume = 1;
+    s.alarm_volume = go::AlarmVolume::Soft;
     uint8_t blob[64];
     go::to_blob(s, blob, sizeof(blob));
     REQUIRE(rig.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
 
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.settings().alarm_volume == 1);
+    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 }
 
 // The board is the only thing that knows the address, and only this wiring carries it to a phone.
@@ -147,7 +147,7 @@ TEST_CASE("product: a board with no battery sense says so instead of reporting e
 TEST_CASE("product: settings changed over the link are persisted") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_volume = 5;
+    rig.settings().alarm_volume = go::AlarmVolume::Soft;
     // The only way the device can be told it is on the ground: one stationary
     // solution, which core/flight answers Ground to and the link's gate reads.
     rig.push_fix(/*alt_m=*/0, /*updates=*/1);
@@ -171,7 +171,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == 2);
+    CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
 }
 
 TEST_CASE("product: the reset reason is read once at boot and kept") {
