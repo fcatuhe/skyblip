@@ -218,7 +218,7 @@ void state_note(ui::Canvas& fb, const char* note, int y) {
     fb.draw_text(b.x + kNotePad, b.y + kNotePad, note, true, kNoteScale);
 }
 
-void aircraft(ui::Canvas& fb, int heard, bool counting) {
+void traffic_count(ui::Canvas& fb, int heard, bool counting) {
     char buf[4];
     if (counting)
         buf[fmt_uint(buf, static_cast<uint32_t>(heard))] = 0;
@@ -226,7 +226,7 @@ void aircraft(ui::Canvas& fb, int heard, bool counting) {
         buf[fmt_string(buf, "-")] = 0;
     const int x = kGlassW - kMargin - text_width(buf, kTrafficScale);
     fb.draw_text(x, kFooterBottom - kGlyphH * kTrafficScale, buf, true, kTrafficScale);
-    fb.draw_text(x - kUnitGap - text_width("ACT", 1), kFooterY, "ACT", true, 1);
+    fb.draw_text(x - kUnitGap - text_width("TFC", 1), kFooterY, "TFC", true, 1);
 }
 
 Box banner_box(const char* word, int y) {
@@ -375,7 +375,7 @@ void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap) {
     flight_clock(fb, snap);
     flight_word(fb, snap);
     range_label(fb, snap);
-    aircraft(fb, snap.heard, snap.fix_valid && snap.receiver_listening);
+    traffic_count(fb, snap.heard, snap.fix_valid && snap.receiver_listening);
 
     if (snap.fix_valid) plot_blips(fb, snap, track);
 

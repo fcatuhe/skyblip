@@ -246,7 +246,7 @@ TEST_CASE("radar: the footer counts every aircraft heard, either side of the clo
     CHECK(reads_in(fb, "FLIGHT", 0, 168, 50, 182));
     CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
     CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "ACT", 140, 175, 190, 200));
+    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot closer = flying(0);
     closer.range_step = 1;
@@ -262,7 +262,7 @@ TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
 
     CHECK(reads_in(fb, "-", 170, 170, 200, 200, 3));
     CHECK_FALSE(reads_in(fb, "0", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "ACT", 140, 175, 190, 200));
+    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot no_position = flying(0);
     no_position.fix_valid = false;
