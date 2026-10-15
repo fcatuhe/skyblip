@@ -9,8 +9,8 @@ namespace skyblip::store {
 
 constexpr uint32_t kMaxPoolSectors = 512;
 
-// INFO: fc 20sep26 170 slots at a record per 4 s is 11.3 min a sector, 5.3 an hour, 298 in all
-constexpr uint32_t kFlightsFloorHours = 12;
+// INFO: fc 15oct26 170 slots at a record a second is 2.8 min a sector, 128 of 298 for six hours
+constexpr uint32_t kFlightsFloorHours = 6;
 
 constexpr uint32_t flights_floor_sectors(uint32_t seconds_per_sector) {
     return seconds_per_sector == 0

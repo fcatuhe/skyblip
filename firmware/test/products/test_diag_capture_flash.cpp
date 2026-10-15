@@ -89,7 +89,9 @@ namespace {
 
 // A partition the floor swallows whole, the one shape the allocator can refuse a capture in.
 struct SmallPoolRig {
-    static constexpr uint32_t kSectors = 65;
+    static constexpr uint32_t kSectors =
+        store::flights_floor_sectors(flight::log_seconds_per_sector(flight::kLogSlotsPerSector)) +
+        1;
 
     platform::host::Clock clock;
     platform::host::Link link;
@@ -233,7 +235,7 @@ TEST_CASE("capture: the floor refuses a sector, the refusal reaches the flash, t
 
 // Rotation is the design; a rotation the corpus cannot see is the defect.
 TEST_CASE("capture: a rolling capture writes the hole it made and names the build again") {
-    SmallPoolRig rig{66};
+    SmallPoolRig rig{SmallPoolRig::kSectors + 1};
     rig.fill_flights_to_the_floor();
     rig.setup();
 
@@ -258,7 +260,7 @@ TEST_CASE("capture: a rolling capture writes the hole it made and names the buil
 }
 
 TEST_CASE("capture: a second capture counts its own records and not the first one's") {
-    SmallPoolRig rig{66};
+    SmallPoolRig rig{SmallPoolRig::kSectors + 1};
     rig.fill_flights_to_the_floor();
     rig.setup();
 

@@ -907,7 +907,7 @@ The flight log's pure half: what a record is on flash, when a session runs, wher
 - a fix outage does not end the flight, and nothing is written across it
 - a landing closes the session with a record that says so
 - a parked wing and a taxiing aeroplane write nothing
-- a record every four seconds and no more
+- a record a second, the rate ADS-L reports an aircraft in flight at
 - a record peeked and not committed is still in the ring
   > The writer takes the record only once flash has it: a refused write must lose nothing.
 - a wing that flies at no ground speed is logged while it moves
@@ -915,10 +915,10 @@ The flight log's pure half: what a record is on flash, when a session runs, wher
 - a writer that never drains loses the oldest, and says how many
 - on the ground the ring is a holding pen and not a queue
 - the file opens before the criterion agreed, so the roll is in it
-- the four-second cadence spans the 49.7-day wrap
-  > M. The four-second record cadence across the 49.7-day wrap of ports::Clock::millis(). A flight log that stops sampling for seven weeks is a flight log with a hole in it that no badge claim survives, and the sampled_ flag beside the stamp is what keeps zero from meaning "never sampled" at the one instant the counter produces it.
 - the landing record stays the last one while the writer is behind
   > A writer that drains late used to have ground samples queued behind the landing record, so the last record of the file said the session was still open and a tablet listed the flight as unclosed.
+- the record cadence spans the 49.7-day wrap
+  > M. The record cadence across the 49.7-day wrap of ports::Clock::millis(). A flight log that stops sampling for seven weeks is a flight log with a hole in it that no badge claim survives, and the sampled_ flag beside the stamp is what keeps zero from meaning "never sampled" at the one instant the counter produces it.
 
 ### test/core/test_flight_timer.cpp
 
@@ -1431,9 +1431,9 @@ The shared sector pool: what a label carries, and which sector a ring is handed 
 - flights eats the oldest diagnostics sector before its own
 - one ring erased gives its sectors back and leaves the other standing
 - only the first sector of a session is labelled as its start
+- six flight hours is 128 sectors of the partition
 - the first sector of a virgin partition is sector zero
 - the partition wraps and the sequence does not
-- twelve flight hours is sixty-four sectors of the partition
 
 ### test/core/test_timing.cpp
 

@@ -67,8 +67,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kIndicatedDampingSamples` | 4 | samples | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
-| `kLogRecordPeriodMs` | 4000 (4 s) | milliseconds | Period | Four seconds. It is the interval the moshe-braner SoftRF fork ships as its default (oss/SoftRF-moshe-braner .../src/driver/ Settings.cpp:838 loginterval = 4) and it is inside every fix-interval a badge, an OLC claim or a competition file is scored on. |
-| `kLogPreTakeoffRecords` | 8 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
+| `kLogRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told |
+| `kLogPreTakeoffRecords` | 60 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
 | `kLogStillHoldMs` | 120000 (2 min) | milliseconds | Hold | a wing that flies at no ground speed has landed once it has stood this long |
 | `kSlipFullScaleMg` | 200 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kFlightSpeedMmS` | 12000 (12 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
