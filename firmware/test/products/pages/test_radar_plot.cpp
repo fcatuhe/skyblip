@@ -126,7 +126,6 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
         {-700, -400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
     RadarSnapshot snap = flying(0);
-    snap.speed_mm_s = 40000;
     snap.n_targets = 4;
     snap.targets = flight;
     snap.formation_members = 4;

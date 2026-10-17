@@ -1,4 +1,5 @@
-// What a formation the device found by itself does to the annunciator, and what takes it back.
+// What a formation the device found by itself does to the annunciator and the radar's count, and
+// what takes it back.
 #include "core/traffic/formation.h"
 #include "core/traffic/lease.h"
 #include "core/units/units.h"
@@ -47,10 +48,11 @@ struct Flight {
     }
 
     void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms,
-              flight::FlightState says = flight::FlightState::Unknown) {
+              flight::FlightState says = flight::FlightState::Unknown, uint32_t addr = 0x515151) {
         rig.state.own.fix_ms = now_ms;
         model::AircraftObs obs =
             contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
+        obs.addr = addr;
         obs.flight_state = static_cast<uint8_t>(says);
         rig.state.traffic.update(obs, now_ms / 1000);
         rig.alarm_service.tick(now_ms);
@@ -79,13 +81,6 @@ struct Flight {
     }
 
     uint32_t hold_station(uint32_t from_ms) { return hold_station(-60, -120, from_ms); }
-
-    void hear_stranger(int north_m, int east_m, uint32_t now_ms) {
-        model::AircraftObs obs = contact(rig.state.own, north_m, east_m, 0, 40, 270, now_ms);
-        obs.addr = 0x626262;
-        rig.state.traffic.update(obs, now_ms / 1000);
-        rig.alarm_service.tick(now_ms);
-    }
 
     void listen() {
         rig.roles.capabilities = ports::Capability::Display | ports::Capability::Rf;
@@ -265,7 +260,7 @@ TEST_CASE("formation: a member is not traffic on the radar's count, and is still
     REQUIRE(flight.rig.screen.page() == go::Page::Radar);
     CHECK(flight.radar_counts("0"));
 
-    flight.hear_stranger(6000, 0, t);
+    flight.hear(6000, 0, 0, 40, 270, t, flight::FlightState::Unknown, 0x626262);
     flight.rig.run_seconds(t, 2);
     CHECK(flight.radar_counts("1"));
 
