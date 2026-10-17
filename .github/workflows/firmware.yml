@@ -283,13 +283,13 @@ jobs:
       - name: provision the signing key
         working-directory: firmware
         env:
-          DEVELOPMENT_KEY: ${{ secrets.SKYBLIP_DEV_SIGNING_KEY }}
+          DEVELOPMENT_KEY: ${{ secrets.MCUBOOT_DEVELOPMENT_SIGNING_KEY }}
           SIGNED_FOR: ${{ needs.changes.outputs.signing }}
         run: |
           key=$RUNNER_TEMP/signing.pem
           if [ -n "$SIGNED_FOR" ]; then
             test -n "$DEVELOPMENT_KEY" \
-              || { echo "FAIL: the firmware_development environment has no SKYBLIP_DEV_SIGNING_KEY"; exit 1; }
+              || { echo "FAIL: the firmware_development environment has no MCUBOOT_DEVELOPMENT_SIGNING_KEY"; exit 1; }
             (umask 077 && printf '%s\n' "$DEVELOPMENT_KEY" > "$key")
             echo "PUBLIC_KEY=firmware/keys/development.pub.pem" >> "$GITHUB_ENV"
           else

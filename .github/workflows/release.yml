@@ -107,10 +107,10 @@ jobs:
 
       - name: provision the signing key
         env:
-          PRODUCTION_KEY: ${{ secrets.SKYBLIP_RELEASE_SIGNING_KEY }}
+          PRODUCTION_KEY: ${{ secrets.MCUBOOT_PRODUCTION_SIGNING_KEY }}
         run: |
           test -n "$PRODUCTION_KEY" \
-            || { echo "FAIL: the firmware_production environment has no SKYBLIP_RELEASE_SIGNING_KEY"; exit 1; }
+            || { echo "FAIL: the firmware_production environment has no MCUBOOT_PRODUCTION_SIGNING_KEY"; exit 1; }
           (umask 077 && printf '%s\n' "$PRODUCTION_KEY" > "$RUNNER_TEMP/signing.pem")
 
       - name: build, sign and check the image
