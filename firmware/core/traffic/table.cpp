@@ -119,6 +119,8 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
     slots_[idx].liftoff = flight::Liftoff{};
     sample_turn(slots_[idx].turn, obs);
     slots_[idx].alarm_level = Level::None;
+    slots_[idx].alarm_dismissed = false;
+    slots_[idx].in_formation = false;
     return idx;
 }
 
@@ -134,6 +136,8 @@ void TrafficTable::age_out(uint32_t now) {
             slots_[i].used = false;
             slots_[i].turn = TargetTurn{};
             slots_[i].alarm_level = Level::None;
+            slots_[i].alarm_dismissed = false;
+            slots_[i].in_formation = false;
         }
     }
 }
@@ -150,6 +154,8 @@ void TrafficTable::clear() {
         s.used = false;
         s.turn = TargetTurn{};
         s.alarm_level = Level::None;
+        s.alarm_dismissed = false;
+        s.in_formation = false;
     }
 }
 
