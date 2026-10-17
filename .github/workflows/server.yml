@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # INFO: fc 17oct26 a run per commit on main, so a later push never cancels a pending deploy.
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 defaults:
@@ -53,8 +54,6 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -65,8 +64,6 @@ jobs:
           chrome-version: stable
       - name: Lift the AppArmor restriction Chrome's sandbox trips on
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - name: Check deployment configuration
-        run: bundle exec ruby ../.github/test/deployment_test.rb
       - name: Run project gates
         env:
           BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}

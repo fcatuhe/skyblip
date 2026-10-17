@@ -16,13 +16,16 @@ class Release
     entries = JSON.parse(response.body)
     raise TypeError unless entries.is_a?(Array)
 
-    releases = entries.reject { |entry| entry.fetch("draft") }
+    shelf entries.reject { |entry| entry.fetch("draft") }
       .select { |entry| TAG.match?(entry.fetch("tag_name")) }
       .map { |entry| new(entry) }
-      .sort_by(&:published_at).reverse
-    [ releases.find(&:stable?), *releases.select(&:development?) ].compact
   rescue JSON::ParserError, KeyError, TypeError, ArgumentError => error
     raise Unavailable, "Invalid GitHub release list: #{error.class}"
+  end
+
+  def self.shelf(releases)
+    newest_first = releases.sort_by(&:published_at).reverse
+    [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
   end
 
   def self.simulator(releases = all)

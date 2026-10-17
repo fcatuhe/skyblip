@@ -54,15 +54,15 @@ The update page (`manage.*`) installs firmware and edits device settings using `
 
 ## Firmware and simulator releases
 
-GitHub Releases hold firmware and the simulator runtime. Loading an app page never waits for GitHub. A separate eager Turbo Frame requests the shelf or simulator build from Rails, which lists the published releases live. The shelf offers the newest stable release and kept development builds. The simulator uses the newest stable release with simulator assets, falling back to the newest main development build while there is none. It never chooses a feature-branch simulator automatically.
+GitHub Releases hold firmware and the simulator runtime. Loading an app page never waits for GitHub. A separate eager Turbo Frame requests the shelf or simulator build from Rails, which lists the published releases live. The shelf offers the newest stable release and kept development builds. The simulator uses the newest stable release when it carries the simulator files, and the newest main development build otherwise. It never chooses a feature-branch simulator automatically.
 
-The browser fetches selected files through `/releases/:tag/:file`, because GitHub's download host does not allow browser CORS requests. The endpoint accepts only our repository, recognized release tags, firmware filenames and the three simulator runtime filenames. Redirects are limited to GitHub's asset hosts, downloads are size-bounded, and successful immutable responses are browser-cacheable. The server does not retain release files or metadata between requests.
+The browser fetches selected files through `/releases/:tag/:file`, because GitHub's download host does not allow browser CORS requests. The endpoint accepts only our repository, recognized release tags, firmware filenames and the four simulator filenames. Redirects are limited to GitHub's asset hosts, downloads are size-bounded, and successful immutable responses are browser-cacheable. The server does not retain release files or metadata between requests.
 
 Release type selects the offered channel, not proof of a signing key. The update client reads the chosen binary and checks its actual key, version and sensor-hub requirements before uploading. MCUboot independently verifies its signature. Production release checksums and provenance stay published on GitHub. The server does not add attestation verification.
 
 A GitHub failure is contained in the frame. The update page reports the unavailable list and keeps its file picker. The simulator reports an unavailable build instead of blocking the page. Requests start without a GitHub token, sharing the unauthenticated limit of 60 API calls per hour on the crooz IP. #132 tracks adding a token. #131 tracks Litestream and kamal-backup before durable device registrations.
 
-`firmware.yml` and `release.yml` publish `skyblip_simulator.js`, `skyblip_simulator.wasm` and `embed.js` with firmware images. Older releases without those files cannot run in the simulator. Publishing or pruning firmware never deploys Rails. Changing app JS, CSS or content does.
+`firmware.yml` and `release.yml` publish `skyblip_simulator.js`, `skyblip_simulator.wasm`, `embed.js` and `scenarios.json` with firmware images. Older releases without those files cannot run in the simulator. Publishing or pruning firmware never deploys Rails. Changing app JS, CSS or content does.
 
 ## Building and deploying
 

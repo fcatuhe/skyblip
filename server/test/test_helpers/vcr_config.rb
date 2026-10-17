@@ -4,8 +4,7 @@ VCR.configure do |config|
   config.cassette_library_dir = "test/vcr_cassettes"
   config.hook_into :webmock
   config.default_cassette_options = {
-    record: ENV["CASSETTES_RECORD"] == "1" ? :all : :once,
-    match_requests_on: %i[method uri]
+    record: ENV["CASSETTES_RECORD"] == "1" ? :all : :once
   }
 
   # INFO: fc 17oct26 GitHub redirects a download to a signed URL that expires, so the recording keeps none of it.

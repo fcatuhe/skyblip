@@ -57,7 +57,11 @@ export default class extends Controller {
   take() {
     if (this.selecting) return
     const option = this.shelfTarget.selectedOptions[0]
-    if (!option?.value) return this.#shelve(null)
+    if (!option?.value) {
+      this.#shelve(null)
+      if (!this.fileTarget.value) this.updater.clearImage()
+      return
+    }
     this.fileTarget.value = ""
     this.#shelve(option)
     return this.#selectImage(async signal => {

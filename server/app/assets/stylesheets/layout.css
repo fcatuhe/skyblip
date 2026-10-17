@@ -5,6 +5,11 @@
 
   main > :where(section) { padding-block: var(--space-l); }
 
+  .frame-note {
+    padding-block: var(--space-l);
+    padding-inline: max(var(--gutter), (100% - var(--measure)) / 2);
+  }
+
   .lede {
     color: var(--ink-soft);
     max-inline-size: 72ch;

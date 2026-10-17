@@ -51,8 +51,6 @@ jobs:
           ! cmp -s firmware/keys/production.pub.pem firmware/keys/development.pub.pem \
             || { echo "FAIL: production.pub.pem is the development key"; exit 1; }
 
-  # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
-  # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
   # Its own job, so the Emscripten toolchain never runs on the runner that holds the key.
   simulator:
     name: browser simulator
@@ -84,6 +82,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
+  # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
   image:
     name: signed image
     needs: [tag, simulator]

@@ -1,7 +1,7 @@
 require "test_helper"
 
 class ReleaseTest < ActiveSupport::TestCase
-  test "a simulator release must have all three runtime files" do
+  test "a simulator release must have all three runtime files, the scenarios aside" do
     assert_not release("dev-1005", assets: %w[embed.js]).simulator?
 
     complete = release("dev-1005", assets: Release::SIMULATOR_FILES)
@@ -22,6 +22,16 @@ class ReleaseTest < ActiveSupport::TestCase
     releases = VCR.use_cassette("github/releases") { Release.all }
 
     assert_equal %w[dev-1005 dev-1002 dev-998], releases.map(&:tag)
+  end
+
+  test "the shelf keeps the newest stable release and every development build, never a release candidate" do
+    older_stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z")
+    newer_stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z")
+    candidate = release("v0.3.0-rc1", prerelease: true, published_at: "2026-10-12T00:00:00Z")
+    main = release("dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z")
+    branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z")
+
+    assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
   end
 
   test "the simulator prefers the newest stable release, then the newest main build" do
