@@ -315,6 +315,23 @@ TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
     CHECK_FALSE(radar(beyond).get_pixel(100, 78));
 }
 
+// The square is the member's depiction, so a ring holding only the formation is an empty ring.
+TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation") {
+    RadarTarget pair[2] = {{-60, -120, 10, Level::None, 0, false, 30000, 0, 0, false, true},
+                           abeam[0]};
+    RadarSnapshot together = flying(0);
+    together.speed_mm_s = 30000;
+    together.n_targets = 1;
+    together.targets = pair;
+    together.formation_members = 1;
+    CHECK(marks_in(together, 0, 0, 200, 200) == 0);
+
+    RadarSnapshot with_traffic = together;
+    with_traffic.n_targets = 2;
+    CHECK(radar(with_traffic).get_pixel(100, 78));
+    CHECK(radar(with_traffic).get_pixel(97, 56));
+}
+
 // The caret rides the blip, not the tag: a crowded glass drops tags, and a climb through your
 // level is not droppable.
 TEST_CASE("radar: a caret on the blip says climbing or sinking, past 500 fpm") {

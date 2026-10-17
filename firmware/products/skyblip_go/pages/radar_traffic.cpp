@@ -350,10 +350,10 @@ InView in_view(const RadarSnapshot& snap, int16_t track) {
     for (int i = 0; i < snap.n_targets && v.n < kMaxRadarTargets; i++) {
         const Plotted p = plot_point(snap, snap.targets[i], track);
         if (!p.shown) continue;
-        if (p.in_ring) v.in_ring++;
         // A member of the formation is drawn once, as the square around own ship
         // and the count in its quadrant. Twice is two aircraft.
         if (snap.targets[i].in_formation) continue;
+        if (p.in_ring) v.in_ring++;
         v.shown[v.n] = p;
         v.target[v.n] = &snap.targets[i];
         v.n++;
