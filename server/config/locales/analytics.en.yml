@@ -1,0 +1,130 @@
+en:
+  analytics:
+    title: "Analytics"
+    all: "All"
+    unknown: "Unknown"
+    unknown_user: "User %{id}"
+    no_results: "No results"
+    clear_filter: "Remove the filter"
+    filtered_by: "Filtered by"
+    segments:
+      non_user: "Non-users"
+      user: "Users"
+      internal: "Internal"
+    sections:
+      public: "Public"
+      briefing: "Briefing"
+      admin: "Admin"
+    channels:
+      direct: "Direct"
+      search: "Search"
+      social: "Social"
+      email: "Email"
+      referral: "Referral"
+    periods:
+      "1": "1d"
+      "7": "7d"
+      "30": "30d"
+      "90": "90d"
+    period:
+      start_on: "From"
+      end_on: "To"
+      apply: "Apply"
+    nav:
+      overview: "Overview"
+      visitors: "Visitors"
+    overview:
+      visitors: "Visitors"
+      visits: "Visits"
+      pageviews: "Pageviews"
+      bounce_rate: "Bounce rate"
+      visit_duration: "Visit duration"
+      chart_title: "Overview"
+      breakdowns:
+        pages: "Pages"
+        sources: "Sources"
+        environment: "Environment"
+        location: "Location"
+      legend:
+        title: "Legend"
+        scope:
+          term: "Scope"
+          definition: "The visits that pass the filters of the bar, over the chosen period. The admin menu opens on the visits without an account, over 30 days, so your own visits stay out."
+        segments:
+          term: "Segments"
+          definition: "Internal: the visits of an admin, and every visit from a browser an admin once signed in from. Users: the same for any other account. Non-users: everyone else."
+        visitors:
+          term: "Visitors"
+          definition: "Distinct visitors, told apart by their browser cookie. A visitor can count in several rows of a tab, so visitors do not add up."
+        duration:
+          term: "Duration"
+          definition: "The average length of whole visits, with the tab visible. Never the time spent on a single page."
+        paths:
+          term: "Paths"
+          definition: "A visit counts in every path it viewed. Pageviews: how many times the path was shown. Duration: the length of the visits that went through the path."
+        ranking:
+          term: "Rows"
+          definition: "The first 10 of each tab, by pageviews."
+    visitors:
+      session: "Last visit"
+      visitor: "Visitor"
+      visits: "Visits"
+      views: "Views"
+      duration: "Duration"
+      total_views: "Total views"
+      total_duration: "Total duration"
+      newer: "Newer"
+      older: "Older"
+    visitor:
+      title: "Visitor"
+      back: "All visitors"
+      first_seen: "First seen"
+      last_seen: "Last seen"
+      visits: "Visits"
+      views: "Views"
+      events: "Events"
+      duration: "Duration"
+      load_more: "Older visits"
+      sources:
+        all: "All"
+        server: "Server"
+        browser: "Browser"
+    timeline:
+      visit_start: "Visit start"
+      visit_end: "Visit end"
+      view: "View"
+      click: "Click"
+    filters:
+      path:
+        one: "Path"
+        other: "Paths"
+      entry:
+        one: "Entry"
+        other: "Entries"
+      exit:
+        one: "Exit"
+        other: "Exits"
+      referrer:
+        one: "Referrer"
+        other: "Referrers"
+      channel:
+        one: "Channel"
+        other: "Channels"
+      browser:
+        one: "Browser"
+        other: "Browsers"
+      os:
+        one: "OS"
+        other: "OS"
+      device:
+        one: "Device"
+        other: "Devices"
+      country:
+        one: "Country"
+        other: "Countries"
+      region:
+        one: "Region"
+        other: "Regions"
+      city:
+        one: "City"
+        other: "Cities"

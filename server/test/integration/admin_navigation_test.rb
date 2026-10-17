@@ -14,7 +14,7 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
 
     get root_path
 
-    assert_select ".site-nav a[href=?]", admin_users_path, text: "Admin"
+    assert_select ".site-nav a[href=?]", admin_analytics_path(filters: { segment: "non_user" }), text: "Admin"
   end
 
   test "a user who is not an admin does not" do
@@ -29,10 +29,10 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
     sign_in_as users(:francois)
 
     get root_path(locale: :fr)
-    assert_select ".site-nav a[href=?]", "/admin/users", text: "Admin"
+    assert_select ".site-nav a[href=?]", "/admin/analytics?filters%5Bsegment%5D=non_user", text: "Admin"
 
-    get admin_users_path(locale: :fr)
-    assert_select "h1", text: "Users"
+    get admin_analytics_path(locale: :fr)
+    assert_select "h1", text: "Analytics"
   end
 
   test "the admin area links its sections and signs out" do

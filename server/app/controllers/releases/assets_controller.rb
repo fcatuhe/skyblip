@@ -2,6 +2,9 @@ class Releases::AssetsController < ApplicationController
   # INFO: fc 17oct26 Rails refuses a GET answered with JavaScript unless forgery protection is off, and embed.js is one.
   skip_forgery_protection
   allow_unauthenticated_access
+  # INFO: fc 17oct26 a response cached a year by anyone must not carry a visitor's cookie
+  skip_before_action :track_ahoy_visit
+  skip_after_action :track_action
 
   def show
     bytes = Release.download(params[:release_tag], params[:file])

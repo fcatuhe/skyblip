@@ -3,6 +3,7 @@
   <div class="admin">
     <nav class="admin-nav" aria-label="Admin">
       <ul>
+        <li><%= link_to "Analytics", analytics_default_path, "aria-current": ("page" if controller_path.start_with?("admin/analytics")) %></li>
         <li><%= link_to "Users", admin_users_path, "aria-current": ("page" if controller_path == "admin/users") %></li>
         <li><%= link_to "Jobs", admin_mission_control_jobs_path %></li>
       </ul>

@@ -1,0 +1,34 @@
+<%# locals: (groups:) %>
+<% if groups.any? %>
+  <% groups.each do |group| %>
+    <section class="analytics-timeline">
+      <h2><%= group[:date] ? l(group[:date], format: "%A %b %-d") : t("analytics.unknown") %></h2>
+      <ol>
+        <% group[:events].each do |entry| %>
+          <% if entry.session_marker? %>
+            <li class="analytics-timeline__marker">
+              <time><%= l(entry.display_time, format: "%H:%M:%S") if entry.display_time %></time>
+              <span><%= entry.session_start? ? t("analytics.timeline.visit_start") : "#{t("analytics.timeline.visit_end")}, #{format_duration(entry.duration)}" %></span>
+            </li>
+          <% else %>
+            <li class="<%= class_names("analytics-timeline__event", "analytics-timeline__event--server": !entry.browser_event?) %>">
+              <time><%= l(entry.time, format: "%H:%M:%S") if entry.time %></time>
+              <span>
+                <% if entry.view? %>
+                  <%= t("analytics.timeline.view") %> <strong><%= entry.label %></strong>
+                <% elsif entry.click? %>
+                  <%= t("analytics.timeline.click") %><% if entry.click_text.present? %> <strong>"<%= entry.click_text %>"</strong><% end %>
+                <% else %>
+                  <strong><%= entry.label %></strong>
+                <% end %>
+                <% if entry.detail.present? %><span class="note"><%= entry.detail %></span><% end %>
+              </span>
+            </li>
+          <% end %>
+        <% end %>
+      </ol>
+    </section>
+  <% end %>
+<% else %>
+  <p class="note"><%= t("analytics.no_results") %></p>
+<% end %>

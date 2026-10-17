@@ -1,0 +1,33 @@
+<%# locals: (url:, filter_params:) %>
+<div class="admin-toolbar">
+  <%= form_with url:, method: :get, class: "admin-period", data: { turbo_action: "replace" } do |form| %>
+    <% filter_params.except(:start_on, :end_on).compact_blank.each do |key, value| %>
+      <%= hidden_field_tag "filters[#{key}]", value, id: nil %>
+    <% end %>
+    <% %i[start_on end_on].each do |key| %>
+      <%= label_tag "filters_#{key}", t("analytics.period.#{key}") %>
+      <%= date_field_tag "filters[#{key}]", filter_params[key]&.to_date %>
+    <% end %>
+    <%= form.submit t("analytics.period.apply"), name: nil, class: "button button--secondary button--small" %>
+  <% end %>
+
+  <nav class="admin-pills" aria-label="Period"><%= analytics_period_links(url, filter_params) %></nav>
+  <nav class="admin-pills" aria-label="Section">
+    <%= analytics_choice_links(url, filter_params, key: :section, values: Analytics::Visit.entry_sections.keys) %>
+  </nav>
+  <nav class="admin-pills" aria-label="Segment">
+    <%= analytics_choice_links(url, filter_params, key: :segment, values: Analytics::Visit.segments.keys) %>
+  </nav>
+</div>
+
+<% if display_filters(filter_params).any? %>
+  <ul class="admin-chips" aria-label="<%= t("analytics.filtered_by") %>">
+    <% display_filters(filter_params).each do |key, value| %>
+      <li>
+        <%= link_to analytics_path_with(url, filter_params.except(key)), title: t("analytics.clear_filter") do %>
+          <%= analytics_filter_chip_label(key, value) %> <span aria-hidden="true">&times;</span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

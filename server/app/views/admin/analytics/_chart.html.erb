@@ -1,0 +1,28 @@
+<%# locals: (chart:) %>
+<div class="analytics-chart">
+  <div class="analytics-chart__scale" aria-hidden="true">
+    <% chart.axis.each do |step| %>
+      <span><%= number_with_precision(step, precision: 1, strip_insignificant_zeros: true, delimiter: ",") %></span>
+    <% end %>
+  </div>
+  <svg class="analytics-chart__plot" viewBox="<%= chart.view_box %>" preserveAspectRatio="none" role="img" aria-label="<%= analytics_chart_summary(chart) %>">
+    <% chart.lines.each do |line| %>
+      <polyline class="analytics-chart__line analytics-chart__line--<%= line.name %>" points="<%= line.points %>" vector-effect="non-scaling-stroke" />
+    <% end %>
+    <% chart.marks.each do |mark| %>
+      <rect class="analytics-chart__mark" x="<%= mark.x - chart.band / 2 %>" y="0" width="<%= chart.band %>" height="100">
+        <title><%= analytics_mark_title(mark, hourly: chart.hourly?) %></title>
+      </rect>
+    <% end %>
+  </svg>
+  <div class="analytics-chart__ticks">
+    <% analytics_chart_ticks(chart).each do |mark| %>
+      <span><%= analytics_mark_time(mark, hourly: chart.hourly?) %></span>
+    <% end %>
+  </div>
+  <ul class="analytics-legend">
+    <% chart.lines.each do |line| %>
+      <li><span class="analytics-legend__swatch analytics-legend__swatch--<%= line.name %>" aria-hidden="true"></span><%= t("analytics.overview.#{line.name}") %></li>
+    <% end %>
+  </ul>
+</div>

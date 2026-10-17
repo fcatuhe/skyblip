@@ -1,0 +1,10 @@
+<%# locals: (title:, keys:, breakdowns:, filter_params:) %>
+<section class="admin-card">
+  <h2><%= title %></h2>
+  <% keys.each_with_index do |key, index| %>
+    <details class="admin-breakdown" name="<%= title.parameterize %>" <%= "open" if index.zero? %>>
+      <summary><%= analytics_filter_label(key, count: 2) %></summary>
+      <%= render "admin/analytics/table", rows: breakdowns[key], filter_key: key, filter_params: %>
+    </details>
+  <% end %>
+</section>
