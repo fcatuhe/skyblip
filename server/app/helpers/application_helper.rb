@@ -20,7 +20,7 @@ module ApplicationHelper
   end
 
   def canonical_url
-    url_for(only_path: false)
+    Content.canonical_url(@page ? @page.url_path : request.path)
   end
 
   def robots_content

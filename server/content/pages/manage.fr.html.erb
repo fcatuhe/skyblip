@@ -2,7 +2,7 @@
 title: Mettre à jour et régler un skyBlip Go
 nav_title: Mise à jour
 slug: mise-a-jour
-description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votre navigateur, en Bluetooth · deux pressions sur l’appareil autorisent chaque changement, et la page dit en clair pourquoi elle s’est arrêtée quand elle s’arrête.
+description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votre navigateur, en Bluetooth · deux pressions sur l'appareil autorisent chaque changement, et la page dit en clair pourquoi elle s'est arrêtée quand elle s'arrête.
 ---
 
 <section id="update">
@@ -22,7 +22,7 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
   </p>
 
   <%= render "shared/manage",
-        unsupported: "Ce navigateur n’a pas Web Bluetooth, cette page ne peut donc pas joindre l’appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d’iPhone et d’iPad n’en ont pas.",
+        unsupported: "Ce navigateur n'a pas Web Bluetooth, cette page ne peut donc pas joindre l'appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d'iPhone et d'iPad n'en ont pas.",
         connect: "Connecter",
         disconnect: "Déconnecter",
         connecting: "Votre navigateur liste les appareils à portée : choisissez skyBlip Go suivi de son adresse.",
@@ -33,45 +33,41 @@ description: Un nouveau firmware et des réglages pour un skyBlip Go depuis votr
         charging: "en charge",
         flight: { label: "Vol", ground: "au sol", airborne: "en vol", unknown: "pas encore connu" },
         settings: {
-          legend: "Réglages de l’appareil",
-          aircraft_type: "Type d’aéronef",
+          legend: "Réglages de l'appareil",
+          aircraft_type: "Type d'aéronef",
           aircraft_types: ["Inconnu", "Avion léger", "Avion lourd", "Hélicoptère", "Planeur", "Ballon",
                            "ULM", "Parapente", "Parachutiste", "VTOL", "Autogire"],
           callsign: "Indicatif",
-          callsign_hint: "Jusqu’à neuf lettres, chiffres, tirets ou blancs. Vide, aucun nom n’est émis.",
+          callsign_hint: "Jusqu'à neuf lettres, chiffres, tirets ou blancs. Vide, aucun nom n'est émis.",
           units: "Unités",
           unit_names: ["Aéronautiques : NM et kt", "Métriques : km et km/h"],
-          alarm: "Son de l’alarme",
-          alarm_volume: "Volume de l’alarme",
+          alarm: "Son de l'alarme",
+          alarm_volume: "Volume de l'alarme",
           volume_names: ["Coupé : vibreur seul", "Faible", "Fort"],
           save: "Enregistrer",
-          reset: "Revenir aux réglages d’origine",
-          default: "D’origine : %{value}",
+          reset: "Revenir aux réglages d'origine",
+          default: "D'origine : %{value}",
           on: "activé",
           off: "désactivé",
           none: "aucun",
-          confirm_set: "Autorisez le changement : l’écran dit SETTINGS, pressez deux fois."
+          confirm_set: "Autorisez le changement : l'écran dit SETTINGS, pressez deux fois."
         },
         advice: "Fichier à envoyer",
         chosen: "Image choisie",
         full: "complète",
         slim: "allégée",
-        shelf: "Une image publiée, signée avec la clé que cet appareil reconnaît",
-        shelf_prompt: "Choisissez une image",
-        shelf_release: "Sa version sur GitHub, avec le .uf2",
         file: "Ou votre propre fichier de firmware, en .signed.bin",
         install: "Installer",
         steps: {
-          dfu: "Autorisez la mise à jour : l’écran dit FIRMWARE et la version, pressez deux fois.",
-          upload: "L’image voyage et l’écran dit RECEIVING. Gardez cette page ouverte et l’appareil près de vous.",
-          install: "L’appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
+          dfu: "Autorisez la mise à jour : l'écran dit FIRMWARE et la version, pressez deux fois.",
+          upload: "L'image voyage et l'écran dit RECEIVING. Gardez cette page ouverte et l'appareil près de vous.",
+          install: "L'appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
         },
         remaining: "environ %{minutes} min restantes",
         recovery: "Si le firmware ne prend pas : le lecteur USB",
-        confirm_recovery: "L’écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER : pressez deux fois.",
-        recovering: "L’écran dit maintenant USB BOOTLOADER. S’il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l’appareil est alors un lecteur USB nommé TECHOBOOT : déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n’est émis pendant ce temps.",
-        recover: "Redémarrer en lecteur USB",
-        missing: "La page de mise à jour ne fait pas partie de cette version du site." %>
+        confirm_recovery: "L'écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER : pressez deux fois.",
+        recovering: "L'écran dit maintenant USB BOOTLOADER. S'il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l'appareil est alors un lecteur USB nommé TECHOBOOT : déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n'est émis pendant ce temps.",
+        recover: "Redémarrer en lecteur USB" %>
 </section>
 
 <section>

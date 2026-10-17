@@ -1,4 +1,3 @@
-# View-layer localization for the Localizable content assigned to @page.
 module LocaleHelper
   def page_alternate_paths
     @page_alternate_paths ||= page_alternates.transform_values { |page| page_url_for(page, only_path: true) }
@@ -12,19 +11,20 @@ module LocaleHelper
   end
 
   def page_url_for(page, only_path: false, anchor: nil)
-    locale = page.locale unless page.locale == I18n.default_locale
-
-    if page.base_slug == "index"
-      root_url(locale:, only_path:, anchor:)
+    locale = page.locale_parameter
+    path = if page.base_slug == "index"
+      root_path(locale:, anchor:)
     else
-      page_url(page, locale:, only_path:, anchor:)
+      page_path(page, locale:, anchor:)
     end
+
+    only_path ? path : Content.canonical_url(path)
   end
 
   private
     def page_alternates
       return {} unless @page
 
-      @page_alternates ||= I18n.available_locales.index_with { |locale| Page.find_by(base_slug: @page.base_slug, locale:) }.compact
+      @page_alternates ||= I18n.available_locales.index_with { |locale| Content::Page.find_by(base_slug: @page.base_slug, locale:) }.compact
     end
 end

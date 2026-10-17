@@ -3,8 +3,8 @@ require_relative "boot"
 require "rails"
 # Pick the frameworks you want:
 require "active_model/railtie"
-# require "active_job/railtie"
-# require "active_record/railtie"
+require "active_job/railtie"
+require "active_record/railtie"
 # require "active_storage/engine"
 require "action_controller/railtie"
 # require "action_mailer/railtie"
@@ -12,13 +12,13 @@ require "action_controller/railtie"
 # require "action_text/engine"
 require "action_view/railtie"
 require "action_cable/engine"
-# require "rails/test_unit/railtie"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Website
+module Skyblip
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
@@ -40,6 +40,7 @@ module Website
     config.generators.system_tests = nil
 
     config.assets.paths << Rails.root.join("content_images")
+    config.x.public_url = "https://skyblip.eu"
 
     config.i18n.available_locales = %i[ en fr ]
     config.i18n.default_locale = :en

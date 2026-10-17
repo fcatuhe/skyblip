@@ -1,7 +1,4 @@
-/* The case itself is drawn by the harness's device.css, served from public/
-   beside the WASM. These rules are unlayered on purpose: that file is too, and
-   a layered rule loses to an unlayered one whatever its specificity says. */
-
+@layer simulator {
 .simulator {
   --sim-glass: #c9cbc4;
   --sim-etch: #a9aca4;
@@ -311,4 +308,5 @@
     margin: 0 0 var(--space-l);
   }
   .simulator-status strong { color: var(--ink); }
+}
 }

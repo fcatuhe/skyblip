@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+# Production eager loads every file under app/ and the autoloaded parts of lib/.
+# Anything that requires a development or test gem at load time therefore boots
+# fine here, where those gems are installed, and dies on the deployed image.
+#
+# The test suite cannot catch this: it runs with the test bundle, so the gems are
+# already loaded and the check would always pass. Only a subprocess without them
+# tells the truth. Optional dependencies belong inside the method that uses them.
+
+require "open3"
+
+ENV["BUNDLE_WITHOUT"] = "development:test"
+ENV["RAILS_ENV"] = "production"
+ENV["SECRET_KEY_BASE"] ||= "eager_load_check"
+
+# INFO: rr 30sep26 no credentials, as on GitHub, so the result never depends on which keys this machine holds
+EAGER_LOAD_WITHOUT_CREDENTIALS = <<~RUBY
+  require_relative "config/application"
+  Rails.application.config.credentials.content_path = Rails.root.join("tmp/eager_load_check/no_credentials.yml.enc")
+  Rails.application.initialize!
+  Rails.application.eager_load!
+RUBY
+
+output, status = Open3.capture2e(RbConfig.ruby, "-e", EAGER_LOAD_WITHOUT_CREDENTIALS, chdir: File.expand_path("..", __dir__))
+
+if status.success?
+  puts "✅ The app eager loads with the production bundle."
+else
+  puts "❌ The app does not eager load without the development bundle:"
+  puts output.lines.grep(/LoadError|cannot load|\.rb:/).first(6).join
+  puts "\nA file loaded at boot requires a gem production does not have."
+  puts "Move that require inside the method that needs it."
+  exit 1
+end

@@ -23,7 +23,20 @@ gem "stimulus-rails"
 gem "bootsnap", require: false
 
 gem "decant"
-gem "parklife-rails"
+
+# Use sqlite3 as the database for Active Record
+gem "sqlite3", ">= 2.1"
+
+# Use the database-backed adapters for Rails.cache, Active Job, and Action Cable
+gem "solid_cache"
+gem "solid_queue"
+gem "solid_cable"
+
+# Deploy this application anywhere as a Docker container [https://kamal-deploy.org]
+gem "kamal", require: false
+
+# Add HTTP asset caching/compression and X-Sendfile acceleration to Puma [https://github.com/basecamp/thruster/]
+gem "thruster", require: false
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
@@ -37,6 +50,16 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  # Serves the app for system tests
+  gem "capybara"
+end
+
+group :test do
+  # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
+  gem "cuprite"
+  gem "vcr"
+  gem "webmock"
 end
 
 group :development do

@@ -1,6 +1,4 @@
 module SimulatorHelper
-  SIMULATOR_ROOT = "simulator".freeze
-
   GAUGE_RADIUS = 49
   GAUGE_MINOR = 4
   GAUGE_MAJOR = 8
@@ -46,24 +44,12 @@ module SimulatorHelper
     { keys: "T", action: :traffic }
   ].freeze
 
-  def simulator_build
-    @simulator_build ||= Rails.public_path.join(SIMULATOR_ROOT).glob("*/embed.js").first&.dirname&.basename&.to_s
-  end
-
-  def simulator_module_path
-    "/#{SIMULATOR_ROOT}/#{simulator_build}/embed.js" if simulator_build
-  end
-
-  def simulator_stylesheet_path
-    "/#{SIMULATOR_ROOT}/#{simulator_build}/device.css" if simulator_build
-  end
-
-  def update_client_build
-    @update_client_build ||= Rails.public_path.join(SIMULATOR_ROOT).glob("*/update.js").first&.dirname&.basename&.to_s
+  def simulator_module_path(tag:)
+    release_asset_path(tag, "embed.js", locale: nil)
   end
 
   def update_module_path
-    "/#{SIMULATOR_ROOT}/#{update_client_build}/update.js" if update_client_build
+    asset_path("skyblip/update.js")
   end
 
   def gauge_marks(dial)

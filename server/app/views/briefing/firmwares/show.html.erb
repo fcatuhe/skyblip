@@ -1,0 +1,23 @@
+<%= turbo_frame_tag :firmware_shelf do %>
+  <% if @unavailable %>
+    <p class="note" role="status"><%= t("firmwares.unavailable") %></p>
+  <% elsif @releases.none? { |release| release.firmware_files.any? } %>
+    <p class="note" role="status"><%= t("firmwares.empty") %></p>
+  <% else %>
+    <div class="manage-row">
+      <label class="manage-file">
+        <span><%= t("firmwares.label") %></span>
+        <select data-manage-target="shelf" data-action="manage#take" disabled>
+          <option value=""><%= t("firmwares.prompt") %></option>
+          <% @releases.each do |release| %>
+            <% release.firmware_files.each do |file| %>
+              <option value="<%= release_asset_path(release.tag, file, locale: nil) %>"
+                      data-channel="<%= release.channel %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t(file.end_with?(".full.signed.bin") ? "firmwares.full" : "firmwares.slim") %></option>
+            <% end %>
+          <% end %>
+        </select>
+      </label>
+      <a class="manage-release" data-manage-target="release" hidden><%= t("firmwares.release") %></a>
+    </div>
+  <% end %>
+<% end %>

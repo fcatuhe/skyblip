@@ -11,15 +11,7 @@ description: Le firmware de skyBlip Go tourne dans votre navigateur. Allumez-le,
 </header>
 
 <section id="simulator">
-  <%= render "shared/simulator",
-        wake: "Maintenez la touche du bas pour le rallumer.",
-        traffic: "Ajouter un trafic dans le ciel",
-        keys: "Pilotez au clavier, les flèches comme un manche : bas pour monter.",
-        glass: "L’écran e-paper simulé d’un skyBlip Go",
-        key: "Le bouton de l’appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume",
-        pad: "Le pavé tactile : une tape change de page, un contact d’une seconde ramène le radar",
-        reset: "RST : redémarrer l’appareil",
-        missing: "Le simulateur ne fait pas partie de cette version du site." %>
+  <%= render "shared/simulator_loader" %>
 
   <p class="note">
     Un à huit trafics vont et viennent, chacun émettant de vraies trames ADS-L,

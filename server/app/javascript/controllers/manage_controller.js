@@ -30,7 +30,12 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this.recheck)
+    this.selection?.abort()
     this.updater?.disconnect()
+  }
+
+  shelfTargetConnected() {
+    if (this.updater) this.#render(this.updater.state)
   }
 
   link() {
@@ -41,29 +46,32 @@ export default class extends Controller {
     this.updater.disconnect()
   }
 
-  async choose() {
+  choose() {
+    if (this.selecting) return
     const [file] = this.fileTarget.files
     if (!file) return
     this.#shelve(null)
-    await this.updater.choose(new Uint8Array(await file.arrayBuffer()), file.name)
+    return this.#selectImage(async () => new Uint8Array(await file.arrayBuffer()), file.name)
   }
 
-  async take() {
+  take() {
+    if (this.selecting) return
     const option = this.shelfTarget.selectedOptions[0]
     if (!option?.value) return this.#shelve(null)
     this.fileTarget.value = ""
     this.#shelve(option)
-    const response = await fetch(option.value)
-    if (!response.ok) {
-      this.messageTarget.textContent = this.#word("shelf_failed")
-      return
-    }
-    await this.updater.choose(new Uint8Array(await response.arrayBuffer()), option.value.split("/").pop())
+    return this.#selectImage(async signal => {
+      const response = await fetch(option.value, { signal })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return new Uint8Array(await response.arrayBuffer())
+    }, option.value.split("/").pop())
   }
 
   install() {
-    this.estimate = null
-    this.updater.install()
+    if (!this.selecting) {
+      this.estimate = null
+      this.updater.install()
+    }
   }
 
   recover() {
@@ -83,6 +91,29 @@ export default class extends Controller {
     this.updater.resetSettings()
   }
 
+  async #selectImage(read, name) {
+    // INFO: fc 17oct26 selections are serialized and installation stays disabled until the new image is fully read and checked.
+    this.selecting = true
+    this.selection = new AbortController()
+    this.updater.clearImage()
+    let failed = false
+    try {
+      const bytes = await read(this.selection.signal)
+      if (!this.selection.signal.aborted) await this.updater.choose(bytes, name)
+    } catch (error) {
+      failed = error.name !== "AbortError"
+    } finally {
+      this.selecting = false
+      if (this.element.isConnected) {
+        this.#render(this.updater.state)
+        if (failed) {
+          this.#shelve(null)
+          this.messageTarget.textContent = this.#word("shelf_failed")
+        }
+      }
+    }
+  }
+
   #render(state) {
     const linked = LINKED.has(state.phase)
     const idle = state.phase === "ready" && this.updater.onGround
@@ -90,7 +121,8 @@ export default class extends Controller {
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
-    this.installTarget.disabled = !idle || !state.file
+    this.installTarget.disabled = this.selecting || !idle || !state.file
+    this.fileTarget.disabled = this.selecting || !["offline", "ready"].includes(state.phase)
     this.#offer(state, idle)
     this.recoverTarget.disabled = !idle
     this.#facts(state)
@@ -106,12 +138,14 @@ export default class extends Controller {
   #offer({ image }, idle) {
     if (!this.hasShelfTarget) return
     const options = [...this.shelfTarget.options].filter(option => option.value)
-    for (const option of options) option.hidden = !image?.key || option.dataset.key !== image.key
+    const channel = image?.downgrade ? "development" : "release"
+    // INFO: fc 17oct26 release channels filter choices. The updater verifies the downloaded image's signing key before installation.
+    for (const option of options) option.hidden = !image?.key || option.dataset.channel !== channel
     if (this.shelfTarget.selectedOptions[0]?.hidden) {
       this.shelfTarget.value = ""
       this.#shelve(null)
     }
-    this.shelfTarget.disabled = !idle || options.every(option => option.hidden)
+    this.shelfTarget.disabled = this.selecting || !idle || options.every(option => option.hidden)
   }
 
   #shelve(option) {

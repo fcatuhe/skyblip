@@ -1,0 +1,11 @@
+<header class="page-hero page-hero--compact">
+  <h1><%= t("briefing.title") %></h1>
+  <p class="page-hero-subtitle"><%= t("briefing.description") %></p>
+</header>
+<section class="band">
+  <ul>
+    <li><%= link_to t("briefing.manage"), page_path(slug: "manage") %></li>
+    <li><%= link_to t("briefing.simulator"), briefing_simulator_path %></li>
+    <li><%= link_to t("briefing.console"), briefing_console_path %></li>
+  </ul>
+</section>

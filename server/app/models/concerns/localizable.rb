@@ -14,6 +14,10 @@ module Localizable
     I18n.available_locales.include?(suffix) ? suffix : I18n.default_locale
   end
 
+  def locale_parameter
+    locale unless locale == I18n.default_locale
+  end
+
   def base_slug
     slug.delete_suffix(".#{locale}")
   end

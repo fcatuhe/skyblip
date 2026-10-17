@@ -21,8 +21,8 @@ module PagesHelper
 
   private
     def find_page(slug)
-      page = Page.find_by(base_slug: slug) || Page.find_by(base_slug: slug, locale: I18n.default_locale)
-      raise Decant::FileNotFound, "Couldn't find Page with 'base_slug'=#{slug} and 'locale'=#{I18n.locale}" unless page
+      page = Content::Page.find_by(base_slug: slug) || Content::Page.find_by(base_slug: slug, locale: I18n.default_locale)
+      raise Decant::FileNotFound, "Couldn't find Content::Page with 'base_slug'=#{slug} and 'locale'=#{I18n.locale}" unless page
 
       page
     end

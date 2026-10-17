@@ -1,4 +1,4 @@
-@layer reset, base, components;
+@layer reset, base, components, device, simulator, workbench;
 
 @font-face {
   font-family: "Inter";
