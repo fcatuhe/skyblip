@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  constraints host: "www.#{URI(Rails.configuration.x.public_url).host}" do
+    get "(*path)", format: false, to: redirect { |_params, request| "#{Rails.configuration.x.public_url}#{request.fullpath}" }
+  end
+
   get "up" => "rails/health#show", as: :rails_health_check
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 

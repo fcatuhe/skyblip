@@ -7,7 +7,9 @@ servers:
 
 proxy:
   ssl: true
-  host: skyblip.eu
+  hosts:
+    - skyblip.eu
+    - www.skyblip.eu
 
 registry:
   server: localhost:5555
