@@ -1,6 +1,6 @@
 # core/store
 
-One flash partition, two rings on it. `Flights` is the pilot's log, written at one record every four seconds; `Diagnostics` is the engineering capture, written in bursts that fill a sector in under a minute. They share the sectors rather than each owning a fixed slice, because a device that never records a diagnostics capture should still hold every hour the partition can, and a capture taken once a year should not have cost the pilot a fixed tenth of their season.
+One flash partition, two rings on it. `Flights` is the pilot's log, written at one record a second; `Diagnostics` is the engineering capture, written in bursts that fill a sector in under a minute. They share the sectors rather than each owning a fixed slice, because a device that never records a diagnostics capture should still hold every hour the partition can, and a capture taken once a year should not have cost the pilot a fixed tenth of their season.
 
 Pure, framework-free, host-tested, and it never touches flash. `SectorAllocator` decides which sector is next; the service that owns the part does the erasing and the writing.
 
@@ -55,7 +55,7 @@ Both run on the service loop that also arms the radio and parses the GNSS, so ne
 | Diagnostics, Flights at the floor | its own oldest |
 | Diagnostics, Flights at the floor and owning nothing to recycle | nothing, and the caller counts the refusal |
 
-Flights eats Diagnostics before it eats itself, because a flight is the thing the device exists to record and a capture is a debugging aid with a session in front of it. Diagnostics grows the other way round: it takes from Flights down to the floor and only then recycles itself, so a device that captures once fills the whole partition above the protected hours rather than stopping at the two sectors it happened to be holding. On a 298-sector pool the steady state is 64 sectors of flights and 234 of diagnostics: 39,780 slots, which is about 60 minutes of a full capture at eleven records a second and 166 hours of a power run.
+Flights eats Diagnostics before it eats itself, because a flight is the thing the device exists to record and a capture is a debugging aid with a session in front of it. Diagnostics grows the other way round: it takes from Flights down to the floor and only then recycles itself, so a device that captures once fills the whole partition above the protected hours rather than stopping at the two sectors it happened to be holding. On a 298-sector pool the steady state is 128 sectors of flights and 170 of diagnostics: 28,900 slots, which is about 44 minutes of a full capture at eleven records a second and 120 hours of a power run.
 
 `Claim::session_start` says whether the sector handed out is the first the session owns, which is what the service writes into the label. The allocator decides it rather than the caller: a session with no sector on the partition yet is opening, and one that already has a sector is continuing, even if what it is continuing is a suffix of itself.
 
@@ -63,13 +63,15 @@ A ring's frontier is never handed out: it is the sector being written into, and 
 
 ## The floor
 
-`kFlightsFloorHours` is 12, and it is the promise the pool makes: twelve hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record every 4 s, a sector is 11 min 20 s, so twelve hours is 64 of the partition's 298 sectors: a device that has flown all season keeps its last dozen hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 234 sectors is told no.
+`kFlightsFloorHours` is 6, and it is the promise the pool makes: six hours of flights are never evicted by a diagnostics capture. It is spelled in flight hours rather than in sectors because hours are what the promise is made in, and `flights_floor_sectors()` turns them into the count the policy compares against, from the record period and the slots a sector holds. At 170 slots a sector and one record a second, a sector is 2 min 50 s, so six hours is 128 of the partition's 298 sectors: a device that has flown all season keeps its last six hours whatever the bench does to it, and a diagnostics capture that wants more than the remaining 170 sectors is told no.
+
+It was twelve hours when a record went every four seconds, 64 sectors. At one a second twelve hours is 255 of the 298, which would leave a capture 43 sectors, about 11 minutes. Six hours keeps the floor under half the partition and leaves a capture about 44 minutes. A flight's events ride in its sectors (`../flight/README.md`), so the six hours are a little shorter for a flight with a busy sky: a status is one record in sixty, and each alarm and each aircraft heard one more.
 
 ## The prepared spare
 
 Each ring keeps one spare: a sector already erased and not yet labelled, so a claim is instant.
 
-It exists because of the rate difference. At the flights cadence a sector lasts 11 minutes and the erase that claims a new one is invisible; at diagnostics rates a sector fills in under a minute, so that erase lands next to the direct slot often enough to be a problem. Preparing the spare is the same decision as claiming, so it runs through the same policy: `prepare(owner)` names the sector to erase and takes it away from its previous owner at once, since the erase is about to destroy what was in it.
+It exists because of the rate difference. At the flights cadence a sector lasts almost three minutes and the erase that claims a new one is invisible; at diagnostics rates a sector fills in under a minute, so that erase lands next to the direct slot often enough to be a problem. Preparing the spare is the same decision as claiming, so it runs through the same policy: `prepare(owner)` names the sector to erase and takes it away from its previous owner at once, since the erase is about to destroy what was in it.
 
 Three steps, and the service owns the middle one: `prepare()` names the sector, the service erases it in a pass where the radio is not keying, `note_erased()` says it is ready. An erase that fails leaves the spare reserved and dirty, so the next pass tries the same sector again, and a claim that arrives first takes it and erases it itself. A spare is never handed to the other ring and never handed out twice.
 

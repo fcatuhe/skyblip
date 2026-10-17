@@ -12,7 +12,7 @@ using namespace skyblip;
 namespace {
 
 constexpr uint32_t kBaseUtc = 1785628800;  // 2026-08-02T00:00:00Z
-constexpr uint32_t kSecondsPerSector = 680;
+constexpr uint32_t kSecondsPerSector = 170;
 constexpr uint32_t kSomeSession = 1;
 
 using store::SectorOwner;
@@ -171,10 +171,10 @@ TEST_CASE("sector pool: a quarantined sector is never handed out and never given
     CHECK(pool.quarantined(0));
 }
 
-TEST_CASE("sector pool: twelve flight hours is sixty-four sectors of the partition") {
-    CHECK(store::kFlightsFloorHours == 12);
-    // 12 h is 43200 s, a sector holds 680 s of records, 63.5 rounded up.
-    CHECK(store::flights_floor_sectors(kSecondsPerSector) == 64);
+TEST_CASE("sector pool: six flight hours is 128 sectors of the partition") {
+    CHECK(store::kFlightsFloorHours == 6);
+    // 6 h is 21600 s, a sector holds 170 s of records, 127.1 rounded up.
+    CHECK(store::flights_floor_sectors(kSecondsPerSector) == 128);
     CHECK(store::flights_floor_sectors(0) == 0);
 }
 

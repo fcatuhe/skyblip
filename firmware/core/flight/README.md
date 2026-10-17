@@ -15,7 +15,7 @@ What the aircraft is doing, decided from the fix stream and the barometer. Pure,
 | `gload` | what the airframe is pulling, now and at its worst |
 | `extrapolate` | where an aircraft is now, when the fix it came from is older than now |
 | `arc` | where an aircraft will be, out to the look-ahead the radar draws |
-| `log_record`, `log_session` | what a flight leaves behind, and when a session runs |
+| `log_record`, `log_session`, `log_events` | what a flight leaves behind, when a session runs, and what was around it |
 
 ## atmosphere
 
@@ -137,7 +137,7 @@ Going lower buys less than it looks. A light aircraft gains about two metres a s
 
 What keeps it from going higher is the wind. Rotation is an airspeed and this threshold is a ground speed, so a headwind moves every takeoff down the scale. In still air nothing here unsticks slowly: no aeroplane flown in this airspace may stall below 55 km/h, the German 120 kg class limit, and the FAI and UK 450 kg classes are capped at 65 km/h, which puts their liftoff at 17 to 20 m/s, a glider's on aerotow at 21 and a light aircraft's at 28. Into an 8 m/s breeze the same 120 kg class crosses the fence at 9 m/s over the ground, and a hang glider on tow leaves it at 13 to 15 before any wind at all. A threshold set at the still-air figures is a threshold that declares those launches late or never, and late here means an aircraft transmitting at the parked rate in the air, which is the only failure in this file that costs more than a log line.
 
-What ground speed alone cannot see is a wing that does not need any. A paraglider trims at 10 m/s of airspeed, so into a 5 m/s breeze its ground speed is 5 for the whole flight; a hang glider working a ridge and a balloon in any wind are the same shape of problem. Those read on the ground from launch to landing: no log session, no clock, and the firmware lock open, in the air. What goes on air is not left to this rule: `announced_state` turns on-ground into ADS-L G.1.2's Undefined, which G.1.16 transmits at the full rate, for every G.1.3 category that can fly at no ground speed, so a paraglider on a ridge is never broadcast as parked. A barometric climb used to catch them, and it is gone deliberately, because the vertical rate on this board is a gust, a canopy, a pressure step and a 3 m/s spike whenever the barometer is out, and paying for it was a takeoff declared in the hangar queue. This is the trade the device makes: nothing is declared airborne that a pilot would not call airborne, and three classes of aircraft that never roll are not declared at all.
+What ground speed alone cannot see is a wing that does not need any. A paraglider trims at 10 m/s of airspeed, so into a 5 m/s breeze its ground speed is 5 for the whole flight; a hang glider working a ridge and a balloon in any wind are the same shape of problem. Those read on the ground from launch to landing: no clock, and the firmware lock open, in the air. What goes on air is not left to this rule, and neither is the flight log (`log_session` below): `announced_state` turns on-ground into ADS-L G.1.2's Undefined, which G.1.16 transmits at the full rate, for every G.1.3 category that can fly at no ground speed, so a paraglider on a ridge is never broadcast as parked. A barometric climb used to catch them, and it is gone deliberately, because the vertical rate on this board is a gust, a canopy, a pressure step and a 3 m/s spike whenever the barometer is out, and paying for it was a takeoff declared in the hangar queue. This is the trade the device makes: nothing is declared airborne that a pilot would not call airborne, and three classes of aircraft that never roll are not declared at all.
 
 A landing is a stop, or a taxi held long enough to be one. The stop is declared on the solution that shows it; the taxi needs 10 s under 8.0 m/s, and it is the only hold left in this file. It is there because a landing that could only be a standstill was a landing the word TAXI could never follow: `rolling()` below picks up at 1.5 m/s and lets go under the same 1.0 a stop needs, so the two flags could not both be true on one solution and every flight ended FLIGHT, GROUND, with the taxi in reaching the word only after coming to rest. A tug that lands and taxis straight back now reads TAXI while it is still rolling, which is what its pilot would call it and what ADS-L G.1.2 already has a code for.
 
@@ -183,8 +183,48 @@ The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `por
 
 A record is 24 bytes and a sector holds 170 of them behind a 16-byte label. The label is not this module's: the log partition is a pool shared with the diagnostics ring, and which sector either ring is handed next is [`core/store`](../store/README.md)'s decision. What lives here is the record and where in a sector it sits.
 
+Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its track there as the high byte of a nine-bit cordic word, so the byte is only ever 0 or 1; an event sets its top bit and names its kind in the other seven. Bytes 0-1, the seconds since the session opened, and bytes 22-23, the CRC, are the same in both, so recovery, the torn-tail check and the offload never ask which one a slot holds. `decode_log_record` answers `Unsupported` for an event and `decode_log_event` for a fix, so neither is ever read as the other, and a kind a later build adds is refused rather than guessed at. The kinds are a wire format: a flight on the partition outlives the firmware that wrote it, so a kind is retired and never renumbered.
+
+| Byte | Fix | Status | Alarm, encounter |
+|---|---|---|---|
+| 0-1 | seconds since the session opened | the same | the same |
+| 2-5 | latitude, 1e-7 deg | cell mV (2-3), percent, power level | address (2-4), address table |
+| 6-9 | longitude, 1e-7 deg | charge, aircraft heard, the most heard since the last status, flags | distance m, relative altitude m |
+| 10-11 | altitude MSL, m | | bearing from own track, deg |
+| 12 | ellipsoid minus MSL, m | | closing m/s (12-13) |
+| 13-14 | ground speed, G.1.8 | | alarm level (14) |
+| 15-16 | track, G.1.10 nine bits | `0x81` in 16 | aircraft category (15), `0x82` alarm or `0x83` encounter (16) |
+| 17-18 | climb, G.1.9 | | source, RSSI dBm |
+| 19-20 | satellites, HDOP tenths | | flags (19), seconds heard (20-21, encounter) |
+| 21 | flags and the G.1.2 flight state | | |
+| 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
+
+The enum codes are the diagnostics capture's, pinned by the same tests (`../diag/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
+
+## log_events
+
+The track says where the flight went. `LogEvents` says what was around it and what the cell did, in the same session and the same sectors, so one read offloads both and one eviction loses both together. It is sampled with the fix, once a second while a session is open and never on the ground, so every event is dated by a second the track holds.
+
+| Kind | When | What |
+|---|---|---|
+| status | the first second of the session, every `kLogStatusPeriodMs` after it, and whenever the cell changes level | cell voltage, percent, power level, charge condition, aircraft heard now and the most heard at once since the last one |
+| alarm | a contact's alarm level changes, either way | the contact and its geometry at that second |
+| encounter | a contact leaves the table, another aircraft takes its slot, or the flight ends | the contact at its closest pass, dated at that pass, with the highest level it reached and how long it was heard |
+
+A status a minute is one record in sixty of the track's. An alarm and an encounter cost one record each, so a busy sky costs what it has in it rather than a record per target per second, which at ten targets would have filled the partition in under two hours.
+
+The geometry is `traffic::assess`, the function the alarm and `$PFLAU` already read, carried to the same instant for both aircraft, and the level is the one the alarm service published on the target, so the log, the buzzer and the tablet cannot disagree about whether a contact was a threat. A target whose report carries no valid position cannot be placed, so it is not tracked until it does.
+
+The events are drained before the fixes. That is what keeps the landing's `session_end` fix the last record of the file, which is how `list` tells a flight that ended from one the power ended: a landing ends every encounter still running, and those are written ahead of the fix that closes the session. Records are therefore in the order they were written and not the order they describe, since an encounter is dated at its closest pass and written when it is over: a reader sorts by `utc`.
+
+`kLogEventBacklogRecords` is sixteen alarms and encounters waiting on a writer that drains every pass. A backlog that overflows loses its oldest and counts it, the same accounting the fix ring keeps.
+
 ## log_session
 
-`kLogPreTakeoffRecords` is eight records of slack, 32 seconds at the four-second cadence, held in RAM and handed to the file the moment it opens. A takeoff is declared at 12 m/s over the ground, so the session opens partway down the runway and the roll that produced it is already history; the ring is what puts it back. It is the same trick the moshe-braner SoftRF fork plays with its pre-position ring (`oss/SoftRF-moshe-braner .../src/protocol/data/IGC.cpp:1105-1125`).
+`kLogRecordPeriodMs` is one second, the rate ADS-L G.1.16 reports an aircraft in flight at, so the log holds what every receiver in range was told, as often as it was told. It was four seconds, the moshe-braner SoftRF fork's default (`oss/SoftRF-moshe-braner .../src/driver/Settings.cpp:838`) and inside every fix interval a badge or an OLC claim is scored on. That is enough for scoring and not for an incident: a flight reconstructed beside a neighbour's track, or an alarm replayed against the geometry that raised it, needs the same second the radio spoke in. It costs four times the bytes, 86.4 KB a flight hour, so the partition's 298 sectors hold 14 hours rather than 56, and the floor a capture may not cross went from twelve hours to six (`../store/README.md`).
+
+`kLogPreTakeoffRecords` is sixty records of slack, a minute at one a second, held in RAM and handed to the file the moment it opens. A takeoff is declared at 12 m/s over the ground, so the session opens partway down the runway and the roll that produced it is already history; the ring is what puts it back. It is the same trick the moshe-braner SoftRF fork plays with its pre-position ring (`oss/SoftRF-moshe-braner .../src/protocol/data/IGC.cpp:1105-1125`). The ground is not logged at the 10 s ADS-L reports it at: a session that opened on a taxi would be a file for every tug run and every push to the grid, and flash cannot take a file back once it is written. The minute in the ring is the taxi before a takeoff, and the landing's own ten-second hold is the taxi after it.
 
 A landing closes the session, and since a landing is now a taxi held for ten seconds as well as a stop (`state` above), a tug that rolls in and taxis back gets one file for the flight rather than one that runs until it parks.
+
+A wing that flies at no ground speed is the exception, for the reason `state` gives: a paraglider soaring into wind reads on the ground for the whole flight, so a session that waited for `Airborne` never opened, and one that did open on a downwind leg closed on the next upwind one. For those G.1.3 categories, `flies_at_no_ground_speed`, a session opens on `rolling` as well, and closes once the aircraft has stood still for `kLogStillHoldMs`, two minutes. The radio's own answer for them, full rate whatever the speed, is not the trigger: it is the right rate for a wing on a ridge and the wrong one for a wing packed away on a shelf, which would log for as long as the cell lasts. What two minutes cannot tell from a landing is a wing hovering under 1 m/s over the ground for that long, which splits the flight into two files rather than losing any of it.

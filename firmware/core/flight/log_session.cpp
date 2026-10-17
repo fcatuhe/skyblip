@@ -50,14 +50,26 @@ void LogSession::reset() {
     closing_ = false;
 }
 
-LogAction LogSession::update(const model::OwnState& own, uint32_t now_ms) {
-    const bool flying = airborne(own.flight_state);
+// INFO: fc 15oct26 the radio's full rate would log a parked paraglider for ever, so it moves
+// instead
+bool LogSession::flying(const model::OwnState& own, bool rolling, uint32_t now_ms) {
+    if (airborne(own.flight_state)) return true;
+    if (!flies_at_no_ground_speed(own.aircraft_cat)) return false;
+    if (rolling) {
+        rolled_ms_ = now_ms;
+        return true;
+    }
+    return open_ && now_ms - rolled_ms_ < kLogStillHoldMs;
+}
+
+LogAction LogSession::update(const model::OwnState& own, bool rolling, uint32_t now_ms) {
+    const bool in_flight = flying(own, rolling, now_ms);
     // A record with no position or no UTC is a row of zeroes in a flight log.
     // The session survives a fix outage - the aircraft is still where it was -
     // but nothing is written across it.
     const bool usable = own.fix_valid && own.utc_valid;
 
-    if (open_ && !flying) {
+    if (open_ && !in_flight) {
         if (usable) {
             LogRecord last = log_record_from(own);
             last.session_end = true;
@@ -76,7 +88,7 @@ LogAction LogSession::update(const model::OwnState& own, uint32_t now_ms) {
 
     const LogRecord record = log_record_from(own);
     if (closing_) return LogAction::Idle;
-    if (!flying && !open_) {
+    if (!in_flight && !open_) {
         // On the ground and staying there: kept in RAM, never written, and
         // overwritten by the next one. This is the whole answer to "the device
         // does not log while it is parked".

@@ -11,6 +11,15 @@ namespace {
 
 constexpr uint32_t kMaxTimeOffsetS = 0xFFFF;
 constexpr uint16_t kHdopTenthsCeiling = 255;
+constexpr uint16_t kTrackMask = 0x01FF;
+constexpr uint32_t kAddrMask = 0x00FFFFFF;
+constexpr uint32_t kChecksummedBytes = kLogRecordBytes - 2;
+
+constexpr uint8_t kStatusFlagBatteryValid = 1u << 0;
+constexpr uint8_t kStatusFlagCharging = 1u << 1;
+constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
+constexpr uint8_t kContactFlagDismissed = 1u << 0;
+constexpr uint8_t kContactFlagInFormation = 1u << 1;
 
 void put_u16(uint8_t* out, uint16_t v) {
     out[0] = static_cast<uint8_t>(v);
@@ -45,6 +54,98 @@ int8_t clamp_i8(int32_t v) {
     return static_cast<int8_t>(v);
 }
 
+void put_offset(uint8_t* out, uint32_t utc, uint32_t base_utc) {
+    const uint32_t elapsed = utc > base_utc ? utc - base_utc : 0;
+    put_u16(out, static_cast<uint16_t>(elapsed > kMaxTimeOffsetS ? kMaxTimeOffsetS : elapsed));
+}
+
+void seal(uint8_t* out) {
+    put_u16(out + kChecksummedBytes, fec::crc16_ccitt(out, kChecksummedBytes));
+}
+
+Status checked(const uint8_t* raw) {
+    if (log_slot_erased(raw, kLogRecordBytes)) return Status::Empty;
+    if (fec::crc16_ccitt(raw, kChecksummedBytes) != get_u16(raw + kChecksummedBytes))
+        return Status::Crc;
+    return Status::Ok;
+}
+
+bool event_slot(const uint8_t* raw) { return (raw[kLogKindOffset] & kLogEventMark) != 0; }
+
+bool known_event(uint8_t code) {
+    switch (static_cast<LogKind>(code)) {
+        case LogKind::Status:
+        case LogKind::Alarm:
+        case LogKind::Encounter: return true;
+        case LogKind::Fix: break;
+    }
+    return false;
+}
+
+void encode_status(const LogStatus& status, uint8_t* out) {
+    put_u16(out + 2, status.cell_mv);
+    out[4] = status.percent;
+    out[5] = status.power_level;
+    out[6] = status.charge;
+    out[7] = status.tracked;
+    out[8] = status.tracked_peak;
+    uint8_t flags = 0;
+    if (status.battery_valid) flags |= kStatusFlagBatteryValid;
+    if (status.charging) flags |= kStatusFlagCharging;
+    if (status.external_power) flags |= kStatusFlagExternalPower;
+    out[9] = flags;
+}
+
+void decode_status(const uint8_t* raw, LogStatus& out) {
+    out.cell_mv = get_u16(raw + 2);
+    out.percent = raw[4];
+    out.power_level = raw[5];
+    out.charge = raw[6];
+    out.tracked = raw[7];
+    out.tracked_peak = raw[8];
+    out.battery_valid = (raw[9] & kStatusFlagBatteryValid) != 0;
+    out.charging = (raw[9] & kStatusFlagCharging) != 0;
+    out.external_power = (raw[9] & kStatusFlagExternalPower) != 0;
+}
+
+void encode_contact(const LogContact& contact, uint8_t* out) {
+    const uint32_t addr = contact.addr & kAddrMask;
+    out[2] = static_cast<uint8_t>(addr);
+    out[3] = static_cast<uint8_t>(addr >> 8);
+    out[4] = static_cast<uint8_t>(addr >> 16);
+    out[5] = contact.addr_table;
+    put_u16(out + 6, contact.dist_m);
+    put_u16(out + 8, static_cast<uint16_t>(contact.rel_alt_m));
+    put_u16(out + 10, contact.rel_bearing_deg);
+    put_u16(out + 12, static_cast<uint16_t>(contact.closing_mps));
+    out[14] = contact.alarm;
+    out[15] = contact.aircraft_cat;
+    out[17] = contact.source;
+    out[18] = static_cast<uint8_t>(contact.rssi_dbm);
+    uint8_t flags = 0;
+    if (contact.dismissed) flags |= kContactFlagDismissed;
+    if (contact.in_formation) flags |= kContactFlagInFormation;
+    out[19] = flags;
+    put_u16(out + 20, contact.heard_s);
+}
+
+void decode_contact(const uint8_t* raw, LogContact& out) {
+    out.addr = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
+               (static_cast<uint32_t>(raw[4]) << 16);
+    out.addr_table = raw[5];
+    out.dist_m = get_u16(raw + 6);
+    out.rel_alt_m = static_cast<int16_t>(get_u16(raw + 8));
+    out.rel_bearing_deg = get_u16(raw + 10);
+    out.closing_mps = static_cast<int16_t>(get_u16(raw + 12));
+    out.alarm = raw[14];
+    out.aircraft_cat = raw[15];
+    out.source = raw[17];
+    out.rssi_dbm = static_cast<int8_t>(raw[18]);
+    out.dismissed = (raw[19] & kContactFlagDismissed) != 0;
+    out.in_formation = (raw[19] & kContactFlagInFormation) != 0;
+    out.heard_s = get_u16(raw + 20);
+}
+
 }  // namespace
 
 LogRecord log_record_from(const model::OwnState& own) {
@@ -69,8 +170,7 @@ LogRecord log_record_from(const model::OwnState& own) {
 }
 
 void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out) {
-    const uint32_t elapsed = record.utc > base_utc ? record.utc - base_utc : 0;
-    put_u16(out + 0, static_cast<uint16_t>(elapsed > kMaxTimeOffsetS ? kMaxTimeOffsetS : elapsed));
+    put_offset(out + 0, record.utc, base_utc);
     put_u32(out + 2, static_cast<uint32_t>(record.lat_1e7));
     put_u32(out + 6, static_cast<uint32_t>(record.lon_1e7));
     put_u16(out + 10, static_cast<uint16_t>(clamp_i16(record.alt_msl_m)));
@@ -79,7 +179,7 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out)
     // carries the pair that two four-byte altitudes would have cost.
     out[12] = static_cast<uint8_t>(clamp_i8(record.alt_hae_m - record.alt_msl_m));
     put_u16(out + 13, record.speed_q);
-    put_u16(out + 15, record.track_c9);
+    put_u16(out + 15, record.track_c9 & kTrackMask);
     put_u16(out + 17, static_cast<uint16_t>(record.climb_e8));
     out[19] = record.sats;
     const uint32_t tenths = (record.hdop_e2 + 5u) / 10u;
@@ -95,14 +195,15 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out)
     flags |= static_cast<uint8_t>((record.flight_state & kLogFlagFlightStateMask)
                                   << kLogFlagFlightStateShift);
     out[21] = flags;
-    put_u16(out + 22, fec::crc16_ccitt(out, kLogRecordBytes - 2));
+    seal(out);
 }
 
 bool log_slot_erased(const uint8_t* raw, uint32_t len) { return store::erased(raw, len); }
 
 Status decode_log_record(const uint8_t* raw, uint32_t base_utc, LogRecord& out) {
-    if (log_slot_erased(raw, kLogRecordBytes)) return Status::Empty;
-    if (fec::crc16_ccitt(raw, kLogRecordBytes - 2) != get_u16(raw + 22)) return Status::Crc;
+    const Status slot = checked(raw);
+    if (!is_ok(slot)) return slot;
+    if (event_slot(raw)) return Status::Unsupported;
 
     out = LogRecord{};
     out.utc = base_utc + get_u16(raw + 0);
@@ -125,6 +226,33 @@ Status decode_log_record(const uint8_t* raw, uint32_t base_utc, LogRecord& out) 
     out.session_end = (flags & kLogFlagSessionEnd) != 0;
     out.flight_state =
         static_cast<uint8_t>((flags >> kLogFlagFlightStateShift) & kLogFlagFlightStateMask);
+    return Status::Ok;
+}
+
+void encode_log_event(const LogEvent& event, uint32_t base_utc, uint8_t* out) {
+    for (uint32_t i = 0; i < kLogRecordBytes; i++) out[i] = 0;
+    put_offset(out + 0, event.utc, base_utc);
+    if (event.kind == LogKind::Status)
+        encode_status(event.status, out);
+    else
+        encode_contact(event.contact, out);
+    out[kLogKindOffset] = static_cast<uint8_t>(kLogEventMark | static_cast<uint8_t>(event.kind));
+    seal(out);
+}
+
+Status decode_log_event(const uint8_t* raw, uint32_t base_utc, LogEvent& out) {
+    const Status slot = checked(raw);
+    if (!is_ok(slot)) return slot;
+    const uint8_t code = static_cast<uint8_t>(raw[kLogKindOffset] & ~kLogEventMark);
+    if (!event_slot(raw) || !known_event(code)) return Status::Unsupported;
+
+    out = LogEvent{};
+    out.kind = static_cast<LogKind>(code);
+    out.utc = base_utc + get_u16(raw + 0);
+    if (out.kind == LogKind::Status)
+        decode_status(raw, out.status);
+    else
+        decode_contact(raw, out.contact);
     return Status::Ok;
 }
 

@@ -16,16 +16,14 @@
 
 namespace skyblip::flight {
 
-// INFO: fl 03aug26 Four seconds. It is the interval the moshe-braner SoftRF
-// fork ships as its default (oss/SoftRF-moshe-braner .../src/driver/
-// Settings.cpp:838 loginterval = 4) and it is inside every fix-interval a
-// badge, an OLC claim or a competition file is scored on. At 100 kt it puts a
-// fix every 200 m, which rounds a turn point to a tenth of the observation
-// zone; halving it would double the bytes to buy resolution nothing scores.
-constexpr uint32_t kLogRecordPeriodMs = 4000;
+// INFO: fc 15oct26 the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told
+constexpr uint32_t kLogRecordPeriodMs = 1000;
 
 // INFO: fl 03aug26 a takeoff is declared at 12 m/s, so the roll is behind the log when it opens
-constexpr int kLogPreTakeoffRecords = 8;
+constexpr int kLogPreTakeoffRecords = 60;
+
+// INFO: fc 15oct26 a wing that flies at no ground speed has landed once it has stood this long
+constexpr uint32_t kLogStillHoldMs = 120000;
 
 enum class LogAction : uint8_t { Idle, OpenSession, AppendRecord, CloseSession };
 
@@ -33,7 +31,7 @@ enum class LogAction : uint8_t { Idle, OpenSession, AppendRecord, CloseSession }
 // bounded ring; the writer drains them when the radio is not keying.
 class LogSession {
    public:
-    LogAction update(const model::OwnState& own, uint32_t now_ms);
+    LogAction update(const model::OwnState& own, bool rolling, uint32_t now_ms);
 
     bool open() const { return open_; }
     // A closed session whose last record has not reached flash yet.
@@ -58,6 +56,7 @@ class LogSession {
 
    private:
     void push(const LogRecord& record);
+    bool flying(const model::OwnState& own, bool rolling, uint32_t now_ms);
 
     LogRecord ring_[kLogPreTakeoffRecords]{};
     int head_{0};
@@ -66,6 +65,7 @@ class LogSession {
     uint32_t dropped_{0};
     uint32_t session_id_{0};
     uint32_t last_sample_ms_{0};
+    uint32_t rolled_ms_{0};
     bool sampled_{false};
     bool open_{false};
     bool closing_{false};
@@ -97,9 +97,6 @@ class LogRing {
     uint32_t slot_{0};
 };
 
-// How long the reserved partition holds, for the arithmetic nobody should have
-// to redo in their head: 170 records of 24 bytes every four seconds is
-// 21.6 KB/h, so a mebibyte is a little over 48 flight hours.
 constexpr uint32_t log_seconds_per_sector(uint32_t slots_per_sector) {
     return slots_per_sector * (kLogRecordPeriodMs / 1000);
 }

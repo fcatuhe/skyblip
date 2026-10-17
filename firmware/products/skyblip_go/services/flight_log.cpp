@@ -1,6 +1,8 @@
 #include "products/skyblip_go/services/flight_log.h"
 
+#include "core/diag/record.h"
 #include "core/events/link.h"
+#include "core/traffic/alarm.h"
 
 namespace skyblip::go {
 
@@ -27,15 +29,69 @@ void FlightLogService::tick(uint32_t now_ms) {
     }
     if (!flights_.available()) return;
 
-    const flight::LogAction action = session_.update(context_.state.own, now_ms);
-    if (action == flight::LogAction::OpenSession) flights_.begin_session(session_.session_id());
-    if (action == flight::LogAction::CloseSession) flights_.end_session();
+    const flight::LogAction action =
+        session_.update(context_.state.own, context_.state.flight.rolling, now_ms);
+    if (action == flight::LogAction::OpenSession) {
+        flights_.begin_session(session_.session_id());
+        events_.open();
+    }
+    if (action == flight::LogAction::CloseSession) {
+        flights_.end_session();
+        events_.close();
+    }
+    if (action == flight::LogAction::OpenSession || action == flight::LogAction::AppendRecord)
+        watch(now_ms);
     drain(now_ms);
     if (flights_.index_stale() && !session_.closing()) flights_.rebuild_index();
 }
 
+// INFO: fc 15oct26 sampled with the fix, so an event is dated by the second the track holds
+void FlightLogService::watch(uint32_t now_ms) {
+    const model::OwnState& own = context_.state.own;
+    events_.status(status_now(), own.utc, now_ms);
+    for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
+        const traffic::Target* target = context_.state.traffic.at(slot);
+        if (target == nullptr || !target->used) {
+            events_.vacant(slot);
+            continue;
+        }
+        const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
+        if (!assessment.valid) continue;
+        flight::LogContact contact{};
+        contact.addr = target->obs.addr;
+        contact.addr_table = target->obs.addr_table;
+        contact.aircraft_cat = target->obs.aircraft_cat;
+        contact.dist_m = diag::clamp_u16(
+            assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
+        contact.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
+        contact.rel_bearing_deg = assessment.rel_bearing_deg;
+        contact.closing_mps = diag::clamp_i16(assessment.closing_mps);
+        contact.alarm = traffic::to_number(target->alarm_level);
+        contact.source = static_cast<uint8_t>(target->obs.source);
+        contact.rssi_dbm = target->obs.rssi_dbm;
+        contact.dismissed = target->alarm_dismissed;
+        contact.in_formation = target->in_formation;
+        events_.heard(slot, contact, own.utc);
+    }
+}
+
+flight::LogStatus FlightLogService::status_now() const {
+    const bus::PowerState& power = context_.state.power;
+    flight::LogStatus status{};
+    status.cell_mv = power.battery.millivolts;
+    status.percent = power.battery.percent;
+    status.power_level = static_cast<uint8_t>(power.level);
+    status.charge = static_cast<uint8_t>(power.charge);
+    status.tracked = static_cast<uint8_t>(context_.state.traffic.count());
+    status.battery_valid = power.battery.valid;
+    status.charging = power.battery.charging;
+    status.external_power = power.battery.external_power;
+    return status;
+}
+
 // INFO: fc 20sep26 the record leaves the ring once flash has it, so a refused write loses nothing
 void FlightLogService::drain(uint32_t now_ms) {
+    if (!drain_events(now_ms)) return;
     flight::LogRecord record{};
     while (session_.peek(record)) {
         flight::encode_log_record(record, flights_.base_session(), scratch_);
@@ -43,6 +99,17 @@ void FlightLogService::drain(uint32_t now_ms) {
         session_.commit();
     }
     if (session_.open()) flights_.prepare_spare(now_ms);
+}
+
+// INFO: fc 15oct26 events go first, so the landing's session_end fix is still the last record
+bool FlightLogService::drain_events(uint32_t now_ms) {
+    flight::LogEvent event{};
+    while (events_.peek(event)) {
+        flight::encode_log_event(event, flights_.base_session(), scratch_);
+        if (flights_.append(scratch_, now_ms) != Append::Ok) return false;
+        events_.commit();
+    }
+    return true;
 }
 
 bool FlightLogService::on_ground() const {
