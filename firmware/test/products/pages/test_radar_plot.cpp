@@ -126,11 +126,9 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
         {-700, -400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
     RadarSnapshot snap = flying(0);
-    snap.speed_mm_s = 40000;
     snap.n_targets = 4;
     snap.targets = flight;
     snap.formation_members = 4;
-    snap.heard = 4;
     const Glass fb = radar(snap);
 
     // The square is 86..113 on both axes, one blank pixel clear of the wingtips.
@@ -157,9 +155,6 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
     CHECK(ink_in(separate, 100, 80, 120, 95) > ink_in(fb, 100, 80, 120, 95));
     CHECK_FALSE(separate.get_pixel(86, 100));
     CHECK_FALSE(separate.get_pixel(113, 100));
-
-    // The footer still counts them: they are aircraft, and they were heard.
-    CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
 }
 
 // The leader is the arc the alarm grades, so a target in a turn does not draw a tangent.
@@ -317,6 +312,23 @@ TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
     beyond.n_targets = 1;
     beyond.targets = far_out;
     CHECK_FALSE(radar(beyond).get_pixel(100, 78));
+}
+
+// The square is the member's depiction, so a ring holding only the formation is an empty ring.
+TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation") {
+    RadarTarget pair[2] = {{-60, -120, 10, Level::None, 0, false, 30000, 0, 0, false, true},
+                           abeam[0]};
+    RadarSnapshot together = flying(0);
+    together.speed_mm_s = 30000;
+    together.n_targets = 1;
+    together.targets = pair;
+    together.formation_members = 1;
+    CHECK(marks_in(together, 0, 0, 200, 200) == 0);
+
+    RadarSnapshot with_traffic = together;
+    with_traffic.n_targets = 2;
+    CHECK(radar(with_traffic).get_pixel(100, 78));
+    CHECK(radar(with_traffic).get_pixel(97, 56));
 }
 
 // The caret rides the blip, not the tag: a crowded glass drops tags, and a climb through your

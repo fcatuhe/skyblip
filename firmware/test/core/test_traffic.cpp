@@ -229,6 +229,34 @@ TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     CHECK(tbl.find(6, 0x1000) >= 0);  // protected alarm still present
 }
 
+// The radar counts a slot by its formation flag, so a newcomer must not inherit a departed
+// wingman's.
+TEST_CASE("traffic: a slot handed to a new aircraft keeps nothing of the last one's standing") {
+    const auto standing = [](TrafficTable& tbl, int idx) {
+        tbl.at(idx)->in_formation = true;
+        tbl.at(idx)->alarm_dismissed = true;
+    };
+    const auto fresh = [](const TrafficTable& tbl, int idx) {
+        return idx >= 0 && !tbl.at(idx)->in_formation && !tbl.at(idx)->alarm_dismissed;
+    };
+
+    TrafficTable full;
+    for (int i = 0; i < TrafficTable::kCapacity; i++)
+        standing(full, full.update(obs(0x1000 + i, 6, 100 + i), 200));
+    CHECK(fresh(full, full.update(obs(0x9999, 6, 300), 300)));
+
+    TrafficTable aged;
+    standing(aged, aged.update(obs(0x1, 6, 100), 100));
+    aged.age_out(100 + kAirborneTargetForgetS + 1);
+    REQUIRE(aged.count() == 0);
+    CHECK(fresh(aged, aged.update(obs(0x2, 6, 120), 120)));
+
+    TrafficTable cleared;
+    standing(cleared, cleared.update(obs(0x1, 6, 100), 100));
+    cleared.clear();
+    CHECK(fresh(cleared, cleared.update(obs(0x2, 6, 100), 100)));
+}
+
 // Nearest-first eviction refused an airborne arrival beyond a full apron of parked aircraft.
 TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air, however far") {
     const model::OwnState own = flying(30, 0);
