@@ -30,7 +30,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "firmware", "ui", "widgets", "wordmark.cpp")
-FONT = os.path.join(ROOT, "..", "website", "app", "assets", "fonts", "FiraSans-Bold.woff2")
+FONT = os.path.join(ROOT, "server", "app", "assets", "fonts", "FiraSans-Bold.woff2")
 
 TEXT = "skyBl\u0131p"  # dotless i: the tittle is the blip
 REFERENCE_SIZE = 56.0

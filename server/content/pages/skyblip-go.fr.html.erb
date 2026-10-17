@@ -1,0 +1,44 @@
+---
+title: Essayer en ligne
+nav_title: Essayer
+slug: essayer
+description: Le firmware de skyBlip Go tourne dans votre navigateur. Allumez-le, ajoutez du trafic, appuyez sur les touches.
+---
+
+<header class="page-hero page-hero--compact">
+  <h1>Essayez-le.</h1>
+  <p class="page-hero-subtitle">C&rsquo;est le logiciel qui équipe skyBlip.</p>
+</header>
+
+<section id="simulator">
+  <%= render "shared/simulator_loader" %>
+
+  <p class="note">
+    Un à huit trafics vont et viennent, chacun émettant de vraies trames ADS-L,
+    tracées comme en vol. Le voyant de gauche s&rsquo;allume quand l&rsquo;un
+    d&rsquo;eux déclenche l&rsquo;alarme.
+  </p>
+
+  <%= render "shared/cta", prompt: false, try: false %>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Et ensuite&nbsp;?</h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Tout ce qu&rsquo;il fait.</h3>
+      <p>Le radar, l&rsquo;alarme, l&rsquo;émission, le téléphone, les instruments.</p>
+      <p><%= link_to_page "features", label: "Voir les fonctionnalités" %></p>
+    </article>
+    <article>
+      <h3>Écran par écran.</h3>
+      <p>Sept guides, un par sujet, avec les captures de ce même firmware.</p>
+      <p><%= link_to_page "guides", label: "Lire les guides" %></p>
+    </article>
+    <article>
+      <h3>Le vôtre.</h3>
+      <p>Un LilyGO T-Echo ou T-Echo Plus, le firmware skyBlip, et c&rsquo;est prêt.</p>
+      <p><%= link_to_page "buy", label: "S&rsquo;équiper".html_safe %></p>
+    </article>
+  </div>
+</section>

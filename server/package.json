@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#skyblip/*": "./app/javascript/skyblip/*.js"
+  },
+  "scripts": {
+    "test": "node --test test/javascript/test_*.mjs"
+  }
+}

@@ -1,0 +1,43 @@
+---
+title: Try it online
+nav_title: Try it
+slug: try
+description: skyBlip Go firmware runs in your browser. Switch it on, add traffic, press the keys.
+---
+
+<header class="page-hero page-hero--compact">
+  <h1>Try it.</h1>
+  <p class="page-hero-subtitle">It is the software inside skyBlip.</p>
+</header>
+
+<section id="simulator">
+  <%= render "shared/simulator_loader" %>
+
+  <p class="note">
+    One to eight aircraft come and go, each sending real ADS-L frames, plotted
+    as in flight. The lamp on the left lights when one sets off the alarm.
+  </p>
+
+  <%= render "shared/cta", prompt: false, try: false %>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">What next?</h2>
+  <div class="resource-cards">
+    <article>
+      <h3>Everything it does.</h3>
+      <p>The radar, the alarm, the broadcast, the phone, the instruments.</p>
+      <p><%= link_to_page "features", label: "See the features" %></p>
+    </article>
+    <article>
+      <h3>Screen by screen.</h3>
+      <p>Seven guides, one per subject, with captures from this same firmware.</p>
+      <p><%= link_to_page "guides", label: "Read the guides" %></p>
+    </article>
+    <article>
+      <h3>Your own.</h3>
+      <p>A LilyGO T-Echo or T-Echo Plus, the skyBlip firmware, and it is ready.</p>
+      <p><%= link_to_page "buy", label: "Get one" %></p>
+    </article>
+  </div>
+</section>

@@ -1,0 +1,110 @@
+@layer device {
+.sb-case {
+  --sb-case-light: #fbfbf9;
+  --sb-case-dark: #dedfda;
+  --sb-boss-paper: #e6e4dd;
+  --sb-rivet-paper: #f4f2ec;
+  --sb-rivet-shadow: #d7d3c9;
+  --sb-rivet-edge: #fbfaf6;
+  --sb-white: #fff;
+  --sb-shadow-soft: #0000001a;
+  --sb-glass-paper: #c9cbc4;
+  --sb-bezel: #f2f2ef;
+  --sb-glass-border: #0000001f;
+  --sb-pad-border: #00000026;
+  --sb-pad-light: #f4f5f2;
+  --sb-pad-dark: #dcded9;
+  --sb-pad-active: #c3e4f4;
+  --sb-key-border: #00000033;
+  --sb-key-paper: #e9e7e1;
+  --sb-led-idle: #c6c8c3;
+  --sb-led-shadow: #00000040;
+  --sb-alarm: #ff4f2f;
+  --sb-alarm-glow: #ff4f2f88;
+  --sb-charge: #ffab3d;
+  --sb-charge-glow: #ffab3d88;
+  --sb-glass: 400px;
+  --sb-margin: calc(var(--sb-glass) * 0.12);
+  --sb-rivet: calc(var(--sb-glass) * 0.055);
+  --sb-led: calc(var(--sb-glass) * 0.02);
+  --sb-case: linear-gradient(168deg, var(--sb-case-light), var(--sb-case-dark));
+  --sb-boss: var(--sb-boss-paper);
+
+  position: relative;
+  box-sizing: border-box;
+  inline-size: calc(var(--sb-glass) + var(--sb-margin) * 2);
+  padding: var(--sb-margin) var(--sb-margin) calc(var(--sb-margin) * 1.16);
+  border-radius: calc(var(--sb-glass) * 0.08);
+  background:
+    radial-gradient(circle at 50% 45%, var(--sb-rivet-paper) 0 26%, var(--sb-rivet-shadow) 30% 44%, var(--sb-rivet-edge) 47% 50%, transparent 52%),
+    radial-gradient(circle at 50% 45%, var(--sb-rivet-paper) 0 26%, var(--sb-rivet-shadow) 30% 44%, var(--sb-rivet-edge) 47% 50%, transparent 52%),
+    radial-gradient(circle at 50% 45%, var(--sb-rivet-paper) 0 26%, var(--sb-rivet-shadow) 30% 44%, var(--sb-rivet-edge) 47% 50%, transparent 52%),
+    radial-gradient(circle at 50% 45%, var(--sb-rivet-paper) 0 26%, var(--sb-rivet-shadow) 30% 44%, var(--sb-rivet-edge) 47% 50%, transparent 52%),
+    var(--sb-case);
+  background-size:
+    var(--sb-rivet) var(--sb-rivet), var(--sb-rivet) var(--sb-rivet),
+    var(--sb-rivet) var(--sb-rivet), var(--sb-rivet) var(--sb-rivet), auto;
+  background-position: 4% 4%, 96% 4%, 4% 95%, 96% 95%;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 2px 0 var(--sb-white), inset 0 -2px 6px var(--sb-shadow-soft);
+}
+
+.sb-glass {
+  display: block;
+  inline-size: var(--sb-glass);
+  block-size: var(--sb-glass);
+  image-rendering: pixelated;
+  background: var(--sb-glass-paper);
+  box-shadow: 0 0 0 calc(var(--sb-glass) * 0.015) var(--sb-bezel), 0 0 0 calc(var(--sb-glass) * 0.0175) var(--sb-glass-border);
+}
+
+.sb-pad,
+.sb-key {
+  position: absolute;
+  padding: 0;
+  cursor: pointer;
+  touch-action: none;
+}
+
+
+.sb-pad {
+  inset-block-start: calc(var(--sb-glass) * -0.0125);
+  inset-inline-start: 13.5%;
+  inline-size: 17.3%;
+  block-size: calc(var(--sb-glass) * 0.05);
+  border: 1px solid var(--sb-pad-border);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--sb-pad-light), var(--sb-pad-dark));
+  box-shadow: inset 0 -2px 4px var(--sb-glass-border);
+}
+.sb-pad:active { background: var(--sb-pad-active); }
+
+
+.sb-key {
+  inset-inline-start: -5px;
+  inline-size: calc(var(--sb-glass) * 0.05);
+  block-size: calc(var(--sb-glass) * 0.14);
+  border: 1px solid var(--sb-key-border);
+  border-radius: 6px 3px 3px 6px;
+  box-shadow: inset -2px 0 4px var(--sb-glass-border);
+}
+.sb-key--reset { inset-block-start: 19%; background: linear-gradient(90deg, var(--sb-white), var(--sb-key-paper)); }
+.sb-key--action { inset-block-start: 72%; background: linear-gradient(90deg, var(--sb-white), var(--sb-key-paper)); }
+.sb-key:active { transform: translateX(2px); box-shadow: inset 2px 0 4px var(--sb-key-border); }
+
+
+.sb-led {
+  position: absolute;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  inline-size: var(--sb-led);
+  block-size: var(--sb-led);
+  border-radius: 50%;
+  background: var(--sb-led-idle);
+  box-shadow: inset 0 1px 2px var(--sb-led-shadow);
+}
+.sb-led--alarm { inset-inline-end: calc(var(--sb-glass) * 0.06); }
+.sb-led--charge { inset-inline-end: calc(var(--sb-glass) * 0.025); }
+.sb-led--alarm.sb-led--lit { background: var(--sb-alarm); box-shadow: 0 0 8px 2px var(--sb-alarm-glow); }
+.sb-led--charge.sb-led--lit { background: var(--sb-charge); box-shadow: 0 0 8px 2px var(--sb-charge-glow); }
+}

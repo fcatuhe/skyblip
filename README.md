@@ -34,11 +34,10 @@ skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. 
 | Directory | What lives there |
 |---|---|
 | [`firmware/`](firmware) | the C++ tree: `core/`, `ui/`, `ports/`, the Zephyr platform, the host test suite, and the simulator's world |
-| [`simulator/`](simulator) | the development harness page that drives the WASM build of the firmware, and `device.css`, the case both it and the site draw the panel in |
-| [`website/`](website) | [skyblip.eu](https://skyblip.eu), a Rails app that Parklife renders to static files |
-| `docs/`, `schemas/`, `scripts/`, `skyship/` | the generated behavior and tuning indexes, the wire schemas, the build and release tooling, the artwork |
+| [`server/`](server) | [skyblip.eu](https://skyblip.eu), public content and the device tools under `/briefing`, served by Rails on crooz |
+| `docs/`, `schemas/`, `scripts/`, `lib/`, `skyship/` | the generated behavior and tuning indexes, the wire schemas, the build and release tooling and its Ruby logic, the artwork |
 
-The firmware and the site share a tree so that a change in behavior and the page documenting it can land in one commit. They do not share a build: each has its own workflow, gated on the paths it owns.
+The firmware and the server share a tree so that a change in behavior and the page documenting it can land in one commit. They do not share a build: each has its own workflow, gated on the paths it owns. Firmware releases include the browser simulator runtime. Rails discovers releases through separate Turbo Frame requests, so publishing firmware does not redeploy the server.
 
 ## Building
 
@@ -81,9 +80,9 @@ skyBlip stands on a decade of open work by the free-flight community. Thanks to 
 
 The repository is **MIT**: see [`LICENSE`](LICENSE). The one exception is [`firmware/`](firmware), which is **GPL-3.0-only** under [`firmware/LICENSE`](firmware/LICENSE), and that license reaches everything below it: `core/`, `ui/`, `ports/`, `hardware/`, `runtime/`, `products/`, `boards/`, `test/` and the simulated world in `firmware/simulator/`.
 
-So the schemas, the build and release scripts, the simulator page and the website may be copied into a closed product; a tracker built from this firmware owes its sources.
+So the schemas, the build and release scripts and the server, simulator pages included, may be copied into a closed product; a tracker built from this firmware owes its sources.
 
-The simulator page is MIT, but what `simulator/` builds is not: `make -C simulator build` copies the firmware's WASM into `simulator/build/`, and that binary stays GPL-3.0-only wherever it is served.
+The simulator pages are MIT, but the WASM they run is not: `make -C firmware browser` builds it from the firmware, releases publish it, and it stays GPL-3.0-only wherever it is served.
 
 ## Trademark
 

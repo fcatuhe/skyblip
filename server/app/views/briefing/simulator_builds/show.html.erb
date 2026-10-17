@@ -1,0 +1,15 @@
+<%= turbo_frame_tag :simulator_build do %>
+  <% if @unavailable %>
+    <p class="<%= class_names("note", "frame-note": @workbench) %>" role="status"><%= t("simulator_builds.unavailable") %></p>
+  <% elsif @release %>
+    <p class="note"><%= link_to @release.name, @release.url %></p>
+    <% if @workbench %>
+      <%= render "shared/simulator_dev", module_path: simulator_module_path(tag: @release.tag),
+            scenario_manifest_url: release_asset_path(@release.tag, "scenarios.json", locale: nil) %>
+    <% else %>
+      <%= render "shared/simulator", **t("simulator_builds.controls").symbolize_keys, module_path: simulator_module_path(tag: @release.tag) %>
+    <% end %>
+  <% else %>
+    <p class="<%= class_names("note", "frame-note": @workbench) %>" role="status"><%= t("simulator_builds.empty") %></p>
+  <% end %>
+<% end %>
