@@ -3,6 +3,7 @@
 #include "core/flight/extrapolate.h"
 #include "core/flight/state.h"
 #include "core/protocol/nmea_out.h"
+#include "core/traffic/alarm.h"
 #include "core/traffic/lease.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
@@ -23,7 +24,29 @@ void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ah
     right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kQ14One));
 }
 
+uint32_t reception_key(const model::AircraftObs& obs) {
+    return obs.received.at_s * kMillisecondsPerSecond + obs.received.into_ms;
+}
+
+bool recent(const flight::Liftoff& liftoff, uint32_t now_ms) {
+    return liftoff.valid && now_ms - liftoff.at_ms < kLiftoffWindowMs;
+}
+
 }  // namespace
+
+void Tracker::observe_own(const model::OwnState& own, uint32_t now_ms) {
+    switch (flight::state_from(own.flight_state)) {
+        case flight::FlightState::Ground:
+            own_grounded_ = true;
+            slots_.fill(Slot{});
+            return;
+        case flight::FlightState::Airborne:
+            if (own_grounded_) own_liftoff_ = {now_ms, true};
+            own_grounded_ = false;
+            return;
+        case flight::FlightState::Unknown: return;
+    }
+}
 
 void Tracker::anchor(Slot& slot, const Report& station, uint32_t now_ms) {
     slot.ref_ahead_m = station.ahead_m;
@@ -31,13 +54,14 @@ void Tracker::anchor(Slot& slot, const Report& station, uint32_t now_ms) {
     slot.ref_up_m = station.up_m;
     slot.steady_since_ms = now_ms;
     slot.drift_fixes = 0;
+    slot.closing_fixes = 0;
     slot.anchored = true;
 }
 
 Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs& reported,
-                        uint32_t now_ms) {
+                        const flight::Liftoff& contact_liftoff, uint32_t now_ms) {
     Report out{};
-    if (flight::on_ground(reported.flight_state)) {
+    if (flight::on_ground(own_fix.flight_state) || flight::on_ground(reported.flight_state)) {
         drop(reported.addr_table, reported.addr);
         return out;
     }
@@ -60,8 +84,23 @@ Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs
         return out;
     }
 
+    const uint32_t key = reception_key(reported);
+    if (slot->anchored && key == slot->obs_key) {
+        out.state = slot->state;
+        return out;
+    }
+    slot->obs_key = key;
+
     if (!slot->anchored) {
         anchor(*slot, out, now_ms);
+        if (lifting(contact_liftoff, now_ms)) slot->state = State::Joining;
+        out.state = slot->state;
+        return out;
+    }
+
+    if (closure_confirmed(*slot, traffic::closing_mm_s(own, target, north_m, east_m, range_m))) {
+        anchor(*slot, out, now_ms);
+        slot->state = State::None;
         return out;
     }
 
@@ -81,20 +120,26 @@ Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs
     return out;
 }
 
-void Tracker::off_station(Slot& slot, const Report& fix, uint32_t now_ms) {
-    slot.steady_since_ms = now_ms;
-    if (slot.state == State::None)
-        anchor(slot, fix, now_ms);
-    else if (slot.state == State::Together && ++slot.drift_fixes >= kBreakFixes)
-        slot.state = State::Parting;
+bool Tracker::lifting(const flight::Liftoff& contact_liftoff, uint32_t now_ms) const {
+    return recent(own_liftoff_, now_ms) || recent(contact_liftoff, now_ms);
 }
 
-void Tracker::release(uint8_t addr_table, uint32_t addr, uint32_t now_ms) {
-    Slot* slot = find(addr_table, addr);
-    if (slot == nullptr) return;
-    slot->state = State::None;
-    slot->drift_fixes = 0;
-    slot->steady_since_ms = now_ms;
+bool Tracker::closure_confirmed(Slot& slot, int32_t closing_mm_s) {
+    if (slot.state == State::None || closing_mm_s < kClosingMps * kMillimetresPerMetre) {
+        slot.closing_fixes = 0;
+        return false;
+    }
+    return ++slot.closing_fixes >= kClosingFixes;
+}
+
+void Tracker::off_station(Slot& slot, const Report& fix, uint32_t now_ms) {
+    slot.steady_since_ms = now_ms;
+    if (slot.state == State::None || slot.state == State::Joining) {
+        anchor(slot, fix, now_ms);
+        slot.state = State::None;
+    } else if (slot.state == State::Together && ++slot.drift_fixes >= kBreakFixes) {
+        slot.state = State::Parting;
+    }
 }
 
 bool Tracker::together(uint8_t addr_table, uint32_t addr) const {

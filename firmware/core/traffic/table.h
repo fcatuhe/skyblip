@@ -23,6 +23,7 @@ struct TargetTurn {
 struct Target {
     model::AircraftObs obs;
     TargetTurn turn;
+    flight::Liftoff liftoff;
     Level alarm_level{Level::None};
     bool alarm_dismissed{false};
     bool in_formation{false};
@@ -86,6 +87,7 @@ class TrafficTable {
 
     static bool prefer_new(const model::AircraftObs& incoming, const model::AircraftObs& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObs& obs);
+    static void watch_liftoff(Target& target, const model::AircraftObs& incoming);
     static bool matters_less(const Weight& a, const Weight& b);
     Weight weight_of(const model::AircraftObs& obs, uint32_t now) const;
     int allocate_slot(const model::AircraftObs& incoming, uint32_t now);

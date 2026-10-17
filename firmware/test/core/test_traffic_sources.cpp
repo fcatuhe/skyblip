@@ -107,7 +107,8 @@ bool joins_formation(const model::AircraftObs& heard) {
     for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
         model::AircraftObs fix = heard;
         fix.at_ms = t;
-        tracker.observe(own_at(t), fix, t);
+        fix.received.at_s = t / 1000;
+        tracker.observe(own_at(t), fix, {}, t);
     }
     return tracker.members() == 1;
 }

@@ -164,7 +164,7 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
         wingman = neighbour(own, -60, -120, 10, 40, 90, t);
         tbl.update(wingman, wingman.received.at_s);
         tracker.update(own, wingman, t);
-        wingmen.observe(own, wingman, t);
+        wingmen.observe(own, wingman, {}, t);
         heard_ms = t;
     }
     tracker.dismiss();

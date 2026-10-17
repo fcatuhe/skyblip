@@ -45,12 +45,24 @@ struct Flight {
         rig.state.own.track_cdeg = 9000;
     }
 
-    void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms) {
+    void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms,
+              flight::FlightState says = flight::FlightState::Unknown) {
         rig.state.own.fix_ms = now_ms;
-        const model::AircraftObs obs =
+        model::AircraftObs obs =
             contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
+        obs.flight_state = static_cast<uint8_t>(says);
         rig.state.traffic.update(obs, now_ms / 1000);
         rig.alarm_service.tick(now_ms);
+    }
+
+    void own_state(flight::FlightState state, int mps) {
+        rig.state.own.flight_state = static_cast<uint8_t>(state);
+        rig.state.own.speed_mm_s = mps * 1000;
+    }
+
+    bool quiet() {
+        return rig.state.alarm_level == traffic::Level::None &&
+               rig.alarm_service.announcing_level() == traffic::Level::None;
     }
 
     const traffic::Target* target() {
@@ -99,16 +111,37 @@ TEST_CASE("formation: a tight pair that settles down stops the alarm its joining
     CHECK(flight.rig.state.alarm_level == traffic::Level::None);
 }
 
-TEST_CASE("formation: a member closing on us alarms on that fix, and is no longer a member") {
+TEST_CASE("formation: a member closing on us alarms on the second fix, and is no longer a member") {
     Flight flight;
-    const uint32_t after = flight.hold_station(1000);
+    uint32_t t = flight.hold_station(1000);
     REQUIRE(flight.target()->in_formation);
 
     // The same aircraft, now 400 m off the nose coming the other way.
-    flight.hear(0, 400, 0, 40, 270, after);
+    flight.hear(0, 400, 0, 40, 270, t);
+    CHECK(flight.quiet());
+    t += 1000;
+    flight.hear(0, 320, 0, 40, 270, t);
     CHECK(flight.rig.state.alarm_level == traffic::Level::Advisory);
     CHECK_FALSE(flight.target()->in_formation);
     CHECK(flight.rig.alarm_service.formation_members() == 0);
+}
+
+// The closing figure was rounded to whole metres a second, so 2.5 m/s of noise took it back.
+TEST_CASE("formation: a member under three metres a second of closure stays a member") {
+    Flight flight;
+    uint32_t t = flight.hold_station(1000);
+    REQUIRE(flight.target()->in_formation);
+
+    // 3.25 m/s faster from 60 m right and 120 m behind: 2.9 m/s on the line of sight.
+    for (const uint32_t until = t + 10000; t < until; t += 1000) {
+        flight.rig.state.own.fix_ms = t;
+        model::AircraftObs obs = contact(flight.rig.state.own, -60, -120, 10, 40, 90, t);
+        obs.speed_q = 173;
+        flight.rig.state.traffic.update(obs, t / 1000);
+        flight.rig.alarm_service.tick(t);
+        CHECK(flight.target()->in_formation);
+        CHECK(flight.quiet());
+    }
 }
 
 TEST_CASE("formation: a pair splitting is not alarmed while it separates") {
@@ -135,6 +168,8 @@ TEST_CASE("formation: a split that turns back into a closure is alarmed again") 
 
     // The one that left is overtaking us from behind at 40 m/s.
     flight.hear(-60, -500, 10, 80, 90, t);
+    t += 1000;
+    flight.hear(-60, -460, 10, 80, 90, t);
     CHECK(flight.rig.state.alarm_level > traffic::Level::None);
     CHECK_FALSE(flight.target()->in_formation);
 }
@@ -148,4 +183,51 @@ TEST_CASE("formation: a contact nobody has heard from is forgotten, membership a
     flight.rig.state.traffic.age_out(gone / 1000);
     flight.rig.alarm_service.tick(gone);
     CHECK(flight.rig.alarm_service.formation_members() == 0);
+}
+
+// The car trip: every stop was a landing, and every pull-away re-formed the pair with a beep.
+TEST_CASE("formation: a pair lifting off together is never announced, and joins") {
+    Flight flight;
+    flight.own_state(flight::FlightState::Ground, 0);
+    uint32_t t = 1000;
+    for (; t <= 30000; t += 10000) {
+        flight.hear(-20, -30, 0, 0, 90, t, flight::FlightState::Ground);
+        CHECK(flight.quiet());
+    }
+
+    flight.own_state(flight::FlightState::Airborne, 40);
+    for (const uint32_t until = t + formation::kTogetherHoldMs + 2000; t <= until; t += 1000) {
+        flight.hear(-20, -30, 0, 40, 90, t, flight::FlightState::Airborne);
+        CHECK(flight.quiet());
+    }
+    CHECK(flight.target()->in_formation);
+}
+
+// The glider leaves the ground first, so the tug is a ground contact until it lifts off itself.
+TEST_CASE("formation: a tug lifting off ahead of its glider is never announced, and joins") {
+    Flight flight;
+    flight.own_state(flight::FlightState::Airborne, 30);
+    uint32_t t = 1000;
+    for (; t <= 5000; t += 1000) {
+        flight.hear(0, 60, 0, 30, 90, t, flight::FlightState::Ground);
+        CHECK(flight.quiet());
+    }
+    for (const uint32_t until = t + formation::kTogetherHoldMs + 2000; t <= until; t += 1000) {
+        flight.hear(0, 60, 0, 30, 90, t, flight::FlightState::Airborne);
+        CHECK(flight.quiet());
+    }
+    CHECK(flight.target()->in_formation);
+}
+
+TEST_CASE("formation: a second aircraft catching up after the takeoff is announced") {
+    Flight flight;
+    flight.own_state(flight::FlightState::Ground, 0);
+    flight.rig.alarm_service.tick(1000);
+    flight.own_state(flight::FlightState::Airborne, 40);
+
+    uint32_t t = 2000;
+    for (int east = -400; t <= 6000; t += 1000, east += 10)
+        flight.hear(-20, east, 0, 50, 90, t, flight::FlightState::Airborne);
+    CHECK(flight.rig.state.alarm_level == traffic::Level::Advisory);
+    CHECK_FALSE(flight.target()->in_formation);
 }

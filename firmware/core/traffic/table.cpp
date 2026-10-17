@@ -105,6 +105,7 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
     int idx = find(obs.addr_table, obs.addr);
     if (idx >= 0) {
         if (prefer_new(obs, slots_[idx].obs)) {
+            watch_liftoff(slots_[idx], obs);
             slots_[idx].obs = obs;
             sample_turn(slots_[idx].turn, obs);
         }
@@ -115,9 +116,15 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
     slots_[idx].used = true;
     slots_[idx].obs = obs;
     slots_[idx].turn = TargetTurn{};
+    slots_[idx].liftoff = flight::Liftoff{};
     sample_turn(slots_[idx].turn, obs);
     slots_[idx].alarm_level = Level::None;
     return idx;
+}
+
+void TrafficTable::watch_liftoff(Target& target, const model::AircraftObs& incoming) {
+    if (flight::on_ground(target.obs.flight_state) && flight::airborne(incoming.flight_state))
+        target.liftoff = {incoming.at_ms, true};
 }
 
 void TrafficTable::age_out(uint32_t now) {

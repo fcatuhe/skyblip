@@ -190,6 +190,31 @@ TEST_CASE("product: a standing advisory buzzes the motor once, and once only") {
     CHECK(sky.buzzer().haptic_pulses() == pulses);
 }
 
+// A unit at the hold beeped for every aircraft that climbed out of the field or turned in above it.
+TEST_CASE("product: a unit on the ground says nothing of the circuit, and one thing at liftoff") {
+    Sky sky;
+    sky.simulator.world().set_speed_kt(0);
+    REQUIRE(sky.simulator.setup() == Status::Ok);
+    sky.run(0, 5000);
+
+    // Two aircraft circling the field, inside the advisory ring and outside formation range.
+    sky.simulator.world().add_aircraft(1500, 0, 150, 35, 270, -1, -1, protocol::System::AdslDirect,
+                                       -1.34);
+    sky.simulator.world().add_aircraft(0, 2000, 200, 35, 0, -1, -1, protocol::System::AdslDirect,
+                                       -1.0);
+    const uint32_t pulses = sky.buzzer().haptic_pulses();
+    const uint32_t tones = sky.tone_commands();
+    sky.run(5000, 45000);
+    CHECK(sky.simulator.product().state().traffic.count() == 2);
+    CHECK(sky.buzzer().haptic_pulses() == pulses);
+    CHECK(sky.tone_commands() == tones);
+
+    sky.simulator.world().set_speed_kt(90);
+    sky.run(45000, 60000);
+    CHECK(sky.buzzer().haptic_pulses() == pulses + 1);
+    CHECK(int(sky.announcing_level()) == 1);
+}
+
 TEST_CASE("product: the first fix plays its tune, and traffic takes the buzzer off it") {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);

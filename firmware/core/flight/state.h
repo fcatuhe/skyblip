@@ -24,6 +24,11 @@ constexpr uint16_t kDopUnityE2 = 100;
 // INFO: fc 18sep26 moshe-braner's jerk gate: a speed jumping 4x between solutions is noise
 constexpr int32_t kJerkSpeedRatio = 4;
 
+struct Liftoff {
+    uint32_t at_ms{0};
+    bool valid{false};
+};
+
 bool flight_evidence(const FlightSample& sample);
 bool ground_evidence(const FlightSample& sample);
 bool taxi_evidence(const FlightSample& sample);
