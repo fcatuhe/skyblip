@@ -80,10 +80,6 @@ HeadingUp on_the_rim(int32_t right, int32_t ahead) {
     return {static_cast<int32_t>(a * kRimR / apart), static_cast<int32_t>(r * kRimR / apart)};
 }
 
-bool clear_of_the_footer(const Plotted& p) {
-    return p.in_ring || p.y + ui::blip_below(p.vertical, p.trend) < kFooterTop;
-}
-
 Plotted plot_point(const RadarSnapshot& snap, const RadarTarget& t, int16_t track) {
     const int ring = ring_r(snap.plot);
     const int64_t range = ring_metres(snap);
@@ -94,7 +90,7 @@ Plotted plot_point(const RadarSnapshot& snap, const RadarTarget& t, int16_t trac
     const HeadingUp drawn = pinned ? on_the_rim(dx, dy) : HeadingUp{dy, dx};
     Plotted p{dx,      dy,   px_of(drawn.right),  py_of(drawn.ahead),
               in_ring, true, vertical_of(t.up_m), trend_of(t)};
-    p.shown = pinned || (on_glass(p.x, p.y) && clear_of_the_footer(p));
+    p.shown = pinned || on_glass(p.x, p.y);
     return p;
 }
 
@@ -254,15 +250,6 @@ void plot_blip(ui::Canvas& fb, const Plotted& p, traffic::Level alarm_level) {
     ui::draw_blip(fb, p.x, p.y, p.vertical, p.trend, alarm_level >= traffic::Level::Advisory);
 }
 
-void clear_under(ui::Canvas& fb, const Plotted& p) {
-    const int beside = ui::blip_beside(p.vertical);
-    const int above = ui::blip_above(p.vertical, p.trend) + 1;
-    const int below = ui::blip_below(p.vertical, p.trend) + 1;
-    for (int y = p.y - above; y <= p.y + below; y++)
-        for (int x = p.x - beside; x <= p.x + beside; x++)
-            if (!pixel_within(x, y, kAllR)) fb.set_pixel(x, y, false);
-}
-
 int64_t apart2(const Plotted& p) {
     return static_cast<int64_t>(p.right) * p.right + static_cast<int64_t>(p.ahead) * p.ahead;
 }
@@ -348,7 +335,6 @@ void rim_count(ui::Canvas& fb, const RimMark& m, const RimMark* marks, int n, co
         if (!box && count_fits(spot, m, marks, n, label)) box = &spot;
     if (!box) return;
     char digit[2] = {static_cast<char>('0' + (m.count > 9 ? 9 : m.count)), 0};
-    fb.rect(box->left, box->top, kCountW + 2, kCountH + 2, false, true);
     fb.draw_text(box->left + 1, box->top + 1, digit, true, 1);
 }
 
@@ -440,10 +426,7 @@ void plot_rim(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track, const Re
     }
     for (int i = 0; i < shown; i++)
         if (drawn[i].count > 1) rim_count(fb, drawn[i], drawn, shown, label);
-    for (int i = shown - 1; i >= 0; i--) {
-        clear_under(fb, drawn[i].p);
-        plot_blip(fb, drawn[i].p, drawn[i].level);
-    }
+    for (int i = 0; i < shown; i++) plot_blip(fb, drawn[i].p, drawn[i].level);
 }
 
 }  // namespace skyblip::go::radar

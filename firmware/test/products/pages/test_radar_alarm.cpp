@@ -178,10 +178,10 @@ TEST_CASE("radar: a threat astern flashes its wedge down to the ring, around the
     // glass the old wedge stopped short of: inside the ring, left of the range plaque
     CHECK(differing_in(between, lit, 62, 175, 80, 190) > 100);
 
-    // "4 NM" is 24 px wide and keeps 3 px around it: x 85..114, y 179 down
-    CHECK(differing_in(between, lit, 86, 180, 114, 198) == 0);
+    // "4 NM" is 24 px wide and keeps 4 px around it: x 84..115, y 178 down
+    CHECK(differing_in(between, lit, 85, 179, 115, 198) == 0);
     // and the square corner is taken back, which is what rounds it
-    CHECK(differing_in(between, lit, 85, 179, 86, 180) == 1);
+    CHECK(differing_in(between, lit, 84, 178, 85, 179) == 1);
 
     // a clock wide enough to reach inside the ring: 10:59 is five cells, 4:20 is four
     snap.flight_seconds = 10 * 3600 + 59 * 60;

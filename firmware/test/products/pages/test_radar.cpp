@@ -211,9 +211,9 @@ TEST_CASE("radar: the range labels the ring, centred on it and cleared off it") 
     wider.range_step = 3;
     CHECK(reads_in(radar(wider), "8", 70, 176, 100, 198, 2));
 
-    // The ring is cleared off the label rather than read through it.
+    // The ring is cleared off the label rather than read through it: "4" starts at 88, 4 px in.
     for (int y = 186; y < 196; y++)
-        for (int x = 82; x < 88; x++) CHECK_FALSE(fb.get_pixel(x, y));
+        for (int x = 84; x < 88; x++) CHECK_FALSE(fb.get_pixel(x, y));
 }
 
 // B4. One ring, picked in the unit it is read in: whole miles or whole kilometres.
@@ -246,7 +246,7 @@ TEST_CASE("radar: the footer counts every aircraft heard, either side of the clo
     CHECK(reads_in(fb, "FLIGHT", 0, 168, 50, 182));
     CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
     CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "ACT", 140, 175, 190, 200));
+    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot closer = flying(0);
     closer.range_step = 1;
@@ -262,7 +262,7 @@ TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
 
     CHECK(reads_in(fb, "-", 170, 170, 200, 200, 3));
     CHECK_FALSE(reads_in(fb, "0", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "ACT", 140, 175, 190, 200));
+    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot no_position = flying(0);
     no_position.fix_valid = false;
@@ -383,13 +383,20 @@ TEST_CASE("radar: under NO FIX stands how far the receiver has got") {
     CHECK_FALSE(reads_in(plotted, "BLIND", 0, 0, 200, 199));
 }
 
-TEST_CASE("radar: a blip lands off the state word rather than erasing it") {
+// The readings are the ground the traffic is struck over: a word is no plaque to hide under.
+TEST_CASE("radar: a blip on the state word is drawn over it, and the word still reads") {
     // 4428 m behind is 54 px on the 4 NM ring, which is where the word stands.
-    RadarTarget behind[1] = {{-4428, 0, 100, Level::None}};
+    RadarTarget behind[1] = {{-4428, 0, 0, Level::None}};
     RadarSnapshot parked = flying(0);
     parked.in_flight = false;
     parked.n_targets = 1;
     parked.targets = behind;
+    const Glass fb = radar(parked);
 
-    CHECK(reads_in(radar(parked), "GROUND", 40, 120, 160, 160, 2));
+    CHECK(reads_in(fb, "GROUND", 40, 120, 160, 160, 2));
+    // the diamond's four points, 7 px out each way from (100, 154)
+    CHECK(fb.get_pixel(93, 154));
+    CHECK(fb.get_pixel(107, 154));
+    CHECK(fb.get_pixel(100, 147));
+    CHECK(fb.get_pixel(100, 161));
 }
