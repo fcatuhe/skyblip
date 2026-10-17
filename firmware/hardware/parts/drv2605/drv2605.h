@@ -43,8 +43,8 @@ class Drv2605 : public ports::Haptic {
     Status begin();
 
     // ports::Haptic. Real-time playback, not a ROM effect: the drive value is a
-    // register that holds until it is cleared, so the pulse is exactly as long
-    // as the caller's timer, and no entry in the effect ROM has to be trusted to
+    // register that holds until it is cleared, so the motor runs exactly as long
+    // as the caller keeps it on, and no entry in the effect ROM has to be trusted to
     // last a particular number of milliseconds. The ROM route (setWaveform +
     // GO, which is what SoftRF plays) gives the effect's own length, which is
     // not the length core/annunciation asked for.

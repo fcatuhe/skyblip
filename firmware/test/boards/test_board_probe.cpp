@@ -65,16 +65,70 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
     models::Drv2605& chip = platform.chips().haptic;
     CHECK_FALSE(chip.moving());
 
-    roles.annunciator.vibrate(200);
+    roles.annunciator.vibrate();
     CHECK(chip.moving());
-
-    // And it stops on its own deadline, which is the adapter's promise in
-    // ports/annunciator.h. The board's poll is where the host's deadline is served.
-    bus::State state{};
-    board.poll(state, 100);
-    CHECK(chip.moving());
-    board.poll(state, 100 + 200);
+    roles.annunciator.still();
     CHECK_FALSE(chip.moving());
+}
+
+// A loop that stalls mid-call would otherwise hold an output on until the watchdog bites.
+TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both") {
+    platform::host::Platform platform;
+    bus::Bus bus;
+    Board board{platform, bus};
+    ports::Roles roles = board.roles();
+    models::Drv2605& chip = platform.chips().haptic;
+    bus::State state{};
+
+    roles.annunciator.vibrate();
+    board.poll(state, 100);
+    board.poll(state, 100 + annunciation::kAnnunciatorOnCeilingMs - 10);
+    CHECK(chip.moving());
+    board.poll(state, 100 + annunciation::kAnnunciatorOnCeilingMs);
+    CHECK_FALSE(chip.moving());
+
+    roles.annunciator.tone(annunciation::kNoteA7Hz, ports::Loudness::Loud);
+    board.poll(state, 3000);
+    board.poll(state, 3000 + annunciation::kAnnunciatorOnCeilingMs - 10);
+    CHECK(platform.annunciator().sounding());
+    board.poll(state, 3000 + annunciation::kAnnunciatorOnCeilingMs);
+    CHECK_FALSE(platform.annunciator().sounding());
+    CHECK(platform.annunciator().guard_cuts() == 2);
+}
+
+TEST_CASE("board: the guard counts from turn-on: an off re-arms it, a pitch change does not") {
+    platform::host::Platform platform;
+    bus::Bus bus;
+    Board board{platform, bus};
+    ports::Roles roles = board.roles();
+    models::Drv2605& chip = platform.chips().haptic;
+    bus::State state{};
+    constexpr uint32_t kCeilingMs = annunciation::kAnnunciatorOnCeilingMs;
+
+    roles.annunciator.vibrate();
+    board.poll(state, 100);
+    roles.annunciator.still();
+    board.poll(state, 100 + kCeilingMs + 10);
+    CHECK(platform.annunciator().guard_cuts() == 0);
+
+    roles.annunciator.vibrate();
+    board.poll(state, 2500);
+    roles.annunciator.still();
+    roles.annunciator.vibrate();
+    board.poll(state, 4000);
+    board.poll(state, 2500 + kCeilingMs + 10);
+    CHECK(chip.moving());
+    CHECK(platform.annunciator().guard_cuts() == 0);
+    roles.annunciator.still();
+
+    roles.annunciator.tone(annunciation::kNoteA7Hz, ports::Loudness::Loud);
+    board.poll(state, 8000);
+    roles.annunciator.tone(annunciation::kNoteCSharp8Hz, ports::Loudness::Loud);
+    board.poll(state, 8000 + kCeilingMs - 10);
+    CHECK(platform.annunciator().sounding());
+    board.poll(state, 8000 + kCeilingMs);
+    CHECK_FALSE(platform.annunciator().sounding());
+    CHECK(platform.annunciator().guard_cuts() == 1);
 }
 
 TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor") {
@@ -92,7 +146,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
     // The call site does not change and does not check: it asks for a pulse and
     // gets whatever this board can make, which here is nothing at all.
     ports::Roles roles = board.roles();
-    roles.annunciator.vibrate(200);
+    roles.annunciator.vibrate();
     CHECK_FALSE(platform.chips().haptic.moving());
 }
 
@@ -142,7 +196,7 @@ TEST_CASE("board: a buzzer pin that follows the pull-up is an empty pad, and the
 
     // ...and still reachable: the annunciator is one role over two parts.
     ports::Roles roles = board.roles();
-    roles.annunciator.vibrate(200);
+    roles.annunciator.vibrate();
     CHECK(platform.chips().haptic.moving());
 }
 

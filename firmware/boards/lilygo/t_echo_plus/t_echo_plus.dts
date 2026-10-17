@@ -514,7 +514,7 @@
  *
  * Nor is the DRV2605 haptic driver at 0x5A, and that is not an omission: we DO
  * drive it, with our own part under hardware/parts/drv2605/, because a haptic
- * pulse is two register writes and a wait, and Zephyr has no haptic subsystem to
+ * pulse is a handful of register writes, and Zephyr has no haptic subsystem to
  * put it behind. It is found by the bus scan, not declared here, for the reason
  * the barometer is declared twice: what is fitted on this footprint is a
  * procurement question the device answers about itself.

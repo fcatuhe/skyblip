@@ -14,7 +14,7 @@
                       "description": "ADS-L aircraft category"},
     "alarm": {"type": "boolean"},
     "alarm_volume": {"type": "integer", "enum": [0, 1, 2], "default": 2,
-                     "description": "0=off, 1=soft, 2=loud, the three steps of the radar menu's VOLUME row. Off silences the buzzer and leaves the haptic pulsing on a new contact, which 'alarm' false does not. A device ships on loud. Firmware before this scale took 0 to 5, where 3 and up all drove the piezo at the same duty; a stored value comes back as 0 off, 1 and 2 soft, 3 to 5 loud"},
+                     "description": "0=off, 1=soft, 2=loud, the three steps of the radar menu's VOLUME row. Off silences the buzzer and the haptic both, as 'alarm' false does. Soft and loud pulse the haptic with each call. A device ships on loud. Firmware before this scale took 0 to 5, where 3 and up all drove the piezo at the same duty; a stored value comes back as 0 off, 1 and 2 soft, 3 to 5 loud"},
     "units": {"type": "integer", "enum": [0, 1], "default": 0,
               "description": "0=nautical (NM, kt), 1=metric (km, km/h): the aeronautical unit is the first one because it is the one a pilot flies, and a device ships on it. Decides every page that prints a distance or a speed: the radar's range ring, the nearby page's distance column, the six-pack's speed dial. Altitudes and vertical speeds stay in feet whatever this says, and the status page shows the aeronautical figure and the SI one side by side"},
     "battery_offset_mv": {"type": "integer", "minimum": -250, "maximum": 250,

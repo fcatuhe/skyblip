@@ -1,7 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 
-#include "core/annunciation/pattern.h"
+#include "core/annunciation/annunciator.h"
 #include "core/diag/payload.h"
 #include "core/indication/lamp.h"
 #include "core/power/duty.h"
@@ -53,19 +53,20 @@ class AlarmService : public runtime::Service {
                         const traffic::AlarmTracker::Decision& decision, uint32_t now_ms);
     formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
     void drive(const annunciation::Situation& situation, uint32_t now_ms);
+    void drive_buzzer(const annunciation::Command& command);
+    void drive_motor(bool vibrating);
     void drive_lamp(uint32_t now_ms, bool running);
     void accrue_annunciator(uint32_t now_ms);
-    void pulse_haptic();
 
-    static constexpr uint16_t kHapticFeltThroughAHarnessMs = 400;
-
-    // Eight passes through the shortest phase of the fastest pattern: the
+    // Eight passes through the shortest note or gap of either tune: the
     // cadence the ear gets is the cadence written in core/annunciation, to
     // within one pass of the loop.
     static constexpr uint32_t kPassesPerShortestPhase = 8;
     static_assert(runtime::kServiceStepMs * kPassesPerShortestPhase <=
                       annunciation::kShortestPhaseMs,
-                  "the service loop is too coarse to resolve the advisory pair");
+                  "the service loop is too coarse to resolve the shortest note");
+    static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kTaskWatchdogMs,
+                  "the annunciator's guard has to cut before the watchdog bites");
 
     // Three passes through the shortest flash in the table. An LED needs far less
     // time than a piezo to be seen, so the figure is smaller than the one above -
@@ -75,7 +76,7 @@ class AlarmService : public runtime::Service {
                   "the service loop is too coarse to resolve the shortest flash");
 
     power::OnTime sounding_{};
-    uint32_t haptic_ms_{0};
+    power::OnTime vibrating_{};
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
     uint32_t recorded_obs_ms_[traffic::TrafficTable::kCapacity]{};

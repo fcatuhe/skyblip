@@ -1,4 +1,5 @@
 // The seven cumulative duty counters on bus::State, through the service that owns what each counts.
+#include "core/annunciation/annunciator.h"
 #include "core/bus/state.h"
 #include "core/gnss/first_fix.h"
 #include "core/timing/slot.h"
@@ -194,7 +195,11 @@ TEST_CASE("duty: the annunciator counter runs while it sounds and stands still w
     for (uint32_t t = 3000; t <= 9000; t += step) sim.step(t);
     REQUIRE(sim.announcing_level() != traffic::Level::None);
     const uint32_t sounded = sim.product().state().duty.annunciator_ms;
-    CHECK(sounded > before);
+    // For traffic the motor runs exactly while the tone sounds, so the advisory counts twice.
+    uint32_t advisory_tone_ms = 0;
+    for (const annunciation::Note& note : annunciation::kAdvisoryCall)
+        advisory_tone_ms += note.tone_ms;
+    CHECK(sounded - before == 2 * advisory_tone_ms);
 
     sim.product().settings().alarm_enabled = false;
     for (uint32_t t = 9000; t <= 15000; t += step) sim.step(t);

@@ -24,8 +24,9 @@ class NullDisplay : public Display {
 class NullAnnunciator : public Annunciator {
    public:
     void tone(uint16_t, Loudness) override {}
-    void vibrate(uint16_t) override {}
     void silence() override {}
+    void vibrate() override {}
+    void still() override {}
 };
 
 class NullLink : public Link {
