@@ -353,13 +353,12 @@ TEST_CASE("simulator: a threat going away does not buzz the motor again") {
     REQUIRE(h.haptic_ms() >= 200);
 
     // The sky emptying is a level CHANGE too, and it must not be mistaken for a
-    // new contact: the annunciator records the last duration, so a fresh pulse
-    // would show up as a change here.
-    const uint16_t after_escalation = h.haptic_ms();
+    // new contact.
+    const uint32_t pulses = h.platform().annunciator().haptic_pulses();
     h.world().clear_aircraft();
     run(h, 6000, 40000);
     CHECK(h.buzzer_level() == 0);
-    CHECK(h.haptic_ms() == after_escalation);  // unchanged: no pulse on the way down
+    CHECK(h.platform().annunciator().haptic_pulses() == pulses);
 }
 
 // The world can connect a phone and take it away again, which is the seam this

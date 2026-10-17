@@ -1,6 +1,6 @@
-// core/annunciation/pattern.h: what the buzzer should be doing right now.
-#ifndef SKYBLIP_CORE_ANNUNCIATION_PATTERN_H
-#define SKYBLIP_CORE_ANNUNCIATION_PATTERN_H
+// core/annunciation/annunciator.h: what the buzzer and the motor should be doing right now.
+#ifndef SKYBLIP_CORE_ANNUNCIATION_ANNUNCIATOR_H
+#define SKYBLIP_CORE_ANNUNCIATION_ANNUNCIATOR_H
 
 #include <algorithm>
 #include <cstdint>
@@ -30,13 +30,6 @@ struct Tune {
 template <uint8_t N>
 constexpr Tune tune_of(const Note (&notes)[N]) {
     return Tune{notes, N};
-}
-
-constexpr uint16_t tune_ms(Tune tune) {
-    uint16_t ms = 0;
-    for (uint8_t i = 0; i < tune.count; i++)
-        ms = static_cast<uint16_t>(ms + tune.notes[i].tone_ms + tune.notes[i].gap_ms);
-    return ms;
 }
 
 // INFO: fc 17oct26 piezo unknown, 9x9 mm ones peak at 4 kHz +/- 500 Hz: the third straddles it
@@ -97,6 +90,8 @@ static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear c
 // is written here and nowhere else.
 enum class Voice : uint8_t { None, FirstFix, Traffic };
 
+constexpr bool felt(Voice voice) { return voice == Voice::Traffic; }
+
 Tune tune_for(Voice voice, traffic::Level level);
 
 // Everything the decision depends on, gathered by the service that owns the
@@ -107,7 +102,7 @@ struct Situation {
     bool announced{false};
     // The first fix landed on this pass.
     bool first_fix{false};
-    // settings.alarm_enabled.
+    // settings.alarm_enabled, and a volume that is not off.
     bool enabled{true};
     // False from the moment the device starts going down.
     bool running{true};
@@ -115,11 +110,13 @@ struct Situation {
 
 // What the buzzer should be doing, and whether that differs from what it was
 // already told. A PWM re-armed on every service pass is a click, not a tone, so
-// the service acts on changed and on nothing else.
+// the service acts on changed for the tone. vibrate_ms is a pulse that starts
+// on this pass and that the port's own timer ends.
 struct Command {
     bool tone_on{false};
     uint16_t tone_hz{0};
     bool changed{false};
+    uint16_t vibrate_ms{0};
 };
 
 class Policy {
@@ -137,6 +134,8 @@ class Policy {
    private:
     void begin(Voice voice, traffic::Level level, uint32_t now_ms);
     void advance(uint32_t now_ms);
+    void start_call();
+    uint16_t call_ms() const;
     void release();
     Command emit();
 
@@ -149,6 +148,7 @@ class Policy {
     uint32_t phase_ms_{0};
     bool phase_on_{false};
     bool commanded_on_{false};
+    uint16_t vibrate_ms_{0};
 };
 
 }  // namespace skyblip::annunciation

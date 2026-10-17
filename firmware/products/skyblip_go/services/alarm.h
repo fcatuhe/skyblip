@@ -1,7 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 
-#include "core/annunciation/pattern.h"
+#include "core/annunciation/annunciator.h"
 #include "core/diag/payload.h"
 #include "core/indication/lamp.h"
 #include "core/power/duty.h"
@@ -55,9 +55,7 @@ class AlarmService : public runtime::Service {
     void drive(const annunciation::Situation& situation, uint32_t now_ms);
     void drive_lamp(uint32_t now_ms, bool running);
     void accrue_annunciator(uint32_t now_ms);
-    void pulse_haptic();
-
-    static constexpr uint16_t kHapticFeltThroughAHarnessMs = 400;
+    void pulse_haptic(uint16_t ms);
 
     // Eight passes through the shortest note or gap of either tune: the
     // cadence the ear gets is the cadence written in core/annunciation, to

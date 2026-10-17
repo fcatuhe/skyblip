@@ -65,19 +65,11 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.running = running_;
     drive(situation, now_ms);
     drive_lamp(now_ms, running_);
-
-    if (!settings_.alarm_enabled || !running_) return;
-    if (announced) pulse_haptic();
 }
 
 void AlarmService::accrue_annunciator(uint32_t now_ms) {
     sounding_.observe(policy_.sounding(), now_ms);
     context_.state.duty.annunciator_ms = sounding_.ms() + haptic_ms_;
-}
-
-void AlarmService::pulse_haptic() {
-    context_.roles.annunciator.vibrate(kHapticFeltThroughAHarnessMs);
-    haptic_ms_ += kHapticFeltThroughAHarnessMs;
 }
 
 // INFO: fc 20sep26 one record per reception: between two of them nothing new is known about it
@@ -139,6 +131,7 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
 
 void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_ms) {
     const annunciation::Command command = policy_.update(situation, now_ms);
+    if (command.vibrate_ms != 0) pulse_haptic(command.vibrate_ms);
     if (!command.changed) return;
     if (!command.tone_on) {
         context_.roles.annunciator.silence();
@@ -147,6 +140,11 @@ void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_
     const ports::Loudness loudness =
         settings_.alarm_volume == AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
     context_.roles.annunciator.tone(command.tone_hz, loudness);
+}
+
+void AlarmService::pulse_haptic(uint16_t ms) {
+    context_.roles.annunciator.vibrate(ms);
+    haptic_ms_ += ms;
 }
 
 }  // namespace skyblip::go

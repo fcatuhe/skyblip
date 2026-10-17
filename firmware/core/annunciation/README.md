@@ -1,6 +1,6 @@
 # core/annunciation
 
-What the buzzer should be doing right now, decided in one place. The traffic tracker says which level stands and whether it just got worse; `pattern.h` says how that sounds, as a tune of notes each with a pitch, a length and the silence after it, and it is the only thing allowed to hand the buzzer from one voice to another.
+What the buzzer and the vibration motor should be doing right now, decided in one place. The traffic tracker says which level stands and whether it just got worse; `annunciator.h` says how that sounds and how it is felt, as a tune of notes each with a pitch, a length and the silence after it, and it is the only thing allowed to hand the buzzer from one voice to another.
 
 `ports::Annunciator::tone()` opens a continuous tone that runs until `silence()`, so a tune is over at its last note and nothing here can hold the tone open. A note with no silence after it runs straight into the next pitch. The policy issues a command only when the tone, or its pitch, changes, because a PWM re-armed on every service pass is a click and not a tone.
 
@@ -12,6 +12,12 @@ The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole
 
 The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major third, so the call is in tune rather than an arbitrary pair of frequencies. They sit either side of where the transducer is loudest. The part LilyGO fits is not identified in its own material; it is a passive piezo driven straight off one PWM pin, and commodity 9x9 mm SMD piezo sounders resonate at 4000 Hz +/- 500 Hz, so whichever way a given unit's resonance falls, one note of every call is near it. A bench sweep with a sound level meter is what settles the real peak, and the pair moves to the third that straddles it then.
 
-## Loudness is the port's, the pattern is not
+## The motor says the calls, and only the calls
 
-The pattern decides pitch and timing and never level. The pilot's volume reaches the port as `ports::Loudness`, `Soft` or `Loud`, and what that means in duty cycle is the platform's: a square wave's fundamental goes as sin(pi x duty), so half duty is the most one pin can give and a tenth of the period is about 10 dB under it. A volume of off never reaches the port: the service treats it like alarms switched off for the buzzer, and the haptic still pulses, because under a headset the motor is the alarm that gets through.
+A call is the notes that run together between two silences. The traffic voice pulses the motor at the start of each call, for as long as the call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The pulse is a length handed to `ports::Annunciator::vibrate()`, whose own timer ends it, so a loop that stops running never leaves the motor on. The fix tune is never felt: the motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
+
+The ERM on the T-Echo Plus takes time to spin up and to stop. Whether a 270 ms pulse is felt through a harness, and whether the 270 ms rest reads as a gap, is a bench question that has not been measured.
+
+## Loudness is the port's, the tune is not
+
+The tune decides pitch and timing and never level. The pilot's volume reaches the port as `ports::Loudness`, `Soft` or `Loud`, and what that means in duty cycle is the platform's: a square wave's fundamental goes as sin(pi x duty), so half duty is the most one pin can give and a tenth of the period is about 10 dB under it. A volume of off never reaches the port: the service treats it like alarms switched off, buzzer and motor both.

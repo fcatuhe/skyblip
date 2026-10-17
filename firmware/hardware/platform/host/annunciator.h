@@ -38,6 +38,7 @@ class Annunciator : public ports::Annunciator {
         haptic_->start();
         pulse_ends_ms_ = ms;
         pulsing_ = true;
+        started_ = false;
     }
 
     void silence() override {

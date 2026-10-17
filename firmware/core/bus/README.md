@@ -50,7 +50,7 @@ No current is sensed anywhere on this board (`../power/README.md`), so what a fl
 | `backlight_ms` | time lit | the span since the screen service last looked, credited while the lamp was on |
 | `rx_armed_ms` | time the radio was in an armed receive dwell | the overlap of each pass with the window the executor was handed, taken in microseconds and published in milliseconds |
 | `tx_keyed_ms` | time the transmitter was on air | the nominal length of each burst the executor reported sent, read off the `timing::AirTime` the hour's budget is already spent from |
-| `annunciator_ms` | buzzer and haptic in one number | the span while the pattern held the tone, plus the stated length of each haptic pulse, which the driver owns and no service can watch end |
+| `annunciator_ms` | buzzer and haptic in one number | the span while a tune held the tone, plus the stated length of each haptic pulse, which the driver owns and no service can watch end |
 | `ble_connected_ms` | time at least one central was connected | the span since the config service last looked, credited while a session was up |
 
 The two counts are never summed. A full refresh is worth about five partials, and which of the two a frame cost is the only thing a refresh policy can act on.

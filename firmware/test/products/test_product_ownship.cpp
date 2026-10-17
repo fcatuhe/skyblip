@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <string>
 
-#include "core/annunciation/pattern.h"
+#include "core/annunciation/annunciator.h"
 #include "core/events/link.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"

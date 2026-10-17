@@ -1,4 +1,4 @@
-#include "core/annunciation/pattern.h"
+#include "core/annunciation/annunciator.h"
 
 namespace skyblip::annunciation {
 
@@ -47,6 +47,7 @@ void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
     note_ = 0;
     tone_hz_ = tune_.notes[0].hz;
     phase_on_ = true;
+    start_call();
 }
 
 void Policy::advance(uint32_t now_ms) {
@@ -68,7 +69,21 @@ void Policy::advance(uint32_t now_ms) {
         note_++;
         tone_hz_ = tune_.notes[note_].hz;
         phase_on_ = true;
+        if (note.gap_ms != 0) start_call();
     }
+}
+
+void Policy::start_call() {
+    if (felt(voice_)) vibrate_ms_ = call_ms();
+}
+
+uint16_t Policy::call_ms() const {
+    uint16_t ms = 0;
+    for (uint8_t i = note_; i < tune_.count; i++) {
+        ms = static_cast<uint16_t>(ms + tune_.notes[i].tone_ms);
+        if (tune_.notes[i].gap_ms != 0) break;
+    }
+    return ms;
 }
 
 void Policy::release() {
@@ -85,6 +100,8 @@ Command Policy::emit() {
     command.changed = command.tone_on != commanded_on_ || command.tone_hz != commanded_hz_;
     commanded_on_ = command.tone_on;
     commanded_hz_ = command.tone_hz;
+    command.vibrate_ms = vibrate_ms_;
+    vibrate_ms_ = 0;
     return command;
 }
 

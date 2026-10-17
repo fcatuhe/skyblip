@@ -8,7 +8,7 @@
 // call site, and neither is a duration.
 //
 // start() begins driving and stop() ends it: no length, because the length of a
-// pulse is a policy (products/skyblip_go/services/alarm.h owns it) and the timer
+// pulse is a policy (core/annunciation owns it) and the timer
 // that ends it belongs to whoever can hold one - the annunciator adapter on each
 // platform. An implementation may idle the part between pulses; nothing above
 // this line knows or cares.

@@ -56,7 +56,7 @@ class Annunciator : public ports::Annunciator {
     // A delayed work item and not a k_timer: a timer's callback runs in interrupt
     // context, and the DRV2605 is stopped over I2C, which may not be called from
     // there. Rescheduled rather than started, so a second pulse that lands inside
-    // the first extends it instead of being cut short by the first one's deadline.
+    // the first replaces its deadline: the motor follows the latest call.
     void vibrate(uint16_t ms) override {
         haptic_->start();
         k_work_reschedule(&haptic_end_.work, K_MSEC(ms));
