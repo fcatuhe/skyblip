@@ -77,7 +77,7 @@ Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
 TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out") {
     MenuValues values = fresh();
     values.settings.aircraft_type = 4;
-    values.settings.alarm_volume = 3;
+    values.settings.alarm_volume = go::AlarmVolume::Soft;
 
     const Drawn drawn = page_of(Page::Radar, values, MenuRow::Alarm);
 
@@ -117,7 +117,7 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
 // Eight rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
     MenuValues values = fresh();
-    values.settings.alarm_volume = 3;
+    values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
     REQUIRE(menu.n == kMenuLines + 1);
 
@@ -130,7 +130,7 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     const Drawn slid = page_of(Page::Radar, values, MenuRow::Volume);
     CHECK(line_of(slid, MenuRow::Volume) == kMenuLines - 1);
     CHECK(row_label_reads(slid, MenuRow::Volume, true));
-    CHECK(row_value_reads(slid, MenuRow::Volume, "3 OF 5", true));
+    CHECK(row_value_reads(slid, MenuRow::Volume, "SOFT", true));
     CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
     CHECK(line_of(slid, MenuRow::AircraftType) == 0);
     CHECK(reads_at(slid.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));

@@ -15,13 +15,14 @@ Out of scope, deliberately: `firmware/hardware/`, `firmware/boards/` and
 name. Anything a pilot can change is a setting rather than a tuning, and lives
 in `firmware/products/skyblip_go/settings.h`.
 
-## `firmware/core/annunciation`
+## [`firmware/core/annunciation`](../firmware/core/annunciation/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | A piezo reaches full amplitude in a couple of milliseconds, so this is an ear figure, not a driver one: shorter than this and a blip is a click that a pilot cannot place, and cannot count. |
 | `kAdvisoryPairBeepMs` | 250 | milliseconds | - | - |
 | `kAdvisoryPairGapSameAsBeepMs` | 250 | milliseconds | - | - |
+| `kAdvisoryWarblePeriodMs` | `kAdvisoryPairBeepMs` = 250 | milliseconds | Period | - |
 | `kFirstFixNoteMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | - |
 | `kFirstFixBeatMs` | `2 * kFirstFixNoteMs` = 180 | milliseconds | - | - |
 | `kFirstFixNextBeatMs` | `kFirstFixBeatMs - kFirstFixNoteMs` = 90 | milliseconds | - | - |
@@ -269,4 +270,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-164 constants over 18 folders.
+165 constants over 18 folders.

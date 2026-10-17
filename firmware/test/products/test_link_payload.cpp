@@ -39,7 +39,7 @@ constexpr uint32_t kWidestAddr = 16777214;  // eight digits, the most air_addres
 go::Settings widest_settings() {
     go::Settings s = go::defaults();
     s.aircraft_type = 17;
-    s.alarm_volume = 5;
+    s.alarm_volume = go::AlarmVolume::Loud;
     s.units = go::Units::Nautical;
     std::memcpy(s.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
     return s;

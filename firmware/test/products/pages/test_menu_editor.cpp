@@ -225,24 +225,19 @@ TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft
     CHECK(bench.values.settings.aircraft_type == 3);
 }
 
-TEST_CASE("menu editor: the volume a pilot can hear, and it stays inside what is valid") {
+// One press from the default is still heard: silent takes a second press.
+TEST_CASE("menu editor: the volume steps down from loud through soft to off, and round") {
     Bench bench;
     bench.focus_on(MenuRow::Volume);
-    REQUIRE(bench.values.settings.alarm_volume == 3);
+    REQUIRE(bench.values.settings.alarm_volume == go::AlarmVolume::Loud);
 
     bench.change();
-    CHECK(bench.values.settings.alarm_volume == 4);
+    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Soft);
     bench.change();
-    CHECK(bench.values.settings.alarm_volume == 5);
-
-    // Off the top it comes back to silent rather than to a value the validator would refuse.
+    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Off);
+    CHECK(go::validate(bench.values.settings) == Status::Ok);
     bench.change();
-    CHECK(bench.values.settings.alarm_volume == 0);
-    for (int i = 0; i <= kMaxAlarmVolume + 1; i++) {
-        CHECK(bench.values.settings.alarm_volume <= kMaxAlarmVolume);
-        CHECK(go::validate(bench.values.settings) == Status::Ok);
-        bench.change();
-    }
+    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Loud);
 }
 
 TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle closes") {
@@ -287,7 +282,7 @@ TEST_CASE("menu editor: a value that would not validate is never handed back") {
     bench.focus_on(MenuRow::Volume);
     REQUIRE(go::validate(bench.values.settings) != Status::Ok);
 
-    const uint8_t volume = bench.values.settings.alarm_volume;
+    const go::AlarmVolume volume = bench.values.settings.alarm_volume;
     CHECK(bench.change() == MenuAction::None);
     CHECK(bench.values.settings.alarm_volume == volume);
     CHECK(bench.values.settings.aircraft_type == 200);

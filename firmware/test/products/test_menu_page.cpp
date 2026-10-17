@@ -168,20 +168,20 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
-    REQUIRE(rig.settings().alarm_volume == 3);
+    REQUIRE(rig.settings().alarm_volume == go::AlarmVolume::Loud);
 
     open_menu(rig, t);
     focus_on(rig, t, go::MenuRow::Volume);
     change(rig, t);
     rig.run(t, t + 500);
     t += 500;
-    CHECK(rig.settings().alarm_volume == 4);
+    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     // The screen did not write the flash: it said the settings had changed and
     // the service that owns the blob wrote it, exactly as it does for a phone.
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.alarm_volume == 4);
+    CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
 
     // And the blob is one a device coming up cold accepts as itself.
     Rig again;
@@ -190,7 +190,7 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
     REQUIRE(again.platform.kv().write("settings", blob, n) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
-    CHECK(again.settings().alarm_volume == 4);
+    CHECK(again.settings().alarm_volume == go::AlarmVolume::Soft);
 }
 
 TEST_CASE("product: the range and the plot a pilot picks on the panel survive a boot") {
@@ -341,7 +341,7 @@ TEST_CASE("product: an invalid setting is never written by the page that could n
     change(rig, t);
     rig.run(t, t + 500);
 
-    CHECK(rig.settings().alarm_volume == 3);
+    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
     go::Settings stored{};
     CHECK_FALSE(stored_settings(rig, stored));
 }

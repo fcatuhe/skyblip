@@ -67,7 +67,11 @@
 
         <div class="manage-field">
           <label for="manage-alarm-volume"><%= settings[:alarm_volume] %></label>
-          <input type="number" id="manage-alarm-volume" name="alarm_volume" min="0" max="5" step="1" required>
+          <select id="manage-alarm-volume" name="alarm_volume">
+            <% settings[:volume_names].each_with_index do |name, code| %>
+              <option value="<%= code %>"><%= name %></option>
+            <% end %>
+          </select>
           <p class="manage-default" data-manage-target="default" data-setting="alarm_volume" hidden></p>
         </div>
       </fieldset>

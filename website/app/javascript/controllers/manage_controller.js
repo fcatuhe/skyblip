@@ -183,15 +183,18 @@ export default class extends Controller {
   #fill(settings) {
     this.shown = settings
     const { elements } = this.settingsTarget
-    const type = elements.aircraft_type
-    if (![...type.options].some(option => Number(option.value) === settings.aircraft_type)) {
-      type.add(new Option(String(settings.aircraft_type), settings.aircraft_type))
-    }
-    type.value = settings.aircraft_type
+    this.#choose(elements.aircraft_type, settings.aircraft_type)
     elements.callsign.value = settings.callsign
     elements.units.value = settings.units
     elements.alarm.checked = settings.alarm
-    elements.alarm_volume.value = settings.alarm_volume
+    this.#choose(elements.alarm_volume, settings.alarm_volume)
+  }
+
+  #choose(select, value) {
+    if (![...select.options].some(option => Number(option.value) === value)) {
+      select.add(new Option(String(value), value))
+    }
+    select.value = value
   }
 
   #edited() {

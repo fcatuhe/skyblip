@@ -53,7 +53,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     on_ground(rig, t);
     open_menu(rig, t);
     focus_on(rig, t, go::MenuRow::Volume);
-    const uint8_t volume = rig.settings().alarm_volume;
+    const go::AlarmVolume volume = rig.settings().alarm_volume;
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
     // up. The prompt takes the glass at once.
@@ -108,7 +108,7 @@ TEST_CASE("product: a long press in the middle of an edit still switches the dev
     uint32_t t = 100;
     open_menu(rig, t);
     focus_on(rig, t, go::MenuRow::Volume);
-    const uint8_t volume = rig.settings().alarm_volume;
+    const go::AlarmVolume volume = rig.settings().alarm_volume;
 
     hold_button(rig, t, power::kLongPressMs + 300);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
@@ -125,16 +125,17 @@ TEST_CASE("product: the volume can be turned up in the air, where a phone is ref
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
+    rig.settings().alarm_volume = go::AlarmVolume::Soft;
     airborne(rig, t);
     REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Airborne);
 
     // The companion app cannot: an unattended phone rewriting the whole struct
     // mid-flight is what that rule is for.
-    rig.send("{\"cmd\":\"set\",\"alarm_volume\":5}");
+    rig.send("{\"cmd\":\"set\",\"alarm_volume\":2}");
     rig.run(t, t + 300);
     t += 300;
     CHECK(rig.product.config().config().pending() == comms::Pending::None);
-    CHECK(rig.settings().alarm_volume == 3);
+    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     // The pilot, on the panel, can. Presence is the thing the phone lacks, and
     // an alarm that is too quiet under a headset is a thing you find out about
@@ -144,9 +145,9 @@ TEST_CASE("product: the volume can be turned up in the air, where a phone is ref
     change(rig, t);
     change(rig, t);
     run_past_the_write_settle(rig, t);
-    CHECK(rig.settings().alarm_volume == 5);
+    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
 
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.alarm_volume == 5);
+    CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
 }

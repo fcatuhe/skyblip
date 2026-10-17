@@ -80,7 +80,9 @@ class Simulator {
     bool panel_refresh_is_full() { return panel_driver().refresh_mode() == ports::Refresh::Full; }
     // What the buzzer is doing at this instant: 0 in the gaps of a pattern too,
     // because a pattern is what an alarm sounds like.
-    uint8_t buzzer_level() { return platform_.annunciator().level(); }
+    uint8_t buzzer_level() {
+        return platform_.annunciator().sounding() ? traffic::to_number(announcing_level()) : 0;
+    }
     // What is being announced, gaps included. This is the one to assert on when
     // the question is whether traffic is being called out at all.
     traffic::Level announcing_level() { return product_.alarm().announcing_level(); }

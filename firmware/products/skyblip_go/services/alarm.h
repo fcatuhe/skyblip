@@ -15,12 +15,6 @@
 
 namespace skyblip::go {
 
-// The one owner of everything this product says out loud or shows with a light.
-// Nothing else calls alarm(), vibrate(), silence() or show(): the traffic tone,
-// the first-fix chirp, the status lamp and the way down all go through the two
-// policies in core/annunciation and core/indication, so each output has one
-// driver and the rules that arbitrate are each written once.
-//
 // The lamp lives here rather than in PowerService, whose state most of it reads,
 // because the highest-priority row in the table is the alarm level and because a
 // device going down has to be silenced and darkened in the same breath - park()

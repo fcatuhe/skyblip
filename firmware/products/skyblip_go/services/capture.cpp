@@ -70,7 +70,7 @@ void CaptureService::record_config(uint32_t now_ms) {
     value.freq_trim_e1_ppm = settings_.freq_trim_e1_ppm;
     value.aircraft_type = settings_.aircraft_type;
     value.addr_table = settings::kAddrTableSkyblip;
-    value.alarm_volume = settings_.alarm_volume;
+    value.alarm_volume = static_cast<uint8_t>(settings_.alarm_volume);
     value.settings_version = settings_.version;
     value.alarm_enabled = settings_.alarm_enabled;
     value.metric = settings_.units == Units::Metric;

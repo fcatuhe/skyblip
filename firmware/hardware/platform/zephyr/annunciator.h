@@ -42,17 +42,12 @@ class Annunciator : public ports::Annunciator {
         silence();
     }
 
-    // Opens the tone and leaves it open, per ports/annunciator.h: whoever calls
-    // this owes it a silence(). The pattern is core/annunciation's.
-    void alarm(uint8_t level, uint8_t volume) override {
-        if (level == 0) return silence();
-        tone(static_cast<uint16_t>(step_hz(level)), volume);
-    }
-
-    void tone(uint16_t hz, uint8_t volume) override {
-        if (hz == 0 || volume == 0) return silence();
-        uint32_t period = PWM_HZ(hz);
-        pwm_set_dt(&buzzer_, period, period / (5 - (volume > 3 ? 3 : volume)));
+    void tone(uint16_t hz, ports::Loudness loudness) override {
+        if (hz == 0) return silence();
+        const uint32_t period = PWM_HZ(hz);
+        const uint32_t divisor =
+            loudness == ports::Loudness::Loud ? kLoudDutyDivisor : kSoftDutyDivisor;
+        pwm_set_dt(&buzzer_, period, period / divisor);
     }
 
     // The pulse and the timer that ends it, per ports/annunciator.h. What the pulse
@@ -67,7 +62,7 @@ class Annunciator : public ports::Annunciator {
         k_work_reschedule(&haptic_end_.work, K_MSEC(ms));
     }
 
-    void silence() override { pwm_set_dt(&buzzer_, PWM_HZ(kTransducerResonanceHz), 0); }
+    void silence() override { pwm_set_pulse_dt(&buzzer_, 0); }
 
     // The one pass of the loop the host platform needs to end a pulse; here the
     // kernel timer has already done it.
@@ -76,20 +71,9 @@ class Annunciator : public ports::Annunciator {
     void attach_haptic(ports::Haptic& haptic) { haptic_ = &haptic; }
 
    private:
-    // INFO: fc 03aug26 The fitted transducer is not identified in LilyGO's own
-    // material (project/research/alarm-audibility.md). It is driven straight off
-    // one PWM pin with no transistor, which is a passive piezo, and commodity
-    // 9x9 mm SMD piezo sounders cluster at 4000 Hz +/- 500 Hz. The table this
-    // replaced ran 2400 to 3200 Hz, entirely below that band, with the loudest
-    // level furthest from resonance. The bench sweep in that document is what
-    // settles the figure; until then the three levels bracket the cluster.
-    static constexpr uint32_t kTransducerResonanceHz = 4000;
-    static constexpr uint32_t kLevelStepHz = 400;
-    static constexpr uint8_t kMiddleLevel = 2;
-
-    static uint32_t step_hz(uint8_t level) {
-        return kTransducerResonanceHz + (static_cast<int32_t>(level) - kMiddleLevel) * kLevelStepHz;
-    }
+    // INFO: fc 15oct26 fundamental goes as sin(pi x duty): half is the most, a tenth is 10 dB under
+    static constexpr uint32_t kLoudDutyDivisor = 2;
+    static constexpr uint32_t kSoftDutyDivisor = 10;
 
     // A plain struct, so CONTAINER_OF is arithmetic on a standard-layout type
     // rather than an offsetof into a class with a vtable.

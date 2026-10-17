@@ -22,14 +22,14 @@ namespace {
 // sampled at a millisecond is not a pattern this device can play.
 constexpr uint32_t kStepMs = 10;
 
-// What a buzzer would have done, from the commands the policy issued. It counts
-// alarm() and silence() calls because that is the difference between one tone
-// with a cadence and the same tone re-armed on every pass of the loop.
+// What a buzzer would have done, from the tone() and silence() commands the policy issued.
 struct Buzzer {
     Policy policy{};
     bool on{false};
-    uint8_t level{0};
+    uint16_t hz{0};
     int tone_commands{0};
+    int pitch_steps{0};
+    uint32_t stepped_after_ms{0};
     int silences{0};
     uint32_t on_ms{0};
     // The beep currently sounding, and the last one that finished.
@@ -40,6 +40,7 @@ struct Buzzer {
     int beeps{0};
     static constexpr int kRecorded = 16;
     uint16_t hz_of[kRecorded]{};
+    uint16_t ended_on_hz[kRecorded]{};
     uint32_t gap_before[kRecorded]{};
 
     void apply(const Command& command, uint32_t now_ms) {
@@ -55,9 +56,13 @@ struct Buzzer {
                     hz_of[beeps - 1] = command.tone_hz;
                     gap_before[beeps - 1] = last_gap_ms;
                 }
+            } else if (command.tone_hz != hz) {
+                pitch_steps++;
+                stepped_after_ms = now_ms - beep_started_ms;
             }
             on = true;
-            level = command.tone_level;
+            hz = command.tone_hz;
+            if (beeps <= kRecorded) ended_on_hz[beeps - 1] = hz;
             return;
         }
         silences++;
@@ -66,7 +71,7 @@ struct Buzzer {
             off_since_ms = now_ms;
         }
         on = false;
-        level = 0;
+        hz = 0;
     }
 
     // Hold one situation for a while, at the rate the product asks at.
@@ -111,6 +116,25 @@ TEST_CASE("annunciation: the advisory is a pair of beeps with a beep-length gap,
     CHECK(buzzer.last_gap_ms == kAdvisoryPairGapSameAsBeepMs);
     CHECK(buzzer.on_ms == kAdvisoryPairBeepMs * kAdvisoryPairBeepCount);
     CHECK_FALSE(buzzer.on);
+}
+
+// A held tone is masked by a noise that a moving one is heard through.
+TEST_CASE("annunciation: each advisory beep rises across 4 kHz, low half then high half") {
+    Buzzer buzzer;
+    uint32_t t = 1000;
+    buzzer.announce(standing(Level::Advisory), t, 5000);
+    REQUIRE(buzzer.beeps == kAdvisoryPairBeepCount);
+
+    for (int i = 0; i < kAdvisoryPairBeepCount; i++) {
+        CHECK(buzzer.hz_of[i] == kAdvisoryWarbleLowHz);
+        CHECK(buzzer.ended_on_hz[i] == kAdvisoryWarbleHighHz);
+    }
+    CHECK(buzzer.pitch_steps == kAdvisoryPairBeepCount);
+    CHECK(buzzer.stepped_after_ms >= kAdvisoryWarblePeriodMs / 2);
+    CHECK(buzzer.stepped_after_ms < kAdvisoryWarblePeriodMs / 2 + kStepMs);
+    CHECK(buzzer.last_beep_ms == kAdvisoryPairBeepMs);
+    CHECK(kAdvisoryWarbleLowHz < 4000);
+    CHECK(kAdvisoryWarbleHighHz > 4000);
 }
 
 // An advisory can stand for the whole climb. It is said when the aircraft

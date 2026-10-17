@@ -152,6 +152,36 @@ TEST_CASE("product: switching alarms off silences the buzzer on the pass it is s
     CHECK(sky.tone_commands() > before);
 }
 
+TEST_CASE("product: the volume a pilot picks is the loudness the advisory warbles at") {
+    for (const go::AlarmVolume volume : {go::AlarmVolume::Soft, go::AlarmVolume::Loud}) {
+        Sky sky;
+        REQUIRE(sky.simulator.setup() == Status::Ok);
+        sky.simulator.product().settings().alarm_volume = volume;
+        sky.run(0, 2000);
+        sky.simulator.world().add_threat();
+        REQUIRE(sky.step_until_sounding(2000, 8000) > 0);
+
+        CHECK(sky.buzzer().hz() == annunciation::kAdvisoryWarbleLowHz);
+        CHECK(sky.buzzer().loudness() ==
+              (volume == go::AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud));
+    }
+}
+
+// Under a headset the motor is what gets through, so a silenced buzzer keeps it.
+TEST_CASE("product: volume off silences the buzzer and the motor still pulses") {
+    Sky sky;
+    REQUIRE(sky.simulator.setup() == Status::Ok);
+    sky.simulator.product().settings().alarm_volume = go::AlarmVolume::Off;
+    sky.run(0, 2000);
+    sky.simulator.world().add_threat();
+    sky.run(2000, 8000);
+
+    CHECK(sky.simulator.product().state().alarm_live == traffic::Level::Advisory);
+    CHECK(sky.buzzer().haptic_pulses() >= 1);
+    CHECK(sky.tone_commands() == 0);
+    CHECK_FALSE(sky.simulator.product().alarm().sounding());
+}
+
 TEST_CASE("product: a device on its way down does not leave the buzzer sounding") {
     Sky sky;
     uint32_t t = sky.with_a_contact_in_the_window();

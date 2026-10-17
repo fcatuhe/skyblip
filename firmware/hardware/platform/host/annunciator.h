@@ -21,18 +21,9 @@ class PinMotor : public ports::Haptic {
 
 class Annunciator : public ports::Annunciator {
    public:
-    void alarm(uint8_t level, uint8_t volume) override {
-        level_ = level;
-        hz_ = 0;
-        volume_ = volume;
-        sounding_ = level != 0;
-        tone_commands_++;
-    }
-
-    void tone(uint16_t hz, uint8_t volume) override {
-        level_ = 0;
+    void tone(uint16_t hz, ports::Loudness loudness) override {
         hz_ = hz;
-        volume_ = volume;
+        loudness_ = loudness;
         sounding_ = hz != 0;
         tone_commands_++;
     }
@@ -50,7 +41,6 @@ class Annunciator : public ports::Annunciator {
     }
 
     void silence() override {
-        level_ = 0;
         hz_ = 0;
         sounding_ = false;
         silences_++;
@@ -75,24 +65,19 @@ class Annunciator : public ports::Annunciator {
 
     void attach_haptic(ports::Haptic& haptic) { haptic_ = &haptic; }
 
-    uint8_t level() const { return level_; }
     uint16_t hz() const { return hz_; }
     bool sounding() const { return sounding_; }
-    uint8_t volume() const { return volume_; }
+    ports::Loudness loudness() const { return loudness_; }
     uint16_t haptic_ms() const { return haptic_ms_; }
 
-    // The real part opens a continuous PWM tone on alarm() and closes it on
-    // silence(), so a pattern is countable: these are how a test tells one tone
-    // with a cadence from the same tone re-armed on every pass of the loop, and
-    // one buzz of the motor from a motor buzzed on every re-announcement.
     uint32_t tone_commands() const { return tone_commands_; }
     uint32_t silences() const { return silences_; }
     uint32_t haptic_pulses() const { return haptic_pulses_; }
     PinMotor& pin_motor() { return pin_motor_; }
 
    private:
-    uint8_t level_{0}, volume_{0};
     uint16_t hz_{0};
+    ports::Loudness loudness_{ports::Loudness::Loud};
     bool sounding_{false};
     uint16_t haptic_ms_{0};
     uint32_t tone_commands_{0}, silences_{0}, haptic_pulses_{0};

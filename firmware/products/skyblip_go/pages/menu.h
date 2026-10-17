@@ -45,8 +45,6 @@ struct MenuSnapshot {
     MenuRow focus{MenuRow::Light};
 };
 
-constexpr uint8_t kMaxAlarmVolume = 5;
-
 // Nine characters, which is what the settings blob has always held, and the ring
 // a pad rolls through them: blank, dash, A to Z, 0 to 9, blank again.
 constexpr int kCallsignChars = static_cast<int>(kCallsignCap) - 1;

@@ -83,7 +83,11 @@ void Policy::advance(uint32_t now_ms) {
         play_jingle(now_ms);
         return;
     }
+    play_pattern(now_ms);
+    tone_hz_ = phase_on_ ? advisory_warble_hz(now_ms - phase_ms_) : 0;
+}
 
+void Policy::play_pattern(uint32_t now_ms) {
     while (true) {
         if (phase_on_) {
             if (now_ms - phase_ms_ < pattern_.tone_ms) return;
@@ -115,12 +119,9 @@ void Policy::release() {
 Command Policy::emit() {
     Command command{};
     command.tone_on = voice_ != Voice::None && phase_on_;
-    command.tone_level = command.tone_on ? traffic::to_number(level_) : 0;
     command.tone_hz = command.tone_on ? tone_hz_ : 0;
-    command.changed = command.tone_on != commanded_on_ || command.tone_level != commanded_level_ ||
-                      command.tone_hz != commanded_hz_;
+    command.changed = command.tone_on != commanded_on_ || command.tone_hz != commanded_hz_;
     commanded_on_ = command.tone_on;
-    commanded_level_ = command.tone_level;
     commanded_hz_ = command.tone_hz;
     return command;
 }

@@ -393,7 +393,7 @@ test('a browser with no Web Bluetooth says so before any picker', async () => {
   assert.equal(updater.state.notice.key, 'no_bluetooth');
 });
 
-const FLOWN = { aircraft_type: 7, alarm: true, alarm_volume: 5, units: 1, callsign: 'F-JABC' };
+const FLOWN = { aircraft_type: 7, alarm: true, alarm_volume: 1, units: 1, callsign: 'F-JABC' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
@@ -427,7 +427,7 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 3, units: 0, callsign: '' });
+  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 2, units: 0, callsign: '' });
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 0);
   assert.deepEqual(settings, DEFAULTS);

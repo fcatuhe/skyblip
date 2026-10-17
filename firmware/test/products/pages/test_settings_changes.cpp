@@ -27,8 +27,8 @@ TEST_CASE("settings changes: each change is a row in the menu's words, and nothi
 
     to = from;
     to.aircraft_type = 4;
-    to.alarm_volume = 5;
-    CHECK(described(from, to) == "TYPE GLIDER\nVOLUME 5 OF 5");
+    to.alarm_volume = AlarmVolume::Soft;
+    CHECK(described(from, to) == "TYPE GLIDER\nVOLUME SOFT");
 }
 
 TEST_CASE("settings changes: a cleared callsign, a silenced alarm and the bench trims read whole") {
@@ -49,7 +49,7 @@ TEST_CASE("settings changes: past four rows the last one counts the rest") {
     std::strcpy(to.callsign, "F-JXYZ");
     to.units = Units::Metric;
     to.alarm_enabled = false;
-    to.alarm_volume = 1;
+    to.alarm_volume = AlarmVolume::Off;
     CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE");
 }
 

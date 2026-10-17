@@ -204,7 +204,8 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
     size_t n = 0;
     uint8_t buf[4];
     CHECK(null.kv.read("k", buf, sizeof(buf), n) == Status::NotFound);
-    null.annunciator.alarm(3, 3);  // must not crash: absent hardware is silent
+    null.annunciator.tone(4000,
+                          ports::Loudness::Loud);  // must not crash: absent hardware is silent
     null.display.power_off();
 }
 

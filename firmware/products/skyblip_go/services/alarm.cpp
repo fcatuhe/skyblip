@@ -61,12 +61,12 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.level = tracker_.announced_level(now_ms);
     situation.announced = announced;
     situation.first_fix = context_.state.own.fix_acquired;
-    situation.enabled = settings_.alarm_enabled;
+    situation.enabled = settings_.alarm_enabled && settings_.alarm_volume != AlarmVolume::Off;
     situation.running = running_;
     drive(situation, now_ms);
     drive_lamp(now_ms, running_);
 
-    if (!situation.enabled || !running_) return;
+    if (!settings_.alarm_enabled || !running_) return;
     if (announced) pulse_haptic();
 }
 
@@ -144,11 +144,9 @@ void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_
         context_.roles.annunciator.silence();
         return;
     }
-    const uint8_t volume = settings_.alarm_volume;
-    if (command.tone_hz != 0)
-        context_.roles.annunciator.tone(command.tone_hz, volume);
-    else
-        context_.roles.annunciator.alarm(command.tone_level, volume);
+    const ports::Loudness loudness =
+        settings_.alarm_volume == AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
+    context_.roles.annunciator.tone(command.tone_hz, loudness);
 }
 
 }  // namespace skyblip::go

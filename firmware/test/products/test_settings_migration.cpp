@@ -60,7 +60,7 @@ TEST_CASE("settings: a blob written by version-1 firmware comes back as itself")
     REQUIRE(from_blob(blob, 1 + sizeof(V1) + 4, out) == Status::Ok);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     CHECK(int(out.version) == int(Settings::kCurrentVersion));
@@ -115,7 +115,7 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     REQUIRE(from_blob(blob, 1 + sizeof(V2) + 4, out) == Status::Ok);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     // A unit that stored its settings before the trim existed was never
@@ -127,7 +127,50 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(int(kBlobVersion) == 10);
+    CHECK(int(kBlobVersion) == 11);
+}
+
+// Until version 11 the volume ran 0 to 5, and every step from 3 up drove the piezo the same.
+TEST_CASE("settings: a blob written by version-10 firmware comes back on three volumes") {
+    struct V10 {
+        uint8_t version{1};
+        int16_t battery_offset_mv{0};
+        int16_t freq_trim_e1_ppm{0};
+        bool battery_offset_manual{false};
+        uint8_t aircraft_type{4};
+        bool alarm_enabled{true};
+        uint8_t alarm_volume{3};
+        Units units{Units::Metric};
+        uint8_t range_step{0};
+        RadarPlot plot{RadarPlot::All};
+        char callsign[10]{0};
+    };
+
+    const AlarmVolume heard_as[] = {AlarmVolume::Off,  AlarmVolume::Soft, AlarmVolume::Soft,
+                                    AlarmVolume::Loud, AlarmVolume::Loud, AlarmVolume::Loud};
+    for (uint8_t six_step = 0; six_step < 6; six_step++) {
+        V10 old{};
+        old.aircraft_type = 7;
+        old.alarm_volume = six_step;
+        old.range_step = 3;
+        old.plot = RadarPlot::ToScale;
+        std::memcpy(old.callsign, "F-JABC", 7);
+
+        uint8_t blob[128] = {0};
+        blob[0] = 10;
+        std::memcpy(blob + 1, &old, sizeof(V10));
+        const uint32_t crc = fec::crc32(blob, 1 + sizeof(V10));
+        for (int i = 0; i < 4; i++)
+            blob[1 + sizeof(V10) + i] = static_cast<uint8_t>(crc >> (8 * i));
+
+        Settings out;
+        REQUIRE(from_blob(blob, 1 + sizeof(V10) + 4, out) == Status::Ok);
+        CHECK(out.alarm_volume == heard_as[six_step]);
+        CHECK(int(out.aircraft_type) == 7);
+        CHECK(int(out.range_step) == 3);
+        CHECK(out.plot == RadarPlot::ToScale);
+        CHECK(std::string(out.callsign) == "F-JABC");
+    }
 }
 
 // Until version 10 the range and the plot were the page's, so a stored unit had neither.
@@ -166,7 +209,7 @@ TEST_CASE(
     CHECK(out.battery_offset_manual);
     CHECK(int(out.freq_trim_e1_ppm) == 12);
     CHECK(int(out.aircraft_type) == 7);
-    CHECK(int(out.alarm_volume) == 1);
+    CHECK(out.alarm_volume == AlarmVolume::Soft);
     CHECK(out.units == Units::Metric);
     CHECK(std::string(out.callsign) == "F-JABC");
     CHECK(int(out.range_step) == kDefaultRangeStep);
@@ -255,7 +298,7 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(int(out.freq_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
     char buf[256];
@@ -310,7 +353,7 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     CHECK(int(out.freq_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
@@ -366,7 +409,7 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     // A unit that stored its settings before the radio trim existed was never
@@ -426,7 +469,7 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     CHECK(int(out.freq_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
-    CHECK(int(out.alarm_volume) == 5);
+    CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
