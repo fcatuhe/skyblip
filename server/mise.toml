@@ -1,2 +1,23 @@
+min_version = "2026.10.4"
+
+[settings]
+experimental = true
+
+[tools]
+fnox = "latest"
+
 [env]
 _.path = ["bin"]
+
+[secrets.fnox]
+
+[tasks.kamal]
+description = "Run Kamal with the production key, as in `mise run kamal deploy`"
+env.RAILS_MASTER_KEY = "{{ secrets.RAILS_PRODUCTION_KEY }}"
+run = "bin/kamal"
+
+[tasks."credentials:production"]
+description = "Edit the production credentials"
+env.RAILS_MASTER_KEY = "{{ secrets.RAILS_PRODUCTION_KEY }}"
+interactive = true
+run = "bin/rails credentials:edit --environment production"

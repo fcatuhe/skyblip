@@ -32,10 +32,9 @@ updates:
       lint:
         patterns: ["*"]
 
-  # The website's gems. `directory` is the Gemfile's, not the repo's, so this is
-  # the one line that has to know the site is nested.
+  # Resolve the server's nested Gemfile.
   - package-ecosystem: bundler
-    directory: "/website"
+    directory: "/server"
     schedule:
       interval: weekly
     open-pull-requests-limit: 1

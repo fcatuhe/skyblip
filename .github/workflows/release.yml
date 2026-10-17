@@ -53,10 +53,41 @@ jobs:
 
   # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
   # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
+  # Its own job, so the Emscripten toolchain never runs on the runner that holds the key.
+  simulator:
+    name: browser simulator
+    needs: tag
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
+        with:
+          version: 6.0.9
+          no-cache: true
+
+      - name: build the WASM and bundle the scenarios
+        run: |
+          make -C firmware browser
+          ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-simulator
+          path: |
+            firmware/build/browser/skyblip_simulator.js
+            firmware/build/browser/skyblip_simulator.wasm
+            firmware/build/browser/embed.js
+            firmware/build/browser/scenarios.json
+          if-no-files-found: error
+          retention-days: 1
+
   image:
     name: signed image
-    needs: tag
-    environment: production
+    needs: [tag, simulator]
+    environment: firmware_production
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -79,7 +110,7 @@ jobs:
           PRODUCTION_KEY: ${{ secrets.SKYBLIP_RELEASE_SIGNING_KEY }}
         run: |
           test -n "$PRODUCTION_KEY" \
-            || { echo "FAIL: the production environment has no SKYBLIP_RELEASE_SIGNING_KEY"; exit 1; }
+            || { echo "FAIL: the firmware_production environment has no SKYBLIP_RELEASE_SIGNING_KEY"; exit 1; }
           (umask 077 && printf '%s\n' "$PRODUCTION_KEY" > "$RUNNER_TEMP/signing.pem")
 
       - name: build, sign and check the image
@@ -91,6 +122,11 @@ jobs:
           SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: browser-simulator
+          path: simulator
+
       # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
       - name: name the files after the release
         run: |
@@ -99,6 +135,8 @@ jobs:
           cp "builds/$SLUG.uf2" "release/$SLUG-$version.uf2"
           cp "builds/$SLUG.signed.bin" "release/$SLUG-$version.signed.bin"
           cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$version.full.signed.bin"
+          cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
+          cp simulator/scenarios.json release/
           (cd release && sha256sum -- * > SHA256SUMS)
           cat "builds/$SLUG.version" release/SHA256SUMS
 

@@ -1,0 +1,8 @@
+root = true
+if_missing = "error"
+
+[providers.bitwarden]
+type = "bitwarden"
+
+[secrets]
+RAILS_PRODUCTION_KEY = { provider = "bitwarden", value = "skyblip-repository/RAILS_PRODUCTION_KEY", env = "exec" }
