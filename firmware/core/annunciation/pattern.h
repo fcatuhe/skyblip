@@ -1,9 +1,8 @@
 // core/annunciation/pattern.h: what the buzzer should be doing right now.
-// INFO: al 02aug26 the pair is SoftRF's fork's look cadence (oss/SoftRF-moshe-braner
-// Buzzer.cpp:172-215)
 #ifndef SKYBLIP_CORE_ANNUNCIATION_PATTERN_H
 #define SKYBLIP_CORE_ANNUNCIATION_PATTERN_H
 
+#include <algorithm>
 #include <cstdint>
 
 #include "core/traffic/alarm.h"
@@ -15,20 +14,46 @@ namespace skyblip::annunciation {
 // pilot cannot place, and cannot count.
 constexpr uint16_t kShortestBlipEarCanPlaceMs = 90;
 
-constexpr uint16_t kAdvisoryPairBeepMs = 250;
-constexpr uint16_t kAdvisoryPairGapSameAsBeepMs = 250;
-constexpr uint8_t kAdvisoryPairBeepCount = 2;
+struct Note {
+    uint16_t hz;
+    uint16_t tone_ms;
+    uint16_t gap_ms;
+};
 
-// INFO: fc 15oct26 piezo part unknown, 9x9 mm ones peak at 4 kHz +/- 500 Hz: the pair straddles it
-constexpr uint16_t kAdvisoryWarbleLowHz = 3600;
-constexpr uint16_t kAdvisoryWarbleHighHz = 4400;
-constexpr uint16_t kAdvisoryWarblePeriodMs = kAdvisoryPairBeepMs;
+struct Tune {
+    const Note* notes;
+    uint8_t count;
+};
 
-constexpr uint16_t advisory_warble_hz(uint32_t into_beep_ms) {
-    return (into_beep_ms % kAdvisoryWarblePeriodMs) < kAdvisoryWarblePeriodMs / 2
-               ? kAdvisoryWarbleLowHz
-               : kAdvisoryWarbleHighHz;
+template <uint8_t N>
+constexpr Tune tune_of(const Note (&notes)[N]) {
+    return Tune{notes, N};
 }
+
+constexpr uint16_t tune_ms(Tune tune) {
+    uint16_t ms = 0;
+    for (uint8_t i = 0; i < tune.count; i++)
+        ms = static_cast<uint16_t>(ms + tune.notes[i].tone_ms + tune.notes[i].gap_ms);
+    return ms;
+}
+
+// INFO: fc 17oct26 piezo unknown, 9x9 mm ones peak at 4 kHz +/- 500 Hz: the third straddles it
+constexpr uint16_t kNoteA7Hz = 3520;
+constexpr uint16_t kNoteCSharp8Hz = 4435;
+
+constexpr uint16_t kAdvisorySixteenthMs = kShortestBlipEarCanPlaceMs;
+constexpr uint16_t kAdvisorySkyMs = 2 * kAdvisorySixteenthMs;
+constexpr uint16_t kAdvisoryBlipMs = kAdvisorySixteenthMs;
+constexpr uint16_t kAdvisoryRestMs = 3 * kAdvisorySixteenthMs;
+constexpr uint16_t kAdvisoryHeldBlipMs = 3 * kAdvisorySixteenthMs;
+
+inline constexpr Note kAdvisoryCall[] = {
+    {kNoteA7Hz, kAdvisorySkyMs, 0},
+    {kNoteCSharp8Hz, kAdvisoryBlipMs, kAdvisoryRestMs},
+    {kNoteA7Hz, kAdvisorySkyMs, 0},
+    {kNoteCSharp8Hz, kAdvisoryHeldBlipMs, 0},
+};
+inline constexpr Tune kAdvisoryTune = tune_of(kAdvisoryCall);
 
 // INFO: fc 12sep26 written C5 E5 G5, played two octaves up: a 4 kHz piezo whispers at 500 Hz
 constexpr uint16_t kNoteC7Hz = 2093;
@@ -41,13 +66,7 @@ constexpr uint16_t kFirstFixNextBeatMs = kFirstFixBeatMs - kFirstFixNoteMs;
 constexpr uint16_t kFirstFixSkipBeatMs = kFirstFixNextBeatMs + kFirstFixBeatMs;
 constexpr uint16_t kFirstFixHeldNoteMs = kFirstFixBeatMs + kFirstFixNextBeatMs;
 
-struct Note {
-    uint16_t hz;
-    uint16_t tone_ms;
-    uint16_t gap_ms;
-};
-
-constexpr Note kFirstFixJingle[] = {
+inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
@@ -55,36 +74,30 @@ constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
     {kNoteG7Hz, kFirstFixHeldNoteMs, 0},
 };
-constexpr uint8_t kFirstFixNoteCount = sizeof(kFirstFixJingle) / sizeof(kFirstFixJingle[0]);
+inline constexpr Tune kFirstFixTune = tune_of(kFirstFixJingle);
 
-constexpr uint16_t first_fix_jingle_ms() {
-    uint16_t ms = 0;
-    for (const Note& note : kFirstFixJingle)
-        ms = static_cast<uint16_t>(ms + note.tone_ms + note.gap_ms);
-    return ms;
+constexpr uint16_t shortest_phase_ms(Tune tune) {
+    uint16_t shortest = 0xFFFF;
+    for (uint8_t i = 0; i < tune.count; i++) {
+        shortest = std::min(tune.notes[i].tone_ms, shortest);
+        if (tune.notes[i].gap_ms != 0) shortest = std::min(tune.notes[i].gap_ms, shortest);
+    }
+    return shortest;
 }
 
-// The shortest phase any pattern asks the service loop to resolve. The loop
-// cadence has to divide into this several times over or the pattern the ear
-// gets is not the pattern written above; products assert that against their own
-// step rate.
-constexpr uint16_t kShortestPhaseMs = kShortestBlipEarCanPlaceMs;
+// The shortest phase any tune asks the service loop to resolve. The loop
+// cadence has to divide into this several times over or the tune the ear gets
+// is not the tune written above; products assert that against their own step
+// rate.
+constexpr uint16_t kShortestPhaseMs =
+    std::min(shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune));
 static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
-static_assert(kAdvisoryWarblePeriodMs / 2 >= kShortestPhaseMs, "a pitch the loop cannot resolve");
-
-struct Pattern {
-    uint16_t tone_ms{0};
-    uint16_t gap_ms{0};
-    uint8_t repeats{0};
-    // 0: said once, and not again until something changes.
-    uint16_t reannounce_ms{0};
-};
 
 // Who is holding the buzzer. Traffic outranks the fix chirp, always: the rule
 // is written here and nowhere else.
 enum class Voice : uint8_t { None, FirstFix, Traffic };
 
-Pattern pattern_for(Voice voice, traffic::Level level);
+Tune tune_for(Voice voice, traffic::Level level);
 
 // Everything the decision depends on, gathered by the service that owns the
 // annunciator and passed in whole.
@@ -114,7 +127,7 @@ class Policy {
     Command update(const Situation& situation, uint32_t now_ms);
 
     Voice voice() const { return voice_; }
-    // The level being announced, gaps included: a pattern between two pulses is
+    // The level being announced, gaps included: a tune between two notes is
     // still announcing. 0 when the buzzer has been released.
     traffic::Level announcing_level() const {
         return voice_ == Voice::Traffic ? level_ : traffic::Level::None;
@@ -125,19 +138,16 @@ class Policy {
    private:
     void begin(Voice voice, traffic::Level level, uint32_t now_ms);
     void advance(uint32_t now_ms);
-    void play_pattern(uint32_t now_ms);
-    void play_jingle(uint32_t now_ms);
     void release();
     Command emit();
 
-    Pattern pattern_{};
+    Tune tune_{};
     Voice voice_{Voice::None};
     uint16_t tone_hz_{0};
     uint16_t commanded_hz_{0};
     traffic::Level level_{traffic::Level::None};
     uint8_t said_{0};
     uint8_t note_{0};
-    uint32_t announced_ms_{0};
     uint32_t phase_ms_{0};
     bool phase_on_{false};
     bool commanded_on_{false};

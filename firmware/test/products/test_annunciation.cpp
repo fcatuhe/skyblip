@@ -152,7 +152,7 @@ TEST_CASE("product: switching alarms off silences the buzzer on the pass it is s
     CHECK(sky.tone_commands() > before);
 }
 
-TEST_CASE("product: the volume a pilot picks is the loudness the advisory warbles at") {
+TEST_CASE("product: the volume a pilot picks is the loudness the advisory is called at") {
     for (const go::AlarmVolume volume : {go::AlarmVolume::Soft, go::AlarmVolume::Loud}) {
         Sky sky;
         REQUIRE(sky.simulator.setup() == Status::Ok);
@@ -161,7 +161,7 @@ TEST_CASE("product: the volume a pilot picks is the loudness the advisory warble
         sky.simulator.world().add_threat();
         REQUIRE(sky.step_until_sounding(2000, 8000) > 0);
 
-        CHECK(sky.buzzer().hz() == annunciation::kAdvisoryWarbleLowHz);
+        CHECK(sky.buzzer().hz() == annunciation::kNoteA7Hz);
         CHECK(sky.buzzer().loudness() ==
               (volume == go::AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud));
     }
@@ -268,18 +268,18 @@ TEST_CASE("product: the first fix plays its tune, and traffic takes the buzzer o
     uint32_t tone_ms = 0;
     for (const annunciation::Note& note : annunciation::kFirstFixJingle) tone_ms += note.tone_ms;
 
-    CHECK(sky.tone_commands() == annunciation::kFirstFixNoteCount);
+    CHECK(sky.tone_commands() == annunciation::kFirstFixTune.count);
     CHECK(started > 0);
     CHECK(first_note_hz == annunciation::kNoteE7Hz);
     CHECK(lowest_hz == annunciation::kNoteC7Hz);
     CHECK(highest_hz == annunciation::kNoteG7Hz);
-    CHECK(sounding_ms >= tone_ms - annunciation::kFirstFixNoteCount * kStepMs);
+    CHECK(sounding_ms >= tone_ms - annunciation::kFirstFixTune.count * kStepMs);
     CHECK(sounding_ms <= tone_ms);
     // No haptics: the motor is reserved for traffic, so a pilot who feels it
     // knows what it means without looking.
     CHECK(sky.buzzer().haptic_pulses() == 0);
     CHECK(int(sky.sounding_level()) == 0);
-    CHECK(sky.buzzer().silences() == annunciation::kFirstFixNoteCount);
+    CHECK(sky.buzzer().silences() == annunciation::kFirstFixTune.count);
 
     // Traffic then owns it, and the fix is not chirped a second time.
     sky.simulator.world().add_threat();

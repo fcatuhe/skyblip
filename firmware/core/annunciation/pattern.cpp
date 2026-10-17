@@ -2,18 +2,17 @@
 
 namespace skyblip::annunciation {
 
-Pattern pattern_for(Voice voice, traffic::Level level) {
-    Pattern p{};
-    if (voice != Voice::Traffic) return p;
-    switch (level) {
-        case traffic::Level::None: return p;
-        case traffic::Level::Advisory:
-            p.tone_ms = kAdvisoryPairBeepMs;
-            p.gap_ms = kAdvisoryPairGapSameAsBeepMs;
-            p.repeats = kAdvisoryPairBeepCount;
-            return p;
+Tune tune_for(Voice voice, traffic::Level level) {
+    switch (voice) {
+        case Voice::None: return Tune{};
+        case Voice::FirstFix: return kFirstFixTune;
+        case Voice::Traffic:
+            switch (level) {
+                case traffic::Level::None: return Tune{};
+                case traffic::Level::Advisory: return kAdvisoryTune;
+            }
     }
-    return p;
+    return Tune{};
 }
 
 Command Policy::update(const Situation& situation, uint32_t now_ms) {
@@ -39,73 +38,39 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
 void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
     voice_ = voice;
     level_ = level;
-    pattern_ = pattern_for(voice, level);
-    announced_ms_ = now_ms;
-    phase_ms_ = now_ms;
-    note_ = 0;
-    tone_hz_ = 0;
-    if (voice == Voice::FirstFix) {
-        tone_hz_ = kFirstFixJingle[0].hz;
-        said_ = 1;
-        phase_on_ = true;
+    tune_ = tune_for(voice, level);
+    if (tune_.count == 0) {
+        release();
         return;
     }
-    said_ = pattern_.repeats > 0 ? 1 : 0;
-    phase_on_ = pattern_.repeats > 0 && pattern_.tone_ms > 0;
-    if (!phase_on_) release();
+    phase_ms_ = now_ms;
+    note_ = 0;
+    said_ = 1;
+    tone_hz_ = tune_.notes[0].hz;
+    phase_on_ = true;
 }
 
-void Policy::play_jingle(uint32_t now_ms) {
+void Policy::advance(uint32_t now_ms) {
+    if (voice_ == Voice::None) return;
     while (true) {
-        const Note& note = kFirstFixJingle[note_];
+        const Note& note = tune_.notes[note_];
         if (phase_on_) {
             if (now_ms - phase_ms_ < note.tone_ms) return;
             phase_ms_ += note.tone_ms;
             phase_on_ = false;
             continue;
         }
-        if (note.gap_ms == 0 || note_ + 1 >= kFirstFixNoteCount) {
-            release();
+        if (note_ + 1 >= tune_.count) {
+            if (voice_ == Voice::FirstFix) release();
             return;
         }
         if (now_ms - phase_ms_ < note.gap_ms) return;
         phase_ms_ += note.gap_ms;
         note_++;
         said_++;
-        tone_hz_ = kFirstFixJingle[note_].hz;
+        tone_hz_ = tune_.notes[note_].hz;
         phase_on_ = true;
     }
-}
-
-void Policy::advance(uint32_t now_ms) {
-    if (voice_ == Voice::None) return;
-    if (voice_ == Voice::FirstFix) {
-        play_jingle(now_ms);
-        return;
-    }
-    play_pattern(now_ms);
-    tone_hz_ = phase_on_ ? advisory_warble_hz(now_ms - phase_ms_) : 0;
-}
-
-void Policy::play_pattern(uint32_t now_ms) {
-    while (true) {
-        if (phase_on_) {
-            if (now_ms - phase_ms_ < pattern_.tone_ms) return;
-            phase_ms_ += pattern_.tone_ms;
-            phase_on_ = false;
-            continue;
-        }
-        // No gap means nothing follows, whatever the count says: a pattern that
-        // cannot end is the bug this file was written for.
-        if (said_ >= pattern_.repeats || pattern_.gap_ms == 0) break;
-        if (now_ms - phase_ms_ < pattern_.gap_ms) return;
-        phase_ms_ += pattern_.gap_ms;
-        phase_on_ = true;
-        said_++;
-    }
-
-    if (pattern_.reannounce_ms == 0) return;
-    if (now_ms - announced_ms_ >= pattern_.reannounce_ms) begin(voice_, level_, now_ms);
 }
 
 void Policy::release() {

@@ -20,15 +20,17 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | A piezo reaches full amplitude in a couple of milliseconds, so this is an ear figure, not a driver one: shorter than this and a blip is a click that a pilot cannot place, and cannot count. |
-| `kAdvisoryPairBeepMs` | 250 | milliseconds | - | - |
-| `kAdvisoryPairGapSameAsBeepMs` | 250 | milliseconds | - | - |
-| `kAdvisoryWarblePeriodMs` | `kAdvisoryPairBeepMs` = 250 | milliseconds | Period | - |
+| `kAdvisorySixteenthMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kAdvisorySkyMs` | `2 * kAdvisorySixteenthMs` = 180 | milliseconds | - | - |
+| `kAdvisoryBlipMs` | `kAdvisorySixteenthMs` = 90 | milliseconds | - | - |
+| `kAdvisoryRestMs` | `3 * kAdvisorySixteenthMs` = 270 | milliseconds | - | - |
+| `kAdvisoryHeldBlipMs` | `3 * kAdvisorySixteenthMs` = 270 | milliseconds | - | - |
 | `kFirstFixNoteMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | - |
 | `kFirstFixBeatMs` | `2 * kFirstFixNoteMs` = 180 | milliseconds | - | - |
 | `kFirstFixNextBeatMs` | `kFirstFixBeatMs - kFirstFixNoteMs` = 90 | milliseconds | - | - |
 | `kFirstFixSkipBeatMs` | `kFirstFixNextBeatMs + kFirstFixBeatMs` = 270 | milliseconds | - | - |
 | `kFirstFixHeldNoteMs` | `kFirstFixBeatMs + kFirstFixNextBeatMs` = 270 | milliseconds | - | - |
-| `kShortestPhaseMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | The shortest phase any pattern asks the service loop to resolve. |
+| `kShortestPhaseMs` | `std::min(shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune))` | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
 
@@ -273,4 +275,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-168 constants over 18 folders.
+170 constants over 18 folders.

@@ -41,6 +41,7 @@ struct Buzzer {
     static constexpr int kRecorded = 16;
     uint16_t hz_of[kRecorded]{};
     uint16_t ended_on_hz[kRecorded]{};
+    uint32_t beep_ms_of[kRecorded]{};
     uint32_t gap_before[kRecorded]{};
 
     void apply(const Command& command, uint32_t now_ms) {
@@ -68,6 +69,7 @@ struct Buzzer {
         silences++;
         if (on) {
             last_beep_ms = now_ms - beep_started_ms;
+            if (beeps <= kRecorded) beep_ms_of[beeps - 1] = last_beep_ms;
             off_since_ms = now_ms;
         }
         on = false;
@@ -91,6 +93,22 @@ struct Buzzer {
     }
 };
 
+int calls_in(Tune tune) {
+    int calls = 1;
+    for (uint8_t i = 0; i + 1 < tune.count; i++)
+        if (tune.notes[i].gap_ms > 0) calls++;
+    return calls;
+}
+
+uint32_t sounding_ms_of(Tune tune) {
+    uint32_t ms = 0;
+    for (uint8_t i = 0; i < tune.count; i++) ms += tune.notes[i].tone_ms;
+    return ms;
+}
+
+const int kAdvisoryCalls = calls_in(kAdvisoryTune);
+const uint32_t kLastCallMs = kAdvisorySkyMs + kAdvisoryHeldBlipMs;
+
 Situation standing(Level level) {
     Situation s{};
     s.level = level;
@@ -99,42 +117,41 @@ Situation standing(Level level) {
 
 }  // namespace
 
-TEST_CASE("annunciation: the advisory is a pair of beeps with a beep-length gap, and it ends") {
-    const Pattern p = pattern_for(Voice::Traffic, Level::Advisory);
-    CHECK(p.tone_ms > 0);
-    CHECK(p.repeats == kAdvisoryPairBeepCount);
-    CHECK(p.gap_ms > 0);
-    // No tone with no end, and nothing that says itself again on a timer.
-    CHECK(p.reannounce_ms == 0);
+TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and it ends") {
+    CHECK(tune_for(Voice::Traffic, Level::Advisory).notes == kAdvisoryTune.notes);
+    CHECK(kAdvisoryCalls == 2);
 
     Buzzer buzzer;
     uint32_t t = 1000;
     buzzer.announce(standing(Level::Advisory), t, 5000);
 
-    CHECK(buzzer.beeps == kAdvisoryPairBeepCount);
-    CHECK(buzzer.last_beep_ms == kAdvisoryPairBeepMs);
-    CHECK(buzzer.last_gap_ms == kAdvisoryPairGapSameAsBeepMs);
-    CHECK(buzzer.on_ms == kAdvisoryPairBeepMs * kAdvisoryPairBeepCount);
+    CHECK(buzzer.beeps == kAdvisoryCalls);
+    CHECK(buzzer.gap_before[1] == kAdvisoryRestMs);
+    CHECK(buzzer.on_ms == sounding_ms_of(kAdvisoryTune));
     CHECK_FALSE(buzzer.on);
 }
 
 // A held tone is masked by a noise that a moving one is heard through.
-TEST_CASE("annunciation: each advisory beep rises across 4 kHz, low half then high half") {
+TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last blip held") {
     Buzzer buzzer;
     uint32_t t = 1000;
     buzzer.announce(standing(Level::Advisory), t, 5000);
-    REQUIRE(buzzer.beeps == kAdvisoryPairBeepCount);
+    REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
-    for (int i = 0; i < kAdvisoryPairBeepCount; i++) {
-        CHECK(buzzer.hz_of[i] == kAdvisoryWarbleLowHz);
-        CHECK(buzzer.ended_on_hz[i] == kAdvisoryWarbleHighHz);
+    for (int i = 0; i < kAdvisoryCalls; i++) {
+        CHECK(buzzer.hz_of[i] == kNoteA7Hz);
+        CHECK(buzzer.ended_on_hz[i] == kNoteCSharp8Hz);
     }
-    CHECK(buzzer.pitch_steps == kAdvisoryPairBeepCount);
-    CHECK(buzzer.stepped_after_ms >= kAdvisoryWarblePeriodMs / 2);
-    CHECK(buzzer.stepped_after_ms < kAdvisoryWarblePeriodMs / 2 + kStepMs);
-    CHECK(buzzer.last_beep_ms == kAdvisoryPairBeepMs);
-    CHECK(kAdvisoryWarbleLowHz < 4000);
-    CHECK(kAdvisoryWarbleHighHz > 4000);
+    CHECK(buzzer.pitch_steps == kAdvisoryCalls);
+    CHECK(buzzer.stepped_after_ms == kAdvisorySkyMs);
+    CHECK(buzzer.beep_ms_of[0] == kAdvisorySkyMs + kAdvisoryBlipMs);
+    CHECK(buzzer.beep_ms_of[1] == kLastCallMs);
+    CHECK(kAdvisorySkyMs > kAdvisoryBlipMs);
+    CHECK(kAdvisoryHeldBlipMs > kAdvisorySkyMs);
+    CHECK(kNoteA7Hz < 4000);
+    CHECK(kNoteCSharp8Hz > 4000);
+    // An equal-tempered major third is 2^(4/12) = 1.2599.
+    CHECK(kNoteCSharp8Hz * 10000 / kNoteA7Hz == 12599);
 }
 
 // An advisory can stand for the whole climb. It is said when the aircraft
@@ -143,11 +160,11 @@ TEST_CASE("annunciation: a standing advisory is said once, however long it stand
     Buzzer buzzer;
     uint32_t t = 1000;
     buzzer.announce(standing(Level::Advisory), t, 5000);
-    REQUIRE(buzzer.beeps == kAdvisoryPairBeepCount);
+    REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
     buzzer.run(standing(Level::Advisory), t, 60000);
-    CHECK(buzzer.beeps == kAdvisoryPairBeepCount);
-    CHECK(buzzer.on_ms == kAdvisoryPairBeepMs * kAdvisoryPairBeepCount);
+    CHECK(buzzer.beeps == kAdvisoryCalls);
+    CHECK(buzzer.on_ms == sounding_ms_of(kAdvisoryTune));
     CHECK(buzzer.policy.announcing_level() == Level::Advisory);
 }
 
@@ -213,7 +230,7 @@ TEST_CASE("annunciation: the buzzer is released the moment its reason goes") {
         buzzer.apply(buzzer.policy.update(fix, t), t);
         t += kStepMs;
         buzzer.run(standing(Level::None), t, 5000);
-        CHECK(buzzer.beeps == kFirstFixNoteCount);
+        CHECK(buzzer.beeps == kFirstFixTune.count);
         CHECK(buzzer.last_beep_ms == kFirstFixHeldNoteMs);
         CHECK_FALSE(buzzer.on);
         CHECK(buzzer.policy.voice() == Voice::None);
@@ -229,9 +246,9 @@ TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneve
     t += kStepMs;
     buzzer.run(Situation{}, t, 5000);
 
-    REQUIRE(buzzer.beeps == kFirstFixNoteCount);
+    REQUIRE(buzzer.beeps == kFirstFixTune.count);
     uint32_t tone_ms = 0;
-    for (uint8_t i = 0; i < kFirstFixNoteCount; i++) {
+    for (uint8_t i = 0; i < kFirstFixTune.count; i++) {
         CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].hz);
         if (i > 0) CHECK(buzzer.gap_before[i] == kFirstFixJingle[i - 1].gap_ms);
         tone_ms += kFirstFixJingle[i].tone_ms;
@@ -244,7 +261,7 @@ TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneve
     CHECK(buzzer.hz_of[3] == kNoteC7Hz);
     CHECK(buzzer.hz_of[3] < buzzer.hz_of[0]);
     CHECK(buzzer.hz_of[5] == kNoteG7Hz);
-    CHECK(first_fix_jingle_ms() < 2000);
+    CHECK(tune_ms(kFirstFixTune) < 2000);
 }
 
 TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it") {
@@ -276,18 +293,18 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
     chirping.announce(standing(Level::Advisory), u, 3000);
     CHECK(chirping.policy.voice() == Voice::Traffic);
     CHECK(chirping.policy.announcing_level() == Level::Advisory);
-    CHECK(chirping.beeps == kAdvisoryPairBeepCount);
-    CHECK(chirping.last_beep_ms == kAdvisoryPairBeepMs);
+    CHECK(chirping.beeps == kAdvisoryCalls);
+    CHECK(chirping.last_beep_ms == kLastCallMs);
 }
 
 TEST_CASE("annunciation: a second aircraft is announced, though the level has not moved") {
     Buzzer buzzer;
     uint32_t t = 1000;
     buzzer.announce(standing(Level::Advisory), t, 2000);
-    REQUIRE(buzzer.beeps == kAdvisoryPairBeepCount);
+    REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
     // With one level, the level alone never changes: the tracker saying that an
     // aircraft was announced is the only thing that can speak for the second one.
     buzzer.announce(standing(Level::Advisory), t, 2000);
-    CHECK(buzzer.beeps == 2 * kAdvisoryPairBeepCount);
+    CHECK(buzzer.beeps == 2 * kAdvisoryCalls);
 }

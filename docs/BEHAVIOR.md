@@ -541,9 +541,9 @@ The annunciation policy on its own: given a level, whether an aircraft was annou
 - a second aircraft is announced, though the level has not moved
 - a standing advisory is said once, however long it stands
   > An advisory can stand for the whole climb. It is said when the aircraft arrives and not again, which is what a pilot can live with in a gaggle.
-- each advisory beep rises across 4 kHz, low half then high half
+- each advisory call rises a third across 4 kHz, the last blip held
   > A held tone is masked by a noise that a moving one is heard through.
-- the advisory is a pair of beeps with a beep-length gap, and it ends
+- the advisory is sky-blip twice with a rest between, and it ends
 - the buzzer is released the moment its reason goes/alarms are switched off in settings, mid-pulse
 - the buzzer is released the moment its reason goes/the device is going down, mid-pulse
 - the buzzer is released the moment its reason goes/the fix tune ends on its own clock, with nothing to release it
@@ -2735,7 +2735,7 @@ What the buzzer does in a cockpit, through the whole product: virtual aircraft t
 - switching alarms off silences the buzzer on the pass it is switched off
 - the first fix plays its tune, and traffic takes the buzzer off it
 - the motor is not left running after its pulse
-- the volume a pilot picks is the loudness the advisory warbles at
+- the volume a pilot picks is the loudness the advisory is called at
 - volume off silences the buzzer and the motor still pulses
   > Under a headset the motor is what gets through, so a silenced buzzer keeps it.
 
