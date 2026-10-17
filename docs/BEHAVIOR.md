@@ -541,7 +541,7 @@ The annunciation policy on its own: given a level, whether an aircraft was annou
 - a second aircraft is announced, though the level has not moved
 - a standing advisory is said once, however long it stands
   > An advisory can stand for the whole climb. It is said when the aircraft arrives and not again, which is what a pilot can live with in a gaggle.
-- each advisory call rises a third across 4 kHz, the last blip held
+- each advisory call rises a third across 4 kHz, the last blip long
   > A held tone is masked by a noise that a moving one is heard through.
 - the advisory is sky-blip twice with a rest between, and it ends
 - the buzzer is released the moment its reason goes/alarms are switched off in settings, mid-pulse

@@ -59,13 +59,13 @@ class AlarmService : public runtime::Service {
 
     static constexpr uint16_t kHapticFeltThroughAHarnessMs = 400;
 
-    // Eight passes through the shortest phase of the fastest pattern: the
+    // Eight passes through the shortest note or gap of either tune: the
     // cadence the ear gets is the cadence written in core/annunciation, to
     // within one pass of the loop.
     static constexpr uint32_t kPassesPerShortestPhase = 8;
     static_assert(runtime::kServiceStepMs * kPassesPerShortestPhase <=
                       annunciation::kShortestPhaseMs,
-                  "the service loop is too coarse to resolve the advisory pair");
+                  "the service loop is too coarse to resolve the shortest note");
 
     // Three passes through the shortest flash in the table. An LED needs far less
     // time than a piezo to be seen, so the figure is smaller than the one above -

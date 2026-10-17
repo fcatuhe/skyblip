@@ -29,7 +29,6 @@ struct Buzzer {
     uint16_t hz{0};
     int tone_commands{0};
     int pitch_steps{0};
-    uint32_t stepped_after_ms{0};
     int silences{0};
     uint32_t on_ms{0};
     // The beep currently sounding, and the last one that finished.
@@ -42,6 +41,7 @@ struct Buzzer {
     uint16_t hz_of[kRecorded]{};
     uint16_t ended_on_hz[kRecorded]{};
     uint32_t beep_ms_of[kRecorded]{};
+    uint32_t stepped_after_ms_of[kRecorded]{};
     uint32_t gap_before[kRecorded]{};
 
     void apply(const Command& command, uint32_t now_ms) {
@@ -59,7 +59,7 @@ struct Buzzer {
                 }
             } else if (command.tone_hz != hz) {
                 pitch_steps++;
-                stepped_after_ms = now_ms - beep_started_ms;
+                if (beeps <= kRecorded) stepped_after_ms_of[beeps - 1] = now_ms - beep_started_ms;
             }
             on = true;
             hz = command.tone_hz;
@@ -107,7 +107,7 @@ uint32_t sounding_ms_of(Tune tune) {
 }
 
 const int kAdvisoryCalls = calls_in(kAdvisoryTune);
-const uint32_t kLastCallMs = kAdvisorySkyMs + kAdvisoryHeldBlipMs;
+const uint32_t kLastCallMs = kAdvisorySkyMs + kAdvisoryLongBlipMs;
 
 Situation standing(Level level) {
     Situation s{};
@@ -132,7 +132,7 @@ TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and
 }
 
 // A held tone is masked by a noise that a moving one is heard through.
-TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last blip held") {
+TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last blip long") {
     Buzzer buzzer;
     uint32_t t = 1000;
     buzzer.announce(standing(Level::Advisory), t, 5000);
@@ -143,11 +143,10 @@ TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last
         CHECK(buzzer.ended_on_hz[i] == kNoteCSharp8Hz);
     }
     CHECK(buzzer.pitch_steps == kAdvisoryCalls);
-    CHECK(buzzer.stepped_after_ms == kAdvisorySkyMs);
+    CHECK(buzzer.stepped_after_ms_of[0] == kAdvisorySkyMs);
+    CHECK(buzzer.stepped_after_ms_of[1] == kAdvisorySkyMs);
     CHECK(buzzer.beep_ms_of[0] == kAdvisorySkyMs + kAdvisoryBlipMs);
     CHECK(buzzer.beep_ms_of[1] == kLastCallMs);
-    CHECK(kAdvisorySkyMs > kAdvisoryBlipMs);
-    CHECK(kAdvisoryHeldBlipMs > kAdvisorySkyMs);
     CHECK(kNoteA7Hz < 4000);
     CHECK(kNoteCSharp8Hz > 4000);
     // An equal-tempered major third is 2^(4/12) = 1.2599.

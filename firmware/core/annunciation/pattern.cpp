@@ -45,7 +45,6 @@ void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
     }
     phase_ms_ = now_ms;
     note_ = 0;
-    said_ = 1;
     tone_hz_ = tune_.notes[0].hz;
     phase_on_ = true;
 }
@@ -67,7 +66,6 @@ void Policy::advance(uint32_t now_ms) {
         if (now_ms - phase_ms_ < note.gap_ms) return;
         phase_ms_ += note.gap_ms;
         note_++;
-        said_++;
         tone_hz_ = tune_.notes[note_].hz;
         phase_on_ = true;
     }
@@ -77,7 +75,6 @@ void Policy::release() {
     voice_ = Voice::None;
     tone_hz_ = 0;
     level_ = traffic::Level::None;
-    said_ = 0;
     phase_on_ = false;
 }
 

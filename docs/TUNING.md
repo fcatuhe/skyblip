@@ -20,16 +20,15 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | A piezo reaches full amplitude in a couple of milliseconds, so this is an ear figure, not a driver one: shorter than this and a blip is a click that a pilot cannot place, and cannot count. |
-| `kAdvisorySixteenthMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
-| `kAdvisorySkyMs` | `2 * kAdvisorySixteenthMs` = 180 | milliseconds | - | - |
-| `kAdvisoryBlipMs` | `kAdvisorySixteenthMs` = 90 | milliseconds | - | - |
-| `kAdvisoryRestMs` | `3 * kAdvisorySixteenthMs` = 270 | milliseconds | - | - |
-| `kAdvisoryHeldBlipMs` | `3 * kAdvisorySixteenthMs` = 270 | milliseconds | - | - |
-| `kFirstFixNoteMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | - |
-| `kFirstFixBeatMs` | `2 * kFirstFixNoteMs` = 180 | milliseconds | - | - |
-| `kFirstFixNextBeatMs` | `kFirstFixBeatMs - kFirstFixNoteMs` = 90 | milliseconds | - | - |
-| `kFirstFixSkipBeatMs` | `kFirstFixNextBeatMs + kFirstFixBeatMs` = 270 | milliseconds | - | - |
-| `kFirstFixHeldNoteMs` | `kFirstFixBeatMs + kFirstFixNextBeatMs` = 270 | milliseconds | - | - |
+| `kTuneSixteenthMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kAdvisorySkyMs` | `2 * kTuneSixteenthMs` = 180 | milliseconds | - | - |
+| `kAdvisoryBlipMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kAdvisoryRestMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kAdvisoryLongBlipMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kFirstFixNoteMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kFirstFixNextBeatMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kFirstFixSkipBeatMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kFirstFixHeldNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
 | `kShortestPhaseMs` | `std::min(shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune))` | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
@@ -275,4 +274,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-170 constants over 18 folders.
+169 constants over 18 folders.

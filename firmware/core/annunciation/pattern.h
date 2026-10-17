@@ -14,6 +14,8 @@ namespace skyblip::annunciation {
 // pilot cannot place, and cannot count.
 constexpr uint16_t kShortestBlipEarCanPlaceMs = 90;
 
+constexpr uint16_t kTuneSixteenthMs = kShortestBlipEarCanPlaceMs;
+
 struct Note {
     uint16_t hz;
     uint16_t tone_ms;
@@ -41,17 +43,16 @@ constexpr uint16_t tune_ms(Tune tune) {
 constexpr uint16_t kNoteA7Hz = 3520;
 constexpr uint16_t kNoteCSharp8Hz = 4435;
 
-constexpr uint16_t kAdvisorySixteenthMs = kShortestBlipEarCanPlaceMs;
-constexpr uint16_t kAdvisorySkyMs = 2 * kAdvisorySixteenthMs;
-constexpr uint16_t kAdvisoryBlipMs = kAdvisorySixteenthMs;
-constexpr uint16_t kAdvisoryRestMs = 3 * kAdvisorySixteenthMs;
-constexpr uint16_t kAdvisoryHeldBlipMs = 3 * kAdvisorySixteenthMs;
+constexpr uint16_t kAdvisorySkyMs = 2 * kTuneSixteenthMs;
+constexpr uint16_t kAdvisoryBlipMs = kTuneSixteenthMs;
+constexpr uint16_t kAdvisoryRestMs = 3 * kTuneSixteenthMs;
+constexpr uint16_t kAdvisoryLongBlipMs = 3 * kTuneSixteenthMs;
 
 inline constexpr Note kAdvisoryCall[] = {
     {kNoteA7Hz, kAdvisorySkyMs, 0},
     {kNoteCSharp8Hz, kAdvisoryBlipMs, kAdvisoryRestMs},
     {kNoteA7Hz, kAdvisorySkyMs, 0},
-    {kNoteCSharp8Hz, kAdvisoryHeldBlipMs, 0},
+    {kNoteCSharp8Hz, kAdvisoryLongBlipMs, 0},
 };
 inline constexpr Tune kAdvisoryTune = tune_of(kAdvisoryCall);
 
@@ -60,11 +61,10 @@ constexpr uint16_t kNoteC7Hz = 2093;
 constexpr uint16_t kNoteE7Hz = 2637;
 constexpr uint16_t kNoteG7Hz = 3136;
 
-constexpr uint16_t kFirstFixNoteMs = kShortestBlipEarCanPlaceMs;
-constexpr uint16_t kFirstFixBeatMs = 2 * kFirstFixNoteMs;
-constexpr uint16_t kFirstFixNextBeatMs = kFirstFixBeatMs - kFirstFixNoteMs;
-constexpr uint16_t kFirstFixSkipBeatMs = kFirstFixNextBeatMs + kFirstFixBeatMs;
-constexpr uint16_t kFirstFixHeldNoteMs = kFirstFixBeatMs + kFirstFixNextBeatMs;
+constexpr uint16_t kFirstFixNoteMs = kTuneSixteenthMs;
+constexpr uint16_t kFirstFixNextBeatMs = kTuneSixteenthMs;
+constexpr uint16_t kFirstFixSkipBeatMs = 3 * kTuneSixteenthMs;
+constexpr uint16_t kFirstFixHeldNoteMs = 3 * kTuneSixteenthMs;
 
 inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
@@ -133,7 +133,6 @@ class Policy {
         return voice_ == Voice::Traffic ? level_ : traffic::Level::None;
     }
     bool sounding() const { return commanded_on_; }
-    uint8_t said() const { return said_; }
 
    private:
     void begin(Voice voice, traffic::Level level, uint32_t now_ms);
@@ -146,7 +145,6 @@ class Policy {
     uint16_t tone_hz_{0};
     uint16_t commanded_hz_{0};
     traffic::Level level_{traffic::Level::None};
-    uint8_t said_{0};
     uint8_t note_{0};
     uint32_t phase_ms_{0};
     bool phase_on_{false};
