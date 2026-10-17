@@ -17,6 +17,15 @@ PpsState pps_state(const timing::ClockState& clock) {
     if (clock.pps_locked) return PpsState::Lock;
     return timing::in_pps_holdover(clock) ? PpsState::Holdover : PpsState::None;
 }
+
+int traffic_outside_formation(const traffic::TrafficTable& table) {
+    int n = 0;
+    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+        const traffic::Target* t = table.at(i);
+        if (t && t->used && !t->in_formation) n++;
+    }
+    return n;
+}
 }  // namespace
 
 void ScreenService::draw_prompt() {
@@ -140,7 +149,7 @@ void ScreenService::render(uint32_t now_ms) {
             snap.units = settings.units;
             snap.range_step = settings.range_step;
             snap.plot = settings.plot;
-            snap.heard = context_.state.traffic.count();
+            snap.heard = traffic_outside_formation(context_.state.traffic);
             snap.track_cdeg = own.track_cdeg;
             snap.speed_mm_s = own.speed_mm_s;
             snap.turn_cdps = context_.state.indicated.turn_cdps;

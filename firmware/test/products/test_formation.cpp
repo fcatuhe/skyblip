@@ -4,6 +4,7 @@
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 #include "doctest/doctest.h"
+#include "test/support/glass_text.h"
 #include "test/support/screen_rig.h"
 
 using namespace skyblip;
@@ -78,6 +79,27 @@ struct Flight {
     }
 
     uint32_t hold_station(uint32_t from_ms) { return hold_station(-60, -120, from_ms); }
+
+    void hear_stranger(int north_m, int east_m, uint32_t now_ms) {
+        model::AircraftObs obs = contact(rig.state.own, north_m, east_m, 0, 40, 270, now_ms);
+        obs.addr = 0x626262;
+        rig.state.traffic.update(obs, now_ms / 1000);
+        rig.alarm_service.tick(now_ms);
+    }
+
+    void listen() {
+        rig.roles.capabilities = ports::Capability::Display | ports::Capability::Rf;
+        rig.state.clock.pps_locked = true;
+        rig.state.clock.ms_since_pps = go::ScreenService::kLockedRedrawMs;
+    }
+
+    bool radar_counts(const char* figure) {
+        return reads_in(rig.screen.framebuffer(), figure, 170, 170, 200, 200, 3);
+    }
+
+    bool nearby_counts(const char* figure) {
+        return reads_in(rig.screen.framebuffer(), figure, 150, 0, 200, go::kNearbyHeadY, 2);
+    }
 };
 
 }  // namespace
@@ -230,4 +252,24 @@ TEST_CASE("formation: a second aircraft catching up after the takeoff is announc
         flight.hear(-20, east, 0, 50, 90, t, flight::FlightState::Airborne);
     CHECK(flight.rig.state.alarm_level == traffic::Level::Advisory);
     CHECK_FALSE(flight.target()->in_formation);
+}
+
+// The square around own ship is the member's depiction, and a count of it too reads as company.
+TEST_CASE("formation: a member is not traffic on the radar's count, and is still listed nearby") {
+    Flight flight;
+    flight.listen();
+    uint32_t t = flight.hold_station(1000);
+    REQUIRE(flight.target()->in_formation);
+
+    flight.rig.run_seconds(t, 2);
+    REQUIRE(flight.rig.screen.page() == go::Page::Radar);
+    CHECK(flight.radar_counts("0"));
+
+    flight.hear_stranger(6000, 0, t);
+    flight.rig.run_seconds(t, 2);
+    CHECK(flight.radar_counts("1"));
+
+    flight.rig.show(t, go::Page::Nearby);
+    flight.rig.run_seconds(t, 2);
+    CHECK(flight.nearby_counts("2"));
 }
