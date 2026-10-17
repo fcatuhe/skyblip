@@ -105,4 +105,4 @@ jobs:
         run: bundle exec kamal deploy
         env:
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          CROOZ_SERVER_IP: ${{ secrets.CROOZ_SERVER_IP }}
+          SKYBLIP_SERVER_IP: ${{ secrets.SKYBLIP_SERVER_IP }}

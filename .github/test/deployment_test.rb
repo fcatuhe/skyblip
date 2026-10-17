@@ -18,7 +18,7 @@ class DeploymentTest < Minitest::Test
 
   def test_application_and_remote_builder_share_the_crooz_host_and_debian_user
     config = deployment
-    host = ENV.fetch("CROOZ_SERVER_IP", "crooz")
+    host = ENV.fetch("SKYBLIP_SERVER_IP", "crooz")
 
     assert_equal [ host ], config.fetch("servers").fetch("web")
     assert_equal "debian", config.fetch("ssh").fetch("user")
