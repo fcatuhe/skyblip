@@ -32,5 +32,8 @@ Ahoy.user_method = ->(_controller) { Current.user }
 Ahoy.server_side_visits = :when_needed
 Ahoy.api_only = Rails.env.local?
 
+Ahoy.geocode = true
+Ahoy::GeocodeV2Job.queue_with_priority 10
+
 # INFO: fc 17oct26 renewed on each visit and capped at 13 months, the lifetime of an exempt analytics cookie
 Ahoy.visitor_duration = 13.months

@@ -7,3 +7,9 @@ production:
     class: Analytics::Visit::PurgeNonBrowserVisitsJob
     schedule: every day at 2am
 
+  # MaxMind publishes GeoLite City twice a week, and the first run after the key lands downloads it.
+<% if Rails.application.credentials.maxmind %>
+  update_geolite_database:
+    class: Maxmind::UpdateGeoliteCityDatabaseJob
+    schedule: every day at 3am
+<% end %>

@@ -1,0 +1,57 @@
+---
+http_interactions:
+- request:
+    method: head
+    uri: https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - download.maxmind.com
+      Authorization:
+      - "<MAXMIND_LICENSE_KEY>"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Fri, 11 Sep 2026 08:26:27 GMT
+      Content-Type:
+      - application/gzip
+      Content-Length:
+      - '32589049'
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - a395499d3e5f809f-MRS
+      Accept-Ranges:
+      - bytes
+      Content-Disposition:
+      - attachment; filename=GeoLite2-City_20260908.tar.gz
+      Etag:
+      - '"62e3630dd9470346fcdc48d9978d4801"'
+      Last-Modified:
+      - Tue, 08 Sep 2026 20:00:54 GMT
+      Server:
+      - cloudflare
+      X-Amz-Expiration:
+      - expiry-date="Thu, 08 Oct 2026 20:00:54 GMT", rule-id="Delete%20objects%20older%20than%2030%20days"
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      X-Content-Type-Options:
+      - nosniff
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: UTF-8
+      string: ''
+  recorded_at: Fri, 11 Sep 2026 08:26:27 GMT
+recorded_with: VCR 6.4.0

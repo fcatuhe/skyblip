@@ -16,4 +16,8 @@ VCR.configure do |config|
       interaction.request.uri
     end
   end
+
+  config.filter_sensitive_data("<MAXMIND_LICENSE_KEY>") do |interaction|
+    interaction.request.headers["Authorization"]&.first if interaction.request.uri.include?("maxmind.com")
+  end
 end
