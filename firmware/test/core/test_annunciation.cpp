@@ -42,21 +42,28 @@ struct Buzzer {
     uint16_t ended_on_hz[kRecorded]{};
     uint32_t beep_ms_of[kRecorded]{};
     uint32_t stepped_after_ms_of[kRecorded]{};
+    bool vibrating{false};
     int vibrations{0};
-    uint16_t vibrate_ms_of[kRecorded]{};
+    uint32_t vibrate_started_ms{0};
+    uint32_t longest_beep_ms{0};
+    uint32_t longest_vibration_ms{0};
+    uint32_t vibrate_ms_of[kRecorded]{};
     uint32_t vibrated_at_ms[kRecorded]{};
     uint32_t gap_before[kRecorded]{};
 
     void apply(const Command& command, uint32_t now_ms) {
         if (on) on_ms += kStepMs;
-        if (command.vibrate_ms != 0) {
+        if (command.vibration_changed && command.vibrating) {
             vibrations++;
-            if (vibrations <= kRecorded) {
-                vibrate_ms_of[vibrations - 1] = command.vibrate_ms;
-                vibrated_at_ms[vibrations - 1] = now_ms;
-            }
+            vibrate_started_ms = now_ms;
+            if (vibrations <= kRecorded) vibrated_at_ms[vibrations - 1] = now_ms;
+        } else if (command.vibration_changed) {
+            const uint32_t ms = now_ms - vibrate_started_ms;
+            if (vibrations <= kRecorded) vibrate_ms_of[vibrations - 1] = ms;
+            if (ms > longest_vibration_ms) longest_vibration_ms = ms;
         }
-        if (!command.changed) return;
+        vibrating = command.vibrating;
+        if (!command.tone_changed) return;
         if (command.tone_on) {
             tone_commands++;
             if (!on) {
@@ -80,6 +87,7 @@ struct Buzzer {
         if (on) {
             last_beep_ms = now_ms - beep_started_ms;
             if (beeps <= kRecorded) beep_ms_of[beeps - 1] = last_beep_ms;
+            if (last_beep_ms > longest_beep_ms) longest_beep_ms = last_beep_ms;
             off_since_ms = now_ms;
         }
         on = false;
@@ -194,15 +202,17 @@ TEST_CASE("annunciation: a standing advisory is said once, however long it stand
     CHECK(buzzer.policy.announcing_level() == Level::Advisory);
 }
 
-TEST_CASE("annunciation: the buzzer is released the moment its reason goes") {
-    // Four ways for the reason to go, and the tone stops for every one of them.
+TEST_CASE("annunciation: the buzzer and the motor are released the moment their reason goes") {
+    // Four ways for the reason to go, and the tone and the motor stop for every one of them.
     SUBCASE("the level falls to nothing: the target has gone") {
         Buzzer buzzer;
         uint32_t t = 1000;
         buzzer.announce(standing(Level::Advisory), t, 200);
         REQUIRE(buzzer.on);
+        REQUIRE(buzzer.vibrating);
         buzzer.run(standing(Level::None), t, kStepMs);
         CHECK_FALSE(buzzer.on);
+        CHECK_FALSE(buzzer.vibrating);
         CHECK(buzzer.silences == 1);  // the release, mid-beep
         CHECK(buzzer.policy.announcing_level() == Level::None);
 
@@ -222,6 +232,7 @@ TEST_CASE("annunciation: the buzzer is released the moment its reason goes") {
         off.enabled = false;
         buzzer.run(off, t, kStepMs);
         CHECK_FALSE(buzzer.on);
+        CHECK_FALSE(buzzer.vibrating);
 
         // Silent and still for as long as it is switched off, threat or no threat.
         const int commands = buzzer.tone_commands;
@@ -246,6 +257,7 @@ TEST_CASE("annunciation: the buzzer is released the moment its reason goes") {
         down.running = false;
         buzzer.run(down, t, kStepMs);
         CHECK_FALSE(buzzer.on);
+        CHECK_FALSE(buzzer.vibrating);
         const int commands = buzzer.tone_commands;
         buzzer.run(down, t, 30000);
         CHECK(buzzer.tone_commands == commands);
@@ -338,9 +350,8 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
     CHECK(standing_traffic.vibrations == 1);
 
     // The other way round: a chirp in progress loses the buzzer the instant
-    // traffic wants it. The handover is heard as the pattern changing under the
-    // pilot's ear - the chirp's tail becomes the first beep of the pair - and
-    // from there the traffic pattern owns the cadence.
+    // traffic wants it. The chirp is cut, a rest follows, and from there the
+    // traffic tune owns the cadence.
     Buzzer chirping;
     uint32_t u = 1000;
     Situation fix{};
@@ -354,7 +365,9 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
     chirping.announce(standing(Level::Advisory), u, 3000);
     CHECK(chirping.policy.voice() == Voice::Traffic);
     CHECK(chirping.policy.announcing_level() == Level::Advisory);
-    CHECK(chirping.beeps == kAdvisoryCalls);
+    CHECK(chirping.beeps == 1 + kAdvisoryCalls);
+    CHECK(chirping.gap_before[1] == kReannounceRestMs);
+    CHECK(chirping.hz_of[1] == kNoteA7Hz);
     CHECK(chirping.last_beep_ms == kLastCallMs);
     CHECK(chirping.vibrations == kAdvisoryCalls);
 }
@@ -370,4 +383,34 @@ TEST_CASE("annunciation: a second aircraft is announced, though the level has no
     buzzer.announce(standing(Level::Advisory), t, 2000);
     CHECK(buzzer.beeps == 2 * kAdvisoryCalls);
     CHECK(buzzer.vibrations == 2 * kAdvisoryCalls);
+}
+
+TEST_CASE(
+    "annunciation: an aircraft announced mid-call is a new call after a rest, heard and felt") {
+    Buzzer buzzer;
+    uint32_t t = 1000;
+    buzzer.announce(standing(Level::Advisory), t, 100);
+    REQUIRE(buzzer.on);
+    REQUIRE(buzzer.vibrating);
+
+    buzzer.announce(standing(Level::Advisory), t, 3000);
+    CHECK(buzzer.beeps == 1 + kAdvisoryCalls);
+    CHECK(buzzer.vibrations == 1 + kAdvisoryCalls);
+    CHECK(buzzer.beep_ms_of[0] == 100);
+    CHECK(buzzer.gap_before[1] == kReannounceRestMs);
+    CHECK(buzzer.beep_ms_of[1] == kAdvisorySkyMs + kAdvisoryBlipMs);
+}
+
+// A gaggle can announce faster than a call ends, and the guard must not be what ends it.
+TEST_CASE("annunciation: a stream of announcements never holds an output past the longest call") {
+    Buzzer buzzer;
+    uint32_t t = 1000;
+    for (int i = 0; i < 20; i++) buzzer.announce(standing(Level::Advisory), t, 150);
+    buzzer.run(standing(Level::Advisory), t, 2000);
+
+    CHECK(buzzer.beeps > 1);
+    CHECK_FALSE(buzzer.on);
+    CHECK(buzzer.longest_beep_ms <= longest_call_ms(kAdvisoryTune));
+    CHECK(buzzer.longest_vibration_ms <= longest_call_ms(kAdvisoryTune));
+    CHECK(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs);
 }

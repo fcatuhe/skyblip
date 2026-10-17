@@ -29,7 +29,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFirstFixNextBeatMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
 | `kFirstFixSkipBeatMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
 | `kFirstFixHeldNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
-| `kShortestPhaseMs` | `std::min(shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune))` | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
+| `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
+| `kShortestPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), kReannounceRestMs})` | milliseconds | - | - |
+| `kAnnunciatorOnCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | a guard under the loop, never a tune's: an output still on past it is a bug |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
 
@@ -273,4 +275,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-168 constants over 18 folders.
+170 constants over 18 folders.

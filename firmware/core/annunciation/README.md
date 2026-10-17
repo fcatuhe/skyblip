@@ -2,7 +2,7 @@
 
 What the buzzer and the vibration motor should be doing right now, decided in one place. The traffic tracker says which level stands and whether it just got worse; `annunciator.h` says how that sounds and how it is felt, as a tune of notes each with a pitch, a length and the silence after it, and it is the only thing allowed to hand the buzzer from one voice to another.
 
-`ports::Annunciator::tone()` opens a continuous tone that runs until `silence()`, so a tune is over at its last note and nothing here can hold the tone open. A note with no silence after it runs straight into the next pitch. The policy issues a command only when the tone, or its pitch, changes, because a PWM re-armed on every service pass is a click and not a tone.
+`ports::Annunciator::tone()` opens a continuous tone that runs until `silence()`, so a tune is over at its last note and nothing here can hold the tone open. A note with no silence after it runs straight into the next pitch. A tune that starts while another is sounding, a second aircraft mid-call or traffic cutting the fix tune, starts after `kReannounceRestMs` of silence, so it is heard and felt as a new call and no stretch of sound outlasts the longest call. The policy issues a command only when the tone, or its pitch, changes, because a PWM re-armed on every service pass is a click and not a tone.
 
 ## The advisory says sky-blip, twice
 
@@ -14,7 +14,7 @@ The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major thi
 
 ## The motor says the calls, and only the calls
 
-A call is the notes that run together between two silences. The traffic voice pulses the motor at the start of each call, for as long as the call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The pulse is a length handed to `ports::Annunciator::vibrate()`, whose own timer ends it, so a loop that stops running never leaves the motor on. The fix tune is never felt: the motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
+A call is the notes that run together between two silences. The traffic voice runs the motor exactly while a call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The motor is driven the way the buzzer is, on until told off, so it stops on the pass the buzzer does, whatever released it. `kAnnunciatorOnCeilingMs` is the guard the adapters hold under both, for a loop that stops running mid-call (`ports/README.md`). The fix tune is never felt: the motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
 
 The ERM on the T-Echo Plus takes time to spin up and to stop. Whether a 270 ms pulse is felt through a harness, and whether the 270 ms rest reads as a gap, is a bench question that has not been measured.
 

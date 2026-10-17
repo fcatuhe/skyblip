@@ -5,7 +5,9 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
+#include "core/annunciation/annunciator.h"
 #include "ports/annunciator.h"
 #include "ports/haptic.h"
 
@@ -37,35 +39,44 @@ class Annunciator : public ports::Annunciator {
         : buzzer_(buzzer), haptic_(&haptic) {}
 
     void begin() {
-        haptic_end_.owner = this;
-        k_work_init_delayable(&haptic_end_.work, haptic_off);
+        tone_guard_.owner = this;
+        motor_guard_.owner = this;
+        k_work_init_delayable(&tone_guard_.work, cut_tone);
+        k_work_init_delayable(&motor_guard_.work, cut_motor);
         silence();
     }
 
+    // INFO: fc 17oct26 schedule, not reschedule: a pitch change must not push the guard back
     void tone(uint16_t hz, ports::Loudness loudness) override {
-        if (hz == 0) return silence();
+        if (hz == 0) {
+            silence();
+            return;
+        }
         const uint32_t period = PWM_HZ(hz);
         const uint32_t divisor =
             loudness == ports::Loudness::Loud ? kLoudDutyDivisor : kSoftDutyDivisor;
         pwm_set_dt(&buzzer_, period, period / divisor);
+        k_work_schedule(&tone_guard_.work, K_MSEC(kCeilingMs));
     }
 
-    // The pulse and the timer that ends it, per ports/annunciator.h. What the pulse
-    // reaches - a pin, or a DRV2605 over I2C - is the board's business: it
-    // attaches whichever it found.
-    // A delayed work item and not a k_timer: a timer's callback runs in interrupt
-    // context, and the DRV2605 is stopped over I2C, which may not be called from
-    // there. Rescheduled rather than started, so a second pulse that lands inside
-    // the first replaces its deadline: the motor follows the latest call.
-    void vibrate(uint16_t ms) override {
+    // INFO: fc 17oct26 cancelled in sync, so no cut is still writing the part once an output is off
+    void silence() override {
+        struct k_work_sync sync;
+        k_work_cancel_delayable_sync(&tone_guard_.work, &sync);
+        pwm_set_pulse_dt(&buzzer_, 0);
+    }
+
+    void vibrate() override {
         haptic_->start();
-        k_work_reschedule(&haptic_end_.work, K_MSEC(ms));
+        k_work_schedule(&motor_guard_.work, K_MSEC(kCeilingMs));
     }
 
-    void silence() override { pwm_set_pulse_dt(&buzzer_, 0); }
+    void still() override {
+        struct k_work_sync sync;
+        k_work_cancel_delayable_sync(&motor_guard_.work, &sync);
+        haptic_->stop();
+    }
 
-    // The one pass of the loop the host platform needs to end a pulse; here the
-    // kernel timer has already done it.
     void service(uint32_t) {}
 
     void attach_haptic(ports::Haptic& haptic) { haptic_ = &haptic; }
@@ -74,22 +85,32 @@ class Annunciator : public ports::Annunciator {
     // INFO: fc 15oct26 fundamental goes as sin(pi x duty): half is the most, a tenth is 10 dB under
     static constexpr uint32_t kLoudDutyDivisor = 2;
     static constexpr uint32_t kSoftDutyDivisor = 10;
+    static constexpr unsigned kCeilingMs = annunciation::kAnnunciatorOnCeilingMs;
 
-    // A plain struct, so CONTAINER_OF is arithmetic on a standard-layout type
-    // rather than an offsetof into a class with a vtable.
-    struct PulseEnd {
+    // INFO: fc 17oct26 a work item, not a k_timer: the DRV2605 stops over I2C, never from an ISR
+    struct Guard {
         struct k_work_delayable work;
         Annunciator* owner;
     };
 
-    static void haptic_off(struct k_work* work) {
-        PulseEnd* end = CONTAINER_OF(k_work_delayable_from_work(work), PulseEnd, work);
-        end->owner->haptic_->stop();
+    static void cut_tone(struct k_work* work) {
+        printk("annunciator: tone on past %u ms, cut\n", kCeilingMs);
+        pwm_set_pulse_dt(&owner_of(work)->buzzer_, 0);
+    }
+
+    static void cut_motor(struct k_work* work) {
+        printk("annunciator: motor on past %u ms, cut\n", kCeilingMs);
+        owner_of(work)->haptic_->stop();
+    }
+
+    static Annunciator* owner_of(struct k_work* work) {
+        return CONTAINER_OF(k_work_delayable_from_work(work), Guard, work)->owner;
     }
 
     struct pwm_dt_spec buzzer_;
     ports::Haptic* haptic_;
-    PulseEnd haptic_end_{};
+    Guard tone_guard_{};
+    Guard motor_guard_{};
 };
 
 }  // namespace skyblip::platform::zephyr

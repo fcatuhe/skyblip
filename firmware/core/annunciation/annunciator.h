@@ -82,9 +82,29 @@ constexpr uint16_t shortest_phase_ms(Tune tune) {
 // cadence has to divide into this several times over or the tune the ear gets
 // is not the tune written above; products assert that against their own step
 // rate.
-constexpr uint16_t kShortestPhaseMs =
-    std::min(shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune));
+// INFO: fc 17oct26 a tune never starts over a sounding one, so no on-span outlasts the longest call
+constexpr uint16_t kReannounceRestMs = kTuneSixteenthMs;
+
+constexpr uint16_t kShortestPhaseMs = std::min(
+    {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), kReannounceRestMs});
 static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
+
+constexpr uint16_t longest_call_ms(Tune tune) {
+    uint16_t longest = 0;
+    uint16_t call = 0;
+    for (uint8_t i = 0; i < tune.count; i++) {
+        call = static_cast<uint16_t>(call + tune.notes[i].tone_ms);
+        longest = std::max(call, longest);
+        if (tune.notes[i].gap_ms != 0) call = 0;
+    }
+    return longest;
+}
+
+// INFO: fc 17oct26 a guard under the loop, never a tune's: an output still on past it is a bug
+constexpr uint16_t kAnnunciatorOnCeilingMs = 2000;
+static_assert(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs &&
+                  longest_call_ms(kFirstFixTune) < kAnnunciatorOnCeilingMs,
+              "the guard would cut a call the policy means to play");
 
 // Who is holding the buzzer. Traffic outranks the fix chirp, always: the rule
 // is written here and nowhere else.
@@ -108,15 +128,15 @@ struct Situation {
     bool running{true};
 };
 
-// What the buzzer should be doing, and whether that differs from what it was
-// already told. A PWM re-armed on every service pass is a click, not a tone, so
-// the service acts on changed for the tone. vibrate_ms is a pulse that starts
-// on this pass and that the port's own timer ends.
+// What the buzzer and the motor should be doing, and whether each differs from
+// what it was already told. A PWM re-armed on every service pass is a click,
+// not a tone, so the service acts on a change and on nothing else.
 struct Command {
     bool tone_on{false};
     uint16_t tone_hz{0};
-    bool changed{false};
-    uint16_t vibrate_ms{0};
+    bool tone_changed{false};
+    bool vibrating{false};
+    bool vibration_changed{false};
 };
 
 class Policy {
@@ -130,12 +150,11 @@ class Policy {
         return voice_ == Voice::Traffic ? level_ : traffic::Level::None;
     }
     bool sounding() const { return commanded_on_; }
+    bool vibrating() const { return commanded_vibrating_; }
 
    private:
     void begin(Voice voice, traffic::Level level, uint32_t now_ms);
     void advance(uint32_t now_ms);
-    void start_call();
-    uint16_t call_ms() const;
     void release();
     Command emit();
 
@@ -147,8 +166,9 @@ class Policy {
     uint8_t note_{0};
     uint32_t phase_ms_{0};
     bool phase_on_{false};
+    bool resting_before_tune_{false};
     bool commanded_on_{false};
-    uint16_t vibrate_ms_{0};
+    bool commanded_vibrating_{false};
 };
 
 }  // namespace skyblip::annunciation

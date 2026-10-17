@@ -69,7 +69,8 @@ void AlarmService::tick(uint32_t now_ms) {
 
 void AlarmService::accrue_annunciator(uint32_t now_ms) {
     sounding_.observe(policy_.sounding(), now_ms);
-    context_.state.duty.annunciator_ms = sounding_.ms() + haptic_ms_;
+    vibrating_.observe(policy_.vibrating(), now_ms);
+    context_.state.duty.annunciator_ms = sounding_.ms() + vibrating_.ms();
 }
 
 // INFO: fc 20sep26 one record per reception: between two of them nothing new is known about it
@@ -131,20 +132,27 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
 
 void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_ms) {
     const annunciation::Command command = policy_.update(situation, now_ms);
-    if (command.vibrate_ms != 0) pulse_haptic(command.vibrate_ms);
-    if (!command.changed) return;
-    if (!command.tone_on) {
-        context_.roles.annunciator.silence();
-        return;
-    }
-    const ports::Loudness loudness =
-        settings_.alarm_volume == AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
-    context_.roles.annunciator.tone(command.tone_hz, loudness);
+    if (command.tone_changed) drive_buzzer(command);
+    if (command.vibration_changed) drive_motor(command.vibrating);
 }
 
-void AlarmService::pulse_haptic(uint16_t ms) {
-    context_.roles.annunciator.vibrate(ms);
-    haptic_ms_ += ms;
+void AlarmService::drive_buzzer(const annunciation::Command& command) {
+    if (command.tone_on) {
+        const ports::Loudness loudness = settings_.alarm_volume == AlarmVolume::Soft
+                                             ? ports::Loudness::Soft
+                                             : ports::Loudness::Loud;
+        context_.roles.annunciator.tone(command.tone_hz, loudness);
+    } else {
+        context_.roles.annunciator.silence();
+    }
+}
+
+void AlarmService::drive_motor(bool vibrating) {
+    if (vibrating) {
+        context_.roles.annunciator.vibrate();
+    } else {
+        context_.roles.annunciator.still();
+    }
 }
 
 }  // namespace skyblip::go

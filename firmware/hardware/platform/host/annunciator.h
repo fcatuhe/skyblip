@@ -3,14 +3,15 @@
 
 #include <cstdint>
 
+#include "core/annunciation/annunciator.h"
 #include "ports/annunciator.h"
 #include "ports/haptic.h"
 
 namespace skyblip::platform::host {
 
 // A vibration motor wired straight to a pin: on while it is driven. The virtual
-// twin of what the silicon platform can do with a GPIO and a timer, and what the
-// T-Echo Plus turns out NOT to be fitted with.
+// twin of what the silicon platform does with a GPIO, and what the T-Echo Plus
+// turns out NOT to be fitted with.
 class PinMotor : public ports::Haptic {
    public:
     void start() override { driving = true; }
@@ -22,46 +23,51 @@ class PinMotor : public ports::Haptic {
 class Annunciator : public ports::Annunciator {
    public:
     void tone(uint16_t hz, ports::Loudness loudness) override {
+        if (hz == 0) {
+            silence();
+            return;
+        }
+        if (!sounding_) tone_guard_.arm();
         hz_ = hz;
         loudness_ = loudness;
-        sounding_ = hz != 0;
+        sounding_ = true;
         tone_commands_++;
-    }
-
-    // The pulse and its end, both here: whatever the haptic is, the length of the
-    // pulse is the adapter's to own (ports/annunciator.h). The host has no timer,
-    // so the end is the caller's next tick asking for the time - which is what
-    // service() is, driven by the board's poll.
-    void vibrate(uint16_t ms) override {
-        haptic_ms_ = ms;
-        haptic_pulses_++;
-        haptic_->start();
-        pulse_ends_ms_ = ms;
-        pulsing_ = true;
-        started_ = false;
     }
 
     void silence() override {
         hz_ = 0;
         sounding_ = false;
+        tone_guard_.disarm();
         silences_++;
     }
 
-    // Ends a pulse whose time is up. The silicon platform has a kernel timer for
-    // this; the host has the loop, so the board calls it once per pass. The
-    // deadline is a duration from the first pass after the pulse started, so a
-    // test that never advances the clock leaves the motor running, exactly as the
-    // hardware would.
-    void service(uint32_t now_ms) {
-        if (!pulsing_) return;
-        if (!started_) {
-            started_ = true;
-            start_ms_ = now_ms;
+    void vibrate() override {
+        if (!vibrating_) {
+            motor_guard_.arm();
+            motor_starts_++;
         }
-        if (now_ms - start_ms_ < pulse_ends_ms_) return;
+        vibrating_ = true;
+        haptic_->start();
+    }
+
+    void still() override {
+        vibrating_ = false;
+        motor_guard_.disarm();
         haptic_->stop();
-        pulsing_ = false;
-        started_ = false;
+    }
+
+    // INFO: fc 17oct26 the guards' clock, counted from the first pass after turn-on
+    void service(uint32_t now_ms) {
+        if (tone_guard_.expired(now_ms)) {
+            hz_ = 0;
+            sounding_ = false;
+            guard_cuts_++;
+        }
+        if (motor_guard_.expired(now_ms)) {
+            vibrating_ = false;
+            haptic_->stop();
+            guard_cuts_++;
+        }
     }
 
     void attach_haptic(ports::Haptic& haptic) { haptic_ = &haptic; }
@@ -69,25 +75,46 @@ class Annunciator : public ports::Annunciator {
     uint16_t hz() const { return hz_; }
     bool sounding() const { return sounding_; }
     ports::Loudness loudness() const { return loudness_; }
-    uint16_t haptic_ms() const { return haptic_ms_; }
+    bool vibrating() const { return vibrating_; }
 
     uint32_t tone_commands() const { return tone_commands_; }
     uint32_t silences() const { return silences_; }
-    uint32_t haptic_pulses() const { return haptic_pulses_; }
+    uint32_t motor_starts() const { return motor_starts_; }
+    uint32_t guard_cuts() const { return guard_cuts_; }
     PinMotor& pin_motor() { return pin_motor_; }
 
    private:
+    struct Guard {
+        bool armed{false};
+        bool started{false};
+        uint32_t start_ms{0};
+
+        void arm() {
+            armed = true;
+            started = false;
+        }
+        void disarm() { armed = false; }
+        bool expired(uint32_t now_ms) {
+            if (!armed) return false;
+            if (!started) {
+                started = true;
+                start_ms = now_ms;
+            }
+            if (now_ms - start_ms < annunciation::kAnnunciatorOnCeilingMs) return false;
+            armed = false;
+            return true;
+        }
+    };
+
     uint16_t hz_{0};
     ports::Loudness loudness_{ports::Loudness::Loud};
     bool sounding_{false};
-    uint16_t haptic_ms_{0};
-    uint32_t tone_commands_{0}, silences_{0}, haptic_pulses_{0};
+    bool vibrating_{false};
+    uint32_t tone_commands_{0}, silences_{0}, motor_starts_{0}, guard_cuts_{0};
     PinMotor pin_motor_{};
     ports::Haptic* haptic_{&pin_motor_};
-    uint32_t start_ms_{0};
-    uint32_t pulse_ends_ms_{0};
-    bool pulsing_{false};
-    bool started_{false};
+    Guard tone_guard_{};
+    Guard motor_guard_{};
 };
 
 }  // namespace skyblip::platform::host

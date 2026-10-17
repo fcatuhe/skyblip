@@ -125,20 +125,24 @@ TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
     CHECK(sky.tone_commands() == before);
 }
 
-TEST_CASE("product: switching alarms off silences the buzzer on the pass it is switched off") {
+TEST_CASE("product: switching alarms off silences the buzzer and stills the motor on that pass") {
     Sky sky;
+    models::Drv2605& chip = sky.simulator.platform().chips().haptic;
     uint32_t t = sky.with_a_contact_in_the_window();
 
     // Mid-pulse, which is the case that matters: a setting that only takes
     // effect at the end of a pattern is a setting a pilot does not believe.
     t = sky.sounding_again(t);
     REQUIRE(t > 0);
+    REQUIRE(chip.moving());
     const uint32_t silences = sky.buzzer().silences();
 
     sky.simulator.product().settings().alarm_enabled = false;
     sky.simulator.step(t + kStepMs);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(sky.buzzer().silences() == silences + 1);
+    CHECK_FALSE(chip.moving());
+    CHECK(sky.buzzer().guard_cuts() == 0);
 
     // Silent while it is off, with the threat still closing.
     const uint32_t before = sky.tone_commands();
@@ -162,9 +166,8 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
         REQUIRE(sky.step_until_sounding(2000, 8000) > 0);
 
         CHECK(sky.buzzer().hz() == annunciation::kNoteA7Hz);
-        CHECK(sky.buzzer().haptic_pulses() == 1);
-        CHECK(sky.buzzer().haptic_ms() ==
-              annunciation::kAdvisorySkyMs + annunciation::kAdvisoryBlipMs);
+        CHECK(sky.buzzer().motor_starts() == 1);
+        CHECK(sky.buzzer().vibrating());
         CHECK(sky.buzzer().loudness() ==
               (volume == go::AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud));
     }
@@ -179,7 +182,7 @@ TEST_CASE("product: volume off silences the buzzer and the motor both") {
     sky.run(2000, 8000);
 
     CHECK(sky.simulator.product().state().alarm_live == traffic::Level::Advisory);
-    CHECK(sky.buzzer().haptic_pulses() == 0);
+    CHECK(sky.buzzer().motor_starts() == 0);
     CHECK(sky.tone_commands() == 0);
     CHECK_FALSE(sky.simulator.product().alarm().sounding());
 }
@@ -194,8 +197,10 @@ TEST_CASE("product: a device on its way down does not leave the buzzer sounding"
     // The same request a long press makes. From here the service loop stops
     // running, so whatever the buzzer was doing is whatever it would go on
     // doing until the rails drop.
+    REQUIRE(sky.simulator.platform().chips().haptic.moving());
     sky.simulator.product().shutdown().request(power::ShutdownReason::LongPress, t);
     sky.simulator.step(t + kStepMs);
+    CHECK_FALSE(sky.simulator.platform().chips().haptic.moving());
     REQUIRE(sky.simulator.product().shutdown().going_down());
     CHECK(int(sky.sounding_level()) == 0);
     CHECK_FALSE(sky.simulator.product().alarm().sounding());
@@ -215,13 +220,12 @@ TEST_CASE("product: a standing advisory shakes the motor with its two calls, and
     // The motor says what the buzzer says, and nothing else: a motor pulsing in
     // a pocket for as long as a glider shares the thermal would be a pilot's
     // whole flight.
-    const uint32_t pulses = sky.buzzer().haptic_pulses();
+    const uint32_t pulses = sky.buzzer().motor_starts();
     CHECK(pulses == 2);
-    CHECK(sky.buzzer().haptic_ms() ==
-          annunciation::kAdvisorySkyMs + annunciation::kAdvisoryLongBlipMs);
+    CHECK(sky.buzzer().guard_cuts() == 0);
 
     sky.run(t, t + 20000);
-    CHECK(sky.buzzer().haptic_pulses() == pulses);
+    CHECK(sky.buzzer().motor_starts() == pulses);
 }
 
 // A unit at the hold beeped for every aircraft that climbed out of the field or turned in above it.
@@ -236,16 +240,16 @@ TEST_CASE("product: a unit on the ground says nothing of the circuit, and one th
                                        -1.34);
     sky.simulator.world().add_aircraft(0, 2000, 200, 35, 0, -1, -1, protocol::System::AdslDirect,
                                        -1.0);
-    const uint32_t pulses = sky.buzzer().haptic_pulses();
+    const uint32_t pulses = sky.buzzer().motor_starts();
     const uint32_t tones = sky.tone_commands();
     sky.run(5000, 45000);
     CHECK(sky.simulator.product().state().traffic.count() == 2);
-    CHECK(sky.buzzer().haptic_pulses() == pulses);
+    CHECK(sky.buzzer().motor_starts() == pulses);
     CHECK(sky.tone_commands() == tones);
 
     sky.simulator.world().set_speed_kt(90);
     sky.run(45000, 60000);
-    CHECK(sky.buzzer().haptic_pulses() == pulses + 2);
+    CHECK(sky.buzzer().motor_starts() == pulses + 2);
     CHECK(int(sky.announcing_level()) == 1);
 }
 
@@ -281,7 +285,7 @@ TEST_CASE("product: the first fix plays its tune, and traffic takes the buzzer o
     CHECK(sounding_ms <= tone_ms);
     // No haptics: the motor is reserved for traffic, so a pilot who feels it
     // knows what it means without looking.
-    CHECK(sky.buzzer().haptic_pulses() == 0);
+    CHECK(sky.buzzer().motor_starts() == 0);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(sky.buzzer().silences() == annunciation::kFirstFixTune.count);
 
@@ -326,37 +330,19 @@ TEST_CASE("product: an announcement reaches the haptic driver's registers") {
     // by driving P0.08 - which is what the annunciator used to do.
     // One start per call: the rest between them reaches the part as a stop.
     CHECK(starts == 2);
-    CHECK(sky.buzzer().haptic_pulses() == 2);
+    CHECK(sky.buzzer().motor_starts() == 2);
 }
 
-// A second aircraft announced mid-call restarts the tune, and the motor with it.
-TEST_CASE("product: a pulse that lands inside another runs its own length") {
-    Sky sky;
-    models::Drv2605& chip = sky.simulator.platform().chips().haptic;
-    REQUIRE(sky.simulator.setup() == Status::Ok);
-    sky.run(0, 1000);
-
-    sky.buzzer().vibrate(annunciation::kAdvisorySkyMs + annunciation::kAdvisoryLongBlipMs);
-    sky.run(1000 + kStepMs, 1300);
-    REQUIRE(chip.moving());
-    sky.buzzer().vibrate(annunciation::kAdvisorySkyMs + annunciation::kAdvisoryBlipMs);
-    sky.run(1300 + kStepMs, 1500);
-    CHECK(chip.moving());
-    sky.run(1500 + kStepMs, 1700);
-    CHECK_FALSE(chip.moving());
-}
-
-TEST_CASE("product: the motor is not left running after its pulse") {
+TEST_CASE("product: the motor is not left running after its calls") {
     Sky sky;
     models::Drv2605& chip = sky.simulator.platform().chips().haptic;
     uint32_t t = sky.with_a_contact_in_the_window();
 
-    // The longest pulse is the last call, 450 ms (core/annunciation). Well past it, the driver is
-    // back in standby: a motor left on is a flat battery, and the DRV2605's own drive stage is
-    // milliamps.
+    // A motor left on is a flat battery: well past the advisory, the driver is back in standby.
     sky.run(t, t + 3000);
     CHECK_FALSE(chip.moving());
     CHECK(chip.standby());
+    CHECK(sky.buzzer().guard_cuts() == 0);
 }
 
 TEST_CASE("product: a unit with no haptic driver flies, sounds, and says what is missing") {

@@ -36,6 +36,7 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
 }
 
 void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
+    const bool cutting_in = phase_on_;
     voice_ = voice;
     level_ = level;
     tune_ = tune_for(voice, level);
@@ -43,16 +44,28 @@ void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
         release();
         return;
     }
-    phase_ms_ = now_ms;
     note_ = 0;
     tone_hz_ = tune_.notes[0].hz;
-    phase_on_ = true;
-    start_call();
+    if (cutting_in) {
+        phase_ms_ = now_ms;
+        phase_on_ = false;
+        resting_before_tune_ = true;
+    } else if (!resting_before_tune_) {
+        phase_ms_ = now_ms;
+        phase_on_ = true;
+    }
 }
 
 void Policy::advance(uint32_t now_ms) {
     if (voice_ == Voice::None) return;
     while (true) {
+        if (resting_before_tune_) {
+            if (now_ms - phase_ms_ < kReannounceRestMs) return;
+            phase_ms_ += kReannounceRestMs;
+            resting_before_tune_ = false;
+            phase_on_ = true;
+            continue;
+        }
         const Note& note = tune_.notes[note_];
         if (phase_on_) {
             if (now_ms - phase_ms_ < note.tone_ms) return;
@@ -69,21 +82,7 @@ void Policy::advance(uint32_t now_ms) {
         note_++;
         tone_hz_ = tune_.notes[note_].hz;
         phase_on_ = true;
-        if (note.gap_ms != 0) start_call();
     }
-}
-
-void Policy::start_call() {
-    if (felt(voice_)) vibrate_ms_ = call_ms();
-}
-
-uint16_t Policy::call_ms() const {
-    uint16_t ms = 0;
-    for (uint8_t i = note_; i < tune_.count; i++) {
-        ms = static_cast<uint16_t>(ms + tune_.notes[i].tone_ms);
-        if (tune_.notes[i].gap_ms != 0) break;
-    }
-    return ms;
 }
 
 void Policy::release() {
@@ -91,17 +90,19 @@ void Policy::release() {
     tone_hz_ = 0;
     level_ = traffic::Level::None;
     phase_on_ = false;
+    resting_before_tune_ = false;
 }
 
 Command Policy::emit() {
     Command command{};
     command.tone_on = voice_ != Voice::None && phase_on_;
     command.tone_hz = command.tone_on ? tone_hz_ : 0;
-    command.changed = command.tone_on != commanded_on_ || command.tone_hz != commanded_hz_;
+    command.tone_changed = command.tone_on != commanded_on_ || command.tone_hz != commanded_hz_;
+    command.vibrating = command.tone_on && felt(voice_);
+    command.vibration_changed = command.vibrating != commanded_vibrating_;
     commanded_on_ = command.tone_on;
     commanded_hz_ = command.tone_hz;
-    command.vibrate_ms = vibrate_ms_;
-    vibrate_ms_ = 0;
+    commanded_vibrating_ = command.vibrating;
     return command;
 }
 

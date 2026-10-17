@@ -159,7 +159,6 @@ KEEPALIVE int simulator_alarm_dismissed() {
 KEEPALIVE int simulator_shutdown_phase() {
     return static_cast<int>(g_simulator.product().shutdown().phase());
 }
-KEEPALIVE int simulator_haptic_ms() { return g_simulator.haptic_ms(); }
 KEEPALIVE int simulator_rx_ok() {
     return static_cast<int>(g_simulator.product().state().air.rx_ok);
 }
