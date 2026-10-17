@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 
+  resource :session, only: %i[new create destroy]
+
   resources :releases, only: [], param: :tag do
     resources :assets, only: :show, module: :releases, path: "", param: :file,
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
