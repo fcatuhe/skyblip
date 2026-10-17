@@ -1,0 +1,312 @@
+@layer simulator {
+.simulator {
+  --sim-glass: #c9cbc4;
+  --sim-etch: #a9aca4;
+  --sim-bezel: #24262a;
+  --sim-dial: #101215;
+  --sim-mark: #f0efe9;
+  --sim-dim: #9aa0a6;
+  --sim-index: #e8a33d;
+  --sim-sky: #2f6f9e;
+  --sim-earth: #7a4a24;
+  --sim-green: #2f9147;
+  --sim-yellow: #d9b43a;
+  --sim-red: #c33b2e;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 26rem);
+  grid-template-areas:
+    "case panel"
+    "controls controls";
+  gap: var(--space-s) var(--space-inline-m);
+  justify-content: start;
+  justify-items: start;
+  align-items: start;
+  margin: 0 0 var(--space-3xl);
+}
+
+.simulator .simulator-device {
+  grid-area: case;
+  display: grid;
+  justify-items: center;
+  padding-inline-start: var(--space-m);
+}
+/* The controls named beside the case, outside it: the pad over its top edge, the keys off its left. */
+.simulator .sb-mark {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: max(0.5625rem, calc(var(--sb-glass) * 0.028));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.simulator .sb-mark--pad {
+  inset-block-end: calc(100% + var(--sb-glass) * 0.0125 + var(--space-2xs));
+  inset-inline-start: calc(13.5% + 17.3% / 2);
+  translate: -50% 0;
+}
+/* INFO: fc 08oct26 physical sides, logical ones turn with this element's vertical writing mode */
+.simulator :is(.sb-mark--reset, .sb-mark--button) {
+  right: calc(100% + 5px + var(--space-2xs));
+  height: calc(var(--sb-glass) * 0.14);
+  text-align: center;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+}
+.simulator .sb-mark--reset { top: 19%; }
+.simulator .sb-mark--button { top: 72%; }
+.simulator:not(.simulator--running) :is(.sb-mark, .simulator-status),
+.simulator--off .simulator-status { visibility: hidden; }
+
+.simulator .sb-case { box-shadow: inset 0 2px 0 #fff, inset 0 -2px 6px #0000001a, 0 10px 24px #00000014; }
+
+.simulator:not(.simulator--running) :is(.sb-pad, .sb-key, .simulator-traffic) { visibility: hidden; }
+.simulator:not(.simulator--running) .simulator-panel { display: none; }
+
+.simulator-placeholder {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -50%;
+  font-size: calc(var(--sb-glass) * 0.15);
+  pointer-events: none;
+}
+
+.simulator--running .simulator-placeholder { display: none; }
+
+@media (max-width: 52rem) {
+  .simulator {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "case" "controls" "panel";
+  }
+}
+
+@media (max-width: 36rem) {
+  .simulator .sb-case { --sb-glass: 200px; }
+}
+
+@layer components {
+  .simulator-controls {
+    grid-area: controls;
+    display: flex;
+    align-items: center;
+    gap: var(--space-inline-s);
+    flex-wrap: wrap;
+  }
+
+  .simulator-traffic {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .simulator-traffic::before { content: "+ " / ""; }
+
+  .simulator-wake {
+    display: none;
+    margin: 0;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+  .simulator--off .simulator-wake { display: block; }
+  .simulator--off .simulator-traffic { display: none; }
+
+  .simulator-legend {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2xs) var(--space-inline-s);
+    margin-block-start: var(--space-2xs);
+  }
+
+  .simulator-keys {
+    margin: 0;
+    flex-basis: 100%;
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .simulator-binding {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-inline-2xs);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+
+  .simulator-binding kbd {
+    font: inherit;
+    font-family: var(--font-mono);
+    color: var(--sim-mark);
+    background: var(--sim-bezel);
+    border-radius: 3px;
+    padding: 1px var(--space-inline-2xs);
+  }
+
+  .simulator-panel {
+    grid-area: panel;
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: "asi horizon alt" "turn trk vsi";
+    gap: var(--space-s) var(--space-inline-s);
+  }
+
+  .simulator-cell--asi { grid-area: asi; }
+  .simulator-cell--horizon { grid-area: horizon; }
+  .simulator-cell--alt { grid-area: alt; }
+  .simulator-cell--turn { grid-area: turn; }
+  .simulator-cell--trk { grid-area: trk; }
+  .simulator-cell--vsi { grid-area: vsi; }
+
+  .simulator-cell {
+    display: grid;
+    gap: var(--space-2xs);
+    justify-items: center;
+  }
+
+  .simulator-dial {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+  }
+
+  :is(.simulator-cell--asi, .simulator-cell--horizon, .simulator-cell--alt) .simulator-dial {
+    flex-direction: column-reverse;
+  }
+
+  .simulator-gauge {
+    display: block;
+    width: 100%;
+    max-width: 7.5rem;
+    filter: drop-shadow(0 2px 4px #00000026);
+  }
+
+  .gauge-bezel { fill: var(--sim-bezel); }
+  .gauge-face { fill: var(--sim-dial); }
+  .gauge-shine { fill-opacity: 0.5; pointer-events: none; }
+  .gauge-shine-near { stop-color: #ffffff; stop-opacity: 0.16; }
+  .gauge-shine-far { stop-color: #ffffff; stop-opacity: 0; }
+
+  .gauge-mark { stroke: var(--sim-dim); stroke-width: 1.4; }
+  .gauge-mark--major { stroke: var(--sim-mark); stroke-width: 2.4; }
+
+  .gauge-band { fill: none; stroke-width: 4; stroke-linecap: butt; }
+  .gauge-band--white { stroke: var(--sim-mark); stroke-width: 3; }
+  .gauge-band--green { stroke: var(--sim-green); }
+  .gauge-band--yellow { stroke: var(--sim-yellow); }
+  .gauge-band--red { stroke: var(--sim-red); }
+
+  .gauge-needle,
+  .gauge-hand,
+  .gauge-hub { fill: var(--sim-mark); }
+  .gauge-plane line { stroke: var(--sim-mark); stroke-width: 2.4; }
+  .gauge-index { fill: var(--sim-index); }
+  .gauge-reference { stroke: var(--sim-index); stroke-width: 2.6; fill: none; }
+  .gauge-hub--reference { fill: var(--sim-index); }
+
+  .gauge-tube { fill: #1b1e22; stroke: var(--sim-dim); stroke-width: 1.2; }
+  .gauge-ball { fill: var(--sim-mark); }
+  .gauge-cage { stroke: var(--sim-dim); stroke-width: 1.2; }
+
+  .gauge-sky { fill: var(--sim-sky); }
+  .gauge-ground { fill: var(--sim-earth); }
+  .gauge-horizon { stroke: var(--sim-mark); stroke-width: 2; }
+  .gauge-ladder { stroke: var(--sim-mark); stroke-width: 1.2; }
+
+  .gauge-numeral {
+    fill: var(--sim-mark);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+
+  .simulator-dial :is(label, .simulator-caption) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+
+  .simulator-dial output {
+    font-family: var(--font-mono);
+    font-size: var(--text-s);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--ink);
+  }
+
+  .simulator-dial input[type="range"] {
+    width: 100%;
+    max-width: 7.5rem;
+    height: 12px;
+    margin: 0;
+    appearance: none;
+    background: repeating-linear-gradient(
+      to right, var(--sim-etch) 0 1px, transparent 1px 10%
+    ) center / 100% 100% no-repeat;
+    cursor: ew-resize;
+    opacity: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .simulator-dial input[type="range"]:focus-visible {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :is(.gauge-needle, .gauge-hand, .gauge-plane, .gauge-ball, .gauge-attitude) {
+      transition: transform 120ms linear;
+    }
+  }
+
+  .simulator-dial input[type="range"]::-webkit-slider-runnable-track {
+    height: 12px;
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .simulator-dial input[type="range"]::-moz-range-track {
+    height: 12px;
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .simulator-dial input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 6px;
+    height: 12px;
+    background: var(--ink);
+  }
+
+  .simulator-dial input[type="range"]::-moz-range-thumb {
+    width: 6px;
+    height: 12px;
+    border: 0;
+    border-radius: 0;
+    background: var(--ink);
+  }
+
+  @media (max-width: 26rem) {
+    .simulator-panel {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-areas: "asi alt" "turn trk" "horizon vsi";
+    }
+  }
+
+  .simulator-status {
+    font-size: var(--text-m);
+    color: var(--ink-muted);
+    margin: 0 0 var(--space-l);
+  }
+  .simulator-status strong { color: var(--ink); }
+}
+}

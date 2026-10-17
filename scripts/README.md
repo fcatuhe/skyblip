@@ -1,6 +1,6 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang.
+Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, which is Ruby.
 
 | Script | What it does |
 |---|---|
@@ -10,6 +10,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
 | `build_local.sh` | build the device image off a committed ref, from a bare machine |
+| `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
 | `build_image.sh` | build, sign and check the slim and full images in a ready workspace: what `build_local.sh`, CI and a release share |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images |

@@ -10,8 +10,8 @@
 #   make browser     compile the WASM the browser page drives
 #   make watch       incremental rebuild on save (WATCH=browser|simulator|test)
 #
-# The page itself and its dev server live in ../simulator: `make -C ../simulator
-# dev`. This file compiles; it does not serve.
+# The page that drives it is the Rails app's /briefing/simulator, which loads the
+# WASM from a release. This file compiles; it does not serve.
 #   make clean
 #
 # core/ and ui/ must compile with NO framework headers. The device image is built
@@ -149,8 +149,8 @@ simulator: $(SIMULATOR_BIN)
 $(SIMULATOR_BIN): $(SIMULATOR_OBJ)
 	$(CXX) $(CXXFLAGS) $(SIMULATOR_OBJ) -o $@ $(LDFLAGS)
 
-# WASM build. Requires Emscripten (https://emscripten.org). The page that loads
-# it lives in ../simulator, which is also what serves it.
+# WASM build. Requires Emscripten (https://emscripten.org). Releases publish it
+# for the Rails app's simulator pages.
 browser:
 	@command -v $(EMCC) >/dev/null 2>&1 || { \
 	  echo "emcc not found. Install Emscripten, then: make browser"; exit 1; }
@@ -167,7 +167,7 @@ $(WEB_OUT): $(WEB_OBJ)
 	  -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 \
 	  -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web \
 	  -o $(WEB_OUT)
-	@echo "built $(WEB_DIST)/, serve it with: make -C ../simulator dev"
+	@echo "built $(WEB_DIST)/"
 
 # Its own target: copied by the link recipe, an edit to it alone shipped nothing.
 $(WEB_DIST)/embed.js: simulator/web/embed.js

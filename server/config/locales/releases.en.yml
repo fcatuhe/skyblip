@@ -1,0 +1,28 @@
+en:
+  firmwares:
+    label: A published image for this device
+    prompt: Choose an image
+    release: Its release on GitHub, with the .uf2
+    slim: Slim image
+    full: Full image
+    loading: Loading published firmware from GitHub. You can also choose a file below.
+    unavailable: GitHub's release list is unavailable. Reload to try again, or choose a firmware file below.
+    empty: No published firmware is available. You can choose a firmware file below.
+  simulator_builds:
+    loading: Loading the simulator from GitHub.
+    unavailable: The simulator could not be loaded from GitHub. Reload to try again.
+    empty: No simulator build has been published yet.
+    controls:
+      wake: Hold the lower key to switch it back on.
+      traffic: Add traffic to the sky
+      keys: "Fly it from the keyboard, the arrows like a stick: down to climb."
+      glass: The simulated e-paper panel of a skyBlip Go
+      key: "The device button: press to open the menu of the page you are on, hold two seconds to switch off, hold it again to switch on"
+      pad: "The capacitive pad: tap to change page, hold one second to come back to the radar"
+      reset: "RST: reboot the device"
+  briefing:
+    title: Briefing
+    description: Prepare your device before a flight.
+    manage: Update and configure your device
+    simulator: Try the simulator and edit the ownship
+    console: Open the Bluetooth console

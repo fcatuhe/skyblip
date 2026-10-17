@@ -1,0 +1,28 @@
+fr:
+  firmwares:
+    label: Une image publiée pour cet appareil
+    prompt: Choisissez une image
+    release: Sa version sur GitHub, avec le .uf2
+    slim: Image allégée
+    full: Image complète
+    loading: Chargement des firmwares publiés sur GitHub. Vous pouvez aussi choisir un fichier ci-dessous.
+    unavailable: La liste des versions GitHub est indisponible. Rechargez la page pour réessayer, ou choisissez un fichier de firmware ci-dessous.
+    empty: Aucun firmware publié n'est disponible. Vous pouvez choisir un fichier ci-dessous.
+  simulator_builds:
+    loading: Chargement du simulateur depuis GitHub.
+    unavailable: Le simulateur n'a pas pu être chargé depuis GitHub. Rechargez la page pour réessayer.
+    empty: Aucune version du simulateur n'a encore été publiée.
+    controls:
+      wake: Maintenez la touche du bas pour le rallumer.
+      traffic: Ajouter un trafic dans le ciel
+      keys: "Pilotez au clavier, les flèches comme un manche : bas pour monter."
+      glass: L'écran e-paper simulé d'un skyBlip Go
+      key: "Le bouton de l'appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume"
+      pad: "Le pavé tactile : une tape change de page, un contact d'une seconde ramène le radar"
+      reset: "RST : redémarrer l'appareil"
+  briefing:
+    title: Briefing
+    description: Préparez votre appareil avant le vol.
+    manage: Mettre à jour et configurer l'appareil
+    simulator: Essayer le simulateur et modifier l'appareil simulé
+    console: Ouvrir la console Bluetooth

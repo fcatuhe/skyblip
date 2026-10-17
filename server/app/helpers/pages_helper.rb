@@ -1,0 +1,29 @@
+module PagesHelper
+  def link_to_page(slug, label: nil, label_type: :title, anchor: nil, **html_options)
+    page = find_page(slug)
+    label ||= label_type == :nav ? page.nav_label : page.title
+
+    lang = page.locale unless page.locale == I18n.locale
+    link_to label, page_url_for(page, only_path: true, anchor:), { lang: }.merge(html_options)
+  end
+
+  def on_page?(slug)
+    @page&.base_slug == slug
+  end
+
+  def pages_image_tag(path, options = {})
+    image_tag "pages/#{@page.base_slug}/#{path}", options
+  end
+
+  def screen_image_tag(path, options = {})
+    image_tag "pages/skyblip-go/#{path}", options
+  end
+
+  private
+    def find_page(slug)
+      page = Content::Page.find_by(base_slug: slug) || Content::Page.find_by(base_slug: slug, locale: I18n.default_locale)
+      raise Decant::FileNotFound, "Couldn't find Content::Page with 'base_slug'=#{slug} and 'locale'=#{I18n.locale}" unless page
+
+      page
+    end
+end

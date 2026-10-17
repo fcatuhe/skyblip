@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://skyblip.eu/sitemap.xml.gz
+Sitemap: https://skyblip.eu/sitemap.xml

@@ -16,5 +16,3 @@ firmware/build-*/
 compile_commands.json
 __pycache__/
 
-# simulator dev server output
-simulator/build/

@@ -1,0 +1,46 @@
+service: skyblip
+image: skyblip
+
+servers:
+  web:
+    - <%= ENV.fetch("SKYBLIP_SERVER_IP", "crooz") %>
+
+proxy:
+  ssl: true
+  hosts:
+    - skyblip.eu
+    - www.skyblip.eu
+
+registry:
+  server: localhost:5555
+
+env:
+  secret:
+    - RAILS_MASTER_KEY
+  clear:
+    SOLID_QUEUE_IN_PUMA: true
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
+
+volumes:
+  - "skyblip_storage:/rails/storage"
+
+asset_path: /rails/public/assets
+
+builder:
+  arch: arm64
+  <% unless RUBY_PLATFORM.match?(/aarch64|arm64/) %>
+  remote: ssh://debian@<%= ENV.fetch("SKYBLIP_SERVER_IP", "crooz") %>
+  <% end %>
+  <% if ENV["GITHUB_ACTIONS"] && ENV["ACTIONS_RUNTIME_TOKEN"] %>
+  cache:
+    type: gha
+    options: mode=max
+  <% end %>
+
+ssh:
+  user: debian

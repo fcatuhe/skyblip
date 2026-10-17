@@ -1,0 +1,108 @@
+name: server
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # INFO: fc 17oct26 a run per commit on main, so a later push never cancels a pending deploy.
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+defaults:
+  run:
+    working-directory: server
+
+jobs:
+  changes:
+    name: what changed
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      protocol: ${{ steps.filter.outputs.protocol }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+              - '.github/workflows/server.yml'
+              - '.github/test/**'
+            protocol:
+              - 'firmware/core/comms/config.cpp'
+              - 'firmware/core/comms/config.h'
+              - 'scripts/simulator_scenarios.rb'
+              - 'lib/simulator_scenarios.rb'
+              - '.github/workflows/firmware.yml'
+              - '.github/workflows/release.yml'
+              - 'firmware/scenarios/*.json'
+
+  ci:
+    name: tests, style and security
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' || needs.changes.outputs.protocol == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - uses: browser-actions/setup-chrome@v2
+        id: setup-chrome
+        with:
+          chrome-version: stable
+      - name: Lift the AppArmor restriction Chrome's sandbox trips on
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run project gates
+        env:
+          BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: bin/ci
+      - name: Keep screenshots from failed system tests
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: screenshots
+          path: ${{ github.workspace }}/server/tmp/screenshots
+          if-no-files-found: ignore
+
+  deploy:
+    name: deploy with Kamal
+    needs: [changes, ci]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (needs.changes.outputs.server == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-26.04-arm
+    environment:
+      name: server_production
+      url: https://skyblip.eu
+    concurrency:
+      group: deploy-server-production
+      cancel-in-progress: false
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - uses: crazy-max/ghaction-github-runtime@v4
+      - uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Deploy with Kamal
+        run: bundle exec kamal deploy
+        env:
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+          SKYBLIP_SERVER_IP: ${{ secrets.SKYBLIP_SERVER_IP }}

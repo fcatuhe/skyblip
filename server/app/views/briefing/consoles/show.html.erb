@@ -1,0 +1,52 @@
+<section class="dev-tools dev-console" data-controller="console">
+  <h1>skyBlip&nbsp;Go: Bluetooth console <span>&middot; a real device over Web Bluetooth,
+    <a href="<%= briefing_simulator_path %>">the simulator</a> is next door</span></h1>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Link</h2>
+      <div class="bar">
+        <button id="connect">Connect</button>
+        <button id="disconnect" disabled>Disconnect</button>
+        <span class="state" id="state">idle</span>
+      </div>
+      <div class="hint">Chrome or Edge, on a page served from localhost or https. Safari and
+        everything on iOS have no Web Bluetooth at all. The picker lists anything advertising
+        Nordic UART or HM-10, so a SoftRF unit answers here too.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Serial stream</h2>
+      <div class="bar">
+        <label class="check"><input type="checkbox" id="follow" checked> follow</label>
+        <label class="check"><input type="checkbox" id="stamps" checked> timestamps</label>
+        <button id="clearstream">Clear</button>
+      </div>
+      <div class="tape" id="stream">-</div>
+      <form class="row" id="send">
+        <input aria-label="NMEA sentence" type="text" id="line" placeholder="$PSRFC,?" autocomplete="off" spellcheck="false" />
+        <button type="submit">Send</button>
+      </form>
+      <div class="hint">A sentence with no <code>*</code> gets its NMEA checksum appended, so
+        <code>$PSRFC,?</code> leaves as <code>$PSRFC,?*47</code> and SoftRF answers with its
+        settings. skyBlip reads nothing here: its write characteristic exists only because
+        XCSoar refuses a UART service without one, and its own commands live in the config
+        panel, which appears once a device carrying that service connects.</div>
+    </div>
+
+    <div class="panel" id="configpanel" hidden>
+      <h2>Config (skyBlip)</h2>
+      <div class="row" id="commands"></div>
+      <div class="tape" id="replies">-</div>
+      <form class="row" id="sendjson">
+        <input aria-label="JSON command" type="text" id="json" placeholder='{"cmd":"set","callsign":"S-BLIP"}'
+               autocomplete="off" spellcheck="false" />
+        <button type="submit">Write</button>
+      </form>
+      <div class="hint">The first session that writes claims config until it disconnects.
+        A <code>set</code> is refused in flight and on a low cell, then staged: the device asks
+        for a button press, and the reply lands here when you give it.</div>
+    </div>
+  </div>
+
+</section>
