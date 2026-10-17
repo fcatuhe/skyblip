@@ -24,6 +24,8 @@ gem "bootsnap", require: false
 
 gem "decant"
 
+gem "mission_control-jobs"
+
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
 

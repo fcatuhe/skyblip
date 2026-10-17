@@ -45,7 +45,7 @@
     <%= render "layouts/nav" %>
 
     <main>
-      <%= yield %>
+      <%= content_for?(:content) ? yield(:content) : yield %>
     </main>
 
     <%= render "layouts/footer" %>

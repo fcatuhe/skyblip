@@ -1,0 +1,7 @@
+<header class="admin-header">
+  <h1>Edit <%= @user.name %></h1>
+</header>
+
+<%= render "form", user: @user %>
+
+<p><%= link_to "Back to #{@user.name}", admin_user_path(@user) %></p>

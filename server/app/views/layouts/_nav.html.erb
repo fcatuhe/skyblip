@@ -9,6 +9,9 @@
     <div class="site-nav-actions">
       <%= render "layouts/locale_switcher" %>
       <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("briefing/") || on_page?("manage")) %>
+      <% if Current.user&.admin? %>
+        <%= link_to "Admin", admin_users_path(locale: nil), class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("admin/")) %>
+      <% end %>
       <%= link_to_page "skyblip-go", label: t("nav.try"), class: "button button--primary button--small" %>
     </div>
   </nav>
