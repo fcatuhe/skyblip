@@ -217,9 +217,7 @@ class TEchoPlus {
     // clock's PPS phase is refreshed. Identical on both platforms.
     void poll(bus::State& state, uint32_t now_ms) {
         rf_.service(now_ms);
-        // A haptic pulse ends on a deadline the adapter owns. On silicon that is a
-        // work item the kernel runs; on the host it is this call, so a motor left
-        // running is a bug a host test can catch.
+        // INFO: fc 17oct26 serves the host annunciator's guards: a test catches an output left on
         platform_.annunciator().service(now_ms);
 
         // The connection before the bytes: a frame from a session whose Up is

@@ -20,15 +20,18 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kShortestBlipEarCanPlaceMs` | 90 | milliseconds | - | A piezo reaches full amplitude in a couple of milliseconds, so this is an ear figure, not a driver one: shorter than this and a blip is a click that a pilot cannot place, and cannot count. |
-| `kAdvisoryPairBeepMs` | 250 | milliseconds | - | - |
-| `kAdvisoryPairGapSameAsBeepMs` | 250 | milliseconds | - | - |
-| `kAdvisoryWarblePeriodMs` | `kAdvisoryPairBeepMs` = 250 | milliseconds | Period | - |
-| `kFirstFixNoteMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | - |
-| `kFirstFixBeatMs` | `2 * kFirstFixNoteMs` = 180 | milliseconds | - | - |
-| `kFirstFixNextBeatMs` | `kFirstFixBeatMs - kFirstFixNoteMs` = 90 | milliseconds | - | - |
-| `kFirstFixSkipBeatMs` | `kFirstFixNextBeatMs + kFirstFixBeatMs` = 270 | milliseconds | - | - |
-| `kFirstFixHeldNoteMs` | `kFirstFixBeatMs + kFirstFixNextBeatMs` = 270 | milliseconds | - | - |
-| `kShortestPhaseMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | The shortest phase any pattern asks the service loop to resolve. |
+| `kTuneSixteenthMs` | `kShortestBlipEarCanPlaceMs` = 90 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kAdvisorySkyMs` | `2 * kTuneSixteenthMs` = 180 | milliseconds | - | - |
+| `kAdvisoryBlipMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kAdvisoryRestMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kAdvisoryLongBlipMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kFirstFixNoteMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kFirstFixNextBeatMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
+| `kFirstFixSkipBeatMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kFirstFixHeldNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
+| `kShortestPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), kReannounceRestMs})` | milliseconds | - | - |
+| `kAnnunciatorOnCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | a guard under the loop, never a tune's: an output still on past it is a bug |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
 
@@ -235,7 +238,6 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kHapticFeltThroughAHarnessMs` | 400 | milliseconds | - | - |
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | one pass of slot programs, so the next dwell is armed on time |
 | `kMovingTargetRedrawMs` | 1000 (1 s) | milliseconds | - | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
@@ -273,4 +275,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-168 constants over 18 folders.
+170 constants over 18 folders.

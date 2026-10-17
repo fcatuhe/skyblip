@@ -53,7 +53,7 @@ Unknown is not ground: a sender that does not say where it is gets the airborne 
 
 The same rule turned around: while own-ship's flight state is on the ground, `assess` returns `Level::None` for every contact, however close and whatever it says about itself. A unit at the hold beside a busy circuit is inside 3 km and 300 m of every aircraft flying it, and it announced each one that climbed out, turned in or came back into reception, for as long as it sat there. FLARM does the same: its warnings are disabled while the own aircraft is taxiing or stationary on the ground.
 
-The liftoff is when the device starts talking. Every contact inside the ring becomes an advisory on the same pass, and the annunciator plays one pattern for a pass however many arrived on it, so a departure into a full circuit is one pair of beeps and not one per aircraft. Contacts within formation range are the exception, below.
+The liftoff is when the device starts talking. Every contact inside the ring becomes an advisory on the same pass, and the annunciator plays one tune for a pass however many arrived on it, so a departure into a full circuit is one advisory and not one per aircraft. Contacts within formation range are the exception, below.
 
 ## Whichever system heard it
 

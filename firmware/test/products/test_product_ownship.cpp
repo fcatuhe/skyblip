@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <string>
 
-#include "core/annunciation/pattern.h"
+#include "core/annunciation/annunciator.h"
 #include "core/events/link.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
@@ -267,7 +267,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     CHECK(rig.product.ownship().first_fix().ever_fixed());
     CHECK(first_note_hz == annunciation::kFirstFixJingle[0].hz);
     // The motor stays out of it: haptics mean traffic that escalated.
-    CHECK(rig.platform.annunciator().haptic_ms() == 0);
+    CHECK(rig.platform.annunciator().motor_starts() == 0);
 
     // It is short and it stops by itself, so nothing has to remember to silence
     // it before the first traffic contact arrives.

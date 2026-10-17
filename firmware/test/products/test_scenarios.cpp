@@ -272,7 +272,7 @@ Encounter measure(simulator::Simulator& s) {
     for (uint32_t t = 0; t <= until; t += simulator::Simulator::kStepMs) {
         s.step(t);
 
-        // Every step, not every sample: a beep is 250 ms of a pair and a sample
+        // Every step, not every sample: a call is a few hundred ms and a sample
         // every 100 ms would still miss which pass began it.
         if (s.buzzer_level() != spoken) {
             spoken = s.buzzer_level();

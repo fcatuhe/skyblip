@@ -324,19 +324,20 @@ TEST_CASE("simulator: an aircraft entering the window buzzes and vibrates") {
     REQUIRE(h.setup() == Status::Ok);
     run(h, 0, 2000);
     REQUIRE(h.product().state().own.fix_valid);
-    REQUIRE(h.haptic_ms() == 0);
+    REQUIRE(h.platform().annunciator().motor_starts() == 0);
 
     // Nothing in the window yet: nothing said, nothing felt.
     h.world().add_aircraft(6000, 0, 0, 20, 90);
     run(h, 2000, 5000);
     REQUIRE(h.announcing_level() == traffic::Level::None);
-    CHECK(h.haptic_ms() == 0);
+    CHECK(h.platform().annunciator().motor_starts() == 0);
 
     // Now one inside it: said out loud, and felt through the harness.
     h.world().add_threat();
     run(h, 5000, 9000);
     REQUIRE(h.announcing_level() == traffic::Level::Advisory);
-    CHECK(h.haptic_ms() >= 200);
+    CHECK(h.platform().annunciator().motor_starts() >= 1);
+    CHECK(h.platform().annunciator().guard_cuts() == 0);
 }
 
 TEST_CASE("simulator: a threat going away does not buzz the motor again") {
@@ -350,16 +351,16 @@ TEST_CASE("simulator: a threat going away does not buzz the motor again") {
         if (h.buzzer_level() > loudest) loudest = h.buzzer_level();
     }
     REQUIRE(loudest >= 1);
-    REQUIRE(h.haptic_ms() >= 200);
+    REQUIRE(h.platform().annunciator().motor_starts() >= 1);
 
     // The sky emptying is a level CHANGE too, and it must not be mistaken for a
-    // new contact: the annunciator records the last duration, so a fresh pulse
-    // would show up as a change here.
-    const uint16_t after_escalation = h.haptic_ms();
+    // new contact.
+    const uint32_t pulses = h.platform().annunciator().motor_starts();
     h.world().clear_aircraft();
     run(h, 6000, 40000);
     CHECK(h.buzzer_level() == 0);
-    CHECK(h.haptic_ms() == after_escalation);  // unchanged: no pulse on the way down
+    CHECK(h.platform().annunciator().motor_starts() == pulses);
+    CHECK(h.platform().annunciator().guard_cuts() == 0);
 }
 
 // The world can connect a phone and take it away again, which is the seam this

@@ -7,11 +7,10 @@
 // a drive value. Both are "the device shakes"; neither is a null check at the
 // call site, and neither is a duration.
 //
-// start() begins driving and stop() ends it: no length, because the length of a
-// pulse is a policy (products/skyblip_go/services/alarm.h owns it) and the timer
-// that ends it belongs to whoever can hold one - the annunciator adapter on each
-// platform. An implementation may idle the part between pulses; nothing above
-// this line knows or cares.
+// start() begins driving and stop() ends it: no length, because how long the
+// motor runs is a policy, core/annunciation's, carried through
+// ports::Annunciator. An implementation may idle the part between pulses;
+// nothing above this line knows or cares.
 #ifndef SKYBLIP_PORTS_HAPTIC_H
 #define SKYBLIP_PORTS_HAPTIC_H
 
