@@ -79,7 +79,7 @@ export class FakeServer {
     this.challenges.delete(server_nonce);
     const message = messages.registration({ deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKey: server_key, version });
     if (!verifies(public_key, signature, message)) throw new ServerRefusal('bad_signature');
-    const known = this.units.get(device_id) ?? { serial: this.units.size, publicKey: public_key };
+    const known = this.units.get(device_id) ?? { serial: this.units.size + 1, publicKey: public_key };
     if (known.publicKey !== public_key) throw new ServerRefusal('other_key');
     this.units.set(device_id, known);
     const unlock = messages.unlock({ deviceId: device_id, publicKey: public_key, serial: known.serial, unitNonce });

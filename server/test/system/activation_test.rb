@@ -2,7 +2,9 @@ require "application_system_test_case"
 
 class ActivationTest < ApplicationSystemTestCase
   setup do
-    page.driver.browser.evaluate_on_new_document(Rails.root.join("test/system/fake_unit.js").read + "\nfakeUnit.vectors = #{vectors.to_json};")
+    # INFO: fc 18oct26 on the page, not the browser, so the fake leaves at reset instead of following every later test
+    script = Rails.root.join("test/system/fake_unit.js").read + "\nfakeUnit.vectors = #{vectors.to_json};"
+    page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
   end
 
   test "a unit gets its serial from skyblip.eu through the activation page" do
@@ -15,7 +17,7 @@ class ActivationTest < ApplicationSystemTestCase
     page.execute_script("fakeUnit.press()")
 
     assert_selector "[role=status]", text: "Activated: the unit holds its serial"
-    assert_selector "[data-activate-target=address]", text: "000002"
-    assert_equal 2, Unit.find_by!(device_id: vectors["device_id"]).serial
+    assert_selector "[data-activate-target=address]", text: "000003"
+    assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
   end
 end

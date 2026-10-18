@@ -9,7 +9,7 @@
     "device_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "public_key": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Pd, the raw Ed25519 public key of the unit, from its seed in UICR CUSTOMER"},
     "server_key": {"type": "string", "pattern": "^[0-9a-f]{8}$", "description": "The id of the server key the firmware is built to trust"},
-    "serial": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "Assigned densely by the server. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
+    "serial": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Assigned densely by the server, from 1: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
 
     "hello": {
       "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'incomplete' on a unit that lacks a required part, the barometer, because such a unit cannot be activated",
