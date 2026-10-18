@@ -43,6 +43,7 @@ export default class extends Controller {
     this.activateTarget.disabled = state.phase !== "ready" || !state.read
     this.deviceTarget.textContent = state.device || "-"
     this.addressTarget.textContent = state.read ? state.address ?? this.noneValue : "-"
+    this.addressTarget.classList.toggle("mono", Boolean(state.address))
     const current = PHASE_STEP[state.phase]
     for (const step of this.stepTargets) {
       if (step.dataset.step === current) step.setAttribute("aria-current", "step")
