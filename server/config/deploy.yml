@@ -34,7 +34,7 @@ asset_path: /rails/public/assets
 builder:
   arch: arm64
   <% unless RUBY_PLATFORM.match?(/aarch64|arm64/) %>
-  remote: ssh://debian@<%= ENV.fetch("SKYBLIP_SERVER_IP", "crooz") %>
+  remote: ssh://crooz
   <% end %>
   <% if ENV["GITHUB_ACTIONS"] && ENV["ACTIONS_RUNTIME_TOKEN"] %>
   cache:

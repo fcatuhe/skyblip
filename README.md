@@ -35,7 +35,7 @@ skyBlip Go runs on the LilyGO T-Echo Plus, the reference board for the tracker. 
 |---|---|
 | [`firmware/`](firmware) | the C++ tree: `core/`, `ui/`, `ports/`, the Zephyr platform, the host test suite, and the simulator's world |
 | [`server/`](server) | [skyblip.eu](https://skyblip.eu), public content and the device tools under `/briefing`, served by Rails on crooz |
-| `docs/`, `schemas/`, `scripts/`, `lib/`, `skyship/` | the generated behavior and tuning indexes, the wire schemas, the build and release tooling and its Ruby logic, the artwork |
+| `docs/`, `schemas/`, `scripts/`, `lib/` | the generated behavior and tuning indexes, the wire schemas, the build and release tooling and its Ruby logic |
 
 The firmware and the server share a tree so that a change in behavior and the page documenting it can land in one commit. They do not share a build: each has its own workflow, gated on the paths it owns. Firmware releases include the browser simulator runtime. Rails discovers releases through separate Turbo Frame requests, so publishing firmware does not redeploy the server.
 
@@ -86,6 +86,6 @@ The simulator pages are MIT, but the WASM they run is not: `make -C firmware bro
 
 ## Trademark
 
-"skyBlip" and "skyPost", the wordmark and the airship mark in [`skyship/`](skyship) are trademarks of François Catuhe. The licenses above grant copyright permissions, not trademark ones: a fork may say it is compatible with skyBlip or derived from it, and may not use the names or the marks to name its own product or to suggest endorsement.
+"skyBlip" and "skyPost", the wordmark and the airship mark are trademarks of François Catuhe. The licenses above grant copyright permissions, not trademark ones: a fork may say it is compatible with skyBlip or derived from it, and may not use the names or the marks to name its own product or to suggest endorsement.
 
 Copyright (C) 2026 François Catuhe
