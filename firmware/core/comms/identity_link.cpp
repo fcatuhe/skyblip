@@ -166,14 +166,18 @@ void ConfigService::unlock(const json::Reader& r) {
         return;
     }
     identity_->hold_unlock(code);
-    if (!identity_->activated()) store_unlock();
+    if (!identity_->activated()) settle_unlock();
 }
 
 // INFO: fc 18oct26 a brown-out between erase and write costs one re-activation, to the same serial
-void ConfigService::store_unlock() {
+void ConfigService::settle_unlock() {
     const std::optional<identity::UnlockCode> code = identity_->unlock_due();
     identity_->unlock_placed();
     if (!code) return;
+    if (!settings_writable()) {
+        refuse("low_power");
+        return;
+    }
     if (identity_->unit().store(*code) != Status::Ok) {
         refuse("flash");
         return;

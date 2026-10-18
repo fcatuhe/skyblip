@@ -82,14 +82,24 @@ void ConfigLinkService::advertise() {
 
 // INFO: fc 18oct26 the code was verified and its nonce spent on receipt; only the write waits here
 void ConfigLinkService::place_unlock(uint32_t now_ms) {
-    if (!config_.unlock_waiting()) return;
+    if (!config_.unlock_waiting()) {
+        unlock_writes_ = timing::DurableWriteWindow{};
+        return;
+    }
+    // INFO: fc 18oct26 never forced onto a low cell: settle_unlock drops it and the pilot asks
+    // again
+    if (!config_.settings_writable()) {
+        config_.settle_unlock();
+        unlock_writes_ = timing::DurableWriteWindow{};
+        return;
+    }
     if (!unlock_writes_.pending()) unlock_writes_.request(now_ms);
     const timing::DurableWriteVerdict verdict = unlock_writes_.decide(
         context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
-    config_.store_unlock();
+    config_.settle_unlock();
     unlock_writes_.placed(now_ms, verdict == timing::DurableWriteVerdict::Forced);
 }
 

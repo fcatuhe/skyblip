@@ -388,33 +388,56 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     CHECK(reads_in(b.rig.product.screen().framebuffer(), "ID 00012A", 0, 0, go::kGlassW, 40));
 }
 
+namespace {
+
+// INFO: fc 18oct26 an activated unit on the ground, with an unlock it holds for a write window
+struct QueuedUnlock {
+    Bench b{platform::host::Platform::kFullyFitted};
+    size_t before{0};
+    static constexpr uint16_t kNewSerial = 0x0101;
+
+    QueuedUnlock() {
+        b.rig.platform.identity().stored =
+            Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
+        b.boot();
+        REQUIRE(b.activation().serial == Identity::kSerial);
+        b.rig.seconds(b.t, 20, 0, 300);
+        REQUIRE(b.rig.product.config().config().flight_state() == flight::FlightState::Ground);
+
+        const identity::Nonce nonce{4, 2};
+        b.rig.platform.identity().queue_random(nonce);
+        REQUIRE(b.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
+        const identity::UnlockCode code = Identity::unlock_code_for(kNewSerial, nonce);
+        std::string signature(128, '?');
+        hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
+        before = b.rig.platform.link().sent.size();
+        b.rig.send(unlock_command(kNewSerial, signature).c_str());
+        b.pass(100);
+        REQUIRE(b.answer_since(before).empty());
+        REQUIRE(b.rig.platform.identity().writes == 0);
+    }
+};
+
+}  // namespace
+
 // The radio of an activated unit is running, so its unlock page is placed outside a dwell, later.
 TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {
-    Bench b(platform::host::Platform::kFullyFitted);
-    b.rig.platform.identity().stored =
-        Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
-    b.boot();
-    REQUIRE(b.activation().serial == Identity::kSerial);
-    b.rig.seconds(b.t, 20, 0, 300);
-    REQUIRE(b.rig.product.config().config().flight_state() == flight::FlightState::Ground);
+    QueuedUnlock q;
+    q.b.rig.seconds(q.b.t, 4, 0, 300);
+    CHECK(q.b.answer_since(q.before) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(q.b.rig.platform.identity().writes == 1);
+    CHECK(q.b.activation().serial == QueuedUnlock::kNewSerial);
+}
 
-    const identity::Nonce nonce{4, 2};
-    b.rig.platform.identity().queue_random(nonce);
-    REQUIRE(b.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
-    const identity::UnlockCode code = Identity::unlock_code_for(0x0101, nonce);
-    std::string signature(128, '?');
-    hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
-    const size_t before = b.rig.platform.link().sent.size();
-    b.rig.send(unlock_command(0x0101, signature).c_str());
-    b.pass(100);
-    CHECK(b.answer_since(before).empty());
-    CHECK(b.rig.platform.identity().writes == 0);
-
-    b.rig.seconds(b.t, 4, 0, 300);
-    CHECK(b.answer_since(before) == "{\"ack\":true,\"reason\":\"unlock\"}");
-    CHECK(b.rig.platform.identity().writes == 1);
-    CHECK(b.activation().serial == 0x0101);
+// A held unlock is never forced onto a cell the settings writer would not touch.
+TEST_CASE("activation: a supply warning before the write window drops the unlock as low_power") {
+    QueuedUnlock q;
+    q.b.rig.platform.system_power().supply_warning = true;
+    q.b.rig.seconds(q.b.t, 4, 0, 300);
+    CHECK(q.b.answer_since(q.before) == refusal("low_power"));
+    CHECK(q.b.rig.platform.identity().writes == 0);
+    CHECK(q.b.activation().serial == Identity::kSerial);
 }
 
 TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitted, Go without") {
