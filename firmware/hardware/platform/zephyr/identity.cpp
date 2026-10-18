@@ -3,8 +3,8 @@
 #include "hardware/platform/zephyr/identity.h"
 
 #include <hal/nrf_ficr.h>
+#include <hal/nrf_nvmc.h>
 #include <zephyr/drivers/entropy.h>
-#include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/logging/log.h>
 
@@ -17,14 +17,6 @@ namespace {
 const crypto::Ed25519::PublicKey kTrustedServerKey = {
 #include "skyblip_server_key.inc"
 };
-
-// INFO: fc 18oct26 UICR CUSTOMER: written word by word, never erased, NRFFW[0] shares it
-constexpr off_t kCustomerAddress = 0x10001080;
-constexpr size_t kSlotBytes = crypto::Ed25519::kSeedBytes;
-constexpr uint8_t kErased = 0xFF;
-static_assert(Identity::kKeySlots * kSlotBytes == 128, "four seeds fill CUSTOMER exactly");
-
-off_t slot_address(int slot) { return kCustomerAddress + static_cast<off_t>(slot * kSlotBytes); }
 
 }  // namespace
 
@@ -40,57 +32,42 @@ Status Identity::begin() {
         page_ = nullptr;
         LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");
     }
-    if (!device_is_ready(flash_) || !device_is_ready(entropy_)) {
-        LOG_ERR("identity: flash controller or entropy not ready, the unit has no key");
+    if (!device_is_ready(entropy_)) {
+        LOG_ERR("identity: no entropy, the unit has no key");
         return Status::Down;
     }
-    provision_key();
-    return key_slot_ >= 0 ? Status::Ok : Status::Down;
-}
-
-// INFO: fc 18oct26 a seed is drawn only into blank slots, and a misread slot is skipped
-void Identity::provision_key() {
-    key_slot_ = last_filled_slot();
-    if (key_slot_ >= 0) return;
-    for (int slot = 0; slot < kKeySlots; slot++) {
-        crypto::Ed25519::Seed seed{};
-        if (entropy_get_entropy(entropy_, seed.data(), static_cast<uint16_t>(seed.size())) != 0) {
-            LOG_ERR("identity: the RNG gave no seed, the unit has no key");
-            return;
-        }
-        const int written = flash_write(flash_, slot_address(slot), seed.data(), seed.size());
-        if (written == 0 && slot_seed(slot) == seed) {
-            key_slot_ = slot;
-            LOG_INF("identity: key drawn into UICR slot %d", slot);
-            return;
-        }
-        LOG_ERR("identity: UICR slot %d did not read back as written (%d)", slot, written);
+    const std::optional<int> slot = identity::KeySlots::provision(uicr_);
+    if (!slot) {
+        LOG_ERR("identity: no UICR slot holds a key or took one, the unit has no key");
+        return Status::Down;
     }
+    LOG_INF("identity: key in UICR slot %d", *slot);
+    return Status::Ok;
 }
 
-int Identity::last_filled_slot() const {
-    for (int slot = kKeySlots - 1; slot >= 0; slot--)
-        if (slot_filled(slot)) return slot;
-    return -1;
+bool Identity::Uicr::read(identity::KeySlots::Words& out) const {
+    for (int i = 0; i < identity::KeySlots::kWords; i++) out[i] = NRF_UICR->CUSTOMER[i];
+    return true;
 }
 
-bool Identity::slot_filled(int slot) const {
-    const crypto::Ed25519::Seed seed = slot_seed(slot);
-    for (uint8_t byte : seed)
-        if (byte != kErased) return true;
-    return false;
+// INFO: fc 18oct26 NVMC word writes straight to UICR: no driver path here can ever erase it
+void Identity::Uicr::write(int word, uint32_t value) {
+    nrf_nvmc_mode_set(NRF_NVMC, NRF_NVMC_MODE_WRITE);
+    NRF_UICR->CUSTOMER[word] = value;
+    __DSB();
+    while (!nrf_nvmc_ready_check(NRF_NVMC)) {
+    }
+    nrf_nvmc_mode_set(NRF_NVMC, NRF_NVMC_MODE_READONLY);
 }
 
-crypto::Ed25519::Seed Identity::slot_seed(int slot) const {
-    crypto::Ed25519::Seed seed{};
-    seed.fill(kErased);
-    if (flash_read(flash_, slot_address(slot), seed.data(), seed.size()) != 0) seed.fill(kErased);
-    return seed;
+bool Identity::Uicr::draw(crypto::Ed25519::Seed& out) {
+    return entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
 }
 
 bool Identity::seed(crypto::Ed25519::Seed& out) const {
-    if (key_slot_ < 0) return false;
-    out = slot_seed(key_slot_);
+    const std::optional<crypto::Ed25519::Seed> seed = identity::KeySlots::seed(uicr_);
+    if (!seed) return false;
+    out = *seed;
     return true;
 }
 
