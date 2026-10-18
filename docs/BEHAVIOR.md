@@ -2839,7 +2839,7 @@ Activation end to end on the running product: silent until the server signs it a
 - the nonce is live until kNonceForgetMs after hello, and dead from then on
   > The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
 - the registration frame at the widest version is exactly the size checked
-  > The widest version and release false make the widest frame, and it must fit what register checked.
+  > The widest version and release false make the widest frame, the size register checks.
 - the registration says whether the build is a release, and signs it
   > The server keeps the release flag beside the key, and the unit's S covers it either way.
 - the self-test page shows the address an unlock gave, without a reboot

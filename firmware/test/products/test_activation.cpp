@@ -678,8 +678,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
     }
 }
 
-// The widest version and release false make the widest frame, and it must fit what register
-// checked.
+// The widest version and release false make the widest frame, the size register checks.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk d;
     d.dfu.running = dfu::kWidestVersion;

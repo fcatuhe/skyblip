@@ -39,8 +39,7 @@ class Message {
 };
 
 Message register_message(const Nonce& unit_nonce, const Nonce& server_nonce);
-// INFO: fc 18oct26 release is one byte, 1 for a release build, between the server key id and
-// version
+// INFO: fc 18oct26 release: one byte, 1 for a release build, after the server key id
 Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                              const Nonce& unit_nonce, const Nonce& server_nonce,
                              const ServerKeyId& server_key, bool release, const char* version);
