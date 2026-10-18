@@ -63,13 +63,21 @@ void ConfigLinkService::load_identity() {
 
 void ConfigLinkService::publish_identity() {
     const identity::Activation activation = unit_.activation();
-    if (identity_published_ && activation == context_.state.activation) return;
-    identity_published_ = true;
-    context_.state.activation = activation;
+    if (!identity_published_ || activation != context_.state.activation) {
+        identity_published_ = true;
+        advertised_ = false;
+        context_.state.activation = activation;
+    }
+    if (!advertised_) advertise();
+}
+
+// INFO: fc 18oct26 asked every pass until the link takes it: a unit nobody sees serves no one
+void ConfigLinkService::advertise() {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Link)) return;
     char name[identity::kBluetoothNameCap + 1];
     identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
-                             activation);
-    (void)context_.roles.link.advertise_as(name);
+                             context_.state.activation);
+    advertised_ = context_.roles.link.advertise_as(name) == Status::Ok;
 }
 
 // INFO: fc 18oct26 the code was verified and its nonce spent on receipt; only the write waits here

@@ -80,7 +80,7 @@ The watchdog is armed before `setup()`, so a refused boot is supervised like a r
 
 What survives a failed self test is a device that still shows why: the page stays on the glass, the button still works, and the loop refuses to fly. That is `flyable_`, and it is false when a required capability is missing. `kRequired` is the radio, the receiver and the barometer: a unit without a BME280 shows its refusal page, neither transmits nor receives, and cannot be activated, because no service runs to answer `hello`. A drag-and-drop cannot be stopped, so this is the closest the firmware gets to not installing.
 
-Advertising starts after the refusal, once `config_.load_identity()` has read the key and verified the stored unlock code, so the first name a phone sees already says whether the unit is activated, and a charger wake that goes back to SYSTEM OFF advertises nothing.
+Advertising starts after the refusal and only on a unit that flies, once `config_.load_identity()` has read the key and verified the stored unlock code, so the first name a phone sees already says whether the unit is activated. A charger wake that goes back to SYSTEM OFF advertises nothing, and neither does a unit the self test refused: it serves nothing, so a name in a phone's chooser would only lead to a unit that never answers.
 
 ## Go and Go+
 
@@ -88,7 +88,7 @@ A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three
 
 ## Activation
 
-Until skyblip.eu has signed it a serial, the unit is silent: `RadioService` arms nothing, the glass shows the activation page in place of every page (`pages/README.md`), and the name is `activate 3F2A skyBlip`. The commands are the config endpoint's (`core/comms/README.md`), and `ConfigLinkService` owns the `identity::Unit` behind them. It publishes `state.activation` each pass, and when that changes after an unlock it renames the link, live: `ports::Link::advertise_as` updates the advertising data without a reboot, and the glass leaves the activation page through a wipe like any page change.
+Until skyblip.eu has signed it a serial, the unit is silent: `RadioService` arms nothing, the glass shows the activation page in place of every page (`pages/README.md`), and the name is `activate 3F2A skyBlip`. The commands are the config endpoint's (`core/comms/README.md`), and `ConfigLinkService` owns the `identity::Unit` behind them. It publishes `state.activation` each pass, and when that changes after an unlock it renames the link, live: `ports::Link::advertise_as` updates the advertising data without a reboot, and the glass leaves the activation page through a wipe like any page change. A name the link refuses is offered again every pass until it takes it. On an activated unit the unlock page is written through `unlock_writes_`, a `timing::DurableWriteWindow` like the settings writer's, so the erase lands outside a dwell.
 
 ## What the glass wears while the device is off
 

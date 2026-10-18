@@ -79,6 +79,7 @@ class ConfigLinkService : public runtime::Service {
 
    private:
     void publish_identity();
+    void advertise();
     void place_unlock(uint32_t now_ms);
     void spend_gnss_cold_start();
     void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
@@ -129,6 +130,7 @@ class ConfigLinkService : public runtime::Service {
     identity::Unit unit_;
     comms::IdentityLink identity_;
     bool identity_published_{false};
+    bool advertised_{false};
     // INFO: fc 18oct26 an activated unit's unlock page is placed like the settings, outside a dwell
     timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};

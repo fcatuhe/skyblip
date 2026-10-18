@@ -328,14 +328,57 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
     }
 }
 
-// Issue #126: the barometer is required, so a unit without one is refused whole.
-TEST_CASE("activation: a unit with no barometer neither flies nor answers an activation") {
+// Issue #126: the barometer is required, so a unit without one is refused and serves nothing.
+TEST_CASE("activation: a unit with no barometer neither flies, nor advertises, nor answers") {
     Bench b(without(ports::Capability::Baro));
     REQUIRE(b.rig.setup() == Status::Down);
     CHECK(b.say("{\"cmd\":\"hello\"}").empty());
     b.pass(3000);
     CHECK(b.rig.product.radio().arm_count() == 0);
     CHECK_FALSE(b.activation().activated());
+    CHECK(b.rig.platform.link().advertise_calls == 0);
+    CHECK(b.rig.platform.link().advertised.empty());
+}
+
+TEST_CASE("activation: a link that refuses the first name is asked again until it takes one") {
+    Rig rig;
+    rig.platform.link().advertise_refusals = 2;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.platform.link().advertised.empty());
+    rig.run(0, 200);
+    CHECK(rig.platform.link().advertised == "skyBlip Go+ 005AFE");
+    CHECK(rig.platform.link().advertise_calls == 3);
+    rig.run(200, 1000);
+    CHECK(rig.platform.link().advertise_calls == 3);
+}
+
+// The radio of an activated unit is running, so its unlock page is placed outside a dwell, later.
+TEST_CASE(
+    "activation: an activated unit on the ground answers an unlock once the write is placed") {
+    Bench b(platform::host::Platform::kFullyFitted);
+    b.rig.platform.identity().stored =
+        Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
+    b.boot();
+    REQUIRE(b.activation().serial == Identity::kSerial);
+    b.rig.seconds(b.t, 20, 0, 300);
+    REQUIRE(b.rig.product.config().config().flight_state() == flight::FlightState::Ground);
+
+    const identity::Nonce nonce{4, 2};
+    b.rig.platform.identity().queue_random(nonce);
+    REQUIRE(b.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
+    const identity::UnlockCode code = Identity::unlock_code_for(0x0101, nonce);
+    std::string signature(128, '?');
+    hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
+    const size_t before = b.rig.platform.link().sent.size();
+    b.rig.send(unlock_command(0x0101, signature).c_str());
+    b.pass(100);
+    CHECK(b.answer_since(before).empty());
+    CHECK(b.rig.platform.identity().writes == 0);
+
+    b.rig.seconds(b.t, 4, 0, 300);
+    CHECK(b.answer_since(before) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(b.rig.platform.identity().writes == 1);
+    CHECK(b.activation().serial == 0x0101);
 }
 
 TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitted, Go without") {

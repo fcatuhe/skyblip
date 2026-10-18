@@ -77,6 +77,11 @@ class Link : public ports::Link {
     }
 
     Status advertise_as(const char* name) override {
+        advertise_calls++;
+        if (advertise_refusals > 0) {
+            advertise_refusals--;
+            return Status::Down;
+        }
         advertised = name;
         return Status::Ok;
     }
@@ -108,6 +113,8 @@ class Link : public ports::Link {
 
     std::vector<Frame> sent;
     std::string advertised;
+    int advertise_calls{0};
+    int advertise_refusals{0};
     int refused_oversize{0};
 
    private:

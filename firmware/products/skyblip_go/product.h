@@ -100,10 +100,10 @@ class Product {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
         }
-        config_.load_identity();
-
         flyable_ = board == Status::Ok &&
                    ports::missing(board_.capabilities(), kRequired) == ports::Capability::None;
+        // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
+        if (flyable_) config_.load_identity();
 
         draw_self_test();
         if (!flyable_) roles_.display.present(boot_fb_, ports::Refresh::Full, 0);
