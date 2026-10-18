@@ -81,7 +81,7 @@ export class Activator {
   activate() {
     if (this.#state.phase !== 'ready') return;
     this.#set({ phase: 'asking', notice: null });
-    return this.#send({ cmd: 'hello' });
+    return this.#send({ cmd: 'challenge' });
   }
 
   async #send(command) {
@@ -95,7 +95,7 @@ export class Activator {
   #receive(reply) {
     if (!reply) return;
     if (reply.cmd === 'config') this.#set({ address: addressOf(reply), read: true });
-    else if (reply.cmd === 'hello' && this.#state.phase === 'asking') return this.#challenge(reply);
+    else if (reply.cmd === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
     else if (reply.cmd === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
     else if ('ack' in reply) this.#acked(reply);
   }

@@ -63,7 +63,7 @@ identity:
   server_key: [seed]
 ```
 
-`openssl rand -hex 32` makes one: any 32 random bytes are a seed. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in `hello`. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
+`openssl rand -hex 32` makes one: any 32 random bytes are a seed. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in its `challenge` reply. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
 
 ```sh
 read -rs seed && ruby -ropenssl -e 'k = OpenSSL::PKey.new_raw_private_key("ED25519", [ARGV[0]].pack("H*")).raw_public_key; puts k.unpack1("H*"), OpenSSL::Digest::SHA256.digest(k)[0, 4].unpack1("H*")' "$seed"; unset seed

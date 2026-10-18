@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://skyblip.eu/schemas/activation.v1.schema.json",
   "title": "skyBlip activation (v1)",
-  "description": "How a unit gets its serial from skyblip.eu (issue #126). Three commands travel on the config endpoint, one JSON object per write and one reply per notification, as config.v1 does: hello, register and unlock. Two requests travel from the browser to the server, as JSON over HTTPS: POST /activation/challenges and POST /activation/registrations. Every byte string is lowercase hexadecimal. Every signature is plain Ed25519 (RFC 8032), 64 bytes, over a message that starts with an ASCII label naming its purpose and version, followed by fixed-width binary fields in the order given, so no two messages can be read as each other: register is 'skyblip:register:v1' || Nu || Ns. registration is 'skyblip:registration:v1' || DEVICEID || Pd || Nu || Ns || server key id || release (one byte, 1 for a release build, 0 otherwise) || version, the version last because it is the one field of variable length. unlock is 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu. DEVICEID is the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, so its hex reads as the 64-bit value. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. activation.v1.vectors.json holds one exchange signed with the test key, which the firmware's host suite and the server's tests both check.",
+  "description": "How a unit gets its serial from skyblip.eu (issue #126). Three commands travel on the config endpoint, one JSON object per write and one reply per notification, as config.v1 does: challenge, register and unlock. Two requests travel from the browser to the server, as JSON over HTTPS: POST /activation/challenges and POST /activation/registrations. Every byte string is lowercase hexadecimal. Every signature is plain Ed25519 (RFC 8032), 64 bytes, over a message that starts with an ASCII label naming its purpose and version, followed by fixed-width binary fields in the order given, so no two messages can be read as each other: register is 'skyblip:register:v1' || Nu || Ns. registration is 'skyblip:registration:v1' || DEVICEID || Pd || Nu || Ns || server key id || release (one byte, 1 for a release build, 0 otherwise) || version, the version last because it is the one field of variable length. unlock is 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu. DEVICEID is the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, so its hex reads as the 64-bit value. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. activation.v1.vectors.json holds one exchange signed with the test key, which the firmware's host suite and the server's tests both check.",
   "definitions": {
     "nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "16 random bytes, used once"},
     "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
@@ -12,16 +12,16 @@
     "release": {"type": "boolean", "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
     "serial": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Assigned densely by the server, from 1: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
 
-    "hello": {
-      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'incomplete' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses hello, register and unlock as 'in_flight' unless it is on the ground",
+    "challenge": {
+      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'incomplete' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground",
       "type": "object", "required": ["cmd"], "additionalProperties": false,
-      "properties": {"cmd": {"const": "hello"}}
+      "properties": {"cmd": {"const": "challenge"}}
     },
-    "hello_reply": {
+    "challenge_reply": {
       "description": "Unit to browser. The nonce, and the id of the server key the unit trusts, so the server knows which of its keys to sign with",
       "type": "object", "required": ["cmd", "nonce", "server_key"], "additionalProperties": false,
       "properties": {
-        "cmd": {"const": "hello"},
+        "cmd": {"const": "challenge"},
         "nonce": {"$ref": "#/definitions/nonce"},
         "server_key": {"$ref": "#/definitions/server_key"}
       }
@@ -58,15 +58,15 @@
       }
     },
 
-    "challenge_request": {
-      "description": "POST /activation/challenges, browser to server: Nu and the key the unit trusts, from the hello reply. Answered 201 with challenge_response, 422 {\"error\":\"unknown_server_key\"} for a key this server does not hold, 422 {\"error\":\"invalid\"} for a malformed nonce, 429 {\"error\":\"rate_limited\"}",
+    "http_challenge_request": {
+      "description": "POST /activation/challenges, browser to server: Nu and the key the unit trusts, from the challenge reply. Answered 201 with http_challenge_response, 422 {\"error\":\"unknown_server_key\"} for a key this server does not hold, 422 {\"error\":\"invalid\"} for a malformed nonce, 429 {\"error\":\"rate_limited\"}",
       "type": "object", "required": ["unit_nonce", "server_key"],
       "properties": {
         "unit_nonce": {"$ref": "#/definitions/nonce"},
         "server_key": {"$ref": "#/definitions/server_key"}
       }
     },
-    "challenge_response": {
+    "http_challenge_response": {
       "description": "Ns, which the server keeps with Nu for five minutes and accepts once, and R over the register message",
       "type": "object", "required": ["server_nonce", "signature"],
       "properties": {
@@ -74,8 +74,8 @@
         "signature": {"$ref": "#/definitions/signature"}
       }
     },
-    "registration_request": {
-      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with unlock_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
+    "http_registration_request": {
+      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with http_registration_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
       "type": "object", "required": ["device_id", "public_key", "version", "server_key", "release", "server_nonce", "signature"],
       "properties": {
         "device_id": {"$ref": "#/definitions/device_id"},
@@ -87,7 +87,7 @@
         "signature": {"$ref": "#/definitions/signature"}
       }
     },
-    "unlock_response": {
+    "http_registration_response": {
       "description": "The serial and U, which the browser sends to the unit as the unlock command",
       "type": "object", "required": ["serial", "signature"],
       "properties": {
