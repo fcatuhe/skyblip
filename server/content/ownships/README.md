@@ -7,7 +7,7 @@ One file per aircraft type, named after the key `Ownship::AircraftType` gives it
 - `art`: the drawing as text, the same text the editor copies and pastes. Rows of `#` and `.`, nose up, one character per pixel of the 200x200 glass, and a `<` after the hot spot row: the row that lands on the centre of the radar, where the aircraft is. The position of a target is measured from it, so it sits on the wing, not on the middle of the bounding box. A drawing with no `<` puts it on the widest row.
 - `planforms`: the real aircraft the drawing is made against, in plan view, the first one shown by default. Each has a `key`, a `name`, its `sources`, a `hot_spot` in metres from the nose, and an `outline`: the right half from the nose round to the tail, in metres from the centreline and from the nose. The editor ghosts the chosen one under the grid at its true proportions, scores the drawing against it stretched to the grid, and traces a starting drawing from it.
 
-The outlines are drawn from published dimensions and from measuring 3-views, so no drawing of anyone else's is shipped. The light aircraft has three: the Nicollier HN 700 Ménestrel II, measured off the Molveau 3-view, whose licence is unknown, so it is a measuring reference only; the Spitfire Mk IX, measured off Marek Cel's CC0 3-view of the Mk V, which shares the Mk IX's wing and tail; and the outline `skyship/index.html` carried as its background, the one the compiled symbol was hinted against.
+The outlines are drawn from published dimensions and from measuring 3-views, so no drawing of anyone else's is shipped. The light aircraft has three: the Nicollier HN 700 Ménestrel II, measured off the Molveau 3-view, whose licence is unknown, so it is a measuring reference only; the Spitfire Mk IX, measured off Marek Cel's CC0 3-view of the Mk V, which shares the Mk IX's wing and tail; and the outline the standalone editor this page replaced carried as its background, the one the compiled symbol was hinted against.
 
 A pilot can import an image instead, a plan view of their own aircraft, one per aircraft type. It stays in the browser, in local storage, and is never sent: it sits under the grid at its own proportions, with no score and nothing to trace.
 
@@ -17,11 +17,11 @@ In the browser. The page is loaded once per aircraft type, with the type's drawi
 
 The rules a drawing must follow exist twice, in `ownship.js` for the editor and in `Ownship::Checking` for `ownship:compile`, and `test/fixtures/files/ownship_checks.json` holds both to the same answers: `node --test` runs it against one and `bin/rails test` against the other.
 
-`light_aircraft.yml` must stay the table in `firmware/ui/widgets/skyship.cpp`, and the test suite says so. Change the drawing here, then `bin/rails ownship:compile` writes the table. It refuses a drawing of another size or hot spot than the compiled one, which `skyship.cpp` asserts and every screen measures against. `skyship/` at the root of the repository still holds the standalone editor this page replaces, and its `apply.py` writes the same table.
+`light_aircraft.yml` must stay the table in `firmware/ui/widgets/skyship.cpp`, and the test suite says so. Change the drawing here, then `bin/rails ownship:compile` writes the table. It refuses a drawing of another size or hot spot than the compiled one, which `skyship.cpp` asserts and every screen measures against.
 
 ## What a drawing must be
 
-The checks are the ones `skyship/index.html` and `apply.py` made, with the box the firmware lays its screens out around added: every screen was laid out around the compiled symbol, 24 px wide, 5 rows ahead of the hot spot and 11 from it aft (`ui/widgets/skyship.h`). Wider, the wingtips touch the formation square on the radar. Longer, the tail runs into the banner below it.
+The checks are the ones the standalone editor made, with the box the firmware lays its screens out around added: every screen was laid out around the compiled symbol, 24 px wide, 5 rows ahead of the hot spot and 11 from it aft (`ui/widgets/skyship.h`). Wider, the wingtips touch the formation square on the radar. Longer, the tail runs into the banner below it.
 
 - Even width, so the symbol straddles the centre of the glass, which is the point between pixels 99 and 100.
 - Mirrored about that axis, and the two middle columns inked on every row.

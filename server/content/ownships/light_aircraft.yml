@@ -103,7 +103,7 @@ planforms:
       fr: Contour d'origine de skyShip
     hot_spot: 2.2
     sources:
-      - skyship/index.html, the reference outline the compiled skyShip was hinted against, scaled to a 10 m span
+      - the reference outline the compiled skyShip was hinted against, in the standalone editor this page replaced, https://github.com/fcatuhe/skyblip/blob/9e3fdfa7/skyship/index.html, scaled to a 10 m span
     outline:
       - [0.00, 0.00]
       - [0.04, 0.02]
