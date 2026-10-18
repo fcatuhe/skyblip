@@ -1,0 +1,140 @@
+// The activation messages byte for byte against the schema's vectors, then the unit verifying them.
+#include <cstring>
+#include <string>
+#include <vector>
+
+#include "core/crypto/ed25519.h"
+#include "core/identity/messages.h"
+#include "core/identity/unlock_code.h"
+#include "core/util/hex.h"
+#include "doctest/doctest.h"
+#include "test/support/activation_vectors.h"
+
+using namespace skyblip;
+using crypto::Ed25519;
+
+namespace {
+
+bool same(ConstByteSpan bytes, const std::vector<uint8_t>& expected) {
+    return bytes.size() == expected.size() &&
+           std::memcmp(bytes.data(), expected.data(), expected.size()) == 0;
+}
+
+std::string hex_of(ConstByteSpan bytes) {
+    std::string out(2 * bytes.size(), '?');
+    hex::write(bytes, out.data());
+    return out;
+}
+
+struct Exchange {
+    ActivationVectors v;
+    Ed25519::Seed server_seed = v.bytes<32>("server_seed");
+    Ed25519::PublicKey server_key = v.bytes<32>("server_public_key");
+    Ed25519::Seed unit_seed = v.bytes<32>("unit_seed");
+    Ed25519::PublicKey unit_key = v.bytes<32>("unit_public_key");
+    identity::DeviceId device_id = v.bytes<8>("device_id");
+    identity::Nonce unit_nonce = v.bytes<16>("unit_nonce");
+    identity::Nonce server_nonce = v.bytes<16>("server_nonce");
+    std::string version = v.text("version");
+    uint16_t serial = static_cast<uint16_t>(v.number("serial"));
+};
+
+}  // namespace
+
+TEST_CASE(
+    "identity: the vectors' keys are the keys their seeds make, and the server's id is theirs") {
+    Exchange x;
+    CHECK(Ed25519::public_key_of(x.server_seed) == x.server_key);
+    CHECK(Ed25519::public_key_of(x.unit_seed) == x.unit_key);
+    const identity::ServerKeyId id = identity::server_key_id(x.server_key);
+    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == x.v.text("server_key"));
+}
+
+TEST_CASE("identity: the register message is the label, Nu and Ns, and the server's R checks") {
+    Exchange x;
+    const identity::Message m = identity::register_message(x.unit_nonce, x.server_nonce);
+    CHECK(same(m.bytes(), x.v.message("register_message")));
+    const auto r = x.v.bytes<64>("register_signature");
+    CHECK(Ed25519::sign(x.server_seed, m.bytes()) == r);
+    CHECK(Ed25519::verify(r, x.server_key, m.bytes()));
+}
+
+// Ed25519 is deterministic, so the unit's S comes out byte-identical to the server's.
+TEST_CASE(
+    "identity: the registration message ends in the version, and the unit's S is the vectors'") {
+    Exchange x;
+    const identity::Message m =
+        identity::registration_message(x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
+                                       identity::server_key_id(x.server_key), x.version.c_str());
+    CHECK(same(m.bytes(), x.v.message("registration_message")));
+    const auto s = x.v.bytes<64>("registration_signature");
+    CHECK(Ed25519::sign(x.unit_seed, m.bytes()) == s);
+    CHECK(Ed25519::verify(s, x.unit_key, m.bytes()));
+}
+
+TEST_CASE("identity: the unlock message carries the serial big-endian, and the server's U checks") {
+    Exchange x;
+    REQUIRE(x.serial == 298);
+    const identity::Message m =
+        identity::unlock_message(x.device_id, x.unit_key, x.serial, x.unit_nonce);
+    CHECK(same(m.bytes(), x.v.message("unlock_message")));
+    const auto u = x.v.bytes<64>("unlock_signature");
+    CHECK(Ed25519::sign(x.server_seed, m.bytes()) == u);
+    CHECK(Ed25519::verify(u, x.server_key, m.bytes()));
+}
+
+TEST_CASE("identity: no signature passes for another purpose, the labels see to that") {
+    Exchange x;
+    const auto r = x.v.bytes<64>("register_signature");
+    const identity::Message unlock =
+        identity::unlock_message(x.device_id, x.unit_key, x.serial, x.unit_nonce);
+    CHECK_FALSE(Ed25519::verify(r, x.server_key, unlock.bytes()));
+    const auto u = x.v.bytes<64>("unlock_signature");
+    CHECK_FALSE(Ed25519::verify(u, x.server_key,
+                                identity::register_message(x.unit_nonce, x.server_nonce).bytes()));
+}
+
+// The development key is the one main and pull requests trust (firmware/keys/server/).
+TEST_CASE("identity: a server key is named by the first four bytes of its SHA-256") {
+    Ed25519::PublicKey development{};
+    REQUIRE(hex::read("41a5e2fbc6f349748ffd4f041350136a06b21553f67450ca27ff2ec56c9f2157",
+                      ByteSpan(development.data(), development.size())));
+    const identity::ServerKeyId id = identity::server_key_id(development);
+    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == "a9649d2d");
+}
+
+TEST_CASE("identity: hex is lowercase both ways, and a read takes exactly the digits it is owed") {
+    uint8_t out[2] = {0, 0};
+    CHECK(hex::read("0aff", ByteSpan(out, 2)));
+    CHECK(out[0] == 0x0A);
+    CHECK(out[1] == 0xFF);
+    CHECK_FALSE(hex::read("0AFF", ByteSpan(out, 2)));
+    CHECK_FALSE(hex::read("0af", ByteSpan(out, 2)));
+    CHECK_FALSE(hex::read("0aff00", ByteSpan(out, 2)));
+    CHECK_FALSE(hex::read("0ag0", ByteSpan(out, 2)));
+    CHECK(hex_of(ConstByteSpan(out, 2)) == "0aff");
+}
+
+TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page holds nothing") {
+    identity::UnlockCode code{};
+    code.serial = 0x012A;
+    code.nonce.fill(0x11);
+    code.signature.fill(0x22);
+    const identity::UnlockPage page = identity::page_of(code);
+    CHECK(page.size() == 84);
+    CHECK(page[0] == 0x01);
+    CHECK(page[1] == 0x2A);
+    CHECK(page[2] == 0x11);
+    CHECK(page[18] == 0x22);
+    CHECK(page[82] == 0xFF);
+
+    const std::optional<identity::UnlockCode> back = identity::code_on(page);
+    REQUIRE(back);
+    CHECK(back->serial == code.serial);
+    CHECK(back->nonce == code.nonce);
+    CHECK(back->signature == code.signature);
+
+    identity::UnlockPage erased{};
+    erased.fill(0xFF);
+    CHECK_FALSE(identity::code_on(erased));
+}
