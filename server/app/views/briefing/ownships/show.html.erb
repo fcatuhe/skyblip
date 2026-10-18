@@ -1,0 +1,173 @@
+<header class="page-hero page-hero--compact">
+  <h1><%= t ".title" %></h1>
+  <p class="page-hero-subtitle"><%= t ".description" %></p>
+</header>
+
+<div class="ownship-page" data-controller="ownship" data-ahoy-skip="true"
+     data-ownship-type-value="<%= { key: @aircraft_type.key, code: @aircraft_type.code }.to_json %>"
+     data-ownship-shipped-value="<%= @aircraft_type.ownship.to_h.to_json %>"
+     <% if @linked %>data-ownship-linked-value="<%= @linked.to_h.to_json %>"<% end %>
+     data-ownship-planforms-value="<%= @aircraft_type.planforms.map(&:to_h).to_json %>"
+     data-ownship-outline-value="<%= params[:outline] if params[:outline].is_a?(String) %>"
+     data-ownship-limits-value="<%= ownship_limits.to_json %>"
+     data-ownship-words-value="<%= ownship_words.to_json %>">
+  <section class="band ownship">
+    <%= form_with url: briefing_ownship_path, method: :get, class: "ownship-type" do |form| %>
+      <%= form.label :type, t(".aircraft_type") %>
+      <%= form.select :type, Ownship::AircraftType.all.map { [ it.name, it.key ] }, { selected: @aircraft_type.key },
+            data: { action: "ownship#chooseType" } %>
+      <noscript><%= form.submit t(".choose"), name: nil %></noscript>
+      <p class="ownship-note">
+        <% if @aircraft_type.drawn? %>
+          <%= t ".drawn", type: @aircraft_type.name %>
+        <% else %>
+          <%= t ".undrawn", type: @aircraft_type.name, shown: Ownship::AircraftType.default.name %>
+        <% end %>
+      </p>
+      <p class="ownship-note ownship-draft" data-ownship-target="draft" hidden>
+        <%= t ".draft", type: @aircraft_type.name %>
+        <button type="button" class="ownship-link" data-action="ownship#reset"><%= t ".reset" %></button>
+      </p>
+    <% end %>
+
+    <% if @unreadable %>
+      <p class="ownship-alert" role="alert"><%= t ".unreadable" %></p>
+    <% end %>
+
+    <div class="ownship-workbench">
+      <div class="ownship-editor">
+        <div class="ownship-tools" role="toolbar" aria-label="<%= t ".tools" %>">
+          <% { rows: %w[addRowFore removeRowFore addRowAft removeRowAft],
+               width: %w[addColumns removeColumns narrowWings widenWings],
+               tidy: %w[toEven trim clear] }.each do |group, operations| %>
+            <div class="ownship-tool-group" role="group" aria-label="<%= t ".#{group}" %>">
+              <span><%= t ".#{group}" %></span>
+              <% operations.each do |operation| %>
+                <button type="button" data-action="ownship#reshape" data-ownship-operation-param="<%= operation %>"><%= t ".reshape.#{operation.underscore}" %></button>
+              <% end %>
+              <% if group == :tidy %>
+                <button type="button" data-action="ownship#trace" data-ownship-target="trace"><%= t ".reshape.trace" %></button>
+                <button type="button" data-action="ownship#reset"><%= t ".reset" %></button>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="ownship-options">
+          <label>
+            <%= t ".outline" %>
+            <select class="ownship-outline" data-ownship-target="outline" data-action="ownship#chooseOutline">
+              <% @aircraft_type.planforms.each do |planform| %>
+                <option value="<%= planform.key %>"><%= planform.name %></option>
+              <% end %>
+              <option value="own"><%= t ".own_image" %></option>
+            </select>
+          </label>
+          <label class="ownship-upload">
+            <%= t ".upload" %>
+            <input type="file" accept="image/*" data-action="ownship#importImage">
+          </label>
+          <span class="ownship-hint" role="alert" data-ownship-target="imageError"></span>
+        </div>
+
+        <div class="ownship-options">
+          <label><input type="checkbox" checked data-ownship-target="mirror"> <%= t ".mirror" %></label>
+          <label><input type="checkbox" class="ownship-ghost-toggle" checked> <%= t ".ghost" %></label>
+          <label>
+            <%= t ".hot_spot" %>
+            <input type="number" min="0" class="ownship-hot-spot" data-ownship-target="hotSpot" data-action="ownship#moveHotSpot">
+          </label>
+        </div>
+
+        <div class="ownship-grid" data-ownship-target="grid"
+             data-action="pointerdown->ownship#press pointermove->ownship#drag pointerup->ownship#release pointercancel->ownship#release click->ownship#click change->ownship#toggle">
+          <img class="ownship-ghost ownship-own-image" alt="" data-ownship-target="image">
+          <svg class="ownship-ghost" preserveAspectRatio="none" aria-hidden="true" data-ownship-target="ghost">
+            <polygon data-ownship-target="ghostOutline" />
+          </svg>
+        </div>
+        <p class="ownship-hint"><%= t ".hint" %></p>
+      </div>
+
+      <div class="ownship-results">
+        <figure class="ownship-screen">
+          <svg viewBox="0 0 <%= OwnshipsHelper::GLASS %> <%= OwnshipsHelper::GLASS %>" role="img" aria-label="<%= t ".screen_label" %>">
+            <rect class="ownship-glass" width="<%= OwnshipsHelper::GLASS %>" height="<%= OwnshipsHelper::GLASS %>" />
+            <% OwnshipsHelper::RINGS.each do |radius| %>
+              <circle class="ownship-ring" cx="100" cy="100" r="<%= radius %>" />
+            <% end %>
+            <circle class="ownship-traffic" cx="132" cy="64" r="4" />
+            <circle class="ownship-traffic ownship-traffic--far" cx="70" cy="120" r="2" />
+            <circle class="ownship-traffic ownship-traffic--far" cx="112" cy="150" r="4" />
+            <path class="ownship-sprite" data-ownship-target="sprite" />
+          </svg>
+          <figcaption><%= t ".screen" %></figcaption>
+        </figure>
+
+        <dl class="ownship-facts">
+          <div><dt><%= t ".size" %></dt><dd data-ownship-target="size"></dd></div>
+          <div><dt><%= t ".ink" %></dt><dd data-ownship-target="ink"></dd></div>
+          <div><dt><%= t ".nose" %></dt><dd data-ownship-target="nose"></dd></div>
+          <div><dt><%= t ".tail" %></dt><dd data-ownship-target="tail"></dd></div>
+        </dl>
+
+        <ul class="ownship-checks" aria-live="polite" data-ownship-target="checks"></ul>
+
+        <figure class="ownship-diff" data-ownship-target="diff">
+          <svg role="img" aria-label="<%= t ".diff_label" %>">
+            <path class="ownship-diff-both" data-ownship-target="both" />
+            <path class="ownship-diff-extra" data-ownship-target="extra" />
+            <path class="ownship-diff-missing" data-ownship-target="missing" />
+          </svg>
+          <figcaption data-ownship-target="fidelity"></figcaption>
+        </figure>
+        <p class="ownship-hint" data-ownship-target="ownHint" hidden><%= t ".own_image_hint" %></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--tint ownship-export">
+    <h2 class="section-title"><%= t ".export" %></h2>
+
+    <div class="ownship-export-grid">
+      <div class="ownship-export-item">
+        <label for="ownship-text"><%= t ".text" %></label>
+        <textarea id="ownship-text" class="ownship-code" rows="16" spellcheck="false" data-ownship-target="text"></textarea>
+        <p class="ownship-hint"><%= t ".text_hint" %></p>
+        <div class="ownship-row-actions">
+          <button type="button" class="ownship-button" data-action="ownship#copy" data-ownship-source-param="text"><%= t ".copy" %></button>
+          <button type="button" class="ownship-button" data-action="ownship#paste"><%= t ".paste" %></button>
+          <button type="button" class="ownship-button" data-action="ownship#importText"><%= t ".import" %></button>
+          <span class="ownship-hint" role="status" data-ownship-target="copied"></span>
+        </div>
+        <p class="ownship-alert" role="alert" data-ownship-target="unreadable" hidden><%= t ".unreadable_text" %></p>
+      </div>
+
+      <div class="ownship-export-item">
+        <label for="ownship-cpp"><%= t ".cpp" %></label>
+        <textarea id="ownship-cpp" class="ownship-code" rows="20" readonly data-ownship-target="cpp"></textarea>
+        <button type="button" class="ownship-button" data-action="ownship#copy" data-ownship-source-param="cpp"><%= t ".copy" %></button>
+      </div>
+
+      <div class="ownship-export-item">
+        <label for="ownship-command"><%= t ".command" %></label>
+        <textarea id="ownship-command" class="ownship-code" rows="5" readonly data-ownship-target="command"></textarea>
+        <p class="ownship-hint" data-ownship-target="bytes"></p>
+        <button type="button" class="ownship-button" data-action="ownship#copy" data-ownship-source-param="command"><%= t ".copy" %></button>
+      </div>
+    </div>
+  </section>
+
+  <% @aircraft_type.planforms.each do |planform| %>
+    <section class="band ownship-reference" data-ownship-target="reference" data-outline="<%= planform.key %>" hidden>
+      <h2 class="section-title"><%= t ".reference" %></h2>
+      <p><%= t ".reference_figures", name: planform.name, span: number_with_precision(planform.span, precision: 1),
+               length: number_with_precision(planform.length, precision: 2) %></p>
+      <ul>
+        <% planform.sources.each do |source| %>
+          <li><%= ownship_source(source) %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</div>

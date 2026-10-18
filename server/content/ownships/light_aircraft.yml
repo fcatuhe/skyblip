@@ -1,0 +1,132 @@
+art: |
+  ...........##...........
+  .......##########.......
+  ..........####..........
+  ..........####..........
+  ..####################..
+  ########################  <
+  ########################
+  ..####################..
+  .....##############.....
+  ..........####..........
+  ...........##...........
+  ...........##...........
+  ........########........
+  .......##########.......
+  ........########........
+  ...........##...........
+planforms:
+  - key: menestrel
+    name: Nicollier HN 700 Ménestrel II
+    hot_spot: 1.54
+    sources:
+      - https://en.wikipedia.org/wiki/Nicollier_Menestrel, span 7.80 m, length 5.30 m, wing area 9.80 m²
+      - http://phcord.perso.libertysurf.fr/HN700.html, root chord 1.40 m, cabin 1.04 m wide
+      - the planform measured off the Molveau 3-view, http://phcord.perso.libertysurf.fr/PLAN5.jpg, scaled to the published span
+    outline:
+      - [0.0, 0.0]
+      - [0.08, 0.05]
+      - [0.15, 0.12]
+      - [0.33, 0.19]
+      - [0.4, 0.6]
+      - [0.44, 1.08]
+      - [0.5, 1.19]
+      - [2.3, 1.2]
+      - [2.95, 1.26]
+      - [3.4, 1.33]
+      - [3.75, 1.4]
+      - [3.86, 1.5]
+      - [3.9, 1.65]
+      - [3.86, 1.85]
+      - [3.77, 2.01]
+      - [3.49, 2.24]
+      - [3.08, 2.39]
+      - [2.54, 2.46]
+      - [2.26, 2.52]
+      - [0.55, 2.52]
+      - [0.46, 2.55]
+      - [0.42, 2.7]
+      - [0.28, 3.6]
+      - [0.14, 4.5]
+      - [0.22, 4.57]
+      - [1.28, 4.77]
+      - [1.32, 4.95]
+      - [1.31, 5.15]
+      - [1.25, 5.28]
+      - [1.2, 5.3]
+      - [0.0, 5.3]
+  - key: spitfire
+    name: Supermarine Spitfire Mk IX
+    hot_spot: 2.57
+    sources:
+      - https://en.wikipedia.org/wiki/Supermarine_Spitfire_variants:_specifications,_performance_and_armament, span 11.23 m, length 9.47 m, wing area 22.5 m²
+      - https://commons.wikimedia.org/wiki/File:Supermarine_Spitfire_Mk_Vb_3-view.svg, CC0, Marek Cel, the Mk V and Mk IX share the wing and tail, measured and scaled to the Mk IX length
+    outline:
+      - [0.0, 0.0]
+      - [0.14, 0.12]
+      - [0.25, 0.36]
+      - [0.31, 0.6]
+      - [0.37, 0.95]
+      - [0.37, 1.88]
+      - [2.05, 1.94]
+      - [2.86, 2.03]
+      - [4.5, 2.27]
+      - [5.22, 2.5]
+      - [5.56, 2.74]
+      - [5.615, 2.98]
+      - [5.46, 3.22]
+      - [5.2, 3.46]
+      - [4.83, 3.7]
+      - [4.33, 3.94]
+      - [3.6, 4.17]
+      - [2.37, 4.41]
+      - [0.81, 4.5]
+      - [0.59, 4.65]
+      - [0.41, 5.25]
+      - [0.35, 6.2]
+      - [0.27, 7.15]
+      - [0.21, 7.87]
+      - [0.42, 7.96]
+      - [0.99, 8.11]
+      - [1.4, 8.35]
+      - [1.58, 8.59]
+      - [1.6, 8.82]
+      - [1.41, 9.06]
+      - [1.11, 9.18]
+      - [0.96, 9.22]
+      - [0.05, 9.22]
+      - [0.01, 9.47]
+      - [0.0, 9.47]
+  - key: skyship_reference
+    name:
+      en: skyShip's original outline
+      fr: Contour d'origine de skyShip
+    hot_spot: 2.2
+    sources:
+      - the reference outline the compiled skyShip was hinted against, in the standalone editor this page replaced, https://github.com/fcatuhe/skyblip/blob/9e3fdfa7/skyship/index.html, scaled to a 10 m span
+    outline:
+      - [0.00, 0.00]
+      - [0.04, 0.02]
+      - [0.09, 0.15]
+      - [0.34, 0.19]
+      - [0.56, 0.45]
+      - [0.65, 1.44]
+      - [2.63, 1.53]
+      - [4.61, 1.70]
+      - [4.83, 1.79]
+      - [5.00, 2.05]
+      - [5.00, 2.31]
+      - [4.83, 2.69]
+      - [4.48, 3.00]
+      - [3.84, 3.25]
+      - [2.93, 3.38]
+      - [0.65, 3.43]
+      - [0.22, 5.80]
+      - [1.59, 6.06]
+      - [1.72, 6.19]
+      - [1.72, 6.66]
+      - [1.68, 6.79]
+      - [1.51, 6.92]
+      - [0.09, 7.09]
+      - [0.04, 7.39]
+      - [0.00, 7.41]

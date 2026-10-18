@@ -10,7 +10,7 @@ Every command here runs from this directory, not from the repo root.
 mise trust && mise install   # Ruby, and fnox
 bin/setup                    # gems, the databases, then bin/dev
 bin/dev                      # http://skyblip.localhost:8119
-bin/ci                       # the gate before handoff, and what CI runs
+bin/ci                       # the gate before handoff, the checks CI runs as separate jobs
 bin/rails test:system        # Cuprite, on the Chrome or Chromium it finds, BROWSER_PATH otherwise
 bin/screenshots              # retake the device screens off the firmware next door
 ```
@@ -36,7 +36,7 @@ A user has a first name, a last name, an email and a password, and a role: `user
 User.create!(first_name: "[first name]", last_name: "[last name]", email: "[email]", password: "[password]", role: :admin)
 ```
 
-Analytics is Patoumatic's stack without the parts about therapists. Ahoy records visits and events in their own database, `analytics`, from the server (every controller action) and from the browser (`app/javascript/ahoy-module.js`, posting to `/hoy`). Each visit is then computed into an `Analytics::Visit`, which knows its pages, duration, channel, section (`public`, `briefing` or `admin`) and segment. The segment is how your own browsing stays out of the numbers: a visit is `internal` when it belongs to an admin, or comes from a browser an admin once signed in from, `user` for any other account, `non_user` otherwise. The `Admin` link opens the overview on `non_user`. Development and test track nothing, `Ahoy.api_only` is on there. Firmware downloads are not tracked, so their year-long public cache never carries a cookie.
+Ahoy records visits and events in their own database, `analytics`, from the server (every controller action) and from the browser (`app/javascript/ahoy-module.js`, posting to `/hoy`). Each visit is then computed into an `Analytics::Visit`, which knows its pages, duration, channel, section (`public`, `briefing` or `admin`) and segment. The segment is how your own browsing stays out of the numbers: a visit is `internal` when it belongs to an admin, or comes from a browser an admin once signed in from, `user` for any other account, `non_user` otherwise. The `Admin` link opens the overview on `non_user`. Development and test track nothing, `Ahoy.api_only` is on there. Firmware downloads are not tracked, so their year-long public cache never carries a cookie.
 
 Visits are placed by IP with the MaxMind GeoLite City database, `storage/GeoLite2-City.mmdb`, which `Maxmind::UpdateGeoliteCityDatabaseJob` downloads and keeps current. The job is scheduled in `config/recurring.yml` only once the production credentials hold the MaxMind account, so until then visits keep no place and nothing fails:
 
@@ -81,9 +81,17 @@ Pages are files, not database rows: `content/pages/<slug>.html.erb`, with YAML f
 
 The site sells one product, the skyBlip Go, and every page is built from the same sections: a centred `page-hero`, then `band`s that alternate with `band--tint`, each opened by a `section-title` (`sections.css`). The nav carries the four pages a buyer reads, `features`, `buy`, `guides` and `about`, then `manage` and the simulator (`skyblip-go`, served as `/try`) on the right. The footer carries everything, the guides included. `index` is the product page, `features` walks through what the device does with a link per feature to the guide paragraph that explains it, `buy` says where to get one and how to install it, `guides` indexes the subject pages (`radar`, `instruments`, `controls`, `power`, `phone`, `radio` and `displays`), `about` holds the why and the pledge, and `roadmap` the devices that come next. A feature gets its block in `features` and its paragraph in the guide that owns the subject, and the paragraph's `h3` carries the anchor the block links to. The words the layout itself speaks (nav, footer, the call to action that closes a section, `shared/_cta.html.erb`) live in `config/locales/`.
 
+The legal notice (`legal-notice.*`, `/fr/mentions-legales`) names the hosting provider only, as article 1-1 II of the [LCEN](https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000801164) allows a site published non-professionally, provided the host holds the publisher's identity. It reads the host from the credentials, not from the source, added to production with `mise run credentials:production`. Development has them already. Without them, as in CI, which has no key, the fields render empty:
+
+```yaml
+legal:
+  host: [hosting provider]
+  host_address: [hosting provider address]
+```
+
 Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_fb()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
 
-Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source with the settings Patoumatic's `Medium::Encoding` uses, so both sites compress alike: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
+Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
 
 The legend under `pages/skyblip-go/blips/` is the other half of the same rule: one PNG per traffic blip, each drawn on its own 19x25 canvas by `ui::draw_blip`, the widget the radar page itself calls, so the table on the page cannot drift from the glass. `bin/blips.cpp` is that dumper, a host binary linked against `ui/canvas.cpp` and `ui/widgets/blip.cpp` and nothing else.
 
@@ -92,6 +100,8 @@ Taking them again is `bin/screenshots`: it builds the firmware's WASM, flies one
 Look and layout come from the token sets in `app/assets/stylesheets/`. Colors, spacing and type are CSS variables in `_global.css`; components never hardcode a value.
 
 The palette is the wordmark's: `--ink` for text and the footer, `--paper` for the page, `--sky`, the grey-blue of "sky", and `--blip`, the orange of the signal. Each of the last two has a soft tint for a band (`--sky-soft`, `--blip-soft`) and a deep shade for text (`--sky-deep`, `--blip-text`). A page alternates paper and sky bands, keeps one blip band for its closing message, and ends on the ink footer.
+
+The ownship editor, `/briefing/ownship`, draws the symbol at the centre of the radar, one per aircraft type. The drawings and the outlines they are made against are files in `content/ownships/`, beside a README on what a drawing must be, where each outline comes from, why the glider is a JS3, and the Bluetooth command a device could take one in. The editing runs in the browser, in `ownship_controller.js` over `#skyblip/ownship`, and sends nothing to the server: the page is loaded once per aircraft type, and a drawing travels as text.
 
 The simulated device case is `app/assets/stylesheets/device.css`, shared by the public simulator and the editable simulator under `/briefing/simulator`.
 

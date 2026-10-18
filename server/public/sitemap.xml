@@ -101,6 +101,11 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://skyblip.eu/fr/mentions-legales</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://skyblip.eu/fr/mise-a-jour</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -137,6 +142,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/instruments</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/legal-notice</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

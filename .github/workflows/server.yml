@@ -26,8 +26,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      checks: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.server == 'true' || steps.filter.outputs.protocol == 'true' }}
       server: ${{ steps.filter.outputs.server }}
-      protocol: ${{ steps.filter.outputs.protocol }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -47,11 +47,118 @@ jobs:
               - '.github/workflows/firmware.yml'
               - '.github/workflows/release.yml'
               - 'firmware/scenarios/*.json'
+              - 'firmware/ui/widgets/skyship.cpp'
+              - 'firmware/ui/widgets/skyship.h'
 
-  ci:
-    name: tests, style and security
+  scan_ruby:
+    name: scan Ruby (brakeman, bundler-audit)
     needs: changes
-    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' || needs.changes.outputs.protocol == 'true'
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Scan for common Rails security vulnerabilities using static analysis
+        run: bin/brakeman --no-pager
+      - name: Scan for known security vulnerabilities in gems used
+        run: bin/bundler-audit
+
+  scan_js:
+    name: scan JS (importmap audit)
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Scan for security vulnerabilities in JavaScript dependencies
+        run: bin/importmap audit
+
+  lint_ruby:
+    name: lint Ruby (rubocop)
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    env:
+      RUBOCOP_CACHE_ROOT: tmp/rubocop
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Prepare RuboCop cache
+        uses: actions/cache@v6
+        env:
+          DEPENDENCIES_HASH: ${{ hashFiles('server/.ruby-version', 'server/**/.rubocop.yml', 'server/**/.rubocop_todo.yml', 'server/Gemfile.lock') }}
+        with:
+          path: server/${{ env.RUBOCOP_CACHE_ROOT }}
+          key: rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
+          restore-keys: |
+            rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
+
+  lint_smart_quotes:
+    name: lint smart quotes
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: server
+      - name: Check for smart quotes
+        run: bin/smart_quotes find
+
+  boot:
+    name: boot (eager load without the development bundle)
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      # A development gem required at load time passes the suite, which has it, and kills the image.
+      - name: Check the app eager loads without the development bundle
+        run: bin/eager_load_check
+
+  test:
+    name: test
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
+    runs-on: ubuntu-26.04-arm
+    env:
+      RAILS_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Run tests
+        run: bin/rails db:test:prepare test
+      - name: Run deployment and release workflow tests
+        run: bundle exec ruby ../.github/test/deployment_test.rb
+      - name: Run browser protocol and firmware word tests
+        run: node --test test/javascript/test_*.mjs
+      - name: Check the content sitemap is current
+        run: bin/rails content:sitemap:check
+
+  system-test:
+    name: system test
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -65,10 +172,11 @@ jobs:
           chrome-version: stable
       - name: Lift the AppArmor restriction Chrome's sandbox trips on
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - name: Run project gates
+      - name: Run system tests
         env:
+          RAILS_ENV: test
           BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
-        run: bin/ci
+        run: bin/rails db:test:prepare test:system
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v7
         if: failure()
@@ -79,7 +187,7 @@ jobs:
 
   deploy:
     name: deploy with Kamal
-    needs: [changes, ci]
+    needs: [changes, scan_ruby, scan_js, lint_ruby, lint_smart_quotes, boot, test, system-test]
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
