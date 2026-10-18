@@ -12,7 +12,7 @@ The four source files are byte-identical to the tarball's. One thing moved: `src
 
 ## How it is built
 
-The host build compiles both `.c` files as C++ with the rest of the tree, so one compiler and one set of sanitizers instrument every object. The Zephyr build compiles them as C, with `BLAKE2_NO_UNROLLING`, Monocypher's one flash knob, in case BLAKE2b is ever linked. Nothing else is configured.
+The host build compiles both `.c` files as C++ with the rest of the tree, so one compiler and one set of sanitizers instrument every object. The Zephyr build compiles them as C. Nothing is configured: BLAKE2b, the one thing Monocypher has a flash knob for, is never linked.
 
 ## On upgrade
 

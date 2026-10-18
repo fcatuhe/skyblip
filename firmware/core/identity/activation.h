@@ -24,8 +24,12 @@ inline bool operator==(const Activation& a, const Activation& b) {
 }
 inline bool operator!=(const Activation& a, const Activation& b) { return !(a == b); }
 
-// INFO: fc 18oct26 21 characters, inside the 29 the scan response leaves for a name
+// INFO: fc 18oct26 the 21 of 'activate 3F2A skyBlip' and room, inside a scan response's 29
 constexpr int kBluetoothNameCap = 24;
+// INFO: fc 18oct26 what is left for the product word beside ' 00012A'
+constexpr int kProductWordCap = kBluetoothNameCap - 7;
+static_assert(sizeof("activate 3F2A skyBlip") - 1 <= kBluetoothNameCap,
+              "the unactivated name fits");
 
 int bluetooth_name(char* out, int cap, const char* product, const Activation& activation);
 

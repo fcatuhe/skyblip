@@ -1,7 +1,6 @@
 #include "core/crypto/ed25519.h"
 
 #include "monocypher/monocypher-ed25519.h"
-#include "monocypher/monocypher.h"
 
 namespace skyblip::crypto {
 
@@ -15,9 +14,6 @@ struct SecretKey {
         Ed25519::Seed spent = seed;
         crypto_ed25519_key_pair(bytes, public_key.data(), spent.data());
     }
-    ~SecretKey() { crypto_wipe(bytes, sizeof(bytes)); }
-    SecretKey(const SecretKey&) = delete;
-    SecretKey& operator=(const SecretKey&) = delete;
 };
 }  // namespace
 

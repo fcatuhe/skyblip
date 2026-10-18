@@ -8,7 +8,10 @@ int bluetooth_name(char* out, int cap, const char* product, const Activation& ac
     char name[kBluetoothNameCap + 1];
     int n = 0;
     if (const settings::AirAddress address = activation.address()) {
-        n += fmt_string(name, product);
+        while (n < kProductWordCap && product[n] != 0) {
+            name[n] = product[n];
+            n++;
+        }
         n += fmt_string(name + n, " ");
         n += fmt_hex(name + n, *address, 6);
     } else {

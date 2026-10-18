@@ -12,6 +12,7 @@
 
 #include "core/comms/link_sessions.h"
 #include "core/events/link.h"
+#include "core/identity/activation.h"
 #include "core/util/fifo.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
@@ -193,6 +194,8 @@ const struct bt_data adv[] = {
 };
 
 // INFO: fc 18sep26 Both UUIDs fill the 31-byte advert, so the name rides the scan response.
+static_assert(identity::kBluetoothNameCap < CONFIG_BT_DEVICE_NAME_MAX,
+              "every name the product builds fits the GAP name and its terminator");
 struct ScanResponse {
     char name[CONFIG_BT_DEVICE_NAME_MAX];
     struct bt_data sd[1];
