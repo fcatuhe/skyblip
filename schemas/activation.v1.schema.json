@@ -26,7 +26,7 @@
       }
     },
     "register": {
-      "description": "Browser to unit, about 210 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. Refusals: 'no_session' (no live nonce), 'bad_signature', 'incomplete', 'small_mtu' (the link cannot carry the registration frame in one notification), 'in_flight'",
+      "description": "Browser to unit, about 210 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. The prompt stands whatever the flight state: a unit without a serial is silent, and one indoors has no fix to be on the ground by. Refusals: 'no_session' (no live nonce), 'bad_signature', 'incomplete', 'small_mtu' (the link cannot carry the registration frame in one notification)",
       "type": "object", "required": ["cmd", "server_nonce", "signature"], "additionalProperties": false,
       "properties": {
         "cmd": {"const": "register"},
@@ -58,9 +58,9 @@
 
     "challenge_request": {
       "description": "POST /activation/challenges, browser to server: Nu and the key the unit trusts, from the hello reply. Answered 201 with challenge_response, 422 {\"error\":\"unknown_server_key\"} for a key this server does not hold, 422 {\"error\":\"invalid\"} for a malformed nonce, 429 {\"error\":\"rate_limited\"}",
-      "type": "object", "required": ["nonce", "server_key"],
+      "type": "object", "required": ["unit_nonce", "server_key"],
       "properties": {
-        "nonce": {"$ref": "#/definitions/nonce"},
+        "unit_nonce": {"$ref": "#/definitions/nonce"},
         "server_key": {"$ref": "#/definitions/server_key"}
       }
     },
