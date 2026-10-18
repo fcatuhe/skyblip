@@ -17,8 +17,8 @@ const hex = buffer => Buffer.from(buffer).toString('hex');
 
 export const messages = {
   register: ({ unitNonce, serverNonce }) => Buffer.concat([label('register'), bytes(unitNonce, serverNonce)]),
-  registration: ({ deviceId, publicKey, unitNonce, serverNonce, serverKey, version }) =>
-    Buffer.concat([label('registration'), bytes(deviceId, publicKey, unitNonce, serverNonce, serverKey), Buffer.from(version)]),
+  registration: ({ deviceId, publicKey, unitNonce, serverNonce, serverKey, release, version }) =>
+    Buffer.concat([label('registration'), bytes(deviceId, publicKey, unitNonce, serverNonce, serverKey), Buffer.of(release ? 1 : 0), Buffer.from(version)]),
   unlock: ({ deviceId, publicKey, serial, unitNonce }) => {
     const serialBytes = Buffer.alloc(2);
     serialBytes.writeUInt16BE(serial);
@@ -70,14 +70,16 @@ export class FakeServer {
     return { server_nonce: serverNonce, signature: this.key.sign(messages.register({ unitNonce: unit_nonce, serverNonce })) };
   }
 
-  async register({ device_id, public_key, version, server_key, server_nonce, signature }) {
+  async register({ device_id, public_key, version, server_key, release, server_nonce, signature }) {
     this.requests.push('register');
     if (this.held) await this.held.promise;
     this.#refuse();
     const unitNonce = this.challenges.get(server_nonce);
     if (!unitNonce) throw new ServerRefusal('expired');
     this.challenges.delete(server_nonce);
-    const message = messages.registration({ deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKey: server_key, version });
+    const message = messages.registration({
+      deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKey: server_key, release, version,
+    });
     if (!verifies(public_key, signature, message)) throw new ServerRefusal('bad_signature');
     const known = this.units.get(device_id) ?? { serial: this.units.size + 1, publicKey: public_key };
     if (known.publicKey !== public_key) throw new ServerRefusal('other_key');
@@ -96,10 +98,10 @@ export class FakeServer {
 // INFO: fc 18oct26 the activation dialect of schemas/activation.v1.schema.json, over the fake's config endpoint
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
-    version = VECTORS.version, complete = true, ...options } = {}) {
+    version = VECTORS.version, release = VECTORS.release, complete = true, ...options } = {}) {
     super({ addr: null, ...options });
     this.unitKey = keyPair(seed);
-    Object.assign(this, { deviceId, trusted, version, complete });
+    Object.assign(this, { deviceId, trusted, version, release, complete });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
     this.nonce = null;
     this.serverNonce = null;
@@ -136,10 +138,10 @@ export class FakeUnit extends FakeSkyblip {
     if (this.pending !== 'register') return super.press();
     this.pending = null;
     const fields = { deviceId: this.deviceId, publicKey: this.unitKey.publicKey, unitNonce: this.nonce, serverNonce: this.serverNonce,
-      serverKey: this.trustedId, version: this.version };
+      serverKey: this.trustedId, release: this.release, version: this.version };
     this.reply({
       cmd: 'registration', device_id: this.deviceId, public_key: this.unitKey.publicKey, version: this.version,
-      server_key: this.trustedId, signature: this.unitKey.sign(messages.registration(fields)),
+      server_key: this.trustedId, release: this.release, signature: this.unitKey.sign(messages.registration(fields)),
     });
   }
 

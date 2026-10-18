@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_18_084600) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_18_135637) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -40,6 +40,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_18_084600) do
     t.string "server_key"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "release"
     t.index ["unit_id", "public_key"], name: "index_unit_keys_on_unit_id_and_public_key", unique: true
     t.index ["unit_id"], name: "index_unit_keys_on_unit_id_active", unique: true, where: "status = 'active'"
   end

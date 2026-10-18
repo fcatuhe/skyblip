@@ -39,7 +39,4 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
-
-  # INFO: fc 18oct26 the public test key of schemas/activation.v1.vectors.json, which the firmware's host suite trusts too
-  config.x.activation.server_keys = { test: "5d23819c3300d895cd6ca317789db5cba92adaf4ef7b5fbe00cbc8d946d243d5" }
 end

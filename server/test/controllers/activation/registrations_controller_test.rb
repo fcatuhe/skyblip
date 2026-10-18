@@ -15,11 +15,18 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert server_verifies?(signature, message)
   end
 
-  test "records the unit's firmware and the address it came from" do
-    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
+  test "records the unit's firmware, whether it is a release, and the address it came from" do
+    post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
 
     key = Unit.find_by!(device_id: vectors["device_id"]).active_key
-    assert_equal [ vectors["version"], "890026b1", "203.0.113.8" ], [ key.version, key.server_key, key.ip_address ]
+    assert_equal [ vectors["version"], "890026b1", false, "203.0.113.8" ], [ key.version, key.server_key, key.release, key.ip_address ]
+  end
+
+  test "refuses a registration that does not say whether it is a release" do
+    post activation_registrations_path, params: signed_registration(@challenge).except(:release), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
   end
 
   test "spends the server nonce, so a replay is refused" do
@@ -33,7 +40,10 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "refuses a registration the unit's key did not sign" do
     post activation_registrations_path, params: signed_registration(@challenge).merge(version: "9.9.9+1"), as: :json
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "bad_signature" }, response.parsed_body)
 
+    post activation_registrations_path, params: signed_registration(@challenge).merge(release: false), as: :json
     assert_response :unprocessable_content
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
     assert_not Unit.exists?(device_id: vectors["device_id"])

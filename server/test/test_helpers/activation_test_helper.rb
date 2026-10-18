@@ -5,9 +5,9 @@ module ActivationTestHelper
 
   def unit_key(seed = vectors["unit_seed"]) = OpenSSL::PKey.new_raw_private_key("ED25519", [ seed ].pack("H*"))
 
-  def signed_registration(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"])
+  def signed_registration(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"], release: true)
     public_key = unit_key.raw_public_key.unpack1("H*")
-    fields = { device_id:, public_key:, server_nonce: challenge.server_nonce, server_key: challenge.server_key, version: }
+    fields = { device_id:, public_key:, server_nonce: challenge.server_nonce, server_key: challenge.server_key, release:, version: }
     message = Activation::Message.registration(**fields, unit_nonce: challenge.unit_nonce)
     fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
   end
