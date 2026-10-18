@@ -14,6 +14,7 @@ _.path = ["bin"]
 [tasks.kamal]
 description = "Run Kamal with the production key, as in `mise run kamal deploy`"
 env.RAILS_MASTER_KEY = "{{ secrets.RAILS_PRODUCTION_KEY }}"
+interactive = true
 run = "bin/kamal"
 
 [tasks."credentials:production"]
