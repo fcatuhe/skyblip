@@ -17,7 +17,15 @@ const DEVICE_NOTES = [
 ];
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
 
-const words = path => new Set([...read(path).matchAll(/data-manage-word="(\w+)"/g)].map(match => match[1]));
+const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
+// INFO: fc 18oct26 the refusals of schemas/activation.v1.schema.json, and what the prompt machinery answers any prompt
+const UNIT_REFUSALS = ['incomplete', 'no_session', 'bad_signature', 'small_mtu', 'flash', 'expired', 'cancelled', 'claimed', 'unknown_cmd'];
+const SERVER_REFUSALS = [
+  'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
+].map(key => `server_${key}`);
+const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
+
+const words = (path, kind = 'manage') => new Set([...read(path).matchAll(new RegExp(`data-${kind}-word="(\\w+)"`, 'g'))].map(match => match[1]));
 
 function firmwareRefusals() {
   const source = read(CONFIG);
@@ -43,5 +51,17 @@ for (const page of PAGES) {
 
 test('both pages word the same keys', () => {
   const [english, french] = PAGES.map(words);
+  assert.deepEqual([...english].sort(), [...french].sort());
+});
+
+for (const page of ACTIVATION_PAGES) {
+  test(`every refusal and notice of an activation has words on ${page.split('/').pop()}`, () => {
+    const missing = [...UNIT_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES].filter(key => !words(page, 'activate').has(key));
+    assert.deepEqual(missing, []);
+  });
+}
+
+test('both activation pages word the same keys', () => {
+  const [english, french] = ACTIVATION_PAGES.map(page => words(page, 'activate'));
   assert.deepEqual([...english].sort(), [...french].sort());
 });

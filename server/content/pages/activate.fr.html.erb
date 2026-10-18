@@ -1,0 +1,164 @@
+---
+title: Activer un skyBlip Go
+nav_title: Activer
+slug: activer
+description: Un skyBlip Go neuf reste muet tant qu'il n'a pas un numéro de série à lui, signé par skyblip.eu · cette page le demande en Bluetooth, et deux pressions sur l'appareil l'autorisent.
+---
+
+<section id="activate">
+  <p class="kicker">skyBlip Go</p>
+  <h1>Un numéro de série à lui, depuis cette page, en Bluetooth.</h1>
+  <p class="lede">
+    Un appareil neuf n&rsquo;émet ni ne reçoit tant qu&rsquo;il n&rsquo;a pas un
+    numéro de série que skyblip.eu a signé pour lui. Son écran affiche
+    <span class="mono">ACTIVATE</span>, nomme cette page et montre quatre
+    caractères, par exemple <span class="mono">3F2A</span>, qui le désignent
+    dans la liste de votre navigateur sous le nom
+    <span class="mono">activate 3F2A skyBlip</span>.
+  </p>
+  <p class="lede">
+    La page demande à skyblip.eu, l&rsquo;appareil vous demande sur son écran,
+    et une fois son numéro en main il allume sa radio et prend son nom, par
+    exemple <span class="mono">skyBlip Go 00012A</span>. Ni compte ni
+    formulaire : avoir l&rsquo;appareil en main est la seule preuve demandée.
+  </p>
+
+  <%= render "shared/activate",
+        unsupported: "Ce navigateur n'a pas Web Bluetooth, cette page ne peut donc pas joindre l'appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d'iPhone et d'iPad n'en ont pas.",
+        connect: "Connecter",
+        disconnect: "Déconnecter",
+        connecting: "Votre navigateur liste les appareils à portée : choisissez activate suivi des quatre caractères affichés à l'écran.",
+        device: "Appareil",
+        address: "Adresse",
+        none: "pas encore",
+        activate: "Activer",
+        steps: {
+          ask: "La page demande à skyblip.eu une requête signée pour cet appareil, et la lui transmet.",
+          confirm: "Autorisez-la : l'écran affiche ACTIVATE, SEND THIS UNIT'S KEY TO SKYBLIP.EU, appuyez deux fois.",
+          register: "skyblip.eu donne son numéro à l'appareil, qui l'enregistre."
+        } %>
+</section>
+
+<section>
+  <h2 class="kicker">Avant de commencer</h2>
+
+  <ul class="points">
+    <li>Chrome ou Edge, sur un ordinateur ou sur Android, avec une connexion à internet</li>
+    <li>L&rsquo;appareil allumé et près de vous, son écran affichant ACTIVATE</li>
+    <li>Aucune autre application ne tenant les réglages de l&rsquo;appareil</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">Ce qui se passe</h2>
+
+  <h3>Une question à l&rsquo;écran, <span class="highlight">puis il vole</span>.</h3>
+  <p class="lede">
+    Activer demande à l&rsquo;appareil un nombre qu&rsquo;il vient de tirer, et
+    skyblip.eu le signe. L&rsquo;appareil vérifie cette signature avec la clé de
+    skyblip.eu inscrite dans son firmware, si bien que personne d&rsquo;autre ne
+    peut lancer une activation, puis vous demande sur son écran. Appuyez deux
+    fois.
+  </p>
+  <p class="lede">
+    L&rsquo;appareil signe alors ce qui l&rsquo;identifie avec une clé à lui,
+    tirée à son premier démarrage et gardée dans sa puce. skyblip.eu vérifie
+    cette signature, attribue le numéro suivant et le signe pour cet appareil
+    seul. L&rsquo;appareil l&rsquo;enregistre, allume sa radio, et la page
+    affiche son adresse : <span class="mono">00</span>, le préfixe
+    qu&rsquo;ADS-L a attribué à skyBlip avec la page constructeur 49, puis le
+    numéro en hexadécimal.
+  </p>
+  <p class="lede">
+    L&rsquo;appareil vérifie son numéro à chaque démarrage, et n&rsquo;a besoin
+    de cette page qu&rsquo;une fois. Activé de nouveau, il garde le même
+    numéro : après être passé d&rsquo;un firmware publié à un firmware de
+    développement, par exemple, qui font confiance à des clés différentes de
+    skyblip.eu.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Ce que skyblip.eu conserve</h2>
+
+  <p class="lede">
+    L&rsquo;identifiant de la puce de l&rsquo;appareil, sa clé publique, son
+    numéro, le firmware qu&rsquo;il fait tourner, la date et l&rsquo;adresse
+    internet d&rsquo;où venait la demande. Ni nom, ni email, ni compte : le
+    numéro appartient à l&rsquo;appareil, et la clé qu&rsquo;il contient en est
+    la preuve. Un appareil donné ou vendu garde son numéro.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Quand l&rsquo;appareil dit non</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et que faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">incomplete</th><td data-activate-word="incomplete">Il manque à l&rsquo;appareil une pièce dont il a besoin pour voler, son baromètre, et son écran le dit. Il ne peut pas être activé.</td></tr>
+        <tr><th class="mono">no_session</th><td data-activate-word="no_session">L&rsquo;appareil n&rsquo;a plus le nombre d&rsquo;où partait cette activation : plus de dix minutes ont passé, ou la liaison est tombée. Activez de nouveau.</td></tr>
+        <tr><th class="mono">bad_signature</th><td data-activate-word="bad_signature">L&rsquo;appareil n&rsquo;a pas reconnu ce que skyblip.eu a signé comme fait pour lui, maintenant. Activez de nouveau, et si cela se reproduit, dites-nous quel firmware il fait tourner.</td></tr>
+        <tr><th class="mono">small_mtu</th><td data-activate-word="small_mtu">La liaison Bluetooth est trop étroite pour la réponse de l&rsquo;appareil. Utilisez un Chrome ou un Edge à jour, qui demandent des paquets plus larges.</td></tr>
+        <tr><th class="mono">flash</th><td data-activate-word="flash">L&rsquo;appareil n&rsquo;a pas pu écrire son numéro dans sa mémoire. Activez de nouveau, et si cela se reproduit, dites-le-nous.</td></tr>
+        <tr><th class="mono">expired</th><td data-activate-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, ce qui compte comme un refus. Activez de nouveau, et appuyez deux fois quand l&rsquo;écran le demande.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-activate-word="cancelled">L&rsquo;appareil a dit non : une pression refuse la question.</td></tr>
+        <tr><th class="mono">claimed</th><td data-activate-word="claimed">Une autre application tient les réglages de l&rsquo;appareil. Déconnectez-la ou fermez-la, puis connectez de nouveau.</td></tr>
+        <tr><th class="mono">unknown_cmd</th><td data-activate-word="unknown_cmd">Le firmware de l&rsquo;appareil est plus ancien que l&rsquo;activation, et n&rsquo;en a pas besoin. Mettez-le d&rsquo;abord à jour depuis la page de mise à jour.</td></tr>
+        <tr><th class="mono">autre chose</th><td data-activate-word="refused">L&rsquo;appareil a refusé, pour une raison que cette page ne connaît pas :</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Quand skyblip.eu dit non</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>La page dit</th><th>Ce que cela veut dire, et que faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Clé inconnue</th><td data-activate-word="server_unknown_server_key">Le firmware de l&rsquo;appareil fait confiance à une clé que skyblip.eu ne détient pas : une compilation à vous, ou d&rsquo;un fork. Installez une version publiée depuis la page de mise à jour, puis activez.</td></tr>
+        <tr><th>Trop tard</th><td data-activate-word="server_expired">Plus de cinq minutes ont passé entre la demande et les pressions. Activez de nouveau.</td></tr>
+        <tr><th>Signature refusée</th><td data-activate-word="server_bad_signature">skyblip.eu n&rsquo;a pas pu vérifier ce que l&rsquo;appareil a signé. Activez de nouveau, et si cela se reproduit, dites-nous quel firmware il fait tourner.</td></tr>
+        <tr><th>Une autre clé</th><td data-activate-word="server_other_key">skyblip.eu connaît cet appareil sous une autre clé, et n&rsquo;a donc donné aucun numéro. Cela suit un effacement de la puce avec un débogueur. Écrivez-nous avec les quatre caractères de l&rsquo;écran : nous vérifions avec vous, puis passons le numéro sur la nouvelle clé.</td></tr>
+        <tr><th>Assez pour aujourd&rsquo;hui</th><td data-activate-word="server_daily_cap">skyblip.eu a activé aujourd&rsquo;hui autant d&rsquo;appareils neufs qu&rsquo;il le fait en un jour. Réessayez demain.</td></tr>
+        <tr><th>Plus de numéro</th><td data-activate-word="server_no_serial">Tous les numéros sont attribués. Écrivez-nous.</td></tr>
+        <tr><th>Trop de demandes</th><td data-activate-word="server_rate_limited">Trop de demandes sont venues de votre connexion en une minute. Attendez une minute, puis activez de nouveau.</td></tr>
+        <tr><th>Pas compris</th><td data-activate-word="server_invalid">skyblip.eu n&rsquo;a pas pu lire ce que la page a envoyé. Rechargez la page et activez de nouveau.</td></tr>
+        <tr><th>Pas de réponse</th><td data-activate-word="server_unreachable">skyblip.eu n&rsquo;a pas répondu : vérifiez la connexion à internet de cet appareil-ci, puis activez de nouveau.</td></tr>
+        <tr><th>Échec</th><td data-activate-word="server_failed">skyblip.eu n&rsquo;a pas su répondre :</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Quand la page s&rsquo;arrête</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>La page dit</th><th>Ce que cela veut dire, et que faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Activé</th><td data-activate-word="activated">Activé : l&rsquo;appareil a son numéro et a allumé sa radio. Son nom devient skyBlip Go suivi de son adresse.</td></tr>
+        <tr><th>Pas de Web Bluetooth</th><td data-activate-word="no_bluetooth">Ce navigateur n&rsquo;a pas Web Bluetooth. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d&rsquo;iPhone et d&rsquo;iPad n&rsquo;en ont pas.</td></tr>
+        <tr><th>Pas un skyBlip</th><td data-activate-word="not_skyblip">L&rsquo;appareil choisi n&rsquo;a pas le service de réglages de skyBlip : ce n&rsquo;est pas un skyBlip.</td></tr>
+        <tr><th>Liaison perdue</th><td data-activate-word="link_lost">La liaison est tombée. Rapprochez l&rsquo;appareil, connectez de nouveau et activez de nouveau.</td></tr>
+        <tr><th>Autre chose</th><td data-activate-word="failed">Quelque chose a échoué en route :</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "manage", class: "cta cta--previous" %>
+  </p>
+</section>
