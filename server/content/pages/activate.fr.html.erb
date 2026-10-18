@@ -45,6 +45,7 @@ description: Un skyBlip Go neuf reste muet tant qu'il n'a pas un numéro de sér
   <ul class="points">
     <li>Chrome ou Edge, sur un ordinateur ou sur Android, avec une connexion à internet</li>
     <li>L&rsquo;appareil allumé et près de vous, son écran affichant ACTIVATE</li>
+    <li>Son baromètre qui répond : un appareil qui n&rsquo;en a pas le dit à l&rsquo;écran, et ne peut pas être activé</li>
     <li>Aucune autre application ne tenant les réglages de l&rsquo;appareil</li>
   </ul>
 </section>
@@ -99,10 +100,12 @@ description: Un skyBlip Go neuf reste muet tant qu'il n'a pas un numéro de sér
         <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et que faire</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">incomplete</th><td data-activate-word="incomplete">Il manque à l&rsquo;appareil une pièce dont il a besoin pour voler, son baromètre, et son écran le dit. Il ne peut pas être activé.</td></tr>
+        <tr><th class="mono">incomplete</th><td data-activate-word="incomplete">L&rsquo;appareil n&rsquo;a pas pu lire ou créer sa propre clé, ou nommer son firmware. Redémarrez-le et activez de nouveau, et si cela se reproduit, dites-le-nous.</td></tr>
         <tr><th class="mono">no_session</th><td data-activate-word="no_session">L&rsquo;appareil n&rsquo;a plus le nombre d&rsquo;où partait cette activation : plus de dix minutes ont passé, ou la liaison est tombée. Activez de nouveau.</td></tr>
         <tr><th class="mono">bad_signature</th><td data-activate-word="bad_signature">L&rsquo;appareil n&rsquo;a pas reconnu ce que skyblip.eu a signé comme fait pour lui, maintenant. Activez de nouveau, et si cela se reproduit, dites-nous quel firmware il fait tourner.</td></tr>
         <tr><th class="mono">small_mtu</th><td data-activate-word="small_mtu">La liaison Bluetooth est trop étroite pour la réponse de l&rsquo;appareil. Utilisez un Chrome ou un Edge à jour, qui demandent des paquets plus larges.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">Cet appareil est déjà activé, et il n&rsquo;a pas prouvé qu&rsquo;il est au sol : il vole, ou n&rsquo;a pas eu de position GPS depuis qu&rsquo;il est allumé. Mettez-le à ciel ouvert, attendez la position, puis activez de nouveau.</td></tr>
+        <tr><th class="mono">low_power</th><td data-activate-word="low_power">La batterie est critique, trop faible pour écrire le numéro en mémoire. Chargez-la, puis activez de nouveau.</td></tr>
         <tr><th class="mono">flash</th><td data-activate-word="flash">L&rsquo;appareil n&rsquo;a pas pu écrire son numéro dans sa mémoire. Activez de nouveau, et si cela se reproduit, dites-le-nous.</td></tr>
         <tr><th class="mono">expired</th><td data-activate-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, ce qui compte comme un refus. Activez de nouveau, et appuyez deux fois quand l&rsquo;écran le demande.</td></tr>
         <tr><th class="mono">cancelled</th><td data-activate-word="cancelled">L&rsquo;appareil a dit non : une pression refuse la question.</td></tr>
