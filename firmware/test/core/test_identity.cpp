@@ -4,14 +4,18 @@
 #include <vector>
 
 #include "core/crypto/ed25519.h"
+#include "core/identity/activation.h"
 #include "core/identity/messages.h"
+#include "core/identity/unit.h"
 #include "core/identity/unlock_code.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "test/support/activation_vectors.h"
 
 using namespace skyblip;
 using crypto::Ed25519;
+using platform::host::Identity;
 
 namespace {
 
@@ -137,4 +141,83 @@ TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page 
     identity::UnlockPage erased{};
     erased.fill(0xFF);
     CHECK_FALSE(identity::code_on(erased));
+}
+
+TEST_CASE("identity: the name says activate and the tag until a serial, then product and address") {
+    char name[identity::kBluetoothNameCap + 1];
+    identity::Activation blank{};
+    blank.bluetooth_tag = 0x3F2A;
+    identity::bluetooth_name(name, sizeof(name), "skyBlip Go+", blank);
+    CHECK(std::string(name) == "activate 3F2A skyBlip");
+
+    identity::Activation activated = blank;
+    activated.serial = 0x012A;
+    identity::bluetooth_name(name, sizeof(name), "skyBlip Go+", activated);
+    CHECK(std::string(name) == "skyBlip Go+ 00012A");
+    identity::bluetooth_name(name, sizeof(name), "skyBlip Go", activated);
+    CHECK(std::string(name) == "skyBlip Go 00012A");
+}
+
+// The host trusts the vectors' server, so the bench and the server's suite check one exchange.
+TEST_CASE("identity: the host platform is the vectors' unit and trusts the vectors' server") {
+    Exchange x;
+    Identity port(std::nullopt);
+    CHECK(port.trusted_server_key() == x.server_key);
+    CHECK(port.device_id() == x.device_id);
+    Ed25519::Seed seed{};
+    REQUIRE(port.seed(seed));
+    CHECK(seed == x.unit_seed);
+}
+
+TEST_CASE("identity: a unit is activated at load only by a code its trusted key signed for it") {
+    SUBCASE("the code the vectors' server signed") {
+        Exchange x;
+        Identity port(std::nullopt);
+        port.stored =
+            identity::UnlockCode{x.serial, x.unit_nonce, x.v.bytes<64>("unlock_signature")};
+        identity::Unit unit(port);
+        unit.load();
+        CHECK(unit.keyed());
+        CHECK(unit.activation().serial == x.serial);
+        CHECK(unit.activation().address() == settings::AirAddress{0x00012Au});
+    }
+    SUBCASE("the same code with another serial in front of it") {
+        Exchange x;
+        Identity port(std::nullopt);
+        port.stored = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
+                                           x.v.bytes<64>("unlock_signature")};
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.activation().activated());
+    }
+    SUBCASE("a code another key signed: what a development unit carries into production") {
+        Identity port(std::nullopt);
+        const Ed25519::Seed other_server{1, 2, 3};
+        identity::UnlockCode code{0x0042, {}, {}};
+        code.signature = Ed25519::sign(
+            other_server, identity::unlock_message(Identity::kDeviceId,
+                                                   Ed25519::public_key_of(Identity::kUnitSeed),
+                                                   code.serial, code.nonce)
+                              .bytes());
+        port.stored = code;
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.activation().activated());
+    }
+    SUBCASE("a unit whose key could not be read") {
+        Identity port(Identity::kSerial);
+        port.keyed = false;
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.keyed());
+        CHECK_FALSE(unit.activation().activated());
+    }
+    SUBCASE("an erased page") {
+        Identity port(std::nullopt);
+        identity::Unit unit(port);
+        unit.load();
+        CHECK(unit.keyed());
+        CHECK_FALSE(unit.activation().activated());
+        CHECK(unit.activation().bluetooth_tag == Identity::kBluetoothTag);
+    }
 }

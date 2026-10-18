@@ -9,6 +9,7 @@
 #include "ports/display.h"
 #include "ports/flash_region.h"
 #include "ports/gnss.h"
+#include "ports/identity.h"
 #include "ports/indicator.h"
 #include "ports/kvstore.h"
 #include "ports/link.h"
@@ -30,8 +31,8 @@ struct Roles {
     DieTemperature& die_temperature;
     Indicator& indicator;
     Gnss& gnss;
+    Identity& identity;
     Capabilities capabilities{Capability::None};
-    uint32_t device_addr{0};
 };
 
 }  // namespace skyblip::ports

@@ -34,6 +34,26 @@ What a support case reads lives where it is asked for. The address and the calls
 
 [`schemas/status.v1.schema.json`](../../../schemas/status.v1.schema.json) is the contract, and `scripts/check_status_schema.py` holds `format_status` to its keys, their order, their types and which of them may be absent. The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
 
+## Activation
+
+`hello`, `register` and `unlock` travel on the config endpoint like every other command, and live apart from it: `IdentityLink` in `identity_link.h` holds the session, and the three handlers are `ConfigService` methods defined beside it in `identity_link.cpp`. `schemas/activation.v1.schema.json` is the contract and `core/identity/README.md` the messages they sign.
+
+`hello` draws Nu, 16 bytes from the hardware RNG, for the session that holds the claim, and answers it with the id of the server key this build trusts. The nonce is single-use and dies when `unlock` spends it, when the claim holder's link drops, or after `IdentityLink::kNonceForgetMs`, ten minutes; a new `hello` replaces it. `register` verifies the server's R over Nu and Ns, then stands `Pending::Register` on the glass under `confirm_register`, and two presses answer the registration frame, signed by the unit's key. `unlock` verifies U over the unit's own DEVICEID, its current key, the serial and Nu, stores the code and answers `{"ack":true,"reason":"unlock"}`. The nonce is spent before the check, so a refused code is never retried on it.
+
+None of it is gated on the ground. Every other prompt is refused unless the flight state is positively `Ground`, and `Unknown`, a unit with no fix since boot, is not: activation on a bench indoors would always fail. An unactivated unit transmits nothing, so the gate would protect nothing, and `Pending::Register` confirms, and survives a take-off, whatever the flight state. One press still cancels it, thirty seconds still expire it, and a dropped link still takes it.
+
+Every identity refusal is written in `identity_link.cpp` as `refuse("word")`, and none as `ack(false, "word")` in `config.cpp`, so the server's activation page can grep its rows apart from the update page's:
+
+| Word | When |
+|---|---|
+| `incomplete` | the unit lacks a part it cannot fly without, has no key, drew no nonce, or cannot read its own version: it can never be activated as it is |
+| `no_session` | no live nonce for this claim holder: no `hello`, a spent nonce, a dropped link, ten minutes, or a `hello` since the registration was staged |
+| `bad_signature` | R or U does not verify with the trusted key, or the field is not the hex the schema pins |
+| `small_mtu` | the claim holder's link cannot carry the registration frame, `IdentityLink::kRegistrationFrameBytes` at the widest version, in one notification |
+| `flash` | the identity page did not take the code, or did not read it back |
+
+`cancelled` and `expired` come from the prompt machinery every command shares, `claimed` and `unknown_cmd` from the dispatch. A product that hands `ConfigService` no `IdentityLink` answers all three commands `unknown_cmd`.
+
 ## The log dialect
 
 `log_link.h` is the log partition's half of the link: the same JSON `config.h` speaks, on its own endpoint, with three commands, list, read and erase. Every reply fits one frame and carries the record index it starts at, which is what makes the transfer acknowledged by construction: the next command IS the acknowledgement, a host that lost chunks asks again from the index it kept, and a chunk that never left the device consumed nothing, so asking again is the whole recovery.

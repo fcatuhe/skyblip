@@ -140,9 +140,12 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK((p.address() & 0xFFFFu) == 0x1234u);
     CHECK(p.address_and_type() == ((9u << 24) | 0xAB1234u));
 
-    CHECK(int(settings::kAddrTableSkyblip) == 58);
-    CHECK(traffic_packet(0x123456u, settings::kAddrTableSkyblip).addr_table() == 58);
-    CHECK(traffic_packet(0x123456u, settings::kAddrTableSkyblip).address() == 0x123456u);
+    CHECK(int(settings::kAddressMappingTable) == 58);
+    const protocol::AdslPacket ours =
+        traffic_packet(settings::address_of(0x1234), settings::kAddressMappingTable);
+    CHECK(ours.addr_table() == 58);
+    CHECK((ours.address() >> 16) == settings::kManufacturerPrefix);
+    CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }
 
 // TODO: fc 19sep26 no ICAO entry: the identity is the chip's, and no patch moves it

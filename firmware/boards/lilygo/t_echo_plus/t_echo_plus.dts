@@ -695,9 +695,11 @@ zephyr_udc0: &usbd {
 			reg = <0x00034000 0x000B6000>;
 		};
 
-		/* 0xEA000..0xEC000 is deliberately unallocated: it is above
-		 * USER_FLASH_END, so a .uf2 cannot reach it, and it keeps NVS on the
-		 * same 8 KB boundary upstream uses. */
+		/* The unlock code, above USER_FLASH_END and below the LittleFS other firmwares keep at 0xED000. */
+		identity_partition: partition@ea000 {
+			label = "identity";
+			reg = <0x000EA000 0x00001000>;
+		};
 
 		storage_partition: partition@ec000 {
 			label = "storage";

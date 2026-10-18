@@ -4,6 +4,7 @@
 #include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
+#include "products/skyblip_go/pages/page.h"
 
 namespace skyblip::go {
 
@@ -44,9 +45,9 @@ int fmt_own_name(char* out, const char* callsign) {
     return n;
 }
 
-void draw_own_addr(ui::Canvas& fb, int x, int y, uint32_t addr, int scale) {
+void draw_own_addr(ui::Canvas& fb, int x, int y, settings::AirAddress addr, int scale) {
     char buf[8];
-    const int n = fmt_hex(buf, addr, 6);
+    const int n = fmt_air_address(buf, addr);
     buf[n] = 0;
     fb.draw_text(x, y, buf, true, scale);
 }

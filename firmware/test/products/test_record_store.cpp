@@ -5,6 +5,7 @@
 
 #include "core/diag/payload.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/record_store.h"
 #include "test/support/product_rig.h"
 
@@ -36,6 +37,7 @@ class BlindSectorFlash : public platform::host::FlashRegion {
 struct StoreRig {
     platform::host::Clock clock;
     platform::host::Link link;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::FlashRegion& flash;
     ports::Roles roles;
@@ -49,9 +51,9 @@ struct StoreRig {
 
     explicit StoreRig(ports::FlashRegion& region)
         : flash(region),
-          roles{clock,    null.rf,          link,     null.display,         null.kv,
-                region,   null.annunciator, null.dfu, null.die_temperature, null.indicator,
-                null.gnss} {
+          roles{clock,     null.rf,          link,     null.display,         null.kv,
+                region,    null.annunciator, null.dfu, null.die_temperature, null.indicator,
+                null.gnss, identity} {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
         link.raise_link(1);
     }

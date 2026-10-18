@@ -30,8 +30,8 @@ struct Rig {
     explicit Rig(BaroByHand) : Rig() { platform.baro().present = false; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
-                 uint32_t device_addr = platform::host::Platform::kDeviceAddr)
-        : platform(fitted, device_addr) {}
+                 std::optional<uint16_t> serial = platform::host::Identity::kSerial)
+        : platform(fitted, serial) {}
 
     Status setup() { return product.setup(); }
 
@@ -275,7 +275,6 @@ struct Rig {
     uint32_t utc_offset_s{0};
     uint32_t fix_updates{0};
 };
-
 
 }  // namespace skyblip
 

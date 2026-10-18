@@ -76,6 +76,11 @@ class Link : public ports::Link {
         return record(session_id, ep, bytes);
     }
 
+    Status advertise_as(const char* name) override {
+        advertised = name;
+        return Status::Ok;
+    }
+
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
     void hold_after(int frames) { share_ = frames; }
     void serve() { in_flight_ = 0; }
@@ -102,6 +107,7 @@ class Link : public ports::Link {
     void clear() { sent.clear(); }
 
     std::vector<Frame> sent;
+    std::string advertised;
     int refused_oversize{0};
 
    private:

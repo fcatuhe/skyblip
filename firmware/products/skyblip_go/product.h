@@ -29,10 +29,10 @@ namespace skyblip::go {
 constexpr ports::Capabilities kRequired =
     ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Baro;
 constexpr ports::Capabilities kOptional =
-    ports::Capability::Display | ports::Capability::Buzzer |
-    ports::Capability::Haptic | ports::Capability::Link | ports::Capability::Storage |
-    ports::Capability::Dfu | ports::Capability::Contacts | ports::Capability::Battery |
-    ports::Capability::Indicator | ports::Capability::Inclinometer;
+    ports::Capability::Display | ports::Capability::Buzzer | ports::Capability::Haptic |
+    ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
+    ports::Capability::Contacts | ports::Capability::Battery | ports::Capability::Indicator |
+    ports::Capability::Inclinometer;
 
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
@@ -100,6 +100,7 @@ class Product {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
         }
+        config_.load_identity();
 
         flyable_ = board == Status::Ok &&
                    ports::missing(board_.capabilities(), kRequired) == ports::Capability::None;
@@ -309,7 +310,7 @@ class Product {
             boot_parts_[i].detail = boot_detail(spec);
         }
 
-        boot_snapshot_.device_addr = roles_.device_addr;
+        boot_snapshot_.address = state_.activation.address();
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
         boot_snapshot_.went_dark_flat = went_dark_flat_;
         boot_snapshot_.parts = boot_parts_;
@@ -409,7 +410,9 @@ class Product {
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
     PowerService power_{ctx_, settings_};
-    ConfigLinkService config_{ctx_, settings_, power_};
+    ConfigLinkService config_{
+        ctx_, settings_, power_,
+        ports::missing(board_.capabilities(), kRequired) == ports::Capability::None};
     OwnshipService ownship_{ctx_, settings_};
     RadioService radio_{ctx_, settings_};
     TrafficService traffic_{ctx_, kFeatures};

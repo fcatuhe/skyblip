@@ -30,6 +30,7 @@
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/platform/host/clock.h"
+#include "hardware/platform/host/identity.h"
 #include "ports/null.h"
 #include "test/support/product_rig.h"
 #include "test/support/rf_channel.h"
@@ -153,11 +154,12 @@ void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 2500
 // claims to do.
 struct FeatureRig {
     platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.kv,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss};
+        null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};
@@ -326,13 +328,12 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     uint32_t t = 0;
     fly(rig, t, 3);
 
-    const uint32_t own_addr = rig.product.board().roles().device_addr;
-    REQUIRE(own_addr != 0);
+    const uint32_t own_addr = *rig.state().activation.address();
     model::AircraftObs echo[2] = {
         relayed_aircraft(rig, own_addr, 0, 0, 0),
         relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
     };
-    echo[0].addr_table = settings::kAddrTableSkyblip;
+    echo[0].addr_table = settings::kAddressMappingTable;
     REQUIRE(relay(rig, t, echo, 2));
 
     CHECK(rig.state().air.uplink_frames == 1);
@@ -342,28 +343,24 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     CHECK(target_for(rig, 0x4D0001) != nullptr);
 }
 
-// A chip address air_address() replaces went on air as 0x5BCAFE and came back as traffic.
-TEST_CASE("uplink: own-ship with a replaced chip address, relayed back, is not traffic") {
-    for (uint32_t chip : {0x000000u, 0xFFFFFFu}) {
-        CAPTURE(chip);
-        Rig rig(platform::host::Platform::kFullyFitted, chip);
-        REQUIRE(rig.setup() == Status::Ok);
-        uint32_t t = 0;
-        fly(rig, t, 3);
+// Serial 0 under prefix 0x00 is address 0x000000, which the table once read as "no address".
+TEST_CASE("uplink: own-ship at serial 0, relayed back, is not traffic") {
+    Rig rig(platform::host::Platform::kFullyFitted, uint16_t{0});
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t t = 0;
+    fly(rig, t, 3);
 
-        const uint32_t on_air = settings::air_address(chip);
-        REQUIRE(on_air != chip);
-        model::AircraftObs echo[2] = {
-            relayed_aircraft(rig, on_air, 0, 0, 0),
-            relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
-        };
-        echo[0].addr_table = settings::kAddrTableSkyblip;
-        REQUIRE(relay(rig, t, echo, 2));
+    REQUIRE(rig.state().activation.address() == settings::AirAddress{0x000000u});
+    model::AircraftObs echo[2] = {
+        relayed_aircraft(rig, 0x000000u, 0, 0, 0),
+        relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
+    };
+    echo[0].addr_table = settings::kAddressMappingTable;
+    REQUIRE(relay(rig, t, echo, 2));
 
-        CHECK(rig.state().traffic.count() == 1);
-        CHECK(target_for(rig, on_air) == nullptr);
-        CHECK(target_for(rig, 0x4D0001) != nullptr);
-    }
+    CHECK(rig.state().traffic.count() == 1);
+    CHECK(target_for(rig, 0x000000u) == nullptr);
+    CHECK(target_for(rig, 0x4D0001) != nullptr);
 }
 
 // The feature is what turns the path on, following the pattern the companion

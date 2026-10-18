@@ -86,8 +86,8 @@ TEST_CASE("product: persisted settings are loaded on setup") {
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 }
 
-// The board is the only thing that knows the address, and only this wiring carries it to a phone.
-TEST_CASE("product: the identity a tablet is told is the board's, not a stored setting's") {
+// Issue #126: the unlock code is the only thing that knows the address, and this wiring carries it.
+TEST_CASE("product: the identity a tablet is told is the unlock code's, not a stored setting's") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link(1);
@@ -96,7 +96,7 @@ TEST_CASE("product: the identity a tablet is told is the board's, not a stored s
     rig.run(100, 200);
 
     const std::string reply = rig.last_on(events::Endpoint::Config);
-    CHECK(reply.find("\"addr\":5987070") != std::string::npos);  // 0x5B5AFE, the host board's
+    CHECK(reply.find("\"addr\":23294") != std::string::npos);  // 0x005AFE, the host's serial
     CHECK(reply.find("\"addr_table\":58") != std::string::npos);
 }
 

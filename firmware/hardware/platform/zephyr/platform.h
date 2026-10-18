@@ -5,7 +5,6 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
 
@@ -22,6 +21,7 @@
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/die_temperature.h"
 #include "hardware/platform/zephyr/flash_region.h"
+#include "hardware/platform/zephyr/identity.h"
 #include "hardware/platform/zephyr/imu_firmware.h"
 #include "hardware/platform/zephyr/indicator.h"
 #include "hardware/platform/zephyr/io.h"
@@ -72,7 +72,9 @@ class Platform {
         (void)imu_flash_.begin();
         annunciator_.begin();
         indicator_.begin();
-        link_up_ = link_.begin(device_addr()) == Status::Ok;
+        // INFO: fc 18oct26 the key goes into UICR before Bluetooth starts
+        keyed_ = identity_.begin() == Status::Ok;
+        link_up_ = link_.begin() == Status::Ok;
         (void)bme280_.begin();
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
         gpio_pin_configure_dt(&pad_, GPIO_INPUT);
@@ -106,6 +108,8 @@ class Platform {
     bool pps_armed() const { return pps_armed_; }
     bool storage_mounted() const { return storage_mounted_; }
     bool link_up() const { return link_up_; }
+    bool keyed() const { return keyed_; }
+    zephyr::Identity& identity() { return identity_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
     zephyr::Watchdog& watchdog() { return watchdog_; }
@@ -167,16 +171,6 @@ class Platform {
         return c;
     }
 
-    // INFO: fc 19sep26 hwinfo_nrf emits DEVICEID[1] then DEVICEID[0], both big-endian
-    uint32_t device_addr() const {
-        uint8_t id[8] = {0};
-        const ssize_t n = hwinfo_get_device_id(id, sizeof(id));
-        if (n < 8) return 0;
-        uint32_t a = 0;
-        for (size_t i = 5; i < 8; i++) a = (a << 8) | id[i];
-        return a & 0x00FFFFFFu;
-    }
-
    private:
     static constexpr struct spi_config kSpiCfg = {
         .frequency = 8000000U,
@@ -227,12 +221,14 @@ class Platform {
     FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
+    zephyr::Identity identity_{};
     zephyr::Battery battery_{battery_dev_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};
     bool pps_armed_{false};
     bool storage_mounted_{false};
     bool link_up_{false};
+    bool keyed_{false};
     zephyr::Watchdog watchdog_{};
     zephyr::SystemPower system_power_{button_};
 };

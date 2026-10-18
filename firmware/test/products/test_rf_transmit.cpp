@@ -171,7 +171,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
         std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
         REQUIRE(p.check_crc() == 0);
         p.descramble();
-        CHECK(p.address() == h.platform().device_addr());
+        CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
         CHECK(p.alt_m() == to_metres(Millimetres(h.product().state().own.alt_mm)).v);
         CHECK(p.FlightState == 2);
         checked++;
@@ -336,7 +336,7 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
         REQUIRE(p.check_crc() == 0);
         p.descramble();
-        REQUIRE(p.address() == h.platform().device_addr());
+        REQUIRE(p.address() == settings::address_of(platform::host::Identity::kSerial));
 
         // Inside the direct slot the quarter is 1, 2 or 3. Zero is the old bug.
         REQUIRE(timing::Scheduler::in_direct_slot(r.phase_ms));

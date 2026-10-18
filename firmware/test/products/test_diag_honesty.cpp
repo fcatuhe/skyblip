@@ -29,11 +29,12 @@ bool last_of(const std::vector<diag::Record>& records, T& out) {
 // One service over null roles, its state written by hand: no board re-deriving what a case says.
 struct ServiceRig {
     platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.kv,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss};
+        null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};

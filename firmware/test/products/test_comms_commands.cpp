@@ -61,7 +61,7 @@ TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation")
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
 
@@ -81,7 +81,7 @@ TEST_CASE("comms: the firmware prompt names the version the phone is about to se
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame(kDfu));
@@ -97,7 +97,7 @@ TEST_CASE("comms: a dfu that does not name its version is refused at the door") 
         platform::host::Link link;
         link.raise_link(1);
         go::Settings s = go::defaults();
-        go::SettingsStore store_cs(s, kTestAddr);
+        go::SettingsStore store_cs(s, kTestActivation);
         ConfigService cs(link, store_cs);
         cs.set_flight_state(flight::FlightState::Ground);
         cs.on_rx(frame(json));
@@ -113,7 +113,7 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame(kDfu));
@@ -140,7 +140,7 @@ TEST_CASE("comms: an image other than the one the press named is refused, not in
     go::Settings s = go::defaults();
     SpyDfu dfu;
     dfu.version = ports::ImageVersion{0, 3, 0, 1};
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     upload_opened(cs, dfu).tick(100);
     CHECK_FALSE(cs.install_requested());
@@ -154,7 +154,7 @@ TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebo
     go::Settings s = go::defaults();
     SpyDfu dfu;
     dfu.staged = false;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     upload_opened(cs, dfu).tick(100);
     CHECK_FALSE(cs.install_requested());
@@ -166,7 +166,7 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     dfu.finished = true;
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
@@ -185,7 +185,7 @@ TEST_CASE("comms: apply is no longer a command") {
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"apply\"}"));
@@ -199,7 +199,7 @@ TEST_CASE("comms: dfu is refused at the door on a critical cell") {
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
     power::BatteryState low{};
@@ -220,7 +220,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     power::BatteryState healthy{};
     healthy.valid = true;
@@ -246,7 +246,7 @@ TEST_CASE("comms: a landed upload on a device no longer proven on the ground is 
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     upload_opened(cs, dfu);
     cs.set_flight_state(flight::FlightState::Unknown);
@@ -259,7 +259,7 @@ TEST_CASE("comms: the update question names the image state and the versions of 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.on_rx(frame("{\"cmd\":\"update\"}"));
     CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
@@ -284,7 +284,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.on_link_up(events::LinkUp{1, 244});
     CHECK(link.sent.empty());
@@ -301,7 +301,7 @@ TEST_CASE("comms: a link that comes up on settings that fell back is told, on a 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_settings_fallback(settings::Fallback::Defaults);
     cs.on_link_up(events::LinkUp{1, 244});
@@ -318,7 +318,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
@@ -339,7 +339,7 @@ TEST_CASE("comms: recovery refused in flight") {
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
@@ -354,7 +354,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
 
@@ -376,7 +376,7 @@ TEST_CASE("comms: power_off refused in flight") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.on_rx(frame("{\"cmd\":\"power_off\"}"));
@@ -405,7 +405,7 @@ TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
@@ -424,7 +424,7 @@ TEST_CASE("comms: upload window expires") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(1000);
@@ -450,7 +450,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
 
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.tick(before);
@@ -467,7 +467,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     // it, and expired thirty seconds after it was raised.
     platform::host::Link second_link;
     second_link.raise_link(1);
-    go::SettingsStore store_prompt(s, kTestAddr);
+    go::SettingsStore store_prompt(s, kTestActivation);
     ConfigService prompt(second_link, store_prompt);
     prompt.set_flight_state(flight::FlightState::Ground);
     prompt.tick(before);
@@ -484,7 +484,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
@@ -501,7 +501,7 @@ TEST_CASE("comms: DFU refused in flight") {
     link.raise_link(1);
     go::Settings s = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, &dfu);
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));

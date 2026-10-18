@@ -37,7 +37,7 @@ bool row_reads(const Glass& fb, int row, const char* verdict) {
 
 BootSnapshot page(const BootPart* parts, int n, bool flyable) {
     BootSnapshot s;
-    s.device_addr = 0x5B7E57;
+    s.address = skyblip::settings::address_of(0x5B7E);
     s.reset_reason = "WATCHDOG";
     s.parts = parts;
     s.n_parts = n;

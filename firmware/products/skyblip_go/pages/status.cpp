@@ -3,6 +3,7 @@
 #include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
+#include "products/skyblip_go/pages/page.h"
 
 namespace skyblip::go {
 
@@ -190,7 +191,7 @@ void draw_status(ui::Canvas& fb, const StatusSnapshot& s) {
 
     // Header: device address (the ADS-L identity) + the name the pilot gave it.
     int n = fmt_string(buf, "ID ");
-    n += fmt_hex(buf + n, s.device_addr, 6);
+    n += fmt_air_address(buf + n, s.address);
     buf[n] = 0;
     fb.draw_text(kLeft, 3, buf, true, 2);
     if (s.callsign != nullptr && s.callsign[0] != 0)

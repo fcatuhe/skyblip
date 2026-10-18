@@ -45,7 +45,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     link.raise_link(1);
     go::Settings s = go::defaults();
     std::memcpy(s.callsign, "D-KXYZ", 7);
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.set_reset_reason(power::ResetReason::Watchdog);
@@ -81,7 +81,7 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     stats.record_missed();
     stats.record_refused();
     stats.record_refused();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, nullptr, &stats);
 
     cs.on_rx(frame("{\"cmd\":\"timing\"}"));
@@ -104,7 +104,7 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.on_rx(frame("{\"cmd\":\"timing\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -115,7 +115,7 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.set_battery_state(battery_of(61, false), power::PowerLevel::Normal);
@@ -132,7 +132,7 @@ TEST_CASE("comms: a battery nobody has read has no percentage, never a false zer
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     // No set_battery_state call at all: no sample has ever arrived.
@@ -149,7 +149,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
 
@@ -189,7 +189,7 @@ TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat i
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.on_link_up(events::LinkUp{1, 200});
 
@@ -211,7 +211,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = go::defaults();
     std::memcpy(s.callsign, "ABCDEFGHI", 10);
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.set_reset_reason(power::ResetReason::Lockup);
@@ -240,7 +240,7 @@ TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
 
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
@@ -257,7 +257,7 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     go::Settings s = go::defaults();
     timing::SlotTimingStats stats;
     stats.record_refused();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, nullptr, &stats);
 
     cs.on_rx(frame("{\"cmd\":\"timing\"}"));
@@ -284,7 +284,7 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
 
     // What the product tells this service, through the doors it already had.
@@ -350,7 +350,7 @@ TEST_CASE("comms: a dump nobody has collected says so, not zeros") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.on_rx(frame("{\"cmd\":\"diag\"}"));
     REQUIRE(link.sent.size() == 1);
@@ -374,7 +374,7 @@ TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs);
     cs.diagnostics().refreshes = 1;
     cs.diagnostics().rx_ok = 99;
@@ -405,7 +405,7 @@ TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     stats.record_edge(0, true);
     stats.record_edge(1000000, true);
     stats.record_missed();
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, nullptr, &stats);
     cs.on_rx(frame("{\"cmd\":\"timing\"}"));
     const std::string body = joined(link);
@@ -426,7 +426,7 @@ TEST_CASE("comms: the timing report says what each dwell change cost the executo
     go::Settings s = go::defaults();
     timing::SlotTimingStats stats;
     stats.record_switching(95, 310, 285, 2);
-    go::SettingsStore store_cs(s, kTestAddr);
+    go::SettingsStore store_cs(s, kTestActivation);
     ConfigService cs(link, store_cs, nullptr, &stats);
     cs.on_rx(frame("{\"cmd\":\"timing\"}"));
     const std::string body = joined(link);

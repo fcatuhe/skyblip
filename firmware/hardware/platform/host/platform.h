@@ -13,6 +13,7 @@
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/die_temperature.h"
 #include "hardware/platform/host/flash_region.h"
+#include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/indicator.h"
 #include "hardware/platform/host/io.h"
 #include "hardware/platform/host/kvstore.h"
@@ -176,8 +177,9 @@ class Platform {
 
     // A host board can be fitted with less than everything, which is how the
     // degraded paths get exercised without a soldering iron.
-    explicit Platform(ports::Capabilities fitted = kFullyFitted, uint32_t device_addr = kDeviceAddr)
-        : fitted_(fitted), device_addr_(device_addr) {
+    explicit Platform(ports::Capabilities fitted = kFullyFitted,
+                      std::optional<uint16_t> serial = Identity::kSerial)
+        : identity_(serial), fitted_(fitted) {
         chips_.epd.attach_clock(clock_);
         buzzer_pin_held_low_ = ports::has(fitted, ports::Capability::Buzzer);
         baro_.present = ports::has(fitted, ports::Capability::Baro);
@@ -223,6 +225,7 @@ class Platform {
     host::Pps& pps() { return pps_; }
     host::Watchdog& watchdog() { return watchdog_; }
     host::SystemPower& system_power() { return system_power_; }
+    host::Identity& identity() { return identity_; }
     bool button_down() const { return gpio_.button_down; }
     bool pad_down() const { return gpio_.pad_down; }
 
@@ -258,8 +261,6 @@ class Platform {
     }
     bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() const { return battery_.external_power; }
-    static constexpr uint32_t kDeviceAddr = 0x5B5AFEu;
-    uint32_t device_addr() const { return device_addr_; }
     Chips& chips() { return chips_; }
     Gpio& board_gpio() { return gpio_; }
     // The bus itself, so a test can fit a unit that came off the line with the
@@ -307,8 +308,8 @@ class Platform {
     host::DieTemperature die_temperature_{};
     host::Pps pps_{clock_};
     host::SystemPower system_power_{};
+    host::Identity identity_;
     ports::Capabilities fitted_;
-    uint32_t device_addr_;
     bool buzzer_pin_held_low_{false};
     bool imu_firmware_linked_{true};
 };

@@ -140,8 +140,8 @@ class TEchoPlus {
                 : null_.indicator,
             ports::has(capabilities_, ports::Capability::Gnss) ? static_cast<ports::Gnss&>(gnss_)
                                                                : null_.gnss,
+            platform_.identity(),
             capabilities_,
-            platform_.device_addr(),
         };
     }
 

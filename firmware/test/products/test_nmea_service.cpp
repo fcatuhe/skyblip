@@ -401,16 +401,17 @@ struct FeatureRig {
     platform::host::Clock clock;
     platform::host::Link link;
     ports::NullRoles null;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::Roles roles{
         clock,          null.rf,          link,     null.display,         null.kv,
         null.log_flash, null.annunciator, null.dfu, null.die_temperature, null.indicator,
-        null.gnss};
+        null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, roles.device_addr};
+    go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{link, store};
     go::NmeaService nmea;
 

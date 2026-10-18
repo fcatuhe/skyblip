@@ -5,6 +5,7 @@
 
 #include "core/comms/config_store.h"
 #include "core/comms/diagnostics.h"
+#include "core/comms/identity_link.h"
 #include "core/comms/link_claim.h"
 #include "core/comms/link_sessions.h"
 #include "core/comms/timing_report.h"
@@ -30,7 +31,8 @@ enum class Pending : uint8_t {
     Recovery = 4,
     PowerOff = 5,
     EraseLog = 6,
-    GnssCold = 7
+    GnssCold = 7,
+    Register = 8
 };
 
 // What a prompt says it is, and what confirming it will do. The panel and the
@@ -80,6 +82,9 @@ class ConfigService {
     // map did not budget for one, and it must not be silent. Wired by the product
     // that owns the write (products/skyblip_go/services/config.h).
     void set_durable_writes(const timing::DurableWriteWindow* writes) { writes_ = writes; }
+
+    // INFO: fc 18oct26 hello, register and unlock live in identity_link.cpp, unknown_cmd without
+    void set_identity(IdentityLink* identity) { identity_ = identity; }
 
     // Drives the upload-window timeout. Called once per App::step().
     void tick(uint32_t now_ms);
@@ -277,6 +282,13 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
+    bool answer_identity(const char* cmd, const json::Reader& r);
+    void hello();
+    void register_unit(const json::Reader& r);
+    void send_registration();
+    bool running_version_text(char* out, size_t cap) const;
+    void unlock(const json::Reader& r);
+    void refuse(const char* reason) { ack(false, reason); }
     template <class Report, class... Args>
     void start_report(std::optional<Report>& report, int frame_cap, const Args&... args);
     template <class Report>
@@ -294,6 +306,7 @@ class ConfigService {
     ports::Dfu* dfu_;
     const timing::SlotTimingStats* timing_stats_;
     const timing::DurableWriteWindow* writes_{nullptr};
+    IdentityLink* identity_{nullptr};
     flight::FlightState flight_{flight::FlightState::Unknown};
     Diagnostics diag_{};
     bool supply_warned_{false};

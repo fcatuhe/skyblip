@@ -20,7 +20,13 @@ Before September 2026 the config and log characteristics sat on `6E400002` and `
 
 The advertisement is full: flags, the 128-bit Nordic UART UUID, the 16-bit `FFE0`. That is 25 of 31 bytes, and it is not optional padding. XCSoar builds its LE scan filters from service UUIDs (`android/src/BluetoothHelper.java`), so a device advertising only a name never appears in its list.
 
-The name therefore rides the scan response, where 29 characters fit: `CONFIG_BT_DEVICE_NAME`, then a space, then the device's own 24-bit address in uppercase hex. `skyBlip Go 5B5AFE`. The hex is the address `core/settings/address.h` derives from the SoC id, which is the one the panel shows, so the entry in a phone's list matches the glass. A product word of up to twenty-two characters still fits.
+The name therefore rides the scan response, where 29 characters fit, and the product decides it (`core/identity/README.md`). Before activation it is `activate 3F2A skyBlip`, 21 characters, where `3F2A` is the low 16 bits of FICR `DEVICEADDR`, the address Zephyr advertises with, and the glass shows the same four digits. After it is `skyBlip Go 00012A` or `skyBlip Go+ 00012A`, the address the unit transmits under, which is the one the panel shows, so the entry in a phone's list matches the glass. The Nordic UART UUID is advertised either way, which is what our activation page's chooser filters on.
+
+`begin()` only enables Bluetooth. Advertising starts on the first `advertise_as()`, which the product calls once it has verified the stored unlock code, so no phone ever sees a name that is about to change. A later `advertise_as()`, after an unlock, renames the unit live: `bt_set_name()` for the GAP characteristic, `bt_le_adv_update_data()` for the scan response, no reboot. The scan response is double-buffered and swapped whole through an atomic pointer, because the loop renames while the host thread may be restarting advertising after a connection.
+
+## The unit's identity
+
+`identity.{h,cpp}` fills `ports::Identity`: the DEVICEID through hwinfo, the tag from FICR `DEVICEADDR`, the key in UICR `CUSTOMER`, the unlock code in `identity_partition` at 0xEA000, and nonces from the RNG behind `zephyr,entropy`. `Platform::begin()` provisions the key before it enables Bluetooth. The UICR write goes through the SoC flash driver (`CONFIG_SOC_FLASH_NRF_UICR`), word by word, read back before it is trusted; the driver could also erase UICR, and nothing here ever asks it to. The server key the build trusts is compiled in from `skyblip_server_key.inc`, which `cmake/skyblip.cmake` generates from `firmware/keys/server/`.
 
 ## Several centrals
 

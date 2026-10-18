@@ -308,26 +308,36 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
 }
 
 TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {
+    const skyblip::settings::AirAddress address = 0x00012Au;
     skyblip::model::OwnState own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.tx_settled = true;
-    CHECK(own_ship_transmits(own, anchored()));
+    CHECK(own_ship_transmits(own, anchored(), address));
 
-    CHECK_FALSE(own_ship_transmits(own, ClockState{true, false, 0}));
-    CHECK_FALSE(own_ship_transmits(own, ClockState{false, true, 0}));
+    CHECK_FALSE(own_ship_transmits(own, ClockState{true, false, 0}, address));
+    CHECK_FALSE(own_ship_transmits(own, ClockState{false, true, 0}, address));
 
     skyblip::model::OwnState unfixed = own;
     unfixed.fix_valid = false;
-    CHECK_FALSE(own_ship_transmits(unfixed, anchored()));
+    CHECK_FALSE(own_ship_transmits(unfixed, anchored(), address));
 
     skyblip::model::OwnState untimed = own;
     untimed.utc_valid = false;
-    CHECK_FALSE(own_ship_transmits(untimed, anchored()));
+    CHECK_FALSE(own_ship_transmits(untimed, anchored(), address));
 
     skyblip::model::OwnState unsettled = own;
     unsettled.tx_settled = false;
-    CHECK_FALSE(own_ship_transmits(unsettled, anchored()));
+    CHECK_FALSE(own_ship_transmits(unsettled, anchored(), address));
+}
+
+// Issue #126: a unit the server never gave a serial has nothing it may transmit under.
+TEST_CASE("transmit: own-ship with every fact but an address does not go on air") {
+    skyblip::model::OwnState own{};
+    own.fix_valid = true;
+    own.utc_valid = true;
+    own.tx_settled = true;
+    CHECK_FALSE(own_ship_transmits(own, anchored(), std::nullopt));
 }
 
 // A transmitter at twice the design rate is faulted, and a faulted one that will not stop is worse.

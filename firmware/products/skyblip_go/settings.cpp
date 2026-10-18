@@ -425,10 +425,10 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out) {
     return Status::Ok;
 }
 
-void write_json_fields(json::Writer& w, const Settings& s, uint32_t device_addr) {
+void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address) {
     w.kv_int("version", s.version);
-    w.kv_int("addr", static_cast<long>(settings::air_address(device_addr)));
-    w.kv_int("addr_table", settings::kAddrTableSkyblip);
+    if (address) w.kv_int("addr", static_cast<long>(*address));
+    w.kv_int("addr_table", settings::kAddressMappingTable);
     write_json_settings(w, s);
 }
 
@@ -440,9 +440,9 @@ void write_json_settings(json::Writer& w, const Settings& s) {
     w.kv_str("callsign", s.callsign);
 }
 
-int to_json(const Settings& s, uint32_t device_addr, char* buf, int cap) {
+int to_json(const Settings& s, settings::AirAddress address, char* buf, int cap) {
     json::Writer w(buf, cap);
-    write_json_fields(w, s, device_addr);
+    write_json_fields(w, s, address);
     return w.finish();
 }
 

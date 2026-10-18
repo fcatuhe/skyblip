@@ -2,6 +2,7 @@
 // are pinned here rather than discovered on hardware.
 #include "core/events/link.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "ports/null.h"
 #include "runtime/loop.h"
 #include "runtime/tasks.h"
@@ -52,6 +53,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
         uint64_t micros() const override { return 0; }
     } clock;
 
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{clock,
                        null.rf,
@@ -64,8 +66,8 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
                        null.die_temperature,
                        null.indicator,
                        null.gnss,
-                       ports::Capability::None,
-                       0};
+                       identity,
+                       ports::Capability::None};
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
@@ -112,6 +114,7 @@ struct Slow : runtime::Service {
 // The bench saw the fix processed later every second, and only this says which wait it was.
 TEST_CASE("runtime: the loop meter names the slowest service and dates the longest wait") {
     SteppedClock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{clock,
                        null.rf,
@@ -124,8 +127,8 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
                        null.die_temperature,
                        null.indicator,
                        null.gnss,
-                       ports::Capability::None,
-                       0};
+                       identity,
+                       ports::Capability::None};
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
@@ -167,6 +170,7 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
         uint64_t micros() const override { return 0; }
     } clock;
 
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{clock,
                        null.rf,
@@ -179,8 +183,8 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
                        null.die_temperature,
                        null.indicator,
                        null.gnss,
-                       ports::Capability::None,
-                       0};
+                       identity,
+                       ports::Capability::None};
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
@@ -279,6 +283,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
         uint64_t micros() const override { return 0; }
     } clock;
 
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{clock,
                        null.rf,
@@ -291,8 +296,8 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
                        null.die_temperature,
                        null.indicator,
                        null.gnss,
-                       ports::Capability::None,
-                       0};
+                       identity,
+                       ports::Capability::None};
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};

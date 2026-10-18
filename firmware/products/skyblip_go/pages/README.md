@@ -295,7 +295,7 @@ The last field of the traffic row is `TX ON` or `TX OFF`, and it answers the que
 
 The power-on self test, and the one page worth having on a first flash: it names the part that did not answer, so a device that refuses to fly says why instead of going dark. It is drawn once, from what the board probed at bring-up, and it stays on the glass when a required part is missing. A device that did come up keeps it as `SELF TEST`, the last row of the nearby menu, which is the only way to it: boot does not flash it at a pilot who has nothing to do with it.
 
-The header carries the identity and why the device is running at all: `ID 5B5AFE` on the left is the 24-bit address this unit transmits under, and the word on the right is the reset reason (`core/power/reset_reason.h`), which is the answer to "why am I looking at a boot at all". `POWER ON` is a cell being connected, `BUTTON WAKE` is a thumb bringing it out of SYSTEM OFF, `CHARGER WAKE` is a cable doing the same thing to a device in a flight bag, and `WATCHDOG`, `CPU LOCKUP`, `BROWNOUT`, `SOFT RESET`, `RESET PIN` and `DEBUGGER` are the ones worth a bug report. The register is read once at boot and then only remembered, so the companion app reports the same word.
+The header carries the identity and why the device is running at all: `ID 00012A` on the left is the 24-bit address this unit transmits under, `ID ------` on a unit skyblip.eu has not activated yet, and the word on the right is the reset reason (`core/power/reset_reason.h`), which is the answer to "why am I looking at a boot at all". `POWER ON` is a cell being connected, `BUTTON WAKE` is a thumb bringing it out of SYSTEM OFF, `CHARGER WAKE` is a cable doing the same thing to a device in a flight bag, and `WATCHDOG`, `CPU LOCKUP`, `BROWNOUT`, `SOFT RESET`, `RESET PIN` and `DEBUGGER` are the ones worth a bug report. The register is read once at boot and then only remembered, so the companion app reports the same word.
 
 Then one row per part, each reading left to right as *what it is*, *which part answered*, *how it answered*:
 
@@ -329,6 +329,12 @@ Fourteen part rows and the bus row is fifteen, which is what took the row pitch 
 Three verdicts, and the third is not a failure. `PASS` is the part answered. `FAIL` is a part the device cannot fly without and did not get. `NOT FITTED` is a footprint with nothing behind it, which is a real answer on this hardware: a plain T-Echo has no buzzer and no haptic, and a board built without a status lamp is still a board that flies. The part named in the middle column stays there when the verdict is `NOT FITTED`, because "the DRV2605 we look for is not there" is what a bench needs to read, and it is replaced by what actually answered when something did.
 
 Under the divider: the cell voltage in volts to two decimals, and the verdict, `READY` or `GROUNDED`, inverted so it cannot be read as one more row.
+
+## activation
+
+A unit skyblip.eu has not activated neither transmits nor receives, and its glass says so in place of every page, a prompt and an incoming image aside: the header `ACTIVATE`, the title `NO RADIO YET`, then `AT SKYBLIP.EU/ACTIVATE` and `AND PICK THIS UNIT:`, the four hex digits of the Bluetooth tag at four times the type size, and under them `ACTIVATE 3F2A SKYBLIP`, the name the chooser lists. The tag is the low 16 bits of the address the unit advertises with, so a pilot with three units on the bench picks the right row. The page goes once the unlock lands, through a wipe like any page change (`core/identity/README.md`).
+
+The question the server's register raises is the confirm page's, under `ACTIVATE`: `SEND THE KEY OF THIS UNIT TO SKYBLIP.EU`. No apostrophe, because the glass font has none.
 
 ## menu
 
@@ -445,5 +451,6 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `nearby` | every emitter placed, nearest first: who, how far, how far above |
 | `menu` | the other side of a page: what it is made of, and what a pilot can change |
 | `confirm`, `installing`, `recovery` | the moments that are not pages: being asked, receiving an image and being written, being handed to the USB bootloader |
+| `activation` | what a unit with no serial says instead of every page: where to activate it, and the tag that names it in the phone's chooser |
 
 `go::Page` lists the four the pad walks first - `Radar`, `Nearby`, `SixPack`, `GMeter` - and `go::kWalkedPages` is where the walk ends and the pages opened by name begin. All four always stand: there was a `page_mask` that could hide pages from the rotation, and with six of them on one walk it was worth having. Four is already the short list it was meant to produce, and two of them are doors - the radar is home, the nearby menu is how every page off the walk is opened - so a mask could only have made the device harder to get around. It left the settings, the JSON and the schema together (`../README.md`). A long touch of the pad goes back to `Radar` from anywhere, once no alarm is standing to be silenced first. Every page arrives the same way, through one call that takes the page by name, and that call draws what it is given: a page asked for while it is already on the glass still goes through the wipe, because the pilot holding the pad at home is asking for exactly that black (`../input/README.md`). The one place that must not spend it is the alarm taking the glass, which asks for the radar only when the radar is not already there.

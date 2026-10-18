@@ -321,7 +321,7 @@ TEST_CASE("status: the page reports whether own-ship is transmitting, not the PP
 // does go on the air.
 TEST_CASE("status: the callsign shares the header with the address, and never crowds it") {
     StatusSnapshot s;
-    s.device_addr = 0xED1234;
+    s.address = skyblip::settings::address_of(0xED12);
 
     Glass bare;
     draw_status(bare, s);

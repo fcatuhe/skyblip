@@ -104,12 +104,12 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out);
 // companion link's "config" reply can tag them and stay one flat object. Nesting
 // them as an escaped string cost 53 bytes of backslashes on a 158-byte body,
 // which is what pushed that reply past what an iPhone will carry.
-void write_json_fields(json::Writer& w, const Settings& s, uint32_t device_addr);
+void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
 void write_json_settings(json::Writer& w, const Settings& s);
 
-int to_json(const Settings& s, uint32_t device_addr, char* buf, int cap);
+int to_json(const Settings& s, settings::AirAddress address, char* buf, int cap);
 Status apply_json(Settings& s, const char* json, int len);
 
 }  // namespace skyblip::go

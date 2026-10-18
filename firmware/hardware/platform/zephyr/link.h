@@ -11,7 +11,7 @@ namespace skyblip::platform::zephyr {
 
 class Link : public ports::Link {
    public:
-    Status begin(uint32_t device_addr);
+    Status begin();
 
     // INFO: fc 04aug26 Read from the connection every time rather than latched
     // at connect: bt_gatt_get_mtu() already tracks the exchange, so a central
@@ -22,6 +22,7 @@ class Link : public ports::Link {
     uint16_t payload_bytes_to(uint16_t session_id) const override;
     Status send(events::Endpoint ep, ConstByteSpan bytes) override;
     Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) override;
+    Status advertise_as(const char* name) override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell
     // drains this into App::on_link_rx(). Returns false when empty.
@@ -34,7 +35,6 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out);
 
    private:
-    static void name_after(uint32_t device_addr);
     static Status notify_one(struct bt_conn* conn, events::Endpoint ep, ConstByteSpan bytes);
 };
 

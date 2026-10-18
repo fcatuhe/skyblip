@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "core/events/link.h"
+#include "products/skyblip_go/product_name.h"
 
 namespace skyblip::go {
 
@@ -43,6 +44,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
         config_.on_rx(frame);
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }
+    publish_identity();
 
     config_.tick(now_ms);
     drain_settings(now_ms);
@@ -50,6 +52,23 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+// INFO: fc 18oct26 before the link advertises at all: the name says whether the unit is activated
+void ConfigLinkService::load_identity() {
+    unit_.load();
+    publish_identity();
+}
+
+void ConfigLinkService::publish_identity() {
+    const identity::Activation activation = unit_.activation();
+    if (identity_published_ && activation == context_.state.activation) return;
+    identity_published_ = true;
+    context_.state.activation = activation;
+    char name[identity::kBluetoothNameCap + 1];
+    identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
+                             activation);
+    (void)context_.roles.link.advertise_as(name);
 }
 
 void ConfigLinkService::publish_upload_verdict() {

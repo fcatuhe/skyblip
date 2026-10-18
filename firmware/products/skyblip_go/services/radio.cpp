@@ -10,8 +10,8 @@ namespace skyblip::go {
 
 Status RadioService::setup() {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf)) return Status::Down;
-    transmitter_.configure(context_.roles.device_addr);
     pass_us_ = context_.roles.clock.micros();
+    if (!identified()) return Status::Ok;
     arm_dwell(timing::Scheduler::plan(phase_ms(), context_.state.clock), dwell_origin_us(), 0,
               Role::Flying);
     return Status::Ok;
@@ -22,6 +22,7 @@ Status RadioService::setup() {
 // thread. A pass of this loop only ever notices an edge after it went by.
 void RadioService::tick(uint32_t now_ms) {
     pass_us_ = context_.roles.clock.micros();
+    if (!identified()) return;
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
@@ -45,6 +46,13 @@ void RadioService::tick(uint32_t now_ms) {
     }
     queue_next(plan, origin_us, now_ms);
     publish_dwell(now_ms);
+}
+
+// INFO: fc 18oct26 a unit with no serial arms nothing, so it neither transmits nor receives
+bool RadioService::identified() {
+    const settings::AirAddress address = context_.state.activation.address();
+    if (address) transmitter_.configure(*address);
+    return address.has_value();
 }
 
 // The one place the phase this service arms against leaves it. core/timing's
@@ -279,7 +287,7 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     // F5: a cold receiver's first solutions walk, and the flight state derived
     // from them decides our transmit rate. Nothing goes on air until own-ship
     // says the solution behind it has settled.
-    if (!timing::own_ship_transmits(own, context_.state.clock))
+    if (!timing::own_ship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return timing::Transmitter::Attempt{};
     const bool full_rate =
         !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_cat));
@@ -402,13 +410,13 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
 
 uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_at_us, uint32_t utc,
                              uint8_t* chips) {
+    const settings::AirAddress address = context_.state.activation.address();
     if (a.payload == Payload::Callsign)
-        protocol::from_own_callsign(outgoing_, context_.roles.device_addr,
-                                    settings::kAddrTableSkyblip, settings_.callsign);
+        protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
+                                    settings_.callsign);
     else
-        protocol::from_own(outgoing_, context_.state.own, context_.roles.device_addr,
-                           settings::kAddrTableSkyblip, context_.state.own.aircraft_cat,
-                           burst_instant(a, tx_at_us, utc));
+        protocol::from_own(outgoing_, context_.state.own, address, settings::kAddressMappingTable,
+                           context_.state.own.aircraft_cat, burst_instant(a, tx_at_us, utc));
     outgoing_.scramble();
     outgoing_.set_crc();
     return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.Data,
@@ -445,7 +453,8 @@ diag::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
     if (!armed) return diag::Refusal::Unarmed;
     if (carries_tx) return diag::Refusal::None;
     if (attempt.over_budget) return diag::Refusal::OverBudget;
-    if (!timing::own_ship_transmits(context_.state.own, context_.state.clock))
+    if (!timing::own_ship_transmits(context_.state.own, context_.state.clock,
+                                    context_.state.activation.address()))
         return diag::Refusal::Unsettled;
     return diag::Refusal::OffSchedule;
 }
