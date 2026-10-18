@@ -6,7 +6,7 @@ class Activation::ChallengesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     server_nonce, signature = response.parsed_body.values_at("server_nonce", "signature")
-    assert server_verifies?(signature, Activation::Message.register(unit_nonce: vectors["unit_nonce"], server_nonce:))
+    assert server_verifies?(signature, Identity::Message.register(unit_nonce: vectors["unit_nonce"], server_nonce:))
     assert Activation::Challenge.exists?(server_nonce:, unit_nonce: vectors["unit_nonce"])
   end
 
