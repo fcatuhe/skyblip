@@ -7,6 +7,8 @@ module PagesHelper
     link_to label, page_url_for(page, only_path: true, anchor:), { lang: }.merge(html_options)
   end
 
+  def legal_notice(field) = Rails.application.credentials.dig(:legal, field)
+
   def on_page?(slug)
     @page&.base_slug == slug
   end
