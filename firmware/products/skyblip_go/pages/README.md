@@ -303,8 +303,8 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 |---|---|
 | `RADIO` | the SX1262 transceiver, answered by a register round-trip: no radio, no flight |
 | `GNSS` | the L76K receiver on its UART: no receiver, no flight |
+| `BARO` | the BME280, with the address that answered, ours at 0x76 and LilyGO's at 0x77: no barometer, no flight and no activation |
 | `PANEL` | the e-paper, by the lot its fingerprint names (`hardware/README.md`) |
-| `BARO` | the BME280, with the address that answered, ours at 0x76 and LilyGO's at 0x77 |
 | `IMU` | the BHI260AP sensor hub, which is what puts the ball in the turn coordinator |
 | `TEMP` | the nRF52840's own die sensor, which is what the thermal charge limits read |
 | `BATTERY` | the resistor divider into the SAADC the cell voltage is measured on |
@@ -316,7 +316,7 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 | `STORAGE` | the settings in internal NVS and the flight log on the external SPI NOR, and `DEFAULTS` after the parts when a stored settings blob could not be read (`../README.md`) |
 | `DFU` | MCUboot, the path a firmware update is written through |
 
-Required first, then what the device senses with, then what it says things with, then what it talks and remembers through. `RADIO` and `GNSS` are the two the product cannot fly without (`kRequired`), which is why they are at the top and why only they can read `FAIL`.
+Required first, then what the device senses with, then what it says things with, then what it talks and remembers through. `RADIO`, `GNSS` and `BARO` are the three the product cannot fly without (`kRequired`), which is why they are at the top and why only they can read `FAIL`.
 
 `CONTACTS` is the weakest row on the page and it is worth knowing why. A switch answers nothing: released, a button and an empty footprint both read as the pull-up, so presence cannot be probed the way the buzzer's drive stage or the DRV2605 can. What the row reports is that both lines are declared and their GPIO controller is up, which is the same standard `LAMP` is held to, and what it prints is the two pins so a bench knows where to put a probe. Only a contact made proves a contact, so the gesture is the test: hold the button and the device begins its power-off count, tap the pad and the page changes. Both pins are on the row because a device with a working button and a dead pad is a device a pilot cannot page.
 
@@ -326,7 +326,7 @@ The RTC is why that row exists. It is soldered onto a Plus like everything else,
 
 Fourteen part rows and the bus row is fifteen, which is what took the row pitch from 10 px to 9: seven of glyph and two of air. The alternative was dropping the scan, and a page that names every part it drives and hides the one part it does not would be the wrong half to lose.
 
-Three verdicts, and the third is not a failure. `PASS` is the part answered. `FAIL` is a part the device cannot fly without and did not get. `NOT FITTED` is a footprint with nothing behind it, which is a real answer on this hardware: a plain T-Echo has no buzzer and no haptic, some units come without a barometer, and a board built without a status lamp is still a board that flies. The part named in the middle column stays there when the verdict is `NOT FITTED`, because "the DRV2605 we look for is not there" is what a bench needs to read, and it is replaced by what actually answered when something did.
+Three verdicts, and the third is not a failure. `PASS` is the part answered. `FAIL` is a part the device cannot fly without and did not get. `NOT FITTED` is a footprint with nothing behind it, which is a real answer on this hardware: a plain T-Echo has no buzzer and no haptic, and a board built without a status lamp is still a board that flies. The part named in the middle column stays there when the verdict is `NOT FITTED`, because "the DRV2605 we look for is not there" is what a bench needs to read, and it is replaced by what actually answered when something did.
 
 Under the divider: the cell voltage in volts to two decimals, and the verdict, `READY` or `GROUNDED`, inverted so it cannot be read as one more row.
 

@@ -24,12 +24,12 @@ TEST_CASE("product: setup brings the radio to Rx and reports its capabilities") 
 }
 
 TEST_CASE("product: a missing optional capability is degraded, a required one refuses") {
-    constexpr ports::Capabilities kNoBaro = static_cast<ports::Capabilities>(
+    constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
-        ~static_cast<uint32_t>(ports::Capability::Baro));
-    Rig degraded(kNoBaro);
+        ~static_cast<uint32_t>(ports::Capability::Haptic));
+    Rig degraded(kNoHaptic);
     CHECK(degraded.setup() == Status::Ok);
-    CHECK(degraded.product.degraded() == ports::Capability::Baro);
+    CHECK(degraded.product.degraded() == ports::Capability::Haptic);
 
     constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &

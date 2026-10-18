@@ -19,9 +19,15 @@ namespace skyblip {
 
 using Go = go::Product<platform::host::Platform>;
 
+// INFO: fc 18oct26 the barometer is required, so these cases fit one and silence it after bring-up
+struct BaroByHand {};
+constexpr BaroByHand kBaroByHand{};
+
 struct Rig {
     platform::host::Platform platform;
     Go product{platform};
+
+    explicit Rig(BaroByHand) : Rig() { platform.baro().present = false; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
                  uint32_t device_addr = platform::host::Platform::kDeviceAddr)
@@ -270,11 +276,6 @@ struct Rig {
     uint32_t fix_updates{0};
 };
 
-// A board with no fitted barometer: the samples in these cases are pushed by
-// hand, so the board must not also be pumping its own.
-constexpr ports::Capabilities kBaroByHand =
-    static_cast<ports::Capabilities>(static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
-                                     ~static_cast<uint32_t>(ports::Capability::Baro));
 
 }  // namespace skyblip
 

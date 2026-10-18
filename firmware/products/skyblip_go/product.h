@@ -26,9 +26,10 @@
 namespace skyblip::go {
 
 // What this product cannot fly without, and what it can lose and keep flying.
-constexpr ports::Capabilities kRequired = ports::Capability::Rf | ports::Capability::Gnss;
+constexpr ports::Capabilities kRequired =
+    ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Baro;
 constexpr ports::Capabilities kOptional =
-    ports::Capability::Display | ports::Capability::Baro | ports::Capability::Buzzer |
+    ports::Capability::Display | ports::Capability::Buzzer |
     ports::Capability::Haptic | ports::Capability::Link | ports::Capability::Storage |
     ports::Capability::Dfu | ports::Capability::Contacts | ports::Capability::Battery |
     ports::Capability::Indicator | ports::Capability::Inclinometer;
@@ -45,8 +46,8 @@ struct BootPartSpec {
 constexpr BootPartSpec kBootParts[] = {
     {"RADIO", ports::Capability::Rf, "SX1262"},
     {"GNSS", ports::Capability::Gnss, "L76K"},
-    {"PANEL", ports::Capability::Display, "SSD1681"},
     {"BARO", ports::Capability::Baro, "BME280"},
+    {"PANEL", ports::Capability::Display, "SSD1681"},
     {"IMU", ports::Capability::Inclinometer, "BHI260AP"},
     {"TEMP", ports::Capability::DieTemperature, "NRF52840"},
     {"BATTERY", ports::Capability::Battery, "DIVIDER"},
