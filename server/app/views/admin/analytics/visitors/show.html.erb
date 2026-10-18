@@ -1,0 +1,72 @@
+<header class="admin-header">
+  <h1><%= t("analytics.visitor.title") %> <span class="mono"><%= @visitor.visitor_token.to_s.first(8) %></span></h1>
+  <%= link_to t("analytics.visitor.back"), admin_analytics_visitors_path(analytics_url_params(@filter_params)) %>
+</header>
+
+<% if @visitor.metadata[:all_user_ids].any? %>
+  <ul class="admin-visitor-users">
+    <% @visitor.metadata[:all_user_ids].each do |user_id| %>
+      <li>
+        <% if (user = @visitor.users[user_id]) %>
+          <%= link_to user.name, admin_user_path(user) %> (<%= user.email %>)
+        <% else %>
+          <%= t("analytics.unknown_user", id: user_id) %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<dl class="admin-metrics">
+  <div>
+    <dt><%= t("analytics.visitor.first_seen") %></dt>
+    <dd><%= @visitor.metadata[:first_seen] ? l(@visitor.metadata[:first_seen], format: "%b %-d, %H:%M") : t("analytics.unknown") %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.visitor.last_seen") %></dt>
+    <dd><%= @visitor.metadata[:last_seen] ? l(@visitor.metadata[:last_seen], format: "%b %-d, %H:%M") : t("analytics.unknown") %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.visitor.visits") %></dt>
+    <dd><%= number_with_delimiter(@visitor.metrics[:visits]) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.visitor.views") %></dt>
+    <dd><%= number_with_delimiter(@visitor.metrics[:views]) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.visitor.events") %></dt>
+    <dd><%= number_with_delimiter(@visitor.metrics[:events]) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.visitor.duration") %></dt>
+    <dd><%= format_duration(@visitor.metrics[:visit_duration]) %></dd>
+  </div>
+</dl>
+
+<dl class="admin-details admin-details--inline">
+  <% Analytics::Visitor::METADATA_DISPLAY_KEYS.each do |key| %>
+    <div>
+      <dt><%= analytics_filter_label(key) %></dt>
+      <dd><%= @visitor.metadata[key].present? ? analytics_label(key, @visitor.metadata[key], country_code: @visitor.metadata[:country_code]) : t("analytics.unknown") %></dd>
+    </div>
+  <% end %>
+</dl>
+
+<nav class="admin-pills" aria-label="Events">
+  <% Analytics::Visitor::SOURCES.each do |source| %>
+    <%= link_to t("analytics.visitor.sources.#{source}"),
+          admin_analytics_visitor_path(@visitor.visitor_token, analytics_url_params(@filter_params).merge(source:)),
+          class: "admin-pill", "aria-current": ("true" if @visitor.source == source) %>
+  <% end %>
+</nav>
+
+<%= render "admin/analytics/timeline", groups: @visitor.timeline.groups %>
+
+<% if @visitor.timeline.more? %>
+  <nav class="admin-pager" aria-label="Visits">
+    <%= link_to t("analytics.visitor.load_more"),
+          admin_analytics_visitor_path(@visitor.visitor_token, analytics_url_params(@filter_params).merge(source: @visitor.source, page: @visitor.timeline.page + 1)),
+          rel: "next" %>
+  </nav>
+<% end %>

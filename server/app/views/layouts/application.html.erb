@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="<%= site_name %>">
     <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= render 'layouts/og_meta_tags', tags: {
@@ -32,20 +33,17 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <% if Rails.env.production? %>
-      <script defer src="https://cloud.umami.is/script.js" data-website-id="9b50045b-b681-4399-a964-6f4edcffa500"></script>
-    <% end %>
-
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+    <%= javascript_import_module_tag "ahoy-module" unless Ahoy.api_only %>
   </head>
 
   <body>
     <%= render "layouts/nav" %>
 
     <main>
-      <%= yield %>
+      <%= content_for?(:content) ? yield(:content) : yield %>
     </main>
 
     <%= render "layouts/footer" %>

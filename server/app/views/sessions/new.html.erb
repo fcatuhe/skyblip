@@ -1,0 +1,18 @@
+<% content_for :noindex, "noindex" %>
+<div class="admin-sign-in">
+  <h1>Sign in</h1>
+
+  <% if flash[:alert] %>
+    <p class="admin-flash admin-flash--alert" role="alert"><%= flash[:alert] %></p>
+  <% end %>
+
+  <%= form_with url: session_path, class: "admin-form" do |form| %>
+    <%= form.label :email %>
+    <%= form.email_field :email, required: true, autofocus: true, autocomplete: "username" %>
+
+    <%= form.label :password %>
+    <%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %>
+
+    <%= form.submit "Sign in", class: "button button--primary button--small" %>
+  <% end %>
+</div>

@@ -7,16 +7,28 @@ development:
   primary:
     <<: *default
     database: storage/development.sqlite3
+  analytics:
+    <<: *default
+    database: storage/development_analytics.sqlite3
+    migrations_paths: db/analytics_migrate
 
 test:
   primary:
     <<: *default
     database: storage/test.sqlite3
+  analytics:
+    <<: *default
+    database: storage/test_analytics.sqlite3
+    migrations_paths: db/analytics_migrate
 
 production:
   primary:
     <<: *default
     database: storage/production.sqlite3
+  analytics:
+    <<: *default
+    database: storage/production_analytics.sqlite3
+    migrations_paths: db/analytics_migrate
   cache:
     <<: *default
     database: storage/production_cache.sqlite3

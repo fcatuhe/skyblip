@@ -1,0 +1,5 @@
+<%# locals: (filter_params:, current:) %>
+<nav class="admin-tabs" aria-label="<%= t("analytics.title") %>">
+  <%= link_to t("analytics.nav.overview"), admin_analytics_path(analytics_url_params(filter_params)), "aria-current": ("page" if current == :overview) %>
+  <%= link_to t("analytics.nav.visitors"), admin_analytics_visitors_path(analytics_url_params(filter_params)), "aria-current": ("page" if current == :visitors) %>
+</nav>

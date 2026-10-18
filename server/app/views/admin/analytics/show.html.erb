@@ -1,0 +1,28 @@
+<header class="admin-header">
+  <h1><%= t("analytics.title") %></h1>
+</header>
+
+<%= render "admin/analytics/filter_bar", url: admin_analytics_path, filter_params: @filter_params %>
+<%= render "admin/analytics/nav", filter_params: @filter_params, current: :overview %>
+
+<%= render "admin/analytics/metrics", metrics: @overview.metrics,
+      visitors_url: admin_analytics_visitors_path(analytics_url_params(@filter_params)) %>
+
+<section class="admin-card">
+  <h2><%= t("analytics.overview.chart_title") %></h2>
+  <% chart = @overview.chart %>
+  <% if chart.any? %>
+    <%= render "admin/analytics/chart", chart: chart %>
+  <% else %>
+    <p class="note"><%= t("analytics.no_results") %></p>
+  <% end %>
+</section>
+
+<% breakdowns = @overview.breakdowns %>
+<div class="admin-grid">
+  <% { pages: %i[path entry exit], sources: %i[referrer channel], environment: %i[browser os device], location: %i[country region city] }.each do |group, keys| %>
+    <%= render "admin/analytics/breakdown", title: t("analytics.overview.breakdowns.#{group}"), keys:, breakdowns:, filter_params: @filter_params %>
+  <% end %>
+</div>
+
+<%= render "admin/analytics/legend" %>

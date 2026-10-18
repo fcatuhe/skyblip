@@ -6,6 +6,20 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 
+  mount Ahoy::Engine, at: :hoy
+
+  resource :session, only: %i[new create destroy]
+
+  namespace :admin do
+    resource :analytics, only: :show do
+      scope module: :analytics do
+        resources :visitors, only: %i[index show], param: :visitor_token
+      end
+    end
+    resources :users
+    mount MissionControl::Jobs::Engine, at: :jobs
+  end
+
   resources :releases, only: [], param: :tag do
     resources :assets, only: :show, module: :releases, path: "", param: :file,
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }

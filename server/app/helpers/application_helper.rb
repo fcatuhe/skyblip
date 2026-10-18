@@ -24,7 +24,11 @@ module ApplicationHelper
   end
 
   def robots_content
-    Rails.env.production? ? "index, follow" : "noindex, nofollow"
+    if Rails.env.production? && !content_for?(:noindex)
+      "index, follow"
+    else
+      "noindex, nofollow"
+    end
   end
 
   def og_meta_tag(key, content)

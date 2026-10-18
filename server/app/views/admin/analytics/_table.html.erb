@@ -1,0 +1,28 @@
+<%# locals: (rows:, filter_key:, filter_params:) %>
+<% if rows.any? %>
+  <div class="table-scroll admin-table">
+    <table>
+      <thead>
+        <tr>
+          <th><%= analytics_filter_label(filter_key) %></th>
+          <th class="admin-number"><%= t("analytics.overview.visitors") %></th>
+          <th class="admin-number"><%= t("analytics.overview.pageviews") %></th>
+          <th class="admin-number"><%= t("analytics.visitors.duration") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <tr>
+            <th><%= link_to analytics_label(filter_key, row[:label], country_code: row[:country_code]),
+                      analytics_path_with(admin_analytics_path, filter_params.merge(filter_key => row[:filter_value])) %></th>
+            <td class="admin-number"><%= number_with_delimiter(row[:visitors]) %></td>
+            <td class="admin-number"><%= number_with_delimiter(row[:pageviews]) %></td>
+            <td class="admin-number"><%= format_duration(row[:duration]) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="note"><%= t("analytics.no_results") %></p>
+<% end %>

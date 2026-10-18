@@ -1,0 +1,23 @@
+<%# locals: (metrics:, visitors_url:) %>
+<dl class="admin-metrics">
+  <div>
+    <dt><%= t("analytics.overview.visitors") %></dt>
+    <dd><%= link_to number_with_delimiter(metrics[:visitors]), visitors_url %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.overview.visits") %></dt>
+    <dd><%= number_with_delimiter(metrics[:visits]) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.overview.pageviews") %></dt>
+    <dd><%= number_with_delimiter(metrics[:pageviews]) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.overview.bounce_rate") %></dt>
+    <dd><%= number_to_percentage(metrics[:bounce_rate] * 100, precision: 1) %></dd>
+  </div>
+  <div>
+    <dt><%= t("analytics.overview.visit_duration") %></dt>
+    <dd><%= format_duration(metrics[:visit_duration]) %></dd>
+  </div>
+</dl>

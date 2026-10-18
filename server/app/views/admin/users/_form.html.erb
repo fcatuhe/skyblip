@@ -1,0 +1,29 @@
+<%= form_with model: [ :admin, user ], class: "admin-form" do |form| %>
+  <% if user.errors.any? %>
+    <ul class="admin-flash admin-flash--alert" role="alert">
+      <% user.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= form.label :first_name %>
+  <%= form.text_field :first_name, required: true, autocomplete: "off" %>
+
+  <%= form.label :last_name %>
+  <%= form.text_field :last_name, required: true, autocomplete: "off" %>
+
+  <%= form.label :email %>
+  <%= form.email_field :email, required: true, autocomplete: "off" %>
+
+  <%= form.label :role %>
+  <%= form.select :role, User.roles.keys %>
+
+  <%= form.label :password, user.new_record? ? "Password" : "New password, blank to keep it" %>
+  <%= form.password_field :password, required: user.new_record?, minlength: 12, maxlength: 72, autocomplete: "new-password" %>
+
+  <%= form.label :password_confirmation %>
+  <%= form.password_field :password_confirmation, required: user.new_record?, maxlength: 72, autocomplete: "new-password" %>
+
+  <%= form.submit class: "button button--primary button--small" %>
+<% end %>

@@ -1,0 +1,63 @@
+<header class="admin-header">
+  <h1><%= t("analytics.title") %></h1>
+</header>
+
+<%= render "admin/analytics/filter_bar", url: admin_analytics_visitors_path, filter_params: @filter_params %>
+<%= render "admin/analytics/nav", filter_params: @filter_params, current: :visitors %>
+
+<% if @visitors.summaries.any? %>
+  <div class="table-scroll admin-table">
+    <table>
+      <thead>
+        <tr>
+          <th><%= t("analytics.visitors.session") %></th>
+          <th><%= analytics_filter_label(:entry) %></th>
+          <th><%= t("analytics.visitors.visitor") %></th>
+          <th class="admin-number"><%= t("analytics.visitors.views") %></th>
+          <th class="admin-number"><%= t("analytics.visitors.duration") %></th>
+          <th><%= analytics_filter_label(:os) %></th>
+          <th><%= analytics_filter_label(:browser) %></th>
+          <th class="admin-number"><%= t("analytics.visitors.visits") %></th>
+          <th class="admin-number"><%= t("analytics.visitors.total_views") %></th>
+          <th class="admin-number"><%= t("analytics.visitors.total_duration") %></th>
+        </tr>
+      </thead>
+      <% @visitors.summaries.chunk_while { |a, b| a.last_seen&.to_date == b.last_seen&.to_date }.each do |day| %>
+        <tbody>
+          <tr>
+            <th colspan="10" class="admin-day"><%= day.first.last_seen ? l(day.first.last_seen.to_date, format: "%A %b %-d") : t("analytics.unknown") %></th>
+          </tr>
+          <% day.each do |visitor| %>
+            <tr>
+              <td><%= l(visitor.last_seen, format: "%H:%M") if visitor.last_seen %></td>
+              <td>
+                <% if visitor.last_entry_path.present? %>
+                  <%= link_to visitor.last_entry_path, analytics_path_with(admin_analytics_visitors_path, @filter_params.merge(entry: visitor.last_entry_path)), class: "admin-truncate", title: visitor.last_entry_path %>
+                <% end %>
+              </td>
+              <td><%= analytics_visitor_link(visitor, users: @users, filter_params: @filter_params) %></td>
+              <td class="admin-number"><%= number_with_delimiter(visitor.latest_views_count) %></td>
+              <td class="admin-number"><%= format_duration(visitor.latest_visit_duration) %></td>
+              <td><%= analytics_filter_link(admin_analytics_visitors_path, @filter_params, key: :os, value: visitor.os) %></td>
+              <td><%= analytics_filter_link(admin_analytics_visitors_path, @filter_params, key: :browser, value: visitor.browser) %></td>
+              <td class="admin-number"><%= number_with_delimiter(visitor.visits_count) %></td>
+              <td class="admin-number"><%= number_with_delimiter(visitor.views_count) %></td>
+              <td class="admin-number"><%= format_duration(visitor.visit_duration) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      <% end %>
+    </table>
+  </div>
+
+  <nav class="admin-pager" aria-label="Pages">
+    <% if @visitors.number > 1 %>
+      <%= link_to t("analytics.visitors.newer"), admin_analytics_visitors_path(analytics_url_params(@filter_params).merge(page: @visitors.number - 1)), rel: "prev" %>
+    <% end %>
+    <% if @visitors.more? %>
+      <%= link_to t("analytics.visitors.older"), admin_analytics_visitors_path(analytics_url_params(@filter_params).merge(page: @visitors.number + 1)), rel: "next" %>
+    <% end %>
+  </nav>
+<% else %>
+  <p class="note"><%= t("analytics.no_results") %></p>
+<% end %>

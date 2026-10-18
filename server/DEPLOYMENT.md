@@ -14,7 +14,7 @@ On the crooz server, beside crooz itself: the same Debian host, user `debian`, a
 
 The image is arm64, because crooz is. The registry is a container Kamal runs on the machine deploying and tunnels to the server over SSH, so there is no hub and no registry password, but Docker has to be running locally. An arm64 machine builds locally, and any other builds over SSH on crooz itself, which `config/deploy.yml` switches on by reading `RUBY_PLATFORM`. Kamal builds `server/` from a clean clone of the commit, so commit before deploying by hand.
 
-Thruster serves on port 80 inside the container and Puma runs Solid Queue in its own process (`SOLID_QUEUE_IN_PUMA`). The four SQLite databases, primary, cache, queue and cable, live in the `skyblip_storage` volume, and `bin/docker-entrypoint` runs `db:prepare` before the server starts. There is no backup yet: #131 adds Litestream and kamal-backup before the first registration that matters.
+Thruster serves on port 80 inside the container and Puma runs Solid Queue in its own process (`SOLID_QUEUE_IN_PUMA`). The five SQLite databases, primary, analytics, cache, queue and cable, live in the `skyblip_storage` volume with the MaxMind city database, and `bin/docker-entrypoint` runs `db:prepare` before the server starts. There is no backup yet: #131 adds Litestream and kamal-backup before the first registration that matters.
 
 ## Secrets
 

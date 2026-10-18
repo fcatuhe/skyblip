@@ -46,5 +46,8 @@ module Skyblip
     config.i18n.default_locale = :en
 
     config.action_dispatch.rescue_responses["Decant::FileNotFound"] = :not_found
+
+    config.mission_control.jobs.base_controller_class = "Admin::ApplicationController"
+    config.mission_control.jobs.http_basic_auth_enabled = false
   end
 end

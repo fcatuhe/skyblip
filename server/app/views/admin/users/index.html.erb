@@ -1,0 +1,27 @@
+<header class="admin-header">
+  <h1>Users</h1>
+  <%= link_to "New user", new_admin_user_path, class: "button button--primary button--small" %>
+</header>
+
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @users.each do |user| %>
+        <tr>
+          <th><%= link_to user.name, admin_user_path(user) %></th>
+          <td><%= user.email %></td>
+          <td><%= user.role %></td>
+          <td><%= l user.created_at, format: "%b %-d, %Y" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
