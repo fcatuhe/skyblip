@@ -1,6 +1,6 @@
 # server
 
-[skyblip.eu](https://skyblip.eu) runs as one Rails app on the crooz server. Public content lives under `Content`, and `/briefing` links the device update page, Bluetooth console and editable simulator. Users sign in to an admin area, and device registration is future work tracked in #126.
+[skyblip.eu](https://skyblip.eu) runs as one Rails app on the crooz server. Public content lives under `Content`, and `/briefing` links the device update page, Bluetooth console and editable simulator. Users sign in to an admin area, and `/activate` gives each unit its serial (#126).
 
 Every command here runs from this directory, not from the repo root.
 
@@ -47,6 +47,25 @@ maxmind:
 ```
 
 `mise run credentials:production` adds them. The first nightly run after the next deploy downloads the database.
+
+## Activation
+
+A unit transmits nothing until it holds a serial that this server signed for it, and `/activate` (`content/pages/activate.*`) is where it gets one. The wire protocol, both halves of it, is [`schemas/activation.v1.schema.json`](../schemas/activation.v1.schema.json): the page asks the unit for a nonce, `POST /activation/challenges` signs it, the unit asks on its glass and signs its registration with its own key, `POST /activation/registrations` checks that signature and answers the serial with an unlock code, and the unit stores the code. [`activation.v1.vectors.json`](../schemas/activation.v1.vectors.json) is one exchange signed with the public test key, which `test/models/activation/message_test.rb` holds OpenSSL to and the firmware's host suite holds Monocypher to: Ed25519 is deterministic, so two libraries that sign the vectors alike sign everything alike.
+
+`Unit` is the DEVICEID and its serial, dense from 0 to 65535, and `Unit::Key` the public keys it registered with, `active`, `pending` or `revoked`. A new DEVICEID gets the next serial and its key is bound. The same key gets the same serial in a fresh unlock code. Another key is refused as `other_key` and kept as `pending`, with the date, the firmware and the IP it came from. In the admin area, `Units` lists them: promote makes a pending key the active one and revokes the old, revoke leaves the unit with no key, so the next registration binds its key as a first one does. `Activation::Challenge` is the server nonce, kept five minutes, used once, and forgotten hourly by `config/recurring.yml`.
+
+Both endpoints take ten requests a minute per IP (`rate_limit`, on Solid Cache). Past 50 new units in a day, a new DEVICEID is refused as `daily_cap`, which logs an error and puts a banner on the admin `Units` page: the app has no mailer to alert by, so that is where it shows.
+
+The server signs with one of its Ed25519 keys, whichever the unit's firmware trusts, named by the first four bytes of the SHA-256 of its public key. They live in the credentials, by name, as 64 hexadecimal characters of seed:
+
+```yaml
+activation:
+  server_keys:
+    development: [seed]
+    production: [seed]
+```
+
+The development credentials hold `development`, which `main`, local and pull-request firmware builds trust. The production credentials need both, because a development unit is activated by skyblip.eu too. To create the production key, print a seed with `ruby -ropenssl -e 'puts OpenSSL::PKey.generate_key("ED25519").raw_private_key.unpack1("H*")'`, add it with `mise run credentials:production` beside a copy of the development seed (`bin/rails credentials:show`), and deploy. The admin `Units` page then lists each key's id and public key, and the production public key goes into the firmware as `firmware/keys/server/production.pub`. The test environment holds the public test key of the vectors, set in `config/environments/test.rb`.
 
 ## Content
 
