@@ -68,6 +68,8 @@ Look and layout come from the token sets in `app/assets/stylesheets/`. Colors, s
 
 The palette is the wordmark's: `--ink` for text and the footer, `--paper` for the page, `--sky`, the grey-blue of "sky", and `--blip`, the orange of the signal. Each of the last two has a soft tint for a band (`--sky-soft`, `--blip-soft`) and a deep shade for text (`--sky-deep`, `--blip-text`). A page alternates paper and sky bands, keeps one blip band for its closing message, and ends on the ink footer.
 
+The ownship editor, `/briefing/ownship`, draws the symbol at the centre of the radar, one per aircraft type. The drawings and the outlines they are made against are files in `content/ownships/`, beside a README on what a drawing must be, where each outline comes from, why the glider is a JS3, and the Bluetooth command a device could take one in. The editing runs in the browser, in `ownship_controller.js` over `#skyblip/ownship`, and sends nothing to the server: the page is loaded once per aircraft type, and a drawing travels as text.
+
 The simulated device case is `app/assets/stylesheets/device.css`, shared by the public simulator and the editable simulator under `/briefing/simulator`.
 
 The update page (`manage.*`) installs firmware and edits device settings using `app/javascript/skyblip/`, loaded through Importmap. The Bluetooth transport and update dialect are described in that folder's README. Every refusal the device can answer is a row in the page's tables, marked `data-manage-word`, and the controller reads the sentence out of the row. `test/javascript/test_words.mjs` fails when `firmware/core/comms/config.cpp` gains a refusal that either language has no row for.

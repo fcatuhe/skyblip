@@ -24,5 +24,6 @@ en:
     title: Briefing
     description: Prepare your device before a flight.
     manage: Update and configure your device
+    ownship: Draw the ownship symbol, one per aircraft type
     simulator: Try the simulator and edit the ownship
     console: Open the Bluetooth console
