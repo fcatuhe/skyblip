@@ -1,6 +1,6 @@
 # Deployment
 
-Pushing to `main` deploys: the `deploy` job in `.github/workflows/server.yml` runs `kamal deploy` from an arm64 runner once `bin/ci` is green, with the secrets of the GitHub `server_production` environment. A push that touches nothing under `server/` does not deploy, and no firmware release does either.
+Pushing to `main` deploys: the `deploy` job in `.github/workflows/server.yml` runs `kamal deploy` from an arm64 runner once every check job is green, with the secrets of the GitHub `server_production` environment. A push that touches nothing under `server/` does not deploy, and no firmware release does either.
 
 By hand, from `server/`, with Bitwarden unlocked:
 

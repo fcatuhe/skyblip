@@ -38,9 +38,10 @@ class DeploymentTest < Minitest::Test
 
   def test_deployment_waits_for_the_gates_on_main
     workflow = YAML.load_file(File.join(ROOT, ".github/workflows/server.yml"))
-    deploy = workflow.fetch("jobs").fetch("deploy")
+    jobs = workflow.fetch("jobs")
+    deploy = jobs.fetch("deploy")
 
-    assert_equal %w[changes ci], deploy.fetch("needs")
+    assert_equal (jobs.keys - %w[deploy]).sort, deploy.fetch("needs").sort
     assert_includes deploy.fetch("if"), "github.ref == 'refs/heads/main'"
     refute deploy.fetch("concurrency").fetch("cancel-in-progress")
     assert_equal "server_production", deploy.fetch("environment").fetch("name")

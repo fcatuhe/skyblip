@@ -10,7 +10,7 @@ Every command here runs from this directory, not from the repo root.
 mise trust && mise install   # Ruby, and fnox
 bin/setup                    # gems, the databases, then bin/dev
 bin/dev                      # http://skyblip.localhost:8119
-bin/ci                       # the gate before handoff, and what CI runs
+bin/ci                       # the gate before handoff, the checks CI runs as separate jobs
 bin/rails test:system        # Cuprite, on the Chrome or Chromium it finds, BROWSER_PATH otherwise
 bin/screenshots              # retake the device screens off the firmware next door
 ```
@@ -36,7 +36,7 @@ A user has a first name, a last name, an email and a password, and a role: `user
 User.create!(first_name: "[first name]", last_name: "[last name]", email: "[email]", password: "[password]", role: :admin)
 ```
 
-Analytics is Patoumatic's stack without the parts about therapists. Ahoy records visits and events in their own database, `analytics`, from the server (every controller action) and from the browser (`app/javascript/ahoy-module.js`, posting to `/hoy`). Each visit is then computed into an `Analytics::Visit`, which knows its pages, duration, channel, section (`public`, `briefing` or `admin`) and segment. The segment is how your own browsing stays out of the numbers: a visit is `internal` when it belongs to an admin, or comes from a browser an admin once signed in from, `user` for any other account, `non_user` otherwise. The `Admin` link opens the overview on `non_user`. Development and test track nothing, `Ahoy.api_only` is on there. Firmware downloads are not tracked, so their year-long public cache never carries a cookie.
+Ahoy records visits and events in their own database, `analytics`, from the server (every controller action) and from the browser (`app/javascript/ahoy-module.js`, posting to `/hoy`). Each visit is then computed into an `Analytics::Visit`, which knows its pages, duration, channel, section (`public`, `briefing` or `admin`) and segment. The segment is how your own browsing stays out of the numbers: a visit is `internal` when it belongs to an admin, or comes from a browser an admin once signed in from, `user` for any other account, `non_user` otherwise. The `Admin` link opens the overview on `non_user`. Development and test track nothing, `Ahoy.api_only` is on there. Firmware downloads are not tracked, so their year-long public cache never carries a cookie.
 
 Visits are placed by IP with the MaxMind GeoLite City database, `storage/GeoLite2-City.mmdb`, which `Maxmind::UpdateGeoliteCityDatabaseJob` downloads and keeps current. The job is scheduled in `config/recurring.yml` only once the production credentials hold the MaxMind account, so until then visits keep no place and nothing fails:
 
@@ -58,7 +58,7 @@ The site sells one product, the skyBlip Go, and every page is built from the sam
 
 Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_fb()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
 
-Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source with the settings Patoumatic's `Medium::Encoding` uses, so both sites compress alike: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
+Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
 
 The legend under `pages/skyblip-go/blips/` is the other half of the same rule: one PNG per traffic blip, each drawn on its own 19x25 canvas by `ui::draw_blip`, the widget the radar page itself calls, so the table on the page cannot drift from the glass. `bin/blips.cpp` is that dumper, a host binary linked against `ui/canvas.cpp` and `ui/widgets/blip.cpp` and nothing else.
 
