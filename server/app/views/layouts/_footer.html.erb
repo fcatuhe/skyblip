@@ -28,10 +28,11 @@
       <div>
         <h2><%= t "footer.project" %></h2>
         <ul>
-          <% %w[about roadmap see-and-avoid ads-l-registry].each do |slug| %>
+          <li><%= link_to_page "about", label_type: :nav %></li>
+          <li><%= link_to "GitHub", "https://github.com/fcatuhe/skyblip" %></li>
+          <% %w[roadmap see-and-avoid ads-l-registry legal-notice].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
-          <li><%= link_to "GitHub", "https://github.com/fcatuhe/skyblip" %></li>
         </ul>
       </div>
     </nav>

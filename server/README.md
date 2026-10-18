@@ -56,6 +56,14 @@ Pages are files, not database rows: `content/pages/<slug>.html.erb`, with YAML f
 
 The site sells one product, the skyBlip Go, and every page is built from the same sections: a centred `page-hero`, then `band`s that alternate with `band--tint`, each opened by a `section-title` (`sections.css`). The nav carries the four pages a buyer reads, `features`, `buy`, `guides` and `about`, then `manage` and the simulator (`skyblip-go`, served as `/try`) on the right. The footer carries everything, the guides included. `index` is the product page, `features` walks through what the device does with a link per feature to the guide paragraph that explains it, `buy` says where to get one and how to install it, `guides` indexes the subject pages (`radar`, `instruments`, `controls`, `power`, `phone`, `radio` and `displays`), `about` holds the why and the pledge, and `roadmap` the devices that come next. A feature gets its block in `features` and its paragraph in the guide that owns the subject, and the paragraph's `h3` carries the anchor the block links to. The words the layout itself speaks (nav, footer, the call to action that closes a section, `shared/_cta.html.erb`) live in `config/locales/`.
 
+The legal notice (`legal-notice.*`, `/fr/mentions-legales`) names the hosting provider only, as article 1-1 II of the [LCEN](https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000801164) allows a site published non-professionally, provided the host holds the publisher's identity. It reads the host from the credentials, not from the source, added to production with `mise run credentials:production`. Development has them already. Without them, as in CI, which has no key, the fields render empty:
+
+```yaml
+legal:
+  host: [hosting provider]
+  host_address: [hosting provider address]
+```
+
 Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_fb()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
 
 Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
