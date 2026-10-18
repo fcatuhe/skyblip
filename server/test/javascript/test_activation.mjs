@@ -63,9 +63,9 @@ test('activating asks the server, then the glass, then stores the unlock code an
   assert.deepEqual(unit.commands, ['get', 'hello', 'register']);
   unit.press();
   const done = await until(state => state.notice?.key === 'activated' && state.address);
-  assert.equal(done.address, '000000');
+  assert.equal(done.address, '000001');
   assert.deepEqual(server.requests, ['challenge', 'register']);
-  assert.equal(unit.unlockCode.serial, 0);
+  assert.equal(unit.unlockCode.serial, 1);
   assert.deepEqual(unit.commands, ['get', 'hello', 'register', 'unlock', 'get']);
 });
 
@@ -76,7 +76,7 @@ test('a unit activated again keeps its serial', async () => {
     activator.activate();
     await until(confirming);
     unit.press();
-    assert.equal((await until(state => state.address)).address, '000000');
+    assert.equal((await until(state => state.address)).address, '000001');
   }
 });
 
@@ -113,7 +113,7 @@ test('activating needs no ground: a unit without a serial is silent, and indoors
   activator.activate();
   await until(confirming);
   unit.press();
-  assert.equal((await until(state => state.address)).address, '000000');
+  assert.equal((await until(state => state.address)).address, '000001');
 });
 
 test('an answer that lands after the link dropped is sent to no unit, not to the next one', async () => {

@@ -1,6 +1,7 @@
 class Unit < ApplicationRecord
   MANUFACTURER_PREFIX = 0x00
-  SERIALS = 0..0xFFFF
+  # INFO: fc 18oct26 serial 0 would put 0x000000 on the air, which decoders read as no address
+  SERIALS = 1..0xFFFF
   NEW_PER_DAY = 50
 
   has_many :keys, dependent: :destroy
@@ -30,7 +31,7 @@ class Unit < ApplicationRecord
 
   # INFO: fc 18oct26 SQLite transactions begin IMMEDIATE, so maximum and insert run under one write lock: serials stay dense
   def self.next_serial
-    serial = (maximum(:serial) || -1) + 1
+    serial = (maximum(:serial) || 0) + 1
     if SERIALS.cover?(serial)
       serial
     else

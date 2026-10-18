@@ -15,7 +15,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     get admin_units_path
 
     assert_response :success
-    assert_select "a[href=?]", admin_unit_path(units(:contested)), text: "000001"
+    assert_select "a[href=?]", admin_unit_path(units(:contested)), text: "000002"
     assert_select "dd", text: /890026b1, public key #{vectors["server_public_key"]}/
   end
 
