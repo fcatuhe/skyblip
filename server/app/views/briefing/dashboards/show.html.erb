@@ -4,6 +4,7 @@
 </header>
 <section class="band">
   <ul>
+    <li><%= link_to_page "activate", label: t("briefing.activate") %></li>
     <li><%= link_to t("briefing.manage"), page_path(slug: "manage") %></li>
     <li><%= link_to t("briefing.simulator"), briefing_simulator_path %></li>
     <li><%= link_to t("briefing.console"), briefing_console_path %></li>

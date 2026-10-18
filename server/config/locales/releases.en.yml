@@ -23,6 +23,7 @@ en:
   briefing:
     title: Briefing
     description: Prepare your device before a flight.
+    activate: Activate a new unit
     manage: Update and configure your device
     simulator: Try the simulator and edit the ownship
     console: Open the Bluetooth console
