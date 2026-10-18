@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://skyblip.eu/schemas/activation.v1.schema.json",
+  "title": "skyBlip activation (v1)",
+  "description": "How a unit gets its serial from skyblip.eu (issue #126). Three commands travel on the config endpoint, one JSON object per write and one reply per notification, as config.v1 does: hello, register and unlock. Two requests travel from the browser to the server, as JSON over HTTPS: POST /activation/challenges and POST /activation/registrations. Every byte string is lowercase hexadecimal. Every signature is plain Ed25519 (RFC 8032), 64 bytes, over a message that starts with an ASCII label naming its purpose and version, followed by fixed-width binary fields in the order given, so no two messages can be read as each other: register is 'skyblip:register:v1' || Nu || Ns. registration is 'skyblip:registration:v1' || DEVICEID || Pd || Nu || Ns || server key id || version, the version last because it is the one field of variable length. unlock is 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu. DEVICEID is the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, so its hex reads as the 64-bit value. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. activation.v1.vectors.json holds one exchange signed with the test key, which the firmware's host suite and the server's tests both check.",
+  "definitions": {
+    "nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "16 random bytes, used once"},
+    "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
+    "device_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "public_key": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Pd, the raw Ed25519 public key of the unit, from its seed in UICR CUSTOMER"},
+    "server_key": {"type": "string", "pattern": "^[0-9a-f]{8}$", "description": "The id of the server key the firmware is built to trust"},
+    "serial": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "Assigned densely by the server. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
+
+    "hello": {
+      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'incomplete' on a unit that lacks a required part, the barometer, because such a unit cannot be activated",
+      "type": "object", "required": ["cmd"], "additionalProperties": false,
+      "properties": {"cmd": {"const": "hello"}}
+    },
+    "hello_reply": {
+      "description": "Unit to browser. The nonce, and the id of the server key the unit trusts, so the server knows which of its keys to sign with",
+      "type": "object", "required": ["cmd", "nonce", "server_key"], "additionalProperties": false,
+      "properties": {
+        "cmd": {"const": "hello"},
+        "nonce": {"$ref": "#/definitions/nonce"},
+        "server_key": {"$ref": "#/definitions/server_key"}
+      }
+    },
+    "register": {
+      "description": "Browser to unit, about 210 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. Refusals: 'no_session' (no live nonce), 'bad_signature', 'incomplete', 'small_mtu' (the link cannot carry the registration frame in one notification), 'in_flight'",
+      "type": "object", "required": ["cmd", "server_nonce", "signature"], "additionalProperties": false,
+      "properties": {
+        "cmd": {"const": "register"},
+        "server_nonce": {"$ref": "#/definitions/nonce"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "registration": {
+      "description": "Unit to browser after the two presses, about 310 bytes in one notification, which Chrome's 498-byte ATT MTU carries. signature is S, by the unit's key over the registration message. The browser posts it to /activation/registrations as it is, without cmd",
+      "type": "object", "required": ["cmd", "device_id", "public_key", "version", "server_key", "signature"], "additionalProperties": false,
+      "properties": {
+        "cmd": {"const": "registration"},
+        "device_id": {"$ref": "#/definitions/device_id"},
+        "public_key": {"$ref": "#/definitions/public_key"},
+        "version": {"type": "string", "maxLength": 23, "description": "The running image, as the dfu command writes it: 0.3.0+1234"},
+        "server_key": {"$ref": "#/definitions/server_key"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "unlock": {
+      "description": "Browser to unit, about 175 bytes. signature is U, by the server over the unlock message. The unit stores serial, Nu and U in its identity page only if U verifies with the key it trusts over its own DEVICEID, its current Pd and the nonce of this session, then answers {\"ack\":true,\"reason\":\"unlock\"} and uses the serial from then on. The nonce is spent either way. Refusals: 'no_session', 'bad_signature', 'flash' (the identity page could not be written)",
+      "type": "object", "required": ["cmd", "serial", "signature"], "additionalProperties": false,
+      "properties": {
+        "cmd": {"const": "unlock"},
+        "serial": {"$ref": "#/definitions/serial"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+
+    "challenge_request": {
+      "description": "POST /activation/challenges, browser to server: Nu and the key the unit trusts, from the hello reply. Answered 201 with challenge_response, 422 {\"error\":\"unknown_server_key\"} for a key this server does not hold, 422 {\"error\":\"invalid\"} for a malformed nonce, 429 {\"error\":\"rate_limited\"}",
+      "type": "object", "required": ["nonce", "server_key"],
+      "properties": {
+        "nonce": {"$ref": "#/definitions/nonce"},
+        "server_key": {"$ref": "#/definitions/server_key"}
+      }
+    },
+    "challenge_response": {
+      "description": "Ns, which the server keeps with Nu for five minutes and accepts once, and R over the register message",
+      "type": "object", "required": ["server_nonce", "signature"],
+      "properties": {
+        "server_nonce": {"$ref": "#/definitions/nonce"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "registration_request": {
+      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with unlock_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
+      "type": "object", "required": ["device_id", "public_key", "version", "server_key", "server_nonce", "signature"],
+      "properties": {
+        "device_id": {"$ref": "#/definitions/device_id"},
+        "public_key": {"$ref": "#/definitions/public_key"},
+        "version": {"type": "string"},
+        "server_key": {"$ref": "#/definitions/server_key"},
+        "server_nonce": {"$ref": "#/definitions/nonce"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "unlock_response": {
+      "description": "The serial and U, which the browser sends to the unit as the unlock command",
+      "type": "object", "required": ["serial", "signature"],
+      "properties": {
+        "serial": {"$ref": "#/definitions/serial"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    }
+  }
+}
