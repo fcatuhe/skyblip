@@ -5,3 +5,10 @@ config SKYBLIP_IMU_IMAGE_LINKED
 	  A full image links the sensor hub's firmware, boots the hub from it and
 	  keeps a copy on imu_image_partition. Without it, a slim image boots the
 	  hub from that copy and is 101 KB lighter over the air.
+
+config SKYBLIP_SERVER_KEY_PRODUCTION
+	bool "Trust the production skyblip.eu key"
+	help
+	  A release build verifies a unit's serial with keys/server/production.pub,
+	  and fails to configure without it. Every other build trusts
+	  keys/server/development.pub.
