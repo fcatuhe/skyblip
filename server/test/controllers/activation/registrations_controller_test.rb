@@ -11,7 +11,7 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     serial, signature = response.parsed_body.values_at("serial", "signature")
     assert_equal Unit.find_by!(device_id: vectors["device_id"]).serial, serial
-    message = Activation::Message.unlock(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], serial:, unit_nonce: vectors["unit_nonce"])
+    message = Identity::Message.unlock(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], serial:, unit_nonce: vectors["unit_nonce"])
     assert server_verifies?(signature, message)
   end
 

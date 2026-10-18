@@ -10,8 +10,11 @@ class Activation::Challenge < ApplicationRecord
   before_validation(on: :create) { self.server_nonce ||= SecureRandom.hex(16) }
 
   def self.issue(attributes)
-    Activation::ServerKey.find(attributes[:server_key])
-    create!(attributes)
+    if Identity::ServerKey.named(attributes[:server_key])
+      create!(attributes)
+    else
+      raise Activation::Refusal.new(:unknown_server_key)
+    end
   rescue ActiveRecord::RecordInvalid
     raise Activation::Refusal.new(:invalid)
   end
@@ -30,6 +33,6 @@ class Activation::Challenge < ApplicationRecord
   end
 
   def signature
-    Activation::ServerKey.find(server_key).signature_for(Activation::Message.register(unit_nonce:, server_nonce:))
+    Identity::ServerKey.current.signature_for(Identity::Message.register(unit_nonce:, server_nonce:))
   end
 end

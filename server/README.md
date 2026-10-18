@@ -56,15 +56,20 @@ A unit transmits nothing until it holds a serial that this server signed for it,
 
 Both endpoints take ten requests a minute per IP (`rate_limit`, on Solid Cache). Past 50 new units in a day, a new DEVICEID is refused as `daily_cap`. The enrollment that reaches the cap logs an error, and the admin `Units` page carries a banner until midnight UTC: the app has no mailer or error tracker to alert by, so those two are the alert. A server nonce is spent only by a registration its unit signed, since it travels in clear over Bluetooth.
 
-Only skyblip.eu activates a unit. Every device build, a pull request, `main`, a release or a local build, trusts one server key, the production key, and carries only its public half, so a build needs no secret to be activated. The private half lives in the production credentials alone, as 64 hexadecimal characters of seed:
+Only skyblip.eu signs for a unit. It holds one Ed25519 key, the server key, which signs every message a unit must trust from it about its identity: the challenge and the unlock code today, any later command that touches identity tomorrow, each under its own `skyblip:<purpose>:v1` label (`Identity::Message`). Every device build, a pull request, `main`, a release or a local build, carries only its public half, `firmware/keys/server.pub`, so a build needs no secret to be activated. The seed, 64 hexadecimal characters, lives in the production credentials alone:
 
 ```yaml
-activation:
-  server_keys:
-    production: [seed]
+identity:
+  server_key: [seed]
 ```
 
-A key is named by the first four bytes of the SHA-256 of its public key, and the unit names the one it trusts in `hello`, which is how rotating to a new key would work: both in the credentials, the server signing with whichever a unit names. To create the production key, print a seed with `ruby -ropenssl -e 'puts OpenSSL::PKey.generate_key("ED25519").raw_private_key.unpack1("H*")'`, add it with `mise run credentials:production`, and deploy. The admin `Units` page then lists its id and public key, which goes into the firmware as `firmware/keys/server/production.pub`. Development and test sign with the public test key of the vectors (`config/initializers/activation.rb`), which only the host suite and the simulator trust, so a local server can never activate a real unit, nor hand one a serial the registry gave another. With no key at all, the activation endpoints fail with an error and the `Units` page says so.
+`openssl rand -hex 32` makes one: any 32 random bytes are a seed. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in `hello`. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
+
+```sh
+read -rs seed && ruby -ropenssl -e 'k = OpenSSL::PKey.new_raw_private_key("ED25519", [ARGV[0]].pack("H*")).raw_public_key; puts k.unpack1("H*"), OpenSSL::Digest::SHA256.digest(k)[0, 4].unpack1("H*")' "$seed"; unset seed
+```
+
+Development and test sign with the public test key of the vectors (`config/initializers/identity.rb`), which only the firmware's host suite and simulator trust, so a local server can never activate a real unit, nor hand one a serial the registry gave another. With no key at all, the activation endpoints fail with an error and the `Units` page says so.
 
 The registration also says whether the unit runs a release build, signed with the rest, and the `Units` page shows it as the build, release or development. Nothing on the air tells them apart: a development unit is a real aircraft with a real serial.
 

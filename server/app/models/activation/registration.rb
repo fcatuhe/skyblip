@@ -38,13 +38,13 @@ class Activation::Registration
 
   private
     def signed_by_unit?(unit_nonce)
-      message = Activation::Message.registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key:, release:, version:)
+      message = Identity::Message.registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key:, release:, version:)
       unit_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ public_key ].pack("H*"))
       unit_key.verify(nil, [ signature ].pack("H*"), message)
     end
 
     def unlock_code_for(serial, unit_nonce)
-      message = Activation::Message.unlock(device_id:, public_key:, serial:, unit_nonce:)
-      { serial:, signature: Activation::ServerKey.find(server_key).signature_for(message) }
+      message = Identity::Message.unlock(device_id:, public_key:, serial:, unit_nonce:)
+      { serial:, signature: Identity::ServerKey.current.signature_for(message) }
     end
 end

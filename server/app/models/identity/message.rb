@@ -1,4 +1,4 @@
-module Activation::Message
+module Identity::Message
   extend self
 
   def register(unit_nonce:, server_nonce:)

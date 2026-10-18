@@ -8,18 +8,16 @@
   </p>
 <% end %>
 
-<% if @server_keys.empty? %>
+<% if @server_key %>
+  <dl class="admin-details">
+    <dt>Server key</dt>
+    <dd><span class="mono"><%= @server_key.id %></span>, public key <span class="mono"><%= @server_key.public_key %></span></dd>
+  </dl>
+<% else %>
   <p class="admin-flash admin-flash--alert" role="alert">
-    No server key in the credentials: every activation fails. The README's Activation section says how to add them.
+    No server key in the credentials: every activation fails. The README's Activation section says how to add it.
   </p>
 <% end %>
-
-<dl class="admin-details">
-  <% @server_keys.each do |key| %>
-    <dt>Server key <%= key.name %></dt>
-    <dd><span class="mono"><%= key.id %></span>, public key <span class="mono"><%= key.public_key %></span></dd>
-  <% end %>
-</dl>
 
 <div class="table-scroll">
   <table>

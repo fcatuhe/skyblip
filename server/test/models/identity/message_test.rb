@@ -1,15 +1,15 @@
 require "test_helper"
 
-class Activation::MessageTest < ActiveSupport::TestCase
+class Identity::MessageTest < ActiveSupport::TestCase
   test "builds the three messages byte for byte as the vectors the firmware checks" do
-    assert_equal vectors["register_message"], hex(Activation::Message.register(unit_nonce: vectors["unit_nonce"], server_nonce: vectors["server_nonce"]))
-    assert_equal vectors["registration_message"], hex(Activation::Message.registration(**registration_fields))
-    assert_equal vectors["unlock_message"], hex(Activation::Message.unlock(**unlock_fields))
+    assert_equal vectors["register_message"], hex(Identity::Message.register(unit_nonce: vectors["unit_nonce"], server_nonce: vectors["server_nonce"]))
+    assert_equal vectors["registration_message"], hex(Identity::Message.registration(**registration_fields))
+    assert_equal vectors["unlock_message"], hex(Identity::Message.unlock(**unlock_fields))
   end
 
   # Ed25519 is deterministic, so equal signatures mean OpenSSL and Monocypher sign alike.
   test "OpenSSL signs the server's two messages as the firmware does, and verifies the unit's" do
-    server_key = Activation::ServerKey.find(vectors["server_key"])
+    server_key = Identity::ServerKey.current
 
     assert_equal vectors["register_signature"], server_key.signature_for(bytes(vectors["register_message"]))
     assert_equal vectors["unlock_signature"], server_key.signature_for(bytes(vectors["unlock_message"]))
