@@ -6,6 +6,7 @@
 #include <hal/nrf_nvmc.h>
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/drivers/hwinfo.h>
+#include <zephyr/irq.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
@@ -51,13 +52,18 @@ bool Identity::Uicr::read(identity::KeySlots::Words& out) const {
 }
 
 // INFO: fc 18oct26 NVMC word writes straight to UICR: no driver path here can ever erase it
+// INFO: fc 18oct26 interrupts held off for the word, so nothing can reset NVMC CONFIG mid-write
 void Identity::Uicr::write(int word, uint32_t value) {
+    const unsigned int key = irq_lock();
+    while (!nrf_nvmc_ready_check(NRF_NVMC)) {
+    }
     nrf_nvmc_mode_set(NRF_NVMC, NRF_NVMC_MODE_WRITE);
     NRF_UICR->CUSTOMER[word] = value;
     __DSB();
     while (!nrf_nvmc_ready_check(NRF_NVMC)) {
     }
     nrf_nvmc_mode_set(NRF_NVMC, NRF_NVMC_MODE_READONLY);
+    irq_unlock(key);
 }
 
 bool Identity::Uicr::draw(crypto::Ed25519::Seed& out) {
