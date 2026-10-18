@@ -33,6 +33,12 @@ class ActivationVectors {
         return value;
     }
 
+    bool flag(const char* key) const {
+        bool value = false;
+        REQUIRE_MESSAGE(reader().get_bool(key, value), "no key ", key);
+        return value;
+    }
+
     long number(const char* key) const {
         long value = 0;
         REQUIRE_MESSAGE(reader().get_int(key, value), "no key ", key);

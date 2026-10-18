@@ -80,6 +80,7 @@ class Dfu : public ports::Dfu {
     bool downgrade_allowed() const override {
         return !IS_ENABLED(CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE);
     }
+    bool release_build() const override { return !downgrade_allowed(); }
 
     bool running_hash(ports::ImageHash& out) override { return read_hash(kPrimarySlot, out); }
     bool staged_hash(ports::ImageHash& out) override { return read_hash(kSecondarySlot, out); }

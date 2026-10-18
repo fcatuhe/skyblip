@@ -116,10 +116,12 @@ void ConfigService::send_registration() {
         refuse("incomplete");
         return;
     }
-    const std::optional<crypto::Ed25519::Signature> signature = unit.sign(
-        identity::registration_message(unit.device_id(), unit.public_key(), identity_->unit_nonce(),
-                                       identity_->server_nonce(), unit.server_key(), version)
-            .bytes());
+    const bool release = dfu_ != nullptr && dfu_->release_build();
+    const std::optional<crypto::Ed25519::Signature> signature =
+        unit.sign(identity::registration_message(unit.device_id(), unit.public_key(),
+                                                 identity_->unit_nonce(), identity_->server_nonce(),
+                                                 unit.server_key(), release, version)
+                      .bytes());
     if (!signature) {
         refuse("incomplete");
         return;
@@ -131,6 +133,7 @@ void ConfigService::send_registration() {
     write_hex_field(w, "public_key", unit.public_key());
     w.kv_str("version", version);
     write_hex_field(w, "server_key", unit.server_key());
+    w.kv_bool("release", release);
     write_hex_field(w, "signature", *signature);
     const int len = w.finish();
     if (w.overflowed()) {

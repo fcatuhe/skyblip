@@ -40,6 +40,7 @@ struct Exchange {
     identity::Nonce unit_nonce = v.bytes<16>("unit_nonce");
     identity::Nonce server_nonce = v.bytes<16>("server_nonce");
     std::string version = v.text("version");
+    bool release = v.flag("release");
     uint16_t serial = static_cast<uint16_t>(v.number("serial"));
 };
 
@@ -67,9 +68,9 @@ TEST_CASE("identity: the register message is the label, Nu and Ns, and the serve
 TEST_CASE(
     "identity: the registration message ends in the version, and the unit's S is the vectors'") {
     Exchange x;
-    const identity::Message m =
-        identity::registration_message(x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
-                                       identity::server_key_id(x.server_key), x.version.c_str());
+    const identity::Message m = identity::registration_message(
+        x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
+        identity::server_key_id(x.server_key), x.release, x.version.c_str());
     CHECK(same(m.bytes(), x.v.message("registration_message")));
     const auto s = x.v.bytes<64>("registration_signature");
     CHECK(Ed25519::sign(x.unit_seed, m.bytes()) == s);

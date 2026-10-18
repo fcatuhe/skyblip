@@ -151,6 +151,8 @@ TEST_CASE("activation: get leaves addr out until there is one, and keeps addr_ta
 // The vectors replayed through the product: every frame the unit says is the server's.
 TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte") {
     Bench b;
+    REQUIRE(b.v.flag("release"));
+    b.rig.platform.dfu().release = true;
     b.boot();
 
     CHECK(b.hello_with_vectors_nonce() == "{\"cmd\":\"hello\",\"nonce\":\"" +
@@ -165,7 +167,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(registration == "{\"cmd\":\"registration\",\"device_id\":\"" + b.v.text("device_id") +
                               "\",\"public_key\":\"" + b.v.text("unit_public_key") +
                               "\",\"version\":\"" + b.v.text("version") + "\",\"server_key\":\"" +
-                              b.v.text("server_key") + "\",\"signature\":\"" +
+                              b.v.text("server_key") + "\",\"release\":true,\"signature\":\"" +
                               b.v.text("registration_signature") + "\"}");
     CHECK_FALSE(b.activation().activated());
 
@@ -560,6 +562,7 @@ TEST_CASE(
     for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
         CAPTURE(static_cast<int>(fs));
         Desk d;
+        d.dfu.release = d.v.flag("release");
         d.config.set_flight_state(fs);
         d.port.queue_random(d.v.bytes<16>("unit_nonce"));
         d.say("{\"cmd\":\"hello\"}");
@@ -648,7 +651,35 @@ TEST_CASE("activation: an expired nonce stays dead when millis() wraps back into
     CHECK(d.port.writes == 0);
 }
 
-// The widest version dfu formats is the widest frame, and it must fit what register checked.
+// The server keeps the release flag beside the key, and the unit's S covers it either way.
+TEST_CASE("activation: the registration says whether the build is a release, and signs it") {
+    for (bool release : {false, true}) {
+        CAPTURE(release);
+        Desk d;
+        d.dfu.release = release;
+        d.say("{\"cmd\":\"hello\"}");
+        d.register_signed_by_the_test_server();
+        REQUIRE(d.config.pending() == comms::Pending::Register);
+        d.config.confirm();
+        const std::string frame = d.link.last().bytes;
+        CHECK(frame.find(release ? "\"release\":true," : "\"release\":false,") !=
+              std::string::npos);
+        CHECK(frame.find("\"server_key\":\"890026b1\",\"release\"") != std::string::npos);
+
+        const identity::Nonce server_nonce{9};
+        const identity::Message signed_over = identity::registration_message(
+            Identity::kDeviceId, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
+            d.identity.unit_nonce(), server_nonce, d.unit.server_key(), release, "0.3.0+1234");
+        crypto::Ed25519::Signature s{};
+        const size_t at = frame.find("\"signature\":\"") + 13;
+        REQUIRE(hex::read(frame.substr(at, 128).c_str(), ByteSpan(s.data(), s.size())));
+        CHECK(crypto::Ed25519::verify(s, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
+                                      signed_over.bytes()));
+    }
+}
+
+// The widest version and release false make the widest frame, and it must fit what register
+// checked.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk d;
     d.dfu.running = dfu::kWidestVersion;
@@ -668,4 +699,6 @@ TEST_CASE("activation: the registration frame at the widest version is exactly t
     d.config.confirm();
     CHECK(d.link.last().bytes.size() == size_t(comms::IdentityLink::kRegistrationFrameBytes));
     CHECK(d.link.last().bytes.find("9.99.99+99999") != std::string::npos);
+    CHECK(d.link.last().bytes.find("\"release\":false") != std::string::npos);
+    CHECK(comms::IdentityLink::kRegistrationFrameBytes <= kChromePayloadBytes);
 }

@@ -70,6 +70,7 @@ class Dfu : public ports::Dfu {
         return true;
     }
     bool downgrade_allowed() const override { return downgrades; }
+    bool release_build() const override { return release; }
     ports::RecoveryPath recovery_path() const override {
         return watchdog_.armed() ? ports::RecoveryPath::PowerOffToFinish
                                  : ports::RecoveryPath::Rebooted;
@@ -96,6 +97,7 @@ class Dfu : public ports::Dfu {
     bool has_running_key{false};
     bool has_staged_key{false};
     bool downgrades{false};
+    bool release{false};
     ports::SigningKeyHash trusted_key{};
     ports::SigningKeyHash staged_signer{};
     ports::ImageVersion running{};

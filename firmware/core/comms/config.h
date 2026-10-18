@@ -339,6 +339,8 @@ class ConfigService {
     char pending_buf_[sizeof(events::RxFrame::data) + 1]{0};
     static constexpr int kHeldFrameCap = kTimingFrameCap;
     static_assert(kHeldFrameCap >= DiagnosticsReport::kFrameCap, "a report frame must be holdable");
+    static_assert(kHeldFrameCap >= IdentityLink::kRegistrationFrameBytes,
+                  "a registration frame must be holdable");
     char held_[kHeldFrameCap]{};
     int held_len_{0};
     uint16_t held_to_{0};

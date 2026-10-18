@@ -13,8 +13,9 @@ class IdentityLink {
    public:
     // INFO: fc 18oct26 #126: long enough to reach the server and back, short of a forgotten tab
     static constexpr uint32_t kNonceForgetMs = 10u * 60u * 1000u;
-    // INFO: fc 18oct26 the registration frame at the widest version dfu formats, 9.99.99+99999
-    static constexpr int kRegistrationFrameBytes = 326;
+    // INFO: fc 18oct26 the registration frame at version 9.99.99+99999 and release false, the
+    // widest
+    static constexpr int kRegistrationFrameBytes = 342;
 
     explicit IdentityLink(identity::Unit& unit) : unit_(unit) {}
 
