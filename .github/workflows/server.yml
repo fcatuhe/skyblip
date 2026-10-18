@@ -46,6 +46,8 @@ jobs:
               - '.github/workflows/firmware.yml'
               - '.github/workflows/release.yml'
               - 'firmware/scenarios/*.json'
+              - 'firmware/ui/widgets/skyship.cpp'
+              - 'firmware/ui/widgets/skyship.h'
 
   scan_ruby:
     name: scan Ruby (brakeman, bundler-audit)
