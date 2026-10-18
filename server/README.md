@@ -10,7 +10,7 @@ Every command here runs from this directory, not from the repo root.
 mise trust && mise install   # Ruby, and fnox
 bin/setup                    # gems, the databases, then bin/dev
 bin/dev                      # http://skyblip.localhost:8119
-bin/ci                       # the gate before handoff, and what CI runs
+bin/ci                       # the gate before handoff, the checks CI runs as separate jobs
 bin/rails test:system        # Cuprite, on the Chrome or Chromium it finds, BROWSER_PATH otherwise
 bin/screenshots              # retake the device screens off the firmware next door
 ```
