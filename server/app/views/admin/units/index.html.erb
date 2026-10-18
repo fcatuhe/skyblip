@@ -31,6 +31,7 @@
         <th>Key</th>
         <th>Pending</th>
         <th>Firmware</th>
+        <th>Build</th>
         <th>Activated</th>
       </tr>
     </thead>
@@ -43,6 +44,7 @@
           <td class="mono"><%= unit.active_key&.public_key&.first(8) || "none" %></td>
           <td><%= unit.keys.count(&:pending?) %></td>
           <td class="mono"><%= unit.active_key&.version %></td>
+          <td><%= unit_key_build(unit.active_key) %></td>
           <td><%= l unit.created_at, format: "%b %-d, %Y" %></td>
         </tr>
       <% end %>

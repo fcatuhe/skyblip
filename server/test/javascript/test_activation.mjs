@@ -41,7 +41,7 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const server = keyPair(VECTORS.server_seed);
   const unit = keyPair(VECTORS.unit_seed);
   const fields = { deviceId: VECTORS.device_id, publicKey: VECTORS.unit_public_key, unitNonce: VECTORS.unit_nonce,
-    serverNonce: VECTORS.server_nonce, serverKey: VECTORS.server_key, version: VECTORS.version, serial: VECTORS.serial };
+    serverNonce: VECTORS.server_nonce, serverKey: VECTORS.server_key, release: VECTORS.release, version: VECTORS.version, serial: VECTORS.serial };
   assert.equal(server.id, VECTORS.server_key);
   assert.equal(server.sign(messages.register(fields)), VECTORS.register_signature);
   assert.equal(unit.sign(messages.registration(fields)), VECTORS.registration_signature);

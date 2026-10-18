@@ -18,6 +18,7 @@
         <th>Public key</th>
         <th>Status</th>
         <th>Firmware</th>
+        <th>Build</th>
         <th>Server key</th>
         <th>IP</th>
         <th>First seen</th>
@@ -31,6 +32,7 @@
           <th class="mono"><%= key.public_key %></th>
           <td><%= key.status %></td>
           <td class="mono"><%= key.version %></td>
+          <td><%= unit_key_build(key) %></td>
           <td class="mono"><%= key.server_key %></td>
           <td class="mono"><%= key.ip_address %></td>
           <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>

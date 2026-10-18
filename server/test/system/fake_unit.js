@@ -26,11 +26,14 @@
     commands: [],
 
     async press() {
-      const { device_id, unit_public_key, unit_seed, server_key, version } = this.vectors;
+      const { device_id, unit_public_key, unit_seed, server_key, release, version } = this.vectors;
       const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
-      const message = join(label('registration'), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key), encoder.encode(version));
+      const message = join(
+        label('registration'), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key), Uint8Array.of(release ? 1 : 0),
+        encoder.encode(version),
+      );
       const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
-      this.reply({ cmd: 'registration', device_id, public_key: unit_public_key, version, server_key, signature });
+      this.reply({ cmd: 'registration', device_id, public_key: unit_public_key, version, server_key, release, signature });
     },
 
     async verifies(signature, message) {
