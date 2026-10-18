@@ -19,6 +19,13 @@ test('connecting reads the running version, the image state and the status', asy
   });
 });
 
+test('the settings carry the address, and a unit not yet activated has none', async () => {
+  const { updater, until } = await connected();
+  assert.equal((await until(state => state.settings)).address, '5B5AFE');
+  const fresh = await connected({ addr: null });
+  assert.equal((await fresh.until(state => state.settings)).address, null);
+});
+
 test('an install asks once on the glass, naming the version, and installs once the image lands', async () => {
   const { device, updater, until } = await chosen();
   updater.install();

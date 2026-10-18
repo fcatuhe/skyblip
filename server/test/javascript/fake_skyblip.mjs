@@ -79,9 +79,10 @@ export class FakeSkyblip {
     verdictFirst = false,
     key = PRODUCTION_KEY,
     downgrade = false,
+    addr = 0x5b5afe,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, addr });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -207,7 +208,7 @@ export class FakeSkyblip {
     if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
     if (cmd === 'update') return this.sendUpdate();
     if (cmd === 'status') return this.sendStatus();
-    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, addr: 0x5b5afe, addr_table: 58, ...this.stored });
+    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...(this.addr === null ? {} : { addr: this.addr }), addr_table: 58, ...this.stored });
     if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
     if (!['set', 'dfu', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
     if (!this.onGround) return this.ack(false, 'in_flight');
