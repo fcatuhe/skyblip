@@ -340,16 +340,28 @@ TEST_CASE("activation: a unit with no barometer neither flies, nor advertises, n
     CHECK(b.rig.platform.link().advertised.empty());
 }
 
-TEST_CASE("activation: a link that refuses the first name is asked again until it takes one") {
+TEST_CASE("activation: a link that refuses the first name is asked again, once a second") {
     Rig rig;
     rig.platform.link().advertise_refusals = 2;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.platform.link().advertised.empty());
-    rig.run(0, 200);
+    rig.run(0, 900);
+    CHECK(rig.platform.link().advertise_calls == 1);
+    rig.run(950, 2100);
     CHECK(rig.platform.link().advertised == "skyBlip Go+ 005AFE");
     CHECK(rig.platform.link().advertise_calls == 3);
-    rig.run(200, 1000);
+    rig.run(2150, 5000);
     CHECK(rig.platform.link().advertise_calls == 3);
+}
+
+// A Bluetooth that failed to come up refuses forever, and must not flood the console doing it.
+TEST_CASE("activation: a link that never takes the name is asked at most once a second") {
+    Rig rig;
+    rig.platform.link().advertise_refusals = 1000;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 10000);
+    CHECK(rig.platform.link().advertise_calls <= 11);
+    CHECK(rig.platform.link().advertise_calls >= 10);
 }
 
 // The activation page has nothing behind it: a press opens no menu and a tap walks no page.
