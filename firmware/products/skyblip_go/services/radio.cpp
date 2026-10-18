@@ -360,9 +360,11 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         if (!a.go || tx_at_us < std::max(plan.start_us, now_us) || tx_at_us >= plan.end_us)
             continue;
         uint8_t* chips = outgoing_chips_[armed.buffer][static_cast<int>(payload)];
+        const uint8_t tx_len = encode(a, tx_at_us, armed.utc, chips);
+        if (tx_len == 0) continue;
         ports::RfPlan with_burst = plan;
         with_burst.tx = chips;
-        with_burst.tx_len = encode(a, tx_at_us, armed.utc, chips);
+        with_burst.tx_len = tx_len;
         with_burst.tx_at_us = tx_at_us;
         if (context_.roles.rf.arm(with_burst) != Status::Ok) {
             if (!dwell_armed) {
@@ -410,13 +412,16 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
 
 uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_at_us, uint32_t utc,
                              uint8_t* chips) {
+    // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
     const settings::AirAddress address = context_.state.activation.address();
-    if (a.payload == Payload::Callsign)
-        protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
-                                    settings_.callsign);
-    else
-        protocol::from_own(outgoing_, context_.state.own, address, settings::kAddressMappingTable,
-                           context_.state.own.aircraft_cat, burst_instant(a, tx_at_us, utc));
+    const bool built =
+        a.payload == Payload::Callsign
+            ? protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
+                                          settings_.callsign)
+            : protocol::from_own(outgoing_, context_.state.own, address,
+                                 settings::kAddressMappingTable, context_.state.own.aircraft_cat,
+                                 burst_instant(a, tx_at_us, utc));
+    if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
     return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.Data,
