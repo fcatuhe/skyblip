@@ -19,6 +19,12 @@ function(skyblip_shared_layers)
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
   target_sources(app PRIVATE ${shared})
 
+  # Monocypher, as C. BLAKE2_NO_UNROLLING is its one flash knob, for the day BLAKE2b gets linked.
+  file(GLOB monocypher ${SKYBLIP_FIRMWARE}/vendor/monocypher/*.c)
+  target_sources(app PRIVATE ${monocypher})
+  set_source_files_properties(${monocypher} TARGET_DIRECTORY app
+    PROPERTIES COMPILE_DEFINITIONS BLAKE2_NO_UNROLLING)
+
   # Hot every pass: the per-byte NMEA parser and the redraw. Source options land after Zephyr's -Os, so -O2 wins.
   set_source_files_properties(
     ${SKYBLIP_FIRMWARE}/core/gnss/nmea.cpp
