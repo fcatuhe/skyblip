@@ -16,7 +16,7 @@ class DeploymentTest < Minitest::Test
     refute builder.key?("dockerfile")
   end
 
-  def test_application_and_remote_builder_share_the_crooz_host_and_debian_user
+  def test_application_runs_as_debian_and_the_remote_builder_on_the_crooz_ssh_host
     config = deployment
     host = ENV.fetch("SKYBLIP_SERVER_IP", "crooz")
 
@@ -26,7 +26,7 @@ class DeploymentTest < Minitest::Test
     if RUBY_PLATFORM.match?(/aarch64|arm64/)
       refute config.fetch("builder").key?("remote")
     else
-      assert_equal "ssh://debian@#{host}", config.fetch("builder").fetch("remote")
+      assert_equal "ssh://crooz", config.fetch("builder").fetch("remote")
     end
   end
 
