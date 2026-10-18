@@ -623,6 +623,19 @@ TEST_CASE("activation: the nonce is live until kNonceForgetMs after hello, and d
     }
 }
 
+// 2^32 ms after hello, millis() names a moment inside the window again: the sweep must have closed
+// it.
+TEST_CASE("activation: an expired nonce stays dead when millis() wraps back into its window") {
+    constexpr uint32_t kHelloMs = 0xFFFF0000u;
+    Desk d;
+    d.config.tick(kHelloMs);
+    d.say("{\"cmd\":\"hello\"}");
+    d.config.tick(kHelloMs + comms::IdentityLink::kNonceForgetMs);
+    d.config.tick(kHelloMs + 5);
+    CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("no_session"));
+    CHECK(d.port.writes == 0);
+}
+
 // The widest version dfu formats is the widest frame, and it must fit what register checked.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk d;

@@ -21,6 +21,7 @@ void ConfigService::tick(uint32_t now_ms) {
         upload_window_open_ = false;
     }
     if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
+    if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kConfirmWindowMs) {
         pending_ = Pending::None;
         pending_len_ = 0;

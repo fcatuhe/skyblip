@@ -40,6 +40,11 @@ class IdentityLink {
         open_ = false;
         registering_ = false;
     }
+    // INFO: fc 18oct26 live() holds the deadline, this keeps it after millis() wraps back into it
+    void tick(uint32_t now_ms) {
+        if (open_ && now_ms - opened_ms_ >= kNonceForgetMs) close();
+    }
+
     // INFO: fc 18oct26 a held unlock is its sender's: its answer must never reach another session
     void forget(uint16_t session_id) {
         if (session_id_ != session_id) return;
