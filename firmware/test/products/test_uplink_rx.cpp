@@ -343,26 +343,6 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     CHECK(target_for(rig, 0x4D0001) != nullptr);
 }
 
-// Serial 0 under prefix 0x00 is address 0x000000, which the table once read as "no address".
-TEST_CASE("uplink: own-ship at serial 0, relayed back, is not traffic") {
-    Rig rig(platform::host::Platform::kFullyFitted, uint16_t{0});
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    fly(rig, t, 3);
-
-    REQUIRE(rig.state().activation.address() == settings::AirAddress{0x000000u});
-    model::AircraftObs echo[2] = {
-        relayed_aircraft(rig, 0x000000u, 0, 0, 0),
-        relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
-    };
-    echo[0].addr_table = settings::kAddressMappingTable;
-    REQUIRE(relay(rig, t, echo, 2));
-
-    CHECK(rig.state().traffic.count() == 1);
-    CHECK(target_for(rig, 0x000000u) == nullptr);
-    CHECK(target_for(rig, 0x4D0001) != nullptr);
-}
-
 // The feature is what turns the path on, following the pattern the companion
 // link established: a claim in products/skyblip_go/features.h with a reader.
 // Take it away and the frame still arrives at the service and is still not

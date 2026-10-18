@@ -6,7 +6,6 @@
 
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/settings/address.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/lease.h"
 #include "core/traffic/sanity.h"
@@ -40,11 +39,11 @@ class TrafficTable {
     // Our own 24-bit address. A ground station relays every aircraft it heard,
     // and it heard us: without this the uplink puts own-ship on the radar, at
     // own-ship's position, and the alarm layer grades a head-on with the
-    // aircraft it is bolted to. No address means nothing is filtered, which is
-    // what a table nobody told has to assume.
-    void set_own_address(uint8_t addr_table, settings::AirAddress addr) {
+    // aircraft it is bolted to. Zero means nothing is filtered, which is what a
+    // table nobody told has to assume.
+    void set_own_address(uint8_t addr_table, uint32_t addr) {
         own_addr_table_ = addr_table;
-        own_addr_ = addr;
+        own_addr_ = addr & 0x00FFFFFF;
     }
 
     // Where own-ship is, for the range gate below. This is the table's door and
@@ -75,7 +74,7 @@ class TrafficTable {
    private:
     std::array<Target, kCapacity> slots_{};
     model::OwnState own_{};
-    settings::AirAddress own_addr_{};
+    uint32_t own_addr_{0};
     uint8_t own_addr_table_{0};
     uint32_t implausible_{0};
 

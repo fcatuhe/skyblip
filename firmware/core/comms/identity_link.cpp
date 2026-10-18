@@ -142,8 +142,8 @@ void ConfigService::unlock(const json::Reader& r) {
     code.nonce = identity_->unit_nonce();
     identity_->close();
     long serial = -1;
-    if (!r.get_int("serial", serial) || serial < 0 || serial > kSerialCeiling ||
-        !read_hex_field(r, "signature", code.signature)) {
+    if (!r.get_int("serial", serial) || serial < identity::kFirstSerial ||
+        serial > kSerialCeiling || !read_hex_field(r, "signature", code.signature)) {
         refuse("bad_signature");
         return;
     }

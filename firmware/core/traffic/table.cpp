@@ -90,8 +90,7 @@ int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now
 }
 
 int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
-    if (own_addr_ && obs.addr_table == own_addr_table_ &&
-        (obs.addr & settings::kAddressMask) == (*own_addr_ & settings::kAddressMask))
+    if (own_addr_ != 0 && obs.addr_table == own_addr_table_ && (obs.addr & 0x00FFFFFF) == own_addr_)
         return -1;
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about

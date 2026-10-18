@@ -28,7 +28,7 @@ void TrafficService::tick(uint32_t now_ms) {
     context_.state.traffic.set_own_reference(context_.state.own);
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
     context_.state.traffic.set_own_address(settings::kAddressMappingTable,
-                                           context_.state.activation.address());
+                                           context_.state.activation.address().value_or(0));
     events::RfEvent event{};
     while (context_.bus.rf.pop(event)) {
         switch (event.type) {

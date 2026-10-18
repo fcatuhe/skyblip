@@ -204,6 +204,42 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
+    SUBCASE("a code the trusted key signed over another DEVICEID") {
+        Identity port(std::nullopt);
+        identity::DeviceId other = Identity::kDeviceId;
+        other[7] ^= 0x01;
+        identity::UnlockCode code{0x0042, {}, {}};
+        code.signature = Ed25519::sign(
+            Identity::kTestServerSeed,
+            identity::unlock_message(other, Ed25519::public_key_of(Identity::kUnitSeed),
+                                     code.serial, code.nonce)
+                .bytes());
+        port.stored = code;
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.activation().activated());
+    }
+    SUBCASE("a code the trusted key signed over another public key") {
+        Identity port(std::nullopt);
+        const Ed25519::Seed other_unit{7, 7, 7};
+        identity::UnlockCode code{0x0042, {}, {}};
+        code.signature = Ed25519::sign(
+            Identity::kTestServerSeed,
+            identity::unlock_message(Identity::kDeviceId, Ed25519::public_key_of(other_unit),
+                                     code.serial, code.nonce)
+                .bytes());
+        port.stored = code;
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.activation().activated());
+    }
+    SUBCASE("a code the trusted key signed for serial 0") {
+        Identity port(std::nullopt);
+        port.stored = Identity::unlock_code_for(0, identity::Nonce{});
+        identity::Unit unit(port);
+        unit.load();
+        CHECK_FALSE(unit.activation().activated());
+    }
     SUBCASE("a unit whose key could not be read") {
         Identity port(Identity::kSerial);
         port.keyed = false;

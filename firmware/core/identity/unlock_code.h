@@ -11,6 +11,9 @@
 
 namespace skyblip::identity {
 
+// INFO: fc 18oct26 serial 0 would put 0x000000 on the air, which decoders read as no address
+constexpr uint16_t kFirstSerial = 1;
+
 struct UnlockCode {
     uint16_t serial{0};
     Nonce nonce{};

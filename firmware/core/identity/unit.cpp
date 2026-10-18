@@ -29,7 +29,7 @@ std::optional<Ed25519::Signature> Unit::sign(ConstByteSpan message) const {
 }
 
 bool Unit::unlocks(const UnlockCode& code) const {
-    if (!keyed_) return false;
+    if (!keyed_ || code.serial < kFirstSerial) return false;
     return Ed25519::verify(
         code.signature, port_.trusted_server_key(),
         unlock_message(device_id_, public_key_, code.serial, code.nonce).bytes());
