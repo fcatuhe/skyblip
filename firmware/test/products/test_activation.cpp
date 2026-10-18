@@ -416,6 +416,16 @@ struct QueuedUnlock {
         REQUIRE(b.answer_since(before).empty());
         REQUIRE(b.rig.platform.identity().writes == 0);
     }
+
+    int unlock_answers() {
+        int n = 0;
+        const auto& sent = b.rig.platform.link().sent;
+        for (size_t i = before; i < sent.size(); i++)
+            if (sent[i].endpoint == events::Endpoint::Config &&
+                sent[i].bytes.find("\"reason\"") != std::string::npos)
+                n++;
+        return n;
+    }
 };
 
 }  // namespace
@@ -436,6 +446,21 @@ TEST_CASE("activation: a supply warning before the write window drops the unlock
     q.b.rig.platform.system_power().supply_warning = true;
     q.b.rig.seconds(q.b.t, 4, 0, 300);
     CHECK(q.b.answer_since(q.before) == refusal("low_power"));
+    CHECK(q.b.rig.platform.identity().writes == 0);
+    CHECK(q.b.activation().serial == Identity::kSerial);
+}
+
+// The answer belongs to the session that asked: another app claiming the link must not receive it.
+TEST_CASE(
+    "activation: a held unlock dies with the link that sent it, and nobody else is answered") {
+    QueuedUnlock q;
+    const uint16_t sender = q.b.rig.platform.link().session_id();
+    q.b.rig.drop_link(sender);
+    q.b.pass(100);
+    q.b.rig.raise_link(sender + 1);
+    q.b.say("{\"cmd\":\"get\"}");
+    q.b.rig.seconds(q.b.t, 4, 0, 300);
+    CHECK(q.unlock_answers() == 0);
     CHECK(q.b.rig.platform.identity().writes == 0);
     CHECK(q.b.activation().serial == Identity::kSerial);
 }

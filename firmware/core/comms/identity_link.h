@@ -40,8 +40,11 @@ class IdentityLink {
         open_ = false;
         registering_ = false;
     }
+    // INFO: fc 18oct26 a held unlock is its sender's: its answer must never reach another session
     void forget(uint16_t session_id) {
-        if (open_ && session_id_ == session_id) close();
+        if (session_id_ != session_id) return;
+        close();
+        unlock_due_.reset();
     }
 
     // INFO: fc 18oct26 verified and its nonce spent, waiting for the product to place the write
