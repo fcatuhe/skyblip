@@ -40,9 +40,9 @@ function(skyblip_shared_layers)
   skyblip_server_key()
 endfunction()
 
-# The skyblip.eu key every device build verifies its serial with: only the production server activates.
+# The skyblip.eu server key every device build verifies identity messages with: only skyblip.eu signs them.
 function(skyblip_server_key)
-  set(key ${SKYBLIP_FIRMWARE}/keys/server/production.pub)
+  set(key ${SKYBLIP_FIRMWARE}/keys/server.pub)
   if(NOT EXISTS ${key})
     message(FATAL_ERROR "no server public key at ${key}: every device build trusts it, and no unit could be activated without it (firmware/keys/README.md)")
   endif()

@@ -26,7 +26,7 @@ The name therefore rides the scan response, where 29 characters fit, and the pro
 
 ## The unit's identity
 
-`identity.{h,cpp}` fills `ports::Identity`: the DEVICEID through hwinfo, the tag from FICR `DEVICEADDR`, the key in UICR `CUSTOMER`, the unlock code in `identity_partition` at 0xEA000, and nonces from the RNG behind `zephyr,entropy`. `Platform::begin()` provisions the key before it enables Bluetooth. The UICR write is NVMC word writes through the nRF HAL, read back as memory before it is trusted, and `CONFIG_SOC_FLASH_NRF_UICR` stays off, so no flash driver call can ever reach UICR, let alone erase it. Which slot holds the key is `core/identity/key_slots.cpp`'s to decide. The server key the build trusts is compiled in from `skyblip_server_key.inc`, which `cmake/skyblip.cmake` generates from `firmware/keys/server/`.
+`identity.{h,cpp}` fills `ports::Identity`: the DEVICEID through hwinfo, the tag from FICR `DEVICEADDR`, the key in UICR `CUSTOMER`, the unlock code in `identity_partition` at 0xEA000, and nonces from the RNG behind `zephyr,entropy`. `Platform::begin()` provisions the key before it enables Bluetooth. The UICR write is NVMC word writes through the nRF HAL, read back as memory before it is trusted, and `CONFIG_SOC_FLASH_NRF_UICR` stays off, so no flash driver call can ever reach UICR, let alone erase it. Which slot holds the key is `core/identity/key_slots.cpp`'s to decide. The server key the build trusts is compiled in from `skyblip_server_key.inc`, which `cmake/skyblip.cmake` generates from `firmware/keys/server.pub`.
 
 ## Several centrals
 

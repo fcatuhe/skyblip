@@ -32,4 +32,4 @@ On the host, `hardware/platform/host/identity.h` is the unit and the test server
 
 ## Which server key a build trusts
 
-Only skyblip.eu, the production server, activates a unit, so every device build, a pull request, `main`, a local build and a release alike, embeds `keys/server/production.pub` and nothing else verifies; `cmake/skyblip.cmake` turns it into `skyblip_server_key.inc` and refuses to configure without it (`firmware/keys/README.md`). The host suite and the simulator trust the test key in `schemas/activation.v1.vectors.json`.
+Only skyblip.eu signs for a unit, so every device build, a pull request, `main`, a local build and a release alike, embeds the server key, `keys/server.pub`, and nothing else verifies; `cmake/skyblip.cmake` turns it into `skyblip_server_key.inc` and refuses to configure without it (`firmware/keys/README.md`). The host suite and the simulator trust the test key in `schemas/activation.v1.vectors.json`.
