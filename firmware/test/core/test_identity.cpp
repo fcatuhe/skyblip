@@ -98,13 +98,13 @@ TEST_CASE("identity: no signature passes for another purpose, the labels see to 
                                 identity::register_message(x.unit_nonce, x.server_nonce).bytes()));
 }
 
-// The development key is the one main and pull requests trust (firmware/keys/server/).
+// The id of RFC 8032's TEST 1 key, from Python's hashlib: sha256(key)[:4] is 21fe31df.
 TEST_CASE("identity: a server key is named by the first four bytes of its SHA-256") {
-    Ed25519::PublicKey development{};
-    REQUIRE(hex::read("41a5e2fbc6f349748ffd4f041350136a06b21553f67450ca27ff2ec56c9f2157",
-                      ByteSpan(development.data(), development.size())));
-    const identity::ServerKeyId id = identity::server_key_id(development);
-    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == "a9649d2d");
+    Ed25519::PublicKey key{};
+    REQUIRE(hex::read("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                      ByteSpan(key.data(), key.size())));
+    const identity::ServerKeyId id = identity::server_key_id(key);
+    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == "21fe31df");
 }
 
 TEST_CASE("identity: hex is lowercase both ways, and a read takes exactly the digits it is owed") {

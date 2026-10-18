@@ -24,14 +24,13 @@ Anyone who builds this firmware with their own key can install it on their own u
 
 ## Server keys
 
-`server/` holds the public halves of the two Ed25519 keys skyblip.eu signs serials with (issue #126, `core/identity/README.md`), as 64 lowercase hex digits. They have nothing to do with the MCUboot keys above: those decide which images a unit installs, these which serial it accepts, and a unit keeps its key, its DEVICEID and its serial when it moves from one MCUboot key to the other.
+`server/production.pub` is the public half of the one Ed25519 key skyblip.eu signs serials with (issue #126, `core/identity/README.md`), as 64 lowercase hex digits. Only the production server activates a unit, so every device build trusts it: a pull request, `main`, `scripts/build_local.sh` and a release alike. It has nothing to do with the MCUboot keys above: those decide which images a unit installs, this one which serial it accepts, and a unit keeps its key, its DEVICEID and its serial when it moves from one MCUboot key to the other, with no activation again.
 
-| File | Trusted by | Id | Private half |
+| Key | Trusted by | Id | Private half |
 |---|---|---|---|
-| `server/development.pub` | builds of `main`, pull requests and `scripts/build_local.sh` | `a9649d2d` | the server's development credentials |
-| `server/production.pub` | releases (`products/<product>/release/app.conf` sets `CONFIG_SKYBLIP_SERVER_KEY_PRODUCTION`) | | the server's production credentials |
+| `server/production.pub` | every device build | | the server's production credentials |
 | the test key in `schemas/activation.v1.vectors.json` | the host suite and the simulator | `890026b1` | in the same file, because it is a test key |
 
-The id is the first four bytes of the SHA-256 of the raw public key, which is how `hello` names the key a unit trusts. `cmake/skyblip.cmake` compiles the chosen file into the image and refuses to configure without it, so a release build with no `server/production.pub` fails loudly rather than shipping units nothing can activate; `release.yml` checks the same before it asks for an approval.
+The id is the first four bytes of the SHA-256 of the raw public key, which is how `hello` names the key a unit trusts. `cmake/skyblip.cmake` compiles the file into the image and refuses to configure a device build without it, so no image ever ships that nothing can activate.
 
-`server/production.pub` is not committed yet. The owner generates the production key into the server's production credentials and commits its public half here; no agent touches those credentials. A unit's stored unlock code is signed by one key only, so a unit moved between development and production firmware activates again once, and gets the same serial back.
+`server/production.pub` is not committed yet, so until it is, every device build fails to configure, the `product image` job included: that is the intended state, not a bug. The owner generates the production key into the server's production credentials and commits its public half here; no agent touches those credentials, and no placeholder stands in for it.

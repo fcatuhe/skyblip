@@ -40,16 +40,11 @@ function(skyblip_shared_layers)
   skyblip_server_key()
 endfunction()
 
-# The skyblip.eu key the unit verifies its serial with: production for a release, development otherwise.
+# The skyblip.eu key every device build verifies its serial with: only the production server activates.
 function(skyblip_server_key)
-  if(CONFIG_SKYBLIP_SERVER_KEY_PRODUCTION)
-    set(channel production)
-  else()
-    set(channel development)
-  endif()
-  set(key ${SKYBLIP_FIRMWARE}/keys/server/${channel}.pub)
+  set(key ${SKYBLIP_FIRMWARE}/keys/server/production.pub)
   if(NOT EXISTS ${key})
-    message(FATAL_ERROR "no server public key at ${key}: a ${channel} build trusts it (firmware/keys/README.md)")
+    message(FATAL_ERROR "no server public key at ${key}: every device build trusts it, and no unit could be activated without it (firmware/keys/README.md)")
   endif()
   file(READ ${key} hex)
   string(STRIP "${hex}" hex)
@@ -64,7 +59,7 @@ function(skyblip_server_key)
   file(GENERATE OUTPUT ${ZEPHYR_BINARY_DIR}/include/generated/skyblip_server_key.inc
        CONTENT "${key_bytes}\n")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key})
-  message(STATUS "skyBlip trusts the ${channel} server key in ${key}")
+  message(STATUS "skyBlip trusts the server key in ${key}")
 endfunction()
 
 # The hub boots from our copy of its image: every build pins the digest, only a full one carries it.

@@ -51,14 +51,6 @@ jobs:
           ! cmp -s firmware/keys/production.pub.pem firmware/keys/development.pub.pem \
             || { echo "FAIL: production.pub.pem is the development key"; exit 1; }
 
-      # A release unit verifies its serial with this key: without it no unit could ever be activated.
-      - name: the production server key is committed, and is not the development one
-        run: |
-          test -f firmware/keys/server/production.pub \
-            || { echo "FAIL: no firmware/keys/server/production.pub (firmware/keys/README.md)"; exit 1; }
-          ! cmp -s firmware/keys/server/production.pub firmware/keys/server/development.pub \
-            || { echo "FAIL: server/production.pub is the development key"; exit 1; }
-
   # Its own job, so the Emscripten toolchain never runs on the runner that holds the key.
   simulator:
     name: browser simulator
