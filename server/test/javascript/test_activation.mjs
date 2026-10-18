@@ -60,13 +60,13 @@ test('activating asks the server, then the glass, then stores the unlock code an
   const { unit, server, activator, until } = await connected();
   activator.activate();
   await until(confirming);
-  assert.deepEqual(unit.commands, ['get', 'hello', 'register']);
+  assert.deepEqual(unit.commands, ['get', 'challenge', 'register']);
   unit.press();
   const done = await until(state => state.notice?.key === 'activated' && state.address);
   assert.equal(done.address, '000001');
   assert.deepEqual(server.requests, ['challenge', 'register']);
   assert.equal(unit.unlockCode.serial, 1);
-  assert.deepEqual(unit.commands, ['get', 'hello', 'register', 'unlock', 'get']);
+  assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
 });
 
 test('a unit activated again keeps its serial', async () => {
@@ -141,7 +141,7 @@ test('a refusal from the server before the glass asks leaves the unit untouched'
   server.refuseNext = 'rate_limited';
   activator.activate();
   assert.equal((await until(settled)).notice.key, 'server_rate_limited');
-  assert.deepEqual(unit.commands, ['get', 'hello']);
+  assert.deepEqual(unit.commands, ['get', 'challenge']);
 });
 
 test('the unit refuses what it cannot do, and the page says why', async () => {

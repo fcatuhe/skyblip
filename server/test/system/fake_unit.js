@@ -50,9 +50,9 @@
       const { cmd, ...fields } = JSON.parse(decoder.decode(raw));
       this.commands.push(cmd);
       if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...(this.addr === null ? {} : { addr: this.addr }), addr_table: 58 });
-      if (cmd === 'hello') {
+      if (cmd === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
-        return this.reply({ cmd: 'hello', nonce: this.nonce, server_key: this.vectors.server_key });
+        return this.reply({ cmd: 'challenge', nonce: this.nonce, server_key: this.vectors.server_key });
       }
       if (cmd === 'register') {
         if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce, fields.server_nonce))))) {

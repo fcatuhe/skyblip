@@ -110,18 +110,18 @@ export class FakeUnit extends FakeSkyblip {
 
   onConfig(raw) {
     const fields = JSON.parse(new TextDecoder().decode(raw));
-    if (this.claimedBy !== null || !['hello', 'register', 'unlock'].includes(fields.cmd)) return super.onConfig(raw);
+    if (this.claimedBy !== null || !['challenge', 'register', 'unlock'].includes(fields.cmd)) return super.onConfig(raw);
     this.commands.push(fields.cmd);
     if (!this.complete) return this.ack(false, 'incomplete');
-    if (fields.cmd === 'hello') return this.hello();
+    if (fields.cmd === 'challenge') return this.challenge();
     if (!this.nonce) return this.ack(false, 'no_session');
     if (fields.cmd === 'register') return this.register(fields);
     return this.unlock(fields);
   }
 
-  hello() {
+  challenge() {
     this.nonce = hex(randomBytes(16));
-    this.reply({ cmd: 'hello', nonce: this.nonce, server_key: this.trustedId });
+    this.reply({ cmd: 'challenge', nonce: this.nonce, server_key: this.trustedId });
   }
 
   register({ server_nonce, signature }) {
