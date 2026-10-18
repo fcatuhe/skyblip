@@ -352,6 +352,42 @@ TEST_CASE("activation: a link that refuses the first name is asked again until i
     CHECK(rig.platform.link().advertise_calls == 3);
 }
 
+// The activation page has nothing behind it: a press opens no menu and a tap walks no page.
+TEST_CASE(
+    "activation: an unactivated unit drops a press and a tap, and still powers off on a hold") {
+    Bench b;
+    b.boot();
+    const go::Settings before = b.rig.settings();
+    b.rig.tap(b.t);
+    b.rig.press(b.t);
+    b.rig.long_touch(b.t);
+    b.pass(1000);
+    CHECK(b.rig.product.screen().mode() == go::Mode::Page);
+    CHECK(b.rig.product.screen().page() == go::Page::Radar);
+    CHECK(std::memcmp(&b.rig.settings(), &before, sizeof(go::Settings)) == 0);
+    CHECK(reads_in(b.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0, go::kGlassW,
+                   go::kGlassH));
+
+    b.rig.platform.board_gpio().button_down = true;
+    b.pass(power::kLongPressMs + 1000);
+    CHECK(b.rig.product.shutdown().going_down());
+    CHECK(b.rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
+}
+
+TEST_CASE("activation: the self-test page shows the address an unlock gave, without a reboot") {
+    Bench b;
+    b.boot();
+    b.hello_with_vectors_nonce();
+    b.register_with_vectors();
+    b.press_twice();
+    REQUIRE(b.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
+    b.pass(3000);
+    b.rig.show(b.t, go::Page::SelfTest);
+    b.pass(2000);
+    REQUIRE(b.rig.product.screen().page() == go::Page::SelfTest);
+    CHECK(reads_in(b.rig.product.screen().framebuffer(), "ID 00012A", 0, 0, go::kGlassW, 40));
+}
+
 // The radio of an activated unit is running, so its unlock page is placed outside a dwell, later.
 TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {

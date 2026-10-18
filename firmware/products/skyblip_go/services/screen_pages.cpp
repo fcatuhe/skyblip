@@ -254,7 +254,13 @@ void ScreenService::render(uint32_t now_ms) {
             draw_nearby(fb_, snap);
             break;
         }
-        case Page::SelfTest: draw_boot(fb_, self_test_); break;
+        case Page::SelfTest: {
+            // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
+            BootSnapshot now = self_test_;
+            now.address = context_.state.activation.address();
+            draw_boot(fb_, now);
+            break;
+        }
         case Page::GMeter: {
             GMeterSnapshot snap;
             snap.fitted = ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);

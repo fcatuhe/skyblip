@@ -90,6 +90,8 @@ A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three
 
 Until skyblip.eu has signed it a serial, the unit is silent: `RadioService` arms nothing, the glass shows the activation page in place of every page (`pages/README.md`), and the name is `activate 3F2A skyBlip`. The commands are the config endpoint's (`core/comms/README.md`), and `ConfigLinkService` owns the `identity::Unit` behind them. It publishes `state.activation` each pass, and when that changes after an unlock it renames the link, live: `ports::Link::advertise_as` updates the advertising data without a reboot, and the glass leaves the activation page through a wipe like any page change. A name the link refuses is offered again every pass until it takes it. On an activated unit the unlock page is written through `unlock_writes_`, a `timing::DurableWriteWindow` like the settings writer's, so the erase lands outside a dwell.
 
+While the activation page stands, a tap, a long touch and a press do nothing: there is no page to walk to and no menu behind it. A prompt and an incoming image still take the button, and the hold that switches the unit off is the shutdown sequencer's, read off the pin, so it works as it always does.
+
 ## What the glass wears while the device is off
 
 E-paper holds its last image with the rails down, so the frame pushed immediately before the rails drop is what the device wears in a flight bag for as long as it sits there. There are six, and `product.h` picks between them by why the device is going down.
