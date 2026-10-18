@@ -37,15 +37,14 @@ namespace skyblip::go {
 // again; what is protected is every setting they ever made.
 class ConfigLinkService : public runtime::Service {
    public:
-    ConfigLinkService(runtime::Context& ctx, Settings& settings, const PowerService& power,
-                      bool complete)
+    ConfigLinkService(runtime::Context& ctx, Settings& settings, const PowerService& power)
         : runtime::Service(ctx),
           settings_(settings),
           store_(settings, ctx.state.activation),
           config_(ctx.roles.link, store_, &ctx.roles.dfu, &ctx.state.rf.timing_stats),
           power_(power),
           unit_(ctx.roles.identity),
-          identity_(unit_, complete) {
+          identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);
     }
@@ -80,6 +79,7 @@ class ConfigLinkService : public runtime::Service {
 
    private:
     void publish_identity();
+    void place_unlock(uint32_t now_ms);
     void spend_gnss_cold_start();
     void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
@@ -129,6 +129,8 @@ class ConfigLinkService : public runtime::Service {
     identity::Unit unit_;
     comms::IdentityLink identity_;
     bool identity_published_{false};
+    // INFO: fc 18oct26 an activated unit's unlock page is placed like the settings, outside a dwell
+    timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};
     power::OnTime connected_{};
     uint16_t recorded_holder_{0};

@@ -364,7 +364,13 @@ TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitt
 
 namespace {
 
-// INFO: fc 18oct26 the config endpoint alone, for two states the product cannot be put in by hand
+std::string hex_text(ConstByteSpan bytes) {
+    std::string out(2 * bytes.size(), '?');
+    hex::write(bytes, out.data());
+    return out;
+}
+
+// INFO: fc 18oct26 the config endpoint alone, for the flight states the product cannot be put in
 struct Desk {
     platform::host::Link link;
     platform::host::Watchdog watchdog;
@@ -372,12 +378,12 @@ struct Desk {
     go::Settings settings = go::defaults();
     go::SettingsStore store{settings, kTestActivation};
     comms::ConfigService config{link, store, &dfu};
-    Identity port{std::nullopt};
+    Identity port;
     identity::Unit unit{port};
-    comms::IdentityLink identity;
+    comms::IdentityLink identity{unit};
     ActivationVectors v;
 
-    explicit Desk(bool complete) : identity(unit, complete) {
+    explicit Desk(std::optional<uint16_t> serial = std::nullopt) : port(serial) {
         link.declare_payload_bytes(kChromePayloadBytes);
         link.raise_link(1);
         dfu.has_running = true;
@@ -390,22 +396,31 @@ struct Desk {
         config.on_rx(frame(json.c_str()));
         return link.sent.empty() ? std::string() : link.last().bytes;
     }
+
+    std::string register_signed_by_the_test_server() {
+        const identity::Nonce server_nonce{9};
+        const crypto::Ed25519::Signature r = crypto::Ed25519::sign(
+            Identity::kTestServerSeed,
+            identity::register_message(identity.unit_nonce(), server_nonce).bytes());
+        return say(register_command(hex_text(ConstByteSpan(server_nonce.data(), 16)),
+                                    hex_text(ConstByteSpan(r.data(), r.size()))));
+    }
+
+    std::string unlock_signed_by_the_test_server(uint16_t serial) {
+        const identity::UnlockCode code = Identity::unlock_code_for(serial, identity.unit_nonce());
+        return say(unlock_command(
+            serial, hex_text(ConstByteSpan(code.signature.data(), code.signature.size()))));
+    }
 };
 
 }  // namespace
 
-TEST_CASE("activation: a unit short of a required part refuses hello and register as incomplete") {
-    Desk d(/*complete=*/false);
-    CHECK(d.say("{\"cmd\":\"hello\"}") == refusal("incomplete"));
-    CHECK(d.say(register_command(d.v.text("server_nonce"), d.v.text("register_signature"))) ==
-          refusal("incomplete"));
-}
-
 // A bench indoors has no fix, and an unactivated unit is silent: no ground gate is owed.
-TEST_CASE("activation: a register prompt is confirmed whatever the flight state") {
+TEST_CASE(
+    "activation: an unactivated unit confirms its register prompt whatever the flight state") {
     for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
         CAPTURE(static_cast<int>(fs));
-        Desk d(/*complete=*/true);
+        Desk d;
         d.config.set_flight_state(fs);
         d.port.queue_random(d.v.bytes<16>("unit_nonce"));
         d.say("{\"cmd\":\"hello\"}");
@@ -418,9 +433,72 @@ TEST_CASE("activation: a register prompt is confirmed whatever the flight state"
     }
 }
 
+// An activated unit transmits, so it owes every identity command the ground gate the others obey.
+TEST_CASE("activation: an activated unit refuses hello, register and unlock off the ground") {
+    for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
+        CAPTURE(static_cast<int>(fs));
+        Desk d(Identity::kSerial);
+        REQUIRE(d.identity.activated());
+        d.config.set_flight_state(fs);
+        CHECK(d.say("{\"cmd\":\"hello\"}") == refusal("in_flight"));
+        CHECK(d.say(register_command(d.v.text("server_nonce"), d.v.text("register_signature"))) ==
+              refusal("in_flight"));
+        CHECK(d.say(unlock_command(298, d.v.text("unlock_signature"))) == refusal("in_flight"));
+    }
+}
+
+TEST_CASE("activation: an activated unit's register prompt is cancelled at take-off") {
+    Desk d(Identity::kSerial);
+    d.config.set_flight_state(flight::FlightState::Ground);
+    REQUIRE(d.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
+    d.register_signed_by_the_test_server();
+    REQUIRE(d.config.pending() == comms::Pending::Register);
+    d.config.set_flight_state(flight::FlightState::Airborne);
+    CHECK(d.config.pending() == comms::Pending::None);
+    CHECK(d.link.last().bytes == refusal("in_flight"));
+}
+
+TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {
+    Desk d;
+    d.say("{\"cmd\":\"hello\"}");
+    d.config.set_supply_warned(true);
+    CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
+    CHECK(d.port.writes == 0);
+    d.config.set_supply_warned(false);
+    CHECK(d.unlock_signed_by_the_test_server(0x0042) == "{\"ack\":true,\"reason\":\"unlock\"}");
+}
+
+// The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
+TEST_CASE("activation: an unlock code for serial 0 is refused, however well it is signed") {
+    Desk d;
+    d.say("{\"cmd\":\"hello\"}");
+    CHECK(d.unlock_signed_by_the_test_server(0) == refusal("bad_signature"));
+    CHECK(d.port.writes == 0);
+    CHECK_FALSE(d.identity.activated());
+}
+
+// The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
+TEST_CASE("activation: the nonce is live until kNonceForgetMs after hello, and dead from then on") {
+    constexpr uint32_t kHelloMs = 5000;
+    for (uint32_t after :
+         {comms::IdentityLink::kNonceForgetMs - 1, comms::IdentityLink::kNonceForgetMs,
+          comms::IdentityLink::kNonceForgetMs + 1}) {
+        CAPTURE(after);
+        Desk d;
+        d.config.tick(kHelloMs);
+        d.say("{\"cmd\":\"hello\"}");
+        d.config.tick(kHelloMs + after);
+        const std::string answer = d.unlock_signed_by_the_test_server(0x0042);
+        if (after < comms::IdentityLink::kNonceForgetMs)
+            CHECK(answer == "{\"ack\":true,\"reason\":\"unlock\"}");
+        else
+            CHECK(answer == refusal("no_session"));
+    }
+}
+
 // The widest version dfu formats is the widest frame, and it must fit what register checked.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
-    Desk d(/*complete=*/true);
+    Desk d;
     d.dfu.running = dfu::kWidestVersion;
     d.say("{\"cmd\":\"hello\"}");
     const identity::Nonce unit_nonce = d.identity.unit_nonce();

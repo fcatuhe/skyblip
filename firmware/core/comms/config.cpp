@@ -21,7 +21,6 @@ void ConfigService::tick(uint32_t now_ms) {
         upload_window_open_ = false;
     }
     if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
-    if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kConfirmWindowMs) {
         pending_ = Pending::None;
         pending_len_ = 0;
@@ -35,7 +34,7 @@ void ConfigService::set_flight_state(flight::FlightState fs) {
         // A prompt that survived the take-off roll would be an authorisation a
         // pilot could confirm with an elbow in the air.
         // INFO: fc 18oct26 activation is the exception: a unit with no serial transmits nothing
-        if (pending_ != Pending::None && pending_ != Pending::Register) {
+        if (pending_ != Pending::None && !register_exempt()) {
             pending_ = Pending::None;
             pending_len_ = 0;
             ack(false, "in_flight");
@@ -405,15 +404,15 @@ void ConfigService::request_log_erase() {
 }
 
 void ConfigService::confirm() {
-    if (pending_ == Pending::Register) {
-        pending_ = Pending::None;
-        send_registration();
-        return;
-    }
-    if (!on_ground()) {
+    if (!on_ground() && !register_exempt()) {
         pending_ = Pending::None;
         pending_len_ = 0;
         ack(false, "in_flight");
+        return;
+    }
+    if (pending_ == Pending::Register) {
+        pending_ = Pending::None;
+        send_registration();
         return;
     }
     if (pending_ == Pending::Set) {

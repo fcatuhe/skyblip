@@ -410,9 +410,7 @@ class Product {
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
     PowerService power_{ctx_, settings_};
-    ConfigLinkService config_{
-        ctx_, settings_, power_,
-        ports::missing(board_.capabilities(), kRequired) == ports::Capability::None};
+    ConfigLinkService config_{ctx_, settings_, power_};
     OwnshipService ownship_{ctx_, settings_};
     RadioService radio_{ctx_, settings_};
     TrafficService traffic_{ctx_, kFeatures};

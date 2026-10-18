@@ -44,6 +44,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
         config_.on_rx(frame);
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }
+    place_unlock(now_ms);
     publish_identity();
 
     config_.tick(now_ms);
@@ -69,6 +70,19 @@ void ConfigLinkService::publish_identity() {
     identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
                              activation);
     (void)context_.roles.link.advertise_as(name);
+}
+
+// INFO: fc 18oct26 the code was verified and its nonce spent on receipt; only the write waits here
+void ConfigLinkService::place_unlock(uint32_t now_ms) {
+    if (!config_.unlock_waiting()) return;
+    if (!unlock_writes_.pending()) unlock_writes_.request(now_ms);
+    const timing::DurableWriteVerdict verdict = unlock_writes_.decide(
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
+    if (verdict != timing::DurableWriteVerdict::Place &&
+        verdict != timing::DurableWriteVerdict::Forced)
+        return;
+    config_.store_unlock();
+    unlock_writes_.placed(now_ms, verdict == timing::DurableWriteVerdict::Forced);
 }
 
 void ConfigLinkService::publish_upload_verdict() {

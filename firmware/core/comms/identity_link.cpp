@@ -57,8 +57,16 @@ bool ConfigService::answer_identity(const char* cmd, const json::Reader& r) {
     return true;
 }
 
+// INFO: fc 18oct26 an unactivated unit is silent and a bench has no fix: only activated is gated
+bool ConfigService::identity_refused_in_flight() {
+    if (!identity_->activated() || on_ground()) return false;
+    refuse("in_flight");
+    return true;
+}
+
 void ConfigService::hello() {
-    if (!identity_->complete() || !identity_->open(claim_.holder(), now_ms_)) {
+    if (identity_refused_in_flight()) return;
+    if (!identity_->unit().keyed() || !identity_->open(claim_.holder(), now_ms_)) {
         refuse("incomplete");
         return;
     }
@@ -70,14 +78,14 @@ void ConfigService::hello() {
     (void)reply(buf, w.finish());
 }
 
-// INFO: fc 18oct26 not gated on the ground: an unactivated unit is silent, a bench has no fix
 void ConfigService::register_unit(const json::Reader& r) {
+    if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextCap] = {0};
-    if (!identity_->complete() || !running_version_text(version, sizeof(version))) {
+    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version))) {
         refuse("incomplete");
         return;
     }
-    if (!identity_->live(claim_.holder())) {
+    if (!identity_->live(claim_.holder(), now_ms_)) {
         refuse("no_session");
         return;
     }
@@ -98,7 +106,7 @@ void ConfigService::register_unit(const json::Reader& r) {
 }
 
 void ConfigService::send_registration() {
-    if (identity_ == nullptr || !identity_->registering(claim_.holder())) {
+    if (identity_ == nullptr || !identity_->registering(claim_.holder(), now_ms_)) {
         refuse("no_session");
         return;
     }
@@ -134,8 +142,13 @@ void ConfigService::send_registration() {
 
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
 void ConfigService::unlock(const json::Reader& r) {
-    if (!identity_->live(claim_.holder())) {
+    if (identity_refused_in_flight()) return;
+    if (!identity_->live(claim_.holder(), now_ms_)) {
         refuse("no_session");
+        return;
+    }
+    if (!settings_writable()) {
+        refuse("low_power");
         return;
     }
     identity::UnlockCode code{};
@@ -152,7 +165,16 @@ void ConfigService::unlock(const json::Reader& r) {
         refuse("bad_signature");
         return;
     }
-    if (identity_->unit().store(code) != Status::Ok) {
+    identity_->hold_unlock(code);
+    if (!identity_->activated()) store_unlock();
+}
+
+// INFO: fc 18oct26 a brown-out between erase and write costs one re-activation, to the same serial
+void ConfigService::store_unlock() {
+    const std::optional<identity::UnlockCode> code = identity_->unlock_due();
+    identity_->unlock_placed();
+    if (!code) return;
+    if (identity_->unit().store(*code) != Status::Ok) {
         refuse("flash");
         return;
     }

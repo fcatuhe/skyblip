@@ -85,6 +85,9 @@ class ConfigService {
 
     // INFO: fc 18oct26 hello, register and unlock live in identity_link.cpp, unknown_cmd without
     void set_identity(IdentityLink* identity) { identity_ = identity; }
+    // INFO: fc 18oct26 an activated unit's radio runs, so its product places the page write
+    bool unlock_waiting() const { return identity_ != nullptr && identity_->unlock_due(); }
+    void store_unlock();
 
     // Drives the upload-window timeout. Called once per App::step().
     void tick(uint32_t now_ms);
@@ -287,6 +290,7 @@ class ConfigService {
     void register_unit(const json::Reader& r);
     void send_registration();
     bool running_version_text(char* out, size_t cap) const;
+    bool identity_refused_in_flight();
     void unlock(const json::Reader& r);
     void refuse(const char* reason) { ack(false, reason); }
     template <class Report, class... Args>
@@ -300,6 +304,8 @@ class ConfigService {
     void install_received_image();
     bool signed_by_trusted_key() const;
     bool on_ground() const { return flight_ == flight::FlightState::Ground; }
+    bool activated() const { return identity_ != nullptr && identity_->activated(); }
+    bool register_exempt() const { return pending_ == Pending::Register && !activated(); }
 
     ports::Link& link_;
     ConfigStore& store_;
