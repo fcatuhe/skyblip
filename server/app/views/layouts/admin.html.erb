@@ -5,6 +5,7 @@
       <ul>
         <li><%= link_to "Analytics", analytics_default_path, "aria-current": ("page" if controller_path.start_with?("admin/analytics")) %></li>
         <li><%= link_to "Users", admin_users_path, "aria-current": ("page" if controller_path == "admin/users") %></li>
+        <li><%= link_to "Units", admin_units_path, "aria-current": ("page" if controller_path == "admin/units") %></li>
         <li><%= link_to "Jobs", admin_mission_control_jobs_path %></li>
       </ul>
       <%= button_to "Sign out", session_path, method: :delete, class: "button button--secondary button--small" %>

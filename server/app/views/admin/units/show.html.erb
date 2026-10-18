@@ -1,0 +1,53 @@
+<header class="admin-header">
+  <h1>Unit <span class="mono"><%= @unit.address %></span></h1>
+</header>
+
+<dl class="admin-details">
+  <dt>Serial</dt>
+  <dd><%= @unit.serial %></dd>
+  <dt>Device ID</dt>
+  <dd class="mono"><%= @unit.device_id %></dd>
+  <dt>Activated</dt>
+  <dd><%= l @unit.created_at, format: "%b %-d, %Y, %H:%M" %></dd>
+</dl>
+
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Public key</th>
+        <th>Status</th>
+        <th>Firmware</th>
+        <th>Server key</th>
+        <th>IP</th>
+        <th>First seen</th>
+        <th>Last seen</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @unit.keys.order(created_at: :desc).each do |key| %>
+        <tr>
+          <th class="mono"><%= key.public_key %></th>
+          <td><%= key.status %></td>
+          <td class="mono"><%= key.version %></td>
+          <td class="mono"><%= key.server_key %></td>
+          <td class="mono"><%= key.ip_address %></td>
+          <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
+          <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
+          <td>
+            <% if key.pending? %>
+              <%= button_to "Promote", admin_unit_key_promotion_path(key), class: "button button--primary button--small",
+                    form: { data: { turbo_confirm: "Make this key the unit's own, and revoke the active one? Check with the owner first." } } %>
+            <% elsif key.active? %>
+              <%= button_to "Revoke", admin_unit_key_revocation_path(key), class: "button button--danger button--small",
+                    form: { data: { turbo_confirm: "Revoke this key? The next registration of this unit binds its key, whoever sends it." } } %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<p><%= link_to "All units", admin_units_path %></p>

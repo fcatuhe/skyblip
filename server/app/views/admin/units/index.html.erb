@@ -1,0 +1,45 @@
+<header class="admin-header">
+  <h1>Units</h1>
+</header>
+
+<% if Unit.daily_cap_reached? %>
+  <p class="admin-flash admin-flash--alert" role="alert">
+    The daily cap of <%= Unit::NEW_PER_DAY %> new units is reached: new units are refused until midnight UTC.
+  </p>
+<% end %>
+
+<dl class="admin-details">
+  <% @server_keys.each do |key| %>
+    <dt>Server key <%= key.name %></dt>
+    <dd><span class="mono"><%= key.id %></span>, public key <span class="mono"><%= key.public_key %></span></dd>
+  <% end %>
+</dl>
+
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Address</th>
+        <th>Serial</th>
+        <th>Device ID</th>
+        <th>Key</th>
+        <th>Pending</th>
+        <th>Firmware</th>
+        <th>Activated</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @units.each do |unit| %>
+        <tr>
+          <th><%= link_to unit.address, admin_unit_path(unit), class: "mono" %></th>
+          <td><%= unit.serial %></td>
+          <td class="mono"><%= unit.device_id %></td>
+          <td class="mono"><%= unit.active_key&.public_key&.first(8) || "none" %></td>
+          <td><%= unit.keys.count(&:pending?) %></td>
+          <td class="mono"><%= unit.active_key&.version %></td>
+          <td><%= l unit.created_at, format: "%b %-d, %Y" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
