@@ -6,7 +6,10 @@ class Activation::ServerKey
   end
 
   def self.find(id)
-    all.find { it.id == id } || raise(Activation::Refusal.new(:unknown_server_key))
+    keys = all
+    raise KeyError, "no activation server key in the credentials" if keys.empty?
+
+    keys.find { it.id == id } || raise(Activation::Refusal.new(:unknown_server_key))
   end
 
   def initialize(name, seed)

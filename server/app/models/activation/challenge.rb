@@ -16,11 +16,14 @@ class Activation::Challenge < ApplicationRecord
     raise Activation::Refusal.new(:invalid)
   end
 
-  def self.redeem(server_nonce)
-    challenge = live.find_by(server_nonce:)
+  def self.find_live(server_nonce)
+    live.find_by(server_nonce:) || raise(Activation::Refusal.new(:expired))
+  end
+
+  def spend
     # INFO: fc 18oct26 a server nonce counts once: only the request whose delete removed the row may use it
-    if challenge && where(id: challenge.id).delete_all == 1
-      challenge
+    if self.class.where(id:).delete_all == 1
+      self
     else
       raise Activation::Refusal.new(:expired)
     end

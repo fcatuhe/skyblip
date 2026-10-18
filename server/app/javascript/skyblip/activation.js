@@ -110,26 +110,31 @@ export class Activator {
   }
 
   async #challenge({ nonce, server_key }) {
-    const answer = await this.#ask(() => this.#server.challenge({ unit_nonce: nonce, server_key }));
+    const device = this.#device;
+    const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: nonce, server_key }));
     if (!answer) return;
     this.#serverNonce = answer.server_nonce;
     return this.#send({ cmd: 'register', server_nonce: answer.server_nonce, signature: answer.signature });
   }
 
   async #register({ cmd, ...registration }) {
+    const device = this.#device;
+    const unit = `${registration.device_id} ${registration.public_key.slice(0, 8)}`;
     this.#set({ phase: 'registering' });
-    const answer = await this.#ask(() => this.#server.register({ ...registration, server_nonce: this.#serverNonce }));
+    const answer = await this.#ask(device, () => this.#server.register({ ...registration, server_nonce: this.#serverNonce }), unit);
     if (!answer) return;
     this.#set({ phase: 'unlocking' });
     return this.#send({ cmd: 'unlock', serial: answer.serial, signature: answer.signature });
   }
 
-  async #ask(request) {
+  // INFO: fc 18oct26 an answer for a link that dropped meanwhile belongs to no unit, not to the next one
+  async #ask(device, request, unit = null) {
     try {
-      return await request();
+      const answer = await request();
+      return this.#device === device ? answer : null;
     } catch (error) {
       if (!(error instanceof ServerRefusal)) throw error;
-      if (this.#device) this.#set({ phase: 'ready', notice: { key: `server_${error.key}`, detail: error.detail } });
+      if (this.#device === device) this.#set({ phase: 'ready', notice: { key: `server_${error.key}`, detail: error.detail ?? unit } });
       return null;
     }
   }

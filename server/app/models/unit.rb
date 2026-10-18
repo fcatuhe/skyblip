@@ -21,14 +21,14 @@ class Unit < ApplicationRecord
   def self.daily_cap_reached? = enrolled_today.count >= NEW_PER_DAY
 
   def self.enroll(device_id)
-    if daily_cap_reached?
-      Rails.logger.error "Activation: the daily cap of #{NEW_PER_DAY} new units is reached, #{device_id} refused"
-      raise Activation::Refusal.new(:daily_cap)
-    end
+    raise Activation::Refusal.new(:daily_cap) if daily_cap_reached?
 
-    create!(device_id:, serial: next_serial)
+    unit = create!(device_id:, serial: next_serial)
+    Rails.logger.error "Activation: #{NEW_PER_DAY} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
+    unit
   end
 
+  # INFO: fc 18oct26 SQLite transactions begin IMMEDIATE, so maximum and insert run under one write lock: serials stay dense
   def self.next_serial
     serial = (maximum(:serial) || -1) + 1
     if SERIALS.cover?(serial)
@@ -40,7 +40,11 @@ class Unit < ApplicationRecord
 
   def bind(public_key, **seen)
     key = keys.find_or_initialize_by(public_key:)
-    key.update!(status: bound_to?(key) ? :active : :pending, **seen)
+    if key.revoked?
+      key.update!(seen)
+    else
+      key.update!(status: bound_to?(key) ? :active : :pending, **seen)
+    end
     key
   end
 

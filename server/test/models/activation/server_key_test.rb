@@ -13,4 +13,13 @@ class Activation::ServerKeyTest < ActiveSupport::TestCase
 
     assert_equal :unknown_server_key, refusal.reason
   end
+
+  test "fails loudly when the credentials hold no key at all" do
+    keys = Rails.configuration.x.activation.server_keys
+    Rails.configuration.x.activation.server_keys = {}
+
+    assert_raises(KeyError) { Activation::ServerKey.find("890026b1") }
+  ensure
+    Rails.configuration.x.activation.server_keys = keys
+  end
 end

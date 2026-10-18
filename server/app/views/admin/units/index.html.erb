@@ -8,6 +8,12 @@
   </p>
 <% end %>
 
+<% if @server_keys.empty? %>
+  <p class="admin-flash admin-flash--alert" role="alert">
+    No server key in the credentials: every activation fails. The README's Activation section says how to add them.
+  </p>
+<% end %>
+
 <dl class="admin-details">
   <% @server_keys.each do |key| %>
     <dt>Server key <%= key.name %></dt>

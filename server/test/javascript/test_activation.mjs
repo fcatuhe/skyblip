@@ -104,7 +104,36 @@ test('the server refusing a known unit with another key is said in its words', a
   unit.press();
   const refused = await until(settled);
   assert.equal(refused.notice.key, 'server_other_key');
+  assert.equal(refused.notice.detail, `${VECTORS.device_id} ${VECTORS.unit_public_key.slice(0, 8)}`, 'what an admin finds the unit by');
   assert.equal(unit.unlockCode, null);
+});
+
+test('activating needs no ground: a unit without a serial is silent, and indoors it has no fix', async () => {
+  const { unit, activator, until } = await connected({ onGround: false });
+  activator.activate();
+  await until(confirming);
+  unit.press();
+  assert.equal((await until(state => state.address)).address, '000000');
+});
+
+test('an answer that lands after the link dropped is sent to no unit, not to the next one', async () => {
+  const server = new FakeServer();
+  const first = await connected({}, server);
+  first.activator.activate();
+  await first.until(confirming);
+  server.hold();
+  first.unit.press();
+  await first.until(state => state.phase === 'registering');
+  first.unit.drop();
+  await first.until(state => state.phase === 'offline');
+  const second = new FakeUnit({ mtu: CHROME_MTU, deviceId: '1111111111111111' }).install();
+  await first.activator.connect();
+  await first.until(state => state.read);
+  server.release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(second.commands, ['get']);
+  assert.equal(first.activator.state.phase, 'ready');
+  assert.equal(first.activator.state.notice, null);
 });
 
 test('a refusal from the server before the glass asks leaves the unit untouched', async () => {

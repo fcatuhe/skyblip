@@ -6,9 +6,15 @@ class Unit::Key < ApplicationRecord
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
 
   def promote
-    transaction do
-      unit.keys.active.each(&:revoked!)
-      active!
+    if pending?
+      transaction do
+        unit.keys.active.each(&:revoked!)
+        active!
+      end
     end
+  end
+
+  def revoke
+    revoked! if active?
   end
 end

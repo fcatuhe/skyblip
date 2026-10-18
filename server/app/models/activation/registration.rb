@@ -12,7 +12,7 @@ class Activation::Registration
 
   validates :device_id, format: { with: Activation::DEVICE_ID }
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
-  validates :version, format: { with: /\A[0-9A-Za-z.+-]{1,23}\z/ }
+  validates :version, format: { with: Activation::VERSION }
   validates :server_key, format: { with: Activation::SERVER_KEY }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
@@ -20,14 +20,18 @@ class Activation::Registration
   def unlock_code
     raise Activation::Refusal.new(:invalid) if invalid?
 
-    challenge = Activation::Challenge.redeem(server_nonce)
+    challenge = Activation::Challenge.find_live(server_nonce)
     raise Activation::Refusal.new(:invalid) unless challenge.server_key == server_key
     raise Activation::Refusal.new(:bad_signature) unless signed_by_unit?(challenge.unit_nonce)
+    challenge.spend
 
-    key = Unit.register(device_id:, public_key:, version:, server_key:, ip_address:)
-    raise Activation::Refusal.new(:other_key) unless key.active?
-
-    unlock_code_for(key.unit.serial, challenge.unit_nonce)
+    key = nil
+    # INFO: fc 18oct26 signed inside the transaction that bound the key, so an admin's revocation lands before or after, never between
+    code = Unit.transaction do
+      key = Unit.register(device_id:, public_key:, version:, server_key:, ip_address:)
+      unlock_code_for(key.unit.serial, challenge.unit_nonce) if key.active?
+    end
+    code || raise(Activation::Refusal.new(key.revoked? ? :revoked_key : :other_key))
   end
 
   private

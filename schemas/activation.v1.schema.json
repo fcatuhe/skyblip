@@ -41,7 +41,7 @@
         "cmd": {"const": "registration"},
         "device_id": {"$ref": "#/definitions/device_id"},
         "public_key": {"$ref": "#/definitions/public_key"},
-        "version": {"type": "string", "maxLength": 23, "description": "The running image, as the dfu command writes it: 0.3.0+1234"},
+        "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$", "description": "The running image, as the dfu command writes it: 0.3.0+1234"},
         "server_key": {"$ref": "#/definitions/server_key"},
         "signature": {"$ref": "#/definitions/signature"}
       }
@@ -73,12 +73,12 @@
       }
     },
     "registration_request": {
-      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with unlock_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
+      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with unlock_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
       "type": "object", "required": ["device_id", "public_key", "version", "server_key", "server_nonce", "signature"],
       "properties": {
         "device_id": {"$ref": "#/definitions/device_id"},
         "public_key": {"$ref": "#/definitions/public_key"},
-        "version": {"type": "string"},
+        "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$"},
         "server_key": {"$ref": "#/definitions/server_key"},
         "server_nonce": {"$ref": "#/definitions/nonce"},
         "signature": {"$ref": "#/definitions/signature"}

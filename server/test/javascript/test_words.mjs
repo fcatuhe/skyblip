@@ -21,7 +21,7 @@ const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../conten
 // INFO: fc 18oct26 the refusals of schemas/activation.v1.schema.json, and what the prompt machinery answers any prompt
 const UNIT_REFUSALS = ['incomplete', 'no_session', 'bad_signature', 'small_mtu', 'flash', 'expired', 'cancelled', 'claimed', 'unknown_cmd'];
 const SERVER_REFUSALS = [
-  'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
+  'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
 const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
 
@@ -50,7 +50,7 @@ for (const page of PAGES) {
 }
 
 test('both pages word the same keys', () => {
-  const [english, french] = PAGES.map(words);
+  const [english, french] = PAGES.map(page => words(page));
   assert.deepEqual([...english].sort(), [...french].sort());
 });
 

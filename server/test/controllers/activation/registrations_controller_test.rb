@@ -47,9 +47,31 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert units(:bound).keys.find_by!(public_key: vectors["unit_public_key"]).pending?
   end
 
+  # A server nonce travels in clear over Bluetooth, so whoever hears it must not be able to spend it.
+  test "a registration the unit did not sign leaves the server nonce for the one it did" do
+    post activation_registrations_path, params: signed_registration(@challenge).merge(signature: "00" * 64), as: :json
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json
+
+    assert_response :created
+  end
+
+  test "refuses a revoked key, which stays revoked" do
+    unit = Unit.create!(device_id: vectors["device_id"], serial: 9)
+    key = unit.keys.create!(public_key: vectors["unit_public_key"], status: :revoked)
+
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json
+
+    assert_response :conflict
+    assert_equal({ "error" => "revoked_key" }, response.parsed_body)
+    assert key.reload.revoked?
+  end
+
   test "refuses a malformed registration" do
     post activation_registrations_path, params: signed_registration(@challenge).merge(device_id: "XYZ"), as: :json
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
 
+    post activation_registrations_path, params: { nothing: true }, as: :json
     assert_response :unprocessable_content
     assert_equal({ "error" => "invalid" }, response.parsed_body)
   end

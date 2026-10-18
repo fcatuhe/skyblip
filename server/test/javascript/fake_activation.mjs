@@ -49,6 +49,16 @@ export class FakeServer {
     this.units = new Map();
     this.refuseNext = null;
     this.requests = [];
+    this.held = null;
+  }
+
+  hold() {
+    this.held = Promise.withResolvers();
+  }
+
+  release() {
+    this.held.resolve();
+    this.held = null;
   }
 
   async challenge({ unit_nonce, server_key }) {
@@ -62,6 +72,7 @@ export class FakeServer {
 
   async register({ device_id, public_key, version, server_key, server_nonce, signature }) {
     this.requests.push('register');
+    if (this.held) await this.held.promise;
     this.#refuse();
     const unitNonce = this.challenges.get(server_nonce);
     if (!unitNonce) throw new ServerRefusal('expired');
@@ -116,7 +127,6 @@ export class FakeUnit extends FakeSkyblip {
       return this.ack(false, 'bad_signature');
     }
     if (this.mtu - 3 < REGISTRATION_FRAME_BYTES) return this.ack(false, 'small_mtu');
-    if (!this.onGround) return this.ack(false, 'in_flight');
     this.serverNonce = server_nonce;
     this.pending = 'register';
     this.reply({ ack: false, pending: true, reason: 'confirm_register' });

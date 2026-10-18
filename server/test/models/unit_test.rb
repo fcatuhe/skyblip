@@ -37,6 +37,19 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal 0, key.unit.serial
   end
 
+  test "a revoked key stays revoked, after a revocation and after a promotion" do
+    unit_keys(:bound_active).revoked!
+    unit_keys(:contested_pending).promote
+
+    revoked = [ units(:bound), units(:contested) ].map do |unit|
+      Unit.register(device_id: unit.device_id, public_key: unit.keys.revoked.first.public_key, ip_address: "203.0.113.5")
+    end
+
+    assert revoked.all?(&:revoked?)
+    assert_equal [ "203.0.113.5" ] * 2, revoked.map(&:ip_address)
+    assert_nil units(:bound).reload.active_key
+  end
+
   test "a promoted key replaces the active one and keeps the serial" do
     unit_keys(:contested_pending).promote
 

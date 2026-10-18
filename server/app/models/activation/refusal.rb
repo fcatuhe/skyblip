@@ -5,6 +5,7 @@ class Activation::Refusal < StandardError
     expired: :unprocessable_content,
     bad_signature: :unprocessable_content,
     other_key: :conflict,
+    revoked_key: :conflict,
     daily_cap: :service_unavailable,
     no_serial: :service_unavailable
   }

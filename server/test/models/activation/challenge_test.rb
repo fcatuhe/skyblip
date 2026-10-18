@@ -14,18 +14,20 @@ class Activation::ChallengeTest < ActiveSupport::TestCase
     assert_equal :unknown_server_key, assert_raises(Activation::Refusal) { Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key: "00000000") }.reason
   end
 
-  test "a server nonce is redeemed once" do
+  test "a server nonce is spent once" do
     challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key: "890026b1")
+    found = Activation::Challenge.find_live(challenge.server_nonce)
 
-    assert_equal challenge, Activation::Challenge.redeem(challenge.server_nonce)
-    assert_equal :expired, assert_raises(Activation::Refusal) { Activation::Challenge.redeem(challenge.server_nonce) }.reason
+    assert_equal challenge, Activation::Challenge.find_live(challenge.server_nonce).spend
+    assert_equal :expired, assert_raises(Activation::Refusal) { found.spend }.reason
+    assert_equal :expired, assert_raises(Activation::Refusal) { Activation::Challenge.find_live(challenge.server_nonce) }.reason
   end
 
   test "a server nonce expires after five minutes" do
     challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key: "890026b1")
 
     travel 5.minutes + 1.second do
-      assert_equal :expired, assert_raises(Activation::Refusal) { Activation::Challenge.redeem(challenge.server_nonce) }.reason
+      assert_equal :expired, assert_raises(Activation::Refusal) { Activation::Challenge.find_live(challenge.server_nonce) }.reason
       assert_includes Activation::Challenge.expired, challenge
     end
   end

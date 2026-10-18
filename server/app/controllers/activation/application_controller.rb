@@ -3,6 +3,7 @@ class Activation::ApplicationController < ApplicationController
   skip_around_action :switch_locale
 
   rescue_from(Activation::Refusal) { |refusal| render json: { error: refusal.reason }, status: refusal.status }
+  rescue_from(ActionController::ParameterMissing) { render json: { error: :invalid }, status: :unprocessable_content }
 
   private
     def rate_limited
