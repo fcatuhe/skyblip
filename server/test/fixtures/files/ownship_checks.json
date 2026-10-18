@@ -1,0 +1,50 @@
+[
+  {
+    "why": "the light aircraft as compiled in",
+    "text": "...........##...........\n.......##########.......\n..........####..........\n..........####..........\n..####################..\n########################  <\n########################\n..####################..\n.....##############.....\n..........####..........\n...........##...........\n...........##...........\n........########........\n.......##########.......\n........########........\n...........##...........",
+    "hot_spot": 5,
+    "problems": []
+  },
+  {
+    "why": "a lone pixel reads as traffic",
+    "text": "#..##..#\n..####..\n...##...",
+    "hot_spot": 0,
+    "problems": [{ "key": "loose", "details": { "count": 2 } }]
+  },
+  {
+    "why": "every rule a drawing can break at once, in the order the page lists them",
+    "text": "..#..\n####.\n.....\n..#..",
+    "hot_spot": 1,
+    "problems": [
+      { "key": "odd_width", "details": { "width": 5 } },
+      { "key": "unmirrored", "details": { "count": 2 } },
+      { "key": "loose", "details": { "count": 1 } },
+      { "key": "detached", "details": {} },
+      { "key": "broken_spine", "details": { "count": 1 } }
+    ]
+  },
+  {
+    "why": "wider than the formation square leaves room for",
+    "text": "##########################\n##########################\n##########################",
+    "hot_spot": 0,
+    "problems": [{ "key": "too_wide", "details": { "width": 26, "max": 24 } }]
+  },
+  {
+    "why": "the widest row seven rows down puts the nose past the box",
+    "text": "..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n######",
+    "hot_spot": 7,
+    "problems": [{ "key": "nose_too_long", "details": { "rows": 7, "max": 5 } }]
+  },
+  {
+    "why": "a marked hot spot wins over the widest row, and twelve rows from it aft run into the banner",
+    "text": "######  <\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..\n..##..",
+    "hot_spot": 0,
+    "problems": [{ "key": "tail_too_long", "details": { "rows": 12, "max": 11 } }]
+  },
+  {
+    "why": "the C++ table carries its hot spot and its width",
+    "text": "// 200x200, as drawn\nconstexpr int kGlyphW = 6;\nconstexpr int kGlyphOriginRow = 1;\n 0x0c,\n 0x3f,\n 0x0c,\n",
+    "hot_spot": 1,
+    "problems": []
+  }
+]
