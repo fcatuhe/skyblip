@@ -74,7 +74,7 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     // 247-byte MTU the old fixed five was aimed at still carries five; and a
     // phone that negotiates the whole L2CAP MTU is not short-changed.
     CHECK(comms::log_records_per_chunk(ports::kMinimumLinkPayloadBytes) == 0);
-    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayload) == 3);
+    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes) == 3);
     CHECK(comms::log_records_per_chunk(244) == 5);
     CHECK(comms::log_records_per_chunk(495) == comms::kMaxLogRecordsPerChunk);
 
@@ -82,7 +82,7 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     // session id and record index the partition can produce.
     uint8_t raw[comms::kLogChunkRawBytes];
     for (size_t i = 0; i < sizeof(raw); i++) raw[i] = static_cast<uint8_t>(0xA0 + i);
-    const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
+    const int payloads[3] = {comms::kSmallestSupportedPayloadBytes, 244, 495};
     for (int payload : payloads) {
         const int records = comms::log_records_per_chunk(payload);
         char buffer[comms::kLogReplyBytes];
@@ -258,11 +258,11 @@ TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it
     CHECK(comms::log_records_per_chunk(244, diagnostics) == 4);
     // At the widest ATT_MTU the twelve-record ceiling is reached either way.
     CHECK(comms::log_records_per_chunk(495, diagnostics) == comms::kMaxLogRecordsPerChunk);
-    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayload, diagnostics) == 2);
+    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes, diagnostics) == 2);
 
     uint8_t raw[comms::kLogChunkRawBytes];
     for (size_t i = 0; i < sizeof(raw); i++) raw[i] = static_cast<uint8_t>(0xA0 + i);
-    const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
+    const int payloads[3] = {comms::kSmallestSupportedPayloadBytes, 244, 495};
     for (int payload : payloads) {
         char buffer[comms::kLogReplyBytes];
         const int length = comms::format_log_chunk(

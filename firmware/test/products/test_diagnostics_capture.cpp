@@ -341,7 +341,7 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     const uint32_t session = rig.product.capture().session_id();
 
     uint32_t refused = 0;
-    for (int i = 0; i < diagnostics::Recorder::kCapacity * 2; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords * 2; i++)
         if (!rig.product.diagnostics().record(
                 bench_record(Rig::kBaseUtcS + static_cast<uint32_t>(i))))
             refused++;

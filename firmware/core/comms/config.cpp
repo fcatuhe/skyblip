@@ -290,7 +290,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         // on a 158-byte body. Sized by its buffer at the smallest payload we
         // support, and refused rather than answered short - an app that receives
         // a config object with fields missing renders defaults a pilot never set.
-        char buffer[kSmallestSupportedPayload + 1];
+        char buffer[kSmallestSupportedPayloadBytes + 1];
         json::Writer writer(buffer, sizeof(buffer));
         writer.add_string("cmd", "config");
         store_.write_fields(writer);

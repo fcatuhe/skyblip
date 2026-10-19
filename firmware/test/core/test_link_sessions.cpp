@@ -140,7 +140,7 @@ TEST_CASE("link sessions: a central beyond the table is refused and counted") {
 
 TEST_CASE("link sessions: a lifecycle event that does not fit is counted, not lost quietly") {
     LinkSessions sessions;
-    for (uint16_t round = 0; round < LinkSessions::kEventCapacity; round++) {
+    for (uint16_t round = 0; round < LinkSessions::kMaxEvents; round++) {
         sessions.connected(1, 244);
         sessions.disconnected(1);
     }

@@ -146,7 +146,7 @@ bool CaptureService::announce_rotation(uint32_t now_ms) {
     diagnostics::Gap gap{};
     gap.dropped = lost_records_;
     gap.total = context_.diagnostics.dropped() + lost_records_;
-    gap.capacity = static_cast<uint16_t>(diagnostics::Recorder::kCapacity);
+    gap.capacity = static_cast<uint16_t>(diagnostics::Recorder::kMaxRecords);
     diagnostics::encode_record(diagnostics::record_of(gap, context_.instant(now_ms)), scratch_);
     if (store_.append(scratch_, now_ms) != Append::Ok) return false;
     lost_records_ = 0;
@@ -167,7 +167,7 @@ bool CaptureService::write_gap(uint32_t now_ms) {
     diagnostics::Gap gap{};
     gap.dropped = static_cast<uint32_t>(context_.diagnostics.queued());
     gap.total = context_.diagnostics.dropped() + gap.dropped;
-    gap.capacity = static_cast<uint16_t>(diagnostics::Recorder::kCapacity);
+    gap.capacity = static_cast<uint16_t>(diagnostics::Recorder::kMaxRecords);
     diagnostics::encode_record(diagnostics::record_of(gap, context_.instant(now_ms)), scratch_);
     return store_.append(scratch_, now_ms) != Append::Deferred;
 }

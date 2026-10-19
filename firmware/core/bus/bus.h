@@ -16,8 +16,6 @@ namespace skyblip::bus {
 template <class Item, int Capacity>
 class Queue {
    public:
-    static constexpr int kCapacity = Capacity;
-
     bool push(const Item& item) {
         const int head = head_.load(std::memory_order_relaxed);
         const int next = (head + 1) % (Capacity + 1);

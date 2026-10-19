@@ -50,6 +50,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDutyPeriodCeilingMs` | 60000 (1 min) | milliseconds | Ceiling | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
 | `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
 | `kStageMarginStepUs` | 10 | microseconds | - | a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms |
+| `kMaxRecords` | 64 | records | - | 64 slots: ~30 records/s across a sector erase and the direct slot behind it |
 
 ## [`firmware/core/events`](../firmware/core/events/README.md)
 
@@ -289,4 +290,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-184 constants over 18 folders.
+185 constants over 18 folders.

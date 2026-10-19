@@ -355,11 +355,11 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     char buffer[256];
     const int traffic = format_pflaa(buffer, sizeof(buffer), own, t, 3, "ABCDEFGHIJKLMN");
     CHECK(traffic > 0);
-    CHECK(traffic <= comms::kSmallestSupportedPayload);
+    CHECK(traffic <= comms::kSmallestSupportedPayloadBytes);
     const int status =
         format_pflau(buffer, sizeof(buffer), own, true, 99, &t, 3, -180, -99999, 999999);
     CHECK(status > 0);
-    CHECK(status <= comms::kSmallestSupportedPayload);
+    CHECK(status <= comms::kSmallestSupportedPayloadBytes);
     // And neither fits what BLE merely guarantees, which is why a sender here
     // cannot assume a frame is a sentence.
     CHECK(traffic > ports::kMinimumLinkPayloadBytes);
@@ -372,10 +372,10 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     own.utc_s = 4294967295u;
     const int rmc = format_gprmc(buffer, sizeof(buffer), own);
     CHECK(rmc > 0);
-    CHECK(rmc <= comms::kSmallestSupportedPayload);
+    CHECK(rmc <= comms::kSmallestSupportedPayloadBytes);
     const int gga = format_gpgga(buffer, sizeof(buffer), own);
     CHECK(gga > 0);
-    CHECK(gga <= comms::kSmallestSupportedPayload);
+    CHECK(gga <= comms::kSmallestSupportedPayloadBytes);
 
     // $LK8EX1 at its widest: every field clamped to the largest value that is
     // not its own sentinel, and the battery in the two-digit-plus-1000 form.
@@ -389,5 +389,5 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     widest.temperature_valid = widest.battery_valid = true;
     const int lk8 = format_lk8ex1(buffer, sizeof(buffer), widest);
     CHECK(lk8 > 0);
-    CHECK(lk8 <= comms::kSmallestSupportedPayload);
+    CHECK(lk8 <= comms::kSmallestSupportedPayloadBytes);
 }

@@ -38,7 +38,7 @@ inline diagnostics::Record bench_record(uint32_t at_s) {
 inline uint32_t feed(Rig& rig, uint32_t& now_ms, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.product.capture().capturing()) {
-        for (int i = 0; i < diagnostics::Recorder::kCapacity && pushed < records; i++)
+        for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
             if (rig.product.diagnostics().record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
         rig.run(now_ms, now_ms + 50);
         now_ms += 50;

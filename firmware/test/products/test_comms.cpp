@@ -404,7 +404,7 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
 TEST_CASE("comms: the range gate's refusals read out with the radio's own counters") {
     platform::host::Link link;
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
@@ -419,7 +419,7 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     REQUIRE_FALSE(link.sent.empty());
     std::string idle;
     for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
         CHECK(f.bytes.find("\"cmd\":\"radio\"") != std::string::npos);
         CHECK(f.bytes.find("\"group\":\"radio\"") != std::string::npos);
         idle += f.bytes;
@@ -439,7 +439,7 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
     std::string body;
     for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
         CHECK(f.bytes.back() == '}');
         body += f.bytes;
     }

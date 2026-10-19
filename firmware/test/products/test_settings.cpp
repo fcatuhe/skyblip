@@ -273,7 +273,7 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 
     // Write-only over the link, for the same reason battery_offset_mv is: the
-    // "get" reply is one frame at comms::kSmallestSupportedPayload with 29
+    // "get" reply is one frame at comms::kSmallestSupportedPayloadBytes with 29
     // bytes of headroom, too few for both trims.
     char buffer[256];
     const int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
@@ -314,7 +314,7 @@ TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     CHECK(json.find("units") != std::string::npos);
     // The one exception, and it goes the other way: the firmware reads
     // battery_offset_mv and the reply does not offer it. The "config" reply is
-    // one frame at comms::kSmallestSupportedPayload, its worst case is already
+    // one frame at comms::kSmallestSupportedPayloadBytes, its worst case is already
     // 173 of those 182 bytes, and no honest name for a signed millivolt trim
     // fits in nine. It is written on the line and read back as the millivolts
     // the status reply and the panel already show.

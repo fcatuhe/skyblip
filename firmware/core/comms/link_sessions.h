@@ -11,7 +11,7 @@ class LinkSessions {
    public:
     // INFO: fc 18sep26 Never above CONFIG_BT_MAX_CONN, the controller is what admits a central.
     static constexpr size_t kMaxSessions = 3;
-    static constexpr size_t kEventCapacity = 8;
+    static constexpr size_t kMaxEvents = 8;
 
     void connected(uint16_t session_id, uint16_t payload_bytes) {
         Slot* slot = find(session_id);
@@ -112,7 +112,7 @@ class LinkSessions {
         if (!is_ok(events_.push(event))) dropped_++;
     }
 
-    Fifo<events::LinkEvent, kEventCapacity> events_{};
+    Fifo<events::LinkEvent, kMaxEvents> events_{};
     Slot slots_[kMaxSessions]{};
     uint32_t dropped_{0};
     uint32_t refused_{0};

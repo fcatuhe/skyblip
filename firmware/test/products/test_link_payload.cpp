@@ -120,7 +120,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = widest_settings();
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
@@ -129,7 +129,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(link.refused_oversize == 0);
     CHECK(config.link_drops() == 0);
 
@@ -142,7 +142,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = widest_settings();
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
@@ -150,7 +150,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     config.on_rx(config_frame("{\"cmd\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     // 153 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
     CHECK(body.size() == 153);
     CHECK(config.link_drops() == 0);
@@ -173,7 +173,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = widest_settings();
     go::SettingsStore store(settings, kWidestAddress);
     platform::host::Watchdog watchdog;
@@ -193,7 +193,7 @@ TEST_CASE(
     config.on_rx(config_frame("{\"cmd\":\"update\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(body.find("\"from\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"to\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
@@ -248,7 +248,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     // free, and trimming a bucket would destroy what it came for.
     platform::host::Link narrow;
     narrow.raise_link(1);
-    narrow.declare_payload_bytes(kSmallestSupportedPayload);
+    narrow.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_on_narrow(settings, kWidestAddress);
     ConfigService on_narrow(narrow, store_on_narrow, nullptr, &stats);
     on_narrow.on_rx(config_frame("{\"cmd\":\"timing\"}"));
@@ -256,7 +256,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     CHECK(narrow.sent.back().bytes.find("\"more\":false") != std::string::npos);
     for (size_t i = 0; i < narrow.sent.size(); i++) {
         const std::string& body = narrow.sent[i].bytes;
-        CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+        CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
         CHECK(body.front() == '{');
         CHECK(body.back() == '}');
         CHECK(body.find("\"cmd\":\"timing\"") != std::string::npos);
@@ -343,7 +343,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
 
     platform::host::Link free_link;
     free_link.raise_link(1);
-    free_link.declare_payload_bytes(kSmallestSupportedPayload);
+    free_link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_free(settings, kWidestAddress);
     ConfigService on_free(free_link, store_free, nullptr, &stats);
     on_free.on_rx(config_frame("{\"cmd\":\"timing\"}"));
@@ -351,7 +351,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
 
     platform::host::Link busy;
     busy.raise_link(1);
-    busy.declare_payload_bytes(kSmallestSupportedPayload);
+    busy.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     busy.hold_after(1);
     go::SettingsStore store_busy(settings, kWidestAddress);
     ConfigService on_busy(busy, store_busy, nullptr, &stats);

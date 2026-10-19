@@ -7,7 +7,7 @@
 // No device and no link here: a snapshot struct in, characters out.
 #include <string>
 
-#include "core/comms/config.h"  // kSmallestSupportedPayload: the ceiling both surfaces answer under
+#include "core/comms/config.h"  // kSmallestSupportedPayloadBytes: the ceiling both surfaces answer under
 #include "core/comms/diagnostics.h"
 #include "core/comms/frame_budget.h"
 #include "doctest/doctest.h"
@@ -215,7 +215,7 @@ TEST_CASE("diagnostics: the three things that are not a bad reception each have 
     CHECK(has(text, "rx_bad=0 rx_wait=58 rx_type=19"));
     CHECK(has(text, "tx_ok=880 tx_lost=3"));
 
-    const std::string json = frames(d, kSmallestSupportedPayload).joined;
+    const std::string json = frames(d, kSmallestSupportedPayloadBytes).joined;
     CHECK(has(json, "\"rx_bad\":0"));
     CHECK(has(json, "\"rx_wait\":58"));
     CHECK(has(json, "\"rx_type\":19"));
@@ -337,8 +337,8 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
 // object naming the subsystem it belongs to.
 TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry, whole") {
     const Diagnostics d = widest_device();
-    const Frames narrow = frames(d, kSmallestSupportedPayload);
-    CHECK(narrow.widest <= kSmallestSupportedPayload);
+    const Frames narrow = frames(d, kSmallestSupportedPayloadBytes);
+    CHECK(narrow.widest <= kSmallestSupportedPayloadBytes);
     CHECK(narrow.count > DiagnosticsReport::kGroupCount);  // the widest values need a second pass
     CHECK(has(narrow.last, "\"more\":false"));
     // Only the last frame says there is nothing after it.
@@ -365,7 +365,8 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
     DiagnosticsReport report(widest_device(), "diag");
     char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
-        const int length = report.next_frame(kSmallestSupportedPayload, buffer, sizeof(buffer));
+        const int length =
+            report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
         REQUIRE(length > 0);
         const std::string body(buffer, static_cast<size_t>(length));
         // The radio's keys cannot appear in a frame that says it is the receiver's,
@@ -387,7 +388,7 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
 TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered short") {
     const Diagnostics d = widest_device();
     DiagnosticsReport report(d, "diag");
-    CHECK(report.fits(kSmallestSupportedPayload));
+    CHECK(report.fits(kSmallestSupportedPayloadBytes));
     // ports::kMinimumLinkPayloadBytes, which is all BLE guarantees: not one worst-case
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
@@ -406,7 +407,8 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     char buffer[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {
-        const int length = report.next_frame(kSmallestSupportedPayload, buffer, sizeof(buffer));
+        const int length =
+            report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
         REQUIRE(length > 0);
         body += std::string(buffer, static_cast<size_t>(length));
     }

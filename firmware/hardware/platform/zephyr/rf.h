@@ -427,7 +427,7 @@ class Rf : public ports::Rf {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;
         rx_.frequency_hz = frequency_hz_;
-        rx_.len = ev.len;
+        rx_.bytes = ev.length;
         rx_.rssi_dbm = ev.rssi_dbm;
         rx_.rssi_valid = ev.rssi_valid;
         rx_.at_us = at_us;

@@ -26,7 +26,7 @@ int ConfigService::format_status(char* buffer, int capacity) {
 }
 
 void ConfigService::send_status() {
-    char buffer[kSmallestSupportedPayload + 1];
+    char buffer[kSmallestSupportedPayloadBytes + 1];
     const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
     if (length == 0) {
         diagnostics_.link_drops++;
@@ -37,7 +37,7 @@ void ConfigService::send_status() {
 }
 
 void ConfigService::send_defaults() {
-    char buffer[kSmallestSupportedPayload + 1];
+    char buffer[kSmallestSupportedPayloadBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
     writer.add_string("cmd", "defaults");
     store_.write_default_fields(writer);
@@ -51,7 +51,7 @@ void ConfigService::send_defaults() {
 
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
 void ConfigService::push_status() {
-    char buffer[kSmallestSupportedPayload + 1];
+    char buffer[kSmallestSupportedPayloadBytes + 1];
     const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
     if (length == 0) {
         diagnostics_.link_drops++;
@@ -121,7 +121,7 @@ void ConfigService::send_update(uint16_t session_id) {
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
     dfu::format_hub_image(hub_image_, hub_image, sizeof(hub_image));
-    char buffer[kSmallestSupportedPayload + 1];
+    char buffer[kSmallestSupportedPayloadBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
     writer.add_string("cmd", "update");
     writer.add_string("image", dfu::to_string(image_state_));

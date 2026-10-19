@@ -268,7 +268,7 @@ TEST_CASE(
     "activation: a link that cannot carry the registration frame is told so before the prompt") {
     Bench bench;
     bench.boot();
-    bench.rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayload);
+    bench.rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayloadBytes);
     bench.challenge_with_vectors_nonce();
     CHECK(bench.register_with_vectors() == refusal("small_mtu"));
     CHECK(bench.pending() == comms::Pending::None);

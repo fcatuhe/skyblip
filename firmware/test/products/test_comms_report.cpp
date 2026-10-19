@@ -210,7 +210,7 @@ TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat i
 TEST_CASE("comms: status at its widest is this frame, field for field, inside 182 bytes") {
     platform::host::Link link;
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);
     go::SettingsStore store(settings, kTestActivation);
@@ -234,7 +234,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
           "{\"cmd\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
           "\"charging\":true,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
           "\"die_temp_c\":-3277}");
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }
 
@@ -284,7 +284,7 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
 TEST_CASE("comms: one question answers every subsystem, in frames the link can carry") {
     platform::host::Link link;
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
@@ -343,7 +343,7 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     for (const platform::host::Link::Frame& f : link.sent) {
         CHECK(f.bytes.front() == '{');
         CHECK(f.bytes.back() == '}');
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     }
     CHECK(config.link_drops() == 0);
 }
@@ -374,7 +374,7 @@ TEST_CASE("comms: a dump nobody has collected says so, not zeros") {
 TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
     platform::host::Link link;
     link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayload);
+    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);

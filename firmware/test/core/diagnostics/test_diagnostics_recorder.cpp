@@ -67,7 +67,7 @@ TEST_CASE("diag recorder: disarming stops the capture and leaves the tail draina
 TEST_CASE("diag recorder: arming again after a disarm starts a clean corpus") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity + 4; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords + 4; i++)
         recorder.record(fix(1), at_ms(i));
     CHECK(recorder.dropped() == 4);
     recorder.disarm();
@@ -114,11 +114,11 @@ TEST_CASE("diag recorder: a burst carries its own instant off the tape") {
 TEST_CASE("diag recorder: a full ring refuses the new record rather than the history") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++)
         CHECK(recorder.record(fix(3), at_ms(i)));
     CHECK_FALSE(recorder.record(fix(9), at_ms(1000)));
     CHECK(recorder.dropped() == 1);
-    CHECK(recorder.queued() == diagnostics::Recorder::kCapacity);
+    CHECK(recorder.queued() == diagnostics::Recorder::kMaxRecords);
 
     diagnostics::Record record{};
     CHECK(took(recorder, record));
@@ -130,14 +130,14 @@ TEST_CASE("diag recorder: a full ring refuses the new record rather than the his
 TEST_CASE("diag recorder: the hole is a gap record where the hole is") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++) recorder.record(fix(1), at_ms(i));
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++) recorder.record(fix(1), at_ms(i));
     recorder.record(fix(2), at_ms(2000));
     recorder.record(fix(2), at_ms(2400));
     recorder.record(fix(2), at_ms(3100));
     CHECK(recorder.dropped() == 3);
 
     diagnostics::Record record{};
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++) {
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++) {
         CHECK(took(recorder, record));
         CHECK(record.type == diagnostics::Type::Gnss);
     }
@@ -151,14 +151,14 @@ TEST_CASE("diag recorder: the hole is a gap record where the hole is") {
     CHECK(gap.dropped == 3);
     CHECK(gap.span_ms == 1100);
     CHECK(gap.total == 3);
-    CHECK(gap.capacity == diagnostics::Recorder::kCapacity);
+    CHECK(gap.capacity == diagnostics::Recorder::kMaxRecords);
     CHECK_FALSE(took(recorder, record));
 }
 
 TEST_CASE("diag recorder: the gap lands before the first record that came after it") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++) recorder.record(fix(1), at_ms(i));
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++) recorder.record(fix(1), at_ms(i));
     recorder.record(fix(2), at_ms(2000));
 
     diagnostics::Record record{};
@@ -180,7 +180,7 @@ TEST_CASE("diag recorder: the gap lands before the first record that came after 
 TEST_CASE("diag recorder: a gap costs the slot that freed it, so a ring still full drops again") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++) recorder.record(fix(1), at_ms(i));
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++) recorder.record(fix(1), at_ms(i));
     CHECK_FALSE(recorder.record(fix(2), at_ms(2000)));
 
     diagnostics::Record record{};
@@ -226,10 +226,10 @@ TEST_CASE("diag recorder: a record peeked and not committed is still in the ring
 TEST_CASE("diag recorder: everything the ring holds is drained once, gaps included") {
     diagnostics::Recorder recorder{};
     recorder.arm();
-    for (int i = 0; i < diagnostics::Recorder::kCapacity + 10; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords + 10; i++)
         recorder.record(fix(1), at_ms(i));
     CHECK(recorder.dropped() == 10);
-    CHECK(drain(recorder) == diagnostics::Recorder::kCapacity + 1);
+    CHECK(drain(recorder) == diagnostics::Recorder::kMaxRecords + 1);
     CHECK(drain(recorder) == 0);
 }
 
@@ -263,7 +263,7 @@ TEST_CASE("diag recorder: a flight run records what a power run records, and not
 TEST_CASE("diag recorder: a type the profile never wanted is not counted as a hole") {
     diagnostics::Recorder recorder;
     recorder.arm(diagnostics::Profile::PowerRun);
-    for (int i = 0; i < diagnostics::Recorder::kCapacity * 2; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords * 2; i++)
         recorder.record(fix(9), at_ms(0));
 
     CHECK(recorder.dropped() == 0);

@@ -49,7 +49,7 @@ bool Recorder::push(const Record& record) {
 }
 
 void Recorder::store(const Record& record) {
-    ring_[(head_ + count_) % kCapacity] = record;
+    ring_[(head_ + count_) % kMaxRecords] = record;
     count_++;
     written_++;
 }
@@ -67,7 +67,7 @@ void Recorder::flush_gap() {
     gap.dropped = gap_dropped_;
     gap.span_ms = span_ms(gap_from_, gap_to_);
     gap.total = dropped_;
-    gap.capacity = static_cast<uint16_t>(kCapacity);
+    gap.capacity = static_cast<uint16_t>(kMaxRecords);
     gap_dropped_ = 0;
     store(record_of(gap, gap_from_));
 }
@@ -77,13 +77,13 @@ bool Recorder::peek(Record& out) { return peek(&out, 1) == 1; }
 int Recorder::peek(Record* out, int most) {
     flush_gap();
     const int run = count_ < most ? count_ : most;
-    for (int i = 0; i < run; i++) out[i] = ring_[(head_ + i) % kCapacity];
+    for (int i = 0; i < run; i++) out[i] = ring_[(head_ + i) % kMaxRecords];
     return run;
 }
 
 void Recorder::commit() {
     if (count_ == 0) return;
-    head_ = (head_ + 1) % kCapacity;
+    head_ = (head_ + 1) % kMaxRecords;
     count_--;
 }
 

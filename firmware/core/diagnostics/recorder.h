@@ -12,7 +12,7 @@ namespace skyblip::diagnostics {
 class Recorder {
    public:
     // INFO: fc 20sep26 64 slots: ~30 records/s across a sector erase and the direct slot behind it
-    static constexpr int kCapacity = 64;
+    static constexpr int kMaxRecords = 64;
 
     // INFO: fc 20sep26 seven subjects, three dwells, own-ship's burst | 28sep26 switches | 03oct26
     // loop
@@ -54,9 +54,9 @@ class Recorder {
     void store(const Record& record);
     void note_drop(const Record& record);
     void flush_gap();
-    bool full() const { return count_ == kCapacity; }
+    bool full() const { return count_ == kMaxRecords; }
 
-    Record ring_[kCapacity]{};
+    Record ring_[kMaxRecords]{};
     Instant gap_from_{};
     Instant gap_to_{};
     uint32_t gap_dropped_{0};

@@ -62,7 +62,7 @@ constexpr uint8_t kBatteryPushStepPercent = 5;
 // than against a local buffer. ports::kMinimumLinkPayloadBytes (20) is lower still and
 // is what BLE guarantees; a link that comes up there gets a counted refusal, not
 // a notification the controller will fail.
-constexpr int kSmallestSupportedPayload = 182;
+constexpr int kSmallestSupportedPayloadBytes = 182;
 
 constexpr int kPromptDetailBytes = 128;
 

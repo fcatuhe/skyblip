@@ -55,7 +55,7 @@ struct Settings {
     // the 32-bit address costs no padding, so the blob is the same length it was.
     //
     // It is the one field the "config" reply does not carry back. That reply is
-    // one frame at core/comms/config.h's kSmallestSupportedPayload, its worst
+    // one frame at core/comms/config.h's kSmallestSupportedPayloadBytes, its worst
     // case is already 173 of those 182 bytes, and no honest name for this key
     // fits in nine. It is written on the line and read back as the millivolts
     // the status reply and the panel already show, which is the figure the line
@@ -69,7 +69,7 @@ struct Settings {
     //
     // Like battery_offset_mv it is accepted on "set" and absent from the "get"
     // reply, for the same reason: that reply is one frame at
-    // core/comms/config.h's kSmallestSupportedPayload and its worst case leaves
+    // core/comms/config.h's kSmallestSupportedPayloadBytes and its worst case leaves
     // 29 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
     // reads the value back, so a bench that sets it has to trust its own record
     // and its spectrum analyser - which is the instrument that had to be there

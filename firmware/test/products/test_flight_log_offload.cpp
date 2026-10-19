@@ -223,12 +223,12 @@ TEST_CASE(
 
     // An iOS central commonly settles at ATT_MTU 185, three bytes of which are
     // the notification header. Nothing in the transfer may exceed what it said.
-    rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayload);
+    rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayloadBytes);
     const Offload small = offload(rig, t, session);
     CHECK(small.eof);
     CHECK(small.decoded);
     CHECK(small.records == written);
-    CHECK(small.widest_frame <= comms::kSmallestSupportedPayload);
+    CHECK(small.widest_frame <= comms::kSmallestSupportedPayloadBytes);
     CHECK(small.most_records_in_a_chunk == 3);
     CHECK(small.chunks == static_cast<int>((written + 2) / 3));
 

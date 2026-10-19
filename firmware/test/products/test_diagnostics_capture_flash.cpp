@@ -139,7 +139,7 @@ struct SmallPoolRig {
     uint32_t feed_until_stopped(uint32_t& t, uint32_t records) {
         uint32_t pushed = 0;
         while (pushed < records && capture.capturing()) {
-            for (int i = 0; i < diagnostics::Recorder::kCapacity && pushed < records; i++)
+            for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
                 if (recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
             capture.tick(t);
             t += 50;
@@ -295,7 +295,7 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
     rig.capture.tick(t);
     REQUIRE(rig.capture.capturing());
 
-    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++)
+    for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++)
         REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const int queued = rig.recorder.queued();
     rig.capture.tick(t += 50);
