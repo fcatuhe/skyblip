@@ -90,6 +90,9 @@ jobs:
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
         run: python3 scripts/check_no_dfu_package.py
+      # embed.js binds the firmware by C name, resolved only when a page loads the module.
+      - name: the browser simulator binds only what it exports
+        run: python3 scripts/check_simulator_exports.py
       # The host decoder and the firmware's record layout are one layout written
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume
