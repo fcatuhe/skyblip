@@ -87,8 +87,7 @@ class ConfigService {
     void set_identity(IdentityLink* identity) { identity_ = identity; }
     // INFO: fc 18oct26 an activated unit's radio runs, so its product places the page write
     bool unlock_waiting() const { return identity_ != nullptr && identity_->unlock_due(); }
-    // INFO: fc 18oct26 writes the held code if the power rule still allows it, else drops it as
-    // low_power
+    // INFO: fc 18oct26 writes the held code if the power rule allows, else drops it as low_power
     void settle_unlock();
 
     // Drives the upload-window timeout. Called once per App::step().

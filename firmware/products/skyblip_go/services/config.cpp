@@ -90,8 +90,7 @@ void ConfigLinkService::place_unlock(uint32_t now_ms) {
         unlock_writes_ = timing::DurableWriteWindow{};
         return;
     }
-    // INFO: fc 18oct26 never forced onto a low cell: settle_unlock drops it and the pilot asks
-    // again
+    // INFO: fc 18oct26 never forced onto a low cell: settle_unlock drops it, the pilot asks again
     if (!config_.settings_writable()) {
         config_.settle_unlock();
         unlock_writes_ = timing::DurableWriteWindow{};
