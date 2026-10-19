@@ -68,7 +68,7 @@ void RadioService::publish_dwell(uint32_t now_ms) {
     dwell.phase_ms = phase_at(read_us);
     dwell.armed = current_dwell_.mode != ports::RfMode::Idle;
     dwell.burst_armed = current_dwell_.carries_any();
-    context_.state.rf.noise_dbm = noise_floor_.dbm();
+    context_.state.rf.noise_dbm = noise_floor_.level_dbm();
     context_.state.rf.duty_permille = duty_permille(now_ms);
 }
 
@@ -447,7 +447,7 @@ void RadioService::record_dwell(const timing::SlotPlan& slot,
     value.state = slot.state;
     value.band = slot.band;
     value.refusal = refusal_of(slot, attempt, armed, carries_tx);
-    value.noise_dbm = noise_floor_.dbm();
+    value.noise_dbm = noise_floor_.level_dbm();
     value.tx_allowed = slot.tx_allowed;
     value.own_tx_dwell = slot.own_tx_dwell;
     value.listen_only = slot.listen_only;

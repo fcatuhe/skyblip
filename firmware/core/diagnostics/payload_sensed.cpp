@@ -84,7 +84,7 @@ Record record_of(const radio::Entry& value) {
     record.payload[9] = static_cast<uint8_t>(value.source);
     record.payload[10] = static_cast<uint8_t>(value.band);
     record.payload[11] = value.channel;
-    record.payload[12] = value.length;
+    record.payload[12] = value.bytes;
     put_i8(record.payload + 13, value.rssi_dbm);
     put_i8(record.payload + 14, value.key_offset_s);
     put_i8(record.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
@@ -110,7 +110,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.source = static_cast<model::Source>(record.payload[9]);
     out.band = static_cast<model::Band>(record.payload[10]);
     out.channel = record.payload[11];
-    out.length = record.payload[12];
+    out.bytes = record.payload[12];
     out.rssi_dbm = get_i8(record.payload + 13);
     out.key_offset_s = get_i8(record.payload + 14);
     out.tx_stage_margin_us = static_cast<int16_t>(get_i8(record.payload + 15) * kStageMarginStepUs);

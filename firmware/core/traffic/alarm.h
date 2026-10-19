@@ -36,7 +36,7 @@ constexpr uint32_t kRenotifyFloorMs = 2000;
 // INFO: fc 11oct26 a touch-and-go or a stop-and-go is back in the air well inside a minute
 constexpr uint32_t kGroundRenotifyFloorMs = 60000;
 
-constexpr int kTrackedTargets = 48;
+constexpr int kMaxTrackedTargets = 48;
 
 int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
                      int32_t north_m, int32_t east_m, int32_t distance_m);
@@ -81,7 +81,7 @@ class AlarmTracker {
     Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
     static bool notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms);
 
-    std::array<Slot, kTrackedTargets> slots_{};
+    std::array<Slot, kMaxTrackedTargets> slots_{};
 };
 
 }  // namespace skyblip::traffic

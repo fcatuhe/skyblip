@@ -20,10 +20,10 @@ class Fifo {
     static constexpr size_t capacity() { return Capacity - 1; }
 
     Status push(const T& item) {
-        size_t n = next(head_);
-        if (n == tail_) return Status::Full;
+        size_t next_head = next(head_);
+        if (next_head == tail_) return Status::Full;
         buffer_[head_] = item;
-        head_ = n;
+        head_ = next_head;
         return Status::Ok;
     }
 

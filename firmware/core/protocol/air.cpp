@@ -9,7 +9,7 @@ namespace {
 
 constexpr uint32_t kTailMask = sync_tail(0xFFFFFFFFu);
 // A dead chip pair decodes to a wrong bit, and the tail is only 23 of them.
-constexpr int kMaxSyncTailErrors = 1;
+constexpr int kSyncTailErrorsCeiling = 1;
 
 uint32_t tail_of(const uint8_t* data) {
     return (static_cast<uint32_t>(data[0]) << 16) | (static_cast<uint32_t>(data[1]) << 8) | data[2];
@@ -20,19 +20,19 @@ int tail_errors(const uint8_t* data, uint32_t sync_word) {
 }
 
 System system_of(const uint8_t* data) {
-    if (tail_errors(data, kAdslSyncWord) <= kMaxSyncTailErrors) return System::AdslDirect;
-    if (tail_errors(data, kAlptasSyncWord) <= kMaxSyncTailErrors) return System::Alptas;
+    if (tail_errors(data, kAdslSyncWord) <= kSyncTailErrorsCeiling) return System::AdslDirect;
+    if (tail_errors(data, kAlptasSyncWord) <= kSyncTailErrorsCeiling) return System::Alptas;
     return System::Unknown;
 }
 
-void shift_left(uint8_t* bytes, size_t length, uint8_t bits) {
+void shift_left(uint8_t* data, size_t bytes, uint8_t bits) {
     const size_t byte_offset = bits >> 3;
     const uint8_t rest = bits & 7;
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < bytes; i++) {
         const size_t source = i + byte_offset;
-        const uint32_t high = source < length ? bytes[source] : 0u;
-        const uint32_t low = source + 1 < length ? bytes[source + 1] : 0u;
-        bytes[i] = static_cast<uint8_t>((high << rest) | (rest != 0 ? low >> (8u - rest) : 0u));
+        const uint32_t high = source < bytes ? data[source] : 0u;
+        const uint32_t low = source + 1 < bytes ? data[source + 1] : 0u;
+        data[i] = static_cast<uint8_t>((high << rest) | (rest != 0 ? low >> (8u - rest) : 0u));
     }
 }
 

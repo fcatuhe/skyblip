@@ -16,7 +16,7 @@ An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pu
 
 ## What ALP-TAS costs us
 
-`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `address_mapping_table_to_idtype`, and it is a lie chosen from a short list of lies.
+`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `address_mapping_table_to_id_type`, and it is a lie chosen from a short list of lies.
 
 SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658`: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2"). Leaving an address at IDType 0 draws nothing on that app at all, which is the one failure worth never causing again. Between the two values left, 1 (ICAO) claims a permanent, registry-issued identity; 2 (FLARM) claims a device-class kinship that is at least true of the mechanism, self-assigned and transient. So ICAO is reported as ICAO and everything else becomes FLARM.
 
@@ -37,3 +37,24 @@ Until 2026-09-19 the ALP-TAS path checked the CRC and threw the frame away, so e
 `alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc_s >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two structural fields the protocol offers (`LastByte == 0`, `Needs3 == 3`), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
 
 The frame is refused either way. What the search buys is the tape saying `KEY+18` instead of `DEC`, which is the difference between a support case about a radio and one about a receiver's time.
+
+## Our names for upstream fields
+
+The packet layout follows OGN's `adsl.h` and the ALP-TAS frame follows SoftRF's `Legacy.cpp`, but the names are ours, spelled in full. The right column is the name this tree carried before, shaped after the reference source, so a reader holding that source finds each field here.
+
+| Ours | Before, after the reference |
+|---|---|
+| `AdslPacket::sync`, `data_bytes`, `data`, `version` | `SYNC`, `Length`, `Data`, `Version` |
+| `payload`, `payload_words`, `payload_type`, `address_bytes` | `Byte`, `Word`, `Type`, `Address` |
+| `timestamp`, `flight_state`, `aircraft_category`, `emergency`, `position_bytes` | `TimeStamp`, `FlightState`, `AcftCat`, `Emergency`, `Position` |
+| `source_integrity`, `design_assurance`, `navigation_integrity` | `SourceIntegrity`, `DesignAssurance`, `NavigIntegrity` |
+| `horizontal_accuracy`, `vertical_accuracy`, `velocity_accuracy`, `reserved` | `HorizAccuracy`, `VertAccuracy`, `VelAccuracy`, `Reserved` |
+| `crc_bytes`, `spare`, `reset()` | `CRC`, `SpareByte`, `init()` |
+| `get_u24`/`put_u24`, `get_u32`/`put_u32` (`core/util/little_endian.h`) | `get3`/`set3`, `get4`/`set4` |
+| `encode_unsigned_variable_range`, `encode_signed_variable_range` (`core/util/variable_range.h`) | UnsVR, SignVR |
+| `telemetry_type()`, `kTelemetryTypeInfo` | `TelemType` |
+| ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `MsgType`, `Needs3`, `Has3`, `vs` |
+| ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `GpsA`, `GpsB`, `unk8` |
+| ALP-TAS `block_tea`, `encode_scaled`, `decode_scaled` | `btea`, `enscale`, `descale` |
+| `block_tea` and `scramble` locals `next`, `previous`, `index`, `key_index` | XXTEA's `y`, `z`, `p`, `e` |
+| `civil_from_epoch` locals `days_since_march_epoch`, `day_of_era`, `year_of_era`, `day_of_year`, `march_month` | Hinnant's `z`, `doe`, `yoe`, `doy`, `mp` |

@@ -270,14 +270,15 @@ TEST_CASE("nmea: category mapping ADS-L glider -> ALP-TAS 1") {
 // SkyDemon, which is the one failure worth never causing again, and between
 // the two legal values a self-minted address is a closer lie as FLARM
 // (transient, self-assigned) than as ICAO (permanent, registry-issued).
-TEST_CASE("nmea: address_mapping_table_to_idtype never answers 0 - SkyDemon draws nothing for it") {
-    CHECK(address_mapping_table_to_idtype(5) == 1);  // ICAO
-    CHECK(address_mapping_table_to_idtype(6) == 2);  // FLARM
-    CHECK(address_mapping_table_to_idtype(7) == 2);  // OGN, folded into the FLARM bucket
-    CHECK(address_mapping_table_to_idtype(0) == 2);  // self-minted/random, ditto
-    CHECK(address_mapping_table_to_idtype(4) == 2);  // top of the self-minted range
+TEST_CASE(
+    "nmea: address_mapping_table_to_id_type never answers 0 - SkyDemon draws nothing for it") {
+    CHECK(address_mapping_table_to_id_type(5) == 1);  // ICAO
+    CHECK(address_mapping_table_to_id_type(6) == 2);  // FLARM
+    CHECK(address_mapping_table_to_id_type(7) == 2);  // OGN, folded into the FLARM bucket
+    CHECK(address_mapping_table_to_id_type(0) == 2);  // self-minted/random, ditto
+    CHECK(address_mapping_table_to_id_type(4) == 2);  // top of the self-minted range
     for (int t = 0; t < 64; t++)
-        CHECK(address_mapping_table_to_idtype(static_cast<uint8_t>(t)) != 0);
+        CHECK(address_mapping_table_to_id_type(static_cast<uint8_t>(t)) != 0);
 }
 
 // own.utc_s is a Unix epoch with no calendar fields of its own; the numbers

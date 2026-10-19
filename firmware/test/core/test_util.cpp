@@ -142,13 +142,13 @@ TEST_CASE("format: hex, dec, fixed point") {
     char b[32];
     int n = format_hex(b, 0xABCD, 4);
     CHECK(std::string(b, n) == "ABCD");
-    n = format_uint(b, 42);
+    n = format_unsigned(b, 42);
     CHECK(std::string(b, n) == "42");
-    n = format_uint(b, 5, 3);
+    n = format_unsigned(b, 5, 3);
     CHECK(std::string(b, n) == "005");
-    n = format_int(b, -17);
+    n = format_signed(b, -17);
     CHECK(std::string(b, n) == "-17");
-    n = format_uint(b, 1234, 1, 1);  // one decimal
+    n = format_unsigned(b, 1234, 1, 1);  // one decimal
     CHECK(std::string(b, n) == "123.4");
 }
 

@@ -41,7 +41,7 @@ void signed_row(Rows& rows, const char* label, int value, uint8_t fraction_digit
     char* out = rows.next();
     int written = format_string(out, label);
     out[written++] = ' ';
-    written += format_int(out + written, value, 1, fraction_digits);
+    written += format_signed(out + written, value, 1, fraction_digits);
     written += format_string(out + written, unit);
     out[written] = 0;
 }
@@ -55,7 +55,7 @@ int join(const Rows& rows, char* out) {
     }
     if (shown < rows.count) {
         written += format_string(out + written, "\nAND ");
-        written += format_uint(out + written, static_cast<uint32_t>(rows.count - shown));
+        written += format_unsigned(out + written, static_cast<uint32_t>(rows.count - shown));
         written += format_string(out + written, " MORE");
     }
     out[written] = 0;

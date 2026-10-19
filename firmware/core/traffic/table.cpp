@@ -8,9 +8,11 @@
 namespace skyblip::traffic {
 
 namespace {
-uint32_t observation_at_s(const model::AircraftObservation& o) { return o.received.at_s; }
-int source_rank(model::Source s) {
-    switch (s) {
+uint32_t observation_at_s(const model::AircraftObservation& observation) {
+    return observation.received.at_s;
+}
+int source_rank(model::Source source) {
+    switch (source) {
         case model::Source::AdslDirect:
         case model::Source::Alptas: return 3;
         case model::Source::AdslUplink: return 1;
@@ -46,8 +48,8 @@ bool TrafficTable::prefer_new(const model::AircraftObservation& incoming,
 
 void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObservation& observation) {
     if (!observation.speed_valid) return;
-    const uint32_t dt = observation.at_ms - turn.reference_at_ms;
-    if (!turn.armed || dt > kTurnMaxAgeMs) {
+    const uint32_t elapsed_ms = observation.at_ms - turn.reference_at_ms;
+    if (!turn.armed || elapsed_ms > kTurnMaxAgeMs) {
         turn.armed = true;
         turn.valid = false;
         turn.rate_dps = 0;
@@ -55,19 +57,20 @@ void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObservatio
         turn.reference_track_c9 = observation.track_c9;
         return;
     }
-    if (dt < flight::kTurnWindowMs) return;
-    turn.rate_dps = flight::turn_rate_dps(observation.track_c9, turn.reference_track_c9, dt);
+    if (elapsed_ms < flight::kTurnWindowMs) return;
+    turn.rate_dps =
+        flight::turn_rate_dps(observation.track_c9, turn.reference_track_c9, elapsed_ms);
     turn.valid = true;
     turn.reference_at_ms = observation.at_ms;
     turn.reference_track_c9 = observation.track_c9;
 }
 
 // INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
-bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
-    if (a.on_ground != b.on_ground) return a.on_ground;
-    if (a.slant_m != b.slant_m) return a.slant_m > b.slant_m;
-    if (a.rank != b.rank) return a.rank < b.rank;
-    return a.age_s > b.age_s;
+bool TrafficTable::matters_less(const Weight& weight, const Weight& other) {
+    if (weight.on_ground != other.on_ground) return weight.on_ground;
+    if (weight.slant_m != other.slant_m) return weight.slant_m > other.slant_m;
+    if (weight.rank != other.rank) return weight.rank < other.rank;
+    return weight.age_s > other.age_s;
 }
 
 TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& observation,
@@ -85,10 +88,10 @@ int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint
     Weight least{};
     for (int i = 0; i < kMaxTargets; i++) {
         if (slots_[i].alarm_level != Level::None) continue;
-        const Weight w = weight_of(slots_[i].observation, now_s);
-        if (victim < 0 || matters_less(w, least)) {
+        const Weight weight = weight_of(slots_[i].observation, now_s);
+        if (victim < 0 || matters_less(weight, least)) {
             victim = i;
-            least = w;
+            least = weight;
         }
     }
     if (victim >= 0 && !matters_less(least, weight_of(incoming, now_s))) return -1;
@@ -151,19 +154,19 @@ void TrafficTable::age_out(uint32_t now_s) {
 }
 
 int TrafficTable::count() const {
-    int n = 0;
+    int count = 0;
     for (int i = 0; i < kMaxTargets; i++)
-        if (slots_[i].used) n++;
-    return n;
+        if (slots_[i].used) count++;
+    return count;
 }
 
 void TrafficTable::clear() {
-    for (auto& s : slots_) {
-        s.used = false;
-        s.turn = TargetTurn{};
-        s.alarm_level = Level::None;
-        s.alarm_dismissed = false;
-        s.in_formation = false;
+    for (auto& slot : slots_) {
+        slot.used = false;
+        slot.turn = TargetTurn{};
+        slot.alarm_level = Level::None;
+        slot.alarm_dismissed = false;
+        slot.in_formation = false;
     }
 }
 

@@ -19,9 +19,9 @@ enum class [[nodiscard]] Status : uint8_t {
     NotFound,
 };
 
-constexpr bool is_ok(Status s) { return s == Status::Ok; }
-constexpr const char* to_string(Status s) {
-    switch (s) {
+constexpr bool is_ok(Status status) { return status == Status::Ok; }
+constexpr const char* to_string(Status status) {
+    switch (status) {
         case Status::Ok: return "Ok";
         case Status::Invalid: return "Invalid";
         case Status::OutOfRange: return "OutOfRange";

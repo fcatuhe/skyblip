@@ -24,22 +24,23 @@ bool range_to(const model::Ownship& own, const model::AircraftObservation& obser
 
 int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
                   const model::Ownship& own, RangeRow* out, int capacity) {
-    int n = 0;
+    int count = 0;
     for (int i = 0; i < TrafficTable::kMaxTargets; i++) {
-        const Target* t = table.at(i);
-        if (!t || !t->used) continue;
+        const Target* target = table.at(i);
+        if (!target || !target->used) continue;
         RangeRow row;
-        if (!range_to(own, t->observation, row)) continue;
+        if (!range_to(own, target->observation, row)) continue;
         row.callsign = callsigns.find(row.address_mapping_table, row.address);
 
-        int at = n;
-        while (at > 0 && out[at - 1].ground_m > row.ground_m) at--;
-        if (at >= capacity) continue;
-        for (int j = (n < capacity ? n : capacity - 1); j > at; j--) out[j] = out[j - 1];
-        out[at] = row;
-        if (n < capacity) n++;
+        int position = count;
+        while (position > 0 && out[position - 1].ground_m > row.ground_m) position--;
+        if (position >= capacity) continue;
+        for (int j = (count < capacity ? count : capacity - 1); j > position; j--)
+            out[j] = out[j - 1];
+        out[position] = row;
+        if (count < capacity) count++;
     }
-    return n;
+    return count;
 }
 
 }  // namespace skyblip::traffic

@@ -6,19 +6,20 @@
 
 namespace skyblip {
 
-inline char hex_digit(uint8_t v) {
-    v &= 0x0F;
-    return static_cast<char>(v < 10 ? '0' + v : 'A' + v - 10);
+inline char hex_digit(uint8_t nibble) {
+    nibble &= 0x0F;
+    return static_cast<char>(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
 }
 
-int format_string(char* out, const char* s);
+int format_string(char* out, const char* text);
 
 int format_hex(char* out, uint32_t value, uint8_t digits);
 
-int format_uint(char* out, uint32_t value, uint8_t min_digits = 1, uint8_t fraction_digits = 0);
+int format_unsigned(char* out, uint32_t value, uint8_t minimum_digits = 1,
+                    uint8_t fraction_digits = 0);
 
-int format_int(char* out, int32_t value, uint8_t min_digits = 1, uint8_t fraction_digits = 0,
-               bool plus_sign = true);
+int format_signed(char* out, int32_t value, uint8_t minimum_digits = 1, uint8_t fraction_digits = 0,
+                  bool plus_sign = true);
 
 int format_seconds_of_day(char* out, uint32_t seconds);
 

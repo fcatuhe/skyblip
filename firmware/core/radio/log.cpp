@@ -21,10 +21,10 @@ void Log::record(const Entry& entry) {
     written_++;
 }
 
-const Entry& Log::newest(int i) const {
+const Entry& Log::newest(int index) const {
     const int held = count();
     if (held == 0) return entries_[0];
-    const int back = i < 0 ? 0 : (i >= held ? held - 1 : i);
+    const int back = index < 0 ? 0 : (index >= held ? held - 1 : index);
     return entries_[(written_ - 1u - static_cast<uint32_t>(back)) % kMaxEntries];
 }
 

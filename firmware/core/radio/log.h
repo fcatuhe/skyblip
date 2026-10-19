@@ -37,7 +37,7 @@ struct Entry {
     int8_t rssi_dbm{0};
     int8_t key_offset_s{0};
     uint8_t channel{0};
-    uint8_t length{0};
+    uint8_t bytes{0};
     bool address_valid{false};
     bool rssi_valid{false};
     bool utc_dated{false};
@@ -63,7 +63,7 @@ class Log {
     void clear() { written_ = 0; }
 
     int count() const { return written_ < kMaxEntries ? static_cast<int>(written_) : kMaxEntries; }
-    const Entry& newest(int i) const;
+    const Entry& newest(int index) const;
 
    private:
     Entry entries_[kMaxEntries]{};

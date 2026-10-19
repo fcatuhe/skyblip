@@ -141,7 +141,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
                 written = format_string(out, name);
             } else {
                 written = format_string(out, "CODE ");
-                written += format_uint(out + written, v.settings.aircraft_type);
+                written += format_unsigned(out + written, v.settings.aircraft_type);
             }
             break;
         }
@@ -163,7 +163,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
                 format_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
             break;
         case MenuRow::Range:
-            written = format_uint(
+            written = format_unsigned(
                 out, static_cast<uint32_t>(range_value(v.settings.range_step, v.settings.units)));
             written += format_string(out + written, " ");
             written += format_string(out + written, range_unit(v.settings.units));

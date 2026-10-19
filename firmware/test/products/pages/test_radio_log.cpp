@@ -296,7 +296,7 @@ TEST_CASE("radio log page: a refused frame whose CRC held still names who sent i
 TEST_CASE("radio log page: a failed burst spends no column on the length every burst has") {
     radio::Log log;
     radio::Entry bad = entry_of(radio::Verdict::BadCrc);
-    bad.length = 58;
+    bad.bytes = 58;
     log.record(bad);
 
     Glass canvas;

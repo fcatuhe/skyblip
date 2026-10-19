@@ -202,7 +202,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
             case power::PowerDownStep::PeripheralRailOff:
                 gpio_pin_configure_dt(&peripheral_rail_, GPIO_OUTPUT_INACTIVE);
                 return;
-            case power::PowerDownStep::AuxRailOff:
+            case power::PowerDownStep::AuxiliaryRailOff:
                 gpio_pin_configure_dt(&aux_rail_, GPIO_OUTPUT_INACTIVE);
                 return;
             case power::PowerDownStep::DrivenPinsReleased: release_pins(); return;

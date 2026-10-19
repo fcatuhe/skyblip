@@ -30,13 +30,13 @@ enum class ResetCause : uint32_t {
     UsbVbus = 1u << 8,
 };
 
-constexpr ResetCause operator|(ResetCause a, ResetCause b) {
-    return static_cast<ResetCause>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+constexpr ResetCause operator|(ResetCause left, ResetCause right) {
+    return static_cast<ResetCause>(static_cast<uint32_t>(left) | static_cast<uint32_t>(right));
 }
 
-constexpr ResetCause& operator|=(ResetCause& a, ResetCause b) {
-    a = a | b;
-    return a;
+constexpr ResetCause& operator|=(ResetCause& left, ResetCause right) {
+    left = left | right;
+    return left;
 }
 
 constexpr bool has_cause(ResetCause set, ResetCause wanted) {

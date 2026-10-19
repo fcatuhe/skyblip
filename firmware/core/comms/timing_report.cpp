@@ -15,8 +15,8 @@ int format_buckets(const timing::SlotTimingStatistics& statistics, bool pps, cha
     int written = 0;
     for (int i = 0; i < timing::SlotTimingStatistics::kBuckets && written < capacity - 1; i++) {
         if (i > 0) out[written++] = ',';
-        written +=
-            format_uint(out + written, pps ? statistics.pps_bucket(i) : statistics.dwell_bucket(i));
+        written += format_unsigned(out + written,
+                                   pps ? statistics.pps_bucket(i) : statistics.dwell_bucket(i));
     }
     out[written] = 0;
     return written;

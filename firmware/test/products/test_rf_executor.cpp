@@ -297,7 +297,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
 TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it measured") {
     Pass pass;
     REQUIRE(pass.begin() == Status::Ok);
-    CHECK(pass.radio_service.noise_floor().dbm() == timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() == timing::NoiseFloor::kSeedDbm);
 
     pass.chip.rssi_dbm = -50;  // a neighbour sitting on the channel, 55 dB over the floor
     int keyed_at_ms = 0;
@@ -314,7 +314,7 @@ TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it 
     CHECK(pass.state.rf.timing_statistics.refused() == 0);
     // The floor is a measurement, and a site this loud has walked it off the seed.
     CHECK(pass.radio_service.noise_floor().samples() > 3);
-    CHECK(pass.radio_service.noise_floor().dbm() > timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() > timing::NoiseFloor::kSeedDbm);
 }
 
 // A read at one instant used to license a burst on top of a neighbour it did not land on.
@@ -334,7 +334,7 @@ TEST_CASE("rf: the floor the service publishes is a window of reads, and moves n
             keyed_at_ms = static_cast<int>(t / 1000 % 1000);
     }
     // The floor the service averages is the window's figure, not the quiet read.
-    CHECK(pass.radio_service.noise_floor().dbm() > window[0] + 20);
+    CHECK(pass.radio_service.noise_floor().level_dbm() > window[0] + 20);
 
     // The same channel read only at its quiet instant keys the PA at the same instant.
     Pass single;
@@ -346,8 +346,9 @@ TEST_CASE("rf: the floor the service publishes is a window of reads, and moves n
         if (single.chip.tx_pending && single_keyed_at_ms == 0)
             single_keyed_at_ms = static_cast<int>(t / 1000 % 1000);
     }
-    CHECK(single.radio_service.noise_floor().dbm() < timing::NoiseFloor::kSeedDbm);
-    CHECK(pass.radio_service.noise_floor().dbm() > single.radio_service.noise_floor().dbm() + 10);
+    CHECK(single.radio_service.noise_floor().level_dbm() < timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() >
+          single.radio_service.noise_floor().level_dbm() + 10);
     CHECK(single_keyed_at_ms == keyed_at_ms);
 }
 

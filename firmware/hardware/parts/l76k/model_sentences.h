@@ -58,9 +58,9 @@ inline int32_t L76k::msl_dm() const {
 
 inline int L76k::put_time(char* s) const {
     int n = 0;
-    n += format_uint(s + n, utc_seconds_of_day / 3600u, 2);
-    n += format_uint(s + n, (utc_seconds_of_day / 60u) % 60u, 2);
-    n += format_uint(s + n, utc_seconds_of_day % 60u, 2);
+    n += format_unsigned(s + n, utc_seconds_of_day / 3600u, 2);
+    n += format_unsigned(s + n, (utc_seconds_of_day / 60u) % 60u, 2);
+    n += format_unsigned(s + n, utc_seconds_of_day % 60u, 2);
     return n;
 }
 
@@ -74,9 +74,9 @@ inline void L76k::emit_rmc() {
     s[n++] = ',';
     n += format_nmea_longitude(s + n, longitude_1e7);
     s[n++] = ',';
-    n += format_uint(s + n, knots_e2(), 1, 2);
+    n += format_unsigned(s + n, knots_e2(), 1, 2);
     s[n++] = ',';
-    n += format_uint(s + n, heading_e2(), 1, 2);
+    n += format_unsigned(s + n, heading_e2(), 1, 2);
     s[n++] = ',';
     n += format_string(s + n, date);
     n += format_string(s + n, ",,,A");
@@ -105,23 +105,23 @@ inline void L76k::emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_v
     const uint8_t used = budget < in_view ? budget : in_view;
     char s[128];
     int n = format_string(s, "$GNGSA,A,");
-    n += format_uint(s + n, solving() ? 3u : 1u, 1);
+    n += format_unsigned(s + n, solving() ? 3u : 1u, 1);
     for (int slot = 0; slot < kGsaSlots; slot++) {
         s[n++] = ',';
-        if (slot < used) n += format_uint(s + n, static_cast<uint32_t>(first_id + slot), 2);
+        if (slot < used) n += format_unsigned(s + n, static_cast<uint32_t>(first_id + slot), 2);
     }
     s[n++] = ',';
     if (solving() && used > 0) {
-        n += format_uint(s + n, pdop_e2, 3, 2);
+        n += format_unsigned(s + n, pdop_e2, 3, 2);
         s[n++] = ',';
-        n += format_uint(s + n, hdop_e2, 3, 2);
+        n += format_unsigned(s + n, hdop_e2, 3, 2);
         s[n++] = ',';
-        n += format_uint(s + n, vdop_e2, 3, 2);
+        n += format_unsigned(s + n, vdop_e2, 3, 2);
     } else {
         n += format_string(s + n, ",,");
     }
     s[n++] = ',';
-    n += format_uint(s + n, system_id, 1);
+    n += format_unsigned(s + n, system_id, 1);
     n = protocol::nmea_finish(s, n);
     pending_.append(s, static_cast<size_t>(n));
 }
@@ -156,22 +156,22 @@ inline void L76k::emit_gsv_set(const char* talker, uint8_t in_view, uint8_t firs
         int n = format_string(s, "$");
         n += format_string(s + n, talker);
         n += format_string(s + n, "GSV,");
-        n += format_uint(s + n, static_cast<uint32_t>(sentences), 1);
+        n += format_unsigned(s + n, static_cast<uint32_t>(sentences), 1);
         s[n++] = ',';
-        n += format_uint(s + n, static_cast<uint32_t>(sentence), 1);
+        n += format_unsigned(s + n, static_cast<uint32_t>(sentence), 1);
         s[n++] = ',';
-        n += format_uint(s + n, in_view, 2);
+        n += format_unsigned(s + n, in_view, 2);
         for (int slot = 0; slot < 4 && at < in_view; slot++, at++) {
             const uint8_t id = static_cast<uint8_t>(first_id + at);
             s[n++] = ',';
-            n += format_uint(s + n, id, 2);
+            n += format_unsigned(s + n, id, 2);
             s[n++] = ',';
-            n += format_uint(s + n, static_cast<uint32_t>(15 + (at * 7) % 70), 2);
+            n += format_unsigned(s + n, static_cast<uint32_t>(15 + (at * 7) % 70), 2);
             s[n++] = ',';
-            n += format_uint(s + n, static_cast<uint32_t>((at * 47) % 360), 3);
+            n += format_unsigned(s + n, static_cast<uint32_t>((at * 47) % 360), 3);
             s[n++] = ',';
             if (at < tracked_of(in_view))
-                n += format_uint(s + n, static_cast<uint32_t>(cn0_dbhz_base - at), 2);
+                n += format_unsigned(s + n, static_cast<uint32_t>(cn0_dbhz_base - at), 2);
         }
         n += format_string(s + n, ",0");
         n = protocol::nmea_finish(s, n);
@@ -186,11 +186,11 @@ inline uint8_t L76k::tracked_of(uint8_t in_view) const {
 inline void L76k::emit_vtg() {
     char s[128];
     int n = format_string(s, "$GPVTG,");
-    n += format_uint(s + n, heading_e2(), 1, 2);
+    n += format_unsigned(s + n, heading_e2(), 1, 2);
     n += format_string(s + n, ",T,,M,");
-    n += format_uint(s + n, knots_e2(), 1, 2);
+    n += format_unsigned(s + n, knots_e2(), 1, 2);
     n += format_string(s + n, ",N,");
-    n += format_uint(s + n, kmh_e2(), 1, 2);
+    n += format_unsigned(s + n, kmh_e2(), 1, 2);
     n += format_string(s + n, ",K,A");
     n = protocol::nmea_finish(s, n);
     pending_.append(s, static_cast<size_t>(n));
@@ -206,15 +206,15 @@ inline void L76k::emit_gga() {
     s[n++] = ',';
     n += format_nmea_longitude(s + n, longitude_1e7);
     s[n++] = ',';
-    n += format_uint(s + n, solving() ? 1u : 0u, 1);
+    n += format_unsigned(s + n, solving() ? 1u : 0u, 1);
     s[n++] = ',';
-    n += format_uint(s + n, solving() ? satellites : uint8_t{0}, 2);
+    n += format_unsigned(s + n, solving() ? satellites : uint8_t{0}, 2);
     s[n++] = ',';
-    n += format_uint(s + n, hdop_e2, 3, 2);
+    n += format_unsigned(s + n, hdop_e2, 3, 2);
     s[n++] = ',';
-    n += format_int(s + n, msl_dm(), 1, 1, false);
+    n += format_signed(s + n, msl_dm(), 1, 1, false);
     n += format_string(s + n, ",M,");
-    if (emit_geoid_separation) n += format_int(s + n, geoid_separation_m * 10, 1, 1, false);
+    if (emit_geoid_separation) n += format_signed(s + n, geoid_separation_m * 10, 1, 1, false);
     n += format_string(s + n, ",M,,");
     n = protocol::nmea_finish(s, n);
     pending_.append(s, static_cast<size_t>(n));

@@ -48,7 +48,7 @@ int32_t tenths(int32_t mg) { return div_round(mg, kMilliPerTenth); }
 
 int format_g(char* out, int32_t mg) {
     const int32_t value = tenths(mg);
-    const int n = format_int(out, value, 1, 1, value != 0);
+    const int n = format_signed(out, value, 1, 1, value != 0);
     out[n] = 0;
     return n;
 }
@@ -57,7 +57,8 @@ int format_named_g(char* out, int32_t mg, char positive, char negative) {
     const int32_t value = tenths(mg);
     int written = 0;
     if (value != 0) out[written++] = value < 0 ? negative : positive;
-    written += format_uint(out + written, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
+    written +=
+        format_unsigned(out + written, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
     out[written] = 0;
     return written;
 }

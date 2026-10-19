@@ -33,9 +33,9 @@ const char* solution_dimensions(const StatusSnapshot& snapshot) {
 int format_elapsed(char* out, uint32_t seconds) {
     constexpr uint32_t kElapsedCeilingS = 99 * 60 + 59;
     const uint32_t capped = seconds > kElapsedCeilingS ? kElapsedCeilingS : seconds;
-    int written = format_uint(out, capped / 60, 1);
+    int written = format_unsigned(out, capped / 60, 1);
     out[written++] = ':';
-    written += format_uint(out + written, capped % 60, 2);
+    written += format_unsigned(out + written, capped % 60, 2);
     out[written] = 0;
     return written;
 }
@@ -86,12 +86,12 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aero, Quant
     char text[16];
     canvas.draw_text(kLeft, y, label, true, 1);
 
-    int written = format_int(text, aero.value, 1, aero.decimals, plus_sign);
+    int written = format_signed(text, aero.value, 1, aero.decimals, plus_sign);
     text[written] = 0;
     right_aligned(canvas, kAeroNumberEnd, y, text, written);
     canvas.draw_text(kAeroUnitX, y, aero.unit, true, 1);
 
-    written = format_int(text, si.value, 1, si.decimals, plus_sign);
+    written = format_signed(text, si.value, 1, si.decimals, plus_sign);
     text[written] = 0;
     right_aligned(canvas, kSiNumberEnd, y, text, written);
     canvas.draw_text(kSiUnitX, y, si.unit, true, 1);
@@ -100,7 +100,7 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aero, Quant
 // What the sensor reads, to the tenth of a pascal it measures in.
 void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
     char barometer[12];
-    const int written = format_uint(barometer, div_round<uint32_t>(pressure_mpa, 100), 1, 3);
+    const int written = format_unsigned(barometer, div_round<uint32_t>(pressure_mpa, 100), 1, 3);
     barometer[written] = 0;
 
     canvas.draw_text(kLeft, y, "BARO", true, 1);
@@ -112,7 +112,7 @@ uint32_t at_most(uint32_t value, uint32_t ceiling) { return value > ceiling ? ce
 
 int imu_sensor_error(char* out, const StatusSnapshot& snapshot) {
     int written = format_string(out, " SE");
-    written += format_uint(out + written, snapshot.imu_errored_sensor, 1);
+    written += format_unsigned(out + written, snapshot.imu_errored_sensor, 1);
     out[written++] = ':';
     written += format_hex(out + written, snapshot.imu_sensor_error, 2);
     return written;
@@ -123,7 +123,7 @@ int imu_traffic(char* out, const StatusSnapshot& snapshot) {
 
     const bool stuck = snapshot.imu_unparsed != 0;
     int written = format_string(out, stuck ? " U" : " B");
-    written += format_uint(
+    written += format_unsigned(
         out + written,
         at_most(stuck ? snapshot.imu_unparsed : snapshot.imu_fifo_bytes, kImuCountCeiling), 1);
     if (snapshot.imu_error != 0) {
@@ -131,7 +131,7 @@ int imu_traffic(char* out, const StatusSnapshot& snapshot) {
         written += format_hex(out + written, snapshot.imu_error, 2);
     } else if (snapshot.imu_meta != kImuMetaInitialised) {
         written += format_string(out + written, " M");
-        written += format_uint(out + written, snapshot.imu_meta, 1);
+        written += format_unsigned(out + written, snapshot.imu_meta, 1);
     } else {
         written += format_string(out + written, " I");
         written += format_hex(out + written, snapshot.imu_interrupt, 2);
@@ -148,7 +148,7 @@ void imu_field(ui::Canvas& canvas, int y, const StatusSnapshot& snapshot) {
         written += format_string(text + written, snapshot.imu_fault);
     } else if (snapshot.slip_valid) {
         written += format_string(text + written, " ");
-        written += format_int(text + written, snapshot.slip_mg, 1, 0, true);
+        written += format_signed(text + written, snapshot.slip_mg, 1, 0, true);
         written += format_string(text + written, "mg");
     } else {
         written += imu_traffic(text + written, snapshot);
@@ -168,9 +168,9 @@ void battery_row(ui::Canvas& canvas, int y, const StatusSnapshot& snapshot) {
     char volts[8] = "--";
     char percent[8] = "--";
     if (snapshot.battery_valid) {
-        int written = format_uint(volts, snapshot.battery_mv, 1, 3);
+        int written = format_unsigned(volts, snapshot.battery_mv, 1, 3);
         volts[written] = 0;
-        written = format_uint(percent, snapshot.battery_percent, 1);
+        written = format_unsigned(percent, snapshot.battery_percent, 1);
         percent[written] = 0;
     }
 
@@ -212,7 +212,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
 
     if (snapshot.fix_valid) {
         char satellites[4];
-        written = format_uint(satellites, snapshot.satellites, 2);
+        written = format_unsigned(satellites, snapshot.satellites, 2);
         satellites[written] = 0;
         text_row(canvas, y, "GNSS", satellites, " SAT", "UTC", text);
         canvas.draw_text(kValueX, y, solution_dimensions(snapshot), true, 1);
@@ -234,13 +234,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     if (snapshot.fix_valid) {
         // Ten characters of latitude do not fit a five-cell value field, so it
         // ends where the first column's unit does: level with TRUE above it.
-        written = format_int(text, snapshot.latitude_1e7, 1, 7, false);
+        written = format_signed(text, snapshot.latitude_1e7, 1, 7, false);
         text[written] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
         right_aligned(canvas, kAeroUnitEnd, y, text, written);
 
         written = format_string(text, "LON ");
-        written += format_int(text + written, snapshot.longitude_1e7, 1, 7, false);
+        written += format_signed(text + written, snapshot.longitude_1e7, 1, 7, false);
         text[written] = 0;
         right_aligned(canvas, kGlassWidth - kLeft, y, text, written);
     } else {
@@ -248,14 +248,14 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     }
     y += kLineH;
 
-    written = format_uint(text, static_cast<uint32_t>(snapshot.track_cdeg), 5, 2);
+    written = format_unsigned(text, static_cast<uint32_t>(snapshot.track_cdeg), 5, 2);
     text[written] = 0;
     text_row(canvas, y, "TRK", text, " TRUE");
     imu_field(canvas, y, snapshot);
     y += kLineH;
 
     char count[8];
-    written = format_uint(count, static_cast<uint32_t>(snapshot.heard_count), 1);
+    written = format_unsigned(count, static_cast<uint32_t>(snapshot.heard_count), 1);
     count[written] = 0;
     text_row(canvas, y, "TFC", count, "", "TX", snapshot.transmitting ? " ON" : " OFF");
     y += kLineH;

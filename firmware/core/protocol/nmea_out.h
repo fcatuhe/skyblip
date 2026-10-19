@@ -13,7 +13,7 @@ namespace skyblip::protocol {
 int nmea_finish(char* sentence, int body_bytes);
 
 uint8_t adsl_category_to_alptas_type(uint8_t adsl_category);
-uint8_t address_mapping_table_to_idtype(uint8_t address_mapping_table);
+uint8_t address_mapping_table_to_id_type(uint8_t address_mapping_table);
 
 // INFO: fc 20sep26 callsign rides the ID field behind a '!', as OGN's does: lookout.h:144
 int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
@@ -69,13 +69,13 @@ constexpr uint32_t kLk8BatteryPercentBase = 1000;
 // the consumers have been fed for years: altitude -1000..99998 m and temperature
 // -99..98 C (lyusupov NMEA.cpp:250-253). The other two are one short of their
 // sentinel for the same reason.
-constexpr uint32_t kLk8MaxPressurePa = kLk8NoPressurePa - 1;
-constexpr int32_t kLk8MinAltitudeM = -1000;
-constexpr int32_t kLk8MaxAltitudeM = kLk8NoAltitudeM - 1;
-constexpr int32_t kLk8MaxVarioCmS = kLk8NoVarioCmS - 1;
-constexpr int32_t kLk8MinVarioCmS = -kLk8MaxVarioCmS;
-constexpr int32_t kLk8MinTemperatureC = -99;
-constexpr int32_t kLk8MaxTemperatureC = kLk8NoTemperatureC - 1;
+constexpr uint32_t kLk8PressureCeilingPa = kLk8NoPressurePa - 1;
+constexpr int32_t kLk8AltitudeFloorM = -1000;
+constexpr int32_t kLk8AltitudeCeilingM = kLk8NoAltitudeM - 1;
+constexpr int32_t kLk8VarioCeilingCmS = kLk8NoVarioCmS - 1;
+constexpr int32_t kLk8VarioFloorCmS = -kLk8VarioCeilingCmS;
+constexpr int32_t kLk8TemperatureFloorC = -99;
+constexpr int32_t kLk8TemperatureCeilingC = kLk8NoTemperatureC - 1;
 
 // What the device has to say, each part of it separately present or absent: a
 // unit with no barometer still has a battery, and that alone is a sentence worth

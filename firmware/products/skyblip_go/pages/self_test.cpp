@@ -98,7 +98,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         // Centivolts: at boot the number that matters is whether the pack can
         // carry a flight, and two decimals is what a cell is judged on.
         written = format_string(text, "BAT ");
-        written += format_uint(text + written, (snapshot.battery_mv + 5u) / 10u, 1, 2);
+        written += format_unsigned(text + written, (snapshot.battery_mv + 5u) / 10u, 1, 2);
         written += format_string(text + written, " V");
     }
     if (snapshot.went_dark_flat)

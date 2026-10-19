@@ -28,7 +28,7 @@ void right_aligned_text(ui::Canvas& canvas, int x_end, int y, const char* text, 
 
 void draw_count(ui::Canvas& canvas, int heard_count) {
     char text[8];
-    const int written = format_uint(text, static_cast<uint32_t>(heard_count), 1);
+    const int written = format_unsigned(text, static_cast<uint32_t>(heard_count), 1);
     text[written] = 0;
     right_aligned(canvas, kNearbyRelativeAltitudeEnd, kNearbyTitleY, text, written, kCountScale);
 
@@ -119,12 +119,12 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
         metric ? div_round(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).value;
     int written = distance_e1 > kDistanceCeilingE1
                       ? format_string(text, "FAR")
-                      : format_uint(text, static_cast<uint32_t>(distance_e1), 2, 1);
+                      : format_unsigned(text, static_cast<uint32_t>(distance_e1), 2, 1);
     text[written] = 0;
     right_aligned(canvas, kNearbyDistanceEnd, y, text, written, kNearbyScale);
 
     const int32_t relative = relative_hundreds_of_feet(row.up_m);
-    written = format_int(text, relative, 2, 0, relative != 0);
+    written = format_signed(text, relative, 2, 0, relative != 0);
     text[written] = 0;
     right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, text, written, kNearbyScale);
 }

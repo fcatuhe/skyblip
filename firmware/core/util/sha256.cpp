@@ -21,9 +21,11 @@ constexpr uint32_t kInitial[8] = {
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 };
 
-constexpr uint32_t rotr(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
+constexpr uint32_t rotate_right(uint32_t value, int bits) {
+    return (value >> bits) | (value << (32 - bits));
+}
 
-uint32_t be32(const uint8_t* bytes) {
+uint32_t get_u32_big_endian(const uint8_t* bytes) {
     return static_cast<uint32_t>(bytes[0]) << 24 | static_cast<uint32_t>(bytes[1]) << 16 |
            static_cast<uint32_t>(bytes[2]) << 8 | static_cast<uint32_t>(bytes[3]);
 }
@@ -57,9 +59,9 @@ Sha256::Digest Sha256::finish() {
     update(&marker, 1);
     const uint8_t zero = 0;
     while (filled_ != kBlockBytes - 8) update(&zero, 1);
-    uint8_t length[8];
-    for (int i = 0; i < 8; i++) length[i] = static_cast<uint8_t>(bits >> (56 - 8 * i));
-    update(length, sizeof(length));
+    uint8_t encoded_bits[8];
+    for (int i = 0; i < 8; i++) encoded_bits[i] = static_cast<uint8_t>(bits >> (56 - 8 * i));
+    update(encoded_bits, sizeof(encoded_bits));
 
     Digest digest{};
     for (size_t i = 0; i < 8; i++) {
@@ -73,46 +75,41 @@ Sha256::Digest Sha256::finish() {
 }
 
 Sha256::Digest Sha256::of(const uint8_t* data, size_t bytes) {
-    Sha256 sha;
-    sha.update(data, bytes);
-    return sha.finish();
+    Sha256 hasher;
+    hasher.update(data, bytes);
+    return hasher.finish();
 }
 
 void Sha256::compress(const uint8_t* block) {
-    uint32_t w[64];
-    for (size_t i = 0; i < 16; i++) w[i] = be32(block + 4 * i);
+    uint32_t schedule[64];
+    for (size_t i = 0; i < 16; i++) schedule[i] = get_u32_big_endian(block + 4 * i);
     for (size_t i = 16; i < 64; i++) {
-        const uint32_t s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
-        const uint32_t s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
-        w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+        const uint32_t older = schedule[i - 15];
+        const uint32_t recent = schedule[i - 2];
+        const uint32_t older_mix = rotate_right(older, 7) ^ rotate_right(older, 18) ^ (older >> 3);
+        const uint32_t recent_mix =
+            rotate_right(recent, 17) ^ rotate_right(recent, 19) ^ (recent >> 10);
+        schedule[i] = schedule[i - 16] + older_mix + schedule[i - 7] + recent_mix;
     }
 
-    uint32_t a = state_[0], b = state_[1], c = state_[2], d = state_[3];
-    uint32_t e = state_[4], f = state_[5], g = state_[6], h = state_[7];
-    for (int i = 0; i < 64; i++) {
-        const uint32_t s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-        const uint32_t choose = (e & f) ^ (~e & g);
-        const uint32_t t1 = h + s1 + choose + kRound[i] + w[i];
-        const uint32_t s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-        const uint32_t majority = (a & b) ^ (a & c) ^ (b & c);
-        const uint32_t t2 = s0 + majority;
-        h = g;
-        g = f;
-        f = e;
-        e = d + t1;
-        d = c;
-        c = b;
-        b = a;
-        a = t1 + t2;
+    uint32_t working[8];
+    std::memcpy(working, state_, sizeof(working));
+    for (int round = 0; round < 64; round++) {
+        const uint32_t first = working[0];
+        const uint32_t fifth = working[4];
+        const uint32_t fifth_mix =
+            rotate_right(fifth, 6) ^ rotate_right(fifth, 11) ^ rotate_right(fifth, 25);
+        const uint32_t choose = (fifth & working[5]) ^ (~fifth & working[6]);
+        const uint32_t carried = working[7] + fifth_mix + choose + kRound[round] + schedule[round];
+        const uint32_t first_mix =
+            rotate_right(first, 2) ^ rotate_right(first, 13) ^ rotate_right(first, 22);
+        const uint32_t majority =
+            (first & working[1]) ^ (first & working[2]) ^ (working[1] & working[2]);
+        for (int k = 7; k > 0; k--) working[k] = working[k - 1];
+        working[4] += carried;
+        working[0] = carried + first_mix + majority;
     }
-    state_[0] += a;
-    state_[1] += b;
-    state_[2] += c;
-    state_[3] += d;
-    state_[4] += e;
-    state_[5] += f;
-    state_[6] += g;
-    state_[7] += h;
+    for (int k = 0; k < 8; k++) state_[k] += working[k];
 }
 
 }  // namespace skyblip

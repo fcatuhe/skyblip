@@ -41,9 +41,9 @@ int format_word(char* out, const char* word) {
 }
 
 int format_span(char* out, uint32_t seconds) {
-    int n = format_uint(out, seconds / 3600);
+    int n = format_unsigned(out, seconds / 3600);
     out[n++] = 'H';
-    n += format_uint(out + n, seconds % 3600 / 60, 2);
+    n += format_unsigned(out + n, seconds % 3600 / 60, 2);
     return n;
 }
 
@@ -65,7 +65,7 @@ void draw_title(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, page_title(Page::Capture), true, 1);
     char text[16];
     int written = format_string(text, "T+");
-    written += format_uint(text + written, snapshot.uptime_s % kUptimeClockWrapS);
+    written += format_unsigned(text + written, snapshot.uptime_s % kUptimeClockWrapS);
     text[written] = 0;
     canvas.draw_text(kRight - written * kCellW, kTitleY, text, true, 1);
     canvas.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
@@ -97,14 +97,14 @@ void draw_offered_capture(ui::Canvas& canvas, int line, diagnostics::Profile pro
 void draw_price(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     char text[40];
     int written = format_word(text, "TAKES");
-    written += format_uint(text + written, snapshot.capture.growth_sectors);
+    written += format_unsigned(text + written, snapshot.capture.growth_sectors);
     written += format_string(text + written, " OF ");
-    written += format_uint(text + written, snapshot.capture.pool_sectors);
+    written += format_unsigned(text + written, snapshot.capture.pool_sectors);
     written += format_string(text + written, " SECTORS");
     row(canvas, kPriceLine, text, written);
 
     written = format_word(text, "EVICTS");
-    written += format_uint(text + written, snapshot.capture.evicted_flights);
+    written += format_unsigned(text + written, snapshot.capture.evicted_flights);
     written += format_string(text + written, " FLIGHTS");
     row(canvas, kPriceLine + 1, text, written);
 
@@ -118,9 +118,9 @@ void draw_wrote(ui::Canvas& canvas, const bus::CaptureState& c) {
     if (c.records == 0) return;
     char text[40];
     int written = format_word(text, "WROTE");
-    written += format_uint(text + written, c.records);
+    written += format_unsigned(text + written, c.records);
     written += format_string(text + written, " DROP ");
-    written += format_uint(text + written, c.dropped);
+    written += format_unsigned(text + written, c.dropped);
     row(canvas, kWroteLine, text, written);
 }
 
@@ -140,17 +140,17 @@ void draw_offer(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
 void draw_progress(ui::Canvas& canvas, const bus::CaptureState& c) {
     char text[40];
     int written = format_word(text, "SESSION");
-    written += format_uint(text + written, c.session_id);
+    written += format_unsigned(text + written, c.session_id);
     row(canvas, kProgressLine, text, written);
 
     written = format_word(text, "WROTE");
-    written += format_uint(text + written, c.records);
+    written += format_unsigned(text + written, c.records);
     written += format_string(text + written, " DROP ");
-    written += format_uint(text + written, c.dropped);
+    written += format_unsigned(text + written, c.dropped);
     row(canvas, kProgressLine + 1, text, written);
 
     written = format_word(text, "SECTORS");
-    written += format_uint(text + written, c.sectors);
+    written += format_unsigned(text + written, c.sectors);
     written += format_string(text + written, " KEEPS ");
     written += format_span(text + written, c.keeps_s);
     row(canvas, kProgressLine + 2, text, written);
@@ -160,9 +160,9 @@ void draw_faults(ui::Canvas& canvas, const bus::CaptureState& c, int line) {
     if (c.faults == 0 && c.unreadable_sectors == 0) return;
     char text[40];
     int written = format_word(text, "FLASH FAULTS");
-    written += format_uint(text + written, c.faults);
+    written += format_unsigned(text + written, c.faults);
     written += format_string(text + written, " UNREAD ");
-    written += format_uint(text + written, c.unreadable_sectors);
+    written += format_unsigned(text + written, c.unreadable_sectors);
     row(canvas, line, text, written);
 }
 

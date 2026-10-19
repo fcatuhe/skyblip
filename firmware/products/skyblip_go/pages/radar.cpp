@@ -120,7 +120,7 @@ void flight_clock(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     if (!flight_over(snapshot)) return;
 
     char seconds[4];
-    seconds[format_uint(seconds, snapshot.flight_seconds % 60, 2)] = 0;
+    seconds[format_unsigned(seconds, snapshot.flight_seconds % 60, 2)] = 0;
     const int x = kMargin + minutes_w + kSecondsGap;
     const int y = kClockY + kCharH * (kClockScale - kSecondsScale);
     clear_behind(canvas, x, y, text_width(seconds, kSecondsScale), kCharH * kSecondsScale);
@@ -136,7 +136,7 @@ struct RangeText {
 
 RangeText range_text(const RadarSnapshot& snapshot) {
     RangeText t;
-    const int written = format_uint(
+    const int written = format_unsigned(
         t.number, static_cast<uint32_t>(range_value(snapshot.range_step, snapshot.units)));
     t.number[written] = 0;
     t.unit = range_unit(snapshot.units);
@@ -178,7 +178,7 @@ const char* state_word(const RadarSnapshot& snapshot) {
 const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     if (!snapshot.battery_low) return nullptr;
     int written = format_string(out, "BAT ");
-    written += format_uint(out + written, snapshot.battery_percent);
+    written += format_unsigned(out + written, snapshot.battery_percent);
     written += format_string(out + written, "%");
     out[written] = 0;
     return out;
@@ -209,7 +209,7 @@ void state_note(ui::Canvas& canvas, const char* note, int y) {
 void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
     char text[4];
     if (counting)
-        text[format_uint(text, static_cast<uint32_t>(heard_count))] = 0;
+        text[format_unsigned(text, static_cast<uint32_t>(heard_count))] = 0;
     else
         text[format_string(text, "-")] = 0;
     const int x = kGlassWidth - kMargin - text_width(text, kTrafficScale);
@@ -270,7 +270,7 @@ void formation_counts(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t
     for (int q = 0; q < 4; q++) {
         if (count[q] <= 0) continue;
         char text[4];
-        text[format_uint(text, static_cast<uint32_t>(count[q] > 9 ? 9 : count[q]))] = 0;
+        text[format_unsigned(text, static_cast<uint32_t>(count[q] > 9 ? 9 : count[q]))] = 0;
         canvas.draw_text(x[q], y[q], text, true, 1);
     }
 }

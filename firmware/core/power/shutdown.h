@@ -59,7 +59,7 @@ enum class PowerDownStep : uint8_t {
     // The rails collapse last, and only once every part behind them has been
     // told and every line into them is at zero.
     PeripheralRailOff,
-    AuxRailOff,
+    AuxiliaryRailOff,
     // INFO: hk 03aug26 SoftRF-moshe-braner src/platform/nRF52.cpp:2055-2080
     // drives each enable pin OUTPUT LOW before switching it to input, because
     // that "clears the output latch AND actively shuts off the external
@@ -82,7 +82,7 @@ inline constexpr PowerDownStep kPowerDownOrder[kPowerDownStepCount] = {
     PowerDownStep::GnssResetAsserted,
     PowerDownStep::RadioResetAsserted,
     PowerDownStep::PeripheralRailOff,
-    PowerDownStep::AuxRailOff,
+    PowerDownStep::AuxiliaryRailOff,
     PowerDownStep::DrivenPinsReleased,
     PowerDownStep::WakePinArmed,
 };
@@ -125,7 +125,7 @@ static_assert(step_order(PowerDownStep::PanelLinesReleased) <
               "a panel line left driven high back-feeds the glass through its protection diodes");
 static_assert(step_order(PowerDownStep::PeripheralRailOff) <
                       step_order(PowerDownStep::DrivenPinsReleased) &&
-                  step_order(PowerDownStep::AuxRailOff) <
+                  step_order(PowerDownStep::AuxiliaryRailOff) <
                       step_order(PowerDownStep::DrivenPinsReleased),
               "a pin is released only once there is no rail left to back-feed");
 

@@ -26,14 +26,14 @@ static_assert(kDischargeCurve[0].percent == 0 &&
                   kDischargeCurve[sizeof(kDischargeCurve) / sizeof(Point) - 1].cell_mv == kFullMv,
               "a curve that does not span empty to full is read past its ends");
 
-uint16_t median_of(uint16_t a, uint16_t b, uint16_t c) {
-    if (a > b) {
-        const uint16_t swap = a;
-        a = b;
-        b = swap;
+uint16_t median_of(uint16_t first, uint16_t second, uint16_t third) {
+    if (first > second) {
+        const uint16_t swap = first;
+        first = second;
+        second = swap;
     }
-    if (b > c) b = c > a ? c : a;
-    return b;
+    if (second > third) second = third > first ? third : first;
+    return second;
 }
 
 template <int N>

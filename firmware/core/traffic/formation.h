@@ -18,7 +18,7 @@ constexpr int32_t kDriftM = 60;
 constexpr int32_t kVerticalDriftM = 30;
 constexpr uint32_t kTogetherHoldMs = 6000;
 constexpr int kBreakFixes = 2;
-constexpr int kTrackedContacts = 8;
+constexpr int kMaxTrackedTargets = 8;
 constexpr int32_t kClosingMps = 3;
 constexpr int kClosingFixes = 2;
 constexpr uint32_t kLiftoffWindowMs = kTogetherHoldMs;
@@ -35,7 +35,7 @@ class Tracker {
    public:
     void observe_own(const model::Ownship& own, uint32_t now_ms);
     Report observe(const model::Ownship& own_fix, const model::AircraftObservation& reported,
-                   const flight::Liftoff& contact_liftoff, uint32_t now_ms);
+                   const flight::Liftoff& target_liftoff, uint32_t now_ms);
 
     bool together(uint8_t address_mapping_table, uint32_t address) const;
     int members() const;
@@ -62,13 +62,13 @@ class Tracker {
     static void anchor(Slot& slot, const Report& station, uint32_t now_ms);
     static void off_station(Slot& slot, const Report& fix, uint32_t now_ms);
     static bool closure_confirmed(Slot& slot, int32_t closing_mm_s);
-    bool lifting(const flight::Liftoff& contact_liftoff, uint32_t now_ms) const;
+    bool lifting(const flight::Liftoff& target_liftoff, uint32_t now_ms) const;
     void drop(uint8_t address_mapping_table, uint32_t address);
     Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
     const Slot* find(uint8_t address_mapping_table, uint32_t address) const;
     Slot* find(uint8_t address_mapping_table, uint32_t address);
 
-    std::array<Slot, kTrackedContacts> slots_{};
+    std::array<Slot, kMaxTrackedTargets> slots_{};
     flight::Liftoff own_liftoff_{};
     bool own_grounded_{false};
 };

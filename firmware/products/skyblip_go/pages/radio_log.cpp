@@ -64,27 +64,27 @@ int format_verdict(char* out, const radio::Entry& entry) {
     if (word == nullptr) return 0;
     int written = format_string(out, word);
     if (entry.verdict == radio::Verdict::Miskeyed)
-        written += format_int(out + written, entry.key_offset_s);
+        written += format_signed(out + written, entry.key_offset_s);
     return written;
 }
 
 int format_stamp(char* out, const radio::Entry& entry) {
     if (!entry.utc_dated) {
         int written = format_string(out, "T+");
-        return written + format_uint(out + written, entry.at_s % kUptimeClockWrapS);
+        return written + format_unsigned(out + written, entry.at_s % kUptimeClockWrapS);
     }
-    int written = format_uint(out, entry.at_s / 60 % 60, 2);
+    int written = format_unsigned(out, entry.at_s / 60 % 60, 2);
     out[written++] = ':';
-    written += format_uint(out + written, entry.at_s % 60, 2);
+    written += format_unsigned(out + written, entry.at_s % 60, 2);
     if (!entry.phase_valid) return written;
     out[written++] = '.';
-    return written + format_uint(out + written, entry.into_ms, 3);
+    return written + format_unsigned(out + written, entry.into_ms, 3);
 }
 
 int format_dwell(char* out, const radio::Entry& entry) {
     if (entry.band == model::Band::O) return format_string(out, "O");
     int n = format_string(out, "M");
-    return n + format_uint(out + n, entry.channel);
+    return n + format_unsigned(out + n, entry.channel);
 }
 
 void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
@@ -92,11 +92,11 @@ void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
 
     char text[32];
     int written = format_string(text, "RX ");
-    written += format_uint(text + written, snapshot.rx_ok);
+    written += format_unsigned(text + written, snapshot.rx_ok);
     written += format_string(text + written, " TX ");
-    written += format_uint(text + written, snapshot.tx_ok);
+    written += format_unsigned(text + written, snapshot.tx_ok);
     written += format_string(text + written, " NOISE ");
-    written += format_uint(text + written, snapshot.rx_noise);
+    written += format_unsigned(text + written, snapshot.rx_noise);
     text[written] = 0;
     right_aligned(canvas, kRightEnd, kTitleY, text, written);
 }
@@ -107,7 +107,7 @@ int format_pps(char* out, const GnssReception& gnss) {
         case PpsState::Lock: return written + format_string(out + written, "LOCK");
         case PpsState::Holdover:
             written += format_string(out + written, "HOLD ");
-            return written + format_uint(out + written, gnss.pps_age_s);
+            return written + format_unsigned(out + written, gnss.pps_age_s);
         case PpsState::None:
         default: return written + format_string(out + written, "NONE");
     }
@@ -122,7 +122,7 @@ void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     } else {
         written =
             format_string(text, gnss.satellites >= kFewestSatellitesForAltitude ? "3D " : "2D ");
-        written += format_uint(text + written, gnss.satellites);
+        written += format_unsigned(text + written, gnss.satellites);
         written += format_string(text + written, "SV");
     }
     text[written] = 0;
@@ -133,7 +133,7 @@ void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     canvas.draw_text(kPpsX, kGnssY, text, true, 1);
 
     written = format_string(text, "BAND ");
-    written += format_int(text + written, snapshot.noise_dbm, 1, 0, true);
+    written += format_signed(text + written, snapshot.noise_dbm, 1, 0, true);
     text[written] = 0;
     right_aligned(canvas, kRightEnd, kGnssY, text, written);
 }
@@ -172,7 +172,7 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     }
 
     if (!entry.rssi_valid) return;
-    written = format_int(text, entry.rssi_dbm, 1, 0, true);
+    written = format_signed(text, entry.rssi_dbm, 1, 0, true);
     text[written] = 0;
     right_aligned(canvas, kRightEnd, y, text, written);
 }

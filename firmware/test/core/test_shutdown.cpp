@@ -321,7 +321,7 @@ TEST_CASE("power down: the rails go last, and the pins are released after them")
     RecordingSink sink;
     power_down(sink);
     const int rail = sink.at(PowerDownStep::PeripheralRailOff);
-    const int aux = sink.at(PowerDownStep::AuxRailOff);
+    const int aux = sink.at(PowerDownStep::AuxiliaryRailOff);
     for (const PowerDownStep step :
          {PowerDownStep::RadioSleep, PowerDownStep::ExternalFlashDeepPowerDown,
           PowerDownStep::ExternalFlashLinesReleased, PowerDownStep::PanelLinesReleased,

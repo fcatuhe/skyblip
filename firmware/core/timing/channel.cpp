@@ -9,14 +9,15 @@ namespace skyblip::timing {
 // to weigh still moves the average by one hundredth.
 void NoiseFloor::sample(int8_t rssi_dbm) {
     samples_++;
-    const int32_t residual = static_cast<int32_t>(rssi_dbm) * 100 - centi_dbm_;
+    const int32_t residual = static_cast<int32_t>(rssi_dbm) * 100 - level_centi_dbm_;
     int32_t step = residual * kWeightPercent / 100;
     if (step == 0) step = residual > 0 ? 1 : (residual < 0 ? -1 : 0);
-    centi_dbm_ += step;
+    level_centi_dbm_ += step;
 }
 
-int8_t NoiseFloor::dbm() const {
-    const int32_t rounded = centi_dbm_ >= 0 ? (centi_dbm_ + 50) / 100 : (centi_dbm_ - 50) / 100;
+int8_t NoiseFloor::level_dbm() const {
+    const int32_t rounded =
+        level_centi_dbm_ >= 0 ? (level_centi_dbm_ + 50) / 100 : (level_centi_dbm_ - 50) / 100;
     if (rounded < -128) return -128;
     if (rounded > 127) return 127;
     return static_cast<int8_t>(rounded);

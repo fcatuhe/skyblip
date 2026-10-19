@@ -113,13 +113,13 @@ int format_version(const ports::ImageVersion& version, char* out, size_t capacit
         if (capacity > 0) out[0] = 0;
         return 0;
     }
-    int written = format_uint(out, version.major);
+    int written = format_unsigned(out, version.major);
     out[written++] = '.';
-    written += format_uint(out + written, version.minor);
+    written += format_unsigned(out + written, version.minor);
     out[written++] = '.';
-    written += format_uint(out + written, version.revision);
+    written += format_unsigned(out + written, version.revision);
     out[written++] = '+';
-    written += format_uint(out + written, version.build);
+    written += format_unsigned(out + written, version.build);
     out[written] = 0;
     return written;
 }

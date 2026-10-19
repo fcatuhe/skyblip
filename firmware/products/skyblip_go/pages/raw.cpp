@@ -34,21 +34,21 @@ int format_word(char* out, const char* word) {
 
 int format_keyed(char* out, const char* key, uint32_t value) {
     int n = format_word(out, key);
-    n += format_uint(out + n, value);
+    n += format_unsigned(out + n, value);
     out[n++] = ' ';
     return n;
 }
 
 int format_dop(char* out, const char* key, uint16_t dop_e2) {
     int n = format_word(out, key);
-    n += dop_e2 == 0 ? format_string(out + n, "---") : format_uint(out + n, dop_e2, 3, 2);
+    n += dop_e2 == 0 ? format_string(out + n, "---") : format_unsigned(out + n, dop_e2, 3, 2);
     out[n++] = ' ';
     return n;
 }
 
 int format_micros(char* out, const char* key, int32_t us) {
     int n = format_word(out, key);
-    n += format_int(out + n, us, 1, 0, /*plus_sign=*/false);
+    n += format_signed(out + n, us, 1, 0, /*plus_sign=*/false);
     n += format_string(out + n, "US ");
     return n;
 }
@@ -80,7 +80,7 @@ void draw_title(ui::Canvas& canvas, const RawSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "RAW", true, 1);
     char text[16];
     int written = format_string(text, "T+");
-    written += format_uint(text + written, snapshot.uptime_s % kUptimeClockWrapS);
+    written += format_unsigned(text + written, snapshot.uptime_s % kUptimeClockWrapS);
     text[written] = 0;
     right_aligned(canvas, kRight, kTitleY, text, written);
     canvas.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
@@ -100,13 +100,13 @@ void draw_nav(ui::Canvas& canvas, int y, const RawGnss& g) {
     char text[40];
     int written = format_word(text, "NAV");
     if (g.nav_valid) {
-        written += format_uint(text + written, g.nav_ms, 3);
+        written += format_unsigned(text + written, g.nav_ms, 3);
         written += format_string(text + written, "MS ");
     } else {
         written += format_string(text + written, "--- ");
     }
     written += format_word(text + written, "WIRE");
-    written += format_uint(text + written, g.health.pps_latency_ms);
+    written += format_unsigned(text + written, g.health.pps_latency_ms);
     written += format_string(text + written, "MS ");
     written += format_keyed(text + written, "SENT", g.health.sentences);
     row(canvas, y, text, written);
@@ -130,7 +130,7 @@ void draw_quality(ui::Canvas& canvas, int y, const RawGnss& g) {
     written += format_dop(text + written, "VDOP", g.vdop_e2);
     written += format_word(text + written, "RES");
     if (g.resid_valid) {
-        written += format_uint(text + written, g.resid_m);
+        written += format_unsigned(text + written, g.resid_m);
         written += format_string(text + written, "M");
     } else {
         written += format_string(text + written, "---");
@@ -153,7 +153,7 @@ void draw_clock(ui::Canvas& canvas, int y, const RawGnss& g) {
     char text[40];
     int written = format_word(text, "PPS");
     written += format_word(text + written, pps_word(g.pps));
-    written += format_uint(text + written, g.pps_age_ms);
+    written += format_unsigned(text + written, g.pps_age_ms);
     written += format_string(text + written, "MS ");
     written += format_word(text + written, "UTC");
     written += g.utc_valid ? format_seconds_of_day(text + written, g.utc_s)
@@ -165,12 +165,12 @@ void draw_dwell(ui::Canvas& canvas, int y, const RawRadio& r) {
     char text[40];
     int written = format_word(text, "DWELL");
     written += format_word(text + written, slot_word(r.slot));
-    written += format_uint(text + written, r.frequency_hz / 100000 % 10000, 4, 1);
+    written += format_unsigned(text + written, r.frequency_hz / 100000 % 10000, 4, 1);
     written += format_string(text + written, " TX ");
     written += format_string(text + written, yes_no(r.tx_allowed));
     row(canvas, y, text, written);
 
-    written = format_int(text, r.noise_dbm, 1, 0, /*plus_sign=*/false);
+    written = format_signed(text, r.noise_dbm, 1, 0, /*plus_sign=*/false);
     written += format_string(text + written, "DBM");
     text[written] = 0;
     right_aligned(canvas, kRight, y, text, written);
@@ -197,11 +197,11 @@ void draw_rx_verdicts(ui::Canvas& canvas, int y, const RawRadio& r) {
 void draw_uplink(ui::Canvas& canvas, int y, const RawRadio& r) {
     char text[40];
     int written = format_word(text, "UPLINK");
-    written += format_uint(text + written, r.uplink_frames);
+    written += format_unsigned(text + written, r.uplink_frames);
     text[written++] = '/';
-    written += format_uint(text + written, r.uplink_bad);
+    written += format_unsigned(text + written, r.uplink_bad);
     text[written++] = '/';
-    written += format_uint(text + written, r.uplink_targets);
+    written += format_unsigned(text + written, r.uplink_targets);
     text[written++] = ' ';
     written += format_keyed(text + written, "TRK", r.tracked);
     written += format_keyed(text + written, "ALM", r.alarm);
@@ -221,10 +221,10 @@ void draw_tx(ui::Canvas& canvas, int y, const RawRadio& r) {
 void draw_burst(ui::Canvas& canvas, int y, const RawRadio& r) {
     char text[40];
     int written = format_word(text, "DUTY");
-    written += format_uint(text + written, r.duty_permille);
+    written += format_unsigned(text + written, r.duty_permille);
     written += format_string(text + written, "/1000 ");
     written += format_word(text + written, "KEYED");
-    written += format_uint(text + written, r.tx_keyed_us);
+    written += format_unsigned(text + written, r.tx_keyed_us);
     written += format_string(text + written, "US");
     row(canvas, y, text, written);
 }

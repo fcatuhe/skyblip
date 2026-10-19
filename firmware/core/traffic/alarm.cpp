@@ -16,7 +16,7 @@ namespace skyblip::traffic {
 namespace {
 
 // Millimetres a second, north and east, scaled by the cordic one.
-void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
+void velocity_north_east(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
     north = static_cast<int64_t>(speed_mm_s) * cosine(angle);
     east = static_cast<int64_t>(speed_mm_s) * sine(angle);
 }
@@ -31,20 +31,21 @@ Level level_for(const AlarmAssessment& assessment) {
 
 int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
                      int32_t north_m, int32_t east_m, int32_t distance_m) {
-    constexpr int32_t unknown_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
-    if (distance_m <= 0) return unknown_mm_s;
+    constexpr int32_t unknown_closing_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
+    if (distance_m <= 0) return unknown_closing_mm_s;
 
-    int64_t own_n = 0, own_e = 0;
-    velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
-    int64_t target_n = 0, target_e = 0;
+    int64_t own_north = 0, own_east = 0;
+    velocity_north_east(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_north,
+                        own_east);
+    int64_t target_north = 0, target_east = 0;
     if (target.speed_valid)
-        velocity_ned(to_mm_s(QuarterMetresPerSecond(target.speed_q)).value,
-                     to_angle16(Cordic9(target.track_c9)), target_n, target_e);
+        velocity_north_east(to_mm_s(QuarterMetresPerSecond(target.speed_q)).value,
+                            to_angle16(Cordic9(target.track_c9)), target_north, target_east);
 
-    const int64_t along = (target_n - own_n) * north_m + (target_e - own_e) * east_m;
+    const int64_t along = (target_north - own_north) * north_m + (target_east - own_east) * east_m;
     const int64_t scale = static_cast<int64_t>(distance_m) * kTrigOne;
     int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
-    if (!target.speed_valid) closing += unknown_mm_s;
+    if (!target.speed_valid) closing += unknown_closing_mm_s;
     return closing;
 }
 
@@ -129,15 +130,16 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& tar
                                            uint32_t now_ms) {
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
-    for (Slot& s : slots_) {
-        if (s.used && s.address == target.address &&
-            s.address_mapping_table == target.address_mapping_table)
-            return &s;
-        if (!s.used) {
-            if (free_slot == nullptr) free_slot = &s;
+    for (Slot& candidate : slots_) {
+        if (candidate.used && candidate.address == target.address &&
+            candidate.address_mapping_table == target.address_mapping_table)
+            return &candidate;
+        if (!candidate.used) {
+            if (free_slot == nullptr) free_slot = &candidate;
             continue;
         }
-        if (oldest == nullptr || now_ms - s.seen_ms > now_ms - oldest->seen_ms) oldest = &s;
+        if (oldest == nullptr || now_ms - candidate.seen_ms > now_ms - oldest->seen_ms)
+            oldest = &candidate;
     }
     Slot* slot = free_slot != nullptr ? free_slot : oldest;
     if (slot == nullptr) return nullptr;
@@ -150,41 +152,42 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& tar
 }
 
 void AlarmTracker::withdraw(uint8_t address_mapping_table, uint32_t address) {
-    for (Slot& s : slots_) {
-        if (!s.used || s.address != address || s.address_mapping_table != address_mapping_table)
+    for (Slot& slot : slots_) {
+        if (!slot.used || slot.address != address ||
+            slot.address_mapping_table != address_mapping_table)
             continue;
-        s.notified_level = Level::None;
-        s.falling = false;
-        s.dismissed = false;
+        slot.notified_level = Level::None;
+        slot.falling = false;
+        slot.dismissed = false;
     }
 }
 
 void AlarmTracker::dismiss() {
-    for (Slot& s : slots_)
-        if (s.used && s.notified_level != Level::None) s.dismissed = true;
+    for (Slot& slot : slots_)
+        if (slot.used && slot.notified_level != Level::None) slot.dismissed = true;
 }
 
 bool AlarmTracker::dismissed() const {
     bool any = false;
-    for (const Slot& s : slots_) {
-        if (!s.used || s.notified_level == Level::None) continue;
-        if (!s.dismissed) return false;
+    for (const Slot& slot : slots_) {
+        if (!slot.used || slot.notified_level == Level::None) continue;
+        if (!slot.dismissed) return false;
         any = true;
     }
     return any;
 }
 
 void AlarmTracker::forget_stale(uint32_t now_ms) {
-    for (Slot& s : slots_) {
-        if (s.used && now_ms - s.seen_ms > s.forget_ms) s = Slot{};
+    for (Slot& slot : slots_) {
+        if (slot.used && now_ms - slot.seen_ms > slot.forget_ms) slot = Slot{};
     }
 }
 
 Level AlarmTracker::announced_level(uint32_t now_ms) const {
     Level level = Level::None;
-    for (const Slot& s : slots_) {
-        if (!s.used || s.dismissed || now_ms - s.seen_ms > kAlertMaxAgeMs) continue;
-        level = std::max(s.notified_level, level);
+    for (const Slot& slot : slots_) {
+        if (!slot.used || slot.dismissed || now_ms - slot.seen_ms > kAlertMaxAgeMs) continue;
+        level = std::max(slot.notified_level, level);
     }
     return level;
 }

@@ -74,7 +74,7 @@ class AdslUplink {
                   int capacity, DecodeStatistics& statistics) const;
 
    private:
-    fec::ReedSolomon255 rs_;
+    fec::ReedSolomon255 reed_solomon_;
 };
 
 }

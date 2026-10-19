@@ -77,7 +77,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.rssi_dbm = -97;
     in.key_offset_s = -18;
     in.channel = 1;
-    in.length = 26;
+    in.bytes = 26;
     in.address_valid = true;
     in.rssi_valid = true;
     in.utc_dated = true;
@@ -106,7 +106,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.rssi_dbm == in.rssi_dbm);
     CHECK(out.key_offset_s == in.key_offset_s);
     CHECK(out.channel == in.channel);
-    CHECK(out.length == in.length);
+    CHECK(out.bytes == in.bytes);
     CHECK(out.address_valid);
     CHECK(out.rssi_valid);
     CHECK(out.utc_dated);

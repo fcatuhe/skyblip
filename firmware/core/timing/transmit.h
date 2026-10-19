@@ -21,7 +21,7 @@ class Transmitter {
    public:
     // INFO: fc 28sep26 §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms
     static constexpr uint32_t kAirTimeMs = 5;
-    // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a contact is hex
+    // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a target is hex
     static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
     static constexpr int32_t kFixMaxAgeMs = 500;

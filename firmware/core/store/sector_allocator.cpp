@@ -239,11 +239,11 @@ bool SectorAllocator::session_sector(SectorOwner owner, uint32_t session_id, uin
     uint32_t low = lowest + labels_before;
     uint32_t high = highest - labels_after;
     while (low < high) {
-        const uint32_t mid = low + (high - low) / 2;
-        if (matching_up_to(match, mid) > index)
-            high = mid;
+        const uint32_t middle = low + (high - low) / 2;
+        if (matching_up_to(match, middle) > index)
+            high = middle;
         else
-            low = mid + 1;
+            low = middle + 1;
     }
     for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
         if (!matches(match, candidate) || sequence_of_[candidate] != low) continue;

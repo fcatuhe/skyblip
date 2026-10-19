@@ -25,7 +25,7 @@ const char* to_string(PowerDownStep step) {
         case PowerDownStep::GnssResetAsserted: return "GNSS RESET";
         case PowerDownStep::RadioResetAsserted: return "RADIO RESET";
         case PowerDownStep::PeripheralRailOff: return "RAIL OFF";
-        case PowerDownStep::AuxRailOff: return "AUX RAIL OFF";
+        case PowerDownStep::AuxiliaryRailOff: return "AUX RAIL OFF";
         case PowerDownStep::DrivenPinsReleased: return "PINS RELEASED";
         case PowerDownStep::WakePinArmed: return "WAKE ARMED";
     }

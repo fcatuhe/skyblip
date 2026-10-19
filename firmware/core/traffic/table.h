@@ -90,7 +90,7 @@ class TrafficTable {
                            const model::AircraftObservation& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
     static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
-    static bool matters_less(const Weight& a, const Weight& b);
+    static bool matters_less(const Weight& weight, const Weight& other);
     Weight weight_of(const model::AircraftObservation& observation, uint32_t now_s) const;
     int allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s);
 };

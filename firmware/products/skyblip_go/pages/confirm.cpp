@@ -74,7 +74,7 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
     if (snapshot.timeout_s == 0) return;
     char text[32];
     int written = format_string(text, "REFUSED AFTER ");
-    written += format_uint(text + written, snapshot.timeout_s);
+    written += format_unsigned(text + written, snapshot.timeout_s);
     written += format_string(text + written, " S");
     text[written] = 0;
     canvas.draw_text(kLeft, kConfirmExpiryY, text, true, 1);

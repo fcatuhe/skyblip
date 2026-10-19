@@ -52,7 +52,7 @@ class DiagnosticsDump {
 
         d.uptime_s = now_ms / 1000;
 
-        d.noise_dbm = product.radio().noise_floor().dbm();
+        d.noise_dbm = product.radio().noise_floor().level_dbm();
         d.duty_permille = state.rf.duty_permille;
         d.rx_ok = state.air.rx_ok;
         d.rx_bad = state.air.rx_bad;

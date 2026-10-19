@@ -9,17 +9,17 @@ void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const
     if (index < 0) index = oldest_slot();
     if (index < 0) return;
 
-    Entry& e = slots_[static_cast<size_t>(index)];
-    e.used = true;
-    e.address = address;
-    e.address_mapping_table = address_mapping_table;
-    e.heard_s = now_s;
-    int n = 0;
-    while (n < kTextBytes - 1 && callsign[n] != 0) {
-        e.text[n] = callsign[n];
-        n++;
+    Entry& entry = slots_[static_cast<size_t>(index)];
+    entry.used = true;
+    entry.address = address;
+    entry.address_mapping_table = address_mapping_table;
+    entry.heard_s = now_s;
+    int count = 0;
+    while (count < kTextBytes - 1 && callsign[count] != 0) {
+        entry.text[count] = callsign[count];
+        count++;
     }
-    e.text[n] = 0;
+    entry.text[count] = 0;
 }
 
 const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address) const {
@@ -29,26 +29,27 @@ const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address)
 }
 
 void CallsignTable::age_out(uint32_t now_s, uint32_t forget_s) {
-    for (Entry& e : slots_) {
-        if (!e.used) continue;
-        if (now_s < e.heard_s || now_s - e.heard_s <= forget_s) continue;
-        e = Entry{};
+    for (Entry& entry : slots_) {
+        if (!entry.used) continue;
+        if (now_s < entry.heard_s || now_s - entry.heard_s <= forget_s) continue;
+        entry = Entry{};
     }
 }
 
 int CallsignTable::count() const {
-    int n = 0;
-    for (const Entry& e : slots_)
-        if (e.used) n++;
-    return n;
+    int count = 0;
+    for (const Entry& entry : slots_)
+        if (entry.used) count++;
+    return count;
 }
 
 void CallsignTable::clear() { slots_ = {}; }
 
 int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kMaxCallsigns; i++) {
-        const Entry& e = slots_[static_cast<size_t>(i)];
-        if (e.used && e.address == address && e.address_mapping_table == address_mapping_table)
+        const Entry& entry = slots_[static_cast<size_t>(i)];
+        if (entry.used && entry.address == address &&
+            entry.address_mapping_table == address_mapping_table)
             return i;
     }
     return -1;
@@ -57,9 +58,9 @@ int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) co
 int CallsignTable::oldest_slot() const {
     int victim = -1;
     for (int i = 0; i < kMaxCallsigns; i++) {
-        const Entry& e = slots_[static_cast<size_t>(i)];
-        if (!e.used) return i;
-        if (victim < 0 || e.heard_s < slots_[static_cast<size_t>(victim)].heard_s) victim = i;
+        const Entry& entry = slots_[static_cast<size_t>(i)];
+        if (!entry.used) return i;
+        if (victim < 0 || entry.heard_s < slots_[static_cast<size_t>(victim)].heard_s) victim = i;
     }
     return victim;
 }

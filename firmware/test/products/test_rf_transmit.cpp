@@ -69,7 +69,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     // E1 and E2, read off the service that spent them: the floor the carrier
     // sense threshold is derived from, and every millisecond that went on air.
     CHECK(simulator.product().radio().noise_floor().samples() > 0);
-    CHECK(simulator.product().radio().noise_floor().dbm() < timing::NoiseFloor::kSeedDbm);
+    CHECK(simulator.product().radio().noise_floor().level_dbm() < timing::NoiseFloor::kSeedDbm);
     CHECK(simulator.product().radio().transmitter().air_time().total_ms() - before.air_time_ms ==
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
     CHECK(simulator.product().radio().duty_permille(from_ms + 6000) <

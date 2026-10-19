@@ -17,9 +17,11 @@ namespace {
 void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ahead_m,
                 int32_t& right_m) {
     const int16_t track = to_angle16(CentiDegrees(track_cdeg));
-    const int64_t c = cosine(track), s = sine(track);
-    ahead_m = static_cast<int32_t>(div_round<int64_t>(north_m * c + east_m * s, kTrigOne));
-    right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kTrigOne));
+    const int64_t cosine_of_track = cosine(track), sine_of_track = sine(track);
+    ahead_m = static_cast<int32_t>(
+        div_round<int64_t>(north_m * cosine_of_track + east_m * sine_of_track, kTrigOne));
+    right_m = static_cast<int32_t>(
+        div_round<int64_t>(east_m * cosine_of_track - north_m * sine_of_track, kTrigOne));
 }
 
 uint32_t reception_key(const model::AircraftObservation& observation) {
@@ -57,7 +59,7 @@ void Tracker::anchor(Slot& slot, const Report& station, uint32_t now_ms) {
 }
 
 Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObservation& reported,
-                        const flight::Liftoff& contact_liftoff, uint32_t now_ms) {
+                        const flight::Liftoff& target_liftoff, uint32_t now_ms) {
     Report out{};
     if (flight::on_ground(own_fix.flight_state) || flight::on_ground(reported.flight_state)) {
         drop(reported.address_mapping_table, reported.address);
@@ -91,7 +93,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
 
     if (!slot->anchored) {
         anchor(*slot, out, now_ms);
-        if (lifting(contact_liftoff, now_ms)) slot->state = State::Joining;
+        if (lifting(target_liftoff, now_ms)) slot->state = State::Joining;
         out.state = slot->state;
         return out;
     }
@@ -118,8 +120,8 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     return out;
 }
 
-bool Tracker::lifting(const flight::Liftoff& contact_liftoff, uint32_t now_ms) const {
-    return recent(own_liftoff_, now_ms) || recent(contact_liftoff, now_ms);
+bool Tracker::lifting(const flight::Liftoff& target_liftoff, uint32_t now_ms) const {
+    return recent(own_liftoff_, now_ms) || recent(target_liftoff, now_ms);
 }
 
 bool Tracker::closure_confirmed(Slot& slot, int32_t closing_mm_s) {
@@ -146,16 +148,16 @@ bool Tracker::together(uint8_t address_mapping_table, uint32_t address) const {
 }
 
 int Tracker::members() const {
-    int n = 0;
-    for (const Slot& s : slots_)
-        if (s.used && s.state == State::Together) n++;
-    return n;
+    int count = 0;
+    for (const Slot& slot : slots_)
+        if (slot.used && slot.state == State::Together) count++;
+    return count;
 }
 
 void Tracker::forget_stale(uint32_t now_ms) {
     constexpr uint32_t lease_ms = traffic::kAirborneTargetForgetS * kMillisecondsPerSecond;
-    for (Slot& s : slots_)
-        if (s.used && now_ms - s.seen_ms > lease_ms) s = Slot{};
+    for (Slot& slot : slots_)
+        if (slot.used && now_ms - slot.seen_ms > lease_ms) slot = Slot{};
 }
 
 void Tracker::drop(uint8_t address_mapping_table, uint32_t address) {
@@ -166,16 +168,17 @@ void Tracker::drop(uint8_t address_mapping_table, uint32_t address) {
 Tracker::Slot* Tracker::slot_for(const model::AircraftObservation& target, uint32_t now_ms) {
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
-    for (Slot& s : slots_) {
-        if (s.used && s.address == target.address &&
-            s.address_mapping_table == target.address_mapping_table)
-            return &s;
-        if (!s.used) {
-            if (free_slot == nullptr) free_slot = &s;
+    for (Slot& candidate : slots_) {
+        if (candidate.used && candidate.address == target.address &&
+            candidate.address_mapping_table == target.address_mapping_table)
+            return &candidate;
+        if (!candidate.used) {
+            if (free_slot == nullptr) free_slot = &candidate;
             continue;
         }
-        if (s.state == State::Together) continue;
-        if (oldest == nullptr || now_ms - s.seen_ms > now_ms - oldest->seen_ms) oldest = &s;
+        if (candidate.state == State::Together) continue;
+        if (oldest == nullptr || now_ms - candidate.seen_ms > now_ms - oldest->seen_ms)
+            oldest = &candidate;
     }
     Slot* slot = free_slot != nullptr ? free_slot : oldest;
     if (slot == nullptr) return nullptr;
@@ -188,16 +191,18 @@ Tracker::Slot* Tracker::slot_for(const model::AircraftObservation& target, uint3
 }
 
 const Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) const {
-    for (const Slot& s : slots_)
-        if (s.used && s.address == address && s.address_mapping_table == address_mapping_table)
-            return &s;
+    for (const Slot& slot : slots_)
+        if (slot.used && slot.address == address &&
+            slot.address_mapping_table == address_mapping_table)
+            return &slot;
     return nullptr;
 }
 
 Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) {
-    for (Slot& s : slots_)
-        if (s.used && s.address == address && s.address_mapping_table == address_mapping_table)
-            return &s;
+    for (Slot& slot : slots_)
+        if (slot.used && slot.address == address &&
+            slot.address_mapping_table == address_mapping_table)
+            return &slot;
     return nullptr;
 }
 

@@ -15,7 +15,7 @@ struct Ownship {
     int32_t latitude_1e7;
     int32_t longitude_1e7;
     // Height above the WGS-84 ellipsoid: ADS-L G.1.7 transmits HAE, and every
-    // neighbour altitude we receive is measured against the same datum, so a
+    // target altitude we receive is measured against the same datum, so a
     // relative height only means something if ours uses it too. altitude_msl_mm is the
     // geoid-referenced figure a panel or an IGC file wants.
     int32_t altitude_hae_mm;

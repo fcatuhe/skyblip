@@ -10,28 +10,28 @@
 namespace skyblip::protocol {
 
 namespace {
-void pack_record(uint8_t* r, const model::AircraftObservation& target) {
-    put_u24(r, target.address & settings::kAddressMask);
-    r[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
-                                ((target.flight_state & 0x03) << 6));
-    r[4] = target.aircraft_category;
-    r[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
-    put_i32(r + 6, target.latitude_1e7);
-    put_i32(r + 10, target.longitude_1e7);
-    put_i16(r + 14, static_cast<int16_t>(target.altitude_m));
+void pack_record(uint8_t* record, const model::AircraftObservation& target) {
+    put_u24(record, target.address & settings::kAddressMask);
+    record[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
+                                     ((target.flight_state & 0x03) << 6));
+    record[4] = target.aircraft_category;
+    record[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
+    put_i32(record + 6, target.latitude_1e7);
+    put_i32(record + 10, target.longitude_1e7);
+    put_i16(record + 14, static_cast<int16_t>(target.altitude_m));
 }
 
-void unpack_record(const uint8_t* r, model::AircraftObservation& target) {
+void unpack_record(const uint8_t* record, model::AircraftObservation& target) {
     target = model::AircraftObservation{};
-    target.address = get_u24(r);
-    target.address_mapping_table = r[3] & 0x3F;
-    target.flight_state = (r[3] >> 6) & 0x03;
-    target.aircraft_category = r[4];
-    target.speed_q = r[5];
-    target.speed_valid = r[5] != 0;
-    target.latitude_1e7 = get_i32(r + 6);
-    target.longitude_1e7 = get_i32(r + 10);
-    target.altitude_m = get_i16(r + 14);
+    target.address = get_u24(record);
+    target.address_mapping_table = record[3] & 0x3F;
+    target.flight_state = (record[3] >> 6) & 0x03;
+    target.aircraft_category = record[4];
+    target.speed_q = record[5];
+    target.speed_valid = record[5] != 0;
+    target.latitude_1e7 = get_i32(record + 6);
+    target.longitude_1e7 = get_i32(record + 10);
+    target.altitude_m = get_i16(record + 14);
     target.position_valid = true;
     target.source = model::Source::AdslUplink;
     target.emergency = 1;
@@ -69,39 +69,39 @@ Status AdslUplink::encode(const model::AircraftObservation* targets, int count, 
     std::memcpy(data, words, sizeof(words));
 
     std::memcpy(out_frame, data, fec::ReedSolomon255::kDataBytes);
-    rs_.encode(data, out_frame + fec::ReedSolomon255::kDataBytes);
+    reed_solomon_.encode(data, out_frame + fec::ReedSolomon255::kDataBytes);
     return Status::Ok;
 }
 
 Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
                           int capacity, DecodeStatistics& statistics) const {
-    uint8_t cw[fec::ReedSolomon255::kCodewordBytes];
-    std::memcpy(cw, frame, sizeof(cw));
-    int corrected = rs_.decode(cw);
+    uint8_t codeword[fec::ReedSolomon255::kCodewordBytes];
+    std::memcpy(codeword, frame, sizeof(codeword));
+    int corrected = reed_solomon_.decode(codeword);
     if (corrected < 0) return Status::Crc;
     statistics.corrected = corrected;
 
     uint8_t data[fec::ReedSolomon255::kDataBytes];
-    std::memcpy(data, cw, fec::ReedSolomon255::kDataBytes);
+    std::memcpy(data, codeword, fec::ReedSolomon255::kDataBytes);
     uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
     fec::xxtea_descramble_key0(words, sizeof(words) / 4, 6);
     std::memcpy(data, words, sizeof(words));
 
     if (data[0] != kVersion) return Status::Unsupported;
-    int n = data[1];
-    if (n > kMaxTargets) return Status::Invalid;
-    int out = 0;
-    for (int i = 0; i < n && out < capacity; i++) {
+    int carried = data[1];
+    if (carried > kMaxTargets) return Status::Invalid;
+    int kept = 0;
+    for (int i = 0; i < carried && kept < capacity; i++) {
         model::AircraftObservation target{};
         unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, target);
         if (!plausible(target)) {
             statistics.rejected++;
             continue;
         }
-        targets[out++] = target;
+        targets[kept++] = target;
     }
-    statistics.targets = out;
+    statistics.targets = kept;
     return Status::Ok;
 }
 

@@ -38,7 +38,7 @@ namespace skyblip::traffic {
 // installation loses several dB into a cockpit at each end, so the air-to-air
 // figure in practice is a third of this: 30 km is a ceiling, never a promise.
 //
-// A ceiling is exactly what a sanity gate wants. It cannot hide a contact anyone
+// A ceiling is exactly what a sanity gate wants. It cannot hide a target anyone
 // could act on, because the alarm layer's advisory ring is 3 km
 // (core/traffic/alarm.h kAdvisoryDistanceM) and the radar's furthest range setting is
 // well inside this figure, and it cannot be reached by a real transmitter on this

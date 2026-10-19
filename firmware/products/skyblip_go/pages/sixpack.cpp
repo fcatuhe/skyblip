@@ -102,7 +102,7 @@ void centred_value(ui::Canvas& canvas, int centre_x, int row, bool have, int32_t
         return;
     }
     char text[12];
-    int written = format_int(text, v, min_digits, 0, plus_sign && v != 0);
+    int written = format_signed(text, v, min_digits, 0, plus_sign && v != 0);
     text[written] = 0;
     value_text(canvas, centre_x, row, text);
 }
@@ -275,11 +275,11 @@ void battery_dial(ui::Canvas& canvas, int centre_x, int row, const SixPackSnapsh
     int written = 0;
     if (snapshot.charging) {
         dial(canvas, centre_x, row, "CHARGE V", 0);
-        written = format_uint(
+        written = format_unsigned(
             text, static_cast<uint32_t>(div_round<int32_t>(snapshot.battery_mv, 10)), 1, 2);
     } else {
         dial(canvas, centre_x, row, "BATTERY", 0);
-        written = snapshot.battery_valid ? format_uint(text, snapshot.battery_percent)
+        written = snapshot.battery_valid ? format_unsigned(text, snapshot.battery_percent)
                                          : format_string(text, "--");
         written += format_string(text + written, "%");
     }

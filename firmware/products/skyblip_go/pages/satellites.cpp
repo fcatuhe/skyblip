@@ -75,7 +75,7 @@ void scale_mark(ui::Canvas& canvas) {
     const int y = kBaseY - kGoodDbHz * kBarSpan / kFullScaleDbHz;
     for (int x = kLeft; x < kRight; x += 4) canvas.hline(x, y, 1, true);
     char text[4];
-    const int written = format_uint(text, kGoodDbHz, 2);
+    const int written = format_unsigned(text, kGoodDbHz, 2);
     text[written] = 0;
     right_aligned(canvas, kRight, y - kCharH - 1, text, written);
 }
@@ -89,10 +89,10 @@ uint32_t used_count(const SatellitesSnapshot& snapshot) {
 void draw_counts(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     char text[24];
     int written = format_string(text, "USED ");
-    written += format_uint(text + written, used_count(snapshot), 1);
+    written += format_unsigned(text + written, used_count(snapshot), 1);
     if (snapshot.levels_live && snapshot.sky != nullptr) {
         written += format_string(text + written, " OF ");
-        written += format_uint(text + written, static_cast<uint32_t>(snapshot.sky->count()), 1);
+        written += format_unsigned(text + written, static_cast<uint32_t>(snapshot.sky->count()), 1);
     }
     text[written] = 0;
     right_aligned(canvas, kRight, kTitleY, text, written);
@@ -102,12 +102,12 @@ void draw_dops(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     char text[32];
     int written = format_string(text, "HDOP ");
     if (snapshot.hdop_e2 > 0)
-        written += format_uint(text + written, snapshot.hdop_e2, 3, 2);
+        written += format_unsigned(text + written, snapshot.hdop_e2, 3, 2);
     else
         written += format_string(text + written, "---");
     written += format_string(text + written, "  VDOP ");
     if (snapshot.vdop_e2 > 0)
-        written += format_uint(text + written, snapshot.vdop_e2, 3, 2);
+        written += format_unsigned(text + written, snapshot.vdop_e2, 3, 2);
     else
         written += format_string(text + written, "---");
     text[written] = 0;
@@ -118,7 +118,7 @@ void draw_nav_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (!snapshot.nav_valid) return;
     char text[12];
     int written = format_string(text, "NAV ");
-    written += format_uint(text + written, snapshot.nav_ms, 3);
+    written += format_unsigned(text + written, snapshot.nav_ms, 3);
     written += format_string(text + written, "MS");
     text[written] = 0;
     right_aligned(canvas, kRight, kDopY, text, written);
@@ -128,12 +128,12 @@ void draw_port(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.health.baud == 0) return;
     char text[32];
     int written = format_string(text, "BAUD ");
-    written += format_uint(text + written, snapshot.health.baud);
+    written += format_unsigned(text + written, snapshot.health.baud);
     written += format_string(text + written, "  ");
     written += format_string(text + written, ports::to_string(snapshot.health.config_stage));
     if (snapshot.health.overruns > 0) {
         written += format_string(text + written, "  OVR ");
-        written += format_uint(text + written, snapshot.health.overruns);
+        written += format_unsigned(text + written, snapshot.health.overruns);
     }
     text[written] = 0;
     canvas.draw_text(kLeft, kPortY, text, true, 1);
@@ -154,7 +154,7 @@ void draw_used_by_system(ui::Canvas& canvas, const SatellitesSnapshot& snapshot)
         if (written > 0) written += format_string(text + written, "  ");
         written += format_string(text + written, gnss::system_name(system));
         text[written++] = ' ';
-        written += format_uint(text + written, static_cast<uint32_t>(used), 1);
+        written += format_unsigned(text + written, static_cast<uint32_t>(used), 1);
     }
     if (written == 0) return;
     text[written] = 0;

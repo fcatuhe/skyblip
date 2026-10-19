@@ -14,11 +14,11 @@ class NoiseFloor {
 
     void sample(int8_t rssi_dbm);
 
-    int8_t dbm() const;
+    int8_t level_dbm() const;
     uint32_t samples() const { return samples_; }
 
    private:
-    int32_t centi_dbm_{static_cast<int32_t>(kSeedDbm) * 100};
+    int32_t level_centi_dbm_{static_cast<int32_t>(kSeedDbm) * 100};
     uint32_t samples_{0};
 };
 

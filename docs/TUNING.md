@@ -130,10 +130,10 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAlptasKeyWindowS` | 18 | seconds | Window | GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by |
 | `kLk8NoAltitudeM` | 99999 | metres | - | - |
 | `kLk8NoVarioCmS` | 9999 | seconds | - | - |
-| `kLk8MinAltitudeM` | -1000 | metres | - | - |
-| `kLk8MaxAltitudeM` | `kLk8NoAltitudeM - 1` = 99998 | metres | - | - |
-| `kLk8MaxVarioCmS` | `kLk8NoVarioCmS - 1` = 9998 | seconds | - | - |
-| `kLk8MinVarioCmS` | `-kLk8MaxVarioCmS` = -9998 | seconds | - | - |
+| `kLk8AltitudeFloorM` | -1000 | metres | Floor | - |
+| `kLk8AltitudeCeilingM` | `kLk8NoAltitudeM - 1` = 99998 | metres | Ceiling | - |
+| `kLk8VarioCeilingCmS` | `kLk8NoVarioCmS - 1` = 9998 | seconds | Ceiling | - |
+| `kLk8VarioFloorCmS` | `-kLk8VarioCeilingCmS` = -9998 | seconds | Floor | - |
 
 ## [`firmware/core/radio`](../firmware/core/radio/README.md)
 
@@ -189,7 +189,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
-| `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
+| `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a target is hex |
 | `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
 | `kCompletionGuardMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
