@@ -88,7 +88,7 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
     run_on(h, from_ms, kAirWindowMs);
     REQUIRE(h.product().state().flight.running);
 
-    const model::OwnState& own = h.product().state().own;
+    const model::Ownship& own = h.product().state().own;
     const simulator::Air& air = h.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {

@@ -6,7 +6,7 @@ namespace skyblip::go {
 
 bool AlarmService::silenced(traffic::Target& target, formation::State state) {
     if (state == formation::State::None) return false;
-    tracker_.withdraw(target.obs.address_mapping_table, target.obs.address);
+    tracker_.withdraw(target.observation.address_mapping_table, target.observation.address);
     target.alarm_level = traffic::Level::None;
     target.alarm_dismissed = false;
     return true;
@@ -14,7 +14,7 @@ bool AlarmService::silenced(traffic::Target& target, formation::State state) {
 
 formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t now_ms) {
     const formation::Report r =
-        formation_.observe(context_.state.own, target.obs, target.liftoff, now_ms);
+        formation_.observe(context_.state.own, target.observation, target.liftoff, now_ms);
     const bool was = target.in_formation;
     target.in_formation = r.state == formation::State::Together;
     if (target.in_formation != was) dirty_ = true;
@@ -33,7 +33,7 @@ void AlarmService::tick(uint32_t now_ms) {
             if (!t || !t->used) continue;
             const formation::State f = watch_formation(*t, now_ms);
             const traffic::AlarmTracker::Decision d =
-                tracker_.update(context_.state.own, t->obs, now_ms);
+                tracker_.update(context_.state.own, t->observation, now_ms);
             t->alarm_level = d.assessment.level;
             t->alarm_dismissed = d.dismissed;
             const bool quiet = silenced(*t, f);
@@ -77,26 +77,26 @@ void AlarmService::accrue_annunciator(uint32_t now_ms) {
 void AlarmService::record_traffic(int slot, const traffic::Target& target,
                                   const traffic::AlarmTracker::Decision& decision,
                                   uint32_t now_ms) {
-    if (target.obs.at_ms == recorded_obs_ms_[slot]) return;
-    recorded_obs_ms_[slot] = target.obs.at_ms;
+    if (target.observation.at_ms == recorded_observation_ms_[slot]) return;
+    recorded_observation_ms_[slot] = target.observation.at_ms;
     if (!context_.diag.armed()) return;
 
     const traffic::AlarmAssessment& assessment = decision.assessment;
     diag::Traffic value{};
-    value.address = target.obs.address;
+    value.address = target.observation.address;
     value.dist_m = diag::clamp_u16(
         assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
     value.bearing_deg = assessment.rel_bearing_deg;
     value.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
     value.closing_mps = diag::clamp_i16(assessment.closing_mps);
     value.alarm = target.alarm_level;
-    value.source = target.obs.source;
-    value.rssi_dbm = target.obs.rssi_dbm;
+    value.source = target.observation.source;
+    value.rssi_dbm = target.observation.rssi_dbm;
     value.tracked = static_cast<uint8_t>(context_.state.traffic.count());
     value.assessed = assessment.valid;
     value.dismissed = decision.dismissed;
     value.in_formation = target.in_formation;
-    value.position_valid = target.obs.position_valid;
+    value.position_valid = target.observation.position_valid;
     context_.diag.record(value, context_.instant(now_ms));
 }
 

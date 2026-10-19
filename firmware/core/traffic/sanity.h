@@ -68,9 +68,9 @@ enum class Plausibility : uint8_t { Believable, NoReference, TooFar };
 
 // slant_m is written whenever the answer is Believable or TooFar, so a caller
 // that wants to log the refusal has the figure that caused it. Which ceiling is
-// applied depends on obs.source, because that is what says how many hops the
+// applied depends on observation.source, because that is what says how many hops the
 // report crossed.
-Plausibility range_check(const model::OwnState& own, const model::AircraftObs& obs,
+Plausibility range_check(const model::Ownship& own, const model::AircraftObservation& observation,
                          int32_t& slant_m);
 
 }  // namespace skyblip::traffic

@@ -15,7 +15,7 @@ using skyblip::reads_in;
 using skyblip::traffic::Level;
 
 TEST_CASE("radar: renders rings, own symbol and plots targets") {
-    Glass fb;
+    Glass canvas;
     RadarTarget targets[2] = {
         {2000, 0, 100, Level::Advisory},    // north, above
         {0, -3000, -100, Level::Advisory},  // west, below, urgent
@@ -44,13 +44,13 @@ TEST_CASE("radar: renders rings, own symbol and plots targets") {
             }
         CHECK(e - 100 == 99 - w);
     }
-    RadarSnapshot snap;
-    snap.fix_valid = true;
-    snap.range_step = 3;
-    snap.n_targets = 2;
-    snap.targets = targets;
-    draw_radar(fb, snap);
-    CHECK(fb.count_black() > 100);
+    RadarSnapshot snapshot;
+    snapshot.fix_valid = true;
+    snapshot.range_step = 3;
+    snapshot.n_targets = 2;
+    snapshot.targets = targets;
+    draw_radar(canvas, snapshot);
+    CHECK(canvas.count_black() > 100);
 
     // no-fix path shows text, few pixels but non-empty
     Glass fb2;
@@ -64,19 +64,19 @@ TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
     // 200x200 is an EVEN grid: there is no middle pixel. The centre is the point
     // where pixels 99 and 100 meet on both axes, so anything "on" the centre is
     // a PAIR of pixels. No alarm and no fix, so only rings and ship mark the edges.
-    Glass fb;
-    RadarSnapshot snap;
-    draw_radar(fb, snap);
+    Glass canvas;
+    RadarSnapshot snapshot;
+    draw_radar(canvas, snapshot);
     // the own ship straddles the centre: its fuselage is a pair of columns
-    CHECK(fb.get_pixel(99, 99));
-    CHECK(fb.get_pixel(100, 99));
-    CHECK(fb.get_pixel(99, 100));
-    CHECK(fb.get_pixel(100, 100));
+    CHECK(canvas.get_pixel(99, 99));
+    CHECK(canvas.get_pixel(100, 99));
+    CHECK(canvas.get_pixel(99, 100));
+    CHECK(canvas.get_pixel(100, 100));
     // ... and the glyph is mirror-symmetric about that point, not about a column
     int mism = 0;
     for (int y = 88; y < 118; y++)
         for (int k = 0; k < 14; k++)
-            if (fb.get_pixel(99 - k, y) != fb.get_pixel(100 + k, y)) mism++;
+            if (canvas.get_pixel(99 - k, y) != canvas.get_pixel(100 + k, y)) mism++;
     CHECK(mism == 0);
     // The hot spot (the wing = the widest row, i.e. the aircraft's position)
     // sits ON the centre point, not at the glyph's bounding-box centre: targets
@@ -85,7 +85,7 @@ TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
     int widest = 0, widest_row = -1;
     for (int y = 88; y < 118; y++) {
         int n = 0;
-        for (int x = 86; x < 114; x++) n += fb.get_pixel(x, y) ? 1 : 0;
+        for (int x = 86; x < 114; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
         if (n > widest) {
             widest = n;
             widest_row = y;
@@ -95,13 +95,13 @@ TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
     // The rings are concentric with the same point: equal margin on all sides.
     int left = -1, right = -1, top = -1, bottom = -1;
     for (int x = 0; x < 200; x++)
-        if (fb.get_pixel(x, 99)) {
+        if (canvas.get_pixel(x, 99)) {
             if (left < 0) left = x;
             right = x;
         }
     // column 50: clear of the flight clock, which erases the ring where it sits
     for (int y = 0; y < 200; y++)
-        if (fb.get_pixel(50, y)) {
+        if (canvas.get_pixel(50, y)) {
             if (top < 0) top = y;
             bottom = y;
         }
@@ -110,15 +110,15 @@ TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
 }
 
 TEST_CASE("radar: the range ring is one unbroken stroke, and the only ring on the glass") {
-    Glass fb;
-    draw_radar(fb, flying(0));  // an empty sky in flight: the ring and own ship, nothing else
+    Glass canvas;
+    draw_radar(canvas, flying(0));  // an empty sky in flight: the ring and own ship, nothing else
     int thinnest = 200, thickest = 0, inside_ink = 0;
     for (int y = 60; y <= 140; y++) {
         int stroke = 0;
-        for (int x = 0; x < 20; x++) stroke += fb.get_pixel(x, y) ? 1 : 0;
+        for (int x = 0; x < 20; x++) stroke += canvas.get_pixel(x, y) ? 1 : 0;
         thinnest = stroke < thinnest ? stroke : thinnest;
         thickest = stroke > thickest ? stroke : thickest;
-        for (int x = 20; x < 80; x++) inside_ink += fb.get_pixel(x, y) ? 1 : 0;
+        for (int x = 20; x < 80; x++) inside_ink += canvas.get_pixel(x, y) ? 1 : 0;
     }
     CHECK(thinnest >= 2);
     CHECK(thickest <= 4);
@@ -128,12 +128,12 @@ TEST_CASE("radar: the range ring is one unbroken stroke, and the only ring on th
     int speckles = 0;
     for (int y = 1; y < 170; y++)  // above the footer, where no label bites the arc
         for (int x = 1; x < 199; x++) {
-            if (!fb.get_pixel(x, y)) continue;
+            if (!canvas.get_pixel(x, y)) continue;
             const int dx = x < 100 ? 99 - x : x - 100, dy = y < 100 ? 99 - y : y - 100;
             const int r2 = dx * dx + dy * dy;
             if (r2 < 80 * 80 || r2 > 95 * 95) continue;
-            const int neighbours = fb.get_pixel(x - 1, y) + fb.get_pixel(x + 1, y) +
-                                   fb.get_pixel(x, y - 1) + fb.get_pixel(x, y + 1);
+            const int neighbours = canvas.get_pixel(x - 1, y) + canvas.get_pixel(x + 1, y) +
+                                   canvas.get_pixel(x, y - 1) + canvas.get_pixel(x, y + 1);
             if (neighbours < 2) speckles++;
         }
     CHECK(speckles == 0);
@@ -177,9 +177,9 @@ TEST_CASE("radar: a finished flight carries its seconds, a running one does not"
     RadarSnapshot landed = flying(0);
     landed.in_flight = false;
     landed.flight_seconds = 42 * 60 + 37;
-    const Glass fb = radar(landed);
-    CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
-    CHECK(reads_in(fb, "37", 45, 183, 80, 198));
+    const Glass canvas = radar(landed);
+    CHECK(reads_in(canvas, "0:42", 0, 176, 60, 198, 2));
+    CHECK(reads_in(canvas, "37", 45, 183, 80, 198));
 
     RadarSnapshot airborne_again = landed;
     airborne_again.in_flight = true;
@@ -194,18 +194,18 @@ TEST_CASE("radar: the seconds take no more ring than they cover") {
     RadarSnapshot landed = flying(0);
     landed.in_flight = false;
     landed.flight_seconds = 42 * 60 + 37;
-    const Glass fb = radar(landed);
+    const Glass canvas = radar(landed);
     const Glass no_seconds = radar(flying(0));
 
-    CHECK(ink_in(fb, 52, 170, 72, 186) > 0);
+    CHECK(ink_in(canvas, 52, 170, 72, 186) > 0);
     for (int y = 170; y < 186; y++)
-        for (int x = 52; x < 72; x++) CHECK(fb.get_pixel(x, y) == no_seconds.get_pixel(x, y));
+        for (int x = 52; x < 72; x++) CHECK(canvas.get_pixel(x, y) == no_seconds.get_pixel(x, y));
 }
 
 TEST_CASE("radar: the range labels the ring, centred on it and cleared off it") {
-    const Glass fb = radar(flying(0));
-    CHECK(reads_in(fb, "4", 70, 176, 100, 198, 2));
-    CHECK(reads_in(fb, "NM", 95, 183, 130, 198));
+    const Glass canvas = radar(flying(0));
+    CHECK(reads_in(canvas, "4", 70, 176, 100, 198, 2));
+    CHECK(reads_in(canvas, "NM", 95, 183, 130, 198));
 
     RadarSnapshot wider = flying(0);
     wider.range_step = 3;
@@ -213,7 +213,7 @@ TEST_CASE("radar: the range labels the ring, centred on it and cleared off it") 
 
     // The ring is cleared off the label rather than read through it: "4" starts at 88, 4 px in.
     for (int y = 186; y < 196; y++)
-        for (int x = 84; x < 88; x++) CHECK_FALSE(fb.get_pixel(x, y));
+        for (int x = 84; x < 88; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }
 
 // B4. One ring, picked in the unit it is read in: whole miles or whole kilometres.
@@ -238,16 +238,16 @@ TEST_CASE(
         {0, -3000, 0, Level::Advisory},
         {40000, 0, 0, Level::Advisory},  // four rings out: heard, and off the picture
     };
-    RadarSnapshot snap = flying(0);
-    snap.n_targets = 3;
-    snap.targets = targets;
-    snap.heard = 4;  // three placed, one heard without a position
-    const Glass fb = radar(snap);
+    RadarSnapshot snapshot = flying(0);
+    snapshot.n_targets = 3;
+    snapshot.targets = targets;
+    snapshot.heard = 4;  // three placed, one heard without a position
+    const Glass canvas = radar(snapshot);
 
-    CHECK(reads_in(fb, "FLIGHT", 0, 168, 50, 182));
-    CHECK(reads_in(fb, "0:42", 0, 176, 60, 198, 2));
-    CHECK(reads_in(fb, "4", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
+    CHECK(reads_in(canvas, "FLIGHT", 0, 168, 50, 182));
+    CHECK(reads_in(canvas, "0:42", 0, 176, 60, 198, 2));
+    CHECK(reads_in(canvas, "4", 170, 170, 200, 200, 3));
+    CHECK(reads_in(canvas, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot closer = flying(0);
     closer.range_step = 1;
@@ -259,11 +259,11 @@ TEST_CASE(
 TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
     RadarSnapshot deaf = flying(0);
     deaf.receiver_listening = false;
-    const Glass fb = radar(deaf);
+    const Glass canvas = radar(deaf);
 
-    CHECK(reads_in(fb, "-", 170, 170, 200, 200, 3));
-    CHECK_FALSE(reads_in(fb, "0", 170, 170, 200, 200, 3));
-    CHECK(reads_in(fb, "TFC", 140, 175, 190, 200));
+    CHECK(reads_in(canvas, "-", 170, 170, 200, 200, 3));
+    CHECK_FALSE(reads_in(canvas, "0", 170, 170, 200, 200, 3));
+    CHECK(reads_in(canvas, "TFC", 140, 175, 190, 200));
 
     RadarSnapshot no_position = flying(0);
     no_position.fix_valid = false;
@@ -273,11 +273,11 @@ TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
 }
 
 TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass edge") {
-    const Glass fb = radar(flying(0));
+    const Glass canvas = radar(flying(0));
     int clock_bottom = -1, range_bottom = -1, count_bottom = -1;
     for (int y = 180; y < 200; y++)
         for (int x = 0; x < 200; x++)
-            if (fb.get_pixel(x, y)) {
+            if (canvas.get_pixel(x, y)) {
                 if (x < 60) clock_bottom = y;
                 if (x > 80 && x < 120) range_bottom = y;
                 if (x > 170) count_bottom = y;
@@ -285,7 +285,7 @@ TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass e
     CHECK(clock_bottom == count_bottom);
     CHECK(range_bottom == count_bottom);
     for (int y = count_bottom + 1; y < 200; y++)
-        for (int x = 0; x < 200; x++) CHECK_FALSE(fb.get_pixel(x, y));
+        for (int x = 0; x < 200; x++) CHECK_FALSE(canvas.get_pixel(x, y));
     CHECK(199 - count_bottom >= 4);
 }
 
@@ -392,12 +392,12 @@ TEST_CASE("radar: a blip on the state word is drawn over it, and the word still 
     parked.in_flight = false;
     parked.n_targets = 1;
     parked.targets = behind;
-    const Glass fb = radar(parked);
+    const Glass canvas = radar(parked);
 
-    CHECK(reads_in(fb, "GROUND", 40, 120, 160, 160, 2));
+    CHECK(reads_in(canvas, "GROUND", 40, 120, 160, 160, 2));
     // the diamond's four points, 7 px out each way from (100, 154)
-    CHECK(fb.get_pixel(93, 154));
-    CHECK(fb.get_pixel(107, 154));
-    CHECK(fb.get_pixel(100, 147));
-    CHECK(fb.get_pixel(100, 161));
+    CHECK(canvas.get_pixel(93, 154));
+    CHECK(canvas.get_pixel(107, 154));
+    CHECK(canvas.get_pixel(100, 147));
+    CHECK(canvas.get_pixel(100, 161));
 }

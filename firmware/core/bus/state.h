@@ -182,7 +182,7 @@ struct CaptureState {
 };
 
 struct State {
-    model::OwnState own{};
+    model::Ownship own{};
     timing::ClockState clock{};
     traffic::TrafficTable traffic{};
     traffic::CallsignTable callsigns{};
@@ -238,7 +238,7 @@ struct State {
     // boot-relative seconds underflows uint32 and ages every target out at once.
     uint32_t traffic_now(uint32_t now_ms) const {
         if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
-        return own.utc_valid ? own.utc : now_ms / 1000;
+        return own.utc_valid ? own.utc_s : now_ms / 1000;
     }
 };
 

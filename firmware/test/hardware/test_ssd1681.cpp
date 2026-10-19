@@ -1,5 +1,5 @@
 // SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init
-// sequence, the framebuffer to RAM polarity (fb 1=black becomes panel 0=black), the
+// sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the
 // glass turned or not, and the signature that names the panel, all on the host, no
 // panel required.
 #include <string>
@@ -45,15 +45,15 @@ TEST_CASE("epd: RES# is held low for the vendor's 10 ms, at begin and at every w
     CHECK(f.reset_low_us >= 10000);
     CHECK(f.short_resets == 0);
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    d.present(canvas, ports::Refresh::Full, 0);
     settle(d, 0);
     d.power_off();
     REQUIRE_FALSE(f.powered);
 
     f.reset_low_us = 0;
-    d.present(fb, ports::Refresh::Partial, 5000);
+    d.present(canvas, ports::Refresh::Partial, 5000);
     CHECK(f.reset_low_us >= 10000);
     CHECK(f.powered);
     CHECK(f.short_resets == 0);
@@ -85,9 +85,9 @@ TEST_CASE("epd: present() writes a full framebuffer with correct black/white pol
     parts::Ssd1681 d = make(f);
     d.begin();
 
-    parts::Ssd1681Glass fb;
-    fb.clear(/*white=*/true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(/*white=*/true);
+    d.present(canvas, ports::Refresh::Full, 0);
 
     CHECK(f.ram.size() == parts::Ssd1681Glass::kBytes);
     // An all-white framebuffer becomes all 0xFF in panel RAM (inverted).
@@ -104,10 +104,10 @@ TEST_CASE("epd: a black pixel flips the corresponding RAM bit to 0") {
     parts::Ssd1681 d = make(f);
     d.begin();
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    fb.set_pixel(0, 0, /*black=*/true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    canvas.set_pixel(0, 0, /*black=*/true);
+    d.present(canvas, ports::Refresh::Full, 0);
 
     // First RAM byte now has at least one cleared bit (was 0xFF all-white).
     CHECK(f.ram[0] != 0xFF);
@@ -118,12 +118,12 @@ TEST_CASE("epd: an unturned glass takes framebuffer rows as gate lines") {
     parts::Ssd1681 d = make(f);
     d.begin();
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    fb.set_pixel(0, 0, true);
-    fb.set_pixel(199, 0, true);
-    fb.set_pixel(3, 8, true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    canvas.set_pixel(0, 0, true);
+    canvas.set_pixel(199, 0, true);
+    canvas.set_pixel(3, 8, true);
+    d.present(canvas, ports::Refresh::Full, 0);
 
     REQUIRE(f.ram.size() == parts::Ssd1681Glass::kBytes);
     CHECK(ram_black(f, 0, 0));
@@ -138,12 +138,12 @@ TEST_CASE("epd: a glass turned 270 degrees takes framebuffer columns as gate lin
     parts::Ssd1681 d = make_turned(f);
     d.begin();
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    fb.set_pixel(0, 0, true);
-    fb.set_pixel(199, 0, true);
-    fb.set_pixel(3, 8, true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    canvas.set_pixel(0, 0, true);
+    canvas.set_pixel(199, 0, true);
+    canvas.set_pixel(3, 8, true);
+    d.present(canvas, ports::Refresh::Full, 0);
 
     REQUIRE(f.ram.size() == parts::Ssd1681Glass::kBytes);
     // (x, y) lands on source y of gate line 199 - x.
@@ -158,16 +158,16 @@ TEST_CASE("epd: a turned glass writes the same count of black pixels it was hand
     parts::Ssd1681 d = make_turned(f);
     d.begin();
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    for (int i = 0; i < 200; i++) fb.set_pixel(i, i / 2, true);
-    d.present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    for (int i = 0; i < 200; i++) canvas.set_pixel(i, i / 2, true);
+    d.present(canvas, ports::Refresh::Full, 0);
 
     int black = 0;
     for (int gate = 0; gate < parts::Ssd1681::kGlassH; gate++)
         for (int source = 0; source < parts::Ssd1681::kGlassW; source++)
             if (ram_black(f, source, gate)) black++;
-    CHECK(black == fb.count_black());
+    CHECK(black == canvas.count_black());
 }
 
 TEST_CASE("epd: the five signatures shipped in T-Echos are told apart") {

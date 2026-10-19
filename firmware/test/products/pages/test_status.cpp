@@ -35,20 +35,20 @@ TEST_CASE("status: every value reads in the aeronautical unit first, then SI") {
 }
 
 TEST_CASE("status: the barometer row reads what the sensor resolves") {
-    Glass fb;
+    Glass canvas;
     StatusSnapshot s;
     s.baro_valid = true;
     s.pressure_mpa = 101325253;  // the BME280's own tenths of a pascal
     s.climb_mm_s = -1234;        // -243 fpm, a rate the 0.125 m/s of ADS-L cannot hold
-    draw_status(fb, s);
+    draw_status(canvas, s);
 
-    CHECK(reads_in(fb, "1013.253", 0, 85, 200, 105));
-    CHECK(reads_in(fb, "-243", 0, 149, 200, 169));
-    CHECK(reads_in(fb, "-1.234", 0, 149, 200, 169));
+    CHECK(reads_in(canvas, "1013.253", 0, 85, 200, 105));
+    CHECK(reads_in(canvas, "-243", 0, 149, 200, 169));
+    CHECK(reads_in(canvas, "-1.234", 0, 149, 200, 169));
 }
 
 TEST_CASE("status: every reading is printed to the resolution it is held in") {
-    Glass fb;
+    Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
     s.baro_valid = true;
@@ -59,14 +59,14 @@ TEST_CASE("status: every reading is printed to the resolution it is held in") {
     s.climb_mm_s = 1234;
     s.battery_valid = true;
     s.battery_mv = 4123;
-    draw_status(fb, s);
+    draw_status(canvas, s);
 
-    CHECK(reads_in(fb, "090.25", 0, 55, 100, 70));
-    CHECK(reads_in(fb, "1234.5", 0, 101, 200, 121));
-    CHECK(reads_in(fb, "1500.12", 0, 117, 200, 137));
-    CHECK(reads_in(fb, "44.44", 0, 133, 200, 153));
-    CHECK(reads_in(fb, "+1.234", 0, 149, 200, 169));
-    CHECK(reads_in(fb, "4.123", 0, 165, 200, 185));
+    CHECK(reads_in(canvas, "090.25", 0, 55, 100, 70));
+    CHECK(reads_in(canvas, "1234.5", 0, 101, 200, 121));
+    CHECK(reads_in(canvas, "1500.12", 0, 117, 200, 137));
+    CHECK(reads_in(canvas, "44.44", 0, 133, 200, 153));
+    CHECK(reads_in(canvas, "+1.234", 0, 149, 200, 169));
+    CHECK(reads_in(canvas, "4.123", 0, 165, 200, 185));
 }
 
 TEST_CASE("status: the IMU field reads the hub's own bring-up word and the ball it feeds") {
@@ -169,22 +169,22 @@ TEST_CASE("status: the widest sensor error still leaves the track's datum readab
     s.imu_stage = "RUN";
     s.imu_errored_sensor = 255;
     s.imu_sensor_error = 0xFF;
-    Glass fb;
-    draw_status(fb, s);
+    Glass canvas;
+    draw_status(canvas, s);
 
-    CHECK(reads_in(fb, "IMU RUN SE255:FF", 0, 55, 200, 70));
-    CHECK(reads_in(fb, "TRUE", 0, 55, 200, 70));
+    CHECK(reads_in(canvas, "IMU RUN SE255:FF", 0, 55, 200, 70));
+    CHECK(reads_in(canvas, "TRUE", 0, 55, 200, 70));
 }
 
 TEST_CASE("status: the widest IMU failure still leaves the track's datum readable") {
     StatusSnapshot s;
     s.imu_stage = "LOAD";
     s.imu_fault = "TIMEOUT";
-    Glass fb;
-    draw_status(fb, s);
+    Glass canvas;
+    draw_status(canvas, s);
 
-    CHECK(reads_in(fb, "IMU LOAD TIMEOUT", 0, 55, 200, 70));
-    CHECK(reads_in(fb, "TRUE", 0, 55, 200, 70));
+    CHECK(reads_in(canvas, "IMU LOAD TIMEOUT", 0, 55, 200, 70));
+    CHECK(reads_in(canvas, "TRUE", 0, 55, 200, 70));
 }
 
 TEST_CASE("status: the battery row states the voltage and the charge, and on the cable only CHG") {
@@ -356,25 +356,25 @@ TEST_CASE("status: the widest position on earth still fits its row") {
     // format can produce. The latitude ends on the first column's unit edge and
     // the longitude block is anchored to the margin, so the worst case is where
     // they nearly meet.
-    Glass fb;
+    Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
     s.lat_1e7 = -900000000;
     s.lon_1e7 = -1800000000;
-    draw_status(fb, s);
+    draw_status(canvas, s);
 
     const int y0 = 43, y1 = 50;  // the LAT/LON row, one glyph tall
     for (int y = y0; y < y1; y++)
-        for (int x = 196; x < Glass::kW; x++) CHECK_FALSE(fb.get_pixel(x, y));
+        for (int x = 196; x < Glass::kW; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 
     // At least one blank column between the latitude and the LON block, and the
     // label is not touched either.
     int blank = 0;
     for (int x = 88; x < 106; x++) {
         bool ink = false;
-        for (int y = y0; y < y1; y++) ink = ink || fb.get_pixel(x, y);
+        for (int y = y0; y < y1; y++) ink = ink || canvas.get_pixel(x, y);
         if (!ink) blank++;
     }
     CHECK(blank >= 1);
-    for (int y = y0; y < y1; y++) CHECK_FALSE(fb.get_pixel(23, y));
+    for (int y = y0; y < y1; y++) CHECK_FALSE(canvas.get_pixel(23, y));
 }

@@ -23,24 +23,25 @@ int length(const char* s) {
 }
 
 // Draw the same text at the same place in a scratch buffer and compare the box it occupies.
-bool reads_at(const Glass& fb, int x, int y, const char* text, bool ink, int scale = 1) {
+bool reads_at(const Glass& canvas, int x, int y, const char* text, bool ink, int scale = 1) {
     Glass expected;
     expected.clear(true);
     if (!ink) expected.clear(false);
     expected.draw_text(x, y, text, ink, scale);
     for (int dy = 0; dy < kGlyphH * scale; dy++)
         for (int dx = 0; dx < length(text) * kSmallCellW * scale; dx++)
-            if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
+            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
+                return false;
     return true;
 }
 
-bool hint_reads(const Glass& fb, int y, const char* text, int scale) {
-    return reads_at(fb, centred_x(text, scale), y, text, true, scale);
+bool hint_reads(const Glass& canvas, int y, const char* text, int scale) {
+    return reads_at(canvas, centred_x(text, scale), y, text, true, scale);
 }
 
 // A menu as drawn, with the focus that decided which of its rows are on the glass.
 struct Drawn {
-    Glass fb;
+    Glass canvas;
     Page page{Page::Radar};
     MenuRow focus{MenuRow::Light};
 };
@@ -51,12 +52,12 @@ int line_of(const Drawn& drawn, MenuRow row) {
 }
 
 bool row_label_reads(const Drawn& drawn, MenuRow row, bool focused) {
-    return reads_at(drawn.fb, kMenuLeftX, menu_line_text_y(line_of(drawn, row)),
+    return reads_at(drawn.canvas, kMenuLeftX, menu_line_text_y(line_of(drawn, row)),
                     menu_row_label(row), !focused, kMenuScale);
 }
 
 bool row_value_reads(const Drawn& drawn, MenuRow row, const char* value, bool focused) {
-    return reads_at(drawn.fb, kMenuRightX - length(value) * kMenuCellW,
+    return reads_at(drawn.canvas, kMenuRightX - length(value) * kMenuCellW,
                     menu_line_text_y(line_of(drawn, row)), value, !focused, kMenuScale);
 }
 
@@ -68,7 +69,7 @@ Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
     Drawn drawn;
     drawn.page = page;
     drawn.focus = focus;
-    draw_menu(drawn.fb, snapshot);
+    draw_menu(drawn.canvas, snapshot);
     return drawn;
 }
 
@@ -99,7 +100,7 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     for (int line = 0; line < kMenuLines; line++)
         if (row_label_reads(drawn, menu_for(Page::Radar).rows[line], true)) bars++;
     CHECK(bars == 1);
-    CHECK(reads_at(drawn.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(drawn.canvas, kMenuHintX, kMenuHintY, kMenuHintText, true));
 
     // And nothing falls off a 200 pixel panel, on either axis.
     CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kMenuHintY);
@@ -125,7 +126,7 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(line_of(top, MenuRow::Light) == 0);
     CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
-    CHECK(reads_at(top.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText, true));
 
     const Drawn slid = page_of(Page::Radar, values, MenuRow::Volume);
     CHECK(line_of(slid, MenuRow::Volume) == kMenuLines - 1);
@@ -133,7 +134,7 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(row_value_reads(slid, MenuRow::Volume, "SOFT", true));
     CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
     CHECK(line_of(slid, MenuRow::AircraftType) == 0);
-    CHECK(reads_at(slid.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(slid.canvas, kMenuHintX, kMenuHintY, kMenuHintText, true));
 }
 
 TEST_CASE("menu: no label and value a row can hold meet at double height") {
@@ -172,7 +173,7 @@ TEST_CASE("menu: a menu is titled what it holds, not the page a thumb came from"
         expected.draw_text(kMenuLeftX - 2, 3, menu_title(page), true, 2);
         for (int y = 3; y < 3 + kGlyphH * kMenuScale; y++)
             for (int x = 0; x < Glass::kW; x++)
-                CHECK(drawn.fb.get_pixel(x, y) == expected.get_pixel(x, y));
+                CHECK(drawn.canvas.get_pixel(x, y) == expected.get_pixel(x, y));
     }
 }
 
@@ -210,22 +211,22 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
     field.text = "F-JABC   ";
     field.cursor = 3;
 
-    Glass fb;
-    draw_callsign(fb, field);
-    CHECK(reads_at(fb, kMenuLeftX - 2, 3, "CALLSIGN", true, kMenuScale));
-    CHECK(reads_at(fb, kCallsignTextX, kCallsignTextY, "F-JABC", true, kCallsignScale));
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "CALLSIGN", true, kMenuScale));
+    CHECK(reads_at(canvas, kCallsignTextX, kCallsignTextY, "F-JABC", true, kCallsignScale));
 
     // The bar is under the character the pad is rolling and under no other.
     const int at = kCallsignTextX + field.cursor * kCallsignCellW;
-    CHECK(fb.get_pixel(at, kCallsignCursorY));
-    CHECK(fb.get_pixel(at + 5 * kCallsignScale - 1, kCallsignCursorY));
-    CHECK_FALSE(fb.get_pixel(at - 2, kCallsignCursorY));
-    CHECK_FALSE(fb.get_pixel(at + kCallsignCellW, kCallsignCursorY));
+    CHECK(canvas.get_pixel(at, kCallsignCursorY));
+    CHECK(canvas.get_pixel(at + 5 * kCallsignScale - 1, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at + kCallsignCellW, kCallsignCursorY));
 
     // The two gestures at double height, and under them the one way out nothing else says.
-    CHECK(hint_reads(fb, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
     CHECK(kCallsignHelpY + kGlyphH < Glass::kH);
 }
 
@@ -237,18 +238,18 @@ TEST_CASE("callsign page: the foot says the button clears when the bar is on a b
     field.clears = callsign_press_clears(field.text, field.cursor);
     REQUIRE(field.clears);
 
-    Glass fb;
-    draw_callsign(fb, field);
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
     // The line that taught the gesture goes once the gesture is armed.
-    CHECK_FALSE(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK_FALSE(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
 
     field.cursor = 1;
     field.clears = callsign_press_clears(field.text, field.cursor);
     CHECK_FALSE(field.clears);
-    draw_callsign(fb, field);
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
+    draw_callsign(canvas, field);
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
 }
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.

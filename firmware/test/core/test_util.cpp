@@ -150,25 +150,25 @@ TEST_CASE("intmath: iatan2 holds a degree everywhere, not only on the cardinals"
 
 TEST_CASE("format: hex, dec, fixed point") {
     char b[32];
-    int n = fmt_hex(b, 0xABCD, 4);
+    int n = format_hex(b, 0xABCD, 4);
     CHECK(std::string(b, n) == "ABCD");
-    n = fmt_uint(b, 42);
+    n = format_uint(b, 42);
     CHECK(std::string(b, n) == "42");
-    n = fmt_uint(b, 5, 3);
+    n = format_uint(b, 5, 3);
     CHECK(std::string(b, n) == "005");
-    n = fmt_int(b, -17);
+    n = format_int(b, -17);
     CHECK(std::string(b, n) == "-17");
-    n = fmt_uint(b, 1234, 1, 1);  // one decimal
+    n = format_uint(b, 1234, 1, 1);  // one decimal
     CHECK(std::string(b, n) == "123.4");
 }
 
 TEST_CASE("format: nmea lat/lon") {
     char b[32];
-    int n = fmt_nmea_lat(b, 481234500);  // 48.12345 deg
+    int n = format_nmea_lat(b, 481234500);  // 48.12345 deg
     std::string s(b, n);
     CHECK(s.substr(0, 2) == "48");
     CHECK(s.back() == 'N');
-    n = fmt_nmea_lon(b, -81234500);
+    n = format_nmea_lon(b, -81234500);
     s.assign(b, n);
     CHECK(s.substr(0, 3) == "008");
     CHECK(s.back() == 'W');

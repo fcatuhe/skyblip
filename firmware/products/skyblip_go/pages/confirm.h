@@ -42,7 +42,7 @@ constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfir
 constexpr const char* kConfirmAllowText = "PRESS TWICE TO ALLOW";
 constexpr const char* kConfirmRefuseText = "ONE PRESS REFUSES";
 
-void draw_confirm(ui::Canvas& fb, const ConfirmSnapshot& snapshot);
+void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

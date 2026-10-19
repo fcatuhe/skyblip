@@ -100,7 +100,7 @@ TEST_CASE("diag recorder: a burst carries its own instant off the tape") {
     entry.at_s = kBaseUtc;
     entry.into_ms = 462;
     entry.phase_valid = true;
-    entry.utc = true;
+    entry.utc_dated = true;
     CHECK(recorder.record(entry));
 
     diag::Record record{};

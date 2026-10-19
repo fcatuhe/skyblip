@@ -29,9 +29,9 @@ TEST_CASE("status readings: the climb is the measurement, not the damped rate th
     uint32_t t = 0;
     show_status(rig, t);
 
-    const go::Glass& fb = rig.screen.framebuffer();
-    CHECK(reads_in(fb, "-1.234", 0, kClimbRowTop, 200, kClimbRowBottom));
-    CHECK_FALSE(reads_in(fb, "-0.500", 0, kClimbRowTop, 200, kClimbRowBottom));
+    const go::Glass& canvas = rig.screen.framebuffer();
+    CHECK(reads_in(canvas, "-1.234", 0, kClimbRowTop, 200, kClimbRowBottom));
+    CHECK_FALSE(reads_in(canvas, "-0.500", 0, kClimbRowTop, 200, kClimbRowBottom));
 }
 
 TEST_CASE("status readings: the ball is the last sample, not the damped ball the dial hangs") {
@@ -54,9 +54,9 @@ TEST_CASE("status readings: the cell is the last sample, not the median the gaug
     uint32_t t = 0;
     show_status(rig, t);
 
-    const go::Glass& fb = rig.screen.framebuffer();
-    CHECK(reads_in(fb, "3.871", 0, kBatteryRowTop, 200, kBatteryRowBottom));
-    CHECK_FALSE(reads_in(fb, "3.950", 0, kBatteryRowTop, 200, kBatteryRowBottom));
+    const go::Glass& canvas = rig.screen.framebuffer();
+    CHECK(reads_in(canvas, "3.871", 0, kBatteryRowTop, 200, kBatteryRowBottom));
+    CHECK_FALSE(reads_in(canvas, "3.950", 0, kBatteryRowTop, 200, kBatteryRowBottom));
 }
 
 TEST_CASE("status readings: pressure altitude is taken from the millipascal, not the pascal") {

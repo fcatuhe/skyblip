@@ -18,47 +18,47 @@ constexpr int kSpan = 24;
 constexpr int kOriginRow = 5;
 
 // Inked rows of the wing band at one column: the chord the planform draws there.
-int chord_at(const TestPanel& fb, int x) {
+int chord_at(const TestPanel& canvas, int x) {
     int chord = 0;
-    for (int y = kCy - 1; y <= kCy + 3; y++) chord += fb.get_pixel(x, y) ? 1 : 0;
+    for (int y = kCy - 1; y <= kCy + 3; y++) chord += canvas.get_pixel(x, y) ? 1 : 0;
     return chord;
 }
 }  // namespace
 
 TEST_CASE("skyship: the hot spot lands on the point it was given") {
-    TestPanel fb;
-    fb.clear(/*white=*/true);
-    draw_skyship(fb, kCx, kCy);
+    TestPanel canvas;
+    canvas.clear(/*white=*/true);
+    draw_skyship(canvas, kCx, kCy);
 
     // The wing's full-span row IS the hot spot, so it must be inked at cy.
-    CHECK(fb.get_pixel(kCx, kCy));
-    CHECK(fb.get_pixel(kCx - 1, kCy));
+    CHECK(canvas.get_pixel(kCx, kCy));
+    CHECK(canvas.get_pixel(kCx - 1, kCy));
     // And nothing may sit above the nose or below the tail.
     for (int x = 0; x < TestPanel::kW; x++) {
-        CHECK_FALSE(fb.get_pixel(x, kCy - kOriginRow - 1));
-        CHECK_FALSE(fb.get_pixel(x, kCy - kOriginRow + 16));
+        CHECK_FALSE(canvas.get_pixel(x, kCy - kOriginRow - 1));
+        CHECK_FALSE(canvas.get_pixel(x, kCy - kOriginRow + 16));
     }
 }
 
 TEST_CASE("skyship: the sprite is symmetric about the centre pixel pair") {
-    TestPanel fb;
-    fb.clear(true);
-    draw_skyship(fb, kCx, kCy);
+    TestPanel canvas;
+    canvas.clear(true);
+    draw_skyship(canvas, kCx, kCy);
 
     for (int y = kCy - kOriginRow; y < kCy - kOriginRow + 16; y++)
         for (int d = 0; d < kSpan / 2; d++)
-            CHECK(fb.get_pixel(kCx + d, y) == fb.get_pixel(kCx - 1 - d, y));
+            CHECK(canvas.get_pixel(kCx + d, y) == canvas.get_pixel(kCx - 1 - d, y));
 }
 
 // The trailing taper was once deleted as ink aft of the hot spot, leaving a slab.
 TEST_CASE("skyship: the wing is elliptic, deepest at the root") {
-    TestPanel fb;
-    fb.clear(true);
-    draw_skyship(fb, kCx, kCy);
+    TestPanel canvas;
+    canvas.clear(true);
+    draw_skyship(canvas, kCx, kCy);
 
-    const int tip = chord_at(fb, kCx - kSpan / 2);
-    const int mid = chord_at(fb, kCx - kSpan / 2 + 3);
-    const int root = chord_at(fb, kCx - kSpan / 2 + 6);
+    const int tip = chord_at(canvas, kCx - kSpan / 2);
+    const int mid = chord_at(canvas, kCx - kSpan / 2 + 3);
+    const int root = chord_at(canvas, kCx - kSpan / 2 + 6);
     CHECK(tip < mid);
     CHECK(mid < root);
 }
@@ -75,18 +75,18 @@ TEST_CASE("skyship: it draws the same aircraft wherever it is asked to") {
 
 // The blip says above or below, inside the advisory's window or not, and which way it is going.
 namespace {
-int ink(const TestPanel& fb) {
+int ink(const TestPanel& canvas) {
     int n = 0;
     for (int y = 0; y < TestPanel::kH; y++)
-        for (int x = 0; x < TestPanel::kW; x++) n += fb.get_pixel(x, y) ? 1 : 0;
+        for (int x = 0; x < TestPanel::kW; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
     return n;
 }
 
 TestPanel blip(Vertical vertical, Trend trend, bool alarm = false) {
-    TestPanel fb;
-    fb.clear(/*white=*/true);
-    draw_blip(fb, kCx, kCy, vertical, trend, alarm);
-    return fb;
+    TestPanel canvas;
+    canvas.clear(/*white=*/true);
+    draw_blip(canvas, kCx, kCy, vertical, trend, alarm);
+    return canvas;
 }
 }  // namespace
 

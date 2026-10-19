@@ -7,7 +7,7 @@ namespace skyblip::ui {
 
 // The skyBlip wordmark, centred on (cx, cy): the site's display face and the
 // mark over the dotless i, baked to 1 bit by scripts/make_wordmark.py.
-void draw_wordmark(Canvas& fb, int cx, int cy);
+void draw_wordmark(Canvas& canvas, int cx, int cy);
 
 int wordmark_width();
 int wordmark_height();

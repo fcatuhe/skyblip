@@ -24,8 +24,8 @@ void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ah
     right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kQ14One));
 }
 
-uint32_t reception_key(const model::AircraftObs& obs) {
-    return obs.received.at_s * kMillisecondsPerSecond + obs.received.into_ms;
+uint32_t reception_key(const model::AircraftObservation& observation) {
+    return observation.received.at_s * kMillisecondsPerSecond + observation.received.into_ms;
 }
 
 bool recent(const flight::Liftoff& liftoff, uint32_t now_ms) {
@@ -34,7 +34,7 @@ bool recent(const flight::Liftoff& liftoff, uint32_t now_ms) {
 
 }  // namespace
 
-void Tracker::observe_own(const model::OwnState& own, uint32_t now_ms) {
+void Tracker::observe_own(const model::Ownship& own, uint32_t now_ms) {
     switch (flight::state_from(own.flight_state)) {
         case flight::FlightState::Ground:
             own_grounded_ = true;
@@ -58,15 +58,15 @@ void Tracker::anchor(Slot& slot, const Report& station, uint32_t now_ms) {
     slot.anchored = true;
 }
 
-Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs& reported,
+Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                         const flight::Liftoff& contact_liftoff, uint32_t now_ms) {
     Report out{};
     if (flight::on_ground(own_fix.flight_state) || flight::on_ground(reported.flight_state)) {
         drop(reported.address_mapping_table, reported.address);
         return out;
     }
-    const model::OwnState own = flight::carried_to(own_fix, now_ms);
-    const model::AircraftObs target = flight::carried_to(reported, now_ms);
+    const model::Ownship own = flight::carried_to(own_fix, now_ms);
+    const model::AircraftObservation target = flight::carried_to(reported, now_ms);
     int32_t north_m, east_m, up_m;
     if (!protocol::relative_ned(own, target, north_m, east_m, up_m)) return out;
 
@@ -165,7 +165,7 @@ void Tracker::drop(uint8_t address_mapping_table, uint32_t address) {
     if (slot != nullptr) *slot = Slot{};
 }
 
-Tracker::Slot* Tracker::slot_for(const model::AircraftObs& target, uint32_t now_ms) {
+Tracker::Slot* Tracker::slot_for(const model::AircraftObservation& target, uint32_t now_ms) {
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
     for (Slot& s : slots_) {

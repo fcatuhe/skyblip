@@ -54,8 +54,8 @@ int8_t clamp_i8(int32_t v) {
     return static_cast<int8_t>(v);
 }
 
-void put_offset(uint8_t* out, uint32_t utc, uint32_t base_utc) {
-    const uint32_t elapsed = utc > base_utc ? utc - base_utc : 0;
+void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
+    const uint32_t elapsed = utc_s > base_utc_s ? utc_s - base_utc_s : 0;
     put_u16(out, static_cast<uint16_t>(elapsed > kMaxTimeOffsetS ? kMaxTimeOffsetS : elapsed));
 }
 
@@ -148,9 +148,9 @@ void decode_contact(const uint8_t* raw, LogContact& out) {
 
 }  // namespace
 
-LogRecord log_record_from(const model::OwnState& own) {
+LogRecord log_record_from(const model::Ownship& own) {
     LogRecord r{};
-    r.utc = own.utc;
+    r.utc_s = own.utc_s;
     r.lat_1e7 = own.lat_1e7;
     r.lon_1e7 = own.lon_1e7;
     r.alt_msl_m = to_metres(Millimetres(own.alt_msl_mm)).v;
@@ -169,8 +169,8 @@ LogRecord log_record_from(const model::OwnState& own) {
     return r;
 }
 
-void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out) {
-    put_offset(out + 0, record.utc, base_utc);
+void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out) {
+    put_offset(out + 0, record.utc_s, base_utc_s);
     put_u32(out + 2, static_cast<uint32_t>(record.lat_1e7));
     put_u32(out + 6, static_cast<uint32_t>(record.lon_1e7));
     put_u16(out + 10, static_cast<uint16_t>(clamp_i16(record.alt_msl_m)));
@@ -200,13 +200,13 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out)
 
 bool log_slot_erased(const uint8_t* raw, uint32_t len) { return store::erased(raw, len); }
 
-Status decode_log_record(const uint8_t* raw, uint32_t base_utc, LogRecord& out) {
+Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out) {
     const Status slot = checked(raw);
     if (!is_ok(slot)) return slot;
     if (event_slot(raw)) return Status::Unsupported;
 
     out = LogRecord{};
-    out.utc = base_utc + get_u16(raw + 0);
+    out.utc_s = base_utc_s + get_u16(raw + 0);
     out.lat_1e7 = static_cast<int32_t>(get_u32(raw + 2));
     out.lon_1e7 = static_cast<int32_t>(get_u32(raw + 6));
     out.alt_msl_m = static_cast<int16_t>(get_u16(raw + 10));
@@ -229,9 +229,9 @@ Status decode_log_record(const uint8_t* raw, uint32_t base_utc, LogRecord& out) 
     return Status::Ok;
 }
 
-void encode_log_event(const LogEvent& event, uint32_t base_utc, uint8_t* out) {
+void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out) {
     for (uint32_t i = 0; i < kLogRecordBytes; i++) out[i] = 0;
-    put_offset(out + 0, event.utc, base_utc);
+    put_offset(out + 0, event.utc_s, base_utc_s);
     if (event.kind == LogKind::Status)
         encode_status(event.status, out);
     else
@@ -240,7 +240,7 @@ void encode_log_event(const LogEvent& event, uint32_t base_utc, uint8_t* out) {
     seal(out);
 }
 
-Status decode_log_event(const uint8_t* raw, uint32_t base_utc, LogEvent& out) {
+Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out) {
     const Status slot = checked(raw);
     if (!is_ok(slot)) return slot;
     const uint8_t code = static_cast<uint8_t>(raw[kLogKindOffset] & ~kLogEventMark);
@@ -248,7 +248,7 @@ Status decode_log_event(const uint8_t* raw, uint32_t base_utc, LogEvent& out) {
 
     out = LogEvent{};
     out.kind = static_cast<LogKind>(code);
-    out.utc = base_utc + get_u16(raw + 0);
+    out.utc_s = base_utc_s + get_u16(raw + 0);
     if (out.kind == LogKind::Status)
         decode_status(raw, out.status);
     else

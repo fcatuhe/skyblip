@@ -51,7 +51,7 @@ struct Rig {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.utc = kUtc;
+        state.own.utc_s = kUtc;
         state.own.lat_1e7 = 485000000;
         state.own.lon_1e7 = 85000000;
         state.own.alt_mm = 500000;
@@ -63,7 +63,7 @@ struct Rig {
     }
 
     void hear(uint32_t address, uint64_t at_us, uint32_t now_ms) {
-        model::OwnState sender = state.own;
+        model::Ownship sender = state.own;
         sender.lat_1e7 += 7000;
         protocol::AdslPacket tx;
         protocol::from_own(tx, sender, address, 6, 4);
@@ -95,7 +95,7 @@ TEST_CASE("stamp: a reception is dated by its dwell, not by the pass that draine
     REQUIRE(rig.state.air.rx_ok == 1);
     const traffic::Target* target = rig.state.traffic.at(0);
     REQUIRE(target != nullptr);
-    CHECK(target->obs.received.at_s == kUtc);
-    CHECK(target->obs.received.into_ms == kIntoMs);
-    CHECK(target->obs.received.phase_valid);
+    CHECK(target->observation.received.at_s == kUtc);
+    CHECK(target->observation.received.into_ms == kIntoMs);
+    CHECK(target->observation.received.phase_valid);
 }

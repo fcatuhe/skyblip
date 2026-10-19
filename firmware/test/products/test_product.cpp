@@ -460,7 +460,7 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
 
     // A contact on the other side of the country, claimed by a frame that passed
     // its CRC. Pushed at the table's own door, which is where the gate lives.
-    model::AircraftObs ghost{};
+    model::AircraftObservation ghost{};
     ghost.address = 0x00ABCDEF;
     ghost.address_mapping_table = 5;
     ghost.position_valid = true;

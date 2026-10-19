@@ -48,7 +48,7 @@ void render(simulator::Simulator& s) {
         std::fflush(stdout);
         return;
     }
-    const go::Glass& fb = s.panel();
+    const go::Glass& canvas = s.panel();
     constexpr int step = 4;
     std::printf("\033[2J\033[H+----------------------------------------------------+\n");
     for (int y = 0; y < go::kGlassH; y += step) {
@@ -57,7 +57,7 @@ void render(simulator::Simulator& s) {
             bool black = false;
             for (int dy = 0; dy < step && !black; dy++)
                 for (int dx = 0; dx < step && !black; dx++)
-                    if (fb.get_pixel(x + dx, y + dy)) black = true;
+                    if (canvas.get_pixel(x + dx, y + dy)) black = true;
             std::printf("%c", black ? '#' : ' ');
         }
         std::printf("|\n");
@@ -65,7 +65,7 @@ void render(simulator::Simulator& s) {
     std::printf("+----------------------------------------------------+\n");
 
     const bus::State& st = s.product().state();
-    const model::OwnState& o = st.own;
+    const model::Ownship& o = st.own;
     const char* glass = !s.panel_refreshing()       ? "idle"
                         : s.panel_refresh_is_full() ? "FULL"
                                                     : "partial";

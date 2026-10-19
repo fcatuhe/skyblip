@@ -156,8 +156,8 @@ TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells
     for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
         const traffic::Target* t = table.at(i);
         if (t == nullptr || !t->used) continue;
-        if (t->obs.source == model::Source::AdslDirect) adsl++;
-        if (t->obs.source == model::Source::Alptas) alptas++;
+        if (t->observation.source == model::Source::AdslDirect) adsl++;
+        if (t->observation.source == model::Source::Alptas) alptas++;
     }
     CHECK(adsl == 1);
     CHECK(alptas == 1);
@@ -173,21 +173,21 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
     s.run(5000);
 
     const traffic::TrafficTable& table = s.product().state().traffic;
-    const model::OwnState& own = s.product().state().own;
+    const model::Ownship& own = s.product().state().own;
     int found = 0;
     for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
         const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used || t->obs.source != model::Source::Alptas) continue;
+        if (t == nullptr || !t->used || t->observation.source != model::Source::Alptas) continue;
         found++;
         // 900 m north and 250 m east of us at the start, closing from the south.
-        const int64_t dlat = t->obs.lat_1e7 - own.lat_1e7;
+        const int64_t dlat = t->observation.lat_1e7 - own.lat_1e7;
         const int32_t north_m = static_cast<int32_t>((dlat * 11132) / 1000000);
         CHECK(north_m > 400);
         CHECK(north_m < 1100);
-        CHECK(t->obs.alt_m < to_metres(Millimetres(own.alt_mm)).v);
+        CHECK(t->observation.alt_m < to_metres(Millimetres(own.alt_mm)).v);
         // A FLARM-taxonomy address is reported as one, so an EFB labels it IDType 2.
-        CHECK(protocol::address_mapping_table_to_idtype(t->obs.address_mapping_table) == 2);
-        CHECK(t->obs.position_valid);
+        CHECK(protocol::address_mapping_table_to_idtype(t->observation.address_mapping_table) == 2);
+        CHECK(t->observation.position_valid);
     }
     CHECK(found == 1);
 }
@@ -288,7 +288,7 @@ Encounter measure(simulator::Simulator& s) {
         const traffic::Target* target = only_target(state);
         if (target == nullptr) continue;
 
-        const traffic::AlarmAssessment a = traffic::assess(state.own, target->obs, t);
+        const traffic::AlarmAssessment a = traffic::assess(state.own, target->observation, t);
         if (!a.valid) continue;
         const uint8_t level = traffic::to_number(state.alarm_level);
         const int32_t range_m = a.rel_dist_m;
@@ -436,8 +436,8 @@ TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot h
     for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
         const traffic::Target* t = state.traffic.at(i);
         if (t == nullptr || !t->used) continue;
-        if (t->obs.source == model::Source::AdslDirect) direct++;
-        if (t->obs.source == model::Source::AdslUplink) relayed++;
+        if (t->observation.source == model::Source::AdslDirect) direct++;
+        if (t->observation.source == model::Source::AdslUplink) relayed++;
     }
     CHECK(direct == 1);
     CHECK(relayed == 3);

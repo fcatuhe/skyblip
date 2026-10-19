@@ -6,7 +6,7 @@
 
 namespace skyblip {
 
-inline bool reads_in(const ui::Canvas& fb, const char* text, int x0, int y0, int x1, int y1,
+inline bool reads_in(const ui::Canvas& canvas, const char* text, int x0, int y0, int x1, int y1,
                      int scale = 1, bool ink = true) {
     int n = 0;
     while (text[n]) n++;
@@ -19,7 +19,7 @@ inline bool reads_in(const ui::Canvas& fb, const char* text, int x0, int y0, int
             bool same = true;
             for (int dy = 0; dy < h && same; dy++)
                 for (int dx = 0; dx < w && same; dx++)
-                    if (fb.get_pixel(x + dx, y + dy) != wanted.get_pixel(dx, dy)) same = false;
+                    if (canvas.get_pixel(x + dx, y + dy) != wanted.get_pixel(dx, dy)) same = false;
             if (same) return true;
         }
     }

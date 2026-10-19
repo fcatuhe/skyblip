@@ -115,7 +115,7 @@ TEST_CASE("rf: what happened on air reaches the station log, sent and heard alik
         CHECK(entry.address != 0);
         CHECK(entry.source == model::Source::AdslDirect);
         CHECK(entry.rssi_valid);
-        CHECK(entry.utc);
+        CHECK(entry.utc_dated);
     }
     CHECK(sent);
     CHECK(heard);

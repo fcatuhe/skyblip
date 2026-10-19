@@ -11,21 +11,21 @@ inline char hex_digit(uint8_t v) {
     return static_cast<char>(v < 10 ? '0' + v : 'A' + v - 10);
 }
 
-int fmt_string(char* out, const char* s);
+int format_string(char* out, const char* s);
 
-int fmt_hex(char* out, uint32_t value, uint8_t digits);
+int format_hex(char* out, uint32_t value, uint8_t digits);
 
-int fmt_uint(char* out, uint32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0);
+int format_uint(char* out, uint32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0);
 
-int fmt_int(char* out, int32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0,
-            bool no_plus = false);
+int format_int(char* out, int32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0,
+               bool no_plus = false);
 
-int fmt_seconds_of_day(char* out, uint32_t seconds);
+int format_seconds_of_day(char* out, uint32_t seconds);
 
-int fmt_flight_clock(char* out, uint32_t seconds, bool have_time);
+int format_flight_clock(char* out, uint32_t seconds, bool have_time);
 
-int fmt_nmea_lat(char* out, int32_t lat_1e7);
-int fmt_nmea_lon(char* out, int32_t lon_1e7);
+int format_nmea_lat(char* out, int32_t lat_1e7);
+int format_nmea_lon(char* out, int32_t lon_1e7);
 
 }
 

@@ -128,13 +128,13 @@ int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
         if (cap > 0) out[0] = 0;
         return 0;
     }
-    int n = fmt_uint(out, version.major);
+    int n = format_uint(out, version.major);
     out[n++] = '.';
-    n += fmt_uint(out + n, version.minor);
+    n += format_uint(out + n, version.minor);
     out[n++] = '.';
-    n += fmt_uint(out + n, version.revision);
+    n += format_uint(out + n, version.revision);
     out[n++] = '+';
-    n += fmt_uint(out + n, version.build);
+    n += format_uint(out + n, version.build);
     out[n] = 0;
     return n;
 }
@@ -168,7 +168,7 @@ int format_hub_image(const HubImageReport& report, char* out, size_t cap) {
         case HubImage::Held: break;
     }
     if (word != nullptr) {
-        const int n = fmt_string(out, word);
+        const int n = format_string(out, word);
         out[n] = 0;
         return n;
     }

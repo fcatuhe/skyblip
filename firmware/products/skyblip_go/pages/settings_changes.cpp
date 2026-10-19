@@ -21,7 +21,7 @@ struct Rows {
 
 void menu_row(Rows& rows, MenuRow row, const Settings& to) {
     char* out = rows.next();
-    int n = fmt_string(out, menu_row_label(row));
+    int n = format_string(out, menu_row_label(row));
     out[n++] = ' ';
     MenuValues values;
     values.settings = to;
@@ -30,18 +30,18 @@ void menu_row(Rows& rows, MenuRow row, const Settings& to) {
 
 void callsign_row(Rows& rows, const Settings& to) {
     char* out = rows.next();
-    int n = fmt_string(out, menu_row_label(MenuRow::Callsign));
+    int n = format_string(out, menu_row_label(MenuRow::Callsign));
     out[n++] = ' ';
-    n += fmt_string(out + n, to.callsign[0] != 0 ? to.callsign : "NONE");
+    n += format_string(out + n, to.callsign[0] != 0 ? to.callsign : "NONE");
     out[n] = 0;
 }
 
 void signed_row(Rows& rows, const char* label, int value, uint8_t dec_point, const char* unit) {
     char* out = rows.next();
-    int n = fmt_string(out, label);
+    int n = format_string(out, label);
     out[n++] = ' ';
-    n += fmt_int(out + n, value, 1, dec_point);
-    n += fmt_string(out + n, unit);
+    n += format_int(out + n, value, 1, dec_point);
+    n += format_string(out + n, unit);
     out[n] = 0;
 }
 
@@ -50,12 +50,12 @@ int join(const Rows& rows, char* out) {
     int n = 0;
     for (int i = 0; i < shown; i++) {
         if (i > 0) out[n++] = '\n';
-        n += fmt_string(out + n, rows.text[i]);
+        n += format_string(out + n, rows.text[i]);
     }
     if (shown < rows.n) {
-        n += fmt_string(out + n, "\nAND ");
-        n += fmt_uint(out + n, static_cast<uint32_t>(rows.n - shown));
-        n += fmt_string(out + n, " MORE");
+        n += format_string(out + n, "\nAND ");
+        n += format_uint(out + n, static_cast<uint32_t>(rows.n - shown));
+        n += format_string(out + n, " MORE");
     }
     out[n] = 0;
     return n;

@@ -65,10 +65,10 @@ class AdslUplink {
 
     AdslUplink() = default;
 
-    Status encode(const model::AircraftObs* targets, int n, uint8_t key_index,
+    Status encode(const model::AircraftObservation* targets, int n, uint8_t key_index,
                   uint8_t out_frame[kFrameBytes]) const;
 
-    Status decode(const uint8_t frame[kFrameBytes], model::AircraftObs* targets, int cap,
+    Status decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets, int cap,
                   DecodeStats& stats) const;
 
    private:

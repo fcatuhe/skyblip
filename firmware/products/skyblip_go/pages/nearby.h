@@ -36,7 +36,7 @@ constexpr int kNearbyFirstRowY = 37;
 constexpr int kNearbyLineH = 20;
 constexpr int kNearbyBannerY = kNearbyFirstRowY + kNearbyLineH;
 
-void draw_nearby(ui::Canvas& fb, const NearbySnapshot& snap);
+void draw_nearby(ui::Canvas& canvas, const NearbySnapshot& snapshot);
 
 }  // namespace skyblip::go
 

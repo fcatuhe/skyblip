@@ -12,8 +12,8 @@ namespace skyblip {
 
 inline uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 512 / 360); }
 
-inline model::OwnState flying(int mps, int track_deg, int16_t turn_dps = 0, uint32_t at_ms = 0) {
-    model::OwnState o{};
+inline model::Ownship flying(int mps, int track_deg, int16_t turn_dps = 0, uint32_t at_ms = 0) {
+    model::Ownship o{};
     o.turn_cdps = static_cast<int16_t>(turn_dps * 100);
     o.fix_ms = at_ms;
     o.fix_valid = true;
@@ -27,9 +27,9 @@ inline model::OwnState flying(int mps, int track_deg, int16_t turn_dps = 0, uint
 
 // Placed by offset from own-ship, so a case reads as the picture out of the
 // canopy rather than as two coordinates.
-inline model::AircraftObs neighbour(const model::OwnState& own, int north_m, int east_m, int up_m,
-                                    int mps, int track_deg, uint32_t at_ms = 0) {
-    model::AircraftObs t{};
+inline model::AircraftObservation neighbour(const model::Ownship& own, int north_m, int east_m,
+                                            int up_m, int mps, int track_deg, uint32_t at_ms = 0) {
+    model::AircraftObservation t{};
     t.address = 0x314159;
     t.address_mapping_table = 6;
     t.position_valid = true;
@@ -48,9 +48,9 @@ inline model::AircraftObs neighbour(const model::OwnState& own, int north_m, int
     return t;
 }
 
-inline model::AircraftObs obs(uint32_t address, uint8_t tbl, uint32_t t,
-                              model::Source src = model::Source::AdslDirect) {
-    model::AircraftObs o{};
+inline model::AircraftObservation observation(uint32_t address, uint8_t tbl, uint32_t t,
+                                              model::Source src = model::Source::AdslDirect) {
+    model::AircraftObservation o{};
     o.address = address;
     o.address_mapping_table = tbl;
     o.received.at_s = t;
@@ -62,9 +62,9 @@ inline model::AircraftObs obs(uint32_t address, uint8_t tbl, uint32_t t,
     return o;
 }
 
-inline model::AircraftObs parked(uint32_t address, uint8_t tbl, uint32_t t,
-                                 model::Source src = model::Source::AdslDirect) {
-    model::AircraftObs o = obs(address, tbl, t, src);
+inline model::AircraftObservation parked(uint32_t address, uint8_t tbl, uint32_t t,
+                                         model::Source src = model::Source::AdslDirect) {
+    model::AircraftObservation o = observation(address, tbl, t, src);
     o.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return o;
 }

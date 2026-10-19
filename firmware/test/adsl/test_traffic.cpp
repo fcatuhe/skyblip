@@ -56,8 +56,8 @@ uint32_t spec_exponential_decode(uint32_t code, int base_bits) {
     return ((thres + base) << exponent) - thres;
 }
 
-model::OwnState flying() {
-    model::OwnState own{};
+model::Ownship flying() {
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
@@ -128,7 +128,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the tabl
 
 // The clause is emphatic: a field nobody measured is transmitted as invalid, never as zero.
 TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted as invalid") {
-    model::OwnState own = flying();
+    model::Ownship own = flying();
     own.fix_valid = false;
     own.climb_valid = false;
     protocol::AdslPacket p{};
@@ -143,9 +143,9 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
 TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp is a quarter second inside a 15-second cycle") {
     CHECK(protocol::kTimeStampCycleS == 15u);
     CHECK(protocol::kTimeStampQuarterMs == 250u);
-    for (uint32_t utc = 1785628800; utc < 1785628860; utc++) {
+    for (uint32_t utc_s = 1785628800; utc_s < 1785628860; utc_s++) {
         for (int32_t lead = -1000; lead <= 1000; lead += 125) {
-            const uint8_t code = protocol::timestamp_code(utc, lead);
+            const uint8_t code = protocol::timestamp_code(utc_s, lead);
             CHECK(code < 60);
         }
     }
@@ -159,12 +159,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp is a quarter second inside a 15-s
 
 // A burst at 613 ms named 500 while carrying the position to 613: 113 ms apart, 14 m at 120 kt.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms") {
-    model::OwnState own = flying();
-    own.utc = 1785628800;
+    model::Ownship own = flying();
+    own.utc_s = 1785628800;
     const int32_t into_utc_ms = 613;
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4,
-                       protocol::BurstInstant{own.utc, into_utc_ms, into_utc_ms});
+                       protocol::BurstInstant{own.utc_s, into_utc_ms, into_utc_ms});
     const int32_t named_ms = static_cast<int32_t>(p.TimeStamp % 4u) *
                              static_cast<int32_t>(protocol::kTimeStampQuarterMs);
     CHECK(named_ms == 500);
@@ -180,20 +180,20 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position
 
 // It dates the navigation solution, and the position is carried to it, so the pair is one moment.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp and the position name the same instant") {
-    model::OwnState own = flying();
-    own.utc = 1785628800;
+    model::Ownship own = flying();
+    own.utc_s = 1785628800;
     protocol::BurstInstant at{};
-    at.utc = own.utc;
+    at.utc_s = own.utc_s;
     at.into_utc_ms = 500;
     at.since_fix_ms = 500;
 
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4, at);
-    CHECK(p.TimeStamp == protocol::timestamp_code(own.utc, 500));
+    CHECK(p.TimeStamp == protocol::timestamp_code(own.utc_s, 500));
 
     protocol::AdslPacket at_fix{};
-    protocol::from_own(at_fix, own, 0x123456, 6, 4, protocol::BurstInstant{own.utc, 0, 0});
-    CHECK(at_fix.TimeStamp == protocol::timestamp_code(own.utc, 0));
+    protocol::from_own(at_fix, own, 0x123456, 6, 4, protocol::BurstInstant{own.utc_s, 0, 0});
+    CHECK(at_fix.TimeStamp == protocol::timestamp_code(own.utc_s, 0));
     // Half a second due east at 120 m/s: the transmitted position moved with the timestamp.
     CHECK(p.lon_1e7() > at_fix.lon_1e7());
 }
@@ -204,7 +204,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
     CHECK(static_cast<uint8_t>(flight::FlightState::Airborne) == 2);
 
     for (uint8_t state : {uint8_t(0), uint8_t(1), uint8_t(2)}) {
-        model::OwnState own = flying();
+        model::Ownship own = flying();
         own.flight_state = state;
         protocol::AdslPacket p{};
         protocol::from_own(p, own, 0x123456, 6, 4);
@@ -215,7 +215,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
 
 TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glider is 4") {
     for (uint8_t cat = 0; cat < 32; cat++) {
-        model::OwnState own = flying();
+        model::Ownship own = flying();
         protocol::AdslPacket p{};
         protocol::from_own(p, own, 0x123456, 6, cat);
         CHECK(p.AcftCat == cat);
@@ -236,9 +236,10 @@ TEST_CASE("ADS-L.4.SRD860.G.1.4: the emergency status transmitted is 1, no emerg
     CHECK(p.Emergency == 1);
     CHECK(field(payload_of(p), 13, 3) == 1u);
 
-    model::AircraftObs obs{};
-    REQUIRE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
-    CHECK(obs.emergency == 1);
+    model::AircraftObservation observation{};
+    REQUIRE(
+        protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, observation));
+    CHECK(observation.emergency == 1);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.5: latitude counts 1/93206 of a degree and longitude 1/46603") {
@@ -269,9 +270,10 @@ TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an air
     CHECK(field(payload_of(p), 40, 24) == 0x800000u);
     CHECK_FALSE(p.has_position());
 
-    model::AircraftObs obs{};
-    CHECK_FALSE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
-    CHECK_FALSE(obs.position_valid);
+    model::AircraftObservation observation{};
+    CHECK_FALSE(
+        protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, observation));
+    CHECK_FALSE(observation.position_valid);
 }
 
 // The clause's own algorithm, against the codec the three variable-range fields share.
@@ -328,20 +330,21 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked exampl
 TEST_CASE("ADS-L.4.SRD860.G.1.7: an altitude marked invalid decodes as no altitude, not 61 km") {
     protocol::AdslPacket p = traffic_packet();
     p.set_alt_invalid();
-    model::AircraftObs obs{};
-    REQUIRE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
-    CHECK(obs.position_valid);
-    CHECK_FALSE(obs.alt_valid);
-    CHECK(obs.alt_m == 0);
-
+    model::AircraftObservation observation{};
     REQUIRE(
-        protocol::to_obs(traffic_packet(), events::Stamp{}, -80, model::Source::AdslDirect, obs));
-    CHECK(obs.alt_valid);
+        protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, observation));
+    CHECK(observation.position_valid);
+    CHECK_FALSE(observation.alt_valid);
+    CHECK(observation.alt_m == 0);
+
+    REQUIRE(protocol::to_observation(traffic_packet(), events::Stamp{}, -80,
+                                     model::Source::AdslDirect, observation));
+    CHECK(observation.alt_valid);
 }
 
 // A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
-    model::OwnState own = flying();
+    model::Ownship own = flying();
     own.vdop_e2 = 0;
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4);
@@ -413,22 +416,24 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
     p.set_speed_invalid();
     p.set_track_c9(256);
 
-    model::AircraftObs obs{};
-    REQUIRE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
-    CHECK_FALSE(obs.speed_valid);
-    CHECK(obs.speed_q == 0);
+    model::AircraftObservation observation{};
+    REQUIRE(
+        protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, observation));
+    CHECK_FALSE(observation.speed_valid);
+    CHECK(observation.speed_q == 0);
 
-    const flight::Prediction carried = flight::extrapolate(obs, 1000);
+    const flight::Prediction carried = flight::extrapolate(observation, 1000);
     CHECK_FALSE(carried.valid);
-    CHECK(carried.lat_1e7 == obs.lat_1e7);
-    CHECK(carried.lon_1e7 == obs.lon_1e7);
+    CHECK(carried.lat_1e7 == observation.lat_1e7);
+    CHECK(carried.lon_1e7 == observation.lon_1e7);
 
     // A ground speed of zero is the clause's other invalid track, and it moves no further.
     protocol::AdslPacket parked = traffic_packet();
     parked.set_speed_q(0);
     parked.set_track_c9(256);
-    model::AircraftObs still{};
-    REQUIRE(protocol::to_obs(parked, events::Stamp{}, -80, model::Source::AdslDirect, still));
+    model::AircraftObservation still{};
+    REQUIRE(
+        protocol::to_observation(parked, events::Stamp{}, -80, model::Source::AdslDirect, still));
     const flight::Prediction stays = flight::extrapolate(still, 1000);
     CHECK(stays.lat_1e7 == still.lat_1e7);
     CHECK(stays.lon_1e7 == still.lon_1e7);

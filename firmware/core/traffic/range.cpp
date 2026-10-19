@@ -7,27 +7,28 @@
 
 namespace skyblip::traffic {
 
-bool range_to(const model::OwnState& own, const model::AircraftObs& obs, RangeRow& out) {
+bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
+              RangeRow& out) {
     int32_t north_m = 0, east_m = 0, up_m = 0;
-    if (!protocol::relative_ned(own, obs, north_m, east_m, up_m)) return false;
+    if (!protocol::relative_ned(own, observation, north_m, east_m, up_m)) return false;
 
     out = RangeRow{};
-    out.address = obs.address;
-    out.address_mapping_table = obs.address_mapping_table;
-    out.source = obs.source;
+    out.address = observation.address;
+    out.address_mapping_table = observation.address_mapping_table;
+    out.source = observation.source;
     out.up_m = up_m;
     out.ground_m = static_cast<int32_t>(idistance(north_m, east_m));
     return true;
 }
 
 int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
-                  const model::OwnState& own, RangeRow* out, int cap) {
+                  const model::Ownship& own, RangeRow* out, int cap) {
     int n = 0;
     for (int i = 0; i < TrafficTable::kCapacity; i++) {
         const Target* t = table.at(i);
         if (!t || !t->used) continue;
         RangeRow row;
-        if (!range_to(own, t->obs, row)) continue;
+        if (!range_to(own, t->observation, row)) continue;
         row.callsign = callsigns.find(row.address_mapping_table, row.address);
 
         int at = n;

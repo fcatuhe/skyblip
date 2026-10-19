@@ -14,7 +14,7 @@ using namespace skyblip;
 
 namespace {
 protocol::AdslPacket traffic_packet() {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;

@@ -16,22 +16,22 @@ uint8_t adsl_cat_to_alptas(uint8_t adsl_cat);
 uint8_t address_mapping_table_to_idtype(uint8_t address_mapping_table);
 
 // INFO: fc 20sep26 callsign rides the ID field behind a '!', as OGN's does: lookout.h:144
-int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model::AircraftObs& t,
-                 uint8_t alarm_level, const char* callsign);
+int format_pflaa(char* out, size_t cap, const model::Ownship& own,
+                 const model::AircraftObservation& t, uint8_t alarm_level, const char* callsign);
 
 // rel_bearing_deg is SIGNED, half a turn either way: the field is, and a value
 // pushed through an unsigned parameter puts a threat off the left wing at 340
 // degrees on an app that reads it as written.
 // INFO: fc 19sep26 FTD-012's GPS field: 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving
-uint8_t pflau_gps(const model::OwnState& own);
+uint8_t pflau_gps(const model::Ownship& own);
 
 // INFO: fc 19sep26 the TX field is whether a burst can leave now: core/timing/transmit.h
-int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmitting,
-                 int n_targets, const model::AircraftObs* threat, uint8_t alarm_level,
+int format_pflau(char* out, size_t cap, const model::Ownship& own, bool transmitting, int n_targets,
+                 const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t rel_bearing_deg, int32_t rel_alt_m, int32_t rel_dist_m);
 
 // fix_valid follows the same binary own.fix_valid this device already keeps
-// (no 2D/3D distinction survives to OwnState), which is what format_pflau's own
+// (no 2D/3D distinction survives to Ownship), which is what format_pflau's own
 // GPS field already reduces the same fix to: '3' (3D) when true, '1' (no fix)
 // when false. Both SoftRF forks send the same two values off the same test
 // (src/protocol/data/NMEA.cpp: isValidGNSSFix() ? '3' : '1').
@@ -100,10 +100,10 @@ int format_lk8ex1(char* out, size_t cap, const Lk8Ex1& v);
 // without the first, and no way to stamp it without the second, and a sentence
 // missing both a real fix and a real time is worse than silence to a consumer
 // that stamps a log with it.
-int format_gprmc(char* out, size_t cap, const model::OwnState& own);
-int format_gpgga(char* out, size_t cap, const model::OwnState& own);
+int format_gprmc(char* out, size_t cap, const model::Ownship& own);
+int format_gpgga(char* out, size_t cap, const model::Ownship& own);
 
-bool relative_ned(const model::OwnState& own, const model::AircraftObs& t, int32_t& north_m,
+bool relative_ned(const model::Ownship& own, const model::AircraftObservation& t, int32_t& north_m,
                   int32_t& east_m, int32_t& up_m);
 
 }

@@ -9,8 +9,8 @@
 using namespace skyblip;
 
 namespace {
-model::AircraftObs target(uint32_t address) {
-    model::AircraftObs t{};
+model::AircraftObservation target(uint32_t address) {
+    model::AircraftObservation t{};
     t.address = address;
     t.address_mapping_table = 6;
     t.aircraft_cat = 1;
@@ -112,14 +112,14 @@ TEST_CASE(
 // A ground station reaches every aircraft in range, so what it relays is checked, not trusted.
 TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refused, not drawn") {
     protocol::AdslUplink uplink;
-    model::AircraftObs targets[4] = {target(0x300001), target(0), target(0x300003),
-                                     target(0x300004)};
+    model::AircraftObservation targets[4] = {target(0x300001), target(0), target(0x300003),
+                                             target(0x300004)};
     targets[3].lat_1e7 = 1800000000;
 
     uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
     REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);
 
-    model::AircraftObs out[4]{};
+    model::AircraftObservation out[4]{};
     protocol::AdslUplink::DecodeStats stats{};
     REQUIRE(uplink.decode(frame, out, 4, stats) == Status::Ok);
     CHECK(stats.targets == 2);

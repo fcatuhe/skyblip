@@ -25,13 +25,14 @@ int length(const char* s) {
     return n;
 }
 
-bool glass_reads(const ui::Canvas& fb, int x, int y, const char* text, int scale) {
+bool glass_reads(const ui::Canvas& canvas, int x, int y, const char* text, int scale) {
     go::Glass expected;
     expected.clear(true);
     expected.draw_text(x, y, text, true, scale);
     for (int dy = 0; dy < 7 * scale; dy++)
         for (int dx = 0; dx < length(text) * go::kInstallingCellW * scale; dx++)
-            if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
+            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
+                return false;
     return true;
 }
 

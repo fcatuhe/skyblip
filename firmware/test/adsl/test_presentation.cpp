@@ -14,7 +14,7 @@ using namespace skyblip;
 
 namespace {
 protocol::AdslPacket traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.lat_1e7 = 481234500;
@@ -64,14 +64,15 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a Traffic payload is type 2, in the broadcast h
 
 // Issue 2 puts Status, Remote ID and the uplinks on this band, and none of them is an aeroplane.
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a payload that is not Traffic never becomes an aircraft") {
-    model::AircraftObs obs{};
+    model::AircraftObservation observation{};
     for (uint8_t type : {uint8_t(0x00), uint8_t(0x03), uint8_t(0x04), uint8_t(0x05), uint8_t(0x06),
                          uint8_t(0x42), uint8_t(0x82)}) {
         protocol::AdslPacket p = traffic_packet();
         p.Type = type;
         CHECK_FALSE(p.is_position());
-        CHECK_FALSE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, obs));
-        CHECK_FALSE(obs.position_valid);
+        CHECK_FALSE(protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect,
+                                             observation));
+        CHECK_FALSE(observation.position_valid);
     }
 }
 

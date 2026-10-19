@@ -71,7 +71,7 @@ constexpr int kBootFooterH = kBootDividerGap + kBootFooterGap - kBootVerdictRise
 static_assert(boot_row_y(kBootRows) + kBootFooterH <= kGlassH,
               "the last row would fall off the glass");
 
-void draw_boot(ui::Canvas& fb, const BootSnapshot& snapshot);
+void draw_boot(ui::Canvas& canvas, const BootSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

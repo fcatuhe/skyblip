@@ -23,20 +23,22 @@ GMeterSnapshot flying() {
     return s;
 }
 
-bool marker_at(const Glass& fb, int x, int y) {
-    return fb.get_pixel(x - 2, y - 2) && fb.get_pixel(x + 2, y + 2);
+bool marker_at(const Glass& canvas, int x, int y) {
+    return canvas.get_pixel(x - 2, y - 2) && canvas.get_pixel(x + 2, y + 2);
 }
 
-bool scale_drawn(const Glass& fb) { return fb.get_pixel(30, 30) && fb.get_pixel(134, 134); }
+bool scale_drawn(const Glass& canvas) {
+    return canvas.get_pixel(30, 30) && canvas.get_pixel(134, 134);
+}
 
 }  // namespace
 
 TEST_CASE("gmeter: level flight puts the marker in the middle of the field") {
-    Glass fb;
-    draw_gmeter(fb, flying());
+    Glass canvas;
+    draw_gmeter(canvas, flying());
 
-    CHECK(marker_at(fb, kFieldCx, kFieldCy));
-    CHECK(reads_in(fb, "+1.0", 40, 138, 120, 156, 2));
+    CHECK(marker_at(canvas, kFieldCx, kFieldCy));
+    CHECK(reads_in(canvas, "+1.0", 40, 138, 120, 156, 2));
 }
 
 TEST_CASE("gmeter: the three axes each read their own now, most and least") {
@@ -44,23 +46,23 @@ TEST_CASE("gmeter: the three axes each read their own now, most and least") {
     s.now = flight::GLoad{2300, -400, 300};
     s.most = flight::GLoad{4200, 700, 300};
     s.least = flight::GLoad{-1300, -600, -400};
-    Glass fb;
-    draw_gmeter(fb, s);
+    Glass canvas;
+    draw_gmeter(canvas, s);
 
-    CHECK(reads_in(fb, "G", 0, 142, 30, 152));
-    CHECK(reads_in(fb, "+2.3", 40, 138, 120, 156, 2));
-    CHECK(reads_in(fb, "-1.3", 130, 142, 158, 152));
-    CHECK(reads_in(fb, "+4.2", 168, 142, 196, 152));
+    CHECK(reads_in(canvas, "G", 0, 142, 30, 152));
+    CHECK(reads_in(canvas, "+2.3", 40, 138, 120, 156, 2));
+    CHECK(reads_in(canvas, "-1.3", 130, 142, 158, 152));
+    CHECK(reads_in(canvas, "+4.2", 168, 142, 196, 152));
 
-    CHECK(reads_in(fb, "SIDE", 0, 162, 34, 172));
-    CHECK(reads_in(fb, "L0.4", 40, 158, 120, 176, 2));
-    CHECK(reads_in(fb, "L0.6", 130, 162, 158, 172));
-    CHECK(reads_in(fb, "R0.7", 168, 162, 196, 172));
+    CHECK(reads_in(canvas, "SIDE", 0, 162, 34, 172));
+    CHECK(reads_in(canvas, "L0.4", 40, 158, 120, 176, 2));
+    CHECK(reads_in(canvas, "L0.6", 130, 162, 158, 172));
+    CHECK(reads_in(canvas, "R0.7", 168, 162, 196, 172));
 
-    CHECK(reads_in(fb, "ACCEL", 0, 182, 40, 192));
-    CHECK(reads_in(fb, "A0.3", 40, 178, 120, 196, 2));
-    CHECK(reads_in(fb, "D0.4", 130, 182, 158, 192));
-    CHECK(reads_in(fb, "A0.3", 168, 182, 196, 192));
+    CHECK(reads_in(canvas, "ACCEL", 0, 182, 40, 192));
+    CHECK(reads_in(canvas, "A0.3", 40, 178, 120, 196, 2));
+    CHECK(reads_in(canvas, "D0.4", 130, 182, 158, 192));
+    CHECK(reads_in(canvas, "A0.3", 168, 182, 196, 192));
 }
 
 // The field shows where the load throws you: pull g and the marker sinks.
@@ -93,11 +95,11 @@ TEST_CASE("gmeter: the longitudinal strip stands up, with the nose at the top") 
     GMeterSnapshot braking = flying();
     braking.now = flight::GLoad{1000, 0, -500};
     braking.least = flight::GLoad{1000, 0, -500};
-    Glass fb;
-    draw_gmeter(fb, braking);
+    Glass canvas;
+    draw_gmeter(canvas, braking);
 
-    CHECK(fb.get_pixel(kStripCx, kFieldCy - 18));
-    CHECK_FALSE(fb.get_pixel(kStripCx, kFieldCy + 18));
+    CHECK(canvas.get_pixel(kStripCx, kFieldCy - 18));
+    CHECK_FALSE(canvas.get_pixel(kStripCx, kFieldCy + 18));
 
     GMeterSnapshot accelerating = flying();
     accelerating.now = flight::GLoad{1000, 0, 500};
@@ -111,41 +113,41 @@ TEST_CASE("gmeter: the longitudinal strip stands up, with the nose at the top") 
 
 // A hand on a nothing is noise: zero is zero whichever way it is not leaning.
 TEST_CASE("gmeter: a reading of zero carries no sign and no hand") {
-    Glass fb;
-    draw_gmeter(fb, flying());
+    Glass canvas;
+    draw_gmeter(canvas, flying());
 
-    CHECK(reads_in(fb, "+1.0", 40, 138, 120, 156, 2));
-    CHECK(reads_in(fb, "0.0", 40, 158, 120, 176, 2));
-    CHECK(reads_in(fb, "0.0", 40, 178, 120, 196, 2));
-    CHECK_FALSE(reads_in(fb, "R0.0", 40, 158, 120, 176, 2));
-    CHECK_FALSE(reads_in(fb, "+0.0", 40, 178, 120, 196, 2));
+    CHECK(reads_in(canvas, "+1.0", 40, 138, 120, 156, 2));
+    CHECK(reads_in(canvas, "0.0", 40, 158, 120, 176, 2));
+    CHECK(reads_in(canvas, "0.0", 40, 178, 120, 196, 2));
+    CHECK_FALSE(reads_in(canvas, "R0.0", 40, 158, 120, 176, 2));
+    CHECK_FALSE(reads_in(canvas, "+0.0", 40, 178, 120, 196, 2));
 }
 
 TEST_CASE("gmeter: the strip says which end is which, so no sign has to be remembered") {
-    Glass fb;
-    draw_gmeter(fb, flying());
+    Glass canvas;
+    draw_gmeter(canvas, flying());
 
-    CHECK(reads_in(fb, "DEC", 152, 28, 180, 42));
-    CHECK(reads_in(fb, "ACC", 152, 120, 180, 136));
+    CHECK(reads_in(canvas, "DEC", 152, 28, 180, 42));
+    CHECK(reads_in(canvas, "ACC", 152, 120, 180, 136));
 }
 
 TEST_CASE("gmeter: a unit with no sensor prints no scale to read nothing off") {
     GMeterSnapshot none;
-    Glass fb;
-    draw_gmeter(fb, none);
+    Glass canvas;
+    draw_gmeter(canvas, none);
 
-    CHECK(reads_in(fb, "NO SENSOR", 0, 60, 200, 100));
-    CHECK_FALSE(scale_drawn(fb));
+    CHECK(reads_in(canvas, "NO SENSOR", 0, 60, 200, 100));
+    CHECK_FALSE(scale_drawn(canvas));
 }
 
 // The ball's cage is drawn empty for the same reason: the scale is true, the reading is not there.
 TEST_CASE("gmeter: a sensor that has not reported yet leaves the field empty") {
     GMeterSnapshot waiting;
     waiting.fitted = true;
-    Glass fb;
-    draw_gmeter(fb, waiting);
+    Glass canvas;
+    draw_gmeter(canvas, waiting);
 
-    CHECK(scale_drawn(fb));
-    CHECK_FALSE(marker_at(fb, kFieldCx, kFieldCy));
-    CHECK(reads_in(fb, "----", 88, 142, 120, 152));
+    CHECK(scale_drawn(canvas));
+    CHECK_FALSE(marker_at(canvas, kFieldCx, kFieldCy));
+    CHECK(reads_in(canvas, "----", 88, 142, 120, 152));
 }

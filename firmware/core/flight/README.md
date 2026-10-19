@@ -103,7 +103,7 @@ The peaks reset when the flight timer starts, so they are this flight's, and a u
 
 The model is the same one, OGN's: constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. A path is walked, never indexed: `Arc::advance()` rotates the velocity vector by half a step's worth of turn, moves, and rotates again, so a whole minute costs two sine lookups per aircraft rather than two per sample. Position is carried in millimetres and rotations are rounded rather than truncated, because a Q14 rotation applied thirty times in a row loses a metre a step otherwise.
 
-A target's turn rate is not on the wire. ADS-L carries position, speed, track and climb, so `motion_of(obs, ...)` takes the rate `core/traffic` estimated from that target's own track history, and flies it straight when there is no estimate yet. The screen draws that estimate, and the tag beside a turning target is the same number the table holds.
+A target's turn rate is not on the wire. ADS-L carries position, speed, track and climb, so `motion_of(observation, ...)` takes the rate `core/traffic` estimated from that target's own track history, and flies it straight when there is no estimate yet. The screen draws that estimate, and the tag beside a turning target is the same number the table holds.
 
 `kMaxTurnDps` is 30. Above it the number is describing the receiver rather than the aircraft: a differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aeroplane this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
 

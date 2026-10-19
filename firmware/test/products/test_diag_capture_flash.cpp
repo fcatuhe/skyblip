@@ -116,7 +116,7 @@ struct SmallPoolRig {
     explicit SmallPoolRig(uint32_t sectors = kSectors) : flash(sectors) {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
         state.own.utc_valid = true;
-        state.own.utc = Rig::kUtcBase;
+        state.own.utc_s = Rig::kUtcBase;
         link.raise_link(1);
     }
 

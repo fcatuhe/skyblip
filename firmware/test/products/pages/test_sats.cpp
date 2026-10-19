@@ -39,54 +39,54 @@ skyblip::gnss::SkyView sky_of(int gps, int beidou, int used) {
 // The page a pilot on the apron opens: what is up there, how loud, and which ones solved.
 TEST_CASE("sats: a bar for every satellite in view, filled for the ones in the solution") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
-    SatsSnapshot snap;
-    snap.levels_live = true;
-    snap.sky = &sky;
-    snap.hdop_e2 = 90;
-    snap.vdop_e2 = 150;
-    snap.nav_ms = 98;
-    snap.nav_valid = true;
-    Glass fb;
-    draw_sats(fb, snap);
+    SatsSnapshot snapshot;
+    snapshot.levels_live = true;
+    snapshot.sky = &sky;
+    snapshot.hdop_e2 = 90;
+    snapshot.vdop_e2 = 150;
+    snapshot.nav_ms = 98;
+    snapshot.nav_valid = true;
+    Glass canvas;
+    draw_sats(canvas, snapshot);
 
-    CHECK(reads_in(fb, "SATELLITES", 0, 0, 120, 12));
-    CHECK(reads_in(fb, "NAV 098MS", 130, 150, 200, 168));
-    CHECK(reads_in(fb, "USED 3 OF 10", 60, 0, 200, 12));
-    CHECK(reads_in(fb, "GPS", 0, 130, 60, 145));
-    CHECK(reads_in(fb, "BDS", 0, 130, 120, 145));
-    CHECK(reads_in(fb, "HDOP 0.90", 0, 150, 130, 168));
+    CHECK(reads_in(canvas, "SATELLITES", 0, 0, 120, 12));
+    CHECK(reads_in(canvas, "NAV 098MS", 130, 150, 200, 168));
+    CHECK(reads_in(canvas, "USED 3 OF 10", 60, 0, 200, 12));
+    CHECK(reads_in(canvas, "GPS", 0, 130, 60, 145));
+    CHECK(reads_in(canvas, "BDS", 0, 130, 120, 145));
+    CHECK(reads_in(canvas, "HDOP 0.90", 0, 150, 130, 168));
 
     // A filled bar carries more ink than the hollow one beside it at the same height.
-    const int first = ink_in(fb, 4, 22, 9, 132);
-    const int fourth = ink_in(fb, 4 + 3 * 5, 22, 9 + 3 * 5, 132);
+    const int first = ink_in(canvas, 4, 22, 9, 132);
+    const int fourth = ink_in(canvas, 4 + 3 * 5, 22, 9 + 3 * 5, 132);
     CHECK(first > fourth);
 }
 
 // A level nobody has measured yet is not drawn as a level of zero.
 TEST_CASE("sats: before the first GSV set the solution stands in for the bars") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
-    SatsSnapshot snap;
-    snap.fix_valid = true;
-    snap.levels_live = false;
-    snap.sky = &sky;
-    snap.sats = 9;
-    Glass fb;
-    draw_sats(fb, snap);
+    SatsSnapshot snapshot;
+    snapshot.fix_valid = true;
+    snapshot.levels_live = false;
+    snapshot.sky = &sky;
+    snapshot.sats = 9;
+    Glass canvas;
+    draw_sats(canvas, snapshot);
 
-    CHECK(reads_in(fb, "LEVELS COMING UP", 0, 176, 200, 196));
-    CHECK(reads_in(fb, "USED 3", 60, 0, 200, 12));
-    CHECK(reads_in(fb, "GPS 3", 0, 18, 120, 32));
-    CHECK(ink_in(fb, 4, 40, 196, 130) == 0);
+    CHECK(reads_in(canvas, "LEVELS COMING UP", 0, 176, 200, 196));
+    CHECK(reads_in(canvas, "USED 3", 60, 0, 200, 12));
+    CHECK(reads_in(canvas, "GPS 3", 0, 18, 120, 32));
+    CHECK(ink_in(canvas, 4, 40, 196, 130) == 0);
 }
 
 TEST_CASE("sats: a receiver that has heard nothing says so rather than drawing an empty chart") {
-    SatsSnapshot snap;
-    snap.stage = skyblip::gnss::Stage::Blind;
-    Glass fb;
-    draw_sats(fb, snap);
-    CHECK(reads_in(fb, "NO SATELLITE HEARD", 0, 176, 200, 196));
-    CHECK(reads_in(fb, "BLIND", 0, 140, 80, 158));
-    CHECK(reads_in(fb, "HDOP ---", 0, 150, 130, 168));
+    SatsSnapshot snapshot;
+    snapshot.stage = skyblip::gnss::Stage::Blind;
+    Glass canvas;
+    draw_sats(canvas, snapshot);
+    CHECK(reads_in(canvas, "NO SATELLITE HEARD", 0, 176, 200, 196));
+    CHECK(reads_in(canvas, "BLIND", 0, 140, 80, 158));
+    CHECK(reads_in(canvas, "HDOP ---", 0, 150, 130, 168));
     // No PPS edge to measure the solution against is no figure, never a zero.
-    CHECK(ink_in(fb, 130, 150, 200, 168) == 0);
+    CHECK(ink_in(canvas, 130, 150, 200, 168) == 0);
 }

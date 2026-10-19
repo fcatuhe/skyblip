@@ -161,7 +161,7 @@ int World::aircraft_count() const {
     return n;
 }
 
-void World::service_aircraft(uint32_t now_ms, const model::OwnState& own) {
+void World::service_aircraft(uint32_t now_ms, const model::Ownship& own) {
     (void)own;
     if (now_ms - last_aircraft_ms_ < 100) return;
     const double dt = (now_ms - last_aircraft_ms_) / 1000.0;
@@ -192,7 +192,7 @@ void World::update_inertial() {
 // §C.5). Scheduling the whole second up front is what a real transmitter's
 // clock does, and it keeps the emission instant independent of how coarsely the
 // simulation is stepped.
-void World::schedule_second(uint64_t epoch_us, const model::OwnState& own) {
+void World::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
     for (auto& a : aircraft_) {
         if (!a.used || a.system == protocol::System::AdslUplink) continue;
         transmit(a, epoch_us, own);
@@ -204,22 +204,24 @@ void World::schedule_second(uint64_t epoch_us, const model::OwnState& own) {
 // aircraft's own frame carries: an address, a place, a height, a speed. No
 // climb rate and no track, because an uplink record has no room for them - which
 // is the whole reason a direct reception outranks a relay of the same aircraft.
-model::AircraftObs World::as_relayed(const VirtualAircraft& a, const model::OwnState& own) const {
+model::AircraftObservation World::as_relayed(const VirtualAircraft& a,
+                                             const model::Ownship& own) const {
     const double coslat = std::cos(origin_lat_1e7_ / 1e7 * kPi / 180.0);
-    model::AircraftObs obs{};
-    obs.address = a.address;
-    obs.address_mapping_table = 6;
-    obs.aircraft_cat = 4;
-    obs.flight_state = 2;
-    obs.speed_q = static_cast<uint16_t>(a.speed_mps * 4);
-    obs.speed_valid = true;
-    obs.lat_1e7 = origin_lat_1e7_ + static_cast<int32_t>(a.north_m * 1e7 / kMetresPerDegLat);
-    obs.lon_1e7 = origin_lon_1e7_;
+    model::AircraftObservation observation{};
+    observation.address = a.address;
+    observation.address_mapping_table = 6;
+    observation.aircraft_cat = 4;
+    observation.flight_state = 2;
+    observation.speed_q = static_cast<uint16_t>(a.speed_mps * 4);
+    observation.speed_valid = true;
+    observation.lat_1e7 =
+        origin_lat_1e7_ + static_cast<int32_t>(a.north_m * 1e7 / kMetresPerDegLat);
+    observation.lon_1e7 = origin_lon_1e7_;
     if (coslat > 0.01)
-        obs.lon_1e7 += static_cast<int32_t>(a.east_m * 1e7 / (kMetresPerDegLat * coslat));
-    obs.alt_m = to_metres(Millimetres(own.alt_mm)).v + static_cast<int32_t>(a.up_m);
-    obs.position_valid = true;
-    return obs;
+        observation.lon_1e7 += static_cast<int32_t>(a.east_m * 1e7 / (kMetresPerDegLat * coslat));
+    observation.alt_m = to_metres(Millimetres(own.alt_mm)).v + static_cast<int32_t>(a.up_m);
+    observation.position_valid = true;
+    return observation;
 }
 
 // One skyPost, one frame a second, carrying every aircraft it heard: §C.5's
@@ -227,8 +229,8 @@ model::AircraftObs World::as_relayed(const VirtualAircraft& a, const model::OwnS
 // finishing well before the dwell closes at 395 (core/timing/slot.h). A relay
 // costs the aircraft nothing - it never transmits on the O band - so this is
 // scheduled apart from the direct transmitters rather than per aircraft.
-void World::relay(uint64_t epoch_us, const model::OwnState& own) {
-    model::AircraftObs relayed[protocol::AdslUplink::kMaxTargets];
+void World::relay(uint64_t epoch_us, const model::Ownship& own) {
+    model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     int n = 0;
     for (auto& a : aircraft_) {
         if (!a.used || a.system != protocol::System::AdslUplink) continue;
@@ -273,13 +275,13 @@ size_t callsign_burst(const VirtualAircraft& a, uint8_t* chips) {
                                   chips);
 }
 
-size_t adsl_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t lat_1e7,
+size_t adsl_burst(const VirtualAircraft& a, uint32_t utc_s, int32_t alt_m, int32_t lat_1e7,
                   int32_t lon_1e7, uint8_t* chips) {
     protocol::AdslPacket p;
     p.init();
     p.set_address(a.address);
     p.set_address_mapping_table(6);
-    p.TimeStamp = static_cast<uint8_t>((utc % 15) * 4);
+    p.TimeStamp = static_cast<uint8_t>((utc_s % 15) * 4);
     p.FlightState = 2;
     p.AcftCat = 4;
     p.Emergency = 1;
@@ -303,32 +305,33 @@ size_t adsl_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t
 
 // An ALP-TAS aircraft carries a FLARM-taxonomy address, so the address type says
 // so and the receiver reports it as one.
-size_t alptas_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t lat_1e7,
+size_t alptas_burst(const VirtualAircraft& a, uint32_t utc_s, int32_t alt_m, int32_t lat_1e7,
                     int32_t lon_1e7, uint8_t* chips) {
-    model::AircraftObs obs{};
-    obs.address = a.address;
-    obs.address_mapping_table = 0x06;
-    obs.aircraft_cat = 4;
-    obs.flight_state = 2;
-    obs.lat_1e7 = lat_1e7;
-    obs.lon_1e7 = lon_1e7;
-    obs.alt_m = alt_m;
-    obs.speed_q = static_cast<uint16_t>(a.speed_mps * 4);
-    obs.climb_e8 = climb_e8_of(a);
-    obs.track_c9 = static_cast<uint16_t>(a.track_deg * 512 / 360) & 0x1FF;
-    obs.speed_valid = true;
-    obs.climb_valid = true;
-    obs.position_valid = true;
+    model::AircraftObservation observation{};
+    observation.address = a.address;
+    observation.address_mapping_table = 0x06;
+    observation.aircraft_cat = 4;
+    observation.flight_state = 2;
+    observation.lat_1e7 = lat_1e7;
+    observation.lon_1e7 = lon_1e7;
+    observation.alt_m = alt_m;
+    observation.speed_q = static_cast<uint16_t>(a.speed_mps * 4);
+    observation.climb_e8 = climb_e8_of(a);
+    observation.track_c9 = static_cast<uint16_t>(a.track_deg * 512 / 360) & 0x1FF;
+    observation.speed_valid = true;
+    observation.climb_valid = true;
+    observation.position_valid = true;
 
     uint8_t frame[protocol::kAlptasFrameBytes] = {0};
-    if (protocol::alptas_encode(frame, obs, utc, lat_1e7, lon_1e7) != Status::Ok) return 0;
+    if (protocol::alptas_encode(frame, observation, utc_s, lat_1e7, lon_1e7) != Status::Ok)
+        return 0;
     return protocol::encode_mband(protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes,
                                   chips);
 }
 
 }  // namespace
 
-void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::OwnState& own) {
+void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::Ownship& own) {
     const double coslat = std::cos(origin_lat_1e7_ / 1e7 * kPi / 180.0);
     int32_t lat = origin_lat_1e7_ + static_cast<int32_t>(a.north_m * 1e7 / kMetresPerDegLat);
     int32_t lon = origin_lon_1e7_;
@@ -336,12 +339,12 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::OwnStat
 
     // ALP-TAS keys its frames on the UTC second, so a transmitter has to use the
     // second the receiver is in, not the simulation's own count of seconds.
-    const uint32_t utc = own.utc_valid ? own.utc : static_cast<uint32_t>(epoch_us / 1000000);
+    const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
     const int32_t alt_m = to_metres(Millimetres(own.alt_mm)).v + static_cast<int32_t>(a.up_m);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_len = a.system == protocol::System::Alptas
-                                ? alptas_burst(a, utc, alt_m, lat, lon, chips)
-                                : adsl_burst(a, utc, alt_m, lat, lon, chips);
+                                ? alptas_burst(a, utc_s, alt_m, lat, lon, chips)
+                                : adsl_burst(a, utc_s, alt_m, lat, lon, chips);
     if (chip_len == 0) return;
 
     int slot = a.slot;
@@ -367,15 +370,16 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::OwnStat
     air_.emit(epoch_us + static_cast<uint64_t>(tail ? phase_ms + 1000 : phase_ms) * 1000,
               timing::Scheduler::slot_freq(slot), chips, static_cast<uint8_t>(chip_len),
               rssi_at(range_m));
-    name_itself(a, epoch_us, utc, range_m);
+    name_itself(a, epoch_us, utc_s, range_m);
 }
 
 // What a skyBlip or an OGN tracker adds to its position bursts: its registration,
 // in slot 1's tail, in the one second of ten its own address owns.
-void World::name_itself(const VirtualAircraft& a, uint64_t epoch_us, uint32_t utc, double range_m) {
+void World::name_itself(const VirtualAircraft& a, uint64_t epoch_us, uint32_t utc_s,
+                        double range_m) {
     if (a.callsign[0] == 0) return;
     const uint32_t period = timing::Transmitter::kCallsignPeriodS;
-    if (utc % period != a.address % period) return;
+    if (utc_s % period != a.address % period) return;
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_len = callsign_burst(a, chips);

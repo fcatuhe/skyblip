@@ -135,17 +135,19 @@ struct Rig {
 
     // A contact at a bearing, graded by hand, for the page to point at.
     void threat(traffic::Level level, int32_t north_m, int32_t east_m, uint32_t now_ms) {
-        model::AircraftObs obs{};
-        obs.address = kThreatAddress;
-        obs.address_mapping_table = kThreatTable;
-        obs.position_valid = true;
-        obs.lat_1e7 = state.own.lat_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
-        obs.lon_1e7 = state.own.lon_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
-        obs.alt_m = to_metres(Millimetres(state.own.alt_mm)).v;
-        obs.received.at_s = now_ms / 1000;
-        obs.at_ms = now_ms;
-        obs.source = model::Source::AdslDirect;
-        state.traffic.update(obs, now_ms / 1000);
+        model::AircraftObservation observation{};
+        observation.address = kThreatAddress;
+        observation.address_mapping_table = kThreatTable;
+        observation.position_valid = true;
+        observation.lat_1e7 =
+            state.own.lat_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
+        observation.lon_1e7 =
+            state.own.lon_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
+        observation.alt_m = to_metres(Millimetres(state.own.alt_mm)).v;
+        observation.received.at_s = now_ms / 1000;
+        observation.at_ms = now_ms;
+        observation.source = model::Source::AdslDirect;
+        state.traffic.update(observation, now_ms / 1000);
         const int at = state.traffic.find(kThreatTable, kThreatAddress);
         REQUIRE(at >= 0);
         state.traffic.at(at)->alarm_level = level;

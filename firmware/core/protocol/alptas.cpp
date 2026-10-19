@@ -123,11 +123,11 @@ void btea4(uint32_t* v, bool encode) {
 // plaintext first two words, the UTC second and a fixed key, XORed into the last
 // four words. It keys on time, which is why a receiver must know the second the
 // frame arrived in.
-void scramble(uint32_t* data, uint32_t utc) {
+void scramble(uint32_t* data, uint32_t utc_s) {
     uint8_t keys[16];
     put_word(keys + 0, data[0]);
     put_word(keys + 4, data[1]);
-    put_word(keys + 8, utc >> 4);
+    put_word(keys + 8, utc_s >> 4);
     put_word(keys + 12, kScrambleKey);
 
     uint32_t z = keys[15];
@@ -152,15 +152,15 @@ void scramble(uint32_t* data, uint32_t utc) {
     for (uint8_t i = 0; i < 4; i++) data[2 + i] ^= get_word(keys + 4 * static_cast<ptrdiff_t>(i));
 }
 
-void crypt_frame(uint8_t* data, uint32_t utc, bool encode) {
+void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
     uint32_t w[kWords];
     for (uint8_t i = 0; i < kWords; i++) w[i] = get_word(data + 4 * static_cast<ptrdiff_t>(i));
     if (encode) {
-        scramble(w, utc);
+        scramble(w, utc_s);
         btea4(w + 2, true);
     } else {
         btea4(w + 2, false);
-        scramble(w, utc);
+        scramble(w, utc_s);
     }
     for (uint8_t i = 0; i < kWords; i++) put_word(data + 4 * static_cast<ptrdiff_t>(i), w[i]);
 }
@@ -311,21 +311,21 @@ int alptas_correct(uint8_t* frame, const uint8_t* err, int max_bad_bits) {
     return -1;
 }
 
-Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc, uint32_t& keyed_utc) {
+Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc_s) {
     if (!alptas_crc_ok(frame)) return Status::Crc;
     if (get_field(frame, kFMsgType) != kAlptasMsgTypePosition) return Status::Unsupported;
 
-    const uint32_t first = (rx_utc - kAlptasKeyWindowS) >> 4;
-    const uint32_t last = (rx_utc + kAlptasKeyWindowS) >> 4;
+    const uint32_t first = (rx_utc_s - kAlptasKeyWindowS) >> 4;
+    const uint32_t last = (rx_utc_s + kAlptasKeyWindowS) >> 4;
     for (uint32_t block = first; block <= last; block++) {
         uint8_t data[kAlptasDataBytes];
         __builtin_memcpy(data, frame, kAlptasDataBytes);
         crypt_frame(data, block << 4, false);
         if (!structured(data)) continue;
         const uint32_t second = (block << 4) | get_field(data, kFTimeBits);
-        const int32_t offset = static_cast<int32_t>(second - rx_utc);
+        const int32_t offset = static_cast<int32_t>(second - rx_utc_s);
         if (offset < -kAlptasKeyWindowS || offset > kAlptasKeyWindowS) continue;
-        keyed_utc = second;
+        keyed_utc_s = second;
         return Status::Ok;
     }
     return Status::Invalid;
@@ -363,15 +363,15 @@ uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_tab
     }
 }
 
-Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
-                     int32_t ref_lon_1e7, model::AircraftObs& out) {
+Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e7,
+                     int32_t ref_lon_1e7, model::AircraftObservation& out) {
     if (!alptas_crc_ok(frame)) return Status::Crc;
 
     uint8_t data[kAlptasDataBytes];
     __builtin_memcpy(data, frame, kAlptasDataBytes);
     if (get_field(data, kFMsgType) != kAlptasMsgTypePosition) return Status::Unsupported;
 
-    crypt_frame(data, rx_utc, false);
+    crypt_frame(data, rx_utc_s, false);
 
     // INFO: fc 09mar26 the only decrypt check the protocol offers: the frame's 4
     // time bits must agree with the local second to +/-1 (a rollover where one
@@ -379,7 +379,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     // needs3 nibble must be 3. Without this gate a mis-framed foreign packet
     // decrypts into plausible-looking traffic.
     uint32_t timebits = get_field(data, kFTimeBits);
-    uint32_t localbits = rx_utc & 0x0Fu;
+    uint32_t localbits = rx_utc_s & 0x0Fu;
     bool time_ok =
         (localbits == timebits) || (localbits + 1 == timebits) || (localbits == timebits + 1);
     if (!time_ok) return Status::Invalid;
@@ -399,7 +399,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     int32_t speed_10 = descale(get_field(data, kFSpeed), 8, 2, 0);
     int32_t vs_10 = descale(get_field(data, kFVs), 6, 2, 1);
 
-    out = model::AircraftObs{};
+    out = model::AircraftObservation{};
     out.address = get_field(data, kFAddress);
     out.address_mapping_table = alptas_address_type_to_address_mapping_table(
         static_cast<uint8_t>(get_field(data, kFAddressType)));
@@ -414,7 +414,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     out.climb_e8 = static_cast<int16_t>(div_nearest(vs_10 * 4, 5));
     out.track_c9 =
         static_cast<uint16_t>(div_nearest(static_cast<int32_t>(course_deg) * 512, 360) & 0x1FF);
-    out.received.at_s = rx_utc;
+    out.received.at_s = rx_utc_s;
     out.source = model::Source::Alptas;
     out.speed_valid = true;
     out.climb_valid = true;
@@ -422,38 +422,39 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     return Status::Ok;
 }
 
-Status alptas_encode(uint8_t* frame, const model::AircraftObs& obs, uint32_t utc,
+Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observation, uint32_t utc_s,
                      int32_t ref_lat_1e7, int32_t ref_lon_1e7) {
     // INFO: fc 09mar26 the reference position is a decode-side input only: the
     // wire carries position modulo 2^20 quanta, absolute, and the receiver
     // reconstructs the high bits from where it is itself (Legacy.cpp:1045).
     (void)ref_lat_1e7;
     (void)ref_lon_1e7;
-    if (!obs.position_valid) return Status::Invalid;
+    if (!observation.position_valid) return Status::Invalid;
 
     __builtin_memset(frame, 0, kAlptasFrameBytes);
-    put_field(frame, kFAddress, obs.address & 0x00FFFFFFu);
+    put_field(frame, kFAddress, observation.address & 0x00FFFFFFu);
     put_field(frame, kFMsgType, kAlptasMsgTypePosition);
     put_field(frame, kFAddressType,
-              address_mapping_table_to_alptas_address_type(obs.address_mapping_table));
-    put_field(frame, kFTimeBits, utc & 0x0Fu);
-    put_field(frame, kFAircraftType, adsl_cat_to_alptas(obs.aircraft_cat));
-    put_field(frame, kFAirborne, obs.flight_state == 1 ? 1 : 2);
-    put_field(frame, kFAlt, enscale(obs.alt_m + 1000, 12, 1, 0));
+              address_mapping_table_to_alptas_address_type(observation.address_mapping_table));
+    put_field(frame, kFTimeBits, utc_s & 0x0Fu);
+    put_field(frame, kFAircraftType, adsl_cat_to_alptas(observation.aircraft_cat));
+    put_field(frame, kFAirborne, observation.flight_state == 1 ? 1 : 2);
+    put_field(frame, kFAlt, enscale(observation.alt_m + 1000, 12, 1, 0));
 
-    int32_t lat_coded = div_nearest(obs.lat_1e7, 52);
+    int32_t lat_coded = div_nearest(observation.lat_1e7, 52);
     put_field(frame, kFLat, static_cast<uint32_t>(lat_coded) & 0x0FFFFFu);
-    int32_t divisor = londiv(abs32(obs.lat_1e7) / 10000000);
-    int32_t lon_coded = div_nearest(obs.lon_1e7, divisor);
+    int32_t divisor = londiv(abs32(observation.lat_1e7) / 10000000);
+    int32_t lon_coded = div_nearest(observation.lon_1e7, divisor);
     put_field(frame, kFLon, static_cast<uint32_t>(lon_coded) & 0x0FFFFFu);
 
-    int32_t speed_10 = obs.speed_valid ? div_nearest(obs.speed_q * 5, 2) : 0;
+    int32_t speed_10 = observation.speed_valid ? div_nearest(observation.speed_q * 5, 2) : 0;
     put_field(frame, kFSpeed, enscale(speed_10, 8, 2, 0));
-    int32_t vs_10 = obs.climb_valid ? div_nearest(obs.climb_e8 * 5, 4) : 0;
+    int32_t vs_10 = observation.climb_valid ? div_nearest(observation.climb_e8 * 5, 4) : 0;
     put_field(frame, kFVs, enscale(vs_10, 6, 2, 1));
     put_field(frame, kFTurnRate, enscale(0, 6, 2, 1));
 
-    uint32_t course_deg = static_cast<uint32_t>(div_nearest(obs.track_c9 * 360, 512)) % 360u;
+    uint32_t course_deg =
+        static_cast<uint32_t>(div_nearest(observation.track_c9 * 360, 512)) % 360u;
     put_field(frame, kFCourse, (course_deg << 1) & 0x03FFu);
 
     // INFO: fc 09mar26 GNSS accuracy and unk8 carry the fixed values upstream
@@ -465,7 +466,7 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObs& obs, uint32_t utc
     put_field(frame, kFNeeds3, 3);
     put_field(frame, kFHas3, 3);
 
-    crypt_frame(frame, utc, true);
+    crypt_frame(frame, utc_s, true);
     alptas_set_crc(frame);
     return Status::Ok;
 }

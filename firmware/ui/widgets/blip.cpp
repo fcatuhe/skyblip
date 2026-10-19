@@ -101,7 +101,7 @@ int top_row(const Sprite& s, bool flip) { return flip ? -(s.dy + s.h - 1) : s.dy
 
 int bottom_row(const Sprite& s, bool flip) { return top_row(s, flip) + s.h - 1; }
 
-void blit(Canvas& fb, int x, int y, const Sprite& s, bool flip, bool fill) {
+void blit(Canvas& canvas, int x, int y, const Sprite& s, bool flip, bool fill) {
     for (int row = 0; row < s.h; row++) {
         const uint32_t bits = s.rows[flip ? s.h - 1 - row : row];
         if (bits == 0) continue;
@@ -110,7 +110,7 @@ void blit(Canvas& fb, int x, int y, const Sprite& s, bool flip, bool fill) {
         while (first < s.w && !(bits & (1u << first))) first++;
         while (last > first && !(bits & (1u << last))) last--;
         for (int col = first; col <= last; col++)
-            if (fill || (bits & (1u << col))) fb.set_pixel(x + s.dx + col, py, true);
+            if (fill || (bits & (1u << col))) canvas.set_pixel(x + s.dx + col, py, true);
     }
 }
 
@@ -118,11 +118,11 @@ bool caret_above(Trend trend) { return trend == Trend::Climbing; }
 
 }  // namespace
 
-void draw_blip(Canvas& fb, int x, int y, Vertical vertical, Trend trend, bool alarm) {
+void draw_blip(Canvas& canvas, int x, int y, Vertical vertical, Trend trend, bool alarm) {
     const bool flip = points_down(vertical);
-    blit(fb, x, y, body_of(vertical), flip, alarm);
+    blit(canvas, x, y, body_of(vertical), flip, alarm);
     if (trend == Trend::Steady) return;
-    blit(fb, x, y, caret_of(vertical), !caret_above(trend), false);
+    blit(canvas, x, y, caret_of(vertical), !caret_above(trend), false);
 }
 
 int blip_above(Vertical vertical, Trend trend) {

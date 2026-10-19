@@ -149,13 +149,13 @@ TEST_CASE("simulator: a climbing aircraft broadcasts its rate and gains height a
         if (t != nullptr && t->used) target = t;
     }
     REQUIRE(target != nullptr);
-    CHECK(target->obs.climb_valid);
+    CHECK(target->observation.climb_valid);
     // 3 m/s is 24 eighths, and 590 fpm, which is past the chevron's 500.
-    CHECK(int(target->obs.climb_e8) == 24);
+    CHECK(int(target->observation.climb_e8) == 24);
 
-    const int32_t was = target->obs.alt_m;
+    const int32_t was = target->observation.alt_m;
     run(h, 8000, 18000);
-    CHECK(target->obs.alt_m > was + 20);
+    CHECK(target->observation.alt_m > was + 20);
     CHECK(h.world().aircraft_at(0)->up_m > 40);
 }
 
@@ -168,7 +168,7 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own ship 
 
     const traffic::Target* target = h.product().state().traffic.at(0);
     REQUIRE(target != nullptr);
-    const int32_t level_at = target->obs.alt_m;
+    const int32_t level_at = target->observation.alt_m;
     const int32_t own_at = to_metres(Millimetres(h.product().state().own.alt_mm)).v;
 
     h.world().set_climb_mm_s(5000);
@@ -176,8 +176,8 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own ship 
 
     // Own ship gains 50 m; the target holds its level within the second of own-ship lag.
     CHECK(to_metres(Millimetres(h.product().state().own.alt_mm)).v > own_at + 40);
-    CHECK(target->obs.alt_m < level_at + 10);
-    CHECK(target->obs.alt_m > level_at - 10);
+    CHECK(target->observation.alt_m < level_at + 10);
+    CHECK(target->observation.alt_m > level_at - 10);
 }
 
 TEST_CASE("simulator: a converging aircraft raises the collision alarm and buzzer") {
@@ -307,7 +307,7 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
     int32_t worst_kt = 0;
     for (uint32_t t = 10000; t <= 30000; t += simulator::Simulator::kStepMs) {
         h.step(t);
-        const model::OwnState& own = h.product().state().own;
+        const model::Ownship& own = h.product().state().own;
         worst_turn = std::max(worst_turn, std::abs(own.turn_cdps - 300));
         worst_vs = std::max(
             worst_vs, std::abs(to_feet_per_minute(MillimetresPerSec(own.climb_mm_s)).v - 300));
@@ -411,7 +411,7 @@ TEST_CASE("simulator: an ALP-TAS-equipped aircraft enters traffic as ALP-TAS") {
     int alptas = 0;
     for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
         const traffic::Target* t = table.at(i);
-        if (t != nullptr && t->used && t->obs.source == model::Source::Alptas) alptas++;
+        if (t != nullptr && t->used && t->observation.source == model::Source::Alptas) alptas++;
     }
     CHECK(alptas == 1);
 }

@@ -18,7 +18,7 @@ constexpr uint8_t kParaglider = 7;         // ADS-L G.1.3
 
 flight::LogRecord sample_record() {
     flight::LogRecord r{};
-    r.utc = kBaseUtc + 1234;
+    r.utc_s = kBaseUtc + 1234;
     r.lat_1e7 = 485212345;
     r.lon_1e7 = -21234567;
     r.alt_msl_m = 1487;
@@ -37,11 +37,11 @@ flight::LogRecord sample_record() {
     return r;
 }
 
-model::OwnState flying(uint32_t utc, int32_t speed_mm_s) {
-    model::OwnState own{};
+model::Ownship flying(uint32_t utc_s, int32_t speed_mm_s) {
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
-    own.utc = utc;
+    own.utc_s = utc_s;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
     own.alt_mm = 1000000;
@@ -54,8 +54,8 @@ model::OwnState flying(uint32_t utc, int32_t speed_mm_s) {
     return own;
 }
 
-model::OwnState parked(uint32_t utc) {
-    model::OwnState own = flying(utc, 0);
+model::Ownship parked(uint32_t utc_s) {
+    model::Ownship own = flying(utc_s, 0);
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return own;
 }
@@ -69,7 +69,7 @@ TEST_CASE("log record: twenty-four bytes carry the instant own-ship publishes") 
 
     flight::LogRecord out{};
     REQUIRE(flight::decode_log_record(raw, kBaseUtc, out) == Status::Ok);
-    CHECK(out.utc == in.utc);
+    CHECK(out.utc_s == in.utc_s);
     CHECK(out.lat_1e7 == in.lat_1e7);
     CHECK(out.lon_1e7 == in.lon_1e7);
     CHECK(out.alt_msl_m == in.alt_msl_m);
@@ -124,14 +124,14 @@ TEST_CASE("log record: an erased slot is empty and a torn one is a checksum fail
 
 TEST_CASE("log record: a session longer than the offset can count saturates rather than wraps") {
     flight::LogRecord in = sample_record();
-    in.utc = kBaseUtc + 100000;
+    in.utc_s = kBaseUtc + 100000;
     uint8_t raw[flight::kLogRecordBytes];
     flight::encode_log_record(in, kBaseUtc, raw);
     flight::LogRecord out{};
     REQUIRE(flight::decode_log_record(raw, kBaseUtc, out) == Status::Ok);
     // Eighteen hours in, the record reads as eighteen hours in and not as the
     // start of the flight.
-    CHECK(out.utc == kBaseUtc + 0xFFFF);
+    CHECK(out.utc_s == kBaseUtc + 0xFFFF);
 }
 
 TEST_CASE("log session: a device parked on a trailer writes nothing") {
@@ -147,11 +147,11 @@ TEST_CASE("log session: a device parked on a trailer writes nothing") {
 // A paraglider soaring into wind reads on the ground for its whole flight.
 TEST_CASE("log session: a wing that flies at no ground speed is logged while it moves") {
     flight::LogSession session;
-    model::OwnState wing = parked(kBaseUtc);
+    model::Ownship wing = parked(kBaseUtc);
     wing.aircraft_cat = kParaglider;
     CHECK(session.update(wing, false, 0) == flight::LogAction::Idle);
 
-    wing.utc = kBaseUtc + 4;
+    wing.utc_s = kBaseUtc + 4;
     wing.speed_mm_s = 5000;
     CHECK(session.update(wing, true, 4000) == flight::LogAction::OpenSession);
 
@@ -159,22 +159,22 @@ TEST_CASE("log session: a wing that flies at no ground speed is logged while it 
     wing.speed_mm_s = 0;
     const uint32_t stopped_ms = 4000 + flight::kLogStillHoldMs;
     for (uint32_t now_ms = 8000; now_ms < stopped_ms; now_ms += 4000) {
-        wing.utc = kBaseUtc + now_ms / 1000;
+        wing.utc_s = kBaseUtc + now_ms / 1000;
         CHECK(session.update(wing, false, now_ms) != flight::LogAction::CloseSession);
     }
     CHECK(session.open());
-    wing.utc = kBaseUtc + stopped_ms / 1000;
+    wing.utc_s = kBaseUtc + stopped_ms / 1000;
     CHECK(session.update(wing, false, stopped_ms) == flight::LogAction::CloseSession);
 }
 
 TEST_CASE("log session: a parked wing and a taxiing aeroplane write nothing") {
     flight::LogSession session;
-    model::OwnState wing = parked(kBaseUtc);
+    model::Ownship wing = parked(kBaseUtc);
     wing.aircraft_cat = kParaglider;
-    model::OwnState taxiing = parked(kBaseUtc);
+    model::Ownship taxiing = parked(kBaseUtc);
     taxiing.speed_mm_s = 5000;
     for (uint32_t i = 0; i < 100; i++) {
-        wing.utc = taxiing.utc = kBaseUtc + i;
+        wing.utc_s = taxiing.utc_s = kBaseUtc + i;
         CHECK(session.update(wing, false, i * 1000) == flight::LogAction::Idle);
         CHECK(session.update(taxiing, true, i * 1000) == flight::LogAction::Idle);
     }
@@ -250,7 +250,7 @@ TEST_CASE("log session: the file opens before the criterion agreed, so the roll 
     flight::LogRecord first{};
     REQUIRE(session.peek(first));
     session.commit();
-    CHECK(first.utc == kBaseUtc + 1);
+    CHECK(first.utc_s == kBaseUtc + 1);
     CHECK(first.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
 }
 
@@ -268,7 +268,7 @@ TEST_CASE("log session: a landing closes the session with a record that says so"
     REQUIRE(session.peek(drained));
     session.commit();
     CHECK(drained.session_end);
-    CHECK(drained.utc == kBaseUtc + 4);
+    CHECK(drained.utc_s == kBaseUtc + 4);
 }
 
 // A writer that drains late used to have ground samples queued behind the
@@ -302,7 +302,7 @@ TEST_CASE("log session: a fix outage does not end the flight, and nothing is wri
     flight::LogSession session;
     REQUIRE(session.update(flying(kBaseUtc, 50000), false, 0) == flight::LogAction::OpenSession);
 
-    model::OwnState blind = flying(kBaseUtc + 4, 50000);
+    model::Ownship blind = flying(kBaseUtc + 4, 50000);
     blind.fix_valid = false;
     CHECK(session.update(blind, false, 4000) == flight::LogAction::Idle);
     CHECK(session.open());
@@ -328,7 +328,7 @@ TEST_CASE("log session: a record peeked and not committed is still in the ring")
     REQUIRE(session.peek(out));
     CHECK(session.queued() == 1);
     REQUIRE(session.peek(out));
-    CHECK(out.utc == kBaseUtc);
+    CHECK(out.utc_s == kBaseUtc);
 
     session.commit();
     CHECK(session.queued() == 0);

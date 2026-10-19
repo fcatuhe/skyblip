@@ -31,8 +31,8 @@ Level level_for(const AlarmAssessment& a) {
 
 }  // namespace
 
-int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
-                     int32_t east_m, int32_t dist_m) {
+int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
+                     int32_t north_m, int32_t east_m, int32_t dist_m) {
     constexpr int32_t unknown_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
     if (dist_m <= 0) return unknown_mm_s;
 
@@ -52,10 +52,10 @@ int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& targe
 
 // INFO: fc 13sep26 two positions from different instants are not a separation, so both are carried
 // to now
-AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
+AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                        uint32_t now_ms) {
-    const model::OwnState own = flight::carried_to(own_fix, now_ms);
-    const model::AircraftObs target = flight::carried_to(reported, now_ms);
+    const model::Ownship own = flight::carried_to(own_fix, now_ms);
+    const model::AircraftObservation target = flight::carried_to(reported, now_ms);
     AlarmAssessment a{};
     int32_t n_m, e_m, u_m;
     if (!protocol::relative_ned(own, target, n_m, e_m, u_m)) return a;
@@ -77,8 +77,9 @@ AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs&
     return a;
 }
 
-AlarmTracker::Decision AlarmTracker::update(const model::OwnState& own,
-                                            const model::AircraftObs& target, uint32_t now_ms) {
+AlarmTracker::Decision AlarmTracker::update(const model::Ownship& own,
+                                            const model::AircraftObservation& target,
+                                            uint32_t now_ms) {
     Decision d{};
     d.assessment = assess(own, target, now_ms);
     if (!d.assessment.valid) return d;
@@ -123,7 +124,8 @@ bool AlarmTracker::notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32
     return speak;
 }
 
-AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObs& target, uint32_t now_ms) {
+AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& target,
+                                           uint32_t now_ms) {
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
     for (Slot& s : slots_) {

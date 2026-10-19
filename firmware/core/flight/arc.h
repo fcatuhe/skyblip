@@ -20,9 +20,9 @@ struct Motion {
     bool climbing{false};
 };
 
-Motion motion_of(const model::OwnState& own);
+Motion motion_of(const model::Ownship& own);
 // INFO: fc 14sep26 ADS-L carries no turn rate (G.1.8), so a target's is core/traffic's estimate
-Motion motion_of(const model::AircraftObs& obs, int16_t turn_cdps, bool turn_valid);
+Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdps, bool turn_valid);
 
 struct Position {
     int32_t north_m{0};

@@ -81,7 +81,7 @@ struct Rig {
         gnss::GnssSolution f{};
         f.fix_valid = true;
         f.utc_valid = true;
-        f.utc = kUtcBase + utc_offset_s;
+        f.utc_s = kUtcBase + utc_offset_s;
         f.lat_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
         f.lon_1e7 = 85000000;
         f.alt_msl_mm = alt_msl_m * 1000;

@@ -76,8 +76,8 @@ void Ssd1681::begin() {
     asleep_ = false;
 }
 
-void Ssd1681::present(const ui::Canvas& fb, ports::Refresh mode, uint32_t now_ms) {
-    if (!drives(fb)) return;
+void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t now_ms) {
+    if (!drives(canvas)) return;
     ensure_awake();
 
     const bool full = mode == ports::Refresh::Full || !glass_known_;
@@ -87,11 +87,11 @@ void Ssd1681::present(const ui::Canvas& fb, ports::Refresh mode, uint32_t now_ms
     data(full ? kBorderFollowLut1 : kBorderVcom);
     if (full) {
         // INFO: fc 09mar26 GxEPD2 writes the new frame into both banks before a full refresh
-        stage(fb.data());
+        stage(canvas.data());
         write_bank(kWriteRamPrevious);
     } else {
         write_bank(kWriteRamPrevious);
-        stage(fb.data());
+        stage(canvas.data());
     }
     write_bank(kWriteRam);
 

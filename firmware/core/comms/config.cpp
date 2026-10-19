@@ -221,9 +221,9 @@ void ConfigService::request_firmware(const json::Reader& r) {
     }
     approved_ = version;
     stage(Pending::Dfu, "confirm_dfu");
-    int n = fmt_string(prompt_detail_, "INSTALL ");
+    int n = format_string(prompt_detail_, "INSTALL ");
     n += dfu::format_version(version, prompt_detail_ + n, sizeof(prompt_detail_) - n);
-    n += fmt_string(prompt_detail_ + n, " FROM THE PHONE");
+    n += format_string(prompt_detail_ + n, " FROM THE PHONE");
     prompt_detail_[n] = 0;
 }
 

@@ -54,72 +54,72 @@ void ScreenService::draw_menu_page() {
 
 RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     const bus::State& state = context_.state;
-    const model::OwnState& own = state.own;
+    const model::Ownship& own = state.own;
     const timing::SlotTimingStats& stats = state.rf.timing_stats;
 
-    RawSnapshot snap;
-    snap.uptime_s = now_ms / 1000;
+    RawSnapshot snapshot;
+    snapshot.uptime_s = now_ms / 1000;
 
-    snap.gnss.health = context_.roles.gnss.health();
-    snap.gnss.stage = state.gnss.stage;
-    snap.gnss.pps = pps_state(state.clock);
-    snap.gnss.pps_age_ms = state.clock.ms_since_pps;
-    snap.gnss.solutions = state.flight.gnss_solutions;
-    snap.gnss.utc = own.utc;
-    snap.gnss.nav_ms = state.gnss.solution_phase_ms;
-    snap.gnss.nav_valid = state.gnss.solution_phase_valid;
-    snap.gnss.hdop_e2 = own.hdop_e2;
-    snap.gnss.vdop_e2 = own.vdop_e2;
-    snap.gnss.resid_m = own.pred_resid_m;
-    snap.gnss.resid_valid = own.pred_resid_valid;
-    snap.gnss.sats = own.sats;
-    snap.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
-    snap.gnss.fix_mode = state.gnss.fix_mode;
-    snap.gnss.fix_valid = own.fix_valid;
-    snap.gnss.utc_valid = own.utc_valid;
-    snap.gnss.settled = own.tx_settled;
-    snap.gnss.levels_live = state.gnss.levels_live;
+    snapshot.gnss.health = context_.roles.gnss.health();
+    snapshot.gnss.stage = state.gnss.stage;
+    snapshot.gnss.pps = pps_state(state.clock);
+    snapshot.gnss.pps_age_ms = state.clock.ms_since_pps;
+    snapshot.gnss.solutions = state.flight.gnss_solutions;
+    snapshot.gnss.utc_s = own.utc_s;
+    snapshot.gnss.nav_ms = state.gnss.solution_phase_ms;
+    snapshot.gnss.nav_valid = state.gnss.solution_phase_valid;
+    snapshot.gnss.hdop_e2 = own.hdop_e2;
+    snapshot.gnss.vdop_e2 = own.vdop_e2;
+    snapshot.gnss.resid_m = own.pred_resid_m;
+    snapshot.gnss.resid_valid = own.pred_resid_valid;
+    snapshot.gnss.sats = own.sats;
+    snapshot.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
+    snapshot.gnss.fix_mode = state.gnss.fix_mode;
+    snapshot.gnss.fix_valid = own.fix_valid;
+    snapshot.gnss.utc_valid = own.utc_valid;
+    snapshot.gnss.settled = own.tx_settled;
+    snapshot.gnss.levels_live = state.gnss.levels_live;
 
-    snap.radio.rx_ok = state.air.rx_ok;
-    snap.radio.rx_bad = state.air.rx_bad;
-    snap.radio.rx_wait = state.air.rx_wait;
-    snap.radio.rx_type = state.air.rx_type;
-    snap.radio.rx_unframed = state.air.rx_unframed;
-    snap.radio.rx_miskeyed = state.air.rx_miskeyed;
-    snap.radio.rx_noise = state.air.rx_noise;
-    snap.radio.rx_named = state.air.rx_named;
-    snap.radio.uplink_frames = state.air.uplink_frames;
-    snap.radio.uplink_bad = state.air.uplink_bad;
-    snap.radio.uplink_targets = state.air.uplink_targets;
-    snap.radio.tx_ok = state.air.tx_ok;
-    snap.radio.tx_lost = state.air.tx_lost;
-    snap.radio.tx_named = state.air.tx_named;
-    snap.radio.missed = stats.missed();
-    snap.radio.refused = stats.refused();
-    snap.radio.duty_permille = state.rf.duty_permille;
-    snap.radio.holdover = stats.holdover_events();
-    snap.radio.dwell_worst_us = stats.dwell_worst_us();
-    snap.radio.pps_worst_us = stats.pps_worst_us();
-    snap.radio.tx_keyed_us = state.rf.last_tx_keyed_us;
-    snap.radio.tx_span_us = state.rf.last_tx_span_us;
-    snap.radio.tracked = static_cast<uint16_t>(state.traffic.count());
-    snap.radio.alarm = traffic::to_number(state.alarm_level);
-    snap.radio.noise_dbm = state.rf.noise_dbm;
-    snap.radio.slot = state.rf.plan.state;
-    snap.radio.freq_hz = state.rf.plan.freq_hz;
-    snap.radio.tx_allowed = state.rf.plan.tx_allowed;
-    return snap;
+    snapshot.radio.rx_ok = state.air.rx_ok;
+    snapshot.radio.rx_bad = state.air.rx_bad;
+    snapshot.radio.rx_wait = state.air.rx_wait;
+    snapshot.radio.rx_type = state.air.rx_type;
+    snapshot.radio.rx_unframed = state.air.rx_unframed;
+    snapshot.radio.rx_miskeyed = state.air.rx_miskeyed;
+    snapshot.radio.rx_noise = state.air.rx_noise;
+    snapshot.radio.rx_named = state.air.rx_named;
+    snapshot.radio.uplink_frames = state.air.uplink_frames;
+    snapshot.radio.uplink_bad = state.air.uplink_bad;
+    snapshot.radio.uplink_targets = state.air.uplink_targets;
+    snapshot.radio.tx_ok = state.air.tx_ok;
+    snapshot.radio.tx_lost = state.air.tx_lost;
+    snapshot.radio.tx_named = state.air.tx_named;
+    snapshot.radio.missed = stats.missed();
+    snapshot.radio.refused = stats.refused();
+    snapshot.radio.duty_permille = state.rf.duty_permille;
+    snapshot.radio.holdover = stats.holdover_events();
+    snapshot.radio.dwell_worst_us = stats.dwell_worst_us();
+    snapshot.radio.pps_worst_us = stats.pps_worst_us();
+    snapshot.radio.tx_keyed_us = state.rf.last_tx_keyed_us;
+    snapshot.radio.tx_span_us = state.rf.last_tx_span_us;
+    snapshot.radio.tracked = static_cast<uint16_t>(state.traffic.count());
+    snapshot.radio.alarm = traffic::to_number(state.alarm_level);
+    snapshot.radio.noise_dbm = state.rf.noise_dbm;
+    snapshot.radio.slot = state.rf.plan.state;
+    snapshot.radio.freq_hz = state.rf.plan.freq_hz;
+    snapshot.radio.tx_allowed = state.rf.plan.tx_allowed;
+    return snapshot;
 }
 
 CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
-    CaptureSnapshot snap;
-    snap.uptime_s = now_ms / 1000;
-    snap.capture = context_.state.capture;
-    snap.focus = capture_in_focus_;
-    snap.running = context_.diag.profile();
-    snap.focus_keeps_s = capture_.keeps_s(capture_in_focus_);
-    snap.arming = arming_.pressed();
-    return snap;
+    CaptureSnapshot snapshot;
+    snapshot.uptime_s = now_ms / 1000;
+    snapshot.capture = context_.state.capture;
+    snapshot.focus = capture_in_focus_;
+    snapshot.running = context_.diag.profile();
+    snapshot.focus_keeps_s = capture_.keeps_s(capture_in_focus_);
+    snapshot.arming = arming_.pressed();
+    return snapshot;
 }
 
 // INFO: fc 18oct26 the unlock swaps the activation page for the radar, through a wipe like any page
@@ -150,108 +150,111 @@ void ScreenService::render(uint32_t now_ms) {
 
     fb_.clear(/*white=*/true);
 
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const go::Settings& settings = settings_;
 
     switch (page_) {
         case Page::Radar: {
-            RadarSnapshot snap;
-            snap.fix_valid = own.fix_valid;
-            snap.stage = context_.state.gnss.stage;
-            snap.units = settings.units;
-            snap.range_step = settings.range_step;
-            snap.plot = settings.plot;
-            snap.heard = traffic_outside_formation(context_.state.traffic);
-            snap.track_cdeg = own.track_cdeg;
-            snap.speed_mm_s = own.speed_mm_s;
-            snap.turn_cdps = context_.state.indicated.turn_cdps;
-            snap.flight_seconds = context_.state.flight.seconds;
-            snap.flight_time_valid = context_.state.flight.time_valid;
-            snap.in_flight = context_.state.flight.running;
-            snap.taxiing = taxiing();
-            snap.receiver_listening = receiver_listening();
-            snap.alarm_flash = alarm_flash_;
-            snap.formation_members = context_.state.formation.members;
-            snap.battery_percent = context_.state.power.battery.percent;
-            snap.battery_low = battery_low();
+            RadarSnapshot snapshot;
+            snapshot.fix_valid = own.fix_valid;
+            snapshot.stage = context_.state.gnss.stage;
+            snapshot.units = settings.units;
+            snapshot.range_step = settings.range_step;
+            snapshot.plot = settings.plot;
+            snapshot.heard = traffic_outside_formation(context_.state.traffic);
+            snapshot.track_cdeg = own.track_cdeg;
+            snapshot.speed_mm_s = own.speed_mm_s;
+            snapshot.turn_cdps = context_.state.indicated.turn_cdps;
+            snapshot.flight_seconds = context_.state.flight.seconds;
+            snapshot.flight_time_valid = context_.state.flight.time_valid;
+            snapshot.in_flight = context_.state.flight.running;
+            snapshot.taxiing = taxiing();
+            snapshot.receiver_listening = receiver_listening();
+            snapshot.alarm_flash = alarm_flash_;
+            snapshot.formation_members = context_.state.formation.members;
+            snapshot.battery_percent = context_.state.power.battery.percent;
+            snapshot.battery_low = battery_low();
             int n = 0;
             if (own.fix_valid) {
-                const model::OwnState own_now = flight::carried_to(own, now_ms);
+                const model::Ownship own_now = flight::carried_to(own, now_ms);
                 for (int i = 0; i < traffic::TrafficTable::kCapacity && n < kMaxRadarTargets; i++) {
                     const traffic::Target* t = context_.state.traffic.at(i);
                     if (!t || !t->used) continue;
-                    const model::AircraftObs obs = flight::carried_to(t->obs, now_ms);
+                    const model::AircraftObservation observation =
+                        flight::carried_to(t->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
-                    if (!protocol::relative_ned(own_now, obs, north, east, up)) continue;
+                    if (!protocol::relative_ned(own_now, observation, north, east, up)) continue;
                     targets_[n].north_m = north;
                     targets_[n].east_m = east;
                     targets_[n].up_m = up;
                     targets_[n].alarm_level = t->alarm_level;
                     targets_[n].alarm_dismissed = t->alarm_dismissed;
-                    targets_[n].climb_e8 = obs.climb_e8;
-                    targets_[n].climb_valid = obs.climb_valid;
+                    targets_[n].climb_e8 = observation.climb_e8;
+                    targets_[n].climb_valid = observation.climb_valid;
                     targets_[n].speed_mm_s =
-                        obs.speed_valid ? to_mm_s(QuarterMetresPerSec(obs.speed_q)).v : 0;
-                    targets_[n].track_cdeg = to_centi_degrees(Cordic9(obs.track_c9)).v;
+                        observation.speed_valid
+                            ? to_mm_s(QuarterMetresPerSec(observation.speed_q)).v
+                            : 0;
+                    targets_[n].track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
                     targets_[n].turn_cdps = static_cast<int16_t>(t->turn.dps * 100);
                     targets_[n].turn_valid = t->turn.valid;
                     targets_[n].in_formation = t->in_formation;
                     n++;
                 }
             }
-            snap.n_targets = n;
-            snap.targets = targets_;
-            draw_radar(fb_, snap);
+            snapshot.n_targets = n;
+            snapshot.targets = targets_;
+            draw_radar(fb_, snapshot);
             break;
         }
         case Page::SixPack: {
-            SixPackSnapshot snap;
-            snap.data_valid = own.fix_valid;
-            snap.units = settings.units;
-            snap.speed_kt = to_knots(MillimetresPerSec(own.speed_mm_s)).v;
-            snap.alt_ft = to_feet(Millimetres(own.alt_mm)).v;
-            snap.vs_fpm = climb_fpm();
-            snap.vs_valid = climb_measured();
-            snap.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
-            snap.turn_cdps = context_.state.indicated.turn_cdps;
-            snap.battery_percent = context_.state.power.battery.percent;
-            snap.battery_valid = context_.state.power.battery.valid;
-            snap.charging = context_.state.power.battery.charging;
-            snap.battery_mv = context_.state.power.battery.sample_mv;
-            snap.inclinometer_fitted =
+            SixPackSnapshot snapshot;
+            snapshot.data_valid = own.fix_valid;
+            snapshot.units = settings.units;
+            snapshot.speed_kt = to_knots(MillimetresPerSec(own.speed_mm_s)).v;
+            snapshot.alt_ft = to_feet(Millimetres(own.alt_mm)).v;
+            snapshot.vs_fpm = climb_fpm();
+            snapshot.vs_valid = climb_measured();
+            snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
+            snapshot.turn_cdps = context_.state.indicated.turn_cdps;
+            snapshot.battery_percent = context_.state.power.battery.percent;
+            snapshot.battery_valid = context_.state.power.battery.valid;
+            snapshot.charging = context_.state.power.battery.charging;
+            snapshot.battery_mv = context_.state.power.battery.sample_mv;
+            snapshot.inclinometer_fitted =
                 ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
-            snap.lateral_valid = context_.state.slip.valid;
-            snap.lateral_mg = context_.state.slip.lateral_mg;
-            draw_sixpack(fb_, snap);
+            snapshot.lateral_valid = context_.state.slip.valid;
+            snapshot.lateral_mg = context_.state.slip.lateral_mg;
+            draw_sixpack(fb_, snapshot);
             break;
         }
         case Page::Sats: {
-            SatsSnapshot snap;
-            snap.fix_valid = own.fix_valid;
-            snap.levels_live = context_.state.gnss.levels_live;
-            snap.stage = context_.state.gnss.stage;
-            snap.stage_s = context_.state.gnss.stage_s;
-            snap.sats = own.sats;
-            snap.hdop_e2 = own.hdop_e2;
-            snap.vdop_e2 = own.vdop_e2;
-            snap.nav_ms = context_.state.gnss.solution_phase_ms;
-            snap.nav_valid = context_.state.gnss.solution_phase_valid;
-            snap.health = context_.roles.gnss.health();
-            snap.sky = &context_.state.gnss.sky;
-            draw_sats(fb_, snap);
+            SatsSnapshot snapshot;
+            snapshot.fix_valid = own.fix_valid;
+            snapshot.levels_live = context_.state.gnss.levels_live;
+            snapshot.stage = context_.state.gnss.stage;
+            snapshot.stage_s = context_.state.gnss.stage_s;
+            snapshot.sats = own.sats;
+            snapshot.hdop_e2 = own.hdop_e2;
+            snapshot.vdop_e2 = own.vdop_e2;
+            snapshot.nav_ms = context_.state.gnss.solution_phase_ms;
+            snapshot.nav_valid = context_.state.gnss.solution_phase_valid;
+            snapshot.health = context_.roles.gnss.health();
+            snapshot.sky = &context_.state.gnss.sky;
+            draw_sats(fb_, snapshot);
             break;
         }
         case Page::Nearby: {
-            NearbySnapshot snap;
-            snap.own_address = context_.state.activation.address();
-            snap.own_callsign = settings.callsign;
-            snap.fix_valid = own.fix_valid;
-            snap.units = settings.units;
-            snap.n_heard = context_.state.traffic.count();
-            snap.n_rows = traffic::rank_by_range(context_.state.traffic, context_.state.callsigns,
-                                                 own, nearby_rows_, kNearbyRows);
-            snap.rows = nearby_rows_;
-            draw_nearby(fb_, snap);
+            NearbySnapshot snapshot;
+            snapshot.own_address = context_.state.activation.address();
+            snapshot.own_callsign = settings.callsign;
+            snapshot.fix_valid = own.fix_valid;
+            snapshot.units = settings.units;
+            snapshot.n_heard = context_.state.traffic.count();
+            snapshot.n_rows = traffic::rank_by_range(
+                context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
+            snapshot.rows = nearby_rows_;
+            draw_nearby(fb_, snapshot);
             break;
         }
         case Page::SelfTest: {
@@ -262,28 +265,30 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
         case Page::GMeter: {
-            GMeterSnapshot snap;
-            snap.fitted = ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
-            snap.valid = context_.state.gload.valid;
-            snap.now = context_.state.gload.now;
-            snap.most = context_.state.gload.most;
-            snap.least = context_.state.gload.least;
-            draw_gmeter(fb_, snap);
+            GMeterSnapshot snapshot;
+            snapshot.fitted =
+                ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
+            snapshot.valid = context_.state.gload.valid;
+            snapshot.now = context_.state.gload.now;
+            snapshot.most = context_.state.gload.most;
+            snapshot.least = context_.state.gload.least;
+            draw_gmeter(fb_, snapshot);
             break;
         }
         case Page::RadioLog: {
-            RadioLogSnapshot snap;
-            snap.gnss.fix_valid = own.fix_valid;
-            snap.gnss.sats = own.sats;
-            snap.gnss.pps = pps_state(context_.state.clock);
-            snap.gnss.pps_age_s = static_cast<uint16_t>(context_.state.clock.ms_since_pps / 1000);
-            snap.rx_ok = context_.state.air.rx_ok;
-            snap.tx_ok = context_.state.air.tx_ok;
-            snap.noise = context_.state.air.rx_noise;
-            snap.band_dbm = context_.state.rf.noise_dbm;
-            snap.n_rows = context_.state.radio_log.count();
-            snap.log = &context_.state.radio_log;
-            draw_radio_log(fb_, snap);
+            RadioLogSnapshot snapshot;
+            snapshot.gnss.fix_valid = own.fix_valid;
+            snapshot.gnss.sats = own.sats;
+            snapshot.gnss.pps = pps_state(context_.state.clock);
+            snapshot.gnss.pps_age_s =
+                static_cast<uint16_t>(context_.state.clock.ms_since_pps / 1000);
+            snapshot.rx_ok = context_.state.air.rx_ok;
+            snapshot.tx_ok = context_.state.air.tx_ok;
+            snapshot.noise = context_.state.air.rx_noise;
+            snapshot.band_dbm = context_.state.rf.noise_dbm;
+            snapshot.n_rows = context_.state.radio_log.count();
+            snapshot.log = &context_.state.radio_log;
+            draw_radio_log(fb_, snapshot);
             break;
         }
         case Page::Raw: {
@@ -296,47 +301,47 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Status:
         default: {
-            StatusSnapshot snap;
-            snap.address = context_.state.activation.address();
-            snap.callsign = settings.callsign;
-            snap.fix_valid = own.fix_valid;
-            snap.utc_valid = own.utc_valid;
-            snap.transmitting = timing::own_ship_transmits(own, context_.state.clock,
-                                                           context_.state.activation.address());
-            snap.sats = own.sats;
-            snap.stage = context_.state.gnss.stage;
-            snap.stage_s = context_.state.gnss.stage_s;
-            snap.fix_mode = context_.state.gnss.fix_mode;
-            snap.lat_1e7 = own.lat_1e7;
-            snap.lon_1e7 = own.lon_1e7;
-            snap.alt_mm = own.alt_mm;
-            snap.speed_mm_s = own.speed_mm_s;
-            snap.track_cdeg = own.track_cdeg;
-            snap.climb_mm_s = own.climb_mm_s;
-            snap.utc = own.utc;
-            snap.n_targets = context_.state.traffic.count();
-            snap.imu_stage = context_.state.imu.stage;
-            snap.imu_fault = context_.state.imu.fault;
-            snap.imu_fifo_bytes = context_.state.imu.fifo_bytes;
-            snap.imu_unparsed = context_.state.imu.unparsed;
-            snap.imu_error = context_.state.imu.error;
-            snap.imu_interrupt = context_.state.imu.interrupt;
-            snap.imu_meta = context_.state.imu.meta;
-            snap.imu_sensor_error = context_.state.imu.sensor_error;
-            snap.imu_errored_sensor = context_.state.imu.errored_sensor;
-            snap.slip_valid = context_.state.slip.valid;
-            snap.slip_mg = context_.state.slip.measured_mg;
-            snap.baro_valid = context_.state.baro.active;
-            snap.battery_valid = context_.state.power.battery.valid;
-            snap.battery_mv = context_.state.power.battery.sample_mv;
-            snap.battery_percent = context_.state.power.battery.percent;
-            snap.charging = context_.state.power.battery.charging;
-            snap.charge = context_.state.power.charge;
-            snap.battery_low = battery_low();
-            snap.pressure_mpa = context_.state.baro.pressure_mpa;
+            StatusSnapshot snapshot;
+            snapshot.address = context_.state.activation.address();
+            snapshot.callsign = settings.callsign;
+            snapshot.fix_valid = own.fix_valid;
+            snapshot.utc_valid = own.utc_valid;
+            snapshot.transmitting = timing::ownship_transmits(own, context_.state.clock,
+                                                              context_.state.activation.address());
+            snapshot.sats = own.sats;
+            snapshot.stage = context_.state.gnss.stage;
+            snapshot.stage_s = context_.state.gnss.stage_s;
+            snapshot.fix_mode = context_.state.gnss.fix_mode;
+            snapshot.lat_1e7 = own.lat_1e7;
+            snapshot.lon_1e7 = own.lon_1e7;
+            snapshot.alt_mm = own.alt_mm;
+            snapshot.speed_mm_s = own.speed_mm_s;
+            snapshot.track_cdeg = own.track_cdeg;
+            snapshot.climb_mm_s = own.climb_mm_s;
+            snapshot.utc_s = own.utc_s;
+            snapshot.n_targets = context_.state.traffic.count();
+            snapshot.imu_stage = context_.state.imu.stage;
+            snapshot.imu_fault = context_.state.imu.fault;
+            snapshot.imu_fifo_bytes = context_.state.imu.fifo_bytes;
+            snapshot.imu_unparsed = context_.state.imu.unparsed;
+            snapshot.imu_error = context_.state.imu.error;
+            snapshot.imu_interrupt = context_.state.imu.interrupt;
+            snapshot.imu_meta = context_.state.imu.meta;
+            snapshot.imu_sensor_error = context_.state.imu.sensor_error;
+            snapshot.imu_errored_sensor = context_.state.imu.errored_sensor;
+            snapshot.slip_valid = context_.state.slip.valid;
+            snapshot.slip_mg = context_.state.slip.measured_mg;
+            snapshot.baro_valid = context_.state.baro.active;
+            snapshot.battery_valid = context_.state.power.battery.valid;
+            snapshot.battery_mv = context_.state.power.battery.sample_mv;
+            snapshot.battery_percent = context_.state.power.battery.percent;
+            snapshot.charging = context_.state.power.battery.charging;
+            snapshot.charge = context_.state.power.charge;
+            snapshot.battery_low = battery_low();
+            snapshot.pressure_mpa = context_.state.baro.pressure_mpa;
             if (context_.state.baro.active)
-                snap.alt_std_mm = flight::pressure_to_alt_mm(context_.state.baro.pressure_mpa);
-            draw_status(fb_, snap);
+                snapshot.alt_std_mm = flight::pressure_to_alt_mm(context_.state.baro.pressure_mpa);
+            draw_status(fb_, snapshot);
             break;
         }
     }

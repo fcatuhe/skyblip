@@ -257,7 +257,7 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
         const bool date_sane = yy < kMaxTwoDigitYear && mon >= 1 && mon <= 12 && day >= 1 &&
                                day <= 31 && hh < 24 && mm < 60 && ss < 62;
         if (date_sane) {
-            solution_.utc = to_epoch(2000 + yy, mon, day, hh, mm, ss);
+            solution_.utc_s = to_epoch(2000 + yy, mon, day, hh, mm, ss);
             solution_.utc_valid = true;
         }
     }

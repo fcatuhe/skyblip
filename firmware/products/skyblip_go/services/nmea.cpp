@@ -103,7 +103,7 @@ void NmeaService::run_pass(uint32_t now_ms) {
 // core/traffic already published on the target (products/.../alarm.cpp is its
 // single writer), so the tablet's alarm and the buzzer cannot disagree.
 void NmeaService::emit_status(uint32_t now_ms) {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const traffic::Target* threat = nullptr;
     traffic::AlarmAssessment worst{};
     traffic::Level worst_level = traffic::Level::None;
@@ -113,7 +113,8 @@ void NmeaService::emit_status(uint32_t now_ms) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
         heard++;
-        const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
         const bool higher = target->alarm_level > worst_level;
         const bool nearer = target->alarm_level == worst_level &&
@@ -125,11 +126,11 @@ void NmeaService::emit_status(uint32_t now_ms) {
     }
 
     const bool transmitting =
-        timing::own_ship_transmits(own, context_.state.clock, context_.state.activation.address());
+        timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
     const int len =
         threat != nullptr
             ? protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
-                                     &threat->obs, traffic::to_number(worst_level),
+                                     &threat->observation, traffic::to_number(worst_level),
                                      static_cast<int16_t>(signed_bearing(worst.rel_bearing_deg)),
                                      worst.rel_alt_m, worst.rel_dist_m)
             : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
@@ -144,7 +145,7 @@ void NmeaService::emit_status(uint32_t now_ms) {
 // core/protocol on the same fix and UTC validity $PGRMZ and $PFLAU already
 // read off own, so there is nothing to gate here a second time.
 void NmeaService::emit_ownship() {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), own);
     if (rmc > 0) write(sentence_, rmc);
     const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), own);
@@ -183,7 +184,7 @@ void NmeaService::emit_altitude() {
 //
 // INFO: cc 19sep26 the BME280 sits inside the case, so field 4 goes out warm and uncorrected
 void NmeaService::emit_vario_and_battery() {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     protocol::Lk8Ex1 v{};
 
     if (context_.state.baro.active) {
@@ -221,7 +222,7 @@ void NmeaService::emit_vario_and_battery() {
 // the first N slots every second, means slot 11 is a target the tablet is never
 // told about at all.
 void NmeaService::emit_targets(uint32_t now_ms) {
-    const model::OwnState own = flight::carried_to(context_.state.own, now_ms);
+    const model::Ownship own = flight::carried_to(context_.state.own, now_ms);
     if (!own.fix_valid) return;
 
     int sent = 0;
@@ -231,9 +232,10 @@ void NmeaService::emit_targets(uint32_t now_ms) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
         const int len = protocol::format_pflaa(
-            sentence_, sizeof(sentence_), own, flight::carried_to(target->obs, now_ms),
+            sentence_, sizeof(sentence_), own, flight::carried_to(target->observation, now_ms),
             traffic::to_number(target->alarm_level),
-            context_.state.callsigns.find(target->obs.address_mapping_table, target->obs.address));
+            context_.state.callsigns.find(target->observation.address_mapping_table,
+                                          target->observation.address));
         if (len <= 0) continue;
         write(sentence_, len);
         resumes_[resume_count_++] = {pass_len_, (slot + 1) % traffic::TrafficTable::kCapacity};

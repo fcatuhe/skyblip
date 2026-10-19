@@ -26,9 +26,11 @@ SlotPlan slot_plan(int phase_ms) {
     return s.plan(phase_ms, anchored());
 }
 
-int instant_at(uint32_t address, uint32_t utc) {
-    const int phase = Transmitter::slot_in(utc, true) == 0 ? 500 : 900;
-    return airborne_transmitter(address).attempt(slot_plan(phase), utc, utc * 1000, true, 0).at_ms;
+int instant_at(uint32_t address, uint32_t utc_s) {
+    const int phase = Transmitter::slot_in(utc_s, true) == 0 ? 500 : 900;
+    return airborne_transmitter(address)
+        .attempt(slot_plan(phase), utc_s, utc_s * 1000, true, 0)
+        .at_ms;
 }
 
 bool position_burst(const Transmitter::Attempt& a) {
@@ -46,8 +48,8 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
     Transmitter t = airborne_transmitter();
     int earliest = 1000, latest = 0;
     // Every other second is the lower channel's: §C.2.5's alternation is the clock's.
-    for (uint32_t utc = 1000; utc < 6000; utc += 2) {
-        const Transmitter::Attempt a = t.attempt(slot_plan(500), utc, utc * 1000, true, 0);
+    for (uint32_t utc_s = 1000; utc_s < 6000; utc_s += 2) {
+        const Transmitter::Attempt a = t.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
         // Not from kSlot0Start: the dwell opens at 400, the direct slot at 450.
         CHECK(a.at_ms >= kDirectStart);
@@ -72,8 +74,8 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
 TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
     Transmitter t = airborne_transmitter();
     int earliest = 2000, latest = 0;
-    for (uint32_t utc = 1; utc < 5000; utc += 2) {
-        const Transmitter::Attempt a = t.attempt(slot_plan(900), utc, utc * 1000, true, 0);
+    for (uint32_t utc_s = 1; utc_s < 5000; utc_s += 2) {
+        const Transmitter::Attempt a = t.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
         if (a.at_ms < earliest) earliest = a.at_ms;
         if (a.at_ms > latest) latest = a.at_ms;
@@ -87,9 +89,9 @@ TEST_CASE("transmit: two devices do not pick the same instant every second") {
     Transmitter a = airborne_transmitter(0x5B7E57);
     Transmitter b = airborne_transmitter(0x123456);
     int same = 0;
-    for (uint32_t utc = 0; utc < 100; utc += 2) {
-        if (a.attempt(slot_plan(500), utc, utc * 1000, true, 0).at_ms ==
-            b.attempt(slot_plan(500), utc, utc * 1000, true, 0).at_ms)
+    for (uint32_t utc_s = 0; utc_s < 100; utc_s += 2) {
+        if (a.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0).at_ms ==
+            b.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0).at_ms)
             same++;
     }
     CHECK(same < 5);
@@ -121,8 +123,8 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
 // our own burst never does.
 TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail") {
     Transmitter t = airborne_transmitter();
-    for (uint32_t utc = 1; utc < 400; utc += 2) {  // the odd seconds are the upper channel's
-        const Transmitter::Attempt a = t.attempt(slot_plan(900), utc, utc * 1000, true, 0);
+    for (uint32_t utc_s = 1; utc_s < 400; utc_s += 2) {  // the odd seconds are the upper channel's
+        const Transmitter::Attempt a = t.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
         CHECK(a.freq_hz == kMband1Hz);
         CHECK(a.at_ms >= kSlot1Start);
@@ -160,10 +162,10 @@ TEST_CASE("transmit: one burst per second airborne, one per ten on the ground") 
 
     Transmitter g = airborne_transmitter();
     const uint32_t owned = g.ground_second();
-    for (uint32_t utc = owned + 1; utc < owned + 10; utc++) {
-        CAPTURE(utc);
-        CHECK_FALSE(position_burst(g.attempt(slot_plan(500), utc, utc * 1000, false, 0)));
-        CHECK_FALSE(position_burst(g.attempt(slot_plan(900), utc, utc * 1000, false, 0)));
+    for (uint32_t utc_s = owned + 1; utc_s < owned + 10; utc_s++) {
+        CAPTURE(utc_s);
+        CHECK_FALSE(position_burst(g.attempt(slot_plan(500), utc_s, utc_s * 1000, false, 0)));
+        CHECK_FALSE(position_burst(g.attempt(slot_plan(900), utc_s, utc_s * 1000, false, 0)));
     }
     const int phase = Transmitter::slot_in(owned + 10, false) == 0 ? 500 : 900;
     CHECK(g.attempt(slot_plan(phase), owned + 10, (owned + 10) * 1000, false, 0).go);
@@ -175,9 +177,9 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every ten"
     const uint32_t owned = t.ground_second();
     const SlotPlan tail = slot_plan(kSlot1Start);
 
-    for (uint32_t utc = owned + 1; utc < owned + Transmitter::kCallsignPeriodS; utc++) {
-        CAPTURE(utc);
-        CHECK_FALSE(t.attempt(tail, utc, utc * 1000, true, 0, kName).go);
+    for (uint32_t utc_s = owned + 1; utc_s < owned + Transmitter::kCallsignPeriodS; utc_s++) {
+        CAPTURE(utc_s);
+        CHECK_FALSE(t.attempt(tail, utc_s, utc_s * 1000, true, 0, kName).go);
     }
 
     const uint32_t due = owned + Transmitter::kCallsignPeriodS;
@@ -225,14 +227,14 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
             Transmitter t = airborne_transmitter(address);
             int named = 0;
             int positions = 0;
-            for (uint32_t utc = 100; utc < 100 + 2 * Transmitter::kCallsignPeriodS; utc++) {
+            for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kCallsignPeriodS; utc_s++) {
                 for (const int phase : {500, kSlot1Start}) {
                     for (const Transmitter::Payload payload :
                          {Transmitter::Payload::Position, Transmitter::Payload::Callsign}) {
                         const Transmitter::Attempt a =
-                            t.attempt(slot_plan(phase), utc, utc * 1000, airborne, 0, payload);
+                            t.attempt(slot_plan(phase), utc_s, utc_s * 1000, airborne, 0, payload);
                         if (!a.go) continue;
-                        t.sent(utc, utc * 1000 + static_cast<uint32_t>(phase), a.payload);
+                        t.sent(utc_s, utc_s * 1000 + static_cast<uint32_t>(phase), a.payload);
                         if (a.payload == Transmitter::Payload::Callsign)
                             named++;
                         else
@@ -309,35 +311,35 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
 
 TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {
     const skyblip::settings::AirAddress address = 0x00012Au;
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.tx_settled = true;
-    CHECK(own_ship_transmits(own, anchored(), address));
+    CHECK(ownship_transmits(own, anchored(), address));
 
-    CHECK_FALSE(own_ship_transmits(own, ClockState{true, false, 0}, address));
-    CHECK_FALSE(own_ship_transmits(own, ClockState{false, true, 0}, address));
+    CHECK_FALSE(ownship_transmits(own, ClockState{true, false, 0}, address));
+    CHECK_FALSE(ownship_transmits(own, ClockState{false, true, 0}, address));
 
-    skyblip::model::OwnState unfixed = own;
+    skyblip::model::Ownship unfixed = own;
     unfixed.fix_valid = false;
-    CHECK_FALSE(own_ship_transmits(unfixed, anchored(), address));
+    CHECK_FALSE(ownship_transmits(unfixed, anchored(), address));
 
-    skyblip::model::OwnState untimed = own;
+    skyblip::model::Ownship untimed = own;
     untimed.utc_valid = false;
-    CHECK_FALSE(own_ship_transmits(untimed, anchored(), address));
+    CHECK_FALSE(ownship_transmits(untimed, anchored(), address));
 
-    skyblip::model::OwnState unsettled = own;
+    skyblip::model::Ownship unsettled = own;
     unsettled.tx_settled = false;
-    CHECK_FALSE(own_ship_transmits(unsettled, anchored(), address));
+    CHECK_FALSE(ownship_transmits(unsettled, anchored(), address));
 }
 
 // Issue #126: a unit the server never gave a serial has nothing it may transmit under.
 TEST_CASE("transmit: own-ship with every fact but an address does not go on air") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.tx_settled = true;
-    CHECK_FALSE(own_ship_transmits(own, anchored(), std::nullopt));
+    CHECK_FALSE(ownship_transmits(own, anchored(), std::nullopt));
 }
 
 // A transmitter at twice the design rate is faulted, and a faulted one that will not stop is worse.

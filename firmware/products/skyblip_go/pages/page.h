@@ -28,8 +28,8 @@ enum class Page : uint8_t {
 constexpr int kPageCount = static_cast<int>(Page::kCount);
 
 // INFO: fc 18oct26 six dashes where a unit not yet activated has no address to print
-inline int fmt_air_address(char* out, settings::AirAddress address) {
-    return address ? fmt_hex(out, *address, 6) : fmt_string(out, "------");
+inline int format_air_address(char* out, settings::AirAddress address) {
+    return address ? format_hex(out, *address, 6) : format_string(out, "------");
 }
 
 constexpr int32_t kRangeStepsNm[kRangeStepCount] = {1, 2, 4, 8};

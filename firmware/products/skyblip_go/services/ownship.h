@@ -32,7 +32,7 @@ class OwnshipService : public runtime::Service {
     bool baro_active() const { return baro_live_; }
 
     // ADS-L G.1.2 FlightState, decided by core/flight from the fix stream.
-    flight::FlightState flight_state_from(const model::OwnState& own, uint32_t now_ms);
+    flight::FlightState flight_state_from(const model::Ownship& own, uint32_t now_ms);
 
     // The one copy of "has the receiver settled": the transmit gate reads it
     // through state.own.tx_settled, and whoever annunciates the first fix takes
@@ -52,16 +52,16 @@ class OwnshipService : public runtime::Service {
     void record_motion(uint32_t now_ms);
     uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) const;
     void publish_solution_phase(uint32_t now_ms);
-    void anchor_utc(const gnss::GnssSolution& solution);
+    void anchor_utc_s(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_baro(const events::BaroSample& sample, uint32_t now_ms);
     void apply_accel(const events::AccelSample& sample);
     void publish_inertial(uint32_t now_ms);
     void update_turn_rate(uint32_t now_ms);
     void publish_turn(int16_t turn_cdps, uint32_t now_ms);
-    void update_residual(const model::OwnState& previous);
-    static gnss::Convergence convergence_of(const model::OwnState& own);
-    static bool height_solved(const model::OwnState& own);
+    void update_residual(const model::Ownship& previous);
+    static gnss::Convergence convergence_of(const model::Ownship& own);
+    static bool height_solved(const model::Ownship& own);
     void adopt_climb(int32_t mm_s, uint32_t now_ms);
     void withdraw_climb();
     static bool vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,

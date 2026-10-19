@@ -7,7 +7,7 @@
 namespace skyblip::traffic {
 
 namespace {
-uint32_t obs_time(const model::AircraftObs& o) { return o.received.at_s; }
+uint32_t observation_at_s(const model::AircraftObservation& o) { return o.received.at_s; }
 int source_rank(model::Source s) {
     switch (s) {
         case model::Source::AdslDirect:
@@ -20,15 +20,16 @@ int source_rank(model::Source s) {
 
 int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kCapacity; i++) {
-        if (slots_[i].used && slots_[i].obs.address == address &&
-            slots_[i].obs.address_mapping_table == address_mapping_table)
+        if (slots_[i].used && slots_[i].observation.address == address &&
+            slots_[i].observation.address_mapping_table == address_mapping_table)
             return i;
     }
     return -1;
 }
 
-bool TrafficTable::prefer_new(const model::AircraftObs& in, const model::AircraftObs& ex) {
-    const uint32_t tin = obs_time(in), tex = obs_time(ex);
+bool TrafficTable::prefer_new(const model::AircraftObservation& in,
+                              const model::AircraftObservation& ex) {
+    const uint32_t tin = observation_at_s(in), tex = observation_at_s(ex);
     const int rank_in = source_rank(in.source), rank_ex = source_rank(ex.source);
     // A ground relay never displaces a first-hand reception the alarm layer
     // would still act on. Being newer is not enough: a relayed frame is always
@@ -40,22 +41,22 @@ bool TrafficTable::prefer_new(const model::AircraftObs& in, const model::Aircraf
     return rank_in >= rank_ex;
 }
 
-void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObs& obs) {
-    if (!obs.speed_valid) return;
-    const uint32_t dt = obs.at_ms - turn.ref_ms;
+void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObservation& observation) {
+    if (!observation.speed_valid) return;
+    const uint32_t dt = observation.at_ms - turn.ref_ms;
     if (!turn.armed || dt > kTurnMaxGapMs) {
         turn.armed = true;
         turn.valid = false;
         turn.dps = 0;
-        turn.ref_ms = obs.at_ms;
-        turn.ref_track_c9 = obs.track_c9;
+        turn.ref_ms = observation.at_ms;
+        turn.ref_track_c9 = observation.track_c9;
         return;
     }
     if (dt < flight::kTurnWindowMs) return;
-    turn.dps = flight::turn_rate_dps(obs.track_c9, turn.ref_track_c9, dt);
+    turn.dps = flight::turn_rate_dps(observation.track_c9, turn.ref_track_c9, dt);
     turn.valid = true;
-    turn.ref_ms = obs.at_ms;
-    turn.ref_track_c9 = obs.track_c9;
+    turn.ref_ms = observation.at_ms;
+    turn.ref_track_c9 = observation.track_c9;
 }
 
 // INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
@@ -66,21 +67,22 @@ bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
     return a.age_s > b.age_s;
 }
 
-TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObs& obs, uint32_t now) const {
+TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& observation,
+                                             uint32_t now) const {
     int32_t slant_m = 0;
-    if (range_check(own_, obs, slant_m) == Plausibility::NoReference) slant_m = 0;
-    return Weight{flight::on_ground(obs.flight_state), slant_m, source_rank(obs.source),
-                  now - obs_time(obs)};
+    if (range_check(own_, observation, slant_m) == Plausibility::NoReference) slant_m = 0;
+    return Weight{flight::on_ground(observation.flight_state), slant_m,
+                  source_rank(observation.source), now - observation_at_s(observation)};
 }
 
-int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now) {
+int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now) {
     for (int i = 0; i < kCapacity; i++)
         if (!slots_[i].used) return i;
     int victim = -1;
     Weight least{};
     for (int i = 0; i < kCapacity; i++) {
         if (slots_[i].alarm_level != Level::None) continue;
-        const Weight w = weight_of(slots_[i].obs, now);
+        const Weight w = weight_of(slots_[i].observation, now);
         if (victim < 0 || matters_less(w, least)) {
             victim = i;
             least = w;
@@ -90,9 +92,9 @@ int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now
     return victim;
 }
 
-int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
-    if (own_address_ != 0 && obs.address_mapping_table == own_address_mapping_table_ &&
-        (obs.address & 0x00FFFFFF) == own_address_)
+int TrafficTable::update(const model::AircraftObservation& observation, uint32_t now) {
+    if (own_address_ != 0 && observation.address_mapping_table == own_address_mapping_table_ &&
+        (observation.address & 0x00FFFFFF) == own_address_)
         return -1;
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about
@@ -100,41 +102,42 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
     // it. A refused observation also never displaces the slot an aircraft of that
     // address already holds - the refusal happens before find().
     int32_t slant_m = 0;
-    if (range_check(own_, obs, slant_m) == Plausibility::TooFar) {
+    if (range_check(own_, observation, slant_m) == Plausibility::TooFar) {
         implausible_++;
         return -1;
     }
-    int idx = find(obs.address_mapping_table, obs.address);
+    int idx = find(observation.address_mapping_table, observation.address);
     if (idx >= 0) {
-        if (prefer_new(obs, slots_[idx].obs)) {
-            watch_liftoff(slots_[idx], obs);
-            slots_[idx].obs = obs;
-            sample_turn(slots_[idx].turn, obs);
+        if (prefer_new(observation, slots_[idx].observation)) {
+            watch_liftoff(slots_[idx], observation);
+            slots_[idx].observation = observation;
+            sample_turn(slots_[idx].turn, observation);
         }
         return idx;
     }
-    idx = allocate_slot(obs, now);
+    idx = allocate_slot(observation, now);
     if (idx < 0) return -1;
     slots_[idx].used = true;
-    slots_[idx].obs = obs;
+    slots_[idx].observation = observation;
     slots_[idx].turn = TargetTurn{};
     slots_[idx].liftoff = flight::Liftoff{};
-    sample_turn(slots_[idx].turn, obs);
+    sample_turn(slots_[idx].turn, observation);
     slots_[idx].alarm_level = Level::None;
     slots_[idx].alarm_dismissed = false;
     slots_[idx].in_formation = false;
     return idx;
 }
 
-void TrafficTable::watch_liftoff(Target& target, const model::AircraftObs& incoming) {
-    if (flight::on_ground(target.obs.flight_state) && flight::airborne(incoming.flight_state))
+void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservation& incoming) {
+    if (flight::on_ground(target.observation.flight_state) &&
+        flight::airborne(incoming.flight_state))
         target.liftoff = {incoming.at_ms, true};
 }
 
 void TrafficTable::age_out(uint32_t now) {
     for (int i = 0; i < kCapacity; i++) {
         if (!slots_[i].used) continue;
-        if (now - obs_time(slots_[i].obs) > forget_s(slots_[i].obs)) {
+        if (now - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation)) {
             slots_[i].used = false;
             slots_[i].turn = TargetTurn{};
             slots_[i].alarm_level = Level::None;

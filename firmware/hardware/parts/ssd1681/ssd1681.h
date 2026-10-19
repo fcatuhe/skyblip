@@ -41,11 +41,11 @@ class Ssd1681 : public ports::Display {
     static constexpr int kGlassStride = (kGlassW + 7) / 8;
     static constexpr size_t kGlassBytes = static_cast<size_t>(kGlassStride) * kGlassH;
 
-    static bool drives(const ui::Canvas& fb) {
-        return fb.width() == kGlassW && fb.height() == kGlassH;
+    static bool drives(const ui::Canvas& canvas) {
+        return canvas.width() == kGlassW && canvas.height() == kGlassH;
     }
 
-    void present(const ui::Canvas& fb, ports::Refresh mode, uint32_t now_ms) override;
+    void present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t now_ms) override;
     void paint_black(uint32_t now_ms) override;
     bool ready(uint32_t now_ms) override;
     void power_off() override;

@@ -13,7 +13,7 @@ void LogEvents::open() {
     open_ = true;
 }
 
-void LogEvents::status(const LogStatus& now, uint32_t utc, uint32_t now_ms) {
+void LogEvents::status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms) {
     if (!open_) return;
     tracked_peak_ = std::max(now.tracked, tracked_peak_);
     const bool due = status_due_ || now_ms - status_ms_ >= kLogStatusPeriodMs ||
@@ -22,7 +22,7 @@ void LogEvents::status(const LogStatus& now, uint32_t utc, uint32_t now_ms) {
 
     LogEvent event{};
     event.kind = LogKind::Status;
-    event.utc = utc;
+    event.utc_s = utc_s;
     event.status = now;
     event.status.tracked_peak = tracked_peak_;
     push(event);
@@ -32,21 +32,21 @@ void LogEvents::status(const LogStatus& now, uint32_t utc, uint32_t now_ms) {
     status_due_ = false;
 }
 
-void LogEvents::heard(int slot, const LogContact& now, uint32_t utc) {
+void LogEvents::heard(int slot, const LogContact& now, uint32_t utc_s) {
     if (!open_ || slot < 0 || slot >= kLogContactSlots) return;
     Track& track = tracks_[slot];
     if (track.active && !same_aircraft(track.closest, now)) end(slot);
     if (!track.active) {
         track = Track{};
         track.active = true;
-        track.first_utc = utc;
+        track.first_utc_s = utc_s;
         track.closest = now;
-        track.closest_utc = utc;
+        track.closest_utc_s = utc_s;
     }
     if (now.alarm != track.alarm) {
         LogEvent event{};
         event.kind = LogKind::Alarm;
-        event.utc = utc;
+        event.utc_s = utc_s;
         event.contact = now;
         push(event);
         track.alarm = now.alarm;
@@ -54,9 +54,9 @@ void LogEvents::heard(int slot, const LogContact& now, uint32_t utc) {
     track.peak_alarm = std::max(now.alarm, track.peak_alarm);
     if (now.dist_m < track.closest.dist_m) {
         track.closest = now;
-        track.closest_utc = utc;
+        track.closest_utc_s = utc_s;
     }
-    track.last_utc = utc;
+    track.last_utc_s = utc_s;
 }
 
 void LogEvents::vacant(int slot) {
@@ -99,10 +99,10 @@ bool LogEvents::same_aircraft(const LogContact& a, const LogContact& b) {
 LogEvent LogEvents::encounter_of(const Track& track) {
     LogEvent event{};
     event.kind = LogKind::Encounter;
-    event.utc = track.closest_utc;
+    event.utc_s = track.closest_utc_s;
     event.contact = track.closest;
     event.contact.alarm = track.peak_alarm;
-    const uint32_t heard_s = track.last_utc - track.first_utc;
+    const uint32_t heard_s = track.last_utc_s - track.first_utc_s;
     event.contact.heard_s = static_cast<uint16_t>(heard_s > 0xFFFF ? 0xFFFF : heard_s);
     return event;
 }

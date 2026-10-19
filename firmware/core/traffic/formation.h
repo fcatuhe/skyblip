@@ -33,8 +33,8 @@ struct Report {
 
 class Tracker {
    public:
-    void observe_own(const model::OwnState& own, uint32_t now_ms);
-    Report observe(const model::OwnState& own_fix, const model::AircraftObs& reported,
+    void observe_own(const model::Ownship& own, uint32_t now_ms);
+    Report observe(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                    const flight::Liftoff& contact_liftoff, uint32_t now_ms);
 
     bool together(uint8_t address_mapping_table, uint32_t address) const;
@@ -64,7 +64,7 @@ class Tracker {
     static bool closure_confirmed(Slot& slot, int32_t closing_mm_s);
     bool lifting(const flight::Liftoff& contact_liftoff, uint32_t now_ms) const;
     void drop(uint8_t address_mapping_table, uint32_t address);
-    Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
+    Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
     const Slot* find(uint8_t address_mapping_table, uint32_t address) const;
     Slot* find(uint8_t address_mapping_table, uint32_t address);
 

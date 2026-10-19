@@ -24,8 +24,8 @@ constexpr int32_t kOwnLon = 81000000;
 constexpr int32_t kOwnAltM = 1000;
 constexpr int32_t kFourHundredMetresNorthE7 = 400 * 1000000 / 11132;
 
-model::OwnState own_at(uint32_t at_ms) {
-    model::OwnState o{};
+model::Ownship own_at(uint32_t at_ms) {
+    model::Ownship o{};
     o.fix_valid = true;
     o.fix_ms = at_ms;
     o.lat_1e7 = kOwnLat;
@@ -35,8 +35,8 @@ model::OwnState own_at(uint32_t at_ms) {
     return o;
 }
 
-model::AircraftObs sender(flight::FlightState state) {
-    model::AircraftObs o{};
+model::AircraftObservation sender(flight::FlightState state) {
+    model::AircraftObservation o{};
     o.address = 0x3C4D5E;
     o.address_mapping_table = 5;
     o.aircraft_cat = 4;
@@ -49,13 +49,13 @@ model::AircraftObs sender(flight::FlightState state) {
     return o;
 }
 
-model::AircraftObs stamped(model::AircraftObs heard) {
+model::AircraftObservation stamped(model::AircraftObservation heard) {
     heard.received.at_s = kUtc;
     heard.at_ms = 1000;
     return heard;
 }
 
-model::AircraftObs over_adsl(const model::AircraftObs& sent) {
+model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
     protocol::AdslPacket p;
     p.init();
     p.set_address(sent.address);
@@ -67,33 +67,33 @@ model::AircraftObs over_adsl(const model::AircraftObs& sent) {
     p.set_lon_1e7(sent.lon_1e7);
     p.set_alt_m(sent.alt_m);
     p.set_speed_q(sent.speed_q);
-    model::AircraftObs heard{};
-    REQUIRE(protocol::to_obs(p, events::Stamp{}, 0, model::Source::AdslDirect, heard));
+    model::AircraftObservation heard{};
+    REQUIRE(protocol::to_observation(p, events::Stamp{}, 0, model::Source::AdslDirect, heard));
     return stamped(heard);
 }
 
-model::AircraftObs over_uplink(const model::AircraftObs& sent) {
+model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
     protocol::AdslUplink codec;
     uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
     REQUIRE(codec.encode(&sent, 1, 0, frame) == Status::Ok);
-    model::AircraftObs heard{};
+    model::AircraftObservation heard{};
     protocol::AdslUplink::DecodeStats stats{};
     REQUIRE(codec.decode(frame, &heard, 1, stats) == Status::Ok);
     REQUIRE(stats.targets == 1);
     return stamped(heard);
 }
 
-model::AircraftObs over_alptas(const model::AircraftObs& sent) {
+model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
     uint8_t frame[protocol::kAlptasFrameBytes];
     REQUIRE(protocol::alptas_encode(frame, sent, kUtc, kOwnLat, kOwnLon) == Status::Ok);
-    model::AircraftObs heard{};
+    model::AircraftObservation heard{};
     REQUIRE(protocol::alptas_decode(frame, kUtc, kOwnLat, kOwnLon, heard) == Status::Ok);
     return stamped(heard);
 }
 
 struct System {
     const char* name;
-    model::AircraftObs (*heard)(const model::AircraftObs&);
+    model::AircraftObservation (*heard)(const model::AircraftObservation&);
 };
 
 constexpr System kSystems[] = {
@@ -102,10 +102,10 @@ constexpr System kSystems[] = {
     {"ALP-TAS", over_alptas},
 };
 
-bool joins_formation(const model::AircraftObs& heard) {
+bool joins_formation(const model::AircraftObservation& heard) {
     formation::Tracker tracker;
     for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
-        model::AircraftObs fix = heard;
+        model::AircraftObservation fix = heard;
         fix.at_ms = t;
         fix.received.at_s = t / 1000;
         tracker.observe(own_at(t), fix, {}, t);
@@ -118,9 +118,10 @@ bool joins_formation(const model::AircraftObs& heard) {
 TEST_CASE("traffic: every system hands a parked aircraft over as on the ground") {
     for (const System& system : kSystems) {
         CAPTURE(system.name);
-        const model::AircraftObs parked = system.heard(sender(flight::FlightState::Ground));
+        const model::AircraftObservation parked = system.heard(sender(flight::FlightState::Ground));
         CHECK(flight::state_from(parked.flight_state) == flight::FlightState::Ground);
-        const model::AircraftObs airborne = system.heard(sender(flight::FlightState::Airborne));
+        const model::AircraftObservation airborne =
+            system.heard(sender(flight::FlightState::Airborne));
         CHECK(flight::state_from(airborne.flight_state) == flight::FlightState::Airborne);
     }
 }
@@ -128,8 +129,9 @@ TEST_CASE("traffic: every system hands a parked aircraft over as on the ground")
 TEST_CASE("traffic: a parked aircraft is never graded, whichever system heard it") {
     for (const System& system : kSystems) {
         CAPTURE(system.name);
-        const model::OwnState own = own_at(1000);
-        const model::AircraftObs airborne = system.heard(sender(flight::FlightState::Airborne));
+        const model::Ownship own = own_at(1000);
+        const model::AircraftObservation airborne =
+            system.heard(sender(flight::FlightState::Airborne));
         REQUIRE(assess(own, airborne, 1000).level == Level::Advisory);
 
         const AlarmAssessment parked =
@@ -143,7 +145,7 @@ TEST_CASE(
     "traffic: a parked aircraft is held for six of its own reports, whichever system heard it") {
     for (const System& system : kSystems) {
         CAPTURE(system.name);
-        const model::AircraftObs parked = system.heard(sender(flight::FlightState::Ground));
+        const model::AircraftObservation parked = system.heard(sender(flight::FlightState::Ground));
         TrafficTable tbl;
         REQUIRE(tbl.update(parked, kUtc) >= 0);
 

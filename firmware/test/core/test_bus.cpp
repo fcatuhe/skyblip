@@ -50,7 +50,7 @@ TEST_CASE("bus: the traffic clock falls back to uptime before the first UTC") {
     s.own.utc_valid = false;
     CHECK(s.traffic_now(12500) == 12);
     s.own.utc_valid = true;
-    s.own.utc = 43200;
+    s.own.utc_s = 43200;
     CHECK(s.traffic_now(12500) == 43200);
 }
 
@@ -58,7 +58,7 @@ TEST_CASE("bus: the traffic clock falls back to uptime before the first UTC") {
 TEST_CASE("bus: the traffic clock is the edge's second, not the sentence's") {
     bus::State s;
     s.own.utc_valid = true;
-    s.own.utc = 43200;
+    s.own.utc_s = 43200;
     s.clock.pps_locked = true;
     s.clock.utc_s = 43201;
     CHECK(s.traffic_now(12500) == 43201);

@@ -47,31 +47,32 @@ void FlightLogService::tick(uint32_t now_ms) {
 
 // INFO: fc 15oct26 sampled with the fix, so an event is dated by the second the track holds
 void FlightLogService::watch(uint32_t now_ms) {
-    const model::OwnState& own = context_.state.own;
-    events_.status(status_now(), own.utc, now_ms);
+    const model::Ownship& own = context_.state.own;
+    events_.status(status_now(), own.utc_s, now_ms);
     for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) {
             events_.vacant(slot);
             continue;
         }
-        const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
         flight::LogContact contact{};
-        contact.address = target->obs.address;
-        contact.address_mapping_table = target->obs.address_mapping_table;
-        contact.aircraft_cat = target->obs.aircraft_cat;
+        contact.address = target->observation.address;
+        contact.address_mapping_table = target->observation.address_mapping_table;
+        contact.aircraft_cat = target->observation.aircraft_cat;
         contact.dist_m = diag::clamp_u16(
             assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
         contact.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
         contact.rel_bearing_deg = assessment.rel_bearing_deg;
         contact.closing_mps = diag::clamp_i16(assessment.closing_mps);
         contact.alarm = traffic::to_number(target->alarm_level);
-        contact.source = static_cast<uint8_t>(target->obs.source);
-        contact.rssi_dbm = target->obs.rssi_dbm;
+        contact.source = static_cast<uint8_t>(target->observation.source);
+        contact.rssi_dbm = target->observation.rssi_dbm;
         contact.dismissed = target->alarm_dismissed;
         contact.in_formation = target->in_formation;
-        events_.heard(slot, contact, own.utc);
+        events_.heard(slot, contact, own.utc_s);
     }
 }
 

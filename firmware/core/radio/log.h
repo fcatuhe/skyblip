@@ -40,7 +40,7 @@ struct Entry {
     uint8_t len{0};
     bool address_valid{false};
     bool rssi_valid{false};
-    bool utc{false};
+    bool utc_dated{false};
     bool airborne{false};
     bool phase_valid{false};
     bool tx_span_valid{false};

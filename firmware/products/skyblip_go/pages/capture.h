@@ -31,7 +31,7 @@ struct CaptureSnapshot {
     bool arming{false};
 };
 
-void draw_capture(ui::Canvas& fb, const CaptureSnapshot& snap);
+void draw_capture(ui::Canvas& canvas, const CaptureSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

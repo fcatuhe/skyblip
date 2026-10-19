@@ -15,9 +15,9 @@ namespace {
 
 constexpr double kMetresPerE7 = 0.0011132 * 10;  // 1e-7 deg of latitude, metres
 
-model::OwnState flying(double lat_deg, double lon_deg, double mps, double track_deg,
-                       double climb_mps = 0.0, double turn_dps = 0.0) {
-    model::OwnState own{};
+model::Ownship flying(double lat_deg, double lon_deg, double mps, double track_deg,
+                      double climb_mps = 0.0, double turn_dps = 0.0) {
+    model::Ownship own{};
     own.fix_valid = true;
     own.lat_1e7 = static_cast<int32_t>(lat_deg * 1e7);
     own.lon_1e7 = static_cast<int32_t>(lon_deg * 1e7);
@@ -35,7 +35,7 @@ double north_m(int32_t from_lat_1e7, int32_t to_lat_1e7) {
     return (to_lat_1e7 - from_lat_1e7) * kMetresPerE7;
 }
 
-double east_m(const model::OwnState& from, int32_t to_lon_1e7) {
+double east_m(const model::Ownship& from, int32_t to_lon_1e7) {
     const double coslat = std::cos(from.lat_1e7 / 1e7 * M_PI / 180.0);
     return (to_lon_1e7 - from.lon_1e7) * kMetresPerE7 * coslat;
 }
@@ -43,7 +43,7 @@ double east_m(const model::OwnState& from, int32_t to_lon_1e7) {
 }  // namespace
 
 TEST_CASE("extrapolate: a straight leg moves the fix along its own track") {
-    const model::OwnState own = flying(48.5, 8.5, 40.0, 90.0);
+    const model::Ownship own = flying(48.5, 8.5, 40.0, 90.0);
     const Prediction at = extrapolate(own, 1000);
     REQUIRE(at.valid);
     // Due east at 40 m/s for one second: 40 m of easting and nothing else.
@@ -60,7 +60,7 @@ TEST_CASE("extrapolate: a straight leg moves the fix along its own track") {
 }
 
 TEST_CASE("extrapolate: flying east across the antimeridian comes out at 180 west") {
-    const model::OwnState own = flying(10.0, 179.9999, 60.0, 90.0);
+    const model::Ownship own = flying(10.0, 179.9999, 60.0, 90.0);
     const Prediction at = extrapolate(own, 1000);
     REQUIRE(at.valid);
     CHECK(at.lon_1e7 < -1799990000);
@@ -70,33 +70,33 @@ TEST_CASE("extrapolate: flying east across the antimeridian comes out at 180 wes
 
 // A neighbour is carried by the three things its burst states: position, ground speed and track.
 TEST_CASE("extrapolate: a reported target moves along its reported track") {
-    const model::OwnState own = flying(48.5, 8.5, 40.0, 90.0);
-    model::AircraftObs obs{};
-    obs.position_valid = true;
-    obs.speed_valid = true;
-    obs.lat_1e7 = own.lat_1e7;
-    obs.lon_1e7 = own.lon_1e7;
-    obs.alt_m = 1200;
-    obs.speed_q = 40 * 4;
-    obs.track_c9 = 128;  // due east
+    const model::Ownship own = flying(48.5, 8.5, 40.0, 90.0);
+    model::AircraftObservation observation{};
+    observation.position_valid = true;
+    observation.speed_valid = true;
+    observation.lat_1e7 = own.lat_1e7;
+    observation.lon_1e7 = own.lon_1e7;
+    observation.alt_m = 1200;
+    observation.speed_q = 40 * 4;
+    observation.track_c9 = 128;  // due east
 
-    const Prediction at = extrapolate(obs, 1000);
+    const Prediction at = extrapolate(observation, 1000);
     REQUIRE(at.valid);
     CHECK(east_m(own, at.lon_1e7) == doctest::Approx(40.0).epsilon(0.01));
     CHECK(north_m(own.lat_1e7, at.lat_1e7) == doctest::Approx(0.0).epsilon(0.01));
-    CHECK(at.alt_mm == obs.alt_m * 1000);  // no climb reported, no climb invented
+    CHECK(at.alt_mm == observation.alt_m * 1000);  // no climb reported, no climb invented
 
-    obs.climb_valid = true;
-    obs.climb_e8 = 8 * 2;  // 2 m/s
-    CHECK(extrapolate(obs, 1000).alt_mm == 1202000);
+    observation.climb_valid = true;
+    observation.climb_e8 = 8 * 2;  // 2 m/s
+    CHECK(extrapolate(observation, 1000).alt_mm == 1202000);
 
     // Relayed traffic often arrives as a position and nothing else: there is no
     // model to run, and the last known position is the only honest answer.
-    obs.speed_valid = false;
-    const Prediction still = extrapolate(obs, 1000);
+    observation.speed_valid = false;
+    const Prediction still = extrapolate(observation, 1000);
     CHECK_FALSE(still.valid);
-    CHECK(still.lat_1e7 == obs.lat_1e7);
-    CHECK(still.lon_1e7 == obs.lon_1e7);
+    CHECK(still.lat_1e7 == observation.lat_1e7);
+    CHECK(still.lon_1e7 == observation.lon_1e7);
 }
 
 // The reason for the half-turn-before, half-turn-after split
@@ -104,7 +104,7 @@ TEST_CASE("extrapolate: a reported target moves along its reported track") {
 // whole second turning, and putting it on the tangent puts it outside its own
 // circle. Four gliders in one core is exactly where a metre matters.
 TEST_CASE("extrapolate: a circling glider is predicted on its arc, not on the tangent") {
-    const model::OwnState own = flying(48.5, 8.5, 40.0, 0.0, 0.0, 20.0);
+    const model::Ownship own = flying(48.5, 8.5, 40.0, 0.0, 0.0, 20.0);
     const Prediction at = extrapolate(own, 1000);
     REQUIRE(at.valid);
 
@@ -116,19 +116,19 @@ TEST_CASE("extrapolate: a circling glider is predicted on its arc, not on the ta
     CHECK(east_m(own, at.lon_1e7) == doctest::Approx(arc_east).epsilon(0.05));
 
     // The tangent it is not: straight ahead puts it 6.9 m off the circle.
-    model::OwnState straight = own;
+    model::Ownship straight = own;
     straight.turn_cdps = 0;
     CHECK(east_m(straight, extrapolate(straight, 1000).lon_1e7) == doctest::Approx(0.0));
 
     // And the track goes with it, to the hundredth of a degree the gyro resolves.
     CHECK(at.track_cdeg == doctest::Approx(2000).epsilon(0.01));
     // Turning left through north wraps rather than going negative.
-    model::OwnState left = flying(48.5, 8.5, 40.0, 0.0, 0.0, -20.0);
+    model::Ownship left = flying(48.5, 8.5, 40.0, 0.0, 0.0, -20.0);
     CHECK(extrapolate(left, 1000).track_cdeg == doctest::Approx(34000).epsilon(0.01));
 }
 
 TEST_CASE("extrapolate: the climb carries both altitudes, and only when it is known") {
-    const model::OwnState climbing = flying(48.5, 8.5, 30.0, 45.0, 2.0);
+    const model::Ownship climbing = flying(48.5, 8.5, 30.0, 45.0, 2.0);
     const Prediction at = extrapolate(climbing, 1000);
     REQUIRE(at.valid);
     CHECK(at.alt_mm == climbing.alt_mm + 2000);
@@ -137,7 +137,7 @@ TEST_CASE("extrapolate: the climb carries both altitudes, and only when it is kn
 
     // G.1.9's "unavailable" is not zero, and neither is it a level prediction we
     // are entitled to make: without a vertical rate the altitude stands still.
-    model::OwnState unknown = climbing;
+    model::Ownship unknown = climbing;
     unknown.climb_valid = false;
     CHECK(extrapolate(unknown, 1000).alt_mm == unknown.alt_mm);
 }
@@ -146,7 +146,7 @@ TEST_CASE("extrapolate: the climb carries both altitudes, and only when it is kn
 // untouched and says so, so the caller can date it as the fix rather than
 // dressing a guess as a prediction.
 TEST_CASE("extrapolate: a gap longer than the bound is not predicted at all") {
-    const model::OwnState own = flying(48.5, 8.5, 50.0, 90.0, 1.0);
+    const model::Ownship own = flying(48.5, 8.5, 50.0, 90.0, 1.0);
 
     const Prediction inside = extrapolate(own, kMaxExtrapolationMs);
     CHECK(inside.valid);
@@ -162,7 +162,7 @@ TEST_CASE("extrapolate: a gap longer than the bound is not predicted at all") {
     CHECK_FALSE(extrapolate(own, -(kMaxExtrapolationMs + 1)).valid);
 
     // A position nobody has is not extrapolated either.
-    model::OwnState blind = own;
+    model::Ownship blind = own;
     blind.fix_valid = false;
     CHECK_FALSE(extrapolate(blind, 500).valid);
 }
@@ -171,7 +171,7 @@ TEST_CASE("extrapolate: a gap longer than the bound is not predicted at all") {
 // against a fix that actually arrived, so a model that has stopped describing
 // the aircraft says so on the bench instead of in the air.
 TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
-    const model::OwnState own = flying(48.5, 8.5, 40.0, 0.0, 2.0);
+    const model::Ownship own = flying(48.5, 8.5, 40.0, 0.0, 2.0);
     const Prediction at = extrapolate(own, 1000);
     REQUIRE(at.valid);
 
@@ -187,7 +187,7 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
     // An aircraft flying the model it is given is predicted to within a metre a
     // second; one that rolls into a turn the model never saw is not, and the
     // residual is the difference between the two.
-    const model::OwnState turning = flying(48.5, 8.5, 40.0, 0.0, 2.0, 25.0);
+    const model::Ownship turning = flying(48.5, 8.5, 40.0, 0.0, 2.0, 25.0);
     const Prediction ignored_turn = extrapolate(own, 1000);
     const Prediction with_turn = extrapolate(turning, 1000);
     const uint32_t missed =
@@ -197,7 +197,7 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
 
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
 TEST_CASE("adsl: the transmitted position is the position at the quarter second it names") {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
@@ -207,7 +207,7 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
     own.climb_mm_s = 2000;
     own.climb_valid = true;
     own.vdop_e2 = 150;
-    own.utc = 1000;  // 1000 % 15 == 10 s into the timestamp cycle
+    own.utc_s = 1000;  // 1000 % 15 == 10 s into the timestamp cycle
 
     AdslPacket at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
@@ -215,7 +215,7 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
 
     // A burst 600 ms later names the quarter at 500 ms, and the position goes to it.
     AdslPacket in_flight{};
-    from_own(in_flight, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, 600, 600});
+    from_own(in_flight, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, 600, 600});
     CHECK(int(in_flight.TimeStamp) == 42);
     CHECK(in_flight.alt_m() == at_fix.alt_m() + 1);
     CHECK(in_flight.lat_1e7() == at_fix.lat_1e7());
@@ -229,27 +229,27 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
 // filled with a guess. The last fix goes out unmoved, dated when it was solved,
 // so the position and the timestamp still describe the same instant.
 TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix") {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
     own.alt_mm = 1200000;
     own.speed_mm_s = 50000;
     own.track_cdeg = 9000;
-    own.utc = 1000;
+    own.utc_s = 1000;
 
     AdslPacket at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
 
     const int32_t bound = kMaxExtrapolationMs;
     AdslPacket inside{};
-    from_own(inside, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, bound, bound});
+    from_own(inside, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, bound, bound});
     CHECK(inside.lon_1e7() != at_fix.lon_1e7());
-    CHECK(int(inside.TimeStamp) == timestamp_code(own.utc, bound));
+    CHECK(int(inside.TimeStamp) == timestamp_code(own.utc_s, bound));
 
     const int32_t past = bound + static_cast<int32_t>(kTimeStampQuarterMs);
     AdslPacket beyond{};
-    from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc, past, past});
+    from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, past, past});
     CHECK(beyond.lon_1e7() == at_fix.lon_1e7());
     CHECK(beyond.lat_1e7() == at_fix.lat_1e7());
     CHECK(int(beyond.TimeStamp) == int(at_fix.TimeStamp));
@@ -264,7 +264,7 @@ TEST_CASE("adsl: the timestamp is quarter seconds inside a fifteen second cycle"
     CHECK(int(timestamp_code(14, 999)) == 59);
     CHECK(int(timestamp_code(14, 1000)) == 0);  // wraps into the next cycle
     CHECK(int(timestamp_code(0, -250)) == 59);  // and backwards out of it
-    for (uint32_t utc = 0; utc < 60; utc++)
+    for (uint32_t utc_s = 0; utc_s < 60; utc_s++)
         for (int32_t lead = -1000; lead <= 1000; lead += 125)
-            CHECK(int(timestamp_code(utc, lead)) < 60);
+            CHECK(int(timestamp_code(utc_s, lead)) < 60);
 }

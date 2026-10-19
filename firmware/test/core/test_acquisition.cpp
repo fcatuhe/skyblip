@@ -15,7 +15,7 @@ GnssSolution blind() { return GnssSolution{}; }
 GnssSolution timed() {
     GnssSolution s;
     s.utc_valid = true;
-    s.utc = 1767225600;
+    s.utc_s = 1767225600;
     return s;
 }
 

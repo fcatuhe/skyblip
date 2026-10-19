@@ -30,7 +30,7 @@ struct StatusSnapshot {
     int32_t speed_mm_s{0};  // as measured, not as transmitted
     int32_t track_cdeg{0};  // hundredths of a degree
     int32_t climb_mm_s{0};  // as measured, not as transmitted
-    uint32_t utc{0};
+    uint32_t utc_s{0};
     int n_targets{0};
     const char* imu_stage{"NONE"};
     const char* imu_fault{""};
@@ -51,7 +51,7 @@ struct StatusSnapshot {
     uint8_t battery_percent{0};
 };
 
-void draw_status(ui::Canvas& fb, const StatusSnapshot& snap);
+void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

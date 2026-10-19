@@ -135,7 +135,7 @@ void ConfigService::send_update(uint16_t session_id) {
     ports::SigningKeyHash trusted;
     if (dfu_ != nullptr && dfu_->running_key(trusted)) {
         char key[9];
-        key[fmt_hex(key, dfu::key_prefix(trusted), 8)] = 0;
+        key[format_hex(key, dfu::key_prefix(trusted), 8)] = 0;
         w.kv_str("key", key);
     }
     const int len = w.finish();

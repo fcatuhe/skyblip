@@ -30,7 +30,7 @@ constexpr char source_letter(Source source) {
     return '?';
 }
 
-struct AircraftObs {
+struct AircraftObservation {
     uint32_t address;
     uint8_t address_mapping_table;
     uint8_t aircraft_cat;

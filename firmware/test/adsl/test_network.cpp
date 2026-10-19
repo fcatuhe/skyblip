@@ -13,7 +13,7 @@ using namespace skyblip;
 
 namespace {
 protocol::AdslPacket traffic_packet() {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
@@ -88,13 +88,14 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload rea
     protocol::AdslPacket p = traffic_packet();
     CHECK((p.Version & 0x0F) == 0);
 
-    model::AircraftObs as_sent{};
-    REQUIRE(protocol::to_obs(p, events::Stamp{}, -80, model::Source::AdslDirect, as_sent));
+    model::AircraftObservation as_sent{};
+    REQUIRE(protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, as_sent));
 
     protocol::AdslPacket issue2 = p;
     issue2.Version = (issue2.Version & 0xF0) | 0x01;
-    model::AircraftObs as_received{};
-    REQUIRE(protocol::to_obs(issue2, events::Stamp{}, -80, model::Source::AdslDirect, as_received));
+    model::AircraftObservation as_received{};
+    REQUIRE(protocol::to_observation(issue2, events::Stamp{}, -80, model::Source::AdslDirect,
+                                     as_received));
     CHECK(as_received.address == as_sent.address);
     CHECK(as_received.lat_1e7 == as_sent.lat_1e7);
     CHECK(as_received.alt_m == as_sent.alt_m);

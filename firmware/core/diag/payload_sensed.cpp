@@ -75,7 +75,7 @@ Record record_of(const radio::Entry& value) {
     at.at_s = value.at_s;
     at.into_ms = value.into_ms;
     at.phase_valid = value.phase_valid;
-    at.utc_dated = value.utc;
+    at.utc_dated = value.utc_dated;
     Record r = framed(Type::Burst, at);
     put_u32(r.payload + 0, value.address);
     put_u16(r.payload + 4, value.tx_keyed_us);
@@ -102,7 +102,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.at_s = record.at_s;
     out.into_ms = record.into_ms;
     out.phase_valid = record.phase_valid();
-    out.utc = record.utc_dated();
+    out.utc_dated = record.utc_dated();
     out.address = get_u32(record.payload + 0);
     out.tx_keyed_us = get_u16(record.payload + 4);
     out.tx_span_us = get_u16(record.payload + 6);

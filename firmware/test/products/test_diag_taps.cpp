@@ -322,20 +322,20 @@ TEST_CASE("diag traffic: an aircraft is recorded a reception, with the margin it
     arm(rig, t);
 
     for (int i = 0; i < 4; i++) {
-        model::AircraftObs obs{};
-        obs.address = 0x515151;
-        obs.address_mapping_table = 6;
-        obs.position_valid = true;
-        obs.speed_valid = true;
-        obs.speed_q = 40 * 4;
-        obs.alt_m = 300;
-        obs.lat_1e7 = rig.state().own.lat_1e7 + 9000;
-        obs.lon_1e7 = rig.state().own.lon_1e7;
-        obs.at_ms = t;
-        obs.rssi_dbm = -92;
-        obs.source = model::Source::AdslDirect;
-        obs.received.at_s = rig.state().traffic_now(t);
-        rig.state().traffic.update(obs, rig.state().traffic_now(t));
+        model::AircraftObservation observation{};
+        observation.address = 0x515151;
+        observation.address_mapping_table = 6;
+        observation.position_valid = true;
+        observation.speed_valid = true;
+        observation.speed_q = 40 * 4;
+        observation.alt_m = 300;
+        observation.lat_1e7 = rig.state().own.lat_1e7 + 9000;
+        observation.lon_1e7 = rig.state().own.lon_1e7;
+        observation.at_ms = t;
+        observation.rssi_dbm = -92;
+        observation.source = model::Source::AdslDirect;
+        observation.received.at_s = rig.state().traffic_now(t);
+        rig.state().traffic.update(observation, rig.state().traffic_now(t));
         taxi(rig, t, 1);
     }
     stop(rig, t);

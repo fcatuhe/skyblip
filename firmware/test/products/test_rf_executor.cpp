@@ -76,7 +76,7 @@ struct Pass {
     void services_at(uint64_t now_us) {
         platform.clock().set_micros(now_us);
         const uint32_t now_ms = static_cast<uint32_t>(now_us / 1000);
-        state.own.utc = now_ms / 1000;
+        state.own.utc_s = now_ms / 1000;
         state.own.fix_ms = now_ms;
         rf.service(now_ms);
         radio_service.tick(now_ms);
@@ -254,7 +254,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     REQUIRE(pass.begin() == Status::Ok);
 
     const uint64_t edge_us = 12'000'000;
-    pass.state.own.utc = 45296;
+    pass.state.own.utc_s = 45296;
     pass.state.clock.pps_locked = true;
     pass.state.clock.utc_s = 45296;
     pass.state.clock.utc_edge_us = edge_us;

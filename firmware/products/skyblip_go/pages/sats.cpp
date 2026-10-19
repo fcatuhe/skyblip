@@ -33,8 +33,8 @@ constexpr gnss::System kSystemOrder[] = {gnss::System::Gps, gnss::System::Beidou
                                          gnss::System::Glonass, gnss::System::Qzss,
                                          gnss::System::Unknown};
 
-void right_aligned(ui::Canvas& fb, int x_end, int y, const char* text, int len) {
-    fb.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
+    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
 }
 
 int bar_height(uint8_t cn0_dbhz) {
@@ -43,41 +43,41 @@ int bar_height(uint8_t cn0_dbhz) {
     return clipped * kBarSpan / kFullScaleDbHz;
 }
 
-void bar(ui::Canvas& fb, int x, const gnss::SatelliteView& sat) {
+void bar(ui::Canvas& canvas, int x, const gnss::SatelliteView& sat) {
     const int h = bar_height(sat.cn0_dbhz);
     if (h <= 0) {
-        fb.hline(x, kBaseY - 1, kBarW, true);
+        canvas.hline(x, kBaseY - 1, kBarW, true);
         return;
     }
     if (sat.in_use) {
-        fb.rect(x, kBaseY - h, kBarW, h, true, true);
+        canvas.rect(x, kBaseY - h, kBarW, h, true, true);
         return;
     }
-    fb.rect(x + 1, kBaseY - h + 1, kBarW - 2, h - 2, false, true);
-    fb.rect(x, kBaseY - h, kBarW, h, true, false);
+    canvas.rect(x + 1, kBaseY - h + 1, kBarW - 2, h - 2, false, true);
+    canvas.rect(x, kBaseY - h, kBarW, h, true, false);
 }
 
-int draw_group(ui::Canvas& fb, const gnss::SkyView& sky, gnss::System system, int x) {
+int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system, int x) {
     if (sky.in_view_of(system) == 0) return x;
     int at = x;
     for (int i = 0; i < sky.count(); i++) {
         const gnss::SatelliteView& sat = sky.at(i);
         if (sat.system != system) continue;
         if (at + kBarW > kRight) break;
-        bar(fb, at, sat);
+        bar(canvas, at, sat);
         at += kBarPitch;
     }
-    fb.draw_text(x, kGroupLabelY, gnss::system_name(system), true, 1);
+    canvas.draw_text(x, kGroupLabelY, gnss::system_name(system), true, 1);
     return at + kGroupGap;
 }
 
-void scale_mark(ui::Canvas& fb) {
+void scale_mark(ui::Canvas& canvas) {
     const int y = kBaseY - kGoodDbHz * kBarSpan / kFullScaleDbHz;
-    for (int x = kLeft; x < kRight; x += 4) fb.hline(x, y, 1, true);
+    for (int x = kLeft; x < kRight; x += 4) canvas.hline(x, y, 1, true);
     char buf[4];
-    const int n = fmt_uint(buf, kGoodDbHz, 2);
+    const int n = format_uint(buf, kGoodDbHz, 2);
     buf[n] = 0;
-    right_aligned(fb, kRight, y - kGlyphH - 1, buf, n);
+    right_aligned(canvas, kRight, y - kGlyphH - 1, buf, n);
 }
 
 uint32_t used_count(const SatsSnapshot& s) {
@@ -85,104 +85,104 @@ uint32_t used_count(const SatsSnapshot& s) {
     return s.sats;
 }
 
-void draw_counts(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_counts(ui::Canvas& canvas, const SatsSnapshot& s) {
     char buf[24];
-    int n = fmt_string(buf, "USED ");
-    n += fmt_uint(buf + n, used_count(s), 1);
+    int n = format_string(buf, "USED ");
+    n += format_uint(buf + n, used_count(s), 1);
     if (s.levels_live && s.sky != nullptr) {
-        n += fmt_string(buf + n, " OF ");
-        n += fmt_uint(buf + n, static_cast<uint32_t>(s.sky->count()), 1);
+        n += format_string(buf + n, " OF ");
+        n += format_uint(buf + n, static_cast<uint32_t>(s.sky->count()), 1);
     }
     buf[n] = 0;
-    right_aligned(fb, kRight, kTitleY, buf, n);
+    right_aligned(canvas, kRight, kTitleY, buf, n);
 }
 
-void draw_dops(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_dops(ui::Canvas& canvas, const SatsSnapshot& s) {
     char buf[32];
-    int n = fmt_string(buf, "HDOP ");
+    int n = format_string(buf, "HDOP ");
     if (s.hdop_e2 > 0)
-        n += fmt_uint(buf + n, s.hdop_e2, 3, 2);
+        n += format_uint(buf + n, s.hdop_e2, 3, 2);
     else
-        n += fmt_string(buf + n, "---");
-    n += fmt_string(buf + n, "  VDOP ");
+        n += format_string(buf + n, "---");
+    n += format_string(buf + n, "  VDOP ");
     if (s.vdop_e2 > 0)
-        n += fmt_uint(buf + n, s.vdop_e2, 3, 2);
+        n += format_uint(buf + n, s.vdop_e2, 3, 2);
     else
-        n += fmt_string(buf + n, "---");
+        n += format_string(buf + n, "---");
     buf[n] = 0;
-    fb.draw_text(kLeft, kDopY, buf, true, 1);
+    canvas.draw_text(kLeft, kDopY, buf, true, 1);
 }
 
-void draw_nav_phase(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_nav_phase(ui::Canvas& canvas, const SatsSnapshot& s) {
     if (!s.nav_valid) return;
     char buf[12];
-    int n = fmt_string(buf, "NAV ");
-    n += fmt_uint(buf + n, s.nav_ms, 3);
-    n += fmt_string(buf + n, "MS");
+    int n = format_string(buf, "NAV ");
+    n += format_uint(buf + n, s.nav_ms, 3);
+    n += format_string(buf + n, "MS");
     buf[n] = 0;
-    right_aligned(fb, kRight, kDopY, buf, n);
+    right_aligned(canvas, kRight, kDopY, buf, n);
 }
 
-void draw_port(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_port(ui::Canvas& canvas, const SatsSnapshot& s) {
     if (s.health.baud == 0) return;
     char buf[32];
-    int n = fmt_string(buf, "BAUD ");
-    n += fmt_uint(buf + n, s.health.baud);
-    n += fmt_string(buf + n, "  ");
-    n += fmt_string(buf + n, ports::to_string(s.health.config));
+    int n = format_string(buf, "BAUD ");
+    n += format_uint(buf + n, s.health.baud);
+    n += format_string(buf + n, "  ");
+    n += format_string(buf + n, ports::to_string(s.health.config));
     if (s.health.overruns > 0) {
-        n += fmt_string(buf + n, "  OVR ");
-        n += fmt_uint(buf + n, s.health.overruns);
+        n += format_string(buf + n, "  OVR ");
+        n += format_uint(buf + n, s.health.overruns);
     }
     buf[n] = 0;
-    fb.draw_text(kLeft, kPortY, buf, true, 1);
+    canvas.draw_text(kLeft, kPortY, buf, true, 1);
 }
 
-void draw_stage(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_stage(ui::Canvas& canvas, const SatsSnapshot& s) {
     if (s.fix_valid) return;
-    fb.draw_text(kLeft, kDopY - 12, gnss::stage_name(s.stage), true, 1);
+    canvas.draw_text(kLeft, kDopY - 12, gnss::stage_name(s.stage), true, 1);
 }
 
-void draw_used_by_system(ui::Canvas& fb, const SatsSnapshot& s) {
+void draw_used_by_system(ui::Canvas& canvas, const SatsSnapshot& s) {
     if (s.sky == nullptr) return;
     char buf[32];
     int n = 0;
     for (gnss::System system : kSystemOrder) {
         const int used = s.sky->in_use_of(system);
         if (used == 0) continue;
-        if (n > 0) n += fmt_string(buf + n, "  ");
-        n += fmt_string(buf + n, gnss::system_name(system));
+        if (n > 0) n += format_string(buf + n, "  ");
+        n += format_string(buf + n, gnss::system_name(system));
         buf[n++] = ' ';
-        n += fmt_uint(buf + n, static_cast<uint32_t>(used), 1);
+        n += format_uint(buf + n, static_cast<uint32_t>(used), 1);
     }
     if (n == 0) return;
     buf[n] = 0;
-    fb.draw_text(kLeft, kBarTop, buf, true, 1);
+    canvas.draw_text(kLeft, kBarTop, buf, true, 1);
 }
 
 }  // namespace
 
-void draw_sats(ui::Canvas& fb, const SatsSnapshot& s) {
-    fb.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
-    draw_counts(fb, s);
-    fb.hline(kLeft, kRuleY, kRight - kLeft, true);
+void draw_sats(ui::Canvas& canvas, const SatsSnapshot& s) {
+    canvas.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
+    draw_counts(canvas, s);
+    canvas.hline(kLeft, kRuleY, kRight - kLeft, true);
 
-    draw_dops(fb, s);
-    draw_nav_phase(fb, s);
-    draw_port(fb, s);
-    draw_stage(fb, s);
+    draw_dops(canvas, s);
+    draw_nav_phase(canvas, s);
+    draw_port(canvas, s);
+    draw_stage(canvas, s);
 
     if (!s.levels_live || s.sky == nullptr || s.sky->count() == 0) {
-        draw_used_by_system(fb, s);
-        fb.draw_text(kLeft, kNoteY, used_count(s) == 0 ? "NO SATELLITE HEARD" : "LEVELS COMING UP",
-                     true, 1);
+        draw_used_by_system(canvas, s);
+        canvas.draw_text(kLeft, kNoteY,
+                         used_count(s) == 0 ? "NO SATELLITE HEARD" : "LEVELS COMING UP", true, 1);
         return;
     }
 
-    scale_mark(fb);
+    scale_mark(canvas);
     int x = kLeft;
-    for (gnss::System system : kSystemOrder) x = draw_group(fb, *s.sky, system, x);
-    fb.draw_text(kLeft, kNoteY, "FILLED: IN THE SOLUTION", true, 1);
+    for (gnss::System system : kSystemOrder) x = draw_group(canvas, *s.sky, system, x);
+    canvas.draw_text(kLeft, kNoteY, "FILLED: IN THE SOLUTION", true, 1);
 }
 
 }  // namespace skyblip::go

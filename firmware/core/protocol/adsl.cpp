@@ -247,9 +247,9 @@ int AdslPacket::correct(const uint8_t* err, int max_bad_bits) {
     return -1;
 }
 
-bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
-            model::Source source, model::AircraftObs& out) {
-    out = model::AircraftObs{};
+bool to_observation(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
+                    model::Source source, model::AircraftObservation& out) {
+    out = model::AircraftObservation{};
     if (!p.is_position() || !p.has_position()) return false;
     out.address = p.address();
     out.address_mapping_table = p.address_mapping_table();
@@ -315,9 +315,9 @@ void AdslPacket::set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     VelAccuracy = velocity_accuracy_code(HorizAccuracy);
 }
 
-uint8_t timestamp_code(uint32_t utc, int32_t lead_ms) {
+uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms) {
     constexpr int64_t kCycleMs = static_cast<int64_t>(kTimeStampCycleS) * 1000;
-    int64_t ms = static_cast<int64_t>(utc % kTimeStampCycleS) * 1000 + lead_ms;
+    int64_t ms = static_cast<int64_t>(utc_s % kTimeStampCycleS) * 1000 + lead_ms;
     ms %= kCycleMs;
     if (ms < 0) ms += kCycleMs;
     return static_cast<uint8_t>(ms / kTimeStampQuarterMs);
@@ -360,13 +360,13 @@ int callsign_of(const AdslPacket& p, char* out, int cap) {
     return n;
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat) {
     return from_own(p, own, address, address_mapping_table, aircraft_cat,
-                    BurstInstant{own.utc, 0, 0});
+                    BurstInstant{own.utc_s, 0, 0});
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at) {
     if (!address) return false;
     p.init(AdslPacket::kTypePosition);
@@ -381,7 +381,8 @@ bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress ad
         at.into_utc_ms - at.into_utc_ms % static_cast<int32_t>(kTimeStampQuarterMs);
     const flight::Prediction where =
         flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
-    p.TimeStamp = timestamp_code(at.utc, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
+    p.TimeStamp =
+        timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
     p.FlightState = flight::announced_state(own.flight_state, aircraft_cat);
     p.AcftCat = aircraft_cat;
     p.Emergency = 1;

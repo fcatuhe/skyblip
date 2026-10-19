@@ -21,7 +21,7 @@ namespace {
 //
 // This is the DEFAULT symbol, compiled in. The plan is for a user to load their
 // own into QSPI flash and pick one per aircraft, at which point this becomes the
-// fallback and the sprite is read from storage - which is why Ownship below is a
+// fallback and the sprite is read from storage - which is why Sprite below is a
 // value carrying its own size and hot spot, not three loose constants.
 //
 // Edit:    /briefing/ownship, then paste its text into light_aircraft.yml
@@ -58,21 +58,21 @@ constexpr int kGlyphH = static_cast<int>(sizeof(kOwnshipRows) / sizeof(kOwnshipR
 
 // A 1-bit ownship sprite: the bitmap plus the two things a renderer cannot
 // guess - how wide a row is, and which row is the aircraft's position.
-struct Ownship {
+struct Sprite {
     int w;  // EVEN, so the sprite straddles the centre point
     int h;
     int origin_row;        // hot spot: this row lands on the centre point
     const uint32_t* rows;  // one word per row, LSB = leftmost column
 };
-constexpr Ownship kDefaultOwnship{kGlyphW, kGlyphH, kGlyphOriginRow, kOwnshipRows};
+constexpr Sprite kDefaultSprite{kGlyphW, kGlyphH, kGlyphOriginRow, kOwnshipRows};
 
 }  // namespace
 
 // s.w is EVEN, so the fuselage straddles the pixel pair (cx-1|cx) and the sprite
 // is exactly centred. The hot-spot row is laid on cy, which puts the aircraft's
 // position on the plot origin itself, not half a pixel off it.
-void draw_skyship(Canvas& fb, int cx, int cy) {
-    const Ownship& s = kDefaultOwnship;
+void draw_skyship(Canvas& canvas, int cx, int cy) {
+    const Sprite& s = kDefaultSprite;
     static_assert(kGlyphW % 2 == 0, "even width: the centre is a pixel PAIR");
     static_assert(kGlyphOriginRow == kSkyshipRowsToNose,
                   "the nose a screen clears is this sprite's");
@@ -82,7 +82,7 @@ void draw_skyship(Canvas& fb, int cx, int cy) {
     for (int row = 0; row < s.h; row++) {
         uint32_t bits = s.rows[row];
         for (int col = 0; bits; col++, bits >>= 1) {
-            if (bits & 1) fb.set_pixel(x0 + col, y0 + row, true);
+            if (bits & 1) canvas.set_pixel(x0 + col, y0 + row, true);
         }
     }
 }

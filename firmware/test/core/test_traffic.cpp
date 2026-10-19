@@ -18,7 +18,7 @@ using namespace skyblip::traffic;
 TEST_CASE("traffic: insert, find, count") {
     TrafficTable tbl;
     CHECK(tbl.count() == 0);
-    int i = tbl.update(obs(0x111, 6, 100), 100);
+    int i = tbl.update(observation(0x111, 6, 100), 100);
     CHECK(i >= 0);
     CHECK(tbl.count() == 1);
     CHECK(tbl.find(6, 0x111) == i);
@@ -27,15 +27,15 @@ TEST_CASE("traffic: insert, find, count") {
 
 TEST_CASE("traffic: dedup merges the same target, fresher and direct win") {
     TrafficTable tbl;
-    tbl.update(obs(0x111, 6, 100, model::Source::AdslUplink), 100);
+    tbl.update(observation(0x111, 6, 100, model::Source::AdslUplink), 100);
     // direct, same time -> should replace uplink (direct preferred)
-    tbl.update(obs(0x111, 6, 100, model::Source::AdslDirect), 100);
+    tbl.update(observation(0x111, 6, 100, model::Source::AdslDirect), 100);
     CHECK(tbl.count() == 1);
     int idx = tbl.find(6, 0x111);
-    CHECK(tbl.at(idx)->obs.source == model::Source::AdslDirect);
+    CHECK(tbl.at(idx)->observation.source == model::Source::AdslDirect);
     // older observation must not overwrite a fresher one
-    tbl.update(obs(0x111, 6, 90, model::Source::AdslUplink), 100);
-    CHECK(tbl.at(idx)->obs.received.at_s == 100);
+    tbl.update(observation(0x111, 6, 90, model::Source::AdslUplink), 100);
+    CHECK(tbl.at(idx)->observation.received.at_s == 100);
 }
 
 // A ground relay is a rebroadcast, so it is always the newer report and always
@@ -43,39 +43,39 @@ TEST_CASE("traffic: dedup merges the same target, fresher and direct win") {
 // perfectly well backwards once a second, for as long as both paths last.
 TEST_CASE("traffic: a relay does not displace a direct reception that is still fresh") {
     TrafficTable tbl;
-    tbl.update(obs(0x111, 6, 100, model::Source::AdslDirect), 100);
+    tbl.update(observation(0x111, 6, 100, model::Source::AdslDirect), 100);
     const int idx = tbl.find(6, 0x111);
     REQUIRE(idx >= 0);
 
-    const uint32_t hold_s = direct_preferred_max_age_s(obs(0x111, 6, 100));
+    const uint32_t hold_s = direct_preferred_max_age_s(observation(0x111, 6, 100));
     for (uint32_t later = 101; later <= 100 + hold_s; later++) {
-        tbl.update(obs(0x111, 6, later, model::Source::AdslUplink), later);
+        tbl.update(observation(0x111, 6, later, model::Source::AdslUplink), later);
         CHECK(tbl.count() == 1);
-        CHECK(tbl.at(idx)->obs.source == model::Source::AdslDirect);
-        CHECK(tbl.at(idx)->obs.received.at_s == 100);
+        CHECK(tbl.at(idx)->observation.source == model::Source::AdslDirect);
+        CHECK(tbl.at(idx)->observation.received.at_s == 100);
     }
 
     // And the hold is a hold, not a block: past it the direct track is as stale
     // as the alarm layer's own patience with a contact, and the relay is the
     // only thing still reporting this aircraft.
     const uint32_t past = 100 + hold_s + 1;
-    tbl.update(obs(0x111, 6, past, model::Source::AdslUplink), past);
+    tbl.update(observation(0x111, 6, past, model::Source::AdslUplink), past);
     CHECK(tbl.count() == 1);
-    CHECK(tbl.at(idx)->obs.source == model::Source::AdslUplink);
-    CHECK(tbl.at(idx)->obs.received.at_s == past);
+    CHECK(tbl.at(idx)->observation.source == model::Source::AdslUplink);
+    CHECK(tbl.at(idx)->observation.received.at_s == past);
 
     // A relay never blocks a target of its own, and a direct reception takes it
     // straight back.
-    tbl.update(obs(0x222, 6, past, model::Source::AdslUplink), past);
+    tbl.update(observation(0x222, 6, past, model::Source::AdslUplink), past);
     CHECK(tbl.count() == 2);
-    tbl.update(obs(0x111, 6, past, model::Source::AdslDirect), past);
-    CHECK(tbl.at(idx)->obs.source == model::Source::AdslDirect);
+    tbl.update(observation(0x111, 6, past, model::Source::AdslDirect), past);
+    CHECK(tbl.at(idx)->observation.source == model::Source::AdslDirect);
 }
 
 // The hold is core/traffic/alarm.h's own freshness rule wearing a different
 // unit. If one moves, the other has to, and this is what says so.
 TEST_CASE("traffic: the direct hold is the alarm layer's patience with a contact") {
-    CHECK(direct_preferred_max_age_s(obs(0x111, 6, 100)) * 1000 == kAlertMaxAgeMs);
+    CHECK(direct_preferred_max_age_s(observation(0x111, 6, 100)) * 1000 == kAlertMaxAgeMs);
 }
 
 // At 0.1 Hz a relay taking over five seconds in replaces every ground report with a poorer copy.
@@ -88,10 +88,10 @@ TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one
     REQUIRE(idx >= 0);
 
     tbl.update(parked(0x111, 6, 106, model::Source::AdslUplink), 106);
-    CHECK(tbl.at(idx)->obs.source == model::Source::AdslDirect);
+    CHECK(tbl.at(idx)->observation.source == model::Source::AdslDirect);
 
     tbl.update(parked(0x111, 6, 111, model::Source::AdslUplink), 111);
-    CHECK(tbl.at(idx)->obs.source == model::Source::AdslUplink);
+    CHECK(tbl.at(idx)->observation.source == model::Source::AdslUplink);
 }
 
 // A ground station relays every aircraft it heard, and it heard us. Own-ship on
@@ -99,20 +99,20 @@ TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one
 TEST_CASE("traffic: our own address is not traffic, whoever reports it") {
     TrafficTable tbl;
     tbl.set_own_address(58, 0xC5D804);
-    CHECK(tbl.update(obs(0xC5D804, 58, 100, model::Source::AdslUplink), 100) < 0);
-    CHECK(tbl.update(obs(0xC5D804, 58, 100, model::Source::AdslDirect), 100) < 0);
+    CHECK(tbl.update(observation(0xC5D804, 58, 100, model::Source::AdslUplink), 100) < 0);
+    CHECK(tbl.update(observation(0xC5D804, 58, 100, model::Source::AdslDirect), 100) < 0);
     CHECK(tbl.count() == 0);
-    CHECK(tbl.update(obs(0xC5D805, 58, 100, model::Source::AdslUplink), 100) >= 0);
+    CHECK(tbl.update(observation(0xC5D805, 58, 100, model::Source::AdslUplink), 100) >= 0);
     CHECK(tbl.count() == 1);
     // The same 24 bits under FLARM's table are another aircraft, and it is traffic.
-    CHECK(tbl.update(obs(0xC5D804, 6, 100, model::Source::AdslDirect), 100) >= 0);
+    CHECK(tbl.update(observation(0xC5D804, 6, 100, model::Source::AdslDirect), 100) >= 0);
     CHECK(tbl.count() == 2);
 }
 
 TEST_CASE("traffic: age-out removes stale entries") {
     TrafficTable tbl;
-    tbl.update(obs(0x1, 6, 100), 100);
-    tbl.update(obs(0x2, 6, 120), 120);
+    tbl.update(observation(0x1, 6, 100), 100);
+    tbl.update(observation(0x2, 6, 120), 120);
     tbl.age_out(124);  // 0x1 is 24 s old -> gone; 0x2 is 4 s -> stays
     CHECK(tbl.find(6, 0x1) == -1);
     CHECK(tbl.find(6, 0x2) >= 0);
@@ -121,7 +121,7 @@ TEST_CASE("traffic: age-out removes stale entries") {
 // Six 1 Hz bursts is a link that stopped rather than one that collided, and 360 m of lie at 60 m/s.
 TEST_CASE("traffic: an airborne aircraft is drawn for six of its own bursts and no longer") {
     TrafficTable tbl;
-    tbl.update(obs(0x1, 6, 100), 100);
+    tbl.update(observation(0x1, 6, 100), 100);
     tbl.age_out(100 + kAirborneTargetForgetS);
     CHECK(tbl.find(6, 0x1) >= 0);
     tbl.age_out(100 + kAirborneTargetForgetS + 1);
@@ -146,7 +146,7 @@ TEST_CASE("traffic: a parked aircraft is drawn for six of its own bursts, which 
 TEST_CASE("traffic: a takeoff shortens the lease on the burst that announces it") {
     TrafficTable tbl;
     tbl.update(parked(0x1, 6, 100), 100);
-    tbl.update(obs(0x1, 6, 110), 110);
+    tbl.update(observation(0x1, 6, 110), 110);
     tbl.age_out(110 + kAirborneTargetForgetS + 1);
     CHECK(tbl.find(6, 0x1) == -1);
 }
@@ -157,10 +157,10 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
     AlarmTracker tracker;
     formation::Tracker wingmen;
 
-    model::AircraftObs wingman{};
+    model::AircraftObservation wingman{};
     uint32_t heard_ms = 0;
     for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
-        const model::OwnState own = flying(40, 90, 0, t);
+        const model::Ownship own = flying(40, 90, 0, t);
         wingman = neighbour(own, -60, -120, 10, 40, 90, t);
         tbl.update(wingman, wingman.received.at_s);
         tracker.update(own, wingman, t);
@@ -190,11 +190,11 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
 
 // A relay names thirteen aircraft a frame, and a burst of them evicted one flying a kilometre away.
 TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in farther away") {
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     TrafficTable tbl;
     tbl.set_own_reference(own);
     const auto at = [&](uint32_t address, int north_m, model::Source src, uint32_t t) {
-        model::AircraftObs o = neighbour(own, north_m, 0, 0, 30, 0);
+        model::AircraftObservation o = neighbour(own, north_m, 0, 0, 30, 0);
         o.address = address;
         o.source = src;
         o.received.at_s = t;
@@ -218,13 +218,13 @@ TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     TrafficTable tbl;
     // fill capacity
     for (int i = 0; i < TrafficTable::kCapacity; i++) {
-        int idx = tbl.update(obs(0x1000 + i, 6, 100 + i), 200);
+        int idx = tbl.update(observation(0x1000 + i, 6, 100 + i), 200);
         REQUIRE(idx >= 0);
     }
     // mark the oldest entry as an active alarm so it can't be evicted
     int oldest = tbl.find(6, 0x1000);
     tbl.at(oldest)->alarm_level = Level::Advisory;
-    int idx = tbl.update(obs(0x9999, 6, 300), 300);
+    int idx = tbl.update(observation(0x9999, 6, 300), 300);
     CHECK(idx >= 0);                  // newcomer placed
     CHECK(tbl.find(6, 0x1000) >= 0);  // protected alarm still present
 }
@@ -242,35 +242,35 @@ TEST_CASE("traffic: a slot handed to a new aircraft keeps nothing of the last on
 
     TrafficTable full;
     for (int i = 0; i < TrafficTable::kCapacity; i++)
-        standing(full, full.update(obs(0x1000 + i, 6, 100 + i), 200));
-    CHECK(fresh(full, full.update(obs(0x9999, 6, 300), 300)));
+        standing(full, full.update(observation(0x1000 + i, 6, 100 + i), 200));
+    CHECK(fresh(full, full.update(observation(0x9999, 6, 300), 300)));
 
     TrafficTable aged;
-    standing(aged, aged.update(obs(0x1, 6, 100), 100));
+    standing(aged, aged.update(observation(0x1, 6, 100), 100));
     aged.age_out(100 + kAirborneTargetForgetS + 1);
     REQUIRE(aged.count() == 0);
-    CHECK(fresh(aged, aged.update(obs(0x2, 6, 120), 120)));
+    CHECK(fresh(aged, aged.update(observation(0x2, 6, 120), 120)));
 
     TrafficTable cleared;
-    standing(cleared, cleared.update(obs(0x1, 6, 100), 100));
+    standing(cleared, cleared.update(observation(0x1, 6, 100), 100));
     cleared.clear();
-    CHECK(fresh(cleared, cleared.update(obs(0x2, 6, 100), 100)));
+    CHECK(fresh(cleared, cleared.update(observation(0x2, 6, 100), 100)));
 }
 
 // Nearest-first eviction refused an airborne arrival beyond a full apron of parked aircraft.
 TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air, however far") {
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     TrafficTable tbl;
     tbl.set_own_reference(own);
     for (int i = 0; i < TrafficTable::kCapacity; i++) {
-        model::AircraftObs apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
+        model::AircraftObservation apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
         apron.address = 0x100000u + static_cast<uint32_t>(i);
         apron.received.at_s = 100;
         apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         REQUIRE(tbl.update(apron, 100) >= 0);
     }
 
-    model::AircraftObs arriving = neighbour(own, 8000, 0, 0, 40, 180);
+    model::AircraftObservation arriving = neighbour(own, 8000, 0, 0, 40, 180);
     arriving.address = 0x200000;
     arriving.received.at_s = 100;
     arriving.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
@@ -289,11 +289,11 @@ TEST_CASE("traffic: the age-out is a difference, whichever side of the wrap the 
     TrafficTable tbl;
     // The seconds base a device with a UTC fix uses. 2^32 seconds is 136 years, so
     // the arithmetic below is the one that matters and it holds at any magnitude.
-    const uint32_t utc = 0xFFFFFFF0u;
-    tbl.update(obs(0x1, 6, utc), utc);
-    tbl.update(obs(0x2, 6, utc + 20u), utc + 20u);
+    const uint32_t utc_s = 0xFFFFFFF0u;
+    tbl.update(observation(0x1, 6, utc_s), utc_s);
+    tbl.update(observation(0x2, 6, utc_s + 20u), utc_s + 20u);
     // 5 s past the seconds counter's own end: the first is 25 s old and goes, the second is 5.
-    const uint32_t later = utc + 25u;
+    const uint32_t later = utc_s + 25u;
     tbl.age_out(later);
     CHECK(tbl.find(6, 0x1) == -1);
     CHECK(tbl.find(6, 0x2) >= 0);
@@ -301,20 +301,20 @@ TEST_CASE("traffic: the age-out is a difference, whichever side of the wrap the 
     // before the wrap still gives up its oldest to a newcomer stamped after it.
     TrafficTable full;
     for (uint32_t i = 0; i < static_cast<uint32_t>(TrafficTable::kCapacity); i++)
-        REQUIRE(full.update(obs(0x2000u + i, 6, utc + i), utc + i) >= 0);
-    const uint32_t newcomer = utc + 60u;  // after every stamp already in the table
-    CHECK(full.update(obs(0x9999, 6, newcomer), newcomer) >= 0);
+        REQUIRE(full.update(observation(0x2000u + i, 6, utc_s + i), utc_s + i) >= 0);
+    const uint32_t newcomer = utc_s + 60u;  // after every stamp already in the table
+    CHECK(full.update(observation(0x9999, 6, newcomer), newcomer) >= 0);
     CHECK(full.find(6, 0x2000) == -1);  // the oldest, and only it
     CHECK(full.find(6, 0x2001) >= 0);
 }
 
 TEST_CASE("alarm: a contact is announced and forgotten across the 49.7-day wrap") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     const uint32_t before = 0xFFFFF000u;  // 4096 ms short of the wrap
 
     // A contact announced on one side of the wrap instant, still standing on the other.
-    model::AircraftObs target = neighbour(own, 400, 0, 0, 30, 180, before);
+    model::AircraftObservation target = neighbour(own, 400, 0, 0, 30, 180, before);
     REQUIRE(tracker.update(own, target, before).notify);
     CHECK(tracker.announced_level(before) == Level::Advisory);
 

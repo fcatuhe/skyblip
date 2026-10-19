@@ -13,16 +13,16 @@ TEST_CASE("board: the host glass is unturned, so the simulator shows the framebu
     boards::TEchoPlus<platform::host::Platform> board{platform, bus};
     REQUIRE(board.begin() == Status::Ok);
 
-    parts::Ssd1681Glass fb;
-    fb.clear(true);
-    fb.set_pixel(4, 12, true);
-    fb.set_pixel(150, 3, true);
-    board.display().present(fb, ports::Refresh::Full, 0);
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    canvas.set_pixel(4, 12, true);
+    canvas.set_pixel(150, 3, true);
+    board.display().present(canvas, ports::Refresh::Full, 0);
 
     const parts::Ssd1681Glass& glass = platform.chips().epd.framebuffer();
     int mismatches = 0;
     for (int y = 0; y < parts::Ssd1681::kGlassH; y++)
         for (int x = 0; x < parts::Ssd1681::kGlassW; x++)
-            if (glass.get_pixel(x, y) != fb.get_pixel(x, y)) mismatches++;
+            if (glass.get_pixel(x, y) != canvas.get_pixel(x, y)) mismatches++;
     CHECK(mismatches == 0);
 }

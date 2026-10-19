@@ -83,8 +83,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.4: the sync word is 0x72 0x4B, Manchester-coded") 
 
 TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency") {
     uint32_t previous = 0;
-    for (uint32_t utc = 1785628800; utc < 1785628810; utc++) {
-        const int slot = timing::Transmitter::slot_in(utc, /*airborne=*/true);
+    for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
+        const int slot = timing::Transmitter::slot_in(utc_s, /*airborne=*/true);
         const uint32_t freq = timing::Scheduler::slot_freq(slot);
         CHECK((freq == timing::kMband0Hz || freq == timing::kMband1Hz));
         if (previous != 0) CHECK(freq != previous);
@@ -147,11 +147,11 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
     for (uint32_t address = 1; address < 64; address++) {
         timing::Transmitter tx;
         tx.configure(address * 0x9E37u);
-        for (uint32_t utc = 0; utc < 32; utc++) {
+        for (uint32_t utc_s = 0; utc_s < 32; utc_s++) {
             for (int slot = 0; slot < 2; slot++) {
                 const timing::SlotPlan plan =
                     timing::Scheduler::plan(timing::Scheduler::slot_start(slot), clock);
-                const timing::Transmitter::Attempt a = tx.attempt(plan, utc, 1000, true, 0);
+                const timing::Transmitter::Attempt a = tx.attempt(plan, utc_s, 1000, true, 0);
                 if (!a.go) continue;
                 if (a.payload == timing::Transmitter::Payload::Callsign) continue;
                 CHECK(timing::Scheduler::in_direct_slot(a.at_ms));
@@ -175,8 +175,8 @@ TEST_CASE(
     for (uint32_t address = 1; address < 64; address++) {
         timing::Transmitter tx;
         tx.configure(address * 0x9E37u);
-        for (uint32_t utc = 0; utc < 32; utc++) {
-            const timing::Transmitter::Attempt a = tx.attempt(slot1, utc, 1000, true, 0);
+        for (uint32_t utc_s = 0; utc_s < 32; utc_s++) {
+            const timing::Transmitter::Attempt a = tx.attempt(slot1, utc_s, 1000, true, 0);
             if (!a.go || a.payload != timing::Transmitter::Payload::Callsign) continue;
             seen++;
             // Past the direct slot, inside slot 1's dwell, and complete before it ends.

@@ -16,7 +16,7 @@ struct GMeterSnapshot {
     flight::GLoad least{};
 };
 
-void draw_gmeter(ui::Canvas& fb, const GMeterSnapshot& snap);
+void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

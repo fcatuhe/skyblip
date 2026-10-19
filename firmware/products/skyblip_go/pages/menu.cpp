@@ -36,13 +36,13 @@ const char* alarm_volume_name(go::AlarmVolume volume) {
     }
 }
 
-void row_text(ui::Canvas& fb, int line, const char* label, const char* value, bool focused) {
+void row_text(ui::Canvas& canvas, int line, const char* label, const char* value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
-    if (focused) fb.rect(2, top, kGlassW - 4, kMenuBarH, true, /*fill=*/true);
+    if (focused) canvas.rect(2, top, kGlassW - 4, kMenuBarH, true, /*fill=*/true);
     const bool ink = !focused;
-    fb.draw_text(kMenuLeftX, y, label, ink, kMenuScale);
-    fb.draw_text(kMenuRightX - text_cells(value) * kMenuCellW, y, value, ink, kMenuScale);
+    canvas.draw_text(kMenuLeftX, y, label, ink, kMenuScale);
+    canvas.draw_text(kMenuRightX - text_cells(value) * kMenuCellW, y, value, ink, kMenuScale);
 }
 
 }  // namespace
@@ -138,16 +138,16 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
         case MenuRow::AircraftType: {
             const char* name = aircraft_type_name(v.settings.aircraft_type);
             if (name[0] != 0) {
-                n = fmt_string(out, name);
+                n = format_string(out, name);
             } else {
-                n = fmt_string(out, "CODE ");
-                n += fmt_uint(out + n, v.settings.aircraft_type);
+                n = format_string(out, "CODE ");
+                n += format_uint(out + n, v.settings.aircraft_type);
             }
             break;
         }
         case MenuRow::Callsign: {
             if (v.settings.callsign[0] == 0) {
-                n = fmt_string(out, "NONE");
+                n = format_string(out, "NONE");
                 break;
             }
             // The row has the label beside it, so it shows what a registration
@@ -159,21 +159,21 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
             break;
         }
         case MenuRow::Units:
-            n = fmt_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
+            n = format_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
             break;
         case MenuRow::Range:
-            n = fmt_uint(
+            n = format_uint(
                 out, static_cast<uint32_t>(range_value(v.settings.range_step, v.settings.units)));
-            n += fmt_string(out + n, " ");
-            n += fmt_string(out + n, range_unit(v.settings.units));
+            n += format_string(out + n, " ");
+            n += format_string(out + n, range_unit(v.settings.units));
             break;
         case MenuRow::Plot:
-            n = fmt_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
+            n = format_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
-        case MenuRow::Light: n = fmt_string(out, v.light ? "ON" : "OFF"); break;
-        case MenuRow::Alarm: n = fmt_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
+        case MenuRow::Light: n = format_string(out, v.light ? "ON" : "OFF"); break;
+        case MenuRow::Alarm: n = format_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
         case MenuRow::Volume:
-            n = fmt_string(out, alarm_volume_name(v.settings.alarm_volume));
+            n = format_string(out, alarm_volume_name(v.settings.alarm_volume));
             break;
         default: break;
     }
@@ -181,10 +181,10 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
     return n;
 }
 
-void draw_menu(ui::Canvas& fb, const MenuSnapshot& s) {
-    fb.clear(true);
-    fb.draw_text(kMenuLeftX - 2, kHeaderY, menu_title(s.page), true, kMenuScale);
-    fb.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
+void draw_menu(ui::Canvas& canvas, const MenuSnapshot& s) {
+    canvas.clear(true);
+    canvas.draw_text(kMenuLeftX - 2, kHeaderY, menu_title(s.page), true, kMenuScale);
+    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
 
     const Menu menu = menu_for(s.page);
     const int first = menu_first_row(menu, s.focus);
@@ -192,29 +192,29 @@ void draw_menu(ui::Canvas& fb, const MenuSnapshot& s) {
     for (int line = 0; line < kMenuLines && first + line < menu.n; line++) {
         const MenuRow row = menu.rows[first + line];
         menu_row_value(value, row, s.values);
-        row_text(fb, line, menu_row_label(row), value, row == s.focus);
+        row_text(canvas, line, menu_row_label(row), value, row == s.focus);
     }
 
-    fb.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
+    canvas.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
 }
 
-void draw_callsign(ui::Canvas& fb, const CallsignSnapshot& s) {
-    fb.clear(true);
-    fb.draw_text(kMenuLeftX - 2, kHeaderY, "CALLSIGN", true, kMenuScale);
-    fb.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
+void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& s) {
+    canvas.clear(true);
+    canvas.draw_text(kMenuLeftX - 2, kHeaderY, "CALLSIGN", true, kMenuScale);
+    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
 
-    fb.draw_text(kCallsignTextX, kCallsignTextY, s.text, true, kCallsignScale);
+    canvas.draw_text(kCallsignTextX, kCallsignTextY, s.text, true, kCallsignScale);
     const int at = kCallsignTextX + s.cursor * kCallsignCellW;
-    fb.rect(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorH, true, /*fill=*/true);
+    canvas.rect(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorH, true, /*fill=*/true);
 
     const char* button = s.clears ? kCallsignClearHintText : kCallsignNextHintText;
-    fb.draw_text(centred_x(kCallsignPadHintText, kCallsignHintScale), kCallsignPadHintY,
-                 kCallsignPadHintText, true, kCallsignHintScale);
-    fb.draw_text(centred_x(button, kCallsignHintScale), kCallsignButtonHintY, button, true,
-                 kCallsignHintScale);
+    canvas.draw_text(centred_x(kCallsignPadHintText, kCallsignHintScale), kCallsignPadHintY,
+                     kCallsignPadHintText, true, kCallsignHintScale);
+    canvas.draw_text(centred_x(button, kCallsignHintScale), kCallsignButtonHintY, button, true,
+                     kCallsignHintScale);
     if (!s.clears)
-        fb.draw_text(centred_x(kCallsignClearHelpText, 1), kCallsignHelpY, kCallsignClearHelpText,
-                     true, 1);
+        canvas.draw_text(centred_x(kCallsignClearHelpText, 1), kCallsignHelpY,
+                         kCallsignClearHelpText, true, 1);
 }
 
 void MenuEditor::enter(Page page, uint32_t now_ms) {

@@ -17,7 +17,7 @@ radio::Entry heard(uint32_t address, uint32_t at_s) {
     e.at_s = at_s;
     e.rssi_dbm = -87;
     e.rssi_valid = true;
-    e.utc = true;
+    e.utc_dated = true;
     return e;
 }
 

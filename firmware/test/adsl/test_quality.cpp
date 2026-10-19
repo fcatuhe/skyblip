@@ -9,7 +9,7 @@ using namespace skyblip;
 
 namespace {
 protocol::AdslPacket from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = true) {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = fix;
     own.utc_valid = true;
     own.lat_1e7 = 481234500;

@@ -22,13 +22,14 @@ int length(const char* s) {
 
 // Draw the same text at the same place into a scratch buffer and compare the
 // box it occupies.
-bool reads_at(const Glass& fb, int x, int y, const char* text, int scale) {
+bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
     Glass expected;
     expected.clear(true);
     expected.draw_text(x, y, text, true, scale);
     for (int dy = 0; dy < 7 * scale; dy++)
         for (int dx = 0; dx < length(text) * kConfirmCellW * scale; dx++)
-            if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
+            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
+                return false;
     return true;
 }
 
@@ -60,8 +61,8 @@ TEST_CASE("confirm page: the pilot is told which operation they are authorising"
 TEST_CASE("confirm page: what it will do is on the page, in words, and not clipped") {
     for (comms::Pending pending : {comms::Pending::Set, comms::Pending::Dfu,
                                    comms::Pending::Recovery, comms::Pending::PowerOff}) {
-        Glass fb;
-        draw_confirm(fb, prompt(pending));
+        Glass canvas;
+        draw_confirm(canvas, prompt(pending));
 
         // Every word of the detail reaches the glass: the sentence wraps rather
         // than running off the right-hand edge or off the bottom.
@@ -70,7 +71,7 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
         for (int row = 0; row < kConfirmDetailRows; row++) {
             const int y = confirm_detail_y(row);
             for (int x = kConfirmLeftX; x < Glass::kW; x++)
-                for (int dy = 0; dy < 7; dy++) drawn += fb.get_pixel(x, y + dy) ? 1 : 0;
+                for (int dy = 0; dy < 7; dy++) drawn += canvas.get_pixel(x, y + dy) ? 1 : 0;
         }
         CHECK(drawn > 0);
         CHECK(length(detail) <= kConfirmDetailCols * kConfirmDetailRows);
@@ -81,19 +82,20 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
 TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {
     ConfirmSnapshot s = prompt(comms::Pending::Set);
     s.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
-    Glass fb;
-    draw_confirm(fb, s);
-    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
-    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
-    CHECK(reads_at(fb, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));
+    Glass canvas;
+    draw_confirm(canvas, s);
+    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
+    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
+    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));
 }
 
 TEST_CASE("confirm page: the allowing gesture and the refusing one are both spelled out") {
-    Glass fb;
-    draw_confirm(fb, prompt(comms::Pending::Dfu));
+    Glass canvas;
+    draw_confirm(canvas, prompt(comms::Pending::Dfu));
 
     // The allowing line is reversed out of a filled block, so it is white ink.
-    CHECK_FALSE(reads_at(fb, kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, 1));
+    CHECK_FALSE(
+        reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, 1));
     Glass inverted;
     inverted.clear(true);
     inverted.rect(kConfirmLeftX, kConfirmAllowY - 4,
@@ -102,24 +104,24 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
     bool same = true;
     for (int y = kConfirmAllowY - 4; y < kConfirmAllowY + 11; y++)
         for (int x = kConfirmLeftX; x < kConfirmLeftX + 130; x++)
-            if (fb.get_pixel(x, y) != inverted.get_pixel(x, y)) same = false;
+            if (canvas.get_pixel(x, y) != inverted.get_pixel(x, y)) same = false;
     CHECK(same);
 
-    CHECK(reads_at(fb, kConfirmLeftX + kConfirmCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
+    CHECK(reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
 
     // And the page says it will refuse on its own, so a prompt left standing is
     // not read as one waiting indefinitely.
-    CHECK(reads_at(fb, kConfirmLeftX, kConfirmExpiryY, "REFUSED AFTER 30 S", 1));
+    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "REFUSED AFTER 30 S", 1));
 }
 
 TEST_CASE("confirm page: it cannot be mistaken for a page a pilot was already on") {
-    Glass fb;
-    draw_confirm(fb, prompt(comms::Pending::Recovery));
+    Glass canvas;
+    draw_confirm(canvas, prompt(comms::Pending::Recovery));
 
     // A full-width reversed header: at arm's length the shape alone says the
     // device is asking something rather than showing something.
     int header_ink = 0;
     for (int y = 0; y < 26; y++)
-        for (int x = 0; x < Glass::kW; x++) header_ink += fb.get_pixel(x, y) ? 1 : 0;
+        for (int x = 0; x < Glass::kW; x++) header_ink += canvas.get_pixel(x, y) ? 1 : 0;
     CHECK(header_ink > 26 * Glass::kW / 2);
 }

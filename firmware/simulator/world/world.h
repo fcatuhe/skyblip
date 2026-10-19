@@ -128,14 +128,14 @@ class World {
     void set_origin();
     double own_north_m() const;
     double own_east_m() const;
-    void service_aircraft(uint32_t now_ms, const model::OwnState& own);
-    void schedule_second(uint64_t epoch_us, const model::OwnState& own);
-    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::OwnState& own);
-    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc,
+    void service_aircraft(uint32_t now_ms, const model::Ownship& own);
+    void schedule_second(uint64_t epoch_us, const model::Ownship& own);
+    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own);
+    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
                      double range_m);
-    void relay(uint64_t epoch_us, const model::OwnState& own);
-    model::AircraftObs as_relayed(const VirtualAircraft& aircraft,
-                                  const model::OwnState& own) const;
+    void relay(uint64_t epoch_us, const model::Ownship& own);
+    model::AircraftObservation as_relayed(const VirtualAircraft& aircraft,
+                                          const model::Ownship& own) const;
     static int8_t rssi_at(double range_m);
     void apply_events(uint32_t now_ms, const bus::State& state);
     void fail(const char* what);

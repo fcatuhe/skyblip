@@ -32,7 +32,7 @@ int alptas_correct(uint8_t* frame, const uint8_t* err, int max_bad_bits = 6);
 // INFO: fc 19sep26 GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by
 constexpr int32_t kAlptasKeyWindowS = 18;
 
-Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc, uint32_t& keyed_utc);
+Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc_s);
 
 // INFO: fc 09mar26 the address word is sent in clear: a receiver can read the
 // sender's identity before, and without, decrypting anything.
@@ -46,12 +46,12 @@ uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_tab
 
 // Decrypt + unpack. Position is coded relative to the receiver, so it needs own
 // position, and the key stage needs the UTC second the frame arrived in.
-Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
-                     int32_t ref_lon_1e7, model::AircraftObs& out);
+Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e7,
+                     int32_t ref_lon_1e7, model::AircraftObservation& out);
 
 // Pack + encrypt the same fields back, so the simulator can fly ALP-TAS traffic
 // and the round trip is a test.
-Status alptas_encode(uint8_t* frame, const model::AircraftObs& obs, uint32_t utc,
+Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observation, uint32_t utc_s,
                      int32_t ref_lat_1e7, int32_t ref_lon_1e7);
 
 }

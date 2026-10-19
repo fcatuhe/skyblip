@@ -29,9 +29,9 @@ go::Glass expected_page(Rig& rig) {
     snapshot.values.settings = rig.settings();
     snapshot.values.light = rig.product.screen().backlight();
     snapshot.focus = rig.product.screen().editor().focus();
-    go::Glass fb;
-    go::draw_menu(fb, snapshot);
-    return fb;
+    go::Glass canvas;
+    go::draw_menu(canvas, snapshot);
+    return canvas;
 }
 
 }  // namespace

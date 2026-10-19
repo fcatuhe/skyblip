@@ -31,7 +31,7 @@ enum class LogAction : uint8_t { Idle, OpenSession, AppendRecord, CloseSession }
 // bounded ring; the writer drains them when the radio is not keying.
 class LogSession {
    public:
-    LogAction update(const model::OwnState& own, bool rolling, uint32_t now_ms);
+    LogAction update(const model::Ownship& own, bool rolling, uint32_t now_ms);
 
     bool open() const { return open_; }
     // A closed session whose last record has not reached flash yet.
@@ -56,7 +56,7 @@ class LogSession {
 
    private:
     void push(const LogRecord& record);
-    bool flying(const model::OwnState& own, bool rolling, uint32_t now_ms);
+    bool flying(const model::Ownship& own, bool rolling, uint32_t now_ms);
 
     LogRecord ring_[kLogPreTakeoffRecords]{};
     int head_{0};

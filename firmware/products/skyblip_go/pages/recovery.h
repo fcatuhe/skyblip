@@ -19,7 +19,7 @@ constexpr const char* recovery_entry(ports::RecoveryPath path) {
     return path == ports::RecoveryPath::PowerOffToFinish ? kRecoveryAwaitsPress : kRecoveryRunning;
 }
 
-void draw_recovery(ui::Canvas& fb, ports::RecoveryPath path);
+void draw_recovery(ui::Canvas& canvas, ports::RecoveryPath path);
 
 }  // namespace skyblip::go
 

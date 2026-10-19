@@ -17,7 +17,7 @@ uint16_t chips_of(uint8_t byte) {
 }
 
 protocol::AdslPacket traffic_packet() {
-    model::OwnState own{};
+    model::Ownship own{};
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
@@ -119,10 +119,12 @@ TEST_CASE("ADS-L.4.SRD860.B.6: a reserved bit a sender filled changes nothing a 
     noisy.Address[3] |= 0x40;
     noisy.Reserved = 1;
 
-    model::AircraftObs from_clean{};
-    model::AircraftObs from_noisy{};
-    REQUIRE(protocol::to_obs(clean, events::Stamp{}, -80, model::Source::AdslDirect, from_clean));
-    REQUIRE(protocol::to_obs(noisy, events::Stamp{}, -80, model::Source::AdslDirect, from_noisy));
+    model::AircraftObservation from_clean{};
+    model::AircraftObservation from_noisy{};
+    REQUIRE(protocol::to_observation(clean, events::Stamp{}, -80, model::Source::AdslDirect,
+                                     from_clean));
+    REQUIRE(protocol::to_observation(noisy, events::Stamp{}, -80, model::Source::AdslDirect,
+                                     from_noisy));
 
     CHECK(from_noisy.address == from_clean.address);
     CHECK(from_noisy.address_mapping_table == from_clean.address_mapping_table);

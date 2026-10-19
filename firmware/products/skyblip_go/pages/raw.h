@@ -17,7 +17,7 @@ struct RawGnss {
     PpsState pps{PpsState::None};
     uint32_t pps_age_ms{0};
     uint32_t solutions{0};
-    uint32_t utc{0};
+    uint32_t utc_s{0};
     uint16_t nav_ms{0};
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
@@ -70,7 +70,7 @@ struct RawSnapshot {
     RawRadio radio{};
 };
 
-void draw_raw(ui::Canvas& fb, const RawSnapshot& snap);
+void draw_raw(ui::Canvas& canvas, const RawSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

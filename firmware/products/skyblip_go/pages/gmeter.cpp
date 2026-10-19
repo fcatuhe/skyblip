@@ -46,41 +46,41 @@ int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : (v > hi
 
 int32_t tenths(int32_t mg) { return div_round(mg, kMilliPerTenth); }
 
-int fmt_g(char* out, int32_t mg) {
+int format_g(char* out, int32_t mg) {
     const int32_t value = tenths(mg);
-    const int n = fmt_int(out, value, 1, 1, value == 0);
+    const int n = format_int(out, value, 1, 1, value == 0);
     out[n] = 0;
     return n;
 }
 
-int fmt_named_g(char* out, int32_t mg, char positive, char negative) {
+int format_named_g(char* out, int32_t mg, char positive, char negative) {
     const int32_t value = tenths(mg);
     int n = 0;
     if (value != 0) out[n++] = value < 0 ? negative : positive;
-    n += fmt_uint(out + n, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
+    n += format_uint(out + n, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
     out[n] = 0;
     return n;
 }
 
-void right_aligned(ui::Canvas& fb, int x_end, int y, const char* text, int len, int scale = 1) {
-    fb.draw_text(x_end - len * kCellW * scale, y, text, true, scale);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len, int scale = 1) {
+    canvas.draw_text(x_end - len * kCellW * scale, y, text, true, scale);
 }
 
-void centred(ui::Canvas& fb, int cx, int y, const char* text, int len) {
-    fb.draw_text(cx - (len * kCellW - 1) / 2, y, text, true, 1);
+void centred(ui::Canvas& canvas, int cx, int y, const char* text, int len) {
+    canvas.draw_text(cx - (len * kCellW - 1) / 2, y, text, true, 1);
 }
 
-void value_at(ui::Canvas& fb, int x_end, int y, int32_t mg, int scale = 1) {
+void value_at(ui::Canvas& canvas, int x_end, int y, int32_t mg, int scale = 1) {
     char buf[8];
-    const int n = fmt_g(buf, mg);
-    right_aligned(fb, x_end, y, buf, n, scale);
+    const int n = format_g(buf, mg);
+    right_aligned(canvas, x_end, y, buf, n, scale);
 }
 
-void named_at(ui::Canvas& fb, int x_end, int y, int32_t mg, char positive, char negative,
+void named_at(ui::Canvas& canvas, int x_end, int y, int32_t mg, char positive, char negative,
               int scale = 1) {
     char buf[12];
-    const int n = fmt_named_g(buf, mg, positive, negative);
-    right_aligned(fb, x_end, y, buf, n, scale);
+    const int n = format_named_g(buf, mg, positive, negative);
+    right_aligned(canvas, x_end, y, buf, n, scale);
 }
 
 int thrown_down_y(int32_t mg) {
@@ -99,87 +99,89 @@ int thrown_forward_y(int32_t accelerating_mg) {
     return kFieldCy + clampi(offset, -kThrownPerG, kThrownPerG);
 }
 
-void field_scale(ui::Canvas& fb) {
-    fb.rect(kFieldCx - kFieldHalfW, kFieldCy - kFieldHalfH, 2 * kFieldHalfW + 1,
-            2 * kFieldHalfH + 1, true);
-    fb.hline(kFieldCx - kFieldHalfW, kFieldCy, 2 * kFieldHalfW + 1, true);
-    fb.vline(kFieldCx, kFieldCy - kFieldHalfH, 2 * kFieldHalfH + 1, true);
+void field_scale(ui::Canvas& canvas) {
+    canvas.rect(kFieldCx - kFieldHalfW, kFieldCy - kFieldHalfH, 2 * kFieldHalfW + 1,
+                2 * kFieldHalfH + 1, true);
+    canvas.hline(kFieldCx - kFieldHalfW, kFieldCy, 2 * kFieldHalfW + 1, true);
+    canvas.vline(kFieldCx, kFieldCy - kFieldHalfH, 2 * kFieldHalfH + 1, true);
 
     for (int32_t g = -2; g <= 4; g++) {
         if (g == 1) continue;
-        fb.hline(kFieldCx - kTickLen, thrown_down_y(g * kMilliPerG), 2 * kTickLen + 1, true);
+        canvas.hline(kFieldCx - kTickLen, thrown_down_y(g * kMilliPerG), 2 * kTickLen + 1, true);
     }
     for (int32_t half_g = -2; half_g <= 2; half_g++) {
         if (half_g == 0) continue;
-        fb.vline(lateral_x(half_g * kMilliPerG / 2), kFieldCy - kTickLen, 2 * kTickLen + 1, true);
+        canvas.vline(lateral_x(half_g * kMilliPerG / 2), kFieldCy - kTickLen, 2 * kTickLen + 1,
+                     true);
     }
 }
 
-void field_reading(ui::Canvas& fb, const GMeterSnapshot& s) {
+void field_reading(ui::Canvas& canvas, const GMeterSnapshot& s) {
     const int left = lateral_x(s.least.lateral_mg);
     const int right = lateral_x(s.most.lateral_mg);
     const int top = thrown_down_y(s.least.normal_mg);
     const int bottom = thrown_down_y(s.most.normal_mg);
-    fb.rect(left, top, right - left + 1, bottom - top + 1, true);
-    fb.circle(lateral_x(s.now.lateral_mg), thrown_down_y(s.now.normal_mg), kMarkerR, true, true);
+    canvas.rect(left, top, right - left + 1, bottom - top + 1, true);
+    canvas.circle(lateral_x(s.now.lateral_mg), thrown_down_y(s.now.normal_mg), kMarkerR, true,
+                  true);
 }
 
-void strip_scale(ui::Canvas& fb) {
-    fb.rect(kStripCx - kStripHalfW, kStripTop, 2 * kStripHalfW + 1, kStripBottom - kStripTop + 1,
-            true);
-    fb.hline(kStripCx - kStripHalfW, kFieldCy, 2 * kStripHalfW + 1, true);
-    centred(fb, kStripCx, kStripTop + kStripLabelInset, "DEC", 3);
-    centred(fb, kStripCx, kStripBottom - kStripLabelInset - kGlyphH, "ACC", 3);
+void strip_scale(ui::Canvas& canvas) {
+    canvas.rect(kStripCx - kStripHalfW, kStripTop, 2 * kStripHalfW + 1,
+                kStripBottom - kStripTop + 1, true);
+    canvas.hline(kStripCx - kStripHalfW, kFieldCy, 2 * kStripHalfW + 1, true);
+    centred(canvas, kStripCx, kStripTop + kStripLabelInset, "DEC", 3);
+    centred(canvas, kStripCx, kStripBottom - kStripLabelInset - kGlyphH, "ACC", 3);
 }
 
-void strip_reading(ui::Canvas& fb, const GMeterSnapshot& s) {
+void strip_reading(ui::Canvas& canvas, const GMeterSnapshot& s) {
     const int inset = kStripHalfW - 3;
-    fb.hline(kStripCx - inset, thrown_forward_y(s.most.longitudinal_mg), 2 * inset + 1, true);
-    fb.hline(kStripCx - inset, thrown_forward_y(s.least.longitudinal_mg), 2 * inset + 1, true);
-    fb.rect(kStripCx - inset, thrown_forward_y(s.now.longitudinal_mg) - 1, 2 * inset + 1, 3, true,
-            true);
+    canvas.hline(kStripCx - inset, thrown_forward_y(s.most.longitudinal_mg), 2 * inset + 1, true);
+    canvas.hline(kStripCx - inset, thrown_forward_y(s.least.longitudinal_mg), 2 * inset + 1, true);
+    canvas.rect(kStripCx - inset, thrown_forward_y(s.now.longitudinal_mg) - 1, 2 * inset + 1, 3,
+                true, true);
 }
 
-void row_label(ui::Canvas& fb, int y, const char* label, bool valid) {
-    fb.draw_text(kLeft, y + kPeakDrop, label, true, 1);
-    if (!valid) fb.draw_text(kNowEnd - 4 * kCellW, y + kPeakDrop, "----", true, 1);
+void row_label(ui::Canvas& canvas, int y, const char* label, bool valid) {
+    canvas.draw_text(kLeft, y + kPeakDrop, label, true, 1);
+    if (!valid) canvas.draw_text(kNowEnd - 4 * kCellW, y + kPeakDrop, "----", true, 1);
 }
 
 }  // namespace
 
-void draw_gmeter(ui::Canvas& fb, const GMeterSnapshot& s) {
-    fb.clear(true);
-    fb.draw_text(kLeft, kTitleY, "G METER", true, 2);
-    fb.hline(kLeft, kRuleY, kGlassW - 2 * kLeft, true);
+void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& s) {
+    canvas.clear(true);
+    canvas.draw_text(kLeft, kTitleY, "G METER", true, 2);
+    canvas.hline(kLeft, kRuleY, kGlassW - 2 * kLeft, true);
 
     if (!s.fitted) {
-        fb.draw_text(kLeft, kFieldCy - kGlyphH / 2, "NO SENSOR", true, 1);
+        canvas.draw_text(kLeft, kFieldCy - kGlyphH / 2, "NO SENSOR", true, 1);
         return;
     }
 
-    field_scale(fb);
-    strip_scale(fb);
+    field_scale(canvas);
+    strip_scale(canvas);
     if (s.valid) {
-        field_reading(fb, s);
-        strip_reading(fb, s);
+        field_reading(canvas, s);
+        strip_reading(canvas, s);
     }
 
-    row_label(fb, kNormalRowY, "G", s.valid);
-    row_label(fb, kLateralRowY, "SIDE", s.valid);
-    row_label(fb, kLongitudinalRowY, "ACCEL", s.valid);
+    row_label(canvas, kNormalRowY, "G", s.valid);
+    row_label(canvas, kLateralRowY, "SIDE", s.valid);
+    row_label(canvas, kLongitudinalRowY, "ACCEL", s.valid);
     if (!s.valid) return;
 
-    value_at(fb, kNowEnd, kNormalRowY, s.now.normal_mg, kNowScale);
-    value_at(fb, kLeastEnd, kNormalRowY + kPeakDrop, s.least.normal_mg);
-    value_at(fb, kMostEnd, kNormalRowY + kPeakDrop, s.most.normal_mg);
+    value_at(canvas, kNowEnd, kNormalRowY, s.now.normal_mg, kNowScale);
+    value_at(canvas, kLeastEnd, kNormalRowY + kPeakDrop, s.least.normal_mg);
+    value_at(canvas, kMostEnd, kNormalRowY + kPeakDrop, s.most.normal_mg);
 
-    named_at(fb, kNowEnd, kLateralRowY, s.now.lateral_mg, 'R', 'L', kNowScale);
-    named_at(fb, kLeastEnd, kLateralRowY + kPeakDrop, s.least.lateral_mg, 'R', 'L');
-    named_at(fb, kMostEnd, kLateralRowY + kPeakDrop, s.most.lateral_mg, 'R', 'L');
+    named_at(canvas, kNowEnd, kLateralRowY, s.now.lateral_mg, 'R', 'L', kNowScale);
+    named_at(canvas, kLeastEnd, kLateralRowY + kPeakDrop, s.least.lateral_mg, 'R', 'L');
+    named_at(canvas, kMostEnd, kLateralRowY + kPeakDrop, s.most.lateral_mg, 'R', 'L');
 
-    named_at(fb, kNowEnd, kLongitudinalRowY, s.now.longitudinal_mg, 'A', 'D', kNowScale);
-    named_at(fb, kLeastEnd, kLongitudinalRowY + kPeakDrop, s.least.longitudinal_mg, 'A', 'D');
-    named_at(fb, kMostEnd, kLongitudinalRowY + kPeakDrop, s.most.longitudinal_mg, 'A', 'D');
+    named_at(canvas, kNowEnd, kLongitudinalRowY, s.now.longitudinal_mg, 'A', 'D', kNowScale);
+    named_at(canvas, kLeastEnd, kLongitudinalRowY + kPeakDrop, s.least.longitudinal_mg, 'A', 'D');
+    named_at(canvas, kMostEnd, kLongitudinalRowY + kPeakDrop, s.most.longitudinal_mg, 'A', 'D');
 }
 
 }  // namespace skyblip::go

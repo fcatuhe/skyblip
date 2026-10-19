@@ -262,7 +262,7 @@ TEST_CASE("adsl: the invalid codes are reachable on purpose and round-trip") {
 }
 
 TEST_CASE("adsl: from_own marks what own-ship does not know") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
     own.alt_mm = 1500000;  // HAE: what G.1.7 transmits
@@ -293,7 +293,7 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
 }
 
 TEST_CASE("adsl: an address goes out as it was handed, in whichever table") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.fix_valid = true;
 
     for (uint8_t table : {uint8_t(0), uint8_t(5), uint8_t(6), uint8_t(7), uint8_t(9)}) {
@@ -306,7 +306,7 @@ TEST_CASE("adsl: an address goes out as it was handed, in whichever table") {
 
 // Issue #126: the third of three refusals, so a caller past the other two still sends nothing.
 TEST_CASE("adsl: without an address the encoder builds no frame, position or name") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.fix_valid = true;
 
     AdslPacket untouched{};
@@ -322,7 +322,7 @@ TEST_CASE("adsl: without an address the encoder builds no frame, position or nam
 // we claim no integrity at all, and receivers are entitled to weight us
 // accordingly. Without a fix that is the truthful answer; with one it is not.
 TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
     own.alt_mm = 1500000;
@@ -390,7 +390,7 @@ TEST_CASE("adsl: vertical accuracy code sits on the G.1.15 boundaries") {
 // A degrading fix walks the codes down together, and a hopeless one claims
 // nothing rather than claiming a number nobody should act on.
 TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
-    skyblip::model::OwnState own{};
+    skyblip::model::Ownship own{};
     own.fix_valid = true;
     AdslPacket p{};
 

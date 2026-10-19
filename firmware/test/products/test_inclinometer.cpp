@@ -23,9 +23,9 @@ void fly_uncoordinated(Rig& rig, int16_t right_mg) {
     rig.platform.chips().imu.set_acceleration(1000, right_mg, 0);
 }
 
-bool ink_between(const go::Glass& fb, int from_x, int to_x, int y) {
+bool ink_between(const go::Glass& canvas, int from_x, int to_x, int y) {
     for (int x = from_x; x <= to_x; x++)
-        if (fb.get_pixel(x, y)) return true;
+        if (canvas.get_pixel(x, y)) return true;
     return false;
 }
 
@@ -51,15 +51,15 @@ TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder 
     CHECK(rig.state().slip.valid);
     CHECK(rig.state().slip.lateral_mg > 0);
 
-    go::SixPackSnapshot snap;
-    snap.inclinometer_fitted = true;
-    snap.lateral_valid = rig.state().slip.valid;
-    snap.lateral_mg = rig.state().slip.lateral_mg;
-    go::Glass fb;
-    go::draw_sixpack(fb, snap);
+    go::SixPackSnapshot snapshot;
+    snapshot.inclinometer_fitted = true;
+    snapshot.lateral_valid = rig.state().slip.valid;
+    snapshot.lateral_mg = rig.state().slip.lateral_mg;
+    go::Glass canvas;
+    go::draw_sixpack(canvas, snapshot);
 
-    CHECK(ink_between(fb, kTurnCoordinatorCx + 1, kTurnCoordinatorCx + 20, kBallY));
-    CHECK_FALSE(ink_between(fb, kTurnCoordinatorCx - 20, kTurnCoordinatorCx - 8, kBallY));
+    CHECK(ink_between(canvas, kTurnCoordinatorCx + 1, kTurnCoordinatorCx + 20, kBallY));
+    CHECK_FALSE(ink_between(canvas, kTurnCoordinatorCx - 20, kTurnCoordinatorCx - 8, kBallY));
 }
 
 TEST_CASE("inclinometer: a hub that stops answering takes the ball off the glass") {
@@ -117,10 +117,10 @@ TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than cen
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Inclinometer));
     CHECK_FALSE(rig.state().slip.valid);
 
-    go::SixPackSnapshot snap;
-    go::Glass fb;
-    go::draw_sixpack(fb, snap);
-    CHECK_FALSE(ink_between(fb, kTurnCoordinatorCx - 20, kTurnCoordinatorCx + 20, kBallY));
+    go::SixPackSnapshot snapshot;
+    go::Glass canvas;
+    go::draw_sixpack(canvas, snapshot);
+    CHECK_FALSE(ink_between(canvas, kTurnCoordinatorCx - 20, kTurnCoordinatorCx + 20, kBallY));
 }
 
 namespace {

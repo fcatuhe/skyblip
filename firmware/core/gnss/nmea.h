@@ -66,7 +66,7 @@ struct GnssSolution {
     // INFO: fc 19sep26 what the receiver resolves, not what the wire carries: RMC fields 7 and 8
     int32_t speed_mm_s{0};
     int32_t track_cdeg{0};
-    uint32_t utc{0};
+    uint32_t utc_s{0};
     // Horizontal dilution of precision in hundredths, GGA field 8.
     uint16_t hdop_e2{0};
     // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution

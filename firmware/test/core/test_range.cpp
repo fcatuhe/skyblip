@@ -15,8 +15,8 @@ int32_t lat_offset_for(int32_t north_m) {
     return static_cast<int32_t>((static_cast<int64_t>(north_m) * 1000000) / 11132);
 }
 
-model::OwnState own_at_equator() {
-    model::OwnState o{};
+model::Ownship own_at_equator() {
+    model::Ownship o{};
     o.fix_valid = true;
     o.lat_1e7 = 0;
     o.lon_1e7 = 0;
@@ -24,8 +24,8 @@ model::OwnState own_at_equator() {
     return o;
 }
 
-model::AircraftObs emitter(int32_t north_m, model::Source src = model::Source::AdslDirect) {
-    model::AircraftObs t{};
+model::AircraftObservation emitter(int32_t north_m, model::Source src = model::Source::AdslDirect) {
+    model::AircraftObservation t{};
     t.position_valid = true;
     t.address = 0xABCD;
     t.lat_1e7 = lat_offset_for(north_m);
@@ -47,18 +47,18 @@ TEST_CASE("range: an emitter carries the address and the system it was heard on"
 }
 
 TEST_CASE("range: an emitter without a position cannot be ranged") {
-    model::AircraftObs t = emitter(1000);
+    model::AircraftObservation t = emitter(1000);
     t.position_valid = false;
     RangeRow row;
     CHECK_FALSE(range_to(own_at_equator(), t, row));
 
-    model::OwnState blind = own_at_equator();
+    model::Ownship blind = own_at_equator();
     blind.fix_valid = false;
     CHECK_FALSE(range_to(blind, emitter(1000), row));
 }
 
 TEST_CASE("range: an aircraft directly overhead is no distance away, only above") {
-    model::AircraftObs t = emitter(0);
+    model::AircraftObservation t = emitter(0);
     t.alt_m = 3000;
     RangeRow row;
     REQUIRE(range_to(own_at_equator(), t, row));
@@ -67,7 +67,7 @@ TEST_CASE("range: an aircraft directly overhead is no distance away, only above"
 }
 
 TEST_CASE("range: distance is the ground track, and height above is its own figure") {
-    model::AircraftObs t = emitter(3000);
+    model::AircraftObservation t = emitter(3000);
     t.alt_m = 5000;
     RangeRow row;
     REQUIRE(range_to(own_at_equator(), t, row));
@@ -79,7 +79,7 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
     TrafficTable table;
     const int32_t ranges[6] = {8000, 1000, 5000, 300, 12000, 2500};
     for (int i = 0; i < 6; i++) {
-        model::AircraftObs t = emitter(ranges[i]);
+        model::AircraftObservation t = emitter(ranges[i]);
         t.address = 0x100u + static_cast<uint32_t>(i);
         table.update(t, 100);
     }
@@ -97,11 +97,11 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
 
 TEST_CASE("range: ranking skips what it cannot range") {
     TrafficTable table;
-    model::AircraftObs positioned = emitter(4000);
+    model::AircraftObservation positioned = emitter(4000);
     positioned.address = 0x200;
     table.update(positioned, 100);
 
-    model::AircraftObs blind = emitter(1000);
+    model::AircraftObservation blind = emitter(1000);
     blind.address = 0x201;
     blind.position_valid = false;
     table.update(blind, 100);

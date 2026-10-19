@@ -26,8 +26,8 @@ constexpr int kPpsX = kColumn(9);
 
 constexpr uint8_t kFewestSatsForAltitude = 4;
 
-void right_aligned(ui::Canvas& fb, int x_end, int y, const char* text, int len) {
-    fb.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
+    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
 }
 
 bool own_burst(radio::Event event) {
@@ -61,136 +61,137 @@ const char* verdict_of(const radio::Entry& entry) {
     }
 }
 
-int fmt_verdict(char* out, const radio::Entry& entry) {
+int format_verdict(char* out, const radio::Entry& entry) {
     const char* word = verdict_of(entry);
     if (word == nullptr) return 0;
-    int n = fmt_string(out, word);
-    if (entry.event == radio::Event::Miskeyed) n += fmt_int(out + n, entry.key_offset_s);
+    int n = format_string(out, word);
+    if (entry.event == radio::Event::Miskeyed) n += format_int(out + n, entry.key_offset_s);
     return n;
 }
 
-int fmt_stamp(char* out, const radio::Entry& entry) {
-    if (!entry.utc) {
-        int n = fmt_string(out, "T+");
-        return n + fmt_uint(out + n, entry.at_s % kUptimeClockWrapS);
+int format_stamp(char* out, const radio::Entry& entry) {
+    if (!entry.utc_dated) {
+        int n = format_string(out, "T+");
+        return n + format_uint(out + n, entry.at_s % kUptimeClockWrapS);
     }
-    int n = fmt_uint(out, entry.at_s / 60 % 60, 2);
+    int n = format_uint(out, entry.at_s / 60 % 60, 2);
     out[n++] = ':';
-    n += fmt_uint(out + n, entry.at_s % 60, 2);
+    n += format_uint(out + n, entry.at_s % 60, 2);
     if (!entry.phase_valid) return n;
     out[n++] = '.';
-    return n + fmt_uint(out + n, entry.into_ms, 3);
+    return n + format_uint(out + n, entry.into_ms, 3);
 }
 
-int fmt_dwell(char* out, const radio::Entry& entry) {
-    if (entry.band == model::Band::O) return fmt_string(out, "O");
-    int n = fmt_string(out, "M");
-    return n + fmt_uint(out + n, entry.channel);
+int format_dwell(char* out, const radio::Entry& entry) {
+    if (entry.band == model::Band::O) return format_string(out, "O");
+    int n = format_string(out, "M");
+    return n + format_uint(out + n, entry.channel);
 }
 
-void draw_title(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    fb.draw_text(kLeft, kTitleY, "RADIO LOG", true, 1);
+void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    canvas.draw_text(kLeft, kTitleY, "RADIO LOG", true, 1);
 
     char buf[32];
-    int n = fmt_string(buf, "RX ");
-    n += fmt_uint(buf + n, snap.rx_ok);
-    n += fmt_string(buf + n, " TX ");
-    n += fmt_uint(buf + n, snap.tx_ok);
-    n += fmt_string(buf + n, " NOISE ");
-    n += fmt_uint(buf + n, snap.noise);
+    int n = format_string(buf, "RX ");
+    n += format_uint(buf + n, snapshot.rx_ok);
+    n += format_string(buf + n, " TX ");
+    n += format_uint(buf + n, snapshot.tx_ok);
+    n += format_string(buf + n, " NOISE ");
+    n += format_uint(buf + n, snapshot.noise);
     buf[n] = 0;
-    right_aligned(fb, kRightEnd, kTitleY, buf, n);
+    right_aligned(canvas, kRightEnd, kTitleY, buf, n);
 }
 
-int fmt_pps(char* out, const GnssReception& gnss) {
-    int n = fmt_string(out, "PPS ");
+int format_pps(char* out, const GnssReception& gnss) {
+    int n = format_string(out, "PPS ");
     switch (gnss.pps) {
-        case PpsState::Lock: return n + fmt_string(out + n, "LOCK");
+        case PpsState::Lock: return n + format_string(out + n, "LOCK");
         case PpsState::Holdover:
-            n += fmt_string(out + n, "HOLD ");
-            return n + fmt_uint(out + n, gnss.pps_age_s);
+            n += format_string(out + n, "HOLD ");
+            return n + format_uint(out + n, gnss.pps_age_s);
         case PpsState::None:
-        default: return n + fmt_string(out + n, "NONE");
+        default: return n + format_string(out + n, "NONE");
     }
 }
 
-void draw_gnss(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    const GnssReception& gnss = snap.gnss;
+void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    const GnssReception& gnss = snapshot.gnss;
     char buf[32];
     int n = 0;
     if (!gnss.fix_valid) {
-        n = fmt_string(buf, "NO FIX");
+        n = format_string(buf, "NO FIX");
     } else {
-        n = fmt_string(buf, gnss.sats >= kFewestSatsForAltitude ? "3D " : "2D ");
-        n += fmt_uint(buf + n, gnss.sats);
-        n += fmt_string(buf + n, "SV");
+        n = format_string(buf, gnss.sats >= kFewestSatsForAltitude ? "3D " : "2D ");
+        n += format_uint(buf + n, gnss.sats);
+        n += format_string(buf + n, "SV");
     }
     buf[n] = 0;
-    fb.draw_text(kLeft, kGnssY, buf, true, 1);
+    canvas.draw_text(kLeft, kGnssY, buf, true, 1);
 
-    n = fmt_pps(buf, gnss);
+    n = format_pps(buf, gnss);
     buf[n] = 0;
-    fb.draw_text(kPpsX, kGnssY, buf, true, 1);
+    canvas.draw_text(kPpsX, kGnssY, buf, true, 1);
 
-    n = fmt_string(buf, "BAND ");
-    n += fmt_int(buf + n, snap.band_dbm, 1, 0, false);
+    n = format_string(buf, "BAND ");
+    n += format_int(buf + n, snapshot.band_dbm, 1, 0, false);
     buf[n] = 0;
-    right_aligned(fb, kRightEnd, kGnssY, buf, n);
+    right_aligned(canvas, kRightEnd, kGnssY, buf, n);
 }
 
-void draw_row(ui::Canvas& fb, int y, const radio::Entry& entry) {
+void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     char buf[16];
 
-    int n = fmt_stamp(buf, entry);
+    int n = format_stamp(buf, entry);
     buf[n] = 0;
-    fb.draw_text(kClockX, y, buf, true, 1);
+    canvas.draw_text(kClockX, y, buf, true, 1);
 
     const bool ours = own_burst(entry.event);
-    fb.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
+    canvas.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
 
-    n = fmt_dwell(buf, entry);
+    n = format_dwell(buf, entry);
     buf[n] = 0;
-    fb.draw_text(kBandX, y, buf, true, 1);
+    canvas.draw_text(kBandX, y, buf, true, 1);
 
-    n = fmt_verdict(buf, entry);
+    n = format_verdict(buf, entry);
     if (n > 0) {
         buf[n] = 0;
-        fb.draw_text(kVerdictX, y, buf, true, 1);
+        canvas.draw_text(kVerdictX, y, buf, true, 1);
     } else if (!ours) {
-        fb.draw_text(kVerdictX, y, model::source_word(entry.source), true, 1);
+        canvas.draw_text(kVerdictX, y, model::source_word(entry.source), true, 1);
     }
 
     if (ours) {
-        fb.draw_text(kAddressX, y, own_burst_word(entry), true, 1);
+        canvas.draw_text(kAddressX, y, own_burst_word(entry), true, 1);
         return;
     }
 
     if (entry.address_valid) {
-        n = fmt_hex(buf, entry.address, 6);
+        n = format_hex(buf, entry.address, 6);
         buf[n] = 0;
-        fb.draw_text(kAddressX, y, buf, true, 1);
+        canvas.draw_text(kAddressX, y, buf, true, 1);
     }
 
     if (!entry.rssi_valid) return;
-    n = fmt_int(buf, entry.rssi_dbm, 1, 0, false);
+    n = format_int(buf, entry.rssi_dbm, 1, 0, false);
     buf[n] = 0;
-    right_aligned(fb, kRightEnd, y, buf, n);
+    right_aligned(canvas, kRightEnd, y, buf, n);
 }
 
 }  // namespace
 
-void draw_radio_log(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    draw_title(fb, snap);
-    draw_gnss(fb, snap);
-    fb.hline(kLeft, kRuleY, kRightEnd - kLeft, true);
+void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    draw_title(canvas, snapshot);
+    draw_gnss(canvas, snapshot);
+    canvas.hline(kLeft, kRuleY, kRightEnd - kLeft, true);
 
-    if (snap.log == nullptr || snap.n_rows == 0) {
-        fb.draw_text(kLeft, kFirstRowY + kLineH, "NOTHING ON AIR YET", true, 1);
+    if (snapshot.log == nullptr || snapshot.n_rows == 0) {
+        canvas.draw_text(kLeft, kFirstRowY + kLineH, "NOTHING ON AIR YET", true, 1);
         return;
     }
 
-    const int rows = snap.n_rows < kRadioLogRows ? snap.n_rows : kRadioLogRows;
-    for (int i = 0; i < rows; i++) draw_row(fb, kFirstRowY + i * kLineH, snap.log->newest(i));
+    const int rows = snapshot.n_rows < kRadioLogRows ? snapshot.n_rows : kRadioLogRows;
+    for (int i = 0; i < rows; i++)
+        draw_row(canvas, kFirstRowY + i * kLineH, snapshot.log->newest(i));
 }
 
 }  // namespace skyblip::go

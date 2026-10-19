@@ -29,21 +29,21 @@ constexpr int kOfferedFaultsLine = 8;
 
 int line_y(int line) { return kTopY + line * kLineH; }
 
-void row(ui::Canvas& fb, int line, char* buf, int n) {
+void row(ui::Canvas& canvas, int line, char* buf, int n) {
     buf[n] = 0;
-    fb.draw_text(kLeft, line_y(line), buf, true, 1);
+    canvas.draw_text(kLeft, line_y(line), buf, true, 1);
 }
 
-int fmt_word(char* out, const char* word) {
-    int n = fmt_string(out, word);
+int format_word(char* out, const char* word) {
+    int n = format_string(out, word);
     out[n++] = ' ';
     return n;
 }
 
-int fmt_span(char* out, uint32_t seconds) {
-    int n = fmt_uint(out, seconds / 3600);
+int format_span(char* out, uint32_t seconds) {
+    int n = format_uint(out, seconds / 3600);
     out[n++] = 'H';
-    n += fmt_uint(out + n, seconds % 3600 / 60, 2);
+    n += format_uint(out + n, seconds % 3600 / 60, 2);
     return n;
 }
 
@@ -61,116 +61,116 @@ const char* stopped_word(bus::CaptureStop stopped) {
     return "OFF";
 }
 
-void draw_title(ui::Canvas& fb, const CaptureSnapshot& s) {
-    fb.draw_text(kLeft, kTitleY, page_title(Page::Capture), true, 1);
+void draw_title(ui::Canvas& canvas, const CaptureSnapshot& s) {
+    canvas.draw_text(kLeft, kTitleY, page_title(Page::Capture), true, 1);
     char buf[16];
-    int n = fmt_string(buf, "T+");
-    n += fmt_uint(buf + n, s.uptime_s % kUptimeClockWrapS);
+    int n = format_string(buf, "T+");
+    n += format_uint(buf + n, s.uptime_s % kUptimeClockWrapS);
     buf[n] = 0;
-    fb.draw_text(kRight - n * kCellW, kTitleY, buf, true, 1);
-    fb.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
+    canvas.draw_text(kRight - n * kCellW, kTitleY, buf, true, 1);
+    canvas.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
 }
 
-void draw_state(ui::Canvas& fb, const CaptureSnapshot& s) {
+void draw_state(ui::Canvas& canvas, const CaptureSnapshot& s) {
     char buf[40];
-    int n = fmt_word(buf, "STATE");
+    int n = format_word(buf, "STATE");
     if (s.capture.armed) {
-        n += fmt_word(buf + n, "ARMED");
-        n += fmt_string(buf + n, capture_name(s.running));
+        n += format_word(buf + n, "ARMED");
+        n += format_string(buf + n, capture_name(s.running));
     } else {
-        n += fmt_string(buf + n, stopped_word(s.capture.stopped));
+        n += format_string(buf + n, stopped_word(s.capture.stopped));
     }
-    row(fb, kStateLine, buf, n);
+    row(canvas, kStateLine, buf, n);
 }
 
-void draw_offered_capture(ui::Canvas& fb, int line, diag::Profile profile, bool focused) {
+void draw_offered_capture(ui::Canvas& canvas, int line, diag::Profile profile, bool focused) {
     const int y = line_y(line);
-    if (focused) fb.rect(2, y - kFocusBarRise, kGlassW - 4, kLineH - 1, true, /*fill=*/true);
+    if (focused) canvas.rect(2, y - kFocusBarRise, kGlassW - 4, kLineH - 1, true, /*fill=*/true);
     const bool ink = !focused;
     const char* subjects = capture_subjects(profile);
-    fb.draw_text(kLeft, y, capture_name(profile), ink, 1);
-    fb.draw_text(kRight - text_cells(subjects) * kCellW, y, subjects, ink, 1);
+    canvas.draw_text(kLeft, y, capture_name(profile), ink, 1);
+    canvas.draw_text(kRight - text_cells(subjects) * kCellW, y, subjects, ink, 1);
 }
 
-void draw_price(ui::Canvas& fb, const CaptureSnapshot& s) {
+void draw_price(ui::Canvas& canvas, const CaptureSnapshot& s) {
     char buf[40];
-    int n = fmt_word(buf, "TAKES");
-    n += fmt_uint(buf + n, s.capture.price_sectors);
-    n += fmt_string(buf + n, " OF ");
-    n += fmt_uint(buf + n, s.capture.pool_sectors);
-    n += fmt_string(buf + n, " SECTORS");
-    row(fb, kPriceLine, buf, n);
+    int n = format_word(buf, "TAKES");
+    n += format_uint(buf + n, s.capture.price_sectors);
+    n += format_string(buf + n, " OF ");
+    n += format_uint(buf + n, s.capture.pool_sectors);
+    n += format_string(buf + n, " SECTORS");
+    row(canvas, kPriceLine, buf, n);
 
-    n = fmt_word(buf, "EVICTS");
-    n += fmt_uint(buf + n, s.capture.price_flights);
-    n += fmt_string(buf + n, " FLIGHTS");
-    row(fb, kPriceLine + 1, buf, n);
+    n = format_word(buf, "EVICTS");
+    n += format_uint(buf + n, s.capture.price_flights);
+    n += format_string(buf + n, " FLIGHTS");
+    row(canvas, kPriceLine + 1, buf, n);
 
-    n = fmt_word(buf, "KEEPS");
-    n += fmt_span(buf + n, s.focus_keeps_s);
-    n += fmt_string(buf + n, " ROLLING");
-    row(fb, kPriceLine + 2, buf, n);
+    n = format_word(buf, "KEEPS");
+    n += format_span(buf + n, s.focus_keeps_s);
+    n += format_string(buf + n, " ROLLING");
+    row(canvas, kPriceLine + 2, buf, n);
 }
 
-void draw_wrote(ui::Canvas& fb, const bus::CaptureState& c) {
+void draw_wrote(ui::Canvas& canvas, const bus::CaptureState& c) {
     if (c.records == 0) return;
     char buf[40];
-    int n = fmt_word(buf, "WROTE");
-    n += fmt_uint(buf + n, c.records);
-    n += fmt_string(buf + n, " DROP ");
-    n += fmt_uint(buf + n, c.dropped);
-    row(fb, kWroteLine, buf, n);
+    int n = format_word(buf, "WROTE");
+    n += format_uint(buf + n, c.records);
+    n += format_string(buf + n, " DROP ");
+    n += format_uint(buf + n, c.dropped);
+    row(canvas, kWroteLine, buf, n);
 }
 
-void draw_offer(ui::Canvas& fb, const CaptureSnapshot& s) {
+void draw_offer(ui::Canvas& canvas, const CaptureSnapshot& s) {
     if (s.capture.available) {
         int line = kOfferLine;
         diag::Profile profile = kFirstCapture;
         do {
-            draw_offered_capture(fb, line++, profile, s.focus == profile);
+            draw_offered_capture(canvas, line++, profile, s.focus == profile);
             profile = next_capture(profile);
         } while (profile != kFirstCapture);
     }
-    draw_price(fb, s);
-    draw_wrote(fb, s.capture);
+    draw_price(canvas, s);
+    draw_wrote(canvas, s.capture);
 }
 
-void draw_progress(ui::Canvas& fb, const bus::CaptureState& c) {
+void draw_progress(ui::Canvas& canvas, const bus::CaptureState& c) {
     char buf[40];
-    int n = fmt_word(buf, "SESSION");
-    n += fmt_uint(buf + n, c.session_id);
-    row(fb, kProgressLine, buf, n);
+    int n = format_word(buf, "SESSION");
+    n += format_uint(buf + n, c.session_id);
+    row(canvas, kProgressLine, buf, n);
 
-    n = fmt_word(buf, "WROTE");
-    n += fmt_uint(buf + n, c.records);
-    n += fmt_string(buf + n, " DROP ");
-    n += fmt_uint(buf + n, c.dropped);
-    row(fb, kProgressLine + 1, buf, n);
+    n = format_word(buf, "WROTE");
+    n += format_uint(buf + n, c.records);
+    n += format_string(buf + n, " DROP ");
+    n += format_uint(buf + n, c.dropped);
+    row(canvas, kProgressLine + 1, buf, n);
 
-    n = fmt_word(buf, "SECTORS");
-    n += fmt_uint(buf + n, c.sectors);
-    n += fmt_string(buf + n, " KEEPS ");
-    n += fmt_span(buf + n, c.keeps_s);
-    row(fb, kProgressLine + 2, buf, n);
+    n = format_word(buf, "SECTORS");
+    n += format_uint(buf + n, c.sectors);
+    n += format_string(buf + n, " KEEPS ");
+    n += format_span(buf + n, c.keeps_s);
+    row(canvas, kProgressLine + 2, buf, n);
 }
 
-void draw_faults(ui::Canvas& fb, const bus::CaptureState& c, int line) {
+void draw_faults(ui::Canvas& canvas, const bus::CaptureState& c, int line) {
     if (c.faults == 0 && c.unreadable_sectors == 0) return;
     char buf[40];
-    int n = fmt_word(buf, "FLASH FAULTS");
-    n += fmt_uint(buf + n, c.faults);
-    n += fmt_string(buf + n, " UNREAD ");
-    n += fmt_uint(buf + n, c.unreadable_sectors);
-    row(fb, line, buf, n);
+    int n = format_word(buf, "FLASH FAULTS");
+    n += format_uint(buf + n, c.faults);
+    n += format_string(buf + n, " UNREAD ");
+    n += format_uint(buf + n, c.unreadable_sectors);
+    row(canvas, line, buf, n);
 }
 
-void draw_hint(ui::Canvas& fb, const CaptureSnapshot& s) {
+void draw_hint(ui::Canvas& canvas, const CaptureSnapshot& s) {
     const char* hint = !s.capture.available ? "NO FLASH FITTED"
                        : s.capture.armed    ? "PRESS TWICE TO STOP"
                        : s.arming           ? "PRESS AGAIN TO ARM"
                                             : "PAD PICKS  PRESS TWICE TO ARM";
-    fb.hline(kLeft, kHintRuleY, kRight - kLeft, true);
-    fb.draw_text(kLeft, kHintY, hint, true, 1);
+    canvas.hline(kLeft, kHintRuleY, kRight - kLeft, true);
+    canvas.draw_text(kLeft, kHintY, hint, true, 1);
 }
 
 }  // namespace
@@ -184,18 +184,18 @@ const char* capture_name(diag::Profile profile) {
     return "FULL";
 }
 
-void draw_capture(ui::Canvas& fb, const CaptureSnapshot& s) {
-    fb.clear(true);
-    draw_title(fb, s);
-    draw_state(fb, s);
+void draw_capture(ui::Canvas& canvas, const CaptureSnapshot& s) {
+    canvas.clear(true);
+    draw_title(canvas, s);
+    draw_state(canvas, s);
 
     if (s.capture.armed)
-        draw_progress(fb, s.capture);
+        draw_progress(canvas, s.capture);
     else
-        draw_offer(fb, s);
+        draw_offer(canvas, s);
 
-    draw_faults(fb, s.capture, s.capture.armed ? kArmedFaultsLine : kOfferedFaultsLine);
-    draw_hint(fb, s);
+    draw_faults(canvas, s.capture, s.capture.armed ? kArmedFaultsLine : kOfferedFaultsLine);
+    draw_hint(canvas, s);
 }
 
 }  // namespace skyblip::go

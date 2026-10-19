@@ -49,39 +49,39 @@ int take_line(const char* text, int from, char* out) {
 
 }  // namespace
 
-void draw_confirm(ui::Canvas& fb, const ConfirmSnapshot& s) {
-    fb.clear(true);
+void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& s) {
+    canvas.clear(true);
 
     // Reversed out across the full width: whatever page was up, this cannot be
     // mistaken for one of them at arm's length.
-    fb.rect(0, 0, kGlassW, 26, true, /*fill=*/true);
-    fb.draw_text(kLeft + kCellW, kConfirmHeaderY, "AUTHORISE", false, 2);
+    canvas.rect(0, 0, kGlassW, 26, true, /*fill=*/true);
+    canvas.draw_text(kLeft + kCellW, kConfirmHeaderY, "AUTHORISE", false, 2);
 
-    fb.draw_text(kLeft, kConfirmTitleY, s.title, true, 2);
-    fb.hline(kLeft, kConfirmTitleY + 22, kGlassW - 2 * kLeft, true);
+    canvas.draw_text(kLeft, kConfirmTitleY, s.title, true, 2);
+    canvas.hline(kLeft, kConfirmTitleY + 22, kGlassW - 2 * kLeft, true);
 
     char line[kConfirmDetailCols + 1];
     int at = 0;
     for (int row = 0; row < kConfirmDetailRows; row++) {
         at = take_line(s.detail, at, line);
         if (line[0] == 0) break;
-        fb.draw_text(kLeft, confirm_detail_y(row), line, true, 1);
+        canvas.draw_text(kLeft, confirm_detail_y(row), line, true, 1);
     }
 
     // The allowing gesture is reversed out and the refusing one is not, so the
     // two are told apart by shape before either is read.
     const int w = (length(kConfirmAllowText) + 2) * kCellW;
-    fb.rect(kLeft, kConfirmAllowY - 4, w, 15, true, /*fill=*/true);
-    fb.draw_text(kLeft + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
-    fb.draw_text(kLeft + kCellW, kConfirmRefuseY, kConfirmRefuseText, true, 1);
+    canvas.rect(kLeft, kConfirmAllowY - 4, w, 15, true, /*fill=*/true);
+    canvas.draw_text(kLeft + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
+    canvas.draw_text(kLeft + kCellW, kConfirmRefuseY, kConfirmRefuseText, true, 1);
 
     if (s.timeout_s == 0) return;
     char buf[32];
-    int n = fmt_string(buf, "REFUSED AFTER ");
-    n += fmt_uint(buf + n, s.timeout_s);
-    n += fmt_string(buf + n, " S");
+    int n = format_string(buf, "REFUSED AFTER ");
+    n += format_uint(buf + n, s.timeout_s);
+    n += format_string(buf + n, " S");
     buf[n] = 0;
-    fb.draw_text(kLeft, kConfirmExpiryY, buf, true, 1);
+    canvas.draw_text(kLeft, kConfirmExpiryY, buf, true, 1);
 }
 
 }  // namespace skyblip::go

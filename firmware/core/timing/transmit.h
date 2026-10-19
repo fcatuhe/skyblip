@@ -11,8 +11,8 @@
 namespace skyblip::timing {
 
 // INFO: fc 18oct26 no address, no burst: only a serial the server signed may go on the air
-inline bool own_ship_transmits(const model::OwnState& own, const ClockState& clock,
-                               const settings::AirAddress& address) {
+inline bool ownship_transmits(const model::Ownship& own, const ClockState& clock,
+                              const settings::AirAddress& address) {
     return address && own.fix_valid && own.utc_valid && own.tx_settled && clock.utc_valid &&
            clock.pps_locked;
 }
@@ -41,15 +41,15 @@ class Transmitter {
 
     void configure(uint32_t address) { address_ = address; }
 
-    // The instant this device transmits in the second `utc`, or go=false. Pure:
+    // The instant this device transmits in the second `utc_s`, or go=false. Pure:
     // calling it twice with the same arguments gives the same answer.
-    Attempt attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms, bool airborne,
+    Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms, Payload payload) const;
     // INFO: fc 27sep26 the first burst the dwell owes, position first: a slot-1 dwell can owe both
-    Attempt attempt(const SlotPlan& plan, uint32_t utc, uint32_t now_ms, bool airborne,
+    Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms) const;
 
-    void sent(uint32_t utc, uint32_t now_ms, Payload payload = Payload::Position);
+    void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
     uint32_t sent_count() const { return sent_; }
     const AirTime& air_time() const { return air_; }
@@ -58,31 +58,31 @@ class Transmitter {
                                                 : flight::FlightState::Ground);
     }
     // INFO: fc 16sep26 §C.2.5 alternates the channel per transmission, and the clock counts them
-    static int slot_in(uint32_t utc, bool airborne) {
-        return static_cast<int>((utc / period_s(airborne)) & 1u);
+    static int slot_in(uint32_t utc_s, bool airborne) {
+        return static_cast<int>((utc_s / period_s(airborne)) & 1u);
     }
     uint32_t ground_second() const;
     static constexpr int kCallsignSlot = 1;
     static int last_callsign_instant();
 
    private:
-    bool on_schedule(uint32_t utc, bool airborne) const;
-    bool on_callsign_schedule(uint32_t utc) const;
-    bool spoke_in(uint32_t utc) const;
-    bool named_in(uint32_t utc) const;
+    bool on_schedule(uint32_t utc_s, bool airborne) const;
+    bool on_callsign_schedule(uint32_t utc_s) const;
+    bool spoke_in(uint32_t utc_s) const;
+    bool named_in(uint32_t utc_s) const;
     static int first_instant_in(int slot);
     static int last_instant_in(int slot);
     // Uniform over the slot's usable width and decorrelated between devices:
     // two aircraft with different addresses do not collide every second, and
     // one aircraft's instant is reproducible in a test.
-    int instant_in(int slot, uint32_t utc) const;
-    int instant_between(int first, int last, uint32_t utc) const;
+    int instant_in(int slot, uint32_t utc_s) const;
+    int instant_between(int first, int last, uint32_t utc_s) const;
 
     AirTime air_{};
     uint32_t address_{0};
     uint32_t sent_{0};
-    uint32_t last_sent_utc_{0};
-    uint32_t last_callsign_utc_{0};
+    uint32_t last_sent_utc_s_{0};
+    uint32_t last_callsign_utc_s_{0};
     bool ever_sent_{false};
     bool ever_named_{false};
 };

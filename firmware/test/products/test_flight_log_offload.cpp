@@ -45,11 +45,11 @@ void label_sector(Rig& rig, uint32_t sector, store::SectorOwner owner, uint32_t 
                                                  raw, sizeof(raw))));
 }
 
-void write_records(Rig& rig, uint32_t sector, uint32_t session, uint32_t first_utc, uint32_t count,
-                   bool closes) {
+void write_records(Rig& rig, uint32_t sector, uint32_t session, uint32_t first_utc_s,
+                   uint32_t count, bool closes) {
     for (uint32_t i = 0; i < count; i++) {
         flight::LogRecord record{};
-        record.utc = first_utc + i * 4;
+        record.utc_s = first_utc_s + i * 4;
         record.lat_1e7 = 485000000;
         record.lon_1e7 = 85000000;
         record.fix_valid = true;
@@ -68,7 +68,7 @@ void write_records(Rig& rig, uint32_t sector, uint32_t session, uint32_t first_u
 Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
     Offload walk{};
     uint32_t from = 0;
-    uint32_t last_utc = 0;
+    uint32_t last_utc_s = 0;
     while (!walk.eof && walk.chunks < 400) {
         char command[96];
         std::snprintf(command, sizeof(command), "{\"cmd\":\"read\",\"session\":%u,\"from\":%u}",
@@ -106,8 +106,8 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
                 walk.decoded = false;
                 return walk;
             } else {
-                if (record.utc < last_utc) walk.ordered = false;
-                last_utc = record.utc;
+                if (record.utc_s < last_utc_s) walk.ordered = false;
+                last_utc_s = record.utc_s;
             }
             walk.records++;
         }
@@ -121,8 +121,8 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
 // One second of flight with a glider parked in the sky north of own-ship, at this range.
 void fly_past(Rig& rig, uint32_t& t, int north_m) {
     fly(rig, t, 1);
-    const model::OwnState& own = rig.state().own;
-    model::AircraftObs glider = neighbour(own, north_m, 0, 0, 0, 0, t);
+    const model::Ownship& own = rig.state().own;
+    model::AircraftObservation glider = neighbour(own, north_m, 0, 0, 0, 0, t);
     glider.address = 0xDD5EED;
     const uint32_t now_s = rig.state().traffic_now(t);
     glider.received.at_s = now_s;
@@ -158,7 +158,7 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
 
     const flight::LogEvent* status = first_of(walk, flight::LogKind::Status);
     REQUIRE(status != nullptr);
-    CHECK(status->utc >= rig.product.flight_log().session_id());
+    CHECK(status->utc_s >= rig.product.flight_log().session_id());
 
     const flight::LogEvent* alarm = first_of(walk, flight::LogKind::Alarm);
     REQUIRE(alarm != nullptr);

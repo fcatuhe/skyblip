@@ -106,7 +106,7 @@ KEEPALIVE int simulator_formation_members() {
 }
 KEEPALIVE int simulator_aircraft_count() { return g_simulator.world().aircraft_count(); }
 
-// Layout: byte = fb[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
+// Layout: byte = canvas[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
 KEEPALIVE const unsigned char* simulator_fb() { return g_simulator.panel().data(); }
 KEEPALIVE int simulator_fb_w() { return g_simulator.panel().width(); }
 KEEPALIVE int simulator_fb_h() { return g_simulator.panel().height(); }

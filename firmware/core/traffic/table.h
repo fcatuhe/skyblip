@@ -21,7 +21,7 @@ struct TargetTurn {
 };
 
 struct Target {
-    model::AircraftObs obs;
+    model::AircraftObservation observation;
     TargetTurn turn;
     flight::Liftoff liftoff;
     Level alarm_level{Level::None};
@@ -53,14 +53,14 @@ class TrafficTable {
     // construction instead of by remembering. Whoever drains the radio bus
     // refreshes this each pass; a table nobody told has no reference and gates
     // nothing, which is also what a device without a fix has.
-    void set_own_reference(const model::OwnState& own) { own_ = own; }
+    void set_own_reference(const model::Ownship& own) { own_ = own; }
 
     // Receptions refused because the position they claimed was further away than
     // this radio can hear (core/traffic/sanity.h). Not silent: a rate that climbs
     // is a receiver at the edge of its budget or a decoder that is wrong.
     uint32_t implausible_count() const { return implausible_; }
 
-    int update(const model::AircraftObs& obs, uint32_t now);
+    int update(const model::AircraftObservation& observation, uint32_t now);
 
     void age_out(uint32_t now);
 
@@ -73,7 +73,7 @@ class TrafficTable {
 
    private:
     std::array<Target, kCapacity> slots_{};
-    model::OwnState own_{};
+    model::Ownship own_{};
     uint32_t own_address_{0};
     uint8_t own_address_mapping_table_{0};
     uint32_t implausible_{0};
@@ -85,12 +85,13 @@ class TrafficTable {
         uint32_t age_s;
     };
 
-    static bool prefer_new(const model::AircraftObs& incoming, const model::AircraftObs& existing);
-    static void sample_turn(TargetTurn& turn, const model::AircraftObs& obs);
-    static void watch_liftoff(Target& target, const model::AircraftObs& incoming);
+    static bool prefer_new(const model::AircraftObservation& incoming,
+                           const model::AircraftObservation& existing);
+    static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
+    static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
     static bool matters_less(const Weight& a, const Weight& b);
-    Weight weight_of(const model::AircraftObs& obs, uint32_t now) const;
-    int allocate_slot(const model::AircraftObs& incoming, uint32_t now);
+    Weight weight_of(const model::AircraftObservation& observation, uint32_t now) const;
+    int allocate_slot(const model::AircraftObservation& incoming, uint32_t now);
 };
 
 }

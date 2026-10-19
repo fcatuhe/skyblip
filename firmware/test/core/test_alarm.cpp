@@ -15,7 +15,7 @@ using namespace skyblip::traffic;
 // The advisory is a place, not a prediction: inside 3 km and 300 m, an aircraft
 // is one whatever it is doing, and outside it is none however fast it closes.
 TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres is an advisory") {
-    const model::OwnState own = flying(40, 0);
+    const model::Ownship own = flying(40, 0);
 
     CHECK(assess(own, neighbour(own, 2800, 0, 0, 40, 180), 0).level == Level::Advisory);
     CHECK(assess(own, neighbour(own, 3200, 0, 0, 40, 180), 0).level == Level::None);
@@ -25,9 +25,9 @@ TEST_CASE("alarm: an aircraft inside three kilometres and three hundred metres i
 
 // A circuit flown over a full apron is a circuit of advisories, and G.1.2 says which those are.
 TEST_CASE("alarm: an aircraft that says it is on the ground is a contact and never an advisory") {
-    const model::OwnState own = flying(40, 0);
+    const model::Ownship own = flying(40, 0);
 
-    model::AircraftObs apron = neighbour(own, 400, 0, 0, 0, 0);
+    model::AircraftObservation apron = neighbour(own, 400, 0, 0, 0, 0);
     CHECK(assess(own, apron, 0).level == Level::Advisory);
 
     apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
@@ -38,8 +38,8 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a contact and nev
 }
 
 TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at our level") {
-    const model::OwnState own = flying(30, 0);
-    model::AircraftObs no_altitude = neighbour(own, 55, 0, 0, 30, 180);
+    const model::Ownship own = flying(30, 0);
+    model::AircraftObservation no_altitude = neighbour(own, 55, 0, 0, 30, 180);
     no_altitude.alt_valid = false;
     no_altitude.alt_m = 61116;
     int32_t slant_m = 0;
@@ -49,7 +49,7 @@ TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at
 }
 
 TEST_CASE("alarm: an aircraft leaving is as much an advisory as one arriving") {
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     CHECK(assess(own, neighbour(own, 400, 0, 0, 30, 0), 0).level == Level::Advisory);
     CHECK(assess(own, neighbour(own, -300, 0, 0, 40, 0), 0).level == Level::Advisory);
@@ -57,16 +57,16 @@ TEST_CASE("alarm: an aircraft leaving is as much an advisory as one arriving") {
 }
 
 TEST_CASE("alarm: invalid when own has no fix") {
-    model::OwnState own{};
-    model::AircraftObs t{};
+    model::Ownship own{};
+    model::AircraftObservation t{};
     t.position_valid = true;
     CHECK_FALSE(assess(own, t, 0).valid);
 }
 
 // The pinned bug: a fix and a report from different instants were subtracted as if they were one.
 TEST_CASE("alarm: both sides are carried to the instant the geometry is read at") {
-    const model::OwnState own = flying(30, 0, 0, 10'000);
-    const model::AircraftObs head_on = neighbour(own, 1000, 0, 0, 30, 180, 10'000);
+    const model::Ownship own = flying(30, 0, 0, 10'000);
+    const model::AircraftObservation head_on = neighbour(own, 1000, 0, 0, 30, 180, 10'000);
 
     CHECK(assess(own, head_on, 10'000).rel_dist_m == doctest::Approx(1000).epsilon(0.02));
 
@@ -83,7 +83,7 @@ TEST_CASE("alarm: both sides are carried to the instant the geometry is read at"
 // formation layer reads this figure, and a gaggle drifting downwind together
 // must not read as closure.
 TEST_CASE("alarm: closing speed is the relative velocity on the line of sight") {
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     // Ahead of us, going the same way at the same speed: the gap is not moving.
     const AlarmAssessment formation = assess(own, neighbour(own, 800, 0, 0, 30, 0), 0);
@@ -107,8 +107,8 @@ TEST_CASE("alarm: closing speed is the relative velocity on the line of sight") 
 // figure is not allowed to tell: what is unknown is charged at what these
 // aircraft fly.
 TEST_CASE("alarm: a target that reports no velocity degrades, it does not vanish") {
-    const model::OwnState own = flying(30, 0);
-    model::AircraftObs quiet = neighbour(own, 900, 0, 0, 0, 0);
+    const model::Ownship own = flying(30, 0);
+    model::AircraftObservation quiet = neighbour(own, 900, 0, 0, 0, 0);
     quiet.speed_valid = false;
 
     const AlarmAssessment a = assess(own, quiet, 0);
@@ -121,7 +121,7 @@ TEST_CASE("alarm: a target that reports no velocity degrades, it does not vanish
 // address (oss/SoftRF-lyusupov .../src/TrafficHelper.cpp:236-260).
 TEST_CASE("alarm: an aircraft is announced once, and not again while it stands") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     AlarmTracker::Decision d = tracker.update(own, neighbour(own, 2800, 0, 0, 20, 180), t);
@@ -140,7 +140,7 @@ TEST_CASE("alarm: an aircraft is announced once, and not again while it stands")
 // A contact sitting on the boundary is one aircraft, not an alarm every second.
 TEST_CASE("alarm: an aircraft is announced again only after it has been outside for a window") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 2800, 0, 0, 20, 180, t), t).notify);
@@ -162,7 +162,7 @@ TEST_CASE("alarm: an aircraft is announced again only after it has been outside 
 // What a pilot with the aircraft in sight dismisses is what has already been said.
 TEST_CASE("alarm: a dismissed contact stops re-announcing itself") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 400, 0, 0, 30, 180, t), t).notify);
@@ -179,14 +179,14 @@ TEST_CASE("alarm: a dismissed contact stops re-announcing itself") {
 // One gesture covers the sky the pilot has looked at, not the aeroplane behind them.
 TEST_CASE("alarm: a dismissal is spent per aircraft, and a newcomer keeps its own voice") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 400, 0, 0, 30, 180, t), t).notify);
     tracker.dismiss();
 
     t += 100;
-    model::AircraftObs stranger = neighbour(own, 0, 400, 0, 30, 270, t);
+    model::AircraftObservation stranger = neighbour(own, 0, 400, 0, 30, 270, t);
     stranger.address = 0x271828;
     CHECK(tracker.update(own, stranger, t).notify);
 
@@ -197,7 +197,7 @@ TEST_CASE("alarm: a dismissal is spent per aircraft, and a newcomer keeps its ow
 
 TEST_CASE("alarm: an aircraft that comes back takes the dismissal back") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 2800, 0, 0, 20, 180, t), t).notify);
@@ -216,14 +216,14 @@ TEST_CASE("alarm: an aircraft that comes back takes the dismissal back") {
 
 TEST_CASE("alarm: a dismissal is spent on the sky that earned it") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 400, 0, 0, 30, 180, t), t).notify);
     tracker.dismiss();
 
     t += 100;
-    model::AircraftObs stranger = neighbour(own, 0, 400, 0, 30, 270, t);
+    model::AircraftObservation stranger = neighbour(own, 0, 400, 0, 30, 270, t);
     stranger.address = 0x271828;
     const AlarmTracker::Decision d = tracker.update(own, stranger, t);
     CHECK(d.notify);
@@ -234,8 +234,8 @@ TEST_CASE("alarm: a dismissal is spent on the sky that earned it") {
 // landed or switched off. SoftRF alerts only inside ALERT_EXPIRATION_TIME.
 TEST_CASE("alarm: a target that has gone quiet stops driving the annunciator") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
-    const model::AircraftObs frozen = neighbour(own, 400, 0, 0, 30, 180, 1000);
+    const model::Ownship own = flying(30, 0);
+    const model::AircraftObservation frozen = neighbour(own, 400, 0, 0, 30, 180, 1000);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, frozen, t).notify);
@@ -247,8 +247,8 @@ TEST_CASE("alarm: a target that has gone quiet stops driving the annunciator") {
 // A recycled slot came back empty and read as a first sighting, so the buzzer spoke.
 TEST_CASE("alarm: a report older than the alert window is not announced on a recycled slot") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
-    const model::AircraftObs target = neighbour(own, 400, 0, 0, 30, 180, 1000);
+    const model::Ownship own = flying(30, 0);
+    const model::AircraftObservation target = neighbour(own, 400, 0, 0, 30, 180, 1000);
     REQUIRE(tracker.update(own, target, 1000).notify);
 
     const uint32_t forgotten = 1000 + kAirborneTargetForgetS * 1000 + 1;
@@ -261,7 +261,7 @@ TEST_CASE("alarm: a report older than the alert window is not announced on a rec
 // a tone nobody remembers to stop.
 TEST_CASE("alarm: the announcement stands while the contact does, and falls a window after") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
 
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 400, 0, 0, 30, 180, t), t).assessment.level ==
@@ -285,8 +285,8 @@ TEST_CASE("alarm: the announcement stands while the contact does, and falls a wi
 
 // A unit at the hold beeped for every aircraft that climbed out or joined the circuit above it.
 TEST_CASE("alarm: nothing is an advisory while own-ship is on the ground") {
-    model::OwnState own = flying(0, 0);
-    const model::AircraftObs overhead = neighbour(own, 400, 0, 150, 40, 180);
+    model::Ownship own = flying(0, 0);
+    const model::AircraftObservation overhead = neighbour(own, 400, 0, 150, 40, 180);
     REQUIRE(assess(own, overhead, 0).level == Level::Advisory);
 
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
@@ -297,13 +297,13 @@ TEST_CASE("alarm: nothing is an advisory while own-ship is on the ground") {
 
 namespace {
 
-model::AircraftObs on_the_runway(model::AircraftObs obs) {
-    obs.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
-    return obs;
+model::AircraftObservation on_the_runway(model::AircraftObservation observation) {
+    observation.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+    return observation;
 }
 
 // Announced in the air, then on the ground from `t` for `ground_ms`, reporting every ten seconds.
-uint32_t announce_then_land(AlarmTracker& tracker, const model::OwnState& own, uint32_t ground_ms) {
+uint32_t announce_then_land(AlarmTracker& tracker, const model::Ownship& own, uint32_t ground_ms) {
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
     for (const uint32_t until = t + ground_ms; t < until; t += 100) {
@@ -318,25 +318,25 @@ uint32_t announce_then_land(AlarmTracker& tracker, const model::OwnState& own, u
 // A touch-and-go never left the ring, and the climb-out announced it again on every lap.
 TEST_CASE("alarm: an aircraft back in the air from a touch-and-go is not announced again") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     const uint32_t t = announce_then_land(tracker, own, 20000);
     CHECK_FALSE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
 }
 
 TEST_CASE("alarm: an aircraft that sat on the ground past a minute is announced as it lifts off") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     const uint32_t t = announce_then_land(tracker, own, kGroundRenotifyFloorMs + 10000);
     CHECK(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
 }
 
 TEST_CASE("alarm: our own touch-and-go does not announce again what it had already said") {
     AlarmTracker tracker;
-    const model::OwnState own = flying(30, 0);
+    const model::Ownship own = flying(30, 0);
     uint32_t t = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, t), t).notify);
 
-    model::OwnState rolling = flying(20, 0);
+    model::Ownship rolling = flying(20, 0);
     rolling.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     for (const uint32_t until = t + 20000; t < until; t += 100)
         tracker.update(rolling, neighbour(rolling, 1500, 0, 0, 30, 180, t), t);

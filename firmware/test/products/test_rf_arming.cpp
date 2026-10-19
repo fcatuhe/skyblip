@@ -240,12 +240,12 @@ struct Armings {
         radio.tick(static_cast<uint32_t>(now_us / 1000));
     }
 
-    void ready_to_transmit(uint32_t utc) {
+    void ready_to_transmit(uint32_t utc_s) {
         state.own.fix_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
         state.own.flight_state = 2;
-        state.own.utc = utc;
+        state.own.utc_s = utc_s;
         state.own.fix_ms = static_cast<uint32_t>(kEdgeUs / 1000);
     }
 };
@@ -442,7 +442,7 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
     }
     REQUIRE(a.state.radio_log.count() == 0);
 
-    a.state.own.utc += 2;  // the lower channel's second again
+    a.state.own.utc_s += 2;  // the lower channel's second again
     a.tick_at(400);
 
     REQUIRE(a.state.radio_log.count() == 1);
@@ -450,7 +450,7 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
     CHECK(a.state.radio_log.newest(0).band == model::Band::M);
     CHECK(a.state.rf.timing_stats.refused() == 1);
 
-    a.state.own.utc += 2;
+    a.state.own.utc_s += 2;
     a.state.own.fix_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
     a.tick_in(1, 205);
     a.tick_in(1, 400);
@@ -503,17 +503,17 @@ void fly_ground_second(Armings& a, Outcomes& outcomes) {
     std::strncpy(a.settings.callsign, "D-KXYZ", go::kCallsignCap - 1);
     a.clock.set_micros(Armings::kEdgeUs);
     REQUIRE(a.radio.setup() == Status::Ok);
-    const uint32_t utc = 1000 + a.radio.transmitter().ground_second();
-    a.ready_to_transmit(utc);
-    a.state.clock.utc_s = utc;
+    const uint32_t utc_s = 1000 + a.radio.transmitter().ground_second();
+    a.ready_to_transmit(utc_s);
+    a.state.clock.utc_s = utc_s;
     for (int phase = 0; phase < 1000; phase += 10) {
         a.tick_at(phase);
         outcomes.report_flown();
     }
     outcomes.held_at_us = outcomes.name_at_us();
     REQUIRE(outcomes.held_at_us != 0);
-    a.state.own.utc = utc + 1;
-    a.state.clock.utc_s = utc + 1;
+    a.state.own.utc_s = utc_s + 1;
+    a.state.clock.utc_s = utc_s + 1;
 }
 
 }  // namespace

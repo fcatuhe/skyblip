@@ -99,7 +99,7 @@ constexpr int menu_line_text_y(int line) { return menu_line_top(line) + kMenuTex
 int menu_row_index(const Menu& menu, MenuRow row);
 int menu_first_row(const Menu& menu, MenuRow focus);
 
-void draw_menu(ui::Canvas& fb, const MenuSnapshot& snapshot);
+void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot);
 
 // The one field on this device, so it is a screen and not a row: the characters
 // at a size a thumb can check, and a bar under the one the pad is rolling.
@@ -131,7 +131,7 @@ constexpr int kCallsignPadHintY = 138;
 constexpr int kCallsignButtonHintY = kCallsignPadHintY + 7 * kCallsignHintScale + 6;
 constexpr int kCallsignHelpY = kMenuHintY;
 
-void draw_callsign(ui::Canvas& fb, const CallsignSnapshot& snapshot);
+void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
 class MenuEditor {
    public:

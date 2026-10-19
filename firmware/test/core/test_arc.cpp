@@ -93,10 +93,10 @@ TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
 }
 
 TEST_CASE("arc: a target with no velocity of its own does not fly anywhere") {
-    model::AircraftObs obs{};
-    obs.speed_valid = false;
-    obs.track_c9 = c9(180);
-    const Position p = after(motion_of(obs, 0, false), 60);
+    model::AircraftObservation observation{};
+    observation.speed_valid = false;
+    observation.track_c9 = c9(180);
+    const Position p = after(motion_of(observation, 0, false), 60);
     CHECK(p.north_m == 0);
     CHECK(p.east_m == 0);
 }

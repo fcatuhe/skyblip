@@ -26,7 +26,7 @@ struct SixPackSnapshot {
     bool lateral_valid{false};
 };
 
-void draw_sixpack(ui::Canvas& fb, const SixPackSnapshot& snap);
+void draw_sixpack(ui::Canvas& canvas, const SixPackSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

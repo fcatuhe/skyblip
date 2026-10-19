@@ -52,7 +52,7 @@ void LogSession::reset() {
 
 // INFO: fc 15oct26 the radio's full rate would log a parked paraglider for ever, so it moves
 // instead
-bool LogSession::flying(const model::OwnState& own, bool rolling, uint32_t now_ms) {
+bool LogSession::flying(const model::Ownship& own, bool rolling, uint32_t now_ms) {
     if (airborne(own.flight_state)) return true;
     if (!flies_at_no_ground_speed(own.aircraft_cat)) return false;
     if (rolling) {
@@ -62,7 +62,7 @@ bool LogSession::flying(const model::OwnState& own, bool rolling, uint32_t now_m
     return open_ && now_ms - rolled_ms_ < kLogStillHoldMs;
 }
 
-LogAction LogSession::update(const model::OwnState& own, bool rolling, uint32_t now_ms) {
+LogAction LogSession::update(const model::Ownship& own, bool rolling, uint32_t now_ms) {
     const bool in_flight = flying(own, rolling, now_ms);
     // A record with no position or no UTC is a row of zeroes in a flight log.
     // The session survives a fix outage - the aircraft is still where it was -
@@ -102,7 +102,7 @@ LogAction LogSession::update(const model::OwnState& own, bool rolling, uint32_t 
         // finally agreed. Named after the push, not before it: the push is what
         // decides which sample is the oldest one that survived.
         push(record);
-        session_id_ = ring_[head_].utc;
+        session_id_ = ring_[head_].utc_s;
         open_ = true;
         closing_ = false;
         return LogAction::OpenSession;

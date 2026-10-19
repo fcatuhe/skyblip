@@ -107,12 +107,12 @@ constexpr unsigned char kBits[kStride * kH] = {
 };
 }  // namespace
 
-void draw_wordmark(Canvas& fb, int cx, int cy) {
+void draw_wordmark(Canvas& canvas, int cx, int cy) {
     const int x0 = cx - kW / 2, y0 = cy - kMidlineRow;
     for (int y = 0; y < kH; y++)
         for (int x = 0; x < kW; x++)
             if (kBits[y * kStride + (x >> 3)] & (0x80 >> (x & 7)))
-                fb.set_pixel(x0 + x, y0 + y, true);
+                canvas.set_pixel(x0 + x, y0 + y, true);
 }
 
 int wordmark_width() { return kW; }

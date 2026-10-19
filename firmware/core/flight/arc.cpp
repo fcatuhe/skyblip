@@ -25,7 +25,7 @@ int16_t clamped_turn_cdps(int32_t turn_cdps) {
     return static_cast<int16_t>(turn_cdps);
 }
 
-Motion motion_of(const model::OwnState& own) {
+Motion motion_of(const model::Ownship& own) {
     Motion m{};
     m.speed_mm_s = own.speed_mm_s;
     m.track_cdeg = own.track_cdeg;
@@ -36,14 +36,16 @@ Motion motion_of(const model::OwnState& own) {
     return m;
 }
 
-Motion motion_of(const model::AircraftObs& obs, int16_t turn_cdps, bool turn_valid) {
+Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdps,
+                 bool turn_valid) {
     Motion m{};
-    m.speed_mm_s = obs.speed_valid ? to_mm_s(QuarterMetresPerSec(obs.speed_q)).v : 0;
-    m.track_cdeg = to_centi_degrees(Cordic9(obs.track_c9)).v;
+    m.speed_mm_s =
+        observation.speed_valid ? to_mm_s(QuarterMetresPerSec(observation.speed_q)).v : 0;
+    m.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
     m.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
     m.turning = turn_valid;
-    m.climb_mm_s = to_mm_s(EighthMetresPerSec(obs.climb_e8)).v;
-    m.climbing = obs.climb_valid;
+    m.climb_mm_s = to_mm_s(EighthMetresPerSec(observation.climb_e8)).v;
+    m.climbing = observation.climb_valid;
     return m;
 }
 

@@ -34,15 +34,15 @@ class TrafficService : public runtime::Service {
     void on_uplink(const events::RfEvent& event, const events::Stamp& stamp, uint32_t now_ms);
     void count_refusal(radio::Event outcome);
     events::Stamp stamp_for(const events::RfEvent& event, uint32_t now_ms) const;
-    static uint32_t keyed_utc(const events::Stamp& stamp, uint32_t now_s);
+    static uint32_t keyed_utc_s(const events::Stamp& stamp, uint32_t now_s);
     void log(const events::RfEvent& event, const events::Stamp& stamp, radio::Event outcome,
-             const model::AircraftObs* obs = nullptr, int8_t key_offset_s = 0);
-    radio::Event decode_adsl(protocol::Frame& frame, uint32_t utc, const events::Stamp& stamp,
-                             model::AircraftObs& obs);
-    radio::Event learn_callsign(const protocol::AdslPacket& p, uint32_t utc,
-                                model::AircraftObs& obs);
-    radio::Event decode_alptas(protocol::Frame& frame, uint32_t utc, bool dated,
-                               model::AircraftObs& obs, int8_t& key_offset_s) const;
+             const model::AircraftObservation* observation = nullptr, int8_t key_offset_s = 0);
+    radio::Event decode_adsl(protocol::Frame& frame, uint32_t utc_s, const events::Stamp& stamp,
+                             model::AircraftObservation& observation);
+    radio::Event learn_callsign(const protocol::AdslPacket& p, uint32_t utc_s,
+                                model::AircraftObservation& observation);
+    radio::Event decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
+                               model::AircraftObservation& observation, int8_t& key_offset_s) const;
     static bool names_its_sender(radio::Event outcome);
     static radio::Event verdict_of(Status decoded);
 

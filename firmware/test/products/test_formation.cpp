@@ -14,9 +14,9 @@ namespace {
 
 uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 512 / 360); }
 
-model::AircraftObs contact(const model::OwnState& own, int north_m, int east_m, int up_m, int mps,
-                           int track_deg, uint32_t at_ms) {
-    model::AircraftObs t{};
+model::AircraftObservation contact(const model::Ownship& own, int north_m, int east_m, int up_m,
+                                   int mps, int track_deg, uint32_t at_ms) {
+    model::AircraftObservation t{};
     t.address = 0x515151;
     t.address_mapping_table = 6;
     t.position_valid = true;
@@ -51,11 +51,11 @@ struct Flight {
               flight::FlightState says = flight::FlightState::Unknown,
               uint32_t address = 0x515151) {
         rig.state.own.fix_ms = now_ms;
-        model::AircraftObs obs =
+        model::AircraftObservation observation =
             contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
-        obs.address = address;
-        obs.flight_state = static_cast<uint8_t>(says);
-        rig.state.traffic.update(obs, now_ms / 1000);
+        observation.address = address;
+        observation.flight_state = static_cast<uint8_t>(says);
+        rig.state.traffic.update(observation, now_ms / 1000);
         rig.alarm_service.tick(now_ms);
     }
 
@@ -153,9 +153,10 @@ TEST_CASE("formation: a member under three metres a second of closure stays a me
     // 3.25 m/s faster from 60 m right and 120 m behind: 2.9 m/s on the line of sight.
     for (const uint32_t until = t + 10000; t < until; t += 1000) {
         flight.rig.state.own.fix_ms = t;
-        model::AircraftObs obs = contact(flight.rig.state.own, -60, -120, 10, 40, 90, t);
-        obs.speed_q = 173;
-        flight.rig.state.traffic.update(obs, t / 1000);
+        model::AircraftObservation observation =
+            contact(flight.rig.state.own, -60, -120, 10, 40, 90, t);
+        observation.speed_q = 173;
+        flight.rig.state.traffic.update(observation, t / 1000);
         flight.rig.alarm_service.tick(t);
         CHECK(flight.target()->in_formation);
         CHECK(flight.quiet());

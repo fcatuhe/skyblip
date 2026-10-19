@@ -14,7 +14,7 @@
 
 namespace skyblip::go {
 
-flight::FlightState OwnshipService::flight_state_from(const model::OwnState& own, uint32_t now_ms) {
+flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own, uint32_t now_ms) {
     flight::FlightSample sample{};
     sample.speed_mm_s = own.speed_mm_s;
     sample.hdop_e2 = own.hdop_e2;
@@ -68,8 +68,8 @@ bool OwnshipService::simulating_flight() const {
 }
 
 void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms) {
-    model::OwnState& own = context_.state.own;
-    const model::OwnState previous = own;
+    model::Ownship& own = context_.state.own;
+    const model::Ownship previous = own;
     context_.state.flight.gnss_solutions++;
     acquisition_.observe(solution, now_ms);
     context_.state.gnss.fix_mode = solution.fix_mode;
@@ -85,13 +85,13 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.track_cdeg = solution.track_cdeg;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
-    own.utc = solution.utc;
+    own.utc_s = solution.utc_s;
     own.fix_ms = solution_instant(solution, now_ms);
     own.sats = solution.sats;
     own.aircraft_cat = settings_.aircraft_type;
 
     context_.state.clock.utc_valid = solution.utc_valid;
-    anchor_utc(solution);
+    anchor_utc_s(solution);
     publish_solution_phase(now_ms);
 
     int32_t mm_s = 0;
@@ -117,7 +117,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
 
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {
     if (!context_.diag.armed()) return;
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const bus::GnssStatus& status = context_.state.gnss;
     diag::Gnss sample{};
     sample.nav_ms = status.solution_phase_ms;
@@ -165,7 +165,7 @@ void OwnshipService::record_pps(uint32_t now_ms) {
 
 void OwnshipService::record_flight(uint32_t now_ms) {
     if (!context_.diag.armed()) return;
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     diag::Flight sample{};
     sample.speed_mm_s = own.speed_mm_s;
     sample.climb_mm_s = own.climb_mm_s;
@@ -181,7 +181,7 @@ void OwnshipService::record_flight(uint32_t now_ms) {
     context_.diag.record(sample, context_.instant(now_ms));
 }
 
-gnss::Convergence OwnshipService::convergence_of(const model::OwnState& own) {
+gnss::Convergence OwnshipService::convergence_of(const model::Ownship& own) {
     gnss::Convergence c{};
     c.fix_valid = own.fix_valid;
     c.resid_valid = own.pred_resid_valid;
@@ -190,10 +190,10 @@ gnss::Convergence OwnshipService::convergence_of(const model::OwnState& own) {
     return c;
 }
 
-bool OwnshipService::height_solved(const model::OwnState& own) { return own.vdop_e2 != 0; }
+bool OwnshipService::height_solved(const model::Ownship& own) { return own.vdop_e2 != 0; }
 
-void OwnshipService::update_residual(const model::OwnState& previous) {
-    model::OwnState& own = context_.state.own;
+void OwnshipService::update_residual(const model::Ownship& previous) {
+    model::Ownship& own = context_.state.own;
     if (!previous.fix_valid || !own.fix_valid) {
         own.pred_resid_valid = false;
         return;
@@ -214,11 +214,11 @@ void OwnshipService::update_residual(const model::OwnState& previous) {
 }
 
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
-void OwnshipService::anchor_utc(const gnss::GnssSolution& solution) {
+void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution) {
     timing::ClockState& clock = context_.state.clock;
     if (!dates_the_edge(solution, clock)) return;
     if (context_.state.own.fix_ms != static_cast<uint32_t>(clock.pps_edge_us / 1000)) return;
-    clock.utc_s = solution.utc;
+    clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
 }
 
@@ -319,7 +319,7 @@ void OwnshipService::publish_inertial(uint32_t now_ms) {
 }
 
 void OwnshipService::adopt_climb(int32_t mm_s, uint32_t now_ms) {
-    model::OwnState& own = context_.state.own;
+    model::Ownship& own = context_.state.own;
     own.climb_mm_s = mm_s;
     own.climb_valid = true;
     indicated_climb_.observe(mm_s, now_ms);

@@ -55,8 +55,8 @@ ui::Trend trend_of(const RadarTarget& t) {
     return ui::Trend::Steady;
 }
 
-int64_t ring_metres(const RadarSnapshot& snap) {
-    return go::range_metres(snap.range_step, snap.units);
+int64_t ring_metres(const RadarSnapshot& snapshot) {
+    return go::range_metres(snapshot.range_step, snapshot.units);
 }
 
 int32_t to_px(int32_t metres, int64_t range, int ring) {
@@ -80,13 +80,13 @@ HeadingUp on_the_rim(int32_t right, int32_t ahead) {
     return {static_cast<int32_t>(a * kRimR / apart), static_cast<int32_t>(r * kRimR / apart)};
 }
 
-Plotted plot_point(const RadarSnapshot& snap, const RadarTarget& t, int16_t track) {
-    const int ring = ring_r(snap.plot);
-    const int64_t range = ring_metres(snap);
+Plotted plot_point(const RadarSnapshot& snapshot, const RadarTarget& t, int16_t track) {
+    const int ring = ring_r(snapshot.plot);
+    const int64_t range = ring_metres(snapshot);
     const HeadingUp at = heading_up(t.north_m, t.east_m, track);
     const int32_t dx = to_px(at.right, range, ring), dy = to_px(at.ahead, range, ring);
     const bool in_ring = inside_ring(dx, dy, ring);
-    const bool pinned = !in_ring && snap.plot == RadarPlot::All;
+    const bool pinned = !in_ring && snapshot.plot == RadarPlot::All;
     const HeadingUp drawn = pinned ? on_the_rim(dx, dy) : HeadingUp{dy, dx};
     Plotted p{dx,      dy,   px_of(drawn.right),  py_of(drawn.ahead),
               in_ring, true, vertical_of(t.up_m), trend_of(t)};
@@ -103,24 +103,24 @@ flight::Motion motion_of(int32_t speed_mm_s, int32_t track_cdeg, int16_t turn_cd
     return m;
 }
 
-HeadingUp on_glass_at(const flight::Position& p, const RadarSnapshot& snap, int16_t track) {
+HeadingUp on_glass_at(const flight::Position& p, const RadarSnapshot& snapshot, int16_t track) {
     const HeadingUp at = heading_up(p.north_m, p.east_m, track);
-    const int64_t range = ring_metres(snap);
-    const int ring = ring_r(snap.plot);
+    const int64_t range = ring_metres(snapshot);
+    const int ring = ring_r(snapshot.plot);
     return {to_px(at.ahead, range, ring), to_px(at.right, range, ring)};
 }
 
-void minute_ball(ui::Canvas& fb, int x, int y) {
+void minute_ball(ui::Canvas& canvas, int x, int y) {
     const int r = kMinuteBallR;
     for (int dy = -r; dy < r; dy++)
         for (int dx = -r; dx < r; dx++) {
             const int px = 2 * dx + 1, py = 2 * dy + 1;
-            if (px * px + py * py <= 4 * r * r) fb.set_pixel(x + dx, y + dy, true);
+            if (px * px + py * py <= 4 * r * r) canvas.set_pixel(x + dx, y + dy, true);
         }
 }
 
 struct DashPen {
-    ui::Canvas& fb;
+    ui::Canvas& canvas;
     int phase{0};
     int x{0};
     int y{0};
@@ -141,8 +141,8 @@ struct DashPen {
    private:
     void dash(int at_x, int at_y, bool steep) {
         if (phase++ % (kDashPx + kDashGapPx) >= kDashPx) return;
-        fb.set_pixel(at_x, at_y, true);
-        fb.set_pixel(steep ? at_x - 1 : at_x, steep ? at_y : at_y - 1, true);
+        canvas.set_pixel(at_x, at_y, true);
+        canvas.set_pixel(steep ? at_x - 1 : at_x, steep ? at_y : at_y - 1, true);
     }
 
     void stroke(int x1, int y1) {
@@ -169,15 +169,15 @@ struct DashPen {
     }
 };
 
-void own_vector(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
-    if (snap.speed_mm_s <= 0) return;
-    flight::Arc arc(motion_of(snap.speed_mm_s, snap.track_cdeg, snap.turn_cdps, true),
+void own_vector(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track) {
+    if (snapshot.speed_mm_s <= 0) return;
+    flight::Arc arc(motion_of(snapshot.speed_mm_s, snapshot.track_cdeg, snapshot.turn_cdps, true),
                     kLeaderStepMs);
-    DashPen pen{fb};
-    const int ring = ring_r(snap.plot);
+    DashPen pen{canvas};
+    const int ring = ring_r(snapshot.plot);
     const int ball_clear = ring - kRingW - kMinuteBallR;
     for (int step = 1; step <= kMinutesMarked * kStepsPerMinute; step++) {
-        const HeadingUp at = on_glass_at(arc.advance(), snap, track);
+        const HeadingUp at = on_glass_at(arc.advance(), snapshot, track);
         if (!inside_ring(at.right, at.ahead, ring)) return;
         const int32_t out = at.right * at.right + at.ahead * at.ahead;
         if (out < kMinuteClearPx * kMinuteClearPx) {
@@ -187,7 +187,7 @@ void own_vector(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
         const int x = px_of(at.right), y = py_of(at.ahead);
         pen.to(x, y);
         if (step % kStepsPerMinute != 0) continue;
-        if (out <= ball_clear * ball_clear) minute_ball(fb, x, y);
+        if (out <= ball_clear * ball_clear) minute_ball(canvas, x, y);
     }
 }
 
@@ -197,24 +197,24 @@ struct Leader {
     bool valid;
 };
 
-Leader leader_of(const RadarSnapshot& snap, const RadarTarget& t, int16_t track) {
+Leader leader_of(const RadarSnapshot& snapshot, const RadarTarget& t, int16_t track) {
     if (t.speed_mm_s <= 0) return {0, 0, false};
     flight::Arc arc(motion_of(t.speed_mm_s, t.track_cdeg, t.turn_cdps, t.turn_valid),
                     kLeaderStepMs);
     HeadingUp end{0, 0};
     for (int step = 0; step < kStepsPerMinute; step++)
-        end = on_glass_at(arc.advance(), snap, track);
+        end = on_glass_at(arc.advance(), snapshot, track);
     if (end.right * end.right + end.ahead * end.ahead < kMinLeaderPx * kMinLeaderPx)
         return {0, 0, false};
     return {end.right, end.ahead, true};
 }
 
-void line_inside_ring(ui::Canvas& fb, int x0, int y0, int x1, int y1, int ring) {
+void line_inside_ring(ui::Canvas& canvas, int x0, int y0, int x1, int y1, int ring) {
     const int dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y1 - y0 : y0 - y1;
     const int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     int err = dx - dy;
     for (;;) {
-        if (pixel_within(x0, y0, ring - kRingW)) fb.set_pixel(x0, y0, true);
+        if (pixel_within(x0, y0, ring - kRingW)) canvas.set_pixel(x0, y0, true);
         if (x0 == x1 && y0 == y1) return;
         const int e2 = 2 * err;
         if (e2 > -dy) {
@@ -228,26 +228,26 @@ void line_inside_ring(ui::Canvas& fb, int x0, int y0, int x1, int y1, int ring) 
     }
 }
 
-void draw_leader(ui::Canvas& fb, const RadarSnapshot& snap, const RadarTarget& t, int16_t track,
-                 const Plotted& p, const Leader& v) {
+void draw_leader(ui::Canvas& canvas, const RadarSnapshot& snapshot, const RadarTarget& t,
+                 int16_t track, const Plotted& p, const Leader& v) {
     if (!v.valid) return;
     flight::Arc arc(motion_of(t.speed_mm_s, t.track_cdeg, t.turn_cdps, t.turn_valid),
                     kLeaderStepMs);
     int from_x = px_of(p.right), from_y = py_of(p.ahead);
     for (int step = 0; step < kStepsPerMinute; step++) {
-        const HeadingUp at = on_glass_at(arc.advance(), snap, track);
+        const HeadingUp at = on_glass_at(arc.advance(), snapshot, track);
         const int to_x = px_of(p.right + at.right), to_y = py_of(p.ahead + at.ahead);
-        if (snap.plot == RadarPlot::All)
-            line_inside_ring(fb, from_x, from_y, to_x, to_y, kAllR);
+        if (snapshot.plot == RadarPlot::All)
+            line_inside_ring(canvas, from_x, from_y, to_x, to_y, kAllR);
         else
-            fb.line(from_x, from_y, to_x, to_y, true);
+            canvas.line(from_x, from_y, to_x, to_y, true);
         from_x = to_x;
         from_y = to_y;
     }
 }
 
-void plot_blip(ui::Canvas& fb, const Plotted& p, traffic::Level alarm_level) {
-    ui::draw_blip(fb, p.x, p.y, p.vertical, p.trend, alarm_level >= traffic::Level::Advisory);
+void plot_blip(ui::Canvas& canvas, const Plotted& p, traffic::Level alarm_level) {
+    ui::draw_blip(canvas, p.x, p.y, p.vertical, p.trend, alarm_level >= traffic::Level::Advisory);
 }
 
 int64_t apart2(const Plotted& p) {
@@ -317,7 +317,8 @@ bool abeam(const Plotted& p) {
     return (dy < 0 ? -dy : dy) < kRimMarkPx / 2;
 }
 
-void rim_count(ui::Canvas& fb, const RimMark& m, const RimMark* marks, int n, const Rect& label) {
+void rim_count(ui::Canvas& canvas, const RimMark& m, const RimMark* marks, int n,
+               const Rect& label) {
     const int dx = m.p.x - kFar, dy = m.p.y - kFar;
     int along_x = -dy, along_y = dx;
     if ((along_x > 0) != (dx >= 0)) {
@@ -335,7 +336,7 @@ void rim_count(ui::Canvas& fb, const RimMark& m, const RimMark* marks, int n, co
         if (!box && count_fits(spot, m, marks, n, label)) box = &spot;
     if (!box) return;
     char digit[2] = {static_cast<char>('0' + (m.count > 9 ? 9 : m.count)), 0};
-    fb.draw_text(box->left + 1, box->top + 1, digit, true, 1);
+    canvas.draw_text(box->left + 1, box->top + 1, digit, true, 1);
 }
 
 struct InView {
@@ -345,17 +346,17 @@ struct InView {
     int in_ring{0};
 };
 
-InView in_view(const RadarSnapshot& snap, int16_t track) {
+InView in_view(const RadarSnapshot& snapshot, int16_t track) {
     InView v;
-    for (int i = 0; i < snap.n_targets && v.n < kMaxRadarTargets; i++) {
-        const Plotted p = plot_point(snap, snap.targets[i], track);
+    for (int i = 0; i < snapshot.n_targets && v.n < kMaxRadarTargets; i++) {
+        const Plotted p = plot_point(snapshot, snapshot.targets[i], track);
         if (!p.shown) continue;
         // A member of the formation is drawn once, as the square around own ship
         // and the count in its quadrant. Twice is two aircraft.
-        if (snap.targets[i].in_formation) continue;
+        if (snapshot.targets[i].in_formation) continue;
         if (p.in_ring) v.in_ring++;
         v.shown[v.n] = p;
-        v.target[v.n] = &snap.targets[i];
+        v.target[v.n] = &snapshot.targets[i];
         v.n++;
     }
     return v;
@@ -385,28 +386,28 @@ Plotted clear_of(const Plotted& p, const Rect& c) {
 
 }  // namespace
 
-void plot_leaders(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
-    const InView v = in_view(snap, track);
+void plot_leaders(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track) {
+    const InView v = in_view(snapshot, track);
     for (int i = 0; i < v.n; i++)
-        draw_leader(fb, snap, *v.target[i], track, v.shown[i],
-                    leader_of(snap, *v.target[i], track));
-    if (v.in_ring > 0) own_vector(fb, snap, track);
+        draw_leader(canvas, snapshot, *v.target[i], track, v.shown[i],
+                    leader_of(snapshot, *v.target[i], track));
+    if (v.in_ring > 0) own_vector(canvas, snapshot, track);
 }
 
-void plot_blips(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
-    const InView v = in_view(snap, track);
+void plot_blips(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track) {
+    const InView v = in_view(snapshot, track);
     for (int i = 0; i < v.n; i++)
-        if (v.shown[i].in_ring || snap.plot == RadarPlot::ToScale)
-            plot_blip(fb, v.shown[i], v.target[i]->alarm_level);
+        if (v.shown[i].in_ring || snapshot.plot == RadarPlot::ToScale)
+            plot_blip(canvas, v.shown[i], v.target[i]->alarm_level);
 }
 
-void plot_rim(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track, const Rect& label) {
+void plot_rim(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track, const Rect& label) {
     RimMark marks[kMaxRadarTargets];
     int n = 0;
-    for (int i = 0; i < snap.n_targets && n < kMaxRadarTargets; i++) {
-        const RadarTarget& t = snap.targets[i];
+    for (int i = 0; i < snapshot.n_targets && n < kMaxRadarTargets; i++) {
+        const RadarTarget& t = snapshot.targets[i];
         if (t.in_formation) continue;
-        const Plotted p = plot_point(snap, t, track);
+        const Plotted p = plot_point(snapshot, t, track);
         if (p.in_ring) continue;
         const RimMark mark{clear_of(p, label), t.alarm_level, t.up_m < 0 ? -t.up_m : t.up_m,
                            apart2(p), 1};
@@ -425,8 +426,8 @@ void plot_rim(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track, const Re
             drawn[shown++] = marks[i];
     }
     for (int i = 0; i < shown; i++)
-        if (drawn[i].count > 1) rim_count(fb, drawn[i], drawn, shown, label);
-    for (int i = 0; i < shown; i++) plot_blip(fb, drawn[i].p, drawn[i].level);
+        if (drawn[i].count > 1) rim_count(canvas, drawn[i], drawn, shown, label);
+    for (int i = 0; i < shown; i++) plot_blip(canvas, drawn[i].p, drawn[i].level);
 }
 
 }  // namespace skyblip::go::radar

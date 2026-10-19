@@ -33,7 +33,7 @@ uint8_t address_mapping_table_to_idtype(uint8_t address_mapping_table) {
     return address_mapping_table == 0x05 ? 1 : 2;
 }
 
-bool relative_ned(const model::OwnState& own, const model::AircraftObs& t, int32_t& north_m,
+bool relative_ned(const model::Ownship& own, const model::AircraftObservation& t, int32_t& north_m,
                   int32_t& east_m, int32_t& up_m) {
     if (!own.fix_valid || !t.position_valid) return false;
     int64_t dlat = static_cast<int64_t>(t.lat_1e7) - own.lat_1e7;
@@ -47,40 +47,40 @@ bool relative_ned(const model::OwnState& own, const model::AircraftObs& t, int32
     return true;
 }
 
-int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model::AircraftObs& t,
-                 uint8_t alarm_level, const char* callsign) {
+int format_pflaa(char* out, size_t cap, const model::Ownship& own,
+                 const model::AircraftObservation& t, uint8_t alarm_level, const char* callsign) {
     (void)cap;
     int32_t n_m, e_m, u_m;
     if (!relative_ned(own, t, n_m, e_m, u_m)) return 0;
     int n = 0;
-    n += fmt_string(out + n, "$PFLAA,");
-    n += fmt_uint(out + n, alarm_level);
+    n += format_string(out + n, "$PFLAA,");
+    n += format_uint(out + n, alarm_level);
     out[n++] = ',';
-    n += fmt_int(out + n, n_m, 1, 0, true);
+    n += format_int(out + n, n_m, 1, 0, true);
     out[n++] = ',';
-    n += fmt_int(out + n, e_m, 1, 0, true);
+    n += format_int(out + n, e_m, 1, 0, true);
     out[n++] = ',';
-    n += fmt_int(out + n, u_m, 1, 0, true);
+    n += format_int(out + n, u_m, 1, 0, true);
     out[n++] = ',';
-    n += fmt_uint(out + n, address_mapping_table_to_idtype(t.address_mapping_table));
+    n += format_uint(out + n, address_mapping_table_to_idtype(t.address_mapping_table));
     out[n++] = ',';
-    n += fmt_hex(out + n, t.address, 6);
+    n += format_hex(out + n, t.address, 6);
     if (callsign != nullptr && callsign[0] != 0) {
         out[n++] = '!';
-        n += fmt_string(out + n, callsign);
+        n += format_string(out + n, callsign);
     }
     out[n++] = ',';
     if (!flight::on_ground(t.flight_state)) {
         uint16_t deg = to_degrees(Cordic9(t.track_c9)).v;
-        n += fmt_uint(out + n, deg);
+        n += format_uint(out + n, deg);
     }
     out[n++] = ',';
     out[n++] = ',';
-    if (t.speed_valid) n += fmt_uint(out + n, (static_cast<uint32_t>(t.speed_q) + 2) / 4);
+    if (t.speed_valid) n += format_uint(out + n, (static_cast<uint32_t>(t.speed_q) + 2) / 4);
     out[n++] = ',';
     if (t.climb_valid) {
         int32_t climb_dm = (static_cast<int32_t>(t.climb_e8) * 10 + 4) / 8;
-        n += fmt_int(out + n, climb_dm, 1, 1, true);
+        n += format_int(out + n, climb_dm, 1, 1, true);
     } else {
         out[n++] = '0';
     }
@@ -90,18 +90,18 @@ int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model:
 }
 
 // INFO: fc 19sep26 Unknown is not a claim of being on the ground, so only Ground answers 1.
-uint8_t pflau_gps(const model::OwnState& own) {
+uint8_t pflau_gps(const model::Ownship& own) {
     if (!own.fix_valid) return 0;
     return flight::state_from(own.flight_state) == flight::FlightState::Ground ? 1 : 2;
 }
 
-int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmitting,
-                 int n_targets, const model::AircraftObs* threat, uint8_t alarm_level,
+int format_pflau(char* out, size_t cap, const model::Ownship& own, bool transmitting, int n_targets,
+                 const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t rel_bearing_deg, int32_t rel_alt_m, int32_t rel_dist_m) {
     (void)cap;
     int n = 0;
-    n += fmt_string(out + n, "$PFLAU,");
-    n += fmt_uint(out + n, static_cast<uint32_t>(n_targets));
+    n += format_string(out + n, "$PFLAU,");
+    n += format_uint(out + n, static_cast<uint32_t>(n_targets));
     out[n++] = ',';
     out[n++] = transmitting ? '1' : '0';
     out[n++] = ',';
@@ -109,18 +109,18 @@ int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmi
     out[n++] = ',';
     out[n++] = '1';
     out[n++] = ',';
-    n += fmt_uint(out + n, alarm_level);
+    n += format_uint(out + n, alarm_level);
     out[n++] = ',';
     if (threat) {
-        n += fmt_int(out + n, static_cast<int32_t>(rel_bearing_deg), 1, 0, true);
+        n += format_int(out + n, static_cast<int32_t>(rel_bearing_deg), 1, 0, true);
         out[n++] = ',';
-        n += fmt_uint(out + n, alarm_level ? 2u : 0u);
+        n += format_uint(out + n, alarm_level ? 2u : 0u);
         out[n++] = ',';
-        n += fmt_int(out + n, rel_alt_m, 1, 0, true);
+        n += format_int(out + n, rel_alt_m, 1, 0, true);
         out[n++] = ',';
-        n += fmt_uint(out + n, static_cast<uint32_t>(rel_dist_m < 0 ? 0 : rel_dist_m));
+        n += format_uint(out + n, static_cast<uint32_t>(rel_dist_m < 0 ? 0 : rel_dist_m));
         out[n++] = ',';
-        n += fmt_hex(out + n, threat->address, 6);
+        n += format_hex(out + n, threat->address, 6);
     } else {
         out[n++] = ',';
         out[n++] = '0';
@@ -134,9 +134,9 @@ int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmi
 int format_pgrmz(char* out, size_t cap, int32_t alt_ft, bool fix_valid) {
     (void)cap;
     int n = 0;
-    n += fmt_string(out + n, "$PGRMZ,");
-    n += fmt_int(out + n, alt_ft, 1, 0, true);
-    n += fmt_string(out + n, ",F,");
+    n += format_string(out + n, "$PGRMZ,");
+    n += format_int(out + n, alt_ft, 1, 0, true);
+    n += format_string(out + n, ",F,");
     out[n++] = fix_valid ? '3' : '1';
     return nmea_finish(out, n);
 }
@@ -174,31 +174,31 @@ int format_lk8ex1(char* out, size_t cap, const Lk8Ex1& v) {
     const uint32_t battery = v.battery_valid ? kLk8BatteryPercentBase + percent : kLk8NoBattery;
 
     int n = 0;
-    n += fmt_string(out + n, "$LK8EX1,");
-    n += fmt_uint(out + n, pressure);
+    n += format_string(out + n, "$LK8EX1,");
+    n += format_uint(out + n, pressure);
     out[n++] = ',';
-    n += fmt_int(out + n, alt, 1, 0, true);
+    n += format_int(out + n, alt, 1, 0, true);
     out[n++] = ',';
-    n += fmt_int(out + n, vario, 1, 0, true);
+    n += format_int(out + n, vario, 1, 0, true);
     out[n++] = ',';
-    n += fmt_int(out + n, temperature, 1, 0, true);
+    n += format_int(out + n, temperature, 1, 0, true);
     out[n++] = ',';
-    n += fmt_uint(out + n, battery);
+    n += format_uint(out + n, battery);
     return nmea_finish(out, n);
 }
 
 namespace {
 
 // The inverse of the epoch core/gnss/nmea.cpp builds from a $GPRMC date and
-// time: own.utc keeps no calendar fields of its own, so writing one back out
+// time: own.utc_s keeps no calendar fields of its own, so writing one back out
 // means undoing the conversion. Howard Hinnant's civil_from_days, exact over
 // the whole range a uint32_t epoch can name.
-void civil_from_epoch(uint32_t utc, int& year, int& month, int& day, int& hh, int& mm, int& ss) {
-    const uint32_t sod = utc % 86400u;
+void civil_from_epoch(uint32_t utc_s, int& year, int& month, int& day, int& hh, int& mm, int& ss) {
+    const uint32_t sod = utc_s % 86400u;
     hh = static_cast<int>(sod / 3600u);
     mm = static_cast<int>((sod / 60u) % 60u);
     ss = static_cast<int>(sod % 60u);
-    const int64_t z = static_cast<int64_t>(utc / 86400u) + 719468;
+    const int64_t z = static_cast<int64_t>(utc_s / 86400u) + 719468;
     const int64_t era = (z >= 0 ? z : z - 146096) / 146097;
     const uint32_t doe = static_cast<uint32_t>(z - era * 146097);
     const uint32_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
@@ -210,65 +210,65 @@ void civil_from_epoch(uint32_t utc, int& year, int& month, int& day, int& hh, in
     year = static_cast<int>(y + (month <= 2 ? 1 : 0));
 }
 
-int put_hhmmss(char* out, uint32_t utc) {
-    const uint32_t sod = utc % 86400u;
+int put_hhmmss(char* out, uint32_t utc_s) {
+    const uint32_t sod = utc_s % 86400u;
     int n = 0;
-    n += fmt_uint(out + n, sod / 3600u, 2);
-    n += fmt_uint(out + n, (sod / 60u) % 60u, 2);
-    n += fmt_uint(out + n, sod % 60u, 2);
+    n += format_uint(out + n, sod / 3600u, 2);
+    n += format_uint(out + n, (sod / 60u) % 60u, 2);
+    n += format_uint(out + n, sod % 60u, 2);
     return n;
 }
 
 }  // namespace
 
-int format_gprmc(char* out, size_t cap, const model::OwnState& own) {
+int format_gprmc(char* out, size_t cap, const model::Ownship& own) {
     (void)cap;
     if (!own.fix_valid || !own.utc_valid) return 0;
     int year, month, day, hh, mm, ss;
-    civil_from_epoch(own.utc, year, month, day, hh, mm, ss);
+    civil_from_epoch(own.utc_s, year, month, day, hh, mm, ss);
     int n = 0;
-    n += fmt_string(out + n, "$GPRMC,");
-    n += fmt_uint(out + n, static_cast<uint32_t>(hh), 2);
-    n += fmt_uint(out + n, static_cast<uint32_t>(mm), 2);
-    n += fmt_uint(out + n, static_cast<uint32_t>(ss), 2);
-    n += fmt_string(out + n, ",A,");
-    n += fmt_nmea_lat(out + n, own.lat_1e7);
+    n += format_string(out + n, "$GPRMC,");
+    n += format_uint(out + n, static_cast<uint32_t>(hh), 2);
+    n += format_uint(out + n, static_cast<uint32_t>(mm), 2);
+    n += format_uint(out + n, static_cast<uint32_t>(ss), 2);
+    n += format_string(out + n, ",A,");
+    n += format_nmea_lat(out + n, own.lat_1e7);
     out[n++] = ',';
-    n += fmt_nmea_lon(out + n, own.lon_1e7);
+    n += format_nmea_lon(out + n, own.lon_1e7);
     out[n++] = ',';
     // Ground speed is knots on this sentence, kept to one decimal.
     const uint32_t knots_e1 = static_cast<uint32_t>(
         div_round<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
-    n += fmt_uint(out + n, knots_e1, 1, 1);
+    n += format_uint(out + n, knots_e1, 1, 1);
     out[n++] = ',';
-    n += fmt_uint(out + n, to_degrees(CentiDegrees(own.track_cdeg)).v, 1);
+    n += format_uint(out + n, to_degrees(CentiDegrees(own.track_cdeg)).v, 1);
     out[n++] = ',';
-    n += fmt_uint(out + n, static_cast<uint32_t>(day), 2);
-    n += fmt_uint(out + n, static_cast<uint32_t>(month), 2);
-    n += fmt_uint(out + n, static_cast<uint32_t>(year % 100), 2);
-    n += fmt_string(out + n, ",,,A");
+    n += format_uint(out + n, static_cast<uint32_t>(day), 2);
+    n += format_uint(out + n, static_cast<uint32_t>(month), 2);
+    n += format_uint(out + n, static_cast<uint32_t>(year % 100), 2);
+    n += format_string(out + n, ",,,A");
     return nmea_finish(out, n);
 }
 
-int format_gpgga(char* out, size_t cap, const model::OwnState& own) {
+int format_gpgga(char* out, size_t cap, const model::Ownship& own) {
     (void)cap;
     if (!own.fix_valid || !own.utc_valid) return 0;
     int n = 0;
-    n += fmt_string(out + n, "$GPGGA,");
-    n += put_hhmmss(out + n, own.utc);
+    n += format_string(out + n, "$GPGGA,");
+    n += put_hhmmss(out + n, own.utc_s);
     out[n++] = ',';
-    n += fmt_nmea_lat(out + n, own.lat_1e7);
+    n += format_nmea_lat(out + n, own.lat_1e7);
     out[n++] = ',';
-    n += fmt_nmea_lon(out + n, own.lon_1e7);
-    n += fmt_string(out + n, ",1,");
-    n += fmt_uint(out + n, own.sats, 2);
+    n += format_nmea_lon(out + n, own.lon_1e7);
+    n += format_string(out + n, ",1,");
+    n += format_uint(out + n, own.sats, 2);
     out[n++] = ',';
-    n += fmt_uint(out + n, own.hdop_e2, 3, 2);
+    n += format_uint(out + n, own.hdop_e2, 3, 2);
     out[n++] = ',';
-    n += fmt_int(out + n, to_metres(Millimetres(own.alt_msl_mm)).v, 1, 0, true);
-    n += fmt_string(out + n, ",M,");
-    n += fmt_int(out + n, to_metres(Millimetres(own.alt_mm - own.alt_msl_mm)).v, 1, 0, true);
-    n += fmt_string(out + n, ",M,,");
+    n += format_int(out + n, to_metres(Millimetres(own.alt_msl_mm)).v, 1, 0, true);
+    n += format_string(out + n, ",M,");
+    n += format_int(out + n, to_metres(Millimetres(own.alt_mm - own.alt_msl_mm)).v, 1, 0, true);
+    n += format_string(out + n, ",M,,");
     return nmea_finish(out, n);
 }
 

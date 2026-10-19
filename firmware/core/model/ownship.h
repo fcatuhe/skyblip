@@ -4,7 +4,7 @@
 #include <cstdint>
 
 namespace skyblip::model {
-struct OwnState {
+struct Ownship {
     bool fix_valid;
     bool utc_valid;
     bool pps_locked;
@@ -31,7 +31,7 @@ struct OwnState {
     // The extrapolation to the transmit instant needs it, so it is own-ship
     // state and not a display value. Zero when nothing measured it.
     int16_t turn_cdps;
-    uint32_t utc;
+    uint32_t utc_s;
     // When the fix that made this state arrived. ADS-L G.1.16 refuses to
     // transmit a navigation solution older than 500 ms.
     uint32_t fix_ms;

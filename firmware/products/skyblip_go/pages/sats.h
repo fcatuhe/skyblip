@@ -25,7 +25,7 @@ struct SatsSnapshot {
     const gnss::SkyView* sky{nullptr};
 };
 
-void draw_sats(ui::Canvas& fb, const SatsSnapshot& snap);
+void draw_sats(ui::Canvas& canvas, const SatsSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

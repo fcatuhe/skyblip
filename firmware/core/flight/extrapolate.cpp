@@ -95,7 +95,7 @@ Prediction carry(const Motion& m, int32_t dt_ms) {
 
 }  // namespace
 
-Prediction extrapolate(const model::OwnState& own, int32_t dt_ms) {
+Prediction extrapolate(const model::Ownship& own, int32_t dt_ms) {
     Motion m{};
     m.lat_1e7 = own.lat_1e7;
     m.lon_1e7 = own.lon_1e7;
@@ -111,23 +111,23 @@ Prediction extrapolate(const model::OwnState& own, int32_t dt_ms) {
 }
 
 // INFO: fc 13sep26 ADS-L carries no turn rate, so a neighbour is carried straight (G.1.8, G.1.10)
-Prediction extrapolate(const model::AircraftObs& obs, int32_t dt_ms) {
+Prediction extrapolate(const model::AircraftObservation& observation, int32_t dt_ms) {
     Motion m{};
-    m.lat_1e7 = obs.lat_1e7;
-    m.lon_1e7 = obs.lon_1e7;
-    m.alt_mm = to_millimetres(Metres(obs.alt_m)).v;
+    m.lat_1e7 = observation.lat_1e7;
+    m.lon_1e7 = observation.lon_1e7;
+    m.alt_mm = to_millimetres(Metres(observation.alt_m)).v;
     m.alt_msl_mm = m.alt_mm;
-    m.speed_mm_s = to_mm_s(QuarterMetresPerSec(obs.speed_q)).v;
-    m.track_cdeg = to_centi_degrees(Cordic9(obs.track_c9)).v;
-    m.climb_mm_s = to_mm_s(EighthMetresPerSec(obs.climb_e8)).v;
-    m.known = obs.position_valid && obs.speed_valid;
-    m.climbs = obs.climb_valid;
+    m.speed_mm_s = to_mm_s(QuarterMetresPerSec(observation.speed_q)).v;
+    m.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
+    m.climb_mm_s = to_mm_s(EighthMetresPerSec(observation.climb_e8)).v;
+    m.known = observation.position_valid && observation.speed_valid;
+    m.climbs = observation.climb_valid;
     return carry(m, dt_ms);
 }
 
-model::OwnState carried_to(const model::OwnState& own, uint32_t now_ms) {
+model::Ownship carried_to(const model::Ownship& own, uint32_t now_ms) {
     const Prediction p = extrapolate(own, static_cast<int32_t>(now_ms - own.fix_ms));
-    model::OwnState out = own;
+    model::Ownship out = own;
     out.lat_1e7 = p.lat_1e7;
     out.lon_1e7 = p.lon_1e7;
     out.alt_mm = p.alt_mm;
@@ -136,9 +136,10 @@ model::OwnState carried_to(const model::OwnState& own, uint32_t now_ms) {
     return out;
 }
 
-model::AircraftObs carried_to(const model::AircraftObs& obs, uint32_t now_ms) {
-    const Prediction p = extrapolate(obs, static_cast<int32_t>(now_ms - obs.at_ms));
-    model::AircraftObs out = obs;
+model::AircraftObservation carried_to(const model::AircraftObservation& observation,
+                                      uint32_t now_ms) {
+    const Prediction p = extrapolate(observation, static_cast<int32_t>(now_ms - observation.at_ms));
+    model::AircraftObservation out = observation;
     out.lat_1e7 = p.lat_1e7;
     out.lon_1e7 = p.lon_1e7;
     out.alt_m = to_metres(Millimetres(p.alt_mm)).v;

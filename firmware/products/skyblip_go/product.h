@@ -258,8 +258,8 @@ class Product {
     }
 
     const char* baro_part(uint8_t address) {
-        int n = skyblip::fmt_string(baro_part_, "BME280 ");
-        n += skyblip::fmt_hex(baro_part_ + n, address, 2);
+        int n = skyblip::format_string(baro_part_, "BME280 ");
+        n += skyblip::format_hex(baro_part_ + n, address, 2);
         baro_part_[n] = 0;
         return baro_part_;
     }

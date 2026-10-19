@@ -62,14 +62,15 @@ events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t n
 }
 
 // INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1Wrap past the second its sender keyed in
-uint32_t TrafficService::keyed_utc(const events::Stamp& stamp, uint32_t now_s) {
+uint32_t TrafficService::keyed_utc_s(const events::Stamp& stamp, uint32_t now_s) {
     if (!stamp.phase_valid) return now_s;
     const bool in_slot1_tail = stamp.into_ms < timing::kSlot1Wrap;
     return (in_slot1_tail && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
 }
 
 void TrafficService::log(const events::RfEvent& event, const events::Stamp& stamp,
-                         radio::Event outcome, const model::AircraftObs* obs, int8_t key_offset_s) {
+                         radio::Event outcome, const model::AircraftObservation* observation,
+                         int8_t key_offset_s) {
     const bus::State& state = context_.state;
     radio::Entry entry{};
     entry.event = outcome;
@@ -78,7 +79,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
-    entry.utc = utc_dated(state);
+    entry.utc_dated = utc_dated(state);
     entry.airborne = flight::airborne(state.own.flight_state);
     entry.rssi_dbm = event.rssi_dbm;
     entry.rssi_valid = event.rssi_valid;
@@ -94,10 +95,10 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
         context_.state.rf.last_tx_span_us = entry.tx_span_us;
     }
     entry.key_offset_s = key_offset_s;
-    if (obs != nullptr) {
-        entry.source = obs->source;
-        entry.address = obs->address;
-        entry.address_valid = obs->source != model::Source::AdslUplink;
+    if (observation != nullptr) {
+        entry.source = observation->source;
+        entry.address = observation->address;
+        entry.address_valid = observation->source != model::Source::AdslUplink;
     }
     context_.state.radio_log.record(entry);
     context_.diag.record(entry);
@@ -122,33 +123,33 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
         return;
     }
 
-    const uint32_t utc = context_.state.traffic_now(now_ms);
-    const uint32_t keyed = keyed_utc(stamp, utc);
-    model::AircraftObs obs{};
+    const uint32_t utc_s = context_.state.traffic_now(now_ms);
+    const uint32_t keyed = keyed_utc_s(stamp, utc_s);
+    model::AircraftObservation observation{};
     const bool alptas = system == protocol::System::Alptas;
     int8_t key_offset_s = 0;
     const radio::Event outcome =
-        alptas ? decode_alptas(frame, keyed, stamp.phase_valid, obs, key_offset_s)
-               : decode_adsl(frame, keyed, stamp, obs);
+        alptas ? decode_alptas(frame, keyed, stamp.phase_valid, observation, key_offset_s)
+               : decode_adsl(frame, keyed, stamp, observation);
     if (outcome == radio::Event::Named) {
         context_.state.air.rx_named++;
-        log(event, stamp, outcome, &obs);
+        log(event, stamp, outcome, &observation);
         return;
     }
     if (outcome != radio::Event::Received) {
         count_refusal(outcome);
         const bool named = alptas && names_its_sender(outcome);
-        log(event, stamp, outcome, named ? &obs : nullptr, key_offset_s);
+        log(event, stamp, outcome, named ? &observation : nullptr, key_offset_s);
         return;
     }
 
-    obs.received.into_ms = stamp.into_ms;
-    obs.received.phase_valid = stamp.phase_valid;
-    obs.at_ms = now_ms;
-    obs.rssi_dbm = event.rssi_dbm;
-    context_.state.traffic.update(obs, utc);
+    observation.received.into_ms = stamp.into_ms;
+    observation.received.phase_valid = stamp.phase_valid;
+    observation.at_ms = now_ms;
+    observation.rssi_dbm = event.rssi_dbm;
+    context_.state.traffic.update(observation, utc_s);
     context_.state.air.rx_ok++;
-    log(event, stamp, radio::Event::Received, &obs);
+    log(event, stamp, radio::Event::Received, &observation);
 }
 
 // One frame from the ground, up to thirteen aircraft in it (§C.4's higher rate
@@ -162,7 +163,7 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     if (!uplink_) return;
     context_.state.air.uplink_frames++;
 
-    model::AircraftObs relayed[protocol::AdslUplink::kMaxTargets];
+    model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStats stats{};
     if (uplink_codec_.decode(event.data.data(), relayed, protocol::AdslUplink::kMaxTargets,
                              stats) != Status::Ok) {
@@ -176,18 +177,19 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     // much. Stamping it with the second it arrived in is the only honest
     // reading, and core/traffic/table.h is what stops that recency from
     // outranking a direct reception of the same aircraft.
-    model::AircraftObs relay{};
+    model::AircraftObservation relay{};
     relay.source = model::Source::AdslUplink;
     log(event, stamp, radio::Event::Received, &relay);
 
-    const uint32_t utc = context_.state.traffic_now(now_ms);
+    const uint32_t utc_s = context_.state.traffic_now(now_ms);
     for (int i = 0; i < stats.targets; i++) {
-        model::AircraftObs& obs = relayed[i];
-        obs.received = stamp;
-        obs.received.at_s = utc;
-        obs.at_ms = now_ms;
-        obs.rssi_dbm = event.rssi_dbm;
-        if (context_.state.traffic.update(obs, utc) >= 0) context_.state.air.uplink_targets++;
+        model::AircraftObservation& observation = relayed[i];
+        observation.received = stamp;
+        observation.received.at_s = utc_s;
+        observation.at_ms = now_ms;
+        observation.rssi_dbm = event.rssi_dbm;
+        if (context_.state.traffic.update(observation, utc_s) >= 0)
+            context_.state.air.uplink_targets++;
     }
 }
 
@@ -209,52 +211,56 @@ bool TrafficService::names_its_sender(radio::Event outcome) {
 
 // The Manchester error map travels with the frame, so the forward correction
 // knows which bits the air already told us not to trust.
-radio::Event TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc,
-                                         const events::Stamp& stamp, model::AircraftObs& obs) {
+radio::Event TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
+                                         const events::Stamp& stamp,
+                                         model::AircraftObservation& observation) {
     protocol::AdslPacket p{};
     p.init();
     __builtin_memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
     if (p.check_crc() != 0 && (p.correct(frame.err) < 0 || p.check_crc() != 0))
         return radio::Event::BadCrc;
     p.descramble();
-    if (p.is_registration()) return learn_callsign(p, utc, obs);
+    if (p.is_registration()) return learn_callsign(p, utc_s, observation);
     if (!p.is_position()) return radio::Event::Unsupported;
     events::Stamp received = stamp;
-    received.at_s = utc;
-    if (!protocol::to_obs(p, received, 0, model::Source::AdslDirect, obs))
+    received.at_s = utc_s;
+    if (!protocol::to_observation(p, received, 0, model::Source::AdslDirect, observation))
         return radio::Event::Undecoded;
     return radio::Event::Received;
 }
 
-radio::Event TrafficService::learn_callsign(const protocol::AdslPacket& p, uint32_t utc,
-                                            model::AircraftObs& obs) {
+radio::Event TrafficService::learn_callsign(const protocol::AdslPacket& p, uint32_t utc_s,
+                                            model::AircraftObservation& observation) {
     char callsign[traffic::CallsignTable::kTextBytes];
     if (protocol::callsign_of(p, callsign, sizeof(callsign)) == 0) return radio::Event::Undecoded;
-    obs.address = p.address();
-    obs.address_mapping_table = p.address_mapping_table();
-    obs.source = model::Source::AdslDirect;
-    context_.state.callsigns.learn(obs.address_mapping_table, obs.address, callsign, utc);
+    observation.address = p.address();
+    observation.address_mapping_table = p.address_mapping_table();
+    observation.source = model::Source::AdslDirect;
+    context_.state.callsigns.learn(observation.address_mapping_table, observation.address, callsign,
+                                   utc_s);
     return radio::Event::Named;
 }
 
 // INFO: fc 16sep26 ALP-TAS keys on the second its sender keyed in, so an undated burst is a guess
-radio::Event TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc, bool dated,
-                                           model::AircraftObs& obs, int8_t& key_offset_s) const {
-    const model::OwnState& own = context_.state.own;
+radio::Event TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
+                                           model::AircraftObservation& observation,
+                                           int8_t& key_offset_s) const {
+    const model::Ownship& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Event::Unattempted;
     if (protocol::alptas_correct(frame.data, frame.err) < 0) return radio::Event::BadCrc;
-    obs.address = protocol::alptas_address(frame.data);
-    obs.source = model::Source::Alptas;
+    observation.address = protocol::alptas_address(frame.data);
+    observation.source = model::Source::Alptas;
     const int32_t lat = own.lat_1e7;
     const int32_t lon = own.lon_1e7;
-    radio::Event verdict = verdict_of(protocol::alptas_decode(frame.data, utc, lat, lon, obs));
-    if (verdict == radio::Event::Undecoded && !dated && utc != 0)
-        verdict = verdict_of(protocol::alptas_decode(frame.data, utc - 1, lat, lon, obs));
+    radio::Event verdict =
+        verdict_of(protocol::alptas_decode(frame.data, utc_s, lat, lon, observation));
+    if (verdict == radio::Event::Undecoded && !dated && utc_s != 0)
+        verdict = verdict_of(protocol::alptas_decode(frame.data, utc_s - 1, lat, lon, observation));
     if (verdict != radio::Event::Undecoded) return verdict;
 
     uint32_t keyed = 0;
-    if (protocol::alptas_keyed_second(frame.data, utc, keyed) != Status::Ok) return verdict;
-    const int32_t offset = static_cast<int32_t>(keyed - utc);
+    if (protocol::alptas_keyed_second(frame.data, utc_s, keyed) != Status::Ok) return verdict;
+    const int32_t offset = static_cast<int32_t>(keyed - utc_s);
     if (offset == 0) return verdict;
     key_offset_s = static_cast<int8_t>(offset);
     return radio::Event::Miskeyed;

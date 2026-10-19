@@ -71,7 +71,7 @@ int drain(flight::LogEvents& events, flight::LogEvent* out, int cap) {
 TEST_CASE("log event: a status and an encounter come back from twenty-four bytes as written") {
     flight::LogEvent status{};
     status.kind = flight::LogKind::Status;
-    status.utc = kBaseUtc + 61;
+    status.utc_s = kBaseUtc + 61;
     status.status = cell(3912, 1, 3);
     status.status.tracked_peak = 5;
     status.status.charging = true;
@@ -81,7 +81,7 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
     flight::LogEvent back{};
     REQUIRE(flight::decode_log_event(raw, kBaseUtc, back) == Status::Ok);
     CHECK(back.kind == flight::LogKind::Status);
-    CHECK(back.utc == kBaseUtc + 61);
+    CHECK(back.utc_s == kBaseUtc + 61);
     CHECK(back.status.cell_mv == 3912);
     CHECK(back.status.percent == 64);
     CHECK(back.status.power_level == 1);
@@ -93,14 +93,14 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
 
     flight::LogEvent pass{};
     pass.kind = flight::LogKind::Encounter;
-    pass.utc = kBaseUtc + 300;
+    pass.utc_s = kBaseUtc + 300;
     pass.contact = glider(0xDD1234, 180, 1);
     pass.contact.heard_s = 95;
     pass.contact.in_formation = true;
     flight::encode_log_event(pass, kBaseUtc, raw);
     REQUIRE(flight::decode_log_event(raw, kBaseUtc, back) == Status::Ok);
     CHECK(back.kind == flight::LogKind::Encounter);
-    CHECK(back.utc == kBaseUtc + 300);
+    CHECK(back.utc_s == kBaseUtc + 300);
     CHECK(back.contact.address == 0xDD1234);
     CHECK(back.contact.address_mapping_table == 6);
     CHECK(back.contact.aircraft_cat == 2);
@@ -117,7 +117,7 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
 
 TEST_CASE("log event: a fix is never read as an event, nor an event as a fix") {
     flight::LogRecord fix{};
-    fix.utc = kBaseUtc + 5;
+    fix.utc_s = kBaseUtc + 5;
     fix.track_c9 = 511;
     fix.fix_valid = true;
     uint8_t raw[flight::kLogRecordBytes];
@@ -129,7 +129,7 @@ TEST_CASE("log event: a fix is never read as an event, nor an event as a fix") {
 
     flight::LogEvent alarm{};
     alarm.kind = flight::LogKind::Alarm;
-    alarm.utc = kBaseUtc + 5;
+    alarm.utc_s = kBaseUtc + 5;
     alarm.contact = glider(0x3F0001, 900, 1);
     flight::encode_log_event(alarm, kBaseUtc, raw);
     CHECK(flight::decode_log_record(raw, kBaseUtc, record) == Status::Unsupported);
@@ -153,7 +153,7 @@ TEST_CASE("log event: the bytes the host decoder is pinned to") {
     uint8_t raw[flight::kLogRecordBytes];
     flight::LogEvent status{};
     status.kind = flight::LogKind::Status;
-    status.utc = kBaseUtc + 61;
+    status.utc_s = kBaseUtc + 61;
     status.status = cell(3912, 4, 3);
     status.status.tracked_peak = 5;
     status.status.external_power = true;
@@ -162,7 +162,7 @@ TEST_CASE("log event: the bytes the host decoder is pinned to") {
 
     flight::LogEvent pass{};
     pass.kind = flight::LogKind::Encounter;
-    pass.utc = kBaseUtc + 300;
+    pass.utc_s = kBaseUtc + 300;
     pass.contact = glider(0xDD1234, 180, 1);
     pass.contact.heard_s = 95;
     flight::encode_log_event(pass, kBaseUtc, raw);
@@ -177,7 +177,7 @@ TEST_CASE("log events: a status opens the flight, then one a minute, and one whe
     events.status(cell(4000, 1, 2), kBaseUtc, 1000);
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Status);
-    CHECK(out[0].utc == kBaseUtc);
+    CHECK(out[0].utc_s == kBaseUtc);
 
     events.status(cell(3990, 1, 7), kBaseUtc + 30, 31000);
     CHECK(drain(events, out, 8) == 0);
@@ -190,7 +190,7 @@ TEST_CASE("log events: a status opens the flight, then one a minute, and one whe
     events.status(cell(3500, 4, 4), kBaseUtc + 75, 76000);
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].status.power_level == 4);
-    CHECK(out[0].utc == kBaseUtc + 75);
+    CHECK(out[0].utc_s == kBaseUtc + 75);
 }
 
 TEST_CASE("log events: an alarm is written when a contact's level changes, rising and falling") {
@@ -204,7 +204,7 @@ TEST_CASE("log events: an alarm is written when a contact's level changes, risin
     events.heard(3, glider(0xABCDEF, 2000, 1), kBaseUtc + 3);
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Alarm);
-    CHECK(out[0].utc == kBaseUtc + 2);
+    CHECK(out[0].utc_s == kBaseUtc + 2);
     CHECK(out[0].contact.alarm == 1);
     CHECK(out[0].contact.dist_m == 2500);
 
@@ -227,7 +227,7 @@ TEST_CASE("log events: an encounter is written once, at its closest, when the ai
 
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Encounter);
-    CHECK(out[0].utc == kBaseUtc + 13);
+    CHECK(out[0].utc_s == kBaseUtc + 13);
     CHECK(out[0].contact.dist_m == 350);
     CHECK(out[0].contact.alarm == 1);
     CHECK(out[0].contact.heard_s == 5);

@@ -38,7 +38,7 @@ int16_t get_i16(const uint8_t* b) {
     return static_cast<int16_t>(static_cast<uint16_t>(b[0]) | (static_cast<uint16_t>(b[1]) << 8));
 }
 
-void pack_record(uint8_t* r, const model::AircraftObs& t) {
+void pack_record(uint8_t* r, const model::AircraftObservation& t) {
     put_u24(r, t.address & 0x00FFFFFF);
     r[3] = static_cast<uint8_t>((t.address_mapping_table & 0x3F) | ((t.flight_state & 0x03) << 6));
     r[4] = t.aircraft_cat;
@@ -48,8 +48,8 @@ void pack_record(uint8_t* r, const model::AircraftObs& t) {
     put_i16(r + 14, static_cast<int16_t>(t.alt_m));
 }
 
-void unpack_record(const uint8_t* r, model::AircraftObs& t) {
-    t = model::AircraftObs{};
+void unpack_record(const uint8_t* r, model::AircraftObservation& t) {
+    t = model::AircraftObservation{};
     t.address = get_u24(r);
     t.address_mapping_table = r[3] & 0x3F;
     t.flight_state = (r[3] >> 6) & 0x03;
@@ -71,7 +71,7 @@ void unpack_record(const uint8_t* r, model::AircraftObs& t) {
 // would otherwise put a whole screenful of phantoms in front of everybody at
 // once. An address of zero is no aircraft, and a position off the globe is no
 // position.
-bool plausible(const model::AircraftObs& t) {
+bool plausible(const model::AircraftObservation& t) {
     if (t.address == 0) return false;
     if (t.lat_1e7 < -900000000 || t.lat_1e7 > 900000000) return false;
     if (t.lon_1e7 < -1800000000 || t.lon_1e7 > 1800000000) return false;
@@ -79,7 +79,7 @@ bool plausible(const model::AircraftObs& t) {
 }
 }
 
-Status AdslUplink::encode(const model::AircraftObs* targets, int n, uint8_t key_index,
+Status AdslUplink::encode(const model::AircraftObservation* targets, int n, uint8_t key_index,
                           uint8_t out_frame[kFrameBytes]) const {
     if (n < 0 || n > kMaxTargets) return Status::Full;
     uint8_t data[fec::ReedSolomon255::kK];
@@ -100,8 +100,8 @@ Status AdslUplink::encode(const model::AircraftObs* targets, int n, uint8_t key_
     return Status::Ok;
 }
 
-Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObs* targets, int cap,
-                          DecodeStats& stats) const {
+Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
+                          int cap, DecodeStats& stats) const {
     uint8_t cw[fec::ReedSolomon255::kN];
     std::memcpy(cw, frame, sizeof(cw));
     int corrected = rs_.decode(cw);
@@ -120,7 +120,7 @@ Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObs* 
     if (n > kMaxTargets) return Status::Invalid;
     int out = 0;
     for (int i = 0; i < n && out < cap; i++) {
-        model::AircraftObs t{};
+        model::AircraftObservation t{};
         unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, t);
         if (!plausible(t)) {
             stats.rejected++;

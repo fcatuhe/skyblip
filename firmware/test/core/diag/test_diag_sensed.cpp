@@ -80,7 +80,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.len = 26;
     in.address_valid = true;
     in.rssi_valid = true;
-    in.utc = true;
+    in.utc_dated = true;
     in.airborne = true;
     in.phase_valid = true;
     in.tx_span_valid = true;
@@ -109,7 +109,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.len == in.len);
     CHECK(out.address_valid);
     CHECK(out.rssi_valid);
-    CHECK(out.utc);
+    CHECK(out.utc_dated);
     CHECK(out.airborne);
     CHECK(out.phase_valid);
     CHECK(out.tx_span_valid);

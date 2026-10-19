@@ -198,7 +198,7 @@ TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a c
     int32_t steepest_mm_s = 0;
     const auto apply_at = [&](uint32_t t) {
         rig.run(t, t);
-        const model::OwnState& own = rig.state().own;
+        const model::Ownship& own = rig.state().own;
         if (own.climb_valid && std::abs(own.climb_mm_s) > steepest_mm_s)
             steepest_mm_s = std::abs(own.climb_mm_s);
     };
@@ -377,7 +377,7 @@ TEST_CASE("product: with no fix the bus says how far the receiver has got") {
     // A date is read off a satellite, so it is the first evidence of one.
     gnss::GnssSolution dated{};
     dated.utc_valid = true;
-    dated.utc = Rig::kUtcBase;
+    dated.utc_s = Rig::kUtcBase;
     rig.product.bus().gnss.push(dated);
     rig.run(250, 300);
     CHECK(rig.state().gnss.stage == gnss::Stage::Solving);
@@ -404,7 +404,7 @@ TEST_CASE("product: a receiver restating its last fixed second does not wind the
 
     gnss::GnssSolution solving{};
     solving.utc_valid = true;
-    solving.utc = anchored;
+    solving.utc_s = anchored;
     solving.updates = ++rig.fix_updates;
     rig.product.bus().gnss.push(solving);
     rig.run(t, t + 950);
@@ -419,7 +419,7 @@ TEST_CASE("product: before any fix, the first dated sentence anchors the clock")
 
     gnss::GnssSolution dated{};
     dated.utc_valid = true;
-    dated.utc = Rig::kUtcBase;
+    dated.utc_s = Rig::kUtcBase;
     dated.updates = ++rig.fix_updates;
     rig.product.bus().gnss.push(dated);
     rig.run(1000, 1950);

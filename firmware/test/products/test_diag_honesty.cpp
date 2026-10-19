@@ -50,7 +50,7 @@ struct ServiceRig {
         gnss::GnssSolution fix{};
         fix.fix_valid = true;
         fix.utc_valid = true;
-        fix.utc = kUtc + now_ms / 1000;
+        fix.utc_s = kUtc + now_ms / 1000;
         fix.lat_1e7 = 485000000;
         fix.lon_1e7 = 85000000;
         fix.alt_mm = 300000;
@@ -113,7 +113,7 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
     REQUIRE(last_of(drained(rig.recorder), burst));
     CHECK(burst.event == radio::Event::BadCrc);
     CHECK(burst.at_s == ServiceRig::kUtc);
-    CHECK(burst.utc);
+    CHECK(burst.utc_dated);
 }
 
 TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling, not as recent") {

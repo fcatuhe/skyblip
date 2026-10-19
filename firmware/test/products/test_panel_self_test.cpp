@@ -9,13 +9,14 @@ using namespace skyblip;
 
 namespace {
 
-bool reads_from(const go::Glass& fb, int x, int y, const char* text) {
+bool reads_from(const go::Glass& canvas, int x, int y, const char* text) {
     go::Glass expected;
     expected.clear(true);
     expected.draw_text(x, y, text, true, 1);
     for (int dy = 0; dy < 7; dy++)
         for (int dx = 0; dx < int(std::string(text).size()) * go::kBootCellW; dx++)
-            if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
+            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
+                return false;
     return true;
 }
 

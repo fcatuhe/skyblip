@@ -25,7 +25,7 @@ constexpr int32_t kPoleLat1e7 = 900000000;
 constexpr int32_t kAntimeridianLon1e7 = 1800000000;
 
 struct Receiver {
-    uint32_t utc;
+    uint32_t utc_s;
     int32_t lat_1e7;
     int32_t lon_1e7;
 };
@@ -43,23 +43,24 @@ void seal_adsl(uint8_t* frame) {
 
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
 void encode_alptas(FuzzedDataProvider& in, const Receiver& at, uint8_t* frame) {
-    model::AircraftObs obs{};
-    obs.address = in.ConsumeIntegral<uint32_t>();
-    obs.address_mapping_table = in.ConsumeIntegral<uint8_t>();
-    obs.aircraft_cat = in.ConsumeIntegral<uint8_t>();
-    obs.flight_state = in.ConsumeIntegral<uint8_t>();
-    obs.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
-    obs.lon_1e7 = in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
-    obs.alt_m = in.ConsumeIntegral<int16_t>();
-    obs.climb_e8 = in.ConsumeIntegral<int16_t>();
-    obs.speed_q = in.ConsumeIntegral<uint16_t>();
-    obs.track_c9 = in.ConsumeIntegral<uint16_t>();
-    obs.climb_valid = in.ConsumeBool();
-    obs.speed_valid = in.ConsumeBool();
-    obs.position_valid = true;
+    model::AircraftObservation observation{};
+    observation.address = in.ConsumeIntegral<uint32_t>();
+    observation.address_mapping_table = in.ConsumeIntegral<uint8_t>();
+    observation.aircraft_cat = in.ConsumeIntegral<uint8_t>();
+    observation.flight_state = in.ConsumeIntegral<uint8_t>();
+    observation.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
+    observation.lon_1e7 =
+        in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
+    observation.alt_m = in.ConsumeIntegral<int16_t>();
+    observation.climb_e8 = in.ConsumeIntegral<int16_t>();
+    observation.speed_q = in.ConsumeIntegral<uint16_t>();
+    observation.track_c9 = in.ConsumeIntegral<uint16_t>();
+    observation.climb_valid = in.ConsumeBool();
+    observation.speed_valid = in.ConsumeBool();
+    observation.position_valid = true;
     const int32_t keyed_off_s = in.ConsumeIntegralInRange<int32_t>(-protocol::kAlptasKeyWindowS,
                                                                    protocol::kAlptasKeyWindowS);
-    (void)protocol::alptas_encode(frame, obs, at.utc + static_cast<uint32_t>(keyed_off_s),
+    (void)protocol::alptas_encode(frame, observation, at.utc_s + static_cast<uint32_t>(keyed_off_s),
                                   at.lat_1e7, at.lon_1e7);
 }
 
@@ -99,24 +100,25 @@ void hear_adsl(protocol::Frame& frame, const Receiver& at) {
         return;
     }
     events::Stamp received{};
-    received.at_s = at.utc;
-    model::AircraftObs obs{};
-    protocol::to_obs(p, received, 0, model::Source::AdslDirect, obs);
+    received.at_s = at.utc_s;
+    model::AircraftObservation observation{};
+    protocol::to_observation(p, received, 0, model::Source::AdslDirect, observation);
 }
 
 void hear_alptas(protocol::Frame& frame, const Receiver& at) {
     if (protocol::alptas_correct(frame.data, frame.err) < 0) return;
     protocol::alptas_address(frame.data);
-    model::AircraftObs obs{};
-    if (protocol::alptas_decode(frame.data, at.utc, at.lat_1e7, at.lon_1e7, obs) == Status::Ok)
+    model::AircraftObservation observation{};
+    if (protocol::alptas_decode(frame.data, at.utc_s, at.lat_1e7, at.lon_1e7, observation) ==
+        Status::Ok)
         return;
     uint32_t keyed = 0;
-    (void)protocol::alptas_keyed_second(frame.data, at.utc, keyed);
+    (void)protocol::alptas_keyed_second(frame.data, at.utc_s, keyed);
 }
 
 void hear_uplink(const uint8_t* codeword) {
     static const protocol::AdslUplink uplink;
-    model::AircraftObs relayed[protocol::AdslUplink::kMaxTargets];
+    model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStats stats{};
     (void)uplink.decode(codeword, relayed, protocol::AdslUplink::kMaxTargets, stats);
 }
@@ -126,7 +128,7 @@ void hear_uplink(const uint8_t* codeword) {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     FuzzedDataProvider in(data, size);
     Receiver at{};
-    at.utc = in.ConsumeIntegral<uint32_t>();
+    at.utc_s = in.ConsumeIntegral<uint32_t>();
     at.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
     at.lon_1e7 = in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
     const Transmitter tx =

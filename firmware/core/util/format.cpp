@@ -6,7 +6,7 @@
 
 namespace skyblip {
 
-int fmt_string(char* out, const char* s) {
+int format_string(char* out, const char* s) {
     int n = 0;
     while (s && s[n]) {
         out[n] = s[n];
@@ -15,7 +15,7 @@ int fmt_string(char* out, const char* s) {
     return n;
 }
 
-int fmt_hex(char* out, uint32_t value, uint8_t digits) {
+int format_hex(char* out, uint32_t value, uint8_t digits) {
     for (int i = digits - 1; i >= 0; i--) {
         out[i] = hex_digit(static_cast<uint8_t>(value & 0x0F));
         value >>= 4;
@@ -23,7 +23,7 @@ int fmt_hex(char* out, uint32_t value, uint8_t digits) {
     return digits;
 }
 
-int fmt_uint(char* out, uint32_t value, uint8_t min_digits, uint8_t dec_point) {
+int format_uint(char* out, uint32_t value, uint8_t min_digits, uint8_t dec_point) {
     char tmp[12];
     int len = 0;
     do {
@@ -42,7 +42,7 @@ int fmt_uint(char* out, uint32_t value, uint8_t min_digits, uint8_t dec_point) {
     return n;
 }
 
-int fmt_int(char* out, int32_t value, uint8_t min_digits, uint8_t dec_point, bool no_plus) {
+int format_int(char* out, int32_t value, uint8_t min_digits, uint8_t dec_point, bool no_plus) {
     int n = 0;
     if (value < 0) {
         out[n++] = '-';
@@ -50,12 +50,12 @@ int fmt_int(char* out, int32_t value, uint8_t min_digits, uint8_t dec_point, boo
     } else if (!no_plus) {
         out[n++] = '+';
     }
-    n += fmt_uint(out + n, static_cast<uint32_t>(value), min_digits, dec_point);
+    n += format_uint(out + n, static_cast<uint32_t>(value), min_digits, dec_point);
     return n;
 }
 
 namespace {
-int fmt_dm(char* out, int32_t coord_1e7, int deg_digits) {
+int format_dm(char* out, int32_t coord_1e7, int deg_digits) {
     uint32_t a = coord_1e7 < 0 ? -coord_1e7 : coord_1e7;
     uint32_t deg = a / 10000000u;
     uint64_t rem = static_cast<uint64_t>(a) - static_cast<uint64_t>(deg) * 10000000u;
@@ -63,49 +63,49 @@ int fmt_dm(char* out, int32_t coord_1e7, int deg_digits) {
     uint32_t mm = static_cast<uint32_t>(min_e4 / 10000u);
     uint32_t frac = static_cast<uint32_t>(min_e4 % 10000u);
     int n = 0;
-    n += fmt_uint(out + n, deg, static_cast<uint8_t>(deg_digits));
-    n += fmt_uint(out + n, mm, 2);
+    n += format_uint(out + n, deg, static_cast<uint8_t>(deg_digits));
+    n += format_uint(out + n, mm, 2);
     out[n++] = '.';
-    n += fmt_uint(out + n, frac, 4);
+    n += format_uint(out + n, frac, 4);
     return n;
 }
 }
 
-int fmt_seconds_of_day(char* out, uint32_t seconds) {
+int format_seconds_of_day(char* out, uint32_t seconds) {
     const uint32_t sod = seconds % 86400u;
-    int n = fmt_uint(out, sod / 3600u, 2);
-    n += fmt_string(out + n, ":");
-    n += fmt_uint(out + n, (sod / 60u) % 60u, 2);
-    n += fmt_string(out + n, ":");
-    n += fmt_uint(out + n, sod % 60u, 2);
+    int n = format_uint(out, sod / 3600u, 2);
+    n += format_string(out + n, ":");
+    n += format_uint(out + n, (sod / 60u) % 60u, 2);
+    n += format_string(out + n, ":");
+    n += format_uint(out + n, sod % 60u, 2);
     return n;
 }
 
-int fmt_flight_clock(char* out, uint32_t seconds, bool have_time) {
+int format_flight_clock(char* out, uint32_t seconds, bool have_time) {
     constexpr uint32_t kMaxMinutes = 99 * 60 + 59;
     if (!have_time) {
-        const int dashes = fmt_string(out, "-:--");
+        const int dashes = format_string(out, "-:--");
         out[dashes] = 0;
         return dashes;
     }
     uint32_t minutes = seconds / 60;
     minutes = std::min(minutes, kMaxMinutes);
-    int n = fmt_uint(out, minutes / 60);
+    int n = format_uint(out, minutes / 60);
     out[n++] = ':';
-    n += fmt_uint(out + n, minutes % 60, 2);
+    n += format_uint(out + n, minutes % 60, 2);
     out[n] = 0;
     return n;
 }
 
-int fmt_nmea_lat(char* out, int32_t lat_1e7) {
-    int n = fmt_dm(out, lat_1e7, 2);
+int format_nmea_lat(char* out, int32_t lat_1e7) {
+    int n = format_dm(out, lat_1e7, 2);
     out[n++] = ',';
     out[n++] = lat_1e7 < 0 ? 'S' : 'N';
     return n;
 }
 
-int fmt_nmea_lon(char* out, int32_t lon_1e7) {
-    int n = fmt_dm(out, lon_1e7, 3);
+int format_nmea_lon(char* out, int32_t lon_1e7) {
+    int n = format_dm(out, lon_1e7, 3);
     out[n++] = ',';
     out[n++] = lon_1e7 < 0 ? 'W' : 'E';
     return n;

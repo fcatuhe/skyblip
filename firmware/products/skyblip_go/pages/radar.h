@@ -53,7 +53,7 @@ struct RadarSnapshot {
     bool battery_low{false};
 };
 
-void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap);
+void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot);
 
 }
 

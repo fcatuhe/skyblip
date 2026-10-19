@@ -42,22 +42,23 @@ namespace {
 // An aircraft as a ground station knows it: an address, a place, a height. That
 // is all one uplink record carries (16 bytes of it), and it is deliberately less
 // than a direct ADS-L frame gives.
-model::AircraftObs relayed_aircraft(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m,
-                                    int32_t up_m) {
-    const model::OwnState& own = rig.state().own;
-    model::AircraftObs obs{};
-    obs.address = address;
-    obs.address_mapping_table = 6;
-    obs.aircraft_cat = 4;
-    obs.flight_state = 2;
-    obs.speed_q = 140;
-    obs.speed_valid = true;
-    obs.lat_1e7 =
+model::AircraftObservation relayed_aircraft(Rig& rig, uint32_t address, int32_t north_m,
+                                            int32_t east_m, int32_t up_m) {
+    const model::Ownship& own = rig.state().own;
+    model::AircraftObservation observation{};
+    observation.address = address;
+    observation.address_mapping_table = 6;
+    observation.aircraft_cat = 4;
+    observation.flight_state = 2;
+    observation.speed_q = 140;
+    observation.speed_valid = true;
+    observation.lat_1e7 =
         own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
-    obs.lon_1e7 = own.lon_1e7 + static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    obs.alt_m = to_metres(Millimetres(own.alt_mm)).v + up_m;
-    obs.position_valid = true;
-    return obs;
+    observation.lon_1e7 =
+        own.lon_1e7 + static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
+    observation.alt_m = to_metres(Millimetres(own.alt_mm)).v + up_m;
+    observation.position_valid = true;
+    return observation;
 }
 
 // One skyPost transmission: the frame the ground station composes, put on air in
@@ -66,7 +67,7 @@ model::AircraftObs relayed_aircraft(Rig& rig, uint32_t address, int32_t north_m,
 //
 // Returns what the radio model made of the burst: false is a deaf dwell, and it
 // is a result worth asserting on rather than a test that quietly passes.
-bool relay(Rig& rig, uint32_t& t, const model::AircraftObs* aircraft, int n,
+bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, int n,
            int corrupt_bytes = 0) {
     rig.push_timed_fix(25000, 900);
 
@@ -103,9 +104,9 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObs* aircraft, int n,
 void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int32_t east_m,
                    int32_t up_m) {
     rig.push_timed_fix(25000, 900);
-    const model::OwnState& own = rig.state().own;
+    const model::Ownship& own = rig.state().own;
 
-    model::OwnState transmitter = own;
+    model::Ownship transmitter = own;
     transmitter.lat_1e7 += static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     transmitter.lon_1e7 += static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
     transmitter.alt_mm += up_m * 1000;
@@ -144,7 +145,7 @@ int sourced(Rig& rig, model::Source source) {
     int n = 0;
     for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
         const traffic::Target* t = table.at(i);
-        if (t != nullptr && t->used && t->obs.source == source) n++;
+        if (t != nullptr && t->used && t->observation.source == source) n++;
     }
     return n;
 }
@@ -171,7 +172,7 @@ struct FeatureRig {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.utc = Rig::kUtcBase;
+        state.own.utc_s = Rig::kUtcBase;
         // The same place Rig flies, because the table's range gate
         // (core/traffic/sanity.h) measures a relayed position against own-ship's:
         // a rig claiming a fix at 0N 0E is 5000 km from the aircraft this frame
@@ -205,7 +206,7 @@ TEST_CASE("uplink: one ground-station frame carries several aircraft onto the ra
     uint32_t t = 0;
     fly(rig, t, 3);
 
-    model::AircraftObs relayed[3] = {
+    model::AircraftObservation relayed[3] = {
         relayed_aircraft(rig, 0x4A0001, 2400, -600, 120),
         relayed_aircraft(rig, 0x4A0002, -1800, 900, -250),
         relayed_aircraft(rig, 0x4A0003, 400, 3100, 60),
@@ -220,15 +221,15 @@ TEST_CASE("uplink: one ground-station frame carries several aircraft onto the ra
 
     // Not merely three blips: the positions the ground station sent are the
     // positions the table holds, to the metre the record's resolution allows.
-    for (const model::AircraftObs& sent : relayed) {
+    for (const model::AircraftObservation& sent : relayed) {
         const traffic::Target* got = target_for(rig, sent.address);
         REQUIRE(got != nullptr);
-        CHECK(got->obs.lat_1e7 == sent.lat_1e7);
-        CHECK(got->obs.lon_1e7 == sent.lon_1e7);
-        CHECK(got->obs.alt_m == sent.alt_m);
-        CHECK(got->obs.position_valid);
-        CHECK(got->obs.source == model::Source::AdslUplink);
-        CHECK(got->obs.received.at_s == rig.state().own.utc);
+        CHECK(got->observation.lat_1e7 == sent.lat_1e7);
+        CHECK(got->observation.lon_1e7 == sent.lon_1e7);
+        CHECK(got->observation.alt_m == sent.alt_m);
+        CHECK(got->observation.position_valid);
+        CHECK(got->observation.source == model::Source::AdslUplink);
+        CHECK(got->observation.received.at_s == rig.state().own.utc_s);
     }
 }
 
@@ -242,7 +243,7 @@ TEST_CASE("uplink: a frame Reed-Solomon cannot repair is counted apart and dropp
     fly(rig, t, 3);
     const uint32_t rx_bad_before = rig.state().air.rx_bad;
 
-    model::AircraftObs relayed[2] = {
+    model::AircraftObservation relayed[2] = {
         relayed_aircraft(rig, 0x4B0001, 1500, 200, 0),
         relayed_aircraft(rig, 0x4B0002, -900, -400, 80),
     };
@@ -271,11 +272,11 @@ TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two
     REQUIRE(rig.state().traffic.count() == 1);
     const traffic::Target* direct = target_for(rig, 0x4C0001);
     REQUIRE(direct != nullptr);
-    const int32_t direct_lat = direct->obs.lat_1e7;
+    const int32_t direct_lat = direct->observation.lat_1e7;
 
     // The ground station heard the same aircraft and puts it on the uplink a
     // second later, with a position 300 m behind where we already have it.
-    model::AircraftObs stale = relayed_aircraft(rig, 0x4C0001, 900, 300, 40);
+    model::AircraftObservation stale = relayed_aircraft(rig, 0x4C0001, 900, 300, 40);
     REQUIRE(relay(rig, t, &stale, 1));
 
     CHECK(rig.state().traffic.count() == 1);
@@ -287,10 +288,10 @@ TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two
 
     const traffic::Target* merged = target_for(rig, 0x4C0001);
     REQUIRE(merged != nullptr);
-    CHECK(merged->obs.source == model::Source::AdslDirect);
-    CHECK(merged->obs.lat_1e7 == direct_lat);
-    CHECK(merged->obs.alt_valid);
-    CHECK(merged->obs.alt_m == stale.alt_m);
+    CHECK(merged->observation.source == model::Source::AdslDirect);
+    CHECK(merged->observation.lat_1e7 == direct_lat);
+    CHECK(merged->observation.alt_valid);
+    CHECK(merged->observation.alt_m == stale.alt_m);
 }
 
 // And the other side of that rule, so the hold is a hold and not a block: an
@@ -308,16 +309,16 @@ TEST_CASE("uplink: the relay takes over once the direct report has gone stale") 
     const traffic::Target* direct = target_for(rig, 0x4C0002);
     REQUIRE(direct != nullptr);
 
-    fly(rig, t, traffic::direct_preferred_max_age_s(direct->obs) + 1);
+    fly(rig, t, traffic::direct_preferred_max_age_s(direct->observation) + 1);
 
-    model::AircraftObs later = relayed_aircraft(rig, 0x4C0002, 500, 300, 40);
+    model::AircraftObservation later = relayed_aircraft(rig, 0x4C0002, 500, 300, 40);
     REQUIRE(relay(rig, t, &later, 1));
 
     CHECK(rig.state().traffic.count() == 1);
     const traffic::Target* merged = target_for(rig, 0x4C0002);
     REQUIRE(merged != nullptr);
-    CHECK(merged->obs.source == model::Source::AdslUplink);
-    CHECK(merged->obs.lat_1e7 == later.lat_1e7);
+    CHECK(merged->observation.source == model::Source::AdslUplink);
+    CHECK(merged->observation.lat_1e7 == later.lat_1e7);
 }
 
 // The phantom a relay can make that a direct reception never can: a ground
@@ -330,7 +331,7 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     fly(rig, t, 3);
 
     const uint32_t own_address = *rig.state().activation.address();
-    model::AircraftObs echo[2] = {
+    model::AircraftObservation echo[2] = {
         relayed_aircraft(rig, own_address, 0, 0, 0),
         relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
     };
@@ -349,7 +350,7 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
 // Take it away and the frame still arrives at the service and is still not
 // decoded.
 TEST_CASE("uplink: with Feature::UplinkRx off, a ground frame decodes to nothing") {
-    model::AircraftObs relayed{};
+    model::AircraftObservation relayed{};
     relayed.address = 0x4E0001;
     relayed.address_mapping_table = 6;
     relayed.lat_1e7 = 485000000;
@@ -433,7 +434,7 @@ TEST_CASE("uplink: a 200 kbps burst is not heard by a dwell framing 100 kbps") {
     uint32_t t = 0;
     fly(rig, t, 3);
 
-    model::AircraftObs relayed = relayed_aircraft(rig, 0x4F0001, 1000, 0, 0);
+    model::AircraftObservation relayed = relayed_aircraft(rig, 0x4F0001, 1000, 0, 0);
     protocol::AdslUplink codec;
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(&relayed, 1, 0, frame) == Status::Ok);

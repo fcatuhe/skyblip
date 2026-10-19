@@ -30,7 +30,7 @@ struct RadioLogSnapshot {
     const radio::Log* log{nullptr};
 };
 
-void draw_radio_log(ui::Canvas& fb, const RadioLogSnapshot& snap);
+void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

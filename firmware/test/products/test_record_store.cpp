@@ -92,9 +92,9 @@ bool says(const std::string& reply, const char* key_value) {
     return reply.find(key_value) != std::string::npos;
 }
 
-void write_flight_record(go::RecordStore& store, uint32_t utc, bool session_end) {
+void write_flight_record(go::RecordStore& store, uint32_t utc_s, bool session_end) {
     flight::LogRecord record{};
-    record.utc = utc;
+    record.utc_s = utc_s;
     record.fix_valid = true;
     record.utc_valid = true;
     record.session_end = session_end;

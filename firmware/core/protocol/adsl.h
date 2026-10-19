@@ -220,26 +220,26 @@ struct __attribute__((packed)) AdslPacket {
 
 static_assert(sizeof(AdslPacket) == 28, "AdslPacket wire size must be 28 bytes");
 
-bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
-            model::Source source, model::AircraftObs& out);
+bool to_observation(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
+                    model::Source source, model::AircraftObservation& out);
 // The TimeStamp field is quarter seconds inside a 15 s cycle, so the instant a
 // burst claims is expressible to 250 ms - and the position it carries has to
 // belong to that instant rather than to whenever the receiver last spoke.
 static constexpr uint32_t kTimeStampCycleS = 15;
 static constexpr uint32_t kTimeStampQuarterMs = 250;
-uint8_t timestamp_code(uint32_t utc, int32_t lead_ms);
+uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms);
 
 // INFO: fc 13sep26 TimeStamp names the UTC instant, since_fix_ms the interval carried over
 struct BurstInstant {
-    uint32_t utc;
+    uint32_t utc_s;
     int32_t into_utc_ms;
     int32_t since_fix_ms;
 };
 
 // INFO: fc 18oct26 false, and p untouched, without an address: a unit not activated builds no frame
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat);
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9

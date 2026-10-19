@@ -203,19 +203,19 @@ void RadioService::fly(const Armed& dwell) {
 // monotonic one. The dwell is armed before the slot opens, so the second figure
 // is the staleness already accrued plus the whole wait still to come.
 protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::Attempt& a,
-                                                   uint64_t tx_at_us, uint32_t utc) const {
+                                                   uint64_t tx_at_us, uint32_t utc_s) const {
     const uint32_t tx_ms = static_cast<uint32_t>(tx_at_us / 1000);
     protocol::BurstInstant at{};
-    at.utc = utc;
+    at.utc_s = utc_s;
     at.into_utc_ms = a.at_ms;
     at.since_fix_ms = static_cast<int32_t>(tx_ms - context_.state.own.fix_ms);
     return at;
 }
 
-uint32_t RadioService::slot_utc(uint32_t now_ms) const {
-    const uint32_t utc = context_.state.traffic_now(now_ms);
+uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
+    const uint32_t utc_s = context_.state.traffic_now(now_ms);
     const bool in_slot1_tail = phase_ms() < timing::kSlot1Wrap;
-    return (in_slot1_tail && utc > 0) ? utc - 1 : utc;
+    return (in_slot1_tail && utc_s > 0) ? utc_s - 1 : utc_s;
 }
 
 ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {
@@ -283,17 +283,17 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
 
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan, uint32_t now_ms,
                                                    Payload payload) const {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     // F5: a cold receiver's first solutions walk, and the flight state derived
     // from them decides our transmit rate. Nothing goes on air until own-ship
     // says the solution behind it has settled.
-    if (!timing::own_ship_transmits(own, context_.state.clock, context_.state.activation.address()))
+    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return timing::Transmitter::Attempt{};
     const bool full_rate =
         !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_cat));
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    return transmitter_.attempt(plan, slot_utc(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
+    return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
 }
 
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
@@ -346,7 +346,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         armed.freq_hz = plan.freq_hz;
         armed.from_us = plan.start_us;
         armed.until_us = plan.end_us;
-        armed.utc = slot_utc(now_ms);
+        armed.utc_s = slot_utc_s(now_ms);
         armed.buffer =
             role == Role::Next ? static_cast<uint8_t>(flying_.buffer ^ 1u) : flying_.buffer;
     }
@@ -360,8 +360,8 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         if (!a.go || tx_at_us < std::max(plan.start_us, now_us) || tx_at_us >= plan.end_us)
             continue;
         uint8_t* chips = outgoing_chips_[armed.buffer][static_cast<int>(payload)];
-        const uint8_t tx_len = encode(a, tx_at_us, armed.utc, chips);
-        // INFO: fc 18oct26 defence in depth, unreachable: own_ship_transmits needs an address
+        const uint8_t tx_len = encode(a, tx_at_us, armed.utc_s, chips);
+        // INFO: fc 18oct26 defence in depth, unreachable: ownship_transmits needs an address
         if (tx_len == 0) continue;
         ports::RfPlan with_burst = plan;
         with_burst.tx = chips;
@@ -411,8 +411,8 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
     record_dwell(slot, first, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
 }
 
-uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_at_us, uint32_t utc,
-                             uint8_t* chips) {
+uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_at_us,
+                             uint32_t utc_s, uint8_t* chips) {
     // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
     const settings::AirAddress address = context_.state.activation.address();
     const bool built =
@@ -421,7 +421,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_
                                           settings_.callsign)
             : protocol::from_own(outgoing_, context_.state.own, address,
                                  settings::kAddressMappingTable, context_.state.own.aircraft_cat,
-                                 burst_instant(a, tx_at_us, utc));
+                                 burst_instant(a, tx_at_us, utc_s));
     if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
@@ -459,8 +459,8 @@ diag::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
     if (!armed) return diag::Refusal::Unarmed;
     if (carries_tx) return diag::Refusal::None;
     if (attempt.over_budget) return diag::Refusal::OverBudget;
-    if (!timing::own_ship_transmits(context_.state.own, context_.state.clock,
-                                    context_.state.activation.address()))
+    if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
+                                   context_.state.activation.address()))
         return diag::Refusal::Unsettled;
     return diag::Refusal::OffSchedule;
 }
@@ -478,7 +478,7 @@ void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slo
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
-    entry.utc = context_.instant(now_ms).utc_dated;
+    entry.utc_dated = context_.instant(now_ms).utc_dated;
     entry.airborne = flight::airborne(state.own.flight_state);
     context_.state.radio_log.record(entry);
     context_.diag.record(entry);
@@ -516,11 +516,11 @@ void RadioService::credit(uint64_t tx_at_us, uint32_t now_ms) {
     if (flying_.carries_any())
         spend(flying_, flying_.first(), now_ms);
     else
-        transmitter_.sent(flying_.utc, now_ms, Payload::Position);
+        transmitter_.sent(flying_.utc_s, now_ms, Payload::Position);
 }
 
 void RadioService::spend(Armed& dwell, Payload payload, uint32_t now_ms) {
-    transmitter_.sent(dwell.utc, now_ms, payload);
+    transmitter_.sent(dwell.utc_s, now_ms, payload);
     if (payload == Payload::Callsign) context_.state.air.tx_named++;
     dwell.drop(payload);
 }

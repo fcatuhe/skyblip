@@ -50,7 +50,7 @@ class RadioService : public runtime::Service {
         uint32_t freq_hz{0};
         uint64_t from_us{0};
         uint64_t until_us{0};
-        uint32_t utc{0};
+        uint32_t utc_s{0};
         uint8_t buffer{0};
         bool carried[kPayloads]{};
         uint64_t at_us[kPayloads]{};
@@ -91,10 +91,10 @@ class RadioService : public runtime::Service {
     static bool holds(const Armed& dwell, const timing::SlotPlan& plan);
     static uint64_t instant_us(const timing::Transmitter::Attempt& attempt, int64_t origin_us);
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
-    uint32_t slot_utc(uint32_t now_ms) const;
+    uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms() const;
     protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,
-                                         uint64_t tx_at_us, uint32_t utc) const;
+                                         uint64_t tx_at_us, uint32_t utc_s) const;
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
     timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, uint32_t now_ms) const;
@@ -102,7 +102,7 @@ class RadioService : public runtime::Service {
                                          Payload payload) const;
     bool owes(const Armed& dwell, const timing::SlotPlan& plan, int64_t origin_us,
               uint32_t now_ms) const;
-    uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc,
+    uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc_s,
                    uint8_t* chips);
     bool transmit_due(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) const;
     void queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);

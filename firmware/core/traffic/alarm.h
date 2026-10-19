@@ -38,11 +38,11 @@ constexpr uint32_t kGroundRenotifyFloorMs = 60000;
 
 constexpr int kTrackedTargets = 48;
 
-int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
-                     int32_t east_m, int32_t dist_m);
+int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
+                     int32_t north_m, int32_t east_m, int32_t dist_m);
 
 // INFO: fc 13sep26 now_ms is the instant both sides are carried to, on ports::Clock
-AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
+AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                        uint32_t now_ms);
 
 class AlarmTracker {
@@ -53,7 +53,8 @@ class AlarmTracker {
         bool dismissed{false};
     };
 
-    Decision update(const model::OwnState& own, const model::AircraftObs& target, uint32_t now_ms);
+    Decision update(const model::Ownship& own, const model::AircraftObservation& target,
+                    uint32_t now_ms);
 
     void forget_stale(uint32_t now_ms);
     void withdraw(uint8_t address_mapping_table, uint32_t address);
@@ -77,7 +78,7 @@ class AlarmTracker {
         uint32_t falling_since_ms{0};
     };
 
-    Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
+    Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
     static bool notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms);
 
     std::array<Slot, kTrackedTargets> slots_{};

@@ -54,10 +54,10 @@ constexpr uint8_t kLogFlagFlightStateMask = 0x03;
 // flight that ended from a flight the battery ended.
 constexpr uint8_t kLogFlagSessionEnd = 1u << 7;
 
-// One logged instant, in the units own-ship already carries. utc is absolute
+// One logged instant, in the units own-ship already carries. utc_s is absolute
 // here and relative on flash: the sector header holds the base.
 struct LogRecord {
-    uint32_t utc{0};
+    uint32_t utc_s{0};
     int32_t lat_1e7{0};
     int32_t lon_1e7{0};
     int32_t alt_msl_m{0};
@@ -113,27 +113,27 @@ struct LogContact {
 
 struct LogEvent {
     LogKind kind{LogKind::Status};
-    uint32_t utc{0};
+    uint32_t utc_s{0};
     LogStatus status{};
     LogContact contact{};
 };
 
 // Everything worth keeping out of the state the whole device already agrees on.
-LogRecord log_record_from(const model::OwnState& own);
+LogRecord log_record_from(const model::Ownship& own);
 
-// 24 bytes, little-endian, CRC-16-CCITT over the first 22. base_utc is the
+// 24 bytes, little-endian, CRC-16-CCITT over the first 22. base_utc_s is the
 // session's opening second: a record more than 18 hours into a session saturates
 // its offset rather than wrapping into the past.
-void encode_log_record(const LogRecord& record, uint32_t base_utc, uint8_t* out);
+void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out);
 
 // Status::Empty for a slot that was never written (erased flash reads 0xFF),
 // Status::Crc for one that was being written when the power went, Unsupported
 // for an event, Ok otherwise. A torn record is never handed back as a position.
-Status decode_log_record(const uint8_t* raw, uint32_t base_utc, LogRecord& out);
+Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out);
 
-void encode_log_event(const LogEvent& event, uint32_t base_utc, uint8_t* out);
+void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out);
 // INFO: fc 15oct26 Unsupported for a fix or an unknown kind, so neither is read as the other
-Status decode_log_event(const uint8_t* raw, uint32_t base_utc, LogEvent& out);
+Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out);
 
 // True when every byte is 0xFF, which on NOR means nothing has been programmed
 // here. Checked before the CRC, so an erased slot is never a checksum question.

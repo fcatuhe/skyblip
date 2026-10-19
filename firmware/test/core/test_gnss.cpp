@@ -59,7 +59,7 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
     // 84.4 degrees, kept as the receiver reported it rather than as the wire will carry it
     CHECK(f.track_cdeg == 8440);
     // 2025-08-23 12:35:19 UTC epoch
-    CHECK(f.utc == 1755952519u);
+    CHECK(f.utc_s == 1755952519u);
 }
 
 TEST_CASE("gnss: an RMC that claims a fix with no position is not a fix, whatever came before") {
@@ -129,7 +129,7 @@ TEST_CASE("gnss: a date past January 2038 is still the right UTC second") {
     NmeaParser p;
     REQUIRE(parse(p, checksummed("GPRMC,000000,A,4807.038,N,01131.000,E,022.4,084.4,010140,,")));
     CHECK(p.solution().utc_valid);
-    CHECK(p.solution().utc == 2208988800u);
+    CHECK(p.solution().utc_s == 2208988800u);
 }
 
 // I, row "Date and jump sanity". An MTK-lineage receiver with no almanac reports
@@ -145,7 +145,7 @@ TEST_CASE("gnss: the MTK year-1980 date is refused, and so is anything before 20
     REQUIRE(p.parse_line(lie, static_cast<int>(strlen(lie))));
     CHECK(p.solution().fix_valid);  // the receiver still claims a solution
     CHECK_FALSE(p.solution().utc_valid);
-    CHECK(p.solution().utc == 0);
+    CHECK(p.solution().utc_s == 0);
 
     // The boundary: 69 is 2069 and believable, 70 is 1970 and a lie. OGN draws
     // the line in the same place.
@@ -184,8 +184,8 @@ TEST_CASE("gnss: RMC time is UTC already, so no leap-second offset is applied") 
     REQUIRE(p.parse_line(rmc, static_cast<int>(strlen(rmc))));
     // Exactly the UTC epoch of 2025-08-23T12:35:19Z. Not 18 s past it, not 18 s
     // short of it: the same integer any UTC clock would produce.
-    CHECK(p.solution().utc == 1755952519u);
-    CHECK(p.solution().utc != 1755952519u + 18u);
+    CHECK(p.solution().utc_s == 1755952519u);
+    CHECK(p.solution().utc_s != 1755952519u + 18u);
 }
 
 TEST_CASE("gnss: GGA updates altitude and sats") {

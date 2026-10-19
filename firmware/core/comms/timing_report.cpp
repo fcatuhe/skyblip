@@ -14,7 +14,7 @@ int format_buckets(const timing::SlotTimingStats& stats, bool pps, char* out, in
     int n = 0;
     for (int i = 0; i < timing::SlotTimingStats::kBuckets && n < cap - 1; i++) {
         if (i > 0) out[n++] = ',';
-        n += fmt_uint(out + n, pps ? stats.pps_bucket(i) : stats.dwell_bucket(i));
+        n += format_uint(out + n, pps ? stats.pps_bucket(i) : stats.dwell_bucket(i));
     }
     out[n] = 0;
     return n;
