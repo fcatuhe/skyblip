@@ -82,7 +82,7 @@ def report(path):
         if not positions:
             missed += 1
             gnss_record = gnss.get(second)
-            missed_list.append((second - first_s, (second // 10) & 1, gnss_record and gnss_record["fix_valid"], gnss_record and gnss_record["nav_ms"]))
+            missed_list.append((second - first_s, (second // 10) & 1, gnss_record and gnss_record["fix_valid"], gnss_record and gnss_record["solution_phase_ms"]))
     print("  all-seconds position windows %d, missed %d  (rel_s, slot, fix_valid, nav_ms): %s" % (
         windows, missed, missed_list))
 

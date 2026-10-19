@@ -62,7 +62,7 @@ def slots_closed_with_end(count, dropped=0):
 
 
 def session_reply(count, closed=True, **extra):
-    return dict({"cmd": "session", "index": 0, "of": 1, "session": 1_700_000_000,
+    return dict({"command": "session", "index": 0, "of": 1, "session": 1_700_000_000,
                  "records": count, "closed": closed}, **extra)
 
 
@@ -109,14 +109,14 @@ class LogEndpoint:
 
     def chunk(self, start, count):
         blob = b"".join(self.slots[start:start + count])
-        return {"cmd": "chunk", "log": self.log, "session": self.session["session"],
-                "from": start, "n": count, "eof": start + count >= len(self.slots),
+        return {"command": "chunk", "log": self.log, "session": self.session["session"],
+                "from": start, "records": count, "ends_session": start + count >= len(self.slots),
                 "data": base64.b64encode(blob).decode()}
 
 
 class RefusingEndpoint(LogEndpoint):
     async def write(self, body):
-        self.pending = [{"cmd": "log", "ack": False, "reason": "in_flight"}]
+        self.pending = [{"command": "log", "acknowledge": False, "reason": "in_flight"}]
 
 
 def fetch(endpoint, out=None, **overrides):
@@ -159,7 +159,7 @@ class WindowedRead(unittest.TestCase):
         fetch(endpoint, window=0)
         self.assertEqual(endpoint.counts_asked, [1] * 9)
 
-    def test_a_read_that_runs_past_the_end_stops_on_eof_and_not_on_the_count(self):
+    def test_a_read_that_runs_past_the_end_stops_where_the_session_ends_and_not_on_the_count(self):
         endpoint = LogEndpoint(20)
         fetch(endpoint)
         self.assertEqual(endpoint.counts_asked, [8])
@@ -173,7 +173,7 @@ class WindowedRead(unittest.TestCase):
         self.assertEqual([line["index"] for line in lines], list(range(100)))
         self.assertEqual([line["interval_us"] for line in lines], list(range(100)))
 
-    def test_a_session_of_exactly_one_window_ends_on_the_eof_of_its_eighth_chunk(self):
+    def test_a_session_of_exactly_one_window_ends_on_its_eighth_chunk(self):
         endpoint = LogEndpoint(96)
         lines = of_type(fetched_lines(endpoint), "pps")
         self.assertEqual(len(lines), 96)

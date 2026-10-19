@@ -1,9 +1,9 @@
 #!/usr/bin/env -S uv run --script --with bleak
-"""Bench CLI for a skyBlip over BLE: scan, stream, cmd, bench, fetch, decode.
+"""Bench CLI for a skyBlip over BLE: scan, stream, command, bench, fetch, decode.
 
     ./scripts/blip.py scan
     ./scripts/blip.py stream --seconds 20
-    ./scripts/blip.py cmd '{"cmd":"diag"}'
+    ./scripts/blip.py command '{"command":"diagnostics"}'
     ./scripts/blip.py bench
     ./scripts/blip.py fetch --log diagnostics --all --out capture.ndjson
     ./scripts/blip.py decode capture.ndjson --summary
@@ -22,6 +22,7 @@ import sys
 import time
 
 import blip_records as records
+import legacy_dialect
 
 NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -51,10 +52,10 @@ def main():
     stream.add_argument("--seconds", type=float, default=20.0)
     stream.set_defaults(run=run_stream)
 
-    one = sub.add_parser("cmd", help="one config command, all of its reply frames")
+    one = sub.add_parser("command", help="one config command, all of its reply frames")
     one.add_argument("json")
     one.add_argument("--timeout", type=float, default=4.0)
-    one.set_defaults(run=run_cmd)
+    one.set_defaults(run=run_command)
 
     bench = sub.add_parser("bench", help="connect, round trip, throughput, cadence, jitter")
     bench.add_argument("--seconds", type=float, default=20.0)
@@ -125,9 +126,10 @@ async def run_stream(args):
     return 0
 
 
-async def run_cmd(args):
+async def run_command(args):
+    body = legacy_dialect.current(legacy_dialect.LINK, json.loads(args.json))
     async with await connect(args, config=True) as link:
-        for delay, text in await link.command(json.loads(args.json), args.timeout):
+        for delay, text in await link.command(body, args.timeout):
             print("%7.1f ms  %s" % (delay * 1000, text))
     return 0
 
@@ -140,15 +142,15 @@ async def run_bench(args):
 
         trips = []
         for _ in range(args.samples):
-            (delay, _), = await link.command({"cmd": "status"}, args.timeout)
+            (delay, _), = await link.command({"command": "status"}, args.timeout)
             trips.append(delay * 1000)
         report_spread("status rtt", trips, "ms")
 
         began = time.monotonic()
-        frames = await link.command({"cmd": "diag"}, args.timeout)
+        frames = await link.command({"command": "diagnostics"}, args.timeout)
         span = max(time.monotonic() - began, 1e-6)
         size = sum(len(text) for _, text in frames)
-        print("diag        %d frames, %d bytes in %.0f ms (%.1f kB/s)"
+        print("diagnostics %d frames, %d bytes in %.0f ms (%.1f kB/s)"
               % (len(frames), size, span * 1000, size / span / 1024))
 
         link.forget_stream()
@@ -256,14 +258,14 @@ async def fetch_session(link, args, session, start, out):
     at = start
     while at < total:
         for chunk in await read_window(link, args, session_id, at):
-            if chunk["from"] != at or (chunk["n"] == 0 and not chunk.get("eof")):
+            if chunk["from"] != at or (chunk["records"] == 0 and not chunk.get("ends_session")):
                 raise SystemExit("session %d was asked for index %d and answered %s"
                                  % (session_id, at, json.dumps(chunk)))
             encoded_bytes += len(chunk.get("data", ""))
             for record in records.decode_chunk(args.log, chunk.get("data", ""), session_id, at):
                 sink.write(record)
-            at += chunk["n"]
-            if chunk.get("eof"):
+            at += chunk["records"]
+            if chunk.get("ends_session"):
                 total = at
         if out:
             out.flush()
@@ -291,15 +293,15 @@ def line_writer(out):
 async def read_window(link, args, session_id, at):
     """One read command, and exactly the chunk frames the device answers it with."""
     asked = chunks_per_read(args.window)
-    await link.write({"cmd": "read", "log": args.log, "session": session_id,
+    await link.write({"command": "read", "log": args.log, "session": session_id,
                       "from": at, "count": asked})
     chunks = []
     while len(chunks) < asked:
         frame = refuse_if_nacked(await link.frame(args.timeout))
-        if frame.get("cmd") != "chunk":
+        if frame.get("command") != "chunk":
             raise SystemExit("unexpected reply to read: %s" % json.dumps(frame))
         chunks.append(frame)
-        if frame.get("eof"):
+        if frame.get("ends_session"):
             break
     return chunks
 
@@ -312,11 +314,11 @@ def chunks_per_read(window):
 
 
 async def list_sessions(link, args):
-    await link.write({"cmd": "list", "log": args.log})
+    await link.write({"command": "list", "log": args.log})
     count = refuse_if_nacked(await link.frame(args.timeout))
     sessions = []
     for index in range(count.get("sessions", 0)):
-        await link.write({"cmd": "list", "log": args.log, "index": index})
+        await link.write({"command": "list", "log": args.log, "index": index})
         sessions.append(refuse_if_nacked(await link.frame(args.timeout)))
     if count.get("truncated"):
         print("the device holds more sessions than its index offers")
@@ -324,7 +326,7 @@ async def list_sessions(link, args):
 
 
 def refuse_if_nacked(frame):
-    if frame.get("ack") is False:
+    if frame.get("acknowledge") is False:
         raise SystemExit("device refused: %s" % frame.get("reason", "no reason given"))
     return frame
 
@@ -402,6 +404,7 @@ class Link:
         self.frames = asyncio.Queue()
         self.notifications = []
         self.assembler = LineAssembler()
+        self.dialect = legacy_dialect.Dialect()
 
     @property
     def address(self):
@@ -432,15 +435,26 @@ class Link:
             self.lines.put_nowait((at, line))
 
     def on_config(self, _, data):
-        self.replies.put_nowait((time.monotonic(), bytes(data).decode(errors="replace")))
+        self.replies.put_nowait((time.monotonic(), self.received(bytes(data))))
 
     def on_log(self, _, data):
-        self.frames.put_nowait(bytes(data).decode(errors="replace"))
+        self.frames.put_nowait(self.received(bytes(data)))
+
+    def received(self, data):
+        """A frame as text in today's names, or as it came when it is not a JSON object."""
+        text = data.decode(errors="replace")
+        try:
+            frame = json.loads(text)
+        except json.JSONDecodeError:
+            return text
+        if not isinstance(frame, dict):
+            return text
+        return json.dumps(self.dialect.receive(frame), separators=(",", ":"))
 
     async def command(self, body, timeout):
         """Every frame of one config reply, ended by its own more flag and not by a count."""
         sent = time.monotonic()
-        await self.client.write_gatt_char(CONFIG_CHAR, json.dumps(body).encode(), response=True)
+        await self.client.write_gatt_char(CONFIG_CHAR, self.encoded(body), response=True)
         out = []
         while True:
             at, text = await asyncio.wait_for(self.replies.get(), timeout)
@@ -449,7 +463,10 @@ class Link:
                 return out
 
     async def write(self, body):
-        await self.client.write_gatt_char(LOG_CHAR, json.dumps(body).encode(), response=True)
+        await self.client.write_gatt_char(LOG_CHAR, self.encoded(body), response=True)
+
+    def encoded(self, body):
+        return json.dumps(self.dialect.send(body)).encode()
 
     async def frame(self, timeout):
         try:

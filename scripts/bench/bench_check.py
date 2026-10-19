@@ -71,13 +71,13 @@ def integrity(records):
 
 def report(path, records):
     boot = [record for record in records if record["type"] == "boot"]
-    build = boot[0]["fw_build"] if boot else 0
+    build = boot[0]["firmware_build"] if boot else 0
     address = next(record["address"] for record in records if record["type"] == "config")
     ground = mix(address) % 10
     slots = windows_for(build)
     first_s, last_s = records[0]["at_s"], max(record["at_s"] for record in records)
     print("== %s  addr %06X  build %s  boots %d  ground %d  span %d s" % (
-        path.split("/")[-1], address, [boot_record["fw_build"] for boot_record in boot], len(boot), ground, last_s - first_s))
+        path.split("/")[-1], address, [boot_record["firmware_build"] for boot_record in boot], len(boot), ground, last_s - first_s))
     for line in integrity(records):
         print("  " + line)
     types = collections.Counter(record["type"] for record in records)
@@ -165,7 +165,7 @@ def report(path, records):
         missing = [(previous - first_s, following - previous) for previous, following in zip(seconds, seconds[1:]) if following - previous > 1]
         print("  gnss %d: fix invalid %d (losses %d), rejects %s, missing seconds %s" % (
             len(gnss), len(lost), flips, dict(collections.Counter(record["reject"] for record in gnss)), missing[:10]))
-        print("  gnss sats_in_view %s" % stats([record["sats_in_view"] for record in gnss]))
+        print("  gnss sats_in_view %s" % stats([record["satellites_in_view"] for record in gnss]))
     pages = collections.Counter(record["page"] for record in records if record["type"] == "screen")
     print("  screen pages (records) %s" % dict(pages))
     return address, own
@@ -192,7 +192,7 @@ def cross(name_a, records_a, address_a, own_a, name_b, records_b):
             hit[kind] += 1
         else:
             missed.append((burst["at_s"] - overlap_start, burst["into_ms"], kind))
-    lengths = collections.Counter(record["len"] for record in rx)
+    lengths = collections.Counter(record["bytes"] for record in rx)
     rssi = [record["rssi_dbm"] for record in rx]
     unframed = sum(1 for record in records_b if record["type"] == "burst" and record["verdict"] == "unframed"
                    and overlap_start <= record["at_s"] <= overlap_end)

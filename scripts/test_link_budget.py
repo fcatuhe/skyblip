@@ -373,8 +373,8 @@ class Firmware(Case):
         for raw, fields in ((config(UNIT_A), ("address", "tx_power_dbm", "pa_rated_dbm")),
                             (heard(UNIT_A, FIX_AT), ("address", "verdict", "band", "channel",
                                                      "rssi_dbm", "address_valid", "rssi_valid")),
-                            (traffic(UNIT_A, FIX_AT, 17), ("address", "dist_m", "position_valid"))):
-            decoded = records.decode_diag_record(raw)
+                            (traffic(UNIT_A, FIX_AT, 17), ("address", "distance_m", "position_valid"))):
+            decoded = records.decode_diagnostics_record(raw)
             for field in fields:
                 self.assertIn(field, decoded)
 

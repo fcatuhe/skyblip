@@ -465,7 +465,7 @@ class Caveats(Case):
 
 class Fields(Case):
     def test_every_duty_field_the_budget_reads_is_a_field_the_decoder_decodes(self):
-        decoded = records.decode_diag_record(duty(0))
+        decoded = records.decode_diagnostics_record(duty(0))
         for consumer in power_budget.CONSUMERS:
             kind, field, _ = consumer.counter
             if kind != "elapsed":

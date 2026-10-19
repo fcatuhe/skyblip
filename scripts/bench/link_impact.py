@@ -7,7 +7,7 @@ import blip_records
 def clock_text(second): return datetime.datetime.fromtimestamp(second, datetime.UTC).strftime("%H:%M:%S")
 for path in sys.argv[1:]:
     records=[record for record in blip_records.read_ndjson(path) if record.get("type") not in blip_records.NOTE_TYPES]
-    build=next((record["fw_build"] for record in records if record["type"]=="boot"),0)
+    build=next((record["firmware_build"] for record in records if record["type"]=="boot"),0)
     windows=[]; up_at=None
     for record in records:
         if record["type"]=="link" and record["action"]=="up" and up_at is None: up_at=record["at_s"]
@@ -25,7 +25,7 @@ for path in sys.argv[1:]:
         side="in" if inside(record["at_s"]) else "out"
         if record["type"]=="gap": counts[side,"dropped"]+=record["dropped"]
         if record["type"]=="dwell" and late(record): counts[side,"late_dwell"]+=1
-        if record["type"]=="gnss" and record["nav_ms"]>=400: counts[side,"nav>=400"]+=1
+        if record["type"]=="gnss" and record["solution_phase_ms"]>=400: counts[side,"nav>=400"]+=1
         if record["type"]=="gnss": counts[side,"gnss_s"]+=1
     print("== %s build %d windows %s" % (path, build, [(clock_text(start), end-start) for start,end in merged]))
     print("   ", dict(sorted(counts.items())))

@@ -40,7 +40,7 @@ def report(path):
         print("   odd rel %d.%03d %s" % (record["at_s"] - first_s, record["into_ms"],
               {key: record[key] for key in ("change", "to_hz", "took_us", "gap_us", "margin_us", "armed_ahead", "late")}))
     own = [record for record in records if record["type"] == "burst" and record["verdict"] == "transmitted"]
-    print("  transmitted %d, names %d (compare with diag tx_ok / tx_named; timing.missed should be 0)"
+    print("  transmitted %d, names %d (compare with diagnostics tx_ok / tx_named; timing.missed should be 0)"
           % (len(own), sum(record["callsign"] for record in own)))
     keyed = sorted(record["tx_keyed_us"] for record in own) or [0]
     print("  tx_keyed_us med %d p99 %d max %d" % (statistics.median(keyed), quantile(keyed, .99), keyed[-1]))

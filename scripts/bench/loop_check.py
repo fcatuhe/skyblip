@@ -27,7 +27,7 @@ def spread(values):
 
 def report(path):
     records = [record for record in blip_records.read_ndjson(path) if record.get("type") not in blip_records.NOTE_TYPES]
-    builds = sorted({record["fw_build"] for record in records if record["type"] == "boot"})
+    builds = sorted({record["firmware_build"] for record in records if record["type"] == "boot"})
     print("== %s  build %s" % (path.split("/")[-1], builds))
     loops = [record for record in records if record["type"] == "loop"]
     if not loops:
@@ -46,8 +46,8 @@ def report(path):
             if record["present_us"]:
                 by_page[page]["present_ms"].append(round(record["present_us"] / 1000, 1))
         if record["type"] == "gnss":
-            nav_of[record["at_s"]] = record["nav_ms"]
-            by_page[page]["nav_ms"].append(record["nav_ms"])
+            nav_of[record["at_s"]] = record["solution_phase_ms"]
+            by_page[page]["solution_phase_ms"].append(record["solution_phase_ms"])
         if record["type"] == "loop":
             page_of[record["at_s"]] = page
 
@@ -64,7 +64,7 @@ def report(path):
         if not series["passes"]:
             continue
         print("   page %s  %d s" % (shown_page, len(series["passes"])))
-        for key in ("passes", "busy_ms", "worst_pass_ms", "worst_gap_ms", "render_ms", "present_ms", "nav_ms"):
+        for key in ("passes", "busy_ms", "worst_pass_ms", "worst_gap_ms", "render_ms", "present_ms", "solution_phase_ms"):
             print("     %-14s %s" % (key, spread(series[key])))
         print("     holder         %s" % dict(collections.Counter(series["holder"]).most_common()))
 

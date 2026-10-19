@@ -22,7 +22,7 @@ for path in sys.argv[1:]:
         if not (first_s <= record["at_s"] <= last_s + 2): continue
         bucket = (record["at_s"] - first_s) // 10
         if record["type"] == "dwell" and late(record): late_by_bucket[bucket] += 1
-        if record["type"] == "gnss": nav_by_bucket[bucket].append(record["nav_ms"])
+        if record["type"] == "gnss": nav_by_bucket[bucket].append(record["solution_phase_ms"])
         if record["type"] == "gap": dropped_by_bucket[bucket] += record["dropped"]
     print("== %s: %d log commands over %d s" % (path.split("/")[-1], len(commands), last_s - first_s))
     print("   t_s  cmds quiet_med quiet_max late nav_med nav_max dropped")

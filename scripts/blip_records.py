@@ -12,6 +12,8 @@ import base64
 import datetime
 import json
 
+import legacy_dialect
+
 RECORD_BYTES = 24
 PAYLOAD_OFFSET = 8
 STORES = ("flights", "diagnostics")
@@ -115,7 +117,8 @@ VERDICT = ("transmitted", "lost", "held", "unarmed", "received", "named", "bad_c
            "miskeyed", "undecoded", "unsupported", "unattempted")
 SOURCE = ("adsl_direct", "adsl_uplink", "alptas", "own")
 BAND = ("M", "O")
-SLOT_STATE = ("uplink_rx_o", "switch_o_to_m", "slot0", "hop", "slot1", "switch_m_to_o")
+SLOT_STATE = ("uplink_rx_o_band", "switch_o_band_to_m_band", "slot0", "hop", "slot1",
+              "switch_m_band_to_o_band")
 REFUSAL = ("none", "over_budget", "unarmed", "unsettled", "off_schedule")
 FLIGHT_STATE = ("unknown", "on_ground", "airborne")
 POWER_LEVEL = ("unknown", "normal", "critical", "flat", "low")
@@ -125,25 +128,25 @@ LINK_ACTION = ("up", "down", "claim_taken", "claim_released", "received", "sent"
 ENDPOINT = ("config", "nmea", "log")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
-CHANGE = ("retune", "hop", "to_oband", "to_mband", "wake")
+CHANGE = ("retune", "hop", "to_o_band", "to_m_band", "wake")
 SERVICE = ("config", "ownship", "power", "radio", "traffic", "alarm", "nmea", "flight_log",
            "capture", "screen", "board_poll")
 
-DIAG_TYPES = {
+DIAGNOSTICS_TYPES = {
     1: ("boot", (
-        ("capabilities", uint32(0)), ("fw_build", uint32(4)), ("fw_revision", uint16(8)),
-        ("fw_major", uint8(10)), ("fw_minor", uint8(11)), ("reset", enum8(12, RESET)),
+        ("capabilities", uint32(0)), ("firmware_build", uint32(4)), ("firmware_revision", uint16(8)),
+        ("firmware_major", uint8(10)), ("firmware_minor", uint8(11)), ("reset", enum8(12, RESET)),
         ("image_state", enum8(13, IMAGE_STATE)), ("profile", vouched_enum8(14, 2, PROFILE)))),
     2: ("config", (
-        ("address", uint32(0)), ("battery_offset_mv", int16(4)), ("freq_trim_e1_ppm", int16(6)),
+        ("address", uint32(0)), ("battery_offset_mv", int16(4)), ("frequency_trim_e1_ppm", int16(6)),
         ("aircraft_type", uint8(8)), ("address_mapping_table", uint8(9)), ("alarm_volume", uint8(10)),
         ("settings_version", uint8(11)), ("tx_power_dbm", int8(12)), ("pa_rated_dbm", int8(13)),
         ("alarm_enabled", flag(2)), ("metric", flag(3)), ("battery_trim_manual", flag(4)))),
     3: ("gnss", (
-        ("nav_ms", uint16(0)), ("resid_m", uint16(2)), ("hdop_e2", uint16(4)), ("vdop_e2", uint16(6)),
-        ("stage_s", uint16(8)), ("sats", uint8(10)), ("sats_in_view", uint8(11)), ("fix_mode", uint8(12)),
+        ("solution_phase_ms", uint16(0)), ("residual_m", uint16(2)), ("hdop_e2", uint16(4)), ("vdop_e2", uint16(6)),
+        ("stage_s", uint16(8)), ("satellites", uint8(10)), ("satellites_in_view", uint8(11)), ("fix_mode", uint8(12)),
         ("reject", enum8(13, REJECT)), ("stage", enum8(14, STAGE)), ("fix_valid", flag(2)),
-        ("resid_valid", flag(3)), ("pps_locked", flag(4)), ("geoid_measured", flag(5)),
+        ("residual_valid", flag(3)), ("pps_locked", flag(4)), ("geoid_measured", flag(5)),
         ("tx_settled", flag(6)), ("levels_fresh", flag(7)))),
     4: ("pps", (
         ("interval_us", uint32(0)), ("error_us", int32(4)), ("samples", uint32(8)),
@@ -152,17 +155,17 @@ DIAG_TYPES = {
     5: ("burst", (
         ("address", uint32(0)), ("tx_keyed_us", uint16(4)), ("tx_span_us", uint16(6)),
         ("verdict", enum8(8, VERDICT)), ("source", enum8(9, SOURCE)), ("band", enum8(10, BAND)),
-        ("channel", uint8(11)), ("len", uint8(12)), ("rssi_dbm", int8(13)), ("key_offset_s", int8(14)),
+        ("channel", uint8(11)), ("bytes", uint8(12)), ("rssi_dbm", int8(13)), ("key_offset_s", int8(14)),
         ("tx_stage_margin_us", scaled(int8(15), 10)), ("address_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
         ("tx_span_valid", flag(5)), ("callsign", flag(6)))),
     6: ("dwell", (
-        ("freq_hz", uint32(0)), ("start_ms", uint16(4)), ("end_ms", uint16(6)), ("phase_ms", uint16(8)),
+        ("frequency_hz", uint32(0)), ("start_ms", uint16(4)), ("end_ms", uint16(6)), ("phase_ms", uint16(8)),
         ("duty_permille", uint16(10)), ("state", enum8(12, SLOT_STATE)), ("band", enum8(13, BAND)),
         ("refusal", enum8(14, REFUSAL)), ("noise_dbm", int8(15)), ("tx_allowed", flag(2)),
         ("own_tx_dwell", flag(3)), ("listen_only", flag(4)), ("armed", flag(5)),
         ("burst_armed", flag(6)))),
     7: ("flight", (
-        ("speed_mm_s", int32(0)), ("climb_mm_s", int32(4)), ("alt_msl_m", int16(8)),
+        ("speed_mm_s", int32(0)), ("climb_mm_s", int32(4)), ("altitude_msl_m", int16(8)),
         ("hdop_e2", uint16(10)), ("vdop_e2", uint16(12)), ("declared", enum8(14, FLIGHT_STATE)),
         ("confirmed", enum8(15, FLIGHT_STATE)), ("fix_valid", flag(2)), ("rolling", flag(3)),
         ("climb_valid", flag(4)), ("tx_settled", flag(5)))),
@@ -173,8 +176,8 @@ DIAG_TYPES = {
         ("trim_offset_mv", int16(13)), ("sample_offset_mv", int8(15)), ("charging", flag(2)), ("external_power", flag(3)),
         ("valid", flag(4)), ("die_valid", flag(5)), ("caution", flag(6)),
         ("trim_learned", flag(7)))),
-    9: ("baro", (
-        ("pressure_mpa", uint32(0)), ("alt_mm", int32(4)), ("climb_mm_s", int32(8)),
+    9: ("barometer", (
+        ("pressure_mpa", uint32(0)), ("altitude_mm", int32(4)), ("climb_mm_s", int32(8)),
         ("temperature_dc", int16(12)), ("active", flag(2)), ("temperature_valid", flag(3)),
         ("climb_adopted", flag(4)))),
     10: ("motion", (
@@ -190,7 +193,8 @@ DIAG_TYPES = {
         ("holder", uint16(6)), ("drops", uint16(8)), ("action", enum8(10, LINK_ACTION)),
         ("endpoint", enum8(11, ENDPOINT)), ("claim_held", flag(2)))),
     13: ("traffic", (
-        ("address", uint32(0)), ("dist_m", uint16(4)), ("bearing_deg", uint16(6)), ("rel_alt_m", int16(8)),
+        ("address", uint32(0)), ("distance_m", uint16(4)), ("bearing_deg", uint16(6)),
+        ("relative_altitude_m", int16(8)),
         ("closing_mps", int16(10)), ("alarm", uint8(12)), ("source", enum8(13, SOURCE)),
         ("rssi_dbm", int8(14)), ("tracked", uint8(15)), ("assessed", flag(2)), ("dismissed", flag(3)),
         ("in_formation", flag(4)), ("position_valid", flag(5)))),
@@ -199,7 +203,7 @@ DIAG_TYPES = {
         ("forced", uint16(10)), ("placement", enum8(12, PLACEMENT)), ("kind", enum8(13, WRITE_KIND)),
         ("pending", flag(2)))),
     15: ("screen", (
-        ("since_ms", uint32(0)), ("page", uint8(4)), ("mode", uint8(5)), ("prompt", uint8(6)),
+        ("since_page_shown_ms", uint32(0)), ("page", uint8(4)), ("mode", uint8(5)), ("prompt", uint8(6)),
         ("alarm", uint8(7)), ("render_us", uint32(8)), ("present_us", uint32(12)), ("backlight", flag(2)),
         ("powered", flag(3)), ("holding", flag(4)))),
     16: ("gap", (
@@ -221,10 +225,10 @@ DIAG_TYPES = {
 }
 
 FLIGHT_FIELDS = (
-    ("lat_1e7", int32(2)), ("lon_1e7", int32(6)), ("alt_msl_m", int16(10)),
-    ("alt_hae_m", added(int16(10), int8(12))), ("speed_q", uint16(13)),
+    ("latitude_1e7", int32(2)), ("longitude_1e7", int32(6)), ("altitude_msl_m", int16(10)),
+    ("altitude_hae_m", added(int16(10), int8(12))), ("speed_q", uint16(13)),
     ("speed_mm_s", scaled(uint16(13), 250)), ("track_c9", uint16(15)), ("track_deg", track_degrees(15)),
-    ("climb_e8", int16(17)), ("climb_mm_s", scaled(int16(17), 125)), ("sats", uint8(19)),
+    ("climb_e8", int16(17)), ("climb_mm_s", scaled(int16(17), 125)), ("satellites", uint8(19)),
     ("hdop_e2", scaled(uint8(20), 10)), ("flight_state", flag_field(5, 0x03, FLIGHT_STATE)),
     ("fix_valid", flag(0)), ("utc_valid", flag(1)), ("pps_locked", flag(2)),
     ("climb_valid", flag(3)), ("geoid_measured", flag(4)), ("session_end", flag(7)),
@@ -236,18 +240,18 @@ FLIGHT_EVENT_MARK = 0x80
 FLIGHT_KIND_OFFSET = 16
 
 CONTACT_FIELDS = (
-    ("address", uint24(2)), ("address_mapping_table", uint8(5)), ("dist_m", uint16(6)), ("rel_alt_m", int16(8)),
-    ("rel_bearing_deg", uint16(10)), ("closing_mps", int16(12)), ("alarm", uint8(14)),
-    ("aircraft_cat", uint8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", int8(18)),
+    ("address", uint24(2)), ("address_mapping_table", uint8(5)), ("distance_m", uint16(6)),
+    ("relative_altitude_m", int16(8)), ("relative_bearing_deg", uint16(10)), ("closing_mps", int16(12)), ("alarm", uint8(14)),
+    ("aircraft_category", uint8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", int8(18)),
     ("dismissed", flag(0)), ("in_formation", flag(1)),
 )
 
 # INFO: fc 15oct26 kind: (name, the byte its flags are read from, its fields)
 FLIGHT_EVENTS = {
     1: ("status", 9, (
-        ("cell_mv", uint16(2)), ("percent", uint8(4)), ("level", enum8(5, POWER_LEVEL)),
+        ("cell_mv", uint16(2)), ("percent", uint8(4)), ("power_level", enum8(5, POWER_LEVEL)),
         ("charge", enum8(6, CHARGE)), ("tracked", uint8(7)), ("tracked_peak", uint8(8)),
-        ("valid", flag(0)), ("charging", flag(1)), ("external_power", flag(2)))),
+        ("battery_valid", flag(0)), ("charging", flag(1)), ("external_power", flag(2)))),
     2: ("alarm", 19, CONTACT_FIELDS),
     3: ("encounter", 19, CONTACT_FIELDS + (("heard_s", uint16(20)),)),
 }
@@ -268,27 +272,27 @@ def flight_enum_fields():
 
 def enum_fields():
     """Every diagnostics field an ordinal is read through, as (field, names) pairs."""
-    for _, fields in DIAG_TYPES.values():
+    for _, fields in DIAGNOSTICS_TYPES.values():
         for field, read in fields:
             names = getattr(read, "names", None)
             if names is not None:
                 yield field, names
 
 
-def decode_record(store, raw, base_utc):
+def decode_record(store, raw, base_utc_s):
     if store == "diagnostics":
-        return decode_diag_record(raw)
-    return decode_flight_record(raw, base_utc)
+        return decode_diagnostics_record(raw)
+    return decode_flight_record(raw, base_utc_s)
 
 
-def decode_diag_record(raw):
+def decode_diagnostics_record(raw):
     if len(raw) != RECORD_BYTES:
         raise RecordError("short slot of %d bytes" % len(raw))
     if all(byte == 0xFF for byte in raw):
         raise RecordError("erased")
-    if raw[0] not in DIAG_TYPES:
+    if raw[0] not in DIAGNOSTICS_TYPES:
         raise RecordError("unknown type %d" % raw[0])
-    name, fields = DIAG_TYPES[raw[0]]
+    name, fields = DIAGNOSTICS_TYPES[raw[0]]
     flags = raw[1]
     payload = raw[PAYLOAD_OFFSET:]
     decoded = {
@@ -305,7 +309,7 @@ def decode_diag_record(raw):
     return decoded
 
 
-def decode_flight_record(raw, base_utc):
+def decode_flight_record(raw, base_utc_s):
     if len(raw) != RECORD_BYTES:
         raise RecordError("short slot of %d bytes" % len(raw))
     if all(byte == 0xFF for byte in raw):
@@ -313,21 +317,21 @@ def decode_flight_record(raw, base_utc):
     if crc16_ccitt(raw[:22]) != int.from_bytes(raw[22:24], "little"):
         raise RecordError("crc")
     if raw[FLIGHT_KIND_OFFSET] & FLIGHT_EVENT_MARK:
-        return decode_flight_event(raw, base_utc)
+        return decode_flight_event(raw, base_utc_s)
     flags = raw[21]
-    decoded = {"type": "fix", "utc": base_utc + int.from_bytes(raw[0:2], "little")}
+    decoded = {"type": "fix", "utc_s": base_utc_s + int.from_bytes(raw[0:2], "little")}
     for field, read in FLIGHT_FIELDS:
         decoded[field] = read(raw, flags)
     return decoded
 
 
-def decode_flight_event(raw, base_utc):
+def decode_flight_event(raw, base_utc_s):
     kind = raw[FLIGHT_KIND_OFFSET] & ~FLIGHT_EVENT_MARK & 0xFF
     if kind not in FLIGHT_EVENTS:
         raise RecordError("unknown event kind %d" % kind)
     name, flags_at, fields = FLIGHT_EVENTS[kind]
     flags = raw[flags_at]
-    decoded = {"type": name, "utc": base_utc + int.from_bytes(raw[0:2], "little")}
+    decoded = {"type": name, "utc_s": base_utc_s + int.from_bytes(raw[0:2], "little")}
     for field, read in fields:
         decoded[field] = read(raw, flags)
     return decoded
@@ -341,7 +345,7 @@ def crc16_ccitt(data, crc=0):
     return crc
 
 
-def decode_chunk(store, encoded, base_utc, first_index):
+def decode_chunk(store, encoded, base_utc_s, first_index):
     """One chunk's base64 into decoded records, each stamped with its own index."""
     raw = base64.b64decode(encoded, validate=True)
     if len(raw) % RECORD_BYTES:
@@ -350,7 +354,7 @@ def decode_chunk(store, encoded, base_utc, first_index):
     for slot in range(len(raw) // RECORD_BYTES):
         at = slot * RECORD_BYTES
         try:
-            decoded = decode_record(store, raw[at:at + RECORD_BYTES], base_utc)
+            decoded = decode_record(store, raw[at:at + RECORD_BYTES], base_utc_s)
         except RecordError as error:
             decoded = {"type": "unreadable", "error": str(error)}
         out.append(dict(index=first_index + slot, **decoded))
@@ -423,10 +427,11 @@ class SessionSink:
 
 
 def read_ndjson(path):
+    """Every line in today's names, whichever blip.py fetched it."""
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             if line.strip():
-                yield json.loads(line)
+                yield legacy_dialect.current(legacy_dialect.RECORDS, json.loads(line))
 
 
 def resume_point(path):
@@ -443,8 +448,8 @@ def resume_point(path):
 
 def stamp_of(record):
     """into_ms reaches 1200 on a slot 1 burst, so it is printed beside the second, not inside it."""
-    if "utc" in record:
-        return utc_text(record["utc"])
+    if "utc_s" in record:
+        return utc_text(record["utc_s"])
     second = utc_text(record["at_s"]) if record.get("utc_dated") else "+%ds" % record.get("at_s", 0)
     return "%s %dms" % (second, record.get("into_ms", 0))
 
@@ -454,7 +459,7 @@ def utc_text(seconds):
     return moment.strftime("%Y-%m-%dT%H:%M:%S")
 
 
-ENVELOPE = ("index", "session", "log", "type", "at_s", "into_ms", "utc")
+ENVELOPE = ("index", "session", "log", "type", "at_s", "into_ms", "utc_s")
 
 
 def render(record):
@@ -475,7 +480,7 @@ def summarise(lines_in):
     records = [line for line in lines_in if not is_note(line)]
     for record in records:
         counts[record.get("type", "?")] = counts.get(record.get("type", "?"), 0) + 1
-        moment = record.get("utc", record.get("at_s"))
+        moment = record.get("utc_s", record.get("at_s"))
         if moment is not None:
             stamped.append((moment, record))
         if record.get("type") == "gap":

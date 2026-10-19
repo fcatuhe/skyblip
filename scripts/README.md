@@ -6,6 +6,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`legacy_dialect.py`](legacy_dialect.py) | the reader of `schemas/legacy_dialect.v1.json`: the words units before #151 speak, and the names captures fetched before it carry |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
@@ -15,7 +16,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
-| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_legacy_dialect.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
 
@@ -41,7 +42,7 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 
 Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser client does (a notification is a slice of a byte stream, not a sentence), verifies every NMEA checksum and prints each sentence with a host timestamp. A sentence whose checksum does not match is printed and flagged, never dropped.
 
-`./scripts/blip.py cmd '{"cmd":"diag"}'` writes one JSON command to the config endpoint (`69c21302`) and prints every reply frame with its round trip. A multi-frame reply ends when a frame stops saying `"more": true`, so `diag` needs no `--parts` and will not silently truncate when the device grows a sixth group.
+`./scripts/blip.py command '{"command":"diagnostics"}'` writes one JSON command to the config endpoint (`69c21302`) and prints every reply frame with its round trip. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
 
 ### Benchmark a link
 
@@ -49,7 +50,7 @@ Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser cl
 ./scripts/blip.py bench --seconds 20 --samples 10
 ```
 
-Connect time to GATT ready, the negotiated MTU and the payload it leaves, the distribution of `status` round trips, the multi-frame throughput of `diag`, then the stream: sentence counts by talker, bad checksums, `$PFLAU` cadence and its jitter, notification sizes and the gap between notifications.
+Connect time to GATT ready, the negotiated MTU and the payload it leaves, the distribution of `status` round trips, the multi-frame throughput of `diagnostics`, then the stream: sentence counts by talker, bad checksums, `$PFLAU` cadence and its jitter, notification sizes and the gap between notifications.
 
 The round trip is stamped before the write goes out, not when `write_gatt_char` returns. Writing with a response returns when the peer's controller acknowledged the write, which is roughly half the exchange, and a version of this that stamped afterwards reported round trips of half a millisecond.
 
@@ -61,9 +62,9 @@ The round trip is stamped before the write goes out, not when `write_gatt_char` 
 ./scripts/blip.py decode capture.ndjson --summary
 ```
 
-`fetch` speaks the log endpoint (`69c21303`): `list` for the session count and one frame per session, then `read` for base64 chunks of 24-byte records. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line carrying its store, session and index. A flights record is a `fix` or one of the events written beside the track, `status`, `alarm` and `encounter`, laid out in [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) and in write order rather than time order, so sort on `utc`. Flights records are verified against the CRC-16-CCITT they were written with; diagnostics records carry no CRC of their own (the sector header holds it, `core/store/sector.h`), so a diagnostics slot is checked for a known type and a whole 24 bytes and nothing more.
+`fetch` speaks the log endpoint (`69c21303`): `list` for the session count and one frame per session, then `read` for base64 chunks of 24-byte records. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line carrying its store, session and index. A flights record is a `fix` or one of the events written beside the track, `status`, `alarm` and `encounter`, laid out in [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) and in write order rather than time order, so sort on `utc_s`. Flights records are verified against the CRC-16-CCITT they were written with; diagnostics records carry no CRC of their own (the sector header holds it, `core/store/sector.h`), so a diagnostics slot is checked for a known type and a whole 24 bytes and nothing more.
 
-`count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 96 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer ending in `eof`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
+`count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 96 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer, the last of them saying `ends_session`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
 
 A dead fetch resumes. The next command is the acknowledgement in this protocol, so the recovery is to ask again from the last index kept: run the same line, and `fetch` reads the tail of `--out`, skips the sessions already whole and restarts the interrupted one at the record after its last line. Sessions the device opened since follow it, so a capture re-armed between two fetches loses nothing. `--restart` ignores what the file holds.
 
@@ -73,7 +74,7 @@ A session the device reports as unclosed stopped where the power did, and a diag
 
 A session the device reports as truncated lost its beginning to the sector allocator, and with it the `boot` and `config` records a capture opens on. The header line carries `"truncated": true`, the summary names it, and an analysis reading that corpus knows it cannot say which build or which settings produced it.
 
-Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `ack: false` with a reason, and `blip.py` stops with that reason rather than retrying.
+Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying.
 
 A diagnostics capture lives in RAM and is armed from the device's own diagnostics screen. It does not survive a power cycle, so fetch it before switching the device off.
 
@@ -168,7 +169,7 @@ Done is a run whose ceiling is printed for both directions: the `kFeedLossCentiD
 
 ## The decoders
 
-`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
+`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAGNOSTICS_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
 
 Import it directly for analysis, the CLI is not in the way:
 
@@ -177,6 +178,12 @@ import blip_records as records
 for record in records.read_ndjson("capture.ndjson"):
     ...
 ```
+
+## Units before #151
+
+Firmware before #151 spoke the same link in shorter words: `cmd` and `ack`, `diag`, `eof`, `n`, `nav_ms`, and a dozen more. Units in the field keep speaking it until they update, and captures fetched before it keep their names. [`schemas/legacy_dialect.v1.json`](../schemas/legacy_dialect.v1.json) is the one table between the two, and `legacy_dialect.py` reads it as data, so neither `blip.py` nor an analysis script spells an old word anywhere else.
+
+`blip.py` writes and reads today's names. Every frame it receives is read through the table, which is a no-op on a frame already in today's names, and the first one decides which dialect the unit speaks: a frame carrying `cmd` or `ack` is an old unit. Until a unit has answered once, a frame goes out in both dialects at once, `{"command":"diagnostics","cmd":"diag"}`, and each firmware reads its own keys and ignores the others; from then on it goes out in the unit's own. `command` accepts either dialect on its command line. `read_ndjson()` reads every line through the same table, so `scripts/bench/` reads the captures under `docs/bench/data/` as they were recorded.
 
 ## Tests
 
@@ -187,4 +194,4 @@ python3 scripts/test_power_budget.py
 python3 scripts/test_link_budget.py
 ```
 
-No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, and `test_blip_offload.py`, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued.
+No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, `test_blip_offload.py`, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued, and `test_legacy_dialect.py`, which holds the table to its own rules and runs the link against a fake unit of each age.

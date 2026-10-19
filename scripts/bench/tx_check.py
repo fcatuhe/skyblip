@@ -47,7 +47,7 @@ def page_lookup(records):
 def report(path):
     records = [record for record in blip_records.read_ndjson(path) if record.get("type") not in blip_records.NOTE_TYPES]
     address = next(record["address"] for record in records if record["type"] == "config")
-    build = next((record["fw_build"] for record in records if record["type"] == "boot"), 0)
+    build = next((record["firmware_build"] for record in records if record["type"] == "boot"), 0)
     slots = dict(SLOT)
     for since, last in sorted(SLOT0_LAST_FROM_BUILD.items()):
         if build >= since:
@@ -62,7 +62,7 @@ def report(path):
     nav = {}
     for record in records:
         if record["type"] == "gnss" and record.get("utc_dated"):
-            nav.setdefault(record["at_s"], record["nav_ms"])
+            nav.setdefault(record["at_s"], record["solution_phase_ms"])
     sent = {record["at_s"] for record in records if record["type"] == "burst" and record["verdict"] == "transmitted"
             and not record["callsign"]}
 

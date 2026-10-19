@@ -194,7 +194,7 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
 
 def gnss_distance(receiver, sender_address):
     """The median distance the receiver's own traffic picture put the sender at, and how many."""
-    metres = [record["dist_m"] for record in receiver.records
+    metres = [record["distance_m"] for record in receiver.records
               if record["type"] == "traffic" and record["address"] == sender_address and record["position_valid"]]
     return (statistics.median(metres), len(metres)) if metres else (None, 0)
 
