@@ -78,7 +78,7 @@ class Device {
     return this.run(TAP_GAP_MS);
   }
 
-  // Two presses inside ConfirmGesture::kDoublePressMs, which is what authorises.
+  // Two presses inside ConfirmGesture::kDoublePressWindowMs, which is what authorises.
   allow() {
     this.sim.button();
     this.run(ALLOW_GAP_MS);

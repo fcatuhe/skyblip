@@ -20,13 +20,13 @@ TEST_CASE("sx1262: the tuned channel is what the PLL word resolves back to") {
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     // Both ADS-L M-band channels, 200 kHz apart (SRD-860 issue 2 C.2).
-    RadioConfig cfg{};
-    cfg.freq_hz = 868200000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.freq_hz = 868200000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz > 868199000);
     CHECK(chip.freq_hz < 868201000);
-    cfg.freq_hz = 868400000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_hz = 868400000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz > 868399000);
     CHECK(chip.freq_hz < 868401000);
 }
@@ -84,11 +84,11 @@ TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.modulation_set);
     CHECK(chip.bitrate == 100000);
     CHECK(chip.fdev_hz > 49990);
@@ -107,16 +107,16 @@ TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz chann
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 869525000;
-    cfg.bitrate = protocol::kUplinkChipRateBps;
-    cfg.fdev_hz = protocol::kUplinkDeviationHz;
-    cfg.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
-    cfg.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
-    cfg.sync = protocol::kUplinkSync;
-    cfg.sync_bits = protocol::kUplinkSyncBits;
-    cfg.payload_bytes = protocol::kUplinkFrameBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.freq_hz = 869525000;
+    config.bitrate = protocol::kUplinkChipRateBps;
+    config.fdev_hz = protocol::kUplinkDeviationHz;
+    config.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
+    config.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
+    config.sync = protocol::kUplinkSync;
+    config.sync_bits = protocol::kUplinkSyncBits;
+    config.payload_bytes = protocol::kUplinkFrameBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.bitrate == 200000);
     CHECK(chip.fdev_hz > 49990);
     CHECK(chip.fdev_hz < 50010);
@@ -153,13 +153,13 @@ TEST_CASE("sx1262: with no frequency trim the PLL word is exactly the channel as
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 868200000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.freq_hz = 868200000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     const uint32_t untrimmed = chip.freq_hz;
 
-    cfg.freq_corr_e1_ppm = 0;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_corr_e1_ppm = 0;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz == untrimmed);
 }
 
@@ -167,29 +167,29 @@ TEST_CASE("sx1262: a frequency trim moves the programmed carrier by its own ppm,
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 868200000;
+    RadioConfig config{};
+    config.freq_hz = 868200000;
 
     // A tenth of a ppm is 86.82 Hz at 868.2 MHz, so ten ppm is 8682 Hz. The PLL
     // step is 32 MHz / 2^25, under a hertz, and the model resolves the word back
     // to the frequency it programmed: a couple of hertz of slack is the two
     // truncations, not the trim.
-    cfg.freq_corr_e1_ppm = 100;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_corr_e1_ppm = 100;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz >= 868208680u);
     CHECK(chip.freq_hz <= 868208682u);
 
-    cfg.freq_corr_e1_ppm = -100;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_corr_e1_ppm = -100;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz >= 868191316u);
     CHECK(chip.freq_hz <= 868191318u);
 
     // And it applies to the O band, on which we only ever listen: a reference
     // that is out is out on both bands, and a trim that only reached the band we
     // transmit on would leave the uplink dwell mistuned.
-    cfg.freq_hz = 869525000;
-    cfg.freq_corr_e1_ppm = 100;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_hz = 869525000;
+    config.freq_corr_e1_ppm = 100;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz >= 869533693u);
     CHECK(chip.freq_hz <= 869533695u);
 }
@@ -203,20 +203,20 @@ TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed")
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 868200000;
-    cfg.freq_corr_e1_ppm = sx::kFreqTrimCeilingE1Ppm;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.freq_hz = 868200000;
+    config.freq_corr_e1_ppm = sx::kFreqTrimCeilingE1Ppm;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     const uint32_t at_limit = chip.freq_hz;
 
-    cfg.freq_corr_e1_ppm = 32767;  // whatever wrote this, it was not a bench
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_corr_e1_ppm = 32767;  // whatever wrote this, it was not a bench
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz == at_limit);
     // ERC 70-03 band h1.4 is 868.0-868.6 MHz and the clamp is what keeps a
     // trimmed carrier inside it whatever it was handed.
     CHECK(chip.freq_hz < 868600000u);
 
-    cfg.freq_corr_e1_ppm = -32768;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_corr_e1_ppm = -32768;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.freq_hz > 868000000u);
 }

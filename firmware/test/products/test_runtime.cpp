@@ -13,8 +13,8 @@ using namespace skyblip;
 namespace {
 
 struct Spy : runtime::Service {
-    Spy(runtime::Context& ctx, int id, int* order, Status setup_status)
-        : runtime::Service(ctx), id_(id), order_(order), status_(setup_status) {}
+    Spy(runtime::Context& context, int id, int* order, Status setup_status)
+        : runtime::Service(context), id_(id), order_(order), status_(setup_status) {}
 
     Status setup() override {
         setups++;
@@ -71,11 +71,11 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
-    runtime::Context ctx{roles, bus, state, recorder};
+    runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
-    Spy a(ctx, 1, order, Status::Ok);
-    Spy b(ctx, 2, order, Status::Ok);
+    Spy a(context, 1, order, Status::Ok);
+    Spy b(context, 2, order, Status::Ok);
     runtime::Service* services[] = {&a, &b};
     runtime::Loop loop(services, 2);
 
@@ -100,8 +100,8 @@ struct SteppedClock : ports::Clock {
 };
 
 struct Slow : runtime::Service {
-    Slow(runtime::Context& ctx, SteppedClock& clock, uint64_t cost)
-        : runtime::Service(ctx), cost_us(cost), clock_(clock) {}
+    Slow(runtime::Context& context, SteppedClock& clock, uint64_t cost)
+        : runtime::Service(context), cost_us(cost), clock_(clock) {}
     void tick(uint32_t) override { clock_.us += cost_us; }
     uint64_t cost_us;
 
@@ -132,9 +132,9 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
-    runtime::Context ctx{roles, bus, state, recorder};
-    Slow quick(ctx, clock, 300);
-    Slow render(ctx, clock, 2000);
+    runtime::Context context{roles, bus, state, recorder};
+    Slow quick(context, clock, 300);
+    Slow render(context, clock, 2000);
     runtime::Service* services[] = {&quick, &render};
     runtime::Loop loop(services, 2);
     runtime::LoopMeter meter(clock);
@@ -188,11 +188,11 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
-    runtime::Context ctx{roles, bus, state, recorder};
+    runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
-    Spy failing(ctx, 1, order, Status::Down);
-    Spy ok(ctx, 2, order, Status::Ok);
+    Spy failing(context, 1, order, Status::Down);
+    Spy ok(context, 2, order, Status::Ok);
     runtime::Service* services[] = {&failing, &ok};
     runtime::Loop loop(services, 2);
 
@@ -301,11 +301,11 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     bus::Bus bus;
     bus::State state;
     diag::Recorder recorder{};
-    runtime::Context ctx{roles, bus, state, recorder};
+    runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
-    Spy healthy(ctx, 1, order, Status::Ok);
-    Spy wedged(ctx, 2, order, Status::Ok);
+    Spy healthy(context, 1, order, Status::Ok);
+    Spy wedged(context, 2, order, Status::Ok);
     runtime::Service* services[] = {&healthy, &wedged};
     static const char* const names[] = {"healthy", "wedged"};
     runtime::Loop loop(services, 2, names);

@@ -42,14 +42,14 @@ struct Peer {
 
     Peer() {
         REQUIRE(radio.begin() == Status::Ok);
-        parts::RadioConfig cfg{};
-        cfg.sync = protocol::kSharedSync;
-        cfg.sync_bits = protocol::kSharedSyncBits;
-        cfg.payload_bytes = protocol::kRxChipBytes;
-        cfg.bitrate = protocol::kMbandChipRateBps;
-        cfg.fdev_hz = protocol::kMbandDeviationHz;
-        cfg.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
-        REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+        parts::RadioConfig config{};
+        config.sync = protocol::kSharedSync;
+        config.sync_bits = protocol::kSharedSyncBits;
+        config.payload_bytes = protocol::kRxChipBytes;
+        config.bitrate = protocol::kMbandChipRateBps;
+        config.fdev_hz = protocol::kMbandDeviationHz;
+        config.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
+        REQUIRE(radio.configure_radio(config) == Status::Ok);
         REQUIRE(radio.start_receive() == Status::Ok);
     }
 

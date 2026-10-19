@@ -46,8 +46,8 @@ TEST_CASE("reset: every cause the silicon can raise has one name") {
 // brings the SoC up - and a device that boots in a flight bag because someone
 // plugged it in arrives flat.
 
-static BootCell healthy(uint16_t millivolts = 3900) {
-    return BootCell{millivolts, /*valid=*/true, /*external_power=*/false};
+static BootCell healthy(uint16_t cell_mv = 3900) {
+    return BootCell{cell_mv, /*valid=*/true, /*external_power=*/false};
 }
 
 // The one the item exists for.

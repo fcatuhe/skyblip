@@ -149,7 +149,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     void set_rssi_sequence(const int8_t* levels, uint8_t n) {
-        rssi_sequence_len = n < kRssiSequenceCap ? n : kRssiSequenceCap;
+        rssi_sequence_len = n < kMaxRssiSequence ? n : kMaxRssiSequence;
         rssi_sequence_at = 0;
         for (uint8_t i = 0; i < rssi_sequence_len; i++) rssi_sequence[i] = levels[i];
     }
@@ -198,8 +198,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     int8_t rssi_dbm{-110};
     int8_t rx_rssi_dbm{-80};
     // INFO: fc 15sep26 a repeating sequence, one entry per read, is a channel changing mid-window
-    static constexpr uint8_t kRssiSequenceCap = 16;
-    int8_t rssi_sequence[kRssiSequenceCap]{};
+    static constexpr uint8_t kMaxRssiSequence = 16;
+    int8_t rssi_sequence[kMaxRssiSequence]{};
     uint8_t rssi_sequence_len{0};
     uint8_t rssi_sequence_at{0};
     uint8_t sync[8]{};

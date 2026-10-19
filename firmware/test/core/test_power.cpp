@@ -20,8 +20,8 @@ static events::BatterySample sample(uint16_t divider_mv, bool external_power = f
 
 // The gauge medians three readings, so a settled value takes three - which is the
 // same reason a single transmit burst cannot move the needle.
-static void settle(Gauge& gauge, uint16_t millivolts, bool external_power = false) {
-    for (int i = 0; i < 4; i++) gauge.apply(sample(millivolts, external_power));
+static void settle(Gauge& gauge, uint16_t divider_mv, bool external_power = false) {
+    for (int i = 0; i < 4; i++) gauge.apply(sample(divider_mv, external_power));
 }
 
 TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
@@ -191,9 +191,9 @@ TEST_CASE("cutoff: one good sample resets the count, so a transmit sag cannot ac
     CHECK_FALSE(monitor.cutoff());
 }
 
-static PowerLevel settled_at(uint16_t millivolts) {
+static PowerLevel settled_at(uint16_t divider_mv) {
     CutoffMonitor monitor;
-    for (int i = 0; i < 4; i++) monitor.apply(sample(millivolts));
+    for (int i = 0; i < 4; i++) monitor.apply(sample(divider_mv));
     return monitor.level();
 }
 
@@ -298,8 +298,8 @@ TEST_CASE("cutoff: a parked cell drifting across a step changes level once") {
     REQUIRE(previous == PowerLevel::Normal);
 
     std::vector<PowerLevel> changes;
-    for (const uint16_t millivolts : kRunMv) {
-        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(millivolts));
+    for (const uint16_t divider_mv : kRunMv) {
+        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(divider_mv));
         if (monitor.level() != previous) changes.push_back(monitor.level());
         previous = monitor.level();
     }

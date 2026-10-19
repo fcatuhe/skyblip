@@ -166,7 +166,7 @@ class L76k : public io::Uart, public io::UartRate {
             } else if (c == '\r' || c == '\n') {
                 if (command_len_ > 0) apply_command();
                 command_len_ = 0;
-            } else if (command_len_ > 0 && command_len_ < kCommandCap - 1) {
+            } else if (command_len_ > 0 && command_len_ < kCommandBytes - 1) {
                 command_[command_len_++] = c;
             }
         }
@@ -218,14 +218,14 @@ class L76k : public io::Uart, public io::UartRate {
     }
 
    private:
-    static constexpr int kCommandCap = 64;
+    static constexpr int kCommandBytes = 64;
 
     uint32_t seconds_of_day_ms_{0};
     double climbed_m_{0};
     double turned_deg_{0};
     double lat_frac_1e7_{0};
     double lon_frac_1e7_{0};
-    char command_[kCommandCap]{};
+    char command_[kCommandBytes]{};
     int command_len_{0};
     // Three windows, each a START instant plus a flag rather than an end instant.
     // core/../ports/clock.h states the rule and section M found the bug it prevents:

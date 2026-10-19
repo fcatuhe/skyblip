@@ -164,12 +164,12 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     REQUIRE(radio.begin() == Status::Ok);
-    parts::RadioConfig cfg{};
-    cfg.freq_hz = timing::kMband0Hz;
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    parts::RadioConfig config{};
+    config.freq_hz = timing::kMband0Hz;
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
@@ -181,8 +181,8 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.
-    cfg.freq_hz = timing::kMband1Hz;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_hz = timing::kMband1Hz;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.standby);
     CHECK_FALSE(chip.receiving);
     CHECK(radio.mode() == parts::RadioMode::Standby);

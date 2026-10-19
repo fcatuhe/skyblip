@@ -38,11 +38,11 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
 
     uint8_t payload[protocol::kAdslFrameBytes];
     for (uint8_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(i + 1);
@@ -68,11 +68,11 @@ TEST_CASE("sx1262: configure programs the sync window and the fixed read length"
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    CHECK(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    CHECK(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.saw_command(sx::kWriteRegister));
     CHECK(chip.saw_command(sx::kSetPacketParams));
     CHECK(chip.sync[0] == protocol::kSharedSync[0]);
@@ -132,17 +132,17 @@ TEST_CASE("sx1262: a burst's air time is its preamble, sync window and payload a
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
 
     const uint8_t adsl_burst = protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes;
     // 16 preamble + 16 sync + 54 x 8 payload chips at 100 kchip/s: transmit.h's 4.64 ms.
     CHECK(radio.air_us(adsl_burst) == 4640);
-    cfg.bitrate = 50000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.bitrate = 50000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(radio.air_us(adsl_burst) == 9280);
 }
 
@@ -151,11 +151,11 @@ TEST_CASE("sx1262: the packet the modem is told to expect carries no CRC of the 
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
 
     const uint8_t expected[9] = {static_cast<uint8_t>(sx::kPreambleChips >> 8),
                                  static_cast<uint8_t>(sx::kPreambleChips),
@@ -178,11 +178,11 @@ TEST_CASE("sx1262: a burst is framed from the chips after the sync window, eithe
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     for (uint32_t sync_word : {protocol::kAdslSyncWord, protocol::kAlptasSyncWord}) {
@@ -209,11 +209,11 @@ TEST_CASE("sx1262: a burst carrying a sync word the dwell is not armed for is no
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kUplinkSync;
-    cfg.sync_bits = protocol::kUplinkSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kUplinkSync;
+    config.sync_bits = protocol::kUplinkSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     uint8_t payload[protocol::kAdslFrameBytes] = {0};
@@ -231,11 +231,11 @@ TEST_CASE("sx1262: a burst goes on air at its own length, and the receiver reads
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     const uint8_t burst[protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes] = {0x55};

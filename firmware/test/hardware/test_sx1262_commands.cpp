@@ -140,17 +140,17 @@ TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and return
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 868200000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.freq_hz = 868200000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     REQUIRE(radio.mode() == RadioMode::Rx);
 
     int standbys = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) standbys++;
-    cfg.freq_hz = 868400000;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.freq_hz = 868400000;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     int after = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) after++;
@@ -204,11 +204,11 @@ TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the conf
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.tx_timeout_ticks != 0);

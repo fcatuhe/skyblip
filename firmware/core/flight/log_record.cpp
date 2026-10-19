@@ -2,6 +2,7 @@
 
 #include "core/fec/crc.h"
 #include "core/model/ownship.h"
+#include "core/settings/address.h"
 #include "core/store/sector.h"
 #include "core/units/units.h"
 #include "core/util/little_endian.h"
@@ -13,7 +14,6 @@ namespace {
 constexpr uint32_t kTimeOffsetCeilingS = 0xFFFF;
 constexpr uint16_t kHdopTenthsCeiling = 255;
 constexpr uint16_t kTrackMask = 0x01FF;
-constexpr uint32_t kAddressMask = 0x00FFFFFF;
 constexpr uint32_t kChecksummedBytes = kLogRecordBytes - 2;
 
 constexpr uint8_t kStatusFlagBatteryValid = 1u << 0;
@@ -90,7 +90,7 @@ void decode_status(const uint8_t* raw, LogStatus& out) {
 }
 
 void encode_contact(const LogContact& contact, uint8_t* out) {
-    const uint32_t address = contact.address & kAddressMask;
+    const uint32_t address = contact.address & settings::kAddressMask;
     out[2] = static_cast<uint8_t>(address);
     out[3] = static_cast<uint8_t>(address >> 8);
     out[4] = static_cast<uint8_t>(address >> 16);

@@ -352,10 +352,10 @@ TEST_CASE("product: a fix lost in the air says NO FIX over a clock that keeps ru
 // of. Both are drawn from the state the services publish, so this is the wiring
 // test - ui/screens/status.cpp owns what they look like.
 TEST_CASE("product: the status page carries the device's name and a cell that is low") {
-    auto status_ink = [](const char* callsign, uint16_t millivolts, bool on_cable = false) {
+    auto status_ink = [](const char* callsign, uint16_t divider_mv, bool on_cable = false) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        rig.platform.battery().divider_mv = millivolts;
+        rig.platform.battery().divider_mv = divider_mv;
         rig.platform.battery().external_power = on_cable;
         for (int i = 0; callsign[i] != 0 && i < 9; i++) rig.settings().callsign[i] = callsign[i];
         uint32_t t = 100;
@@ -404,11 +404,11 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
 }
 
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
-// verdict, published on the bus: the page does not compare millivolts a second
+// verdict, published on the bus: the page does not compare divider_mv a second
 // time, so it cannot disagree with the thing that can switch the device off.
 
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
-// verdict, published on the bus: the page does not compare millivolts a second
+// verdict, published on the bus: the page does not compare divider_mv a second
 // time, so it cannot disagree with the thing that can switch the device off.
 TEST_CASE("product: the status page marks a low cell when the monitor says so, not before") {
     Rig rig;
