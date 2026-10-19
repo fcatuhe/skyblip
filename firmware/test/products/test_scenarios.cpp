@@ -17,12 +17,12 @@ using namespace skyblip;
 namespace {
 
 const char* kInlineScenario =
-    "{\"name\":\"inline\",\"mode\":\"training\",\"alt_m\":900,\"speed_kt\":50,"
+    "{\"name\":\"inline\",\"mode\":\"training\",\"altitude_m\":900,\"speed_kt\":50,"
     "\"track_deg\":90,\"duration_ms\":6000,"
     "\"aircraft\":[{\"north_m\":600,\"east_m\":200,\"up_m\":30,\"speed_mps\":40,"
     "\"track_deg\":200,\"climb_mps_e1\":-25}],"
-    "\"events\":[{\"at_ms\":3000,\"expect_traffic_min\":1},"
-    "{\"at_ms\":5000,\"expect_alarm_min\":1},{\"at_ms\":5500,\"fix\":0}]}";
+    "\"events\":[{\"at_ms\":3000,\"expect_traffic_minimum\":1},"
+    "{\"at_ms\":5000,\"expect_alarm_minimum\":1},{\"at_ms\":5500,\"fix\":0}]}";
 
 void replay(simulator::Simulator& simulator) {
     const uint32_t until =
@@ -47,8 +47,8 @@ TEST_CASE("scenario: the parser reads own-ship, traffic and events") {
     // Tenths of a metre per second on the wire of the file, m/s in the world.
     CHECK(scenario.aircraft[0].climb_mps == doctest::Approx(-2.5));
     REQUIRE(scenario.events.size() == 3);
-    CHECK(scenario.events[0].kind == simulator::EventKind::ExpectTrafficMin);
-    CHECK(scenario.events[1].kind == simulator::EventKind::ExpectAlarmMin);
+    CHECK(scenario.events[0].kind == simulator::EventKind::ExpectTrafficMinimum);
+    CHECK(scenario.events[1].kind == simulator::EventKind::ExpectAlarmMinimum);
     CHECK(scenario.events[2].kind == simulator::EventKind::Fix);
     CHECK(scenario.events[2].value == 0);
 }
@@ -134,7 +134,7 @@ TEST_CASE("scenario: a failed expectation is reported, not swallowed") {
     simulator::Scenario scenario;
     scenario.duration_ms = 3000;
     scenario.events.push_back(
-        simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMin, 3});
+        simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMinimum, 3});
     simulator.load(scenario);
     replay(simulator);
 

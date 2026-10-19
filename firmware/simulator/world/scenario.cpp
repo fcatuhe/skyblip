@@ -49,7 +49,7 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
     static const Named kKeys[] = {
         {"fix", EventKind::Fix},
         {"pps", EventKind::Pps},
-        {"baro", EventKind::Barometer},
+        {"barometer", EventKind::Barometer},
         {"battery_mv", EventKind::BatteryMv},
         {"external_power", EventKind::ExternalPower},
         {"button", EventKind::Button},
@@ -57,8 +57,8 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
         {"speed_kt", EventKind::Speed},
         {"track_deg", EventKind::Track},
         {"aircraft", EventKind::Aircraft},
-        {"expect_alarm_min", EventKind::ExpectAlarmMin},
-        {"expect_traffic_min", EventKind::ExpectTrafficMin},
+        {"expect_alarm_minimum", EventKind::ExpectAlarmMinimum},
+        {"expect_traffic_minimum", EventKind::ExpectTrafficMinimum},
     };
     out.at_ms = static_cast<uint32_t>(integer_or(reader, "at_ms", 0));
     for (const Named& named : kKeys) {
@@ -74,7 +74,7 @@ protocol::System system_from(const std::string& name) {
     if (name == "alptas") return protocol::System::Alptas;
     // Not a fit: an aircraft this device never hears for itself, reaching it
     // only through a skyPost's O-band relay.
-    if (name == "uplink") return protocol::System::AdslUplink;
+    if (name == "adsl_uplink") return protocol::System::AdslUplink;
     return protocol::System::AdslDirect;
 }
 
@@ -96,9 +96,9 @@ bool parse_scenario(const char* json, int bytes, Scenario& out) {
     if (top.read_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
     if (top.read_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
 
-    out.latitude_1e7 = static_cast<int32_t>(integer_or(top, "lat_1e7", out.latitude_1e7));
-    out.longitude_1e7 = static_cast<int32_t>(integer_or(top, "lon_1e7", out.longitude_1e7));
-    out.altitude_m = static_cast<int32_t>(integer_or(top, "alt_m", out.altitude_m));
+    out.latitude_1e7 = static_cast<int32_t>(integer_or(top, "latitude_1e7", out.latitude_1e7));
+    out.longitude_1e7 = static_cast<int32_t>(integer_or(top, "longitude_1e7", out.longitude_1e7));
+    out.altitude_m = static_cast<int32_t>(integer_or(top, "altitude_m", out.altitude_m));
     out.speed_kt = static_cast<int32_t>(integer_or(top, "speed_kt", out.speed_kt));
     out.track_deg = static_cast<int32_t>(integer_or(top, "track_deg", out.track_deg));
     out.turn_dps = static_cast<int32_t>(integer_or(top, "turn_dps", out.turn_dps));

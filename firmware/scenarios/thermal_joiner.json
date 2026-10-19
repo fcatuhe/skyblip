@@ -1,9 +1,9 @@
 {
   "name": "a glider joining the thermal in a straight line",
   "mode": "training",
-  "lat_1e7": 485000000,
-  "lon_1e7": 85000000,
-  "alt_m": 1500,
+  "latitude_1e7": 485000000,
+  "longitude_1e7": 85000000,
+  "altitude_m": 1500,
   "speed_kt": 45,
   "track_deg": 0,
   "turn_dps": 13,
@@ -12,7 +12,7 @@
     {"north_m": 2200, "east_m": 0, "up_m": 0, "speed_mps": 45, "track_deg": 180}
   ],
   "events": [
-    {"at_ms": 6000, "expect_traffic_min": 1},
-    {"at_ms": 6000, "expect_alarm_min": 1}
+    {"at_ms": 6000, "expect_traffic_minimum": 1},
+    {"at_ms": 6000, "expect_alarm_minimum": 1}
   ]
 }

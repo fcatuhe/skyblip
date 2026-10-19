@@ -456,11 +456,11 @@ void World::apply_events(uint32_t now_ms, const bus::State& state) {
             case EventKind::Speed: set_speed_kt(static_cast<int32_t>(event.value)); break;
             case EventKind::Track: set_track_deg(static_cast<int32_t>(event.value)); break;
             case EventKind::Aircraft: add_threat(); break;
-            case EventKind::ExpectAlarmMin:
+            case EventKind::ExpectAlarmMinimum:
                 if (traffic::to_number(state.alarm_level) < event.value)
                     fail("alarm level below expectation");
                 break;
-            case EventKind::ExpectTrafficMin:
+            case EventKind::ExpectTrafficMinimum:
                 if (state.traffic.count() < event.value) fail("traffic count below expectation");
                 break;
         }
