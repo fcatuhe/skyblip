@@ -11,9 +11,9 @@ uint8_t manchester_encode_nibble(uint8_t nibble);
 
 uint8_t manchester_decode_byte(uint8_t coded);
 
-void manchester_encode(const uint8_t* data, size_t len, uint8_t* out);
+void manchester_encode(const uint8_t* data, size_t bytes, uint8_t* out);
 
-size_t manchester_decode(const uint8_t* coded, size_t data_len, uint8_t* data, uint8_t* error_mask);
+size_t manchester_decode(const uint8_t* coded, size_t out_bytes, uint8_t* out, uint8_t* error_mask);
 
 }
 

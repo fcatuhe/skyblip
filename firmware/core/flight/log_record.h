@@ -137,7 +137,7 @@ Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out);
 
 // True when every byte is 0xFF, which on NOR means nothing has been programmed
 // here. Checked before the CRC, so an erased slot is never a checksum question.
-bool log_slot_erased(const uint8_t* raw, uint32_t len);
+bool log_slot_erased(const uint8_t* raw, uint32_t bytes);
 
 }  // namespace skyblip::flight
 

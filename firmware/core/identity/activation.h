@@ -31,7 +31,7 @@ constexpr int kProductWordBytes = kBluetoothNameBytes - 7;
 static_assert(sizeof("activate 3F2A skyBlip") - 1 <= kBluetoothNameBytes,
               "the unactivated name fits");
 
-int bluetooth_name(char* out, int cap, const char* product, const Activation& activation);
+int bluetooth_name(char* out, int capacity, const char* product, const Activation& activation);
 
 }  // namespace skyblip::identity
 

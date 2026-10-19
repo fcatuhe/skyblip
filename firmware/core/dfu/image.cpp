@@ -22,23 +22,23 @@ size_t past_protected_area(const uint8_t* tlvs, size_t len) {
 
 }  // namespace
 
-bool read_header(const uint8_t* bytes, size_t len, ImageHeader& out) {
-    if (bytes == nullptr || len < kImageHeaderBytes || get_u32(bytes) != kImageMagic) return false;
-    out.header_bytes = get_u16(bytes + 8);
-    out.body_bytes = get_u32(bytes + 12);
-    out.version.major = bytes[20];
-    out.version.minor = bytes[21];
-    out.version.revision = get_u16(bytes + 22);
-    out.version.build = get_u32(bytes + 24);
+bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out) {
+    if (data == nullptr || bytes < kImageHeaderBytes || get_u32(data) != kImageMagic) return false;
+    out.header_bytes = get_u16(data + 8);
+    out.body_bytes = get_u32(data + 12);
+    out.version.major = data[20];
+    out.version.minor = data[21];
+    out.version.revision = get_u16(data + 22);
+    out.version.build = get_u32(data + 24);
     return out.header_bytes >= kImageHeaderBytes;
 }
 
-bool find_key_hash(const uint8_t* tlvs, size_t len, ports::SigningKeyHash& out) {
+bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out) {
     if (tlvs == nullptr) return false;
-    size_t at = past_protected_area(tlvs, len);
-    if (at + kTlvInfoBytes > len || get_u16(tlvs + at) != kTlvMagic) return false;
+    size_t at = past_protected_area(tlvs, bytes);
+    if (at + kTlvInfoBytes > bytes || get_u16(tlvs + at) != kTlvMagic) return false;
     const size_t end = at + get_u16(tlvs + at + 2);
-    if (end > len) return false;
+    if (end > bytes) return false;
     for (at += kTlvInfoBytes; at + kTlvEntryBytes <= end;) {
         const uint16_t type = get_u16(tlvs + at);
         const uint16_t value_bytes = get_u16(tlvs + at + 2);

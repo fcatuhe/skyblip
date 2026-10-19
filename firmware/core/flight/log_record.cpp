@@ -179,7 +179,7 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* ou
     seal(out);
 }
 
-bool log_slot_erased(const uint8_t* raw, uint32_t len) { return store::erased(raw, len); }
+bool log_slot_erased(const uint8_t* raw, uint32_t bytes) { return store::erased(raw, bytes); }
 
 Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out) {
     const Status slot = checked(raw);

@@ -60,9 +60,9 @@ ports::ImageVersion get_version(const uint8_t* in) {
 
 }  // namespace
 
-size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t cap) {
+size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t capacity) {
     const size_t len = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
-    if (cap < len) return 0;
+    if (capacity < len) return 0;
     put_version(out, record.from);
     put_version(out + 8, record.to);
     if (!record.hashed) return len;
@@ -72,12 +72,12 @@ size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t cap) {
     return kUpdateRecordBytes;
 }
 
-bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out) {
-    if (len != kVersionsOnlyRecordBytes && len != kUpdateRecordBytes) return false;
+bool from_blob(const uint8_t* blob, size_t bytes, UpdateRecord& out) {
+    if (bytes != kVersionsOnlyRecordBytes && bytes != kUpdateRecordBytes) return false;
     out = UpdateRecord{};
     out.from = get_version(blob);
     out.to = get_version(blob + 8);
-    if (len == kVersionsOnlyRecordBytes) return true;
+    if (bytes == kVersionsOnlyRecordBytes) return true;
     std::memcpy(out.from_hash.bytes, blob + kVersionsOnlyRecordBytes, ports::ImageHash::kBytes);
     std::memcpy(out.to_hash.bytes, blob + kVersionsOnlyRecordBytes + ports::ImageHash::kBytes,
                 ports::ImageHash::kBytes);
@@ -108,9 +108,9 @@ const char* version_refusal(const ports::ImageVersion& running, const ports::Ima
     return nullptr;
 }
 
-int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
-    if (cap < kVersionTextBytes || !within_widest(version)) {
-        if (cap > 0) out[0] = 0;
+int format_version(const ports::ImageVersion& version, char* out, size_t capacity) {
+    if (capacity < kVersionTextBytes || !within_widest(version)) {
+        if (capacity > 0) out[0] = 0;
         return 0;
     }
     int n = format_uint(out, version.major);
@@ -138,9 +138,9 @@ bool parse_version(const char* text, ports::ImageVersion& out) {
     return true;
 }
 
-int format_hub_image(const HubImageReport& report, char* out, size_t cap) {
-    if (cap < kHubImageTextBytes) {
-        if (cap > 0) out[0] = 0;
+int format_hub_image(const HubImageReport& report, char* out, size_t capacity) {
+    if (capacity < kHubImageTextBytes) {
+        if (capacity > 0) out[0] = 0;
         return 0;
     }
     const char* word = nullptr;

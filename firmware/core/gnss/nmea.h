@@ -87,7 +87,7 @@ class NmeaParser {
    public:
     bool feed(char c);
 
-    bool parse_line(const char* line, int len);
+    bool parse_line(const char* line, int bytes);
 
     const GnssSolution& solution() const { return solution_; }
     void reset() { line_length_ = 0; }
@@ -126,7 +126,7 @@ class NmeaParser {
     bool apply_txt(const char* line, int len);
 };
 
-bool nmea_checksum_ok(const char* line, int len);
+bool nmea_checksum_ok(const char* line, int bytes);
 bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t& out_1e7);
 
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms) {

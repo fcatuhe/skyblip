@@ -72,11 +72,11 @@ bool TimingReport::fits(int payload) const {
            budget.take(frame::kMoreFieldBytes) && budget.take(widest);
 }
 
-int TimingReport::next_frame(int payload, char* buf, int cap) {
+int TimingReport::next_frame(int payload, char* out, int capacity) {
     if (exhausted()) return 0;
 
     int room = payload + 1;
-    room = std::min(room, cap);
+    room = std::min(room, capacity);
 
     frame::Budget budget(room - 1);
     budget.take(field_bytes(Field{"cmd", "timing", 0}));
@@ -86,7 +86,7 @@ int TimingReport::next_frame(int payload, char* buf, int cap) {
     while (at_ + packed < count_ && budget.take(field_bytes(fields_[at_ + packed]))) packed++;
     if (packed == 0) return 0;
 
-    json::Writer writer(buf, room);
+    json::Writer writer(out, room);
     writer.kv_str("cmd", "timing");
     writer.kv_int("part", part_);
     writer.kv_bool("more", at_ + packed < count_);

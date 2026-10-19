@@ -65,19 +65,19 @@ int log_records_per_chunk(int payload_bytes, LogStore store) {
     return records > kMaxLogRecordsPerChunk ? kMaxLogRecordsPerChunk : records;
 }
 
-int base64_encode(const uint8_t* in, int len, char* out, int cap) {
-    const int needed = ((len + 2) / 3) * 4;
-    if (needed + 1 > cap) return -1;
+int base64_encode(const uint8_t* data, int bytes, char* out, int capacity) {
+    const int needed = ((bytes + 2) / 3) * 4;
+    if (needed + 1 > capacity) return -1;
     int n = 0;
-    for (int i = 0; i < len; i += 3) {
-        const uint32_t b0 = in[i];
-        const uint32_t b1 = i + 1 < len ? in[i + 1] : 0;
-        const uint32_t b2 = i + 2 < len ? in[i + 2] : 0;
+    for (int i = 0; i < bytes; i += 3) {
+        const uint32_t b0 = data[i];
+        const uint32_t b1 = i + 1 < bytes ? data[i + 1] : 0;
+        const uint32_t b2 = i + 2 < bytes ? data[i + 2] : 0;
         const uint32_t triple = (b0 << 16) | (b1 << 8) | b2;
         out[n++] = kAlphabet[(triple >> 18) & 0x3F];
         out[n++] = kAlphabet[(triple >> 12) & 0x3F];
-        out[n++] = i + 1 < len ? kAlphabet[(triple >> 6) & 0x3F] : '=';
-        out[n++] = i + 2 < len ? kAlphabet[triple & 0x3F] : '=';
+        out[n++] = i + 1 < bytes ? kAlphabet[(triple >> 6) & 0x3F] : '=';
+        out[n++] = i + 2 < bytes ? kAlphabet[triple & 0x3F] : '=';
     }
     out[n] = 0;
     return n;
@@ -143,8 +143,8 @@ LogChunkSpan LogWindow::at(int nth) const {
     return span;
 }
 
-int format_log_ack(char* buf, int cap, bool ok, const char* reason, LogStore store) {
-    json::Writer writer(buf, cap);
+int format_log_ack(char* out, int capacity, bool ok, const char* reason, LogStore store) {
+    json::Writer writer(out, capacity);
     writer.kv_str("cmd", "log");
     if (!named_store(writer, store)) return 0;
     writer.kv_bool("ack", ok);
@@ -152,8 +152,8 @@ int format_log_ack(char* buf, int cap, bool ok, const char* reason, LogStore sto
     return finished(writer);
 }
 
-int format_log_count(char* buf, int cap, uint32_t sessions, bool truncated, LogStore store) {
-    json::Writer writer(buf, cap);
+int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated, LogStore store) {
+    json::Writer writer(out, capacity);
     writer.kv_str("cmd", "log");
     if (!named_store(writer, store)) return 0;
     writer.kv_bool("ack", true);
@@ -164,9 +164,9 @@ int format_log_count(char* buf, int cap, uint32_t sessions, bool truncated, LogS
     return finished(writer);
 }
 
-int format_log_session(char* buf, int cap, uint32_t index, uint32_t count, uint32_t session_id,
+int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
                        uint32_t records, bool closed, bool truncated, LogStore store) {
-    json::Writer writer(buf, cap);
+    json::Writer writer(out, capacity);
     writer.kv_str("cmd", "session");
     if (!named_store(writer, store)) return 0;
     writer.kv_int("index", static_cast<long>(index));
@@ -183,14 +183,14 @@ int format_log_session(char* buf, int cap, uint32_t index, uint32_t count, uint3
     return finished(writer);
 }
 
-int format_log_chunk(char* buf, int cap, uint32_t session_id, uint32_t from, const uint8_t* raw,
-                     int record_count, bool eof, LogStore store) {
+int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from,
+                     const uint8_t* raw, int record_count, bool eof, LogStore store) {
     char data[kLogChunkRawBytes * 4 / 3 + 8];
     const int encoded = base64_encode(raw, record_count * static_cast<int>(flight::kLogRecordBytes),
                                       data, static_cast<int>(sizeof(data)));
     if (encoded < 0) return 0;
 
-    json::Writer writer(buf, cap);
+    json::Writer writer(out, capacity);
     writer.kv_str("cmd", "chunk");
     if (!named_store(writer, store)) return 0;
     writer.kv_int("session", session_id);

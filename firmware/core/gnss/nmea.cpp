@@ -74,15 +74,15 @@ uint32_t to_epoch(int y, int mon, int day, int hh, int mm, int ss) {
 }
 }
 
-bool nmea_checksum_ok(const char* line, int len) {
-    if (len < 4 || line[0] != '$') return false;
+bool nmea_checksum_ok(const char* line, int bytes) {
+    if (bytes < 4 || line[0] != '$') return false;
     int star = -1;
-    for (int i = 0; i < len; i++)
+    for (int i = 0; i < bytes; i++)
         if (line[i] == '*') {
             star = i;
             break;
         }
-    if (star < 0 || star + 2 >= len) return false;
+    if (star < 0 || star + 2 >= bytes) return false;
     uint8_t checksum = 0;
     for (int i = 1; i < star; i++) checksum ^= static_cast<uint8_t>(line[i]);
     int hi = hex_value(line[star + 1]);
@@ -141,11 +141,11 @@ bool NmeaParser::feed(char c) {
     return false;
 }
 
-bool NmeaParser::parse_line(const char* line, int len) {
-    if (!nmea_checksum_ok(line, len)) return false;
+bool NmeaParser::parse_line(const char* line, int bytes) {
+    if (!nmea_checksum_ok(line, bytes)) return false;
     char line_copy[100];
     int n = 0;
-    for (int i = 0; i < len && line[i] != '*' && n < 99; i++) line_copy[n++] = line[i];
+    for (int i = 0; i < bytes && line[i] != '*' && n < 99; i++) line_copy[n++] = line[i];
     line_copy[n] = 0;
     const char* fields[24];
     int field_count = 0;
@@ -160,10 +160,10 @@ bool NmeaParser::parse_line(const char* line, int len) {
     const char* tag = fields[0];
     if (strlen(tag) < 6) return false;
     if (memcmp(tag + 3, "RMC", 3) == 0) return apply_rmc(fields, field_count);
-    if (memcmp(tag + 3, "GGA", 3) == 0) return apply_gga(fields, field_count, len);
+    if (memcmp(tag + 3, "GGA", 3) == 0) return apply_gga(fields, field_count, bytes);
     if (memcmp(tag + 3, "GSA", 3) == 0) return apply_gsa(fields, field_count);
     if (memcmp(tag + 3, "GSV", 3) == 0) return apply_gsv(tag + 1, fields, field_count);
-    if (memcmp(tag + 3, "TXT", 3) == 0) return apply_txt(line, len);
+    if (memcmp(tag + 3, "TXT", 3) == 0) return apply_txt(line, bytes);
     if (memcmp(tag + 3, "GLL", 3) == 0 || memcmp(tag + 3, "VTG", 3) == 0) unrequested_++;
     return false;
 }

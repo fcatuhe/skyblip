@@ -26,7 +26,7 @@ class TimingReport {
     // The next frame, written into buf. Returns its length, or 0 when the payload
     // is too small to carry a single field - which is a refusal, not a short
     // frame. Advances only when a frame was produced.
-    int next_frame(int payload, char* buf, int cap);
+    int next_frame(int payload, char* out, int capacity);
 
    private:
     // One key and its value, measurable before it is written. text != nullptr

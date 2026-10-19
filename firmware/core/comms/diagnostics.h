@@ -122,14 +122,14 @@ class DiagnosticsReport {
     // Writes line `index`, NUL-terminated, and returns its length. 0 when the
     // index is past the end or the buffer cannot hold the line whole - a line cut
     // in half is a counter misread, so it is refused instead.
-    int line(int index, char* buf, int cap) const;
+    int line(int index, char* out, int capacity) const;
 
     // The link surface: as many complete flat objects as the negotiated payload
     // needs, each carrying "cmd", "group", "part" and "more". A frame never mixes
     // two subsystems, so a reader that only wants one can stop at its group.
     bool fits(int payload) const;
     bool exhausted() const { return at_ >= count_; }
-    int next_frame(int payload, char* buf, int cap);
+    int next_frame(int payload, char* out, int capacity);
 
    private:
     enum class Kind : uint8_t { Int, Bool, Text };

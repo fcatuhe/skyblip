@@ -189,7 +189,7 @@ int DiagnosticsReport::line_start(int index) const {
     return count_;
 }
 
-int DiagnosticsReport::line(int index, char* buf, int cap) const {
+int DiagnosticsReport::line(int index, char* out, int capacity) const {
     const int start = line_start(index);
     if (start >= count_) return 0;
     const Group group = fields_[start].group;
@@ -209,25 +209,25 @@ int DiagnosticsReport::line(int index, char* buf, int cap) const {
         }
         end++;
     }
-    if (need + 1 > cap) return 0;
+    if (need + 1 > capacity) return 0;
 
-    int n = write_text(buf, group_name(group));
+    int n = write_text(out, group_name(group));
     for (int i = start; i < end; i++) {
         const Field& field = fields_[i];
-        buf[n++] = ' ';
-        n += write_text(buf + n, field.key);
-        buf[n++] = '=';
+        out[n++] = ' ';
+        n += write_text(out + n, field.key);
+        out[n++] = '=';
         switch (field.kind) {
-            case Kind::Int: n += write_long(buf + n, field.value); break;
-            case Kind::Bool: n += write_text(buf + n, bool_text(field.value != 0)); break;
+            case Kind::Int: n += write_long(out + n, field.value); break;
+            case Kind::Bool: n += write_text(out + n, bool_text(field.value != 0)); break;
             case Kind::Text:
-                buf[n++] = '"';
-                n += write_text(buf + n, field.text);
-                buf[n++] = '"';
+                out[n++] = '"';
+                n += write_text(out + n, field.text);
+                out[n++] = '"';
                 break;
         }
     }
-    buf[n] = 0;
+    out[n] = 0;
     return n;
 }
 
@@ -249,11 +249,11 @@ bool DiagnosticsReport::fits(int payload) const {
            budget.take(frame::kMoreFieldBytes) && budget.take(widest_field);
 }
 
-int DiagnosticsReport::next_frame(int payload, char* buf, int cap) {
+int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
     if (exhausted()) return 0;
 
     int room = payload + 1;
-    room = std::min(room, cap);
+    room = std::min(room, capacity);
 
     const Group group = fields_[at_].group;
     frame::Budget budget(room - 1);
@@ -268,7 +268,7 @@ int DiagnosticsReport::next_frame(int payload, char* buf, int cap) {
     }
     if (packed == 0) return 0;
 
-    json::Writer writer(buf, room);
+    json::Writer writer(out, room);
     writer.kv_str("cmd", cmd_);
     writer.kv_str("group", group_name(group));
     writer.kv_int("part", part_);

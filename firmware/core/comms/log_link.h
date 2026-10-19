@@ -86,19 +86,20 @@ constexpr int kLogStoreFieldBytes = 20;
 int log_records_per_chunk(int payload_bytes, LogStore store = LogStore::Flights);
 
 // Returns the number of characters written, excluding the terminator.
-int format_log_ack(char* buf, int cap, bool ok, const char* reason,
+int format_log_ack(char* out, int capacity, bool ok, const char* reason,
                    LogStore store = LogStore::Flights);
-int format_log_count(char* buf, int cap, uint32_t sessions, bool truncated,
+int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated,
                      LogStore store = LogStore::Flights);
-int format_log_session(char* buf, int cap, uint32_t index, uint32_t count, uint32_t session_id,
+int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
                        uint32_t records, bool closed, bool truncated,
                        LogStore store = LogStore::Flights);
-int format_log_chunk(char* buf, int cap, uint32_t session_id, uint32_t from, const uint8_t* raw,
-                     int record_count, bool eof, LogStore store = LogStore::Flights);
+int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from,
+                     const uint8_t* raw, int record_count, bool eof,
+                     LogStore store = LogStore::Flights);
 
 // Standard base64, no padding omitted, no line breaks. Returns characters
 // written, or -1 if they would not fit.
-int base64_encode(const uint8_t* in, int len, char* out, int cap);
+int base64_encode(const uint8_t* data, int bytes, char* out, int capacity);
 
 }  // namespace skyblip::comms
 

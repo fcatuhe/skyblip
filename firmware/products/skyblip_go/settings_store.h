@@ -24,12 +24,14 @@ class SettingsStore : public comms::ConfigStore {
         write_json_settings(w, defaults());
     }
 
-    Status apply(const char* json, int len) override { return apply_json(settings_, json, len); }
+    Status apply(const char* json, int bytes) override {
+        return apply_json(settings_, json, bytes);
+    }
 
-    int describe_changes(const char* json, int len, char* out, int cap) const override {
+    int describe_changes(const char* json, int bytes, char* out, int capacity) const override {
         Settings next = settings_;
-        if (apply_json(next, json, len) != Status::Ok) return 0;
-        return describe_settings_changes(settings_, next, out, cap);
+        if (apply_json(next, json, bytes) != Status::Ok) return 0;
+        return describe_settings_changes(settings_, next, out, capacity);
     }
 
    private:
