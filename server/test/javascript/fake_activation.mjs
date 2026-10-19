@@ -9,7 +9,7 @@ export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activat
 // INFO: fc 18oct26 the DER headers that wrap a raw Ed25519 seed or public key for node:crypto
 const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
-const REGISTRATION_FRAME_BYTES = 320;
+const REGISTRATION_FRAME_BYTES = 345;
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
 const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
@@ -76,11 +76,11 @@ export class FakeServer {
     this.#refuse();
     const unitNonce = this.challenges.get(server_nonce);
     if (!unitNonce) throw new ServerRefusal('expired');
-    this.challenges.delete(server_nonce);
     const message = messages.registration({
       deviceId: device_id, publicKey: public_key, unitNonce, serverNonce: server_nonce, serverKeyId: server_key_id, release, version,
     });
     if (!verifies(public_key, signature, message)) throw new ServerRefusal('bad_signature');
+    this.challenges.delete(server_nonce);
     const known = this.units.get(device_id) ?? { serial: this.units.size + 1, publicKey: public_key };
     if (known.publicKey !== public_key) throw new ServerRefusal('other_key');
     this.units.set(device_id, known);

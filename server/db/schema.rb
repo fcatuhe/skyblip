@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_080519) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_094938) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -52,7 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_080519) do
     t.datetime "updated_at", null: false
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
     t.index ["serial"], name: "index_units_on_serial", unique: true
-    t.check_constraint "serial BETWEEN 0 AND 65535", name: "units_serial_in_sixteen_bits"
+    t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end
 
   create_table "users", force: :cascade do |t|
