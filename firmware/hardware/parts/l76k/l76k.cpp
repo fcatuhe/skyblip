@@ -26,7 +26,7 @@ void L76k::send_next(uint32_t now_ms) {
 
 void L76k::begin_verify(uint32_t now_ms) {
     verify_start_ms_ = now_ms;
-    verify_sentences_ = parser_.solution().updates;
+    verify_sentences_ = parser_.solution().sentences;
     unrequested_at_verify_ = parser_.unrequested();
 }
 
@@ -76,7 +76,7 @@ void L76k::verify_failed(uint32_t now_ms) {
     // at all is a receiver we cannot hear, and the rate is the first suspect. A
     // receiver that is talking has the right rate and is simply not obeying, and
     // walking the baud rates would only lose the sentences we do get.
-    const bool heard_nothing = parser_.solution().updates == verify_sentences_;
+    const bool heard_nothing = parser_.solution().sentences == verify_sentences_;
     if (heard_nothing && next_baud()) {
         attempts_ = 1;
         begin_wake(now_ms);
@@ -138,7 +138,7 @@ void L76k::service(uint32_t now_ms) {
             break;
         case ConfigStage::Verifying:
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
-            if (parser_.solution().updates - verify_sentences_ < kMinVerifySentences ||
+            if (parser_.solution().sentences - verify_sentences_ < kMinVerifySentences ||
                 !obeying()) {
                 verify_failed(now_ms);
                 break;
@@ -148,7 +148,7 @@ void L76k::service(uint32_t now_ms) {
             break;
         // INFO: fc 19sep26 a sentence that checksums at the new rate is the ack $PCAS01 never sends
         case ConfigStage::Confirming:
-            if (parser_.solution().updates != verify_sentences_) {
+            if (parser_.solution().sentences != verify_sentences_) {
                 stage_ = ConfigStage::Ready;
                 break;
             }

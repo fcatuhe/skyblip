@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
+#include "core/flight/extrapolate.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/traffic/range.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
@@ -41,7 +41,7 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                  const char* callsign) {
     (void)capacity;
     int32_t north_m, east_m, up_m;
-    if (!traffic::relative_ned(own, target, north_m, east_m, up_m)) return 0;
+    if (!flight::relative_ned(own, target, north_m, east_m, up_m)) return 0;
     int n = 0;
     n += format_string(out + n, "$PFLAA,");
     n += format_uint(out + n, alarm_level);

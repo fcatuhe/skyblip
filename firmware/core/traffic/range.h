@@ -20,9 +20,6 @@ struct RangeRow {
     const char* callsign{nullptr};
 };
 
-bool relative_ned(const model::Ownship& own, const model::AircraftObservation& target,
-                  int32_t& north_m, int32_t& east_m, int32_t& up_m);
-
 // INFO: fc 19sep26 ground distance, what the radar ring and the alarm mean by distance
 bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
               RangeRow& out);

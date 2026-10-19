@@ -24,7 +24,7 @@ namespace skyblip::timing {
 //  - kHopGuardMs (core/timing/slot.h), the smaller of the two slot-map
 //    guards, paid at every M-band channel change.
 //  - kJitterGuardMs (core/timing/slot.h), the guard both band edges keep, and
-//    the figure core/timing/transmit.h's kCompletionMarginMs is drawn from.
+//    the figure core/timing/transmit.h's kCompletionGuardMs is drawn from.
 //    Past this the error is not something the slot map budgeted for.
 // A count outside the widest pair still lands somewhere: saturated into the
 // outermost bucket, never wrapped, because a fault we cannot bound is one this

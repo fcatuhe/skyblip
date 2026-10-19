@@ -42,7 +42,7 @@ model::Ownship own_from_gnss(const char* rmc, const char* gga, const char* gsa) 
     o.pps_locked = true;
     o.lat_1e7 = f.lat_1e7;
     o.lon_1e7 = f.lon_1e7;
-    o.alt_hae_mm = f.alt_mm;
+    o.alt_hae_mm = f.alt_hae_mm;
     o.speed_mm_s = f.speed_mm_s;
     o.track_cdeg = f.track_cdeg;
     o.vdop_e2 = f.vdop_e2;

@@ -63,7 +63,7 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
     CHECK(gnss.poll());
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.solution().sats == 9);
-    CHECK(gnss.solution().alt_mm == 1200000);
+    CHECK(gnss.solution().alt_hae_mm == 1200000);
     CHECK(gnss.solution().lat_1e7 == doctest::Approx(485000000).epsilon(0.0001));
 
     CHECK_FALSE(gnss.poll());  // no new bytes: the same fix is not re-delivered
@@ -158,7 +158,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
         if (gnss.poll(at)) published++;
 
     CHECK(published == 1);
-    CHECK(gnss.solution().alt_mm == 1500000);
+    CHECK(gnss.solution().alt_hae_mm == 1500000);
 }
 
 // The estimate own-ship falls back to with no PPS edge latched, stamped by the part that knows it.

@@ -304,7 +304,7 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 | `RADIO` | the SX1262 transceiver, answered by a register round-trip: no radio, no flight |
 | `GNSS` | the L76K receiver on its UART: no receiver, no flight |
 | `BARO` | the BME280, with the address that answered, ours at 0x76 and LilyGO's at 0x77: no barometer, no flight and no activation |
-| `PANEL` | the e-paper, by the lot its fingerprint names (`hardware/README.md`) |
+| `PANEL` | the e-paper, by the lot its signature names (`hardware/README.md`) |
 | `IMU` | the BHI260AP sensor hub, which is what puts the ball in the turn coordinator |
 | `TEMP` | the nRF52840's own die sensor, which is what the thermal charge limits read |
 | `BATTERY` | the resistor divider into the SAADC the cell voltage is measured on |
@@ -320,7 +320,7 @@ Required first, then what the device senses with, then what it says things with,
 
 `CONTACTS` is the weakest row on the page and it is worth knowing why. A switch answers nothing: released, a button and an empty footprint both read as the pull-up, so presence cannot be probed the way the buzzer's drive stage or the DRV2605 can. What the row reports is that both lines are declared and their GPIO controller is up, which is the same standard `LAMP` is held to, and what it prints is the two pins so a bench knows where to put a probe. Only a contact made proves a contact, so the gesture is the test: hold the button and the device begins its power-off count, tap the pad and the page changes. Both pins are on the row because a device with a working button and a dead pad is a device a pilot cannot page.
 
-The last row is the I2C scan, and it reads `I2C IMU RTC HAPTIC BARO`: what answered on the sensor bus, named by the part that sits at each address, ascending, with no verdict. An address the board cannot account for has no name to print, so it prints as its hex, which is the whole point of scanning the bus rather than probing four addresses - `I2C IMU RTC HAPTIC BARO 3C` is a part nobody expected, and it is worth the trip to the bench. The map is `boards/lilygo/t_echo_plus/i2c_scan.h`, over the addresses the parts declare.
+The last row is the I2C scan, and it reads `I2C IMU RTC HAPTIC BARO`: what answered on the sensor bus, named by the part that sits at each address, ascending, with no verdict. An address the board cannot account for has no name to print, so it prints as its hex, which is the whole point of scanning the bus rather than probing four addresses - `I2C IMU RTC HAPTIC BARO 3C` is a part nobody expected, and it is worth the trip to the bench. The map is `boards/lilygo/t_echo_plus/i2c_scan.h`, beside the addresses the parts declare.
 
 The RTC is why that row exists. It is soldered onto a Plus like everything else, but nothing in this firmware drives it, so it has no capability, and a row is a capability: it carries a verdict, and `PASS` on a part the device never uses would be a claim that nothing behind it is true. The bus row is the honest half - the part answered, we know what it is, we do not use it. The IMU was in that half until a driver arrived; it has a row of its own now, and it still appears in the scan, because what the scan says is that the address answered and what the row says is that the part named itself.
 

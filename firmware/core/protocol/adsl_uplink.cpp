@@ -10,16 +10,6 @@
 namespace skyblip::protocol {
 
 namespace {
-void put_u24(uint8_t* b, uint32_t v) {
-    b[0] = static_cast<uint8_t>(v);
-    b[1] = static_cast<uint8_t>(v >> 8);
-    b[2] = static_cast<uint8_t>(v >> 16);
-}
-uint32_t get_u24(const uint8_t* b) {
-    return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
-           (static_cast<uint32_t>(b[2]) << 16);
-}
-
 void pack_record(uint8_t* r, const model::AircraftObservation& target) {
     put_u24(r, target.address & settings::kAddressMask);
     r[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |

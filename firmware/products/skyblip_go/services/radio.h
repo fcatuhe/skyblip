@@ -143,7 +143,7 @@ class RadioService : public runtime::Service {
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
     protocol::AdslPacket outgoing_{};
-    // INFO: fc 27sep26 per dwell and payload: the queued bursts are built while the current keys
+    // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};
     Armed next_dwell_{};

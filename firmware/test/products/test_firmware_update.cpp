@@ -39,7 +39,7 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
         climbing.fix_valid = true;
         climbing.speed_mm_s = 50000;
         climbing.alt_msl_mm = 1200 * 1000;
-        climbing.updates = 1;
+        climbing.sentences = 1;
         rig.product.bus().gnss.push(climbing);
         for (int i = 0; i < 10; i++) {
             pass(rig, t);

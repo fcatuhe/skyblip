@@ -82,11 +82,11 @@ bool receive_mband(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     if (out.system == System::Unknown) return false;
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
-    out.len = frame_bytes(out.system);
+    out.bytes = frame_bytes(out.system);
     // A dwell reads for the longer of the two frames, so the shorter one is
     // followed by chips no transmitter sent. Counting those as damage would call
     // every ADS-L frame broken.
-    for (uint8_t i = 0; i < out.len; i++)
+    for (uint8_t i = 0; i < out.bytes; i++)
         out.bad_chips = static_cast<uint16_t>(out.bad_chips + __builtin_popcount(out.erasures[i]));
     return true;
 }

@@ -60,12 +60,12 @@ static_assert(CONFIG_BT_MAX_CONN <= static_cast<int>(comms::LinkSessions::kMaxSe
               "the controller admits more centrals than core will serve");
 
 // INFO: fc 23sep26 a notify off the sysworkq waits forever for a buffer, so each link gets a share
-constexpr atomic_val_t kNotifyInFlightMax = 4;
+constexpr atomic_val_t kMaxNotifiesInFlight = 4;
 constexpr int kAttResponsesPerLink = 1;
 // INFO: fc 25sep26 smp_bt.c waits on each notification's sent callback before the next
 constexpr int kSmpNotifiesPerLink = 1;
 static_assert(CONFIG_BT_ATT_TX_COUNT >=
-                  (kNotifyInFlightMax + kAttResponsesPerLink + kSmpNotifiesPerLink) *
+                  (kMaxNotifiesInFlight + kAttResponsesPerLink + kSmpNotifiesPerLink) *
                       CONFIG_BT_MAX_CONN,
               "the ATT pool must hold every link's notifications, a response and an SMP reply");
 atomic_t g_in_flight[CONFIG_BT_MAX_CONN];
@@ -336,7 +336,7 @@ Status Link::notify_one(struct bt_conn* conn, Endpoint endpoint, ConstByteSpan b
     for (int i = 0; i < n; i++) {
         if (!bt_gatt_is_subscribed(conn, attrs[i], BT_GATT_CCC_NOTIFY)) continue;
         subscribed = true;
-        if (atomic_get(in_flight) >= kNotifyInFlightMax) return Status::WouldBlock;
+        if (atomic_get(in_flight) >= kMaxNotifiesInFlight) return Status::WouldBlock;
         struct bt_gatt_notify_params params = {};
         params.attr = attrs[i];
         params.data = bytes.data();

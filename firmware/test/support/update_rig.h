@@ -19,7 +19,7 @@ inline void on_ground(Rig& rig, uint32_t& now_ms) {
 inline void receiver_speaks_without_a_fix(Rig& rig) {
     gnss::GnssSolution f{};
     f.fix_valid = false;
-    f.updates = 1;
+    f.sentences = 1;
     rig.product.bus().gnss.push(f);
 }
 

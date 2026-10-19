@@ -72,7 +72,7 @@ struct HousekeepingRig {
         solution.fix_valid = true;
         solution.speed_mm_s = speed_mm_s;
         solution.alt_msl_mm = alt_msl_m * 1000;
-        solution.updates = 1;
+        solution.sentences = 1;
         product.bus().gnss.push(solution);
     }
 

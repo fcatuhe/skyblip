@@ -53,12 +53,12 @@ struct ServiceRig {
         fix.utc_s = kBaseUtcS + now_ms / 1000;
         fix.lat_1e7 = 485000000;
         fix.lon_1e7 = 85000000;
-        fix.alt_mm = 300000;
+        fix.alt_hae_mm = 300000;
         fix.alt_msl_mm = 300000;
         fix.hdop_e2 = 100;
         fix.vdop_e2 = 150;
         fix.sats = 9;
-        fix.updates = ++updates;
+        fix.sentences = ++updates;
         bus.gnss.push(fix);
         clock.set_millis(now_ms);
         ownship.tick(now_ms);

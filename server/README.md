@@ -89,7 +89,7 @@ legal:
   host_address: [hosting provider address]
 ```
 
-Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_fb()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
+Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_panel()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
 
 Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
 

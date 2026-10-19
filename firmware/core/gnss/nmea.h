@@ -56,11 +56,11 @@ struct GnssSolution {
     bool utc_valid{false};
     int32_t lat_1e7{0};
     int32_t lon_1e7{0};
-    // INFO: gn 09Jun25 alt_mm is height above the WGS-84 ELLIPSOID (HAE), which is
+    // INFO: gn 09Jun25 alt_hae_mm is height above the WGS-84 ELLIPSOID (HAE), which is
     // what ADS-L 4 SRD860 issue 2 G.1.7 transmits and what every received
     // neighbour altitude is measured in. alt_msl_mm is GGA field 9, the value a
     // panel or an IGC file wants.
-    int32_t alt_mm{0};
+    int32_t alt_hae_mm{0};
     int32_t alt_msl_mm{0};
     int32_t geoid_separation_mm{kDefaultGeoidSeparationMm};
     // INFO: fc 19sep26 what the receiver resolves, not what the wire carries: RMC fields 7 and 8
@@ -80,7 +80,7 @@ struct GnssSolution {
     bool alt_msl_valid{false};
     bool alt_hae_valid{false};
     bool geoid_measured{false};
-    uint32_t updates{0};
+    uint32_t sentences{0};
 };
 
 class NmeaParser {

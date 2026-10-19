@@ -23,8 +23,8 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kTelemTypeInfo = 1;
     static constexpr uint8_t kInfoTypeRegistration = 5;
     static constexpr int kInfoHeaderByte = 5;
-    static constexpr int kInfoTextByte = 6;
-    static constexpr int kInfoTextBytes = 14;
+    static constexpr int kInfoMsgByte = 6;
+    static constexpr int kInfoMsgBytes = 14;
 
     uint8_t SYNC[2];
     uint8_t Length;
@@ -81,8 +81,8 @@ struct __attribute__((packed)) AdslPacket {
         return Type == kTypeOgnDiagnostics && telem_type() == kTelemTypeInfo &&
                info_type() == kInfoTypeRegistration;
     }
-    const char* info_text() const { return reinterpret_cast<const char*>(Byte + kInfoTextByte); }
-    char* info_text() { return reinterpret_cast<char*>(Byte + kInfoTextByte); }
+    const char* info_msg() const { return reinterpret_cast<const char*>(Byte + kInfoMsgByte); }
+    char* info_msg() { return reinterpret_cast<char*>(Byte + kInfoMsgByte); }
 
     static uint32_t get4(const uint8_t* b) {
         return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |

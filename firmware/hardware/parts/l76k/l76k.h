@@ -185,7 +185,7 @@ class L76k : public ports::Gnss {
     // Sentences the parser accepted since boot. A receiver that is wired but
     // silent (or babbling at the wrong baud) never moves this off zero, which is
     // what the DFU health gate watches.
-    uint32_t sentences() const { return parser_.solution().updates; }
+    uint32_t sentences() const { return parser_.solution().sentences; }
 
    private:
     static constexpr size_t kReadChunkBytes = 64;

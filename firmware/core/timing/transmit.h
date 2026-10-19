@@ -26,7 +26,7 @@ class Transmitter {
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
     static constexpr int32_t kFixMaxAgeMs = 500;
     // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
-    static constexpr int kCompletionMarginMs = 2;
+    static constexpr int kCompletionGuardMs = 2;
 
     enum class Payload : uint8_t { Position, Callsign };
 

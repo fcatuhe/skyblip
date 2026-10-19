@@ -56,7 +56,7 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     const model::AircraftObservation target = flight::carried_to(reported, now_ms);
     AlarmAssessment assessment{};
     int32_t north_m, east_m, up_m;
-    if (!relative_ned(own, target, north_m, east_m, up_m)) return assessment;
+    if (!flight::relative_ned(own, target, north_m, east_m, up_m)) return assessment;
     assessment.valid = true;
     assessment.rel_alt_m = up_m;
     assessment.rel_dist_m = static_cast<int32_t>(idistance(north_m, east_m));

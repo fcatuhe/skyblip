@@ -81,7 +81,7 @@ constexpr uint8_t kTxPayloadChipBytes = kSyncTailChipBytes + 2 * kAlptasFrameByt
 
 struct Frame {
     System system{System::Unknown};
-    uint8_t len{0};
+    uint8_t bytes{0};
     uint16_t bad_chips{0};
     uint8_t data[kRxFrameBytes]{};
     uint8_t erasures[kRxFrameBytes]{};

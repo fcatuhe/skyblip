@@ -56,7 +56,7 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
         // The burst also has to end before the dwell closes for the channel hop, not just
         // before the direct slot ends at 1000.
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionMarginMs <=
+                  Transmitter::kCompletionGuardMs <=
               Scheduler::dwell_end(0));
         CHECK(a.freq_hz == kMband0Hz);
         if (a.at_ms < earliest) earliest = a.at_ms;
@@ -65,7 +65,7 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
     // The whole slot is usable: an open dwell is a tuned dwell, so 450 itself is
     // a legal instant and no guard is owed at the front.
     CHECK(earliest == kDirectStartMs);
-    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionMarginMs -
+    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionGuardMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
 
@@ -81,7 +81,7 @@ TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
         if (a.at_ms > latest) latest = a.at_ms;
     }
     CHECK(earliest == kSlot1StartMs);
-    CHECK(latest == kDirectEndMs - Transmitter::kCompletionMarginMs -
+    CHECK(latest == kDirectEndMs - Transmitter::kCompletionGuardMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
 
@@ -129,7 +129,7 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
         CHECK(a.freq_hz == kMband1Hz);
         CHECK(a.at_ms >= kSlot1StartMs);
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionMarginMs <=
+                  Transmitter::kCompletionGuardMs <=
               kDirectEndMs);
     }
     // And the tail is not a position opportunity, however anchored the clock is.
@@ -211,7 +211,7 @@ TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never a
         REQUIRE(name.go);
         CHECK(position.freq_hz == name.freq_hz);
         CHECK(position.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionMarginMs <=
+                  Transmitter::kCompletionGuardMs <=
               name.at_ms);
         both++;
     }

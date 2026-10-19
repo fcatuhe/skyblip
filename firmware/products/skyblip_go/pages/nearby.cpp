@@ -14,7 +14,7 @@ using ui::kCharH;
 constexpr int kCountScale = 2;
 constexpr int kRuleY = 32;
 constexpr int kRelHundredsCeiling = 99;
-constexpr int32_t kDistanceE1Ceiling = 999;
+constexpr int32_t kDistanceCeilingE1 = 999;
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len, int scale) {
     canvas.draw_text(x_end - len * kCellW * scale, y, text, true, scale);
@@ -117,7 +117,7 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
 
     const int32_t dist_e1 =
         metric ? div_round(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).v;
-    int written = dist_e1 > kDistanceE1Ceiling
+    int written = dist_e1 > kDistanceCeilingE1
                       ? format_string(text, "FAR")
                       : format_uint(text, static_cast<uint32_t>(dist_e1), 2, 1);
     text[written] = 0;

@@ -335,22 +335,22 @@ bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
     packet.set_address_mapping_table(address_mapping_table);
     packet.set_info_header(AdslPacket::kTelemTypeInfo, AdslPacket::kInfoTypeRegistration);
 
-    char* text = packet.info_text();
+    char* text = packet.info_msg();
     int n = 0;
-    while (n < AdslPacket::kInfoTextBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
+    while (n < AdslPacket::kInfoMsgBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
         text[n] = callsign[n];
         n++;
     }
-    while (n < AdslPacket::kInfoTextBytes) text[n++] = 0;
+    while (n < AdslPacket::kInfoMsgBytes) text[n++] = 0;
     return true;
 }
 
 int callsign_of(const AdslPacket& packet, char* out, int capacity) {
     out[0] = 0;
     if (!packet.is_registration() || capacity <= 1) return 0;
-    const char* text = packet.info_text();
+    const char* text = packet.info_msg();
     int n = 0;
-    while (n < AdslPacket::kInfoTextBytes && text[n] != 0) {
+    while (n < AdslPacket::kInfoMsgBytes && text[n] != 0) {
         if (!is_callsign_char(text[n])) return 0;
         n++;
     }
@@ -395,7 +395,7 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
     // would compute relative vertical separation against it.
     if (own.fix_valid) {
         if (own.vdop_e2 != 0)
-            packet.set_alt_m(to_metres(Millimetres(where.alt_mm)).v);
+            packet.set_alt_m(to_metres(Millimetres(where.alt_hae_mm)).v);
         else
             packet.set_alt_invalid();
         packet.set_speed_q(to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v);

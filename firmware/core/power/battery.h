@@ -16,8 +16,8 @@ constexpr uint16_t kImplausibleCeilingMv = 4700;
 
 static_assert(kFullMv < kImplausibleCeilingMv, "a full cell is a reading the gauge believes");
 
-constexpr bool plausible_mv(uint16_t millivolts) {
-    return millivolts > kImplausibleFloorMv && millivolts <= kImplausibleCeilingMv;
+constexpr bool plausible_mv(uint16_t divider_mv) {
+    return divider_mv > kImplausibleFloorMv && divider_mv <= kImplausibleCeilingMv;
 }
 
 // INFO: fc 03aug26 The per-unit trim, in millivolts, added to a reading before
@@ -45,7 +45,7 @@ uint16_t calibrated_mv(uint16_t raw_mv, int16_t offset_mv);
 events::BatterySample calibrated(const events::BatterySample& raw, int16_t offset_mv);
 
 // INFO: fc 05oct26 off the cable only: on it the divider reads the USB rail, README.md
-uint8_t percent_from_mv(uint16_t millivolts);
+uint8_t percent_from_mv(uint16_t cell_mv);
 
 struct BatteryState {
     uint16_t cell_mv{0};

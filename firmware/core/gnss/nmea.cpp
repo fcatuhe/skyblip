@@ -283,7 +283,7 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
                 static_cast<int32_t>(((track_cdeg % kCentiDegreesPerTurn) + kCentiDegreesPerTurn) %
                                      kCentiDegreesPerTurn);
     }
-    solution_.updates++;
+    solution_.sentences++;
     return true;
 }
 
@@ -315,10 +315,10 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int len) {
     solution_.alt_hae_valid = solution_.alt_msl_valid;
     if (solution_.alt_msl_valid) {
         solution_.alt_msl_mm = static_cast<int32_t>(msl_mm);
-        solution_.alt_mm = solution_.alt_msl_mm + solution_.geoid_separation_mm;
+        solution_.alt_hae_mm = solution_.alt_msl_mm + solution_.geoid_separation_mm;
     }
 
-    solution_.updates++;
+    solution_.sentences++;
     return true;
 }
 

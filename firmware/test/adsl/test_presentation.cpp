@@ -93,7 +93,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
     CHECK(p.address() == 0x123456u);
     CHECK(p.address_mapping_table() == 58);
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInfoMsgBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 6);
     CHECK(std::string(name) == "D-KXYZ");
 }
@@ -101,9 +101,9 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused, not drawn") {
     protocol::AdslPacket p{};
     protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.info_text()[3] = 0x07;
+    p.info_msg()[3] = 0x07;
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInfoMsgBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 
@@ -118,9 +118,9 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not split into PFLAA") {
     protocol::AdslPacket p{};
     protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.info_text()[1] = ',';
+    p.info_msg()[1] = ',';
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInfoMsgBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 }

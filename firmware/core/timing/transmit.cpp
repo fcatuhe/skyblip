@@ -27,7 +27,7 @@ int Transmitter::first_instant_in(int slot) {
 int Transmitter::last_instant_in(int slot) {
     const int dwell_end = Scheduler::dwell_end(slot);
     const int closes = dwell_end < kDirectEndMs ? dwell_end : kDirectEndMs;
-    const int last = closes - kCompletionMarginMs - static_cast<int>(kAirTimeMs);
+    const int last = closes - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
     const int first = first_instant_in(slot);
     return last > first ? last : first;
 }
@@ -62,7 +62,7 @@ bool Transmitter::on_callsign_schedule(uint32_t utc_s) const {
 }
 
 int Transmitter::last_callsign_instant() {
-    return kCallsignEndMs - kCompletionMarginMs - static_cast<int>(kAirTimeMs);
+    return kCallsignEndMs - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,

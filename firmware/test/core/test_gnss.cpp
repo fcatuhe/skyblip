@@ -214,7 +214,7 @@ TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values") {
     CHECK(f.geoid_separation_mm == 46900);
     CHECK(f.geoid_measured);
     CHECK(f.alt_hae_valid);
-    CHECK(f.alt_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
+    CHECK(f.alt_hae_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
 }
 
 // Some receivers omit field 11 entirely and some always answer "0.0,M": OGN
@@ -230,7 +230,7 @@ TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says 
     CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
     CHECK(p.solution().alt_msl_mm == 545400);
-    CHECK(p.solution().alt_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(p.solution().alt_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
 TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
@@ -239,7 +239,7 @@ TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
     REQUIRE(p.parse_line(zero, static_cast<int>(strlen(zero))));
     CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
-    CHECK(p.solution().alt_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(p.solution().alt_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
 // GGA field 8. Without it every integrity and accuracy field we transmit is a
@@ -332,7 +332,7 @@ TEST_CASE("gnss: byte-wise feed reconstructs a sentence") {
     for (const char* c = gga; *c; c++) got |= p.feed(*c);
     CHECK(got);
     CHECK(p.solution().alt_msl_mm == 545400);
-    CHECK(p.solution().alt_mm == 592300);
+    CHECK(p.solution().alt_hae_mm == 592300);
 }
 
 // A burst is always late relative to the PPS edge whose second it describes, so
@@ -392,7 +392,7 @@ TEST_CASE("gnss: a truncated GGA is refused, checksum or no checksum") {
 
     // Neither of them touched the solution we already had.
     CHECK(p.solution().alt_msl_mm == 545400);
-    CHECK(p.solution().updates == 1);
+    CHECK(p.solution().sentences == 1);
 }
 
 // I, row "Receiver identification". $PCAS06 is answered with a $GPTXT banner and
@@ -412,7 +412,7 @@ TEST_CASE("gnss: the receiver names itself in a $GPTXT, and the version is kept"
 
     // A banner is not a solution: the verification window counts fixes, and a
     // receiver introducing itself must not satisfy it.
-    CHECK(p.solution().updates == 0);
+    CHECK(p.solution().sentences == 0);
 
     // The part emits other $GPTXT lines (antenna status, start-up notices). A
     // version field that is sometimes an antenna warning is worse than none, so
@@ -426,7 +426,7 @@ TEST_CASE("gnss: corrupt checksum is rejected, no update") {
     NmeaParser p;
     const char* bad = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*00";
     CHECK_FALSE(p.parse_line(bad, static_cast<int>(strlen(bad))));
-    CHECK(p.solution().updates == 0);
+    CHECK(p.solution().sentences == 0);
 }
 
 // The pinned bug: a solution quantised to the wire's units at the door, so a turn rate

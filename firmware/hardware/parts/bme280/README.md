@@ -2,6 +2,8 @@
 
 The barometer converts four times a second in forced mode behind the part's IIR 8, triggered on the PPS phases 0, 250, 500 and 750 ms and read once a second on a later pass, because consumption matters most and every way of asking Zephyr's driver for a sample sleeps through the conversion in the service loop.
 
+Its address is disputed: our BOM says 0x76, LilyGO's README and SoftRF say 0x77. `Bme280::kAddressPrimary` and `kAddressAlternate` are both, the devicetree declares both, and the board takes whichever answers.
+
 ## Why not Zephyr's driver
 
 Zephyr 4.4.2's `bme280_sample_fetch_helper` (`drivers/sensor/bosch/bme280/bme280.c:164-213`) writes `ctrl_meas` in forced mode and `k_sleep`s `BME280_EXPECTED_SAMPLE_TIME_MS`, then polls the status register every 3 ms. At x16 / x2 / x1 that was 43 ms of the service loop at every PPS edge (bench loop record, worst tick 43 ms in `board_poll`, phase 950-999 ms). The async sensor API runs the same helper on an RTIO work-queue thread, which buys a 1 KB stack and a thread to stop a sleep we do not need.

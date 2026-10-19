@@ -110,11 +110,11 @@ KEEPALIVE int simulator_formation_members() {
 }
 KEEPALIVE int simulator_aircraft_count() { return g_simulator.world().aircraft_count(); }
 
-// Layout: byte = canvas[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
-KEEPALIVE const unsigned char* simulator_fb() { return g_simulator.panel().data(); }
-KEEPALIVE int simulator_fb_w() { return g_simulator.panel().width(); }
-KEEPALIVE int simulator_fb_h() { return g_simulator.panel().height(); }
-KEEPALIVE int simulator_fb_stride() { return go::Glass::kStride; }
+// Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
+KEEPALIVE const unsigned char* simulator_panel() { return g_simulator.panel().data(); }
+KEEPALIVE int simulator_panel_width() { return g_simulator.panel().width(); }
+KEEPALIVE int simulator_panel_height() { return g_simulator.panel().height(); }
+KEEPALIVE int simulator_panel_stride() { return go::Glass::kStride; }
 
 KEEPALIVE int simulator_panel_refreshing() { return g_simulator.panel_refreshing() ? 1 : 0; }
 KEEPALIVE int simulator_panel_refresh_is_full() {
@@ -135,7 +135,7 @@ KEEPALIVE int simulator_fix_valid() { return g_simulator.product().state().own.f
 KEEPALIVE int simulator_sats() { return g_simulator.product().state().own.sats; }
 KEEPALIVE int simulator_lat_1e7() { return g_simulator.product().state().own.lat_1e7; }
 KEEPALIVE int simulator_lon_1e7() { return g_simulator.product().state().own.lon_1e7; }
-KEEPALIVE int simulator_alt_mm() { return g_simulator.product().state().own.alt_hae_mm; }
+KEEPALIVE int simulator_alt_hae_mm() { return g_simulator.product().state().own.alt_hae_mm; }
 KEEPALIVE int simulator_pressure_mpa() {
     return static_cast<int>(g_simulator.product().state().baro.pressure_mpa);
 }

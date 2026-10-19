@@ -78,7 +78,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.utc_valid = solution.utc_valid;
     own.lat_1e7 = solution.lat_1e7;
     own.lon_1e7 = solution.lon_1e7;
-    own.alt_hae_mm = solution.alt_mm;
+    own.alt_hae_mm = solution.alt_hae_mm;
     own.alt_msl_mm = solution.alt_msl_mm;
     own.geoid_measured = solution.geoid_measured;
     own.speed_mm_s = solution.speed_mm_s;
@@ -98,7 +98,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     const bool height_fixed = own.fix_valid && height_solved(own);
     if (!height_fixed) gnss_ref_ms_ = 0;
     const bool climb_valid =
-        height_fixed && climb_from_alt_mm(solution.alt_mm, now_ms, kGnssClimbWindowMs,
+        height_fixed && climb_from_alt_mm(solution.alt_hae_mm, now_ms, kGnssClimbWindowMs,
                                           gnss_ref_alt_mm_, gnss_ref_ms_, mm_s);
     if (!baro_active_) {
         if (climb_valid) adopt_climb(mm_s, now_ms);

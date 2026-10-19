@@ -55,9 +55,9 @@ struct Rig {
     void push_fix(int32_t alt_m, uint32_t updates) {
         gnss::GnssSolution f{};
         f.fix_valid = true;
-        f.alt_mm = alt_m * 1000;
+        f.alt_hae_mm = alt_m * 1000;
         f.vdop_e2 = 150;
-        f.updates = updates;
+        f.sentences = updates;
         product.bus().gnss.push(f);
     }
 
@@ -66,8 +66,8 @@ struct Rig {
         gnss::GnssSolution f{};
         f.fix_valid = true;
         f.fix_mode = gnss::kFixMode2D;
-        f.alt_mm = alt_m * 1000;
-        f.updates = updates;
+        f.alt_hae_mm = alt_m * 1000;
+        f.sentences = updates;
         product.bus().gnss.push(f);
     }
 
@@ -85,14 +85,14 @@ struct Rig {
         f.lat_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
         f.lon_1e7 = 85000000;
         f.alt_msl_mm = alt_msl_m * 1000;
-        f.alt_mm = f.alt_msl_mm + gnss::kDefaultGeoidSeparationMm;
+        f.alt_hae_mm = f.alt_msl_mm + gnss::kDefaultGeoidSeparationMm;
         f.geoid_measured = true;
         f.speed_mm_s = speed_mm_s;
         f.track_cdeg = 9000;
         f.sats = 10;
         f.hdop_e2 = 100;
         f.vdop_e2 = 150;
-        f.updates = ++fix_updates;
+        f.sentences = ++fix_updates;
         product.bus().gnss.push(f);
     }
 
@@ -108,7 +108,7 @@ struct Rig {
     void blind_second(uint32_t& now_ms) {
         gnss::GnssSolution f{};
         f.fix_valid = false;
-        f.updates = ++fix_updates;
+        f.sentences = ++fix_updates;
         product.bus().gnss.push(f);
         run(now_ms, now_ms + 950);
         now_ms += 1000;

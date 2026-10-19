@@ -75,7 +75,7 @@ TEST_CASE("air: an ADS-L burst frames as ADS-L, byte-aligned on its data") {
     protocol::Frame frame{};
     frame_of(protocol::kAdslSyncWord, payload, sizeof(payload), frame);
     CHECK(frame.system == protocol::System::AdslDirect);
-    CHECK(frame.len == protocol::kAdslFrameBytes);
+    CHECK(frame.bytes == protocol::kAdslFrameBytes);
     CHECK(std::memcmp(frame.data, payload, sizeof(payload)) == 0);
     CHECK(frame.bad_chips == 0);
 }
@@ -87,7 +87,7 @@ TEST_CASE("air: an ALP-TAS burst frames as ALP-TAS through the same window") {
     protocol::Frame frame{};
     frame_of(protocol::kAlptasSyncWord, payload, sizeof(payload), frame);
     CHECK(frame.system == protocol::System::Alptas);
-    CHECK(frame.len == protocol::kAlptasFrameBytes);
+    CHECK(frame.bytes == protocol::kAlptasFrameBytes);
     CHECK(std::memcmp(frame.data, payload, sizeof(payload)) == 0);
 }
 
@@ -141,7 +141,7 @@ TEST_CASE("air: a chip error inside the frame is reported, not hidden") {
     CHECK(frame.system == protocol::System::AdslDirect);
     CHECK(frame.bad_chips > 0);
     bool flagged = false;
-    for (uint8_t i = 0; i < frame.len; i++)
+    for (uint8_t i = 0; i < frame.bytes; i++)
         if (frame.erasures[i] != 0) flagged = true;
     CHECK(flagged);
 }
@@ -159,7 +159,7 @@ TEST_CASE("air: a foreign sync word frames as nothing") {
     protocol::Frame frame{};
     CHECK_FALSE(protocol::receive_mband(reported, sizeof(reported), frame));
     CHECK(frame.system == protocol::System::Unknown);
-    CHECK(frame.len == 0);
+    CHECK(frame.bytes == 0);
     CHECK_FALSE(protocol::framed_noise(frame));
 }
 
@@ -225,7 +225,7 @@ TEST_CASE("air: an O-band burst is named an uplink frame without being decoded")
     // The codeword is eleven times longer than a Frame and stays where the
     // executor put it, so nothing was copied into out.
     CHECK(out.system == protocol::System::Unknown);
-    CHECK(out.len == 0);
+    CHECK(out.bytes == 0);
 }
 
 TEST_CASE("air: an O-band burst of the wrong length is not an uplink frame") {
@@ -247,7 +247,7 @@ TEST_CASE("air: an M-band burst is still framed and named from its sync tail") {
     protocol::Frame out{};
     CHECK(protocol::receive_burst(model::Band::M, reported, sizeof(reported), out) ==
           protocol::System::Alptas);
-    CHECK(out.len == protocol::kAlptasFrameBytes);
+    CHECK(out.bytes == protocol::kAlptasFrameBytes);
 }
 
 // The O-band framing a transmitter uses, round-tripped through the same sync

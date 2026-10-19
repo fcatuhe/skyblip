@@ -149,12 +149,12 @@ namespace {
 void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t updates) {
     gnss::GnssSolution f{};
     f.fix_valid = true;
-    f.alt_mm = 1000000;
+    f.alt_hae_mm = 1000000;
     f.vdop_e2 = 150;
     f.hdop_e2 = 100;
     f.speed_mm_s = speed_mm_s;
     f.track_cdeg = track_cdeg;
-    f.updates = updates;
+    f.sentences = updates;
     rig.product.bus().gnss.push(f);
 }
 
@@ -405,7 +405,7 @@ TEST_CASE("product: a receiver restating its last fixed second does not wind the
     gnss::GnssSolution solving{};
     solving.utc_valid = true;
     solving.utc_s = anchored;
-    solving.updates = ++rig.fix_updates;
+    solving.sentences = ++rig.fix_updates;
     rig.product.bus().gnss.push(solving);
     rig.run(t, t + 950);
 
@@ -420,7 +420,7 @@ TEST_CASE("product: before any fix, the first dated sentence anchors the clock")
     gnss::GnssSolution dated{};
     dated.utc_valid = true;
     dated.utc_s = Rig::kBaseUtcS;
-    dated.updates = ++rig.fix_updates;
+    dated.sentences = ++rig.fix_updates;
     rig.product.bus().gnss.push(dated);
     rig.run(1000, 1950);
 

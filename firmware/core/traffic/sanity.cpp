@@ -1,5 +1,6 @@
 #include "core/traffic/sanity.h"
 
+#include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/traffic/range.h"
@@ -14,7 +15,8 @@ int32_t plausible_range_m(model::Source source) {
 Plausibility range_check(const model::Ownship& own, const model::AircraftObservation& observation,
                          int32_t& slant_m) {
     int32_t north_m = 0, east_m = 0, up_m = 0;
-    if (!relative_ned(own, observation, north_m, east_m, up_m)) return Plausibility::NoReference;
+    if (!flight::relative_ned(own, observation, north_m, east_m, up_m))
+        return Plausibility::NoReference;
 
     // INFO: fc 19sep26 slant, not ground: a bad altitude field throws a target straight up
     const int32_t ground_m = static_cast<int32_t>(idistance(north_m, east_m));

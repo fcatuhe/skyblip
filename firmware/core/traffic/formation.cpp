@@ -66,7 +66,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     const model::Ownship own = flight::carried_to(own_fix, now_ms);
     const model::AircraftObservation target = flight::carried_to(reported, now_ms);
     int32_t north_m, east_m, up_m;
-    if (!traffic::relative_ned(own, target, north_m, east_m, up_m)) return out;
+    if (!flight::relative_ned(own, target, north_m, east_m, up_m)) return out;
 
     heading_up(north_m, east_m, own.track_cdeg, out.ahead_m, out.right_m);
     out.up_m = up_m;
