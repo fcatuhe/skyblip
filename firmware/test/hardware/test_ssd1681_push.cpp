@@ -15,7 +15,7 @@ constexpr int kStride = parts::Ssd1681::kGlassStride;
 
 parts::Ssd1681 turned_driver_for(models::Ssd1681& chip) {
     return parts::Ssd1681(chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin, -1,
-                          parts::GlassRotation::Deg270);
+                          parts::GlassRotation::Degrees270);
 }
 
 std::vector<uint8_t> per_pixel_bank(const parts::Ssd1681Glass& canvas) {

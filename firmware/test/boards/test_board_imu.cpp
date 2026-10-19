@@ -179,7 +179,7 @@ TEST_CASE("board: a slim image boots the hub from the copy on flash") {
     run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(platform.chips().imu.booted);
-    CHECK(platform.chips().imu.uploaded() == carried.size());
+    CHECK(platform.chips().imu.uploaded_bytes() == carried.size());
     CHECK(state.imu.bootable);
     CHECK(std::string(state.imu.fault).empty());
 }

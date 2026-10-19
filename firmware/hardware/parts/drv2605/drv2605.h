@@ -61,7 +61,7 @@ class Drv2605 : public ports::Haptic {
    private:
     static constexpr uint8_t kRegisterStatus = 0x00;
     static constexpr uint8_t kRegisterMode = 0x01;
-    static constexpr uint8_t kRegisterRtpInput = 0x02;
+    static constexpr uint8_t kRegisterRealTimePlaybackInput = 0x02;
     static constexpr uint8_t kRegisterLibrary = 0x03;
     static constexpr uint8_t kRegisterWaveSequence1 = 0x04;
     static constexpr uint8_t kRegisterWaveSequence2 = 0x05;
@@ -70,7 +70,7 @@ class Drv2605 : public ports::Haptic {
     static constexpr uint8_t kRegisterSustainPositive = 0x0E;
     static constexpr uint8_t kRegisterSustainNegative = 0x0F;
     static constexpr uint8_t kRegisterBreak = 0x10;
-    static constexpr uint8_t kRegisterAudioMax = 0x13;
+    static constexpr uint8_t kRegisterAudioMaximumInput = 0x13;
     static constexpr uint8_t kRegisterFeedback = 0x1A;
     static constexpr uint8_t kRegisterControl3 = 0x1D;
 
@@ -91,8 +91,8 @@ class Drv2605 : public ports::Haptic {
     static constexpr uint8_t kErmLibraryA = 0x01;
     // Signed full scale in RTP mode: DATA_FORMAT_RTP defaults to signed, so
     // 0x7F is 100% drive in one direction.
-    static constexpr uint8_t kRtpFullScale = 0x7F;
-    static constexpr uint8_t kAudioMaxDefault = 0x64;
+    static constexpr uint8_t kRealTimePlaybackFullScale = 0x7F;
+    static constexpr uint8_t kAudioMaximumInputDefault = 0x64;
 
     bool write_register(uint8_t register_address, uint8_t value);
     bool read_register(uint8_t register_address, uint8_t& out);

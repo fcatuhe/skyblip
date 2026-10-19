@@ -51,8 +51,8 @@ enum {
 // INFO: fc 24aug26 these three pins are named as a gpio and as a psel, and both copies are driven
 #define BOARD_GPIO_PIN(node_id) \
 	(DT_PROP(DT_GPIO_CTLR(node_id, gpios), port) * 32 + DT_GPIO_PIN(node_id, gpios))
-#define BOARD_PSEL_PIN(node_id, idx) \
-	((DT_PROP_BY_IDX(node_id, psels, idx) >> NRF_PIN_POS) & NRF_PIN_MSK)
+#define BOARD_PSEL_PIN(node_id, index) \
+	((DT_PROP_BY_IDX(node_id, psels, index) >> NRF_PIN_POS) & NRF_PIN_MSK)
 
 BUILD_ASSERT(BOARD_GPIO_PIN(DT_NODELABEL(epd_sck_gpio)) ==
 	     BOARD_PSEL_PIN(DT_CHILD(DT_NODELABEL(spi2_default), group1), 0));
@@ -66,8 +66,8 @@ BUILD_ASSERT(BOARD_GPIO_PIN(DT_NODELABEL(buzzer_sense_gpio)) ==
 // about which pin is which.
 static const struct gpio_dt_spec board_power_pins[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(peripheral_rail), gpios),
-	GPIO_DT_SPEC_GET(DT_ALIAS(aux_rail), gpios),
-	GPIO_DT_SPEC_GET(DT_ALIAS(flash_wp), gpios),
+	GPIO_DT_SPEC_GET(DT_ALIAS(auxiliary_rail), gpios),
+	GPIO_DT_SPEC_GET(DT_ALIAS(flash_write_protect), gpios),
 	GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios),
 };
 
@@ -88,10 +88,10 @@ static int board_power_up_gated_rails(void)
 		}
 
 		// GPIO_ACTIVE_HIGH throughout, so ACTIVE is the pin high.
-		int rc = gpio_pin_configure_dt(&board_power_pins[i], GPIO_OUTPUT_ACTIVE);
+		int error = gpio_pin_configure_dt(&board_power_pins[i], GPIO_OUTPUT_ACTIVE);
 
-		if (rc != 0) {
-			return rc;
+		if (error != 0) {
+			return error;
 		}
 	}
 
@@ -103,16 +103,16 @@ static int board_power_up_gated_rails(void)
 
 	// The reset line is GPIO_ACTIVE_LOW in the devicetree, so INACTIVE releases
 	// the part; the wake line is active high.
-	int rc = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
+	int error = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
 
-	if (rc != 0) {
-		return rc;
+	if (error != 0) {
+		return error;
 	}
 
-	rc = gpio_pin_configure_dt(&gnss_enable, GPIO_OUTPUT_ACTIVE);
+	error = gpio_pin_configure_dt(&gnss_enable, GPIO_OUTPUT_ACTIVE);
 
-	if (rc != 0) {
-		return rc;
+	if (error != 0) {
+		return error;
 	}
 
 	// Last, and in this function rather than in a SYS_INIT of its own: the panel
@@ -213,7 +213,7 @@ static uint8_t panel_clock_in(void)
 	return value;
 }
 
-static void panel_read_register(uint8_t register_address, uint8_t *out, size_t len)
+static void panel_read_register(uint8_t register_address, uint8_t *out, size_t bytes)
 {
 	gpio_pin_configure_dt(&epd_mosi, GPIO_OUTPUT_INACTIVE);
 	gpio_pin_set_dt(&epd_dc, 0); /* command */
@@ -224,7 +224,7 @@ static void panel_read_register(uint8_t register_address, uint8_t *out, size_t l
 	gpio_pin_configure_dt(&epd_mosi, GPIO_INPUT);
 	gpio_pin_set_dt(&epd_dc, 1); /* data */
 
-	for (size_t i = 0; i < len; i++) {
+	for (size_t i = 0; i < bytes; i++) {
 		out[i] = panel_clock_in();
 	}
 

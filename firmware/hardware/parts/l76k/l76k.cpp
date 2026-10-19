@@ -3,9 +3,9 @@
 namespace skyblip::parts {
 
 void L76k::send(const char* sentence, uint32_t now_ms) {
-    size_t length = 0;
-    while (sentence[length]) length++;
-    uart_.write(reinterpret_cast<const uint8_t*>(sentence), length);
+    size_t bytes = 0;
+    while (sentence[bytes]) bytes++;
+    uart_.write(reinterpret_cast<const uint8_t*>(sentence), bytes);
     last_command_ms_ = now_ms;
 }
 
@@ -190,9 +190,9 @@ bool L76k::poll(uint32_t now_ms) {
     uint8_t buffer[kReadChunkBytes];
     bool closed = false;
     for (;;) {
-        size_t n = uart_.read(buffer, sizeof(buffer));
-        if (n == 0) break;
-        for (size_t i = 0; i < n; i++) {
+        size_t received = uart_.read(buffer, sizeof(buffer));
+        if (received == 0) break;
+        for (size_t i = 0; i < received; i++) {
             if (!parser_.feed(static_cast<char>(buffer[i]))) continue;
             const gnss::Sentence sentence = parser_.last_sentence();
             validity_.observe(parser_.solution(), sentence, now_ms);
@@ -200,7 +200,7 @@ bool L76k::poll(uint32_t now_ms) {
                             (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
             closed = closed || sentence == kBurstClosingSentence;
         }
-        if (n < sizeof(buffer)) break;  // drained
+        if (received < sizeof(buffer)) break;  // drained
     }
     // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
     if (closed && satellites_in_view_every_ == 0) parser_.forget_satellites_in_view();

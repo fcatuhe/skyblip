@@ -136,8 +136,8 @@ class L76k : public io::Uart, public io::UartRate {
     }
     uint32_t port_baud() const { return port_baud_; }
 
-    size_t write(const uint8_t* data, size_t length) override {
-        for (size_t i = 0; i < length; i++) {
+    size_t write(const uint8_t* data, size_t bytes) override {
+        for (size_t i = 0; i < bytes; i++) {
             // A rate mismatch is not silence: the bits arrive and frame as
             // rubbish, which fails the checksum and is therefore indistinguishable
             // from nothing having been said.
@@ -159,20 +159,20 @@ class L76k : public io::Uart, public io::UartRate {
                 command_length_ = 0;
                 continue;
             }
-            const char c = static_cast<char>(data[i]);
-            if (c == '$') {
+            const char character = static_cast<char>(data[i]);
+            if (character == '$') {
                 command_length_ = 0;
-                command_[command_length_++] = c;
-            } else if (c == '\r' || c == '\n') {
+                command_[command_length_++] = character;
+            } else if (character == '\r' || character == '\n') {
                 if (command_length_ > 0) apply_command();
                 command_length_ = 0;
             } else if (command_length_ > 0 && command_length_ < kCommandBytes - 1) {
-                command_[command_length_++] = c;
+                command_[command_length_++] = character;
             }
         }
-        return length;
+        return bytes;
     }
-    size_t read(uint8_t* data, size_t cap) override {
+    size_t read(uint8_t* out, size_t capacity) override {
         // It is talking and we cannot frame a byte of it: the sentences went
         // past on the wire and are gone, they are not queued up waiting for
         // someone to fix the rate.
@@ -180,10 +180,10 @@ class L76k : public io::Uart, public io::UartRate {
             pending_.clear();
             return 0;
         }
-        size_t n = pending_.size() < cap ? pending_.size() : cap;
-        for (size_t i = 0; i < n; i++) data[i] = static_cast<uint8_t>(pending_[i]);
-        pending_.erase(0, n);
-        return n;
+        size_t count = pending_.size() < capacity ? pending_.size() : capacity;
+        for (size_t i = 0; i < count; i++) out[i] = static_cast<uint8_t>(pending_[i]);
+        pending_.erase(0, count);
+        return count;
     }
     size_t available() override { return pending_.size(); }
 
@@ -204,8 +204,8 @@ class L76k : public io::Uart, public io::UartRate {
             report_ms_ = now_ms;
             return;
         }
-        const int32_t dt = static_cast<int32_t>(now_ms - last_ms_);
-        if (dt <= 0) return;
+        const int32_t elapsed_ms = static_cast<int32_t>(now_ms - last_ms_);
+        if (elapsed_ms <= 0) return;
         last_ms_ = now_ms;
         // A receiver nobody has spoken to yet is not producing, and one that is
         // rebooting after $PCAS10 has nothing to say either.
@@ -213,7 +213,7 @@ class L76k : public io::Uart, public io::UartRate {
             report_ms_ = now_ms;
             return;
         }
-        fly(dt);
+        fly(elapsed_ms);
         if (now_ms - report_ms_ < solution_period_ms) return;
         report_ms_ = now_ms;
         emit_burst();
@@ -249,17 +249,18 @@ class L76k : public io::Uart, public io::UartRate {
     bool solving_since_set_{false};
     std::string heard_;
 
-    static bool starts_with(const char* s, int length, const char* prefix) {
+    static bool starts_with(const char* text, int bytes, const char* prefix) {
         int i = 0;
         for (; prefix[i]; i++) {
-            if (i >= length || s[i] != prefix[i]) return false;
+            if (i >= bytes || text[i] != prefix[i]) return false;
         }
         return true;
     }
-    static uint32_t argument(const char* s, int length, int at) {
-        uint32_t v = 0;
-        for (int i = at; i < length && s[i] >= '0' && s[i] <= '9'; i++) v = v * 10 + (s[i] - '0');
-        return v;
+    static uint32_t argument(const char* text, int bytes, int at) {
+        uint32_t value = 0;
+        for (int i = at; i < bytes && text[i] >= '0' && text[i] <= '9'; i++)
+            value = value * 10 + (text[i] - '0');
+        return value;
     }
 
     void apply_command() {
@@ -320,19 +321,22 @@ class L76k : public io::Uart, public io::UartRate {
     }
 
     // INFO: fc 18sep26 a receiver solves continuously and reports on its cadence, ADS-L 4 §C.2.5
-    void fly(int32_t dt_ms) {
-        const double v_mps = speed_mm_s / 1000.0;
-        const double secs = dt_ms / 1000.0;
-        const double rad = mid_step_track_deg(secs) * 3.14159265358979 / 180.0;
-        advance_latitude(v_mps * std::cos(rad) * secs);
-        const double coslat = std::cos(latitude_1e7 / 1e7 * 3.14159265358979 / 180.0);
-        if (coslat > 0.01) advance_longitude(v_mps * std::sin(rad) * secs, coslat);
-        advance_track(secs);
-        advance_altitude(secs);
-        advance_clock(dt_ms);
+    void fly(int32_t elapsed_ms) {
+        const double speed_mps = speed_mm_s / 1000.0;
+        const double elapsed_s = elapsed_ms / 1000.0;
+        const double track_rad = mid_step_track_deg(elapsed_s) * 3.14159265358979 / 180.0;
+        advance_latitude(speed_mps * std::cos(track_rad) * elapsed_s);
+        const double latitude_cosine = std::cos(latitude_1e7 / 1e7 * 3.14159265358979 / 180.0);
+        if (latitude_cosine > 0.01)
+            advance_longitude(speed_mps * std::sin(track_rad) * elapsed_s, latitude_cosine);
+        advance_track(elapsed_s);
+        advance_altitude(elapsed_s);
+        advance_clock(elapsed_ms);
     }
 
-    double mid_step_track_deg(double secs) const { return track_deg + turn_dps * secs * 0.5; }
+    double mid_step_track_deg(double elapsed_s) const {
+        return track_deg + turn_dps * elapsed_s * 0.5;
+    }
 
     // INFO: fc 18sep26 a step moves less than the 1.1 cm 1e-7 deg carries, so the rest is banked
     void advance_latitude(double north_m) {
@@ -342,30 +346,30 @@ class L76k : public io::Uart, public io::UartRate {
         latitude_1e7 += whole;
     }
 
-    void advance_longitude(double east_m, double coslat) {
-        longitude_fraction_1e7_ += east_m * 1e7 / (111320.0 * coslat);
+    void advance_longitude(double east_m, double latitude_cosine) {
+        longitude_fraction_1e7_ += east_m * 1e7 / (111320.0 * latitude_cosine);
         const int32_t whole = static_cast<int32_t>(longitude_fraction_1e7_);
         longitude_fraction_1e7_ -= whole;
         longitude_1e7 += whole;
     }
 
-    void advance_track(double secs) {
-        turned_deg_ += turn_dps * secs;
+    void advance_track(double elapsed_s) {
+        turned_deg_ += turn_dps * elapsed_s;
         const int32_t whole_deg = static_cast<int32_t>(turned_deg_);
         turned_deg_ -= whole_deg;
         track_deg = ((track_deg + whole_deg) % 360 + 360) % 360;
     }
 
-    void advance_altitude(double secs) {
-        climbed_m_ += climb_mm_s * secs / 1000.0;
+    void advance_altitude(double elapsed_s) {
+        climbed_m_ += climb_mm_s * elapsed_s / 1000.0;
         const int32_t whole_m = static_cast<int32_t>(climbed_m_);
         altitude_m += whole_m;
         climbed_m_ -= whole_m;
     }
 
     // INFO: fc 18sep26 NMEA carries whole seconds, so every solution of one second stamps the same
-    void advance_clock(int32_t dt_ms) {
-        seconds_of_day_ms_ += static_cast<uint32_t>(dt_ms);
+    void advance_clock(int32_t elapsed_ms) {
+        seconds_of_day_ms_ += static_cast<uint32_t>(elapsed_ms);
         utc_seconds_of_day = (utc_seconds_of_day + seconds_of_day_ms_ / 1000u) % 86400u;
         seconds_of_day_ms_ %= 1000u;
     }
@@ -432,7 +436,7 @@ class L76k : public io::Uart, public io::UartRate {
     uint32_t kmh_e2() const;
     uint32_t heading_e2() const;
     int32_t msl_dm() const;
-    int put_time(char* s) const;
+    int put_time(char* out) const;
     void emit_rmc();
     void emit_gsa();
     static uint8_t share_of_solution(uint8_t budget, uint8_t in_view, uint8_t total_in_view);

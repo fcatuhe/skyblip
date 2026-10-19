@@ -52,10 +52,10 @@ class Rf : public ports::Rf {
     }
 
     Status begin() override {
-        Status s = radio_.begin();
-        if (s != Status::Ok) return s;
-        s = radio_.configure_radio(parts::RadioConfig{});
-        if (s != Status::Ok) return s;
+        Status status = radio_.begin();
+        if (status != Status::Ok) return status;
+        status = radio_.configure_radio(parts::RadioConfig{});
+        if (status != Status::Ok) return status;
         self_ = this;
         gpio_init_callback(&dio1_callback_, on_dio1, BIT(dio1_.pin));
         dio1_wakes_ = gpio_add_callback(dio1_.port, &dio1_callback_) == 0 && arm_dio1();
@@ -82,13 +82,13 @@ class Rf : public ports::Rf {
                 verdict = Status::WouldBlock;
         } else if (flying_ && plan.end_us <= flying_end_us_) {
             verdict = Status::WouldBlock;
-        } else if (queued_ && same_dwell(plan, plan_)) {
+        } else if (queued_ && same_dwell(plan, queued_plan_)) {
             if (plan.tx != nullptr && !queued_bursts_.add(burst_of(plan)))
                 verdict = Status::WouldBlock;
         } else {
-            plan_ = plan;
+            queued_plan_ = plan;
             queued_bursts_ = ports::RfBursts::of(plan);
-            plan_armed_at_us_ = clock_.micros();
+            queued_armed_at_us_ = clock_.micros();
             queued_ = true;
             k_sem_give(&armed_);
         }
@@ -122,7 +122,7 @@ class Rf : public ports::Rf {
     ports::RfCarrier carrier() const override { return carrier_; }
 
     ports::RfTransmitter transmitter() const override {
-        return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
+        return {parts::sx1262::kConductedDbm, parts::sx1262::kPaConfigHighPowerRatedDbm};
     }
 
     ports::RfDio1 dio1() const override { return {dio1_wakes_, dio1_edges_, dio1_missed_}; }
@@ -186,7 +186,7 @@ class Rf : public ports::Rf {
         health_checked_us_ = clock_.micros();
         for (;;) {
             const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
-            health(reinit_affordable());
+            health(reinitialisation_affordable());
             if (armed != 0) continue;
             if (sleep_requested_) {
                 sleep_requested_ = false;
@@ -214,7 +214,7 @@ class Rf : public ports::Rf {
                 miss_unfinished(flying_bursts(), 0, 0);
             last_end_us_ = plan.end_us;
             flying_ = false;
-            health(reinit_affordable());
+            health(reinitialisation_affordable());
         }
     }
 
@@ -224,8 +224,8 @@ class Rf : public ports::Rf {
         k_sched_lock();
         const bool taken = queued_;
         if (taken) {
-            plan = plan_;
-            armed_at_us = plan_armed_at_us_;
+            plan = queued_plan_;
+            armed_at_us = queued_armed_at_us_;
             queued_ = false;
             flying_bursts_ = queued_bursts_;
             flying_mode_ = plan.mode;
@@ -241,31 +241,31 @@ class Rf : public ports::Rf {
     // only cure is a reinitialisation. It is accumulated here, between dwells,
     // because this thread owns the bus: the elapsed time comes off the same
     // clock the deadlines do, so a dwell that overran is counted, not lost.
-    void health(bool may_reinit) {
+    void health(bool may_reinitialise) {
         const uint64_t now_us = clock_.micros();
         if (now_us <= health_checked_us_) return;
         const uint32_t elapsed_ms = static_cast<uint32_t>((now_us - health_checked_us_) / 1000);
         if (elapsed_ms == 0) return;
         health_checked_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
-        const uint32_t rope_ms =
-            may_reinit ? runtime::kRadioRxSilenceCeilingMs : std::numeric_limits<uint32_t>::max();
-        // INFO: fc 03oct26 a reinit reconfigures DIO1 as an input, and nrfx GPIO drops its trigger
-        if (radio_.service(elapsed_ms, rope_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
+        const uint32_t silence_ceiling_ms = may_reinitialise ? runtime::kRadioRxSilenceCeilingMs
+                                                             : std::numeric_limits<uint32_t>::max();
+        // INFO: fc 03oct26 a reinitialisation reconfigures DIO1, and nrfx GPIO drops its trigger
+        if (radio_.service(elapsed_ms, silence_ceiling_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
     }
 
-    // INFO: fc 28sep26 a no-RX reinit fits the bench's 23 ms stall, only the uplink dwell spares it
-    bool reinit_affordable() {
+    // INFO: fc 28sep26 reinitialising fits the 23 ms bench stall: only the uplink dwell spares it
+    bool reinitialisation_affordable() {
         k_sched_lock();
-        const bool affordable = !queued_ || plan_.mode == ports::RfMode::RxOBand;
+        const bool affordable = !queued_ || queued_plan_.mode == ports::RfMode::RxOBand;
         k_sched_unlock();
         return affordable;
     }
 
     void sleep_until(uint64_t deadline_us) {
-        const uint64_t now = clock_.micros();
-        if (deadline_us <= now) return;
-        const uint64_t left = deadline_us - now;
-        if (left > 2000) k_usleep(static_cast<int32_t>(left - 1000));
+        const uint64_t now_us = clock_.micros();
+        if (deadline_us <= now_us) return;
+        const uint64_t remaining_us = deadline_us - now_us;
+        if (remaining_us > 2000) k_usleep(static_cast<int32_t>(remaining_us - 1000));
         while (clock_.micros() < deadline_us) k_busy_wait(10);
     }
 
@@ -303,7 +303,7 @@ class Rf : public ports::Rf {
         parts::RadioConfig config{};
         config.frequency_hz = plan.frequency_hz;
         if (plan.bitrate != 0) config.bitrate = plan.bitrate;
-        if (plan.fdev_hz != 0) config.fdev_hz = plan.fdev_hz;
+        if (plan.deviation_hz != 0) config.deviation_hz = plan.deviation_hz;
         if (plan.bandwidth_hz != 0) config.bandwidth_hz = plan.bandwidth_hz;
         config.gaussian_bt_e2 = plan.gaussian_bt_e2;
         config.frequency_correction_e1_ppm = plan.frequency_correction_e1_ppm;
@@ -351,13 +351,13 @@ class Rf : public ports::Rf {
         const bool line_up = irq_at_us_ != 0 || radio_.irq_asserted();
         const uint64_t polled_us = irq_at_us_ != 0 ? irq_at_us_ : clock_.micros();
         irq_at_us_ = 0;
-        const parts::RadioEvent ev = radio_.poll(rx_.data.data(), events::kRfEventBytes);
-        if (ev.type != parts::RadioEventType::None && !line_up) dio1_missed_++;
-        switch (ev.type) {
+        const parts::RadioEvent event = radio_.poll(rx_.data.data(), events::kRfEventBytes);
+        if (event.type != parts::RadioEventType::None && !line_up) dio1_missed_++;
+        switch (event.type) {
             case parts::RadioEventType::None: return false;
-            case parts::RadioEventType::RxDone: push_rx(ev, polled_us); return true;
+            case parts::RadioEventType::RxDone: push_rx(event, polled_us); return true;
             case parts::RadioEventType::CrcError:
-                emit(events::RfEventType::CrcError, polled_us, ev);
+                emit(events::RfEventType::CrcError, polled_us, event);
                 return true;
             case parts::RadioEventType::TxDone:
                 completed = true;
@@ -423,41 +423,41 @@ class Rf : public ports::Rf {
     // as on the queue would be the same bytes twice. The band the dwell was
     // armed for travels with it: the O band carries one system and the M band
     // two, and only the arming knows which of them this burst is.
-    void push_rx(const parts::RadioEvent& ev, uint64_t at_us) {
+    void push_rx(const parts::RadioEvent& event, uint64_t at_us) {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;
         rx_.frequency_hz = frequency_hz_;
-        rx_.bytes = ev.length;
-        rx_.rssi_dbm = ev.rssi_dbm;
-        rx_.rssi_valid = ev.rssi_valid;
+        rx_.bytes = event.bytes;
+        rx_.rssi_dbm = event.rssi_dbm;
+        rx_.rssi_valid = event.rssi_valid;
         rx_.at_us = at_us;
         out_.push(rx_);
     }
 
-    void emit(events::RfEventType type, uint64_t at_us, const parts::RadioEvent& ev = {}) {
-        events::RfEvent e{};
-        e.type = type;
-        e.band = band_;
-        e.frequency_hz = frequency_hz_;
-        e.rssi_dbm = ev.rssi_dbm;
-        e.rssi_valid = ev.rssi_valid;
-        e.at_us = at_us;
-        e.keyed_at_us = keyed_at_us_;
-        e.staged_at_us = staged_at_us_;
-        e.tx_at_us = tx_at_us_;
-        out_.push(e);
+    void emit(events::RfEventType type, uint64_t at_us, const parts::RadioEvent& event = {}) {
+        events::RfEvent reported{};
+        reported.type = type;
+        reported.band = band_;
+        reported.frequency_hz = frequency_hz_;
+        reported.rssi_dbm = event.rssi_dbm;
+        reported.rssi_valid = event.rssi_valid;
+        reported.at_us = at_us;
+        reported.keyed_at_us = keyed_at_us_;
+        reported.staged_at_us = staged_at_us_;
+        reported.tx_at_us = tx_at_us_;
+        out_.push(reported);
     }
 
     parts::Sx1262& radio_;
     ports::Clock& clock_;
     bus::Queue<events::RfEvent, 8>& out_;
-    ports::RfPlan plan_{};
+    ports::RfPlan queued_plan_{};
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
     uint32_t last_frequency_hz_{0};
     uint64_t last_end_us_{0};
-    uint64_t plan_armed_at_us_{0};
+    uint64_t queued_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t frequency_hz_{0};

@@ -16,16 +16,16 @@ TEST_CASE("sx1262: SetPaConfig widens the current limit to 140 mA and the driver
     CHECK(chip.ocp == models::Sx1262::kOcpReset);
 
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
-    CHECK(chip.ocp == sx::kOcpLimit);
+    CHECK(chip.ocp == sx1262::kOcpLimitSteps);
     CHECK(chip.ocp < models::Sx1262::kOcpAfterPaConfigSx1262);
     CHECK(chip.ocp == 48);  // 120 mA in the register's own 2.5 mA steps
 }
 
 // Under what +14 dBm draws through this PA configuration, the chip backs the power off.
 TEST_CASE("sx1262: the current limit clears the 90 mA that +14 dBm costs, under Semtech's 140") {
-    CHECK(sx::kOcpLimitMa > 90);
-    CHECK(sx::kOcpLimitMa < 140);
-    CHECK(sx::kOcpLimit * 5 / 2 == sx::kOcpLimitMa);
+    CHECK(sx1262::kOcpLimitMa > 90);
+    CHECK(sx1262::kOcpLimitMa < 140);
+    CHECK(sx1262::kOcpLimitSteps * 5 / 2 == sx1262::kOcpLimitMa);
 }
 
 // Every retune reconfigures, and every reconfiguration issues the SetPaConfig that widens it again.
@@ -38,7 +38,7 @@ TEST_CASE("sx1262: the current limit survives every dwell, not only the first") 
         config.frequency_hz = hz;
         REQUIRE(radio.configure_radio(config) == Status::Ok);
         CAPTURE(hz);
-        CHECK(chip.ocp == sx::kOcpLimit);
+        CHECK(chip.ocp == sx1262::kOcpLimitSteps);
     }
 }
 
@@ -48,7 +48,7 @@ TEST_CASE("sx1262: the PA clamp is widened out of reset, and only its own four b
     Sx1262 radio = driver_for(chip);
     CHECK(chip.tx_clamp == models::Sx1262::kTxClampReset);
     REQUIRE(radio.begin() == Status::Ok);
-    CHECK((chip.tx_clamp & sx::kTxClampWidenBits) == sx::kTxClampWidenBits);
+    CHECK((chip.tx_clamp & sx1262::kTxClampWidenBits) == sx1262::kTxClampWidenBits);
     // Bits 7-5 and 0 are the part's own.
     CHECK((chip.tx_clamp & 0xE1) == (models::Sx1262::kTxClampReset & 0xE1));
 }
@@ -58,9 +58,9 @@ TEST_CASE("sx1262: the GFSK modulation-quality bit is set before anything is tra
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) == 0);
+    CHECK((chip.tx_modulation & sx1262::kTxModulationGfskBit) == 0);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
-    CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) != 0);
+    CHECK((chip.tx_modulation & sx1262::kTxModulationGfskBit) != 0);
     CHECK((chip.tx_modulation & 0x01) == (models::Sx1262::kTxModulationReset & 0x01));
 }
 
@@ -72,7 +72,7 @@ TEST_CASE("sx1262: a dwell reprogrammed on the other band keeps the modulation-q
     config.frequency_hz = 868400000;
     config.gaussian_bt_e2 = 50;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
-    CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) != 0);
+    CHECK((chip.tx_modulation & sx1262::kTxModulationGfskBit) != 0);
 }
 
 // DS 13.1.2 caution: the dwell thread can be armed the instant after it parks the radio.
@@ -103,7 +103,7 @@ TEST_CASE("sx1262: the configuration save is given the datasheet's 500 us before
 }
 
 TEST_CASE("sx1262: an NSS edge 499 us after SetSleep interrupts the save, 500 us does not") {
-    const uint8_t sleep[2] = {sx::kSetSleep, sx::kSleepWarmStartNoRtc};
+    const uint8_t sleep[2] = {sx1262::kSetSleep, sx1262::kSleepWarmStartNoRtc};
     for (const uint32_t waited_us : {499u, 500u}) {
         models::Sx1262 chip;
         chip.standby = true;
@@ -154,32 +154,32 @@ TEST_CASE("sx1262: no command is put on the bus while the part is still busy wit
     CHECK(chip.faults == 0);
 }
 
-// A failed calibration has no symptom but a deaf radio, and deafness is cured by reinit, forever.
+// A failed calibration has no symptom but a deaf radio, and only reinitialising cures it, forever.
 TEST_CASE("sx1262: a bring-up whose calibration failed reports the failing block, not silence") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrorPllCalibration;
+    chip.fail_calibration = sx1262::kErrorPllCalibration;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrorPllCalibration) != 0);
+    CHECK((radio.device_errors() & sx1262::kErrorPllCalibration) != 0);
     CHECK(chip.device_errors == 0);  // cleared, so the next bring-up answers for itself
 }
 
 TEST_CASE("sx1262: an image calibration that failed is not a radio that came up") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrorImageCalibration | sx::kErrorPllLock;
+    chip.fail_calibration = sx1262::kErrorImageCalibration | sx1262::kErrorPllLock;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrorImageCalibration) != 0);
-    CHECK((radio.device_errors() & sx::kErrorPllLock) != 0);
+    CHECK((radio.device_errors() & sx1262::kErrorImageCalibration) != 0);
+    CHECK((radio.device_errors() & sx1262::kErrorPllLock) != 0);
 }
 
 // The clock really not appearing is not the flag the TCXO raises for free at power-on.
 TEST_CASE("sx1262: an XOSC that never starts is still caught, once the free flag is cleared") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrorXoscStart;
+    chip.fail_calibration = sx1262::kErrorCrystalOscillatorStart;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrorXoscStart) != 0);
+    CHECK((radio.device_errors() & sx1262::kErrorCrystalOscillatorStart) != 0);
 }
 
 TEST_CASE("sx1262: a healthy bring-up reports no device error and says so") {
@@ -187,14 +187,14 @@ TEST_CASE("sx1262: a healthy bring-up reports no device error and says so") {
     Sx1262 radio = driver_for(chip);
     CHECK(radio.begin() == Status::Ok);
     CHECK(radio.device_errors() == 0);
-    CHECK(chip.saw_command(sx::kGetDeviceErrors));
+    CHECK(chip.saw_command(sx1262::kGetDeviceErrors));
 }
 
 // The bits above PA_RAMP_ERR are RFU, and a part that floats them has not failed a calibration.
 TEST_CASE("sx1262: reserved OpError bits are not read as a failure") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = static_cast<uint16_t>(~sx::kDeviceErrorMask);
+    chip.fail_calibration = static_cast<uint16_t>(~sx1262::kDeviceErrorMask);
     CHECK(radio.begin() == Status::Ok);
     CHECK(radio.device_errors() == 0);
 }

@@ -41,7 +41,7 @@ TEST_CASE("ADS-L.4.SRD860.A.5: the product ships with an installation and a user
 
 // The appendix's airborne transmitter: 12 to 14 dBm e.r.p., and half a second of latency.
 TEST_CASE("ADS-L.4.SRD860.APPENDIX: the transmitter sits inside the nominal power and latency") {
-    CHECK(parts::sx::kResultingErpCentiDb >= 1200);
-    CHECK(parts::sx::kResultingErpCentiDb <= 1400);
+    CHECK(parts::sx1262::kResultingErpCentiDb >= 1200);
+    CHECK(parts::sx1262::kResultingErpCentiDb <= 1400);
     CHECK(timing::Transmitter::kFixMaxAgeMs <= 500);
 }

@@ -17,7 +17,7 @@ enum class RadioEventType : uint8_t { None, RxDone, CrcError, TxDone, Timeout, F
 
 struct RadioEvent {
     RadioEventType type{RadioEventType::None};
-    uint8_t length{0};
+    uint8_t bytes{0};
     int8_t rssi_dbm{0};
     bool rssi_valid{false};
 };
@@ -29,7 +29,7 @@ struct RadioEvent {
 struct RadioConfig {
     uint32_t frequency_hz{868200000};
     uint32_t bitrate{100000};
-    uint32_t fdev_hz{50000};
+    uint32_t deviation_hz{50000};
     uint32_t bandwidth_hz{200000};
     // The Gaussian filter's BT in hundredths. Zero is an unshaped carrier, which
     // is what the M band asks for and what the part does out of reset.
@@ -42,7 +42,7 @@ struct RadioConfig {
     // Tenths of a ppm added to frequency_hz before the PLL word is computed, positive
     // upwards. Zero is the design intent on a TCXO part; the field exists so a
     // batch whose reference is out can be corrected in the field instead of
-    // returned. Clamped to sx::kFrequencyTrimCeilingE1Ppm either way.
+    // returned. Clamped to sx1262::kFrequencyTrimCeilingE1Ppm either way.
     int16_t frequency_correction_e1_ppm{0};
 };
 
@@ -53,9 +53,9 @@ class Sx1262 {
         : spi_(spi),
           gpio_(gpio),
           delay_(delay),
-          busy_(busy_pin),
-          reset_(reset_pin),
-          dio1_(dio1_pin) {}
+          busy_pin_(busy_pin),
+          reset_pin_(reset_pin),
+          dio1_pin_(dio1_pin) {}
 
     // Is there a radio on the other end of this bus at all? Answers only what a
     // register round-trip can prove, and leaves the chip in standby.
@@ -64,10 +64,10 @@ class Sx1262 {
     Status begin();
     Status configure_radio(const RadioConfig& config);
 
-    Status transmit(const uint8_t* data, uint8_t length);
-    Status stage_tx(const uint8_t* data, uint8_t length);
+    Status transmit(const uint8_t* data, uint8_t bytes);
+    Status stage_tx(const uint8_t* data, uint8_t bytes);
     Status key_tx();
-    uint32_t air_us(uint8_t length) const;
+    uint32_t air_us(uint8_t bytes) const;
     Status start_receive();
 
     // The lowest-power state the part has, and the way back out of it.
@@ -81,14 +81,14 @@ class Sx1262 {
     // to.
     Status wait_ready() { return wait_busy_low(); }
 
-    RadioEvent poll(uint8_t* rx_buffer, uint8_t cap);
+    RadioEvent poll(uint8_t* out, uint8_t capacity);
     // INFO: fc 16sep26 DIO1 is a level here, not an edge | 03oct26 an edge only wakes the executor
-    bool irq_asserted() { return gpio_.get(dio1_); }
+    bool irq_asserted() { return gpio_.get(dio1_pin_); }
 
-    bool service(uint32_t elapsed_ms, uint32_t no_rx_reinit_ms = 30000);
+    bool service(uint32_t elapsed_ms, uint32_t rx_silence_ceiling_ms = 30000);
 
     RadioMode mode() const { return mode_; }
-    uint32_t reinit_count() const { return reinit_count_; }
+    uint32_t reinitialisations() const { return reinitialisations_; }
     // A transmission the chip's own SetTx timeout had to end. Never silent.
     uint32_t tx_recovery_count() const { return tx_recovery_count_; }
     uint16_t device_errors() const { return device_errors_; }
@@ -96,12 +96,12 @@ class Sx1262 {
    private:
     Status wait_busy_low(uint32_t max_spins = 100000);
     void select_when_ready();
-    void command(uint8_t opcode, const uint8_t* parameters, size_t n);
-    void read_command(uint8_t opcode, uint8_t* out, size_t n);
-    void write_frame(const uint8_t* head, size_t head_n, const uint8_t* data, size_t n);
-    void read_frame(const uint8_t* head, size_t head_n, uint8_t* out, size_t n);
-    void write_register(uint16_t addr, const uint8_t* data, size_t n);
-    void read_register(uint16_t addr, uint8_t* out, size_t n);
+    void command(uint8_t opcode, const uint8_t* parameters, size_t bytes);
+    void read_command(uint8_t opcode, uint8_t* out, size_t bytes);
+    void write_frame(const uint8_t* head, size_t head_bytes, const uint8_t* data, size_t bytes);
+    void read_frame(const uint8_t* head, size_t head_bytes, uint8_t* out, size_t bytes);
+    void write_register(uint16_t address, const uint8_t* data, size_t bytes);
+    void read_register(uint16_t address, uint8_t* out, size_t bytes);
     Status reset_to_standby();
     Status verify_link();
     Status enter_standby();
@@ -118,14 +118,14 @@ class Sx1262 {
     void configure_power();
     void configure_irq();
     int8_t packet_rssi_dbm();
-    uint8_t read_payload(uint8_t* rx_buffer, uint8_t cap);
+    uint8_t read_payload(uint8_t* out, uint8_t capacity);
     Status check_device_errors();
     void clear_device_errors();
     void configure_frame(const RadioConfig& config);
     void write_packet_parameters(uint8_t payload_bytes);
-    uint32_t tx_timeout_ticks(uint8_t length) const;
+    uint32_t tx_timeout_ticks(uint8_t bytes) const;
     void recover_tx();
-    Status reinit();
+    Status reinitialise();
 
     static constexpr size_t kWriteFrameBytes = 3 + 255;
     static constexpr size_t kReadFrameBytes = 16;
@@ -134,7 +134,7 @@ class Sx1262 {
     io::Gpio& gpio_;
     io::Delay& delay_;
     uint8_t frame_[kWriteFrameBytes]{};
-    int busy_, reset_, dio1_;
+    int busy_pin_, reset_pin_, dio1_pin_;
     RadioMode mode_{RadioMode::Sleep};
     RadioConfig config_{};
     bool brought_up_{false};
@@ -143,21 +143,21 @@ class Sx1262 {
     uint8_t packet_bytes_{0};
     uint8_t staged_bytes_{0};
     uint32_t since_rx_ms_{0};
-    uint32_t reinit_count_{0};
-    bool reinit_owed_{false};
+    uint32_t reinitialisations_{0};
+    bool reinitialisation_owed_{false};
     uint32_t tx_recovery_count_{0};
     uint16_t device_errors_{0};
 };
 
-namespace sx {
+namespace sx1262 {
 constexpr uint8_t kSetStandby = 0x80;
-constexpr uint8_t kStandbyRc = 0x00;
-constexpr uint8_t kStandbyXosc = 0x01;
+constexpr uint8_t kStandbyOnRcOscillator = 0x00;
+constexpr uint8_t kStandbyOnCrystalOscillator = 0x01;
 // INFO: fc 26sep26 DS 13.1.15: where the part goes after TX, STDBY_RC unless told otherwise
 constexpr uint8_t kSetRxTxFallbackMode = 0x93;
-constexpr uint8_t kFallbackFs = 0x40;
-constexpr uint8_t kFallbackStdbyXosc = 0x30;
-constexpr uint8_t kFallbackStdbyRc = 0x20;
+constexpr uint8_t kFallbackFrequencySynthesis = 0x40;
+constexpr uint8_t kFallbackStandbyOnCrystalOscillator = 0x30;
+constexpr uint8_t kFallbackStandbyOnRcOscillator = 0x20;
 constexpr uint8_t kSetRegulatorMode = 0x96;
 // DS 13.1.4 regModeParam. The part comes out of reset on its LDO alone and the
 // converter roughly halves the supply current in receive and in transmit, which
@@ -173,7 +173,7 @@ constexpr uint8_t kRegulatorDcDc = 0x01;
 constexpr uint8_t kSetDio3AsTcxoControl = 0x97;
 constexpr uint8_t kSetDio2AsRfSwitch = 0x9D;
 constexpr uint8_t kCalibrate = 0x89;
-constexpr uint8_t kTcxoVolt1v8 = 0x02;  // DIO3 TCXO 1.8 V (T-Echo Plus)
+constexpr uint8_t kTcxoVoltage1v8 = 0x02;  // DIO3 TCXO 1.8 V (T-Echo Plus)
 constexpr uint8_t kCalibrateImage = 0x98;
 constexpr uint8_t kSetTx = 0x83;
 constexpr uint8_t kSetRx = 0x82;
@@ -244,11 +244,11 @@ constexpr uint16_t kErrorRc13mCalibration = 0x0002;
 constexpr uint16_t kErrorPllCalibration = 0x0004;
 constexpr uint16_t kErrorAdcCalibration = 0x0008;
 constexpr uint16_t kErrorImageCalibration = 0x0010;
-constexpr uint16_t kErrorXoscStart = 0x0020;
+constexpr uint16_t kErrorCrystalOscillatorStart = 0x0020;
 constexpr uint16_t kErrorPllLock = 0x0040;
 constexpr uint16_t kErrorPaRamp = 0x0100;
 constexpr uint16_t kDeviceErrorMask = 0x01FF;
-constexpr uint8_t kGetRssiInst = 0x15;
+constexpr uint8_t kGetInstantRssi = 0x15;
 constexpr uint8_t kGetRxBufferStatus = 0x13;
 constexpr uint8_t kGetPacketStatus = 0x14;
 constexpr uint16_t kIrqTxDone = 0x0001;
@@ -259,7 +259,7 @@ constexpr uint16_t kIrqTimeout = 0x0200;
 // IRQ status register, so an unmasked bit is a bit GetIrqStatus never reports.
 constexpr uint16_t kIrqMask = kIrqTxDone | kIrqRxDone | kIrqCrcError | kIrqTimeout;
 
-constexpr uint32_t kXtalHz = 32000000;
+constexpr uint32_t kCrystalHz = 32000000;
 // DS 13.4.6 GFSK modulation params: pulse shape and RX bandwidth are table
 // indices. 0x0A is the 234.3 kHz double-sideband entry.
 constexpr uint8_t kPulseShapeNone = 0x00;
@@ -278,7 +278,7 @@ constexpr uint8_t kTxModulationGfskBit = 0x04;
 // clips the signal, too wide buys noise. Transcribed from the datasheet in the
 // order the part numbers them, and only over the range these two bands use.
 struct RxBandwidthEntry {
-    uint32_t hz;
+    uint32_t bandwidth_hz;
     uint8_t index;
 };
 constexpr RxBandwidthEntry kRxBandwidths[] = {
@@ -301,7 +301,7 @@ constexpr uint16_t kOcpRegister = 0x08E7;
 // INFO: fc 05sep26 DS table 3-5: +14 dBm through this PA configuration draws 90 mA at 868 MHz
 constexpr uint16_t kOcpLimitMa = 120;
 // INFO: fc 05sep26 DS 5.1: the OCP register counts 2.5 mA a step
-constexpr uint8_t kOcpLimit = static_cast<uint8_t>(kOcpLimitMa * 2 / 5);
+constexpr uint8_t kOcpLimitSteps = static_cast<uint8_t>(kOcpLimitMa * 2 / 5);
 
 // INFO: fc 05sep26 DS 15.2.2: the reset clamp costs 5-6 dB into a mismatched antenna
 constexpr uint16_t kTxClampRegister = 0x08D8;
@@ -353,7 +353,7 @@ constexpr uint32_t trimmed_hz(uint32_t frequency_hz, int16_t correction_e1_ppm) 
 // DS 13.4.1: the SetTx timeout counts 15.625 us steps, 24 bits wide. 0 disables
 // it, which is a PA that stays keyed when TxDone never arrives.
 constexpr uint32_t kTimeoutStepNs = 15625;
-constexpr uint32_t kTimeoutTicksMax = 0xFFFFFF;
+constexpr uint32_t kTimeoutTicksCeiling = 0xFFFFFF;
 constexpr uint32_t kTxGuardUs = 25000;
 
 // INFO: wr 02aug26 DS 8.1: NRESET must be held low >= 100 us
@@ -364,7 +364,7 @@ constexpr uint32_t kSleepSettleUs = 500;
 // for the detector to declare a preamble.
 constexpr uint16_t kPreambleChips = 16;
 constexpr uint8_t kPreambleDetect8Chips = 0x04;
-constexpr uint8_t kAddrCompOff = 0x00;
+constexpr uint8_t kAddressFilteringOff = 0x00;
 constexpr uint8_t kFixedLength = 0x00;
 // INFO: fc 16sep26 DS 13.4.6 table 13-70: CRC off is 0x01 here, 0x00 is a one-byte CRC
 constexpr uint8_t kCrcOff = 0x01;

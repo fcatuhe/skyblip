@@ -88,7 +88,7 @@ class DiagnosticsDump {
         const auto& gnss = product.board().gnss();
         d.gnss_baud = gnss.baud_rate();
         d.gnss_config = gnss.config_stage();
-        d.gnss_raises = gnss.raises();
+        d.gnss_raises = gnss.baud_raises();
         d.gnss_raise_fallbacks = gnss.raise_fallbacks();
         d.gnss_identified = gnss.identified();
         d.gnss_firmware = gnss.firmware_version();

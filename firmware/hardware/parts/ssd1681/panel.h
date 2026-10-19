@@ -88,11 +88,11 @@ constexpr PanelSignature kElecrowM1{
 
 }  // namespace panels
 
-inline bool panel_signature_equal(const PanelSignature& x, const PanelSignature& y) {
+inline bool panel_signature_equal(const PanelSignature& left, const PanelSignature& right) {
     for (int i = 0; i < kPanelIdBytes2d; i++)
-        if (x.register_2d[i] != y.register_2d[i]) return false;
+        if (left.register_2d[i] != right.register_2d[i]) return false;
     for (int i = 0; i < kPanelIdBytes2e; i++)
-        if (x.register_2e[i] != y.register_2e[i]) return false;
+        if (left.register_2e[i] != right.register_2e[i]) return false;
     return true;
 }
 

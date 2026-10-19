@@ -183,7 +183,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     // The chip is holding a timer that expires well inside one 400 ms dwell.
-    const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx::kTimeoutStepNs / 1000000u;
+    const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx1262::kTimeoutStepNs / 1000000u;
     CHECK(timeout_ms > 0);
     CHECK(timeout_ms < timing::kSlot0EndMs - timing::kSlot0StartMs);
 
@@ -309,7 +309,7 @@ TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it 
 
     // The PA keyed inside the direct slot. Nothing here completes the burst: the
     // world that takes it off the antenna is simulator::Air, and this harness has none.
-    CHECK(pass.chip.saw_command(parts::sx::kSetTx));
+    CHECK(pass.chip.saw_command(parts::sx1262::kSetTx));
     CHECK(timing::Scheduler::in_direct_slot(keyed_at_ms));
     CHECK(pass.state.rf.timing_statistics.refused() == 0);
     // The floor is a measurement, and a site this loud has walked it off the seed.
@@ -378,12 +378,12 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
         clock.set_millis(t);
         rf.service(t);
     }
-    CHECK(radio.reinit_count() == 0);
+    CHECK(radio.reinitialisations() == 0);
     for (uint32_t t = deadline_ms; t <= deadline_ms + 100; t += 10) {
         clock.set_millis(t);
         rf.service(t);
     }
-    CHECK(radio.reinit_count() == 1);
+    CHECK(radio.reinitialisations() == 1);
     CHECK(radio.mode() == parts::RadioMode::Rx);
 
     // A frame that arrives restarts the rope rather than shortening it.
@@ -393,7 +393,7 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
         clock.set_millis(t);
         rf.service(t);
     }
-    CHECK(radio.reinit_count() == 1);
+    CHECK(radio.reinitialisations() == 1);
 }
 
 // Every dwell restarts the receiver, and restarting it once zeroed the rope: no unit ever got here.
@@ -417,11 +417,11 @@ TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it he
         clock.set_millis(t);
         rf.service(t);
     }
-    CHECK(radio.reinit_count() == 1);
+    CHECK(radio.reinitialisations() == 1);
     CHECK(rf.armed_count() > runtime::kRadioRxSilenceCeilingMs / 400);
 }
 
-// A reinit that failed left the radio out of Rx, where the rope stops counting: dead for good.
+// A failed reinitialisation left the radio out of Rx, where the rope stops counting: dead for good.
 TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
@@ -448,7 +448,7 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
         clock.set_millis(t);
         rf.service(t);
     }
-    CHECK(radio.reinit_count() >= 2);
+    CHECK(radio.reinitialisations() >= 2);
 }
 
 // A radio half configured may still sit on the last dwell's channel, and it keyed there.
@@ -482,7 +482,7 @@ TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so
         rf.service(t);
     }
 
-    CHECK_FALSE(chip.saw_command(parts::sx::kSetTx));
+    CHECK_FALSE(chip.saw_command(parts::sx1262::kSetTx));
     events::RfEvent e{};
     bool missed = false;
     while (events.pop(e)) missed = missed || e.type == events::RfEventType::Missed;

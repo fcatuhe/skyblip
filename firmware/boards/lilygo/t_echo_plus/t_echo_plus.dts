@@ -35,8 +35,8 @@
 		gnss-enable = &gnss_enable_gpio;
 		gnss-reset = &gnss_reset_gpio;
 		peripheral-rail = &peripheral_rail_gpio;
-		aux-rail = &aux_rail_gpio;
-		flash-wp = &flash_wp_gpio;
+		auxiliary-rail = &auxiliary_rail_gpio;
+		flash-write-protect = &flash_write_protect_gpio;
 		flash-hold = &flash_hold_gpio;
 		radio-reset = &radio_reset_gpio;
 		watchdog0 = &wdt0;
@@ -102,16 +102,16 @@
 		 * SoftRF and the moshe-braner fork leave this pin alone on REV_2 - they
 		 * never raise it, so they have nothing to drop. We raise it, so we own
 		 * dropping it. */
-		aux_rail_gpio: aux_rail {
+		auxiliary_rail_gpio: auxiliary_rail {
 			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
-			label = "aux-rail";
+			label = "auxiliary-rail";
 		};
 
 		/* Flash WP# (IO2) and HOLD# (IO3) in single-line mode: real inputs, and
 		 * a floating one write-protects the chip or stalls a transfer. */
-		flash_wp_gpio: flash_wp {
+		flash_write_protect_gpio: flash_write_protect {
 			gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
-			label = "flash-wp";
+			label = "flash-write-protect";
 		};
 
 		flash_hold_gpio: flash_hold {
@@ -265,7 +265,7 @@
 	 *
 	 * meshcore variants/lilygo_techo/variant.h:77-79 disagrees: 13 / 14 / 15. That
 	 * is SoftRF's REV_1 map (iomap:19-21), so that variant targets the older board
-	 * - and P0.13 is this board's aux 3V3 rail (aux_rail above, iomap:82-83), so
+	 * - and P0.13 is this board's aux 3V3 rail (auxiliary_rail above, iomap:82-83), so
 	 * the two cannot both be true of a Plus. Every other pin on this board is
 	 * already the REV_2 map, which is the tie-break.
 	 *

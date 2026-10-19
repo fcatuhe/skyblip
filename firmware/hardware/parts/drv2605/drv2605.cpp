@@ -33,7 +33,7 @@ Status Drv2605::begin() {
     // Out of software standby first: every register below is only writable with
     // the part awake.
     if (!write_register(kRegisterMode, kModeInternalTrigger)) return Status::Down;
-    write_register(kRegisterRtpInput, 0x00);
+    write_register(kRegisterRealTimePlaybackInput, 0x00);
     write_register(kRegisterLibrary, kErmLibraryA);
     write_register(kRegisterWaveSequence1, 0x01);
     write_register(kRegisterWaveSequence2, 0x00);  // the terminator: a sequence with no end runs on
@@ -41,7 +41,7 @@ Status Drv2605::begin() {
     write_register(kRegisterSustainPositive, 0x00);
     write_register(kRegisterSustainNegative, 0x00);
     write_register(kRegisterBreak, 0x00);
-    write_register(kRegisterAudioMax, kAudioMaxDefault);
+    write_register(kRegisterAudioMaximumInput, kAudioMaximumInputDefault);
     update_register(kRegisterFeedback, kFeedbackLraSelect, 0x00);
     update_register(kRegisterControl3, 0x00, kControl3ErmOpenLoop);
 
@@ -56,13 +56,13 @@ void Drv2605::start() {
     if (!ready_ || driving_) return;
     driving_ = true;
     write_register(kRegisterMode, kModeRealTimePlayback);
-    write_register(kRegisterRtpInput, kRtpFullScale);
+    write_register(kRegisterRealTimePlaybackInput, kRealTimePlaybackFullScale);
 }
 
 void Drv2605::stop() {
     if (!ready_) return;
     driving_ = false;
-    write_register(kRegisterRtpInput, 0x00);
+    write_register(kRegisterRealTimePlaybackInput, 0x00);
     // GO is cleared too, so a part left mid-sequence by anything else - a reset
     // in the middle of a pulse, a ROM effect from a bench session - is silent
     // when the alarm releases it.

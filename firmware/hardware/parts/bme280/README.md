@@ -8,7 +8,23 @@ Its address is disputed: our BOM says 0x76, LilyGO's README and SoftRF say 0x77.
 
 Zephyr 4.4.2's `bme280_sample_fetch_helper` (`drivers/sensor/bosch/bme280/bme280.c:164-213`) writes `ctrl_meas` in forced mode and `k_sleep`s `BME280_EXPECTED_SAMPLE_TIME_MS`, then polls the status register every 3 ms. At x16 / x2 / x1 that was 43 ms of the service loop at every PPS edge (bench loop record, worst tick 43 ms in `board_poll`, phase 950-999 ms). The async sensor API runs the same helper on an RTIO work-queue thread, which buys a 1 KB stack and a thread to stop a sleep we do not need.
 
-What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev 1.1 with each left shift on a signed term written as a multiply. Its oracle in `test/hardware/test_bme280.cpp` is the model, which builds raw words by searching DS 8.1's double-precision formulas, not the integer ones. The two Bosch paths part by up to 13 `t_fine` counts at -20 °C, about 0.45 Pa, which is the test's tolerance and a bias rather than jitter.
+What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev 1.1 with each left shift on a signed term written as a multiply. Its oracle in `test/hardware/test_bme280.cpp` is the model, which builds raw words by searching DS 8.1's double-precision formulas, not the integer ones. The two Bosch paths part by up to 13 `fine_temperature` counts at -20 °C, about 0.45 Pa, which is the test's tolerance and a bias rather than jitter.
+
+## Names
+
+The compensation is the datasheet's, in full words. Where the two differ, this is the pair.
+
+| Our name | Datasheet name |
+|---|---|
+| `Trim::temperature_1` to `temperature_3`, the model's `kTemperatureTrim1` to `kTemperatureTrim3` | dig_T1 to dig_T3 |
+| `Trim::pressure_1` to `pressure_9`, the model's `kPressureTrim1` to `kPressureTrim9` | dig_P1 to dig_P9 |
+| `raw_temperature`, `raw_pressure` | adc_T, adc_P |
+| `fine_temperature`, `fine_temperature_from()` | t_fine |
+| `first_term`, `second_term` | var1, var2 |
+| `kRegisterControlMeasurement` | ctrl_meas (0xF4) |
+| `kRegisterControlHumidity` | ctrl_hum (0xF2) |
+| `kRegisterCalibration` | calib00 (0x88) |
+| `kRegisterResult` | press_msb (0xF7), the first of the six result bytes |
 
 ## The setting
 

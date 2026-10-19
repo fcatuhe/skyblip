@@ -89,8 +89,8 @@ TEST_CASE("diag config: arming names the power the radio transmits at, as its ex
 
     diagnostics::Config config{};
     REQUIRE(first_of(records, config));
-    CHECK(config.tx_power_dbm == parts::sx::kConductedDbm);
-    CHECK(config.pa_rated_dbm == parts::sx::kPaConfigHighPowerRatedDbm);
+    CHECK(config.tx_power_dbm == parts::sx1262::kConductedDbm);
+    CHECK(config.pa_rated_dbm == parts::sx1262::kPaConfigHighPowerRatedDbm);
 }
 
 TEST_CASE("diag gnss: every solution is recorded with what the sky gave it") {

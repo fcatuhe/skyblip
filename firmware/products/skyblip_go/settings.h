@@ -40,7 +40,7 @@ constexpr size_t kCallsignBytes = 10;
 // datasheet, a field with no way to correct it is a recall. The bound is that
 // tenfold miss and no more (+-10 ppm, +-8.7 kHz at 868.2 MHz): inside it the
 // carrier cannot leave ERC 70-03 band h1.4, and beyond it the part is broken
-// rather than out of trim. sx::kFrequencyTrimCeilingE1Ppm is the same number where
+// rather than out of trim. sx1262::kFrequencyTrimCeilingE1Ppm is the same number where
 // the PLL word is computed.
 constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 

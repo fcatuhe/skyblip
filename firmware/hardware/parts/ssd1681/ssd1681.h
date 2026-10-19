@@ -9,12 +9,12 @@
 namespace skyblip::parts {
 
 // INFO: fc 12sep26 the SSD1681 mirrors (0x01, 0x11) but cannot transpose, so the driver turns
-enum class GlassRotation : uint8_t { Deg0, Deg270 };
+enum class GlassRotation : uint8_t { Degrees0, Degrees270 };
 
 class Ssd1681 : public ports::Display {
    public:
     Ssd1681(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int dc_pin, int reset_pin, int busy_pin,
-            int backlight_pin = -1, GlassRotation rotation = GlassRotation::Deg0)
+            int backlight_pin = -1, GlassRotation rotation = GlassRotation::Degrees0)
         : spi_(spi),
           gpio_(gpio),
           delay_(delay),
@@ -64,7 +64,7 @@ class Ssd1681 : public ports::Display {
     static constexpr uint32_t kBusyTimeoutMs = 10000;
 
    private:
-    void init_panel();
+    void initialise_panel();
     void ensure_awake();
     void activate(uint8_t sequence, bool full, uint32_t now_ms);
     void abort_refresh();

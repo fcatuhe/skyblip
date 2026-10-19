@@ -47,7 +47,7 @@ struct Peer {
         config.sync_bits = protocol::kSharedSyncBits;
         config.payload_bytes = protocol::kRxChipBytes;
         config.bitrate = protocol::kMBandChipRateBps;
-        config.fdev_hz = protocol::kMBandDeviationHz;
+        config.deviation_hz = protocol::kMBandDeviationHz;
         config.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
         REQUIRE(radio.configure_radio(config) == Status::Ok);
         REQUIRE(radio.start_receive() == Status::Ok);
@@ -61,7 +61,7 @@ struct Peer {
         const parts::RadioEvent event = radio.poll(buffer, sizeof(buffer));
         REQUIRE(radio.start_receive() == Status::Ok);
         if (event.type != parts::RadioEventType::RxDone) return false;
-        return protocol::receive_m_band(buffer, event.length, out);
+        return protocol::receive_m_band(buffer, event.bytes, out);
     }
 };
 

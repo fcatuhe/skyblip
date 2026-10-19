@@ -36,7 +36,7 @@ struct RfPlan {
     // used", which is what a plan built before this field existed asked for.
     // gaussian_bt_e2 is the Gaussian filter's BT in hundredths; 0 is unshaped.
     uint32_t bitrate{0};
-    uint32_t fdev_hz{0};
+    uint32_t deviation_hz{0};
     uint32_t bandwidth_hz{0};
     uint16_t gaussian_bt_e2{0};
     // The reference's own error, in tenths of a ppm, positive upwards. It travels
@@ -57,12 +57,12 @@ struct RfBurst {
 };
 
 struct RfBursts {
-    static constexpr uint8_t kCapacity = 2;
+    static constexpr uint8_t kMaxBursts = 2;
     static constexpr uint64_t kNever = UINT64_MAX;
-    RfBurst burst[kCapacity]{};
+    RfBurst burst[kMaxBursts]{};
     uint8_t count{0};
 
-    bool full() const { return count == kCapacity; }
+    bool full() const { return count == kMaxBursts; }
 
     // INFO: fc 29sep26 none while one is on air: the next stages into the buffer it is sent from
     uint64_t stage_at_us(uint8_t keyed, uint8_t done, uint64_t lead_us) const {
@@ -77,12 +77,12 @@ struct RfBursts {
         return false;
     }
 
-    bool add(const RfBurst& b) {
-        if (holds(b.at_us)) return true;
+    bool add(const RfBurst& added) {
+        if (holds(added.at_us)) return true;
         if (full()) return false;
         uint8_t at = count++;
-        for (; at > 0 && burst[at - 1].at_us > b.at_us; at--) burst[at] = burst[at - 1];
-        burst[at] = b;
+        for (; at > 0 && burst[at - 1].at_us > added.at_us; at--) burst[at] = burst[at - 1];
+        burst[at] = added;
         return true;
     }
 

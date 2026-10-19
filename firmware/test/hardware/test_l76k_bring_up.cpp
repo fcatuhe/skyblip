@@ -141,7 +141,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     CHECK(chip.port_baud() == parts::L76k::kTargetBaudRate);
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.solution().pps_latency_ms == parts::L76k::kBurstMs);
-    CHECK(gnss.raises() == 1);
+    CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 0);
 }
 
@@ -158,7 +158,7 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
     CHECK(chip.port_baud() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.raises() == 1);
+    CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 1);
 }
 
@@ -172,7 +172,7 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     CHECK(chip.baud == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
-    CHECK(gnss.raises() == 0);
+    CHECK(gnss.baud_raises() == 0);
 }
 
 // I, row "Baud detection and recovery". A receiver that comes up at another rate

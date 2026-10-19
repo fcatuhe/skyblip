@@ -18,29 +18,29 @@ class Bhi260 : public io::I2c {
 
     struct Stream {
         uint8_t bytes[kMaxStreamBytes]{};
-        size_t length{0};
+        size_t held{0};
         size_t position{0};
     };
 
-    bool write(uint8_t addr, const uint8_t* data, size_t length) override {
-        if (addr != address || !answers) return false;
-        if (length == 0) return true;
+    bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
+        if (address != bus_address || !answers) return false;
+        if (bytes == 0) return true;
         pointer = data[0];
-        if (pointer == kRegisterCommand) return accept_command(data + 1, length - 1);
-        for (size_t i = 1; i < length; i++) {
+        if (pointer == kRegisterCommand) return accept_command(data + 1, bytes - 1);
+        for (size_t i = 1; i < bytes; i++) {
             const uint8_t register_address = static_cast<uint8_t>(pointer + i - 1);
             if (register_address == kRegisterResetRequest && data[i] != 0) reset();
         }
         return true;
     }
 
-    bool read(uint8_t addr, uint8_t* data, size_t length) override {
-        if (addr != address || !answers) return false;
-        if (pointer == kRegisterFifoWakeup) return read_fifo(wakeup_, data, length);
-        if (pointer == kRegisterFifoNonWakeup) return read_fifo(non_wakeup_, data, length);
-        if (pointer == kRegisterStatusChannel) return read_status(data, length);
-        for (size_t i = 0; i < length; i++)
-            data[i] = register_value(static_cast<uint8_t>(pointer + i));
+    bool read(uint8_t address, uint8_t* out, size_t bytes) override {
+        if (address != bus_address || !answers) return false;
+        if (pointer == kRegisterFifoWakeup) return read_fifo(wakeup_, out, bytes);
+        if (pointer == kRegisterFifoNonWakeup) return read_fifo(non_wakeup_, out, bytes);
+        if (pointer == kRegisterStatusChannel) return read_status(out, bytes);
+        for (size_t i = 0; i < bytes; i++)
+            out[i] = register_value(static_cast<uint8_t>(pointer + i));
         return true;
     }
 
@@ -66,9 +66,9 @@ class Bhi260 : public io::I2c {
 
     bool running() const { return booted && sample_rate_hz > 0; }
     bool gyroscope_streaming() const { return booted && gyroscope_rate_hz > 0; }
-    uint32_t uploaded() const { return uploaded_; }
+    uint32_t uploaded_bytes() const { return uploaded_bytes_; }
 
-    uint8_t address{kAddress};
+    uint8_t bus_address{kAddress};
     bool answers{true};
     bool accepts_firmware{true};
     uint8_t product_id{0x89};
@@ -122,9 +122,9 @@ class Bhi260 : public io::I2c {
     static constexpr uint16_t kCommandChangeRange = 0x000E;
     static constexpr uint8_t kSensorAccelerometer = 0x04;
     static constexpr uint8_t kSensorGyroscope = 0x0D;
-    static constexpr uint8_t kSysIdTimestampSmallDelta = 251;
-    static constexpr uint8_t kSysIdMetaEvent = 254;
-    static constexpr uint8_t kSysIdMetaEventWakeup = 248;
+    static constexpr uint8_t kSystemEventIdTimestampSmallDelta = 251;
+    static constexpr uint8_t kSystemEventIdMetaEvent = 254;
+    static constexpr uint8_t kSystemEventIdMetaEventWakeup = 248;
     static constexpr uint8_t kMetaEventInitialised = 16;
     static constexpr uint8_t kInterruptFifoWakeup = 0x02;
     static constexpr int kCountsPerRange = 32768;
@@ -132,57 +132,58 @@ class Bhi260 : public io::I2c {
     void reset() {
         resets++;
         booted = false;
-        uploaded_ = 0;
+        uploaded_bytes_ = 0;
         magic_ = 0;
         command_ = 0;
-        expected_ = 0;
-        received_ = 0;
+        expected_bytes_ = 0;
+        received_bytes_ = 0;
         payload_bytes_ = 0;
         sample_rate_hz = 0;
         gyroscope_rate_hz = 0;
         announced_ = false;
-        status_length_ = 0;
+        status_bytes_ = 0;
         status_position_ = 0;
         wakeup_ = Stream{};
         non_wakeup_ = Stream{};
     }
 
-    bool accept_command(const uint8_t* data, size_t length) {
+    bool accept_command(const uint8_t* data, size_t bytes) {
         size_t position = 0;
-        while (position < length) {
-            if (expected_ == 0 && received_ == 0 && command_ == 0) {
-                if (length - position < 4) return false;
+        while (position < bytes) {
+            if (expected_bytes_ == 0 && received_bytes_ == 0 && command_ == 0) {
+                if (bytes - position < 4) return false;
                 command_ = get_u16(data + position);
                 const uint16_t declared = get_u16(data + position + 2);
-                expected_ = command_ == kCommandUploadToProgramRam ? declared * 4u : declared;
+                expected_bytes_ = command_ == kCommandUploadToProgramRam ? declared * 4u : declared;
                 position += 4;
                 payload_bytes_ = 0;
-                if (expected_ == 0) finish_command();
+                if (expected_bytes_ == 0) finish_command();
                 continue;
             }
-            const size_t take = length - position < expected_ - received_ ? length - position
-                                                                          : expected_ - received_;
+            const size_t take = bytes - position < expected_bytes_ - received_bytes_
+                                    ? bytes - position
+                                    : expected_bytes_ - received_bytes_;
             for (size_t i = 0; i < take; i++) {
                 if (command_ == kCommandUploadToProgramRam) {
-                    if (received_ + i == 0) magic_ = data[position + i];
-                    if (received_ + i == 1)
+                    if (received_bytes_ + i == 0) magic_ = data[position + i];
+                    if (received_bytes_ + i == 1)
                         magic_ = static_cast<uint16_t>(magic_ | (data[position + i] << 8));
                 } else if (payload_bytes_ < sizeof(payload_)) {
                     payload_[payload_bytes_++] = data[position + i];
                 }
             }
-            received_ += take;
+            received_bytes_ += take;
             position += take;
-            if (received_ >= expected_) finish_command();
+            if (received_bytes_ >= expected_bytes_) finish_command();
         }
         return true;
     }
 
     void finish_command() {
         switch (command_) {
-            case kCommandUploadToProgramRam: uploaded_ = received_; break;
+            case kCommandUploadToProgramRam: uploaded_bytes_ = received_bytes_; break;
             case kCommandBootProgramRam:
-                booted = accepts_firmware && magic_ == kFirmwareMagic && uploaded_ > 0;
+                booted = accepts_firmware && magic_ == kFirmwareMagic && uploaded_bytes_ > 0;
                 verify_error = !booted;
                 if (booted && announces_itself) report_meta_event(kMetaEventInitialised, 0, 0);
                 break;
@@ -213,8 +214,8 @@ class Bhi260 : public io::I2c {
                 break;
         }
         command_ = 0;
-        expected_ = 0;
-        received_ = 0;
+        expected_bytes_ = 0;
+        received_bytes_ = 0;
     }
 
     uint8_t register_value(uint8_t register_address) const {
@@ -238,26 +239,26 @@ class Bhi260 : public io::I2c {
 
     uint8_t interrupt_status() const {
         uint8_t status = 0;
-        if (status_position_ < status_length_) status |= kInterruptStatusChannel;
+        if (status_position_ < status_bytes_) status |= kInterruptStatusChannel;
         if (running() || meta_pending_ || holding(non_wakeup_)) status |= kInterruptFifoNonWakeup;
         if (meta_pending_wakeup_ || holding(wakeup_)) status |= kInterruptFifoWakeup;
         return status;
     }
 
-    static bool holding(const Stream& stream) { return stream.position < stream.length; }
+    static bool holding(const Stream& stream) { return stream.position < stream.held; }
 
     void answer_parameter(uint16_t parameter) {
         uint8_t payload[kSensorsPresentBytes] = {};
-        size_t n = 0;
+        size_t answer_bytes = 0;
         if (parameter == kParameterSensorsPresent) {
-            n = kSensorsPresentBytes;
+            answer_bytes = kSensorsPresentBytes;
             if (accelerometer_present)
                 payload[kSensorAccelerometer / 8] |=
                     static_cast<uint8_t>(1 << (kSensorAccelerometer % 8));
             if (gyroscope_present)
                 payload[kSensorGyroscope / 8] |= static_cast<uint8_t>(1 << (kSensorGyroscope % 8));
         } else if (parameter == kParameterSensorConfig + kSensorAccelerometer) {
-            n = kSensorConfigBytes;
+            answer_bytes = kSensorConfigBytes;
             uint32_t bits = 0;
             std::memcpy(&bits, &sample_rate_hz, sizeof(bits));
             put_u32(payload, bits);
@@ -266,66 +267,66 @@ class Bhi260 : public io::I2c {
             return;
         }
 
-        status_length_ = 0;
+        status_bytes_ = 0;
         status_position_ = 0;
-        status_[status_length_++] = static_cast<uint8_t>(parameter & 0xFF);
-        status_[status_length_++] = static_cast<uint8_t>(parameter >> 8);
-        status_[status_length_++] = static_cast<uint8_t>(n & 0xFF);
-        status_[status_length_++] = static_cast<uint8_t>(n >> 8);
-        for (size_t i = 0; i < n; i++) status_[status_length_++] = payload[i];
+        status_[status_bytes_++] = static_cast<uint8_t>(parameter & 0xFF);
+        status_[status_bytes_++] = static_cast<uint8_t>(parameter >> 8);
+        status_[status_bytes_++] = static_cast<uint8_t>(answer_bytes & 0xFF);
+        status_[status_bytes_++] = static_cast<uint8_t>(answer_bytes >> 8);
+        for (size_t i = 0; i < answer_bytes; i++) status_[status_bytes_++] = payload[i];
     }
 
-    bool read_status(uint8_t* data, size_t length) {
-        for (size_t i = 0; i < length; i++)
-            data[i] = status_position_ < status_length_ ? status_[status_position_++] : 0;
+    bool read_status(uint8_t* out, size_t bytes) {
+        for (size_t i = 0; i < bytes; i++)
+            out[i] = status_position_ < status_bytes_ ? status_[status_position_++] : 0;
         return true;
     }
 
-    bool read_fifo(Stream& stream, uint8_t* data, size_t length) {
-        if (stream.position >= stream.length) fill_stream(stream);
-        for (size_t i = 0; i < length; i++)
-            data[i] = stream.position < stream.length ? stream.bytes[stream.position++] : 0;
+    bool read_fifo(Stream& stream, uint8_t* out, size_t bytes) {
+        if (stream.position >= stream.held) fill_stream(stream);
+        for (size_t i = 0; i < bytes; i++)
+            out[i] = stream.position < stream.held ? stream.bytes[stream.position++] : 0;
         return true;
     }
 
     void fill_stream(Stream& stream) {
         const bool wakeup = &stream == &wakeup_;
-        stream.length = 0;
+        stream.held = 0;
         stream.position = 0;
         uint8_t events[32];
-        int n = 0;
+        int written = 0;
         bool& pending = wakeup ? meta_pending_wakeup_ : meta_pending_;
         if (pending) {
-            events[n++] = wakeup ? kSysIdMetaEventWakeup : kSysIdMetaEvent;
-            events[n++] = meta_event_;
-            events[n++] = meta_first_;
-            events[n++] = meta_second_;
+            events[written++] = wakeup ? kSystemEventIdMetaEventWakeup : kSystemEventIdMetaEvent;
+            events[written++] = meta_event_;
+            events[written++] = meta_first_;
+            events[written++] = meta_second_;
             pending = false;
             if (meta_event_ == kMetaEventInitialised && !wakeup) announced_ = true;
         }
         if (running() && !wakeup) {
-            events[n++] = kSysIdTimestampSmallDelta;
-            events[n++] = 1;
-            events[n++] = kSensorAccelerometer;
-            n += put_counts(events + n, x_mg,
-                            accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
-            n += put_counts(events + n, y_mg,
-                            accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
-            n += put_counts(events + n, z_mg,
-                            accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
+            events[written++] = kSystemEventIdTimestampSmallDelta;
+            events[written++] = 1;
+            events[written++] = kSensorAccelerometer;
+            written += put_counts(events + written, x_mg,
+                                  accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
+            written += put_counts(events + written, y_mg,
+                                  accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
+            written += put_counts(events + written, z_mg,
+                                  accelerometer_range_g == 0 ? 1 : accelerometer_range_g, 1000);
         }
         if (gyroscope_streaming() && !wakeup) {
-            events[n++] = kSensorGyroscope;
-            n += put_counts(events + n, x_cdps, gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps,
-                            100);
-            n += put_counts(events + n, y_cdps, gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps,
-                            100);
-            n += put_counts(events + n, z_cdps, gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps,
-                            100);
+            events[written++] = kSensorGyroscope;
+            written += put_counts(events + written, x_cdps,
+                                  gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps, 100);
+            written += put_counts(events + written, y_cdps,
+                                  gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps, 100);
+            written += put_counts(events + written, z_cdps,
+                                  gyroscope_range_dps == 0 ? 1 : gyroscope_range_dps, 100);
         }
-        stream.bytes[stream.length++] = static_cast<uint8_t>(n & 0xFF);
-        stream.bytes[stream.length++] = static_cast<uint8_t>(n >> 8);
-        for (int i = 0; i < n; i++) stream.bytes[stream.length++] = events[i];
+        stream.bytes[stream.held++] = static_cast<uint8_t>(written & 0xFF);
+        stream.bytes[stream.held++] = static_cast<uint8_t>(written >> 8);
+        for (int i = 0; i < written; i++) stream.bytes[stream.held++] = events[i];
     }
 
     static int put_counts(uint8_t* out, int16_t value, int range, int per_unit) {
@@ -336,9 +337,9 @@ class Bhi260 : public io::I2c {
 
     uint8_t pointer{0};
     uint16_t command_{0};
-    uint32_t expected_{0};
-    uint32_t received_{0};
-    uint32_t uploaded_{0};
+    uint32_t expected_bytes_{0};
+    uint32_t received_bytes_{0};
+    uint32_t uploaded_bytes_{0};
     uint16_t magic_{0};
     uint8_t payload_[8]{};
     size_t payload_bytes_{0};
@@ -351,7 +352,7 @@ class Bhi260 : public io::I2c {
     Stream wakeup_{};
     Stream non_wakeup_{};
     uint8_t status_[4 + kSensorsPresentBytes]{};
-    size_t status_length_{0};
+    size_t status_bytes_{0};
     size_t status_position_{0};
 };
 

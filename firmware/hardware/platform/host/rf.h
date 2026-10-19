@@ -22,8 +22,8 @@ class Rf : public ports::Rf {
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
-        Status s = radio_.begin();
-        if (s != Status::Ok) return s;
+        Status status = radio_.begin();
+        if (status != Status::Ok) return status;
         return radio_.configure_radio(parts::RadioConfig{});
     }
 
@@ -34,13 +34,13 @@ class Rf : public ports::Rf {
         if (armed_ && joins_flying_dwell(plan))
             return flying_bursts_.add(burst_of(plan)) ? Status::Ok : Status::WouldBlock;
         if (armed_ && plan.end_us <= flying_plan_.end_us) return Status::WouldBlock;
-        if (armed_ && queued_ && same_dwell(plan, plan_))
+        if (armed_ && queued_ && same_dwell(plan, queued_plan_))
             return plan.tx == nullptr || queued_bursts_.add(burst_of(plan)) ? Status::Ok
                                                                             : Status::WouldBlock;
         if (armed_) {
-            plan_ = plan;
+            queued_plan_ = plan;
             queued_bursts_ = ports::RfBursts::of(plan);
-            plan_armed_at_us_ = clock_.micros();
+            queued_armed_at_us_ = clock_.micros();
             queued_ = true;
             return Status::Ok;
         }
@@ -64,16 +64,16 @@ class Rf : public ports::Rf {
     ports::RfCarrier carrier() const override { return carrier_; }
 
     ports::RfTransmitter transmitter() const override {
-        return {parts::sx::kConductedDbm, parts::sx::kPaConfigHighPowerRatedDbm};
+        return {parts::sx1262::kConductedDbm, parts::sx1262::kPaConfigHighPowerRatedDbm};
     }
 
     ports::RfSwitching switching() const override { return switching_; }
 
     void service(uint32_t now_ms) {
         const uint64_t now_us = clock_.micros();
-        const uint32_t dt = now_ms - last_ms_;
+        const uint32_t elapsed_ms = now_ms - last_ms_;
         last_ms_ = now_ms;
-        radio_.service(dt, runtime::kRadioRxSilenceCeilingMs);
+        radio_.service(elapsed_ms, runtime::kRadioRxSilenceCeilingMs);
 
         fly(now_us);
         // The receiver keeps reporting between dwells: a frame that arrived
@@ -125,11 +125,11 @@ class Rf : public ports::Rf {
 
     void take_queued(uint64_t now_us) {
         queued_ = false;
-        if (now_us >= plan_.end_us) {
+        if (now_us >= queued_plan_.end_us) {
             miss_unfinished(queued_bursts_, 0, 0, now_us);
             return;
         }
-        adopt(plan_, queued_bursts_, plan_armed_at_us_);
+        adopt(queued_plan_, queued_bursts_, queued_armed_at_us_);
     }
 
     void adopt(const ports::RfPlan& plan, const ports::RfBursts& bursts, uint64_t armed_at_us) {
@@ -193,7 +193,7 @@ class Rf : public ports::Rf {
         parts::RadioConfig config{};
         config.frequency_hz = plan.frequency_hz;
         if (plan.bitrate != 0) config.bitrate = plan.bitrate;
-        if (plan.fdev_hz != 0) config.fdev_hz = plan.fdev_hz;
+        if (plan.deviation_hz != 0) config.deviation_hz = plan.deviation_hz;
         if (plan.bandwidth_hz != 0) config.bandwidth_hz = plan.bandwidth_hz;
         config.gaussian_bt_e2 = plan.gaussian_bt_e2;
         config.frequency_correction_e1_ppm = plan.frequency_correction_e1_ppm;
@@ -250,7 +250,7 @@ class Rf : public ports::Rf {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;
         rx_.frequency_hz = frequency_hz_;
-        rx_.bytes = event.length;
+        rx_.bytes = event.bytes;
         rx_.rssi_dbm = event.rssi_dbm;
         rx_.rssi_valid = event.rssi_valid;
         rx_.at_us = now_us;
@@ -258,24 +258,24 @@ class Rf : public ports::Rf {
     }
 
     void emit(events::RfEventType type, uint64_t now_us, const parts::RadioEvent& event = {}) {
-        events::RfEvent e{};
-        e.type = type;
-        e.band = band_;
-        e.frequency_hz = frequency_hz_;
-        e.rssi_dbm = event.rssi_dbm;
-        e.rssi_valid = event.rssi_valid;
-        e.at_us = now_us;
-        e.keyed_at_us = keyed_at_us_;
-        e.staged_at_us = staged_at_us_;
-        e.tx_at_us = tx_at_us_;
-        out_.push(e);
+        events::RfEvent reported{};
+        reported.type = type;
+        reported.band = band_;
+        reported.frequency_hz = frequency_hz_;
+        reported.rssi_dbm = event.rssi_dbm;
+        reported.rssi_valid = event.rssi_valid;
+        reported.at_us = now_us;
+        reported.keyed_at_us = keyed_at_us_;
+        reported.staged_at_us = staged_at_us_;
+        reported.tx_at_us = tx_at_us_;
+        out_.push(reported);
     }
 
     parts::Sx1262& radio_;
     ports::Clock& clock_;
     bus::Queue<events::RfEvent, 8>& out_;
     ports::RfPlan flying_plan_{};
-    ports::RfPlan plan_{};
+    ports::RfPlan queued_plan_{};
     ports::RfBursts flying_bursts_{};
     ports::RfBursts queued_bursts_{};
     ports::RfCarrier carrier_{};
@@ -284,7 +284,7 @@ class Rf : public ports::Rf {
     uint32_t last_frequency_hz_{0};
     uint64_t last_end_us_{0};
     uint64_t armed_at_us_{0};
-    uint64_t plan_armed_at_us_{0};
+    uint64_t queued_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t frequency_hz_{0};

@@ -36,16 +36,16 @@ class Bhi260ImageStore : public Bhi260::Image {
     const Sha256::Digest& digest() const { return digest_; }
     uint32_t capacity() const;
 
-    uint32_t size() const override { return holding_ == Holding::Held ? length_ : 0; }
-    bool read(uint32_t offset, uint8_t* out, uint16_t length) override;
+    uint32_t size() const override { return holding_ == Holding::Held ? image_bytes_ : 0; }
+    bool read(uint32_t offset, uint8_t* out, uint16_t bytes) override;
 
    private:
     enum class Phase : uint8_t { Erase, Program, Commit, Verify };
 
     struct Header {
         uint32_t magic{0};
-        uint16_t layout{0};
-        uint32_t length{0};
+        uint16_t layout_version{0};
+        uint32_t image_bytes{0};
         Sha256::Digest digest{};
     };
     static constexpr uint32_t kHeaderUsedBytes = 12 + Sha256::kDigestBytes;
@@ -53,7 +53,7 @@ class Bhi260ImageStore : public Bhi260::Image {
     static void encode(const Header& header, uint8_t* out);
     static Header decode(const uint8_t* raw);
 
-    Holding verify_payload(uint32_t length, const Sha256::Digest& expected);
+    Holding verify_payload(uint32_t bytes, const Sha256::Digest& expected);
     void step_erase();
     void step_program();
     void step_commit();
@@ -63,7 +63,7 @@ class Bhi260ImageStore : public Bhi260::Image {
     ports::FlashRegion& flash_;
     Holding holding_{Holding::Unread};
     Sha256::Digest digest_{};
-    uint32_t length_{0};
+    uint32_t image_bytes_{0};
 
     ConstByteSpan source_{};
     Phase phase_{Phase::Erase};

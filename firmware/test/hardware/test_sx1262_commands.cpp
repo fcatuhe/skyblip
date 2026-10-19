@@ -40,9 +40,9 @@ TEST_CASE("sx1262: the IRQ mask and the DIO1 mask are programmed before the rece
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.irq_mask == 0);
     REQUIRE(radio.start_receive() == Status::Ok);
-    CHECK(chip.command_order(sx::kSetDioIrqParameters) < chip.command_order(sx::kSetRx));
-    CHECK((chip.irq_mask & sx::kIrqRxDone) != 0);
-    CHECK((chip.irq_mask & sx::kIrqCrcError) != 0);
+    CHECK(chip.command_order(sx1262::kSetDioIrqParameters) < chip.command_order(sx1262::kSetRx));
+    CHECK((chip.irq_mask & sx1262::kIrqRxDone) != 0);
+    CHECK((chip.irq_mask & sx1262::kIrqCrcError) != 0);
     // DIO1 is the only interrupt line wired on this board.
     CHECK(chip.dio1_mask == chip.irq_mask);
     chip.queue_rx(nullptr, 0);
@@ -56,9 +56,9 @@ TEST_CASE("sx1262: the IRQ mask is programmed before the transmitter is keyed") 
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
-    CHECK(chip.command_order(sx::kSetDioIrqParameters) < chip.command_order(sx::kSetTx));
-    CHECK((chip.irq_mask & sx::kIrqTxDone) != 0);
-    CHECK((chip.irq_mask & sx::kIrqTimeout) != 0);
+    CHECK(chip.command_order(sx1262::kSetDioIrqParameters) < chip.command_order(sx1262::kSetTx));
+    CHECK((chip.irq_mask & sx1262::kIrqTxDone) != 0);
+    CHECK((chip.irq_mask & sx1262::kIrqTimeout) != 0);
     chip.signal_tx_done();
     uint8_t buffer[8];
     CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::TxDone);
@@ -76,8 +76,8 @@ TEST_CASE("sx1262: the PA is the SX1262 high-power configuration, ordered before
     CHECK(chip.pa_config[1] == 0x07);
     CHECK(chip.pa_config[2] == 0x00);
     CHECK(chip.pa_config[3] == 0x01);
-    CHECK(sx::kPaConfigHighPowerRatedDbm == 22);
-    CHECK(chip.command_order(sx::kSetPaConfig) < chip.command_order(sx::kSetTxParameters));
+    CHECK(sx1262::kPaConfigHighPowerRatedDbm == 22);
+    CHECK(chip.command_order(sx1262::kSetPaConfig) < chip.command_order(sx1262::kSetTxParameters));
 }
 
 // The register takes conducted power and the law limits radiated power, so what
@@ -91,15 +91,15 @@ TEST_CASE("sx1262: output power is 14 dBm conducted, which is under 25 mW e.r.p.
     REQUIRE(radio.begin() == Status::Ok);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.tx_power_set);
-    CHECK(chip.tx_power_dbm == sx::kConductedDbm);
+    CHECK(chip.tx_power_dbm == sx1262::kConductedDbm);
     CHECK(chip.tx_power_dbm == 14);
-    CHECK(chip.ramp_time == sx::kRampTime200Us);
+    CHECK(chip.ramp_time == sx1262::kRampTime200Us);
 
     // 14 dBm conducted, 0.5 dB of feed, a 1.6 dBi whip: 12.95 dBm e.r.p. against
     // a 14 dBm ceiling (ERC 70-03 band h1.4). A quarter-wave whip sits below a
     // dipole, so the part runs out of power before the regulation does.
-    CHECK(sx::kResultingErpCentiDb == 1295);
-    CHECK(sx::kResultingErpCentiDb <= sx::kSrd868ErpLimitDbm * 100);
+    CHECK(sx1262::kResultingErpCentiDb == 1295);
+    CHECK(sx1262::kResultingErpCentiDb <= sx1262::kSrd868ErpLimitDbm * 100);
 }
 
 TEST_CASE("sx1262: a chip whose output power was never programmed refuses to transmit") {
@@ -109,7 +109,7 @@ TEST_CASE("sx1262: a chip whose output power was never programmed refuses to tra
     chip.transfer(frame, nullptr, 1);
     chip.select(false);
     chip.select(true);
-    const uint8_t tx[4] = {sx::kSetTx, 0, 0, 0};
+    const uint8_t tx[4] = {sx1262::kSetTx, 0, 0, 0};
     chip.transfer(tx, nullptr, sizeof(tx));
     chip.select(false);
     CHECK(chip.fault == models::Sx1262::Fault::TxWithoutPower);
@@ -125,13 +125,14 @@ TEST_CASE("sx1262: image rejection is calibrated for 863-870 MHz after the TCXO 
     CHECK(chip.image_calibrated);
     CHECK(chip.image_band[0] == 0xD7);
     CHECK(chip.image_band[1] == 0xDB);
-    CHECK(chip.command_order(sx::kSetDio3AsTcxoControl) < chip.command_order(sx::kCalibrateImage));
-    CHECK(chip.command_order(sx::kCalibrate) < chip.command_order(sx::kCalibrateImage));
+    CHECK(chip.command_order(sx1262::kSetDio3AsTcxoControl) <
+          chip.command_order(sx1262::kCalibrateImage));
+    CHECK(chip.command_order(sx1262::kCalibrate) < chip.command_order(sx1262::kCalibrateImage));
     CHECK(chip.fault == models::Sx1262::Fault::None);
     // Once per band: the second dwell does not pay for it again.
-    const int before = chip.command_order(sx::kCalibrateImage);
+    const int before = chip.command_order(sx1262::kCalibrateImage);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
-    CHECK(chip.command_order(sx::kCalibrateImage) == before);
+    CHECK(chip.command_order(sx1262::kCalibrateImage) == before);
 }
 
 // A5. The previous dwell leaves the chip in continuous RX, and SetRfFrequency
@@ -148,12 +149,12 @@ TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and return
 
     int standbys = 0;
     for (uint8_t c : chip.commands_seen)
-        if (c == sx::kSetStandby) standbys++;
+        if (c == sx1262::kSetStandby) standbys++;
     config.frequency_hz = 868400000;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     int after = 0;
     for (uint8_t c : chip.commands_seen)
-        if (c == sx::kSetStandby) after++;
+        if (c == sx1262::kSetStandby) after++;
     CHECK(after == standbys + 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
     CHECK(chip.frequency_hz > 868399000);
@@ -168,7 +169,7 @@ TEST_CASE("sx1262: a standby-only command issued while the receiver runs is a ch
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     REQUIRE(chip.fault == models::Sx1262::Fault::None);
-    const uint8_t retune[5] = {sx::kSetRfFrequency, 0x36, 0x40, 0x00, 0x00};
+    const uint8_t retune[5] = {sx1262::kSetRfFrequency, 0x36, 0x40, 0x00, 0x00};
     chip.select(true);
     chip.transfer(retune, nullptr, sizeof(retune));
     chip.select(false);
@@ -214,8 +215,8 @@ TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the conf
     CHECK(chip.tx_timeout_ticks != 0);
     // 100 kbps: one bit is 10 us. Preamble + sync window + payload.
     const uint32_t air_us =
-        (sx::kPreambleChips + protocol::kSharedSyncBits + sizeof(frame) * 8u) * 10u;
-    const uint32_t timeout_us = chip.tx_timeout_ticks * sx::kTimeoutStepNs / 1000u;
+        (sx1262::kPreambleChips + protocol::kSharedSyncBits + sizeof(frame) * 8u) * 10u;
+    const uint32_t timeout_us = chip.tx_timeout_ticks * sx1262::kTimeoutStepNs / 1000u;
     CHECK(timeout_us > air_us);
     CHECK(timeout_us < air_us + 30000);
 }

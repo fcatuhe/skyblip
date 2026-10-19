@@ -236,7 +236,7 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
         plan.sync_bits = protocol::kUplinkSyncBits;
         plan.rx_bytes = protocol::kUplinkFrameBytes;
         plan.bitrate = protocol::kUplinkChipRateBps;
-        plan.fdev_hz = protocol::kUplinkDeviationHz;
+        plan.deviation_hz = protocol::kUplinkDeviationHz;
         plan.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
         plan.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
         return;
@@ -245,7 +245,7 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
     plan.bitrate = protocol::kMBandChipRateBps;
-    plan.fdev_hz = protocol::kMBandDeviationHz;
+    plan.deviation_hz = protocol::kMBandDeviationHz;
     plan.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
     plan.gaussian_bt_e2 = protocol::kMBandGaussianBtE2;
 }

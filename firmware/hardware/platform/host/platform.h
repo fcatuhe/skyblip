@@ -198,8 +198,8 @@ class Platform {
     }
     void wire(const io::PinMap& map) { gpio_.wire(map); }
 
-    io::Spi& spi(io::BusId id) {
-        if (id == io::BusId::Epd) return chips_.epd;
+    io::Spi& spi(io::BusId bus) {
+        if (bus == io::BusId::Epd) return chips_.epd;
         return chips_.radio;
     }
     io::Uart& uart(io::BusId) { return chips_.gnss; }
@@ -231,7 +231,7 @@ class Platform {
     bool button_down() const { return gpio_.button_down; }
     bool pad_down() const { return gpio_.pad_down; }
 
-    static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Deg0; }
+    static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Degrees0; }
 
     // The panel signature, as the silicon platform's board port takes it: 11
     // bytes of register 0x2D then 10 of 0x2E. The virtual glass carries which lot

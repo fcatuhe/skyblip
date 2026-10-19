@@ -147,20 +147,20 @@ class L76k : public ports::Gnss {
 
     uint32_t port_overruns() const { return uart_.overruns(); }
 
-    uint32_t raises() const { return baud_raises_; }
+    uint32_t baud_raises() const { return baud_raises_; }
     uint32_t raise_fallbacks() const { return raise_fallbacks_; }
 
     ports::GnssHealth health() const override {
-        ports::GnssHealth h{};
-        h.baud = baud_rate();
-        h.overruns = port_overruns();
-        h.sentences = sentences();
-        h.rejected = rejected();
-        h.pps_latency_ms = pps_latency_ms();
-        h.last_reject = last_reject();
-        h.config_stage = stage_;
-        h.identified = identified();
-        return h;
+        ports::GnssHealth reported{};
+        reported.baud = baud_rate();
+        reported.overruns = port_overruns();
+        reported.sentences = sentences();
+        reported.rejected = rejected();
+        reported.pps_latency_ms = pps_latency_ms();
+        reported.last_reject = last_reject();
+        reported.config_stage = stage_;
+        reported.identified = identified();
+        return reported;
     }
 
     // Did the part name itself, and as what. An unidentified receiver still gets

@@ -11,7 +11,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kConvertedMs = parts::Bme280::kMeasureUs / 1000 + 1;
+constexpr uint32_t kConvertedMs = parts::Bme280::kMeasurementUs / 1000 + 1;
 
 struct Bench {
     Bench() { chip.attach_clock(clock); }
@@ -80,7 +80,7 @@ TEST_CASE("bme280: a read before the conversion ends reports nothing and a later
 
 TEST_CASE("bme280: a conversion is dated at the middle of its pressure phase") {
     // DS 9.1 typical: 1 + 2 x 2 ms of temperature, then half of 2 x 16 + 0.5 ms of pressure.
-    CHECK(parts::Bme280::kMeasureUs == 37500);
+    CHECK(parts::Bme280::kMeasurementUs == 37500);
     CHECK(parts::Bme280::kConversionMidpointMs == 21);
 }
 
@@ -88,14 +88,14 @@ TEST_CASE(
     "bme280: the pressure read is the one the part was given, within six tenths of a pascal") {
     Bench bench;
 
-    for (int16_t deci : {int16_t{-200}, int16_t{150}, int16_t{452}}) {
+    for (int16_t temperature_dc : {int16_t{-200}, int16_t{150}, int16_t{452}}) {
         for (uint32_t pa = 30000; pa <= 110000; pa += 7919) {
-            bench.chip.set_temperature_dc(deci);
+            bench.chip.set_temperature_dc(temperature_dc);
             bench.chip.set_pressure_mpa(pa * 1000 + 371);
             const parts::Bme280::Reading reading = bench.convert();
-            CHECK(reading.temperature_dc == deci);
+            CHECK(reading.temperature_dc == temperature_dc);
             const int64_t error = int64_t{reading.pressure_mpa} - (int64_t{pa} * 1000 + 371);
-            // DS 4.2.3 and DS 8.1 part by up to 13 t_fine counts at -20 C, which is 0.45 Pa.
+            // DS 4.2.3 and 8.1 part by up to 13 fine_temperature counts at -20 C, which is 0.45 Pa.
             CHECK(error <= 600);
             CHECK(error >= -600);
         }
@@ -116,7 +116,7 @@ TEST_CASE("bme280: the air is the air at the trigger, not at the read") {
 
 TEST_CASE("bme280: a part strapped to the alternate address is found there") {
     Bench bench;
-    bench.chip.address = parts::Bme280::kAddressAlternate;
+    bench.chip.bus_address = parts::Bme280::kAddressAlternate;
 
     CHECK(bench.barometer.answers());
     REQUIRE(bench.barometer.begin() == Status::Ok);

@@ -49,26 +49,26 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
-    void wait_at_least_us(uint32_t us) override { elapsed_us += us; }
+    void wait_at_least_us(uint32_t hold_us) override { elapsed_us += hold_us; }
 
     void select(bool) override {}
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t length) override {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         transfers++;
-        for (size_t i = 0; i < length; i++) {
-            uint8_t b = tx ? tx[i] : 0;
+        for (size_t i = 0; i < bytes; i++) {
+            uint8_t byte = tx ? tx[i] : 0;
             if (rx) rx[i] = 0;
             if (!dc_high_) {
                 // INFO: fc 13sep26 a command over a live BUSY aborts the waveform mid-pixel
                 if (refreshing()) commands_while_busy++;
-                commands.push_back(b);
-                if (b == kWriteRam) ram.clear();
-                if (b == kWriteRamPrevious) ram_previous.clear();
-                if (b == kDeepSleep) {
+                commands.push_back(byte);
+                if (byte == kWriteRam) ram.clear();
+                if (byte == kWriteRamPrevious) ram_previous.clear();
+                if (byte == kDeepSleep) {
                     powered = false;
                     rails_on = false;
                     deep_sleeps++;
                 }
-                if (b == kMasterActivation) {
+                if (byte == kMasterActivation) {
                     rails_on =
                         powered && (sequence_ & kEnableAnalog) && !(sequence_ & kDisableAnalog);
                     if (sequence_ & kDisplay) {
@@ -82,21 +82,22 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                         if (powered) rasterise();
                     }
                 }
-                pending_ = b;
+                pending_opcode_ = byte;
             } else {
-                if (pending_ == kWriteRam) ram.push_back(b);
-                if (pending_ == kWriteRamPrevious) ram_previous.push_back(b);
-                if (pending_ == kUpdateControl2) {
-                    sequence_ = b;
-                    if (b & kDisplay) last_full = !(b & kLoadLutMode2);
+                if (pending_opcode_ == kWriteRam) ram.push_back(byte);
+                if (pending_opcode_ == kWriteRamPrevious) ram_previous.push_back(byte);
+                if (pending_opcode_ == kDisplayUpdateControl2) {
+                    sequence_ = byte;
+                    if (byte & kDisplay) last_full = !(byte & kLoadLutMode2);
                 }
-                if (pending_ == kBorderWaveform) border = b;
+                if (pending_opcode_ == kBorderWaveform) border = byte;
             }
         }
     }
 
-    bool saw_command(uint8_t c) const {
-        return std::any_of(commands.begin(), commands.end(), [c](uint8_t x) { return x == c; });
+    bool saw_command(uint8_t opcode) const {
+        return std::any_of(commands.begin(), commands.end(),
+                           [opcode](uint8_t seen) { return seen == opcode; });
     }
 
     // What the panel would be showing: RAM read back through the driver's own
@@ -105,16 +106,16 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     const parts::Ssd1681Glass& framebuffer() const { return panel_; }
 
     bool save_pgm(const char* path) const {
-        FILE* f = std::fopen(path, "wb");
-        if (!f) return false;
-        std::fprintf(f, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassWidth,
+        FILE* file = std::fopen(path, "wb");
+        if (!file) return false;
+        std::fprintf(file, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassWidth,
                      parts::Ssd1681::kGlassHeight);
         for (int y = 0; y < parts::Ssd1681::kGlassHeight; y++)
             for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++) {
-                uint8_t v = panel_.get_pixel(x, y) ? 0 : 255;
-                std::fwrite(&v, 1, 1, f);
+                uint8_t shade = panel_.get_pixel(x, y) ? 0 : 255;
+                std::fwrite(&shade, 1, 1, file);
             }
-        std::fclose(f);
+        std::fclose(file);
         return true;
     }
 
@@ -148,7 +149,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr uint8_t kWriteRam = 0x24;
     static constexpr uint8_t kWriteRamPrevious = 0x26;
     static constexpr uint8_t kMasterActivation = 0x20;
-    static constexpr uint8_t kUpdateControl2 = 0x22;
+    static constexpr uint8_t kDisplayUpdateControl2 = 0x22;
     static constexpr uint8_t kBorderWaveform = 0x3C;
     static constexpr uint8_t kDeepSleep = 0x10;
     static constexpr uint8_t kEnableAnalog = 0x40;
@@ -187,7 +188,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     bool dc_high_{false};
     bool reset_level_{true};
     uint64_t reset_low_since_us_{0};
-    uint8_t pending_{0};
+    uint8_t pending_opcode_{0};
 };
 
 }  // namespace skyblip::models

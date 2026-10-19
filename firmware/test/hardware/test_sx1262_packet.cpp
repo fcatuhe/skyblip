@@ -73,8 +73,8 @@ TEST_CASE("sx1262: configure programs the sync window and the fixed read length"
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     CHECK(radio.configure_radio(config) == Status::Ok);
-    CHECK(chip.saw_command(sx::kWriteRegister));
-    CHECK(chip.saw_command(sx::kSetPacketParameters));
+    CHECK(chip.saw_command(sx1262::kWriteRegister));
+    CHECK(chip.saw_command(sx1262::kSetPacketParameters));
     CHECK(chip.sync[0] == protocol::kSharedSync[0]);
     CHECK(chip.sync[1] == protocol::kSharedSync[1]);
     CHECK(chip.sync_bits == protocol::kSharedSyncBits);
@@ -157,21 +157,21 @@ TEST_CASE("sx1262: the packet the modem is told to expect carries no CRC of the 
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
 
-    const uint8_t expected[9] = {static_cast<uint8_t>(sx::kPreambleChips >> 8),
-                                 static_cast<uint8_t>(sx::kPreambleChips),
-                                 sx::kPreambleDetect8Chips,
+    const uint8_t expected[9] = {static_cast<uint8_t>(sx1262::kPreambleChips >> 8),
+                                 static_cast<uint8_t>(sx1262::kPreambleChips),
+                                 sx1262::kPreambleDetect8Chips,
                                  protocol::kSharedSyncBits,
-                                 sx::kAddrCompOff,
-                                 sx::kFixedLength,
+                                 sx1262::kAddressFilteringOff,
+                                 sx1262::kFixedLength,
                                  protocol::kRxChipBytes,
-                                 sx::kCrcOff,
-                                 sx::kWhiteningOff};
+                                 sx1262::kCrcOff,
+                                 sx1262::kWhiteningOff};
     for (size_t i = 0; i < sizeof(expected); i++) {
         CAPTURE(i);
         CHECK(chip.packet_parameters[i] == expected[i]);
     }
-    CHECK(sx::kCrcOff == 0x01);
-    CHECK(sx::kCrcOneByte == 0x00);
+    CHECK(sx1262::kCrcOff == 0x01);
+    CHECK(sx1262::kCrcOneByte == 0x00);
 }
 
 TEST_CASE("sx1262: a burst is framed from the chips after the sync window, either system") {
@@ -197,7 +197,7 @@ TEST_CASE("sx1262: a burst is framed from the chips after the sync window, eithe
         RadioEvent event = radio.poll(buffer, sizeof(buffer));
         REQUIRE(event.type == RadioEventType::RxDone);
         protocol::Frame frame{};
-        REQUIRE(protocol::receive_m_band(buffer, event.length, frame));
+        REQUIRE(protocol::receive_m_band(buffer, event.bytes, frame));
         const bool adsl = sync_word == protocol::kAdslSyncWord;
         if (adsl) CHECK(frame.system == protocol::System::AdslDirect);
         if (!adsl) CHECK(frame.system == protocol::System::Alptas);

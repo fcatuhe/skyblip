@@ -91,18 +91,18 @@ TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.modulation_set);
     CHECK(chip.bitrate == 100000);
-    CHECK(chip.fdev_hz > 49990);
-    CHECK(chip.fdev_hz < 50010);
+    CHECK(chip.deviation_hz > 49990);
+    CHECK(chip.deviation_hz < 50010);
     // DS 13.4.6 order: bit rate, pulse shape, RX bandwidth, deviation.
-    CHECK(chip.modulation[3] == sx::kPulseShapeNone);
-    CHECK(chip.modulation[4] == sx::kRxBandwidth234kHz);
-    CHECK(chip.pulse_shape == sx::kPulseShapeNone);
-    CHECK(chip.rx_bandwidth == sx::kRxBandwidth234kHz);
+    CHECK(chip.modulation[3] == sx1262::kPulseShapeNone);
+    CHECK(chip.modulation[4] == sx1262::kRxBandwidth234kHz);
+    CHECK(chip.pulse_shape == sx1262::kPulseShapeNone);
+    CHECK(chip.rx_bandwidth == sx1262::kRxBandwidth234kHz);
     // DS 13.1.4: the packet handler is configured after the modem, not before.
-    CHECK(chip.command_order(sx::kSetRfFrequency) <
-          chip.command_order(sx::kSetModulationParameters));
-    CHECK(chip.command_order(sx::kSetModulationParameters) <
-          chip.command_order(sx::kSetPacketParameters));
+    CHECK(chip.command_order(sx1262::kSetRfFrequency) <
+          chip.command_order(sx1262::kSetModulationParameters));
+    CHECK(chip.command_order(sx1262::kSetModulationParameters) <
+          chip.command_order(sx1262::kSetPacketParameters));
 }
 
 TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {
@@ -112,7 +112,7 @@ TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz chann
     RadioConfig config{};
     config.frequency_hz = 869525000;
     config.bitrate = protocol::kUplinkChipRateBps;
-    config.fdev_hz = protocol::kUplinkDeviationHz;
+    config.deviation_hz = protocol::kUplinkDeviationHz;
     config.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
     config.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
     config.sync = protocol::kUplinkSync;
@@ -120,9 +120,9 @@ TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz chann
     config.payload_bytes = protocol::kUplinkFrameBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.bitrate == 200000);
-    CHECK(chip.fdev_hz > 49990);
-    CHECK(chip.fdev_hz < 50010);
-    CHECK(chip.pulse_shape == sx::kGaussianBt0p5);
+    CHECK(chip.deviation_hz > 49990);
+    CHECK(chip.deviation_hz < 50010);
+    CHECK(chip.pulse_shape == sx1262::kGaussianBt0p5);
     // The narrowest entry of DS 13.4.6's table that still passes 250 kHz. The
     // one below it, 234.3 kHz, clips the channel.
     CHECK(chip.rx_bandwidth == 0x19);
@@ -200,14 +200,14 @@ TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed")
     // The two bounds are the same number in two layers: what the flash blob
     // accepts and what the PLL word is allowed to carry. If they ever part, a
     // stored value would be silently altered on its way to the synthesiser.
-    CHECK(int(sx::kFrequencyTrimCeilingE1Ppm) == int(go::kFrequencyTrimCeilingE1Ppm));
+    CHECK(int(sx1262::kFrequencyTrimCeilingE1Ppm) == int(go::kFrequencyTrimCeilingE1Ppm));
 
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     RadioConfig config{};
     config.frequency_hz = 868200000;
-    config.frequency_correction_e1_ppm = sx::kFrequencyTrimCeilingE1Ppm;
+    config.frequency_correction_e1_ppm = sx1262::kFrequencyTrimCeilingE1Ppm;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     const uint32_t at_limit = chip.frequency_hz;
 

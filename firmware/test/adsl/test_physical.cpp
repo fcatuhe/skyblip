@@ -35,7 +35,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2: the M band is modulated as the table prints it") 
     CHECK(protocol::kMBandChipRateBps == 100000u);
     CHECK(protocol::kMBandDeviationHz == 50000u);
     CHECK(protocol::kMBandGaussianBtE2 == 50u);
-    CHECK(parts::sx::kResultingErpCentiDb <= 1400);
+    CHECK(parts::sx1262::kResultingErpCentiDb <= 1400);
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.2.1: a one is sent as 01 and a zero as 10") {
@@ -61,7 +61,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two
     const uint8_t lead = static_cast<uint8_t>(protocol::kAdslSyncWord >> 24);
     CHECK(chips_of(lead) == 0x5599);
 
-    const int radio_repetitions = parts::sx::kPreambleChips / 2;
+    const int radio_repetitions = parts::sx1262::kPreambleChips / 2;
     const int lead_repetitions = 4;
     CHECK(radio_repetitions == 8);
     CHECK(radio_repetitions + lead_repetitions >= 5);

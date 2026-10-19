@@ -63,7 +63,7 @@ TEST_CASE("bhi260: bring-up resets the part, uploads the image and boots it from
     CHECK(imu.stage() == Stage::Running);
     CHECK(chip.resets == 1);
     CHECK(chip.booted);
-    CHECK(chip.uploaded() == sizeof(kImage));
+    CHECK(chip.uploaded_bytes() == sizeof(kImage));
     CHECK(imu.uploaded_bytes() == sizeof(kImage));
     CHECK(imu.kernel_version() == models::Bhi260::kKernelVersion);
 }
@@ -193,7 +193,7 @@ TEST_CASE("bhi260: the upload is paced, so no single pass of the loop owns the b
     }
 
     CHECK(imu.stage() == Stage::Running);
-    CHECK(chip.uploaded() == sizeof(big));
+    CHECK(chip.uploaded_bytes() == sizeof(big));
     // 1024 bytes at 240 a pass, the first one short by the command header.
     CHECK(passes_while_uploading == 5);
 }

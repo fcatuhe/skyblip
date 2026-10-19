@@ -2160,15 +2160,15 @@ SX1262 driver recovery tests against models/sx1262.h with fault injection The cl
 - a CRC-error RX is reported as CrcError, NOT delivered
 - a chip that was never taken off its LDO is not believed
 - a queued RX packet is delivered via poll
-- a reinit that failed after the reset keys nothing until one succeeds
+- a reinitialisation that failed after the reset keys nothing until one succeeds
 - a reinitialised radio is on the boosted gain again
-  > And the reset default is where a recovered radio comes back to: NRESET clears the register and the retention list together, so the reinit path has to write both again or a device silently loses 3 dB after its first watchdog bite.
+  > And the reset default is where a recovered radio comes back to: NRESET clears the register and the retention list together, so the reinitialisation path has to write both again or a device silently loses 3 dB after its first watchdog bite.
 - a transmission that never completes is recovered to RX and counted
 - begin + configure + receive brings the modem to Rx
 - begin configures the TCXO (DIO3) and RF switch (DIO2) for T-Echo wiring
 - begin puts the part on its DC-DC converter, before it calibrates against it
   > B1. The reset default is LDO-only and there is no symptom: the radio works, and draws about twice the current it needs to for the ~980 ms of every second the receiver is armed. So the model is stricter than the silicon.
-- health watchdog reinitialises after no-RX timeout (no-RX-in-N reinit, tested)
+- health watchdog reinitialises after no-RX timeout (no-RX-in-N reinitialisation, tested)
 - sleep is a warm start with the RTC off, and an NSS edge brings it back
   > D4. The way off has to reach the part, not only the executor driving it.
 - the boosted gain survives the warm start the radio sleeps into
@@ -2254,7 +2254,7 @@ What the part asks for so that it survives: the current limit, DS 15, and the si
 
 - SetPaConfig widens the current limit to 140 mA and the driver takes it back
 - a bring-up whose calibration failed reports the failing block, not silence
-  > A failed calibration has no symptom but a deaf radio, and deafness is cured by reinit, forever.
+  > A failed calibration has no symptom but a deaf radio, and only reinitialising cures it, forever.
 - a dwell reprogrammed on the other band keeps the modulation-quality bit
 - a healthy bring-up reports no device error and says so
 - an NSS edge 499 us after SetSleep interrupts the save, 500 us does not
@@ -3980,7 +3980,7 @@ Below the service list: the SX1262 driver, the host executor that arms and servi
 - a receiver that hears nothing is reinitialised by the executor that owns it
   > The 30 s no-RX reinitialisation lived in parts::Sx1262::service(), which only the host executor ever called: on silicon hardware/platform/zephyr/rf.h had an empty service() body, so the radio health watchdog this pins did not exist on the device at all. It belongs to whichever thread owns the radio, because reinitialising from the service list would put a second writer on the SPI bus while a dwell is using it.
 - a reinitialisation that failed is tried again a rope later
-  > A reinit that failed left the radio out of Rx, where the rope stops counting: dead for good.
+  > A failed reinitialisation left the radio out of Rx, where the rope stops counting: dead for good.
 - the SetTx timeout is the transmit watchdog, and the next dwell is the backstop
   > A7, decided and written down: there is no second, firmware-side transmit watchdog in the executor or in the driver's service, and there does not need to be one. SetTx carries a timeout of air time plus 25 ms (DS 13.4.1), so the hardware unkeys the PA on its own and no firmware timer can be faster; poll() turns that into a counted recovery. A backstop could only run on the thread that owns the radio, which is the same loop that already reads the IRQ, so it would fire strictly after the chip does. The one gap it might have covered - a burst issued so late that the dwell closes before the chip's timeout expires - is closed by the next dwell, which is standby-bracketed (DS 13.1) and unkeys the transmitter on its way to the new channel.
 - the burst keys at its drawn instant, on a held channel as on a quiet one

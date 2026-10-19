@@ -64,6 +64,26 @@ Both are answered only when the hub answers. A parameter read that times out (50
 
 Both FIFOs are read the way the reference does: two bytes for the count when nothing is outstanding, then up to 64 bytes a pass until the count is drained. The non-wakeup one (0x02) is where a non-wakeup virtual sensor puts its frames, the wakeup one (0x01) carries its own copy of every meta event, and a channel nobody reads is a channel that fills; each keeps its own carry, because an event can straddle two passes on either. Events are parsed by the size table the reference carries for system ids (padding, the three timestamp forms, meta events, filler) plus the seven bytes an accelerometer frame takes. An id with no size is an id we cannot step over, so the rest of that stream is dropped and the count is on `unparsed_events()`: the next transaction starts on an event boundary again.
 
+## Names
+
+The register, command and parameter constants are spelled in full. The names above are the reference's (`BHY2_SensorAPI`), and this is how they map.
+
+| Our name | Reference name |
+|---|---|
+| `kRegisterResetRequest` (0x14) | `RESET_REQ` |
+| `kRegisterProductId` (0x1C) | `PRODUCT_ID` |
+| `kRegisterKernelVersion` (0x20) | `KERNEL_VERSION` |
+| `kRegisterBootStatus` (0x25) | `BOOT_STATUS` |
+| `kRegisterInterruptStatus` (0x2D) | `INT_STATUS` |
+| `kBootHostInterfaceReady` | `HOST_INTERFACE_READY` |
+| `kBootFirmwareVerifyDone` | `FW_VERIFY_DONE` |
+| `kCommandUploadToProgramRam` (0x0002) | `UPLOAD_TO_PROGRAM_RAM` |
+| `kCommandBootProgramRam` (0x0003) | `BOOT_PROGRAM_RAM` |
+| `kParameterSensorsPresent` (0x011F) | the virtual sensor present bitmap |
+| `kParameterSensorConfig` (0x0500) | the sensor configuration parameter, plus the sensor id |
+| `kSystemEventIdPadding`, `kFirstSystemEventId` (0, 245) | the system ids, padding and the first of the table |
+| `kSystemEventIdMetaEvent`, `kSystemEventIdMetaEventWakeup` (254, 248) | the meta event system ids |
+
 ## What this part does not do
 
 No gyroscope, no fusion output, no step counter, no wrist gestures, no interrupt line - the Plus leaves HIRQ unconnected, so everything here is polled. The hub is capable of all of it and none of it has a reader, so none of it is configured: the six-pack needs one lateral acceleration, and `core/flight/slip.h` is where that becomes a ball. The gyroscope is the one worth naming, because it is in the image and costs the better part of a milliamp against the accelerometer's tens of microamps: no instrument on this device reads a body rate, so virtual sensor 13 is never subscribed to and the part stays powered down.
@@ -72,4 +92,4 @@ No gyroscope, no fusion output, no step counter, no wrist gestures, no interrupt
 
 The driver reports the chip's own axes. Which way the chip sits in the case is the board's fact and lives in `boards/lilygo/t_echo_plus/imu_mount.h`: the one place a rotation gets corrected, and nothing downstream has an axis in it.
 
-The bench measured it in three readings: a quarter turn on the first unit with a working ball, the ball's direction on the second, and the g-meter reading inverted on the third, which is the one that showed the part is face down as well as turned. The mount maps the chip's +X to the case's up, its +Y to the case's right and its +Z out the nose, and the rates with it. That is the same turn the panel is mounted at (`GlassRotation::Deg270` in `hardware/platform/zephyr/platform.h`), which is what a part placed on a board that sits sideways in its case looks like from both ends.
+The bench measured it in three readings: a quarter turn on the first unit with a working ball, the ball's direction on the second, and the g-meter reading inverted on the third, which is the one that showed the part is face down as well as turned. The mount maps the chip's +X to the case's up, its +Y to the case's right and its +Z out the nose, and the rates with it. That is the same turn the panel is mounted at (`GlassRotation::Degrees270` in `hardware/platform/zephyr/platform.h`), which is what a part placed on a board that sits sideways in its case looks like from both ends.

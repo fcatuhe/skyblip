@@ -8,15 +8,15 @@ namespace skyblip::parts {
 namespace {
 constexpr uint8_t kDriverOutputControl = 0x01;
 constexpr uint8_t kDataEntryMode = 0x11;
-constexpr uint8_t kSwReset = 0x12;
+constexpr uint8_t kSoftwareReset = 0x12;
 constexpr uint8_t kTemperatureSensorControl = 0x18;
 constexpr uint8_t kMasterActivation = 0x20;
 constexpr uint8_t kDisplayUpdateControl2 = 0x22;
 constexpr uint8_t kWriteRam = 0x24;
 constexpr uint8_t kWriteRamPrevious = 0x26;
 constexpr uint8_t kBorderWaveform = 0x3C;
-constexpr uint8_t kSetRamXAddr = 0x44;
-constexpr uint8_t kSetRamYAddr = 0x45;
+constexpr uint8_t kSetRamXRange = 0x44;
+constexpr uint8_t kSetRamYRange = 0x45;
 constexpr uint8_t kSetRamXCounter = 0x4E;
 constexpr uint8_t kSetRamYCounter = 0x4F;
 constexpr uint8_t kDeepSleep = 0x10;
@@ -32,36 +32,32 @@ constexpr uint8_t kSequenceWipe = 0xFC;
 constexpr uint8_t kBorderFollowLut1 = 0x05;
 constexpr uint8_t kBorderVcom = 0x80;
 
-constexpr int kW = Ssd1681::kGlassWidth;
-constexpr int kH = Ssd1681::kGlassHeight;
-constexpr int kStride = Ssd1681::kGlassStride;
-
 // INFO: fc 01aug25 panel RAM is 1=white, the framebuffer 1=black
 constexpr uint8_t kRamWhite = 0xFF;
 constexpr uint8_t kRamBlack = 0x00;
 
 // INFO: fc 03oct26 Hacker's Delight transpose8: byte k out is bit k of each byte in, MSB first
 void turn_block(const uint8_t* rows, uint8_t* gates) {
-    uint32_t x = 0;
-    uint32_t y = 0;
+    uint32_t upper = 0;
+    uint32_t lower = 0;
     for (size_t i = 0; i < 4; i++) {
-        x = (x << 8) | rows[i * kStride];
-        y = (y << 8) | rows[(i + 4) * kStride];
+        upper = (upper << 8) | rows[i * Ssd1681::kGlassStride];
+        lower = (lower << 8) | rows[(i + 4) * Ssd1681::kGlassStride];
     }
-    uint32_t t = (x ^ (x >> 7)) & 0x00AA00AAu;
-    x ^= t ^ (t << 7);
-    t = (y ^ (y >> 7)) & 0x00AA00AAu;
-    y ^= t ^ (t << 7);
-    t = (x ^ (x >> 14)) & 0x0000CCCCu;
-    x ^= t ^ (t << 14);
-    t = (y ^ (y >> 14)) & 0x0000CCCCu;
-    y ^= t ^ (t << 14);
-    t = (x & 0xF0F0F0F0u) | ((y >> 4) & 0x0F0F0F0Fu);
-    y = ((x << 4) & 0xF0F0F0F0u) | (y & 0x0F0F0F0Fu);
-    x = t;
+    uint32_t swapped = (upper ^ (upper >> 7)) & 0x00AA00AAu;
+    upper ^= swapped ^ (swapped << 7);
+    swapped = (lower ^ (lower >> 7)) & 0x00AA00AAu;
+    lower ^= swapped ^ (swapped << 7);
+    swapped = (upper ^ (upper >> 14)) & 0x0000CCCCu;
+    upper ^= swapped ^ (swapped << 14);
+    swapped = (lower ^ (lower >> 14)) & 0x0000CCCCu;
+    lower ^= swapped ^ (swapped << 14);
+    swapped = (upper & 0xF0F0F0F0u) | ((lower >> 4) & 0x0F0F0F0Fu);
+    lower = ((upper << 4) & 0xF0F0F0F0u) | (lower & 0x0F0F0F0Fu);
+    upper = swapped;
     for (size_t k = 0; k < 4; k++) {
-        gates[(7 - k) * kStride] = static_cast<uint8_t>(~(x >> (24 - 8 * k)));
-        gates[(3 - k) * kStride] = static_cast<uint8_t>(~(y >> (24 - 8 * k)));
+        gates[(7 - k) * Ssd1681::kGlassStride] = static_cast<uint8_t>(~(upper >> (24 - 8 * k)));
+        gates[(3 - k) * Ssd1681::kGlassStride] = static_cast<uint8_t>(~(lower >> (24 - 8 * k)));
     }
 }
 }  // namespace
@@ -70,7 +66,7 @@ void Ssd1681::begin() {
     gpio_.mode_output(dc_pin_);
     gpio_.mode_output(reset_pin_);
     gpio_.mode_input(busy_pin_, false);
-    init_panel();
+    initialise_panel();
     glass_known_ = false;
     refreshing_ = false;
     asleep_ = false;
@@ -82,7 +78,7 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
 
     const bool full = mode == ports::Refresh::Full || !glass_known_;
 
-    set_window(0, 0, kW - 1, kH - 1);
+    set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
     command(kBorderWaveform);
     data(full ? kBorderFollowLut1 : kBorderVcom);
     if (full) {
@@ -102,7 +98,7 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
 void Ssd1681::paint_black(uint32_t now_ms) {
     ensure_awake();
 
-    set_window(0, 0, kW - 1, kH - 1);
+    set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
     command(kBorderWaveform);
     data(kBorderVcom);
     std::memset(shadow_, kRamWhite, sizeof(shadow_));
@@ -116,7 +112,7 @@ void Ssd1681::paint_black(uint32_t now_ms) {
 void Ssd1681::ensure_awake() {
     if (refreshing_) abort_refresh();
     if (!asleep_) return;
-    init_panel();
+    initialise_panel();
     asleep_ = false;
 }
 
@@ -137,7 +133,7 @@ bool Ssd1681::ready(uint32_t now_ms) {
     if (static_cast<int32_t>(now_ms - ready_at_ms_) < 0) return false;
     if (gpio_.get(busy_pin_)) {
         if (static_cast<int32_t>(now_ms - timeout_at_ms_) < 0) return false;
-        init_panel();
+        initialise_panel();
         glass_known_ = false;
         refreshing_ = false;
         asleep_ = false;
@@ -157,7 +153,7 @@ void Ssd1681::power_off() {
 void Ssd1681::abort_refresh() {
     refreshing_ = false;
     if (wait_busy()) return;
-    init_panel();
+    initialise_panel();
     asleep_ = false;
     glass_known_ = false;
 }
@@ -168,7 +164,7 @@ void Ssd1681::set_backlight(bool on) {
     gpio_.set(backlight_pin_, on);
 }
 
-void Ssd1681::init_panel() {
+void Ssd1681::initialise_panel() {
     gpio_.set(reset_pin_, true);
     gpio_.set(reset_pin_, false);
     delay_.wait_at_least_us(epd::kResetHoldUs);
@@ -176,7 +172,7 @@ void Ssd1681::init_panel() {
     delay_.wait_at_least_us(epd::kResetHoldUs);
     wait_busy();
 
-    command(kSwReset);
+    command(kSoftwareReset);
     wait_busy();
 
     command(kDriverOutputControl);
@@ -187,7 +183,7 @@ void Ssd1681::init_panel() {
     command(kDataEntryMode);
     data(0x03);  // X inc, Y inc
 
-    set_window(0, 0, kW - 1, kH - 1);
+    set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
 
     command(kBorderWaveform);
     data(kBorderFollowLut1);
@@ -232,22 +228,22 @@ void Ssd1681::write_bank(uint8_t opcode) {
 }
 
 void Ssd1681::stage(const uint8_t* canvas_bytes) {
-    if (rotation_ == GlassRotation::Deg0) {
+    if (rotation_ == GlassRotation::Degrees0) {
         for (size_t i = 0; i < kGlassBytes; i++)
             shadow_[i] = static_cast<uint8_t>(~canvas_bytes[i]);
     } else {
-        for (size_t band = 0; band < kStride; band++)
-            for (size_t column = 0; column < kStride; column++)
-                turn_block(canvas_bytes + band * 8 * kStride + column,
-                           shadow_ + (kH - 8 - column * 8) * kStride + band);
+        for (size_t band = 0; band < kGlassStride; band++)
+            for (size_t column = 0; column < kGlassStride; column++)
+                turn_block(canvas_bytes + band * 8 * kGlassStride + column,
+                           shadow_ + (kGlassHeight - 8 - column * 8) * kGlassStride + band);
     }
 }
 
 void Ssd1681::set_window(int x0, int y0, int x1, int y1) {
-    command(kSetRamXAddr);
+    command(kSetRamXRange);
     data(static_cast<uint8_t>(x0 / 8));
     data(static_cast<uint8_t>(x1 / 8));
-    command(kSetRamYAddr);
+    command(kSetRamYRange);
     data(static_cast<uint8_t>(y0));
     data(static_cast<uint8_t>(y0 >> 8));
     data(static_cast<uint8_t>(y1));

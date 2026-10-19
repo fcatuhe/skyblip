@@ -100,10 +100,10 @@ TEST_CASE("sx1262: a hop between the M-band channels writes the frequency and no
     REQUIRE(radio.configure_radio(dwell(868400000)) == Status::Ok);
     CHECK(chip.receiving);
     CHECK((chip.frequency_hz + 500) / 1000 == 868400);
-    CHECK(chip.saw_command(sx::kSetRfFrequency));
-    CHECK_FALSE(chip.saw_command(sx::kSetModulationParameters));
-    CHECK_FALSE(chip.saw_command(sx::kSetPacketParameters));
-    CHECK_FALSE(chip.saw_command(sx::kWriteRegister));
+    CHECK(chip.saw_command(sx1262::kSetRfFrequency));
+    CHECK_FALSE(chip.saw_command(sx1262::kSetModulationParameters));
+    CHECK_FALSE(chip.saw_command(sx1262::kSetPacketParameters));
+    CHECK_FALSE(chip.saw_command(sx1262::kWriteRegister));
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
 }
@@ -112,7 +112,7 @@ TEST_CASE("sx1262: a part told to fall back to STDBY_XOSC keeps its TCXO through
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    command(chip, sx::kSetRxTxFallbackMode, sx::kFallbackStdbyXosc);
+    command(chip, sx1262::kSetRxTxFallbackMode, sx1262::kFallbackStandbyOnCrystalOscillator);
     REQUIRE(radio.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     REQUIRE(chip.tcxo_starts == 1);
@@ -132,11 +132,11 @@ TEST_CASE("sx1262: re-arming the dwell the radio is already tuned for keeps the 
     REQUIRE(radio.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     const auto standbys =
-        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetStandby);
+        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx1262::kSetStandby);
 
     REQUIRE(radio.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
-    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetStandby) ==
+    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx1262::kSetStandby) ==
           standbys);
     CHECK(chip.receiving);
     CHECK(chip.tcxo_starts == 1);
@@ -167,9 +167,9 @@ TEST_CASE("sx1262: after a sleep the same dwell is written again, not trusted to
     radio.sleep();
     REQUIRE(radio.wake() == Status::Ok);
     const auto tunes =
-        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetRfFrequency);
+        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx1262::kSetRfFrequency);
 
     REQUIRE(radio.configure_radio(dwell(868200000)) == Status::Ok);
-    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetRfFrequency) ==
-          tunes + 1);
+    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(),
+                     sx1262::kSetRfFrequency) == tunes + 1);
 }

@@ -64,7 +64,7 @@ class Platform {
         // The gated rails are raised at board level so MCUboot sees them too;
         // what is still owed here is the SX1262 TCXO settling time.
         k_msleep(50);
-        storage_mounted_ = kv_.begin() == Status::Ok;
+        storage_mounted_ = key_value_.begin() == Status::Ok;
         // A log partition that refuses to open is a device that flies and logs
         // nothing, not a device that refuses to fly: the region reports its own
         // readiness and the flight log service reads it.
@@ -84,8 +84,8 @@ class Platform {
 
     void wire(const io::PinMap&) {}
 
-    io::Spi& spi(io::BusId id) {
-        if (id == io::BusId::Epd) return epd_spi_;
+    io::Spi& spi(io::BusId bus) {
+        if (bus == io::BusId::Epd) return epd_spi_;
         return radio_spi_;
     }
     io::Uart& uart(io::BusId) { return gnss_uart_; }
@@ -98,7 +98,7 @@ class Platform {
 
     zephyr::Clock& clock() { return clock_; }
     zephyr::Link& link() { return link_; }
-    zephyr::KeyValueStore& key_value() { return kv_; }
+    zephyr::KeyValueStore& key_value() { return key_value_; }
     zephyr::FlashRegion& log_flash() { return log_flash_; }
     zephyr::FlashRegion& imu_flash() { return imu_flash_; }
     zephyr::Annunciator& annunciator() { return annunciator_; }
@@ -121,7 +121,7 @@ class Platform {
     bool pad_down() { return gpio_pin_get_dt(&pad_) == 1; }
 
     // INFO: fc 12sep26 the Plus mounts the glass a quarter turn off the scan (SoftRF EPD.cpp:84)
-    parts::GlassRotation glass_rotation() const { return parts::GlassRotation::Deg270; }
+    parts::GlassRotation glass_rotation() const { return parts::GlassRotation::Degrees270; }
 
     // The 21 bytes the board port clocked out of the panel, or false if it could
     // not take them at all.
@@ -154,22 +154,23 @@ class Platform {
 
     // Probe only: what silicon answered, before anything is brought up.
     ports::Capabilities capabilities() const {
-        ports::Capabilities c =
+        ports::Capabilities found =
             ports::Capability::Storage | ports::Capability::Dfu | ports::Capability::Link;
-        if (gpio_is_ready_dt(&button_) && gpio_is_ready_dt(&pad_)) c |= ports::Capability::Contacts;
-        if (device_is_ready(epd_spi_device_)) c |= ports::Capability::Display;
-        if (device_is_ready(gnss_uart_device_)) c |= ports::Capability::Gnss;
-        if (bme280_.answers()) c |= ports::Capability::Barometer;
-        if (device_is_ready(battery_device_)) c |= ports::Capability::Battery;
+        if (gpio_is_ready_dt(&button_) && gpio_is_ready_dt(&pad_))
+            found |= ports::Capability::Contacts;
+        if (device_is_ready(epd_spi_device_)) found |= ports::Capability::Display;
+        if (device_is_ready(gnss_uart_device_)) found |= ports::Capability::Gnss;
+        if (bme280_.answers()) found |= ports::Capability::Barometer;
+        if (device_is_ready(battery_device_)) found |= ports::Capability::Battery;
         // Only when the driver answered. A build with no CONFIG_TEMP_NRF5, or a
         // devicetree without the node, is a device with no die reading - and
         // saying so once here is what keeps a zero out of the status reply.
-        if (die_temperature_.ready()) c |= ports::Capability::DieTemperature;
+        if (die_temperature_.ready()) found |= ports::Capability::DieTemperature;
         // All three lamps or none. A partially populated LED node would be a
         // board file half-edited, and a table that can show two of its three
         // colours is a vocabulary a pilot cannot read.
-        if (indicator_.ready()) c |= ports::Capability::Indicator;
-        return c;
+        if (indicator_.ready()) found |= ports::Capability::Indicator;
+        return found;
     }
 
    private:
@@ -186,7 +187,7 @@ class Platform {
     const struct device* epd_spi_device_{DEVICE_DT_GET(DT_ALIAS(epd_spi))};
     const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
     const struct device* battery_device_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
-    const struct device* sensor_i2c_dev_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
+    const struct device* sensor_i2c_device_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
     // Assigned, not brace-initialised: the DT_SPEC macros ARE brace lists, so
     // member{MACRO} nests them one level too deep and the first field eats the
     // whole struct.
@@ -209,7 +210,7 @@ class Platform {
     Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
     Spi epd_spi_{epd_spi_device_, kSpiConfig, epd_cs_};
     Uart gnss_uart_{gnss_uart_device_};
-    I2c sensor_i2c_{sensor_i2c_dev_};
+    I2c sensor_i2c_{sensor_i2c_device_};
     parts::Bme280 bme280_{sensor_i2c_};
     // The default haptic: the pin, driven directly. The board replaces it the
     // moment it finds a waveform driver on the bus, which on this board is the
@@ -217,7 +218,7 @@ class Platform {
     PinMotor motor_{haptic_enable_};
     Annunciator annunciator_{buzzer_, motor_};
     Indicator indicator_{led_green_, led_red_, led_blue_};
-    KeyValueStore kv_{};
+    KeyValueStore key_value_{};
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};

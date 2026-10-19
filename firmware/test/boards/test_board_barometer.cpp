@@ -119,7 +119,7 @@ TEST_CASE("board: the published sample is the one triggered at the edge") {
     }
 
     REQUIRE(published.size() == 3);
-    for (uint32_t mpa : published) CHECK((mpa + 500) / 1000 == 95000);
+    for (uint32_t pressure_mpa : published) CHECK((pressure_mpa + 500) / 1000 == 95000);
 }
 
 TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
@@ -153,14 +153,14 @@ TEST_CASE("board: with no PPS the barometer keeps its own second and its own qua
 TEST_CASE("board: a conversion that never ends is given up at its ceiling and counted") {
     Unit u;
     u.sample_instants(0, 1000);
-    u.chip().extra_measure_us = 10000000;
+    u.chip().extra_measurement_us = 10000000;
 
     CHECK(u.sample_instants(1000, 1000 + runtime::kBarometerConversionCeilingMs).empty());
     CHECK(u.board.barometer_faults() == 0);
     CHECK(u.sample_instants(1000 + runtime::kBarometerConversionCeilingMs, 1500).empty());
     CHECK(u.board.barometer_faults() == 1);
 
-    u.chip().extra_measure_us = 0;
+    u.chip().extra_measurement_us = 0;
     CHECK(u.sample_instants(1500, 2100).size() == 1);
     CHECK(u.board.barometer_faults() == 1);
 }

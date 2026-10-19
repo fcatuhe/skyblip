@@ -22,7 +22,7 @@ class Bhi260 {
        public:
         virtual ~Image() = default;
         virtual uint32_t size() const = 0;
-        virtual bool read(uint32_t offset, uint8_t* out, uint16_t length) = 0;
+        virtual bool read(uint32_t offset, uint8_t* out, uint16_t bytes) = 0;
     };
 
     static constexpr uint8_t kAddress = 0x28;
@@ -90,7 +90,7 @@ class Bhi260 {
         uint8_t register_address{0};
         uint16_t remaining{0};
         uint16_t carried{0};
-        bool resync{false};
+        bool resynchronising{false};
         uint8_t bytes[kFifoReadBytes]{};
     };
 
@@ -130,9 +130,9 @@ class Bhi260 {
     static constexpr int32_t kCountsPerRange = 32768;
     static constexpr uint16_t kCommandHeaderBytes = 4;
 
-    bool write_registers(uint8_t register_address, const uint8_t* data, uint16_t length);
-    bool read_registers(uint8_t register_address, uint8_t* out, uint16_t length);
-    bool command(uint16_t opcode, const uint8_t* payload, uint16_t length);
+    bool write_registers(uint8_t register_address, const uint8_t* data, uint16_t bytes);
+    bool read_registers(uint8_t register_address, uint8_t* out, uint16_t bytes);
+    bool command(uint16_t opcode, const uint8_t* payload, uint16_t bytes);
     bool boot_status(uint8_t& out);
     void fail(Status why);
 
@@ -149,17 +149,17 @@ class Bhi260 {
     void start_running(uint32_t now_ms);
     bool request_parameter(uint16_t parameter);
     bool parameter_ready();
-    int read_status_channel(uint16_t& code, uint8_t* out, uint16_t max);
+    int read_status_channel(uint16_t& code, uint8_t* out, uint16_t capacity);
     void step_running(uint32_t now_ms);
 
     bool configure_sensor(uint8_t sensor, int32_t range);
     void read_hub_error();
     void drain_fifos(uint32_t now_ms);
     void drain_fifo(Fifo& fifo, uint32_t now_ms);
-    uint16_t parse_fifo(Fifo& fifo, uint16_t length, uint32_t now_ms);
+    uint16_t parse_fifo(Fifo& fifo, uint16_t bytes, uint32_t now_ms);
     void note_meta_event(const uint8_t* event);
-    static uint8_t event_bytes(uint8_t id);
-    static int16_t to_milli_g(const uint8_t* le16);
+    static uint8_t event_bytes(uint8_t event_id);
+    static int16_t to_milli_g(const uint8_t* bytes);
 
     io::I2c& bus_;
     Image* image_{nullptr};
@@ -191,7 +191,7 @@ class LinkedImage : public Bhi260::Image {
     explicit LinkedImage(ConstByteSpan bytes) : bytes_(bytes) {}
 
     uint32_t size() const override { return static_cast<uint32_t>(bytes_.size()); }
-    bool read(uint32_t offset, uint8_t* out, uint16_t length) override;
+    bool read(uint32_t offset, uint8_t* out, uint16_t bytes) override;
 
    private:
     ConstByteSpan bytes_;

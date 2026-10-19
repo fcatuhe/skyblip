@@ -48,18 +48,18 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // (see translate), which is exactly the cause the boot path must not confuse
     // a charger with. So the read happens once and is then only remembered.
     void begin() {
-        if (!read_) {
-            read_ = true;
+        if (!causes_read_) {
+            causes_read_ = true;
             causes_ = read_causes();
             hwinfo_clear_reset_cause();
         }
-        supply_.arm();
+        supply_monitor_.arm();
     }
 
     power::ResetCause reset_causes() const override { return causes_; }
 
-    bool supply_monitor_armed() const override { return supply_.armed(); }
-    bool take_supply_warning() override { return supply_.take_warning(); }
+    bool supply_monitor_armed() const override { return supply_monitor_.armed(); }
+    bool take_supply_warning() override { return supply_monitor_.take_warning(); }
 
     // The order is core/power's, not this file's: everything here is one step
     // of it, and which step happens when is decided and tested on the host.
@@ -185,7 +185,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
                 // The same three SoftRF releases, in the same place in its own
                 // teardown (nRF52.cpp:2914-2916). CS last: it is what latched
                 // the command above.
-                gpio_pin_configure_dt(&flash_wp_, GPIO_INPUT);
+                gpio_pin_configure_dt(&flash_write_protect_, GPIO_INPUT);
                 gpio_pin_configure_dt(&flash_hold_, GPIO_INPUT);
                 gpio_pin_configure_dt(&flash_cs_, GPIO_INPUT);
                 return;
@@ -203,7 +203,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
                 gpio_pin_configure_dt(&peripheral_rail_, GPIO_OUTPUT_INACTIVE);
                 return;
             case power::PowerDownStep::AuxiliaryRailOff:
-                gpio_pin_configure_dt(&aux_rail_, GPIO_OUTPUT_INACTIVE);
+                gpio_pin_configure_dt(&auxiliary_rail_, GPIO_OUTPUT_INACTIVE);
                 return;
             case power::PowerDownStep::DrivenPinsReleased: release_pins(); return;
             case power::PowerDownStep::WakePinArmed: arm_wake(); return;
@@ -216,7 +216,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // panel, and a falling NSS edge here would wake a sleeping part anyway
     // (DS 9.3), so the second SetSleep is what actually leaves it asleep.
     void radio_sleep() {
-        uint8_t frame[2] = {parts::sx::kSetSleep, parts::sx::kSleepWarmStartNoRtc};
+        uint8_t frame[2] = {parts::sx1262::kSetSleep, parts::sx1262::kSleepWarmStartNoRtc};
         k_busy_wait(kRadioCommandSettleUs);
         write_spi(radio_bus_, radio_cs_, frame, sizeof(frame));
     }
@@ -233,11 +233,11 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // Manual CS, matching the drivers: the transfer and the chip select are two
     // separate things on this board.
     static void write_spi(const struct device* bus, const struct gpio_dt_spec& cs,
-                          const uint8_t* data, size_t len) {
+                          const uint8_t* data, size_t bytes) {
         if (!device_is_ready(bus)) return;
         gpio_pin_configure_dt(&cs, GPIO_OUTPUT_ACTIVE);
-        struct spi_buf buf{const_cast<uint8_t*>(data), len};
-        struct spi_buf_set tx{&buf, 1};
+        struct spi_buf buffer{const_cast<uint8_t*>(data), bytes};
+        struct spi_buf_set tx{&buffer, 1};
         spi_write(bus, &kSpiConfig, &tx);
         gpio_pin_set_dt(&cs, 0);
     }
@@ -259,7 +259,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     void release_pins() {
         k_msleep(power::kRailSettleMs);
         gpio_pin_configure_dt(&peripheral_rail_, GPIO_INPUT | GPIO_PULL_DOWN);
-        gpio_pin_configure_dt(&aux_rail_, GPIO_INPUT | GPIO_PULL_DOWN);
+        gpio_pin_configure_dt(&auxiliary_rail_, GPIO_INPUT | GPIO_PULL_DOWN);
         gpio_pin_configure_dt(&gnss_enable_, GPIO_INPUT);
         gpio_pin_configure_dt(&gnss_reset_, GPIO_INPUT);
         gpio_pin_configure_dt(&radio_reset_, GPIO_INPUT);
@@ -310,9 +310,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     };
 
     struct gpio_dt_spec wake_;
-    SupplyMonitor supply_{};
+    SupplyMonitor supply_monitor_{};
     power::ResetCause causes_{power::ResetCause::None};
-    bool read_{false};
+    bool causes_read_{false};
 
     const struct device* radio_bus_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
     const struct device* flash_bus_{DEVICE_DT_GET(DT_BUS(DT_NODELABEL(ext_flash)))};
@@ -321,8 +321,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         GPIO_DT_SPEC_GET_BY_IDX(DT_BUS(DT_NODELABEL(ext_flash)), cs_gpios, 0);
     struct gpio_dt_spec radio_reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(radio_reset), gpios);
     struct gpio_dt_spec peripheral_rail_ = GPIO_DT_SPEC_GET(DT_ALIAS(peripheral_rail), gpios);
-    struct gpio_dt_spec aux_rail_ = GPIO_DT_SPEC_GET(DT_ALIAS(aux_rail), gpios);
-    struct gpio_dt_spec flash_wp_ = GPIO_DT_SPEC_GET(DT_ALIAS(flash_wp), gpios);
+    struct gpio_dt_spec auxiliary_rail_ = GPIO_DT_SPEC_GET(DT_ALIAS(auxiliary_rail), gpios);
+    struct gpio_dt_spec flash_write_protect_ =
+        GPIO_DT_SPEC_GET(DT_ALIAS(flash_write_protect), gpios);
     struct gpio_dt_spec flash_hold_ = GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios);
     struct gpio_dt_spec gnss_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_enable), gpios);
     struct gpio_dt_spec gnss_reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
