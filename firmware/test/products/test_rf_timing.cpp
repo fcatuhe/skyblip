@@ -28,11 +28,11 @@ using namespace skyblip;
 namespace {
 
 // A receiver-only world: PPS unlocked keeps own-ship off air, so the only bursts are a neighbour's.
-void listen_at(simulator::Simulator& h, int phase_ms, int slot) {
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_pps_locked(false);
-    h.world().add_aircraft(800, 0, 0, 30, 180, phase_ms, slot);
+void listen_at(simulator::Simulator& simulator, int phase_ms, int slot) {
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);
+    simulator.world().add_aircraft(800, 0, 0, 30, 180, phase_ms, slot);
 }
 
 // A device on the next bench: the real driver over its own part, armed for the M-band dwell.
@@ -69,42 +69,43 @@ struct Peer {
 
 // A quiet band still frames a few bursts a minute, and the tape is sixteen rows.
 TEST_CASE("rf: a window the band's own noise walked through is counted, never put on the tape") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_pps_locked(false);
-    const uint32_t start = past_settling(h);
-    run_on(h, start, 1000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);
+    const uint32_t start = past_settling(simulator);
+    run_on(simulator, start, 1000);
 
     uint8_t burst[protocol::kSyncWindowChipBytes + protocol::kRxChipBytes];
     std::memcpy(burst, protocol::kSharedSync, protocol::kSyncWindowChipBytes);
-    models::RfChannel noise(0xC0FFEE);
+    RfChannel noise(0xC0FFEE);
     for (size_t i = protocol::kSyncWindowChipBytes; i < sizeof(burst); i++)
         burst[i] = static_cast<uint8_t>(noise.next());
 
-    const int rows_before = h.product().state().radio_log.count();
-    const uint32_t bad_before = h.product().state().air.rx_bad;
+    const int rows_before = simulator.product().state().radio_log.count();
+    const uint32_t bad_before = simulator.product().state().air.rx_bad;
     const uint32_t at_ms = start + 2000 + timing::kSlot0StartMs + 200;
-    h.step(at_ms);
-    REQUIRE(h.platform().chips().radio.receive_air(burst, sizeof(burst), /*crc_error=*/false,
-                                                   /*rssi=*/-112, protocol::kMbandChipRateBps));
-    run_on(h, at_ms, 200);
+    simulator.step(at_ms);
+    REQUIRE(
+        simulator.platform().chips().radio.receive_air(burst, sizeof(burst), /*crc_error=*/false,
+                                                       /*rssi=*/-112, protocol::kMbandChipRateBps));
+    run_on(simulator, at_ms, 200);
 
-    CHECK(h.product().state().air.rx_noise == 1);
-    CHECK(h.product().state().air.rx_bad == bad_before);
-    CHECK(h.product().state().radio_log.count() == rows_before);
+    CHECK(simulator.product().state().air.rx_noise == 1);
+    CHECK(simulator.product().state().air.rx_bad == bad_before);
+    CHECK(simulator.product().state().radio_log.count() == rows_before);
 }
 
 // The page a bench reads instead of guessing from two counters that only ever climb.
 TEST_CASE("rf: what happened on air reaches the station log, sent and heard alike") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_speed_kt(50);
-    h.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
-    run_on(h, past_settling(h), 6000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    simulator.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
+    run_on(simulator, past_settling(simulator), 6000);
 
-    const radio::Log& log = h.product().state().radio_log;
+    const radio::Log& log = simulator.product().state().radio_log;
     REQUIRE(log.count() > 0);
     bool sent = false, heard = false;
     for (int i = 0; i < log.count(); i++) {
@@ -123,14 +124,14 @@ TEST_CASE("rf: what happened on air reaches the station log, sent and heard alik
 
 // One burst sent on one device and heard on another is compared on this phase alone.
 TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed in") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_speed_kt(50);
-    h.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
-    run_on(h, past_settling(h), 6000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    simulator.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
+    run_on(simulator, past_settling(simulator), 6000);
 
-    const radio::Log& log = h.product().state().radio_log;
+    const radio::Log& log = simulator.product().state().radio_log;
     int dated = 0, channelled = 0;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& entry = log.newest(i);
@@ -159,13 +160,13 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
 
 // Two devices on a bench, both transmitting, neither ever hearing the other.
 TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_speed_kt(50);
-    run_on(h, past_settling(h), 6000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), 6000);
 
-    const simulator::Air& air = h.world().air();
+    const simulator::Air& air = simulator.world().air();
     Peer peer;
     int framed = 0;
     for (int i = 0; i < air.record_count(); i++) {
@@ -188,14 +189,14 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
 TEST_CASE("rf: a paraglider below the flight speed transmits every second, flight undefined") {
     for (const uint8_t type : {uint8_t{7}, uint8_t{1}}) {
         CAPTURE(int(type));
-        simulator::Simulator h;
-        REQUIRE(h.setup() == Status::Ok);
-        h.product().settings().aircraft_type = type;
-        h.world().set_fix(true);
-        h.world().set_speed_kt(15);
-        run_on(h, past_settling(h), 20000);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.product().settings().aircraft_type = type;
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(15);
+        run_on(simulator, past_settling(simulator), 20000);
 
-        const simulator::Air& air = h.world().air();
+        const simulator::Air& air = simulator.world().air();
         Peer peer;
         int positions = 0;
         for (int i = 0; i < air.record_count(); i++) {
@@ -251,38 +252,38 @@ TEST_CASE("rf: a burst is heard only inside the dwell that owns its channel") {
         {600, 1, false},
     };
     for (const Case& c : cases) {
-        simulator::Simulator h;
-        listen_at(h, c.phase_ms, c.slot);
-        h.run(4000);
-        const int heard = count_of(h.world().air(), simulator::AirEvent::Rx);
-        const int deaf = count_of(h.world().air(), simulator::AirEvent::Deaf);
+        simulator::Simulator simulator;
+        listen_at(simulator, c.phase_ms, c.slot);
+        simulator.run(4000);
+        const int heard = count_of(simulator.world().air(), simulator::AirEvent::Rx);
+        const int deaf = count_of(simulator.world().air(), simulator::AirEvent::Deaf);
         CAPTURE(c.phase_ms);
         CAPTURE(c.slot);
         CHECK((heard > 0) == c.heard);
         CHECK((deaf > 0) == !c.heard);
-        CHECK((h.product().state().air.rx_ok > 0u) == c.heard);
+        CHECK((simulator.product().state().air.rx_ok > 0u) == c.heard);
     }
 }
 
 // A burst near the end of the second finishes after the second has rolled over.
 // Its phase is its own instant's, not the instant we noticed it ended.
 TEST_CASE("rf: a burst that straddles the second is dated by when it started") {
-    simulator::Simulator h;
-    listen_at(h, 995, 1);
-    h.run(4000);
-    const simulator::Air& air = h.world().air();
+    simulator::Simulator simulator;
+    listen_at(simulator, 995, 1);
+    simulator.run(4000);
+    const simulator::Air& air = simulator.world().air();
     REQUIRE(air.record_count() > 0);
     for (int i = 0; i < air.record_count(); i++) CHECK(air.record(i).phase_ms == 995);
 }
 
 TEST_CASE("rf: a heard burst is the frame that was on air, decoded by the real path") {
-    simulator::Simulator h;
-    listen_at(h, 600, 0);
-    h.run(3000);
-    REQUIRE(h.product().state().air.rx_ok > 0);
-    REQUIRE(h.product().state().traffic.count() == 1);
+    simulator::Simulator simulator;
+    listen_at(simulator, 600, 0);
+    simulator.run(3000);
+    REQUIRE(simulator.product().state().air.rx_ok > 0);
+    REQUIRE(simulator.product().state().traffic.count() == 1);
     char line[160];
-    REQUIRE(h.world().air().format(0, line, sizeof(line)) > 0);
+    REQUIRE(simulator.world().air().format(0, line, sizeof(line)) > 0);
     // The tape decodes what the receiver decoded: same address, CRC intact.
     CHECK(std::string(line).find("300001") != std::string::npos);
     CHECK(std::string(line).find("crc ok") != std::string::npos);
@@ -309,16 +310,16 @@ TEST_CASE("rf: a heard burst is the frame that was on air, decoded by the real p
 // What we do instead is assert the property the guard would protect, over the
 // real air, with both directions live in the same second.
 TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_speed_kt(50);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
     // A neighbour transmitting inside the first M-band dwell, so every second
     // carries a reception and a transmission on the same radio.
-    h.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
-    run_on(h, past_settling(h), 6000);
+    simulator.world().add_aircraft(1200, 300, 50, 30, 90, 600, 0);
+    run_on(simulator, past_settling(simulator), 6000);
 
-    const simulator::Air& air = h.world().air();
+    const simulator::Air& air = simulator.world().air();
     int received = 0, transmitted = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& mine = air.record(i);
@@ -348,8 +349,8 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
     // Neither half may be zero, or the case above proves nothing.
     CHECK(received > 0);
     CHECK(transmitted > 0);
-    CHECK(h.product().state().air.rx_ok > 0);
-    CHECK(h.product().state().air.tx_ok > 0);
+    CHECK(simulator.product().state().air.rx_ok > 0);
+    CHECK(simulator.product().state().air.tx_ok > 0);
 }
 
 // --- J. Range sanity, end to end --------------------------------------------
@@ -358,34 +359,34 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
 // detector, the driver, the executor and the decoder. A frame that survives all
 // of that and still claims to be 120 km away did not arrive from there.
 TEST_CASE("rf: a decoded burst claiming an impossible range never reaches the radar") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_pps_locked(false);  // receive only, so the tape is the neighbour's
-    h.world().add_aircraft(120000, 0, 0, 30, 180, 600, 0);
-    h.run(4000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);  // receive only, so the tape is the neighbour's
+    simulator.world().add_aircraft(120000, 0, 0, 30, 180, 600, 0);
+    simulator.run(4000);
 
     // Heard, decoded, CRC intact: the frame is not being refused by the radio or
     // by the protocol layer.
-    CHECK(h.product().state().air.rx_ok > 0);
-    CHECK(h.product().state().air.rx_bad == 0);
+    CHECK(simulator.product().state().air.rx_ok > 0);
+    CHECK(simulator.product().state().air.rx_bad == 0);
     // And refused by the table, counted, with nothing on the screen.
-    CHECK(h.product().state().traffic.count() == 0);
-    CHECK(h.product().state().traffic.implausible() > 0);
-    CHECK(h.product().state().alarm_level == traffic::Level::None);
+    CHECK(simulator.product().state().traffic.count() == 0);
+    CHECK(simulator.product().state().traffic.implausible() > 0);
+    CHECK(simulator.product().state().alarm_level == traffic::Level::None);
 }
 
 // The same air with the same aircraft at a range this radio can actually reach:
 // the gate is a ceiling on nonsense, not a filter on traffic.
 TEST_CASE("rf: a burst from a range the link budget allows is traffic as before") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    h.world().set_fix(true);
-    h.world().set_pps_locked(false);
-    h.world().add_aircraft(8000, 0, 0, 30, 180, 600, 0);
-    h.run(4000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);
+    simulator.world().add_aircraft(8000, 0, 0, 30, 180, 600, 0);
+    simulator.run(4000);
 
-    CHECK(h.product().state().air.rx_ok > 0);
-    CHECK(h.product().state().traffic.count() == 1);
-    CHECK(h.product().state().traffic.implausible() == 0);
+    CHECK(simulator.product().state().air.rx_ok > 0);
+    CHECK(simulator.product().state().traffic.count() == 1);
+    CHECK(simulator.product().state().traffic.implausible() == 0);
 }

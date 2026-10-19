@@ -15,40 +15,40 @@
 using namespace skyblip;
 using namespace skyblip::parts;
 
-TEST_CASE("radio: the tuned channel is what the PLL word resolves back to") {
+TEST_CASE("sx1262: the tuned channel is what the PLL word resolves back to") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     // Both ADS-L M-band channels, 200 kHz apart (SRD-860 issue 2 C.2).
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz > 868199000);
     CHECK(chip.freq_hz < 868201000);
     cfg.freq_hz = 868400000;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz > 868399000);
     CHECK(chip.freq_hz < 868401000);
 }
 
-TEST_CASE("radio: carrier sense reads the level on the tuned channel") {
+TEST_CASE("sx1262: carrier sense reads the level on the tuned channel") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    REQUIRE(r.start_receive() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
     chip.rssi_dbm = -110;
-    CHECK(r.instant_rssi_dbm() == -110);
+    CHECK(radio.instant_rssi_dbm() == -110);
     chip.rssi_dbm = -48;
-    CHECK(r.instant_rssi_dbm() == -48);
+    CHECK(radio.instant_rssi_dbm() == -48);
 }
 
-TEST_CASE("radio: an assessment interval is a run of reads, each answering for its own instant") {
+TEST_CASE("sx1262: an assessment interval is a run of reads, each answering for its own instant") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    REQUIRE(r.start_receive() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
 
     const int8_t levels[4] = {-112, -112, -44, -112};
     chip.set_rssi_sequence(levels, 4);
@@ -56,39 +56,39 @@ TEST_CASE("radio: an assessment interval is a run of reads, each answering for i
         for (int i = 0; i < 4; i++) {
             CAPTURE(pass);
             CAPTURE(i);
-            CHECK(r.instant_rssi_dbm() == levels[i]);
+            CHECK(radio.instant_rssi_dbm() == levels[i]);
         }
 
     // With no sequence loaded the chip answers one steady level, as before.
     chip.set_rssi_sequence(nullptr, 0);
     chip.rssi_dbm = -97;
-    CHECK(r.instant_rssi_dbm() == -97);
-    CHECK(r.instant_rssi_dbm() == -97);
+    CHECK(radio.instant_rssi_dbm() == -97);
+    CHECK(radio.instant_rssi_dbm() == -97);
 }
 
-TEST_CASE("radio: a delivered packet carries the level it arrived with") {
+TEST_CASE("sx1262: a delivered packet carries the level it arrived with") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    REQUIRE(r.start_receive() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
     uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, 4, /*crc_error=*/false, /*rssi=*/-73);
     uint8_t buf[8];
-    const RadioEvent ev = r.poll(buf, sizeof(buf));
+    const RadioEvent ev = radio.poll(buf, sizeof(buf));
     CHECK(ev.type == RadioEventType::RxDone);
     CHECK(ev.rssi_dbm == -73);
 }
 
-TEST_CASE("radio: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 kHz, unshaped") {
+TEST_CASE("sx1262: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 kHz, unshaped") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.modulation_set);
     CHECK(chip.bitrate == 100000);
     CHECK(chip.fdev_hz > 49990);
@@ -103,10 +103,10 @@ TEST_CASE("radio: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 
     CHECK(chip.command_order(sx::kSetModulationParams) < chip.command_order(sx::kSetPacketParams));
 }
 
-TEST_CASE("radio: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {
+TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 869525000;
     cfg.bitrate = protocol::kUplinkChipRateBps;
@@ -116,7 +116,7 @@ TEST_CASE("radio: the O band is programmed for 200 kbps GMSK in a 250 kHz channe
     cfg.sync = protocol::kUplinkSync;
     cfg.sync_bits = protocol::kUplinkSyncBits;
     cfg.payload_bytes = protocol::kUplinkFrameBytes;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.bitrate == 200000);
     CHECK(chip.fdev_hz > 49990);
     CHECK(chip.fdev_hz < 50010);
@@ -130,7 +130,7 @@ TEST_CASE("radio: the O band is programmed for 200 kbps GMSK in a 250 kHz channe
     CHECK(chip.payload_bytes == 255);
 }
 
-TEST_CASE("radio: a modem left on its reset defaults frames nothing off the air") {
+TEST_CASE("sx1262: a modem left on its reset defaults frames nothing off the air") {
     models::Sx1262 chip;
     chip.sync_bits = protocol::kSharedSyncBits;
     chip.payload_bytes = protocol::kRxChipBytes;
@@ -149,24 +149,24 @@ TEST_CASE("radio: a modem left on its reset defaults frames nothing off the air"
 // no-op when it is zero and moves the carrier the right way by the right amount
 // when it is not, because nothing on the device can measure the answer back.
 
-TEST_CASE("radio: with no frequency trim the PLL word is exactly the channel asked for") {
+TEST_CASE("sx1262: with no frequency trim the PLL word is exactly the channel asked for") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     const uint32_t untrimmed = chip.freq_hz;
 
     cfg.freq_corr_e1_ppm = 0;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz == untrimmed);
 }
 
-TEST_CASE("radio: a frequency trim moves the programmed carrier by its own ppm, both ways") {
+TEST_CASE("sx1262: a frequency trim moves the programmed carrier by its own ppm, both ways") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
 
@@ -175,12 +175,12 @@ TEST_CASE("radio: a frequency trim moves the programmed carrier by its own ppm, 
     // to the frequency it programmed: a couple of hertz of slack is the two
     // truncations, not the trim.
     cfg.freq_corr_e1_ppm = 100;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz >= 868208680u);
     CHECK(chip.freq_hz <= 868208682u);
 
     cfg.freq_corr_e1_ppm = -100;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz >= 868191316u);
     CHECK(chip.freq_hz <= 868191318u);
 
@@ -189,34 +189,34 @@ TEST_CASE("radio: a frequency trim moves the programmed carrier by its own ppm, 
     // transmit on would leave the uplink dwell mistuned.
     cfg.freq_hz = 869525000;
     cfg.freq_corr_e1_ppm = 100;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz >= 869533693u);
     CHECK(chip.freq_hz <= 869533695u);
 }
 
-TEST_CASE("radio: a trim past the band's own limit is clamped, not programmed") {
+TEST_CASE("sx1262: a trim past the band's own limit is clamped, not programmed") {
     // The two bounds are the same number in two layers: what the flash blob
     // accepts and what the PLL word is allowed to carry. If they ever part, a
     // stored value would be silently altered on its way to the synthesiser.
     CHECK(int(sx::kFreqTrimCeilingE1Ppm) == int(go::kFreqTrimCeilingE1Ppm));
 
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
     cfg.freq_corr_e1_ppm = sx::kFreqTrimCeilingE1Ppm;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     const uint32_t at_limit = chip.freq_hz;
 
     cfg.freq_corr_e1_ppm = 32767;  // whatever wrote this, it was not a bench
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz == at_limit);
     // ERC 70-03 band h1.4 is 868.0-868.6 MHz and the clamp is what keeps a
     // trimmed carrier inside it whatever it was handed.
     CHECK(chip.freq_hz < 868600000u);
 
     cfg.freq_corr_e1_ppm = -32768;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     CHECK(chip.freq_hz > 868000000u);
 }

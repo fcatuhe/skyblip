@@ -13,165 +13,165 @@ using namespace skyblip;
 
 namespace {
 
-parts::Ssd1681 make_turned(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin, -1,
+parts::Ssd1681 turned_driver_for(models::Ssd1681& chip) {
+    return parts::Ssd1681(chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin, -1,
                           parts::GlassRotation::Deg270);
 }
 
 // One pixel of panel RAM, addressed as the controller does: a source on a gate line, black at 0.
-bool ram_black(const models::Ssd1681& f, int source, int gate) {
+bool ram_black(const models::Ssd1681& chip, int source, int gate) {
     const size_t byte = size_t(gate) * parts::Ssd1681Glass::kStride + size_t(source >> 3);
-    return byte < f.ram.size() && (f.ram[byte] & (0x80 >> (source & 7))) == 0;
+    return byte < chip.ram.size() && (chip.ram[byte] & (0x80 >> (source & 7))) == 0;
 }
 
 }  // namespace
 
-TEST_CASE("epd: begin() runs the SSD1681 init sequence and resets the panel") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
-    CHECK(f.reset_pulses >= 1);
-    CHECK(f.saw_command(0x12));  // SW reset
-    CHECK(f.saw_command(0x01));  // driver output control
-    CHECK(f.saw_command(0x11));  // data entry mode
-    CHECK(f.saw_command(0x3C));  // border waveform
-    CHECK(f.saw_command(0x18));  // temperature sensor
+TEST_CASE("ssd1681: begin() runs the SSD1681 init sequence and resets the panel") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
+    CHECK(chip.reset_pulses >= 1);
+    CHECK(chip.saw_command(0x12));  // SW reset
+    CHECK(chip.saw_command(0x01));  // driver output control
+    CHECK(chip.saw_command(0x11));  // data entry mode
+    CHECK(chip.saw_command(0x3C));  // border waveform
+    CHECK(chip.saw_command(0x18));  // temperature sensor
 }
 
 // 10 ms as a literal: the test this replaced compared epd::kResetHoldSpins with itself.
-TEST_CASE("epd: RES# is held low for the vendor's 10 ms, at begin and at every wake") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
-    CHECK(f.reset_low_us >= 10000);
-    CHECK(f.short_resets == 0);
+TEST_CASE("ssd1681: RES# is held low for the vendor's 10 ms, at begin and at every wake") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
+    CHECK(chip.reset_low_us >= 10000);
+    CHECK(chip.short_resets == 0);
 
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
-    d.present(canvas, ports::Refresh::Full, 0);
-    settle(d, 0);
-    d.power_off();
-    REQUIRE_FALSE(f.powered);
+    driver.present(canvas, ports::Refresh::Full, 0);
+    refresh_to_ready(driver, 0);
+    driver.power_off();
+    REQUIRE_FALSE(chip.powered);
 
-    f.reset_low_us = 0;
-    d.present(canvas, ports::Refresh::Partial, 5000);
-    CHECK(f.reset_low_us >= 10000);
-    CHECK(f.powered);
-    CHECK(f.short_resets == 0);
+    chip.reset_low_us = 0;
+    driver.present(canvas, ports::Refresh::Partial, 5000);
+    CHECK(chip.reset_low_us >= 10000);
+    CHECK(chip.powered);
+    CHECK(chip.short_resets == 0);
 }
 
 // A glitched RES# leaves a deep-sleeping SSD1681 asleep, BUSY high, first image forever.
-TEST_CASE("epd: a RES# pulse one microsecond under 10 ms leaves a sleeping panel asleep") {
-    models::Ssd1681 f;
+TEST_CASE("ssd1681: a RES# pulse one microsecond under 10 ms leaves a sleeping panel asleep") {
+    models::Ssd1681 chip;
     const uint8_t deep_sleep = 0x10;
-    f.set(f.dc_pin, false);
-    f.transfer(&deep_sleep, nullptr, 1);
-    REQUIRE_FALSE(f.powered);
+    chip.set(chip.dc_pin, false);
+    chip.transfer(&deep_sleep, nullptr, 1);
+    REQUIRE_FALSE(chip.powered);
 
-    f.set(f.reset_pin, false);
-    f.wait_at_least_us(9999);
-    f.set(f.reset_pin, true);
-    CHECK_FALSE(f.powered);
-    CHECK(f.short_resets == 1);
+    chip.set(chip.reset_pin, false);
+    chip.wait_at_least_us(9999);
+    chip.set(chip.reset_pin, true);
+    CHECK_FALSE(chip.powered);
+    CHECK(chip.short_resets == 1);
 
-    f.set(f.reset_pin, false);
-    f.wait_at_least_us(10000);
-    f.set(f.reset_pin, true);
-    CHECK(f.powered);
-    CHECK(f.reset_pulses == 1);
+    chip.set(chip.reset_pin, false);
+    chip.wait_at_least_us(10000);
+    chip.set(chip.reset_pin, true);
+    CHECK(chip.powered);
+    CHECK(chip.reset_pulses == 1);
 }
 
-TEST_CASE("epd: present() writes a full framebuffer with correct black/white polarity") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
+TEST_CASE("ssd1681: present() writes a full framebuffer with correct black/white polarity") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
 
     parts::Ssd1681Glass canvas;
     canvas.clear(/*white=*/true);
-    d.present(canvas, ports::Refresh::Full, 0);
+    driver.present(canvas, ports::Refresh::Full, 0);
 
-    CHECK(f.ram.size() == parts::Ssd1681Glass::kBytes);
+    CHECK(chip.ram.size() == parts::Ssd1681Glass::kBytes);
     // An all-white framebuffer becomes all 0xFF in panel RAM (inverted).
     bool all_ff = true;
-    for (uint8_t b : f.ram)
+    for (uint8_t b : chip.ram)
         if (b != 0xFF) all_ff = false;
     CHECK(all_ff);
-    CHECK(f.saw_command(0x24));  // WriteRAM
-    CHECK(f.saw_command(0x20));  // Master activation
+    CHECK(chip.saw_command(0x24));  // WriteRAM
+    CHECK(chip.saw_command(0x20));  // Master activation
 }
 
-TEST_CASE("epd: a black pixel flips the corresponding RAM bit to 0") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
+TEST_CASE("ssd1681: a black pixel flips the corresponding RAM bit to 0") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
 
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
     canvas.set_pixel(0, 0, /*black=*/true);
-    d.present(canvas, ports::Refresh::Full, 0);
+    driver.present(canvas, ports::Refresh::Full, 0);
 
     // First RAM byte now has at least one cleared bit (was 0xFF all-white).
-    CHECK(f.ram[0] != 0xFF);
+    CHECK(chip.ram[0] != 0xFF);
 }
 
-TEST_CASE("epd: an unturned glass takes framebuffer rows as gate lines") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
+TEST_CASE("ssd1681: an unturned glass takes framebuffer rows as gate lines") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
 
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
     canvas.set_pixel(0, 0, true);
     canvas.set_pixel(199, 0, true);
     canvas.set_pixel(3, 8, true);
-    d.present(canvas, ports::Refresh::Full, 0);
+    driver.present(canvas, ports::Refresh::Full, 0);
 
-    REQUIRE(f.ram.size() == parts::Ssd1681Glass::kBytes);
-    CHECK(ram_black(f, 0, 0));
-    CHECK(ram_black(f, 199, 0));
-    CHECK(ram_black(f, 3, 8));
-    CHECK_FALSE(ram_black(f, 0, 199));
+    REQUIRE(chip.ram.size() == parts::Ssd1681Glass::kBytes);
+    CHECK(ram_black(chip, 0, 0));
+    CHECK(ram_black(chip, 199, 0));
+    CHECK(ram_black(chip, 3, 8));
+    CHECK_FALSE(ram_black(chip, 0, 199));
 }
 
 // The Plus mounts the glass a quarter turn off the scan: unturned here, the device reads sideways.
-TEST_CASE("epd: a glass turned 270 degrees takes framebuffer columns as gate lines") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make_turned(f);
-    d.begin();
+TEST_CASE("ssd1681: a glass turned 270 degrees takes framebuffer columns as gate lines") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = turned_driver_for(chip);
+    driver.begin();
 
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
     canvas.set_pixel(0, 0, true);
     canvas.set_pixel(199, 0, true);
     canvas.set_pixel(3, 8, true);
-    d.present(canvas, ports::Refresh::Full, 0);
+    driver.present(canvas, ports::Refresh::Full, 0);
 
-    REQUIRE(f.ram.size() == parts::Ssd1681Glass::kBytes);
+    REQUIRE(chip.ram.size() == parts::Ssd1681Glass::kBytes);
     // (x, y) lands on source y of gate line 199 - x.
-    CHECK(ram_black(f, 0, 199));
-    CHECK(ram_black(f, 0, 0));
-    CHECK(ram_black(f, 8, 196));
-    CHECK_FALSE(ram_black(f, 199, 0));
+    CHECK(ram_black(chip, 0, 199));
+    CHECK(ram_black(chip, 0, 0));
+    CHECK(ram_black(chip, 8, 196));
+    CHECK_FALSE(ram_black(chip, 199, 0));
 }
 
-TEST_CASE("epd: a turned glass writes the same count of black pixels it was handed") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make_turned(f);
-    d.begin();
+TEST_CASE("ssd1681: a turned glass writes the same count of black pixels it was handed") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = turned_driver_for(chip);
+    driver.begin();
 
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
     for (int i = 0; i < 200; i++) canvas.set_pixel(i, i / 2, true);
-    d.present(canvas, ports::Refresh::Full, 0);
+    driver.present(canvas, ports::Refresh::Full, 0);
 
     int black = 0;
     for (int gate = 0; gate < parts::Ssd1681::kGlassHeight; gate++)
         for (int source = 0; source < parts::Ssd1681::kGlassWidth; source++)
-            if (ram_black(f, source, gate)) black++;
+            if (ram_black(chip, source, gate)) black++;
     CHECK(black == canvas.count_black());
 }
 
-TEST_CASE("epd: the five signatures shipped in T-Echos are told apart") {
+TEST_CASE("ssd1681: the five signatures shipped in T-Echos are told apart") {
     CHECK(parts::identify_panel(parts::panels::kGdeh0154D67Syx1942) ==
           parts::Panel::Gdeh0154D67Syx1942);
     CHECK(parts::identify_panel(parts::panels::kGdeh0154D67Syx2118) ==
@@ -183,7 +183,7 @@ TEST_CASE("epd: the five signatures shipped in T-Echos are told apart") {
     CHECK(parts::identify_panel(parts::panels::kElecrowM1) == parts::Panel::ElecrowM1);
 }
 
-TEST_CASE("epd: 2118 and 2129 are the same in 0x2D and only 0x2E separates them") {
+TEST_CASE("ssd1681: 2118 and 2129 are the same in 0x2D and only 0x2E separates them") {
     // The reason the ident reads both registers. A table keyed on 0x2D alone
     // would answer this question with whichever row it happened to try first.
     for (int i = 0; i < parts::kPanelIdBytes2d; i++)
@@ -198,7 +198,7 @@ TEST_CASE("epd: 2118 and 2129 are the same in 0x2D and only 0x2E separates them"
     CHECK(register_2e_differs);
 }
 
-TEST_CASE("epd: a signature nobody has recorded is unlisted, and an unread one is neither") {
+TEST_CASE("ssd1681: a signature nobody has recorded is unlisted, and an unread one is neither") {
     // The seventh row of SoftRF's table is the Plus - our own board - and it
     // carries no bytes at all, only the string "20.05.21". So this is the answer
     // this board is expected to give until somebody reads one on a bench.
@@ -218,14 +218,14 @@ TEST_CASE("epd: a signature nobody has recorded is unlisted, and an unread one i
     CHECK(parts::identify_panel(zeroes) == parts::Panel::Unknown);
 }
 
-TEST_CASE("epd: the identity is a name the self-test page can print") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
-    CHECK(std::string(d.panel_name()) == "NO ID");
+TEST_CASE("ssd1681: the identity is a name the self-test page can print") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
+    CHECK(std::string(driver.panel_name()) == "NO ID");
 
-    d.adopt(parts::panels::kDepg0150Bn);
-    CHECK(std::string(d.panel_name()) == "DEPG0150");
+    driver.adopt(parts::panels::kDepg0150Bn);
+    CHECK(std::string(driver.panel_name()) == "DEPG0150");
 
     // Short enough to share a row with a name and a verdict inside 200 pixels.
     for (int i = 0; i <= int(parts::Panel::ElecrowM1); i++) {
@@ -236,16 +236,16 @@ TEST_CASE("epd: the identity is a name the self-test page can print") {
 
 // A canvas of another size would be written as if it were this glass: same bank,
 // same window, rows sheared by the stride it does not have.
-TEST_CASE("epd: a canvas that is not this glass never reaches the panel") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
+TEST_CASE("ssd1681: a canvas that is not this glass never reaches the panel") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
 
     ui::Panel<128, 64> other;
     other.clear(/*white=*/false);
-    const int presents = f.present_count;
-    d.present(other, ports::Refresh::Full, 0);
+    const int presents = chip.present_count;
+    driver.present(other, ports::Refresh::Full, 0);
 
     CHECK_FALSE(parts::Ssd1681::drives(other));
-    CHECK(f.present_count == presents);
+    CHECK(chip.present_count == presents);
 }

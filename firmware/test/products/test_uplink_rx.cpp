@@ -75,7 +75,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, in
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(aircraft, n, /*key_index=*/0, frame) == Status::Ok);
     if (corrupt_bytes > 0) {
-        models::RfChannel channel(0x5150);
+        RfChannel channel(0x5150);
         channel.apply_symbol_errors(frame, sizeof(frame), corrupt_bytes);
     }
 
@@ -172,7 +172,7 @@ struct FeatureRig {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.utc_s = Rig::kUtcBase;
+        state.own.utc_s = Rig::kBaseUtcS;
         // The same place Rig flies, because the table's range gate
         // (core/traffic/sanity.h) measures a relayed position against own-ship's:
         // a rig claiming a fix at 0N 0E is 5000 km from the aircraft this frame

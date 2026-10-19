@@ -12,22 +12,11 @@
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
 #include "doctest/doctest.h"
+#include "test/support/random.h"
 
 using namespace skyblip::protocol;
 
 namespace {
-// Deterministic xorshift so Monte-Carlo runs are reproducible in CI.
-struct Rng {
-    uint32_t s;
-    explicit Rng(uint32_t seed) : s(seed) {}
-    uint32_t next() {
-        s ^= s << 13;
-        s ^= s >> 17;
-        s ^= s << 5;
-        return s;
-    }
-};
-
 AdslPacket make_reference() {
     AdslPacket p;
     p.init();
@@ -137,7 +126,7 @@ TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") 
     //   detected  = check_crc != 0 after correct() (safe: we know it failed)
     //   silent    = check_crc == 0 but payload != original (the DANGER mode)
     // We assert silent miscorrection stays rare and is *counted*, never hidden.
-    Rng rng(0xC0FFEE);
+    skyblip::Random rng(0xC0FFEE);
     const int kTrials = 20000;
     int good = 0, detected = 0, silent = 0;
 

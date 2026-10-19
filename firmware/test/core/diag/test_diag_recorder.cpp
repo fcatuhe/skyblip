@@ -6,11 +6,11 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kBaseUtc = 1789000000;
+constexpr uint32_t kBaseUtcS = 1789000000;
 
 diag::Instant at_ms(uint32_t millis) {
     diag::Instant at{};
-    at.at_s = kBaseUtc + millis / 1000;
+    at.at_s = kBaseUtcS + millis / 1000;
     at.into_ms = static_cast<uint16_t>(millis % 1000);
     at.phase_valid = true;
     at.utc_dated = true;
@@ -97,7 +97,7 @@ TEST_CASE("diag recorder: a burst carries its own instant off the tape") {
     recorder.arm();
     radio::Entry entry{};
     entry.verdict = radio::Verdict::Transmitted;
-    entry.at_s = kBaseUtc;
+    entry.at_s = kBaseUtcS;
     entry.into_ms = 462;
     entry.phase_valid = true;
     entry.utc_dated = true;
@@ -106,7 +106,7 @@ TEST_CASE("diag recorder: a burst carries its own instant off the tape") {
     diag::Record record{};
     CHECK(took(recorder, record));
     CHECK(record.type == diag::Type::Burst);
-    CHECK(record.at_s == kBaseUtc);
+    CHECK(record.at_s == kBaseUtcS);
     CHECK(record.into_ms == 462);
 }
 
@@ -141,7 +141,7 @@ TEST_CASE("diag recorder: the hole is a gap record where the hole is") {
     }
     CHECK(took(recorder, record));
     CHECK(record.type == diag::Type::Gap);
-    CHECK(record.at_s == kBaseUtc + 2);
+    CHECK(record.at_s == kBaseUtcS + 2);
     CHECK(record.into_ms == 0);
 
     diag::Gap gap{};

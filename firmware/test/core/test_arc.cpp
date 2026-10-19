@@ -1,5 +1,6 @@
 // Where an aircraft will be if it keeps doing what it is doing: one path, drawn and alarmed on.
 #include "core/flight/arc.h"
+#include "core/units/units.h"
 #include "core/util/intmath.h"
 #include "doctest/doctest.h"
 
@@ -10,8 +11,6 @@ namespace {
 
 constexpr uint32_t kStepMs = 1000;
 constexpr int32_t kThermalSpeedMmS = 23150;
-
-uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 512 / 360); }
 
 Motion flying(int track_deg, int32_t speed_mm_s, int16_t turn_dps) {
     Motion m{};
@@ -95,7 +94,7 @@ TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
 TEST_CASE("arc: a target with no velocity of its own does not fly anywhere") {
     model::AircraftObservation observation{};
     observation.speed_valid = false;
-    observation.track_c9 = c9(180);
+    observation.track_c9 = to_cordic9(CentiDegrees(18000)).v;
     const Position p = after(motion_of(observation, 0, false), 60);
     CHECK(p.north_m == 0);
     CHECK(p.east_m == 0);

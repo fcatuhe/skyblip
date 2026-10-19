@@ -12,17 +12,15 @@ using namespace skyblip;
 
 namespace {
 
-uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 512 / 360); }
-
 model::AircraftObservation contact(const model::Ownship& own, int north_m, int east_m, int up_m,
-                                   int mps, int track_deg, uint32_t at_ms) {
+                                   int speed_mps, int track_deg, uint32_t at_ms) {
     model::AircraftObservation t{};
     t.address = 0x515151;
     t.address_mapping_table = 6;
     t.position_valid = true;
     t.speed_valid = true;
-    t.speed_q = static_cast<uint16_t>(mps * 4);
-    t.track_c9 = c9(track_deg);
+    t.speed_q = static_cast<uint16_t>(speed_mps * 4);
+    t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).v;
     t.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
     t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
@@ -36,7 +34,7 @@ model::AircraftObservation contact(const model::Ownship& own, int north_m, int e
 }
 
 struct Flight {
-    Rig rig;
+    ScreenRig rig;
 
     Flight() {
         rig.state.own.fix_valid = true;
@@ -47,21 +45,21 @@ struct Flight {
         rig.state.own.track_cdeg = 9000;
     }
 
-    void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms,
+    void hear(int north_m, int east_m, int up_m, int speed_mps, int track_deg, uint32_t now_ms,
               flight::FlightState says = flight::FlightState::Unknown,
               uint32_t address = 0x515151) {
         rig.state.own.fix_at_ms = now_ms;
         model::AircraftObservation observation =
-            contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
+            contact(rig.state.own, north_m, east_m, up_m, speed_mps, track_deg, now_ms);
         observation.address = address;
         observation.flight_state = static_cast<uint8_t>(says);
         rig.state.traffic.update(observation, now_ms / 1000);
         rig.alarm_service.tick(now_ms);
     }
 
-    void own_state(flight::FlightState state, int mps) {
+    void own_state(flight::FlightState state, int speed_mps) {
         rig.state.own.flight_state = static_cast<uint8_t>(state);
-        rig.state.own.speed_mm_s = mps * 1000;
+        rig.state.own.speed_mm_s = speed_mps * 1000;
     }
 
     bool quiet() {

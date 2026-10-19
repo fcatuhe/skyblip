@@ -33,7 +33,7 @@ bool scale_drawn(const Glass& canvas) {
 
 }  // namespace
 
-TEST_CASE("gmeter: level flight puts the marker in the middle of the field") {
+TEST_CASE("gmeter page: level flight puts the marker in the middle of the field") {
     Glass canvas;
     draw_gmeter(canvas, flying());
 
@@ -41,7 +41,7 @@ TEST_CASE("gmeter: level flight puts the marker in the middle of the field") {
     CHECK(reads_in(canvas, "+1.0", 40, 138, 120, 156, 2));
 }
 
-TEST_CASE("gmeter: the three axes each read their own now, most and least") {
+TEST_CASE("gmeter page: the three axes each read their own now, most and least") {
     GMeterSnapshot s = flying();
     s.now = flight::GLoad{2300, -400, 300};
     s.most = flight::GLoad{4200, 700, 300};
@@ -66,7 +66,7 @@ TEST_CASE("gmeter: the three axes each read their own now, most and least") {
 }
 
 // The field shows where the load throws you: pull g and the marker sinks.
-TEST_CASE("gmeter: the marker moves the way the aircraft is loaded") {
+TEST_CASE("gmeter page: the marker moves the way the aircraft is loaded") {
     GMeterSnapshot pulling = flying();
     pulling.now = flight::GLoad{3000, 0, 0};
     pulling.most = flight::GLoad{3000, 0, 0};
@@ -91,7 +91,7 @@ TEST_CASE("gmeter: the marker moves the way the aircraft is loaded") {
 }
 
 // Braking throws you at the nose, which is the top of the strip.
-TEST_CASE("gmeter: the longitudinal strip stands up, with the nose at the top") {
+TEST_CASE("gmeter page: the longitudinal strip stands up, with the nose at the top") {
     GMeterSnapshot braking = flying();
     braking.now = flight::GLoad{1000, 0, -500};
     braking.least = flight::GLoad{1000, 0, -500};
@@ -112,7 +112,7 @@ TEST_CASE("gmeter: the longitudinal strip stands up, with the nose at the top") 
 }
 
 // A hand on a nothing is noise: zero is zero whichever way it is not leaning.
-TEST_CASE("gmeter: a reading of zero carries no sign and no hand") {
+TEST_CASE("gmeter page: a reading of zero carries no sign and no hand") {
     Glass canvas;
     draw_gmeter(canvas, flying());
 
@@ -123,7 +123,7 @@ TEST_CASE("gmeter: a reading of zero carries no sign and no hand") {
     CHECK_FALSE(reads_in(canvas, "+0.0", 40, 178, 120, 196, 2));
 }
 
-TEST_CASE("gmeter: the strip says which end is which, so no sign has to be remembered") {
+TEST_CASE("gmeter page: the strip says which end is which, so no sign has to be remembered") {
     Glass canvas;
     draw_gmeter(canvas, flying());
 
@@ -131,7 +131,7 @@ TEST_CASE("gmeter: the strip says which end is which, so no sign has to be remem
     CHECK(reads_in(canvas, "ACC", 152, 120, 180, 136));
 }
 
-TEST_CASE("gmeter: a unit with no sensor prints no scale to read nothing off") {
+TEST_CASE("gmeter page: a unit with no sensor prints no scale to read nothing off") {
     GMeterSnapshot none;
     Glass canvas;
     draw_gmeter(canvas, none);
@@ -141,7 +141,7 @@ TEST_CASE("gmeter: a unit with no sensor prints no scale to read nothing off") {
 }
 
 // The ball's cage is drawn empty for the same reason: the scale is true, the reading is not there.
-TEST_CASE("gmeter: a sensor that has not reported yet leaves the field empty") {
+TEST_CASE("gmeter page: a sensor that has not reported yet leaves the field empty") {
     GMeterSnapshot waiting;
     waiting.inclinometer_fitted = true;
     Glass canvas;

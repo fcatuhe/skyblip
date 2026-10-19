@@ -37,7 +37,8 @@ skyblip::gnss::SkyView sky_of(int gps, int beidou, int used) {
 }  // namespace
 
 // The page a pilot on the apron opens: what is up there, how loud, and which ones solved.
-TEST_CASE("sats: a bar for every satellite in view, filled for the ones in the solution") {
+TEST_CASE(
+    "satellites page: a bar for every satellite in view, filled for the ones in the solution") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
     SatsSnapshot snapshot;
     snapshot.levels_live = true;
@@ -63,7 +64,7 @@ TEST_CASE("sats: a bar for every satellite in view, filled for the ones in the s
 }
 
 // A level nobody has measured yet is not drawn as a level of zero.
-TEST_CASE("sats: before the first GSV set the solution stands in for the bars") {
+TEST_CASE("satellites page: before the first GSV set the solution stands in for the bars") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
     SatsSnapshot snapshot;
     snapshot.fix_valid = true;
@@ -79,7 +80,8 @@ TEST_CASE("sats: before the first GSV set the solution stands in for the bars") 
     CHECK(ink_in(canvas, 4, 40, 196, 130) == 0);
 }
 
-TEST_CASE("sats: a receiver that has heard nothing says so rather than drawing an empty chart") {
+TEST_CASE(
+    "satellites page: a receiver that heard nothing says so rather than drawing an empty chart") {
     SatsSnapshot snapshot;
     snapshot.stage = skyblip::gnss::Stage::Blind;
     Glass canvas;

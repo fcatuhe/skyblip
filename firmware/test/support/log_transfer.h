@@ -61,22 +61,22 @@ inline const platform::host::Link::Frame* last_log_frame(Rig& rig) {
 }
 
 // The tablet's two-step list: how many flights, then one line each.
-inline std::string list_session(Rig& rig, uint32_t& t, uint32_t index) {
+inline std::string list_session(Rig& rig, uint32_t& now_ms, uint32_t index) {
     char command[64];
     std::snprintf(command, sizeof(command), "{\"cmd\":\"list\",\"index\":%u}", index);
     rig.platform.link().clear();
     rig.send_log(command);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     const platform::host::Link::Frame* frame = last_log_frame(rig);
     return frame == nullptr ? "" : frame->bytes;
 }
 
-inline std::string list_count(Rig& rig, uint32_t& t) {
+inline std::string list_count(Rig& rig, uint32_t& now_ms) {
     rig.platform.link().clear();
     rig.send_log("{\"cmd\":\"list\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     const platform::host::Link::Frame* frame = last_log_frame(rig);
     return frame == nullptr ? "" : frame->bytes;
 }

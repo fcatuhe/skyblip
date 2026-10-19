@@ -18,7 +18,7 @@ std::string described(const Settings& from, const Settings& to) {
 
 }  // namespace
 
-TEST_CASE("settings changes: each change is a row in the menu's words, and nothing else is") {
+TEST_CASE("settings changes page: each change is a row in the menu's words, and nothing else is") {
     const Settings from = defaults();
     Settings to = from;
     std::strcpy(to.callsign, "F-JXYZ");
@@ -31,7 +31,8 @@ TEST_CASE("settings changes: each change is a row in the menu's words, and nothi
     CHECK(described(from, to) == "TYPE GLIDER\nVOLUME SOFT");
 }
 
-TEST_CASE("settings changes: a cleared callsign, a silenced alarm and the bench trims read whole") {
+TEST_CASE(
+    "settings changes page: a cleared callsign, a silenced alarm and the bench trims read whole") {
     Settings from = defaults();
     std::strcpy(from.callsign, "F-JABCDEF");
     Settings to = from;
@@ -42,7 +43,7 @@ TEST_CASE("settings changes: a cleared callsign, a silenced alarm and the bench 
     CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nBATTERY -20 MV\nFREQ TRIM +1.5 PPM");
 }
 
-TEST_CASE("settings changes: past four rows the last one counts the rest") {
+TEST_CASE("settings changes page: past four rows the last one counts the rest") {
     const Settings from = defaults();
     Settings to = from;
     to.aircraft_type = 7;
@@ -53,7 +54,8 @@ TEST_CASE("settings changes: past four rows the last one counts the rest") {
     CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE");
 }
 
-TEST_CASE("settings changes: nothing changed writes nothing, and neither does a short buffer") {
+TEST_CASE(
+    "settings changes page: nothing changed writes nothing, and neither does a short buffer") {
     const Settings from = defaults();
     char out[kSettingsChangesBytes] = "untouched";
     CHECK(describe_settings_changes(from, from, out, sizeof(out)) == 0);

@@ -19,22 +19,22 @@ namespace {
 // reads what it decided. Standing still is on the ground; five seconds of
 // believed motion is airborne.
 void on_ground(Rig& rig, uint32_t& t) {
-    push_solution(rig, 0, 0);
+    push_fix(rig, 0, 0);
     rig.run(t, t + 200);
     t += 200;
 }
 
 void airborne(Rig& rig, uint32_t& t) {
     for (int i = 0; i < 14; i++) {
-        push_solution(rig, 50000, 1200);
+        push_fix(rig, 50000, 1200);
         rig.run(t, t + 500);
         t += 500;
     }
 }
 
-void hold_button(Rig& rig, uint32_t& t, uint32_t ms, bool down = true) {
+void hold_button(Rig& rig, uint32_t& t, uint32_t held_ms, bool down = true) {
     rig.platform.board_gpio().button_down = down;
-    const uint32_t until = t + ms;
+    const uint32_t until = t + held_ms;
     for (; t <= until; t += 50) {
         rig.platform.clock().set_millis(t);
         rig.product.run_pass(t);

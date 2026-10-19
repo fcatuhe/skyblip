@@ -20,26 +20,26 @@ using namespace skyblip::parts;
 // listened at half the rate a skyPost transmits at.
 // A2. IrqMask is 0x0000 out of reset and gates the status register, so an
 // unprogrammed mask is a radio that reports neither RxDone nor TxDone, for ever.
-TEST_CASE("radio: an IRQ bit that was never unmasked is never reported") {
+TEST_CASE("sx1262: an IRQ bit that was never unmasked is never reported") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, 4);
     uint8_t buf[32];
-    CHECK(r.poll(buf, sizeof(buf)).type == RadioEventType::None);
-    CHECK(r.start_receive() == Status::Ok);
-    CHECK(r.poll(buf, sizeof(buf)).type == RadioEventType::RxDone);
+    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::None);
+    CHECK(radio.start_receive() == Status::Ok);
+    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::RxDone);
 }
 
-TEST_CASE("radio: the IRQ mask and the DIO1 mask are programmed before the receiver is started") {
+TEST_CASE("sx1262: the IRQ mask and the DIO1 mask are programmed before the receiver is started") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.irq_mask == 0);
-    REQUIRE(r.start_receive() == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
     CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetRx));
     CHECK((chip.irq_mask & sx::kIrqRxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqCrcErr) != 0);
@@ -49,28 +49,28 @@ TEST_CASE("radio: the IRQ mask and the DIO1 mask are programmed before the recei
     CHECK(chip.get(chip.dio1_pin));
 }
 
-TEST_CASE("radio: the IRQ mask is programmed before the transmitter is keyed") {
+TEST_CASE("sx1262: the IRQ mask is programmed before the transmitter is keyed") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
-    REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
+    REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetTx));
     CHECK((chip.irq_mask & sx::kIrqTxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqTimeout) != 0);
     chip.signal_tx_done();
     uint8_t buf[8];
-    CHECK(r.poll(buf, sizeof(buf)).type == RadioEventType::TxDone);
+    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::TxDone);
 }
 
 // A3. Nothing in this tree set output power. The PA config is also the write
 // that raises OCP, and the band's ceiling is a regulation, not a preference.
-TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before the power") {
+TEST_CASE("sx1262: the PA is the SX1262 high-power configuration, ordered before the power") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.pa_set);
     CHECK(chip.pa_config[0] == 0x04);
     CHECK(chip.pa_config[1] == 0x07);
@@ -85,11 +85,11 @@ TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before 
 // makes it legal: feed loss out, antenna gain in, dBi referenced back to the
 // dipole the e.r.p. limit is written against. Change the antenna and this is the
 // case that fails.
-TEST_CASE("radio: output power is 14 dBm conducted, which is under 25 mW e.r.p. on our antenna") {
+TEST_CASE("sx1262: output power is 14 dBm conducted, which is under 25 mW e.r.p. on our antenna") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.tx_power_set);
     CHECK(chip.tx_power_dbm == sx::kConductedDbm);
     CHECK(chip.tx_power_dbm == 14);
@@ -102,7 +102,7 @@ TEST_CASE("radio: output power is 14 dBm conducted, which is under 25 mW e.r.p. 
     CHECK(sx::kResultingErpCentiDb <= sx::kSrd868ErpLimitDbm * 100);
 }
 
-TEST_CASE("radio: a chip whose output power was never programmed refuses to transmit") {
+TEST_CASE("sx1262: a chip whose output power was never programmed refuses to transmit") {
     models::Sx1262 chip;
     const uint8_t frame[3] = {1, 2, 3};
     chip.select(true);
@@ -118,10 +118,10 @@ TEST_CASE("radio: a chip whose output power was never programmed refuses to tran
 
 // A4. Image rejection is calibrated per band, and only against the clock the
 // chip will actually run on.
-TEST_CASE("radio: image rejection is calibrated for 863-870 MHz after the TCXO is up") {
+TEST_CASE("sx1262: image rejection is calibrated for 863-870 MHz after the TCXO is up") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     CHECK(chip.image_calibrated);
     CHECK(chip.image_band[0] == 0xD7);
     CHECK(chip.image_band[1] == 0xDB);
@@ -130,43 +130,43 @@ TEST_CASE("radio: image rejection is calibrated for 863-870 MHz after the TCXO i
     CHECK(chip.fault == models::Sx1262::Fault::None);
     // Once per band: the second dwell does not pay for it again.
     const int before = chip.command_order(sx::kCalibrateImage);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.command_order(sx::kCalibrateImage) == before);
 }
 
 // A5. The previous dwell leaves the chip in continuous RX, and SetRfFrequency
 // and SetPacketType are standby-only commands.
-TEST_CASE("radio: retuning a receiving radio is bracketed by standby and returns to RX") {
+TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and returns to RX") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
-    REQUIRE(r.start_receive() == Status::Ok);
-    REQUIRE(r.mode() == RadioMode::Rx);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
+    REQUIRE(radio.mode() == RadioMode::Rx);
 
     int standbys = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) standbys++;
     cfg.freq_hz = 868400000;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     int after = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) after++;
     CHECK(after == standbys + 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
     CHECK(chip.freq_hz > 868399000);
-    CHECK(r.mode() == RadioMode::Rx);
+    CHECK(radio.mode() == RadioMode::Rx);
     CHECK(chip.receiving);
 }
 
-TEST_CASE("radio: a standby-only command issued while the receiver runs is a chip fault") {
+TEST_CASE("sx1262: a standby-only command issued while the receiver runs is a chip fault") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
-    REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    REQUIRE(r.start_receive() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
+    REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
+    REQUIRE(radio.start_receive() == Status::Ok);
     REQUIRE(chip.fault == models::Sx1262::Fault::None);
     const uint8_t retune[5] = {sx::kSetRfFrequency, 0x36, 0x40, 0x00, 0x00};
     chip.select(true);
@@ -176,16 +176,16 @@ TEST_CASE("radio: a standby-only command issued while the receiver runs is a chi
 }
 
 // DS 8.1, as a literal: a constant compared with itself passes at any value.
-TEST_CASE("radio: NRESET is held low for the datasheet's 100 us") {
+TEST_CASE("sx1262: NRESET is held low for the datasheet's 100 us") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     CHECK(chip.reset_pulses == 1);
     CHECK(chip.reset_low_us >= 100);
     CHECK(chip.fault == models::Sx1262::Fault::None);
 }
 
-TEST_CASE("radio: a reset pulse one microsecond under 100 us is a fault, 100 us is not") {
+TEST_CASE("sx1262: a reset pulse one microsecond under 100 us is a fault, 100 us is not") {
     models::Sx1262 held;
     held.set(held.reset_pin, false);
     held.wait_at_least_us(100);
@@ -200,17 +200,17 @@ TEST_CASE("radio: a reset pulse one microsecond under 100 us is a fault, 100 us 
 }
 
 // A7. SetTx with no timeout is a PA that stays keyed when TxDone never arrives.
-TEST_CASE("radio: SetTx carries a timeout past the frame's air time at the configured bitrate") {
+TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the configured bitrate") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    REQUIRE(r.begin() == Status::Ok);
+    Sx1262 radio = driver_for(chip);
+    REQUIRE(radio.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.sync = protocol::kSharedSync;
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(r.configure_radio(cfg) == Status::Ok);
+    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
-    REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
+    REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.tx_timeout_ticks != 0);
     // 100 kbps: one bit is 10 us. Preamble + sync window + payload.
     const uint32_t air_us =
@@ -222,16 +222,16 @@ TEST_CASE("radio: SetTx carries a timeout past the frame's air time at the confi
 
 // A8. BUSY going low proves a rail and a pull-down, which an empty footprint
 // and an unsoldered MISO pad manage too. Only a value out of the part proves it.
-TEST_CASE("radio: presence is a register round-trip, and a dead MISO is an absent radio") {
+TEST_CASE("sx1262: presence is a register round-trip, and a dead MISO is an absent radio") {
     models::Sx1262 chip;
-    Sx1262 r = make(chip);
-    CHECK(r.probe() == Status::Ok);
-    CHECK(r.begin() == Status::Ok);  // and leaves the part where bring-up wants it
+    Sx1262 radio = driver_for(chip);
+    CHECK(radio.probe() == Status::Ok);
+    CHECK(radio.begin() == Status::Ok);  // and leaves the part where bring-up wants it
     for (uint8_t rail : {uint8_t{0x00}, uint8_t{0xFF}}) {
         models::Sx1262 mute;  // BUSY still answers: the old check still passed
         mute.miso_dead = true;
         mute.miso_level = rail;
-        Sx1262 absent = make(mute);
+        Sx1262 absent = driver_for(mute);
         CHECK(absent.probe() == Status::Down);
         CHECK(absent.begin() == Status::Down);
     }

@@ -8,7 +8,7 @@
 using namespace skyblip::go;
 using skyblip::reads_in;
 
-TEST_CASE("status: every value reads in the aeronautical unit first, then SI") {
+TEST_CASE("status page: every value reads in the aeronautical unit first, then SI") {
     // 1500 m = 4921 ft, 20 m/s = 39 kt, +2.0 m/s =
     // +394 fpm. Rendering is 5x7 glyphs, so the check is on the row's ink: the
     // dual-unit row is wider than a single-unit one would be.
@@ -34,7 +34,7 @@ TEST_CASE("status: every value reads in the aeronautical unit first, then SI") {
     CHECK(with_baro.count_black() > both.count_black());
 }
 
-TEST_CASE("status: the barometer row reads what the sensor resolves") {
+TEST_CASE("status page: the barometer row reads what the sensor resolves") {
     Glass canvas;
     StatusSnapshot s;
     s.baro_valid = true;
@@ -47,7 +47,7 @@ TEST_CASE("status: the barometer row reads what the sensor resolves") {
     CHECK(reads_in(canvas, "-1.234", 0, 149, 200, 169));
 }
 
-TEST_CASE("status: every reading is printed to the resolution it is held in") {
+TEST_CASE("status page: every reading is printed to the resolution it is held in") {
     Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
@@ -69,7 +69,7 @@ TEST_CASE("status: every reading is printed to the resolution it is held in") {
     CHECK(reads_in(canvas, "4.123", 0, 165, 200, 185));
 }
 
-TEST_CASE("status: the IMU field reads the hub's own bring-up word and the ball it feeds") {
+TEST_CASE("status page: the IMU field reads the hub's own bring-up word and the ball it feeds") {
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.slip_valid = true;
@@ -93,7 +93,7 @@ TEST_CASE("status: the IMU field reads the hub's own bring-up word and the ball 
 }
 
 // A silent hub and one whose FIFO nobody can step through are two different faults.
-TEST_CASE("status: a hub reporting nothing says what the FIFO gave it") {
+TEST_CASE("status page: a hub reporting nothing says what the FIFO gave it") {
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_fifo_bytes = 4096;
@@ -111,7 +111,7 @@ TEST_CASE("status: a hub reporting nothing says what the FIFO gave it") {
 }
 
 // The bench run that asked for this: a hub up, 18 bytes drained and no ball.
-TEST_CASE("status: a silent hub reports the last thing it said about itself") {
+TEST_CASE("status page: a silent hub reports the last thing it said about itself") {
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_fifo_bytes = 18;
@@ -130,7 +130,7 @@ TEST_CASE("status: a silent hub reports the last thing it said about itself") {
 }
 
 // Only the interrupt register separates a hub producing nothing from a FIFO nobody read.
-TEST_CASE("status: an announced hub shows what the hub says it is holding") {
+TEST_CASE("status page: an announced hub shows what the hub says it is holding") {
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_fifo_bytes = 18;
@@ -148,7 +148,7 @@ TEST_CASE("status: an announced hub shows what the hub says it is holding") {
     CHECK(reads_in(empty, "IMU RUN B18 I00", 0, 55, 200, 70));
 }
 
-TEST_CASE("status: a bring-up that named the fault stops on the stage that found it") {
+TEST_CASE("status page: a bring-up that named the fault stops on the stage that found it") {
     StatusSnapshot s;
     s.imu_stage = "CONF";
     s.imu_fault = "NOSENS";
@@ -164,7 +164,7 @@ TEST_CASE("status: a bring-up that named the fault stops on the stage that found
     CHECK(reads_in(dropped, "IMU CONF NOCFG", 0, 55, 200, 70));
 }
 
-TEST_CASE("status: the widest sensor error still leaves the track's datum readable") {
+TEST_CASE("status page: the widest sensor error still leaves the track's datum readable") {
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_errored_sensor = 255;
@@ -176,7 +176,7 @@ TEST_CASE("status: the widest sensor error still leaves the track's datum readab
     CHECK(reads_in(canvas, "TRUE", 0, 55, 200, 70));
 }
 
-TEST_CASE("status: the widest IMU failure still leaves the track's datum readable") {
+TEST_CASE("status page: the widest IMU failure still leaves the track's datum readable") {
     StatusSnapshot s;
     s.imu_stage = "LOAD";
     s.imu_fault = "TIMEOUT";
@@ -187,7 +187,8 @@ TEST_CASE("status: the widest IMU failure still leaves the track's datum readabl
     CHECK(reads_in(canvas, "TRUE", 0, 55, 200, 70));
 }
 
-TEST_CASE("status: the battery row states the voltage and the charge, and on the cable only CHG") {
+TEST_CASE(
+    "status page: the battery row states the voltage and the charge, and on the cable only CHG") {
     StatusSnapshot s;
     s.battery_valid = true;
     s.battery_mv = 4000;
@@ -238,7 +239,7 @@ TEST_CASE("status: the battery row states the voltage and the charge, and on the
         for (int x = 0; x < Glass::kW; x++) CHECK_FALSE(charging.get_pixel(x, y));
 }
 
-TEST_CASE("status: a receiver with no fix says how far it has got, and for how long") {
+TEST_CASE("status page: a receiver with no fix says how far it has got, and for how long") {
     StatusSnapshot s;
     s.sats = 9;
     s.stage = skyblip::gnss::Stage::Blind;
@@ -276,7 +277,7 @@ TEST_CASE("status: a receiver with no fix says how far it has got, and for how l
 }
 
 // The receiver's own GSA answer where it gave one, the satellite count where it did not.
-TEST_CASE("status: a solution without height reads 2D") {
+TEST_CASE("status page: a solution without height reads 2D") {
     StatusSnapshot s;
     s.fix_valid = true;
     s.sats = 9;
@@ -299,7 +300,7 @@ TEST_CASE("status: a solution without height reads 2D") {
 }
 
 // The page used to report PPS lock, a pin a pilot cannot act on.
-TEST_CASE("status: the page reports whether own-ship is transmitting, not the PPS pin") {
+TEST_CASE("status page: the page reports whether own-ship is transmitting, not the PPS pin") {
     StatusSnapshot s;
     s.fix_valid = true;
     s.sats = 9;
@@ -319,7 +320,7 @@ TEST_CASE("status: the page reports whether own-ship is transmitting, not the PP
 // B4. ADS-L carries no callsign, so the setting has exactly one job: telling
 // three devices on a bench apart. It shares the header with the identity that
 // does go on the air.
-TEST_CASE("status: the callsign shares the header with the address, and never crowds it") {
+TEST_CASE("status page: the callsign shares the header with the address, and never crowds it") {
     StatusSnapshot s;
     s.address = skyblip::settings::address_of(0xED12);
 
@@ -351,7 +352,7 @@ TEST_CASE("status: the callsign shares the header with the address, and never cr
     CHECK(none.count_black() == bare.count_black());
 }
 
-TEST_CASE("status: the widest position on earth still fits its row") {
+TEST_CASE("status page: the widest position on earth still fits its row") {
     // -90.0000000 and -180.0000000: eleven and twelve characters, the most the
     // format can produce. The latitude ends on the first column's unit edge and
     // the longitude block is anchored to the margin, so the worst case is where

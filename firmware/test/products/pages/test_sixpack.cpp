@@ -10,13 +10,15 @@ using namespace skyblip::go;
 namespace {
 // The six dial centres, in the order the panel draws them.
 struct Tile {
-    int cx, cy;
+    int centre_x, centre_y;
 };
 const Tile kTiles[6] = {{34, 67}, {100, 67}, {166, 67}, {34, 133}, {100, 133}, {166, 133}};
 
 // The number sits outside the glass: above the top row, below the bottom one.
 const int kValueScale = 2;
-int value_y(const Tile& t) { return t.cy < 100 ? t.cy - 31 - 7 - 7 * kValueScale : t.cy + 31 + 7; }
+int value_y(const Tile& t) {
+    return t.centre_y < 100 ? t.centre_y - 31 - 7 - 7 * kValueScale : t.centre_y + 31 + 7;
+}
 
 // Ink at the point `deg` clockwise from the top: only the needle and the shading reach kFaceR.
 const int kFaceR = 20;
@@ -24,8 +26,8 @@ const int kBandR = 27;
 
 bool ink_at(const Glass& canvas, Tile t, double deg, int r = kFaceR) {
     const double a = deg * 3.14159265358979 / 180.0;
-    const int x = t.cx + static_cast<int>(std::lround(r * std::sin(a)));
-    const int y = t.cy - static_cast<int>(std::lround(r * std::cos(a)));
+    const int x = t.centre_x + static_cast<int>(std::lround(r * std::sin(a)));
+    const int y = t.centre_y - static_cast<int>(std::lround(r * std::cos(a)));
     for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
             if (canvas.get_pixel(x + dx, y + dy)) return true;
@@ -33,22 +35,22 @@ bool ink_at(const Glass& canvas, Tile t, double deg, int r = kFaceR) {
 }
 
 bool title_matches(const Glass& canvas, Tile t, const char* text) {
-    const int y0 = t.cy < 100 ? value_y(t) - 4 - 7 : value_y(t) + 7 * kValueScale + 4;
+    const int y0 = t.centre_y < 100 ? value_y(t) - 4 - 7 : value_y(t) + 7 * kValueScale + 4;
     Glass expected;
     expected.clear(true);
     int n = 0;
     while (text[n]) n++;
-    expected.draw_text(t.cx - (n * 6) / 2, y0, text, true, 1);
+    expected.draw_text(t.centre_x - (n * 6) / 2, y0, text, true, 1);
     for (int y = y0; y < y0 + 7; y++)
-        for (int x = t.cx - 32; x <= t.cx + 32; x++)
+        for (int x = t.centre_x - 32; x <= t.centre_x + 32; x++)
             if (canvas.get_pixel(x, y) != expected.get_pixel(x, y)) return false;
     return true;
 }
 
 int black_in(const Glass& canvas, Tile t, int r) {
     int n = 0;
-    for (int y = t.cy - r; y <= t.cy + r; y++)
-        for (int x = t.cx - r; x <= t.cx + r; x++)
+    for (int y = t.centre_y - r; y <= t.centre_y + r; y++)
+        for (int x = t.centre_x - r; x <= t.centre_x + r; x++)
             if (canvas.get_pixel(x, y)) n++;
     return n;
 }
@@ -60,9 +62,9 @@ bool value_matches(const Glass& canvas, Tile t, const char* text) {
     expected.clear(true);
     int n = 0;
     while (text[n]) n++;
-    expected.draw_text(t.cx - (n * 6 * kValueScale) / 2, y0, text, true, kValueScale);
+    expected.draw_text(t.centre_x - (n * 6 * kValueScale) / 2, y0, text, true, kValueScale);
     for (int y = y0; y < y0 + 7 * kValueScale; y++)
-        for (int x = t.cx - 32; x <= t.cx + 32; x++)
+        for (int x = t.centre_x - 32; x <= t.centre_x + 32; x++)
             if (canvas.get_pixel(x, y) != expected.get_pixel(x, y)) return false;
     return true;
 }
@@ -83,7 +85,7 @@ SixPackSnapshot flying() {
 }
 }  // namespace
 
-TEST_CASE("sixpack: six dials are drawn, each with its own needle") {
+TEST_CASE("sixpack page: six dials are drawn, each with its own needle") {
     const SixPackSnapshot s = flying();
 
     Glass canvas;
@@ -92,7 +94,7 @@ TEST_CASE("sixpack: six dials are drawn, each with its own needle") {
 }
 
 // An instrument with no needle reads as a broken instrument, so a lost fix parks them at rest.
-TEST_CASE("sixpack: without a fix the needles park at zero and the numbers withhold") {
+TEST_CASE("sixpack page: without a fix the needles park at zero and the numbers withhold") {
     SixPackSnapshot none;
     Glass canvas;
     draw_sixpack(canvas, none);
@@ -100,10 +102,10 @@ TEST_CASE("sixpack: without a fix the needles park at zero and the numbers withh
     for (const Tile& t : kTiles) CHECK(black_in(canvas, t, 30) > 60);
 
     // Zero speed hangs its needle down, zero altitude stands its own up.
-    CHECK(canvas.get_pixel(kTiles[0].cx, kTiles[0].cy + kFaceR));
-    CHECK_FALSE(canvas.get_pixel(kTiles[0].cx - 1, kTiles[0].cy + kFaceR));
-    CHECK(canvas.get_pixel(kTiles[2].cx, kTiles[2].cy - kFaceR));
-    CHECK_FALSE(canvas.get_pixel(kTiles[2].cx - 2, kTiles[2].cy - kFaceR));
+    CHECK(canvas.get_pixel(kTiles[0].centre_x, kTiles[0].centre_y + kFaceR));
+    CHECK_FALSE(canvas.get_pixel(kTiles[0].centre_x - 1, kTiles[0].centre_y + kFaceR));
+    CHECK(canvas.get_pixel(kTiles[2].centre_x, kTiles[2].centre_y - kFaceR));
+    CHECK_FALSE(canvas.get_pixel(kTiles[2].centre_x - 2, kTiles[2].centre_y - kFaceR));
     CHECK(ink_at(canvas, kTiles[5], -90));  // a level vario points at its zero
     CHECK(ink_at(canvas, kTiles[3], 90));   // and the turn coordinator's wings are level
     CHECK(ink_at(canvas, kTiles[3], -90));
@@ -114,7 +116,7 @@ TEST_CASE("sixpack: without a fix the needles park at zero and the numbers withh
 }
 
 // The barometer measures a climb of its own, so the vario is not a GNSS instrument.
-TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
+TEST_CASE("sixpack page: a baro vertical speed reads on without a fix") {
     SixPackSnapshot searching;
     searching.climb_fpm = -1000;
     searching.climb_valid = true;
@@ -122,7 +124,7 @@ TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
     draw_sixpack(canvas, searching);
 
     CHECK(value_matches(canvas, kTiles[5], "-1000"));
-    CHECK(canvas.get_pixel(kTiles[5].cx, kTiles[5].cy + kFaceR));
+    CHECK(canvas.get_pixel(kTiles[5].centre_x, kTiles[5].centre_y + kFaceR));
     CHECK(value_matches(canvas, kTiles[0], "---"));
     CHECK(value_matches(canvas, kTiles[2], "---"));
 
@@ -132,11 +134,11 @@ TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
     Glass none;
     draw_sixpack(none, blind);
     CHECK(value_matches(none, kTiles[5], "---"));
-    CHECK(none.get_pixel(kTiles[5].cx - kFaceR, kTiles[5].cy));
+    CHECK(none.get_pixel(kTiles[5].centre_x - kFaceR, kTiles[5].centre_y));
 }
 
 // Five dials read the receiver and one reads the cell, and a lost fix is the receiver's.
-TEST_CASE("sixpack: a fix lost in flight withholds the dials and leaves the cell alone") {
+TEST_CASE("sixpack page: a fix lost in flight withholds the dials and leaves the cell alone") {
     SixPackSnapshot lost = flying();
     lost.fix_valid = false;
     Glass canvas;
@@ -145,7 +147,7 @@ TEST_CASE("sixpack: a fix lost in flight withholds the dials and leaves the cell
     CHECK(value_matches(canvas, kTiles[0], "---"));
 }
 
-TEST_CASE("sixpack: needles move with the data they show") {
+TEST_CASE("sixpack page: needles move with the data they show") {
     SixPackSnapshot a;
     a.fix_valid = true;
     a.units = skyblip::go::Units::Nautical;
@@ -163,8 +165,8 @@ TEST_CASE("sixpack: needles move with the data they show") {
 
     bool differs[6] = {};
     for (int i = 0; i < 6; i++) {
-        for (int y = kTiles[i].cy - 28; y <= kTiles[i].cy + 28 && !differs[i]; y++)
-            for (int x = kTiles[i].cx - 28; x <= kTiles[i].cx + 28; x++)
+        for (int y = kTiles[i].centre_y - 28; y <= kTiles[i].centre_y + 28 && !differs[i]; y++)
+            for (int x = kTiles[i].centre_x - 28; x <= kTiles[i].centre_x + 28; x++)
                 if (fa.get_pixel(x, y) != fbuf.get_pixel(x, y)) {
                     differs[i] = true;
                     break;
@@ -175,7 +177,7 @@ TEST_CASE("sixpack: needles move with the data they show") {
     CHECK(differs[4]);  // heading
 }
 
-TEST_CASE("sixpack: the altimeter reads like a three-pointer, the card like a compass") {
+TEST_CASE("sixpack page: the altimeter reads like a three-pointer, the card like a compass") {
     SixPackSnapshot s;
     s.fix_valid = true;
     s.units = skyblip::go::Units::Nautical;
@@ -184,10 +186,10 @@ TEST_CASE("sixpack: the altimeter reads like a three-pointer, the card like a co
     draw_sixpack(canvas, s);
 
     const Tile alt = kTiles[2];
-    CHECK(canvas.get_pixel(alt.cx, alt.cy + 20));        // hundreds hand, straight down
-    CHECK(canvas.get_pixel(alt.cx + 12, alt.cy));        // thousands hand, quarter turn
-    CHECK_FALSE(canvas.get_pixel(alt.cx + 20, alt.cy));  // and it is the SHORT one
-    CHECK_FALSE(canvas.get_pixel(alt.cx, alt.cy - 20));
+    CHECK(canvas.get_pixel(alt.centre_x, alt.centre_y + 20));        // hundreds hand, straight down
+    CHECK(canvas.get_pixel(alt.centre_x + 12, alt.centre_y));        // thousands hand, quarter turn
+    CHECK_FALSE(canvas.get_pixel(alt.centre_x + 20, alt.centre_y));  // and it is the SHORT one
+    CHECK_FALSE(canvas.get_pixel(alt.centre_x, alt.centre_y - 20));
 
     // The compass card turns with the track: north swings to the right when the
     // aircraft flies west.
@@ -197,16 +199,16 @@ TEST_CASE("sixpack: the altimeter reads like a three-pointer, the card like a co
     draw_sixpack(fw, west);
     const Tile hdg = kTiles[4];
     int right = 0, left = 0;
-    for (int y = hdg.cy - 8; y <= hdg.cy + 8; y++)
+    for (int y = hdg.centre_y - 8; y <= hdg.centre_y + 8; y++)
         for (int d = 12; d <= 24; d++) {
-            if (fw.get_pixel(hdg.cx + d, y)) right++;
-            if (fw.get_pixel(hdg.cx - d, y)) left++;
+            if (fw.get_pixel(hdg.centre_x + d, y)) right++;
+            if (fw.get_pixel(hdg.centre_x - d, y)) left++;
         }
     CHECK(right > left);
 }
 
 // B4. A dial has one needle and one number, so the km/h pilot has to ask for it.
-TEST_CASE("sixpack: the unit setting decides the speed dial, and only the speed dial") {
+TEST_CASE("sixpack page: the unit setting decides the speed dial, and only the speed dial") {
     SixPackSnapshot nautical;
     nautical.fix_valid = true;
     nautical.units = skyblip::go::Units::Nautical;
@@ -236,7 +238,7 @@ TEST_CASE("sixpack: the unit setting decides the speed dial, and only the speed 
     for (int i = 1; i < 6; i++) CHECK(black_in(fm, kTiles[i], 30) == black_in(fi, kTiles[i], 30));
 }
 
-TEST_CASE("sixpack: the middle number is the state of charge, with the unit on the figure") {
+TEST_CASE("sixpack page: the middle number is the state of charge, with the unit on the figure") {
     SixPackSnapshot s = flying();
     Glass canvas;
     draw_sixpack(canvas, s);
@@ -250,7 +252,7 @@ TEST_CASE("sixpack: the middle number is the state of charge, with the unit on t
 }
 
 // A unit with no divider fitted draws the shape of the reading, never a zero that reads as flat.
-TEST_CASE("sixpack: a cell nobody measured withholds the figure and keeps the sign") {
+TEST_CASE("sixpack page: a cell nobody measured withholds the figure and keeps the sign") {
     SixPackSnapshot s = flying();
     s.battery_valid = false;
     Glass canvas;
@@ -259,7 +261,8 @@ TEST_CASE("sixpack: a cell nobody measured withholds the figure and keeps the si
 }
 
 // On the cable the divider reads the USB rail, which drawn as a percentage reads as the cell.
-TEST_CASE("sixpack: on the cable the middle dial reads the charge rail in volts, not the cell") {
+TEST_CASE(
+    "sixpack page: on the cable the middle dial reads the charge rail in volts, not the cell") {
     SixPackSnapshot cable = flying();
     cable.battery_valid = false;
     cable.charging = true;
@@ -286,33 +289,34 @@ TEST_CASE("sixpack: on the cable the middle dial reads the charge rail in volts,
 }
 
 // Two dashes and a hub read as a needle: what leans here is an aeroplane seen from behind.
-TEST_CASE("sixpack: the turn coordinator flies an aeroplane between four marks") {
+TEST_CASE("sixpack page: the turn coordinator flies an aeroplane between four marks") {
     const Tile turn = kTiles[3];
     SixPackSnapshot level = flying();
     level.turn_cdps = 0;
     Glass canvas;
     draw_sixpack(canvas, level);
 
-    CHECK(canvas.get_pixel(turn.cx - 22, turn.cy));  // wings
-    CHECK(canvas.get_pixel(turn.cx + 22, turn.cy));
-    CHECK_FALSE(canvas.get_pixel(turn.cx + 24, turn.cy));
-    CHECK_FALSE(canvas.get_pixel(turn.cx + 7, turn.cy + 1));
-    CHECK_FALSE(canvas.get_pixel(turn.cx + 7, turn.cy - 1));
-    CHECK(canvas.get_pixel(turn.cx, turn.cy - 6));      // fin, standing above
-    CHECK(canvas.get_pixel(turn.cx - 8, turn.cy - 3));  // the tailplane on the fuselage
-    CHECK(canvas.get_pixel(turn.cx + 8, turn.cy - 3));
-    CHECK_FALSE(canvas.get_pixel(turn.cx, turn.cy + 6));
+    CHECK(canvas.get_pixel(turn.centre_x - 22, turn.centre_y));  // wings
+    CHECK(canvas.get_pixel(turn.centre_x + 22, turn.centre_y));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x + 24, turn.centre_y));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x + 7, turn.centre_y + 1));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x + 7, turn.centre_y - 1));
+    CHECK(canvas.get_pixel(turn.centre_x, turn.centre_y - 6));      // fin, standing above
+    CHECK(canvas.get_pixel(turn.centre_x - 8, turn.centre_y - 3));  // the tailplane on the fuselage
+    CHECK(canvas.get_pixel(turn.centre_x + 8, turn.centre_y - 3));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x, turn.centre_y + 6));
 
-    CHECK(canvas.get_pixel(turn.cx - 27, turn.cy));  // wings-level marks
-    CHECK(canvas.get_pixel(turn.cx + 27, turn.cy));
-    CHECK(canvas.get_pixel(turn.cx - 25, turn.cy + 9));  // standard-rate marks, 20 degrees down
-    CHECK(canvas.get_pixel(turn.cx + 25, turn.cy + 9));
-    CHECK_FALSE(canvas.get_pixel(turn.cx, turn.cy - 27));  // and no scale anywhere else
-    CHECK_FALSE(canvas.get_pixel(turn.cx - 25, turn.cy - 9));
+    CHECK(canvas.get_pixel(turn.centre_x - 27, turn.centre_y));  // wings-level marks
+    CHECK(canvas.get_pixel(turn.centre_x + 27, turn.centre_y));
+    CHECK(canvas.get_pixel(turn.centre_x - 25,
+                           turn.centre_y + 9));  // standard-rate marks, 20 degrees down
+    CHECK(canvas.get_pixel(turn.centre_x + 25, turn.centre_y + 9));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x, turn.centre_y - 27));  // and no scale anywhere else
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x - 25, turn.centre_y - 9));
 }
 
 // An empty cage is the reading before the sensor has one: a centred ball claims coordination.
-TEST_CASE("sixpack: the ball sits between its cage lines, and is absent without a reading") {
+TEST_CASE("sixpack page: the ball sits between its cage lines, and is absent without a reading") {
     const Tile turn = kTiles[3];
     SixPackSnapshot coordinated = flying();
     coordinated.inclinometer_fitted = true;
@@ -320,56 +324,57 @@ TEST_CASE("sixpack: the ball sits between its cage lines, and is absent without 
     Glass canvas;
     draw_sixpack(canvas, coordinated);
 
-    CHECK(canvas.get_pixel(turn.cx - 6, turn.cy + 18));  // cage
-    CHECK(canvas.get_pixel(turn.cx + 6, turn.cy + 18));
-    CHECK(canvas.get_pixel(turn.cx, turn.cy + 18));  // ball, centred
+    CHECK(canvas.get_pixel(turn.centre_x - 6, turn.centre_y + 18));  // cage
+    CHECK(canvas.get_pixel(turn.centre_x + 6, turn.centre_y + 18));
+    CHECK(canvas.get_pixel(turn.centre_x, turn.centre_y + 18));  // ball, centred
 
     SixPackSnapshot skidding = coordinated;
     skidding.lateral_mg = 200;  // full scale, a ball's width and more out
     Glass fs;
     draw_sixpack(fs, skidding);
-    CHECK(fs.get_pixel(turn.cx + 16, turn.cy + 18));
-    CHECK_FALSE(fs.get_pixel(turn.cx - 2, turn.cy + 18));
+    CHECK(fs.get_pixel(turn.centre_x + 16, turn.centre_y + 18));
+    CHECK_FALSE(fs.get_pixel(turn.centre_x - 2, turn.centre_y + 18));
 
     SixPackSnapshot warming = coordinated;
     warming.lateral_valid = false;
     Glass blind;
     draw_sixpack(blind, warming);
-    CHECK(blind.get_pixel(turn.cx - 6, turn.cy + 18));
-    CHECK_FALSE(blind.get_pixel(turn.cx, turn.cy + 18));
+    CHECK(blind.get_pixel(turn.centre_x - 6, turn.centre_y + 18));
+    CHECK_FALSE(blind.get_pixel(turn.centre_x, turn.centre_y + 18));
 
     // A device with no IMU fitted has no inclinometer to draw, not an empty one.
     Glass plain;
     draw_sixpack(plain, flying());
     for (int x = -16; x <= 16; x++)
-        for (int y = 13; y <= 23; y++) CHECK_FALSE(plain.get_pixel(turn.cx + x, turn.cy + y));
+        for (int y = 13; y <= 23; y++)
+            CHECK_FALSE(plain.get_pixel(turn.centre_x + x, turn.centre_y + y));
 }
 
 // Standard rate is 3 deg/s, the two-minute turn: at it, the wing is on the mark.
-TEST_CASE("sixpack: the turn coordinator puts a standard rate turn on its index marks") {
+TEST_CASE("sixpack page: the turn coordinator puts a standard rate turn on its index marks") {
     const Tile turn = kTiles[3];
     SixPackSnapshot right = flying();  // 3 deg/s
     Glass canvas;
     draw_sixpack(canvas, right);
-    CHECK(canvas.get_pixel(turn.cx + 21, turn.cy + 8));
-    CHECK_FALSE(canvas.get_pixel(turn.cx + 21, turn.cy));
+    CHECK(canvas.get_pixel(turn.centre_x + 21, turn.centre_y + 8));
+    CHECK_FALSE(canvas.get_pixel(turn.centre_x + 21, turn.centre_y));
 
     SixPackSnapshot left = flying();
     left.turn_cdps = -300;
     Glass fl;
     draw_sixpack(fl, left);
-    CHECK(fl.get_pixel(turn.cx - 21, turn.cy + 8));
+    CHECK(fl.get_pixel(turn.centre_x - 21, turn.centre_y + 8));
 
     // Speed does not enter it: a rate gyro's dial reads the same at any airspeed.
     SixPackSnapshot fast = flying();
     fast.speed_kt = 160;
     Glass ff;
     draw_sixpack(ff, fast);
-    CHECK(ff.get_pixel(turn.cx + 21, turn.cy + 8));
+    CHECK(ff.get_pixel(turn.centre_x + 21, turn.centre_y + 8));
 }
 
 // The reference symbol is read against the horizon behind it: pitch is what it measures.
-TEST_CASE("sixpack: the horizon carries two wing bars and a dot, clear of each other") {
+TEST_CASE("sixpack page: the horizon carries two wing bars and a dot, clear of each other") {
     const Tile att = kTiles[1];
     SixPackSnapshot climbing = flying();
     climbing.turn_cdps = 0;
@@ -378,22 +383,23 @@ TEST_CASE("sixpack: the horizon carries two wing bars and a dot, clear of each o
     draw_sixpack(canvas, climbing);
 
     for (int i = 7; i <= 20; i++) {
-        CHECK(canvas.get_pixel(att.cx - i, att.cy));
-        CHECK(canvas.get_pixel(att.cx + i, att.cy));
+        CHECK(canvas.get_pixel(att.centre_x - i, att.centre_y));
+        CHECK(canvas.get_pixel(att.centre_x + i, att.centre_y));
     }
     for (int i = 3; i <= 6; i++) {
-        CHECK_FALSE(canvas.get_pixel(att.cx - i, att.cy));
-        CHECK_FALSE(canvas.get_pixel(att.cx + i, att.cy));
+        CHECK_FALSE(canvas.get_pixel(att.centre_x - i, att.centre_y));
+        CHECK_FALSE(canvas.get_pixel(att.centre_x + i, att.centre_y));
     }
     for (int dy = -2; dy <= 2; dy++)
         for (int dx = -2; dx <= 2; dx++)
-            CHECK(canvas.get_pixel(att.cx + dx, att.cy + dy) == (dx * dx + dy * dy < 8));
-    CHECK_FALSE(canvas.get_pixel(att.cx - 21, att.cy));
-    CHECK_FALSE(canvas.get_pixel(att.cx + 21, att.cy));
+            CHECK(canvas.get_pixel(att.centre_x + dx, att.centre_y + dy) ==
+                  (dx * dx + dy * dy < 8));
+    CHECK_FALSE(canvas.get_pixel(att.centre_x - 21, att.centre_y));
+    CHECK_FALSE(canvas.get_pixel(att.centre_x + 21, att.centre_y));
 }
 
 // The label names the quantity and the figure carries its unit: the radar keeps the clock.
-TEST_CASE("sixpack: the middle dial is titled BATTERY whatever the cell reads") {
+TEST_CASE("sixpack page: the middle dial is titled BATTERY whatever the cell reads") {
     SixPackSnapshot s = flying();
     Glass canvas;
     draw_sixpack(canvas, s);
@@ -414,7 +420,7 @@ TEST_CASE("sixpack: the middle dial is titled BATTERY whatever the cell reads") 
 }
 
 // North is three-six-zero on every other instrument a pilot reads, and 000 is nobody's heading.
-TEST_CASE("sixpack: a track due north reads 360") {
+TEST_CASE("sixpack page: a track due north reads 360") {
     SixPackSnapshot s = flying();
     s.track_deg = 0;
     Glass canvas;
@@ -428,7 +434,7 @@ TEST_CASE("sixpack: a track due north reads 360") {
 }
 
 // The horizon is drawn off a track rate and a climb rate, so nothing else may move it.
-TEST_CASE("sixpack: the horizon banks with the turn and pitches with climb") {
+TEST_CASE("sixpack page: the horizon banks with the turn and pitches with climb") {
     SixPackSnapshot level = flying();
     level.speed_kt = 100;
     level.turn_cdps = 0;
@@ -457,28 +463,28 @@ TEST_CASE("sixpack: the horizon banks with the turn and pitches with climb") {
     CHECK(value_matches(f3, att, "12%"));
 }
 
-TEST_CASE("sixpack: the speed dial rests at the bottom and stands 100 kt straight up") {
+TEST_CASE("sixpack page: the speed dial rests at the bottom and stands 100 kt straight up") {
     const Tile asi = kTiles[0];
     SixPackSnapshot s = flying();
     s.speed_kt = 100;
     Glass canvas;
     draw_sixpack(canvas, s);
-    CHECK(canvas.get_pixel(asi.cx, asi.cy - kFaceR));
-    CHECK_FALSE(canvas.get_pixel(asi.cx - 2, asi.cy - kFaceR));
-    CHECK_FALSE(canvas.get_pixel(asi.cx + 2, asi.cy - kFaceR));
+    CHECK(canvas.get_pixel(asi.centre_x, asi.centre_y - kFaceR));
+    CHECK_FALSE(canvas.get_pixel(asi.centre_x - 2, asi.centre_y - kFaceR));
+    CHECK_FALSE(canvas.get_pixel(asi.centre_x + 2, asi.centre_y - kFaceR));
 
     // Stopped on the apron it hangs straight down, and reads through the shading, not under it.
     SixPackSnapshot stopped = s;
     stopped.speed_kt = 0;
     Glass fs;
     draw_sixpack(fs, stopped);
-    CHECK(fs.get_pixel(asi.cx, asi.cy + kBandR));
-    CHECK_FALSE(fs.get_pixel(asi.cx - 2, asi.cy + kBandR));
-    CHECK_FALSE(fs.get_pixel(asi.cx + 2, asi.cy + kBandR));
+    CHECK(fs.get_pixel(asi.centre_x, asi.centre_y + kBandR));
+    CHECK_FALSE(fs.get_pixel(asi.centre_x - 2, asi.centre_y + kBandR));
+    CHECK_FALSE(fs.get_pixel(asi.centre_x + 2, asi.centre_y + kBandR));
 }
 
 // The arc no aeroplane reaches belongs at the bottom of the glass, not across the top of it.
-TEST_CASE("sixpack: the speed dial shades the arc past 180 kt, and nothing below it") {
+TEST_CASE("sixpack page: the speed dial shades the arc past 180 kt, and nothing below it") {
     const Tile asi = kTiles[0];
     SixPackSnapshot s = flying();  // 90 kt, half the scale, so half way round
     Glass canvas;
@@ -490,32 +496,33 @@ TEST_CASE("sixpack: the speed dial shades the arc past 180 kt, and nothing below
     CHECK_FALSE(ink_at(canvas, asi, 60, kBandR));
 }
 
-TEST_CASE("sixpack: the vertical speed dial stands a 1000 climb up and hangs a 1000 descent down") {
+TEST_CASE(
+    "sixpack page: the vertical speed dial stands a 1000 climb up and hangs a 1000 descent down") {
     const Tile vsi = kTiles[5];
     SixPackSnapshot s = flying();
 
     s.climb_fpm = 1000;
     Glass up;
     draw_sixpack(up, s);
-    CHECK(up.get_pixel(vsi.cx, vsi.cy - kFaceR));
-    CHECK_FALSE(up.get_pixel(vsi.cx + 3, vsi.cy - kFaceR));
-    CHECK_FALSE(up.get_pixel(vsi.cx - 3, vsi.cy - kFaceR));
+    CHECK(up.get_pixel(vsi.centre_x, vsi.centre_y - kFaceR));
+    CHECK_FALSE(up.get_pixel(vsi.centre_x + 3, vsi.centre_y - kFaceR));
+    CHECK_FALSE(up.get_pixel(vsi.centre_x - 3, vsi.centre_y - kFaceR));
 
     s.climb_fpm = -1000;
     Glass down;
     draw_sixpack(down, s);
-    CHECK(down.get_pixel(vsi.cx, vsi.cy + kFaceR));
-    CHECK_FALSE(down.get_pixel(vsi.cx + 3, vsi.cy + kFaceR));
-    CHECK_FALSE(down.get_pixel(vsi.cx - 3, vsi.cy + kFaceR));
+    CHECK(down.get_pixel(vsi.centre_x, vsi.centre_y + kFaceR));
+    CHECK_FALSE(down.get_pixel(vsi.centre_x + 3, vsi.centre_y + kFaceR));
+    CHECK_FALSE(down.get_pixel(vsi.centre_x - 3, vsi.centre_y + kFaceR));
 
     s.climb_fpm = 0;
     Glass level;
     draw_sixpack(level, s);
-    CHECK(level.get_pixel(vsi.cx - kFaceR, vsi.cy));
-    CHECK_FALSE(level.get_pixel(vsi.cx - kFaceR, vsi.cy + 3));
+    CHECK(level.get_pixel(vsi.centre_x - kFaceR, vsi.centre_y));
+    CHECK_FALSE(level.get_pixel(vsi.centre_x - kFaceR, vsi.centre_y + 3));
 }
 
-TEST_CASE("sixpack: the vertical speed dial is marked every 500 fpm and shaded past 2000") {
+TEST_CASE("sixpack page: the vertical speed dial is marked every 500 fpm and shaded past 2000") {
     const Tile vsi = kTiles[5];
     SixPackSnapshot s = flying();
     s.climb_fpm = 1000;
@@ -537,7 +544,7 @@ TEST_CASE("sixpack: the vertical speed dial is marked every 500 fpm and shaded p
 }
 
 // A rate of zero is a rate, not a direction: +0 and -0 are both noise on a glance.
-TEST_CASE("sixpack: a zero rate carries no sign") {
+TEST_CASE("sixpack page: a zero rate carries no sign") {
     SixPackSnapshot s = flying();
     s.turn_cdps = 0;
     s.climb_fpm = 0;
@@ -559,7 +566,7 @@ TEST_CASE("sixpack: a zero rate carries no sign") {
     CHECK(value_matches(jitter, kTiles[5], "0"));
 }
 
-TEST_CASE("sixpack: the vertical speed figure moves in tens of feet a minute") {
+TEST_CASE("sixpack page: the vertical speed figure moves in tens of feet a minute") {
     SixPackSnapshot s = flying();
     s.climb_fpm = -243;
     Glass canvas;

@@ -9,6 +9,7 @@
 #include "core/protocol/adsl_uplink.h"
 #include "core/timing/slot.h"
 #include "doctest/doctest.h"
+#include "test/support/random.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
@@ -19,17 +20,6 @@ namespace {
 // give it. The dwell map's own figures are in core/timing/slot.h.
 constexpr int kUplinkSlotStartMs = 200;
 constexpr int kUplinkSlotEndMs = 450;
-
-struct Rng {
-    uint32_t s;
-    explicit Rng(uint32_t seed) : s(seed) {}
-    uint32_t next() {
-        s ^= s << 13;
-        s ^= s >> 17;
-        s ^= s << 5;
-        return s;
-    }
-};
 
 model::AircraftObservation make_target(uint32_t address) {
     model::AircraftObservation t{};
@@ -47,7 +37,7 @@ model::AircraftObservation make_target(uint32_t address) {
 }
 }  // namespace
 
-TEST_CASE("rs: encode then decode with no errors returns 0 corrections") {
+TEST_CASE("reed-solomon: encode then decode with no errors returns 0 corrections") {
     ReedSolomon255 rs;
     uint8_t data[ReedSolomon255::kK];
     for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(i * 3 + 1);
@@ -59,9 +49,9 @@ TEST_CASE("rs: encode then decode with no errors returns 0 corrections") {
     CHECK(std::memcmp(cw, data, ReedSolomon255::kK) == 0);
 }
 
-TEST_CASE("rs: corrects ALL patterns up to 16 symbol errors") {
+TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
     ReedSolomon255 rs;
-    Rng rng(0xBEEF);
+    Random rng(0xBEEF);
     uint8_t data[ReedSolomon255::kK];
     for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(rng.next());
     uint8_t base[ReedSolomon255::kN];
@@ -92,9 +82,9 @@ TEST_CASE("rs: corrects ALL patterns up to 16 symbol errors") {
     }
 }
 
-TEST_CASE("rs: beyond 16 errors, detected vs silent miscorrection, counted") {
+TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, counted") {
     ReedSolomon255 rs;
-    Rng rng(0x1234);
+    Random rng(0x1234);
     uint8_t data[ReedSolomon255::kK];
     for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(rng.next());
     uint8_t base[ReedSolomon255::kN];
@@ -162,7 +152,7 @@ TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock
 
 TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     AdslUplink up;
-    Rng rng(0x55AA);
+    Random rng(0x55AA);
     model::AircraftObservation tx[4];
     for (int i = 0; i < 4; i++) tx[i] = make_target(0x300000 + i * 7);
     uint8_t frame[AdslUplink::kFrameBytes];

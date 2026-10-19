@@ -1029,6 +1029,7 @@ The only door position gets in through. Everything downstream (the alarm, the ra
 - RMC time is UTC already, so no leap-second offset is applied
   > I, row "Leap seconds": DOES NOT APPLY, and this is where it is written down. RMC fields 1 and 9 are UTC as the receiver resolved them, so the GPS-UTC offset (18 s in 2026) never enters our arithmetic. The moshe-braner fork queries it, persists it and reboots when it changes (.../src/driver/GNSS.cpp:1610-1679) because it reads u-blox NAV-TIMEGPS, which is GPS time. Applying a correction here would move our clock 18 s off UTC.
 - RMC updates fix position, time, speed, track
+- a DDMM.mmmm coordinate parses to 1e-7 degrees
 - a GGA without a solution reports no altitude
   > No fix: no altitude of either kind, and no DOP worth believing.
 - a GSA with no DOP at all is a constellation that solved nothing
@@ -1054,7 +1055,6 @@ The only door position gets in through. Everything downstream (the alarm, the ra
 - an RMC that claims a fix with no position is not a fix, whatever came before
 - byte-wise feed reconstructs a sentence
 - checksum validation
-- coord parse DDMM.mmmm -> 1e-7 deg
 - corrupt checksum is rejected, no update
 - sentences we switched off are counted, not silently dropped
   > A $PCAS sentence is never acknowledged: what the receiver stops saying is the only evidence.
@@ -1258,19 +1258,19 @@ What an EFB is told, in the FLARM sentences it already speaks. The geometry is t
 
 **nmea**
 
-- GPRMC/GPGGA carry ownship's own absolute position
+- GPRMC/GPGGA carry own-ship's own absolute position
   > own.utc_s is a Unix epoch with no calendar fields of its own; the numbers below are 2026-08-02T01:01:01Z, 1785628800 + 3661s (1785628800 is the same 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product case from), chosen so the date and time fields below are hand-checkable rather than merely re-deriving the same arithmetic the formatter uses.
 - GPRMC/GPGGA emit nothing without both a fix and a UTC time
 - PFLAA carries a known callsign behind the address, as OGN's does
   > OGN hangs the name off the ID field behind a '!' (oss/nrf52-ogn-tracker/src/lookout.h:144).
-- PFLAA carries id, relative pos, checksum
+- PFLAA carries the id, the relative position and the checksum
 - PFLAA keeps its eleven fields whatever callsign a receiver accepts
 - PFLAA returns 0 without own position
 - PFLAU GPS 1 on the ground reads as a 2D fix on XCSoar, and is still sent
   > XCSoar names value 1 GPS_2D (src/FLARM/Status.hpp), so a device on the apron shows a 2D fix.
 - PFLAU carries all ten FTD-012 fields, empty sky or not
   > SoftRF sends the tenth field empty rather than dropping it: "$PFLAU,0,1,2,1,0,,0,,,*4C".
-- PFLAU reports rx count, gps and threat
+- PFLAU reports the receive count, the GPS state and the threat
 - PFLAU's GPS field is the flight state, as FLARM defines it
   > FTD-012 defines the GPS field as 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving.
 - PFLAU's TX field follows the transmitter's own gate, not the clock's validity
@@ -1480,7 +1480,7 @@ The ball: where a damped mass hangs in the specific force the case measures.
 
 G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds - the latched PPS edge and an armed dwell's outcome - are exercised directly here on virtual time, exactly as core/timing/slot_timing_stats.h promises: no heap, integer only, and no phase math to get wrong across the second wrap.
 
-**timing_stats**
+**timing stats**
 
 - a clean 1 Hz PPS train lands in the centre bucket
 - a drifting edge walks the buckets outward, one guard at a time
@@ -1689,7 +1689,7 @@ Rate of turn from two reported tracks. Own-ship differentiates its own GNSS trac
 
 The ADS-L uplink air<->ground round-trip, pure host, no hardware. Proves air+ground share one core/. Asserts RS(255,223) corrects all patterns up to 16 symbol errors and, beyond 16, that silent miscorrection is counted SEPARATELY from detected failure.
 
-**rs**
+**reed-solomon**
 
 - beyond 16 errors, detected vs silent miscorrection, counted
 - corrects ALL patterns up to 16 symbol errors
@@ -2080,7 +2080,7 @@ Satellites in view: the GSV sets the sats page reads, and what they cost the fix
 
 SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the glass turned or not, and the signature that names the panel, all on the host, no panel required.
 
-**epd**
+**ssd1681**
 
 - 2118 and 2129 are the same in 0x2D and only 0x2E separates them
 - RES# is held low for the vendor's 10 ms, at begin and at every wake
@@ -2104,7 +2104,7 @@ SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequenc
 
 What one push costs the bus, and the turned glass pinned against the per-pixel rotation.
 
-**epd**
+**ssd1681**
 
 - a push sends each RAM bank as one SPI write, not one per gate line
   > One blocking SPI call per gate line was 425 calls a push and held the main loop 100-170 ms.
@@ -2116,7 +2116,7 @@ What one push costs the bus, and the turned glass pinned against the per-pixel r
 
 The two-bank differential contract (previous image in 0x26, new in 0x24), the non-blocking present/ready cycle, the rails down after every refresh but the wipe, and the hung-BUSY recovery.
 
-**epd**
+**ssd1681**
 
 - a full refresh puts the new frame in both banks, not the old one in 0x26
   > GxEPD2 writeImageForFullRefresh: the wash reads both banks, and old against new adds inversions.
@@ -2155,7 +2155,7 @@ The two-bank differential contract (previous image in 0x26, new in 0x24), the no
 
 SX1262 driver recovery tests against models/sx1262.h with fault injection The class of intermittent bug that is hell to reproduce on hardware.
 
-**radio**
+**sx1262**
 
 - BUSY stuck high is surfaced as a fault, not a hang
 - a CRC-error RX is reported as CrcError, NOT delivered
@@ -2181,7 +2181,7 @@ SX1262 driver recovery tests against models/sx1262.h with fault injection The cl
 
 What the datasheet asks the driver to write, and in what order: IRQ masks, PA, image, reset.
 
-**radio**
+**sx1262**
 
 - NRESET is held low for the datasheet's 100 us
   > DS 8.1, as a literal: a constant compared with itself passes at any value.
@@ -2209,7 +2209,7 @@ What the datasheet asks the driver to write, and in what order: IRQ masks, PA, i
 
 How the radio is tuned, and what it can then hear: the modulation programmed for each of the two bands we dwell on, what the PLL word says the radio is tuned to, what a carrier-sense assessment reads off that channel, and the level a delivered packet arrived with. Split out of test_sx1262.cpp to keep both files under 500 lines; the driver and its model are exercised through the same public surface either way.
 
-**radio**
+**sx1262**
 
 - a delivered packet carries the level it arrived with
 - a frequency trim moves the programmed carrier by its own ppm, both ways
@@ -2226,7 +2226,7 @@ How the radio is tuned, and what it can then hear: the modulation programmed for
 
 What goes on air and what comes off it: the buffer, the sync window the part inserts, the frame.
 
-**radio**
+**sx1262**
 
 - a burst carrying a sync word the dwell is not armed for is not reported
 - a burst goes on air at its own length, and the receiver reads its own again
@@ -2251,7 +2251,7 @@ What goes on air and what comes off it: the buffer, the sync window the part ins
 
 What the part asks for so that it survives: the current limit, DS 15, and the silent failures.
 
-**radio**
+**sx1262**
 
 - SetPaConfig widens the current limit to 140 mA and the driver takes it back
 - a bring-up whose calibration failed reports the failing block, not silence
@@ -2287,7 +2287,7 @@ What the part asks for so that it survives: the current limit, DS 15, and the si
 
 The TCXO on DIO3: it starts once, and no retune, burst or hop pays its 5 ms start again.
 
-**radio**
+**sx1262**
 
 - a hop between the M-band channels writes the frequency and nothing else
   > The two M-band dwells are one modulation on two channels, and rewriting the whole modem to move 200 kHz was most of what the hop cost.
@@ -2352,7 +2352,7 @@ The drawing stack end to end, from a pixel to what reaches the glass.
 
 The g-meter page: what the airframe is pulling, and the worst of this flight.
 
-**gmeter**
+**gmeter page**
 
 - a reading of zero carries no sign and no hand
   > A hand on a nothing is noise: zero is zero whichever way it is not leaning.
@@ -2391,7 +2391,12 @@ The menu behind each page as drawn: the focused row, what each row reads, the ca
 - the foot says the button clears when the bar is on a blank first one
   > A gesture nothing says is a gesture nobody finds, and this one throws the name away.
 
-**menu**
+**menu editor**
+
+- a metric pilot steps whole kilometres, not a converted mile
+  > The ring is picked in the unit it is read in, so switching units keeps the step a pilot chose.
+
+**menu page**
 
 - a category the phone stored but the page does not name is still shown
 - a menu is titled what it holds, not the page a thumb came from
@@ -2402,11 +2407,6 @@ The menu behind each page as drawn: the focused row, what each row reads, the ca
 - the UAV categories are not a choice a pilot can make on the panel
 - the callsign ring is blank, dash, A to Z, 0 to 9, and back
   > The ring a pad rolls: blank, dash, letters, digits, and round again.
-
-**menu editor**
-
-- a metric pilot steps whole kilometres, not a converted mile
-  > The ring is picked in the unit it is read in, so switching units keeps the step a pilot chose.
 
 **radar menu**
 
@@ -2450,7 +2450,7 @@ The menu editor: what the pad moves, what the button changes, and what a pilot t
 
 The list a pilot reads when the plot says something is there: who, how far, how much above.
 
-**nearby**
+**nearby page**
 
 - a callsign wider than the column is drawn as far as the column goes
   > The column ends where DIST begins, and a name that would run into it is cut, not wrapped.
@@ -2488,7 +2488,7 @@ The list a pilot reads when the plot says something is there: who, how far, how 
 
 The radar's frame: the ring, the plot's rotation, the footer and the words in the ring. On a 200-pixel span there is no centre pixel, so own-ship sits on the 99|100 boundary and every ring and bearing is measured from there. Half a pixel of drift is half a pixel of parallax on every target.
 
-**radar**
+**radar page**
 
 - a blip on the state word is drawn over it, and the word still reads
   > The readings are the ground the traffic is struck over: a word is no plaque to hide under.
@@ -2503,7 +2503,7 @@ The radar's frame: the ring, the plot's rotation, the footer and the words in th
 - everything is centred on the 99|100 point, not on a pixel
 - renders rings, own symbol and plots targets
 - the flight time reads in the bottom-left, and dashes before a flight
-- the footer counts the traffic it is handed, placed or not, either side of the clock
+- the footer counts traffic it is handed, placed or not, either side of the clock
 - the footer sits on one baseline, a margin clear of the glass edge
 - the plot turns with the track, so what is ahead is up the glass
 - the range labels the ring, centred on it and cleared off it
@@ -2519,7 +2519,7 @@ The radar's frame: the ring, the plot's rotation, the footer and the words in th
 
 An alarm on the radar: a flashing sector on the bearing of every graded aircraft.
 
-**radar**
+**radar page**
 
 - a dismissed aircraft keeps its symbol and takes its sector with it
   > The silence is the whole mark: no word stands in for the sector that went out.
@@ -2541,23 +2541,23 @@ An alarm on the radar: a flashing sector on the bearing of every graded aircraft
 
 What the radar plots: traffic blips and their leaders, the formation square, own ship's vector.
 
-**radar**
+**radar page**
 
 - a caret on the blip says climbing or sinking, past 500 fpm
   > The caret rides the blip, not the tag: a crowded glass drops tags, and a climb through your level is not droppable.
-- a formation is own ship, counted by quadrant
+- a formation is own-ship, counted by quadrant
   > Own ship becomes the formation: one 28 px square, one digit per quadrant, and the airframe untouched.
 - a leader line runs the minute ahead of the target, out to the glass
 - a turning target's leader is its arc
   > The leader is the arc the alarm grades, so a target in a turn does not draw a tangent.
-- own ship's track is a line, with a ball on each of the next two minutes
-- own ship's vector keeps off a plot with nothing on it
+- own-ship's track is a line, with a ball on each of the next two minutes
+- own-ship's vector keeps off a plot with nothing on it
   > An empty ring needs no scale: the vector is read against traffic or not at all.
-- own ship's vector keeps off a ring holding only the formation
+- own-ship's vector keeps off a ring holding only the formation
   > The square is the member's depiction, so a ring holding only the formation is an empty ring.
 - past the advisory's own altitude window the blip is the small one
   > Near-size covers exactly the separation that can alarm, so size is a fact and not a flourish.
-- the vector rides own ship's turn, not its nose
+- the vector rides own-ship's turn, not its nose
   > A pilot in a turn is not going where the nose points, and the line is where they will be.
 - traffic is a blip, and the advisory fills it
   > One blip, three ways up: a diamond at your level, pointing up above you, down below.
@@ -2644,7 +2644,7 @@ The page a bench reads: what it draws per burst, and what it refuses to invent.
 
 The page a bench reads when a burst went missing, in the units the counters keep.
 
-**raw**
+**raw page**
 
 - a solution nothing has dated reports no phase at all
   > A zero would read as a solution landing at the top of the second, which it never does.
@@ -2665,11 +2665,11 @@ The page the glass wears while the factory bootloader has the device, read back 
 
 The satellites page: a bar for every satellite in view, and what stands in before any GSV.
 
-**sats**
+**satellites page**
 
 - a bar for every satellite in view, filled for the ones in the solution
   > The page a pilot on the apron opens: what is up there, how loud, and which ones solved.
-- a receiver that has heard nothing says so rather than drawing an empty chart
+- a receiver that heard nothing says so rather than drawing an empty chart
 - before the first GSV set the solution stands in for the bars
   > A level nobody has measured yet is not drawn as a level of zero.
 
@@ -2677,7 +2677,7 @@ The satellites page: a bar for every satellite in view, and what stands in befor
 
 The power-on self test, on the glass. On a first flash this is the only thing that can name the part that did not answer, so these read the framebuffer back rather than count ink: "there is something on the GNSS row" is not the claim that matters, "the GNSS row says FAIL" is.
 
-**boot**
+**self-test page**
 
 - a full inventory still fits the panel
 - a part that could be two parts says which one it is
@@ -2698,7 +2698,7 @@ The power-on self test, on the glass. On a first flash this is the only thing th
 
 What the settings prompt says a "set" will change, row by row, in the menu's own words.
 
-**settings changes**
+**settings changes page**
 
 - a cleared callsign, a silenced alarm and the bench trims read whole
 - each change is a row in the menu's words, and nothing else is
@@ -2709,7 +2709,7 @@ What the settings prompt says a "set" will change, row by row, in the menu's own
 
 Read against a pilot's habit, not pixels: two dials on one value looks right and lies.
 
-**sixpack**
+**sixpack page**
 
 - a baro vertical speed reads on without a fix
   > The barometer measures a climb of its own, so the vario is not a GNSS instrument.
@@ -2754,7 +2754,7 @@ Read against a pilot's habit, not pixels: two dials on one value looks right and
 
 The status page pins the units a pilot reads first, what each sensor and the receiver say about themselves, and the widest position on earth still fitting its row.
 
-**status**
+**status page**
 
 - a bring-up that named the fault stops on the stage that found it
 - a hub reporting nothing says what the FIFO gave it
@@ -4099,7 +4099,7 @@ The committed scenarios are regression fixtures: the same files the browser and 
 - pinned transmit phases land where the dwell map says
   > The pinned-phase fixture is the slot map's regression test: two neighbours inside the direct dwells are heard, the one in the uplink window is not.
 - the committed files replay with their expectations met
-- the parser reads ownship, traffic and events
+- the parser reads own-ship, traffic and events
 - two gliders sharing a thermal core are warned about the 15 m pass
   > Decision 5.3, settled: cores 75 m apart, an 11 m crossing that both arcs see coming.
 
@@ -4261,7 +4261,7 @@ End-to-end tests through the simulator: modelled GNSS emits real NMEA that the p
 - satellites in view are asked for by the page that draws them
   > Nothing but the satellites page reads a level, and a GSV set is 648 bytes of a 9600 baud second.
 - simulated GNSS drives own-ship state via the real NMEA parser
-- traffic reporting no climb holds its level while own ship climbs past
+- traffic reporting no climb holds its level while own-ship climbs past
   > A rate on air that the aeroplane does not fly is a simulator lying to the extrapolator.
 
 ### test/products/test_status_readings.cpp

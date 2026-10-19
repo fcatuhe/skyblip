@@ -52,8 +52,8 @@ bool has(const std::string& haystack, const char* needle) {
 
 // The dump is driven from the shell with the product in hand, once per pass, so
 // this is what a pass looks like.
-void pass(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
-    const uint32_t until = t + ms;
+void pass(Rig& rig, Dump& dump, uint32_t& t, uint32_t for_ms) {
+    const uint32_t until = t + for_ms;
     for (; t <= until; t += 50) {
         rig.platform.clock().set_millis(t);
         rig.product.run_pass(t);
@@ -261,10 +261,10 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
 // while the arithmetic is a division of the counter rather than a subtraction of
 // two instants.
 namespace {
-// The rig's own pass() helper cannot be used here: it walks t up to t + ms, which
+// The rig's own pass() helper cannot be used here: it walks t up to t + for_ms, which
 // is not a comparison that survives the wrap. The wrap is a value, not a wait.
-void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
-    for (uint32_t stepped = 0; stepped <= ms; stepped += 50) {
+void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& t, uint32_t for_ms) {
+    for (uint32_t stepped = 0; stepped <= for_ms; stepped += 50) {
         rig.platform.clock().set_millis(t);
         rig.product.run_pass(t);
         dump.step(rig.product, t);

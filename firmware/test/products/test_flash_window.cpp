@@ -62,18 +62,18 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     REQUIRE(rig.product.config_link().durable_writes().pending());
 
     // The last phase of the uplink dwell a worst-case write still clears a guard before its end.
-    constexpr int kLastWritePhase = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
-                                    static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
+    constexpr int kLastWritePhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
+                                      static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
     constexpr int kRanLongMs = 50;
-    constexpr int kPassPhase = kLastWritePhase - kRanLongMs;
-    const uint32_t pass_ms = t + 1000 + kPassPhase;
-    publish_dwell(rig, pass_ms, kPassPhase);
+    constexpr int kPassPhaseMs = kLastWritePhaseMs - kRanLongMs;
+    const uint32_t pass_ms = t + 1000 + kPassPhaseMs;
+    publish_dwell(rig, pass_ms, kPassPhaseMs);
     rig.platform.clock().set_millis(pass_ms + kRanLongMs + 1);
     rig.product.config_link().tick(pass_ms);
     CHECK(writes(rig) == before);
     CHECK(rig.product.config_link().durable_writes().pending());
 
-    publish_dwell(rig, pass_ms + 1000, kPassPhase);
+    publish_dwell(rig, pass_ms + 1000, kPassPhaseMs);
     rig.platform.clock().set_millis(pass_ms + 1000 + kRanLongMs);
     rig.product.config_link().tick(pass_ms + 1000);
     CHECK(writes(rig) - before == 1);

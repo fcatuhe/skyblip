@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
+#include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"
 
@@ -18,23 +19,6 @@ namespace {
 
 constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
 constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
-
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-bool glass_reads(const ui::Canvas& canvas, int x, int y, const char* text, int scale) {
-    go::Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, scale);
-    for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * ui::kCellW * scale; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
-}
 
 void pass(Rig& rig, uint32_t& t) {
     t += 50;
@@ -157,8 +141,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     open_upload_window(rig, t);
     rig.run(t, t + 3000);
     t += 3000;
-    CHECK(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                      go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
+                   go::kInstallingTitleY, go::kReceivingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 0);
 
     land_upload(rig, t);
@@ -176,8 +160,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK_FALSE(attempt_recorded(rig));
 
     rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
-    CHECK(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                      go::kInstallingTitleY, go::kInstallingTitle, 2));
+    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
+                   go::kInstallingTitleY, go::kInstallingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(attempt_recorded(rig));
@@ -211,9 +195,8 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
 
     rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning,
-                      1));
+    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning, 1));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
 }
@@ -237,9 +220,9 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
 
     rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0),
-                      go::kRecoveryAwaitsPress, 1));
+    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
+    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryAwaitsPress,
+                   1));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK(rig.product.ready_to_power_off());
     CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
@@ -286,8 +269,8 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     t += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());
     CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
-    CHECK_FALSE(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                            go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK_FALSE(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
+                         go::kInstallingTitleY, go::kReceivingTitle, 2));
 
     land_upload(rig, t);
     rig.run(t, t + 200);

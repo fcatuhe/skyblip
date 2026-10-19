@@ -19,7 +19,7 @@ using namespace skyblip;
 // then are the rails allowed to drop - and not while the button is still down.
 
 TEST_CASE("product: a long press parks the radio and the panel, then asks for the rails") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.run(0, 1000);
@@ -48,7 +48,7 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
 
 // Rails cut mid-frame leave the ink half-driven, and in the sun it goes on developing.
 TEST_CASE("product: the rails wait for the park frame, not only for the park window") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.run(0, 1000);
@@ -71,7 +71,7 @@ TEST_CASE("product: the rails wait for the park frame, not only for the park win
 
 // The unit as flashed paged under the thumb, two seconds before the rails went.
 TEST_CASE("product: the hold that switches the device off does not page first") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.run(0, 1000);
@@ -91,7 +91,7 @@ TEST_CASE("product: the hold that switches the device off does not page first") 
 // D4 over the link: the same road, from a phone instead of a thumb.
 
 TEST_CASE("product: a confirmed power_off over the link parks the device like a long press") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -122,7 +122,7 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
 }
 
 TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -139,7 +139,7 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
 
     // Airborne, the device refuses to arm it at all: a link request cannot land
     // an aircraft.
-    Rig flying;
+    HousekeepingRig flying;
     REQUIRE(flying.setup() == Status::Ok);
     uint32_t ft = 0;
     flying.airborne(ft);
@@ -153,7 +153,7 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
 }
 
 TEST_CASE("product: a page tap is not a power-off") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.tap(t);
@@ -166,7 +166,7 @@ TEST_CASE("product: a page tap is not a power-off") {
 // D3: the acting half of the gauge, wired up.
 
 TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);
     REQUIRE_FALSE(rig.product.power().cutoff());
@@ -184,20 +184,20 @@ TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
 
 // The ratchet: switched off at the cutoff, pressed back on, flattened a bit more.
 TEST_CASE("product: a cell too flat to run refuses the boot instead of spending it") {
-    Rig rig;
+    HousekeepingRig rig;
     rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     CHECK(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
     CHECK(rig.platform.chips().epd.present_count == 0);
     CHECK_FALSE(rig.state().started);
 
-    Rig on_charge;
+    HousekeepingRig on_charge;
     on_charge.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     on_charge.platform.battery().external_power = true;
     CHECK(on_charge.setup() == Status::Ok);
     CHECK(on_charge.product.boot_path() == power::BootPath::Run);
 
-    Rig healthy;
+    HousekeepingRig healthy;
     healthy.platform.battery().divider_mv = power::kBootLockoutMv;
     CHECK(healthy.setup() == Status::Ok);
     CHECK(healthy.product.boot_path() == power::BootPath::Run);
@@ -208,7 +208,7 @@ TEST_CASE("product: a device that cannot fly still switches itself off on a flat
     constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Gnss));
-    Rig rig(kNoGnss);
+    HousekeepingRig rig(kNoGnss);
     REQUIRE(rig.setup() == Status::Down);
     REQUIRE_FALSE(rig.product.flyable());
 
@@ -223,7 +223,7 @@ TEST_CASE("product: a device that cannot fly still switches itself off on a flat
 }
 
 TEST_CASE("product: critical comes before the cutoff, and a floating sense never acts") {
-    Rig warned;
+    HousekeepingRig warned;
     REQUIRE(warned.setup() == Status::Ok);
     warned.platform.battery().divider_mv = 3400;
     warned.run(0, 8000);
@@ -235,7 +235,7 @@ TEST_CASE("product: critical comes before the cutoff, and a floating sense never
 
     // An unconnected divider drifts near zero. It must not switch a device off
     // in someone's hand.
-    Rig floating;
+    HousekeepingRig floating;
     REQUIRE(floating.setup() == Status::Ok);
     floating.platform.battery().divider_mv = 200;
     floating.run(0, 20000);
@@ -247,7 +247,7 @@ TEST_CASE("product: critical comes before the cutoff, and a floating sense never
 // D1: the loop's half of the watchdog, at product scale.
 
 TEST_CASE("product: the loop feeds the watchdog while it is flying and through a shutdown") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     for (uint32_t t = 0; t <= 3 * runtime::kServiceSilenceCeilingMs; t += 100) {
         rig.platform.clock().set_millis(t);

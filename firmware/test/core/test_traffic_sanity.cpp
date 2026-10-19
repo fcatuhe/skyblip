@@ -29,36 +29,36 @@ double free_space_loss_db(int32_t range_m) {
 
 TEST_CASE("traffic: a target further away than the radio can hear is a mis-decode") {
     const model::Ownship own = flying(30, 0);
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
 
     // Ten kilometres out is a real contact on this band: it is well inside the
     // budget and it is what the radar's outer ring is for.
     model::AircraftObservation near_by = neighbour(own, 10000, 0, 0, 30, 180);
     near_by.address = 0x4A0001;
-    CHECK(tbl.update(near_by, 100) >= 0);
+    CHECK(table.update(near_by, 100) >= 0);
 
     // A hundred kilometres is not. Nothing at 14 dBm e.r.p. on 868 MHz reaches
     // this receiver from there, so the frame that said so was wrong.
     model::AircraftObservation ghost = neighbour(own, 100000, 0, 0, 30, 180);
     ghost.address = 0x4A0002;
-    CHECK(tbl.update(ghost, 100) < 0);
-    CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible() == 1);
+    CHECK(table.update(ghost, 100) < 0);
+    CHECK(table.count() == 1);
+    CHECK(table.implausible() == 1);
 
     // Straight up counts too: the altitude field miscorrects as readily as the
     // latitude one, and the slant range is the path the signal took.
     model::AircraftObservation high = neighbour(own, 0, 0, 60000, 0, 0);
     high.address = 0x4A0003;
-    CHECK(tbl.update(high, 100) < 0);
-    CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible() == 2);
+    CHECK(table.update(high, 100) < 0);
+    CHECK(table.count() == 1);
+    CHECK(table.implausible() == 2);
 }
 
 TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
     const model::Ownship own = flying(30, 0);
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
     int32_t slant_m = 0;
 
     // On the limit is believed, past it is not. The integer geometry rounds, so
@@ -92,12 +92,12 @@ TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
 TEST_CASE("traffic: with no fix of our own nothing is refused for being far away") {
     model::Ownship own = flying(30, 0);
     own.fix_valid = false;
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
 
     model::AircraftObservation far_away = neighbour(flying(30, 0), 100000, 0, 0, 30, 180);
-    CHECK(tbl.update(far_away, 100) >= 0);
-    CHECK(tbl.implausible() == 0);
+    CHECK(table.update(far_away, 100) >= 0);
+    CHECK(table.implausible() == 0);
 
     // Same for a report that carries no position at all: it is not a range claim,
     // so it is not this gate's business.
@@ -110,11 +110,11 @@ TEST_CASE("traffic: with no fix of our own nothing is refused for being far away
 // A table nobody told about own-ship gates nothing, which is the same behaviour
 // as no fix: the gate is a refinement on the door, never a new way to be blind.
 TEST_CASE("traffic: a table with no reference set behaves exactly as it did before") {
-    TrafficTable tbl;
+    TrafficTable table;
     model::AircraftObservation far_away = neighbour(flying(30, 0), 250000, 0, 0, 30, 180);
-    CHECK(tbl.update(far_away, 100) >= 0);
-    CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible() == 0);
+    CHECK(table.update(far_away, 100) >= 0);
+    CHECK(table.count() == 1);
+    CHECK(table.implausible() == 0);
 }
 
 // The uplink is the case that makes the gate per-observation rather than
@@ -122,8 +122,8 @@ TEST_CASE("traffic: a table with no reference set behaves exactly as it did befo
 // ghost among them says nothing about the other twelve.
 TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets with it") {
     const model::Ownship own = flying(30, 0);
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
 
     model::AircraftObservation good = neighbour(own, 2000, 500, 100, 30, 90);
     good.address = 0x4B0001;
@@ -135,14 +135,14 @@ TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets wi
     also_good.address = 0x4B0003;
     also_good.source = model::Source::AdslUplink;
 
-    CHECK(tbl.update(good, 100) >= 0);
-    CHECK(tbl.update(ghost, 100) < 0);
-    CHECK(tbl.update(also_good, 100) >= 0);
-    CHECK(tbl.count() == 2);
-    CHECK(tbl.find(6, 0x4B0001) >= 0);
-    CHECK(tbl.find(6, 0x4B0002) == -1);
-    CHECK(tbl.find(6, 0x4B0003) >= 0);
-    CHECK(tbl.implausible() == 1);
+    CHECK(table.update(good, 100) >= 0);
+    CHECK(table.update(ghost, 100) < 0);
+    CHECK(table.update(also_good, 100) >= 0);
+    CHECK(table.count() == 2);
+    CHECK(table.find(6, 0x4B0001) >= 0);
+    CHECK(table.find(6, 0x4B0002) == -1);
+    CHECK(table.find(6, 0x4B0003) >= 0);
+    CHECK(table.implausible() == 1);
 }
 
 // And a refused report never disturbs the aircraft it claims to be. The slot an
@@ -150,25 +150,25 @@ TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets wi
 // carrying a known address must not move it, blank it or age it.
 TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraft") {
     const model::Ownship own = flying(30, 0);
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
 
     model::AircraftObservation real_contact = neighbour(own, 1200, 0, 0, 30, 180, 100000);
     real_contact.address = 0x4C0001;
-    const int idx = tbl.update(real_contact, 100);
+    const int idx = table.update(real_contact, 100);
     REQUIRE(idx >= 0);
-    tbl.at(idx)->alarm_level = Level::Advisory;
+    table.at(idx)->alarm_level = Level::Advisory;
 
     model::AircraftObservation same_aircraft_wrong_place =
         neighbour(own, 120000, 0, 0, 30, 180, 101000);
     same_aircraft_wrong_place.address = 0x4C0001;
-    CHECK(tbl.update(same_aircraft_wrong_place, 101) < 0);
+    CHECK(table.update(same_aircraft_wrong_place, 101) < 0);
 
-    CHECK(tbl.count() == 1);
-    CHECK(tbl.find(6, 0x4C0001) == idx);
-    CHECK(tbl.at(idx)->observation.lat_1e7 == real_contact.lat_1e7);
-    CHECK(tbl.at(idx)->observation.received.at_s == real_contact.received.at_s);
-    CHECK(tbl.at(idx)->alarm_level == Level::Advisory);
+    CHECK(table.count() == 1);
+    CHECK(table.find(6, 0x4C0001) == idx);
+    CHECK(table.at(idx)->observation.lat_1e7 == real_contact.lat_1e7);
+    CHECK(table.at(idx)->observation.received.at_s == real_contact.received.at_s);
+    CHECK(table.at(idx)->alarm_level == Level::Advisory);
 }
 
 // A relayed target crossed two links, so it is allowed to be further away than
@@ -177,20 +177,20 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
 // and a legitimate contact on the relayed one.
 TEST_CASE("traffic: a relayed target is judged against the two hops it travelled") {
     const model::Ownship own = flying(30, 0);
-    TrafficTable tbl;
-    tbl.set_own_reference(own);
+    TrafficTable table;
+    table.set_own_reference(own);
     int32_t slant_m = 0;
 
     model::AircraftObservation distant = neighbour(own, 45000, 0, 0, 30, 180);
     distant.address = 0x4D0001;
     distant.source = model::Source::AdslDirect;
     CHECK(range_check(own, distant, slant_m) == Plausibility::TooFar);
-    CHECK(tbl.update(distant, 100) < 0);
+    CHECK(table.update(distant, 100) < 0);
 
     distant.source = model::Source::AdslUplink;
     CHECK(range_check(own, distant, slant_m) == Plausibility::Believable);
-    CHECK(tbl.update(distant, 100) >= 0);
-    CHECK(tbl.count() == 1);
+    CHECK(table.update(distant, 100) >= 0);
+    CHECK(table.count() == 1);
 
     // ALP-TAS is a direct reception like our own protocol: one hop, one ceiling.
     CHECK(plausible_range_m(model::Source::Alptas) == kPlausibleRangeCeilingM);
@@ -202,7 +202,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     model::AircraftObservation relayed_ghost = neighbour(own, 200000, 0, 0, 30, 180);
     relayed_ghost.address = 0x4D0002;
     relayed_ghost.source = model::Source::AdslUplink;
-    CHECK(tbl.update(relayed_ghost, 100) < 0);
-    CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible() == 2);
+    CHECK(table.update(relayed_ghost, 100) < 0);
+    CHECK(table.count() == 1);
+    CHECK(table.implausible() == 2);
 }

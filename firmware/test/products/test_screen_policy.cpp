@@ -3,7 +3,7 @@
 #include "test/support/screen_rig.h"
 
 TEST_CASE("screen policy: a static frame is never re-presented") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     CHECK(rig.chip.present_count == 2);  // the boot black, then the page
@@ -14,7 +14,7 @@ TEST_CASE("screen policy: a static frame is never re-presented") {
 }
 
 TEST_CASE("screen policy: a minute of changing frames costs partials and no full") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);  // boot full
 
@@ -25,7 +25,7 @@ TEST_CASE("screen policy: a minute of changing frames costs partials and no full
 
 // SoftRF runs this glass on partials alone: the full waveform is power on and power off, no more.
 TEST_CASE("screen policy: hours of changing frames never cost a full refresh") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);  // boot full
     const int boot = rig.chip.present_count;
@@ -36,7 +36,7 @@ TEST_CASE("screen policy: hours of changing frames never cost a full refresh") {
 }
 
 TEST_CASE("screen policy: a page change goes through black, not through the full waveform") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -56,7 +56,7 @@ TEST_CASE("screen policy: a page change goes through black, not through the full
 
 // The rails carry the ~140 ms power-down: skipping it is the whole saving of the shorter wipe.
 TEST_CASE("screen policy: a wipe leaves the rails up, and the page behind it puts them down") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -72,7 +72,7 @@ TEST_CASE("screen policy: a wipe leaves the rails up, and the page behind it put
 }
 
 TEST_CASE("screen policy: a second page change on a black glass costs no second wipe") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -89,7 +89,7 @@ TEST_CASE("screen policy: a second page change on a black glass costs no second 
 }
 
 TEST_CASE("screen policy: a fix arriving is a data change, presented as a partial") {
-    Rig rig;
+    ScreenRig rig;
     rig.state.own.fix_valid = false;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
@@ -104,7 +104,7 @@ TEST_CASE("screen policy: a fix arriving is a data change, presented as a partia
 
 // A radar ghosted over the page under it is worse than 360 ms of black the pilot asked for.
 TEST_CASE("screen policy: the loudest alarm standing still gets the page its black") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -121,7 +121,7 @@ TEST_CASE("screen policy: the loudest alarm standing still gets the page its bla
 
 // A pilot reading the sixpack is a pilot who cannot see the bearing the alarm is about.
 TEST_CASE("screen policy: converging traffic takes a flying page back to the radar") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.screen.next_page();
@@ -140,7 +140,7 @@ TEST_CASE("screen policy: converging traffic takes a flying page back to the rad
 
 // A diagnostics page is read on a bench, where there is no sky to be taken back to.
 TEST_CASE("screen policy: converging traffic leaves the diagnostics pages standing") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.show(t, go::Page::Status);
@@ -154,7 +154,7 @@ TEST_CASE("screen policy: converging traffic leaves the diagnostics pages standi
 
 // The diagnostics menu is the only way to those pages, so an alarm that closed it would seal them.
 TEST_CASE("screen policy: converging traffic leaves the diagnostics menu standing") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.tap(t);
@@ -171,7 +171,7 @@ TEST_CASE("screen policy: converging traffic leaves the diagnostics menu standin
 
 // The settings mode keeps the button to itself, so it has to give it back unasked.
 TEST_CASE("screen policy: converging traffic takes the settings mode back off the glass") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.bus.input.push(events::ContactEvent{events::Contact::Button, true, t});
@@ -190,7 +190,7 @@ TEST_CASE("screen policy: converging traffic takes the settings mode back off th
 }
 
 TEST_CASE("screen policy: presents wait for the panel, none is issued mid-refresh") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.tick(t += 1000);  // boot full: the glass is busy 2.5 s
     const int count = rig.chip.present_count;
@@ -206,7 +206,7 @@ TEST_CASE("screen policy: presents wait for the panel, none is issued mid-refres
 
 // A wipe is 360 ms of black over the bearing the pilot was just told to look at.
 TEST_CASE("screen policy: the long touch that silences an alarm costs no wipe and no page") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.screen.next_page();
@@ -230,7 +230,7 @@ TEST_CASE("screen policy: the long touch that silences an alarm costs no wipe an
 
 // Nothing may hide a page a board can draw: the radar is home and the nearby menu opens the rest.
 TEST_CASE("screen policy: the walk is every picture the board can draw, and every tap changes it") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -244,7 +244,7 @@ TEST_CASE("screen policy: the walk is every picture the board can draw, and ever
 
 // A plain T-Echo has no inertial sensor, so the g-meter is not one of its pictures.
 TEST_CASE("screen policy: the g-meter is on the walk only where the sensor is fitted") {
-    Rig rig;
+    ScreenRig rig;
     rig.roles.capabilities = rig.roles.capabilities | ports::Capability::Inclinometer;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
@@ -260,7 +260,7 @@ TEST_CASE("screen policy: the g-meter is on the walk only where the sensor is fi
 
 // The wipe the pilot's hold asks for, made unasked over the bearing they were just told to look at.
 TEST_CASE("screen policy: an alarm arriving on a radar already read leaves the glass standing") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     REQUIRE(rig.screen.page() == go::Page::Radar);
@@ -273,7 +273,7 @@ TEST_CASE("screen policy: an alarm arriving on a radar already read leaves the g
 
 // Months of the same rings burn into the glass, and this hold is the pilot's way to scrub them.
 TEST_CASE("screen policy: the long touch on the radar takes the picture through black") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     REQUIRE(rig.screen.page() == go::Page::Radar);
@@ -291,7 +291,7 @@ TEST_CASE("screen policy: the long touch on the radar takes the picture through 
 
 // The wedge flips once per frame presented, so the present floor is the blink rate.
 TEST_CASE("screen policy: an alarm flashes the wedge at a flip a second") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int settled = rig.chip.present_count;
@@ -315,7 +315,7 @@ namespace {
 constexpr uint32_t kPassMs = 11;
 constexpr uint32_t kSecondMs = 1000;
 
-void locked_tick(Rig& rig, uint32_t t) {
+void locked_tick(ScreenRig& rig, uint32_t t) {
     rig.state.clock.utc_valid = true;
     rig.state.clock.pps_locked = true;
     rig.state.clock.since_edge_ms = t % kSecondMs;
@@ -327,9 +327,9 @@ bool on_the_redraw_phase(uint32_t t) {
            t % kSecondMs < go::ScreenService::kLockedRedrawWindowStartMs + kPassMs;
 }
 
-int locked_presents(Rig& rig, uint32_t& t, uint32_t ms) {
+int locked_presents(ScreenRig& rig, uint32_t& t, uint32_t for_ms) {
     int presents = 0;
-    for (const uint32_t end = t + ms; t < end; t += kPassMs) {
+    for (const uint32_t end = t + for_ms; t < end; t += kPassMs) {
         if (t % kSecondMs < kPassMs) rig.state.flight.seconds += 60;
         const int before = rig.chip.present_count;
         locked_tick(rig, t);
@@ -346,7 +346,7 @@ int locked_presents(Rig& rig, uint32_t& t, uint32_t ms) {
 // Bench 2026-09-29: a redraw a pass after the last walked ~7 ms/s into the fix and the uplink
 // dwell.
 TEST_CASE("screen policy: under a PPS lock a moving page is redrawn once a second, on one phase") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -357,7 +357,7 @@ TEST_CASE("screen policy: under a PPS lock a moving page is redrawn once a secon
 
 // Every present used to ask for the next, so a flashing wedge set its own drifting cadence.
 TEST_CASE("screen policy: under a PPS lock an alarm flashes the wedge on the redraw phase") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.threat(traffic::Level::Advisory, 0, 1500, t);
@@ -378,7 +378,7 @@ TEST_CASE("screen policy: under a PPS lock an alarm flashes the wedge on the red
 
 // A present just ahead of the phase holds the glass busy through it: that second is lost, no more.
 TEST_CASE("screen policy: under a PPS lock a redraw the busy glass refused lands the next second") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     for (const uint32_t end = t + 3 * kSecondMs; t < end; t += kPassMs) locked_tick(rig, t);
@@ -397,7 +397,7 @@ TEST_CASE("screen policy: under a PPS lock a redraw the busy glass refused lands
 
 // The screen record rode the same drifting rule, so a corpus showed it walking through the second.
 TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second, on one phase") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.recorder.arm();
     rig.run_seconds(t, 3);
@@ -424,7 +424,7 @@ TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second,
 // A pass held up past the phase would push the glass into the next second's fix.
 TEST_CASE(
     "screen policy: under a PPS lock a pass that reaches the phase too late leaves it alone") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     locked_presents(rig, t, 3 * kSecondMs);

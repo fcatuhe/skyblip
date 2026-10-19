@@ -19,19 +19,7 @@ using namespace skyblip;
 using namespace skyblip::protocol;
 
 namespace {
-// Deterministic xorshift so any failure is reproducible in CI.
-struct Rng {
-    uint32_t s;
-    explicit Rng(uint32_t seed) : s(seed) {}
-    uint32_t next() {
-        s ^= s << 13;
-        s ^= s >> 17;
-        s ^= s << 5;
-        return s;
-    }
-};
-
-constexpr uint32_t kUtc = 1700000000;  // 1700000000 % 16 == 0, so timebits == 0
+constexpr uint32_t kUtcS = 1700000000;  // 1700000000 % 16 == 0, so timebits == 0
 
 model::AircraftObservation make_observation(int32_t lat_1e7, int32_t lon_1e7) {
     model::AircraftObservation observation{};
@@ -74,10 +62,10 @@ void check_position_round_trip(int32_t lat_1e7, int32_t lon_1e7, int32_t referen
     CAPTURE(lon_1e7);
     model::AircraftObservation observation = make_observation(lat_1e7, lon_1e7);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, reference_lat_1e7, reference_lon_1e7) ==
+    REQUIRE(alptas_encode(frame, observation, kUtcS, reference_lat_1e7, reference_lon_1e7) ==
             Status::Ok);
     model::AircraftObservation got{};
-    REQUIRE(alptas_decode(frame, kUtc, reference_lat_1e7, reference_lon_1e7, got) == Status::Ok);
+    REQUIRE(alptas_decode(frame, kUtcS, reference_lat_1e7, reference_lon_1e7, got) == Status::Ok);
     CHECK(std::abs(got.lat_1e7 - lat_1e7) <= 26);
     CHECK(std::abs(got.lon_1e7 - lon_1e7) <= lon_quantum(lat_1e7));
 }
@@ -86,10 +74,10 @@ void check_position_round_trip(int32_t lat_1e7, int32_t lon_1e7, int32_t referen
 TEST_CASE("alptas: encode then decode preserves the identity and motion fields") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Ok);
 
     model::AircraftObservation got{};
-    REQUIRE(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok);
+    REQUIRE(alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok);
 
     CHECK(got.address == 0x123456u);
     CHECK(int(got.address_mapping_table) == 0x06);
@@ -102,7 +90,7 @@ TEST_CASE("alptas: encode then decode preserves the identity and motion fields")
     CHECK(got.speed_valid);
     CHECK(got.climb_valid);
     CHECK(got.position_valid);
-    CHECK(got.received.at_s == kUtc);
+    CHECK(got.received.at_s == kUtcS);
     CHECK(got.source == model::Source::Alptas);
 }
 
@@ -111,9 +99,9 @@ TEST_CASE("alptas: on-ground and airborne flight state survive the 2-bit field")
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.flight_state = state;
         uint8_t frame[kAlptasFrameBytes];
-        REQUIRE(alptas_encode(frame, observation, kUtc, 481000000, 87000000) == Status::Ok);
+        REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
-        REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
+        REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
         CHECK(int(got.flight_state) == int(state));
     }
 }
@@ -132,9 +120,9 @@ TEST_CASE("alptas: an ICAO address keeps its table, an unknown one degrades to 0
         observation.address_mapping_table = table;
         observation.address = 0xABCDEF;
         uint8_t frame[kAlptasFrameBytes];
-        REQUIRE(alptas_encode(frame, observation, kUtc, 481000000, 87000000) == Status::Ok);
+        REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
-        REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
+        REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
         CHECK(got.address == 0xABCDEFu);
         CHECK(int(got.address_mapping_table) == int(table));
     }
@@ -180,9 +168,10 @@ TEST_CASE("alptas: speed, climb and track round trip over their ranges") {
                 observation.climb_e8 = climb;
                 observation.track_c9 = track;
                 uint8_t frame[kAlptasFrameBytes];
-                REQUIRE(alptas_encode(frame, observation, kUtc, 481000000, 87000000) == Status::Ok);
+                REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) ==
+                        Status::Ok);
                 model::AircraftObservation got{};
-                REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
+                REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
                 CAPTURE(speed);
                 CAPTURE(climb);
                 CAPTURE(track);
@@ -203,9 +192,9 @@ TEST_CASE("alptas: altitude round trips including below sea level and high up") 
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.alt_m = alt;
         uint8_t frame[kAlptasFrameBytes];
-        REQUIRE(alptas_encode(frame, observation, kUtc, 481000000, 87000000) == Status::Ok);
+        REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
-        REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
+        REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
         CAPTURE(alt);
         CHECK(std::abs(got.alt_m - alt) <= 2);
     }
@@ -214,7 +203,7 @@ TEST_CASE("alptas: altitude round trips including below sea level and high up") 
 TEST_CASE("alptas: the frame CRC is set, checked, and a flipped bit fails it") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Ok);
     CHECK(alptas_crc_ok(frame));
 
     uint16_t crc = alptas_crc(frame);
@@ -228,7 +217,7 @@ TEST_CASE("alptas: the frame CRC is set, checked, and a flipped bit fails it") {
         CAPTURE(bit);
         CHECK_FALSE(alptas_crc_ok(bad));
         model::AircraftObservation got{};
-        CHECK(alptas_decode(bad, kUtc, 480000000, 87000000, got) == Status::Crc);
+        CHECK(alptas_decode(bad, kUtcS, 480000000, 87000000, got) == Status::Crc);
     }
 
     // set_crc is idempotent and repairs a clobbered checksum.
@@ -241,26 +230,26 @@ TEST_CASE("alptas: the frame CRC is set, checked, and a flipped bit fails it") {
 TEST_CASE("alptas: the decrypt gate accepts the second it was sent in, +/-1") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Ok);
 
     model::AircraftObservation got{};
-    CHECK(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok);
-    CHECK(alptas_decode(frame, kUtc + 1, 480000000, 87000000, got) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS + 1, 480000000, 87000000, got) == Status::Ok);
 
     // Two seconds off is a different aircraft's frame, or ours mis-framed.
-    CHECK(alptas_decode(frame, kUtc + 2, 480000000, 87000000, got) != Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS + 2, 480000000, 87000000, got) != Status::Ok);
     // No wrap fudge: 15 seconds later the low nibble is 15 against a sent 0, and
     // that is a rejection, not an off-by-one.
-    CHECK(alptas_decode(frame, kUtc + 15, 480000000, 87000000, got) != Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS + 15, 480000000, 87000000, got) != Status::Ok);
     // A different 16-second block changes the key stage as well.
-    CHECK(alptas_decode(frame, kUtc + 16, 480000000, 87000000, got) != Status::Ok);
-    CHECK(alptas_decode(frame, kUtc - 100, 480000000, 87000000, got) != Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS + 16, 480000000, 87000000, got) != Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS - 100, 480000000, 87000000, got) != Status::Ok);
 }
 
 TEST_CASE("alptas: the decrypt gate rejects a frame with one byte changed") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Ok);
 
     // Change one byte and repair the CRC, so the only line of defence left is the
     // plausibility of the decrypt itself.
@@ -272,19 +261,19 @@ TEST_CASE("alptas: the decrypt gate rejects a frame with one byte changed") {
         REQUIRE(alptas_crc_ok(bad));
         model::AircraftObservation got{};
         CAPTURE(i);
-        CHECK(alptas_decode(bad, kUtc, 480000000, 87000000, got) != Status::Ok);
+        CHECK(alptas_decode(bad, kUtcS, 480000000, 87000000, got) != Status::Ok);
     }
 }
 
 TEST_CASE("alptas: the decrypt gate rejects random frames") {
-    Rng rng(0xA1B2C3D4);
+    Random rng(0xA1B2C3D4);
     int accepted = 0;
     for (int n = 0; n < 500; n++) {
         uint8_t frame[kAlptasFrameBytes];
         for (int i = 0; i < kAlptasDataBytes; i++) frame[i] = static_cast<uint8_t>(rng.next() >> 9);
         alptas_set_crc(frame);
         model::AircraftObservation got{};
-        if (alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok) accepted++;
+        if (alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok) accepted++;
     }
     CHECK(accepted == 0);
 }
@@ -292,36 +281,36 @@ TEST_CASE("alptas: the decrypt gate rejects random frames") {
 TEST_CASE("alptas: a non-position message type is not decoded as traffic") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Ok);
     // Message type lives in the plaintext first word: 3 is a text message.
     frame[3] = static_cast<uint8_t>((frame[3] & 0xF0) | 3);
     alptas_set_crc(frame);
     model::AircraftObservation got{};
-    CHECK(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Unsupported);
+    CHECK(alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Unsupported);
 }
 
 TEST_CASE("alptas: a position that unwraps past the pole or the antimeridian is not a target") {
-    constexpr int32_t kRefLat = 895000000;
-    constexpr int32_t kRefLon = 1799900000;
-    check_position_round_trip(895000000, 1799000000, kRefLat, kRefLon);
+    constexpr int32_t kRefLat1e7 = 895000000;
+    constexpr int32_t kRefLon1e7 = 1799900000;
+    check_position_round_trip(895000000, 1799000000, kRefLat1e7, kRefLon1e7);
 
     uint8_t frame[kAlptasFrameBytes];
     model::AircraftObservation got{};
     // 635974 quanta of 806e-7 deg, unwrapped against 179.99E, is 2 * 2^20 further east: 220 deg
-    REQUIRE(alptas_encode(frame, make_observation(kRefLat, 512595044), kUtc, kRefLat, kRefLon) ==
-            Status::Ok);
-    CHECK(alptas_decode(frame, kUtc, kRefLat, kRefLon, got) == Status::Invalid);
+    REQUIRE(alptas_encode(frame, make_observation(kRefLat1e7, 512595044), kUtcS, kRefLat1e7,
+                          kRefLon1e7) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS, kRefLat1e7, kRefLon1e7, got) == Status::Invalid);
 
     // 722784 quanta of 52e-7 deg, unwrapped against 89.99N, is 16 * 2^20 further north: 91 deg
-    REQUIRE(alptas_encode(frame, make_observation(37584768, 0), kUtc, 899900000, 0) == Status::Ok);
-    CHECK(alptas_decode(frame, kUtc, 899900000, 0, got) == Status::Invalid);
+    REQUIRE(alptas_encode(frame, make_observation(37584768, 0), kUtcS, 899900000, 0) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS, 899900000, 0, got) == Status::Invalid);
 }
 
 TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     observation.position_valid = false;
     uint8_t frame[kAlptasFrameBytes];
-    CHECK(alptas_encode(frame, observation, kUtc, 480000000, 87000000) == Status::Invalid);
+    CHECK(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Invalid);
 }
 
 TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") {
@@ -346,9 +335,9 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.aircraft_cat = cat;
         uint8_t frame[kAlptasFrameBytes];
-        REQUIRE(alptas_encode(frame, observation, kUtc, 481000000, 87000000) == Status::Ok);
+        REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
-        REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
+        REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
         CAPTURE(cat);
         CHECK(int(got.aircraft_cat) == int(cat));
     }
@@ -357,13 +346,13 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
 TEST_CASE("alptas: the chip pairs the air destroyed are flipped back to the frame that was sent") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t sent[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(sent, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(sent, observation, kUtcS, 480000000, 87000000) == Status::Ok);
 
     for (int seed = 1; seed <= 20; seed++) {
         uint8_t frame[kAlptasFrameBytes];
         std::memcpy(frame, sent, sizeof(frame));
         uint8_t erasures[kAlptasFrameBytes] = {0};
-        models::RfChannel channel(static_cast<uint32_t>(seed));
+        RfChannel channel(static_cast<uint32_t>(seed));
         const int flipped = channel.apply_ber(frame, sizeof(frame), 0.012, erasures);
         CAPTURE(seed);
         CAPTURE(flipped);
@@ -371,7 +360,7 @@ TEST_CASE("alptas: the chip pairs the air destroyed are flipped back to the fram
         CHECK(alptas_correct(frame, erasures) == flipped);
         CHECK(std::memcmp(frame, sent, sizeof(frame)) == 0);
         model::AircraftObservation got{};
-        CHECK(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok);
+        CHECK(alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok);
     }
 }
 
@@ -379,7 +368,7 @@ TEST_CASE("alptas: the chip pairs the air destroyed are flipped back to the fram
 TEST_CASE("alptas: damage nothing flagged, or too much of it, leaves the frame as it arrived") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t sent[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(sent, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(sent, observation, kUtcS, 480000000, 87000000) == Status::Ok);
 
     uint8_t unflagged[kAlptasFrameBytes];
     std::memcpy(unflagged, sent, sizeof(unflagged));
@@ -393,7 +382,7 @@ TEST_CASE("alptas: damage nothing flagged, or too much of it, leaves the frame a
     uint8_t beyond[kAlptasFrameBytes];
     std::memcpy(beyond, sent, sizeof(beyond));
     uint8_t erasures[kAlptasFrameBytes] = {0};
-    models::RfChannel channel(7);
+    RfChannel channel(7);
     channel.apply_ber(beyond, sizeof(beyond), 0.25, erasures);
     std::memcpy(as_arrived, beyond, sizeof(as_arrived));
     CHECK(alptas_correct(beyond, erasures) == -1);
@@ -408,37 +397,37 @@ TEST_CASE("alptas: a frame our second refuses names the second its sender keyed"
     for (int32_t offset : {-18, -2, -1, 0, 1, 5, 16, 18}) {
         uint8_t frame[kAlptasFrameBytes];
         REQUIRE(alptas_encode(frame, observation,
-                              static_cast<uint32_t>(static_cast<int32_t>(kUtc) + offset), 480000000,
-                              87000000) == Status::Ok);
+                              static_cast<uint32_t>(static_cast<int32_t>(kUtcS) + offset),
+                              480000000, 87000000) == Status::Ok);
         uint32_t keyed = 0;
         CAPTURE(offset);
-        REQUIRE(alptas_keyed_second(frame, kUtc, keyed) == Status::Ok);
-        CHECK(static_cast<int32_t>(keyed - kUtc) == offset);
+        REQUIRE(alptas_keyed_second(frame, kUtcS, keyed) == Status::Ok);
+        CHECK(static_cast<int32_t>(keyed - kUtcS) == offset);
     }
 }
 
 TEST_CASE("alptas: a second further out than a clock can plausibly be is not searched for") {
     model::AircraftObservation observation = make_observation(481234567, 87654321);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc + 40, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS + 40, 480000000, 87000000) == Status::Ok);
     uint32_t keyed = 0;
-    CHECK(alptas_keyed_second(frame, kUtc, keyed) == Status::Invalid);
+    CHECK(alptas_keyed_second(frame, kUtcS, keyed) == Status::Invalid);
 
     // A frame nothing keyed: noise that framed and held its CRC by accident is not a clock fault.
     uint8_t noise[kAlptasFrameBytes];
     for (int i = 0; i < kAlptasDataBytes; i++) noise[i] = static_cast<uint8_t>(i * 37 + 11);
     noise[3] = static_cast<uint8_t>((noise[3] & 0xF0) | kAlptasMsgTypePosition);
     alptas_set_crc(noise);
-    CHECK(alptas_keyed_second(noise, kUtc, keyed) == Status::Invalid);
+    CHECK(alptas_keyed_second(noise, kUtcS, keyed) == Status::Invalid);
 
     uint8_t broken[kAlptasFrameBytes];
     std::memcpy(broken, frame, sizeof(broken));
     broken[5] ^= 0x01;
-    CHECK(alptas_keyed_second(broken, kUtc, keyed) == Status::Crc);
+    CHECK(alptas_keyed_second(broken, kUtcS, keyed) == Status::Crc);
 
     uint8_t other[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(other, observation, kUtc, 480000000, 87000000) == Status::Ok);
+    REQUIRE(alptas_encode(other, observation, kUtcS, 480000000, 87000000) == Status::Ok);
     other[3] = static_cast<uint8_t>(other[3] & 0xF0);
     alptas_set_crc(other);
-    CHECK(alptas_keyed_second(other, kUtc, keyed) == Status::Unsupported);
+    CHECK(alptas_keyed_second(other, kUtcS, keyed) == Status::Unsupported);
 }

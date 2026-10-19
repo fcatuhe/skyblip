@@ -123,7 +123,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
     observation.lat_1e7 = 481234567;
     observation.lon_1e7 = 87654321;
     uint8_t frame[protocol::kAlptasFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kUtcBase, 481000000, 87000000) ==
+    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kBaseUtcS, 481000000, 87000000) ==
             Status::Ok);
 
     hear_alptas(rig, frame);
@@ -260,7 +260,7 @@ TEST_CASE("radio counters: a burst nothing was attempted on leaves rx_bad where 
     observation.lat_1e7 = 481234567;
     observation.lon_1e7 = 87654321;
     uint8_t frame[protocol::kAlptasFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kUtcBase, 481000000, 87000000) ==
+    REQUIRE(protocol::alptas_encode(frame, observation, Rig::kBaseUtcS, 481000000, 87000000) ==
             Status::Ok);
 
     hear_alptas(rig, frame);

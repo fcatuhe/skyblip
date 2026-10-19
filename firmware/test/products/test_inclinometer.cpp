@@ -16,7 +16,7 @@ namespace {
 constexpr int kTurnCoordinatorCx = 34;
 constexpr int kTurnCoordinatorCy = 133;
 constexpr int kBallY = kTurnCoordinatorCy + 18;
-constexpr uint32_t kBootToBall = 4000;
+constexpr uint32_t kBootToBallMs = 4000;
 
 // The chip is a quarter turn from the case and face down with it (imu_mount.h): +X up, +Y right.
 void fly_uncoordinated(Rig& rig, int16_t right_mg) {
@@ -35,7 +35,7 @@ TEST_CASE("inclinometer: a hub that boots gives the six-pack its cage and its ba
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, 0);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
     CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(rig.state().slip.valid);
@@ -46,7 +46,7 @@ TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, -150);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
     CHECK(rig.state().slip.valid);
     CHECK(rig.state().slip.lateral_mg > 0);
@@ -66,11 +66,11 @@ TEST_CASE("inclinometer: a hub that stops answering takes the ball off the glass
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, -150);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
     REQUIRE(rig.state().slip.valid);
 
     rig.platform.chips().imu.answers = false;
-    rig.run(kBootToBall, kBootToBall + flight::kIndicatedStaleMs + 1000);
+    rig.run(kBootToBallMs, kBootToBallMs + flight::kIndicatedStaleMs + 1000);
 
     CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Failed);
     CHECK_FALSE(rig.state().slip.valid);
@@ -80,9 +80,9 @@ TEST_CASE("inclinometer: the status page names the stage the hub stopped in") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, -150);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
-    uint32_t t = kBootToBall;
+    uint32_t t = kBootToBallMs;
     rig.show(t, go::Page::Status);
     REQUIRE(rig.product.screen().page() == go::Page::Status);
     rig.run(t, t + 1000);
@@ -99,7 +99,7 @@ TEST_CASE("inclinometer: the hub runs no gyroscope, and the turn rate comes off 
     REQUIRE(rig.setup() == Status::Ok);
     fly_uncoordinated(rig, 0);
     rig.platform.chips().imu.set_angular_rate(-300, 0, 0);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
     REQUIRE(rig.product.board().imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(rig.platform.chips().imu.gyro_rate_hz == doctest::Approx(0));
@@ -112,7 +112,7 @@ TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than cen
         ~static_cast<uint32_t>(ports::Capability::Inclinometer));
     Rig rig(kNoImu);
     REQUIRE(rig.setup() == Status::Ok);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Inclinometer));
     CHECK_FALSE(rig.state().slip.valid);
@@ -148,11 +148,11 @@ TEST_CASE("inclinometer: a slim image with no hub image on flash says so on the 
     Rig rig;
     rig.platform.set_imu_firmware_linked(false);
     REQUIRE(rig.setup() == Status::Ok);
-    rig.run(0, kBootToBall);
+    rig.run(0, kBootToBallMs);
 
     CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Idle);
     CHECK_FALSE(rig.state().slip.valid);
-    uint32_t t = kBootToBall;
+    uint32_t t = kBootToBallMs;
     rig.show(t, go::Page::Status);
     rig.run(t, t + 1000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "IMU IDLE NOBLOB", 0, 55, 200, 70));
@@ -220,7 +220,7 @@ TEST_CASE(
     "it") {
     Rig fitted;
     REQUIRE(fitted.setup() == Status::Ok);
-    fitted.run(0, kBootToBall);
+    fitted.run(0, kBootToBallMs);
     REQUIRE(fitted.product.board().imu_store().holds(fitted.platform.imu_firmware_digest()));
 
     Rig slim;
@@ -228,7 +228,7 @@ TEST_CASE(
     slim.platform.set_imu_firmware_linked(false);
     REQUIRE(slim.setup() == Status::Ok);
     fly_uncoordinated(slim, 0);
-    slim.run(0, kBootToBall);
+    slim.run(0, kBootToBallMs);
     CHECK(slim.product.board().imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(slim.state().slip.valid);
 }

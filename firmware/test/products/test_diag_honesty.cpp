@@ -50,7 +50,7 @@ struct ServiceRig {
         gnss::GnssSolution fix{};
         fix.fix_valid = true;
         fix.utc_valid = true;
-        fix.utc_s = kUtc + now_ms / 1000;
+        fix.utc_s = kBaseUtcS + now_ms / 1000;
         fix.lat_1e7 = 485000000;
         fix.lon_1e7 = 85000000;
         fix.alt_mm = 300000;
@@ -64,7 +64,7 @@ struct ServiceRig {
         ownship.tick(now_ms);
     }
 
-    static constexpr uint32_t kUtc = 1785628800;
+    static constexpr uint32_t kBaseUtcS = 1785628800;
     uint32_t updates{0};
 };
 
@@ -98,7 +98,7 @@ TEST_CASE("diag gnss: the settle gate recorded is this pass's, not the one befor
 TEST_CASE("diag burst: a second the anchored clock dated is never recorded as boot-relative") {
     ServiceRig rig;
     rig.state.clock.pps_locked = true;
-    rig.state.clock.utc_s = ServiceRig::kUtc;
+    rig.state.clock.utc_s = ServiceRig::kBaseUtcS;
     rig.state.own.utc_valid = false;
     rig.clock.set_micros(4000000);
 
@@ -112,7 +112,7 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
     radio::Entry burst{};
     REQUIRE(last_of(drained(rig.recorder), burst));
     CHECK(burst.verdict == radio::Verdict::BadCrc);
-    CHECK(burst.at_s == ServiceRig::kUtc);
+    CHECK(burst.at_s == ServiceRig::kBaseUtcS);
     CHECK(burst.utc_dated);
 }
 
@@ -131,7 +131,7 @@ TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling,
 
 // Recorded before the alarm navigated, the page is the one the pilot was taken off.
 TEST_CASE("diag screen: the page recorded is the one the alarm put up, not the one it replaced") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.recorder.arm();
     rig.run_seconds(t, 3);

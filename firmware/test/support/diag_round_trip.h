@@ -7,12 +7,12 @@
 
 namespace skyblip {
 
-constexpr uint32_t kDiagTestUtc = 1789000000;
+constexpr uint32_t kDiagTestUtcS = 1789000000;
 constexpr uint16_t kDiagTestIntoMs = 462;
 
 inline diag::Instant diag_test_instant() {
     diag::Instant at{};
-    at.at_s = kDiagTestUtc;
+    at.at_s = kDiagTestUtcS;
     at.into_ms = kDiagTestIntoMs;
     at.phase_valid = true;
     at.utc_dated = true;
@@ -26,7 +26,7 @@ T diag_round_trip(const T& value) {
     diag::encode_record(in, raw);
     diag::Record decoded{};
     CHECK(diag::decode_record(raw, decoded) == Status::Ok);
-    CHECK(decoded.at_s == kDiagTestUtc);
+    CHECK(decoded.at_s == kDiagTestUtcS);
     CHECK(decoded.into_ms == kDiagTestIntoMs);
     CHECK(decoded.phase_valid());
     CHECK(decoded.utc_dated());

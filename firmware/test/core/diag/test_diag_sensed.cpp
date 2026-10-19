@@ -69,7 +69,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.band = model::Band::M;
     in.source = model::Source::Alptas;
     in.address = 0xDD8241;
-    in.at_s = kDiagTestUtc;
+    in.at_s = kDiagTestUtcS;
     in.into_ms = 462;
     in.tx_keyed_us = 619;
     in.tx_span_us = 6014;

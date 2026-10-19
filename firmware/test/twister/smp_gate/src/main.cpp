@@ -22,11 +22,11 @@ constexpr size_t kChunkBytes = 64;
 
 struct Reply {
     bool answered{false};
-    bool has_rc{false};
+    bool rc_valid{false};
     int32_t rc{0};
-    bool has_off{false};
+    bool off_valid{false};
     size_t off{0};
-    bool has_echo{false};
+    bool echo_valid{false};
 };
 
 struct Body {
@@ -47,11 +47,11 @@ Reply decode(const uint8_t* payload, size_t len) {
         zcbor_string key{};
         if (!zcbor_tstr_decode(zsd, &key)) break;
         if (key_is(key, "rc")) {
-            reply.has_rc = zcbor_int32_decode(zsd, &reply.rc);
+            reply.rc_valid = zcbor_int32_decode(zsd, &reply.rc);
         } else if (key_is(key, "off")) {
-            reply.has_off = zcbor_size_decode(zsd, &reply.off);
+            reply.off_valid = zcbor_size_decode(zsd, &reply.off);
         } else if (key_is(key, "r")) {
-            reply.has_echo = true;
+            reply.echo_valid = true;
             zcbor_any_skip(zsd, nullptr);
         } else {
             zcbor_any_skip(zsd, nullptr);
@@ -120,7 +120,7 @@ Reply upload_chunk(size_t off, size_t len) {
 }
 
 bool refused(const Reply& reply) {
-    return reply.answered && reply.has_rc && reply.rc == MGMT_ERR_EACCESSDENIED;
+    return reply.answered && reply.rc_valid && reply.rc == MGMT_ERR_EACCESSDENIED;
 }
 
 void open_gate() { platform::zephyr::UploadGate::publish(true); }
@@ -143,15 +143,15 @@ ZTEST_SUITE(smp_gate, nullptr, nullptr, before_each, nullptr, nullptr);
 ZTEST(smp_gate, test_image_upload_is_refused_while_the_gate_is_closed) {
     const Reply reply = upload_chunk(0, kChunkBytes);
     zassert_true(refused(reply), "rc %d", reply.rc);
-    zassert_false(reply.has_off, "the handler ran");
+    zassert_false(reply.off_valid, "the handler ran");
 }
 
 ZTEST(smp_gate, test_image_upload_reaches_the_handler_while_the_gate_is_open) {
     open_gate();
     const Reply reply = upload_chunk(0, kChunkBytes);
     zassert_true(reply.answered);
-    zassert_false(reply.has_rc && reply.rc != MGMT_ERR_EOK, "rc %d", reply.rc);
-    zassert_true(reply.has_off, "no offset, the handler did not run");
+    zassert_false(reply.rc_valid && reply.rc != MGMT_ERR_EOK, "rc %d", reply.rc);
+    zassert_true(reply.off_valid, "no offset, the handler did not run");
     zassert_equal(reply.off, kChunkBytes);
 }
 
@@ -184,8 +184,8 @@ ZTEST(smp_gate, test_os_echo_is_answered_with_the_gate_closed) {
         send(dfu::SmpGroup::Os, dfu::kSmpOsEcho, dfu::SmpOp::Write, body([](zcbor_state_t* zse) {
                  return zcbor_tstr_put_lit(zse, "d") && zcbor_tstr_put_lit(zse, "skyblip");
              }));
-    zassert_false(reply.has_rc, "rc %d", reply.rc);
-    zassert_true(reply.has_echo, "no echo, the handler did not run");
+    zassert_false(reply.rc_valid, "rc %d", reply.rc);
+    zassert_true(reply.echo_valid, "no echo, the handler did not run");
 }
 
 ZTEST(smp_gate, test_image_state_read_is_answered_with_the_gate_closed) {

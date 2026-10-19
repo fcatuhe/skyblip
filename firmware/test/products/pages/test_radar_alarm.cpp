@@ -29,7 +29,7 @@ RadarSnapshot with_threat(RadarTarget* one, Level level) {
 }  // namespace
 
 // The wedge is the whole alarm on the glass: which way to look, from the first grade.
-TEST_CASE("radar: an alarm flashes a wedge on the bearing of the threat") {
+TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat") {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
@@ -46,7 +46,7 @@ TEST_CASE("radar: an alarm flashes a wedge on the bearing of the threat") {
 }
 
 // A quarter of the glass flipping is seen without looking. A narrow slice has to be read.
-TEST_CASE("radar: the wedge opens 45 degrees each side of the bearing") {
+TEST_CASE("radar page: the wedge opens 45 degrees each side of the bearing") {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
@@ -61,7 +61,7 @@ TEST_CASE("radar: the wedge opens 45 degrees each side of the bearing") {
 }
 
 // A sector that inverted the ring too flashed white gaps into the one closed curve on the page.
-TEST_CASE("radar: the sector stops under the ring, which stays black through the flash") {
+TEST_CASE("radar page: the sector stops under the ring, which stays black through the flash") {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
@@ -78,7 +78,7 @@ TEST_CASE("radar: the sector stops under the ring, which stays black through the
 }
 
 // The square is own ship, and a sector that ran through it broke the box and reversed its counts.
-TEST_CASE("radar: a flashing sector keeps off the formation square, not the glass around it") {
+TEST_CASE("radar page: a flashing sector keeps off the formation square, not the glass around it") {
     RadarTarget flight[2] = {
         {0, 3000, 0, Level::Advisory},
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
@@ -103,7 +103,7 @@ TEST_CASE("radar: a flashing sector keeps off the formation square, not the glas
 }
 
 // The grade that fills the diamond is the grade that starts the search.
-TEST_CASE("radar: the wedge is flashing by the time a target reads as a filled diamond") {
+TEST_CASE("radar page: the wedge is flashing by the time a target reads as a filled diamond") {
     for (const Level level : {Level::Advisory, Level::Advisory, Level::Advisory}) {
         RadarTarget east[1] = {{0, 1500, 0}};
         RadarSnapshot snapshot = with_threat(east, level);
@@ -124,7 +124,7 @@ TEST_CASE("radar: the wedge is flashing by the time a target reads as a filled d
 }
 
 // The silence is the whole mark: no word stands in for the sector that went out.
-TEST_CASE("radar: a dismissed aircraft keeps its symbol and takes its sector with it") {
+TEST_CASE("radar page: a dismissed aircraft keeps its symbol and takes its sector with it") {
     RadarTarget east[1] = {{0, 1500, 0}};
     RadarSnapshot snapshot = with_threat(east, Level::Advisory);
     east[0].alarm_dismissed = true;
@@ -142,7 +142,7 @@ TEST_CASE("radar: a dismissed aircraft keeps its symbol and takes its sector wit
 }
 
 // Two aircraft are two places to look, and a pilot told only about the louder one looks once.
-TEST_CASE("radar: every graded aircraft flashes a sector of its own") {
+TEST_CASE("radar page: every graded aircraft flashes a sector of its own") {
     RadarTarget pair[2] = {{0, 1500, 0}, {0, -1500, 0}};
     pair[1].alarm_level = Level::Advisory;
     RadarSnapshot snapshot = with_threat(pair, Level::Advisory);
@@ -165,7 +165,7 @@ TEST_CASE("radar: every graded aircraft flashes a sector of its own") {
     CHECK(differing_in(one_left, radar(snapshot), 10, 90, 70, 110) == 0);
 }
 
-TEST_CASE("radar: a threat astern flashes its wedge down to the ring, around the range") {
+TEST_CASE("radar page: a threat astern flashes its wedge down to the ring, around the range") {
     RadarTarget behind[1] = {{-1500, 0, 0}};
     RadarSnapshot snapshot = with_threat(behind, Level::Advisory);
 

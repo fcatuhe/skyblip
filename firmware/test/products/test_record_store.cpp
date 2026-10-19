@@ -18,7 +18,7 @@ constexpr uint32_t kCaptureSession = 9000;
 constexpr int kClaimCostMs =
     static_cast<int>(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs);
 // The last phase of the uplink dwell a claim still finishes a guard's width before its end.
-constexpr int kLastClaimPhase = timing::kUplinkRxEndMs - timing::kJitterGuardMs - kClaimCostMs;
+constexpr int kLastClaimPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs - kClaimCostMs;
 
 // One sector of the partition answers every read Status::Down, the boot-scan fault.
 class BlindSectorFlash : public platform::host::FlashRegion {
@@ -310,14 +310,14 @@ TEST_CASE("record store: a write is placed at the instant it starts, not when it
 
     // Earlier services held the loop this long, inside the view's staleness bound.
     constexpr int kRanLongMs = 50;
-    constexpr int kPassPhase = kLastClaimPhase - kRanLongMs;
-    constexpr uint32_t kPassMs = 10'000 + kPassPhase;
-    rig.publish_dwell(kPassMs, kPassPhase);
+    constexpr int kPassPhaseMs = kLastClaimPhaseMs - kRanLongMs;
+    constexpr uint32_t kPassMs = 10'000 + kPassPhaseMs;
+    rig.publish_dwell(kPassMs, kPassPhaseMs);
     rig.clock.set_millis(kPassMs + kRanLongMs + 1);
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
     CHECK(flash.erases == erases);
 
-    rig.publish_dwell(kPassMs + 1000, kPassPhase);
+    rig.publish_dwell(kPassMs + 1000, kPassPhaseMs);
     rig.clock.set_millis(kPassMs + 1000 + kRanLongMs);
     CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
     CHECK(flash.erases > erases);
@@ -332,7 +332,7 @@ TEST_CASE("record store: both rings writing in one pass share the window that pa
     rig.capture.begin_session(kCaptureSession);
 
     constexpr uint32_t kPassMs = 10'000;
-    rig.publish_dwell(kPassMs, kLastClaimPhase);
+    rig.publish_dwell(kPassMs, kLastClaimPhaseMs);
     CHECK(append_one(rig.flights, kPassMs) == go::Append::Ok);
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
     CHECK(rig.capture.sectors_owned() == 0);

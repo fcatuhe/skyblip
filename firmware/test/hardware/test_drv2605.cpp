@@ -14,13 +14,15 @@ using namespace skyblip;
 
 namespace {
 
-parts::Drv2605 make(models::Drv2605& chip) { return parts::Drv2605(chip, chip, chip.enable_pin); }
+parts::Drv2605 driver_for(models::Drv2605& chip) {
+    return parts::Drv2605(chip, chip, chip.enable_pin);
+}
 
 }  // namespace
 
 TEST_CASE("drv2605: the enable pin on its own produces no pulse") {
     models::Drv2605 chip;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
 
     // Exactly what the annunciator used to do: drive the pin, wait, drop it.
     haptic.power_up();
@@ -32,7 +34,7 @@ TEST_CASE("drv2605: the enable pin on its own produces no pulse") {
 
 TEST_CASE("drv2605: bring-up identifies the part and leaves it configured and asleep") {
     models::Drv2605 chip;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
 
     REQUIRE(haptic.begin() == Status::Ok);
     CHECK(haptic.ready());
@@ -55,7 +57,7 @@ TEST_CASE("drv2605: bring-up identifies the part and leaves it configured and as
 TEST_CASE("drv2605: a part that does not answer its address is absent, not broken") {
     models::Drv2605 chip;
     chip.answers = false;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
 
     CHECK(haptic.begin() == Status::Down);
     CHECK_FALSE(haptic.ready());
@@ -68,7 +70,7 @@ TEST_CASE("drv2605: a part that does not answer its address is absent, not broke
 TEST_CASE("drv2605: something else at 0x5A is not a haptic driver") {
     models::Drv2605 chip;
     chip.registers[0x00] = 0x00;  // device id 0: not any DRV260x
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
 
     CHECK(haptic.begin() == Status::Unsupported);
     CHECK_FALSE(haptic.ready());
@@ -78,7 +80,7 @@ TEST_CASE("drv2605: something else at 0x5A is not a haptic driver") {
 
 TEST_CASE("drv2605: a pulse is a drive value that holds, and stops when it is told") {
     models::Drv2605 chip;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
     REQUIRE(haptic.begin() == Status::Ok);
 
     haptic.start();
@@ -100,7 +102,7 @@ TEST_CASE("drv2605: a pulse is a drive value that holds, and stops when it is to
 
 TEST_CASE("drv2605: a second start inside a pulse does not restack the bus traffic") {
     models::Drv2605 chip;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
     REQUIRE(haptic.begin() == Status::Ok);
 
     haptic.start();
@@ -112,7 +114,7 @@ TEST_CASE("drv2605: a second start inside a pulse does not restack the bus traff
 
 TEST_CASE("drv2605: parking clears the GO bit a bench session may have left set") {
     models::Drv2605 chip;
-    parts::Drv2605 haptic = make(chip);
+    parts::Drv2605 haptic = driver_for(chip);
     REQUIRE(haptic.begin() == Status::Ok);
 
     // A ROM sequence left running by anything else: mode 0, GO set, waveform 1.

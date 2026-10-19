@@ -11,13 +11,13 @@
 namespace skyblip {
 
 inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
-inline events::RxFrame frame(const char* json) {
-    events::RxFrame f{};
-    f.session_id = 1;
-    f.endpoint = events::Endpoint::Config;
-    f.bytes = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(f.data.data(), json, f.bytes);
-    return f;
+inline events::RxFrame config_frame(const char* json) {
+    events::RxFrame frame{};
+    frame.session_id = 1;
+    frame.endpoint = events::Endpoint::Config;
+    frame.bytes = static_cast<uint16_t>(std::strlen(json));
+    std::memcpy(frame.data.data(), json, frame.bytes);
+    return frame;
 }
 
 }  // namespace skyblip

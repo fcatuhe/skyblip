@@ -18,18 +18,18 @@ using namespace skyblip::traffic;
 
 namespace {
 
-constexpr uint32_t kUtc = 1700000000;
-constexpr int32_t kOwnLat = 481000000;
-constexpr int32_t kOwnLon = 81000000;
+constexpr uint32_t kUtcS = 1700000000;
+constexpr int32_t kOwnLat1e7 = 481000000;
+constexpr int32_t kOwnLon1e7 = 81000000;
 constexpr int32_t kOwnAltM = 1000;
-constexpr int32_t kFourHundredMetresNorthE7 = 400 * 1000000 / 11132;
+constexpr int32_t kFourHundredMetresNorth1e7 = 400 * 1000000 / 11132;
 
 model::Ownship own_at(uint32_t at_ms) {
     model::Ownship o{};
     o.fix_valid = true;
     o.fix_at_ms = at_ms;
-    o.lat_1e7 = kOwnLat;
-    o.lon_1e7 = kOwnLon;
+    o.lat_1e7 = kOwnLat1e7;
+    o.lon_1e7 = kOwnLon1e7;
     o.alt_hae_mm = kOwnAltM * 1000;
     o.speed_mm_s = 30000;
     return o;
@@ -41,8 +41,8 @@ model::AircraftObservation sender(flight::FlightState state) {
     o.address_mapping_table = 5;
     o.aircraft_cat = 4;
     o.flight_state = static_cast<uint8_t>(state);
-    o.lat_1e7 = kOwnLat + kFourHundredMetresNorthE7;
-    o.lon_1e7 = kOwnLon;
+    o.lat_1e7 = kOwnLat1e7 + kFourHundredMetresNorth1e7;
+    o.lon_1e7 = kOwnLon1e7;
     o.alt_m = kOwnAltM;
     o.speed_valid = true;
     o.position_valid = true;
@@ -50,7 +50,7 @@ model::AircraftObservation sender(flight::FlightState state) {
 }
 
 model::AircraftObservation stamped(model::AircraftObservation heard) {
-    heard.received.at_s = kUtc;
+    heard.received.at_s = kUtcS;
     heard.at_ms = 1000;
     return heard;
 }
@@ -85,9 +85,9 @@ model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
 
 model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
     uint8_t frame[protocol::kAlptasFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, sent, kUtc, kOwnLat, kOwnLon) == Status::Ok);
+    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS, kOwnLat1e7, kOwnLon1e7) == Status::Ok);
     model::AircraftObservation heard{};
-    REQUIRE(protocol::alptas_decode(frame, kUtc, kOwnLat, kOwnLon, heard) == Status::Ok);
+    REQUIRE(protocol::alptas_decode(frame, kUtcS, kOwnLat1e7, kOwnLon1e7, heard) == Status::Ok);
     return stamped(heard);
 }
 
@@ -146,13 +146,13 @@ TEST_CASE(
     for (const System& system : kSystems) {
         CAPTURE(system.name);
         const model::AircraftObservation parked = system.heard(sender(flight::FlightState::Ground));
-        TrafficTable tbl;
-        REQUIRE(tbl.update(parked, kUtc) >= 0);
+        TrafficTable table;
+        REQUIRE(table.update(parked, kUtcS) >= 0);
 
-        tbl.age_out(kUtc + kGroundTargetForgetS);
-        CHECK(tbl.find(parked.address_mapping_table, parked.address) >= 0);
-        tbl.age_out(kUtc + kGroundTargetForgetS + 1);
-        CHECK(tbl.find(parked.address_mapping_table, parked.address) == -1);
+        table.age_out(kUtcS + kGroundTargetForgetS);
+        CHECK(table.find(parked.address_mapping_table, parked.address) >= 0);
+        table.age_out(kUtcS + kGroundTargetForgetS + 1);
+        CHECK(table.find(parked.address_mapping_table, parked.address) == -1);
     }
 }
 

@@ -243,7 +243,7 @@ TEST_CASE("product: the aircraft type set on the panel is the one that goes on t
     // The category the transmitter puts in the frame is own.aircraft_cat, and
     // the own-ship service copies it off the settings on the next fix: the page
     // does not need a second wire, and it must not grow one.
-    push_solution(rig, 25000, 500);
+    push_fix(rig, 25000, 500);
     rig.run(t, t + 1000);
     CHECK(rig.state().own.aircraft_cat == 3);
 }

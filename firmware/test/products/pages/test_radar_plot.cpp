@@ -46,7 +46,7 @@ RadarSnapshot one_target(RadarTarget* t) {
 }
 
 // One blip, three ways up: a diamond at your level, pointing up above you, down below.
-TEST_CASE("radar: traffic is a blip, and the advisory fills it") {
+TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
     RadarTarget level[1] = {{2 * kMetresPerNm, 0, 0, Level::None}};
     const Glass diamond = radar(one_target(level));
     CHECK_FALSE(diamond.get_pixel(kPlotX, kPlotY));
@@ -78,7 +78,7 @@ TEST_CASE("radar: traffic is a blip, and the advisory fills it") {
 }
 
 // Near-size covers exactly the separation that can alarm, so size is a fact and not a flourish.
-TEST_CASE("radar: past the advisory's own altitude window the blip is the small one") {
+TEST_CASE("radar page: past the advisory's own altitude window the blip is the small one") {
     RadarTarget inside[1] = {{2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltM, Level::None}};
     const Glass near = radar(one_target(inside));
     CHECK(near.get_pixel(kPlotX, kPlotY - 7));
@@ -93,7 +93,7 @@ TEST_CASE("radar: past the advisory's own altitude window the blip is the small 
     CHECK_FALSE(far.get_pixel(kPlotX - 8, kPlotY + 1));
 }
 
-TEST_CASE("radar: a leader line runs the minute ahead of the target, out to the glass") {
+TEST_CASE("radar page: a leader line runs the minute ahead of the target, out to the glass") {
     // 30 m/s for 60 s is 1800 m, which is 22 px on the 4 NM ring.
     RadarTarget north[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     const Glass ahead = radar(one_target(north));
@@ -118,7 +118,7 @@ TEST_CASE("radar: a leader line runs the minute ahead of the target, out to the 
 
 // Own ship becomes the formation: one 28 px square, one digit per quadrant, and the airframe
 // untouched.
-TEST_CASE("radar: a formation is own ship, counted by quadrant") {
+TEST_CASE("radar page: a formation is own-ship, counted by quadrant") {
     RadarTarget flight[4] = {
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
         {700, 600, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
@@ -158,7 +158,7 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
 }
 
 // The leader is the arc the alarm grades, so a target in a turn does not draw a tangent.
-TEST_CASE("radar: a turning target's leader is its arc") {
+TEST_CASE("radar page: a turning target's leader is its arc") {
     RadarTarget straight[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     RadarTarget arcing[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0, 200, true}};
     RadarSnapshot snapshot = flying(0);
@@ -182,7 +182,7 @@ TEST_CASE("radar: a turning target's leader is its arc") {
 }
 
 // The ring is the scale the footer reads in, and the glass around it is spare.
-TEST_CASE("radar: traffic past the ring still draws, and the count stays on the ring") {
+TEST_CASE("radar page: traffic past the ring still draws, and the count stays on the ring") {
     // 4.2 NM abeam is off the 4 NM ring and still on the glass, at 96 px.
     RadarTarget beside[1] = {{0, (42 * kMetresPerNm) / 10, 0, Level::Advisory}};
     RadarSnapshot snapshot = flying(0);
@@ -214,7 +214,7 @@ TEST_CASE("radar: traffic past the ring still draws, and the count stays on the 
     CHECK(reads_in(empty, "0", 170, 170, 200, 200, 3));
 }
 
-TEST_CASE("radar: own ship's track is a line, with a ball on each of the next two minutes") {
+TEST_CASE("radar page: own-ship's track is a line, with a ball on each of the next two minutes") {
     const Glass canvas = radar(cruising(30));
 
     // 30 m/s for 60 s is 1800 m, 22 px up the glass: the ball straddles the 99|100 pair.
@@ -267,7 +267,7 @@ TEST_CASE("radar: own ship's track is a line, with a ball on each of the next tw
 }
 
 // A pilot in a turn is not going where the nose points, and the line is where they will be.
-TEST_CASE("radar: the vector rides own ship's turn, not its nose") {
+TEST_CASE("radar page: the vector rides own-ship's turn, not its nose") {
     // 30 m/s at 1 deg/s is a 1719 m radius: 60 deg of it is 10 px right, 18 px up.
     RadarTarget behind[1] = {{-3000, 0, 0, Level::Advisory}};
     RadarSnapshot right = flying(0);
@@ -297,7 +297,7 @@ TEST_CASE("radar: the vector rides own ship's turn, not its nose") {
 }
 
 // An empty ring needs no scale: the vector is read against traffic or not at all.
-TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
+TEST_CASE("radar page: own-ship's vector keeps off a plot with nothing on it") {
     RadarSnapshot alone = flying(0);
     alone.speed_mm_s = 30000;
     CHECK_FALSE(radar(alone).get_pixel(100, 78));
@@ -315,7 +315,7 @@ TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
 }
 
 // The square is the member's depiction, so a ring holding only the formation is an empty ring.
-TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation") {
+TEST_CASE("radar page: own-ship's vector keeps off a ring holding only the formation") {
     RadarTarget pair[2] = {{-60, -120, 10, Level::None, 0, false, 30000, 0, 0, false, true},
                            abeam[0]};
     RadarSnapshot together = flying(0);
@@ -333,7 +333,7 @@ TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation"
 
 // The caret rides the blip, not the tag: a crowded glass drops tags, and a climb through your
 // level is not droppable.
-TEST_CASE("radar: a caret on the blip says climbing or sinking, past 500 fpm") {
+TEST_CASE("radar page: a caret on the blip says climbing or sinking, past 500 fpm") {
     RadarTarget steady[1] = {{2 * kMetresPerNm, 0, 300, Level::Advisory, 0, true}};
     const Glass flat = radar(one_target(steady));
     CHECK_FALSE(flat.get_pixel(kPlotX, kPlotY - 11));

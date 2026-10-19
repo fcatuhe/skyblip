@@ -29,11 +29,11 @@ void deliver(const uint8_t* chips, size_t chip_len, uint8_t* out, size_t out_len
     }
 }
 
-constexpr uint32_t kUtc = 1754092800;
+constexpr uint32_t kUtcS = 1754092800;
 constexpr uint64_t kPpsEdgeUs = 40'000'000;
 constexpr uint16_t kIntoMs = 437;
 
-struct Rig {
+struct StampRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
@@ -47,18 +47,18 @@ struct Rig {
     runtime::Context context{roles, bus, state, recorder};
     go::TrafficService traffic{context, go::kFeatures};
 
-    Rig() {
+    StampRig() {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.utc_s = kUtc;
+        state.own.utc_s = kUtcS;
         state.own.lat_1e7 = 485000000;
         state.own.lon_1e7 = 85000000;
         state.own.alt_hae_mm = 500000;
         state.own.vdop_e2 = 150;
         state.clock.pps_locked = true;
         state.clock.pps_edge_us = kPpsEdgeUs;
-        state.clock.utc_s = kUtc;
+        state.clock.utc_s = kUtcS;
         REQUIRE(traffic.setup() == Status::Ok);
     }
 
@@ -88,14 +88,14 @@ struct Rig {
 }  // namespace
 
 TEST_CASE("stamp: a reception is dated by its dwell, not by the pass that drained it") {
-    Rig rig;
+    StampRig rig;
     // Heard 437 ms into the second, drained on a pass 906 ms into it.
     rig.hear(0xC5D804, kPpsEdgeUs + kIntoMs * 1000, 40906);
 
     REQUIRE(rig.state.air.rx_ok == 1);
     const traffic::Target* target = rig.state.traffic.at(0);
     REQUIRE(target != nullptr);
-    CHECK(target->observation.received.at_s == kUtc);
+    CHECK(target->observation.received.at_s == kUtcS);
     CHECK(target->observation.received.into_ms == kIntoMs);
     CHECK(target->observation.received.phase_valid);
 }

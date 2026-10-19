@@ -14,7 +14,7 @@ using skyblip::ink_in;
 using skyblip::reads_in;
 using skyblip::traffic::Level;
 
-TEST_CASE("radar: renders rings, own symbol and plots targets") {
+TEST_CASE("radar page: renders rings, own symbol and plots targets") {
     Glass canvas;
     RadarTarget targets[2] = {
         {2000, 0, 100, Level::Advisory},    // north, above
@@ -60,7 +60,7 @@ TEST_CASE("radar: renders rings, own symbol and plots targets") {
     CHECK(fb2.count_black() > 0);
 }
 
-TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
+TEST_CASE("radar page: everything is centred on the 99|100 point, not on a pixel") {
     // 200x200 is an EVEN grid: there is no middle pixel. The centre is the point
     // where pixels 99 and 100 meet on both axes, so anything "on" the centre is
     // a PAIR of pixels. No alarm and no fix, so only rings and ship mark the edges.
@@ -109,7 +109,7 @@ TEST_CASE("radar: everything is centred on the 99|100 point, not on a pixel") {
     CHECK(top == 199 - bottom);
 }
 
-TEST_CASE("radar: the range ring is one unbroken stroke, and the only ring on the glass") {
+TEST_CASE("radar page: the range ring is one unbroken stroke, and the only ring on the glass") {
     Glass canvas;
     draw_radar(canvas, flying(0));  // an empty sky in flight: the ring and own ship, nothing else
     int thinnest = 200, thickest = 0, inside_ink = 0;
@@ -139,7 +139,7 @@ TEST_CASE("radar: the range ring is one unbroken stroke, and the only ring on th
     CHECK(speckles == 0);
 }
 
-TEST_CASE("radar: the plot turns with the track, so what is ahead is up the glass") {
+TEST_CASE("radar page: the plot turns with the track, so what is ahead is up the glass") {
     RadarTarget east[1] = {{0, 2 * kMetresPerNm, 0, Level::Advisory}};
     RadarSnapshot flying_east = flying(90);
     flying_east.target_count = 1;
@@ -158,7 +158,7 @@ TEST_CASE("radar: the plot turns with the track, so what is ahead is up the glas
     CHECK_FALSE(beam.get_pixel(99, 99 - 46 + 1 - 2));
 }
 
-TEST_CASE("radar: the flight time reads in the bottom-left, and dashes before a flight") {
+TEST_CASE("radar page: the flight time reads in the bottom-left, and dashes before a flight") {
     CHECK(reads_in(radar(flying(47)), "0:42", 0, 176, 60, 198, 2));
 
     RadarSnapshot long_flight = flying(47);
@@ -173,7 +173,7 @@ TEST_CASE("radar: the flight time reads in the bottom-left, and dashes before a 
 }
 
 // Back on the ground the clock is a logbook entry, and a logbook is filled to the second.
-TEST_CASE("radar: a finished flight carries its seconds, a running one does not") {
+TEST_CASE("radar page: a finished flight carries its seconds, a running one does not") {
     RadarSnapshot landed = flying(0);
     landed.flight_running = false;
     landed.flight_seconds = 42 * 60 + 37;
@@ -190,7 +190,7 @@ TEST_CASE("radar: a finished flight carries its seconds, a running one does not"
 }
 
 // The seconds are half the height of the minutes and clear only their own row of the ring.
-TEST_CASE("radar: the seconds take no more ring than they cover") {
+TEST_CASE("radar page: the seconds take no more ring than they cover") {
     RadarSnapshot landed = flying(0);
     landed.flight_running = false;
     landed.flight_seconds = 42 * 60 + 37;
@@ -202,7 +202,7 @@ TEST_CASE("radar: the seconds take no more ring than they cover") {
         for (int x = 52; x < 72; x++) CHECK(canvas.get_pixel(x, y) == no_seconds.get_pixel(x, y));
 }
 
-TEST_CASE("radar: the range labels the ring, centred on it and cleared off it") {
+TEST_CASE("radar page: the range labels the ring, centred on it and cleared off it") {
     const Glass canvas = radar(flying(0));
     CHECK(reads_in(canvas, "4", 70, 176, 100, 198, 2));
     CHECK(reads_in(canvas, "NM", 95, 183, 130, 198));
@@ -217,7 +217,7 @@ TEST_CASE("radar: the range labels the ring, centred on it and cleared off it") 
 }
 
 // B4. One ring, picked in the unit it is read in: whole miles or whole kilometres.
-TEST_CASE("radar: the ring is labelled and sized in the unit a pilot set") {
+TEST_CASE("radar page: the ring is labelled and sized in the unit a pilot set") {
     RadarSnapshot metric = flying(0);
     metric.units = skyblip::go::Units::Metric;
     const Glass km = radar(metric);
@@ -232,7 +232,7 @@ TEST_CASE("radar: the ring is labelled and sized in the unit a pilot set") {
 }
 
 TEST_CASE(
-    "radar: the footer counts the traffic it is handed, placed or not, either side of the clock") {
+    "radar page: the footer counts traffic it is handed, placed or not, either side of the clock") {
     RadarTarget targets[3] = {
         {2000, 0, 0, Level::Advisory},
         {0, -3000, 0, Level::Advisory},
@@ -256,7 +256,7 @@ TEST_CASE(
 }
 
 // An empty sky and a radio that is not listening yet look the same on the plot.
-TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
+TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes") {
     RadarSnapshot deaf = flying(0);
     deaf.receiver_listening = false;
     const Glass canvas = radar(deaf);
@@ -272,7 +272,7 @@ TEST_CASE("radar: a radio not yet listening counts no aircraft, it dashes") {
     CHECK(reads_in(radar(flying(0)), "0", 170, 170, 200, 200, 3));
 }
 
-TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass edge") {
+TEST_CASE("radar page: the footer sits on one baseline, a margin clear of the glass edge") {
     const Glass canvas = radar(flying(0));
     int clock_bottom = -1, range_bottom = -1, count_bottom = -1;
     for (int y = 180; y < 200; y++)
@@ -290,7 +290,7 @@ TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass e
 }
 
 // A pilot must not have to read the footer to learn the plot is not being fed.
-TEST_CASE("radar: anything but a flight is said in the ring, and a flight over the clock") {
+TEST_CASE("radar page: anything but a flight is said in the ring, and a flight over the clock") {
     RadarSnapshot searching;
     searching.flight_running = true;  // stale from the last flight: no fix outranks it
     const Glass no_fix = radar(searching);
@@ -316,7 +316,7 @@ TEST_CASE("radar: anything but a flight is said in the ring, and a flight over t
 }
 
 // The one thing on this page a pilot can act on from the cockpit: land, or plug it in.
-TEST_CASE("radar: a warned cell takes the ring, at the size the ring is read at") {
+TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is read at") {
     RadarSnapshot low = flying(47);
     low.battery_low = true;
     low.battery_percent = 4;
@@ -361,7 +361,7 @@ TEST_CASE("radar: a warned cell takes the ring, at the size the ring is read at"
 }
 
 // NO FIX says the plot is not being fed; the word under it says whether that is going anywhere.
-TEST_CASE("radar: under NO FIX stands how far the receiver has got") {
+TEST_CASE("radar page: under NO FIX stands how far the receiver has got") {
     RadarSnapshot searching;
     searching.stage = skyblip::gnss::Stage::Blind;
     const Glass looking = radar(searching);
@@ -385,7 +385,7 @@ TEST_CASE("radar: under NO FIX stands how far the receiver has got") {
 }
 
 // The readings are the ground the traffic is struck over: a word is no plaque to hide under.
-TEST_CASE("radar: a blip on the state word is drawn over it, and the word still reads") {
+TEST_CASE("radar page: a blip on the state word is drawn over it, and the word still reads") {
     // 4428 m behind is 54 px on the 4 NM ring, which is where the word stands.
     RadarTarget behind[1] = {{-4428, 0, 0, Level::None}};
     RadarSnapshot parked = flying(0);

@@ -2,40 +2,27 @@
 // that can name the part that did not answer, so these read the framebuffer back
 // rather than count ink: "there is something on the GNSS row" is not the claim
 // that matters, "the GNSS row says FAIL" is.
+#include <cstring>
+
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/self_test.h"
+#include "test/support/glass_text.h"
 
 using namespace skyblip::go;
 
 namespace {
 
+using skyblip::reads_at;
 using skyblip::ui::kCellW;
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-// Draw the same text, right-aligned on the same column, into a scratch buffer
-// and compare the box it occupies.
-bool reads_at(const Glass& canvas, int y, const char* text) {
-    const int len = length(text);
-    const int x = kSelfTestRightX - len * kCellW;
-
-    Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, 1);
-    for (int dy = 0; dy < 7; dy++)
-        for (int dx = 0; dx < len * kCellW; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
+bool reads_right_aligned(const Glass& canvas, int y, const char* text) {
+    return reads_at(canvas, kSelfTestRightX - static_cast<int>(std::strlen(text)) * kCellW, y,
+                    text);
 }
 
 bool row_reads(const Glass& canvas, int row, const char* verdict) {
-    return reads_at(canvas, self_test_row_y(row), verdict);
+    return reads_right_aligned(canvas, self_test_row_y(row), verdict);
 }
 
 SelfTestSnapshot page(const SelfTestPart* parts, int n, bool flyable) {
@@ -50,7 +37,7 @@ SelfTestSnapshot page(const SelfTestPart* parts, int n, bool flyable) {
 
 }  // namespace
 
-TEST_CASE("boot: every part on the page carries its own verdict") {
+TEST_CASE("self-test page: every part on the page carries its own verdict") {
     const SelfTestPart parts[] = {
         {"RADIO", PartState::Pass},
         {"GNSS", PartState::Fail},
@@ -69,7 +56,7 @@ TEST_CASE("boot: every part on the page carries its own verdict") {
     CHECK_FALSE(row_reads(canvas, 0, "FAIL"));
 }
 
-TEST_CASE("boot: the page says whether the device may fly, in one word") {
+TEST_CASE("self-test page: the page says whether the device may fly, in one word") {
     const SelfTestPart ok[] = {{"RADIO", PartState::Pass}};
     Glass ready;
     draw_self_test(ready, page(ok, 1, /*flyable=*/true));
@@ -85,11 +72,11 @@ TEST_CASE("boot: the page says whether the device may fly, in one word") {
     CHECK(ready.count_black() > 200);
 }
 
-TEST_CASE("boot: the reset reason and the identity share the header") {
+TEST_CASE("self-test page: the reset reason and the identity share the header") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     Glass canvas;
     draw_self_test(canvas, page(parts, 1, /*flyable=*/true));
-    CHECK(reads_at(canvas, kSelfTestHeaderY, "WATCHDOG"));
+    CHECK(reads_right_aligned(canvas, kSelfTestHeaderY, "WATCHDOG"));
 
     // A boot that followed a bite must not look like a boot that followed a
     // pilot pressing the button.
@@ -97,11 +84,11 @@ TEST_CASE("boot: the reset reason and the identity share the header") {
     other.reset_reason = "POWER ON";
     Glass fresh;
     draw_self_test(fresh, other);
-    CHECK(reads_at(fresh, kSelfTestHeaderY, "POWER ON"));
-    CHECK_FALSE(reads_at(fresh, kSelfTestHeaderY, "WATCHDOG"));
+    CHECK(reads_right_aligned(fresh, kSelfTestHeaderY, "POWER ON"));
+    CHECK_FALSE(reads_right_aligned(fresh, kSelfTestHeaderY, "WATCHDOG"));
 }
 
-TEST_CASE("boot: a full inventory still fits the panel") {
+TEST_CASE("self-test page: a full inventory still fits the panel") {
     SelfTestPart parts[kSelfTestRows];
     for (int i = 0; i < kSelfTestRows; i++) {
         parts[i].name = "PART";
@@ -121,7 +108,7 @@ TEST_CASE("boot: a full inventory still fits the panel") {
     CHECK(footer_ink > 100);
 }
 
-TEST_CASE("boot: the cell's voltage is on the page when there is a gauge to read") {
+TEST_CASE("self-test page: the cell's voltage is on the page when there is a gauge to read") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     SelfTestSnapshot with = page(parts, 1, /*flyable=*/true);
     with.battery_valid = true;
@@ -143,24 +130,13 @@ TEST_CASE("boot: the cell's voltage is on the page when there is a gauge to read
 
 namespace {
 
-// The same comparison as reads_at, at a stated left edge instead of the right one.
-bool reads_from(const Glass& canvas, int x, int y, const char* text) {
-    const int len = length(text);
-    Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, 1);
-    for (int dy = 0; dy < 7; dy++)
-        for (int dx = 0; dx < len * kCellW; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
+int detail_x(const char* name) {
+    return kSelfTestLeftX + (static_cast<int>(std::strlen(name)) + 1) * kCellW;
 }
-
-int detail_x(const char* name) { return kSelfTestLeftX + (length(name) + 1) * kCellW; }
 
 }  // namespace
 
-TEST_CASE("boot: a part that could be two parts says which one it is") {
+TEST_CASE("self-test page: a part that could be two parts says which one it is") {
     SelfTestPart parts[] = {
         {"BARO", PartState::Pass, "76"},
         {"PANEL", PartState::Pass, "D67/1942"},
@@ -171,15 +147,15 @@ TEST_CASE("boot: a part that could be two parts says which one it is") {
 
     // The identity sits with the name and the verdict stays where the eye
     // expects it: a row reads "what it is", then "how it answered".
-    CHECK(reads_from(canvas, detail_x("BARO"), self_test_row_y(0), "76"));
-    CHECK(reads_from(canvas, detail_x("PANEL"), self_test_row_y(1), "D67/1942"));
-    CHECK(reads_from(canvas, detail_x("HAPTIC"), self_test_row_y(2), "DRV2605"));
+    CHECK(reads_at(canvas, detail_x("BARO"), self_test_row_y(0), "76"));
+    CHECK(reads_at(canvas, detail_x("PANEL"), self_test_row_y(1), "D67/1942"));
+    CHECK(reads_at(canvas, detail_x("HAPTIC"), self_test_row_y(2), "DRV2605"));
     CHECK(row_reads(canvas, 0, "PASS"));
     CHECK(row_reads(canvas, 1, "PASS"));
     CHECK(row_reads(canvas, 2, "PASS"));
 }
 
-TEST_CASE("boot: a row with no detail is the row it always was") {
+TEST_CASE("self-test page: a row with no detail is the row it always was") {
     const SelfTestPart plain[] = {{"RADIO", PartState::Pass}};
     Glass without;
     draw_self_test(without, page(plain, 1, /*flyable=*/true));
@@ -189,13 +165,13 @@ TEST_CASE("boot: a row with no detail is the row it always was") {
     draw_self_test(with, page(detailed, 1, /*flyable=*/true));
 
     CHECK(row_reads(without, 0, "PASS"));
-    CHECK(reads_from(without, kSelfTestLeftX, self_test_row_y(0), "RADIO"));
+    CHECK(reads_at(without, kSelfTestLeftX, self_test_row_y(0), "RADIO"));
     // The detail is the only difference, and it is not on the page that has none.
-    CHECK_FALSE(reads_from(without, detail_x("RADIO"), self_test_row_y(0), "1262"));
-    CHECK(reads_from(with, detail_x("RADIO"), self_test_row_y(0), "1262"));
+    CHECK_FALSE(reads_at(without, detail_x("RADIO"), self_test_row_y(0), "1262"));
+    CHECK(reads_at(with, detail_x("RADIO"), self_test_row_y(0), "1262"));
 }
 
-TEST_CASE("boot: the bus scan is a row of its own, addresses and no verdict") {
+TEST_CASE("self-test page: the bus scan is a row of its own, addresses and no verdict") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}, {"BARO", PartState::Pass, "76"}};
     // What a fully fitted Plus answers: IMU, RTC, haptic driver, barometer. Two
     // of those four have no driver anywhere in the tree, which is exactly why the
@@ -210,7 +186,7 @@ TEST_CASE("boot: the bus scan is a row of its own, addresses and no verdict") {
     Glass canvas;
     draw_self_test(canvas, s);
 
-    CHECK(reads_from(canvas, kSelfTestLeftX, self_test_row_y(2), "I2C IMU RTC HAPTIC BARO"));
+    CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(2), "I2C IMU RTC HAPTIC BARO"));
     // No verdict: nothing on this row is a pass or a failure.
     CHECK_FALSE(row_reads(canvas, 2, "PASS"));
     CHECK_FALSE(row_reads(canvas, 2, "FAIL"));
@@ -218,7 +194,7 @@ TEST_CASE("boot: the bus scan is a row of its own, addresses and no verdict") {
 }
 
 // A part nobody expected is the reason to scan at all, and there is no name for it.
-TEST_CASE("boot: an address the board cannot account for reads as its hex") {
+TEST_CASE("self-test page: an address the board cannot account for reads as its hex") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     const uint8_t found[] = {0x3C, 0x51};
     const char* const roles[] = {nullptr, "RTC"};
@@ -230,11 +206,11 @@ TEST_CASE("boot: an address the board cannot account for reads as its hex") {
     Glass canvas;
     draw_self_test(canvas, s);
 
-    CHECK(reads_from(canvas, kSelfTestLeftX, self_test_row_y(1), "I2C 3C RTC"));
+    CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(1), "I2C 3C RTC"));
 }
 
 // The row is what a bench reads a bus off: it must not run into the row's edge.
-TEST_CASE("boot: the bus row stops at the width of a row rather than running off it") {
+TEST_CASE("self-test page: the bus row stops at the width of a row rather than running off it") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     const uint8_t found[] = {0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
     const char* const roles[] = {"HAPTIC", "HAPTIC", "HAPTIC", "HAPTIC",
@@ -251,7 +227,7 @@ TEST_CASE("boot: the bus row stops at the width of a row rather than running off
         for (int x = kSelfTestRightX; x < kGlassWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }
 
-TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it") {
+TEST_CASE("self-test page: the inventory a real unit reports fits with the bus row on it") {
     // Eleven capabilities and the scan's row: the page the product actually draws.
     SelfTestPart parts[kSelfTestRows - 1];
     for (int i = 0; i < kSelfTestRows - 1; i++) {
@@ -270,8 +246,8 @@ TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it")
     Glass canvas;
     draw_self_test(canvas, s);
 
-    CHECK(reads_from(canvas, kSelfTestLeftX, self_test_row_y(kSelfTestRows - 1),
-                     "I2C IMU RTC HAPTIC BARO"));
+    CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(kSelfTestRows - 1),
+                   "I2C IMU RTC HAPTIC BARO"));
     CHECK(self_test_row_y(kSelfTestRows - 1) + 7 < Glass::kH);
 
     // And the verdict is still on the glass below all of it.
@@ -281,7 +257,8 @@ TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it")
     CHECK(footer_ink > 100);
 }
 
-TEST_CASE("boot: a unit that last went dark on a flat cell says so beside the cell's voltage") {
+TEST_CASE(
+    "self-test page: a unit that last went dark on a flat cell says so beside the cell's voltage") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     const int footer_y = self_test_row_y(1) + kSelfTestDividerGap + kSelfTestFooterGap;
     SelfTestSnapshot s = page(parts, 1, /*flyable=*/true);
@@ -290,11 +267,11 @@ TEST_CASE("boot: a unit that last went dark on a flat cell says so beside the ce
     s.went_dark_flat = true;
     Glass canvas;
     draw_self_test(canvas, s);
-    CHECK(reads_from(canvas, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+    CHECK(reads_at(canvas, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
 
     s.went_dark_flat = false;
     Glass ordinary;
     draw_self_test(ordinary, s);
-    CHECK(reads_from(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V"));
-    CHECK_FALSE(reads_from(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+    CHECK(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V"));
+    CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
 }

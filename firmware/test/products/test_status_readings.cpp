@@ -12,7 +12,7 @@ constexpr int kClimbRowTop = 149, kClimbRowBottom = 169;
 constexpr int kStdRowTop = 117, kStdRowBottom = 137;
 constexpr int kBatteryRowTop = 165, kBatteryRowBottom = 185;
 
-void show_status(Rig& rig, uint32_t& t) {
+void show_status(ScreenRig& rig, uint32_t& t) {
     rig.run_seconds(t, 3);
     rig.show(t, go::Page::Status);
     rig.run_seconds(t, 2);
@@ -22,7 +22,7 @@ void show_status(Rig& rig, uint32_t& t) {
 }  // namespace
 
 TEST_CASE("status readings: the climb is the measurement, not the damped rate the six-pack shows") {
-    Rig rig;
+    ScreenRig rig;
     rig.state.own.climb_valid = true;
     rig.state.own.climb_mm_s = -1234;
     rig.state.indicated.climb_mm_s = -500;
@@ -35,7 +35,7 @@ TEST_CASE("status readings: the climb is the measurement, not the damped rate th
 }
 
 TEST_CASE("status readings: the ball is the last sample, not the damped ball the dial hangs") {
-    Rig rig;
+    ScreenRig rig;
     rig.state.imu.stage = "RUN";
     rig.state.slip.valid = true;
     rig.state.slip.lateral_mg = -40;
@@ -47,7 +47,7 @@ TEST_CASE("status readings: the ball is the last sample, not the damped ball the
 }
 
 TEST_CASE("status readings: the cell is the last sample, not the median the gauge keeps") {
-    Rig rig;
+    ScreenRig rig;
     rig.state.power.battery.valid = true;
     rig.state.power.battery.cell_mv = 3950;
     rig.state.power.battery.sample_mv = 3871;
@@ -60,7 +60,7 @@ TEST_CASE("status readings: the cell is the last sample, not the median the gaug
 }
 
 TEST_CASE("status readings: pressure altitude is taken from the millipascal, not the pascal") {
-    Rig rig;
+    ScreenRig rig;
     rig.state.baro.active = true;
     rig.state.baro.pressure_mpa = flight::alt_mm_to_pressure_mpa(1500123);
     uint32_t t = 0;

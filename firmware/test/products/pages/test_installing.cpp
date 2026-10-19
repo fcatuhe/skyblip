@@ -1,8 +1,11 @@
 // The page the glass wears through the swap, read back off the pixels.
+#include <cstring>
+
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "test/support/glass_text.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -11,23 +14,6 @@ namespace {
 
 using ui::kCellW;
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
-    Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, scale);
-    for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * kCellW * scale; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
-}
-
 }  // namespace
 
 TEST_CASE("installing page: it says what is happening and what not to do, unclipped") {
@@ -35,7 +21,8 @@ TEST_CASE("installing page: it says what is happening and what not to do, unclip
     draw_installing(canvas);
     CHECK(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kInstallingTitle, 2));
     for (int row = 0; row < kInstallingBodyRows; row++) {
-        CHECK(length(kInstallingBody[row]) * kCellW + kInstallingLeftX <= Glass::kW);
+        CHECK(static_cast<int>(std::strlen(kInstallingBody[row])) * kCellW + kInstallingLeftX <=
+              Glass::kW);
         CHECK(reads_at(canvas, kInstallingLeftX, installing_body_y(row), kInstallingBody[row], 1));
     }
     CHECK(installing_body_y(kInstallingBodyRows - 1) + 7 < Glass::kH);
@@ -46,7 +33,8 @@ TEST_CASE("receiving page: it says the install follows on its own, and how to st
     draw_receiving(canvas);
     CHECK(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kReceivingTitle, 2));
     for (int row = 0; row < kReceivingBodyRows; row++) {
-        CHECK(length(kReceivingBody[row]) * kCellW + kInstallingLeftX <= Glass::kW);
+        CHECK(static_cast<int>(std::strlen(kReceivingBody[row])) * kCellW + kInstallingLeftX <=
+              Glass::kW);
         CHECK(reads_at(canvas, kInstallingLeftX, installing_body_y(row), kReceivingBody[row], 1));
     }
     CHECK_FALSE(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kInstallingTitle, 2));

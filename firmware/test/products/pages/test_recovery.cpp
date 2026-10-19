@@ -1,10 +1,12 @@
 // The page the glass wears while the factory bootloader has the device, read back off the pixels.
+#include <cstring>
 #include <initializer_list>
 
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/recovery.h"
+#include "test/support/glass_text.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -13,25 +15,8 @@ namespace {
 
 using ui::kCellW;
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
-    Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, scale);
-    for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * kCellW * scale; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
-}
-
 bool fits(const char* text, int scale) {
-    return kInstallingLeftX + length(text) * kCellW * scale <= Glass::kW;
+    return kInstallingLeftX + static_cast<int>(std::strlen(text)) * kCellW * scale <= Glass::kW;
 }
 
 }  // namespace

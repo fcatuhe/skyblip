@@ -13,8 +13,8 @@ namespace {
 
 constexpr int kStride = parts::Ssd1681::kGlassStride;
 
-parts::Ssd1681 make_turned(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin, -1,
+parts::Ssd1681 turned_driver_for(models::Ssd1681& chip) {
+    return parts::Ssd1681(chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin, -1,
                           parts::GlassRotation::Deg270);
 }
 
@@ -63,71 +63,72 @@ std::vector<parts::Ssd1681Glass> patterns() {
 
 }  // namespace
 
-TEST_CASE("epd: a turned glass sends the bytes the per-pixel rotation sent, on every pattern") {
+TEST_CASE("ssd1681: a turned glass sends the bytes the per-pixel rotation sent, on every pattern") {
     for (const parts::Ssd1681Glass& canvas : patterns()) {
-        models::Ssd1681 f;
-        parts::Ssd1681 d = make_turned(f);
-        d.begin();
+        models::Ssd1681 chip;
+        parts::Ssd1681 driver = turned_driver_for(chip);
+        driver.begin();
 
-        d.present(canvas, ports::Refresh::Full, 0);
-        CHECK(f.ram == per_pixel_bank(canvas));
-        CHECK(f.ram_previous == f.ram);
+        driver.present(canvas, ports::Refresh::Full, 0);
+        CHECK(chip.ram == per_pixel_bank(canvas));
+        CHECK(chip.ram_previous == chip.ram);
     }
 }
 
-TEST_CASE("epd: a turned partial sends the frame before it to 0x26 as the per-pixel rotation did") {
+TEST_CASE(
+    "ssd1681: a turned partial sends the frame before it to 0x26 as the per-pixel rotation did") {
     const std::vector<parts::Ssd1681Glass> frames = patterns();
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make_turned(f);
-    d.begin();
-    d.present(frames[0], ports::Refresh::Full, 0);
-    settle(d, 0);
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = turned_driver_for(chip);
+    driver.begin();
+    driver.present(frames[0], ports::Refresh::Full, 0);
+    refresh_to_ready(driver, 0);
 
     for (size_t i = 1; i < frames.size(); i++) {
         const uint32_t now_ms = uint32_t(i) * 5000;
-        d.present(frames[i], ports::Refresh::Partial, now_ms);
-        CHECK_FALSE(f.last_full);
-        CHECK(f.ram_previous == per_pixel_bank(frames[i - 1]));
-        CHECK(f.ram == per_pixel_bank(frames[i]));
-        CHECK(d.ready(now_ms + parts::Ssd1681::kReadyAfterFullMs));
+        driver.present(frames[i], ports::Refresh::Partial, now_ms);
+        CHECK_FALSE(chip.last_full);
+        CHECK(chip.ram_previous == per_pixel_bank(frames[i - 1]));
+        CHECK(chip.ram == per_pixel_bank(frames[i]));
+        CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterFullMs));
     }
 }
 
-TEST_CASE("epd: an unturned glass sends the framebuffer inverted, byte for byte") {
+TEST_CASE("ssd1681: an unturned glass sends the framebuffer inverted, byte for byte") {
     const parts::Ssd1681Glass canvas = patterns()[2];
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make(f);
-    d.begin();
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    driver.begin();
 
-    d.present(canvas, ports::Refresh::Full, 0);
-    REQUIRE(f.ram.size() == parts::Ssd1681::kGlassBytes);
+    driver.present(canvas, ports::Refresh::Full, 0);
+    REQUIRE(chip.ram.size() == parts::Ssd1681::kGlassBytes);
     bool inverted = true;
     for (size_t i = 0; i < parts::Ssd1681::kGlassBytes; i++)
-        if (f.ram[i] != static_cast<uint8_t>(~canvas.data()[i])) inverted = false;
+        if (chip.ram[i] != static_cast<uint8_t>(~canvas.data()[i])) inverted = false;
     CHECK(inverted);
 }
 
 // One blocking SPI call per gate line was 425 calls a push and held the main loop 100-170 ms.
-TEST_CASE("epd: a push sends each RAM bank as one SPI write, not one per gate line") {
-    models::Ssd1681 f;
-    parts::Ssd1681 d = make_turned(f);
-    d.begin();
+TEST_CASE("ssd1681: a push sends each RAM bank as one SPI write, not one per gate line") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = turned_driver_for(chip);
+    driver.begin();
     parts::Ssd1681Glass canvas;
     canvas.clear(true);
 
     // 8 window + 2 border + 2 banks x (5 cursor + 1 command + 1 bank) + 3 activation
     const int kPushTransfers = 27;
-    f.transfers = 0;
-    d.present(canvas, ports::Refresh::Full, 0);
-    CHECK(f.transfers == kPushTransfers);
-    settle(d, 0);
+    chip.transfers = 0;
+    driver.present(canvas, ports::Refresh::Full, 0);
+    CHECK(chip.transfers == kPushTransfers);
+    refresh_to_ready(driver, 0);
 
-    f.transfers = 0;
-    d.present(canvas, ports::Refresh::Partial, 5000);
-    CHECK(f.transfers == kPushTransfers);
-    CHECK(d.ready(5000 + parts::Ssd1681::kReadyAfterPartialMs));
+    chip.transfers = 0;
+    driver.present(canvas, ports::Refresh::Partial, 5000);
+    CHECK(chip.transfers == kPushTransfers);
+    CHECK(driver.ready(5000 + parts::Ssd1681::kReadyAfterPartialMs));
 
-    f.transfers = 0;
-    d.paint_black(10000);
-    CHECK(f.transfers == kPushTransfers);
+    chip.transfers = 0;
+    driver.paint_black(10000);
+    CHECK(chip.transfers == kPushTransfers);
 }

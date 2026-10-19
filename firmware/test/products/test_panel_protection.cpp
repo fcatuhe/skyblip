@@ -4,7 +4,7 @@
 // go::Glass rated 0..50 C; the Go's soak case is 72.4 C,
 // project/research/enclosure-and-mount-go.md.
 TEST_CASE("screen policy: a panel too hot to drive is left unrefreshed, with its rails down") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -17,7 +17,7 @@ TEST_CASE("screen policy: a panel too hot to drive is left unrefreshed, with its
 
 // skyBlip stays on for the whole flight, so nothing but the pilot's switch may sleep the panel.
 TEST_CASE("screen policy: a screen nobody changes is left awake, unrefreshed, rails down") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -32,7 +32,7 @@ TEST_CASE("screen policy: a screen nobody changes is left awake, unrefreshed, ra
 
 // The ink migrates under bias, so a busy sky must not hold the rails up for a whole flight.
 TEST_CASE("screen policy: a screen changing every second still rests between refreshes") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.churn(t, 120);
@@ -44,7 +44,7 @@ TEST_CASE("screen policy: a screen changing every second still rests between ref
 }
 
 TEST_CASE("screen policy: nothing refreshes a panel held hot, partial or full") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.churn(t, 2);
@@ -58,7 +58,7 @@ TEST_CASE("screen policy: nothing refreshes a panel held hot, partial or full") 
 }
 
 TEST_CASE("screen policy: no refresh starts on a dying rail, partial or full") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.churn(t, 2);
@@ -76,7 +76,7 @@ TEST_CASE("screen policy: the hold threshold is the rated limit, not a margin so
 
 // The rated limit is a temperature the panel works at, not the first one it refuses.
 TEST_CASE("screen policy: the panel still refreshes at exactly its rated limit") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -93,7 +93,7 @@ TEST_CASE("screen policy: the panel still refreshes at exactly its rated limit")
 
 // A refresh already in flight when the panel goes out of range is left to finish.
 TEST_CASE("screen policy: going hot mid-refresh does not abandon the frame on the glass") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.state.flight.seconds += 60;
@@ -109,7 +109,7 @@ TEST_CASE("screen policy: going hot mid-refresh does not abandon the frame on th
 
 TEST_CASE(
     "screen policy: a hold that trips behind a wipe still lands the page and drops the rails") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.tick(t += 1000);
     REQUIRE(rig.glass_all_black());
@@ -121,7 +121,7 @@ TEST_CASE(
 }
 
 TEST_CASE("screen policy: a page change a held panel cannot finish never starts") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -142,7 +142,7 @@ TEST_CASE("screen policy: a page change a held panel cannot finish never starts"
 }
 
 TEST_CASE("screen policy: the traffic picture comes back once the panel has cooled") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
@@ -156,7 +156,7 @@ TEST_CASE("screen policy: the traffic picture comes back once the panel has cool
 
 // The partial LUT may well ghost cold, but a full refresh a frame wears the glass out first (#62).
 TEST_CASE("screen policy: below freezing every refresh is still a partial one") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
@@ -169,7 +169,7 @@ TEST_CASE("screen policy: below freezing every refresh is still a partial one") 
 }
 
 TEST_CASE("screen policy: a cold panel with a static frame is still never re-presented") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -180,7 +180,7 @@ TEST_CASE("screen policy: a cold panel with a static frame is still never re-pre
 }
 
 TEST_CASE("screen policy: a board whose die sensor never read refreshes as it always did") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     REQUIRE_FALSE(rig.state.power.die_valid);
@@ -191,7 +191,7 @@ TEST_CASE("screen policy: a board whose die sensor never read refreshes as it al
 }
 
 TEST_CASE("screen policy: nothing routine is refreshed once the cell is at its cutoff") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -203,7 +203,7 @@ TEST_CASE("screen policy: nothing routine is refreshed once the cell is at its c
 }
 
 TEST_CASE("screen policy: a critical cell still gets its traffic picture") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -214,7 +214,7 @@ TEST_CASE("screen policy: a critical cell still gets its traffic picture") {
 }
 
 TEST_CASE("screen policy: the white field the glass wears while off is drawn at the cutoff") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -229,7 +229,7 @@ TEST_CASE("screen policy: the white field the glass wears while off is drawn at 
 
 // A command sent over a live BUSY is lost, and the park frame runs for seconds after it is issued.
 TEST_CASE("screen policy: the panel sleeps when the park frame has finished, not when it starts") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 5);
 
@@ -248,7 +248,7 @@ TEST_CASE("screen policy: the panel sleeps when the park frame has finished, not
 
 // The ink the sun develops: a park frame written over a waveform that was still driving the glass.
 TEST_CASE("screen policy: a park mid-refresh waits for the glass, it does not talk over it") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.churn(t, 5);
     rig.state.flight.seconds += 60;
@@ -266,7 +266,7 @@ TEST_CASE("screen policy: a park mid-refresh waits for the glass, it does not ta
 
 // POFCON fires milliseconds before the brownout reset, so the park frame cannot finish.
 TEST_CASE("screen policy: a supply warning parks the panel without a park frame") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 5);
     const int before = rig.chip.present_count;
@@ -279,7 +279,7 @@ TEST_CASE("screen policy: a supply warning parks the panel without a park frame"
 }
 
 TEST_CASE("screen policy: a supply warning stops the routine refreshes too") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
@@ -292,7 +292,7 @@ TEST_CASE("screen policy: a supply warning stops the routine refreshes too") {
 
 // A held panel presents nothing, so nothing a pilot has not read reaches the glass.
 TEST_CASE("screen policy: a held panel puts no new frame on the glass, dirty or not") {
-    Rig rig;
+    ScreenRig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 

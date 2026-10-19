@@ -11,9 +11,9 @@ using namespace skyblip::flight;
 
 namespace {
 
-FlightSample solution(double mps, uint16_t hdop_e2 = 90) {
+FlightSample solution(double speed_mps, uint16_t hdop_e2 = 90) {
     FlightSample s{};
-    s.speed_mm_s = static_cast<int32_t>(mps * 1000);
+    s.speed_mm_s = static_cast<int32_t>(speed_mps * 1000);
     s.hdop_e2 = hdop_e2;
     s.fix_valid = true;
     return s;
@@ -24,15 +24,15 @@ struct Stream {
     FlightMonitor monitor;
     uint32_t now_ms{0};
 
-    FlightState hold(int seconds, double mps, uint16_t hdop_e2 = 90) {
+    FlightState hold(int seconds, double speed_mps, uint16_t hdop_e2 = 90) {
         FlightState state = monitor.state();
-        for (int i = 0; i < seconds; i++) state = one(mps, hdop_e2);
+        for (int i = 0; i < seconds; i++) state = one(speed_mps, hdop_e2);
         return state;
     }
 
-    FlightState one(double mps, uint16_t hdop_e2 = 90) {
+    FlightState one(double speed_mps, uint16_t hdop_e2 = 90) {
         now_ms += 1000;
-        return monitor.update(solution(mps, hdop_e2), now_ms);
+        return monitor.update(solution(speed_mps, hdop_e2), now_ms);
     }
 
     FlightState blind(int seconds = 1) {

@@ -10,10 +10,10 @@ using namespace skyblip;
 
 namespace {
 
-inline void on_ground(Rig& rig, uint32_t& t) {
+inline void on_ground(Rig& rig, uint32_t& now_ms) {
     rig.push_fix(/*alt_m=*/0, /*updates=*/1);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
 }
 
 inline void receiver_speaks_without_a_fix(Rig& rig) {

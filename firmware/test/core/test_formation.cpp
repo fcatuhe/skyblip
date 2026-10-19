@@ -12,29 +12,27 @@ using namespace skyblip::formation;
 
 namespace {
 
-uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 512 / 360); }
-
-model::Ownship flying(int mps, int track_deg, uint32_t at_ms = 0) {
+model::Ownship flying(int speed_mps, int track_deg, uint32_t at_ms = 0) {
     model::Ownship o{};
     o.fix_valid = true;
     o.fix_at_ms = at_ms;
     o.lat_1e7 = 481000000;
     o.lon_1e7 = 81000000;
     o.alt_hae_mm = 1000000;
-    o.speed_mm_s = mps * 1000;
+    o.speed_mm_s = speed_mps * 1000;
     o.track_cdeg = track_deg * 100;
     return o;
 }
 
 model::AircraftObservation neighbour(const model::Ownship& own, int north_m, int east_m, int up_m,
-                                     int mps, int track_deg, uint32_t at_ms) {
+                                     int speed_mps, int track_deg, uint32_t at_ms) {
     model::AircraftObservation t{};
     t.address = 0x424242;
     t.address_mapping_table = 6;
     t.position_valid = true;
     t.speed_valid = true;
-    t.speed_q = static_cast<uint16_t>(mps * 4);
-    t.track_c9 = c9(track_deg);
+    t.speed_q = static_cast<uint16_t>(speed_mps * 4);
+    t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).v;
     t.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
     t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
@@ -109,8 +107,8 @@ TEST_CASE("formation: a member drifting away is parting, and it takes two fixes"
 
 // A break once asked for 60 m/s, then a re-anchored Parting rejoined any peel-off up to 10 m/s.
 TEST_CASE("formation: a member peeling off at any speed parts once and stays parted to the band") {
-    for (const int mps : {3, 5, 10, 15}) {
-        CAPTURE(mps);
+    for (const int speed_mps : {3, 5, 10, 15}) {
+        CAPTURE(speed_mps);
         Tracker tracker;
         uint32_t t = fly_on_station(tracker);
         REQUIRE(tracker.together(6, 0x424242));
@@ -118,7 +116,8 @@ TEST_CASE("formation: a member peeling off at any speed parts once and stays par
         int breaks = 0;
         int rejoins = 0;
         State was = State::Together;
-        for (int away_m = mps; was != State::None && away_m <= 2 * kRangeM; away_m += mps) {
+        for (int away_m = speed_mps; was != State::None && away_m <= 2 * kRangeM;
+             away_m += speed_mps) {
             t += 1000;
             const model::Ownship own = flying(40, 90, t);
             const State now =

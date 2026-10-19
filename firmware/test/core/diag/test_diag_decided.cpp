@@ -99,7 +99,7 @@ TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 o
     in.tx_power_dbm = 14;
     in.pa_rated_dbm = 22;
     diag::Instant at{};
-    at.at_s = kDiagTestUtc;
+    at.at_s = kDiagTestUtcS;
     at.utc_dated = true;
 
     uint8_t raw[diag::kRecordBytes]{};
@@ -366,8 +366,8 @@ TEST_CASE("diag record: two duty records a wrap apart subtract to the true inter
 
     uint8_t first_raw[diag::kRecordBytes]{};
     uint8_t second_raw[diag::kRecordBytes]{};
-    const diag::Duty first = duty_off_the_wire(before, kDiagTestUtc, first_raw);
-    const diag::Duty second = duty_off_the_wire(after, kDiagTestUtc + 30, second_raw);
+    const diag::Duty first = duty_off_the_wire(before, kDiagTestUtcS, first_raw);
+    const diag::Duty second = duty_off_the_wire(after, kDiagTestUtcS + 30, second_raw);
     CHECK(std::memcmp(first_raw, kDutyBeforeWrap, diag::kRecordBytes) == 0);
     CHECK(std::memcmp(second_raw, kDutyAfterWrap, diag::kRecordBytes) == 0);
 

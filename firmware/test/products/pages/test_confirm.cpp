@@ -2,12 +2,14 @@
 // page is the only thing standing between a stranger's phone and the secondary
 // slot, so "there is ink on the panel" is not the claim: "the panel says POWER
 // OFF, and says which press allows it" is.
+#include <cstring>
 #include <initializer_list>
 
 #include "core/comms/config.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
+#include "test/support/glass_text.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -15,25 +17,6 @@ using namespace skyblip::go;
 namespace {
 
 using ui::kCellW;
-
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-// Draw the same text at the same place into a scratch buffer and compare the
-// box it occupies.
-bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
-    Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, scale);
-    for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * kCellW * scale; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
-}
 
 ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot s;
@@ -76,7 +59,7 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
                 for (int dy = 0; dy < 7; dy++) drawn += canvas.get_pixel(x, y + dy) ? 1 : 0;
         }
         CHECK(drawn > 0);
-        CHECK(length(detail) <= kConfirmDetailCols * kConfirmDetailRows);
+        CHECK(static_cast<int>(std::strlen(detail)) <= kConfirmDetailCols * kConfirmDetailRows);
         CHECK(confirm_detail_y(kConfirmDetailRows - 1) + 7 < kConfirmAllowY);
     }
 }
@@ -99,8 +82,9 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
     CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, 1));
     Glass inverted;
     inverted.clear(true);
-    inverted.rect(kConfirmLeftX, kConfirmAllowY - 4, (length(kConfirmAllowText) + 2) * kCellW, 15,
-                  true, /*fill=*/true);
+    inverted.rect(kConfirmLeftX, kConfirmAllowY - 4,
+                  (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellW, 15, true,
+                  /*fill=*/true);
     inverted.draw_text(kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
     bool same = true;
     for (int y = kConfirmAllowY - 4; y < kConfirmAllowY + 11; y++)

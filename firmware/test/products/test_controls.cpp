@@ -9,7 +9,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kLong = go::Controls::kLongTouchHoldMs;
+constexpr uint32_t kLongTouchHoldMs = go::Controls::kLongTouchHoldMs;
 
 events::ContactEvent down(events::Contact contact, uint32_t at_ms) {
     return events::ContactEvent{contact, true, at_ms};
@@ -19,12 +19,12 @@ events::ContactEvent up(events::Contact contact, uint32_t at_ms) {
     return events::ContactEvent{contact, false, at_ms};
 }
 
-go::Gesture touch(go::Controls& controls, uint32_t at_ms, uint32_t ms) {
+go::Gesture touch(go::Controls& controls, uint32_t at_ms, uint32_t held_ms) {
     controls.read(down(events::Contact::Pad, at_ms));
-    for (uint32_t elapsed = 0; elapsed <= ms; elapsed += 10)
+    for (uint32_t elapsed = 0; elapsed <= held_ms; elapsed += 10)
         if (const go::Gesture held = controls.tick(at_ms + elapsed); held != go::Gesture::None)
             return held;
-    return controls.read(up(events::Contact::Pad, at_ms + ms));
+    return controls.read(up(events::Contact::Pad, at_ms + held_ms));
 }
 
 }  // namespace
@@ -42,11 +42,11 @@ TEST_CASE("controls: a tap pages on the release, not on the contact") {
 TEST_CASE("controls: the long touch fires while the finger is still on the pad") {
     go::Controls controls;
     controls.read(down(events::Contact::Pad, 1000));
-    CHECK(controls.tick(1000 + kLong - 1) == go::Gesture::None);
-    CHECK(controls.tick(1000 + kLong) == go::Gesture::LongTouch);
+    CHECK(controls.tick(1000 + kLongTouchHoldMs - 1) == go::Gesture::None);
+    CHECK(controls.tick(1000 + kLongTouchHoldMs) == go::Gesture::LongTouch);
 
     // Held on, and then let go of: neither fires again, and the release is not a page.
-    CHECK(controls.tick(1000 + kLong + 3000) == go::Gesture::None);
+    CHECK(controls.tick(1000 + kLongTouchHoldMs + 3000) == go::Gesture::None);
     CHECK(controls.read(up(events::Contact::Pad, 5000)) == go::Gesture::None);
 }
 
@@ -54,7 +54,8 @@ TEST_CASE("controls: the long touch fires while the finger is still on the pad")
 TEST_CASE("controls: a release nobody ticked through is still the long touch it was") {
     go::Controls controls;
     controls.read(down(events::Contact::Pad, 1000));
-    CHECK(controls.read(up(events::Contact::Pad, 1000 + kLong + 500)) == go::Gesture::LongTouch);
+    CHECK(controls.read(up(events::Contact::Pad, 1000 + kLongTouchHoldMs + 500)) ==
+          go::Gesture::LongTouch);
 }
 
 TEST_CASE("controls: a press lands when the thumb comes off, not when it arrives") {
@@ -79,17 +80,20 @@ TEST_CASE("controls: a press held into the power-off hold says nothing, then or 
 TEST_CASE("controls: a touch the button joins says nothing, in either direction") {
     go::Controls controls;
     controls.read(down(events::Contact::Button, 500));
-    CHECK(touch(controls, 1000, kLong + 1000) == go::Gesture::None);
+    CHECK(touch(controls, 1000, kLongTouchHoldMs + 1000) == go::Gesture::None);
 
     go::Controls joined;
     joined.read(down(events::Contact::Pad, 1000));
-    CHECK(joined.read(down(events::Contact::Button, 1000 + kLong - 200)) == go::Gesture::None);
-    CHECK(joined.tick(1000 + kLong + 500) == go::Gesture::None);
-    CHECK(joined.read(up(events::Contact::Button, 1000 + kLong + 600)) == go::Gesture::Press);
+    CHECK(joined.read(down(events::Contact::Button, 1000 + kLongTouchHoldMs - 200)) ==
+          go::Gesture::None);
+    CHECK(joined.tick(1000 + kLongTouchHoldMs + 500) == go::Gesture::None);
+    CHECK(joined.read(up(events::Contact::Button, 1000 + kLongTouchHoldMs + 600)) ==
+          go::Gesture::Press);
 
     // Releasing the button does not rescue that touch: the pad has to be let go of first.
-    CHECK(joined.read(up(events::Contact::Pad, 1000 + kLong + 900)) == go::Gesture::None);
-    CHECK(touch(joined, 9000, kLong + 100) == go::Gesture::LongTouch);
+    CHECK(joined.read(up(events::Contact::Pad, 1000 + kLongTouchHoldMs + 900)) ==
+          go::Gesture::None);
+    CHECK(touch(joined, 9000, kLongTouchHoldMs + 100) == go::Gesture::LongTouch);
 }
 
 TEST_CASE("gesture: two presses inside the window authorise, one press refuses") {

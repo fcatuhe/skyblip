@@ -77,7 +77,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     //    manchester decode, CRC-correct, verify, descramble.
     uint8_t coded[48];
     fec::manchester_encode(tx.Data, protocol::AdslPacket::kDataBytes, coded);
-    models::RfChannel chan(12345);
+    RfChannel chan(12345);
     chan.apply_ber(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
     protocol::AdslPacket rx = tx;  // start from a copy; overwrite the data region

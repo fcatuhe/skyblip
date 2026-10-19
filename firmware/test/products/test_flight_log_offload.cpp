@@ -312,7 +312,7 @@ TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive
 // The flights ring stops being contiguous the moment the other ring takes a sector out of it.
 TEST_CASE("flight log: a session whose middle sector went to diagnostics still reads back whole") {
     Rig rig;
-    const uint32_t session = Rig::kUtcBase - 7200;
+    const uint32_t session = Rig::kBaseUtcS - 7200;
     const uint32_t slots = flight::kLogSlotsPerSector;
     const uint32_t tail = 5;
     const uint32_t last = platform::host::FlashRegion::kSectorCount - 1;

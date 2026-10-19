@@ -96,9 +96,9 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     constexpr uint16_t kBenchMv = 3800;
     constexpr uint16_t kThisUnitReadsMv = 3850;
 
-    go::Settings s = go::defaults();
+    go::Settings settings = go::defaults();
     const char* patch = "{\"battery_offset_mv\":-50}";
-    REQUIRE(go::apply_json(s, patch, 25) == Status::Ok);
+    REQUIRE(go::apply_json(settings, patch, 25) == Status::Ok);
 
     events::BatterySample sample{};
     sample.divider_mv = kThisUnitReadsMv;
@@ -107,7 +107,7 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     Gauge trimmed;
     for (int i = 0; i < 3; i++) {
         uncalibrated.apply(sample);
-        trimmed.apply(calibrated(sample, s.battery_offset_mv));
+        trimmed.apply(calibrated(sample, settings.battery_offset_mv));
     }
     CHECK(uncalibrated.state().cell_mv == kThisUnitReadsMv);
     CHECK(trimmed.state().cell_mv == kBenchMv);

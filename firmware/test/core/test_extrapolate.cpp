@@ -13,9 +13,9 @@ using namespace skyblip::protocol;
 
 namespace {
 
-constexpr double kMetresPerE7 = 0.0011132 * 10;  // 1e-7 deg of latitude, metres
+constexpr double kMetresPer1e7 = 0.0011132 * 10;  // 1e-7 deg of latitude, metres
 
-model::Ownship flying(double lat_deg, double lon_deg, double mps, double track_deg,
+model::Ownship flying(double lat_deg, double lon_deg, double speed_mps, double track_deg,
                       double climb_mps = 0.0, double turn_dps = 0.0) {
     model::Ownship own{};
     own.fix_valid = true;
@@ -23,7 +23,7 @@ model::Ownship flying(double lat_deg, double lon_deg, double mps, double track_d
     own.lon_1e7 = static_cast<int32_t>(lon_deg * 1e7);
     own.alt_hae_mm = 1200000;
     own.alt_msl_mm = 1155000;
-    own.speed_mm_s = static_cast<int32_t>(mps * 1000);
+    own.speed_mm_s = static_cast<int32_t>(speed_mps * 1000);
     own.track_cdeg = static_cast<int32_t>(track_deg * 100);
     own.climb_mm_s = static_cast<int32_t>(climb_mps * 1000);
     own.climb_valid = climb_mps != 0.0;
@@ -32,12 +32,12 @@ model::Ownship flying(double lat_deg, double lon_deg, double mps, double track_d
 }
 
 double north_m(int32_t from_lat_1e7, int32_t to_lat_1e7) {
-    return (to_lat_1e7 - from_lat_1e7) * kMetresPerE7;
+    return (to_lat_1e7 - from_lat_1e7) * kMetresPer1e7;
 }
 
 double east_m(const model::Ownship& from, int32_t to_lon_1e7) {
     const double coslat = std::cos(from.lat_1e7 / 1e7 * M_PI / 180.0);
-    return (to_lon_1e7 - from.lon_1e7) * kMetresPerE7 * coslat;
+    return (to_lon_1e7 - from.lon_1e7) * kMetresPer1e7 * coslat;
 }
 
 }  // namespace
@@ -180,7 +180,7 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
 
     // Five metres north and three up of the prediction is eight metres of miss:
     // north, east and vertical, summed absolute, as OGN sums them.
-    const int32_t five_north = at.lat_1e7 + static_cast<int32_t>(5.0 / kMetresPerE7);
+    const int32_t five_north = at.lat_1e7 + static_cast<int32_t>(5.0 / kMetresPer1e7);
     CHECK(prediction_residual_m(at, five_north, at.lon_1e7, at.alt_mm + 3000) ==
           doctest::Approx(8).epsilon(0.2));
 

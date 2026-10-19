@@ -69,7 +69,7 @@ RawSnapshot bench_device() {
 
 }  // namespace
 
-TEST_CASE("raw: the receiver block names the rate, the sentence phase and every refusal") {
+TEST_CASE("raw page: the receiver block names the rate, the sentence phase and every refusal") {
     Glass canvas;
     draw_raw(canvas, bench_device());
 
@@ -85,7 +85,7 @@ TEST_CASE("raw: the receiver block names the rate, the sentence phase and every 
     CHECK(reads_in(canvas, "UTC 12:34:56", 0, 68, 200, 85));
 }
 
-TEST_CASE("raw: the radio block names the dwell it is in and every verdict it has counted") {
+TEST_CASE("raw page: the radio block names the dwell it is in and every verdict it has counted") {
     Glass canvas;
     draw_raw(canvas, bench_device());
 
@@ -101,7 +101,7 @@ TEST_CASE("raw: the radio block names the dwell it is in and every verdict it ha
 }
 
 // A zero would read as a solution landing at the top of the second, which it never does.
-TEST_CASE("raw: a solution nothing has dated reports no phase at all") {
+TEST_CASE("raw page: a solution nothing has dated reports no phase at all") {
     RawSnapshot snapshot = bench_device();
     snapshot.gnss.nav_valid = false;
     snapshot.gnss.utc_valid = false;

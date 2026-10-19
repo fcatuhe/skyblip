@@ -9,7 +9,7 @@
 
 using namespace skyblip::timing;
 
-TEST_CASE("timing_stats: a clean 1 Hz PPS train lands in the centre bucket") {
+TEST_CASE("timing stats: a clean 1 Hz PPS train lands in the centre bucket") {
     SlotTimingStats stats;
     uint64_t edge_us = 1000000;
     stats.record_edge(edge_us, true);  // the first edge only seeds the clock
@@ -25,7 +25,7 @@ TEST_CASE("timing_stats: a clean 1 Hz PPS train lands in the centre bucket") {
     CHECK(stats.holdover_events() == 0);
 }
 
-TEST_CASE("timing_stats: polling between edges never inflates the sample count") {
+TEST_CASE("timing stats: polling between edges never inflates the sample count") {
     SlotTimingStats stats;
     stats.record_edge(1000000, true);
     for (int i = 0; i < 50; i++) stats.record_edge(1000000, true);  // same edge, many passes
@@ -38,7 +38,7 @@ TEST_CASE("timing_stats: polling between edges never inflates the sample count")
 // the centre bucket - that error is the chip doing what its datasheet
 // promises), past it but inside the hop guard, past that but inside the
 // jitter guard, and past the whole budget.
-TEST_CASE("timing_stats: a drifting edge walks the buckets outward, one guard at a time") {
+TEST_CASE("timing stats: a drifting edge walks the buckets outward, one guard at a time") {
     SlotTimingStats stats;
     uint64_t edge_us = 0;
     stats.record_edge(edge_us, true);
@@ -67,7 +67,7 @@ TEST_CASE("timing_stats: a drifting edge walks the buckets outward, one guard at
     CHECK(early.pps_worst_us() == -8000);
 }
 
-TEST_CASE("timing_stats: a lost PPS becomes holdover, not a phase outlier") {
+TEST_CASE("timing stats: a lost PPS becomes holdover, not a phase outlier") {
     SlotTimingStats stats;
     uint64_t edge_us = 0;
     stats.record_edge(edge_us, true);
@@ -97,7 +97,7 @@ TEST_CASE("timing_stats: a lost PPS becomes holdover, not a phase outlier") {
     CHECK(stats.pps_bucket(3) == 2);
 }
 
-TEST_CASE("timing_stats: an edge gap while still reporting locked is holdover too") {
+TEST_CASE("timing stats: an edge gap while still reporting locked is holdover too") {
     SlotTimingStats stats;
     stats.record_edge(0, true);
     stats.record_edge(2200000, true);  // more than one edge went missing
@@ -110,7 +110,7 @@ TEST_CASE("timing_stats: an edge gap while still reporting locked is holdover to
 // the wrap and a landed instant just after it are still only a few thousand
 // microseconds apart - not a second, and not undefined, because nothing here
 // is derived from a phase.
-TEST_CASE("timing_stats: the dwell-phase error is exact across the UTC second wrap") {
+TEST_CASE("timing stats: the dwell-phase error is exact across the UTC second wrap") {
     SlotTimingStats stats;
     const uint64_t deadline_us = 999995000;
     const uint64_t landed_us = 1000001200;
@@ -120,7 +120,7 @@ TEST_CASE("timing_stats: the dwell-phase error is exact across the UTC second wr
     CHECK(stats.dwell_bucket(SlotTimingStats::bucket_of(6200)) == 1);
 }
 
-TEST_CASE("timing_stats: an extreme error saturates the outer bucket, never indexes past it") {
+TEST_CASE("timing stats: an extreme error saturates the outer bucket, never indexes past it") {
     CHECK(SlotTimingStats::bucket_of(1000000000) == 6);
     CHECK(SlotTimingStats::bucket_of(-1000000000) == 0);
 
@@ -130,7 +130,7 @@ TEST_CASE("timing_stats: an extreme error saturates the outer bucket, never inde
     CHECK(stats.dwell_worst_us() == std::numeric_limits<int32_t>::max());
 }
 
-TEST_CASE("timing_stats: missed and refused are counted apart from the phase histograms") {
+TEST_CASE("timing stats: missed and refused are counted apart from the phase histograms") {
     SlotTimingStats stats;
     stats.record_missed();
     stats.record_missed();
@@ -145,7 +145,7 @@ TEST_CASE("timing_stats: missed and refused are counted apart from the phase his
     }
 }
 
-TEST_CASE("timing_stats: an out-of-range bucket index reads zero, not memory past the array") {
+TEST_CASE("timing stats: an out-of-range bucket index reads zero, not memory past the array") {
     SlotTimingStats stats;
     stats.record_dwell_phase(0);
     CHECK(stats.dwell_bucket(-1) == 0);

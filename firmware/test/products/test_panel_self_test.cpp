@@ -7,25 +7,6 @@
 
 using namespace skyblip;
 
-namespace {
-
-bool reads_from(const go::Glass& canvas, int x, int y, const char* text) {
-    go::Glass expected;
-    expected.clear(true);
-    expected.draw_text(x, y, text, true, 1);
-    for (int dy = 0; dy < 7; dy++)
-        for (int dx = 0; dx < int(std::string(text).size()) * ui::kCellW; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
-                return false;
-    return true;
-}
-
-}  // namespace
-
-// D2: the panel is the self test. A device that returns from main and goes dark
-// tells a pilot on a bench nothing at all; a device holding a page that names
-// the part that did not answer tells them everything.
-
 // D2: the panel is the self test. A device that returns from main and goes dark
 // tells a pilot on a bench nothing at all; a device holding a page that names
 // the part that did not answer tells them everything.
@@ -147,8 +128,8 @@ TEST_CASE("product: the parts this firmware never drives are named on the bus ro
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
 
-    CHECK(reads_from(rig.product.self_test_page(), go::kSelfTestLeftX,
-                     go::self_test_row_y(go::kSelfTestPartCount), "I2C IMU RTC HAPTIC BARO"));
+    CHECK(reads_at(rig.product.self_test_page(), go::kSelfTestLeftX,
+                   go::self_test_row_y(go::kSelfTestPartCount), "I2C IMU RTC HAPTIC BARO"));
 }
 
 // The page is the inventory: a capability with no row is a part nobody can miss.

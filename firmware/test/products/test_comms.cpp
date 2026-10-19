@@ -24,11 +24,11 @@ using namespace skyblip::comms;
 TEST_CASE("comms: get returns current config on the Config endpoint") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"get\"}"));
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last_on(events::Endpoint::Config));
     CHECK(link.last().bytes.find("config") != std::string::npos);
@@ -37,46 +37,46 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
 TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a set restores it") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    s.aircraft_type = 7;
-    s.alarm_volume = go::AlarmVolume::Soft;
-    std::memcpy(s.callsign, "D-KXYZ", 7);
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    settings.aircraft_type = 7;
+    settings.alarm_volume = go::AlarmVolume::Soft;
+    std::memcpy(settings.callsign, "D-KXYZ", 7);
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
-    cs.on_rx(frame("{\"cmd\":\"defaults\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"defaults\"}"));
     const std::string body = link.last().bytes;
     CHECK(body ==
           "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":2,"
           "\"units\":0,\"callsign\":\"\"}");
 
     const std::string set = "{\"cmd\":\"set\"" + body.substr(body.find(','));
-    cs.on_rx(frame(set.c_str()));
-    cs.confirm();
+    config.on_rx(config_frame(set.c_str()));
+    config.confirm();
     const go::Settings shipped = go::defaults();
-    CHECK(s.aircraft_type == shipped.aircraft_type);
-    CHECK(s.alarm_volume == shipped.alarm_volume);
-    CHECK(std::string(s.callsign).empty());
+    CHECK(settings.aircraft_type == shipped.aircraft_type);
+    CHECK(settings.alarm_volume == shipped.alarm_volume);
+    CHECK(std::string(settings.callsign).empty());
 }
 
 TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    CHECK(cs.pending() == Pending::Set);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    CHECK(config.pending() == Pending::Set);
     CHECK(link.last().bytes.find("confirm") != std::string::npos);
-    CHECK(int(s.aircraft_type) == 1);  // not yet applied
+    CHECK(int(settings.aircraft_type) == 1);  // not yet applied
 
-    cs.confirm();
-    CHECK(cs.pending() == Pending::None);
-    CHECK(int(s.aircraft_type) == 4);  // applied
-    CHECK(cs.settings_dirty());
+    config.confirm();
+    CHECK(config.pending() == Pending::None);
+    CHECK(int(settings.aircraft_type) == 4);  // applied
+    CHECK(config.settings_dirty());
     CHECK(link.last().bytes.find("\"ack\":true") != std::string::npos);
 }
 
@@ -84,76 +84,77 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
 TEST_CASE("comms: the settings prompt lists what the set changes, and only that") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
-    cs.on_rx(frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
-    REQUIRE(cs.pending() == Pending::Set);
-    CHECK(std::string(cs.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
+    config.on_rx(
+        config_frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
+    REQUIRE(config.pending() == Pending::Set);
+    CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
 
-    cs.on_rx(frame("{\"cmd\":\"set\",\"units\":0}"));
-    CHECK(std::string(cs.prompt_detail()) == pending_detail(Pending::Set));
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"units\":0}"));
+    CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
 TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
     const std::string head = "{\"cmd\":\"set\",";
     const std::string tail = "\"aircraft_type\":4}";
     const std::string full =
         head + std::string(events::RxFrame{}.data.size() - head.size() - tail.size(), ' ') + tail;
-    cs.on_rx(frame(full.c_str()));
-    REQUIRE(cs.pending() == Pending::Set);
-    CHECK(std::string(cs.pending_set_json()) == full);
+    config.on_rx(config_frame(full.c_str()));
+    REQUIRE(config.pending() == Pending::Set);
+    CHECK(std::string(config.pending_set_json()) == full);
 }
 
 TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Airborne);
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    CHECK(cs.pending() == Pending::None);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Airborne);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
-    CHECK(int(s.aircraft_type) == 1);
+    CHECK(int(settings.aircraft_type) == 1);
 }
 
 // The latch itself is core/flight/ground.h's; this gate refuses whatever is not a confirmed ground.
 TEST_CASE("comms: unknown flight-state refuses") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Unknown);  // never confirmed on ground
-    CHECK(cs.flight_state() == flight::FlightState::Unknown);
-    cs.on_rx(frame("{\"cmd\":\"set\",\"alarm\":false}"));
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Unknown);  // never confirmed on ground
+    CHECK(config.flight_state() == flight::FlightState::Unknown);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"alarm\":false}"));
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 
-    cs.set_flight_state(flight::FlightState::Ground);
-    CHECK(cs.flight_state() == flight::FlightState::Ground);
+    config.set_flight_state(flight::FlightState::Ground);
+    CHECK(config.flight_state() == flight::FlightState::Ground);
 }
 
 TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    cs.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
-    cs.confirm();
-    CHECK(int(s.aircraft_type) == 1);  // NOT applied
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
+    config.confirm();
+    CHECK(int(settings.aircraft_type) == 1);  // NOT applied
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 }
 
@@ -161,53 +162,53 @@ TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") 
 TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value refuses") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::state_from(0));
-    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    CHECK(cs.pending() == Pending::None);
-    cs.set_flight_state(flight::state_from(1));
-    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    CHECK(cs.pending() == Pending::Dfu);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::state_from(0));
+    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    CHECK(config.pending() == Pending::None);
+    config.set_flight_state(flight::state_from(1));
+    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    CHECK(config.pending() == Pending::Dfu);
 }
 
 TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants nothing") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.tick(1000);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.tick(1000);
 
-    cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    REQUIRE(cs.pending() == Pending::Dfu);
-    cs.tick(1000 + kPromptForgetMs - 1);
-    CHECK(cs.pending() == Pending::Dfu);
+    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    REQUIRE(config.pending() == Pending::Dfu);
+    config.tick(1000 + kPromptForgetMs - 1);
+    CHECK(config.pending() == Pending::Dfu);
 
-    cs.tick(1000 + kPromptForgetMs);
-    CHECK(cs.pending() == Pending::None);
+    config.tick(1000 + kPromptForgetMs);
+    CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("expired") != std::string::npos);
 
     // The button pressed after the prompt came down authorises the operation
     // that was on it, or it authorises nothing. It is nothing.
-    cs.confirm();
-    CHECK_FALSE(cs.upload_allowed());
+    config.confirm();
+    CHECK_FALSE(config.upload_allowed());
 }
 
 TEST_CASE("comms: taking off takes a standing prompt away with it") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"recovery\"}"));
-    REQUIRE(cs.pending() == Pending::Recovery);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"recovery\"}"));
+    REQUIRE(config.pending() == Pending::Recovery);
 
-    cs.set_flight_state(flight::FlightState::Airborne);
-    CHECK(cs.pending() == Pending::None);
+    config.set_flight_state(flight::FlightState::Airborne);
+    CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 }
 
@@ -231,14 +232,14 @@ TEST_CASE("comms: every operation that needs authorising names itself and what i
 TEST_CASE("comms: link down cancels a pending change") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"set\",\"alarm\":false}"));
-    CHECK(cs.pending() == Pending::Set);
-    cs.on_link_down(events::LinkDown{1});
-    CHECK(cs.pending() == Pending::None);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"alarm\":false}"));
+    CHECK(config.pending() == Pending::Set);
+    config.on_link_down(events::LinkDown{1});
+    CHECK(config.pending() == Pending::None);
 }
 
 // G1: the wire, not the gauge or the cutoff rule - core/power decided percent,
@@ -254,25 +255,25 @@ TEST_CASE("comms: link down cancels a pending change") {
 TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
     power::BatteryState low{};
     low.valid = true;
     low.cell_mv = 3400;
-    cs.set_battery_state(low, power::PowerLevel::Critical);
-    CHECK_FALSE(cs.settings_writable());
+    config.set_battery_state(low, power::PowerLevel::Critical);
+    CHECK_FALSE(config.settings_writable());
 
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
     // Refused at the door: no prompt to walk over and confirm for a write that
     // was never going to happen.
-    CHECK(cs.pending() == Pending::None);
+    CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
     CHECK(link.last().bytes.find("\"ack\":false") != std::string::npos);
-    CHECK(int(s.aircraft_type) == 1);
-    CHECK_FALSE(cs.settings_dirty());
+    CHECK(int(settings.aircraft_type) == 1);
+    CHECK_FALSE(config.settings_dirty());
 
     // A charger on the cable holds the terminal above the cell, so core/power
     // reports Normal again and the door opens.
@@ -281,12 +282,12 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     charging.cell_mv = 3400;
     charging.external_power = true;
     charging.charging = true;
-    cs.set_battery_state(charging, power::PowerLevel::Normal);
-    CHECK(cs.settings_writable());
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    REQUIRE(cs.pending() == Pending::Set);
-    cs.confirm();
-    CHECK(int(s.aircraft_type) == 4);
+    config.set_battery_state(charging, power::PowerLevel::Normal);
+    CHECK(config.settings_writable());
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    REQUIRE(config.pending() == Pending::Set);
+    config.confirm();
+    CHECK(int(settings.aircraft_type) == 4);
 }
 
 // The confirmation window is 30 s wide and a cell can cross the warning inside
@@ -294,21 +295,21 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
 TEST_CASE("comms: a cell that falls while the prompt stands cancels the change") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    REQUIRE(cs.pending() == Pending::Set);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    REQUIRE(config.pending() == Pending::Set);
 
     power::BatteryState low{};
     low.valid = true;
     low.cell_mv = 3100;
-    cs.set_battery_state(low, power::PowerLevel::Flat);
-    cs.confirm();
-    CHECK(cs.pending() == Pending::None);
-    CHECK(int(s.aircraft_type) == 1);
-    CHECK_FALSE(cs.settings_dirty());
+    config.set_battery_state(low, power::PowerLevel::Flat);
+    config.confirm();
+    CHECK(config.pending() == Pending::None);
+    CHECK(int(settings.aircraft_type) == 1);
+    CHECK_FALSE(config.settings_dirty());
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
 }
 
@@ -318,20 +319,20 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
 TEST_CASE("comms: a fired power-failure comparator closes the door on its own") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
     power::BatteryState healthy{};
     healthy.valid = true;
     healthy.cell_mv = 4000;
-    cs.set_battery_state(healthy, power::PowerLevel::Normal);
-    REQUIRE(cs.settings_writable());
+    config.set_battery_state(healthy, power::PowerLevel::Normal);
+    REQUIRE(config.settings_writable());
 
-    cs.set_supply_warned(true);
-    CHECK_FALSE(cs.settings_writable());
-    cs.on_rx(frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
-    CHECK(cs.pending() == Pending::None);
+    config.set_supply_warned(true);
+    CHECK_FALSE(config.settings_writable());
+    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
 }
 
@@ -344,16 +345,16 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
 TEST_CASE("comms: the status reply carries the die temperature, in whole degrees") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
 
     // Nothing has read the sensor yet: the key is absent, not zero.
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("die_temp_c") == std::string::npos);
 
-    cs.set_die_temperature(412, /*valid=*/true);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(412, /*valid=*/true);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("\"die_temp_c\":41") != std::string::npos);
 }
 
@@ -363,38 +364,38 @@ TEST_CASE("comms: the status reply carries the die temperature, in whole degrees
 TEST_CASE("comms: no reading is no key, never a zero") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
 
-    cs.set_die_temperature(0, /*valid=*/true);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(0, /*valid=*/true);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
 
-    cs.set_die_temperature(0, /*valid=*/false);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(0, /*valid=*/false);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("die_temp_c") == std::string::npos);
 }
 
 TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") {
     platform::host::Link link;
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
 
     // A cold morning must not read one degree warmer than it is, and a hot
     // afternoon must not read one cooler: -20.6 C is -21, +20.6 C is +21.
-    cs.set_die_temperature(-206, true);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(-206, true);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("\"die_temp_c\":-21") != std::string::npos);
 
-    cs.set_die_temperature(206, true);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(206, true);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("\"die_temp_c\":21") != std::string::npos);
 
-    cs.set_die_temperature(-4, true);
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.set_die_temperature(-4, true);
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
 }
 
@@ -404,17 +405,17 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     platform::host::Link link;
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kTestActivation);
-    ConfigService cs(link, store_cs);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
 
-    Diagnostics& dump = cs.diagnostics();
+    Diagnostics& dump = config.diagnostics();
     dump.refreshes = 1;
     dump.noise_dbm = -101;
     dump.rx_ok = 7;
-    cs.set_range_refused(0);
+    config.set_range_refused(0);
     link.sent.clear();
-    cs.on_rx(frame("{\"cmd\":\"radio\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
     REQUIRE_FALSE(link.sent.empty());
     std::string idle;
     for (const platform::host::Link::Frame& f : link.sent) {
@@ -433,9 +434,9 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     // answer is two whole frames rather than one short one.
     dump.rx_ok = dump.rx_bad = dump.tx_ok = 2147483647u;
     dump.rx_wait = dump.rx_type = dump.tx_lost = 2147483647u;
-    cs.set_range_refused(2147483647u);
+    config.set_range_refused(2147483647u);
     link.sent.clear();
-    cs.on_rx(frame("{\"cmd\":\"radio\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
     std::string body;
     for (const platform::host::Link::Frame& f : link.sent) {
         CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayload));
@@ -444,5 +445,5 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     }
     CHECK(body.find("\"range_refused\":2147483647") != std::string::npos);
     CHECK(body.find("\"more\":false") != std::string::npos);
-    CHECK(cs.link_drops() == 0);
+    CHECK(config.link_drops() == 0);
 }

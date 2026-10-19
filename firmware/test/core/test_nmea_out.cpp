@@ -28,12 +28,12 @@ static int data_fields(const std::string& sentence) {
     return static_cast<int>(std::count(body.begin(), body.end(), ','));
 }
 
-static model::Ownship own_at(int32_t lat, int32_t lon, int32_t alt_m) {
+static model::Ownship own_at(int32_t lat_1e7, int32_t lon_1e7, int32_t alt_m) {
     model::Ownship o{};
     o.fix_valid = true;
     o.utc_valid = true;
-    o.lat_1e7 = lat;
-    o.lon_1e7 = lon;
+    o.lat_1e7 = lat_1e7;
+    o.lon_1e7 = lon_1e7;
     o.alt_hae_mm = alt_m * 1000;
     return o;
 }
@@ -93,7 +93,7 @@ TEST_CASE("nmea: a target across the antimeridian is metres away, not the width 
     CHECK(e_m == doctest::Approx(22).epsilon(0.05));
 }
 
-TEST_CASE("nmea: PFLAA carries id, relative pos, checksum") {
+TEST_CASE("nmea: PFLAA carries the id, the relative position and the checksum") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation t{};
     t.position_valid = true;
@@ -179,7 +179,7 @@ TEST_CASE("nmea: PFLAA returns 0 without own position") {
     CHECK(format_pflaa(buf, sizeof(buf), own, t, 0, nullptr) == 0);
 }
 
-TEST_CASE("nmea: PFLAU reports rx count, gps and threat") {
+TEST_CASE("nmea: PFLAU reports the receive count, the GPS state and the threat") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation threat{};
     threat.address = 0x112233;
@@ -284,7 +284,7 @@ TEST_CASE("nmea: address_mapping_table_to_idtype never answers 0 - SkyDemon draw
 // 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product
 // case from), chosen so the date and time fields below are hand-checkable
 // rather than merely re-deriving the same arithmetic the formatter uses.
-TEST_CASE("nmea: GPRMC/GPGGA carry ownship's own absolute position") {
+TEST_CASE("nmea: GPRMC/GPGGA carry own-ship's own absolute position") {
     auto own = own_at(481234500, -81234500, 1000);
     own.utc_s = 1785628800u + 3661u;
     own.alt_msl_mm = 950000;

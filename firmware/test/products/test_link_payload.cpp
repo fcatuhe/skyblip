@@ -38,12 +38,12 @@ const identity::Activation kWidestAddress{0xFFFF, 0xFFFF};
 // it is allowed to hold, so these cases measure the worst case rather than a
 // convenient one.
 go::Settings widest_settings() {
-    go::Settings s = go::defaults();
-    s.aircraft_type = 17;
-    s.alarm_volume = go::AlarmVolume::Loud;
-    s.units = go::Units::Nautical;
-    std::memcpy(s.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
-    return s;
+    go::Settings settings = go::defaults();
+    settings.aircraft_type = 17;
+    settings.alarm_volume = go::AlarmVolume::Loud;
+    settings.units = go::Units::Nautical;
+    std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
+    return settings;
 }
 
 power::BatteryState full_battery() {
@@ -58,10 +58,10 @@ power::BatteryState full_battery() {
 
 // A device at its most talkative: the longest flight word, the longest power
 // level, a full cell, and the widest temperature an int16 of tenths can print.
-void make_worst_case(ConfigService& cs) {
-    cs.set_flight_state(flight::FlightState::Airborne);
-    cs.set_battery_state(full_battery(), power::PowerLevel::Flat);
-    cs.set_die_temperature(INT16_MIN, true);
+void make_worst_case(ConfigService& config) {
+    config.set_flight_state(flight::FlightState::Airborne);
+    config.set_battery_state(full_battery(), power::PowerLevel::Flat);
+    config.set_die_temperature(INT16_MIN, true);
 }
 
 // Two weeks of bench: one PPS edge a second puts a bucket into seven figures,
@@ -121,17 +121,17 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddress);
-    ConfigService cs(link, store_cs);
-    make_worst_case(cs);
+    go::Settings settings = widest_settings();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    make_worst_case(config);
 
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
     CHECK(link.refused_oversize == 0);
-    CHECK(cs.link_drops() == 0);
+    CHECK(config.link_drops() == 0);
 
     // Every field whole. json::Writer leaves a field out rather than cutting it,
     // so "fits" has to mean the last key is there and not merely valid JSON.
@@ -143,17 +143,17 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddress);
-    ConfigService cs(link, store_cs);
+    go::Settings settings = widest_settings();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
 
-    cs.on_rx(frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
     // 153 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
     CHECK(body.size() == 153);
-    CHECK(cs.link_drops() == 0);
+    CHECK(config.link_drops() == 0);
 
     // The settings used to ride as a JSON string inside the reply, and the
     // backslashes alone were 53 bytes of a 158-byte body. There is not one left.
@@ -174,23 +174,23 @@ TEST_CASE(
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddress);
+    go::Settings settings = widest_settings();
+    go::SettingsStore store(settings, kWidestAddress);
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu(watchdog);
     dfu.running_key_valid = true;
     dfu.running_signer.fill(0xff);
     dfu.allows_downgrade = true;
-    ConfigService cs(link, store_cs, &dfu);
-    cs.set_image_state(dfu::ImageState::Probation,
-                       dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
-    cs.set_settings_fallback(settings::Fallback::Defaults);
+    ConfigService config(link, store, &dfu);
+    config.set_image_state(dfu::ImageState::Probation,
+                           dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
+    config.set_settings_fallback(settings::Fallback::Defaults);
     dfu::HubImageReport held{};
     held.holding = dfu::HubImage::Held;
     for (uint8_t& byte : held.digest) byte = 0xAB;
-    cs.set_hub_image(held);
+    config.set_hub_image(held);
 
-    cs.on_rx(frame("{\"cmd\":\"update\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"update\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
@@ -209,19 +209,19 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddress);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
+    go::Settings settings = widest_settings();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
 
     // Nothing in this dialect fits twenty bytes, not even a refusal, so the
     // honest answer is silence and a number - never a notification the
     // controller would fail, and never a reply with fields quietly missing.
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
-    cs.on_rx(frame("{\"cmd\":\"get\"}"));
-    cs.on_rx(frame("{\"cmd\":\"nonsense\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"nonsense\"}"));
     CHECK(link.sent.empty());
-    CHECK(cs.link_drops() == 3);
+    CHECK(config.link_drops() == 3);
     // The refusal happened above the port: nothing was ever handed down.
     CHECK(link.refused_oversize == 0);
 }
@@ -229,15 +229,15 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
 TEST_CASE("comms: the bench's timing report is one frame on a wide link and several on a narrow") {
     timing::SlotTimingStats stats;
     run_bench(stats);
-    go::Settings s = go::defaults();
+    go::Settings settings = go::defaults();
 
     // A phone that negotiated the whole L2CAP MTU: one frame, and it says so.
     platform::host::Link wide;
     wide.raise_link(1);
     wide.declare_payload_bytes(495);
-    go::SettingsStore store_on_wide(s, kWidestAddress);
+    go::SettingsStore store_on_wide(settings, kWidestAddress);
     ConfigService on_wide(wide, store_on_wide, nullptr, &stats);
-    on_wide.on_rx(frame("{\"cmd\":\"timing\"}"));
+    on_wide.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(wide.sent.size() == 1);
     CHECK(wide.last().bytes.find("\"part\":0") != std::string::npos);
     CHECK(wide.last().bytes.find("\"more\":false") != std::string::npos);
@@ -249,9 +249,9 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link narrow;
     narrow.raise_link(1);
     narrow.declare_payload_bytes(kSmallestSupportedPayload);
-    go::SettingsStore store_on_narrow(s, kWidestAddress);
+    go::SettingsStore store_on_narrow(settings, kWidestAddress);
     ConfigService on_narrow(narrow, store_on_narrow, nullptr, &stats);
-    on_narrow.on_rx(frame("{\"cmd\":\"timing\"}"));
+    on_narrow.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(narrow.sent.size() > 1);
     CHECK(narrow.sent.back().bytes.find("\"more\":false") != std::string::npos);
     for (size_t i = 0; i < narrow.sent.size(); i++) {
@@ -280,9 +280,9 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link hopeless;
     hopeless.raise_link(1);
     hopeless.declare_payload_bytes(64);
-    go::SettingsStore store_on_hopeless(s, kWidestAddress);
+    go::SettingsStore store_on_hopeless(settings, kWidestAddress);
     ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &stats);
-    on_hopeless.on_rx(frame("{\"cmd\":\"timing\"}"));
+    on_hopeless.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     CHECK(hopeless.sent.empty());
     CHECK(on_hopeless.link_drops() == 1);
 }
@@ -291,27 +291,27 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kWidestAddress);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
 
     // Out of buffers for one pass - an upload sharing the connection will do
     // that. The push is the one frame nobody asked for, so nobody will ask
     // again: it is the one that has to come back on the next pass.
     link.force_status(Status::WouldBlock);
-    cs.set_battery_state(full_battery(), power::PowerLevel::Normal);
+    config.set_battery_state(full_battery(), power::PowerLevel::Normal);
     CHECK(link.sent.empty());
-    CHECK(cs.link_drops() == 1);
+    CHECK(config.link_drops() == 1);
 
-    cs.tick(10);
+    config.tick(10);
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last().bytes.find("\"cmd\":\"status\"") != std::string::npos);
-    CHECK(cs.link_drops() == 1);
+    CHECK(config.link_drops() == 1);
 
     // And a second pass does not send it again: a retry is not a stream.
-    cs.tick(20);
+    config.tick(20);
     CHECK(link.sent.size() == 1);
 }
 
@@ -320,18 +320,18 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
     link.raise_link(1);
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kWidestAddress);
-    ConfigService cs(link, store_cs);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
 
-    cs.set_battery_state(full_battery(), power::PowerLevel::Normal);
-    CHECK(cs.link_drops() == 1);
-    for (uint32_t t = 10; t <= 100; t += 10) cs.tick(t);
+    config.set_battery_state(full_battery(), power::PowerLevel::Normal);
+    CHECK(config.link_drops() == 1);
+    for (uint32_t t = 10; t <= 100; t += 10) config.tick(t);
     // Nothing about a frame too big changes by waiting, so waiting is not the
     // answer: one count, and the phone can ask for a status whenever it likes.
-    CHECK(cs.link_drops() == 1);
+    CHECK(config.link_drops() == 1);
     CHECK(link.sent.empty());
 }
 
@@ -339,23 +339,23 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
 TEST_CASE("comms: a report the link takes one frame at a time arrives whole and in order") {
     timing::SlotTimingStats stats;
     run_bench(stats);
-    go::Settings s = go::defaults();
+    go::Settings settings = go::defaults();
 
     platform::host::Link free_link;
     free_link.raise_link(1);
     free_link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::SettingsStore store_free(s, kWidestAddress);
+    go::SettingsStore store_free(settings, kWidestAddress);
     ConfigService on_free(free_link, store_free, nullptr, &stats);
-    on_free.on_rx(frame("{\"cmd\":\"timing\"}"));
+    on_free.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(free_link.sent.size() > 1);
 
     platform::host::Link busy;
     busy.raise_link(1);
     busy.declare_payload_bytes(kSmallestSupportedPayload);
     busy.hold_after(1);
-    go::SettingsStore store_busy(s, kWidestAddress);
+    go::SettingsStore store_busy(settings, kWidestAddress);
     ConfigService on_busy(busy, store_busy, nullptr, &stats);
-    on_busy.on_rx(frame("{\"cmd\":\"timing\"}"));
+    on_busy.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
     CHECK(on_busy.replying());
     for (uint32_t t = 10; t < 1000 && on_busy.replying(); t += 10) {
@@ -371,39 +371,39 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     platform::host::Link link;
     link.raise_link(1);
     link.hold_after(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store(s, kWidestAddress);
-    ConfigService cs(link, store);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"get\"}"));
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
-    CHECK(cs.replying());
+    CHECK(config.replying());
 
-    cs.resume_replies(10);
+    config.resume_replies(10);
     CHECK(link.sent.size() == 1);
     link.serve();
-    cs.resume_replies(20);
+    config.resume_replies(20);
     REQUIRE(link.sent.size() == 2);
     CHECK(link.last().bytes.find("\"cmd\":\"status\"") != std::string::npos);
-    CHECK_FALSE(cs.replying());
-    CHECK(cs.link_drops() == 0);
+    CHECK_FALSE(config.replying());
+    CHECK(config.link_drops() == 0);
 }
 
 TEST_CASE("comms: a central that never takes its reply loses it, counted, and frees the service") {
     platform::host::Link link;
     link.raise_link(1);
     link.hold_after(1);
-    go::Settings s = go::defaults();
-    go::SettingsStore store(s, kWidestAddress);
-    ConfigService cs(link, store);
-    cs.set_flight_state(flight::FlightState::Ground);
-    cs.on_rx(frame("{\"cmd\":\"get\"}"));
-    cs.on_rx(frame("{\"cmd\":\"status\"}"));
-    cs.resume_replies(ports::kReplyWaitCeilingMs - 1);
-    CHECK(cs.replying());
-    cs.resume_replies(ports::kReplyWaitCeilingMs);
-    CHECK_FALSE(cs.replying());
-    CHECK(cs.link_drops() == 1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kWidestAddress);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.resume_replies(ports::kReplyWaitCeilingMs - 1);
+    CHECK(config.replying());
+    config.resume_replies(ports::kReplyWaitCeilingMs);
+    CHECK_FALSE(config.replying());
+    CHECK(config.link_drops() == 1);
     CHECK(link.sent.size() == 1);
 }

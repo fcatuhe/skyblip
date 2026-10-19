@@ -13,27 +13,27 @@ using namespace skyblip::power;
 // and the wake pin is armed only once the button is actually up.
 
 TEST_CASE("shutdown: a short press is not a shutdown, a long one is") {
-    ShutdownSequencer seq;
+    ShutdownSequencer shutdown;
     uint32_t t = 0;
-    seq.tick(t, false);  // the button starts up: the hold is armed
+    shutdown.tick(t, false);  // the button starts up: the hold is armed
 
-    for (t = 10; t < 500; t += 10) seq.tick(t, true);
-    seq.tick(t, false);
-    CHECK(seq.phase() == ShutdownPhase::Running);
-    CHECK(seq.reason() == ShutdownReason::None);
+    for (t = 10; t < 500; t += 10) shutdown.tick(t, true);
+    shutdown.tick(t, false);
+    CHECK(shutdown.phase() == ShutdownPhase::Running);
+    CHECK(shutdown.reason() == ShutdownReason::None);
 
-    for (t = 1000; t < 1000 + kLongPressHoldMs + 100; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
-    CHECK(seq.reason() == ShutdownReason::LongPress);
+    for (t = 1000; t < 1000 + kLongPressHoldMs + 100; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
+    CHECK(shutdown.reason() == ShutdownReason::LongPress);
 }
 
 TEST_CASE("shutdown: the pad held through the press asks to be stowed, not switched off") {
-    ShutdownSequencer seq;
+    ShutdownSequencer shutdown;
     uint32_t t = 0;
-    seq.tick(t, false);
-    for (t = 10; t <= 10 + kLongPressHoldMs; t += 10) seq.tick(t, true, /*pad_down=*/true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
-    CHECK(seq.reason() == ShutdownReason::Stow);
+    shutdown.tick(t, false);
+    for (t = 10; t <= 10 + kLongPressHoldMs; t += 10) shutdown.tick(t, true, /*pad_down=*/true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
+    CHECK(shutdown.reason() == ShutdownReason::Stow);
     CHECK(std::string(to_string(ShutdownReason::Stow)) == "STOW");
 }
 
@@ -71,134 +71,135 @@ TEST_CASE("shutdown: a pad never seen up since boot is not a stow") {
 
 // A cheek, a raindrop or a bag rests on the pad: it may never switch anything off.
 TEST_CASE("shutdown: the pad on its own switches nothing off") {
-    ShutdownSequencer seq;
-    seq.tick(0, false);
-    for (uint32_t t = 10; t < 30000; t += 10) seq.tick(t, /*button_down=*/false, /*pad_down=*/true);
-    CHECK(seq.phase() == ShutdownPhase::Running);
-    CHECK(seq.reason() == ShutdownReason::None);
+    ShutdownSequencer shutdown;
+    shutdown.tick(0, false);
+    for (uint32_t t = 10; t < 30000; t += 10)
+        shutdown.tick(t, /*button_down=*/false, /*pad_down=*/true);
+    CHECK(shutdown.phase() == ShutdownPhase::Running);
+    CHECK(shutdown.reason() == ShutdownReason::None);
 }
 
 TEST_CASE("shutdown: a stow waits for the button like any other press") {
-    ShutdownSequencer seq;
-    seq.request(ShutdownReason::Stow, 0);
-    for (uint32_t t = 0; t <= kParkSettleMs; t += 10) seq.tick(t, true, /*pad_down=*/true);
-    CHECK(seq.phase() == ShutdownPhase::AwaitRelease);
+    ShutdownSequencer shutdown;
+    shutdown.request(ShutdownReason::Stow, 0);
+    for (uint32_t t = 0; t <= kParkSettleMs; t += 10) shutdown.tick(t, true, /*pad_down=*/true);
+    CHECK(shutdown.phase() == ShutdownPhase::AwaitRelease);
 }
 
 TEST_CASE("shutdown: the wake pin waits for the button to come up") {
-    ShutdownSequencer seq;
+    ShutdownSequencer shutdown;
     uint32_t t = 0;
-    seq.tick(t, false);
-    for (t = 10; t <= 10 + kLongPressHoldMs; t += 10) seq.tick(t, true);
-    REQUIRE(seq.phase() == ShutdownPhase::Parking);
+    shutdown.tick(t, false);
+    for (t = 10; t <= 10 + kLongPressHoldMs; t += 10) shutdown.tick(t, true);
+    REQUIRE(shutdown.phase() == ShutdownPhase::Parking);
 
     // The panel needs its park frame before the rails may go.
-    for (; t < 10 + kLongPressHoldMs + kParkSettleMs; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
+    for (; t < 10 + kLongPressHoldMs + kParkSettleMs; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
 
     // Parked, but the finger is still on the button: a level-sensed wake pin
     // armed now brings the device straight back up.
-    for (; t < 30000; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::AwaitRelease);
-    CHECK_FALSE(seq.ready_to_power_off());
+    for (; t < 30000; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::AwaitRelease);
+    CHECK_FALSE(shutdown.ready_to_power_off());
 
     const uint32_t released = t;
-    for (; t < released + kReleaseSettleMs; t += 10) seq.tick(t, false);
-    CHECK_FALSE(seq.ready_to_power_off());
-    seq.tick(t + kReleaseSettleMs, false);
-    CHECK(seq.phase() == ShutdownPhase::Off);
-    CHECK(seq.ready_to_power_off());
+    for (; t < released + kReleaseSettleMs; t += 10) shutdown.tick(t, false);
+    CHECK_FALSE(shutdown.ready_to_power_off());
+    shutdown.tick(t + kReleaseSettleMs, false);
+    CHECK(shutdown.phase() == ShutdownPhase::Off);
+    CHECK(shutdown.ready_to_power_off());
 }
 
 // The cutoff arms the button like every switch-off, and a held one would wake it at once.
 TEST_CASE("shutdown: a low-battery shutdown waits for the button it arms") {
-    ShutdownSequencer seq;
-    seq.request(ShutdownReason::LowBattery, 0);
+    ShutdownSequencer shutdown;
+    shutdown.request(ShutdownReason::LowBattery, 0);
     uint32_t t = 0;
-    for (; t <= kParkSettleMs + 1000; t += 10) seq.tick(t, /*button_down=*/true);
-    CHECK(seq.phase() == ShutdownPhase::AwaitRelease);
-    CHECK_FALSE(seq.ready_to_power_off());
+    for (; t <= kParkSettleMs + 1000; t += 10) shutdown.tick(t, /*button_down=*/true);
+    CHECK(shutdown.phase() == ShutdownPhase::AwaitRelease);
+    CHECK_FALSE(shutdown.ready_to_power_off());
 
     const uint32_t released = t;
-    for (; t <= released + kReleaseSettleMs + 10; t += 10) seq.tick(t, false);
-    CHECK(seq.ready_to_power_off());
+    for (; t <= released + kReleaseSettleMs + 10; t += 10) shutdown.tick(t, false);
+    CHECK(shutdown.ready_to_power_off());
 }
 
 // The swap takes the same road out as a power-off: the panel gets its park frame
 // before the bootloader is handed the device, and the reason is spelled for the log.
 TEST_CASE("shutdown: an install parks the panel like a power-off and is named as one") {
-    ShutdownSequencer seq;
-    seq.request(ShutdownReason::Install, 0);
+    ShutdownSequencer shutdown;
+    shutdown.request(ShutdownReason::Install, 0);
     CHECK(std::string(to_string(ShutdownReason::Install)) == "INSTALL");
-    CHECK(seq.going_down());
+    CHECK(shutdown.going_down());
     uint32_t t = 0;
-    for (; t < kParkSettleMs; t += 10) seq.tick(t, /*button_down=*/false);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
-    for (; t < kParkSettleMs + kReleaseSettleMs + 50; t += 10) seq.tick(t, false);
-    CHECK(seq.phase() == ShutdownPhase::Off);
-    CHECK(seq.ready_to_power_off());
+    for (; t < kParkSettleMs; t += 10) shutdown.tick(t, /*button_down=*/false);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
+    for (; t < kParkSettleMs + kReleaseSettleMs + 50; t += 10) shutdown.tick(t, false);
+    CHECK(shutdown.phase() == ShutdownPhase::Off);
+    CHECK(shutdown.ready_to_power_off());
 }
 
 TEST_CASE("shutdown: a recovery leaves the button armed, since a press may be what finishes it") {
-    ShutdownSequencer seq;
-    seq.request(ShutdownReason::Recovery, 0);
+    ShutdownSequencer shutdown;
+    shutdown.request(ShutdownReason::Recovery, 0);
     CHECK(std::string(to_string(ShutdownReason::Recovery)) == "RECOVERY");
     uint32_t t = 0;
-    for (; t < kParkSettleMs + kReleaseSettleMs + 50; t += 10) seq.tick(t, false);
-    CHECK(seq.ready_to_power_off());
+    for (; t < kParkSettleMs + kReleaseSettleMs + 50; t += 10) shutdown.tick(t, false);
+    CHECK(shutdown.ready_to_power_off());
 }
 
 TEST_CASE("shutdown: a device woken by the button does not switch itself off again") {
     // SYSTEM OFF is left by a press, so the first thing the sequencer ever sees
     // is a button that is already down. Counting that as a hold powers the
     // device off before the panel has drawn a single frame.
-    ShutdownSequencer seq;
-    for (uint32_t t = 0; t < 10000; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::Running);
+    ShutdownSequencer shutdown;
+    for (uint32_t t = 0; t < 10000; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Running);
 
     // Once it has been released, the next hold counts.
     uint32_t t = 10000;
-    seq.tick(t, false);
-    for (; t <= 10000 + kLongPressHoldMs + 10; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
+    shutdown.tick(t, false);
+    for (; t <= 10000 + kLongPressHoldMs + 10; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
 }
 
 TEST_CASE("shutdown: low battery and the link take the same road as the button") {
     for (const ShutdownReason reason : {ShutdownReason::LowBattery, ShutdownReason::LinkRequest}) {
-        ShutdownSequencer seq;
-        seq.request(reason, 0);
-        CHECK(seq.phase() == ShutdownPhase::Parking);
-        CHECK(seq.reason() == reason);
-        CHECK(seq.going_down());
+        ShutdownSequencer shutdown;
+        shutdown.request(reason, 0);
+        CHECK(shutdown.phase() == ShutdownPhase::Parking);
+        CHECK(shutdown.reason() == reason);
+        CHECK(shutdown.going_down());
 
         uint32_t t = 0;
-        for (; t < kParkSettleMs + kReleaseSettleMs + 100; t += 10) seq.tick(t, false);
-        CHECK(seq.ready_to_power_off());
+        for (; t < kParkSettleMs + kReleaseSettleMs + 100; t += 10) shutdown.tick(t, false);
+        CHECK(shutdown.ready_to_power_off());
     }
 }
 
 TEST_CASE("shutdown: nothing cancels a shutdown once it has started") {
-    ShutdownSequencer seq;
-    seq.request(ShutdownReason::LowBattery, 0);
-    seq.request(ShutdownReason::LinkRequest, 10);
-    CHECK(seq.reason() == ShutdownReason::LowBattery);
+    ShutdownSequencer shutdown;
+    shutdown.request(ShutdownReason::LowBattery, 0);
+    shutdown.request(ShutdownReason::LinkRequest, 10);
+    CHECK(shutdown.reason() == ShutdownReason::LowBattery);
 
-    for (uint32_t t = 0; t < 20000; t += 10) seq.tick(t, false);
-    CHECK(seq.phase() == ShutdownPhase::Off);
+    for (uint32_t t = 0; t < 20000; t += 10) shutdown.tick(t, false);
+    CHECK(shutdown.phase() == ShutdownPhase::Off);
     // Even a fresh press cannot bring it back.
-    seq.tick(20000, true);
-    CHECK(seq.phase() == ShutdownPhase::Off);
+    shutdown.tick(20000, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Off);
 }
 
 TEST_CASE("shutdown: the hold is readable while it fills up") {
-    ShutdownSequencer seq;
-    seq.tick(0, false);
-    CHECK(seq.held_ms(0) == 0);
-    seq.tick(100, true);
-    seq.tick(600, true);
-    CHECK(seq.held_ms(600) == 500);
-    seq.tick(700, false);
-    CHECK(seq.held_ms(700) == 0);
+    ShutdownSequencer shutdown;
+    shutdown.tick(0, false);
+    CHECK(shutdown.held_ms(0) == 0);
+    shutdown.tick(100, true);
+    shutdown.tick(600, true);
+    CHECK(shutdown.held_ms(600) == 500);
+    shutdown.tick(700, false);
+    CHECK(shutdown.held_ms(700) == 0);
 }
 
 // M. The whole sequencer across the 49.7-day wrap of ports::Clock::millis(): the
@@ -209,37 +210,37 @@ TEST_CASE("shutdown: the hold is readable while it fills up") {
 // round; or a park that expires the instant it starts, so the rails go while the
 // panel is still refreshing.
 TEST_CASE("shutdown: the press, the park and the settle span the 49.7-day wrap") {
-    ShutdownSequencer seq;
+    ShutdownSequencer shutdown;
     const uint32_t before = 0xFFFFFF00u;  // 256 ms short of the wrap
     uint32_t t = before;
-    seq.tick(t, false);  // the button starts up: the hold is armed
+    shutdown.tick(t, false);  // the button starts up: the hold is armed
 
     // Pressed 256 ms before the wrap, held through it. The hold reads as elapsed
     // time on both sides of zero.
-    seq.tick(t, true);
-    CHECK(seq.held_ms(before + 500u) == 500);
-    for (t = before; t != before + kLongPressHoldMs - 10u; t += 10) seq.tick(t, true);
-    CHECK(seq.phase() == ShutdownPhase::Running);
-    seq.tick(before + kLongPressHoldMs, true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
-    CHECK(seq.reason() == ShutdownReason::LongPress);
+    shutdown.tick(t, true);
+    CHECK(shutdown.held_ms(before + 500u) == 500);
+    for (t = before; t != before + kLongPressHoldMs - 10u; t += 10) shutdown.tick(t, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Running);
+    shutdown.tick(before + kLongPressHoldMs, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
+    CHECK(shutdown.reason() == ShutdownReason::LongPress);
 
     // The park is three seconds of panel time, not zero and not seven weeks.
     const uint32_t parking_since = before + kLongPressHoldMs;
-    seq.tick(parking_since + kParkSettleMs - 1u, true);
-    CHECK(seq.phase() == ShutdownPhase::Parking);
-    seq.tick(parking_since + kParkSettleMs, true);
-    CHECK(seq.phase() == ShutdownPhase::AwaitRelease);
+    shutdown.tick(parking_since + kParkSettleMs - 1u, true);
+    CHECK(shutdown.phase() == ShutdownPhase::Parking);
+    shutdown.tick(parking_since + kParkSettleMs, true);
+    CHECK(shutdown.phase() == ShutdownPhase::AwaitRelease);
 
     // The finger comes up, and the settle before the wake pin is armed is
     // measured the same way.
     const uint32_t released = parking_since + kParkSettleMs + 40u;
-    seq.tick(released, false);
-    seq.tick(released + kReleaseSettleMs - 1u, false);
-    CHECK_FALSE(seq.ready_to_power_off());
-    seq.tick(released + kReleaseSettleMs, false);
-    CHECK(seq.phase() == ShutdownPhase::Off);
-    CHECK(seq.ready_to_power_off());
+    shutdown.tick(released, false);
+    shutdown.tick(released + kReleaseSettleMs - 1u, false);
+    CHECK_FALSE(shutdown.ready_to_power_off());
+    shutdown.tick(released + kReleaseSettleMs, false);
+    CHECK(shutdown.phase() == ShutdownPhase::Off);
+    CHECK(shutdown.ready_to_power_off());
 }
 
 // The order the rails are allowed to collapse in. Nothing here is about WHEN

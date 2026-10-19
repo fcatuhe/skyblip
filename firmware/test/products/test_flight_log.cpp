@@ -42,7 +42,7 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
     CHECK(rig.product.flight_log().recording());
     // The session is named for a sample taken before core/flight would commit
     // to the takeoff, so the ground roll is in the file.
-    CHECK(rig.product.flight_log().session_id() < Rig::kUtcBase + 45);
+    CHECK(rig.product.flight_log().session_id() < Rig::kBaseUtcS + 45);
     const uint32_t airborne_records = rig.product.flight_log().records_written();
     // Two minutes at a record a second, plus the pre-takeoff ring.
     CHECK(airborne_records >= 120);

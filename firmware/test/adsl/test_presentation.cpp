@@ -163,12 +163,12 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
 
 // The clause asks a device to disallow an inconsistent configuration: this one cannot make any.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
-    go::Settings s = go::defaults();
+    go::Settings settings = go::defaults();
     const char* icao = "{\"address\":3934737,\"address_mapping_table\":5}";  // 0x3C0A11 under ICAO
-    CHECK(go::apply_json(s, icao, static_cast<int>(strlen(icao))) == Status::Ok);
+    CHECK(go::apply_json(settings, icao, static_cast<int>(strlen(icao))) == Status::Ok);
 
     char buf[256];
-    const int n = go::to_json(s, 0x123456, buf, static_cast<int>(sizeof(buf)));
+    const int n = go::to_json(settings, 0x123456, buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
     CHECK(r.get_int("address", v));

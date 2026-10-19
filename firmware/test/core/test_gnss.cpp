@@ -34,7 +34,7 @@ TEST_CASE("gnss: checksum validation") {
     CHECK_FALSE(nmea_checksum_ok(bad, static_cast<int>(strlen(bad))));
 }
 
-TEST_CASE("gnss: coord parse DDMM.mmmm -> 1e-7 deg") {
+TEST_CASE("gnss: a DDMM.mmmm coordinate parses to 1e-7 degrees") {
     int32_t lat = 0;
     REQUIRE(nmea_parse_coordinate("4807.038", 'N', lat));  // 48 deg 07.038' = 48.1173
     CHECK(std::abs(lat - 481173000) < 20000);

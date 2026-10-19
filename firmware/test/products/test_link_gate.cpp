@@ -17,7 +17,7 @@ using namespace skyblip;
 // nothing could ever call confirm(), so it refused everything twice over.
 
 TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a phone's word") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
 
@@ -47,7 +47,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
 
 // The case the whole gesture was chosen for.
 TEST_CASE("product: paging does not authorise a firmware upload") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -84,7 +84,7 @@ TEST_CASE("product: paging does not authorise a firmware upload") {
 }
 
 TEST_CASE("product: two presses on the ground are what open the upload window") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -117,7 +117,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
 }
 
 TEST_CASE("product: the panel names the operation while it waits, and stops cycling pages") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -142,7 +142,7 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
 }
 
 TEST_CASE("product: a prompt nobody answers expires, and the device is not powered off") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -169,7 +169,7 @@ TEST_CASE("product: a prompt nobody answers expires, and the device is not power
 // stored orbit data away; until this, nothing could ask it to. It costs the next
 // fix, so it sits behind the same confirmation as a firmware upload.
 TEST_CASE("product: a confirmed gnss_cold reaches the receiver, and an unconfirmed one does not") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.on_ground(t);
@@ -198,7 +198,7 @@ TEST_CASE("product: a confirmed gnss_cold reaches the receiver, and an unconfirm
 // Airborne, the same request is refused at the door: losing the fix in flight is
 // the one moment the device must not do this.
 TEST_CASE("product: gnss_cold is refused in flight") {
-    Rig rig;
+    HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.airborne(t);

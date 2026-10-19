@@ -116,7 +116,7 @@ struct SmallPoolRig {
     explicit SmallPoolRig(uint32_t sectors = kSectors) : flash(sectors) {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
         state.own.utc_valid = true;
-        state.own.utc_s = Rig::kUtcBase;
+        state.own.utc_s = Rig::kBaseUtcS;
         link.raise_link(1);
     }
 
@@ -140,7 +140,7 @@ struct SmallPoolRig {
         uint32_t pushed = 0;
         while (pushed < records && capture.capturing()) {
             for (int i = 0; i < diag::Recorder::kCapacity && pushed < records; i++)
-                if (recorder.record(bench_record(Rig::kUtcBase + pushed))) pushed++;
+                if (recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
             capture.tick(t);
             t += 50;
         }
@@ -186,7 +186,7 @@ void feed_gently(SmallPoolRig& rig, uint32_t& t, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.capture.capturing()) {
         for (int i = 0; i < 8 && pushed < records; i++)
-            if (rig.recorder.record(bench_record(Rig::kUtcBase + pushed))) pushed++;
+            if (rig.recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
         rig.capture.tick(t);
         t += 50;
     }
@@ -296,7 +296,7 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
     REQUIRE(rig.capture.capturing());
 
     for (int i = 0; i < diag::Recorder::kCapacity; i++)
-        REQUIRE(rig.recorder.record(bench_record(Rig::kUtcBase)));
+        REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const int queued = rig.recorder.queued();
     rig.capture.tick(t += 50);
     CHECK(rig.recorder.queued() ==
@@ -329,13 +329,13 @@ SmallPoolRig& armed(SmallPoolRig& rig, uint32_t& t) {
 
 void drain_to_slot(SmallPoolRig& rig, uint32_t& t, uint32_t slot) {
     while (frontier_slot(rig) < slot) {
-        REQUIRE(rig.recorder.record(bench_record(Rig::kUtcBase)));
+        REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
         rig.capture.tick(t += 50);
     }
     REQUIRE(frontier_slot(rig) == slot);
 }
 
-diag::Record numbered(uint32_t i) { return bench_record(Rig::kUtcBase + 1000 + i); }
+diag::Record numbered(uint32_t i) { return bench_record(Rig::kBaseUtcS + 1000 + i); }
 
 void queue_numbered(SmallPoolRig& rig, uint32_t count) {
     for (uint32_t i = 0; i < count; i++) REQUIRE(rig.recorder.record(numbered(i)));
@@ -417,14 +417,14 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     queue_numbered(rig, 15);
 
     // Room for one page program and not for the two the straddling write needs after it.
-    constexpr int kPhase = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
-                           static_cast<int>(store::kSlotWriteCostMs) - 1;
-    t = 20'000 + kPhase;
+    constexpr int kPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
+                             static_cast<int>(store::kSlotWriteCostMs) - 1;
+    t = 20'000 + kPhaseMs;
     timing::ClockState anchored{};
     anchored.utc_valid = true;
     anchored.pps_locked = true;
-    rig.state.rf.plan = timing::Scheduler::plan(kPhase, anchored);
-    rig.state.rf.dwell = timing::DwellPhase{t, kPhase, true, false};
+    rig.state.rf.plan = timing::Scheduler::plan(kPhaseMs, anchored);
+    rig.state.rf.dwell = timing::DwellPhase{t, kPhaseMs, true, false};
     rig.clock.set_millis(t);
     rig.capture.tick(t);
 
@@ -448,7 +448,7 @@ TEST_CASE("capture: nothing reaches the flash in the slot own-ship may be keying
     REQUIRE(rig.capture.capturing());
 
     rig.state.rf.plan.tx_allowed = true;
-    for (int i = 0; i < 10; i++) REQUIRE(rig.recorder.record(bench_record(Rig::kUtcBase)));
+    for (int i = 0; i < 10; i++) REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const uint32_t writes = rig.flash.writes;
     rig.capture.tick(t += 50);
     CHECK(rig.flash.writes == writes);

@@ -76,10 +76,10 @@ TEST_CASE("product: the e-paper refreshes on change, not on cadence") {
 
 TEST_CASE("product: persisted settings are loaded on setup") {
     Rig rig;
-    go::Settings s = go::defaults();
-    s.alarm_volume = go::AlarmVolume::Soft;
+    go::Settings settings = go::defaults();
+    settings.alarm_volume = go::AlarmVolume::Soft;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
+    go::to_blob(settings, blob, sizeof(blob));
     REQUIRE(rig.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
 
     REQUIRE(rig.setup() == Status::Ok);
@@ -272,10 +272,10 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     // This unit reads 60 mV high, measured once on the line against a bench
     // supply and written into settings.
     Rig trimmed;
-    go::Settings s = go::defaults();
-    s.battery_offset_mv = -60;
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
+    go::to_blob(settings, blob, sizeof(blob));
     REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
     REQUIRE(trimmed.setup() == Status::Ok);
     REQUIRE(trimmed.settings().battery_offset_mv == -60);
@@ -302,10 +302,10 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
 
 // Taken before any service runs, so it is the reader that could have been raw.
 TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider") {
-    go::Settings s = go::defaults();
-    s.battery_offset_mv = -60;
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
+    go::to_blob(settings, blob, sizeof(blob));
 
     // 3440 raw is above the lockout, 3380 trimmed is below it.
     Rig trimmed;

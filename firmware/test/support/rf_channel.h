@@ -7,30 +7,21 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace skyblip::models {
+#include "test/support/random.h"
 
-class RfChannel {
+namespace skyblip {
+
+class RfChannel : public Random {
    public:
-    explicit RfChannel(uint32_t seed = 1) : seed_(seed) {}
+    explicit RfChannel(uint32_t seed = 1) : Random(seed) {}
 
-    int apply_ber(uint8_t* data, size_t len, double ber, uint8_t* err = nullptr);
+    int apply_ber(uint8_t* data, size_t len, double ber, uint8_t* error_mask = nullptr);
 
-    int apply_burst(uint8_t* data, size_t len, int burst_bits, uint8_t* err = nullptr);
+    int apply_burst(uint8_t* data, size_t len, int burst_bits, uint8_t* error_mask = nullptr);
 
-    int apply_symbol_errors(uint8_t* data, size_t len, int n);
-
-    uint32_t next() {
-        seed_ ^= seed_ << 13;
-        seed_ ^= seed_ >> 17;
-        seed_ ^= seed_ << 5;
-        return seed_;
-    }
-    double uniform() { return (next() >> 8) * (1.0 / 16777216.0); }
-
-   private:
-    uint32_t seed_;
+    int apply_symbol_errors(uint8_t* data, size_t len, int symbol_errors);
 };
 
-}
+}  // namespace skyblip
 
 #endif

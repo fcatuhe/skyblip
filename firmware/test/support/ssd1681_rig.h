@@ -8,15 +8,15 @@
 
 namespace skyblip {
 
-inline parts::Ssd1681 make(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin);
+inline parts::Ssd1681 driver_for(models::Ssd1681& chip) {
+    return parts::Ssd1681(chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin);
 }
 
 // Drives the present to ready cycle to completion, as the screen service would
 // across ticks.
-inline void settle(parts::Ssd1681& d, uint32_t issued_ms) {
-    CHECK_FALSE(d.ready(issued_ms));
-    CHECK(d.ready(issued_ms + parts::Ssd1681::kReadyAfterFullMs));
+inline void refresh_to_ready(parts::Ssd1681& driver, uint32_t issued_ms) {
+    CHECK_FALSE(driver.ready(issued_ms));
+    CHECK(driver.ready(issued_ms + parts::Ssd1681::kReadyAfterFullMs));
 }
 
 }  // namespace skyblip

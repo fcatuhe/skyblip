@@ -50,7 +50,7 @@ TEST_CASE("diag record: the header is written where a host decoder reads it") {
     CHECK((raw[1] & diag::kFlagUtcDated) != 0);
     CHECK(raw[2] == 0xCE);
     CHECK(raw[3] == 0x01);
-    CHECK(get_u32(raw + 4) == kDiagTestUtc);
+    CHECK(get_u32(raw + 4) == kDiagTestUtcS);
     CHECK(get_u16(raw + diag::kPayloadOffset) == 287);
 }
 
@@ -94,11 +94,11 @@ TEST_CASE("diag record: an instant with no PPS behind it says so rather than rea
 
 TEST_CASE("diag record: a stamp becomes an instant with the clock's own dating") {
     events::Stamp stamp{};
-    stamp.at_s = kDiagTestUtc;
+    stamp.at_s = kDiagTestUtcS;
     stamp.into_ms = 812;
     stamp.phase_valid = true;
     const diag::Instant at = diag::instant_of(stamp, false);
-    CHECK(at.at_s == kDiagTestUtc);
+    CHECK(at.at_s == kDiagTestUtcS);
     CHECK(at.into_ms == 812);
     CHECK(at.phase_valid);
     CHECK_FALSE(at.utc_dated);

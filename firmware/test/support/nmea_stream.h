@@ -59,7 +59,9 @@ inline int count_of(Rig& rig, const char* kind) {
 
 // Airborne, timed and moving: everything below needs a fix, because a relative
 // position has no meaning without one.
-inline void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 25000, 900); }
+inline void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
+    rig.seconds(now_ms, seconds, 25000, 900);
+}
 
 }  // namespace
 

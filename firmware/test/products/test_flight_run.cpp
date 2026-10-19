@@ -41,19 +41,19 @@ Said said_on_air(const simulator::Air& air) {
     return said;
 }
 
-void park_on_the_bench(simulator::Simulator& h) {
-    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
-    h.world().set_fix(true);
-    h.world().set_speed_kt(0);
-    h.world().set_altitude_m(300);
+void park_on_the_bench(simulator::Simulator& simulator) {
+    std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(0);
+    simulator.world().set_altitude_m(300);
 }
 
-uint32_t arm_a_flight_run(simulator::Simulator& h) {
-    const uint32_t armed_ms = past_settling(h);
-    h.product().diag().arm(diag::Profile::FlightRun);
-    run_on(h, armed_ms, 1000);
-    REQUIRE(h.product().capture().capturing());
-    h.world().air().clear();
+uint32_t arm_a_flight_run(simulator::Simulator& simulator) {
+    const uint32_t armed_ms = past_settling(simulator);
+    simulator.product().diag().arm(diag::Profile::FlightRun);
+    run_on(simulator, armed_ms, 1000);
+    REQUIRE(simulator.product().capture().capturing());
+    simulator.world().air().clear();
     return armed_ms + 1000;
 }
 
@@ -65,14 +65,14 @@ const go::Glass& glass(Rig& rig) { return rig.product.screen().framebuffer(); }
 
 // G.1.16: on ground the rate shall be 0.1 Hz, so the glass flies and the transmitter does not.
 TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the glass flies") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    park_on_the_bench(h);
-    const uint32_t from_ms = arm_a_flight_run(h);
-    run_on(h, from_ms, kAirWindowMs);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    park_on_the_bench(simulator);
+    const uint32_t from_ms = arm_a_flight_run(simulator);
+    run_on(simulator, from_ms, kAirWindowMs);
 
-    CHECK(h.product().state().flight.running);
-    const Said said = said_on_air(h.world().air());
+    CHECK(simulator.product().state().flight.running);
+    const Said said = said_on_air(simulator.world().air());
     // a position and a name every ten seconds, at most one more for the window's two ends
     CHECK(said.positions >= 3);
     CHECK(said.positions <= 4);
@@ -81,15 +81,15 @@ TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the g
 }
 
 TEST_CASE("flight run: every burst on air says on ground, at the real position, standing still") {
-    simulator::Simulator h;
-    REQUIRE(h.setup() == Status::Ok);
-    park_on_the_bench(h);
-    const uint32_t from_ms = arm_a_flight_run(h);
-    run_on(h, from_ms, kAirWindowMs);
-    REQUIRE(h.product().state().flight.running);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    park_on_the_bench(simulator);
+    const uint32_t from_ms = arm_a_flight_run(simulator);
+    run_on(simulator, from_ms, kAirWindowMs);
+    REQUIRE(simulator.product().state().flight.running);
 
-    const model::Ownship& own = h.product().state().own;
-    const simulator::Air& air = h.world().air();
+    const model::Ownship& own = simulator.product().state().own;
+    const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& r = air.record(i);

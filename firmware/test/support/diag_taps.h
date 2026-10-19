@@ -35,26 +35,26 @@ inline bool last_of(const std::vector<diag::Record>& records, T& out) {
     return found;
 }
 
-inline void arm(Rig& rig, uint32_t& t, diag::Profile profile = diag::Profile::Full) {
+inline void arm(Rig& rig, uint32_t& now_ms, diag::Profile profile = diag::Profile::Full) {
     rig.product.diag().arm(profile);
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     REQUIRE(rig.product.capture().capturing());
 }
 
-inline void stop(Rig& rig, uint32_t& t) {
+inline void stop(Rig& rig, uint32_t& now_ms) {
     rig.product.diag().disarm();
-    rig.run(t, t + 4000);
-    t += 4000;
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
     REQUIRE_FALSE(rig.product.capture().capturing());
 }
 
-inline std::vector<diag::Record> armed_taxi(Rig& rig, uint32_t& t, uint32_t seconds) {
+inline std::vector<diag::Record> armed_taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
     REQUIRE(rig.setup() == Status::Ok);
-    taxi(rig, t, 3);
-    arm(rig, t);
-    taxi(rig, t, seconds);
-    stop(rig, t);
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    taxi(rig, now_ms, seconds);
+    stop(rig, now_ms);
     return captured(rig);
 }
 
