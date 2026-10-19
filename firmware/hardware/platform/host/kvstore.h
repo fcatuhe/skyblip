@@ -14,9 +14,9 @@ class KeyValueStore : public ports::KeyValueStore {
     Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
         for (auto& entry : entries_)
             if (entry.used && entry.key == key) {
-                if (entry.length > capacity) return Status::OutOfRange;
-                for (size_t i = 0; i < entry.length; i++) out[i] = entry.data[i];
-                out_bytes = entry.length;
+                if (entry.bytes > capacity) return Status::OutOfRange;
+                for (size_t i = 0; i < entry.bytes; i++) out[i] = entry.data[i];
+                out_bytes = entry.bytes;
                 return Status::Ok;
             }
         return Status::NotFound;
@@ -37,7 +37,7 @@ class KeyValueStore : public ports::KeyValueStore {
                 }
         if (!slot || bytes > sizeof(slot->data)) return Status::Full;
         for (size_t i = 0; i < bytes; i++) slot->data[i] = data[i];
-        slot->length = bytes;
+        slot->bytes = bytes;
         writes_++;
         return Status::Ok;
     }
@@ -61,7 +61,7 @@ class KeyValueStore : public ports::KeyValueStore {
         bool used{false};
         std::string key;
         uint8_t data[64]{};
-        size_t length{0};
+        size_t bytes{0};
     };
     Entry entries_[4];
     uint32_t writes_{0};

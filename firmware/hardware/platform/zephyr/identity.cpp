@@ -22,12 +22,13 @@ const crypto::Ed25519::PublicKey kTrustedServerKey = {
 }  // namespace
 
 Status Identity::begin() {
-    uint8_t id[identity::kDeviceIdBytes] = {0};
-    if (hwinfo_get_device_id(id, sizeof(id)) != static_cast<ssize_t>(sizeof(id))) {
+    uint8_t hardware_id[identity::kDeviceIdBytes] = {0};
+    if (hwinfo_get_device_id(hardware_id, sizeof(hardware_id)) !=
+        static_cast<ssize_t>(sizeof(hardware_id))) {
         LOG_ERR("identity: no DEVICEID, the unit cannot be activated");
         return Status::Down;
     }
-    for (size_t i = 0; i < sizeof(id); i++) device_id_[i] = id[i];
+    for (size_t i = 0; i < sizeof(hardware_id); i++) device_id_[i] = hardware_id[i];
     bluetooth_tag_ = static_cast<uint16_t>(nrf_ficr_deviceaddr_get(NRF_FICR, 0) & 0xFFFFu);
     if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0) {
         unlock_page_ = nullptr;
@@ -101,8 +102,9 @@ Status Identity::write_unlock_code(const identity::UnlockCode& code) {
         LOG_ERR("identity: the unlock code was not written");
         return Status::Down;
     }
-    identity::UnlockPage back{};
-    if (flash_area_read(unlock_page_, 0, back.data(), back.size()) != 0 || back != page) {
+    identity::UnlockPage read_back{};
+    if (flash_area_read(unlock_page_, 0, read_back.data(), read_back.size()) != 0 ||
+        read_back != page) {
         LOG_ERR("identity: the unlock code did not read back as written");
         return Status::Down;
     }

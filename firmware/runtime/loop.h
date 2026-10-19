@@ -21,8 +21,8 @@ class Loop {
     Status setup() {
         Status first = Status::Ok;
         for (int i = 0; i < count_; i++) {
-            const Status s = services_[i]->setup();
-            if (s != Status::Ok && first == Status::Ok) first = s;
+            const Status status = services_[i]->setup();
+            if (status != Status::Ok && first == Status::Ok) first = status;
         }
         return first;
     }

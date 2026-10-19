@@ -23,9 +23,9 @@ class Delay : public io::Delay {
    public:
     explicit Delay(Chips& chips) : chips_(chips) {}
 
-    void wait_at_least_us(uint32_t us) override {
-        chips_.radio.wait_at_least_us(us);
-        chips_.epd.wait_at_least_us(us);
+    void wait_at_least_us(uint32_t hold_us) override {
+        chips_.radio.wait_at_least_us(hold_us);
+        chips_.epd.wait_at_least_us(hold_us);
     }
 
    private:
@@ -112,36 +112,36 @@ class Gpio : public io::Gpio {
 
     void wire(const io::PinMap& map) {
         for (int i = 0; i < map.count; i++) {
-            const io::PinRole& r = map.roles[i];
-            switch (r.function) {
-                case io::PinFunction::RadioBusy: chips_.radio.busy_pin = r.pin; break;
-                case io::PinFunction::RadioReset: chips_.radio.reset_pin = r.pin; break;
-                case io::PinFunction::RadioDio1: chips_.radio.dio1_pin = r.pin; break;
-                case io::PinFunction::EpdDc: chips_.epd.dc_pin = r.pin; break;
-                case io::PinFunction::EpdReset: chips_.epd.reset_pin = r.pin; break;
-                case io::PinFunction::EpdBusy: chips_.epd.busy_pin = r.pin; break;
-                case io::PinFunction::EpdBacklight: chips_.epd.backlight_pin = r.pin; break;
+            const io::PinRole& role = map.roles[i];
+            switch (role.function) {
+                case io::PinFunction::RadioBusy: chips_.radio.busy_pin = role.pin; break;
+                case io::PinFunction::RadioReset: chips_.radio.reset_pin = role.pin; break;
+                case io::PinFunction::RadioDio1: chips_.radio.dio1_pin = role.pin; break;
+                case io::PinFunction::EpdDc: chips_.epd.dc_pin = role.pin; break;
+                case io::PinFunction::EpdReset: chips_.epd.reset_pin = role.pin; break;
+                case io::PinFunction::EpdBusy: chips_.epd.busy_pin = role.pin; break;
+                case io::PinFunction::EpdBacklight: chips_.epd.backlight_pin = role.pin; break;
             }
-            owner_[i] = r;
+            owner_[i] = role;
             count_ = i + 1;
         }
     }
 
     void set(int pin, bool level) override {
-        io::Gpio* t = route(pin);
-        if (t) t->set(pin, level);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->set(pin, level);
     }
     bool get(int pin) override {
-        io::Gpio* t = route(pin);
-        return t ? t->get(pin) : false;
+        io::Gpio* owner = route(pin);
+        return owner ? owner->get(pin) : false;
     }
     void mode_output(int pin) override {
-        io::Gpio* t = route(pin);
-        if (t) t->mode_output(pin);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->mode_output(pin);
     }
     void mode_input(int pin, bool pullup) override {
-        io::Gpio* t = route(pin);
-        if (t) t->mode_input(pin, pullup);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->mode_input(pin, pullup);
     }
 
     bool button_down{false};

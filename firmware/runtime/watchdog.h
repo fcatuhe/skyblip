@@ -25,14 +25,14 @@ class FeedDecision {
         const int id = count_++;
         name_[id] = name;
         deadline_ms_[id] = deadline_ms;
-        last_ms_[id] = 0;
+        checked_in_ms_[id] = 0;
         return id;
     }
 
     // Start the clock on every registered service. Called once, when the loop first
     // runs: registration happens before there is a time base to stamp.
     void begin(uint32_t now_ms) {
-        for (int i = 0; i < count_; i++) last_ms_[i] = now_ms;
+        for (int i = 0; i < count_; i++) checked_in_ms_[i] = now_ms;
         started_ = true;
     }
 
@@ -40,7 +40,7 @@ class FeedDecision {
 
     void check_in(int service, uint32_t now_ms) {
         if (service < 0 || service >= count_) return;
-        last_ms_[service] = now_ms;
+        checked_in_ms_[service] = now_ms;
     }
 
     // The first service past its deadline, or kNone. First rather than worst: it is
@@ -48,7 +48,7 @@ class FeedDecision {
     int stalled_service(uint32_t now_ms) const {
         if (!started_) return kNone;
         for (int i = 0; i < count_; i++)
-            if (now_ms - last_ms_[i] >= deadline_ms_[i]) return i;
+            if (now_ms - checked_in_ms_[i] >= deadline_ms_[i]) return i;
         return kNone;
     }
 
@@ -59,7 +59,7 @@ class FeedDecision {
     }
 
     uint32_t silent_ms(int service, uint32_t now_ms) const {
-        return service >= 0 && service < count_ ? now_ms - last_ms_[service] : 0;
+        return service >= 0 && service < count_ ? now_ms - checked_in_ms_[service] : 0;
     }
 
     int count() const { return count_; }
@@ -67,7 +67,7 @@ class FeedDecision {
    private:
     const char* name_[kMaxServices]{};
     uint32_t deadline_ms_[kMaxServices]{};
-    uint32_t last_ms_[kMaxServices]{};
+    uint32_t checked_in_ms_[kMaxServices]{};
     int count_{0};
     bool started_{false};
 };

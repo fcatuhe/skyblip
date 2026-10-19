@@ -35,7 +35,8 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out);
 
    private:
-    static Status notify_one(struct bt_conn* conn, events::Endpoint endpoint, ConstByteSpan bytes);
+    static Status notify_one(struct bt_conn* connection, events::Endpoint endpoint,
+                             ConstByteSpan bytes);
 };
 
 Link& link();

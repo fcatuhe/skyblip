@@ -16,23 +16,27 @@ struct ImageVersion {
     uint32_t build{0};
 };
 
-constexpr bool operator==(const ImageVersion& a, const ImageVersion& b) {
-    return a.major == b.major && a.minor == b.minor && a.revision == b.revision &&
-           a.build == b.build;
+constexpr bool operator==(const ImageVersion& left, const ImageVersion& right) {
+    return left.major == right.major && left.minor == right.minor &&
+           left.revision == right.revision && left.build == right.build;
 }
-constexpr bool operator!=(const ImageVersion& a, const ImageVersion& b) { return !(a == b); }
+constexpr bool operator!=(const ImageVersion& left, const ImageVersion& right) {
+    return !(left == right);
+}
 
 struct ImageHash {
     static constexpr size_t kBytes = 8;
     uint8_t bytes[kBytes]{};
 };
 
-constexpr bool operator==(const ImageHash& a, const ImageHash& b) {
+constexpr bool operator==(const ImageHash& left, const ImageHash& right) {
     for (size_t i = 0; i < ImageHash::kBytes; i++)
-        if (a.bytes[i] != b.bytes[i]) return false;
+        if (left.bytes[i] != right.bytes[i]) return false;
     return true;
 }
-constexpr bool operator!=(const ImageHash& a, const ImageHash& b) { return !(a == b); }
+constexpr bool operator!=(const ImageHash& left, const ImageHash& right) {
+    return !(left == right);
+}
 
 using SigningKeyHash = std::array<uint8_t, 32>;
 

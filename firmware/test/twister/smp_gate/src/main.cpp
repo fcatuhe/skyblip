@@ -22,39 +22,39 @@ constexpr size_t kChunkBytes = 64;
 
 struct Reply {
     bool answered{false};
-    bool rc_valid{false};
-    int32_t rc{0};
-    bool off_valid{false};
-    size_t off{0};
+    bool result_code_valid{false};
+    int32_t result_code{0};
+    bool offset_valid{false};
+    size_t offset{0};
     bool echo_valid{false};
 };
 
 struct Body {
     uint8_t bytes[256]{};
-    size_t len{0};
+    size_t used_bytes{0};
 };
 
 bool key_is(const zcbor_string& key, const char* name) {
     return key.len == strlen(name) && memcmp(key.value, name, key.len) == 0;
 }
 
-Reply decode(const uint8_t* payload, size_t len) {
+Reply decode(const uint8_t* payload, size_t bytes) {
     Reply reply;
     reply.answered = true;
-    ZCBOR_STATE_D(zsd, 3, payload, len, 1, 0);
-    if (!zcbor_map_start_decode(zsd)) return reply;
-    while (!zcbor_array_at_end(zsd)) {
+    ZCBOR_STATE_D(decoder, 3, payload, bytes, 1, 0);
+    if (!zcbor_map_start_decode(decoder)) return reply;
+    while (!zcbor_array_at_end(decoder)) {
         zcbor_string key{};
-        if (!zcbor_tstr_decode(zsd, &key)) break;
+        if (!zcbor_tstr_decode(decoder, &key)) break;
         if (key_is(key, "rc")) {
-            reply.rc_valid = zcbor_int32_decode(zsd, &reply.rc);
+            reply.result_code_valid = zcbor_int32_decode(decoder, &reply.result_code);
         } else if (key_is(key, "off")) {
-            reply.off_valid = zcbor_size_decode(zsd, &reply.off);
+            reply.offset_valid = zcbor_size_decode(decoder, &reply.offset);
         } else if (key_is(key, "r")) {
             reply.echo_valid = true;
-            zcbor_any_skip(zsd, nullptr);
+            zcbor_any_skip(decoder, nullptr);
         } else {
-            zcbor_any_skip(zsd, nullptr);
+            zcbor_any_skip(decoder, nullptr);
         }
     }
     return reply;
@@ -64,23 +64,23 @@ Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOperation operation, const B
     uint8_t packet[kSmpHeaderBytes + sizeof(Body::bytes)]{};
     const uint16_t group_id = static_cast<uint16_t>(group);
     packet[0] = static_cast<uint8_t>(operation);
-    packet[2] = static_cast<uint8_t>(body.len >> 8);
-    packet[3] = static_cast<uint8_t>(body.len);
+    packet[2] = static_cast<uint8_t>(body.used_bytes >> 8);
+    packet[3] = static_cast<uint8_t>(body.used_bytes);
     packet[4] = static_cast<uint8_t>(group_id >> 8);
     packet[5] = static_cast<uint8_t>(group_id);
     packet[7] = id;
-    memcpy(packet + kSmpHeaderBytes, body.bytes, body.len);
+    memcpy(packet + kSmpHeaderBytes, body.bytes, body.used_bytes);
 
     smp_dummy_enable();
     smp_dummy_clear_state();
-    (void)smp_dummy_tx_pkt(packet, static_cast<int>(kSmpHeaderBytes + body.len));
+    (void)smp_dummy_tx_pkt(packet, static_cast<int>(kSmpHeaderBytes + body.used_bytes));
     smp_dummy_add_data();
     Reply reply;
     if (smp_dummy_wait_for_data(kResponseWaitS)) {
-        net_buf* nb = smp_dummy_get_outgoing();
-        if (nb->len >= kSmpHeaderBytes)
-            reply = decode(nb->data + kSmpHeaderBytes, nb->len - kSmpHeaderBytes);
-        net_buf_unref(nb);
+        net_buf* outgoing = smp_dummy_get_outgoing();
+        if (outgoing->len >= kSmpHeaderBytes)
+            reply = decode(outgoing->data + kSmpHeaderBytes, outgoing->len - kSmpHeaderBytes);
+        net_buf_unref(outgoing);
     }
     smp_dummy_disable();
     return reply;
@@ -89,10 +89,11 @@ Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOperation operation, const B
 template <class Encode>
 Body body(Encode encode) {
     Body out;
-    ZCBOR_STATE_E(zse, 2, out.bytes, sizeof(out.bytes), 0);
-    const bool ok = zcbor_map_start_encode(zse, 8) && encode(zse) && zcbor_map_end_encode(zse, 8);
+    ZCBOR_STATE_E(encoder, 2, out.bytes, sizeof(out.bytes), 0);
+    const bool ok =
+        zcbor_map_start_encode(encoder, 8) && encode(encoder) && zcbor_map_end_encode(encoder, 8);
     zassert_true(ok, "request did not encode");
-    out.len = static_cast<size_t>(zse->payload_mut - out.bytes);
+    out.used_bytes = static_cast<size_t>(encoder->payload_mut - out.bytes);
     return out;
 }
 
@@ -106,21 +107,23 @@ const uint8_t* image() {
     return bytes;
 }
 
-Reply upload_chunk(size_t off, size_t len) {
-    return send(
-        dfu::SmpGroup::Image, dfu::kSmpImageUpload, dfu::SmpOperation::Write,
-        body([&](zcbor_state_t* zse) {
-            bool ok = zcbor_tstr_put_lit(zse, "off") && zcbor_size_put(zse, off) &&
-                      zcbor_tstr_put_lit(zse, "data") &&
-                      zcbor_bstr_encode_ptr(zse, reinterpret_cast<const char*>(image() + off), len);
-            if (off == 0)
-                ok = ok && zcbor_tstr_put_lit(zse, "len") && zcbor_size_put(zse, kImageBytes);
-            return ok;
-        }));
+Reply upload_chunk(size_t offset, size_t bytes) {
+    return send(dfu::SmpGroup::Image, dfu::kSmpImageUpload, dfu::SmpOperation::Write,
+                body([&](zcbor_state_t* encoder) {
+                    bool ok = zcbor_tstr_put_lit(encoder, "off") &&
+                              zcbor_size_put(encoder, offset) &&
+                              zcbor_tstr_put_lit(encoder, "data") &&
+                              zcbor_bstr_encode_ptr(
+                                  encoder, reinterpret_cast<const char*>(image() + offset), bytes);
+                    if (offset == 0)
+                        ok = ok && zcbor_tstr_put_lit(encoder, "len") &&
+                             zcbor_size_put(encoder, kImageBytes);
+                    return ok;
+                }));
 }
 
 bool refused(const Reply& reply) {
-    return reply.answered && reply.rc_valid && reply.rc == MGMT_ERR_EACCESSDENIED;
+    return reply.answered && reply.result_code_valid && reply.result_code == MGMT_ERR_EACCESSDENIED;
 }
 
 void open_gate() { platform::zephyr::UploadGate::publish(true); }
@@ -131,8 +134,8 @@ void before_each(void*) {
 }
 
 bool upload_whole() {
-    for (size_t off = 0; off < kImageBytes; off += kChunkBytes)
-        if (upload_chunk(off, kChunkBytes).off != off + kChunkBytes) return false;
+    for (size_t offset = 0; offset < kImageBytes; offset += kChunkBytes)
+        if (upload_chunk(offset, kChunkBytes).offset != offset + kChunkBytes) return false;
     return true;
 }
 
@@ -142,52 +145,54 @@ ZTEST_SUITE(smp_gate, nullptr, nullptr, before_each, nullptr, nullptr);
 
 ZTEST(smp_gate, test_image_upload_is_refused_while_the_gate_is_closed) {
     const Reply reply = upload_chunk(0, kChunkBytes);
-    zassert_true(refused(reply), "rc %d", reply.rc);
-    zassert_false(reply.off_valid, "the handler ran");
+    zassert_true(refused(reply), "rc %d", reply.result_code);
+    zassert_false(reply.offset_valid, "the handler ran");
 }
 
 ZTEST(smp_gate, test_image_upload_reaches_the_handler_while_the_gate_is_open) {
     open_gate();
     const Reply reply = upload_chunk(0, kChunkBytes);
     zassert_true(reply.answered);
-    zassert_false(reply.rc_valid && reply.rc != MGMT_ERR_EOK, "rc %d", reply.rc);
-    zassert_true(reply.off_valid, "no offset, the handler did not run");
-    zassert_equal(reply.off, kChunkBytes);
+    zassert_false(reply.result_code_valid && reply.result_code != MGMT_ERR_EOK, "rc %d",
+                  reply.result_code);
+    zassert_true(reply.offset_valid, "no offset, the handler did not run");
+    zassert_equal(reply.offset, kChunkBytes);
 }
 
 ZTEST(smp_gate, test_image_state_write_is_refused_inside_the_window) {
     open_gate();
     const Reply reply =
         send(dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOperation::Write,
-             body([](zcbor_state_t* zse) {
-                 return zcbor_tstr_put_lit(zse, "confirm") && zcbor_bool_put(zse, true);
+             body([](zcbor_state_t* encoder) {
+                 return zcbor_tstr_put_lit(encoder, "confirm") && zcbor_bool_put(encoder, true);
              }));
-    zassert_true(refused(reply), "rc %d", reply.rc);
+    zassert_true(refused(reply), "rc %d", reply.result_code);
 }
 
 ZTEST(smp_gate, test_image_erase_is_refused_inside_the_window) {
     open_gate();
-    const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageErase, dfu::SmpOperation::Write,
-                             body([](zcbor_state_t* zse) {
-                                 return zcbor_tstr_put_lit(zse, "slot") && zcbor_uint32_put(zse, 1);
-                             }));
-    zassert_true(refused(reply), "rc %d", reply.rc);
+    const Reply reply =
+        send(dfu::SmpGroup::Image, dfu::kSmpImageErase, dfu::SmpOperation::Write,
+             body([](zcbor_state_t* encoder) {
+                 return zcbor_tstr_put_lit(encoder, "slot") && zcbor_uint32_put(encoder, 1);
+             }));
+    zassert_true(refused(reply), "rc %d", reply.result_code);
 }
 
 ZTEST(smp_gate, test_os_reset_is_refused_inside_the_window) {
     open_gate();
     const Reply reply = send(dfu::SmpGroup::OperatingSystem, dfu::kSmpOperatingSystemReset,
                              dfu::SmpOperation::Write, empty());
-    zassert_true(refused(reply), "rc %d", reply.rc);
+    zassert_true(refused(reply), "rc %d", reply.result_code);
 }
 
 ZTEST(smp_gate, test_os_echo_is_answered_with_the_gate_closed) {
     const Reply reply =
         send(dfu::SmpGroup::OperatingSystem, dfu::kSmpOperatingSystemEcho, dfu::SmpOperation::Write,
-             body([](zcbor_state_t* zse) {
-                 return zcbor_tstr_put_lit(zse, "d") && zcbor_tstr_put_lit(zse, "skyblip");
+             body([](zcbor_state_t* encoder) {
+                 return zcbor_tstr_put_lit(encoder, "d") && zcbor_tstr_put_lit(encoder, "skyblip");
              }));
-    zassert_false(reply.rc_valid, "rc %d", reply.rc);
+    zassert_false(reply.result_code_valid, "rc %d", reply.result_code);
     zassert_true(reply.echo_valid, "no echo, the handler did not run");
 }
 
@@ -206,14 +211,14 @@ ZTEST(smp_gate, test_an_upload_written_whole_is_finished) {
 
 ZTEST(smp_gate, test_an_upload_that_stopped_short_is_not_finished) {
     open_gate();
-    zassert_equal(upload_chunk(0, kChunkBytes).off, kChunkBytes);
+    zassert_equal(upload_chunk(0, kChunkBytes).offset, kChunkBytes);
     zassert_false(platform::zephyr::UploadGate::finished());
 }
 
 ZTEST(smp_gate, test_a_new_upload_forgets_the_one_that_finished) {
     open_gate();
     zassert_true(upload_whole());
-    zassert_equal(upload_chunk(0, kChunkBytes).off, kChunkBytes);
+    zassert_equal(upload_chunk(0, kChunkBytes).offset, kChunkBytes);
     zassert_false(platform::zephyr::UploadGate::finished());
 }
 

@@ -75,7 +75,7 @@ TEST_CASE("product: a boot refused on a flat cell writes the reason under the ma
 TEST_CASE("product: a refused boot pushes no frame the glass is already wearing") {
     Rig rig;
     rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
-    rig.platform.system_power().glass_cell = power::CellOnGlass::Flat;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.product.refused_frame() == power::RefusedFrame::Leave);
     rig.sleep_again();
@@ -93,8 +93,10 @@ TEST_CASE("product: a press after a cutoff is refused and leaves the flat frame 
     REQUIRE(dying.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
 
     Rig pressed;
-    pressed.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
-    pressed.platform.system_power().dark_flat = dying.platform.system_power().went_dark_flat();
+    pressed.platform.system_power().retained_cell_on_glass =
+        dying.platform.system_power().cell_on_glass();
+    pressed.platform.system_power().retained_went_dark_flat =
+        dying.platform.system_power().went_dark_flat();
     pressed.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
     pressed.platform.board_gpio().button_down = true;
@@ -146,7 +148,8 @@ TEST_CASE("product: a press on the cable after a cutoff starts the device and cl
     REQUIRE(dying.product.ready_to_power_off());
 
     Rig plugged;
-    plugged.platform.system_power().glass_cell = dying.platform.system_power().cell_on_glass();
+    plugged.platform.system_power().retained_cell_on_glass =
+        dying.platform.system_power().cell_on_glass();
     plugged.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     plugged.platform.battery().external_power = true;
     plugged.platform.system_power().causes = power::ResetCause::LowPowerWake;
@@ -168,7 +171,7 @@ TEST_CASE("product: a charger wake past the bootloader takes the word back off t
     Rig rig;
     rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     rig.platform.battery().external_power = true;
-    rig.platform.system_power().glass_cell = power::CellOnGlass::Flat;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
     rig.platform.system_power().causes =
         power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
     REQUIRE(rig.setup() == Status::Ok);
@@ -275,8 +278,10 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     CHECK(refused.platform.system_power().went_dark_flat());
 
     Rig pressed;
-    pressed.platform.system_power().glass_cell = refused.platform.system_power().cell_on_glass();
-    pressed.platform.system_power().dark_flat = refused.platform.system_power().went_dark_flat();
+    pressed.platform.system_power().retained_cell_on_glass =
+        refused.platform.system_power().cell_on_glass();
+    pressed.platform.system_power().retained_went_dark_flat =
+        refused.platform.system_power().went_dark_flat();
     pressed.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     pressed.platform.battery().external_power = true;
     pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;

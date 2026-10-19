@@ -41,13 +41,13 @@ static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                   timing::kSlot0StartMs,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
-// The T-Echo Plus, assembled once. P is the platform: silicon or host. Swapping
+// The T-Echo Plus, assembled once. Platform is silicon or host. Swapping
 // it changes which io/ backend the parts talk to and nothing else, so there is
 // no second copy of this wiring to keep in step.
-template <class P>
+template <class Platform>
 class TEchoPlus {
    public:
-    TEchoPlus(P& platform, bus::Bus& bus)
+    TEchoPlus(Platform& platform, bus::Bus& bus)
         : platform_(platform),
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
@@ -82,8 +82,8 @@ class TEchoPlus {
     // is present but refuses to start is a degraded state, not a missing
     // capability.
     Status begin() {
-        const Status s = platform_.begin();
-        if (s != Status::Ok) return s;
+        const Status status = platform_.begin();
+        if (status != Status::Ok) return status;
         if (ports::has(capabilities_, ports::Capability::Display)) display_.begin();
         read_stored_imu_image();
         if (!ports::has(capabilities_, ports::Capability::Rf)) return Status::Ok;
@@ -184,16 +184,16 @@ class TEchoPlus {
     bool unpublished_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
             return now_ms - barometer_triggered_ms_ >= runtime::kBarometerConversionPeriodMs;
-        const uint32_t slot = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
-        return slot > barometer_quarter_ && slot < kBarometerConversionsPerSecond;
+        const uint32_t quarter = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+        return quarter > barometer_quarter_ && quarter < kBarometerConversionsPerSecond;
     }
 
     bool barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
-        const uint32_t since = now_ms - last_barometer_ms_;
-        if (since < runtime::kBarometerPublishPeriodMs / 2) return false;
-        if (!clock.pps_locked) return since >= runtime::kBarometerPublishPeriodMs;
+        const uint32_t since_published_ms = now_ms - last_barometer_ms_;
+        if (since_published_ms < runtime::kBarometerPublishPeriodMs / 2) return false;
+        if (!clock.pps_locked) return since_published_ms >= runtime::kBarometerPublishPeriodMs;
         return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
-               since >= 2 * runtime::kBarometerPublishPeriodMs;
+               since_published_ms >= 2 * runtime::kBarometerPublishPeriodMs;
     }
 
     void publish_contact(events::Contact which, input::Contact& contact, bool level,
@@ -268,7 +268,7 @@ class TEchoPlus {
         state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }
 
-    typename P::Rf& rf() { return rf_; }
+    typename Platform::Rf& rf() { return rf_; }
     parts::L76k& gnss() { return gnss_; }
     parts::Bhi260& imu() { return imu_; }
     parts::Bhi260ImageStore& imu_store() { return imu_store_; }
@@ -439,7 +439,7 @@ class TEchoPlus {
     // INFO: fc 03oct26 as the record store's bulk erase: a window at a time, eight steps at most
     static constexpr uint32_t kImuImageStepsPerPass = 8;
 
-    P& platform_;
+    Platform& platform_;
     bus::Bus& bus_;
     parts::Sx1262 radio_;
     parts::Ssd1681 display_;
@@ -449,7 +449,7 @@ class TEchoPlus {
     parts::Bhi260ImageStore imu_store_;
     parts::LinkedImage linked_image_{ConstByteSpan{}};
     bool imu_image_store_tried_{false};
-    typename P::Rf rf_;
+    typename Platform::Rf rf_;
     ports::Inventory inventory_{};
     input::Contact button_{t_echo_plus::kButtonHoldMs};
     input::Contact pad_{t_echo_plus::kPadSettleMs};

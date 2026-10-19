@@ -21,7 +21,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     void reboot() override { reboots++; }
 
-    bool supply_monitor_armed() const override { return supply_monitor; }
+    bool supply_monitor_armed() const override { return supply_monitor_fitted; }
 
     bool take_supply_warning() override {
         if (!supply_warning) return false;
@@ -29,10 +29,10 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         return true;
     }
 
-    power::CellOnGlass cell_on_glass() const override { return glass_cell; }
-    void set_cell_on_glass(power::CellOnGlass word) override { glass_cell = word; }
-    bool went_dark_flat() const override { return dark_flat; }
-    void set_went_dark_flat(bool flat) override { dark_flat = flat; }
+    power::CellOnGlass cell_on_glass() const override { return retained_cell_on_glass; }
+    void set_cell_on_glass(power::CellOnGlass word) override { retained_cell_on_glass = word; }
+    bool went_dark_flat() const override { return retained_went_dark_flat; }
+    void set_went_dark_flat(bool flat) override { retained_went_dark_flat = flat; }
 
     // Where a step ended up in what actually ran, -1 if it never did.
     int order_of(power::PowerDownStep step) const {
@@ -45,13 +45,13 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // A host board carries the comparator, because the policy above it is the
     // thing worth testing and a platform that could never warn would leave it
     // unreachable. Settable, so the absent case is a case too.
-    bool supply_monitor{true};
+    bool supply_monitor_fitted{true};
     // What a collapsing rail does to this platform: a case sets it, the product
     // polls it exactly as it polls the silicon.
     bool supply_warning{false};
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
-    power::CellOnGlass glass_cell{power::CellOnGlass::None};
-    bool dark_flat{false};
+    power::CellOnGlass retained_cell_on_glass{power::CellOnGlass::None};
+    bool retained_went_dark_flat{false};
     int system_offs{0};
     int reboots{0};
     power::PowerDownStep performed_steps[power::kPowerDownStepCount]{};

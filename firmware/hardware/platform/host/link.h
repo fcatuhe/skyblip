@@ -93,8 +93,8 @@ class Link : public ports::Link {
     void hold_after(int frames) { notification_share_ = frames; }
     void serve() { in_flight_ = 0; }
 
-    void force_status(Status s, bool once = true) {
-        next_status_ = s;
+    void force_status(Status status, bool once = true) {
+        next_status_ = status;
         status_once_ = once;
     }
 
@@ -103,16 +103,16 @@ class Link : public ports::Link {
         return !sent.empty() && sent.back().endpoint == endpoint;
     }
     int count_on(events::Endpoint endpoint) const {
-        int n = 0;
-        for (const auto& f : sent)
-            if (f.endpoint == endpoint) n++;
-        return n;
+        int count = 0;
+        for (const auto& frame : sent)
+            if (frame.endpoint == endpoint) count++;
+        return count;
     }
     int count_to(uint16_t session_id, events::Endpoint endpoint) const {
-        int n = 0;
-        for (const auto& f : sent)
-            if (f.endpoint == endpoint && f.session == session_id) n++;
-        return n;
+        int count = 0;
+        for (const auto& frame : sent)
+            if (frame.endpoint == endpoint && frame.session == session_id) count++;
+        return count;
     }
     void clear() { sent.clear(); }
 
@@ -131,9 +131,9 @@ class Link : public ports::Link {
             return Status::OutOfRange;
         }
         if (next_status_ != Status::Ok) {
-            Status s = next_status_;
+            Status forced = next_status_;
             if (status_once_) next_status_ = Status::Ok;
-            return s;
+            return forced;
         }
         if (notification_share_ > 0 && in_flight_ >= notification_share_) return Status::WouldBlock;
         in_flight_++;

@@ -22,13 +22,13 @@ class FlashRegion : public ports::FlashRegion {
 
     Status begin() {
         if (flash_area_open(partition_id_, &area_) != 0) return Status::Down;
-        const struct device* dev = flash_area_get_device(area_);
-        if (dev == nullptr || !device_is_ready(dev)) return Status::Down;
+        const struct device* controller = flash_area_get_device(area_);
+        if (controller == nullptr || !device_is_ready(controller)) return Status::Down;
         struct flash_pages_info info;
         // SFDP told the driver the geometry at boot; asking it is how one image
         // serves both candidate parts. The constant is the fallback, not the
         // assertion.
-        sector_bytes_ = flash_get_page_info_by_offs(dev, area_->fa_off, &info) == 0
+        sector_bytes_ = flash_get_page_info_by_offs(controller, area_->fa_off, &info) == 0
                             ? static_cast<uint32_t>(info.size)
                             : flight::kLogSectorBytes;
         if (sector_bytes_ == 0) return Status::Down;
