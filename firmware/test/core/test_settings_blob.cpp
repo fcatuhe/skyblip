@@ -11,7 +11,7 @@ using namespace skyblip;
 namespace {
 
 struct Payload {
-    uint32_t addr;
+    uint32_t address;
     uint8_t volume;
 };
 
@@ -26,7 +26,7 @@ TEST_CASE("settings blob: a sealed payload opens as itself") {
 
     Payload read{};
     REQUIRE(settings::open(blob, sizeof(blob), sizeof(Payload), &read) == Status::Ok);
-    CHECK(read.addr == written.addr);
+    CHECK(read.address == written.address);
     CHECK(read.volume == written.volume);
 }
 

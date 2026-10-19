@@ -68,7 +68,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.event = radio::Event::Miskeyed;
     in.band = model::Band::M;
     in.source = model::Source::Alptas;
-    in.addr = 0xDD8241;
+    in.address = 0xDD8241;
     in.at_s = kDiagTestUtc;
     in.into_ms = 462;
     in.tx_keyed_us = 619;
@@ -78,7 +78,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.key_offset_s = -18;
     in.channel = 1;
     in.len = 26;
-    in.addr_valid = true;
+    in.address_valid = true;
     in.rssi_valid = true;
     in.utc = true;
     in.airborne = true;
@@ -97,7 +97,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.event == in.event);
     CHECK(out.band == in.band);
     CHECK(out.source == in.source);
-    CHECK(out.addr == in.addr);
+    CHECK(out.address == in.address);
     CHECK(out.at_s == in.at_s);
     CHECK(out.into_ms == in.into_ms);
     CHECK(out.tx_keyed_us == in.tx_keyed_us);
@@ -107,7 +107,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.key_offset_s == in.key_offset_s);
     CHECK(out.channel == in.channel);
     CHECK(out.len == in.len);
-    CHECK(out.addr_valid);
+    CHECK(out.address_valid);
     CHECK(out.rssi_valid);
     CHECK(out.utc);
     CHECK(out.airborne);

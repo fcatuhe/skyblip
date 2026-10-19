@@ -16,7 +16,7 @@ An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pu
 
 ## What ALP-TAS costs us
 
-`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `addr_table_to_idtype`, and it is a lie chosen from a short list of lies.
+`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `address_mapping_table_to_idtype`, and it is a lie chosen from a short list of lies.
 
 SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658`: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2"). Leaving an address at IDType 0 draws nothing on that app at all, which is the one failure worth never causing again. Between the two values left, 1 (ICAO) claims a permanent, registry-issued identity; 2 (FLARM) claims a device-class kinship that is at least true of the mechanism, self-assigned and transient. So ICAO is reported as ICAO and everything else becomes FLARM.
 

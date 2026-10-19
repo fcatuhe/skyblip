@@ -30,8 +30,8 @@ inline model::OwnState flying(int mps, int track_deg, int16_t turn_dps = 0, uint
 inline model::AircraftObs neighbour(const model::OwnState& own, int north_m, int east_m, int up_m,
                                     int mps, int track_deg, uint32_t at_ms = 0) {
     model::AircraftObs t{};
-    t.addr = 0x314159;
-    t.addr_table = 6;
+    t.address = 0x314159;
+    t.address_mapping_table = 6;
     t.position_valid = true;
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(mps * 4);
@@ -48,11 +48,11 @@ inline model::AircraftObs neighbour(const model::OwnState& own, int north_m, int
     return t;
 }
 
-inline model::AircraftObs obs(uint32_t addr, uint8_t tbl, uint32_t t,
+inline model::AircraftObs obs(uint32_t address, uint8_t tbl, uint32_t t,
                               model::Source src = model::Source::AdslDirect) {
     model::AircraftObs o{};
-    o.addr = addr;
-    o.addr_table = tbl;
+    o.address = address;
+    o.address_mapping_table = tbl;
     o.received.at_s = t;
     o.source = src;
     o.position_valid = true;
@@ -62,9 +62,9 @@ inline model::AircraftObs obs(uint32_t addr, uint8_t tbl, uint32_t t,
     return o;
 }
 
-inline model::AircraftObs parked(uint32_t addr, uint8_t tbl, uint32_t t,
+inline model::AircraftObs parked(uint32_t address, uint8_t tbl, uint32_t t,
                                  model::Source src = model::Source::AdslDirect) {
-    model::AircraftObs o = obs(addr, tbl, t, src);
+    model::AircraftObs o = obs(address, tbl, t, src);
     o.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     return o;
 }

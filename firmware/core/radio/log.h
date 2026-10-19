@@ -28,7 +28,7 @@ struct Entry {
     Event event{Event::Undecoded};
     model::Band band{model::Band::M};
     model::Source source{model::Source::AdslDirect};
-    uint32_t addr{0};
+    uint32_t address{0};
     uint32_t at_s{0};
     uint16_t into_ms{0};
     uint16_t tx_keyed_us{0};
@@ -38,7 +38,7 @@ struct Entry {
     int8_t key_offset_s{0};
     uint8_t channel{0};
     uint8_t len{0};
-    bool addr_valid{false};
+    bool address_valid{false};
     bool rssi_valid{false};
     bool utc{false};
     bool airborne{false};

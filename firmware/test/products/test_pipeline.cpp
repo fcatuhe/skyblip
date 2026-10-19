@@ -91,7 +91,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     model::AircraftObs obs;
     REQUIRE(protocol::to_obs(rx, events::Stamp{own.utc, 500, true}, -80, model::Source::AdslDirect,
                              obs));
-    CHECK(obs.addr == 0xC5D804u);
+    CHECK(obs.address == 0xC5D804u);
     CHECK(obs.alt_valid);
 
     traffic::TrafficTable table;
@@ -144,8 +144,8 @@ TEST_CASE("scenario: uplink RX merges with direct RX (dedup, prefer direct)") {
 
     // First seen only via uplink (relayed from a ground station).
     model::AircraftObs up{};
-    up.addr = 0x3FBEEF;
-    up.addr_table = 5;  // ICAO (from ADS-B via uplink)
+    up.address = 0x3FBEEF;
+    up.address_mapping_table = 5;  // ICAO (from ADS-B via uplink)
     up.position_valid = true;
     up.lat_1e7 = own.lat_1e7 + 50000;
     up.lon_1e7 = own.lon_1e7;

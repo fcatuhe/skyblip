@@ -94,14 +94,14 @@ void World::name_aircraft(int index, const char* callsign) {
 
 int World::add_aircraft(double north_m, double east_m, double up_m, double speed_mps,
                         double track_deg, int phase_ms, int slot, protocol::System system,
-                        double turn_dps, double climb_mps, uint32_t addr) {
+                        double turn_dps, double climb_mps, uint32_t address) {
     set_origin();
     for (int i = 0; i < kMaxAircraft; i++) {
         if (aircraft_[i].used) continue;
         aircraft_[i] = VirtualAircraft{};
         aircraft_[i].used = true;
         aircraft_[i].system = system;
-        aircraft_[i].addr = addr != 0 ? addr : 0x300000u + static_cast<uint32_t>(i) + 1u;
+        aircraft_[i].address = address != 0 ? address : 0x300000u + static_cast<uint32_t>(i) + 1u;
         aircraft_[i].north_m = own_north_m() + north_m;
         aircraft_[i].east_m = own_east_m() + east_m;
         aircraft_[i].up_m = up_m;
@@ -207,8 +207,8 @@ void World::schedule_second(uint64_t epoch_us, const model::OwnState& own) {
 model::AircraftObs World::as_relayed(const VirtualAircraft& a, const model::OwnState& own) const {
     const double coslat = std::cos(origin_lat_1e7_ / 1e7 * kPi / 180.0);
     model::AircraftObs obs{};
-    obs.addr = a.addr;
-    obs.addr_table = 6;
+    obs.address = a.address;
+    obs.address_mapping_table = 6;
     obs.aircraft_cat = 4;
     obs.flight_state = 2;
     obs.speed_q = static_cast<uint16_t>(a.speed_mps * 4);
@@ -266,7 +266,7 @@ int16_t climb_e8_of(const VirtualAircraft& a) {
 
 size_t callsign_burst(const VirtualAircraft& a, uint8_t* chips) {
     protocol::AdslPacket p;
-    protocol::from_own_callsign(p, a.addr, 6, a.callsign);
+    protocol::from_own_callsign(p, a.address, 6, a.callsign);
     p.scramble();
     p.set_crc();
     return protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes,
@@ -277,8 +277,8 @@ size_t adsl_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t
                   int32_t lon_1e7, uint8_t* chips) {
     protocol::AdslPacket p;
     p.init();
-    p.set_address(a.addr);
-    p.set_addr_table(6);
+    p.set_address(a.address);
+    p.set_address_mapping_table(6);
     p.TimeStamp = static_cast<uint8_t>((utc % 15) * 4);
     p.FlightState = 2;
     p.AcftCat = 4;
@@ -306,8 +306,8 @@ size_t adsl_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t
 size_t alptas_burst(const VirtualAircraft& a, uint32_t utc, int32_t alt_m, int32_t lat_1e7,
                     int32_t lon_1e7, uint8_t* chips) {
     model::AircraftObs obs{};
-    obs.addr = a.addr;
-    obs.addr_table = 0x06;
+    obs.address = a.address;
+    obs.address_mapping_table = 0x06;
     obs.aircraft_cat = 4;
     obs.flight_state = 2;
     obs.lat_1e7 = lat_1e7;
@@ -356,7 +356,7 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::OwnStat
         const int first = timing::Scheduler::slot_start(slot) + timing::kJitterGuardMs;
         const int last = timing::Scheduler::slot_end(slot) - timing::kJitterGuardMs -
                          static_cast<int>(Air::kAirTimeUs / 1000);
-        phase_ms = first + static_cast<int>((a.addr * 2654435761u + a.transmissions * 40503u) %
+        phase_ms = first + static_cast<int>((a.address * 2654435761u + a.transmissions * 40503u) %
                                             static_cast<uint32_t>(last - first));
     }
     a.transmissions++;
@@ -375,7 +375,7 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::OwnStat
 void World::name_itself(const VirtualAircraft& a, uint64_t epoch_us, uint32_t utc, double range_m) {
     if (a.callsign[0] == 0) return;
     const uint32_t period = timing::Transmitter::kCallsignPeriodS;
-    if (utc % period != a.addr % period) return;
+    if (utc % period != a.address % period) return;
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_len = callsign_burst(a, chips);
@@ -384,7 +384,7 @@ void World::name_itself(const VirtualAircraft& a, uint64_t epoch_us, uint32_t ut
     const int last =
         timing::kCallsignEnd - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
     const int phase_ms =
-        first + static_cast<int>((a.addr * 2654435761u) % static_cast<uint32_t>(last - first));
+        first + static_cast<int>((a.address * 2654435761u) % static_cast<uint32_t>(last - first));
     air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, timing::kMband1Hz, chips,
               static_cast<uint8_t>(chip_len), rssi_at(range_m));
 }

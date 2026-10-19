@@ -45,16 +45,16 @@ int fmt_own_name(char* out, const char* callsign) {
     return n;
 }
 
-void draw_own_addr(ui::Canvas& fb, int x, int y, settings::AirAddress addr, int scale) {
+void draw_own_address(ui::Canvas& fb, int x, int y, settings::AirAddress address, int scale) {
     char buf[8];
-    const int n = fmt_air_address(buf, addr);
+    const int n = fmt_air_address(buf, address);
     buf[n] = 0;
     fb.draw_text(x, y, buf, true, scale);
 }
 
 void draw_own_id(ui::Canvas& fb, const NearbySnapshot& snap) {
     if (snap.own_callsign == nullptr || snap.own_callsign[0] == 0) {
-        draw_own_addr(fb, kNearbyIdX, kNearbyTitleY, snap.own_addr, kNearbyTitleScale);
+        draw_own_address(fb, kNearbyIdX, kNearbyTitleY, snap.own_address, kNearbyTitleScale);
         return;
     }
 
@@ -63,8 +63,9 @@ void draw_own_id(ui::Canvas& fb, const NearbySnapshot& snap) {
     buf[n] = 0;
     fb.draw_text(kNearbyIdX, kNearbyTitleY, buf, true, kNearbyTitleScale);
 
-    const int addr_x = kNearbyIdX + n * kSmallCellW * kNearbyTitleScale + kNearbyWordGap;
-    draw_own_addr(fb, addr_x, kNearbyTitleY + kGlyphH * (kNearbyTitleScale - 1), snap.own_addr, 1);
+    const int address_x = kNearbyIdX + n * kSmallCellW * kNearbyTitleScale + kNearbyWordGap;
+    draw_own_address(fb, address_x, kNearbyTitleY + kGlyphH * (kNearbyTitleScale - 1),
+                     snap.own_address, 1);
 }
 
 void banner(ui::Canvas& fb, const char* text) {
@@ -95,7 +96,8 @@ int32_t rel_hundreds_of_feet(int32_t up_m) {
 int fmt_id(char* out, const traffic::RangeRow& row) {
     out[0] = model::source_letter(row.source);
     out[1] = ' ';
-    if (row.callsign == nullptr || row.callsign[0] == 0) return 2 + fmt_hex(out + 2, row.addr, 6);
+    if (row.callsign == nullptr || row.callsign[0] == 0)
+        return 2 + fmt_hex(out + 2, row.address, 6);
     int n = 2;
     while (n < kNearbyIdChars && row.callsign[n - 2] != 0) {
         out[n] = row.callsign[n - 2];

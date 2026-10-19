@@ -18,9 +18,10 @@ int source_rank(model::Source s) {
 }
 }
 
-int TrafficTable::find(uint8_t addr_table, uint32_t addr) const {
+int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kCapacity; i++) {
-        if (slots_[i].used && slots_[i].obs.addr == addr && slots_[i].obs.addr_table == addr_table)
+        if (slots_[i].used && slots_[i].obs.address == address &&
+            slots_[i].obs.address_mapping_table == address_mapping_table)
             return i;
     }
     return -1;
@@ -90,7 +91,8 @@ int TrafficTable::allocate_slot(const model::AircraftObs& incoming, uint32_t now
 }
 
 int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
-    if (own_addr_ != 0 && obs.addr_table == own_addr_table_ && (obs.addr & 0x00FFFFFF) == own_addr_)
+    if (own_address_ != 0 && obs.address_mapping_table == own_address_mapping_table_ &&
+        (obs.address & 0x00FFFFFF) == own_address_)
         return -1;
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about
@@ -102,7 +104,7 @@ int TrafficTable::update(const model::AircraftObs& obs, uint32_t now) {
         implausible_++;
         return -1;
     }
-    int idx = find(obs.addr_table, obs.addr);
+    int idx = find(obs.address_mapping_table, obs.address);
     if (idx >= 0) {
         if (prefer_new(obs, slots_[idx].obs)) {
             watch_liftoff(slots_[idx], obs);

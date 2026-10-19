@@ -27,7 +27,7 @@ model::OwnState own_at_equator() {
 model::AircraftObs emitter(int32_t north_m, model::Source src = model::Source::AdslDirect) {
     model::AircraftObs t{};
     t.position_valid = true;
-    t.addr = 0xABCD;
+    t.address = 0xABCD;
     t.lat_1e7 = lat_offset_for(north_m);
     t.lon_1e7 = 0;
     t.alt_m = 1000;
@@ -40,7 +40,7 @@ model::AircraftObs emitter(int32_t north_m, model::Source src = model::Source::A
 TEST_CASE("range: an emitter carries the address and the system it was heard on") {
     RangeRow row;
     REQUIRE(range_to(own_at_equator(), emitter(1000, model::Source::Alptas), row));
-    CHECK(row.addr == 0xABCD);
+    CHECK(row.address == 0xABCD);
     CHECK(row.source == model::Source::Alptas);
     CHECK(row.ground_m == doctest::Approx(1000).epsilon(0.01));
     CHECK(row.up_m == 0);
@@ -80,7 +80,7 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
     const int32_t ranges[6] = {8000, 1000, 5000, 300, 12000, 2500};
     for (int i = 0; i < 6; i++) {
         model::AircraftObs t = emitter(ranges[i]);
-        t.addr = 0x100u + static_cast<uint32_t>(i);
+        t.address = 0x100u + static_cast<uint32_t>(i);
         table.update(t, 100);
     }
 
@@ -88,21 +88,21 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
     const CallsignTable callsigns;
     const int n = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
     REQUIRE(n == 4);
-    CHECK(rows[0].addr == 0x103);  // 300 m
-    CHECK(rows[1].addr == 0x101);  // 1000 m
-    CHECK(rows[2].addr == 0x105);  // 2500 m
-    CHECK(rows[3].addr == 0x102);  // 5000 m
+    CHECK(rows[0].address == 0x103);  // 300 m
+    CHECK(rows[1].address == 0x101);  // 1000 m
+    CHECK(rows[2].address == 0x105);  // 2500 m
+    CHECK(rows[3].address == 0x102);  // 5000 m
     for (int i = 1; i < n; i++) CHECK(rows[i - 1].ground_m <= rows[i].ground_m);
 }
 
 TEST_CASE("range: ranking skips what it cannot range") {
     TrafficTable table;
     model::AircraftObs positioned = emitter(4000);
-    positioned.addr = 0x200;
+    positioned.address = 0x200;
     table.update(positioned, 100);
 
     model::AircraftObs blind = emitter(1000);
-    blind.addr = 0x201;
+    blind.address = 0x201;
     blind.position_valid = false;
     table.update(blind, 100);
 
@@ -110,5 +110,5 @@ TEST_CASE("range: ranking skips what it cannot range") {
     const CallsignTable callsigns;
     const int n = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
     CHECK(n == 1);
-    CHECK(rows[0].addr == 0x200);
+    CHECK(rows[0].address == 0x200);
 }

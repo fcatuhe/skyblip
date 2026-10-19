@@ -124,14 +124,14 @@ TEST_CASE("simulator: an aircraft that names itself is named on the device") {
     const int index = h.world().add_aircraft(2000, 0, 0);
     REQUIRE(index >= 0);
     h.world().name_aircraft(index, "D-KXYZ");
-    const uint32_t addr = h.world().aircraft_at(index)->addr;
+    const uint32_t address = h.world().aircraft_at(index)->address;
 
     // A name goes out once in ten seconds, so the window has to be wider than that.
     run(h, 2000, 26000);
 
     CHECK(h.product().state().air.rx_named > 0);
-    REQUIRE(h.product().state().callsigns.find(6, addr) != nullptr);
-    CHECK(std::string(h.product().state().callsigns.find(6, addr)) == "D-KXYZ");
+    REQUIRE(h.product().state().callsigns.find(6, address) != nullptr);
+    CHECK(std::string(h.product().state().callsigns.find(6, address)) == "D-KXYZ");
 }
 
 // The radar's chevron and its counting altitude tag have nothing to read until an aircraft moves.

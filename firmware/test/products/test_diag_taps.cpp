@@ -71,8 +71,8 @@ TEST_CASE("diag config: arming names the settings every other record was decided
     CHECK(count_of(records, diag::Type::Config) == 1);
     diag::Config config{};
     REQUIRE(first_of(records, config));
-    CHECK(config.addr == settings::address_of(platform::host::Identity::kSerial));
-    CHECK(config.addr_table == settings::kAddressMappingTable);
+    CHECK(config.address == settings::address_of(platform::host::Identity::kSerial));
+    CHECK(config.address_mapping_table == settings::kAddressMappingTable);
     CHECK(config.aircraft_type == 9);
     CHECK(config.alarm_volume == 1);
     CHECK(config.battery_offset_mv == -30);
@@ -323,8 +323,8 @@ TEST_CASE("diag traffic: an aircraft is recorded a reception, with the margin it
 
     for (int i = 0; i < 4; i++) {
         model::AircraftObs obs{};
-        obs.addr = 0x515151;
-        obs.addr_table = 6;
+        obs.address = 0x515151;
+        obs.address_mapping_table = 6;
         obs.position_valid = true;
         obs.speed_valid = true;
         obs.speed_q = 40 * 4;
@@ -344,7 +344,7 @@ TEST_CASE("diag traffic: an aircraft is recorded a reception, with the margin it
     CHECK(count_of(records, diag::Type::Traffic) >= 3);
     diag::Traffic seen{};
     REQUIRE(last_of(records, seen));
-    CHECK(seen.addr == 0x515151);
+    CHECK(seen.address == 0x515151);
     CHECK(seen.source == model::Source::AdslDirect);
     CHECK(seen.rssi_dbm == -92);
     CHECK(seen.tracked == 1);

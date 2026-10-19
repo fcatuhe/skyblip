@@ -35,10 +35,10 @@ constexpr uint32_t kUtc = 1700000000;  // 1700000000 % 16 == 0, so timebits == 0
 
 model::AircraftObs make_obs(int32_t lat_1e7, int32_t lon_1e7) {
     model::AircraftObs obs{};
-    obs.addr = 0x123456;
-    obs.addr_table = 0x06;  // FLARM-issued address
-    obs.aircraft_cat = 4;   // glider
-    obs.flight_state = 2;   // airborne
+    obs.address = 0x123456;
+    obs.address_mapping_table = 0x06;  // FLARM-issued address
+    obs.aircraft_cat = 4;              // glider
+    obs.flight_state = 2;              // airborne
     obs.lat_1e7 = lat_1e7;
     obs.lon_1e7 = lon_1e7;
     obs.alt_m = 1234;
@@ -90,8 +90,8 @@ TEST_CASE("alptas: encode then decode preserves the identity and motion fields")
     model::AircraftObs got{};
     REQUIRE(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok);
 
-    CHECK(got.addr == 0x123456u);
-    CHECK(int(got.addr_table) == 0x06);
+    CHECK(got.address == 0x123456u);
+    CHECK(int(got.address_mapping_table) == 0x06);
     CHECK(int(got.aircraft_cat) == 4);
     CHECK(int(got.flight_state) == 2);
     CHECK(std::abs(got.alt_m - obs.alt_m) <= 2);
@@ -128,23 +128,23 @@ TEST_CASE("alptas: the airborne field is 1 on the ground, 2 or 3 airborne, and 0
 TEST_CASE("alptas: an ICAO address keeps its table, an unknown one degrades to 0") {
     for (uint8_t table : {uint8_t(0x05), uint8_t(0x06), uint8_t(0x00)}) {
         model::AircraftObs obs = make_obs(481234567, 87654321);
-        obs.addr_table = table;
-        obs.addr = 0xABCDEF;
+        obs.address_mapping_table = table;
+        obs.address = 0xABCDEF;
         uint8_t frame[kAlptasFrameBytes];
         REQUIRE(alptas_encode(frame, obs, kUtc, 481000000, 87000000) == Status::Ok);
         model::AircraftObs got{};
         REQUIRE(alptas_decode(frame, kUtc, 481000000, 87000000, got) == Status::Ok);
-        CHECK(got.addr == 0xABCDEFu);
-        CHECK(int(got.addr_table) == int(table));
+        CHECK(got.address == 0xABCDEFu);
+        CHECK(int(got.address_mapping_table) == int(table));
     }
     // Address types the protocol has but ADS-L has no table for (random,
     // anonymous) must not be smuggled through as a real identity.
-    CHECK(int(alptas_addr_type_to_table(0)) == 0);
-    CHECK(int(alptas_addr_type_to_table(3)) == 0);
-    CHECK(int(alptas_addr_type_to_table(1)) == 0x05);
-    CHECK(int(alptas_addr_type_to_table(2)) == 0x06);
+    CHECK(int(alptas_address_type_to_address_mapping_table(0)) == 0);
+    CHECK(int(alptas_address_type_to_address_mapping_table(3)) == 0);
+    CHECK(int(alptas_address_type_to_address_mapping_table(1)) == 0x05);
+    CHECK(int(alptas_address_type_to_address_mapping_table(2)) == 0x06);
     // Bit 2 of the wire field marks a relayed frame, not a fourth address type.
-    CHECK(int(alptas_addr_type_to_table(1 | 4)) == 0x05);
+    CHECK(int(alptas_address_type_to_address_mapping_table(1 | 4)) == 0x05);
 }
 
 TEST_CASE("alptas: position round trips north, south, high latitude and near zero") {

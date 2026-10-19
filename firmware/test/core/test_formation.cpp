@@ -29,8 +29,8 @@ model::OwnState flying(int mps, int track_deg, uint32_t at_ms = 0) {
 model::AircraftObs neighbour(const model::OwnState& own, int north_m, int east_m, int up_m, int mps,
                              int track_deg, uint32_t at_ms) {
     model::AircraftObs t{};
-    t.addr = 0x424242;
-    t.addr_table = 6;
+    t.address = 0x424242;
+    t.address_mapping_table = 6;
     t.position_valid = true;
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(mps * 4);

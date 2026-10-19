@@ -12,8 +12,8 @@ bool range_to(const model::OwnState& own, const model::AircraftObs& obs, RangeRo
     if (!protocol::relative_ned(own, obs, north_m, east_m, up_m)) return false;
 
     out = RangeRow{};
-    out.addr = obs.addr;
-    out.addr_table = obs.addr_table;
+    out.address = obs.address;
+    out.address_mapping_table = obs.address_mapping_table;
     out.source = obs.source;
     out.up_m = up_m;
     out.ground_m = static_cast<int32_t>(idistance(north_m, east_m));
@@ -28,7 +28,7 @@ int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
         if (!t || !t->used) continue;
         RangeRow row;
         if (!range_to(own, t->obs, row)) continue;
-        row.callsign = callsigns.find(row.addr_table, row.addr);
+        row.callsign = callsigns.find(row.address_mapping_table, row.address);
 
         int at = n;
         while (at > 0 && out[at - 1].ground_m > row.ground_m) at--;

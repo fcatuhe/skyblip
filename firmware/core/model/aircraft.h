@@ -31,8 +31,8 @@ constexpr char source_letter(Source source) {
 }
 
 struct AircraftObs {
-    uint32_t addr;
-    uint8_t addr_table;
+    uint32_t address;
+    uint8_t address_mapping_table;
     uint8_t aircraft_cat;
     uint8_t flight_state;
     uint8_t emergency;

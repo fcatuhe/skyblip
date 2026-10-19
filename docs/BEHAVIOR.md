@@ -1279,7 +1279,7 @@ What an EFB is told, in the FLARM sentences it already speaks. The geometry is t
   > Field 3 of $PGRMZ is the fix dimension Garmin defines for it (1=no fix, 2=2D, 3=3D), not a constant: both SoftRF forks send exactly these two values off exactly this test (src/protocol/data/NMEA.cpp: "isValidGNSSFix() ? '3' : '1'"), because own.fix_valid carries no 2D/3D distinction of its own - the same reduction format_pflau's GPS field already makes.
 - a target across the antimeridian is metres away, not the width of the earth
   > Longitude was differenced raw, so a neighbour one meridian over was 40,000 km east and refused.
-- addr_table_to_idtype never answers 0 - SkyDemon draws nothing for that value
+- address_mapping_table_to_idtype never answers 0 - SkyDemon draws nothing for it
   > oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658 is the source for both branches: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2". Every ADS-L address table value that is not ICAO (5) - our own self-minted range 0-4, FLARM 6, OGN 7, and anything reserved beyond it - lands on IDType 2 rather than IDType 0: 0 draws nothing at all on SkyDemon, which is the one failure worth never causing again, and between the two legal values a self-minted address is a closer lie as FLARM (transient, self-assigned) than as ICAO (permanent, registry-issued).
 - category mapping ADS-L glider -> ALP-TAS 1
 - checksum appended correctly

@@ -243,7 +243,7 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Nearby: {
             NearbySnapshot snap;
-            snap.own_addr = context_.state.activation.address();
+            snap.own_address = context_.state.activation.address();
             snap.own_callsign = settings.callsign;
             snap.fix_valid = own.fix_valid;
             snap.units = settings.units;

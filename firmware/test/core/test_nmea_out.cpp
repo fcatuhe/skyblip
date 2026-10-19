@@ -96,8 +96,8 @@ TEST_CASE("nmea: PFLAA carries id, relative pos, checksum") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObs t{};
     t.position_valid = true;
-    t.addr = 0xC5D804;
-    t.addr_table = 6;  // FLARM -> IDType 2
+    t.address = 0xC5D804;
+    t.address_mapping_table = 6;  // FLARM -> IDType 2
     t.aircraft_cat = 4;
     t.speed_valid = true;
     t.speed_q = 120;
@@ -121,8 +121,8 @@ TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's doe
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObs t{};
     t.position_valid = true;
-    t.addr = 0xC5D804;
-    t.addr_table = 0x06;
+    t.address = 0xC5D804;
+    t.address_mapping_table = 0x06;
     t.lat_1e7 = own.lat_1e7 + 100000;
     t.lon_1e7 = own.lon_1e7;
     t.alt_m = 1000;
@@ -145,8 +145,8 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObs t{};
     t.position_valid = true;
-    t.addr = 0xC5D804;
-    t.addr_table = 0x06;
+    t.address = 0xC5D804;
+    t.address_mapping_table = 0x06;
     t.lat_1e7 = own.lat_1e7 + 100000;
     t.lon_1e7 = own.lon_1e7;
     t.alt_m = 1000;
@@ -181,7 +181,7 @@ TEST_CASE("nmea: PFLAA returns 0 without own position") {
 TEST_CASE("nmea: PFLAU reports rx count, gps and threat") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObs threat{};
-    threat.addr = 0x112233;
+    threat.address = 0x112233;
     char buf[128];
     int n = format_pflau(buf, sizeof(buf), own, true, 5, &threat, 3, 45, -50, 800);
     std::string s(buf, n);
@@ -237,7 +237,7 @@ TEST_CASE("nmea: PFLAU carries all ten FTD-012 fields, empty sky or not") {
     CHECK(checksum_ok(nothing_out_there));
 
     model::AircraftObs threat{};
-    threat.addr = 0x112233;
+    threat.address = 0x112233;
     const int seen = format_pflau(buf, sizeof(buf), own, true, 1, &threat, 2, -45, -50, 800);
     const std::string with_a_threat(buf, seen);
     CHECK(data_fields(with_a_threat) == 10);
@@ -268,13 +268,14 @@ TEST_CASE("nmea: category mapping ADS-L glider -> ALP-TAS 1") {
 // SkyDemon, which is the one failure worth never causing again, and between
 // the two legal values a self-minted address is a closer lie as FLARM
 // (transient, self-assigned) than as ICAO (permanent, registry-issued).
-TEST_CASE("nmea: addr_table_to_idtype never answers 0 - SkyDemon draws nothing for that value") {
-    CHECK(addr_table_to_idtype(5) == 1);  // ICAO
-    CHECK(addr_table_to_idtype(6) == 2);  // FLARM
-    CHECK(addr_table_to_idtype(7) == 2);  // OGN, folded into the FLARM bucket
-    CHECK(addr_table_to_idtype(0) == 2);  // self-minted/random, ditto
-    CHECK(addr_table_to_idtype(4) == 2);  // top of the self-minted range
-    for (int t = 0; t < 64; t++) CHECK(addr_table_to_idtype(static_cast<uint8_t>(t)) != 0);
+TEST_CASE("nmea: address_mapping_table_to_idtype never answers 0 - SkyDemon draws nothing for it") {
+    CHECK(address_mapping_table_to_idtype(5) == 1);  // ICAO
+    CHECK(address_mapping_table_to_idtype(6) == 2);  // FLARM
+    CHECK(address_mapping_table_to_idtype(7) == 2);  // OGN, folded into the FLARM bucket
+    CHECK(address_mapping_table_to_idtype(0) == 2);  // self-minted/random, ditto
+    CHECK(address_mapping_table_to_idtype(4) == 2);  // top of the self-minted range
+    for (int t = 0; t < 64; t++)
+        CHECK(address_mapping_table_to_idtype(static_cast<uint8_t>(t)) != 0);
 }
 
 // own.utc is a Unix epoch with no calendar fields of its own; the numbers
@@ -336,8 +337,8 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     own.utc_valid = true;
     model::AircraftObs t{};
     t.position_valid = true;
-    t.addr = 0xFFFFFF;
-    t.addr_table = 0x06;
+    t.address = 0xFFFFFF;
+    t.address_mapping_table = 0x06;
     t.lat_1e7 = 899999999;
     t.lon_1e7 = 1799999999;
     t.alt_m = 99999;

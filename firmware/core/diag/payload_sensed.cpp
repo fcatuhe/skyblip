@@ -77,7 +77,7 @@ Record record_of(const radio::Entry& value) {
     at.phase_valid = value.phase_valid;
     at.utc_dated = value.utc;
     Record r = framed(Type::Burst, at);
-    put_u32(r.payload + 0, value.addr);
+    put_u32(r.payload + 0, value.address);
     put_u16(r.payload + 4, value.tx_keyed_us);
     put_u16(r.payload + 6, value.tx_span_us);
     r.payload[8] = static_cast<uint8_t>(value.event);
@@ -88,7 +88,7 @@ Record record_of(const radio::Entry& value) {
     put_i8(r.payload + 13, value.rssi_dbm);
     put_i8(r.payload + 14, value.key_offset_s);
     put_i8(r.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
-    set_flag(r.flags, kBurstFlagAddrValid, value.addr_valid);
+    set_flag(r.flags, kBurstFlagAddressValid, value.address_valid);
     set_flag(r.flags, kBurstFlagRssiValid, value.rssi_valid);
     set_flag(r.flags, kBurstFlagAirborne, value.airborne);
     set_flag(r.flags, kBurstFlagTxSpanValid, value.tx_span_valid);
@@ -103,7 +103,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.into_ms = record.into_ms;
     out.phase_valid = record.phase_valid();
     out.utc = record.utc_dated();
-    out.addr = get_u32(record.payload + 0);
+    out.address = get_u32(record.payload + 0);
     out.tx_keyed_us = get_u16(record.payload + 4);
     out.tx_span_us = get_u16(record.payload + 6);
     out.event = static_cast<radio::Event>(record.payload[8]);
@@ -114,7 +114,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.rssi_dbm = get_i8(record.payload + 13);
     out.key_offset_s = get_i8(record.payload + 14);
     out.tx_stage_margin_us = static_cast<int16_t>(get_i8(record.payload + 15) * kStageMarginStepUs);
-    out.addr_valid = record.flagged(kBurstFlagAddrValid);
+    out.address_valid = record.flagged(kBurstFlagAddressValid);
     out.rssi_valid = record.flagged(kBurstFlagRssiValid);
     out.airborne = record.flagged(kBurstFlagAirborne);
     out.tx_span_valid = record.flagged(kBurstFlagTxSpanValid);

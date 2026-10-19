@@ -70,10 +70,10 @@ static protocol::System system_of(int alptas) {
 
 KEEPALIVE int simulator_add_aircraft(int north_m, int east_m, int up_m, int speed_mps,
                                      int track_deg, int turn_dps_e1, int climb_mm_s, int alptas,
-                                     int addr) {
+                                     int address) {
     return g_simulator.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, -1, -1,
                                             system_of(alptas), turn_dps_e1 / 10.0,
-                                            climb_mm_s / 1000.0, static_cast<uint32_t>(addr));
+                                            climb_mm_s / 1000.0, static_cast<uint32_t>(address));
 }
 // phase_ms/slot below zero let the aircraft pick its own instant, as a
 // conforming transmitter does. Pinned, they put a burst where the dwell map

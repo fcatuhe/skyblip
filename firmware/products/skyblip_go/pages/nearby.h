@@ -12,7 +12,7 @@ namespace skyblip::go {
 constexpr int kNearbyRows = 8;
 
 struct NearbySnapshot {
-    settings::AirAddress own_addr{};
+    settings::AirAddress own_address{};
     const char* own_callsign{nullptr};
     bool fix_valid{false};
     go::Units units{go::Units::Nautical};

@@ -17,8 +17,8 @@ uint16_t c9(int deg) { return static_cast<uint16_t>(((deg % 360 + 360) % 360) * 
 model::AircraftObs contact(const model::OwnState& own, int north_m, int east_m, int up_m, int mps,
                            int track_deg, uint32_t at_ms) {
     model::AircraftObs t{};
-    t.addr = 0x515151;
-    t.addr_table = 6;
+    t.address = 0x515151;
+    t.address_mapping_table = 6;
     t.position_valid = true;
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(mps * 4);
@@ -48,11 +48,12 @@ struct Flight {
     }
 
     void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms,
-              flight::FlightState says = flight::FlightState::Unknown, uint32_t addr = 0x515151) {
+              flight::FlightState says = flight::FlightState::Unknown,
+              uint32_t address = 0x515151) {
         rig.state.own.fix_ms = now_ms;
         model::AircraftObs obs =
             contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
-        obs.addr = addr;
+        obs.address = address;
         obs.flight_state = static_cast<uint8_t>(says);
         rig.state.traffic.update(obs, now_ms / 1000);
         rig.alarm_service.tick(now_ms);

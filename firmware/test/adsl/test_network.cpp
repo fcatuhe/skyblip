@@ -95,7 +95,7 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload rea
     issue2.Version = (issue2.Version & 0xF0) | 0x01;
     model::AircraftObs as_received{};
     REQUIRE(protocol::to_obs(issue2, events::Stamp{}, -80, model::Source::AdslDirect, as_received));
-    CHECK(as_received.addr == as_sent.addr);
+    CHECK(as_received.address == as_sent.address);
     CHECK(as_received.lat_1e7 == as_sent.lat_1e7);
     CHECK(as_received.alt_m == as_sent.alt_m);
 }

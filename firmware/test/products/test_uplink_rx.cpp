@@ -42,12 +42,12 @@ namespace {
 // An aircraft as a ground station knows it: an address, a place, a height. That
 // is all one uplink record carries (16 bytes of it), and it is deliberately less
 // than a direct ADS-L frame gives.
-model::AircraftObs relayed_aircraft(Rig& rig, uint32_t addr, int32_t north_m, int32_t east_m,
+model::AircraftObs relayed_aircraft(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m,
                                     int32_t up_m) {
     const model::OwnState& own = rig.state().own;
     model::AircraftObs obs{};
-    obs.addr = addr;
-    obs.addr_table = 6;
+    obs.address = address;
+    obs.address_mapping_table = 6;
     obs.aircraft_cat = 4;
     obs.flight_state = 2;
     obs.speed_q = 140;
@@ -100,7 +100,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObs* aircraft, int n,
 
 // A neighbour we hear for ourselves, on the M band, in the direct slot. Same
 // address as a relayed one is the interesting case.
-void hear_directly(Rig& rig, uint32_t& t, uint32_t addr, int32_t north_m, int32_t east_m,
+void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int32_t east_m,
                    int32_t up_m) {
     rig.push_timed_fix(25000, 900);
     const model::OwnState& own = rig.state().own;
@@ -113,7 +113,8 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t addr, int32_t north_m, int32_
     transmitter.track_cdeg = 18000;
 
     protocol::AdslPacket packet;
-    protocol::from_own(packet, transmitter, addr, /*addr_table=*/6, /*aircraft_cat=*/4);
+    protocol::from_own(packet, transmitter, address, /*address_mapping_table=*/6,
+                       /*aircraft_cat=*/4);
     packet.scramble();
     packet.set_crc();
 
@@ -132,9 +133,9 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t addr, int32_t north_m, int32_
     rig.utc_offset_s++;
 }
 
-const traffic::Target* target_for(Rig& rig, uint32_t addr) {
+const traffic::Target* target_for(Rig& rig, uint32_t address) {
     const traffic::TrafficTable& table = rig.state().traffic;
-    const int idx = table.find(/*addr_table=*/6, addr);
+    const int idx = table.find(/*address_mapping_table=*/6, address);
     return idx < 0 ? nullptr : table.at(idx);
 }
 
@@ -220,7 +221,7 @@ TEST_CASE("uplink: one ground-station frame carries several aircraft onto the ra
     // Not merely three blips: the positions the ground station sent are the
     // positions the table holds, to the metre the record's resolution allows.
     for (const model::AircraftObs& sent : relayed) {
-        const traffic::Target* got = target_for(rig, sent.addr);
+        const traffic::Target* got = target_for(rig, sent.address);
         REQUIRE(got != nullptr);
         CHECK(got->obs.lat_1e7 == sent.lat_1e7);
         CHECK(got->obs.lon_1e7 == sent.lon_1e7);
@@ -328,18 +329,18 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     uint32_t t = 0;
     fly(rig, t, 3);
 
-    const uint32_t own_addr = *rig.state().activation.address();
+    const uint32_t own_address = *rig.state().activation.address();
     model::AircraftObs echo[2] = {
-        relayed_aircraft(rig, own_addr, 0, 0, 0),
+        relayed_aircraft(rig, own_address, 0, 0, 0),
         relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
     };
-    echo[0].addr_table = settings::kAddressMappingTable;
+    echo[0].address_mapping_table = settings::kAddressMappingTable;
     REQUIRE(relay(rig, t, echo, 2));
 
     CHECK(rig.state().air.uplink_frames == 1);
     CHECK(rig.state().traffic.count() == 1);
     CHECK(rig.state().air.uplink_targets == 1);
-    CHECK(target_for(rig, own_addr) == nullptr);
+    CHECK(target_for(rig, own_address) == nullptr);
     CHECK(target_for(rig, 0x4D0001) != nullptr);
 }
 
@@ -349,8 +350,8 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
 // decoded.
 TEST_CASE("uplink: with Feature::UplinkRx off, a ground frame decodes to nothing") {
     model::AircraftObs relayed{};
-    relayed.addr = 0x4E0001;
-    relayed.addr_table = 6;
+    relayed.address = 0x4E0001;
+    relayed.address_mapping_table = 6;
     relayed.lat_1e7 = 485000000;
     relayed.lon_1e7 = 85000000;
     relayed.alt_m = 1000;

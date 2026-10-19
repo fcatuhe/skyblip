@@ -31,10 +31,10 @@ struct Rng {
     }
 };
 
-model::AircraftObs make_target(uint32_t addr) {
+model::AircraftObs make_target(uint32_t address) {
     model::AircraftObs t{};
-    t.addr = addr & 0xFFFFFF;
-    t.addr_table = 6;
+    t.address = address & 0xFFFFFF;
+    t.address_mapping_table = 6;
     t.aircraft_cat = 4;
     t.flight_state = 2;
     t.speed_q = 180;
@@ -152,7 +152,7 @@ TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock
     CHECK(st.targets == n);
     CHECK(st.corrected == 0);
     for (int i = 0; i < n; i++) {
-        CHECK(rx[i].addr == tx[i].addr);
+        CHECK(rx[i].address == tx[i].address);
         CHECK(rx[i].lat_1e7 == tx[i].lat_1e7);
         CHECK(rx[i].lon_1e7 == tx[i].lon_1e7);
         CHECK(rx[i].alt_m == tx[i].alt_m);
@@ -183,7 +183,7 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     CHECK(up.decode(frame, rx, 4, st) == Status::Ok);
     CHECK(st.corrected == 16);
     CHECK(st.targets == 4);
-    CHECK(rx[0].addr == tx[0].addr);
+    CHECK(rx[0].address == tx[0].address);
     CHECK(rx[3].lat_1e7 == tx[3].lat_1e7);
 }
 
@@ -269,5 +269,5 @@ TEST_CASE("uplink: a record with no address and no place on the globe is refused
     CHECK(up.decode(frame, rx, 3, st) == Status::Ok);
     CHECK(st.targets == 1);
     CHECK(st.rejected == 2);
-    CHECK(rx[0].addr == 0x600001u);
+    CHECK(rx[0].address == 0x600001u);
 }

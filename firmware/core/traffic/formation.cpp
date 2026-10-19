@@ -62,7 +62,7 @@ Report Tracker::observe(const model::OwnState& own_fix, const model::AircraftObs
                         const flight::Liftoff& contact_liftoff, uint32_t now_ms) {
     Report out{};
     if (flight::on_ground(own_fix.flight_state) || flight::on_ground(reported.flight_state)) {
-        drop(reported.addr_table, reported.addr);
+        drop(reported.address_mapping_table, reported.address);
         return out;
     }
     const model::OwnState own = flight::carried_to(own_fix, now_ms);
@@ -142,8 +142,8 @@ void Tracker::off_station(Slot& slot, const Report& fix, uint32_t now_ms) {
     }
 }
 
-bool Tracker::together(uint8_t addr_table, uint32_t addr) const {
-    const Slot* slot = find(addr_table, addr);
+bool Tracker::together(uint8_t address_mapping_table, uint32_t address) const {
+    const Slot* slot = find(address_mapping_table, address);
     return slot != nullptr && slot->state == State::Together;
 }
 
@@ -160,8 +160,8 @@ void Tracker::forget_stale(uint32_t now_ms) {
         if (s.used && now_ms - s.seen_ms > lease_ms) s = Slot{};
 }
 
-void Tracker::drop(uint8_t addr_table, uint32_t addr) {
-    Slot* slot = find(addr_table, addr);
+void Tracker::drop(uint8_t address_mapping_table, uint32_t address) {
+    Slot* slot = find(address_mapping_table, address);
     if (slot != nullptr) *slot = Slot{};
 }
 
@@ -169,7 +169,9 @@ Tracker::Slot* Tracker::slot_for(const model::AircraftObs& target, uint32_t now_
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
     for (Slot& s : slots_) {
-        if (s.used && s.addr == target.addr && s.addr_table == target.addr_table) return &s;
+        if (s.used && s.address == target.address &&
+            s.address_mapping_table == target.address_mapping_table)
+            return &s;
         if (!s.used) {
             if (free_slot == nullptr) free_slot = &s;
             continue;
@@ -181,21 +183,23 @@ Tracker::Slot* Tracker::slot_for(const model::AircraftObs& target, uint32_t now_
     if (slot == nullptr) return nullptr;
     *slot = Slot{};
     slot->used = true;
-    slot->addr = target.addr;
-    slot->addr_table = target.addr_table;
+    slot->address = target.address;
+    slot->address_mapping_table = target.address_mapping_table;
     slot->seen_ms = now_ms;
     return slot;
 }
 
-const Tracker::Slot* Tracker::find(uint8_t addr_table, uint32_t addr) const {
+const Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) const {
     for (const Slot& s : slots_)
-        if (s.used && s.addr == addr && s.addr_table == addr_table) return &s;
+        if (s.used && s.address == address && s.address_mapping_table == address_mapping_table)
+            return &s;
     return nullptr;
 }
 
-Tracker::Slot* Tracker::find(uint8_t addr_table, uint32_t addr) {
+Tracker::Slot* Tracker::find(uint8_t address_mapping_table, uint32_t address) {
     for (Slot& s : slots_)
-        if (s.used && s.addr == addr && s.addr_table == addr_table) return &s;
+        if (s.used && s.address == address && s.address_mapping_table == address_mapping_table)
+            return &s;
     return nullptr;
 }
 

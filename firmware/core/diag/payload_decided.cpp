@@ -33,11 +33,11 @@ bool read(const Record& record, Boot& out) {
 
 Record record_of(const Config& value, const Instant& at) {
     Record r = framed(Type::Config, at);
-    put_u32(r.payload + 0, value.addr);
+    put_u32(r.payload + 0, value.address);
     put_i16(r.payload + 4, value.battery_offset_mv);
     put_i16(r.payload + 6, value.freq_trim_e1_ppm);
     r.payload[8] = value.aircraft_type;
-    r.payload[9] = value.addr_table;
+    r.payload[9] = value.address_mapping_table;
     r.payload[10] = value.alarm_volume;
     r.payload[11] = value.settings_version;
     put_i8(r.payload + 12, value.tx_power_dbm);
@@ -51,11 +51,11 @@ Record record_of(const Config& value, const Instant& at) {
 bool read(const Record& record, Config& out) {
     if (record.type != Type::Config) return false;
     out = Config{};
-    out.addr = get_u32(record.payload + 0);
+    out.address = get_u32(record.payload + 0);
     out.battery_offset_mv = get_i16(record.payload + 4);
     out.freq_trim_e1_ppm = get_i16(record.payload + 6);
     out.aircraft_type = record.payload[8];
-    out.addr_table = record.payload[9];
+    out.address_mapping_table = record.payload[9];
     out.alarm_volume = record.payload[10];
     out.settings_version = record.payload[11];
     out.tx_power_dbm = get_i8(record.payload + 12);
@@ -140,7 +140,7 @@ bool read(const Record& record, Flight& out) {
 
 Record record_of(const Traffic& value, const Instant& at) {
     Record r = framed(Type::Traffic, at);
-    put_u32(r.payload + 0, value.addr);
+    put_u32(r.payload + 0, value.address);
     put_u16(r.payload + 4, value.dist_m);
     put_u16(r.payload + 6, value.bearing_deg);
     put_i16(r.payload + 8, value.rel_alt_m);
@@ -159,7 +159,7 @@ Record record_of(const Traffic& value, const Instant& at) {
 bool read(const Record& record, Traffic& out) {
     if (record.type != Type::Traffic) return false;
     out = Traffic{};
-    out.addr = get_u32(record.payload + 0);
+    out.address = get_u32(record.payload + 0);
     out.dist_m = get_u16(record.payload + 4);
     out.bearing_deg = get_u16(record.payload + 6);
     out.rel_alt_m = get_i16(record.payload + 8);

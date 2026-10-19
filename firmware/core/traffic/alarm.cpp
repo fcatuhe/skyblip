@@ -127,7 +127,9 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObs& target, uin
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
     for (Slot& s : slots_) {
-        if (s.used && s.addr == target.addr && s.addr_table == target.addr_table) return &s;
+        if (s.used && s.address == target.address &&
+            s.address_mapping_table == target.address_mapping_table)
+            return &s;
         if (!s.used) {
             if (free_slot == nullptr) free_slot = &s;
             continue;
@@ -138,15 +140,16 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObs& target, uin
     if (slot == nullptr) return nullptr;
     *slot = Slot{};
     slot->used = true;
-    slot->addr = target.addr;
-    slot->addr_table = target.addr_table;
+    slot->address = target.address;
+    slot->address_mapping_table = target.address_mapping_table;
     slot->seen_ms = now_ms;
     return slot;
 }
 
-void AlarmTracker::withdraw(uint8_t addr_table, uint32_t addr) {
+void AlarmTracker::withdraw(uint8_t address_mapping_table, uint32_t address) {
     for (Slot& s : slots_) {
-        if (!s.used || s.addr != addr || s.addr_table != addr_table) continue;
+        if (!s.used || s.address != address || s.address_mapping_table != address_mapping_table)
+            continue;
         s.notified_level = Level::None;
         s.falling = false;
         s.dismissed = false;

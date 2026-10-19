@@ -187,7 +187,7 @@ TEST_CASE("alarm: a dismissal is spent per aircraft, and a newcomer keeps its ow
 
     t += 100;
     model::AircraftObs stranger = neighbour(own, 0, 400, 0, 30, 270, t);
-    stranger.addr = 0x271828;
+    stranger.address = 0x271828;
     CHECK(tracker.update(own, stranger, t).notify);
 
     // The aircraft already seen stays silent through the newcomer's alarm.
@@ -224,7 +224,7 @@ TEST_CASE("alarm: a dismissal is spent on the sky that earned it") {
 
     t += 100;
     model::AircraftObs stranger = neighbour(own, 0, 400, 0, 30, 270, t);
-    stranger.addr = 0x271828;
+    stranger.address = 0x271828;
     const AlarmTracker::Decision d = tracker.update(own, stranger, t);
     CHECK(d.notify);
     CHECK_FALSE(tracker.dismissed());

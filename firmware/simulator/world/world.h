@@ -22,7 +22,7 @@ struct VirtualAircraft {
     // this device never hears for itself, reaching it only because a skyPost on
     // the ground heard it and relays it on the O band.
     protocol::System system{protocol::System::AdslDirect};
-    uint32_t addr{0};
+    uint32_t address{0};
     // North and east of the world's origin, not of own-ship: two aircraft that
     // both manoeuvre only describe one encounter if they fly over the same
     // ground. up_m stays own-relative, as the air in one thermal is.
@@ -63,7 +63,7 @@ class World {
     int add_aircraft(double north_m, double east_m, double up_m, double speed_mps = 30,
                      double track_deg = 270, int phase_ms = -1, int slot = -1,
                      protocol::System system = protocol::System::AdslDirect, double turn_dps = 0,
-                     double climb_mps = 0, uint32_t addr = 0);
+                     double climb_mps = 0, uint32_t address = 0);
     // INFO: fc 14sep26 a kilometre ahead on our track, reciprocal, sinking through our level
     int add_threat(protocol::System system = protocol::System::AdslDirect) {
         return add_aircraft(0, 1000, 30, 40, 270, -1, -1, system, 0, kThreatSinkMps);

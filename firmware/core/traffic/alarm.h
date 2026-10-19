@@ -56,7 +56,7 @@ class AlarmTracker {
     Decision update(const model::OwnState& own, const model::AircraftObs& target, uint32_t now_ms);
 
     void forget_stale(uint32_t now_ms);
-    void withdraw(uint8_t addr_table, uint32_t addr);
+    void withdraw(uint8_t address_mapping_table, uint32_t address);
 
     void dismiss();
     bool dismissed() const;
@@ -66,8 +66,8 @@ class AlarmTracker {
    private:
     struct Slot {
         bool used{false};
-        uint8_t addr_table{0};
-        uint32_t addr{0};
+        uint8_t address_mapping_table{0};
+        uint32_t address{0};
         uint32_t obs_key{0};
         uint32_t seen_ms{0};
         uint32_t forget_ms{0};

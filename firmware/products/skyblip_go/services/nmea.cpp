@@ -233,7 +233,7 @@ void NmeaService::emit_targets(uint32_t now_ms) {
         const int len = protocol::format_pflaa(
             sentence_, sizeof(sentence_), own, flight::carried_to(target->obs, now_ms),
             traffic::to_number(target->alarm_level),
-            context_.state.callsigns.find(target->obs.addr_table, target->obs.addr));
+            context_.state.callsigns.find(target->obs.address_mapping_table, target->obs.address));
         if (len <= 0) continue;
         write(sentence_, len);
         resumes_[resume_count_++] = {pass_len_, (slot + 1) % traffic::TrafficTable::kCapacity};

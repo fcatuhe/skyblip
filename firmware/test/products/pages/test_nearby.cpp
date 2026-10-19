@@ -52,13 +52,13 @@ bool banner_reads(const Glass& fb, const char* text) {
 }
 
 // Where the small address lands: after the name it stands beside, on the same bottom.
-int own_addr_x() {
+int own_address_x() {
     return kNearbyIdX + kNearbyOwnNameChars * 6 * kNearbyTitleScale + kNearbyWordGap;
 }
 
 NearbySnapshot listing(const traffic::RangeRow* rows, int n, go::Units units) {
     NearbySnapshot snap;
-    snap.own_addr = 0x4B1F07;
+    snap.own_address = 0x4B1F07;
     snap.fix_valid = true;
     snap.units = units;
     snap.n_heard = n;
@@ -69,7 +69,7 @@ NearbySnapshot listing(const traffic::RangeRow* rows, int n, go::Units units) {
 
 traffic::RangeRow row_at(int32_t ground_m, int32_t up_m) {
     traffic::RangeRow r;
-    r.addr = 0x3FA21C;
+    r.address = 0x3FA21C;
     r.source = model::Source::AdslDirect;
     r.ground_m = ground_m;
     r.up_m = up_m;
@@ -180,7 +180,7 @@ TEST_CASE("nearby: a named own-ship reads its callsign, with the address still b
     draw_nearby(fb, snap);
 
     CHECK(reads_at(fb, kNearbyIdX, kNearbyTitleY, "S-BLIP", kNearbyTitleScale));
-    CHECK(reads_at(fb, own_addr_x(), kNearbyTitleY + 7, "4B1F07", 1));
+    CHECK(reads_at(fb, own_address_x(), kNearbyTitleY + 7, "4B1F07", 1));
 }
 
 // The count owns the right of that line, so a long name is cut where the row column cuts one.
@@ -192,7 +192,7 @@ TEST_CASE("nearby: own callsign is cut to the six characters a registration is k
     draw_nearby(fb, snap);
 
     CHECK(reads_at(fb, kNearbyIdX, kNearbyTitleY, "ABCDEF", kNearbyTitleScale));
-    CHECK(reads_at(fb, own_addr_x(), kNearbyTitleY + 7, "4B1F07", 1));
+    CHECK(reads_at(fb, own_address_x(), kNearbyTitleY + 7, "4B1F07", 1));
 }
 
 // The letter in front of the address is the source the report arrived by, and nothing said so.

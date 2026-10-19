@@ -193,9 +193,9 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
     const model::OwnState own = flying(30, 0);
     TrafficTable tbl;
     tbl.set_own_reference(own);
-    const auto at = [&](uint32_t addr, int north_m, model::Source src, uint32_t t) {
+    const auto at = [&](uint32_t address, int north_m, model::Source src, uint32_t t) {
         model::AircraftObs o = neighbour(own, north_m, 0, 0, 30, 0);
-        o.addr = addr;
+        o.address = address;
         o.source = src;
         o.received.at_s = t;
         return o;
@@ -264,14 +264,14 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
     tbl.set_own_reference(own);
     for (int i = 0; i < TrafficTable::kCapacity; i++) {
         model::AircraftObs apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
-        apron.addr = 0x100000u + static_cast<uint32_t>(i);
+        apron.address = 0x100000u + static_cast<uint32_t>(i);
         apron.received.at_s = 100;
         apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         REQUIRE(tbl.update(apron, 100) >= 0);
     }
 
     model::AircraftObs arriving = neighbour(own, 8000, 0, 0, 40, 180);
-    arriving.addr = 0x200000;
+    arriving.address = 0x200000;
     arriving.received.at_s = 100;
     arriving.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
     CHECK(tbl.update(arriving, 100) >= 0);

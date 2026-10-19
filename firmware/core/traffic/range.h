@@ -11,8 +11,8 @@
 namespace skyblip::traffic {
 
 struct RangeRow {
-    uint32_t addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     model::Source source{model::Source::AdslDirect};
     int32_t ground_m{0};
     int32_t up_m{0};

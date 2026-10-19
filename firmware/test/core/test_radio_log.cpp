@@ -9,11 +9,11 @@ using namespace skyblip;
 
 namespace {
 
-radio::Entry heard(uint32_t addr, uint32_t at_s) {
+radio::Entry heard(uint32_t address, uint32_t at_s) {
     radio::Entry e{};
     e.event = radio::Event::Received;
     e.source = model::Source::AdslDirect;
-    e.addr = addr;
+    e.address = address;
     e.at_s = at_s;
     e.rssi_dbm = -87;
     e.rssi_valid = true;
@@ -35,9 +35,9 @@ TEST_CASE("radio log: the burst that just happened is the one at the top") {
     log.record(heard(0xCCCCCC, 12));
 
     REQUIRE(log.count() == 3);
-    CHECK(log.newest(0).addr == 0xCCCCCC);
-    CHECK(log.newest(1).addr == 0xBBBBBB);
-    CHECK(log.newest(2).addr == 0xAAAAAA);
+    CHECK(log.newest(0).address == 0xCCCCCC);
+    CHECK(log.newest(1).address == 0xBBBBBB);
+    CHECK(log.newest(2).address == 0xAAAAAA);
 }
 
 // What falls off the bottom of the screen is gone: the page is a tape, not a history.
@@ -47,8 +47,8 @@ TEST_CASE("radio log: past capacity the oldest burst is the one dropped") {
         log.record(heard(static_cast<uint32_t>(i), static_cast<uint32_t>(i)));
 
     CHECK(log.count() == radio::Log::kCapacity);
-    CHECK(log.newest(0).addr == radio::Log::kCapacity + 4);
-    CHECK(log.newest(radio::Log::kCapacity - 1).addr == 5);
+    CHECK(log.newest(0).address == radio::Log::kCapacity + 4);
+    CHECK(log.newest(radio::Log::kCapacity - 1).address == 5);
 }
 
 TEST_CASE("radio log: every outcome a burst can have is one it keeps") {
@@ -121,7 +121,7 @@ TEST_CASE("radio log: a cleared log holds nothing and starts over") {
 
     log.record(heard(0xBBBBBB, 11));
     REQUIRE(log.count() == 1);
-    CHECK(log.newest(0).addr == 0xBBBBBB);
+    CHECK(log.newest(0).address == 0xBBBBBB);
 }
 
 // Staging that ends after the instant is what keys a burst late, so the sign is the finding.
