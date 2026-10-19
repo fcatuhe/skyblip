@@ -87,12 +87,12 @@ uint8_t pflau_gps(const model::Ownship& own) {
 }
 
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
-                 int n_targets, const model::AircraftObservation* threat, uint8_t alarm_level,
+                 int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t rel_bearing_deg, int32_t rel_alt_m, int32_t rel_dist_m) {
     (void)capacity;
     int n = 0;
     n += format_string(out + n, "$PFLAU,");
-    n += format_uint(out + n, static_cast<uint32_t>(n_targets));
+    n += format_uint(out + n, static_cast<uint32_t>(target_count));
     out[n++] = ',';
     out[n++] = transmitting ? '1' : '0';
     out[n++] = ',';

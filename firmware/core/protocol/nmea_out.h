@@ -28,7 +28,7 @@ uint8_t pflau_gps(const model::Ownship& own);
 
 // INFO: fc 19sep26 the TX field is whether a burst can leave now: core/timing/transmit.h
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
-                 int n_targets, const model::AircraftObservation* threat, uint8_t alarm_level,
+                 int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t rel_bearing_deg, int32_t rel_alt_m, int32_t rel_dist_m);
 
 // fix_valid follows the same binary own.fix_valid this device already keeps
