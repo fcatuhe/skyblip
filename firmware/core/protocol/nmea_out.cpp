@@ -41,7 +41,7 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                  const char* callsign) {
     (void)capacity;
     int32_t north_m, east_m, up_m;
-    if (!flight::relative_ned(own, target, north_m, east_m, up_m)) return 0;
+    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m)) return 0;
     int n = 0;
     n += format_string(out + n, "$PFLAA,");
     n += format_uint(out + n, alarm_level);

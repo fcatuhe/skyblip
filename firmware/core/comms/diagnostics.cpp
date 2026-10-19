@@ -9,29 +9,29 @@ namespace skyblip::comms {
 
 namespace {
 
-int write_text(char* out, const char* s) {
-    int n = 0;
-    while (s[n] != 0) {
-        out[n] = s[n];
-        n++;
+int write_text(char* out, const char* text) {
+    int written = 0;
+    while (text[written] != 0) {
+        out[written] = text[written];
+        written++;
     }
-    return n;
+    return written;
 }
 
-int write_long(char* out, long v) {
-    const int n = frame::number_bytes(v);
+int write_long(char* out, long value) {
+    const int written = frame::number_bytes(value);
     unsigned long magnitude =
-        v < 0 ? static_cast<unsigned long>(-v) : static_cast<unsigned long>(v);
-    int at = n;
+        value < 0 ? static_cast<unsigned long>(-value) : static_cast<unsigned long>(value);
+    int at = written;
     do {
         out[--at] = static_cast<char>('0' + magnitude % 10);
         magnitude /= 10;
     } while (magnitude != 0);
-    if (v < 0) out[0] = '-';
-    return n;
+    if (value < 0) out[0] = '-';
+    return written;
 }
 
-const char* bool_text(bool v) { return v ? "true" : "false"; }
+const char* boolean_text(bool value) { return value ? "true" : "false"; }
 
 // The saturating counter both link reports share, and why they have to
 // (core/comms/frame_budget.h).
@@ -60,109 +60,110 @@ DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char*
 // a different name. Every value is a plain read of something the device already
 // keeps: nothing here computes, samples or clears anything.
 void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only) {
-    const bool sys = only == nullptr || *only == Group::Sys;
+    const bool system = only == nullptr || *only == Group::System;
     const bool radio = only == nullptr || *only == Group::Radio;
     const bool traffic = only == nullptr || *only == Group::Traffic;
     const bool gnss = only == nullptr || *only == Group::Gnss;
     const bool power = only == nullptr || *only == Group::Power;
 
-    if (sys) {
-        add_int(Group::Sys, "up_s", counter(diagnostics.uptime_s));
-        add_text(Group::Sys, "reset", power::to_string(diagnostics.reset));
-        add_int(Group::Sys, "link_drops", counter(diagnostics.link_drops));
+    if (system) {
+        add_integer(Group::System, "up_s", counter(diagnostics.uptime_s));
+        add_string(Group::System, "reset", power::to_string(diagnostics.reset));
+        add_integer(Group::System, "link_drops", counter(diagnostics.link_drops));
     }
 
     if (radio) {
-        add_int(Group::Radio, "noise_dbm", diagnostics.noise_dbm);
-        add_int(Group::Radio, "duty_permille", counter(diagnostics.duty_permille));
-        add_int(Group::Radio, "rx_ok", counter(diagnostics.rx_ok));
-        add_int(Group::Radio, "rx_bad", counter(diagnostics.rx_bad));
-        add_int(Group::Radio, "rx_wait", counter(diagnostics.rx_wait));
-        add_int(Group::Radio, "rx_type", counter(diagnostics.rx_type));
-        add_int(Group::Radio, "rx_unframed", counter(diagnostics.rx_unframed));
-        add_int(Group::Radio, "rx_miskeyed", counter(diagnostics.rx_miskeyed));
-        add_int(Group::Radio, "rx_noise", counter(diagnostics.rx_noise));
-        add_int(Group::Radio, "rx_named", counter(diagnostics.rx_named));
-        add_int(Group::Radio, "tx_ok", counter(diagnostics.tx_ok));
-        add_int(Group::Radio, "tx_lost", counter(diagnostics.tx_lost));
-        add_int(Group::Radio, "tx_named", counter(diagnostics.tx_named));
-        add_int(Group::Radio, "tx_keyed_us", diagnostics.tx_keyed_us);
-        add_int(Group::Radio, "tx_span_us", diagnostics.tx_span_us);
+        add_integer(Group::Radio, "noise_dbm", diagnostics.noise_dbm);
+        add_integer(Group::Radio, "duty_permille", counter(diagnostics.duty_permille));
+        add_integer(Group::Radio, "rx_ok", counter(diagnostics.rx_ok));
+        add_integer(Group::Radio, "rx_bad", counter(diagnostics.rx_bad));
+        add_integer(Group::Radio, "rx_wait", counter(diagnostics.rx_wait));
+        add_integer(Group::Radio, "rx_type", counter(diagnostics.rx_type));
+        add_integer(Group::Radio, "rx_unframed", counter(diagnostics.rx_unframed));
+        add_integer(Group::Radio, "rx_miskeyed", counter(diagnostics.rx_miskeyed));
+        add_integer(Group::Radio, "rx_noise", counter(diagnostics.rx_noise));
+        add_integer(Group::Radio, "rx_named", counter(diagnostics.rx_named));
+        add_integer(Group::Radio, "tx_ok", counter(diagnostics.tx_ok));
+        add_integer(Group::Radio, "tx_lost", counter(diagnostics.tx_lost));
+        add_integer(Group::Radio, "tx_named", counter(diagnostics.tx_named));
+        add_integer(Group::Radio, "tx_keyed_us", diagnostics.tx_keyed_us);
+        add_integer(Group::Radio, "tx_span_us", diagnostics.tx_span_us);
         // The range gate's refusals read out with the radio and not with the
         // table, because what they measure is this receiver's link budget: a rate
         // that climbs is a decoder correcting a frame into a position no radio
         // this size could have heard (core/traffic/sanity.h).
-        add_int(Group::Radio, "range_refused", counter(diagnostics.range_refused));
-        add_bool(Group::Radio, "dio1_armed", diagnostics.dio1_armed);
-        add_int(Group::Radio, "dio1_edges", counter(diagnostics.dio1_edges));
-        add_int(Group::Radio, "dio1_missed", counter(diagnostics.dio1_missed));
+        add_integer(Group::Radio, "range_refused", counter(diagnostics.range_refused));
+        add_boolean(Group::Radio, "dio1_armed", diagnostics.dio1_armed);
+        add_integer(Group::Radio, "dio1_edges", counter(diagnostics.dio1_edges));
+        add_integer(Group::Radio, "dio1_missed", counter(diagnostics.dio1_missed));
     }
 
     if (traffic) {
-        add_int(Group::Traffic, "tracked", counter(diagnostics.tracked));
-        add_int(Group::Traffic, "alarm", diagnostics.alarm);
+        add_integer(Group::Traffic, "tracked", counter(diagnostics.tracked));
+        add_integer(Group::Traffic, "alarm", diagnostics.alarm);
     }
 
     if (gnss) {
-        add_int(Group::Gnss, "fixes", counter(diagnostics.gnss_fixes));
-        add_bool(Group::Gnss, "valid", diagnostics.fix_valid);
+        add_integer(Group::Gnss, "fixes", counter(diagnostics.gnss_fixes));
+        add_boolean(Group::Gnss, "valid", diagnostics.fix_valid);
         // A receiver silently at another rate is a GNSS-less device that looks
         // fitted, and it is the top support case this part will generate.
-        add_int(Group::Gnss, "baud", counter(diagnostics.gnss_baud));
-        add_text(Group::Gnss, "config", ports::to_string(diagnostics.gnss_config));
-        add_int(Group::Gnss, "raises", counter(diagnostics.gnss_raises));
-        add_int(Group::Gnss, "raise_fallbacks", counter(diagnostics.gnss_raise_fallbacks));
+        add_integer(Group::Gnss, "baud", counter(diagnostics.gnss_baud));
+        add_string(Group::Gnss, "config", ports::to_string(diagnostics.gnss_config));
+        add_integer(Group::Gnss, "raises", counter(diagnostics.gnss_raises));
+        add_integer(Group::Gnss, "raise_fallbacks", counter(diagnostics.gnss_raise_fallbacks));
         // INFO: fc 19sep26 the phase a solution lands at, which kFixMaxAgeMs refuses a burst over
-        if (diagnostics.gnss_nav_valid) add_int(Group::Gnss, "nav_ms", diagnostics.gnss_nav_ms);
-        add_int(Group::Gnss, "overruns", counter(diagnostics.gnss_overruns));
-        add_bool(Group::Gnss, "identified", diagnostics.gnss_identified);
-        add_text(Group::Gnss, "firmware", diagnostics.gnss_firmware);
-        add_text(Group::Gnss, "reject", gnss::reject_name(diagnostics.gnss_reject));
-        add_int(Group::Gnss, "rejected", counter(diagnostics.gnss_rejected));
+        if (diagnostics.gnss_solution_phase_valid)
+            add_integer(Group::Gnss, "nav_ms", diagnostics.gnss_solution_phase_ms);
+        add_integer(Group::Gnss, "overruns", counter(diagnostics.gnss_overruns));
+        add_boolean(Group::Gnss, "identified", diagnostics.gnss_identified);
+        add_string(Group::Gnss, "firmware", diagnostics.gnss_firmware);
+        add_string(Group::Gnss, "reject", gnss::reject_name(diagnostics.gnss_reject));
+        add_integer(Group::Gnss, "rejected", counter(diagnostics.gnss_rejected));
         // Absent rather than zero: a device with no two consecutive fixes has no
         // residual, and 0 m is what a perfect one reports.
-        if (diagnostics.resid_valid) add_int(Group::Gnss, "resid_m", diagnostics.resid_m);
+        if (diagnostics.residual_valid) add_integer(Group::Gnss, "resid_m", diagnostics.residual_m);
     }
 
     if (power) {
-        add_int(Group::Power, "mv", diagnostics.battery.cell_mv);
-        add_int(Group::Power, "percent", diagnostics.battery.percent);
-        add_bool(Group::Power, "valid", diagnostics.battery.valid);
-        add_bool(Group::Power, "charging", diagnostics.battery.charging);
-        add_text(Group::Power, "level", power::to_string(diagnostics.level));
-        add_int(Group::Power, "supply_warnings", counter(diagnostics.supply_warnings));
-        add_int(Group::Power, "implausible", counter(diagnostics.battery_implausible));
+        add_integer(Group::Power, "mv", diagnostics.battery.cell_mv);
+        add_integer(Group::Power, "percent", diagnostics.battery.percent);
+        add_boolean(Group::Power, "valid", diagnostics.battery.valid);
+        add_boolean(Group::Power, "charging", diagnostics.battery.charging);
+        add_string(Group::Power, "level", power::to_string(diagnostics.level));
+        add_integer(Group::Power, "supply_warnings", counter(diagnostics.supply_warnings));
+        add_integer(Group::Power, "implausible", counter(diagnostics.battery_implausible));
         // Same rule as the status reply, and the same key: no reading is no key,
         // never a zero, because 0.0 C is a plausible hangar morning.
         if (diagnostics.die_valid)
-            add_int(Group::Power, "die_temp_c", whole_celsius(diagnostics.die_dc));
+            add_integer(Group::Power, "die_temp_c", whole_celsius(diagnostics.die_dc));
         if (diagnostics.charge != power::ChargeCondition::Unknown)
-            add_text(Group::Power, "charge", power::to_string(diagnostics.charge));
-        add_int(Group::Power, "charge_warnings", counter(diagnostics.charge_warnings));
+            add_string(Group::Power, "charge", power::to_string(diagnostics.charge));
+        add_integer(Group::Power, "charge_warnings", counter(diagnostics.charge_warnings));
     }
 }
 
-void DiagnosticsReport::add_int(Group group, const char* key, long value) {
+void DiagnosticsReport::add_integer(Group group, const char* key, long value) {
     if (count_ >= kMaxFields) return;
-    fields_[count_++] = Field{key, nullptr, value, Kind::Int, group};
+    fields_[count_++] = Field{key, nullptr, value, Kind::Integer, group};
     if (count_ == 1 || fields_[count_ - 2].group != group) line_count_++;
 }
 
-void DiagnosticsReport::add_bool(Group group, const char* key, bool value) {
+void DiagnosticsReport::add_boolean(Group group, const char* key, bool value) {
     if (count_ >= kMaxFields) return;
-    fields_[count_++] = Field{key, nullptr, value ? 1 : 0, Kind::Bool, group};
+    fields_[count_++] = Field{key, nullptr, value ? 1 : 0, Kind::Boolean, group};
     if (count_ == 1 || fields_[count_ - 2].group != group) line_count_++;
 }
 
-void DiagnosticsReport::add_text(Group group, const char* key, const char* value) {
+void DiagnosticsReport::add_string(Group group, const char* key, const char* value) {
     if (count_ >= kMaxFields) return;
-    fields_[count_++] = Field{key, value, 0, Kind::Text, group};
+    fields_[count_++] = Field{key, value, 0, Kind::String, group};
     if (count_ == 1 || fields_[count_ - 2].group != group) line_count_++;
 }
 
 const char* DiagnosticsReport::group_name(Group group) {
     switch (group) {
-        case Group::Sys: return "sys";
+        case Group::System: return "sys";
         case Group::Radio: return "radio";
         case Group::Traffic: return "traffic";
         case Group::Gnss: return "gnss";
@@ -173,9 +174,9 @@ const char* DiagnosticsReport::group_name(Group group) {
 
 int DiagnosticsReport::field_bytes(const Field& field) {
     switch (field.kind) {
-        case Kind::Int: return frame::int_field_bytes(field.key, field.value);
-        case Kind::Bool: return frame::bool_field_bytes(field.key);
-        case Kind::Text: return frame::text_field_bytes(field.key, field.text);
+        case Kind::Integer: return frame::integer_field_bytes(field.key, field.value);
+        case Kind::Boolean: return frame::boolean_field_bytes(field.key);
+        case Kind::String: return frame::string_field_bytes(field.key, field.text);
     }
     return 0;
 }
@@ -205,63 +206,65 @@ int DiagnosticsReport::line(int index, char* out, int capacity) const {
         // JSON.
         need += 2 + frame::text_bytes(field.key);
         switch (field.kind) {
-            case Kind::Int: need += frame::number_bytes(field.value); break;
-            case Kind::Bool: need += frame::text_bytes(bool_text(field.value != 0)); break;
-            case Kind::Text: need += frame::text_bytes(field.text) + 2; break;
+            case Kind::Integer: need += frame::number_bytes(field.value); break;
+            case Kind::Boolean: need += frame::text_bytes(boolean_text(field.value != 0)); break;
+            case Kind::String: need += frame::text_bytes(field.text) + 2; break;
         }
         end++;
     }
     if (need + 1 > capacity) return 0;
 
-    int n = write_text(out, group_name(group));
+    int written = write_text(out, group_name(group));
     for (int i = start; i < end; i++) {
         const Field& field = fields_[i];
-        out[n++] = ' ';
-        n += write_text(out + n, field.key);
-        out[n++] = '=';
+        out[written++] = ' ';
+        written += write_text(out + written, field.key);
+        out[written++] = '=';
         switch (field.kind) {
-            case Kind::Int: n += write_long(out + n, field.value); break;
-            case Kind::Bool: n += write_text(out + n, bool_text(field.value != 0)); break;
-            case Kind::Text:
-                out[n++] = '"';
-                n += write_text(out + n, field.text);
-                out[n++] = '"';
+            case Kind::Integer: written += write_long(out + written, field.value); break;
+            case Kind::Boolean:
+                written += write_text(out + written, boolean_text(field.value != 0));
+                break;
+            case Kind::String:
+                out[written++] = '"';
+                written += write_text(out + written, field.text);
+                out[written++] = '"';
                 break;
         }
     }
-    out[n] = 0;
-    return n;
+    out[written] = 0;
+    return written;
 }
 
 // Asked before the first frame goes out, so the answer is all or nothing: a bench
 // holding four frames of a five-frame dump, with no fifth one coming, has been
 // told a fault it cannot see is absent.
-bool DiagnosticsReport::fits(int payload) const {
+bool DiagnosticsReport::fits(int payload_bytes) const {
     int widest_field = 0;
     int widest_group = 0;
     for (int i = 0; i < count_; i++) {
         const int bytes = field_bytes(fields_[i]);
         widest_field = std::max(bytes, widest_field);
-        const int group = frame::text_field_bytes("group", group_name(fields_[i].group));
+        const int group = frame::string_field_bytes("group", group_name(fields_[i].group));
         widest_group = std::max(group, widest_group);
     }
-    frame::Budget budget(payload);
-    return budget.take(frame::text_field_bytes("cmd", command_)) && budget.take(widest_group) &&
-           budget.take(frame::int_field_bytes("part", count_)) &&
+    frame::Budget budget(payload_bytes);
+    return budget.take(frame::string_field_bytes("cmd", command_)) && budget.take(widest_group) &&
+           budget.take(frame::integer_field_bytes("part", count_)) &&
            budget.take(frame::kMoreFieldBytes) && budget.take(widest_field);
 }
 
-int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
+int DiagnosticsReport::next_frame(int payload_bytes, char* out, int capacity) {
     if (exhausted()) return 0;
 
-    int room = payload + 1;
+    int room = payload_bytes + 1;
     room = std::min(room, capacity);
 
     const Group group = fields_[at_].group;
     frame::Budget budget(room - 1);
-    budget.take(frame::text_field_bytes("cmd", command_));
-    budget.take(frame::text_field_bytes("group", group_name(group)));
-    budget.take(frame::int_field_bytes("part", part_));
+    budget.take(frame::string_field_bytes("cmd", command_));
+    budget.take(frame::string_field_bytes("group", group_name(group)));
+    budget.take(frame::integer_field_bytes("part", part_));
     budget.take(frame::kMoreFieldBytes);
     int packed = 0;
     while (at_ + packed < count_ && fields_[at_ + packed].group == group &&
@@ -278,9 +281,9 @@ int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         switch (field.kind) {
-            case Kind::Int: writer.add_integer(field.key, field.value); break;
-            case Kind::Bool: writer.add_boolean(field.key, field.value != 0); break;
-            case Kind::Text: writer.add_string(field.key, field.text); break;
+            case Kind::Integer: writer.add_integer(field.key, field.value); break;
+            case Kind::Boolean: writer.add_boolean(field.key, field.value != 0); break;
+            case Kind::String: writer.add_string(field.key, field.text); break;
         }
     }
     const int length = writer.finish();

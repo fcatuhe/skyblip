@@ -28,10 +28,10 @@ constexpr uint8_t kBootFlagProfileRecorded = 1u << 2;
 
 struct Boot {
     uint32_t capabilities{0};
-    uint32_t fw_build{0};
-    uint16_t fw_revision{0};
-    uint8_t fw_major{0};
-    uint8_t fw_minor{0};
+    uint32_t firmware_build{0};
+    uint16_t firmware_revision{0};
+    uint8_t firmware_major{0};
+    uint8_t firmware_minor{0};
     power::ResetReason reset{power::ResetReason::Unknown};
     dfu::ImageState image_state{dfu::ImageState::Confirmed};
     Profile profile{Profile::Full};
@@ -58,15 +58,15 @@ struct Config {
 };
 
 constexpr uint8_t kGnssFlagFixValid = 1u << 2;
-constexpr uint8_t kGnssFlagResidValid = 1u << 3;
+constexpr uint8_t kGnssFlagResidualValid = 1u << 3;
 constexpr uint8_t kGnssFlagPpsLocked = 1u << 4;
 constexpr uint8_t kGnssFlagGeoidMeasured = 1u << 5;
 constexpr uint8_t kGnssFlagTxSettled = 1u << 6;
 constexpr uint8_t kGnssFlagLevelsFresh = 1u << 7;
 
 struct Gnss {
-    uint16_t nav_ms{0};
-    uint16_t resid_m{0};
+    uint16_t solution_phase_ms{0};
+    uint16_t residual_m{0};
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
     uint32_t stage_s{0};
@@ -76,7 +76,7 @@ struct Gnss {
     gnss::FixReject reject{gnss::FixReject::None};
     gnss::Stage stage{gnss::Stage::Silent};
     bool fix_valid{false};
-    bool resid_valid{false};
+    bool residual_valid{false};
     bool pps_locked{false};
     bool geoid_measured{false};
     bool tx_settled{false};

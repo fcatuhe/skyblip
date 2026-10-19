@@ -183,7 +183,8 @@ void ScreenService::render(uint32_t now_ms) {
                     const model::AircraftObservation observation =
                         flight::carried_to(t->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
-                    if (!flight::relative_ned(own_now, observation, north, east, up)) continue;
+                    if (!flight::relative_north_east_up(own_now, observation, north, east, up))
+                        continue;
                     targets_[n].north_m = north;
                     targets_[n].east_m = east;
                     targets_[n].up_m = up;

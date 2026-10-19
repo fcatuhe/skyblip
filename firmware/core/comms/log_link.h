@@ -38,7 +38,7 @@ const char* log_store_name(LogStore store);
 struct LogChunkSpan {
     uint32_t from{0};
     int records{0};
-    bool eof{false};
+    bool ends_session{false};
 };
 
 struct LogWindow {
@@ -47,7 +47,7 @@ struct LogWindow {
     int records_per_chunk{0};
     int chunks{0};
 
-    LogChunkSpan at(int nth) const;
+    LogChunkSpan at(int chunk) const;
 };
 
 LogWindow plan_log_window(uint32_t from, uint32_t count, int records_per_chunk,
@@ -86,15 +86,15 @@ constexpr int kLogStoreFieldBytes = 20;
 int log_records_per_chunk(int payload_bytes, LogStore store = LogStore::Flights);
 
 // Returns the number of characters written, excluding the terminator.
-int format_log_ack(char* out, int capacity, bool ok, const char* reason,
-                   LogStore store = LogStore::Flights);
+int format_log_acknowledgement(char* out, int capacity, bool accepted, const char* reason,
+                               LogStore store = LogStore::Flights);
 int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated,
                      LogStore store = LogStore::Flights);
 int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
                        uint32_t records, bool closed, bool truncated,
                        LogStore store = LogStore::Flights);
 int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from,
-                     const uint8_t* raw, int record_count, bool eof,
+                     const uint8_t* records, int record_count, bool ends_session,
                      LogStore store = LogStore::Flights);
 
 // Standard base64, no padding omitted, no line breaks. Returns characters

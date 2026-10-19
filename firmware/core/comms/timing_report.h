@@ -21,12 +21,12 @@ class TimingReport {
     // payload. Asked before the first frame goes out so the answer is all or
     // nothing: a bench left holding two frames of a three-frame report, with no
     // third one coming, has evidence with a hole in it.
-    bool fits(int payload) const;
+    bool fits(int payload_bytes) const;
 
     // The next frame, written into out. Returns its length, or 0 when the payload
     // is too small to carry a single field - which is a refusal, not a short
     // frame. Advances only when a frame was produced.
-    int next_frame(int payload, char* out, int capacity);
+    int next_frame(int payload_bytes, char* out, int capacity);
 
    private:
     // One key and its value, measurable before it is written. text != nullptr
@@ -45,10 +45,10 @@ class TimingReport {
 
     void add(const char* key, const char* text, long value);
     // "key":value, excluding the comma that joins it to the field before it.
-    static int field_bytes(const Field& f);
+    static int field_bytes(const Field& field);
 
-    char pps_[kBucketsTextBytes]{};
-    char dwell_[kBucketsTextBytes]{};
+    char pps_buckets_[kBucketsTextBytes]{};
+    char dwell_buckets_[kBucketsTextBytes]{};
     Field fields_[kMaxFields]{};
     int count_{0};
     int at_{0};

@@ -10,10 +10,10 @@ using namespace skyblip;
 TEST_CASE("diag record: boot carries the image and the parts the corpus was taken on") {
     diagnostics::Boot in{};
     in.capabilities = 0x00000FAB;
-    in.fw_build = 41237;
-    in.fw_revision = 1290;
-    in.fw_major = 2;
-    in.fw_minor = 7;
+    in.firmware_build = 41237;
+    in.firmware_revision = 1290;
+    in.firmware_major = 2;
+    in.firmware_minor = 7;
     in.reset = power::ResetReason::Watchdog;
     in.image_state = dfu::ImageState::Probation;
     in.profile = diagnostics::Profile::FlightRun;
@@ -21,10 +21,10 @@ TEST_CASE("diag record: boot carries the image and the parts the corpus was take
 
     const diagnostics::Boot out = diagnostics_round_trip(in);
     CHECK(out.capabilities == in.capabilities);
-    CHECK(out.fw_build == in.fw_build);
-    CHECK(out.fw_revision == in.fw_revision);
-    CHECK(out.fw_major == in.fw_major);
-    CHECK(out.fw_minor == in.fw_minor);
+    CHECK(out.firmware_build == in.firmware_build);
+    CHECK(out.firmware_revision == in.firmware_revision);
+    CHECK(out.firmware_major == in.firmware_major);
+    CHECK(out.firmware_minor == in.firmware_minor);
     CHECK(out.reset == in.reset);
     CHECK(out.image_state == in.image_state);
     CHECK(out.profile == diagnostics::Profile::FlightRun);

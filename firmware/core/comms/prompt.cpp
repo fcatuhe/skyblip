@@ -9,7 +9,7 @@ const char* pending_title(Pending pending) {
         case Pending::Recovery: return "RECOVERY";
         case Pending::PowerOff: return "POWER OFF";
         case Pending::EraseLog: return "ERASE LOGS";
-        case Pending::GnssCold: return "GNSS RESET";
+        case Pending::GnssColdStart: return "GNSS RESET";
         case Pending::Register: return "ACTIVATE";
         case Pending::None: break;
     }
@@ -23,7 +23,7 @@ const char* pending_detail(Pending pending) {
         case Pending::Recovery: return "REBOOT INTO THE USB BOOTLOADER";
         case Pending::PowerOff: return "SHUT THE DEVICE DOWN";
         case Pending::EraseLog: return "DELETE EVERY FLIGHT ON THE DEVICE";
-        case Pending::GnssCold: return "THROW AWAY THE STORED SATELLITE DATA";
+        case Pending::GnssColdStart: return "THROW AWAY THE STORED SATELLITE DATA";
         case Pending::Register: return "SEND THE KEY OF THIS UNIT TO SKYBLIP.EU";
         case Pending::None: break;
     }

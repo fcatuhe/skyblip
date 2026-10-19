@@ -11,7 +11,7 @@ namespace skyblip::traffic {
 bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
               RangeRow& out) {
     int32_t north_m = 0, east_m = 0, up_m = 0;
-    if (!flight::relative_ned(own, observation, north_m, east_m, up_m)) return false;
+    if (!flight::relative_north_east_up(own, observation, north_m, east_m, up_m)) return false;
 
     out = RangeRow{};
     out.address = observation.address;

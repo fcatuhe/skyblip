@@ -65,14 +65,14 @@ struct Diagnostics {
     gnss::FixReject gnss_reject{gnss::FixReject::None};
     uint32_t gnss_rejected{0};
     uint32_t gnss_overruns{0};
-    uint16_t gnss_nav_ms{0};
-    bool gnss_nav_valid{false};
+    uint16_t gnss_solution_phase_ms{0};
+    bool gnss_solution_phase_valid{false};
     // The extrapolation the transmitter applies, measured against the fix that
     // closed the interval (products/skyblip_go/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
     // receiver rather than with the radio.
-    uint16_t resid_m{0};
-    bool resid_valid{false};
+    uint16_t residual_m{0};
+    bool residual_valid{false};
 
     uint32_t supply_warnings{0};
     uint32_t battery_implausible{0};
@@ -100,7 +100,7 @@ int whole_celsius(int16_t temperature_dc);
 // console lines or as link frames, and then thrown away.
 class DiagnosticsReport {
    public:
-    enum class Group : uint8_t { Sys, Radio, Traffic, Gnss, Power };
+    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power };
     static constexpr int kGroupCount = 5;
 
     // The widest console line any group can produce at its widest values, plus
@@ -127,12 +127,12 @@ class DiagnosticsReport {
     // The link surface: as many complete flat objects as the negotiated payload
     // needs, each carrying "cmd", "group", "part" and "more". A frame never mixes
     // two subsystems, so a reader that only wants one can stop at its group.
-    bool fits(int payload) const;
+    bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
-    int next_frame(int payload, char* out, int capacity);
+    int next_frame(int payload_bytes, char* out, int capacity);
 
    private:
-    enum class Kind : uint8_t { Int, Bool, Text };
+    enum class Kind : uint8_t { Integer, Boolean, String };
 
     struct Field {
         const char* key;
@@ -145,9 +145,9 @@ class DiagnosticsReport {
     static constexpr int kMaxFields = 47;
 
     void build(const Diagnostics& diagnostics, const Group* only);
-    void add_int(Group group, const char* key, long value);
-    void add_bool(Group group, const char* key, bool value);
-    void add_text(Group group, const char* key, const char* value);
+    void add_integer(Group group, const char* key, long value);
+    void add_boolean(Group group, const char* key, bool value);
+    void add_string(Group group, const char* key, const char* value);
     static int field_bytes(const Field& field);
     static const char* group_name(Group group);
     // Where the index-th line's fields start, or count_ when there is no such

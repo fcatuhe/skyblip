@@ -277,15 +277,15 @@ TEST_CASE("dfu: a key is named by its first four bytes, the way a page compares 
 
 // The SMP permission matrix off the silicon; the Zephyr hook pins the numbers with static_assert.
 namespace {
-constexpr uint8_t kRead = static_cast<uint8_t>(SmpOp::Read);
-constexpr uint8_t kWrite = static_cast<uint8_t>(SmpOp::Write);
-constexpr uint16_t kOs = static_cast<uint16_t>(SmpGroup::Os);
+constexpr uint8_t kRead = static_cast<uint8_t>(SmpOperation::Read);
+constexpr uint8_t kWrite = static_cast<uint8_t>(SmpOperation::Write);
+constexpr uint16_t kOperatingSystem = static_cast<uint16_t>(SmpGroup::OperatingSystem);
 constexpr uint16_t kImage = static_cast<uint16_t>(SmpGroup::Image);
 }  // namespace
 
 TEST_CASE("smp: every read passes, in or out of the upload window") {
     for (const bool window : {false, true}) {
-        CHECK(smp_permitted({kOs, kSmpOsEcho, kRead}, window));
+        CHECK(smp_permitted({kOperatingSystem, kSmpOperatingSystemEcho, kRead}, window));
         CHECK(smp_permitted({kImage, kSmpImageState, kRead}, window));
         CHECK(smp_permitted({kImage, kSmpImageUpload, kRead}, window));
         CHECK(smp_permitted({7, 3, kRead}, window));
@@ -302,17 +302,19 @@ TEST_CASE(
     for (const bool window : {false, true}) {
         CHECK_FALSE(smp_permitted({kImage, kSmpImageState, kWrite}, window));
         CHECK_FALSE(smp_permitted({kImage, kSmpImageErase, kWrite}, window));
-        CHECK_FALSE(smp_permitted({kOs, kSmpOsReset, kWrite}, window));
+        CHECK_FALSE(smp_permitted({kOperatingSystem, kSmpOperatingSystemReset, kWrite}, window));
         CHECK_FALSE(smp_permitted({7, 3, kWrite}, window));
     }
 }
 
 TEST_CASE(
     "smp: echo is a write a phone may always make, and a response opcode is never a request") {
-    CHECK(smp_permitted({kOs, kSmpOsEcho, kWrite}, false));
-    CHECK_FALSE(smp_permitted({kOs, kSmpOsEcho, static_cast<uint8_t>(SmpOp::WriteResponse)}, true));
-    CHECK_FALSE(
-        smp_permitted({kImage, kSmpImageUpload, static_cast<uint8_t>(SmpOp::ReadResponse)}, true));
+    CHECK(smp_permitted({kOperatingSystem, kSmpOperatingSystemEcho, kWrite}, false));
+    CHECK_FALSE(smp_permitted({kOperatingSystem, kSmpOperatingSystemEcho,
+                               static_cast<uint8_t>(SmpOperation::WriteResponse)},
+                              true));
+    CHECK_FALSE(smp_permitted(
+        {kImage, kSmpImageUpload, static_cast<uint8_t>(SmpOperation::ReadResponse)}, true));
 }
 
 TEST_CASE("dfu: the hub's image is reported as a word, or as the digest a page compares with") {

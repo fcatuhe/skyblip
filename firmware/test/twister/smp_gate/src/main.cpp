@@ -60,10 +60,10 @@ Reply decode(const uint8_t* payload, size_t len) {
     return reply;
 }
 
-Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOp op, const Body& body) {
+Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOperation operation, const Body& body) {
     uint8_t packet[kSmpHeaderBytes + sizeof(Body::bytes)]{};
     const uint16_t group_id = static_cast<uint16_t>(group);
-    packet[0] = static_cast<uint8_t>(op);
+    packet[0] = static_cast<uint8_t>(operation);
     packet[2] = static_cast<uint8_t>(body.len >> 8);
     packet[3] = static_cast<uint8_t>(body.len);
     packet[4] = static_cast<uint8_t>(group_id >> 8);
@@ -108,7 +108,7 @@ const uint8_t* image() {
 
 Reply upload_chunk(size_t off, size_t len) {
     return send(
-        dfu::SmpGroup::Image, dfu::kSmpImageUpload, dfu::SmpOp::Write,
+        dfu::SmpGroup::Image, dfu::kSmpImageUpload, dfu::SmpOperation::Write,
         body([&](zcbor_state_t* zse) {
             bool ok = zcbor_tstr_put_lit(zse, "off") && zcbor_size_put(zse, off) &&
                       zcbor_tstr_put_lit(zse, "data") &&
@@ -157,16 +157,17 @@ ZTEST(smp_gate, test_image_upload_reaches_the_handler_while_the_gate_is_open) {
 
 ZTEST(smp_gate, test_image_state_write_is_refused_inside_the_window) {
     open_gate();
-    const Reply reply = send(
-        dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOp::Write, body([](zcbor_state_t* zse) {
-            return zcbor_tstr_put_lit(zse, "confirm") && zcbor_bool_put(zse, true);
-        }));
+    const Reply reply =
+        send(dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOperation::Write,
+             body([](zcbor_state_t* zse) {
+                 return zcbor_tstr_put_lit(zse, "confirm") && zcbor_bool_put(zse, true);
+             }));
     zassert_true(refused(reply), "rc %d", reply.rc);
 }
 
 ZTEST(smp_gate, test_image_erase_is_refused_inside_the_window) {
     open_gate();
-    const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageErase, dfu::SmpOp::Write,
+    const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageErase, dfu::SmpOperation::Write,
                              body([](zcbor_state_t* zse) {
                                  return zcbor_tstr_put_lit(zse, "slot") && zcbor_uint32_put(zse, 1);
                              }));
@@ -175,13 +176,15 @@ ZTEST(smp_gate, test_image_erase_is_refused_inside_the_window) {
 
 ZTEST(smp_gate, test_os_reset_is_refused_inside_the_window) {
     open_gate();
-    const Reply reply = send(dfu::SmpGroup::Os, dfu::kSmpOsReset, dfu::SmpOp::Write, empty());
+    const Reply reply = send(dfu::SmpGroup::OperatingSystem, dfu::kSmpOperatingSystemReset,
+                             dfu::SmpOperation::Write, empty());
     zassert_true(refused(reply), "rc %d", reply.rc);
 }
 
 ZTEST(smp_gate, test_os_echo_is_answered_with_the_gate_closed) {
     const Reply reply =
-        send(dfu::SmpGroup::Os, dfu::kSmpOsEcho, dfu::SmpOp::Write, body([](zcbor_state_t* zse) {
+        send(dfu::SmpGroup::OperatingSystem, dfu::kSmpOperatingSystemEcho, dfu::SmpOperation::Write,
+             body([](zcbor_state_t* zse) {
                  return zcbor_tstr_put_lit(zse, "d") && zcbor_tstr_put_lit(zse, "skyblip");
              }));
     zassert_false(reply.rc_valid, "rc %d", reply.rc);
@@ -189,7 +192,8 @@ ZTEST(smp_gate, test_os_echo_is_answered_with_the_gate_closed) {
 }
 
 ZTEST(smp_gate, test_image_state_read_is_answered_with_the_gate_closed) {
-    const Reply reply = send(dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOp::Read, empty());
+    const Reply reply =
+        send(dfu::SmpGroup::Image, dfu::kSmpImageState, dfu::SmpOperation::Read, empty());
     zassert_true(reply.answered);
     zassert_false(refused(reply), "a read was refused");
 }

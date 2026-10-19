@@ -155,8 +155,8 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
     return static_cast<uint32_t>(iabs64(north) + iabs64(east) + iabs64(up));
 }
 
-bool relative_ned(const model::Ownship& own, const model::AircraftObservation& target,
-                  int32_t& north_m, int32_t& east_m, int32_t& up_m) {
+bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,
+                            int32_t& north_m, int32_t& east_m, int32_t& up_m) {
     if (!own.fix_valid || !target.position_valid) return false;
     int64_t dlat = static_cast<int64_t>(target.latitude_1e7) - own.latitude_1e7;
     int64_t dlon =

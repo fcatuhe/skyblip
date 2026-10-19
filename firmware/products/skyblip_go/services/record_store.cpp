@@ -256,8 +256,9 @@ uint32_t RecordStore::sessions_within(uint32_t sectors) const {
 void RecordStore::reply(uint16_t link_session, int bytes) { pool_.send(link_session, bytes); }
 
 void RecordStore::ack(uint16_t link_session, bool ok, const char* reason) {
-    reply(link_session, comms::format_log_ack(pool_.reply_buffer(), pool_.reply_cap(link_session),
-                                              ok, reason, selector()));
+    reply(link_session,
+          comms::format_log_acknowledgement(pool_.reply_buffer(), pool_.reply_cap(link_session), ok,
+                                            reason, selector()));
 }
 
 void RecordStore::serve(const comms::LogRequest& request) {
@@ -333,10 +334,11 @@ void RecordStore::continue_read() {
             ack(link_session, false, "read_failed");
             return;
         }
-        const bool sent = pool_.send(
-            link_session, comms::format_log_chunk(
-                              pool_.reply_buffer(), pool_.reply_cap(link_session), reading_.session,
-                              span.from, pool_.chunk_buffer(), span.records, span.eof, selector()));
+        const bool sent =
+            pool_.send(link_session,
+                       comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(link_session),
+                                               reading_.session, span.from, pool_.chunk_buffer(),
+                                               span.records, span.ends_session, selector()));
         reading_.next++;
         if (!sent || reading_.next == reading_.window.chunks) reading_.active = false;
     }

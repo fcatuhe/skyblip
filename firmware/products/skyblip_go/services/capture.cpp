@@ -51,10 +51,10 @@ void CaptureService::record_boot(uint32_t now_ms) {
     value.capabilities = static_cast<uint32_t>(context_.roles.capabilities);
     ports::ImageVersion running{};
     if (context_.roles.dfu.running_version(running)) {
-        value.fw_build = running.build;
-        value.fw_revision = running.revision;
-        value.fw_major = running.major;
-        value.fw_minor = running.minor;
+        value.firmware_build = running.build;
+        value.firmware_revision = running.revision;
+        value.firmware_major = running.major;
+        value.firmware_minor = running.minor;
     }
     value.reset = config_.reset_reason();
     value.image_state = config_.image_state();

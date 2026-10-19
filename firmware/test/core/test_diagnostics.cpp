@@ -59,10 +59,10 @@ Diagnostics busy_device() {
     d.gnss_reject = gnss::FixReject::Stale;
     d.gnss_rejected = 6;
     d.gnss_overruns = 0;
-    d.gnss_nav_ms = 98;
-    d.gnss_nav_valid = true;
-    d.resid_m = 13;
-    d.resid_valid = true;
+    d.gnss_solution_phase_ms = 98;
+    d.gnss_solution_phase_valid = true;
+    d.residual_m = 13;
+    d.residual_valid = true;
 
     d.battery.cell_mv = 3812;
     d.battery.percent = 64;
@@ -117,10 +117,10 @@ Diagnostics widest_device() {
     d.gnss_reject = gnss::FixReject::NoSolution;  // "NO SOLUTION"
     d.gnss_rejected = 0xFFFFFFFFu;
     d.gnss_overruns = 0xFFFFFFFFu;
-    d.gnss_nav_ms = 999;
-    d.gnss_nav_valid = true;
-    d.resid_m = 65535;
-    d.resid_valid = true;
+    d.gnss_solution_phase_ms = 999;
+    d.gnss_solution_phase_valid = true;
+    d.residual_m = 65535;
+    d.residual_valid = true;
     d.battery.cell_mv = 65535;
     d.battery.percent = 255;
     d.level = power::PowerLevel::Critical;  // "CRITICAL"
@@ -269,7 +269,7 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
 
 TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
     Diagnostics d = busy_device();
-    d.resid_valid = false;
+    d.residual_valid = false;
     d.die_valid = false;
 
     const std::string text = console(d);
@@ -281,9 +281,9 @@ TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
 
     // 0 m of residual and 0 C of die temperature are both real readings a device
     // can produce, which is why absent is not spelled as zero.
-    d.resid_valid = true;
+    d.residual_valid = true;
     d.die_valid = true;
-    d.resid_m = 0;
+    d.residual_m = 0;
     d.die_dc = 0;
     CHECK(has(console(d), "resid_m=0"));
     CHECK(has(console(d), "die_temp_c=0"));

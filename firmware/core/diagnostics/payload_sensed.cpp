@@ -4,8 +4,8 @@ namespace skyblip::diagnostics {
 
 Record record_of(const Gnss& value, const Instant& at) {
     Record r = framed(Type::Gnss, at);
-    put_u16(r.payload + 0, value.nav_ms);
-    put_u16(r.payload + 2, value.resid_m);
+    put_u16(r.payload + 0, value.solution_phase_ms);
+    put_u16(r.payload + 2, value.residual_m);
     put_u16(r.payload + 4, value.hdop_e2);
     put_u16(r.payload + 6, value.vdop_e2);
     put_u16(r.payload + 8, clamp_u16(value.stage_s));
@@ -15,7 +15,7 @@ Record record_of(const Gnss& value, const Instant& at) {
     r.payload[13] = static_cast<uint8_t>(value.reject);
     r.payload[14] = static_cast<uint8_t>(value.stage);
     set_flag(r.flags, kGnssFlagFixValid, value.fix_valid);
-    set_flag(r.flags, kGnssFlagResidValid, value.resid_valid);
+    set_flag(r.flags, kGnssFlagResidualValid, value.residual_valid);
     set_flag(r.flags, kGnssFlagPpsLocked, value.pps_locked);
     set_flag(r.flags, kGnssFlagGeoidMeasured, value.geoid_measured);
     set_flag(r.flags, kGnssFlagTxSettled, value.tx_settled);
@@ -26,8 +26,8 @@ Record record_of(const Gnss& value, const Instant& at) {
 bool read(const Record& record, Gnss& out) {
     if (record.type != Type::Gnss) return false;
     out = Gnss{};
-    out.nav_ms = get_u16(record.payload + 0);
-    out.resid_m = get_u16(record.payload + 2);
+    out.solution_phase_ms = get_u16(record.payload + 0);
+    out.residual_m = get_u16(record.payload + 2);
     out.hdop_e2 = get_u16(record.payload + 4);
     out.vdop_e2 = get_u16(record.payload + 6);
     out.stage_s = get_u16(record.payload + 8);
@@ -37,7 +37,7 @@ bool read(const Record& record, Gnss& out) {
     out.reject = static_cast<gnss::FixReject>(record.payload[13]);
     out.stage = static_cast<gnss::Stage>(record.payload[14]);
     out.fix_valid = record.flagged(kGnssFlagFixValid);
-    out.resid_valid = record.flagged(kGnssFlagResidValid);
+    out.residual_valid = record.flagged(kGnssFlagResidualValid);
     out.pps_locked = record.flagged(kGnssFlagPpsLocked);
     out.geoid_measured = record.flagged(kGnssFlagGeoidMeasured);
     out.tx_settled = record.flagged(kGnssFlagTxSettled);

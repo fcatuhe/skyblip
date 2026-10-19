@@ -38,7 +38,7 @@ struct SlotImage {
 Outcome outcome(const UpdateRecord& record, const SlotImage& running,
                 const std::optional<SlotImage>& staged);
 
-int compare(const ports::ImageVersion& a, const ports::ImageVersion& b);
+int compare(const ports::ImageVersion& left, const ports::ImageVersion& right);
 
 const char* version_refusal(const ports::ImageVersion& running, const ports::ImageVersion& incoming,
                             bool downgrade_allowed);

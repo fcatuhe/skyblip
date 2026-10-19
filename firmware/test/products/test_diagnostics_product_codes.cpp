@@ -57,7 +57,7 @@ uint8_t wire(comms::Pending value) {
         case comms::Pending::Recovery: return 4;
         case comms::Pending::PowerOff: return 5;
         case comms::Pending::EraseLog: return 6;
-        case comms::Pending::GnssCold: return 7;
+        case comms::Pending::GnssColdStart: return 7;
         case comms::Pending::Register: return 8;
     }
     return kUnpinned;

@@ -11,44 +11,44 @@
 
 namespace skyblip::comms::frame {
 
-inline int text_bytes(const char* s) {
-    int n = 0;
-    while (s[n] != 0) n++;
-    return n;
+inline int text_bytes(const char* text) {
+    int bytes = 0;
+    while (text[bytes] != 0) bytes++;
+    return bytes;
 }
 
 // INFO: fc 06aug26 json::Writer takes long, 32-bit on the nRF52: past 2^31 a cast prints negative
-inline long counter(uint32_t v) {
+inline long counter(uint32_t value) {
     constexpr uint32_t kCeiling = 0x7FFFFFFFu;
-    return static_cast<long>(v > kCeiling ? kCeiling : v);
+    return static_cast<long>(value > kCeiling ? kCeiling : value);
 }
 
-inline int number_bytes(long v) {
-    int n = v < 0 ? 1 : 0;
+inline int number_bytes(long value) {
+    int bytes = value < 0 ? 1 : 0;
     unsigned long magnitude =
-        v < 0 ? static_cast<unsigned long>(-v) : static_cast<unsigned long>(v);
+        value < 0 ? static_cast<unsigned long>(-value) : static_cast<unsigned long>(value);
     do {
-        n++;
+        bytes++;
         magnitude /= 10;
     } while (magnitude != 0);
-    return n;
+    return bytes;
 }
 
 // "key": - the quotes and the colon, excluding the comma that joins this field
 // to the one before it.
 inline int key_bytes(const char* key) { return text_bytes(key) + 3; }
 
-inline int int_field_bytes(const char* key, long value) {
+inline int integer_field_bytes(const char* key, long value) {
     return key_bytes(key) + number_bytes(value);
 }
 
-inline int text_field_bytes(const char* key, const char* value) {
+inline int string_field_bytes(const char* key, const char* value) {
     return key_bytes(key) + text_bytes(value) + 2;
 }
 
 // "false", the longer of the two, so a field that ends up carrying true has a
 // byte to spare rather than a byte too few.
-inline int bool_field_bytes(const char* key) { return key_bytes(key) + 5; }
+inline int boolean_field_bytes(const char* key) { return key_bytes(key) + 5; }
 
 // "more":false, same reasoning.
 constexpr int kMoreFieldBytes = 6 + 1 + 5;
@@ -59,7 +59,7 @@ constexpr int kMoreFieldBytes = 6 + 1 + 5;
 // instead of the size of a local buffer.
 class Budget {
    public:
-    explicit Budget(int payload) : left_(payload - 2) {}
+    explicit Budget(int payload_bytes) : left_(payload_bytes - 2) {}
 
     bool take(int bytes) {
         const int need = bytes + (first_ ? 0 : 1);

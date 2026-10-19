@@ -12,7 +12,7 @@
 
 namespace skyblip::go {
 
-static_assert(flight::kLogContactSlots == traffic::TrafficTable::kCapacity,
+static_assert(flight::kLogTargetSlots == traffic::TrafficTable::kCapacity,
               "the flight log follows one contact per traffic table slot");
 
 class FlightLogService : public runtime::Service {

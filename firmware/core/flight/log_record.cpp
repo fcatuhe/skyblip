@@ -19,8 +19,8 @@ constexpr uint32_t kChecksummedBytes = kLogRecordBytes - 2;
 constexpr uint8_t kStatusFlagBatteryValid = 1u << 0;
 constexpr uint8_t kStatusFlagCharging = 1u << 1;
 constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
-constexpr uint8_t kContactFlagDismissed = 1u << 0;
-constexpr uint8_t kContactFlagInFormation = 1u << 1;
+constexpr uint8_t kTargetFlagDismissed = 1u << 0;
+constexpr uint8_t kTargetFlagInFormation = 1u << 1;
 
 int16_t clamp_i16(int32_t v) {
     if (v > 32767) return 32767;
@@ -89,7 +89,7 @@ void decode_status(const uint8_t* raw, LogStatus& out) {
     out.external_power = (raw[9] & kStatusFlagExternalPower) != 0;
 }
 
-void encode_contact(const LogContact& contact, uint8_t* out) {
+void encode_target(const LogTarget& contact, uint8_t* out) {
     const uint32_t address = contact.address & settings::kAddressMask;
     out[2] = static_cast<uint8_t>(address);
     out[3] = static_cast<uint8_t>(address >> 8);
@@ -104,13 +104,13 @@ void encode_contact(const LogContact& contact, uint8_t* out) {
     out[17] = contact.source;
     out[18] = static_cast<uint8_t>(contact.rssi_dbm);
     uint8_t flags = 0;
-    if (contact.dismissed) flags |= kContactFlagDismissed;
-    if (contact.in_formation) flags |= kContactFlagInFormation;
+    if (contact.dismissed) flags |= kTargetFlagDismissed;
+    if (contact.in_formation) flags |= kTargetFlagInFormation;
     out[19] = flags;
     put_u16(out + 20, contact.heard_s);
 }
 
-void decode_contact(const uint8_t* raw, LogContact& out) {
+void decode_target(const uint8_t* raw, LogTarget& out) {
     out.address = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
                   (static_cast<uint32_t>(raw[4]) << 16);
     out.address_mapping_table = raw[5];
@@ -122,8 +122,8 @@ void decode_contact(const uint8_t* raw, LogContact& out) {
     out.aircraft_category = raw[15];
     out.source = raw[17];
     out.rssi_dbm = static_cast<int8_t>(raw[18]);
-    out.dismissed = (raw[19] & kContactFlagDismissed) != 0;
-    out.in_formation = (raw[19] & kContactFlagInFormation) != 0;
+    out.dismissed = (raw[19] & kTargetFlagDismissed) != 0;
+    out.in_formation = (raw[19] & kTargetFlagInFormation) != 0;
     out.heard_s = get_u16(raw + 20);
 }
 
@@ -216,7 +216,7 @@ void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out) 
     if (event.kind == LogKind::Status)
         encode_status(event.status, out);
     else
-        encode_contact(event.contact, out);
+        encode_target(event.contact, out);
     out[kLogKindOffset] = static_cast<uint8_t>(kLogEventMark | static_cast<uint8_t>(event.kind));
     seal(out);
 }
@@ -233,7 +233,7 @@ Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out) 
     if (out.kind == LogKind::Status)
         decode_status(raw, out.status);
     else
-        decode_contact(raw, out.contact);
+        decode_target(raw, out.contact);
     return Status::Ok;
 }
 

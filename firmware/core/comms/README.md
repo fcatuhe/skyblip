@@ -42,7 +42,7 @@ What a support case reads lives where it is asked for. The address and the calls
 
 On an unactivated unit none of it is gated on the ground. Every other prompt is refused unless the flight state is positively `Ground`, and `Unknown`, a unit with no fix since boot, is not: activation on a bench indoors would always fail. A unit with no serial transmits nothing, so the gate would protect nothing, and its `Pending::Register` confirms, and survives a take-off, whatever the flight state. An activated unit transmits, so it owes the gate like every other command: `challenge`, `register` and `unlock` are refused `in_flight` unless it is on the ground, and its register prompt is cancelled at take-off. One press still cancels a prompt, thirty seconds still expire it, and a dropped link still takes it.
 
-Every identity refusal is written in `identity_link.cpp` as `refuse("word")`, and none as `ack(false, "word")` in `config.cpp`, so the server's activation page can grep its rows apart from the update page's:
+Every identity refusal is written in `identity_link.cpp` as `refuse("word")`, and none as `acknowledge(false, "word")` in `config.cpp`, so the server's activation page can grep its rows apart from the update page's:
 
 | Word | When |
 |---|---|

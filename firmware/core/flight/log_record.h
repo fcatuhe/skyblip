@@ -95,7 +95,7 @@ struct LogStatus {
     bool external_power{false};
 };
 
-struct LogContact {
+struct LogTarget {
     uint32_t address{0};
     uint8_t address_mapping_table{0};
     uint8_t aircraft_category{0};
@@ -115,7 +115,7 @@ struct LogEvent {
     LogKind kind{LogKind::Status};
     uint32_t utc_s{0};
     LogStatus status{};
-    LogContact contact{};
+    LogTarget contact{};
 };
 
 // Everything worth keeping out of the state the whole device already agrees on.

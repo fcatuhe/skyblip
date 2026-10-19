@@ -123,8 +123,8 @@ void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t no
     const model::Ownship& own = context_.state.own;
     const bus::GnssState& status = context_.state.gnss;
     diagnostics::Gnss sample{};
-    sample.nav_ms = status.solution_phase_ms;
-    sample.resid_m = own.prediction_residual_m;
+    sample.solution_phase_ms = status.solution_phase_ms;
+    sample.residual_m = own.prediction_residual_m;
     sample.hdop_e2 = own.hdop_e2;
     sample.vdop_e2 = own.vdop_e2;
     sample.stage_s = acquisition_.stage_ms(now_ms) / 1000;
@@ -134,7 +134,7 @@ void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t no
     sample.reject = status.reject;
     sample.stage = acquisition_.stage();
     sample.fix_valid = own.fix_valid;
-    sample.resid_valid = own.prediction_residual_valid;
+    sample.residual_valid = own.prediction_residual_valid;
     sample.pps_locked = context_.state.clock.pps_locked;
     sample.geoid_measured = own.geoid_measured;
     sample.tx_settled = own.tx_settled;

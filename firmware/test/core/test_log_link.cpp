@@ -182,11 +182,11 @@ TEST_CASE("log link: a read asks for a window of chunks and gets them back to ba
 
     const comms::LogWindow window = comms::plan_log_window(request.from, request.count, 12, 170);
     REQUIRE(window.chunks == 4);
-    for (int nth = 0; nth < window.chunks; nth++) {
-        const comms::LogChunkSpan span = window.at(nth);
-        CHECK(span.from == 24u + static_cast<uint32_t>(nth) * 12u);
+    for (int chunk = 0; chunk < window.chunks; chunk++) {
+        const comms::LogChunkSpan span = window.at(chunk);
+        CHECK(span.from == 24u + static_cast<uint32_t>(chunk) * 12u);
         CHECK(span.records == 12);
-        CHECK_FALSE(span.eof);
+        CHECK_FALSE(span.ends_session);
     }
 }
 
@@ -195,10 +195,10 @@ TEST_CASE("log link: a window stops at the end of the session rather than wrappi
     const comms::LogWindow window = comms::plan_log_window(156, comms::kMaxLogReadChunks, 12, 170);
     REQUIRE(window.chunks == 2);
     CHECK(window.at(0).records == 12);
-    CHECK_FALSE(window.at(0).eof);
+    CHECK_FALSE(window.at(0).ends_session);
     CHECK(window.at(1).from == 168u);
     CHECK(window.at(1).records == 2);
-    CHECK(window.at(1).eof);
+    CHECK(window.at(1).ends_session);
     // Nothing past the last chunk, whatever the window was asked for.
     CHECK(window.at(2).records == 0);
 
@@ -233,7 +233,8 @@ TEST_CASE("log link: every reply names the store it answers for") {
 
     REQUIRE(comms::format_log_chunk(buffer, sizeof(buffer), 7, 0, raw, 3, false, diagnostics) > 0);
     CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
-    REQUIRE(comms::format_log_ack(buffer, sizeof(buffer), false, "busy", diagnostics) > 0);
+    REQUIRE(comms::format_log_acknowledgement(buffer, sizeof(buffer), false, "busy", diagnostics) >
+            0);
     CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
     REQUIRE(comms::format_log_count(buffer, sizeof(buffer), 2, false, diagnostics) > 0);
     CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);

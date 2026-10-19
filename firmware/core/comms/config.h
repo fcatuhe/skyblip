@@ -31,7 +31,7 @@ enum class Pending : uint8_t {
     Recovery = 4,
     PowerOff = 5,
     EraseLog = 6,
-    GnssCold = 7,
+    GnssColdStart = 7,
     Register = 8
 };
 
@@ -109,8 +109,8 @@ class ConfigService {
     void close_upload_window() { upload_window_open_ = false; }
     bool receiving_firmware() const { return upload_window_open_; }
 
-    void on_link_up(const events::LinkUp& up);
-    void on_link_down(const events::LinkDown& down);
+    void on_link_up(const events::LinkUp& event);
+    void on_link_down(const events::LinkDown& event);
     void on_rx(const events::RxFrame& frame);
 
     // Whether anyone is listening. Exported because it is the one fact about
@@ -192,8 +192,8 @@ class ConfigService {
 
     Pending pending() const { return pending_; }
     const char* prompt_detail() const;
-    bool settings_dirty() const { return dirty_; }
-    void clear_dirty() { dirty_ = false; }
+    bool settings_dirty() const { return settings_dirty_; }
+    void clear_dirty() { settings_dirty_ = false; }
 
     // INFO: cf 02aug26 The panel's settings page edits the same struct this
     // service was handed, one validated field at a time, and this is how it
@@ -204,7 +204,7 @@ class ConfigService {
     // because a phone in a pocket has no proven presence and rewrites the whole
     // struct in one message. A press on the panel is presence itself and moves
     // one field, and alarm volume is a thing a pilot needs in the air.
-    void note_settings_changed() { dirty_ = true; }
+    void note_settings_changed() { settings_dirty_ = true; }
 
     // Why the device came up. Read once at boot by the shell, reported here so
     // a watchdog bite in the field is diagnosable without the panel in hand.
@@ -254,17 +254,17 @@ class ConfigService {
     Status reply_to(uint16_t session_id, const char* json, int length);
     Status broadcast(const char* json, int length);
     void refuse_unclaimed(uint16_t session_id);
-    void note_up(uint16_t session_id);
-    void note_down(uint16_t session_id);
-    bool up(uint16_t session_id) const;
-    int payload() const;
-    int payload_to(uint16_t session_id) const;
+    void note_connected(uint16_t session_id);
+    void note_disconnected(uint16_t session_id);
+    bool connected(uint16_t session_id) const;
+    int payload_bytes() const;
+    int payload_bytes_to(uint16_t session_id) const;
     void stage(Pending pending, const char* reason);
-    void ack(bool ok, const char* reason);
+    void acknowledge(bool accepted, const char* reason);
     void send_status();
     void send_defaults();
     void push_status();
-    int format_status(char* buffer, int cap);
+    int format_status(char* buffer, int capacity);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that
     // answers "get" and "status" answers "timing" from the one accumulator
     // core/timing::SlotTimingStats keeps, over the link the phone already has
@@ -289,12 +289,13 @@ class ConfigService {
     void challenge();
     void register_unit(const json::Reader& reader);
     void send_registration();
-    bool running_version_text(char* out, size_t cap) const;
+    bool running_version_text(char* out, size_t capacity) const;
     bool identity_refused_in_flight();
     void unlock(const json::Reader& reader);
-    void refuse(const char* reason) { ack(false, reason); }
-    template <class Report, class... Args>
-    void start_report(std::optional<Report>& report, int frame_cap, const Args&... args);
+    void refuse(const char* reason) { acknowledge(false, reason); }
+    template <class Report, class... Arguments>
+    void start_report(std::optional<Report>& report, int frame_bytes,
+                      const Arguments&... arguments);
     template <class Report>
     void continue_report(std::optional<Report>& report);
     void hold(uint16_t session_id, const char* json, int length);
@@ -327,7 +328,7 @@ class ConfigService {
     bool log_erase_requested_{false};
     bool gnss_cold_start_requested_{false};
     Pending pending_{Pending::None};
-    bool dirty_{false};
+    bool settings_dirty_{false};
     bool upload_window_open_{false};
     uint32_t now_ms_{0};
     uint32_t upload_window_opened_ms_{0};
@@ -340,14 +341,14 @@ class ConfigService {
                   "a report frame must be holdable");
     static_assert(kHeldFrameBytes >= IdentityLink::kRegistrationFrameBytes,
                   "a registration frame must be holdable");
-    char held_[kHeldFrameBytes]{};
+    char held_frame_[kHeldFrameBytes]{};
     int held_bytes_{0};
-    uint16_t held_to_{0};
+    uint16_t held_for_session_id_{0};
     uint32_t held_since_ms_{0};
     std::optional<DiagnosticsReport> diagnostics_report_{};
     std::optional<TimingReport> timing_report_{};
-    int report_payload_{0};
-    int report_frame_cap_{0};
+    int report_payload_bytes_{0};
+    int report_frame_bytes_{0};
     int pending_set_bytes_{0};
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};

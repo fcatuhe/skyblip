@@ -14,12 +14,12 @@
 namespace skyblip::platform::zephyr {
 namespace {
 
-static_assert(static_cast<uint8_t>(dfu::SmpOp::Read) == MGMT_OP_READ);
-static_assert(static_cast<uint8_t>(dfu::SmpOp::Write) == MGMT_OP_WRITE);
-static_assert(static_cast<uint16_t>(dfu::SmpGroup::Os) == MGMT_GROUP_ID_OS);
+static_assert(static_cast<uint8_t>(dfu::SmpOperation::Read) == MGMT_OP_READ);
+static_assert(static_cast<uint8_t>(dfu::SmpOperation::Write) == MGMT_OP_WRITE);
+static_assert(static_cast<uint16_t>(dfu::SmpGroup::OperatingSystem) == MGMT_GROUP_ID_OS);
 static_assert(static_cast<uint16_t>(dfu::SmpGroup::Image) == MGMT_GROUP_ID_IMAGE);
-static_assert(dfu::kSmpOsEcho == OS_MGMT_ID_ECHO);
-static_assert(dfu::kSmpOsReset == OS_MGMT_ID_RESET);
+static_assert(dfu::kSmpOperatingSystemEcho == OS_MGMT_ID_ECHO);
+static_assert(dfu::kSmpOperatingSystemReset == OS_MGMT_ID_RESET);
 static_assert(dfu::kSmpImageState == IMG_MGMT_ID_STATE);
 static_assert(dfu::kSmpImageUpload == IMG_MGMT_ID_UPLOAD);
 static_assert(dfu::kSmpImageErase == IMG_MGMT_ID_ERASE);

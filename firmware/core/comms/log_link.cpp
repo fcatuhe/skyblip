@@ -11,7 +11,7 @@ namespace {
 
 const char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-uint32_t non_negative(long v) { return v < 0 ? 0u : static_cast<uint32_t>(v); }
+uint32_t non_negative(long value) { return value < 0 ? 0u : static_cast<uint32_t>(value); }
 
 // INFO: fc 04aug26 json::Writer leaves out a field that will not fit whole, so a
 // reply built into too small a capacity is short but valid - which is exactly the
@@ -68,19 +68,19 @@ int log_records_per_chunk(int payload_bytes, LogStore store) {
 int base64_encode(const uint8_t* data, int bytes, char* out, int capacity) {
     const int needed = ((bytes + 2) / 3) * 4;
     if (needed + 1 > capacity) return -1;
-    int n = 0;
+    int written = 0;
     for (int i = 0; i < bytes; i += 3) {
-        const uint32_t b0 = data[i];
-        const uint32_t b1 = i + 1 < bytes ? data[i + 1] : 0;
-        const uint32_t b2 = i + 2 < bytes ? data[i + 2] : 0;
-        const uint32_t triple = (b0 << 16) | (b1 << 8) | b2;
-        out[n++] = kAlphabet[(triple >> 18) & 0x3F];
-        out[n++] = kAlphabet[(triple >> 12) & 0x3F];
-        out[n++] = i + 1 < bytes ? kAlphabet[(triple >> 6) & 0x3F] : '=';
-        out[n++] = i + 2 < bytes ? kAlphabet[triple & 0x3F] : '=';
+        const uint32_t first = data[i];
+        const uint32_t second = i + 1 < bytes ? data[i + 1] : 0;
+        const uint32_t third = i + 2 < bytes ? data[i + 2] : 0;
+        const uint32_t triple = (first << 16) | (second << 8) | third;
+        out[written++] = kAlphabet[(triple >> 18) & 0x3F];
+        out[written++] = kAlphabet[(triple >> 12) & 0x3F];
+        out[written++] = i + 1 < bytes ? kAlphabet[(triple >> 6) & 0x3F] : '=';
+        out[written++] = i + 2 < bytes ? kAlphabet[triple & 0x3F] : '=';
     }
-    out[n] = 0;
-    return n;
+    out[written] = 0;
+    return written;
 }
 
 LogRequest parse_log_request(const events::RxFrame& frame) {
@@ -132,22 +132,23 @@ LogWindow plan_log_window(uint32_t from, uint32_t count, int records_per_chunk,
     return window;
 }
 
-LogChunkSpan LogWindow::at(int nth) const {
+LogChunkSpan LogWindow::at(int chunk) const {
     LogChunkSpan span{};
-    if (nth < 0 || nth >= chunks) return span;
+    if (chunk < 0 || chunk >= chunks) return span;
     const uint32_t per_chunk = static_cast<uint32_t>(records_per_chunk);
-    span.from = from + static_cast<uint32_t>(nth) * per_chunk;
+    span.from = from + static_cast<uint32_t>(chunk) * per_chunk;
     const uint32_t left = session_records - span.from;
     span.records = static_cast<int>(left < per_chunk ? left : per_chunk);
-    span.eof = span.from + static_cast<uint32_t>(span.records) >= session_records;
+    span.ends_session = span.from + static_cast<uint32_t>(span.records) >= session_records;
     return span;
 }
 
-int format_log_ack(char* out, int capacity, bool ok, const char* reason, LogStore store) {
+int format_log_acknowledgement(char* out, int capacity, bool accepted, const char* reason,
+                               LogStore store) {
     json::Writer writer(out, capacity);
     writer.add_string("cmd", "log");
     if (!named_store(writer, store)) return 0;
-    writer.add_boolean("ack", ok);
+    writer.add_boolean("ack", accepted);
     if (reason != nullptr) writer.add_string("reason", reason);
     return finished(writer);
 }
@@ -184,10 +185,11 @@ int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, 
 }
 
 int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from,
-                     const uint8_t* raw, int record_count, bool eof, LogStore store) {
+                     const uint8_t* records, int record_count, bool ends_session, LogStore store) {
     char data[kLogChunkRawBytes * 4 / 3 + 8];
-    const int encoded = base64_encode(raw, record_count * static_cast<int>(flight::kLogRecordBytes),
-                                      data, static_cast<int>(sizeof(data)));
+    const int encoded =
+        base64_encode(records, record_count * static_cast<int>(flight::kLogRecordBytes), data,
+                      static_cast<int>(sizeof(data)));
     if (encoded < 0) return 0;
 
     json::Writer writer(out, capacity);
@@ -196,7 +198,7 @@ int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from
     writer.add_integer("session", session_id);
     writer.add_integer("from", static_cast<long>(from));
     writer.add_integer("n", record_count);
-    writer.add_boolean("eof", eof);
+    writer.add_boolean("eof", ends_session);
     writer.add_string("data", data);
     return finished(writer);
 }

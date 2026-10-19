@@ -40,7 +40,7 @@ TEST_CASE("diag record: the type tag is the corpus, and these numbers never move
 
 TEST_CASE("diag record: the header is written where a host decoder reads it") {
     diagnostics::Gnss value{};
-    value.nav_ms = 287;
+    value.solution_phase_ms = 287;
     const diagnostics::Record record = diagnostics::record_of(value, diagnostics_test_instant());
     uint8_t raw[diagnostics::kRecordBytes]{};
     diagnostics::encode_record(record, raw);

@@ -77,8 +77,8 @@ class DiagnosticsDump {
 
         d.gnss_fixes = state.flight.gnss_solutions;
         d.fix_valid = state.own.fix_valid;
-        d.resid_m = state.own.prediction_residual_m;
-        d.resid_valid = state.own.prediction_residual_valid;
+        d.residual_m = state.own.prediction_residual_m;
+        d.residual_valid = state.own.prediction_residual_valid;
 
         // The receiver's own answers, which nothing else on the device reads: a
         // unit talking at a rate the devicetree did not ask for, or one whose fixes
@@ -95,8 +95,8 @@ class DiagnosticsDump {
         d.gnss_reject = gnss.last_reject();
         d.gnss_rejected = gnss.rejected();
         d.gnss_overruns = gnss.port_overruns();
-        d.gnss_nav_ms = state.gnss.solution_phase_ms;
-        d.gnss_nav_valid = state.gnss.solution_phase_valid;
+        d.gnss_solution_phase_ms = state.gnss.solution_phase_ms;
+        d.gnss_solution_phase_valid = state.gnss.solution_phase_valid;
 
         // The two counters core/power keeps and acts on nothing for: comparator
         // firings, and readings the sanity floor threw away. They tell a bench a

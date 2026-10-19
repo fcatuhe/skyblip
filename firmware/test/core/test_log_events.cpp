@@ -25,8 +25,8 @@ flight::LogStatus cell(uint16_t cell_mv, uint8_t level, uint8_t tracked) {
     return s;
 }
 
-flight::LogContact glider(uint32_t address, uint16_t distance_m, uint8_t alarm) {
-    flight::LogContact c{};
+flight::LogTarget glider(uint32_t address, uint16_t distance_m, uint8_t alarm) {
+    flight::LogTarget c{};
     c.address = address;
     c.address_mapping_table = 6;
     c.aircraft_category = 2;
@@ -254,14 +254,14 @@ TEST_CASE("log events: a landing ends every encounter still running, after what 
     events.open();
     flight::LogEvent out[64];
 
-    for (int slot = 0; slot < flight::kLogContactSlots; slot++)
+    for (int slot = 0; slot < flight::kLogTargetSlots; slot++)
         events.heard(slot, glider(0x100000 + static_cast<uint32_t>(slot), 5000, 0), kBaseUtcS);
     events.heard(5, glider(0x100005, 2000, 1), kBaseUtcS + 1);
     events.close();
 
-    REQUIRE(drain(events, out, 64) == 1 + flight::kLogContactSlots);
+    REQUIRE(drain(events, out, 64) == 1 + flight::kLogTargetSlots);
     CHECK(out[0].kind == flight::LogKind::Alarm);
-    for (int i = 1; i <= flight::kLogContactSlots; i++)
+    for (int i = 1; i <= flight::kLogTargetSlots; i++)
         CHECK(out[i].kind == flight::LogKind::Encounter);
     CHECK(events.dropped() == 0);
 

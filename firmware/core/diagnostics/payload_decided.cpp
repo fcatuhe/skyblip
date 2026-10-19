@@ -5,10 +5,10 @@ namespace skyblip::diagnostics {
 Record record_of(const Boot& value, const Instant& at) {
     Record r = framed(Type::Boot, at);
     put_u32(r.payload + 0, value.capabilities);
-    put_u32(r.payload + 4, value.fw_build);
-    put_u16(r.payload + 8, value.fw_revision);
-    r.payload[10] = value.fw_major;
-    r.payload[11] = value.fw_minor;
+    put_u32(r.payload + 4, value.firmware_build);
+    put_u16(r.payload + 8, value.firmware_revision);
+    r.payload[10] = value.firmware_major;
+    r.payload[11] = value.firmware_minor;
     r.payload[12] = static_cast<uint8_t>(value.reset);
     r.payload[13] = static_cast<uint8_t>(value.image_state);
     r.payload[14] = static_cast<uint8_t>(value.profile);
@@ -20,10 +20,10 @@ bool read(const Record& record, Boot& out) {
     if (record.type != Type::Boot) return false;
     out = Boot{};
     out.capabilities = get_u32(record.payload + 0);
-    out.fw_build = get_u32(record.payload + 4);
-    out.fw_revision = get_u16(record.payload + 8);
-    out.fw_major = record.payload[10];
-    out.fw_minor = record.payload[11];
+    out.firmware_build = get_u32(record.payload + 4);
+    out.firmware_revision = get_u16(record.payload + 8);
+    out.firmware_major = record.payload[10];
+    out.firmware_minor = record.payload[11];
     out.reset = static_cast<power::ResetReason>(record.payload[12]);
     out.image_state = static_cast<dfu::ImageState>(record.payload[13]);
     out.profile = static_cast<Profile>(record.payload[14]);

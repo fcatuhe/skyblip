@@ -12,25 +12,27 @@ namespace skyblip::comms {
 namespace {
 constexpr long kSerialCeiling = 0xFFFF;
 
-template <size_t N>
-bool read_hex_field(const json::Reader& reader, const char* key, std::array<uint8_t, N>& out) {
-    char text[2 * N + 2] = {0};
-    return reader.get_string(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
+template <size_t Bytes>
+bool read_hex_field(const json::Reader& reader, const char* key, std::array<uint8_t, Bytes>& out) {
+    char text[2 * Bytes + 2] = {0};
+    return reader.get_string(key, text, sizeof(text)) &&
+           hex::read(text, ByteSpan(out.data(), Bytes));
 }
 
-template <size_t N>
-void write_hex_field(json::Writer& writer, const char* key, const std::array<uint8_t, N>& bytes) {
-    char text[2 * N + 1];
-    text[hex::write(ConstByteSpan(bytes.data(), N), text)] = 0;
+template <size_t Bytes>
+void write_hex_field(json::Writer& writer, const char* key,
+                     const std::array<uint8_t, Bytes>& bytes) {
+    char text[2 * Bytes + 1];
+    text[hex::write(ConstByteSpan(bytes.data(), Bytes), text)] = 0;
     writer.add_string(key, text);
 }
 }  // namespace
 
 // INFO: fc 18oct26 the server refuses a registration with no version, so none is ever sent
-bool ConfigService::running_version_text(char* out, size_t cap) const {
+bool ConfigService::running_version_text(char* out, size_t capacity) const {
     ports::ImageVersion running;
     if (dfu_ == nullptr || !dfu_->running_version(running)) return false;
-    return dfu::format_version(running, out, cap) > 0;
+    return dfu::format_version(running, out, capacity) > 0;
 }
 
 bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
@@ -91,7 +93,7 @@ void ConfigService::register_unit(const json::Reader& reader) {
         refuse("no_session");
         return;
     }
-    if (payload_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
+    if (payload_bytes_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
         refuse("small_mtu");
         return;
     }
@@ -187,7 +189,7 @@ void ConfigService::settle_unlock() {
         refuse("flash");
         return;
     }
-    ack(true, "unlock");
+    acknowledge(true, "unlock");
 }
 
 }  // namespace skyblip::comms

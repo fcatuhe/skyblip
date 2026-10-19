@@ -25,7 +25,7 @@ void ConfigService::tick(uint32_t now_ms) {
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptForgetMs) {
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
-        ack(false, "expired");
+        acknowledge(false, "expired");
     }
 }
 
@@ -38,7 +38,7 @@ void ConfigService::set_flight_state(flight::FlightState state) {
         if (pending_ != Pending::None && !register_exempt()) {
             pending_ = Pending::None;
             pending_set_bytes_ = 0;
-            ack(false, "in_flight");
+            acknowledge(false, "in_flight");
         }
     }
     const bool changed = state != flight_state_;
@@ -47,18 +47,19 @@ void ConfigService::set_flight_state(flight::FlightState state) {
     if (changed && link_up()) push_status();
 }
 
-bool ConfigService::up(uint16_t session_id) const {
+bool ConfigService::connected(uint16_t session_id) const {
     for (int i = 0; i < connected_count_; i++)
         if (connected_sessions_[i] == session_id) return true;
     return false;
 }
 
-void ConfigService::note_up(uint16_t session_id) {
-    if (up(session_id) || connected_count_ == static_cast<int>(LinkSessions::kMaxSessions)) return;
+void ConfigService::note_connected(uint16_t session_id) {
+    if (connected(session_id) || connected_count_ == static_cast<int>(LinkSessions::kMaxSessions))
+        return;
     connected_sessions_[connected_count_++] = session_id;
 }
 
-void ConfigService::note_down(uint16_t session_id) {
+void ConfigService::note_disconnected(uint16_t session_id) {
     for (int i = 0; i < connected_count_; i++) {
         if (connected_sessions_[i] != session_id) continue;
         connected_sessions_[i] = connected_sessions_[--connected_count_];
@@ -67,19 +68,19 @@ void ConfigService::note_down(uint16_t session_id) {
 }
 
 // INFO: fc 18sep26 A second Up on one session is the MTU exchange landing late, never a second app.
-void ConfigService::on_link_up(const events::LinkUp& up) {
-    note_up(up.session_id);
+void ConfigService::on_link_up(const events::LinkUp& event) {
+    note_connected(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
-        send_update(up.session_id);
+        send_update(event.session_id);
 }
 
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
 // prompt.
-void ConfigService::on_link_down(const events::LinkDown& down) {
-    note_down(down.session_id);
-    if (identity_ != nullptr) identity_->forget(down.session_id);
-    if (!claim_.holds(down.session_id)) return;
+void ConfigService::on_link_down(const events::LinkDown& event) {
+    note_disconnected(event.session_id);
+    if (identity_ != nullptr) identity_->forget(event.session_id);
+    if (!claim_.holds(event.session_id)) return;
     claim_.release();
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
@@ -106,9 +107,9 @@ void ConfigService::set_battery_state(const power::BatteryState& battery, power:
     if (link_up() && (charging_changed || level_changed || step_changed)) push_status();
 }
 
-int ConfigService::payload() const { return static_cast<int>(link_.payload_bytes()); }
+int ConfigService::payload_bytes() const { return static_cast<int>(link_.payload_bytes()); }
 
-int ConfigService::payload_to(uint16_t session_id) const {
+int ConfigService::payload_bytes_to(uint16_t session_id) const {
     return static_cast<int>(link_.payload_bytes_to(session_id));
 }
 
@@ -122,7 +123,7 @@ Status ConfigService::reply(const char* json, int length) {
 }
 
 Status ConfigService::broadcast(const char* json, int length) {
-    if (length <= 0 || length > payload()) {
+    if (length <= 0 || length > payload_bytes()) {
         diagnostics_.link_drops++;
         return Status::OutOfRange;
     }
@@ -135,7 +136,7 @@ Status ConfigService::broadcast(const char* json, int length) {
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
 Status ConfigService::reply_to(uint16_t session_id, const char* json, int length) {
-    if (length <= 0 || length > payload_to(session_id) || held_bytes_ > 0) {
+    if (length <= 0 || length > payload_bytes_to(session_id) || held_bytes_ > 0) {
         diagnostics_.link_drops++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
     }
@@ -154,9 +155,9 @@ void ConfigService::hold(uint16_t session_id, const char* json, int length) {
         diagnostics_.link_drops++;
         return;
     }
-    std::memcpy(held_, json, static_cast<size_t>(length));
+    std::memcpy(held_frame_, json, static_cast<size_t>(length));
     held_bytes_ = length;
-    held_to_ = session_id;
+    held_for_session_id_ = session_id;
     held_since_ms_ = now_ms_;
 }
 
@@ -193,10 +194,10 @@ void ConfigService::stage(Pending pending, const char* reason) {
     (void)reply(buffer);
 }
 
-void ConfigService::ack(bool ok, const char* reason) {
+void ConfigService::acknowledge(bool accepted, const char* reason) {
     char buffer[96];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_boolean("ack", ok);
+    writer.add_boolean("ack", accepted);
     if (reason) writer.add_string("reason", reason);
     writer.finish();
     (void)reply(buffer);
@@ -211,21 +212,22 @@ void ConfigService::request_firmware(const json::Reader& reader) {
     char text[dfu::kVersionTextBytes];
     ports::ImageVersion version;
     if (!reader.get_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
-        ack(false, "no_version");
+        acknowledge(false, "no_version");
         return;
     }
     ports::ImageVersion running;
     if (dfu_ != nullptr && dfu_->running_version(running) &&
         dfu::version_refusal(running, version, dfu_->downgrade_allowed()) != nullptr) {
-        ack(false, "older");
+        acknowledge(false, "older");
         return;
     }
     approved_version_ = version;
     stage(Pending::Dfu, "confirm_dfu");
-    int n = format_string(prompt_detail_, "INSTALL ");
-    n += dfu::format_version(version, prompt_detail_ + n, sizeof(prompt_detail_) - n);
-    n += format_string(prompt_detail_ + n, " FROM THE PHONE");
-    prompt_detail_[n] = 0;
+    int written = format_string(prompt_detail_, "INSTALL ");
+    written +=
+        dfu::format_version(version, prompt_detail_ + written, sizeof(prompt_detail_) - written);
+    written += format_string(prompt_detail_ + written, " FROM THE PHONE");
+    prompt_detail_[written] = 0;
 }
 
 // INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
@@ -233,18 +235,18 @@ void ConfigService::install_received_image() {
     upload_window_open_ = false;
     ports::ImageVersion staged;
     if (!dfu_->staged_version(staged)) {
-        ack(false, "nothing_staged");
+        acknowledge(false, "nothing_staged");
     } else if (staged != approved_version_) {
-        ack(false, "not_approved");
+        acknowledge(false, "not_approved");
     } else if (!signed_by_trusted_key()) {
-        ack(false, "wrong_key");
+        acknowledge(false, "wrong_key");
     } else if (!on_ground()) {
-        ack(false, "in_flight");
+        acknowledge(false, "in_flight");
     } else if (!swap_powered()) {
-        ack(false, "low_power");
+        acknowledge(false, "low_power");
     } else {
         install_requested_ = true;
-        ack(true, "install");
+        acknowledge(true, "install");
     }
 }
 
@@ -277,7 +279,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     json::Reader reader(data, length);
     char command[16] = {0};
     if (!reader.get_string("cmd", command, sizeof(command))) {
-        ack(false, "no_cmd");
+        acknowledge(false, "no_cmd");
         return;
     }
 
@@ -340,14 +342,14 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
 
     if (std::strcmp(command, "set") == 0) {
         if (!on_ground()) {
-            ack(false, "in_flight");
+            acknowledge(false, "in_flight");
             return;
         }
         // Refused at the door and not after the button press: a prompt a pilot
         // walks over and confirms, for a write that was never going to happen,
         // is worse than a refusal they can read on the phone in their hand.
         if (!settings_writable()) {
-            ack(false, "low_power");
+            acknowledge(false, "low_power");
             return;
         }
         pending_set_bytes_ = length < static_cast<int>(sizeof(pending_set_json_)) - 1
@@ -374,17 +376,17 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         requested = Pending::PowerOff;
         reason = "confirm_power_off";
     } else if (std::strcmp(command, "gnss_cold") == 0) {
-        requested = Pending::GnssCold;
+        requested = Pending::GnssColdStart;
         reason = "confirm_gnss_cold";
     }
 
     if (requested != Pending::None) {
         if (!on_ground()) {
-            ack(false, "in_flight");
+            acknowledge(false, "in_flight");
             return;
         }
         if (requested == Pending::Dfu && !swap_powered()) {
-            ack(false, "low_power");
+            acknowledge(false, "low_power");
             return;
         }
         if (requested == Pending::Dfu)
@@ -394,12 +396,12 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
 
-    ack(false, "unknown_cmd");
+    acknowledge(false, "unknown_cmd");
 }
 
 void ConfigService::request_log_erase() {
     if (!on_ground()) {
-        ack(false, "in_flight");
+        acknowledge(false, "in_flight");
         return;
     }
     stage(Pending::EraseLog, "confirm_erase_log");
@@ -409,7 +411,7 @@ void ConfigService::confirm() {
     if (!on_ground() && !register_exempt()) {
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
-        ack(false, "in_flight");
+        acknowledge(false, "in_flight");
         return;
     }
     if (pending_ == Pending::Register) {
@@ -423,46 +425,46 @@ void ConfigService::confirm() {
         if (!settings_writable()) {
             pending_ = Pending::None;
             pending_set_bytes_ = 0;
-            ack(false, "low_power");
+            acknowledge(false, "low_power");
             return;
         }
-        Status st = store_.apply(pending_set_json_, pending_set_bytes_);
+        Status applied = store_.apply(pending_set_json_, pending_set_bytes_);
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
-        if (st == Status::Ok) {
-            dirty_ = true;
-            ack(true, nullptr);
+        if (applied == Status::Ok) {
+            settings_dirty_ = true;
+            acknowledge(true, nullptr);
         } else {
-            ack(false, to_string(st));
+            acknowledge(false, to_string(applied));
         }
     } else if (pending_ == Pending::Dfu && !swap_powered()) {
         pending_ = Pending::None;
         upload_window_open_ = false;
-        ack(false, "low_power");
+        acknowledge(false, "low_power");
     } else if (pending_ == Pending::Dfu) {
         pending_ = Pending::None;
         upload_window_open_ = true;
         upload_window_opened_ms_ = now_ms_;
         if (dfu_) dfu_->forget_upload();
-        ack(true, "dfu");
+        acknowledge(true, "dfu");
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
         upload_window_open_ = false;
         recovery_requested_ = true;
-        ack(true, "recovery");
+        acknowledge(true, "recovery");
     } else if (pending_ == Pending::PowerOff) {
         pending_ = Pending::None;
         upload_window_open_ = false;
         power_off_requested_ = true;
-        ack(true, "power_off");
+        acknowledge(true, "power_off");
     } else if (pending_ == Pending::EraseLog) {
         pending_ = Pending::None;
         log_erase_requested_ = true;
-        ack(true, "erase_log");
-    } else if (pending_ == Pending::GnssCold) {
+        acknowledge(true, "erase_log");
+    } else if (pending_ == Pending::GnssColdStart) {
         pending_ = Pending::None;
         gnss_cold_start_requested_ = true;
-        ack(true, "gnss_cold");
+        acknowledge(true, "gnss_cold");
     }
 }
 
@@ -470,7 +472,7 @@ void ConfigService::cancel() {
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
-    ack(false, "cancelled");
+    acknowledge(false, "cancelled");
 }
 
 }

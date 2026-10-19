@@ -10,21 +10,21 @@ namespace skyblip::comms {
 
 namespace {
 
-int format_buckets(const timing::SlotTimingStats& stats, bool pps, char* out, int cap) {
-    int n = 0;
-    for (int i = 0; i < timing::SlotTimingStats::kBuckets && n < cap - 1; i++) {
-        if (i > 0) out[n++] = ',';
-        n += format_uint(out + n, pps ? stats.pps_bucket(i) : stats.dwell_bucket(i));
+int format_buckets(const timing::SlotTimingStats& stats, bool pps, char* out, int capacity) {
+    int written = 0;
+    for (int i = 0; i < timing::SlotTimingStats::kBuckets && written < capacity - 1; i++) {
+        if (i > 0) out[written++] = ',';
+        written += format_uint(out + written, pps ? stats.pps_bucket(i) : stats.dwell_bucket(i));
     }
-    out[n] = 0;
-    return n;
+    out[written] = 0;
+    return written;
 }
 
 }  // namespace
 
-int TimingReport::field_bytes(const Field& f) {
-    return f.text != nullptr ? frame::text_field_bytes(f.key, f.text)
-                             : frame::int_field_bytes(f.key, f.value);
+int TimingReport::field_bytes(const Field& field) {
+    return field.text != nullptr ? frame::string_field_bytes(field.key, field.text)
+                                 : frame::integer_field_bytes(field.key, field.value);
 }
 
 void TimingReport::add(const char* key, const char* text, long value) {
@@ -38,17 +38,17 @@ void TimingReport::add(const char* key, const char* text, long value) {
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
 TimingReport::TimingReport(const timing::SlotTimingStats& stats) {
-    format_buckets(stats, true, pps_, kBucketsTextBytes);
-    format_buckets(stats, false, dwell_, kBucketsTextBytes);
+    format_buckets(stats, true, pps_buckets_, kBucketsTextBytes);
+    format_buckets(stats, false, dwell_buckets_, kBucketsTextBytes);
 
     // Every count goes through frame::counter and not through a cast: the worst_us
     // pair is signed on both platforms and stays as it is, but a uint32_t sample
     // count cast straight to long is a negative number on the nRF52 and a correct
     // one in this suite (core/comms/frame_budget.h).
-    add("pps_us", pps_, 0);
+    add("pps_us", pps_buckets_, 0);
     add("pps_worst_us", nullptr, stats.pps_worst_us());
     add("pps_samples", nullptr, frame::counter(stats.pps_samples()));
-    add("dwell_us", dwell_, 0);
+    add("dwell_us", dwell_buckets_, 0);
     add("dwell_worst_us", nullptr, stats.dwell_worst_us());
     add("dwell_samples", nullptr, frame::counter(stats.dwell_samples()));
     add("holdover", nullptr, frame::counter(stats.holdover_events()));
@@ -60,22 +60,22 @@ TimingReport::TimingReport(const timing::SlotTimingStats& stats) {
     add("late_dwells", nullptr, frame::counter(stats.late_dwells()));
 }
 
-bool TimingReport::fits(int payload) const {
+bool TimingReport::fits(int payload_bytes) const {
     int widest = 0;
     for (int i = 0; i < count_; i++) {
         const int bytes = field_bytes(fields_[i]);
         widest = std::max(bytes, widest);
     }
-    frame::Budget budget(payload);
+    frame::Budget budget(payload_bytes);
     return budget.take(field_bytes(Field{"cmd", "timing", 0})) &&
            budget.take(field_bytes(Field{"part", nullptr, count_})) &&
            budget.take(frame::kMoreFieldBytes) && budget.take(widest);
 }
 
-int TimingReport::next_frame(int payload, char* out, int capacity) {
+int TimingReport::next_frame(int payload_bytes, char* out, int capacity) {
     if (exhausted()) return 0;
 
-    int room = payload + 1;
+    int room = payload_bytes + 1;
     room = std::min(room, capacity);
 
     frame::Budget budget(room - 1);

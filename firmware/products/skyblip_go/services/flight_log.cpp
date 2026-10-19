@@ -58,7 +58,7 @@ void FlightLogService::watch(uint32_t now_ms) {
         const traffic::AlarmAssessment assessment =
             traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
-        flight::LogContact contact{};
+        flight::LogTarget contact{};
         contact.address = target->observation.address;
         contact.address_mapping_table = target->observation.address_mapping_table;
         contact.aircraft_category = target->observation.aircraft_category;
@@ -122,8 +122,8 @@ bool FlightLogService::on_ground() const {
 void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {
     RecordPool& pool = flights_.pool();
     pool.send(reply_link_session_,
-              comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(reply_link_session_), ok,
-                                    reason, store));
+              comms::format_log_acknowledgement(
+                  pool.reply_buffer(), pool.reply_cap(reply_link_session_), ok, reason, store));
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {

@@ -53,10 +53,10 @@ class LinkSessions {
     bool up(uint16_t session_id) const { return find(session_id) != nullptr; }
 
     int count() const {
-        int n = 0;
+        int sessions = 0;
         for (const Slot& slot : slots_)
-            if (slot.used) n++;
-        return n;
+            if (slot.used) sessions++;
+        return sessions;
     }
 
     uint16_t payload_bytes() const {

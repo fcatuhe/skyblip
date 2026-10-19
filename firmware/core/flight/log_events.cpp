@@ -32,8 +32,8 @@ void LogEvents::status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms) {
     status_due_ = false;
 }
 
-void LogEvents::heard(int slot, const LogContact& now, uint32_t utc_s) {
-    if (!open_ || slot < 0 || slot >= kLogContactSlots) return;
+void LogEvents::heard(int slot, const LogTarget& now, uint32_t utc_s) {
+    if (!open_ || slot < 0 || slot >= kLogTargetSlots) return;
     Track& track = tracks_[slot];
     if (track.active && !same_aircraft(track.closest, now)) end(slot);
     if (!track.active) {
@@ -60,7 +60,7 @@ void LogEvents::heard(int slot, const LogContact& now, uint32_t utc_s) {
 }
 
 void LogEvents::vacant(int slot) {
-    if (!open_ || slot < 0 || slot >= kLogContactSlots) return;
+    if (!open_ || slot < 0 || slot >= kLogTargetSlots) return;
     end(slot);
 }
 
@@ -92,7 +92,7 @@ void LogEvents::commit() {
     if (slot >= 0) tracks_[slot] = Track{};
 }
 
-bool LogEvents::same_aircraft(const LogContact& a, const LogContact& b) {
+bool LogEvents::same_aircraft(const LogTarget& a, const LogTarget& b) {
     return a.address == b.address && a.address_mapping_table == b.address_mapping_table;
 }
 
@@ -125,7 +125,7 @@ void LogEvents::push(const LogEvent& event) {
 }
 
 int LogEvents::first_ending() const {
-    for (int slot = 0; slot < kLogContactSlots; slot++)
+    for (int slot = 0; slot < kLogTargetSlots; slot++)
         if (tracks_[slot].ending) return slot;
     return -1;
 }

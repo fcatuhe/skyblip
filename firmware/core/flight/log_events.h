@@ -12,7 +12,7 @@ namespace skyblip::flight {
 constexpr uint32_t kLogStatusPeriodMs = 60000;
 
 // INFO: fc 15oct26 one per traffic table slot, which the service holds equal with a static_assert
-constexpr int kLogContactSlots = 48;
+constexpr int kLogTargetSlots = 48;
 
 // INFO: fc 15oct26 alarms and encounters waiting on a writer that drains every pass
 constexpr int kLogEventBacklogRecords = 16;
@@ -21,7 +21,7 @@ class LogEvents {
    public:
     void open();
     void status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms);
-    void heard(int slot, const LogContact& now, uint32_t utc_s);
+    void heard(int slot, const LogTarget& now, uint32_t utc_s);
     void vacant(int slot);
     void close();
 
@@ -32,7 +32,7 @@ class LogEvents {
 
    private:
     struct Track {
-        LogContact closest{};
+        LogTarget closest{};
         uint32_t closest_utc_s{0};
         uint32_t first_utc_s{0};
         uint32_t last_utc_s{0};
@@ -42,13 +42,13 @@ class LogEvents {
         bool ending{false};
     };
 
-    static bool same_aircraft(const LogContact& a, const LogContact& b);
+    static bool same_aircraft(const LogTarget& a, const LogTarget& b);
     static LogEvent encounter_of(const Track& track);
     void end(int slot);
     void push(const LogEvent& event);
     int first_ending() const;
 
-    Track tracks_[kLogContactSlots]{};
+    Track tracks_[kLogTargetSlots]{};
     LogEvent backlog_[kLogEventBacklogRecords]{};
     int head_{0};
     int count_{0};

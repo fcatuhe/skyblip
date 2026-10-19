@@ -6,23 +6,23 @@ namespace skyblip::identity {
 
 int bluetooth_name(char* out, int capacity, const char* product, const Activation& activation) {
     char name[kBluetoothNameBytes + 1];
-    int n = 0;
+    int written = 0;
     if (const settings::AirAddress address = activation.address()) {
-        while (n < kProductWordBytes && product[n] != 0) {
-            name[n] = product[n];
-            n++;
+        while (written < kProductWordBytes && product[written] != 0) {
+            name[written] = product[written];
+            written++;
         }
-        n += format_string(name + n, " ");
-        n += format_hex(name + n, *address, 6);
+        written += format_string(name + written, " ");
+        written += format_hex(name + written, *address, 6);
     } else {
-        n += format_string(name, "activate ");
-        n += format_hex(name + n, activation.bluetooth_tag, 4);
-        n += format_string(name + n, " skyBlip");
+        written += format_string(name, "activate ");
+        written += format_hex(name + written, activation.bluetooth_tag, 4);
+        written += format_string(name + written, " skyBlip");
     }
-    if (n >= capacity) n = capacity - 1;
-    for (int i = 0; i < n; i++) out[i] = name[i];
-    out[n] = 0;
-    return n;
+    if (written >= capacity) written = capacity - 1;
+    for (int i = 0; i < written; i++) out[i] = name[i];
+    out[written] = 0;
+    return written;
 }
 
 }  // namespace skyblip::identity

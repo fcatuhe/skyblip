@@ -180,7 +180,7 @@ TEST_CASE("product: a confirmed gnss_cold reaches the receiver, and an unconfirm
     t += 3000;
     // Staged and waiting for the device's own gesture: the phone cannot spend a
     // pilot's next fix by itself.
-    REQUIRE(rig.config().pending() == comms::Pending::GnssCold);
+    REQUIRE(rig.config().pending() == comms::Pending::GnssColdStart);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
 
     rig.double_press(t);

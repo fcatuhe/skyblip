@@ -19,28 +19,28 @@ const char* to_string(ImageState state) {
 
 namespace {
 
-void put_version(uint8_t* out, const ports::ImageVersion& v) {
-    out[0] = v.major;
-    out[1] = v.minor;
-    put_u16(out + 2, v.revision);
-    put_u32(out + 4, v.build);
+void put_version(uint8_t* out, const ports::ImageVersion& version) {
+    out[0] = version.major;
+    out[1] = version.minor;
+    put_u16(out + 2, version.revision);
+    put_u32(out + 4, version.build);
 }
 
-const char* parse_field(const char* at, uint32_t max, char end, uint32_t& out) {
+const char* parse_field(const char* at, uint32_t ceiling, char terminator, uint32_t& out) {
     if (*at < '0' || *at > '9') return nullptr;
     uint64_t value = 0;
     for (; *at >= '0' && *at <= '9'; at++) {
         value = value * 10 + static_cast<uint64_t>(*at - '0');
-        if (value > max) return nullptr;
+        if (value > ceiling) return nullptr;
     }
-    if (*at != end) return nullptr;
+    if (*at != terminator) return nullptr;
     out = static_cast<uint32_t>(value);
-    return end == 0 ? at : at + 1;
+    return terminator == 0 ? at : at + 1;
 }
 
-bool within_widest(const ports::ImageVersion& v) {
-    return v.major <= kWidestVersion.major && v.minor <= kWidestVersion.minor &&
-           v.revision <= kWidestVersion.revision && v.build <= kWidestVersion.build;
+bool within_widest(const ports::ImageVersion& version) {
+    return version.major <= kWidestVersion.major && version.minor <= kWidestVersion.minor &&
+           version.revision <= kWidestVersion.revision && version.build <= kWidestVersion.build;
 }
 
 bool is_image(const SlotImage& slot, const ports::ImageVersion& version,
@@ -49,23 +49,23 @@ bool is_image(const SlotImage& slot, const ports::ImageVersion& version,
     return slot.version == version;
 }
 
-ports::ImageVersion get_version(const uint8_t* in) {
-    ports::ImageVersion v;
-    v.major = in[0];
-    v.minor = in[1];
-    v.revision = get_u16(in + 2);
-    v.build = get_u32(in + 4);
-    return v;
+ports::ImageVersion get_version(const uint8_t* bytes) {
+    ports::ImageVersion version;
+    version.major = bytes[0];
+    version.minor = bytes[1];
+    version.revision = get_u16(bytes + 2);
+    version.build = get_u32(bytes + 4);
+    return version;
 }
 
 }  // namespace
 
 size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t capacity) {
-    const size_t length = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
-    if (capacity < length) return 0;
+    const size_t record_bytes = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
+    if (capacity < record_bytes) return 0;
     put_version(out, record.from);
     put_version(out + 8, record.to);
-    if (!record.hashed) return length;
+    if (!record.hashed) return record_bytes;
     std::memcpy(out + kVersionsOnlyRecordBytes, record.from_hash.bytes, ports::ImageHash::kBytes);
     std::memcpy(out + kVersionsOnlyRecordBytes + ports::ImageHash::kBytes, record.to_hash.bytes,
                 ports::ImageHash::kBytes);
@@ -94,11 +94,11 @@ Outcome outcome(const UpdateRecord& record, const SlotImage& running,
     return swapped_back ? Outcome::Reverted : Outcome::Refused;
 }
 
-int compare(const ports::ImageVersion& a, const ports::ImageVersion& b) {
-    if (a.major != b.major) return a.major < b.major ? -1 : 1;
-    if (a.minor != b.minor) return a.minor < b.minor ? -1 : 1;
-    if (a.revision != b.revision) return a.revision < b.revision ? -1 : 1;
-    if (a.build != b.build) return a.build < b.build ? -1 : 1;
+int compare(const ports::ImageVersion& left, const ports::ImageVersion& right) {
+    if (left.major != right.major) return left.major < right.major ? -1 : 1;
+    if (left.minor != right.minor) return left.minor < right.minor ? -1 : 1;
+    if (left.revision != right.revision) return left.revision < right.revision ? -1 : 1;
+    if (left.build != right.build) return left.build < right.build ? -1 : 1;
     return 0;
 }
 
@@ -113,15 +113,15 @@ int format_version(const ports::ImageVersion& version, char* out, size_t capacit
         if (capacity > 0) out[0] = 0;
         return 0;
     }
-    int n = format_uint(out, version.major);
-    out[n++] = '.';
-    n += format_uint(out + n, version.minor);
-    out[n++] = '.';
-    n += format_uint(out + n, version.revision);
-    out[n++] = '+';
-    n += format_uint(out + n, version.build);
-    out[n] = 0;
-    return n;
+    int written = format_uint(out, version.major);
+    out[written++] = '.';
+    written += format_uint(out + written, version.minor);
+    out[written++] = '.';
+    written += format_uint(out + written, version.revision);
+    out[written++] = '+';
+    written += format_uint(out + written, version.build);
+    out[written] = 0;
+    return written;
 }
 
 bool parse_version(const char* text, ports::ImageVersion& out) {
@@ -153,18 +153,18 @@ int format_hub_image(const HubImageReport& report, char* out, size_t capacity) {
         case HubImage::Held: break;
     }
     if (word != nullptr) {
-        const int n = format_string(out, word);
-        out[n] = 0;
-        return n;
+        const int written = format_string(out, word);
+        out[written] = 0;
+        return written;
     }
     static constexpr char kLowerHex[] = "0123456789abcdef";
-    int n = 0;
+    int written = 0;
     for (uint8_t byte : report.digest) {
-        out[n++] = kLowerHex[byte >> 4];
-        out[n++] = kLowerHex[byte & 0x0F];
+        out[written++] = kLowerHex[byte >> 4];
+        out[written++] = kLowerHex[byte & 0x0F];
     }
-    out[n] = 0;
-    return n;
+    out[written] = 0;
+    return written;
 }
 
 }  // namespace skyblip::dfu

@@ -9,8 +9,8 @@
 namespace skyblip::comms {
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
-int ConfigService::format_status(char* buffer, int cap) {
-    json::Writer writer(buffer, cap);
+int ConfigService::format_status(char* buffer, int capacity) {
+    json::Writer writer(buffer, capacity);
     writer.add_string("cmd", "status");
     writer.add_string("flight", flight_name(flight_state_));
     writer.add_boolean("upload", upload_allowed());
@@ -68,7 +68,7 @@ void ConfigService::push_status() {
 // and the rest of the report is abandoned rather than sent with a hole in it.
 void ConfigService::send_timing() {
     if (timing_stats_ == nullptr) {
-        ack(false, "no_stats");
+        acknowledge(false, "no_stats");
         return;
     }
     start_report(timing_report_, kTimingFrameBytes, *timing_stats_);
@@ -86,7 +86,7 @@ void ConfigService::send_timing() {
 // question - not a longer answer a phone might truncate.
 void ConfigService::send_flash() {
     if (durable_writes_ == nullptr) {
-        ack(false, "no_stats");
+        acknowledge(false, "no_stats");
         return;
     }
     char buffer[192];
@@ -117,10 +117,10 @@ void ConfigService::send_radio() {
 void ConfigService::send_update(uint16_t session_id) {
     char from[dfu::kVersionTextBytes];
     char to[dfu::kVersionTextBytes];
-    char hub[dfu::kHubImageTextBytes];
+    char hub_image[dfu::kHubImageTextBytes];
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
-    dfu::format_hub_image(hub_image_, hub, sizeof(hub));
+    dfu::format_hub_image(hub_image_, hub_image, sizeof(hub_image));
     char buffer[kSmallestSupportedPayload + 1];
     json::Writer writer(buffer, sizeof(buffer));
     writer.add_string("cmd", "update");
@@ -132,7 +132,7 @@ void ConfigService::send_update(uint16_t session_id) {
     if (settings_fallback_ != settings::Fallback::None)
         writer.add_string("settings", settings::to_string(settings_fallback_));
     writer.add_boolean("swap_powered", swap_powered());
-    writer.add_string("imu", hub);
+    writer.add_string("imu", hub_image);
     if (dfu_ != nullptr && dfu_->downgrade_allowed()) writer.add_boolean("downgrade", true);
     ports::SigningKeyHash trusted;
     if (dfu_ != nullptr && dfu_->running_key(trusted)) {
@@ -153,18 +153,18 @@ void ConfigService::send_update(uint16_t session_id) {
 // has zero receptions.
 void ConfigService::send_diagnostics() {
     if (diagnostics_.refreshes == 0) {
-        ack(false, "no_stats");
+        acknowledge(false, "no_stats");
         return;
     }
     start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_, "diag");
 }
 
-template <class Report, class... Args>
-void ConfigService::start_report(std::optional<Report>& report, int frame_cap,
-                                 const Args&... args) {
-    report_payload_ = payload_to(claim_.holder());
-    report_frame_cap_ = frame_cap;
-    if (!report.emplace(args...).fits(report_payload_)) {
+template <class Report, class... Arguments>
+void ConfigService::start_report(std::optional<Report>& report, int frame_bytes,
+                                 const Arguments&... arguments) {
+    report_payload_bytes_ = payload_bytes_to(claim_.holder());
+    report_frame_bytes_ = frame_bytes;
+    if (!report.emplace(arguments...).fits(report_payload_bytes_)) {
         diagnostics_.link_drops++;
         report.reset();
         return;
@@ -177,7 +177,7 @@ template <class Report>
 void ConfigService::continue_report(std::optional<Report>& report) {
     char buffer[kHeldFrameBytes];
     while (report && held_bytes_ == 0) {
-        const int length = report->next_frame(report_payload_, buffer, report_frame_cap_);
+        const int length = report->next_frame(report_payload_bytes_, buffer, report_frame_bytes_);
         if (length <= 0) {
             diagnostics_.link_drops++;
             report.reset();
@@ -192,9 +192,10 @@ void ConfigService::continue_report(std::optional<Report>& report) {
 void ConfigService::resume_replies(uint32_t now_ms) {
     now_ms_ = now_ms;
     if (held_bytes_ > 0) {
-        const Status sent = link_.send_to(held_to_, events::Endpoint::Config,
-                                          ConstByteSpan(reinterpret_cast<const uint8_t*>(held_),
-                                                        static_cast<size_t>(held_bytes_)));
+        const Status sent =
+            link_.send_to(held_for_session_id_, events::Endpoint::Config,
+                          ConstByteSpan(reinterpret_cast<const uint8_t*>(held_frame_),
+                                        static_cast<size_t>(held_bytes_)));
         if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
             return;
         held_bytes_ = 0;

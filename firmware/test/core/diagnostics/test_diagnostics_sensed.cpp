@@ -7,8 +7,8 @@ using namespace skyblip;
 
 TEST_CASE("diag record: a fix carries where in its second it landed and why it was refused") {
     diagnostics::Gnss in{};
-    in.nav_ms = 287;
-    in.resid_m = 41;
+    in.solution_phase_ms = 287;
+    in.residual_m = 41;
     in.hdop_e2 = 123;
     in.vdop_e2 = 211;
     in.stage_s = 4096;
@@ -18,15 +18,15 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     in.reject = gnss::FixReject::Jump;
     in.stage = gnss::Stage::Solving;
     in.fix_valid = true;
-    in.resid_valid = true;
+    in.residual_valid = true;
     in.pps_locked = true;
     in.geoid_measured = true;
     in.tx_settled = true;
     in.levels_fresh = true;
 
     const diagnostics::Gnss out = diagnostics_round_trip(in);
-    CHECK(out.nav_ms == in.nav_ms);
-    CHECK(out.resid_m == in.resid_m);
+    CHECK(out.solution_phase_ms == in.solution_phase_ms);
+    CHECK(out.residual_m == in.residual_m);
     CHECK(out.hdop_e2 == in.hdop_e2);
     CHECK(out.vdop_e2 == in.vdop_e2);
     CHECK(out.stage_s == in.stage_s);
@@ -36,7 +36,7 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     CHECK(out.reject == in.reject);
     CHECK(out.stage == in.stage);
     CHECK(out.fix_valid);
-    CHECK(out.resid_valid);
+    CHECK(out.residual_valid);
     CHECK(out.pps_locked);
     CHECK(out.geoid_measured);
     CHECK(out.levels_fresh);

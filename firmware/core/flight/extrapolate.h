@@ -59,8 +59,8 @@ model::AircraftObservation carried_to(const model::AircraftObservation& observat
 uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7,
                                int32_t longitude_1e7, int32_t altitude_hae_mm);
 
-bool relative_ned(const model::Ownship& own, const model::AircraftObservation& target,
-                  int32_t& north_m, int32_t& east_m, int32_t& up_m);
+bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,
+                            int32_t& north_m, int32_t& east_m, int32_t& up_m);
 
 }  // namespace skyblip::flight
 
