@@ -18,8 +18,8 @@ uint32_t non_negative(long value) { return value < 0 ? 0u : static_cast<uint32_t
 // failure that must not reach a tablet. Every formatter here answers 0 instead,
 // and the service counts it.
 int finished(json::Writer& writer) {
-    const int length = writer.finish();
-    return writer.overflowed() ? 0 : length;
+    const int bytes = writer.finish();
+    return writer.overflowed() ? 0 : bytes;
 }
 
 bool named_store(json::Writer& writer, LogStore store) {

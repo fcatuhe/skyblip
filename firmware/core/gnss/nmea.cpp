@@ -124,20 +124,20 @@ bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t
 
 bool NmeaParser::feed(char character) {
     if (character == '$') {
-        line_length_ = 0;
-        line_[line_length_++] = character;
+        line_bytes_ = 0;
+        line_[line_bytes_++] = character;
         return false;
     }
     if (character == '\r' || character == '\n') {
-        if (line_length_ > 0) {
-            bool parsed = parse_line(line_, line_length_);
-            line_length_ = 0;
+        if (line_bytes_ > 0) {
+            bool parsed = parse_line(line_, line_bytes_);
+            line_bytes_ = 0;
             return parsed;
         }
         return false;
     }
-    if (line_length_ > 0 && line_length_ < static_cast<int>(sizeof(line_)) - 1)
-        line_[line_length_++] = character;
+    if (line_bytes_ > 0 && line_bytes_ < static_cast<int>(sizeof(line_)) - 1)
+        line_[line_bytes_++] = character;
     return false;
 }
 

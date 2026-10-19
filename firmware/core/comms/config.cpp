@@ -118,45 +118,45 @@ int ConfigService::payload_bytes_to(uint16_t session_id) const {
 // fails, so it is counted here and never handed down. Everything that comes
 // through this door is a request/response answer except the status push, so the
 // recovery from a lost one is the phone's next command; the push has tick().
-Status ConfigService::reply(const char* json, int length) {
-    return reply_to(claim_.holder(), json, length);
+Status ConfigService::reply(const char* json, int bytes) {
+    return reply_to(claim_.holder(), json, bytes);
 }
 
-Status ConfigService::broadcast(const char* json, int length) {
-    if (length <= 0 || length > payload_bytes()) {
+Status ConfigService::broadcast(const char* json, int bytes) {
+    if (bytes <= 0 || bytes > payload_bytes()) {
         diagnostics_.link_drops++;
         return Status::OutOfRange;
     }
     const Status sent = link_.send(
         events::Endpoint::Config,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(length)));
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(bytes)));
     if (!is_ok(sent)) diagnostics_.link_drops++;
     return sent;
 }
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
-Status ConfigService::reply_to(uint16_t session_id, const char* json, int length) {
-    if (length <= 0 || length > payload_bytes_to(session_id) || held_bytes_ > 0) {
+Status ConfigService::reply_to(uint16_t session_id, const char* json, int bytes) {
+    if (bytes <= 0 || bytes > payload_bytes_to(session_id) || held_bytes_ > 0) {
         diagnostics_.link_drops++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(
         session_id, events::Endpoint::Config,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(length)));
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(bytes)));
     if (sent == Status::WouldBlock)
-        hold(session_id, json, length);
+        hold(session_id, json, bytes);
     else if (!is_ok(sent))
         diagnostics_.link_drops++;
     return sent;
 }
 
-void ConfigService::hold(uint16_t session_id, const char* json, int length) {
-    if (length > kHeldFrameBytes) {
+void ConfigService::hold(uint16_t session_id, const char* json, int bytes) {
+    if (bytes > kHeldFrameBytes) {
         diagnostics_.link_drops++;
         return;
     }
-    std::memcpy(held_frame_, json, static_cast<size_t>(length));
-    held_bytes_ = length;
+    std::memcpy(held_frame_, json, static_cast<size_t>(bytes));
+    held_bytes_ = bytes;
     held_for_session_id_ = session_id;
     held_since_ms_ = now_ms_;
 }
@@ -177,8 +177,8 @@ void ConfigService::refuse_unclaimed(uint16_t session_id) {
     writer.add_boolean("ack", false);
     writer.add_string("reason", "claimed");
     writer.add_integer("by", static_cast<long>(claim_.holder()));
-    const int length = writer.finish();
-    (void)reply_to(session_id, buffer, length);
+    const int bytes = writer.finish();
+    (void)reply_to(session_id, buffer, bytes);
 }
 
 void ConfigService::stage(Pending pending, const char* reason) {
@@ -275,8 +275,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
     const char* data = reinterpret_cast<const char*>(frame.data.data());
-    int length = frame.bytes;
-    json::Reader reader(data, length);
+    int bytes = frame.bytes;
+    json::Reader reader(data, bytes);
     char command[16] = {0};
     if (!reader.get_string("cmd", command, sizeof(command))) {
         acknowledge(false, "no_cmd");
@@ -294,12 +294,12 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         json::Writer writer(buffer, sizeof(buffer));
         writer.add_string("cmd", "config");
         store_.write_fields(writer);
-        const int reply_length = writer.finish();
+        const int reply_bytes = writer.finish();
         if (writer.overflowed()) {
             diagnostics_.link_drops++;
             return;
         }
-        (void)reply(buffer, reply_length);
+        (void)reply(buffer, reply_bytes);
         return;
     }
 
@@ -352,8 +352,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
             acknowledge(false, "low_power");
             return;
         }
-        pending_set_bytes_ = length < static_cast<int>(sizeof(pending_set_json_)) - 1
-                                 ? length
+        pending_set_bytes_ = bytes < static_cast<int>(sizeof(pending_set_json_)) - 1
+                                 ? bytes
                                  : static_cast<int>(sizeof(pending_set_json_)) - 1;
         std::memcpy(pending_set_json_, data, static_cast<size_t>(pending_set_bytes_));
         pending_set_json_[pending_set_bytes_] = 0;

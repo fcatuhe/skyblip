@@ -250,9 +250,9 @@ class ConfigService {
 
    private:
     Status reply(const char* json);
-    Status reply(const char* json, int length);
-    Status reply_to(uint16_t session_id, const char* json, int length);
-    Status broadcast(const char* json, int length);
+    Status reply(const char* json, int bytes);
+    Status reply_to(uint16_t session_id, const char* json, int bytes);
+    Status broadcast(const char* json, int bytes);
     void refuse_unclaimed(uint16_t session_id);
     void note_connected(uint16_t session_id);
     void note_disconnected(uint16_t session_id);
@@ -264,7 +264,7 @@ class ConfigService {
     void send_status();
     void send_defaults();
     void push_status();
-    int format_status(char* buffer, int capacity);
+    int format_status(char* out, int capacity);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that
     // answers "get" and "status" answers "timing" from the one accumulator
     // core/timing::SlotTimingStats keeps, over the link the phone already has
@@ -298,7 +298,7 @@ class ConfigService {
                       const Arguments&... arguments);
     template <class Report>
     void continue_report(std::optional<Report>& report);
-    void hold(uint16_t session_id, const char* json, int length);
+    void hold(uint16_t session_id, const char* json, int bytes);
     void drop_replies();
     static const char* flight_name(flight::FlightState state);
     void request_firmware(const json::Reader& reader);

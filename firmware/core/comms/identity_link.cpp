@@ -139,12 +139,12 @@ void ConfigService::send_registration() {
     write_hex_field(writer, "server_key_id", unit.server_key_id());
     writer.add_boolean("release", release);
     write_hex_field(writer, "signature", *signature);
-    const int length = writer.finish();
+    const int bytes = writer.finish();
     if (writer.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
-    (void)reply(buffer, length);
+    (void)reply(buffer, bytes);
 }
 
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it

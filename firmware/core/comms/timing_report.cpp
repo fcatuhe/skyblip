@@ -97,12 +97,12 @@ int TimingReport::next_frame(int payload_bytes, char* out, int capacity) {
         else
             writer.add_integer(field.key, field.value);
     }
-    const int length = writer.finish();
+    const int bytes = writer.finish();
     if (writer.overflowed()) return 0;
 
     at_ += packed;
     part_++;
-    return length;
+    return bytes;
 }
 
 }  // namespace skyblip::comms

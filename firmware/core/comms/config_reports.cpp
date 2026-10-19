@@ -9,8 +9,8 @@
 namespace skyblip::comms {
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
-int ConfigService::format_status(char* buffer, int capacity) {
-    json::Writer writer(buffer, capacity);
+int ConfigService::format_status(char* out, int capacity) {
+    json::Writer writer(out, capacity);
     writer.add_string("cmd", "status");
     writer.add_string("flight", flight_name(flight_state_));
     writer.add_boolean("upload", upload_allowed());
@@ -21,19 +21,19 @@ int ConfigService::format_status(char* buffer, int capacity) {
     writer.add_boolean("went_dark_flat", went_dark_flat_);
     if (diagnostics_.die_valid)
         writer.add_integer("die_temp_c", whole_celsius(diagnostics_.die_dc));
-    const int length = writer.finish();
-    return writer.overflowed() ? 0 : length;
+    const int bytes = writer.finish();
+    return writer.overflowed() ? 0 : bytes;
 }
 
 void ConfigService::send_status() {
     char buffer[kSmallestSupportedPayloadBytes + 1];
-    const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
-    if (length == 0) {
+    const int bytes = format_status(buffer, static_cast<int>(sizeof(buffer)));
+    if (bytes == 0) {
         diagnostics_.link_drops++;
         status_push_due_ = false;
         return;
     }
-    (void)reply(buffer, length);
+    (void)reply(buffer, bytes);
 }
 
 void ConfigService::send_defaults() {
@@ -41,24 +41,24 @@ void ConfigService::send_defaults() {
     json::Writer writer(buffer, sizeof(buffer));
     writer.add_string("cmd", "defaults");
     store_.write_default_fields(writer);
-    const int length = writer.finish();
+    const int bytes = writer.finish();
     if (writer.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
-    (void)reply(buffer, length);
+    (void)reply(buffer, bytes);
 }
 
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
 void ConfigService::push_status() {
     char buffer[kSmallestSupportedPayloadBytes + 1];
-    const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
-    if (length == 0) {
+    const int bytes = format_status(buffer, static_cast<int>(sizeof(buffer)));
+    if (bytes == 0) {
         diagnostics_.link_drops++;
         status_push_due_ = false;
         return;
     }
-    status_push_due_ = broadcast(buffer, length) == Status::WouldBlock;
+    status_push_due_ = broadcast(buffer, bytes) == Status::WouldBlock;
 }
 
 // INFO: fc 04aug26 The one sender allowed more than one frame, and the reason
@@ -140,8 +140,8 @@ void ConfigService::send_update(uint16_t session_id) {
         key[format_hex(key, dfu::key_prefix(trusted), 8)] = 0;
         writer.add_string("key", key);
     }
-    const int length = writer.finish();
-    (void)reply_to(session_id, buffer, length);
+    const int bytes = writer.finish();
+    (void)reply_to(session_id, buffer, bytes);
 }
 
 // A whole dump nobody has collected is a dump of zeros, and zeros here read as a
@@ -177,13 +177,13 @@ template <class Report>
 void ConfigService::continue_report(std::optional<Report>& report) {
     char buffer[kHeldFrameBytes];
     while (report && held_bytes_ == 0) {
-        const int length = report->next_frame(report_payload_bytes_, buffer, report_frame_bytes_);
-        if (length <= 0) {
+        const int bytes = report->next_frame(report_payload_bytes_, buffer, report_frame_bytes_);
+        if (bytes <= 0) {
             diagnostics_.link_drops++;
             report.reset();
             return;
         }
-        const Status sent = reply(buffer, length);
+        const Status sent = reply(buffer, bytes);
         if (report->exhausted() || (sent != Status::Ok && sent != Status::WouldBlock))
             report.reset();
     }

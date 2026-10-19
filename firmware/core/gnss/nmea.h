@@ -90,7 +90,7 @@ class NmeaParser {
     bool parse_line(const char* line, int bytes);
 
     const GnssSolution& solution() const { return solution_; }
-    void reset() { line_length_ = 0; }
+    void reset() { line_bytes_ = 0; }
 
     // Which sentence the last accepted parse was. Only meaningful right after
     // feed() or parse_line() returned true.
@@ -112,7 +112,7 @@ class NmeaParser {
     static constexpr int kVersionBytes = 24;
 
     char line_[100];
-    int line_length_{0};
+    int line_bytes_{0};
     GnssSolution solution_;
     SkyView sky_{};
     char firmware_version_[kVersionBytes]{};
