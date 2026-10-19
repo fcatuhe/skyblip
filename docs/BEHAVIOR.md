@@ -2826,7 +2826,7 @@ Activation end to end on the running product: silent until the server signs it a
   > The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
 - an unlock code that does not verify spends the nonce all the same
 - get leaves addr out until there is one, and keeps addr_table
-  > The server's update page reads 'addr' in the reply as activated.
+  > The server's update page reads 'address' in the reply as activated.
 - once unlocked the unit names itself, reports its addr and arms its radio
 - one press cancels the registration, thirty seconds expire it/no press
 - one press cancels the registration, thirty seconds expire it/one press
@@ -4170,7 +4170,7 @@ Settings survive a power cycle, so every way a stored blob can be wrong is a way
 
 **address**
 
-- a unit with no serial reports no addr, and still its table
+- a unit with no serial reports no address, and still its table
 - the prefix, then the serial the server signed
   > Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
 - the table is a constant, not a field anything can hold
@@ -4199,7 +4199,7 @@ Settings survive a power cycle, so every way a stored blob can be wrong is a way
 - the frequency trim is set over the link and refused whole when it is not
 - the radar's range and plot are stored, and a new unit ships on 4 NM and ALL
 - the range and the plot are the glass's, and the link neither shows nor sets them
-  > The "config" reply has nine bytes left at its worst case, and neither key fits in them.
+  > The radar's range and plot are set on the glass, and the config reply carries what a phone sets.
 - to_json/apply_json round-trip of a patch
 - wrong version blob is Unsupported (migrate/default)
 
