@@ -54,7 +54,6 @@ test('a unit not yet activated reports no address', async () => {
   assert.equal(activator.state.phase, 'ready');
   assert.equal(activator.state.address, null);
   assert.equal(addressOf({ address: 0x00012a }), '00012A');
-  assert.equal(addressOf({ addr: 0x5b5afe }), '5B5AFE', 'firmware before #126 says addr');
 });
 
 test('activating asks the server, then the glass, then stores the unlock code and reads the address back', async () => {

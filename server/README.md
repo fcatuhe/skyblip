@@ -60,10 +60,10 @@ Only skyblip.eu signs for a unit. It holds one Ed25519 key, the server key, whic
 
 ```yaml
 identity:
-  server_key: [seed]
+  server_private_key: [seed]
 ```
 
-`openssl rand -hex 32` makes one: any 32 random bytes are a seed. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in its `challenge` reply. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
+The name says private because this is the one place the secret half sits, beside values that are not secret; its public half is `server.pub` in the firmware, and the server key, unqualified, is the pair. `openssl rand -hex 32` makes a seed: in Ed25519 the 32 random bytes are the private key. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in its `challenge` reply. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
 
 ```sh
 read -rs seed && ruby -ropenssl -e 'k = OpenSSL::PKey.new_raw_private_key("ED25519", [ARGV[0]].pack("H*")).raw_public_key; puts k.unpack1("H*"), OpenSSL::Digest::SHA256.digest(k)[0, 4].unpack1("H*")' "$seed"; unset seed
