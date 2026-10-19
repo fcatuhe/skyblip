@@ -62,11 +62,11 @@ class OwnshipService : public runtime::Service {
     void update_residual(const model::Ownship& previous);
     static gnss::Convergence convergence_of(const model::Ownship& own);
     static bool height_solved(const model::Ownship& own);
-    void adopt_climb(int32_t mm_s, uint32_t now_ms);
+    void adopt_climb(int32_t climb_mm_s, uint32_t now_ms);
     void withdraw_climb();
     static bool climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms, uint32_t window_ms,
                                        int32_t& reference_altitude_mm, uint32_t& reference_ms,
-                                       int32_t& out_mm_s);
+                                       int32_t& out_climb_mm_s);
     bool barometer_heard_within_max_age(uint32_t now_ms) const;
 
     flight::SlipBall ball_{};

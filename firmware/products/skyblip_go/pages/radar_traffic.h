@@ -7,7 +7,7 @@
 
 namespace skyblip::go::radar {
 
-struct Rect {
+struct Bounds {
     int left;
     int top;
     int right;
@@ -17,7 +17,7 @@ struct Rect {
 void plot_leaders(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16);
 void plot_blips(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16);
 void plot_rim(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16,
-              const Rect& label);
+              const Bounds& label);
 
 }  // namespace skyblip::go::radar
 

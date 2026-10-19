@@ -45,8 +45,8 @@ TEST_CASE(
     snapshot.sky = &sky;
     snapshot.hdop_e2 = 90;
     snapshot.vdop_e2 = 150;
-    snapshot.nav_ms = 98;
-    snapshot.nav_valid = true;
+    snapshot.solution_phase_ms = 98;
+    snapshot.solution_phase_valid = true;
     Glass canvas;
     draw_satellites(canvas, snapshot);
 

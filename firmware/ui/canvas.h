@@ -6,9 +6,9 @@
 
 namespace skyblip::ui {
 
-constexpr int kCharW = 5;
-constexpr int kCharH = 7;
-constexpr int kCellW = 6;
+constexpr int kCharacterWidth = 5;
+constexpr int kCharacterHeight = 7;
+constexpr int kCellWidth = 6;
 
 class Canvas {
    public:
@@ -24,13 +24,13 @@ class Canvas {
     void set_pixel(int x, int y, bool black);
     bool get_pixel(int x, int y) const;
 
-    void hline(int x, int y, int w, bool black);
-    void vline(int x, int y, int h, bool black);
+    void horizontal_line(int x, int y, int width, bool black);
+    void vertical_line(int x, int y, int height, bool black);
     void line(int x0, int y0, int x1, int y1, bool black);
-    void rect(int x, int y, int w, int h, bool black, bool fill = false);
-    void circle(int centre_x, int centre_y, int r, bool black, bool fill = false);
+    void rectangle(int x, int y, int width, int height, bool black, bool fill = false);
+    void circle(int centre_x, int centre_y, int radius, bool black, bool fill = false);
 
-    int draw_char(int x, int y, char c, bool black, int scale = 1);
+    int draw_character(int x, int y, char character, bool black, int scale = 1);
     int draw_text(int x, int y, const char* text, bool black, int scale = 1);
 
     const uint8_t* data() const { return data_; }
@@ -44,16 +44,16 @@ class Canvas {
     int stride_;
 };
 
-template <int W, int H>
+template <int Width, int Height>
 class Panel : public Canvas {
    public:
-    static constexpr int kW = W;
-    static constexpr int kH = H;
-    static constexpr int kStride = (W + 7) / 8;
-    static constexpr size_t kBytes = static_cast<size_t>(kStride) * static_cast<size_t>(H);
+    static constexpr int kWidth = Width;
+    static constexpr int kHeight = Height;
+    static constexpr int kStride = (Width + 7) / 8;
+    static constexpr size_t kBytes = static_cast<size_t>(kStride) * static_cast<size_t>(Height);
 
-    Panel() : Canvas(store_, W, H) {}
-    Panel(const Panel& other) : Canvas(store_, W, H) { assign(other); }
+    Panel() : Canvas(store_, Width, Height) {}
+    Panel(const Panel& other) : Canvas(store_, Width, Height) { assign(other); }
     Panel& operator=(const Panel& other) {
         if (this != &other) assign(other);
         return *this;

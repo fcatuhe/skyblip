@@ -95,15 +95,15 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     anchor_utc_s(solution);
     publish_solution_phase(now_ms);
 
-    int32_t mm_s = 0;
+    int32_t climb_mm_s = 0;
     const bool height_fixed = own.fix_valid && height_solved(own);
     if (!height_fixed) gnss_reference_ms_ = 0;
     const bool climb_valid =
         height_fixed &&
         climb_from_altitude_mm(solution.altitude_hae_mm, now_ms, kGnssClimbWindowMs,
-                               gnss_reference_altitude_mm_, gnss_reference_ms_, mm_s);
+                               gnss_reference_altitude_mm_, gnss_reference_ms_, climb_mm_s);
     if (!barometer_active_) {
-        if (climb_valid) adopt_climb(mm_s, now_ms);
+        if (climb_valid) adopt_climb(climb_mm_s, now_ms);
         if (!height_fixed) withdraw_climb();
     }
 
@@ -185,12 +185,12 @@ void OwnshipService::record_flight(uint32_t now_ms) {
 }
 
 gnss::Convergence OwnshipService::convergence_of(const model::Ownship& own) {
-    gnss::Convergence c{};
-    c.fix_valid = own.fix_valid;
-    c.residual_valid = own.prediction_residual_valid;
-    c.height_solved = height_solved(own);
-    c.residual_m = own.prediction_residual_m;
-    return c;
+    gnss::Convergence convergence{};
+    convergence.fix_valid = own.fix_valid;
+    convergence.residual_valid = own.prediction_residual_valid;
+    convergence.height_solved = height_solved(own);
+    convergence.residual_m = own.prediction_residual_m;
+    return convergence;
 }
 
 bool OwnshipService::height_solved(const model::Ownship& own) { return own.vdop_e2 != 0; }
@@ -201,19 +201,19 @@ void OwnshipService::update_residual(const model::Ownship& previous) {
         own.prediction_residual_valid = false;
         return;
     }
-    const int32_t dt_ms = static_cast<int32_t>(own.fix_at_ms - previous.fix_at_ms);
-    if (dt_ms <= 0) {
+    const int32_t elapsed_ms = static_cast<int32_t>(own.fix_at_ms - previous.fix_at_ms);
+    if (elapsed_ms <= 0) {
         own.prediction_residual_valid = false;
         return;
     }
-    const flight::Prediction p = flight::extrapolate(previous, dt_ms);
-    if (!p.valid) {
+    const flight::Prediction prediction = flight::extrapolate(previous, elapsed_ms);
+    if (!prediction.valid) {
         own.prediction_residual_valid = false;
         return;
     }
-    const uint32_t resid =
-        flight::prediction_residual_m(p, own.latitude_1e7, own.longitude_1e7, own.altitude_hae_mm);
-    own.prediction_residual_m = resid > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(resid);
+    const uint32_t residual_m = flight::prediction_residual_m(
+        prediction, own.latitude_1e7, own.longitude_1e7, own.altitude_hae_mm);
+    own.prediction_residual_m = residual_m > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(residual_m);
     own.prediction_residual_valid = true;
 }
 
@@ -258,12 +258,12 @@ void OwnshipService::apply_barometer(const events::BarometerSample& sample, uint
     if (!barometer_heard_within_max_age(now_ms)) barometer_reference_ms_ = 0;
     barometer_heard_ms_ = now_ms == 0 ? 1 : now_ms;
     barometer_active_ = true;
-    int32_t mm_s = 0;
-    const bool adopted =
-        climb_from_altitude_mm(altitude_mm, sample.at_ms, kBarometerClimbWindowMs,
-                               barometer_reference_altitude_mm_, barometer_reference_ms_, mm_s);
-    if (adopted) adopt_climb(mm_s, now_ms);
-    record_barometer(sample, altitude_mm, mm_s, adopted, now_ms);
+    int32_t climb_mm_s = 0;
+    const bool adopted = climb_from_altitude_mm(altitude_mm, sample.at_ms, kBarometerClimbWindowMs,
+                                                barometer_reference_altitude_mm_,
+                                                barometer_reference_ms_, climb_mm_s);
+    if (adopted) adopt_climb(climb_mm_s, now_ms);
+    record_barometer(sample, altitude_mm, climb_mm_s, adopted, now_ms);
 }
 
 void OwnshipService::record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
@@ -323,11 +323,11 @@ void OwnshipService::publish_inertial(uint32_t now_ms) {
     flying_ = flying;
 }
 
-void OwnshipService::adopt_climb(int32_t mm_s, uint32_t now_ms) {
+void OwnshipService::adopt_climb(int32_t climb_mm_s, uint32_t now_ms) {
     model::Ownship& own = context_.state.own;
-    own.climb_mm_s = mm_s;
+    own.climb_mm_s = climb_mm_s;
     own.climb_valid = true;
-    indicated_climb_.observe(mm_s, now_ms);
+    indicated_climb_.observe(climb_mm_s, now_ms);
     context_.state.indicated.climb_mm_s = indicated_climb_.value();
 }
 
@@ -348,11 +348,11 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
         turn_reference_track_cdeg_ = track.value;
         return;
     }
-    const uint32_t dt = now_ms - turn_reference_ms_;
-    if (dt < flight::kTurnWindowMs) return;
+    const uint32_t elapsed_ms = now_ms - turn_reference_ms_;
+    if (elapsed_ms < flight::kTurnWindowMs) return;
 
-    publish_turn(flight::clamped_turn_cdps(
-                     flight::turn_rate_cdps(track, CentiDegrees(turn_reference_track_cdeg_), dt)),
+    publish_turn(flight::clamped_turn_cdps(flight::turn_rate_cdps(
+                     track, CentiDegrees(turn_reference_track_cdeg_), elapsed_ms)),
                  now_ms);
     turn_reference_ms_ = now_ms;
     turn_reference_track_cdeg_ = track.value;
@@ -370,7 +370,7 @@ bool OwnshipService::barometer_heard_within_max_age(uint32_t now_ms) const {
 
 bool OwnshipService::climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms,
                                             uint32_t window_ms, int32_t& reference_altitude_mm,
-                                            uint32_t& reference_ms, int32_t& out_mm_s) {
+                                            uint32_t& reference_ms, int32_t& out_climb_mm_s) {
     if (reference_ms == 0) {
         reference_ms = now_ms == 0 ? 1 : now_ms;
         reference_altitude_mm = altitude_mm;
@@ -378,11 +378,11 @@ bool OwnshipService::climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms
     }
     if (now_ms - reference_ms < window_ms) return false;
 
-    const bool ok = flight::climb_mm_s_from_altitude(altitude_mm, reference_altitude_mm,
-                                                     now_ms - reference_ms, out_mm_s);
+    const bool measured = flight::climb_mm_s_from_altitude(altitude_mm, reference_altitude_mm,
+                                                           now_ms - reference_ms, out_climb_mm_s);
     reference_ms = now_ms;
     reference_altitude_mm = altitude_mm;
-    return ok;
+    return measured;
 }
 
 }  // namespace skyblip::go

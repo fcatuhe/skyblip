@@ -215,27 +215,28 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
-    protocol::AdslPacket p{};
-    p.reset();
-    __builtin_memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
-    if (p.check_crc() != 0 && (p.correct(frame.erasures) < 0 || p.check_crc() != 0))
+    protocol::AdslPacket packet{};
+    packet.reset();
+    __builtin_memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
         return radio::Verdict::BadCrc;
-    p.descramble();
-    if (p.is_registration()) return learn_callsign(p, utc_s, observation);
-    if (!p.is_position()) return radio::Verdict::Unsupported;
+    packet.descramble();
+    if (packet.is_registration()) return learn_callsign(packet, utc_s, observation);
+    if (!packet.is_position()) return radio::Verdict::Unsupported;
     events::Stamp received = stamp;
     received.at_s = utc_s;
-    if (!protocol::to_observation(p, received, 0, model::Source::AdslDirect, observation))
+    if (!protocol::to_observation(packet, received, 0, model::Source::AdslDirect, observation))
         return radio::Verdict::Undecoded;
     return radio::Verdict::Received;
 }
 
-radio::Verdict TrafficService::learn_callsign(const protocol::AdslPacket& p, uint32_t utc_s,
+radio::Verdict TrafficService::learn_callsign(const protocol::AdslPacket& packet, uint32_t utc_s,
                                               model::AircraftObservation& observation) {
     char callsign[traffic::CallsignTable::kTextBytes];
-    if (protocol::callsign_of(p, callsign, sizeof(callsign)) == 0) return radio::Verdict::Undecoded;
-    observation.address = p.address();
-    observation.address_mapping_table = p.address_mapping_table();
+    if (protocol::callsign_of(packet, callsign, sizeof(callsign)) == 0)
+        return radio::Verdict::Undecoded;
+    observation.address = packet.address();
+    observation.address_mapping_table = packet.address_mapping_table();
     observation.source = model::Source::AdslDirect;
     context_.state.callsigns.learn(observation.address_mapping_table, observation.address, callsign,
                                    utc_s);

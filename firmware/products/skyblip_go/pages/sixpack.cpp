@@ -1,5 +1,7 @@
 #include "products/skyblip_go/pages/sixpack.h"
 
+#include <algorithm>
+
 #include "core/flight/slip.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
@@ -11,7 +13,7 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr int kDialR = 31;
+constexpr int kDialRadius = 31;
 constexpr int kCentreX[3] = {34, 100, 166};
 constexpr int kCentreY[2] = {67, 133};
 constexpr int kValueScale = 2;
@@ -22,15 +24,15 @@ constexpr int kTicks = 12;
 constexpr int kAltitudeTicks = 10;  // one mark per 100 ft, so the hands line up with them
 // Card letters stay upright whatever the card does: at 5x7 a turned glyph is a
 // staircase of its own stroke width, and unreadable beats authentic.
-constexpr int kCardR = kDialR - 7;
+constexpr int kCardRadius = kDialRadius - 7;
 constexpr int kIndexTableLength = 5;
-constexpr int kNeedleR = kDialR - 6;
-constexpr int kFaceR = kDialR - 1;
-constexpr int kDeadInnerR = kDialR - 7;
-constexpr int kShortNeedleR = kDialR - 15;
-constexpr int kHubR = 2;
-using ui::kCellW;
-using ui::kCharH;
+constexpr int kNeedleLength = kDialRadius - 6;
+constexpr int kFaceRadius = kDialRadius - 1;
+constexpr int kDeadInnerRadius = kDialRadius - 7;
+constexpr int kShortNeedleLength = kDialRadius - 15;
+constexpr int kHubRadius = 2;
+using ui::kCellWidth;
+using ui::kCharacterHeight;
 
 constexpr int32_t kAsiFullScaleKt = 175;
 constexpr int32_t kAsiFullScaleKmh = 315;
@@ -50,59 +52,57 @@ constexpr int32_t kPitchFullScaleDeg = 20;
 constexpr int32_t kStandardRateDps = 3;
 constexpr int32_t kRateMarkDeg = 20;
 constexpr int32_t kRateFullScaleDeg = 45;
-constexpr int kWingHalf = kDialR - 9;
+constexpr int kWingHalfSpan = kDialRadius - 9;
 constexpr int kFinLength = 6;
 constexpr int kTailUp = 3;
-constexpr int kTailHalf = 8;
+constexpr int kTailHalfSpan = 8;
 constexpr int kBallY = 18;
-constexpr int kBallR = 4;
-constexpr int kCageHalf = kBallR + 2;
-constexpr int kCageHalfH = 5;
+constexpr int kBallRadius = 4;
+constexpr int kCageHalfWidth = kBallRadius + 2;
+constexpr int kCageHalfHeight = 5;
 constexpr int kBallTravel = 16;
-constexpr int kFuselageR = 3;
-constexpr int kReferenceInnerR = 7;
-constexpr int kReferenceOuterR = 20;
-constexpr int kReferenceDotR = 2;
-
-int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : (v > hi ? hi : v); }
+constexpr int kFuselageRadius = 3;
+constexpr int kReferenceInnerRadius = 7;
+constexpr int kReferenceOuterRadius = 20;
+constexpr int kReferenceDotRadius = 2;
 
 // Rounded, sign-symmetric projection of a radius onto a cordic axis: plain
 // integer division truncates toward zero and pulls both ends of a mark inward.
-int radial_half(int32_t r_half, int32_t q14) {
-    const int32_t v = r_half * q14;
-    return static_cast<int>((v + (v < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne));
+int radial_half(int32_t radius_in_halves, int32_t axis) {
+    const int32_t product = radius_in_halves * axis;
+    return static_cast<int>((product + (product < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne));
 }
 
-int radial(int32_t r, int32_t q14) { return radial_half(2 * r, q14); }
+int radial(int32_t radius, int32_t axis) { return radial_half(2 * radius, axis); }
 
 int value_y(int row) {
-    return row == 0 ? kCentreY[0] - kDialR - kValueGap - kCharH * kValueScale
-                    : kCentreY[1] + kDialR + kValueGap;
+    return row == 0 ? kCentreY[0] - kDialRadius - kValueGap - kCharacterHeight * kValueScale
+                    : kCentreY[1] + kDialRadius + kValueGap;
 }
 
 int title_y(int row) {
-    return row == 0 ? value_y(0) - kTitleGap - kCharH
-                    : value_y(1) + kCharH * kValueScale + kTitleGap;
+    return row == 0 ? value_y(0) - kTitleGap - kCharacterHeight
+                    : value_y(1) + kCharacterHeight * kValueScale + kTitleGap;
 }
 
-void centred_text(ui::Canvas& canvas, int centre_x, int y, const char* s, int scale = 1) {
-    int n = 0;
-    while (s[n]) n++;
-    canvas.draw_text(centre_x - (n * kCellW * scale) / 2, y, s, true, scale);
+void centred_text(ui::Canvas& canvas, int centre_x, int y, const char* text, int scale = 1) {
+    int count = 0;
+    while (text[count]) count++;
+    canvas.draw_text(centre_x - (count * kCellWidth * scale) / 2, y, text, true, scale);
 }
 
-void value_text(ui::Canvas& canvas, int centre_x, int row, const char* s) {
-    centred_text(canvas, centre_x, value_y(row), s, kValueScale);
+void value_text(ui::Canvas& canvas, int centre_x, int row, const char* text) {
+    centred_text(canvas, centre_x, value_y(row), text, kValueScale);
 }
 
-void centred_value(ui::Canvas& canvas, int centre_x, int row, bool have, int32_t v, bool plus_sign,
-                   uint8_t min_digits = 1) {
-    if (!have) {
+void centred_value(ui::Canvas& canvas, int centre_x, int row, bool valid, int32_t value,
+                   bool plus_sign, uint8_t min_digits = 1) {
+    if (!valid) {
         value_text(canvas, centre_x, row, "---");
         return;
     }
     char text[12];
-    int written = format_signed(text, v, min_digits, 0, plus_sign && v != 0);
+    int written = format_signed(text, value, min_digits, 0, plus_sign && value != 0);
     text[written] = 0;
     value_text(canvas, centre_x, row, text);
 }
@@ -110,20 +110,22 @@ void centred_value(ui::Canvas& canvas, int centre_x, int row, bool have, int32_t
 // Marks are stepped along the true radius in half-pixels rather than drawn as a
 // line between two rounded end points: over 4 px, rounding both ends tilts the
 // mark by degrees, which is what made the scales look bent.
-void radial_mark(ui::Canvas& canvas, int centre_x, int centre_y, int16_t a, int from_r, int to_r) {
-    const int32_t s = sine(a), c = cosine(a);
-    for (int half = 2 * from_r; half <= 2 * to_r; half++) {
-        canvas.set_pixel(centre_x + radial_half(half, s), centre_y - radial_half(half, c), true);
+void radial_mark(ui::Canvas& canvas, int centre_x, int centre_y, int16_t angle, int from_radius,
+                 int to_radius) {
+    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    for (int half = 2 * from_radius; half <= 2 * to_radius; half++) {
+        canvas.set_pixel(centre_x + radial_half(half, unit_x), centre_y - radial_half(half, unit_y),
+                         true);
     }
 }
 
-void tick(ui::Canvas& canvas, int centre_x, int centre_y, int16_t a, int length = kTickLength) {
-    radial_mark(canvas, centre_x, centre_y, a, kDialR - length, kFaceR);
+void tick(ui::Canvas& canvas, int centre_x, int centre_y, int16_t angle, int length = kTickLength) {
+    radial_mark(canvas, centre_x, centre_y, angle, kDialRadius - length, kFaceRadius);
 }
 
 void dial(ui::Canvas& canvas, int centre_x, int row, const char* title, int ticks = kTicks) {
     const int centre_y = kCentreY[row];
-    canvas.circle(centre_x, centre_y, kDialR, true);
+    canvas.circle(centre_x, centre_y, kDialRadius, true);
     for (int i = 0; i < ticks; i++)
         tick(canvas, centre_x, centre_y, angle16_of_degrees(i * (360 / ticks)));
     centred_text(canvas, centre_x, title_y(row), title);
@@ -131,105 +133,114 @@ void dial(ui::Canvas& canvas, int centre_x, int row, const char* title, int tick
 
 void dead_sector(ui::Canvas& canvas, int centre_x, int centre_y, int32_t from_deg, int32_t to_deg) {
     const int16_t from = angle16_of_degrees(from_deg), to = angle16_of_degrees(to_deg);
-    for (int dy = -kDialR; dy <= kDialR; dy++) {
-        for (int dx = -kDialR; dx <= kDialR; dx++) {
+    for (int dy = -kDialRadius; dy <= kDialRadius; dy++) {
+        for (int dx = -kDialRadius; dx <= kDialRadius; dx++) {
             if (((dx + dy) & 1) != 0) continue;
-            const int r2 = dx * dx + dy * dy;
-            if (r2 > kDialR * kDialR || r2 <= kDeadInnerR * kDeadInnerR) continue;
-            const int16_t a = arctangent(dx, -dy);
-            if (from <= to ? (a < from || a > to) : (a < from && a > to)) continue;
+            const int radius_squared = dx * dx + dy * dy;
+            if (radius_squared > kDialRadius * kDialRadius ||
+                radius_squared <= kDeadInnerRadius * kDeadInnerRadius)
+                continue;
+            const int16_t angle = arctangent(dx, -dy);
+            if (from <= to ? (angle < from || angle > to) : (angle < from && angle > to)) continue;
             canvas.set_pixel(centre_x + dx, centre_y + dy, true);
         }
     }
 }
 
-int32_t vsi_deg(int32_t fpm) {
-    const int32_t v = clampi(fpm, -kVsiFullScaleFpm, kVsiFullScaleFpm);
-    const int32_t rate = v < 0 ? -v : v;
+int32_t vsi_deg(int32_t climb_fpm) {
+    const int32_t clamped = std::clamp<int32_t>(climb_fpm, -kVsiFullScaleFpm, kVsiFullScaleFpm);
+    const int32_t rate = clamped < 0 ? -clamped : clamped;
     const int32_t inner = (rate < kVsiKneeFpm ? rate : kVsiKneeFpm) * kVsiKneeDeg / kVsiKneeFpm;
     const int32_t outer = (rate > kVsiKneeFpm ? rate - kVsiKneeFpm : 0) * kVsiOuterDeg /
                           (kVsiFullScaleFpm - kVsiKneeFpm);
-    return v < 0 ? kVsiZeroDeg - inner - outer : kVsiZeroDeg + inner + outer;
+    return clamped < 0 ? kVsiZeroDeg - inner - outer : kVsiZeroDeg + inner + outer;
 }
 
 void vsi_face(ui::Canvas& canvas, int centre_x, int centre_y) {
     dead_sector(canvas, centre_x, centre_y, vsi_deg(kVsiFullScaleFpm), vsi_deg(-kVsiFullScaleFpm));
-    for (int32_t fpm = -kVsiFullScaleFpm; fpm <= kVsiFullScaleFpm; fpm += kVsiMarkFpm)
-        tick(canvas, centre_x, centre_y, angle16_of_degrees(vsi_deg(fpm)),
-             fpm % kVsiKneeFpm == 0 ? kTickLength + 3 : kTickLength);
+    for (int32_t climb_fpm = -kVsiFullScaleFpm; climb_fpm <= kVsiFullScaleFpm;
+         climb_fpm += kVsiMarkFpm)
+        tick(canvas, centre_x, centre_y, angle16_of_degrees(vsi_deg(climb_fpm)),
+             climb_fpm % kVsiKneeFpm == 0 ? kTickLength + 3 : kTickLength);
 }
 
-void needle(ui::Canvas& canvas, int centre_x, int centre_y, int32_t deg, int length,
+void needle(ui::Canvas& canvas, int centre_x, int centre_y, int32_t angle_deg, int length,
             bool thick = false, bool cleared = false) {
-    const int16_t a = angle16_of_degrees(deg);
-    const int32_t s = sine(a), c = cosine(a);
-    const int tx = centre_x + radial(length, s);
-    const int ty = centre_y - radial(length, c);
+    const int16_t angle = angle16_of_degrees(angle_deg);
+    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int tip_x = centre_x + radial(length, unit_x);
+    const int tip_y = centre_y - radial(length, unit_y);
     if (cleared)
-        for (int ox = -1; ox <= 1; ox++)
-            for (int oy = -1; oy <= 1; oy++)
-                canvas.line(centre_x + ox, centre_y + oy, tx + ox, ty + oy, false);
-    canvas.line(centre_x, centre_y, tx, ty, true);
+        for (int offset_x = -1; offset_x <= 1; offset_x++)
+            for (int offset_y = -1; offset_y <= 1; offset_y++)
+                canvas.line(centre_x + offset_x, centre_y + offset_y, tip_x + offset_x,
+                            tip_y + offset_y, false);
+    canvas.line(centre_x, centre_y, tip_x, tip_y, true);
     if (thick) {  // the altimeter's thousands hand: short and broad, hundreds long and fine
-        canvas.line(centre_x + 1, centre_y, tx + 1, ty, true);
-        canvas.line(centre_x, centre_y + 1, tx, ty + 1, true);
+        canvas.line(centre_x + 1, centre_y, tip_x + 1, tip_y, true);
+        canvas.line(centre_x, centre_y + 1, tip_x, tip_y + 1, true);
     }
-    canvas.circle(centre_x, centre_y, kHubR, true, true);
+    canvas.circle(centre_x, centre_y, kHubRadius, true, true);
 }
 
 void horizon(ui::Canvas& canvas, int centre_x, int centre_y, int32_t pitch_deg, int32_t bank_deg) {
-    const int32_t off =
-        (clampi(pitch_deg, -kPitchFullScaleDeg, kPitchFullScaleDeg) * kDialR) / kPitchFullScaleDeg;
-    const int16_t a = angle16_of_degrees(clampi(bank_deg, -kBankLimitDeg, kBankLimitDeg));
-    const int32_t s = sine(a), c = cosine(a);
-    for (int dx = -kDialR + 1; dx < kDialR; dx++) {
-        const int h = static_cast<int>(
-            square_root<uint32_t>(static_cast<uint32_t>(kDialR * kDialR - dx * dx)));
-        const int32_t hy = clampi(off - (dx * s) / c, -h, h);
+    const int32_t pitch_offset =
+        (std::clamp<int32_t>(pitch_deg, -kPitchFullScaleDeg, kPitchFullScaleDeg) * kDialRadius) /
+        kPitchFullScaleDeg;
+    const int16_t angle =
+        angle16_of_degrees(std::clamp<int32_t>(bank_deg, -kBankLimitDeg, kBankLimitDeg));
+    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    for (int dx = -kDialRadius + 1; dx < kDialRadius; dx++) {
+        const int chord = static_cast<int>(
+            square_root<uint32_t>(static_cast<uint32_t>(kDialRadius * kDialRadius - dx * dx)));
+        const int32_t horizon_y =
+            std::clamp<int32_t>(pitch_offset - (dx * unit_x) / unit_y, -chord, chord);
         const int x = centre_x + dx;
-        for (int y = centre_y + static_cast<int>(hy); y <= centre_y + h; y++) {
+        for (int y = centre_y + static_cast<int>(horizon_y); y <= centre_y + chord; y++) {
             if (((x + y) & 1) == 0) canvas.set_pixel(x, y, true);
         }
     }
-    for (int i = kReferenceInnerR; i <= kReferenceOuterR; i++) {  // solid over sky or ground
+    for (int i = kReferenceInnerRadius; i <= kReferenceOuterRadius;
+         i++) {  // solid over sky or ground
         canvas.set_pixel(centre_x - i, centre_y, true);
         canvas.set_pixel(centre_x + i, centre_y, true);
     }
-    canvas.circle(centre_x, centre_y, kReferenceDotR, true, true);
+    canvas.circle(centre_x, centre_y, kReferenceDotRadius, true, true);
 }
 
 int32_t rate_deflection_deg(int32_t turn_cdps) {
-    return clampi((turn_cdps * kRateMarkDeg) / (kStandardRateDps * 100), -kRateFullScaleDeg,
-                  kRateFullScaleDeg);
+    return std::clamp<int32_t>((turn_cdps * kRateMarkDeg) / (kStandardRateDps * 100),
+                               -kRateFullScaleDeg, kRateFullScaleDeg);
 }
 
 void inclinometer(ui::Canvas& canvas, int centre_x, int centre_y, const SixPackSnapshot& snapshot) {
     if (!snapshot.inclinometer_fitted) return;
     const int y = centre_y + kBallY;
     for (int side = -1; side <= 1; side += 2)
-        canvas.vline(centre_x + side * kCageHalf, y - kCageHalfH, 2 * kCageHalfH + 1, true);
+        canvas.vertical_line(centre_x + side * kCageHalfWidth, y - kCageHalfHeight,
+                             2 * kCageHalfHeight + 1, true);
     if (!snapshot.lateral_valid) return;
-    const int32_t swing =
-        clampi(snapshot.lateral_mg, -flight::kSlipFullScaleMg, flight::kSlipFullScaleMg);
+    const int32_t swing = std::clamp<int32_t>(snapshot.lateral_mg, -flight::kSlipFullScaleMg,
+                                              flight::kSlipFullScaleMg);
     canvas.circle(centre_x + static_cast<int>((swing * kBallTravel) / flight::kSlipFullScaleMg), y,
-                  kBallR, true, true);
+                  kBallRadius, true, true);
 }
 
 void turn_coordinator(ui::Canvas& canvas, int centre_x, int centre_y, int32_t turn_cdps) {
-    const int16_t a = angle16_of_degrees(rate_deflection_deg(turn_cdps));
-    const int32_t s = sine(a), c = cosine(a);
-    const int wx = radial(kWingHalf, c);
-    const int wy = radial(kWingHalf, s);
-    const int ux = radial(kTailUp, s);
-    const int uy = radial(kTailUp, c);
-    const int tx = radial(kTailHalf, c);
-    const int ty = radial(kTailHalf, s);
-    canvas.line(centre_x - wx, centre_y - wy, centre_x + wx, centre_y + wy, true);
-    canvas.line(centre_x, centre_y, centre_x + radial(kFinLength, s),
-                centre_y - radial(kFinLength, c), true);
-    canvas.line(centre_x + ux - tx, centre_y - uy - ty, centre_x + ux + tx, centre_y - uy + ty,
-                true);
-    canvas.circle(centre_x, centre_y, kFuselageR, true, true);
+    const int16_t angle = angle16_of_degrees(rate_deflection_deg(turn_cdps));
+    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int wing_x = radial(kWingHalfSpan, unit_y);
+    const int wing_y = radial(kWingHalfSpan, unit_x);
+    const int tail_up_x = radial(kTailUp, unit_x);
+    const int tail_up_y = radial(kTailUp, unit_y);
+    const int tail_x = radial(kTailHalfSpan, unit_y);
+    const int tail_y = radial(kTailHalfSpan, unit_x);
+    canvas.line(centre_x - wing_x, centre_y - wing_y, centre_x + wing_x, centre_y + wing_y, true);
+    canvas.line(centre_x, centre_y, centre_x + radial(kFinLength, unit_x),
+                centre_y - radial(kFinLength, unit_y), true);
+    canvas.line(centre_x + tail_up_x - tail_x, centre_y - tail_up_y - tail_y,
+                centre_x + tail_up_x + tail_x, centre_y - tail_up_y + tail_y, true);
+    canvas.circle(centre_x, centre_y, kFuselageRadius, true, true);
     for (int side = -1; side <= 1; side += 2) {
         tick(canvas, centre_x, centre_y, angle16_of_degrees(90 * side));
         tick(canvas, centre_x, centre_y, angle16_of_degrees(side * (90 - kRateMarkDeg) + 180));
@@ -242,17 +253,17 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
     static const char kCardinal[4] = {'N', 'E', 'S', 'W'};
     for (int i = 0; i < kTicks; i++) {
         const int32_t bearing = i * (360 / kTicks);
-        const int16_t a = angle16_of_degrees(bearing - track_deg);
+        const int16_t angle = angle16_of_degrees(bearing - track_deg);
         if (bearing % 90 != 0) {
-            tick(canvas, centre_x, centre_y, a);
+            tick(canvas, centre_x, centre_y, angle);
             continue;
         }
-        canvas.draw_char(centre_x - kCellW / 2 + radial(kCardR, sine(a)),
-                         centre_y - kCharH / 2 - radial(kCardR, cosine(a)), kCardinal[bearing / 90],
-                         true);
+        canvas.draw_character(centre_x - kCellWidth / 2 + radial(kCardRadius, sine(angle)),
+                              centre_y - kCharacterHeight / 2 - radial(kCardRadius, cosine(angle)),
+                              kCardinal[bearing / 90], true);
     }
-    canvas.rect(centre_x - 1, centre_y - kDialR, 3, kIndexTableLength, true,
-                true);  // the lubber index, on the case
+    canvas.rectangle(centre_x - 1, centre_y - kDialRadius, 3, kIndexTableLength, true,
+                     true);  // the lubber index, on the case
     ui::draw_skyship(canvas, centre_x, centre_y);
 }
 
@@ -292,23 +303,25 @@ void battery_dial(ui::Canvas& canvas, int centre_x, int row, const SixPackSnapsh
 void draw_sixpack(ui::Canvas& canvas, const SixPackSnapshot& snapshot) {
     canvas.clear(true);
 
-    const int32_t kt = snapshot.fix_valid ? clampi(snapshot.speed_kt, 0, 999) : 0;
+    const int32_t speed_kt =
+        snapshot.fix_valid ? std::clamp<int32_t>(snapshot.speed_kt, 0, 999) : 0;
     const int32_t altitude_ft = snapshot.fix_valid ? snapshot.altitude_ft : 0;
     const int32_t climb_fpm = snapshot.climb_valid ? snapshot.climb_fpm : 0;
     const int32_t turn_cdps = snapshot.fix_valid ? snapshot.turn_cdps : 0;
     const int32_t turn_dps = (turn_cdps + (turn_cdps < 0 ? -50 : 50)) / 100;
     const int32_t track = snapshot.fix_valid ? snapshot.track_deg % 360 : 0;
-    const int32_t bank = inferred_bank_deg(turn_dps, kt);
-    const int32_t pitch = flight_path_deg(climb_fpm, kt);
+    const int32_t bank = inferred_bank_deg(turn_dps, speed_kt);
+    const int32_t pitch = flight_path_deg(climb_fpm, speed_kt);
 
     const bool metric = snapshot.units == go::Units::Metric;
-    const int32_t speed = metric ? (kt * 1852 + 500) / 1000 : kt;
+    const int32_t speed = metric ? (speed_kt * 1852 + 500) / 1000 : speed_kt;
     const int32_t speed_full = metric ? kAsiFullScaleKmh : kAsiFullScaleKt;
 
     dial(canvas, kCentreX[0], 0, metric ? "GS KM/H" : "GS KT", kAsiTicks);
     dead_sector(canvas, kCentreX[0], kCentreY[0], kAsiZeroDeg + kAsiSpanDeg, kAsiZeroDeg);
     needle(canvas, kCentreX[0], kCentreY[0],
-           kAsiZeroDeg + (clampi(speed, 0, speed_full) * kAsiSpanDeg) / speed_full, kNeedleR,
+           kAsiZeroDeg + (std::clamp<int32_t>(speed, 0, speed_full) * kAsiSpanDeg) / speed_full,
+           kNeedleLength,
            /*thick=*/false, /*cleared=*/true);
     centred_value(canvas, kCentreX[0], 0, snapshot.fix_valid, speed, false);
 
@@ -319,10 +332,10 @@ void draw_sixpack(ui::Canvas& canvas, const SixPackSnapshot& snapshot) {
     const int32_t on_scale = altitude_ft < 0 ? 0 : altitude_ft;
     needle(canvas, kCentreX[2], kCentreY[0],
            ((on_scale % kAltitudeThousandsPerTurn) * 360) / kAltitudeThousandsPerTurn,
-           kShortNeedleR,
+           kShortNeedleLength,
            /*thick=*/true);
     needle(canvas, kCentreX[2], kCentreY[0],
-           ((on_scale % kAltitudeHundredsPerTurn) * 360) / kAltitudeHundredsPerTurn, kNeedleR);
+           ((on_scale % kAltitudeHundredsPerTurn) * 360) / kAltitudeHundredsPerTurn, kNeedleLength);
     centred_value(canvas, kCentreX[2], 0, snapshot.fix_valid, altitude_ft, false);
 
     dial(canvas, kCentreX[0], 1, "TURN D/S", 0);
@@ -336,7 +349,7 @@ void draw_sixpack(ui::Canvas& canvas, const SixPackSnapshot& snapshot) {
 
     dial(canvas, kCentreX[2], 1, "VS FPM", 0);
     vsi_face(canvas, kCentreX[2], kCentreY[1]);
-    needle(canvas, kCentreX[2], kCentreY[1], vsi_deg(climb_fpm), kNeedleR, /*thick=*/false,
+    needle(canvas, kCentreX[2], kCentreY[1], vsi_deg(climb_fpm), kNeedleLength, /*thick=*/false,
            /*cleared=*/true);
     centred_value(canvas, kCentreX[2], 1, snapshot.climb_valid, climb_figure_fpm(climb_fpm), true);
 }

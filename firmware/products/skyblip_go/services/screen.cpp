@@ -504,14 +504,15 @@ void ScreenService::draw_parked_cell(const char* said) {
     framebuffer_.clear(/*white=*/true);
     ui::draw_wordmark(framebuffer_, kGlassWidth / 2, kGlassHeight / 2);
     const int wordmark_bottom = kGlassHeight / 2 + ui::wordmark_height() / 2;
-    const int y = (wordmark_bottom + kGlassHeight) / 2 - ui::kCharH * kParkedSaidScale / 2;
+    const int y =
+        (wordmark_bottom + kGlassHeight) / 2 - ui::kCharacterHeight * kParkedSaidScale / 2;
     centred_text(y, said, kParkedSaidScale);
 }
 
 void ScreenService::centred_text(int y, const char* text, int scale) {
-    int n = 0;
-    while (text[n] != 0) n++;
-    const int width = n * ui::kCellW * scale;
+    int count = 0;
+    while (text[count] != 0) count++;
+    const int width = count * ui::kCellWidth * scale;
     framebuffer_.draw_text((kGlassWidth - width) / 2, y, text, true, scale);
 }
 

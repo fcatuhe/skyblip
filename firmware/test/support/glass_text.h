@@ -15,7 +15,7 @@ inline bool reads_in(const ui::Canvas& canvas, const char* text, int x0, int y0,
     go::Glass wanted;
     wanted.clear(ink);
     wanted.draw_text(0, 0, text, ink, scale);
-    const int w = n * ui::kCellW * scale - scale, h = ui::kCharH * scale;
+    const int w = n * ui::kCellWidth * scale - scale, h = ui::kCharacterHeight * scale;
     for (int y = y0; y + h <= y1; y++) {
         for (int x = x0; x + w <= x1; x++) {
             bool same = true;
@@ -34,8 +34,8 @@ inline bool reads_at(const ui::Canvas& canvas, int x, int y, const char* text, i
     go::Glass expected;
     expected.clear(ink);
     expected.draw_text(x, y, text, ink, scale);
-    const int width = static_cast<int>(std::strlen(text)) * ui::kCellW * scale;
-    for (int dy = 0; dy < ui::kCharH * scale; dy++)
+    const int width = static_cast<int>(std::strlen(text)) * ui::kCellWidth * scale;
+    for (int dy = 0; dy < ui::kCharacterHeight * scale; dy++)
         for (int dx = 0; dx < width; dx++)
             if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
                 return false;

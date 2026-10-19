@@ -14,21 +14,21 @@ namespace {
 
 constexpr int kRowH = 7 * kNearbyScale;
 
-int row_y(int index) { return kNearbyFirstRowY + index * kNearbyLineH; }
+int row_y(int index) { return kNearbyFirstRowY + index * kNearbyLineHeight; }
 
 // Ink inside one row band, so a drawn row is told from an empty one without asserting on glyphs.
 int ink_in_row(const Glass& canvas, int index) {
     const int y0 = row_y(index);
     int n = 0;
     for (int y = y0; y < y0 + kRowH; y++)
-        for (int x = 0; x < Glass::kW; x++)
+        for (int x = 0; x < Glass::kWidth; x++)
             if (canvas.get_pixel(x, y)) n++;
     return n;
 }
 
 // A case claims a column reads "2.3", not that there is ink in it.
 bool reads_right_of(const Glass& canvas, int x_end, int y, const char* text, int scale) {
-    return reads_at(canvas, x_end - static_cast<int>(std::strlen(text)) * ui::kCellW * scale, y,
+    return reads_at(canvas, x_end - static_cast<int>(std::strlen(text)) * ui::kCellWidth * scale, y,
                     text, scale);
 }
 
@@ -36,12 +36,12 @@ bool banner_reads(const Glass& canvas, const char* text) {
     int n = 0;
     while (text[n]) n++;
     const int w = n * 6 * kNearbyScale;
-    return reads_at(canvas, (Glass::kW - w) / 2, kNearbyBannerY, text, kNearbyScale);
+    return reads_at(canvas, (Glass::kWidth - w) / 2, kNearbyBannerY, text, kNearbyScale);
 }
 
 // Where the small address lands: after the name it stands beside, on the same bottom.
 int own_address_x() {
-    return kNearbyIdX + kNearbyOwnNameChars * 6 * kNearbyTitleScale + kNearbyWordGap;
+    return kNearbyIdX + kNearbyOwnNameCharacters * 6 * kNearbyTitleScale + kNearbyWordGap;
 }
 
 NearbySnapshot listing(const traffic::RangeRow* rows, int n, go::Units units) {
@@ -273,6 +273,6 @@ TEST_CASE("nearby page: more emitters than rows are cut, never overdrawn") {
     draw_nearby(canvas, listing(rows, kNearbyRows + 4, go::Units::Nautical));
 
     for (int i = 0; i < kNearbyRows; i++) CHECK(ink_in_row(canvas, i) > 20);
-    for (int y = row_y(kNearbyRows - 1) + kRowH; y < Glass::kH; y++)
-        for (int x = 0; x < Glass::kW; x++) CHECK_FALSE(canvas.get_pixel(x, y));
+    for (int y = row_y(kNearbyRows - 1) + kRowH; y < Glass::kHeight; y++)
+        for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }

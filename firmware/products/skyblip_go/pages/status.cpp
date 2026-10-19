@@ -9,20 +9,20 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-constexpr int kLineH = 16;
-using ui::kCellW;
-constexpr int kColumn(int cell) { return kLeft + cell * kCellW; }
+constexpr int kLineHeight = 16;
+using ui::kCellWidth;
+constexpr int column_x(int cell) { return kLeft + cell * kCellWidth; }
 
 // One grid, in character cells: 4 label, 1 space, 5 value, 4 unit, 3 space,
 // 5 value, 4 unit. Every unit string carries its own leading space, which is
 // what keeps a five-character value off it. km/h then runs one cell past the
 // field, which is what it costs to have every unit start in the same column.
-constexpr int kValueX = kColumn(5);
-constexpr int kAeroNumberEnd = kColumn(10);
-constexpr int kAeroUnitX = kColumn(10);
-constexpr int kAeroUnitEnd = kColumn(15);  // past a leading space and four characters
-constexpr int kSiNumberEnd = kColumn(22);
-constexpr int kSiUnitX = kColumn(22);
+constexpr int kValueX = column_x(5);
+constexpr int kAeroNumberEnd = column_x(10);
+constexpr int kAeroUnitX = column_x(10);
+constexpr int kAeroUnitEnd = column_x(15);  // past a leading space and four characters
+constexpr int kSiNumberEnd = column_x(22);
+constexpr int kSiUnitX = column_x(22);
 
 const char* solution_dimensions(const StatusSnapshot& snapshot) {
     if (snapshot.fix_mode == gnss::kFixMode3D) return "3D";
@@ -40,7 +40,7 @@ int format_elapsed(char* out, uint32_t seconds) {
     return written;
 }
 constexpr uint32_t kImuCountCeiling = 99;
-constexpr uint8_t kImuMetaInitialised = 16;
+constexpr uint8_t kImuMetaEventInitialised = 16;
 
 int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).value; }
 
@@ -53,24 +53,24 @@ void row(ui::Canvas& canvas, int y, const char* label, const char* value) {
 }
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
+    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
+int length(const char* text) {
+    int count = 0;
+    while (text[count]) count++;
+    return count;
 }
 
 // The same two columns as the numbers, for the rows whose values are words: the
 // value right-aligned on the column, its unit left-aligned after it.
 void text_row(ui::Canvas& canvas, int y, const char* label, const char* value, const char* unit,
-              const char* value2 = "", const char* unit2 = "") {
+              const char* second_value = "", const char* second_unit = "") {
     canvas.draw_text(kLeft, y, label, true, 1);
     right_aligned(canvas, kAeroNumberEnd, y, value, length(value));
     canvas.draw_text(kAeroUnitX, y, unit, true, 1);
-    right_aligned(canvas, kSiNumberEnd, y, value2, length(value2));
-    canvas.draw_text(kSiUnitX, y, unit2, true, 1);
+    right_aligned(canvas, kSiNumberEnd, y, second_value, length(second_value));
+    canvas.draw_text(kSiUnitX, y, second_unit, true, 1);
 }
 
 struct Quantity {
@@ -129,9 +129,9 @@ int imu_traffic(char* out, const StatusSnapshot& snapshot) {
     if (snapshot.imu_error != 0) {
         written += format_string(out + written, " E");
         written += format_hex(out + written, snapshot.imu_error, 2);
-    } else if (snapshot.imu_meta != kImuMetaInitialised) {
+    } else if (snapshot.imu_meta_event != kImuMetaEventInitialised) {
         written += format_string(out + written, " M");
-        written += format_unsigned(out + written, snapshot.imu_meta, 1);
+        written += format_unsigned(out + written, snapshot.imu_meta_event, 1);
     } else {
         written += format_string(out + written, " I");
         written += format_hex(out + written, snapshot.imu_interrupt, 2);
@@ -197,7 +197,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     canvas.draw_text(kLeft, 3, text, true, 2);
     if (snapshot.callsign != nullptr && snapshot.callsign[0] != 0)
         right_aligned(canvas, kGlassWidth - kLeft, 8, snapshot.callsign, length(snapshot.callsign));
-    canvas.hline(kLeft, 21, kGlassWidth - 2 * kLeft, true);
+    canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     // Everything that is one free-form string first, then the block where every
     // number lines up in its column.
@@ -225,7 +225,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         text_row(canvas, y, "GNSS", "", "", "UTC", text);
         canvas.draw_text(kValueX, y, stage, true, 1);
     }
-    y += kLineH;
+    y += kLineHeight;
 
     // Full 1e-7 degrees on both, which is what the fix carries. A signed
     // three-digit longitude is then 16 cells wide with its label, so the
@@ -246,19 +246,19 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     } else {
         row(canvas, y, "LAT", "no fix");
     }
-    y += kLineH;
+    y += kLineHeight;
 
     written = format_unsigned(text, static_cast<uint32_t>(snapshot.track_cdeg), 5, 2);
     text[written] = 0;
     text_row(canvas, y, "TRK", text, " TRUE");
     imu_field(canvas, y, snapshot);
-    y += kLineH;
+    y += kLineHeight;
 
     char count[8];
     written = format_unsigned(count, static_cast<uint32_t>(snapshot.heard_count), 1);
     count[written] = 0;
     text_row(canvas, y, "TFC", count, "", "TX", snapshot.transmitting ? " ON" : " OFF");
-    y += kLineH;
+    y += kLineHeight;
 
     // The aligned block: the pressure the altitudes depend on, the geometric
     // altitude, and pressure altitude on the 1013.25 hPa standard setting - the
@@ -267,26 +267,26 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         pressure_row(canvas, y, snapshot.pressure_mpa);
     else
         row(canvas, y, "BARO", "no sensor");
-    y += kLineH;
+    y += kLineHeight;
 
     dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).value, 0, " ft"},
              {div_round(snapshot.altitude_mm, 100), 1, " m"}, false);
-    y += kLineH;
+    y += kLineHeight;
 
     if (snapshot.barometer_valid)
         dual_row(canvas, y, "STD",
                  {to_feet(Millimetres(snapshot.altitude_standard_mm)).value, 0, " ft"},
                  {div_round(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
-    y += kLineH;
+    y += kLineHeight;
 
     dual_row(canvas, y, "SPD", {knots(snapshot.speed_mm_s), 0, " kt"},
              {centi_kilometres_per_hour(snapshot.speed_mm_s), 2, " km/h"}, false);
-    y += kLineH;
+    y += kLineHeight;
 
     dual_row(canvas, y, "VS",
              {to_feet_per_minute(MillimetresPerSecond(snapshot.climb_mm_s)).value, 0, " fpm"},
              {snapshot.climb_mm_s, 3, " m/s"}, true);
-    y += kLineH;
+    y += kLineHeight;
 
     battery_row(canvas, y, snapshot);
 }

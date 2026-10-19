@@ -13,10 +13,11 @@ using namespace skyblip::go;
 
 namespace {
 
-using ui::kCellW;
+using ui::kCellWidth;
 
 bool fits(const char* text, int scale) {
-    return kInstallingLeftX + static_cast<int>(std::strlen(text)) * kCellW * scale <= Glass::kW;
+    return kInstallingLeftX + static_cast<int>(std::strlen(text)) * kCellWidth * scale <=
+           Glass::kWidth;
 }
 
 }  // namespace
@@ -35,7 +36,7 @@ TEST_CASE("recovery page: it names the drive, the file and the way back, unclipp
             CHECK(reads_at(canvas, kInstallingLeftX, installing_body_y(row + 1), kRecoveryBody[row],
                            1));
         }
-        CHECK(installing_body_y(kRecoveryBodyRows) + 7 < Glass::kH);
+        CHECK(installing_body_y(kRecoveryBodyRows) + 7 < Glass::kHeight);
     }
 }
 
@@ -55,6 +56,7 @@ TEST_CASE("recovery page: a reboot says the bootloader runs, a power off asks fo
 TEST_CASE("recovery page: it cannot be read as the prompt it replaced") {
     Glass canvas;
     draw_recovery(canvas, ports::RecoveryPath::Rebooted);
-    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, 1));
-    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
+    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmAllowY, kConfirmAllowText, 1));
+    CHECK_FALSE(
+        reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmRefuseY, kConfirmRefuseText, 1));
 }

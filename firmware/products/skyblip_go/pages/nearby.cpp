@@ -9,21 +9,21 @@
 namespace skyblip::go {
 
 namespace {
-using ui::kCellW;
-using ui::kCharH;
+using ui::kCellWidth;
+using ui::kCharacterHeight;
 constexpr int kCountScale = 2;
 constexpr int kRuleY = 32;
 constexpr int kRelativeHundredsCeiling = 99;
 constexpr int32_t kDistanceCeilingE1 = 999;
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length, int scale) {
-    canvas.draw_text(x_end - length * kCellW * scale, y, text, true, scale);
+    canvas.draw_text(x_end - length * kCellWidth * scale, y, text, true, scale);
 }
 
 void right_aligned_text(ui::Canvas& canvas, int x_end, int y, const char* text, int scale) {
-    int n = 0;
-    while (text[n]) n++;
-    right_aligned(canvas, x_end, y, text, n, scale);
+    int count = 0;
+    while (text[count]) count++;
+    right_aligned(canvas, x_end, y, text, count, scale);
 }
 
 void draw_count(ui::Canvas& canvas, int heard_count) {
@@ -33,13 +33,14 @@ void draw_count(ui::Canvas& canvas, int heard_count) {
     right_aligned(canvas, kNearbyRelativeAltitudeEnd, kNearbyTitleY, text, written, kCountScale);
 
     const int word_end =
-        kNearbyRelativeAltitudeEnd - written * kCellW * kCountScale - kNearbyWordGap;
-    right_aligned_text(canvas, word_end, kNearbyTitleY + kCharH * (kCountScale - 1), "TRAFFIC", 1);
+        kNearbyRelativeAltitudeEnd - written * kCellWidth * kCountScale - kNearbyWordGap;
+    right_aligned_text(canvas, word_end, kNearbyTitleY + kCharacterHeight * (kCountScale - 1),
+                       "TRAFFIC", 1);
 }
 
 int format_own_name(char* out, const char* callsign) {
     int written = 0;
-    while (written < kNearbyOwnNameChars && callsign[written] != 0) {
+    while (written < kNearbyOwnNameCharacters && callsign[written] != 0) {
         out[written] = callsign[written];
         written++;
     }
@@ -48,8 +49,8 @@ int format_own_name(char* out, const char* callsign) {
 
 void draw_own_address(ui::Canvas& canvas, int x, int y, settings::AirAddress address, int scale) {
     char buffer[8];
-    const int n = format_air_address(buffer, address);
-    buffer[n] = 0;
+    const int written = format_air_address(buffer, address);
+    buffer[written] = 0;
     canvas.draw_text(x, y, buffer, true, scale);
 }
 
@@ -65,16 +66,16 @@ void draw_own_id(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
     text[written] = 0;
     canvas.draw_text(kNearbyIdX, kNearbyTitleY, text, true, kNearbyTitleScale);
 
-    const int address_x = kNearbyIdX + written * kCellW * kNearbyTitleScale + kNearbyWordGap;
-    draw_own_address(canvas, address_x, kNearbyTitleY + kCharH * (kNearbyTitleScale - 1),
+    const int address_x = kNearbyIdX + written * kCellWidth * kNearbyTitleScale + kNearbyWordGap;
+    draw_own_address(canvas, address_x, kNearbyTitleY + kCharacterHeight * (kNearbyTitleScale - 1),
                      snapshot.own_address, 1);
 }
 
 void banner(ui::Canvas& canvas, const char* text) {
-    int n = 0;
-    while (text[n]) n++;
-    canvas.draw_text((kGlassWidth - n * kCellW * kNearbyScale) / 2, kNearbyBannerY, text, true,
-                     kNearbyScale);
+    int count = 0;
+    while (text[count]) count++;
+    canvas.draw_text((kGlassWidth - count * kCellWidth * kNearbyScale) / 2, kNearbyBannerY, text,
+                     true, kNearbyScale);
 }
 
 void draw_header(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
@@ -84,7 +85,7 @@ void draw_header(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
     canvas.draw_text(kNearbyIdX, kNearbyHeadY, "SRC ID", true, 1);
     right_aligned_text(canvas, kNearbyDistanceEnd, kNearbyHeadY, "DIST", 1);
     right_aligned_text(canvas, kNearbyRelativeAltitudeEnd, kNearbyHeadY, "ALT", 1);
-    canvas.hline(kNearbyIdX, kRuleY, kNearbyRelativeAltitudeEnd - kNearbyIdX, true);
+    canvas.horizontal_line(kNearbyIdX, kRuleY, kNearbyRelativeAltitudeEnd - kNearbyIdX, true);
 }
 
 int32_t relative_hundreds_of_feet(int32_t up_m) {
@@ -101,7 +102,7 @@ int format_id(char* out, const traffic::RangeRow& row) {
     if (row.callsign == nullptr || row.callsign[0] == 0)
         return 2 + format_hex(out + 2, row.address, 6);
     int written = 2;
-    while (written < kNearbyIdChars && row.callsign[written - 2] != 0) {
+    while (written < kNearbyIdCharacters && row.callsign[written - 2] != 0) {
         out[written] = row.callsign[written - 2];
         written++;
     }
@@ -111,8 +112,8 @@ int format_id(char* out, const traffic::RangeRow& row) {
 void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metric) {
     char text[16];
 
-    const int n_id = format_id(text, row);
-    text[n_id] = 0;
+    const int id_written = format_id(text, row);
+    text[id_written] = 0;
     canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
 
     const int32_t distance_e1 =
@@ -146,7 +147,7 @@ void draw_nearby(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
     const int rows = snapshot.row_count < kNearbyRows ? snapshot.row_count : kNearbyRows;
     const bool metric = snapshot.units == go::Units::Metric;
     for (int i = 0; i < rows; i++)
-        draw_row(canvas, kNearbyFirstRowY + i * kNearbyLineH, snapshot.rows[i], metric);
+        draw_row(canvas, kNearbyFirstRowY + i * kNearbyLineHeight, snapshot.rows[i], metric);
 }
 
 }  // namespace skyblip::go

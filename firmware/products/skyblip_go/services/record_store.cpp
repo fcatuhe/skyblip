@@ -29,12 +29,12 @@ uint32_t RecordStore::frontier_slot(uint32_t sector) {
     uint32_t low = 0;
     uint32_t high = ring_.slots_per_sector();
     while (low < high) {
-        const uint32_t mid = low + (high - low) / 2;
-        if (!pool_.read_slot(sector, mid, scratch_)) return low;
+        const uint32_t middle = low + (high - low) / 2;
+        if (!pool_.read_slot(sector, middle, scratch_)) return low;
         if (flight::log_slot_erased(scratch_, kStoreRecordBytes))
-            high = mid;
+            high = middle;
         else
-            low = mid + 1;
+            low = middle + 1;
     }
     return low;
 }
@@ -255,10 +255,10 @@ uint32_t RecordStore::sessions_within(uint32_t sectors) const {
 
 void RecordStore::reply(uint16_t link_session, int bytes) { pool_.send(link_session, bytes); }
 
-void RecordStore::ack(uint16_t link_session, bool ok, const char* reason) {
+void RecordStore::acknowledge(uint16_t link_session, bool ok, const char* reason) {
     reply(link_session,
-          comms::format_log_acknowledgement(pool_.reply_buffer(), pool_.reply_cap(link_session), ok,
-                                            reason, selector()));
+          comms::format_log_acknowledgement(
+              pool_.reply_buffer(), pool_.reply_capacity(link_session), ok, reason, selector()));
 }
 
 void RecordStore::serve(const comms::LogRequest& request) {
@@ -266,7 +266,9 @@ void RecordStore::serve(const comms::LogRequest& request) {
         case comms::LogCommand::List: answer_list(request); break;
         case comms::LogCommand::Read: answer_read(request); break;
         case comms::LogCommand::Erase:
-        case comms::LogCommand::None: ack(request.link_session, false, "unknown_cmd"); break;
+        case comms::LogCommand::None:
+            acknowledge(request.link_session, false, "unknown_cmd");
+            break;
     }
 }
 
@@ -275,17 +277,17 @@ void RecordStore::answer_list(const comms::LogRequest& request) {
     if (!request.index_valid) {
         rebuild_index();
         reply(link_session,
-              comms::format_log_count(pool_.reply_buffer(), pool_.reply_cap(link_session),
+              comms::format_log_count(pool_.reply_buffer(), pool_.reply_capacity(link_session),
                                       session_count_, index_truncated_, selector()));
         return;
     }
     if (request.index >= session_count_) {
-        ack(link_session, false, "no_session");
+        acknowledge(link_session, false, "no_session");
         return;
     }
     const SessionInfo& entry = index_[request.index];
     reply(link_session,
-          comms::format_log_session(pool_.reply_buffer(), pool_.reply_cap(link_session),
+          comms::format_log_session(pool_.reply_buffer(), pool_.reply_capacity(link_session),
                                     request.index, session_count_, entry.session_id, entry.records,
                                     entry.closed, entry.truncated, selector()));
 }
@@ -298,17 +300,17 @@ void RecordStore::answer_read(const comms::LogRequest& request) {
         entry = find(request.session);
     }
     if (entry == nullptr) {
-        ack(link_session, false, "no_session");
+        acknowledge(link_session, false, "no_session");
         return;
     }
     const int per_chunk =
         comms::log_records_per_chunk(pool_.payload_bytes(link_session), selector());
     if (per_chunk == 0) {
-        ack(link_session, false, "payload");
+        acknowledge(link_session, false, "payload");
         return;
     }
     if (ring_.slots_per_sector() == 0 || ring_.sector_count() == 0) {
-        ack(link_session, false, "no_storage");
+        acknowledge(link_session, false, "no_storage");
         return;
     }
 
@@ -316,7 +318,7 @@ void RecordStore::answer_read(const comms::LogRequest& request) {
         comms::plan_log_window(request.from, request.count, per_chunk, entry->records);
     if (window.chunks == 0) {
         reply(link_session,
-              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(link_session),
+              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_capacity(link_session),
                                       request.session, request.from, pool_.chunk_buffer(), 0, true,
                                       selector()));
         return;
@@ -331,14 +333,14 @@ void RecordStore::continue_read() {
         const comms::LogChunkSpan span = reading_.window.at(reading_.next);
         if (!read_records(reading_.session, span.from, span.records)) {
             reading_.active = false;
-            ack(link_session, false, "read_failed");
+            acknowledge(link_session, false, "read_failed");
             return;
         }
-        const bool sent =
-            pool_.send(link_session,
-                       comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(link_session),
-                                               reading_.session, span.from, pool_.chunk_buffer(),
-                                               span.records, span.ends_session, selector()));
+        const bool sent = pool_.send(
+            link_session,
+            comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_capacity(link_session),
+                                    reading_.session, span.from, pool_.chunk_buffer(), span.records,
+                                    span.ends_session, selector()));
         reading_.next++;
         if (!sent || reading_.next == reading_.window.chunks) reading_.active = false;
     }

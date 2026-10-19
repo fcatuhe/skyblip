@@ -23,7 +23,7 @@ void FlightLogService::tick(uint32_t now_ms) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {
             session_.reset();
-            ack(comms::LogStore::Flights, true, "erased");
+            acknowledge(comms::LogStore::Flights, true, "erased");
         }
         return;
     }
@@ -118,11 +118,12 @@ bool FlightLogService::on_ground() const {
     return context_.state.flight.confirmed_state == flight::FlightState::Ground;
 }
 
-void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {
+void FlightLogService::acknowledge(comms::LogStore store, bool ok, const char* reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(reply_link_session_,
-              comms::format_log_acknowledgement(
-                  pool.reply_buffer(), pool.reply_cap(reply_link_session_), ok, reason, store));
+    pool.send(
+        reply_link_session_,
+        comms::format_log_acknowledgement(
+            pool.reply_buffer(), pool.reply_capacity(reply_link_session_), ok, reason, store));
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {
@@ -178,34 +179,35 @@ void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t sess
 void FlightLogService::handle(const comms::LogRequest& request) {
     reply_link_session_ = request.link_session;
     if (!config_.claim_link(request.link_session)) {
-        ack(request.store, false, "claimed");
+        acknowledge(request.store, false, "claimed");
         return;
     }
     if (!request.understood) {
-        ack(request.store, false, request.reason == nullptr ? "unknown_cmd" : request.reason);
+        acknowledge(request.store, false,
+                    request.reason == nullptr ? "unknown_cmd" : request.reason);
         return;
     }
     RecordStore* store = store_for(request.store);
     if (store == nullptr) {
-        ack(request.store, false, "no_diagnostics");
+        acknowledge(request.store, false, "no_diagnostics");
         return;
     }
     if (!store->available()) {
-        ack(request.store, false, "no_storage");
+        acknowledge(request.store, false, "no_storage");
         return;
     }
     if (flights_.erasing()) {
-        ack(request.store, false, "busy");
+        acknowledge(request.store, false, "busy");
         return;
     }
     if (!on_ground()) {
-        ack(request.store, false, "in_flight");
+        acknowledge(request.store, false, "in_flight");
         return;
     }
 
     if (request.command == comms::LogCommand::Erase) {
         if (request.store != comms::LogStore::Flights) {
-            ack(request.store, false, "flights_only");
+            acknowledge(request.store, false, "flights_only");
             return;
         }
         config_.request_log_erase();

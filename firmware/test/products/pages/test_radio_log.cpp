@@ -20,7 +20,7 @@ int ink_in_row(const Glass& canvas, int index) {
     const int y0 = kFirstRowY + index * kLineH;
     int n = 0;
     for (int y = y0; y < y0 + 8; y++)
-        for (int x = 0; x < Glass::kW; x++)
+        for (int x = 0; x < Glass::kWidth; x++)
             if (canvas.get_pixel(x, y)) n++;
     return n;
 }

@@ -16,12 +16,12 @@ class SettingsStore : public comms::ConfigStore {
     SettingsStore(Settings& settings, const identity::Activation& activation)
         : settings_(settings), activation_(activation) {}
 
-    void write_fields(json::Writer& w) const override {
-        write_json_fields(w, settings_, activation_.address());
+    void write_fields(json::Writer& writer) const override {
+        write_json_fields(writer, settings_, activation_.address());
     }
 
-    void write_default_fields(json::Writer& w) const override {
-        write_json_settings(w, defaults());
+    void write_default_fields(json::Writer& writer) const override {
+        write_json_settings(writer, defaults());
     }
 
     Status apply(const char* json, int bytes) override {

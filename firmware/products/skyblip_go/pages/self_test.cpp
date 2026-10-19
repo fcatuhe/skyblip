@@ -9,17 +9,17 @@ namespace {
 
 constexpr int kLeft = kSelfTestLeftX;
 constexpr int kRight = kSelfTestRightX;
-using ui::kCellW;
-constexpr int kLineH = kSelfTestRowH;
+using ui::kCellWidth;
+constexpr int kLineHeight = kSelfTestRowHeight;
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
+int length(const char* text) {
+    int count = 0;
+    while (text[count]) count++;
+    return count;
 }
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text) {
-    canvas.draw_text(x_end - length(text) * kCellW, y, text, true, 1);
+    canvas.draw_text(x_end - length(text) * kCellWidth, y, text, true, 1);
 }
 
 const char* verdict(PartState state) {
@@ -34,7 +34,7 @@ const char* verdict(PartState state) {
 // A leader of dots between the name and its verdict, so an eye running down the
 // right-hand column does not lose which row it is on.
 void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
-    for (int x = from_x; x < to_x; x += 2 * kCellW) canvas.draw_text(x, y, ".", true, 1);
+    for (int x = from_x; x < to_x; x += 2 * kCellWidth) canvas.draw_text(x, y, ".", true, 1);
 }
 
 }  // namespace
@@ -46,7 +46,7 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     int written = format_string(text, "SELF TEST");
     text[written] = 0;
     canvas.draw_text(kLeft, 3, text, true, 2);
-    canvas.hline(kLeft, 21, kGlassWidth - 2 * kLeft, true);
+    canvas.horizontal_line(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     // Identity and why the device is running at all, on one line: the pair a
     // bench log needs before anything below it means something.
@@ -61,17 +61,17 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     for (int i = 0; i < rows; i++) {
         const SelfTestPart& part = snapshot.parts[i];
         const char* mark = verdict(part.state);
-        int name_end = kLeft + (length(part.name) + 1) * kCellW;
+        int name_end = kLeft + (length(part.name) + 1) * kCellWidth;
         canvas.draw_text(kLeft, y, part.name, true, 1);
         // The identity sits with the name, not with the verdict: a row reads
         // "what it is" then "how it answered", left to right.
         if (part.detail) {
             canvas.draw_text(name_end, y, part.detail, true, 1);
-            name_end += (length(part.detail) + 1) * kCellW;
+            name_end += (length(part.detail) + 1) * kCellWidth;
         }
-        leaders(canvas, name_end, kRight - (length(mark) + 1) * kCellW, y);
+        leaders(canvas, name_end, kRight - (length(mark) + 1) * kCellWidth, y);
         right_aligned(canvas, kRight, y, mark);
-        y += kLineH;
+        y += kLineHeight;
     }
 
     if (snapshot.i2c_addresses && snapshot.i2c_address_count > 0 && rows < kSelfTestRows) {
@@ -86,11 +86,11 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         }
         bus[written] = 0;
         canvas.draw_text(kLeft, y, bus, true, 1);
-        y += kLineH;
+        y += kLineHeight;
     }
 
     y += kSelfTestDividerGap;
-    canvas.hline(kLeft, y, kGlassWidth - 2 * kLeft, true);
+    canvas.horizontal_line(kLeft, y, kGlassWidth - 2 * kLeft, true);
     y += kSelfTestFooterGap;
 
     written = 0;
@@ -108,9 +108,10 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
 
     // The verdict, inverted so it cannot be read as one more row.
     const char* status = snapshot.flyable ? "READY" : "GROUNDED";
-    const int w = (length(status) + 2) * kCellW;
-    canvas.rect(kRight - w, y - kSelfTestVerdictRise, w, kSelfTestVerdictH, true, /*fill=*/true);
-    canvas.draw_text(kRight - w + kCellW, y, status, false, 1);
+    const int width = (length(status) + 2) * kCellWidth;
+    canvas.rectangle(kRight - width, y - kSelfTestVerdictRise, width, kSelfTestVerdictHeight, true,
+                     /*fill=*/true);
+    canvas.draw_text(kRight - width + kCellWidth, y, status, false, 1);
 }
 
 }  // namespace skyblip::go

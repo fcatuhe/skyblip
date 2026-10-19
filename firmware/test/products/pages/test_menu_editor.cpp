@@ -103,8 +103,8 @@ TEST_CASE("menu editor: the callsign is rolled a character at a time and stored 
     CHECK(bench.editor.cursor() == 1);
     bench.move();
     CHECK(bench.editor.text()[1] == '-');
-    for (int i = 2; i < kCallsignChars; i++) CHECK(bench.change() == MenuAction::Moved);
-    CHECK(bench.editor.cursor() == kCallsignChars - 1);
+    for (int i = 2; i < kCallsignCharacters; i++) CHECK(bench.change() == MenuAction::Moved);
+    CHECK(bench.editor.cursor() == kCallsignCharacters - 1);
 
     CHECK(bench.change() == MenuAction::Changed);
     CHECK_FALSE(bench.editor.editing());
@@ -122,7 +122,7 @@ TEST_CASE("menu editor: the callsign field opens on what is stored") {
     CHECK(std::string(bench.editor.text()) == "F-JABC   ");
 
     // Walked through unchanged, it is stored as it was.
-    for (int i = 1; i < kCallsignChars; i++) bench.change();
+    for (int i = 1; i < kCallsignCharacters; i++) bench.change();
     CHECK(bench.change() == MenuAction::Changed);
     CHECK(std::string(bench.values.settings.callsign) == "F-JABC");
 }

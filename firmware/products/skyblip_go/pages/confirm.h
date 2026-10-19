@@ -27,14 +27,14 @@ constexpr int kConfirmLeftX = 4;
 constexpr int kConfirmHeaderY = 6;
 constexpr int kConfirmTitleY = 40;
 constexpr int kConfirmDetailY = 74;
-constexpr int kConfirmLineH = 11;
-constexpr int kConfirmDetailCols = 30;
+constexpr int kConfirmLineHeight = 11;
+constexpr int kConfirmDetailColumns = 30;
 constexpr int kConfirmDetailRows = 4;
 constexpr int kConfirmAllowY = 130;
 constexpr int kConfirmRefuseY = 148;
 constexpr int kConfirmExpiryY = 172;
 
-constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfirmLineH; }
+constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfirmLineHeight; }
 
 // The two halves of the gesture, spelled out. They are constants because the
 // page and its test must not be able to disagree about what the device accepts.

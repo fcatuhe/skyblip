@@ -39,7 +39,7 @@ class TrafficService : public runtime::Service {
              const model::AircraftObservation* observation = nullptr, int8_t key_offset_s = 0);
     radio::Verdict decode_adsl(protocol::Frame& frame, uint32_t utc_s, const events::Stamp& stamp,
                                model::AircraftObservation& observation);
-    radio::Verdict learn_callsign(const protocol::AdslPacket& p, uint32_t utc_s,
+    radio::Verdict learn_callsign(const protocol::AdslPacket& packet, uint32_t utc_s,
                                   model::AircraftObservation& observation);
     radio::Verdict decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
                                  model::AircraftObservation& observation,

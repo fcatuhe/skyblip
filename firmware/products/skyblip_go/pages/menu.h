@@ -47,9 +47,9 @@ struct MenuSnapshot {
 
 // Nine characters, which is what the settings blob has always held, and the ring
 // a pad rolls through them: blank, dash, A to Z, 0 to 9, blank again.
-constexpr int kCallsignChars = static_cast<int>(kCallsignBytes) - 1;
+constexpr int kCallsignCharacters = static_cast<int>(kCallsignBytes) - 1;
 constexpr char kCallsignBlank = ' ';
-char next_callsign_char(char c);
+char next_callsign_character(char character);
 // The stored form: a name is edited nine wide and stored as what a pilot typed.
 int callsign_stored(char* out, const char* edited);
 
@@ -74,22 +74,22 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values);
 
 constexpr int kMenuScale = 2;
 constexpr int kMenuLeftX = 6;
-constexpr int kMenuCellW = ui::kCellW * kMenuScale;
+constexpr int kMenuCellWidth = ui::kCellWidth * kMenuScale;
 constexpr int kMenuRightX = 194;
 constexpr int kMenuRowsTop = 23;
 constexpr int kMenuRowHeight = 23;
-constexpr int kMenuBarH = kMenuRowHeight - 1;
-constexpr int kMenuTextInset = (kMenuBarH - 7 * kMenuScale) / 2;
+constexpr int kMenuBarHeight = kMenuRowHeight - 1;
+constexpr int kMenuTextInset = (kMenuBarHeight - 7 * kMenuScale) / 2;
 constexpr int kMenuHintY = 188;
 constexpr const char* kMenuHintText = "PAD MOVES    BUTTON CHANGES";
 
-constexpr int text_cells(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
+constexpr int text_cells(const char* text) {
+    int count = 0;
+    while (text[count]) count++;
+    return count;
 }
 
-constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * ui::kCellW) / 2;
+constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * ui::kCellWidth) / 2;
 constexpr int kMenuLines = (kMenuHintY - kMenuRowsTop) / kMenuRowHeight;
 
 constexpr int menu_line_top(int line) { return kMenuRowsTop + line * kMenuRowHeight; }
@@ -111,11 +111,11 @@ struct CallsignSnapshot {
 bool callsign_press_clears(const char* text, int cursor);
 
 constexpr int kCallsignScale = 3;
-constexpr int kCallsignCellW = ui::kCellW * kCallsignScale;
-constexpr int kCallsignTextX = (kGlassWidth - kCallsignChars * kCallsignCellW) / 2;
+constexpr int kCallsignCellWidth = ui::kCellWidth * kCallsignScale;
+constexpr int kCallsignTextX = (kGlassWidth - kCallsignCharacters * kCallsignCellWidth) / 2;
 constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
-constexpr int kCallsignCursorH = 3;
+constexpr int kCallsignCursorHeight = 3;
 constexpr int kCallsignHintScale = 2;
 constexpr const char* kCallsignPadHintText = "PAD ROLLS";
 constexpr const char* kCallsignNextHintText = "BUTTON NEXT";
@@ -123,7 +123,7 @@ constexpr const char* kCallsignClearHintText = "BUTTON CLEARS";
 constexpr const char* kCallsignClearHelpText = "BLANK THE FIRST TO CLEAR";
 
 constexpr int centred_x(const char* text, int scale) {
-    return (kGlassWidth - text_cells(text) * ui::kCellW * scale) / 2;
+    return (kGlassWidth - text_cells(text) * ui::kCellWidth * scale) / 2;
 }
 
 constexpr int kCallsignPadHintY = 138;

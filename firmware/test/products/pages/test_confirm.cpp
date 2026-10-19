@@ -16,7 +16,7 @@ using namespace skyblip::go;
 
 namespace {
 
-using ui::kCellW;
+using ui::kCellWidth;
 
 ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot s;
@@ -55,11 +55,11 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
         int drawn = 0;
         for (int row = 0; row < kConfirmDetailRows; row++) {
             const int y = confirm_detail_y(row);
-            for (int x = kConfirmLeftX; x < Glass::kW; x++)
+            for (int x = kConfirmLeftX; x < Glass::kWidth; x++)
                 for (int dy = 0; dy < 7; dy++) drawn += canvas.get_pixel(x, y + dy) ? 1 : 0;
         }
         CHECK(drawn > 0);
-        CHECK(static_cast<int>(std::strlen(detail)) <= kConfirmDetailCols * kConfirmDetailRows);
+        CHECK(static_cast<int>(std::strlen(detail)) <= kConfirmDetailColumns * kConfirmDetailRows);
         CHECK(confirm_detail_y(kConfirmDetailRows - 1) + 7 < kConfirmAllowY);
     }
 }
@@ -79,20 +79,21 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
     draw_confirm(canvas, prompt(comms::Pending::Dfu));
 
     // The allowing line is reversed out of a filled block, so it is white ink.
-    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, 1));
+    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmAllowY, kConfirmAllowText, 1));
     Glass inverted;
     inverted.clear(true);
-    inverted.rect(kConfirmLeftX, kConfirmAllowY - 4,
-                  (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellW, 15, true,
-                  /*fill=*/true);
-    inverted.draw_text(kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
+    inverted.rectangle(kConfirmLeftX, kConfirmAllowY - 4,
+                       (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellWidth, 15,
+                       true,
+                       /*fill=*/true);
+    inverted.draw_text(kConfirmLeftX + kCellWidth, kConfirmAllowY, kConfirmAllowText, false, 1);
     bool same = true;
     for (int y = kConfirmAllowY - 4; y < kConfirmAllowY + 11; y++)
         for (int x = kConfirmLeftX; x < kConfirmLeftX + 130; x++)
             if (canvas.get_pixel(x, y) != inverted.get_pixel(x, y)) same = false;
     CHECK(same);
 
-    CHECK(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
+    CHECK(reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmRefuseY, kConfirmRefuseText, 1));
 
     // And the page says it will refuse on its own, so a prompt left standing is
     // not read as one waiting indefinitely.
@@ -107,6 +108,6 @@ TEST_CASE("confirm page: it cannot be mistaken for a page a pilot was already on
     // device is asking something rather than showing something.
     int header_ink = 0;
     for (int y = 0; y < 26; y++)
-        for (int x = 0; x < Glass::kW; x++) header_ink += canvas.get_pixel(x, y) ? 1 : 0;
-    CHECK(header_ink > 26 * Glass::kW / 2);
+        for (int x = 0; x < Glass::kWidth; x++) header_ink += canvas.get_pixel(x, y) ? 1 : 0;
+    CHECK(header_ink > 26 * Glass::kWidth / 2);
 }

@@ -6,8 +6,8 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-using ui::kCellW;
-using ui::kCharH;
+using ui::kCellWidth;
+using ui::kCharacterHeight;
 constexpr int kRight = kGlassWidth - kLeft;
 
 constexpr int kTitleY = 2;
@@ -16,8 +16,8 @@ constexpr int kRuleY = 13;
 constexpr int kBarTop = 22;
 constexpr int kBaseY = 132;
 constexpr int kBarSpan = kBaseY - kBarTop;
-constexpr int kBarW = 4;
-constexpr int kBarPitch = kBarW + 1;
+constexpr int kBarWidth = 4;
+constexpr int kBarPitch = kBarWidth + 1;
 constexpr int kGroupGap = 6;
 constexpr int kGroupLabelY = kBaseY + 4;
 
@@ -34,7 +34,7 @@ constexpr gnss::System kSystemOrder[] = {gnss::System::Gps, gnss::System::Beidou
                                          gnss::System::Unknown};
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
+    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
 int bar_height(uint8_t cn0_dbhz) {
@@ -44,17 +44,17 @@ int bar_height(uint8_t cn0_dbhz) {
 }
 
 void bar(ui::Canvas& canvas, int x, const gnss::SatelliteView& satellite) {
-    const int h = bar_height(satellite.cn0_dbhz);
-    if (h <= 0) {
-        canvas.hline(x, kBaseY - 1, kBarW, true);
+    const int height = bar_height(satellite.cn0_dbhz);
+    if (height <= 0) {
+        canvas.horizontal_line(x, kBaseY - 1, kBarWidth, true);
         return;
     }
     if (satellite.in_use) {
-        canvas.rect(x, kBaseY - h, kBarW, h, true, true);
+        canvas.rectangle(x, kBaseY - height, kBarWidth, height, true, true);
         return;
     }
-    canvas.rect(x + 1, kBaseY - h + 1, kBarW - 2, h - 2, false, true);
-    canvas.rect(x, kBaseY - h, kBarW, h, true, false);
+    canvas.rectangle(x + 1, kBaseY - height + 1, kBarWidth - 2, height - 2, false, true);
+    canvas.rectangle(x, kBaseY - height, kBarWidth, height, true, false);
 }
 
 int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system, int x) {
@@ -63,7 +63,7 @@ int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system
     for (int i = 0; i < sky.count(); i++) {
         const gnss::SatelliteView& satellite = sky.at(i);
         if (satellite.system != system) continue;
-        if (at + kBarW > kRight) break;
+        if (at + kBarWidth > kRight) break;
         bar(canvas, at, satellite);
         at += kBarPitch;
     }
@@ -73,11 +73,11 @@ int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system
 
 void scale_mark(ui::Canvas& canvas) {
     const int y = kBaseY - kGoodDbHz * kBarSpan / kFullScaleDbHz;
-    for (int x = kLeft; x < kRight; x += 4) canvas.hline(x, y, 1, true);
+    for (int x = kLeft; x < kRight; x += 4) canvas.horizontal_line(x, y, 1, true);
     char text[4];
     const int written = format_unsigned(text, kGoodDbHz, 2);
     text[written] = 0;
-    right_aligned(canvas, kRight, y - kCharH - 1, text, written);
+    right_aligned(canvas, kRight, y - kCharacterHeight - 1, text, written);
 }
 
 uint32_t used_count(const SatellitesSnapshot& snapshot) {
@@ -114,11 +114,11 @@ void draw_dops(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     canvas.draw_text(kLeft, kDopY, text, true, 1);
 }
 
-void draw_nav_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
-    if (!snapshot.nav_valid) return;
+void draw_solution_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
+    if (!snapshot.solution_phase_valid) return;
     char text[12];
     int written = format_string(text, "NAV ");
-    written += format_unsigned(text + written, snapshot.nav_ms, 3);
+    written += format_unsigned(text + written, snapshot.solution_phase_ms, 3);
     written += format_string(text + written, "MS");
     text[written] = 0;
     right_aligned(canvas, kRight, kDopY, text, written);
@@ -166,10 +166,10 @@ void draw_used_by_system(ui::Canvas& canvas, const SatellitesSnapshot& snapshot)
 void draw_satellites(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
     draw_counts(canvas, snapshot);
-    canvas.hline(kLeft, kRuleY, kRight - kLeft, true);
+    canvas.horizontal_line(kLeft, kRuleY, kRight - kLeft, true);
 
     draw_dops(canvas, snapshot);
-    draw_nav_phase(canvas, snapshot);
+    draw_solution_phase(canvas, snapshot);
     draw_port(canvas, snapshot);
     draw_stage(canvas, snapshot);
 

@@ -14,10 +14,10 @@ using namespace skyblip::go;
 namespace {
 
 using skyblip::reads_at;
-using skyblip::ui::kCellW;
+using skyblip::ui::kCellWidth;
 
 bool reads_right_aligned(const Glass& canvas, int y, const char* text) {
-    return reads_at(canvas, kSelfTestRightX - static_cast<int>(std::strlen(text)) * kCellW, y,
+    return reads_at(canvas, kSelfTestRightX - static_cast<int>(std::strlen(text)) * kCellWidth, y,
                     text);
 }
 
@@ -99,12 +99,12 @@ TEST_CASE("self-test page: a full inventory still fits the panel") {
 
     // The last row and the verdict below it are both on the glass, not clipped
     // off the bottom of a 200-pixel panel.
-    CHECK(self_test_row_y(kSelfTestRows - 1) + 7 < Glass::kH);
+    CHECK(self_test_row_y(kSelfTestRows - 1) + 7 < Glass::kHeight);
     CHECK(row_reads(canvas, kSelfTestRows - 1, "PASS"));
 
     int footer_ink = 0;
-    for (int y = self_test_row_y(kSelfTestRows - 1) + 8; y < Glass::kH; y++)
-        for (int x = 0; x < Glass::kW; x++) footer_ink += canvas.get_pixel(x, y) ? 1 : 0;
+    for (int y = self_test_row_y(kSelfTestRows - 1) + 8; y < Glass::kHeight; y++)
+        for (int x = 0; x < Glass::kWidth; x++) footer_ink += canvas.get_pixel(x, y) ? 1 : 0;
     CHECK(footer_ink > 100);
 }
 
@@ -131,7 +131,7 @@ TEST_CASE("self-test page: the cell's voltage is on the page when there is a gau
 namespace {
 
 int detail_x(const char* name) {
-    return kSelfTestLeftX + (static_cast<int>(std::strlen(name)) + 1) * kCellW;
+    return kSelfTestLeftX + (static_cast<int>(std::strlen(name)) + 1) * kCellWidth;
 }
 
 }  // namespace
@@ -248,12 +248,12 @@ TEST_CASE("self-test page: the inventory a real unit reports fits with the bus r
 
     CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(kSelfTestRows - 1),
                    "I2C IMU RTC HAPTIC BARO"));
-    CHECK(self_test_row_y(kSelfTestRows - 1) + 7 < Glass::kH);
+    CHECK(self_test_row_y(kSelfTestRows - 1) + 7 < Glass::kHeight);
 
     // And the verdict is still on the glass below all of it.
     int footer_ink = 0;
-    for (int y = self_test_row_y(kSelfTestRows - 1) + 8; y < Glass::kH; y++)
-        for (int x = 0; x < Glass::kW; x++) footer_ink += canvas.get_pixel(x, y) ? 1 : 0;
+    for (int y = self_test_row_y(kSelfTestRows - 1) + 8; y < Glass::kHeight; y++)
+        for (int x = 0; x < Glass::kWidth; x++) footer_ink += canvas.get_pixel(x, y) ? 1 : 0;
     CHECK(footer_ink > 100);
 }
 

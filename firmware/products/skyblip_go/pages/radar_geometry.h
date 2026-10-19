@@ -25,20 +25,22 @@ namespace skyblip::go::radar {
 constexpr int kNear = kGlassWidth / 2 - 1;
 constexpr int kFar = kGlassWidth / 2;
 constexpr int kMargin = 4;
-constexpr int kToScaleR = 92;
-constexpr int kAllR = 76;
-constexpr int kRingW = 2;
-constexpr int kRimR = kAllR + 11;
+constexpr int kToScaleRadius = 92;
+constexpr int kAllRadius = 76;
+constexpr int kRingWidth = 2;
+constexpr int kRimRadius = kAllRadius + 11;
 
-constexpr int ring_r(RadarPlot plot) { return plot == RadarPlot::All ? kAllR : kToScaleR; }
-using ui::kCharH;
+constexpr int ring_radius(RadarPlot plot) {
+    return plot == RadarPlot::All ? kAllRadius : kToScaleRadius;
+}
+using ui::kCharacterHeight;
 constexpr int kClockScale = 2;
 constexpr int kStateScale = 1;
 constexpr int kLabelPad = 2;
 constexpr int kStackGap = 2;
 constexpr int kFooterBottom = kGlassHeight - kMargin;
-constexpr int kClockY = kFooterBottom - kCharH * kClockScale;
-constexpr int kStateY = kClockY - kStackGap - kCharH * kStateScale;
+constexpr int kClockY = kFooterBottom - kCharacterHeight * kClockScale;
+constexpr int kStateY = kClockY - kStackGap - kCharacterHeight * kStateScale;
 constexpr int kFooterTop = kStateY - kLabelPad;
 
 struct HeadingUp {
@@ -47,9 +49,9 @@ struct HeadingUp {
 };
 
 inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track_angle16) {
-    const int64_t c = cosine(track_angle16), s = sine(track_angle16);
-    return {static_cast<int32_t>((north * c + east * s) / kTrigOne),
-            static_cast<int32_t>((east * c - north * s) / kTrigOne)};
+    const int64_t track_cosine = cosine(track_angle16), track_sine = sine(track_angle16);
+    return {static_cast<int32_t>((north * track_cosine + east * track_sine) / kTrigOne),
+            static_cast<int32_t>((east * track_cosine - north * track_sine) / kTrigOne)};
 }
 
 }  // namespace skyblip::go::radar

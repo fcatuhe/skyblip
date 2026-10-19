@@ -17,8 +17,8 @@ namespace {
 // the same layout, so a blob written then still decodes now.
 struct SettingsV1 {
     uint8_t version{1};
-    uint32_t device_addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     uint8_t region{0};
     bool alarm_enabled{true};
@@ -37,8 +37,8 @@ struct SettingsV1 {
 // version byte tells them apart.
 struct SettingsV2 {
     uint8_t version{1};
-    uint32_t device_addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -52,9 +52,9 @@ struct SettingsV2 {
 // frequency_trim_e1_ppm.
 struct SettingsV3 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -68,10 +68,10 @@ struct SettingsV3 {
 // page_mask that no longer has a reader.
 struct SettingsV4 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
     int16_t frequency_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -83,10 +83,10 @@ struct SettingsV4 {
 
 struct SettingsV5 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
     int16_t frequency_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -97,10 +97,10 @@ struct SettingsV5 {
 
 struct SettingsV6 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
     int16_t frequency_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -112,10 +112,10 @@ struct SettingsV6 {
 
 struct SettingsV7 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
     int16_t frequency_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
@@ -323,15 +323,15 @@ void migrate_v7(const SettingsV7& old, Settings& out) {
     out.callsign[kCallsignBytes - 1] = 0;
 }
 
-bool callsign_is_typeable(const char* s) {
+bool callsign_is_typeable(const char* callsign) {
     for (size_t i = 0; i < kCallsignBytes; i++) {
-        if (s[i] == 0) return true;
-        if (!protocol::is_callsign_char(s[i])) return false;
+        if (callsign[i] == 0) return true;
+        if (!protocol::is_callsign_char(callsign[i])) return false;
     }
     return false;
 }
 
-bool fits_u8(long v) { return v >= 0 && v <= UINT8_MAX; }
+bool fits_u8(long value) { return value >= 0 && value <= UINT8_MAX; }
 
 }  // namespace
 
@@ -356,8 +356,8 @@ Status validate(const Settings& settings) {
 
 size_t blob_size() { return settings::blob_bytes(kPayload); }
 
-void to_blob(const Settings& settings, uint8_t* out, size_t cap) {
-    settings::seal(kBlobVersion, &settings, kPayload, out, cap);
+void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
+    settings::seal(kBlobVersion, &settings, kPayload, out, capacity);
 }
 
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
@@ -426,25 +426,26 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     return Status::Ok;
 }
 
-void write_json_fields(json::Writer& w, const Settings& settings, settings::AirAddress address) {
-    w.add_integer("version", settings.version);
-    if (address) w.add_integer("address", static_cast<long>(*address));
-    w.add_integer("address_mapping_table", settings::kAddressMappingTable);
-    write_json_settings(w, settings);
+void write_json_fields(json::Writer& writer, const Settings& settings,
+                       settings::AirAddress address) {
+    writer.add_integer("version", settings.version);
+    if (address) writer.add_integer("address", static_cast<long>(*address));
+    writer.add_integer("address_mapping_table", settings::kAddressMappingTable);
+    write_json_settings(writer, settings);
 }
 
-void write_json_settings(json::Writer& w, const Settings& settings) {
-    w.add_integer("aircraft_type", settings.aircraft_type);
-    w.add_boolean("alarm", settings.alarm_enabled);
-    w.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
-    w.add_integer("units", static_cast<long>(settings.units));
-    w.add_string("callsign", settings.callsign);
+void write_json_settings(json::Writer& writer, const Settings& settings) {
+    writer.add_integer("aircraft_type", settings.aircraft_type);
+    writer.add_boolean("alarm", settings.alarm_enabled);
+    writer.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
+    writer.add_integer("units", static_cast<long>(settings.units));
+    writer.add_string("callsign", settings.callsign);
 }
 
-int to_json(const Settings& settings, settings::AirAddress address, char* out, int cap) {
-    json::Writer w(out, cap);
-    write_json_fields(w, settings, address);
-    return w.finish();
+int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity) {
+    json::Writer writer(out, capacity);
+    write_json_fields(writer, settings, address);
+    return writer.finish();
 }
 
 Status apply_json(Settings& settings, const char* json, int length) {

@@ -34,13 +34,13 @@ class RecordPool {
     bool book_window(uint32_t cost_ms, uint32_t pass_ms);
 
     bool read_slot(uint32_t sector, uint32_t slot, uint8_t* out);
-    bool write_slots(uint32_t sector, uint32_t first, const uint8_t* in, uint32_t count);
+    bool write_slots(uint32_t sector, uint32_t first, const uint8_t* records, uint32_t count);
     Status read_header(uint32_t sector, store::SectorHeader& out);
     bool write_header(uint32_t sector, const store::SectorHeader& header);
     bool erase(uint32_t sector);
 
     int payload_bytes(uint16_t link_session) const;
-    int reply_cap(uint16_t link_session) const;
+    int reply_capacity(uint16_t link_session) const;
     char* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
     // False when the frame was dropped. A link at its share holds it for deliver_held().

@@ -55,14 +55,14 @@ class RadioService : public runtime::Service {
         bool carried[kPayloads]{};
         uint64_t at_us[kPayloads]{};
 
-        bool carries(Payload p) const { return carried[static_cast<int>(p)]; }
-        uint64_t at(Payload p) const { return at_us[static_cast<int>(p)]; }
+        bool carries(Payload payload) const { return carried[static_cast<int>(payload)]; }
+        uint64_t at(Payload payload) const { return at_us[static_cast<int>(payload)]; }
         bool carries_any() const { return carried[0] || carried[1]; }
-        void carry(Payload p, uint64_t tx_at_us) {
-            carried[static_cast<int>(p)] = true;
-            at_us[static_cast<int>(p)] = tx_at_us;
+        void carry(Payload payload, uint64_t tx_at_us) {
+            carried[static_cast<int>(payload)] = true;
+            at_us[static_cast<int>(payload)] = tx_at_us;
         }
-        void drop(Payload p) { carried[static_cast<int>(p)] = false; }
+        void drop(Payload payload) { carried[static_cast<int>(payload)] = false; }
         Payload first() const {
             if (!carries(Payload::Callsign)) return Payload::Position;
             if (!carries(Payload::Position)) return Payload::Callsign;

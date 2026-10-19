@@ -36,8 +36,8 @@ constexpr uint16_t kHalfTurnDeg = 180;
 constexpr int32_t kFullTurnDeg = 360;
 
 int32_t signed_bearing(uint16_t clockwise_deg) {
-    const int32_t deg = static_cast<int32_t>(clockwise_deg);
-    return deg > kHalfTurnDeg ? deg - kFullTurnDeg : deg;
+    const int32_t bearing_deg = static_cast<int32_t>(clockwise_deg);
+    return bearing_deg > kHalfTurnDeg ? bearing_deg - kFullTurnDeg : bearing_deg;
 }
 
 }  // namespace
@@ -186,35 +186,35 @@ void NmeaService::emit_altitude() {
 // INFO: cc 19sep26 the BME280 sits inside the case, so field 4 goes out warm and uncorrected
 void NmeaService::emit_vario_and_battery() {
     const model::Ownship& own = context_.state.own;
-    protocol::Lk8Ex1 v{};
+    protocol::Lk8Ex1 vario{};
 
     if (context_.state.barometer.active) {
-        v.pressure_pa = div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
-        v.pressure_valid = true;
+        vario.pressure_pa = div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
+        vario.pressure_valid = true;
         // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
         // carries and for the same reason: the consumer applies its own
         // subscale. A consumer that read field 1 recomputes this and ignores it.
-        v.altitude_m = div_round(flight::pressure_to_altitude_cm(div_round<uint32_t>(
-                                     context_.state.barometer.pressure_mpa, 1000)),
-                                 100);
-        v.altitude_valid = true;
+        vario.altitude_m = div_round(flight::pressure_to_altitude_cm(div_round<uint32_t>(
+                                         context_.state.barometer.pressure_mpa, 1000)),
+                                     100);
+        vario.altitude_valid = true;
     }
 
     if (context_.state.barometer.temperature_valid) {
-        v.temperature_c = div_round<int32_t>(context_.state.barometer.temperature_dc, 10);
-        v.temperature_valid = true;
+        vario.temperature_c = div_round<int32_t>(context_.state.barometer.temperature_dc, 10);
+        vario.temperature_valid = true;
     }
 
     if (own.climb_valid) {
-        const int32_t mm_s = own.climb_mm_s;
-        v.vario_cm_s = (mm_s >= 0 ? mm_s + 5 : mm_s - 5) / 10;
-        v.vario_valid = true;
+        const int32_t climb_mm_s = own.climb_mm_s;
+        vario.vario_cm_s = (climb_mm_s >= 0 ? climb_mm_s + 5 : climb_mm_s - 5) / 10;
+        vario.vario_valid = true;
     }
 
-    v.battery_percent = context_.state.power.battery.percent;
-    v.battery_valid = context_.state.power.battery.valid;
+    vario.battery_percent = context_.state.power.battery.percent;
+    vario.battery_valid = context_.state.power.battery.valid;
 
-    write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), v));
+    write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), vario));
 }
 
 // The rotation: at most kTargetsPerPass targets, resuming where the last pass

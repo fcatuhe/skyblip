@@ -69,12 +69,12 @@ static_assert(kSelfTestPartCount < kSelfTestRows, "the self-test page would drop
 
 // skyBlip Go: one board, one service list. The shell around it only decides how
 // often run_pass() is called and where the pixels go.
-template <class P>
+template <class Platform>
 class Product {
    public:
-    using Board = boards::TEchoPlus<P>;
+    using Board = boards::TEchoPlus<Platform>;
 
-    explicit Product(P& platform) : platform_(platform), board_(platform, bus_) {}
+    explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {}
 
     Status setup() {
         const Status board = board_.begin();
@@ -260,9 +260,9 @@ class Product {
     }
 
     const char* barometer_part(uint8_t address) {
-        int n = skyblip::format_string(barometer_part_, "BME280 ");
-        n += skyblip::format_hex(barometer_part_ + n, address, 2);
-        barometer_part_[n] = 0;
+        int written = skyblip::format_string(barometer_part_, "BME280 ");
+        written += skyblip::format_hex(barometer_part_ + written, address, 2);
+        barometer_part_[written] = 0;
         return barometer_part_;
     }
 
@@ -400,7 +400,7 @@ class Product {
     Settings settings_{};
     Glass self_test_page_{};
     SelfTestSnapshot self_test_snapshot_{};
-    P& platform_;
+    Platform& platform_;
     Board board_;
     ports::Roles roles_{board_.roles()};
     runtime::Context context_{roles_, bus_, state_, diagnostics_};

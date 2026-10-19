@@ -7,7 +7,7 @@ namespace skyblip::go {
 
 constexpr int kInstallingLeftX = 4;
 constexpr int kInstallingTitleY = 40;
-constexpr int kInstallingLineH = 14;
+constexpr int kInstallingLineHeight = 14;
 constexpr int kInstallingBodyY = 90;
 
 constexpr const char* kInstallingHeader = "FIRMWARE";
@@ -21,7 +21,7 @@ constexpr const char* kReceivingBody[] = {"KEEP THE PHONE NEAR", "IT INSTALLS BY
                                           "ONCE THE IMAGE IS IN", "ONE PRESS CANCELS"};
 constexpr int kReceivingBodyRows = 4;
 
-constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineH; }
+constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineHeight; }
 
 void draw_notice_heading(ui::Canvas& canvas, const char* header, const char* title);
 void draw_installing(ui::Canvas& canvas);

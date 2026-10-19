@@ -8,8 +8,8 @@ namespace {
 
 struct Sprite {
     const uint32_t* rows;
-    int w;
-    int h;
+    int width;
+    int height;
     int origin_dx;
     int origin_dy;
 };
@@ -97,20 +97,25 @@ const Sprite& caret_of(Vertical vertical) {
     return beyond_the_window(vertical) ? kFarCaret : kNearCaret;
 }
 
-int top_row(const Sprite& s, bool flip) { return flip ? -(s.origin_dy + s.h - 1) : s.origin_dy; }
+int top_row(const Sprite& sprite, bool flip) {
+    return flip ? -(sprite.origin_dy + sprite.height - 1) : sprite.origin_dy;
+}
 
-int bottom_row(const Sprite& s, bool flip) { return top_row(s, flip) + s.h - 1; }
+int bottom_row(const Sprite& sprite, bool flip) {
+    return top_row(sprite, flip) + sprite.height - 1;
+}
 
-void blit(Canvas& canvas, int x, int y, const Sprite& s, bool flip, bool fill) {
-    for (int row = 0; row < s.h; row++) {
-        const uint32_t bits = s.rows[flip ? s.h - 1 - row : row];
+void blit(Canvas& canvas, int x, int y, const Sprite& sprite, bool flip, bool fill) {
+    for (int row = 0; row < sprite.height; row++) {
+        const uint32_t bits = sprite.rows[flip ? sprite.height - 1 - row : row];
         if (bits == 0) continue;
-        const int py = y + top_row(s, flip) + row;
-        int first = 0, last = s.w - 1;
-        while (first < s.w && !(bits & (1u << first))) first++;
+        const int row_y = y + top_row(sprite, flip) + row;
+        int first = 0, last = sprite.width - 1;
+        while (first < sprite.width && !(bits & (1u << first))) first++;
         while (last > first && !(bits & (1u << last))) last--;
-        for (int col = first; col <= last; col++)
-            if (fill || (bits & (1u << col))) canvas.set_pixel(x + s.origin_dx + col, py, true);
+        for (int column = first; column <= last; column++)
+            if (fill || (bits & (1u << column)))
+                canvas.set_pixel(x + sprite.origin_dx + column, row_y, true);
     }
 }
 
@@ -139,6 +144,6 @@ int blip_below(Vertical vertical, Trend trend) {
     return below;
 }
 
-int blip_beside(Vertical vertical) { return body_of(vertical).w / 2 + 1; }
+int blip_beside(Vertical vertical) { return body_of(vertical).width / 2 + 1; }
 
 }  // namespace skyblip::ui

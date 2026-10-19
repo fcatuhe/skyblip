@@ -9,12 +9,12 @@ namespace skyblip::go {
 namespace {
 
 constexpr int kLeft = 4;
-using ui::kCellW;
+using ui::kCellWidth;
 constexpr int kRight = kGlassWidth - kLeft;
 constexpr int kTitleY = 2;
 constexpr int kTitleRuleY = 12;
 constexpr int kTopY = 20;
-constexpr int kLineH = 14;
+constexpr int kLineHeight = 14;
 constexpr int kFocusBarRise = 3;
 constexpr int kHintRuleY = 176;
 constexpr int kHintY = 182;
@@ -27,24 +27,24 @@ constexpr int kWroteLine = 7;
 constexpr int kArmedFaultsLine = 5;
 constexpr int kOfferedFaultsLine = 8;
 
-int line_y(int line) { return kTopY + line * kLineH; }
+int line_y(int line) { return kTopY + line * kLineHeight; }
 
-void row(ui::Canvas& canvas, int line, char* buffer, int n) {
-    buffer[n] = 0;
-    canvas.draw_text(kLeft, line_y(line), buffer, true, 1);
+void row(ui::Canvas& canvas, int line, char* text, int written) {
+    text[written] = 0;
+    canvas.draw_text(kLeft, line_y(line), text, true, 1);
 }
 
 int format_word(char* out, const char* word) {
-    int n = format_string(out, word);
-    out[n++] = ' ';
-    return n;
+    int written = format_string(out, word);
+    out[written++] = ' ';
+    return written;
 }
 
 int format_span(char* out, uint32_t seconds) {
-    int n = format_unsigned(out, seconds / 3600);
-    out[n++] = 'H';
-    n += format_unsigned(out + n, seconds % 3600 / 60, 2);
-    return n;
+    int written = format_unsigned(out, seconds / 3600);
+    out[written++] = 'H';
+    written += format_unsigned(out + written, seconds % 3600 / 60, 2);
+    return written;
 }
 
 const char* capture_subjects(diagnostics::Profile profile) {
@@ -67,8 +67,8 @@ void draw_title(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     int written = format_string(text, "T+");
     written += format_unsigned(text + written, snapshot.uptime_s % kUptimeClockWrapS);
     text[written] = 0;
-    canvas.draw_text(kRight - written * kCellW, kTitleY, text, true, 1);
-    canvas.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
+    canvas.draw_text(kRight - written * kCellWidth, kTitleY, text, true, 1);
+    canvas.horizontal_line(kLeft, kTitleRuleY, kRight - kLeft, true);
 }
 
 void draw_state(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
@@ -87,11 +87,12 @@ void draw_offered_capture(ui::Canvas& canvas, int line, diagnostics::Profile pro
                           bool focused) {
     const int y = line_y(line);
     if (focused)
-        canvas.rect(2, y - kFocusBarRise, kGlassWidth - 4, kLineH - 1, true, /*fill=*/true);
+        canvas.rectangle(2, y - kFocusBarRise, kGlassWidth - 4, kLineHeight - 1, true,
+                         /*fill=*/true);
     const bool ink = !focused;
     const char* subjects = capture_subjects(profile);
     canvas.draw_text(kLeft, y, capture_name(profile), ink, 1);
-    canvas.draw_text(kRight - text_cells(subjects) * kCellW, y, subjects, ink, 1);
+    canvas.draw_text(kRight - text_cells(subjects) * kCellWidth, y, subjects, ink, 1);
 }
 
 void draw_price(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
@@ -114,13 +115,13 @@ void draw_price(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     row(canvas, kPriceLine + 2, text, written);
 }
 
-void draw_wrote(ui::Canvas& canvas, const bus::CaptureState& c) {
-    if (c.records == 0) return;
+void draw_wrote(ui::Canvas& canvas, const bus::CaptureState& capture) {
+    if (capture.records == 0) return;
     char text[40];
     int written = format_word(text, "WROTE");
-    written += format_unsigned(text + written, c.records);
+    written += format_unsigned(text + written, capture.records);
     written += format_string(text + written, " DROP ");
-    written += format_unsigned(text + written, c.dropped);
+    written += format_unsigned(text + written, capture.dropped);
     row(canvas, kWroteLine, text, written);
 }
 
@@ -137,32 +138,32 @@ void draw_offer(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     draw_wrote(canvas, snapshot.capture);
 }
 
-void draw_progress(ui::Canvas& canvas, const bus::CaptureState& c) {
+void draw_progress(ui::Canvas& canvas, const bus::CaptureState& capture) {
     char text[40];
     int written = format_word(text, "SESSION");
-    written += format_unsigned(text + written, c.session_id);
+    written += format_unsigned(text + written, capture.session_id);
     row(canvas, kProgressLine, text, written);
 
     written = format_word(text, "WROTE");
-    written += format_unsigned(text + written, c.records);
+    written += format_unsigned(text + written, capture.records);
     written += format_string(text + written, " DROP ");
-    written += format_unsigned(text + written, c.dropped);
+    written += format_unsigned(text + written, capture.dropped);
     row(canvas, kProgressLine + 1, text, written);
 
     written = format_word(text, "SECTORS");
-    written += format_unsigned(text + written, c.sectors);
+    written += format_unsigned(text + written, capture.sectors);
     written += format_string(text + written, " KEEPS ");
-    written += format_span(text + written, c.keeps_s);
+    written += format_span(text + written, capture.keeps_s);
     row(canvas, kProgressLine + 2, text, written);
 }
 
-void draw_faults(ui::Canvas& canvas, const bus::CaptureState& c, int line) {
-    if (c.faults == 0 && c.unreadable_sectors == 0) return;
+void draw_faults(ui::Canvas& canvas, const bus::CaptureState& capture, int line) {
+    if (capture.faults == 0 && capture.unreadable_sectors == 0) return;
     char text[40];
     int written = format_word(text, "FLASH FAULTS");
-    written += format_unsigned(text + written, c.faults);
+    written += format_unsigned(text + written, capture.faults);
     written += format_string(text + written, " UNREAD ");
-    written += format_unsigned(text + written, c.unreadable_sectors);
+    written += format_unsigned(text + written, capture.unreadable_sectors);
     row(canvas, line, text, written);
 }
 
@@ -171,7 +172,7 @@ void draw_hint(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
                        : snapshot.capture.armed    ? "PRESS TWICE TO STOP"
                        : snapshot.arming           ? "PRESS AGAIN TO ARM"
                                                    : "PAD PICKS  PRESS TWICE TO ARM";
-    canvas.hline(kLeft, kHintRuleY, kRight - kLeft, true);
+    canvas.horizontal_line(kLeft, kHintRuleY, kRight - kLeft, true);
     canvas.draw_text(kLeft, kHintY, hint, true, 1);
 }
 

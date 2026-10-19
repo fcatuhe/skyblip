@@ -81,9 +81,10 @@ bool RecordPool::read_slot(uint32_t sector, uint32_t slot, uint8_t* out) {
                                                out, kStoreRecordBytes));
 }
 
-bool RecordPool::write_slots(uint32_t sector, uint32_t first, const uint8_t* in, uint32_t count) {
+bool RecordPool::write_slots(uint32_t sector, uint32_t first, const uint8_t* records,
+                             uint32_t count) {
     return noted(is_ok(context_.roles.log_flash.write(
-        offset_of(sector) + flight::log_record_offset(first), in, count * kStoreRecordBytes)));
+        offset_of(sector) + flight::log_record_offset(first), records, count * kStoreRecordBytes)));
 }
 
 bool RecordPool::erase(uint32_t sector) {
@@ -99,7 +100,7 @@ int RecordPool::payload_bytes(uint16_t link_session) const {
     return static_cast<int>(context_.roles.link.payload_bytes_to(link_session));
 }
 
-int RecordPool::reply_cap(uint16_t link_session) const {
+int RecordPool::reply_capacity(uint16_t link_session) const {
     const int room = payload_bytes(link_session) + 1;
     return room < comms::kLogReplyBytes ? room : comms::kLogReplyBytes;
 }

@@ -6,26 +6,26 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-using ui::kCellW;
-constexpr int kColumn(int cell) { return kLeft + cell * kCellW; }
+using ui::kCellWidth;
+constexpr int column_x(int cell) { return kLeft + cell * kCellWidth; }
 
 constexpr int kTitleY = 2;
 constexpr int kGnssY = 13;
 constexpr int kRuleY = 23;
 constexpr int kFirstRowY = 27;
-constexpr int kLineH = 10;
+constexpr int kLineHeight = 10;
 
-constexpr int kClockX = kColumn(0);
-constexpr int kWayX = kColumn(10);
-constexpr int kBandX = kColumn(13);
-constexpr int kVerdictX = kColumn(16);
-constexpr int kAddressX = kColumn(22);
-constexpr int kRightEnd = kColumn(32);
+constexpr int kClockX = column_x(0);
+constexpr int kWayX = column_x(10);
+constexpr int kBandX = column_x(13);
+constexpr int kVerdictX = column_x(16);
+constexpr int kAddressX = column_x(22);
+constexpr int kRightEnd = column_x(32);
 
-constexpr int kPpsX = kColumn(9);
+constexpr int kPpsX = column_x(9);
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
-    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
+    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
 bool own_burst(radio::Verdict verdict) {
@@ -83,8 +83,8 @@ int format_stamp(char* out, const radio::Entry& entry) {
 
 int format_dwell(char* out, const radio::Entry& entry) {
     if (entry.band == model::Band::O) return format_string(out, "O");
-    int n = format_string(out, "M");
-    return n + format_unsigned(out + n, entry.channel);
+    int written = format_string(out, "M");
+    return written + format_unsigned(out + written, entry.channel);
 }
 
 void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
@@ -182,16 +182,16 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
 void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     draw_title(canvas, snapshot);
     draw_gnss(canvas, snapshot);
-    canvas.hline(kLeft, kRuleY, kRightEnd - kLeft, true);
+    canvas.horizontal_line(kLeft, kRuleY, kRightEnd - kLeft, true);
 
     if (snapshot.log == nullptr || snapshot.row_count == 0) {
-        canvas.draw_text(kLeft, kFirstRowY + kLineH, "NOTHING ON AIR YET", true, 1);
+        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NOTHING ON AIR YET", true, 1);
         return;
     }
 
     const int rows = snapshot.row_count < kRadioLogRows ? snapshot.row_count : kRadioLogRows;
     for (int i = 0; i < rows; i++)
-        draw_row(canvas, kFirstRowY + i * kLineH, snapshot.log->newest(i));
+        draw_row(canvas, kFirstRowY + i * kLineHeight, snapshot.log->newest(i));
 }
 
 }  // namespace skyblip::go

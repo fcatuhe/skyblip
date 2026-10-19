@@ -19,12 +19,12 @@ PpsState pps_state(const timing::ClockState& clock) {
 }
 
 int traffic_outside_formation(const traffic::TrafficTable& table) {
-    int n = 0;
+    int count = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t && t->used && !t->in_formation) n++;
+        const traffic::Target* target = table.at(i);
+        if (target && target->used && !target->in_formation) count++;
     }
-    return n;
+    return count;
 }
 }  // namespace
 
@@ -66,12 +66,12 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.gnss.pps_age_ms = state.clock.since_edge_ms;
     snapshot.gnss.solutions = state.flight.gnss_solutions;
     snapshot.gnss.utc_s = own.utc_s;
-    snapshot.gnss.nav_ms = state.gnss.solution_phase_ms;
-    snapshot.gnss.nav_valid = state.gnss.solution_phase_valid;
+    snapshot.gnss.solution_phase_ms = state.gnss.solution_phase_ms;
+    snapshot.gnss.solution_phase_valid = state.gnss.solution_phase_valid;
     snapshot.gnss.hdop_e2 = own.hdop_e2;
     snapshot.gnss.vdop_e2 = own.vdop_e2;
-    snapshot.gnss.resid_m = own.prediction_residual_m;
-    snapshot.gnss.resid_valid = own.prediction_residual_valid;
+    snapshot.gnss.residual_m = own.prediction_residual_m;
+    snapshot.gnss.residual_valid = own.prediction_residual_valid;
     snapshot.gnss.satellites = own.satellites;
     snapshot.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
     snapshot.gnss.fix_mode = state.gnss.fix_mode;
@@ -174,37 +174,38 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.formation_members = context_.state.formation.members;
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
-            int n = 0;
+            int count = 0;
             if (own.fix_valid) {
                 const model::Ownship own_now = flight::carried_to(own, now_ms);
-                for (int i = 0; i < traffic::TrafficTable::kMaxTargets && n < kMaxRadarTargets;
+                for (int i = 0; i < traffic::TrafficTable::kMaxTargets && count < kMaxRadarTargets;
                      i++) {
-                    const traffic::Target* t = context_.state.traffic.at(i);
-                    if (!t || !t->used) continue;
+                    const traffic::Target* target = context_.state.traffic.at(i);
+                    if (!target || !target->used) continue;
                     const model::AircraftObservation observation =
-                        flight::carried_to(t->observation, now_ms);
+                        flight::carried_to(target->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
                     if (!flight::relative_north_east_up(own_now, observation, north, east, up))
                         continue;
-                    targets_[n].north_m = north;
-                    targets_[n].east_m = east;
-                    targets_[n].up_m = up;
-                    targets_[n].alarm_level = t->alarm_level;
-                    targets_[n].alarm_dismissed = t->alarm_dismissed;
-                    targets_[n].climb_e8 = observation.climb_e8;
-                    targets_[n].climb_valid = observation.climb_valid;
-                    targets_[n].speed_mm_s =
+                    targets_[count].north_m = north;
+                    targets_[count].east_m = east;
+                    targets_[count].up_m = up;
+                    targets_[count].alarm_level = target->alarm_level;
+                    targets_[count].alarm_dismissed = target->alarm_dismissed;
+                    targets_[count].climb_e8 = observation.climb_e8;
+                    targets_[count].climb_valid = observation.climb_valid;
+                    targets_[count].speed_mm_s =
                         observation.speed_valid
                             ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value
                             : 0;
-                    targets_[n].track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).value;
-                    targets_[n].turn_cdps = static_cast<int16_t>(t->turn.rate_dps * 100);
-                    targets_[n].turn_valid = t->turn.valid;
-                    targets_[n].in_formation = t->in_formation;
-                    n++;
+                    targets_[count].track_cdeg =
+                        to_centi_degrees(Cordic9(observation.track_c9)).value;
+                    targets_[count].turn_cdps = static_cast<int16_t>(target->turn.rate_dps * 100);
+                    targets_[count].turn_valid = target->turn.valid;
+                    targets_[count].in_formation = target->in_formation;
+                    count++;
                 }
             }
-            snapshot.target_count = n;
+            snapshot.target_count = count;
             snapshot.targets = targets_;
             draw_radar(framebuffer_, snapshot);
             break;
@@ -239,8 +240,8 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.satellites = own.satellites;
             snapshot.hdop_e2 = own.hdop_e2;
             snapshot.vdop_e2 = own.vdop_e2;
-            snapshot.nav_ms = context_.state.gnss.solution_phase_ms;
-            snapshot.nav_valid = context_.state.gnss.solution_phase_valid;
+            snapshot.solution_phase_ms = context_.state.gnss.solution_phase_ms;
+            snapshot.solution_phase_valid = context_.state.gnss.solution_phase_valid;
             snapshot.health = context_.roles.gnss.health();
             snapshot.sky = &context_.state.gnss.sky;
             draw_satellites(framebuffer_, snapshot);
@@ -328,7 +329,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.imu_unparsed = context_.state.imu.unparsed_events;
             snapshot.imu_error = context_.state.imu.error;
             snapshot.imu_interrupt = context_.state.imu.interrupt;
-            snapshot.imu_meta = context_.state.imu.meta_event;
+            snapshot.imu_meta_event = context_.state.imu.meta_event;
             snapshot.imu_sensor_error = context_.state.imu.sensor_error;
             snapshot.imu_errored_sensor = context_.state.imu.errored_sensor;
             snapshot.slip_valid = context_.state.slip.valid;

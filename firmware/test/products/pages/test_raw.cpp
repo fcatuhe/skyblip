@@ -20,16 +20,16 @@ RawSnapshot bench_device() {
     snapshot.gnss.health.pps_latency_ms = 28;
     snapshot.gnss.health.last_reject = skyblip::gnss::FixReject::Stale;
     snapshot.gnss.health.identified = true;
-    snapshot.gnss.nav_ms = 98;
-    snapshot.gnss.nav_valid = true;
+    snapshot.gnss.solution_phase_ms = 98;
+    snapshot.gnss.solution_phase_valid = true;
     snapshot.gnss.fix_valid = true;
     snapshot.gnss.satellites = 22;
     snapshot.gnss.in_use = 12;
     snapshot.gnss.fix_mode = 3;
     snapshot.gnss.hdop_e2 = 90;
     snapshot.gnss.vdop_e2 = 150;
-    snapshot.gnss.resid_m = 3;
-    snapshot.gnss.resid_valid = true;
+    snapshot.gnss.residual_m = 3;
+    snapshot.gnss.residual_valid = true;
     snapshot.gnss.settled = true;
     snapshot.gnss.levels_live = true;
     snapshot.gnss.solutions = 5210;
@@ -103,12 +103,12 @@ TEST_CASE("raw page: the radio block names the dwell it is in and every verdict 
 // A zero would read as a solution landing at the top of the second, which it never does.
 TEST_CASE("raw page: a solution nothing has dated reports no phase at all") {
     RawSnapshot snapshot = bench_device();
-    snapshot.gnss.nav_valid = false;
+    snapshot.gnss.solution_phase_valid = false;
     snapshot.gnss.utc_valid = false;
     snapshot.gnss.pps = PpsState::None;
     snapshot.gnss.fix_valid = false;
     snapshot.gnss.stage = skyblip::gnss::Stage::Blind;
-    snapshot.gnss.resid_valid = false;
+    snapshot.gnss.residual_valid = false;
     snapshot.gnss.hdop_e2 = 0;
     Glass canvas;
     draw_raw(canvas, snapshot);

@@ -54,21 +54,21 @@ constexpr int kSelfTestRows = 15;
 // claim as "the GNSS row says FAIL".
 constexpr int kSelfTestLeftX = 4;
 constexpr int kSelfTestRightX = kGlassWidth - kSelfTestLeftX;
-constexpr int kSelfTestRowCells = (kGlassWidth - 2 * kSelfTestLeftX) / ui::kCellW;
-constexpr int kSelfTestRowH = 9;
+constexpr int kSelfTestRowCells = (kGlassWidth - 2 * kSelfTestLeftX) / ui::kCellWidth;
+constexpr int kSelfTestRowHeight = 9;
 constexpr int kSelfTestFirstRowY = 36;
 constexpr int kSelfTestHeaderY = 26;
 
-constexpr int self_test_row_y(int row) { return kSelfTestFirstRowY + row * kSelfTestRowH; }
+constexpr int self_test_row_y(int row) { return kSelfTestFirstRowY + row * kSelfTestRowHeight; }
 
 constexpr int kSelfTestDividerGap = 3;
 constexpr int kSelfTestFooterGap = 5;
 constexpr int kSelfTestVerdictRise = 3;
-constexpr int kSelfTestVerdictH = 13;
-constexpr int kSelfTestFooterH =
-    kSelfTestDividerGap + kSelfTestFooterGap - kSelfTestVerdictRise + kSelfTestVerdictH;
+constexpr int kSelfTestVerdictHeight = 13;
+constexpr int kSelfTestFooterHeight =
+    kSelfTestDividerGap + kSelfTestFooterGap - kSelfTestVerdictRise + kSelfTestVerdictHeight;
 
-static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterH <= kGlassHeight,
+static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterHeight <= kGlassHeight,
               "the last row would fall off the glass");
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);

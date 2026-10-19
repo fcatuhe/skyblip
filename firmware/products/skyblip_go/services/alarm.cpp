@@ -15,9 +15,9 @@ bool AlarmService::silenced(traffic::Target& target, formation::State state) {
 formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t now_ms) {
     const formation::Report report =
         formation_.observe(context_.state.own, target.observation, target.liftoff, now_ms);
-    const bool was = target.in_formation;
+    const bool was_in_formation = target.in_formation;
     target.in_formation = report.state == formation::State::Together;
-    if (target.in_formation != was) dirty_ = true;
+    if (target.in_formation != was_in_formation) dirty_ = true;
     return report.state;
 }
 

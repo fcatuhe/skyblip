@@ -19,8 +19,8 @@ struct SatellitesSnapshot {
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
     // INFO: fc 20sep26 how far into its own second the last solution landed, 450 ms costs bursts
-    uint16_t nav_ms{0};
-    bool nav_valid{false};
+    uint16_t solution_phase_ms{0};
+    bool solution_phase_valid{false};
     ports::GnssHealth health{};
     const gnss::SkyView* sky{nullptr};
 };

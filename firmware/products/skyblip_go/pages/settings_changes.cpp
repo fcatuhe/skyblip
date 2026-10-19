@@ -13,7 +13,7 @@ namespace {
 constexpr int kMaxChanges = 7;
 
 struct Rows {
-    char text[kMaxChanges][kConfirmDetailCols + 1]{};
+    char text[kMaxChanges][kConfirmDetailColumns + 1]{};
     int count{0};
 
     char* next() { return text[count++]; }
@@ -64,8 +64,8 @@ int join(const Rows& rows, char* out) {
 
 }  // namespace
 
-int describe_settings_changes(const Settings& from, const Settings& to, char* out, int cap) {
-    if (cap < kSettingsChangesBytes) return 0;
+int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity) {
+    if (capacity < kSettingsChangesBytes) return 0;
     Rows rows;
     if (to.aircraft_type != from.aircraft_type) menu_row(rows, MenuRow::AircraftType, to);
     if (std::strncmp(to.callsign, from.callsign, kCallsignBytes) != 0) callsign_row(rows, to);

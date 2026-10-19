@@ -4,12 +4,12 @@ namespace skyblip::go {
 
 void draw_notice_heading(ui::Canvas& canvas, const char* header, const char* title) {
     canvas.clear(true);
-    canvas.rect(0, 0, kGlassWidth, 26, true, /*fill=*/true);
-    canvas.draw_text(kInstallingLeftX + ui::kCellW, 6, header, false, 2);
+    canvas.rectangle(0, 0, kGlassWidth, 26, true, /*fill=*/true);
+    canvas.draw_text(kInstallingLeftX + ui::kCellWidth, 6, header, false, 2);
 
     canvas.draw_text(kInstallingLeftX, kInstallingTitleY, title, true, 2);
-    canvas.hline(kInstallingLeftX, kInstallingTitleY + 22, kGlassWidth - 2 * kInstallingLeftX,
-                 true);
+    canvas.horizontal_line(kInstallingLeftX, kInstallingTitleY + 22,
+                           kGlassWidth - 2 * kInstallingLeftX, true);
 }
 
 namespace {

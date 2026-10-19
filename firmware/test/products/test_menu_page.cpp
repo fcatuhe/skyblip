@@ -268,7 +268,7 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
         change(rig, t);
     }
     // The rest is left blank, and the button walked off the end stores the name.
-    for (int at = 3; at < go::kCallsignChars; at++) change(rig, t);
+    for (int at = 3; at < go::kCallsignCharacters; at++) change(rig, t);
     CHECK_FALSE(rig.product.screen().editor().editing());
 
     run_past_the_write_settle(rig, t);

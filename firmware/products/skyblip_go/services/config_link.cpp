@@ -136,11 +136,11 @@ void ConfigLinkService::watch_claim(uint32_t now_ms) {
     if (claim.held() == recorded_claim_held_ && claim.holder() == recorded_holder_) return;
     const bool taken = claim.held();
     recorded_claim_held_ = taken;
-    const uint16_t was = recorded_holder_;
+    const uint16_t previous_holder = recorded_holder_;
     recorded_holder_ = claim.holder();
     record_link(
         taken ? diagnostics::LinkAction::ClaimTaken : diagnostics::LinkAction::ClaimReleased,
-        taken ? claim.holder() : was, 0, now_ms);
+        taken ? claim.holder() : previous_holder, 0, now_ms);
 }
 
 void ConfigLinkService::watch_link_drops(uint32_t now_ms) {
@@ -373,8 +373,8 @@ void ConfigLinkService::record_update() {
     record.hashed = context_.roles.dfu.running_hash(record.from_hash) &&
                     context_.roles.dfu.staged_hash(record.to_hash);
     uint8_t blob[dfu::kUpdateRecordBytes];
-    const size_t n = dfu::to_blob(record, blob, sizeof(blob));
-    if (!is_ok(context_.roles.key_value.write(kUpdateKey, blob, n))) return;
+    const size_t blob_bytes = dfu::to_blob(record, blob, sizeof(blob));
+    if (!is_ok(context_.roles.key_value.write(kUpdateKey, blob, blob_bytes))) return;
     update_record_ = record;
     update_recorded_ = true;
     keep_settings_for_a_revert();

@@ -9,7 +9,7 @@ constexpr int kSkyshipRowsToNose = 5;
 constexpr int kSkyshipSpan = 24;
 constexpr int kSkyshipRows = 16;
 
-// skyShip, the ownship symbol, with its hot spot on (cx, cy). Every screen that
+// skyShip, the ownship symbol, with its hot spot on (centre_x, centre_y). Every screen that
 // says "this is you" draws this one, which is why it is a widget and not part of
 // whichever screen happened to need it first.
 void draw_skyship(Canvas& canvas, int centre_x, int centre_y);

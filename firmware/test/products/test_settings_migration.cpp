@@ -22,8 +22,8 @@ TEST_CASE("settings: a blob written by version-1 firmware comes back as itself")
     // region, rotation and power_save sat between aircraft_type and callsign.
     struct V1 {
         uint8_t version{1};
-        uint32_t device_addr{0};
-        uint8_t addr_table{0};
+        uint32_t address{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         uint8_t region{0};
         bool alarm_enabled{true};
@@ -37,8 +37,8 @@ TEST_CASE("settings: a blob written by version-1 firmware comes back as itself")
     };
 
     V1 old{};
-    old.device_addr = 0x5B7E57;
-    old.addr_table = 6;
+    old.address = 0x5B7E57;
+    old.address_mapping_table = 6;
     old.aircraft_type = 9;
     old.region = 2;         // a field this firmware no longer has
     old.rotation = 3;       // and another
@@ -83,8 +83,8 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     // The version-2 payload, byte for byte as that firmware memcpy'd its struct.
     struct V2 {
         uint8_t version{1};
-        uint32_t device_addr{0};
-        uint8_t addr_table{0};
+        uint32_t address{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -95,8 +95,8 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     };
 
     V2 old{};
-    old.device_addr = 0x5B7E57;
-    old.addr_table = 6;
+    old.address = 0x5B7E57;
+    old.address_mapping_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
     old.alarm_volume = 5;
@@ -266,10 +266,10 @@ TEST_CASE("settings: a trim stored by version-8 firmware is a hand-set trim") {
 TEST_CASE("settings: a blob written by version-7 firmware comes back without its identity") {
     struct V7 {
         uint8_t version{1};
-        uint32_t device_addr{0};
+        uint32_t address{0};
         int16_t battery_offset_mv{0};
         int16_t frequency_trim_e1_ppm{0};
-        uint8_t addr_table{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -278,10 +278,10 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     };
 
     V7 old{};
-    old.device_addr = 0xDD1234;
+    old.address = 0xDD1234;
     old.battery_offset_mv = -120;
     old.frequency_trim_e1_ppm = -37;
-    old.addr_table = 5;
+    old.address_mapping_table = 5;
     old.aircraft_type = 9;
     old.alarm_volume = 5;
     old.units = Units::Nautical;
@@ -316,10 +316,10 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
 TEST_CASE("settings: a blob written by version-6 firmware comes back without stealth or gyro") {
     struct V6 {
         uint8_t version{1};
-        uint32_t device_addr{0};
+        uint32_t address{0};
         int16_t battery_offset_mv{0};
         int16_t frequency_trim_e1_ppm{0};
-        uint8_t addr_table{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -330,10 +330,10 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     };
 
     V6 old{};
-    old.device_addr = 0x5B7E57;
+    old.address = 0x5B7E57;
     old.battery_offset_mv = -120;
     old.frequency_trim_e1_ppm = -37;
-    old.addr_table = 6;
+    old.address_mapping_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
     old.alarm_volume = 5;
@@ -373,9 +373,9 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     // The version-3 payload, byte for byte as that firmware memcpy'd its struct.
     struct V3 {
         uint8_t version{1};
-        uint32_t device_addr{0};
+        uint32_t address{0};
         int16_t battery_offset_mv{0};
-        uint8_t addr_table{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -388,9 +388,9 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     CHECK(sizeof(V3) == 28u);
 
     V3 old{};
-    old.device_addr = 0x5B7E57;
+    old.address = 0x5B7E57;
     old.battery_offset_mv = -120;  // a unit that WAS calibrated keeps its trim
-    old.addr_table = 6;
+    old.address_mapping_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
     old.alarm_volume = 5;
@@ -432,10 +432,10 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     // The version-4 payload, byte for byte as that firmware memcpy'd its struct.
     struct V4 {
         uint8_t version{1};
-        uint32_t device_addr{0};
+        uint32_t address{0};
         int16_t battery_offset_mv{0};
         int16_t frequency_trim_e1_ppm{0};
-        uint8_t addr_table{0};
+        uint8_t address_mapping_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -446,10 +446,10 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     };
 
     V4 old{};
-    old.device_addr = 0x5B7E57;
+    old.address = 0x5B7E57;
     old.battery_offset_mv = -120;
     old.frequency_trim_e1_ppm = -37;
-    old.addr_table = 6;
+    old.address_mapping_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
     old.alarm_volume = 5;

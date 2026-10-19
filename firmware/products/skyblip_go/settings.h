@@ -97,19 +97,20 @@ Settings defaults();
 Status validate(const Settings& settings);
 
 size_t blob_size();
-void to_blob(const Settings& settings, uint8_t* out, size_t cap);
+void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 // INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
 // companion link's "config" reply can tag them and stay one flat object. Nesting
 // them as an escaped string cost 53 bytes of backslashes on a 158-byte body,
 // which is what pushed that reply past what an iPhone will carry.
-void write_json_fields(json::Writer& w, const Settings& settings, settings::AirAddress address);
+void write_json_fields(json::Writer& writer, const Settings& settings,
+                       settings::AirAddress address);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
-void write_json_settings(json::Writer& w, const Settings& settings);
+void write_json_settings(json::Writer& writer, const Settings& settings);
 
-int to_json(const Settings& settings, settings::AirAddress address, char* out, int cap);
+int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity);
 Status apply_json(Settings& settings, const char* json, int length);
 
 }  // namespace skyblip::go

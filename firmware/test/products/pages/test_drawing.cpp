@@ -32,7 +32,7 @@ TEST_CASE("canvas: primitives draw something") {
     int before = canvas.count_black();
     canvas.circle(100, 100, 50, true, false);
     CHECK(canvas.count_black() > before);
-    canvas.rect(10, 10, 30, 20, true, true);
+    canvas.rectangle(10, 10, 30, 20, true, true);
     CHECK(canvas.get_pixel(25, 20));
 }
 
@@ -45,7 +45,7 @@ TEST_CASE("canvas: text advances and draws glyph pixels") {
     // space draws nothing
     Glass fb2;
     fb2.clear(true);
-    fb2.draw_char(0, 0, ' ', true, 1);
+    fb2.draw_character(0, 0, ' ', true, 1);
     CHECK(fb2.count_black() == 0);
 }
 
@@ -54,7 +54,7 @@ TEST_CASE("canvas: every character the pages print has a glyph of its own") {
     for (const char* c = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.:/+%"; *c != 0; c++) {
         Glass canvas;
         canvas.clear(true);
-        canvas.draw_char(0, 0, *c, true, 1);
+        canvas.draw_character(0, 0, *c, true, 1);
         CAPTURE(*c);
         CHECK(canvas.count_black() > 0);
     }

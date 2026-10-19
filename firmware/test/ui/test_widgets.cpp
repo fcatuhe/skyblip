@@ -34,7 +34,7 @@ TEST_CASE("skyship: the hot spot lands on the point it was given") {
     CHECK(canvas.get_pixel(kCentreX, kCentreY));
     CHECK(canvas.get_pixel(kCentreX - 1, kCentreY));
     // And nothing may sit above the nose or below the tail.
-    for (int x = 0; x < TestPanel::kW; x++) {
+    for (int x = 0; x < TestPanel::kWidth; x++) {
         CHECK_FALSE(canvas.get_pixel(x, kCentreY - kOriginRow - 1));
         CHECK_FALSE(canvas.get_pixel(x, kCentreY - kOriginRow + 16));
     }
@@ -77,8 +77,8 @@ TEST_CASE("skyship: it draws the same aircraft wherever it is asked to") {
 namespace {
 int ink(const TestPanel& canvas) {
     int n = 0;
-    for (int y = 0; y < TestPanel::kH; y++)
-        for (int x = 0; x < TestPanel::kW; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
+    for (int y = 0; y < TestPanel::kHeight; y++)
+        for (int x = 0; x < TestPanel::kWidth; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
     return n;
 }
 
@@ -99,8 +99,8 @@ TEST_CASE("blip: a blip below is the blip above, flipped about the plot point") 
                                                              : Trend::Steady;
             const TestPanel up = blip(above, trend);
             const TestPanel down = blip(below, opposite);
-            for (int y = 0; y < TestPanel::kH; y++)
-                for (int x = 0; x < TestPanel::kW; x++)
+            for (int y = 0; y < TestPanel::kHeight; y++)
+                for (int x = 0; x < TestPanel::kWidth; x++)
                     CHECK(up.get_pixel(x, y) == down.get_pixel(x, 2 * kCentreY - y));
         }
     }
@@ -140,8 +140,8 @@ TEST_CASE("blip: the alarm fills the blip it was already drawing") {
     for (const Vertical vertical : {Vertical::Above, Vertical::Level, Vertical::Below}) {
         const TestPanel a = blip(vertical, Trend::Climbing);
         const TestPanel b = blip(vertical, Trend::Climbing, /*alarm=*/true);
-        for (int y = 0; y < TestPanel::kH; y++)
-            for (int x = 0; x < TestPanel::kW; x++)
+        for (int y = 0; y < TestPanel::kHeight; y++)
+            for (int x = 0; x < TestPanel::kWidth; x++)
                 if (a.get_pixel(x, y)) CHECK(b.get_pixel(x, y));
     }
 }

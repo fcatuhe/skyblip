@@ -15,8 +15,8 @@ using namespace skyblip::go;
 
 namespace {
 
-using ui::kCellW;
-using ui::kCharH;
+using ui::kCellWidth;
+using ui::kCharacterHeight;
 
 bool hint_reads(const Glass& canvas, int y, const char* text, int scale) {
     return reads_at(canvas, centred_x(text, scale), y, text, scale);
@@ -40,7 +40,8 @@ bool row_label_reads(const Drawn& drawn, MenuRow row, bool focused) {
 }
 
 bool row_value_reads(const Drawn& drawn, MenuRow row, const char* value, bool focused) {
-    return reads_at(drawn.canvas, kMenuRightX - static_cast<int>(std::strlen(value)) * kMenuCellW,
+    return reads_at(drawn.canvas,
+                    kMenuRightX - static_cast<int>(std::strlen(value)) * kMenuCellWidth,
                     menu_line_text_y(line_of(drawn, row)), value, kMenuScale, !focused);
 }
 
@@ -87,15 +88,15 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
 
     // And nothing falls off a 200 pixel panel, on either axis.
     CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kMenuHintY);
-    CHECK(kMenuHintY + kCharH < Glass::kH);
+    CHECK(kMenuHintY + kCharacterHeight < Glass::kHeight);
 
     // The hint is centred: the same air either side of it.
-    const int hint_w = static_cast<int>(std::strlen(kMenuHintText)) * kCellW;
+    const int hint_w = static_cast<int>(std::strlen(kMenuHintText)) * kCellWidth;
     CHECK(kMenuHintX > 0);
-    CHECK(kMenuHintX - (Glass::kW - kMenuHintX - hint_w) <= 1);
+    CHECK(kMenuHintX - (Glass::kWidth - kMenuHintX - hint_w) <= 1);
 
     // And a row's words stand in the middle of its bar, the same air above and below.
-    CHECK(2 * kMenuTextInset + kCharH * kMenuScale == kMenuBarH);
+    CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
 // Eight rows and seven lines: the rows slide up under the focus, one line at a time.
@@ -127,7 +128,7 @@ TEST_CASE("menu page: no label and value a row can hold meet at double height") 
         for (int i = 0; i < menu.row_count; i++) {
             const int label_end =
                 kMenuLeftX +
-                static_cast<int>(std::strlen(menu_row_label(menu.rows[i]))) * kMenuCellW;
+                static_cast<int>(std::strlen(menu_row_label(menu.rows[i]))) * kMenuCellWidth;
             CHECK(label_end <= kMenuRightX);
             for (uint8_t type = 0; type < kNamedAircraftTypes + 2; type++) {
                 values.settings.aircraft_type = type;
@@ -137,7 +138,7 @@ TEST_CASE("menu page: no label and value a row can hold meet at double height") 
                         values.settings.range_step = step;
                         char value[kMenuValueBytes];
                         const int n = menu_row_value(value, menu.rows[i], values);
-                        CHECK(label_end <= kMenuRightX - n * kMenuCellW);
+                        CHECK(label_end <= kMenuRightX - n * kMenuCellWidth);
                     }
                 }
             }
@@ -152,13 +153,13 @@ TEST_CASE("menu page: a menu is titled what it holds, not the page a thumb came 
     const MenuValues values = default_menu_values();
     for (Page page : {Page::Radar, Page::Nearby}) {
         const Drawn drawn = page_of(page, values, menu_for(page).rows[0]);
-        CHECK(kMenuLeftX - 2 + static_cast<int>(std::strlen(menu_title(page))) * kMenuCellW <=
-              Glass::kW);
+        CHECK(kMenuLeftX - 2 + static_cast<int>(std::strlen(menu_title(page))) * kMenuCellWidth <=
+              Glass::kWidth);
         Glass expected;
         expected.clear(true);
         expected.draw_text(kMenuLeftX - 2, 3, menu_title(page), true, 2);
-        for (int y = 3; y < 3 + kCharH * kMenuScale; y++)
-            for (int x = 0; x < Glass::kW; x++)
+        for (int y = 3; y < 3 + kCharacterHeight * kMenuScale; y++)
+            for (int x = 0; x < Glass::kWidth; x++)
                 CHECK(drawn.canvas.get_pixel(x, y) == expected.get_pixel(x, y));
     }
 }
@@ -203,17 +204,17 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
     CHECK(reads_at(canvas, kCallsignTextX, kCallsignTextY, "F-JABC", kCallsignScale));
 
     // The bar is under the character the pad is rolling and under no other.
-    const int at = kCallsignTextX + field.cursor * kCallsignCellW;
+    const int at = kCallsignTextX + field.cursor * kCallsignCellWidth;
     CHECK(canvas.get_pixel(at, kCallsignCursorY));
     CHECK(canvas.get_pixel(at + 5 * kCallsignScale - 1, kCallsignCursorY));
     CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
-    CHECK_FALSE(canvas.get_pixel(at + kCallsignCellW, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at + kCallsignCellWidth, kCallsignCursorY));
 
     // The two gestures at double height, and under them the one way out nothing else says.
     CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
     CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
     CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
-    CHECK(kCallsignHelpY + kCharH < Glass::kH);
+    CHECK(kCallsignHelpY + kCharacterHeight < Glass::kHeight);
 }
 
 // A gesture nothing says is a gesture nobody finds, and this one throws the name away.
@@ -240,12 +241,12 @@ TEST_CASE("callsign page: the foot says the button clears when the bar is on a b
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.
 TEST_CASE("menu page: the callsign ring is blank, dash, A to Z, 0 to 9, and back") {
-    CHECK(next_callsign_char(' ') == '-');
-    CHECK(next_callsign_char('-') == 'A');
-    CHECK(next_callsign_char('A') == 'B');
-    CHECK(next_callsign_char('Z') == '0');
-    CHECK(next_callsign_char('0') == '1');
-    CHECK(next_callsign_char('9') == ' ');
+    CHECK(next_callsign_character(' ') == '-');
+    CHECK(next_callsign_character('-') == 'A');
+    CHECK(next_callsign_character('A') == 'B');
+    CHECK(next_callsign_character('Z') == '0');
+    CHECK(next_callsign_character('0') == '1');
+    CHECK(next_callsign_character('9') == ' ');
 }
 
 // Nine characters are edited and what is stored is what a pilot typed.

@@ -115,7 +115,7 @@ TEST_CASE("status page: a silent hub reports the last thing it said about itself
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_fifo_bytes = 18;
-    s.imu_meta = 12;
+    s.imu_meta_event = 12;
     Glass overflowed;
     draw_status(overflowed, s);
     CHECK(reads_in(overflowed, "IMU RUN B18 M12", 0, 55, 200, 70));
@@ -134,7 +134,7 @@ TEST_CASE("status page: an announced hub shows what the hub says it is holding")
     StatusSnapshot s;
     s.imu_stage = "RUN";
     s.imu_fifo_bytes = 18;
-    s.imu_meta = 16;
+    s.imu_meta_event = 16;
     s.imu_interrupt = 0x18;
     Glass holding;
     draw_status(holding, s);
@@ -235,8 +235,8 @@ TEST_CASE(
     CHECK_FALSE(reads_in(cable, "LOW", 0, 160, 200, 194));
 
     // The row is the last one on the panel: it has to fit inside it.
-    for (int y = 194; y < Glass::kH; y++)
-        for (int x = 0; x < Glass::kW; x++) CHECK_FALSE(charging.get_pixel(x, y));
+    for (int y = 194; y < Glass::kHeight; y++)
+        for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(charging.get_pixel(x, y));
 }
 
 TEST_CASE("status page: a receiver with no fix says how far it has got, and for how long") {
@@ -342,7 +342,7 @@ TEST_CASE("status page: the callsign shares the header with the address, and nev
     draw_status(full, widest);
     for (int y = 3; y < 21; y++)
         for (int x = 116; x < 128; x++) CHECK_FALSE(full.get_pixel(x, y));
-    for (int y = 3; y < 21; y++) CHECK_FALSE(full.get_pixel(Glass::kW - 1, y));
+    for (int y = 3; y < 21; y++) CHECK_FALSE(full.get_pixel(Glass::kWidth - 1, y));
 
     // An empty callsign is a header with nothing extra on it, not a blank box.
     StatusSnapshot empty = s;
@@ -366,7 +366,7 @@ TEST_CASE("status page: the widest position on earth still fits its row") {
 
     const int y0 = 43, y1 = 50;  // the LAT/LON row, one glyph tall
     for (int y = y0; y < y1; y++)
-        for (int x = 196; x < Glass::kW; x++) CHECK_FALSE(canvas.get_pixel(x, y));
+        for (int x = 196; x < Glass::kWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 
     // At least one blank column between the latitude and the LON block, and the
     // label is not touched either.

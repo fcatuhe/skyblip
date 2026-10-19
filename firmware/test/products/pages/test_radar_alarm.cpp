@@ -120,7 +120,7 @@ TEST_CASE("radar page: the wedge is flashing by the time a target reads as a fil
     quiet.alarm_flash = false;
     const Glass off_phase = radar(quiet);
     quiet.alarm_flash = true;
-    CHECK(differing_in(off_phase, radar(quiet), 0, 0, Glass::kW, Glass::kH) == 0);
+    CHECK(differing_in(off_phase, radar(quiet), 0, 0, Glass::kWidth, Glass::kHeight) == 0);
 }
 
 // The silence is the whole mark: no word stands in for the sector that went out.
@@ -132,13 +132,13 @@ TEST_CASE("radar page: a dismissed aircraft keeps its symbol and takes its secto
     snapshot.alarm_flash = false;
     const Glass held = radar(snapshot);
     snapshot.alarm_flash = true;
-    CHECK(differing_in(held, radar(snapshot), 0, 0, Glass::kW, Glass::kH) == 0);
+    CHECK(differing_in(held, radar(snapshot), 0, 0, Glass::kWidth, Glass::kHeight) == 0);
 
     // The page is the one a target nobody graded draws, symbol apart.
     RadarTarget quiet_one[1] = {{0, 1500, 0}};
     const Glass quiet = radar(with_threat(quiet_one, Level::None));
     CHECK(differing_in(quiet, held, 130, 90, 190, 110) == 0);
-    CHECK(differing_in(quiet, held, 0, 120, Glass::kW, 171) == 0);
+    CHECK(differing_in(quiet, held, 0, 120, Glass::kWidth, 171) == 0);
 }
 
 // Two aircraft are two places to look, and a pilot told only about the louder one looks once.
