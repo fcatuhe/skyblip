@@ -225,7 +225,7 @@ uint32_t CaptureService::measured_records_per_hour() const {
     const uint32_t span_ms = steady_written_ms_ - opened_ms_;
     if (span_ms == 0) return 0;
     return static_cast<uint32_t>(static_cast<uint64_t>(steady_records_) *
-                                 diagnostics::Recorder::kMsPerHour / span_ms);
+                                 diagnostics::Recorder::kMillisecondsPerHour / span_ms);
 }
 
 void CaptureService::publish(uint32_t now_ms) {
@@ -245,11 +245,11 @@ void CaptureService::publish(uint32_t now_ms) {
     out.unreadable_sectors = pool.unreadable_sectors();
 
     const uint32_t growth = growth_sectors();
-    out.price_sectors = growth;
+    out.growth_sectors = growth;
     const uint32_t floor_sectors =
         store::flights_floor_sectors(flight::log_seconds_per_sector(pool.slots_per_sector()));
     const uint32_t flights = pool.allocator().owned(store::SectorOwner::Flights);
-    out.price_flights =
+    out.evicted_flights =
         flights_.sessions_within(flights > floor_sectors ? flights - floor_sectors : 0);
     // INFO: fc 20sep26 the ring rotates: this is what survives, not a deadline
     out.keeps_s = span_s(growth * pool.slots_per_sector(), records_per_hour());

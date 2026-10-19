@@ -279,7 +279,7 @@ constexpr uint8_t kScreenFlagPowered = 1u << 3;
 constexpr uint8_t kScreenFlagHolding = 1u << 4;
 
 struct Screen {
-    uint32_t since_ms{0};
+    uint32_t since_page_shown_ms{0};
     uint8_t page{0};
     uint8_t mode{0};
     uint8_t prompt{0};

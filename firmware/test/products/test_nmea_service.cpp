@@ -78,7 +78,7 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
-    event.length = models::Sx1262::deliver_after_sync(
+    event.bytes = models::Sx1262::deliver_after_sync(
         chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
@@ -98,7 +98,7 @@ void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
-    event.length = models::Sx1262::deliver_after_sync(
+    event.bytes = models::Sx1262::deliver_after_sync(
         chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);

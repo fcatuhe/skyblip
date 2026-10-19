@@ -250,7 +250,7 @@ class Rf : public ports::Rf {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;
         rx_.frequency_hz = frequency_hz_;
-        rx_.length = event.length;
+        rx_.bytes = event.length;
         rx_.rssi_dbm = event.rssi_dbm;
         rx_.rssi_valid = event.rssi_valid;
         rx_.at_us = now_us;

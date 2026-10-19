@@ -97,14 +97,14 @@ void draw_offered_capture(ui::Canvas& canvas, int line, diagnostics::Profile pro
 void draw_price(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     char text[40];
     int written = format_word(text, "TAKES");
-    written += format_uint(text + written, snapshot.capture.price_sectors);
+    written += format_uint(text + written, snapshot.capture.growth_sectors);
     written += format_string(text + written, " OF ");
     written += format_uint(text + written, snapshot.capture.pool_sectors);
     written += format_string(text + written, " SECTORS");
     row(canvas, kPriceLine, text, written);
 
     written = format_word(text, "EVICTS");
-    written += format_uint(text + written, snapshot.capture.price_flights);
+    written += format_uint(text + written, snapshot.capture.evicted_flights);
     written += format_string(text + written, " FLIGHTS");
     row(canvas, kPriceLine + 1, text, written);
 

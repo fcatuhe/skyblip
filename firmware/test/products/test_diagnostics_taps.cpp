@@ -395,7 +395,7 @@ TEST_CASE("diag screen: what was on the glass is recorded on the render cadence"
     CHECK(screen.mode == static_cast<uint8_t>(go::Mode::Page));
     CHECK(screen.powered);
     CHECK_FALSE(screen.holding);
-    CHECK(screen.since_ms > 0);
+    CHECK(screen.since_page_shown_ms > 0);
 }
 
 // The fix processed later every second was the loop's lateness, so the capture has to carry it.

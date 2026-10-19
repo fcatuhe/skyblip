@@ -45,7 +45,7 @@ void Policy::begin(Voice voice, traffic::Level level, uint32_t now_ms) {
         return;
     }
     note_index_ = 0;
-    tone_hz_ = tune_.notes[0].pitch_hz;
+    pitch_hz_ = tune_.notes[0].pitch_hz;
     if (cutting_in) {
         phase_ms_ = now_ms;
         phase_on_ = false;
@@ -80,14 +80,14 @@ void Policy::advance(uint32_t now_ms) {
         if (now_ms - phase_ms_ < note.gap_ms) return;
         phase_ms_ += note.gap_ms;
         note_index_++;
-        tone_hz_ = tune_.notes[note_index_].pitch_hz;
+        pitch_hz_ = tune_.notes[note_index_].pitch_hz;
         phase_on_ = true;
     }
 }
 
 void Policy::release() {
     voice_ = Voice::None;
-    tone_hz_ = 0;
+    pitch_hz_ = 0;
     level_ = traffic::Level::None;
     phase_on_ = false;
     resting_before_tune_ = false;
@@ -96,7 +96,7 @@ void Policy::release() {
 Command Policy::emit() {
     Command command{};
     command.tone_on = voice_ != Voice::None && phase_on_;
-    command.tone_hz = command.tone_on ? tone_hz_ : 0;
+    command.tone_hz = command.tone_on ? pitch_hz_ : 0;
     command.tone_changed =
         command.tone_on != commanded_sounding_ || command.tone_hz != commanded_pitch_hz_;
     command.vibrating = command.tone_on && felt(voice_);

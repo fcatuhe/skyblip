@@ -76,11 +76,13 @@ inline void set_flag(uint8_t& flags, uint8_t bit, bool on) {
     if (on) flags |= bit;
 }
 
-inline void put_i8(uint8_t* out, int8_t v) { *out = static_cast<uint8_t>(v); }
+inline void put_i8(uint8_t* out, int8_t value) { *out = static_cast<uint8_t>(value); }
 
 inline int8_t get_i8(const uint8_t* raw) { return static_cast<int8_t>(*raw); }
 
-inline uint16_t clamp_u16(uint32_t v) { return v > 0xFFFFu ? 0xFFFFu : static_cast<uint16_t>(v); }
+inline uint16_t clamp_u16(uint32_t value) {
+    return value > 0xFFFFu ? 0xFFFFu : static_cast<uint16_t>(value);
+}
 
 constexpr int8_t kSampleOffsetFloorMv = -128;
 constexpr int8_t kSampleOffsetCeilingMv = 127;
@@ -102,10 +104,10 @@ inline int8_t stage_margin_steps(int32_t margin_us) {
     return static_cast<int8_t>(steps);
 }
 
-inline int16_t clamp_i16(int32_t v) {
-    if (v > 32767) return 32767;
-    if (v < -32768) return -32768;
-    return static_cast<int16_t>(v);
+inline int16_t clamp_i16(int32_t value) {
+    if (value > 32767) return 32767;
+    if (value < -32768) return -32768;
+    return static_cast<int16_t>(value);
 }
 
 }  // namespace skyblip::diag

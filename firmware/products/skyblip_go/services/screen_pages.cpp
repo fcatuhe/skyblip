@@ -324,10 +324,10 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.imu_stage = context_.state.imu.stage;
             snapshot.imu_fault = context_.state.imu.fault;
             snapshot.imu_fifo_bytes = context_.state.imu.fifo_bytes;
-            snapshot.imu_unparsed = context_.state.imu.unparsed;
+            snapshot.imu_unparsed = context_.state.imu.unparsed_events;
             snapshot.imu_error = context_.state.imu.error;
             snapshot.imu_interrupt = context_.state.imu.interrupt;
-            snapshot.imu_meta = context_.state.imu.meta;
+            snapshot.imu_meta = context_.state.imu.meta_event;
             snapshot.imu_sensor_error = context_.state.imu.sensor_error;
             snapshot.imu_errored_sensor = context_.state.imu.errored_sensor;
             snapshot.slip_valid = context_.state.slip.valid;

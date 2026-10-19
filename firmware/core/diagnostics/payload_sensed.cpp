@@ -3,24 +3,24 @@
 namespace skyblip::diagnostics {
 
 Record record_of(const Gnss& value, const Instant& at) {
-    Record r = framed(Type::Gnss, at);
-    put_u16(r.payload + 0, value.solution_phase_ms);
-    put_u16(r.payload + 2, value.residual_m);
-    put_u16(r.payload + 4, value.hdop_e2);
-    put_u16(r.payload + 6, value.vdop_e2);
-    put_u16(r.payload + 8, clamp_u16(value.stage_s));
-    r.payload[10] = value.satellites;
-    r.payload[11] = value.satellites_in_view;
-    r.payload[12] = value.fix_mode;
-    r.payload[13] = static_cast<uint8_t>(value.reject);
-    r.payload[14] = static_cast<uint8_t>(value.stage);
-    set_flag(r.flags, kGnssFlagFixValid, value.fix_valid);
-    set_flag(r.flags, kGnssFlagResidualValid, value.residual_valid);
-    set_flag(r.flags, kGnssFlagPpsLocked, value.pps_locked);
-    set_flag(r.flags, kGnssFlagGeoidMeasured, value.geoid_measured);
-    set_flag(r.flags, kGnssFlagTxSettled, value.tx_settled);
-    set_flag(r.flags, kGnssFlagLevelsFresh, value.levels_fresh);
-    return r;
+    Record record = framed(Type::Gnss, at);
+    put_u16(record.payload + 0, value.solution_phase_ms);
+    put_u16(record.payload + 2, value.residual_m);
+    put_u16(record.payload + 4, value.hdop_e2);
+    put_u16(record.payload + 6, value.vdop_e2);
+    put_u16(record.payload + 8, clamp_u16(value.stage_s));
+    record.payload[10] = value.satellites;
+    record.payload[11] = value.satellites_in_view;
+    record.payload[12] = value.fix_mode;
+    record.payload[13] = static_cast<uint8_t>(value.reject);
+    record.payload[14] = static_cast<uint8_t>(value.stage);
+    set_flag(record.flags, kGnssFlagFixValid, value.fix_valid);
+    set_flag(record.flags, kGnssFlagResidualValid, value.residual_valid);
+    set_flag(record.flags, kGnssFlagPpsLocked, value.pps_locked);
+    set_flag(record.flags, kGnssFlagGeoidMeasured, value.geoid_measured);
+    set_flag(record.flags, kGnssFlagTxSettled, value.tx_settled);
+    set_flag(record.flags, kGnssFlagLevelsFresh, value.levels_fresh);
+    return record;
 }
 
 bool read(const Record& record, Gnss& out) {
@@ -46,15 +46,15 @@ bool read(const Record& record, Gnss& out) {
 }
 
 Record record_of(const Pps& value, const Instant& at) {
-    Record r = framed(Type::Pps, at);
-    put_u32(r.payload + 0, value.interval_us);
-    put_i32(r.payload + 4, value.error_us);
-    put_u32(r.payload + 8, value.samples);
-    put_u16(r.payload + 12, clamp_u16(value.holdover_events));
-    put_u16(r.payload + 14, value.since_edge_ms);
-    set_flag(r.flags, kPpsFlagLocked, value.locked);
-    set_flag(r.flags, kPpsFlagUtcValid, value.utc_valid);
-    return r;
+    Record record = framed(Type::Pps, at);
+    put_u32(record.payload + 0, value.interval_us);
+    put_i32(record.payload + 4, value.error_us);
+    put_u32(record.payload + 8, value.samples);
+    put_u16(record.payload + 12, clamp_u16(value.holdover_events));
+    put_u16(record.payload + 14, value.since_edge_ms);
+    set_flag(record.flags, kPpsFlagLocked, value.locked);
+    set_flag(record.flags, kPpsFlagUtcValid, value.utc_valid);
+    return record;
 }
 
 bool read(const Record& record, Pps& out) {
@@ -76,24 +76,24 @@ Record record_of(const radio::Entry& value) {
     at.into_ms = value.into_ms;
     at.phase_valid = value.phase_valid;
     at.utc_dated = value.utc_dated;
-    Record r = framed(Type::Burst, at);
-    put_u32(r.payload + 0, value.address);
-    put_u16(r.payload + 4, value.tx_keyed_us);
-    put_u16(r.payload + 6, value.tx_span_us);
-    r.payload[8] = static_cast<uint8_t>(value.verdict);
-    r.payload[9] = static_cast<uint8_t>(value.source);
-    r.payload[10] = static_cast<uint8_t>(value.band);
-    r.payload[11] = value.channel;
-    r.payload[12] = value.length;
-    put_i8(r.payload + 13, value.rssi_dbm);
-    put_i8(r.payload + 14, value.key_offset_s);
-    put_i8(r.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
-    set_flag(r.flags, kBurstFlagAddressValid, value.address_valid);
-    set_flag(r.flags, kBurstFlagRssiValid, value.rssi_valid);
-    set_flag(r.flags, kBurstFlagAirborne, value.airborne);
-    set_flag(r.flags, kBurstFlagTxSpanValid, value.tx_span_valid);
-    set_flag(r.flags, kBurstFlagCallsign, value.callsign);
-    return r;
+    Record record = framed(Type::Burst, at);
+    put_u32(record.payload + 0, value.address);
+    put_u16(record.payload + 4, value.tx_keyed_us);
+    put_u16(record.payload + 6, value.tx_span_us);
+    record.payload[8] = static_cast<uint8_t>(value.verdict);
+    record.payload[9] = static_cast<uint8_t>(value.source);
+    record.payload[10] = static_cast<uint8_t>(value.band);
+    record.payload[11] = value.channel;
+    record.payload[12] = value.length;
+    put_i8(record.payload + 13, value.rssi_dbm);
+    put_i8(record.payload + 14, value.key_offset_s);
+    put_i8(record.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
+    set_flag(record.flags, kBurstFlagAddressValid, value.address_valid);
+    set_flag(record.flags, kBurstFlagRssiValid, value.rssi_valid);
+    set_flag(record.flags, kBurstFlagAirborne, value.airborne);
+    set_flag(record.flags, kBurstFlagTxSpanValid, value.tx_span_valid);
+    set_flag(record.flags, kBurstFlagCallsign, value.callsign);
+    return record;
 }
 
 bool read(const Record& record, radio::Entry& out) {
@@ -123,15 +123,15 @@ bool read(const Record& record, radio::Entry& out) {
 }
 
 Record record_of(const Barometer& value, const Instant& at) {
-    Record r = framed(Type::Barometer, at);
-    put_u32(r.payload + 0, value.pressure_mpa);
-    put_i32(r.payload + 4, value.altitude_mm);
-    put_i32(r.payload + 8, value.climb_mm_s);
-    put_i16(r.payload + 12, value.temperature_dc);
-    set_flag(r.flags, kBarometerFlagActive, value.active);
-    set_flag(r.flags, kBarometerFlagTemperatureValid, value.temperature_valid);
-    set_flag(r.flags, kBarometerFlagClimbAdopted, value.climb_adopted);
-    return r;
+    Record record = framed(Type::Barometer, at);
+    put_u32(record.payload + 0, value.pressure_mpa);
+    put_i32(record.payload + 4, value.altitude_mm);
+    put_i32(record.payload + 8, value.climb_mm_s);
+    put_i16(record.payload + 12, value.temperature_dc);
+    set_flag(record.flags, kBarometerFlagActive, value.active);
+    set_flag(record.flags, kBarometerFlagTemperatureValid, value.temperature_valid);
+    set_flag(record.flags, kBarometerFlagClimbAdopted, value.climb_adopted);
+    return record;
 }
 
 bool read(const Record& record, Barometer& out) {
@@ -148,19 +148,19 @@ bool read(const Record& record, Barometer& out) {
 }
 
 Record record_of(const Motion& value, const Instant& at) {
-    Record r = framed(Type::Motion, at);
-    put_i16(r.payload + 0, value.slip_mg);
-    put_i16(r.payload + 2, value.normal_mg);
-    put_i16(r.payload + 4, value.lateral_mg);
-    put_i16(r.payload + 6, value.longitudinal_mg);
-    put_i16(r.payload + 8, value.most_normal_mg);
-    put_i16(r.payload + 10, value.least_normal_mg);
-    r.payload[12] = value.imu_error;
-    r.payload[13] = value.sensor_error;
-    set_flag(r.flags, kMotionFlagSlipValid, value.slip_valid);
-    set_flag(r.flags, kMotionFlagGLoadValid, value.gload_valid);
-    set_flag(r.flags, kMotionFlagFitted, value.fitted);
-    return r;
+    Record record = framed(Type::Motion, at);
+    put_i16(record.payload + 0, value.slip_mg);
+    put_i16(record.payload + 2, value.normal_mg);
+    put_i16(record.payload + 4, value.lateral_mg);
+    put_i16(record.payload + 6, value.longitudinal_mg);
+    put_i16(record.payload + 8, value.most_normal_mg);
+    put_i16(record.payload + 10, value.least_normal_mg);
+    record.payload[12] = value.imu_error;
+    record.payload[13] = value.sensor_error;
+    set_flag(record.flags, kMotionFlagSlipValid, value.slip_valid);
+    set_flag(record.flags, kMotionFlagGLoadValid, value.gload_valid);
+    set_flag(record.flags, kMotionFlagFitted, value.fitted);
+    return record;
 }
 
 bool read(const Record& record, Motion& out) {
@@ -181,21 +181,21 @@ bool read(const Record& record, Motion& out) {
 }
 
 Record record_of(const Power& value, const Instant& at) {
-    Record r = framed(Type::Power, at);
-    put_u16(r.payload + 0, value.cell_mv);
-    put_u16(r.payload + 2, clamp_u16(value.supply_warnings));
-    put_u16(r.payload + 4, clamp_u16(value.implausible));
-    put_u16(r.payload + 6, clamp_u16(value.charge_warnings));
-    put_i16(r.payload + 8, value.die_dc);
-    r.payload[10] = value.percent;
-    r.payload[11] = static_cast<uint8_t>(value.level);
-    r.payload[12] = static_cast<uint8_t>(value.charge);
-    r.payload[15] = static_cast<uint8_t>(value.sample_offset_mv);
-    set_flag(r.flags, kPowerFlagCharging, value.charging);
-    set_flag(r.flags, kPowerFlagExternalPower, value.external_power);
-    set_flag(r.flags, kPowerFlagValid, value.valid);
-    set_flag(r.flags, kPowerFlagDieValid, value.die_valid);
-    return r;
+    Record record = framed(Type::Power, at);
+    put_u16(record.payload + 0, value.cell_mv);
+    put_u16(record.payload + 2, clamp_u16(value.supply_warnings));
+    put_u16(record.payload + 4, clamp_u16(value.implausible));
+    put_u16(record.payload + 6, clamp_u16(value.charge_warnings));
+    put_i16(record.payload + 8, value.die_dc);
+    record.payload[10] = value.percent;
+    record.payload[11] = static_cast<uint8_t>(value.level);
+    record.payload[12] = static_cast<uint8_t>(value.charge);
+    record.payload[15] = static_cast<uint8_t>(value.sample_offset_mv);
+    set_flag(record.flags, kPowerFlagCharging, value.charging);
+    set_flag(record.flags, kPowerFlagExternalPower, value.external_power);
+    set_flag(record.flags, kPowerFlagValid, value.valid);
+    set_flag(record.flags, kPowerFlagDieValid, value.die_valid);
+    return record;
 }
 
 bool read(const Record& record, Power& out) {
@@ -218,13 +218,13 @@ bool read(const Record& record, Power& out) {
 }
 
 Record record_of(const Contact& value, const Instant& at) {
-    Record r = framed(Type::Contact, at);
-    put_u32(r.payload + 0, value.at_ms);
-    put_u32(r.payload + 4, value.held_ms);
-    r.payload[8] = static_cast<uint8_t>(value.contact);
-    r.payload[9] = value.gesture;
-    set_flag(r.flags, kContactFlagDown, value.down);
-    return r;
+    Record record = framed(Type::Contact, at);
+    put_u32(record.payload + 0, value.at_ms);
+    put_u32(record.payload + 4, value.held_ms);
+    record.payload[8] = static_cast<uint8_t>(value.contact);
+    record.payload[9] = value.gesture;
+    set_flag(record.flags, kContactFlagDown, value.down);
+    return record;
 }
 
 bool read(const Record& record, Contact& out) {
@@ -239,16 +239,16 @@ bool read(const Record& record, Contact& out) {
 }
 
 Record record_of(const Link& value, const Instant& at) {
-    Record r = framed(Type::Link, at);
-    put_u16(r.payload + 0, value.link_session);
-    put_u16(r.payload + 2, value.payload_bytes);
-    put_u16(r.payload + 4, value.frame_bytes);
-    put_u16(r.payload + 6, value.holder);
-    put_u16(r.payload + 8, clamp_u16(value.drops));
-    r.payload[10] = static_cast<uint8_t>(value.action);
-    r.payload[11] = static_cast<uint8_t>(value.endpoint);
-    set_flag(r.flags, kLinkFlagClaimHeld, value.claim_held);
-    return r;
+    Record record = framed(Type::Link, at);
+    put_u16(record.payload + 0, value.link_session);
+    put_u16(record.payload + 2, value.payload_bytes);
+    put_u16(record.payload + 4, value.frame_bytes);
+    put_u16(record.payload + 6, value.holder);
+    put_u16(record.payload + 8, clamp_u16(value.drops));
+    record.payload[10] = static_cast<uint8_t>(value.action);
+    record.payload[11] = static_cast<uint8_t>(value.endpoint);
+    set_flag(record.flags, kLinkFlagClaimHeld, value.claim_held);
+    return record;
 }
 
 bool read(const Record& record, Link& out) {
@@ -266,15 +266,15 @@ bool read(const Record& record, Link& out) {
 }
 
 Record record_of(const Switch& value, const Instant& at) {
-    Record r = framed(Type::Switch, at);
-    put_u32(r.payload + 0, value.to_hz);
-    put_i32(r.payload + 4, value.margin_us);
-    put_u16(r.payload + 8, value.took_us);
-    put_u16(r.payload + 10, value.gap_us);
-    r.payload[12] = static_cast<uint8_t>(value.kind);
-    set_flag(r.flags, kSwitchFlagArmedAhead, value.armed_ahead);
-    set_flag(r.flags, kSwitchFlagLate, value.late);
-    return r;
+    Record record = framed(Type::Switch, at);
+    put_u32(record.payload + 0, value.to_hz);
+    put_i32(record.payload + 4, value.margin_us);
+    put_u16(record.payload + 8, value.took_us);
+    put_u16(record.payload + 10, value.gap_us);
+    record.payload[12] = static_cast<uint8_t>(value.kind);
+    set_flag(record.flags, kSwitchFlagArmedAhead, value.armed_ahead);
+    set_flag(record.flags, kSwitchFlagLate, value.late);
+    return record;
 }
 
 bool read(const Record& record, Switch& out) {

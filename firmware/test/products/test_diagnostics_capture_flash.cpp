@@ -75,7 +75,7 @@ TEST_CASE("capture: the capture takes flights sectors down to the floor and no f
     uint32_t t = 100;
     taxi(rig, t, 2);
     arm_from_the_page(rig, t);
-    CHECK(rig.state().capture.price_flights > 0);
+    CHECK(rig.state().capture.evicted_flights > 0);
 
     feed(rig, t, flight::kLogSlotsPerSector * 6);
     CHECK(rig.product.capture().capturing());

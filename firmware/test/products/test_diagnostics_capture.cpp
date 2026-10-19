@@ -102,7 +102,7 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     const bus::CaptureState& price = rig.state().capture;
     CHECK(price.available);
     CHECK(price.pool_sectors == platform::host::FlashRegion::kSectorCount);
-    CHECK(price.price_sectors == platform::host::FlashRegion::kSectorCount);
+    CHECK(price.growth_sectors == platform::host::FlashRegion::kSectorCount);
     CHECK(price.keeps_s > 0);
     CHECK(reads_in(rig.product.screen().framebuffer(), "TAKES 298 OF 298 SECTORS", 0, 0, 200, 200));
     CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO ARM", 0, 0, 200, 200));

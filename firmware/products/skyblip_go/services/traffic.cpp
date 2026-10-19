@@ -84,7 +84,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.airborne = flight::airborne(state.own.flight_state);
     entry.rssi_dbm = event.rssi_dbm;
     entry.rssi_valid = event.rssi_valid;
-    if (event.type == events::RfEventType::RxDone) entry.length = event.length;
+    if (event.type == events::RfEventType::RxDone) entry.length = event.bytes;
     if (event.type == events::RfEventType::TxDone || event.type == events::RfEventType::Missed)
         entry.callsign = event.tx_at_us != 0 && event.tx_at_us == state.rf.callsign_at_us;
     if (outcome == radio::Verdict::Transmitted && event.tx_at_us != 0) {
@@ -109,7 +109,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     const events::Stamp stamp = stamp_for(event, now_ms);
     protocol::Frame frame{};
     const protocol::System system =
-        protocol::receive_burst(event.band, event.data.data(), event.length, frame);
+        protocol::receive_burst(event.band, event.data.data(), event.bytes, frame);
     if (system == protocol::System::AdslUplink) {
         on_uplink(event, stamp, now_ms);
         return;

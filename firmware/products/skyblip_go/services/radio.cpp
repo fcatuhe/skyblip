@@ -500,7 +500,7 @@ void RadioService::collect_outcome(uint32_t now_ms) {
         if (!current_dwell_.carries_any() && next_armed_ && next_dwell_.carries_any() &&
             now_us >= next_dwell_.from_us)
             promote();
-        credit(context_.state.rf.tx_done_at(seen_tx_ok_, tx_ok), now_ms);
+        credit(context_.state.rf.tx_done_at_us(seen_tx_ok_, tx_ok), now_ms);
     }
     if (reported) context_.state.duty.tx_keyed_ms = transmitter_.air_time().total_ms();
     expire(current_dwell_, now_us);

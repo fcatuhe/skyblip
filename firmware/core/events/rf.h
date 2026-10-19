@@ -22,7 +22,7 @@ struct RfEvent {
     // M by default so a queue entry nobody stamped reads as the band that
     // carries two systems and is framed rather than trusted.
     model::Band band;
-    uint8_t length;
+    uint8_t bytes;
     int8_t rssi_dbm;
     bool rssi_valid;
     uint64_t at_us;

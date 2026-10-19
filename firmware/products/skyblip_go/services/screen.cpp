@@ -97,7 +97,7 @@ void ScreenService::record_screen(uint32_t now_ms) {
     recorded_ms_ = now_ms;
     if (!context_.diagnostics.armed()) return;
     diagnostics::Screen value{};
-    value.since_ms = now_ms - screen_since_ms_;
+    value.since_page_shown_ms = now_ms - screen_since_ms_;
     value.page = static_cast<uint8_t>(page_);
     value.mode = static_cast<uint8_t>(mode_);
     value.prompt = static_cast<uint8_t>(prompt_);

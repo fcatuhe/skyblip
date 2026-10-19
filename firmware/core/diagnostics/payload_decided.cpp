@@ -3,17 +3,17 @@
 namespace skyblip::diagnostics {
 
 Record record_of(const Boot& value, const Instant& at) {
-    Record r = framed(Type::Boot, at);
-    put_u32(r.payload + 0, value.capabilities);
-    put_u32(r.payload + 4, value.firmware_build);
-    put_u16(r.payload + 8, value.firmware_revision);
-    r.payload[10] = value.firmware_major;
-    r.payload[11] = value.firmware_minor;
-    r.payload[12] = static_cast<uint8_t>(value.reset);
-    r.payload[13] = static_cast<uint8_t>(value.image_state);
-    r.payload[14] = static_cast<uint8_t>(value.profile);
-    set_flag(r.flags, kBootFlagProfileRecorded, value.profile_recorded);
-    return r;
+    Record record = framed(Type::Boot, at);
+    put_u32(record.payload + 0, value.capabilities);
+    put_u32(record.payload + 4, value.firmware_build);
+    put_u16(record.payload + 8, value.firmware_revision);
+    record.payload[10] = value.firmware_major;
+    record.payload[11] = value.firmware_minor;
+    record.payload[12] = static_cast<uint8_t>(value.reset);
+    record.payload[13] = static_cast<uint8_t>(value.image_state);
+    record.payload[14] = static_cast<uint8_t>(value.profile);
+    set_flag(record.flags, kBootFlagProfileRecorded, value.profile_recorded);
+    return record;
 }
 
 bool read(const Record& record, Boot& out) {
@@ -32,20 +32,20 @@ bool read(const Record& record, Boot& out) {
 }
 
 Record record_of(const Config& value, const Instant& at) {
-    Record r = framed(Type::Config, at);
-    put_u32(r.payload + 0, value.address);
-    put_i16(r.payload + 4, value.battery_offset_mv);
-    put_i16(r.payload + 6, value.frequency_trim_e1_ppm);
-    r.payload[8] = value.aircraft_type;
-    r.payload[9] = value.address_mapping_table;
-    r.payload[10] = value.alarm_volume;
-    r.payload[11] = value.settings_version;
-    put_i8(r.payload + 12, value.tx_power_dbm);
-    put_i8(r.payload + 13, value.pa_rated_dbm);
-    set_flag(r.flags, kConfigFlagAlarmEnabled, value.alarm_enabled);
-    set_flag(r.flags, kConfigFlagMetric, value.metric);
-    set_flag(r.flags, kConfigFlagBatteryTrimManual, value.battery_trim_manual);
-    return r;
+    Record record = framed(Type::Config, at);
+    put_u32(record.payload + 0, value.address);
+    put_i16(record.payload + 4, value.battery_offset_mv);
+    put_i16(record.payload + 6, value.frequency_trim_e1_ppm);
+    record.payload[8] = value.aircraft_type;
+    record.payload[9] = value.address_mapping_table;
+    record.payload[10] = value.alarm_volume;
+    record.payload[11] = value.settings_version;
+    put_i8(record.payload + 12, value.tx_power_dbm);
+    put_i8(record.payload + 13, value.pa_rated_dbm);
+    set_flag(record.flags, kConfigFlagAlarmEnabled, value.alarm_enabled);
+    set_flag(record.flags, kConfigFlagMetric, value.metric);
+    set_flag(record.flags, kConfigFlagBatteryTrimManual, value.battery_trim_manual);
+    return record;
 }
 
 bool read(const Record& record, Config& out) {
@@ -67,22 +67,22 @@ bool read(const Record& record, Config& out) {
 }
 
 Record record_of(const Dwell& value, const Instant& at) {
-    Record r = framed(Type::Dwell, at);
-    put_u32(r.payload + 0, value.frequency_hz);
-    put_u16(r.payload + 4, value.start_ms);
-    put_u16(r.payload + 6, value.end_ms);
-    put_u16(r.payload + 8, value.phase_ms);
-    put_u16(r.payload + 10, value.duty_permille);
-    r.payload[12] = static_cast<uint8_t>(value.state);
-    r.payload[13] = static_cast<uint8_t>(value.band);
-    r.payload[14] = static_cast<uint8_t>(value.refusal);
-    put_i8(r.payload + 15, value.noise_dbm);
-    set_flag(r.flags, kDwellFlagTxAllowed, value.tx_allowed);
-    set_flag(r.flags, kDwellFlagOwnTxDwell, value.own_tx_dwell);
-    set_flag(r.flags, kDwellFlagListenOnly, value.listen_only);
-    set_flag(r.flags, kDwellFlagArmed, value.armed);
-    set_flag(r.flags, kDwellFlagBurstArmed, value.burst_armed);
-    return r;
+    Record record = framed(Type::Dwell, at);
+    put_u32(record.payload + 0, value.frequency_hz);
+    put_u16(record.payload + 4, value.start_ms);
+    put_u16(record.payload + 6, value.end_ms);
+    put_u16(record.payload + 8, value.phase_ms);
+    put_u16(record.payload + 10, value.duty_permille);
+    record.payload[12] = static_cast<uint8_t>(value.state);
+    record.payload[13] = static_cast<uint8_t>(value.band);
+    record.payload[14] = static_cast<uint8_t>(value.refusal);
+    put_i8(record.payload + 15, value.noise_dbm);
+    set_flag(record.flags, kDwellFlagTxAllowed, value.tx_allowed);
+    set_flag(record.flags, kDwellFlagOwnTxDwell, value.own_tx_dwell);
+    set_flag(record.flags, kDwellFlagListenOnly, value.listen_only);
+    set_flag(record.flags, kDwellFlagArmed, value.armed);
+    set_flag(record.flags, kDwellFlagBurstArmed, value.burst_armed);
+    return record;
 }
 
 bool read(const Record& record, Dwell& out) {
@@ -106,19 +106,19 @@ bool read(const Record& record, Dwell& out) {
 }
 
 Record record_of(const Flight& value, const Instant& at) {
-    Record r = framed(Type::Flight, at);
-    put_i32(r.payload + 0, value.speed_mm_s);
-    put_i32(r.payload + 4, value.climb_mm_s);
-    put_i16(r.payload + 8, value.altitude_msl_m);
-    put_u16(r.payload + 10, value.hdop_e2);
-    put_u16(r.payload + 12, value.vdop_e2);
-    r.payload[14] = static_cast<uint8_t>(value.declared);
-    r.payload[15] = static_cast<uint8_t>(value.confirmed);
-    set_flag(r.flags, kFlightFlagFixValid, value.fix_valid);
-    set_flag(r.flags, kFlightFlagRolling, value.rolling);
-    set_flag(r.flags, kFlightFlagClimbValid, value.climb_valid);
-    set_flag(r.flags, kFlightFlagTxSettled, value.tx_settled);
-    return r;
+    Record record = framed(Type::Flight, at);
+    put_i32(record.payload + 0, value.speed_mm_s);
+    put_i32(record.payload + 4, value.climb_mm_s);
+    put_i16(record.payload + 8, value.altitude_msl_m);
+    put_u16(record.payload + 10, value.hdop_e2);
+    put_u16(record.payload + 12, value.vdop_e2);
+    record.payload[14] = static_cast<uint8_t>(value.declared);
+    record.payload[15] = static_cast<uint8_t>(value.confirmed);
+    set_flag(record.flags, kFlightFlagFixValid, value.fix_valid);
+    set_flag(record.flags, kFlightFlagRolling, value.rolling);
+    set_flag(record.flags, kFlightFlagClimbValid, value.climb_valid);
+    set_flag(record.flags, kFlightFlagTxSettled, value.tx_settled);
+    return record;
 }
 
 bool read(const Record& record, Flight& out) {
@@ -139,21 +139,21 @@ bool read(const Record& record, Flight& out) {
 }
 
 Record record_of(const Traffic& value, const Instant& at) {
-    Record r = framed(Type::Traffic, at);
-    put_u32(r.payload + 0, value.address);
-    put_u16(r.payload + 4, value.distance_m);
-    put_u16(r.payload + 6, value.bearing_deg);
-    put_i16(r.payload + 8, value.relative_altitude_m);
-    put_i16(r.payload + 10, value.closing_mps);
-    r.payload[12] = static_cast<uint8_t>(value.alarm);
-    r.payload[13] = static_cast<uint8_t>(value.source);
-    put_i8(r.payload + 14, value.rssi_dbm);
-    r.payload[15] = value.tracked;
-    set_flag(r.flags, kTrafficFlagAssessed, value.assessed);
-    set_flag(r.flags, kTrafficFlagDismissed, value.dismissed);
-    set_flag(r.flags, kTrafficFlagInFormation, value.in_formation);
-    set_flag(r.flags, kTrafficFlagPositionValid, value.position_valid);
-    return r;
+    Record record = framed(Type::Traffic, at);
+    put_u32(record.payload + 0, value.address);
+    put_u16(record.payload + 4, value.distance_m);
+    put_u16(record.payload + 6, value.bearing_deg);
+    put_i16(record.payload + 8, value.relative_altitude_m);
+    put_i16(record.payload + 10, value.closing_mps);
+    record.payload[12] = static_cast<uint8_t>(value.alarm);
+    record.payload[13] = static_cast<uint8_t>(value.source);
+    put_i8(record.payload + 14, value.rssi_dbm);
+    record.payload[15] = value.tracked;
+    set_flag(record.flags, kTrafficFlagAssessed, value.assessed);
+    set_flag(record.flags, kTrafficFlagDismissed, value.dismissed);
+    set_flag(record.flags, kTrafficFlagInFormation, value.in_formation);
+    set_flag(record.flags, kTrafficFlagPositionValid, value.position_valid);
+    return record;
 }
 
 bool read(const Record& record, Traffic& out) {
@@ -176,16 +176,16 @@ bool read(const Record& record, Traffic& out) {
 }
 
 Record record_of(const Write& value, const Instant& at) {
-    Record r = framed(Type::Write, at);
-    put_u32(r.payload + 0, value.waited_ms);
-    put_u16(r.payload + 4, value.phase_ms);
-    put_u16(r.payload + 6, clamp_u16(value.requests));
-    put_u16(r.payload + 8, clamp_u16(value.writes));
-    put_u16(r.payload + 10, clamp_u16(value.forced));
-    r.payload[12] = static_cast<uint8_t>(value.placement);
-    r.payload[13] = static_cast<uint8_t>(value.kind);
-    set_flag(r.flags, kWriteFlagPending, value.pending);
-    return r;
+    Record record = framed(Type::Write, at);
+    put_u32(record.payload + 0, value.waited_ms);
+    put_u16(record.payload + 4, value.phase_ms);
+    put_u16(record.payload + 6, clamp_u16(value.requests));
+    put_u16(record.payload + 8, clamp_u16(value.writes));
+    put_u16(record.payload + 10, clamp_u16(value.forced));
+    record.payload[12] = static_cast<uint8_t>(value.placement);
+    record.payload[13] = static_cast<uint8_t>(value.kind);
+    set_flag(record.flags, kWriteFlagPending, value.pending);
+    return record;
 }
 
 bool read(const Record& record, Write& out) {
@@ -203,24 +203,24 @@ bool read(const Record& record, Write& out) {
 }
 
 Record record_of(const Screen& value, const Instant& at) {
-    Record r = framed(Type::Screen, at);
-    put_u32(r.payload + 0, value.since_ms);
-    r.payload[4] = value.page;
-    r.payload[5] = value.mode;
-    r.payload[6] = value.prompt;
-    r.payload[7] = static_cast<uint8_t>(value.alarm);
-    put_u32(r.payload + 8, value.render_us);
-    put_u32(r.payload + 12, value.present_us);
-    set_flag(r.flags, kScreenFlagBacklight, value.backlight);
-    set_flag(r.flags, kScreenFlagPowered, value.powered);
-    set_flag(r.flags, kScreenFlagHolding, value.holding);
-    return r;
+    Record record = framed(Type::Screen, at);
+    put_u32(record.payload + 0, value.since_page_shown_ms);
+    record.payload[4] = value.page;
+    record.payload[5] = value.mode;
+    record.payload[6] = value.prompt;
+    record.payload[7] = static_cast<uint8_t>(value.alarm);
+    put_u32(record.payload + 8, value.render_us);
+    put_u32(record.payload + 12, value.present_us);
+    set_flag(record.flags, kScreenFlagBacklight, value.backlight);
+    set_flag(record.flags, kScreenFlagPowered, value.powered);
+    set_flag(record.flags, kScreenFlagHolding, value.holding);
+    return record;
 }
 
 bool read(const Record& record, Screen& out) {
     if (record.type != Type::Screen) return false;
     out = Screen{};
-    out.since_ms = get_u32(record.payload + 0);
+    out.since_page_shown_ms = get_u32(record.payload + 0);
     out.page = record.payload[4];
     out.mode = record.payload[5];
     out.prompt = record.payload[6];
@@ -234,16 +234,16 @@ bool read(const Record& record, Screen& out) {
 }
 
 Record record_of(const Loop& value, const Instant& at) {
-    Record r = framed(Type::Loop, at);
-    put_u16(r.payload + 0, value.passes);
-    put_u16(r.payload + 2, value.busy_ms);
-    put_u32(r.payload + 4, value.worst_pass_us);
-    put_u16(r.payload + 8, value.worst_pass_phase_ms);
-    put_u16(r.payload + 10, value.worst_gap_ms);
-    put_u16(r.payload + 12, value.worst_gap_phase_ms);
-    r.payload[14] = value.worst_service;
-    r.payload[15] = value.worst_tick_ms;
-    return r;
+    Record record = framed(Type::Loop, at);
+    put_u16(record.payload + 0, value.passes);
+    put_u16(record.payload + 2, value.busy_ms);
+    put_u32(record.payload + 4, value.worst_pass_us);
+    put_u16(record.payload + 8, value.worst_pass_phase_ms);
+    put_u16(record.payload + 10, value.worst_gap_ms);
+    put_u16(record.payload + 12, value.worst_gap_phase_ms);
+    record.payload[14] = value.worst_service;
+    record.payload[15] = value.worst_tick_ms;
+    return record;
 }
 
 bool read(const Record& record, Loop& out) {
@@ -261,12 +261,12 @@ bool read(const Record& record, Loop& out) {
 }
 
 Record record_of(const Gap& value, const Instant& at) {
-    Record r = framed(Type::Gap, at);
-    put_u32(r.payload + 0, value.dropped);
-    put_u32(r.payload + 4, value.span_ms);
-    put_u32(r.payload + 8, value.total);
-    put_u16(r.payload + 12, value.capacity);
-    return r;
+    Record record = framed(Type::Gap, at);
+    put_u32(record.payload + 0, value.dropped);
+    put_u32(record.payload + 4, value.span_ms);
+    put_u32(record.payload + 8, value.total);
+    put_u16(record.payload + 12, value.capacity);
+    return record;
 }
 
 bool read(const Record& record, Gap& out) {
@@ -280,10 +280,10 @@ bool read(const Record& record, Gap& out) {
 }
 
 Record record_of(const End& value, const Instant& at) {
-    Record r = framed(Type::End, at);
-    put_u32(r.payload + 0, value.records);
-    put_u32(r.payload + 4, value.dropped);
-    return r;
+    Record record = framed(Type::End, at);
+    put_u32(record.payload + 0, value.records);
+    put_u32(record.payload + 4, value.dropped);
+    return record;
 }
 
 bool read(const Record& record, End& out) {
@@ -295,16 +295,16 @@ bool read(const Record& record, End& out) {
 }
 
 Record record_of(const Duty& value, const Instant& at) {
-    Record r = framed(Type::Duty, at);
+    Record record = framed(Type::Duty, at);
     // INFO: fc 21sep26 the low half, not clamp_u16: readers subtract, and a clamp loses the delta
-    put_u16(r.payload + 0, static_cast<uint16_t>(value.panel_partial_refreshes));
-    put_u16(r.payload + 2, static_cast<uint16_t>(value.panel_full_refreshes));
-    put_u16(r.payload + 4, static_cast<uint16_t>(value.backlight_ms));
-    put_u16(r.payload + 6, static_cast<uint16_t>(value.rx_armed_ms));
-    put_u16(r.payload + 8, static_cast<uint16_t>(value.tx_keyed_ms));
-    put_u16(r.payload + 10, static_cast<uint16_t>(value.ble_connected_ms));
-    put_u16(r.payload + 12, static_cast<uint16_t>(value.annunciator_ms));
-    return r;
+    put_u16(record.payload + 0, static_cast<uint16_t>(value.panel_partial_refreshes));
+    put_u16(record.payload + 2, static_cast<uint16_t>(value.panel_full_refreshes));
+    put_u16(record.payload + 4, static_cast<uint16_t>(value.backlight_ms));
+    put_u16(record.payload + 6, static_cast<uint16_t>(value.rx_armed_ms));
+    put_u16(record.payload + 8, static_cast<uint16_t>(value.tx_keyed_ms));
+    put_u16(record.payload + 10, static_cast<uint16_t>(value.ble_connected_ms));
+    put_u16(record.payload + 12, static_cast<uint16_t>(value.annunciator_ms));
+    return record;
 }
 
 bool read(const Record& record, Duty& out) {

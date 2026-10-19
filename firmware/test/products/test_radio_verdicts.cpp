@@ -46,7 +46,7 @@ void hear_mband(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t fram
     event.band = model::Band::M;
     event.rssi_dbm = -15;
     event.rssi_valid = true;
-    event.length = models::Sx1262::deliver_after_sync(
+    event.bytes = models::Sx1262::deliver_after_sync(
         chips, static_cast<uint16_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);

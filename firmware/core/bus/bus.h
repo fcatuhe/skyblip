@@ -13,19 +13,19 @@
 namespace skyblip::bus {
 
 // INFO: fc 04sep26 one producer, one consumer, two threads on silicon: release/acquire is the lock
-template <class T, int N>
+template <class T, int Capacity>
 class Queue {
    public:
-    static constexpr int kCapacity = N;
+    static constexpr int kCapacity = Capacity;
 
     bool push(const T& item) {
         const int head = head_.load(std::memory_order_relaxed);
-        const int next = (head + 1) % (N + 1);
+        const int next = (head + 1) % (Capacity + 1);
         if (next == tail_.load(std::memory_order_acquire)) {
             dropped_.fetch_add(1, std::memory_order_relaxed);
             return false;
         }
-        slot_[head] = item;
+        slots_[head] = item;
         head_.store(next, std::memory_order_release);
         return true;
     }
@@ -33,8 +33,8 @@ class Queue {
     bool pop(T& out) {
         const int tail = tail_.load(std::memory_order_relaxed);
         if (tail == head_.load(std::memory_order_acquire)) return false;
-        out = slot_[tail];
-        tail_.store((tail + 1) % (N + 1), std::memory_order_release);
+        out = slots_[tail];
+        tail_.store((tail + 1) % (Capacity + 1), std::memory_order_release);
         return true;
     }
 
@@ -44,7 +44,7 @@ class Queue {
     uint32_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
 
    private:
-    T slot_[N + 1]{};
+    T slots_[Capacity + 1]{};
     std::atomic<int> head_{0};
     std::atomic<int> tail_{0};
     std::atomic<uint32_t> dropped_{0};

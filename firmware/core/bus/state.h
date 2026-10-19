@@ -37,12 +37,12 @@ struct RfState {
     uint64_t callsign_at_us{0};
     // INFO: fc 28sep26 a TxDone can reach the radio after its dwell closed, its instant says whose
     static constexpr uint32_t kTxDonesKept = 4;
-    uint64_t tx_done_at_us[kTxDonesKept]{};
+    uint64_t tx_done_ring_us[kTxDonesKept]{};
     void note_tx_done(uint32_t index, uint64_t tx_at_us) {
-        tx_done_at_us[index % kTxDonesKept] = tx_at_us;
+        tx_done_ring_us[index % kTxDonesKept] = tx_at_us;
     }
-    uint64_t tx_done_at(uint32_t index, uint32_t count) const {
-        return count - index <= kTxDonesKept ? tx_done_at_us[index % kTxDonesKept] : 0;
+    uint64_t tx_done_at_us(uint32_t index, uint32_t count) const {
+        return count - index <= kTxDonesKept ? tx_done_ring_us[index % kTxDonesKept] : 0;
     }
     uint32_t duty_permille{0};
     uint16_t last_tx_keyed_us{0};
@@ -144,10 +144,10 @@ struct ImuState {
     dfu::HubImageReport image{};
     bool bootable{true};
     uint32_t fifo_bytes{0};
-    uint32_t unparsed{0};
+    uint32_t unparsed_events{0};
     uint8_t error{0};
     uint8_t interrupt{0};
-    uint8_t meta{0};
+    uint8_t meta_event{0};
     uint8_t sensor_error{0};
     uint8_t errored_sensor{0};
 };
@@ -170,8 +170,8 @@ struct CaptureState {
     uint32_t dropped{0};
     uint32_t sectors{0};
     uint32_t pool_sectors{0};
-    uint32_t price_sectors{0};
-    uint32_t price_flights{0};
+    uint32_t growth_sectors{0};
+    uint32_t evicted_flights{0};
     // INFO: fc 20sep26 the ring rotates: what the partition keeps of a capture, not a deadline
     uint32_t keeps_s{0};
     uint32_t faults{0};

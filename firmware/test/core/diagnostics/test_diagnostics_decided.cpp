@@ -226,7 +226,7 @@ TEST_CASE("diag record: a durable write keeps where in the second it was placed"
 
 TEST_CASE("diag record: the glass keeps what was on it and how long it had been") {
     diagnostics::Screen in{};
-    in.since_ms = 61000;
+    in.since_page_shown_ms = 61000;
     in.page = 4;
     in.mode = 1;
     in.prompt = 2;
@@ -238,7 +238,7 @@ TEST_CASE("diag record: the glass keeps what was on it and how long it had been"
     in.present_us = 41210;
 
     const diagnostics::Screen out = diagnostics_round_trip(in);
-    CHECK(out.since_ms == in.since_ms);
+    CHECK(out.since_page_shown_ms == in.since_page_shown_ms);
     CHECK(out.page == in.page);
     CHECK(out.mode == in.mode);
     CHECK(out.prompt == in.prompt);

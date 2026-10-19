@@ -190,7 +190,7 @@ struct FeatureRig {
         events::RfEvent event{};
         event.type = events::RfEventType::RxDone;
         event.band = model::Band::O;
-        event.length = protocol::kUplinkFrameBytes;
+        event.bytes = protocol::kUplinkFrameBytes;
         event.rssi_dbm = -92;
         for (int i = 0; i < protocol::kUplinkFrameBytes; i++) event.data[i] = frame[i];
         bus.rf.push(event);

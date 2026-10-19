@@ -18,8 +18,8 @@ CaptureSnapshot disarmed_device() {
     snapshot.uptime_s = 812;
     snapshot.capture.available = true;
     snapshot.capture.pool_sectors = 330;
-    snapshot.capture.price_sectors = 266;
-    snapshot.capture.price_flights = 3;
+    snapshot.capture.growth_sectors = 266;
+    snapshot.capture.evicted_flights = 3;
     snapshot.focus_keeps_s = kFullKeepsS;
     return snapshot;
 }

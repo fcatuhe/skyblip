@@ -19,11 +19,12 @@ class Recorder {
     static constexpr uint32_t kPeriodicRecordsPerSecond = 15;
 
     static constexpr uint32_t kSecondsPerHour = 3600;
-    static constexpr uint32_t kMsPerHour = kSecondsPerHour * 1000;
+    static constexpr uint32_t kMillisecondsPerHour = kSecondsPerHour * 1000;
 
     static constexpr uint32_t records_per_hour(Profile profile) {
-        return paced(profile) ? kPowerRunRecordsPerPass * kMsPerHour / kPowerRunRecordPeriodMs
-                              : kPeriodicRecordsPerSecond * kSecondsPerHour;
+        return paced(profile)
+                   ? kPowerRunRecordsPerPass * kMillisecondsPerHour / kPowerRunRecordPeriodMs
+                   : kPeriodicRecordsPerSecond * kSecondsPerHour;
     }
 
     void arm(Profile profile = Profile::Full);
@@ -34,8 +35,8 @@ class Recorder {
     bool record(const Record& record);
     bool record(const radio::Entry& entry);
 
-    template <class T>
-    bool record(const T& value, const Instant& at) {
+    template <class Value>
+    bool record(const Value& value, const Instant& at) {
         if (!armed_) return false;
         return push(record_of(value, at));
     }

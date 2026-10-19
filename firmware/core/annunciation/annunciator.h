@@ -160,7 +160,7 @@ class Policy {
 
     Tune tune_{};
     Voice voice_{Voice::None};
-    uint16_t tone_hz_{0};
+    uint16_t pitch_hz_{0};
     uint16_t commanded_pitch_hz_{0};
     traffic::Level level_{traffic::Level::None};
     uint8_t note_index_{0};

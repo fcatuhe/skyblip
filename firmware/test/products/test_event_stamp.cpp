@@ -79,7 +79,7 @@ struct StampRig {
         const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, tx.Data,
                                                           protocol::AdslPacket::kDataBytes, chips);
         deliver(chips, chip_length, event.data.data(), protocol::kRxChipBytes);
-        event.length = protocol::kRxChipBytes;
+        event.bytes = protocol::kRxChipBytes;
         bus.rf.push(event);
         traffic.tick(now_ms);
     }
