@@ -58,22 +58,23 @@ void FlightLogService::watch(uint32_t now_ms) {
         const traffic::AlarmAssessment assessment =
             traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
-        flight::LogTarget contact{};
-        contact.address = target->observation.address;
-        contact.address_mapping_table = target->observation.address_mapping_table;
-        contact.aircraft_category = target->observation.aircraft_category;
-        contact.distance_m = clamp_u16(assessment.relative_distance_m < 0
-                                           ? 0
-                                           : static_cast<uint32_t>(assessment.relative_distance_m));
-        contact.relative_altitude_m = clamp_i16(assessment.relative_altitude_m);
-        contact.relative_bearing_deg = assessment.relative_bearing_deg;
-        contact.closing_mps = clamp_i16(assessment.closing_mps);
-        contact.alarm = traffic::to_number(target->alarm_level);
-        contact.source = static_cast<uint8_t>(target->observation.source);
-        contact.rssi_dbm = target->observation.rssi_dbm;
-        contact.dismissed = target->alarm_dismissed;
-        contact.in_formation = target->in_formation;
-        events_.heard(slot, contact, own.utc_s);
+        flight::LogTarget log_target{};
+        log_target.address = target->observation.address;
+        log_target.address_mapping_table = target->observation.address_mapping_table;
+        log_target.aircraft_category = target->observation.aircraft_category;
+        log_target.distance_m =
+            clamp_u16(assessment.relative_distance_m < 0
+                          ? 0
+                          : static_cast<uint32_t>(assessment.relative_distance_m));
+        log_target.relative_altitude_m = clamp_i16(assessment.relative_altitude_m);
+        log_target.relative_bearing_deg = assessment.relative_bearing_deg;
+        log_target.closing_mps = clamp_i16(assessment.closing_mps);
+        log_target.alarm = traffic::to_number(target->alarm_level);
+        log_target.source = static_cast<uint8_t>(target->observation.source);
+        log_target.rssi_dbm = target->observation.rssi_dbm;
+        log_target.dismissed = target->alarm_dismissed;
+        log_target.in_formation = target->in_formation;
+        events_.heard(slot, log_target, own.utc_s);
     }
 }
 

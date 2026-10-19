@@ -37,8 +37,8 @@ class NmeaService : public runtime::Service {
 
     // INFO: nm 04aug26 What the rotation below guarantees: every target in the
     // table reaches the tablet inside this. It is core/traffic's own freshness
-    // rule (kAlertMaxAgeMs), because a contact the device would no longer alarm
-    // on is exactly a contact whose position on the tablet has gone stale - the
+    // rule (kAlertMaxAgeMs), because a target the device would no longer alarm
+    // on is exactly a target whose position on the tablet has gone stale - the
     // two pictures must not be allowed to disagree by more than the device's own
     // patience with a target.
     static constexpr uint32_t kTargetRefreshCeilingMs = traffic::kAlertMaxAgeMs;

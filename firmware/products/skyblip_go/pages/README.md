@@ -118,7 +118,7 @@ The three of them share one baseline, which stands the same four pixels off the 
 
 ## nearby
 
-What the radar plots, as a list: one row per emitter the device can place, nearest first, and the count of everything it heard in the corner. The radar answers where to look, this page answers who that is and by how much they are above.
+What the radar plots, as a list: one row per target the device can place, nearest first, and the count of everything it heard in the corner. The radar answers where to look, this page answers who that is and by how much they are above.
 
 The top line is own identity and the count, and it is the radar's footer arrangement turned up to the corner: what this aircraft is at the height the rows are read at, the figure at double height on the right margin with `TRAFFIC` beside it. The page does not name itself, because a pilot who walked here knows where they are and the six hex digits are asked for on the radio, read off to a controller and typed into a club list. This is the page a pilot is already on when the question comes, and `status` prints the same address for the pilot who went looking for it.
 
@@ -448,7 +448,7 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `sixpack` | what own-ship is doing: speed, altitude, vertical speed, track, turn, and what the cell has left, or the charge rail on the cable |
 | `status` | what the sensors say: fix, position, pressure, battery, UTC, and whether we transmit |
 | `satellites` | what is above the antenna, how loud, and which satellites solved |
-| `nearby` | every emitter placed, nearest first: who, how far, how far above |
+| `nearby` | every target placed, nearest first: who, how far, how far above |
 | `menu` | the other side of a page: what it is made of, and what a pilot can change |
 | `confirm`, `installing`, `recovery` | the moments that are not pages: being asked, receiving an image and being written, being handed to the USB bootloader |
 | `activation` | what a unit with no serial says instead of every page: where to activate it, and the tag that names it in the phone's chooser |

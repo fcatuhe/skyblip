@@ -98,7 +98,7 @@ void NmeaService::run_pass(uint32_t now_ms) {
     drain();
 }
 
-// $PFLAU: how many we hear, whether we have a fix, and the one contact that
+// $PFLAU: how many we hear, whether we have a fix, and the one target that
 // matters most - highest level, nearest at equal level. The level is the one
 // core/traffic already published on the target (products/.../alarm.cpp is its
 // single writer), so the tablet's alarm and the buzzer cannot disagree.

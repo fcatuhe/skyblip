@@ -56,7 +56,7 @@ void AlarmService::tick(uint32_t now_ms) {
 
     annunciation::Situation situation{};
     // Not the raw worst: what is being announced, which the tracker already
-    // holds through a contact bouncing across a ring boundary, and which falls
+    // holds through a target bouncing across a ring boundary, and which falls
     // to nothing when the target that caused it stops being heard.
     situation.level = tracker_.announced_level(now_ms);
     situation.announced = announced;
