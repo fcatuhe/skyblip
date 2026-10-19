@@ -73,8 +73,8 @@ description: Un skyBlip Go neuf reste muet tant qu'il n'a pas un numéro de sér
   <p class="lede">
     L&rsquo;appareil vérifie son numéro à chaque démarrage, et n&rsquo;a besoin
     de cette page qu&rsquo;une fois. Activé de nouveau, il garde le même
-    numéro : après être passé d&rsquo;un firmware publié à un firmware de
-    développement, par exemple, qui font confiance à des clés différentes de
+    numéro. Il le garde aussi en passant d&rsquo;un firmware publié à un
+    firmware de développement, qui font tous deux confiance à la même clé de
     skyblip.eu.
   </p>
 </section>
@@ -126,7 +126,7 @@ description: Un skyBlip Go neuf reste muet tant qu'il n'a pas un numéro de sér
         <tr><th>La page dit</th><th>Ce que cela veut dire, et que faire</th></tr>
       </thead>
       <tbody>
-        <tr><th>Clé inconnue</th><td data-activate-word="server_unknown_server_key">Le firmware de l&rsquo;appareil fait confiance à une clé que skyblip.eu ne détient pas : une compilation à vous, ou d&rsquo;un fork. Installez une version publiée depuis la page de mise à jour, puis activez.</td></tr>
+        <tr><th>Clé inconnue</th><td data-activate-word="server_unknown_server_key">Le firmware de l&rsquo;appareil fait confiance à une clé que skyblip.eu ne détient pas : une compilation faite pour une autre clé, comme celle d&rsquo;un fork. Installez une version publiée depuis la page de mise à jour, puis activez.</td></tr>
         <tr><th>Trop tard</th><td data-activate-word="server_expired">Plus de cinq minutes ont passé entre la demande et les pressions. Activez de nouveau.</td></tr>
         <tr><th>Signature refusée</th><td data-activate-word="server_bad_signature">skyblip.eu n&rsquo;a pas pu vérifier ce que l&rsquo;appareil a signé. Activez de nouveau, et si cela se reproduit, dites-nous quel firmware il fait tourner.</td></tr>
         <tr><th>Une autre clé</th><td data-activate-word="server_other_key">skyblip.eu connaît cet appareil sous une autre clé, et n&rsquo;a donc donné aucun numéro. Cela suit un effacement de la puce avec un débogueur. Écrivez-nous avec le code que la page affiche après ces mots : nous vérifions avec vous, puis passons le numéro sur la nouvelle clé. Le code :</td></tr>

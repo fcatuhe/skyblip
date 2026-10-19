@@ -2,6 +2,7 @@ bound_active:
   unit: bound
   public_key: <%= "a1" * 32 %>
   status: active
+  release: true
   version: 0.3.0+1200
   server_key_id: "890026b1"
   ip_address: 192.0.2.1
@@ -18,6 +19,7 @@ contested_pending:
   unit: contested
   public_key: <%= "c3" * 32 %>
   status: pending
+  release: false
   version: 0.3.0+1234
   server_key_id: "890026b1"
   ip_address: 198.51.100.7

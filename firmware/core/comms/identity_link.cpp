@@ -66,7 +66,9 @@ bool ConfigService::identity_refused_in_flight() {
 
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
-    if (!identity_->unit().keyed() || !identity_->open(claim_.holder(), now_ms_)) {
+    char version[dfu::kVersionTextCap] = {0};
+    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version)) ||
+        !identity_->open(claim_.holder(), now_ms_)) {
         refuse("keyless");
         return;
     }

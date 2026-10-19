@@ -36,7 +36,7 @@
       }
     },
     "registration": {
-      "description": "Unit to browser after the two presses, about 310 bytes in one notification, which Chrome's 498-byte ATT MTU carries. signature is S, by the unit's key over the registration message. The browser posts it to /activation/registrations as it is, without cmd",
+      "description": "Unit to browser after the two presses, at most 345 bytes in one notification, which Chrome's 498-byte ATT MTU carries. signature is S, by the unit's key over the registration message. The browser posts it to /activation/registrations as it is, without cmd",
       "type": "object", "required": ["cmd", "device_id", "public_key", "version", "server_key_id", "release", "signature"], "additionalProperties": false,
       "properties": {
         "cmd": {"const": "registration"},
@@ -75,7 +75,7 @@
       }
     },
     "http_registration_request": {
-      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with http_registration_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
+      "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with http_registration_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65535 are assigned), 429 'rate_limited'",
       "type": "object", "required": ["device_id", "public_key", "version", "server_key_id", "release", "server_nonce", "signature"],
       "properties": {
         "device_id": {"$ref": "#/definitions/device_id"},

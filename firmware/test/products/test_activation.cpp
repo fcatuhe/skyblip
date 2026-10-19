@@ -140,8 +140,7 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
 }
 
 // The server's update page reads 'address' in the reply as activated.
-TEST_CASE(
-    "activation: get leaves address out until there is one, and keeps address_mapping_table") {
+TEST_CASE("activation: get leaves address out until there is one, keeps address_mapping_table") {
     Bench b;
     b.boot();
     const std::string reply = b.say("{\"cmd\":\"get\"}");
@@ -180,8 +179,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(b.rig.platform.identity().stored->serial == 298);
 }
 
-TEST_CASE(
-    "activation: once unlocked the unit names itself, reports its address and arms its radio") {
+TEST_CASE("activation: once unlocked the unit names itself, reports its address, arms its radio") {
     Bench b;
     b.boot();
     b.challenge_with_vectors_nonce();
@@ -327,7 +325,13 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
         Bench b;
         b.rig.platform.dfu().has_running = false;
         b.boot();
+        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
+    }
+    SUBCASE("a version lost between the challenge and the register") {
+        Bench b;
+        b.boot();
         b.challenge_with_vectors_nonce();
+        b.rig.platform.dfu().has_running = false;
         CHECK(b.register_with_vectors() == refusal("keyless"));
     }
 }
