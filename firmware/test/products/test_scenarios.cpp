@@ -186,7 +186,7 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
         CHECK(north_m < 1100);
         CHECK(t->obs.alt_m < to_metres(Millimetres(own.alt_mm)).v);
         // A FLARM-taxonomy address is reported as one, so an EFB labels it IDType 2.
-        CHECK(protocol::addr_table_to_idtype(t->obs.addr_table) == 2);
+        CHECK(protocol::address_mapping_table_to_idtype(t->obs.address_mapping_table) == 2);
         CHECK(t->obs.position_valid);
     }
     CHECK(found == 1);

@@ -190,9 +190,9 @@ int Air::format(int i, char* out, int cap) const {
     if (!framed(r, frame)) return head + std::snprintf(out + head, left, "unframed");
 
     if (frame.system == protocol::System::Alptas) {
-        const uint32_t addr = protocol::alptas_address(frame.data);
+        const uint32_t address = protocol::alptas_address(frame.data);
         const char* crc = protocol::alptas_crc_ok(frame.data) ? "crc ok" : "CRC BAD";
-        return head + std::snprintf(out + head, left, "ALP-TAS %06X %s", addr, crc);
+        return head + std::snprintf(out + head, left, "ALP-TAS %06X %s", address, crc);
     }
 
     protocol::AdslPacket p{};

@@ -32,10 +32,10 @@ AdslPacket make_reference() {
     AdslPacket p;
     p.init();
     p.set_address(0x123456);
-    p.set_addr_table(6);  // FLARM/ALP-TAS table
-    p.TimeStamp = 4 * 4;  // 4.0 s
-    p.FlightState = 2;    // airborne
-    p.AcftCat = 4;        // glider
+    p.set_address_mapping_table(6);  // FLARM/ALP-TAS table
+    p.TimeStamp = 4 * 4;             // 4.0 s
+    p.FlightState = 2;               // airborne
+    p.AcftCat = 4;                   // glider
     p.Emergency = 1;
     p.set_lat_1e7(481234500);  // 48.12345 deg
     p.set_lon_1e7(81234500);   //  8.12345 deg
@@ -56,7 +56,7 @@ AdslPacket make_reference() {
 TEST_CASE("adsl: field accessors round-trip through the wire layout") {
     AdslPacket p = make_reference();
     CHECK(p.address() == 0x123456);
-    CHECK(p.addr_table() == 6);
+    CHECK(p.address_mapping_table() == 6);
     CHECK(int(p.TimeStamp) == 16);
     CHECK(int(p.FlightState) == 2);
     CHECK(int(p.AcftCat) == 4);
@@ -300,7 +300,7 @@ TEST_CASE("adsl: an address goes out as it was handed, in whichever table") {
         AdslPacket p{};
         CHECK(from_own(p, own, 0xDD1234u, table, 4));
         CHECK(p.address() == 0xDD1234u);
-        CHECK(p.addr_table() == table);
+        CHECK(p.address_mapping_table() == table);
     }
 }
 

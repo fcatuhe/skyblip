@@ -37,7 +37,7 @@ class Tracker {
     Report observe(const model::OwnState& own_fix, const model::AircraftObs& reported,
                    const flight::Liftoff& contact_liftoff, uint32_t now_ms);
 
-    bool together(uint8_t addr_table, uint32_t addr) const;
+    bool together(uint8_t address_mapping_table, uint32_t address) const;
     int members() const;
 
     void forget_stale(uint32_t now_ms);
@@ -46,8 +46,8 @@ class Tracker {
     struct Slot {
         bool used{false};
         bool anchored{false};
-        uint8_t addr_table{0};
-        uint32_t addr{0};
+        uint8_t address_mapping_table{0};
+        uint32_t address{0};
         uint32_t seen_ms{0};
         uint32_t obs_key{0};
         int32_t ref_ahead_m{0};
@@ -63,10 +63,10 @@ class Tracker {
     static void off_station(Slot& slot, const Report& fix, uint32_t now_ms);
     static bool closure_confirmed(Slot& slot, int32_t closing_mm_s);
     bool lifting(const flight::Liftoff& contact_liftoff, uint32_t now_ms) const;
-    void drop(uint8_t addr_table, uint32_t addr);
+    void drop(uint8_t address_mapping_table, uint32_t address);
     Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
-    const Slot* find(uint8_t addr_table, uint32_t addr) const;
-    Slot* find(uint8_t addr_table, uint32_t addr);
+    const Slot* find(uint8_t address_mapping_table, uint32_t address) const;
+    Slot* find(uint8_t address_mapping_table, uint32_t address);
 
     std::array<Slot, kTrackedContacts> slots_{};
     flight::Liftoff own_liftoff_{};

@@ -251,8 +251,8 @@ bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
             model::Source source, model::AircraftObs& out) {
     out = model::AircraftObs{};
     if (!p.is_position() || !p.has_position()) return false;
-    out.addr = p.address();
-    out.addr_table = p.addr_table();
+    out.address = p.address();
+    out.address_mapping_table = p.address_mapping_table();
     out.aircraft_cat = p.AcftCat;
     out.flight_state = p.FlightState;
     out.emergency = p.Emergency;
@@ -327,12 +327,12 @@ bool is_callsign_char(char c) {
     return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-bool from_own_callsign(AdslPacket& p, settings::AirAddress addr, uint8_t addr_table,
+bool from_own_callsign(AdslPacket& p, settings::AirAddress address, uint8_t address_mapping_table,
                        const char* callsign) {
-    if (!addr) return false;
+    if (!address) return false;
     p.init(AdslPacket::kTypeOgnDiagnostics);
-    p.set_address(*addr & settings::kAddressMask);
-    p.set_addr_table(addr_table);
+    p.set_address(*address & settings::kAddressMask);
+    p.set_address_mapping_table(address_mapping_table);
     p.set_info_header(AdslPacket::kTelemTypeInfo, AdslPacket::kInfoTypeRegistration);
 
     char* msg = p.info_msg();
@@ -360,17 +360,18 @@ int callsign_of(const AdslPacket& p, char* out, int cap) {
     return n;
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
-              uint8_t addr_table, uint8_t aircraft_cat) {
-    return from_own(p, own, addr, addr_table, aircraft_cat, BurstInstant{own.utc, 0, 0});
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_cat) {
+    return from_own(p, own, address, address_mapping_table, aircraft_cat,
+                    BurstInstant{own.utc, 0, 0});
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
-              uint8_t addr_table, uint8_t aircraft_cat, const BurstInstant& at) {
-    if (!addr) return false;
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at) {
+    if (!address) return false;
     p.init(AdslPacket::kTypePosition);
-    p.set_address(*addr & settings::kAddressMask);
-    p.set_addr_table(addr_table);
+    p.set_address(*address & settings::kAddressMask);
+    p.set_address_mapping_table(address_mapping_table);
 
     // The burst leaves later than the fix was solved, so the position goes
     // forward to the instant the timestamp names. Past the model's bound the

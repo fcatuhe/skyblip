@@ -29,7 +29,9 @@ uint8_t adsl_cat_to_alptas(uint8_t adsl_cat) {
 }
 
 // INFO: fc 03aug26 SkyDemon draws nothing at IDType 0, so ICAO is 1 and all else 2 (README.md)
-uint8_t addr_table_to_idtype(uint8_t addr_table) { return addr_table == 0x05 ? 1 : 2; }
+uint8_t address_mapping_table_to_idtype(uint8_t address_mapping_table) {
+    return address_mapping_table == 0x05 ? 1 : 2;
+}
 
 bool relative_ned(const model::OwnState& own, const model::AircraftObs& t, int32_t& north_m,
                   int32_t& east_m, int32_t& up_m) {
@@ -60,9 +62,9 @@ int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model:
     out[n++] = ',';
     n += fmt_int(out + n, u_m, 1, 0, true);
     out[n++] = ',';
-    n += fmt_uint(out + n, addr_table_to_idtype(t.addr_table));
+    n += fmt_uint(out + n, address_mapping_table_to_idtype(t.address_mapping_table));
     out[n++] = ',';
-    n += fmt_hex(out + n, t.addr, 6);
+    n += fmt_hex(out + n, t.address, 6);
     if (callsign != nullptr && callsign[0] != 0) {
         out[n++] = '!';
         n += fmt_string(out + n, callsign);
@@ -118,7 +120,7 @@ int format_pflau(char* out, size_t cap, const model::OwnState& own, bool transmi
         out[n++] = ',';
         n += fmt_uint(out + n, static_cast<uint32_t>(rel_dist_m < 0 ? 0 : rel_dist_m));
         out[n++] = ',';
-        n += fmt_hex(out + n, threat->addr, 6);
+        n += fmt_hex(out + n, threat->address, 6);
     } else {
         out[n++] = ',';
         out[n++] = '0';

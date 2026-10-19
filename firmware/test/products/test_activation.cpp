@@ -140,7 +140,8 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
 }
 
 // The server's update page reads 'address' in the reply as activated.
-TEST_CASE("activation: get leaves addr out until there is one, and keeps addr_table") {
+TEST_CASE(
+    "activation: get leaves address out until there is one, and keeps address_mapping_table") {
     Bench b;
     b.boot();
     const std::string reply = b.say("{\"cmd\":\"get\"}");
@@ -179,7 +180,8 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(b.rig.platform.identity().stored->serial == 298);
 }
 
-TEST_CASE("activation: once unlocked the unit names itself, reports its addr and arms its radio") {
+TEST_CASE(
+    "activation: once unlocked the unit names itself, reports its address and arms its radio") {
     Bench b;
     b.boot();
     b.challenge_with_vectors_nonce();

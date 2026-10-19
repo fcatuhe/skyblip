@@ -114,10 +114,10 @@ struct __attribute__((packed)) AdslPacket {
         w = (w & 0xC000003F) | (a << 6);
         set4(Address, w);
     }
-    uint8_t addr_table() const { return Address[0] & 0x3F; }
-    void set_addr_table(uint8_t t) { Address[0] = (Address[0] & 0xC0) | t; }
+    uint8_t address_mapping_table() const { return Address[0] & 0x3F; }
+    void set_address_mapping_table(uint8_t t) { Address[0] = (Address[0] & 0xC0) | t; }
     uint32_t address_and_type() const {
-        return (static_cast<uint32_t>(addr_table()) << 24) | address();
+        return (static_cast<uint32_t>(address_mapping_table()) << 24) | address();
     }
     bool is_relay() const { return Address[3] & 0x80; }
     void set_relay(uint8_t r = 1) { Address[3] = (Address[3] & 0x7F) | (r << 7); }
@@ -237,14 +237,14 @@ struct BurstInstant {
 };
 
 // INFO: fc 18oct26 false, and p untouched, without an address: a unit not activated builds no frame
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
-              uint8_t addr_table, uint8_t aircraft_cat);
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
-              uint8_t addr_table, uint8_t aircraft_cat, const BurstInstant& at);
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_cat);
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
 bool is_callsign_char(char c);
-bool from_own_callsign(AdslPacket& p, settings::AirAddress addr, uint8_t addr_table,
+bool from_own_callsign(AdslPacket& p, settings::AirAddress address, uint8_t address_mapping_table,
                        const char* callsign);
 int callsign_of(const AdslPacket& p, char* out, int cap);
 

@@ -53,7 +53,7 @@ namespace {
 // in as chips through the same sync-window strip the SX1262 does, so the
 // product's own decoder is what turns it into a target: nothing here writes to
 // the traffic table.
-void hear(Rig& rig, uint32_t addr, int32_t north_m, int32_t east_m, int32_t up_m,
+void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t up_m,
           uint16_t track_c9 = 256) {
     model::OwnState transmitter = rig.state().own;
     transmitter.lat_1e7 += static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
@@ -64,7 +64,8 @@ void hear(Rig& rig, uint32_t addr, int32_t north_m, int32_t east_m, int32_t up_m
     transmitter.vdop_e2 = 150;
 
     protocol::AdslPacket packet;
-    protocol::from_own(packet, transmitter, addr, /*addr_table=*/6, /*aircraft_cat=*/4);
+    protocol::from_own(packet, transmitter, address, /*address_mapping_table=*/6,
+                       /*aircraft_cat=*/4);
     packet.scramble();
     packet.set_crc();
 
@@ -82,9 +83,9 @@ void hear(Rig& rig, uint32_t addr, int32_t north_m, int32_t east_m, int32_t up_m
 }
 
 // The same aircraft naming itself, one Type 66 burst (core/protocol/README.md).
-void hear_callsign(Rig& rig, uint32_t addr, const char* callsign) {
+void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     protocol::AdslPacket packet;
-    protocol::from_own_callsign(packet, addr, /*addr_table=*/6, callsign);
+    protocol::from_own_callsign(packet, address, /*address_mapping_table=*/6, callsign);
     packet.scramble();
     packet.set_crc();
 

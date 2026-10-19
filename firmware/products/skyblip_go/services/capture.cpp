@@ -65,11 +65,11 @@ void CaptureService::record_boot(uint32_t now_ms) {
 
 void CaptureService::record_config(uint32_t now_ms) {
     diag::Config value{};
-    value.addr = context_.state.activation.address().value_or(0);
+    value.address = context_.state.activation.address().value_or(0);
     value.battery_offset_mv = settings_.battery_offset_mv;
     value.freq_trim_e1_ppm = settings_.freq_trim_e1_ppm;
     value.aircraft_type = settings_.aircraft_type;
-    value.addr_table = settings::kAddressMappingTable;
+    value.address_mapping_table = settings::kAddressMappingTable;
     value.alarm_volume = static_cast<uint8_t>(settings_.alarm_volume);
     value.settings_version = settings_.version;
     value.alarm_enabled = settings_.alarm_enabled;

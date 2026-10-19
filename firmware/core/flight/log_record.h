@@ -96,8 +96,8 @@ struct LogStatus {
 };
 
 struct LogContact {
-    uint32_t addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_cat{0};
     uint16_t dist_m{0};
     int16_t rel_alt_m{0};

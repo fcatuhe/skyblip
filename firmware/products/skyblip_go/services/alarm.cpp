@@ -6,7 +6,7 @@ namespace skyblip::go {
 
 bool AlarmService::silenced(traffic::Target& target, formation::State state) {
     if (state == formation::State::None) return false;
-    tracker_.withdraw(target.obs.addr_table, target.obs.addr);
+    tracker_.withdraw(target.obs.address_mapping_table, target.obs.address);
     target.alarm_level = traffic::Level::None;
     target.alarm_dismissed = false;
     return true;
@@ -83,7 +83,7 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
 
     const traffic::AlarmAssessment& assessment = decision.assessment;
     diag::Traffic value{};
-    value.addr = target.obs.addr;
+    value.address = target.obs.address;
     value.dist_m = diag::clamp_u16(
         assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
     value.bearing_deg = assessment.rel_bearing_deg;

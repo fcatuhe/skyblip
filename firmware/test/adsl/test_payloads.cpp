@@ -9,10 +9,10 @@
 using namespace skyblip;
 
 namespace {
-model::AircraftObs target(uint32_t addr) {
+model::AircraftObs target(uint32_t address) {
     model::AircraftObs t{};
-    t.addr = addr;
-    t.addr_table = 6;
+    t.address = address;
+    t.address_mapping_table = 6;
     t.aircraft_cat = 1;
     t.flight_state = 2;
     t.lat_1e7 = 481234500;

@@ -12,7 +12,7 @@ namespace {
 constexpr uint32_t kMaxTimeOffsetS = 0xFFFF;
 constexpr uint16_t kHdopTenthsCeiling = 255;
 constexpr uint16_t kTrackMask = 0x01FF;
-constexpr uint32_t kAddrMask = 0x00FFFFFF;
+constexpr uint32_t kAddressMask = 0x00FFFFFF;
 constexpr uint32_t kChecksummedBytes = kLogRecordBytes - 2;
 
 constexpr uint8_t kStatusFlagBatteryValid = 1u << 0;
@@ -109,11 +109,11 @@ void decode_status(const uint8_t* raw, LogStatus& out) {
 }
 
 void encode_contact(const LogContact& contact, uint8_t* out) {
-    const uint32_t addr = contact.addr & kAddrMask;
-    out[2] = static_cast<uint8_t>(addr);
-    out[3] = static_cast<uint8_t>(addr >> 8);
-    out[4] = static_cast<uint8_t>(addr >> 16);
-    out[5] = contact.addr_table;
+    const uint32_t address = contact.address & kAddressMask;
+    out[2] = static_cast<uint8_t>(address);
+    out[3] = static_cast<uint8_t>(address >> 8);
+    out[4] = static_cast<uint8_t>(address >> 16);
+    out[5] = contact.address_mapping_table;
     put_u16(out + 6, contact.dist_m);
     put_u16(out + 8, static_cast<uint16_t>(contact.rel_alt_m));
     put_u16(out + 10, contact.rel_bearing_deg);
@@ -130,9 +130,9 @@ void encode_contact(const LogContact& contact, uint8_t* out) {
 }
 
 void decode_contact(const uint8_t* raw, LogContact& out) {
-    out.addr = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
-               (static_cast<uint32_t>(raw[4]) << 16);
-    out.addr_table = raw[5];
+    out.address = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
+                  (static_cast<uint32_t>(raw[4]) << 16);
+    out.address_mapping_table = raw[5];
     out.dist_m = get_u16(raw + 6);
     out.rel_alt_m = static_cast<int16_t>(get_u16(raw + 8));
     out.rel_bearing_deg = get_u16(raw + 10);

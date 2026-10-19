@@ -37,8 +37,8 @@ model::OwnState own_at(uint32_t at_ms) {
 
 model::AircraftObs sender(flight::FlightState state) {
     model::AircraftObs o{};
-    o.addr = 0x3C4D5E;
-    o.addr_table = 5;
+    o.address = 0x3C4D5E;
+    o.address_mapping_table = 5;
     o.aircraft_cat = 4;
     o.flight_state = static_cast<uint8_t>(state);
     o.lat_1e7 = kOwnLat + kFourHundredMetresNorthE7;
@@ -58,8 +58,8 @@ model::AircraftObs stamped(model::AircraftObs heard) {
 model::AircraftObs over_adsl(const model::AircraftObs& sent) {
     protocol::AdslPacket p;
     p.init();
-    p.set_address(sent.addr);
-    p.set_addr_table(sent.addr_table);
+    p.set_address(sent.address);
+    p.set_address_mapping_table(sent.address_mapping_table);
     p.FlightState = sent.flight_state;
     p.AcftCat = sent.aircraft_cat;
     p.Emergency = 1;
@@ -148,9 +148,9 @@ TEST_CASE(
         REQUIRE(tbl.update(parked, kUtc) >= 0);
 
         tbl.age_out(kUtc + kGroundTargetForgetS);
-        CHECK(tbl.find(parked.addr_table, parked.addr) >= 0);
+        CHECK(tbl.find(parked.address_mapping_table, parked.address) >= 0);
         tbl.age_out(kUtc + kGroundTargetForgetS + 1);
-        CHECK(tbl.find(parked.addr_table, parked.addr) == -1);
+        CHECK(tbl.find(parked.address_mapping_table, parked.address) == -1);
     }
 }
 

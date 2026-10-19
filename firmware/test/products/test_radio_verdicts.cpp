@@ -20,8 +20,8 @@ namespace {
 
 model::AircraftObs neighbour(const model::OwnState& own) {
     model::AircraftObs obs{};
-    obs.addr = 0xC5D804;
-    obs.addr_table = 6;
+    obs.address = 0xC5D804;
+    obs.address_mapping_table = 6;
     obs.aircraft_cat = 4;
     obs.flight_state = 2;
     obs.lat_1e7 = own.lat_1e7 + 10000;
@@ -66,14 +66,15 @@ protocol::AdslPacket adsl_from_neighbour(const model::OwnState& own) {
     model::OwnState transmitter = own;
     transmitter.lat_1e7 += 10000;
     protocol::AdslPacket p{};
-    protocol::from_own(p, transmitter, 0xC5D804, /*addr_table=*/6, /*aircraft_cat=*/4);
+    protocol::from_own(p, transmitter, 0xC5D804, /*address_mapping_table=*/6, /*aircraft_cat=*/4);
     return p;
 }
 
 // A neighbour naming itself: OGN's payload 66, scrambled and checksummed as any ADS-L frame is.
-void hear_callsign(Rig& rig, uint32_t addr, uint8_t addr_table, const char* callsign) {
+void hear_callsign(Rig& rig, uint32_t address, uint8_t address_mapping_table,
+                   const char* callsign) {
     protocol::AdslPacket p{};
-    protocol::from_own_callsign(p, addr, addr_table, callsign);
+    protocol::from_own_callsign(p, address, address_mapping_table, callsign);
     p.scramble();
     p.set_crc();
     hear_mband(rig, protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes);
@@ -242,8 +243,8 @@ TEST_CASE("radio verdicts: a registration frame names its sender and is not a ta
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
-    CHECK(entry->addr == 0xC5D804u);
-    CHECK(entry->addr_valid);
+    CHECK(entry->address == 0xC5D804u);
+    CHECK(entry->address_valid);
 }
 
 // A skyBlip on the apron beside a chatty neighbour used to report a climbing bad-frame count.
@@ -361,8 +362,8 @@ TEST_CASE("radio verdicts: a frame we refuse past its CRC still names the aircra
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
-    CHECK(entry->addr_valid);
-    CHECK(entry->addr == 0xC5D804u);
+    CHECK(entry->address_valid);
+    CHECK(entry->address == 0xC5D804u);
     CHECK(entry->source == model::Source::Alptas);
 }
 
@@ -385,7 +386,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
     CHECK(entry->event == radio::Event::Unframed);
-    CHECK_FALSE(entry->addr_valid);
+    CHECK_FALSE(entry->address_valid);
     CHECK(rig.state().air.rx_unframed == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
 }

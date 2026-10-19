@@ -44,8 +44,8 @@ void seal_adsl(uint8_t* frame) {
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
 void encode_alptas(FuzzedDataProvider& in, const Receiver& at, uint8_t* frame) {
     model::AircraftObs obs{};
-    obs.addr = in.ConsumeIntegral<uint32_t>();
-    obs.addr_table = in.ConsumeIntegral<uint8_t>();
+    obs.address = in.ConsumeIntegral<uint32_t>();
+    obs.address_mapping_table = in.ConsumeIntegral<uint8_t>();
     obs.aircraft_cat = in.ConsumeIntegral<uint8_t>();
     obs.flight_state = in.ConsumeIntegral<uint8_t>();
     obs.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);

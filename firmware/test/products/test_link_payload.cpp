@@ -32,7 +32,7 @@ using namespace skyblip::comms;
 namespace {
 
 // INFO: fc 18oct26 serial 0xFFFF under prefix 0x00 is 65535, the widest address an unlock can hand
-const identity::Activation kWidestAddr{0xFFFF, 0xFFFF};
+const identity::Activation kWidestAddress{0xFFFF, 0xFFFF};
 
 // The widest a unit can make its own answers: every field at the longest value
 // it is allowed to hold, so these cases measure the worst case rather than a
@@ -122,7 +122,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
     make_worst_case(cs);
 
@@ -144,7 +144,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
 
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
@@ -175,7 +175,7 @@ TEST_CASE(
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayload);
     go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu(watchdog);
     dfu.has_running_key = true;
@@ -210,7 +210,7 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayload);
     go::Settings s = widest_settings();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
 
@@ -235,7 +235,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link wide;
     wide.raise_link(1);
     wide.declare_payload_bytes(495);
-    go::SettingsStore store_on_wide(s, kWidestAddr);
+    go::SettingsStore store_on_wide(s, kWidestAddress);
     ConfigService on_wide(wide, store_on_wide, nullptr, &stats);
     on_wide.on_rx(frame("{\"cmd\":\"timing\"}"));
     REQUIRE(wide.sent.size() == 1);
@@ -249,7 +249,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link narrow;
     narrow.raise_link(1);
     narrow.declare_payload_bytes(kSmallestSupportedPayload);
-    go::SettingsStore store_on_narrow(s, kWidestAddr);
+    go::SettingsStore store_on_narrow(s, kWidestAddress);
     ConfigService on_narrow(narrow, store_on_narrow, nullptr, &stats);
     on_narrow.on_rx(frame("{\"cmd\":\"timing\"}"));
     REQUIRE(narrow.sent.size() > 1);
@@ -280,7 +280,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link hopeless;
     hopeless.raise_link(1);
     hopeless.declare_payload_bytes(64);
-    go::SettingsStore store_on_hopeless(s, kWidestAddr);
+    go::SettingsStore store_on_hopeless(s, kWidestAddress);
     ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &stats);
     on_hopeless.on_rx(frame("{\"cmd\":\"timing\"}"));
     CHECK(hopeless.sent.empty());
@@ -292,7 +292,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     link.raise_link(1);
     link.raise_link(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
@@ -321,7 +321,7 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayload);
     go::Settings s = go::defaults();
-    go::SettingsStore store_cs(s, kWidestAddr);
+    go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_link_up(events::LinkUp{1, link.payload_bytes()});
@@ -344,7 +344,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     platform::host::Link free_link;
     free_link.raise_link(1);
     free_link.declare_payload_bytes(kSmallestSupportedPayload);
-    go::SettingsStore store_free(s, kWidestAddr);
+    go::SettingsStore store_free(s, kWidestAddress);
     ConfigService on_free(free_link, store_free, nullptr, &stats);
     on_free.on_rx(frame("{\"cmd\":\"timing\"}"));
     REQUIRE(free_link.sent.size() > 1);
@@ -353,7 +353,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     busy.raise_link(1);
     busy.declare_payload_bytes(kSmallestSupportedPayload);
     busy.hold_after(1);
-    go::SettingsStore store_busy(s, kWidestAddr);
+    go::SettingsStore store_busy(s, kWidestAddress);
     ConfigService on_busy(busy, store_busy, nullptr, &stats);
     on_busy.on_rx(frame("{\"cmd\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
@@ -372,7 +372,7 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     link.raise_link(1);
     link.hold_after(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store(s, kWidestAddr);
+    go::SettingsStore store(s, kWidestAddress);
     ConfigService cs(link, store);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
@@ -395,7 +395,7 @@ TEST_CASE("comms: a central that never takes its reply loses it, counted, and fr
     link.raise_link(1);
     link.hold_after(1);
     go::Settings s = go::defaults();
-    go::SettingsStore store(s, kWidestAddr);
+    go::SettingsStore store(s, kWidestAddress);
     ConfigService cs(link, store);
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));

@@ -50,22 +50,22 @@ TEST_CASE("diag record: a boot older than its profile byte reads as unrecorded, 
 
 TEST_CASE("diag record: config carries the settings a replay has to assume") {
     diag::Config in{};
-    in.addr = 0x5BCAFE;
+    in.address = 0x5BCAFE;
     in.battery_offset_mv = -137;
     in.freq_trim_e1_ppm = 62;
     in.aircraft_type = 9;
-    in.addr_table = 7;
+    in.address_mapping_table = 7;
     in.alarm_volume = 4;
     in.settings_version = 1;
     in.alarm_enabled = true;
     in.metric = true;
 
     const diag::Config out = diag_round_trip(in);
-    CHECK(out.addr == in.addr);
+    CHECK(out.address == in.address);
     CHECK(out.battery_offset_mv == in.battery_offset_mv);
     CHECK(out.freq_trim_e1_ppm == in.freq_trim_e1_ppm);
     CHECK(out.aircraft_type == in.aircraft_type);
-    CHECK(out.addr_table == in.addr_table);
+    CHECK(out.address_mapping_table == in.address_mapping_table);
     CHECK(out.alarm_volume == in.alarm_volume);
     CHECK(out.settings_version == in.settings_version);
     CHECK(out.alarm_enabled);
@@ -93,8 +93,8 @@ constexpr uint8_t kConfigOfATransmitter[diag::kRecordBytes] = {
 
 TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 on the wire") {
     diag::Config in{};
-    in.addr = 0x5BCAFE;
-    in.addr_table = 7;
+    in.address = 0x5BCAFE;
+    in.address_mapping_table = 7;
     in.settings_version = 1;
     in.tx_power_dbm = 14;
     in.pa_rated_dbm = 22;
@@ -171,7 +171,7 @@ TEST_CASE("diag record: a flight decision keeps the inputs that were one thresho
 
 TEST_CASE("diag record: a target keeps the geometry the alarm level was decided on") {
     diag::Traffic in{};
-    in.addr = 0x3F1002;
+    in.address = 0x3F1002;
     in.dist_m = 2740;
     in.bearing_deg = 291;
     in.rel_alt_m = -180;
@@ -186,7 +186,7 @@ TEST_CASE("diag record: a target keeps the geometry the alarm level was decided 
     in.position_valid = true;
 
     const diag::Traffic out = diag_round_trip(in);
-    CHECK(out.addr == in.addr);
+    CHECK(out.address == in.address);
     CHECK(out.dist_m == in.dist_m);
     CHECK(out.bearing_deg == in.bearing_deg);
     CHECK(out.rel_alt_m == in.rel_alt_m);

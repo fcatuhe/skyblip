@@ -41,9 +41,9 @@ class TrafficTable {
     // own-ship's position, and the alarm layer grades a head-on with the
     // aircraft it is bolted to. Zero means nothing is filtered, which is what a
     // table nobody told has to assume.
-    void set_own_address(uint8_t addr_table, uint32_t addr) {
-        own_addr_table_ = addr_table;
-        own_addr_ = addr & 0x00FFFFFF;
+    void set_own_address(uint8_t address_mapping_table, uint32_t address) {
+        own_address_mapping_table_ = address_mapping_table;
+        own_address_ = address & 0x00FFFFFF;
     }
 
     // Where own-ship is, for the range gate below. This is the table's door and
@@ -69,13 +69,13 @@ class TrafficTable {
     Target* at(int i) { return (i >= 0 && i < kCapacity) ? &slots_[i] : nullptr; }
     void clear();
 
-    int find(uint8_t addr_table, uint32_t addr) const;
+    int find(uint8_t address_mapping_table, uint32_t address) const;
 
    private:
     std::array<Target, kCapacity> slots_{};
     model::OwnState own_{};
-    uint32_t own_addr_{0};
-    uint8_t own_addr_table_{0};
+    uint32_t own_address_{0};
+    uint8_t own_address_mapping_table_{0};
     uint32_t implausible_{0};
 
     struct Weight {

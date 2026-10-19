@@ -93,7 +93,7 @@ void LogEvents::commit() {
 }
 
 bool LogEvents::same_aircraft(const LogContact& a, const LogContact& b) {
-    return a.addr == b.addr && a.addr_table == b.addr_table;
+    return a.address == b.address && a.address_mapping_table == b.address_mapping_table;
 }
 
 LogEvent LogEvents::encounter_of(const Track& track) {

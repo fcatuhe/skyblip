@@ -25,10 +25,10 @@ flight::LogStatus cell(uint16_t mv, uint8_t level, uint8_t tracked) {
     return s;
 }
 
-flight::LogContact glider(uint32_t addr, uint16_t dist_m, uint8_t alarm) {
+flight::LogContact glider(uint32_t address, uint16_t dist_m, uint8_t alarm) {
     flight::LogContact c{};
-    c.addr = addr;
-    c.addr_table = 6;
+    c.address = address;
+    c.address_mapping_table = 6;
     c.aircraft_cat = 2;
     c.dist_m = dist_m;
     c.rel_alt_m = -42;
@@ -101,8 +101,8 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
     REQUIRE(flight::decode_log_event(raw, kBaseUtc, back) == Status::Ok);
     CHECK(back.kind == flight::LogKind::Encounter);
     CHECK(back.utc == kBaseUtc + 300);
-    CHECK(back.contact.addr == 0xDD1234);
-    CHECK(back.contact.addr_table == 6);
+    CHECK(back.contact.address == 0xDD1234);
+    CHECK(back.contact.address_mapping_table == 6);
     CHECK(back.contact.aircraft_cat == 2);
     CHECK(back.contact.dist_m == 180);
     CHECK(back.contact.rel_alt_m == -42);
@@ -243,10 +243,10 @@ TEST_CASE("log events: a slot handed to another aircraft ends the first one's en
     events.heard(0, glider(0x000AAA, 1500, 0), kBaseUtc);
     events.heard(0, glider(0x000BBB, 2500, 0), kBaseUtc + 1);
     REQUIRE(drain(events, out, 8) == 1);
-    CHECK(out[0].contact.addr == 0x000AAA);
+    CHECK(out[0].contact.address == 0x000AAA);
     events.vacant(0);
     REQUIRE(drain(events, out, 8) == 1);
-    CHECK(out[0].contact.addr == 0x000BBB);
+    CHECK(out[0].contact.address == 0x000BBB);
 }
 
 TEST_CASE("log events: a landing ends every encounter still running, after what was queued") {

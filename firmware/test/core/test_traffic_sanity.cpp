@@ -35,13 +35,13 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
     // Ten kilometres out is a real contact on this band: it is well inside the
     // budget and it is what the radar's outer ring is for.
     model::AircraftObs near_by = neighbour(own, 10000, 0, 0, 30, 180);
-    near_by.addr = 0x4A0001;
+    near_by.address = 0x4A0001;
     CHECK(tbl.update(near_by, 100) >= 0);
 
     // A hundred kilometres is not. Nothing at 14 dBm e.r.p. on 868 MHz reaches
     // this receiver from there, so the frame that said so was wrong.
     model::AircraftObs ghost = neighbour(own, 100000, 0, 0, 30, 180);
-    ghost.addr = 0x4A0002;
+    ghost.address = 0x4A0002;
     CHECK(tbl.update(ghost, 100) < 0);
     CHECK(tbl.count() == 1);
     CHECK(tbl.implausible_count() == 1);
@@ -49,7 +49,7 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
     // Straight up counts too: the altitude field miscorrects as readily as the
     // latitude one, and the slant range is the path the signal took.
     model::AircraftObs high = neighbour(own, 0, 0, 60000, 0, 0);
-    high.addr = 0x4A0003;
+    high.address = 0x4A0003;
     CHECK(tbl.update(high, 100) < 0);
     CHECK(tbl.count() == 1);
     CHECK(tbl.implausible_count() == 2);
@@ -124,13 +124,13 @@ TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets wi
     tbl.set_own_reference(own);
 
     model::AircraftObs good = neighbour(own, 2000, 500, 100, 30, 90);
-    good.addr = 0x4B0001;
+    good.address = 0x4B0001;
     good.source = model::Source::AdslUplink;
     model::AircraftObs ghost = neighbour(own, 400000, -200000, 0, 30, 270);
-    ghost.addr = 0x4B0002;
+    ghost.address = 0x4B0002;
     ghost.source = model::Source::AdslUplink;
     model::AircraftObs also_good = neighbour(own, -1500, 800, -200, 25, 180);
-    also_good.addr = 0x4B0003;
+    also_good.address = 0x4B0003;
     also_good.source = model::Source::AdslUplink;
 
     CHECK(tbl.update(good, 100) >= 0);
@@ -152,13 +152,13 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
     tbl.set_own_reference(own);
 
     model::AircraftObs real_contact = neighbour(own, 1200, 0, 0, 30, 180, 100000);
-    real_contact.addr = 0x4C0001;
+    real_contact.address = 0x4C0001;
     const int idx = tbl.update(real_contact, 100);
     REQUIRE(idx >= 0);
     tbl.at(idx)->alarm_level = Level::Advisory;
 
     model::AircraftObs same_aircraft_wrong_place = neighbour(own, 120000, 0, 0, 30, 180, 101000);
-    same_aircraft_wrong_place.addr = 0x4C0001;
+    same_aircraft_wrong_place.address = 0x4C0001;
     CHECK(tbl.update(same_aircraft_wrong_place, 101) < 0);
 
     CHECK(tbl.count() == 1);
@@ -179,7 +179,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     int32_t slant_m = 0;
 
     model::AircraftObs distant = neighbour(own, 45000, 0, 0, 30, 180);
-    distant.addr = 0x4D0001;
+    distant.address = 0x4D0001;
     distant.source = model::Source::AdslDirect;
     CHECK(range_check(own, distant, slant_m) == Plausibility::TooFar);
     CHECK(tbl.update(distant, 100) < 0);
@@ -197,7 +197,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     // Past the two-hop budget a relay is refused too: a ground station cannot
     // hand us an aircraft it could not have heard either.
     model::AircraftObs relayed_ghost = neighbour(own, 200000, 0, 0, 30, 180);
-    relayed_ghost.addr = 0x4D0002;
+    relayed_ghost.address = 0x4D0002;
     relayed_ghost.source = model::Source::AdslUplink;
     CHECK(tbl.update(relayed_ghost, 100) < 0);
     CHECK(tbl.count() == 1);

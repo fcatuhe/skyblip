@@ -58,8 +58,8 @@ void FlightLogService::watch(uint32_t now_ms) {
         const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
         if (!assessment.valid) continue;
         flight::LogContact contact{};
-        contact.addr = target->obs.addr;
-        contact.addr_table = target->obs.addr_table;
+        contact.address = target->obs.address;
+        contact.address_mapping_table = target->obs.address_mapping_table;
         contact.aircraft_cat = target->obs.aircraft_cat;
         contact.dist_m = diag::clamp_u16(
             assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));

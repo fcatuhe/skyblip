@@ -39,7 +39,7 @@ class Transmitter {
         bool over_budget{false};
     };
 
-    void configure(uint32_t device_addr) { addr_ = device_addr; }
+    void configure(uint32_t address) { address_ = address; }
 
     // The instant this device transmits in the second `utc`, or go=false. Pure:
     // calling it twice with the same arguments gives the same answer.
@@ -79,7 +79,7 @@ class Transmitter {
     int instant_between(int first, int last, uint32_t utc) const;
 
     AirTime air_{};
-    uint32_t addr_{0};
+    uint32_t address_{0};
     uint32_t sent_{0};
     uint32_t last_sent_utc_{0};
     uint32_t last_callsign_utc_{0};

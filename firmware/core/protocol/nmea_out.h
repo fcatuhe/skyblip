@@ -13,7 +13,7 @@ namespace skyblip::protocol {
 int nmea_finish(char* sentence, int body_len);
 
 uint8_t adsl_cat_to_alptas(uint8_t adsl_cat);
-uint8_t addr_table_to_idtype(uint8_t addr_table);
+uint8_t address_mapping_table_to_idtype(uint8_t address_mapping_table);
 
 // INFO: fc 20sep26 callsign rides the ID field behind a '!', as OGN's does: lookout.h:144
 int format_pflaa(char* out, size_t cap, const model::OwnState& own, const model::AircraftObs& t,

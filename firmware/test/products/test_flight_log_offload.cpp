@@ -123,7 +123,7 @@ void fly_past(Rig& rig, uint32_t& t, int north_m) {
     fly(rig, t, 1);
     const model::OwnState& own = rig.state().own;
     model::AircraftObs glider = neighbour(own, north_m, 0, 0, 0, 0, t);
-    glider.addr = 0xDD5EED;
+    glider.address = 0xDD5EED;
     const uint32_t now_s = rig.state().traffic_now(t);
     glider.received.at_s = now_s;
     rig.state().traffic.update(glider, now_s);
@@ -162,13 +162,13 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
 
     const flight::LogEvent* alarm = first_of(walk, flight::LogKind::Alarm);
     REQUIRE(alarm != nullptr);
-    CHECK(alarm->contact.addr == 0xDD5EED);
+    CHECK(alarm->contact.address == 0xDD5EED);
     CHECK(alarm->contact.alarm == traffic::to_number(traffic::Level::Advisory));
     CHECK(alarm->contact.dist_m <= traffic::kAdvisoryDistM);
 
     const flight::LogEvent* pass = first_of(walk, flight::LogKind::Encounter);
     REQUIRE(pass != nullptr);
-    CHECK(pass->contact.addr == 0xDD5EED);
+    CHECK(pass->contact.address == 0xDD5EED);
     CHECK(pass->contact.alarm == traffic::to_number(traffic::Level::Advisory));
     // Placed 200 m north at its closest; own-ship's second of flight since the fix moves that.
     CHECK(pass->contact.dist_m < 300);

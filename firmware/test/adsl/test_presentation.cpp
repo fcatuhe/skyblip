@@ -13,7 +13,7 @@
 using namespace skyblip;
 
 namespace {
-protocol::AdslPacket traffic_packet(uint32_t addr = 0x123456, uint8_t table = 6) {
+protocol::AdslPacket traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     model::OwnState own{};
     own.fix_valid = true;
     own.utc_valid = true;
@@ -24,7 +24,7 @@ protocol::AdslPacket traffic_packet(uint32_t addr = 0x123456, uint8_t table = 6)
     own.hdop_e2 = 90;
     own.flight_state = 2;
     protocol::AdslPacket p{};
-    protocol::from_own(p, own, addr, table, 4);
+    protocol::from_own(p, own, address, table, 4);
     return p;
 }
 }  // namespace
@@ -43,7 +43,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, res
     protocol::AdslPacket p = traffic_packet();
     CHECK(p.Type == 0x02);
     CHECK(p.address() == 0x123456u);
-    CHECK(p.addr_table() == 6);
+    CHECK(p.address_mapping_table() == 6);
     CHECK_FALSE(p.is_relay());
 
     p.set_relay();
@@ -90,7 +90,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
     // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
     CHECK(p.Byte[protocol::AdslPacket::kInfoHeaderByte] == 0x45);
     CHECK(p.address() == 0x123456u);
-    CHECK(p.addr_table() == 58);
+    CHECK(p.address_mapping_table() == 58);
 
     char name[protocol::AdslPacket::kInfoMsgBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 6);
@@ -127,15 +127,15 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not spl
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
     protocol::AdslPacket p{};
     p.init();
-    p.set_addr_table(63);
+    p.set_address_mapping_table(63);
     p.set_address(0x00FFFFFFu);
-    CHECK(p.addr_table() == 63);
+    CHECK(p.address_mapping_table() == 63);
     CHECK(p.address() == 0x00FFFFFFu);
 
     // Table 9 and up split the address: an 8-bit manufacturer prefix, then a 16-bit base.
-    p.set_addr_table(9);
+    p.set_address_mapping_table(9);
     p.set_address(0xAB1234u);
-    CHECK(p.addr_table() == 9);
+    CHECK(p.address_mapping_table() == 9);
     CHECK((p.address() >> 16) == 0xABu);
     CHECK((p.address() & 0xFFFFu) == 0x1234u);
     CHECK(p.address_and_type() == ((9u << 24) | 0xAB1234u));
@@ -143,7 +143,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK(int(settings::kAddressMappingTable) == 58);
     const protocol::AdslPacket ours =
         traffic_packet(settings::address_of(0x1234), settings::kAddressMappingTable);
-    CHECK(ours.addr_table() == 58);
+    CHECK(ours.address_mapping_table() == 58);
     CHECK((ours.address() >> 16) == settings::kManufacturerPrefix);
     CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }

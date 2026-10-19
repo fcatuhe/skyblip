@@ -39,8 +39,8 @@ int16_t get_i16(const uint8_t* b) {
 }
 
 void pack_record(uint8_t* r, const model::AircraftObs& t) {
-    put_u24(r, t.addr & 0x00FFFFFF);
-    r[3] = static_cast<uint8_t>((t.addr_table & 0x3F) | ((t.flight_state & 0x03) << 6));
+    put_u24(r, t.address & 0x00FFFFFF);
+    r[3] = static_cast<uint8_t>((t.address_mapping_table & 0x3F) | ((t.flight_state & 0x03) << 6));
     r[4] = t.aircraft_cat;
     r[5] = static_cast<uint8_t>(t.speed_q > 255 ? 255 : t.speed_q);
     put_i32(r + 6, t.lat_1e7);
@@ -50,8 +50,8 @@ void pack_record(uint8_t* r, const model::AircraftObs& t) {
 
 void unpack_record(const uint8_t* r, model::AircraftObs& t) {
     t = model::AircraftObs{};
-    t.addr = get_u24(r);
-    t.addr_table = r[3] & 0x3F;
+    t.address = get_u24(r);
+    t.address_mapping_table = r[3] & 0x3F;
     t.flight_state = (r[3] >> 6) & 0x03;
     t.aircraft_cat = r[4];
     t.speed_q = r[5];
@@ -72,7 +72,7 @@ void unpack_record(const uint8_t* r, model::AircraftObs& t) {
 // once. An address of zero is no aircraft, and a position off the globe is no
 // position.
 bool plausible(const model::AircraftObs& t) {
-    if (t.addr == 0) return false;
+    if (t.address == 0) return false;
     if (t.lat_1e7 < -900000000 || t.lat_1e7 > 900000000) return false;
     if (t.lon_1e7 < -1800000000 || t.lon_1e7 > 1800000000) return false;
     return true;

@@ -45,11 +45,11 @@ radio::Entry entry_of(radio::Event event) {
     return e;
 }
 
-radio::Entry received(uint32_t addr, int8_t rssi) {
+radio::Entry received(uint32_t address, int8_t rssi) {
     radio::Entry e = entry_of(radio::Event::Received);
     e.source = model::Source::AdslDirect;
-    e.addr = addr;
-    e.addr_valid = true;
+    e.address = address;
+    e.address_valid = true;
     e.rssi_dbm = rssi;
     e.rssi_valid = true;
     return e;
@@ -192,7 +192,7 @@ TEST_CASE("radio log page: a burst that never framed says so instead of naming a
     radio::Entry bad = entry_of(radio::Event::BadCrc);
     bad.rssi_dbm = -101;
     bad.rssi_valid = true;
-    bad.addr = 0x3FA21C;
+    bad.address = 0x3FA21C;
     log.record(bad);
 
     Glass fb;
@@ -274,7 +274,7 @@ TEST_CASE("radio log page: a reception that worked names the system it framed as
     flarm.source = model::Source::Alptas;
     radio::Entry relayed = received(0, -101);
     relayed.source = model::Source::AdslUplink;
-    relayed.addr_valid = false;
+    relayed.address_valid = false;
     log.record(flarm);
     log.record(relayed);
 
@@ -291,8 +291,8 @@ TEST_CASE("radio log page: a refused frame whose CRC held still names who sent i
     radio::Entry refused = entry_of(radio::Event::Miskeyed);
     refused.key_offset_s = 18;
     refused.source = model::Source::Alptas;
-    refused.addr = 0xED4838;
-    refused.addr_valid = true;
+    refused.address = 0xED4838;
+    refused.address_valid = true;
     log.record(refused);
 
     Glass fb;

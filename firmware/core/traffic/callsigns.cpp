@@ -2,16 +2,17 @@
 
 namespace skyblip::traffic {
 
-void CallsignTable::learn(uint8_t addr_table, uint32_t addr, const char* callsign, uint32_t now) {
+void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
+                          uint32_t now) {
     if (callsign == nullptr || callsign[0] == 0) return;
-    int idx = find_slot(addr_table, addr);
+    int idx = find_slot(address_mapping_table, address);
     if (idx < 0) idx = oldest_slot();
     if (idx < 0) return;
 
     Entry& e = slots_[static_cast<size_t>(idx)];
     e.used = true;
-    e.addr = addr;
-    e.addr_table = addr_table;
+    e.address = address;
+    e.address_mapping_table = address_mapping_table;
     e.heard_s = now;
     int n = 0;
     while (n < kTextBytes - 1 && callsign[n] != 0) {
@@ -21,8 +22,8 @@ void CallsignTable::learn(uint8_t addr_table, uint32_t addr, const char* callsig
     e.text[n] = 0;
 }
 
-const char* CallsignTable::find(uint8_t addr_table, uint32_t addr) const {
-    const int idx = find_slot(addr_table, addr);
+const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address) const {
+    const int idx = find_slot(address_mapping_table, address);
     if (idx < 0) return nullptr;
     return slots_[static_cast<size_t>(idx)].text;
 }
@@ -44,10 +45,11 @@ int CallsignTable::count() const {
 
 void CallsignTable::clear() { slots_ = {}; }
 
-int CallsignTable::find_slot(uint8_t addr_table, uint32_t addr) const {
+int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kCapacity; i++) {
         const Entry& e = slots_[static_cast<size_t>(i)];
-        if (e.used && e.addr == addr && e.addr_table == addr_table) return i;
+        if (e.used && e.address == address && e.address_mapping_table == address_mapping_table)
+            return i;
     }
     return -1;
 }

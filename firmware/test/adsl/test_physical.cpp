@@ -144,9 +144,9 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
     clock.utc_valid = true;
     clock.pps_locked = true;
 
-    for (uint32_t addr = 1; addr < 64; addr++) {
+    for (uint32_t address = 1; address < 64; address++) {
         timing::Transmitter tx;
-        tx.configure(addr * 0x9E37u);
+        tx.configure(address * 0x9E37u);
         for (uint32_t utc = 0; utc < 32; utc++) {
             for (int slot = 0; slot < 2; slot++) {
                 const timing::SlotPlan plan =
@@ -172,9 +172,9 @@ TEST_CASE(
     const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1Start, clock);
 
     int seen = 0;
-    for (uint32_t addr = 1; addr < 64; addr++) {
+    for (uint32_t address = 1; address < 64; address++) {
         timing::Transmitter tx;
-        tx.configure(addr * 0x9E37u);
+        tx.configure(address * 0x9E37u);
         for (uint32_t utc = 0; utc < 32; utc++) {
             const timing::Transmitter::Attempt a = tx.attempt(slot1, utc, 1000, true, 0);
             if (!a.go || a.payload != timing::Transmitter::Payload::Callsign) continue;

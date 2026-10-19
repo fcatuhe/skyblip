@@ -112,7 +112,7 @@ TEST_CASE("rf: what happened on air reaches the station log, sent and heard alik
         if (entry.event == radio::Event::Transmitted) sent = true;
         if (entry.event != radio::Event::Received) continue;
         heard = true;
-        CHECK(entry.addr != 0);
+        CHECK(entry.address != 0);
         CHECK(entry.source == model::Source::AdslDirect);
         CHECK(entry.rssi_valid);
         CHECK(entry.utc);

@@ -19,7 +19,7 @@ constexpr int kClockX = kColumn(0);
 constexpr int kWayX = kColumn(10);
 constexpr int kBandX = kColumn(13);
 constexpr int kVerdictX = kColumn(16);
-constexpr int kAddrX = kColumn(22);
+constexpr int kAddressX = kColumn(22);
 constexpr int kRightEnd = kColumn(32);
 
 constexpr int kPpsX = kColumn(9);
@@ -161,14 +161,14 @@ void draw_row(ui::Canvas& fb, int y, const radio::Entry& entry) {
     }
 
     if (ours) {
-        fb.draw_text(kAddrX, y, own_burst_word(entry), true, 1);
+        fb.draw_text(kAddressX, y, own_burst_word(entry), true, 1);
         return;
     }
 
-    if (entry.addr_valid) {
-        n = fmt_hex(buf, entry.addr, 6);
+    if (entry.address_valid) {
+        n = fmt_hex(buf, entry.address, 6);
         buf[n] = 0;
-        fb.draw_text(kAddrX, y, buf, true, 1);
+        fb.draw_text(kAddressX, y, buf, true, 1);
     }
 
     if (!entry.rssi_valid) return;

@@ -96,8 +96,8 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.key_offset_s = key_offset_s;
     if (obs != nullptr) {
         entry.source = obs->source;
-        entry.addr = obs->addr;
-        entry.addr_valid = obs->source != model::Source::AdslUplink;
+        entry.address = obs->address;
+        entry.address_valid = obs->source != model::Source::AdslUplink;
     }
     context_.state.radio_log.record(entry);
     context_.diag.record(entry);
@@ -230,10 +230,10 @@ radio::Event TrafficService::learn_callsign(const protocol::AdslPacket& p, uint3
                                             model::AircraftObs& obs) {
     char callsign[traffic::CallsignTable::kTextBytes];
     if (protocol::callsign_of(p, callsign, sizeof(callsign)) == 0) return radio::Event::Undecoded;
-    obs.addr = p.address();
-    obs.addr_table = p.addr_table();
+    obs.address = p.address();
+    obs.address_mapping_table = p.address_mapping_table();
     obs.source = model::Source::AdslDirect;
-    context_.state.callsigns.learn(obs.addr_table, obs.addr, callsign, utc);
+    context_.state.callsigns.learn(obs.address_mapping_table, obs.address, callsign, utc);
     return radio::Event::Named;
 }
 
@@ -243,7 +243,7 @@ radio::Event TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc,
     const model::OwnState& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Event::Unattempted;
     if (protocol::alptas_correct(frame.data, frame.err) < 0) return radio::Event::BadCrc;
-    obs.addr = protocol::alptas_address(frame.data);
+    obs.address = protocol::alptas_address(frame.data);
     obs.source = model::Source::Alptas;
     const int32_t lat = own.lat_1e7;
     const int32_t lon = own.lon_1e7;

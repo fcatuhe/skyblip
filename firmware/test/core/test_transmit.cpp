@@ -14,9 +14,9 @@ using namespace skyblip::timing;
 
 namespace {
 
-Transmitter airborne_transmitter(uint32_t addr = 0x5B7E57) {
+Transmitter airborne_transmitter(uint32_t address = 0x5B7E57) {
     Transmitter t;
-    t.configure(addr);
+    t.configure(address);
     return t;
 }
 
@@ -26,9 +26,9 @@ SlotPlan slot_plan(int phase_ms) {
     return s.plan(phase_ms, anchored());
 }
 
-int instant_at(uint32_t addr, uint32_t utc) {
+int instant_at(uint32_t address, uint32_t utc) {
     const int phase = Transmitter::slot_in(utc, true) == 0 ? 500 : 900;
-    return airborne_transmitter(addr).attempt(slot_plan(phase), utc, utc * 1000, true, 0).at_ms;
+    return airborne_transmitter(address).attempt(slot_plan(phase), utc, utc * 1000, true, 0).at_ms;
 }
 
 bool position_burst(const Transmitter::Attempt& a) {
@@ -106,10 +106,10 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
     const int shared_ms = instant_at(kOwn, 1);
     const int own_next_ms = instant_at(kOwn, 2);
     int shared = 0, still_overlapping = 0;
-    for (uint32_t addr = 0x5B0000; addr < 0x5C0000; addr++) {
-        if (addr == kOwn || instant_at(addr, 1) != shared_ms) continue;
+    for (uint32_t address = 0x5B0000; address < 0x5C0000; address++) {
+        if (address == kOwn || instant_at(address, 1) != shared_ms) continue;
         shared++;
-        if (bursts_overlap(own_next_ms, instant_at(addr, 2))) still_overlapping++;
+        if (bursts_overlap(own_next_ms, instant_at(address, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
     // 4 of 376, the odds of two 5 ms bursts meeting in a 342 ms slot. A carried delta keeps 376.
@@ -195,11 +195,11 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every ten"
 // One slot-1 dwell carries both bursts, so the position has to be off the air before the name keys.
 TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never at once") {
     int both = 0;
-    for (uint32_t addr = 0x5B0000; addr < 0x5B0400; addr++) {
-        Transmitter t = airborne_transmitter(addr);
+    for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
+        Transmitter t = airborne_transmitter(address);
         const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
         if (Transmitter::slot_in(due, false) != Transmitter::kCallsignSlot) continue;
-        CAPTURE(addr);
+        CAPTURE(address);
         const SlotPlan slot1 = slot_plan(kSlot1Start);
         const Transmitter::Attempt position =
             t.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Position);
@@ -218,11 +218,11 @@ TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never a
 
 // Half of all addresses once lost every name to their own slot-1 position burst.
 TEST_CASE("transmit: every address names itself every ten seconds, airborne or on the ground") {
-    for (uint32_t addr = 0x5B0000; addr < 0x5B0400; addr++) {
+    for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         for (const bool airborne : {true, false}) {
-            CAPTURE(addr);
+            CAPTURE(address);
             CAPTURE(airborne);
-            Transmitter t = airborne_transmitter(addr);
+            Transmitter t = airborne_transmitter(address);
             int named = 0;
             int positions = 0;
             for (uint32_t utc = 100; utc < 100 + 2 * Transmitter::kCallsignPeriodS; utc++) {
@@ -274,8 +274,8 @@ TEST_CASE("transmit: the ground second is the address's, not the boot's") {
           airborne_transmitter(0x5B7E57).ground_second());
 
     int taken[skyblip::flight::kGroundReportPeriodS] = {0};
-    for (uint32_t addr = 0x5B0000; addr < 0x5B1000; addr++)
-        taken[airborne_transmitter(addr).ground_second()]++;
+    for (uint32_t address = 0x5B0000; address < 0x5B1000; address++)
+        taken[airborne_transmitter(address).ground_second()]++;
     for (uint32_t second = 0; second < skyblip::flight::kGroundReportPeriodS; second++) {
         CAPTURE(second);
         CHECK(taken[second] > 0x1000 / 20);

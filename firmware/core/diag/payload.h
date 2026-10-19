@@ -43,11 +43,11 @@ constexpr uint8_t kConfigFlagMetric = 1u << 3;
 constexpr uint8_t kConfigFlagBatteryTrimManual = 1u << 4;
 
 struct Config {
-    uint32_t addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
     int16_t freq_trim_e1_ppm{0};
     uint8_t aircraft_type{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t alarm_volume{0};
     uint8_t settings_version{0};
     int8_t tx_power_dbm{0};
@@ -96,7 +96,7 @@ struct Pps {
     bool utc_valid{false};
 };
 
-constexpr uint8_t kBurstFlagAddrValid = 1u << 2;
+constexpr uint8_t kBurstFlagAddressValid = 1u << 2;
 constexpr uint8_t kBurstFlagRssiValid = 1u << 3;
 constexpr uint8_t kBurstFlagAirborne = 1u << 4;
 constexpr uint8_t kBurstFlagTxSpanValid = 1u << 5;
@@ -246,7 +246,7 @@ constexpr uint8_t kTrafficFlagFormation = 1u << 4;
 constexpr uint8_t kTrafficFlagPositionValid = 1u << 5;
 
 struct Traffic {
-    uint32_t addr{0};
+    uint32_t address{0};
     uint16_t dist_m{0};
     uint16_t bearing_deg{0};
     int16_t rel_alt_m{0};

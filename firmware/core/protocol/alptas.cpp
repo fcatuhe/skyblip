@@ -27,9 +27,9 @@ struct Field {
     uint16_t lsb;
     uint8_t width;
 };
-constexpr Field kFAddr{0, 24};
+constexpr Field kFAddress{0, 24};
 constexpr Field kFMsgType{24, 4};
-constexpr Field kFAddrType{28, 3};
+constexpr Field kFAddressType{28, 3};
 constexpr Field kFNeeds3{56, 4};
 constexpr Field kFHas3{60, 4};
 constexpr Field kFTimeBits{66, 4};
@@ -331,7 +331,7 @@ Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc, uint32_t& keye
     return Status::Invalid;
 }
 
-uint32_t alptas_address(const uint8_t* frame) { return get_field(frame, kFAddr); }
+uint32_t alptas_address(const uint8_t* frame) { return get_field(frame, kFAddress); }
 
 uint8_t alptas_type_to_adsl_cat(uint8_t alptas_type) {
     static const uint8_t kMap[16] = {0, 4, 1, 3, 8, 1, 7, 7, 1, 2, 3, 5, 5, 11, 0, 0};
@@ -347,16 +347,16 @@ uint8_t alptas_flight_state(uint8_t alptas_airborne) {
     }
 }
 
-uint8_t alptas_addr_type_to_table(uint8_t alptas_addr_type) {
-    switch (alptas_addr_type & 3) {
+uint8_t alptas_address_type_to_address_mapping_table(uint8_t alptas_address_type) {
+    switch (alptas_address_type & 3) {
         case 1: return 0x05;
         case 2: return 0x06;
         default: return 0;
     }
 }
 
-uint8_t adsl_table_to_alptas_addr_type(uint8_t addr_table) {
-    switch (addr_table) {
+uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_table) {
+    switch (address_mapping_table) {
         case 0x05: return 1;
         case 0x06: return 2;
         default: return 0;
@@ -400,8 +400,9 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc, int32_t ref_lat_1e7,
     int32_t vs_10 = descale(get_field(data, kFVs), 6, 2, 1);
 
     out = model::AircraftObs{};
-    out.addr = get_field(data, kFAddr);
-    out.addr_table = alptas_addr_type_to_table(static_cast<uint8_t>(get_field(data, kFAddrType)));
+    out.address = get_field(data, kFAddress);
+    out.address_mapping_table = alptas_address_type_to_address_mapping_table(
+        static_cast<uint8_t>(get_field(data, kFAddressType)));
     out.aircraft_cat =
         alptas_type_to_adsl_cat(static_cast<uint8_t>(get_field(data, kFAircraftType)));
     out.flight_state = alptas_flight_state(static_cast<uint8_t>(get_field(data, kFAirborne)));
@@ -431,9 +432,10 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObs& obs, uint32_t utc
     if (!obs.position_valid) return Status::Invalid;
 
     __builtin_memset(frame, 0, kAlptasFrameBytes);
-    put_field(frame, kFAddr, obs.addr & 0x00FFFFFFu);
+    put_field(frame, kFAddress, obs.address & 0x00FFFFFFu);
     put_field(frame, kFMsgType, kAlptasMsgTypePosition);
-    put_field(frame, kFAddrType, adsl_table_to_alptas_addr_type(obs.addr_table));
+    put_field(frame, kFAddressType,
+              address_mapping_table_to_alptas_address_type(obs.address_mapping_table));
     put_field(frame, kFTimeBits, utc & 0x0Fu);
     put_field(frame, kFAircraftType, adsl_cat_to_alptas(obs.aircraft_cat));
     put_field(frame, kFAirborne, obs.flight_state == 1 ? 1 : 2);

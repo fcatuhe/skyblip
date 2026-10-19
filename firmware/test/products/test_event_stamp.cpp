@@ -62,11 +62,11 @@ struct Rig {
         REQUIRE(traffic.setup() == Status::Ok);
     }
 
-    void hear(uint32_t addr, uint64_t at_us, uint32_t now_ms) {
+    void hear(uint32_t address, uint64_t at_us, uint32_t now_ms) {
         model::OwnState sender = state.own;
         sender.lat_1e7 += 7000;
         protocol::AdslPacket tx;
-        protocol::from_own(tx, sender, addr, 6, 4);
+        protocol::from_own(tx, sender, address, 6, 4);
         tx.scramble();
         tx.set_crc();
 
