@@ -103,9 +103,9 @@ class LogEndpoint:
         planned = min(chunks, to_the_end)
         if planned == 0:
             return [self.chunk(start, 0)]
-        return [self.chunk(start + nth * self.per_chunk,
-                           min(self.per_chunk, len(self.slots) - start - nth * self.per_chunk))
-                for nth in range(planned)]
+        return [self.chunk(start + index * self.per_chunk,
+                           min(self.per_chunk, len(self.slots) - start - index * self.per_chunk))
+                for index in range(planned)]
 
     def chunk(self, start, count):
         blob = b"".join(self.slots[start:start + count])

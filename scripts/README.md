@@ -168,7 +168,7 @@ Done is a run whose ceiling is printed for both directions: the `kFeedLossCentiD
 
 ## The decoders
 
-`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`u16(4)`, `i8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
+`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`uint16(4)`, `int8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
 
 Import it directly for analysis, the CLI is not in the way:
 

@@ -164,14 +164,14 @@ async def run_bench(args):
         print("stream      %d sentences in %.0fs, %d bad checksums"
               % (sum(kinds.values()), args.seconds, len(bad)))
         print("            %s" % " ".join("%s=%d" % pair for pair in sorted(kinds.items())))
-        report_spread("cadence", [(b - a) * 1000 for a, b in zip(heads, heads[1:])], "ms")
+        report_spread("cadence", [(later - earlier) * 1000 for earlier, later in zip(heads, heads[1:])], "ms")
 
         sizes = [size for _, size in link.notifications]
         if sizes:
             print("notify      %d frames, min %d median %d max %d bytes"
                   % (len(sizes), min(sizes), statistics.median(sizes), max(sizes)))
         report_spread("notify gap",
-                      [(b - a) * 1000 for (a, _), (b, _) in
+                      [(later - earlier) * 1000 for (earlier, _), (later, _) in
                        zip(link.notifications, link.notifications[1:])], "ms")
     return 0
 
