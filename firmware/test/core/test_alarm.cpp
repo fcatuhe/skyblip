@@ -307,7 +307,7 @@ model::AircraftObservation on_the_runway(model::AircraftObservation observation)
     return observation;
 }
 
-// Announced in the air, then on the ground from `t` for `ground_ms`, reporting every ten seconds.
+// Announced in the air, then on the ground from 1 s for `ground_ms`, reporting every ten seconds.
 uint32_t announce_then_land(AlarmTracker& tracker, const model::Ownship& own, uint32_t ground_ms) {
     uint32_t now_ms = 1000;
     REQUIRE(tracker.update(own, neighbour(own, 1500, 0, 0, 30, 180, now_ms), now_ms).notify);

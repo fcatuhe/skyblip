@@ -263,7 +263,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
 // while the arithmetic is a division of the counter rather than a subtraction of
 // two instants.
 namespace {
-// The rig's own pass() helper cannot be used here: it walks t up to t + for_ms, which
+// The rig's own pass() helper cannot be used here: it walks now_ms up to now_ms + for_ms, which
 // is not a comparison that survives the wrap. The wrap is a value, not a wait.
 void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& now_ms, uint32_t for_ms) {
     for (uint32_t stepped = 0; stepped <= for_ms; stepped += 50) {
