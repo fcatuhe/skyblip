@@ -54,7 +54,7 @@ struct Peer {
     }
 
     bool frames(const simulator::AirRecord& burst, protocol::Frame& out) {
-        if (!chip.receive_air(burst.chips, burst.length, /*crc_error=*/false, burst.rssi_dbm,
+        if (!chip.receive_air(burst.chips, burst.bytes, /*crc_error=*/false, burst.rssi_dbm,
                               burst.chip_rate_bps))
             return false;
         uint8_t buffer[events::kRfEventBytes];
@@ -170,7 +170,7 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
     Peer peer;
     int framed = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& mine = air.record(i);
+        const simulator::AirRecord& mine = air.record_at(i);
         if (mine.event != simulator::AirEvent::Tx) continue;
         protocol::Frame heard{};
         REQUIRE(peer.frames(mine, heard));
@@ -200,7 +200,7 @@ TEST_CASE("rf: a paraglider below the flight speed transmits every second, fligh
         Peer peer;
         int positions = 0;
         for (int i = 0; i < air.record_count(); i++) {
-            const simulator::AirRecord& mine = air.record(i);
+            const simulator::AirRecord& mine = air.record_at(i);
             if (mine.event != simulator::AirEvent::Tx) continue;
             protocol::Frame heard{};
             REQUIRE(peer.frames(mine, heard));
@@ -273,7 +273,7 @@ TEST_CASE("rf: a burst that straddles the second is dated by when it started") {
     simulator.run(4000);
     const simulator::Air& air = simulator.world().air();
     REQUIRE(air.record_count() > 0);
-    for (int i = 0; i < air.record_count(); i++) CHECK(air.record(i).phase_ms == 995);
+    for (int i = 0; i < air.record_count(); i++) CHECK(air.record_at(i).phase_ms == 995);
 }
 
 TEST_CASE("rf: a heard burst is the frame that was on air, decoded by the real path") {
@@ -322,7 +322,7 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
     const simulator::Air& air = simulator.world().air();
     int received = 0, transmitted = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& mine = air.record(i);
+        const simulator::AirRecord& mine = air.record_at(i);
         if (mine.event != simulator::AirEvent::Tx) continue;
         transmitted++;
         protocol::Frame sent{};
@@ -337,15 +337,15 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
 
         for (int j = 0; j < air.record_count(); j++) {
-            const simulator::AirRecord& heard = air.record(j);
+            const simulator::AirRecord& heard = air.record_at(j);
             if (heard.event != simulator::AirEvent::Rx) continue;
-            const bool identical = heard.length == mine.length &&
-                                   std::memcmp(heard.chips, mine.chips, mine.length) == 0;
+            const bool identical =
+                heard.bytes == mine.bytes && std::memcmp(heard.chips, mine.chips, mine.bytes) == 0;
             CHECK_FALSE(identical);
         }
     }
     for (int i = 0; i < air.record_count(); i++)
-        if (air.record(i).event == simulator::AirEvent::Rx) received++;
+        if (air.record_at(i).event == simulator::AirEvent::Rx) received++;
     // Neither half may be zero, or the case above proves nothing.
     CHECK(received > 0);
     CHECK(transmitted > 0);

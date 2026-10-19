@@ -51,7 +51,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     int transmissions = 0;
     uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         transmissions++;
         // Always inside the direct slot, even though the dwell that carries the
@@ -111,7 +111,7 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
     int named = 0;
     int positions = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
             positions++;
@@ -145,7 +145,7 @@ TEST_CASE("rf: a device with no callsign set transmits nothing in the reserved w
 
     const simulator::Air& air = simulator.world().air();
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
     }
@@ -162,7 +162,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         // Own bursts go on air as chips behind the ADS-L sync word, so reading
         // them back means framing them the way the receiver does.
@@ -334,7 +334,7 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         protocol::Frame frame{};
         REQUIRE(simulator::Air::framed(r, frame));
@@ -418,7 +418,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
     int transmissions = 0;
     uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         transmissions++;
         // Still inside the direct slot, still alternating channel: the phase comes

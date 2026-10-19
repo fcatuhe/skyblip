@@ -30,8 +30,9 @@ struct RawTerminal {
 
 uint32_t now_ms() {
     using namespace std::chrono;
-    static auto t0 = steady_clock::now();
-    return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now() - t0).count());
+    static auto started = steady_clock::now();
+    return static_cast<uint32_t>(
+        duration_cast<milliseconds>(steady_clock::now() - started).count());
 }
 
 const char* kPages[] = {"radar",      "nearby",    "6-pack", "g meter", "status",
@@ -130,9 +131,9 @@ int main(int argc, char** argv) {
     RawTerminal raw;
     bool running = true;
     while (running) {
-        char c;
-        while (read(STDIN_FILENO, &c, 1) == 1) {
-            switch (c) {
+        char key;
+        while (read(STDIN_FILENO, &key, 1) == 1) {
+            switch (key) {
                 case 'q': running = false; break;
                 case 'p': simulator.world().tap_pad(); break;
                 case 'm': simulator.world().press_button(); break;

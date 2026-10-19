@@ -28,7 +28,7 @@ inline void run_on(simulator::Simulator& simulator, uint32_t from_ms, uint32_t f
 inline int count_of(const simulator::Air& air, simulator::AirEvent want) {
     int n = 0;
     for (int i = 0; i < air.record_count(); i++)
-        if (air.record(i).event == want) n++;
+        if (air.record_at(i).event == want) n++;
     return n;
 }
 

@@ -44,7 +44,7 @@ class Simulator {
     static constexpr uint32_t kStepMs = 5;
 
     void run(uint32_t until_ms, uint32_t step_ms = kStepMs) {
-        for (uint32_t t = 0; t <= until_ms; t += step_ms) step(t);
+        for (uint32_t now_ms = 0; now_ms <= until_ms; now_ms += step_ms) step(now_ms);
     }
 
     void load(const Scenario& scenario) {
@@ -54,9 +54,9 @@ class Simulator {
     }
 
     bool load_file(const char* path) {
-        Scenario s;
-        if (!load_scenario(path, s)) return false;
-        load(s);
+        Scenario scenario;
+        if (!load_scenario(path, scenario)) return false;
+        load(scenario);
         return true;
     }
 
@@ -92,10 +92,10 @@ class Simulator {
     // INFO: fc 21sep26 settings are what a device was found with, not an act inside the scenario
     void name_device(const std::string& callsign) {
         char* out = product_.settings().callsign;
-        const size_t n =
+        const size_t bytes =
             callsign.size() < go::kCallsignBytes - 1 ? callsign.size() : go::kCallsignBytes - 1;
-        std::memcpy(out, callsign.c_str(), n);
-        out[n] = 0;
+        std::memcpy(out, callsign.c_str(), bytes);
+        out[bytes] = 0;
     }
 
     parts::Ssd1681& panel_driver() { return product_.board().display(); }

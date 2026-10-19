@@ -188,7 +188,7 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     uint64_t position_at_us = 0;
     bool position_on_channel1 = false;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
             positions++;

@@ -31,7 +31,7 @@ struct Said {
 Said said_on_air(const simulator::Air& air) {
     Said said{};
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx) continue;
         if (timing::Scheduler::in_direct_slot(r.phase_ms))
             said.positions++;
@@ -92,7 +92,7 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record(i);
+        const simulator::AirRecord& r = air.record_at(i);
         if (r.event != simulator::AirEvent::Tx || !timing::Scheduler::in_direct_slot(r.phase_ms))
             continue;
         protocol::Frame frame{};

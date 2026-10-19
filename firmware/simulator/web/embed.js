@@ -100,7 +100,7 @@ export async function load(options = {}) {
     txLost: call('simulator_tx_lost', 'number', noArgs),
     slotState: call('simulator_slot_state', 'number', noArgs),
     dwellFreqKhz: call('simulator_dwell_frequency_khz', 'number', noArgs),
-    airCount: call('simulator_air_count', 'number', noArgs),
+    airCount: call('simulator_air_record_count', 'number', noArgs),
     airPhase: call('simulator_air_phase_ms', 'number', oneNumber),
     airEvent: call('simulator_air_event', 'number', oneNumber),
     airFreqKhz: call('simulator_air_frequency_khz', 'number', oneNumber),
