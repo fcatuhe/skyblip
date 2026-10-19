@@ -16,7 +16,7 @@ void LogEvents::open() {
 void LogEvents::status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms) {
     if (!open_) return;
     tracked_peak_ = std::max(now.tracked, tracked_peak_);
-    const bool due = status_due_ || now_ms - status_ms_ >= kLogStatusPeriodMs ||
+    const bool due = status_due_ || now_ms - last_status_ms_ >= kLogStatusPeriodMs ||
                      now.power_level != status_level_;
     if (!due) return;
 
@@ -26,7 +26,7 @@ void LogEvents::status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms) {
     event.status = now;
     event.status.tracked_peak = tracked_peak_;
     push(event);
-    status_ms_ = now_ms;
+    last_status_ms_ = now_ms;
     status_level_ = now.power_level;
     tracked_peak_ = now.tracked;
     status_due_ = false;
@@ -51,7 +51,7 @@ void LogEvents::heard(int slot, const LogContact& now, uint32_t utc_s) {
         push(event);
         track.alarm = now.alarm;
     }
-    track.peak_alarm = std::max(now.alarm, track.peak_alarm);
+    track.alarm_peak = std::max(now.alarm, track.alarm_peak);
     if (now.dist_m < track.closest.dist_m) {
         track.closest = now;
         track.closest_utc_s = utc_s;
@@ -101,7 +101,7 @@ LogEvent LogEvents::encounter_of(const Track& track) {
     event.kind = LogKind::Encounter;
     event.utc_s = track.closest_utc_s;
     event.contact = track.closest;
-    event.contact.alarm = track.peak_alarm;
+    event.contact.alarm = track.alarm_peak;
     const uint32_t heard_s = track.last_utc_s - track.first_utc_s;
     event.contact.heard_s = static_cast<uint16_t>(heard_s > 0xFFFF ? 0xFFFF : heard_s);
     return event;

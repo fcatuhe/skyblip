@@ -37,17 +37,17 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kConfirmWindowMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Window | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
+| `kPromptForgetMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Forget | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
 | `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
-| `kDiagnosticsRefreshMs` | 1000 (1 s) | milliseconds | - | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
-| `kDiagnosticsDumpMs` | 10000 (10 s) | milliseconds | - | - |
+| `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
+| `kDiagnosticsDumpPeriodMs` | 10000 (10 s) | milliseconds | Period | - |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 
 ## [`firmware/core/diag`](../firmware/core/diag/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kDutyMaxPeriodMs` | 60000 (1 min) | milliseconds | Period | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
+| `kDutyPeriodCeilingMs` | 60000 (1 min) | milliseconds | Ceiling | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
 | `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
 | `kStageMarginStepUs` | 10 | microseconds | - | a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms |
 
@@ -61,10 +61,10 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kMaxTurnDps` | 30 | degrees per second | - | [README](../firmware/core/flight/README.md) argues it |
-| `kMinWindowMs` | 500 | milliseconds | Window | Shortest window that still averages out sensor noise, and the longest one whose answer is still "now" rather than a history lesson. |
-| `kMaxWindowMs` | 10000 (10 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
-| `kMaxExtrapolationMs` | 1500 (1.5 s) | milliseconds | - | The model is OGN's, in oss/nrf52-ogn-tracker src/ogn.h:1735-1790: constant ground speed on a constant turn rate, the turn applied as half before the velocity is resolved and half after, plus a constant climb. |
+| `kTurnCeilingDps` | 30 | degrees per second | Ceiling | [README](../firmware/core/flight/README.md) argues it |
+| `kClimbWindowFloorMs` | 500 | milliseconds | Floor | Shortest window that still averages out sensor noise, and the longest one whose answer is still "now" rather than a history lesson. |
+| `kClimbWindowCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | [README](../firmware/core/flight/README.md) argues it |
+| `kExtrapolationCeilingMs` | 1500 (1.5 s) | milliseconds | Ceiling | The model is OGN's, in oss/nrf52-ogn-tracker src/ogn.h:1735-1790: constant ground speed on a constant turn rate, the turn applied as half before the velocity is resolved and half after, plus a constant climb. |
 | `kLevelFlightMg` | 1000 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kResultantFloorMg` | 200 | thousandths of g | Floor | [README](../firmware/core/flight/README.md) argues it |
 | `kIndicatedStaleMs` | 2000 (2 s) | milliseconds | Stale | [README](../firmware/core/flight/README.md) argues it |
@@ -72,14 +72,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kIndicatedRateDampingMs` | 2000 (2 s) | milliseconds | Damping | [README](../firmware/core/flight/README.md) argues it |
 | `kLogStatusPeriodMs` | 60000 (1 min) | milliseconds | Period | the cell and the aircraft heard, once a minute: one record in sixty of the track's |
 | `kLogEventBacklogRecords` | 16 | records | - | alarms and encounters waiting on a writer that drains every pass |
-| `kMaxTimeOffsetS` | `0xFFFF` = 65535 | seconds | - | - |
+| `kTimeOffsetCeilingS` | `0xFFFF` = 65535 | seconds | Ceiling | - |
 | `kLogRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the ADS-L G.1.16 airborne rate, so the log holds what neighbours were told |
 | `kLogPreTakeoffRecords` | 60 | records | - | a takeoff is declared at 12 m/s, so the roll is behind the log when it opens |
 | `kLogStillHoldMs` | 120000 (2 min) | milliseconds | Hold | a wing that flies at no ground speed has landed once it has stood this long |
 | `kSlipFullScaleMg` | 200 | thousandths of g | - | [README](../firmware/core/flight/README.md) argues it |
 | `kFlightSpeedMmS` | 12000 (12 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingSpeedMmS` | 8000 (8 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
-| `kTaxiSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
+| `kRollingSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
 | `kAirborneReportPeriodS` | 1 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
@@ -245,7 +245,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMovingTargetRedrawMs` | 1000 (1 s) | milliseconds | - | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
 | `kTargetRefreshBoundMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | - | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
-| `kBaroVsWindowMs` | `flight::kMinWindowMs` = 500 | milliseconds | Window | - |
+| `kBaroVsWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssVsWindowMs` | 2000 (2 s) | milliseconds | Window | - |
 | `kBaroMaxAgeMs` | `3 * runtime::kBaroPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |

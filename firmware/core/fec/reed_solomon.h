@@ -32,7 +32,7 @@ class ReedSolomon255 {
         return exp_[log_[a] + log_[b]];
     }
     uint8_t inv(uint8_t a) const { return exp_[255 - log_[a]]; }
-    void calc_syndromes(const uint8_t* cw, uint8_t* synd, bool& all_zero) const;
+    void compute_syndromes(const uint8_t* codeword, uint8_t* syndromes, bool& all_zero) const;
 };
 
 }

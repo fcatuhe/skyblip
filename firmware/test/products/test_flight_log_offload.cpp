@@ -124,7 +124,7 @@ void fly_past(Rig& rig, uint32_t& t, int north_m) {
     const model::Ownship& own = rig.state().own;
     model::AircraftObservation glider = neighbour(own, north_m, 0, 0, 0, 0, t);
     glider.address = 0xDD5EED;
-    const uint32_t now_s = rig.state().traffic_now(t);
+    const uint32_t now_s = rig.state().traffic_now_s(t);
     glider.received.at_s = now_s;
     rig.state().traffic.update(glider, now_s);
 }
@@ -241,9 +241,9 @@ TEST_CASE(
     CHECK(large.decoded);
     CHECK(large.records == written);
     CHECK(large.widest_frame <= 495);
-    CHECK(large.most_records_in_a_chunk == comms::kLogRecordsPerChunkMax);
-    CHECK(large.chunks == static_cast<int>((written + comms::kLogRecordsPerChunkMax - 1) /
-                                           comms::kLogRecordsPerChunkMax));
+    CHECK(large.most_records_in_a_chunk == comms::kMaxLogRecordsPerChunk);
+    CHECK(large.chunks == static_cast<int>((written + comms::kMaxLogRecordsPerChunk - 1) /
+                                           comms::kMaxLogRecordsPerChunk));
     CHECK(large.chunks <= small.chunks / 3 + 1);
 
     // Nothing was refused at either end of the range, and nothing was truncated:

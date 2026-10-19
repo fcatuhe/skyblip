@@ -30,8 +30,8 @@ struct Position {
     int32_t up_m{0};
 };
 
-constexpr int16_t kMaxTurnDps = 30;
-constexpr int16_t kMaxTurnCdps = kMaxTurnDps * 100;
+constexpr int16_t kTurnCeilingDps = 30;
+constexpr int16_t kTurnCeilingCdps = kTurnCeilingDps * 100;
 
 int16_t clamped_turn_cdps(int32_t turn_cdps);
 int32_t turn_angle16(int16_t turn_cdps, int32_t dt_ms);
@@ -49,8 +49,8 @@ class Arc {
     int64_t north_mm_;
     int64_t east_mm_;
     int64_t up_mm_;
-    int32_t vel_north_mm_s_;
-    int32_t vel_east_mm_s_;
+    int32_t velocity_north_mm_s_;
+    int32_t velocity_east_mm_s_;
     int32_t climb_mm_s_;
     int32_t step_ms_;
     int16_t half_cos_;

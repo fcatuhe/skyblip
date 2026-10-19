@@ -226,7 +226,7 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
         b.challenge_with_vectors_nonce();
         b.register_with_vectors();
         const size_t before = b.rig.platform.link().sent.size();
-        b.pass(comms::kConfirmWindowMs + 500);
+        b.pass(comms::kPromptForgetMs + 500);
         CHECK(b.answer_since(before) == refusal("expired"));
     }
 }

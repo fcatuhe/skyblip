@@ -122,12 +122,12 @@ TEST_CASE("dfu: a release unit refuses only an older image, a development unit n
 }
 
 TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits the cap") {
-    char text[kVersionTextCap];
+    char text[kVersionTextBytes];
     CHECK(format_version(ports::ImageVersion{0, 1, 0, 12}, text, sizeof(text)) == 8);
     CHECK(std::string(text) == "0.1.0+12");
     const int widest = format_version(kWidestVersion, text, sizeof(text));
     CHECK(std::string(text) == "9.99.99+99999");
-    CHECK(widest == static_cast<int>(kVersionTextCap) - 1);
+    CHECK(widest == static_cast<int>(kVersionTextBytes) - 1);
 
     char tight[8];
     CHECK(format_version(ports::ImageVersion{0, 1, 0, 12}, tight, sizeof(tight)) == 0);
@@ -136,7 +136,7 @@ TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits th
 
 // An image from someone else's build can carry any version, and the frame sized for ours must hold.
 TEST_CASE("dfu: a version wider than the widest we sign is written as nothing") {
-    char text[kVersionTextCap];
+    char text[kVersionTextBytes];
     for (const ports::ImageVersion& v :
          {ports::ImageVersion{10, 0, 0, 1}, ports::ImageVersion{0, 100, 0, 1},
           ports::ImageVersion{0, 0, 100, 1}, ports::ImageVersion{0, 0, 0, 100000},
@@ -148,7 +148,7 @@ TEST_CASE("dfu: a version wider than the widest we sign is written as nothing") 
 }
 
 TEST_CASE("dfu: a version reads back from the text format_version writes, and nothing looser") {
-    char text[kVersionTextCap];
+    char text[kVersionTextBytes];
     for (const ports::ImageVersion& v : {ports::ImageVersion{0, 2, 0, 15}, kWidestVersion}) {
         format_version(v, text, sizeof(text));
         ports::ImageVersion read;
@@ -316,7 +316,7 @@ TEST_CASE(
 }
 
 TEST_CASE("dfu: the hub's image is reported as a word, or as the digest a page compares with") {
-    char text[kHubImageTextCap];
+    char text[kHubImageTextBytes];
     HubImageReport report{};
     format_hub_image(report, text, sizeof(text));
     CHECK(std::string(text) == "none");
@@ -333,7 +333,7 @@ TEST_CASE("dfu: the hub's image is reported as a word, or as the digest a page c
     CHECK(format_hub_image(report, text, sizeof(text)) == 16);
     CHECK(std::string(text) == "318def511fd8eb76");
 
-    char tight[kHubImageTextCap - 1];
+    char tight[kHubImageTextBytes - 1];
     CHECK(format_hub_image(report, tight, sizeof(tight)) == 0);
     CHECK(tight[0] == 0);
 }

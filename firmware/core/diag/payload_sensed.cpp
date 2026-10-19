@@ -192,7 +192,7 @@ Record record_of(const Power& value, const Instant& at) {
     r.payload[12] = static_cast<uint8_t>(value.charge);
     r.payload[15] = static_cast<uint8_t>(value.sample_offset_mv);
     set_flag(r.flags, kPowerFlagCharging, value.charging);
-    set_flag(r.flags, kPowerFlagExternal, value.external_power);
+    set_flag(r.flags, kPowerFlagExternalPower, value.external_power);
     set_flag(r.flags, kPowerFlagValid, value.valid);
     set_flag(r.flags, kPowerFlagDieValid, value.die_valid);
     return r;
@@ -211,7 +211,7 @@ bool read(const Record& record, Power& out) {
     out.charge = static_cast<power::ChargeCondition>(record.payload[12]);
     out.sample_offset_mv = get_i8(record.payload + 15);
     out.charging = record.flagged(kPowerFlagCharging);
-    out.external_power = record.flagged(kPowerFlagExternal);
+    out.external_power = record.flagged(kPowerFlagExternalPower);
     out.valid = record.flagged(kPowerFlagValid);
     out.die_valid = record.flagged(kPowerFlagDieValid);
     return true;
@@ -240,7 +240,7 @@ bool read(const Record& record, Contact& out) {
 
 Record record_of(const Link& value, const Instant& at) {
     Record r = framed(Type::Link, at);
-    put_u16(r.payload + 0, value.session);
+    put_u16(r.payload + 0, value.link_session);
     put_u16(r.payload + 2, value.payload_bytes);
     put_u16(r.payload + 4, value.frame_bytes);
     put_u16(r.payload + 6, value.holder);
@@ -254,7 +254,7 @@ Record record_of(const Link& value, const Instant& at) {
 bool read(const Record& record, Link& out) {
     if (record.type != Type::Link) return false;
     out = Link{};
-    out.session = get_u16(record.payload + 0);
+    out.link_session = get_u16(record.payload + 0);
     out.payload_bytes = get_u16(record.payload + 2);
     out.frame_bytes = get_u16(record.payload + 4);
     out.holder = get_u16(record.payload + 6);

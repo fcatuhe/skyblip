@@ -45,7 +45,7 @@ TEST_CASE("atmosphere: out-of-range pressure clamps instead of wrapping") {
 
 TEST_CASE("atmosphere: the inverse round-trips through the forward curve") {
     for (int32_t alt_cm = -50000; alt_cm <= 900000; alt_cm += 4321) {
-        const uint32_t pa = flight::alt_cm_to_pressure(alt_cm);
+        const uint32_t pa = flight::alt_cm_to_pressure_pa(alt_cm);
         // Bisection lands within one pascal, which is well under a metre.
         CHECK(std::abs(flight::pressure_to_alt_cm(pa) - alt_cm) < 100);
     }
@@ -109,9 +109,9 @@ TEST_CASE("atmosphere: a pascal is centimetres of altitude, so the curve is walk
 }
 
 TEST_CASE("atmosphere: the ISA temperature falls 6.5 C every kilometre from 15 C at the sea") {
-    CHECK(flight::isa_temperature_decicelsius(0) == flight::kIsaSeaLevelDeciCelsius);
-    CHECK(flight::isa_temperature_decicelsius(1000000) == 85);
-    CHECK(flight::isa_temperature_decicelsius(3000000) == -45);
+    CHECK(flight::isa_temperature_dc(0) == flight::kIsaSeaLevelDeciCelsius);
+    CHECK(flight::isa_temperature_dc(1000000) == 85);
+    CHECK(flight::isa_temperature_dc(3000000) == -45);
     // Below the sea the air is warmer, and a 500 m mine shaft is 3.25 C of it.
-    CHECK(flight::isa_temperature_decicelsius(-500000) == 183);
+    CHECK(flight::isa_temperature_dc(-500000) == 183);
 }

@@ -109,7 +109,7 @@ const char* version_refusal(const ports::ImageVersion& running, const ports::Ima
 }
 
 int format_version(const ports::ImageVersion& version, char* out, size_t cap) {
-    if (cap < kVersionTextCap || !within_widest(version)) {
+    if (cap < kVersionTextBytes || !within_widest(version)) {
         if (cap > 0) out[0] = 0;
         return 0;
     }
@@ -139,7 +139,7 @@ bool parse_version(const char* text, ports::ImageVersion& out) {
 }
 
 int format_hub_image(const HubImageReport& report, char* out, size_t cap) {
-    if (cap < kHubImageTextCap) {
+    if (cap < kHubImageTextBytes) {
         if (cap > 0) out[0] = 0;
         return 0;
     }

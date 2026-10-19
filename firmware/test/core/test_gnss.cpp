@@ -36,10 +36,10 @@ TEST_CASE("gnss: checksum validation") {
 
 TEST_CASE("gnss: coord parse DDMM.mmmm -> 1e-7 deg") {
     int32_t lat = 0;
-    REQUIRE(nmea_parse_coord("4807.038", 'N', lat));  // 48 deg 07.038' = 48.1173
+    REQUIRE(nmea_parse_coordinate("4807.038", 'N', lat));  // 48 deg 07.038' = 48.1173
     CHECK(std::abs(lat - 481173000) < 20000);
     int32_t lon = 0;
-    REQUIRE(nmea_parse_coord("01131.000", 'W', lon));  // -11.51667
+    REQUIRE(nmea_parse_coordinate("01131.000", 'W', lon));  // -11.51667
     CHECK(lon < 0);
     CHECK(std::abs(lon + 115166667) < 30000);
 }
@@ -149,7 +149,7 @@ TEST_CASE("gnss: the MTK year-1980 date is refused, and so is anything before 20
 
     // The boundary: 69 is 2069 and believable, 70 is 1970 and a lie. OGN draws
     // the line in the same place.
-    CHECK(kMaxTwoDigitYear == 70);
+    CHECK(kTwoDigitYearCeiling == 70);
 
     // A receiver still counting up from nothing sends all zeroes, which is not a
     // date either: month 0 and day 0 do not exist.
@@ -387,7 +387,7 @@ TEST_CASE("gnss: a truncated GGA is refused, checksum or no checksum") {
     // the case the length rule exists for.
     const char* empty = "$GPGGA,,,,,,,,,,,,,,*56";
     REQUIRE(nmea_checksum_ok(empty, static_cast<int>(strlen(empty))));
-    CHECK(static_cast<int>(strlen(empty)) < kMinGgaLength);
+    CHECK(static_cast<int>(strlen(empty)) < kGgaLengthFloorBytes);
     CHECK_FALSE(p.parse_line(empty, static_cast<int>(strlen(empty))));
 
     // Neither of them touched the solution we already had.

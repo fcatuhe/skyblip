@@ -63,29 +63,29 @@ uint16_t calibrated_mv(uint16_t raw_mv, int16_t offset_mv) {
 
 events::BatterySample calibrated(const events::BatterySample& raw, int16_t offset_mv) {
     events::BatterySample out = raw;
-    out.millivolts = calibrated_mv(raw.millivolts, offset_mv);
+    out.divider_mv = calibrated_mv(raw.divider_mv, offset_mv);
     return out;
 }
 
 uint8_t percent_from_mv(uint16_t millivolts) { return percent_on(kDischargeCurve, millivolts); }
 
 void Gauge::apply(const events::BatterySample& sample) {
-    state_.sample_mv = sample.millivolts;
+    state_.sample_mv = sample.divider_mv;
     state_.external_power = sample.external_power;
     state_.charging = sample.external_power;
 
-    const bool plausible = plausible_mv(sample.millivolts);
+    const bool plausible = plausible_mv(sample.divider_mv);
     if (!plausible) refused_++;
     if (!plausible || sample.external_power) {
         seen_ = 0;
-        state_.millivolts = sample.millivolts;
+        state_.millivolts = sample.divider_mv;
         state_.percent = 0;
         state_.valid = false;
         return;
     }
 
     for (int i = kWindowSamples - 1; i > 0; i--) recent_[i] = recent_[i - 1];
-    recent_[0] = sample.millivolts;
+    recent_[0] = sample.divider_mv;
     if (seen_ < kWindowSamples) seen_++;
 
     // Rejecting a transient takes three readings. Before that the newest is

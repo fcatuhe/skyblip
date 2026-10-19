@@ -56,10 +56,10 @@ bool LogSession::flying(const model::Ownship& own, bool rolling, uint32_t now_ms
     if (airborne(own.flight_state)) return true;
     if (!flies_at_no_ground_speed(own.aircraft_cat)) return false;
     if (rolling) {
-        rolled_ms_ = now_ms;
+        last_rolled_ms_ = now_ms;
         return true;
     }
-    return open_ && now_ms - rolled_ms_ < kLogStillHoldMs;
+    return open_ && now_ms - last_rolled_ms_ < kLogStillHoldMs;
 }
 
 LogAction LogSession::update(const model::Ownship& own, bool rolling, uint32_t now_ms) {

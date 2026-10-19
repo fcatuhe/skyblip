@@ -477,8 +477,8 @@ class Fields(Case):
         self.assertEqual(power_budget.INCLINOMETER, 1 << int(bit.group(1)))
 
     def test_the_longest_interval_the_budget_subtracts_is_the_firmwares_bound(self):
-        bound = re.search(r"kDutyMaxPeriodMs = (\d+);", PAYLOAD_H.read_text(encoding="utf-8"))
-        self.assertIsNotNone(bound, "kDutyMaxPeriodMs moved out of %s" % PAYLOAD_H)
+        bound = re.search(r"kDutyPeriodCeilingMs = (\d+);", PAYLOAD_H.read_text(encoding="utf-8"))
+        self.assertIsNotNone(bound, "kDutyPeriodCeilingMs moved out of %s" % PAYLOAD_H)
         self.assertEqual(power_budget.DUTY_MAX_PERIOD_S * 1000, int(bound.group(1)))
 
 

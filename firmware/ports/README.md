@@ -10,7 +10,7 @@ Register code belongs in `hardware/parts/` and `hardware/platform/`. Zephyr head
 
 A port is something the core calls: arm this dwell, send these bytes, paint this frame, read the die now. The core decides when, so it needs a name for what it decides against.
 
-A receiver, a barometer, a divider and a button are called by nobody. The world happens to them, the board polls them, and what reaches a service is an `events::BaroSample` or an `events::ButtonEvent` on a queue. The queue is already the interface, declared in `core/events/`, so a port in front of one would be an abstraction with no caller. `hardware/README.md` lists what a platform owes the board for that half.
+A receiver, a barometer, a divider and a button are called by nobody. The world happens to them, the board polls them, and what reaches a service is an `events::BaroSample` or an `events::ContactEvent` on a queue. The queue is already the interface, declared in `core/events/`, so a port in front of one would be an abstraction with no caller. `hardware/README.md` lists what a platform owes the board for that half.
 
 `Link` is the port with two shapes of send, and the split is the same one: `send()` puts one frame on every subscribed central because the traffic picture is everyone's, `send_to()` answers the session that asked. `payload_bytes()` with no session is therefore the smallest central connected, since a broadcast frame is formatted once and has to fit the narrowest. `core/comms/README.md` has the rest, including which app may configure the device.
 

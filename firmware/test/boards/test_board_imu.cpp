@@ -131,7 +131,7 @@ void store_on_flash(platform::host::Platform& platform, const uint8_t* image, si
 }
 
 std::string reported(const bus::State& state) {
-    char text[dfu::kHubImageTextCap];
+    char text[dfu::kHubImageTextBytes];
     dfu::format_hub_image(state.imu.image, text, sizeof(text));
     return text;
 }

@@ -34,7 +34,7 @@ void World::step(uint32_t now_ms, const bus::State& state) {
     const int32_t alt_msl_mm = gnss().alt_mm() - gnss().geoid_separation_m * 1000;
     baro().set_pressure_mpa(flight::alt_mm_to_pressure_mpa(
         alt_msl_mm + flight::pressure_to_alt_mm(airmass_qnh_pa_ * 1000)));
-    baro().set_temperature_decicelsius(flight::isa_temperature_decicelsius(alt_msl_mm));
+    baro().set_temperature_decicelsius(flight::isa_temperature_dc(alt_msl_mm));
 
     update_inertial();
     service_button(now_ms);
@@ -399,8 +399,8 @@ void World::send_config(const char* json) {
     frame.session_id = platform_.link().session_id();
     frame.endpoint = events::Endpoint::Config;
     const size_t len = std::strlen(json);
-    frame.len = static_cast<uint16_t>(len < frame.data.size() ? len : frame.data.size());
-    std::memcpy(frame.data.data(), json, frame.len);
+    frame.bytes = static_cast<uint16_t>(len < frame.data.size() ? len : frame.data.size());
+    std::memcpy(frame.data.data(), json, frame.bytes);
     platform_.link().push_rx(frame);
 }
 

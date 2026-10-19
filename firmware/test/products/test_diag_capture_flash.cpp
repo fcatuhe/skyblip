@@ -469,8 +469,8 @@ TEST_CASE("log: a store this build has no service for is refused by name, never 
     frame.endpoint = events::Endpoint::Log;
     const char* json = "{\"cmd\":\"list\",\"log\":\"diagnostics\"}";
     frame.session_id = rig.link.session_id();
-    frame.len = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(frame.data.data(), json, frame.len);
+    frame.bytes = static_cast<uint16_t>(std::strlen(json));
+    std::memcpy(frame.data.data(), json, frame.bytes);
     rig.bus.log_rx.push(frame);
     log.tick(0);
 

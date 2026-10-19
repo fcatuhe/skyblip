@@ -17,8 +17,8 @@ namespace {
 events::RxFrame log_frame(const char* json) {
     events::RxFrame frame{};
     frame.endpoint = events::Endpoint::Log;
-    frame.len = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(frame.data.data(), json, frame.len);
+    frame.bytes = static_cast<uint16_t>(std::strlen(json));
+    std::memcpy(frame.data.data(), json, frame.bytes);
     return frame;
 }
 
@@ -28,8 +28,8 @@ TEST_CASE("log link: the three commands, and nothing else") {
     auto framed = [](const char* json) {
         events::RxFrame frame{};
         frame.endpoint = events::Endpoint::Log;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         return frame;
     };
 
@@ -76,7 +76,7 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     CHECK(comms::log_records_per_chunk(ports::kMinimumLinkPayload) == 0);
     CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayload) == 3);
     CHECK(comms::log_records_per_chunk(244) == 5);
-    CHECK(comms::log_records_per_chunk(495) == comms::kLogRecordsPerChunkMax);
+    CHECK(comms::log_records_per_chunk(495) == comms::kMaxLogRecordsPerChunk);
 
     // And a chunk really does fit the frame it was sized for, at the widest
     // session id and record index the partition can produce.
@@ -85,7 +85,7 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
     for (int payload : payloads) {
         const int records = comms::log_records_per_chunk(payload);
-        char buf[comms::kLogReplyCap];
+        char buf[comms::kLogReplyBytes];
         const int len =
             comms::format_log_chunk(buf, payload + 1, 4294967295u, 4294967295u, raw, records, true);
         CHECK(len > 0);
@@ -100,7 +100,7 @@ TEST_CASE("log link: a reply that will not fit the frame is refused, never short
     // yields a short but perfectly valid object - a chunk with no "data" key, or
     // a session line with no record count. A tablet must not be handed either.
     uint8_t raw[comms::kLogChunkRawBytes] = {0};
-    char buf[comms::kLogReplyCap];
+    char buf[comms::kLogReplyBytes];
     const int tiny = ports::kMinimumLinkPayload + 1;
     CHECK(comms::format_log_chunk(buf, tiny, 1785628800u, 0, raw, 1, false) == 0);
     CHECK(comms::format_log_session(buf, tiny, 0, 3, 1785628800u, 1700, false, false) == 0);
@@ -108,14 +108,14 @@ TEST_CASE("log link: a reply that will not fit the frame is refused, never short
 }
 
 TEST_CASE("log link: the count comes first and says whether it is the whole truth") {
-    char buf[comms::kLogReplyCap];
+    char buf[comms::kLogReplyBytes];
     CHECK(comms::format_log_count(buf, sizeof(buf), 3, false) > 0);
     CHECK(std::strstr(buf, "\"sessions\":3") != nullptr);
     CHECK(std::strstr(buf, "\"truncated\":false") != nullptr);
 }
 
 TEST_CASE("log link: a session line says how many records and whether the flight ended") {
-    char buf[comms::kLogReplyCap];
+    char buf[comms::kLogReplyBytes];
     const int len =
         comms::format_log_session(buf, sizeof(buf), 0, 3, 1785628800u, 1700, false, false);
     CHECK(len > 0);
@@ -131,7 +131,7 @@ TEST_CASE("log link: a flight opened after January 2038 is read and named by its
     CHECK(read.understood);
     CHECK(read.session == kNewYear2040);
 
-    char buf[comms::kLogReplyCap];
+    char buf[comms::kLogReplyBytes];
     REQUIRE(comms::format_log_session(buf, sizeof(buf), 0, 1, kNewYear2040, 10, true, false) > 0);
     CHECK(std::strstr(buf, "\"session\":2208988800,") != nullptr);
     const uint8_t raw[flight::kLogRecordBytes] = {0};
@@ -191,7 +191,7 @@ TEST_CASE("log link: a read asks for a window of chunks and gets them back to ba
 
 TEST_CASE("log link: a window stops at the end of the session rather than wrapping") {
     // 170 records, 12 to a chunk, asked from 156: 12 then 2, and the eight asked for are two.
-    const comms::LogWindow window = comms::plan_log_window(156, comms::kLogReadChunksMax, 12, 170);
+    const comms::LogWindow window = comms::plan_log_window(156, comms::kMaxLogReadChunks, 12, 170);
     REQUIRE(window.chunks == 2);
     CHECK(window.at(0).records == 12);
     CHECK_FALSE(window.at(0).eof);
@@ -209,7 +209,7 @@ TEST_CASE("log link: a window stops at the end of the session rather than wrappi
 
 TEST_CASE("log link: a window is clamped so one fetch cannot monopolise the link") {
     CHECK(comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1,\"count\":99}"))
-              .count == comms::kLogReadChunksMax);
+              .count == comms::kMaxLogReadChunks);
     CHECK(
         comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1,\"count\":0}")).count ==
         1u);
@@ -219,16 +219,16 @@ TEST_CASE("log link: a window is clamped so one fetch cannot monopolise the link
     const comms::LogRequest request = comms::parse_log_request(
         log_frame("{\"cmd\":\"read\",\"session\":1,\"from\":0,\"count\":4000}"));
     const comms::LogWindow window =
-        comms::plan_log_window(request.from, request.count, comms::kLogRecordsPerChunkMax, 5000);
+        comms::plan_log_window(request.from, request.count, comms::kMaxLogRecordsPerChunk, 5000);
     // Eight chunks of twelve: 96 records, about 4 kB, a quarter second of notifications.
-    CHECK(window.chunks == static_cast<int>(comms::kLogReadChunksMax));
+    CHECK(window.chunks == static_cast<int>(comms::kMaxLogReadChunks));
     CHECK(window.at(window.chunks - 1).from == 84u);
 }
 
 TEST_CASE("log link: every reply names the store it answers for") {
     const store::SectorOwner diagnostics = store::SectorOwner::Diagnostics;
     uint8_t raw[comms::kLogChunkRawBytes] = {0};
-    char buf[comms::kLogReplyCap];
+    char buf[comms::kLogReplyBytes];
 
     REQUIRE(comms::format_log_chunk(buf, sizeof(buf), 7, 0, raw, 3, false, diagnostics) > 0);
     CHECK(std::strstr(buf, "\"log\":\"diagnostics\"") != nullptr);
@@ -255,14 +255,14 @@ TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it
     CHECK(comms::log_records_per_chunk(244) == 5);
     CHECK(comms::log_records_per_chunk(244, diagnostics) == 4);
     // At the widest ATT_MTU the twelve-record ceiling is reached either way.
-    CHECK(comms::log_records_per_chunk(495, diagnostics) == comms::kLogRecordsPerChunkMax);
+    CHECK(comms::log_records_per_chunk(495, diagnostics) == comms::kMaxLogRecordsPerChunk);
     CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayload, diagnostics) == 2);
 
     uint8_t raw[comms::kLogChunkRawBytes];
     for (size_t i = 0; i < sizeof(raw); i++) raw[i] = static_cast<uint8_t>(0xA0 + i);
     const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
     for (int payload : payloads) {
-        char buf[comms::kLogReplyCap];
+        char buf[comms::kLogReplyBytes];
         const int len = comms::format_log_chunk(buf, payload + 1, 4294967295u, 4294967295u, raw,
                                                 comms::log_records_per_chunk(payload, diagnostics),
                                                 true, diagnostics);

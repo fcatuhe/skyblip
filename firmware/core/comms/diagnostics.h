@@ -85,7 +85,7 @@ struct Diagnostics {
     uint32_t range_refused{0};
     power::BatteryState battery{};
     power::PowerLevel level{power::PowerLevel::Unknown};
-    int16_t die_decicelsius{0};
+    int16_t die_dc{0};
     bool die_valid{false};
 };
 
@@ -94,7 +94,7 @@ struct Diagnostics {
 // resolution away at the port is not the port's decision. Rounded away from zero
 // on both sides, so -20.6 C does not read as -20. One implementation, because the
 // status reply and the dump must not round a support case differently.
-int whole_celsius(int16_t decicelsius);
+int whole_celsius(int16_t temperature_dc);
 
 // The dump, rendered. Built cheaply on the stack from a snapshot, read either as
 // console lines or as link frames, and then thrown away.
@@ -106,11 +106,11 @@ class DiagnosticsReport {
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
     // trusting it.
-    static constexpr int kLineCap = 377;
+    static constexpr int kLineBytes = 377;
     // Enough for one frame at its widest on a link that can carry a whole group;
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
-    static constexpr int kFrameCap = 384;
+    static constexpr int kFrameBytes = 384;
 
     // cmd is the name the reply answers under, because the link already has a
     // question that asks for the radio group alone.
@@ -174,8 +174,8 @@ class DiagnosticsReport {
 // The refresh is the cheaper half (thirty loads and four accessor calls) and is
 // separate because the link may ask at any instant: a "diag" answered from a
 // ten-second-old snapshot would report a fix that was lost nine seconds ago.
-constexpr uint32_t kDiagnosticsRefreshMs = 1000;
-constexpr uint32_t kDiagnosticsDumpMs = 10000;
+constexpr uint32_t kDiagnosticsRefreshPeriodMs = 1000;
+constexpr uint32_t kDiagnosticsDumpPeriodMs = 10000;
 
 }  // namespace skyblip::comms
 

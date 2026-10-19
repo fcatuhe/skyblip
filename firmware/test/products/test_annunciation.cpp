@@ -114,7 +114,7 @@ TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
 
     CHECK(int(sky.announcing_level()) == 0);
     CHECK(int(sky.sounding_level()) == 0);
-    CHECK(int(sky.simulator.product().state().alarm_live) == 0);
+    CHECK(int(sky.simulator.product().state().alarm_undismissed) == 0);
     // The lamp goes with the buzzer: nothing is left saying look.
     CHECK(sky.simulator.product().alarm().indicator_condition() != indication::Condition::Alarm);
     // Still an advisory, still plotted: what was dismissed is the saying, not the sky.
@@ -181,7 +181,7 @@ TEST_CASE("product: volume off silences the buzzer and the motor both") {
     sky.simulator.world().add_threat();
     sky.run(2000, 8000);
 
-    CHECK(sky.simulator.product().state().alarm_live == traffic::Level::Advisory);
+    CHECK(sky.simulator.product().state().alarm_undismissed == traffic::Level::Advisory);
     CHECK(sky.buzzer().motor_starts() == 0);
     CHECK(sky.tone_commands() == 0);
     CHECK_FALSE(sky.simulator.product().alarm().sounding());

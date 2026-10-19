@@ -17,7 +17,7 @@ constexpr uint16_t kShortestBlipEarCanPlaceMs = 90;
 constexpr uint16_t kTuneSixteenthMs = kShortestBlipEarCanPlaceMs;
 
 struct Note {
-    uint16_t hz;
+    uint16_t pitch_hz;
     uint16_t tone_ms;
     uint16_t gap_ms;
 };
@@ -149,7 +149,7 @@ class Policy {
     traffic::Level announcing_level() const {
         return voice_ == Voice::Traffic ? level_ : traffic::Level::None;
     }
-    bool sounding() const { return commanded_on_; }
+    bool sounding() const { return commanded_sounding_; }
     bool vibrating() const { return commanded_vibrating_; }
 
    private:
@@ -161,13 +161,13 @@ class Policy {
     Tune tune_{};
     Voice voice_{Voice::None};
     uint16_t tone_hz_{0};
-    uint16_t commanded_hz_{0};
+    uint16_t commanded_pitch_hz_{0};
     traffic::Level level_{traffic::Level::None};
-    uint8_t note_{0};
+    uint8_t note_index_{0};
     uint32_t phase_ms_{0};
     bool phase_on_{false};
     bool resting_before_tune_{false};
-    bool commanded_on_{false};
+    bool commanded_sounding_{false};
     bool commanded_vibrating_{false};
 };
 

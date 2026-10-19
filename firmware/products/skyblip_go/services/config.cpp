@@ -42,7 +42,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     events::RxFrame frame{};
     while (!config_.replying() && context_.bus.link_rx.pop(frame)) {
         config_.on_rx(frame);
-        record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
+        record_link(diag::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
     place_unlock(now_ms);
     publish_identity(now_ms);
@@ -78,7 +78,7 @@ void ConfigLinkService::advertise(uint32_t now_ms) {
     if (advertise_asked_ && now_ms - advertise_asked_ms_ < kAdvertiseRetryPeriodMs) return;
     advertise_asked_ = true;
     advertise_asked_ms_ = now_ms;
-    char name[identity::kBluetoothNameCap + 1];
+    char name[identity::kBluetoothNameBytes + 1];
     identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
                              context_.state.activation);
     advertised_ = context_.roles.link.advertise_as(name) == Status::Ok;
@@ -86,7 +86,7 @@ void ConfigLinkService::advertise(uint32_t now_ms) {
 
 // INFO: fc 18oct26 the code was verified and its nonce spent on receipt; only the write waits here
 void ConfigLinkService::place_unlock(uint32_t now_ms) {
-    if (!config_.unlock_waiting()) {
+    if (!config_.unlock_due()) {
         unlock_writes_ = timing::DurableWriteWindow{};
         return;
     }
@@ -119,7 +119,7 @@ void ConfigLinkService::record_link(diag::LinkAction action, uint16_t session, u
                                     uint32_t now_ms) {
     if (!context_.diag.armed()) return;
     diag::Link event{};
-    event.session = session;
+    event.link_session = session;
     event.payload_bytes = context_.roles.link.payload_bytes();
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
@@ -145,7 +145,7 @@ void ConfigLinkService::watch_claim(uint32_t now_ms) {
 void ConfigLinkService::watch_link_drops(uint32_t now_ms) {
     if (config_.link_drops() == recorded_drops_) return;
     recorded_drops_ = config_.link_drops();
-    record_link(diag::LinkAction::Dropped, config_.session(), 0, now_ms);
+    record_link(diag::LinkAction::Dropped, config_.claim_holder(), 0, now_ms);
 }
 
 // A cold start costs the next fix and the driver puts our configuration back

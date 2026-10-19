@@ -63,7 +63,7 @@ class PowerService : public runtime::Service {
 
     // INFO: fc 21sep26 a counter of screen, receiver and buzzer seconds needs no finer grain
     static constexpr uint32_t kDutyRecordPeriodMs = 10000;
-    static_assert(kDutyRecordPeriodMs <= diag::kDutyMaxPeriodMs,
+    static_assert(kDutyRecordPeriodMs <= diag::kDutyPeriodCeilingMs,
                   "two Duty records this far apart cannot be subtracted");
 
    private:

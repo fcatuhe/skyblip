@@ -121,12 +121,12 @@ struct Rig {
 
     void alarm(traffic::Level level) {
         state.alarm_level = level;
-        state.alarm_live = level;
+        state.alarm_undismissed = level;
     }
 
     // The long touch as the alarm service publishes it: the sky stands, nothing is live.
     void dismiss() {
-        state.alarm_live = traffic::Level::None;
+        state.alarm_undismissed = traffic::Level::None;
         for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
             traffic::Target* t = state.traffic.at(i);
             if (t && t->used) t->alarm_dismissed = true;

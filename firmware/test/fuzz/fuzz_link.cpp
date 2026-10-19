@@ -51,7 +51,7 @@ void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* byt
     if (len > frame.data.size()) return;
     frame.session_id = app;
     frame.endpoint = endpoint;
-    frame.len = static_cast<uint16_t>(len);
+    frame.bytes = static_cast<uint16_t>(len);
     std::memcpy(frame.data.data(), bytes, len);
     rig.platform.link().push_rx(frame);
 }

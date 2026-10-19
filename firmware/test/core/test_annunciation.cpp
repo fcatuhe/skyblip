@@ -304,7 +304,7 @@ TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneve
     REQUIRE(buzzer.beeps == kFirstFixTune.count);
     uint32_t tone_ms = 0;
     for (uint8_t i = 0; i < kFirstFixTune.count; i++) {
-        CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].hz);
+        CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].pitch_hz);
         if (i > 0) CHECK(buzzer.gap_before[i] == kFirstFixJingle[i - 1].gap_ms);
         tone_ms += kFirstFixJingle[i].tone_ms;
     }

@@ -99,7 +99,7 @@ void ScreenService::record_screen(uint32_t now_ms) {
     value.page = static_cast<uint8_t>(page_);
     value.mode = static_cast<uint8_t>(mode_);
     value.prompt = static_cast<uint8_t>(prompt_);
-    value.alarm = context_.state.alarm_live;
+    value.alarm = context_.state.alarm_undismissed;
     value.backlight = backlight_;
     value.powered = powered_;
     value.holding = thermal() == Thermal::Hold;
@@ -309,10 +309,11 @@ void ScreenService::tick(uint32_t now_ms) {
     handle_input(now_ms);
     context_.state.gnss.levels_wanted = showing_sky();
 
-    if (context_.state.alarm_live != last_live_) {
-        const bool escalated_into_glass =
-            alarm_takes_glass() && context_.state.alarm_live > last_live_ && !showing_radar();
-        last_live_ = context_.state.alarm_live;
+    if (context_.state.alarm_undismissed != last_live_) {
+        const bool escalated_into_glass = alarm_takes_glass() &&
+                                          context_.state.alarm_undismissed > last_live_ &&
+                                          !showing_radar();
+        last_live_ = context_.state.alarm_undismissed;
         dirty_ = true;
         if (escalated_into_glass) show_radar();
     }

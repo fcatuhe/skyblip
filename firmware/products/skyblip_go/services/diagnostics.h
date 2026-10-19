@@ -10,7 +10,7 @@ namespace skyblip::go {
 // The dump's collector: it reads counters the device already keeps and writes
 // them into the one snapshot the companion link answers from
 // (core/comms/diagnostics.h), then puts the same table on the console every
-// kDiagnosticsDumpMs. No formatting and no policy live here - that is core's, and
+// kDiagnosticsDumpPeriodMs. No formatting and no policy live here - that is core's, and
 // host-tested there.
 //
 // Not a runtime::Service, deliberately. A service is handed roles, the bus and
@@ -30,11 +30,11 @@ class DiagnosticsDump {
         comms::Diagnostics& snapshot = product.config().config().diagnostics();
         // Unsigned subtraction throughout, so the 49.7-day wrap of a 32-bit
         // millisecond counter costs one late dump and nothing else.
-        if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshMs) {
+        if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshPeriodMs) {
             refresh(product, snapshot, now_ms);
             refreshed_ms_ = now_ms;
         }
-        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpMs) {
+        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpPeriodMs) {
             dumped_ms_ = now_ms;
             emit(snapshot);
         }
@@ -112,7 +112,7 @@ class DiagnosticsDump {
     void emit(const comms::Diagnostics& d) {
         if (!sink_.ready()) return;
         comms::DiagnosticsReport report(d, "diag");
-        char line[comms::DiagnosticsReport::kLineCap];
+        char line[comms::DiagnosticsReport::kLineBytes];
         for (int i = 0; i < report.line_count(); i++) {
             const int len = report.line(i, line, static_cast<int>(sizeof(line)));
             if (len > 0) sink_.line(line, len);

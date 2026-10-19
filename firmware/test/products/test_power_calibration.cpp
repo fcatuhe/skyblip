@@ -58,19 +58,19 @@ TEST_CASE("battery: the trimmed sample is the same sample, charger state and all
     // and the cutoff monitor read the cell at all, and a trim has no opinion
     // about it.
     events::BatterySample on_the_cable{};
-    on_the_cable.millivolts = 4000;
+    on_the_cable.divider_mv = 4000;
     on_the_cable.external_power = true;
     CHECK(calibrated(on_the_cable, -60).external_power);
-    CHECK(calibrated(on_the_cable, -60).millivolts == 3940);
+    CHECK(calibrated(on_the_cable, -60).divider_mv == 3940);
 
     // The boundary that matters: this unit reads 60 mV high, so a cell the raw
     // sample puts above the low-battery warning is really below it, and both
     // readers must agree on which side of the line it is.
     events::BatterySample raw{};
-    raw.millivolts = 3540;
+    raw.divider_mv = 3540;
     const events::BatterySample trimmed = calibrated(raw, -60);
-    CHECK(raw.millivolts > kCriticalMv);
-    CHECK(trimmed.millivolts < kCriticalMv);
+    CHECK(raw.divider_mv > kCriticalMv);
+    CHECK(trimmed.divider_mv < kCriticalMv);
 
     Gauge gauge;
     CutoffMonitor monitor;
@@ -101,7 +101,7 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     REQUIRE(go::apply_json(s, patch, 25) == Status::Ok);
 
     events::BatterySample sample{};
-    sample.millivolts = kThisUnitReadsMv;
+    sample.divider_mv = kThisUnitReadsMv;
 
     Gauge uncalibrated;
     Gauge trimmed;

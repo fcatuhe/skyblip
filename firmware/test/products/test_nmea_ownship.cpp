@@ -92,7 +92,7 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
     CHECK(int(rig.state().power.battery.percent) == 55);
     // Field 4 is what the part measured, carried in the whole degrees the sentence is read in.
     REQUIRE(rig.state().baro.temperature_valid);
-    CHECK(rig.state().baro.temperature_decicelsius == -72);
+    CHECK(rig.state().baro.temperature_dc == -72);
     CHECK(f[4] == "-7");
 
     // Same pass as $PGRMZ, so the same cadence, second for second.

@@ -109,7 +109,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     ground_.update(declared);
     update_turn_rate(now_ms);
     update_residual(previous);
-    settle_.update(convergence_of(own), now_ms);
+    settle_.observe(convergence_of(own), now_ms);
     own.tx_settled = settle_.settled(now_ms);
     record_gnss(solution, now_ms);
     record_flight(now_ms);
@@ -184,9 +184,9 @@ void OwnshipService::record_flight(uint32_t now_ms) {
 gnss::Convergence OwnshipService::convergence_of(const model::Ownship& own) {
     gnss::Convergence c{};
     c.fix_valid = own.fix_valid;
-    c.resid_valid = own.pred_resid_valid;
+    c.residual_valid = own.pred_resid_valid;
     c.height_solved = height_solved(own);
-    c.resid_m = own.pred_resid_m;
+    c.residual_m = own.pred_resid_m;
     return c;
 }
 
@@ -248,7 +248,7 @@ uint32_t OwnshipService::solution_instant(const gnss::GnssSolution& solution,
 
 void OwnshipService::apply_baro(const events::BaroSample& sample, uint32_t now_ms) {
     context_.state.baro.pressure_mpa = sample.pressure_mpa;
-    context_.state.baro.temperature_decicelsius = sample.temperature_decicelsius;
+    context_.state.baro.temperature_dc = sample.temperature_dc;
     context_.state.baro.temperature_valid = sample.temperature_valid;
     const int32_t alt_mm = flight::pressure_to_alt_mm(sample.pressure_mpa);
     if (!baro_heard_within_max_age(now_ms)) baro_ref_ms_ = 0;
@@ -268,7 +268,7 @@ void OwnshipService::record_baro(const events::BaroSample& sample, int32_t alt_m
     value.pressure_mpa = sample.pressure_mpa;
     value.alt_mm = alt_mm;
     value.climb_mm_s = climb_mm_s;
-    value.temperature_dc = sample.temperature_decicelsius;
+    value.temperature_dc = sample.temperature_dc;
     value.active = baro_active();
     value.temperature_valid = sample.temperature_valid;
     value.climb_adopted = adopted;
@@ -299,13 +299,13 @@ void OwnshipService::record_motion(uint32_t now_ms) {
 
 void OwnshipService::apply_accel(const events::AccelSample& sample) {
     const flight::SpecificForce force{sample.right_mg, sample.up_mg, sample.aft_mg};
-    ball_.update(force, sample.at_ms);
+    ball_.observe(force, sample.at_ms);
     gmeter_.observe(force, sample.at_ms);
 }
 
 void OwnshipService::publish_inertial(uint32_t now_ms) {
     context_.state.slip.valid = ball_.valid(now_ms);
-    context_.state.slip.lateral_mg = ball_.mg();
+    context_.state.slip.lateral_mg = ball_.damped_mg();
     context_.state.slip.measured_mg = ball_.measured_mg();
 
     context_.state.gload.valid = gmeter_.valid(now_ms);

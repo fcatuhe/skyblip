@@ -111,7 +111,7 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
         head + std::string(events::RxFrame{}.data.size() - head.size() - tail.size(), ' ') + tail;
     cs.on_rx(frame(full.c_str()));
     REQUIRE(cs.pending() == Pending::Set);
-    CHECK(std::string(cs.pending_json()) == full);
+    CHECK(std::string(cs.pending_set_json()) == full);
 }
 
 TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
@@ -183,10 +183,10 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
 
     cs.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(cs.pending() == Pending::Dfu);
-    cs.tick(1000 + kConfirmWindowMs - 1);
+    cs.tick(1000 + kPromptForgetMs - 1);
     CHECK(cs.pending() == Pending::Dfu);
 
-    cs.tick(1000 + kConfirmWindowMs);
+    cs.tick(1000 + kPromptForgetMs);
     CHECK(cs.pending() == Pending::None);
     CHECK(link.last().bytes.find("expired") != std::string::npos);
 

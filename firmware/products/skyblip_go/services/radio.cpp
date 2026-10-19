@@ -123,7 +123,7 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
     value.late = change.late_start();
     const timing::ClockState& clock = context_.state.clock;
     const events::Stamp stamp = events::stamp_of(
-        change.ready_us, clock.pps_edge_us, clock.pps_locked, context_.state.traffic_now(now_ms));
+        change.ready_us, clock.pps_edge_us, clock.pps_locked, context_.state.traffic_now_s(now_ms));
     context_.diag.record(value, diag::instant_of(stamp, context_.instant(now_ms).utc_dated));
 }
 
@@ -213,7 +213,7 @@ protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::At
 }
 
 uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
-    const uint32_t utc_s = context_.state.traffic_now(now_ms);
+    const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     const bool in_slot1_tail = phase_ms() < timing::kSlot1Wrap;
     return (in_slot1_tail && utc_s > 0) ? utc_s - 1 : utc_s;
 }
@@ -470,7 +470,7 @@ void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slo
     const bus::State& state = context_.state;
     const events::Stamp stamp =
         events::stamp_of(context_.roles.clock.micros(), state.clock.pps_edge_us,
-                         state.clock.pps_locked, state.traffic_now(now_ms));
+                         state.clock.pps_locked, state.traffic_now_s(now_ms));
     radio::Entry entry{};
     entry.event = outcome;
     entry.band = slot.band;

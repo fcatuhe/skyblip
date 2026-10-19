@@ -33,7 +33,7 @@ class LogSession {
    public:
     LogAction update(const model::Ownship& own, bool rolling, uint32_t now_ms);
 
-    bool open() const { return open_; }
+    bool recording() const { return open_; }
     // A closed session whose last record has not reached flash yet.
     bool closing() const { return closing_; }
     // The UTC second the session opened, which is also the time base every one
@@ -65,7 +65,7 @@ class LogSession {
     uint32_t dropped_{0};
     uint32_t session_id_{0};
     uint32_t last_sample_ms_{0};
-    uint32_t rolled_ms_{0};
+    uint32_t last_rolled_ms_{0};
     bool sampled_{false};
     bool open_{false};
     bool closing_{false};

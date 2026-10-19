@@ -148,18 +148,18 @@ TEST_CASE("extrapolate: the climb carries both altitudes, and only when it is kn
 TEST_CASE("extrapolate: a gap longer than the bound is not predicted at all") {
     const model::Ownship own = flying(48.5, 8.5, 50.0, 90.0, 1.0);
 
-    const Prediction inside = extrapolate(own, kMaxExtrapolationMs);
+    const Prediction inside = extrapolate(own, kExtrapolationCeilingMs);
     CHECK(inside.valid);
     CHECK(inside.lon_1e7 != own.lon_1e7);
 
-    const Prediction outside = extrapolate(own, kMaxExtrapolationMs + 1);
+    const Prediction outside = extrapolate(own, kExtrapolationCeilingMs + 1);
     CHECK_FALSE(outside.valid);
     CHECK(outside.lat_1e7 == own.lat_1e7);
     CHECK(outside.lon_1e7 == own.lon_1e7);
     CHECK(outside.alt_mm == own.alt_mm);
     CHECK(outside.track_cdeg == own.track_cdeg);
 
-    CHECK_FALSE(extrapolate(own, -(kMaxExtrapolationMs + 1)).valid);
+    CHECK_FALSE(extrapolate(own, -(kExtrapolationCeilingMs + 1)).valid);
 
     // A position nobody has is not extrapolated either.
     model::Ownship blind = own;
@@ -241,7 +241,7 @@ TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix"
     AdslPacket at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
 
-    const int32_t bound = kMaxExtrapolationMs;
+    const int32_t bound = kExtrapolationCeilingMs;
     AdslPacket inside{};
     from_own(inside, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, bound, bound});
     CHECK(inside.lon_1e7() != at_fix.lon_1e7());

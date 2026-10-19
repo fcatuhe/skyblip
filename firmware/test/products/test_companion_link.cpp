@@ -68,7 +68,7 @@ TEST_CASE("companion link: the product raises LinkUp through its own platform, n
     rig.send("{\"cmd\":\"get\"}");
     rig.run(t, t + 100);
     t += 100;
-    CHECK(rig.product.config().config().session() == 0x0042);
+    CHECK(rig.product.config().config().claim_holder() == 0x0042);
 
     rig.drop_link();
     CHECK_FALSE(rig.platform.link().up());
@@ -138,7 +138,7 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Set);
     expect.detail = "CALLSIGN F-JABC";
-    expect.timeout_s = comms::kConfirmWindowMs / 1000;
+    expect.timeout_s = comms::kPromptForgetMs / 1000;
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),
@@ -249,7 +249,7 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     rig.run(t, t + 200);
     t += 200;
     REQUIRE(rig.link_up());
-    CHECK(rig.product.config().config().session() == 12);
+    CHECK(rig.product.config().config().claim_holder() == 12);
     CHECK(rig.platform.link().count_on(events::Endpoint::Log) >= 1);
     CHECK(last_frame_on(rig, events::Endpoint::Log).find("\"sessions\"") != std::string::npos);
 }
@@ -276,7 +276,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     rig.run(t, t + 200);
     t += 200;
     CHECK(rig.link_up());
-    CHECK(rig.product.config().config().session() == 5);
+    CHECK(rig.product.config().config().claim_holder() == 5);
     CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
 }
 
@@ -314,7 +314,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     rig.send_from(1, "{\"cmd\":\"get\"}");
     rig.run(t, t + 200);
     t += 200;
-    REQUIRE(rig.product.config().config().session() == 1);
+    REQUIRE(rig.product.config().config().claim_holder() == 1);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
@@ -365,7 +365,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.run(t, t + 200);
     t += 200;
     CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
-    CHECK(rig.product.config().config().session() == 1);
+    CHECK(rig.product.config().config().claim_holder() == 1);
 
     // And when the holder leaves, the prompt goes with it and the claim is free
     // for the phone that is still connected.
@@ -381,5 +381,5 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     t += 100;
     rig.send_from(2, "{\"cmd\":\"get\"}");
     rig.run(t, t + 200);
-    CHECK(rig.product.config().config().session() == 2);
+    CHECK(rig.product.config().config().claim_holder() == 2);
 }

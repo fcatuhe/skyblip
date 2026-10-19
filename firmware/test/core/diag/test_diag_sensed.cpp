@@ -265,7 +265,7 @@ TEST_CASE("diag record: a contact keeps the instant the level moved, not the pol
 
 TEST_CASE("diag record: a link event keeps the payload the central negotiated") {
     diag::Link in{};
-    in.session = 41;
+    in.link_session = 41;
     in.payload_bytes = 182;
     in.frame_bytes = 96;
     in.holder = 41;
@@ -275,7 +275,7 @@ TEST_CASE("diag record: a link event keeps the payload the central negotiated") 
     in.claim_held = true;
 
     const diag::Link out = diag_round_trip(in);
-    CHECK(out.session == in.session);
+    CHECK(out.link_session == in.link_session);
     CHECK(out.payload_bytes == in.payload_bytes);
     CHECK(out.frame_bytes == in.frame_bytes);
     CHECK(out.holder == in.holder);

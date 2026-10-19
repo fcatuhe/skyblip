@@ -15,8 +15,8 @@ inline events::RxFrame frame(const char* json) {
     events::RxFrame f{};
     f.session_id = 1;
     f.endpoint = events::Endpoint::Config;
-    f.len = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(f.data.data(), json, f.len);
+    f.bytes = static_cast<uint16_t>(std::strlen(json));
+    std::memcpy(f.data.data(), json, f.bytes);
     return f;
 }
 

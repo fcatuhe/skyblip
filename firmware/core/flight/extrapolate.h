@@ -25,7 +25,7 @@ namespace skyblip::flight {
 // to a slot later than the attempt was decided, so the honest ceiling is a
 // little over a second. Past it the last fix goes out dated as the last fix:
 // wrong by a known amount beats wrong by an invented one.
-constexpr int32_t kMaxExtrapolationMs = 1500;
+constexpr int32_t kExtrapolationCeilingMs = 1500;
 
 // Where the model says own-ship is at the target instant. When `valid` is
 // false the fields are the unextrapolated fix, so a caller that only wants a

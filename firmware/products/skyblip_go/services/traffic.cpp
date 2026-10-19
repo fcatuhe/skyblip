@@ -10,7 +10,7 @@
 namespace skyblip::go {
 
 namespace {
-// INFO: fc 20sep26 the branch bus::State::traffic_now() takes is what dates the second it returns
+// INFO: fc 20sep26 the branch bus::State::traffic_now_s() takes is what dates the second it returns
 bool utc_dated(const bus::State& state) {
     return (state.clock.pps_locked && state.clock.utc_s != 0) || state.own.utc_valid;
 }
@@ -50,7 +50,7 @@ void TrafficService::tick(uint32_t now_ms) {
                 break;
         }
     }
-    const uint32_t now_s = context_.state.traffic_now(now_ms);
+    const uint32_t now_s = context_.state.traffic_now_s(now_ms);
     context_.state.traffic.age_out(now_s);
     context_.state.callsigns.age_out(now_s);
 }
@@ -58,7 +58,7 @@ void TrafficService::tick(uint32_t now_ms) {
 events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t now_ms) const {
     const bus::State& state = context_.state;
     return events::stamp_of(event.at_us, state.clock.pps_edge_us, state.clock.pps_locked,
-                            state.traffic_now(now_ms));
+                            state.traffic_now_s(now_ms));
 }
 
 // INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1Wrap past the second its sender keyed in
@@ -123,7 +123,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
         return;
     }
 
-    const uint32_t utc_s = context_.state.traffic_now(now_ms);
+    const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     const uint32_t keyed = keyed_utc_s(stamp, utc_s);
     model::AircraftObservation observation{};
     const bool alptas = system == protocol::System::Alptas;
@@ -181,7 +181,7 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     relay.source = model::Source::AdslUplink;
     log(event, stamp, radio::Event::Received, &relay);
 
-    const uint32_t utc_s = context_.state.traffic_now(now_ms);
+    const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     for (int i = 0; i < stats.targets; i++) {
         model::AircraftObservation& observation = relayed[i];
         observation.received = stamp;

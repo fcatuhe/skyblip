@@ -32,7 +32,7 @@ struct Rig {
     }
 
     // The raw level, held for as long as a thumb would. A long press produces no
-    // edges at all, so nothing on the ButtonEvent path can see one.
+    // edges at all, so nothing on the ContactEvent path can see one.
     void hold_button(uint32_t& t, uint32_t ms, bool down = true) {
         platform.board_gpio().button_down = down;
         const uint32_t until = t + ms;
@@ -102,8 +102,8 @@ struct Rig {
     void send(const char* json) {
         events::RxFrame frame{};
         frame.endpoint = events::Endpoint::Config;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         platform.link().push_rx(frame);
     }
 

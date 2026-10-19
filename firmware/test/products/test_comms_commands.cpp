@@ -473,9 +473,9 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     prompt.tick(before);
     prompt.on_rx(frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kConfirmWindowMs - 1u);
+    prompt.tick(before + kPromptForgetMs - 1u);
     CHECK(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kConfirmWindowMs);
+    prompt.tick(before + kPromptForgetMs);
     CHECK(prompt.pending() == Pending::None);
     CHECK(second_link.last().bytes.find("expired") != std::string::npos);
 }

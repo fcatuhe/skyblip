@@ -301,12 +301,12 @@ TEST_CASE("diag link: a central connecting is a record, with the payload it nego
 
     diag::Link up{};
     REQUIRE(link_action(records, diag::LinkAction::Up, up));
-    CHECK(up.session == 7);
+    CHECK(up.link_session == 7);
     CHECK(up.payload_bytes == rig.platform.link().payload_bytes());
     diag::Link received{};
     REQUIRE(link_action(records, diag::LinkAction::Received, received));
     CHECK(received.endpoint == events::Endpoint::Config);
-    CHECK(received.session == 7);
+    CHECK(received.link_session == 7);
     CHECK(received.frame_bytes > 0);
     diag::Link claimed{};
     REQUIRE(link_action(records, diag::LinkAction::ClaimTaken, claimed));
@@ -334,8 +334,8 @@ TEST_CASE("diag traffic: an aircraft is recorded a reception, with the margin it
         observation.at_ms = t;
         observation.rssi_dbm = -92;
         observation.source = model::Source::AdslDirect;
-        observation.received.at_s = rig.state().traffic_now(t);
-        rig.state().traffic.update(observation, rig.state().traffic_now(t));
+        observation.received.at_s = rig.state().traffic_now_s(t);
+        rig.state().traffic.update(observation, rig.state().traffic_now_s(t));
         taxi(rig, t, 1);
     }
     stop(rig, t);

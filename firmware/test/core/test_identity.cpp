@@ -145,7 +145,7 @@ TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page 
 }
 
 TEST_CASE("identity: the name says activate and the tag until a serial, then product and address") {
-    char name[identity::kBluetoothNameCap + 1];
+    char name[identity::kBluetoothNameBytes + 1];
     identity::Activation blank{};
     blank.bluetooth_tag = 0x3F2A;
     identity::bluetooth_name(name, sizeof(name), "skyBlip Go+", blank);

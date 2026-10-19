@@ -18,7 +18,7 @@ uint32_t adsl_pi_check(const uint8_t* data, size_t len) {
     return crc >> 8;
 }
 
-uint32_t adsl_pi_calc(const uint8_t* data, size_t len) {
+uint32_t adsl_pi_compute(const uint8_t* data, size_t len) {
     uint32_t crc = 0;
     for (size_t i = 0; i < len; i++) crc = adsl_pi_pass(crc, data[i]);
     crc = adsl_pi_pass(crc, 0);

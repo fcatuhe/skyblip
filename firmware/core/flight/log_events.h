@@ -37,7 +37,7 @@ class LogEvents {
         uint32_t first_utc_s{0};
         uint32_t last_utc_s{0};
         uint8_t alarm{0};
-        uint8_t peak_alarm{0};
+        uint8_t alarm_peak{0};
         bool active{false};
         bool ending{false};
     };
@@ -53,7 +53,7 @@ class LogEvents {
     int head_{0};
     int count_{0};
     uint32_t dropped_{0};
-    uint32_t status_ms_{0};
+    uint32_t last_status_ms_{0};
     uint8_t status_level_{0};
     uint8_t tracked_peak_{0};
     bool status_due_{false};

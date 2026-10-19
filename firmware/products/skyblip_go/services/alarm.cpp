@@ -48,9 +48,9 @@ void AlarmService::tick(uint32_t now_ms) {
     formation_.forget_stale(now_ms);
     context_.state.formation.members = formation_.members();
 
-    if (worst != context_.state.alarm_level || live != context_.state.alarm_live) {
+    if (worst != context_.state.alarm_level || live != context_.state.alarm_undismissed) {
         context_.state.alarm_level = worst;
-        context_.state.alarm_live = live;
+        context_.state.alarm_undismissed = live;
         dirty_ = true;
     }
 
@@ -122,7 +122,7 @@ void AlarmService::park(uint32_t now_ms) {
 void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     indication::Situation situation{};
     situation.running = running;
-    situation.alarm_level = context_.state.alarm_live;
+    situation.alarm_level = context_.state.alarm_undismissed;
     situation.power_level = context_.state.power.level;
     situation.fix_valid = context_.state.own.fix_valid;
 

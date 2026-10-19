@@ -35,28 +35,29 @@ void ReedSolomon255::encode(const uint8_t data[kK], uint8_t parity[kParity]) con
     }
 }
 
-void ReedSolomon255::calc_syndromes(const uint8_t* cw, uint8_t* synd, bool& all_zero) const {
+void ReedSolomon255::compute_syndromes(const uint8_t* codeword, uint8_t* syndromes,
+                                       bool& all_zero) const {
     all_zero = true;
     for (int i = 0; i < kParity; i++) {
         uint8_t s = 0;
         uint8_t root = exp_[i];
-        for (int j = 0; j < kN; j++) s = static_cast<uint8_t>(cw[j] ^ mul(s, root));
-        synd[i] = s;
+        for (int j = 0; j < kN; j++) s = static_cast<uint8_t>(codeword[j] ^ mul(s, root));
+        syndromes[i] = s;
         if (s) all_zero = false;
     }
 }
 
 bool ReedSolomon255::syndromes_zero(const uint8_t codeword[kN]) const {
-    uint8_t synd[kParity];
+    uint8_t syndromes[kParity];
     bool z;
-    calc_syndromes(codeword, synd, z);
+    compute_syndromes(codeword, syndromes, z);
     return z;
 }
 
 int ReedSolomon255::decode(uint8_t codeword[kN]) const {
-    uint8_t synd[kParity];
+    uint8_t syndromes[kParity];
     bool all_zero;
-    calc_syndromes(codeword, synd, all_zero);
+    compute_syndromes(codeword, syndromes, all_zero);
     if (all_zero) return 0;
 
     uint8_t lambda[kParity + 1] = {1};
@@ -66,8 +67,8 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
     int m = 1;
     uint8_t b = 1;
     for (int n = 0; n < kParity; n++) {
-        uint8_t delta = synd[n];
-        for (int i = 1; i <= l; i++) delta ^= mul(lambda[i], synd[n - i]);
+        uint8_t delta = syndromes[n];
+        for (int i = 1; i <= l; i++) delta ^= mul(lambda[i], syndromes[n - i]);
         if (delta == 0) {
             m++;
         } else if (2 * l <= n) {
@@ -87,40 +88,38 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
         }
     }
 
-    int nerr = 0;
+    int error_count = 0;
     for (int i = kParity; i >= 0; i--) {
         if (lambda[i]) {
-            nerr = i;
+            error_count = i;
             break;
         }
     }
-    if (nerr == 0 || nerr > kMaxErrors) return -1;
+    if (error_count == 0 || error_count > kMaxErrors) return -1;
 
-    int eround_robin_pos[kMaxErrors];
+    int error_positions[kMaxErrors];
     int found = 0;
     for (int i = 0; i < kN; i++) {
         uint8_t sum = 1;
         uint8_t xinv = exp_[(255 - i) % 255];
         uint8_t xp = 1;
-        for (int j = 1; j <= nerr; j++) {
+        for (int j = 1; j <= error_count; j++) {
             xp = mul(xp, xinv);
             sum ^= mul(lambda[j], xp);
         }
         if (sum == 0) {
             if (found >= kMaxErrors) return -1;
-            eround_robin_pos[found++] = i;
+            error_positions[found++] = i;
         }
     }
-    if (found != nerr) return -1;
+    if (found != error_count) return -1;
 
     uint8_t omega[kParity + 1] = {0};
     for (int i = 0; i < kParity; i++) {
-        uint8_t s = synd[i];
-        for (int j = 0; j <= i; j++) omega[i] ^= mul(lambda[j], synd[i - j]);
-        (void)s;
+        for (int j = 0; j <= i; j++) omega[i] ^= mul(lambda[j], syndromes[i - j]);
     }
     for (int k = 0; k < found; k++) {
-        int pos = eround_robin_pos[k];
+        int pos = error_positions[k];
         uint8_t xinv = exp_[(255 - pos) % 255];
         uint8_t omega_v = 0;
         uint8_t xp = 1;
@@ -130,16 +129,16 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
         }
         uint8_t lambda_der = 0;
         uint8_t xq = 1;
-        for (int j = 1; j <= nerr; j += 2) {
+        for (int j = 1; j <= error_count; j += 2) {
             lambda_der ^= mul(lambda[j], xq);
             xq = mul(xq, mul(xinv, xinv));
         }
         if (lambda_der == 0) return -1;
         uint8_t xk = exp_[pos];
-        uint8_t mag = mul(xk, mul(omega_v, inv(lambda_der)));
-        int idx = kN - 1 - pos;
-        if (idx < 0 || idx >= kN) return -1;
-        codeword[idx] ^= mag;
+        uint8_t magnitude = mul(xk, mul(omega_v, inv(lambda_der)));
+        int byte_index = kN - 1 - pos;
+        if (byte_index < 0 || byte_index >= kN) return -1;
+        codeword[byte_index] ^= magnitude;
     }
 
     if (!syndromes_zero(codeword)) return -1;

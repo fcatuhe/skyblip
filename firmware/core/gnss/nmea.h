@@ -21,14 +21,14 @@ constexpr int32_t kDefaultGeoidSeparationMm = 46000;
 // what did arrive, so the checksum cannot catch it. moshe-braner refuses any GGA
 // shorter than 40 characters and drops the fix with it (oss/SoftRF-moshe-braner
 // .../src/driver/GNSS.cpp:2226-2236, `write_size > 40` else `badGGA`).
-constexpr int kMinGgaLength = 40;
+constexpr int kGgaLengthFloorBytes = 40;
 
 // INFO: fc 03aug26 An MTK-lineage receiver with no almanac reports a date in
 // 1980 next to a position that looks perfectly ordinary; OGN refuses any
 // two-digit year at or above 70 for that reason (oss/nrf52-ogn-tracker
 // src/ogn.h:737-738, "MTK GPS can produce fake date with year 1980"). Every date
 // this device will ever see is 20xx.
-constexpr int kMaxTwoDigitYear = 70;
+constexpr int kTwoDigitYearCeiling = 70;
 
 // Which sentence a parse consumed. The caller ages GGA and RMC separately, so it
 // has to be told which one just arrived; a fix is not a fix on one of them.
@@ -90,17 +90,17 @@ class NmeaParser {
     bool parse_line(const char* line, int len);
 
     const GnssSolution& solution() const { return solution_; }
-    void reset() { pos_ = 0; }
+    void reset() { line_length_ = 0; }
 
     // Which sentence the last accepted parse was. Only meaningful right after
     // feed() or parse_line() returned true.
-    Sentence last_sentence() const { return last_; }
+    Sentence last_sentence() const { return last_sentence_; }
 
     // The receiver's answer to $PCAS06, "$GPTXT,01,01,02,SW=<version>": empty
     // until the part has named itself. SoftRF takes the same substring and logs
     // it (oss/SoftRF-lyusupov .../src/driver/GNSS.cpp:1015-1025).
-    const char* firmware_version() const { return version_; }
-    bool identified() const { return version_[0] != 0; }
+    const char* firmware_version() const { return firmware_version_; }
+    bool identified() const { return firmware_version_[0] != 0; }
 
     // INFO: fc 13sep26 GLL or VTG still arriving means the sentence set was never taken
     uint32_t unrequested() const { return unrequested_; }
@@ -109,25 +109,25 @@ class NmeaParser {
     void forget_satellites_in_view() { sky_.forget_in_view(); }
 
    private:
-    static constexpr int kVersionCap = 24;
+    static constexpr int kVersionBytes = 24;
 
-    char buf_[100];
-    int pos_{0};
+    char line_[100];
+    int line_length_{0};
     GnssSolution solution_;
     SkyView sky_{};
-    char version_[kVersionCap]{};
+    char firmware_version_[kVersionBytes]{};
     uint32_t unrequested_{0};
-    Sentence last_{Sentence::None};
+    Sentence last_sentence_{Sentence::None};
 
-    bool apply_rmc(const char* fields[], int nf);
-    bool apply_gga(const char* fields[], int nf, int len);
-    bool apply_gsa(const char* fields[], int nf);
-    bool apply_gsv(const char* talker, const char* fields[], int nf);
+    bool apply_rmc(const char* fields[], int field_count);
+    bool apply_gga(const char* fields[], int field_count, int len);
+    bool apply_gsa(const char* fields[], int field_count);
+    bool apply_gsv(const char* talker, const char* fields[], int field_count);
     bool apply_txt(const char* line, int len);
 };
 
 bool nmea_checksum_ok(const char* line, int len);
-bool nmea_parse_coord(const char* dm, char hemi, int32_t& out_1e7);
+bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t& out_1e7);
 
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms) {
     return arrival_ms - solution.pps_latency_ms;

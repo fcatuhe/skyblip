@@ -200,7 +200,7 @@ void NmeaService::emit_vario_and_battery() {
     }
 
     if (context_.state.baro.temperature_valid) {
-        v.temperature_c = div_round<int32_t>(context_.state.baro.temperature_decicelsius, 10);
+        v.temperature_c = div_round<int32_t>(context_.state.baro.temperature_dc, 10);
         v.temperature_valid = true;
     }
 

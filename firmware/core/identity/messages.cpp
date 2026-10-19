@@ -10,8 +10,8 @@ constexpr const char* kRegistrationLabel = "skyblip:registration:v1";
 constexpr const char* kUnlockLabel = "skyblip:unlock:v1";
 
 static_assert(sizeof("skyblip:registration:v1") - 1 + kDeviceIdBytes + Ed25519::kPublicKeyBytes +
-                      2 * kNonceBytes + kServerKeyIdBytes + 1 + kVersionMaxBytes <=
-                  Message::kCap,
+                      2 * kNonceBytes + kServerKeyIdBytes + 1 + kMaxVersionBytes <=
+                  Message::kBytes,
               "the longest message, the registration, fits whole");
 
 template <size_t N>
@@ -28,7 +28,7 @@ ServerKeyId server_key_id(const Ed25519::PublicKey& key) {
 }
 
 Message& Message::append(ConstByteSpan field) {
-    for (size_t i = 0; i < field.size() && size_ < kCap; i++) bytes_[size_++] = field[i];
+    for (size_t i = 0; i < field.size() && size_ < kBytes; i++) bytes_[size_++] = field[i];
     return *this;
 }
 
@@ -49,7 +49,7 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
                              const ServerKeyId& server_key_id, bool release, const char* version) {
     const uint8_t release_byte = release ? 1 : 0;
     size_t version_bytes = 0;
-    while (version_bytes < kVersionMaxBytes && version[version_bytes] != 0) version_bytes++;
+    while (version_bytes < kMaxVersionBytes && version[version_bytes] != 0) version_bytes++;
     Message m;
     m.append(kRegistrationLabel)
         .append(span_of(device_id))

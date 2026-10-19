@@ -82,12 +82,12 @@ TEST_CASE("arc: a climb is carried with the path") {
 }
 
 TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
-    CHECK(clamped_turn_cdps(9000) == kMaxTurnCdps);
-    CHECK(clamped_turn_cdps(-9000) == -kMaxTurnCdps);
+    CHECK(clamped_turn_cdps(9000) == kTurnCeilingCdps);
+    CHECK(clamped_turn_cdps(-9000) == -kTurnCeilingCdps);
     CHECK(clamped_turn_cdps(1300) == 1300);
 
     const Position wild = after(flying(0, kThermalSpeedMmS, 200), 20);
-    const Position clamped = after(flying(0, kThermalSpeedMmS, kMaxTurnCdps / 100), 20);
+    const Position clamped = after(flying(0, kThermalSpeedMmS, kTurnCeilingCdps / 100), 20);
     CHECK(wild.north_m == clamped.north_m);
     CHECK(wild.east_m == clamped.east_m);
 }

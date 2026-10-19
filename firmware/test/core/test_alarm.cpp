@@ -74,7 +74,7 @@ TEST_CASE("alarm: both sides are carried to the instant the geometry is read at"
     CHECK(assess(own, head_on, 11'000).rel_dist_m == doctest::Approx(940).epsilon(0.02));
 
     // Past the model's reach, both stand where they were last known to be.
-    const uint32_t too_late = 10'000 + flight::kMaxExtrapolationMs + 1;
+    const uint32_t too_late = 10'000 + flight::kExtrapolationCeilingMs + 1;
     CHECK(assess(own, head_on, too_late).rel_dist_m == doctest::Approx(1000).epsilon(0.02));
 }
 

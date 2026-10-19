@@ -231,7 +231,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     // One dump and one question, close enough together that nothing between them
     // could have moved a counter: the ten-second cadence means the console's last
     // dump is otherwise older than the link's answer.
-    pass(rig, dump, t, comms::kDiagnosticsDumpMs);
+    pass(rig, dump, t, comms::kDiagnosticsDumpPeriodMs);
     rig.send("{\"cmd\":\"diag\"}");
     pass(rig, dump, t, 200);
 

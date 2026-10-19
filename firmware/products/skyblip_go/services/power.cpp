@@ -48,7 +48,7 @@ void PowerService::tick(uint32_t now_ms) {
         const events::BatterySample sample = power::calibrated(raw, settings_.battery_offset_mv);
         gauge_.apply(sample);
         // INFO: fc 05oct26 a refused reading is no step on the ladder, the cable still overrides it
-        if (sample.external_power || power::plausible_mv(sample.millivolts)) cutoff_.apply(sample);
+        if (sample.external_power || power::plausible_mv(sample.divider_mv)) cutoff_.apply(sample);
     }
     context_.state.power.battery = gauge_.state();
     context_.state.power.level = cutoff_.level();

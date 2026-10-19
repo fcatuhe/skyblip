@@ -16,7 +16,7 @@ struct FlightSample {
 
 constexpr int32_t kFlightSpeedMmS = 12000;
 constexpr int32_t kLandingSpeedMmS = 8000;
-constexpr int32_t kTaxiSpeedMmS = 1500;
+constexpr int32_t kRollingSpeedMmS = 1500;
 constexpr int32_t kGroundSpeedMmS = 1000;
 constexpr uint32_t kLandingHoldMs = 10000;
 constexpr uint16_t kDopUnityE2 = 100;
@@ -62,14 +62,14 @@ class FlightMonitor {
    private:
     static bool jerky(int32_t previous_mm_s, int32_t now_mm_s);
     void update_rolling(int32_t speed_mm_s);
-    void update_slowdown(const FlightSample& sample, uint32_t now_ms);
+    void update_taxi(const FlightSample& sample, uint32_t now_ms);
     bool taxi_sustained(uint32_t now_ms) const;
 
     FlightState state_{FlightState::Unknown};
     int32_t last_speed_mm_s_{0};
-    uint32_t slow_since_ms_{0};
-    bool slow_{false};
-    bool armed_{false};
+    uint32_t taxiing_since_ms_{0};
+    bool taxiing_{false};
+    bool previous_speed_valid_{false};
     bool rolling_{false};
 };
 

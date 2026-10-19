@@ -67,8 +67,8 @@ class RecordPool {
     bool opened_{false};
     bool available_{false};
 
-    char reply_[comms::kLogReplyCap]{};
-    char held_[comms::kLogReplyCap]{};
+    char reply_[comms::kLogReplyBytes]{};
+    char held_[comms::kLogReplyBytes]{};
     int held_len_{0};
     uint16_t held_to_{0};
     uint32_t held_since_ms_{0};

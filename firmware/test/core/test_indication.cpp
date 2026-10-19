@@ -80,7 +80,7 @@ TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
         CHECK(indication_for(row.condition).lamp == row.indication.lamp);
         CHECK(std::string(meaning_of(row.condition)) == row.meaning);
     }
-    CHECK(kRowCount == static_cast<int>(Condition::kCount));
+    CHECK(kRowCount == static_cast<int>(Condition::Count));
 }
 
 TEST_CASE("indication: no row spends more of the pack than the budget it declares") {

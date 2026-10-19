@@ -32,7 +32,7 @@ void ScreenService::draw_prompt() {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(prompt_);
     snapshot.detail = config_.prompt_detail();
-    snapshot.timeout_s = comms::kConfirmWindowMs / 1000;
+    snapshot.timeout_s = comms::kPromptForgetMs / 1000;
     draw_confirm(fb_, snapshot);
 }
 

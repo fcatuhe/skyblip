@@ -35,14 +35,15 @@ void manchester_encode(const uint8_t* data, size_t len, uint8_t* out) {
     }
 }
 
-size_t manchester_decode(const uint8_t* coded, size_t data_len, uint8_t* data, uint8_t* err) {
+size_t manchester_decode(const uint8_t* coded, size_t data_len, uint8_t* data,
+                         uint8_t* error_mask) {
     size_t bad_bits = 0;
     for (size_t i = 0; i < data_len; i++) {
         uint8_t hi = kDecode[coded[2 * i]];
         uint8_t lo = kDecode[coded[2 * i + 1]];
         data[i] = static_cast<uint8_t>(((hi & 0x0F) << 4) | (lo & 0x0F));
         uint8_t e = static_cast<uint8_t>((hi & 0xF0) | ((lo & 0xF0) >> 4));
-        if (err) err[i] = e;
+        if (error_mask) error_mask[i] = e;
         bad_bits += __builtin_popcount(e);
     }
     return bad_bits;

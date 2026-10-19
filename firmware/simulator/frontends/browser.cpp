@@ -154,7 +154,8 @@ KEEPALIVE int simulator_alarm_level() {
 }
 KEEPALIVE int simulator_alarm_dismissed() {
     const bus::State& state = g_simulator.product().state();
-    return state.alarm_level != traffic::Level::None && state.alarm_live == traffic::Level::None;
+    return state.alarm_level != traffic::Level::None &&
+           state.alarm_undismissed == traffic::Level::None;
 }
 KEEPALIVE int simulator_shutdown_phase() {
     return static_cast<int>(g_simulator.product().shutdown().phase());

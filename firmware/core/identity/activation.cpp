@@ -5,10 +5,10 @@
 namespace skyblip::identity {
 
 int bluetooth_name(char* out, int cap, const char* product, const Activation& activation) {
-    char name[kBluetoothNameCap + 1];
+    char name[kBluetoothNameBytes + 1];
     int n = 0;
     if (const settings::AirAddress address = activation.address()) {
-        while (n < kProductWordCap && product[n] != 0) {
+        while (n < kProductWordBytes && product[n] != 0) {
             name[n] = product[n];
             n++;
         }

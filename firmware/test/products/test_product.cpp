@@ -156,8 +156,8 @@ TEST_CASE("product: settings changed over the link are persisted") {
     const char* json = "{\"cmd\":\"set\",\"alarm_volume\":2}";
     events::RxFrame frame{};
     frame.endpoint = events::Endpoint::Config;
-    frame.len = static_cast<uint16_t>(__builtin_strlen(json));
-    for (uint16_t i = 0; i < frame.len; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
+    frame.bytes = static_cast<uint16_t>(__builtin_strlen(json));
+    for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
     rig.platform.link().push_rx(frame);
     rig.run(100, 300);
     rig.product.config().config().confirm();

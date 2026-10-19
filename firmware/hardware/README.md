@@ -28,7 +28,7 @@ The producers the board polls, which are not ports because nothing calls them on
 | `read_baro(platform::BaroReading&)` | `events::BaroSample` |
 | `imu_firmware()` | the image `parts::Bhi260` uploads, which becomes `events::AccelSample` |
 | `read_battery_mv(uint16_t&)`, `external_power()` | `events::BatterySample` |
-| `button_down()`, `pad_down()` | `events::ButtonEvent` |
+| `button_down()`, `pad_down()` | `events::ContactEvent` |
 | `pps()` | the PPS edge on `bus::State::clock` |
 
 And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `identity()`, `glass_rotation()`, `read_panel_signature()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`.

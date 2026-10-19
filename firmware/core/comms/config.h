@@ -46,7 +46,7 @@ const char* pending_detail(Pending pending);
 // it is not allowed to stand there forever: a device left on a wing with an
 // unanswered "confirm firmware upload" is a device a stranger can walk up to.
 // Long enough to put a phone down and reach the button, and no longer.
-constexpr uint32_t kConfirmWindowMs = 30u * 1000u;
+constexpr uint32_t kPromptForgetMs = 30u * 1000u;
 
 // INFO: cf 02aug26 A push exists so a tablet does not have to poll a gauge that
 // barely moves between polls. Pushing on every millivolt reading would just
@@ -64,7 +64,7 @@ constexpr uint8_t kBatteryPushStepPercent = 5;
 // a notification the controller will fail.
 constexpr int kSmallestSupportedPayload = 182;
 
-constexpr int kPromptDetailCap = 128;
+constexpr int kPromptDetailBytes = 128;
 
 class ConfigService {
    public:
@@ -73,20 +73,20 @@ class ConfigService {
         : link_(link), store_(store), dfu_(dfu), timing_stats_(timing_stats) {}
 
     // INFO: cf 02aug26 Ground opens this door, latched in core/flight/ground.h
-    void set_flight_state(flight::FlightState fs);
-    flight::FlightState flight_state() const { return flight_; }
+    void set_flight_state(flight::FlightState state);
+    flight::FlightState flight_state() const { return flight_state_; }
 
     // The durable-write policy's own counters, read out beside the dwell
     // histograms because they are measurements of the same second: a write that
     // could not be placed inside its bound is a stall that landed where the slot
     // map did not budget for one, and it must not be silent. Wired by the product
     // that owns the write (products/skyblip_go/services/config.h).
-    void set_durable_writes(const timing::DurableWriteWindow* writes) { writes_ = writes; }
+    void set_durable_writes(const timing::DurableWriteWindow* writes) { durable_writes_ = writes; }
 
     // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, unknown_cmd without
     void set_identity(IdentityLink* identity) { identity_ = identity; }
     // INFO: fc 18oct26 an activated unit's radio runs, so its product places the page write
-    bool unlock_waiting() const { return identity_ != nullptr && identity_->unlock_due(); }
+    bool unlock_due() const { return identity_ != nullptr && identity_->unlock_due(); }
     // INFO: fc 18oct26 writes the held code if the power rule allows, else drops it as low_power
     void settle_unlock();
 
@@ -96,7 +96,7 @@ class ConfigService {
     // INFO: fc 25sep26 a reply the link refused with WouldBlock goes out here, and a report resumes
     void resume_replies(uint32_t now_ms);
     // While true the next command waits on the bus: its answer would have nowhere to go.
-    bool replying() const { return held_len_ > 0 || report_ || timing_; }
+    bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
     // Consulted by the MCUmgr image-upload hook. An unauthenticated SMP
     // transport is what makes the browser update page possible (encrypted GATT
@@ -116,11 +116,10 @@ class ConfigService {
     // Whether anyone is listening. Exported because it is the one fact about
     // this service that no reply reveals until the gauge happens to move, and a
     // product test has to be able to assert that a connection reached it.
-    bool link_up() const { return links_ > 0; }
-    int links() const { return links_; }
+    bool link_up() const { return connected_count_ > 0; }
     const LinkClaim& claim() const { return claim_; }
     bool claim_link(uint16_t session_id) { return claim_.grant(session_id); }
-    uint16_t session() const { return claim_.holder(); }
+    uint16_t claim_holder() const { return claim_.holder(); }
 
     // The values core/power already decided: state of charge, the millivolt
     // reading, whether the charger is holding the rail, and the level
@@ -136,9 +135,9 @@ class ConfigService {
     // things, and 0.0 C is a plausible hangar morning - so an invalid reading
     // leaves the key out of the reply altogether rather than publishing a number
     // nobody measured.
-    void set_die_temperature(int16_t decicelsius, bool valid) {
-        diag_.die_decicelsius = decicelsius;
-        diag_.die_valid = valid;
+    void set_die_temperature(int16_t die_dc, bool valid) {
+        diagnostics_.die_dc = die_dc;
+        diagnostics_.die_valid = valid;
     }
 
     // The status dump, held here because this is the one service that can put it
@@ -146,15 +145,15 @@ class ConfigService {
     // of it, so the reply, the unsolicited push and the console dump report one
     // set of numbers rather than three copies of them; the product's collector
     // fills the other half through this door, once a second.
-    Diagnostics& diagnostics() { return diag_; }
-    const Diagnostics& diagnostics() const { return diag_; }
+    Diagnostics& diagnostics() { return diagnostics_; }
+    const Diagnostics& diagnostics() const { return diagnostics_; }
 
     // Receptions core/traffic refused because the position they claimed was
     // further away than this radio can hear. The number a support case opens
     // with: it says whether the range gate fires once a week or once a second,
     // and the second one is a decoder or a link budget, not a sky full of
     // aircraft.
-    void set_range_refused(uint32_t count) { diag_.range_refused = count; }
+    void set_range_refused(uint32_t count) { diagnostics_.range_refused = count; }
 
     // The nRF52840's power-failure comparator has fired, latched by core/power.
     // Kept beside the level because the two feed one rule
@@ -167,7 +166,7 @@ class ConfigService {
     // written: below the low-battery warning the settings sector is not touched,
     // and a companion app that patched a value per keystroke has to be told so.
     bool settings_writable() const {
-        return power::may_write(diag_.level, supply_warned_, power::DurableWrite::Settings);
+        return power::may_write(diagnostics_.level, supply_warned_, power::DurableWrite::Settings);
     }
 
     // INFO: fc 07sep26 a swap is 15-25 s of erases on the cell, and probation ends next boot
@@ -209,8 +208,8 @@ class ConfigService {
 
     // Why the device came up. Read once at boot by the shell, reported here so
     // a watchdog bite in the field is diagnosable without the panel in hand.
-    void set_reset_reason(power::ResetReason reason) { diag_.reset = reason; }
-    power::ResetReason reset_reason() const { return diag_.reset; }
+    void set_reset_reason(power::ResetReason reason) { diagnostics_.reset = reason; }
+    power::ResetReason reset_reason() const { return diagnostics_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
@@ -226,8 +225,8 @@ class ConfigService {
     // throwing the stored orbit data away has to be reachable without a cable.
     // It is behind the same confirmation as the rest: a cold start costs the next
     // fix, and a phone must not be able to spend that on its own.
-    bool gnss_cold_start_requested() const { return gnss_cold_requested_; }
-    void clear_gnss_cold_start_request() { gnss_cold_requested_ = false; }
+    bool gnss_cold_start_requested() const { return gnss_cold_start_requested_; }
+    void clear_gnss_cold_start_request() { gnss_cold_start_requested_ = false; }
 
     // Latched by a confirmed "power_off". The shell owns the sequencer, so this
     // is where the request waits for it: core/power::ShutdownSequencer::request
@@ -241,13 +240,13 @@ class ConfigService {
     bool recovery_requested() const { return recovery_requested_; }
     void clear_recovery_request() { recovery_requested_ = false; }
 
-    const char* pending_json() const { return pending_buf_; }
+    const char* pending_set_json() const { return pending_set_json_; }
 
     // INFO: fc 04aug26 Every frame this service could not put on the link: one
     // that would not fit the negotiated payload, one the controller refused, and
     // one a writer left incomplete. Silence towards a phone is a fault worth a
     // number, and the pilot-facing push is the one path that also retries.
-    uint32_t link_drops() const { return diag_.link_drops; }
+    uint32_t link_drops() const { return diagnostics_.link_drops; }
 
    private:
     Status reply(const char* json);
@@ -300,11 +299,11 @@ class ConfigService {
     void continue_report(std::optional<Report>& report);
     void hold(uint16_t session_id, const char* json, int len);
     void drop_replies();
-    static const char* flight_name(flight::FlightState fs);
+    static const char* flight_name(flight::FlightState state);
     void request_firmware(const json::Reader& r);
     void install_received_image();
     bool signed_by_trusted_key() const;
-    bool on_ground() const { return flight_ == flight::FlightState::Ground; }
+    bool on_ground() const { return flight_state_ == flight::FlightState::Ground; }
     bool activated() const { return identity_ != nullptr && identity_->activated(); }
     bool register_exempt() const { return pending_ == Pending::Register && !activated(); }
 
@@ -312,43 +311,44 @@ class ConfigService {
     ConfigStore& store_;
     ports::Dfu* dfu_;
     const timing::SlotTimingStats* timing_stats_;
-    const timing::DurableWriteWindow* writes_{nullptr};
+    const timing::DurableWriteWindow* durable_writes_{nullptr};
     IdentityLink* identity_{nullptr};
-    flight::FlightState flight_{flight::FlightState::Unknown};
-    Diagnostics diag_{};
+    flight::FlightState flight_state_{flight::FlightState::Unknown};
+    Diagnostics diagnostics_{};
     bool supply_warned_{false};
     bool went_dark_flat_{false};
-    uint16_t up_[LinkSessions::kMaxSessions]{};
-    int links_{0};
+    uint16_t connected_sessions_[LinkSessions::kMaxSessions]{};
+    int connected_count_{0};
     LinkClaim claim_{};
     bool status_push_due_{false};
     bool power_off_requested_{false};
     bool install_requested_{false};
     bool recovery_requested_{false};
     bool log_erase_requested_{false};
-    bool gnss_cold_requested_{false};
+    bool gnss_cold_start_requested_{false};
     Pending pending_{Pending::None};
     bool dirty_{false};
     bool upload_window_open_{false};
     uint32_t now_ms_{0};
-    uint32_t window_opened_ms_{0};
+    uint32_t upload_window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
-    ports::ImageVersion approved_{};
-    char prompt_detail_[kPromptDetailCap]{};
-    char pending_buf_[sizeof(events::RxFrame::data) + 1]{0};
-    static constexpr int kHeldFrameCap = kTimingFrameCap;
-    static_assert(kHeldFrameCap >= DiagnosticsReport::kFrameCap, "a report frame must be holdable");
-    static_assert(kHeldFrameCap >= IdentityLink::kRegistrationFrameBytes,
+    ports::ImageVersion approved_version_{};
+    char prompt_detail_[kPromptDetailBytes]{};
+    char pending_set_json_[sizeof(events::RxFrame::data) + 1]{0};
+    static constexpr int kHeldFrameBytes = kTimingFrameBytes;
+    static_assert(kHeldFrameBytes >= DiagnosticsReport::kFrameBytes,
+                  "a report frame must be holdable");
+    static_assert(kHeldFrameBytes >= IdentityLink::kRegistrationFrameBytes,
                   "a registration frame must be holdable");
-    char held_[kHeldFrameCap]{};
-    int held_len_{0};
+    char held_[kHeldFrameBytes]{};
+    int held_bytes_{0};
     uint16_t held_to_{0};
     uint32_t held_since_ms_{0};
-    std::optional<DiagnosticsReport> report_{};
-    std::optional<TimingReport> timing_{};
+    std::optional<DiagnosticsReport> diagnostics_report_{};
+    std::optional<TimingReport> timing_report_{};
     int report_payload_{0};
     int report_frame_cap_{0};
-    int pending_len_{0};
+    int pending_set_bytes_{0};
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};

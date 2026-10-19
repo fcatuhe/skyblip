@@ -13,7 +13,7 @@ enum class LogCommand : uint8_t { None, List, Read, Erase };
 using LogStore = store::SectorOwner;
 
 // INFO: fc 20sep26 eight 498-byte notifications is a quarter second of link at one per interval
-constexpr uint32_t kLogReadChunksMax = 8;
+constexpr uint32_t kMaxLogReadChunks = 8;
 
 struct LogRequest {
     LogCommand command{LogCommand::None};
@@ -57,7 +57,7 @@ LogWindow plan_log_window(uint32_t from, uint32_t count, int records_per_chunk,
 // a buffer bound and not a promise: what actually goes out is cut to the payload
 // ports::Link::payload_bytes() reports. Room for the largest chunk a link that
 // negotiated ATT_MTU 498 can carry.
-constexpr int kLogReplyCap = 512;
+constexpr int kLogReplyBytes = 512;
 
 // INFO: cf 03aug26 Raw bytes are what travels, CRC and all, so the host verifies
 // each record against the same checksum the flash holds - the transfer is checked
@@ -69,9 +69,9 @@ constexpr int kLogReplyCap = 512;
 // short-changed by. Twelve is the ceiling because that is what a 498-byte ATT_MTU
 // reaches; the base64 of 24 raw bytes is exactly 32 characters, so the arithmetic
 // below is exact rather than an estimate.
-constexpr int kLogRecordsPerChunkMax = 12;
+constexpr int kMaxLogRecordsPerChunk = 12;
 constexpr int kLogChunkRawBytes =
-    kLogRecordsPerChunkMax * static_cast<int>(flight::kLogRecordBytes);
+    kMaxLogRecordsPerChunk * static_cast<int>(flight::kLogRecordBytes);
 constexpr int kLogChunkBase64PerRecord = static_cast<int>(flight::kLogRecordBytes) / 3 * 4;
 
 // The chunk envelope at its widest: the longest session id and record index the

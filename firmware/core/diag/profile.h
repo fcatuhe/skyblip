@@ -14,7 +14,7 @@ constexpr bool simulates_flight(Profile profile) { return profile == Profile::Fl
 
 // INFO: fc 21sep26 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff
 constexpr uint32_t kPowerRunRecordPeriodMs = 30000;
-static_assert(kPowerRunRecordPeriodMs <= kDutyMaxPeriodMs,
+static_assert(kPowerRunRecordPeriodMs <= kDutyPeriodCeilingMs,
               "two Duty records this far apart cannot be subtracted");
 
 constexpr uint32_t kPowerRunRecordsPerPass = 2;

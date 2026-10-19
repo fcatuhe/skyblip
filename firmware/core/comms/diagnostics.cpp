@@ -39,9 +39,9 @@ using frame::counter;
 
 }  // namespace
 
-int whole_celsius(int16_t decicelsius) {
-    const int16_t bias = decicelsius >= 0 ? 5 : -5;
-    return (decicelsius + bias) / 10;
+int whole_celsius(int16_t temperature_dc) {
+    const int16_t bias = temperature_dc >= 0 ? 5 : -5;
+    return (temperature_dc + bias) / 10;
 }
 
 DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd) : cmd_(cmd) {
@@ -57,7 +57,7 @@ DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char*
 // reaches the console and the link in one edit and cannot reach one of them under
 // a different name. Every value is a plain read of something the device already
 // keeps: nothing here computes, samples or clears anything.
-void DiagnosticsReport::build(const Diagnostics& d, const Group* only) {
+void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only) {
     const bool sys = only == nullptr || *only == Group::Sys;
     const bool radio = only == nullptr || *only == Group::Radio;
     const bool traffic = only == nullptr || *only == Group::Traffic;
@@ -65,77 +65,78 @@ void DiagnosticsReport::build(const Diagnostics& d, const Group* only) {
     const bool power = only == nullptr || *only == Group::Power;
 
     if (sys) {
-        add_int(Group::Sys, "up_s", counter(d.uptime_s));
-        add_text(Group::Sys, "reset", power::to_string(d.reset));
-        add_int(Group::Sys, "link_drops", counter(d.link_drops));
+        add_int(Group::Sys, "up_s", counter(diagnostics.uptime_s));
+        add_text(Group::Sys, "reset", power::to_string(diagnostics.reset));
+        add_int(Group::Sys, "link_drops", counter(diagnostics.link_drops));
     }
 
     if (radio) {
-        add_int(Group::Radio, "noise_dbm", d.noise_dbm);
-        add_int(Group::Radio, "duty_permille", counter(d.duty_permille));
-        add_int(Group::Radio, "rx_ok", counter(d.rx_ok));
-        add_int(Group::Radio, "rx_bad", counter(d.rx_bad));
-        add_int(Group::Radio, "rx_wait", counter(d.rx_wait));
-        add_int(Group::Radio, "rx_type", counter(d.rx_type));
-        add_int(Group::Radio, "rx_unframed", counter(d.rx_unframed));
-        add_int(Group::Radio, "rx_miskeyed", counter(d.rx_miskeyed));
-        add_int(Group::Radio, "rx_noise", counter(d.rx_noise));
-        add_int(Group::Radio, "rx_named", counter(d.rx_named));
-        add_int(Group::Radio, "tx_ok", counter(d.tx_ok));
-        add_int(Group::Radio, "tx_lost", counter(d.tx_lost));
-        add_int(Group::Radio, "tx_named", counter(d.tx_named));
-        add_int(Group::Radio, "tx_keyed_us", d.tx_keyed_us);
-        add_int(Group::Radio, "tx_span_us", d.tx_span_us);
+        add_int(Group::Radio, "noise_dbm", diagnostics.noise_dbm);
+        add_int(Group::Radio, "duty_permille", counter(diagnostics.duty_permille));
+        add_int(Group::Radio, "rx_ok", counter(diagnostics.rx_ok));
+        add_int(Group::Radio, "rx_bad", counter(diagnostics.rx_bad));
+        add_int(Group::Radio, "rx_wait", counter(diagnostics.rx_wait));
+        add_int(Group::Radio, "rx_type", counter(diagnostics.rx_type));
+        add_int(Group::Radio, "rx_unframed", counter(diagnostics.rx_unframed));
+        add_int(Group::Radio, "rx_miskeyed", counter(diagnostics.rx_miskeyed));
+        add_int(Group::Radio, "rx_noise", counter(diagnostics.rx_noise));
+        add_int(Group::Radio, "rx_named", counter(diagnostics.rx_named));
+        add_int(Group::Radio, "tx_ok", counter(diagnostics.tx_ok));
+        add_int(Group::Radio, "tx_lost", counter(diagnostics.tx_lost));
+        add_int(Group::Radio, "tx_named", counter(diagnostics.tx_named));
+        add_int(Group::Radio, "tx_keyed_us", diagnostics.tx_keyed_us);
+        add_int(Group::Radio, "tx_span_us", diagnostics.tx_span_us);
         // The range gate's refusals read out with the radio and not with the
         // table, because what they measure is this receiver's link budget: a rate
         // that climbs is a decoder correcting a frame into a position no radio
         // this size could have heard (core/traffic/sanity.h).
-        add_int(Group::Radio, "range_refused", counter(d.range_refused));
-        add_bool(Group::Radio, "dio1_armed", d.dio1_armed);
-        add_int(Group::Radio, "dio1_edges", counter(d.dio1_edges));
-        add_int(Group::Radio, "dio1_missed", counter(d.dio1_missed));
+        add_int(Group::Radio, "range_refused", counter(diagnostics.range_refused));
+        add_bool(Group::Radio, "dio1_armed", diagnostics.dio1_armed);
+        add_int(Group::Radio, "dio1_edges", counter(diagnostics.dio1_edges));
+        add_int(Group::Radio, "dio1_missed", counter(diagnostics.dio1_missed));
     }
 
     if (traffic) {
-        add_int(Group::Traffic, "tracked", counter(d.tracked));
-        add_int(Group::Traffic, "alarm", d.alarm);
+        add_int(Group::Traffic, "tracked", counter(diagnostics.tracked));
+        add_int(Group::Traffic, "alarm", diagnostics.alarm);
     }
 
     if (gnss) {
-        add_int(Group::Gnss, "fixes", counter(d.gnss_fixes));
-        add_bool(Group::Gnss, "valid", d.fix_valid);
+        add_int(Group::Gnss, "fixes", counter(diagnostics.gnss_fixes));
+        add_bool(Group::Gnss, "valid", diagnostics.fix_valid);
         // A receiver silently at another rate is a GNSS-less device that looks
         // fitted, and it is the top support case this part will generate.
-        add_int(Group::Gnss, "baud", counter(d.gnss_baud));
-        add_text(Group::Gnss, "config", ports::to_string(d.gnss_config));
-        add_int(Group::Gnss, "raises", counter(d.gnss_raises));
-        add_int(Group::Gnss, "raise_fallbacks", counter(d.gnss_raise_fallbacks));
+        add_int(Group::Gnss, "baud", counter(diagnostics.gnss_baud));
+        add_text(Group::Gnss, "config", ports::to_string(diagnostics.gnss_config));
+        add_int(Group::Gnss, "raises", counter(diagnostics.gnss_raises));
+        add_int(Group::Gnss, "raise_fallbacks", counter(diagnostics.gnss_raise_fallbacks));
         // INFO: fc 19sep26 the phase a solution lands at, which kFixLagMaxMs refuses a burst over
-        if (d.gnss_nav_valid) add_int(Group::Gnss, "nav_ms", d.gnss_nav_ms);
-        add_int(Group::Gnss, "overruns", counter(d.gnss_overruns));
-        add_bool(Group::Gnss, "identified", d.gnss_identified);
-        add_text(Group::Gnss, "firmware", d.gnss_firmware);
-        add_text(Group::Gnss, "reject", gnss::reject_name(d.gnss_reject));
-        add_int(Group::Gnss, "rejected", counter(d.gnss_rejected));
+        if (diagnostics.gnss_nav_valid) add_int(Group::Gnss, "nav_ms", diagnostics.gnss_nav_ms);
+        add_int(Group::Gnss, "overruns", counter(diagnostics.gnss_overruns));
+        add_bool(Group::Gnss, "identified", diagnostics.gnss_identified);
+        add_text(Group::Gnss, "firmware", diagnostics.gnss_firmware);
+        add_text(Group::Gnss, "reject", gnss::reject_name(diagnostics.gnss_reject));
+        add_int(Group::Gnss, "rejected", counter(diagnostics.gnss_rejected));
         // Absent rather than zero: a device with no two consecutive fixes has no
         // residual, and 0 m is what a perfect one reports.
-        if (d.resid_valid) add_int(Group::Gnss, "resid_m", d.resid_m);
+        if (diagnostics.resid_valid) add_int(Group::Gnss, "resid_m", diagnostics.resid_m);
     }
 
     if (power) {
-        add_int(Group::Power, "mv", d.battery.millivolts);
-        add_int(Group::Power, "percent", d.battery.percent);
-        add_bool(Group::Power, "valid", d.battery.valid);
-        add_bool(Group::Power, "charging", d.battery.charging);
-        add_text(Group::Power, "level", power::to_string(d.level));
-        add_int(Group::Power, "supply_warnings", counter(d.supply_warnings));
-        add_int(Group::Power, "implausible", counter(d.battery_implausible));
+        add_int(Group::Power, "mv", diagnostics.battery.millivolts);
+        add_int(Group::Power, "percent", diagnostics.battery.percent);
+        add_bool(Group::Power, "valid", diagnostics.battery.valid);
+        add_bool(Group::Power, "charging", diagnostics.battery.charging);
+        add_text(Group::Power, "level", power::to_string(diagnostics.level));
+        add_int(Group::Power, "supply_warnings", counter(diagnostics.supply_warnings));
+        add_int(Group::Power, "implausible", counter(diagnostics.battery_implausible));
         // Same rule as the status reply, and the same key: no reading is no key,
         // never a zero, because 0.0 C is a plausible hangar morning.
-        if (d.die_valid) add_int(Group::Power, "die_temp_c", whole_celsius(d.die_decicelsius));
-        if (d.charge != power::ChargeCondition::Unknown)
-            add_text(Group::Power, "charge", power::to_string(d.charge));
-        add_int(Group::Power, "charge_warnings", counter(d.charge_warnings));
+        if (diagnostics.die_valid)
+            add_int(Group::Power, "die_temp_c", whole_celsius(diagnostics.die_dc));
+        if (diagnostics.charge != power::ChargeCondition::Unknown)
+            add_text(Group::Power, "charge", power::to_string(diagnostics.charge));
+        add_int(Group::Power, "charge_warnings", counter(diagnostics.charge_warnings));
     }
 }
 

@@ -27,33 +27,32 @@ constexpr uint8_t kConvergedFixes = 3;
 
 struct Convergence {
     bool fix_valid{false};
-    bool resid_valid{false};
+    bool residual_valid{false};
     bool height_solved{false};
-    uint16_t resid_m{0};
+    uint16_t residual_m{0};
 };
 
 class FirstFix {
    public:
-    void update(const Convergence& solution, uint32_t now_ms);
+    void observe(const Convergence& convergence, uint32_t now_ms);
 
     // True once, on the first valid fix since boot. The caller that annunciates
     // consumes it, so nothing can chirp twice.
     bool take_acquired();
 
     bool ever_fixed() const { return ever_fixed_; }
-    bool has_fix() const { return fix_valid_; }
     uint32_t fix_since_ms() const { return fix_since_ms_; }
 
     bool settled(uint32_t now_ms) const;
 
-    uint8_t converged_fixes() const { return converged_; }
+    uint8_t converged_fixes() const { return converged_fixes_; }
 
    private:
-    static bool converged(const Convergence& solution);
+    static bool converged(const Convergence& convergence);
 
     uint32_t fix_since_ms_{0};
     uint32_t settle_ms_{kFirstFixSettleMs};
-    uint8_t converged_{0};
+    uint8_t converged_fixes_{0};
     bool fix_valid_{false};
     bool ever_fixed_{false};
     bool acquired_pending_{false};

@@ -49,7 +49,7 @@ TEST_CASE("board battery: a refused reading still publishes the cable and what w
     REQUIRE(published.size() == 3);
     for (const events::BatterySample& sample : published) {
         CHECK(sample.external_power);
-        CHECK(sample.millivolts == 4812);
+        CHECK(sample.divider_mv == 4812);
     }
 }
 
@@ -62,7 +62,7 @@ TEST_CASE("board battery: an ADC that gave nothing still publishes the cable, at
     REQUIRE(published.size() == 3);
     for (const events::BatterySample& sample : published) {
         CHECK(sample.external_power);
-        CHECK(sample.millivolts == 0);
+        CHECK(sample.divider_mv == 0);
     }
 }
 
@@ -72,6 +72,6 @@ TEST_CASE("board battery: a believable reading off the cable goes out as it was 
 
     const std::vector<events::BatterySample> published = unit.passes(2);
     REQUIRE(published.size() == 2);
-    CHECK(published.back().millivolts == 3870);
+    CHECK(published.back().divider_mv == 3870);
     CHECK_FALSE(published.back().external_power);
 }

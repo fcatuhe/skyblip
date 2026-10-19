@@ -71,7 +71,7 @@ Diagnostics busy_device() {
     d.level = power::PowerLevel::Normal;
     d.supply_warnings = 1;
     d.battery_implausible = 2;
-    d.die_decicelsius = 415;
+    d.die_dc = 415;
     d.die_valid = true;
     return d;
 }
@@ -112,7 +112,7 @@ Diagnostics widest_device() {
     d.gnss_raises = 0xFFFFFFFFu;
     d.gnss_raise_fallbacks = 0xFFFFFFFFu;
     // The driver's version buffer is 24 bytes, so 23 characters is the longest
-    // string a receiver can ever hand us (core/gnss/nmea.h::kVersionCap).
+    // string a receiver can ever hand us (core/gnss/nmea.h::kVersionBytes).
     d.gnss_firmware = "ABCDEFGHIJKLMNOPQRSTUVW";
     d.gnss_reject = gnss::FixReject::NoSolution;  // "NO SOLUTION"
     d.gnss_rejected = 0xFFFFFFFFu;
@@ -126,7 +126,7 @@ Diagnostics widest_device() {
     d.level = power::PowerLevel::Critical;  // "CRITICAL"
     d.supply_warnings = 0xFFFFFFFFu;
     d.battery_implausible = 0xFFFFFFFFu;
-    d.die_decicelsius = -1250;
+    d.die_dc = -1250;
     d.die_valid = true;
     d.charge = power::ChargeCondition::TooCold;
     d.charge_warnings = 0xFFFFFFFFu;
@@ -136,7 +136,7 @@ Diagnostics widest_device() {
 std::string console(const Diagnostics& d) {
     DiagnosticsReport report(d, "diag");
     std::string all;
-    char line[DiagnosticsReport::kLineCap];
+    char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
         const int len = report.line(i, line, static_cast<int>(sizeof(line)));
         REQUIRE(len > 0);
@@ -158,7 +158,7 @@ struct Frames {
 Frames frames(const Diagnostics& d, int payload, const char* cmd = "diag") {
     DiagnosticsReport report(d, cmd);
     Frames out;
-    char buf[DiagnosticsReport::kFrameCap];
+    char buf[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
         const int len = report.next_frame(payload, buf, static_cast<int>(sizeof(buf)));
         REQUIRE(len > 0);
@@ -201,7 +201,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
     DiagnosticsReport report(busy_device(), "diag");
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
     // Past the end is nothing at all, not an empty line a reader would parse.
-    char line[DiagnosticsReport::kLineCap];
+    char line[DiagnosticsReport::kLineBytes];
     CHECK(report.line(DiagnosticsReport::kGroupCount, line, sizeof(line)) == 0);
     CHECK(report.line(-1, line, sizeof(line)) == 0);
 }
@@ -249,16 +249,16 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     const Diagnostics d = widest_device();
     DiagnosticsReport report(d, "diag");
     int widest = 0;
-    char line[DiagnosticsReport::kLineCap];
+    char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
         const int len = report.line(i, line, static_cast<int>(sizeof(line)));
         REQUIRE(len > 0);
         if (len > widest) widest = len;
     }
-    CHECK(widest + 1 <= DiagnosticsReport::kLineCap);
+    CHECK(widest + 1 <= DiagnosticsReport::kLineBytes);
     // And a buffer one byte short of the line refuses it whole rather than
     // handing back half a counter.
-    char tight[DiagnosticsReport::kLineCap];
+    char tight[DiagnosticsReport::kLineBytes];
     DiagnosticsReport again(d, "diag");
     int longest_index = 0;
     for (int i = 0; i < again.line_count(); i++) {
@@ -284,7 +284,7 @@ TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
     d.resid_valid = true;
     d.die_valid = true;
     d.resid_m = 0;
-    d.die_decicelsius = 0;
+    d.die_dc = 0;
     CHECK(has(console(d), "resid_m=0"));
     CHECK(has(console(d), "die_temp_c=0"));
     CHECK(has(frames(d, 182).joined, "\"resid_m\":0"));
@@ -363,7 +363,7 @@ TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry
 
 TEST_CASE("diagnostics: a frame never mixes two subsystems") {
     DiagnosticsReport report(widest_device(), "diag");
-    char buf[DiagnosticsReport::kFrameCap];
+    char buf[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
         const int len = report.next_frame(kSmallestSupportedPayload, buf, sizeof(buf));
         REQUIRE(len > 0);
@@ -392,7 +392,7 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
 
-    char buf[DiagnosticsReport::kFrameCap];
+    char buf[DiagnosticsReport::kFrameBytes];
     DiagnosticsReport narrow(d, "diag");
     CHECK(narrow.next_frame(20, buf, sizeof(buf)) == 0);
     CHECK_FALSE(narrow.exhausted());
@@ -403,7 +403,7 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     DiagnosticsReport report(d, "radio", DiagnosticsReport::Group::Radio);
     CHECK(report.line_count() == 1);
 
-    char buf[DiagnosticsReport::kFrameCap];
+    char buf[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {
         const int len = report.next_frame(kSmallestSupportedPayload, buf, sizeof(buf));

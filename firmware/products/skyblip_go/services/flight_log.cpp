@@ -99,7 +99,7 @@ void FlightLogService::drain(uint32_t now_ms) {
         if (flights_.append(scratch_, now_ms) != Append::Ok) break;
         session_.commit();
     }
-    if (session_.open()) flights_.prepare_spare(now_ms);
+    if (session_.recording()) flights_.prepare_spare(now_ms);
 }
 
 // INFO: fc 15oct26 events go first, so the landing's session_end fix is still the last record
@@ -138,7 +138,7 @@ void FlightLogService::serve_link(uint32_t now_ms) {
     events::RxFrame frame{};
     while (!replying() && context_.bus.log_rx.pop(frame)) {
         handle(comms::parse_log_request(frame));
-        record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
+        record_link(diag::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
 }
 
@@ -162,7 +162,7 @@ void FlightLogService::record_link(diag::LinkAction action, uint16_t session, ui
                                    uint32_t now_ms) {
     if (!context_.diag.armed()) return;
     diag::Link event{};
-    event.session = session;
+    event.link_session = session;
     event.payload_bytes = context_.roles.link.payload_bytes();
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();

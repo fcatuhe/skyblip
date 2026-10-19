@@ -265,7 +265,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
         if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().hz();
     }
     CHECK(rig.product.ownship().first_fix().ever_fixed());
-    CHECK(first_note_hz == annunciation::kFirstFixJingle[0].hz);
+    CHECK(first_note_hz == annunciation::kFirstFixJingle[0].pitch_hz);
     // The motor stays out of it: haptics mean traffic that escalated.
     CHECK(rig.platform.annunciator().motor_starts() == 0);
 

@@ -28,7 +28,7 @@ class FlightLogService : public runtime::Service {
     void tick(uint32_t now_ms) override;
 
     bool available() const { return flights_.available(); }
-    bool recording() const { return session_.open(); }
+    bool recording() const { return session_.recording(); }
     uint32_t session_id() const { return session_.session_id(); }
     uint32_t records_written() const { return flights_.records_written(); }
     uint32_t records_dropped() const { return session_.dropped(); }

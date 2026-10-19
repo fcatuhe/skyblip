@@ -24,8 +24,8 @@ constexpr uint32_t kSentenceMaxAgeMs = 3500;
 // longitude between consecutive solutions. At 1 Hz that is 16.7 km of latitude
 // in a second, which no aircraft we serve can do and no correct receiver
 // reports.
-constexpr int32_t kMaxLatitudeJump1e7 = 1500000;
-constexpr int32_t kMaxLongitudeJump1e7 = 2500000;
+constexpr int32_t kLatitudeJumpCeiling1e7 = 1500000;
+constexpr int32_t kLongitudeJumpCeiling1e7 = 2500000;
 
 // Why a solution is not a fix. Every one of these has been a support case in one
 // of the reference projects, which is why they are named and counted rather than
@@ -70,15 +70,15 @@ class FixValidity {
    private:
     uint32_t rmc_ms_{0};
     uint32_t gga_ms_{0};
-    int32_t prev_lat_1e7_{0};
-    int32_t prev_lon_1e7_{0};
+    int32_t previous_lat_1e7_{0};
+    int32_t previous_lon_1e7_{0};
     uint32_t rejected_{0};
     FixReject last_reject_{FixReject::None};
     bool rmc_heard_{false};
     bool gga_heard_{false};
-    bool rmc_solution_{false};
-    bool gga_solution_{false};
-    bool date_ok_{false};
+    bool rmc_fix_valid_{false};
+    bool gga_fix_valid_{false};
+    bool utc_valid_{false};
     bool jumped_{false};
     bool previous_valid_{false};
 };

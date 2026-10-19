@@ -18,7 +18,7 @@ constexpr int64_t kMicrometresPerMillimetre = 1000;
 // Below this cosine a metre of easting is more than a degree of longitude and
 // the scaling stops meaning anything. 88 degrees of latitude is 500 km further
 // north than anything this device will fly over.
-constexpr int64_t kMinLatCosine = 512;
+constexpr int64_t kLatCosineFloor = 512;
 
 int64_t iabs64(int64_t v) { return v < 0 ? -v : v; }
 
@@ -28,7 +28,7 @@ int16_t lat_angle16(int32_t lat_1e7) {
 
 int64_t lat_cosine(int32_t lat_1e7) {
     const int64_t c = icos(lat_angle16(lat_1e7));
-    return c < kMinLatCosine ? kMinLatCosine : c;
+    return c < kLatCosineFloor ? kLatCosineFloor : c;
 }
 
 struct Carried {
@@ -54,7 +54,7 @@ Prediction carry(const Carried& motion, int32_t dt_ms) {
     out.valid = false;
 
     if (!motion.fix_valid) return out;
-    if (dt_ms > kMaxExtrapolationMs || dt_ms < -kMaxExtrapolationMs) return out;
+    if (dt_ms > kExtrapolationCeilingMs || dt_ms < -kExtrapolationCeilingMs) return out;
     out.valid = true;
     if (dt_ms == 0) return out;
 

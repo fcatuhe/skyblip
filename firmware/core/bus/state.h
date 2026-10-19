@@ -111,7 +111,7 @@ struct GnssStatus {
 
 struct BaroState {
     uint32_t pressure_mpa{0};
-    int16_t temperature_decicelsius{0};
+    int16_t temperature_dc{0};
     bool temperature_valid{false};
     bool active{false};
 };
@@ -203,7 +203,7 @@ struct State {
     identity::Activation activation{};
 
     traffic::Level alarm_level{traffic::Level::None};
-    traffic::Level alarm_live{traffic::Level::None};
+    traffic::Level alarm_undismissed{traffic::Level::None};
 
     struct AirCounts {
         uint32_t rx_ok{0};
@@ -236,7 +236,7 @@ struct State {
 
     // The traffic table's single time base. Mixing GNSS epoch seconds with
     // boot-relative seconds underflows uint32 and ages every target out at once.
-    uint32_t traffic_now(uint32_t now_ms) const {
+    uint32_t traffic_now_s(uint32_t now_ms) const {
         if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
         return own.utc_valid ? own.utc_s : now_ms / 1000;
     }

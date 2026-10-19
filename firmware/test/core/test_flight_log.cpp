@@ -33,7 +33,7 @@ flight::LogRecord sample_record() {
     r.utc_valid = true;
     r.pps_locked = true;
     r.climb_valid = true;
-    r.geoid_separation_measured = true;
+    r.geoid_measured = true;
     return r;
 }
 
@@ -83,7 +83,7 @@ TEST_CASE("log record: twenty-four bytes carry the instant own-ship publishes") 
     CHECK(out.hdop_e2 == in.hdop_e2);
     CHECK(out.flight_state == in.flight_state);
     CHECK(out.pps_locked);
-    CHECK(out.geoid_separation_measured);
+    CHECK(out.geoid_measured);
     CHECK_FALSE(out.session_end);
 }
 
@@ -139,7 +139,7 @@ TEST_CASE("log session: a device parked on a trailer writes nothing") {
     for (uint32_t i = 0; i < 100; i++) {
         CHECK(session.update(parked(kBaseUtc + i), false, i * 1000) == flight::LogAction::Idle);
     }
-    CHECK_FALSE(session.open());
+    CHECK_FALSE(session.recording());
     // What it did keep is the last few seconds, in RAM, against a takeoff.
     CHECK(session.queued() == flight::kLogPreTakeoffRecords);
 }
@@ -162,7 +162,7 @@ TEST_CASE("log session: a wing that flies at no ground speed is logged while it 
         wing.utc_s = kBaseUtc + now_ms / 1000;
         CHECK(session.update(wing, false, now_ms) != flight::LogAction::CloseSession);
     }
-    CHECK(session.open());
+    CHECK(session.recording());
     wing.utc_s = kBaseUtc + stopped_ms / 1000;
     CHECK(session.update(wing, false, stopped_ms) == flight::LogAction::CloseSession);
 }
@@ -178,7 +178,7 @@ TEST_CASE("log session: a parked wing and a taxiing aeroplane write nothing") {
         CHECK(session.update(wing, false, i * 1000) == flight::LogAction::Idle);
         CHECK(session.update(taxiing, true, i * 1000) == flight::LogAction::Idle);
     }
-    CHECK_FALSE(session.open());
+    CHECK_FALSE(session.recording());
 }
 
 TEST_CASE("log session: on the ground the ring is a holding pen and not a queue") {
@@ -237,11 +237,11 @@ TEST_CASE("log session: the file opens before the criterion agreed, so the roll 
     // A minute of taxiing, sampled and held in RAM.
     for (uint32_t i = 0; i < 60; i++, now_ms += 1000)
         session.update(parked(kBaseUtc + i), false, now_ms);
-    REQUIRE_FALSE(session.open());
+    REQUIRE_FALSE(session.recording());
 
     CHECK(session.update(flying(kBaseUtc + 60, 50000), false, now_ms) ==
           flight::LogAction::OpenSession);
-    CHECK(session.open());
+    CHECK(session.recording());
     // The session is named for the oldest sample still held, not for the instant
     // core/flight finally said "airborne" - 59 seconds of ground roll earlier.
     CHECK(session.session_id() == kBaseUtc + 1);
@@ -264,7 +264,7 @@ TEST_CASE("log session: a landing closes the session with a record that says so"
 
     now_ms += 4000;
     CHECK(session.update(parked(kBaseUtc + 4), false, now_ms) == flight::LogAction::CloseSession);
-    CHECK_FALSE(session.open());
+    CHECK_FALSE(session.recording());
     REQUIRE(session.peek(drained));
     session.commit();
     CHECK(drained.session_end);
@@ -305,7 +305,7 @@ TEST_CASE("log session: a fix outage does not end the flight, and nothing is wri
     model::Ownship blind = flying(kBaseUtc + 4, 50000);
     blind.fix_valid = false;
     CHECK(session.update(blind, false, 4000) == flight::LogAction::Idle);
-    CHECK(session.open());
+    CHECK(session.recording());
 
     // A row of zeroes is worse than a gap, so the gap is what the file gets.
     CHECK(session.update(flying(kBaseUtc + 8, 50000), false, 8000) ==

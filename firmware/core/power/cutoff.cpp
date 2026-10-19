@@ -67,7 +67,7 @@ void CutoffMonitor::on_supply_warning() {
 PowerLevel CutoffMonitor::apply(const events::BatterySample& sample) {
     if (level_ == PowerLevel::Flat) return level_;
 
-    if (sample.millivolts <= kImplausibleFloorMv) {
+    if (sample.divider_mv <= kImplausibleFloorMv) {
         implausible_++;
         forget_runs();
         return level_;
@@ -80,8 +80,8 @@ PowerLevel CutoffMonitor::apply(const events::BatterySample& sample) {
         return level_;
     }
 
-    count(sample.millivolts);
-    level_ = settled(sample.millivolts);
+    count(sample.divider_mv);
+    level_ = settled(sample.divider_mv);
     return level_;
 }
 

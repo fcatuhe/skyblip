@@ -14,8 +14,8 @@
 using namespace skyblip;
 using namespace skyblip::power;
 
-static events::BatterySample sample(uint16_t millivolts, bool external_power = false) {
-    return events::BatterySample{millivolts, external_power};
+static events::BatterySample sample(uint16_t divider_mv, bool external_power = false) {
+    return events::BatterySample{divider_mv, external_power};
 }
 
 // The gauge medians three readings, so a settled value takes three - which is the

@@ -72,7 +72,7 @@ struct LogRecord {
     bool utc_valid{false};
     bool pps_locked{false};
     bool climb_valid{false};
-    bool geoid_separation_measured{false};
+    bool geoid_measured{false};
     bool session_end{false};
 };
 

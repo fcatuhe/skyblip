@@ -24,9 +24,9 @@ const char* reject_name(FixReject reason) {
 void FixValidity::reset() {
     rmc_heard_ = false;
     gga_heard_ = false;
-    rmc_solution_ = false;
-    gga_solution_ = false;
-    date_ok_ = false;
+    rmc_fix_valid_ = false;
+    gga_fix_valid_ = false;
+    utc_valid_ = false;
     jumped_ = false;
     previous_valid_ = false;
 }
@@ -35,16 +35,16 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
     if (which == Sentence::Gga) {
         gga_heard_ = true;
         gga_ms_ = now_ms;
-        gga_solution_ = solution.fix_quality >= kQualityGps &&
-                        solution.fix_quality <= kQualityFloatRtk && solution.alt_msl_valid;
+        gga_fix_valid_ = solution.fix_quality >= kQualityGps &&
+                         solution.fix_quality <= kQualityFloatRtk && solution.alt_msl_valid;
         return;
     }
     if (which != Sentence::Rmc) return;
 
     rmc_heard_ = true;
     rmc_ms_ = now_ms;
-    rmc_solution_ = solution.fix_valid;
-    date_ok_ = solution.utc_valid;
+    rmc_fix_valid_ = solution.fix_valid;
+    utc_valid_ = solution.utc_valid;
 
     // The jump gate compares consecutive SOLUTIONS, so losing the fix drops the
     // reference: a receiver that reacquires somewhere else has not jumped, it
@@ -57,15 +57,15 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
     }
 
     const int32_t lon_step_1e7 =
-        wrapped_lon_1e7(static_cast<int64_t>(solution.lon_1e7) - prev_lon_1e7_);
-    jumped_ =
-        previous_valid_ && (magnitude(solution.lat_1e7 - prev_lat_1e7_) > kMaxLatitudeJump1e7 ||
-                            magnitude(lon_step_1e7) > kMaxLongitudeJump1e7);
+        wrapped_lon_1e7(static_cast<int64_t>(solution.lon_1e7) - previous_lon_1e7_);
+    jumped_ = previous_valid_ &&
+              (magnitude(solution.lat_1e7 - previous_lat_1e7_) > kLatitudeJumpCeiling1e7 ||
+               magnitude(lon_step_1e7) > kLongitudeJumpCeiling1e7);
     // The new position becomes the reference either way: one implausible step
     // costs one fix, not every fix after it. Two receivers disagreeing about
     // where we are is a stuck state; a single spike is a spike.
-    prev_lat_1e7_ = solution.lat_1e7;
-    prev_lon_1e7_ = solution.lon_1e7;
+    previous_lat_1e7_ = solution.lat_1e7;
+    previous_lon_1e7_ = solution.lon_1e7;
     previous_valid_ = true;
 }
 
@@ -87,9 +87,9 @@ FixReject FixValidity::evaluate(uint32_t now_ms) const {
         reason = FixReject::MissingGga;
     else if (now_ms - rmc_ms_ > kSentenceMaxAgeMs || now_ms - gga_ms_ > kSentenceMaxAgeMs)
         reason = FixReject::Stale;
-    else if (!rmc_solution_ || !gga_solution_)
+    else if (!rmc_fix_valid_ || !gga_fix_valid_)
         reason = FixReject::NoSolution;
-    else if (!date_ok_)
+    else if (!utc_valid_)
         reason = FixReject::NoDate;
     else if (jumped_)
         reason = FixReject::Jump;

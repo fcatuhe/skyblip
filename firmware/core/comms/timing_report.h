@@ -9,7 +9,7 @@ namespace skyblip::comms {
 // Enough for every field in one frame at its widest, for the link that can carry
 // them all: a frame is never longer than the payload, this only bounds the buffer
 // the caller lends.
-constexpr int kTimingFrameCap = 384;
+constexpr int kTimingFrameBytes = 384;
 
 class TimingReport {
    public:
@@ -40,15 +40,15 @@ class TimingReport {
     // Seven counts, comma-joined: cheaper than a JSON array over a FLAT-JSON
     // writer that does not have one, and just as readable on a bench terminal.
     // Room for the widest count a bucket can reach.
-    static constexpr int kBucketsTextCap = timing::SlotTimingStats::kBuckets * 11 + 1;
+    static constexpr int kBucketsTextBytes = timing::SlotTimingStats::kBuckets * 11 + 1;
     static constexpr int kMaxFields = 13;
 
     void add(const char* key, const char* text, long value);
     // "key":value, excluding the comma that joins it to the field before it.
     static int field_bytes(const Field& f);
 
-    char pps_[kBucketsTextCap]{};
-    char dwell_[kBucketsTextCap]{};
+    char pps_[kBucketsTextBytes]{};
+    char dwell_[kBucketsTextBytes]{};
     Field fields_[kMaxFields]{};
     int count_{0};
     int at_{0};

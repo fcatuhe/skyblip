@@ -99,9 +99,9 @@ Status push_rx(struct bt_conn* conn, Endpoint endpoint, const void* buf, uint16_
     RxFrame f{};
     f.session_id = session_of(conn);
     f.endpoint = endpoint;
-    f.len = len > f.data.size() ? static_cast<uint16_t>(f.data.size()) : len;
+    f.bytes = len > f.data.size() ? static_cast<uint16_t>(f.data.size()) : len;
     const uint8_t* p = static_cast<const uint8_t*>(buf);
-    for (uint16_t i = 0; i < f.len; i++) f.data[i] = p[i];
+    for (uint16_t i = 0; i < f.bytes; i++) f.data[i] = p[i];
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     const Status queued = g_rx.push(f);
     k_spin_unlock(&g_lock, key);
@@ -194,7 +194,7 @@ const struct bt_data adv[] = {
 };
 
 // INFO: fc 18sep26 Both UUIDs fill the 31-byte advert, so the name rides the scan response.
-static_assert(identity::kBluetoothNameCap < CONFIG_BT_DEVICE_NAME_MAX,
+static_assert(identity::kBluetoothNameBytes < CONFIG_BT_DEVICE_NAME_MAX,
               "every name the product builds fits the GAP name and its terminator");
 struct ScanResponse {
     char name[CONFIG_BT_DEVICE_NAME_MAX];

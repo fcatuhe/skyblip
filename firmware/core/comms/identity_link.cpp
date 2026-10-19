@@ -66,7 +66,7 @@ bool ConfigService::identity_refused_in_flight() {
 
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
-    char version[dfu::kVersionTextCap] = {0};
+    char version[dfu::kVersionTextBytes] = {0};
     if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version)) ||
         !identity_->open(claim_.holder(), now_ms_)) {
         refuse("keyless");
@@ -82,7 +82,7 @@ void ConfigService::challenge() {
 
 void ConfigService::register_unit(const json::Reader& r) {
     if (identity_refused_in_flight()) return;
-    char version[dfu::kVersionTextCap] = {0};
+    char version[dfu::kVersionTextBytes] = {0};
     if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version))) {
         refuse("keyless");
         return;
@@ -113,7 +113,7 @@ void ConfigService::send_registration() {
         return;
     }
     identity::Unit& unit = identity_->unit();
-    char version[dfu::kVersionTextCap] = {0};
+    char version[dfu::kVersionTextBytes] = {0};
     if (!running_version_text(version, sizeof(version))) {
         refuse("keyless");
         return;
@@ -139,7 +139,7 @@ void ConfigService::send_registration() {
     write_hex_field(w, "signature", *signature);
     const int len = w.finish();
     if (w.overflowed()) {
-        diag_.link_drops++;
+        diagnostics_.link_drops++;
         return;
     }
     (void)reply(buf, len);

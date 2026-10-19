@@ -251,8 +251,8 @@ struct Rig {
         events::RxFrame frame{};
         frame.session_id = session_id;
         frame.endpoint = events::Endpoint::Config;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         platform.link().push_rx(frame);
     }
 
@@ -267,8 +267,8 @@ struct Rig {
         events::RxFrame frame{};
         frame.session_id = session_id;
         frame.endpoint = events::Endpoint::Log;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         platform.link().push_rx(frame);
     }
 

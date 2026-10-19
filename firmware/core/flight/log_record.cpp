@@ -10,7 +10,7 @@ namespace skyblip::flight {
 
 namespace {
 
-constexpr uint32_t kMaxTimeOffsetS = 0xFFFF;
+constexpr uint32_t kTimeOffsetCeilingS = 0xFFFF;
 constexpr uint16_t kHdopTenthsCeiling = 255;
 constexpr uint16_t kTrackMask = 0x01FF;
 constexpr uint32_t kAddressMask = 0x00FFFFFF;
@@ -36,7 +36,8 @@ int8_t clamp_i8(int32_t v) {
 
 void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
     const uint32_t elapsed = utc_s > base_utc_s ? utc_s - base_utc_s : 0;
-    put_u16(out, static_cast<uint16_t>(elapsed > kMaxTimeOffsetS ? kMaxTimeOffsetS : elapsed));
+    put_u16(out,
+            static_cast<uint16_t>(elapsed > kTimeOffsetCeilingS ? kTimeOffsetCeilingS : elapsed));
 }
 
 void seal(uint8_t* out) {
@@ -145,7 +146,7 @@ LogRecord log_record_from(const model::Ownship& own) {
     r.utc_valid = own.utc_valid;
     r.pps_locked = own.pps_locked;
     r.climb_valid = own.climb_valid;
-    r.geoid_separation_measured = own.geoid_separation_measured;
+    r.geoid_measured = own.geoid_separation_measured;
     return r;
 }
 
@@ -170,7 +171,7 @@ void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* ou
     if (record.utc_valid) flags |= kLogFlagUtcValid;
     if (record.pps_locked) flags |= kLogFlagPpsLocked;
     if (record.climb_valid) flags |= kLogFlagClimbValid;
-    if (record.geoid_separation_measured) flags |= kLogFlagGeoidMeasured;
+    if (record.geoid_measured) flags |= kLogFlagGeoidMeasured;
     if (record.session_end) flags |= kLogFlagSessionEnd;
     flags |= static_cast<uint8_t>((record.flight_state & kLogFlagFlightStateMask)
                                   << kLogFlagFlightStateShift);
@@ -202,7 +203,7 @@ Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out
     out.utc_valid = (flags & kLogFlagUtcValid) != 0;
     out.pps_locked = (flags & kLogFlagPpsLocked) != 0;
     out.climb_valid = (flags & kLogFlagClimbValid) != 0;
-    out.geoid_separation_measured = (flags & kLogFlagGeoidMeasured) != 0;
+    out.geoid_measured = (flags & kLogFlagGeoidMeasured) != 0;
     out.session_end = (flags & kLogFlagSessionEnd) != 0;
     out.flight_state =
         static_cast<uint8_t>((flags >> kLogFlagFlightStateShift) & kLogFlagFlightStateMask);

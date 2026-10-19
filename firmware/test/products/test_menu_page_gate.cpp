@@ -82,7 +82,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Dfu);
     expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
-    expect.timeout_s = comms::kConfirmWindowMs / 1000;
+    expect.timeout_s = comms::kPromptForgetMs / 1000;
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),

@@ -32,11 +32,17 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | none | the SI base unit, whole | `alt_m`, `speed_mps`, `freq_hz` |
 | `_ms`, `_us`, `_s` | milliseconds, microseconds, seconds | `at_ms`, `tx_at_us`, `flight_seconds` |
 | `_mm_s` | millimetres per second | `climb_mm_s` |
+| `_cm`, `_ft` | centimetres, feet | `hfom_cm`, `alt_ft` |
+| `_kt`, `_fpm` | knots, feet per minute | `speed_kt`, `vs_fpm` |
 | `_1e7`, `_e8`, `_e2`, `_e1` | scaled by that power of ten | `lat_1e7`, `climb_e8`, `hdop_e2` |
 | `_q` | quarter units, the ADS-L velocity encoding | `speed_q` |
 | `_c9` | ADS-L's 9-bit course, 360 degrees over 512 counts | `track_c9` |
 | `_dbm`, `_mv`, `_mpa`, `_pa` | dBm, millivolts, millipascals, pascals | `rssi_dbm`, `battery_offset_mv`, `pressure_mpa` |
-| `_dps` | degrees per second | `turn_dps` |
+| `_deg`, `_cdeg` | degrees, hundredths of a degree | `track_deg`, `track_cdeg` |
+| `_dps`, `_cdps` | degrees per second, hundredths of a degree per second | `turn_dps`, `turn_cdps` |
+| `_mg` | thousandths of a g | `lateral_mg` |
+| `_dc` | tenths of a degree Celsius | `die_dc` |
+| `_dbhz` | dB-Hz, a carrier-to-noise density | `cn0_dbhz` |
 
 `core/units/units.h` carries the same units as types, and the conversions between them. It is what `ui/` reads in, because a page that prints knots and feet should be converting from a type rather than from a name. On the wire and in `bus::State` the suffix is the convention, because a struct that crosses a queue is a layout as well as a vocabulary.
 

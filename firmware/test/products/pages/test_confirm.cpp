@@ -37,7 +37,7 @@ ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot s;
     s.title = comms::pending_title(pending);
     s.detail = comms::pending_detail(pending);
-    s.timeout_s = comms::kConfirmWindowMs / 1000;
+    s.timeout_s = comms::kPromptForgetMs / 1000;
     return s;
 }
 

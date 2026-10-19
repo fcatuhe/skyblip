@@ -151,7 +151,7 @@ Record record_of(const Traffic& value, const Instant& at) {
     r.payload[15] = value.tracked;
     set_flag(r.flags, kTrafficFlagAssessed, value.assessed);
     set_flag(r.flags, kTrafficFlagDismissed, value.dismissed);
-    set_flag(r.flags, kTrafficFlagFormation, value.in_formation);
+    set_flag(r.flags, kTrafficFlagInFormation, value.in_formation);
     set_flag(r.flags, kTrafficFlagPositionValid, value.position_valid);
     return r;
 }
@@ -170,7 +170,7 @@ bool read(const Record& record, Traffic& out) {
     out.tracked = record.payload[15];
     out.assessed = record.flagged(kTrafficFlagAssessed);
     out.dismissed = record.flagged(kTrafficFlagDismissed);
-    out.in_formation = record.flagged(kTrafficFlagFormation);
+    out.in_formation = record.flagged(kTrafficFlagInFormation);
     out.position_valid = record.flagged(kTrafficFlagPositionValid);
     return true;
 }

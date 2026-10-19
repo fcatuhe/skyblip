@@ -153,7 +153,7 @@ struct Flight {
 };
 
 constexpr uint8_t kPowerFlagCharging = 1u << 2;
-constexpr uint8_t kPowerFlagExternal = 1u << 3;
+constexpr uint8_t kPowerFlagExternalPower = 1u << 3;
 constexpr uint8_t kPowerFlagValid = 1u << 4;
 constexpr uint8_t kPowerFlagDieValid = 1u << 5;
 // INFO: fc 30sep26 bit 6 was caution until the level carried Low, and is never reused
@@ -230,7 +230,7 @@ enum class LinkAction : uint8_t {
 constexpr uint8_t kLinkFlagClaimHeld = 1u << 2;
 
 struct Link {
-    uint16_t session{0};
+    uint16_t link_session{0};
     uint16_t payload_bytes{0};
     uint16_t frame_bytes{0};
     uint16_t holder{0};
@@ -242,7 +242,7 @@ struct Link {
 
 constexpr uint8_t kTrafficFlagAssessed = 1u << 2;
 constexpr uint8_t kTrafficFlagDismissed = 1u << 3;
-constexpr uint8_t kTrafficFlagFormation = 1u << 4;
+constexpr uint8_t kTrafficFlagInFormation = 1u << 4;
 constexpr uint8_t kTrafficFlagPositionValid = 1u << 5;
 
 struct Traffic {
@@ -305,7 +305,7 @@ struct End {
 };
 
 // INFO: fc 21sep26 a counter crosses the wire as its low half, so 65.536 s of it is the ceiling
-constexpr uint32_t kDutyMaxPeriodMs = 60000;
+constexpr uint32_t kDutyPeriodCeilingMs = 60000;
 
 struct Duty {
     uint32_t panel_partial_refreshes{0};

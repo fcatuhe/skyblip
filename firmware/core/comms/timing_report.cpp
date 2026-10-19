@@ -38,8 +38,8 @@ void TimingReport::add(const char* key, const char* text, long value) {
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
 TimingReport::TimingReport(const timing::SlotTimingStats& stats) {
-    format_buckets(stats, true, pps_, kBucketsTextCap);
-    format_buckets(stats, false, dwell_, kBucketsTextCap);
+    format_buckets(stats, true, pps_, kBucketsTextBytes);
+    format_buckets(stats, false, dwell_, kBucketsTextBytes);
 
     // Every count goes through frame::counter and not through a cast: the worst_us
     // pair is signed on both platforms and stays as it is, but a uint32_t sample

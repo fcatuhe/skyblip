@@ -104,7 +104,7 @@ void AdslPacket::descramble() {
 }
 
 void AdslPacket::set_crc() {
-    uint32_t w = fec::adsl_pi_calc(Data, kCrcCoverBytes);
+    uint32_t w = fec::adsl_pi_compute(Data, kCrcCoverBytes);
     CRC[0] = static_cast<uint8_t>(w >> 16);
     CRC[1] = static_cast<uint8_t>(w >> 8);
     CRC[2] = static_cast<uint8_t>(w);

@@ -14,7 +14,6 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 
 | Field | Writer |
 |---|---|
-| `settings` | `config` at boot (defaults, then the stored blob), `screen` when a pilot changes one in a menu. The flash write itself is `config`'s alone. |
 | `own` | `ownship` |
 | `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `ms_since_pps` |
 | `traffic` | `traffic` |
@@ -37,7 +36,7 @@ Four entries have more than one writer and all four are deliberate. `clock`, `gn
 
 `duty` is the fifth, and it is four writers rather than two: the group is a subject like the others, and the subject is what the device spent. A reader of the power budget wants the panel, the backlight, the receiver, the annunciator and the phone in one place, and each of those facts is known only to the service that drives that consumer, so the split is the same one `baro` and `gnss` make.
 
-`air.last_tx_done_at_us` looks misfiled and is not: `traffic` is the single reader of `bus.rf`, so it is the only code that sees the executor's `TxDone`, and `radio` reads the instant from here rather than opening a second drain of the same queue.
+`rf.tx_done_at_us` looks misfiled and is not: `traffic` is the single reader of `bus.rf`, so it is the only code that sees the executor's `TxDone`, and `radio` reads the instant from here rather than opening a second drain of the same queue.
 
 ## The duty counters
 

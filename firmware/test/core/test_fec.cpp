@@ -16,7 +16,7 @@ using namespace skyblip::fec;
 TEST_CASE("crc: adsl PI detects a good vs corrupted packet") {
     uint8_t data[24];
     for (int i = 0; i < 21; i++) data[i] = static_cast<uint8_t>(i * 7 + 1);
-    uint32_t pi = adsl_pi_calc(data, 21);
+    uint32_t pi = adsl_pi_compute(data, 21);
     data[21] = static_cast<uint8_t>(pi >> 16);
     data[22] = static_cast<uint8_t>(pi >> 8);
     data[23] = static_cast<uint8_t>(pi);

@@ -101,7 +101,7 @@ int RecordPool::payload_bytes(uint16_t to) const {
 
 int RecordPool::reply_cap(uint16_t to) const {
     const int room = payload_bytes(to) + 1;
-    return room < comms::kLogReplyCap ? room : comms::kLogReplyCap;
+    return room < comms::kLogReplyBytes ? room : comms::kLogReplyBytes;
 }
 
 bool RecordPool::send(uint16_t to, int len) {

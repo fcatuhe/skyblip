@@ -91,7 +91,7 @@ class OwnshipService : public runtime::Service {
     uint32_t pps_recorded_ms_{0};
     uint32_t motion_recorded_ms_{0};
 
-    static constexpr uint32_t kBaroVsWindowMs = flight::kMinWindowMs;
+    static constexpr uint32_t kBaroVsWindowMs = flight::kClimbWindowFloorMs;
     static constexpr uint32_t kGnssVsWindowMs = 2000;
     // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
     static constexpr uint32_t kBaroMaxAgeMs = 3 * runtime::kBaroPeriodMs;

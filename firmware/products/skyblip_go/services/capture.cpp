@@ -33,7 +33,7 @@ void CaptureService::open(uint32_t now_ms) {
         stopped_ = bus::CaptureStop::NoStorage;
         return;
     }
-    session_id_ = context_.state.traffic_now(now_ms);
+    session_id_ = context_.state.traffic_now_s(now_ms);
     opened_ms_ = now_ms;
     steady_records_ = 0;
     steady_written_ms_ = now_ms;

@@ -30,7 +30,7 @@ CONFIG_CHAR = "69c21302-0187-4204-a91d-02eb8858b440"
 LOG_CHAR = "69c21303-0187-4204-a91d-02eb8858b440"
 NAME_PREFIXES = ("skyBlip", "SoftRF")
 SERVICE_UUIDS = (NUS_SERVICE, HM10_SERVICE)
-# INFO: fc 20sep26 comms::kLogReadChunksMax, the clamp a read's "count" meets on the device
+# INFO: fc 20sep26 comms::kMaxLogReadChunks, the clamp a read's "count" meets on the device
 LOG_READ_CHUNKS_MAX = 8
 
 

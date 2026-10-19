@@ -37,10 +37,10 @@ class SkyView {
     void clear_solution();
     void forget_in_view();
 
-    int count() const { return n_; }
-    const SatelliteView& at(int i) const { return sats_[i]; }
+    int count() const { return count_; }
+    const SatelliteView& at(int i) const { return satellites_[i]; }
 
-    int in_use() const { return used_n_; }
+    int in_use() const { return in_use_count_; }
     int in_view_of(System system) const;
     int in_use_of(System system) const;
     bool used(System system, uint8_t id) const;
@@ -51,10 +51,10 @@ class SkyView {
         uint8_t id{0};
     };
 
-    SatelliteView sats_[kMaxSatellitesInView]{};
+    SatelliteView satellites_[kMaxSatellitesInView]{};
     UsedId used_[kMaxSatellitesInUse]{};
-    int n_{0};
-    int used_n_{0};
+    int count_{0};
+    int in_use_count_{0};
 };
 
 }  // namespace skyblip::gnss

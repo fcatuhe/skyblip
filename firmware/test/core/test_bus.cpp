@@ -48,10 +48,10 @@ TEST_CASE("bus: indices wrap without losing a slot") {
 TEST_CASE("bus: the traffic clock falls back to uptime before the first UTC") {
     bus::State s;
     s.own.utc_valid = false;
-    CHECK(s.traffic_now(12500) == 12);
+    CHECK(s.traffic_now_s(12500) == 12);
     s.own.utc_valid = true;
     s.own.utc_s = 43200;
-    CHECK(s.traffic_now(12500) == 43200);
+    CHECK(s.traffic_now_s(12500) == 43200);
 }
 
 // A receiver names a second hundreds of milliseconds after the edge that opened it.
@@ -61,9 +61,9 @@ TEST_CASE("bus: the traffic clock is the edge's second, not the sentence's") {
     s.own.utc_s = 43200;
     s.clock.pps_locked = true;
     s.clock.utc_s = 43201;
-    CHECK(s.traffic_now(12500) == 43201);
+    CHECK(s.traffic_now_s(12500) == 43201);
 
     // A lost lock leaves nothing to carry the second forward, and the sentence has it.
     s.clock.pps_locked = false;
-    CHECK(s.traffic_now(12500) == 43200);
+    CHECK(s.traffic_now_s(12500) == 43200);
 }

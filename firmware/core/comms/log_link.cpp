@@ -42,7 +42,7 @@ bool parse_store(const json::Reader& reader, LogRequest& request) {
 uint32_t clamped_chunk_count(long value) {
     const uint32_t count = non_negative(value);
     if (count == 0) return 1;
-    return count > kLogReadChunksMax ? kLogReadChunksMax : count;
+    return count > kMaxLogReadChunks ? kMaxLogReadChunks : count;
 }
 
 }  // namespace
@@ -62,7 +62,7 @@ int log_records_per_chunk(int payload_bytes, LogStore store) {
     const int room = payload_bytes - envelope;
     if (room < kLogChunkBase64PerRecord) return 0;
     const int records = room / kLogChunkBase64PerRecord;
-    return records > kLogRecordsPerChunkMax ? kLogRecordsPerChunkMax : records;
+    return records > kMaxLogRecordsPerChunk ? kMaxLogRecordsPerChunk : records;
 }
 
 int base64_encode(const uint8_t* in, int len, char* out, int cap) {
@@ -89,7 +89,7 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
     request.link_session = frame.session_id;
     request.reason = "unknown_cmd";
 
-    json::Reader reader(reinterpret_cast<const char*>(frame.data.data()), frame.len);
+    json::Reader reader(reinterpret_cast<const char*>(frame.data.data()), frame.bytes);
     if (!parse_store(reader, request)) {
         request.reason = "unknown_log";
         return request;

@@ -8,7 +8,7 @@
 namespace skyblip::gnss {
 
 namespace {
-int hexval(char c) {
+int hex_value(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
@@ -83,128 +83,132 @@ bool nmea_checksum_ok(const char* line, int len) {
             break;
         }
     if (star < 0 || star + 2 >= len) return false;
-    uint8_t cs = 0;
-    for (int i = 1; i < star; i++) cs ^= static_cast<uint8_t>(line[i]);
-    int hi = hexval(line[star + 1]);
-    int lo = hexval(line[star + 2]);
+    uint8_t checksum = 0;
+    for (int i = 1; i < star; i++) checksum ^= static_cast<uint8_t>(line[i]);
+    int hi = hex_value(line[star + 1]);
+    int lo = hex_value(line[star + 2]);
     if (hi < 0 || lo < 0) return false;
-    return cs == (hi << 4 | lo);
+    return checksum == (hi << 4 | lo);
 }
 
-bool nmea_parse_coord(const char* dm, char hemi, int32_t& out_1e7) {
-    const bool latitude = hemi == 'N' || hemi == 'S';
-    if (!latitude && hemi != 'E' && hemi != 'W') return false;
+bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t& out_1e7) {
+    const bool latitude = hemisphere == 'N' || hemisphere == 'S';
+    if (!latitude && hemisphere != 'E' && hemisphere != 'W') return false;
     int dot = -1;
-    for (int i = 0; dm[i] && i < 16; i++)
-        if (dm[i] == '.') {
+    for (int i = 0; degrees_minutes[i] && i < 16; i++)
+        if (degrees_minutes[i] == '.') {
             dot = i;
             break;
         }
     if (dot < 2 || dot > 5) return false;
     int deg_digits = dot - 2;
-    long deg = parse_long(dm, deg_digits);
-    long min_whole = parse_long(dm + deg_digits, 2);
-    if (min_whole >= 60) return false;
-    long frac = 0, scale = 1;
+    long degrees = parse_long(degrees_minutes, deg_digits);
+    long minutes_whole = parse_long(degrees_minutes + deg_digits, 2);
+    if (minutes_whole >= 60) return false;
+    long fraction = 0, scale = 1;
     for (int i = 0; i < 4; i++) {
-        char c = dm[dot + 1 + i];
+        char c = degrees_minutes[dot + 1 + i];
         if (c < '0' || c > '9') break;
-        frac = frac * 10 + (c - '0');
+        fraction = fraction * 10 + (c - '0');
         scale *= 10;
     }
-    long min_e4 = min_whole * 10000 + (scale ? frac * (10000 / scale) : 0);
-    int64_t v = static_cast<int64_t>(deg) * 10000000LL +
-                div_round<int64_t>(static_cast<int64_t>(min_e4) * 10000000LL, 600000LL);
-    if (v > (latitude ? 900000000 : 1800000000)) return false;
-    out_1e7 = static_cast<int32_t>(hemi == 'S' || hemi == 'W' ? -v : v);
+    long minutes_e4 = minutes_whole * 10000 + (scale ? fraction * (10000 / scale) : 0);
+    int64_t coordinate_1e7 =
+        static_cast<int64_t>(degrees) * 10000000LL +
+        div_round<int64_t>(static_cast<int64_t>(minutes_e4) * 10000000LL, 600000LL);
+    if (coordinate_1e7 > (latitude ? 900000000 : 1800000000)) return false;
+    out_1e7 = static_cast<int32_t>(hemisphere == 'S' || hemisphere == 'W' ? -coordinate_1e7
+                                                                          : coordinate_1e7);
     return true;
 }
 
 bool NmeaParser::feed(char c) {
     if (c == '$') {
-        pos_ = 0;
-        buf_[pos_++] = c;
+        line_length_ = 0;
+        line_[line_length_++] = c;
         return false;
     }
     if (c == '\r' || c == '\n') {
-        if (pos_ > 0) {
-            bool ok = parse_line(buf_, pos_);
-            pos_ = 0;
+        if (line_length_ > 0) {
+            bool ok = parse_line(line_, line_length_);
+            line_length_ = 0;
             return ok;
         }
         return false;
     }
-    if (pos_ > 0 && pos_ < static_cast<int>(sizeof(buf_)) - 1) buf_[pos_++] = c;
+    if (line_length_ > 0 && line_length_ < static_cast<int>(sizeof(line_)) - 1)
+        line_[line_length_++] = c;
     return false;
 }
 
 bool NmeaParser::parse_line(const char* line, int len) {
     if (!nmea_checksum_ok(line, len)) return false;
-    char tmp[100];
+    char line_copy[100];
     int n = 0;
-    for (int i = 0; i < len && line[i] != '*' && n < 99; i++) tmp[n++] = line[i];
-    tmp[n] = 0;
+    for (int i = 0; i < len && line[i] != '*' && n < 99; i++) line_copy[n++] = line[i];
+    line_copy[n] = 0;
     const char* fields[24];
-    int nf = 0;
-    fields[nf++] = tmp;
-    for (int i = 0; i < n && nf < 24; i++) {
-        if (tmp[i] == ',') {
-            tmp[i] = 0;
-            fields[nf++] = tmp + i + 1;
+    int field_count = 0;
+    fields[field_count++] = line_copy;
+    for (int i = 0; i < n && field_count < 24; i++) {
+        if (line_copy[i] == ',') {
+            line_copy[i] = 0;
+            fields[field_count++] = line_copy + i + 1;
         }
     }
-    if (nf < 1) return false;
+    if (field_count < 1) return false;
     const char* tag = fields[0];
     if (strlen(tag) < 6) return false;
-    if (memcmp(tag + 3, "RMC", 3) == 0) return apply_rmc(fields, nf);
-    if (memcmp(tag + 3, "GGA", 3) == 0) return apply_gga(fields, nf, len);
-    if (memcmp(tag + 3, "GSA", 3) == 0) return apply_gsa(fields, nf);
-    if (memcmp(tag + 3, "GSV", 3) == 0) return apply_gsv(tag + 1, fields, nf);
+    if (memcmp(tag + 3, "RMC", 3) == 0) return apply_rmc(fields, field_count);
+    if (memcmp(tag + 3, "GGA", 3) == 0) return apply_gga(fields, field_count, len);
+    if (memcmp(tag + 3, "GSA", 3) == 0) return apply_gsa(fields, field_count);
+    if (memcmp(tag + 3, "GSV", 3) == 0) return apply_gsv(tag + 1, fields, field_count);
     if (memcmp(tag + 3, "TXT", 3) == 0) return apply_txt(line, len);
     if (memcmp(tag + 3, "GLL", 3) == 0 || memcmp(tag + 3, "VTG", 3) == 0) unrequested_++;
     return false;
 }
 
 // INFO: fc 13sep26 GSA is asked for to carry VDOP, which GGA has no field for
-bool NmeaParser::apply_gsa(const char* f[], int nf) {
-    if (nf <= kGsaVdopField) return false;
-    last_ = Sentence::Gsa;
+bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
+    if (field_count <= kGsaVdopField) return false;
+    last_sentence_ = Sentence::Gsa;
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
     int64_t pdop_e2 = 0;
-    if (!parse_scaled(f[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
-    solution_.fix_mode = static_cast<uint8_t>(parse_long(f[kGsaFixModeField], 1));
+    if (!parse_scaled(fields[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
+    solution_.fix_mode = static_cast<uint8_t>(parse_long(fields[kGsaFixModeField], 1));
     int64_t vdop_e2 = 0;
     solution_.vdop_e2 =
-        parse_scaled(f[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
+        parse_scaled(fields[kGsaVdopField], 100, vdop_e2) && vdop_e2 > 0 && vdop_e2 <= 0xFFFF
             ? static_cast<uint16_t>(vdop_e2)
             : 0;
 
     const System system =
-        nf > kGsaSystemField
-            ? system_of_gsa_id(static_cast<uint8_t>(parse_long(f[kGsaSystemField], 1)))
+        field_count > kGsaSystemField
+            ? system_of_gsa_id(static_cast<uint8_t>(parse_long(fields[kGsaSystemField], 1)))
             : System::Unknown;
-    for (int slot = 0; slot < kGsaSatSlots && kGsaFirstSatField + slot < nf; slot++)
-        sky_.solving(system, static_cast<uint8_t>(parse_long(f[kGsaFirstSatField + slot], 3)));
+    for (int slot = 0; slot < kGsaSatSlots && kGsaFirstSatField + slot < field_count; slot++)
+        sky_.solving(system, static_cast<uint8_t>(parse_long(fields[kGsaFirstSatField + slot], 3)));
     return true;
 }
 
 // INFO: fc 18sep26 QZSS rides on the GP talker and is told apart by its satellite id alone
-bool NmeaParser::apply_gsv(const char* talker, const char* f[], int nf) {
-    if (nf <= kGsvFirstSatField) return false;
-    last_ = Sentence::Gsv;
+bool NmeaParser::apply_gsv(const char* talker, const char* fields[], int field_count) {
+    if (field_count <= kGsvFirstSatField) return false;
+    last_sentence_ = Sentence::Gsv;
     const System talker_system = system_of_talker(talker, 0);
-    if (parse_long(f[2], 2) == 1) {
+    if (parse_long(fields[2], 2) == 1) {
         sky_.open(talker_system);
         if (talker_system == System::Gps) sky_.open(System::Qzss);
     }
-    for (int at = kGsvFirstSatField; at + kGsvFieldsPerSat - 1 < nf; at += kGsvFieldsPerSat) {
+    for (int at = kGsvFirstSatField; at + kGsvFieldsPerSat - 1 < field_count;
+         at += kGsvFieldsPerSat) {
         SatelliteView sat;
-        sat.id = static_cast<uint8_t>(parse_long(f[at], 3));
+        sat.id = static_cast<uint8_t>(parse_long(fields[at], 3));
         if (sat.id == 0) continue;
         sat.system = system_of_talker(talker, sat.id);
-        sat.elevation_deg = static_cast<uint8_t>(parse_long(f[at + 1], 2));
-        sat.azimuth_deg = static_cast<uint16_t>(parse_long(f[at + 2], 3));
-        sat.cn0_dbhz = static_cast<uint8_t>(parse_long(f[at + 3], 2));
+        sat.elevation_deg = static_cast<uint8_t>(parse_long(fields[at + 1], 2));
+        sat.azimuth_deg = static_cast<uint16_t>(parse_long(fields[at + 2], 3));
+        sat.cn0_dbhz = static_cast<uint8_t>(parse_long(fields[at + 3], 2));
         sky_.add(sat);
     }
     return true;
@@ -226,9 +230,10 @@ bool NmeaParser::apply_txt(const char* line, int len) {
     if (len - at < 3 || line[at] != 'S' || line[at + 1] != 'W' || line[at + 2] != '=') return false;
     at += 3;
     int n = 0;
-    for (; at < len && line[at] != '*' && n < kVersionCap - 1; at++, n++) version_[n] = line[at];
-    version_[n] = 0;
-    last_ = Sentence::Txt;
+    for (; at < len && line[at] != '*' && n < kVersionBytes - 1; at++, n++)
+        firmware_version_[n] = line[at];
+    firmware_version_[n] = 0;
+    last_sentence_ = Sentence::Txt;
     // Not a solution: `updates` counts fixes, and the verification window that
     // reads it must not be satisfied by the receiver introducing itself.
     return n > 0;
@@ -241,20 +246,21 @@ bool NmeaParser::apply_txt(const char* line, int len) {
 // reports GPS time; that correction has no reader here and adding one would be a
 // second, wrong, clock. This device's only failure mode in that direction is a
 // receiver whose almanac is stale, and the date sanity below is what catches it.
-bool NmeaParser::apply_rmc(const char* f[], int nf) {
-    if (nf < 10) return false;
-    last_ = Sentence::Rmc;
+bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
+    if (field_count < 10) return false;
+    last_sentence_ = Sentence::Rmc;
     int32_t lat_1e7 = 0;
     int32_t lon_1e7 = 0;
-    solution_.fix_valid = f[2][0] == 'A' && nmea_parse_coord(f[3], f[4][0], lat_1e7) &&
-                          nmea_parse_coord(f[5], f[6][0], lon_1e7);
+    solution_.fix_valid = fields[2][0] == 'A' &&
+                          nmea_parse_coordinate(fields[3], fields[4][0], lat_1e7) &&
+                          nmea_parse_coordinate(fields[5], fields[6][0], lon_1e7);
     solution_.utc_valid = false;
-    if (digits(f[1], kRmcStampDigits) && digits(f[9], kRmcStampDigits)) {
-        int hh = d2(f[1]), mm = d2(f[1] + 2), ss = d2(f[1] + 4);
-        int day = d2(f[9]), mon = d2(f[9] + 2), yy = d2(f[9] + 4);
+    if (digits(fields[1], kRmcStampDigits) && digits(fields[9], kRmcStampDigits)) {
+        int hh = d2(fields[1]), mm = d2(fields[1] + 2), ss = d2(fields[1] + 4);
+        int day = d2(fields[9]), mon = d2(fields[9] + 2), yy = d2(fields[9] + 4);
         // The MTK 1980 lie and its neighbours: a two-digit year of 70 or more is
         // a receiver that has not decoded the almanac, not a date.
-        const bool date_sane = yy < kMaxTwoDigitYear && mon >= 1 && mon <= 12 && day >= 1 &&
+        const bool date_sane = yy < kTwoDigitYearCeiling && mon >= 1 && mon <= 12 && day >= 1 &&
                                day <= 31 && hh < 24 && mm < 60 && ss < 62;
         if (date_sane) {
             solution_.utc_s = to_epoch(2000 + yy, mon, day, hh, mm, ss);
@@ -266,13 +272,13 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
         solution_.lon_1e7 = lon_1e7;
         int64_t knots_e2 = 0;
         int64_t speed_mm_s = -1;
-        if (parse_scaled(f[7], 100, knots_e2))
+        if (parse_scaled(fields[7], 100, knots_e2))
             speed_mm_s = div_round<int64_t>(knots_e2 * kMillimetresPerSecPerKnotE3, 100000);
         solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
                                    ? static_cast<int32_t>(speed_mm_s)
                                    : 0;
         int64_t track_cdeg = 0;
-        if (parse_scaled(f[8], 100, track_cdeg))
+        if (parse_scaled(fields[8], 100, track_cdeg))
             solution_.track_cdeg =
                 static_cast<int32_t>(((track_cdeg % kCentiDegreesPerTurn) + kCentiDegreesPerTurn) %
                                      kCentiDegreesPerTurn);
@@ -281,30 +287,30 @@ bool NmeaParser::apply_rmc(const char* f[], int nf) {
     return true;
 }
 
-bool NmeaParser::apply_gga(const char* f[], int nf, int len) {
+bool NmeaParser::apply_gga(const char* fields[], int field_count, int len) {
     // A sentence that stopped early still checksums: length is the only thing
     // that catches it, which is why moshe-braner measures it.
-    if (nf < 10 || len < kMinGgaLength) return false;
-    last_ = Sentence::Gga;
+    if (field_count < 10 || len < kGgaLengthFloorBytes) return false;
+    last_sentence_ = Sentence::Gga;
     sky_.clear_solution();
-    solution_.fix_quality = static_cast<uint8_t>(parse_long(f[6], 2));
-    solution_.sats = static_cast<uint8_t>(parse_long(f[7], 2));
+    solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
+    solution_.sats = static_cast<uint8_t>(parse_long(fields[7], 2));
 
     int64_t hdop_e2 = 0;
-    solution_.hdop_e2 = parse_scaled(f[8], 100, hdop_e2) && hdop_e2 > 0 && hdop_e2 <= 0xFFFF
+    solution_.hdop_e2 = parse_scaled(fields[8], 100, hdop_e2) && hdop_e2 > 0 && hdop_e2 <= 0xFFFF
                             ? static_cast<uint16_t>(hdop_e2)
                             : 0;
 
     int64_t separation_mm = 0;
-    solution_.geoid_separation_measured = nf > 11 && parse_scaled(f[11], 1000, separation_mm) &&
-                                          separation_mm != 0 && separation_mm > -200000 &&
-                                          separation_mm < 200000;
+    solution_.geoid_separation_measured =
+        field_count > 11 && parse_scaled(fields[11], 1000, separation_mm) && separation_mm != 0 &&
+        separation_mm > -200000 && separation_mm < 200000;
     solution_.geoid_separation_mm = solution_.geoid_separation_measured
                                         ? static_cast<int32_t>(separation_mm)
                                         : kDefaultGeoidSeparationMm;
 
     int64_t msl_mm = 0;
-    solution_.alt_msl_valid = parse_scaled(f[9], 1000, msl_mm) &&
+    solution_.alt_msl_valid = parse_scaled(fields[9], 1000, msl_mm) &&
                               msl_mm >= kAltitudeFloorM * 1000 &&
                               msl_mm <= kAltitudeCeilingM * 1000;
     solution_.alt_hae_valid = solution_.alt_msl_valid;
