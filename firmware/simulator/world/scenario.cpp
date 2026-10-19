@@ -38,7 +38,7 @@ std::vector<std::string> objects_in_array(const std::string& text, const char* k
 
 long int_or(const json::Reader& r, const char* key, long fallback) {
     long v = 0;
-    return r.get_int(key, v) ? v : fallback;
+    return r.read_integer(key, v) ? v : fallback;
 }
 
 bool event_from(const json::Reader& r, ScenarioEvent& out) {
@@ -92,9 +92,9 @@ bool parse_scenario(const char* json, int length, Scenario& out) {
     const json::Reader top(json, length);
 
     char buffer[64] = {0};
-    if (top.get_string("name", buffer, sizeof(buffer))) out.name = buffer;
-    if (top.get_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
-    if (top.get_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
+    if (top.read_string("name", buffer, sizeof(buffer))) out.name = buffer;
+    if (top.read_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
+    if (top.read_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
 
     out.latitude_1e7 = static_cast<int32_t>(int_or(top, "lat_1e7", out.latitude_1e7));
     out.longitude_1e7 = static_cast<int32_t>(int_or(top, "lon_1e7", out.longitude_1e7));
@@ -107,7 +107,7 @@ bool parse_scenario(const char* json, int length, Scenario& out) {
     for (const std::string& obj : objects_in_array(text, "aircraft")) {
         const json::Reader r(obj.c_str(), static_cast<int>(obj.size()));
         ScenarioAircraft a;
-        if (r.get_string("system", buffer, sizeof(buffer))) a.system = system_from(buffer);
+        if (r.read_string("system", buffer, sizeof(buffer))) a.system = system_from(buffer);
         a.north_m = static_cast<double>(int_or(r, "north_m", 0));
         a.east_m = static_cast<double>(int_or(r, "east_m", 0));
         a.up_m = static_cast<double>(int_or(r, "up_m", 0));

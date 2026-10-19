@@ -103,8 +103,8 @@ int RadioService::phase_at(uint64_t now_us) const {
 
 void RadioService::take_switching(uint32_t now_ms) {
     const ports::RfSwitching s = context_.roles.rf.switching();
-    context_.state.rf.timing_stats.record_switching(s.hop_us, s.to_oband_us, s.to_mband_us,
-                                                    s.late_starts);
+    context_.state.rf.timing_statistics.record_switching(s.hop_us, s.to_o_band_us, s.to_m_band_us,
+                                                         s.late_starts);
     if (s.switches == seen_switches_) return;
     seen_switches_ = s.switches;
     record_switch(s.last, now_ms);
@@ -117,8 +117,8 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
     value.margin_us = static_cast<int32_t>(
         std::clamp<int64_t>(change.margin_us(), std::numeric_limits<int32_t>::min(),
                             std::numeric_limits<int32_t>::max()));
-    value.took_us = diagnostics::clamp_u16(change.took_us());
-    value.gap_us = diagnostics::clamp_u16(change.gap_us());
+    value.took_us = clamp_u16(change.took_us());
+    value.gap_us = clamp_u16(change.gap_us());
     value.kind = kind_of(change);
     value.armed_ahead = change.armed_ahead;
     value.late = change.late_start();
@@ -132,8 +132,8 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
 diagnostics::SwitchKind RadioService::kind_of(const ports::RfSwitch& change) {
     if (change.from == ports::RfMode::Idle) return diagnostics::SwitchKind::Wake;
     if (change.from != change.to)
-        return change.to == ports::RfMode::RxOband ? diagnostics::SwitchKind::ToOband
-                                                   : diagnostics::SwitchKind::ToMband;
+        return change.to == ports::RfMode::RxOBand ? diagnostics::SwitchKind::ToOBand
+                                                   : diagnostics::SwitchKind::ToMBand;
     return change.from_hz != change.to_hz ? diagnostics::SwitchKind::Hop
                                           : diagnostics::SwitchKind::Retune;
 }
@@ -222,7 +222,7 @@ uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
 }
 
 ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {
-    return plan.band == timing::Band::O ? ports::RfMode::RxOband : ports::RfMode::RxMband;
+    return plan.band == timing::Band::O ? ports::RfMode::RxOBand : ports::RfMode::RxMBand;
 }
 
 // The M band carries two systems past one sync window. The O band carries the
@@ -244,10 +244,10 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
-    plan.bitrate = protocol::kMbandChipRateBps;
-    plan.fdev_hz = protocol::kMbandDeviationHz;
-    plan.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
-    plan.gaussian_bt_e2 = protocol::kMbandGaussianBtE2;
+    plan.bitrate = protocol::kMBandChipRateBps;
+    plan.fdev_hz = protocol::kMBandDeviationHz;
+    plan.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
+    plan.gaussian_bt_e2 = protocol::kMBandGaussianBtE2;
 }
 
 // INFO: fc 15sep26 the gates a burst waits on clear inside the dwell, ports::Rf::arm() joins it
@@ -331,7 +331,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
     // air-time budget already refused to arm, counted apart from a dwell that
     // was armed and then missed its outcome.
     if (first.over_budget) {
-        context_.state.rf.timing_stats.record_refused();
+        context_.state.rf.timing_statistics.record_refused();
         if (!held_logged_) {
             log_refusal(radio::Verdict::Held, slot, now_ms);
             held_logged_ = true;
@@ -378,7 +378,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
                 return;
             }
             if (role == Role::Current) {
-                context_.state.rf.timing_stats.record_missed();
+                context_.state.rf.timing_statistics.record_missed();
                 log_refusal(radio::Verdict::Unarmed, slot, now_ms);
             }
             continue;
@@ -411,7 +411,7 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
                                 const timing::Transmitter::Attempt& first, int phase, Role role,
                                 bool carried_tx, uint32_t now_ms) {
     if (role == Role::Next) return;
-    context_.state.rf.timing_stats.record_missed();
+    context_.state.rf.timing_statistics.record_missed();
     if (carried_tx) log_refusal(radio::Verdict::Unarmed, slot, now_ms);
     record_dwell(slot, first, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
 }
@@ -430,8 +430,8 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_
     if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
-    return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.data,
-                                                        protocol::kAdslFrameBytes, chips));
+    return static_cast<uint8_t>(protocol::m_band_payload(protocol::kAdslSyncWord, outgoing_.data,
+                                                         protocol::kAdslFrameBytes, chips));
 }
 
 void RadioService::record_dwell(const timing::SlotPlan& slot,
@@ -479,7 +479,7 @@ void RadioService::log_refusal(radio::Verdict outcome, const timing::SlotPlan& s
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = slot.band;
-    entry.channel = slot.frequency_hz == timing::kMband1Hz ? 1 : 0;
+    entry.channel = slot.frequency_hz == timing::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
@@ -541,7 +541,7 @@ void RadioService::expire(Armed& dwell, uint64_t now_us) {
 void RadioService::miss(Armed& dwell) {
     for (const Payload payload : kEveryPayload) {
         if (!dwell.carries(payload)) continue;
-        context_.state.rf.timing_stats.record_missed();
+        context_.state.rf.timing_statistics.record_missed();
         dwell.drop(payload);
     }
 }

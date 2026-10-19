@@ -159,7 +159,7 @@ TEST_CASE("scenario: uplink RX merges with direct RX (dedup, prefer direct)") {
     uint8_t frame[protocol::AdslUplink::kFrameBytes];
     REQUIRE(codec.encode(&up, 1, 0, frame) == Status::Ok);
     model::AircraftObservation decoded[4];
-    protocol::AdslUplink::DecodeStats st;
+    protocol::AdslUplink::DecodeStatistics st;
     REQUIRE(codec.decode(frame, decoded, 4, st) == Status::Ok);
     REQUIRE(st.targets == 1);
     table.update(decoded[0], own.utc_s);

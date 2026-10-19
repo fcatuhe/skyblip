@@ -247,9 +247,9 @@ void World::relay(uint64_t epoch_us, const model::Ownship& own) {
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     if (uplink_.encode(relayed, n, /*key_index=*/0, frame) != Status::Ok) return;
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_length = protocol::encode_oband(frame, burst);
+    const size_t burst_length = protocol::encode_o_band(frame, burst);
 
-    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, timing::kObandHz,
+    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, timing::kOBandHz,
               burst, static_cast<uint16_t>(burst_length), rssi_at(kGroundStationRangeM),
               protocol::kUplinkChipRateBps);
 }
@@ -275,8 +275,8 @@ size_t callsign_burst(const VirtualAircraft& aircraft, uint8_t* chips) {
     protocol::from_own_callsign(p, aircraft.address, 6, aircraft.callsign);
     p.scramble();
     p.set_crc();
-    return protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
-                                  chips);
+    return protocol::encode_m_band(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
+                                   chips);
 }
 
 size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altitude_m,
@@ -303,8 +303,8 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     p.velocity_accuracy = 2;
     p.scramble();
     p.set_crc();
-    return protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
-                                  chips);
+    return protocol::encode_m_band(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
+                                   chips);
 }
 
 // An ALP-TAS aircraft carries a FLARM-taxonomy address, so the address type says
@@ -330,8 +330,8 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
     if (protocol::alptas_encode(frame, observation, utc_s, latitude_1e7, longitude_1e7) !=
         Status::Ok)
         return 0;
-    return protocol::encode_mband(protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes,
-                                  chips);
+    return protocol::encode_m_band(protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes,
+                                   chips);
 }
 
 }  // namespace
@@ -401,7 +401,7 @@ void World::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint
         timing::kCallsignEndMs - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
     const int phase_ms = first_ms + static_cast<int>((aircraft.address * 2654435761u) %
                                                      static_cast<uint32_t>(last_ms - first_ms));
-    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, timing::kMband1Hz, chips,
+    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, timing::kMBand1Hz, chips,
               static_cast<uint8_t>(chip_length), rssi_at(range_m));
 }
 

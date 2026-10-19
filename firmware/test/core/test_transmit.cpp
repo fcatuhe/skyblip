@@ -58,7 +58,7 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
                   Transmitter::kCompletionGuardMs <=
               Scheduler::dwell_end(0));
-        CHECK(a.frequency_hz == kMband0Hz);
+        CHECK(a.frequency_hz == kMBand0Hz);
         if (a.at_ms < earliest) earliest = a.at_ms;
         if (a.at_ms > latest) latest = a.at_ms;
     }
@@ -126,7 +126,7 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
     for (uint32_t utc_s = 1; utc_s < 400; utc_s += 2) {  // the odd seconds are the upper channel's
         const Transmitter::Attempt a = t.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
-        CHECK(a.frequency_hz == kMband1Hz);
+        CHECK(a.frequency_hz == kMBand1Hz);
         CHECK(a.at_ms >= kSlot1StartMs);
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
                   Transmitter::kCompletionGuardMs <=
@@ -138,19 +138,19 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
 
 TEST_CASE("transmit: consecutive transmissions alternate channel and slot") {
     Transmitter t = airborne_transmitter();
-    CHECK(t.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMband0Hz);
+    CHECK(t.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMBand0Hz);
     CHECK_FALSE(position_burst(t.attempt(slot_plan(900), 10, 10000, true, 0)));
     t.sent(10, 10500);
     CHECK_FALSE(t.attempt(slot_plan(500), 11, 11000, true, 0).go);
-    CHECK(t.attempt(slot_plan(900), 11, 11000, true, 0).frequency_hz == kMband1Hz);
+    CHECK(t.attempt(slot_plan(900), 11, 11000, true, 0).frequency_hz == kMBand1Hz);
 }
 
 // A burst refused for any reason used to shift the alternation for ever after.
 TEST_CASE("transmit: a missed transmission does not put the channel out of step") {
     Transmitter t = airborne_transmitter();
-    CHECK(t.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMband0Hz);
-    CHECK(t.attempt(slot_plan(500), 12, 12000, true, 0).frequency_hz == kMband0Hz);
-    CHECK(t.attempt(slot_plan(900), 13, 13000, true, 0).frequency_hz == kMband1Hz);
+    CHECK(t.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMBand0Hz);
+    CHECK(t.attempt(slot_plan(500), 12, 12000, true, 0).frequency_hz == kMBand0Hz);
+    CHECK(t.attempt(slot_plan(900), 13, 13000, true, 0).frequency_hz == kMBand1Hz);
 }
 
 // §G.1.16: at least 1 Hz airborne, 0.1 Hz on the ground, one second of UTC's own ten.
@@ -186,7 +186,7 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every ten"
     const Transmitter::Attempt a = t.attempt(tail, due, due * 1000, true, 0, kName);
     REQUIRE(a.go);
     CHECK(a.payload == kName);
-    CHECK(a.frequency_hz == kMband1Hz);
+    CHECK(a.frequency_hz == kMBand1Hz);
     CHECK(a.at_ms >= kCallsignStartMs);
     CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kCallsignEndMs);
 

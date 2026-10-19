@@ -211,7 +211,7 @@ const char* ConfigService::prompt_detail() const {
 void ConfigService::request_firmware(const json::Reader& reader) {
     char text[dfu::kVersionTextBytes];
     ports::ImageVersion version;
-    if (!reader.get_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
+    if (!reader.read_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
         acknowledge(false, "no_version");
         return;
     }
@@ -278,7 +278,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     int bytes = frame.bytes;
     json::Reader reader(data, bytes);
     char command[16] = {0};
-    if (!reader.get_string("cmd", command, sizeof(command))) {
+    if (!reader.read_string("cmd", command, sizeof(command))) {
         acknowledge(false, "no_cmd");
         return;
     }

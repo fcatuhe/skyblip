@@ -137,7 +137,7 @@ TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock
     CHECK(up.encode(tx, n, /*key=*/0, frame) == Status::Ok);
 
     model::AircraftObservation rx[AdslUplink::kMaxTargets];
-    AdslUplink::DecodeStats st;
+    AdslUplink::DecodeStatistics st;
     CHECK(up.decode(frame, rx, n, st) == Status::Ok);
     CHECK(st.targets == n);
     CHECK(st.corrected == 0);
@@ -169,7 +169,7 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
         frame[position] ^= static_cast<uint8_t>(0x80 | (rng.next() & 0x7F));
     }
     model::AircraftObservation rx[4];
-    AdslUplink::DecodeStats st;
+    AdslUplink::DecodeStatistics st;
     CHECK(up.decode(frame, rx, 4, st) == Status::Ok);
     CHECK(st.corrected == 16);
     CHECK(st.targets == 4);
@@ -184,7 +184,7 @@ TEST_CASE("uplink: a destroyed frame is DETECTED (Status::Crc), never silently w
     REQUIRE(up.encode(tx, 2, 0, frame) == Status::Ok);
     for (int i = 0; i < 40; i++) frame[i] ^= 0xFF;  // 40 > 16 errors
     model::AircraftObservation rx[2];
-    AdslUplink::DecodeStats st;
+    AdslUplink::DecodeStatistics st;
     Status s = up.decode(frame, rx, 2, st);
     CHECK(s == Status::Crc);  // detected, not delivered
 }
@@ -256,7 +256,7 @@ TEST_CASE("uplink: a record with no address and no place on the globe is refused
     REQUIRE(up.encode(tx, 3, 0, frame) == Status::Ok);
 
     model::AircraftObservation rx[3];
-    AdslUplink::DecodeStats st;
+    AdslUplink::DecodeStatistics st;
     CHECK(up.decode(frame, rx, 3, st) == Status::Ok);
     CHECK(st.targets == 1);
     CHECK(st.rejected == 2);

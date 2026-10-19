@@ -66,13 +66,13 @@ void make_worst_case(ConfigService& config) {
 
 // Two weeks of bench: one PPS edge a second puts a bucket into seven figures,
 // and a histogram that loses its last bucket is not evidence.
-void run_bench(timing::SlotTimingStats& stats) {
+void run_bench(timing::SlotTimingStatistics& statistics) {
     for (uint32_t i = 0; i < 1200000u; i++) {
-        stats.record_edge(static_cast<uint64_t>(i) * 1000000u, true);
-        stats.record_dwell_phase(static_cast<int64_t>(i % 7) * 3000 - 9000);
+        statistics.record_edge(static_cast<uint64_t>(i) * 1000000u, true);
+        statistics.record_dwell_phase(static_cast<int64_t>(i % 7) * 3000 - 9000);
     }
-    stats.record_missed();
-    stats.record_refused();
+    statistics.record_missed();
+    statistics.record_refused();
 }
 
 std::string joined(const platform::host::Link& link) {
@@ -227,8 +227,8 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
 }
 
 TEST_CASE("comms: the bench's timing report is one frame on a wide link and several on a narrow") {
-    timing::SlotTimingStats stats;
-    run_bench(stats);
+    timing::SlotTimingStatistics statistics;
+    run_bench(statistics);
     go::Settings settings = go::defaults();
 
     // A phone that negotiated the whole L2CAP MTU: one frame, and it says so.
@@ -236,7 +236,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     wide.raise_link(1);
     wide.declare_payload_bytes(495);
     go::SettingsStore store_on_wide(settings, kWidestAddress);
-    ConfigService on_wide(wide, store_on_wide, nullptr, &stats);
+    ConfigService on_wide(wide, store_on_wide, nullptr, &statistics);
     on_wide.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(wide.sent.size() == 1);
     CHECK(wide.last().bytes.find("\"part\":0") != std::string::npos);
@@ -250,7 +250,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     narrow.raise_link(1);
     narrow.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_on_narrow(settings, kWidestAddress);
-    ConfigService on_narrow(narrow, store_on_narrow, nullptr, &stats);
+    ConfigService on_narrow(narrow, store_on_narrow, nullptr, &statistics);
     on_narrow.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(narrow.sent.size() > 1);
     CHECK(narrow.sent.back().bytes.find("\"more\":false") != std::string::npos);
@@ -281,7 +281,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     hopeless.raise_link(1);
     hopeless.declare_payload_bytes(64);
     go::SettingsStore store_on_hopeless(settings, kWidestAddress);
-    ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &stats);
+    ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &statistics);
     on_hopeless.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     CHECK(hopeless.sent.empty());
     CHECK(on_hopeless.link_drops() == 1);
@@ -337,15 +337,15 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
 
 // The notify share cut a report at its first refusal, and the phone waited on "more".
 TEST_CASE("comms: a report the link takes one frame at a time arrives whole and in order") {
-    timing::SlotTimingStats stats;
-    run_bench(stats);
+    timing::SlotTimingStatistics statistics;
+    run_bench(statistics);
     go::Settings settings = go::defaults();
 
     platform::host::Link free_link;
     free_link.raise_link(1);
     free_link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_free(settings, kWidestAddress);
-    ConfigService on_free(free_link, store_free, nullptr, &stats);
+    ConfigService on_free(free_link, store_free, nullptr, &statistics);
     on_free.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(free_link.sent.size() > 1);
 
@@ -354,7 +354,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     busy.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     busy.hold_after(1);
     go::SettingsStore store_busy(settings, kWidestAddress);
-    ConfigService on_busy(busy, store_busy, nullptr, &stats);
+    ConfigService on_busy(busy, store_busy, nullptr, &statistics);
     on_busy.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
     CHECK(on_busy.replying());

@@ -74,15 +74,15 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    timing::SlotTimingStats stats;
-    stats.record_edge(0, true);
-    stats.record_edge(1000000, true);  // one clean second: centre bucket
-    stats.record_dwell_phase(200);     // inside the hop guard
-    stats.record_missed();
-    stats.record_refused();
-    stats.record_refused();
+    timing::SlotTimingStatistics statistics;
+    statistics.record_edge(0, true);
+    statistics.record_edge(1000000, true);  // one clean second: centre bucket
+    statistics.record_dwell_phase(200);     // inside the hop guard
+    statistics.record_missed();
+    statistics.record_refused();
+    statistics.record_refused();
     go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store, nullptr, &stats);
+    ConfigService config(link, store, nullptr, &statistics);
 
     config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(!link.sent.empty());
@@ -257,10 +257,10 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    timing::SlotTimingStats stats;
-    stats.record_refused();
+    timing::SlotTimingStatistics statistics;
+    statistics.record_refused();
     go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store, nullptr, &stats);
+    ConfigService config(link, store, nullptr, &statistics);
 
     config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     REQUIRE(!link.sent.empty());
@@ -403,12 +403,12 @@ TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    timing::SlotTimingStats stats;
-    stats.record_edge(0, true);
-    stats.record_edge(1000000, true);
-    stats.record_missed();
+    timing::SlotTimingStatistics statistics;
+    statistics.record_edge(0, true);
+    statistics.record_edge(1000000, true);
+    statistics.record_missed();
     go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store, nullptr, &stats);
+    ConfigService config(link, store, nullptr, &statistics);
     config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     const std::string body = joined(link);
     CHECK(body.find("\"pps_samples\":1") != std::string::npos);
@@ -426,10 +426,10 @@ TEST_CASE("comms: the timing report says what each dwell change cost the executo
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    timing::SlotTimingStats stats;
-    stats.record_switching(95, 310, 285, 2);
+    timing::SlotTimingStatistics statistics;
+    statistics.record_switching(95, 310, 285, 2);
     go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store, nullptr, &stats);
+    ConfigService config(link, store, nullptr, &statistics);
     config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     const std::string body = joined(link);
     CHECK(body.find("\"switch_hop_us\":95") != std::string::npos);

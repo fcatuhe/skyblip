@@ -80,7 +80,7 @@ class AlarmService : public runtime::Service {
     power::OnTime vibrating_{};
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
-    uint32_t recorded_observation_ms_[traffic::TrafficTable::kCapacity]{};
+    uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     bool dirty_{false};

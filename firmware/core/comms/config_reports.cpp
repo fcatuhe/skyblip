@@ -67,11 +67,11 @@ void ConfigService::push_status() {
 // evidence it was asked for. A frame that cannot be produced at all is counted
 // and the rest of the report is abandoned rather than sent with a hole in it.
 void ConfigService::send_timing() {
-    if (timing_stats_ == nullptr) {
+    if (timing_statistics_ == nullptr) {
         acknowledge(false, "no_stats");
         return;
     }
-    start_report(timing_report_, kTimingFrameBytes, *timing_stats_);
+    start_report(timing_report_, kTimingFrameBytes, *timing_statistics_);
 }
 
 // The durable-write half of the same bench: the settings writes the device made,

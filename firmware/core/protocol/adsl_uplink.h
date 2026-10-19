@@ -55,7 +55,7 @@ class AdslUplink {
         (fec::ReedSolomon255::kDataBytes - kHeaderBytes) / kRecordBytes;
     static constexpr int kFrameBytes = fec::ReedSolomon255::kCodewordBytes;
 
-    struct DecodeStats {
+    struct DecodeStatistics {
         int targets{0};
         int corrected{0};
         // Records the frame carried and the decoder refused. Reed-Solomon can
@@ -71,7 +71,7 @@ class AdslUplink {
                   uint8_t out_frame[kFrameBytes]) const;
 
     Status decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
-                  int capacity, DecodeStats& stats) const;
+                  int capacity, DecodeStatistics& statistics) const;
 
    private:
     fec::ReedSolomon255 rs_;

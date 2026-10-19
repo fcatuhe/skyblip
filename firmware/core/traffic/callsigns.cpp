@@ -46,7 +46,7 @@ int CallsignTable::count() const {
 void CallsignTable::clear() { slots_ = {}; }
 
 int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) const {
-    for (int i = 0; i < kCapacity; i++) {
+    for (int i = 0; i < kMaxCallsigns; i++) {
         const Entry& e = slots_[static_cast<size_t>(i)];
         if (e.used && e.address == address && e.address_mapping_table == address_mapping_table)
             return i;
@@ -56,7 +56,7 @@ int CallsignTable::find_slot(uint8_t address_mapping_table, uint32_t address) co
 
 int CallsignTable::oldest_slot() const {
     int victim = -1;
-    for (int i = 0; i < kCapacity; i++) {
+    for (int i = 0; i < kMaxCallsigns; i++) {
         const Entry& e = slots_[static_cast<size_t>(i)];
         if (!e.used) return i;
         if (victim < 0 || e.heard_s < slots_[static_cast<size_t>(victim)].heard_s) victim = i;

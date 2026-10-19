@@ -74,12 +74,12 @@ Status AdslUplink::encode(const model::AircraftObservation* targets, int count, 
 }
 
 Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
-                          int capacity, DecodeStats& stats) const {
+                          int capacity, DecodeStatistics& statistics) const {
     uint8_t cw[fec::ReedSolomon255::kCodewordBytes];
     std::memcpy(cw, frame, sizeof(cw));
     int corrected = rs_.decode(cw);
     if (corrected < 0) return Status::Crc;
-    stats.corrected = corrected;
+    statistics.corrected = corrected;
 
     uint8_t data[fec::ReedSolomon255::kDataBytes];
     std::memcpy(data, cw, fec::ReedSolomon255::kDataBytes);
@@ -96,12 +96,12 @@ Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObser
         model::AircraftObservation target{};
         unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, target);
         if (!plausible(target)) {
-            stats.rejected++;
+            statistics.rejected++;
             continue;
         }
         targets[out++] = target;
     }
-    stats.targets = out;
+    statistics.targets = out;
     return Status::Ok;
 }
 

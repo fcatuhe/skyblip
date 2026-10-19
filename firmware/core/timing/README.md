@@ -44,7 +44,7 @@ That number answers a question the counters cannot: a device hearing nothing at 
 
 EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what this product declares. `AirTime` is the evidence: sixty one-minute buckets on a ring that turns by elapsed time, so the hour that straddles `millis()`'s 49.7-day wrap is an hour like any other.
 
-At the design rate of one 5 ms burst per second we sit at half the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStats::refused()` counts it.
+At the design rate of one 5 ms burst per second we sit at half the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
 
 ## What the dwell map is for
 

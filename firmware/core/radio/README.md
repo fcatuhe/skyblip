@@ -47,7 +47,7 @@ A window noise walked through is counted in `air.rx_noise` and written nowhere e
 
 There is no verdict for a burst the radio declined to send, because nothing declines: the instant is drawn inside the slot and the PA keys there whatever the receiver is hearing (`core/timing/README.md`). A dwell that carried a burst and reported nothing is `Lost`.
 
-The page spends no row on the difference between `Lost` and `Unarmed`: both read `LOST`, because both mean the burst did not go out and what separates them is ours, not the reader's. The distinction survives where it is acted on, in the entry and in `timing_stats`.
+The page spends no row on the difference between `Lost` and `Unarmed`: both read `LOST`, because both mean the burst did not go out and what separates them is ours, not the reader's. The distinction survives where it is acted on, in the entry and in `timing_statistics`.
 
 `Entry::airborne` is own-ship's flight state when the row was written, and the page prints it as `AIR` or `GND` on every burst of ours. It is per entry for the same reason the date is: §G.1.16 transmits at 1 Hz in the air and 0.1 Hz on the ground, and the tape outlives a takeoff. The page used to draw the live flag on all sixteen rows, so one takeoff rewrote the schedule the whole tape claimed to have gone out on.
 
@@ -75,7 +75,7 @@ Neither figure is on the page. Both are microseconds of this CPU and of the chip
 
 A reception is dated where the radio raised it: the executor stamps the instant it saw DIO1 go up, or the instant it began the status read, never the instant the read-out ended. Reading 58 chip-bytes out of the buffer costs milliseconds on a bench, and it used to sit between the burst and its own timestamp, which is what made one link's two stamps read 2 to 3 ms apart. DIO1 stays a level, not an edge: a dwell is driven by a deadline (`boards/lilygo/t_echo_plus/t_echo_plus.dts`).
 
-The capacity is what one screen holds. Nothing is kept that could not be shown: this is a tape of what is happening now, not a history to scroll back through. `products/skyblip_go/pages/radio_log.cpp` draws exactly `Log::kCapacity` rows for that reason.
+The capacity is what one screen holds. Nothing is kept that could not be shown: this is a tape of what is happening now, not a history to scroll back through. `products/skyblip_go/pages/radio_log.cpp` draws exactly `Log::kMaxEntries` rows for that reason.
 
 ## What the counters hold
 
@@ -107,7 +107,7 @@ All eleven reach `core/comms/diagnostics.h`'s radio group, so they leave on the 
 
 `go::RadioService` writes the two the air never sees. A burst its own policy refused reaches no executor and raises no event, so before `Held` and `Unarmed` existed the counters moved and the page stayed silent - which reads exactly like a dead transmitter to the one person looking at it. `Held` is the hour's allowance holding every burst until it frees up, and `Unarmed` is the executor refusing a plan that cannot complete inside its own dwell.
 
-`Held` is recorded once per spell, not once per refusal. The allowance holds for minutes at a time and a row a second would push the sky itself off a sixteen-row tape, so the row says when the spell began and `timing_stats.refused()` counts every one. The next completed burst ends the spell, and a refusal after that is a new one. `Unarmed` is written only for a plan that carried a burst: a receive dwell the executor refused is a deafness, not a transmission, and it keeps its counter in `timing_stats.missed()` until the page has somewhere honest to put it.
+`Held` is recorded once per spell, not once per refusal. The allowance holds for minutes at a time and a row a second would push the sky itself off a sixteen-row tape, so the row says when the spell began and `timing_statistics.refused()` counts every one. The next completed burst ends the spell, and a refusal after that is a new one. `Unarmed` is written only for a plan that carried a burst: a receive dwell the executor refused is a deafness, not a transmission, and it keeps its counter in `timing_statistics.missed()` until the page has somewhere honest to put it.
 
 ## On a bench
 

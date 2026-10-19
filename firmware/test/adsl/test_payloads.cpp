@@ -100,7 +100,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 se
 // The uplink carried here is the ground station's own, on the channel and in the slot G.3 names.
 TEST_CASE(
     "ADS-L.4.SRD860.G.3: the Traffic Uplink rides the O-band HDR channel in the Uplink slot") {
-    CHECK(timing::kObandHz == 869525000u);
+    CHECK(timing::kOBandHz == 869525000u);
     CHECK(protocol::kUplinkChipRateBps == 200000u);
     CHECK(timing::kUplinkRxStartMs >= 200);
     CHECK(timing::kUplinkRxEndMs <= 450);
@@ -120,11 +120,11 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
     REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);
 
     model::AircraftObservation out[4]{};
-    protocol::AdslUplink::DecodeStats stats{};
-    REQUIRE(uplink.decode(frame, out, 4, stats) == Status::Ok);
-    CHECK(stats.targets == 2);
-    CHECK(stats.rejected == 2);
-    for (int i = 0; i < stats.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(frame, out, 4, statistics) == Status::Ok);
+    CHECK(statistics.targets == 2);
+    CHECK(statistics.rejected == 2);
+    for (int i = 0; i < statistics.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
 }
 
 // TODO: fc 18sep26 the uplink frame is a house format: 16-byte records, no verbatim payload

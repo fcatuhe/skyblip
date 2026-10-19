@@ -30,7 +30,7 @@ bool named_store(json::Writer& writer, LogStore store) {
 
 bool parse_store(const json::Reader& reader, LogRequest& request) {
     char name[16] = {0};
-    if (!reader.get_string("log", name, sizeof(name))) return true;
+    if (!reader.read_string("log", name, sizeof(name))) return true;
     for (LogStore store : {LogStore::Flights, LogStore::Diagnostics}) {
         if (std::strcmp(name, log_store_name(store)) != 0) continue;
         request.store = store;
@@ -95,21 +95,21 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
         return request;
     }
     char command[16] = {0};
-    if (!reader.get_string("cmd", command, sizeof(command))) return request;
+    if (!reader.read_string("cmd", command, sizeof(command))) return request;
 
     if (std::strcmp(command, "list") == 0) {
         request.command = LogCommand::List;
         long value = 0;
-        request.index_valid = reader.get_int("index", value);
+        request.index_valid = reader.read_integer("index", value);
         request.index = request.index_valid ? non_negative(value) : 0;
     } else if (std::strcmp(command, "erase") == 0) {
         request.command = LogCommand::Erase;
     } else if (std::strcmp(command, "read") == 0) {
         request.command = LogCommand::Read;
-        if (!reader.get_uint("session", request.session)) return request;
+        if (!reader.read_unsigned("session", request.session)) return request;
         long value = 0;
-        request.from = reader.get_int("from", value) ? non_negative(value) : 0;
-        request.count = reader.get_int("count", value) ? clamped_chunk_count(value) : 1;
+        request.from = reader.read_integer("from", value) ? non_negative(value) : 0;
+        request.count = reader.read_integer("count", value) ? clamped_chunk_count(value) : 1;
     } else {
         return request;
     }

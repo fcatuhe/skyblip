@@ -12,7 +12,7 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/timing/slot.h"
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
@@ -46,9 +46,9 @@ struct Peer {
         config.sync = protocol::kSharedSync;
         config.sync_bits = protocol::kSharedSyncBits;
         config.payload_bytes = protocol::kRxChipBytes;
-        config.bitrate = protocol::kMbandChipRateBps;
-        config.fdev_hz = protocol::kMbandDeviationHz;
-        config.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
+        config.bitrate = protocol::kMBandChipRateBps;
+        config.fdev_hz = protocol::kMBandDeviationHz;
+        config.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
         REQUIRE(radio.configure_radio(config) == Status::Ok);
         REQUIRE(radio.start_receive() == Status::Ok);
     }
@@ -61,7 +61,7 @@ struct Peer {
         const parts::RadioEvent event = radio.poll(buffer, sizeof(buffer));
         REQUIRE(radio.start_receive() == Status::Ok);
         if (event.type != parts::RadioEventType::RxDone) return false;
-        return protocol::receive_mband(buffer, event.length, out);
+        return protocol::receive_m_band(buffer, event.length, out);
     }
 };
 
@@ -88,7 +88,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
     simulator.step(at_ms);
     REQUIRE(
         simulator.platform().chips().radio.receive_air(burst, sizeof(burst), /*crc_error=*/false,
-                                                       /*rssi=*/-112, protocol::kMbandChipRateBps));
+                                                       /*rssi=*/-112, protocol::kMBandChipRateBps));
     run_on(simulator, at_ms, 200);
 
     CHECK(simulator.product().state().air.rx_noise == 1);

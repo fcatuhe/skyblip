@@ -35,7 +35,7 @@ constexpr uint32_t kTurnMaxAgeMs = 3000;
 
 class TrafficTable {
    public:
-    static constexpr int kCapacity = 48;
+    static constexpr int kMaxTargets = 48;
 
     // Our own 24-bit address. A ground station relays every aircraft it heard,
     // and it heard us: without this the uplink puts own-ship on the radar, at
@@ -66,14 +66,14 @@ class TrafficTable {
     void age_out(uint32_t now_s);
 
     int count() const;
-    const Target* at(int i) const { return (i >= 0 && i < kCapacity) ? &slots_[i] : nullptr; }
-    Target* at(int i) { return (i >= 0 && i < kCapacity) ? &slots_[i] : nullptr; }
+    const Target* at(int i) const { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
+    Target* at(int i) { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
     void clear();
 
     int find(uint8_t address_mapping_table, uint32_t address) const;
 
    private:
-    std::array<Target, kCapacity> slots_{};
+    std::array<Target, kMaxTargets> slots_{};
     model::Ownship own_{};
     uint32_t own_address_{0};
     uint8_t own_address_mapping_table_{0};

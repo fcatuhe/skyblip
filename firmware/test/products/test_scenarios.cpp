@@ -154,7 +154,7 @@ TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells
     CHECK(simulator.world().failures() == 0);
     const traffic::TrafficTable& table = simulator.product().state().traffic;
     int adsl = 0, alptas = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t == nullptr || !t->used) continue;
         if (t->observation.source == model::Source::AdslDirect) adsl++;
@@ -176,7 +176,7 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
     const traffic::TrafficTable& table = simulator.product().state().traffic;
     const model::Ownship& own = simulator.product().state().own;
     int found = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t == nullptr || !t->used || t->observation.source != model::Source::Alptas) continue;
         found++;
@@ -209,7 +209,7 @@ TEST_CASE("scenario: a gaggle in one thermal is traffic, not three collisions") 
     const traffic::TrafficTable& table = simulator.product().state().traffic;
     CHECK(table.count() == 3);
     CHECK(simulator.product().state().alarm_level == traffic::Level::None);
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t == nullptr || !t->used) continue;
         CHECK(t->alarm_level == traffic::Level::None);
@@ -257,7 +257,7 @@ struct Encounter {
 };
 
 const traffic::Target* only_target(const bus::State& state) {
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = state.traffic.at(i);
         if (t != nullptr && t->used) return t;
     }
@@ -423,7 +423,7 @@ TEST_CASE("scenario: a takeoff and a landing bracket one flight log session") {
 // one O-band frame, alongside one neighbour it hears for itself on the M band.
 //
 // Before 2026-08-05 this scenario produced exactly one target. The uplink frame
-// went to protocol::receive_mband, which frames the M band's two systems and
+// went to protocol::receive_m_band, which frames the M band's two systems and
 // nothing else, so it failed there and was counted as rx_bad: the feature was
 // absent and its absence was indistinguishable from a noisy site.
 TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot hear") {
@@ -436,7 +436,7 @@ TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot h
     const bus::State& state = simulator.product().state();
 
     int direct = 0, relayed = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = state.traffic.at(i);
         if (t == nullptr || !t->used) continue;
         if (t->observation.source == model::Source::AdslDirect) direct++;

@@ -2,7 +2,7 @@
 //
 // The tree had an ADS-L uplink codec, a Reed-Solomon suite around it and a
 // radio service that armed the O-band dwell for its sync word - and no product
-// caller at all. Every RxDone went to protocol::receive_mband, which frames the
+// caller at all. Every RxDone went to protocol::receive_m_band, which frames the
 // two M-band systems and nothing else, so an uplink frame that arrived was
 // counted as rx_bad and thrown away. Feature::UplinkRx had no reader, so the
 // capability the product claimed - ADS-L uplink receive - was not one it had.
@@ -80,7 +80,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, in
     }
 
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_length = protocol::encode_oband(frame, burst);
+    const size_t burst_length = protocol::encode_o_band(frame, burst);
 
     // Into the dwell, not around it: the radio has to have opened the O-band
     // window (205 ms, one jitter guard before the ground station starts) before
@@ -122,15 +122,15 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                       protocol::kAdslFrameBytes, chips);
 
     // 500 ms is inside the direct slot and inside the first M-band dwell.
     rig.run(t, t + 500);
     rig.platform.clock().set_millis(t + 500);
     rig.platform.chips().radio.receive_air(chips, static_cast<uint16_t>(chip_length),
                                            /*crc_error=*/false, /*rssi=*/-70,
-                                           protocol::kMbandChipRateBps);
+                                           protocol::kMBandChipRateBps);
     rig.run(t + 500, t + 950);
     t += 1000;
     rig.utc_offset_s++;
@@ -145,7 +145,7 @@ const traffic::Target* target_for(Rig& rig, uint32_t address) {
 int sourced(Rig& rig, model::Source source) {
     const traffic::TrafficTable& table = rig.state().traffic;
     int n = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t != nullptr && t->used && t->observation.source == source) n++;
     }
@@ -404,7 +404,7 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
     rig.product.run_pass(t + timing::kGroundEmitStartMs);
     // The chip reports what its PLL word resolves to, which is a hertz or two
     // off the channel it was asked for.
-    CHECK(timing::kObandHz - chip.frequency_hz < 100);
+    CHECK(timing::kOBandHz - chip.frequency_hz < 100);
     CHECK(chip.bitrate == protocol::kUplinkChipRateBps);
     CHECK(chip.pulse_shape == parts::sx::kGaussianBt0p5);
     CHECK(chip.rx_bandwidth == 0x19);
@@ -420,7 +420,7 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
 
     // And back on the M band, §C.2's, which is not the same modulation.
     rig.run(t + timing::kGroundEmitStartMs + 10, t + 500);
-    CHECK(chip.bitrate == protocol::kMbandChipRateBps);
+    CHECK(chip.bitrate == protocol::kMBandChipRateBps);
     CHECK(chip.pulse_shape == parts::sx::kGaussianBt0p5);
     CHECK(chip.payload_bytes == protocol::kRxChipBytes);
     t += 1000;
@@ -441,7 +441,7 @@ TEST_CASE("uplink: a 200 kbps burst is not heard by a dwell framing 100 kbps") {
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(&relayed, 1, 0, frame) == Status::Ok);
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_length = protocol::encode_oband(frame, burst);
+    const size_t burst_length = protocol::encode_o_band(frame, burst);
 
     // In the direct slot, where the radio is on the M band at 100 kbps.
     rig.push_timed_fix(25000, 900);

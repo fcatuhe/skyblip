@@ -18,7 +18,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `since_edge_ms` |
 | `traffic` | `traffic` |
 | `radio_log` | `traffic` for what was received, `radio` for what was sent |
-| `rf` | `radio`, except `rf.timing_stats`, whose PPS half is the board's |
+| `rf` | `radio`, except `rf.timing_statistics`, whose PPS half is the board's |
 | `air` | `traffic` |
 | `power` | `power` |
 | `flight` | `ownship` |
@@ -32,7 +32,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `panel_presented` | `screen` |
 | `started` | the product |
 
-Four entries have more than one writer and all four are deliberate. `clock`, `gnss` and `rf.timing_stats` are split between the board, which is the only code holding the part and therefore the only code that can say when the PPS edge arrived or why the receiver refused a solution, and the services that decide what to do with either. `radio_log` is one ring with two ends of the same conversation in it.
+Four entries have more than one writer and all four are deliberate. `clock`, `gnss` and `rf.timing_statistics` are split between the board, which is the only code holding the part and therefore the only code that can say when the PPS edge arrived or why the receiver refused a solution, and the services that decide what to do with either. `radio_log` is one ring with two ends of the same conversation in it.
 
 `duty` is the fifth, and it is four writers rather than two: the group is a subject like the others, and the subject is what the device spent. A reader of the power budget wants the panel, the backlight, the receiver, the annunciator and the phone in one place, and each of those facts is known only to the service that drives that consumer, so the split is the same one `barometer` and `gnss` make.
 

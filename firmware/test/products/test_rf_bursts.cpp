@@ -39,8 +39,8 @@ struct Executor {
 
     static ports::RfPlan slot1() {
         ports::RfPlan plan{};
-        plan.mode = ports::RfMode::RxMband;
-        plan.frequency_hz = timing::kMband1Hz;
+        plan.mode = ports::RfMode::RxMBand;
+        plan.frequency_hz = timing::kMBand1Hz;
         plan.start_us = 800000;
         plan.end_us = 1200000;
         return plan;
@@ -105,7 +105,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
     ports::RfPlan slot0 = Executor::slot1();
-    slot0.frequency_hz = timing::kMband0Hz;
+    slot0.frequency_hz = timing::kMBand0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 797000;
     executor.clock.set_millis(400);
@@ -193,7 +193,7 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
         if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
             positions++;
             position_at_us = r.at_us;
-            position_on_channel1 = simulator::Air::tuned_to(r.frequency_hz, timing::kMband1Hz);
+            position_on_channel1 = simulator::Air::tuned_to(r.frequency_hz, timing::kMBand1Hz);
             continue;
         }
         names++;

@@ -29,12 +29,12 @@ TEST_CASE("ADS-L.4.SRD860.C.1: ADS-L runs on an M band of two channels and an O 
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.2: the M band is modulated as the table prints it") {
-    CHECK(timing::kMband0Hz == 868200000u);
-    CHECK(timing::kMband1Hz == 868400000u);
-    CHECK(protocol::kMbandChannelBandwidthHz == 200000u);
-    CHECK(protocol::kMbandChipRateBps == 100000u);
-    CHECK(protocol::kMbandDeviationHz == 50000u);
-    CHECK(protocol::kMbandGaussianBtE2 == 50u);
+    CHECK(timing::kMBand0Hz == 868200000u);
+    CHECK(timing::kMBand1Hz == 868400000u);
+    CHECK(protocol::kMBandChannelBandwidthHz == 200000u);
+    CHECK(protocol::kMBandChipRateBps == 100000u);
+    CHECK(protocol::kMBandDeviationHz == 50000u);
+    CHECK(protocol::kMBandGaussianBtE2 == 50u);
     CHECK(parts::sx::kResultingErpCentiDb <= 1400);
 }
 
@@ -74,7 +74,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.4: the sync word is 0x72 0x4B, Manchester-coded") 
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
-    protocol::encode_mband(protocol::kAdslSyncWord, frame, sizeof(frame), chips);
+    protocol::encode_m_band(protocol::kAdslSyncWord, frame, sizeof(frame), chips);
     CHECK(chips[2] == static_cast<uint8_t>(chips_of(0x72) >> 8));
     CHECK(chips[3] == static_cast<uint8_t>(chips_of(0x72)));
     CHECK(chips[4] == static_cast<uint8_t>(chips_of(0x4B) >> 8));
@@ -86,7 +86,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
         const int slot = timing::Transmitter::slot_in(utc_s, /*airborne=*/true);
         const uint32_t frequency = timing::Scheduler::slot_frequency_hz(slot);
-        CHECK((frequency == timing::kMband0Hz || frequency == timing::kMband1Hz));
+        CHECK((frequency == timing::kMBand0Hz || frequency == timing::kMBand1Hz));
         if (previous != 0) CHECK(frequency != previous);
         previous = frequency;
     }
@@ -109,7 +109,7 @@ TEST_CASE("ADS-L.4.SRD860.C.3.2: the O-band LDR preamble is 10, forty times" * d
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.4: the O-band HDR channel is modulated as the table prints it") {
-    CHECK(timing::kObandHz == 869525000u);
+    CHECK(timing::kOBandHz == 869525000u);
     CHECK(protocol::kUplinkChannelBandwidthHz == 250000u);
     CHECK(protocol::kUplinkChipRateBps == 200000u);
     CHECK(protocol::kUplinkDeviationHz == 50000u);
@@ -130,7 +130,7 @@ TEST_CASE("ADS-L.4.SRD860.C.4.3: the O-band HDR sync word is 0x2D 0xD4, uncoded"
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     frame[0] = 0xA5;
     uint8_t out[protocol::kUplinkBurstBytes] = {0};
-    CHECK(protocol::encode_oband(frame, out) == static_cast<size_t>(protocol::kUplinkBurstBytes));
+    CHECK(protocol::encode_o_band(frame, out) == static_cast<size_t>(protocol::kUplinkBurstBytes));
     CHECK(out[0] == 0x2D);
     CHECK(out[1] == 0xD4);
     CHECK(out[3] == 0xA5);
@@ -184,7 +184,7 @@ TEST_CASE(
             CHECK(a.at_ms >= timing::kCallsignStartMs);
             CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
                   timing::kCallsignEndMs);
-            CHECK(a.frequency_hz == timing::kMband1Hz);
+            CHECK(a.frequency_hz == timing::kMBand1Hz);
         }
     }
     CHECK(seen > 0);
@@ -195,7 +195,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, ins
     CHECK(timing::kUplinkRxEndMs <= 450);
     for (int phase = timing::kUplinkRxStartMs; phase < timing::kUplinkRxEndMs; phase++) {
         CHECK(timing::Scheduler::band_at(phase) == timing::Band::O);
-        CHECK(timing::Scheduler::frequency_hz_at(phase) == timing::kObandHz);
+        CHECK(timing::Scheduler::frequency_hz_at(phase) == timing::kOBandHz);
     }
     for (int phase = 0; phase < 200; phase++) CHECK_FALSE(timing::Scheduler::in_direct_slot(phase));
 }

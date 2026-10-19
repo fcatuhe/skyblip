@@ -336,7 +336,7 @@ TEST_CASE("radio log page: a burst with no level reported shows none") {
 
 TEST_CASE("radio log page: the newest burst is the top row and the rest fall away") {
     radio::Log log;
-    for (int i = 0; i < radio::Log::kCapacity + 3; i++)
+    for (int i = 0; i < radio::Log::kMaxEntries + 3; i++)
         log.record(received(static_cast<uint32_t>(0xA00000 + i), -80));
 
     Glass canvas;

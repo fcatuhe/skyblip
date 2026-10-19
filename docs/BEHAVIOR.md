@@ -1152,7 +1152,7 @@ The JSON the companion link speaks, with no heap: what is refused and what is le
 - a key that will not fit whole is left out, not cut short
   > core/comms's status reply is a fixed-size stack buffer with no heap behind it: a key that overruns it must never come out half-written. A writer that silently dropped the tail of its last key would still close the brace and look like valid, complete JSON to anything downstream.
 - an integer past 32 bits is refused, so the host reads what the device reads
-- the reader parses ints, bools and strings, the writer emits them
+- the reader parses integers, booleans and strings, the writer emits them
 
 ### test/core/test_key_slots.cpp
 
@@ -1476,11 +1476,11 @@ The ball: where a damped mass hangs in the specific force the case measures.
 - the ball slides away from the force, the way the pilot does
 - the reading is the fraction of the resultant, not of one axis
 
-### test/core/test_slot_timing_stats.cpp
+### test/core/test_slot_timing_statistics.cpp
 
-G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds - the latched PPS edge and an armed dwell's outcome - are exercised directly here on virtual time, exactly as core/timing/slot_timing_stats.h promises: no heap, integer only, and no phase math to get wrong across the second wrap.
+G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds - the latched PPS edge and an armed dwell's outcome - are exercised directly here on virtual time, exactly as core/timing/slot_timing_statistics.h promises: no heap, integer only, and no phase math to get wrong across the second wrap.
 
-**timing stats**
+**timing statistics**
 
 - a clean 1 Hz PPS train lands in the centre bucket
 - a drifting edge walks the buckets outward, one guard at a time
@@ -2933,7 +2933,7 @@ The commands that take the device out of service, each behind a confirmation on 
 - recovery routed through confirmation, latched and never entered inline
   > The product paints the recovery page first, so a confirmed recovery is a latch the sequencer spends.
 - takeoff closes an open upload window and it stays latched
-  > D5: the reset reason was read at boot and shown on the self-test page, and a device in a field with a phone next to it has no self-test page in view. G6's plug-in-and-read: the same on_rx dispatch that answers "status" answers "timing" from whatever core/timing::SlotTimingStats the device has been accumulating - no second channel, no panel real estate a bucket array would not fit on anyway. Fail closed: takeoff must revoke an authorisation granted on the ground, or a long upload could still be running when the aircraft leaves.
+  > D5: the reset reason was read at boot and shown on the self-test page, and a device in a field with a phone next to it has no self-test page in view. G6's plug-in-and-read: the same on_rx dispatch that answers "status" answers "timing" from whatever core/timing::SlotTimingStatistics the device has been accumulating - no second channel, no panel real estate a bucket array would not fit on anyway. Fail closed: takeoff must revoke an authorisation granted on the ground, or a long upload could still be running when the aircraft leaves.
 - the firmware prompt names the version the phone is about to send
   > The press is the whole authorisation, so the glass names what it authorises.
 - the update question names the image state and the versions of the attempt
@@ -4023,7 +4023,7 @@ What own-ship puts on air: the rate, the window, the channel, the callsign secon
 **rf**
 
 - a completed burst lands in the bench's dwell-phase histogram
-  > G6's wiring, not the bucket arithmetic (core/test_timing.cpp already pins that down): RadioService owns the deadline, TrafficService the executor's report, and this proves the two actually meet in state.rf.timing_stats rather than each keeping a private opinion.
+  > G6's wiring, not the bucket arithmetic (core/test_timing.cpp already pins that down): RadioService owns the deadline, TrafficService the executor's report, and this proves the two actually meet in state.rf.timing_statistics rather than each keeping a private opinion.
 - a device on the ground transmits, and reports no burst it never armed
   > The ground rate is one burst per ten seconds, so most of this run is dwells that carry nothing, and none of them is a transmission that failed.
 - a device with no callsign set transmits nothing in the reserved window
@@ -4086,7 +4086,7 @@ The committed scenarios are regression fixtures: the same files the browser and 
 - a loaded scenario names the device, and a file can say which name
   > A simulated device is one somebody set up, so it carries a registration unless a file says not.
 - a skyPost relay puts aircraft on the radar that we cannot hear
-  > The ground relay as a committed fixture, so the case is reproducible in the browser and not only in a test file: three aircraft too far away for this device to hear, reaching it because a skyPost heard them and put all three in one O-band frame, alongside one neighbour it hears for itself on the M band.  Before 2026-08-05 this scenario produced exactly one target. The uplink frame went to protocol::receive_mband, which frames the M band's two systems and nothing else, so it failed there and was counted as rx_bad: the feature was absent and its absence was indistinguishable from a noisy site.
+  > The ground relay as a committed fixture, so the case is reproducible in the browser and not only in a test file: three aircraft too far away for this device to hear, reaching it because a skyPost heard them and put all three in one O-band frame, alongside one neighbour it hears for itself on the M band.  Before 2026-08-05 this scenario produced exactly one target. The uplink frame went to protocol::receive_m_band, which frames the M band's two systems and nothing else, so it failed there and was counted as rx_bad: the feature was absent and its absence was indistinguishable from a noisy site.
 - a takeoff and a landing bracket one flight log session
   > The session boundary as a committed fixture: one file, replayed by the tests today and by the browser page the day someone wonders where the log came from. The device is stationary, then it flies, then it stops - and what the partition holds afterwards is exactly one flight with a beginning and an end.
 - a training scenario's expectations hold when replayed
@@ -4294,7 +4294,7 @@ What the power service publishes about temperature, and how long a reading stand
 
 ### test/products/test_uplink_rx.cpp
 
-What a skyPost ground station actually gets onto a skyBlip Go's screen.  The tree had an ADS-L uplink codec, a Reed-Solomon suite around it and a radio service that armed the O-band dwell for its sync word - and no product caller at all. Every RxDone went to protocol::receive_mband, which frames the two M-band systems and nothing else, so an uplink frame that arrived was counted as rx_bad and thrown away. Feature::UplinkRx had no reader, so the capability the product claimed - ADS-L uplink receive - was not one it had.  So nothing here pushes an RfEvent. A real encoded frame goes on the virtual air, through the SX1262 model's own sync detector, into the dwell the product armed for itself. If the arming and the transmitter disagree about the sync word, the length, or the chip rate, the model delivers nothing and these cases go red - which is exactly how the second bug on this branch was found: the dwell was armed for a length byte of 0x18, the M band's 24-byte ADS-L frame, behind an O-band sync word whose frame is 255 bytes.
+What a skyPost ground station actually gets onto a skyBlip Go's screen.  The tree had an ADS-L uplink codec, a Reed-Solomon suite around it and a radio service that armed the O-band dwell for its sync word - and no product caller at all. Every RxDone went to protocol::receive_m_band, which frames the two M-band systems and nothing else, so an uplink frame that arrived was counted as rx_bad and thrown away. Feature::UplinkRx had no reader, so the capability the product claimed - ADS-L uplink receive - was not one it had.  So nothing here pushes an RfEvent. A real encoded frame goes on the virtual air, through the SX1262 model's own sync detector, into the dwell the product armed for itself. If the arming and the transmitter disagree about the sync word, the length, or the chip rate, the model delivers nothing and these cases go red - which is exactly how the second bug on this branch was found: the dwell was armed for a length byte of 0x18, the M band's 24-byte ADS-L frame, behind an O-band sync word whose frame is 255 bytes.
 
 **uplink**
 

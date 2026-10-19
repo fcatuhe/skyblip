@@ -10,7 +10,7 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/timing/slot.h"
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
@@ -120,7 +120,7 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
         named++;
         CHECK(r.phase_ms < timing::kSlot1WrapMs);
         CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
-        CHECK(simulator::Air::tuned_to(r.frequency_hz, timing::kMband1Hz));
+        CHECK(simulator::Air::tuned_to(r.frequency_hz, timing::kMBand1Hz));
     }
     // Twenty-one seconds of flight: twenty-one positions and two names.
     CHECK(positions >= 19);
@@ -185,7 +185,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
 
 // G6's wiring, not the bucket arithmetic (core/test_timing.cpp already pins
 // that down): RadioService owns the deadline, TrafficService the executor's
-// report, and this proves the two actually meet in state.rf.timing_stats rather
+// report, and this proves the two actually meet in state.rf.timing_statistics rather
 // than each keeping a private opinion.
 TEST_CASE("rf: a completed burst lands in the bench's dwell-phase histogram") {
     simulator::Simulator simulator;
@@ -195,19 +195,21 @@ TEST_CASE("rf: a completed burst lands in the bench's dwell-phase histogram") {
     // 1 ms passes: a 5 ms one spends the burst's completion slack before the radio is serviced.
     run_on(simulator, past_settling(simulator), 6000, 1);
 
-    const timing::SlotTimingStats& stats = simulator.product().state().rf.timing_stats;
-    CHECK(stats.dwell_samples() > 0);
-    CHECK(stats.missed() == 0);
-    CHECK(stats.refused() == 0);
+    const timing::SlotTimingStatistics& statistics =
+        simulator.product().state().rf.timing_statistics;
+    CHECK(statistics.dwell_samples() > 0);
+    CHECK(statistics.missed() == 0);
+    CHECK(statistics.refused() == 0);
     // Never before the instant it was armed for, and never as late as the burst is long.
-    CHECK(stats.dwell_worst_us() >= 0);
-    CHECK(stats.dwell_worst_us() < static_cast<int32_t>(timing::Transmitter::kAirTimeMs * 1000));
+    CHECK(statistics.dwell_worst_us() >= 0);
+    CHECK(statistics.dwell_worst_us() <
+          static_cast<int32_t>(timing::Transmitter::kAirTimeMs * 1000));
 
     // host::Pps has no jitter model at all: every edge board.h latched is
     // exact, so the whole interval histogram sits in the centre bucket.
-    CHECK(stats.pps_samples() > 0);
-    CHECK(stats.pps_bucket(3) == stats.pps_samples());
-    CHECK(stats.holdover_events() == 0);
+    CHECK(statistics.pps_samples() > 0);
+    CHECK(statistics.pps_bucket(3) == statistics.pps_samples());
+    CHECK(statistics.holdover_events() == 0);
 }
 
 // The other half of the wiring: whatever already owns the PPS edge
@@ -220,17 +222,18 @@ TEST_CASE("rf: losing and regaining PPS through the simulator counts as holdover
     // host::Pps has no jitter to show, but it does turn over exactly once per
     // simulated second, which is what the first sample needs.
     run_on(simulator, 0, 1200);
-    REQUIRE(simulator.product().state().rf.timing_stats.pps_samples() >= 1);
+    REQUIRE(simulator.product().state().rf.timing_statistics.pps_samples() >= 1);
 
     simulator.world().set_pps_locked(false);
     run_on(simulator, 1205, 2000);
     simulator.world().set_pps_locked(true);
     run_on(simulator, 3210, 2000);
 
-    const timing::SlotTimingStats& stats = simulator.product().state().rf.timing_stats;
-    CHECK(stats.holdover_events() >= 1);
-    for (int b = 0; b < timing::SlotTimingStats::kBuckets; b++)
-        if (b != 3) CHECK(stats.pps_bucket(b) == 0);
+    const timing::SlotTimingStatistics& statistics =
+        simulator.product().state().rf.timing_statistics;
+    CHECK(statistics.holdover_events() >= 1);
+    for (int b = 0; b < timing::SlotTimingStatistics::kBuckets; b++)
+        if (b != 3) CHECK(statistics.pps_bucket(b) == 0);
 }
 
 TEST_CASE("rf: without an anchored clock nothing is transmitted") {
@@ -450,7 +453,7 @@ TEST_CASE("rf: a device on the ground transmits, and reports no burst it never a
     run_on(simulator, past_settling(simulator), 30000);
 
     CHECK(simulator.product().state().air.tx_ok > 0);
-    CHECK(simulator.product().state().rf.timing_stats.missed() == 0);
+    CHECK(simulator.product().state().rf.timing_statistics.missed() == 0);
 
     const radio::Log& log = simulator.product().state().radio_log;
     int sent = 0, lost = 0;

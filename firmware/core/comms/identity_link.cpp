@@ -15,7 +15,7 @@ constexpr long kSerialCeiling = 0xFFFF;
 template <size_t Bytes>
 bool read_hex_field(const json::Reader& reader, const char* key, std::array<uint8_t, Bytes>& out) {
     char text[2 * Bytes + 2] = {0};
-    return reader.get_string(key, text, sizeof(text)) &&
+    return reader.read_string(key, text, sizeof(text)) &&
            hex::read(text, ByteSpan(out.data(), Bytes));
 }
 
@@ -162,7 +162,7 @@ void ConfigService::unlock(const json::Reader& reader) {
     code.nonce = identity_->unit_nonce();
     identity_->close();
     long serial = -1;
-    if (!reader.get_int("serial", serial) || serial < identity::kFirstSerial ||
+    if (!reader.read_integer("serial", serial) || serial < identity::kFirstSerial ||
         serial > kSerialCeiling || !read_hex_field(reader, "signature", code.signature)) {
         refuse("bad_signature");
         return;

@@ -10,9 +10,9 @@
 namespace skyblip::timing {
 
 // §C.2: two 200 kHz M-band channels. §C.4: one O-band HDR channel.
-constexpr uint32_t kMband0Hz = 868200000;
-constexpr uint32_t kMband1Hz = 868400000;
-constexpr uint32_t kObandHz = 869525000;
+constexpr uint32_t kMBand0Hz = 868200000;
+constexpr uint32_t kMBand1Hz = 868400000;
+constexpr uint32_t kOBandHz = 869525000;
 
 // §C.5 gives the second to the bands: 200..450 ms is the uplink slot the ground
 // infrastructure transmits in, 450..1000 the direct slot. One radio cannot hold
@@ -106,7 +106,7 @@ bool in_pps_holdover(const ClockState& clock);
 struct SlotPlan {
     SlotState state{SlotState::UplinkRxO};
     Band band{Band::O};
-    uint32_t frequency_hz{kObandHz};
+    uint32_t frequency_hz{kOBandHz};
     // The dwell this state belongs to, as a phase in the second. Guards are
     // already subtracted: a dwell that runs to its end_ms leaves the radio time
     // to retune before the next one starts.
@@ -138,7 +138,7 @@ class Scheduler {
     // Which M-band dwell, and so which channel, a phase belongs to. -1 outside
     // the M-band half of the second.
     static int slot_of(int phase_ms);
-    static uint32_t slot_frequency_hz(int slot) { return slot == 1 ? kMband1Hz : kMband0Hz; }
+    static uint32_t slot_frequency_hz(int slot) { return slot == 1 ? kMBand1Hz : kMBand0Hz; }
     static int slot_start(int slot) { return slot == 1 ? kSlot1StartMs : kSlot0StartMs; }
     static int slot_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs; }
     static int dwell_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs - kHopGuardMs; }

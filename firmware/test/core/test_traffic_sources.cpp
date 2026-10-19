@@ -77,9 +77,9 @@ model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
     uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
     REQUIRE(codec.encode(&sent, 1, 0, frame) == Status::Ok);
     model::AircraftObservation heard{};
-    protocol::AdslUplink::DecodeStats stats{};
-    REQUIRE(codec.decode(frame, &heard, 1, stats) == Status::Ok);
-    REQUIRE(stats.targets == 1);
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(codec.decode(frame, &heard, 1, statistics) == Status::Ok);
+    REQUIRE(statistics.targets == 1);
     return stamped(heard);
 }
 

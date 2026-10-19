@@ -2,7 +2,7 @@
 #ifndef SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 #define SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 
 namespace skyblip::comms {
 
@@ -13,7 +13,7 @@ constexpr int kTimingFrameBytes = 384;
 
 class TimingReport {
    public:
-    explicit TimingReport(const timing::SlotTimingStats& stats);
+    explicit TimingReport(const timing::SlotTimingStatistics& statistics);
 
     bool exhausted() const { return at_ >= count_; }
 
@@ -40,7 +40,7 @@ class TimingReport {
     // Seven counts, comma-joined: cheaper than a JSON array over a FLAT-JSON
     // writer that does not have one, and just as readable on a bench terminal.
     // Room for the widest count a bucket can reach.
-    static constexpr int kBucketsTextBytes = timing::SlotTimingStats::kBuckets * 11 + 1;
+    static constexpr int kBucketsTextBytes = timing::SlotTimingStatistics::kBuckets * 11 + 1;
     static constexpr int kMaxFields = 13;
 
     void add(const char* key, const char* text, long value);

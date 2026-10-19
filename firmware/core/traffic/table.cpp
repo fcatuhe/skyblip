@@ -20,7 +20,7 @@ int source_rank(model::Source s) {
 }
 
 int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
-    for (int i = 0; i < kCapacity; i++) {
+    for (int i = 0; i < kMaxTargets; i++) {
         if (slots_[i].used && slots_[i].observation.address == address &&
             slots_[i].observation.address_mapping_table == address_mapping_table)
             return i;
@@ -79,11 +79,11 @@ TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& o
 }
 
 int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s) {
-    for (int i = 0; i < kCapacity; i++)
+    for (int i = 0; i < kMaxTargets; i++)
         if (!slots_[i].used) return i;
     int victim = -1;
     Weight least{};
-    for (int i = 0; i < kCapacity; i++) {
+    for (int i = 0; i < kMaxTargets; i++) {
         if (slots_[i].alarm_level != Level::None) continue;
         const Weight w = weight_of(slots_[i].observation, now_s);
         if (victim < 0 || matters_less(w, least)) {
@@ -138,7 +138,7 @@ void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservatio
 }
 
 void TrafficTable::age_out(uint32_t now_s) {
-    for (int i = 0; i < kCapacity; i++) {
+    for (int i = 0; i < kMaxTargets; i++) {
         if (!slots_[i].used) continue;
         if (now_s - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation)) {
             slots_[i].used = false;
@@ -152,7 +152,7 @@ void TrafficTable::age_out(uint32_t now_s) {
 
 int TrafficTable::count() const {
     int n = 0;
-    for (int i = 0; i < kCapacity; i++)
+    for (int i = 0; i < kMaxTargets; i++)
         if (slots_[i].used) n++;
     return n;
 }

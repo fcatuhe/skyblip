@@ -29,19 +29,19 @@ class ActivationVectors {
 
     std::string text(const char* key) const {
         char value[512] = {0};
-        REQUIRE_MESSAGE(reader().get_string(key, value, sizeof(value)), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_string(key, value, sizeof(value)), "no key ", key);
         return value;
     }
 
     bool flag(const char* key) const {
         bool value = false;
-        REQUIRE_MESSAGE(reader().get_bool(key, value), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_boolean(key, value), "no key ", key);
         return value;
     }
 
     long number(const char* key) const {
         long value = 0;
-        REQUIRE_MESSAGE(reader().get_int(key, value), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_integer(key, value), "no key ", key);
         return value;
     }
 

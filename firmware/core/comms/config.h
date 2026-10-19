@@ -17,7 +17,7 @@
 #include "core/power/reset_reason.h"
 #include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
 
@@ -69,8 +69,8 @@ constexpr int kPromptDetailBytes = 128;
 class ConfigService {
    public:
     ConfigService(ports::Link& link, ConfigStore& store, ports::Dfu* dfu = nullptr,
-                  const timing::SlotTimingStats* timing_stats = nullptr)
-        : link_(link), store_(store), dfu_(dfu), timing_stats_(timing_stats) {}
+                  const timing::SlotTimingStatistics* timing_statistics = nullptr)
+        : link_(link), store_(store), dfu_(dfu), timing_statistics_(timing_statistics) {}
 
     // INFO: cf 02aug26 Ground opens this door, latched in core/flight/ground.h
     void set_flight_state(flight::FlightState state);
@@ -267,7 +267,7 @@ class ConfigService {
     int format_status(char* out, int capacity);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that
     // answers "get" and "status" answers "timing" from the one accumulator
-    // core/timing::SlotTimingStats keeps, over the link the phone already has
+    // core/timing::SlotTimingStatistics keeps, over the link the phone already has
     // open - no second channel, no panel real estate a histogram would not
     // fit on anyway.
     void send_timing();
@@ -311,7 +311,7 @@ class ConfigService {
     ports::Link& link_;
     ConfigStore& store_;
     ports::Dfu* dfu_;
-    const timing::SlotTimingStats* timing_stats_;
+    const timing::SlotTimingStatistics* timing_statistics_;
     const timing::DurableWriteWindow* durable_writes_{nullptr};
     IdentityLink* identity_{nullptr};
     flight::FlightState flight_state_{flight::FlightState::Unknown};

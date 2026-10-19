@@ -109,7 +109,7 @@ void NmeaService::emit_status(uint32_t now_ms) {
     traffic::Level worst_level = traffic::Level::None;
     int heard = 0;
 
-    for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
+    for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
         heard++;
@@ -228,8 +228,9 @@ void NmeaService::emit_targets(uint32_t now_ms) {
 
     int sent = 0;
     const int from = cursor_;
-    for (int step = 0; step < traffic::TrafficTable::kCapacity && sent < kTargetsPerPass; step++) {
-        const int slot = (from + step) % traffic::TrafficTable::kCapacity;
+    for (int step = 0; step < traffic::TrafficTable::kMaxTargets && sent < kTargetsPerPass;
+         step++) {
+        const int slot = (from + step) % traffic::TrafficTable::kMaxTargets;
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
         const int length = protocol::format_pflaa(
@@ -239,7 +240,7 @@ void NmeaService::emit_targets(uint32_t now_ms) {
                                           target->observation.address));
         if (length <= 0) continue;
         write(sentence_, length);
-        resumes_[resume_count_++] = {pass_bytes_, (slot + 1) % traffic::TrafficTable::kCapacity};
+        resumes_[resume_count_++] = {pass_bytes_, (slot + 1) % traffic::TrafficTable::kMaxTargets};
         sent++;
     }
 }

@@ -48,7 +48,7 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     for (uint8_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(i + 1);
     uint8_t buffer[protocol::kTxPayloadChipBytes] = {0};
     const size_t buffer_length =
-        protocol::mband_payload(protocol::kAdslSyncWord, payload, sizeof(payload), buffer);
+        protocol::m_band_payload(protocol::kAdslSyncWord, payload, sizeof(payload), buffer);
     REQUIRE(radio.transmit(buffer, static_cast<uint8_t>(buffer_length)) == Status::Ok);
 
     uint8_t on_air[protocol::kTxChipBytes] = {0};
@@ -56,7 +56,7 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     REQUIRE(chip.take_tx(on_air, length));
     uint8_t expected[protocol::kTxChipBytes] = {0};
     const size_t expected_length =
-        protocol::encode_mband(protocol::kAdslSyncWord, payload, sizeof(payload), expected);
+        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), expected);
     CHECK(length == expected_length);
     CHECK(std::memcmp(on_air, expected, expected_length) == 0);
 }
@@ -190,14 +190,14 @@ TEST_CASE("sx1262: a burst is framed from the chips after the sync window, eithe
         for (uint8_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(i + 1);
         uint8_t chips[protocol::kTxChipBytes] = {0};
         const size_t chip_length =
-            protocol::encode_mband(sync_word, payload, sizeof(payload), chips);
+            protocol::encode_m_band(sync_word, payload, sizeof(payload), chips);
         REQUIRE(chip.receive_air(chips, static_cast<uint8_t>(chip_length)));
 
         uint8_t buffer[64];
         RadioEvent event = radio.poll(buffer, sizeof(buffer));
         REQUIRE(event.type == RadioEventType::RxDone);
         protocol::Frame frame{};
-        REQUIRE(protocol::receive_mband(buffer, event.length, frame));
+        REQUIRE(protocol::receive_m_band(buffer, event.length, frame));
         const bool adsl = sync_word == protocol::kAdslSyncWord;
         if (adsl) CHECK(frame.system == protocol::System::AdslDirect);
         if (!adsl) CHECK(frame.system == protocol::System::Alptas);
@@ -220,7 +220,7 @@ TEST_CASE("sx1262: a burst carrying a sync word the dwell is not armed for is no
     uint8_t payload[protocol::kAdslFrameBytes] = {0};
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_length =
-        protocol::encode_mband(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
+        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
     CHECK_FALSE(chip.receive_air(chips, static_cast<uint8_t>(chip_length)));
     uint8_t buffer[64];
     CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::None);

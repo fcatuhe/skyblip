@@ -17,7 +17,7 @@ int16_t tx_stage_margin_of(uint64_t staged_at_us, uint64_t deadline_us) {
 }
 
 void Log::record(const Entry& entry) {
-    entries_[written_ % kCapacity] = entry;
+    entries_[written_ % kMaxEntries] = entry;
     written_++;
 }
 
@@ -25,7 +25,7 @@ const Entry& Log::newest(int i) const {
     const int held = count();
     if (held == 0) return entries_[0];
     const int back = i < 0 ? 0 : (i >= held ? held - 1 : i);
-    return entries_[(written_ - 1u - static_cast<uint32_t>(back)) % kCapacity];
+    return entries_[(written_ - 1u - static_cast<uint32_t>(back)) % kMaxEntries];
 }
 
 }  // namespace skyblip::radio

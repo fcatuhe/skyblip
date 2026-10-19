@@ -110,7 +110,7 @@ TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 o
 
 TEST_CASE("diag record: a dwell carries the plan the second ran under and its refusal") {
     diagnostics::Dwell in{};
-    in.frequency_hz = timing::kMband1Hz;
+    in.frequency_hz = timing::kMBand1Hz;
     in.start_ms = 800;
     in.end_ms = 1200;
     in.phase_ms = 947;

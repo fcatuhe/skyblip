@@ -7,7 +7,7 @@
 
 namespace skyblip::ports {
 
-enum class RfMode : uint8_t { Idle, RxMband, RxOband };
+enum class RfMode : uint8_t { Idle, RxMBand, RxOBand };
 
 // One armed dwell, in absolute microseconds on the clock the executor reads.
 // A dwell that cannot complete before end_us is refused, never truncated on air:
@@ -138,8 +138,8 @@ struct RfSwitch {
 // of change, and how many dwells armed ahead were still not listening at their start.
 struct RfSwitching {
     uint32_t hop_us{0};
-    uint32_t to_oband_us{0};
-    uint32_t to_mband_us{0};
+    uint32_t to_o_band_us{0};
+    uint32_t to_m_band_us{0};
     uint32_t late_starts{0};
     uint32_t switches{0};
     RfSwitch last{};
@@ -151,9 +151,9 @@ struct RfSwitching {
         uint32_t* worst = nullptr;
         const RfMode from = change.from;
         const RfMode to = change.to;
-        if (to == RfMode::RxOband && from == RfMode::RxMband) worst = &to_oband_us;
-        if (to == RfMode::RxMband && from == RfMode::RxOband) worst = &to_mband_us;
-        if (to == RfMode::RxMband && from == RfMode::RxMband && change.to_hz != change.from_hz)
+        if (to == RfMode::RxOBand && from == RfMode::RxMBand) worst = &to_o_band_us;
+        if (to == RfMode::RxMBand && from == RfMode::RxOBand) worst = &to_m_band_us;
+        if (to == RfMode::RxMBand && from == RfMode::RxMBand && change.to_hz != change.from_hz)
             worst = &hop_us;
         if (worst != nullptr && change.took_us() > *worst) *worst = change.took_us();
     }

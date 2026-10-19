@@ -25,10 +25,10 @@ constexpr uint32_t kAlptasSyncWord = 0xF531FAB6u;
 constexpr uint8_t kAdslFrameBytes = AdslPacket::kDataBytes;
 
 // INFO: fc 18sep26 §C.2's table, clocked at the chip rate because §C.2.1's Manchester halves it
-constexpr uint32_t kMbandChipRateBps = 100000;
-constexpr uint32_t kMbandDeviationHz = 50000;
-constexpr uint32_t kMbandChannelBandwidthHz = 200000;
-constexpr uint16_t kMbandGaussianBtE2 = 50;
+constexpr uint32_t kMBandChipRateBps = 100000;
+constexpr uint32_t kMBandDeviationHz = 50000;
+constexpr uint32_t kMBandChannelBandwidthHz = 200000;
+constexpr uint16_t kMBandGaussianBtE2 = 50;
 
 // One data bit becomes two chips: 1 -> 01, 0 -> 10 (§C.2.1), which is the table
 // fec::manchester_encode holds.
@@ -91,14 +91,14 @@ uint8_t frame_bytes(System system);
 
 // The chip stream a transmitter puts on air: the whole sync word, then the
 // frame, both Manchester-encoded.
-size_t encode_mband(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
+size_t encode_m_band(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 // INFO: fc 15sep26 SX1262 DS 6.2.2: the part inserts the window, the buffer carries the rest
-size_t mband_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
+size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 // The chips a receiver reports once the shared window matched. Manchester-decode
 // them, name the system by the sync tail, and shift the frame to byte zero.
-bool receive_mband(const uint8_t* chips, size_t chip_bytes, Frame& out);
+bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out);
 
 // INFO: fc 17sep26 noise decodes half its chip pairs to a pair no transmitter can send
 constexpr uint8_t kNoiseWindowBytes = 12;
@@ -112,7 +112,7 @@ bool framed_noise(const Frame& frame);
 // The chips a transmitter puts on the O band: no Manchester (§C.4), so the sync
 // word, the §D.1.1 length byte and the codeword, as they are. Written here
 // beside its M-band twin because encode and decode change together.
-size_t encode_oband(const uint8_t* frame, uint8_t* out);
+size_t encode_o_band(const uint8_t* frame, uint8_t* out);
 
 // One burst off the bus, named by the dwell that heard it.
 //

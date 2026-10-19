@@ -18,7 +18,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -32,7 +32,7 @@ struct RfState {
     timing::SlotPlan plan{};
     timing::DwellPhase dwell{};
     // INFO: fc 27sep26 G6: boards/ writes the PPS half, services/traffic.cpp the dwell half
-    timing::SlotTimingStats timing_stats{};
+    timing::SlotTimingStatistics timing_statistics{};
     // INFO: fc 27sep26 names the callsign burst among a dwell's two, for the row the tape writes
     uint64_t callsign_at_us{0};
     // INFO: fc 28sep26 a TxDone can reach the radio after its dwell closed, its instant says whose
@@ -223,7 +223,7 @@ struct State {
         // The third is smaller than the aircraft the frames carried whenever the
         // ground station relayed one back that the table refuses - own-ship, or an
         // aircraft we are hearing better first-hand. Until 2026-08-05 an uplink
-        // frame reached protocol::receive_mband, failed to frame as either M-band
+        // frame reached protocol::receive_m_band, failed to frame as either M-band
         // system and landed in rx_bad: the whole feature was absent and its absence
         // looked like radio noise, which is what hid it.
         uint32_t uplink_frames{0};

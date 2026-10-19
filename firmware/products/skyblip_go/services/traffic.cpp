@@ -45,7 +45,7 @@ void TrafficService::tick(uint32_t now_ms) {
             case events::RfEventType::TxDone:
                 context_.state.rf.note_tx_done(context_.state.air.tx_ok, event.tx_at_us);
                 context_.state.air.tx_ok++;
-                context_.state.rf.timing_stats.record_dwell_phase(
+                context_.state.rf.timing_statistics.record_dwell_phase(
                     static_cast<int64_t>(event.keyed_at_us) - static_cast<int64_t>(event.tx_at_us));
                 log(event, stamp_for(event, now_ms), radio::Verdict::Transmitted);
                 break;
@@ -76,7 +76,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = event.band;
-    entry.channel = event.frequency_hz == timing::kMband1Hz ? 1 : 0;
+    entry.channel = event.frequency_hz == timing::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
@@ -165,9 +165,9 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     context_.state.air.uplink_frames++;
 
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
-    protocol::AdslUplink::DecodeStats stats{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
     if (uplink_codec_.decode(event.data.data(), relayed, protocol::AdslUplink::kMaxTargets,
-                             stats) != Status::Ok) {
+                             statistics) != Status::Ok) {
         context_.state.air.uplink_bad++;
         log(event, stamp, radio::Verdict::BadCrc);
         return;
@@ -183,7 +183,7 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     log(event, stamp, radio::Verdict::Received, &relay);
 
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
-    for (int i = 0; i < stats.targets; i++) {
+    for (int i = 0; i < statistics.targets; i++) {
         model::AircraftObservation& observation = relayed[i];
         observation.received = stamp;
         observation.received.at_s = utc_s;

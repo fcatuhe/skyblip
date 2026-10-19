@@ -35,10 +35,10 @@ model::AircraftObservation neighbour(const model::Ownship& own) {
 }
 
 // A neighbour two metres away, as the chip hands one over: past the shared sync window.
-void hear_mband(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t frame_bytes,
-                int dead_chip_byte = -1) {
+void hear_m_band(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t frame_bytes,
+                 int dead_chip_byte = -1) {
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_mband(sync_word, frame, frame_bytes, chips);
+    const size_t chip_length = protocol::encode_m_band(sync_word, frame, frame_bytes, chips);
     if (dead_chip_byte >= 0) chips[dead_chip_byte] ^= 0x01;
 
     events::RfEvent event{};
@@ -53,13 +53,13 @@ void hear_mband(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t fram
 }
 
 void hear_alptas(Rig& rig, const uint8_t* frame, int dead_chip_byte = -1) {
-    hear_mband(rig, protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes, dead_chip_byte);
+    hear_m_band(rig, protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes, dead_chip_byte);
 }
 
 void hear_adsl(Rig& rig, protocol::AdslPacket& p) {
     p.scramble();
     p.set_crc();
-    hear_mband(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
+    hear_m_band(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
 }
 
 protocol::AdslPacket adsl_from_neighbour(const model::Ownship& own) {
@@ -78,7 +78,7 @@ void hear_callsign(Rig& rig, uint32_t address, uint8_t address_mapping_table,
     protocol::from_own_callsign(p, address, address_mapping_table, callsign);
     p.scramble();
     p.set_crc();
-    hear_mband(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
+    hear_m_band(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
 }
 
 const radio::Entry* heard_entry(Rig& rig) {
@@ -383,7 +383,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
     REQUIRE(protocol::alptas_encode(frame, neighbour(own), own.utc_s, own.latitude_1e7,
                                     own.longitude_1e7) == Status::Ok);
     // Shares the chips the detector matched on and nothing after them.
-    hear_mband(rig, 0xF5F3656Cu, frame, protocol::kAlptasFrameBytes);
+    hear_m_band(rig, 0xF5F3656Cu, frame, protocol::kAlptasFrameBytes);
     settle(rig, t);
 
     const radio::Entry* entry = heard_entry(rig);

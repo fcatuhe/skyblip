@@ -20,7 +20,7 @@ PpsState pps_state(const timing::ClockState& clock) {
 
 int traffic_outside_formation(const traffic::TrafficTable& table) {
     int n = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t && t->used && !t->in_formation) n++;
     }
@@ -55,7 +55,7 @@ void ScreenService::draw_menu_page() {
 RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     const bus::State& state = context_.state;
     const model::Ownship& own = state.own;
-    const timing::SlotTimingStats& stats = state.rf.timing_stats;
+    const timing::SlotTimingStatistics& statistics = state.rf.timing_statistics;
 
     RawSnapshot snapshot;
     snapshot.uptime_s = now_ms / 1000;
@@ -94,12 +94,12 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.radio.tx_ok = state.air.tx_ok;
     snapshot.radio.tx_lost = state.air.tx_lost;
     snapshot.radio.tx_named = state.air.tx_named;
-    snapshot.radio.missed = stats.missed();
-    snapshot.radio.refused = stats.refused();
+    snapshot.radio.missed = statistics.missed();
+    snapshot.radio.refused = statistics.refused();
     snapshot.radio.duty_permille = state.rf.duty_permille;
-    snapshot.radio.holdover = stats.holdover_events();
-    snapshot.radio.dwell_worst_us = stats.dwell_worst_us();
-    snapshot.radio.pps_worst_us = stats.pps_worst_us();
+    snapshot.radio.holdover = statistics.holdover_events();
+    snapshot.radio.dwell_worst_us = statistics.dwell_worst_us();
+    snapshot.radio.pps_worst_us = statistics.pps_worst_us();
     snapshot.radio.tx_keyed_us = state.rf.last_tx_keyed_us;
     snapshot.radio.tx_span_us = state.rf.last_tx_span_us;
     snapshot.radio.tracked = static_cast<uint16_t>(state.traffic.count());
@@ -177,7 +177,8 @@ void ScreenService::render(uint32_t now_ms) {
             int n = 0;
             if (own.fix_valid) {
                 const model::Ownship own_now = flight::carried_to(own, now_ms);
-                for (int i = 0; i < traffic::TrafficTable::kCapacity && n < kMaxRadarTargets; i++) {
+                for (int i = 0; i < traffic::TrafficTable::kMaxTargets && n < kMaxRadarTargets;
+                     i++) {
                     const traffic::Target* t = context_.state.traffic.at(i);
                     if (!t || !t->used) continue;
                     const model::AircraftObservation observation =

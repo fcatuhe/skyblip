@@ -14,8 +14,8 @@ const char* kEventName[] = {"TX  ", "RX  ", "DEAF", "COLL"};
 // The radio reports the frequency its PLL word resolves to, a few hertz off the
 // channel it was asked for.
 const char* channel_name(uint32_t frequency_hz) {
-    if (Air::tuned_to(frequency_hz, timing::kObandHz)) return "869.525";
-    if (Air::tuned_to(frequency_hz, timing::kMband1Hz)) return "868.400";
+    if (Air::tuned_to(frequency_hz, timing::kOBandHz)) return "869.525";
+    if (Air::tuned_to(frequency_hz, timing::kMBand1Hz)) return "868.400";
     return "868.200";
 }
 }  // namespace
@@ -133,7 +133,7 @@ bool Air::framed(const AirRecord& record, protocol::Frame& out) {
     uint8_t payload[protocol::kRxChipBytes] = {0};
     models::Sx1262::deliver_after_sync(record.chips, record.length, protocol::kSharedSync,
                                        protocol::kSharedSyncBits, payload, sizeof(payload));
-    return protocol::receive_mband(payload, sizeof(payload), out);
+    return protocol::receive_m_band(payload, sizeof(payload), out);
 }
 
 bool Air::framed_uplink(const AirRecord& record, uint8_t* frame) {
@@ -173,18 +173,18 @@ int Air::format(int i, char* out, int cap) const {
     // The O band carries one thing and it is not Manchester-coded, so it is read
     // its own way: how many aircraft the ground station put in the frame, which
     // is the number a relay is worth judging by.
-    if (tuned_to(r.frequency_hz, timing::kObandHz)) {
+    if (tuned_to(r.frequency_hz, timing::kOBandHz)) {
         uint8_t frame_bytes[protocol::kUplinkFrameBytes] = {0};
         if (!framed_uplink(r, frame_bytes))
             return head + std::snprintf(out + head, left, "unframed");
         protocol::AdslUplink codec;
         model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
-        protocol::AdslUplink::DecodeStats stats{};
-        if (codec.decode(frame_bytes, relayed, protocol::AdslUplink::kMaxTargets, stats) !=
+        protocol::AdslUplink::DecodeStatistics statistics{};
+        if (codec.decode(frame_bytes, relayed, protocol::AdslUplink::kMaxTargets, statistics) !=
             Status::Ok)
             return head + std::snprintf(out + head, left, "UPLINK RS BAD");
         return head + std::snprintf(out + head, left, "UPLINK %d aircraft, %d corrected",
-                                    stats.targets, stats.corrected);
+                                    statistics.targets, statistics.corrected);
     }
 
     protocol::Frame frame{};

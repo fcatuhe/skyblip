@@ -130,8 +130,8 @@ uint8_t wire(diagnostics::SwitchKind value) {
     switch (value) {
         case diagnostics::SwitchKind::Retune: return 0;
         case diagnostics::SwitchKind::Hop: return 1;
-        case diagnostics::SwitchKind::ToOband: return 2;
-        case diagnostics::SwitchKind::ToMband: return 3;
+        case diagnostics::SwitchKind::ToOBand: return 2;
+        case diagnostics::SwitchKind::ToMBand: return 3;
         case diagnostics::SwitchKind::Wake: return 4;
     }
     return kUnpinned;

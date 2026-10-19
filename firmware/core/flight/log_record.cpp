@@ -5,6 +5,7 @@
 #include "core/settings/address.h"
 #include "core/store/sector.h"
 #include "core/units/units.h"
+#include "core/util/clamp.h"
 #include "core/util/little_endian.h"
 
 namespace skyblip::flight {
@@ -21,18 +22,6 @@ constexpr uint8_t kStatusFlagCharging = 1u << 1;
 constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
 constexpr uint8_t kTargetFlagDismissed = 1u << 0;
 constexpr uint8_t kTargetFlagInFormation = 1u << 1;
-
-int16_t clamp_i16(int32_t value) {
-    if (value > 32767) return 32767;
-    if (value < -32768) return -32768;
-    return static_cast<int16_t>(value);
-}
-
-int8_t clamp_i8(int32_t value) {
-    if (value > 127) return 127;
-    if (value < -128) return -128;
-    return static_cast<int8_t>(value);
-}
 
 void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
     const uint32_t elapsed = utc_s > base_utc_s ? utc_s - base_utc_s : 0;

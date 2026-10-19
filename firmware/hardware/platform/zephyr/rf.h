@@ -256,7 +256,7 @@ class Rf : public ports::Rf {
     // INFO: fc 28sep26 a no-RX reinit fits the bench's 23 ms stall, only the uplink dwell spares it
     bool reinit_affordable() {
         k_sched_lock();
-        const bool affordable = !queued_ || plan_.mode == ports::RfMode::RxOband;
+        const bool affordable = !queued_ || plan_.mode == ports::RfMode::RxOBand;
         k_sched_unlock();
         return affordable;
     }
@@ -272,7 +272,7 @@ class Rf : public ports::Rf {
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
     bool start(const ports::RfPlan& plan, uint64_t armed_at_us) {
         const uint64_t from_us = clock_.micros();
-        band_ = plan.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
+        band_ = plan.mode == ports::RfMode::RxOBand ? model::Band::O : model::Band::M;
         frequency_hz_ = plan.frequency_hz;
         if (radio_.wake() != Status::Ok) return false;
         if (plan.frequency_hz != 0 && radio_.configure_radio(dwell_config(plan)) != Status::Ok)

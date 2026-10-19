@@ -7,19 +7,19 @@
 
 using namespace skyblip;
 
-TEST_CASE("json: the reader parses ints, bools and strings, the writer emits them") {
+TEST_CASE("json: the reader parses integers, booleans and strings, the writer emits them") {
     const char* j = "{\"a\":42,\"b\":true,\"c\":\"hi\",\"d\":-7}";
     json::Reader r(j, static_cast<int>(strlen(j)));
     long v;
     bool b;
     char s[8];
-    CHECK(r.get_int("a", v));
+    CHECK(r.read_integer("a", v));
     CHECK(v == 42);
-    CHECK(r.get_bool("b", b));
+    CHECK(r.read_boolean("b", b));
     CHECK(b);
-    CHECK(r.get_string("c", s, sizeof(s)));
+    CHECK(r.read_string("c", s, sizeof(s)));
     CHECK(std::string(s) == "hi");
-    CHECK(r.get_int("d", v));
+    CHECK(r.read_integer("d", v));
     CHECK(v == -7);
     CHECK_FALSE(r.has("z"));
 
@@ -37,9 +37,9 @@ TEST_CASE("json: a frame that ends on a colon has no value, and nothing past it 
     long v = 0;
     bool b = false;
     char s[8];
-    CHECK_FALSE(r.get_int("cmd", v));
-    CHECK_FALSE(r.get_bool("cmd", b));
-    CHECK_FALSE(r.get_string("cmd", s, sizeof(s)));
+    CHECK_FALSE(r.read_integer("cmd", v));
+    CHECK_FALSE(r.read_boolean("cmd", b));
+    CHECK_FALSE(r.read_string("cmd", s, sizeof(s)));
 }
 
 TEST_CASE("json: an integer past 32 bits is refused, so the host reads what the device reads") {
@@ -48,13 +48,13 @@ TEST_CASE("json: an integer past 32 bits is refused, so the host reads what the 
         "\"huge\":99999999999999999999999}";
     json::Reader r(j, static_cast<int>(strlen(j)));
     long v = 0;
-    CHECK(r.get_int("max", v));
+    CHECK(r.read_integer("max", v));
     CHECK(v == 2147483647L);
-    CHECK(r.get_int("min", v));
+    CHECK(r.read_integer("min", v));
     CHECK(v == -2147483647L - 1);
-    CHECK_FALSE(r.get_int("over", v));
-    CHECK_FALSE(r.get_int("under", v));
-    CHECK_FALSE(r.get_int("huge", v));
+    CHECK_FALSE(r.read_integer("over", v));
+    CHECK_FALSE(r.read_integer("under", v));
+    CHECK_FALSE(r.read_integer("huge", v));
 }
 
 // core/comms's status reply is a fixed-size stack buffer with no heap behind

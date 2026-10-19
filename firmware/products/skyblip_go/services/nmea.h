@@ -48,9 +48,9 @@ class NmeaService : public runtime::Service {
     // A full table divided over those passes, rounded up: the cap on $PFLAA per
     // pass that makes the bound arithmetic rather than hope.
     static constexpr int kTargetsPerPass =
-        (traffic::TrafficTable::kCapacity + kPassesPerRefreshCeiling - 1) /
+        (traffic::TrafficTable::kMaxTargets + kPassesPerRefreshCeiling - 1) /
         kPassesPerRefreshCeiling;
-    static_assert(kTargetsPerPass * kPassesPerRefreshCeiling >= traffic::TrafficTable::kCapacity,
+    static_assert(kTargetsPerPass * kPassesPerRefreshCeiling >= traffic::TrafficTable::kMaxTargets,
                   "a full table would not be refreshed inside its bound");
 
     // INFO: nm 04aug26 A pass is formatting and a handful of notifications, none

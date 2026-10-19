@@ -72,8 +72,8 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                       protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
@@ -92,8 +92,8 @@ void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                       protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
@@ -327,7 +327,7 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
 
     // A full table: five times what one pass may carry, so the bound below is
     // exercised at the worst case the device can be in rather than near it.
-    const int count = traffic::TrafficTable::kCapacity;
+    const int count = traffic::TrafficTable::kMaxTargets;
     for (int i = 0; i < count; i++) {
         hear(rig, 0x200000u + static_cast<uint32_t>(i), 500 + 100 * i, 200 - 30 * i, 40 + 5 * i);
         // The radio queue holds eight events, and the traffic service drains it

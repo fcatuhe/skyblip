@@ -146,7 +146,7 @@ TEST_CASE("simulator: a climbing aircraft broadcasts its rate and gains height a
     run(simulator, 2000, 8000);
 
     const traffic::Target* target = nullptr;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = simulator.product().state().traffic.at(i);
         if (t != nullptr && t->used) target = t;
     }
@@ -415,7 +415,7 @@ TEST_CASE("simulator: an ALP-TAS-equipped aircraft enters traffic as ALP-TAS") {
     const traffic::TrafficTable& table = simulator.product().state().traffic;
     REQUIRE(table.count() >= 1);
     int alptas = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
         const traffic::Target* t = table.at(i);
         if (t != nullptr && t->used && t->observation.source == model::Source::Alptas) alptas++;
     }

@@ -265,7 +265,7 @@ class TEchoPlus {
         timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
         // The one place the PPS edge is owned: the bench's interval-error
         // histogram is fed here rather than by a second reader of the pin.
-        state.rf.timing_stats.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
+        state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }
 
     typename P::Rf& rf() { return rf_; }

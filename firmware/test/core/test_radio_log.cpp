@@ -43,12 +43,12 @@ TEST_CASE("radio log: the burst that just happened is the one at the top") {
 // What falls off the bottom of the screen is gone: the page is a tape, not a history.
 TEST_CASE("radio log: past capacity the oldest burst is the one dropped") {
     radio::Log log;
-    for (int i = 0; i < radio::Log::kCapacity + 5; i++)
+    for (int i = 0; i < radio::Log::kMaxEntries + 5; i++)
         log.record(heard(static_cast<uint32_t>(i), static_cast<uint32_t>(i)));
 
-    CHECK(log.count() == radio::Log::kCapacity);
-    CHECK(log.newest(0).address == radio::Log::kCapacity + 4);
-    CHECK(log.newest(radio::Log::kCapacity - 1).address == 5);
+    CHECK(log.count() == radio::Log::kMaxEntries);
+    CHECK(log.newest(0).address == radio::Log::kMaxEntries + 4);
+    CHECK(log.newest(radio::Log::kMaxEntries - 1).address == 5);
 }
 
 TEST_CASE("radio log: every outcome a burst can have is one it keeps") {

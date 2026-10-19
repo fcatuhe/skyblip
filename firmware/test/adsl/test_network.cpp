@@ -186,7 +186,7 @@ TEST_CASE("ADS-L.4.SRD860.E.4: nothing is signed, and nothing says it is") {
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t length =
-        protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
+        protocol::encode_m_band(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
     CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 }
 

@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/events/stamp.h"
+#include "core/util/clamp.h"
 #include "core/util/little_endian.h"
 #include "core/util/result.h"
 
@@ -80,10 +81,6 @@ inline void put_i8(uint8_t* out, int8_t value) { *out = static_cast<uint8_t>(val
 
 inline int8_t get_i8(const uint8_t* raw) { return static_cast<int8_t>(*raw); }
 
-inline uint16_t clamp_u16(uint32_t value) {
-    return value > 0xFFFFu ? 0xFFFFu : static_cast<uint16_t>(value);
-}
-
 constexpr int8_t kSampleOffsetFloorMv = -128;
 constexpr int8_t kSampleOffsetCeilingMv = 127;
 
@@ -102,12 +99,6 @@ inline int8_t stage_margin_steps(int32_t margin_us) {
     if (steps > INT8_MAX) return INT8_MAX;
     if (steps < INT8_MIN) return INT8_MIN;
     return static_cast<int8_t>(steps);
-}
-
-inline int16_t clamp_i16(int32_t value) {
-    if (value > 32767) return 32767;
-    if (value < -32768) return -32768;
-    return static_cast<int16_t>(value);
 }
 
 }  // namespace skyblip::diag

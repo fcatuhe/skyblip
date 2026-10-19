@@ -36,59 +36,60 @@ int Reader::value_offset(const char* key) const {
 
 bool Reader::has(const char* key) const { return value_offset(key) >= 0; }
 
-bool Reader::get_int(const char* key, long& out) const {
-    int64_t v = 0;
-    if (!get_number(key, v) || v < INT32_MIN || v > INT32_MAX) return false;
-    out = static_cast<long>(v);
+bool Reader::read_integer(const char* key, long& out) const {
+    int64_t value = 0;
+    if (!read_number(key, value) || value < INT32_MIN || value > INT32_MAX) return false;
+    out = static_cast<long>(value);
     return true;
 }
 
-bool Reader::get_uint(const char* key, uint32_t& out) const {
-    int64_t v = 0;
-    if (!get_number(key, v) || v < 0 || v > UINT32_MAX) return false;
-    out = static_cast<uint32_t>(v);
+bool Reader::read_unsigned(const char* key, uint32_t& out) const {
+    int64_t value = 0;
+    if (!read_number(key, value) || value < 0 || value > UINT32_MAX) return false;
+    out = static_cast<uint32_t>(value);
     return true;
 }
 
-bool Reader::get_number(const char* key, int64_t& out) const {
-    int o = value_offset(key);
-    if (o < 0) return false;
-    bool neg = false;
-    if (data_[o] == '-') {
-        neg = true;
-        o++;
+bool Reader::read_number(const char* key, int64_t& out) const {
+    int offset = value_offset(key);
+    if (offset < 0) return false;
+    bool negative = false;
+    if (data_[offset] == '-') {
+        negative = true;
+        offset++;
     }
-    if (o >= bytes_ || data_[o] < '0' || data_[o] > '9') return false;
-    int64_t v = 0;
-    while (o < bytes_ && data_[o] >= '0' && data_[o] <= '9') {
-        v = v * 10 + (data_[o++] - '0');
-        if (v > UINT32_MAX) return false;
+    if (offset >= bytes_ || data_[offset] < '0' || data_[offset] > '9') return false;
+    int64_t value = 0;
+    while (offset < bytes_ && data_[offset] >= '0' && data_[offset] <= '9') {
+        value = value * 10 + (data_[offset++] - '0');
+        if (value > UINT32_MAX) return false;
     }
-    out = neg ? -v : v;
+    out = negative ? -value : value;
     return true;
 }
 
-bool Reader::get_bool(const char* key, bool& out) const {
-    int o = value_offset(key);
-    if (o < 0) return false;
-    if (o + 4 <= bytes_ && data_[o] == 't') {
+bool Reader::read_boolean(const char* key, bool& out) const {
+    int offset = value_offset(key);
+    if (offset < 0) return false;
+    if (offset + 4 <= bytes_ && data_[offset] == 't') {
         out = true;
         return true;
     }
-    if (o + 5 <= bytes_ && data_[o] == 'f') {
+    if (offset + 5 <= bytes_ && data_[offset] == 'f') {
         out = false;
         return true;
     }
     return false;
 }
 
-bool Reader::get_string(const char* key, char* out, int capacity) const {
-    int o = value_offset(key);
-    if (o < 0 || data_[o] != '"') return false;
-    o++;
-    int n = 0;
-    while (o < bytes_ && data_[o] != '"' && n < capacity - 1) out[n++] = data_[o++];
-    out[n] = 0;
+bool Reader::read_string(const char* key, char* out, int capacity) const {
+    int offset = value_offset(key);
+    if (offset < 0 || data_[offset] != '"') return false;
+    offset++;
+    int count = 0;
+    while (offset < bytes_ && data_[offset] != '"' && count < capacity - 1)
+        out[count++] = data_[offset++];
+    out[count] = 0;
     return true;
 }
 
@@ -99,63 +100,63 @@ bool Writer::reserve(int extra) {
     }
     return true;
 }
-void Writer::sep() {
+void Writer::write_separator() {
     if (!first_) buffer_[length_++] = ',';
     first_ = false;
 }
-void Writer::raw(const char* s) {
-    while (*s) buffer_[length_++] = *s++;
+void Writer::write_text(const char* text) {
+    while (*text) buffer_[length_++] = *text++;
 }
-void Writer::raw_str(const char* s) {
+void Writer::write_quoted(const char* text) {
     buffer_[length_++] = '"';
-    while (*s) {
-        if (*s == '"' || *s == '\\') buffer_[length_++] = '\\';
-        buffer_[length_++] = *s++;
+    while (*text) {
+        if (*text == '"' || *text == '\\') buffer_[length_++] = '\\';
+        buffer_[length_++] = *text++;
     }
     buffer_[length_++] = '"';
 }
-void Writer::add_integer(const char* key, int64_t v) {
-    char temporary[20];
-    int t = 0;
-    bool neg = v < 0;
-    uint64_t uv = neg ? 0 - static_cast<uint64_t>(v) : static_cast<uint64_t>(v);
+void Writer::add_integer(const char* key, int64_t value) {
+    char digits[20];
+    int digit_count = 0;
+    bool negative = value < 0;
+    uint64_t magnitude = negative ? 0 - static_cast<uint64_t>(value) : static_cast<uint64_t>(value);
     do {
-        temporary[t++] = static_cast<char>('0' + uv % 10);
-        uv /= 10;
-    } while (uv);
-    const int need =
-        (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 + (neg ? 1 : 0) + t;
-    if (!reserve(need)) return;
-    sep();
-    raw_str(key);
+        digits[digit_count++] = static_cast<char>('0' + magnitude % 10);
+        magnitude /= 10;
+    } while (magnitude);
+    const int needed = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
+                       (negative ? 1 : 0) + digit_count;
+    if (!reserve(needed)) return;
+    write_separator();
+    write_quoted(key);
     buffer_[length_++] = ':';
-    if (neg) buffer_[length_++] = '-';
-    while (t > 0) buffer_[length_++] = temporary[--t];
+    if (negative) buffer_[length_++] = '-';
+    while (digit_count > 0) buffer_[length_++] = digits[--digit_count];
 }
-void Writer::add_boolean(const char* key, bool v) {
-    const char* val = v ? "true" : "false";
-    const int need = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
-                     static_cast<int>(std::strlen(val));
-    if (!reserve(need)) return;
-    sep();
-    raw_str(key);
+void Writer::add_boolean(const char* key, bool value) {
+    const char* text = value ? "true" : "false";
+    const int needed = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
+                       static_cast<int>(std::strlen(text));
+    if (!reserve(needed)) return;
+    write_separator();
+    write_quoted(key);
     buffer_[length_++] = ':';
-    raw(val);
+    write_text(text);
 }
-void Writer::add_string(const char* key, const char* v) {
+void Writer::add_string(const char* key, const char* value) {
     int value_length = 0;
     int escapes = 0;
-    for (const char* p = v; *p; p++) {
+    for (const char* character = value; *character; character++) {
         value_length++;
-        if (*p == '"' || *p == '\\') escapes++;
+        if (*character == '"' || *character == '\\') escapes++;
     }
-    const int need =
+    const int needed =
         (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 + value_length + escapes + 2;
-    if (!reserve(need)) return;
-    sep();
-    raw_str(key);
+    if (!reserve(needed)) return;
+    write_separator();
+    write_quoted(key);
     buffer_[length_++] = ':';
-    raw_str(v);
+    write_quoted(value);
 }
 int Writer::finish() {
     if (length_ < capacity_ - 1)

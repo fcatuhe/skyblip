@@ -10,11 +10,13 @@ namespace skyblip::comms {
 
 namespace {
 
-int format_buckets(const timing::SlotTimingStats& stats, bool pps, char* out, int capacity) {
+int format_buckets(const timing::SlotTimingStatistics& statistics, bool pps, char* out,
+                   int capacity) {
     int written = 0;
-    for (int i = 0; i < timing::SlotTimingStats::kBuckets && written < capacity - 1; i++) {
+    for (int i = 0; i < timing::SlotTimingStatistics::kBuckets && written < capacity - 1; i++) {
         if (i > 0) out[written++] = ',';
-        written += format_uint(out + written, pps ? stats.pps_bucket(i) : stats.dwell_bucket(i));
+        written +=
+            format_uint(out + written, pps ? statistics.pps_bucket(i) : statistics.dwell_bucket(i));
     }
     out[written] = 0;
     return written;
@@ -34,30 +36,30 @@ void TimingReport::add(const char* key, const char* text, long value) {
 
 // pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
 // retune time, core/timing::kHopGuardMs and core/timing::kJitterGuardMs on each
-// side of the centre bucket (core/timing/slot_timing_stats.h). holdover, missed and
+// side of the centre bucket (core/timing/slot_timing_statistics.h). holdover, missed and
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
-TimingReport::TimingReport(const timing::SlotTimingStats& stats) {
-    format_buckets(stats, true, pps_buckets_, kBucketsTextBytes);
-    format_buckets(stats, false, dwell_buckets_, kBucketsTextBytes);
+TimingReport::TimingReport(const timing::SlotTimingStatistics& statistics) {
+    format_buckets(statistics, true, pps_buckets_, kBucketsTextBytes);
+    format_buckets(statistics, false, dwell_buckets_, kBucketsTextBytes);
 
     // Every count goes through frame::counter and not through a cast: the worst_us
     // pair is signed on both platforms and stays as it is, but a uint32_t sample
     // count cast straight to long is a negative number on the nRF52 and a correct
     // one in this suite (core/comms/frame_budget.h).
     add("pps_us", pps_buckets_, 0);
-    add("pps_worst_us", nullptr, stats.pps_worst_us());
-    add("pps_samples", nullptr, frame::counter(stats.pps_samples()));
+    add("pps_worst_us", nullptr, statistics.pps_worst_us());
+    add("pps_samples", nullptr, frame::counter(statistics.pps_samples()));
     add("dwell_us", dwell_buckets_, 0);
-    add("dwell_worst_us", nullptr, stats.dwell_worst_us());
-    add("dwell_samples", nullptr, frame::counter(stats.dwell_samples()));
-    add("holdover", nullptr, frame::counter(stats.holdover_events()));
-    add("missed", nullptr, frame::counter(stats.missed()));
-    add("refused", nullptr, frame::counter(stats.refused()));
-    add("switch_hop_us", nullptr, frame::counter(stats.switch_hop_us()));
-    add("switch_to_o_us", nullptr, frame::counter(stats.switch_to_oband_us()));
-    add("switch_to_m_us", nullptr, frame::counter(stats.switch_to_mband_us()));
-    add("late_dwells", nullptr, frame::counter(stats.late_dwells()));
+    add("dwell_worst_us", nullptr, statistics.dwell_worst_us());
+    add("dwell_samples", nullptr, frame::counter(statistics.dwell_samples()));
+    add("holdover", nullptr, frame::counter(statistics.holdover_events()));
+    add("missed", nullptr, frame::counter(statistics.missed()));
+    add("refused", nullptr, frame::counter(statistics.refused()));
+    add("switch_hop_us", nullptr, frame::counter(statistics.switch_hop_us()));
+    add("switch_to_o_us", nullptr, frame::counter(statistics.switch_to_o_band_us()));
+    add("switch_to_m_us", nullptr, frame::counter(statistics.switch_to_m_band_us()));
+    add("late_dwells", nullptr, frame::counter(statistics.late_dwells()));
 }
 
 bool TimingReport::fits(int payload_bytes) const {

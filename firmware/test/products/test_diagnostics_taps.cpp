@@ -187,9 +187,9 @@ TEST_CASE("diag dwell: every dwell the radio arms is a record, band edges and ho
         diagnostics::Dwell dwell{};
         if (!diagnostics::read(record, dwell)) continue;
         CHECK(dwell.armed);
-        uplink = uplink || dwell.frequency_hz == timing::kObandHz;
-        slot0 = slot0 || dwell.frequency_hz == timing::kMband0Hz;
-        slot1 = slot1 || dwell.frequency_hz == timing::kMband1Hz;
+        uplink = uplink || dwell.frequency_hz == timing::kOBandHz;
+        slot0 = slot0 || dwell.frequency_hz == timing::kMBand0Hz;
+        slot1 = slot1 || dwell.frequency_hz == timing::kMBand1Hz;
         if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1EndMs);
     }
     CHECK(uplink);
@@ -205,21 +205,21 @@ TEST_CASE("diag switch: every dwell change is recorded, with the channel it tune
 
     CHECK(count_of(records, diagnostics::Type::Switch) >= 3 * 3);
     bool hop = false;
-    bool to_oband = false;
-    bool to_mband = false;
+    bool to_o_band = false;
+    bool to_m_band = false;
     for (const diagnostics::Record& record : records) {
         diagnostics::Switch change{};
         if (!diagnostics::read(record, change)) continue;
         CHECK(change.armed_ahead);
-        if (change.kind == diagnostics::SwitchKind::Hop) hop = change.to_hz == timing::kMband1Hz;
-        if (change.kind == diagnostics::SwitchKind::ToOband)
-            to_oband = change.to_hz == timing::kObandHz;
-        if (change.kind == diagnostics::SwitchKind::ToMband)
-            to_mband = change.to_hz == timing::kMband0Hz;
+        if (change.kind == diagnostics::SwitchKind::Hop) hop = change.to_hz == timing::kMBand1Hz;
+        if (change.kind == diagnostics::SwitchKind::ToOBand)
+            to_o_band = change.to_hz == timing::kOBandHz;
+        if (change.kind == diagnostics::SwitchKind::ToMBand)
+            to_m_band = change.to_hz == timing::kMBand0Hz;
     }
     CHECK(hop);
-    CHECK(to_oband);
-    CHECK(to_mband);
+    CHECK(to_o_band);
+    CHECK(to_m_band);
 }
 
 TEST_CASE("diag baro: a sample carries the altitude and the rate taken from it") {

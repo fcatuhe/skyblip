@@ -105,7 +105,7 @@ TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
     CHECK(n > 0);
     json::Reader r(buffer, n);
     long v;
-    CHECK(r.get_int("aircraft_type", v));
+    CHECK(r.read_integer("aircraft_type", v));
     CHECK(v == kAircraftTypeLight);
 
     // apply a patch: change type + alarm volume + units
@@ -144,9 +144,9 @@ TEST_CASE("address: the table is a constant, not a field anything can hold") {
     const int n = to_json(defaults(), address_of(0x0042), buffer, static_cast<int>(sizeof(buffer)));
     json::Reader r(buffer, n);
     long v = 0;
-    CHECK(r.get_int("address", v));
+    CHECK(r.read_integer("address", v));
     CHECK(v == 0x000042);
-    CHECK(r.get_int("address_mapping_table", v));
+    CHECK(r.read_integer("address_mapping_table", v));
     CHECK(v == 58);
 }
 
@@ -156,7 +156,7 @@ TEST_CASE("address: a unit with no serial reports no address, and still its tabl
     json::Reader r(buffer, n);
     long v = 0;
     CHECK_FALSE(r.has("address"));
-    CHECK(r.get_int("address_mapping_table", v));
+    CHECK(r.read_integer("address_mapping_table", v));
     CHECK(v == 58);
 }
 
@@ -404,8 +404,8 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     const int n = to_json(settings, 0x5B7E57, buffer, static_cast<int>(sizeof(buffer)));
     json::Reader r(buffer, n);
     long v = 0;
-    CHECK(r.get_int("address", v));
+    CHECK(r.read_integer("address", v));
     CHECK(v == 0x5B7E57);
-    CHECK(r.get_int("address_mapping_table", v));
+    CHECK(r.read_integer("address_mapping_table", v));
     CHECK(v == 58);
 }

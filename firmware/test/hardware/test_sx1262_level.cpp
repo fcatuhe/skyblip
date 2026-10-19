@@ -141,7 +141,7 @@ TEST_CASE("sx1262: a modem left on its reset defaults frames nothing off the air
     uint8_t payload[protocol::kAdslFrameBytes] = {0};
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_length =
-        protocol::encode_mband(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
+        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
     CHECK_FALSE(chip.receive_air(chips, static_cast<uint8_t>(chip_length)));
 }
 

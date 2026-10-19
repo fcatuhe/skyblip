@@ -92,7 +92,7 @@ TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, n
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t length =
-        protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
+        protocol::encode_m_band(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
     CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 
     uint8_t decoded[protocol::kSyncWordBytes + protocol::kAdslFrameBytes] = {0};

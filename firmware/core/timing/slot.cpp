@@ -45,9 +45,9 @@ Band Scheduler::band_at(int phase_ms) {
 uint32_t Scheduler::frequency_hz_at(int phase_ms) {
     switch (state_at(phase_ms)) {
         case SlotState::Slot0:
-        case SlotState::Hop: return kMband0Hz;
-        case SlotState::Slot1: return kMband1Hz;
-        default: return kObandHz;
+        case SlotState::Hop: return kMBand0Hz;
+        case SlotState::Slot1: return kMBand1Hz;
+        default: return kOBandHz;
     }
 }
 

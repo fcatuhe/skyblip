@@ -41,7 +41,8 @@ class ConfigLinkService : public runtime::Service {
         : runtime::Service(context),
           settings_(settings),
           store_(settings, context.state.activation),
-          config_(context.roles.link, store_, &context.roles.dfu, &context.state.rf.timing_stats),
+          config_(context.roles.link, store_, &context.roles.dfu,
+                  &context.state.rf.timing_statistics),
           power_(power),
           unit_(context.roles.identity),
           identity_(unit_) {

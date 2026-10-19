@@ -49,7 +49,7 @@ void FlightLogService::tick(uint32_t now_ms) {
 void FlightLogService::watch(uint32_t now_ms) {
     const model::Ownship& own = context_.state.own;
     events_.status(status_now(), own.utc_s, now_ms);
-    for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
+    for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) {
             events_.vacant(slot);
@@ -62,13 +62,12 @@ void FlightLogService::watch(uint32_t now_ms) {
         contact.address = target->observation.address;
         contact.address_mapping_table = target->observation.address_mapping_table;
         contact.aircraft_category = target->observation.aircraft_category;
-        contact.distance_m =
-            diagnostics::clamp_u16(assessment.relative_distance_m < 0
-                                       ? 0
-                                       : static_cast<uint32_t>(assessment.relative_distance_m));
-        contact.relative_altitude_m = diagnostics::clamp_i16(assessment.relative_altitude_m);
+        contact.distance_m = clamp_u16(assessment.relative_distance_m < 0
+                                           ? 0
+                                           : static_cast<uint32_t>(assessment.relative_distance_m));
+        contact.relative_altitude_m = clamp_i16(assessment.relative_altitude_m);
         contact.relative_bearing_deg = assessment.relative_bearing_deg;
-        contact.closing_mps = diagnostics::clamp_i16(assessment.closing_mps);
+        contact.closing_mps = clamp_i16(assessment.closing_mps);
         contact.alarm = traffic::to_number(target->alarm_level);
         contact.source = static_cast<uint8_t>(target->observation.source);
         contact.rssi_dbm = target->observation.rssi_dbm;

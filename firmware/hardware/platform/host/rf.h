@@ -156,7 +156,7 @@ class Rf : public ports::Rf {
     bool start(uint64_t now_us) {
         started_ = true;
         armed_count_++;
-        band_ = flying_plan_.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
+        band_ = flying_plan_.mode == ports::RfMode::RxOBand ? model::Band::O : model::Band::M;
         frequency_hz_ = flying_plan_.frequency_hz;
         if (radio_.wake() != Status::Ok) return false;
         if (flying_plan_.frequency_hz != 0 &&

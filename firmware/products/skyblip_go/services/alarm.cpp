@@ -28,7 +28,7 @@ void AlarmService::tick(uint32_t now_ms) {
     bool announced = false;
     formation_.observe_own(context_.state.own, now_ms);
     if (context_.state.own.fix_valid) {
-        for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
+        for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
             traffic::Target* target = context_.state.traffic.at(i);
             if (!target || !target->used) continue;
             const formation::State formation_state = watch_formation(*target, now_ms);
@@ -84,12 +84,12 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
     const traffic::AlarmAssessment& assessment = decision.assessment;
     diagnostics::Traffic value{};
     value.address = target.observation.address;
-    value.distance_m = diagnostics::clamp_u16(
-        assessment.relative_distance_m < 0 ? 0
-                                           : static_cast<uint32_t>(assessment.relative_distance_m));
+    value.distance_m = clamp_u16(assessment.relative_distance_m < 0
+                                     ? 0
+                                     : static_cast<uint32_t>(assessment.relative_distance_m));
     value.bearing_deg = assessment.relative_bearing_deg;
-    value.relative_altitude_m = diagnostics::clamp_i16(assessment.relative_altitude_m);
-    value.closing_mps = diagnostics::clamp_i16(assessment.closing_mps);
+    value.relative_altitude_m = clamp_i16(assessment.relative_altitude_m);
+    value.closing_mps = clamp_i16(assessment.closing_mps);
     value.alarm = target.alarm_level;
     value.source = target.observation.source;
     value.rssi_dbm = target.observation.rssi_dbm;

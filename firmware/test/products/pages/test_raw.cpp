@@ -62,7 +62,7 @@ RawSnapshot bench_device() {
     snapshot.radio.alarm = 1;
     snapshot.radio.noise_dbm = -104;
     snapshot.radio.slot = skyblip::timing::SlotState::Slot0;
-    snapshot.radio.frequency_hz = skyblip::timing::kMband0Hz;
+    snapshot.radio.frequency_hz = skyblip::timing::kMBand0Hz;
     snapshot.radio.tx_allowed = true;
     return snapshot;
 }

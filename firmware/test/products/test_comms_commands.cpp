@@ -396,7 +396,7 @@ TEST_CASE("comms: power_off refused in flight") {
 // D5: the reset reason was read at boot and shown on the self-test page, and a
 // device in a field with a phone next to it has no self-test page in view.
 // G6's plug-in-and-read: the same on_rx dispatch that answers "status"
-// answers "timing" from whatever core/timing::SlotTimingStats the device has
+// answers "timing" from whatever core/timing::SlotTimingStatistics the device has
 // been accumulating - no second channel, no panel real estate a bucket array
 // would not fit on anyway.
 // Fail closed: takeoff must revoke an authorisation granted on the ground, or a

@@ -25,7 +25,7 @@ bool range_to(const model::Ownship& own, const model::AircraftObservation& obser
 int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
                   const model::Ownship& own, RangeRow* out, int capacity) {
     int n = 0;
-    for (int i = 0; i < TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < TrafficTable::kMaxTargets; i++) {
         const Target* t = table.at(i);
         if (!t || !t->used) continue;
         RangeRow row;

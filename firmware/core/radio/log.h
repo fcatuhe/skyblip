@@ -57,16 +57,16 @@ int16_t tx_stage_margin_of(uint64_t staged_at_us, uint64_t deadline_us);
 
 class Log {
    public:
-    static constexpr int kCapacity = 16;
+    static constexpr int kMaxEntries = 16;
 
     void record(const Entry& entry);
     void clear() { written_ = 0; }
 
-    int count() const { return written_ < kCapacity ? static_cast<int>(written_) : kCapacity; }
+    int count() const { return written_ < kMaxEntries ? static_cast<int>(written_) : kMaxEntries; }
     const Entry& newest(int i) const;
 
    private:
-    Entry entries_[kCapacity]{};
+    Entry entries_[kMaxEntries]{};
     uint32_t written_{0};
 };
 

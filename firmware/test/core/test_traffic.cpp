@@ -201,7 +201,7 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
         return o;
     };
     REQUIRE(table.update(at(0xAAAAAA, 1000, model::Source::AdslDirect, 100), 100) >= 0);
-    for (int i = 1; i < TrafficTable::kCapacity; i++)
+    for (int i = 1; i < TrafficTable::kMaxTargets; i++)
         REQUIRE(table.update(at(0x100000u + i, 10000 + i * 100, model::Source::AdslUplink, 101),
                              101) >= 0);
     for (uint32_t i = 0; i < 20; i++)
@@ -210,14 +210,14 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
 
     // A newcomer nearer than the farthest takes that slot, and the nearest stays.
     CHECK(table.update(at(0x300000, 2000, model::Source::AdslUplink, 103), 103) >= 0);
-    CHECK(table.find(6, 0x100000u + TrafficTable::kCapacity - 1) < 0);
+    CHECK(table.find(6, 0x100000u + TrafficTable::kMaxTargets - 1) < 0);
     CHECK(table.find(6, 0xAAAAAA) >= 0);
 }
 
 TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     TrafficTable table;
     // fill capacity
-    for (int i = 0; i < TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < TrafficTable::kMaxTargets; i++) {
         int index = table.update(observation(0x1000 + i, 6, 100 + i), 200);
         REQUIRE(index >= 0);
     }
@@ -241,7 +241,7 @@ TEST_CASE("traffic: a slot handed to a new aircraft keeps nothing of the last on
     };
 
     TrafficTable full;
-    for (int i = 0; i < TrafficTable::kCapacity; i++)
+    for (int i = 0; i < TrafficTable::kMaxTargets; i++)
         standing(full, full.update(observation(0x1000 + i, 6, 100 + i), 200));
     CHECK(fresh(full, full.update(observation(0x9999, 6, 300), 300)));
 
@@ -262,7 +262,7 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
-    for (int i = 0; i < TrafficTable::kCapacity; i++) {
+    for (int i = 0; i < TrafficTable::kMaxTargets; i++) {
         model::AircraftObservation apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
         apron.address = 0x100000u + static_cast<uint32_t>(i);
         apron.received.at_s = 100;
@@ -276,7 +276,7 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
     arriving.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
     CHECK(table.update(arriving, 100) >= 0);
     CHECK(table.find(6, 0x200000) >= 0);
-    CHECK(table.count() == TrafficTable::kCapacity);
+    CHECK(table.count() == TrafficTable::kMaxTargets);
 }
 
 // M. Two different clocks meet in this layer and only one of them wraps at
@@ -300,7 +300,7 @@ TEST_CASE("traffic: the age-out is a difference, whichever side of the wrap the 
     // And the eviction order is ages, not stamps: a table full of targets stamped
     // before the wrap still gives up its oldest to a newcomer stamped after it.
     TrafficTable full;
-    for (uint32_t i = 0; i < static_cast<uint32_t>(TrafficTable::kCapacity); i++)
+    for (uint32_t i = 0; i < static_cast<uint32_t>(TrafficTable::kMaxTargets); i++)
         REQUIRE(full.update(observation(0x2000u + i, 6, utc_s + i), utc_s + i) >= 0);
     const uint32_t newcomer = utc_s + 60u;  // after every stamp already in the table
     CHECK(full.update(observation(0x9999, 6, newcomer), newcomer) >= 0);

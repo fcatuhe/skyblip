@@ -9,7 +9,7 @@
 
 namespace skyblip::go {
 
-constexpr int kRadioLogRows = radio::Log::kCapacity;
+constexpr int kRadioLogRows = radio::Log::kMaxEntries;
 
 enum class PpsState : uint8_t { None, Lock, Holdover };
 

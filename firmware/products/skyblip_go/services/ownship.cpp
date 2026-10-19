@@ -8,7 +8,7 @@
 #include "core/flight/turn.h"
 #include "core/model/ownship.h"
 #include "core/timing/slot.h"
-#include "core/timing/slot_timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 
@@ -151,16 +151,16 @@ void OwnshipService::record_pps(uint32_t now_ms) {
     pps_recorded_ms_ = now_ms;
     if (!context_.diagnostics.armed()) return;
 
-    const timing::SlotTimingStats& stats = context_.state.rf.timing_stats;
+    const timing::SlotTimingStatistics& statistics = context_.state.rf.timing_statistics;
     diagnostics::Pps sample{};
     if (edged && previous != 0)
         sample.interval_us = static_cast<uint32_t>(clock.pps_edge_us - previous);
     if (sample.interval_us != 0)
         sample.error_us = static_cast<int32_t>(static_cast<int64_t>(sample.interval_us) -
-                                               timing::SlotTimingStats::kNominalSecondUs);
-    sample.samples = stats.pps_samples();
-    sample.holdover_events = stats.holdover_events();
-    sample.since_edge_ms = diagnostics::clamp_u16(clock.since_edge_ms);
+                                               timing::SlotTimingStatistics::kNominalSecondUs);
+    sample.samples = statistics.pps_samples();
+    sample.holdover_events = statistics.holdover_events();
+    sample.since_edge_ms = clamp_u16(clock.since_edge_ms);
     sample.locked = clock.pps_locked;
     sample.utc_valid = clock.utc_valid;
     context_.diagnostics.record(sample, context_.instant(now_ms));

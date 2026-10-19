@@ -14,7 +14,7 @@ constexpr uint32_t kCallsignForgetS = 600;
 
 class CallsignTable {
    public:
-    static constexpr int kCapacity = TrafficTable::kCapacity;
+    static constexpr int kMaxCallsigns = TrafficTable::kMaxTargets;
     static constexpr int kTextBytes = protocol::AdslPacket::kInfoTextBytes + 1;
 
     void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
@@ -37,7 +37,7 @@ class CallsignTable {
     int find_slot(uint8_t address_mapping_table, uint32_t address) const;
     int oldest_slot() const;
 
-    std::array<Entry, kCapacity> slots_{};
+    std::array<Entry, kMaxCallsigns> slots_{};
 };
 
 }  // namespace skyblip::traffic

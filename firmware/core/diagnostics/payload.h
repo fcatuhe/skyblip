@@ -317,7 +317,7 @@ struct Duty {
     uint32_t annunciator_ms{0};
 };
 
-enum class SwitchKind : uint8_t { Retune = 0, Hop = 1, ToOband = 2, ToMband = 3, Wake = 4 };
+enum class SwitchKind : uint8_t { Retune = 0, Hop = 1, ToOBand = 2, ToMBand = 3, Wake = 4 };
 
 constexpr uint8_t kSwitchFlagArmedAhead = 1u << 2;
 constexpr uint8_t kSwitchFlagLate = 1u << 3;

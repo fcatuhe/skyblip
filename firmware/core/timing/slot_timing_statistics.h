@@ -1,11 +1,11 @@
-// core/timing/slot_timing_stats.h: the bench-facing accumulator behind G6, the
+// core/timing/slot_timing_statistics.h: the bench-facing accumulator behind G6, the
 // launch gate's "slot timing proven on silicon". It has exactly two inputs -
 // the PPS edge boards/ already latches every pass, and the outcome an
 // armed dwell reports back against the deadline core/timing::Transmitter chose
 // - so nothing here forms a second opinion about either. ADS-L 4 SRD-860
 // issue 2 §C.5 is the budget both halves are read against.
-#ifndef SKYBLIP_CORE_TIMING_SLOT_TIMING_STATS_H
-#define SKYBLIP_CORE_TIMING_SLOT_TIMING_STATS_H
+#ifndef SKYBLIP_CORE_TIMING_SLOT_TIMING_STATISTICS_H
+#define SKYBLIP_CORE_TIMING_SLOT_TIMING_STATISTICS_H
 
 #include <cstdint>
 
@@ -17,7 +17,7 @@ namespace skyblip::timing {
 // figures that already bound this budget, not a round number:
 //  - kRetuneUs, the SX1262's own share of it. Semtech DS.SX1261-2.W.APP rev
 //    2.1 §3.5.2 table 3-7, TS_HOP: 30 us typical for a 10 MHz synthesizer
-//    step; the M-band hop here is 200 kHz (kMband1Hz - kMband0Hz), so the chip
+//    step; the M-band hop here is 200 kHz (kMBand1Hz - kMBand0Hz), so the chip
 //    settles inside this bucket with room left over. An error this small is
 //    the radio doing exactly what its own datasheet promises, not a PPS or a
 //    scheduling fault.
@@ -29,7 +29,7 @@ namespace skyblip::timing {
 // A count outside the widest pair still lands somewhere: saturated into the
 // outermost bucket, never wrapped, because a fault we cannot bound is one this
 // class must not misreport as a smaller one.
-class SlotTimingStats {
+class SlotTimingStatistics {
    public:
     static constexpr int32_t kRetuneUs = 30;
     static constexpr int32_t kHopGuardUs = kHopGuardMs * 1000;
@@ -61,11 +61,11 @@ class SlotTimingStats {
     // The executor's own measurement of its dwell changes, as it last reported
     // it: the worst of each kind since boot, and how many dwells armed ahead were
     // still not listening at their start. The figures the guards are sized from.
-    void record_switching(uint32_t hop_us, uint32_t to_oband_us, uint32_t to_mband_us,
+    void record_switching(uint32_t hop_us, uint32_t to_o_band_us, uint32_t to_m_band_us,
                           uint32_t late) {
         switch_hop_us_ = hop_us;
-        switch_to_oband_us_ = to_oband_us;
-        switch_to_mband_us_ = to_mband_us;
+        switch_to_o_band_us_ = to_o_band_us;
+        switch_to_m_band_us_ = to_m_band_us;
         late_dwells_ = late;
     }
 
@@ -75,12 +75,12 @@ class SlotTimingStats {
     uint32_t dwell_samples() const { return dwell_samples_; }
     int32_t pps_worst_us() const { return pps_worst_us_; }
     int32_t dwell_worst_us() const { return dwell_worst_us_; }
-    uint32_t holdover_events() const { return holdover_; }
+    uint32_t holdover_events() const { return holdover_events_; }
     uint32_t missed() const { return missed_; }
     uint32_t refused() const { return refused_; }
     uint32_t switch_hop_us() const { return switch_hop_us_; }
-    uint32_t switch_to_oband_us() const { return switch_to_oband_us_; }
-    uint32_t switch_to_mband_us() const { return switch_to_mband_us_; }
+    uint32_t switch_to_o_band_us() const { return switch_to_o_band_us_; }
+    uint32_t switch_to_m_band_us() const { return switch_to_m_band_us_; }
     uint32_t late_dwells() const { return late_dwells_; }
 
     // Exposed for the bench arithmetic to be checked directly, not only
@@ -91,7 +91,8 @@ class SlotTimingStats {
     static uint32_t bucket_at(const uint32_t* buckets, int index) {
         return (index >= 0 && index < kBuckets) ? buckets[static_cast<unsigned>(index)] : 0;
     }
-    static void bump(uint32_t* buckets, uint32_t& samples, int32_t& worst_us, int64_t error_us);
+    static void record_sample(uint32_t* buckets, uint32_t& samples, int32_t& worst_us,
+                              int64_t error_us);
 
     uint32_t pps_buckets_[kBuckets]{};
     uint32_t dwell_buckets_[kBuckets]{};
@@ -99,12 +100,12 @@ class SlotTimingStats {
     uint32_t dwell_samples_{0};
     int32_t pps_worst_us_{0};
     int32_t dwell_worst_us_{0};
-    uint32_t holdover_{0};
+    uint32_t holdover_events_{0};
     uint32_t missed_{0};
     uint32_t refused_{0};
     uint32_t switch_hop_us_{0};
-    uint32_t switch_to_oband_us_{0};
-    uint32_t switch_to_mband_us_{0};
+    uint32_t switch_to_o_band_us_{0};
+    uint32_t switch_to_m_band_us_{0};
     uint32_t late_dwells_{0};
     uint64_t previous_edge_us_{0};
     bool previous_edge_valid_{false};

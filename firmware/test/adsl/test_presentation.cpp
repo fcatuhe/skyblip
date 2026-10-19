@@ -172,9 +172,9 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong 
     const int n = go::to_json(settings, 0x123456, buffer, static_cast<int>(sizeof(buffer)));
     json::Reader r(buffer, n);
     long v = 0;
-    CHECK(r.get_int("address", v));
+    CHECK(r.read_integer("address", v));
     CHECK(v == 0x123456);
-    CHECK(r.get_int("address_mapping_table", v));
+    CHECK(r.read_integer("address_mapping_table", v));
     CHECK(v == 58);
 }
 

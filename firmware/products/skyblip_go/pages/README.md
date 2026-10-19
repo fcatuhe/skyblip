@@ -148,7 +148,7 @@ A range past 99.9 reads `FAR` and a separation past 9900 ft stops at `+99`. Thre
 
 ## radio_log
 
-The station log, newest at the top, `radio::Log::kCapacity` rows and no more: what scrolls off the bottom is gone, because the page is a tape of what is happening now rather than a history.
+The station log, newest at the top, `radio::Log::kMaxEntries` rows and no more: what scrolls off the bottom is gone, because the page is a tape of what is happening now rather than a history.
 
 Each row is one burst.
 

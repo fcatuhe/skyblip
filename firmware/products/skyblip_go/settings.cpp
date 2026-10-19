@@ -452,31 +452,31 @@ Status apply_json(Settings& settings, const char* json, int length) {
     long value;
     bool flag;
     Settings next = settings;
-    if (reader.get_int("aircraft_type", value)) {
+    if (reader.read_integer("aircraft_type", value)) {
         if (!fits_u8(value)) return Status::OutOfRange;
         next.aircraft_type = static_cast<uint8_t>(value);
     }
-    if (reader.get_bool("alarm", flag)) next.alarm_enabled = flag;
-    if (reader.get_int("alarm_volume", value)) {
+    if (reader.read_boolean("alarm", flag)) next.alarm_enabled = flag;
+    if (reader.read_integer("alarm_volume", value)) {
         if (!fits_u8(value)) return Status::OutOfRange;
         next.alarm_volume = static_cast<AlarmVolume>(value);
     }
-    if (reader.get_int("units", value)) next.units = value ? Units::Metric : Units::Nautical;
+    if (reader.read_integer("units", value)) next.units = value ? Units::Metric : Units::Nautical;
     // Narrowed before it is validated, not after: 65536 truncates to 0 in an
     // int16 and would pass a bound check that never saw the value sent.
-    if (reader.get_int("battery_offset_mv", value)) {
+    if (reader.read_integer("battery_offset_mv", value)) {
         if (value < -power::kCalibrationCeilingMv || value > power::kCalibrationCeilingMv)
             return Status::OutOfRange;
         next.battery_offset_mv = static_cast<int16_t>(value);
         next.battery_offset_manual = true;
     }
-    if (reader.get_int("freq_trim_e1_ppm", value)) {
+    if (reader.read_integer("freq_trim_e1_ppm", value)) {
         if (value < -kFrequencyTrimCeilingE1Ppm || value > kFrequencyTrimCeilingE1Ppm)
             return Status::OutOfRange;
         next.frequency_trim_e1_ppm = static_cast<int16_t>(value);
     }
     char callsign[kCallsignBytes + 1] = {0};
-    if (reader.get_string("callsign", callsign, sizeof(callsign))) {
+    if (reader.read_string("callsign", callsign, sizeof(callsign))) {
         if (std::strlen(callsign) >= kCallsignBytes) return Status::OutOfRange;
         std::memcpy(next.callsign, callsign, kCallsignBytes);
     }
