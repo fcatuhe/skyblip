@@ -25,7 +25,7 @@ def mix(x):
 
 def report(path):
     recs = [x for x in r.read_ndjson(path) if x.get("type") not in r.NOTE_TYPES]
-    addr = next(x["addr"] for x in recs if x["type"] == "config")
+    addr = next(x["address"] for x in recs if x["type"] == "config")
     ground = mix(addr) % 10
     first_s, last_s = recs[0]["at_s"], max(x["at_s"] for x in recs)
     by = collections.defaultdict(list)
@@ -33,7 +33,7 @@ def report(path):
         by[x["type"]].append(x)
     print("== %s  ground %d  span %d s" % (path.split("/")[-1], ground, last_s - first_s))
 
-    bursts = [b for b in by["burst"] if b["source"] != "received" and b.get("addr") == 0 or b["verdict"] != "received"]
+    bursts = [b for b in by["burst"] if b["source"] != "received" and b.get("address") == 0 or b["verdict"] != "received"]
     own = [b for b in by["burst"] if b["verdict"] not in ("received", "named", "unframed")]
     heard = collections.Counter(b["verdict"] for b in by["burst"] if b["verdict"] in ("received", "named", "unframed"))
     print("  heard", dict(heard))

@@ -13,7 +13,7 @@ def mix(x):
     return x
 path = sys.argv[1]
 recs = [x for x in r.read_ndjson(path) if x.get("type") not in r.NOTE_TYPES]
-addr = next(x["addr"] for x in recs if x["type"] == "config")
+addr = next(x["address"] for x in recs if x["type"] == "config")
 SLOT = windows_for(next((x["fw_build"] for x in recs if x["type"] == "boot"), 0))
 ground = mix(addr) % 10
 secs = sorted({x["at_s"] for x in recs if x["type"] == "gnss"})

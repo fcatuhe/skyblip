@@ -135,8 +135,8 @@ DIAG_TYPES = {
         ("fw_major", u8(10)), ("fw_minor", u8(11)), ("reset", enum8(12, RESET)),
         ("image_state", enum8(13, IMAGE_STATE)), ("profile", vouched_enum8(14, 2, PROFILE)))),
     2: ("config", (
-        ("addr", u32(0)), ("battery_offset_mv", i16(4)), ("freq_trim_e1_ppm", i16(6)),
-        ("aircraft_type", u8(8)), ("addr_table", u8(9)), ("alarm_volume", u8(10)),
+        ("address", u32(0)), ("battery_offset_mv", i16(4)), ("freq_trim_e1_ppm", i16(6)),
+        ("aircraft_type", u8(8)), ("address_mapping_table", u8(9)), ("alarm_volume", u8(10)),
         ("settings_version", u8(11)), ("tx_power_dbm", i8(12)), ("pa_rated_dbm", i8(13)),
         ("alarm_enabled", flag(2)), ("metric", flag(3)), ("battery_trim_manual", flag(4)))),
     3: ("gnss", (
@@ -150,10 +150,10 @@ DIAG_TYPES = {
         ("holdover_events", u16(12)), ("since_edge_ms", u16(14)), ("locked", flag(2)),
         ("utc_valid", flag(3)))),
     5: ("burst", (
-        ("addr", u32(0)), ("tx_keyed_us", u16(4)), ("tx_span_us", u16(6)),
+        ("address", u32(0)), ("tx_keyed_us", u16(4)), ("tx_span_us", u16(6)),
         ("verdict", enum8(8, VERDICT)), ("source", enum8(9, SOURCE)), ("band", enum8(10, BAND)),
         ("channel", u8(11)), ("len", u8(12)), ("rssi_dbm", i8(13)), ("key_offset_s", i8(14)),
-        ("tx_stage_margin_us", scaled(i8(15), 10)), ("addr_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
+        ("tx_stage_margin_us", scaled(i8(15), 10)), ("address_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
         ("tx_span_valid", flag(5)), ("callsign", flag(6)))),
     6: ("dwell", (
         ("freq_hz", u32(0)), ("start_ms", u16(4)), ("end_ms", u16(6)), ("phase_ms", u16(8)),
@@ -190,7 +190,7 @@ DIAG_TYPES = {
         ("holder", u16(6)), ("drops", u16(8)), ("action", enum8(10, LINK_ACTION)),
         ("endpoint", enum8(11, ENDPOINT)), ("claim_held", flag(2)))),
     13: ("traffic", (
-        ("addr", u32(0)), ("dist_m", u16(4)), ("bearing_deg", u16(6)), ("rel_alt_m", i16(8)),
+        ("address", u32(0)), ("dist_m", u16(4)), ("bearing_deg", u16(6)), ("rel_alt_m", i16(8)),
         ("closing_mps", i16(10)), ("alarm", u8(12)), ("source", enum8(13, SOURCE)),
         ("rssi_dbm", i8(14)), ("tracked", u8(15)), ("assessed", flag(2)), ("dismissed", flag(3)),
         ("in_formation", flag(4)), ("position_valid", flag(5)))),
@@ -236,7 +236,7 @@ FLIGHT_EVENT_MARK = 0x80
 FLIGHT_KIND_OFFSET = 16
 
 CONTACT_FIELDS = (
-    ("addr", u24(2)), ("addr_table", u8(5)), ("dist_m", u16(6)), ("rel_alt_m", i16(8)),
+    ("address", u24(2)), ("address_mapping_table", u8(5)), ("dist_m", u16(6)), ("rel_alt_m", i16(8)),
     ("rel_bearing_deg", u16(10)), ("closing_mps", i16(12)), ("alarm", u8(14)),
     ("aircraft_cat", u8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", i8(18)),
     ("dismissed", flag(0)), ("in_formation", flag(1)),

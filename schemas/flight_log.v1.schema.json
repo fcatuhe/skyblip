@@ -174,13 +174,13 @@
       "type": "boolean",
       "description": "status. Bit 2 of byte 9: the cable is in"
     },
-    "addr": {
+    "address": {
       "type": "integer",
       "minimum": 0,
       "maximum": 16777215,
       "description": "alarm, encounter. The aircraft's 24-bit address, bytes 2-4"
     },
-    "addr_table": {
+    "address_mapping_table": {
       "type": "integer",
       "minimum": 0,
       "maximum": 255,

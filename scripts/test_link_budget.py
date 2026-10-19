@@ -370,10 +370,10 @@ class Firmware(Case):
         self.assertEqual(link_budget.MBAND_HZ, sum(channels) // 2)
 
     def test_every_field_the_link_reads_is_a_field_the_decoder_decodes(self):
-        for raw, fields in ((config(UNIT_A), ("addr", "tx_power_dbm", "pa_rated_dbm")),
-                            (heard(UNIT_A, FIX_AT), ("addr", "verdict", "band", "channel",
-                                                     "rssi_dbm", "addr_valid", "rssi_valid")),
-                            (traffic(UNIT_A, FIX_AT, 17), ("addr", "dist_m", "position_valid"))):
+        for raw, fields in ((config(UNIT_A), ("address", "tx_power_dbm", "pa_rated_dbm")),
+                            (heard(UNIT_A, FIX_AT), ("address", "verdict", "band", "channel",
+                                                     "rssi_dbm", "address_valid", "rssi_valid")),
+                            (traffic(UNIT_A, FIX_AT, 17), ("address", "dist_m", "position_valid"))):
             decoded = records.decode_diag_record(raw)
             for field in fields:
                 self.assertIn(field, decoded)

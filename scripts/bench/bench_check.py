@@ -72,7 +72,7 @@ def integrity(recs):
 def report(path, recs):
     boot = [x for x in recs if x["type"] == "boot"]
     build = boot[0]["fw_build"] if boot else 0
-    addr = next(x["addr"] for x in recs if x["type"] == "config")
+    addr = next(x["address"] for x in recs if x["type"] == "config")
     ground = mix(addr) % 10
     slots = windows_for(build)
     first_s, last_s = recs[0]["at_s"], max(x["at_s"] for x in recs)
@@ -173,7 +173,7 @@ def report(path, recs):
 
 def cross(name_a, recs_a, addr_a, own_a, name_b, recs_b):
     rx = [x for x in recs_b if x["type"] == "burst" and x["verdict"] in ("received", "named")
-          and x.get("addr") == addr_a]
+          and x.get("address") == addr_a]
     lo = max(recs_a[0]["at_s"], recs_b[0]["at_s"]) + 1
     hi = min(max(x["at_s"] for x in recs_a), max(x["at_s"] for x in recs_b)) - 1
     t_rx = sorted(x["at_s"] + x["into_ms"] / 1000 for x in rx)

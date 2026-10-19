@@ -46,7 +46,7 @@ def page_lookup(recs):
 
 def report(path):
     recs = [x for x in r.read_ndjson(path) if x.get("type") not in r.NOTE_TYPES]
-    addr = next(x["addr"] for x in recs if x["type"] == "config")
+    addr = next(x["address"] for x in recs if x["type"] == "config")
     build = next((x["fw_build"] for x in recs if x["type"] == "boot"), 0)
     slots = dict(SLOT)
     for since, last in sorted(SLOT0_LAST_FROM_BUILD.items()):

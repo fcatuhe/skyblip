@@ -109,8 +109,8 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_config_reads_signed_trims_and_its_three_flag_bits(self):
         payload = struct.pack("<I2h4B2b", 0xABCDEF, -120, -35, 9, 7, 3, 2, -9, 22)
         self.assertEqual(decoded(2, payload, 0b1_1100), whole(
-            "config", 0b1_1100, addr=0xABCDEF, battery_offset_mv=-120, freq_trim_e1_ppm=-35,
-            aircraft_type=9, addr_table=7, alarm_volume=3, settings_version=2,
+            "config", 0b1_1100, address=0xABCDEF, battery_offset_mv=-120, freq_trim_e1_ppm=-35,
+            aircraft_type=9, address_mapping_table=7, alarm_volume=3, settings_version=2,
             tx_power_dbm=-9, pa_rated_dbm=22, alarm_enabled=True, metric=True,
             battery_trim_manual=True))
 
@@ -131,9 +131,9 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_burst_reads_the_radio_entry_with_its_signed_rssi_and_key_offset(self):
         payload = struct.pack("<I2H5B3b", 0x0102AB, 410, 960, 8, 2, 1, 1, 26, -97, -2, -23)
         self.assertEqual(decoded(5, payload, 0b0011_1100), whole(
-            "burst", 0b0011_1100, addr=0x0102AB, tx_keyed_us=410, tx_span_us=960,
+            "burst", 0b0011_1100, address=0x0102AB, tx_keyed_us=410, tx_span_us=960,
             verdict="miskeyed", source="alptas", band="O", channel=1, len=26, rssi_dbm=-97,
-            key_offset_s=-2, tx_stage_margin_us=-230, addr_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
+            key_offset_s=-2, tx_stage_margin_us=-230, address_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
             callsign=False))
 
     def test_a_transmitted_burst_says_whether_it_carried_the_callsign_or_a_position(self):
@@ -222,7 +222,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_traffic_reads_the_encounter_geometry_with_signed_altitude(self):
         payload = struct.pack("<I2H2h2BbB", 0xDD1234, 2450, 270, -180, 32, 1, 1, -88, 12)
         self.assertEqual(decoded(13, payload, 0b0010_0100), whole(
-            "traffic", 0b0010_0100, addr=0xDD1234, dist_m=2450, bearing_deg=270, rel_alt_m=-180,
+            "traffic", 0b0010_0100, address=0xDD1234, dist_m=2450, bearing_deg=270, rel_alt_m=-180,
             closing_mps=32, alarm=1, source="adsl_uplink", rssi_dbm=-88, tracked=12, assessed=True,
             dismissed=False, in_formation=False, position_valid=True))
 
@@ -277,7 +277,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_a_config_record_names_the_transmitter_it_was_captured_on(self):
         decoded = records.decode_diag_record(bytes.fromhex(
             "0202000040f9a16afeca5b0000000000000700010e160000"))
-        self.assertEqual(decoded["addr"], 0x5BCAFE)
+        self.assertEqual(decoded["address"], 0x5BCAFE)
         self.assertEqual(decoded["tx_power_dbm"], 14)
         self.assertEqual(decoded["pa_rated_dbm"], 22)
 
@@ -339,7 +339,7 @@ class GoldenVectors(unittest.TestCase):
     def test_a_burst_record_encoded_by_the_firmware(self):
         decoded = records.decode_diag_record(
             bytes.fromhex("053fb00400f15365ab0201009a01c003080201011a9ffe00"))
-        self.assertEqual(decoded["addr"], 0x0102AB)
+        self.assertEqual(decoded["address"], 0x0102AB)
         self.assertEqual(decoded["verdict"], "miskeyed")
         self.assertEqual(decoded["rssi_dbm"], -97)
         self.assertEqual(decoded["key_offset_s"], -2)
@@ -380,7 +380,7 @@ class GoldenVectors(unittest.TestCase):
             bytes.fromhex("2c013412dd06b400d6ff3b010c0001028300a8005f002eb1"), 1_785_628_800)
         self.assertEqual(decoded["type"], "encounter")
         self.assertEqual(decoded["utc"], 1_785_629_100)
-        self.assertEqual(decoded["addr"], 0xDD1234)
+        self.assertEqual(decoded["address"], 0xDD1234)
         self.assertEqual(decoded["dist_m"], 180)
         self.assertEqual(decoded["rel_alt_m"], -42)
         self.assertEqual(decoded["rel_bearing_deg"], 315)
