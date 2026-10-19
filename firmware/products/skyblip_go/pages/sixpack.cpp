@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/sixpack.h"
 
 #include "core/flight/slip.h"
+#include "core/units/units.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "products/skyblip_go/pages/page.h"
@@ -30,10 +31,6 @@ constexpr int kShortNeedle = kR - 15;
 constexpr int kHubR = 2;
 constexpr int kCharW = 6;
 constexpr int kGlyphH = 7;
-
-// isin/icos are Q14 (16384 = 1.0) over a 65536-unit circle.
-constexpr int32_t kOne = 16384;
-constexpr int32_t kTurn = 65536;
 
 constexpr int32_t kAsiFullScaleKt = 175;
 constexpr int32_t kAsiFullScaleKmh = 315;
@@ -74,7 +71,7 @@ int32_t clampi(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : (v > hi
 // integer division truncates toward zero and pulls both ends of a mark inward.
 int radial_half(int32_t r_half, int32_t q14) {
     const int32_t v = r_half * q14;
-    return static_cast<int>((v + (v < 0 ? -kOne : kOne)) / (2 * kOne));
+    return static_cast<int>((v + (v < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne));
 }
 
 int radial(int32_t r, int32_t q14) { return radial_half(2 * r, q14); }
@@ -82,7 +79,7 @@ int radial(int32_t r, int32_t q14) { return radial_half(2 * r, q14); }
 int16_t c16(int32_t deg) {
     int32_t d = ((deg % 360) + 360) % 360;
     if (d >= 180) d -= 360;  // keep the cordic value inside int16_t
-    return static_cast<int16_t>((d * kTurn) / 360);
+    return static_cast<int16_t>((d * kAngle16PerTurn) / 360);
 }
 
 int value_y(int row) {
@@ -258,14 +255,14 @@ void heading_card(ui::Canvas& canvas, int cx, int cy, int32_t track_deg) {
 
 int32_t flight_path_deg(int32_t vs_fpm, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
-    return (static_cast<int32_t>(iatan2(vs_fpm * 10, speed_kt * 1013)) * 360) / kTurn;
+    return (static_cast<int32_t>(iatan2(vs_fpm * 10, speed_kt * 1013)) * 360) / kAngle16PerTurn;
 }
 
 // Coordinated turn: tan(bank) = omega * V / g, which in deg/s and knots is
 // turn_dps * kt / 1093, and no sensor on this device measures a bank.
 int32_t inferred_bank_deg(int32_t turn_dps, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
-    return (static_cast<int32_t>(iatan2(turn_dps * speed_kt, 1093)) * 360) / kTurn;
+    return (static_cast<int32_t>(iatan2(turn_dps * speed_kt, 1093)) * 360) / kAngle16PerTurn;
 }
 
 // INFO: fc 11oct26 on the cable the divider reads the USB rail, so the dial reads it as that

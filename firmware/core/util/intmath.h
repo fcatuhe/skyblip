@@ -20,6 +20,8 @@ constexpr int32_t wrapped_lon_1e7(int64_t lon_1e7) {
                                 half_turn);
 }
 
+constexpr int32_t kTrigOne = 16384;
+
 int16_t isin(int16_t angle);
 inline int16_t icos(int16_t angle) { return isin(static_cast<int16_t>(angle + 0x4000)); }
 

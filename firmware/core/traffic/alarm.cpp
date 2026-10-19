@@ -14,8 +14,6 @@ namespace skyblip::traffic {
 
 namespace {
 
-constexpr int32_t kTrigOne = 16384;
-
 // Millimetres a second, north and east, scaled by the cordic one.
 void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
     north = static_cast<int64_t>(speed_mm_s) * icos(angle);

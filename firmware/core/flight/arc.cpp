@@ -7,17 +7,15 @@ namespace skyblip::flight {
 
 namespace {
 
-constexpr int64_t kTrigOne = 16384;
-constexpr int64_t kTurn16 = 65536;
 constexpr int64_t kCentiDegreeMsPerTurn = 36000000;
 constexpr int64_t kMmPerM = 1000;
 
-int16_t turn_angle16(int16_t turn_cdps, int32_t dt_ms) {
-    return static_cast<int16_t>(static_cast<uint16_t>(
-        div_round(static_cast<int64_t>(turn_cdps) * dt_ms * kTurn16, kCentiDegreeMsPerTurn)));
-}
-
 }  // namespace
+
+int32_t turn_angle16(int16_t turn_cdps, int32_t dt_ms) {
+    return static_cast<int32_t>(div_round(static_cast<int64_t>(turn_cdps) * dt_ms * kAngle16PerTurn,
+                                          kCentiDegreeMsPerTurn));
+}
 
 int16_t clamped_turn_cdps(int32_t turn_cdps) {
     if (turn_cdps > kMaxTurnCdps) return kMaxTurnCdps;
@@ -57,11 +55,12 @@ Arc::Arc(const Motion& motion, uint32_t step_ms)
       step_ms_(static_cast<int32_t>(step_ms)) {
     const int16_t angle = to_angle16(CentiDegrees(motion.track_cdeg));
     vel_north_mm_s_ = static_cast<int32_t>(
-        div_round(static_cast<int64_t>(motion.speed_mm_s) * icos(angle), kTrigOne));
+        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * icos(angle), kTrigOne));
     vel_east_mm_s_ = static_cast<int32_t>(
-        div_round(static_cast<int64_t>(motion.speed_mm_s) * isin(angle), kTrigOne));
-    const int16_t half =
-        motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2) : 0;
+        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * isin(angle), kTrigOne));
+    const int16_t half = motion.turning ? static_cast<int16_t>(static_cast<uint16_t>(turn_angle16(
+                                              clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2)))
+                                        : 0;
     half_cos_ = icos(half);
     half_sin_ = isin(half);
 }
@@ -76,8 +75,10 @@ Position Arc::here() const {
 
 void Arc::rotate_half() {
     const int64_t n = vel_north_mm_s_, e = vel_east_mm_s_;
-    vel_north_mm_s_ = static_cast<int32_t>(div_round(n * half_cos_ - e * half_sin_, kTrigOne));
-    vel_east_mm_s_ = static_cast<int32_t>(div_round(n * half_sin_ + e * half_cos_, kTrigOne));
+    vel_north_mm_s_ =
+        static_cast<int32_t>(div_round<int64_t>(n * half_cos_ - e * half_sin_, kTrigOne));
+    vel_east_mm_s_ =
+        static_cast<int32_t>(div_round<int64_t>(n * half_sin_ + e * half_cos_, kTrigOne));
 }
 
 Position Arc::advance() {

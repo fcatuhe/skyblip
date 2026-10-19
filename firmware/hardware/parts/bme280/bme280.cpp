@@ -1,13 +1,12 @@
 #include "hardware/parts/bme280/bme280.h"
 
 #include "core/util/intmath.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::parts {
 
 namespace {
 
-uint16_t u16_le(const uint8_t* b) { return static_cast<uint16_t>(b[0] | b[1] << 8); }
-int16_t s16_le(const uint8_t* b) { return static_cast<int16_t>(u16_le(b)); }
 int32_t adc_word(const uint8_t* b) { return b[0] << 12 | b[1] << 4 | b[2] >> 4; }
 
 }  // namespace
@@ -24,9 +23,9 @@ Status Bme280::begin() {
     if (!write_register(kRegCtrlMeas, kModeSleep)) return Status::Down;
     uint8_t raw[kCalibrationBytes] = {};
     if (!read_registers(address_, kRegCalibration, raw, sizeof(raw))) return Status::Down;
-    trim_ = Trim{u16_le(raw),      s16_le(raw + 2),  s16_le(raw + 4),  u16_le(raw + 6),
-                 s16_le(raw + 8),  s16_le(raw + 10), s16_le(raw + 12), s16_le(raw + 14),
-                 s16_le(raw + 16), s16_le(raw + 18), s16_le(raw + 20), s16_le(raw + 22)};
+    trim_ = Trim{get_u16(raw),      get_i16(raw + 2),  get_i16(raw + 4),  get_u16(raw + 6),
+                 get_i16(raw + 8),  get_i16(raw + 10), get_i16(raw + 12), get_i16(raw + 14),
+                 get_i16(raw + 16), get_i16(raw + 18), get_i16(raw + 20), get_i16(raw + 22)};
 
     if (!write_register(kRegCtrlHum, kOversamplingSkipped)) return Status::Down;
     if (!write_register(kRegConfig, kConfigFilter4)) return Status::Down;

@@ -41,7 +41,7 @@ bool relative_ned(const model::Ownship& own, const model::AircraftObservation& t
     north_m = static_cast<int32_t>(div_round<int64_t>(dlat * 11132, 1000000));
     int16_t ang = static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
     int64_t coslat = icos(ang);
-    int64_t east_um = div_round<int64_t>(dlon * 11132 * coslat, 16384);
+    int64_t east_um = div_round<int64_t>(dlon * 11132 * coslat, kTrigOne);
     east_m = static_cast<int32_t>(div_round<int64_t>(east_um, 1000000));
     up_m = t.alt_valid ? t.alt_m - to_metres(Millimetres(own.alt_mm)).v : 0;
     return true;

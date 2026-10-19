@@ -4,6 +4,7 @@
 
 #include "core/fec/scramble.h"
 #include "core/model/aircraft.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::protocol {
 
@@ -16,26 +17,6 @@ void put_u24(uint8_t* b, uint32_t v) {
 uint32_t get_u24(const uint8_t* b) {
     return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
            (static_cast<uint32_t>(b[2]) << 16);
-}
-void put_i32(uint8_t* b, int32_t v) {
-    uint32_t u = static_cast<uint32_t>(v);
-    b[0] = static_cast<uint8_t>(u);
-    b[1] = static_cast<uint8_t>(u >> 8);
-    b[2] = static_cast<uint8_t>(u >> 16);
-    b[3] = static_cast<uint8_t>(u >> 24);
-}
-int32_t get_i32(const uint8_t* b) {
-    return static_cast<int32_t>(static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
-                                (static_cast<uint32_t>(b[2]) << 16) |
-                                (static_cast<uint32_t>(b[3]) << 24));
-}
-void put_i16(uint8_t* b, int16_t v) {
-    uint16_t u = static_cast<uint16_t>(v);
-    b[0] = static_cast<uint8_t>(u);
-    b[1] = static_cast<uint8_t>(u >> 8);
-}
-int16_t get_i16(const uint8_t* b) {
-    return static_cast<int16_t>(static_cast<uint16_t>(b[0]) | (static_cast<uint16_t>(b[1]) << 8));
 }
 
 void pack_record(uint8_t* r, const model::AircraftObservation& t) {

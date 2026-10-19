@@ -22,7 +22,6 @@ constexpr int kRangePad = 4;
 constexpr int kReadingCorner = 3;
 constexpr int kFooterY = kFooterBottom - kGlyphH;
 constexpr int kUnitGap = 3;
-constexpr int32_t kTurn16 = 65536;
 constexpr int kWedgeInnerR = 15;
 constexpr int64_t kTanScale = 10000;
 constexpr int64_t kWedgeEdgeTanE4 = 10000;
@@ -81,7 +80,7 @@ void ring(ui::Canvas& canvas, int r) {
 int16_t c16(int32_t deg) {
     int32_t d = ((deg % 360) + 360) % 360;
     if (d >= 180) d -= 360;  // keep the cordic value inside int16_t
-    return static_cast<int16_t>((d * kTurn16) / 360);
+    return static_cast<int16_t>((d * kAngle16PerTurn) / 360);
 }
 
 int text_width(const char* s, int scale) {
@@ -247,7 +246,7 @@ void formation_square(ui::Canvas& canvas) {
     canvas.vline(x1, y0 + r + 1, y1 - y0 - 2 * r - 1, true);
     for (int step = 0; step <= 90; step++) {
         const int16_t a = c16(step);
-        const int dx = r - (r * icos(a)) / kQ14One, dy = r - (r * isin(a)) / kQ14One;
+        const int dx = r - (r * icos(a)) / kTrigOne, dy = r - (r * isin(a)) / kTrigOne;
         canvas.set_pixel(x0 + dx, y0 + dy, true);
         canvas.set_pixel(x1 - dx, y0 + dy, true);
         canvas.set_pixel(x0 + dx, y1 - dy, true);

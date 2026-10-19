@@ -1259,7 +1259,7 @@ What an EFB is told, in the FLARM sentences it already speaks. The geometry is t
 **nmea**
 
 - GPRMC/GPGGA carry ownship's own absolute position
-  > own.utc is a Unix epoch with no calendar fields of its own; the numbers below are 2026-08-02T01:01:01Z, 1785628800 + 3661s (1785628800 is the same 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product case from), chosen so the date and time fields below are hand-checkable rather than merely re-deriving the same arithmetic the formatter uses.
+  > own.utc_s is a Unix epoch with no calendar fields of its own; the numbers below are 2026-08-02T01:01:01Z, 1785628800 + 3661s (1785628800 is the same 2026-08-02T00:00:00Z base test/support/product_rig.h flies every product case from), chosen so the date and time fields below are hand-checkable rather than merely re-deriving the same arithmetic the formatter uses.
 - GPRMC/GPGGA emit nothing without both a fix and a UTC time
 - PFLAA carries a known callsign behind the address, as OGN's does
   > OGN hangs the name off the ID field behind a '!' (oss/nrf52-ogn-tracker/src/lookout.h:144).
@@ -2078,7 +2078,7 @@ Satellites in view: the GSV sets the sats page reads, and what they cost the fix
 
 ### test/hardware/test_ssd1681.cpp
 
-SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequence, the framebuffer to RAM polarity (fb 1=black becomes panel 0=black), the glass turned or not, and the signature that names the panel, all on the host, no panel required.
+SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the glass turned or not, and the signature that names the panel, all on the host, no panel required.
 
 **epd**
 
@@ -2357,7 +2357,7 @@ The authorisation prompt, read back off the glass. With BLE pairing off, this pa
 
 The drawing stack end to end, from a pixel to what reaches the glass.
 
-**fb**
+**canvas**
 
 - every character the pages print has a glyph of its own
   > A character with no glyph prints as a space, and only the glass ever notices.
@@ -3730,7 +3730,7 @@ The self test on the glass: the page that names the part which did not answer, r
 
 ### test/products/test_pipeline.cpp
 
-End-to-end host scenario (no hardware): the full skyBlip Go air-side pipeline. GNSS NMEA -> OwnState ADS-L direct RX (scramble+crc+manchester over a BER channel) -> obs -> table alarm assessment -> $PFLAA/$PFLAU to the EFB link ADS-L uplink RX -> obs -> table dedup/merge This is the "run all of core/ headless" harness and doubles as the composition sanity check that everything fits together with no #ifdef.
+End-to-end host scenario (no hardware): the full skyBlip Go air-side pipeline. GNSS NMEA -> Ownship ADS-L direct RX (scramble+crc+manchester over a BER channel) -> observation -> table alarm assessment -> $PFLAA/$PFLAU to the EFB link ADS-L uplink RX -> observation -> table dedup/merge This is the "run all of core/ headless" harness and doubles as the composition sanity check that everything fits together with no #ifdef.
 
 **scenario**
 

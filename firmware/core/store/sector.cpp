@@ -1,33 +1,13 @@
 #include "core/store/sector.h"
 
 #include "core/fec/crc.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::store {
 
 namespace {
 
 constexpr uint32_t kChecksummedBytes = kSectorHeaderBytes - 2;
-
-void put_u16(uint8_t* out, uint16_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-}
-
-void put_u32(uint8_t* out, uint32_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-    out[2] = static_cast<uint8_t>(v >> 16);
-    out[3] = static_cast<uint8_t>(v >> 24);
-}
-
-uint16_t get_u16(const uint8_t* raw) {
-    return static_cast<uint16_t>(raw[0] | (static_cast<uint16_t>(raw[1]) << 8));
-}
-
-uint32_t get_u32(const uint8_t* raw) {
-    return static_cast<uint32_t>(raw[0]) | (static_cast<uint32_t>(raw[1]) << 8) |
-           (static_cast<uint32_t>(raw[2]) << 16) | (static_cast<uint32_t>(raw[3]) << 24);
-}
 
 bool owner_known(uint8_t code) {
     return code == static_cast<uint8_t>(SectorOwner::Flights) ||

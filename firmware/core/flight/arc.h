@@ -34,6 +34,7 @@ constexpr int16_t kMaxTurnDps = 30;
 constexpr int16_t kMaxTurnCdps = kMaxTurnDps * 100;
 
 int16_t clamped_turn_cdps(int32_t turn_cdps);
+int32_t turn_angle16(int16_t turn_cdps, int32_t dt_ms);
 
 class Arc {
    public:

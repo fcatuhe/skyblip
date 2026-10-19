@@ -12,16 +12,14 @@ namespace skyblip::formation {
 
 namespace {
 
-constexpr int32_t kQ14One = 16384;
-
 int32_t iabs32(int32_t v) { return v < 0 ? -v : v; }
 
 void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ahead_m,
                 int32_t& right_m) {
     const int16_t track = to_angle16(CentiDegrees(track_cdeg));
     const int64_t c = icos(track), s = isin(track);
-    ahead_m = static_cast<int32_t>(div_round<int64_t>(north_m * c + east_m * s, kQ14One));
-    right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kQ14One));
+    ahead_m = static_cast<int32_t>(div_round<int64_t>(north_m * c + east_m * s, kTrigOne));
+    right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kTrigOne));
 }
 
 uint32_t reception_key(const model::AircraftObservation& observation) {

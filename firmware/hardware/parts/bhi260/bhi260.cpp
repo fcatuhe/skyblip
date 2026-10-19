@@ -1,5 +1,7 @@
 #include "hardware/parts/bhi260/bhi260.h"
 
+#include "core/util/little_endian.h"
+
 namespace skyblip::parts {
 
 namespace {
@@ -11,13 +13,6 @@ constexpr uint8_t kSysIdMetaEventWakeup = 248;
 constexpr uint8_t kSysIdMetaEvent = 254;
 constexpr uint8_t kMetaEventSensorError = 11;
 constexpr uint8_t kMetaEventInitialised = 16;
-
-uint16_t le16(const uint8_t* bytes) { return static_cast<uint16_t>(bytes[0] | (bytes[1] << 8)); }
-
-uint32_t le32(const uint8_t* bytes) {
-    return static_cast<uint32_t>(bytes[0]) | static_cast<uint32_t>(bytes[1]) << 8 |
-           static_cast<uint32_t>(bytes[2]) << 16 | static_cast<uint32_t>(bytes[3]) << 24;
-}
 
 bool bit_set(const uint8_t* bitmap, uint8_t bit) {
     return (bitmap[bit / 8] & (1 << (bit % 8))) != 0;
@@ -57,7 +52,7 @@ void Bhi260::load(Image& image, uint32_t now_ms) {
 
     uint8_t magic[2] = {0};
     if (image.size() < kCommandHeaderBytes || !image.read(0, magic, sizeof(magic)) ||
-        le16(magic) != kFirmwareMagic) {
+        get_u16(magic) != kFirmwareMagic) {
         fail(Status::Invalid);
         return;
     }
@@ -226,7 +221,7 @@ void Bhi260::read_kernel_version(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    kernel_version_ = le16(version);
+    kernel_version_ = get_u16(version);
     if (kernel_version_ == 0) {
         fail(Status::Down);
         return;
@@ -287,7 +282,7 @@ void Bhi260::confirm_configuration(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (code == kParamSensorConfig + kSensorAccelerometer && n >= 4 && le32(config) == 0) {
+    if (code == kParamSensorConfig + kSensorAccelerometer && n >= 4 && get_u32(config) == 0) {
         fail(Status::Unsupported);
         return;
     }
@@ -313,8 +308,8 @@ bool Bhi260::parameter_ready() {
 int Bhi260::read_status_channel(uint16_t& code, uint8_t* out, uint16_t max) {
     uint8_t header[4] = {};
     if (!read_registers(kRegStatusChannel, header, sizeof(header))) return -1;
-    code = le16(header);
-    const uint16_t len = le16(header + 2);
+    code = get_u16(header);
+    const uint16_t len = get_u16(header + 2);
     if (len == 0) return 0;
     if (len > max) return -1;
     if (!read_registers(kRegStatusChannel, out, len)) return -1;
@@ -364,7 +359,7 @@ void Bhi260::drain_fifo(Fifo& fifo, uint32_t now_ms) {
             fail(Status::Down);
             return;
         }
-        fifo.remaining = le16(available);
+        fifo.remaining = get_u16(available);
         fifo.resync = false;
         fifo.carried = 0;
         if (fifo.remaining == 0) return;
@@ -431,7 +426,7 @@ uint8_t Bhi260::event_bytes(uint8_t id) {
 }
 
 int16_t Bhi260::to_milli_g(const uint8_t* le16_bytes) {
-    const int32_t raw = static_cast<int16_t>(le16(le16_bytes));
+    const int32_t raw = get_i16(le16_bytes);
     return static_cast<int16_t>(raw * kRangeG * 1000 / kCountsPerRange);
 }
 

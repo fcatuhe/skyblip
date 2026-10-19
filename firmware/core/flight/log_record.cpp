@@ -4,6 +4,7 @@
 #include "core/model/ownship.h"
 #include "core/store/sector.h"
 #include "core/units/units.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::flight {
 
@@ -20,27 +21,6 @@ constexpr uint8_t kStatusFlagCharging = 1u << 1;
 constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
 constexpr uint8_t kContactFlagDismissed = 1u << 0;
 constexpr uint8_t kContactFlagInFormation = 1u << 1;
-
-void put_u16(uint8_t* out, uint16_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-}
-
-void put_u32(uint8_t* out, uint32_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-    out[2] = static_cast<uint8_t>(v >> 16);
-    out[3] = static_cast<uint8_t>(v >> 24);
-}
-
-uint16_t get_u16(const uint8_t* raw) {
-    return static_cast<uint16_t>(raw[0] | (static_cast<uint16_t>(raw[1]) << 8));
-}
-
-uint32_t get_u32(const uint8_t* raw) {
-    return static_cast<uint32_t>(raw[0]) | (static_cast<uint32_t>(raw[1]) << 8) |
-           (static_cast<uint32_t>(raw[2]) << 16) | (static_cast<uint32_t>(raw[3]) << 24);
-}
 
 int16_t clamp_i16(int32_t v) {
     if (v > 32767) return 32767;

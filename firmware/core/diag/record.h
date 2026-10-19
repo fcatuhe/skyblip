@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/events/stamp.h"
+#include "core/util/little_endian.h"
 #include "core/util/result.h"
 
 namespace skyblip::diag {
@@ -71,38 +72,13 @@ Record framed(Type type, const Instant& at);
 void encode_record(const Record& record, uint8_t* out);
 Status decode_record(const uint8_t* raw, Record& out);
 
-inline void put_u16(uint8_t* out, uint16_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-}
-
-inline void put_u32(uint8_t* out, uint32_t v) {
-    out[0] = static_cast<uint8_t>(v);
-    out[1] = static_cast<uint8_t>(v >> 8);
-    out[2] = static_cast<uint8_t>(v >> 16);
-    out[3] = static_cast<uint8_t>(v >> 24);
-}
-
 inline void set_flag(uint8_t& flags, uint8_t bit, bool on) {
     if (on) flags |= bit;
 }
 
-inline uint16_t get_u16(const uint8_t* raw) {
-    return static_cast<uint16_t>(raw[0] | (static_cast<uint16_t>(raw[1]) << 8));
-}
-
-inline uint32_t get_u32(const uint8_t* raw) {
-    return static_cast<uint32_t>(raw[0]) | (static_cast<uint32_t>(raw[1]) << 8) |
-           (static_cast<uint32_t>(raw[2]) << 16) | (static_cast<uint32_t>(raw[3]) << 24);
-}
-
 inline void put_i8(uint8_t* out, int8_t v) { *out = static_cast<uint8_t>(v); }
-inline void put_i16(uint8_t* out, int16_t v) { put_u16(out, static_cast<uint16_t>(v)); }
-inline void put_i32(uint8_t* out, int32_t v) { put_u32(out, static_cast<uint32_t>(v)); }
 
 inline int8_t get_i8(const uint8_t* raw) { return static_cast<int8_t>(*raw); }
-inline int16_t get_i16(const uint8_t* raw) { return static_cast<int16_t>(get_u16(raw)); }
-inline int32_t get_i32(const uint8_t* raw) { return static_cast<int32_t>(get_u32(raw)); }
 
 inline uint16_t clamp_u16(uint32_t v) { return v > 0xFFFFu ? 0xFFFFu : static_cast<uint16_t>(v); }
 

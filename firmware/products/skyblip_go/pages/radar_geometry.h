@@ -39,7 +39,6 @@ constexpr int kStackGap = 2;
 constexpr int kFooterBottom = kGlassH - kMargin;
 constexpr int kClockY = kFooterBottom - kGlyphH * kClockScale;
 constexpr int kStateY = kClockY - kStackGap - kGlyphH * kStateScale;
-constexpr int32_t kQ14One = 16384;
 constexpr int kFooterTop = kStateY - kLabelPad;
 
 struct HeadingUp {
@@ -49,8 +48,8 @@ struct HeadingUp {
 
 inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track) {
     const int64_t c = icos(track), s = isin(track);
-    return {static_cast<int32_t>((north * c + east * s) / kQ14One),
-            static_cast<int32_t>((east * c - north * s) / kQ14One)};
+    return {static_cast<int32_t>((north * c + east * s) / kTrigOne),
+            static_cast<int32_t>((east * c - north * s) / kTrigOne)};
 }
 
 }  // namespace skyblip::go::radar
