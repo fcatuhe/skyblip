@@ -16,32 +16,33 @@ namespace {
 
 constexpr uint16_t kBelowCutoffMv = power::kFlatMv - 100;
 
-void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
+void taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 0, 300); }
 
-void arm_power_run(Rig& rig, uint32_t& t) {
+void arm_power_run(Rig& rig, uint32_t& now_ms) {
     rig.product.diagnostics().arm(diagnostics::Profile::PowerRun);
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     REQUIRE(rig.product.capture().capturing());
 }
 
-void run_until_parked(Rig& rig, uint32_t& t) {
-    const uint32_t deadline = t + 20000;
-    while (rig.product.capture().capturing() && t < deadline) {
-        rig.platform.clock().set_milliseconds(t);
-        rig.product.run_pass(t);
-        t += 50;
+void run_until_parked(Rig& rig, uint32_t& now_ms) {
+    const uint32_t deadline = now_ms + 20000;
+    while (rig.product.capture().capturing() && now_ms < deadline) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        now_ms += 50;
     }
     REQUIRE_FALSE(rig.product.capture().capturing());
 }
 
-std::vector<diagnostics::Record> tail(const std::vector<diagnostics::Record>& records, size_t n) {
-    REQUIRE(records.size() >= n);
-    return {records.end() - static_cast<std::ptrdiff_t>(n), records.end()};
+std::vector<diagnostics::Record> tail(const std::vector<diagnostics::Record>& records,
+                                      size_t count) {
+    REQUIRE(records.size() >= count);
+    return {records.end() - static_cast<std::ptrdiff_t>(count), records.end()};
 }
 
-bool same_instant(const diagnostics::Record& a, const diagnostics::Record& b) {
-    return a.at_s == b.at_s && a.into_ms == b.into_ms;
+bool same_instant(const diagnostics::Record& first, const diagnostics::Record& second) {
+    return first.at_s == second.at_s && first.into_ms == second.into_ms;
 }
 
 uint32_t quoted_keeps_s(Rig& rig) { return rig.state().capture.keeps_s; }
@@ -56,11 +57,11 @@ uint32_t nominal_keeps_s(Rig& rig) {
 TEST_CASE("power run: before its first pair lands, the span quoted is the nominal one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_power_run(rig, t);
-    rig.run(t, t + 5000);
-    t += 5000;
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_power_run(rig, now_ms);
+    rig.run(now_ms, now_ms + 5000);
+    now_ms += 5000;
 
     CHECK(rig.product.capture().records_written() == 2);
     CHECK(quoted_keeps_s(rig) == nominal_keeps_s(rig));
@@ -69,13 +70,13 @@ TEST_CASE("power run: before its first pair lands, the span quoted is the nomina
 TEST_CASE("power run: once pairs land, the span quoted is the one they are landing at") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_power_run(rig, t);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_power_run(rig, now_ms);
 
     for (uint32_t elapsed_s = 7; elapsed_s <= 91; elapsed_s += 7) {
-        rig.run(t, t + 7000);
-        t += 7000;
+        rig.run(now_ms, now_ms + 7000);
+        now_ms += 7000;
         // the first pair reaches the flash within a second of 30 s after the session opened
         CHECK(quoted_keeps_s(rig) >= nominal_keeps_s(rig) * 29 / 30);
         CHECK(quoted_keeps_s(rig) <= nominal_keeps_s(rig) * 31 / 30);
@@ -86,13 +87,13 @@ TEST_CASE("power run: once pairs land, the span quoted is the one they are landi
 TEST_CASE("park: a power run taken down by its cell ends on a cutoff power record, then duty") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_power_run(rig, t);
-    rig.run(t, t + 40000);
-    t += 40000;
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_power_run(rig, now_ms);
+    rig.run(now_ms, now_ms + 40000);
+    now_ms += 40000;
     rig.platform.battery().divider_mv = kBelowCutoffMv;
-    run_until_parked(rig, t);
+    run_until_parked(rig, now_ms);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
@@ -107,13 +108,13 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
 TEST_CASE("park: a power run the pilot switches off closes on power, then duty, all the same") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_power_run(rig, t);
-    rig.run(t, t + 40000);
-    t += 40000;
-    rig.product.shutdown().request(power::ShutdownReason::LongPress, t);
-    run_until_parked(rig, t);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_power_run(rig, now_ms);
+    rig.run(now_ms, now_ms + 40000);
+    now_ms += 40000;
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
+    run_until_parked(rig, now_ms);
 
     const std::vector<diagnostics::Record> records = captured(rig);
     const std::vector<diagnostics::Record> last = tail(records, 3);
@@ -130,12 +131,12 @@ TEST_CASE("park: a power run the pilot switches off closes on power, then duty, 
 TEST_CASE("park: a full capture closes on the same pair, off its own cadence") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
     rig.product.diagnostics().arm(diagnostics::Profile::Full);
-    taxi(rig, t, 4);
-    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, t);
-    run_until_parked(rig, t);
+    taxi(rig, now_ms, 4);
+    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, now_ms);
+    run_until_parked(rig, now_ms);
 
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
     CHECK(last[0].type == diagnostics::Type::Power);

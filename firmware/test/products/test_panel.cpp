@@ -16,41 +16,41 @@ TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.screen().page() == go::Page::Radar);
 
-    uint32_t t = 100;
-    rig.tap(t);
+    uint32_t now_ms = 100;
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
     CHECK_FALSE(rig.platform.chips().epd.last_full);  // power on to power off, partials alone
-    rig.run(t, t + 4000);
-    t += 4000;
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
 
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::SixPack);
 
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::GMeter);
 
     // Four pictures on the walk, and it wraps. The rest are opened by name.
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 }
 
 // Every page is drawn and compared, and only a frame that differs reaches the glass.
 TEST_CASE("product: a still world leaves every picture on the walk alone") {
-    for (int p = 0; p < go::kWalkedPages; p++) {
-        const go::Page page = static_cast<go::Page>(p);
-        CAPTURE(p);
+    for (int page_index = 0; page_index < go::kWalkedPages; page_index++) {
+        const go::Page page = static_cast<go::Page>(page_index);
+        CAPTURE(page_index);
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
         rig.platform.chips().imu.set_acceleration(1000, 0, 0);
-        uint32_t t = 0;
-        rig.seconds(t, 5, 0, 300);
-        rig.show(t, page);
-        rig.seconds(t, 5, 0, 300);
+        uint32_t now_ms = 0;
+        rig.seconds(now_ms, 5, 0, 300);
+        rig.show(now_ms, page);
+        rig.seconds(now_ms, 5, 0, 300);
         REQUIRE(rig.product.screen().page() == page);
 
         const uint32_t presented = rig.state().duty.panel_partial_refreshes;
-        rig.seconds(t, 60, 0, 300);
+        rig.seconds(now_ms, 60, 0, 300);
         CHECK(rig.state().duty.panel_partial_refreshes == presented);
     }
 }
@@ -62,25 +62,25 @@ TEST_CASE("product: a ball that never stops is presented once a second, never fa
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.chips().imu.set_acceleration(1000, 0, 0);
-    uint32_t t = 0;
-    rig.run(t, t + 4000);
-    t += 4000;
-    rig.show(t, go::Page::SixPack);
-    rig.run(t, t + 3000);
-    t += 3000;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
+    rig.show(now_ms, go::Page::SixPack);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
 
     uint32_t presents = 0;
     uint32_t last_present_ms = 0;
     uint32_t seen = rig.state().duty.panel_partial_refreshes;
-    for (const uint32_t end = t + 10000; t <= end; t += kStepMs) {
-        const bool left = (t / kSwingMs) % 2 == 0;
+    for (const uint32_t end = now_ms + 10000; now_ms <= end; now_ms += kStepMs) {
+        const bool left = (now_ms / kSwingMs) % 2 == 0;
         rig.platform.chips().imu.set_acceleration(1000, left ? -150 : 150, 0);
-        rig.platform.clock().set_milliseconds(t);
-        rig.product.run_pass(t);
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
         if (rig.state().duty.panel_partial_refreshes == seen) continue;
         seen = rig.state().duty.panel_partial_refreshes;
-        if (presents > 0) CHECK(t - last_present_ms >= go::ScreenService::kPresentFloorMs);
-        last_present_ms = t;
+        if (presents > 0) CHECK(now_ms - last_present_ms >= go::ScreenService::kPresentFloorMs);
+        last_present_ms = now_ms;
         presents++;
     }
     CHECK(presents >= 5);
@@ -91,14 +91,14 @@ TEST_CASE("product: a ball that never stops is presented once a second, never fa
 TEST_CASE("product: the pad leaves a page it was sent to for the page that sent it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
 
-    rig.show(t, go::Page::RadioLog);
+    rig.show(now_ms, go::Page::RadioLog);
     REQUIRE(rig.product.screen().page() == go::Page::RadioLog);
 
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::SixPack);
 }
 
@@ -106,18 +106,18 @@ TEST_CASE("product: the pad leaves a page it was sent to for the page that sent 
 TEST_CASE("product: a long touch comes back to the radar from wherever the pilot is") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.show(t, go::Page::Status);
+    uint32_t now_ms = 100;
+    rig.show(now_ms, go::Page::Status);
     REQUIRE(rig.product.screen().page() == go::Page::Status);
 
-    rig.long_touch(t);
+    rig.long_touch(now_ms);
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 
     // And out of the menu, which the pad did not take the pilot into.
-    rig.press(t);
+    rig.press(now_ms);
     REQUIRE(rig.product.screen().mode() == go::Mode::Menu);
-    rig.long_touch(t);
+    rig.long_touch(now_ms);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(rig.product.screen().editor().active());
@@ -158,16 +158,16 @@ TEST_CASE("product: powering the panel down leaves the wordmark on it") {
 TEST_CASE("product: the pad held through the press leaves the glass blank") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     rig.run(0, 1000);
-    t = 1000;
+    now_ms = 1000;
 
     rig.platform.board_gpio().pad_down = true;
     rig.platform.board_gpio().button_down = true;
-    rig.run(t, t + power::kLongPressHoldMs + 200);
-    t += power::kLongPressHoldMs + 200;
+    rig.run(now_ms, now_ms + power::kLongPressHoldMs + 200);
+    now_ms += power::kLongPressHoldMs + 200;
 
-    rig.run(t, t + power::kParkSettleMs);
+    rig.run(now_ms, now_ms + power::kParkSettleMs);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Stow);
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK(rig.platform.chips().epd.last_full);
@@ -195,13 +195,13 @@ TEST_CASE("product: the front light goes out after the park frame, not before it
 TEST_CASE("product: a flat cell takes the front light down with the panel") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    open_menu(rig, t);
-    change(rig, t);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
+    change(rig, now_ms);
     REQUIRE(rig.platform.chips().epd.backlight);
 
     rig.platform.battery().divider_mv = 3100;
-    rig.run(t, t + 20000);
+    rig.run(now_ms, now_ms + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     CHECK(rig.product.ready_to_power_off());
     CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 10, 130, 190, 199, 2));
@@ -214,14 +214,14 @@ TEST_CASE("product: a flat cell takes the front light down with the panel") {
 TEST_CASE("product: a park with no frame to push still puts the front light out") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    open_menu(rig, t);
-    change(rig, t);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
+    change(rig, now_ms);
     REQUIRE(rig.platform.chips().epd.backlight);
 
     rig.platform.system_power().supply_warning = true;
     rig.platform.battery().divider_mv = 3100;
-    rig.run(t, t + 20000);
+    rig.run(now_ms, now_ms + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     REQUIRE(rig.product.power().supply_warned());
     CHECK(rig.product.ready_to_power_off());
@@ -245,9 +245,9 @@ TEST_CASE("product: the unit setting reaches the pages that print one") {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
         rig.settings().units = units;
-        uint32_t t = 100;
-        rig.show(t, page);
-        rig.run(t, t + 3000);
+        uint32_t now_ms = 100;
+        rig.show(now_ms, page);
+        rig.run(now_ms, now_ms + 3000);
         REQUIRE(rig.product.screen().page() == page);
         return rig.product.screen().framebuffer().count_black();
     };
@@ -263,8 +263,8 @@ TEST_CASE("product: an aircraft rolling on the ground says TAXI in the ring, par
     auto radar_says = [](const char* word, int32_t speed_mm_s) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t t = 100;
-        rig.seconds(t, 20, speed_mm_s, 300);
+        uint32_t now_ms = 100;
+        rig.seconds(now_ms, 20, speed_mm_s, 300);
         REQUIRE(rig.product.screen().page() == go::Page::Radar);
         return reads_in(rig.product.screen().framebuffer(), word, 40, 120, 160, 160, 2);
     };
@@ -286,15 +286,15 @@ TEST_CASE("product: a flight that rolls in without stopping reads TAXI on the ta
 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.seconds(t, 20, 0, 300);
-    rig.seconds(t, 60, 30000, 800);
+    uint32_t now_ms = 100;
+    rig.seconds(now_ms, 20, 0, 300);
+    rig.seconds(now_ms, 60, 30000, 800);
     REQUIRE_FALSE(reads(rig, "TAXI"));
 
-    rig.seconds(t, 10, 4000, 300);  // off the runway at 4 m/s, and the hold is not out yet
+    rig.seconds(now_ms, 10, 4000, 300);  // off the runway at 4 m/s, and the hold is not out yet
     CHECK_FALSE(reads(rig, "TAXI"));
 
-    rig.seconds(t, 5, 4000, 300);
+    rig.seconds(now_ms, 5, 4000, 300);
     CHECK(reads(rig, "TAXI"));
     CHECK_FALSE(reads(rig, "GROUND"));
 }
@@ -307,20 +307,20 @@ TEST_CASE("product: the word holds through the band between a standstill and a t
 
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.seconds(t, 20, 0, 300);
+    uint32_t now_ms = 100;
+    rig.seconds(now_ms, 20, 0, 300);
     REQUIRE(reads(rig, "GROUND"));
 
-    rig.seconds(t, 5, 1250, 300);  // 1.25 m/s of noise on a device that has not moved
+    rig.seconds(now_ms, 5, 1250, 300);  // 1.25 m/s of noise on a device that has not moved
     CHECK(reads(rig, "GROUND"));
 
-    rig.seconds(t, 5, 2000, 300);  // 2 m/s, a glider pushed to the grid
+    rig.seconds(now_ms, 5, 2000, 300);  // 2 m/s, a glider pushed to the grid
     REQUIRE(reads(rig, "TAXI"));
 
-    rig.seconds(t, 5, 1250, 300);  // the same 1.25 m/s, now a taxi slowing for the turn
+    rig.seconds(now_ms, 5, 1250, 300);  // the same 1.25 m/s, now a taxi slowing for the turn
     CHECK(reads(rig, "TAXI"));
 
-    rig.seconds(t, 5, 750, 300);  // 0.75 m/s: stopped, and the word goes back
+    rig.seconds(now_ms, 5, 750, 300);  // 0.75 m/s: stopped, and the word goes back
     CHECK(reads(rig, "GROUND"));
 }
 
@@ -328,13 +328,13 @@ TEST_CASE("product: the word holds through the band between a standstill and a t
 TEST_CASE("product: a fix lost in the air says NO FIX over a clock that keeps running") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.seconds(t, 130, 25000, 300);  // 25 m/s: airborne, and two minutes of it
+    uint32_t now_ms = 0;
+    rig.seconds(now_ms, 130, 25000, 300);  // 25 m/s: airborne, and two minutes of it
     REQUIRE(rig.state().flight.running);
     const uint32_t flown = rig.state().flight.seconds;
     REQUIRE(flown >= 2 * 60);
 
-    rig.blind_seconds(t, 90);
+    rig.blind_seconds(now_ms, 90);
     CHECK_FALSE(rig.state().own.fix_valid);
     CHECK(rig.state().flight.running);
     CHECK(rig.state().flight.seconds >= flown + 85);
@@ -358,12 +358,12 @@ TEST_CASE("product: the status page carries the device's name and a cell that is
         rig.platform.battery().divider_mv = divider_mv;
         rig.platform.battery().external_power = on_cable;
         for (int i = 0; callsign[i] != 0 && i < 9; i++) rig.settings().callsign[i] = callsign[i];
-        uint32_t t = 100;
-        rig.show(t, go::Page::Status);
+        uint32_t now_ms = 100;
+        rig.show(now_ms, go::Page::Status);
         // Long enough for the cutoff monitor to have made its mind up: it wants
         // three consecutive samples before it calls a cell low, and the page
         // draws what it decided rather than deciding again.
-        rig.run(t, t + 8000);
+        rig.run(now_ms, now_ms + 8000);
         REQUIRE(rig.product.screen().page() == go::Page::Status);
         return rig.product.screen().framebuffer().count_black();
     };
@@ -385,9 +385,9 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
         REQUIRE(rig.setup() == Status::Ok);
         rig.platform.battery().divider_mv = on_cable ? 4790 : 4050;
         rig.platform.battery().external_power = on_cable;
-        uint32_t t = 100;
-        rig.show(t, go::Page::SixPack);
-        rig.run(t, t + 8000);
+        uint32_t now_ms = 100;
+        rig.show(now_ms, go::Page::SixPack);
+        rig.run(now_ms, now_ms + 8000);
         REQUIRE(rig.product.screen().page() == go::Page::SixPack);
         REQUIRE(rig.state().power.battery.charging == on_cable);
         return rig.product.screen().framebuffer();
@@ -414,14 +414,14 @@ TEST_CASE("product: the status page marks a low cell when the monitor says so, n
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().divider_mv = 3450;
-    uint32_t t = 100;
-    rig.show(t, go::Page::Status);
+    uint32_t now_ms = 100;
+    rig.show(now_ms, go::Page::Status);
     REQUIRE(rig.product.screen().page() == go::Page::Status);
 
     // Two samples under the warning is not yet a low cell: a transmit burst
     // sags the rail for as long as it lasts, and the third sample is what
     // decides. The page says nothing while the monitor has not.
-    rig.run(t, 2500);
+    rig.run(now_ms, 2500);
     REQUIRE(rig.state().power.level != power::PowerLevel::Critical);
     const int undecided = rig.product.screen().framebuffer().count_black();
 
@@ -444,9 +444,9 @@ TEST_CASE("product: the status page marks a cell charging too hot to be charged"
         rig.platform.die_temperature().hold(die_dc);
         rig.platform.battery().divider_mv = 4000;
         rig.platform.battery().external_power = true;
-        uint32_t t = 100;
-        rig.show(t, go::Page::Status);
-        rig.run(t, t + 8000);
+        uint32_t now_ms = 100;
+        rig.show(now_ms, go::Page::Status);
+        rig.run(now_ms, now_ms + 8000);
         REQUIRE(rig.product.screen().page() == go::Page::Status);
         REQUIRE(rig.state().power.battery.charging);
         return rig.product.screen().framebuffer().count_black();

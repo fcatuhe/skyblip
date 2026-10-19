@@ -32,7 +32,7 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
     TrafficTable table;
     table.set_own_reference(own);
 
-    // Ten kilometres out is a real contact on this band: it is well inside the
+    // Ten kilometres out is a real target on this band: it is well inside the
     // budget and it is what the radar's outer ring is for.
     model::AircraftObservation near_by = neighbour(own, 10000, 0, 0, 30, 180);
     near_by.address = 0x4A0001;
@@ -82,7 +82,7 @@ TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
     CHECK(free_space_loss_db(kPlausibleRangeCeilingM / 2) < 121);
 
     // Four times the outermost thing the alarm layer will speak about, so no
-    // contact a pilot could act on is inside the part being refused.
+    // target a pilot could act on is inside the part being refused.
     CHECK(kPlausibleRangeCeilingM > 4 * kAdvisoryDistanceM);
 }
 
@@ -153,9 +153,9 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
     TrafficTable table;
     table.set_own_reference(own);
 
-    model::AircraftObservation real_contact = neighbour(own, 1200, 0, 0, 30, 180, 100000);
-    real_contact.address = 0x4C0001;
-    const int index = table.update(real_contact, 100);
+    model::AircraftObservation real_target = neighbour(own, 1200, 0, 0, 30, 180, 100000);
+    real_target.address = 0x4C0001;
+    const int index = table.update(real_target, 100);
     REQUIRE(index >= 0);
     table.at(index)->alarm_level = Level::Advisory;
 
@@ -166,15 +166,15 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
 
     CHECK(table.count() == 1);
     CHECK(table.find(6, 0x4C0001) == index);
-    CHECK(table.at(index)->observation.latitude_1e7 == real_contact.latitude_1e7);
-    CHECK(table.at(index)->observation.received.at_s == real_contact.received.at_s);
+    CHECK(table.at(index)->observation.latitude_1e7 == real_target.latitude_1e7);
+    CHECK(table.at(index)->observation.received.at_s == real_target.received.at_s);
     CHECK(table.at(index)->alarm_level == Level::Advisory);
 }
 
 // A relayed target crossed two links, so it is allowed to be further away than
 // anything we could have heard for ourselves - and that is the whole point of the
 // uplink. The same position from the same aircraft is a ghost on the direct path
-// and a legitimate contact on the relayed one.
+// and a legitimate target on the relayed one.
 TEST_CASE("traffic: a relayed target is judged against the two hops it travelled") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;

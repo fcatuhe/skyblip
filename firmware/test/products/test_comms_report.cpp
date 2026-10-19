@@ -25,18 +25,18 @@ namespace {
 // nothing has to be asked for twice.
 std::string joined(const platform::host::Link& link) {
     std::string all;
-    for (const platform::host::Link::Frame& f : link.sent) all += f.bytes;
+    for (const platform::host::Link::Frame& frame : link.sent) all += frame.bytes;
     return all;
 }
 
 power::BatteryState battery_of(uint8_t percent, bool charging, bool valid = true) {
-    power::BatteryState b{};
-    b.cell_mv = 3700;
-    b.percent = percent;
-    b.external_power = charging;
-    b.charging = charging;
-    b.valid = valid;
-    return b;
+    power::BatteryState battery{};
+    battery.cell_mv = 3700;
+    battery.percent = percent;
+    battery.external_power = charging;
+    battery.charging = charging;
+    battery.valid = valid;
+    return battery;
 }
 }  // namespace
 
@@ -270,10 +270,10 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     CHECK(body.find("carrier_sense") == std::string::npos);
     // Every frame is a complete object of its own, and no frame is longer than
     // the link said it would carry.
-    for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.front() == '{');
-        CHECK(f.bytes.back() == '}');
-        CHECK(f.bytes.size() <= link.payload_bytes());
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.front() == '{');
+        CHECK(frame.bytes.back() == '}');
+        CHECK(frame.bytes.size() <= link.payload_bytes());
     }
 }
 
@@ -340,10 +340,10 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
 
     // Every frame whole, none longer than the narrowest phone in the field, and
     // nothing refused on the way out.
-    for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.front() == '{');
-        CHECK(f.bytes.back() == '}');
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.front() == '{');
+        CHECK(frame.bytes.back() == '}');
+        CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     }
     CHECK(config.link_drops() == 0);
 }

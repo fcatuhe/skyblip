@@ -27,9 +27,9 @@ protocol::AdslPacket traffic_packet() {
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;
     own.flight_state = 2;
-    protocol::AdslPacket p{};
-    protocol::from_own(p, own, 0x123456, 6, 4);
-    return p;
+    protocol::AdslPacket packet{};
+    protocol::from_own(packet, own, 0x123456, 6, 4);
+    return packet;
 }
 
 }  // namespace
@@ -43,13 +43,13 @@ TEST_CASE("ADS-L.4.SRD860.D.1: the data link mediates the channel, adds parity, 
 // The length byte rides in the sync word, which is why a burst of any other length never frames.
 TEST_CASE(
     "ADS-L.4.SRD860.D.1.1: the Packet Length field counts the message behind it, not itself") {
-    protocol::AdslPacket p = traffic_packet();
+    protocol::AdslPacket packet = traffic_packet();
     const int network_header = 1;
     const int adsl_data = 20;
     const int parity = 3;
-    CHECK(int(p.data_bytes) == network_header + adsl_data + parity);
-    CHECK(int(p.data_bytes) == protocol::AdslPacket::kDataBytes);
-    CHECK(int(p.data_bytes) == int(protocol::kAdslSyncWord & 0xFFu));
+    CHECK(int(packet.data_bytes) == network_header + adsl_data + parity);
+    CHECK(int(packet.data_bytes) == protocol::AdslPacket::kDataBytes);
+    CHECK(int(packet.data_bytes) == int(protocol::kAdslSyncWord & 0xFFu));
     CHECK(protocol::kUplinkSync[2] == protocol::kUplinkFrameBytes);
 }
 
@@ -63,18 +63,18 @@ TEST_CASE(
 
 // The parity covers the scrambled form, so a receiver checks it before it can read a single field.
 TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the network header too") {
-    protocol::AdslPacket p = traffic_packet();
-    const protocol::AdslPacket plain = p;
-    p.scramble();
-    p.set_crc();
-    CHECK(std::memcmp(p.payload, plain.payload, 20) != 0);
-    CHECK(p.check_crc() == 0);
+    protocol::AdslPacket packet = traffic_packet();
+    const protocol::AdslPacket plain = packet;
+    packet.scramble();
+    packet.set_crc();
+    CHECK(std::memcmp(packet.payload, plain.payload, 20) != 0);
+    CHECK(packet.check_crc() == 0);
 
-    protocol::AdslPacket flipped = p;
+    protocol::AdslPacket flipped = packet;
     flipped.version ^= 0x01;
     CHECK(flipped.check_crc() != 0);
 
-    protocol::AdslPacket descrambled = p;
+    protocol::AdslPacket descrambled = packet;
     descrambled.descramble();
     CHECK(descrambled.check_crc() != 0);
     CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);

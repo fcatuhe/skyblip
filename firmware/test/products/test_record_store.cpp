@@ -433,7 +433,8 @@ TEST_CASE("record store: records written in page runs leave the image one at a t
     }
     for (uint32_t i = 0; i < total;) {
         const uint32_t run = std::min(runs.capture.run_slots(), total - i);
-        for (uint32_t k = 0; k < run; k++) numbered_record(i + k, raw + k * go::kStoreRecordBytes);
+        for (uint32_t offset = 0; offset < run; offset++)
+            numbered_record(i + offset, raw + offset * go::kStoreRecordBytes);
         REQUIRE(runs.capture.append(raw, run, 0) == go::Append::Ok);
         i += run;
     }

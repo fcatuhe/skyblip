@@ -41,9 +41,9 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
     flying.start_us = 400000;
     flying.end_us = 799000;
     REQUIRE(rf.arm(flying) == Status::Ok);
-    for (uint32_t t = 400; t <= 450; t += 10) {
-        clock.set_milliseconds(t);
-        rf.service(t);
+    for (uint32_t now_ms = 400; now_ms <= 450; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
     REQUIRE(tuned_khz(chip) == timing::kMBand0Hz / 1000);
 
@@ -68,23 +68,23 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
     listening.end_us = 600000;
     CHECK(rf.arm(listening) == Status::WouldBlock);
 
-    for (uint32_t t = 460; t <= 790; t += 10) {
-        clock.set_milliseconds(t);
-        rf.service(t);
+    for (uint32_t now_ms = 460; now_ms <= 790; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
     // The dwell in flight kept the channel it was armed for, and the burst never went on air.
     CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
     CHECK_FALSE(chip.tx_pending);
 
-    for (uint32_t t = 800; t <= 850; t += 10) {
-        clock.set_milliseconds(t);
-        rf.service(t);
+    for (uint32_t now_ms = 800; now_ms <= 850; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
     CHECK(tuned_khz(chip) == timing::kMBand1Hz / 1000);
     int missed = 0;
-    events::RfEvent e{};
-    while (events.pop(e))
-        if (e.type == events::RfEventType::Missed) missed++;
+    events::RfEvent event{};
+    while (events.pop(event))
+        if (event.type == events::RfEventType::Missed) missed++;
     CHECK(missed == 0);
 }
 
@@ -161,8 +161,8 @@ struct CreepingClock : platform::host::Clock {
         crept_us_ += creep_us;
         return now_us;
     }
-    void set_microseconds(uint64_t us) {
-        Clock::set_microseconds(us);
+    void set_microseconds(uint64_t now_us) {
+        Clock::set_microseconds(now_us);
         crept_us_ = 0;
     }
     uint64_t creep_us{0};
@@ -256,14 +256,14 @@ struct Armings {
 // window already behind the phase used to be armed as a 1 ms stub the executor
 // then dropped: one fabricated LOST per pass that landed in a guard.
 TEST_CASE("rf: every dwell is handed over whole, never as a stub inside a guard") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    for (int phase = 0; phase < 2000; phase++) a.tick_in(phase / 1000, phase % 1000);
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 2000; phase++) armings.tick_in(phase / 1000, phase % 1000);
 
-    REQUIRE(a.rf.handed >= 6);
-    for (uint32_t i = 0; i < a.rf.handed; i++) {
-        const ports::RfPlan& plan = a.rf.plans[i];
+    REQUIRE(armings.rf.handed >= 6);
+    for (uint32_t i = 0; i < armings.rf.handed; i++) {
+        const ports::RfPlan& plan = armings.rf.plans[i];
         CHECK(plan.end_us - plan.start_us >= 190000);
     }
 }
@@ -271,15 +271,15 @@ TEST_CASE("rf: every dwell is handed over whole, never as a stub inside a guard"
 // Armed at the edge by whichever pass noticed it, a dwell opened up to a pass
 // late and a burst drawn for its first milliseconds was gone before it was armed.
 TEST_CASE("rf: the next dwell is armed ahead of its edge, at the edge the latched PPS names") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    for (int phase = 0; phase < 2000; phase += 7) a.tick_in(phase / 1000, phase % 1000);
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 2000; phase += 7) armings.tick_in(phase / 1000, phase % 1000);
 
     int slot1_dwells = 0;
-    for (uint32_t i = 1; i < a.rf.handed; i++) {
-        const ports::RfPlan& plan = a.rf.plans[i];
-        CHECK(a.rf.armed_at_us[i] < plan.start_us);
+    for (uint32_t i = 1; i < armings.rf.handed; i++) {
+        const ports::RfPlan& plan = armings.rf.plans[i];
+        CHECK(armings.rf.armed_at_us[i] < plan.start_us);
         CHECK((plan.start_us - Armings::kEdgeUs) % 1000 == 0);
         if (plan.frequency_hz != timing::kMBand1Hz) continue;
         slot1_dwells++;
@@ -292,19 +292,20 @@ TEST_CASE("rf: the next dwell is armed ahead of its edge, at the edge the latche
 // A slot-1 burst drawn for 800 ms used to be dropped: its dwell was only armed by
 // the first pass after 800, and a burst whose instant had gone by was not armed.
 TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwell") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    a.ready_to_transmit(1001);
-    a.state.clock.utc_s = 1001;
-    a.state.clock.utc_edge_us = Armings::kEdgeUs;
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.ready_to_transmit(1001);
+    armings.state.clock.utc_s = 1001;
+    armings.state.clock.utc_edge_us = Armings::kEdgeUs;
 
-    for (int phase = 0; phase < 800; phase += 10) a.tick_at(phase);
+    for (int phase = 0; phase < 800; phase += 10) armings.tick_at(phase);
 
     const ports::RfPlan* queued = nullptr;
-    for (uint32_t i = 0; i < a.rf.handed; i++)
-        if (a.rf.plans[i].frequency_hz == timing::kMBand1Hz && a.rf.plans[i].tx != nullptr)
-            queued = &a.rf.plans[i];
+    for (uint32_t i = 0; i < armings.rf.handed; i++)
+        if (armings.rf.plans[i].frequency_hz == timing::kMBand1Hz &&
+            armings.rf.plans[i].tx != nullptr)
+            queued = &armings.rf.plans[i];
     REQUIRE(queued != nullptr);
     CHECK(queued->start_us == Armings::kEdgeUs + 800000);
     CHECK(queued->tx_at_us >= queued->start_us);
@@ -313,22 +314,22 @@ TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwel
 
 // A pass read the hop plan at 799.99 ms, promoted slot 1 after 800, and aborted it in flight.
 TEST_CASE("rf: a pass that straddles a dwell edge keeps the dwell already queued for it") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    for (int phase = 0; phase < 800; phase += 10) a.tick_at(phase);
-    const uint32_t handed = a.rf.handed;
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    for (int phase = 0; phase < 800; phase += 10) armings.tick_at(phase);
+    const uint32_t handed = armings.rf.handed;
 
-    a.clock.set_microseconds(Armings::kEdgeUs + 799990);
-    a.clock.creep_us = 5;
-    a.radio.tick(static_cast<uint32_t>((Armings::kEdgeUs + 799990) / 1000));
-    a.clock.creep_us = 0;
-    a.tick_at(810);
+    armings.clock.set_microseconds(Armings::kEdgeUs + 799990);
+    armings.clock.creep_us = 5;
+    armings.radio.tick(static_cast<uint32_t>((Armings::kEdgeUs + 799990) / 1000));
+    armings.clock.creep_us = 0;
+    armings.tick_at(810);
 
-    CHECK(a.rf.aborts == 0);
-    REQUIRE(a.rf.handed > handed);
-    for (uint32_t i = handed; i < a.rf.handed; i++)
-        CHECK(a.rf.plans[i].frequency_hz != timing::kMBand1Hz);
+    CHECK(armings.rf.aborts == 0);
+    REQUIRE(armings.rf.handed > handed);
+    for (uint32_t i = handed; i < armings.rf.handed; i++)
+        CHECK(armings.rf.plans[i].frequency_hz != timing::kMBand1Hz);
 }
 
 // Whether a burst may go out is decided on the fix, the rate and the slot, and
@@ -336,27 +337,27 @@ TEST_CASE("rf: a pass that straddles a dwell edge keeps the dwell already queued
 // to cost the whole second, because the dwell was armed at its edge and never
 // looked at again.
 TEST_CASE("rf: a burst whose gates clear inside the dwell is armed into that dwell") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    a.state.own.utc_valid = true;
-    a.state.own.tx_settled = true;
-    a.state.own.flight_state = 2;
-    a.state.own.fix_at_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000);
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.state.own.utc_valid = true;
+    armings.state.own.tx_settled = true;
+    armings.state.own.flight_state = 2;
+    armings.state.own.fix_at_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000);
 
-    a.tick_at(400);
-    const uint32_t armed_at_the_edge = a.rf.arms;
-    CHECK(a.rf.last.tx == nullptr);
+    armings.tick_at(400);
+    const uint32_t armed_at_the_edge = armings.rf.arms;
+    CHECK(armings.rf.last.tx == nullptr);
 
-    a.state.own.fix_valid = true;
-    a.tick_at(410);
-    CHECK(a.rf.arms == armed_at_the_edge + 1);
-    REQUIRE(a.rf.last.tx != nullptr);
-    CHECK(a.rf.last.tx_at_us >= a.rf.last.start_us);
-    CHECK(a.rf.last.tx_at_us < a.rf.last.end_us);
+    armings.state.own.fix_valid = true;
+    armings.tick_at(410);
+    CHECK(armings.rf.arms == armed_at_the_edge + 1);
+    REQUIRE(armings.rf.last.tx != nullptr);
+    CHECK(armings.rf.last.tx_at_us >= armings.rf.last.start_us);
+    CHECK(armings.rf.last.tx_at_us < armings.rf.last.end_us);
 
-    for (int phase = 420; phase < 790; phase += 10) a.tick_at(phase);
-    CHECK(a.rf.arms == armed_at_the_edge + 1);
+    for (int phase = 420; phase < 790; phase += 10) armings.tick_at(phase);
+    CHECK(armings.rf.arms == armed_at_the_edge + 1);
 }
 
 // The dwell is armed at its edge, where the gates on a burst may not have
@@ -377,9 +378,9 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
     dwell.start_us = 400000;
     dwell.end_us = 799000;
     REQUIRE(rf.arm(dwell) == Status::Ok);
-    for (uint32_t t = 400; t <= 450; t += 10) {
-        clock.set_milliseconds(t);
-        rf.service(t);
+    for (uint32_t now_ms = 400; now_ms <= 450; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
 
     const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
@@ -392,19 +393,19 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
 
     uint8_t on_air[events::kRfEventBytes];
     uint8_t on_air_length = 0;
-    for (uint32_t t = 460; t <= 800; t += 10) {
-        clock.set_milliseconds(t);
-        rf.service(t);
+    for (uint32_t now_ms = 460; now_ms <= 800; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
         if (chip.take_tx(on_air, on_air_length)) chip.signal_tx_done();
     }
 
     CHECK(on_air_length > 0);
     CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
     int sent = 0, missed = 0;
-    events::RfEvent e{};
-    while (events.pop(e)) {
-        if (e.type == events::RfEventType::TxDone) sent++;
-        if (e.type == events::RfEventType::Missed) missed++;
+    events::RfEvent event{};
+    while (events.pop(event)) {
+        if (event.type == events::RfEventType::TxDone) sent++;
+        if (event.type == events::RfEventType::Missed) missed++;
     }
     CHECK(sent == 1);
     CHECK(missed == 0);
@@ -413,50 +414,50 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
 // A burst refused before it was ever armed left the counters moving and the page
 // silent, which reads exactly like a dead transmitter to the one person looking.
 TEST_CASE("rf: a plan the radio refuses is a burst that never armed, not one that went missing") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    a.ready_to_transmit(1000);
-    a.rf.refuse = true;
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.ready_to_transmit(1000);
+    armings.rf.refuse = true;
 
-    a.tick_at(400);
+    armings.tick_at(400);
 
-    REQUIRE(a.rf.with_tx >= 1);
-    REQUIRE(a.state.radio_log.count() == 1);
-    CHECK(a.state.radio_log.newest(0).verdict == radio::Verdict::Unarmed);
-    CHECK(a.state.rf.timing_statistics.missed() == 1);
+    REQUIRE(armings.rf.with_tx >= 1);
+    REQUIRE(armings.state.radio_log.count() == 1);
+    CHECK(armings.state.radio_log.newest(0).verdict == radio::Verdict::Unarmed);
+    CHECK(armings.state.rf.timing_statistics.missed() == 1);
 }
 
 // The hour's allowance holds every burst until it frees up again, so one row says
 // when that began: a spell of them would push the sky itself off a 16-row tape.
 TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and counted every time") {
-    Armings a;
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    a.ready_to_transmit(1000);
+    Armings armings;
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    armings.ready_to_transmit(1000);
 
     // EN 300 220-2 band M is 10 permille of the hour: 7200 bursts of 5 ms fill it.
     for (int i = 0; i < 7202; i++) {
-        a.state.air.tx_ok++;
-        a.tick_at(100);
+        armings.state.air.tx_ok++;
+        armings.tick_at(100);
     }
-    REQUIRE(a.state.radio_log.count() == 0);
+    REQUIRE(armings.state.radio_log.count() == 0);
 
-    a.state.own.utc_s += 2;  // the lower channel's second again
-    a.tick_at(400);
+    armings.state.own.utc_s += 2;  // the lower channel's second again
+    armings.tick_at(400);
 
-    REQUIRE(a.state.radio_log.count() == 1);
-    CHECK(a.state.radio_log.newest(0).verdict == radio::Verdict::Held);
-    CHECK(a.state.radio_log.newest(0).band == model::Band::M);
-    CHECK(a.state.rf.timing_statistics.refused() == 1);
+    REQUIRE(armings.state.radio_log.count() == 1);
+    CHECK(armings.state.radio_log.newest(0).verdict == radio::Verdict::Held);
+    CHECK(armings.state.radio_log.newest(0).band == model::Band::M);
+    CHECK(armings.state.rf.timing_statistics.refused() == 1);
 
-    a.state.own.utc_s += 2;
-    a.state.own.fix_at_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
-    a.tick_in(1, 205);
-    a.tick_in(1, 400);
+    armings.state.own.utc_s += 2;
+    armings.state.own.fix_at_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
+    armings.tick_in(1, 205);
+    armings.tick_in(1, 400);
 
-    CHECK(a.state.radio_log.count() == 1);
-    CHECK(a.state.rf.timing_statistics.refused() == 2);
+    CHECK(armings.state.radio_log.count() == 1);
+    CHECK(armings.state.rf.timing_statistics.refused() == 2);
 }
 
 namespace {
@@ -465,22 +466,22 @@ constexpr uint64_t kSecondOneUs = Armings::kEdgeUs + 1000000;
 constexpr uint64_t kBurstUs = 6000;
 
 struct Outcomes {
-    Armings& a;
+    Armings& armings;
     uint64_t held_at_us{0};
     std::vector<uint64_t> reported{};
 
     void report_flown() {
-        const uint64_t now_us = a.clock.microseconds();
-        for (uint32_t i = 0; i < a.rf.handed; i++) {
-            const ports::RfPlan& plan = a.rf.plans[i];
+        const uint64_t now_us = armings.clock.microseconds();
+        for (uint32_t i = 0; i < armings.rf.handed; i++) {
+            const ports::RfPlan& plan = armings.rf.plans[i];
             if (plan.tx == nullptr || plan.tx_at_us + kBurstUs > now_us) continue;
             if (plan.tx_at_us != held_at_us && !was_reported(plan.tx_at_us)) report(plan.tx_at_us);
         }
     }
 
     void report(uint64_t tx_at_us) {
-        a.state.rf.note_tx_done(a.state.air.tx_ok, tx_at_us);
-        a.state.air.tx_ok++;
+        armings.state.rf.note_tx_done(armings.state.air.tx_ok, tx_at_us);
+        armings.state.air.tx_ok++;
         reported.push_back(tx_at_us);
     }
 
@@ -489,8 +490,8 @@ struct Outcomes {
     }
 
     uint64_t name_at_us() const {
-        for (uint32_t i = 0; i < a.rf.handed; i++) {
-            const ports::RfPlan& plan = a.rf.plans[i];
+        for (uint32_t i = 0; i < armings.rf.handed; i++) {
+            const ports::RfPlan& plan = armings.rf.plans[i];
             if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs &&
                 plan.tx_at_us < kSecondOneUs + timing::kSlot1WrapMs * 1000)
                 return plan.tx_at_us;
@@ -499,21 +500,21 @@ struct Outcomes {
     }
 };
 
-void fly_ground_second(Armings& a, Outcomes& outcomes) {
-    std::strncpy(a.settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
-    a.clock.set_microseconds(Armings::kEdgeUs);
-    REQUIRE(a.radio.setup() == Status::Ok);
-    const uint32_t utc_s = 1000 + a.radio.transmitter().ground_second();
-    a.ready_to_transmit(utc_s);
-    a.state.clock.utc_s = utc_s;
+void fly_ground_second(Armings& armings, Outcomes& outcomes) {
+    std::strncpy(armings.settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    armings.clock.set_microseconds(Armings::kEdgeUs);
+    REQUIRE(armings.radio.setup() == Status::Ok);
+    const uint32_t utc_s = 1000 + armings.radio.transmitter().ground_second();
+    armings.ready_to_transmit(utc_s);
+    armings.state.clock.utc_s = utc_s;
     for (int phase = 0; phase < 1000; phase += 10) {
-        a.tick_at(phase);
+        armings.tick_at(phase);
         outcomes.report_flown();
     }
     outcomes.held_at_us = outcomes.name_at_us();
     REQUIRE(outcomes.held_at_us != 0);
-    a.state.own.utc_s = utc_s + 1;
-    a.state.clock.utc_s = utc_s + 1;
+    armings.state.own.utc_s = utc_s + 1;
+    armings.state.clock.utc_s = utc_s + 1;
 }
 
 }  // namespace
@@ -521,36 +522,36 @@ void fly_ground_second(Armings& a, Outcomes& outcomes) {
 // The name's dwell closes 5 ms after its latest instant, and its TxDone reaches the policy a pass
 // later: counted missed at the close, it was then credited to the next dwell as a position.
 TEST_CASE("rf: a TxDone that lands after its dwell closed is credited to the burst it names") {
-    Armings a;
-    Outcomes outcomes{a};
-    fly_ground_second(a, outcomes);
+    Armings armings;
+    Outcomes outcomes{armings};
+    fly_ground_second(armings, outcomes);
 
     for (int phase = 0; phase <= 200; phase += 10) {
-        a.tick_in(1, phase);
+        armings.tick_in(1, phase);
         outcomes.report_flown();
     }
     outcomes.report(outcomes.held_at_us);
-    a.tick_in(1, 210);
+    armings.tick_in(1, 210);
 
-    CHECK(a.state.rf.timing_statistics.missed() == 0);
-    CHECK(a.state.air.tx_named == 1);
-    CHECK(a.radio.transmitter().sent_count() == outcomes.reported.size());
+    CHECK(armings.state.rf.timing_statistics.missed() == 0);
+    CHECK(armings.state.air.tx_named == 1);
+    CHECK(armings.radio.transmitter().sent_count() == outcomes.reported.size());
 }
 
 TEST_CASE("rf: a burst that never reports is counted missed once its report is overdue") {
-    Armings a;
-    Outcomes outcomes{a};
-    fly_ground_second(a, outcomes);
+    Armings armings;
+    Outcomes outcomes{armings};
+    fly_ground_second(armings, outcomes);
 
     const int overdue_ms =
         timing::kSlot1WrapMs + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
     for (int phase = 0; phase < overdue_ms; phase += 10) {
-        a.tick_in(1, phase);
+        armings.tick_in(1, phase);
         outcomes.report_flown();
     }
-    CHECK(a.state.rf.timing_statistics.missed() == 0);
+    CHECK(armings.state.rf.timing_statistics.missed() == 0);
 
-    a.tick_in(1, overdue_ms);
-    CHECK(a.state.rf.timing_statistics.missed() == 1);
-    CHECK(a.state.air.tx_named == 0);
+    armings.tick_in(1, overdue_ms);
+    CHECK(armings.state.rf.timing_statistics.missed() == 1);
+    CHECK(armings.state.air.tx_named == 0);
 }

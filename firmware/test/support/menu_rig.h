@@ -56,9 +56,9 @@ inline void change(Rig& rig, uint32_t& now_ms) {
 
 // The blob goes to flash kSettleMs after the last tap, in the next free window.
 inline void run_past_the_write_settle(Rig& rig, uint32_t& now_ms) {
-    const uint32_t ms = timing::DurableWriteWindow::kSettleMs + 1000;
-    rig.run(now_ms, now_ms + ms);
-    now_ms += ms;
+    const uint32_t settle_ms = timing::DurableWriteWindow::kSettleMs + 1000;
+    rig.run(now_ms, now_ms + settle_ms);
+    now_ms += settle_ms;
 }
 
 inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
@@ -71,10 +71,10 @@ inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
 
 inline bool stored_settings(Rig& rig, go::Settings& out) {
     uint8_t blob[64];
-    size_t n = 0;
-    if (rig.platform.key_value().read("settings", blob, sizeof(blob), n) != Status::Ok)
+    size_t count = 0;
+    if (rig.platform.key_value().read("settings", blob, sizeof(blob), count) != Status::Ok)
         return false;
-    return go::from_blob(blob, n, out) == Status::Ok;
+    return go::from_blob(blob, count, out) == Status::Ok;
 }
 
 }  // namespace

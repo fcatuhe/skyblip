@@ -94,19 +94,19 @@ TEST_CASE("settings: wrong version blob is Unsupported (migrate/default)") {
     // recompute crc so it isn't a CRC failure: simulate a real older version
     // (here we just confirm version mismatch is caught before trusting payload)
     Settings out;
-    Status st = from_blob(blob, blob_size(), out);
-    CHECK((st == Status::Unsupported || st == Status::Crc));
+    Status status = from_blob(blob, blob_size(), out);
+    CHECK((status == Status::Unsupported || status == Status::Crc));
 }
 
 TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
     Settings settings = defaults();
     char buffer[256];
-    int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    CHECK(n > 0);
-    json::Reader r(buffer, n);
-    long v;
-    CHECK(r.read_integer("aircraft_type", v));
-    CHECK(v == kAircraftTypeLight);
+    int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
+    CHECK(written > 0);
+    json::Reader reader(buffer, written);
+    long value;
+    CHECK(reader.read_integer("aircraft_type", value));
+    CHECK(value == kAircraftTypeLight);
 
     // apply a patch: change type + alarm volume + units
     const char* patch = "{\"aircraft_type\":4,\"alarm_volume\":0,\"units\":1}";
@@ -141,23 +141,24 @@ TEST_CASE("address: the prefix, then the serial the server signed") {
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
     CHECK(int(kAddressMappingTable) == 58);
     char buffer[256];
-    const int n = to_json(defaults(), address_of(0x0042), buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader r(buffer, n);
-    long v = 0;
-    CHECK(r.read_integer("address", v));
-    CHECK(v == 0x000042);
-    CHECK(r.read_integer("address_mapping_table", v));
-    CHECK(v == 58);
+    const int written =
+        to_json(defaults(), address_of(0x0042), buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader reader(buffer, written);
+    long value = 0;
+    CHECK(reader.read_integer("address", value));
+    CHECK(value == 0x000042);
+    CHECK(reader.read_integer("address_mapping_table", value));
+    CHECK(value == 58);
 }
 
 TEST_CASE("address: a unit with no serial reports no address, and still its table") {
     char buffer[256];
-    const int n = to_json(defaults(), std::nullopt, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader r(buffer, n);
-    long v = 0;
-    CHECK_FALSE(r.has("address"));
-    CHECK(r.read_integer("address_mapping_table", v));
-    CHECK(v == 58);
+    const int written = to_json(defaults(), std::nullopt, buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader reader(buffer, written);
+    long value = 0;
+    CHECK_FALSE(reader.has("address"));
+    CHECK(reader.read_integer("address_mapping_table", value));
+    CHECK(value == 58);
 }
 
 // H. The per-unit gauge trim: one signed millivolt offset, set once on the line
@@ -276,8 +277,8 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     // "get" reply is one frame at comms::kSmallestSupportedPayloadBytes with 29
     // bytes of headroom, too few for both trims.
     char buffer[256];
-    const int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    CHECK(std::string(buffer, static_cast<size_t>(n)).find("freq_trim") == std::string::npos);
+    const int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
+    CHECK(std::string(buffer, static_cast<size_t>(written)).find("freq_trim") == std::string::npos);
 }
 
 TEST_CASE("settings: a blob from a version this firmware never wrote is refused") {
@@ -292,8 +293,8 @@ TEST_CASE("settings: a blob from a version this firmware never wrote is refused"
 TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     Settings settings = defaults();
     char buffer[256];
-    const int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    const std::string json(buffer, static_cast<size_t>(n));
+    const int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
+    const std::string json(buffer, static_cast<size_t>(written));
     // Removed with their fields: no reader outside this module, and a page that
     // accepts a setting nothing reads is worse than one that does not offer it.
     CHECK(json.find("region") == std::string::npos);
@@ -401,11 +402,11 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
     char buffer[256];
-    const int n = to_json(settings, 0x5B7E57, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader r(buffer, n);
-    long v = 0;
-    CHECK(r.read_integer("address", v));
-    CHECK(v == 0x5B7E57);
-    CHECK(r.read_integer("address_mapping_table", v));
-    CHECK(v == 58);
+    const int written = to_json(settings, 0x5B7E57, buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader reader(buffer, written);
+    long value = 0;
+    CHECK(reader.read_integer("address", value));
+    CHECK(value == 0x5B7E57);
+    CHECK(reader.read_integer("address_mapping_table", value));
+    CHECK(value == 58);
 }

@@ -21,9 +21,9 @@ struct Unit {
     std::vector<events::BatterySample> passes(int count) {
         std::vector<events::BatterySample> published;
         for (int i = 0; i < count; i++) {
-            t += runtime::kBatteryPeriodMs;
-            platform.clock().set_milliseconds(t);
-            board.poll(state, t);
+            now_ms += runtime::kBatteryPeriodMs;
+            platform.clock().set_milliseconds(now_ms);
+            board.poll(state, now_ms);
             events::BatterySample sample{};
             while (bus.battery.pop(sample)) published.push_back(sample);
         }
@@ -34,7 +34,7 @@ struct Unit {
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
-    uint32_t t{0};
+    uint32_t now_ms{0};
 };
 
 }  // namespace

@@ -34,8 +34,8 @@ TEST_CASE("ssd1681: paint_black drives every pixel from white, on the partial wa
     CHECK_FALSE(chip.last_full);
     REQUIRE(chip.ram_previous.size() == parts::Ssd1681Glass::kBytes);
     REQUIRE(chip.ram.size() == parts::Ssd1681Glass::kBytes);
-    for (uint8_t b : chip.ram_previous) REQUIRE(b == 0xFF);  // panel RAM 1 is white
-    for (uint8_t b : chip.ram) REQUIRE(b == 0x00);
+    for (uint8_t byte : chip.ram_previous) REQUIRE(byte == 0xFF);  // panel RAM 1 is white
+    for (uint8_t byte : chip.ram) REQUIRE(byte == 0x00);
     CHECK(chip.framebuffer().count_black() ==
           parts::Ssd1681::kGlassWidth * parts::Ssd1681::kGlassHeight);
 }
@@ -80,7 +80,7 @@ TEST_CASE("ssd1681: a paint_black leaves the glass known, and the page after it 
     canvas.clear(true);
     driver.present(canvas, ports::Refresh::Partial, 1000);
     CHECK_FALSE(chip.last_full);
-    for (uint8_t b : chip.ram_previous) REQUIRE(b == 0x00);  // the black it was left on
+    for (uint8_t byte : chip.ram_previous) REQUIRE(byte == 0x00);  // the black it was left on
 }
 
 // The simulator draws this: a partial that changed no pixel is invisible on glass.
@@ -209,9 +209,9 @@ TEST_CASE("ssd1681: a run of partials costs one reset, not one per refresh") {
 
     for (int i = 0; i < 5; i++) {
         canvas.set_pixel(10 + i, 10, true);
-        const uint32_t t = 5000 + uint32_t(i) * 1000;
-        driver.present(canvas, ports::Refresh::Partial, t);
-        CHECK(driver.ready(t + parts::Ssd1681::kReadyAfterPartialMs));
+        const uint32_t now_ms = 5000 + uint32_t(i) * 1000;
+        driver.present(canvas, ports::Refresh::Partial, now_ms);
+        CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterPartialMs));
     }
     CHECK(chip.reset_pulses == resets_before);
     CHECK(chip.powered);

@@ -25,28 +25,28 @@ constexpr int32_t kOwnAltitudeM = 1000;
 constexpr int32_t kFourHundredMetresNorth1e7 = 400 * 1000000 / 11132;
 
 model::Ownship own_at(uint32_t at_ms) {
-    model::Ownship o{};
-    o.fix_valid = true;
-    o.fix_at_ms = at_ms;
-    o.latitude_1e7 = kOwnLatitude1e7;
-    o.longitude_1e7 = kOwnLongitude1e7;
-    o.altitude_hae_mm = kOwnAltitudeM * 1000;
-    o.speed_mm_s = 30000;
-    return o;
+    model::Ownship own{};
+    own.fix_valid = true;
+    own.fix_at_ms = at_ms;
+    own.latitude_1e7 = kOwnLatitude1e7;
+    own.longitude_1e7 = kOwnLongitude1e7;
+    own.altitude_hae_mm = kOwnAltitudeM * 1000;
+    own.speed_mm_s = 30000;
+    return own;
 }
 
 model::AircraftObservation sender(flight::FlightState state) {
-    model::AircraftObservation o{};
-    o.address = 0x3C4D5E;
-    o.address_mapping_table = 5;
-    o.aircraft_category = 4;
-    o.flight_state = static_cast<uint8_t>(state);
-    o.latitude_1e7 = kOwnLatitude1e7 + kFourHundredMetresNorth1e7;
-    o.longitude_1e7 = kOwnLongitude1e7;
-    o.altitude_m = kOwnAltitudeM;
-    o.speed_valid = true;
-    o.position_valid = true;
-    return o;
+    model::AircraftObservation observation{};
+    observation.address = 0x3C4D5E;
+    observation.address_mapping_table = 5;
+    observation.aircraft_category = 4;
+    observation.flight_state = static_cast<uint8_t>(state);
+    observation.latitude_1e7 = kOwnLatitude1e7 + kFourHundredMetresNorth1e7;
+    observation.longitude_1e7 = kOwnLongitude1e7;
+    observation.altitude_m = kOwnAltitudeM;
+    observation.speed_valid = true;
+    observation.position_valid = true;
+    return observation;
 }
 
 model::AircraftObservation stamped(model::AircraftObservation heard) {
@@ -56,19 +56,19 @@ model::AircraftObservation stamped(model::AircraftObservation heard) {
 }
 
 model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
-    protocol::AdslPacket p;
-    p.reset();
-    p.set_address(sent.address);
-    p.set_address_mapping_table(sent.address_mapping_table);
-    p.flight_state = sent.flight_state;
-    p.aircraft_category = sent.aircraft_category;
-    p.emergency = 1;
-    p.set_latitude_1e7(sent.latitude_1e7);
-    p.set_longitude_1e7(sent.longitude_1e7);
-    p.set_altitude_m(sent.altitude_m);
-    p.set_speed_q(sent.speed_q);
+    protocol::AdslPacket packet;
+    packet.reset();
+    packet.set_address(sent.address);
+    packet.set_address_mapping_table(sent.address_mapping_table);
+    packet.flight_state = sent.flight_state;
+    packet.aircraft_category = sent.aircraft_category;
+    packet.emergency = 1;
+    packet.set_latitude_1e7(sent.latitude_1e7);
+    packet.set_longitude_1e7(sent.longitude_1e7);
+    packet.set_altitude_m(sent.altitude_m);
+    packet.set_speed_q(sent.speed_q);
     model::AircraftObservation heard{};
-    REQUIRE(protocol::to_observation(p, events::Stamp{}, 0, model::Source::AdslDirect, heard));
+    REQUIRE(protocol::to_observation(packet, events::Stamp{}, 0, model::Source::AdslDirect, heard));
     return stamped(heard);
 }
 
@@ -106,11 +106,12 @@ constexpr System kSystems[] = {
 
 bool joins_formation(const model::AircraftObservation& heard) {
     formation::Tracker tracker;
-    for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
+    for (uint32_t now_ms = 1000; now_ms <= 1000 + formation::kTogetherHoldMs + 1000;
+         now_ms += 1000) {
         model::AircraftObservation fix = heard;
-        fix.at_ms = t;
-        fix.received.at_s = t / 1000;
-        tracker.observe(own_at(t), fix, {}, t);
+        fix.at_ms = now_ms;
+        fix.received.at_s = now_ms / 1000;
+        tracker.observe(own_at(now_ms), fix, {}, now_ms);
     }
     return tracker.members() == 1;
 }

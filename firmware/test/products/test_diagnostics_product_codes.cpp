@@ -79,26 +79,27 @@ void codes_pinned(int count, int retired = 0) {
 }  // namespace
 
 TEST_CASE(
-    "diag product codes: go::Gesture's codes are the contact record's gesture byte, and a "
+    "diagnostics product codes: go::Gesture's codes are the contact record's gesture byte, and a "
     "code changed or added here moves the gesture list and its maximum in the schema") {
     codes_pinned<go::Gesture>(4);
 }
 
 TEST_CASE(
-    "diag product codes: go::Page's codes are the screen record's page byte, and a page given "
+    "diagnostics product codes: go::Page's codes are the screen record's page byte, and a page "
+    "given "
     "a code here renames that page in every corpus already written unless the schema moves") {
     codes_pinned<go::Page>(10);
     CHECK(go::kPageCount == 10);
 }
 
 TEST_CASE(
-    "diag product codes: go::Mode's codes are the screen record's mode byte, and a member "
+    "diagnostics product codes: go::Mode's codes are the screen record's mode byte, and a member "
     "added here raises the maximum the schema puts on mode") {
     codes_pinned<go::Mode>(2);
 }
 
 TEST_CASE(
-    "diag product codes: comms::Pending's codes are the screen record's prompt byte, and a "
+    "diagnostics product codes: comms::Pending's codes are the screen record's prompt byte, and a "
     "code changed or added here moves the prompt list in the schema") {
     // 3 was apply, and stays out of use so a capture written before still reads
     codes_pinned<comms::Pending>(9, /*retired=*/1);

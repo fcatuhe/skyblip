@@ -12,11 +12,11 @@ using namespace skyblip::flight;
 namespace {
 
 FlightSample solution(double speed_mps, uint16_t hdop_e2 = 90) {
-    FlightSample s{};
-    s.speed_mm_s = static_cast<int32_t>(speed_mps * 1000);
-    s.hdop_e2 = hdop_e2;
-    s.fix_valid = true;
-    return s;
+    FlightSample sample{};
+    sample.speed_mm_s = static_cast<int32_t>(speed_mps * 1000);
+    sample.hdop_e2 = hdop_e2;
+    sample.fix_valid = true;
+    return sample;
 }
 
 // One second of solutions at a time, the cadence the receiver is configured for.

@@ -58,10 +58,10 @@ TEST_CASE("scenario: a loaded scenario names the device, and a file can say whic
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
 
-    simulator::Scenario sc;
+    simulator::Scenario scenario;
     const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, length, sc));
-    simulator.load(sc);
+    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
+    simulator.load(scenario);
     CHECK(std::string(simulator.product().settings().callsign) == "S-BLIP");
 
     simulator::Scenario named;
@@ -76,10 +76,10 @@ TEST_CASE("scenario: an empty callsign in the file leaves the device unnamed") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
 
-    simulator::Scenario sc;
+    simulator::Scenario scenario;
     const char* json = "{\"name\":\"quiet\",\"callsign\":\"\"}";
-    REQUIRE(simulator::parse_scenario(json, static_cast<int>(__builtin_strlen(json)), sc));
-    simulator.load(sc);
+    REQUIRE(simulator::parse_scenario(json, static_cast<int>(__builtin_strlen(json)), scenario));
+    simulator.load(scenario);
     CHECK(std::string(simulator.product().settings().callsign).empty());
 }
 
@@ -92,10 +92,10 @@ TEST_CASE("scenario: an unparseable scenario is refused, not half-applied") {
 TEST_CASE("scenario: a training scenario's expectations hold when replayed") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
-    simulator::Scenario sc;
+    simulator::Scenario scenario;
     const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, length, sc));
-    simulator.load(sc);
+    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
+    simulator.load(scenario);
     replay(simulator);
 
     CHECK(simulator.world().failures() == 0);
@@ -131,10 +131,11 @@ TEST_CASE("scenario: pinned transmit phases land where the dwell map says") {
 TEST_CASE("scenario: a failed expectation is reported, not swallowed") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
-    simulator::Scenario sc;
-    sc.duration_ms = 3000;
-    sc.events.push_back(simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMin, 3});
-    simulator.load(sc);
+    simulator::Scenario scenario;
+    scenario.duration_ms = 3000;
+    scenario.events.push_back(
+        simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMin, 3});
+    simulator.load(scenario);
     replay(simulator);
 
     CHECK(simulator.world().failures() == 1);
@@ -155,10 +156,10 @@ TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells
     const traffic::TrafficTable& table = simulator.product().state().traffic;
     int adsl = 0, alptas = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used) continue;
-        if (t->observation.source == model::Source::AdslDirect) adsl++;
-        if (t->observation.source == model::Source::Alptas) alptas++;
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used) continue;
+        if (target->observation.source == model::Source::AdslDirect) adsl++;
+        if (target->observation.source == model::Source::Alptas) alptas++;
     }
     CHECK(adsl == 1);
     CHECK(alptas == 1);
@@ -177,19 +178,21 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
     const model::Ownship& own = simulator.product().state().own;
     int found = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used || t->observation.source != model::Source::Alptas) continue;
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used ||
+            target->observation.source != model::Source::Alptas)
+            continue;
         found++;
         // 900 m north and 250 m east of us at the start, closing from the south.
-        const int64_t dlat = t->observation.latitude_1e7 - own.latitude_1e7;
-        const int32_t north_m = static_cast<int32_t>((dlat * 11132) / 1000000);
+        const int64_t north_1e7 = target->observation.latitude_1e7 - own.latitude_1e7;
+        const int32_t north_m = static_cast<int32_t>((north_1e7 * 11132) / 1000000);
         CHECK(north_m > 400);
         CHECK(north_m < 1100);
-        CHECK(t->observation.altitude_m < to_metres(Millimetres(own.altitude_hae_mm)).value);
+        CHECK(target->observation.altitude_m < to_metres(Millimetres(own.altitude_hae_mm)).value);
         // A FLARM-taxonomy address is reported as one, so an EFB labels it IDType 2.
-        CHECK(protocol::address_mapping_table_to_id_type(t->observation.address_mapping_table) ==
-              2);
-        CHECK(t->observation.position_valid);
+        CHECK(protocol::address_mapping_table_to_id_type(
+                  target->observation.address_mapping_table) == 2);
+        CHECK(target->observation.position_valid);
     }
     CHECK(found == 1);
 }
@@ -211,9 +214,9 @@ TEST_CASE("scenario: a gaggle in one thermal is traffic, not three collisions") 
     CHECK(table.count() == 3);
     CHECK(simulator.product().state().alarm_level == traffic::Level::None);
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used) continue;
-        CHECK(t->alarm_level == traffic::Level::None);
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used) continue;
+        CHECK(target->alarm_level == traffic::Level::None);
     }
 }
 
@@ -236,7 +239,7 @@ struct Encounter {
     // so everything before this is the device meeting a stranger.
     static constexpr uint32_t kSettledMs = 5000;
     // What the ear gets falls one re-notification window later, because what
-    // the device has already said out loud is only taken back after the contact
+    // the device has already said out loud is only taken back after the target
     // has been outside the window for that whole time (traffic::notify_for).
     static constexpr uint32_t kQuietFromMs = kSettledMs + traffic::kRenotifyFloorMs;
 
@@ -259,74 +262,80 @@ struct Encounter {
 
 const traffic::Target* only_target(const bus::State& state) {
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = state.traffic.at(i);
-        if (t != nullptr && t->used) return t;
+        const traffic::Target* target = state.traffic.at(i);
+        if (target != nullptr && target->used) return target;
     }
     return nullptr;
 }
 
 Encounter measure(simulator::Simulator& simulator) {
-    Encounter e{};
+    Encounter encounter{};
     const uint32_t until = simulator.scenario().duration_ms;
     int64_t error_sum = 0;
     int samples = 0;
     uint8_t spoken = 0;
-    for (uint32_t t = 0; t <= until; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
+    for (uint32_t now_ms = 0; now_ms <= until; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
 
         // Every step, not every sample: a call is a few hundred ms and a sample
         // every 100 ms would still miss which pass began it.
         if (simulator.buzzer_level() != spoken) {
             spoken = simulator.buzzer_level();
             if (spoken != 0) {
-                e.last_spoken_ms = t;
-                ++(t >= Encounter::kQuietFromMs ? e.beeps_after_settle : e.beeps_before_settle);
+                encounter.last_spoken_ms = now_ms;
+                ++(now_ms >= Encounter::kQuietFromMs ? encounter.beeps_after_settle
+                                                     : encounter.beeps_before_settle);
             }
         }
 
-        if (t % Encounter::kSampleMs != 0) continue;
+        if (now_ms % Encounter::kSampleMs != 0) continue;
 
         const bus::State& state = simulator.product().state();
         const traffic::Target* target = only_target(state);
         if (target == nullptr) continue;
 
-        const traffic::AlarmAssessment a = traffic::assess(state.own, target->observation, t);
-        if (!a.valid) continue;
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(state.own, target->observation, now_ms);
+        if (!assessment.valid) continue;
         const uint8_t level = traffic::to_number(state.alarm_level);
-        const int32_t range_m = a.relative_distance_m;
+        const int32_t range_m = assessment.relative_distance_m;
         const int32_t true_separation_m = static_cast<int32_t>(simulator.world().separation_m(0));
 
-        if (level >= 1 && !e.announced) {
-            e.announced = true;
-            e.first_ms = t;
-            e.first_range_m = range_m;
-            e.first_true_separation_m = true_separation_m;
+        if (level >= 1 && !encounter.announced) {
+            encounter.announced = true;
+            encounter.first_ms = now_ms;
+            encounter.first_range_m = range_m;
+            encounter.first_true_separation_m = true_separation_m;
         }
-        if (range_m < e.min_reported_m) e.min_reported_m = range_m;
+        if (range_m < encounter.min_reported_m) encounter.min_reported_m = range_m;
         error_sum +=
             range_m > true_separation_m ? range_m - true_separation_m : true_separation_m - range_m;
         samples++;
-        if (true_separation_m < e.min_true_separation_m) {
-            e.min_true_separation_m = true_separation_m;
-            e.min_true_separation_ms = t;
-            e.level_at_min_true_separation = level;
+        if (true_separation_m < encounter.min_true_separation_m) {
+            encounter.min_true_separation_m = true_separation_m;
+            encounter.min_true_separation_ms = now_ms;
+            encounter.level_at_min_true_separation = level;
         }
-        e.traffic_count = state.traffic.count();
+        encounter.traffic_count = state.traffic.count();
     }
-    if (samples > 0) e.mean_range_error_m = static_cast<int32_t>(error_sum / samples);
-    return e;
+    if (samples > 0) encounter.mean_range_error_m = static_cast<int32_t>(error_sum / samples);
+    return encounter;
 }
 
-void report(const Encounter& e) {
-    MESSAGE("first advisory: t=" << e.first_ms << " ms, model range=" << e.first_range_m
-                                 << " m, true separation=" << e.first_true_separation_m << " m");
-    MESSAGE("beeps: " << e.beeps_before_settle << " before " << Encounter::kQuietFromMs << " ms, "
-                      << e.beeps_after_settle << " after; last at t=" << e.last_spoken_ms << " ms");
-    MESSAGE("closest approach: " << e.min_true_separation_m << " m true at t="
-                                 << e.min_true_separation_ms << " ms, published level "
-                                 << static_cast<int>(e.level_at_min_true_separation)
-                                 << ", closest the model ever saw " << e.min_reported_m << " m");
-    MESSAGE("mean range error: " << e.mean_range_error_m << " m");
+void report(const Encounter& encounter) {
+    MESSAGE("first advisory: t=" << encounter.first_ms
+                                 << " ms, model range=" << encounter.first_range_m
+                                 << " m, true separation=" << encounter.first_true_separation_m
+                                 << " m");
+    MESSAGE("beeps: " << encounter.beeps_before_settle << " before " << Encounter::kQuietFromMs
+                      << " ms, " << encounter.beeps_after_settle
+                      << " after; last at t=" << encounter.last_spoken_ms << " ms");
+    MESSAGE("closest approach: " << encounter.min_true_separation_m << " m true at t="
+                                 << encounter.min_true_separation_ms << " ms, published level "
+                                 << static_cast<int>(encounter.level_at_min_true_separation)
+                                 << ", closest the model ever saw " << encounter.min_reported_m
+                                 << " m");
+    MESSAGE("mean range error: " << encounter.mean_range_error_m << " m");
 }
 
 }  // namespace
@@ -336,20 +345,20 @@ TEST_CASE("scenario: two gliders sharing a thermal core are warned about the 15 
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/circling_gaggle.json"));
-    const Encounter e = measure(simulator);
-    report(e);
+    const Encounter encounter = measure(simulator);
+    report(encounter);
 
     CHECK(simulator.world().failures() == 0);
-    CHECK(e.traffic_count == 1);
+    CHECK(encounter.traffic_count == 1);
 
-    CHECK(e.min_true_separation_m < 15);
-    CHECK(e.min_true_separation_ms > 10000);
-    CHECK(e.announced);
-    CHECK(e.first_ms < e.min_true_separation_ms);
+    CHECK(encounter.min_true_separation_m < 15);
+    CHECK(encounter.min_true_separation_ms > 10000);
+    CHECK(encounter.announced);
+    CHECK(encounter.first_ms < encounter.min_true_separation_ms);
 
     // A neighbour's turn rate is not on the wire, so each is still carried straight to now.
-    CHECK(e.min_reported_m < 60);
-    CHECK(e.mean_range_error_m < 20);
+    CHECK(encounter.min_reported_m < 60);
+    CHECK(encounter.mean_range_error_m < 20);
 }
 
 // The other side of the fence: a glider arriving straight at 45 m/s is spoken
@@ -358,27 +367,27 @@ TEST_CASE("scenario: a glider joining the thermal on a straight line is still ca
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/thermal_joiner.json"));
-    const Encounter e = measure(simulator);
-    report(e);
+    const Encounter encounter = measure(simulator);
+    report(encounter);
 
     CHECK(simulator.world().failures() == 0);
-    CHECK(e.traffic_count == 1);
+    CHECK(encounter.traffic_count == 1);
 
     // Inside the window from the first report it made, and spoken about there:
     // 2 km at 68 m/s of closure is half a minute of looking.
-    CHECK(e.announced);
-    CHECK(e.first_range_m <= traffic::kAdvisoryDistanceM);
-    CHECK(e.first_range_m > 1800);
-    CHECK(e.first_ms < 5000);
-    CHECK(e.min_true_separation_ms - e.first_ms > 30000);
+    CHECK(encounter.announced);
+    CHECK(encounter.first_range_m <= traffic::kAdvisoryDistanceM);
+    CHECK(encounter.first_range_m > 1800);
+    CHECK(encounter.first_ms < 5000);
+    CHECK(encounter.min_true_separation_ms - encounter.first_ms > 30000);
 
     // One pair of beeps for the whole encounter: it arrives once.
-    CHECK(e.beeps_before_settle == 2);
-    CHECK(e.beeps_after_settle == 0);
+    CHECK(encounter.beeps_before_settle == 2);
+    CHECK(encounter.beeps_after_settle == 0);
 
     // Both sides carried to the instant the range is read at: unaligned, this encounter reads 57 m
     // out.
-    CHECK(e.mean_range_error_m < 40);
+    CHECK(encounter.mean_range_error_m < 40);
 }
 
 // The session boundary as a committed fixture: one file, replayed by the tests
@@ -394,13 +403,13 @@ TEST_CASE("scenario: a takeoff and a landing bracket one flight log session") {
     uint32_t parked_writes = 0;
     uint32_t airborne_records = 0;
     bool was_recording = false;
-    for (uint32_t t = 0; t <= 130000; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
-        if (t == 18000) {
+    for (uint32_t now_ms = 0; now_ms <= 130000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
+        if (now_ms == 18000) {
             parked_records = simulator.product().flight_log().records_written();
             parked_writes = simulator.platform().log_flash().writes;
         }
-        if (t == 70000) {
+        if (now_ms == 70000) {
             was_recording = simulator.product().flight_log().recording();
             airborne_records = simulator.product().flight_log().records_written();
         }
@@ -438,10 +447,10 @@ TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot h
 
     int direct = 0, relayed = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = state.traffic.at(i);
-        if (t == nullptr || !t->used) continue;
-        if (t->observation.source == model::Source::AdslDirect) direct++;
-        if (t->observation.source == model::Source::AdslUplink) relayed++;
+        const traffic::Target* target = state.traffic.at(i);
+        if (target == nullptr || !target->used) continue;
+        if (target->observation.source == model::Source::AdslDirect) direct++;
+        if (target->observation.source == model::Source::AdslUplink) relayed++;
     }
     CHECK(direct == 1);
     CHECK(relayed == 3);

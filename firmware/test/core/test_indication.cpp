@@ -27,12 +27,12 @@ constexpr uint32_t kStepMs = 10;
 // A situation that is true of every lit row at once. Peeling one field off it at a
 // time is how the priority order gets asserted instead of restated.
 Situation everything_at_once() {
-    Situation s{};
-    s.running = true;
-    s.alarm_level = Level::Advisory;
-    s.power_level = power::PowerLevel::Flat;
-    s.fix_valid = false;
-    return s;
+    Situation situation{};
+    situation.running = true;
+    situation.alarm_level = Level::Advisory;
+    situation.power_level = power::PowerLevel::Flat;
+    situation.fix_valid = false;
+    return situation;
 }
 
 // What a lamp would have done, from the commands the policy issued. It integrates
@@ -57,7 +57,7 @@ struct LampRig {
     }
 
     void run(const Situation& situation, uint32_t from, uint32_t to) {
-        for (uint32_t t = from; t <= to; t += kStepMs) step(situation, t);
+        for (uint32_t now_ms = from; now_ms <= to; now_ms += kStepMs) step(situation, now_ms);
     }
 
     uint32_t duty_permille() const { return total_ms == 0 ? 0 : 1000u * lit_ms / total_ms; }
@@ -97,62 +97,62 @@ TEST_CASE("indication: no row spends more of the pack than the budget it declare
 }
 
 TEST_CASE("indication: traffic outranks everything the device has to say about itself") {
-    Situation s = everything_at_once();
-    CHECK(condition_for(s) == Condition::Alarm);
+    Situation situation = everything_at_once();
+    CHECK(condition_for(situation) == Condition::Alarm);
     CHECK(indication_for(Condition::Alarm).lamp == indication::Lamp::Red);
 
     // And an empty sky does not.
-    s.alarm_level = Level::None;
-    CHECK(condition_for(s) != Condition::Alarm);
-    s.alarm_level = kAlarmTakesLamp;
-    CHECK(condition_for(s) == Condition::Alarm);
+    situation.alarm_level = Level::None;
+    CHECK(condition_for(situation) != Condition::Alarm);
+    situation.alarm_level = kAlarmTakesLamp;
+    CHECK(condition_for(situation) == Condition::Alarm);
 }
 
 TEST_CASE("indication: the priority order is the table, top row first") {
-    Situation s = everything_at_once();
+    Situation situation = everything_at_once();
 
     // Off outranks every reason to be lit: after park() nothing runs to advance a
     // blink anyway, and a lamp left showing anything is a device that looks on.
-    s.running = false;
-    CHECK(condition_for(s) == Condition::Off);
-    s.running = true;
+    situation.running = false;
+    CHECK(condition_for(situation) == Condition::Off);
+    situation.running = true;
 
-    CHECK(condition_for(s) == Condition::Alarm);
-    s.alarm_level = Level::None;
+    CHECK(condition_for(situation) == Condition::Alarm);
+    situation.alarm_level = Level::None;
 
-    CHECK(condition_for(s) == Condition::Critical);
-    s.power_level = power::PowerLevel::Low;
+    CHECK(condition_for(situation) == Condition::Critical);
+    situation.power_level = power::PowerLevel::Low;
 
-    CHECK(condition_for(s) == Condition::Low);
-    s.power_level = power::PowerLevel::Normal;
+    CHECK(condition_for(situation) == Condition::Low);
+    situation.power_level = power::PowerLevel::Normal;
 
-    CHECK(condition_for(s) == Condition::NoFix);
-    s.fix_valid = true;
-    CHECK(condition_for(s) == Condition::Alive);
+    CHECK(condition_for(situation) == Condition::NoFix);
+    situation.fix_valid = true;
+    CHECK(condition_for(situation) == Condition::Alive);
 }
 
 TEST_CASE("indication: the cutoff monitor decides what low means, not a second threshold") {
-    Situation s{};
-    s.power_level = power::PowerLevel::Critical;
-    CHECK(condition_for(s) == Condition::Critical);
-    s.power_level = power::PowerLevel::Flat;
-    CHECK(condition_for(s) == Condition::Critical);
-    s.power_level = power::PowerLevel::Low;
-    CHECK(condition_for(s) == Condition::Low);
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Critical;
+    CHECK(condition_for(situation) == Condition::Critical);
+    situation.power_level = power::PowerLevel::Flat;
+    CHECK(condition_for(situation) == Condition::Critical);
+    situation.power_level = power::PowerLevel::Low;
+    CHECK(condition_for(situation) == Condition::Low);
     // A unit whose divider is unpopulated reads Unknown for ever. It is not a low
     // cell and must not blink like one: the whole point of reading the published
     // level rather than comparing millivolts again.
-    s.power_level = power::PowerLevel::Unknown;
-    CHECK(condition_for(s) == Condition::NoFix);
+    situation.power_level = power::PowerLevel::Unknown;
+    CHECK(condition_for(situation) == Condition::NoFix);
 }
 
 TEST_CASE("indication: alive is a wink, not an LED left on") {
-    Situation s{};
-    s.power_level = power::PowerLevel::Normal;
-    s.fix_valid = true;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
 
     LampRig lamp;
-    lamp.run(s, 0, 30000);
+    lamp.run(situation, 0, 30000);
     CHECK(lamp.policy.condition() == Condition::Alive);
     // Thirty seconds of a healthy device: ten winks, and the lamp is dark for
     // more than 97% of it.
@@ -162,12 +162,12 @@ TEST_CASE("indication: alive is a wink, not an LED left on") {
 }
 
 TEST_CASE("indication: no fix is the same wink in another colour") {
-    Situation s{};
-    s.power_level = power::PowerLevel::Normal;
-    s.fix_valid = false;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = false;
 
     LampRig lamp;
-    lamp.run(s, 0, 30000);
+    lamp.run(situation, 0, 30000);
     CHECK(lamp.policy.condition() == Condition::NoFix);
     CHECK(lamp.duty_permille() <= kSteadyDutyCeilingPermille);
     CHECK(indication_for(Condition::NoFix).lamp == indication::Lamp::Blue);
@@ -185,10 +185,10 @@ TEST_CASE("indication: a critical cell keeps SoftRF's blink rate at a tenth of i
     CHECK(low.on_ms + low.off_ms == 600);
     CHECK(indication::duty_permille(low) <= 100);
 
-    Situation s{};
-    s.power_level = power::PowerLevel::Critical;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Critical;
     LampRig lamp;
-    lamp.run(s, 0, 6000);
+    lamp.run(situation, 0, 6000);
     CHECK(lamp.policy.condition() == Condition::Critical);
     CHECK(lamp.flashes >= 9);
     CHECK(lamp.duty_permille() <= kTransientDutyCeilingPermille);
@@ -199,53 +199,53 @@ TEST_CASE("indication: no row is held, so every lit row is paid for in winks") {
         if (kTable[i].indication.lamp != indication::Lamp::None)
             CHECK(kTable[i].indication.off_ms > 0);
 
-    Situation s{};
-    s.alarm_level = Level::Advisory;
+    Situation situation{};
+    situation.alarm_level = Level::Advisory;
     LampRig lamp;
-    lamp.run(s, 0, 5000);
+    lamp.run(situation, 0, 5000);
     CHECK(lamp.policy.condition() == Condition::Alarm);
     // The one condition a pilot must not miss, and it still spends a quarter of the time lit.
     CHECK(lamp.duty_permille() <= kTransientDutyCeilingPermille);
 }
 
 TEST_CASE("indication: the lamp goes dark the moment the device starts going down") {
-    Situation s{};
-    s.alarm_level = Level::Advisory;
+    Situation situation{};
+    situation.alarm_level = Level::Advisory;
     LampRig lamp;
-    lamp.step(s, 0);
+    lamp.step(situation, 0);
     REQUIRE(lamp.shown == indication::Lamp::Red);
 
-    s.running = false;
-    lamp.step(s, 1010);
+    situation.running = false;
+    lamp.step(situation, 1010);
     CHECK(lamp.shown == indication::Lamp::None);
     CHECK(lamp.policy.condition() == Condition::Off);
     // And it stays dark: nothing about the cell or the sky brings it back while
     // the device is on its way down.
-    s.power_level = power::PowerLevel::Critical;
-    lamp.run(s, 1010, 5000);
+    situation.power_level = power::PowerLevel::Critical;
+    lamp.run(situation, 1010, 5000);
     CHECK(lamp.shown == indication::Lamp::None);
 }
 
 TEST_CASE("indication: a change shows itself at once, not at the end of the cycle") {
-    Situation s{};
-    s.power_level = power::PowerLevel::Normal;
-    s.fix_valid = true;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
     LampRig lamp;
-    lamp.run(s, 0, 1000);
+    lamp.run(situation, 0, 1000);
     // Mid-cycle: the wink is long over and the lamp is dark for another 2 s.
     REQUIRE(lamp.shown == indication::Lamp::None);
 
-    s.alarm_level = Level::Advisory;
-    lamp.step(s, 1010);
+    situation.alarm_level = Level::Advisory;
+    lamp.step(situation, 1010);
     CHECK(lamp.shown == indication::Lamp::Red);
 }
 
 TEST_CASE("indication: the lamp is told only when the answer changes") {
-    Situation s{};
-    s.power_level = power::PowerLevel::Normal;
-    s.fix_valid = true;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
     LampRig lamp;
-    lamp.run(s, 0, 30000);
+    lamp.run(situation, 0, 30000);
     // Ten winks in thirty seconds is twenty commands, not three thousand.
     CHECK(lamp.shows <= 2 * (lamp.flashes + 1));
 }
@@ -256,16 +256,16 @@ TEST_CASE("indication: the millisecond counter wrapping costs one flash, not a s
     // would have left the lamp in whichever phase it was in for ever.
     constexpr uint32_t kJustBeforeWrap = 0xFFFFF000u;
     constexpr uint32_t kMsAcrossTheWrap = 0x3000u;
-    Situation s{};
-    s.power_level = power::PowerLevel::Normal;
-    s.fix_valid = true;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
 
     LampRig lamp;
     uint32_t now_ms = kJustBeforeWrap;
     for (uint32_t elapsed = 0; elapsed < kMsAcrossTheWrap; elapsed += kStepMs, now_ms += kStepMs)
-        lamp.step(s, now_ms);
+        lamp.step(situation, now_ms);
     const uint32_t flashes_across_the_wrap = lamp.flashes;
-    lamp.run(s, now_ms, now_ms + 30000);
+    lamp.run(situation, now_ms, now_ms + 30000);
     CHECK(lamp.flashes > flashes_across_the_wrap);
     CHECK(lamp.duty_permille() <= kSteadyDutyCeilingPermille);
 }

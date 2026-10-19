@@ -12,8 +12,8 @@ namespace {
 
 std::string described(const Settings& from, const Settings& to) {
     char out[kSettingsChangesBytes];
-    const int n = describe_settings_changes(from, to, out, sizeof(out));
-    return n == 0 ? std::string() : std::string(out, static_cast<size_t>(n));
+    const int written = describe_settings_changes(from, to, out, sizeof(out));
+    return written == 0 ? std::string() : std::string(out, static_cast<size_t>(written));
 }
 
 }  // namespace

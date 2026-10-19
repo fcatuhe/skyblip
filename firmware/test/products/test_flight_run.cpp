@@ -31,9 +31,9 @@ struct Said {
 Said said_on_air(const simulator::Air& air) {
     Said said{};
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(r.phase_ms))
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
+        if (timing::Scheduler::in_direct_slot(record.phase_ms))
             said.positions++;
         else
             said.names++;
@@ -57,7 +57,9 @@ uint32_t arm_a_flight_run(simulator::Simulator& simulator) {
     return armed_ms + 1000;
 }
 
-void arm_flight_run(Rig& rig, uint32_t& t) { arm(rig, t, diagnostics::Profile::FlightRun); }
+void arm_flight_run(Rig& rig, uint32_t& now_ms) {
+    arm(rig, now_ms, diagnostics::Profile::FlightRun);
+}
 
 const go::Glass& glass(Rig& rig) { return rig.product.screen().framebuffer(); }
 
@@ -92,21 +94,22 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx || !timing::Scheduler::in_direct_slot(r.phase_ms))
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx ||
+            !timing::Scheduler::in_direct_slot(record.phase_ms))
             continue;
         protocol::Frame frame{};
-        REQUIRE(simulator::Air::framed(r, frame));
-        protocol::AdslPacket p{};
-        p.reset();
-        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
-        REQUIRE(p.check_crc() == 0);
-        p.descramble();
-        CHECK(p.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
+        REQUIRE(simulator::Air::framed(record, frame));
+        protocol::AdslPacket packet{};
+        packet.reset();
+        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+        REQUIRE(packet.check_crc() == 0);
+        packet.descramble();
+        CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
         // the payload carries latitude in steps of 107 and longitude of 215, in 1e-7 degrees
-        CHECK(std::abs(p.latitude_1e7() - own.latitude_1e7) < 200);
-        CHECK(std::abs(p.longitude_1e7() - own.longitude_1e7) < 400);
-        CHECK(p.speed_q() == 0);
+        CHECK(std::abs(packet.latitude_1e7() - own.latitude_1e7) < 200);
+        CHECK(std::abs(packet.longitude_1e7() - own.longitude_1e7) < 400);
+        CHECK(packet.speed_q() == 0);
         checked++;
     }
     CHECK(checked >= 3);
@@ -115,12 +118,12 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
 TEST_CASE("flight run: records the pair every 30 s, and its boot names the profile") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_flight_run(rig, t);
-    rig.run(t, t + 65000);
-    t += 65000;
-    stop(rig, t);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_flight_run(rig, now_ms);
+    rig.run(now_ms, now_ms + 65000);
+    now_ms += 65000;
+    stop(rig, now_ms);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     CHECK(count_of(records, diagnostics::Type::Power) == 2);
@@ -138,11 +141,11 @@ TEST_CASE("flight run: records the pair every 30 s, and its boot names the profi
 TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates stay grounded") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
-    arm_flight_run(rig, t);
-    taxi(rig, t, 65);
+    arm_flight_run(rig, now_ms);
+    taxi(rig, now_ms, 65);
 
     CHECK(rig.state().flight.running);
     CHECK(rig.state().flight.seconds >= 60);
@@ -159,19 +162,19 @@ TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates
 TEST_CASE("flight run: the glass refreshes as a flown one does, and a parked one does not") {
     Rig parked;
     REQUIRE(parked.setup() == Status::Ok);
-    uint32_t pt = 100;
-    taxi(parked, pt, 3);
-    arm(parked, pt, diagnostics::Profile::PowerRun);
+    uint32_t parked_now_ms = 100;
+    taxi(parked, parked_now_ms, 3);
+    arm(parked, parked_now_ms, diagnostics::Profile::PowerRun);
     const uint32_t parked_from = parked.state().duty.panel_partial_refreshes;
-    taxi(parked, pt, 130);
+    taxi(parked, parked_now_ms, 130);
 
     Rig flying;
     REQUIRE(flying.setup() == Status::Ok);
-    uint32_t ft = 100;
-    taxi(flying, ft, 3);
-    arm_flight_run(flying, ft);
+    uint32_t flying_now_ms = 100;
+    taxi(flying, flying_now_ms, 3);
+    arm_flight_run(flying, flying_now_ms);
     const uint32_t flying_from = flying.state().duty.panel_partial_refreshes;
-    taxi(flying, ft, 130);
+    taxi(flying, flying_now_ms, 130);
 
     // the clock turns 0:00, 0:01 and 0:02, and FLIGHT replaces GROUND once
     CHECK(flying.state().duty.panel_partial_refreshes - flying_from >= 2);
@@ -182,14 +185,14 @@ TEST_CASE("flight run: the glass refreshes as a flown one does, and a parked one
 TEST_CASE("flight run: a stop lands the glass, and leaves no flight time behind") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm_flight_run(rig, t);
-    taxi(rig, t, 65);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm_flight_run(rig, now_ms);
+    taxi(rig, now_ms, 65);
     REQUIRE(rig.state().flight.running);
 
-    stop(rig, t);
-    taxi(rig, t, 2);
+    stop(rig, now_ms);
+    taxi(rig, now_ms, 2);
     CHECK_FALSE(rig.state().flight.running);
     CHECK_FALSE(rig.state().flight.time_valid);
     CHECK(rig.state().flight.seconds == 0);
@@ -202,10 +205,10 @@ TEST_CASE("flight run: a power run and a full capture leave the glass on the gro
          {diagnostics::Profile::Full, diagnostics::Profile::PowerRun}) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t t = 100;
-        taxi(rig, t, 3);
-        arm(rig, t, profile);
-        taxi(rig, t, 5);
+        uint32_t now_ms = 100;
+        taxi(rig, now_ms, 3);
+        arm(rig, now_ms, profile);
+        taxi(rig, now_ms, 5);
         CHECK_FALSE(rig.state().flight.running);
         CHECK(reads_in(glass(rig), "GROUND", 40, 120, 160, 160, 2));
     }

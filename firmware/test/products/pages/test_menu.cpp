@@ -91,9 +91,9 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(kMenuHintY + kCharacterHeight < Glass::kHeight);
 
     // The hint is centred: the same air either side of it.
-    const int hint_w = static_cast<int>(std::strlen(kMenuHintText)) * kCellWidth;
+    const int hint_width = static_cast<int>(std::strlen(kMenuHintText)) * kCellWidth;
     CHECK(kMenuHintX > 0);
-    CHECK(kMenuHintX - (Glass::kWidth - kMenuHintX - hint_w) <= 1);
+    CHECK(kMenuHintX - (Glass::kWidth - kMenuHintX - hint_width) <= 1);
 
     // And a row's words stand in the middle of its bar, the same air above and below.
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
@@ -137,8 +137,8 @@ TEST_CASE("menu page: no label and value a row can hold meet at double height") 
                     for (int step = 0; step < kRangeStepCount; step++) {
                         values.settings.range_step = step;
                         char value[kMenuValueBytes];
-                        const int n = menu_row_value(value, menu.rows[i], values);
-                        CHECK(label_end <= kMenuRightX - n * kMenuCellWidth);
+                        const int written = menu_row_value(value, menu.rows[i], values);
+                        CHECK(label_end <= kMenuRightX - written * kMenuCellWidth);
                     }
                 }
             }

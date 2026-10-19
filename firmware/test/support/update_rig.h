@@ -17,10 +17,10 @@ inline void on_ground(Rig& rig, uint32_t& now_ms) {
 }
 
 inline void receiver_speaks_without_a_fix(Rig& rig) {
-    gnss::GnssSolution f{};
-    f.fix_valid = false;
-    f.sentences = 1;
-    rig.product.bus().gnss.push(f);
+    gnss::GnssSolution solution{};
+    solution.fix_valid = false;
+    solution.sentences = 1;
+    rig.product.bus().gnss.push(solution);
 }
 
 inline comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }

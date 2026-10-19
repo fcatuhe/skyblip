@@ -42,17 +42,17 @@ model::AircraftObservation make_observation(int32_t latitude_1e7, int32_t longit
 // Longitude quantum in 1e-7 deg at this latitude, from the protocol's own table:
 // this is the tolerance a longitude round trip is entitled to.
 int32_t longitude_quantum(int32_t latitude_1e7) {
-    int32_t deg = std::abs(latitude_1e7) / 10000000;
+    int32_t degrees = std::abs(latitude_1e7) / 10000000;
     static const int32_t kStep[] = {52, 65, 80, 101, 129, 174, 252, 362, 552, 806};
-    if (deg >= 89) return kStep[9];
-    if (deg >= 84) return kStep[8];
-    if (deg >= 79) return kStep[7];
-    if (deg >= 74) return kStep[6];
-    if (deg >= 69) return kStep[5];
-    if (deg >= 64) return kStep[4];
-    if (deg >= 54) return kStep[3];
-    if (deg >= 39) return kStep[2];
-    if (deg >= 26) return kStep[1];
+    if (degrees >= 89) return kStep[9];
+    if (degrees >= 84) return kStep[8];
+    if (degrees >= 79) return kStep[7];
+    if (degrees >= 74) return kStep[6];
+    if (degrees >= 69) return kStep[5];
+    if (degrees >= 64) return kStep[4];
+    if (degrees >= 54) return kStep[3];
+    if (degrees >= 39) return kStep[2];
+    if (degrees >= 26) return kStep[1];
     return 806;  // never tighter than the coarsest step; latitudes above are exact
 }
 
@@ -188,8 +188,8 @@ TEST_CASE("alptas: speed, climb and track round trip over their ranges") {
 }
 
 TEST_CASE("alptas: altitude round trips including below sea level and high up") {
-    static const int32_t kAlts[] = {-400, -50, 0, 300, 1234, 3096, 5000, 11000};
-    for (int32_t altitude : kAlts) {
+    static const int32_t kAltitudes[] = {-400, -50, 0, 300, 1234, 3096, 5000, 11000};
+    for (int32_t altitude : kAltitudes) {
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.altitude_m = altitude;
         uint8_t frame[kAlptasFrameBytes];
@@ -267,11 +267,12 @@ TEST_CASE("alptas: the decrypt gate rejects a frame with one byte changed") {
 }
 
 TEST_CASE("alptas: the decrypt gate rejects random frames") {
-    Random rng(0xA1B2C3D4);
+    Random random(0xA1B2C3D4);
     int accepted = 0;
-    for (int n = 0; n < 500; n++) {
+    for (int trial = 0; trial < 500; trial++) {
         uint8_t frame[kAlptasFrameBytes];
-        for (int i = 0; i < kAlptasDataBytes; i++) frame[i] = static_cast<uint8_t>(rng.next() >> 9);
+        for (int i = 0; i < kAlptasDataBytes; i++)
+            frame[i] = static_cast<uint8_t>(random.next() >> 9);
         alptas_set_crc(frame);
         model::AircraftObservation got{};
         if (alptas_decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok) accepted++;
@@ -356,7 +357,7 @@ TEST_CASE("alptas: the chip pairs the air destroyed are flipped back to the fram
         std::memcpy(frame, sent, sizeof(frame));
         uint8_t erasures[kAlptasFrameBytes] = {0};
         RfChannel channel(static_cast<uint32_t>(seed));
-        const int flipped = channel.apply_ber(frame, sizeof(frame), 0.012, erasures);
+        const int flipped = channel.apply_bit_error_rate(frame, sizeof(frame), 0.012, erasures);
         CAPTURE(seed);
         CAPTURE(flipped);
         if (flipped == 0 || flipped > 6) continue;
@@ -386,7 +387,7 @@ TEST_CASE("alptas: damage nothing flagged, or too much of it, leaves the frame a
     std::memcpy(beyond, sent, sizeof(beyond));
     uint8_t erasures[kAlptasFrameBytes] = {0};
     RfChannel channel(7);
-    channel.apply_ber(beyond, sizeof(beyond), 0.25, erasures);
+    channel.apply_bit_error_rate(beyond, sizeof(beyond), 0.25, erasures);
     std::memcpy(as_arrived, beyond, sizeof(as_arrived));
     CHECK(alptas_correct(beyond, erasures) == -1);
     CHECK(std::memcmp(beyond, as_arrived, sizeof(as_arrived)) == 0);

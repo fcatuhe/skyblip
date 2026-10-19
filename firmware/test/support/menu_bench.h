@@ -11,9 +11,9 @@
 namespace skyblip::go {
 
 inline MenuValues default_menu_values() {
-    MenuValues v;
-    v.settings = go::defaults();
-    return v;
+    MenuValues values;
+    values.settings = go::defaults();
+    return values;
 }
 
 // The editor with a clock the case advances, and the values it hands back applied.

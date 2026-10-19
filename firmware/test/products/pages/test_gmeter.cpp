@@ -14,13 +14,13 @@ constexpr int kFieldCentreY = 82;
 constexpr int kStripCentreX = 164;
 
 GMeterSnapshot flying() {
-    GMeterSnapshot s;
-    s.inclinometer_fitted = true;
-    s.gload_valid = true;
-    s.now = flight::GLoad{1000, 0, 0};
-    s.most = flight::GLoad{1000, 0, 0};
-    s.least = flight::GLoad{1000, 0, 0};
-    return s;
+    GMeterSnapshot snapshot;
+    snapshot.inclinometer_fitted = true;
+    snapshot.gload_valid = true;
+    snapshot.now = flight::GLoad{1000, 0, 0};
+    snapshot.most = flight::GLoad{1000, 0, 0};
+    snapshot.least = flight::GLoad{1000, 0, 0};
+    return snapshot;
 }
 
 bool marker_at(const Glass& canvas, int x, int y) {
@@ -42,12 +42,12 @@ TEST_CASE("gmeter page: level flight puts the marker in the middle of the field"
 }
 
 TEST_CASE("gmeter page: the three axes each read their own now, most and least") {
-    GMeterSnapshot s = flying();
-    s.now = flight::GLoad{2300, -400, 300};
-    s.most = flight::GLoad{4200, 700, 300};
-    s.least = flight::GLoad{-1300, -600, -400};
+    GMeterSnapshot snapshot = flying();
+    snapshot.now = flight::GLoad{2300, -400, 300};
+    snapshot.most = flight::GLoad{4200, 700, 300};
+    snapshot.least = flight::GLoad{-1300, -600, -400};
     Glass canvas;
-    draw_gmeter(canvas, s);
+    draw_gmeter(canvas, snapshot);
 
     CHECK(reads_in(canvas, "G", 0, 142, 30, 152));
     CHECK(reads_in(canvas, "+2.3", 40, 138, 120, 156, 2));

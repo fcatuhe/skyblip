@@ -17,12 +17,12 @@ namespace {
 constexpr int kRimAheadY = 13;
 constexpr int kRingTopY = 24;
 
-RadarSnapshot plotting_all(RadarTarget* targets, int n) {
+RadarSnapshot plotting_all(RadarTarget* targets, int count) {
     RadarSnapshot snapshot = flying(0);
     snapshot.plot = RadarPlot::All;
     snapshot.targets = targets;
-    snapshot.target_count = n;
-    snapshot.heard_count = n;
+    snapshot.target_count = count;
+    snapshot.heard_count = count;
     return snapshot;
 }
 

@@ -20,121 +20,121 @@ namespace {
 // A device that has been up for a while and has something to complain about, so
 // that no field reads as its default.
 Diagnostics busy_device() {
-    Diagnostics d{};
-    d.refreshes = 12;
-    d.uptime_s = 3725;
-    d.reset = power::ResetReason::Watchdog;
-    d.link_drops = 2;
+    Diagnostics diagnostics{};
+    diagnostics.refreshes = 12;
+    diagnostics.uptime_s = 3725;
+    diagnostics.reset = power::ResetReason::Watchdog;
+    diagnostics.link_drops = 2;
 
-    d.noise_dbm = -101;
-    d.duty_permille = 7;
-    d.rx_ok = 1204;
-    d.rx_bad = 37;
-    d.rx_wait = 58;
-    d.rx_type = 19;
-    d.rx_unframed = 11;
-    d.rx_miskeyed = 7;
-    d.rx_noise = 96;
-    d.rx_named = 12;
-    d.tx_ok = 880;
-    d.tx_lost = 3;
-    d.tx_named = 41;
-    d.tx_keyed_us = 609;
-    d.tx_span_us = 5919;
-    d.range_refused = 5;
-    d.dio1_armed = true;
-    d.dio1_edges = 1500;
-    d.dio1_missed = 4;
+    diagnostics.noise_dbm = -101;
+    diagnostics.duty_permille = 7;
+    diagnostics.rx_ok = 1204;
+    diagnostics.rx_bad = 37;
+    diagnostics.rx_wait = 58;
+    diagnostics.rx_type = 19;
+    diagnostics.rx_unframed = 11;
+    diagnostics.rx_miskeyed = 7;
+    diagnostics.rx_noise = 96;
+    diagnostics.rx_named = 12;
+    diagnostics.tx_ok = 880;
+    diagnostics.tx_lost = 3;
+    diagnostics.tx_named = 41;
+    diagnostics.tx_keyed_us = 609;
+    diagnostics.tx_span_us = 5919;
+    diagnostics.range_refused = 5;
+    diagnostics.dio1_armed = true;
+    diagnostics.dio1_edges = 1500;
+    diagnostics.dio1_missed = 4;
 
-    d.tracked = 4;
-    d.alarm = 2;
+    diagnostics.tracked = 4;
+    diagnostics.alarm = 2;
 
-    d.gnss_fixes = 5210;
-    d.fix_valid = true;
-    d.gnss_baud = 38400;
-    d.gnss_config = ports::GnssConfigStage::Ready;
-    d.gnss_raises = 1;
-    d.gnss_identified = true;
-    d.gnss_firmware = "URANUS5,V5.1.0.0";
-    d.gnss_reject = gnss::FixReject::Stale;
-    d.gnss_rejected = 6;
-    d.gnss_overruns = 0;
-    d.gnss_solution_phase_ms = 98;
-    d.gnss_solution_phase_valid = true;
-    d.residual_m = 13;
-    d.residual_valid = true;
+    diagnostics.gnss_fixes = 5210;
+    diagnostics.fix_valid = true;
+    diagnostics.gnss_baud = 38400;
+    diagnostics.gnss_config = ports::GnssConfigStage::Ready;
+    diagnostics.gnss_raises = 1;
+    diagnostics.gnss_identified = true;
+    diagnostics.gnss_firmware = "URANUS5,V5.1.0.0";
+    diagnostics.gnss_reject = gnss::FixReject::Stale;
+    diagnostics.gnss_rejected = 6;
+    diagnostics.gnss_overruns = 0;
+    diagnostics.gnss_solution_phase_ms = 98;
+    diagnostics.gnss_solution_phase_valid = true;
+    diagnostics.residual_m = 13;
+    diagnostics.residual_valid = true;
 
-    d.battery.cell_mv = 3812;
-    d.battery.percent = 64;
-    d.battery.valid = true;
-    d.battery.charging = false;
-    d.level = power::PowerLevel::Normal;
-    d.supply_warnings = 1;
-    d.battery_implausible = 2;
-    d.die_dc = 415;
-    d.die_valid = true;
-    return d;
+    diagnostics.battery.cell_mv = 3812;
+    diagnostics.battery.percent = 64;
+    diagnostics.battery.valid = true;
+    diagnostics.battery.charging = false;
+    diagnostics.level = power::PowerLevel::Normal;
+    diagnostics.supply_warnings = 1;
+    diagnostics.battery_implausible = 2;
+    diagnostics.die_dc = 415;
+    diagnostics.die_valid = true;
+    return diagnostics;
 }
 
 // Every field at the widest it can be: every counter at the widest value the dump
 // can carry, and the longest word every string field can hold. The counters are
 // handed in wider than that on purpose - see the saturation case below.
 Diagnostics widest_device() {
-    Diagnostics d{};
-    d.refreshes = 0xFFFFFFFFu;
-    d.uptime_s = 0xFFFFFFFFu;
-    d.reset = power::ResetReason::Lockup;  // "CPU LOCKUP"
-    d.link_drops = 0xFFFFFFFFu;
-    d.noise_dbm = -128;
-    d.duty_permille = 1000;
-    d.rx_ok = 0xFFFFFFFFu;
-    d.rx_bad = 0xFFFFFFFFu;
-    d.rx_wait = 0xFFFFFFFFu;
-    d.rx_type = 0xFFFFFFFFu;
-    d.rx_unframed = 0xFFFFFFFFu;
-    d.rx_miskeyed = 0xFFFFFFFFu;
-    d.rx_noise = 0xFFFFFFFFu;
-    d.rx_named = 0xFFFFFFFFu;
-    d.tx_ok = 0xFFFFFFFFu;
-    d.tx_lost = 0xFFFFFFFFu;
-    d.tx_named = 0xFFFFFFFFu;
-    d.tx_keyed_us = 65535;
-    d.tx_span_us = 65535;
-    d.range_refused = 0xFFFFFFFFu;
-    d.dio1_armed = false;
-    d.dio1_edges = 0xFFFFFFFFu;
-    d.dio1_missed = 0xFFFFFFFFu;
-    d.tracked = 0xFFFFFFFFu;
-    d.alarm = 255;
-    d.gnss_fixes = 0xFFFFFFFFu;
-    d.gnss_baud = 921600;
-    d.gnss_config = ports::GnssConfigStage::Degraded;  // "DEGRADED"
-    d.gnss_raises = 0xFFFFFFFFu;
-    d.gnss_raise_fallbacks = 0xFFFFFFFFu;
+    Diagnostics diagnostics{};
+    diagnostics.refreshes = 0xFFFFFFFFu;
+    diagnostics.uptime_s = 0xFFFFFFFFu;
+    diagnostics.reset = power::ResetReason::Lockup;  // "CPU LOCKUP"
+    diagnostics.link_drops = 0xFFFFFFFFu;
+    diagnostics.noise_dbm = -128;
+    diagnostics.duty_permille = 1000;
+    diagnostics.rx_ok = 0xFFFFFFFFu;
+    diagnostics.rx_bad = 0xFFFFFFFFu;
+    diagnostics.rx_wait = 0xFFFFFFFFu;
+    diagnostics.rx_type = 0xFFFFFFFFu;
+    diagnostics.rx_unframed = 0xFFFFFFFFu;
+    diagnostics.rx_miskeyed = 0xFFFFFFFFu;
+    diagnostics.rx_noise = 0xFFFFFFFFu;
+    diagnostics.rx_named = 0xFFFFFFFFu;
+    diagnostics.tx_ok = 0xFFFFFFFFu;
+    diagnostics.tx_lost = 0xFFFFFFFFu;
+    diagnostics.tx_named = 0xFFFFFFFFu;
+    diagnostics.tx_keyed_us = 65535;
+    diagnostics.tx_span_us = 65535;
+    diagnostics.range_refused = 0xFFFFFFFFu;
+    diagnostics.dio1_armed = false;
+    diagnostics.dio1_edges = 0xFFFFFFFFu;
+    diagnostics.dio1_missed = 0xFFFFFFFFu;
+    diagnostics.tracked = 0xFFFFFFFFu;
+    diagnostics.alarm = 255;
+    diagnostics.gnss_fixes = 0xFFFFFFFFu;
+    diagnostics.gnss_baud = 921600;
+    diagnostics.gnss_config = ports::GnssConfigStage::Degraded;  // "DEGRADED"
+    diagnostics.gnss_raises = 0xFFFFFFFFu;
+    diagnostics.gnss_raise_fallbacks = 0xFFFFFFFFu;
     // The driver's version buffer is 24 bytes, so 23 characters is the longest
     // string a receiver can ever hand us (core/gnss/nmea.h::kVersionBytes).
-    d.gnss_firmware = "ABCDEFGHIJKLMNOPQRSTUVW";
-    d.gnss_reject = gnss::FixReject::NoSolution;  // "NO SOLUTION"
-    d.gnss_rejected = 0xFFFFFFFFu;
-    d.gnss_overruns = 0xFFFFFFFFu;
-    d.gnss_solution_phase_ms = 999;
-    d.gnss_solution_phase_valid = true;
-    d.residual_m = 65535;
-    d.residual_valid = true;
-    d.battery.cell_mv = 65535;
-    d.battery.percent = 255;
-    d.level = power::PowerLevel::Critical;  // "CRITICAL"
-    d.supply_warnings = 0xFFFFFFFFu;
-    d.battery_implausible = 0xFFFFFFFFu;
-    d.die_dc = -1250;
-    d.die_valid = true;
-    d.charge = power::ChargeCondition::TooCold;
-    d.charge_warnings = 0xFFFFFFFFu;
-    return d;
+    diagnostics.gnss_firmware = "ABCDEFGHIJKLMNOPQRSTUVW";
+    diagnostics.gnss_reject = gnss::FixReject::NoSolution;  // "NO SOLUTION"
+    diagnostics.gnss_rejected = 0xFFFFFFFFu;
+    diagnostics.gnss_overruns = 0xFFFFFFFFu;
+    diagnostics.gnss_solution_phase_ms = 999;
+    diagnostics.gnss_solution_phase_valid = true;
+    diagnostics.residual_m = 65535;
+    diagnostics.residual_valid = true;
+    diagnostics.battery.cell_mv = 65535;
+    diagnostics.battery.percent = 255;
+    diagnostics.level = power::PowerLevel::Critical;  // "CRITICAL"
+    diagnostics.supply_warnings = 0xFFFFFFFFu;
+    diagnostics.battery_implausible = 0xFFFFFFFFu;
+    diagnostics.die_dc = -1250;
+    diagnostics.die_valid = true;
+    diagnostics.charge = power::ChargeCondition::TooCold;
+    diagnostics.charge_warnings = 0xFFFFFFFFu;
+    return diagnostics;
 }
 
-std::string console(const Diagnostics& d) {
-    DiagnosticsReport report(d, "diag");
+std::string console(const Diagnostics& diagnostics) {
+    DiagnosticsReport report(diagnostics, "diag");
     std::string all;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -155,8 +155,8 @@ struct Frames {
     std::string last;
 };
 
-Frames frames(const Diagnostics& d, int payload, const char* command = "diag") {
-    DiagnosticsReport report(d, command);
+Frames frames(const Diagnostics& diagnostics, int payload, const char* command = "diag") {
+    DiagnosticsReport report(diagnostics, command);
     Frames out;
     char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
@@ -208,14 +208,14 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
 
 // A device on the apron with no fix beside a chatty neighbour reads zero bad frames.
 TEST_CASE("diagnostics: the three things that are not a bad reception each have their own key") {
-    Diagnostics d = busy_device();
-    d.rx_bad = 0;
+    Diagnostics diagnostics = busy_device();
+    diagnostics.rx_bad = 0;
 
-    const std::string text = console(d);
+    const std::string text = console(diagnostics);
     CHECK(has(text, "rx_bad=0 rx_wait=58 rx_type=19"));
     CHECK(has(text, "tx_ok=880 tx_lost=3"));
 
-    const std::string json = frames(d, kSmallestSupportedPayloadBytes).joined;
+    const std::string json = frames(diagnostics, kSmallestSupportedPayloadBytes).joined;
     CHECK(has(json, "\"rx_bad\":0"));
     CHECK(has(json, "\"rx_wait\":58"));
     CHECK(has(json, "\"rx_type\":19"));
@@ -225,29 +225,29 @@ TEST_CASE("diagnostics: the three things that are not a bad reception each have 
 // A support case is pasted into an email, so the console form has to stay
 // machine-readable: "CPU LOCKUP" is one value, not two fields.
 TEST_CASE("diagnostics: a text value is quoted on both surfaces, spaces and all") {
-    Diagnostics d = busy_device();
-    d.reset = power::ResetReason::Lockup;
-    CHECK(has(console(d), "reset=\"CPU LOCKUP\""));
-    CHECK(has(frames(d, 182).joined, "\"reset\":\"CPU LOCKUP\""));
+    Diagnostics diagnostics = busy_device();
+    diagnostics.reset = power::ResetReason::Lockup;
+    CHECK(has(console(diagnostics), "reset=\"CPU LOCKUP\""));
+    CHECK(has(frames(diagnostics, 182).joined, "\"reset\":\"CPU LOCKUP\""));
 }
 
 // A cable in the sun is the support case, and this is the only trace it leaves.
 TEST_CASE("diagnostics: the charge window reads out only when there is a cable to judge") {
-    Diagnostics d = busy_device();
-    CHECK_FALSE(has(console(d), "charge="));
-    CHECK(has(console(d), "charge_warnings=0"));
+    Diagnostics diagnostics = busy_device();
+    CHECK_FALSE(has(console(diagnostics), "charge="));
+    CHECK(has(console(diagnostics), "charge_warnings=0"));
 
-    d.charge = power::ChargeCondition::TooHot;
-    d.charge_warnings = 3;
-    CHECK(has(console(d), "charge=\"HOT\" charge_warnings=3"));
-    CHECK(has(frames(d, 182).joined, "\"charge\":\"HOT\""));
+    diagnostics.charge = power::ChargeCondition::TooHot;
+    diagnostics.charge_warnings = 3;
+    CHECK(has(console(diagnostics), "charge=\"HOT\" charge_warnings=3"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"charge\":\"HOT\""));
 }
 
 // The buffer the caller lends is a constant in the header, so the widest line
 // this dump can ever produce has to be measured rather than assumed.
 TEST_CASE("diagnostics: the widest dump every field can produce still fits one console line") {
-    const Diagnostics d = widest_device();
-    DiagnosticsReport report(d, "diag");
+    const Diagnostics diagnostics = widest_device();
+    DiagnosticsReport report(diagnostics, "diag");
     int widest = 0;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -259,7 +259,7 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     // And a buffer one byte short of the line refuses it whole rather than
     // handing back half a counter.
     char tight[DiagnosticsReport::kLineBytes];
-    DiagnosticsReport again(d, "diag");
+    DiagnosticsReport again(diagnostics, "diag");
     int longest_index = 0;
     for (int i = 0; i < again.line_count(); i++) {
         if (again.line(i, line, static_cast<int>(sizeof(line))) == widest) longest_index = i;
@@ -268,12 +268,12 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
 }
 
 TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
-    Diagnostics d = busy_device();
-    d.residual_valid = false;
-    d.die_valid = false;
+    Diagnostics diagnostics = busy_device();
+    diagnostics.residual_valid = false;
+    diagnostics.die_valid = false;
 
-    const std::string text = console(d);
-    const std::string json = frames(d, 182).joined;
+    const std::string text = console(diagnostics);
+    const std::string json = frames(diagnostics, 182).joined;
     CHECK_FALSE(has(text, "resid_m"));
     CHECK_FALSE(has(text, "die_temp_c"));
     CHECK_FALSE(has(json, "resid_m"));
@@ -281,14 +281,14 @@ TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
 
     // 0 m of residual and 0 C of die temperature are both real readings a device
     // can produce, which is why absent is not spelled as zero.
-    d.residual_valid = true;
-    d.die_valid = true;
-    d.residual_m = 0;
-    d.die_dc = 0;
-    CHECK(has(console(d), "resid_m=0"));
-    CHECK(has(console(d), "die_temp_c=0"));
-    CHECK(has(frames(d, 182).joined, "\"resid_m\":0"));
-    CHECK(has(frames(d, 182).joined, "\"die_temp_c\":0"));
+    diagnostics.residual_valid = true;
+    diagnostics.die_valid = true;
+    diagnostics.residual_m = 0;
+    diagnostics.die_dc = 0;
+    CHECK(has(console(diagnostics), "resid_m=0"));
+    CHECK(has(console(diagnostics), "die_temp_c=0"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"resid_m\":0"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"die_temp_c\":0"));
 }
 
 // The rounding rule is the status reply's, and it is shared code rather than a
@@ -302,17 +302,17 @@ TEST_CASE("diagnostics: tenths of a degree round away from zero on both sides of
 }
 
 TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not numbered") {
-    Diagnostics d = busy_device();
-    d.gnss_identified = false;
-    d.gnss_firmware = "";
-    d.gnss_baud = 9600;
-    d.gnss_config = ports::GnssConfigStage::Degraded;
-    d.gnss_raises = 2;
-    d.gnss_raise_fallbacks = 2;
-    d.gnss_reject = gnss::FixReject::NoDate;
-    d.gnss_rejected = 41;
+    Diagnostics diagnostics = busy_device();
+    diagnostics.gnss_identified = false;
+    diagnostics.gnss_firmware = "";
+    diagnostics.gnss_baud = 9600;
+    diagnostics.gnss_config = ports::GnssConfigStage::Degraded;
+    diagnostics.gnss_raises = 2;
+    diagnostics.gnss_raise_fallbacks = 2;
+    diagnostics.gnss_reject = gnss::FixReject::NoDate;
+    diagnostics.gnss_rejected = 41;
 
-    const std::string text = console(d);
+    const std::string text = console(diagnostics);
     CHECK(has(text, "identified=false"));
     CHECK(has(text, "firmware=\"\""));
     CHECK(has(text, "baud=9600"));
@@ -336,8 +336,8 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
 // dump is cut into frames the payload can carry, and every frame is a complete
 // object naming the subsystem it belongs to.
 TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry, whole") {
-    const Diagnostics d = widest_device();
-    const Frames narrow = frames(d, kSmallestSupportedPayloadBytes);
+    const Diagnostics diagnostics = widest_device();
+    const Frames narrow = frames(diagnostics, kSmallestSupportedPayloadBytes);
     CHECK(narrow.widest <= kSmallestSupportedPayloadBytes);
     CHECK(narrow.count > DiagnosticsReport::kGroupCount);  // the widest values need a second pass
     CHECK(has(narrow.last, "\"more\":false"));
@@ -386,22 +386,22 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
 // frames of a five-frame dump, with no fifth one coming, has been told that a
 // fault it cannot see is absent.
 TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered short") {
-    const Diagnostics d = widest_device();
-    DiagnosticsReport report(d, "diag");
+    const Diagnostics diagnostics = widest_device();
+    DiagnosticsReport report(diagnostics, "diag");
     CHECK(report.fits(kSmallestSupportedPayloadBytes));
     // ports::kMinimumLinkPayloadBytes, which is all BLE guarantees: not one worst-case
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
 
     char buffer[DiagnosticsReport::kFrameBytes];
-    DiagnosticsReport narrow(d, "diag");
+    DiagnosticsReport narrow(diagnostics, "diag");
     CHECK(narrow.next_frame(20, buffer, sizeof(buffer)) == 0);
     CHECK_FALSE(narrow.exhausted());
 }
 
 TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own name") {
-    const Diagnostics d = busy_device();
-    DiagnosticsReport report(d, "radio", DiagnosticsReport::Group::Radio);
+    const Diagnostics diagnostics = busy_device();
+    DiagnosticsReport report(diagnostics, "radio", DiagnosticsReport::Group::Radio);
     CHECK(report.line_count() == 1);
 
     char buffer[DiagnosticsReport::kFrameBytes];
@@ -428,11 +428,11 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
 // correct one right here, in the suite we look at. So it saturates, at a ceiling
 // no device reaches: 2147483647 receptions is thirteen years of them at 5 Hz.
 TEST_CASE("diagnostics: a counter is never printed negative, on any platform") {
-    Diagnostics d{};
-    d.rx_ok = 0xFFFFFFFFu;
-    d.gnss_rejected = 0x80000000u;
-    d.link_drops = 0x7FFFFFFFu;
-    const std::string text = console(d);
+    Diagnostics diagnostics{};
+    diagnostics.rx_ok = 0xFFFFFFFFu;
+    diagnostics.gnss_rejected = 0x80000000u;
+    diagnostics.link_drops = 0x7FFFFFFFu;
+    const std::string text = console(diagnostics);
     CHECK(has(text, "rx_ok=2147483647"));
     CHECK(has(text, "rejected=2147483647"));
     CHECK(has(text, "link_drops=2147483647"));
@@ -440,19 +440,19 @@ TEST_CASE("diagnostics: a counter is never printed negative, on any platform") {
     CHECK(has(text, "noise_dbm=-105"));
     CHECK_FALSE(has(text, "rx_ok=-"));
     CHECK_FALSE(has(text, "rejected=-"));
-    CHECK_FALSE(has(frames(d, 182).joined, "\"rx_ok\":-"));
+    CHECK_FALSE(has(frames(diagnostics, 182).joined, "\"rx_ok\":-"));
 }
 
 TEST_CASE("diagnostics: reading the dump neither clears nor changes anything") {
-    const Diagnostics d = busy_device();
-    const std::string first = console(d);
-    const std::string first_json = frames(d, 182).joined;
-    const std::string second = console(d);
-    const std::string second_json = frames(d, 182).joined;
+    const Diagnostics diagnostics = busy_device();
+    const std::string first = console(diagnostics);
+    const std::string first_json = frames(diagnostics, 182).joined;
+    const std::string second = console(diagnostics);
+    const std::string second_json = frames(diagnostics, 182).joined;
     CHECK(first == second);
     CHECK(first_json == second_json);
-    CHECK(d.rx_ok == 1204);
-    CHECK(d.supply_warnings == 1);
+    CHECK(diagnostics.rx_ok == 1204);
+    CHECK(diagnostics.supply_warnings == 1);
 }
 
 // M. The clamp itself, since both link reports now share it and neither of them

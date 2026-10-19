@@ -239,121 +239,130 @@ void codes_pinned(int count) {
 }  // namespace
 
 TEST_CASE(
-    "diag ordinals: radio::Verdict's codes are the burst verdict byte, and a code changed here "
+    "diagnostics ordinals: radio::Verdict's codes are the burst verdict byte, and a code changed "
+    "here "
     "changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it") {
     codes_pinned<radio::Verdict>(12);
 }
 
 TEST_CASE(
-    "diag ordinals: power::ResetReason's codes are the boot reset byte, and a code changed "
+    "diagnostics ordinals: power::ResetReason's codes are the boot reset byte, and a code changed "
     "here changes RESET in scripts/blip_records.py and the schema's reset enum with it") {
     codes_pinned<power::ResetReason>(10);
 }
 
 TEST_CASE(
-    "diag ordinals: dfu::ImageState's codes are the boot image_state byte, and a code changed "
+    "diagnostics ordinals: dfu::ImageState's codes are the boot image_state byte, and a code "
+    "changed "
     "here changes IMAGE_STATE in scripts/blip_records.py and the schema's image_state enum") {
     codes_pinned<dfu::ImageState>(4);
 }
 
 TEST_CASE(
-    "diag ordinals: diag::Profile's codes are the boot profile byte, and a code changed here "
+    "diagnostics ordinals: diagnostics::Profile's codes are the boot profile byte, and a code "
+    "changed here "
     "changes PROFILE in scripts/blip_records.py and the schema's profile enum with it") {
     codes_pinned<diagnostics::Profile>(3);
 }
 
 TEST_CASE(
-    "diag ordinals: gnss::FixReject's codes are the gnss reject byte, and a code changed here "
+    "diagnostics ordinals: gnss::FixReject's codes are the gnss reject byte, and a code changed "
+    "here "
     "changes REJECT in scripts/blip_records.py and the schema's reject enum with it") {
     codes_pinned<gnss::FixReject>(7);
 }
 
 TEST_CASE(
-    "diag ordinals: gnss::Stage's codes are the gnss stage byte, and a code changed here "
+    "diagnostics ordinals: gnss::Stage's codes are the gnss stage byte, and a code changed here "
     "changes STAGE in scripts/blip_records.py and the schema's stage enum with it") {
     codes_pinned<gnss::Stage>(4);
 }
 
 TEST_CASE(
-    "diag ordinals: model::Source's codes are the burst and traffic source byte, and a code "
+    "diagnostics ordinals: model::Source's codes are the burst and traffic source byte, and a code "
     "changed here changes SOURCE in scripts/blip_records.py and the schema's source enum") {
     codes_pinned<model::Source>(4);
 }
 
 TEST_CASE(
-    "diag ordinals: model::Band's codes are the burst and dwell band byte, and a code changed "
+    "diagnostics ordinals: model::Band's codes are the burst and dwell band byte, and a code "
+    "changed "
     "here changes BAND in scripts/blip_records.py and the schema's band enum with it") {
     codes_pinned<model::Band>(2);
 }
 
 TEST_CASE(
-    "diag ordinals: timing::SlotState's codes are the dwell state byte, and a code changed "
+    "diagnostics ordinals: timing::SlotState's codes are the dwell state byte, and a code changed "
     "here changes SLOT_STATE in scripts/blip_records.py and the schema's state enum with it") {
     codes_pinned<timing::SlotState>(6);
 }
 
 TEST_CASE(
-    "diag ordinals: diag::Refusal's codes are the dwell refusal byte, and a code changed here "
+    "diagnostics ordinals: diagnostics::Refusal's codes are the dwell refusal byte, and a code "
+    "changed here "
     "changes REFUSAL in scripts/blip_records.py and the schema's refusal enum with it") {
     codes_pinned<diagnostics::Refusal>(5);
 }
 
 TEST_CASE(
-    "diag ordinals: diag::SwitchKind's codes are the switch change byte, and a code changed "
+    "diagnostics ordinals: diagnostics::SwitchKind's codes are the switch change byte, and a code "
+    "changed "
     "here changes CHANGE in scripts/blip_records.py and the schema's change enum with it") {
     codes_pinned<diagnostics::SwitchKind>(5);
 }
 
 TEST_CASE(
-    "diag ordinals: flight::FlightState's codes are the flight declared and confirmed bytes, "
+    "diagnostics ordinals: flight::FlightState's codes are the flight declared and confirmed "
+    "bytes, "
     "and a code changed here changes FLIGHT_STATE in blip_records.py and both schema enums") {
     codes_pinned<flight::FlightState>(3);
 }
 
 TEST_CASE(
-    "diag ordinals: power::PowerLevel's codes are the power level byte, and a code changed "
+    "diagnostics ordinals: power::PowerLevel's codes are the power level byte, and a code changed "
     "here changes POWER_LEVEL in scripts/blip_records.py and the schema's level enum") {
     codes_pinned<power::PowerLevel>(5);
 }
 
 TEST_CASE(
-    "diag ordinals: power::ChargeCondition's codes are the power charge byte, and a code "
+    "diagnostics ordinals: power::ChargeCondition's codes are the power charge byte, and a code "
     "changed here changes CHARGE in scripts/blip_records.py and the schema's charge enum") {
     codes_pinned<power::ChargeCondition>(4);
 }
 
 TEST_CASE(
-    "diag ordinals: events::Contact's codes are the contact byte, and a code changed here "
+    "diagnostics ordinals: events::Contact's codes are the contact byte, and a code changed here "
     "changes CONTACT in scripts/blip_records.py and the schema's contact enum with it") {
     codes_pinned<events::Contact>(2);
 }
 
 TEST_CASE(
-    "diag ordinals: diag::LinkAction's codes are the link action byte, and a code changed "
+    "diagnostics ordinals: diagnostics::LinkAction's codes are the link action byte, and a code "
+    "changed "
     "here changes LINK_ACTION in scripts/blip_records.py and the schema's action enum") {
     codes_pinned<diagnostics::LinkAction>(7);
 }
 
 TEST_CASE(
-    "diag ordinals: events::Endpoint's codes are the link endpoint byte, and a code changed "
+    "diagnostics ordinals: events::Endpoint's codes are the link endpoint byte, and a code changed "
     "here changes ENDPOINT in scripts/blip_records.py and the schema's endpoint enum") {
     codes_pinned<events::Endpoint>(3);
 }
 
 TEST_CASE(
-    "diag ordinals: timing::DurableWriteVerdict's codes are the write placement byte, and a "
+    "diagnostics ordinals: timing::DurableWriteVerdict's codes are the write placement byte, and a "
     "code changed here changes PLACEMENT in blip_records.py and the schema's placement enum") {
     codes_pinned<timing::DurableWriteVerdict>(4);
 }
 
 TEST_CASE(
-    "diag ordinals: power::DurableWrite's codes are the write kind byte, and a code changed "
+    "diagnostics ordinals: power::DurableWrite's codes are the write kind byte, and a code changed "
     "here changes WRITE_KIND in scripts/blip_records.py and the schema's kind enum with it") {
     codes_pinned<power::DurableWrite>(2);
 }
 
 TEST_CASE(
-    "diag ordinals: traffic::Level's codes are the traffic and screen alarm byte, and a "
+    "diagnostics ordinals: traffic::Level's codes are the traffic and screen alarm byte, and a "
     "member added here raises the maximum the schema puts on alarm") {
     codes_pinned<traffic::Level>(2);
 }

@@ -148,13 +148,13 @@ TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and return
     REQUIRE(radio.mode() == RadioMode::Rx);
 
     int standbys = 0;
-    for (uint8_t c : chip.commands_seen)
-        if (c == sx1262::kSetStandby) standbys++;
+    for (uint8_t command : chip.commands_seen)
+        if (command == sx1262::kSetStandby) standbys++;
     config.frequency_hz = 868400000;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     int after = 0;
-    for (uint8_t c : chip.commands_seen)
-        if (c == sx1262::kSetStandby) after++;
+    for (uint8_t command : chip.commands_seen)
+        if (command == sx1262::kSetStandby) after++;
     CHECK(after == standbys + 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
     CHECK(chip.frequency_hz > 868399000);

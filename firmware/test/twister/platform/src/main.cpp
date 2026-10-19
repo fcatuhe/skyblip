@@ -34,9 +34,9 @@ ZTEST(platform_adapters, test_missing_key_is_not_found) {
 namespace {
 
 uint32_t waited_us(platform::zephyr::Delay& delay, uint32_t hold_us) {
-    const uint32_t from = k_cycle_get_32();
+    const uint32_t started_cycles = k_cycle_get_32();
     delay.wait_at_least_us(hold_us);
-    return k_cyc_to_us_floor32(k_cycle_get_32() - from);
+    return k_cyc_to_us_floor32(k_cycle_get_32() - started_cycles);
 }
 
 }  // namespace

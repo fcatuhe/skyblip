@@ -227,9 +227,9 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     REQUIRE(chip.aviation_dynamic_model());
 
     gnss.request_restart(ports::Restart::Factory);
-    uint32_t t = kBringUpLeadMs + 5010;
-    chip.tick(t);
-    gnss.service(t);
+    uint32_t now_ms = kBringUpLeadMs + 5010;
+    chip.tick(now_ms);
+    gnss.service(now_ms);
     CHECK(chip.factory_resets == 1);
     CHECK(chip.heard().rfind("PCAS10,") == chip.heard().size() - 7);
     // The receiver that comes back is not the one we configured.
@@ -237,7 +237,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     CHECK(chip.solution_period_ms == models::L76k::kFactoryPeriodMs);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Restarting);
 
-    run(gnss, chip, t + 10, t + 15000);
+    run(gnss, chip, now_ms + 10, now_ms + 15000);
     CHECK(gnss.configured());
     CHECK(chip.aviation_dynamic_model());
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
@@ -245,7 +245,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     // And the fix comes back on its own once the receiver has an almanac again,
     // which is the whole point: the pilot is told to wait, not to send it back.
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, t + 15010, t + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 15010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }
 
@@ -259,9 +259,9 @@ TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac
     REQUIRE(gnss.solution().fix_valid);
 
     gnss.request_restart(ports::Restart::Cold);
-    const uint32_t t = kBringUpLeadMs + 5010;
-    chip.tick(t);
-    gnss.service(t);
+    const uint32_t now_ms = kBringUpLeadMs + 5010;
+    chip.tick(now_ms);
+    gnss.service(now_ms);
 
     CHECK(chip.restarts == 1);
     CHECK(chip.factory_resets == 0);
@@ -269,8 +269,8 @@ TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Ready);
 
-    run(gnss, chip, t + 10, t + 5000);
+    run(gnss, chip, now_ms + 10, now_ms + 5000);
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, t + 5010, t + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 5010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }

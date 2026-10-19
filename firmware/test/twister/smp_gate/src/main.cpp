@@ -60,7 +60,7 @@ Reply decode(const uint8_t* payload, size_t bytes) {
     return reply;
 }
 
-Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOperation operation, const Body& body) {
+Reply send(dfu::SmpGroup group, uint8_t command_id, dfu::SmpOperation operation, const Body& body) {
     uint8_t packet[kSmpHeaderBytes + sizeof(Body::bytes)]{};
     const uint16_t group_id = static_cast<uint16_t>(group);
     packet[0] = static_cast<uint8_t>(operation);
@@ -68,7 +68,7 @@ Reply send(dfu::SmpGroup group, uint8_t id, dfu::SmpOperation operation, const B
     packet[3] = static_cast<uint8_t>(body.used_bytes);
     packet[4] = static_cast<uint8_t>(group_id >> 8);
     packet[5] = static_cast<uint8_t>(group_id);
-    packet[7] = id;
+    packet[7] = command_id;
     memcpy(packet + kSmpHeaderBytes, body.bytes, body.used_bytes);
 
     smp_dummy_enable();

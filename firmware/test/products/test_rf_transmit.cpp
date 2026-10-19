@@ -51,15 +51,15 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     int transmissions = 0;
     uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
         transmissions++;
         // Always inside the direct slot, even though the dwell that carries the
         // burst runs 200 ms past it.
-        CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
-        if (last_frequency != 0) CHECK(r.frequency_hz != last_frequency);
-        last_frequency = r.frequency_hz;
+        CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
+        if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
+        last_frequency = record.frequency_hz;
     }
     // Six seconds of flight, one burst a second, less the one the cleared tape cut in half.
     CHECK(transmissions >= 5);
@@ -88,11 +88,11 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
     const radio::Log& log = simulator.product().state().radio_log;
     int done = 0;
     for (int i = 0; i < log.count(); i++) {
-        const radio::Entry& e = log.newest(i);
-        if (e.verdict != radio::Verdict::Transmitted) continue;
+        const radio::Entry& entry = log.newest(i);
+        if (entry.verdict != radio::Verdict::Transmitted) continue;
         done++;
         // 4.8 ms of air from the keying step, read out on the next one.
-        CHECK(e.tx_span_us - e.tx_keyed_us <= simulator::Simulator::kStepMs * 1000);
+        CHECK(entry.tx_span_us - entry.tx_keyed_us <= simulator::Simulator::kStepMs * 1000);
     }
     CHECK(done >= 5);
 }
@@ -111,16 +111,16 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
     int named = 0;
     int positions = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
+        if (timing::Scheduler::in_direct_slot(record.phase_ms)) {
             positions++;
             continue;
         }
         named++;
-        CHECK(r.phase_ms < timing::kSlot1WrapMs);
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
-        CHECK(simulator::Air::tuned_to(r.frequency_hz, timing::kMBand1Hz));
+        CHECK(record.phase_ms < timing::kSlot1WrapMs);
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
+        CHECK(simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz));
     }
     // Twenty-one seconds of flight: twenty-one positions and two names.
     CHECK(positions >= 19);
@@ -145,9 +145,9 @@ TEST_CASE("rf: a device with no callsign set transmits nothing in the reserved w
 
     const simulator::Air& air = simulator.world().air();
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
-        CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
+        CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
     }
 }
 
@@ -162,22 +162,22 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
         // Own bursts go on air as chips behind the ADS-L sync word, so reading
         // them back means framing them the way the receiver does.
         protocol::Frame frame{};
-        REQUIRE(simulator::Air::framed(r, frame));
+        REQUIRE(simulator::Air::framed(record, frame));
         REQUIRE(frame.system == protocol::System::AdslDirect);
-        protocol::AdslPacket p{};
-        p.reset();
-        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
-        REQUIRE(p.check_crc() == 0);
-        p.descramble();
-        CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
-        CHECK(p.altitude_m() ==
+        protocol::AdslPacket packet{};
+        packet.reset();
+        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+        REQUIRE(packet.check_crc() == 0);
+        packet.descramble();
+        CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
+        CHECK(packet.altitude_m() ==
               to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).value);
-        CHECK(p.flight_state == 2);
+        CHECK(packet.flight_state == 2);
         checked++;
     }
     CHECK(checked > 0);
@@ -232,8 +232,8 @@ TEST_CASE("rf: losing and regaining PPS through the simulator counts as holdover
     const timing::SlotTimingStatistics& statistics =
         simulator.product().state().rf.timing_statistics;
     CHECK(statistics.holdover_events() >= 1);
-    for (int b = 0; b < timing::SlotTimingStatistics::kBuckets; b++)
-        if (b != 3) CHECK(statistics.pps_bucket(b) == 0);
+    for (int bucket = 0; bucket < timing::SlotTimingStatistics::kBuckets; bucket++)
+        if (bucket != 3) CHECK(statistics.pps_bucket(bucket) == 0);
 }
 
 TEST_CASE("rf: without an anchored clock nothing is transmitted") {
@@ -301,9 +301,10 @@ TEST_CASE("rf: a receiver the model predicts goes on air in seconds, not in twen
     simulator.world().set_speed_kt(50);
 
     uint32_t settled_at = 0;
-    for (uint32_t t = 0; t <= gnss::kFirstFixSettleMs; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
-        if (settled_at == 0 && simulator.product().state().own.tx_settled) settled_at = t;
+    for (uint32_t now_ms = 0; now_ms <= gnss::kFirstFixSettleMs;
+         now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
+        if (settled_at == 0 && simulator.product().state().own.tx_settled) settled_at = now_ms;
     }
     REQUIRE(settled_at > 0);
     const uint32_t first_fix_ms = simulator.product().ownship().first_fix().fix_since_ms();
@@ -334,21 +335,21 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
         protocol::Frame frame{};
-        REQUIRE(simulator::Air::framed(r, frame));
-        protocol::AdslPacket p{};
-        p.reset();
-        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
-        REQUIRE(p.check_crc() == 0);
-        p.descramble();
-        REQUIRE(p.address() == settings::address_of(platform::host::Identity::kSerial));
+        REQUIRE(simulator::Air::framed(record, frame));
+        protocol::AdslPacket packet{};
+        packet.reset();
+        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+        REQUIRE(packet.check_crc() == 0);
+        packet.descramble();
+        REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
 
         // Inside the direct slot the quarter is 1, 2 or 3. Zero is the old bug.
-        REQUIRE(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(int(p.timestamp % 4) == r.phase_ms / 250);
-        CHECK(int(p.timestamp % 4) != 0);
+        REQUIRE(timing::Scheduler::in_direct_slot(record.phase_ms));
+        CHECK(int(packet.timestamp % 4) == record.phase_ms / 250);
+        CHECK(int(packet.timestamp % 4) != 0);
         checked++;
     }
     CHECK(checked >= 4);
@@ -374,8 +375,8 @@ TEST_CASE("rf: the extrapolation residual is measured against the fix that arriv
     // aircraft again the moment it flies straight.
     simulator.world().set_track_deg(180);
     uint16_t worst_m = 0;
-    for (uint32_t t = 6000; t <= 8000; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
+    for (uint32_t now_ms = 6000; now_ms <= 8000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
         const uint16_t resid_m = simulator.product().state().own.prediction_residual_m;
         if (resid_m > worst_m) worst_m = resid_m;
     }
@@ -396,11 +397,11 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
     // Thirty seconds before the wrap: the receiver's configuration sequence, the
     // twenty-second settling window and a couple of seconds of transmitting all
     // happen before the counter turns over.
-    uint32_t t = 0u - 30000u;
-    const uint32_t settled_at = t + 28000u;
-    while (t != settled_at) {
-        simulator.step(t);
-        t += simulator::Simulator::kStepMs;
+    uint32_t now_ms = 0u - 30000u;
+    const uint32_t settled_at = now_ms + 28000u;
+    while (now_ms != settled_at) {
+        simulator.step(now_ms);
+        now_ms += simulator::Simulator::kStepMs;
     }
     REQUIRE(simulator.product().state().own.tx_settled);
     const uint32_t sent_before = simulator.product().state().air.tx_ok;
@@ -408,25 +409,25 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
     simulator.world().air().clear();
 
     // Eight seconds, four of them on each side of zero.
-    const uint32_t stop_at = t + 8000u;
-    while (t != stop_at) {
-        simulator.step(t);
-        t += simulator::Simulator::kStepMs;
+    const uint32_t stop_at = now_ms + 8000u;
+    while (now_ms != stop_at) {
+        simulator.step(now_ms);
+        now_ms += simulator::Simulator::kStepMs;
     }
 
     const simulator::Air& air = simulator.world().air();
     int transmissions = 0;
     uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
         transmissions++;
         // Still inside the direct slot, still alternating channel: the phase comes
         // off the PPS edge in microseconds(), which is 64-bit and does not wrap.
-        CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
-        if (last_frequency != 0) CHECK(r.frequency_hz != last_frequency);
-        last_frequency = r.frequency_hz;
+        CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
+        if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
+        last_frequency = record.frequency_hz;
     }
     // Eight seconds of flight is eight bursts, give or take the one the step
     // boundary lands on. A wrap that broke the rate rule would show up as zero.
@@ -437,9 +438,9 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
     // And the hour that straddles the wrap is still an hour: the design rate is
     // half the band's allowance and the window did not forget what it holds.
     const timing::AirTime& air_time = simulator.product().radio().transmitter().air_time();
-    CHECK(air_time.window_ms(t) >=
+    CHECK(air_time.window_ms(now_ms) >=
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
-    CHECK(simulator.product().radio().duty_permille(t) < timing::AirTime::kLimitPermille);
+    CHECK(simulator.product().radio().duty_permille(now_ms) < timing::AirTime::kLimitPermille);
     CHECK_FALSE(simulator.product().radio().over_budget());
 }
 

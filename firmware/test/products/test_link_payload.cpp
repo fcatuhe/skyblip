@@ -47,13 +47,13 @@ go::Settings widest_settings() {
 }
 
 power::BatteryState full_battery() {
-    power::BatteryState b{};
-    b.cell_mv = 4200;
-    b.percent = 100;  // three digits
-    b.external_power = true;
-    b.charging = true;
-    b.valid = true;
-    return b;
+    power::BatteryState battery{};
+    battery.cell_mv = 4200;
+    battery.percent = 100;  // three digits
+    battery.external_power = true;
+    battery.charging = true;
+    battery.valid = true;
+    return battery;
 }
 
 // A device at its most talkative: the longest flight word, the longest power
@@ -77,16 +77,16 @@ void run_bench(timing::SlotTimingStatistics& statistics) {
 
 std::string joined(const platform::host::Link& link) {
     std::string all;
-    for (const platform::host::Link::Frame& f : link.sent) all += f.bytes;
+    for (const platform::host::Link::Frame& frame : link.sent) all += frame.bytes;
     return all;
 }
 
 int occurrences(const std::string& haystack, const char* needle) {
-    int n = 0;
+    int count = 0;
     for (size_t at = haystack.find(needle); at != std::string::npos;
          at = haystack.find(needle, at + 1))
-        n++;
-    return n;
+        count++;
+    return count;
 }
 
 }  // namespace
@@ -328,7 +328,7 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
 
     config.set_battery_state(full_battery(), power::PowerLevel::Normal);
     CHECK(config.link_drops() == 1);
-    for (uint32_t t = 10; t <= 100; t += 10) config.tick(t);
+    for (uint32_t now_ms = 10; now_ms <= 100; now_ms += 10) config.tick(now_ms);
     // Nothing about a frame too big changes by waiting, so waiting is not the
     // answer: one count, and the phone can ask for a status whenever it likes.
     CHECK(config.link_drops() == 1);
@@ -358,9 +358,9 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     on_busy.on_rx(config_frame("{\"cmd\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
     CHECK(on_busy.replying());
-    for (uint32_t t = 10; t < 1000 && on_busy.replying(); t += 10) {
+    for (uint32_t now_ms = 10; now_ms < 1000 && on_busy.replying(); now_ms += 10) {
         busy.serve();
-        on_busy.resume_replies(t);
+        on_busy.resume_replies(now_ms);
     }
     CHECK_FALSE(on_busy.replying());
     CHECK(joined(busy) == joined(free_link));

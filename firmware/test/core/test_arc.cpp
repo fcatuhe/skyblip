@@ -13,28 +13,28 @@ constexpr uint32_t kStepMs = 1000;
 constexpr int32_t kThermalSpeedMmS = 23150;
 
 Motion flying(int track_deg, int32_t speed_mm_s, int16_t turn_dps) {
-    Motion m{};
-    m.speed_mm_s = speed_mm_s;
-    m.track_cdeg = track_deg * 100;
-    m.turn_cdps = static_cast<int16_t>(turn_dps * 100);
-    m.turning = true;
-    return m;
+    Motion motion{};
+    motion.speed_mm_s = speed_mm_s;
+    motion.track_cdeg = track_deg * 100;
+    motion.turn_cdps = static_cast<int16_t>(turn_dps * 100);
+    motion.turning = true;
+    return motion;
 }
 
-Position after(Motion m, int seconds, uint32_t step_ms = kStepMs) {
-    Arc arc(m, step_ms);
-    Position p = arc.here();
+Position after(Motion motion, int seconds, uint32_t step_ms = kStepMs) {
+    Arc arc(motion, step_ms);
+    Position position = arc.here();
     for (uint32_t elapsed = 0; elapsed < static_cast<uint32_t>(seconds) * 1000u; elapsed += step_ms)
-        p = arc.advance();
-    return p;
+        position = arc.advance();
+    return position;
 }
 
 }  // namespace
 
 TEST_CASE("arc: an aircraft not turning flies a straight ray") {
-    const Position p = after(flying(0, 30000, 0), 60);
-    CHECK(p.north_m == 1800);
-    CHECK(p.east_m == 0);
+    const Position position = after(flying(0, 30000, 0), 60);
+    CHECK(position.north_m == 1800);
+    CHECK(position.east_m == 0);
 
     const Position east = after(flying(90, 30000, 0), 60);
     CHECK(east.east_m == 1800);
@@ -65,19 +65,19 @@ TEST_CASE("arc: a left turn mirrors a right turn") {
 }
 
 TEST_CASE("arc: the step is a cadence, not a shape") {
-    const Motion m = flying(30, kThermalSpeedMmS, 9);
-    const Position coarse = after(m, 20, 2000);
-    const Position fine = after(m, 20, 500);
+    const Motion motion = flying(30, kThermalSpeedMmS, 9);
+    const Position coarse = after(motion, 20, 2000);
+    const Position fine = after(motion, 20, 500);
     CHECK(hypotenuse(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
 }
 
 TEST_CASE("arc: a climb is carried with the path") {
-    Motion m = flying(0, 30000, 0);
-    m.climb_mm_s = 3000;
-    m.climbing = true;
-    CHECK(after(m, 10).up_m == 30);
-    m.climbing = false;
-    CHECK(after(m, 10).up_m == 0);
+    Motion motion = flying(0, 30000, 0);
+    motion.climb_mm_s = 3000;
+    motion.climbing = true;
+    CHECK(after(motion, 10).up_m == 30);
+    motion.climbing = false;
+    CHECK(after(motion, 10).up_m == 0);
 }
 
 TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
@@ -95,7 +95,7 @@ TEST_CASE("arc: a target with no velocity of its own does not fly anywhere") {
     model::AircraftObservation observation{};
     observation.speed_valid = false;
     observation.track_c9 = to_cordic9(CentiDegrees(18000)).value;
-    const Position p = after(motion_of(observation, 0, false), 60);
-    CHECK(p.north_m == 0);
-    CHECK(p.east_m == 0);
+    const Position position = after(motion_of(observation, 0, false), 60);
+    CHECK(position.north_m == 0);
+    CHECK(position.east_m == 0);
 }

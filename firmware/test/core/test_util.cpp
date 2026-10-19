@@ -19,11 +19,11 @@
 using namespace skyblip;
 
 TEST_CASE("units: feet<->metres round-trip is close") {
-    for (int ft = -1000; ft <= 40000; ft += 137) {
-        Metres m = to_metres(Feet(ft));
-        Feet back = to_feet(m);
+    for (int feet = -1000; feet <= 40000; feet += 137) {
+        Metres metres = to_metres(Feet(feet));
+        Feet back = to_feet(metres);
         // integer double-conversion truncation. A few feet is physically moot
-        CHECK(std::abs(back.value - ft) <= 5 + std::abs(ft) / 6000);
+        CHECK(std::abs(back.value - feet) <= 5 + std::abs(feet) / 6000);
     }
 }
 
@@ -58,28 +58,28 @@ TEST_CASE("result: ok and error carry status") {
 }
 
 TEST_CASE("fifo: bounded ring behaviour") {
-    Fifo<int, 4> q;  // capacity 3
-    CHECK(q.empty());
-    CHECK(q.push(1) == Status::Ok);
-    CHECK(q.push(2) == Status::Ok);
-    CHECK(q.push(3) == Status::Ok);
-    CHECK(q.full());
-    CHECK(q.push(4) == Status::Full);
-    CHECK(q.pop().value() == 1);
-    CHECK(q.pop().value() == 2);
-    CHECK(q.push(5) == Status::Ok);
-    CHECK(q.pop().value() == 3);
-    CHECK(q.pop().value() == 5);
-    CHECK(q.pop().status() == Status::Empty);
+    Fifo<int, 4> fifo;  // capacity 3
+    CHECK(fifo.empty());
+    CHECK(fifo.push(1) == Status::Ok);
+    CHECK(fifo.push(2) == Status::Ok);
+    CHECK(fifo.push(3) == Status::Ok);
+    CHECK(fifo.full());
+    CHECK(fifo.push(4) == Status::Full);
+    CHECK(fifo.pop().value() == 1);
+    CHECK(fifo.pop().value() == 2);
+    CHECK(fifo.push(5) == Status::Ok);
+    CHECK(fifo.pop().value() == 3);
+    CHECK(fifo.pop().value() == 5);
+    CHECK(fifo.pop().status() == Status::Empty);
 }
 
 TEST_CASE("variable range: unsigned encode/decode round-trip (within representable range)") {
     // Bits=6 range encoding is representable up to ~956. Below that the coarsest
     // quantization step is 8.
-    for (uint16_t v = 0; v < 900; v += 7) {
-        uint16_t enc = encode_unsigned_variable_range<uint16_t, 6>(v);
-        uint16_t dec = decode_unsigned_variable_range<uint16_t, 6>(enc);
-        CHECK(std::abs(int(dec) - int(v)) <= 8);  // within the coarsest step
+    for (uint16_t value = 0; value < 900; value += 7) {
+        uint16_t encoded = encode_unsigned_variable_range<uint16_t, 6>(value);
+        uint16_t decoded = decode_unsigned_variable_range<uint16_t, 6>(encoded);
+        CHECK(std::abs(int(decoded) - int(value)) <= 8);  // within the coarsest step
     }
     // Saturation: large values clamp to the max code, not garbage.
     CHECK(decode_unsigned_variable_range<uint16_t, 6>(
@@ -87,12 +87,12 @@ TEST_CASE("variable range: unsigned encode/decode round-trip (within representab
 }
 
 TEST_CASE("variable range: signed preserves sign and magnitude bucket") {
-    for (int16_t v = -900; v < 900; v += 13) {
-        int16_t enc = encode_signed_variable_range<int16_t, 6>(v);
-        int16_t dec = decode_signed_variable_range<int16_t, 6>(enc);
-        bool sign_ok = ((v < 0) == (dec < 0)) || (dec == 0);
+    for (int16_t value = -900; value < 900; value += 13) {
+        int16_t encoded = encode_signed_variable_range<int16_t, 6>(value);
+        int16_t decoded = decode_signed_variable_range<int16_t, 6>(encoded);
+        bool sign_ok = ((value < 0) == (decoded < 0)) || (decoded == 0);
         CHECK(sign_ok);
-        CHECK(std::abs(std::abs(v) - std::abs(dec)) <= 8);
+        CHECK(std::abs(std::abs(value) - std::abs(decoded)) <= 8);
     }
 }
 
@@ -102,11 +102,12 @@ TEST_CASE("intmath: sine/cosine magnitude and quadrature") {
     CHECK(std::abs(cosine(0) - 0x4000) <= 2);     // cos(0) == 1.0
     CHECK(std::abs(sine(int16_t(0x8000))) <= 2);  // sin(180) == 0
     // sin^2 + cos^2 ~= 1 (scaled to 0x4000^2)
-    for (int a = 0; a < 0x10000; a += 997) {
-        int32_t s = sine(int16_t(a));
-        int32_t c = cosine(int16_t(a));
-        int32_t mag = (s * s + c * c) >> 14;  // ~0x4000
-        CHECK(std::abs(mag - 0x4000) <= 40);
+    for (int angle = 0; angle < 0x10000; angle += 997) {
+        int32_t sine_value = sine(int16_t(angle));
+        int32_t cosine_value = cosine(int16_t(angle));
+        int32_t magnitude =
+            (sine_value * sine_value + cosine_value * cosine_value) >> 14;  // ~0x4000
+        CHECK(std::abs(magnitude - 0x4000) <= 40);
     }
 }
 
@@ -118,48 +119,49 @@ TEST_CASE("intmath: square root and hypotenuse") {
 }
 
 TEST_CASE("intmath: arctangent cardinal directions (16-bit cyclic)") {
-    auto deg = [](int16_t a) { return (int(uint16_t(a)) * 360) / 65536; };
-    CHECK(deg(arctangent(0, 1000)) == 0);
-    CHECK(std::abs(deg(arctangent(1000, 0)) - 90) <= 1);
-    CHECK(std::abs(deg(arctangent(0, -1000)) - 180) <= 1);
+    auto to_degrees = [](int16_t angle) { return (int(uint16_t(angle)) * 360) / 65536; };
+    CHECK(to_degrees(arctangent(0, 1000)) == 0);
+    CHECK(std::abs(to_degrees(arctangent(1000, 0)) - 90) <= 1);
+    CHECK(std::abs(to_degrees(arctangent(0, -1000)) - 180) <= 1);
 }
 
 // The cardinals were exact while everything between them was up to 8 degrees out.
 TEST_CASE("intmath: arctangent holds a degree everywhere, not only on the cardinals") {
     double worst = 0;
-    for (int d = 0; d < 360; d++) {
-        const double rad = d * M_PI / 180.0;
-        const int16_t a = arctangent(static_cast<int32_t>(std::lround(10000 * std::sin(rad))),
-                                     static_cast<int32_t>(std::lround(10000 * std::cos(rad))));
-        const double got = static_cast<double>(a) * 360.0 / 65536.0;
-        const double want = d > 180 ? d - 360 : d;
-        worst = std::fmax(worst, d == 180 ? 0 : std::fabs(got - want));
+    for (int degrees = 0; degrees < 360; degrees++) {
+        const double radians = degrees * M_PI / 180.0;
+        const int16_t angle =
+            arctangent(static_cast<int32_t>(std::lround(10000 * std::sin(radians))),
+                       static_cast<int32_t>(std::lround(10000 * std::cos(radians))));
+        const double got = static_cast<double>(angle) * 360.0 / 65536.0;
+        const double want = degrees > 180 ? degrees - 360 : degrees;
+        worst = std::fmax(worst, degrees == 180 ? 0 : std::fabs(got - want));
     }
     CHECK(worst < 1.0);
 }
 
 TEST_CASE("format: hex, dec, fixed point") {
-    char b[32];
-    int n = format_hex(b, 0xABCD, 4);
-    CHECK(std::string(b, n) == "ABCD");
-    n = format_unsigned(b, 42);
-    CHECK(std::string(b, n) == "42");
-    n = format_unsigned(b, 5, 3);
-    CHECK(std::string(b, n) == "005");
-    n = format_signed(b, -17);
-    CHECK(std::string(b, n) == "-17");
-    n = format_unsigned(b, 1234, 1, 1);  // one decimal
-    CHECK(std::string(b, n) == "123.4");
+    char text[32];
+    int written = format_hex(text, 0xABCD, 4);
+    CHECK(std::string(text, written) == "ABCD");
+    written = format_unsigned(text, 42);
+    CHECK(std::string(text, written) == "42");
+    written = format_unsigned(text, 5, 3);
+    CHECK(std::string(text, written) == "005");
+    written = format_signed(text, -17);
+    CHECK(std::string(text, written) == "-17");
+    written = format_unsigned(text, 1234, 1, 1);  // one decimal
+    CHECK(std::string(text, written) == "123.4");
 }
 
 TEST_CASE("format: nmea lat/lon") {
-    char b[32];
-    int n = format_nmea_latitude(b, 481234500);  // 48.12345 deg
-    std::string s(b, n);
-    CHECK(s.substr(0, 2) == "48");
-    CHECK(s.back() == 'N');
-    n = format_nmea_longitude(b, -81234500);
-    s.assign(b, n);
-    CHECK(s.substr(0, 3) == "008");
-    CHECK(s.back() == 'W');
+    char buffer[32];
+    int written = format_nmea_latitude(buffer, 481234500);  // 48.12345 deg
+    std::string text(buffer, written);
+    CHECK(text.substr(0, 2) == "48");
+    CHECK(text.back() == 'N');
+    written = format_nmea_longitude(buffer, -81234500);
+    text.assign(buffer, written);
+    CHECK(text.substr(0, 3) == "008");
+    CHECK(text.back() == 'W');
 }

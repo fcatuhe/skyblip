@@ -36,20 +36,21 @@ const std::vector<uint8_t>& logbook() {
     static const std::vector<uint8_t> image = [] {
         Rig flight(kNoGlass);
         if (flight.setup() != Status::Ok) __builtin_trap();
-        uint32_t t = 0;
-        flight.seconds(t, kTaxiOutSeconds, kTaxiMmS, kFieldAltitudeM);
-        flight.seconds(t, kFlightSeconds, kCruiseMmS, kCruiseAltitudeM);
-        flight.seconds(t, kTaxiInSeconds, kTaxiMmS, kFieldAltitudeM);
+        uint32_t now_ms = 0;
+        flight.seconds(now_ms, kTaxiOutSeconds, kTaxiMmS, kFieldAltitudeM);
+        flight.seconds(now_ms, kFlightSeconds, kCruiseMmS, kCruiseAltitudeM);
+        flight.seconds(now_ms, kTaxiInSeconds, kTaxiMmS, kFieldAltitudeM);
         return flight.platform.log_flash().bytes();
     }();
     return image;
 }
 
 // INFO: fc 25sep26 a longer write is refused by the ATT layer (hardware/platform/zephyr/link.cpp)
-void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* bytes, size_t length) {
+void write(Rig& rig, uint16_t session_id, events::Endpoint endpoint, const uint8_t* bytes,
+           size_t length) {
     events::RxFrame frame{};
     if (length > frame.data.size()) return;
-    frame.session_id = app;
+    frame.session_id = session_id;
     frame.endpoint = endpoint;
     frame.bytes = static_cast<uint16_t>(length);
     std::memcpy(frame.data.data(), bytes, length);
@@ -57,13 +58,13 @@ void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* byt
 }
 
 // The gesture arms once the prompt has stood as long as a double press takes.
-void confirm_on_device(Rig& rig, uint32_t& t) {
-    rig.run(t, t + go::ConfirmGesture::kDoublePressWindowMs);
-    t += go::ConfirmGesture::kDoublePressWindowMs;
-    rig.double_press(t);
+void confirm_on_device(Rig& rig, uint32_t& now_ms) {
+    rig.run(now_ms, now_ms + go::ConfirmGesture::kDoublePressWindowMs);
+    now_ms += go::ConfirmGesture::kDoublePressWindowMs;
+    rig.double_press(now_ms);
 }
 
-void act(Rig& rig, uint32_t& t, const uint8_t* line, size_t length) {
+void act(Rig& rig, uint32_t& now_ms, const uint8_t* line, size_t length) {
     if (length == 0) return;
     const uint8_t* body = line + 1;
     const size_t body_length = length - 1;
@@ -72,11 +73,11 @@ void act(Rig& rig, uint32_t& t, const uint8_t* line, size_t length) {
         case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_length); break;
         case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_length); break;
         case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_length); break;
-        case 'P': confirm_on_device(rig, t); return;
+        case 'P': confirm_on_device(rig, now_ms); return;
         default: return;
     }
-    rig.run(t, t + kWriteGapMs);
-    t += kWriteGapMs;
+    rig.run(now_ms, now_ms + kWriteGapMs);
+    now_ms += kWriteGapMs;
 }
 
 }  // namespace
@@ -86,18 +87,18 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     rig.platform.log_flash().restore(logbook());
     if (rig.setup() != Status::Ok) __builtin_trap();
     rig.utc_offset_s = kTaxiOutSeconds + kFlightSeconds + kTaxiInSeconds;
-    uint32_t t = 0;
-    rig.seconds(t, kGroundSeconds, kTaxiMmS, kFieldAltitudeM);
+    uint32_t now_ms = 0;
+    rig.seconds(now_ms, kGroundSeconds, kTaxiMmS, kFieldAltitudeM);
     rig.raise_link(kFirstApp);
     rig.raise_link(kSecondApp);
 
     const uint8_t* end = data + size;
     const uint8_t* line = data;
-    for (int n = 0; n < kMaxLines && line < end; n++) {
-        const uint8_t* eol = static_cast<const uint8_t*>(std::memchr(line, '\n', end - line));
-        if (eol == nullptr) eol = end;
-        act(rig, t, line, static_cast<size_t>(eol - line));
-        line = eol + 1;
+    for (int line_index = 0; line_index < kMaxLines && line < end; line_index++) {
+        const uint8_t* line_end = static_cast<const uint8_t*>(std::memchr(line, '\n', end - line));
+        if (line_end == nullptr) line_end = end;
+        act(rig, now_ms, line, static_cast<size_t>(line_end - line));
+        line = line_end + 1;
     }
     return 0;
 }

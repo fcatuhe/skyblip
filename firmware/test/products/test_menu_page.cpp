@@ -39,31 +39,31 @@ go::Glass expected_page(Rig& rig) {
 TEST_CASE("product: a press opens the menu of the page a pilot is standing on") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
 
-    rig.press(t);
+    rig.press(now_ms);
     CHECK(rig.product.screen().mode() == go::Mode::Menu);
     CHECK(rig.product.screen().editor().page() == go::Page::Radar);
     CHECK(rig.product.screen().editor().active());
 
     // On the rows the pad still navigates: it walks them one at a time.
     REQUIRE(rig.product.screen().editor().focus() == go::MenuRow::Light);
-    move(rig, t);
+    move(rig, now_ms);
     CHECK(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
 
     // The pad past the last row hands the glass back to the page the menu belongs to.
-    focus_on(rig, t, go::MenuRow::Volume);
-    move(rig, t);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    move(rig, now_ms);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(rig.product.screen().editor().active());
 
     // And the next page along carries its own menu, not the radar's.
-    rig.tap(t);
-    settle(rig, t);
+    rig.tap(now_ms);
+    settle(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
-    rig.press(t);
-    settle(rig, t);
+    rig.press(now_ms);
+    settle(rig, now_ms);
     CHECK(rig.product.screen().editor().page() == go::Page::Nearby);
     CHECK(rig.product.screen().editor().focus() == go::MenuRow::Status);
 }
@@ -72,31 +72,31 @@ TEST_CASE("product: a press opens the menu of the page a pilot is standing on") 
 TEST_CASE("product: a press on the light row switches the front light and gives the page back") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE_FALSE(rig.product.screen().backlight());
     REQUIRE_FALSE(rig.platform.chips().epd.backlight);
 
-    open_menu(rig, t);
-    change(rig, t);
+    open_menu(rig, now_ms);
+    change(rig, now_ms);
     CHECK(rig.product.screen().backlight());
     CHECK(rig.platform.chips().epd.backlight);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Radar);
 
     // The row reads what the panel is doing, and the same two presses put it out.
-    open_menu(rig, t);
-    rig.run(t, t + 4000);
-    t += 4000;
+    open_menu(rig, now_ms);
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
     const go::Glass lit = expected_page(rig);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), lit.data(), go::Glass::kBytes) ==
           0);
-    change(rig, t);
+    change(rig, now_ms);
     CHECK_FALSE(rig.product.screen().backlight());
     CHECK_FALSE(rig.platform.chips().epd.backlight);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 
     // A switch, not a setting: nothing goes to flash.
-    run_past_the_write_settle(rig, t);
+    run_past_the_write_settle(rig, now_ms);
     go::Settings stored{};
     CHECK_FALSE(stored_settings(rig, stored));
 }
@@ -105,14 +105,14 @@ TEST_CASE("product: a press on the light row switches the front light and gives 
 TEST_CASE("product: a long touch the button joins switches the device off, it opens nothing") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.run(t, t + 500);
-    t += 500;
+    uint32_t now_ms = 100;
+    rig.run(now_ms, now_ms + 500);
+    now_ms += 500;
 
     rig.platform.board_gpio().pad_down = true;
     rig.platform.board_gpio().button_down = true;
-    rig.run(t, t + power::kLongPressHoldMs + 400);
-    t += power::kLongPressHoldMs + 400;
+    rig.run(now_ms, now_ms + power::kLongPressHoldMs + 400);
+    now_ms += power::kLongPressHoldMs + 400;
 
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Stow);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
@@ -122,16 +122,16 @@ TEST_CASE("product: a long touch the button joins switches the device off, it op
 TEST_CASE("product: the self test is a page the nearby menu opens") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.tap(t);
-    settle(rig, t);
+    uint32_t now_ms = 100;
+    rig.tap(now_ms);
+    settle(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::SelfTest);
-    change(rig, t);
-    rig.run(t, t + 4000);
-    t += 4000;
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::SelfTest);
+    change(rig, now_ms);
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
 
     CHECK(rig.product.screen().page() == go::Page::SelfTest);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
@@ -141,19 +141,19 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
           rig.product.self_test_page().count_black());
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
-    rig.tap(t);
-    settle(rig, t);
+    rig.tap(now_ms);
+    settle(rig, now_ms);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 }
 
 TEST_CASE("product: the settings page reaches the glass, drawn from what the device is running") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     rig.settings().aircraft_type = 4;
-    open_menu(rig, t);
-    rig.run(t, t + 4000);
-    t += 4000;
+    open_menu(rig, now_ms);
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
 
     const go::Glass expected = expected_page(rig);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
@@ -167,14 +167,14 @@ TEST_CASE("product: the settings page reaches the glass, drawn from what the dev
 TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that survives a boot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.settings().alarm_volume == go::AlarmVolume::Loud);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
-    change(rig, t);
-    rig.run(t, t + 500);
-    t += 500;
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    change(rig, now_ms);
+    rig.run(now_ms, now_ms + 500);
+    now_ms += 500;
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     // The screen did not write the flash: it said the settings had changed and
@@ -186,9 +186,9 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     // And the blob is one a device coming up cold accepts as itself.
     Rig again;
     uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
-    REQUIRE(again.platform.key_value().write("settings", blob, n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
+    REQUIRE(again.platform.key_value().write("settings", blob, count) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
     CHECK(again.settings().alarm_volume == go::AlarmVolume::Soft);
 }
@@ -196,17 +196,17 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
 TEST_CASE("product: the range and the plot a pilot picks on the panel survive a boot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.product.screen().range_step() == go::kDefaultRangeStep);
     REQUIRE(rig.settings().plot == go::RadarPlot::All);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Range);
-    change(rig, t);
-    focus_on(rig, t, go::MenuRow::Plot);
-    change(rig, t);
-    rig.run(t, t + 500);
-    t += 500;
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Range);
+    change(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Plot);
+    change(rig, now_ms);
+    rig.run(now_ms, now_ms + 500);
+    now_ms += 500;
 
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
@@ -215,9 +215,9 @@ TEST_CASE("product: the range and the plot a pilot picks on the panel survive a 
 
     Rig again;
     uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
-    REQUIRE(again.platform.key_value().write("settings", blob, n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
+    REQUIRE(again.platform.key_value().write("settings", blob, count) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
     CHECK(again.product.screen().range_step() == go::kDefaultRangeStep + 1);
     CHECK(again.settings().plot == go::RadarPlot::ToScale);
@@ -226,14 +226,14 @@ TEST_CASE("product: the range and the plot a pilot picks on the panel survive a 
 TEST_CASE("product: the aircraft type set on the panel is the one that goes on the air") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.settings().aircraft_type == go::kAircraftTypeLight);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::AircraftType);
-    change(rig, t);
-    change(rig, t);
-    run_past_the_write_settle(rig, t);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::AircraftType);
+    change(rig, now_ms);
+    change(rig, now_ms);
+    run_past_the_write_settle(rig, now_ms);
     CHECK(rig.settings().aircraft_type == 3);
 
     go::Settings stored{};
@@ -244,7 +244,7 @@ TEST_CASE("product: the aircraft type set on the panel is the one that goes on t
     // the own-ship service copies it off the settings on the next fix: the page
     // does not need a second wire, and it must not grow one.
     push_fix(rig, 25000, 500);
-    rig.run(t, t + 1000);
+    rig.run(now_ms, now_ms + 1000);
     CHECK(rig.state().own.aircraft_category == 3);
 }
 
@@ -253,25 +253,25 @@ TEST_CASE("product: the aircraft type set on the panel is the one that goes on t
 TEST_CASE("product: a callsign typed on the panel is stored and put on the air") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.settings().callsign[0] == 0);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Callsign);
-    change(rig, t);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Callsign);
+    change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().editing());
 
     // "F-J", rolled a character at a time: the pad rolls, the button steps on.
     const char* wanted = "F-J";
     for (int at = 0; at < 3; at++) {
-        while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, t);
-        change(rig, t);
+        while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
+        change(rig, now_ms);
     }
     // The rest is left blank, and the button walked off the end stores the name.
-    for (int at = 3; at < go::kCallsignCharacters; at++) change(rig, t);
+    for (int at = 3; at < go::kCallsignCharacters; at++) change(rig, now_ms);
     CHECK_FALSE(rig.product.screen().editor().editing());
 
-    run_past_the_write_settle(rig, t);
+    run_past_the_write_settle(rig, now_ms);
     CHECK(std::string(rig.settings().callsign) == "F-J");
 
     go::Settings stored{};
@@ -282,11 +282,11 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
 TEST_CASE("product: walking the rows without changing one writes nothing at all") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     const go::Settings before = rig.settings();
 
-    open_menu(rig, t);
-    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) move(rig, t);
+    open_menu(rig, now_ms);
+    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) move(rig, now_ms);
 
     // Off the last row and back to the traffic picture the pad pages through.
     CHECK(rig.product.screen().page() == go::Page::Radar);
@@ -299,19 +299,19 @@ TEST_CASE("product: walking the rows without changing one writes nothing at all"
     go::Settings stored{};
     CHECK_FALSE(stored_settings(rig, stored));
 
-    rig.tap(t);
+    rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 }
 
 TEST_CASE("product: a page nobody presses gives the traffic picture back on its own") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
 
-    rig.run(t, t + go::MenuEditor::kIdleReturnHoldMs + 2000);
-    t += go::MenuEditor::kIdleReturnHoldMs + 2000;
+    rig.run(now_ms, now_ms + go::MenuEditor::kIdleReturnHoldMs + 2000);
+    now_ms += go::MenuEditor::kIdleReturnHoldMs + 2000;
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(rig.product.screen().editor().active());
 }
@@ -319,27 +319,27 @@ TEST_CASE("product: a page nobody presses gives the traffic picture back on its 
 TEST_CASE("product: the pad walks out of a menu onto the page that opened it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
-    move(rig, t);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    move(rig, now_ms);
     CHECK(rig.product.screen().page() == go::Page::Radar);
 }
 
 TEST_CASE("product: an invalid setting is never written by the page that could not fix it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     // Whatever got it there, this struct is one go::validate refuses.
     rig.settings().aircraft_type = 200;
     REQUIRE(go::validate(rig.settings()) != Status::Ok);
 
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
-    change(rig, t);
-    change(rig, t);
-    rig.run(t, t + 500);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    change(rig, now_ms);
+    change(rig, now_ms);
+    rig.run(now_ms, now_ms + 500);
 
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
     go::Settings stored{};
@@ -350,28 +350,28 @@ TEST_CASE("product: an invalid setting is never written by the page that could n
 TEST_CASE("product: a screen change wipes the glass, and no keypress asks for a full") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    rig.run(t, t + 3000);  // the boot frame came through black, like every frame after it
-    t += 3000;
+    uint32_t now_ms = 100;
+    rig.run(now_ms, now_ms + 3000);  // the boot frame came through black, like every frame after it
+    now_ms += 3000;
     REQUIRE_FALSE(rig.platform.chips().epd.last_full);
 
-    open_menu(rig, t);
-    rig.run(t, t + 4000);
-    t += 4000;
+    open_menu(rig, now_ms);
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
     CHECK_FALSE(rig.platform.chips().epd.last_full);
     CHECK(rig.platform.chips().epd.present_count >= 3);  // boot, the black frame, then the page
 
-    focus_on(rig, t, go::MenuRow::Volume);
-    change(rig, t);
-    change(rig, t);
-    rig.run(t, t + 2000);
-    t += 2000;
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    change(rig, now_ms);
+    change(rig, now_ms);
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2000;
     CHECK_FALSE(rig.platform.chips().epd.last_full);
 
-    focus_on(rig, t, go::MenuRow::Volume);
-    move(rig, t);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    move(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
-    rig.run(t, t + 4000);
+    rig.run(now_ms, now_ms + 4000);
     CHECK_FALSE(rig.platform.chips().epd.last_full);
 }
 

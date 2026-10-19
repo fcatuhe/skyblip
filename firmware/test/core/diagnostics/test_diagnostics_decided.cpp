@@ -7,7 +7,7 @@
 
 using namespace skyblip;
 
-TEST_CASE("diag record: boot carries the image and the parts the corpus was taken on") {
+TEST_CASE("diagnostics record: boot carries the image and the parts the corpus was taken on") {
     diagnostics::Boot in{};
     in.capabilities = 0x00000FAB;
     in.firmware_build = 41237;
@@ -33,7 +33,8 @@ TEST_CASE("diag record: boot carries the image and the parts the corpus was take
 
 // A capture from before the byte has a zero there, and zero is Full: the flag says it was never
 // set.
-TEST_CASE("diag record: a boot older than its profile byte reads as unrecorded, not as full") {
+TEST_CASE(
+    "diagnostics record: a boot older than its profile byte reads as unrecorded, not as full") {
     diagnostics::Boot in{};
     in.profile = diagnostics::Profile::PowerRun;
     in.profile_recorded = true;
@@ -49,7 +50,7 @@ TEST_CASE("diag record: a boot older than its profile byte reads as unrecorded, 
     CHECK_FALSE(out.profile_recorded);
 }
 
-TEST_CASE("diag record: config carries the settings a replay has to assume") {
+TEST_CASE("diagnostics record: config carries the settings a replay has to assume") {
     diagnostics::Config in{};
     in.address = 0x5BCAFE;
     in.battery_offset_mv = -137;
@@ -73,7 +74,8 @@ TEST_CASE("diag record: config carries the settings a replay has to assume") {
     CHECK(out.metric);
 }
 
-TEST_CASE("diag record: config carries the power the transmitter was asked for and its PA row") {
+TEST_CASE(
+    "diagnostics record: config carries the power the transmitter was asked for and its PA row") {
     diagnostics::Config in{};
     in.tx_power_dbm = -9;
     in.pa_rated_dbm = 22;
@@ -92,7 +94,8 @@ constexpr uint8_t kConfigOfATransmitter[diagnostics::kRecordBytes] = {
 
 }  // namespace
 
-TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 on the wire") {
+TEST_CASE(
+    "diagnostics record: the transmitter's power sits in config bytes 12 and 13 on the wire") {
     diagnostics::Config in{};
     in.address = 0x5BCAFE;
     in.address_mapping_table = 7;
@@ -108,7 +111,7 @@ TEST_CASE("diag record: the transmitter's power sits in config bytes 12 and 13 o
     CHECK(std::memcmp(raw, kConfigOfATransmitter, diagnostics::kRecordBytes) == 0);
 }
 
-TEST_CASE("diag record: a dwell carries the plan the second ran under and its refusal") {
+TEST_CASE("diagnostics record: a dwell carries the plan the second ran under and its refusal") {
     diagnostics::Dwell in{};
     in.frequency_hz = timing::kMBand1Hz;
     in.start_ms = 800;
@@ -142,7 +145,7 @@ TEST_CASE("diag record: a dwell carries the plan the second ran under and its re
     CHECK(out.burst_armed);
 }
 
-TEST_CASE("diag record: a flight decision keeps the inputs that were one threshold away") {
+TEST_CASE("diagnostics record: a flight decision keeps the inputs that were one threshold away") {
     diagnostics::Flight in{};
     in.speed_mm_s = 11940;
     in.climb_mm_s = -1250;
@@ -170,7 +173,7 @@ TEST_CASE("diag record: a flight decision keeps the inputs that were one thresho
     CHECK(out.tx_settled);
 }
 
-TEST_CASE("diag record: a target keeps the geometry the alarm level was decided on") {
+TEST_CASE("diagnostics record: a target keeps the geometry the alarm level was decided on") {
     diagnostics::Traffic in{};
     in.address = 0x3F1002;
     in.distance_m = 2740;
@@ -202,7 +205,7 @@ TEST_CASE("diag record: a target keeps the geometry the alarm level was decided 
     CHECK(out.position_valid);
 }
 
-TEST_CASE("diag record: a durable write keeps where in the second it was placed") {
+TEST_CASE("diagnostics record: a durable write keeps where in the second it was placed") {
     diagnostics::Write in{};
     in.waited_ms = 2870;
     in.phase_ms = 203;
@@ -224,7 +227,7 @@ TEST_CASE("diag record: a durable write keeps where in the second it was placed"
     CHECK(out.pending);
 }
 
-TEST_CASE("diag record: the glass keeps what was on it and how long it had been") {
+TEST_CASE("diagnostics record: the glass keeps what was on it and how long it had been") {
     diagnostics::Screen in{};
     in.since_page_shown_ms = 61000;
     in.page = 4;
@@ -250,7 +253,8 @@ TEST_CASE("diag record: the glass keeps what was on it and how long it had been"
     CHECK(out.present_us == in.present_us);
 }
 
-TEST_CASE("diag record: a loop window keeps its longest pass and its longest wait, each dated") {
+TEST_CASE(
+    "diagnostics record: a loop window keeps its longest pass and its longest wait, each dated") {
     diagnostics::Loop in{};
     in.passes = 87;
     in.busy_ms = 231;
@@ -272,7 +276,7 @@ TEST_CASE("diag record: a loop window keeps its longest pass and its longest wai
     CHECK(out.worst_tick_ms == in.worst_tick_ms);
 }
 
-TEST_CASE("diag record: a gap names its own size, so a hole is never silent") {
+TEST_CASE("diagnostics record: a gap names its own size, so a hole is never silent") {
     diagnostics::Gap in{};
     in.dropped = 37;
     in.span_ms = 1204;
@@ -287,7 +291,7 @@ TEST_CASE("diag record: a gap names its own size, so a hole is never silent") {
 }
 
 // The one record that says the tail is not torn: a session without it was cut.
-TEST_CASE("diag record: the end marker counts the session it closes") {
+TEST_CASE("diagnostics record: the end marker counts the session it closes") {
     diagnostics::End in{};
     in.records = 41200;
     in.dropped = 17;
@@ -297,7 +301,7 @@ TEST_CASE("diag record: the end marker counts the session it closes") {
     CHECK(out.dropped == in.dropped);
 }
 
-TEST_CASE("diag record: duty carries how long each consumer was on") {
+TEST_CASE("diagnostics record: duty carries how long each consumer was on") {
     diagnostics::Duty in{};
     in.panel_partial_refreshes = 1904;
     in.panel_full_refreshes = 37;
@@ -317,7 +321,8 @@ TEST_CASE("diag record: duty carries how long each consumer was on") {
     CHECK(out.annunciator_ms == in.annunciator_ms);
 }
 
-TEST_CASE("diag record: a duty counter past 16 bits wraps, because a clamp would lose the delta") {
+TEST_CASE(
+    "diagnostics record: a duty counter past 16 bits wraps, because a clamp would lose the delta") {
     diagnostics::Duty in{};
     in.backlight_ms = 65536 + 2000;
     in.rx_armed_ms = 4000000000u;
@@ -357,7 +362,7 @@ uint32_t duty_delta(uint32_t later, uint32_t earlier) { return (later - earlier)
 
 }  // namespace
 
-TEST_CASE("diag record: two duty records a wrap apart subtract to the true interval") {
+TEST_CASE("diagnostics record: two duty records a wrap apart subtract to the true interval") {
     diagnostics::Duty before{};
     before.backlight_ms = 65000;
     before.rx_armed_ms = 60000;

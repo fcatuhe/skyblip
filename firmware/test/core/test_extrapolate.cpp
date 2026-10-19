@@ -36,8 +36,8 @@ double north_m(int32_t from_latitude_1e7, int32_t to_latitude_1e7) {
 }
 
 double east_m(const model::Ownship& from, int32_t to_longitude_1e7) {
-    const double coslat = std::cos(from.latitude_1e7 / 1e7 * M_PI / 180.0);
-    return (to_longitude_1e7 - from.longitude_1e7) * kMetresPer1e7 * coslat;
+    const double cos_latitude = std::cos(from.latitude_1e7 / 1e7 * M_PI / 180.0);
+    return (to_longitude_1e7 - from.longitude_1e7) * kMetresPer1e7 * cos_latitude;
 }
 
 }  // namespace

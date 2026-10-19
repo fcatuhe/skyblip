@@ -21,8 +21,8 @@ using namespace skyblip;
 
 namespace {
 
-void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
-void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 25000, 900); }
+void taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 0, 300); }
+void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, seconds, 25000, 900); }
 
 int config_frames(Rig& rig) { return rig.platform.link().count_on(events::Endpoint::Config); }
 
@@ -51,8 +51,8 @@ std::string last_frame_on(Rig& rig, events::Endpoint endpoint) {
 TEST_CASE("companion link: the product raises LinkUp through its own platform, not by hand") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 3);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 3);
     REQUIRE_FALSE(rig.link_up());
 
     rig.raise_link(0x0042);
@@ -60,19 +60,19 @@ TEST_CASE("companion link: the product raises LinkUp through its own platform, n
     // guards was the other half of this pair, and only the other half: the
     // service was never told, because nothing carried it.
     CHECK(rig.platform.link().up());
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     CHECK(rig.link_up());
     // Connected is not configuring: nothing is claimed until the app asks.
     CHECK_FALSE(rig.product.config_link().config().claim().held());
     rig.send("{\"cmd\":\"get\"}");
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     CHECK(rig.product.config_link().config().claim_holder() == 0x0042);
 
     rig.drop_link();
     CHECK_FALSE(rig.platform.link().up());
-    rig.run(t, t + 100);
+    rig.run(now_ms, now_ms + 100);
     CHECK_FALSE(rig.link_up());
 }
 
@@ -83,24 +83,24 @@ TEST_CASE(
     "companion link: a connected tablet's gauge moves without asking, and stops when it goes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 4);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 4);
     rig.platform.link().clear();
 
     // Nobody is listening yet: the cell can do what it likes and nothing is sent.
     rig.platform.battery().divider_mv = 3900;
-    taxi(rig, t, 3);
+    taxi(rig, now_ms, 3);
     CHECK(config_frames(rig) == 0);
 
     rig.raise_link();
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     REQUIRE(rig.link_up());
     // A connection on its own is not news about the battery.
     CHECK(config_frames(rig) == 0);
 
     rig.platform.battery().divider_mv = 3600;
-    taxi(rig, t, 4);
+    taxi(rig, now_ms, 4);
     const int pushed = config_frames(rig);
     CHECK(pushed >= 1);
     const std::string status = last_frame_on(rig, events::Endpoint::Config);
@@ -108,15 +108,15 @@ TEST_CASE(
     CHECK(status.find("\"battery_percent\"") != std::string::npos);
 
     rig.drop_link();
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     REQUIRE_FALSE(rig.link_up());
 
     // A charger going in is the loudest thing that can happen to the gauge, and
     // with nobody there it is silence, not a notification into a dead handle.
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 4100;
-    taxi(rig, t, 5);
+    taxi(rig, now_ms, 5);
     CHECK(config_frames(rig) == pushed);
 }
 
@@ -125,13 +125,13 @@ TEST_CASE(
 TEST_CASE("companion link: a callsign is written by an app and authorised on the glass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 6);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 6);
     REQUIRE(rig.settings().callsign[0] == 0);
 
     rig.send("{\"cmd\":\"set\",\"callsign\":\"F-JABC\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     // Staged, not applied: the glass has the question and nothing is stored yet.
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Set);
     CHECK(rig.settings().callsign[0] == 0);
@@ -144,9 +144,9 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),
                       go::Glass::kBytes) == 0);
 
-    rig.double_press(t);
-    rig.run(t, t + 1000);
-    t += 1000;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 1000);
+    now_ms += 1000;
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
 }
 
@@ -154,38 +154,38 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
 TEST_CASE("companion link: a callsign written in flight is refused, not staged") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    fly(rig, t, 6);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 6);
 
     rig.send("{\"cmd\":\"set\",\"callsign\":\"F-JABC\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
-    rig.double_press(t);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.settings().callsign[0] == 0);
 }
 
 TEST_CASE("companion link: a connection that drops takes the standing prompt with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
 
     // The phone that asked is gone. An authorisation left standing on the glass
     // is one a stranger can walk up to and answer with the button.
     rig.drop_link();
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().prompt() == comms::Pending::None);
     CHECK_FALSE(rig.product.config_link().config().upload_allowed());
@@ -194,25 +194,25 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
 TEST_CASE("companion link: a dropped connection closes the upload window it opened") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
 
     rig.raise_link();
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
-    rig.double_press(t);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     REQUIRE(rig.product.config_link().config().upload_allowed());
 
     // The window is what the MCUmgr hook consults before it accepts a byte of
     // image, so a phone that walks away with it open leaves the secondary slot
     // writable by anyone in range for the rest of the ten minutes.
     rig.drop_link();
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK_FALSE(rig.product.config_link().config().upload_allowed());
 }
 
@@ -223,21 +223,21 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
 TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for the next one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    rig.seconds(t, 60, 50000, 800);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    rig.seconds(now_ms, 60, 50000, 800);
+    taxi(rig, now_ms, 40);
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     rig.raise_link(11);
     rig.send_log("{\"cmd\":\"erase\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
 
     rig.drop_link();
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
@@ -246,8 +246,8 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     rig.platform.link().clear();
     rig.raise_link(12);
     rig.send_log("{\"cmd\":\"list\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     REQUIRE(rig.link_up());
     CHECK(rig.product.config_link().config().claim_holder() == 12);
     CHECK(rig.platform.link().count_on(events::Endpoint::Log) >= 1);
@@ -259,22 +259,22 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
 TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
 
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.raise_link(5);
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
 
     // 182 is an iPhone's usual answer, and it lands after the service is already
     // waiting for a button press. The prompt is the phone's, and it is still the
     // same phone.
     rig.platform.link().declare_payload_bytes(182);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.link_up());
     CHECK(rig.product.config_link().config().claim_holder() == 5);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -285,17 +285,17 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
 TEST_CASE("companion link: two centrals read the same traffic stream") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 3);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 3);
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     REQUIRE(rig.platform.link().links() == 2);
 
     rig.platform.link().clear();
-    taxi(rig, t, 3);
+    taxi(rig, now_ms, 3);
     // One frame formatted once, put on every subscribed connection by the
     // platform: what the host model records is the broadcast, session 0.
     CHECK(rig.platform.link().count_to(0, events::Endpoint::Nmea) >= 3);
@@ -306,21 +306,21 @@ TEST_CASE("companion link: two centrals read the same traffic stream") {
 TEST_CASE("companion link: the first app to ask holds config, and the second is told who has it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
     rig.send_from(1, "{\"cmd\":\"get\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     REQUIRE(rig.product.config_link().config().claim_holder() == 1);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
     rig.send_from(2, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     // Refused, with a reason and to the app that asked. Not silence, which a page
     // cannot tell from a device that died.
     const std::string refusal = rig.last_on(events::Endpoint::Config);
@@ -333,14 +333,14 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
 TEST_CASE("companion link: a reply is sized for the app that asked, not the narrowest link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
     rig.platform.link().declare_payload_bytes(2, ports::kMinimumLinkPayloadBytes);
     rig.send_from(1, "{\"cmd\":\"get\"}");
-    rig.run(t, t + 200);
+    rig.run(now_ms, now_ms + 200);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
     CHECK(rig.last_on(events::Endpoint::Config).size() > ports::kMinimumLinkPayloadBytes);
     CHECK(rig.platform.link().refused_oversize == 0);
@@ -351,35 +351,35 @@ TEST_CASE("companion link: a reply is sized for the app that asked, not the narr
 TEST_CASE("companion link: a second app leaving does not cancel the holder's prompt") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
 
     rig.raise_link(1);
     rig.raise_link(2);
     rig.send_from(1, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
 
     rig.drop_link(2);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
     CHECK(rig.product.config_link().config().claim_holder() == 1);
 
     // And when the holder leaves, the prompt goes with it and the claim is free
     // for the phone that is still connected.
     rig.drop_link(1);
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK_FALSE(rig.product.config_link().config().claim().held());
     CHECK_FALSE(rig.link_up());
 
     rig.raise_link(2);
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     rig.send_from(2, "{\"cmd\":\"get\"}");
-    rig.run(t, t + 200);
+    rig.run(now_ms, now_ms + 200);
     CHECK(rig.product.config_link().config().claim_holder() == 2);
 }

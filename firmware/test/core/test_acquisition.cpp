@@ -13,70 +13,70 @@ namespace {
 GnssSolution blind() { return GnssSolution{}; }
 
 GnssSolution timed() {
-    GnssSolution s;
-    s.utc_valid = true;
-    s.utc_s = 1767225600;
-    return s;
+    GnssSolution solution;
+    solution.utc_valid = true;
+    solution.utc_s = 1767225600;
+    return solution;
 }
 
 GnssSolution fixed() {
-    GnssSolution s = timed();
-    s.fix_valid = true;
-    return s;
+    GnssSolution solution = timed();
+    solution.fix_valid = true;
+    return solution;
 }
 
 }  // namespace
 
 TEST_CASE("acquisition: a receiver that has said nothing is silent, not blind") {
-    Acquisition a;
-    CHECK(a.stage() == Stage::Silent);
+    Acquisition acquisition;
+    CHECK(acquisition.stage() == Stage::Silent);
 
-    a.tick(3000);
-    CHECK(a.stage() == Stage::Silent);
+    acquisition.tick(3000);
+    CHECK(acquisition.stage() == Stage::Silent);
     // The count runs from boot, so a bench sees how long it has been quiet.
-    CHECK(a.stage_ms(3000) == 3000u);
+    CHECK(acquisition.stage_ms(3000) == 3000u);
 }
 
 TEST_CASE("acquisition: sentences with no date are a receiver that is blind") {
-    Acquisition a;
-    a.observe(blind(), 1000);
-    CHECK(a.stage() == Stage::Blind);
-    CHECK(a.stage_ms(4000) == 3000u);
+    Acquisition acquisition;
+    acquisition.observe(blind(), 1000);
+    CHECK(acquisition.stage() == Stage::Blind);
+    CHECK(acquisition.stage_ms(4000) == 3000u);
 
-    a.observe(blind(), 2000);
-    a.tick(2000);
-    CHECK(a.stage() == Stage::Blind);
+    acquisition.observe(blind(), 2000);
+    acquisition.tick(2000);
+    CHECK(acquisition.stage() == Stage::Blind);
     // Still the same stage, so the clock behind it was not restarted.
-    CHECK(a.stage_ms(4000) == 3000u);
+    CHECK(acquisition.stage_ms(4000) == 3000u);
 }
 
 // A date can only be read off a satellite, so it is the rung that says the antenna sees sky.
 TEST_CASE("acquisition: a decoded date is a satellite read, and outranks the blind rung") {
-    Acquisition a;
-    a.observe(blind(), 1000);
-    a.observe(timed(), 2000);
-    CHECK(a.stage() == Stage::Solving);
-    CHECK(a.stage_ms(5000) == 3000u);
+    Acquisition acquisition;
+    acquisition.observe(blind(), 1000);
+    acquisition.observe(timed(), 2000);
+    CHECK(acquisition.stage() == Stage::Solving);
+    CHECK(acquisition.stage_ms(5000) == 3000u);
 
-    a.observe(fixed(), 6000);
-    CHECK(a.stage() == Stage::Fixed);
-    CHECK(a.stage_ms(6000) == 0u);
+    acquisition.observe(fixed(), 6000);
+    CHECK(acquisition.stage() == Stage::Fixed);
+    CHECK(acquisition.stage_ms(6000) == 0u);
 }
 
 TEST_CASE("acquisition: a receiver that stops talking goes silent, whatever it last said") {
-    Acquisition a;
-    a.observe(fixed(), 1000);
-    REQUIRE(a.stage() == Stage::Fixed);
+    Acquisition acquisition;
+    acquisition.observe(fixed(), 1000);
+    REQUIRE(acquisition.stage() == Stage::Fixed);
 
-    a.tick(1000 + kSentenceMaxAgeMs - 1);
-    CHECK(a.stage() == Stage::Fixed);
+    acquisition.tick(1000 + kSentenceMaxAgeMs - 1);
+    CHECK(acquisition.stage() == Stage::Fixed);
 
-    a.tick(1000 + kSentenceMaxAgeMs);
-    CHECK(a.stage() == Stage::Silent);
-    CHECK(a.stage_ms(1000 + kSentenceMaxAgeMs) == 0u);
+    acquisition.tick(1000 + kSentenceMaxAgeMs);
+    CHECK(acquisition.stage() == Stage::Silent);
+    CHECK(acquisition.stage_ms(1000 + kSentenceMaxAgeMs) == 0u);
 
-    a.observe(timed(), 9000);
-    CHECK(a.stage() == Stage::Solving);
+    acquisition.observe(timed(), 9000);
+    CHECK(acquisition.stage() == Stage::Solving);
 }
 
 // A solved receiver already reads GROUND, TAXI or FLIGHT: a second word for it would be one too

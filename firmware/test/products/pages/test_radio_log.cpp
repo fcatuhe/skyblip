@@ -14,36 +14,36 @@ using namespace skyblip::go;
 namespace {
 
 constexpr int kFirstRowY = 27;
-constexpr int kLineH = 10;
+constexpr int kLineHeight = 10;
 
 int ink_in_row(const Glass& canvas, int index) {
-    const int y0 = kFirstRowY + index * kLineH;
-    int n = 0;
+    const int y0 = kFirstRowY + index * kLineHeight;
+    int count = 0;
     for (int y = y0; y < y0 + 8; y++)
         for (int x = 0; x < Glass::kWidth; x++)
-            if (canvas.get_pixel(x, y)) n++;
-    return n;
+            if (canvas.get_pixel(x, y)) count++;
+    return count;
 }
 
 radio::Entry entry_of(radio::Verdict verdict) {
-    radio::Entry e{};
-    e.verdict = verdict;
-    e.band = model::Band::M;
-    e.at_s = 45296;  // 12:34:56
-    e.into_ms = 462;
-    e.phase_valid = true;
-    e.utc_dated = true;
-    return e;
+    radio::Entry entry{};
+    entry.verdict = verdict;
+    entry.band = model::Band::M;
+    entry.at_s = 45296;  // 12:34:56
+    entry.into_ms = 462;
+    entry.phase_valid = true;
+    entry.utc_dated = true;
+    return entry;
 }
 
 radio::Entry received(uint32_t address, int8_t rssi_dbm) {
-    radio::Entry e = entry_of(radio::Verdict::Received);
-    e.source = model::Source::AdslDirect;
-    e.address = address;
-    e.address_valid = true;
-    e.rssi_dbm = rssi_dbm;
-    e.rssi_valid = true;
-    return e;
+    radio::Entry entry = entry_of(radio::Verdict::Received);
+    entry.source = model::Source::AdslDirect;
+    entry.address = address;
+    entry.address_valid = true;
+    entry.rssi_dbm = rssi_dbm;
+    entry.rssi_valid = true;
+    return entry;
 }
 
 RadioLogSnapshot with(const radio::Log& log) {
@@ -77,9 +77,9 @@ TEST_CASE("radio log page: a received frame shows when, from whom, and how loud"
 // The reading two devices are compared on: the same burst, sent at one phase and heard at another.
 TEST_CASE("radio log page: the phase a burst landed at is printed to the millisecond") {
     radio::Log log;
-    radio::Entry e = received(0x3FA21C, -87);
-    e.into_ms = 7;
-    log.record(e);
+    radio::Entry entry = received(0x3FA21C, -87);
+    entry.into_ms = 7;
+    log.record(entry);
 
     Glass canvas;
     draw_radio_log(canvas, with(log));
@@ -89,9 +89,9 @@ TEST_CASE("radio log page: the phase a burst landed at is printed to the millise
 // A phase against an edge nothing latched would be a number the reader could act on wrongly.
 TEST_CASE("radio log page: a burst with no phase measured shows the second alone") {
     radio::Log log;
-    radio::Entry e = received(0x3FA21C, -87);
-    e.phase_valid = false;
-    log.record(e);
+    radio::Entry entry = received(0x3FA21C, -87);
+    entry.phase_valid = false;
+    log.record(entry);
 
     Glass canvas;
     draw_radio_log(canvas, with(log));
@@ -113,17 +113,17 @@ TEST_CASE("radio log page: the M band's two channels read apart, and the O band 
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 13 * 6, kFirstRowY, "O"));
     CHECK_FALSE(reads_at(canvas, 4 + 13 * 6, kFirstRowY, "O0"));
-    CHECK(reads_at(canvas, 4 + 13 * 6, kFirstRowY + kLineH, "M1"));
+    CHECK(reads_at(canvas, 4 + 13 * 6, kFirstRowY + kLineHeight, "M1"));
 }
 
 // Sixteen rows of SENT is sixteen rows a reader scans past to find the one that failed.
 TEST_CASE("radio log page: a transmission that worked prints no verdict at all") {
     radio::Log log;
-    radio::Entry e = entry_of(radio::Verdict::Transmitted);
-    e.tx_keyed_us = 1523;
-    e.tx_span_us = 6344;
-    e.tx_span_valid = true;
-    log.record(e);
+    radio::Entry entry = entry_of(radio::Verdict::Transmitted);
+    entry.tx_keyed_us = 1523;
+    entry.tx_span_us = 6344;
+    entry.tx_span_valid = true;
+    log.record(entry);
 
     Glass canvas;
     draw_radio_log(canvas, with(log));
@@ -145,7 +145,7 @@ TEST_CASE("radio log page: a sent burst names the schedule it went out on") {
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY, "AIR"));
-    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY + kLineH, "GROUND"));
+    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY + kLineHeight, "GROUND"));
 }
 
 // A name is on neither schedule, so it says which burst it was where the rate would be.
@@ -202,8 +202,8 @@ TEST_CASE("radio log page: the hour's refusal reads apart from a burst that neve
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "LOST"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineH, "LOST"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + 2 * kLineH, "HELD"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineHeight, "LOST"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + 2 * kLineHeight, "HELD"));
 }
 
 // Bits the air corrupted and bits nothing here knew what to do with are different faults.
@@ -226,8 +226,8 @@ TEST_CASE("radio log page: the three things that are not a decode read apart") {
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "WAIT"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineH, "TYPE"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + 2 * kLineH, "DEC"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineHeight, "TYPE"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + 2 * kLineHeight, "DEC"));
 }
 
 // A burst that named no system is a neighbour's dialect, not a frame this firmware got wrong.
@@ -239,7 +239,7 @@ TEST_CASE("radio log page: a burst that framed as neither system reads apart fro
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "SYNC"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineH, "DEC"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineHeight, "DEC"));
 }
 
 // The row that ends the support case: a device and its neighbour disagreeing on the second.
@@ -255,7 +255,7 @@ TEST_CASE("radio log page: a frame keyed on another second prints the offset it 
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "KEY-2"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineH, "KEY+18"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineHeight, "KEY+18"));
 }
 
 // A letter per system was a legend to learn; the column the verdicts use holds the word.
@@ -272,8 +272,8 @@ TEST_CASE("radio log page: a reception that worked names the system it framed as
     Glass canvas;
     draw_radio_log(canvas, with(log));
     CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "UPLINK"));
-    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineH, "FLARM"));
-    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY + kLineH, "4C11A0"));
+    CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY + kLineHeight, "FLARM"));
+    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY + kLineHeight, "4C11A0"));
 }
 
 // Two photos of a bench tape and no way to tell whose frames were being refused.
@@ -313,13 +313,13 @@ TEST_CASE("radio log page: own-ship's two outcomes read apart, and both read as 
     const Case cases[] = {{radio::Verdict::Lost, "LOST"},
                           {radio::Verdict::Held, "HELD"},
                           {radio::Verdict::Unarmed, "LOST"}};
-    for (const Case& c : cases) {
+    for (const Case& example : cases) {
         radio::Log log;
-        log.record(entry_of(c.verdict));
+        log.record(entry_of(example.verdict));
         Glass canvas;
         draw_radio_log(canvas, with(log));
         CHECK(reads_at(canvas, 4 + 10 * 6, kFirstRowY, "TX"));
-        CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, c.reads));
+        CHECK(reads_at(canvas, 4 + 16 * 6, kFirstRowY, example.reads));
     }
 }
 
@@ -349,10 +349,10 @@ TEST_CASE("radio log page: the newest burst is the top row and the rest fall awa
 // Before a fix the stamp is not a wall clock, and does not pretend to be one.
 TEST_CASE("radio log page: without UTC the stamp counts from boot") {
     radio::Log log;
-    radio::Entry e = received(0x3FA21C, -87);
-    e.utc_dated = false;
-    e.at_s = 412;
-    log.record(e);
+    radio::Entry entry = received(0x3FA21C, -87);
+    entry.utc_dated = false;
+    entry.at_s = 412;
+    log.record(entry);
 
     Glass canvas;
     draw_radio_log(canvas, with(log));
@@ -414,5 +414,5 @@ TEST_CASE("radio log page: a silent band says so rather than showing an empty gr
     radio::Log log;
     Glass canvas;
     draw_radio_log(canvas, with(log));
-    CHECK(reads_at(canvas, 4, kFirstRowY + kLineH, "NOTHING ON AIR YET"));
+    CHECK(reads_at(canvas, 4, kFirstRowY + kLineHeight, "NOTHING ON AIR YET"));
 }

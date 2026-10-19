@@ -46,14 +46,14 @@ TEST_CASE("capture: a flights session claims a diagnostics sector, and the captu
             sector < count - 40 ? store::SectorOwner::Flights : store::SectorOwner::Diagnostics,
             sector + 1, sector < count - 40 ? 4000 : 9000);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 5);
-    arm_from_the_page(rig, t);
-    taxi(rig, t, 5);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 5);
+    arm_from_the_page(rig, now_ms);
+    taxi(rig, now_ms, 5);
     const uint32_t captured = rig.product.capture().records_written();
     REQUIRE(captured > 0);
 
-    fly(rig, t, 30);
+    fly(rig, now_ms, 30);
     CHECK(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() > 0);
     CHECK(rig.product.flight_log().records_dropped() == 0);
@@ -72,12 +72,12 @@ TEST_CASE("capture: the capture takes flights sectors down to the floor and no f
         label_sector(rig.platform.log_flash(), sector, store::SectorOwner::Flights, sector + 1,
                      4000 + sector / 4);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 2);
-    arm_from_the_page(rig, t);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 2);
+    arm_from_the_page(rig, now_ms);
     CHECK(rig.state().capture.evicted_flights > 0);
 
-    feed(rig, t, flight::kLogSlotsPerSector * 6);
+    feed(rig, now_ms, flight::kLogSlotsPerSector * 6);
     CHECK(rig.product.capture().capturing());
     CHECK(rig.product.capture().sectors_owned() >= 5);
 
@@ -136,15 +136,15 @@ struct SmallPoolRig {
             label(sector, store::SectorOwner::Flights, sector + 1, 4000);
     }
 
-    uint32_t feed_until_stopped(uint32_t& t, uint32_t records) {
+    uint32_t feed_until_stopped(uint32_t& now_ms, uint32_t records) {
         uint32_t pushed = 0;
         while (pushed < records && capture.capturing()) {
             for (int i = 0; i < diagnostics::Recorder::kMaxRecords && pushed < records; i++)
                 if (recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
-            capture.tick(t);
-            t += 50;
+            capture.tick(now_ms);
+            now_ms += 50;
         }
-        capture.tick(t);
+        capture.tick(now_ms);
         return pushed;
     }
 };
@@ -182,15 +182,15 @@ CaptureWalk walk_sectors(SmallPoolRig& rig, uint32_t session) {
 }
 
 // Slowly enough that the RAM ring never overflows, so every hole on the flash is the store's.
-void feed_gently(SmallPoolRig& rig, uint32_t& t, uint32_t records) {
+void feed_gently(SmallPoolRig& rig, uint32_t& now_ms, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.capture.capturing()) {
         for (int i = 0; i < 8 && pushed < records; i++)
             if (rig.recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
-        rig.capture.tick(t);
-        t += 50;
+        rig.capture.tick(now_ms);
+        now_ms += 50;
     }
-    rig.capture.tick(t);
+    rig.capture.tick(now_ms);
 }
 
 }  // namespace
@@ -204,14 +204,14 @@ TEST_CASE("capture: the floor refuses a sector, the refusal reaches the flash, t
         rig.label(sector, store::SectorOwner::Flights, sector + 1, 4000);
     rig.setup();
 
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     rig.recorder.arm();
-    rig.capture.tick(t);
-    t += 50;
+    rig.capture.tick(now_ms);
+    now_ms += 50;
     REQUIRE(rig.capture.capturing());
     REQUIRE(rig.capture.sectors_owned() == 1);
 
-    rig.feed_until_stopped(t, flight::kLogSlotsPerSector * 3);
+    rig.feed_until_stopped(now_ms, flight::kLogSlotsPerSector * 3);
     CHECK_FALSE(rig.capture.capturing());
     CHECK_FALSE(rig.recorder.armed());
     CHECK(rig.capture.stopped() == bus::CaptureStop::NoSectors);
@@ -240,14 +240,14 @@ TEST_CASE("capture: a rolling capture writes the hole it made and names the buil
     rig.fill_flights_to_the_floor();
     rig.setup();
 
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     rig.recorder.arm();
-    rig.capture.tick(t);
-    t += 50;
+    rig.capture.tick(now_ms);
+    now_ms += 50;
     REQUIRE(rig.capture.capturing());
     const uint32_t session = rig.capture.session_id();
 
-    feed_gently(rig, t, flight::kLogSlotsPerSector * 3);
+    feed_gently(rig, now_ms, flight::kLogSlotsPerSector * 3);
     CHECK(rig.capture.capturing());
     CHECK(rig.capture.stopped() == bus::CaptureStop::None);
     CHECK(rig.pool.allocator().owned(store::SectorOwner::Flights) ==
@@ -265,23 +265,23 @@ TEST_CASE("capture: a second capture counts its own records and not the first on
     rig.fill_flights_to_the_floor();
     rig.setup();
 
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     rig.recorder.arm();
-    rig.capture.tick(t);
-    t += 50;
-    feed_gently(rig, t, 200);
+    rig.capture.tick(now_ms);
+    now_ms += 50;
+    feed_gently(rig, now_ms, 200);
     rig.recorder.disarm();
-    rig.capture.tick(t);
-    t += 50;
+    rig.capture.tick(now_ms);
+    now_ms += 50;
     const uint32_t first = rig.capture.records_written();
     REQUIRE(first > 100);
     REQUIRE_FALSE(rig.capture.capturing());
 
     rig.recorder.arm();
-    rig.capture.tick(t);
-    t += 50;
+    rig.capture.tick(now_ms);
+    now_ms += 50;
     REQUIRE(rig.capture.capturing());
-    feed_gently(rig, t, 20);
+    feed_gently(rig, now_ms, 20);
     CHECK(rig.capture.records_written() > 0);
     CHECK(rig.capture.records_written() < first);
 }
@@ -290,15 +290,15 @@ TEST_CASE("capture: a second capture counts its own records and not the first on
 TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the queue is") {
     SmallPoolRig rig;
     rig.setup();
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     rig.recorder.arm();
-    rig.capture.tick(t);
+    rig.capture.tick(now_ms);
     REQUIRE(rig.capture.capturing());
 
     for (int i = 0; i < diagnostics::Recorder::kMaxRecords; i++)
         REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const int queued = rig.recorder.queued();
-    rig.capture.tick(t += 50);
+    rig.capture.tick(now_ms += 50);
     CHECK(rig.recorder.queued() ==
           queued - static_cast<int>(go::CaptureService::kDrainCeilingRecords));
 }
@@ -319,18 +319,18 @@ uint32_t frontier_sector(SmallPoolRig& rig) {
     return sector;
 }
 
-SmallPoolRig& armed(SmallPoolRig& rig, uint32_t& t) {
+SmallPoolRig& armed(SmallPoolRig& rig, uint32_t& now_ms) {
     rig.setup();
     rig.recorder.arm();
-    rig.capture.tick(t);
+    rig.capture.tick(now_ms);
     REQUIRE(rig.capture.capturing());
     return rig;
 }
 
-void drain_to_slot(SmallPoolRig& rig, uint32_t& t, uint32_t slot) {
+void drain_to_slot(SmallPoolRig& rig, uint32_t& now_ms, uint32_t slot) {
     while (frontier_slot(rig) < slot) {
         REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
-        rig.capture.tick(t += 50);
+        rig.capture.tick(now_ms += 50);
     }
     REQUIRE(frontier_slot(rig) == slot);
 }
@@ -365,17 +365,17 @@ void check_erased(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t co
 // Build 895: one 24 B program per record held the loop ~2.5 ms each, ~40 ms in the uplink dwell.
 TEST_CASE("capture: a drained second costs one flash write per NOR page, not one per record") {
     SmallPoolRig rig;
-    uint32_t t = 1000;
-    armed(rig, t);
+    uint32_t now_ms = 1000;
+    armed(rig, now_ms);
     // Slot 10 is the first of page 1: the 16 B label and slots 0-9 fill page 0 exactly.
-    drain_to_slot(rig, t, kRecordsPerPage);
+    drain_to_slot(rig, now_ms, kRecordsPerPage);
     const uint32_t sector = frontier_sector(rig);
     const uint32_t writes = rig.flash.writes;
     const uint32_t programs = rig.flash.programs;
 
     const uint32_t second = diagnostics::Recorder::kPeriodicRecordsPerSecond;
     queue_numbered(rig, second);
-    rig.capture.tick(t += 50);
+    rig.capture.tick(now_ms += 50);
 
     CHECK(rig.recorder.queued() == 0);
     CHECK(rig.flash.writes - writes == (second + kRecordsPerPage - 1) / kRecordsPerPage);
@@ -386,15 +386,15 @@ TEST_CASE("capture: a drained second costs one flash write per NOR page, not one
 
 TEST_CASE("capture: a write stops at the sector's end, and the next sector opens with its claim") {
     SmallPoolRig rig;
-    uint32_t t = 1000;
-    armed(rig, t);
+    uint32_t now_ms = 1000;
+    armed(rig, now_ms);
     const uint32_t slots = rig.pool.slots_per_sector();
-    drain_to_slot(rig, t, slots - 5);
+    drain_to_slot(rig, now_ms, slots - 5);
     const uint32_t first = frontier_sector(rig);
     const uint32_t writes = rig.flash.writes;
 
     queue_numbered(rig, 10);
-    rig.capture.tick(t += 50);
+    rig.capture.tick(now_ms += 50);
 
     CHECK(rig.recorder.queued() == 0);
     const uint32_t second = frontier_sector(rig);
@@ -409,9 +409,9 @@ TEST_CASE("capture: a write stops at the sector's end, and the next sector opens
 // The window closes between two writes of one drain: the second write's records stay in the ring.
 TEST_CASE("capture: a window that closes mid-drain commits only the records the flash took") {
     SmallPoolRig rig;
-    uint32_t t = 1000;
-    armed(rig, t);
-    drain_to_slot(rig, t, kRecordsPerPage);
+    uint32_t now_ms = 1000;
+    armed(rig, now_ms);
+    drain_to_slot(rig, now_ms, kRecordsPerPage);
     const uint32_t sector = frontier_sector(rig);
     const uint32_t written = rig.capture.records_written();
     queue_numbered(rig, 15);
@@ -419,14 +419,14 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     // Room for one page program and not for the two the straddling write needs after it.
     constexpr int kPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
                              static_cast<int>(store::kSlotWriteCostMs) - 1;
-    t = 20'000 + kPhaseMs;
+    now_ms = 20'000 + kPhaseMs;
     timing::ClockState anchored{};
     anchored.utc_valid = true;
     anchored.pps_locked = true;
     rig.state.rf.plan = timing::Scheduler::plan(kPhaseMs, anchored);
-    rig.state.rf.dwell = timing::DwellPhase{t, kPhaseMs, true, false};
-    rig.clock.set_milliseconds(t);
-    rig.capture.tick(t);
+    rig.state.rf.dwell = timing::DwellPhase{now_ms, kPhaseMs, true, false};
+    rig.clock.set_milliseconds(now_ms);
+    rig.capture.tick(now_ms);
 
     CHECK(rig.recorder.queued() == 5);
     CHECK(rig.capture.records_written() == written + kRecordsPerPage);
@@ -434,7 +434,7 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     check_erased(rig, sector, 2 * kRecordsPerPage, 5);
 
     rig.state.rf.dwell = timing::DwellPhase{};
-    rig.capture.tick(t += 1000);
+    rig.capture.tick(now_ms += 1000);
     CHECK(rig.recorder.queued() == 0);
     check_numbered(rig, sector, kRecordsPerPage, 0, 15);
 }
@@ -442,20 +442,20 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
 TEST_CASE("capture: nothing reaches the flash in the slot own-ship may be keying the PA in") {
     SmallPoolRig rig;
     rig.setup();
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     rig.recorder.arm();
-    rig.capture.tick(t);
+    rig.capture.tick(now_ms);
     REQUIRE(rig.capture.capturing());
 
     rig.state.rf.plan.tx_allowed = true;
     for (int i = 0; i < 10; i++) REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const uint32_t writes = rig.flash.writes;
-    rig.capture.tick(t += 50);
+    rig.capture.tick(now_ms += 50);
     CHECK(rig.flash.writes == writes);
     CHECK(rig.recorder.queued() == 10);
 
     rig.state.rf.plan.tx_allowed = false;
-    rig.capture.tick(t += 50);
+    rig.capture.tick(now_ms += 50);
     CHECK(rig.flash.writes > writes);
     CHECK(rig.recorder.queued() == 0);
 }

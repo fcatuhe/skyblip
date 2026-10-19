@@ -111,9 +111,9 @@ TEST_CASE("channel: the hour's allowance is 1% of it, and the counter stops at t
 
     AirTime air;
     uint32_t refused = 0;
-    for (uint32_t t = 0; t < AirTime::kWindowMs; t += 100) {
-        if (air.may_spend(t, Transmitter::kAirTimeMs))
-            air.spend(t, Transmitter::kAirTimeMs);
+    for (uint32_t now_ms = 0; now_ms < AirTime::kWindowMs; now_ms += 100) {
+        if (air.may_spend(now_ms, Transmitter::kAirTimeMs))
+            air.spend(now_ms, Transmitter::kAirTimeMs);
         else
             refused++;
     }

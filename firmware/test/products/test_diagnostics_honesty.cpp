@@ -72,13 +72,13 @@ struct ServiceRig {
 }  // namespace
 
 // The gate the transmitter reads: a corpus that dates it a pass late misdates why a burst went out.
-TEST_CASE("diag gnss: the settle gate recorded is this pass's, not the one before it") {
+TEST_CASE("diagnostics gnss: the settle gate recorded is this pass's, not the one before it") {
     ServiceRig rig;
     bool settled_before = false;
     bool crossed = false;
 
-    for (uint32_t t = 1000; t <= 8000 && !crossed; t += 1000) {
-        rig.solve(t);
+    for (uint32_t now_ms = 1000; now_ms <= 8000 && !crossed; now_ms += 1000) {
+        rig.solve(now_ms);
         const std::vector<diagnostics::Record> records = drained(rig.recorder);
         crossed = rig.state.own.tx_settled && !settled_before;
         settled_before = rig.state.own.tx_settled;
@@ -96,7 +96,8 @@ TEST_CASE("diag gnss: the settle gate recorded is this pass's, not the one befor
 }
 
 // The seconds a receiver drops while its PPS keeps ticking: the clock still dates them.
-TEST_CASE("diag burst: a second the anchored clock dated is never recorded as boot-relative") {
+TEST_CASE(
+    "diagnostics burst: a second the anchored clock dated is never recorded as boot-relative") {
     ServiceRig rig;
     rig.state.clock.pps_locked = true;
     rig.state.clock.utc_s = ServiceRig::kBaseUtcS;
@@ -117,7 +118,8 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
     CHECK(burst.utc_dated);
 }
 
-TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling, not as recent") {
+TEST_CASE(
+    "diagnostics pps: an edge lost past the field's ceiling reads as the ceiling, not as recent") {
     ServiceRig rig;
     rig.state.clock.pps_locked = false;
     rig.state.clock.since_edge_ms = timing::kPpsHoldoverMs + 10000;
@@ -131,18 +133,19 @@ TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling,
 }
 
 // Recorded before the alarm navigated, the page is the one the pilot was taken off.
-TEST_CASE("diag screen: the page recorded is the one the alarm put up, not the one it replaced") {
+TEST_CASE(
+    "diagnostics screen: the page recorded is the one the alarm put up, not the one it replaced") {
     ScreenRig rig;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     rig.recorder.arm();
-    rig.run_seconds(t, 3);
+    rig.run_seconds(now_ms, 3);
     rig.screen.next_page();
-    rig.run_seconds(t, 2);
+    rig.run_seconds(now_ms, 2);
     REQUIRE(rig.screen.page() != go::Page::Radar);
     drained(rig.recorder);
 
     rig.alarm(go::ScreenService::kAlarmTakesGlass);
-    rig.tick(t += 1000);
+    rig.tick(now_ms += 1000);
 
     diagnostics::Screen screen{};
     REQUIRE(last_of(drained(rig.recorder), screen));

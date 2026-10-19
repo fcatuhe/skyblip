@@ -15,7 +15,7 @@ using namespace skyblip::flight;
 namespace {
 
 // cordic9 from whole degrees, the way a fix and an ADS-L frame carry a track.
-uint16_t cordic9(int deg) { return to_cordic9(CentiDegrees(deg * 100)).value; }
+uint16_t cordic9(int degrees) { return to_cordic9(CentiDegrees(degrees * 100)).value; }
 
 }  // namespace
 
@@ -31,11 +31,11 @@ TEST_CASE("turn: the difference between two tracks is taken the short way round"
 }
 
 TEST_CASE("turn: a half turn is signed, never larger than half a circle") {
-    for (int deg = 0; deg < 360; deg += 5) {
-        const int16_t d = track_delta_c9(cordic9(deg + 180), cordic9(deg));
-        CAPTURE(deg);
-        CHECK(d >= -256);
-        CHECK(d <= 256);
+    for (int degrees = 0; degrees < 360; degrees += 5) {
+        const int16_t delta = track_delta_c9(cordic9(degrees + 180), cordic9(degrees));
+        CAPTURE(degrees);
+        CHECK(delta >= -256);
+        CHECK(delta <= 256);
     }
 }
 

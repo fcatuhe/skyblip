@@ -15,7 +15,8 @@ class RfChannel : public Random {
    public:
     explicit RfChannel(uint32_t seed = 1) : Random(seed) {}
 
-    int apply_ber(uint8_t* data, size_t length, double ber, uint8_t* error_mask = nullptr);
+    int apply_bit_error_rate(uint8_t* data, size_t length, double bit_error_rate,
+                             uint8_t* error_mask = nullptr);
 
     int apply_burst(uint8_t* data, size_t length, int burst_bits, uint8_t* error_mask = nullptr);
 

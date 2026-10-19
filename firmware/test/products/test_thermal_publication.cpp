@@ -65,18 +65,18 @@ TEST_CASE("thermal: a board with no sensor publishes no reading, never a zero") 
 TEST_CASE("thermal: a sensor that stops answering stops gating the panel") {
     ThermalRig rig;
     rig.sensor.hold(700);
-    uint32_t t = 1000;
-    rig.power.tick(t);
+    uint32_t now_ms = 1000;
+    rig.power.tick(now_ms);
     REQUIRE(rig.state.power.die_valid);
 
     rig.sensor.refuse();
     for (uint32_t elapsed = kSamplePeriodMs; elapsed <= go::PowerService::kDieStaleMs;
          elapsed += kSamplePeriodMs) {
-        rig.power.tick(t + elapsed);
+        rig.power.tick(now_ms + elapsed);
         CHECK(rig.state.power.die_valid);
     }
 
-    rig.power.tick(t + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK_FALSE(rig.state.power.die_valid);
     CHECK(rig.state.power.die_dc == 700);
 }
@@ -84,15 +84,15 @@ TEST_CASE("thermal: a sensor that stops answering stops gating the panel") {
 TEST_CASE("thermal: one reading and then silence, and the charge window stops saying Ok") {
     ThermalRig rig;
     rig.sensor.hold(250);
-    const uint32_t t = 1000;
-    rig.tick_on_cable(t);
+    const uint32_t now_ms = 1000;
+    rig.tick_on_cable(now_ms);
     REQUIRE(rig.state.power.charge == power::ChargeCondition::Ok);
 
     rig.sensor.refuse();
-    rig.tick_on_cable(t + kSamplePeriodMs);
+    rig.tick_on_cable(now_ms + kSamplePeriodMs);
     CHECK(rig.state.power.charge == power::ChargeCondition::Ok);
 
-    rig.tick_on_cable(t + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.tick_on_cable(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK(rig.state.power.charge != power::ChargeCondition::Ok);
 }
 
@@ -100,26 +100,26 @@ TEST_CASE("thermal: one reading and then silence, and the charge window stops sa
 TEST_CASE("thermal: a stale reading on Go's cable cannot say, and never counts as a warning") {
     ThermalRig rig;
     rig.sensor.hold(20);
-    const uint32_t t = 1000;
-    rig.tick_on_cable(t);
+    const uint32_t now_ms = 1000;
+    rig.tick_on_cable(now_ms);
     REQUIRE(rig.state.power.charge == power::ChargeCondition::TooCold);
     REQUIRE(rig.power.charge_warnings() == 1);
 
     rig.sensor.refuse();
-    rig.tick_on_cable(t + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.tick_on_cable(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK(rig.state.power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.power.charge_warnings() == 1);
 }
 
 TEST_CASE("thermal: a sensor that answers again is believed again") {
     ThermalRig rig;
-    uint32_t t = 1000;
-    rig.power.tick(t);
+    uint32_t now_ms = 1000;
+    rig.power.tick(now_ms);
     rig.sensor.refuse();
-    rig.power.tick(t + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
     REQUIRE_FALSE(rig.state.power.die_valid);
     rig.sensor.hold(180);
-    rig.power.tick(t + go::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
+    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
     CHECK(rig.state.power.die_valid);
     CHECK(rig.state.power.die_dc == 180);
 }

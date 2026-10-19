@@ -74,19 +74,19 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
-    Spy a(context, 1, order, Status::Ok);
-    Spy b(context, 2, order, Status::Ok);
-    runtime::Service* services[] = {&a, &b};
+    Spy first(context, 1, order, Status::Ok);
+    Spy second(context, 2, order, Status::Ok);
+    runtime::Service* services[] = {&first, &second};
     runtime::Loop loop(services, 2);
 
     CHECK(loop.setup() == Status::Ok);
-    CHECK(a.setups == 1);
-    CHECK(b.setups == 1);
+    CHECK(first.setups == 1);
+    CHECK(second.setups == 1);
 
     loop.run_pass(1234);
-    CHECK(a.ticks == 1);
-    CHECK(b.ticks == 1);
-    CHECK(a.last_ms == 1234);
+    CHECK(first.ticks == 1);
+    CHECK(second.ticks == 1);
+    CHECK(first.last_ms == 1234);
     CHECK(order[1] == 1);
     CHECK(order[2] == 2);
 }
@@ -94,15 +94,15 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
 namespace {
 
 struct SteppedClock : ports::Clock {
-    uint32_t milliseconds() const override { return static_cast<uint32_t>(us / 1000); }
-    uint64_t microseconds() const override { return us; }
-    uint64_t us{0};
+    uint32_t milliseconds() const override { return static_cast<uint32_t>(now_us / 1000); }
+    uint64_t microseconds() const override { return now_us; }
+    uint64_t now_us{0};
 };
 
 struct Slow : runtime::Service {
-    Slow(runtime::Context& context, SteppedClock& clock, uint64_t cost)
-        : runtime::Service(context), cost_us(cost), clock_(clock) {}
-    void tick(uint32_t) override { clock_.us += cost_us; }
+    Slow(runtime::Context& context, SteppedClock& clock, uint64_t spent_us)
+        : runtime::Service(context), cost_us(spent_us), clock_(clock) {}
+    void tick(uint32_t) override { clock_.now_us += cost_us; }
     uint64_t cost_us;
 
    private:
@@ -145,10 +145,10 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     for (int i = 0; i < 4; i++) {
         render.cost_us = i == 2 ? 190000 : 2000;
         meter.begin_pass(phases[i]);
-        meter.timed(diagnostics::kLoopBoardPoll, [&] { clock.us += 100; });
+        meter.timed(diagnostics::kLoopBoardPoll, [&] { clock.now_us += 100; });
         loop.run_pass(clock.milliseconds(), &meter);
         meter.end_pass();
-        clock.us += sleeps_us[i];
+        clock.now_us += sleeps_us[i];
     }
 
     const diagnostics::Loop window = meter.take();
@@ -205,9 +205,9 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
     CHECK(null.rf.begin() == Status::Down);
     CHECK(null.rf.arm(ports::RfPlan{}) == Status::Down);
     CHECK(null.link.send(events::Endpoint::Nmea, ConstByteSpan{}) == Status::Down);
-    size_t n = 0;
+    size_t count = 0;
     uint8_t buffer[4];
-    CHECK(null.key_value.read("k", buffer, sizeof(buffer), n) == Status::NotFound);
+    CHECK(null.key_value.read("k", buffer, sizeof(buffer), count) == Status::NotFound);
     null.annunciator.tone(4000,
                           ports::Loudness::Loud);  // must not crash: absent hardware is silent
     null.display.power_off();
@@ -221,10 +221,10 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
 
 TEST_CASE("watchdog: the dog is fed while every task is inside its deadline") {
     runtime::FeedDecision feed;
-    const int a = feed.add("radio", 1000);
-    const int b = feed.add("gnss", 1000);
-    CHECK(a == 0);
-    CHECK(b == 1);
+    const int radio_id = feed.add("radio", 1000);
+    const int gnss_id = feed.add("gnss", 1000);
+    CHECK(radio_id == 0);
+    CHECK(gnss_id == 1);
     CHECK(feed.count() == 2);
 
     // Before the first pass there is no time base, so nothing is stale yet.
@@ -232,10 +232,10 @@ TEST_CASE("watchdog: the dog is fed while every task is inside its deadline") {
 
     feed.begin(0);
     CHECK(feed.may_feed(0));
-    for (uint32_t t = 0; t < 10000; t += 100) {
-        feed.check_in(a, t);
-        feed.check_in(b, t);
-        CHECK(feed.may_feed(t));
+    for (uint32_t now_ms = 0; now_ms < 10000; now_ms += 100) {
+        feed.check_in(radio_id, now_ms);
+        feed.check_in(gnss_id, now_ms);
+        CHECK(feed.may_feed(now_ms));
     }
 }
 
@@ -246,9 +246,9 @@ TEST_CASE("watchdog: a task that stops checking in stops the feed and is named")
     feed.begin(0);
 
     // The radio keeps going; the GNSS task went quiet at t=0.
-    for (uint32_t t = 0; t < 1000; t += 100) {
-        feed.check_in(radio, t);
-        CHECK(feed.may_feed(t));
+    for (uint32_t now_ms = 0; now_ms < 1000; now_ms += 100) {
+        feed.check_in(radio, now_ms);
+        CHECK(feed.may_feed(now_ms));
     }
     feed.check_in(radio, 1000);
     CHECK_FALSE(feed.may_feed(1000));
@@ -312,24 +312,25 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
     // runs a thousand of them and the ordering is pinned above.
-    for (uint32_t t = 0; t < runtime::kServiceSilenceCeilingMs;
-         t += runtime::kServicePassCeilingMs) {
+    for (uint32_t now_ms = 0; now_ms < runtime::kServiceSilenceCeilingMs;
+         now_ms += runtime::kServicePassCeilingMs) {
         order[0] = 0;
-        loop.run_pass(t);
-        CHECK(loop.may_feed_watchdog(t));
+        loop.run_pass(now_ms);
+        CHECK(loop.may_feed_watchdog(now_ms));
     }
 
     // It keeps being ticked and keeps returning. It just is not getting
     // anywhere, and the whole point is that the loop must not vouch for it.
     wedged.alive = false;
-    uint32_t t = runtime::kServiceSilenceCeilingMs;
-    for (; t < 2 * runtime::kServiceSilenceCeilingMs; t += runtime::kServicePassCeilingMs) {
+    uint32_t now_ms = runtime::kServiceSilenceCeilingMs;
+    for (; now_ms < 2 * runtime::kServiceSilenceCeilingMs;
+         now_ms += runtime::kServicePassCeilingMs) {
         order[0] = 0;
-        loop.run_pass(t);
+        loop.run_pass(now_ms);
     }
-    CHECK_FALSE(loop.may_feed_watchdog(t));
-    CHECK(loop.stalled_service(t) == 1);
-    CHECK(__builtin_strcmp(loop.feed_decision().name(loop.stalled_service(t)), "wedged") == 0);
+    CHECK_FALSE(loop.may_feed_watchdog(now_ms));
+    CHECK(loop.stalled_service(now_ms) == 1);
+    CHECK(__builtin_strcmp(loop.feed_decision().name(loop.stalled_service(now_ms)), "wedged") == 0);
     CHECK(wedged.ticks > 0);
 }
 
@@ -347,11 +348,11 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
 
     // Through the wrap at the loop's own cadence: every task inside its deadline.
     for (uint32_t step = 0; step < 20; step++) {
-        const uint32_t t = before + step * 50u;
-        feed.check_in(radio, t);
-        feed.check_in(gnss, t);
-        CHECK(feed.may_feed(t));
-        CHECK(feed.silent_ms(radio, t) == 0);
+        const uint32_t now_ms = before + step * 50u;
+        feed.check_in(radio, now_ms);
+        feed.check_in(gnss, now_ms);
+        CHECK(feed.may_feed(now_ms));
+        CHECK(feed.silent_ms(radio, now_ms) == 0);
     }
 
     // A task that went quiet 256 ms before the wrap is 1000 ms quiet 744 ms after

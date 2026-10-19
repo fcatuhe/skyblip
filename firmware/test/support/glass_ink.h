@@ -7,10 +7,10 @@
 namespace skyblip {
 
 inline int ink_in(const go::Glass& canvas, int x0, int y0, int x1, int y1) {
-    int n = 0;
+    int count = 0;
     for (int y = y0; y < y1; y++)
-        for (int x = x0; x < x1; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
-    return n;
+        for (int x = x0; x < x1; x++) count += canvas.get_pixel(x, y) ? 1 : 0;
+    return count;
 }
 
 }  // namespace skyblip

@@ -12,18 +12,18 @@ using namespace skyblip::go;
 
 namespace {
 
-constexpr int kRowH = 7 * kNearbyScale;
+constexpr int kRowHeight = 7 * kNearbyScale;
 
 int row_y(int index) { return kNearbyFirstRowY + index * kNearbyLineHeight; }
 
 // Ink inside one row band, so a drawn row is told from an empty one without asserting on glyphs.
 int ink_in_row(const Glass& canvas, int index) {
     const int y0 = row_y(index);
-    int n = 0;
-    for (int y = y0; y < y0 + kRowH; y++)
+    int count = 0;
+    for (int y = y0; y < y0 + kRowHeight; y++)
         for (int x = 0; x < Glass::kWidth; x++)
-            if (canvas.get_pixel(x, y)) n++;
-    return n;
+            if (canvas.get_pixel(x, y)) count++;
+    return count;
 }
 
 // A case claims a column reads "2.3", not that there is ink in it.
@@ -33,10 +33,10 @@ bool reads_right_of(const Glass& canvas, int x_end, int y, const char* text, int
 }
 
 bool banner_reads(const Glass& canvas, const char* text) {
-    int n = 0;
-    while (text[n]) n++;
-    const int w = n * 6 * kNearbyScale;
-    return reads_at(canvas, (Glass::kWidth - w) / 2, kNearbyBannerY, text, kNearbyScale);
+    int count = 0;
+    while (text[count]) count++;
+    const int width = count * 6 * kNearbyScale;
+    return reads_at(canvas, (Glass::kWidth - width) / 2, kNearbyBannerY, text, kNearbyScale);
 }
 
 // Where the small address lands: after the name it stands beside, on the same bottom.
@@ -44,24 +44,24 @@ int own_address_x() {
     return kNearbyIdX + kNearbyOwnNameCharacters * 6 * kNearbyTitleScale + kNearbyWordGap;
 }
 
-NearbySnapshot listing(const traffic::RangeRow* rows, int n, go::Units units) {
+NearbySnapshot listing(const traffic::RangeRow* rows, int count, go::Units units) {
     NearbySnapshot snapshot;
     snapshot.own_address = 0x4B1F07;
     snapshot.fix_valid = true;
     snapshot.units = units;
-    snapshot.heard_count = n;
-    snapshot.row_count = n;
+    snapshot.heard_count = count;
+    snapshot.row_count = count;
     snapshot.rows = rows;
     return snapshot;
 }
 
 traffic::RangeRow row_at(int32_t ground_m, int32_t up_m) {
-    traffic::RangeRow r;
-    r.address = 0x3FA21C;
-    r.source = model::Source::AdslDirect;
-    r.ground_m = ground_m;
-    r.up_m = up_m;
-    return r;
+    traffic::RangeRow row;
+    row.address = 0x3FA21C;
+    row.source = model::Source::AdslDirect;
+    row.ground_m = ground_m;
+    row.up_m = up_m;
+    return row;
 }
 
 }  // namespace
@@ -273,6 +273,6 @@ TEST_CASE("nearby page: more emitters than rows are cut, never overdrawn") {
     draw_nearby(canvas, listing(rows, kNearbyRows + 4, go::Units::Nautical));
 
     for (int i = 0; i < kNearbyRows; i++) CHECK(ink_in_row(canvas, i) > 20);
-    for (int y = row_y(kNearbyRows - 1) + kRowH; y < Glass::kHeight; y++)
+    for (int y = row_y(kNearbyRows - 1) + kRowHeight; y < Glass::kHeight; y++)
         for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }

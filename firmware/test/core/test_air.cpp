@@ -18,8 +18,8 @@ void deliver(const uint8_t* chips, size_t chip_length, uint8_t* out, size_t out_
     const size_t first_bit = protocol::kSharedSyncEndChip;
     for (size_t i = 0; i < out_length; i++) {
         uint8_t byte = 0;
-        for (int b = 0; b < 8; b++) {
-            const size_t bit = first_bit + i * 8 + static_cast<size_t>(b);
+        for (int bit_in_byte = 0; bit_in_byte < 8; bit_in_byte++) {
+            const size_t bit = first_bit + i * 8 + static_cast<size_t>(bit_in_byte);
             const bool set = bit < chip_length * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
             byte = static_cast<uint8_t>((byte << 1) | (set ? 1u : 0u));
         }

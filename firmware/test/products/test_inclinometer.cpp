@@ -83,14 +83,14 @@ TEST_CASE("inclinometer: the status page names the stage the hub stopped in") {
     fly_uncoordinated(rig, -150);
     rig.run(0, kBootToBallMs);
 
-    uint32_t t = kBootToBallMs;
-    rig.show(t, go::Page::Status);
+    uint32_t now_ms = kBootToBallMs;
+    rig.show(now_ms, go::Page::Status);
     REQUIRE(rig.product.screen().page() == go::Page::Status);
-    rig.run(t, t + 1000);
+    rig.run(now_ms, now_ms + 1000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "IMU RUN", 0, 55, 200, 70));
 
     rig.platform.chips().imu.answers = false;
-    rig.run(t + 1000, t + 1000 + flight::kIndicatedStaleMs + 1000);
+    rig.run(now_ms + 1000, now_ms + 1000 + flight::kIndicatedStaleMs + 1000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "IMU RUN DOWN", 0, 55, 200, 70));
 }
 
@@ -154,9 +154,9 @@ TEST_CASE("inclinometer: a slim image with no hub image on flash says so on the 
 
     CHECK(rig.product.board().imu().stage() == parts::Bhi260::Stage::Idle);
     CHECK_FALSE(rig.state().slip.valid);
-    uint32_t t = kBootToBallMs;
-    rig.show(t, go::Page::Status);
-    rig.run(t, t + 1000);
+    uint32_t now_ms = kBootToBallMs;
+    rig.show(now_ms, go::Page::Status);
+    rig.run(now_ms, now_ms + 1000);
     CHECK(reads_in(rig.product.screen().framebuffer(), "IMU IDLE NOBLOB", 0, 55, 200, 70));
 }
 

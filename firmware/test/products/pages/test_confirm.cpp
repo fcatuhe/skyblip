@@ -19,11 +19,11 @@ namespace {
 using ui::kCellWidth;
 
 ConfirmSnapshot prompt(comms::Pending pending) {
-    ConfirmSnapshot s;
-    s.title = comms::pending_title(pending);
-    s.detail = comms::pending_detail(pending);
-    s.timeout_s = comms::kPromptForgetMs / 1000;
-    return s;
+    ConfirmSnapshot snapshot;
+    snapshot.title = comms::pending_title(pending);
+    snapshot.detail = comms::pending_detail(pending);
+    snapshot.timeout_s = comms::kPromptForgetMs / 1000;
+    return snapshot;
 }
 
 }  // namespace
@@ -65,10 +65,10 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
 }
 
 TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {
-    ConfirmSnapshot s = prompt(comms::Pending::Set);
-    s.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
+    ConfirmSnapshot snapshot = prompt(comms::Pending::Set);
+    snapshot.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
     Glass canvas;
-    draw_confirm(canvas, s);
+    draw_confirm(canvas, snapshot);
     CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
     CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
     CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));

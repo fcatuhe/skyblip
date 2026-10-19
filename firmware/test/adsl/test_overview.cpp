@@ -31,9 +31,9 @@ protocol::AdslPacket traffic_packet() {
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;
     own.flight_state = 2;
-    protocol::AdslPacket p{};
-    protocol::from_own(p, own, 0x123456, 6, 4);
-    return p;
+    protocol::AdslPacket packet{};
+    protocol::from_own(packet, own, 0x123456, 6, 4);
+    return packet;
 }
 }  // namespace
 
@@ -67,13 +67,13 @@ TEST_CASE("ADS-L.4.SRD860.B.3: an integer rides the air least significant byte f
 
 // Example 2's packing rule, read off the Meta block G.1 puts at payload offset 0.
 TEST_CASE("ADS-L.4.SRD860.B.3: a field starts at the bit its offset names, counting from bit 0") {
-    protocol::AdslPacket p{};
-    p.reset();
-    p.timestamp = 0x2A;
-    p.flight_state = 2;
-    p.aircraft_category = 0x15;
-    p.emergency = 5;
-    const uint8_t* meta = &p.address_bytes[4];
+    protocol::AdslPacket packet{};
+    packet.reset();
+    packet.timestamp = 0x2A;
+    packet.flight_state = 2;
+    packet.aircraft_category = 0x15;
+    packet.emergency = 5;
+    const uint8_t* meta = &packet.address_bytes[4];
     CHECK(meta[0] == static_cast<uint8_t>(0x2A | (2u << 6)));
     CHECK(meta[1] == static_cast<uint8_t>(0x15 | (5u << 5)));
 }
@@ -86,24 +86,24 @@ TEST_CASE("ADS-L.4.SRD860.B.3: a byte goes out most significant bit first") {
 
 // The preamble is the radio's: what the firmware hands it runs from the sync word to the last byte.
 TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, nothing behind it") {
-    protocol::AdslPacket p = traffic_packet();
-    p.scramble();
-    p.set_crc();
+    protocol::AdslPacket packet = traffic_packet();
+    packet.scramble();
+    packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t length =
-        protocol::encode_m_band(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
+    const size_t length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                  protocol::kAdslFrameBytes, chips);
     CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 
     uint8_t decoded[protocol::kSyncWordBytes + protocol::kAdslFrameBytes] = {0};
     uint8_t error[sizeof(decoded)] = {0};
     fec::manchester_decode(chips, sizeof(decoded), decoded, error);
-    for (uint8_t e : error) CHECK(e == 0);
+    for (uint8_t error_bits : error) CHECK(error_bits == 0);
     CHECK(decoded[1] == 0x72);
     CHECK(decoded[2] == 0x4B);
     CHECK(decoded[3] == protocol::kAdslFrameBytes);
     for (int i = 0; i < protocol::kAdslFrameBytes; i++)
-        CHECK(decoded[protocol::kSyncWordBytes + i] == p.data[i]);
+        CHECK(decoded[protocol::kSyncWordBytes + i] == packet.data[i]);
 }
 
 // TODO: fc 18sep26 soft versioning needs G.2's Max Protocol Version, neither sent nor tracked

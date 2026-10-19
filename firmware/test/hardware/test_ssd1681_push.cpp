@@ -19,7 +19,7 @@ parts::Ssd1681 turned_driver_for(models::Ssd1681& chip) {
 }
 
 std::vector<uint8_t> per_pixel_bank(const parts::Ssd1681Glass& canvas) {
-    const uint8_t* fb_bytes = canvas.data();
+    const uint8_t* canvas_bytes = canvas.data();
     std::vector<uint8_t> bank(parts::Ssd1681::kGlassBytes);
     for (int gate = 0; gate < parts::Ssd1681::kGlassHeight; gate++)
         for (int column = 0; column < kStride; column++) {
@@ -27,7 +27,7 @@ std::vector<uint8_t> per_pixel_bank(const parts::Ssd1681Glass& canvas) {
             uint8_t bits = 0;
             for (int source = 0; source < 8; source++) {
                 const int y = column * 8 + source;
-                if (fb_bytes[y * kStride + (x >> 3)] & (0x80 >> (x & 7)))
+                if (canvas_bytes[y * kStride + (x >> 3)] & (0x80 >> (x & 7)))
                     bits |= static_cast<uint8_t>(0x80 >> source);
             }
             bank[size_t(gate) * kStride + size_t(column)] = static_cast<uint8_t>(~bits);
@@ -47,9 +47,9 @@ std::vector<parts::Ssd1681Glass> patterns() {
         for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++) canvas.set_pixel(x, y, (x + y) & 1);
     out.push_back(canvas);
 
-    std::mt19937 rng(874);
+    std::mt19937 generator(874);
     for (size_t i = 0; i < parts::Ssd1681::kGlassBytes; i++)
-        canvas.data()[i] = static_cast<uint8_t>(rng());
+        canvas.data()[i] = static_cast<uint8_t>(generator());
     out.push_back(canvas);
 
     const int corners[4][2] = {{0, 0}, {199, 0}, {0, 199}, {199, 199}};

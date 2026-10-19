@@ -26,26 +26,26 @@ using namespace skyblip;
 TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     // The air the aircraft is actually flying through, nowhere near standard.
     rig.platform.barometer().chip.set_pressure_mpa(90000000);
-    fly(rig, t, 3);
+    fly(rig, now_ms, 3);
     rig.raise_link();
-    fly(rig, t, 2);
+    fly(rig, now_ms, 2);
     REQUIRE(rig.state().barometer.active);
 
     std::string altitude;
-    for (const std::string& s : sentences(rig))
-        if (s.rfind("$PGRMZ,", 0) == 0) altitude = s;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind("$PGRMZ,", 0) == 0) altitude = sentence;
     REQUIRE_FALSE(altitude.empty());
     CHECK(checksum_ok(altitude));
-    const std::vector<std::string> f = fields(altitude);
-    REQUIRE(f.size() >= 3);
-    CHECK(f[2] == "F");
+    const std::vector<std::string> values = fields(altitude);
+    REQUIRE(values.size() >= 3);
+    CHECK(values[2] == "F");
 
     const uint32_t pressure_pa = rig.state().barometer.pressure_mpa / 1000;
     const int32_t standard_cm = flight::pressure_to_altitude_cm(pressure_pa);
-    const int32_t sent_cm = static_cast<int32_t>(std::stoi(f[1])) * 3048 / 100;
+    const int32_t sent_cm = static_cast<int32_t>(std::stoi(values[1])) * 3048 / 100;
     // What an EFB does with this figure is apply its own QNH, so the figure has
     // to be the datum-free one: pressure altitude on 1013.25, within a foot.
     CHECK(standard_cm > 90000);
@@ -60,45 +60,46 @@ TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
 TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the $PGRMZ pass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     // A cell in the flat middle, and air the aircraft is really flying through.
     rig.platform.battery().divider_mv = 3800;
     rig.platform.barometer().chip.set_pressure_mpa(90000000);
     rig.platform.barometer().chip.set_temperature_dc(-72);
-    fly(rig, t, 3);
+    fly(rig, now_ms, 3);
     rig.raise_link();
-    fly(rig, t, 2);
+    fly(rig, now_ms, 2);
     REQUIRE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
-    std::string lk8;
-    for (const std::string& s : sentences(rig))
-        if (s.rfind("$LK8EX1,", 0) == 0) lk8 = s;
-    REQUIRE_FALSE(lk8.empty());
-    CHECK(checksum_ok(lk8));
+    std::string lk8ex1;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind("$LK8EX1,", 0) == 0) lk8ex1 = sentence;
+    REQUIRE_FALSE(lk8ex1.empty());
+    CHECK(checksum_ok(lk8ex1));
 
-    const std::vector<std::string> f = fields(lk8);
-    REQUIRE(f.size() == 6);
+    const std::vector<std::string> values = fields(lk8ex1);
+    REQUIRE(values.size() == 6);
     // Field 1 is the raw pressure in pascals, which is what a consumer prefers
     // over field 2 because it can apply its own datum to it.
-    CHECK(std::stol(f[1]) == static_cast<long>((rig.state().barometer.pressure_mpa + 500) / 1000));
+    CHECK(std::stol(values[1]) ==
+          static_cast<long>((rig.state().barometer.pressure_mpa + 500) / 1000));
     // Field 2 is metres on 1013.25, the same datum-free figure $PGRMZ carries.
-    CHECK(std::abs(std::stol(f[2]) -
+    CHECK(std::abs(std::stol(values[2]) -
                    flight::pressure_to_altitude_cm(rig.state().barometer.pressure_mpa / 1000) /
                        100) <= 1);
     // Field 5 is the gauge's own percentage, offset by 1000. A device that says
     // 55% on its panel and something else on the tablet is a support call.
-    CHECK(std::stol(f[5]) == 1000 + rig.state().power.battery.percent);
-    CHECK(std::stol(f[5]) >= 1000);
+    CHECK(std::stol(values[5]) == 1000 + rig.state().power.battery.percent);
+    CHECK(std::stol(values[5]) >= 1000);
     CHECK(int(rig.state().power.battery.percent) == 55);
     // Field 4 is what the part measured, carried in the whole degrees the sentence is read in.
     REQUIRE(rig.state().barometer.temperature_valid);
     CHECK(rig.state().barometer.temperature_dc == -72);
-    CHECK(f[4] == "-7");
+    CHECK(values[4] == "-7");
 
     // Same pass as $PGRMZ, so the same cadence, second for second.
     rig.platform.link().clear();
-    fly(rig, t, 3);
+    fly(rig, now_ms, 3);
     CHECK(count_of(rig, "$LK8EX1") >= 3);
     CHECK(count_of(rig, "$LK8EX1") == count_of(rig, "$PGRMZ"));
     CHECK(count_of(rig, "$LK8EX1") == count_of(rig, "$PFLAU"));
@@ -113,11 +114,11 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
 TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about its cell") {
     Rig rig(kBarometerByHand);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     rig.platform.battery().divider_mv = 3600;
-    fly(rig, t, 3);
+    fly(rig, now_ms, 3);
     rig.raise_link();
-    fly(rig, t, 2);
+    fly(rig, now_ms, 2);
     REQUIRE_FALSE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
@@ -125,18 +126,18 @@ TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about 
     CHECK(count_of(rig, "$PGRMZ") == 0);
     CHECK(count_of(rig, "$LK8EX1") >= 2);
 
-    std::string lk8;
-    for (const std::string& s : sentences(rig))
-        if (s.rfind("$LK8EX1,", 0) == 0) lk8 = s;
-    REQUIRE_FALSE(lk8.empty());
-    CHECK(checksum_ok(lk8));
+    std::string lk8ex1;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind("$LK8EX1,", 0) == 0) lk8ex1 = sentence;
+    REQUIRE_FALSE(lk8ex1.empty());
+    CHECK(checksum_ok(lk8ex1));
 
-    const std::vector<std::string> f = fields(lk8);
-    REQUIRE(f.size() == 6);
-    CHECK(f[1] == "999999");  // no pressure
-    CHECK(f[2] == "99999");   // no pressure altitude
-    CHECK(f[4] == "99");      // no temperature
-    CHECK(std::stol(f[5]) == 1000 + rig.state().power.battery.percent);
+    const std::vector<std::string> values = fields(lk8ex1);
+    REQUIRE(values.size() == 6);
+    CHECK(values[1] == "999999");  // no pressure
+    CHECK(values[2] == "99999");   // no pressure altitude
+    CHECK(values[4] == "99");      // no temperature
+    CHECK(std::stol(values[5]) == 1000 + rig.state().power.battery.percent);
     CHECK(int(rig.state().power.battery.percent) == 12);
 }
 
@@ -150,17 +151,17 @@ TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about 
 TEST_CASE("nmea: GPRMC/GPGGA give a panel-mounted tablet the position it has no GNSS for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    fly(rig, t, 3);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
     rig.raise_link();
-    fly(rig, t, 2);
+    fly(rig, now_ms, 2);
     REQUIRE(rig.state().own.fix_valid);
     REQUIRE(rig.state().own.utc_valid);
 
     std::string rmc, gga;
-    for (const std::string& s : sentences(rig)) {
-        if (s.rfind("$GPRMC,", 0) == 0) rmc = s;
-        if (s.rfind("$GPGGA,", 0) == 0) gga = s;
+    for (const std::string& sentence : sentences(rig)) {
+        if (sentence.rfind("$GPRMC,", 0) == 0) rmc = sentence;
+        if (sentence.rfind("$GPGGA,", 0) == 0) gga = sentence;
     }
     REQUIRE_FALSE(rmc.empty());
     REQUIRE_FALSE(gga.empty());
@@ -173,15 +174,15 @@ TEST_CASE("nmea: GPRMC/GPGGA give a panel-mounted tablet the position it has no 
     CHECK(rf[1].size() == 6);  // hhmmss
     CHECK(rf[9].size() == 6);  // ddmmyy
 
-    const std::vector<std::string> gf = fields(gga);
-    REQUIRE(gf.size() >= 9);
-    CHECK(gf[6] == "1");          // fix quality: a fix
-    CHECK(std::stoi(gf[7]) > 0);  // satellites, as the rig's fix reports them
+    const std::vector<std::string> gga_fields = fields(gga);
+    REQUIRE(gga_fields.size() >= 9);
+    CHECK(gga_fields[6] == "1");          // fix quality: a fix
+    CHECK(std::stoi(gga_fields[7]) > 0);  // satellites, as the rig's fix reports them
 
     // One pass a second, one of each per pass: two more seconds of flight is
     // two more of each, same as the $PFLAU heartbeat they now share a pass with.
     rig.platform.link().clear();
-    fly(rig, t, 2);
+    fly(rig, now_ms, 2);
     CHECK(count_of(rig, "$GPRMC") >= 2);
     CHECK(count_of(rig, "$GPGGA") >= 2);
     CHECK(count_of(rig, "$GPRMC") == count_of(rig, "$PFLAU"));

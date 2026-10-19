@@ -46,8 +46,9 @@ TEST_CASE("skyship: the sprite is symmetric about the centre pixel pair") {
     draw_skyship(canvas, kCentreX, kCentreY);
 
     for (int y = kCentreY - kOriginRow; y < kCentreY - kOriginRow + 16; y++)
-        for (int d = 0; d < kSpan / 2; d++)
-            CHECK(canvas.get_pixel(kCentreX + d, y) == canvas.get_pixel(kCentreX - 1 - d, y));
+        for (int offset = 0; offset < kSpan / 2; offset++)
+            CHECK(canvas.get_pixel(kCentreX + offset, y) ==
+                  canvas.get_pixel(kCentreX - 1 - offset, y));
 }
 
 // The trailing taper was once deleted as ink aft of the hot spot, leaving a slab.
@@ -64,22 +65,22 @@ TEST_CASE("skyship: the wing is elliptic, deepest at the root") {
 }
 
 TEST_CASE("skyship: it draws the same aircraft wherever it is asked to") {
-    TestPanel a, b;
-    a.clear(true);
-    b.clear(true);
-    draw_skyship(a, kCentreX, kCentreY);
-    draw_skyship(b, kCentreX + 20, kCentreY + 20);
-    CHECK(a.count_black() == b.count_black());
-    CHECK(a.count_black() > 40);
+    TestPanel climbing, alarmed;
+    climbing.clear(true);
+    alarmed.clear(true);
+    draw_skyship(climbing, kCentreX, kCentreY);
+    draw_skyship(alarmed, kCentreX + 20, kCentreY + 20);
+    CHECK(climbing.count_black() == alarmed.count_black());
+    CHECK(climbing.count_black() > 40);
 }
 
 // The blip says above or below, inside the advisory's window or not, and which way it is going.
 namespace {
 int ink(const TestPanel& canvas) {
-    int n = 0;
+    int count = 0;
     for (int y = 0; y < TestPanel::kHeight; y++)
-        for (int x = 0; x < TestPanel::kWidth; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
-    return n;
+        for (int x = 0; x < TestPanel::kWidth; x++) count += canvas.get_pixel(x, y) ? 1 : 0;
+    return count;
 }
 
 TestPanel blip(Vertical vertical, Trend trend, bool alarm = false) {
@@ -138,10 +139,10 @@ TEST_CASE("blip: the alarm fills the blip it was already drawing") {
     CHECK(ink(filled) > ink(hollow));
     // Filling is ink, never reach: an advisory must not move a tag off its target.
     for (const Vertical vertical : {Vertical::Above, Vertical::Level, Vertical::Below}) {
-        const TestPanel a = blip(vertical, Trend::Climbing);
-        const TestPanel b = blip(vertical, Trend::Climbing, /*alarm=*/true);
+        const TestPanel climbing = blip(vertical, Trend::Climbing);
+        const TestPanel alarmed = blip(vertical, Trend::Climbing, /*alarm=*/true);
         for (int y = 0; y < TestPanel::kHeight; y++)
             for (int x = 0; x < TestPanel::kWidth; x++)
-                if (a.get_pixel(x, y)) CHECK(b.get_pixel(x, y));
+                if (climbing.get_pixel(x, y)) CHECK(alarmed.get_pixel(x, y));
     }
 }

@@ -130,12 +130,12 @@ struct ScreenRig {
     void dismiss() {
         state.alarm_undismissed = traffic::Level::None;
         for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-            traffic::Target* t = state.traffic.at(i);
-            if (t && t->used) t->alarm_dismissed = true;
+            traffic::Target* target = state.traffic.at(i);
+            if (target && target->used) target->alarm_dismissed = true;
         }
     }
 
-    // A contact at a bearing, graded by hand, for the page to point at.
+    // A target at a bearing, graded by hand, for the page to point at.
     void threat(traffic::Level level, int32_t north_m, int32_t east_m, uint32_t now_ms) {
         model::AircraftObservation observation{};
         observation.address = kThreatAddress;

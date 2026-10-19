@@ -38,9 +38,9 @@ struct Uicr : KeySlots::Memory {
         return true;
     }
 
-    static Ed25519::Seed seed_numbered(uint8_t n) {
+    static Ed25519::Seed seed_numbered(uint8_t number) {
         Ed25519::Seed seed{};
-        for (size_t i = 0; i < seed.size(); i++) seed[i] = static_cast<uint8_t>(n + i);
+        for (size_t i = 0; i < seed.size(); i++) seed[i] = static_cast<uint8_t>(number + i);
         return seed;
     }
 

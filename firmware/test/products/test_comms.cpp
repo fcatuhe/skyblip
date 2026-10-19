@@ -216,15 +216,16 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
 // panel that shows an unlabelled question is a panel a pilot answers blind.
 TEST_CASE("comms: every operation that needs authorising names itself and what it will do") {
     const Pending all[] = {Pending::Set, Pending::Dfu, Pending::Recovery, Pending::PowerOff};
-    for (Pending p : all) {
-        CHECK(std::strlen(pending_title(p)) > 0);
-        CHECK(std::strlen(pending_detail(p)) > 8);
+    for (Pending pending : all) {
+        CHECK(std::strlen(pending_title(pending)) > 0);
+        CHECK(std::strlen(pending_detail(pending)) > 8);
     }
     // No two operations wear the same title, or confirming one would look like
     // confirming another.
-    for (Pending a : all)
-        for (Pending b : all)
-            if (a != b) CHECK(std::strcmp(pending_title(a), pending_title(b)) != 0);
+    for (Pending first : all)
+        for (Pending second : all)
+            if (first != second)
+                CHECK(std::strcmp(pending_title(first), pending_title(second)) != 0);
 
     CHECK(std::strlen(pending_title(Pending::None)) == 0);
 }
@@ -418,11 +419,11 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
     REQUIRE_FALSE(link.sent.empty());
     std::string idle;
-    for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-        CHECK(f.bytes.find("\"cmd\":\"radio\"") != std::string::npos);
-        CHECK(f.bytes.find("\"group\":\"radio\"") != std::string::npos);
-        idle += f.bytes;
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+        CHECK(frame.bytes.find("\"cmd\":\"radio\"") != std::string::npos);
+        CHECK(frame.bytes.find("\"group\":\"radio\"") != std::string::npos);
+        idle += frame.bytes;
     }
     CHECK(idle.find("\"range_refused\":0") != std::string::npos);
     CHECK(idle.find("\"noise_dbm\":-101") != std::string::npos);
@@ -438,10 +439,10 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     link.sent.clear();
     config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
     std::string body;
-    for (const platform::host::Link::Frame& f : link.sent) {
-        CHECK(f.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-        CHECK(f.bytes.back() == '}');
-        body += f.bytes;
+    for (const platform::host::Link::Frame& frame : link.sent) {
+        CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+        CHECK(frame.bytes.back() == '}');
+        body += frame.bytes;
     }
     CHECK(body.find("\"range_refused\":2147483647") != std::string::npos);
     CHECK(body.find("\"more\":false") != std::string::npos);

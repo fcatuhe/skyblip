@@ -53,22 +53,22 @@ struct Rig {
     }
 
     void push_fix(int32_t altitude_m, uint32_t updates) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.altitude_hae_mm = altitude_m * 1000;
-        f.vdop_e2 = 150;
-        f.sentences = updates;
-        product.bus().gnss.push(f);
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.altitude_hae_mm = altitude_m * 1000;
+        solution.vdop_e2 = 150;
+        solution.sentences = updates;
+        product.bus().gnss.push(solution);
     }
 
     // A receiver that lost its vertical solution: no VDOP, and the last height it solved.
     void push_2d_fix(int32_t altitude_m, uint32_t updates) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.fix_mode = gnss::kFixMode2D;
-        f.altitude_hae_mm = altitude_m * 1000;
-        f.sentences = updates;
-        product.bus().gnss.push(f);
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.fix_mode = gnss::kFixMode2D;
+        solution.altitude_hae_mm = altitude_m * 1000;
+        solution.sentences = updates;
+        product.bus().gnss.push(solution);
     }
 
     // 2026-08-02T00:00:00Z. A fix with no UTC cannot name a session, so the
@@ -78,22 +78,22 @@ struct Rig {
     // A solution as a receiver reports one in flight: moving, timed, solved in 3D, and
     // referenced to both datums. core/flight decides what it means.
     void push_timed_fix(int32_t speed_mm_s, int32_t altitude_msl_m) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.utc_valid = true;
-        f.utc_s = kBaseUtcS + utc_offset_s;
-        f.latitude_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
-        f.longitude_1e7 = 85000000;
-        f.altitude_msl_mm = altitude_msl_m * 1000;
-        f.altitude_hae_mm = f.altitude_msl_mm + gnss::kDefaultGeoidSeparationMm;
-        f.geoid_measured = true;
-        f.speed_mm_s = speed_mm_s;
-        f.track_cdeg = 9000;
-        f.satellites = 10;
-        f.hdop_e2 = 100;
-        f.vdop_e2 = 150;
-        f.sentences = ++fix_updates;
-        product.bus().gnss.push(f);
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.utc_valid = true;
+        solution.utc_s = kBaseUtcS + utc_offset_s;
+        solution.latitude_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
+        solution.longitude_1e7 = 85000000;
+        solution.altitude_msl_mm = altitude_msl_m * 1000;
+        solution.altitude_hae_mm = solution.altitude_msl_mm + gnss::kDefaultGeoidSeparationMm;
+        solution.geoid_measured = true;
+        solution.speed_mm_s = speed_mm_s;
+        solution.track_cdeg = 9000;
+        solution.satellites = 10;
+        solution.hdop_e2 = 100;
+        solution.vdop_e2 = 150;
+        solution.sentences = ++fix_updates;
+        product.bus().gnss.push(solution);
     }
 
     // One second of the world: a solution, then the passes that follow it.
@@ -106,21 +106,21 @@ struct Rig {
 
     // What the driver publishes once the receiver has gone quiet: not a fix.
     void blind_second(uint32_t& now_ms) {
-        gnss::GnssSolution f{};
-        f.fix_valid = false;
-        f.sentences = ++fix_updates;
-        product.bus().gnss.push(f);
+        gnss::GnssSolution solution{};
+        solution.fix_valid = false;
+        solution.sentences = ++fix_updates;
+        product.bus().gnss.push(solution);
         run(now_ms, now_ms + 950);
         now_ms += 1000;
         utc_offset_s++;
     }
 
-    void blind_seconds(uint32_t& now_ms, uint32_t n) {
-        for (uint32_t i = 0; i < n; i++) blind_second(now_ms);
+    void blind_seconds(uint32_t& now_ms, uint32_t seconds) {
+        for (uint32_t i = 0; i < seconds; i++) blind_second(now_ms);
     }
 
-    void seconds(uint32_t& now_ms, uint32_t n, int32_t speed_mm_s, int32_t altitude_msl_m) {
-        for (uint32_t i = 0; i < n; i++) second(now_ms, speed_mm_s, altitude_msl_m);
+    void seconds(uint32_t& now_ms, uint32_t seconds, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        for (uint32_t i = 0; i < seconds; i++) second(now_ms, speed_mm_s, altitude_msl_m);
     }
 
     // The same passes, counted instead of bounded: `now_ms <= to_ms` above cannot cross
@@ -140,11 +140,11 @@ struct Rig {
     // (hardware/platform/{host,zephyr}/clock.h), so this is the only way to step a
     // case through the 49.7-day wrap of milliseconds() while microseconds() keeps counting -
     // which is what the silicon does and what set_milliseconds() cannot express.
-    void run_span_from_us(uint64_t& us, uint32_t span_ms, uint32_t step_ms = 50) {
+    void run_span_from_us(uint64_t& now_us, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_microseconds(us);
+            platform.clock().set_microseconds(now_us);
             product.run_pass(platform.clock().milliseconds());
-            us += static_cast<uint64_t>(step_ms) * 1000;
+            now_us += static_cast<uint64_t>(step_ms) * 1000;
         }
     }
 

@@ -89,12 +89,13 @@ TEST_CASE(
     Bench bench;
 
     for (int16_t temperature_dc : {int16_t{-200}, int16_t{150}, int16_t{452}}) {
-        for (uint32_t pa = 30000; pa <= 110000; pa += 7919) {
+        for (uint32_t pressure_pa = 30000; pressure_pa <= 110000; pressure_pa += 7919) {
             bench.chip.set_temperature_dc(temperature_dc);
-            bench.chip.set_pressure_mpa(pa * 1000 + 371);
+            bench.chip.set_pressure_mpa(pressure_pa * 1000 + 371);
             const parts::Bme280::Reading reading = bench.convert();
             CHECK(reading.temperature_dc == temperature_dc);
-            const int64_t error = int64_t{reading.pressure_mpa} - (int64_t{pa} * 1000 + 371);
+            const int64_t error =
+                int64_t{reading.pressure_mpa} - (int64_t{pressure_pa} * 1000 + 371);
             // DS 4.2.3 and 8.1 part by up to 13 fine_temperature counts at -20 C, which is 0.45 Pa.
             CHECK(error <= 600);
             CHECK(error >= -600);

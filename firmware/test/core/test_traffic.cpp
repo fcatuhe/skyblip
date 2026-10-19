@@ -56,7 +56,7 @@ TEST_CASE("traffic: a relay does not displace a direct reception that is still f
     }
 
     // And the hold is a hold, not a block: past it the direct track is as stale
-    // as the alarm layer's own patience with a contact, and the relay is the
+    // as the alarm layer's own patience with a target, and the relay is the
     // only thing still reporting this aircraft.
     const uint32_t past = 100 + hold_s + 1;
     table.update(observation(0x111, 6, past, model::Source::AdslUplink), past);
@@ -74,7 +74,7 @@ TEST_CASE("traffic: a relay does not displace a direct reception that is still f
 
 // The hold is core/traffic/alarm.h's own freshness rule wearing a different
 // unit. If one moves, the other has to, and this is what says so.
-TEST_CASE("traffic: the direct hold is the alarm layer's patience with a contact") {
+TEST_CASE("traffic: the direct hold is the alarm layer's patience with a target") {
     CHECK(direct_preferred_max_age_s(observation(0x111, 6, 100)) * 1000 == kAlertMaxAgeMs);
 }
 
@@ -159,13 +159,14 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
 
     model::AircraftObservation wingman{};
     uint32_t heard_ms = 0;
-    for (uint32_t t = 1000; t <= 1000 + formation::kTogetherHoldMs + 1000; t += 1000) {
-        const model::Ownship own = flying(40, 90, 0, t);
-        wingman = neighbour(own, -60, -120, 10, 40, 90, t);
+    for (uint32_t now_ms = 1000; now_ms <= 1000 + formation::kTogetherHoldMs + 1000;
+         now_ms += 1000) {
+        const model::Ownship own = flying(40, 90, 0, now_ms);
+        wingman = neighbour(own, -60, -120, 10, 40, 90, now_ms);
         table.update(wingman, wingman.received.at_s);
-        tracker.update(own, wingman, t);
-        wingmen.observe(own, wingman, {}, t);
-        heard_ms = t;
+        tracker.update(own, wingman, now_ms);
+        wingmen.observe(own, wingman, {}, now_ms);
+        heard_ms = now_ms;
     }
     tracker.dismiss();
     REQUIRE(wingmen.together(6, 0x314159));
@@ -193,12 +194,12 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
-    const auto at = [&](uint32_t address, int north_m, model::Source source, uint32_t t) {
-        model::AircraftObservation o = neighbour(own, north_m, 0, 0, 30, 0);
-        o.address = address;
-        o.source = source;
-        o.received.at_s = t;
-        return o;
+    const auto at = [&](uint32_t address, int north_m, model::Source source, uint32_t now_ms) {
+        model::AircraftObservation observation = neighbour(own, north_m, 0, 0, 30, 0);
+        observation.address = address;
+        observation.source = source;
+        observation.received.at_s = now_ms;
+        return observation;
     };
     REQUIRE(table.update(at(0xAAAAAA, 1000, model::Source::AdslDirect, 100), 100) >= 0);
     for (int i = 1; i < TrafficTable::kMaxTargets; i++)
@@ -284,7 +285,7 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
 // a fix, boot seconds when there is not) and the alarm tracker holds its own
 // deadlines on ports::Clock::milliseconds(). Both are unsigned differences, and these are
 // the cases that keep them that way: a target must not be forgotten because the
-// counter turned over, and a contact must not go unannounced for seven weeks.
+// counter turned over, and a target must not go unannounced for seven weeks.
 TEST_CASE("traffic: the age-out is a difference, whichever side of the wrap the stamps fell") {
     TrafficTable table;
     // The seconds base a device with a UTC fix uses. 2^32 seconds is 136 years, so
@@ -308,12 +309,12 @@ TEST_CASE("traffic: the age-out is a difference, whichever side of the wrap the 
     CHECK(full.find(6, 0x2001) >= 0);
 }
 
-TEST_CASE("alarm: a contact is announced and forgotten across the 49.7-day wrap") {
+TEST_CASE("alarm: a target is announced and forgotten across the 49.7-day wrap") {
     AlarmTracker tracker;
     const model::Ownship own = flying(30, 0);
     const uint32_t before = 0xFFFFF000u;  // 4096 ms short of the wrap
 
-    // A contact announced on one side of the wrap instant, still standing on the other.
+    // A target announced on one side of the wrap instant, still standing on the other.
     model::AircraftObservation target = neighbour(own, 400, 0, 0, 30, 180, before);
     REQUIRE(tracker.update(own, target, before).notify);
     CHECK(tracker.announced_level(before) == Level::Advisory);

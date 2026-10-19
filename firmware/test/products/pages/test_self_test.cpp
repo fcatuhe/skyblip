@@ -25,14 +25,14 @@ bool row_reads(const Glass& canvas, int row, const char* verdict) {
     return reads_right_aligned(canvas, self_test_row_y(row), verdict);
 }
 
-SelfTestSnapshot page(const SelfTestPart* parts, int n, bool flyable) {
-    SelfTestSnapshot s;
-    s.address = skyblip::settings::address_of(0x5B7E);
-    s.reset_reason = "WATCHDOG";
-    s.parts = parts;
-    s.part_count = n;
-    s.flyable = flyable;
-    return s;
+SelfTestSnapshot page(const SelfTestPart* parts, int count, bool flyable) {
+    SelfTestSnapshot snapshot;
+    snapshot.address = skyblip::settings::address_of(0x5B7E);
+    snapshot.reset_reason = "WATCHDOG";
+    snapshot.parts = parts;
+    snapshot.part_count = count;
+    snapshot.flyable = flyable;
+    return snapshot;
 }
 
 }  // namespace
@@ -178,13 +178,13 @@ TEST_CASE("self-test page: the bus scan is a row of its own, addresses and no ve
     // row exists.
     const uint8_t found[] = {0x28, 0x51, 0x5A, 0x76};
     const char* const roles[] = {"IMU", "RTC", "HAPTIC", "BARO"};
-    SelfTestSnapshot s = page(parts, 2, /*flyable=*/true);
-    s.i2c_addresses = found;
-    s.i2c_roles = roles;
-    s.i2c_address_count = 4;
+    SelfTestSnapshot snapshot = page(parts, 2, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 4;
 
     Glass canvas;
-    draw_self_test(canvas, s);
+    draw_self_test(canvas, snapshot);
 
     CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(2), "I2C IMU RTC HAPTIC BARO"));
     // No verdict: nothing on this row is a pass or a failure.
@@ -198,13 +198,13 @@ TEST_CASE("self-test page: an address the board cannot account for reads as its 
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     const uint8_t found[] = {0x3C, 0x51};
     const char* const roles[] = {nullptr, "RTC"};
-    SelfTestSnapshot s = page(parts, 1, /*flyable=*/true);
-    s.i2c_addresses = found;
-    s.i2c_roles = roles;
-    s.i2c_address_count = 2;
+    SelfTestSnapshot snapshot = page(parts, 1, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 2;
 
     Glass canvas;
-    draw_self_test(canvas, s);
+    draw_self_test(canvas, snapshot);
 
     CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(1), "I2C 3C RTC"));
 }
@@ -215,13 +215,13 @@ TEST_CASE("self-test page: the bus row stops at the width of a row rather than r
     const uint8_t found[] = {0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
     const char* const roles[] = {"HAPTIC", "HAPTIC", "HAPTIC", "HAPTIC",
                                  "HAPTIC", "HAPTIC", "HAPTIC", "HAPTIC"};
-    SelfTestSnapshot s = page(parts, 1, /*flyable=*/true);
-    s.i2c_addresses = found;
-    s.i2c_roles = roles;
-    s.i2c_address_count = 8;
+    SelfTestSnapshot snapshot = page(parts, 1, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 8;
 
     Glass canvas;
-    draw_self_test(canvas, s);
+    draw_self_test(canvas, snapshot);
 
     for (int y = self_test_row_y(1); y < self_test_row_y(1) + 7; y++)
         for (int x = kSelfTestRightX; x < kGlassWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
@@ -236,15 +236,15 @@ TEST_CASE("self-test page: the inventory a real unit reports fits with the bus r
     }
     const uint8_t found[] = {0x28, 0x51, 0x5A, 0x76};
     const char* const roles[] = {"IMU", "RTC", "HAPTIC", "BARO"};
-    SelfTestSnapshot s = page(parts, kSelfTestRows - 1, /*flyable=*/true);
-    s.i2c_addresses = found;
-    s.i2c_roles = roles;
-    s.i2c_address_count = 4;
-    s.battery_valid = true;
-    s.battery_mv = 4050;
+    SelfTestSnapshot snapshot = page(parts, kSelfTestRows - 1, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 4;
+    snapshot.battery_valid = true;
+    snapshot.battery_mv = 4050;
 
     Glass canvas;
-    draw_self_test(canvas, s);
+    draw_self_test(canvas, snapshot);
 
     CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(kSelfTestRows - 1),
                    "I2C IMU RTC HAPTIC BARO"));
@@ -261,17 +261,17 @@ TEST_CASE(
     "self-test page: a unit that last went dark on a flat cell says so beside the cell's voltage") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}};
     const int footer_y = self_test_row_y(1) + kSelfTestDividerGap + kSelfTestFooterGap;
-    SelfTestSnapshot s = page(parts, 1, /*flyable=*/true);
-    s.battery_valid = true;
-    s.battery_mv = 4050;
-    s.went_dark_flat = true;
+    SelfTestSnapshot snapshot = page(parts, 1, /*flyable=*/true);
+    snapshot.battery_valid = true;
+    snapshot.battery_mv = 4050;
+    snapshot.went_dark_flat = true;
     Glass canvas;
-    draw_self_test(canvas, s);
+    draw_self_test(canvas, snapshot);
     CHECK(reads_at(canvas, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
 
-    s.went_dark_flat = false;
+    snapshot.went_dark_flat = false;
     Glass ordinary;
-    draw_self_test(ordinary, s);
+    draw_self_test(ordinary, snapshot);
     CHECK(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V"));
     CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
 }

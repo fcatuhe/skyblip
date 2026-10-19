@@ -46,7 +46,7 @@ std::string unlock_command(long serial, const std::string& signature) {
 struct Bench {
     Rig rig;
     ActivationVectors vectors;
-    uint32_t t{0};
+    uint32_t now_ms{0};
 
     explicit Bench(ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
         : rig(fitted, std::nullopt) {
@@ -60,9 +60,9 @@ struct Bench {
         pass(500);
     }
 
-    void pass(uint32_t ms) {
-        rig.run(t, t + ms);
-        t += ms + 50;
+    void pass(uint32_t for_ms) {
+        rig.run(now_ms, now_ms + for_ms);
+        now_ms += for_ms + 50;
     }
 
     std::string say(const std::string& json) {
@@ -102,7 +102,7 @@ struct Bench {
     std::string press_twice() {
         read_the_prompt();
         const size_t before = rig.platform.link().sent.size();
-        rig.double_press(t);
+        rig.double_press(now_ms);
         pass(500);
         return answer_since(before);
     }
@@ -121,7 +121,7 @@ std::string refusal(const char* word) {
 TEST_CASE("activation: a unit with no serial arms neither receiver nor transmitter, fix or not") {
     Bench bench;
     bench.boot();
-    bench.rig.seconds(bench.t, 20, 0, 300);
+    bench.rig.seconds(bench.now_ms, 20, 0, 300);
     CHECK_FALSE(bench.activation().activated());
     CHECK(bench.rig.product.radio().arm_count() == 0);
     CHECK(bench.rig.product.radio().armed_mode() == ports::RfMode::Idle);
@@ -218,7 +218,7 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
         bench.register_with_vectors();
         bench.read_the_prompt();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.rig.press(bench.t);
+        bench.rig.press(bench.now_ms);
         bench.pass(1000);
         CHECK(bench.answer_since(before) == refusal("cancelled"));
     }
@@ -382,9 +382,9 @@ TEST_CASE(
     Bench bench;
     bench.boot();
     const go::Settings before = bench.rig.settings();
-    bench.rig.tap(bench.t);
-    bench.rig.press(bench.t);
-    bench.rig.long_touch(bench.t);
+    bench.rig.tap(bench.now_ms);
+    bench.rig.press(bench.now_ms);
+    bench.rig.long_touch(bench.now_ms);
     bench.pass(1000);
     CHECK(bench.rig.product.screen().mode() == go::Mode::Page);
     CHECK(bench.rig.product.screen().page() == go::Page::Radar);
@@ -406,7 +406,7 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     bench.press_twice();
     REQUIRE(bench.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
-    bench.rig.show(bench.t, go::Page::SelfTest);
+    bench.rig.show(bench.now_ms, go::Page::SelfTest);
     bench.pass(2000);
     REQUIRE(bench.rig.product.screen().page() == go::Page::SelfTest);
     CHECK(
@@ -426,7 +426,7 @@ struct QueuedUnlock {
             Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
         bench.boot();
         REQUIRE(bench.activation().serial == Identity::kSerial);
-        bench.rig.seconds(bench.t, 20, 0, 300);
+        bench.rig.seconds(bench.now_ms, 20, 0, 300);
         REQUIRE(bench.rig.product.config_link().config().flight_state() ==
                 flight::FlightState::Ground);
 
@@ -444,13 +444,13 @@ struct QueuedUnlock {
     }
 
     int unlock_answers() {
-        int n = 0;
+        int count = 0;
         const auto& sent = bench.rig.platform.link().sent;
         for (size_t i = before; i < sent.size(); i++)
             if (sent[i].endpoint == events::Endpoint::Config &&
                 sent[i].bytes.find("\"reason\"") != std::string::npos)
-                n++;
-        return n;
+                count++;
+        return count;
     }
 };
 
@@ -459,36 +459,36 @@ struct QueuedUnlock {
 // The radio of an activated unit is running, so its unlock page is placed outside a dwell, later.
 TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {
-    QueuedUnlock q;
-    q.bench.rig.seconds(q.bench.t, 4, 0, 300);
-    CHECK(q.bench.answer_since(q.before) == "{\"ack\":true,\"reason\":\"unlock\"}");
-    CHECK(q.bench.rig.platform.identity().writes == 1);
-    CHECK(q.bench.activation().serial == QueuedUnlock::kNewSerial);
+    QueuedUnlock queue;
+    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    CHECK(queue.bench.answer_since(queue.before) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(queue.bench.rig.platform.identity().writes == 1);
+    CHECK(queue.bench.activation().serial == QueuedUnlock::kNewSerial);
 }
 
 // A held unlock is never forced onto a cell the settings writer would not touch.
 TEST_CASE("activation: a supply warning before the write window drops the unlock as low_power") {
-    QueuedUnlock q;
-    q.bench.rig.platform.system_power().supply_warning = true;
-    q.bench.rig.seconds(q.bench.t, 4, 0, 300);
-    CHECK(q.bench.answer_since(q.before) == refusal("low_power"));
-    CHECK(q.bench.rig.platform.identity().writes == 0);
-    CHECK(q.bench.activation().serial == Identity::kSerial);
+    QueuedUnlock queue;
+    queue.bench.rig.platform.system_power().supply_warning = true;
+    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    CHECK(queue.bench.answer_since(queue.before) == refusal("low_power"));
+    CHECK(queue.bench.rig.platform.identity().writes == 0);
+    CHECK(queue.bench.activation().serial == Identity::kSerial);
 }
 
 // The answer belongs to the session that asked: another app claiming the link must not receive it.
 TEST_CASE(
     "activation: a held unlock dies with the link that sent it, and nobody else is answered") {
-    QueuedUnlock q;
-    const uint16_t sender = q.bench.rig.platform.link().session_id();
-    q.bench.rig.drop_link(sender);
-    q.bench.pass(100);
-    q.bench.rig.raise_link(sender + 1);
-    q.bench.say("{\"cmd\":\"get\"}");
-    q.bench.rig.seconds(q.bench.t, 4, 0, 300);
-    CHECK(q.unlock_answers() == 0);
-    CHECK(q.bench.rig.platform.identity().writes == 0);
-    CHECK(q.bench.activation().serial == Identity::kSerial);
+    QueuedUnlock queue;
+    const uint16_t sender = queue.bench.rig.platform.link().session_id();
+    queue.bench.rig.drop_link(sender);
+    queue.bench.pass(100);
+    queue.bench.rig.raise_link(sender + 1);
+    queue.bench.say("{\"cmd\":\"get\"}");
+    queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
+    CHECK(queue.unlock_answers() == 0);
+    CHECK(queue.bench.rig.platform.identity().writes == 0);
+    CHECK(queue.bench.activation().serial == Identity::kSerial);
 }
 
 TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitted, Go without") {
@@ -552,11 +552,11 @@ struct Desk {
 
     std::string register_signed_by_the_test_server() {
         const identity::Nonce server_nonce{9};
-        const crypto::Ed25519::Signature r = crypto::Ed25519::sign(
+        const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
             Identity::kTestServerSeed,
             identity::register_message(identity.unit_nonce(), server_nonce).bytes());
         return say(register_command(hex_text(ConstByteSpan(server_nonce.data(), 16)),
-                                    hex_text(ConstByteSpan(r.data(), r.size()))));
+                                    hex_text(ConstByteSpan(signature.data(), signature.size()))));
     }
 
     std::string unlock_signed_by_the_test_server(uint16_t serial) {
@@ -571,68 +571,70 @@ struct Desk {
 // A bench indoors has no fix, and an unactivated unit is silent: no ground gate is owed.
 TEST_CASE(
     "activation: an unactivated unit confirms its register prompt whatever the flight state") {
-    for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
-        CAPTURE(static_cast<int>(fs));
-        Desk d;
-        d.dfu.release = d.vectors.flag("release");
-        d.config.set_flight_state(fs);
-        d.port.queue_random(d.vectors.bytes<16>("unit_nonce"));
-        d.say("{\"cmd\":\"challenge\"}");
-        d.say(
-            register_command(d.vectors.text("server_nonce"), d.vectors.text("register_signature")));
-        REQUIRE(d.config.pending() == comms::Pending::Register);
-        d.config.set_flight_state(fs);
-        REQUIRE(d.config.pending() == comms::Pending::Register);
-        d.config.confirm();
-        CHECK(d.link.last().bytes.find(d.vectors.text("registration_signature")) !=
+    for (flight::FlightState flight_state :
+         {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
+        CAPTURE(static_cast<int>(flight_state));
+        Desk desk;
+        desk.dfu.release = desk.vectors.flag("release");
+        desk.config.set_flight_state(flight_state);
+        desk.port.queue_random(desk.vectors.bytes<16>("unit_nonce"));
+        desk.say("{\"cmd\":\"challenge\"}");
+        desk.say(register_command(desk.vectors.text("server_nonce"),
+                                  desk.vectors.text("register_signature")));
+        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        desk.config.set_flight_state(flight_state);
+        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        desk.config.confirm();
+        CHECK(desk.link.last().bytes.find(desk.vectors.text("registration_signature")) !=
               std::string::npos);
     }
 }
 
 // An activated unit transmits, so it owes every identity command the ground gate the others obey.
 TEST_CASE("activation: an activated unit refuses challenge, register and unlock off the ground") {
-    for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
-        CAPTURE(static_cast<int>(fs));
-        Desk d(Identity::kSerial);
-        REQUIRE(d.identity.activated());
-        d.config.set_flight_state(fs);
-        CHECK(d.say("{\"cmd\":\"challenge\"}") == refusal("in_flight"));
-        CHECK(d.say(register_command(d.vectors.text("server_nonce"),
-                                     d.vectors.text("register_signature"))) ==
+    for (flight::FlightState flight_state :
+         {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
+        CAPTURE(static_cast<int>(flight_state));
+        Desk desk(Identity::kSerial);
+        REQUIRE(desk.identity.activated());
+        desk.config.set_flight_state(flight_state);
+        CHECK(desk.say("{\"cmd\":\"challenge\"}") == refusal("in_flight"));
+        CHECK(desk.say(register_command(desk.vectors.text("server_nonce"),
+                                        desk.vectors.text("register_signature"))) ==
               refusal("in_flight"));
-        CHECK(d.say(unlock_command(298, d.vectors.text("unlock_signature"))) ==
+        CHECK(desk.say(unlock_command(298, desk.vectors.text("unlock_signature"))) ==
               refusal("in_flight"));
     }
 }
 
 TEST_CASE("activation: an activated unit's register prompt is cancelled at take-off") {
-    Desk d(Identity::kSerial);
-    d.config.set_flight_state(flight::FlightState::Ground);
-    REQUIRE(d.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
-    d.register_signed_by_the_test_server();
-    REQUIRE(d.config.pending() == comms::Pending::Register);
-    d.config.set_flight_state(flight::FlightState::Airborne);
-    CHECK(d.config.pending() == comms::Pending::None);
-    CHECK(d.link.last().bytes == refusal("in_flight"));
+    Desk desk(Identity::kSerial);
+    desk.config.set_flight_state(flight::FlightState::Ground);
+    REQUIRE(desk.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
+    desk.register_signed_by_the_test_server();
+    REQUIRE(desk.config.pending() == comms::Pending::Register);
+    desk.config.set_flight_state(flight::FlightState::Airborne);
+    CHECK(desk.config.pending() == comms::Pending::None);
+    CHECK(desk.link.last().bytes == refusal("in_flight"));
 }
 
 TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {
-    Desk d;
-    d.say("{\"cmd\":\"challenge\"}");
-    d.config.set_supply_warned(true);
-    CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
-    CHECK(d.port.writes == 0);
-    d.config.set_supply_warned(false);
-    CHECK(d.unlock_signed_by_the_test_server(0x0042) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    Desk desk;
+    desk.say("{\"cmd\":\"challenge\"}");
+    desk.config.set_supply_warned(true);
+    CHECK(desk.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
+    CHECK(desk.port.writes == 0);
+    desk.config.set_supply_warned(false);
+    CHECK(desk.unlock_signed_by_the_test_server(0x0042) == "{\"ack\":true,\"reason\":\"unlock\"}");
 }
 
 // The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
 TEST_CASE("activation: an unlock code for serial 0 is refused, however well it is signed") {
-    Desk d;
-    d.say("{\"cmd\":\"challenge\"}");
-    CHECK(d.unlock_signed_by_the_test_server(0) == refusal("bad_signature"));
-    CHECK(d.port.writes == 0);
-    CHECK_FALSE(d.identity.activated());
+    Desk desk;
+    desk.say("{\"cmd\":\"challenge\"}");
+    CHECK(desk.unlock_signed_by_the_test_server(0) == refusal("bad_signature"));
+    CHECK(desk.port.writes == 0);
+    CHECK_FALSE(desk.identity.activated());
 }
 
 // The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
@@ -642,11 +644,11 @@ TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is
          {comms::IdentityLink::kNonceForgetMs - 1, comms::IdentityLink::kNonceForgetMs,
           comms::IdentityLink::kNonceForgetMs + 1}) {
         CAPTURE(after);
-        Desk d;
-        d.config.tick(kChallengeMs);
-        d.say("{\"cmd\":\"challenge\"}");
-        d.config.tick(kChallengeMs + after);
-        const std::string answer = d.unlock_signed_by_the_test_server(0x0042);
+        Desk desk;
+        desk.config.tick(kChallengeMs);
+        desk.say("{\"cmd\":\"challenge\"}");
+        desk.config.tick(kChallengeMs + after);
+        const std::string answer = desk.unlock_signed_by_the_test_server(0x0042);
         if (after < comms::IdentityLink::kNonceForgetMs)
             CHECK(answer == "{\"ack\":true,\"reason\":\"unlock\"}");
         else
@@ -659,26 +661,26 @@ TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is
 TEST_CASE(
     "activation: an expired nonce stays dead when milliseconds() wraps back into its window") {
     constexpr uint32_t kChallengeMs = 0xFFFF0000u;
-    Desk d;
-    d.config.tick(kChallengeMs);
-    d.say("{\"cmd\":\"challenge\"}");
-    d.config.tick(kChallengeMs + comms::IdentityLink::kNonceForgetMs);
-    d.config.tick(kChallengeMs + 5);
-    CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("no_session"));
-    CHECK(d.port.writes == 0);
+    Desk desk;
+    desk.config.tick(kChallengeMs);
+    desk.say("{\"cmd\":\"challenge\"}");
+    desk.config.tick(kChallengeMs + comms::IdentityLink::kNonceForgetMs);
+    desk.config.tick(kChallengeMs + 5);
+    CHECK(desk.unlock_signed_by_the_test_server(0x0042) == refusal("no_session"));
+    CHECK(desk.port.writes == 0);
 }
 
 // The server keeps the release flag beside the key, and the unit's S covers it either way.
 TEST_CASE("activation: the registration says whether the build is a release, and signs it") {
     for (bool release : {false, true}) {
         CAPTURE(release);
-        Desk d;
-        d.dfu.release = release;
-        d.say("{\"cmd\":\"challenge\"}");
-        d.register_signed_by_the_test_server();
-        REQUIRE(d.config.pending() == comms::Pending::Register);
-        d.config.confirm();
-        const std::string frame = d.link.last().bytes;
+        Desk desk;
+        desk.dfu.release = release;
+        desk.say("{\"cmd\":\"challenge\"}");
+        desk.register_signed_by_the_test_server();
+        REQUIRE(desk.config.pending() == comms::Pending::Register);
+        desk.config.confirm();
+        const std::string frame = desk.link.last().bytes;
         CHECK(frame.find(release ? "\"release\":true," : "\"release\":false,") !=
               std::string::npos);
         CHECK(frame.find("\"server_key_id\":\"890026b1\",\"release\"") != std::string::npos);
@@ -686,35 +688,37 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         const identity::Nonce server_nonce{9};
         const identity::Message signed_over = identity::registration_message(
             Identity::kDeviceId, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
-            d.identity.unit_nonce(), server_nonce, d.unit.server_key_id(), release, "0.3.0+1234");
-        crypto::Ed25519::Signature s{};
+            desk.identity.unit_nonce(), server_nonce, desk.unit.server_key_id(), release,
+            "0.3.0+1234");
+        crypto::Ed25519::Signature signature{};
         const size_t at = frame.find("\"signature\":\"") + 13;
-        REQUIRE(hex::read(frame.substr(at, 128).c_str(), ByteSpan(s.data(), s.size())));
-        CHECK(crypto::Ed25519::verify(s, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
-                                      signed_over.bytes()));
+        REQUIRE(
+            hex::read(frame.substr(at, 128).c_str(), ByteSpan(signature.data(), signature.size())));
+        CHECK(crypto::Ed25519::verify(
+            signature, crypto::Ed25519::public_key_of(Identity::kUnitSeed), signed_over.bytes()));
     }
 }
 
 // The widest version and release false make the widest frame, the size register checks.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
-    Desk d;
-    d.dfu.running_image_version = dfu::kWidestVersion;
-    d.say("{\"cmd\":\"challenge\"}");
-    const identity::Nonce unit_nonce = d.identity.unit_nonce();
+    Desk desk;
+    desk.dfu.running_image_version = dfu::kWidestVersion;
+    desk.say("{\"cmd\":\"challenge\"}");
+    const identity::Nonce unit_nonce = desk.identity.unit_nonce();
     char nonce_hex[33] = {0};
     hex::write(ConstByteSpan(unit_nonce.data(), unit_nonce.size()), nonce_hex);
     const identity::Nonce server_nonce{7};
     char server_hex[33] = {0};
     hex::write(ConstByteSpan(server_nonce.data(), server_nonce.size()), server_hex);
-    const crypto::Ed25519::Signature r = crypto::Ed25519::sign(
+    const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
         Identity::kTestServerSeed, identity::register_message(unit_nonce, server_nonce).bytes());
-    char r_hex[129] = {0};
-    hex::write(ConstByteSpan(r.data(), r.size()), r_hex);
-    d.say(register_command(server_hex, r_hex));
-    REQUIRE(d.config.pending() == comms::Pending::Register);
-    d.config.confirm();
-    CHECK(d.link.last().bytes.size() == size_t(comms::IdentityLink::kRegistrationFrameBytes));
-    CHECK(d.link.last().bytes.find("9.99.99+99999") != std::string::npos);
-    CHECK(d.link.last().bytes.find("\"release\":false") != std::string::npos);
+    char signature_hex[129] = {0};
+    hex::write(ConstByteSpan(signature.data(), signature.size()), signature_hex);
+    desk.say(register_command(server_hex, signature_hex));
+    REQUIRE(desk.config.pending() == comms::Pending::Register);
+    desk.config.confirm();
+    CHECK(desk.link.last().bytes.size() == size_t(comms::IdentityLink::kRegistrationFrameBytes));
+    CHECK(desk.link.last().bytes.find("9.99.99+99999") != std::string::npos);
+    CHECK(desk.link.last().bytes.find("\"release\":false") != std::string::npos);
     CHECK(comms::IdentityLink::kRegistrationFrameBytes <= kChromePayloadBytes);
 }

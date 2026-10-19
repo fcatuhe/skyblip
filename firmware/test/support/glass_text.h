@@ -11,16 +11,17 @@ namespace skyblip {
 
 inline bool reads_in(const ui::Canvas& canvas, const char* text, int x0, int y0, int x1, int y1,
                      int scale = 1, bool ink = true) {
-    const int n = static_cast<int>(std::strlen(text));
+    const int characters = static_cast<int>(std::strlen(text));
     go::Glass wanted;
     wanted.clear(ink);
     wanted.draw_text(0, 0, text, ink, scale);
-    const int w = n * ui::kCellWidth * scale - scale, h = ui::kCharacterHeight * scale;
-    for (int y = y0; y + h <= y1; y++) {
-        for (int x = x0; x + w <= x1; x++) {
+    const int width = characters * ui::kCellWidth * scale - scale,
+              height = ui::kCharacterHeight * scale;
+    for (int y = y0; y + height <= y1; y++) {
+        for (int x = x0; x + width <= x1; x++) {
             bool same = true;
-            for (int dy = 0; dy < h && same; dy++)
-                for (int dx = 0; dx < w && same; dx++)
+            for (int dy = 0; dy < height && same; dy++)
+                for (int dx = 0; dx < width && same; dx++)
                     if (canvas.get_pixel(x + dx, y + dy) != wanted.get_pixel(dx, dy)) same = false;
             if (same) return true;
         }

@@ -10,18 +10,18 @@ using namespace skyblip;
 
 namespace {
 model::AircraftObservation target(uint32_t address) {
-    model::AircraftObservation t{};
-    t.address = address;
-    t.address_mapping_table = 6;
-    t.aircraft_category = 1;
-    t.flight_state = 2;
-    t.latitude_1e7 = 481234500;
-    t.longitude_1e7 = 81234500;
-    t.altitude_m = 1200;
-    t.speed_q = 160;
-    t.speed_valid = true;
-    t.position_valid = true;
-    return t;
+    model::AircraftObservation observation{};
+    observation.address = address;
+    observation.address_mapping_table = 6;
+    observation.aircraft_category = 1;
+    observation.flight_state = 2;
+    observation.latitude_1e7 = 481234500;
+    observation.longitude_1e7 = 81234500;
+    observation.altitude_m = 1200;
+    observation.speed_q = 160;
+    observation.speed_valid = true;
+    observation.position_valid = true;
+    return observation;
 }
 }  // namespace
 

@@ -46,9 +46,9 @@ TEST_CASE("product: a receiver that never speaks keeps the image on probation") 
 TEST_CASE("product: an image that was installed confirmed is never confirmed again") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    on_ground(rig, t);
-    rig.run(t, t + 5000);
+    uint32_t now_ms = 0;
+    on_ground(rig, now_ms);
+    rig.run(now_ms, now_ms + 5000);
     CHECK(rig.platform.dfu().confirms == 0);
     CHECK(config(rig).image_state() == dfu::ImageState::Confirmed);
 }

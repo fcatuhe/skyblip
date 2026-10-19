@@ -24,25 +24,25 @@ TEST_CASE("radar page: renders rings, own symbol and plots targets") {
     // point: east of it starts at pixel 100, west of it at 99.
     {
         RadarTarget pair[2] = {{0, 4000, 0, Level::Advisory}, {0, -4000, 0, Level::Advisory}};
-        RadarSnapshot s2;
-        s2.fix_valid = true;
-        s2.range_step = 3;
-        s2.target_count = 2;
-        s2.targets = pair;
-        Glass f2;
-        draw_radar(f2, s2);
-        int e = -1, w = -1;
+        RadarSnapshot pair_snapshot;
+        pair_snapshot.fix_valid = true;
+        pair_snapshot.range_step = 3;
+        pair_snapshot.target_count = 2;
+        pair_snapshot.targets = pair;
+        Glass pair_glass;
+        draw_radar(pair_glass, pair_snapshot);
+        int east = -1, west = -1;
         for (int x = 100; x < 200; x++)
-            if (f2.get_pixel(x, 99)) {
-                e = x;
+            if (pair_glass.get_pixel(x, 99)) {
+                east = x;
                 break;
             }
         for (int x = 99; x >= 0; x--)
-            if (f2.get_pixel(x, 99)) {
-                w = x;
+            if (pair_glass.get_pixel(x, 99)) {
+                west = x;
                 break;
             }
-        CHECK(e - 100 == 99 - w);
+        CHECK(east - 100 == 99 - west);
     }
     RadarSnapshot snapshot;
     snapshot.fix_valid = true;
@@ -53,11 +53,11 @@ TEST_CASE("radar page: renders rings, own symbol and plots targets") {
     CHECK(canvas.count_black() > 100);
 
     // no-fix path shows text, few pixels but non-empty
-    Glass fb2;
-    RadarSnapshot ns;
-    ns.fix_valid = false;
-    draw_radar(fb2, ns);
-    CHECK(fb2.count_black() > 0);
+    Glass no_fix_glass;
+    RadarSnapshot no_fix;
+    no_fix.fix_valid = false;
+    draw_radar(no_fix_glass, no_fix);
+    CHECK(no_fix_glass.count_black() > 0);
 }
 
 TEST_CASE("radar page: everything is centred on the 99|100 point, not on a pixel") {
@@ -73,21 +73,21 @@ TEST_CASE("radar page: everything is centred on the 99|100 point, not on a pixel
     CHECK(canvas.get_pixel(99, 100));
     CHECK(canvas.get_pixel(100, 100));
     // ... and the glyph is mirror-symmetric about that point, not about a column
-    int mism = 0;
+    int mismatches = 0;
     for (int y = 88; y < 118; y++)
-        for (int k = 0; k < 14; k++)
-            if (canvas.get_pixel(99 - k, y) != canvas.get_pixel(100 + k, y)) mism++;
-    CHECK(mism == 0);
+        for (int tick = 0; tick < 14; tick++)
+            if (canvas.get_pixel(99 - tick, y) != canvas.get_pixel(100 + tick, y)) mismatches++;
+    CHECK(mismatches == 0);
     // The hot spot (the wing = the widest row, i.e. the aircraft's position)
     // sits ON the centre point, not at the glyph's bounding-box centre: targets
     // are plotted as offsets from it, so bbox-centring a long-tailed aeroplane
     // puts the wing several px forward and skews every bearing on screen.
     int widest = 0, widest_row = -1;
     for (int y = 88; y < 118; y++) {
-        int n = 0;
-        for (int x = 86; x < 114; x++) n += canvas.get_pixel(x, y) ? 1 : 0;
-        if (n > widest) {
-            widest = n;
+        int count = 0;
+        for (int x = 86; x < 114; x++) count += canvas.get_pixel(x, y) ? 1 : 0;
+        if (count > widest) {
+            widest = count;
             widest_row = y;
         }
     }
@@ -130,8 +130,8 @@ TEST_CASE("radar page: the range ring is one unbroken stroke, and the only ring 
         for (int x = 1; x < 199; x++) {
             if (!canvas.get_pixel(x, y)) continue;
             const int dx = x < 100 ? 99 - x : x - 100, dy = y < 100 ? 99 - y : y - 100;
-            const int r2 = dx * dx + dy * dy;
-            if (r2 < 80 * 80 || r2 > 95 * 95) continue;
+            const int distance_squared = dx * dx + dy * dy;
+            if (distance_squared < 80 * 80 || distance_squared > 95 * 95) continue;
             const int neighbours = canvas.get_pixel(x - 1, y) + canvas.get_pixel(x + 1, y) +
                                    canvas.get_pixel(x, y - 1) + canvas.get_pixel(x, y + 1);
             if (neighbours < 2) speckles++;
@@ -220,11 +220,11 @@ TEST_CASE("radar page: the range labels the ring, centred on it and cleared off 
 TEST_CASE("radar page: the ring is labelled and sized in the unit a pilot set") {
     RadarSnapshot metric = flying(0);
     metric.units = skyblip::go::Units::Metric;
-    const Glass km = radar(metric);
+    const Glass metric_glass = radar(metric);
 
-    CHECK(reads_in(km, "8", 70, 176, 100, 198, 2));
-    CHECK(reads_in(km, "KM", 95, 183, 140, 198));
-    CHECK_FALSE(reads_in(km, "NM", 60, 176, 140, 198));
+    CHECK(reads_in(metric_glass, "8", 70, 176, 100, 198, 2));
+    CHECK(reads_in(metric_glass, "KM", 95, 183, 140, 198));
+    CHECK_FALSE(reads_in(metric_glass, "NM", 60, 176, 140, 198));
 
     // The ring is 8 km rather than the 7.4 the same step converts to, so the plot is its own.
     CHECK(range_metres(metric.range_step, metric.units) == 8000);

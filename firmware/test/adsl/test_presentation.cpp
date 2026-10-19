@@ -24,9 +24,9 @@ protocol::AdslPacket traffic_packet(uint32_t address = 0x123456, uint8_t table =
     own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
     own.hdop_e2 = 90;
     own.flight_state = 2;
-    protocol::AdslPacket p{};
-    protocol::from_own(p, own, address, table, 4);
-    return p;
+    protocol::AdslPacket packet{};
+    protocol::from_own(packet, own, address, table, 4);
+    return packet;
 }
 }  // namespace
 
@@ -41,26 +41,26 @@ TEST_CASE("ADS-L.4.SRD860.F.1: the ADS-L data is a 40-bit header and a payload b
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, reserved, relay") {
-    protocol::AdslPacket p = traffic_packet();
-    CHECK(p.payload_type == 0x02);
-    CHECK(p.address() == 0x123456u);
-    CHECK(p.address_mapping_table() == 6);
-    CHECK_FALSE(p.is_relay());
+    protocol::AdslPacket packet = traffic_packet();
+    CHECK(packet.payload_type == 0x02);
+    CHECK(packet.address() == 0x123456u);
+    CHECK(packet.address_mapping_table() == 6);
+    CHECK_FALSE(packet.is_relay());
 
-    p.set_relay();
-    CHECK(p.is_relay());
-    CHECK((p.address_bytes[3] & 0x80) != 0);
+    packet.set_relay();
+    CHECK(packet.is_relay());
+    CHECK((packet.address_bytes[3] & 0x80) != 0);
 
     // One little-endian word: the AMT in bits 0 to 5, the address in bits 6 to 29.
-    CHECK((get_u32(p.address_bytes) & 0x3Fu) == 6u);
-    CHECK(((get_u32(p.address_bytes) >> 6) & 0x00FFFFFFu) == 0x123456u);
+    CHECK((get_u32(packet.address_bytes) & 0x3Fu) == 6u);
+    CHECK(((get_u32(packet.address_bytes) >> 6) & 0x00FFFFFFu) == 0x123456u);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a Traffic payload is type 2, in the broadcast half of the range") {
-    protocol::AdslPacket p = traffic_packet();
-    CHECK(p.payload_type == 0x02);
-    CHECK(p.is_position());
-    CHECK(p.payload_type < 0x80);
+    protocol::AdslPacket packet = traffic_packet();
+    CHECK(packet.payload_type == 0x02);
+    CHECK(packet.is_position());
+    CHECK(packet.payload_type < 0x80);
 }
 
 // Issue 2 puts Status, Remote ID and the uplinks on this band, and none of them is an aeroplane.
@@ -68,44 +68,44 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a payload that is not Traffic never becomes an 
     model::AircraftObservation observation{};
     for (uint8_t type : {uint8_t(0x00), uint8_t(0x03), uint8_t(0x04), uint8_t(0x05), uint8_t(0x06),
                          uint8_t(0x42), uint8_t(0x82)}) {
-        protocol::AdslPacket p = traffic_packet();
-        p.payload_type = type;
-        CHECK_FALSE(p.is_position());
-        CHECK_FALSE(protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect,
-                                             observation));
+        protocol::AdslPacket packet = traffic_packet();
+        packet.payload_type = type;
+        CHECK_FALSE(packet.is_position());
+        CHECK_FALSE(protocol::to_observation(packet, events::Stamp{}, -80,
+                                             model::Source::AdslDirect, observation));
         CHECK_FALSE(observation.position_valid);
     }
 }
 
 // Payload 66 is the entry F.2.1 assigns to OGN and leaves outside its own scope.
 TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has no field for") {
-    protocol::AdslPacket p{};
-    protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
+    protocol::AdslPacket packet{};
+    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
 
-    CHECK(p.payload_type == 0x42);
-    CHECK(p.payload_type == 66);
-    CHECK(p.payload_type < 0x80);
-    CHECK_FALSE(p.is_position());
-    CHECK(p.is_registration());
-    CHECK(p.telemetry_type() == 1);
-    CHECK(p.information_type() == 5);
+    CHECK(packet.payload_type == 0x42);
+    CHECK(packet.payload_type == 66);
+    CHECK(packet.payload_type < 0x80);
+    CHECK_FALSE(packet.is_position());
+    CHECK(packet.is_registration());
+    CHECK(packet.telemetry_type() == 1);
+    CHECK(packet.information_type() == 5);
     // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
-    CHECK(p.payload[protocol::AdslPacket::kInformationHeaderByte] == 0x45);
-    CHECK(p.address() == 0x123456u);
-    CHECK(p.address_mapping_table() == 58);
+    CHECK(packet.payload[protocol::AdslPacket::kInformationHeaderByte] == 0x45);
+    CHECK(packet.address() == 0x123456u);
+    CHECK(packet.address_mapping_table() == 58);
 
     char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(p, name, sizeof(name)) == 6);
+    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 6);
     CHECK(std::string(name) == "D-KXYZ");
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused, not drawn") {
-    protocol::AdslPacket p{};
-    protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.information_text()[3] = 0x07;
+    protocol::AdslPacket packet{};
+    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
+    packet.information_text()[3] = 0x07;
 
     char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
+    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 
     // And a telemetry record that is not the registration one is not a name either.
@@ -117,30 +117,30 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not split into PFLAA") {
-    protocol::AdslPacket p{};
-    protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.information_text()[1] = ',';
+    protocol::AdslPacket packet{};
+    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
+    packet.information_text()[1] = ',';
 
     char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
+    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
-    protocol::AdslPacket p{};
-    p.reset();
-    p.set_address_mapping_table(63);
-    p.set_address(0x00FFFFFFu);
-    CHECK(p.address_mapping_table() == 63);
-    CHECK(p.address() == 0x00FFFFFFu);
+    protocol::AdslPacket packet{};
+    packet.reset();
+    packet.set_address_mapping_table(63);
+    packet.set_address(0x00FFFFFFu);
+    CHECK(packet.address_mapping_table() == 63);
+    CHECK(packet.address() == 0x00FFFFFFu);
 
     // Table 9 and up split the address: an 8-bit manufacturer prefix, then a 16-bit base.
-    p.set_address_mapping_table(9);
-    p.set_address(0xAB1234u);
-    CHECK(p.address_mapping_table() == 9);
-    CHECK((p.address() >> 16) == 0xABu);
-    CHECK((p.address() & 0xFFFFu) == 0x1234u);
-    CHECK(p.table_and_address() == ((9u << 24) | 0xAB1234u));
+    packet.set_address_mapping_table(9);
+    packet.set_address(0xAB1234u);
+    CHECK(packet.address_mapping_table() == 9);
+    CHECK((packet.address() >> 16) == 0xABu);
+    CHECK((packet.address() & 0xFFFFu) == 0x1234u);
+    CHECK(packet.table_and_address() == ((9u << 24) | 0xAB1234u));
 
     CHECK(int(settings::kAddressMappingTable) == 58);
     const protocol::AdslPacket ours =
@@ -169,13 +169,13 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong 
     CHECK(go::apply_json(settings, icao, static_cast<int>(strlen(icao))) == Status::Ok);
 
     char buffer[256];
-    const int n = go::to_json(settings, 0x123456, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader r(buffer, n);
-    long v = 0;
-    CHECK(r.read_integer("address", v));
-    CHECK(v == 0x123456);
-    CHECK(r.read_integer("address_mapping_table", v));
-    CHECK(v == 58);
+    const int written = go::to_json(settings, 0x123456, buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader reader(buffer, written);
+    long value = 0;
+    CHECK(reader.read_integer("address", value));
+    CHECK(value == 0x123456);
+    CHECK(reader.read_integer("address_mapping_table", value));
+    CHECK(value == 58);
 }
 
 // Every ADS-L data block has to be scramblable, and XXTEA works on whole 32-bit words.

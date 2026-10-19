@@ -17,24 +17,24 @@ constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
 constexpr uint8_t kParaglider = 7;          // ADS-L G.1.3
 
 flight::LogRecord sample_record() {
-    flight::LogRecord r{};
-    r.utc_s = kBaseUtcS + 1234;
-    r.latitude_1e7 = 485212345;
-    r.longitude_1e7 = -21234567;
-    r.altitude_msl_m = 1487;
-    r.altitude_hae_m = 1487 + 46;
-    r.speed_q = 253;
-    r.track_c9 = 401;
-    r.climb_e8 = -37;
-    r.hdop_e2 = 120;
-    r.satellites = 11;
-    r.flight_state = 2;
-    r.fix_valid = true;
-    r.utc_valid = true;
-    r.pps_locked = true;
-    r.climb_valid = true;
-    r.geoid_measured = true;
-    return r;
+    flight::LogRecord record{};
+    record.utc_s = kBaseUtcS + 1234;
+    record.latitude_1e7 = 485212345;
+    record.longitude_1e7 = -21234567;
+    record.altitude_msl_m = 1487;
+    record.altitude_hae_m = 1487 + 46;
+    record.speed_q = 253;
+    record.track_c9 = 401;
+    record.climb_e8 = -37;
+    record.hdop_e2 = 120;
+    record.satellites = 11;
+    record.flight_state = 2;
+    record.fix_valid = true;
+    record.utc_valid = true;
+    record.pps_locked = true;
+    record.climb_valid = true;
+    record.geoid_measured = true;
+    return record;
 }
 
 model::Ownship flying(uint32_t utc_s, int32_t speed_mm_s) {

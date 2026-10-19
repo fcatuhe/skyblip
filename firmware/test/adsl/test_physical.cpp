@@ -151,11 +151,11 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
             for (int slot = 0; slot < 2; slot++) {
                 const timing::SlotPlan plan =
                     timing::Scheduler::plan(timing::Scheduler::slot_start(slot), clock);
-                const timing::Transmitter::Attempt a = tx.attempt(plan, utc_s, 1000, true, 0);
-                if (!a.go) continue;
-                if (a.payload == timing::Transmitter::Payload::Callsign) continue;
-                CHECK(timing::Scheduler::in_direct_slot(a.at_ms));
-                CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
+                const timing::Transmitter::Attempt attempt = tx.attempt(plan, utc_s, 1000, true, 0);
+                if (!attempt.go) continue;
+                if (attempt.payload == timing::Transmitter::Payload::Callsign) continue;
+                CHECK(timing::Scheduler::in_direct_slot(attempt.at_ms));
+                CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
                       timing::kDirectEndMs);
             }
         }
@@ -176,15 +176,15 @@ TEST_CASE(
         timing::Transmitter tx;
         tx.configure(address * 0x9E37u);
         for (uint32_t utc_s = 0; utc_s < 32; utc_s++) {
-            const timing::Transmitter::Attempt a = tx.attempt(slot1, utc_s, 1000, true, 0);
-            if (!a.go || a.payload != timing::Transmitter::Payload::Callsign) continue;
+            const timing::Transmitter::Attempt attempt = tx.attempt(slot1, utc_s, 1000, true, 0);
+            if (!attempt.go || attempt.payload != timing::Transmitter::Payload::Callsign) continue;
             seen++;
             // Past the direct slot, inside slot 1's dwell, and complete before it ends.
-            CHECK_FALSE(timing::Scheduler::in_direct_slot(a.at_ms));
-            CHECK(a.at_ms >= timing::kCallsignStartMs);
-            CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
+            CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
+            CHECK(attempt.at_ms >= timing::kCallsignStartMs);
+            CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
                   timing::kCallsignEndMs);
-            CHECK(a.frequency_hz == timing::kMBand1Hz);
+            CHECK(attempt.frequency_hz == timing::kMBand1Hz);
         }
     }
     CHECK(seen > 0);

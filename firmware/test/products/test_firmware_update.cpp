@@ -20,20 +20,20 @@ namespace {
 constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
 constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
 
-void pass(Rig& rig, uint32_t& t) {
-    t += 50;
-    rig.run(t, t);
+void pass(Rig& rig, uint32_t& now_ms) {
+    now_ms += 50;
+    rig.run(now_ms, now_ms);
 }
 
-void open_upload_window(Rig& rig, uint32_t& t) {
-    on_ground(rig, t);
+void open_upload_window(Rig& rig, uint32_t& now_ms) {
+    on_ground(rig, now_ms);
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     config(rig).confirm();
 }
 
-void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
+void climb_until_the_link_sees_it(Rig& rig, uint32_t& now_ms) {
     for (int second = 0; second < 20; second++) {
         gnss::GnssSolution climbing{};
         climbing.fix_valid = true;
@@ -42,7 +42,7 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
         climbing.sentences = 1;
         rig.product.bus().gnss.push(climbing);
         for (int i = 0; i < 10; i++) {
-            pass(rig, t);
+            pass(rig, now_ms);
             if (config(rig).flight_state() == flight::FlightState::Airborne) return;
         }
     }
@@ -55,29 +55,29 @@ void stage_versions(Rig& rig) {
     rig.platform.dfu().staged_image_version = kStaged;
 }
 
-void land_upload(Rig& rig, uint32_t& t) {
+void land_upload(Rig& rig, uint32_t& now_ms) {
     rig.platform.dfu().finished_upload = true;
-    pass(rig, t);
+    pass(rig, now_ms);
 }
 
 void install_and_swap(Rig& rig) {
-    uint32_t t = 0;
-    open_upload_window(rig, t);
-    land_upload(rig, t);
-    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
 }
 
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
 std::string update_frame(Rig& rig) {
-    for (const auto& f : rig.platform.link().sent)
-        if (f.bytes.find("\"cmd\":\"update\"") != std::string::npos) return f.bytes;
+    for (const auto& frame : rig.platform.link().sent)
+        if (frame.bytes.find("\"cmd\":\"update\"") != std::string::npos) return frame.bytes;
     return "";
 }
 
 bool attempt_recorded(Rig& rig) {
     uint8_t blob[dfu::kUpdateRecordBytes];
-    size_t n = 0;
-    return rig.platform.key_value().read("update", blob, sizeof(blob), n) == Status::Ok;
+    size_t count = 0;
+    return rig.platform.key_value().read("update", blob, sizeof(blob), count) == Status::Ok;
 }
 
 // The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.
@@ -113,22 +113,23 @@ struct NewerBlob {
 
 bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t length) {
     uint8_t stored[64];
-    size_t n = 0;
-    if (rig.platform.key_value().read(key, stored, sizeof(stored), n) != Status::Ok) return false;
-    return n == length && std::memcmp(stored, blob, length) == 0;
+    size_t count = 0;
+    if (rig.platform.key_value().read(key, stored, sizeof(stored), count) != Status::Ok)
+        return false;
+    return count == length && std::memcmp(stored, blob, length) == 0;
 }
 
-void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
-    on_ground(rig, t);
+void set_callsign_over_the_link(Rig& rig, uint32_t& now_ms, const char* callsign) {
+    on_ground(rig, now_ms);
     std::string json = "{\"cmd\":\"set\",\"callsign\":\"";
     json += callsign;
     json += "\"}";
     rig.send(json.c_str());
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     config(rig).confirm();
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
 }
 
 }  // namespace
@@ -137,17 +138,17 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(rig, t);
-    rig.run(t, t + 3000);
-    t += 3000;
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
                    go::kInstallingTitleY, go::kReceivingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 0);
 
-    land_upload(rig, t);
-    rig.run(t, t + 200);
-    t += 200;
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Install);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK(rig.product.installing());
@@ -159,7 +160,7 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK(rig.platform.dfu().triggered == 0);
     CHECK_FALSE(attempt_recorded(rig));
 
-    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
                    go::kInstallingTitleY, go::kInstallingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 1);
@@ -167,10 +168,10 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK(attempt_recorded(rig));
 
     uint8_t blob[dfu::kUpdateRecordBytes];
-    size_t n = 0;
-    REQUIRE(rig.platform.key_value().read("update", blob, sizeof(blob), n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("update", blob, sizeof(blob), count) == Status::Ok);
     dfu::UpdateRecord record;
-    REQUIRE(dfu::from_blob(blob, n, record));
+    REQUIRE(dfu::from_blob(blob, count, record));
     CHECK(record.from == kRunning);
     CHECK(record.to == kStaged);
 }
@@ -178,22 +179,22 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
 TEST_CASE("product: with no watchdog running a recovery paints the bootloader page, then reboots") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    on_ground(rig, t);
+    uint32_t now_ms = 0;
+    on_ground(rig, now_ms);
 
     rig.send("{\"cmd\":\"recovery\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     REQUIRE(config(rig).pending() == comms::Pending::Recovery);
 
     config(rig).confirm();
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
     CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning, 1));
@@ -205,20 +206,20 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) == Status::Ok);
-    uint32_t t = 0;
-    on_ground(rig, t);
+    uint32_t now_ms = 0;
+    on_ground(rig, now_ms);
 
     rig.send("{\"cmd\":\"recovery\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     config(rig).confirm();
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
     CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryAwaitsPress,
@@ -231,12 +232,12 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
 TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(rig, t);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
     REQUIRE(config(rig).upload_allowed());
     CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 
-    pass(rig, t);
+    pass(rig, now_ms);
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
@@ -244,12 +245,12 @@ TEST_CASE("product: the SMP hook's gate opens on the pass after the window is co
 TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's gate in that pass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(rig, t);
-    pass(rig, t);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    pass(rig, now_ms);
     REQUIRE(rig.platform.dfu().upload_allowed_published);
 
-    climb_until_the_link_sees_it(rig, t);
+    climb_until_the_link_sees_it(rig, now_ms);
     REQUIRE(config(rig).flight_state() == flight::FlightState::Airborne);
     CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
 }
@@ -258,22 +259,22 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(rig, t);
-    rig.run(t, t + 3000);
-    t += 3000;
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(config(rig).receiving_firmware());
 
-    rig.press(t);
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());
     CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
     CHECK_FALSE(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
                          go::kInstallingTitleY, go::kReceivingTitle, 2));
 
-    land_upload(rig, t);
-    rig.run(t, t + 200);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + 200);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.platform.dfu().triggered == 0);
 }
@@ -282,15 +283,15 @@ TEST_CASE("product: an upload that lands on a critical cell is refused and nothi
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(rig, t);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
     rig.platform.battery().divider_mv = 3400;
-    rig.run(t, t + 8000);
-    t += 8000;
+    rig.run(now_ms, now_ms + 8000);
+    now_ms += 8000;
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
 
-    land_upload(rig, t);
-    rig.run(t, t + 200);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + 200);
     CHECK(rig.last_on(events::Endpoint::Config).find("low_power") != std::string::npos);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.platform.dfu().triggered == 0);
@@ -332,14 +333,14 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     before.platform.dfu().staged_hash_valid = true;
     before.platform.dfu().staged_image_hash = kFull;
     REQUIRE(before.setup() == Status::Ok);
-    uint32_t t = 0;
-    on_ground(before, t);
+    uint32_t now_ms = 0;
+    on_ground(before, now_ms);
     before.send("{\"cmd\":\"dfu\",\"version\":\"0.1.0+12\"}");
-    before.run(t, t + 200);
-    t += 200;
+    before.run(now_ms, now_ms + 200);
+    now_ms += 200;
     config(before).confirm();
-    land_upload(before, t);
-    before.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    land_upload(before, now_ms);
+    before.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
@@ -406,29 +407,29 @@ TEST_CASE("product: an image staged before a restart is not installed by the nex
     after.rig.platform.dfu().staged_version_valid = true;
     after.rig.platform.dfu().staged_image_version = kStaged;
     REQUIRE(after.rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    open_upload_window(after.rig, t);
-    after.rig.run(t, t + 2000);
+    uint32_t now_ms = 0;
+    open_upload_window(after.rig, now_ms);
+    after.rig.run(now_ms, now_ms + 2000);
     CHECK(config(after.rig).receiving_firmware());
     CHECK(after.rig.platform.dfu().triggered == 0);
 }
 
 namespace {
 std::string ask_for(Rig& rig, const char* version) {
-    uint32_t t = 0;
-    on_ground(rig, t);
+    uint32_t now_ms = 0;
+    on_ground(rig, now_ms);
     std::string json = "{\"cmd\":\"dfu\",\"version\":\"";
     json += version;
     json += "\"}";
     rig.send(json.c_str());
-    rig.run(t, t + 200);
+    rig.run(now_ms, now_ms + 200);
     return rig.last_on(events::Endpoint::Config);
 }
 
 std::string land(Rig& rig) {
-    uint32_t t = 0;
-    open_upload_window(rig, t);
-    land_upload(rig, t);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
     return rig.last_on(events::Endpoint::Config);
 }
 
@@ -526,9 +527,9 @@ TEST_CASE("product: a set on an image older than its settings never writes over 
     REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
             Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    set_callsign_over_the_link(rig, t, "F-JABC");
+    set_callsign_over_the_link(rig, now_ms, "F-JABC");
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 
@@ -573,14 +574,14 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
             Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    set_callsign_over_the_link(rig, t, "F-JABC");
+    set_callsign_over_the_link(rig, now_ms, "F-JABC");
     uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored;
-    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
+    REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
     CHECK(std::string(stored.callsign) == "F-JABC");
 }
 
@@ -588,8 +589,8 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     Rig before;
     stage_versions(before);
     REQUIRE(before.setup() == Status::Ok);
-    uint32_t t = 0;
-    set_callsign_over_the_link(before, t, "D-KXYZ");
+    uint32_t now_ms = 0;
+    set_callsign_over_the_link(before, now_ms, "D-KXYZ");
     install_and_swap(before);
     REQUIRE(before.platform.dfu().triggered == 1);
 

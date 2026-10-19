@@ -23,16 +23,16 @@ class SentenceWire : public io::Uart {
 
     size_t write(const uint8_t* data, size_t length) override { return chip_.write(data, length); }
 
-    size_t read(uint8_t* out, size_t cap) override {
+    size_t read(uint8_t* out, size_t capacity) override {
         if (buffered_.empty()) {
             uint8_t buffer[1024];
-            const size_t n = chip_.read(buffer, sizeof(buffer));
-            buffered_.assign(reinterpret_cast<const char*>(buffer), n);
+            const size_t bytes = chip_.read(buffer, sizeof(buffer));
+            buffered_.assign(reinterpret_cast<const char*>(buffer), bytes);
         }
         if (buffered_.empty()) return 0;
         const size_t line = buffered_.find('\n');
         size_t take = line == std::string::npos ? buffered_.size() : line + 1;
-        if (take > cap) take = cap;
+        if (take > capacity) take = capacity;
         for (size_t i = 0; i < take; i++) out[i] = static_cast<uint8_t>(buffered_[i]);
         buffered_.erase(0, take);
         return take;
@@ -72,7 +72,7 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
 TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
     models::L76k chip;  // never ticked: powered, connected, saying nothing
     parts::L76k gnss(chip);
-    for (uint32_t t = 0; t <= 5000; t += 100) CHECK_FALSE(gnss.poll());
+    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) CHECK_FALSE(gnss.poll());
     CHECK(gnss.sentences() == 0);
 }
 
@@ -132,9 +132,9 @@ TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
     uint32_t fixes = 0;
-    for (uint32_t t = kBringUpLeadMs + 1010; t <= kBringUpLeadMs + 5010; t += 10) {
-        chip.tick(t);
-        gnss.service(t);
+    for (uint32_t now_ms = kBringUpLeadMs + 1010; now_ms <= kBringUpLeadMs + 5010; now_ms += 10) {
+        chip.tick(now_ms);
+        gnss.service(now_ms);
         if (gnss.poll()) fixes++;
     }
     CHECK(fixes >= 4000 / parts::L76k::kSolutionPeriodMs);
@@ -245,11 +245,11 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
     const int32_t start_longitude = chip.longitude_1e7;
 
     int32_t east_latitude = 0, east_longitude = 0;
-    for (uint32_t t = 0; t <= 27700; t += 100) {
-        chip.tick(t);
+    for (uint32_t now_ms = 0; now_ms <= 27700; now_ms += 100) {
+        chip.tick(now_ms);
         // A quarter of the way round a right turn from north, own-ship is due
         // east of where it started by one radius and level with the centre.
-        if (t == 6900) {
+        if (now_ms == 6900) {
             east_latitude = chip.latitude_1e7;
             east_longitude = chip.longitude_1e7;
         }
@@ -290,11 +290,11 @@ TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
     const uint32_t rejects_before = gnss.rejected();
     uint32_t withdrawn_at = 0;
     uint32_t updates = 0;
-    for (uint32_t t = quiet_from + 10; t <= quiet_from + 10000; t += 10) {
-        gnss.service(t);
+    for (uint32_t now_ms = quiet_from + 10; now_ms <= quiet_from + 10000; now_ms += 10) {
+        gnss.service(now_ms);
         if (gnss.poll()) {
             updates++;
-            if (!gnss.solution().fix_valid && withdrawn_at == 0) withdrawn_at = t;
+            if (!gnss.solution().fix_valid && withdrawn_at == 0) withdrawn_at = now_ms;
         }
     }
 

@@ -19,12 +19,12 @@ class ActivationVectors {
     static constexpr const char* kPath = "../schemas/activation.v1.vectors.json";
 
     ActivationVectors() {
-        std::FILE* f = std::fopen(kPath, "rb");
-        REQUIRE_MESSAGE(f != nullptr, "cannot open ", kPath);
+        std::FILE* file = std::fopen(kPath, "rb");
+        REQUIRE_MESSAGE(file != nullptr, "cannot open ", kPath);
         char chunk[512];
-        size_t n = 0;
-        while ((n = std::fread(chunk, 1, sizeof(chunk), f)) > 0) text_.append(chunk, n);
-        std::fclose(f);
+        size_t count = 0;
+        while ((count = std::fread(chunk, 1, sizeof(chunk), file)) > 0) text_.append(chunk, count);
+        std::fclose(file);
     }
 
     std::string text(const char* key) const {

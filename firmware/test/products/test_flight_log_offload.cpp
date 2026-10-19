@@ -65,7 +65,7 @@ void write_records(Rig& rig, uint32_t sector, uint32_t session, uint32_t first_u
 
 // The transfer as a tablet performs it: ask for the index you want next, verify
 // every record against the checksum the flash wrote, stop at eof.
-Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
+Offload offload(Rig& rig, uint32_t& now_ms, uint32_t session) {
     Offload walk{};
     uint32_t from = 0;
     uint32_t last_utc_s = 0;
@@ -75,8 +75,8 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
                       session, from);
         rig.platform.link().clear();
         rig.send_log(command);
-        rig.run(t, t + 100);
-        t += 100;
+        rig.run(now_ms, now_ms + 100);
+        now_ms += 100;
         const platform::host::Link::Frame* chunk = last_log_frame(rig);
         if (chunk == nullptr || chunk->bytes.find("\"cmd\":\"chunk\"") == std::string::npos) {
             walk.decoded = false;
@@ -85,13 +85,13 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
         if (static_cast<int>(chunk->bytes.size()) > walk.widest_frame)
             walk.widest_frame = static_cast<int>(chunk->bytes.size());
 
-        const int n = std::atoi(field(chunk->bytes, "n").c_str());
-        if (n > walk.most_records_in_a_chunk) walk.most_records_in_a_chunk = n;
+        const int records = std::atoi(field(chunk->bytes, "n").c_str());
+        if (records > walk.most_records_in_a_chunk) walk.most_records_in_a_chunk = records;
         uint8_t raw[comms::kLogChunkRawBytes];
         const int bytes = base64_decode(field(chunk->bytes, "data"), raw, sizeof(raw));
-        if (bytes != n * static_cast<int>(flight::kLogRecordBytes)) walk.decoded = false;
+        if (bytes != records * static_cast<int>(flight::kLogRecordBytes)) walk.decoded = false;
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < records; i++) {
             const uint8_t* slot = raw + i * flight::kLogRecordBytes;
             flight::LogRecord record{};
             flight::LogEvent event{};
@@ -111,7 +111,7 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
             }
             walk.records++;
         }
-        from += static_cast<uint32_t>(n);
+        from += static_cast<uint32_t>(records);
         walk.eof = field(chunk->bytes, "eof") == "true";
         walk.chunks++;
     }
@@ -119,12 +119,12 @@ Offload offload(Rig& rig, uint32_t& t, uint32_t session) {
 }
 
 // One second of flight with a glider parked in the sky north of own-ship, at this range.
-void fly_past(Rig& rig, uint32_t& t, int north_m) {
-    fly(rig, t, 1);
+void fly_past(Rig& rig, uint32_t& now_ms, int north_m) {
+    fly(rig, now_ms, 1);
     const model::Ownship& own = rig.state().own;
-    model::AircraftObservation glider = neighbour(own, north_m, 0, 0, 0, 0, t);
+    model::AircraftObservation glider = neighbour(own, north_m, 0, 0, 0, 0, now_ms);
     glider.address = 0xDD5EED;
-    const uint32_t now_s = rig.state().traffic_now_s(t);
+    const uint32_t now_s = rig.state().traffic_now_s(now_ms);
     glider.received.at_s = now_s;
     rig.state().traffic.update(glider, now_s);
 }
@@ -141,15 +141,15 @@ const flight::LogEvent* first_of(const Offload& walk, flight::LogKind kind) {
 TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride in the flight") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 20);
-    for (int i = 0; i <= 38; i++) fly_past(rig, t, i <= 19 ? 4000 - 200 * i : 200 * (i - 18));
-    fly(rig, t, 20);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 20);
+    for (int i = 0; i <= 38; i++) fly_past(rig, now_ms, i <= 19 ? 4000 - 200 * i : 200 * (i - 18));
+    fly(rig, now_ms, 20);
+    taxi(rig, now_ms, 40);
     REQUIRE_FALSE(rig.product.flight_log().recording());
 
-    const Offload walk = offload(rig, t, rig.product.flight_log().session_id());
+    const Offload walk = offload(rig, now_ms, rig.product.flight_log().session_id());
     CHECK(walk.eof);
     CHECK(walk.decoded);
     CHECK(walk.ordered);
@@ -178,15 +178,15 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
 TEST_CASE("flight log: the tablet lists a flight and reads it back five records at a time") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 80);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 80);
+    taxi(rig, now_ms, 40);
     const uint32_t session = rig.product.flight_log().session_id();
     const uint32_t written = rig.product.flight_log().records_written();
 
-    CHECK(field(list_count(rig, t), "sessions") == "1");
-    const std::string listed = list_session(rig, t, 0);
+    CHECK(field(list_count(rig, now_ms), "sessions") == "1");
+    const std::string listed = list_session(rig, now_ms, 0);
     CHECK(field(listed, "records") == std::to_string(written));
     CHECK(field(listed, "closed") == "true");
 
@@ -198,7 +198,7 @@ TEST_CASE("flight log: the tablet lists a flight and reads it back five records 
     // the size the abandoned fixed five was chosen against.
     CHECK(per_chunk == 5);
 
-    const Offload walk = offload(rig, t, session);
+    const Offload walk = offload(rig, now_ms, session);
     CHECK(walk.eof);
     CHECK(walk.decoded);
     CHECK(walk.ordered);
@@ -213,10 +213,10 @@ TEST_CASE(
     " a large one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 80);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 80);
+    taxi(rig, now_ms, 40);
     const uint32_t session = rig.product.flight_log().session_id();
     const uint32_t written = rig.product.flight_log().records_written();
     REQUIRE(written > 20);
@@ -224,7 +224,7 @@ TEST_CASE(
     // An iOS central commonly settles at ATT_MTU 185, three bytes of which are
     // the notification header. Nothing in the transfer may exceed what it said.
     rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayloadBytes);
-    const Offload small = offload(rig, t, session);
+    const Offload small = offload(rig, now_ms, session);
     CHECK(small.eof);
     CHECK(small.decoded);
     CHECK(small.records == written);
@@ -236,7 +236,7 @@ TEST_CASE(
     // records, four times as many per frame, a quarter of the round trips. This
     // is the half of the bug that was costing throughput rather than breaking.
     rig.platform.link().declare_payload_bytes(495);
-    const Offload large = offload(rig, t, session);
+    const Offload large = offload(rig, now_ms, session);
     CHECK(large.eof);
     CHECK(large.decoded);
     CHECK(large.records == written);
@@ -261,7 +261,7 @@ TEST_CASE(
     std::snprintf(command, sizeof(command), "{\"cmd\":\"read\",\"session\":%u,\"from\":0}",
                   session);
     rig.send_log(command);
-    rig.run(t, t + 100);
+    rig.run(now_ms, now_ms + 100);
     CHECK(last_log_frame(rig) == nullptr);
     CHECK(rig.product.flight_log().link_drops() > drops_before);
     CHECK(rig.platform.link().refused_oversize == 0);
@@ -271,10 +271,10 @@ TEST_CASE(
 TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive whole") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 200);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 200);
+    taxi(rig, now_ms, 40);
     const uint32_t session = rig.product.flight_log().session_id();
     REQUIRE(rig.product.flight_log().records_written() > 8 * 5);
 
@@ -285,14 +285,14 @@ TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive
                   "{\"cmd\":\"read\",\"session\":%u,\"from\":0,\"count\":8}", session);
     rig.send_log(command);
     rig.send_log("{\"cmd\":\"list\"}");
-    rig.run(t, t + 100);
-    t += 100;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     CHECK(rig.platform.link().count_on(events::Endpoint::Log) <= 4);
     for (int served = 0; served < 20 && rig.platform.link().count_on(events::Endpoint::Log) < 9;
          served++) {
         rig.platform.link().serve();
-        rig.run(t, t + 100);
-        t += 100;
+        rig.run(now_ms, now_ms + 100);
+        now_ms += 100;
     }
 
     std::vector<std::string> sent;
@@ -325,15 +325,15 @@ TEST_CASE("flight log: a session whose middle sector went to diagnostics still r
     label_sector(rig, last, store::SectorOwner::Diagnostics, 4, 77);
     REQUIRE(rig.setup() == Status::Ok);
 
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    CHECK(field(list_count(rig, t), "sessions") == "1");
-    const std::string listed = list_session(rig, t, 0);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    CHECK(field(list_count(rig, now_ms), "sessions") == "1");
+    const std::string listed = list_session(rig, now_ms, 0);
     CHECK(field(listed, "session") == std::to_string(session));
     CHECK(field(listed, "records") == std::to_string(slots + tail));
     CHECK(field(listed, "closed") == "true");
 
-    const Offload walk = offload(rig, t, session);
+    const Offload walk = offload(rig, now_ms, session);
     CHECK(walk.eof);
     CHECK(walk.decoded);
     CHECK(walk.ordered);
@@ -344,23 +344,23 @@ TEST_CASE("flight log: a session whose middle sector went to diagnostics still r
 TEST_CASE("flight log: an offload is refused in the air, on the same gate a settings change is") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 60);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     rig.platform.link().clear();
     rig.send_log("{\"cmd\":\"list\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     const auto* refused = last_log_frame(rig);
     REQUIRE(refused != nullptr);
     CHECK(refused->bytes.find("in_flight") != std::string::npos);
 
     rig.platform.link().clear();
     rig.send_log("{\"cmd\":\"erase\"}");
-    rig.run(t, t + 200);
-    t += 200;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
     CHECK(last_log_frame(rig)->bytes.find("in_flight") != std::string::npos);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
 
@@ -371,10 +371,10 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
 TEST_CASE("flight log: erasing every flight takes the button, not just the phone") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 60);
-    taxi(rig, t, 40);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
+    taxi(rig, now_ms, 40);
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     // Long enough for the question to have reached the glass: a press only
@@ -382,8 +382,8 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     // has stopped (products/skyblip_go/input/gesture.h), which is what makes a pilot stepping a
     // value on the settings page unable to authorise anything by accident.
     rig.send_log("{\"cmd\":\"erase\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     // The same prompt machine a firmware upload knocks on, so a pilot reads one
     // kind of authorisation on the glass and not two.
     CHECK(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
@@ -391,29 +391,29 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     CHECK(rig.product.flight_log().sessions_on_flash() >= 1);
 
     // A single press at a prompt refuses, which is what fail-closed means here.
-    rig.press(t);
-    rig.run(t, t + 1200);
-    t += 1200;
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 1200);
+    now_ms += 1200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
     rig.send_log("{\"cmd\":\"erase\"}");
-    rig.run(t, t + 3000);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
-    rig.double_press(t);
-    rig.run(t, t + 100);
-    t += 100;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
     CHECK(rig.product.flight_log().erasing());
 
     // 298 sectors at the rate one durable-write window a second allows: about 40 s.
     rig.platform.link().clear();
-    rig.run(t, t + 60000, 50);
-    t += 60000;
+    rig.run(now_ms, now_ms + 60000, 50);
+    now_ms += 60000;
     CHECK_FALSE(rig.product.flight_log().erasing());
     CHECK(rig.product.flight_log().records_written() == 0);
 
-    CHECK(field(list_count(rig, t), "sessions") == "0");
+    CHECK(field(list_count(rig, now_ms), "sessions") == "0");
 }
 
 TEST_CASE("flight log: with no storage the device flies and logs nothing") {
@@ -425,17 +425,17 @@ TEST_CASE("flight log: with no storage the device flies and logs nothing") {
     CHECK(rig.product.degraded() == ports::Capability::Storage);
     CHECK_FALSE(rig.product.flight_log().available());
 
-    uint32_t t = 0;
-    taxi(rig, t, 20);
-    fly(rig, t, 60);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
     // It still flies: the radio, the alarm and the panel know nothing about this.
     CHECK(rig.state().own.flight_state == static_cast<uint8_t>(flight::FlightState::Airborne));
     CHECK(rig.product.flight_log().records_written() == 0);
 
-    taxi(rig, t, 40);
+    taxi(rig, now_ms, 40);
     rig.platform.link().clear();
     rig.send_log("{\"cmd\":\"list\"}");
-    rig.run(t, t + 200);
+    rig.run(now_ms, now_ms + 200);
     // And it says so, rather than answering an empty log.
     CHECK(last_log_frame(rig)->bytes.find("no_storage") != std::string::npos);
 }

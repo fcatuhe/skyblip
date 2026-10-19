@@ -147,15 +147,15 @@ TEST_CASE("product: the glass reads the climb damped, the air reads it as measur
 namespace {
 
 void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t updates) {
-    gnss::GnssSolution f{};
-    f.fix_valid = true;
-    f.altitude_hae_mm = 1000000;
-    f.vdop_e2 = 150;
-    f.hdop_e2 = 100;
-    f.speed_mm_s = speed_mm_s;
-    f.track_cdeg = track_cdeg;
-    f.sentences = updates;
-    rig.product.bus().gnss.push(f);
+    gnss::GnssSolution solution{};
+    solution.fix_valid = true;
+    solution.altitude_hae_mm = 1000000;
+    solution.vdop_e2 = 150;
+    solution.hdop_e2 = 100;
+    solution.speed_mm_s = speed_mm_s;
+    solution.track_cdeg = track_cdeg;
+    solution.sentences = updates;
+    rig.product.bus().gnss.push(solution);
 }
 
 }  // namespace
@@ -196,25 +196,25 @@ TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a c
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t updates = 0;
     int32_t steepest_mm_s = 0;
-    const auto apply_at = [&](uint32_t t) {
-        rig.run(t, t);
+    const auto apply_at = [&](uint32_t now_ms) {
+        rig.run(now_ms, now_ms);
         const model::Ownship& own = rig.state().own;
         if (own.climb_valid && std::abs(own.climb_mm_s) > steepest_mm_s)
             steepest_mm_s = std::abs(own.climb_mm_s);
     };
 
-    uint32_t t = 1000;
-    for (; t <= 3000; t += 1000) {
+    uint32_t now_ms = 1000;
+    for (; now_ms <= 3000; now_ms += 1000) {
         rig.push_fix(1000, ++updates);
-        apply_at(t);
+        apply_at(now_ms);
     }
-    for (; t <= 6000; t += 1000) {
+    for (; now_ms <= 6000; now_ms += 1000) {
         rig.push_2d_fix(1000, ++updates);
-        apply_at(t);
+        apply_at(now_ms);
     }
-    for (; t <= 12000; t += 1000) {
+    for (; now_ms <= 12000; now_ms += 1000) {
         rig.push_fix(1100, ++updates);
-        apply_at(t);
+        apply_at(now_ms);
     }
 
     CHECK(steepest_mm_s == 0);
@@ -259,9 +259,9 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
 
     rig.push_fix(1000, 1);
     uint16_t first_note_hz = 0;
-    for (uint32_t t = 550; t <= 700; t += 10) {
-        rig.platform.clock().set_milliseconds(t);
-        rig.product.run_pass(t);
+    for (uint32_t now_ms = 550; now_ms <= 700; now_ms += 10) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
         if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().pitch_hz();
     }
     CHECK(rig.product.ownship().first_fix().ever_fixed());
@@ -270,7 +270,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     CHECK(rig.platform.annunciator().motor_starts() == 0);
 
     // It is short and it stops by itself, so nothing has to remember to silence
-    // it before the first traffic contact arrives.
+    // it before the first traffic target arrives.
     rig.run(750, 3000);
     CHECK_FALSE(rig.platform.annunciator().sounding());
 
@@ -303,23 +303,23 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
 TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
     Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0u - 500u;  // half a second short of the wrap
+    uint32_t now_ms = 0u - 500u;  // half a second short of the wrap
 
-    rig.push_barometer(100000, t);
-    rig.run_span(t, 0);
+    rig.push_barometer(100000, now_ms);
+    rig.run_span(now_ms, 0);
     CHECK(rig.product.ownship().barometer_active());
 
     // +10 m over the second that straddles zero.
-    const uint32_t after = t + 950u;
+    const uint32_t after = now_ms + 950u;
     rig.push_barometer(101000, after);
-    t = after;
-    rig.run_span(t, 0);
+    now_ms = after;
+    rig.run_span(now_ms, 0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 
     // And a sample inside the window is still refused after the wrap, rather than
     // being taken as a 49-day interval that reads as no climb at all.
-    rig.push_barometer(199000, t);
-    rig.run_span(t, 0);
+    rig.push_barometer(199000, now_ms);
+    rig.run_span(now_ms, 0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 }
 
@@ -338,19 +338,19 @@ TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
 TEST_CASE("product: the free-running dwell phase steps forward through the 49.7-day wrap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint64_t us = static_cast<uint64_t>(0xFFFFFF00u) * 1000u;  // 256 ms short of the wrap
+    uint64_t now_us = static_cast<uint64_t>(0xFFFFFF00u) * 1000u;  // 256 ms short of the wrap
 
     // The receiver has no PPS lock, so the case is about the free-running fallback
     // and not about the anchored path.
     rig.platform.pps().set_locked(false);
-    rig.run_span_from_us(us, 0);
+    rig.run_span_from_us(now_us, 0);
     REQUIRE_FALSE(rig.state().clock.pps_locked);
 
     int previous = rig.state().rf.dwell.phase_ms;
     bool wrapped = false;
     for (int step = 0; step < 20; step++) {
         const uint32_t before_ms = rig.platform.clock().milliseconds();
-        rig.run_span_from_us(us, 0);
+        rig.run_span_from_us(now_us, 0);
         if (rig.platform.clock().milliseconds() < before_ms) wrapped = true;
         // 50 ms of clock is 50 ms of phase, all the way round the second and all
         // the way through the counter turning over.
@@ -397,8 +397,8 @@ TEST_CASE("product: with no fix the bus says how far the receiver has got") {
 TEST_CASE("product: a receiver restating its last fixed second does not wind the clock back") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 1000;
-    rig.seconds(t, 3, 0, 500);
+    uint32_t now_ms = 1000;
+    rig.seconds(now_ms, 3, 0, 500);
     const uint32_t anchored = rig.state().clock.utc_s;
     REQUIRE(anchored == Rig::kBaseUtcS + 2);
 
@@ -407,7 +407,7 @@ TEST_CASE("product: a receiver restating its last fixed second does not wind the
     solving.utc_s = anchored;
     solving.sentences = ++rig.fix_updates;
     rig.product.bus().gnss.push(solving);
-    rig.run(t, t + 950);
+    rig.run(now_ms, now_ms + 950);
 
     CHECK(rig.state().clock.utc_s == anchored + 1);
 }

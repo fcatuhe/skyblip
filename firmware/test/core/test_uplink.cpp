@@ -22,98 +22,100 @@ constexpr int kUplinkSlotStartMs = 200;
 constexpr int kUplinkSlotEndMs = 450;
 
 model::AircraftObservation make_target(uint32_t address) {
-    model::AircraftObservation t{};
-    t.address = address & 0xFFFFFF;
-    t.address_mapping_table = 6;
-    t.aircraft_category = 4;
-    t.flight_state = 2;
-    t.speed_q = 180;
-    t.speed_valid = true;
-    t.latitude_1e7 = 481234500;
-    t.longitude_1e7 = 81234500;
-    t.altitude_m = 1234;
-    t.position_valid = true;
-    return t;
+    model::AircraftObservation observation{};
+    observation.address = address & 0xFFFFFF;
+    observation.address_mapping_table = 6;
+    observation.aircraft_category = 4;
+    observation.flight_state = 2;
+    observation.speed_q = 180;
+    observation.speed_valid = true;
+    observation.latitude_1e7 = 481234500;
+    observation.longitude_1e7 = 81234500;
+    observation.altitude_m = 1234;
+    observation.position_valid = true;
+    return observation;
 }
 }  // namespace
 
 TEST_CASE("reed-solomon: encode then decode with no errors returns 0 corrections") {
-    ReedSolomon255 rs;
+    ReedSolomon255 reed_solomon;
     uint8_t data[ReedSolomon255::kDataBytes];
     for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(i * 3 + 1);
-    uint8_t cw[ReedSolomon255::kCodewordBytes];
-    std::memcpy(cw, data, ReedSolomon255::kDataBytes);
-    rs.encode(data, cw + ReedSolomon255::kDataBytes);
-    CHECK(rs.syndromes_zero(cw));
-    CHECK(rs.decode(cw) == 0);
-    CHECK(std::memcmp(cw, data, ReedSolomon255::kDataBytes) == 0);
+    uint8_t codeword[ReedSolomon255::kCodewordBytes];
+    std::memcpy(codeword, data, ReedSolomon255::kDataBytes);
+    reed_solomon.encode(data, codeword + ReedSolomon255::kDataBytes);
+    CHECK(reed_solomon.syndromes_zero(codeword));
+    CHECK(reed_solomon.decode(codeword) == 0);
+    CHECK(std::memcmp(codeword, data, ReedSolomon255::kDataBytes) == 0);
 }
 
 TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
-    ReedSolomon255 rs;
-    Random rng(0xBEEF);
+    ReedSolomon255 reed_solomon;
+    Random random(0xBEEF);
     uint8_t data[ReedSolomon255::kDataBytes];
-    for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(rng.next());
+    for (int i = 0; i < ReedSolomon255::kDataBytes; i++)
+        data[i] = static_cast<uint8_t>(random.next());
     uint8_t base[ReedSolomon255::kCodewordBytes];
     std::memcpy(base, data, ReedSolomon255::kDataBytes);
-    rs.encode(data, base + ReedSolomon255::kDataBytes);
+    reed_solomon.encode(data, base + ReedSolomon255::kDataBytes);
 
-    for (int nerr = 1; nerr <= 16; nerr++) {
+    for (int errors = 1; errors <= 16; errors++) {
         for (int trial = 0; trial < 200; trial++) {
-            uint8_t cw[ReedSolomon255::kCodewordBytes];
-            std::memcpy(cw, base, ReedSolomon255::kCodewordBytes);
+            uint8_t codeword[ReedSolomon255::kCodewordBytes];
+            std::memcpy(codeword, base, ReedSolomon255::kCodewordBytes);
             bool used[ReedSolomon255::kCodewordBytes] = {false};
-            for (int e = 0; e < nerr; e++) {
+            for (int error = 0; error < errors; error++) {
                 int position;
                 do {
-                    position = rng.next() % ReedSolomon255::kCodewordBytes;
+                    position = random.next() % ReedSolomon255::kCodewordBytes;
                 } while (used[position]);
                 used[position] = true;
-                uint8_t v;
+                uint8_t value;
                 do {
-                    v = static_cast<uint8_t>(rng.next());
-                } while (v == 0);
-                cw[position] ^= v;
+                    value = static_cast<uint8_t>(random.next());
+                } while (value == 0);
+                codeword[position] ^= value;
             }
-            int corrected = rs.decode(cw);
-            CHECK(corrected == nerr);
-            CHECK(std::memcmp(cw, base, ReedSolomon255::kCodewordBytes) == 0);
+            int corrected = reed_solomon.decode(codeword);
+            CHECK(corrected == errors);
+            CHECK(std::memcmp(codeword, base, ReedSolomon255::kCodewordBytes) == 0);
         }
     }
 }
 
 TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, counted") {
-    ReedSolomon255 rs;
-    Random rng(0x1234);
+    ReedSolomon255 reed_solomon;
+    Random random(0x1234);
     uint8_t data[ReedSolomon255::kDataBytes];
-    for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(rng.next());
+    for (int i = 0; i < ReedSolomon255::kDataBytes; i++)
+        data[i] = static_cast<uint8_t>(random.next());
     uint8_t base[ReedSolomon255::kCodewordBytes];
     std::memcpy(base, data, ReedSolomon255::kDataBytes);
-    rs.encode(data, base + ReedSolomon255::kDataBytes);
+    reed_solomon.encode(data, base + ReedSolomon255::kDataBytes);
 
     int detected = 0, silent = 0, lucky = 0;
     const int kTrials = 4000;
-    for (int t = 0; t < kTrials; t++) {
-        uint8_t cw[ReedSolomon255::kCodewordBytes];
-        std::memcpy(cw, base, ReedSolomon255::kCodewordBytes);
-        int nerr = 17 + (rng.next() % 20);  // 17..36 errors
+    for (int trial = 0; trial < kTrials; trial++) {
+        uint8_t codeword[ReedSolomon255::kCodewordBytes];
+        std::memcpy(codeword, base, ReedSolomon255::kCodewordBytes);
+        int errors = 17 + (random.next() % 20);  // 17..36 errors
         bool used[ReedSolomon255::kCodewordBytes] = {false};
-        for (int e = 0; e < nerr; e++) {
+        for (int error = 0; error < errors; error++) {
             int position;
             do {
-                position = rng.next() % ReedSolomon255::kCodewordBytes;
+                position = random.next() % ReedSolomon255::kCodewordBytes;
             } while (used[position]);
             used[position] = true;
-            uint8_t v;
+            uint8_t value;
             do {
-                v = static_cast<uint8_t>(rng.next());
-            } while (v == 0);
-            cw[position] ^= v;
+                value = static_cast<uint8_t>(random.next());
+            } while (value == 0);
+            codeword[position] ^= value;
         }
-        int r = rs.decode(cw);
-        if (r < 0) {
+        int corrected = reed_solomon.decode(codeword);
+        if (corrected < 0) {
             detected++;  // safe
-        } else if (std::memcmp(cw, base, ReedSolomon255::kCodewordBytes) == 0) {
+        } else if (std::memcmp(codeword, base, ReedSolomon255::kCodewordBytes) == 0) {
             lucky++;  // happened to fully recover (rare)
         } else {
             silent++;  // decoded to a WRONG codeword: the danger mode
@@ -130,18 +132,18 @@ TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, cou
 TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock)") {
     AdslUplink up;
     model::AircraftObservation tx[AdslUplink::kMaxTargets];
-    int n = AdslUplink::kMaxTargets;
-    for (int i = 0; i < n; i++) tx[i] = make_target(0x200000 + i);
+    int count = AdslUplink::kMaxTargets;
+    for (int i = 0; i < count; i++) tx[i] = make_target(0x200000 + i);
 
     uint8_t frame[AdslUplink::kFrameBytes];
-    CHECK(up.encode(tx, n, /*key=*/0, frame) == Status::Ok);
+    CHECK(up.encode(tx, count, /*key=*/0, frame) == Status::Ok);
 
     model::AircraftObservation rx[AdslUplink::kMaxTargets];
-    AdslUplink::DecodeStatistics st;
-    CHECK(up.decode(frame, rx, n, st) == Status::Ok);
-    CHECK(st.targets == n);
-    CHECK(st.corrected == 0);
-    for (int i = 0; i < n; i++) {
+    AdslUplink::DecodeStatistics statistics;
+    CHECK(up.decode(frame, rx, count, statistics) == Status::Ok);
+    CHECK(statistics.targets == count);
+    CHECK(statistics.corrected == 0);
+    for (int i = 0; i < count; i++) {
         CHECK(rx[i].address == tx[i].address);
         CHECK(rx[i].latitude_1e7 == tx[i].latitude_1e7);
         CHECK(rx[i].longitude_1e7 == tx[i].longitude_1e7);
@@ -152,7 +154,7 @@ TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock
 
 TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     AdslUplink up;
-    Random rng(0x55AA);
+    Random random(0x55AA);
     model::AircraftObservation tx[4];
     for (int i = 0; i < 4; i++) tx[i] = make_target(0x300000 + i * 7);
     uint8_t frame[AdslUplink::kFrameBytes];
@@ -160,19 +162,19 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
 
     // inject 16 symbol errors
     bool used[AdslUplink::kFrameBytes] = {false};
-    for (int e = 0; e < 16; e++) {
+    for (int error = 0; error < 16; error++) {
         int position;
         do {
-            position = rng.next() % AdslUplink::kFrameBytes;
+            position = random.next() % AdslUplink::kFrameBytes;
         } while (used[position]);
         used[position] = true;
-        frame[position] ^= static_cast<uint8_t>(0x80 | (rng.next() & 0x7F));
+        frame[position] ^= static_cast<uint8_t>(0x80 | (random.next() & 0x7F));
     }
     model::AircraftObservation rx[4];
-    AdslUplink::DecodeStatistics st;
-    CHECK(up.decode(frame, rx, 4, st) == Status::Ok);
-    CHECK(st.corrected == 16);
-    CHECK(st.targets == 4);
+    AdslUplink::DecodeStatistics statistics;
+    CHECK(up.decode(frame, rx, 4, statistics) == Status::Ok);
+    CHECK(statistics.corrected == 16);
+    CHECK(statistics.targets == 4);
     CHECK(rx[0].address == tx[0].address);
     CHECK(rx[3].latitude_1e7 == tx[3].latitude_1e7);
 }
@@ -184,9 +186,9 @@ TEST_CASE("uplink: a destroyed frame is DETECTED (Status::Crc), never silently w
     REQUIRE(up.encode(tx, 2, 0, frame) == Status::Ok);
     for (int i = 0; i < 40; i++) frame[i] ^= 0xFF;  // 40 > 16 errors
     model::AircraftObservation rx[2];
-    AdslUplink::DecodeStatistics st;
-    Status s = up.decode(frame, rx, 2, st);
-    CHECK(s == Status::Crc);  // detected, not delivered
+    AdslUplink::DecodeStatistics statistics;
+    Status status = up.decode(frame, rx, 2, statistics);
+    CHECK(status == Status::Crc);  // detected, not delivered
 }
 
 // What the dwell has to be armed with to hear a skyPost at all. Every one of
@@ -256,9 +258,9 @@ TEST_CASE("uplink: a record with no address and no place on the globe is refused
     REQUIRE(up.encode(tx, 3, 0, frame) == Status::Ok);
 
     model::AircraftObservation rx[3];
-    AdslUplink::DecodeStatistics st;
-    CHECK(up.decode(frame, rx, 3, st) == Status::Ok);
-    CHECK(st.targets == 1);
-    CHECK(st.rejected == 2);
+    AdslUplink::DecodeStatistics statistics;
+    CHECK(up.decode(frame, rx, 3, statistics) == Status::Ok);
+    CHECK(statistics.targets == 1);
+    CHECK(statistics.rejected == 2);
     CHECK(rx[0].address == 0x600001u);
 }

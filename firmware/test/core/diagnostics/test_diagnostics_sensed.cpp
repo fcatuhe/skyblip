@@ -5,7 +5,8 @@
 
 using namespace skyblip;
 
-TEST_CASE("diag record: a fix carries where in its second it landed and why it was refused") {
+TEST_CASE(
+    "diagnostics record: a fix carries where in its second it landed and why it was refused") {
     diagnostics::Gnss in{};
     in.solution_phase_ms = 287;
     in.residual_m = 41;
@@ -43,7 +44,7 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     CHECK(out.tx_settled);
 }
 
-TEST_CASE("diag record: a PPS edge keeps the sign of its error") {
+TEST_CASE("diagnostics record: a PPS edge keeps the sign of its error") {
     diagnostics::Pps in{};
     in.interval_us = 999873;
     in.error_us = -127;
@@ -63,7 +64,7 @@ TEST_CASE("diag record: a PPS edge keeps the sign of its error") {
     CHECK(out.utc_valid);
 }
 
-TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict together") {
+TEST_CASE("diagnostics record: a burst is the whole tape entry, instant and verdict together") {
     radio::Entry in{};
     in.verdict = radio::Verdict::Miskeyed;
     in.band = model::Band::M;
@@ -117,7 +118,8 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
 }
 
 // A name is nine characters and the payload has none free, so the flag and the address are it.
-TEST_CASE("diag record: a burst that carried a callsign says so, and a position burst does not") {
+TEST_CASE(
+    "diagnostics record: a burst that carried a callsign says so, and a position burst does not") {
     radio::Entry named{};
     named.verdict = radio::Verdict::Transmitted;
     named.callsign = true;
@@ -131,7 +133,7 @@ TEST_CASE("diag record: a burst that carried a callsign says so, and a position 
     CHECK_FALSE(out.callsign);
 }
 
-TEST_CASE("diag record: every one of the twelve verdicts survives the slot") {
+TEST_CASE("diagnostics record: every one of the twelve verdicts survives the slot") {
     for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Unattempted); i++) {
         radio::Entry in{};
         in.verdict = static_cast<radio::Verdict>(i);
@@ -145,7 +147,7 @@ TEST_CASE("diag record: every one of the twelve verdicts survives the slot") {
     }
 }
 
-TEST_CASE("diag record: baro keeps the pressure beside the altitude derived from it") {
+TEST_CASE("diagnostics record: baro keeps the pressure beside the altitude derived from it") {
     diagnostics::Barometer in{};
     in.pressure_mpa = 101325000;
     in.altitude_mm = -412;
@@ -165,7 +167,7 @@ TEST_CASE("diag record: baro keeps the pressure beside the altitude derived from
     CHECK(out.climb_adopted);
 }
 
-TEST_CASE("diag record: motion keeps the ball and both ends of the g-meter") {
+TEST_CASE("diagnostics record: motion keeps the ball and both ends of the g-meter") {
     diagnostics::Motion in{};
     in.slip_mg = -87;
     in.normal_mg = 1620;
@@ -193,7 +195,7 @@ TEST_CASE("diag record: motion keeps the ball and both ends of the g-meter") {
     CHECK(out.fitted);
 }
 
-TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings counted") {
+TEST_CASE("diagnostics record: power keeps the cell, the verdict on it and the warnings counted") {
     diagnostics::Power in{};
     in.cell_mv = 3987;
     in.supply_warnings = 3;
@@ -225,7 +227,9 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     CHECK(out.die_valid);
 }
 
-TEST_CASE("diag record: the knee rides inside the level, and the bit it used to ride stays clear") {
+TEST_CASE(
+    "diagnostics record: the knee rides inside the level, and the bit it used to ride stays "
+    "clear") {
     diagnostics::Power in{};
     in.cell_mv = 3550;
     in.level = power::PowerLevel::Low;
@@ -234,20 +238,21 @@ TEST_CASE("diag record: the knee rides inside the level, and the bit it used to 
     CHECK(diagnostics_round_trip(in).level == power::PowerLevel::Low);
 }
 
-TEST_CASE("diag record: the retired trim bit and bytes are written clear and never reused") {
+TEST_CASE("diagnostics record: the retired trim bit and bytes are written clear and never reused") {
     diagnostics::Power in{};
     in.cell_mv = 4812;
     in.sample_offset_mv = -5;
     in.external_power = true;
     in.charging = true;
 
-    const diagnostics::Record r = diagnostics::record_of(in, diagnostics_test_instant());
-    CHECK((r.flags & (1u << 7)) == 0);
-    CHECK(r.payload[13] == 0);
-    CHECK(r.payload[14] == 0);
+    const diagnostics::Record record = diagnostics::record_of(in, diagnostics_test_instant());
+    CHECK((record.flags & (1u << 7)) == 0);
+    CHECK(record.payload[13] == 0);
+    CHECK(record.payload[14] == 0);
 }
 
-TEST_CASE("diag record: a contact keeps the instant the level moved, not the poll that saw it") {
+TEST_CASE(
+    "diagnostics record: a contact keeps the instant the level moved, not the poll that saw it") {
     diagnostics::Contact in{};
     in.at_ms = 4294967295u;
     in.held_ms = 1004;
@@ -263,7 +268,7 @@ TEST_CASE("diag record: a contact keeps the instant the level moved, not the pol
     CHECK(out.down);
 }
 
-TEST_CASE("diag record: a link event keeps the payload the central negotiated") {
+TEST_CASE("diagnostics record: a link event keeps the payload the central negotiated") {
     diagnostics::Link in{};
     in.link_session = 41;
     in.payload_bytes = 182;
@@ -285,7 +290,8 @@ TEST_CASE("diag record: a link event keeps the payload the central negotiated") 
     CHECK(out.claim_held);
 }
 
-TEST_CASE("diag record: a counter past what the field holds saturates rather than wrapping") {
+TEST_CASE(
+    "diagnostics record: a counter past what the field holds saturates rather than wrapping") {
     diagnostics::Power in{};
     in.supply_warnings = 70000;
     in.implausible = 65535;
@@ -294,7 +300,7 @@ TEST_CASE("diag record: a counter past what the field holds saturates rather tha
     CHECK(out.implausible == 65535);
 }
 
-TEST_CASE("diag record: a dwell change carries how long it took and how early it listened") {
+TEST_CASE("diagnostics record: a dwell change carries how long it took and how early it listened") {
     diagnostics::Switch in{};
     in.to_hz = 868400000;
     in.margin_us = -2921;
@@ -315,7 +321,7 @@ TEST_CASE("diag record: a dwell change carries how long it took and how early it
 }
 
 // The byte holds 10 us steps, so a margin past +-1.27 ms reads as the ceiling and not as noise.
-TEST_CASE("diag record: a stage margin past what the byte holds saturates at its ends") {
+TEST_CASE("diagnostics record: a stage margin past what the byte holds saturates at its ends") {
     radio::Entry late{};
     late.tx_stage_margin_us = -4000;
     radio::Entry early{};

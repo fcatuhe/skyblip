@@ -15,29 +15,29 @@ namespace {
 constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
 
 flight::LogStatus cell(uint16_t cell_mv, uint8_t level, uint8_t tracked) {
-    flight::LogStatus s{};
-    s.cell_mv = cell_mv;
-    s.percent = 64;
-    s.power_level = level;
-    s.charge = 1;
-    s.tracked = tracked;
-    s.battery_valid = true;
-    return s;
+    flight::LogStatus status{};
+    status.cell_mv = cell_mv;
+    status.percent = 64;
+    status.power_level = level;
+    status.charge = 1;
+    status.tracked = tracked;
+    status.battery_valid = true;
+    return status;
 }
 
 flight::LogTarget glider(uint32_t address, uint16_t distance_m, uint8_t alarm) {
-    flight::LogTarget c{};
-    c.address = address;
-    c.address_mapping_table = 6;
-    c.aircraft_category = 2;
-    c.distance_m = distance_m;
-    c.relative_altitude_m = -42;
-    c.relative_bearing_deg = 315;
-    c.closing_mps = 12;
-    c.alarm = alarm;
-    c.source = 0;
-    c.rssi_dbm = -88;
-    return c;
+    flight::LogTarget target{};
+    target.address = address;
+    target.address_mapping_table = 6;
+    target.aircraft_category = 2;
+    target.distance_m = distance_m;
+    target.relative_altitude_m = -42;
+    target.relative_bearing_deg = 315;
+    target.closing_mps = 12;
+    target.alarm = alarm;
+    target.source = 0;
+    target.rssi_dbm = -88;
+    return target;
 }
 
 std::string hex(const uint8_t* raw) {
@@ -56,14 +56,14 @@ void reseal(uint8_t* raw) {
     raw[23] = static_cast<uint8_t>(crc >> 8);
 }
 
-int drain(flight::LogEvents& events, flight::LogEvent* out, int cap) {
-    int n = 0;
+int drain(flight::LogEvents& events, flight::LogEvent* out, int capacity) {
+    int count = 0;
     flight::LogEvent event{};
-    while (n < cap && events.peek(event)) {
-        out[n++] = event;
+    while (count < capacity && events.peek(event)) {
+        out[count++] = event;
         events.commit();
     }
-    return n;
+    return count;
 }
 
 }  // namespace
@@ -193,7 +193,7 @@ TEST_CASE("log events: a status opens the flight, then one a minute, and one whe
     CHECK(out[0].utc_s == kBaseUtcS + 75);
 }
 
-TEST_CASE("log events: an alarm is written when a contact's level changes, rising and falling") {
+TEST_CASE("log events: an alarm is written when a target's level changes, rising and falling") {
     flight::LogEvents events;
     events.open();
     flight::LogEvent out[8];

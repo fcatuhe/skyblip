@@ -167,10 +167,10 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.run(300, 2400);
 
     uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
-    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
+    REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
 }
 
@@ -323,11 +323,11 @@ TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider
 
 namespace {
 
-std::string status_of(Rig& rig, uint32_t& t) {
+std::string status_of(Rig& rig, uint32_t& now_ms) {
     rig.platform.link().clear();
     rig.send("{\"cmd\":\"status\"}");
-    rig.run(t, t + 200);
-    t += 250;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 250;
     return rig.last_on(events::Endpoint::Config);
 }
 
@@ -347,30 +347,30 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(412);
 
-    uint32_t t = 0;
-    rig.run(t, t + 100);
-    t += 150;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 150;
     // Read on the first pass rather than ten seconds into the boot: the first
     // status a phone is pushed should carry a temperature, and the self-test page
     // is the moment a bench eye is looking.
     CHECK(die.reads() == 1);
     CHECK(rig.product.power().die_temperature_valid());
     CHECK(rig.product.power().die_temperature_dc() == 412);
-    CHECK(status_of(rig, t).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temp_c\":41") != std::string::npos);
 
     // Five seconds of passes: still one measurement.
-    rig.run(t, t + 5000);
-    t += 5050;
+    rig.run(now_ms, now_ms + 5000);
+    now_ms += 5050;
     CHECK(die.reads() == 1);
 
     // Past ten seconds from the first: a second one.
-    rig.run(t, t + 6000);
-    t += 6050;
+    rig.run(now_ms, now_ms + 6000);
+    now_ms += 6050;
     CHECK(die.reads() == 2);
     // And nothing has read it hundreds of times, which is what a per-pass reader
     // would have done by now.
-    rig.run(t, t + 30000);
-    t += 30050;
+    rig.run(now_ms, now_ms + 30000);
+    now_ms += 30050;
     CHECK(die.reads() <= 6);
 
     // A refused measurement leaves the last good reading standing rather than
@@ -378,15 +378,15 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     // still believe it: past kDieStaleMs the tablet is shown no temperature either.
     const int before = die.reads();
     die.refuse();
-    rig.run(t, t + 10000);
-    t += 10050;
+    rig.run(now_ms, now_ms + 10000);
+    now_ms += 10050;
     CHECK(die.reads() > before);
-    CHECK(status_of(rig, t).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temp_c\":41") != std::string::npos);
 
-    rig.run(t, t + go::PowerService::kDieStaleMs);
-    t += go::PowerService::kDieStaleMs + 50;
+    rig.run(now_ms, now_ms + go::PowerService::kDieStaleMs);
+    now_ms += go::PowerService::kDieStaleMs + 50;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, t).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temp_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
@@ -399,28 +399,28 @@ TEST_CASE("product: a cable in the heat is named, counted and left counted") {
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(250);
 
-    uint32_t t = 0;
-    rig.run(t, t + 2000);
-    t += 2050;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     rig.platform.battery().external_power = true;
-    rig.run(t, t + 2000);
-    t += 2050;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Ok);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     die.hold(724);
-    rig.run(t, t + 15000);
-    t += 15050;
+    rig.run(now_ms, now_ms + 15000);
+    now_ms += 15050;
     CHECK(rig.state().power.charge == power::ChargeCondition::TooHot);
     // One event, however many passes read the same sensor.
     CHECK(rig.product.power().charge_warnings() == 1);
 
     rig.platform.battery().external_power = false;
-    rig.run(t, t + 2000);
-    t += 2050;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 1);
 }
@@ -435,11 +435,11 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
     CHECK(rig.product.degraded() == ports::Capability::None);
 
-    uint32_t t = 0;
-    rig.run(t, t + 30000);
-    t += 30050;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 30000);
+    now_ms += 30050;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, t).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temp_c") == std::string::npos);
 }
 
 // J. The range gate refuses a reception whose claimed position is further away
@@ -449,17 +449,17 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
 TEST_CASE("product: the range gate's refusals leave the device over the link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.seconds(t, 3, /*speed_mm_s=*/0, 0);
+    uint32_t now_ms = 0;
+    rig.seconds(now_ms, 3, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().own.fix_valid);
 
     rig.platform.link().clear();
     rig.send("{\"cmd\":\"radio\"}");
-    rig.run(t, t + 200);
-    t += 250;
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 250;
     CHECK(rig.last_on(events::Endpoint::Config).find("\"range_refused\":0") != std::string::npos);
 
-    // A contact on the other side of the country, claimed by a frame that passed
+    // A target on the other side of the country, claimed by a frame that passed
     // its CRC. Pushed at the table's own door, which is where the gate lives.
     model::AircraftObservation ghost{};
     ghost.address = 0x00ABCDEF;
@@ -473,6 +473,6 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
 
     rig.platform.link().clear();
     rig.send("{\"cmd\":\"radio\"}");
-    rig.run(t, t + 200);
+    rig.run(now_ms, now_ms + 200);
     CHECK(rig.platform.link().last().bytes.find("\"range_refused\":1") != std::string::npos);
 }

@@ -55,11 +55,11 @@ std::vector<diagnostics::Power> every_power_record(
 
 }  // namespace
 
-TEST_CASE("diag power: the cell is recorded on the cadence it is sampled at") {
+TEST_CASE("diagnostics power: the cell is recorded on the cadence it is sampled at") {
     Rig rig;
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     const int seconds = 8;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, t, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, now_ms, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
     CHECK(count_of(records, diagnostics::Type::Power) <= seconds + 1);
@@ -70,17 +70,17 @@ TEST_CASE("diag power: the cell is recorded on the cadence it is sampled at") {
     CHECK(power.level == rig.state().power.level);
 }
 
-TEST_CASE("diag power: the knee is recorded on both sides of it, as the level") {
+TEST_CASE("diagnostics power: the knee is recorded on both sides of it, as the level") {
     Rig rig;
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, t, 3);
-    arm(rig, t);
-    taxi(rig, t, 4);
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    taxi(rig, now_ms, 4);
     rig.platform.battery().divider_mv = 3550;
-    taxi(rig, t, 6);
-    stop(rig, t);
+    taxi(rig, now_ms, 6);
+    stop(rig, now_ms);
 
     const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 8);
@@ -92,23 +92,23 @@ TEST_CASE("diag power: the knee is recorded on both sides of it, as the level") 
 }
 
 // The median kept the gauge still through a sag, and the corpus could not see the sag at all.
-TEST_CASE("diag power: the reading the median threw out rides beside it, to the millivolt") {
+TEST_CASE("diagnostics power: the reading the median threw out rides beside it, to the millivolt") {
     Rig rig;
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, t, 3);
-    arm(rig, t);
-    taxi(rig, t, 4);
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    taxi(rig, now_ms, 4);
     rig.platform.battery().divider_mv = 3737;
-    taxi(rig, t, 1);
+    taxi(rig, now_ms, 1);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, t, 3);
+    taxi(rig, now_ms, 3);
     rig.platform.battery().divider_mv = 3500;
-    taxi(rig, t, 1);
+    taxi(rig, now_ms, 1);
     rig.platform.battery().divider_mv = 3800;
-    taxi(rig, t, 3);
-    stop(rig, t);
+    taxi(rig, now_ms, 3);
+    stop(rig, now_ms);
 
     bool dip_seen = false, sag_seen = false;
     for (const diagnostics::Power& power : every_power_record(captured(rig))) {
@@ -122,18 +122,19 @@ TEST_CASE("diag power: the reading the median threw out rides beside it, to the 
 }
 
 // 0B1B2C charged for 7 h with every record reading no cable and no cell (#114).
-TEST_CASE("diag power: on the cable the record carries the cable and what the divider read") {
+TEST_CASE(
+    "diagnostics power: on the cable the record carries the cable and what the divider read") {
     Rig rig;
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 4812;
-    taxi(rig, t, 3);
-    arm(rig, t);
-    taxi(rig, t, 4);
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    taxi(rig, now_ms, 4);
     rig.platform.battery().fitted = false;
-    taxi(rig, t, 3);
-    stop(rig, t);
+    taxi(rig, now_ms, 3);
+    stop(rig, now_ms);
 
     const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 6);
@@ -150,11 +151,11 @@ TEST_CASE("diag power: on the cable the record carries the cable and what the di
 }
 
 // A reader divides a duty delta by a power delta: interpolating between two instants is not that.
-TEST_CASE("diag duty: a duty record rides a power pass, on a slower cadence of its own") {
+TEST_CASE("diagnostics duty: a duty record rides a power pass, on a slower cadence of its own") {
     Rig rig;
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     const int seconds = 22;
-    const std::vector<diagnostics::Record> records = armed_taxi(rig, t, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, now_ms, seconds);
 
     CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
     const int duty = count_of(records, diagnostics::Type::Duty);
@@ -164,15 +165,15 @@ TEST_CASE("diag duty: a duty record rides a power pass, on a slower cadence of i
     CHECK(paired_with_power(records) == duty);
 }
 
-TEST_CASE("diag duty: a power run writes the pair every 30 s and lists nothing else") {
+TEST_CASE("diagnostics duty: a power run writes the pair every 30 s and lists nothing else") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
-    arm(rig, t, diagnostics::Profile::PowerRun);
-    rig.run(t, t + 95000);
-    t += 95000;
-    stop(rig, t);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms, diagnostics::Profile::PowerRun);
+    rig.run(now_ms, now_ms + 95000);
+    now_ms += 95000;
+    stop(rig, now_ms);
     const std::vector<diagnostics::Record> records = captured(rig);
 
     // pairs land about 30, 60 and 90 s after arming, and the pilot's stop at 95 s writes none
@@ -187,17 +188,18 @@ TEST_CASE("diag duty: a power run writes the pair every 30 s and lists nothing e
     CHECK(count_of(records, diagnostics::Type::Dwell) == 0);
 }
 
-TEST_CASE("diag duty: the record carries what each service published, not a count of its own") {
+TEST_CASE(
+    "diagnostics duty: the record carries what each service published, not a count of its own") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    taxi(rig, t, 3);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
     rig.raise_link();
     rig.product.screen().set_backlight(true);
-    arm(rig, t);
-    taxi(rig, t, 12);
+    arm(rig, now_ms);
+    taxi(rig, now_ms, 12);
     const bus::DutyState published = rig.state().duty;
-    stop(rig, t);
+    stop(rig, now_ms);
 
     diagnostics::Duty duty{};
     REQUIRE(last_of(captured(rig), duty));

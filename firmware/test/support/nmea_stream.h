@@ -51,10 +51,10 @@ inline std::vector<std::string> fields(const std::string& sentence) {
 }
 
 inline int count_of(Rig& rig, const char* kind) {
-    int n = 0;
-    for (const std::string& s : sentences(rig))
-        if (s.rfind(kind, 0) == 0) n++;
-    return n;
+    int count = 0;
+    for (const std::string& sentence : sentences(rig))
+        if (sentence.rfind(kind, 0) == 0) count++;
+    return count;
 }
 
 // Airborne, timed and moving: everything below needs a fix, because a relative

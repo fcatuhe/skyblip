@@ -56,13 +56,13 @@ struct Executor {
 
     std::vector<Keyed> fly(uint32_t from_ms, uint32_t to_ms) {
         std::vector<Keyed> keyed;
-        for (uint32_t t = from_ms; t <= to_ms; t++) {
-            clock.set_milliseconds(t);
-            rf.service(t);
+        for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms++) {
+            clock.set_milliseconds(now_ms);
+            rf.service(now_ms);
             uint8_t sent[protocol::kTxPayloadChipBytes];
             uint8_t length = 0;
             if (!completes || !chip.take_tx(sent, length)) continue;
-            keyed.push_back({sent[length - protocol::AdslPacket::kTxBytes], t});
+            keyed.push_back({sent[length - protocol::AdslPacket::kTxBytes], now_ms});
             chip.signal_tx_done();
         }
         return keyed;
@@ -70,9 +70,9 @@ struct Executor {
 
     std::vector<events::RfEvent> drained(events::RfEventType type) {
         std::vector<events::RfEvent> out;
-        events::RfEvent e{};
-        while (events.pop(e))
-            if (e.type == type) out.push_back(e);
+        events::RfEvent event{};
+        while (events.pop(event))
+            if (event.type == type) out.push_back(event);
         return out;
     }
 };
@@ -188,19 +188,20 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     uint64_t position_at_us = 0;
     bool position_on_channel1 = false;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& r = air.record_at(i);
-        if (r.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
+        const simulator::AirRecord& record = air.record_at(i);
+        if (record.event != simulator::AirEvent::Tx) continue;
+        if (timing::Scheduler::in_direct_slot(record.phase_ms)) {
             positions++;
-            position_at_us = r.at_us;
-            position_on_channel1 = simulator::Air::tuned_to(r.frequency_hz, timing::kMBand1Hz);
+            position_at_us = record.at_us;
+            position_on_channel1 = simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz);
             continue;
         }
         names++;
-        CAPTURE(r.at_us);
+        CAPTURE(record.at_us);
         // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
         CHECK(position_at_us != 0);
-        CHECK(r.at_us - position_at_us < (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
+        CHECK(record.at_us - position_at_us <
+              (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
         if (position_on_channel1) shared_dwell++;
     }
     CHECK(names >= 3);
@@ -211,13 +212,13 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     const radio::Log& log = simulator.product().state().radio_log;
     int rows = 0;
     for (int i = 0; i < log.count(); i++) {
-        const radio::Entry& e = log.newest(i);
-        if (e.verdict != radio::Verdict::Transmitted) continue;
+        const radio::Entry& entry = log.newest(i);
+        if (entry.verdict != radio::Verdict::Transmitted) continue;
         rows++;
-        CAPTURE(e.at_s);
-        CHECK(e.callsign == (e.into_ms < timing::kSlot1WrapMs));
+        CAPTURE(entry.at_s);
+        CHECK(entry.callsign == (entry.into_ms < timing::kSlot1WrapMs));
         // one 5 ms host step late at most, a neighbour's instant would be 10 ms or more off
-        CHECK(e.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
+        CHECK(entry.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
     }
     CHECK(rows >= 4);
 }

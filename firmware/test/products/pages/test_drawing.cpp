@@ -43,31 +43,32 @@ TEST_CASE("canvas: text advances and draws glyph pixels") {
     CHECK(x == 5 + 3 * 6);
     CHECK(canvas.count_black() > 0);
     // space draws nothing
-    Glass fb2;
-    fb2.clear(true);
-    fb2.draw_character(0, 0, ' ', true, 1);
-    CHECK(fb2.count_black() == 0);
+    Glass space;
+    space.clear(true);
+    space.draw_character(0, 0, ' ', true, 1);
+    CHECK(space.count_black() == 0);
 }
 
 // A character with no glyph prints as a space, and only the glass ever notices.
 TEST_CASE("canvas: every character the pages print has a glyph of its own") {
-    for (const char* c = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.:/+%"; *c != 0; c++) {
+    for (const char* character = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.:/+%"; *character != 0;
+         character++) {
         Glass canvas;
         canvas.clear(true);
-        canvas.draw_character(0, 0, *c, true, 1);
-        CAPTURE(*c);
+        canvas.draw_character(0, 0, *character, true, 1);
+        CAPTURE(*character);
         CHECK(canvas.count_black() > 0);
     }
 }
 
 TEST_CASE("panel model: the driver's own output is what the model shows") {
     Glass canvas;
-    StatusSnapshot s;
-    s.fix_valid = true;
-    s.altitude_mm = 900000;
-    s.barometer_valid = true;
-    s.pressure_mpa = 90810000;
-    draw_status(canvas, s);
+    StatusSnapshot snapshot;
+    snapshot.fix_valid = true;
+    snapshot.altitude_mm = 900000;
+    snapshot.barometer_valid = true;
+    snapshot.pressure_mpa = 90810000;
+    draw_status(canvas, snapshot);
 
     skyblip::models::Ssd1681 panel;
     skyblip::parts::Ssd1681 driver(panel, panel, panel, panel.dc_pin, panel.reset_pin,

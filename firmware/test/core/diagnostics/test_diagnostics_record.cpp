@@ -8,12 +8,12 @@
 
 using namespace skyblip;
 
-TEST_CASE("diag record: one slot is the flight log's, so both share the sector ring") {
+TEST_CASE("diagnostics record: one slot is the flight log's, so both share the sector ring") {
     CHECK(diagnostics::kRecordBytes == flight::kLogRecordBytes);
     CHECK(diagnostics::kPayloadOffset + diagnostics::kPayloadBytes == diagnostics::kRecordBytes);
 }
 
-TEST_CASE("diag record: the type tag is the corpus, and these numbers never move") {
+TEST_CASE("diagnostics record: the type tag is the corpus, and these numbers never move") {
     CHECK(static_cast<uint8_t>(diagnostics::Type::None) == 0);
     CHECK(static_cast<uint8_t>(diagnostics::Type::Boot) == 1);
     CHECK(static_cast<uint8_t>(diagnostics::Type::Config) == 2);
@@ -38,7 +38,7 @@ TEST_CASE("diag record: the type tag is the corpus, and these numbers never move
     CHECK(diagnostics::kHighestType == 20);
 }
 
-TEST_CASE("diag record: the header is written where a host decoder reads it") {
+TEST_CASE("diagnostics record: the header is written where a host decoder reads it") {
     diagnostics::Gnss value{};
     value.solution_phase_ms = 287;
     const diagnostics::Record record = diagnostics::record_of(value, diagnostics_test_instant());
@@ -54,14 +54,14 @@ TEST_CASE("diag record: the header is written where a host decoder reads it") {
     CHECK(get_u16(raw + diagnostics::kPayloadOffset) == 287);
 }
 
-TEST_CASE("diag record: an erased slot is empty rather than a record of zeroes") {
+TEST_CASE("diagnostics record: an erased slot is empty rather than a record of zeroes") {
     uint8_t raw[diagnostics::kRecordBytes];
     for (uint8_t& byte : raw) byte = 0xFF;
     diagnostics::Record out{};
     CHECK(diagnostics::decode_record(raw, out) == Status::Empty);
 }
 
-TEST_CASE("diag record: a type this firmware never wrote is refused, not guessed at") {
+TEST_CASE("diagnostics record: a type this firmware never wrote is refused, not guessed at") {
     diagnostics::Record out{};
     uint8_t raw[diagnostics::kRecordBytes]{};
     raw[0] = diagnostics::kHighestType + 1;
@@ -70,7 +70,7 @@ TEST_CASE("diag record: a type this firmware never wrote is refused, not guessed
     CHECK(diagnostics::decode_record(raw, out) == Status::Unsupported);
 }
 
-TEST_CASE("diag record: a payload is read back only under its own type") {
+TEST_CASE("diagnostics record: a payload is read back only under its own type") {
     diagnostics::Power value{};
     value.cell_mv = 3987;
     const diagnostics::Record record = diagnostics::record_of(value, diagnostics_test_instant());
@@ -78,7 +78,7 @@ TEST_CASE("diag record: a payload is read back only under its own type") {
     CHECK_FALSE(diagnostics::read(record, wrong));
 }
 
-TEST_CASE("diag record: an instant with no PPS behind it says so rather than reading zero") {
+TEST_CASE("diagnostics record: an instant with no PPS behind it says so rather than reading zero") {
     diagnostics::Instant at{};
     at.at_s = 4120;
     at.into_ms = 0;
@@ -92,7 +92,7 @@ TEST_CASE("diag record: an instant with no PPS behind it says so rather than rea
     CHECK(decoded.at_s == 4120);
 }
 
-TEST_CASE("diag record: a stamp becomes an instant with the clock's own dating") {
+TEST_CASE("diagnostics record: a stamp becomes an instant with the clock's own dating") {
     events::Stamp stamp{};
     stamp.at_s = kDiagnosticsTestUtcS;
     stamp.into_ms = 812;

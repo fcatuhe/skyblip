@@ -34,11 +34,11 @@ struct Receiver {
 enum class Sealing : uint8_t { Raw, Sealed, Encoded };
 
 void seal_adsl(uint8_t* frame) {
-    protocol::AdslPacket p{};
-    p.reset();
-    std::memcpy(p.data, frame, protocol::kAdslFrameBytes);
-    p.set_crc();
-    std::memcpy(frame, p.data, protocol::kAdslFrameBytes);
+    protocol::AdslPacket packet{};
+    packet.reset();
+    std::memcpy(packet.data, frame, protocol::kAdslFrameBytes);
+    packet.set_crc();
+    std::memcpy(frame, packet.data, protocol::kAdslFrameBytes);
 }
 
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
@@ -92,21 +92,22 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, uint8_t* codewor
 }
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
-    protocol::AdslPacket p{};
-    p.reset();
-    std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
-    if (p.check_crc() != 0 && (p.correct(frame.erasures) < 0 || p.check_crc() != 0)) return;
-    p.descramble();
+    protocol::AdslPacket packet{};
+    packet.reset();
+    std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
+        return;
+    packet.descramble();
 
-    if (p.is_registration()) {
+    if (packet.is_registration()) {
         char callsign[traffic::CallsignTable::kTextBytes];
-        protocol::callsign_of(p, callsign, sizeof(callsign));
+        protocol::callsign_of(packet, callsign, sizeof(callsign));
         return;
     }
     events::Stamp received{};
     received.at_s = receiver.utc_s;
     model::AircraftObservation observation{};
-    protocol::to_observation(p, received, 0, model::Source::AdslDirect, observation);
+    protocol::to_observation(packet, received, 0, model::Source::AdslDirect, observation);
 }
 
 void hear_alptas(protocol::Frame& frame, const Receiver& receiver) {

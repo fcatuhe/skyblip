@@ -15,10 +15,10 @@
 namespace skyblip {
 
 inline int count_of(const std::vector<diagnostics::Record>& records, diagnostics::Type type) {
-    int n = 0;
+    int count = 0;
     for (const diagnostics::Record& record : records)
-        if (record.type == type) n++;
-    return n;
+        if (record.type == type) count++;
+    return count;
 }
 
 template <class T>

@@ -175,12 +175,12 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
         protocol::Frame heard{};
         REQUIRE(peer.frames(mine, heard));
         CHECK(heard.system == protocol::System::AdslDirect);
-        protocol::AdslPacket p{};
-        p.reset();
-        std::memcpy(p.data, heard.data, protocol::kAdslFrameBytes);
-        REQUIRE(p.check_crc() == 0);
-        p.descramble();
-        CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
+        protocol::AdslPacket packet{};
+        packet.reset();
+        std::memcpy(packet.data, heard.data, protocol::kAdslFrameBytes);
+        REQUIRE(packet.check_crc() == 0);
+        packet.descramble();
+        CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         framed++;
     }
     CHECK(framed > 0);
@@ -204,13 +204,13 @@ TEST_CASE("rf: a paraglider below the flight speed transmits every second, fligh
             if (mine.event != simulator::AirEvent::Tx) continue;
             protocol::Frame heard{};
             REQUIRE(peer.frames(mine, heard));
-            protocol::AdslPacket p{};
-            p.reset();
-            std::memcpy(p.data, heard.data, protocol::kAdslFrameBytes);
-            p.descramble();
-            if (!p.is_position()) continue;
+            protocol::AdslPacket packet{};
+            packet.reset();
+            std::memcpy(packet.data, heard.data, protocol::kAdslFrameBytes);
+            packet.descramble();
+            if (!packet.is_position()) continue;
             positions++;
-            CHECK(p.flight_state == (type == 7 ? 0 : 1));
+            CHECK(packet.flight_state == (type == 7 ? 0 : 1));
         }
         if (type == 7)
             CHECK(positions >= 19);
@@ -251,17 +251,17 @@ TEST_CASE("rf: a burst is heard only inside the dwell that owns its channel") {
         // Right channel, wrong time: 868.4 during slot 0.
         {600, 1, false},
     };
-    for (const Case& c : cases) {
+    for (const Case& example : cases) {
         simulator::Simulator simulator;
-        listen_at(simulator, c.phase_ms, c.slot);
+        listen_at(simulator, example.phase_ms, example.slot);
         simulator.run(4000);
         const int heard = count_of(simulator.world().air(), simulator::AirEvent::Rx);
         const int deaf = count_of(simulator.world().air(), simulator::AirEvent::Deaf);
-        CAPTURE(c.phase_ms);
-        CAPTURE(c.slot);
-        CHECK((heard > 0) == c.heard);
-        CHECK((deaf > 0) == !c.heard);
-        CHECK((simulator.product().state().air.rx_ok > 0u) == c.heard);
+        CAPTURE(example.phase_ms);
+        CAPTURE(example.slot);
+        CHECK((heard > 0) == example.heard);
+        CHECK((deaf > 0) == !example.heard);
+        CHECK((simulator.product().state().air.rx_ok > 0u) == example.heard);
     }
 }
 
@@ -327,14 +327,14 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         transmitted++;
         protocol::Frame sent{};
         REQUIRE(simulator::Air::framed(mine, sent));
-        protocol::AdslPacket p{};
-        p.reset();
-        std::memcpy(p.data, sent.data, protocol::kAdslFrameBytes);
-        REQUIRE(p.check_crc() == 0);
-        p.descramble();
+        protocol::AdslPacket packet{};
+        packet.reset();
+        std::memcpy(packet.data, sent.data, protocol::kAdslFrameBytes);
+        REQUIRE(packet.check_crc() == 0);
+        packet.descramble();
         // Every burst we put on air is ours, by address: a relayed frame would
         // carry the neighbour's.
-        CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
+        CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
 
         for (int j = 0; j < air.record_count(); j++) {
             const simulator::AirRecord& heard = air.record_at(j);

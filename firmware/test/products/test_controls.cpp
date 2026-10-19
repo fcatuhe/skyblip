@@ -97,12 +97,12 @@ TEST_CASE("controls: a touch the button joins says nothing, in either direction"
 }
 
 TEST_CASE("gesture: two presses inside the window authorise, one press refuses") {
-    go::ConfirmGesture g;
-    g.arm(1000);
-    CHECK(g.press(1100) == go::Answer::None);  // one press decides nothing yet
-    CHECK(g.press(1250) == go::Answer::Confirm);
-    CHECK_FALSE(g.armed());  // spent: the same pair cannot confirm twice
-    CHECK(g.press(1300) == go::Answer::None);
+    go::ConfirmGesture gesture;
+    gesture.arm(1000);
+    CHECK(gesture.press(1100) == go::Answer::None);  // one press decides nothing yet
+    CHECK(gesture.press(1250) == go::Answer::Confirm);
+    CHECK_FALSE(gesture.armed());  // spent: the same pair cannot confirm twice
+    CHECK(gesture.press(1300) == go::Answer::None);
 
     // The page press, made at a prompt. It is not ignored - it refuses.
     go::ConfirmGesture lone;
@@ -115,16 +115,16 @@ TEST_CASE("gesture: two presses inside the window authorise, one press refuses")
 
 // A pilot cycling pages produces exactly this, and it must not add up to a firmware upload.
 TEST_CASE("gesture: presses made before the prompt, and slow presses, authorise nothing") {
-    go::ConfirmGesture g;
-    CHECK(g.press(500) == go::Answer::None);  // disarmed: paging, not answering
-    CHECK(g.press(600) == go::Answer::None);
-    CHECK(g.tick(2000) == go::Answer::None);
+    go::ConfirmGesture gesture;
+    CHECK(gesture.press(500) == go::Answer::None);  // disarmed: paging, not answering
+    CHECK(gesture.press(600) == go::Answer::None);
+    CHECK(gesture.tick(2000) == go::Answer::None);
 
     // The prompt arrives between the two halves of a page double-tap. The half
     // that came first belongs to the pages, and cannot be counted here.
-    g.arm(650);
-    CHECK(g.press(700) == go::Answer::None);
-    CHECK(g.tick(700 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
+    gesture.arm(650);
+    CHECK(gesture.press(700) == go::Answer::None);
+    CHECK(gesture.tick(700 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
 
     go::ConfirmGesture slow;
     slow.arm(0);
@@ -137,11 +137,11 @@ TEST_CASE("gesture: the authorising window sits between a press and the power-of
     CHECK(go::ConfirmGesture::kDoublePressWindowMs < power::kLongPressHoldMs);
 
     go::Controls controls;
-    go::ConfirmGesture g;
-    g.arm(0);
+    go::ConfirmGesture gesture;
+    gesture.arm(0);
     controls.read(down(events::Contact::Button, 0));
     CHECK(controls.read(up(events::Contact::Button, power::kLongPressHoldMs + 200)) ==
           go::Gesture::None);
-    CHECK(g.tick(power::kLongPressHoldMs) == go::Answer::None);
-    CHECK(g.armed());
+    CHECK(gesture.tick(power::kLongPressHoldMs) == go::Answer::None);
+    CHECK(gesture.armed());
 }

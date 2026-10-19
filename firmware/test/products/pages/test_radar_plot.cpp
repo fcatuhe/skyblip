@@ -31,17 +31,17 @@ int marks_in(const RadarSnapshot& snapshot, int x0, int y0, int x1, int y1) {
     RadarSnapshot still = snapshot;
     still.speed_mm_s = 0;
     const Glass with = radar(snapshot), without = radar(still);
-    int n = 0;
+    int count = 0;
     for (int y = y0; y < y1; y++)
         for (int x = x0; x < x1; x++)
-            if (with.get_pixel(x, y) && !without.get_pixel(x, y)) n++;
-    return n;
+            if (with.get_pixel(x, y) && !without.get_pixel(x, y)) count++;
+    return count;
 }
 
-RadarSnapshot one_target(RadarTarget* t) {
+RadarSnapshot one_target(RadarTarget* target) {
     RadarSnapshot snapshot = flying(0);
     snapshot.target_count = 1;
-    snapshot.targets = t;
+    snapshot.targets = target;
     return snapshot;
 }
 
@@ -150,7 +150,7 @@ TEST_CASE("radar page: a formation is own-ship, counted by quadrant") {
     RadarSnapshot apart = snapshot;
     apart.formation_members = 0;
     RadarTarget loose[4] = {flight[0], flight[1], flight[2], flight[3]};
-    for (RadarTarget& t : loose) t.in_formation = false;
+    for (RadarTarget& target : loose) target.in_formation = false;
     apart.targets = loose;
     const Glass separate = radar(apart);
     CHECK(ink_in(separate, 100, 80, 120, 95) > ink_in(canvas, 100, 80, 120, 95));

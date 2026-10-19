@@ -11,11 +11,12 @@ using skyblip::traffic::Level;
 
 namespace {
 
-int differing_in(const Glass& a, const Glass& b, int x0, int y0, int x1, int y1) {
-    int n = 0;
+int differing_in(const Glass& first, const Glass& second, int x0, int y0, int x1, int y1) {
+    int count = 0;
     for (int y = y0; y < y1; y++)
-        for (int x = x0; x < x1; x++) n += a.get_pixel(x, y) != b.get_pixel(x, y) ? 1 : 0;
-    return n;
+        for (int x = x0; x < x1; x++)
+            count += first.get_pixel(x, y) != second.get_pixel(x, y) ? 1 : 0;
+    return count;
 }
 
 RadarSnapshot with_threat(RadarTarget* one, Level level) {
@@ -114,7 +115,7 @@ TEST_CASE("radar page: the wedge is flashing by the time a target reads as a fil
         CHECK(differing_in(between, radar(snapshot), 130, 90, 190, 110) > 100);
     }
 
-    // A contact nobody graded is a hollow diamond and no wedge at all.
+    // A target nobody graded is a hollow diamond and no wedge at all.
     RadarTarget quiet_one[1] = {{0, 1500, 0}};
     RadarSnapshot quiet = with_threat(quiet_one, Level::None);
     quiet.alarm_flash = false;

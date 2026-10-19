@@ -10,15 +10,15 @@ using namespace skyblip;
 namespace {
 
 radio::Entry heard(uint32_t address, uint32_t at_s) {
-    radio::Entry e{};
-    e.verdict = radio::Verdict::Received;
-    e.source = model::Source::AdslDirect;
-    e.address = address;
-    e.at_s = at_s;
-    e.rssi_dbm = -87;
-    e.rssi_valid = true;
-    e.utc_dated = true;
-    return e;
+    radio::Entry entry{};
+    entry.verdict = radio::Verdict::Received;
+    entry.source = model::Source::AdslDirect;
+    entry.address = address;
+    entry.at_s = at_s;
+    entry.rssi_dbm = -87;
+    entry.rssi_valid = true;
+    entry.utc_dated = true;
+    return entry;
 }
 
 }  // namespace
@@ -57,9 +57,9 @@ TEST_CASE("radio log: every outcome a burst can have is one it keeps") {
          {radio::Verdict::Transmitted, radio::Verdict::Lost, radio::Verdict::Held,
           radio::Verdict::Unarmed, radio::Verdict::Received, radio::Verdict::BadCrc,
           radio::Verdict::Undecoded, radio::Verdict::Unsupported, radio::Verdict::Unattempted}) {
-        radio::Entry e{};
-        e.verdict = verdict;
-        log.record(e);
+        radio::Entry entry{};
+        entry.verdict = verdict;
+        log.record(entry);
         CHECK(log.newest(0).verdict == verdict);
     }
 }

@@ -19,8 +19,8 @@ TEST_CASE("timing statistics: a clean 1 Hz PPS train lands in the centre bucket"
     }
     CHECK(statistics.pps_samples() == 10);
     CHECK(statistics.pps_bucket(3) == 10);
-    for (int b = 0; b < SlotTimingStatistics::kBuckets; b++)
-        if (b != 3) CHECK(statistics.pps_bucket(b) == 0);
+    for (int bucket = 0; bucket < SlotTimingStatistics::kBuckets; bucket++)
+        if (bucket != 3) CHECK(statistics.pps_bucket(bucket) == 0);
     CHECK(statistics.pps_worst_us() == 0);
     CHECK(statistics.holdover_events() == 0);
 }
@@ -51,7 +51,7 @@ TEST_CASE("timing statistics: a drifting edge walks the buckets outward, one gua
         edge_us += static_cast<uint64_t>(1000000 + error);
         statistics.record_edge(edge_us, true);
     }
-    for (int b : expect_late) CHECK(statistics.pps_bucket(b) == 1);
+    for (int bucket : expect_late) CHECK(statistics.pps_bucket(bucket) == 1);
     CHECK(statistics.pps_samples() == 4);
     CHECK(statistics.pps_worst_us() == 8000);
 
@@ -63,7 +63,7 @@ TEST_CASE("timing statistics: a drifting edge walks the buckets outward, one gua
         edge_us += static_cast<uint64_t>(1000000 - error);
         early.record_edge(edge_us, true);
     }
-    for (int b : expect_early) CHECK(early.pps_bucket(b) == 1);
+    for (int bucket : expect_early) CHECK(early.pps_bucket(bucket) == 1);
     CHECK(early.pps_worst_us() == -8000);
 }
 
@@ -87,8 +87,8 @@ TEST_CASE("timing statistics: a lost PPS becomes holdover, not a phase outlier")
     edge_us += 10 * 1000000;
     statistics.record_edge(edge_us, true);
     CHECK(statistics.pps_samples() == 1);
-    for (int b = 0; b < SlotTimingStatistics::kBuckets; b++)
-        if (b != 3) CHECK(statistics.pps_bucket(b) == 0);
+    for (int bucket = 0; bucket < SlotTimingStatistics::kBuckets; bucket++)
+        if (bucket != 3) CHECK(statistics.pps_bucket(bucket) == 0);
 
     // The second after reacquisition is measured normally again.
     edge_us += 1000000;
@@ -140,9 +140,9 @@ TEST_CASE("timing statistics: missed and refused are counted apart from the phas
     CHECK(statistics.refused() == 1);
     CHECK(statistics.dwell_samples() == 0);
     CHECK(statistics.pps_samples() == 0);
-    for (int b = 0; b < SlotTimingStatistics::kBuckets; b++) {
-        CHECK(statistics.dwell_bucket(b) == 0);
-        CHECK(statistics.pps_bucket(b) == 0);
+    for (int bucket = 0; bucket < SlotTimingStatistics::kBuckets; bucket++) {
+        CHECK(statistics.dwell_bucket(bucket) == 0);
+        CHECK(statistics.pps_bucket(bucket) == 0);
     }
 }
 

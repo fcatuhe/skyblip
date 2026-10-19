@@ -14,13 +14,13 @@ using namespace skyblip::dfu;
 
 namespace {
 UpdateRecord attempt() {
-    UpdateRecord r;
-    r.from = ports::ImageVersion{0, 1, 0, 12};
-    r.to = ports::ImageVersion{0, 2, 0, 15};
-    r.from_hash = ports::ImageHash{{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}};
-    r.to_hash = ports::ImageHash{{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28}};
-    r.hashed = true;
-    return r;
+    UpdateRecord record;
+    record.from = ports::ImageVersion{0, 1, 0, 12};
+    record.to = ports::ImageVersion{0, 2, 0, 15};
+    record.from_hash = ports::ImageHash{{0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18}};
+    record.to_hash = ports::ImageHash{{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28}};
+    record.hashed = true;
+    return record;
 }
 
 SlotImage image(const ports::ImageVersion& version) { return SlotImage{version, {}, false}; }
@@ -68,42 +68,45 @@ TEST_CASE("dfu: a blob of the wrong length is refused rather than half read") {
 }
 
 TEST_CASE("dfu: the image that boots after the swap is classified by what it is running") {
-    const UpdateRecord r = attempt();
-    const SlotImage to = image(r.to, r.to_hash);
-    CHECK(outcome(r, to, std::nullopt) == Outcome::Landed);
-    CHECK(outcome(r, image(r.from, r.from_hash), to) == Outcome::Reverted);
-    CHECK(outcome(r, image(ports::ImageVersion{0, 3, 0, 1}, ports::ImageHash{}), to) ==
+    const UpdateRecord record = attempt();
+    const SlotImage to = image(record.to, record.to_hash);
+    CHECK(outcome(record, to, std::nullopt) == Outcome::Landed);
+    CHECK(outcome(record, image(record.from, record.from_hash), to) == Outcome::Reverted);
+    CHECK(outcome(record, image(ports::ImageVersion{0, 3, 0, 1}, ports::ImageHash{}), to) ==
           Outcome::Unrelated);
 }
 
 TEST_CASE("dfu: a running image that cannot read its own hash is classified by version") {
-    const UpdateRecord r = attempt();
-    CHECK(outcome(r, image(r.to), std::nullopt) == Outcome::Landed);
-    CHECK(outcome(r, image(r.from), image(r.to)) == Outcome::Reverted);
-    CHECK(outcome(r, image(ports::ImageVersion{0, 2, 0, 16}), std::nullopt) == Outcome::Unrelated);
+    const UpdateRecord record = attempt();
+    CHECK(outcome(record, image(record.to), std::nullopt) == Outcome::Landed);
+    CHECK(outcome(record, image(record.from), image(record.to)) == Outcome::Reverted);
+    CHECK(outcome(record, image(ports::ImageVersion{0, 2, 0, 16}), std::nullopt) ==
+          Outcome::Unrelated);
 }
 
 TEST_CASE("dfu: an old image with the new one gone from slot 1 was refused, never run") {
-    const UpdateRecord r = attempt();
-    CHECK(outcome(r, image(r.from, r.from_hash), std::nullopt) == Outcome::Refused);
-    CHECK(outcome(r, image(r.from, r.from_hash), image(r.from, r.from_hash)) == Outcome::Refused);
+    const UpdateRecord record = attempt();
+    CHECK(outcome(record, image(record.from, record.from_hash), std::nullopt) == Outcome::Refused);
+    CHECK(outcome(record, image(record.from, record.from_hash),
+                  image(record.from, record.from_hash)) == Outcome::Refused);
 }
 
 TEST_CASE("dfu: two builds of one release are two images") {
-    const UpdateRecord r = attempt();
-    ports::ImageVersion other_build = r.to;
+    const UpdateRecord record = attempt();
+    ports::ImageVersion other_build = record.to;
     other_build.build++;
-    CHECK(r.to != other_build);
-    CHECK(outcome(r, image(other_build), std::nullopt) == Outcome::Unrelated);
+    CHECK(record.to != other_build);
+    CHECK(outcome(record, image(other_build), std::nullopt) == Outcome::Unrelated);
 }
 
 // The full image of the running version, reverted: by version alone it would read as landed.
 TEST_CASE("dfu: an image of the same version is told apart by its hash") {
-    UpdateRecord r = attempt();
-    r.to = r.from;
-    CHECK(outcome(r, image(r.from, r.from_hash), image(r.to, r.to_hash)) == Outcome::Reverted);
-    CHECK(outcome(r, image(r.from, r.from_hash), std::nullopt) == Outcome::Refused);
-    CHECK(outcome(r, image(r.to, r.to_hash), std::nullopt) == Outcome::Landed);
+    UpdateRecord record = attempt();
+    record.to = record.from;
+    CHECK(outcome(record, image(record.from, record.from_hash), image(record.to, record.to_hash)) ==
+          Outcome::Reverted);
+    CHECK(outcome(record, image(record.from, record.from_hash), std::nullopt) == Outcome::Refused);
+    CHECK(outcome(record, image(record.to, record.to_hash), std::nullopt) == Outcome::Landed);
 }
 
 TEST_CASE("dfu: versions order by major, minor, revision, then build") {
@@ -137,23 +140,23 @@ TEST_CASE("dfu: a version reads as imgtool stamps it, and the widest one fits th
 // An image from someone else's build can carry any version, and the frame sized for ours must hold.
 TEST_CASE("dfu: a version wider than the widest we sign is written as nothing") {
     char text[kVersionTextBytes];
-    for (const ports::ImageVersion& v :
+    for (const ports::ImageVersion& version :
          {ports::ImageVersion{10, 0, 0, 1}, ports::ImageVersion{0, 100, 0, 1},
           ports::ImageVersion{0, 0, 100, 1}, ports::ImageVersion{0, 0, 0, 100000},
           ports::ImageVersion{255, 255, 65535, 4294967295u}}) {
         text[0] = 'x';
-        CHECK(format_version(v, text, sizeof(text)) == 0);
+        CHECK(format_version(version, text, sizeof(text)) == 0);
         CHECK(text[0] == 0);
     }
 }
 
 TEST_CASE("dfu: a version reads back from the text format_version writes, and nothing looser") {
     char text[kVersionTextBytes];
-    for (const ports::ImageVersion& v : {ports::ImageVersion{0, 2, 0, 15}, kWidestVersion}) {
-        format_version(v, text, sizeof(text));
+    for (const ports::ImageVersion& version : {ports::ImageVersion{0, 2, 0, 15}, kWidestVersion}) {
+        format_version(version, text, sizeof(text));
         ports::ImageVersion read;
         REQUIRE(parse_version(text, read));
-        CHECK(read == v);
+        CHECK(read == version);
     }
 
     ports::ImageVersion untouched{9, 9, 9, 9};
@@ -173,21 +176,21 @@ TEST_CASE("dfu: every image state has a name a phone can switch on") {
 
 // What imgtool wrote for skyblip-go 0.1.0+892, cut down to the fields the device reads.
 namespace {
-std::vector<uint8_t> header_of(ports::ImageVersion v) {
-    std::vector<uint8_t> h(kImageHeaderBytes, 0);
+std::vector<uint8_t> header_of(ports::ImageVersion version) {
+    std::vector<uint8_t> header(kImageHeaderBytes, 0);
     const uint8_t magic[] = {0x3d, 0xb8, 0xf3, 0x96};
-    std::memcpy(h.data(), magic, sizeof(magic));
-    h[8] = 0x00;
-    h[9] = 0x02;
-    h[12] = 0xd0;
-    h[13] = 0x6d;
-    h[14] = 0x07;
-    h[20] = v.major;
-    h[21] = v.minor;
-    h[22] = static_cast<uint8_t>(v.revision);
-    h[23] = static_cast<uint8_t>(v.revision >> 8);
-    for (int i = 0; i < 4; i++) h[24 + i] = static_cast<uint8_t>(v.build >> (8 * i));
-    return h;
+    std::memcpy(header.data(), magic, sizeof(magic));
+    header[8] = 0x00;
+    header[9] = 0x02;
+    header[12] = 0xd0;
+    header[13] = 0x6d;
+    header[14] = 0x07;
+    header[20] = version.major;
+    header[21] = version.minor;
+    header[22] = static_cast<uint8_t>(version.revision);
+    header[23] = static_cast<uint8_t>(version.revision >> 8);
+    for (int i = 0; i < 4; i++) header[24 + i] = static_cast<uint8_t>(version.build >> (8 * i));
+    return header;
 }
 
 void put_tlv(std::vector<uint8_t>& out, uint16_t type, uint8_t fill, uint16_t length) {
@@ -217,20 +220,20 @@ std::vector<uint8_t> signed_tlvs(uint8_t key_byte) {
 }  // namespace
 
 TEST_CASE("dfu: the header gives the version and where the TLVs start") {
-    const std::vector<uint8_t> h = header_of({0, 1, 0, 892});
+    const std::vector<uint8_t> header = header_of({0, 1, 0, 892});
     ImageHeader out;
-    REQUIRE(read_header(h.data(), h.size(), out));
+    REQUIRE(read_header(header.data(), header.size(), out));
     CHECK(out.version == ports::ImageVersion{0, 1, 0, 892});
     // 0x200 of header and 0x76dd0 of body: imgtool dumpinfo puts the TLV area at 0x76fd0.
     CHECK(out.tlv_offset() == 0x76fd0u);
 }
 
 TEST_CASE("dfu: a short or foreign header is not read as an image") {
-    std::vector<uint8_t> h = header_of({0, 1, 0, 892});
+    std::vector<uint8_t> header = header_of({0, 1, 0, 892});
     ImageHeader out;
-    CHECK_FALSE(read_header(h.data(), h.size() - 1, out));
-    h[0] ^= 0xff;
-    CHECK_FALSE(read_header(h.data(), h.size(), out));
+    CHECK_FALSE(read_header(header.data(), header.size() - 1, out));
+    header[0] ^= 0xff;
+    CHECK_FALSE(read_header(header.data(), header.size(), out));
     CHECK_FALSE(read_header(nullptr, 0, out));
 }
 

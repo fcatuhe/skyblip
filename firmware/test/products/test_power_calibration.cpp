@@ -123,12 +123,12 @@ TEST_CASE("product: a charge however long leaves the trim where the line set it"
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().battery_offset_mv = -15;
 
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     rig.platform.battery().external_power = true;
     rig.platform.battery().divider_mv = 3960;
-    rig.run(t, t + 10000);
-    t += 10000;
+    rig.run(now_ms, now_ms + 10000);
+    now_ms += 10000;
     rig.platform.battery().divider_mv = 4160;
-    rig.run(t, t + 300000);
+    rig.run(now_ms, now_ms + 300000);
     CHECK(int(rig.settings().battery_offset_mv) == -15);
 }

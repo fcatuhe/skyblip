@@ -31,8 +31,8 @@ TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
     CHECK(percent_from_mv(4500) == 100);
 
     uint8_t previous = 0;
-    for (uint16_t mv = kEmptyMv; mv <= kFullMv; mv += 10) {
-        const uint8_t percent = percent_from_mv(mv);
+    for (uint16_t cell_mv = kEmptyMv; cell_mv <= kFullMv; cell_mv += 10) {
+        const uint8_t percent = percent_from_mv(cell_mv);
         CHECK(percent >= previous);
         previous = percent;
     }
@@ -40,9 +40,9 @@ TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
 
 TEST_CASE("battery: the flat middle of the cell is not a straight line") {
     // 3.70 -> 3.80 V is a quarter of the capacity; 4.10 -> 4.20 V is a twentieth.
-    const int mid = percent_from_mv(3800) - percent_from_mv(3700);
-    const int top = percent_from_mv(4200) - percent_from_mv(4100);
-    CHECK(mid > top);
+    const int middle_step = percent_from_mv(3800) - percent_from_mv(3700);
+    const int top_step = percent_from_mv(4200) - percent_from_mv(4100);
+    CHECK(middle_step > top_step);
 }
 
 // The window the gauge believes: a floating divider under it, a rail over it.

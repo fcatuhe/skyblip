@@ -20,12 +20,12 @@ using Board = boards::TEchoPlus<platform::host::Platform>;
 
 uint32_t run(platform::host::Platform& platform, Board& board, bus::State& state, uint32_t from_ms,
              uint32_t for_ms) {
-    uint32_t t = from_ms;
-    for (; t < from_ms + for_ms; t += runtime::kServicePassCeilingMs) {
-        platform.clock().set_milliseconds(t);
-        board.poll(state, t);
+    uint32_t now_ms = from_ms;
+    for (; now_ms < from_ms + for_ms; now_ms += runtime::kServicePassCeilingMs) {
+        platform.clock().set_milliseconds(now_ms);
+        board.poll(state, now_ms);
     }
-    return t;
+    return now_ms;
 }
 
 bool last_sample(bus::Bus& bus, events::AccelerometerSample& out) {
@@ -93,7 +93,7 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
     Board board{platform, bus};
     bus::State state;
 
-    const uint32_t t = run(platform, board, state, 0, 2000);
+    const uint32_t now_ms = run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(platform.chips().imu.booted);
 
@@ -102,7 +102,7 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
     CHECK(sample.right_mg == doctest::Approx(-150).epsilon(0.02));
     CHECK(sample.up_mg == doctest::Approx(990).epsilon(0.02));
     CHECK(sample.aft_mg == doctest::Approx(20).epsilon(0.1));
-    CHECK(sample.at_ms < t);
+    CHECK(sample.at_ms < now_ms);
 }
 
 TEST_CASE("board: nothing is asked of a bus with no hub on it") {
@@ -137,11 +137,11 @@ std::string reported(const bus::State& state) {
 }
 
 std::string hex_prefix(const Sha256::Digest& digest) {
-    static const char kHex[] = "0123456789abcdef";
+    static const char kHexDigits[] = "0123456789abcdef";
     std::string out;
     for (size_t i = 0; i < dfu::HubImageReport::kDigestBytes; i++) {
-        out += kHex[digest[i] >> 4];
-        out += kHex[digest[i] & 0x0F];
+        out += kHexDigits[digest[i] >> 4];
+        out += kHexDigits[digest[i] & 0x0F];
     }
     return out;
 }
@@ -155,13 +155,13 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     Board board{platform, bus};
     bus::State state;
 
-    uint32_t t = run(platform, board, state, 0, 2000);
+    uint32_t now_ms = run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(reported(state) == "missing");
     CHECK(platform.imu_flash().erases == 0);
 
     platform.dfu().image_confirmed = true;
-    run(platform, board, state, t, 2000);
+    run(platform, board, state, now_ms, 2000);
     CHECK(board.imu_store().holds(platform.imu_firmware_digest()));
     CHECK(reported(state) == hex_prefix(platform.imu_firmware_digest()));
     CHECK(state.imu.bootable);

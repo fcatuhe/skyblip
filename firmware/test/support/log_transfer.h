@@ -15,28 +15,28 @@ namespace skyblip {
 // The tablet's side of the transfer, and the only decoder in the tree: the
 // device never speaks IGC, it hands over the raw records and the CRC that came
 // off the flash with them.
-inline int base64_decode(const std::string& in, uint8_t* out, int cap) {
-    auto value = [](char c) -> int {
-        if (c >= 'A' && c <= 'Z') return c - 'A';
-        if (c >= 'a' && c <= 'z') return c - 'a' + 26;
-        if (c >= '0' && c <= '9') return c - '0' + 52;
-        if (c == '+') return 62;
-        if (c == '/') return 63;
+inline int base64_decode(const std::string& in, uint8_t* out, int capacity) {
+    auto value = [](char character) -> int {
+        if (character >= 'A' && character <= 'Z') return character - 'A';
+        if (character >= 'a' && character <= 'z') return character - 'a' + 26;
+        if (character >= '0' && character <= '9') return character - '0' + 52;
+        if (character == '+') return 62;
+        if (character == '/') return 63;
         return -1;
     };
-    int n = 0;
+    int count = 0;
     uint32_t buffer = 0;
     int bits = 0;
-    for (char c : in) {
-        const int v = value(c);
-        if (v < 0) continue;
-        buffer = (buffer << 6) | static_cast<uint32_t>(v);
+    for (char character : in) {
+        const int digit = value(character);
+        if (digit < 0) continue;
+        buffer = (buffer << 6) | static_cast<uint32_t>(digit);
         bits += 6;
         if (bits < 8) continue;
         bits -= 8;
-        if (n < cap) out[n++] = static_cast<uint8_t>((buffer >> bits) & 0xFF);
+        if (count < capacity) out[count++] = static_cast<uint8_t>((buffer >> bits) & 0xFF);
     }
-    return n;
+    return count;
 }
 
 inline std::string field(const std::string& json, const char* key) {

@@ -93,8 +93,8 @@ TEST_CASE("ssd1681: present() writes a full framebuffer with correct black/white
     CHECK(chip.ram.size() == parts::Ssd1681Glass::kBytes);
     // An all-white framebuffer becomes all 0xFF in panel RAM (inverted).
     bool all_ff = true;
-    for (uint8_t b : chip.ram)
-        if (b != 0xFF) all_ff = false;
+    for (uint8_t byte : chip.ram)
+        if (byte != 0xFF) all_ff = false;
     CHECK(all_ff);
     CHECK(chip.saw_command(0x24));  // WriteRAM
     CHECK(chip.saw_command(0x20));  // Master activation

@@ -23,27 +23,27 @@ struct Unit {
 
     std::vector<uint32_t> sample_instants(uint32_t from_ms, uint32_t to_ms) {
         std::vector<uint32_t> at;
-        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServicePassCeilingMs) {
+        for (uint32_t now_ms = from_ms; now_ms < to_ms; now_ms += runtime::kServicePassCeilingMs) {
             events::BarometerSample sample{};
-            if (pass(t, sample)) at.push_back(sample.at_ms);
+            if (pass(now_ms, sample)) at.push_back(sample.at_ms);
         }
         return at;
     }
 
     std::vector<uint32_t> trigger_instants(uint32_t from_ms, uint32_t to_ms) {
         std::vector<uint32_t> at;
-        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServicePassCeilingMs) {
+        for (uint32_t now_ms = from_ms; now_ms < to_ms; now_ms += runtime::kServicePassCeilingMs) {
             const int before = chip().conversions;
             events::BarometerSample sample{};
-            pass(t, sample);
-            if (chip().conversions != before) at.push_back(t);
+            pass(now_ms, sample);
+            if (chip().conversions != before) at.push_back(now_ms);
         }
         return at;
     }
 
-    bool pass(uint32_t t, events::BarometerSample& sample) {
-        platform.clock().set_milliseconds(t);
-        board.poll(state, t);
+    bool pass(uint32_t now_ms, events::BarometerSample& sample) {
+        platform.clock().set_milliseconds(now_ms);
+        board.poll(state, now_ms);
         return bus.barometer.pop(sample);
     }
 
@@ -59,41 +59,41 @@ struct Unit {
 
 // The Zephyr fetch slept 43 ms in this pass; the part now converts while the loop runs on.
 TEST_CASE("board: a trigger never waits, and the edge's conversion is read on a later pass") {
-    Unit u;
+    Unit unit;
     events::BarometerSample sample{};
-    u.sample_instants(0, 1000);
-    const int conversions = u.chip().conversions;
-    const int reads = u.chip().reads;
+    unit.sample_instants(0, 1000);
+    const int conversions = unit.chip().conversions;
+    const int reads = unit.chip().reads;
 
-    CHECK_FALSE(u.pass(1000, sample));
-    CHECK(u.chip().conversions == conversions + 1);
-    CHECK(u.chip().reads == reads);
-    CHECK(u.chip().measuring());
-    CHECK_FALSE(u.pass(1030, sample));
-    CHECK(u.pass(1040, sample));
+    CHECK_FALSE(unit.pass(1000, sample));
+    CHECK(unit.chip().conversions == conversions + 1);
+    CHECK(unit.chip().reads == reads);
+    CHECK(unit.chip().measuring());
+    CHECK_FALSE(unit.pass(1030, sample));
+    CHECK(unit.pass(1040, sample));
 
-    const int read_after_edge = u.chip().reads;
-    CHECK_FALSE(u.pass(1250, sample));
-    CHECK(u.chip().conversions == conversions + 2);
-    CHECK(u.chip().reads == read_after_edge);
+    const int read_after_edge = unit.chip().reads;
+    CHECK_FALSE(unit.pass(1250, sample));
+    CHECK(unit.chip().conversions == conversions + 2);
+    CHECK(unit.chip().reads == read_after_edge);
 }
 
 TEST_CASE("board: four conversions a second, one published") {
-    Unit u;
-    u.sample_instants(0, 1000);
-    const int conversions = u.chip().conversions;
+    Unit unit;
+    unit.sample_instants(0, 1000);
+    const int conversions = unit.chip().conversions;
 
-    const std::vector<uint32_t> at = u.sample_instants(1000, 11000);
+    const std::vector<uint32_t> at = unit.sample_instants(1000, 11000);
 
-    CHECK(u.chip().conversions - conversions == 40);
+    CHECK(unit.chip().conversions - conversions == 40);
     CHECK(at.size() == 10);
-    CHECK(u.board.barometer_faults() == 0);
+    CHECK(unit.board.barometer_faults() == 0);
 }
 
 TEST_CASE("board: triggers stay on the PPS phases") {
-    Unit u;
+    Unit unit;
 
-    const std::vector<uint32_t> at = u.trigger_instants(1000, 4000);
+    const std::vector<uint32_t> at = unit.trigger_instants(1000, 4000);
 
     REQUIRE(at.size() == 12);
     for (size_t i = 0; i < at.size(); i++)
@@ -101,21 +101,21 @@ TEST_CASE("board: triggers stay on the PPS phases") {
 }
 
 TEST_CASE("board: a barometer sample is dated at its conversion, not at its read") {
-    Unit u;
+    Unit unit;
 
-    const std::vector<uint32_t> at = u.sample_instants(1000, 1100);
+    const std::vector<uint32_t> at = unit.sample_instants(1000, 1100);
 
     REQUIRE(at.size() == 1);
     CHECK(at.front() == 1000 + kMidpointMs);
 }
 
 TEST_CASE("board: the published sample is the one triggered at the edge") {
-    Unit u;
+    Unit unit;
     std::vector<uint32_t> published;
-    for (uint32_t t = 0; t < 4000; t += runtime::kServicePassCeilingMs) {
-        u.chip().set_pressure_mpa(t % 1000 == 0 ? 95000000 : 90000000);
+    for (uint32_t now_ms = 0; now_ms < 4000; now_ms += runtime::kServicePassCeilingMs) {
+        unit.chip().set_pressure_mpa(now_ms % 1000 == 0 ? 95000000 : 90000000);
         events::BarometerSample sample{};
-        if (u.pass(t, sample)) published.push_back(sample.pressure_mpa);
+        if (unit.pass(now_ms, sample)) published.push_back(sample.pressure_mpa);
     }
 
     REQUIRE(published.size() == 3);
@@ -123,9 +123,9 @@ TEST_CASE("board: the published sample is the one triggered at the edge") {
 }
 
 TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
-    Unit u;
+    Unit unit;
 
-    const std::vector<uint32_t> at = u.sample_instants(0, 10000);
+    const std::vector<uint32_t> at = unit.sample_instants(0, 10000);
 
     REQUIRE(at.size() == 9);
     CHECK(at.front() == 1000 + kMidpointMs);
@@ -136,11 +136,11 @@ TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
 }
 
 TEST_CASE("board: with no PPS the barometer keeps its own second and its own quarters") {
-    Unit u;
-    u.platform.pps().set_locked(false);
+    Unit unit;
+    unit.platform.pps().set_locked(false);
 
-    const std::vector<uint32_t> at = u.sample_instants(55, 10055);
-    const std::vector<uint32_t> triggers = u.trigger_instants(10055, 12055);
+    const std::vector<uint32_t> at = unit.sample_instants(55, 10055);
+    const std::vector<uint32_t> triggers = unit.trigger_instants(10055, 12055);
 
     REQUIRE(at.size() >= 9);
     for (size_t i = 1; i < at.size(); i++)
@@ -151,24 +151,24 @@ TEST_CASE("board: with no PPS the barometer keeps its own second and its own qua
 }
 
 TEST_CASE("board: a conversion that never ends is given up at its ceiling and counted") {
-    Unit u;
-    u.sample_instants(0, 1000);
-    u.chip().extra_measurement_us = 10000000;
+    Unit unit;
+    unit.sample_instants(0, 1000);
+    unit.chip().extra_measurement_us = 10000000;
 
-    CHECK(u.sample_instants(1000, 1000 + runtime::kBarometerConversionCeilingMs).empty());
-    CHECK(u.board.barometer_faults() == 0);
-    CHECK(u.sample_instants(1000 + runtime::kBarometerConversionCeilingMs, 1500).empty());
-    CHECK(u.board.barometer_faults() == 1);
+    CHECK(unit.sample_instants(1000, 1000 + runtime::kBarometerConversionCeilingMs).empty());
+    CHECK(unit.board.barometer_faults() == 0);
+    CHECK(unit.sample_instants(1000 + runtime::kBarometerConversionCeilingMs, 1500).empty());
+    CHECK(unit.board.barometer_faults() == 1);
 
-    u.chip().extra_measurement_us = 0;
-    CHECK(u.sample_instants(1500, 2100).size() == 1);
-    CHECK(u.board.barometer_faults() == 1);
+    unit.chip().extra_measurement_us = 0;
+    CHECK(unit.sample_instants(1500, 2100).size() == 1);
+    CHECK(unit.board.barometer_faults() == 1);
 }
 
 TEST_CASE("board: a sample the sensor refused is not a sample of the last pressure") {
-    Unit u;
-    u.platform.barometer().fitted = false;
+    Unit unit;
+    unit.platform.barometer().fitted = false;
 
-    CHECK(u.sample_instants(1000, 5000).empty());
-    CHECK(u.board.barometer_faults() == 16);
+    CHECK(unit.sample_instants(1000, 5000).empty());
+    CHECK(unit.board.barometer_faults() == 16);
 }

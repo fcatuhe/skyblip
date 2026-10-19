@@ -20,42 +20,43 @@ using namespace skyblip;
 namespace {
 
 void run(simulator::Simulator& simulator, uint32_t from_ms, uint32_t to_ms) {
-    for (uint32_t t = from_ms; t <= to_ms; t += simulator::Simulator::kStepMs) simulator.step(t);
+    for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += simulator::Simulator::kStepMs)
+        simulator.step(now_ms);
 }
 
 // A press has to outlast the board's debounce window, held across steps as a thumb would.
-uint32_t press(simulator::Simulator& simulator, uint32_t t) {
+uint32_t press(simulator::Simulator& simulator, uint32_t now_ms) {
     simulator.world().press_button();
     for (int i = 0; i < 5; i++) {
-        simulator.step(t);
-        t += 40;
+        simulator.step(now_ms);
+        now_ms += 40;
     }
-    return t;
+    return now_ms;
 }
 
 // A touch has to outlast the pad's settle and end well inside go::Controls::kLongTouchHoldMs.
-uint32_t tap(simulator::Simulator& simulator, uint32_t t) {
+uint32_t tap(simulator::Simulator& simulator, uint32_t now_ms) {
     simulator.world().tap_pad();
     for (int i = 0; i < 5; i++) {
-        simulator.step(t);
-        t += 40;
+        simulator.step(now_ms);
+        now_ms += 40;
     }
-    return t;
+    return now_ms;
 }
 
 // Reached the way a thumb reaches it: the pad along the walk, then the menu row.
-uint32_t show_satellites(simulator::Simulator& simulator, uint32_t t) {
+uint32_t show_satellites(simulator::Simulator& simulator, uint32_t now_ms) {
     for (int i = 0; i < go::kPageCount && simulator.product().screen().page() != go::Page::Nearby;
          i++)
-        t = tap(simulator, t);
-    t = press(simulator, t);
+        now_ms = tap(simulator, now_ms);
+    now_ms = press(simulator, now_ms);
     const go::Menu menu = go::menu_for(go::Page::Nearby);
     for (int i = 0;
          i < menu.row_count &&
          go::page_behind(simulator.product().screen().editor().focus()) != go::Page::Satellites;
          i++)
-        t = tap(simulator, t);
-    return press(simulator, t);
+        now_ms = tap(simulator, now_ms);
+    return press(simulator, now_ms);
 }
 
 bool glass_is(const ui::Canvas& glass, const ui::Canvas& expected) {
@@ -147,8 +148,8 @@ TEST_CASE("simulator: a climbing aircraft broadcasts its rate and gains height a
 
     const traffic::Target* target = nullptr;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = simulator.product().state().traffic.at(i);
-        if (t != nullptr && t->used) target = t;
+        const traffic::Target* candidate = simulator.product().state().traffic.at(i);
+        if (candidate != nullptr && candidate->used) target = candidate;
     }
     REQUIRE(target != nullptr);
     CHECK(target->observation.climb_valid);
@@ -239,12 +240,12 @@ TEST_CASE("simulator: every page renders ink to the panel") {
     simulator.world().add_aircraft(1500, 500, 50);
     run(simulator, 0, 2500);
 
-    uint32_t t = 2500;
+    uint32_t now_ms = 2500;
     for (int i = 0; i < static_cast<int>(go::Page::kCount); i++) {
-        run(simulator, t, t + 1000);
-        t += 1000;
+        run(simulator, now_ms, now_ms + 1000);
+        now_ms += 1000;
         CHECK(simulator.panel().count_black() > 20);  // something was drawn
-        t = tap(simulator, t);
+        now_ms = tap(simulator, now_ms);
     }
     CHECK(simulator.present_count() > 0);
 }
@@ -256,19 +257,19 @@ TEST_CASE("simulator: a modelled turn deflects the six-pack turn coordinator") {
     simulator.world().set_speed_kt(100);
     simulator.world().set_track_deg(0);
     run(simulator, 0, 2000);
-    uint32_t page_t = 2000;
-    page_t = tap(simulator, page_t);  // radar -> nearby
-    page_t = tap(simulator, page_t);  // nearby -> 6-pack
-    run(simulator, page_t, page_t + 2000);
+    uint32_t page_now_ms = 2000;
+    page_now_ms = tap(simulator, page_now_ms);  // radar -> nearby
+    page_now_ms = tap(simulator, page_now_ms);  // nearby -> 6-pack
+    run(simulator, page_now_ms, page_now_ms + 2000);
     REQUIRE(simulator.product().screen().page() == go::Page::SixPack);
     const parts::Ssd1681Glass level = simulator.panel();
 
     // A standard-rate turn: 3 deg/s of track change, held four seconds.
-    uint32_t t = page_t + 2000;
+    uint32_t now_ms = page_now_ms + 2000;
     for (int i = 1; i <= 4; i++) {
         simulator.world().set_track_deg(i * 3);
-        run(simulator, t, t + 1000);
-        t += 1000;
+        run(simulator, now_ms, now_ms + 1000);
+        now_ms += 1000;
     }
 
     int diff = 0;  // the turn tile: centre (34, 138), radius 29
@@ -307,21 +308,21 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
     run(simulator, 0, 10000);
 
     int32_t worst_turn = 0;
-    int32_t worst_vs = 0;
+    int32_t worst_fpm = 0;
     int32_t worst_kt = 0;
-    for (uint32_t t = 10000; t <= 30000; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
+    for (uint32_t now_ms = 10000; now_ms <= 30000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
         const model::Ownship& own = simulator.product().state().own;
         worst_turn = std::max(worst_turn, std::abs(own.turn_cdps - 300));
-        worst_vs = std::max(
-            worst_vs,
+        worst_fpm = std::max(
+            worst_fpm,
             std::abs(to_feet_per_minute(MillimetresPerSecond(own.climb_mm_s)).value - 300));
         worst_kt =
             std::max(worst_kt, std::abs(to_knots(MillimetresPerSecond(own.speed_mm_s)).value - 60));
     }
     CHECK(worst_turn <= 10);
     // An ADC count is 0.17 Pa, 1.5 cm up here, and a climb may be two counts off: 6 ft/min.
-    CHECK(worst_vs <= 6);
+    CHECK(worst_fpm <= 6);
     CHECK(worst_kt == 0);
 }
 
@@ -352,15 +353,15 @@ TEST_CASE("simulator: a threat going away does not buzz the motor again") {
     run(simulator, 0, 2000);
     simulator.world().add_threat();
     uint8_t loudest = 0;
-    for (uint32_t t = 2000; t <= 6000; t += simulator::Simulator::kStepMs) {
-        simulator.step(t);
+    for (uint32_t now_ms = 2000; now_ms <= 6000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
         if (simulator.buzzer_level() > loudest) loudest = simulator.buzzer_level();
     }
     REQUIRE(loudest >= 1);
     REQUIRE(simulator.platform().annunciator().motor_starts() >= 1);
 
     // The sky emptying is a level CHANGE too, and it must not be mistaken for a
-    // new contact.
+    // new target.
     const uint32_t pulses = simulator.platform().annunciator().motor_starts();
     simulator.world().clear_aircraft();
     run(simulator, 6000, 40000);
@@ -416,8 +417,10 @@ TEST_CASE("simulator: an ALP-TAS-equipped aircraft enters traffic as ALP-TAS") {
     REQUIRE(table.count() >= 1);
     int alptas = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t != nullptr && t->used && t->observation.source == model::Source::Alptas) alptas++;
+        const traffic::Target* target = table.at(i);
+        if (target != nullptr && target->used &&
+            target->observation.source == model::Source::Alptas)
+            alptas++;
     }
     CHECK(alptas == 1);
 }
@@ -429,18 +432,18 @@ TEST_CASE("simulator: holding the button switches the device off, a tap never do
     REQUIRE(simulator.setup() == Status::Ok);
     run(simulator, 0, 2000);
 
-    uint32_t t = press(simulator, 2000);
-    run(simulator, t, t + power::kLongPressHoldMs);
+    uint32_t now_ms = press(simulator, 2000);
+    run(simulator, now_ms, now_ms + power::kLongPressHoldMs);
     CHECK(simulator.product().shutdown().phase() == power::ShutdownPhase::Running);
 
-    t += power::kLongPressHoldMs;
+    now_ms += power::kLongPressHoldMs;
     simulator.world().hold_button(true);
-    run(simulator, t, t + power::kLongPressHoldMs + 100);
-    t += power::kLongPressHoldMs + 100;
+    run(simulator, now_ms, now_ms + power::kLongPressHoldMs + 100);
+    now_ms += power::kLongPressHoldMs + 100;
     CHECK(simulator.product().shutdown().reason() == power::ShutdownReason::LongPress);
 
     simulator.world().hold_button(false);
-    run(simulator, t, t + power::kParkSettleMs + power::kReleaseSettleMs + 100);
+    run(simulator, now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 100);
     CHECK(simulator.product().ready_to_power_off());
     CHECK_FALSE(simulator.panel_powered());
 }
@@ -456,8 +459,8 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     CHECK_FALSE(simulator.product().state().gnss.levels_live);
     CHECK(simulator.product().state().gnss.sky.count() == 0);
 
-    uint32_t t = show_satellites(simulator, 6000);
-    run(simulator, t, t + 3000);
+    uint32_t now_ms = show_satellites(simulator, 6000);
+    run(simulator, now_ms, now_ms + 3000);
     REQUIRE(simulator.product().screen().page() == go::Page::Satellites);
     CHECK(simulator.world().gnss().gsv_enabled());
     CHECK(simulator.product().state().gnss.levels_live);
@@ -465,16 +468,16 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     CHECK(simulator.product().state().gnss.sky.in_use() == 0);
     CHECK(simulator.product().state().gnss.stage != gnss::Stage::Fixed);
 
-    t = tap(simulator, t + 3000);
-    run(simulator, t, t + 3000);
+    now_ms = tap(simulator, now_ms + 3000);
+    run(simulator, now_ms, now_ms + 3000);
     REQUIRE(simulator.product().screen().page() != go::Page::Satellites);
     CHECK_FALSE(simulator.world().gnss().gsv_enabled());
     CHECK_FALSE(simulator.product().state().gnss.levels_live);
     CHECK(simulator.product().state().gnss.sky.count() == 0);
 
-    t = show_satellites(simulator, t + 3000);
+    now_ms = show_satellites(simulator, now_ms + 3000);
     simulator.world().set_fix(true);
-    run(simulator, t, t + 20000);
+    run(simulator, now_ms, now_ms + 20000);
     REQUIRE(simulator.product().state().own.fix_valid);
     REQUIRE(simulator.product().state().own.tx_settled);
 

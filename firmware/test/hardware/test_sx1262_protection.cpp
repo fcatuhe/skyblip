@@ -34,10 +34,10 @@ TEST_CASE("sx1262: the current limit survives every dwell, not only the first") 
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     RadioConfig config{};
-    for (uint32_t hz : {868200000u, 868400000u, 868200000u}) {
-        config.frequency_hz = hz;
+    for (uint32_t frequency_hz : {868200000u, 868400000u, 868200000u}) {
+        config.frequency_hz = frequency_hz;
         REQUIRE(radio.configure_radio(config) == Status::Ok);
-        CAPTURE(hz);
+        CAPTURE(frequency_hz);
         CHECK(chip.ocp == sx1262::kOcpLimitSteps);
     }
 }
