@@ -2,11 +2,11 @@ class Identity::ServerKey
   attr_reader :id, :public_key
 
   def self.current
-    seed = Rails.configuration.x.identity.server_key.presence || raise(KeyError, "no identity server key in the credentials")
+    seed = Rails.configuration.x.identity.server_private_key.presence || raise(KeyError, "no identity.server_private_key in the credentials")
     (@keys ||= {})[seed] ||= new(seed)
   end
 
-  def self.configured? = Rails.configuration.x.identity.server_key.present?
+  def self.configured? = Rails.configuration.x.identity.server_private_key.present?
 
   def self.named(id)
     current if current.id == id

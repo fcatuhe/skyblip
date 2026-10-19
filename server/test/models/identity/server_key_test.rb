@@ -10,12 +10,12 @@ class Identity::ServerKeyTest < ActiveSupport::TestCase
   end
 
   test "fails loudly when the credentials hold no key" do
-    seed = Rails.configuration.x.identity.server_key
-    Rails.configuration.x.identity.server_key = nil
+    seed = Rails.configuration.x.identity.server_private_key
+    Rails.configuration.x.identity.server_private_key = nil
 
     assert_not Identity::ServerKey.configured?
     assert_raises(KeyError) { Identity::ServerKey.current }
   ensure
-    Rails.configuration.x.identity.server_key = seed
+    Rails.configuration.x.identity.server_private_key = seed
   end
 end
