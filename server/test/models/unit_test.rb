@@ -72,6 +72,21 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal 1, Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]).unit.serial
   end
 
+  # Two admin requests can load the same key; the later one must act on it as it is now.
+  test "a promotion loaded before a revocation promotes nothing" do
+    stale = Unit::Key.find(unit_keys(:contested_pending).id)
+    unit_keys(:contested_pending).promote
+    unit_keys(:contested_pending).revoke
+
+    assert_not stale.promote
+    assert unit_keys(:contested_pending).reload.revoked?
+    assert_nil units(:contested).reload.active_key
+  end
+
+  test "the database refuses serial 0 on its own" do
+    assert_raises(ActiveRecord::StatementInvalid) { Unit.insert_all([ { device_id: vectors["device_id"], serial: 0 } ]) }
+  end
+
   test "refuses a new device once every serial is taken" do
     units(:contested).update!(serial: 0xFFFF)
 

@@ -68,9 +68,9 @@ description: A new skyBlip Go stays silent until it holds a serial of its own, s
   </p>
   <p class="lede">
     The unit checks its serial at every start, and needs this page only once.
-    Activate it again and it keeps the same serial: after moving between a
-    release and a development firmware, for example, which trust different keys
-    of skyblip.eu.
+    Activate it again and it keeps the same serial. It keeps its serial too when
+    it moves between a release and a development firmware, which both trust the
+    same key of skyblip.eu.
   </p>
 </section>
 
@@ -120,7 +120,7 @@ description: A new skyBlip Go stays silent until it holds a serial of its own, s
         <tr><th>The page says</th><th>What it means, and what to do</th></tr>
       </thead>
       <tbody>
-        <tr><th>Unknown key</th><td data-activate-word="server_unknown_server_key">The unit&rsquo;s firmware trusts a key skyblip.eu does not hold: a build of your own, or of a fork. Install a release from the update page, then activate.</td></tr>
+        <tr><th>Unknown key</th><td data-activate-word="server_unknown_server_key">The unit&rsquo;s firmware trusts a key skyblip.eu does not hold: a build made to trust another key, such as a fork&rsquo;s. Install a release from the update page, then activate.</td></tr>
         <tr><th>Too slow</th><td data-activate-word="server_expired">More than five minutes passed between the request and the presses. Activate again.</td></tr>
         <tr><th>Signature refused</th><td data-activate-word="server_bad_signature">skyblip.eu could not verify what the unit signed. Activate again, and if it happens twice, tell us which firmware it runs.</td></tr>
         <tr><th>Another key</th><td data-activate-word="server_other_key">skyblip.eu knows this unit under another key, so it gave no serial. That follows an erase of the unit&rsquo;s chip with a debugger. Write to us with the code the page shows after these words: we check with you, then move the serial to the new key. The code:</td></tr>

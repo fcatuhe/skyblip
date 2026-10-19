@@ -5,9 +5,10 @@ class Unit::Key < ApplicationRecord
 
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
 
+  # INFO: fc 19oct26 with_lock reloads the status, so a request loaded before another's change acts on the key as it is now
   def promote
-    if pending?
-      transaction do
+    with_lock do
+      if pending?
         unit.keys.active.each(&:revoked!)
         active!
       end
@@ -15,6 +16,8 @@ class Unit::Key < ApplicationRecord
   end
 
   def revoke
-    revoked! if active?
+    with_lock do
+      revoked! if active?
+    end
   end
 end
