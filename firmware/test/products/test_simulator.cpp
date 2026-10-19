@@ -172,13 +172,14 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own-ship 
     REQUIRE(target != nullptr);
     const int32_t level_at = target->observation.altitude_m;
     const int32_t own_at =
-        to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v;
+        to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).value;
 
     simulator.world().set_climb_mm_s(5000);
     run(simulator, 6000, 16000);
 
     // Own ship gains 50 m; the target holds its level within the second of own-ship lag.
-    CHECK(to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v > own_at + 40);
+    CHECK(to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).value >
+          own_at + 40);
     CHECK(target->observation.altitude_m < level_at + 10);
     CHECK(target->observation.altitude_m > level_at - 10);
 }
@@ -313,9 +314,10 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
         const model::Ownship& own = simulator.product().state().own;
         worst_turn = std::max(worst_turn, std::abs(own.turn_cdps - 300));
         worst_vs = std::max(
-            worst_vs, std::abs(to_feet_per_minute(MillimetresPerSecond(own.climb_mm_s)).v - 300));
+            worst_vs,
+            std::abs(to_feet_per_minute(MillimetresPerSecond(own.climb_mm_s)).value - 300));
         worst_kt =
-            std::max(worst_kt, std::abs(to_knots(MillimetresPerSecond(own.speed_mm_s)).v - 60));
+            std::max(worst_kt, std::abs(to_knots(MillimetresPerSecond(own.speed_mm_s)).value - 60));
     }
     CHECK(worst_turn <= 10);
     // An ADC count is 0.17 Pa, 1.5 cm up here, and a climb may be two counts off: 6 ft/min.

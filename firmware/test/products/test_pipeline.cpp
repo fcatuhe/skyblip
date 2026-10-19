@@ -113,7 +113,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     // The same aircraft flying the way we are: the gap is not closing, and it is
     // an advisory all the same, because it is there.
     model::AircraftObservation chase = observation;
-    chase.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
+    chase.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
     const traffic::AlarmAssessment following = traffic::assess(own, chase, own.fix_at_ms);
     CHECK(following.closing_mps <= 0);
     CHECK(following.level == traffic::Level::Advisory);

@@ -44,7 +44,7 @@ TEST_CASE("arc: an aircraft not turning flies a straight ray") {
 TEST_CASE("arc: a turn flies the radius its rate and speed describe") {
     // 23.15 m/s at 12 deg/s is radius = speed / rate = 111 m, so 221 m across at the half turn.
     const Position half = after(flying(0, kThermalSpeedMmS, 12), 15);
-    const int32_t diameter = static_cast<int32_t>(idistance(half.north_m, half.east_m));
+    const int32_t diameter = static_cast<int32_t>(hypotenuse(half.north_m, half.east_m));
     CHECK(diameter > 213);
     CHECK(diameter < 229);
     CHECK(half.east_m > 213);
@@ -54,7 +54,7 @@ TEST_CASE("arc: a turn flies the radius its rate and speed describe") {
 
 TEST_CASE("arc: a full circle comes back to where it started") {
     const Position full = after(flying(0, kThermalSpeedMmS, 12), 30);
-    CHECK(idistance(full.north_m, full.east_m) < 8);
+    CHECK(hypotenuse(full.north_m, full.east_m) < 8);
 }
 
 TEST_CASE("arc: a left turn mirrors a right turn") {
@@ -68,7 +68,7 @@ TEST_CASE("arc: the step is a cadence, not a shape") {
     const Motion m = flying(30, kThermalSpeedMmS, 9);
     const Position coarse = after(m, 20, 2000);
     const Position fine = after(m, 20, 500);
-    CHECK(idistance(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
+    CHECK(hypotenuse(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
 }
 
 TEST_CASE("arc: a climb is carried with the path") {
@@ -94,7 +94,7 @@ TEST_CASE("arc: a turn rate no aeroplane holds is clamped, not believed") {
 TEST_CASE("arc: a target with no velocity of its own does not fly anywhere") {
     model::AircraftObservation observation{};
     observation.speed_valid = false;
-    observation.track_c9 = to_cordic9(CentiDegrees(18000)).v;
+    observation.track_c9 = to_cordic9(CentiDegrees(18000)).value;
     const Position p = after(motion_of(observation, 0, false), 60);
     CHECK(p.north_m == 0);
     CHECK(p.east_m == 0);

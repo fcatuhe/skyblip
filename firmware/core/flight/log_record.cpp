@@ -134,11 +134,11 @@ LogRecord log_record_from(const model::Ownship& own) {
     record.utc_s = own.utc_s;
     record.latitude_1e7 = own.latitude_1e7;
     record.longitude_1e7 = own.longitude_1e7;
-    record.altitude_msl_m = to_metres(Millimetres(own.altitude_msl_mm)).v;
-    record.altitude_hae_m = to_metres(Millimetres(own.altitude_hae_mm)).v;
-    record.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v;
-    record.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
-    record.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v;
+    record.altitude_msl_m = to_metres(Millimetres(own.altitude_msl_mm)).value;
+    record.altitude_hae_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
+    record.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
+    record.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
+    record.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value;
     record.hdop_e2 = own.hdop_e2;
     record.satellites = own.satellites;
     record.flight_state = own.flight_state;

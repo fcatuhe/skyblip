@@ -176,7 +176,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
         p.descramble();
         CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
         CHECK(p.altitude_m() ==
-              to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v);
+              to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).value);
         CHECK(p.flight_state == 2);
         checked++;
     }

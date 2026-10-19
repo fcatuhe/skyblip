@@ -88,7 +88,7 @@ void draw_header(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
 }
 
 int32_t relative_hundreds_of_feet(int32_t up_m) {
-    const int32_t feet = to_feet(Metres(up_m)).v;
+    const int32_t feet = to_feet(Metres(up_m)).value;
     const int32_t rounded = (feet >= 0 ? feet + 50 : feet - 50) / 100;
     if (rounded > kRelativeHundredsCeiling) return kRelativeHundredsCeiling;
     if (rounded < -kRelativeHundredsCeiling) return -kRelativeHundredsCeiling;
@@ -116,7 +116,7 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
     canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
 
     const int32_t distance_e1 =
-        metric ? div_round(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).v;
+        metric ? div_round(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).value;
     int written = distance_e1 > kDistanceCeilingE1
                       ? format_string(text, "FAR")
                       : format_uint(text, static_cast<uint32_t>(distance_e1), 2, 1);

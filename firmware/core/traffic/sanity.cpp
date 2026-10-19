@@ -19,8 +19,8 @@ Plausibility range_check(const model::Ownship& own, const model::AircraftObserva
         return Plausibility::NoReference;
 
     // INFO: fc 19sep26 slant, not ground: a bad altitude field throws a target straight up
-    const int32_t ground_m = static_cast<int32_t>(idistance(north_m, east_m));
-    slant_m = static_cast<int32_t>(idistance(ground_m, up_m));
+    const int32_t ground_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
+    slant_m = static_cast<int32_t>(hypotenuse(ground_m, up_m));
     return slant_m > plausible_range_m(observation.source) ? Plausibility::TooFar
                                                            : Plausibility::Believable;
 }

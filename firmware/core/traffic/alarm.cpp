@@ -17,8 +17,8 @@ namespace {
 
 // Millimetres a second, north and east, scaled by the cordic one.
 void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
-    north = static_cast<int64_t>(speed_mm_s) * icos(angle);
-    east = static_cast<int64_t>(speed_mm_s) * isin(angle);
+    north = static_cast<int64_t>(speed_mm_s) * cosine(angle);
+    east = static_cast<int64_t>(speed_mm_s) * sine(angle);
 }
 
 Level level_for(const AlarmAssessment& assessment) {
@@ -38,7 +38,7 @@ int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation
     velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
     int64_t target_n = 0, target_e = 0;
     if (target.speed_valid)
-        velocity_ned(to_mm_s(QuarterMetresPerSecond(target.speed_q)).v,
+        velocity_ned(to_mm_s(QuarterMetresPerSecond(target.speed_q)).value,
                      to_angle16(Cordic9(target.track_c9)), target_n, target_e);
 
     const int64_t along = (target_n - own_n) * north_m + (target_e - own_e) * east_m;
@@ -59,13 +59,13 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m)) return assessment;
     assessment.valid = true;
     assessment.relative_altitude_m = up_m;
-    assessment.relative_distance_m = static_cast<int32_t>(idistance(north_m, east_m));
+    assessment.relative_distance_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
     assessment.closing_mps =
         div_round(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
                   kMillimetresPerMetre);
 
-    const int16_t bearing = iatan2(east_m, north_m);
-    const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
+    const int16_t bearing = arctangent(east_m, north_m);
+    const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
     const int bearing_deg = static_cast<int>(
         div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
         360);

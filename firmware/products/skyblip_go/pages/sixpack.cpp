@@ -111,7 +111,7 @@ void centred_value(ui::Canvas& canvas, int centre_x, int row, bool have, int32_t
 // line between two rounded end points: over 4 px, rounding both ends tilts the
 // mark by degrees, which is what made the scales look bent.
 void radial_mark(ui::Canvas& canvas, int centre_x, int centre_y, int16_t a, int from_r, int to_r) {
-    const int32_t s = isin(a), c = icos(a);
+    const int32_t s = sine(a), c = cosine(a);
     for (int half = 2 * from_r; half <= 2 * to_r; half++) {
         canvas.set_pixel(centre_x + radial_half(half, s), centre_y - radial_half(half, c), true);
     }
@@ -136,7 +136,7 @@ void dead_sector(ui::Canvas& canvas, int centre_x, int centre_y, int32_t from_de
             if (((dx + dy) & 1) != 0) continue;
             const int r2 = dx * dx + dy * dy;
             if (r2 > kDialR * kDialR || r2 <= kDeadInnerR * kDeadInnerR) continue;
-            const int16_t a = iatan2(dx, -dy);
+            const int16_t a = arctangent(dx, -dy);
             if (from <= to ? (a < from || a > to) : (a < from && a > to)) continue;
             canvas.set_pixel(centre_x + dx, centre_y + dy, true);
         }
@@ -162,7 +162,7 @@ void vsi_face(ui::Canvas& canvas, int centre_x, int centre_y) {
 void needle(ui::Canvas& canvas, int centre_x, int centre_y, int32_t deg, int length,
             bool thick = false, bool cleared = false) {
     const int16_t a = angle16_of_degrees(deg);
-    const int32_t s = isin(a), c = icos(a);
+    const int32_t s = sine(a), c = cosine(a);
     const int tx = centre_x + radial(length, s);
     const int ty = centre_y - radial(length, c);
     if (cleared)
@@ -181,10 +181,10 @@ void horizon(ui::Canvas& canvas, int centre_x, int centre_y, int32_t pitch_deg, 
     const int32_t off =
         (clampi(pitch_deg, -kPitchFullScaleDeg, kPitchFullScaleDeg) * kDialR) / kPitchFullScaleDeg;
     const int16_t a = angle16_of_degrees(clampi(bank_deg, -kBankLimitDeg, kBankLimitDeg));
-    const int32_t s = isin(a), c = icos(a);
+    const int32_t s = sine(a), c = cosine(a);
     for (int dx = -kDialR + 1; dx < kDialR; dx++) {
-        const int h =
-            static_cast<int>(isqrt<uint32_t>(static_cast<uint32_t>(kDialR * kDialR - dx * dx)));
+        const int h = static_cast<int>(
+            square_root<uint32_t>(static_cast<uint32_t>(kDialR * kDialR - dx * dx)));
         const int32_t hy = clampi(off - (dx * s) / c, -h, h);
         const int x = centre_x + dx;
         for (int y = centre_y + static_cast<int>(hy); y <= centre_y + h; y++) {
@@ -217,7 +217,7 @@ void inclinometer(ui::Canvas& canvas, int centre_x, int centre_y, const SixPackS
 
 void turn_coordinator(ui::Canvas& canvas, int centre_x, int centre_y, int32_t turn_cdps) {
     const int16_t a = angle16_of_degrees(rate_deflection_deg(turn_cdps));
-    const int32_t s = isin(a), c = icos(a);
+    const int32_t s = sine(a), c = cosine(a);
     const int wx = radial(kWingHalf, c);
     const int wy = radial(kWingHalf, s);
     const int ux = radial(kTailUp, s);
@@ -247,8 +247,8 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
             tick(canvas, centre_x, centre_y, a);
             continue;
         }
-        canvas.draw_char(centre_x - kCellW / 2 + radial(kCardR, isin(a)),
-                         centre_y - kCharH / 2 - radial(kCardR, icos(a)), kCardinal[bearing / 90],
+        canvas.draw_char(centre_x - kCellW / 2 + radial(kCardR, sine(a)),
+                         centre_y - kCharH / 2 - radial(kCardR, cosine(a)), kCardinal[bearing / 90],
                          true);
     }
     canvas.rect(centre_x - 1, centre_y - kDialR, 3, kIndexTableLength, true,
@@ -258,14 +258,15 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
 
 int32_t flight_path_deg(int32_t climb_fpm, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
-    return (static_cast<int32_t>(iatan2(climb_fpm * 10, speed_kt * 1013)) * 360) / kAngle16PerTurn;
+    return (static_cast<int32_t>(arctangent(climb_fpm * 10, speed_kt * 1013)) * 360) /
+           kAngle16PerTurn;
 }
 
 // Coordinated turn: tan(bank) = omega * V / g, which in deg/s and knots is
 // turn_dps * kt / 1093, and no sensor on this device measures a bank.
 int32_t inferred_bank_deg(int32_t turn_dps, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
-    return (static_cast<int32_t>(iatan2(turn_dps * speed_kt, 1093)) * 360) / kAngle16PerTurn;
+    return (static_cast<int32_t>(arctangent(turn_dps * speed_kt, 1093)) * 360) / kAngle16PerTurn;
 }
 
 // INFO: fc 11oct26 on the cable the divider reads the USB rail, so the dial reads it as that

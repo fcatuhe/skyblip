@@ -76,8 +76,8 @@ void render(simulator::Simulator& simulator) {
     std::printf("  fix:%-6s sats:%2u  pos:%.5f,%.5f\n", own.fix_valid ? "3D" : "none",
                 own.satellites, own.latitude_1e7 / 1e7, own.longitude_1e7 / 1e7);
     std::printf("  alt:%5dm  spd:%5.1fm/s  trk:%03u  vs:%+.1fm/s\n",
-                to_metres(Millimetres(own.altitude_hae_mm)).v, own.speed_mm_s / 1000.0,
-                to_degrees(CentiDegrees(own.track_cdeg)).v, own.climb_mm_s / 1000.0);
+                to_metres(Millimetres(own.altitude_hae_mm)).value, own.speed_mm_s / 1000.0,
+                to_degrees(CentiDegrees(own.track_cdeg)).value, own.climb_mm_s / 1000.0);
     std::printf("  batt:%u.%02uV %3u%%%s\n", state.power.battery.cell_mv / 1000,
                 (state.power.battery.cell_mv % 1000) / 10, state.power.battery.percent,
                 state.power.battery.charging ? " CHG" : "");

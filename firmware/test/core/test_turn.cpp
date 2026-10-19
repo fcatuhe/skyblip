@@ -15,7 +15,7 @@ using namespace skyblip::flight;
 namespace {
 
 // cordic9 from whole degrees, the way a fix and an ADS-L frame carry a track.
-uint16_t cordic9(int deg) { return to_cordic9(CentiDegrees(deg * 100)).v; }
+uint16_t cordic9(int deg) { return to_cordic9(CentiDegrees(deg * 100)).value; }
 
 }  // namespace
 

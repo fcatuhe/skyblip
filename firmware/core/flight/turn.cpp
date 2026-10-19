@@ -21,7 +21,7 @@ int16_t track_delta_c9(uint16_t track_c9, uint16_t reference_track_c9) {
 }
 
 int32_t track_delta_cdeg(CentiDegrees track, CentiDegrees reference_track) {
-    return ((wrapped(track).v - wrapped(reference_track).v + kCentiDegreesPerTurn +
+    return ((wrapped(track).value - wrapped(reference_track).value + kCentiDegreesPerTurn +
              kCentiDegreesPerTurn / 2) %
             kCentiDegreesPerTurn) -
            kCentiDegreesPerTurn / 2;

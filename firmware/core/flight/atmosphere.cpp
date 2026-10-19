@@ -107,7 +107,7 @@ bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
 }
 
 int16_t climb_e8_from_mm_s(int32_t climb_mm_s) {
-    return to_climb_e8(MillimetresPerSecond(climb_mm_s)).v;
+    return to_climb_e8(MillimetresPerSecond(climb_mm_s)).value;
 }
 
 }  // namespace skyblip::flight

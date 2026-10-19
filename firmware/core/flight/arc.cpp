@@ -38,11 +38,11 @@ Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdp
                  bool turn_valid) {
     Motion motion{};
     motion.speed_mm_s =
-        observation.speed_valid ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v : 0;
-    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
+        observation.speed_valid ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value : 0;
+    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).value;
     motion.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
     motion.turning = turn_valid;
-    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
+    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).value;
     motion.climbing = observation.climb_valid;
     return motion;
 }
@@ -55,14 +55,14 @@ Arc::Arc(const Motion& motion, uint32_t step_ms)
       step_ms_(static_cast<int32_t>(step_ms)) {
     const int16_t angle = to_angle16(CentiDegrees(motion.track_cdeg));
     velocity_north_mm_s_ = static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * icos(angle), kTrigOne));
+        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * cosine(angle), kTrigOne));
     velocity_east_mm_s_ = static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * isin(angle), kTrigOne));
+        div_round<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * sine(angle), kTrigOne));
     const int32_t half_turn =
         motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2) : 0;
     const int16_t half = static_cast<int16_t>(static_cast<uint16_t>(half_turn));
-    half_cosine_ = icos(half);
-    half_sine_ = isin(half);
+    half_cosine_ = cosine(half);
+    half_sine_ = sine(half);
 }
 
 Position Arc::here() const {

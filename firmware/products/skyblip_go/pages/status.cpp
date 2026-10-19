@@ -42,7 +42,7 @@ int format_elapsed(char* out, uint32_t seconds) {
 constexpr uint32_t kImuCountCeiling = 99;
 constexpr uint8_t kImuMetaInitialised = 16;
 
-int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).v; }
+int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).value; }
 
 int32_t centi_kilometres_per_hour(int32_t speed_mm_s) { return div_round(speed_mm_s * 36, 100); }
 
@@ -269,13 +269,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         row(canvas, y, "BARO", "no sensor");
     y += kLineH;
 
-    dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).v, 0, " ft"},
+    dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).value, 0, " ft"},
              {div_round(snapshot.altitude_mm, 100), 1, " m"}, false);
     y += kLineH;
 
     if (snapshot.barometer_valid)
         dual_row(canvas, y, "STD",
-                 {to_feet(Millimetres(snapshot.altitude_standard_mm)).v, 0, " ft"},
+                 {to_feet(Millimetres(snapshot.altitude_standard_mm)).value, 0, " ft"},
                  {div_round(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
     y += kLineH;
 
@@ -284,7 +284,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     y += kLineH;
 
     dual_row(canvas, y, "VS",
-             {to_feet_per_minute(MillimetresPerSecond(snapshot.climb_mm_s)).v, 0, " fpm"},
+             {to_feet_per_minute(MillimetresPerSecond(snapshot.climb_mm_s)).value, 0, " fpm"},
              {snapshot.climb_mm_s, 3, " m/s"}, true);
     y += kLineH;
 

@@ -28,8 +28,8 @@ int16_t latitude_angle16(int32_t latitude_1e7) {
 }
 
 int64_t latitude_cosine(int32_t latitude_1e7) {
-    const int64_t cosine = icos(latitude_angle16(latitude_1e7));
-    return cosine < kLatitudeCosineFloor ? kLatitudeCosineFloor : cosine;
+    const int64_t cosine_of_latitude = cosine(latitude_angle16(latitude_1e7));
+    return cosine_of_latitude < kLatitudeCosineFloor ? kLatitudeCosineFloor : cosine_of_latitude;
 }
 
 struct Carried {
@@ -51,7 +51,7 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
     out.longitude_1e7 = motion.longitude_1e7;
     out.altitude_hae_mm = motion.altitude_hae_mm;
     out.altitude_msl_mm = motion.altitude_msl_mm;
-    out.track_cdeg = wrapped(CentiDegrees(motion.track_cdeg)).v;
+    out.track_cdeg = wrapped(CentiDegrees(motion.track_cdeg)).value;
     out.valid = false;
 
     if (!motion.fix_valid) return out;
@@ -68,8 +68,8 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
         static_cast<int64_t>(motion.speed_mm_s) * elapsed_ms * kMicrometresPerMillimetre,
         kMillisecondsPerSecond);
     out.latitude_1e7 =
-        motion.latitude_1e7 + static_cast<int32_t>(div_round(travel * icos(heading), scale));
-    const int64_t east = div_round(travel * isin(heading), scale);
+        motion.latitude_1e7 + static_cast<int32_t>(div_round(travel * cosine(heading), scale));
+    const int64_t east = div_round(travel * sine(heading), scale);
     out.longitude_1e7 =
         wrapped_longitude_1e7(static_cast<int64_t>(motion.longitude_1e7) +
                               div_round(east * kTrigOne, latitude_cosine(motion.latitude_1e7)));
@@ -84,7 +84,7 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
     out.track_cdeg =
         centi_degrees_of_angle16(
             static_cast<uint16_t>(to_angle16(CentiDegrees(motion.track_cdeg)) + turn_angle))
-            .v;
+            .value;
     return out;
 }
 
@@ -110,11 +110,11 @@ Prediction extrapolate(const model::AircraftObservation& observation, int32_t el
     Carried motion{};
     motion.latitude_1e7 = observation.latitude_1e7;
     motion.longitude_1e7 = observation.longitude_1e7;
-    motion.altitude_hae_mm = to_millimetres(Metres(observation.altitude_m)).v;
+    motion.altitude_hae_mm = to_millimetres(Metres(observation.altitude_m)).value;
     motion.altitude_msl_mm = motion.altitude_hae_mm;
-    motion.speed_mm_s = to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v;
-    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
-    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
+    motion.speed_mm_s = to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value;
+    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).value;
+    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).value;
     motion.fix_valid = observation.position_valid && observation.speed_valid;
     motion.climb_valid = observation.climb_valid;
     return carry(motion, elapsed_ms);
@@ -138,7 +138,7 @@ model::AircraftObservation carried_to(const model::AircraftObservation& observat
     model::AircraftObservation out = observation;
     out.latitude_1e7 = prediction.latitude_1e7;
     out.longitude_1e7 = prediction.longitude_1e7;
-    out.altitude_m = to_metres(Millimetres(prediction.altitude_hae_mm)).v;
+    out.altitude_m = to_metres(Millimetres(prediction.altitude_hae_mm)).value;
     return out;
 }
 
@@ -164,12 +164,13 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
         wrapped_longitude_1e7(static_cast<int64_t>(target.longitude_1e7) - own.longitude_1e7);
     north_m = static_cast<int32_t>(
         div_round<int64_t>(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre));
-    const int64_t cosine = icos(latitude_angle16(own.latitude_1e7));
+    const int64_t cosine_of_latitude = cosine(latitude_angle16(own.latitude_1e7));
     const int64_t east_micrometres =
-        div_round<int64_t>(longitude_delta_1e7 * kMicrometresPerE7 * cosine, kTrigOne);
+        div_round<int64_t>(longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
     east_m = static_cast<int32_t>(div_round<int64_t>(east_micrometres, kMicrometresPerMetre));
-    up_m = target.altitude_valid ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).v
-                                 : 0;
+    up_m = target.altitude_valid
+               ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value
+               : 0;
     return true;
 }
 

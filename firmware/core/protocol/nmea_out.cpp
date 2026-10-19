@@ -61,7 +61,7 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
     }
     out[n++] = ',';
     if (!flight::on_ground(target.flight_state)) {
-        uint16_t deg = to_degrees(Cordic9(target.track_c9)).v;
+        uint16_t deg = to_degrees(Cordic9(target.track_c9)).value;
         n += format_uint(out + n, deg);
     }
     out[n++] = ',';
@@ -231,7 +231,7 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
         div_round<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
     n += format_uint(out + n, knots_e1, 1, 1);
     out[n++] = ',';
-    n += format_uint(out + n, to_degrees(CentiDegrees(own.track_cdeg)).v, 1);
+    n += format_uint(out + n, to_degrees(CentiDegrees(own.track_cdeg)).value, 1);
     out[n++] = ',';
     n += format_uint(out + n, static_cast<uint32_t>(day), 2);
     n += format_uint(out + n, static_cast<uint32_t>(month), 2);
@@ -255,10 +255,11 @@ int format_gpgga(char* out, size_t capacity, const model::Ownship& own) {
     out[n++] = ',';
     n += format_uint(out + n, own.hdop_e2, 3, 2);
     out[n++] = ',';
-    n += format_int(out + n, to_metres(Millimetres(own.altitude_msl_mm)).v, 1, 0, false);
+    n += format_int(out + n, to_metres(Millimetres(own.altitude_msl_mm)).value, 1, 0, false);
     n += format_string(out + n, ",M,");
-    n += format_int(out + n, to_metres(Millimetres(own.altitude_hae_mm - own.altitude_msl_mm)).v, 1,
-                    0, false);
+    n +=
+        format_int(out + n, to_metres(Millimetres(own.altitude_hae_mm - own.altitude_msl_mm)).value,
+                   1, 0, false);
     n += format_string(out + n, ",M,,");
     return nmea_finish(out, n);
 }

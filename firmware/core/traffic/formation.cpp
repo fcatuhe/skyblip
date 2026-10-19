@@ -17,7 +17,7 @@ namespace {
 void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ahead_m,
                 int32_t& right_m) {
     const int16_t track = to_angle16(CentiDegrees(track_cdeg));
-    const int64_t c = icos(track), s = isin(track);
+    const int64_t c = cosine(track), s = sine(track);
     ahead_m = static_cast<int32_t>(div_round<int64_t>(north_m * c + east_m * s, kTrigOne));
     right_m = static_cast<int32_t>(div_round<int64_t>(east_m * c - north_m * s, kTrigOne));
 }
@@ -76,7 +76,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     if (slot == nullptr) return out;
     slot->seen_ms = now_ms;
 
-    const int32_t range_m = static_cast<int32_t>(idistance(north_m, east_m));
+    const int32_t range_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
     if (range_m > kRangeM || std::abs(up_m) > kVerticalM) {
         *slot = Slot{};
         return out;
@@ -103,7 +103,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     }
 
     const int32_t drift_m = static_cast<int32_t>(
-        idistance(out.ahead_m - slot->anchor_ahead_m, out.right_m - slot->anchor_right_m));
+        hypotenuse(out.ahead_m - slot->anchor_ahead_m, out.right_m - slot->anchor_right_m));
     const bool station_kept =
         drift_m <= kDriftM && std::abs(out.up_m - slot->anchor_up_m) <= kVerticalDriftM;
 

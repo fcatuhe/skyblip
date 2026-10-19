@@ -223,7 +223,7 @@ model::AircraftObservation World::as_relayed(const VirtualAircraft& aircraft,
         observation.longitude_1e7 +=
             static_cast<int32_t>(aircraft.east_m * 1e7 / (kMetresPerDegreeLatitude * cos_latitude));
     observation.altitude_m =
-        to_metres(Millimetres(own.altitude_hae_mm)).v + static_cast<int32_t>(aircraft.up_m);
+        to_metres(Millimetres(own.altitude_hae_mm)).value + static_cast<int32_t>(aircraft.up_m);
     observation.position_valid = true;
     return observation;
 }
@@ -349,7 +349,7 @@ void World::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::
     // second the receiver is in, not the simulation's own count of seconds.
     const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
     const int32_t altitude_m =
-        to_metres(Millimetres(own.altitude_hae_mm)).v + static_cast<int32_t>(aircraft.up_m);
+        to_metres(Millimetres(own.altitude_hae_mm)).value + static_cast<int32_t>(aircraft.up_m);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_length =
         aircraft.system == protocol::System::Alptas

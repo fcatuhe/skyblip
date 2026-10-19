@@ -442,6 +442,6 @@ TEST_CASE("gnss: a solution is kept at the precision the receiver reported, not 
     CHECK(f.track_cdeg == 8443);
 
     // And the wire's own units are still one conversion away, rounded.
-    CHECK(skyblip::to_speed_q(skyblip::MillimetresPerSecond(f.speed_mm_s)).v == 46);
-    CHECK(skyblip::to_cordic9(skyblip::CentiDegrees(f.track_cdeg)).v == 120);
+    CHECK(skyblip::to_speed_q(skyblip::MillimetresPerSecond(f.speed_mm_s)).value == 46);
+    CHECK(skyblip::to_cordic9(skyblip::CentiDegrees(f.track_cdeg)).value == 120);
 }

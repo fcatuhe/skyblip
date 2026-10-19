@@ -76,7 +76,7 @@ bool pixel_within(int x, int y, int r) {
 
 HeadingUp on_the_rim(int32_t right, int32_t ahead) {
     const int64_t r = right, a = ahead;
-    const int64_t apart = isqrt<int64_t>(r * r + a * a);
+    const int64_t apart = square_root<int64_t>(r * r + a * a);
     return {static_cast<int32_t>(a * kRimR / apart), static_cast<int32_t>(r * kRimR / apart)};
 }
 
@@ -386,7 +386,7 @@ Plotted clear_of(const Plotted& plotted, const Rect& label) {
     Plotted moved = plotted;
     moved.x = slid_x(plotted, label);
     const int32_t dx = moved.x - kFar;
-    moved.y = kFar + isqrt<int32_t>(kRimR * kRimR - dx * dx);
+    moved.y = kFar + square_root<int32_t>(kRimR * kRimR - dx * dx);
     return moved;
 }
 

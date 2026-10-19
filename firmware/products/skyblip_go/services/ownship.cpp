@@ -345,7 +345,7 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
     const CentiDegrees track{context_.state.own.track_cdeg};
     if (turn_reference_ms_ == 0) {
         turn_reference_ms_ = now_ms == 0 ? 1 : now_ms;
-        turn_reference_track_cdeg_ = track.v;
+        turn_reference_track_cdeg_ = track.value;
         return;
     }
     const uint32_t dt = now_ms - turn_reference_ms_;
@@ -355,7 +355,7 @@ void OwnshipService::update_turn_rate(uint32_t now_ms) {
                      flight::turn_rate_cdps(track, CentiDegrees(turn_reference_track_cdeg_), dt)),
                  now_ms);
     turn_reference_ms_ = now_ms;
-    turn_reference_track_cdeg_ = track.v;
+    turn_reference_track_cdeg_ = track.value;
 }
 
 void OwnshipService::publish_turn(int16_t turn_cdps, uint32_t now_ms) {

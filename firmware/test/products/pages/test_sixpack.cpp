@@ -541,7 +541,7 @@ TEST_CASE("sixpack page: the vertical speed dial is marked every 500 fpm and sha
     CHECK(ink_at(canvas, vsi, 90, kBandR));
     CHECK_FALSE(ink_at(canvas, vsi, -90));
 
-    // The shading is angled by iatan2, the scale by cordic: they used to disagree by 8 degrees.
+    // The shading is angled by arctangent, the scale by cordic: they used to disagree by 8 degrees.
     CHECK_FALSE(ink_at(canvas, vsi, 72, kBandR));
     CHECK_FALSE(ink_at(canvas, vsi, 108, kBandR));
 }

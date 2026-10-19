@@ -194,9 +194,9 @@ void ScreenService::render(uint32_t now_ms) {
                     targets_[n].climb_valid = observation.climb_valid;
                     targets_[n].speed_mm_s =
                         observation.speed_valid
-                            ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v
+                            ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value
                             : 0;
-                    targets_[n].track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
+                    targets_[n].track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).value;
                     targets_[n].turn_cdps = static_cast<int16_t>(t->turn.rate_dps * 100);
                     targets_[n].turn_valid = t->turn.valid;
                     targets_[n].in_formation = t->in_formation;
@@ -212,11 +212,11 @@ void ScreenService::render(uint32_t now_ms) {
             SixPackSnapshot snapshot;
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.speed_kt = to_knots(MillimetresPerSecond(own.speed_mm_s)).v;
-            snapshot.altitude_ft = to_feet(Millimetres(own.altitude_hae_mm)).v;
+            snapshot.speed_kt = to_knots(MillimetresPerSecond(own.speed_mm_s)).value;
+            snapshot.altitude_ft = to_feet(Millimetres(own.altitude_hae_mm)).value;
             snapshot.climb_fpm = climb_fpm();
             snapshot.climb_valid = climb_measured();
-            snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
+            snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
             snapshot.turn_cdps = context_.state.indicated.turn_cdps;
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_valid = context_.state.power.battery.valid;

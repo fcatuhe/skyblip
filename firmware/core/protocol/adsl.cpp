@@ -398,10 +398,10 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
     // would compute relative vertical separation against it.
     if (own.fix_valid) {
         if (own.vdop_e2 != 0)
-            packet.set_altitude_m(to_metres(Millimetres(where.altitude_hae_mm)).v);
+            packet.set_altitude_m(to_metres(Millimetres(where.altitude_hae_mm)).value);
         else
             packet.set_altitude_invalid();
-        packet.set_speed_q(to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v);
+        packet.set_speed_q(to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value);
         packet.set_integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
     } else {
         packet.set_position_invalid();
@@ -414,11 +414,11 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
     // fix and has its own validity. Encoding 0 before then would claim level
     // flight (G.1.9).
     if (own.climb_valid)
-        packet.set_climb_e8(to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v);
+        packet.set_climb_e8(to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value);
     else
         packet.set_climb_invalid();
 
-    packet.set_track_c9(to_cordic9(CentiDegrees(where.track_cdeg)).v);
+    packet.set_track_c9(to_cordic9(CentiDegrees(where.track_cdeg)).value);
     return true;
 }
 

@@ -59,7 +59,7 @@ constexpr const Layout& layout_of(const RadarSnapshot& snapshot) {
 int half_chord_in_half_pixels(int r, int b) {
     const int32_t v = 4 * r * r - (2 * b + 1) * (2 * b + 1);
     if (v < 0) return -1;
-    int q = isqrt<int32_t>(v);
+    int q = square_root<int32_t>(v);
     while (q * q > v) q--;
     return (q - 1) / 2;
 }
@@ -242,7 +242,7 @@ void formation_square(ui::Canvas& canvas) {
     canvas.vline(x1, y0 + r + 1, y1 - y0 - 2 * r - 1, true);
     for (int step = 0; step <= 90; step++) {
         const int16_t a = angle16_of_degrees(step);
-        const int dx = r - (r * icos(a)) / kTrigOne, dy = r - (r * isin(a)) / kTrigOne;
+        const int dx = r - (r * cosine(a)) / kTrigOne, dy = r - (r * sine(a)) / kTrigOne;
         canvas.set_pixel(x0 + dx, y0 + dy, true);
         canvas.set_pixel(x1 - dx, y0 + dy, true);
         canvas.set_pixel(x0 + dx, y1 - dy, true);
@@ -372,7 +372,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     }
 
     const int16_t track_angle16 =
-        angle16_of_degrees(to_degrees(CentiDegrees(snapshot.track_cdeg)).v);
+        angle16_of_degrees(to_degrees(CentiDegrees(snapshot.track_cdeg)).value);
     if (snapshot.fix_valid) {
         plot_leaders(canvas, snapshot, track_angle16);
         plot_blips(canvas, snapshot, track_angle16);

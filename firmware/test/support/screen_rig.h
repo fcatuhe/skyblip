@@ -145,7 +145,7 @@ struct ScreenRig {
             state.own.latitude_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
         observation.longitude_1e7 =
             state.own.longitude_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
-        observation.altitude_m = to_metres(Millimetres(state.own.altitude_hae_mm)).v;
+        observation.altitude_m = to_metres(Millimetres(state.own.altitude_hae_mm)).value;
         observation.received.at_s = now_ms / 1000;
         observation.at_ms = now_ms;
         observation.source = model::Source::AdslDirect;

@@ -56,7 +56,7 @@ model::AircraftObservation relayed_aircraft(Rig& rig, uint32_t address, int32_t 
         own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     observation.longitude_1e7 =
         own.longitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    observation.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).v + up_m;
+    observation.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value + up_m;
     observation.position_valid = true;
     return observation;
 }

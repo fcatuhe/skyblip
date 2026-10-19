@@ -47,7 +47,7 @@ struct HeadingUp {
 };
 
 inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track_angle16) {
-    const int64_t c = icos(track_angle16), s = isin(track_angle16);
+    const int64_t c = cosine(track_angle16), s = sine(track_angle16);
     return {static_cast<int32_t>((north * c + east * s) / kTrigOne),
             static_cast<int32_t>((east * c - north * s) / kTrigOne)};
 }

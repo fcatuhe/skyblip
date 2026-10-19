@@ -20,13 +20,13 @@ model::AircraftObservation contact(const model::Ownship& own, int north_m, int e
     t.position_valid = true;
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(speed_mps * 4);
-    t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).v;
-    t.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).v + up_m;
+    t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).value;
+    t.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value + up_m;
     t.latitude_1e7 =
         own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
         static_cast<int16_t>((static_cast<int64_t>(own.latitude_1e7) * 65536) / 3600000000LL);
-    const int64_t east_scaled = static_cast<int64_t>(east_m) * kTrigOne / icos(ang);
+    const int64_t east_scaled = static_cast<int64_t>(east_m) * kTrigOne / cosine(ang);
     t.longitude_1e7 = own.longitude_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     t.received.at_s = at_ms / 1000;
     t.at_ms = at_ms;

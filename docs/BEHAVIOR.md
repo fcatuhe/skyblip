@@ -1709,7 +1709,7 @@ The ADS-L uplink air<->ground round-trip, pure host, no hardware. Proves air+gro
 
 ### test/core/test_util.cpp
 
-The integer arithmetic the rest of the firmware trusts without checking: fixed point instead of floats, a CORDIC sine, an integer square root, the variable resolution codecs ADS-L packs its fields into. Every one is a silent failure mode. A variable range that rounds the wrong way or an iatan2 that is a quadrant out reaches the pilot as a target in the wrong place, with nothing logged.
+The integer arithmetic the rest of the firmware trusts without checking: fixed point instead of floats, a CORDIC sine, an integer square root, the variable resolution codecs ADS-L packs its fields into. Every one is a silent failure mode. A variable range that rounds the wrong way or an arctangent that is a quadrant out reaches the pilot as a target in the wrong place, with nothing logged.
 
 **fifo**
 
@@ -1722,11 +1722,11 @@ The integer arithmetic the rest of the firmware trusts without checking: fixed p
 
 **intmath**
 
-- iatan2 cardinal directions (16-bit cyclic)
-- iatan2 holds a degree everywhere, not only on the cardinals
+- arctangent cardinal directions (16-bit cyclic)
+- arctangent holds a degree everywhere, not only on the cardinals
   > The cardinals were exact while everything between them was up to 8 degrees out.
-- isin/icos magnitude and quadrature
-- isqrt and distance
+- sine/cosine magnitude and quadrature
+- square root and hypotenuse
 
 **result**
 

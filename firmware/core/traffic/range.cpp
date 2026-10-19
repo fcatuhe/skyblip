@@ -18,7 +18,7 @@ bool range_to(const model::Ownship& own, const model::AircraftObservation& obser
     out.address_mapping_table = observation.address_mapping_table;
     out.source = observation.source;
     out.up_m = up_m;
-    out.ground_m = static_cast<int32_t>(idistance(north_m, east_m));
+    out.ground_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
     return true;
 }
 
