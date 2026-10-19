@@ -84,7 +84,7 @@ struct StoreRig {
         anchored.pps_locked = true;
         state.rf.plan = timing::Scheduler::plan(phase_ms, anchored);
         state.rf.dwell = timing::DwellPhase{pass_ms, phase_ms, true, false};
-        clock.set_millis(pass_ms);
+        clock.set_milliseconds(pass_ms);
     }
 };
 
@@ -315,12 +315,12 @@ TEST_CASE("record store: a write is placed at the instant it starts, not when it
     constexpr int kPassPhaseMs = kLastClaimPhaseMs - kRanLongMs;
     constexpr uint32_t kPassMs = 10'000 + kPassPhaseMs;
     rig.publish_dwell(kPassMs, kPassPhaseMs);
-    rig.clock.set_millis(kPassMs + kRanLongMs + 1);
+    rig.clock.set_milliseconds(kPassMs + kRanLongMs + 1);
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
     CHECK(flash.erases == erases);
 
     rig.publish_dwell(kPassMs + 1000, kPassPhaseMs);
-    rig.clock.set_millis(kPassMs + 1000 + kRanLongMs);
+    rig.clock.set_milliseconds(kPassMs + 1000 + kRanLongMs);
     CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
     CHECK(flash.erases > erases);
 }

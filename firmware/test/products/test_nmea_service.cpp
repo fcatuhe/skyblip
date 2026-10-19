@@ -455,7 +455,7 @@ TEST_CASE("nmea: the companion link is not claimed on a board with no link fitte
     CHECK(unfitted.frames() == 0);
 }
 
-// M. The pass cadence across the 49.7-day wrap of ports::Clock::millis(). The
+// M. The pass cadence across the 49.7-day wrap of ports::Clock::milliseconds(). The
 // service defers a pass while a burst is armed and otherwise redraws every second,
 // both of them measured as differences from the last pass, and the flag beside the
 // stamp is what keeps a zero from meaning "never passed". If it were an instant

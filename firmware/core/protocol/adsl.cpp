@@ -325,7 +325,7 @@ uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms) {
     return static_cast<uint8_t>(ms / kTimestampQuarterMs);
 }
 
-bool is_callsign_char(char c) {
+bool is_callsign_character(char c) {
     return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
@@ -341,7 +341,7 @@ bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
     char* text = packet.information_text();
     int count = 0;
     while (count < AdslPacket::kInformationTextBytes && callsign[count] != 0 &&
-           is_callsign_char(callsign[count])) {
+           is_callsign_character(callsign[count])) {
         text[count] = callsign[count];
         count++;
     }
@@ -355,7 +355,7 @@ int callsign_of(const AdslPacket& packet, char* out, int capacity) {
     const char* text = packet.information_text();
     int count = 0;
     while (count < AdslPacket::kInformationTextBytes && text[count] != 0) {
-        if (!is_callsign_char(text[count])) return 0;
+        if (!is_callsign_character(text[count])) return 0;
         count++;
     }
     if (count >= capacity) count = capacity - 1;

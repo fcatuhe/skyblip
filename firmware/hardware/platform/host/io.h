@@ -18,7 +18,7 @@ struct Chips {
     models::Bhi260 imu;
 };
 
-// INFO: fc 26sep26 not the world clock: a hold that advanced it would make set_millis() wrap
+// INFO: fc 26sep26 not the world clock: a hold that advanced it would make set_milliseconds() wrap
 class Delay : public io::Delay {
    public:
     explicit Delay(Chips& chips) : chips_(chips) {}

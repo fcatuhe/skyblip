@@ -47,7 +47,7 @@ void LogEvents::heard(int slot, const LogTarget& now, uint32_t utc_s) {
         LogEvent event{};
         event.kind = LogKind::Alarm;
         event.utc_s = utc_s;
-        event.contact = now;
+        event.target = now;
         push(event);
         track.alarm = now.alarm;
     }
@@ -100,10 +100,10 @@ LogEvent LogEvents::encounter_of(const Track& track) {
     LogEvent event{};
     event.kind = LogKind::Encounter;
     event.utc_s = track.closest_utc_s;
-    event.contact = track.closest;
-    event.contact.alarm = track.alarm_peak;
+    event.target = track.closest;
+    event.target.alarm = track.alarm_peak;
     const uint32_t heard_s = track.last_utc_s - track.first_utc_s;
-    event.contact.heard_s = static_cast<uint16_t>(heard_s > 0xFFFF ? 0xFFFF : heard_s);
+    event.target.heard_s = static_cast<uint16_t>(heard_s > 0xFFFF ? 0xFFFF : heard_s);
     return event;
 }
 

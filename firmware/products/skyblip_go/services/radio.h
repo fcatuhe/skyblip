@@ -75,7 +75,7 @@ class RadioService : public runtime::Service {
         int64_t origin_us;
     };
 
-    // Both from micros(), which is 64-bit and does not wrap: nothing about where
+    // Both from microseconds(), which is 64-bit and does not wrap: nothing about where
     // the radio believes it is inside the second reads the 32-bit millisecond
     // counter (ports/clock.h).
     bool identified();

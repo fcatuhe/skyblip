@@ -254,7 +254,7 @@ class TEchoPlus {
         publish_contact(events::Contact::Button, button_, platform_.button_down(), now_ms);
         publish_contact(events::Contact::Pad, pad_, platform_.pad_down(), now_ms);
 
-        const uint64_t now_us = platform_.clock().micros();
+        const uint64_t now_us = platform_.clock().microseconds();
         state.clock.pps_locked = platform_.pps().locked();
         state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
         poll_barometer_on_pps(state.clock, now_ms);
@@ -402,7 +402,7 @@ class TEchoPlus {
         for (uint32_t step = 0; step < kImuImageStepsPerPass && imu_store_.writing(); step++) {
             const uint32_t cost_ms = imu_store_.next_cost_ms();
             if (cost_ms > 0 &&
-                !state.rf.book_flash_window(now_ms, platform_.clock().millis(), cost_ms))
+                !state.rf.book_flash_window(now_ms, platform_.clock().milliseconds(), cost_ms))
                 return;
             imu_store_.step();
         }

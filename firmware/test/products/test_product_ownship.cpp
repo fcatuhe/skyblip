@@ -228,7 +228,7 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
 
-    rig.platform.clock().set_micros(12345678);
+    rig.platform.clock().set_microseconds(12345678);
     rig.product.run_pass(12345);
     CHECK(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 12000000u);
@@ -244,7 +244,7 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     // No lock, no edge: a stale instant is worse than none, because the phase
     // it implies is a plausible one.
     rig.platform.pps().set_locked(false);
-    rig.platform.clock().set_micros(13345678);
+    rig.platform.clock().set_microseconds(13345678);
     rig.product.run_pass(13345);
     CHECK_FALSE(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 0u);
@@ -260,7 +260,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     rig.push_fix(1000, 1);
     uint16_t first_note_hz = 0;
     for (uint32_t t = 550; t <= 700; t += 10) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().pitch_hz();
     }
@@ -294,7 +294,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
 }
 
 // M. Vertical speed and turn rate are both differences over a window kept on
-// ports::Clock::millis(), and both keep the instant they last sampled at in a
+// ports::Clock::milliseconds(), and both keep the instant they last sampled at in a
 // uint32_t whose zero is biased away rather than flagged (ownship.cpp: a stamp of
 // zero would mean "no reference yet", and the counter produces exactly one zero
 // per wrap). The windows themselves are unsigned differences, so this is what a
@@ -324,17 +324,17 @@ TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
 }
 
 // M. Where the radio believes it is inside the second, across the 49.7-day wrap of
-// ports::Clock::millis(). With PPS locked the phase is measured from the latched
+// ports::Clock::milliseconds(). With PPS locked the phase is measured from the latched
 // edge, which is a 64-bit microsecond figure and cannot wrap in the life of the
 // device. Without it the phase used to be now_ms % 1000, and that is not a phase at
 // all: 2^32 ms is 4294967.296 seconds, so at the wrap the free-running second
 // stepped 705 ms BACKWARDS and the dwell map was armed out of order for a second -
 // with the anchor already lost, which is the worst moment to add a fault. Both
-// branches read micros() now.
+// branches read microseconds() now.
 //
 // The clock is driven in microseconds here because that is what the silicon does:
-// now_ms is the low 32 bits of the same uptime, so millis() wraps underneath a
-// micros() that keeps counting.
+// now_ms is the low 32 bits of the same uptime, so milliseconds() wraps underneath a
+// microseconds() that keeps counting.
 TEST_CASE("product: the free-running dwell phase steps forward through the 49.7-day wrap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -349,9 +349,9 @@ TEST_CASE("product: the free-running dwell phase steps forward through the 49.7-
     int previous = rig.state().rf.dwell.phase_ms;
     bool wrapped = false;
     for (int step = 0; step < 20; step++) {
-        const uint32_t millis_before = rig.platform.clock().millis();
+        const uint32_t before_ms = rig.platform.clock().milliseconds();
         rig.run_span_from_us(us, 0);
-        if (rig.platform.clock().millis() < millis_before) wrapped = true;
+        if (rig.platform.clock().milliseconds() < before_ms) wrapped = true;
         // 50 ms of clock is 50 ms of phase, all the way round the second and all
         // the way through the counter turning over.
         CHECK(rig.state().rf.dwell.phase_ms == (previous + 50) % 1000);

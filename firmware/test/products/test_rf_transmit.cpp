@@ -382,7 +382,7 @@ TEST_CASE("rf: the extrapolation residual is measured against the fix that arriv
     CHECK(worst_m > 10);
 }
 
-// M. The whole transmit chain stepped through the instant ports::Clock::millis()
+// M. The whole transmit chain stepped through the instant ports::Clock::milliseconds()
 // turns over: the first-fix settling window, the fix-age gate, the once-a-second
 // rate rule, the channel alternation and the rolling duty-cycle hour.
 //
@@ -422,7 +422,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
         if (r.event != simulator::AirEvent::Tx) continue;
         transmissions++;
         // Still inside the direct slot, still alternating channel: the phase comes
-        // off the PPS edge in micros(), which is 64-bit and does not wrap.
+        // off the PPS edge in microseconds(), which is 64-bit and does not wrap.
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
         CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
         if (last_frequency != 0) CHECK(r.frequency_hz != last_frequency);

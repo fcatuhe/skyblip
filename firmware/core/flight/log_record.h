@@ -115,7 +115,7 @@ struct LogEvent {
     LogKind kind{LogKind::Status};
     uint32_t utc_s{0};
     LogStatus status{};
-    LogTarget contact{};
+    LogTarget target{};
 };
 
 // Everything worth keeping out of the state the whole device already agrees on.

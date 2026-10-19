@@ -43,6 +43,7 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_mg` | thousandths of a g | `lateral_mg` |
 | `_dc` | tenths of a degree Celsius | `die_dc` |
 | `_dbhz` | dB-Hz, a carrier-to-noise density | `cn0_dbhz` |
+| `_px` | pixels on the glass | `kDashPx`, `kMinLeaderPx` |
 
 `core/units/units.h` carries the same units as types, and the conversions between them. It is what `ui/` reads in, because a page that prints knots and feet should be converting from a type rather than from a name. On the wire and in `bus::State` the suffix is the convention, because a struct that crosses a queue is a layout as well as a vocabulary.
 

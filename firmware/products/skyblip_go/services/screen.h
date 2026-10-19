@@ -117,7 +117,7 @@ class ScreenService : public runtime::Service {
     void sync_receiving(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
-    uint32_t micros_since(uint64_t began_us) const;
+    uint32_t microseconds_since(uint64_t began_us) const;
     void obey(Gesture gesture, uint32_t now_ms);
     void tap(uint32_t now_ms);
     void long_touch();

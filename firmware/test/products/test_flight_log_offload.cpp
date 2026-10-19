@@ -162,17 +162,17 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
 
     const flight::LogEvent* alarm = first_of(walk, flight::LogKind::Alarm);
     REQUIRE(alarm != nullptr);
-    CHECK(alarm->contact.address == 0xDD5EED);
-    CHECK(alarm->contact.alarm == traffic::to_number(traffic::Level::Advisory));
-    CHECK(alarm->contact.distance_m <= traffic::kAdvisoryDistanceM);
+    CHECK(alarm->target.address == 0xDD5EED);
+    CHECK(alarm->target.alarm == traffic::to_number(traffic::Level::Advisory));
+    CHECK(alarm->target.distance_m <= traffic::kAdvisoryDistanceM);
 
     const flight::LogEvent* pass = first_of(walk, flight::LogKind::Encounter);
     REQUIRE(pass != nullptr);
-    CHECK(pass->contact.address == 0xDD5EED);
-    CHECK(pass->contact.alarm == traffic::to_number(traffic::Level::Advisory));
+    CHECK(pass->target.address == 0xDD5EED);
+    CHECK(pass->target.alarm == traffic::to_number(traffic::Level::Advisory));
     // Placed 200 m north at its closest; own-ship's second of flight since the fix moves that.
-    CHECK(pass->contact.distance_m < 300);
-    CHECK(pass->contact.heard_s >= 30);
+    CHECK(pass->target.distance_m < 300);
+    CHECK(pass->target.heard_s >= 30);
 }
 
 TEST_CASE("flight log: the tablet lists a flight and reads it back five records at a time") {

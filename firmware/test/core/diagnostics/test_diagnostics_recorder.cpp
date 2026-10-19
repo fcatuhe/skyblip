@@ -8,10 +8,10 @@ namespace {
 
 constexpr uint32_t kBaseUtcS = 1789000000;
 
-diagnostics::Instant at_ms(uint32_t millis) {
+diagnostics::Instant at_ms(uint32_t milliseconds) {
     diagnostics::Instant at{};
-    at.at_s = kBaseUtcS + millis / 1000;
-    at.into_ms = static_cast<uint16_t>(millis % 1000);
+    at.at_s = kBaseUtcS + milliseconds / 1000;
+    at.into_ms = static_cast<uint16_t>(milliseconds % 1000);
     at.phase_valid = true;
     at.utc_dated = true;
     return at;

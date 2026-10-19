@@ -24,7 +24,7 @@ struct HousekeepingRig {
 
     void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
         for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
         }
     }
@@ -35,7 +35,7 @@ struct HousekeepingRig {
         platform.board_gpio().button_down = down;
         const uint32_t until = now_ms + held_ms;
         for (; now_ms <= until; now_ms += 50) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
         }
     }

@@ -39,7 +39,7 @@ struct Rig {
 
     void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
         for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
         }
     }
@@ -47,7 +47,7 @@ struct Rig {
     // The shell's other loop: a refused boot settles the frame it owes the glass.
     void sleep_again(uint32_t step_ms = 50) {
         for (uint32_t now_ms = 0; now_ms <= 20000; now_ms += step_ms) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             if (product.park_refusal(now_ms)) return;
         }
     }
@@ -124,26 +124,26 @@ struct Rig {
     }
 
     // The same passes, counted instead of bounded: `now_ms <= to_ms` above cannot cross
-    // the 49.7-day wrap of ports::Clock::millis(), because that is a comparison of
+    // the 49.7-day wrap of ports::Clock::milliseconds(), because that is a comparison of
     // two instants (ports/clock.h). A case that wants the device stepped THROUGH the
     // wrap advances by an elapsed span instead. Steps now_ms forward by span + step_ms.
     void run_span(uint32_t& now_ms, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
             now_ms += step_ms;
         }
     }
 
     // The same passes, driven from the 64-bit clock the way both platforms do it:
-    // now_ms is the low 32 bits of the uptime micros() reports
+    // now_ms is the low 32 bits of the uptime microseconds() reports
     // (hardware/platform/{host,zephyr}/clock.h), so this is the only way to step a
-    // case through the 49.7-day wrap of millis() while micros() keeps counting -
-    // which is what the silicon does and what set_millis() cannot express.
+    // case through the 49.7-day wrap of milliseconds() while microseconds() keeps counting -
+    // which is what the silicon does and what set_milliseconds() cannot express.
     void run_span_from_us(uint64_t& us, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_micros(us);
-            product.run_pass(platform.clock().millis());
+            platform.clock().set_microseconds(us);
+            product.run_pass(platform.clock().milliseconds());
             us += static_cast<uint64_t>(step_ms) * 1000;
         }
     }
@@ -174,7 +174,7 @@ struct Rig {
 
     void settle(uint32_t& now_ms) {
         for (int i = 0; i < 2; i++) {
-            platform.clock().set_millis(now_ms);
+            platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
             now_ms += 40;
         }

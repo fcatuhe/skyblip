@@ -153,7 +153,7 @@ class Pps {
 
     uint64_t last_edge_us() const {
         if (!locked_) return 0;
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         return now_us - now_us % kSecondUs;
     }
 

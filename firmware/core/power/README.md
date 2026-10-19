@@ -105,7 +105,7 @@ The refusal is complete without it. A charge mode would be a third `BootPath` va
 
 `duty.h` is one accumulator, `OnTime`: a thing was on, and this is how many milliseconds of it have gone by. It is what the backlight, the annunciator and the companion link are counted with, each by the service that drives that consumer and each published on `bus::State::duty` (`../bus/README.md`).
 
-It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::millis()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
+It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::milliseconds()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
 
 What these buy is the second half of a budget nothing else on this board can supply. Milliamps per consumer come from a datasheet or a bench; how long each was on comes from here, and multiplying the two is the only power figure this device can produce.
 

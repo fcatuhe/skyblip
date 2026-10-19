@@ -60,7 +60,8 @@ uint32_t RecordPool::free_sectors() const {
 }
 
 bool RecordPool::book_window(uint32_t cost_ms, uint32_t pass_ms) {
-    return context_.state.rf.book_flash_window(pass_ms, context_.roles.clock.millis(), cost_ms);
+    return context_.state.rf.book_flash_window(pass_ms, context_.roles.clock.milliseconds(),
+                                               cost_ms);
 }
 
 Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {

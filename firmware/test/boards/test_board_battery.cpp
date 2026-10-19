@@ -22,7 +22,7 @@ struct Unit {
         std::vector<events::BatterySample> published;
         for (int i = 0; i < count; i++) {
             t += runtime::kBatteryPeriodMs;
-            platform.clock().set_millis(t);
+            platform.clock().set_milliseconds(t);
             board.poll(state, t);
             events::BatterySample sample{};
             while (bus.battery.pop(sample)) published.push_back(sample);

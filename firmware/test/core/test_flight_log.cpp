@@ -206,7 +206,7 @@ TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in
 }
 
 // M. The record cadence across the 49.7-day wrap of
-// ports::Clock::millis(). A flight log that stops sampling for seven weeks is a
+// ports::Clock::milliseconds(). A flight log that stops sampling for seven weeks is a
 // flight log with a hole in it that no badge claim survives, and the sampled_ flag
 // beside the stamp is what keeps zero from meaning "never sampled" at the one
 // instant the counter produces it.

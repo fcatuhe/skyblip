@@ -57,7 +57,7 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     stand_on_the_ground(rig, t);
     const uint32_t before = writes(rig);
     change_volume(rig, go::AlarmVolume::Soft);
-    rig.platform.clock().set_millis(t);
+    rig.platform.clock().set_milliseconds(t);
     rig.product.config_link().tick(t);
     REQUIRE(rig.product.config_link().durable_writes().pending());
 
@@ -68,13 +68,13 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     constexpr int kPassPhaseMs = kLastWritePhaseMs - kRanLongMs;
     const uint32_t pass_ms = t + 1000 + kPassPhaseMs;
     publish_dwell(rig, pass_ms, kPassPhaseMs);
-    rig.platform.clock().set_millis(pass_ms + kRanLongMs + 1);
+    rig.platform.clock().set_milliseconds(pass_ms + kRanLongMs + 1);
     rig.product.config_link().tick(pass_ms);
     CHECK(writes(rig) == before);
     CHECK(rig.product.config_link().durable_writes().pending());
 
     publish_dwell(rig, pass_ms + 1000, kPassPhaseMs);
-    rig.platform.clock().set_millis(pass_ms + 1000 + kRanLongMs);
+    rig.platform.clock().set_milliseconds(pass_ms + 1000 + kRanLongMs);
     rig.product.config_link().tick(pass_ms + 1000);
     CHECK(writes(rig) - before == 1);
     CHECK(rig.product.config_link().durable_writes().forced() == 0);
@@ -90,8 +90,8 @@ TEST_CASE("flash window: the radio's view of the second is stamped when its phas
     REQUIRE_FALSE(rig.state().clock.pps_locked);
 
     constexpr uint32_t kRadioTurnMs = 40;
-    const uint32_t pass_ms = rig.platform.clock().millis() + 50;
-    rig.platform.clock().set_millis(pass_ms + kRadioTurnMs);
+    const uint32_t pass_ms = rig.platform.clock().milliseconds() + 50;
+    rig.platform.clock().set_milliseconds(pass_ms + kRadioTurnMs);
     rig.product.run_pass(pass_ms);
 
     const timing::DwellPhase& dwell = rig.state().rf.dwell;

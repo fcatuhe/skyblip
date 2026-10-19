@@ -177,7 +177,7 @@ Nothing but a takeoff starts it and nothing but switching the device off clears 
 
 A device switched on in the air is timed from the first solution rather than from the wheels, because `FlightMonitor` declares `Airborne` immediately in that case and nothing on board saw the takeoff. The alternative is withholding the number from exactly the pilot who has been flying longest.
 
-The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::millis()` is one ordinary second of flight.
+The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::milliseconds()` is one ordinary second of flight.
 
 ## log_record
 

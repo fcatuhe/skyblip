@@ -425,7 +425,7 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     anchored.pps_locked = true;
     rig.state.rf.plan = timing::Scheduler::plan(kPhaseMs, anchored);
     rig.state.rf.dwell = timing::DwellPhase{t, kPhaseMs, true, false};
-    rig.clock.set_millis(t);
+    rig.clock.set_milliseconds(t);
     rig.capture.tick(t);
 
     CHECK(rig.recorder.queued() == 5);

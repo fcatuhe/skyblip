@@ -251,7 +251,7 @@ TEST_CASE("indication: the lamp is told only when the answer changes") {
 }
 
 TEST_CASE("indication: the millisecond counter wrapping costs one flash, not a stuck lamp") {
-    // ports::Clock::millis() is 32-bit and wraps at 49.7 days. Everything here is
+    // ports::Clock::milliseconds() is 32-bit and wraps at 49.7 days. Everything here is
     // unsigned subtraction, so the wrap restarts a wink; an absolute comparison
     // would have left the lamp in whichever phase it was in for ever.
     constexpr uint32_t kJustBeforeWrap = 0xFFFFF000u;

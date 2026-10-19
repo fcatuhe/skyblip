@@ -61,7 +61,7 @@ struct ServiceRig {
         fix.satellites = 9;
         fix.sentences = ++updates;
         bus.gnss.push(fix);
-        clock.set_millis(now_ms);
+        clock.set_milliseconds(now_ms);
         ownship.tick(now_ms);
     }
 
@@ -101,7 +101,7 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
     rig.state.clock.pps_locked = true;
     rig.state.clock.utc_s = ServiceRig::kBaseUtcS;
     rig.state.own.utc_valid = false;
-    rig.clock.set_micros(4000000);
+    rig.clock.set_microseconds(4000000);
 
     events::RfEvent event{};
     event.type = events::RfEventType::CrcError;
@@ -121,7 +121,7 @@ TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling,
     ServiceRig rig;
     rig.state.clock.pps_locked = false;
     rig.state.clock.since_edge_ms = timing::kPpsHoldoverMs + 10000;
-    rig.clock.set_millis(1000);
+    rig.clock.set_milliseconds(1000);
     rig.ownship.tick(1000);
 
     diagnostics::Pps pps{};

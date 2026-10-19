@@ -25,15 +25,16 @@ class Simulator {
     }
 
     void step(uint32_t now_ms) {
-        platform_.clock().set_millis(now_ms);
+        platform_.clock().set_milliseconds(now_ms);
         world_.step(now_ms, product_.state());
         product_.run_pass(now_ms);
         // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
-        world_.air().take_own_transmission(platform_.clock().micros(), platform_.chips().radio);
+        world_.air().take_own_transmission(platform_.clock().microseconds(),
+                                           platform_.chips().radio);
     }
 
     bool park_refusal(uint32_t now_ms) {
-        platform_.clock().set_millis(now_ms);
+        platform_.clock().set_milliseconds(now_ms);
         return product_.park_refusal(now_ms);
     }
 

@@ -75,7 +75,7 @@ TEST_CASE("product: a ball that never stops is presented once a second, never fa
     for (const uint32_t end = t + 10000; t <= end; t += kStepMs) {
         const bool left = (t / kSwingMs) % 2 == 0;
         rig.platform.chips().imu.set_acceleration(1000, left ? -150 : 150, 0);
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         if (rig.state().duty.panel_partial_refreshes == seen) continue;
         seen = rig.state().duty.panel_partial_refreshes;

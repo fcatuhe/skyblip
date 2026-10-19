@@ -155,7 +155,7 @@ class Bme280 : public io::I2c {
         store_word(kRegisterResult, pending_raw_pressure_);
     }
 
-    uint64_t now_us() const { return clock_ ? clock_->micros() : 0; }
+    uint64_t now_us() const { return clock_ ? clock_->microseconds() : 0; }
 
     void store_word(int register_address, int32_t raw) {
         registers[register_address] = static_cast<uint8_t>(raw >> 12);

@@ -42,7 +42,7 @@ void World::step(uint32_t now_ms, const bus::State& state) {
     service_aircraft(now_ms, state.own);
     apply_events(now_ms, state);
 
-    const uint64_t now_us = platform_.clock().micros();
+    const uint64_t now_us = platform_.clock().microseconds();
     const uint64_t epoch_us = now_us - now_us % 1000000;
     const uint32_t second = static_cast<uint32_t>(now_us / 1000000);
     if (!scheduled_ || second != scheduled_second_) {

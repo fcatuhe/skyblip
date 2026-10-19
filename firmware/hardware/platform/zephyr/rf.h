@@ -72,7 +72,7 @@ class Rf : public ports::Rf {
             return Status::OutOfRange;
         // A dwell that cannot start before its own end is refused here rather
         // than truncated on air.
-        if (clock_.micros() >= plan.end_us) return Status::WouldBlock;
+        if (clock_.microseconds() >= plan.end_us) return Status::WouldBlock;
         Status verdict = Status::Ok;
         k_sched_lock();
         if (joins_flying_dwell(plan)) {
@@ -88,7 +88,7 @@ class Rf : public ports::Rf {
         } else {
             queued_plan_ = plan;
             queued_bursts_ = ports::RfBursts::of(plan);
-            queued_armed_at_us_ = clock_.micros();
+            queued_armed_at_us_ = clock_.microseconds();
             queued_ = true;
             k_sem_give(&armed_);
         }
@@ -155,7 +155,7 @@ class Rf : public ports::Rf {
     bool joins_flying_dwell(const ports::RfPlan& plan) {
         if (!flying_ || plan.tx == nullptr) return false;
         if (plan.mode != flying_mode_ || plan.frequency_hz != flying_frequency_hz_) return false;
-        return plan.tx_at_us >= clock_.micros() && plan.tx_at_us < flying_end_us_;
+        return plan.tx_at_us >= clock_.microseconds() && plan.tx_at_us < flying_end_us_;
     }
 
     static ports::RfBurst burst_of(const ports::RfPlan& plan) {
@@ -178,12 +178,12 @@ class Rf : public ports::Rf {
         for (uint8_t i = done; i < bursts.count; i++) {
             tx_at_us_ = bursts.burst[i].at_us;
             if (i >= keyed) keyed_at_us_ = 0;
-            emit(events::RfEventType::Missed, clock_.micros());
+            emit(events::RfEventType::Missed, clock_.microseconds());
         }
     }
 
     void run() {
-        health_checked_us_ = clock_.micros();
+        health_checked_us_ = clock_.microseconds();
         for (;;) {
             const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
             health(reinitialisation_affordable());
@@ -197,7 +197,7 @@ class Rf : public ports::Rf {
             ports::RfPlan plan{};
             uint64_t armed_at_us = 0;
             if (!take(plan, armed_at_us)) continue;
-            if (clock_.micros() >= plan.end_us) {
+            if (clock_.microseconds() >= plan.end_us) {
                 miss_unfinished(flying_bursts(), 0, 0);
                 flying_ = false;
                 continue;
@@ -242,7 +242,7 @@ class Rf : public ports::Rf {
     // because this thread owns the bus: the elapsed time comes off the same
     // clock the deadlines do, so a dwell that overran is counted, not lost.
     void health(bool may_reinitialise) {
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         if (now_us <= health_checked_us_) return;
         const uint32_t elapsed_ms = static_cast<uint32_t>((now_us - health_checked_us_) / 1000);
         if (elapsed_ms == 0) return;
@@ -262,16 +262,16 @@ class Rf : public ports::Rf {
     }
 
     void sleep_until(uint64_t deadline_us) {
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         if (deadline_us <= now_us) return;
         const uint64_t remaining_us = deadline_us - now_us;
         if (remaining_us > 2000) k_usleep(static_cast<int32_t>(remaining_us - 1000));
-        while (clock_.micros() < deadline_us) k_busy_wait(10);
+        while (clock_.microseconds() < deadline_us) k_busy_wait(10);
     }
 
     // INFO: fc 23sep26 a radio half configured may sit on the last dwell's channel: it keys nothing
     bool start(const ports::RfPlan& plan, uint64_t armed_at_us) {
-        const uint64_t from_us = clock_.micros();
+        const uint64_t from_us = clock_.microseconds();
         band_ = plan.mode == ports::RfMode::RxOBand ? model::Band::O : model::Band::M;
         frequency_hz_ = plan.frequency_hz;
         if (radio_.wake() != Status::Ok) return false;
@@ -287,7 +287,7 @@ class Rf : public ports::Rf {
         change.to_hz = plan.frequency_hz;
         change.previous_end_us = last_end_us_;
         change.began_us = from_us;
-        change.ready_us = clock_.micros();
+        change.ready_us = clock_.microseconds();
         change.start_us = plan.start_us;
         change.armed_ahead = armed_at_us < plan.start_us;
         switching_.note(change);
@@ -315,28 +315,28 @@ class Rf : public ports::Rf {
 
     // INFO: fc 15sep26 the last read is kWindowUs after the first whatever a read costs on the bus
     int8_t sample_carrier() {
-        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.dbm;
+        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
         int8_t window[timing::ChannelLevel::kSamples];
-        const uint64_t opened_us = clock_.micros();
+        const uint64_t opened_us = clock_.microseconds();
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++) {
             const uint64_t due_us =
                 opened_us + static_cast<uint64_t>(i) * timing::ChannelLevel::kSampleSpacingUs;
-            while (clock_.micros() < due_us) k_busy_wait(1);
+            while (clock_.microseconds() < due_us) k_busy_wait(1);
             window[i] = radio_.instant_rssi_dbm();
         }
-        carrier_.dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
+        carrier_.level_dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
         carrier_.samples++;
-        return carrier_.dbm;
+        return carrier_.level_dbm;
     }
 
     // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx and not the whole buffer write
     void key(const ports::RfBurst& burst) {
         tx_at_us_ = burst.at_us;
         (void)radio_.stage_tx(burst.chips, burst.bytes);
-        staged_at_us_ = clock_.micros();
-        while (clock_.micros() < burst.at_us) k_busy_wait(1);
+        staged_at_us_ = clock_.microseconds();
+        while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
         (void)radio_.key_tx();
-        keyed_at_us_ = clock_.micros();
+        keyed_at_us_ = clock_.microseconds();
         tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.bytes);
     }
 
@@ -349,7 +349,7 @@ class Rf : public ports::Rf {
     // INFO: fc 16sep26 the event is dated where the radio raised it, not where the read-out ended
     bool collect(bool& completed, bool& fault) {
         const bool line_up = irq_at_us_ != 0 || radio_.irq_asserted();
-        const uint64_t polled_us = irq_at_us_ != 0 ? irq_at_us_ : clock_.micros();
+        const uint64_t polled_us = irq_at_us_ != 0 ? irq_at_us_ : clock_.microseconds();
         irq_at_us_ = 0;
         const parts::RadioEvent event = radio_.poll(rx_.data.data(), events::kRfEventBytes);
         if (event.type != parts::RadioEventType::None && !line_up) dio1_missed_++;
@@ -381,15 +381,15 @@ class Rf : public ports::Rf {
         keyed_at_us_ = 0;
         irq_at_us_ = 0;
         uint64_t poll_due_us = 0;
-        while (!abort_ && clock_.micros() < plan.end_us) {
+        while (!abort_ && clock_.microseconds() < plan.end_us) {
             bursts = flying_bursts();
-            if (clock_.micros() >= bursts.stage_at_us(keyed, done, kTxStageLeadUs)) {
+            if (clock_.microseconds() >= bursts.stage_at_us(keyed, done, kTxStageLeadUs)) {
                 key(bursts.burst[keyed]);
                 keyed++;
             }
-            if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.micros();
-            if (irq_at_us_ != 0 || clock_.micros() >= poll_due_us) {
-                poll_due_us = clock_.micros() + kSafetyPollUs;
+            if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.microseconds();
+            if (irq_at_us_ != 0 || clock_.microseconds() >= poll_due_us) {
+                poll_due_us = clock_.microseconds() + kSafetyPollUs;
                 completed = false;
                 if (collect(completed, fault)) {
                     if (completed) done++;
@@ -398,15 +398,16 @@ class Rf : public ports::Rf {
                 if (fault) return;
             }
             const bool sent_all = keyed == done && keyed == bursts.count;
-            if (!sampled && sent_all && clock_.micros() + kCarrierLeadUs >= plan.end_us) {
+            if (!sampled && sent_all && clock_.microseconds() + kCarrierLeadUs >= plan.end_us) {
                 sample_carrier();
                 sampled = true;
                 continue;
             }
-            if (keyed > done) poll_due_us = std::min(poll_due_us, tail_poll_at(clock_.micros()));
+            if (keyed > done)
+                poll_due_us = std::min(poll_due_us, tail_poll_at(clock_.microseconds()));
             uint64_t wake_us = std::min(
                 {plan.end_us, poll_due_us, bursts.stage_at_us(keyed, done, kTxStageLeadUs)});
-            if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.micros() + kSpinUs);
+            if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.microseconds() + kSpinUs);
             if (!sampled && sent_all) wake_us = std::min(wake_us, plan.end_us - kCarrierLeadUs);
             // INFO: fc 29sep26 an absolute uptime wake: k_usleep lands a tick past the stage point
             (void)k_sem_take(

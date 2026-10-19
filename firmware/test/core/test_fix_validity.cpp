@@ -195,7 +195,7 @@ TEST_CASE("fix validity: refusals are counted once per cause, not once per poll"
     CHECK(b.validity.rejected() == 2);
 }
 
-// M. The 3500 ms liveness bound across the 49.7-day wrap of ports::Clock::millis().
+// M. The 3500 ms liveness bound across the 49.7-day wrap of ports::Clock::milliseconds().
 // The failure this would be: a receiver that is talking perfectly well is declared
 // STALE for the seven weeks after the wrap, so the device stops transmitting and
 // stops logging while its GNSS light says everything is fine.

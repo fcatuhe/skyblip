@@ -31,7 +31,7 @@ void settle(Rig& rig, uint32_t& t, uint32_t for_ms = 5000) {
 // reading the dark half of a wink. Returns the instant, or 0.
 uint32_t step_until_lit(Rig& rig, uint32_t& t, uint32_t within_ms) {
     for (uint32_t end = t + within_ms; t <= end; t += 10) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         if (lamp_of(rig).lit()) return t;
     }
@@ -68,7 +68,7 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
     uint32_t lit_passes = 0;
     uint32_t passes = 0;
     for (uint32_t t = 0; t <= 60000; t += 10) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         passes++;
         if (lamp_of(rig).lit()) lit_passes++;

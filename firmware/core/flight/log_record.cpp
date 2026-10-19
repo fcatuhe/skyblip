@@ -78,25 +78,25 @@ void decode_status(const uint8_t* raw, LogStatus& out) {
     out.external_power = (raw[9] & kStatusFlagExternalPower) != 0;
 }
 
-void encode_target(const LogTarget& contact, uint8_t* out) {
-    const uint32_t address = contact.address & settings::kAddressMask;
+void encode_target(const LogTarget& target, uint8_t* out) {
+    const uint32_t address = target.address & settings::kAddressMask;
     out[2] = static_cast<uint8_t>(address);
     out[3] = static_cast<uint8_t>(address >> 8);
     out[4] = static_cast<uint8_t>(address >> 16);
-    out[5] = contact.address_mapping_table;
-    put_u16(out + 6, contact.distance_m);
-    put_u16(out + 8, static_cast<uint16_t>(contact.relative_altitude_m));
-    put_u16(out + 10, contact.relative_bearing_deg);
-    put_u16(out + 12, static_cast<uint16_t>(contact.closing_mps));
-    out[14] = contact.alarm;
-    out[15] = contact.aircraft_category;
-    out[17] = contact.source;
-    out[18] = static_cast<uint8_t>(contact.rssi_dbm);
+    out[5] = target.address_mapping_table;
+    put_u16(out + 6, target.distance_m);
+    put_u16(out + 8, static_cast<uint16_t>(target.relative_altitude_m));
+    put_u16(out + 10, target.relative_bearing_deg);
+    put_u16(out + 12, static_cast<uint16_t>(target.closing_mps));
+    out[14] = target.alarm;
+    out[15] = target.aircraft_category;
+    out[17] = target.source;
+    out[18] = static_cast<uint8_t>(target.rssi_dbm);
     uint8_t flags = 0;
-    if (contact.dismissed) flags |= kTargetFlagDismissed;
-    if (contact.in_formation) flags |= kTargetFlagInFormation;
+    if (target.dismissed) flags |= kTargetFlagDismissed;
+    if (target.in_formation) flags |= kTargetFlagInFormation;
     out[19] = flags;
-    put_u16(out + 20, contact.heard_s);
+    put_u16(out + 20, target.heard_s);
 }
 
 void decode_target(const uint8_t* raw, LogTarget& out) {
@@ -205,7 +205,7 @@ void encode_log_event(const LogEvent& event, uint32_t base_utc_s, uint8_t* out) 
     if (event.kind == LogKind::Status)
         encode_status(event.status, out);
     else
-        encode_target(event.contact, out);
+        encode_target(event.target, out);
     out[kLogKindOffset] = static_cast<uint8_t>(kLogEventMark | static_cast<uint8_t>(event.kind));
     seal(out);
 }
@@ -222,7 +222,7 @@ Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out) 
     if (out.kind == LogKind::Status)
         decode_status(raw, out.status);
     else
-        decode_target(raw, out.contact);
+        decode_target(raw, out.target);
     return Status::Ok;
 }
 

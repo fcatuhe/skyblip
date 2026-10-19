@@ -259,7 +259,7 @@ TEST_CASE("durable write: a change at any phase of the second is placed within t
 }
 
 // M. The whole policy is unsigned differences from the first and last request, so
-// the 49.7-day wrap of ports::Clock::millis() costs it nothing - but "costs it
+// the 49.7-day wrap of ports::Clock::milliseconds() costs it nothing - but "costs it
 // nothing" is a claim, and this is the case that holds it. A pilot stepping a
 // setting through the wrap instant must not have their change deferred for seven
 // weeks, and a dwell view stamped before the wrap must read as 84 ms old after it

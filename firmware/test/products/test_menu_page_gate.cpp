@@ -36,7 +36,7 @@ void hold_button(Rig& rig, uint32_t& t, uint32_t held_ms, bool down = true) {
     rig.platform.board_gpio().button_down = down;
     const uint32_t until = t + held_ms;
     for (; t <= until; t += 50) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
     }
 }

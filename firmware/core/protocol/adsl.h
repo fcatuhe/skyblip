@@ -235,7 +235,7 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
               uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
-bool is_callsign_char(char c);
+bool is_callsign_character(char c);
 bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
                        uint8_t address_mapping_table, const char* callsign);
 int callsign_of(const AdslPacket& packet, char* out, int capacity);

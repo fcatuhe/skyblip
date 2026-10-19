@@ -87,7 +87,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, in
     // a burst arriving there means anything at all.
     const uint32_t at_ms = t + timing::kGroundEmitStartMs;
     rig.run(t, t + 200);
-    rig.platform.clock().set_millis(at_ms);
+    rig.platform.clock().set_milliseconds(at_ms);
     rig.product.run_pass(at_ms);
     const bool heard = rig.platform.chips().radio.receive_air(
         burst, static_cast<uint16_t>(burst_length), /*crc_error=*/false, /*rssi=*/-92,
@@ -127,7 +127,7 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int
 
     // 500 ms is inside the direct slot and inside the first M-band dwell.
     rig.run(t, t + 500);
-    rig.platform.clock().set_millis(t + 500);
+    rig.platform.clock().set_milliseconds(t + 500);
     rig.platform.chips().radio.receive_air(chips, static_cast<uint16_t>(chip_length),
                                            /*crc_error=*/false, /*rssi=*/-70,
                                            protocol::kMBandChipRateBps);
@@ -400,7 +400,7 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
     // wide enough for its 250 kHz channel, and 255 bytes to read.
     rig.push_timed_fix(25000, 900);
     rig.run(t, t + 200);
-    rig.platform.clock().set_millis(t + timing::kGroundEmitStartMs);
+    rig.platform.clock().set_milliseconds(t + timing::kGroundEmitStartMs);
     rig.product.run_pass(t + timing::kGroundEmitStartMs);
     // The chip reports what its PLL word resolves to, which is a hertz or two
     // off the channel it was asked for.

@@ -31,7 +31,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
 
     bool refreshing() const {
         if (clock_ == nullptr || refresh_span_ms_ == 0) return false;
-        return clock_->millis() - refresh_since_ms_ < refresh_span_ms_;
+        return clock_->milliseconds() - refresh_since_ms_ < refresh_span_ms_;
     }
 
     void set(int pin, bool level) override {
@@ -74,7 +74,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                     if (sequence_ & kDisplay) {
                         present_count++;
                         if (clock_ != nullptr) {
-                            refresh_since_ms_ = clock_->millis();
+                            refresh_since_ms_ = clock_->milliseconds();
                             refresh_span_ms_ = last_full ? kFullBusyMs : partial_busy_ms();
                         }
                         // In deep sleep the panel's charge pump is off: it latches

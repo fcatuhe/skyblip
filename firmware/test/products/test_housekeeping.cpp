@@ -250,7 +250,7 @@ TEST_CASE("product: the loop feeds the watchdog while it is flying and through a
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     for (uint32_t t = 0; t <= 3 * runtime::kServiceSilenceCeilingMs; t += 100) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         CHECK(rig.product.may_feed_watchdog(t));
     }

@@ -14,7 +14,7 @@ class LoopMeter {
     explicit LoopMeter(const ports::Clock& clock) : clock_(clock) {}
 
     void begin_pass(uint16_t phase_ms) {
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         if (began_) {
             const uint64_t gap_ms = (now_us - pass_began_us_) / 1000;
             if (gap_ms > window_.worst_gap_ms) {
@@ -29,9 +29,9 @@ class LoopMeter {
 
     template <class Work>
     void timed(uint8_t service, Work&& work) {
-        const uint64_t began_us = clock_.micros();
+        const uint64_t began_us = clock_.microseconds();
         work();
-        const uint64_t took_us = clock_.micros() - began_us;
+        const uint64_t took_us = clock_.microseconds() - began_us;
         if (took_us > worst_tick_us_) {
             worst_tick_us_ = took_us;
             window_.worst_service = service;
@@ -39,7 +39,7 @@ class LoopMeter {
     }
 
     void end_pass() {
-        const uint64_t took_us = clock_.micros() - pass_began_us_;
+        const uint64_t took_us = clock_.microseconds() - pass_began_us_;
         window_.passes++;
         busy_us_ += took_us;
         if (took_us > window_.worst_pass_us) {

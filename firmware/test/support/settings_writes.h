@@ -12,7 +12,7 @@ namespace skyblip::settings_writes {
 // One service pass at a time, so a case can say which millisecond of the second
 // the write landed on.
 inline void step_one(Rig& rig, uint32_t& now_ms, uint32_t by_ms = 10) {
-    rig.platform.clock().set_millis(now_ms);
+    rig.platform.clock().set_milliseconds(now_ms);
     rig.product.run_pass(now_ms);
     now_ms += by_ms;
 }

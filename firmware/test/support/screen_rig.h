@@ -60,7 +60,7 @@ struct ScreenRig {
 
     // The pass a service loop makes: the world's clock, then the service on it.
     void tick(uint32_t now_ms) {
-        clock.set_millis(now_ms);
+        clock.set_milliseconds(now_ms);
         screen.tick(now_ms);
     }
 

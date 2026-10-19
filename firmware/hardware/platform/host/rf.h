@@ -40,11 +40,11 @@ class Rf : public ports::Rf {
         if (armed_) {
             queued_plan_ = plan;
             queued_bursts_ = ports::RfBursts::of(plan);
-            queued_armed_at_us_ = clock_.micros();
+            queued_armed_at_us_ = clock_.microseconds();
             queued_ = true;
             return Status::Ok;
         }
-        adopt(plan, ports::RfBursts::of(plan), clock_.micros());
+        adopt(plan, ports::RfBursts::of(plan), clock_.microseconds());
         return Status::Ok;
     }
 
@@ -70,7 +70,7 @@ class Rf : public ports::Rf {
     ports::RfSwitching switching() const override { return switching_; }
 
     void service(uint32_t now_ms) {
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         const uint32_t elapsed_ms = now_ms - last_ms_;
         last_ms_ = now_ms;
         radio_.service(elapsed_ms, runtime::kRadioRxSilenceCeilingMs);
@@ -100,8 +100,8 @@ class Rf : public ports::Rf {
 
     bool joins_flying_dwell(const ports::RfPlan& plan) const {
         return plan.tx != nullptr && plan.mode == flying_plan_.mode &&
-               plan.frequency_hz == flying_plan_.frequency_hz && plan.tx_at_us >= clock_.micros() &&
-               plan.tx_at_us < flying_plan_.end_us;
+               plan.frequency_hz == flying_plan_.frequency_hz &&
+               plan.tx_at_us >= clock_.microseconds() && plan.tx_at_us < flying_plan_.end_us;
     }
 
     bool keying() const { return keyed_ > done_; }
@@ -171,7 +171,7 @@ class Rf : public ports::Rf {
         change.to_hz = flying_plan_.frequency_hz;
         change.previous_end_us = last_end_us_;
         change.began_us = now_us;
-        change.ready_us = clock_.micros();
+        change.ready_us = clock_.microseconds();
         change.start_us = flying_plan_.start_us;
         change.armed_ahead = armed_at_us_ < flying_plan_.start_us;
         switching_.note(change);
@@ -206,20 +206,20 @@ class Rf : public ports::Rf {
     void transmit(const ports::RfBurst& burst) {
         keyed_++;
         tx_at_us_ = burst.at_us;
-        staged_at_us_ = clock_.micros();
+        staged_at_us_ = clock_.microseconds();
         (void)radio_.transmit(burst.chips, burst.bytes);
-        keyed_at_us_ = clock_.micros();
+        keyed_at_us_ = clock_.microseconds();
     }
 
     // INFO: fc 15sep26 virtual time stands still in a pass, so the run of reads is the window
     int8_t sample_carrier() {
-        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.dbm;
+        if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
         int8_t window[timing::ChannelLevel::kSamples];
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++)
             window[i] = radio_.instant_rssi_dbm();
-        carrier_.dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
+        carrier_.level_dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
         carrier_.samples++;
-        return carrier_.dbm;
+        return carrier_.level_dbm;
     }
 
     void drain(uint64_t now_us) {

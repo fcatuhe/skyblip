@@ -40,7 +40,8 @@ class IdentityLink {
         open_ = false;
         registering_ = false;
     }
-    // INFO: fc 18oct26 live() holds the deadline, this keeps it after millis() wraps back into it
+    // INFO: fc 18oct26 live() holds the deadline, this keeps it after milliseconds() wraps back
+    // into it
     void tick(uint32_t now_ms) {
         if (open_ && now_ms - opened_ms_ >= kNonceForgetMs) close();
     }

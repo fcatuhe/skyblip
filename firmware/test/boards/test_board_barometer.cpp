@@ -42,7 +42,7 @@ struct Unit {
     }
 
     bool pass(uint32_t t, events::BarometerSample& sample) {
-        platform.clock().set_millis(t);
+        platform.clock().set_milliseconds(t);
         board.poll(state, t);
         return bus.barometer.pop(sample);
     }

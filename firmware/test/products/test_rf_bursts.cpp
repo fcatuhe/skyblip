@@ -57,7 +57,7 @@ struct Executor {
     std::vector<Keyed> fly(uint32_t from_ms, uint32_t to_ms) {
         std::vector<Keyed> keyed;
         for (uint32_t t = from_ms; t <= to_ms; t++) {
-            clock.set_millis(t);
+            clock.set_milliseconds(t);
             rf.service(t);
             uint8_t sent[protocol::kTxPayloadChipBytes];
             uint8_t length = 0;
@@ -83,7 +83,7 @@ struct Executor {
 TEST_CASE("rf: a dwell keys both its bursts in time order, whichever was armed first") {
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
-    executor.clock.set_millis(790);
+    executor.clock.set_milliseconds(790);
     REQUIRE(executor.rf.arm(executor.carrying(executor.name, 1050000)) == Status::Ok);
     REQUIRE(executor.rf.arm(executor.carrying(executor.position, 900000)) == Status::Ok);
 
@@ -108,7 +108,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
     slot0.frequency_hz = timing::kMBand0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 797000;
-    executor.clock.set_millis(400);
+    executor.clock.set_milliseconds(400);
     REQUIRE(executor.rf.arm(slot0) == Status::Ok);
     executor.rf.service(400);
 
@@ -124,7 +124,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
 TEST_CASE("rf: a burst armed twice for its dwell goes on air once") {
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
-    executor.clock.set_millis(790);
+    executor.clock.set_milliseconds(790);
     REQUIRE(executor.rf.arm(executor.carrying(executor.position, 900000)) == Status::Ok);
     REQUIRE(executor.rf.arm(executor.carrying(executor.position, 900000)) == Status::Ok);
 
@@ -137,7 +137,7 @@ TEST_CASE("rf: a dwell that closes on two unfinished bursts reports each lost, b
     Executor executor;
     executor.completes = false;
     REQUIRE(executor.rf.begin() == Status::Ok);
-    executor.clock.set_millis(790);
+    executor.clock.set_milliseconds(790);
     REQUIRE(executor.rf.arm(executor.carrying(executor.position, 900000)) == Status::Ok);
     REQUIRE(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::Ok);
 
@@ -168,7 +168,7 @@ TEST_CASE("rf: a burst stages its lead before its instant, the next once the fir
 TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
-    executor.clock.set_millis(790);
+    executor.clock.set_milliseconds(790);
     REQUIRE(executor.rf.arm(executor.carrying(executor.position, 900000)) == Status::Ok);
     REQUIRE(executor.rf.arm(executor.carrying(executor.name, 1050000)) == Status::Ok);
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);

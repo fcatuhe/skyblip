@@ -439,7 +439,7 @@ TEST_CASE("comms: upload window expires") {
 }
 
 // M. The two windows this service holds, across the 49.7-day wrap of
-// ports::Clock::millis(). A ten-minute upload window that never closes is a device
+// ports::Clock::milliseconds(). A ten-minute upload window that never closes is a device
 // that will take firmware from a phone for seven weeks; a thirty-second prompt
 // that expires the instant it is raised cannot be answered at all. Both are
 // unsigned differences from a stamp guarded by a flag, and this is what says so.

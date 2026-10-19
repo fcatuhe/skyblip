@@ -22,7 +22,7 @@ uint32_t run(platform::host::Platform& platform, Board& board, bus::State& state
              uint32_t for_ms) {
     uint32_t t = from_ms;
     for (; t < from_ms + for_ms; t += runtime::kServicePassCeilingMs) {
-        platform.clock().set_millis(t);
+        platform.clock().set_milliseconds(t);
         board.poll(state, t);
     }
     return t;

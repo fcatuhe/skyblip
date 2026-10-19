@@ -202,7 +202,7 @@ TEST_CASE("shutdown: the hold is readable while it fills up") {
     CHECK(shutdown.held_ms(700) == 0);
 }
 
-// M. The whole sequencer across the 49.7-day wrap of ports::Clock::millis(): the
+// M. The whole sequencer across the 49.7-day wrap of ports::Clock::milliseconds(): the
 // long press, the park, and the settle after the button comes up. It is written as
 // unsigned differences from a stamp guarded by a flag, and this is the case that
 // keeps it that way. What the two failures would be: a press that never reaches

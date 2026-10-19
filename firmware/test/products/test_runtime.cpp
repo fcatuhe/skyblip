@@ -49,8 +49,8 @@ struct Fixture {
 
 TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     struct : ports::Clock {
-        uint32_t millis() const override { return 0; }
-        uint64_t micros() const override { return 0; }
+        uint32_t milliseconds() const override { return 0; }
+        uint64_t microseconds() const override { return 0; }
     } clock;
 
     platform::host::Identity identity{platform::host::Identity::kSerial};
@@ -94,8 +94,8 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
 namespace {
 
 struct SteppedClock : ports::Clock {
-    uint32_t millis() const override { return static_cast<uint32_t>(us / 1000); }
-    uint64_t micros() const override { return us; }
+    uint32_t milliseconds() const override { return static_cast<uint32_t>(us / 1000); }
+    uint64_t microseconds() const override { return us; }
     uint64_t us{0};
 };
 
@@ -146,7 +146,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
         render.cost_us = i == 2 ? 190000 : 2000;
         meter.begin_pass(phases[i]);
         meter.timed(diagnostics::kLoopBoardPoll, [&] { clock.us += 100; });
-        loop.run_pass(clock.millis(), &meter);
+        loop.run_pass(clock.milliseconds(), &meter);
         meter.end_pass();
         clock.us += sleeps_us[i];
     }
@@ -166,8 +166,8 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
 
 TEST_CASE("runtime: setup reports the first failure but still sets up the rest") {
     struct : ports::Clock {
-        uint32_t millis() const override { return 0; }
-        uint64_t micros() const override { return 0; }
+        uint32_t milliseconds() const override { return 0; }
+        uint64_t microseconds() const override { return 0; }
     } clock;
 
     platform::host::Identity identity{platform::host::Identity::kSerial};
@@ -279,8 +279,8 @@ TEST_CASE("watchdog: each task carries its own rope") {
 
 TEST_CASE("watchdog: the loop refuses to feed for a service that is not progressing") {
     struct : ports::Clock {
-        uint32_t millis() const override { return 0; }
-        uint64_t micros() const override { return 0; }
+        uint32_t milliseconds() const override { return 0; }
+        uint64_t microseconds() const override { return 0; }
     } clock;
 
     platform::host::Identity identity{platform::host::Identity::kSerial};
@@ -333,7 +333,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     CHECK(wedged.ticks > 0);
 }
 
-// M. The dog's own arithmetic across the 49.7-day wrap of ports::Clock::millis().
+// M. The dog's own arithmetic across the 49.7-day wrap of ports::Clock::milliseconds().
 // This is the one deadline in the tree whose failure mode is the device biting
 // itself: a silence measured as 4.29 billion milliseconds is every task past every
 // deadline at once, so the loop would stop feeding and the aircraft would lose its

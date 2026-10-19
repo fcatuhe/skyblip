@@ -126,7 +126,7 @@ TEST_CASE("product: a refused press goes dark only once the button has come up")
     bool dark = false;
     uint32_t t = 0;
     for (; t <= go::kRefusalParkCeilingMs + 2000; t += 50) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         dark = dark || rig.product.park_refusal(t);
     }
     CHECK_FALSE(dark);

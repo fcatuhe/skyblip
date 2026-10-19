@@ -57,7 +57,7 @@ bool has(const std::string& haystack, const char* needle) {
 void pass(Rig& rig, Dump& dump, uint32_t& t, uint32_t for_ms) {
     const uint32_t until = t + for_ms;
     for (; t <= until; t += 50) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         dump.step(rig.product, t);
     }
@@ -253,7 +253,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     CHECK(has(console, ("fixes=" + fixes).c_str()));
 }
 
-// M. The whole product, stepped through the instant ports::Clock::millis() turns
+// M. The whole product, stepped through the instant ports::Clock::milliseconds() turns
 // over. Two things are being pinned. One: the collector's own cadences are
 // unsigned differences, so the wrap costs one late dump and nothing else - a
 // refresh cadence that broke here would freeze every number the dump carries
@@ -267,7 +267,7 @@ namespace {
 // is not a comparison that survives the wrap. The wrap is a value, not a wait.
 void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& t, uint32_t for_ms) {
     for (uint32_t stepped = 0; stepped <= for_ms; stepped += 50) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         dump.step(rig.product, t);
         t += 50;

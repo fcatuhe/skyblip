@@ -28,7 +28,7 @@ void arm_power_run(Rig& rig, uint32_t& t) {
 void run_until_parked(Rig& rig, uint32_t& t) {
     const uint32_t deadline = t + 20000;
     while (rig.product.capture().capturing() && t < deadline) {
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         t += 50;
     }

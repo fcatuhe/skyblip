@@ -95,7 +95,7 @@ struct RfBursts {
 
 // INFO: fc 15sep26 a diagnostic the pilot reads, never a gate: core/timing/README.md
 struct RfCarrier {
-    int8_t dbm{0};
+    int8_t level_dbm{0};
     uint32_t samples{0};
 };
 

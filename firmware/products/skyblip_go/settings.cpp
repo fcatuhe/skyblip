@@ -326,7 +326,7 @@ void migrate_v7(const SettingsV7& old, Settings& out) {
 bool callsign_is_typeable(const char* callsign) {
     for (size_t i = 0; i < kCallsignBytes; i++) {
         if (callsign[i] == 0) return true;
-        if (!protocol::is_callsign_char(callsign[i])) return false;
+        if (!protocol::is_callsign_character(callsign[i])) return false;
     }
     return false;
 }

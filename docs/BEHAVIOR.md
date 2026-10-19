@@ -771,7 +771,7 @@ core/timing's durable-write policy, alone: a slot plan, a phase, a clock the cas
 - the retune guards between dwells are not free time
   > The two retune guards, 200..204 and 395..399, are the gaps between dwells. They are also where the next dwell gets armed, so they are refused rather than taken for free time: a write there delays the opening of the dwell that follows.
 - the settle, the bound and the stale view span the 49.7-day wrap
-  > M. The whole policy is unsigned differences from the first and last request, so the 49.7-day wrap of ports::Clock::millis() costs it nothing - but "costs it nothing" is a claim, and this is the case that holds it. A pilot stepping a setting through the wrap instant must not have their change deferred for seven weeks, and a dwell view stamped before the wrap must read as 84 ms old after it rather than as a lifetime.
+  > M. The whole policy is unsigned differences from the first and last request, so the 49.7-day wrap of ports::Clock::milliseconds() costs it nothing - but "costs it nothing" is a claim, and this is the case that holds it. A pilot stepping a setting through the wrap instant must not have their change deferred for seven weeks, and a dwell view stamped before the wrap must read as 84 ms old after it rather than as a lifetime.
 - with no dwell armed there is nothing to wait for
   > A product with no radio fitted has no second to respect.
 
@@ -867,7 +867,7 @@ I, row "Fix age as validity". The bug being pinned: `fix.valid` used to mean "th
   > What support reads. A run of refusals for one cause is one event: "the antenna came off twice", not "the antenna came off four thousand times".
 - the jump gate is drawn where moshe-braner draws it
 - the staleness bound spans the 49.7-day wrap
-  > M. The 3500 ms liveness bound across the 49.7-day wrap of ports::Clock::millis(). The failure this would be: a receiver that is talking perfectly well is declared STALE for the seven weeks after the wrap, so the device stops transmitting and stops logging while its GNSS light says everything is fine.
+  > M. The 3500 ms liveness bound across the 49.7-day wrap of ports::Clock::milliseconds(). The failure this would be: a receiver that is talking perfectly well is declared STALE for the seven weeks after the wrap, so the device stops transmitting and stops logging while its GNSS light says everything is fine.
 
 ### test/core/test_flight.cpp
 
@@ -940,7 +940,7 @@ The flight log's pure half: what a record is on flash, when a session runs, wher
 - the landing record stays the last one while the writer is behind
   > A writer that drains late used to have ground samples queued behind the landing record, so the last record of the file said the session was still open and a tablet listed the flight as unclosed.
 - the record cadence spans the 49.7-day wrap
-  > M. The record cadence across the 49.7-day wrap of ports::Clock::millis(). A flight log that stops sampling for seven weeks is a flight log with a hole in it that no badge claim survives, and the sampled_ flag beside the stamp is what keeps zero from meaning "never sampled" at the one instant the counter produces it.
+  > M. The record cadence across the 49.7-day wrap of ports::Clock::milliseconds(). A flight log that stops sampling for seven weeks is a flight log with a hole in it that no badge claim survives, and the sampled_ flag beside the stamp is what keeps zero from meaning "never sampled" at the one instant the counter produces it.
 
 ### test/core/test_flight_timer.cpp
 
@@ -1457,7 +1457,7 @@ The road from running to SYSTEM OFF: what starts a shutdown, and the order the r
 - the pad on its own switches nothing off
   > A cheek, a raindrop or a bag rests on the pad: it may never switch anything off.
 - the press, the park and the settle span the 49.7-day wrap
-  > M. The whole sequencer across the 49.7-day wrap of ports::Clock::millis(): the long press, the park, and the settle after the button comes up. It is written as unsigned differences from a stamp guarded by a flag, and this is the case that keeps it that way. What the two failures would be: a press that never reaches two seconds, so the device cannot be switched off at all until the counter comes round; or a park that expires the instant it starts, so the rails go while the panel is still refreshing.
+  > M. The whole sequencer across the 49.7-day wrap of ports::Clock::milliseconds(): the long press, the park, and the settle after the button comes up. It is written as unsigned differences from a stamp guarded by a flag, and this is the case that keeps it that way. What the two failures would be: a press that never reaches two seconds, so the device cannot be switched off at all until the counter comes round; or a park that expires the instant it starts, so the rails go while the panel is still refreshing.
 - the wake pin waits for the button to come up
 
 ### test/core/test_slip.cpp
@@ -1594,7 +1594,7 @@ The table is finite and the sky is not, so every entry that arrives asks which o
   > A ground station relays every aircraft it heard, and it heard us. Own-ship on the radar is a permanent collision with the aircraft the device is bolted to.
 - overflow drops oldest non-threat, keeps active alarms
 - the age-out is a difference, whichever side of the wrap the stamps fell
-  > M. Two different clocks meet in this layer and only one of them wraps at 49.7 days. The table ages targets out on a SECONDS base (GNSS UTC when there is a fix, boot seconds when there is not) and the alarm tracker holds its own deadlines on ports::Clock::millis(). Both are unsigned differences, and these are the cases that keep them that way: a target must not be forgotten because the counter turned over, and a contact must not go unannounced for seven weeks.
+  > M. Two different clocks meet in this layer and only one of them wraps at 49.7 days. The table ages targets out on a SECONDS base (GNSS UTC when there is a fix, boot seconds when there is not) and the alarm tracker holds its own deadlines on ports::Clock::milliseconds(). Both are unsigned differences, and these are the cases that keep them that way: a target must not be forgotten because the counter turned over, and a contact must not go unannounced for seven weeks.
 - the direct hold is the alarm layer's patience with a contact
   > The hold is core/traffic/alarm.h's own freshness rule wearing a different unit. If one moves, the other has to, and this is what says so.
 - the plot, the annunciator and the formation lose an aircraft together
@@ -2815,8 +2815,8 @@ Activation end to end on the running product: silent until the server signs it a
 - an activated unit refuses challenge, register and unlock off the ground
   > An activated unit transmits, so it owes every identity command the ground gate the others obey.
 - an activated unit's register prompt is cancelled at take-off
-- an expired nonce stays dead when millis() wraps back into its window
-  > 2^32 ms after a challenge, millis() is inside the window again: the sweep must have closed it.
+- an expired nonce stays dead when milliseconds() wraps back into its window
+  > 2^32 ms after a challenge, milliseconds() is inside the window again: the sweep must have closed it.
 - an identity page that will not take the code is refused as flash
 - an unactivated unit confirms its register prompt whatever the flight state
   > A bench indoors has no fix, and an unactivated unit is silent: no ground gate is owed.
@@ -2938,7 +2938,7 @@ The commands that take the device out of service, each behind a confirmation on 
   > The press is the whole authorisation, so the glass names what it authorises.
 - the update question names the image state and the versions of the attempt
 - the upload and confirmation windows span the 49.7-day wrap
-  > M. The two windows this service holds, across the 49.7-day wrap of ports::Clock::millis(). A ten-minute upload window that never closes is a device that will take firmware from a phone for seven weeks; a thirty-second prompt that expires the instant it is raised cannot be answered at all. Both are unsigned differences from a stamp guarded by a flag, and this is what says so.
+  > M. The two windows this service holds, across the 49.7-day wrap of ports::Clock::milliseconds(). A ten-minute upload window that never closes is a device that will take firmware from a phone for seven weeks; a thirty-second prompt that expires the instant it is raised cannot be answered at all. Both are unsigned differences from a stamp guarded by a flag, and this is what says so.
 - upload window expires
 
 ### test/products/test_comms_report.cpp
@@ -3571,7 +3571,7 @@ What a pilot's tablet actually receives from a running skyBlip Go.  The tree for
 - PFLAU's TX field is the transmitter's own gate, so a silent device admits it
   > The TX field is what an app shows as transmitting, and a device can hear all and say nothing.
 - a paired tablet keeps hearing the device across the 49.7-day wrap
-  > M. The pass cadence across the 49.7-day wrap of ports::Clock::millis(). The service defers a pass while a burst is armed and otherwise redraws every second, both of them measured as differences from the last pass, and the flag beside the stamp is what keeps a zero from meaning "never passed". If it were an instant comparison, a paired tablet would go quiet for seven weeks with a device that is tracking perfectly well behind it - and $PFLAU going quiet is what XCSoar reads as the device having failed.
+  > M. The pass cadence across the 49.7-day wrap of ports::Clock::milliseconds(). The service defers a pass while a burst is armed and otherwise redraws every second, both of them measured as differences from the last pass, and the flag beside the stamp is what keeps a zero from meaning "never passed". If it were an instant comparison, a paired tablet would go quiet for seven weeks with a device that is tracking perfectly well behind it - and $PFLAU going quiet is what XCSoar reads as the device having failed.
 - a pass longer than the link's share reaches a tablet at the BLE minimum whole
   > The notify share ended each pass at four 20-byte frames: no $PFLAA reached a 20-byte tablet.
 - a product that does not declare the companion link says nothing on it
@@ -3837,12 +3837,12 @@ Own-ship on the running product: vertical speed from the barometer or from GNSS,
   > B3. The slot map is specified against the PPS edge, and the transmit plan is armed from it. An edge rebuilt from the millisecond phase is up to a millisecond late on a 5 ms guard.
 - the first fix is announced once, then own-ship settles before it flies
 - the free-running dwell phase steps forward through the 49.7-day wrap
-  > M. Where the radio believes it is inside the second, across the 49.7-day wrap of ports::Clock::millis(). With PPS locked the phase is measured from the latched edge, which is a 64-bit microsecond figure and cannot wrap in the life of the device. Without it the phase used to be now_ms % 1000, and that is not a phase at all: 2^32 ms is 4294967.296 seconds, so at the wrap the free-running second stepped 705 ms BACKWARDS and the dwell map was armed out of order for a second - with the anchor already lost, which is the worst moment to add a fault. Both branches read micros() now.  The clock is driven in microseconds here because that is what the silicon does: now_ms is the low 32 bits of the same uptime, so millis() wraps underneath a micros() that keeps counting.
+  > M. Where the radio believes it is inside the second, across the 49.7-day wrap of ports::Clock::milliseconds(). With PPS locked the phase is measured from the latched edge, which is a 64-bit microsecond figure and cannot wrap in the life of the device. Without it the phase used to be now_ms % 1000, and that is not a phase at all: 2^32 ms is 4294967.296 seconds, so at the wrap the free-running second stepped 705 ms BACKWARDS and the dwell map was armed out of order for a second - with the anchor already lost, which is the worst moment to add a fault. Both branches read microseconds() now.  The clock is driven in microseconds here because that is what the silicon does: now_ms is the low 32 bits of the same uptime, so milliseconds() wraps underneath a microseconds() that keeps counting.
 - the glass reads the climb damped, the air reads it as measured
 - the height a 3D fix returns with after a 2D spell is not a climb
   > The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
 - vertical speed is measured across the 49.7-day wrap
-  > M. Vertical speed and turn rate are both differences over a window kept on ports::Clock::millis(), and both keep the instant they last sampled at in a uint32_t whose zero is biased away rather than flagged (ownship.cpp: a stamp of zero would mean "no reference yet", and the counter produces exactly one zero per wrap). The windows themselves are unsigned differences, so this is what a climb through the wrap instant looks like: a climb, measured over its window, not a 4.29-billion-millisecond interval that reads as no climb at all.
+  > M. Vertical speed and turn rate are both differences over a window kept on ports::Clock::milliseconds(), and both keep the instant they last sampled at in a uint32_t whose zero is biased away rather than flagged (ownship.cpp: a stamp of zero would mean "no reference yet", and the counter produces exactly one zero per wrap). The windows themselves are unsigned differences, so this is what a climb through the wrap instant looks like: a climb, measured over its window, not a 4.29-billion-millisecond interval that reads as no climb at all.
 - with neither a fix nor a barometer the climb is not valid
 - with no barometer, vertical speed comes from GNSS
 - with no fix the bus says how far the receiver has got
@@ -4036,7 +4036,7 @@ What own-ship puts on air: the rate, the window, the channel, the callsign secon
   > F5. A cold receiver's first solutions walk, and the flight state we derive from ground speed decides the transmit rate, so transmitting through that window publishes a track nobody flew. gnss::FirstFix has held the answer since it was written; until now nothing asked it.
 - on the ground the transmit rate drops to 0.1 Hz
 - own-ship keeps transmitting across the 49.7-day wrap
-  > M. The whole transmit chain stepped through the instant ports::Clock::millis() turns over: the first-fix settling window, the fix-age gate, the once-a-second rate rule, the channel alternation and the rolling duty-cycle hour.  The wrap is a value, not a wait: the clock starts 25 seconds short of it.
+  > M. The whole transmit chain stepped through the instant ports::Clock::milliseconds() turns over: the first-fix settling window, the fix-age gate, the once-a-second rate rule, the channel alternation and the rolling duty-cycle hour.  The wrap is a value, not a wait: the clock starts 25 seconds short of it.
 - own-ship transmits once a second, inside its window, alternating channel
 - the burst is dated when it leaves, and carries the position from then
   > F3. The burst leaves in the direct slot, 450 to 1000 ms into the second, and the ADS-L TimeStamp resolves to a quarter of a second. Encoding the fix's own second left every transmission claiming quarter zero - an instant 450 ms or more before the burst existed - while carrying a position from a third instant. This pins the pair together: the quarter the frame claims is the quarter it went on air in.
@@ -4066,7 +4066,7 @@ The loop is what every shell drives, so setup failure reporting and tick order a
 - a task that stops checking in stops the feed and is named
 - each task carries its own rope
 - silence is a difference, so the wrap is not a stall
-  > M. The dog's own arithmetic across the 49.7-day wrap of ports::Clock::millis(). This is the one deadline in the tree whose failure mode is the device biting itself: a silence measured as 4.29 billion milliseconds is every task past every deadline at once, so the loop would stop feeding and the aircraft would lose its tracker in flight, once every seven weeks, for no reason at all.
+  > M. The dog's own arithmetic across the 49.7-day wrap of ports::Clock::milliseconds(). This is the one deadline in the tree whose failure mode is the device biting itself: a silence measured as 4.29 billion milliseconds is every task past every deadline at once, so the loop would stop feeding and the aircraft would lose its tracker in flight, once every seven weeks, for no reason at all.
 - the dog is fed while every task is inside its deadline
 - the loop refuses to feed for a service that is not progressing
 

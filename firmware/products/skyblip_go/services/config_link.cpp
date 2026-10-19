@@ -58,7 +58,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
 // INFO: fc 18oct26 before the link advertises at all: the name says whether the unit is activated
 void ConfigLinkService::load_identity() {
     unit_.load();
-    publish_identity(context_.roles.clock.millis());
+    publish_identity(context_.roles.clock.milliseconds());
 }
 
 void ConfigLinkService::publish_identity(uint32_t now_ms) {
@@ -98,7 +98,7 @@ void ConfigLinkService::place_unlock(uint32_t now_ms) {
     }
     if (!unlock_writes_.pending()) unlock_writes_.request(now_ms);
     const timing::DurableWriteVerdict verdict = unlock_writes_.decide(
-        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
@@ -210,7 +210,7 @@ void ConfigLinkService::drain_settings(uint32_t now_ms) {
     take_request(now_ms);
     // INFO: fc 03oct26 the stall starts at the clock, not where the pass began
     const timing::DurableWriteVerdict verdict = writes_.decide(
-        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
     if (verdict != timing::DurableWriteVerdict::Idle) record_write(verdict, now_ms);
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)

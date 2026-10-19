@@ -45,7 +45,7 @@ struct RefusingExecutor {
 
     void run(uint32_t until_ms) {
         for (uint32_t t = 0; t <= until_ms; t += kPassMs) {
-            clock.set_millis(t);
+            clock.set_milliseconds(t);
             radio.tick(t);
         }
     }

@@ -32,7 +32,7 @@ bool link_action(const std::vector<diagnostics::Record>& records, diagnostics::L
 void receiver_seconds(Rig& rig, uint32_t& t, uint32_t seconds) {
     for (uint32_t elapsed = 0; elapsed < seconds * 1000; elapsed += 50) {
         rig.platform.chips().gnss.tick(t);
-        rig.platform.clock().set_millis(t);
+        rig.platform.clock().set_milliseconds(t);
         rig.product.run_pass(t);
         t += 50;
     }

@@ -654,8 +654,10 @@ TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is
     }
 }
 
-// 2^32 ms after a challenge, millis() is inside the window again: the sweep must have closed it.
-TEST_CASE("activation: an expired nonce stays dead when millis() wraps back into its window") {
+// 2^32 ms after a challenge, milliseconds() is inside the window again: the sweep must have closed
+// it.
+TEST_CASE(
+    "activation: an expired nonce stays dead when milliseconds() wraps back into its window") {
     constexpr uint32_t kChallengeMs = 0xFFFF0000u;
     Desk d;
     d.config.tick(kChallengeMs);

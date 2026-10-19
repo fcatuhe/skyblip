@@ -110,8 +110,8 @@ void ScreenService::record_screen(uint32_t now_ms) {
     context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
-uint32_t ScreenService::micros_since(uint64_t began_us) const {
-    const uint64_t took_us = context_.roles.clock.micros() - began_us;
+uint32_t ScreenService::microseconds_since(uint64_t began_us) const {
+    const uint64_t took_us = context_.roles.clock.microseconds() - began_us;
     return took_us > 0xFFFFFFFFu ? 0xFFFFFFFFu : static_cast<uint32_t>(took_us);
 }
 
@@ -349,17 +349,17 @@ void ScreenService::tick(uint32_t now_ms) {
 
     last_render_ms_ = now_ms;
     dirty_ = false;
-    const uint64_t render_began_us = context_.roles.clock.micros();
+    const uint64_t render_began_us = context_.roles.clock.microseconds();
     render(now_ms);
-    render_us_ = micros_since(render_began_us);
+    render_us_ = microseconds_since(render_began_us);
 
     const bool changed = !presented_once_ || change_ == Change::Wiped ||
                          std::memcmp(framebuffer_.data(), presented_.data(), Glass::kBytes) != 0;
     if (!changed) return;
 
-    const uint64_t present_began_us = context_.roles.clock.micros();
+    const uint64_t present_began_us = context_.roles.clock.microseconds();
     context_.roles.display.present(framebuffer_, ports::Refresh::Partial, now_ms);
-    present_us_ = micros_since(present_began_us);
+    present_us_ = microseconds_since(present_began_us);
     count_refresh(ports::Refresh::Partial);
     note_presented(now_ms);
     flash_alarm();

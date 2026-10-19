@@ -94,25 +94,25 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
     flight::LogEvent pass{};
     pass.kind = flight::LogKind::Encounter;
     pass.utc_s = kBaseUtcS + 300;
-    pass.contact = glider(0xDD1234, 180, 1);
-    pass.contact.heard_s = 95;
-    pass.contact.in_formation = true;
+    pass.target = glider(0xDD1234, 180, 1);
+    pass.target.heard_s = 95;
+    pass.target.in_formation = true;
     flight::encode_log_event(pass, kBaseUtcS, raw);
     REQUIRE(flight::decode_log_event(raw, kBaseUtcS, back) == Status::Ok);
     CHECK(back.kind == flight::LogKind::Encounter);
     CHECK(back.utc_s == kBaseUtcS + 300);
-    CHECK(back.contact.address == 0xDD1234);
-    CHECK(back.contact.address_mapping_table == 6);
-    CHECK(back.contact.aircraft_category == 2);
-    CHECK(back.contact.distance_m == 180);
-    CHECK(back.contact.relative_altitude_m == -42);
-    CHECK(back.contact.relative_bearing_deg == 315);
-    CHECK(back.contact.closing_mps == 12);
-    CHECK(back.contact.alarm == 1);
-    CHECK(back.contact.rssi_dbm == -88);
-    CHECK(back.contact.heard_s == 95);
-    CHECK(back.contact.in_formation);
-    CHECK_FALSE(back.contact.dismissed);
+    CHECK(back.target.address == 0xDD1234);
+    CHECK(back.target.address_mapping_table == 6);
+    CHECK(back.target.aircraft_category == 2);
+    CHECK(back.target.distance_m == 180);
+    CHECK(back.target.relative_altitude_m == -42);
+    CHECK(back.target.relative_bearing_deg == 315);
+    CHECK(back.target.closing_mps == 12);
+    CHECK(back.target.alarm == 1);
+    CHECK(back.target.rssi_dbm == -88);
+    CHECK(back.target.heard_s == 95);
+    CHECK(back.target.in_formation);
+    CHECK_FALSE(back.target.dismissed);
 }
 
 TEST_CASE("log event: a fix is never read as an event, nor an event as a fix") {
@@ -130,7 +130,7 @@ TEST_CASE("log event: a fix is never read as an event, nor an event as a fix") {
     flight::LogEvent alarm{};
     alarm.kind = flight::LogKind::Alarm;
     alarm.utc_s = kBaseUtcS + 5;
-    alarm.contact = glider(0x3F0001, 900, 1);
+    alarm.target = glider(0x3F0001, 900, 1);
     flight::encode_log_event(alarm, kBaseUtcS, raw);
     CHECK(flight::decode_log_record(raw, kBaseUtcS, record) == Status::Unsupported);
     CHECK(flight::decode_log_event(raw, kBaseUtcS, event) == Status::Ok);
@@ -163,8 +163,8 @@ TEST_CASE("log event: the bytes the host decoder is pinned to") {
     flight::LogEvent pass{};
     pass.kind = flight::LogKind::Encounter;
     pass.utc_s = kBaseUtcS + 300;
-    pass.contact = glider(0xDD1234, 180, 1);
-    pass.contact.heard_s = 95;
+    pass.target = glider(0xDD1234, 180, 1);
+    pass.target.heard_s = 95;
     flight::encode_log_event(pass, kBaseUtcS, raw);
     CHECK(hex(raw) == "2c013412dd06b400d6ff3b010c0001028300a8005f002eb1");
 }
@@ -205,13 +205,13 @@ TEST_CASE("log events: an alarm is written when a contact's level changes, risin
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Alarm);
     CHECK(out[0].utc_s == kBaseUtcS + 2);
-    CHECK(out[0].contact.alarm == 1);
-    CHECK(out[0].contact.distance_m == 2500);
+    CHECK(out[0].target.alarm == 1);
+    CHECK(out[0].target.distance_m == 2500);
 
     events.heard(3, glider(0xABCDEF, 3500, 0), kBaseUtcS + 9);
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Alarm);
-    CHECK(out[0].contact.alarm == 0);
+    CHECK(out[0].target.alarm == 0);
 }
 
 TEST_CASE("log events: an encounter is written once, at its closest, when the aircraft leaves") {
@@ -228,9 +228,9 @@ TEST_CASE("log events: an encounter is written once, at its closest, when the ai
     REQUIRE(drain(events, out, 8) == 1);
     CHECK(out[0].kind == flight::LogKind::Encounter);
     CHECK(out[0].utc_s == kBaseUtcS + 13);
-    CHECK(out[0].contact.distance_m == 350);
-    CHECK(out[0].contact.alarm == 1);
-    CHECK(out[0].contact.heard_s == 5);
+    CHECK(out[0].target.distance_m == 350);
+    CHECK(out[0].target.alarm == 1);
+    CHECK(out[0].target.heard_s == 5);
     events.vacant(7);
     CHECK(drain(events, out, 8) == 0);
 }
@@ -243,10 +243,10 @@ TEST_CASE("log events: a slot handed to another aircraft ends the first one's en
     events.heard(0, glider(0x000AAA, 1500, 0), kBaseUtcS);
     events.heard(0, glider(0x000BBB, 2500, 0), kBaseUtcS + 1);
     REQUIRE(drain(events, out, 8) == 1);
-    CHECK(out[0].contact.address == 0x000AAA);
+    CHECK(out[0].target.address == 0x000AAA);
     events.vacant(0);
     REQUIRE(drain(events, out, 8) == 1);
-    CHECK(out[0].contact.address == 0x000BBB);
+    CHECK(out[0].target.address == 0x000BBB);
 }
 
 TEST_CASE("log events: a landing ends every encounter still running, after what was queued") {

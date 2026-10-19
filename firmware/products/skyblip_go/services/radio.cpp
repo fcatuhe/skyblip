@@ -10,7 +10,7 @@ namespace skyblip::go {
 
 Status RadioService::setup() {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Rf)) return Status::Down;
-    pass_us_ = context_.roles.clock.micros();
+    pass_us_ = context_.roles.clock.microseconds();
     if (!identified()) return Status::Ok;
     arm_dwell(timing::Scheduler::plan(phase_ms(), context_.state.clock), dwell_origin_us(), 0,
               Role::Current);
@@ -21,7 +21,7 @@ Status RadioService::setup() {
 // the edge between them is the executor's to keep, to the microsecond, on its own
 // thread. A pass of this loop only ever notices an edge after it went by.
 void RadioService::tick(uint32_t now_ms) {
-    pass_us_ = context_.roles.clock.micros();
+    pass_us_ = context_.roles.clock.microseconds();
     if (!identified()) return;
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
@@ -62,8 +62,8 @@ bool RadioService::identified() {
 // queued on the next dwell is not in flight yet.
 void RadioService::publish_dwell(uint32_t now_ms) {
     timing::DwellPhase& dwell = context_.state.rf.dwell;
-    // INFO: fc 03oct26 one clock read: millis() is the low 32 bits of micros() / 1000
-    const uint64_t read_us = context_.roles.clock.micros();
+    // INFO: fc 03oct26 one clock read: milliseconds() is the low 32 bits of microseconds() / 1000
+    const uint64_t read_us = context_.roles.clock.microseconds();
     dwell.at_ms = static_cast<uint32_t>(read_us / 1000);
     dwell.phase_ms = phase_at(read_us);
     dwell.armed = current_dwell_.mode != ports::RfMode::Idle;
@@ -73,7 +73,7 @@ void RadioService::publish_dwell(uint32_t now_ms) {
 }
 
 void RadioService::accrue_armed() {
-    const uint64_t now_us = context_.roles.clock.micros();
+    const uint64_t now_us = context_.roles.clock.microseconds();
     armed_us_ += armed_between(current_dwell_, accounted_us_, now_us);
     if (next_armed_) armed_us_ += armed_between(next_dwell_, accounted_us_, now_us);
     accounted_us_ = now_us;
@@ -87,9 +87,9 @@ uint64_t RadioService::armed_between(const Armed& dwell, uint64_t from_us, uint6
 
 // INFO: fc 27sep26 one read per pass: a plan and a promotion read apart straddled the 800 edge
 //
-// Both branches read micros(), which is 64-bit and does not wrap. The free-running
+// Both branches read microseconds(), which is 64-bit and does not wrap. The free-running
 // fallback used to be now_ms % 1000, and that is not a phase: 2^32 ms is not a
-// whole number of seconds, so at the 49.7-day wrap of ports::Clock::millis() the
+// whole number of seconds, so at the 49.7-day wrap of ports::Clock::milliseconds() the
 // second stepped 705 ms BACKWARDS and one dwell was armed out of order. It only
 // showed with the anchor already lost, which is the worst time to add a fault.
 int RadioService::phase_ms() const { return phase_at(pass_us_); }
@@ -142,7 +142,7 @@ void RadioService::take_carrier_samples() {
     const ports::RfCarrier carrier = context_.roles.rf.carrier();
     if (carrier.samples == seen_carrier_samples_) return;
     seen_carrier_samples_ = carrier.samples;
-    noise_floor_.sample(carrier.dbm);
+    noise_floor_.sample(carrier.level_dbm);
 }
 
 // The top of the second phase_ms() counts from, to the microsecond: the latched
@@ -263,7 +263,7 @@ bool RadioService::owes(const Armed& dwell, const timing::SlotPlan& plan, int64_
         if (dwell.carries(payload)) return false;
         const timing::Transmitter::Attempt payload_attempt = attempt(plan, now_ms, payload);
         return payload_attempt.go &&
-               instant_us(payload_attempt, origin_us) > context_.roles.clock.micros();
+               instant_us(payload_attempt, origin_us) > context_.roles.clock.microseconds();
     });
 }
 
@@ -309,7 +309,7 @@ int32_t RadioService::fix_lag_ms() const {
 void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms,
                              Role role) {
     const int phase = phase_ms();
-    const uint64_t now_us = context_.roles.clock.micros();
+    const uint64_t now_us = context_.roles.clock.microseconds();
 
     ports::RfPlan plan{};
     plan.mode = mode_for(slot);
@@ -476,7 +476,7 @@ void RadioService::log_refusal(radio::Verdict outcome, const timing::SlotPlan& s
                                uint32_t now_ms) {
     const bus::State& state = context_.state;
     const events::Stamp stamp =
-        events::stamp_of(context_.roles.clock.micros(), state.clock.pps_edge_us,
+        events::stamp_of(context_.roles.clock.microseconds(), state.clock.pps_edge_us,
                          state.clock.pps_locked, state.traffic_now_s(now_ms));
     radio::Entry entry{};
     entry.verdict = outcome;
