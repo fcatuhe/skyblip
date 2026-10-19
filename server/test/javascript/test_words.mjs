@@ -20,7 +20,7 @@ const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
 // INFO: fc 18oct26 the refusals of schemas/activation.v1.schema.json, and what the prompt machinery answers any prompt
 const UNIT_REFUSALS = [
-  'incomplete', 'no_session', 'bad_signature', 'small_mtu', 'flash', 'in_flight', 'low_power', 'expired', 'cancelled', 'claimed', 'unknown_cmd',
+  'keyless', 'no_session', 'bad_signature', 'small_mtu', 'flash', 'in_flight', 'low_power', 'expired', 'cancelled', 'claimed', 'unknown_cmd',
 ];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',

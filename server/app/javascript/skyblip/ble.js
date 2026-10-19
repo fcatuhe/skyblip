@@ -38,7 +38,9 @@ async function serviceOrNull(server, uuid) {
 }
 
 export function addressOf(config) {
-  return 'addr' in config ? config.addr.toString(16).toUpperCase().padStart(6, '0') : null;
+  // TODO: fc 19oct26 firmware before #126 says addr: drop the fallback once every unit runs the identity release
+  const address = config.address ?? config.addr;
+  return address === undefined ? null : address.toString(16).toUpperCase().padStart(6, '0');
 }
 
 export function hasWebBluetooth() {

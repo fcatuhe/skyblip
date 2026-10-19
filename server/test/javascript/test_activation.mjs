@@ -41,8 +41,8 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const server = keyPair(VECTORS.server_seed);
   const unit = keyPair(VECTORS.unit_seed);
   const fields = { deviceId: VECTORS.device_id, publicKey: VECTORS.unit_public_key, unitNonce: VECTORS.unit_nonce,
-    serverNonce: VECTORS.server_nonce, serverKey: VECTORS.server_key, release: VECTORS.release, version: VECTORS.version, serial: VECTORS.serial };
-  assert.equal(server.id, VECTORS.server_key);
+    serverNonce: VECTORS.server_nonce, serverKeyId: VECTORS.server_key_id, release: VECTORS.release, version: VECTORS.version, serial: VECTORS.serial };
+  assert.equal(server.id, VECTORS.server_key_id);
   assert.equal(server.sign(messages.register(fields)), VECTORS.register_signature);
   assert.equal(unit.sign(messages.registration(fields)), VECTORS.registration_signature);
   assert.equal(server.sign(messages.unlock(fields)), VECTORS.unlock_signature);
@@ -53,7 +53,8 @@ test('a unit not yet activated reports no address', async () => {
   const { activator } = await connected();
   assert.equal(activator.state.phase, 'ready');
   assert.equal(activator.state.address, null);
-  assert.equal(addressOf({ addr: 0x00012a }), '00012A');
+  assert.equal(addressOf({ address: 0x00012a }), '00012A');
+  assert.equal(addressOf({ addr: 0x5b5afe }), '5B5AFE', 'firmware before #126 says addr');
 });
 
 test('activating asks the server, then the glass, then stores the unlock code and reads the address back', async () => {
@@ -145,9 +146,9 @@ test('a refusal from the server before the glass asks leaves the unit untouched'
 });
 
 test('the unit refuses what it cannot do, and the page says why', async () => {
-  const incomplete = await connected({ complete: false });
-  incomplete.activator.activate();
-  assert.equal((await incomplete.until(settled)).notice.key, 'incomplete');
+  const keyless = await connected({ keyed: false });
+  keyless.activator.activate();
+  assert.equal((await keyless.until(settled)).notice.key, 'keyless');
 
   const narrow = await connected({ mtu: 185 });
   narrow.activator.activate();

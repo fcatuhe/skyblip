@@ -1,7 +1,7 @@
 {
   "server_seed": "5d23819c3300d895cd6ca317789db5cba92adaf4ef7b5fbe00cbc8d946d243d5",
   "server_public_key": "5882d8d6e982e1e7179ddec54a2c04c79b5b216fb2c28bf846d0fbe820b55a0f",
-  "server_key": "890026b1",
+  "server_key_id": "890026b1",
   "unit_seed": "d9560a4dbc21c575c38423a674e6276d5333dce82ecb0f3a79c53283bb00245f",
   "unit_public_key": "541d18aec807b33cbcc9fa643eb0020fc5b0ce05cb6e1d03ac7188a598088833",
   "device_id": "8f3a1c2e9b7d4f60",

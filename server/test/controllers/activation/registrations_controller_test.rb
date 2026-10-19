@@ -2,7 +2,7 @@ require "test_helper"
 
 class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key: "890026b1")
+    @challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key_id: "890026b1")
   end
 
   test "binds a new unit and answers its serial with an unlock code for this unit and this session" do
@@ -19,7 +19,7 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
 
     key = Unit.find_by!(device_id: vectors["device_id"]).active_key
-    assert_equal [ vectors["version"], "890026b1", false, "203.0.113.8" ], [ key.version, key.server_key, key.release, key.ip_address ]
+    assert_equal [ vectors["version"], "890026b1", false, "203.0.113.8" ], [ key.version, key.server_key_id, key.release, key.ip_address ]
   end
 
   test "refuses a registration that does not say whether it is a release" do

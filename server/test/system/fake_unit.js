@@ -21,19 +21,19 @@
     vectors: null,
     nonce: null,
     serverNonce: null,
-    addr: null,
+    address: null,
     listeners: [],
     commands: [],
 
     async press() {
-      const { device_id, unit_public_key, unit_seed, server_key, release, version } = this.vectors;
+      const { device_id, unit_public_key, unit_seed, server_key_id, release, version } = this.vectors;
       const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
       const message = join(
-        label('registration'), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key), Uint8Array.of(release ? 1 : 0),
+        label('registration'), bytes(device_id, unit_public_key, this.nonce, this.serverNonce, server_key_id), Uint8Array.of(release ? 1 : 0),
         encoder.encode(version),
       );
       const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
-      this.reply({ cmd: 'registration', device_id, public_key: unit_public_key, version, server_key, release, signature });
+      this.reply({ cmd: 'registration', device_id, public_key: unit_public_key, version, server_key_id, release, signature });
     },
 
     async verifies(signature, message) {
@@ -49,10 +49,10 @@
     async write(raw) {
       const { cmd, ...fields } = JSON.parse(decoder.decode(raw));
       this.commands.push(cmd);
-      if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...(this.addr === null ? {} : { addr: this.addr }), addr_table: 58 });
+      if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 });
       if (cmd === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
-        return this.reply({ cmd: 'challenge', nonce: this.nonce, server_key: this.vectors.server_key });
+        return this.reply({ cmd: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
       }
       if (cmd === 'register') {
         if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce, fields.server_nonce))))) {
@@ -66,7 +66,7 @@
         const message = join(label('unlock'), bytes(this.vectors.device_id, this.vectors.unit_public_key), serial, bytes(this.nonce));
         this.nonce = null;
         if (!(await this.verifies(fields.signature, message))) return this.reply({ ack: false, reason: 'bad_signature' });
-        this.addr = fields.serial;
+        this.address = fields.serial;
         return this.reply({ ack: true, reason: 'unlock' });
       }
       return this.reply({ ack: false, reason: 'unknown_cmd' });
