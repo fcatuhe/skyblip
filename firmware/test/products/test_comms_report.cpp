@@ -60,7 +60,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     // "config" reply answers, and the reset reason never changes inside a session:
     // carrying any of them here is what used to crowd the one unsolicited frame.
     CHECK(body.find("D-KXYZ") == std::string::npos);
-    CHECK(body.find("\"addr\"") == std::string::npos);
+    CHECK(body.find("\"address\"") == std::string::npos);
     CHECK(body.find("\"reset\"") == std::string::npos);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     CHECK(link.last().bytes.find("D-KXYZ") != std::string::npos);

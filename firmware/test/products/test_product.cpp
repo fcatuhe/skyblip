@@ -96,8 +96,8 @@ TEST_CASE("product: the identity a tablet is told is the unlock code's, not a st
     rig.run(100, 200);
 
     const std::string reply = rig.last_on(events::Endpoint::Config);
-    CHECK(reply.find("\"addr\":23294") != std::string::npos);  // 0x005AFE, the host's serial
-    CHECK(reply.find("\"addr_table\":58") != std::string::npos);
+    CHECK(reply.find("\"address\":23294") != std::string::npos);  // 0x005AFE, the host's serial
+    CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
 }
 
 TEST_CASE("product: the board reads the cell and the gauge publishes it") {

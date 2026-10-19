@@ -427,8 +427,8 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out) {
 
 void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address) {
     w.kv_int("version", s.version);
-    if (address) w.kv_int("addr", static_cast<long>(*address));
-    w.kv_int("addr_table", settings::kAddressMappingTable);
+    if (address) w.kv_int("address", static_cast<long>(*address));
+    w.kv_int("address_mapping_table", settings::kAddressMappingTable);
     write_json_settings(w, s);
 }
 

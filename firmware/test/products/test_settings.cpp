@@ -59,7 +59,7 @@ TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships
     CHECK(validate(no_such_plot) == Status::OutOfRange);
 }
 
-// The "config" reply has nine bytes left at its worst case, and neither key fits in them.
+// The radar's range and plot are set on the glass, and the config reply carries what a phone sets.
 TEST_CASE(
     "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
     Settings s = defaults();
@@ -143,19 +143,19 @@ TEST_CASE("address: the table is a constant, not a field anything can hold") {
     const int n = to_json(defaults(), address_of(0x0042), buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
+    CHECK(r.get_int("address", v));
     CHECK(v == 0x000042);
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }
 
-TEST_CASE("address: a unit with no serial reports no addr, and still its table") {
+TEST_CASE("address: a unit with no serial reports no address, and still its table") {
     char buf[256];
     const int n = to_json(defaults(), std::nullopt, buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK_FALSE(r.has("addr"));
-    CHECK(r.get_int("addr_table", v));
+    CHECK_FALSE(r.has("address"));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }
 
@@ -272,8 +272,8 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     CHECK(int(s.freq_trim_e1_ppm) == -25);
 
     // Write-only over the link, for the same reason battery_offset_mv is: the
-    // "get" reply is one frame at comms::kSmallestSupportedPayload with nine
-    // bytes of headroom, and "freq_trim_e1_ppm" alone is nineteen.
+    // "get" reply is one frame at comms::kSmallestSupportedPayload with 29
+    // bytes of headroom, too few for both trims.
     char buf[256];
     const int n = to_json(s, settings::address_of(0x3456), buf, sizeof(buf));
     CHECK(std::string(buf, static_cast<size_t>(n)).find("freq_trim") == std::string::npos);
@@ -394,7 +394,8 @@ TEST_CASE("settings: a type or a volume is refused before it is narrowed, never 
 
 TEST_CASE("settings: a patch that names an identity changes nothing and refuses nothing") {
     Settings s = defaults();
-    const char* icao = "{\"addr\":14488116,\"addr_table\":5,\"alarm_volume\":1}";  // 0xDD1234
+    const char* icao =
+        "{\"address\":14488116,\"address_mapping_table\":5,\"alarm_volume\":1}";  // 0xDD1234
     CHECK(apply_json(s, icao, static_cast<int>(strlen(icao))) == Status::Ok);
     CHECK(s.alarm_volume == AlarmVolume::Soft);
 
@@ -402,8 +403,8 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     const int n = to_json(s, 0x5B7E57, buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
+    CHECK(r.get_int("address", v));
     CHECK(v == 0x5B7E57);
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }

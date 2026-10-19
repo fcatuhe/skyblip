@@ -69,8 +69,8 @@ struct Settings {
     //
     // Like battery_offset_mv it is accepted on "set" and absent from the "get"
     // reply, for the same reason: that reply is one frame at
-    // core/comms/config.h's kSmallestSupportedPayload and its worst case has nine
-    // bytes left. Unlike the battery trim there is nothing on the device that
+    // core/comms/config.h's kSmallestSupportedPayload and its worst case leaves
+    // 29 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
     // reads the value back, so a bench that sets it has to trust its own record
     // and its spectrum analyser - which is the instrument that had to be there
     // to know the number in the first place.

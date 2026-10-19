@@ -305,9 +305,9 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     const int n = to_json(out, settings::address_of(0x3456), buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
+    CHECK(r.get_int("address", v));
     CHECK(v == 0x003456);  // the unlock code's, not the 0xDD1234 that blob carried
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }
 

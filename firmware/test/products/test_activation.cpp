@@ -139,13 +139,13 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
     CHECK(reads_in(glass, "ACTIVATE 3F2A SKYBLIP", 0, 0, go::kGlassW, go::kGlassH));
 }
 
-// The server's update page reads 'addr' in the reply as activated.
+// The server's update page reads 'address' in the reply as activated.
 TEST_CASE("activation: get leaves addr out until there is one, and keeps addr_table") {
     Bench b;
     b.boot();
     const std::string reply = b.say("{\"cmd\":\"get\"}");
-    CHECK(reply.find("\"addr\"") == std::string::npos);
-    CHECK(reply.find("\"addr_table\":58") != std::string::npos);
+    CHECK(reply.find("\"address\"") == std::string::npos);
+    CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
 }
 
 // The vectors replayed through the product: every frame the unit says is the server's.
@@ -189,7 +189,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its addr and
     b.pass(3000);
 
     CHECK(b.rig.platform.link().advertised == "skyBlip Go+ 00012A");
-    CHECK(b.say("{\"cmd\":\"get\"}").find("\"addr\":298") != std::string::npos);
+    CHECK(b.say("{\"cmd\":\"get\"}").find("\"address\":298") != std::string::npos);
     CHECK(b.rig.product.radio().arm_count() > 0);
     CHECK_FALSE(reads_in(b.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
                          go::kGlassW, go::kGlassH));
