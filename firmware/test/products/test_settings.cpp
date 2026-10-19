@@ -3,9 +3,7 @@
 // or patched by a client sending a value out of range. Each one falls back or
 // refuses whole. A partly applied patch is the outcome none of these allow.
 //
-// The address cases are the other half of the same subject: what the device says
-// it is. A chip id is a serial number, and the space it lands in is shared with
-// every other tracker that mints its identity the same way.
+// The address cases are what the device says it is: the prefix, then the serial the server signed.
 #include <cstring>
 #include <initializer_list>
 #include <string>
@@ -61,12 +59,13 @@ TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships
     CHECK(validate(no_such_plot) == Status::OutOfRange);
 }
 
-// The "config" reply has nine bytes left at its worst case, and neither key fits in them.
+// The radar's range and plot are set on the glass, and the config reply carries what a phone sets.
 TEST_CASE(
     "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
     Settings s = defaults();
     char buf[256];
-    const std::string json(buf, static_cast<size_t>(to_json(s, 0x123456, buf, sizeof(buf))));
+    const std::string json(
+        buf, static_cast<size_t>(to_json(s, settings::address_of(0x3456), buf, sizeof(buf))));
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
@@ -101,7 +100,7 @@ TEST_CASE("settings: wrong version blob is Unsupported (migrate/default)") {
 TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
     Settings s = defaults();
     char buf[256];
-    int n = to_json(s, 0x123456, buf, sizeof(buf));
+    int n = to_json(s, settings::address_of(0x3456), buf, sizeof(buf));
     CHECK(n > 0);
     json::Reader r(buf, n);
     long v;
@@ -129,31 +128,34 @@ TEST_CASE("settings: apply_json rejects out-of-range atomically") {
     CHECK(s.alarm_volume == AlarmVolume::Loud);
 }
 
-// F4. The table says which space the address came from, so no prefix is ours to move.
-TEST_CASE("address: every prefix is left exactly where the chip put it") {
-    for (uint32_t prefix = 0; prefix <= 0xFF; prefix++) {
-        const uint32_t raw = (prefix << 16) | 0xABCD;
-        CHECK(air_address(raw) == raw);
-    }
+// Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
+TEST_CASE("address: the prefix, then the serial the server signed") {
+    CHECK(address_of(0x0000) == 0x000000u);
+    CHECK(address_of(0x012A) == 0x00012Au);
+    CHECK(address_of(0xFFFF) == 0x00FFFFu);
+    CHECK(int(kManufacturerPrefix) == 0x00);
 }
 
-TEST_CASE("address: neither all-zeros nor all-ones goes on the air") {
-    CHECK(air_address(0x000000) == kFallbackAddress);
-    CHECK(air_address(0xFFFFFF) == kFallbackAddress);
-    CHECK(air_address(0xFF000000) == kFallbackAddress);  // masked to 24 bits first
-    CHECK(air_address(kFallbackAddress) == kFallbackAddress);
-}
-
-// Issue 2 F.2.2: 0 is privacy and must be re-drawn every start-up, 1 to 4 are reserved.
+// Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
-    CHECK(int(kAddrTableSkyblip) == 58);
+    CHECK(int(kAddressMappingTable) == 58);
     char buf[256];
-    const int n = to_json(defaults(), 0xDD0042, buf, static_cast<int>(sizeof(buf)));
+    const int n = to_json(defaults(), address_of(0x0042), buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
-    CHECK(v == 0xDD0042);  // the chip's number, prefix and all
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address", v));
+    CHECK(v == 0x000042);
+    CHECK(r.get_int("address_mapping_table", v));
+    CHECK(v == 58);
+}
+
+TEST_CASE("address: a unit with no serial reports no address, and still its table") {
+    char buf[256];
+    const int n = to_json(defaults(), std::nullopt, buf, static_cast<int>(sizeof(buf)));
+    json::Reader r(buf, n);
+    long v = 0;
+    CHECK_FALSE(r.has("address"));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }
 
@@ -270,10 +272,10 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     CHECK(int(s.freq_trim_e1_ppm) == -25);
 
     // Write-only over the link, for the same reason battery_offset_mv is: the
-    // "get" reply is one frame at comms::kSmallestSupportedPayload with nine
-    // bytes of headroom, and "freq_trim_e1_ppm" alone is nineteen.
+    // "get" reply is one frame at comms::kSmallestSupportedPayload with 29
+    // bytes of headroom, too few for both trims.
     char buf[256];
-    const int n = to_json(s, 0x123456, buf, sizeof(buf));
+    const int n = to_json(s, settings::address_of(0x3456), buf, sizeof(buf));
     CHECK(std::string(buf, static_cast<size_t>(n)).find("freq_trim") == std::string::npos);
 }
 
@@ -289,7 +291,7 @@ TEST_CASE("settings: a blob from a version this firmware never wrote is refused"
 TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     Settings s = defaults();
     char buf[256];
-    const int n = to_json(s, 0x123456, buf, sizeof(buf));
+    const int n = to_json(s, settings::address_of(0x3456), buf, sizeof(buf));
     const std::string json(buf, static_cast<size_t>(n));
     // Removed with their fields: no reader outside this module, and a page that
     // accepts a setting nothing reads is worse than one that does not offer it.
@@ -392,7 +394,8 @@ TEST_CASE("settings: a type or a volume is refused before it is narrowed, never 
 
 TEST_CASE("settings: a patch that names an identity changes nothing and refuses nothing") {
     Settings s = defaults();
-    const char* icao = "{\"addr\":14488116,\"addr_table\":5,\"alarm_volume\":1}";  // 0xDD1234
+    const char* icao =
+        "{\"address\":14488116,\"address_mapping_table\":5,\"alarm_volume\":1}";  // 0xDD1234
     CHECK(apply_json(s, icao, static_cast<int>(strlen(icao))) == Status::Ok);
     CHECK(s.alarm_volume == AlarmVolume::Soft);
 
@@ -400,8 +403,8 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     const int n = to_json(s, 0x5B7E57, buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
+    CHECK(r.get_int("address", v));
     CHECK(v == 0x5B7E57);
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }

@@ -3,6 +3,7 @@
 #include "doctest/doctest.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/die_temperature.h"
+#include "hardware/platform/host/identity.h"
 #include "ports/null.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/settings.h"
@@ -13,11 +14,12 @@ namespace {
 
 struct Rig {
     platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     platform::host::DieTemperature sensor{};
     ports::Roles roles{clock,   null.rf,        null.link,        null.display,
                        null.kv, null.log_flash, null.annunciator, null.dfu,
-                       sensor,  null.indicator, null.gnss};
+                       sensor,  null.indicator, null.gnss,        identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};

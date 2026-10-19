@@ -140,9 +140,12 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK((p.address() & 0xFFFFu) == 0x1234u);
     CHECK(p.address_and_type() == ((9u << 24) | 0xAB1234u));
 
-    CHECK(int(settings::kAddrTableSkyblip) == 58);
-    CHECK(traffic_packet(0x123456u, settings::kAddrTableSkyblip).addr_table() == 58);
-    CHECK(traffic_packet(0x123456u, settings::kAddrTableSkyblip).address() == 0x123456u);
+    CHECK(int(settings::kAddressMappingTable) == 58);
+    const protocol::AdslPacket ours =
+        traffic_packet(settings::address_of(0x1234), settings::kAddressMappingTable);
+    CHECK(ours.addr_table() == 58);
+    CHECK((ours.address() >> 16) == settings::kManufacturerPrefix);
+    CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }
 
 // TODO: fc 19sep26 no ICAO entry: the identity is the chip's, and no patch moves it
@@ -160,16 +163,16 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
 // The clause asks a device to disallow an inconsistent configuration: this one cannot make any.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
     go::Settings s = go::defaults();
-    const char* icao = "{\"addr\":3934737,\"addr_table\":5}";  // 0x3C0A11 under ICAO
+    const char* icao = "{\"address\":3934737,\"address_mapping_table\":5}";  // 0x3C0A11 under ICAO
     CHECK(go::apply_json(s, icao, static_cast<int>(strlen(icao))) == Status::Ok);
 
     char buf[256];
     const int n = go::to_json(s, 0x123456, buf, static_cast<int>(sizeof(buf)));
     json::Reader r(buf, n);
     long v = 0;
-    CHECK(r.get_int("addr", v));
+    CHECK(r.get_int("address", v));
     CHECK(v == 0x123456);
-    CHECK(r.get_int("addr_table", v));
+    CHECK(r.get_int("address_mapping_table", v));
     CHECK(v == 58);
 }
 

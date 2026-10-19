@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "core/events/link.h"
+#include "products/skyblip_go/product_name.h"
 
 namespace skyblip::go {
 
@@ -43,6 +44,8 @@ void ConfigLinkService::tick(uint32_t now_ms) {
         config_.on_rx(frame);
         record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
     }
+    place_unlock(now_ms);
+    publish_identity(now_ms);
 
     config_.tick(now_ms);
     drain_settings(now_ms);
@@ -50,6 +53,57 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     confirm_image_once_healthy();
     watch_claim(now_ms);
     watch_link_drops(now_ms);
+}
+
+// INFO: fc 18oct26 before the link advertises at all: the name says whether the unit is activated
+void ConfigLinkService::load_identity() {
+    unit_.load();
+    publish_identity(context_.roles.clock.millis());
+}
+
+void ConfigLinkService::publish_identity(uint32_t now_ms) {
+    const identity::Activation activation = unit_.activation();
+    if (!identity_published_ || activation != context_.state.activation) {
+        identity_published_ = true;
+        advertised_ = false;
+        advertise_asked_ = false;
+        context_.state.activation = activation;
+    }
+    if (!advertised_) advertise(now_ms);
+}
+
+// INFO: fc 18oct26 asked again until the link takes it, a unit nobody sees serves no one
+void ConfigLinkService::advertise(uint32_t now_ms) {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Link)) return;
+    if (advertise_asked_ && now_ms - advertise_asked_ms_ < kAdvertiseRetryPeriodMs) return;
+    advertise_asked_ = true;
+    advertise_asked_ms_ = now_ms;
+    char name[identity::kBluetoothNameCap + 1];
+    identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
+                             context_.state.activation);
+    advertised_ = context_.roles.link.advertise_as(name) == Status::Ok;
+}
+
+// INFO: fc 18oct26 the code was verified and its nonce spent on receipt; only the write waits here
+void ConfigLinkService::place_unlock(uint32_t now_ms) {
+    if (!config_.unlock_waiting()) {
+        unlock_writes_ = timing::DurableWriteWindow{};
+        return;
+    }
+    // INFO: fc 18oct26 never forced onto a low cell: settle_unlock drops it, the pilot asks again
+    if (!config_.settings_writable()) {
+        config_.settle_unlock();
+        unlock_writes_ = timing::DurableWriteWindow{};
+        return;
+    }
+    if (!unlock_writes_.pending()) unlock_writes_.request(now_ms);
+    const timing::DurableWriteVerdict verdict = unlock_writes_.decide(
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.millis());
+    if (verdict != timing::DurableWriteVerdict::Place &&
+        verdict != timing::DurableWriteVerdict::Forced)
+        return;
+    config_.settle_unlock();
+    unlock_writes_.placed(now_ms, verdict == timing::DurableWriteVerdict::Forced);
 }
 
 void ConfigLinkService::publish_upload_verdict() {

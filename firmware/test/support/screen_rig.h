@@ -7,6 +7,7 @@
 #include "hardware/parts/ssd1681/model.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
 #include "hardware/platform/host/clock.h"
+#include "hardware/platform/host/identity.h"
 #include "ports/null.h"
 #include "products/skyblip_go/services/alarm.h"
 #include "products/skyblip_go/services/capture.h"
@@ -25,16 +26,17 @@ struct Rig {
     parts::Ssd1681 epd{chip, chip, chip, chip.dc, chip.rst, chip.busy};
     platform::host::Clock clock;
     ports::NullRoles null;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::Roles roles{
         clock,          null.rf,        null.link,        epd,  // epd fills Display
         null.kv,        null.log_flash, null.annunciator, null.dfu, null.die_temperature,
-        null.indicator, null.gnss};
+        null.indicator, null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, roles.device_addr};
+    go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{null.link, store};
     go::BootSnapshot self_test{};
     go::AlarmService alarm_service{context, settings};
@@ -47,6 +49,7 @@ struct Rig {
     Rig() {
         chip.attach_clock(clock);
         roles.capabilities = ports::Capability::Display;
+        state.activation.serial = platform::host::Identity::kSerial;
         // With a fix the radar page draws rings and the range label, so churn()
         // below produces real pixel changes.
         state.own.fix_valid = true;

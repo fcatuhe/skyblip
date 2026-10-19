@@ -152,13 +152,13 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 }
 
 void ScreenService::tap(uint32_t now_ms) {
-    if (answering() || receiving_) return;
+    if (answering() || receiving_ || !context_.state.activation.activated()) return;
     if (step_capture_focus()) return;
     page_forward(now_ms);
 }
 
 void ScreenService::long_touch() {
-    if (answering() || receiving_) return;
+    if (answering() || receiving_ || !context_.state.activation.activated()) return;
     if (alarm_stands()) {
         alarm_.dismiss();
         return;
@@ -178,6 +178,8 @@ void ScreenService::press(uint32_t now_ms) {
         if (settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
         return;
     }
+    // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
+    if (!context_.state.activation.activated()) return;
     if (editor_.active()) {
         editor_.button(now_ms);
         return;

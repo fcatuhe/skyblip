@@ -292,21 +292,29 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     CHECK(p.climb_e8() == 16);
 }
 
-// F4. The address goes on the air here, so this is the last place a stored blob can be caught.
-TEST_CASE("adsl: an address goes out as configured, unless no decoder could read it") {
+TEST_CASE("adsl: an address goes out as it was handed, in whichever table") {
     skyblip::model::OwnState own{};
     own.fix_valid = true;
 
     for (uint8_t table : {uint8_t(0), uint8_t(5), uint8_t(6), uint8_t(7), uint8_t(9)}) {
         AdslPacket p{};
-        from_own(p, own, 0xDD1234, table, 4);
+        CHECK(from_own(p, own, 0xDD1234u, table, 4));
         CHECK(p.address() == 0xDD1234u);
         CHECK(p.addr_table() == table);
     }
+}
 
-    AdslPacket unusable{};
-    from_own(unusable, own, 0x000000, 7, 4);
-    CHECK(unusable.address() == skyblip::settings::kFallbackAddress);
+// Issue #126: the third of three refusals, so a caller past the other two still sends nothing.
+TEST_CASE("adsl: without an address the encoder builds no frame, position or name") {
+    skyblip::model::OwnState own{};
+    own.fix_valid = true;
+
+    AdslPacket untouched{};
+    untouched.init();
+    const AdslPacket before = untouched;
+    CHECK_FALSE(from_own(untouched, own, std::nullopt, 58, 4));
+    CHECK_FALSE(from_own_callsign(untouched, std::nullopt, 58, "D-KXYZ"));
+    CHECK(std::memcmp(&untouched, &before, sizeof(AdslPacket)) == 0);
 }
 
 // Every field of the Integrity block has a zero code meaning "unknown / no fix"

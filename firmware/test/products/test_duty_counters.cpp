@@ -5,6 +5,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/radio.h"
 #include "simulator/simulator.h"
 #include "test/support/product_rig.h"
@@ -24,11 +25,12 @@ constexpr uint32_t kDwellMsPerSecond =
 // The radio service alone over ports::NullRf, which answers Down to every plan.
 struct RefusingExecutor {
     platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.kv,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss};
+        null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};
@@ -36,7 +38,10 @@ struct RefusingExecutor {
     go::Settings settings{};
     go::RadioService radio{context, settings};
 
-    RefusingExecutor() { roles.capabilities = ports::Capability::Rf; }
+    RefusingExecutor() {
+        roles.capabilities = ports::Capability::Rf;
+        state.activation.serial = 0x7E57;
+    }
 
     void run(uint32_t until_ms) {
         for (uint32_t t = 0; t <= until_ms; t += kPassMs) {

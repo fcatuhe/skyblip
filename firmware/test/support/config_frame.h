@@ -6,10 +6,11 @@
 #include <cstring>
 
 #include "core/events/link.h"
+#include "core/identity/activation.h"
 
 namespace skyblip {
 
-inline constexpr uint32_t kTestAddr = 0x123456;
+inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
 inline events::RxFrame frame(const char* json) {
     events::RxFrame f{};
     f.session_id = 1;

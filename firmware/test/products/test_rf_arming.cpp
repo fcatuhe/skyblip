@@ -11,6 +11,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
@@ -200,6 +201,7 @@ struct Armings {
     } rf{};
     bus::Bus bus{};
     bus::State state{};
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null{};
     ports::Roles roles{clock,
                        rf,
@@ -212,14 +214,17 @@ struct Armings {
                        null.die_temperature,
                        null.indicator,
                        null.gnss,
-                       ports::Capability::Rf,
-                       0x5B7E57};
+                       identity,
+                       ports::Capability::Rf};
     diag::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio{context, settings};
 
-    Armings() { rf.clock = &clock; }
+    Armings() {
+        rf.clock = &clock;
+        state.activation.serial = 0x7E57;
+    }
 
     static constexpr uint64_t kEdgeUs = 30000000;
 

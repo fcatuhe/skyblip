@@ -4,13 +4,17 @@
 
 #include "core/flight/state.h"
 #include "core/model/ownship.h"
+#include "core/settings/address.h"
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
 
 namespace skyblip::timing {
 
-inline bool own_ship_transmits(const model::OwnState& own, const ClockState& clock) {
-    return own.fix_valid && own.utc_valid && own.tx_settled && clock.utc_valid && clock.pps_locked;
+// INFO: fc 18oct26 no address, no burst: only a serial the server signed may go on the air
+inline bool own_ship_transmits(const model::OwnState& own, const ClockState& clock,
+                               const settings::AirAddress& address) {
+    return address && own.fix_valid && own.utc_valid && own.tx_settled && clock.utc_valid &&
+           clock.pps_locked;
 }
 
 class Transmitter {

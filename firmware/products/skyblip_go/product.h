@@ -26,12 +26,13 @@
 namespace skyblip::go {
 
 // What this product cannot fly without, and what it can lose and keep flying.
-constexpr ports::Capabilities kRequired = ports::Capability::Rf | ports::Capability::Gnss;
+constexpr ports::Capabilities kRequired =
+    ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Baro;
 constexpr ports::Capabilities kOptional =
-    ports::Capability::Display | ports::Capability::Baro | ports::Capability::Buzzer |
-    ports::Capability::Haptic | ports::Capability::Link | ports::Capability::Storage |
-    ports::Capability::Dfu | ports::Capability::Contacts | ports::Capability::Battery |
-    ports::Capability::Indicator | ports::Capability::Inclinometer;
+    ports::Capability::Display | ports::Capability::Buzzer | ports::Capability::Haptic |
+    ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
+    ports::Capability::Contacts | ports::Capability::Battery | ports::Capability::Indicator |
+    ports::Capability::Inclinometer;
 
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
@@ -45,8 +46,8 @@ struct BootPartSpec {
 constexpr BootPartSpec kBootParts[] = {
     {"RADIO", ports::Capability::Rf, "SX1262"},
     {"GNSS", ports::Capability::Gnss, "L76K"},
-    {"PANEL", ports::Capability::Display, "SSD1681"},
     {"BARO", ports::Capability::Baro, "BME280"},
+    {"PANEL", ports::Capability::Display, "SSD1681"},
     {"IMU", ports::Capability::Inclinometer, "BHI260AP"},
     {"TEMP", ports::Capability::DieTemperature, "NRF52840"},
     {"BATTERY", ports::Capability::Battery, "DIVIDER"},
@@ -99,9 +100,10 @@ class Product {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
         }
-
         flyable_ = board == Status::Ok &&
                    ports::missing(board_.capabilities(), kRequired) == ports::Capability::None;
+        // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
+        if (flyable_) config_.load_identity();
 
         draw_self_test();
         if (!flyable_) roles_.display.present(boot_fb_, ports::Refresh::Full, 0);
@@ -308,7 +310,7 @@ class Product {
             boot_parts_[i].detail = boot_detail(spec);
         }
 
-        boot_snapshot_.device_addr = roles_.device_addr;
+        boot_snapshot_.address = state_.activation.address();
         boot_snapshot_.reset_reason = power::to_string(reset_reason_);
         boot_snapshot_.went_dark_flat = went_dark_flat_;
         boot_snapshot_.parts = boot_parts_;

@@ -31,7 +31,8 @@ using namespace skyblip::comms;
 
 namespace {
 
-constexpr uint32_t kWidestAddr = 16777214;  // eight digits, the most air_address can emit
+// INFO: fc 18oct26 serial 0xFFFF under prefix 0x00 is 65535, the widest address an unlock can hand
+const identity::Activation kWidestAddr{0xFFFF, 0xFFFF};
 
 // The widest a unit can make its own answers: every field at the longest value
 // it is allowed to hold, so these cases measure the worst case rather than a
@@ -150,6 +151,8 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayload));
+    // 153 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
+    CHECK(body.size() == 153);
     CHECK(cs.link_drops() == 0);
 
     // The settings used to ride as a JSON string inside the reply, and the
@@ -157,8 +160,8 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     CHECK(body.find('\\') == std::string::npos);
     CHECK(body.find("\"cmd\":\"config\"") != std::string::npos);
     CHECK(body.find("\"version\":1") != std::string::npos);
-    CHECK(body.find("\"addr\":16777214") != std::string::npos);
-    CHECK(body.find("\"addr_table\":58") != std::string::npos);
+    CHECK(body.find("\"address\":65535") != std::string::npos);
+    CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);

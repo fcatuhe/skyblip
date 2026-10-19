@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/boot.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/page.h"
 
 namespace skyblip::go {
 
@@ -50,7 +51,7 @@ void draw_boot(ui::Canvas& fb, const BootSnapshot& s) {
     // Identity and why the device is running at all, on one line: the pair a
     // bench log needs before anything below it means something.
     n = fmt_string(buf, "ID ");
-    n += fmt_hex(buf + n, s.device_addr, 6);
+    n += fmt_air_address(buf + n, s.address);
     buf[n] = 0;
     fb.draw_text(kLeft, kBootHeaderY, buf, true, 1);
     right_aligned(fb, kRight, kBootHeaderY, s.reset_reason);

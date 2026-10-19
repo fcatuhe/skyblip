@@ -327,9 +327,11 @@ bool is_callsign_char(char c) {
     return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-void from_own_callsign(AdslPacket& p, uint32_t addr, uint8_t addr_table, const char* callsign) {
+bool from_own_callsign(AdslPacket& p, settings::AirAddress addr, uint8_t addr_table,
+                       const char* callsign) {
+    if (!addr) return false;
     p.init(AdslPacket::kTypeOgnDiagnostics);
-    p.set_address(settings::air_address(addr));
+    p.set_address(*addr & settings::kAddressMask);
     p.set_addr_table(addr_table);
     p.set_info_header(AdslPacket::kTelemTypeInfo, AdslPacket::kInfoTypeRegistration);
 
@@ -340,6 +342,7 @@ void from_own_callsign(AdslPacket& p, uint32_t addr, uint8_t addr_table, const c
         n++;
     }
     while (n < AdslPacket::kInfoMsgBytes) msg[n++] = 0;
+    return true;
 }
 
 int callsign_of(const AdslPacket& p, char* out, int cap) {
@@ -357,15 +360,16 @@ int callsign_of(const AdslPacket& p, char* out, int cap) {
     return n;
 }
 
-void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t addr_table,
-              uint8_t aircraft_cat) {
-    from_own(p, own, addr, addr_table, aircraft_cat, BurstInstant{own.utc, 0, 0});
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
+              uint8_t addr_table, uint8_t aircraft_cat) {
+    return from_own(p, own, addr, addr_table, aircraft_cat, BurstInstant{own.utc, 0, 0});
 }
 
-void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t addr_table,
-              uint8_t aircraft_cat, const BurstInstant& at) {
+bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress addr,
+              uint8_t addr_table, uint8_t aircraft_cat, const BurstInstant& at) {
+    if (!addr) return false;
     p.init(AdslPacket::kTypePosition);
-    p.set_address(settings::air_address(addr));
+    p.set_address(*addr & settings::kAddressMask);
     p.set_addr_table(addr_table);
 
     // The burst leaves later than the fix was solved, so the position goes
@@ -410,6 +414,7 @@ void from_own(AdslPacket& p, const model::OwnState& own, uint32_t addr, uint8_t 
         p.set_climb_invalid();
 
     p.set_track_c9(to_cordic9(CentiDegrees(where.track_cdeg)).v);
+    return true;
 }
 
 }

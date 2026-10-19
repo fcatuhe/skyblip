@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_SCREEN_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_SCREEN_H
 
+#include <optional>
+
 #include "core/comms/config.h"
 #include "core/diag/payload.h"
 #include "core/flight/state.h"
@@ -11,6 +13,7 @@
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/input/gesture.h"
+#include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/capture.h"
 #include "products/skyblip_go/pages/confirm.h"
@@ -158,6 +161,7 @@ class ScreenService : public runtime::Service {
     bool showing_radar() const { return mode_ == Mode::Page && page_ == Page::Radar; }
 
     bool answering() const { return prompt_ != comms::Pending::None; }
+    bool unit_activated();
 
     bool alarm_takes_glass() const {
         return context_.state.alarm_live >= kAlarmTakesGlass && !diagnostics_on_glass();
@@ -205,6 +209,7 @@ class ScreenService : public runtime::Service {
     bool prompt_on_glass_{false};
     bool capture_on_glass_{false};
     bool receiving_{false};
+    std::optional<bool> activated_{};
     uint32_t receiving_since_ms_{0};
 
     Glass fb_{};

@@ -164,18 +164,35 @@ TEST_CASE("product: every capability the product flies on or without has a row")
     }
 }
 
-// The row already says NOT FITTED, and "00" would read as a part at address zero.
+// A footprint with nothing behind it is a real answer, and the row names what was looked for.
+TEST_CASE("product: an optional part nothing answered reads NOT FITTED and names the part") {
+    constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
+        static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
+        ~static_cast<uint32_t>(ports::Capability::Haptic));
+    Rig rig{kNoHaptic};
+    REQUIRE(rig.setup() == Status::Ok);
+
+    for (int i = 0; i < go::kBootPartCount; i++) {
+        if (go::kBootParts[i].capability != ports::Capability::Haptic) continue;
+        const go::BootPart& row = rig.product.boot_rows()[i];
+        CHECK(row.state == go::PartState::Absent);
+        REQUIRE(row.detail != nullptr);
+        CHECK(std::string(row.detail) == "DRV2605");
+    }
+}
+
+// The row already says FAIL, and "00" would read as a part at address zero.
 TEST_CASE("product: a footprint nothing answered names the part and prints no address") {
     constexpr ports::Capabilities kNoBaro = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Baro));
     Rig rig{kNoBaro};
-    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.setup() == Status::Down);
 
     for (int i = 0; i < go::kBootPartCount; i++) {
         if (go::kBootParts[i].capability != ports::Capability::Baro) continue;
         const go::BootPart& row = rig.product.boot_rows()[i];
-        CHECK(row.state == go::PartState::Absent);
+        CHECK(row.state == go::PartState::Fail);
         REQUIRE(row.detail != nullptr);
         CHECK(std::string(row.detail) == "BME280");
     }

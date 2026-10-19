@@ -82,7 +82,7 @@ class Side:
         self.records = [r for run in self.runs for r in run.records if not r.get("error")]
 
     def configs(self):
-        return {(r["addr"], r["tx_power_dbm"], r["pa_rated_dbm"])
+        return {(r["address"], r["tx_power_dbm"], r["pa_rated_dbm"])
                 for r in self.records if r["type"] == "config"}
 
     def bursts(self):
@@ -106,7 +106,7 @@ def transmitter(side):
     addr, power_dbm, pa_rated_dbm = configs.pop()
     if pa_rated_dbm == 0:
         return None, "%s predates the transmitter fields of its config record" % side.path
-    return {"addr": addr, "power_dbm": power_dbm, "pa_rated_dbm": pa_rated_dbm,
+    return {"address": addr, "power_dbm": power_dbm, "pa_rated_dbm": pa_rated_dbm,
             "conducted_dbm": min(power_dbm, pa_rated_dbm)}, None
 
 
@@ -114,8 +114,8 @@ def pair(sender, sender_addr, receiver):
     """Each transmission of the sender with the reception of it at the receiver, if any."""
     sent = [r for r in sender.bursts() if r["verdict"] == "transmitted"]
     heard = [r for r in receiver.bursts()
-             if r["verdict"] not in OWN_VERDICTS and r["addr_valid"] and r["rssi_valid"]
-             and r["addr"] == sender_addr]
+             if r["verdict"] not in OWN_VERDICTS and r["address_valid"] and r["rssi_valid"]
+             and r["address"] == sender_addr]
     dated_heard = sorted((instant(r), r) for r in heard if instant(r) is not None)
     at = [moment for moment, _ in dated_heard]
     taken = set()
@@ -195,7 +195,7 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
 def gnss_distance(receiver, sender_addr):
     """The median distance the receiver's own traffic picture put the sender at, and how many."""
     metres = [r["dist_m"] for r in receiver.records
-              if r["type"] == "traffic" and r["addr"] == sender_addr and r["position_valid"]]
+              if r["type"] == "traffic" and r["address"] == sender_addr and r["position_valid"]]
     return (statistics.median(metres), len(metres)) if metres else (None, 0)
 
 
@@ -272,10 +272,10 @@ def report(a, b, distance_m, height_m, out):
     if why or why_b:
         out(why or why_b)
         return False
-    out("link  a 0x%06X %s   b 0x%06X %s" % (tx_a["addr"], a.antenna, tx_b["addr"], b.antenna))
+    out("link  a 0x%06X %s   b 0x%06X %s" % (tx_a["address"], a.antenna, tx_b["address"], b.antenna))
     out("      %g m apart, both %g m up" % (distance_m, height_m))
     for receiver, sender, sender_tx in ((b, a, tx_a), (a, b, tx_b)):
-        metres, count = gnss_distance(receiver, sender_tx["addr"])
+        metres, count = gnss_distance(receiver, sender_tx["address"])
         if count:
             out("      %s puts %s %g m away, the median of %d traffic records"
                 % (receiver.label, sender.label, metres, count))
@@ -284,7 +284,7 @@ def report(a, b, distance_m, height_m, out):
 
     results = []
     for name, sender, receiver, sender_tx in (("a -> b", a, b, tx_a), ("b -> a", b, a, tx_b)):
-        link = pair(sender, sender_tx["addr"], receiver)
+        link = pair(sender, sender_tx["address"], receiver)
         result = direction(link, sender_tx, ANTENNAS[sender.antenna], ANTENNAS[receiver.antenna],
                            distance_m, height_m)
         direction_lines(name, link, sender_tx, result, distance_m, height_m, out)

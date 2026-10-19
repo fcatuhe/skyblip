@@ -12,9 +12,8 @@
 
 #include "core/comms/link_sessions.h"
 #include "core/events/link.h"
-#include "core/settings/address.h"
+#include "core/identity/activation.h"
 #include "core/util/fifo.h"
-#include "core/util/format.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
@@ -195,15 +194,26 @@ const struct bt_data adv[] = {
 };
 
 // INFO: fc 18sep26 Both UUIDs fill the 31-byte advert, so the name rides the scan response.
-char g_name[CONFIG_BT_DEVICE_NAME_MAX] = CONFIG_BT_DEVICE_NAME;
-struct bt_data sd[] = {BT_DATA(BT_DATA_NAME_COMPLETE, g_name, sizeof(CONFIG_BT_DEVICE_NAME) - 1)};
+static_assert(identity::kBluetoothNameCap < CONFIG_BT_DEVICE_NAME_MAX,
+              "every name the product builds fits the GAP name and its terminator");
+struct ScanResponse {
+    char name[CONFIG_BT_DEVICE_NAME_MAX];
+    struct bt_data sd[1];
+};
+// INFO: fc 18oct26 two, swapped whole: the loop renames while the host may resume
+ScanResponse g_responses[2];
+atomic_ptr_t g_response = ATOMIC_PTR_INIT(nullptr);
+atomic_t g_advertising = ATOMIC_INIT(0);
 
 int start_advertising() {
-    return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, adv, ARRAY_SIZE(adv), sd, ARRAY_SIZE(sd));
+    const ScanResponse* response = static_cast<const ScanResponse*>(atomic_ptr_get(&g_response));
+    return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, adv, ARRAY_SIZE(adv), response->sd,
+                           ARRAY_SIZE(response->sd));
 }
 
 // INFO: fc 18sep26 -ENOMEM is every connection object in use, and recycled() is what undoes it.
 void resume_advertising() {
+    if (atomic_get(&g_advertising) == 0) return;
     const int rc = start_advertising();
     if (rc != 0 && rc != -ENOMEM && rc != -EALREADY)
         LOG_ERR("bluetooth: advertising did not resume (%d), the device is invisible", rc);
@@ -258,23 +268,40 @@ struct bt_gatt_cb gatt_cbs = {.att_mtu_updated = mtu_updated};
 
 }  // namespace
 
-Status Link::begin(uint32_t device_addr) {
+// INFO: fc 18oct26 enabled here, advertised once the product names the unit (advertise_as)
+Status Link::begin() {
     if (bt_enable(nullptr) != 0) return Status::Down;
     bt_gatt_cb_register(&gatt_cbs);
-    name_after(device_addr);
-    if (start_advertising() != 0) return Status::Down;
     return Status::Ok;
 }
 
-// INFO: fc 18sep26 The address the panel shows, so a phone's list says what the glass says.
-void Link::name_after(uint32_t device_addr) {
-    const uint32_t shown = settings::air_address(device_addr);
-    int n = fmt_string(g_name, CONFIG_BT_DEVICE_NAME);
-    n += fmt_string(g_name + n, " ");
-    n += fmt_hex(g_name + n, shown, 6);
-    g_name[n] = 0;
-    sd[0].data_len = static_cast<uint8_t>(n);
-    bt_set_name(g_name);
+// INFO: fc 18oct26 a live rename: a link connected now sees the new name at its next scan
+Status Link::advertise_as(const char* name) {
+    ScanResponse* next =
+        atomic_ptr_get(&g_response) == &g_responses[0] ? &g_responses[1] : &g_responses[0];
+    size_t n = 0;
+    while (name[n] != 0 && n < sizeof(next->name) - 1) {
+        next->name[n] = name[n];
+        n++;
+    }
+    next->name[n] = 0;
+    next->sd[0].type = BT_DATA_NAME_COMPLETE;
+    next->sd[0].data_len = static_cast<uint8_t>(n);
+    next->sd[0].data = reinterpret_cast<const uint8_t*>(next->name);
+    atomic_ptr_set(&g_response, next);
+
+    const int named = bt_set_name(next->name);
+    if (named != 0) LOG_ERR("bluetooth: the GAP name was not set (%d)", named);
+    int rc = 0;
+    if (atomic_get(&g_advertising) == 0) {
+        rc = start_advertising();
+        if (rc == 0) atomic_set(&g_advertising, 1);
+    } else {
+        rc = bt_le_adv_update_data(adv, ARRAY_SIZE(adv), next->sd, ARRAY_SIZE(next->sd));
+        if (rc == -EAGAIN) rc = 0;
+    }
+    if (rc != 0) LOG_ERR("bluetooth: advertising as %s failed (%d)", next->name, rc);
+    return named == 0 && rc == 0 ? Status::Ok : Status::Down;
 }
 
 // INFO: fc 28sep26 the central starts the MTU exchange, an Android app that never asks stays at 23

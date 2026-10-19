@@ -97,15 +97,16 @@ struct SmallPoolRig {
     platform::host::Link link;
     platform::host::FlashRegion flash;
     ports::NullRoles null;
-    ports::Roles roles{clock,    null.rf,          link,     null.display,         null.kv,
-                       flash,    null.annunciator, null.dfu, null.die_temperature, null.indicator,
-                       null.gnss};
+    platform::host::Identity identity{platform::host::Identity::kSerial};
+    ports::Roles roles{clock,     null.rf,          link,     null.display,         null.kv,
+                       flash,     null.annunciator, null.dfu, null.die_temperature, null.indicator,
+                       null.gnss, identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, roles.device_addr};
+    go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{link, store};
     go::RecordPool pool{context};
     go::RecordStore flights{pool, store::SectorOwner::Flights};

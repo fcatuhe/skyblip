@@ -24,12 +24,12 @@ TEST_CASE("product: setup brings the radio to Rx and reports its capabilities") 
 }
 
 TEST_CASE("product: a missing optional capability is degraded, a required one refuses") {
-    constexpr ports::Capabilities kNoBaro = static_cast<ports::Capabilities>(
+    constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
-        ~static_cast<uint32_t>(ports::Capability::Baro));
-    Rig degraded(kNoBaro);
+        ~static_cast<uint32_t>(ports::Capability::Haptic));
+    Rig degraded(kNoHaptic);
     CHECK(degraded.setup() == Status::Ok);
-    CHECK(degraded.product.degraded() == ports::Capability::Baro);
+    CHECK(degraded.product.degraded() == ports::Capability::Haptic);
 
     constexpr ports::Capabilities kNoGnss = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
@@ -86,8 +86,8 @@ TEST_CASE("product: persisted settings are loaded on setup") {
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 }
 
-// The board is the only thing that knows the address, and only this wiring carries it to a phone.
-TEST_CASE("product: the identity a tablet is told is the board's, not a stored setting's") {
+// Issue #126: the unlock code is the only thing that knows the address, and this wiring carries it.
+TEST_CASE("product: the identity a tablet is told is the unlock code's, not a stored setting's") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link(1);
@@ -96,8 +96,8 @@ TEST_CASE("product: the identity a tablet is told is the board's, not a stored s
     rig.run(100, 200);
 
     const std::string reply = rig.last_on(events::Endpoint::Config);
-    CHECK(reply.find("\"addr\":5987070") != std::string::npos);  // 0x5B5AFE, the host board's
-    CHECK(reply.find("\"addr_table\":58") != std::string::npos);
+    CHECK(reply.find("\"address\":23294") != std::string::npos);  // 0x005AFE, the host's serial
+    CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
 }
 
 TEST_CASE("product: the board reads the cell and the gauge publishes it") {

@@ -78,6 +78,7 @@ class RadioService : public runtime::Service {
     // Both from micros(), which is 64-bit and does not wrap: nothing about where
     // the radio believes it is inside the second reads the 32-bit millisecond
     // counter (ports/clock.h).
+    bool identified();
     int phase_ms() const;
     int phase_at(uint64_t now_us) const;
     int64_t second_origin_us() const;

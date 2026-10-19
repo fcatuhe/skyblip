@@ -31,7 +31,7 @@ The producers the board polls, which are not ports because nothing calls them on
 | `button_down()`, `pad_down()` | `events::ButtonEvent` |
 | `pps()` | the PPS edge on `bus::State::clock` |
 
-And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `device_addr()`, `glass_rotation()`, `read_panel_signature()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`.
+And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `identity()`, `glass_rotation()`, `read_panel_signature()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`.
 
 `read_baro()` is one fetch because the BME280 measures pressure and ambient temperature in the same conversion, and asking twice would pay for two. The temperature carries its own validity beside it: a part that answers with a pressure and no temperature is still a pressure, and the `$LK8EX1` a tablet reads has a sentinel for the field that is missing. What the sensor reads is what goes out - it sits inside the case, so it reads warm, and no correction is invented for it.
 

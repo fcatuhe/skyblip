@@ -71,8 +71,8 @@ TEST_CASE("diag config: arming names the settings every other record was decided
     CHECK(count_of(records, diag::Type::Config) == 1);
     diag::Config config{};
     REQUIRE(first_of(records, config));
-    CHECK(config.addr == rig.platform.device_addr());
-    CHECK(config.addr_table == settings::kAddrTableSkyblip);
+    CHECK(config.addr == settings::address_of(platform::host::Identity::kSerial));
+    CHECK(config.addr_table == settings::kAddressMappingTable);
     CHECK(config.aircraft_type == 9);
     CHECK(config.alarm_volume == 1);
     CHECK(config.battery_offset_mv == -30);

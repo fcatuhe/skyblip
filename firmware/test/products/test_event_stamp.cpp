@@ -6,6 +6,7 @@
 #include "core/protocol/air.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/clock.h"
+#include "hardware/platform/host/identity.h"
 #include "ports/null.h"
 #include "products/skyblip_go/services/traffic.h"
 
@@ -34,11 +35,12 @@ constexpr uint16_t kIntoMs = 437;
 
 struct Rig {
     platform::host::Clock clock;
+    platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.kv,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss};
+        null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
     diag::Recorder recorder{};

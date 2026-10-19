@@ -21,3 +21,16 @@ imgtool getpub -k signing.pem --encoding pem > firmware/keys/<environment>.pub.p
 ```
 
 Anyone who builds this firmware with their own key can install it on their own unit the same way, through the factory bootloader's drag-and-drop: no key in this directory locks a device to these images.
+
+## The server key
+
+`server.pub` is the public half of the server key, the one Ed25519 key skyblip.eu signs every identity message with (issue #126, `core/identity/README.md`): the challenge and the unlock code of an activation today, any later command that touches identity tomorrow. It is 64 lowercase hex digits. Only skyblip.eu signs for a unit, so every device build trusts it: a pull request, `main`, `scripts/build_local.sh` and a release alike, and a unit keeps its unlock code when it moves between development and release firmware. It has nothing to do with the MCUboot keys above: those decide which images a unit installs, this one which identity messages it believes.
+
+| Key | Trusted by | Id | Private half |
+|---|---|---|---|
+| `server.pub` | every device build | `8c06724d` | `identity.server_private_key` in the server's production credentials |
+| the test key in `schemas/activation.v1.vectors.json` | the host suite and the simulator | `890026b1` | in the same file, because it is a test key |
+
+The id is the first four bytes of the SHA-256 of the raw public key, which is how `challenge` names the key a unit trusts. `cmake/skyblip.cmake` compiles the file into the image and refuses to configure a device build without it, so no image ever ships that nothing can activate.
+
+The owner generated the seed into the server's production credentials and derived the public half here (`server/README.md`, Activation); no agent touches those credentials. Without this file every device build fails to configure, so a key is never missing silently. After a deploy, the admin `Units` page shows the server's key id, which must read `8c06724d`.

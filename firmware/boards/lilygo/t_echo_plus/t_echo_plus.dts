@@ -664,8 +664,10 @@ zephyr_udc0: &usbd {
  * The drag-and-drop write window is USER_FLASH_START..USER_FLASH_END =
  * 0x1000..0xEA000 (Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h:25-26 with
  * DFU_APP_DATA_RESERVED = 10*4096, Makefile:139). Everything a .uf2 must carry
- * (MCUboot and slot0) therefore lives strictly below 0xEA000, and NVS lives
- * above it inside the 40 KB the bootloader reserves for application data.
+ * (MCUboot and slot0) therefore lives strictly below 0xEA000. Above it, inside
+ * the 40 KB the bootloader reserves for application data, live the unit's
+ * unlock code at 0xEA000 (identity_partition, core/identity/README.md) and NVS
+ * from 0xEC000: no .uf2 can write either.
  *
  * The secondary slot is NOT here: it is on the external SPI NOR part (&ext_flash
  * below), which is what buys slot0 its full 728 KB.
@@ -695,9 +697,11 @@ zephyr_udc0: &usbd {
 			reg = <0x00034000 0x000B6000>;
 		};
 
-		/* 0xEA000..0xEC000 is deliberately unallocated: it is above
-		 * USER_FLASH_END, so a .uf2 cannot reach it, and it keeps NVS on the
-		 * same 8 KB boundary upstream uses. */
+		/* The unlock code, above USER_FLASH_END and below the LittleFS other firmwares keep at 0xED000. */
+		identity_partition: partition@ea000 {
+			label = "identity";
+			reg = <0x000EA000 0x00001000>;
+		};
 
 		storage_partition: partition@ec000 {
 			label = "storage";

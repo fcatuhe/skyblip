@@ -18,16 +18,20 @@ const DEVICE_NOTES = [
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
 
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
-// INFO: fc 18oct26 the refusals of schemas/activation.v1.schema.json, and what the prompt machinery answers any prompt
-const UNIT_REFUSALS = [
-  'keyless', 'no_session', 'bad_signature', 'small_mtu', 'flash', 'in_flight', 'low_power', 'expired', 'cancelled', 'claimed', 'unknown_cmd',
-];
+const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
+// INFO: fc 18oct26 what the prompt machinery and the claim answer any command, activation included
+const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_cmd'];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
 const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
 
 const words = (path, kind = 'manage') => new Set([...read(path).matchAll(new RegExp(`data-${kind}-word="(\\w+)"`, 'g'))].map(match => match[1]));
+
+function identityRefusals() {
+  const source = read(IDENTITY).replace(/\/\/.*$/gm, '');
+  return [...new Set([...source.matchAll(/refuse\("(\w+)"\)/g)].map(match => match[1]))];
+}
 
 function firmwareRefusals() {
   const source = read(CONFIG);
@@ -56,9 +60,14 @@ test('both pages word the same keys', () => {
   assert.deepEqual([...english].sort(), [...french].sort());
 });
 
+test('the firmware still refuses activation with the reasons this test reads', () => {
+  assert.ok(identityRefusals().includes('small_mtu'), `${IDENTITY} no longer reads as it did`);
+});
+
 for (const page of ACTIVATION_PAGES) {
   test(`every refusal and notice of an activation has words on ${page.split('/').pop()}`, () => {
-    const missing = [...UNIT_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES].filter(key => !words(page, 'activate').has(key));
+    const keys = [...identityRefusals(), ...PROMPT_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES];
+    const missing = keys.filter(key => !words(page, 'activate').has(key));
     assert.deepEqual(missing, []);
   });
 }

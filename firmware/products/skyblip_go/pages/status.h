@@ -5,12 +5,13 @@
 
 #include "core/gnss/acquisition.h"
 #include "core/power/charging.h"
+#include "core/settings/address.h"
 #include "products/skyblip_go/glass.h"
 
 namespace skyblip::go {
 
 struct StatusSnapshot {
-    uint32_t device_addr{0};
+    settings::AirAddress address{};
     // INFO: fc 20sep26 the only place a pilot reads back the name payload 66 puts on air
     const char* callsign{""};
     bool fix_valid{false};

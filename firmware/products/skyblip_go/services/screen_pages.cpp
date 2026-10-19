@@ -122,6 +122,14 @@ CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
     return snap;
 }
 
+// INFO: fc 18oct26 the unlock swaps the activation page for the radar, through a wipe like any page
+bool ScreenService::unit_activated() {
+    const bool activated = context_.state.activation.activated();
+    if (activated_ && *activated_ != activated) change_screen();
+    activated_ = activated;
+    return activated;
+}
+
 void ScreenService::render(uint32_t now_ms) {
     if (answering()) {
         draw_prompt();
@@ -129,6 +137,10 @@ void ScreenService::render(uint32_t now_ms) {
     }
     if (receiving_) {
         draw_receiving(fb_);
+        return;
+    }
+    if (!unit_activated()) {
+        draw_activation(fb_, context_.state.activation.bluetooth_tag);
         return;
     }
     if (mode_ == Mode::Menu) {
@@ -231,7 +243,7 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Nearby: {
             NearbySnapshot snap;
-            snap.own_addr = context_.roles.device_addr;
+            snap.own_addr = context_.state.activation.address();
             snap.own_callsign = settings.callsign;
             snap.fix_valid = own.fix_valid;
             snap.units = settings.units;
@@ -242,7 +254,13 @@ void ScreenService::render(uint32_t now_ms) {
             draw_nearby(fb_, snap);
             break;
         }
-        case Page::SelfTest: draw_boot(fb_, self_test_); break;
+        case Page::SelfTest: {
+            // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
+            BootSnapshot now = self_test_;
+            now.address = context_.state.activation.address();
+            draw_boot(fb_, now);
+            break;
+        }
         case Page::GMeter: {
             GMeterSnapshot snap;
             snap.fitted = ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
@@ -279,11 +297,12 @@ void ScreenService::render(uint32_t now_ms) {
         case Page::Status:
         default: {
             StatusSnapshot snap;
-            snap.device_addr = context_.roles.device_addr;
+            snap.address = context_.state.activation.address();
             snap.callsign = settings.callsign;
             snap.fix_valid = own.fix_valid;
             snap.utc_valid = own.utc_valid;
-            snap.transmitting = timing::own_ship_transmits(own, context_.state.clock);
+            snap.transmitting = timing::own_ship_transmits(own, context_.state.clock,
+                                                           context_.state.activation.address());
             snap.sats = own.sats;
             snap.stage = context_.state.gnss.stage;
             snap.stage_s = context_.state.gnss.stage_s;

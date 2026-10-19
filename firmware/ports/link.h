@@ -42,6 +42,9 @@ class Link {
 
     // INFO: fc 18sep26 send() is every subscribed central, send_to() is the one that asked.
     virtual Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) = 0;
+
+    // INFO: fc 18oct26 starts advertising under name, or renames a link already advertising
+    virtual Status advertise_as(const char* name) = 0;
 };
 
 }

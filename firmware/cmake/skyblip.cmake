@@ -19,6 +19,10 @@ function(skyblip_shared_layers)
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
   target_sources(app PRIVATE ${shared})
 
+  # Monocypher, as C: the host compiles it as C++ with everything else (vendor/monocypher/LOCAL-CHANGES.md).
+  file(GLOB monocypher ${SKYBLIP_FIRMWARE}/vendor/monocypher/*.c)
+  target_sources(app PRIVATE ${monocypher})
+
   # Hot every pass: the per-byte NMEA parser and the redraw. Source options land after Zephyr's -Os, so -O2 wins.
   set_source_files_properties(
     ${SKYBLIP_FIRMWARE}/core/gnss/nmea.cpp
@@ -33,6 +37,29 @@ function(skyblip_shared_layers)
     target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
   endif()
   skyblip_imu_image()
+  skyblip_server_key()
+endfunction()
+
+# The skyblip.eu server key every device build verifies identity messages with: only skyblip.eu signs them.
+function(skyblip_server_key)
+  set(key ${SKYBLIP_FIRMWARE}/keys/server.pub)
+  if(NOT EXISTS ${key})
+    message(FATAL_ERROR "no server public key at ${key}: every device build trusts it, and no unit could be activated without it (firmware/keys/README.md)")
+  endif()
+  file(READ ${key} hex)
+  string(STRIP "${hex}" hex)
+  if(NOT hex MATCHES "^[0-9a-f]+$")
+    message(FATAL_ERROR "${key} is not lowercase hex")
+  endif()
+  string(LENGTH "${hex}" digits)
+  if(NOT digits EQUAL 64)
+    message(FATAL_ERROR "${key} holds ${digits} hex digits, not the 64 of an Ed25519 public key")
+  endif()
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " key_bytes ${hex})
+  file(GENERATE OUTPUT ${ZEPHYR_BINARY_DIR}/include/generated/skyblip_server_key.inc
+       CONTENT "${key_bytes}\n")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key})
+  message(STATUS "skyBlip trusts the server key in ${key}")
 endfunction()
 
 # The hub boots from our copy of its image: every build pins the digest, only a full one carries it.

@@ -52,6 +52,9 @@ int main(void) {
     if (!g_platform.storage_mounted())
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
     if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
+    if (!g_platform.keyed()) LOG_ERR("identity: no unit key, the unit can never be activated");
+    if (!g_product.state().activation.activated())
+        LOG_INF("identity: not activated, the radio stays off until skyblip.eu/activate");
 
     // Not fatal and not silent: without the comparator the write rule still
     // holds, on the divider alone, and a cell that collapses between two samples

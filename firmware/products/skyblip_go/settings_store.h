@@ -3,6 +3,7 @@
 
 #include "core/comms/config.h"
 #include "core/comms/config_store.h"
+#include "core/identity/activation.h"
 #include "products/skyblip_go/pages/settings_changes.h"
 #include "products/skyblip_go/settings.h"
 
@@ -12,11 +13,11 @@ static_assert(comms::kPromptDetailCap >= kSettingsChangesCap, "the prompt holds 
 
 class SettingsStore : public comms::ConfigStore {
    public:
-    SettingsStore(Settings& settings, uint32_t device_addr)
-        : settings_(settings), device_addr_(device_addr) {}
+    SettingsStore(Settings& settings, const identity::Activation& activation)
+        : settings_(settings), activation_(activation) {}
 
     void write_fields(json::Writer& w) const override {
-        write_json_fields(w, settings_, device_addr_);
+        write_json_fields(w, settings_, activation_.address());
     }
 
     void write_default_fields(json::Writer& w) const override {
@@ -33,7 +34,7 @@ class SettingsStore : public comms::ConfigStore {
 
    private:
     Settings& settings_;
-    uint32_t device_addr_;
+    const identity::Activation& activation_;
 };
 
 }  // namespace skyblip::go

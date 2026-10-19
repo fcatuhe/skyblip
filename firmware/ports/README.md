@@ -18,7 +18,9 @@ A receiver, a barometer, a divider and a button are called by nobody. The world 
 
 ## Absent is a role, not a null
 
-Every field of `Roles` is a reference. A board with no lamp, no die sensor and no radio still fills all eleven, because a port whose methods do nothing is a smaller thing than a pointer every caller has to check. Some ports are their own absent part: `Indicator`, `DieTemperature` and `Gnss` are concrete, and the base class is what a board without one is handed. The rest have a null in `null.h`, next to the role it fills rather than in the loop that steps them.
+Every field of `Roles` is a reference. A board with no lamp, no die sensor and no radio still fills all twelve, because a port whose methods do nothing is a smaller thing than a pointer every caller has to check. Some ports are their own absent part: `Indicator`, `DieTemperature` and `Gnss` are concrete, and the base class is what a board without one is handed. The rest have a null in `null.h`, next to the role it fills rather than in the loop that steps them.
+
+`Identity` is the one role with no null part and no capability bit: every unit has a DEVICEID, a key and somewhere to keep its unlock code, so the platform fills it directly (`core/identity/README.md`). A unit whose key could not be provisioned still fills it, and says so through `seed()` answering false.
 
 What is missing is stated once, in `capabilities.h`, and read by the code that has something to say about it: the self-test page prints the row, a service skips the work. Never by dereferencing.
 

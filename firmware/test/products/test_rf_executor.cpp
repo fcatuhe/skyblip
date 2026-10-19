@@ -14,6 +14,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
@@ -36,11 +37,11 @@ struct Pass {
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
-    ports::Roles roles{platform.clock(), rf,        null.link,
-                       null.display,     null.kv,   null.log_flash,
-                       null.annunciator, null.dfu,  null.die_temperature,
-                       null.indicator,   null.gnss, ports::Capability::Rf,
-                       0x5B7E57};
+    ports::Roles roles{platform.clock(),     rf,        null.link,
+                       null.display,         null.kv,   null.log_flash,
+                       null.annunciator,     null.dfu,  null.die_temperature,
+                       null.indicator,       null.gnss, platform.identity(),
+                       ports::Capability::Rf};
     diag::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
@@ -55,6 +56,7 @@ struct Pass {
         state.own.tx_settled = true;
         state.own.flight_state = 2;
         state.clock.utc_valid = true;
+        state.activation.serial = 0x7E57;
         return radio_service.setup();
     }
 

@@ -109,7 +109,7 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
 // speak that says anything about power: silence here is a pilot with no way to
 // see a flat unit coming. SoftRF MB sends the same battery-only sentence when no
 // baro chip answered (src/protocol/data/NMEA.cpp:1398-1401).
-TEST_CASE("nmea: a unit with no barometer still tells the tablet about its cell") {
+TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about its cell") {
     Rig rig(kBaroByHand);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;

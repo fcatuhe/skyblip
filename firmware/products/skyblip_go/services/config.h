@@ -3,6 +3,7 @@
 
 #include "core/comms/config.h"
 #include "core/diag/payload.h"
+#include "core/identity/unit.h"
 #include "core/power/cutoff.h"
 #include "core/power/duty.h"
 #include "core/settings/blob.h"
@@ -39,14 +40,18 @@ class ConfigLinkService : public runtime::Service {
     ConfigLinkService(runtime::Context& ctx, Settings& settings, const PowerService& power)
         : runtime::Service(ctx),
           settings_(settings),
-          store_(settings, ctx.roles.device_addr),
+          store_(settings, ctx.state.activation),
           config_(ctx.roles.link, store_, &ctx.roles.dfu, &ctx.state.rf.timing_stats),
-          power_(power) {
+          power_(power),
+          unit_(ctx.roles.identity),
+          identity_(unit_) {
         config_.set_durable_writes(&writes_);
+        config_.set_identity(&identity_);
     }
 
     Status setup() override;
     void load();
+    void load_identity();
     void tick(uint32_t now_ms) override;
 
     comms::ConfigService& config() { return config_; }
@@ -73,6 +78,9 @@ class ConfigLinkService : public runtime::Service {
     void record_update();
 
    private:
+    void publish_identity(uint32_t now_ms);
+    void advertise(uint32_t now_ms);
+    void place_unlock(uint32_t now_ms);
     void spend_gnss_cold_start();
     void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
@@ -82,6 +90,8 @@ class ConfigLinkService : public runtime::Service {
     void accrue_connected(uint32_t now_ms);
     void publish_upload_verdict();
 
+    // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
+    static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
     static constexpr size_t kBlobCap = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kSettingsKey = "settings";
@@ -119,6 +129,14 @@ class ConfigLinkService : public runtime::Service {
     SettingsStore store_;
     comms::ConfigService config_;
     const PowerService& power_;
+    identity::Unit unit_;
+    comms::IdentityLink identity_;
+    bool identity_published_{false};
+    bool advertised_{false};
+    bool advertise_asked_{false};
+    uint32_t advertise_asked_ms_{0};
+    // INFO: fc 18oct26 an activated unit's unlock page is placed like the settings, outside a dwell
+    timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};
     power::OnTime connected_{};
     uint16_t recorded_holder_{0};

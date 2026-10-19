@@ -9,6 +9,7 @@
 #include "core/gnss/acquisition.h"
 #include "core/gnss/sky.h"
 #include "core/gnss/validity.h"
+#include "core/identity/activation.h"
 #include "core/model/ownship.h"
 #include "core/power/battery.h"
 #include "core/power/charging.h"
@@ -198,6 +199,8 @@ struct State {
     FormationState formation{};
     CaptureState capture{};
     DutyState duty{};
+    // INFO: fc 18oct26 written by the config service alone, which holds the unit
+    identity::Activation activation{};
 
     traffic::Level alarm_level{traffic::Level::None};
     traffic::Level alarm_live{traffic::Level::None};

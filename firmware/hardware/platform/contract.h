@@ -17,6 +17,7 @@
 #include "ports/dfu.h"
 #include "ports/die_temperature.h"
 #include "ports/flash_region.h"
+#include "ports/identity.h"
 #include "ports/indicator.h"
 #include "ports/kvstore.h"
 #include "ports/link.h"
@@ -87,8 +88,10 @@ constexpr bool fills_the_platform_contract() {
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().capabilities()), ports::Capabilities>,
         "platform: capabilities() -> ports::Capabilities, what this unit was found to have");
-    static_assert(std::is_convertible_v<decltype(std::declval<Self>().device_addr()), uint32_t>,
-                  "platform: device_addr() -> uint32_t");
+    static_assert(
+        std::is_convertible_v<decltype(std::declval<Self>().identity()), ports::Identity&>,
+        "platform: identity() -> ports::Identity&, the unit's key provisioned before the link "
+        "comes up");
 
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().start_baro()), bool>,
                   "platform: start_baro() -> bool, one conversion started, never waited on");

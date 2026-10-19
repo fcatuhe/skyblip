@@ -71,6 +71,10 @@ SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard core/*/*.cpp ui/*.cpp 
        simulator/world/*.cpp))
 SRC := $(filter-out products/skyblip_go/main.cpp %/test_%.cpp,$(SRC))
 
+# Monocypher is C that also compiles as C++: one compiler builds and instruments it with the rest.
+VENDOR_SRC := $(wildcard vendor/monocypher/*.c)
+VENDOR_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(VENDOR_SRC))
+
 # Test sources (mirrored tree): one folder per layer, tests never live beside
 # the code they test.
 TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp))
@@ -81,12 +85,12 @@ FUZZ_NAMES := $(patsubst test/fuzz/fuzz_%.cpp,%,$(FUZZ_SRC))
 FUZZ_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(FUZZ_SRC))
 FUZZERS := $(patsubst test/fuzz/%.cpp,$(BUILD)/%,$(FUZZ_SRC))
 
-OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) $(TEST_SRC))
+OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) $(TEST_SRC)) $(VENDOR_OBJ)
 
 BIN := $(BUILD)/skyblip_tests
 
 # The simulator: the same product, on the host platform, inside simulator/world.
-SIMULATOR_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) simulator/frontends/terminal.cpp)
+SIMULATOR_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) simulator/frontends/terminal.cpp) $(VENDOR_OBJ)
 SIMULATOR_BIN := $(BUILD)/skyblip_simulator
 
 EMCC ?= emcc
@@ -99,7 +103,7 @@ WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
 # editing one file rebuilds one file (a single emcc pass over all sources costs
 # ~30 s every save; this makes the edit->reload loop a couple of seconds).
 WEB_BUILD := $(BUILD)/web
-WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC))
+WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
 WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
 .PHONY: test test-sanitize fuzz fuzzers all clean simulator browser watch tidy
@@ -127,7 +131,7 @@ fuzz-%:
 	  $(addprefix -dict=,$(wildcard test/fuzz/$*.dict)) \
 	  $(FUZZ_BUILD)/corpus/$* $(wildcard test/fuzz/corpus/$*)
 
-$(BUILD)/fuzz_%: $(BUILD)/test/fuzz/fuzz_%.o $(patsubst %.cpp,$(BUILD)/%.o,$(SRC))
+$(BUILD)/fuzz_%: $(BUILD)/test/fuzz/fuzz_%.o $(patsubst %.cpp,$(BUILD)/%.o,$(SRC)) $(VENDOR_OBJ)
 	$(CXX) $(CXXFLAGS) -fsanitize=fuzzer $^ -o $@ $(LDFLAGS)
 
 # Same $(SRC) the host build compiles, so no workflow ever restates the list, and
@@ -160,6 +164,10 @@ $(WEB_BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(EMCC) $(WEB_CXXFLAGS) -c $< -o $@
 
+$(WEB_BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(EMCC) $(WEB_CXXFLAGS) -x c++ -c $< -o $@
+
 $(WEB_OUT): $(WEB_OBJ)
 	@mkdir -p $(WEB_DIST)
 	$(EMXX) -O2 $(WEB_OBJ) \
@@ -177,6 +185,10 @@ $(WEB_DIST)/embed.js: simulator/web/embed.js
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -x c++ -c $< -o $@
 
 # dev loop
 # C++ has no hot-module-reload: a change always means a recompile. These make

@@ -6,6 +6,7 @@
 
 #include <cstdint>
 
+#include "core/settings/address.h"
 #include "products/skyblip_go/glass.h"
 
 namespace skyblip::go {
@@ -26,7 +27,7 @@ struct BootPart {
 };
 
 struct BootSnapshot {
-    uint32_t device_addr{0};
+    settings::AirAddress address{};
     const char* reset_reason{"UNKNOWN"};
     bool went_dark_flat{false};
     const BootPart* parts{nullptr};

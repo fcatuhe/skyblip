@@ -54,6 +54,8 @@ class Dfu {
     // INFO: fc 03oct26 the bootloader's rule, built into both images: a release refuses an older
     // one
     virtual bool downgrade_allowed() const { return false; }
+    // INFO: fc 18oct26 a release build is the one that refuses downgrades, told to the server only
+    virtual bool release_build() const { return false; }
 
     // INFO: fc 03oct26 slim and full images of a release share a version, not a hash
     virtual bool running_hash(ImageHash&) { return false; }

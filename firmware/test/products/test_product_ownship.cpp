@@ -120,7 +120,7 @@ TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-
     CHECK(rig.state().own.fix_valid);
     CHECK_FALSE(rig.state().own.climb_valid);
     protocol::AdslPacket burst{};
-    protocol::from_own(burst, rig.state().own, rig.product.board().roles().device_addr, 6, 4);
+    protocol::from_own(burst, rig.state().own, rig.state().activation.address(), 6, 4);
     CHECK_FALSE(burst.has_climb());
 }
 
@@ -139,7 +139,7 @@ TEST_CASE("product: the glass reads the climb damped, the air reads it as measur
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(3000).epsilon(0.02));
     CHECK(rig.state().indicated.climb_mm_s == doctest::Approx(1000).epsilon(0.02));
     protocol::AdslPacket burst{};
-    protocol::from_own(burst, rig.state().own, rig.product.board().roles().device_addr, 6, 4);
+    protocol::from_own(burst, rig.state().own, rig.state().activation.address(), 6, 4);
     // 3 m/s in ADS-L G.1.9 eighths
     CHECK(burst.climb_e8() == 24);
 }

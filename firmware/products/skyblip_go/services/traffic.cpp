@@ -16,12 +16,7 @@ bool utc_dated(const bus::State& state) {
 }
 }  // namespace
 
-// The one thing this service knows before any frame arrives: which aircraft is
-// this one. A ground relay rebroadcasts everything it heard, us included, and
-// the table is where that is refused (core/traffic/table.h).
 Status TrafficService::setup() {
-    context_.state.traffic.set_own_address(settings::kAddrTableSkyblip,
-                                           settings::air_address(context_.roles.device_addr));
     uplink_ = has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
     return Status::Ok;
 }
@@ -31,6 +26,9 @@ void TrafficService::tick(uint32_t now_ms) {
     // (core/traffic/sanity.h), refreshed before this pass drains a single frame:
     // own-ship has already run this pass, so this is the newest fix there is.
     context_.state.traffic.set_own_reference(context_.state.own);
+    // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
+    context_.state.traffic.set_own_address(settings::kAddressMappingTable,
+                                           context_.state.activation.address().value_or(0));
     events::RfEvent event{};
     while (context_.bus.rf.pop(event)) {
         switch (event.type) {

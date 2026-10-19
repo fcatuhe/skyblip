@@ -41,6 +41,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
 | `kDiagnosticsRefreshMs` | 1000 (1 s) | milliseconds | - | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
 | `kDiagnosticsDumpMs` | 10000 (10 s) | milliseconds | - | - |
+| `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 
 ## [`firmware/core/diag`](../firmware/core/diag/README.md)
 
@@ -240,6 +241,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | one pass of slot programs, so the next dwell is armed on time |
+| `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked, and logs its refusal, once a second |
 | `kMovingTargetRedrawMs` | 1000 (1 s) | milliseconds | - | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
 | `kTargetRefreshBoundMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | - | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
@@ -275,4 +277,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-170 constants over 18 folders.
+172 constants over 18 folders.

@@ -10,32 +10,6 @@
 
 namespace skyblip::comms {
 
-const char* pending_title(Pending pending) {
-    switch (pending) {
-        case Pending::Set: return "SETTINGS";
-        case Pending::Dfu: return "FIRMWARE";
-        case Pending::Recovery: return "RECOVERY";
-        case Pending::PowerOff: return "POWER OFF";
-        case Pending::EraseLog: return "ERASE LOGS";
-        case Pending::GnssCold: return "GNSS RESET";
-        case Pending::None: break;
-    }
-    return "";
-}
-
-const char* pending_detail(Pending pending) {
-    switch (pending) {
-        case Pending::Set: return "APPLY THE SETTINGS THE PHONE SENT";
-        case Pending::Dfu: return "INSTALL THE IMAGE THE PHONE SENDS";
-        case Pending::Recovery: return "REBOOT INTO THE USB BOOTLOADER";
-        case Pending::PowerOff: return "SHUT THE DEVICE DOWN";
-        case Pending::EraseLog: return "DELETE EVERY FLIGHT ON THE DEVICE";
-        case Pending::GnssCold: return "THROW AWAY THE STORED SATELLITE DATA";
-        case Pending::None: break;
-    }
-    return "";
-}
-
 void ConfigService::tick(uint32_t now_ms) {
     now_ms_ = now_ms;
     // INFO: fc 04aug26 The one frame nobody asked for is the one nobody will ask
@@ -47,6 +21,7 @@ void ConfigService::tick(uint32_t now_ms) {
         upload_window_open_ = false;
     }
     if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
+    if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kConfirmWindowMs) {
         pending_ = Pending::None;
         pending_len_ = 0;
@@ -59,7 +34,8 @@ void ConfigService::set_flight_state(flight::FlightState fs) {
         upload_window_open_ = false;
         // A prompt that survived the take-off roll would be an authorisation a
         // pilot could confirm with an elbow in the air.
-        if (pending_ != Pending::None) {
+        // INFO: fc 18oct26 activation is the exception: a unit with no serial transmits nothing
+        if (pending_ != Pending::None && !register_exempt()) {
             pending_ = Pending::None;
             pending_len_ = 0;
             ack(false, "in_flight");
@@ -102,6 +78,7 @@ void ConfigService::on_link_up(const events::LinkUp& up) {
 // prompt.
 void ConfigService::on_link_down(const events::LinkDown& down) {
     note_down(down.session_id);
+    if (identity_ != nullptr) identity_->forget(down.session_id);
     if (!claim_.holds(down.session_id)) return;
     claim_.release();
     pending_ = Pending::None;
@@ -358,6 +335,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
 
+    if (answer_identity(cmd, r)) return;
+
     if (std::strcmp(cmd, "set") == 0) {
         if (!on_ground()) {
             ack(false, "in_flight");
@@ -426,10 +405,15 @@ void ConfigService::request_log_erase() {
 }
 
 void ConfigService::confirm() {
-    if (!on_ground()) {
+    if (!on_ground() && !register_exempt()) {
         pending_ = Pending::None;
         pending_len_ = 0;
         ack(false, "in_flight");
+        return;
+    }
+    if (pending_ == Pending::Register) {
+        pending_ = Pending::None;
+        send_registration();
         return;
     }
     if (pending_ == Pending::Set) {
