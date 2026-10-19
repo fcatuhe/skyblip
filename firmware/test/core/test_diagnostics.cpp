@@ -138,9 +138,9 @@ std::string console(const Diagnostics& diagnostics) {
     std::string all;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
-        const int length = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(length > 0);
-        CHECK(static_cast<int>(std::string(line).size()) == length);
+        const int written = report.line(i, line, static_cast<int>(sizeof(line)));
+        REQUIRE(written > 0);
+        CHECK(static_cast<int>(std::string(line).size()) == written);
         all += line;
         all += "\n";
     }
@@ -160,12 +160,12 @@ Frames frames(const Diagnostics& diagnostics, int payload, const char* command =
     Frames out;
     char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
-        const int length = report.next_frame(payload, buffer, static_cast<int>(sizeof(buffer)));
-        REQUIRE(length > 0);
-        REQUIRE(length <= payload);
-        out.joined += std::string(buffer, static_cast<size_t>(length));
-        out.last = std::string(buffer, static_cast<size_t>(length));
-        if (length > out.widest) out.widest = length;
+        const int written = report.next_frame(payload, buffer, static_cast<int>(sizeof(buffer)));
+        REQUIRE(written > 0);
+        REQUIRE(written <= payload);
+        out.joined += std::string(buffer, static_cast<size_t>(written));
+        out.last = std::string(buffer, static_cast<size_t>(written));
+        if (written > out.widest) out.widest = written;
         out.count++;
         REQUIRE(out.count < 32);  // a dump that never ends is a bug, not a report
     }
@@ -251,9 +251,9 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     int widest = 0;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
-        const int length = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(length > 0);
-        if (length > widest) widest = length;
+        const int written = report.line(i, line, static_cast<int>(sizeof(line)));
+        REQUIRE(written > 0);
+        if (written > widest) widest = written;
     }
     CHECK(widest + 1 <= DiagnosticsReport::kLineBytes);
     // And a buffer one byte short of the line refuses it whole rather than
@@ -365,10 +365,10 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
     DiagnosticsReport report(widest_device(), "diag");
     char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
-        const int length =
+        const int written =
             report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
-        REQUIRE(length > 0);
-        const std::string body(buffer, static_cast<size_t>(length));
+        REQUIRE(written > 0);
+        const std::string body(buffer, static_cast<size_t>(written));
         // The radio's keys cannot appear in a frame that says it is the receiver's,
         // whichever way round the report packed them.
         if (has(body, "\"group\":\"gnss\"")) {
@@ -407,10 +407,10 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     char buffer[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {
-        const int length =
+        const int written =
             report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
-        REQUIRE(length > 0);
-        body += std::string(buffer, static_cast<size_t>(length));
+        REQUIRE(written > 0);
+        body += std::string(buffer, static_cast<size_t>(written));
     }
     CHECK(has(body, "\"cmd\":\"radio\""));
     CHECK(has(body, "\"group\":\"radio\""));

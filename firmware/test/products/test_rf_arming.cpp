@@ -392,14 +392,14 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
     REQUIRE(rf.arm(burst) == Status::Ok);
 
     uint8_t on_air[events::kRfEventBytes];
-    uint8_t on_air_length = 0;
+    uint8_t on_air_bytes = 0;
     for (uint32_t now_ms = 460; now_ms <= 800; now_ms += 10) {
         clock.set_milliseconds(now_ms);
         rf.service(now_ms);
-        if (chip.take_tx(on_air, on_air_length)) chip.signal_tx_done();
+        if (chip.take_tx(on_air, on_air_bytes)) chip.signal_tx_done();
     }
 
-    CHECK(on_air_length > 0);
+    CHECK(on_air_bytes > 0);
     CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
     int sent = 0, missed = 0;
     events::RfEvent event{};

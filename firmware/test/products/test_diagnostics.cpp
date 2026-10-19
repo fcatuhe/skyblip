@@ -28,8 +28,8 @@ struct Capture {
     std::vector<std::string> lines;
 
     bool ready() const { return attached; }
-    void line(const char* text, int length) {
-        lines.emplace_back(text, static_cast<size_t>(length));
+    void line(const char* text, int characters) {
+        lines.emplace_back(text, static_cast<size_t>(characters));
     }
 
     std::string all() const {

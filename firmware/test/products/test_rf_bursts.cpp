@@ -60,9 +60,9 @@ struct Executor {
             clock.set_milliseconds(now_ms);
             rf.service(now_ms);
             uint8_t sent[protocol::kTxPayloadChipBytes];
-            uint8_t length = 0;
-            if (!completes || !chip.take_tx(sent, length)) continue;
-            keyed.push_back({sent[length - protocol::AdslPacket::kTxBytes], now_ms});
+            uint8_t bytes = 0;
+            if (!completes || !chip.take_tx(sent, bytes)) continue;
+            keyed.push_back({sent[bytes - protocol::AdslPacket::kTxBytes], now_ms});
             chip.signal_tx_done();
         }
         return keyed;

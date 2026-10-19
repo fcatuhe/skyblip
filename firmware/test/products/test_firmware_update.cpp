@@ -111,12 +111,12 @@ struct NewerBlob {
     }
 };
 
-bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t length) {
+bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t blob_bytes) {
     uint8_t stored[64];
     size_t count = 0;
     if (rig.platform.key_value().read(key, stored, sizeof(stored), count) != Status::Ok)
         return false;
-    return count == length && std::memcmp(stored, blob, length) == 0;
+    return count == blob_bytes && std::memcmp(stored, blob, blob_bytes) == 0;
 }
 
 void set_callsign_over_the_link(Rig& rig, uint32_t& now_ms, const char* callsign) {

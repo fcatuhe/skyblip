@@ -14,7 +14,7 @@ class TappedWire : public io::Uart {
    public:
     explicit TappedWire(models::L76k& chip) : chip_(chip) {}
 
-    size_t write(const uint8_t* data, size_t length) override { return chip_.write(data, length); }
+    size_t write(const uint8_t* data, size_t bytes) override { return chip_.write(data, bytes); }
 
     size_t read(uint8_t* out, size_t capacity) override {
         const size_t bytes = chip_.read(out, capacity);

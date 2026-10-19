@@ -34,8 +34,8 @@ void replay(simulator::Simulator& simulator) {
 
 TEST_CASE("scenario: the parser reads own-ship, traffic and events") {
     simulator::Scenario scenario;
-    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
     CHECK(scenario.name == "inline");
     CHECK(scenario.mode == simulator::Mode::Training);
     CHECK(scenario.altitude_m == 900);
@@ -59,8 +59,8 @@ TEST_CASE("scenario: a loaded scenario names the device, and a file can say whic
     REQUIRE(simulator.setup() == Status::Ok);
 
     simulator::Scenario scenario;
-    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
     simulator.load(scenario);
     CHECK(std::string(simulator.product().settings().callsign) == "S-BLIP");
 
@@ -93,8 +93,8 @@ TEST_CASE("scenario: a training scenario's expectations hold when replayed") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator::Scenario scenario;
-    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
     simulator.load(scenario);
     replay(simulator);
 

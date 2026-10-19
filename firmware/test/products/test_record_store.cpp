@@ -25,9 +25,9 @@ class BlindSectorFlash : public platform::host::FlashRegion {
    public:
     BlindSectorFlash(uint32_t sectors, uint32_t blind) : FlashRegion(sectors), blind_(blind) {}
 
-    Status read(uint32_t offset, uint8_t* buffer, uint32_t length) override {
+    Status read(uint32_t offset, uint8_t* buffer, uint32_t bytes) override {
         if (offset / kSectorBytes == blind_) return Status::Down;
-        return FlashRegion::read(offset, buffer, length);
+        return FlashRegion::read(offset, buffer, bytes);
     }
 
    private:

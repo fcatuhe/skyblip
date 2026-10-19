@@ -38,7 +38,7 @@ model::AircraftObservation neighbour(const model::Ownship& own) {
 void hear_m_band(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t frame_bytes,
                  int dead_chip_byte = -1) {
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_m_band(sync_word, frame, frame_bytes, chips);
+    const size_t chip_bytes = protocol::encode_m_band(sync_word, frame, frame_bytes, chips);
     if (dead_chip_byte >= 0) chips[dead_chip_byte] ^= 0x01;
 
     events::RfEvent event{};
@@ -47,7 +47,7 @@ void hear_m_band(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint8_t fra
     event.rssi_dbm = -15;
     event.rssi_valid = true;
     event.bytes = models::Sx1262::deliver_after_sync(
-        chips, static_cast<uint16_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
+        chips, static_cast<uint16_t>(chip_bytes), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
 }

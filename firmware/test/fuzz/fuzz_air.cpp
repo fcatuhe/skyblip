@@ -71,15 +71,15 @@ size_t transmit_m_band(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
                        uint8_t* chips) {
     const bool adsl = in.ConsumeBool();
     const uint32_t sync_word = adsl ? protocol::kAdslSyncWord : protocol::kAlptasSyncWord;
-    const uint8_t frame_length = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
+    const uint8_t frame_bytes = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
     uint8_t frame[protocol::kAlptasFrameBytes]{};
     if (sealing == Sealing::Encoded && !adsl)
         encode_alptas(in, receiver, frame);
     else
-        in.ConsumeData(frame, frame_length);
+        in.ConsumeData(frame, frame_bytes);
     if (sealing != Sealing::Raw && adsl) seal_adsl(frame);
     if (sealing == Sealing::Sealed && !adsl) protocol::alptas_set_crc(frame);
-    protocol::m_band_payload(sync_word, frame, frame_length, chips);
+    protocol::m_band_payload(sync_word, frame, frame_bytes, chips);
     return protocol::kRxChipBytes;
 }
 
@@ -141,13 +141,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     const model::Band band = in.ConsumeBool() ? model::Band::O : model::Band::M;
 
     uint8_t burst[events::kRfEventBytes]{};
-    const size_t length = band == model::Band::O ? transmit_uplink(in, sealing, burst)
-                                                 : transmit_m_band(in, sealing, receiver, burst);
+    const size_t bytes = band == model::Band::O ? transmit_uplink(in, sealing, burst)
+                                                : transmit_m_band(in, sealing, receiver, burst);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
     for (size_t i = 0; i < noise.size() && i < sizeof(burst); i++) burst[i] ^= noise[i];
 
     protocol::Frame frame{};
-    switch (protocol::receive_burst(band, burst, length, frame)) {
+    switch (protocol::receive_burst(band, burst, bytes, frame)) {
         case protocol::System::AdslDirect: hear_adsl(frame, receiver); break;
         case protocol::System::Alptas: hear_alptas(frame, receiver); break;
         case protocol::System::AdslUplink: hear_uplink(burst); break;

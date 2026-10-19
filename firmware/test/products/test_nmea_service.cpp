@@ -72,14 +72,14 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                       protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                      protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
     event.bytes = models::Sx1262::deliver_after_sync(
-        chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
+        chips, static_cast<uint8_t>(chip_bytes), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
 }
@@ -92,14 +92,14 @@ void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                       protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                      protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
     event.bytes = models::Sx1262::deliver_after_sync(
-        chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
+        chips, static_cast<uint8_t>(chip_bytes), protocol::kSharedSync, protocol::kSharedSyncBits,
         event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
 }

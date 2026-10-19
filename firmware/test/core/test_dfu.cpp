@@ -193,12 +193,12 @@ std::vector<uint8_t> header_of(ports::ImageVersion version) {
     return header;
 }
 
-void put_tlv(std::vector<uint8_t>& out, uint16_t type, uint8_t fill, uint16_t length) {
+void put_tlv(std::vector<uint8_t>& out, uint16_t type, uint8_t fill, uint16_t value_bytes) {
     out.push_back(static_cast<uint8_t>(type));
     out.push_back(static_cast<uint8_t>(type >> 8));
-    out.push_back(static_cast<uint8_t>(length));
-    out.push_back(static_cast<uint8_t>(length >> 8));
-    out.insert(out.end(), length, fill);
+    out.push_back(static_cast<uint8_t>(value_bytes));
+    out.push_back(static_cast<uint8_t>(value_bytes >> 8));
+    out.insert(out.end(), value_bytes, fill);
 }
 
 std::vector<uint8_t> tlv_area(uint16_t magic, const std::vector<uint8_t>& entries) {

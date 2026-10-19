@@ -80,7 +80,7 @@ bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraf
     }
 
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_length = protocol::encode_o_band(frame, burst);
+    const size_t burst_bytes = protocol::encode_o_band(frame, burst);
 
     // Into the dwell, not around it: the radio has to have opened the O-band
     // window (205 ms, one jitter guard before the ground station starts) before
@@ -90,7 +90,7 @@ bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraf
     rig.platform.clock().set_milliseconds(at_ms);
     rig.product.run_pass(at_ms);
     const bool heard = rig.platform.chips().radio.receive_air(
-        burst, static_cast<uint16_t>(burst_length), /*crc_error=*/false, /*rssi=*/-92,
+        burst, static_cast<uint16_t>(burst_bytes), /*crc_error=*/false, /*rssi=*/-92,
         protocol::kUplinkChipRateBps);
 
     rig.run(at_ms + 10, now_ms + 950);
@@ -122,13 +122,13 @@ void hear_directly(Rig& rig, uint32_t& now_ms, uint32_t address, int32_t north_m
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                       protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                      protocol::kAdslFrameBytes, chips);
 
     // 500 ms is inside the direct slot and inside the first M-band dwell.
     rig.run(now_ms, now_ms + 500);
     rig.platform.clock().set_milliseconds(now_ms + 500);
-    rig.platform.chips().radio.receive_air(chips, static_cast<uint16_t>(chip_length),
+    rig.platform.chips().radio.receive_air(chips, static_cast<uint16_t>(chip_bytes),
                                            /*crc_error=*/false, /*rssi=*/-70,
                                            protocol::kMBandChipRateBps);
     rig.run(now_ms + 500, now_ms + 950);
@@ -441,12 +441,12 @@ TEST_CASE("uplink: a 200 kbps burst is not heard by a dwell framing 100 kbps") {
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(&relayed, 1, 0, frame) == Status::Ok);
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_length = protocol::encode_o_band(frame, burst);
+    const size_t burst_bytes = protocol::encode_o_band(frame, burst);
 
     // In the direct slot, where the radio is on the M band at 100 kbps.
     rig.push_timed_fix(25000, 900);
     rig.run(now_ms, now_ms + 500);
-    CHECK_FALSE(rig.platform.chips().radio.receive_air(burst, static_cast<uint16_t>(burst_length),
+    CHECK_FALSE(rig.platform.chips().radio.receive_air(burst, static_cast<uint16_t>(burst_bytes),
                                                        false, -92, protocol::kUplinkChipRateBps));
     rig.run(now_ms + 500, now_ms + 950);
     CHECK(rig.state().air.uplink_frames == 0);

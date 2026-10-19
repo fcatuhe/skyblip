@@ -138,8 +138,8 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
 
     // The same dwell one second later on a quiet channel keys at the same instant.
     uint8_t sent[protocol::kTxPayloadChipBytes];
-    uint8_t sent_length = 0;
-    REQUIRE(chip.take_tx(sent, sent_length));
+    uint8_t sent_bytes = 0;
+    REQUIRE(chip.take_tx(sent, sent_bytes));
     chip.rssi_dbm = simulator::Air::kNoiseFloorDbm;
     plan.start_us += 1000000;
     plan.end_us += 1000000;

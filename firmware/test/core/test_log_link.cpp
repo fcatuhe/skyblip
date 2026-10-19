@@ -86,10 +86,10 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     for (int payload : payloads) {
         const int records = comms::log_records_per_chunk(payload);
         char buffer[comms::kLogReplyBytes];
-        const int length = comms::format_log_chunk(buffer, payload + 1, 4294967295u, 4294967295u,
-                                                   raw, records, true);
-        CHECK(length > 0);
-        CHECK(length <= payload);
+        const int written = comms::format_log_chunk(buffer, payload + 1, 4294967295u, 4294967295u,
+                                                    raw, records, true);
+        CHECK(written > 0);
+        CHECK(written <= payload);
         CHECK(std::strstr(buffer, "\"cmd\":\"chunk\"") != nullptr);
         CHECK(std::strstr(buffer, "\"eof\":true") != nullptr);
     }
@@ -116,9 +116,9 @@ TEST_CASE("log link: the count comes first and says whether it is the whole trut
 
 TEST_CASE("log link: a session line says how many records and whether the flight ended") {
     char buffer[comms::kLogReplyBytes];
-    const int length =
+    const int written =
         comms::format_log_session(buffer, sizeof(buffer), 0, 3, 1785628800u, 1700, false, false);
-    CHECK(length > 0);
+    CHECK(written > 0);
     CHECK(std::strstr(buffer, "\"records\":1700") != nullptr);
     // The one thing a tablet must not hide: this flight stops where the power did.
     CHECK(std::strstr(buffer, "\"closed\":false") != nullptr);
@@ -265,11 +265,11 @@ TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it
     const int payloads[3] = {comms::kSmallestSupportedPayloadBytes, 244, 495};
     for (int payload : payloads) {
         char buffer[comms::kLogReplyBytes];
-        const int length = comms::format_log_chunk(
+        const int written = comms::format_log_chunk(
             buffer, payload + 1, 4294967295u, 4294967295u, raw,
             comms::log_records_per_chunk(payload, diagnostics), true, diagnostics);
-        CHECK(length > 0);
-        CHECK(length <= payload);
+        CHECK(written > 0);
+        CHECK(written <= payload);
     }
 }
 

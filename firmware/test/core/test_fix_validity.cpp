@@ -21,8 +21,8 @@ struct Burst {
     FixValidity validity;
 
     void feed(const char* line, uint32_t at_ms) {
-        const int length = static_cast<int>(std::strlen(line));
-        REQUIRE(parser.parse_line(line, length));
+        const int characters = static_cast<int>(std::strlen(line));
+        REQUIRE(parser.parse_line(line, characters));
         validity.observe(parser.solution(), parser.last_sentence(), at_ms);
     }
 };

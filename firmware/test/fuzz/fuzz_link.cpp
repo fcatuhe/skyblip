@@ -47,13 +47,13 @@ const std::vector<uint8_t>& logbook() {
 
 // INFO: fc 25sep26 a longer write is refused by the ATT layer (hardware/platform/zephyr/link.cpp)
 void write(Rig& rig, uint16_t session_id, events::Endpoint endpoint, const uint8_t* bytes,
-           size_t length) {
+           size_t byte_count) {
     events::RxFrame frame{};
-    if (length > frame.data.size()) return;
+    if (byte_count > frame.data.size()) return;
     frame.session_id = session_id;
     frame.endpoint = endpoint;
-    frame.bytes = static_cast<uint16_t>(length);
-    std::memcpy(frame.data.data(), bytes, length);
+    frame.bytes = static_cast<uint16_t>(byte_count);
+    std::memcpy(frame.data.data(), bytes, byte_count);
     rig.platform.link().push_rx(frame);
 }
 
@@ -64,15 +64,15 @@ void confirm_on_device(Rig& rig, uint32_t& now_ms) {
     rig.double_press(now_ms);
 }
 
-void act(Rig& rig, uint32_t& now_ms, const uint8_t* line, size_t length) {
-    if (length == 0) return;
+void act(Rig& rig, uint32_t& now_ms, const uint8_t* line, size_t byte_count) {
+    if (byte_count == 0) return;
     const uint8_t* body = line + 1;
-    const size_t body_length = length - 1;
+    const size_t body_bytes = byte_count - 1;
     switch (line[0]) {
-        case 'C': write(rig, kFirstApp, events::Endpoint::Config, body, body_length); break;
-        case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_length); break;
-        case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_length); break;
-        case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_length); break;
+        case 'C': write(rig, kFirstApp, events::Endpoint::Config, body, body_bytes); break;
+        case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_bytes); break;
+        case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_bytes); break;
+        case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_bytes); break;
         case 'P': confirm_on_device(rig, now_ms); return;
         default: return;
     }

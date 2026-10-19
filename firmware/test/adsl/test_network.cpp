@@ -56,11 +56,11 @@ void spec_xxtea(uint32_t* data, uint32_t words, const uint32_t* key, uint32_t ro
 }
 
 // E.3.1's own sample implementation, transcribed.
-uint32_t spec_crc24(const uint8_t* data, size_t length) {
+uint32_t spec_crc24(const uint8_t* data, size_t bytes) {
     const uint32_t kPolynomial = 0xFFFA0480u;
     uint32_t crc = 0;
-    for (size_t i = 0; i < length + 3; i++) {
-        crc |= i < length ? data[i] : 0u;
+    for (size_t i = 0; i < bytes + 3; i++) {
+        crc |= i < bytes ? data[i] : 0u;
         for (uint8_t bit = 0; bit < 8; bit++) {
             if (crc & 0x80000000u) crc ^= kPolynomial;
             crc <<= 1;
@@ -186,9 +186,9 @@ TEST_CASE("ADS-L.4.SRD860.E.4: nothing is signed, and nothing says it is") {
     CHECK(protocol::kAdslFrameBytes == protocol::AdslPacket::kDataBytes);
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t length = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                  protocol::kAdslFrameBytes, chips);
-    CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
+    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
+                                                      protocol::kAdslFrameBytes, chips);
+    CHECK(chip_bytes == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 }
 
 // TODO: fc 18sep26 no signature, so no UNIX timestamp is appended to one either

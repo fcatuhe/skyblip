@@ -16,13 +16,13 @@ namespace {
 
 // What the modem hands up: chips from the end of the matched window, not from
 // the start of the buffer a transmitter filled.
-void deliver(const uint8_t* chips, size_t chip_length, uint8_t* out, size_t out_length) {
+void deliver(const uint8_t* chips, size_t chip_bytes, uint8_t* out, size_t out_bytes) {
     const size_t first_bit = protocol::kSharedSyncEndChip;
-    for (size_t i = 0; i < out_length; i++) {
+    for (size_t i = 0; i < out_bytes; i++) {
         uint8_t byte = 0;
         for (int bit_in_byte = 0; bit_in_byte < 8; bit_in_byte++) {
             const size_t bit = first_bit + i * 8 + static_cast<size_t>(bit_in_byte);
-            const bool set = bit < chip_length * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
+            const bool set = bit < chip_bytes * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
             byte = static_cast<uint8_t>((byte << 1) | (set ? 1u : 0u));
         }
         out[i] = byte;
@@ -76,9 +76,9 @@ struct StampRig {
         event.at_us = at_us;
         event.rssi_dbm = -80;
         uint8_t chips[protocol::kTxChipBytes] = {0};
-        const size_t chip_length = protocol::encode_m_band(protocol::kAdslSyncWord, tx.data,
-                                                           protocol::AdslPacket::kDataBytes, chips);
-        deliver(chips, chip_length, event.data.data(), protocol::kRxChipBytes);
+        const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, tx.data,
+                                                          protocol::AdslPacket::kDataBytes, chips);
+        deliver(chips, chip_bytes, event.data.data(), protocol::kRxChipBytes);
         event.bytes = protocol::kRxChipBytes;
         bus.rf.push(event);
         traffic.tick(now_ms);
