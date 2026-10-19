@@ -126,7 +126,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     ConfigService config(link, store);
     make_worst_case(config);
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
@@ -135,7 +135,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
 
     // Every field whole. json::Writer leaves a field out rather than cutting it,
     // so "fits" has to mean the last key is there and not merely valid JSON.
-    CHECK(body.find("\"die_temp_c\":-3277}") != std::string::npos);
+    CHECK(body.find("\"die_temperature_c\":-3277}") != std::string::npos);
 }
 
 TEST_CASE("comms: the config reply fits it too, as one flat object instead of an escaped one") {
@@ -147,18 +147,18 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
 
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-    // 153 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
-    CHECK(body.size() == 153);
+    // 165 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
+    CHECK(body.size() == 165);
     CHECK(config.link_drops() == 0);
 
     // The settings used to ride as a JSON string inside the reply, and the
     // backslashes alone were 53 bytes of a 158-byte body. There is not one left.
     CHECK(body.find('\\') == std::string::npos);
-    CHECK(body.find("\"cmd\":\"config\"") != std::string::npos);
+    CHECK(body.find("\"command\":\"config\"") != std::string::npos);
     CHECK(body.find("\"version\":1") != std::string::npos);
     CHECK(body.find("\"address\":65535") != std::string::npos);
     CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
@@ -167,41 +167,59 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
 }
 
+namespace {
+
+struct UpdateBench {
+    platform::host::Link link;
+    go::Settings settings = widest_settings();
+    go::SettingsStore store{settings, kWidestAddress};
+    platform::host::Watchdog watchdog;
+    platform::host::Dfu dfu{watchdog};
+    ConfigService config{link, store, &dfu};
+
+    explicit UpdateBench(bool allows_downgrade) {
+        link.raise_link(1);
+        link.raise_link(1);
+        link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
+        dfu.running_key_valid = true;
+        dfu.running_signer.fill(0xff);
+        dfu.allows_downgrade = allows_downgrade;
+        config.set_image_state(dfu::ImageState::Probation,
+                               dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
+        config.set_settings_fallback(settings::Fallback::Defaults);
+        dfu::HubImageReport held{};
+        held.holding = dfu::HubImage::Held;
+        for (uint8_t& byte : held.digest) byte = 0xAB;
+        config.set_hub_image(held);
+        config.on_rx(config_frame("{\"command\":\"update\"}"));
+    }
+};
+
+}  // namespace
+
 TEST_CASE(
     "comms: the update report fits it too, widest versions, a settings fallback, a hub image "
     "and a key") {
-    platform::host::Link link;
-    link.raise_link(1);
-    link.raise_link(1);
-    link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
-    go::Settings settings = widest_settings();
-    go::SettingsStore store(settings, kWidestAddress);
-    platform::host::Watchdog watchdog;
-    platform::host::Dfu dfu(watchdog);
-    dfu.running_key_valid = true;
-    dfu.running_signer.fill(0xff);
-    dfu.allows_downgrade = true;
-    ConfigService config(link, store, &dfu);
-    config.set_image_state(dfu::ImageState::Probation,
-                           dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
-    config.set_settings_fallback(settings::Fallback::Defaults);
-    dfu::HubImageReport held{};
-    held.holding = dfu::HubImage::Held;
-    for (uint8_t& byte : held.digest) byte = 0xAB;
-    config.set_hub_image(held);
-
-    config.on_rx(config_frame("{\"cmd\":\"update\"}"));
-    REQUIRE(link.sent.size() == 1);
-    const std::string body = link.last().bytes;
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+    UpdateBench bench(false);
+    REQUIRE(bench.link.sent.size() == 1);
+    const std::string body = bench.link.last().bytes;
+    // 168 bytes: the widest release build's report, every key written
+    CHECK(body.size() == 168);
     CHECK(body.find("\"from\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"to\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
     CHECK(body.find("\"swap_powered\"") != std::string::npos);
     CHECK(body.find("\"imu\":\"abababababababab\"") != std::string::npos);
-    CHECK(body.find("\"downgrade\":true") != std::string::npos);
-    // The last field written, so its presence is the proof nothing was dropped.
     CHECK(body.find("\"key\":\"FFFFFFFF\"") != std::string::npos);
+    CHECK(bench.config.link_drops() == 0);
+}
+
+TEST_CASE(
+    "comms: an update report too wide for the payload is refused and counted, never sent without "
+    "its key") {
+    UpdateBench bench(true);
+    CHECK(bench.link.sent.empty());
+    CHECK(bench.config.link_drops() == 1);
 }
 
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {
@@ -217,9 +235,9 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
     // Nothing in this dialect fits twenty bytes, not even a refusal, so the
     // honest answer is silence and a number - never a notification the
     // controller would fail, and never a reply with fields quietly missing.
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
-    config.on_rx(config_frame("{\"cmd\":\"nonsense\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"nonsense\"}"));
     CHECK(link.sent.empty());
     CHECK(config.link_drops() == 3);
     // The refusal happened above the port: nothing was ever handed down.
@@ -237,7 +255,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     wide.declare_payload_bytes(495);
     go::SettingsStore store_on_wide(settings, kWidestAddress);
     ConfigService on_wide(wide, store_on_wide, nullptr, &statistics);
-    on_wide.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    on_wide.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(wide.sent.size() == 1);
     CHECK(wide.last().bytes.find("\"part\":0") != std::string::npos);
     CHECK(wide.last().bytes.find("\"more\":false") != std::string::npos);
@@ -251,7 +269,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     narrow.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_on_narrow(settings, kWidestAddress);
     ConfigService on_narrow(narrow, store_on_narrow, nullptr, &statistics);
-    on_narrow.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    on_narrow.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(narrow.sent.size() > 1);
     CHECK(narrow.sent.back().bytes.find("\"more\":false") != std::string::npos);
     for (size_t i = 0; i < narrow.sent.size(); i++) {
@@ -259,14 +277,14 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
         CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
         CHECK(body.front() == '{');
         CHECK(body.back() == '}');
-        CHECK(body.find("\"cmd\":\"timing\"") != std::string::npos);
+        CHECK(body.find("\"command\":\"timing\"") != std::string::npos);
         if (i + 1 < narrow.sent.size()) CHECK(body.find("\"more\":true") != std::string::npos);
     }
 
     const std::string all = joined(narrow);
     CHECK(occurrences(all, "\"pps_us\":") == 1);
     CHECK(occurrences(all, "\"dwell_us\":") == 1);
-    CHECK(occurrences(all, "\"holdover\":") == 1);
+    CHECK(occurrences(all, "\"holdover_events\":") == 1);
     CHECK(occurrences(all, "\"refused\":") == 1);
     CHECK(all.find("\"pps_samples\":1199999") != std::string::npos);
     CHECK(all.find("\"missed\":1") != std::string::npos);
@@ -282,7 +300,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     hopeless.declare_payload_bytes(64);
     go::SettingsStore store_on_hopeless(settings, kWidestAddress);
     ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &statistics);
-    on_hopeless.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    on_hopeless.on_rx(config_frame("{\"command\":\"timing\"}"));
     CHECK(hopeless.sent.empty());
     CHECK(on_hopeless.link_drops() == 1);
 }
@@ -307,7 +325,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
 
     config.tick(10);
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("\"cmd\":\"status\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"command\":\"status\"") != std::string::npos);
     CHECK(config.link_drops() == 1);
 
     // And a second pass does not send it again: a retry is not a stream.
@@ -346,7 +364,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     free_link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::SettingsStore store_free(settings, kWidestAddress);
     ConfigService on_free(free_link, store_free, nullptr, &statistics);
-    on_free.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    on_free.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(free_link.sent.size() > 1);
 
     platform::host::Link busy;
@@ -355,7 +373,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     busy.hold_after(1);
     go::SettingsStore store_busy(settings, kWidestAddress);
     ConfigService on_busy(busy, store_busy, nullptr, &statistics);
-    on_busy.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    on_busy.on_rx(config_frame("{\"command\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
     CHECK(on_busy.replying());
     for (uint32_t now_ms = 10; now_ms < 1000 && on_busy.replying(); now_ms += 10) {
@@ -375,8 +393,8 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(config.replying());
 
@@ -385,7 +403,7 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     link.serve();
     config.resume_replies(20);
     REQUIRE(link.sent.size() == 2);
-    CHECK(link.last().bytes.find("\"cmd\":\"status\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"command\":\"status\"") != std::string::npos);
     CHECK_FALSE(config.replying());
     CHECK(config.link_drops() == 0);
 }
@@ -398,8 +416,8 @@ TEST_CASE("comms: a central that never takes its reply loses it, counted, and fr
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     config.resume_replies(ports::kReplyWaitCeilingMs - 1);
     CHECK(config.replying());
     config.resume_replies(ports::kReplyWaitCeilingMs);

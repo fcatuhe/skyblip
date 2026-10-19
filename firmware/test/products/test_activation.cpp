@@ -33,12 +33,12 @@ constexpr ports::Capabilities without(ports::Capability part) {
 }
 
 std::string register_command(const std::string& server_nonce, const std::string& signature) {
-    return "{\"cmd\":\"register\",\"server_nonce\":\"" + server_nonce + "\",\"signature\":\"" +
+    return "{\"command\":\"register\",\"server_nonce\":\"" + server_nonce + "\",\"signature\":\"" +
            signature + "\"}";
 }
 
 std::string unlock_command(long serial, const std::string& signature) {
-    return "{\"cmd\":\"unlock\",\"serial\":" + std::to_string(serial) + ",\"signature\":\"" +
+    return "{\"command\":\"unlock\",\"serial\":" + std::to_string(serial) + ",\"signature\":\"" +
            signature + "\"}";
 }
 
@@ -77,14 +77,14 @@ struct Bench {
         std::string answer;
         for (size_t i = before; i < sent.size(); i++)
             if (sent[i].endpoint == events::Endpoint::Config &&
-                sent[i].bytes.rfind("{\"cmd\":\"status\"", 0) != 0)
+                sent[i].bytes.rfind("{\"command\":\"status\"", 0) != 0)
                 answer = sent[i].bytes;
         return answer;
     }
 
     std::string challenge_with_vectors_nonce() {
         rig.platform.identity().queue_random(vectors.bytes<16>("unit_nonce"));
-        return say("{\"cmd\":\"challenge\"}");
+        return say("{\"command\":\"challenge\"}");
     }
 
     std::string register_with_vectors() {
@@ -112,7 +112,7 @@ struct Bench {
 };
 
 std::string refusal(const char* word) {
-    return std::string("{\"ack\":false,\"reason\":\"") + word + "\"}";
+    return std::string("{\"acknowledge\":false,\"reason\":\"") + word + "\"}";
 }
 
 }  // namespace
@@ -144,7 +144,7 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
 TEST_CASE("activation: get leaves address out until there is one, keeps address_mapping_table") {
     Bench bench;
     bench.boot();
-    const std::string reply = bench.say("{\"cmd\":\"get\"}");
+    const std::string reply = bench.say("{\"command\":\"get\"}");
     CHECK(reply.find("\"address\"") == std::string::npos);
     CHECK(reply.find("\"address_mapping_table\":58") != std::string::npos);
 }
@@ -157,23 +157,23 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     bench.boot();
 
     CHECK(bench.challenge_with_vectors_nonce() ==
-          "{\"cmd\":\"challenge\",\"nonce\":\"" + bench.vectors.text("unit_nonce") +
+          "{\"command\":\"challenge\",\"nonce\":\"" + bench.vectors.text("unit_nonce") +
               "\",\"server_key_id\":\"" + bench.vectors.text("server_key_id") + "\"}");
 
     CHECK(bench.register_with_vectors() ==
-          "{\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}");
+          "{\"acknowledge\":false,\"pending\":true,\"reason\":\"confirm_register\"}");
     REQUIRE(bench.pending() == comms::Pending::Register);
 
     const std::string registration = bench.press_twice();
     CHECK(registration ==
-          "{\"cmd\":\"registration\",\"device_id\":\"" + bench.vectors.text("device_id") +
+          "{\"command\":\"registration\",\"device_id\":\"" + bench.vectors.text("device_id") +
               "\",\"public_key\":\"" + bench.vectors.text("unit_public_key") + "\",\"version\":\"" +
               bench.vectors.text("version") + "\",\"server_key_id\":\"" +
               bench.vectors.text("server_key_id") + "\",\"release\":true,\"signature\":\"" +
               bench.vectors.text("registration_signature") + "\"}");
     CHECK_FALSE(bench.activation().activated());
 
-    CHECK(bench.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(bench.activation().serial == 298);
     CHECK(bench.activation().address() == settings::AirAddress{0x00012Au});
     CHECK(bench.rig.platform.identity().writes == 1);
@@ -187,11 +187,11 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
     bench.press_twice();
-    REQUIRE(bench.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
+    REQUIRE(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
 
     CHECK(bench.rig.platform.link().advertised == "skyBlip Go+ 00012A");
-    CHECK(bench.say("{\"cmd\":\"get\"}").find("\"address\":298") != std::string::npos);
+    CHECK(bench.say("{\"command\":\"get\"}").find("\"address\":298") != std::string::npos);
     CHECK(bench.rig.product.radio().arm_count() > 0);
     CHECK_FALSE(reads_in(bench.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
                          go::kGlassWidth, go::kGlassHeight));
@@ -259,7 +259,7 @@ TEST_CASE("activation: a second challenge replaces the nonce, and R over the fir
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
-    bench.say("{\"cmd\":\"challenge\"}");
+    bench.say("{\"command\":\"challenge\"}");
     CHECK(bench.register_with_vectors() == refusal("bad_signature"));
 }
 
@@ -317,19 +317,19 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
         Bench bench;
         bench.rig.platform.identity().key_provisioned = false;
         bench.boot();
-        CHECK(bench.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
+        CHECK(bench.say("{\"command\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no randomness") {
         Bench bench;
         bench.boot();
         bench.rig.platform.identity().random_fails = true;
-        CHECK(bench.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
+        CHECK(bench.say("{\"command\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no running version") {
         Bench bench;
         bench.rig.platform.dfu().running_version_valid = false;
         bench.boot();
-        CHECK(bench.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
+        CHECK(bench.say("{\"command\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("a version lost between the challenge and the register") {
         Bench bench;
@@ -344,7 +344,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
 TEST_CASE("activation: a unit with no barometer neither flies, nor advertises, nor answers") {
     Bench bench(without(ports::Capability::Barometer));
     REQUIRE(bench.rig.setup() == Status::Down);
-    CHECK(bench.say("{\"cmd\":\"challenge\"}").empty());
+    CHECK(bench.say("{\"command\":\"challenge\"}").empty());
     bench.pass(3000);
     CHECK(bench.rig.product.radio().arm_count() == 0);
     CHECK_FALSE(bench.activation().activated());
@@ -404,7 +404,7 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
     bench.press_twice();
-    REQUIRE(bench.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
+    REQUIRE(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
     bench.rig.show(bench.now_ms, go::Page::SelfTest);
     bench.pass(2000);
@@ -432,7 +432,7 @@ struct QueuedUnlock {
 
         const identity::Nonce nonce{4, 2};
         bench.rig.platform.identity().queue_random(nonce);
-        REQUIRE(bench.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
+        REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
         const identity::UnlockCode code = Identity::unlock_code_for(kNewSerial, nonce);
         std::string signature(128, '?');
         hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
@@ -461,7 +461,7 @@ TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {
     QueuedUnlock queue;
     queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
-    CHECK(queue.bench.answer_since(queue.before) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(queue.bench.answer_since(queue.before) == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(queue.bench.rig.platform.identity().writes == 1);
     CHECK(queue.bench.activation().serial == QueuedUnlock::kNewSerial);
 }
@@ -484,7 +484,7 @@ TEST_CASE(
     queue.bench.rig.drop_link(sender);
     queue.bench.pass(100);
     queue.bench.rig.raise_link(sender + 1);
-    queue.bench.say("{\"cmd\":\"get\"}");
+    queue.bench.say("{\"command\":\"get\"}");
     queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
     CHECK(queue.unlock_answers() == 0);
     CHECK(queue.bench.rig.platform.identity().writes == 0);
@@ -578,7 +578,7 @@ TEST_CASE(
         desk.dfu.release = desk.vectors.flag("release");
         desk.config.set_flight_state(flight_state);
         desk.port.queue_random(desk.vectors.bytes<16>("unit_nonce"));
-        desk.say("{\"cmd\":\"challenge\"}");
+        desk.say("{\"command\":\"challenge\"}");
         desk.say(register_command(desk.vectors.text("server_nonce"),
                                   desk.vectors.text("register_signature")));
         REQUIRE(desk.config.pending() == comms::Pending::Register);
@@ -598,7 +598,7 @@ TEST_CASE("activation: an activated unit refuses challenge, register and unlock 
         Desk desk(Identity::kSerial);
         REQUIRE(desk.identity.activated());
         desk.config.set_flight_state(flight_state);
-        CHECK(desk.say("{\"cmd\":\"challenge\"}") == refusal("in_flight"));
+        CHECK(desk.say("{\"command\":\"challenge\"}") == refusal("in_flight"));
         CHECK(desk.say(register_command(desk.vectors.text("server_nonce"),
                                         desk.vectors.text("register_signature"))) ==
               refusal("in_flight"));
@@ -610,7 +610,7 @@ TEST_CASE("activation: an activated unit refuses challenge, register and unlock 
 TEST_CASE("activation: an activated unit's register prompt is cancelled at take-off") {
     Desk desk(Identity::kSerial);
     desk.config.set_flight_state(flight::FlightState::Ground);
-    REQUIRE(desk.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
+    REQUIRE(desk.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
     desk.register_signed_by_the_test_server();
     REQUIRE(desk.config.pending() == comms::Pending::Register);
     desk.config.set_flight_state(flight::FlightState::Airborne);
@@ -620,18 +620,19 @@ TEST_CASE("activation: an activated unit's register prompt is cancelled at take-
 
 TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {
     Desk desk;
-    desk.say("{\"cmd\":\"challenge\"}");
+    desk.say("{\"command\":\"challenge\"}");
     desk.config.set_supply_warned(true);
     CHECK(desk.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
     CHECK(desk.port.writes == 0);
     desk.config.set_supply_warned(false);
-    CHECK(desk.unlock_signed_by_the_test_server(0x0042) == "{\"ack\":true,\"reason\":\"unlock\"}");
+    CHECK(desk.unlock_signed_by_the_test_server(0x0042) ==
+          "{\"acknowledge\":true,\"reason\":\"unlock\"}");
 }
 
 // The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
 TEST_CASE("activation: an unlock code for serial 0 is refused, however well it is signed") {
     Desk desk;
-    desk.say("{\"cmd\":\"challenge\"}");
+    desk.say("{\"command\":\"challenge\"}");
     CHECK(desk.unlock_signed_by_the_test_server(0) == refusal("bad_signature"));
     CHECK(desk.port.writes == 0);
     CHECK_FALSE(desk.identity.activated());
@@ -646,11 +647,11 @@ TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is
         CAPTURE(after);
         Desk desk;
         desk.config.tick(kChallengeMs);
-        desk.say("{\"cmd\":\"challenge\"}");
+        desk.say("{\"command\":\"challenge\"}");
         desk.config.tick(kChallengeMs + after);
         const std::string answer = desk.unlock_signed_by_the_test_server(0x0042);
         if (after < comms::IdentityLink::kNonceForgetMs)
-            CHECK(answer == "{\"ack\":true,\"reason\":\"unlock\"}");
+            CHECK(answer == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
         else
             CHECK(answer == refusal("no_session"));
     }
@@ -663,7 +664,7 @@ TEST_CASE(
     constexpr uint32_t kChallengeMs = 0xFFFF0000u;
     Desk desk;
     desk.config.tick(kChallengeMs);
-    desk.say("{\"cmd\":\"challenge\"}");
+    desk.say("{\"command\":\"challenge\"}");
     desk.config.tick(kChallengeMs + comms::IdentityLink::kNonceForgetMs);
     desk.config.tick(kChallengeMs + 5);
     CHECK(desk.unlock_signed_by_the_test_server(0x0042) == refusal("no_session"));
@@ -676,7 +677,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         CAPTURE(release);
         Desk desk;
         desk.dfu.release = release;
-        desk.say("{\"cmd\":\"challenge\"}");
+        desk.say("{\"command\":\"challenge\"}");
         desk.register_signed_by_the_test_server();
         REQUIRE(desk.config.pending() == comms::Pending::Register);
         desk.config.confirm();
@@ -703,7 +704,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk desk;
     desk.dfu.running_image_version = dfu::kWidestVersion;
-    desk.say("{\"cmd\":\"challenge\"}");
+    desk.say("{\"command\":\"challenge\"}");
     const identity::Nonce unit_nonce = desk.identity.unit_nonce();
     char nonce_hex[33] = {0};
     hex::write(ConstByteSpan(unit_nonce.data(), unit_nonce.size()), nonce_hex);

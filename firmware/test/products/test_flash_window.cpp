@@ -266,11 +266,11 @@ TEST_CASE("flash window: the write counters are readable over the companion link
     REQUIRE(wait_for_write(rig, now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
 
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"flash\"}");
+    rig.send("{\"command\":\"flash\"}");
     step_until(rig, now_ms, now_ms + 100);
     const std::string reply = rig.last_on(events::Endpoint::Config);
     REQUIRE_FALSE(reply.empty());
-    CHECK(reply.find("\"cmd\":\"flash\"") != std::string::npos);
+    CHECK(reply.find("\"command\":\"flash\"") != std::string::npos);
     CHECK(reply.find("\"writes\":1") != std::string::npos);
     CHECK(reply.find("\"forced\":0") != std::string::npos);
     CHECK(reply.find("\"worst_wait_ms\":") != std::string::npos);

@@ -11,7 +11,7 @@ namespace skyblip::comms {
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
 int ConfigService::format_status(char* out, int capacity) {
     json::Writer writer(out, capacity);
-    writer.add_string("cmd", "status");
+    writer.add_string("command", "status");
     writer.add_string("flight", flight_name(flight_state_));
     writer.add_boolean("upload", upload_allowed());
     const power::BatteryState& battery = diagnostics_.battery;
@@ -20,7 +20,7 @@ int ConfigService::format_status(char* out, int capacity) {
     writer.add_string("power_level", power::to_string(diagnostics_.level));
     writer.add_boolean("went_dark_flat", went_dark_flat_);
     if (diagnostics_.die_valid)
-        writer.add_integer("die_temp_c", whole_celsius(diagnostics_.die_dc));
+        writer.add_integer("die_temperature_c", whole_celsius(diagnostics_.die_dc));
     const int bytes = writer.finish();
     return writer.overflowed() ? 0 : bytes;
 }
@@ -39,7 +39,7 @@ void ConfigService::send_status() {
 void ConfigService::send_defaults() {
     char buffer[kSmallestSupportedPayloadBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_string("cmd", "defaults");
+    writer.add_string("command", "defaults");
     store_.write_default_fields(writer);
     const int bytes = writer.finish();
     if (writer.overflowed()) {
@@ -68,7 +68,7 @@ void ConfigService::push_status() {
 // and the rest of the report is abandoned rather than sent with a hole in it.
 void ConfigService::send_timing() {
     if (timing_statistics_ == nullptr) {
-        acknowledge(false, "no_stats");
+        acknowledge(false, "no_statistics");
         return;
     }
     start_report(timing_report_, kTimingFrameBytes, *timing_statistics_);
@@ -86,14 +86,14 @@ void ConfigService::send_timing() {
 // question - not a longer answer a phone might truncate.
 void ConfigService::send_flash() {
     if (durable_writes_ == nullptr) {
-        acknowledge(false, "no_stats");
+        acknowledge(false, "no_statistics");
         return;
     }
     char buffer[192];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_string("cmd", "flash");
+    writer.add_string("command", "flash");
     writer.add_boolean("writable", settings_writable());
-    writer.add_integer("changes", static_cast<long>(durable_writes_->requests()));
+    writer.add_integer("requests", static_cast<long>(durable_writes_->requests()));
     writer.add_integer("writes", static_cast<long>(durable_writes_->writes()));
     writer.add_integer("forced", static_cast<long>(durable_writes_->forced()));
     writer.add_integer("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
@@ -123,7 +123,7 @@ void ConfigService::send_update(uint16_t session_id) {
     dfu::format_hub_image(hub_image_, hub_image, sizeof(hub_image));
     char buffer[kSmallestSupportedPayloadBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_string("cmd", "update");
+    writer.add_string("command", "update");
     writer.add_string("image", dfu::to_string(image_state_));
     if (image_state_ != dfu::ImageState::Confirmed) {
         writer.add_string("from", from);
@@ -141,6 +141,10 @@ void ConfigService::send_update(uint16_t session_id) {
         writer.add_string("key", key);
     }
     const int bytes = writer.finish();
+    if (writer.overflowed()) {
+        diagnostics_.link_drops++;
+        return;
+    }
     (void)reply_to(session_id, buffer, bytes);
 }
 
@@ -153,10 +157,10 @@ void ConfigService::send_update(uint16_t session_id) {
 // has zero receptions.
 void ConfigService::send_diagnostics() {
     if (diagnostics_.refreshes == 0) {
-        acknowledge(false, "no_stats");
+        acknowledge(false, "no_statistics");
         return;
     }
-    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_, "diag");
+    start_report(diagnostics_report_, DiagnosticsReport::kFrameBytes, diagnostics_, "diagnostics");
 }
 
 template <class Report, class... Arguments>

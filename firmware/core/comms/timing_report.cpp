@@ -36,7 +36,7 @@ void TimingReport::add(const char* key, const char* text, long value) {
 
 // pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
 // retune time, core/timing::kHopGuardMs and core/timing::kJitterGuardMs on each
-// side of the centre bucket (core/timing/slot_timing_statistics.h). holdover, missed and
+// side of the centre bucket (core/timing/slot_timing_statistics.h). holdover_events, missed and
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
 TimingReport::TimingReport(const timing::SlotTimingStatistics& statistics) {
@@ -53,12 +53,12 @@ TimingReport::TimingReport(const timing::SlotTimingStatistics& statistics) {
     add("dwell_us", dwell_buckets_, 0);
     add("dwell_worst_us", nullptr, statistics.dwell_worst_us());
     add("dwell_samples", nullptr, frame::counter(statistics.dwell_samples()));
-    add("holdover", nullptr, frame::counter(statistics.holdover_events()));
+    add("holdover_events", nullptr, frame::counter(statistics.holdover_events()));
     add("missed", nullptr, frame::counter(statistics.missed()));
     add("refused", nullptr, frame::counter(statistics.refused()));
     add("switch_hop_us", nullptr, frame::counter(statistics.switch_hop_us()));
-    add("switch_to_o_us", nullptr, frame::counter(statistics.switch_to_o_band_us()));
-    add("switch_to_m_us", nullptr, frame::counter(statistics.switch_to_m_band_us()));
+    add("switch_to_o_band_us", nullptr, frame::counter(statistics.switch_to_o_band_us()));
+    add("switch_to_m_band_us", nullptr, frame::counter(statistics.switch_to_m_band_us()));
     add("late_dwells", nullptr, frame::counter(statistics.late_dwells()));
 }
 
@@ -69,7 +69,7 @@ bool TimingReport::fits(int payload_bytes) const {
         widest = std::max(bytes, widest);
     }
     frame::Budget budget(payload_bytes);
-    return budget.take(field_bytes(Field{"cmd", "timing", 0})) &&
+    return budget.take(field_bytes(Field{"command", "timing", 0})) &&
            budget.take(field_bytes(Field{"part", nullptr, count_})) &&
            budget.take(frame::kMoreFieldBytes) && budget.take(widest);
 }
@@ -81,7 +81,7 @@ int TimingReport::next_frame(int payload_bytes, char* out, int capacity) {
     room = std::min(room, capacity);
 
     frame::Budget budget(room - 1);
-    budget.take(field_bytes(Field{"cmd", "timing", 0}));
+    budget.take(field_bytes(Field{"command", "timing", 0}));
     budget.take(field_bytes(Field{"part", nullptr, part_}));
     budget.take(frame::kMoreFieldBytes);
     int packed = 0;
@@ -89,7 +89,7 @@ int TimingReport::next_frame(int payload_bytes, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.add_string("cmd", "timing");
+    writer.add_string("command", "timing");
     writer.add_integer("part", part_);
     writer.add_boolean("more", at_ + packed < count_);
     for (int i = 0; i < packed; i++) {

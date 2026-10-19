@@ -112,7 +112,7 @@ class DiagnosticsReport {
     // buffer the caller lends.
     static constexpr int kFrameBytes = 384;
 
-    // cmd is the name the reply answers under, because the link already has a
+    // command is the name the reply answers under, because the link already has a
     // question that asks for the radio group alone.
     DiagnosticsReport(const Diagnostics& diagnostics, const char* command);
     DiagnosticsReport(const Diagnostics& diagnostics, const char* command, Group only);
@@ -125,7 +125,7 @@ class DiagnosticsReport {
     int line(int index, char* out, int capacity) const;
 
     // The link surface: as many complete flat objects as the negotiated payload
-    // needs, each carrying "cmd", "group", "part" and "more". A frame never mixes
+    // needs, each carrying "command", "group", "part" and "more". A frame never mixes
     // two subsystems, so a reader that only wants one can stop at its group.
     bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
@@ -172,7 +172,7 @@ class DiagnosticsReport {
 // pull-only, so a phone pays for exactly the dumps it asks for.
 //
 // The refresh is the cheaper half (thirty loads and four accessor calls) and is
-// separate because the link may ask at any instant: a "diag" answered from a
+// separate because the link may ask at any instant: a "diagnostics" answered from a
 // ten-second-old snapshot would report a fix that was lost nine seconds ago.
 constexpr uint32_t kDiagnosticsRefreshPeriodMs = 1000;
 constexpr uint32_t kDiagnosticsDumpPeriodMs = 10000;

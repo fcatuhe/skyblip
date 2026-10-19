@@ -436,7 +436,7 @@ void write_json_fields(json::Writer& writer, const Settings& settings,
 
 void write_json_settings(json::Writer& writer, const Settings& settings) {
     writer.add_integer("aircraft_type", settings.aircraft_type);
-    writer.add_boolean("alarm", settings.alarm_enabled);
+    writer.add_boolean("alarm_enabled", settings.alarm_enabled);
     writer.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
     writer.add_integer("units", static_cast<long>(settings.units));
     writer.add_string("callsign", settings.callsign);
@@ -457,7 +457,7 @@ Status apply_json(Settings& settings, const char* json, int length) {
         if (!fits_u8(value)) return Status::OutOfRange;
         next.aircraft_type = static_cast<uint8_t>(value);
     }
-    if (reader.read_boolean("alarm", flag)) next.alarm_enabled = flag;
+    if (reader.read_boolean("alarm_enabled", flag)) next.alarm_enabled = flag;
     if (reader.read_integer("alarm_volume", value)) {
         if (!fits_u8(value)) return Status::OutOfRange;
         next.alarm_volume = static_cast<AlarmVolume>(value);
@@ -471,7 +471,7 @@ Status apply_json(Settings& settings, const char* json, int length) {
         next.battery_offset_mv = static_cast<int16_t>(value);
         next.battery_offset_manual = true;
     }
-    if (reader.read_integer("freq_trim_e1_ppm", value)) {
+    if (reader.read_integer("frequency_trim_e1_ppm", value)) {
         if (value < -kFrequencyTrimCeilingE1Ppm || value > kFrequencyTrimCeilingE1Ppm)
             return Status::OutOfRange;
         next.frequency_trim_e1_ppm = static_cast<int16_t>(value);

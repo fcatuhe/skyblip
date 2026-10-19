@@ -97,7 +97,7 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
     rig.on_ground(now_ms);
     rig.run(now_ms, 1000);
 
-    rig.send("{\"cmd\":\"power_off\"}");
+    rig.send("{\"command\":\"power_off\"}");
     rig.run(1000, 1500);
     // Asking is not doing: the request is still waiting for the confirmation
     // the device demands, and nothing has moved.
@@ -126,7 +126,7 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     rig.on_ground(now_ms);
-    rig.send("{\"cmd\":\"power_off\"}");
+    rig.send("{\"command\":\"power_off\"}");
     rig.run(now_ms, 5000);
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.screen().powered());
@@ -143,7 +143,7 @@ TEST_CASE("product: an unconfirmed power_off over the link turns nothing off") {
     REQUIRE(flying.setup() == Status::Ok);
     uint32_t flying_now_ms = 0;
     flying.airborne(flying_now_ms);
-    flying.send("{\"cmd\":\"power_off\"}");
+    flying.send("{\"command\":\"power_off\"}");
     flying.run(flying_now_ms, flying_now_ms + 2000);
     flying_now_ms += 2000;
     CHECK(flying.config().pending() == comms::Pending::None);

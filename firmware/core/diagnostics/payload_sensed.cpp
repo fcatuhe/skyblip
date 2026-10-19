@@ -271,7 +271,7 @@ Record record_of(const Switch& value, const Instant& at) {
     put_i32(record.payload + 4, value.margin_us);
     put_u16(record.payload + 8, value.took_us);
     put_u16(record.payload + 10, value.gap_us);
-    record.payload[12] = static_cast<uint8_t>(value.kind);
+    record.payload[12] = static_cast<uint8_t>(value.change);
     set_flag(record.flags, kSwitchFlagArmedAhead, value.armed_ahead);
     set_flag(record.flags, kSwitchFlagLate, value.late);
     return record;
@@ -284,7 +284,7 @@ bool read(const Record& record, Switch& out) {
     out.margin_us = get_i32(record.payload + 4);
     out.took_us = get_u16(record.payload + 8);
     out.gap_us = get_u16(record.payload + 10);
-    out.kind = static_cast<SwitchKind>(record.payload[12]);
+    out.change = static_cast<SwitchKind>(record.payload[12]);
     out.armed_ahead = record.flagged(kSwitchFlagArmedAhead);
     out.late = record.flagged(kSwitchFlagLate);
     return true;

@@ -27,7 +27,7 @@ void pass(Rig& rig, uint32_t& now_ms) {
 
 void open_upload_window(Rig& rig, uint32_t& now_ms) {
     on_ground(rig, now_ms);
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     config(rig).confirm();
@@ -70,7 +70,7 @@ void install_and_swap(Rig& rig) {
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
 std::string update_frame(Rig& rig) {
     for (const auto& frame : rig.platform.link().sent)
-        if (frame.bytes.find("\"cmd\":\"update\"") != std::string::npos) return frame.bytes;
+        if (frame.bytes.find("\"command\":\"update\"") != std::string::npos) return frame.bytes;
     return "";
 }
 
@@ -121,7 +121,7 @@ bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t blob_bytes) {
 
 void set_callsign_over_the_link(Rig& rig, uint32_t& now_ms, const char* callsign) {
     on_ground(rig, now_ms);
-    std::string json = "{\"cmd\":\"set\",\"callsign\":\"";
+    std::string json = "{\"command\":\"set\",\"callsign\":\"";
     json += callsign;
     json += "\"}";
     rig.send(json.c_str());
@@ -182,7 +182,7 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
     uint32_t now_ms = 0;
     on_ground(rig, now_ms);
 
-    rig.send("{\"cmd\":\"recovery\"}");
+    rig.send("{\"command\":\"recovery\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     REQUIRE(config(rig).pending() == comms::Pending::Recovery);
@@ -209,7 +209,7 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     uint32_t now_ms = 0;
     on_ground(rig, now_ms);
 
-    rig.send("{\"cmd\":\"recovery\"}");
+    rig.send("{\"command\":\"recovery\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     config(rig).confirm();
@@ -335,7 +335,7 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     REQUIRE(before.setup() == Status::Ok);
     uint32_t now_ms = 0;
     on_ground(before, now_ms);
-    before.send("{\"cmd\":\"dfu\",\"version\":\"0.1.0+12\"}");
+    before.send("{\"command\":\"dfu\",\"version\":\"0.1.0+12\"}");
     before.run(now_ms, now_ms + 200);
     now_ms += 200;
     config(before).confirm();
@@ -418,7 +418,7 @@ namespace {
 std::string ask_for(Rig& rig, const char* version) {
     uint32_t now_ms = 0;
     on_ground(rig, now_ms);
-    std::string json = "{\"cmd\":\"dfu\",\"version\":\"";
+    std::string json = "{\"command\":\"dfu\",\"version\":\"";
     json += version;
     json += "\"}";
     rig.send(json.c_str());
@@ -490,7 +490,7 @@ TEST_CASE("product: the update frame names the trusted key and, on a development
     sign(release, 0x21, 0x21);
     release.platform.dfu().running_signer[1] = 0x26;
     REQUIRE(release.setup() == Status::Ok);
-    release.send("{\"cmd\":\"update\"}");
+    release.send("{\"command\":\"update\"}");
     release.run(0, 200);
     const std::string said = release.last_on(events::Endpoint::Config);
     CHECK(said.find("\"key\":\"21262121\"") != std::string::npos);
@@ -500,7 +500,7 @@ TEST_CASE("product: the update frame names the trusted key and, on a development
     sign(development, 0x21, 0x21);
     development.platform.dfu().allows_downgrade = true;
     REQUIRE(development.setup() == Status::Ok);
-    development.send("{\"cmd\":\"update\"}");
+    development.send("{\"command\":\"update\"}");
     development.run(0, 200);
     CHECK(development.last_on(events::Endpoint::Config).find("\"downgrade\":true") !=
           std::string::npos);

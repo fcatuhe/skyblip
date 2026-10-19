@@ -28,12 +28,13 @@ SlotState Scheduler::state_at(int phase_ms) {
     // The tail first: before anything else in a second, the radio is still in
     // the slot 1 that opened 800 ms into the previous one.
     if (phase_ms < kSlot1WrapMs) return SlotState::Slot1;
-    if (phase_ms >= kUplinkRxStartMs && phase_ms < kUplinkRxEndMs) return SlotState::UplinkRxO;
-    if (phase_ms >= kUplinkRxEndMs && phase_ms < kSlot0StartMs) return SlotState::SwitchOtoM;
+    if (phase_ms >= kUplinkRxStartMs && phase_ms < kUplinkRxEndMs) return SlotState::UplinkRxOBand;
+    if (phase_ms >= kUplinkRxEndMs && phase_ms < kSlot0StartMs)
+        return SlotState::SwitchOBandToMBand;
     if (phase_ms >= kSlot0StartMs && phase_ms < kSlot0EndMs - kHopGuardMs) return SlotState::Slot0;
     if (phase_ms >= kSlot0EndMs - kHopGuardMs && phase_ms < kSlot1StartMs) return SlotState::Hop;
     if (phase_ms >= kSlot1StartMs) return SlotState::Slot1;
-    return SlotState::SwitchMtoO;
+    return SlotState::SwitchMBandToOBand;
 }
 
 Band Scheduler::band_at(int phase_ms) {

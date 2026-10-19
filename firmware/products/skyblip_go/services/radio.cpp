@@ -119,7 +119,7 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
                             std::numeric_limits<int32_t>::max()));
     value.took_us = clamp_u16(change.took_us());
     value.gap_us = clamp_u16(change.gap_us());
-    value.kind = kind_of(change);
+    value.change = kind_of(change);
     value.armed_ahead = change.armed_ahead;
     value.late = change.late_start();
     const timing::ClockState& clock = context_.state.clock;

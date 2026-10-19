@@ -51,10 +51,10 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     config.set_reset_reason(power::ResetReason::Watchdog);
     config.diagnostics().refreshes = 1;
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    CHECK(body.find("\"cmd\":\"status\"") != std::string::npos);
+    CHECK(body.find("\"command\":\"status\"") != std::string::npos);
     CHECK(body.find("\"flight\":\"ground\"") != std::string::npos);
     // State, and only state. The callsign and the device address are what the
     // "config" reply answers, and the reset reason never changes inside a session:
@@ -62,11 +62,11 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     CHECK(body.find("D-KXYZ") == std::string::npos);
     CHECK(body.find("\"address\"") == std::string::npos);
     CHECK(body.find("\"reset\"") == std::string::npos);
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
     CHECK(link.last().bytes.find("D-KXYZ") != std::string::npos);
 
     link.clear();
-    config.on_rx(config_frame("{\"cmd\":\"diag\"}"));
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     CHECK(joined(link).find("\"reset\":\"WATCHDOG\"") != std::string::npos);
 }
 
@@ -84,18 +84,18 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, nullptr, &statistics);
 
-    config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    config.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(!link.sent.empty());
     // The last frame is the one that says there is nothing after it, whether
     // that is the first frame or the third.
     CHECK(link.sent.back().bytes.find("\"more\":false") != std::string::npos);
     const std::string body = joined(link);
-    CHECK(body.find("\"cmd\":\"timing\"") != std::string::npos);
+    CHECK(body.find("\"command\":\"timing\"") != std::string::npos);
     CHECK(body.find("\"pps_us\":\"0,0,0,1,0,0,0\"") != std::string::npos);
     CHECK(body.find("\"dwell_us\":\"0,0,0,0,1,0,0\"") != std::string::npos);
     CHECK(body.find("\"pps_samples\":1") != std::string::npos);
     CHECK(body.find("\"dwell_worst_us\":200") != std::string::npos);
-    CHECK(body.find("\"holdover\":0") != std::string::npos);
+    CHECK(body.find("\"holdover_events\":0") != std::string::npos);
     CHECK(body.find("\"missed\":1") != std::string::npos);
     CHECK(body.find("\"refused\":2") != std::string::npos);
 }
@@ -106,9 +106,9 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    config.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("no_stats") != std::string::npos);
+    CHECK(link.last().bytes.find("no_statistics") != std::string::npos);
 }
 
 TEST_CASE("comms: status carries state of charge, the charging flag and the level") {
@@ -120,7 +120,7 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
     config.set_flight_state(flight::FlightState::Ground);
     config.set_battery_state(battery_of(61, false), power::PowerLevel::Normal);
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.find("\"battery_percent\":61") != std::string::npos);
@@ -137,7 +137,7 @@ TEST_CASE("comms: a battery nobody has read has no percentage, never a false zer
     config.set_flight_state(flight::FlightState::Ground);
     // No set_battery_state call at all: no sample has ever arrived.
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     const std::string body = link.last().bytes;
     CHECK(body.find("battery_percent") == std::string::npos);
     CHECK(body.find("\"power_level\":\"--\"") != std::string::npos);
@@ -227,13 +227,14 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     // The driver gates -50 to +125 C, the formatter does not: int16 prints widest.
     config.set_die_temperature(INT16_MIN, true);
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
-    CHECK(body ==
-          "{\"cmd\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
-          "\"charging\":true,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
-          "\"die_temp_c\":-3277}");
+    CHECK(
+        body ==
+        "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
+        "\"charging\":true,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
+        "\"die_temperature_c\":-3277}");
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }
@@ -245,11 +246,11 @@ TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
 
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     CHECK(link.last().bytes.find("\"went_dark_flat\":false") != std::string::npos);
 
     config.set_went_dark_flat(true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     CHECK(link.last().bytes.find("\"went_dark_flat\":true") != std::string::npos);
 }
 
@@ -262,7 +263,7 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, nullptr, &statistics);
 
-    config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    config.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(!link.sent.empty());
     const std::string body = joined(link);
     CHECK(body.find("\"refused\":1") != std::string::npos);
@@ -312,12 +313,12 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     dump.gnss_rejected = 6;
 
     link.clear();
-    config.on_rx(config_frame("{\"cmd\":\"diag\"}"));
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     REQUIRE(!link.sent.empty());
     const std::string body = joined(link);
 
-    CHECK(body.find("\"group\":\"sys\"") != std::string::npos);
-    CHECK(body.find("\"up_s\":3725") != std::string::npos);
+    CHECK(body.find("\"group\":\"system\"") != std::string::npos);
+    CHECK(body.find("\"uptime_s\":3725") != std::string::npos);
     CHECK(body.find("\"reset\":\"WATCHDOG\"") != std::string::npos);
     CHECK(body.find("\"noise_dbm\":-101") != std::string::npos);
     CHECK(body.find("\"rx_ok\":1204") != std::string::npos);
@@ -333,10 +334,10 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     // The gauge and the die sensor are the SAME numbers the status reply carries,
     // because there is one snapshot behind both replies and not two copies.
     CHECK(body.find("\"percent\":64") != std::string::npos);
-    CHECK(body.find("\"die_temp_c\":42") != std::string::npos);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
+    CHECK(body.find("\"die_temperature_c\":42") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
     CHECK(link.last().bytes.find("\"battery_percent\":64") != std::string::npos);
-    CHECK(link.last().bytes.find("\"die_temp_c\":42") != std::string::npos);
+    CHECK(link.last().bytes.find("\"die_temperature_c\":42") != std::string::npos);
 
     // Every frame whole, none longer than the narrowest phone in the field, and
     // nothing refused on the way out.
@@ -354,19 +355,19 @@ TEST_CASE("comms: a dump nobody has collected says so, not zeros") {
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_rx(config_frame("{\"cmd\":\"diag\"}"));
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("no_stats") != std::string::npos);
+    CHECK(link.last().bytes.find("no_statistics") != std::string::npos);
     // A device with a dead receiver and a dead radio reports zeros for real, so
     // the difference has to be visible: the refusal names the wiring.
-    CHECK(link.last().bytes.find("\"ack\":false") != std::string::npos);
+    CHECK(link.last().bytes.find("\"acknowledge\":false") != std::string::npos);
 
     // The radio group is not gated, and that asymmetry is deliberate: its own key
     // has a writer that runs every pass, and a radio that has heard nothing
     // truthfully has zero receptions. A receiver's firmware string does not.
     link.clear();
-    config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
-    CHECK(link.last().bytes.find("\"cmd\":\"radio\"") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"radio\"}"));
+    CHECK(link.last().bytes.find("\"command\":\"radio\"") != std::string::npos);
 }
 
 // Asking is not clearing. Every counter in the dump belongs to somebody else and
@@ -382,10 +383,10 @@ TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
     config.diagnostics().rx_ok = 99;
     config.set_range_refused(7);
 
-    config.on_rx(config_frame("{\"cmd\":\"diag\"}"));
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     const std::string first = joined(link);
     link.clear();
-    config.on_rx(config_frame("{\"cmd\":\"diag\"}"));
+    config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     CHECK(joined(link) == first);
     CHECK(config.diagnostics().rx_ok == 99);
     CHECK(config.diagnostics().range_refused == 7);
@@ -409,13 +410,13 @@ TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     statistics.record_missed();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, nullptr, &statistics);
-    config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    config.on_rx(config_frame("{\"command\":\"timing\"}"));
     const std::string body = joined(link);
     CHECK(body.find("\"pps_samples\":1") != std::string::npos);
     CHECK(body.find("\"dwell_samples\":0") != std::string::npos);
     CHECK(body.find("\"missed\":1") != std::string::npos);
     CHECK(body.find("_samples\":-") == std::string::npos);
-    CHECK(body.find("\"holdover\":-") == std::string::npos);
+    CHECK(body.find("\"holdover_events\":-") == std::string::npos);
     // The signed figures stay signed: an error in microseconds has a direction.
     CHECK(body.find("\"pps_worst_us\":0") != std::string::npos);
 }
@@ -430,10 +431,10 @@ TEST_CASE("comms: the timing report says what each dwell change cost the executo
     statistics.record_switching(95, 310, 285, 2);
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, nullptr, &statistics);
-    config.on_rx(config_frame("{\"cmd\":\"timing\"}"));
+    config.on_rx(config_frame("{\"command\":\"timing\"}"));
     const std::string body = joined(link);
     CHECK(body.find("\"switch_hop_us\":95") != std::string::npos);
-    CHECK(body.find("\"switch_to_o_us\":310") != std::string::npos);
-    CHECK(body.find("\"switch_to_m_us\":285") != std::string::npos);
+    CHECK(body.find("\"switch_to_o_band_us\":310") != std::string::npos);
+    CHECK(body.find("\"switch_to_m_band_us\":285") != std::string::npos);
     CHECK(body.find("\"late_dwells\":2") != std::string::npos);
 }

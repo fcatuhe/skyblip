@@ -111,7 +111,7 @@ class DiagnosticsDump {
 
     void emit(const comms::Diagnostics& snapshot) {
         if (!sink_.ready()) return;
-        comms::DiagnosticsReport report(snapshot, "diag");
+        comms::DiagnosticsReport report(snapshot, "diagnostics");
         char line[comms::DiagnosticsReport::kLineBytes];
         for (int i = 0; i < report.line_count(); i++) {
             const int length = report.line(i, line, static_cast<int>(sizeof(line)));

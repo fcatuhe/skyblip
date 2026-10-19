@@ -291,7 +291,7 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     CHECK(pressed.product.went_dark_flat());
     CHECK(reads_in(pressed.product.self_test_page(), "WAS FLAT", 0, 150, 200, 199));
     CHECK_FALSE(pressed.platform.system_power().went_dark_flat());
-    pressed.send("{\"cmd\":\"status\"}");
+    pressed.send("{\"command\":\"status\"}");
     pressed.run(0, 200);
     CHECK(pressed.last_on(events::Endpoint::Config).find("\"went_dark_flat\":true") !=
           std::string::npos);

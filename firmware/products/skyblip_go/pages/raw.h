@@ -59,7 +59,7 @@ struct RawRadio {
     uint16_t tracked{0};
     uint8_t alarm{0};
     int8_t noise_dbm{0};
-    timing::SlotState slot{timing::SlotState::UplinkRxO};
+    timing::SlotState slot{timing::SlotState::UplinkRxOBand};
     uint32_t frequency_hz{0};
     bool tx_allowed{false};
 };

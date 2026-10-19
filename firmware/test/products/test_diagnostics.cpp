@@ -122,7 +122,7 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     CHECK(has(radio, "dio1_armed=false dio1_edges=0 dio1_missed=0"));
 
     // And the two the shell already knew and could not say out loud.
-    CHECK(has(console.with("sys "), "reset=\"POWER ON\""));
+    CHECK(has(console.with("system "), "reset=\"POWER ON\""));
     CHECK(has(console.with("power "), "supply_warnings=0"));
     CHECK(has(console.with("power "), "implausible=0"));
     CHECK(has(console.with("traffic "), "tracked=0"));
@@ -184,7 +184,7 @@ TEST_CASE("diagnostics: nothing is written until a host has opened the port") {
     CHECK(rig.product.config_link().config().diagnostics().refreshes > 20);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"diag\"}");
+    rig.send("{\"command\":\"diagnostics\"}");
     pass(rig, dump, now_ms, 200);
     CHECK(has(last_config_frame(rig), "\"group\":\"radio\""));
 }
@@ -234,7 +234,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     // could have moved a counter: the ten-second cadence means the console's last
     // dump is otherwise older than the link's answer.
     pass(rig, dump, now_ms, comms::kDiagnosticsDumpPeriodMs);
-    rig.send("{\"cmd\":\"diag\"}");
+    rig.send("{\"command\":\"diagnostics\"}");
     pass(rig, dump, now_ms, 200);
 
     const std::string frames = last_config_frame(rig);
@@ -257,7 +257,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
 // over. Two things are being pinned. One: the collector's own cadences are
 // unsigned differences, so the wrap costs one late dump and nothing else - a
 // refresh cadence that broke here would freeze every number the dump carries
-// while the device kept flying. Two: up_s is now_ms / 1000, so it counts 49 days
+// while the device kept flying. Two: uptime_s is now_ms / 1000, so it counts 49 days
 // and then starts again at zero, which is the honest answer. What would not be
 // honest is a negative age or a four-billion-second jump, and neither can happen
 // while the arithmetic is a division of the counter rather than a subtraction of
@@ -284,7 +284,7 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
     // The first pass always dumps, and it dumps 49.7 days of uptime.
     pass_across_wrap(rig, dump, now_ms, 0);
     REQUIRE(dump.sink().lines.size() == 5);
-    CHECK(has(dump.sink().with("sys"), "up_s=4294967"));
+    CHECK(has(dump.sink().with("system"), "uptime_s=4294967"));
 
     // Twenty seconds of passes, straddling zero: two more dumps, ten seconds
     // apart, exactly as on any other day.
@@ -296,7 +296,7 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
     // And the uptime is small, positive, and counting again from the wrap.
     const uint32_t uptime_s = rig.product.config_link().config().diagnostics().uptime_s;
     CHECK(uptime_s < 60u);
-    const std::string sys = dump.sink().with("sys");
-    CHECK_FALSE(has(sys, "up_s=-"));
-    CHECK_FALSE(has(sys, "up_s=4294"));
+    const std::string system_line = dump.sink().with("system");
+    CHECK_FALSE(has(system_line, "uptime_s=-"));
+    CHECK_FALSE(has(system_line, "uptime_s=4294"));
 }

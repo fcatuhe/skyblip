@@ -134,7 +134,7 @@ Diagnostics widest_device() {
 }
 
 std::string console(const Diagnostics& diagnostics) {
-    DiagnosticsReport report(diagnostics, "diag");
+    DiagnosticsReport report(diagnostics, "diagnostics");
     std::string all;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -155,7 +155,7 @@ struct Frames {
     std::string last;
 };
 
-Frames frames(const Diagnostics& diagnostics, int payload, const char* command = "diag") {
+Frames frames(const Diagnostics& diagnostics, int payload, const char* command = "diagnostics") {
     DiagnosticsReport report(diagnostics, command);
     Frames out;
     char buffer[DiagnosticsReport::kFrameBytes];
@@ -183,7 +183,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
 
     // Five subsystems, in the order a bench eye wants them: how long it has been
     // up, then the radio, then what it heard, then what it knows about itself.
-    CHECK(has(text, "sys up_s=3725 reset=\"WATCHDOG\" link_drops=2\n"));
+    CHECK(has(text, "system uptime_s=3725 reset=\"WATCHDOG\" link_drops=2\n"));
     CHECK(has(text,
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
               "rx_unframed=11 rx_miskeyed=7 rx_noise=96 rx_named=12 tx_ok=880 tx_lost=3 "
@@ -192,13 +192,14 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
     CHECK(has(text, "traffic tracked=4 alarm=2\n"));
     CHECK(has(text,
               "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "
-              "nav_ms=98 overruns=0 identified=true "
-              "firmware=\"URANUS5,V5.1.0.0\" reject=\"STALE\" rejected=6 resid_m=13\n"));
-    CHECK(has(text,
-              "power mv=3812 percent=64 valid=true charging=false level=\"OK\" supply_warnings=1 "
-              "implausible=2 die_temp_c=42 charge_warnings=0\n"));
+              "solution_phase_ms=98 overruns=0 identified=true "
+              "firmware=\"URANUS5,V5.1.0.0\" reject=\"STALE\" rejected=6 residual_m=13\n"));
+    CHECK(has(
+        text,
+        "power cell_mv=3812 percent=64 valid=true charging=false level=\"OK\" supply_warnings=1 "
+        "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
 
-    DiagnosticsReport report(busy_device(), "diag");
+    DiagnosticsReport report(busy_device(), "diagnostics");
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
     // Past the end is nothing at all, not an empty line a reader would parse.
     char line[DiagnosticsReport::kLineBytes];
@@ -247,7 +248,7 @@ TEST_CASE("diagnostics: the charge window reads out only when there is a cable t
 // this dump can ever produce has to be measured rather than assumed.
 TEST_CASE("diagnostics: the widest dump every field can produce still fits one console line") {
     const Diagnostics diagnostics = widest_device();
-    DiagnosticsReport report(diagnostics, "diag");
+    DiagnosticsReport report(diagnostics, "diagnostics");
     int widest = 0;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -259,7 +260,7 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     // And a buffer one byte short of the line refuses it whole rather than
     // handing back half a counter.
     char tight[DiagnosticsReport::kLineBytes];
-    DiagnosticsReport again(diagnostics, "diag");
+    DiagnosticsReport again(diagnostics, "diagnostics");
     int longest_index = 0;
     for (int i = 0; i < again.line_count(); i++) {
         if (again.line(i, line, static_cast<int>(sizeof(line))) == widest) longest_index = i;
@@ -274,10 +275,10 @@ TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
 
     const std::string text = console(diagnostics);
     const std::string json = frames(diagnostics, 182).joined;
-    CHECK_FALSE(has(text, "resid_m"));
-    CHECK_FALSE(has(text, "die_temp_c"));
-    CHECK_FALSE(has(json, "resid_m"));
-    CHECK_FALSE(has(json, "die_temp_c"));
+    CHECK_FALSE(has(text, "residual_m"));
+    CHECK_FALSE(has(text, "die_temperature_c"));
+    CHECK_FALSE(has(json, "residual_m"));
+    CHECK_FALSE(has(json, "die_temperature_c"));
 
     // 0 m of residual and 0 C of die temperature are both real readings a device
     // can produce, which is why absent is not spelled as zero.
@@ -285,10 +286,10 @@ TEST_CASE("diagnostics: no reading is no key, on the console as on the link") {
     diagnostics.die_valid = true;
     diagnostics.residual_m = 0;
     diagnostics.die_dc = 0;
-    CHECK(has(console(diagnostics), "resid_m=0"));
-    CHECK(has(console(diagnostics), "die_temp_c=0"));
-    CHECK(has(frames(diagnostics, 182).joined, "\"resid_m\":0"));
-    CHECK(has(frames(diagnostics, 182).joined, "\"die_temp_c\":0"));
+    CHECK(has(console(diagnostics), "residual_m=0"));
+    CHECK(has(console(diagnostics), "die_temperature_c=0"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"residual_m\":0"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"die_temperature_c\":0"));
 }
 
 // The rounding rule is the status reply's, and it is shared code rather than a
@@ -354,7 +355,7 @@ TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry
     // never fewer: a reader that only wants the radio stops at its group.
     const Frames wide = frames(busy_device(), 512);
     CHECK(wide.count == DiagnosticsReport::kGroupCount);
-    CHECK(has(wide.joined, "\"group\":\"sys\""));
+    CHECK(has(wide.joined, "\"group\":\"system\""));
     CHECK(has(wide.joined, "\"group\":\"radio\""));
     CHECK(has(wide.joined, "\"group\":\"traffic\""));
     CHECK(has(wide.joined, "\"group\":\"gnss\""));
@@ -362,7 +363,7 @@ TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry
 }
 
 TEST_CASE("diagnostics: a frame never mixes two subsystems") {
-    DiagnosticsReport report(widest_device(), "diag");
+    DiagnosticsReport report(widest_device(), "diagnostics");
     char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
         const int written =
@@ -387,14 +388,14 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
 // fault it cannot see is absent.
 TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered short") {
     const Diagnostics diagnostics = widest_device();
-    DiagnosticsReport report(diagnostics, "diag");
+    DiagnosticsReport report(diagnostics, "diagnostics");
     CHECK(report.fits(kSmallestSupportedPayloadBytes));
     // ports::kMinimumLinkPayloadBytes, which is all BLE guarantees: not one worst-case
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
 
     char buffer[DiagnosticsReport::kFrameBytes];
-    DiagnosticsReport narrow(diagnostics, "diag");
+    DiagnosticsReport narrow(diagnostics, "diagnostics");
     CHECK(narrow.next_frame(20, buffer, sizeof(buffer)) == 0);
     CHECK_FALSE(narrow.exhausted());
 }
@@ -412,11 +413,11 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
         REQUIRE(written > 0);
         body += std::string(buffer, static_cast<size_t>(written));
     }
-    CHECK(has(body, "\"cmd\":\"radio\""));
+    CHECK(has(body, "\"command\":\"radio\""));
     CHECK(has(body, "\"group\":\"radio\""));
     CHECK(has(body, "\"range_refused\":5"));
     // And nothing from any other subsystem came with it.
-    CHECK_FALSE(has(body, "up_s"));
+    CHECK_FALSE(has(body, "uptime_s"));
     CHECK_FALSE(has(body, "firmware"));
 }
 

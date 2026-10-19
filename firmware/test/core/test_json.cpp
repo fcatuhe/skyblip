@@ -37,9 +37,9 @@ TEST_CASE("json: a frame that ends on a colon has no value, and nothing past it 
     long value = 0;
     bool flag = false;
     char text[8];
-    CHECK_FALSE(reader.read_integer("cmd", value));
-    CHECK_FALSE(reader.read_boolean("cmd", flag));
-    CHECK_FALSE(reader.read_string("cmd", text, sizeof(text)));
+    CHECK_FALSE(reader.read_integer("command", value));
+    CHECK_FALSE(reader.read_boolean("command", flag));
+    CHECK_FALSE(reader.read_string("command", text, sizeof(text)));
 }
 
 TEST_CASE("json: an integer past 32 bits is refused, so the host reads what the device reads") {

@@ -139,7 +139,7 @@ const go::SelfTestPart& imu_row(Rig& rig) {
 }
 
 std::string update_frame(Rig& rig, uint32_t at_ms) {
-    rig.send("{\"cmd\":\"update\"}");
+    rig.send("{\"command\":\"update\"}");
     rig.run(at_ms, at_ms + 100);
     return rig.last_on(events::Endpoint::Config);
 }

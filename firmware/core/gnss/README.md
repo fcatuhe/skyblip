@@ -26,7 +26,7 @@ At 9600 the 320-byte fix burst is 333 ms of line, so RMC lands at about 403 ms a
 
 Nothing acknowledges `$PCAS01`, and a receiver that ignored it while we retuned the port is a device that looks fitted and is deaf for ever. So the move is made in the one place where the receiver has just proved it obeys: after `Verifying`, not inside the configuration sequence. `Confirming` then waits for a sentence that frames and checksums at the new rate, which is the acknowledgement the sentence itself never sends, and a window with none puts the port back where it was. A port that cannot retune is never asked to move the receiver at all: `port_can_retune()` asks `io::UartRate` by setting the rate it is already at, and `io::FixedUartRate` refuses. A factory reset takes the receiver back to 9600, so the driver follows it down before the sequence runs again.
 
-What this costs is read out of `diagnostics`: `baud` is the live rate, `nav_ms` is the phase of the second the last solution landed at, and `overruns` is the bytes the port dropped. The last one is the price of the change: the 512-byte ring is 533 ms of tolerance against a stalled service pass at 9600 and 44 ms at 115200. If it ever moves, the answer is a bigger ring, not a slower port.
+What this costs is read out of `diagnostics`: `baud` is the live rate, `solution_phase_ms` is the phase of the second the last solution landed at, and `overruns` is the bytes the port dropped. The last one is the price of the change: the 512-byte ring is 533 ms of tolerance against a stalled service pass at 9600 and 44 ms at 115200. If it ever moves, the answer is a bigger ring, not a slower port.
 
 ## The satellites, and the second they do not fit in
 

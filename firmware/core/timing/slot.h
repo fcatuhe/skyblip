@@ -71,12 +71,12 @@ constexpr uint32_t kPpsHoldoverMs = 60000;
 using Band = model::Band;
 
 enum class SlotState : uint8_t {
-    UplinkRxO = 0,
-    SwitchOtoM = 1,
+    UplinkRxOBand = 0,
+    SwitchOBandToMBand = 1,
     Slot0 = 2,
     Hop = 3,
     Slot1 = 4,
-    SwitchMtoO = 5,
+    SwitchMBandToOBand = 5,
 };
 
 struct ClockState {
@@ -104,7 +104,7 @@ constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
 bool in_pps_holdover(const ClockState& clock);
 
 struct SlotPlan {
-    SlotState state{SlotState::UplinkRxO};
+    SlotState state{SlotState::UplinkRxOBand};
     Band band{Band::O};
     uint32_t frequency_hz{kOBandHz};
     // The dwell this state belongs to, as a phase in the second. Guards are

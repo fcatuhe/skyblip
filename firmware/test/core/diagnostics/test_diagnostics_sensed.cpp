@@ -306,7 +306,7 @@ TEST_CASE("diagnostics record: a dwell change carries how long it took and how e
     in.margin_us = -2921;
     in.took_us = 5921;
     in.gap_us = 412;
-    in.kind = diagnostics::SwitchKind::Hop;
+    in.change = diagnostics::SwitchKind::Hop;
     in.armed_ahead = true;
     in.late = true;
 
@@ -315,7 +315,7 @@ TEST_CASE("diagnostics record: a dwell change carries how long it took and how e
     CHECK(out.margin_us == in.margin_us);
     CHECK(out.took_us == in.took_us);
     CHECK(out.gap_us == in.gap_us);
-    CHECK(out.kind == in.kind);
+    CHECK(out.change == in.change);
     CHECK(out.armed_ahead);
     CHECK(out.late);
 }

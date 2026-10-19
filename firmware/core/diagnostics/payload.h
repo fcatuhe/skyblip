@@ -122,7 +122,7 @@ struct Dwell {
     uint16_t end_ms{0};
     uint16_t phase_ms{0};
     uint16_t duty_permille{0};
-    timing::SlotState state{timing::SlotState::UplinkRxO};
+    timing::SlotState state{timing::SlotState::UplinkRxOBand};
     model::Band band{model::Band::M};
     Refusal refusal{Refusal::None};
     int8_t noise_dbm{0};
@@ -327,7 +327,7 @@ struct Switch {
     int32_t margin_us{0};
     uint16_t took_us{0};
     uint16_t gap_us{0};
-    SwitchKind kind{SwitchKind::Retune};
+    SwitchKind change{SwitchKind::Retune};
     bool armed_ahead{false};
     bool late{false};
 };

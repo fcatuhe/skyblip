@@ -76,7 +76,7 @@ constexpr int kLogChunkBase64PerRecord = static_cast<int>(flight::kLogRecordByte
 
 // The chunk envelope at its widest: the longest session id and record index the
 // partition can produce, the two-digit count, and an empty data string.
-constexpr int kLogChunkEnvelopeBytes = 83;
+constexpr int kLogChunkEnvelopeBytes = 102;
 
 // INFO: fc 20sep26 `,"log":"diagnostics"`, the only store spelled on the wire
 constexpr int kLogStoreFieldBytes = 20;

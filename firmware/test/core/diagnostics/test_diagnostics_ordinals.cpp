@@ -105,12 +105,12 @@ uint8_t wire(model::Band value) {
 
 uint8_t wire(timing::SlotState value) {
     switch (value) {
-        case timing::SlotState::UplinkRxO: return 0;
-        case timing::SlotState::SwitchOtoM: return 1;
+        case timing::SlotState::UplinkRxOBand: return 0;
+        case timing::SlotState::SwitchOBandToMBand: return 1;
         case timing::SlotState::Slot0: return 2;
         case timing::SlotState::Hop: return 3;
         case timing::SlotState::Slot1: return 4;
-        case timing::SlotState::SwitchMtoO: return 5;
+        case timing::SlotState::SwitchMBandToOBand: return 5;
     }
     return kUnpinned;
 }

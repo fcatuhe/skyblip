@@ -166,7 +166,7 @@ TEST_CASE("flight log: the next flight after a power cut does not overwrite the 
     bool found_first = false;
     for (uint32_t i = 0; i < 2; i++) {
         const std::string line = list_session(rebooted, rebooted_now_ms, i);
-        REQUIRE(line.find("\"cmd\":\"session\"") != std::string::npos);
+        REQUIRE(line.find("\"command\":\"session\"") != std::string::npos);
         if (field(line, "session") != std::to_string(first_session)) continue;
         found_first = true;
         // The flight that was on the part before the reboot is untouched by the

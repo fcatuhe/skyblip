@@ -497,7 +497,7 @@ TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does
     run(simulator, 0, 20000);
     simulator.world().connect_companion();
     run(simulator, 20000, 20200);
-    simulator.world().send_config("{\"cmd\":\"recovery\"}");
+    simulator.world().send_config("{\"command\":\"recovery\"}");
     run(simulator, 20200, 20400);
     REQUIRE(simulator.product().config_link().config().pending() == comms::Pending::Recovery);
 

@@ -33,23 +33,23 @@ TEST_CASE("log link: the three commands, and nothing else") {
         return frame;
     };
 
-    CHECK(comms::parse_log_request(framed("{\"cmd\":\"list\"}")).command ==
+    CHECK(comms::parse_log_request(framed("{\"command\":\"list\"}")).command ==
           comms::LogCommand::List);
-    CHECK(comms::parse_log_request(framed("{\"cmd\":\"erase\"}")).command ==
+    CHECK(comms::parse_log_request(framed("{\"command\":\"erase\"}")).command ==
           comms::LogCommand::Erase);
 
-    const comms::LogRequest read =
-        comms::parse_log_request(framed("{\"cmd\":\"read\",\"session\":1785628800,\"from\":170}"));
+    const comms::LogRequest read = comms::parse_log_request(
+        framed("{\"command\":\"read\",\"session\":1785628800,\"from\":170}"));
     CHECK(read.command == comms::LogCommand::Read);
     CHECK(read.session == 1785628800u);
     CHECK(read.from == 170u);
 
     // A read with no session names nothing, so it is not a read.
-    CHECK_FALSE(comms::parse_log_request(framed("{\"cmd\":\"read\"}")).understood);
-    CHECK_FALSE(comms::parse_log_request(framed("{\"cmd\":\"format\"}")).understood);
+    CHECK_FALSE(comms::parse_log_request(framed("{\"command\":\"read\"}")).understood);
+    CHECK_FALSE(comms::parse_log_request(framed("{\"command\":\"format\"}")).understood);
 
     // Config frames belong to the config service even if they reach this parser.
-    events::RxFrame wrong = framed("{\"cmd\":\"list\"}");
+    events::RxFrame wrong = framed("{\"command\":\"list\"}");
     wrong.endpoint = events::Endpoint::Config;
     CHECK_FALSE(comms::parse_log_request(wrong).understood);
 }
@@ -68,14 +68,10 @@ TEST_CASE("log link: base64 carries the raw record, padding and all") {
 }
 
 TEST_CASE("log link: how many records ride in a chunk follows the payload, not a guess") {
-    // 24 raw bytes are exactly 32 base64 characters and the envelope at its
-    // widest is 83, so this arithmetic is exact rather than an estimate.
-    // Nothing fits in what BLE merely guarantees; an iPhone carries three; the
-    // 247-byte MTU the old fixed five was aimed at still carries five; and a
-    // phone that negotiates the whole L2CAP MTU is not short-changed.
+    // (payload - 102-byte widest envelope) / 32 base64 characters per 24-byte record, capped at 12
     CHECK(comms::log_records_per_chunk(ports::kMinimumLinkPayloadBytes) == 0);
-    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes) == 3);
-    CHECK(comms::log_records_per_chunk(244) == 5);
+    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes) == 2);
+    CHECK(comms::log_records_per_chunk(244) == 4);
     CHECK(comms::log_records_per_chunk(495) == comms::kMaxLogRecordsPerChunk);
 
     // And a chunk really does fit the frame it was sized for, at the widest
@@ -90,8 +86,8 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
                                                     raw, records, true);
         CHECK(written > 0);
         CHECK(written <= payload);
-        CHECK(std::strstr(buffer, "\"cmd\":\"chunk\"") != nullptr);
-        CHECK(std::strstr(buffer, "\"eof\":true") != nullptr);
+        CHECK(std::strstr(buffer, "\"command\":\"chunk\"") != nullptr);
+        CHECK(std::strstr(buffer, "\"ends_session\":true") != nullptr);
     }
 }
 
@@ -127,7 +123,7 @@ TEST_CASE("log link: a session line says how many records and whether the flight
 TEST_CASE("log link: a flight opened after January 2038 is read and named by its own second") {
     constexpr uint32_t kNewYear2040 = 2208988800u;
     const comms::LogRequest read =
-        comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":2208988800}"));
+        comms::parse_log_request(log_frame("{\"command\":\"read\",\"session\":2208988800}"));
     CHECK(read.understood);
     CHECK(read.session == kNewYear2040);
 
@@ -141,42 +137,44 @@ TEST_CASE("log link: a flight opened after January 2038 is read and named by its
 }
 
 TEST_CASE("log link: an absent store is the flights every client asks for today") {
-    const comms::LogRequest list = comms::parse_log_request(log_frame("{\"cmd\":\"list\"}"));
+    const comms::LogRequest list = comms::parse_log_request(log_frame("{\"command\":\"list\"}"));
     CHECK(list.store == store::SectorOwner::Flights);
     CHECK(list.reason == nullptr);
 
     const comms::LogRequest read =
-        comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1785628800}"));
+        comms::parse_log_request(log_frame("{\"command\":\"read\",\"session\":1785628800}"));
     CHECK(read.store == store::SectorOwner::Flights);
     CHECK(read.count == 1u);
 
     const comms::LogRequest diagnostics = comms::parse_log_request(
-        log_frame("{\"cmd\":\"read\",\"log\":\"diagnostics\",\"session\":7}"));
+        log_frame("{\"command\":\"read\",\"log\":\"diagnostics\",\"session\":7}"));
     REQUIRE(diagnostics.understood);
     CHECK(diagnostics.store == store::SectorOwner::Diagnostics);
-    CHECK(comms::parse_log_request(log_frame("{\"cmd\":\"erase\",\"log\":\"flights\"}")).store ==
-          store::SectorOwner::Flights);
+    CHECK(
+        comms::parse_log_request(log_frame("{\"command\":\"erase\",\"log\":\"flights\"}")).store ==
+        store::SectorOwner::Flights);
 }
 
 TEST_CASE("log link: a store the partition does not hold is refused by name") {
     const comms::LogRequest request = comms::parse_log_request(
-        log_frame("{\"cmd\":\"read\",\"log\":\"telemetry\",\"session\":7}"));
+        log_frame("{\"command\":\"read\",\"log\":\"telemetry\",\"session\":7}"));
     CHECK_FALSE(request.understood);
     REQUIRE(request.reason != nullptr);
     CHECK(std::strcmp(request.reason, "unknown_log") == 0);
 
     const comms::LogRequest empty =
-        comms::parse_log_request(log_frame("{\"cmd\":\"list\",\"log\":\"\"}"));
+        comms::parse_log_request(log_frame("{\"command\":\"list\",\"log\":\"\"}"));
     CHECK_FALSE(empty.understood);
     CHECK(std::strcmp(empty.reason, "unknown_log") == 0);
 
-    const comms::LogRequest unknown = comms::parse_log_request(log_frame("{\"cmd\":\"format\"}"));
-    CHECK(std::strcmp(unknown.reason, "unknown_cmd") == 0);
+    const comms::LogRequest unknown =
+        comms::parse_log_request(log_frame("{\"command\":\"format\"}"));
+    CHECK(std::strcmp(unknown.reason, "unknown_command") == 0);
 }
 
 TEST_CASE("log link: a read asks for a window of chunks and gets them back to back") {
     const comms::LogRequest request = comms::parse_log_request(
-        log_frame("{\"cmd\":\"read\",\"session\":1785628800,\"from\":24,\"count\":4}"));
+        log_frame("{\"command\":\"read\",\"session\":1785628800,\"from\":24,\"count\":4}"));
     REQUIRE(request.understood);
     CHECK(request.count == 4u);
 
@@ -209,16 +207,15 @@ TEST_CASE("log link: a window stops at the end of the session rather than wrappi
 }
 
 TEST_CASE("log link: a window is clamped so one fetch cannot monopolise the link") {
-    CHECK(comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1,\"count\":99}"))
+    CHECK(comms::parse_log_request(log_frame("{\"command\":\"read\",\"session\":1,\"count\":99}"))
               .count == comms::kMaxLogReadChunks);
-    CHECK(
-        comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1,\"count\":0}")).count ==
-        1u);
-    CHECK(comms::parse_log_request(log_frame("{\"cmd\":\"read\",\"session\":1,\"count\":-3}"))
+    CHECK(comms::parse_log_request(log_frame("{\"command\":\"read\",\"session\":1,\"count\":0}"))
+              .count == 1u);
+    CHECK(comms::parse_log_request(log_frame("{\"command\":\"read\",\"session\":1,\"count\":-3}"))
               .count == 1u);
 
     const comms::LogRequest request = comms::parse_log_request(
-        log_frame("{\"cmd\":\"read\",\"session\":1,\"from\":0,\"count\":4000}"));
+        log_frame("{\"command\":\"read\",\"session\":1,\"from\":0,\"count\":4000}"));
     const comms::LogWindow window =
         comms::plan_log_window(request.from, request.count, comms::kMaxLogRecordsPerChunk, 5000);
     // Eight chunks of twelve: 96 records, about 4 kB, a quarter second of notifications.
@@ -254,11 +251,10 @@ TEST_CASE("log link: every reply names the store it answers for") {
 
 TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it carries") {
     const store::SectorOwner diagnostics = store::SectorOwner::Diagnostics;
-    CHECK(comms::log_records_per_chunk(244) == 5);
-    CHECK(comms::log_records_per_chunk(244, diagnostics) == 4);
-    // At the widest ATT_MTU the twelve-record ceiling is reached either way.
-    CHECK(comms::log_records_per_chunk(495, diagnostics) == comms::kMaxLogRecordsPerChunk);
-    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes, diagnostics) == 2);
+    CHECK(comms::log_records_per_chunk(244) == 4);
+    CHECK(comms::log_records_per_chunk(244, diagnostics) == 3);
+    CHECK(comms::log_records_per_chunk(495, diagnostics) == comms::kMaxLogRecordsPerChunk - 1);
+    CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayloadBytes, diagnostics) == 1);
 
     uint8_t raw[comms::kLogChunkRawBytes];
     for (size_t i = 0; i < sizeof(raw); i++) raw[i] = static_cast<uint8_t>(0xA0 + i);

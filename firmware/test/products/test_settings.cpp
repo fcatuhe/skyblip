@@ -254,7 +254,7 @@ TEST_CASE("settings: the frequency trim is bounded at the boundary, in both fram
 
 TEST_CASE("settings: the frequency trim is set over the link and refused whole when it is not") {
     Settings settings = defaults();
-    const char* set = "{\"freq_trim_e1_ppm\":-25,\"alarm_volume\":1}";
+    const char* set = "{\"frequency_trim_e1_ppm\":-25,\"alarm_volume\":1}";
     REQUIRE(apply_json(settings, set, static_cast<int>(strlen(set))) == Status::Ok);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
@@ -262,14 +262,14 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     // Out of range is refused as a whole patch, not clamped and not partly
     // applied: a bench that asked for 500 ppm has the wrong number written down,
     // and silently storing 10 ppm instead would hide that.
-    const char* far = "{\"freq_trim_e1_ppm\":5000,\"alarm_volume\":2}";
+    const char* far = "{\"frequency_trim_e1_ppm\":5000,\"alarm_volume\":2}";
     CHECK(apply_json(settings, far, static_cast<int>(strlen(far))) == Status::OutOfRange);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
     // Narrowed before it is validated: 65536 tenths of a ppm truncates to 0 in
     // an int16 and would pass a bound check that never saw the value sent.
-    const char* wrapped = "{\"freq_trim_e1_ppm\":65536}";
+    const char* wrapped = "{\"frequency_trim_e1_ppm\":65536}";
     CHECK(apply_json(settings, wrapped, static_cast<int>(strlen(wrapped))) == Status::OutOfRange);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 

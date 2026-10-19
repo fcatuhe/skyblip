@@ -174,7 +174,7 @@ Status ConfigService::reply(const char* json) {
 void ConfigService::refuse_unclaimed(uint16_t session_id) {
     char buffer[96];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_boolean("ack", false);
+    writer.add_boolean("acknowledge", false);
     writer.add_string("reason", "claimed");
     writer.add_integer("by", static_cast<long>(claim_.holder()));
     const int bytes = writer.finish();
@@ -185,9 +185,9 @@ void ConfigService::stage(Pending pending, const char* reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
     prompt_detail_[0] = 0;
-    char buffer[64];
+    char buffer[96];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_boolean("ack", false);
+    writer.add_boolean("acknowledge", false);
     writer.add_boolean("pending", true);
     writer.add_string("reason", reason);
     writer.finish();
@@ -197,7 +197,7 @@ void ConfigService::stage(Pending pending, const char* reason) {
 void ConfigService::acknowledge(bool accepted, const char* reason) {
     char buffer[96];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_boolean("ack", accepted);
+    writer.add_boolean("acknowledge", accepted);
     if (reason) writer.add_string("reason", reason);
     writer.finish();
     (void)reply(buffer);
@@ -278,8 +278,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     int bytes = frame.bytes;
     json::Reader reader(data, bytes);
     char command[16] = {0};
-    if (!reader.read_string("cmd", command, sizeof(command))) {
-        acknowledge(false, "no_cmd");
+    if (!reader.read_string("command", command, sizeof(command))) {
+        acknowledge(false, "no_command");
         return;
     }
 
@@ -292,7 +292,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         // a config object with fields missing renders defaults a pilot never set.
         char buffer[kSmallestSupportedPayloadBytes + 1];
         json::Writer writer(buffer, sizeof(buffer));
-        writer.add_string("cmd", "config");
+        writer.add_string("command", "config");
         store_.write_fields(writer);
         const int reply_bytes = writer.finish();
         if (writer.overflowed()) {
@@ -333,7 +333,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
 
-    if (std::strcmp(command, "diag") == 0) {
+    if (std::strcmp(command, "diagnostics") == 0) {
         send_diagnostics();
         return;
     }
@@ -375,9 +375,9 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     } else if (std::strcmp(command, "power_off") == 0) {
         requested = Pending::PowerOff;
         reason = "confirm_power_off";
-    } else if (std::strcmp(command, "gnss_cold") == 0) {
+    } else if (std::strcmp(command, "gnss_cold_start") == 0) {
         requested = Pending::GnssColdStart;
-        reason = "confirm_gnss_cold";
+        reason = "confirm_gnss_cold_start";
     }
 
     if (requested != Pending::None) {
@@ -396,7 +396,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
 
-    acknowledge(false, "unknown_cmd");
+    acknowledge(false, "unknown_command");
 }
 
 void ConfigService::request_log_erase() {
@@ -464,7 +464,7 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::GnssColdStart) {
         pending_ = Pending::None;
         gnss_cold_start_requested_ = true;
-        acknowledge(true, "gnss_cold");
+        acknowledge(true, "gnss_cold_start");
     }
 }
 

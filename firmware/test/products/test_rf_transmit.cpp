@@ -377,8 +377,8 @@ TEST_CASE("rf: the extrapolation residual is measured against the fix that arriv
     uint16_t worst_m = 0;
     for (uint32_t now_ms = 6000; now_ms <= 8000; now_ms += simulator::Simulator::kStepMs) {
         simulator.step(now_ms);
-        const uint16_t resid_m = simulator.product().state().own.prediction_residual_m;
-        if (resid_m > worst_m) worst_m = resid_m;
+        const uint16_t residual_m = simulator.product().state().own.prediction_residual_m;
+        if (residual_m > worst_m) worst_m = residual_m;
     }
     CHECK(worst_m > 10);
 }

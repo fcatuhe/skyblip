@@ -24,7 +24,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
     // No solution yet: the device does not know where it is, so it is not on
     // the ground, so it authorises nothing. This is the state a bench device
     // was stuck in - Unknown, forever.
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, 500);
     CHECK(rig.config().flight_state() == flight::FlightState::Unknown);
     CHECK(rig.config().pending() == comms::Pending::None);
@@ -32,7 +32,7 @@ TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a
 
     rig.on_ground(now_ms);
     CHECK(rig.config().flight_state() == flight::FlightState::Ground);
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 500);
     now_ms += 500;
     CHECK(rig.config().pending() == comms::Pending::Dfu);
@@ -57,7 +57,7 @@ TEST_CASE("product: paging does not authorise a firmware upload") {
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
 
     // Long enough for the question to have reached the glass.
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
@@ -89,7 +89,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     uint32_t now_ms = 0;
     rig.on_ground(now_ms);
 
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
@@ -108,7 +108,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     // and no gesture reopens it.
     rig.airborne(now_ms);
     CHECK_FALSE(rig.config().upload_allowed());
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     rig.double_press(now_ms);
@@ -122,7 +122,7 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
     uint32_t now_ms = 0;
     rig.on_ground(now_ms);
 
-    rig.send("{\"cmd\":\"power_off\"}");
+    rig.send("{\"command\":\"power_off\"}");
     rig.run(now_ms, now_ms + 6000);
     now_ms += 6000;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::PowerOff);
@@ -147,7 +147,7 @@ TEST_CASE("product: a prompt nobody answers expires, and the device is not power
     uint32_t now_ms = 0;
     rig.on_ground(now_ms);
 
-    rig.send("{\"cmd\":\"power_off\"}");
+    rig.send("{\"command\":\"power_off\"}");
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::PowerOff);
@@ -168,14 +168,15 @@ TEST_CASE("product: a prompt nobody answers expires, and the device is not power
 // reads that as a broken device. The driver has always been able to throw the
 // stored orbit data away; until this, nothing could ask it to. It costs the next
 // fix, so it sits behind the same confirmation as a firmware upload.
-TEST_CASE("product: a confirmed gnss_cold reaches the receiver, and an unconfirmed one does not") {
+TEST_CASE(
+    "product: a confirmed gnss_cold_start reaches the receiver, and an unconfirmed one does not") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     rig.on_ground(now_ms);
     const uint32_t restarts_before = rig.platform.chips().gnss.restarts;
 
-    rig.send("{\"cmd\":\"gnss_cold\"}");
+    rig.send("{\"command\":\"gnss_cold_start\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     // Staged and waiting for the device's own gesture: the phone cannot spend a
@@ -197,14 +198,14 @@ TEST_CASE("product: a confirmed gnss_cold reaches the receiver, and an unconfirm
 
 // Airborne, the same request is refused at the door: losing the fix in flight is
 // the one moment the device must not do this.
-TEST_CASE("product: gnss_cold is refused in flight") {
+TEST_CASE("product: gnss_cold_start is refused in flight") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     rig.airborne(now_ms);
     const uint32_t restarts_before = rig.platform.chips().gnss.restarts;
 
-    rig.send("{\"cmd\":\"gnss_cold\"}");
+    rig.send("{\"command\":\"gnss_cold_start\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK(rig.config().pending() == comms::Pending::None);

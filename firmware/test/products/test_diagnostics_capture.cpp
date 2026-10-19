@@ -37,7 +37,7 @@ std::string ask(Rig& rig, uint32_t& now_ms, const char* json) {
 struct Capture {
     uint32_t records{0};
     int chunks{0};
-    bool eof{false};
+    bool ends_session{false};
     bool decoded{true};
     int gaps{0};
     int flights{0};
@@ -46,19 +46,19 @@ struct Capture {
 Capture offload_capture(Rig& rig, uint32_t& now_ms, uint32_t session) {
     Capture walk{};
     uint32_t from = 0;
-    while (!walk.eof && walk.chunks < 400) {
+    while (!walk.ends_session && walk.chunks < 1000) {
         char command[128];
         std::snprintf(command, sizeof(command),
-                      "{\"cmd\":\"read\",\"log\":\"diagnostics\",\"session\":%u,\"from\":%u}",
+                      "{\"command\":\"read\",\"log\":\"diagnostics\",\"session\":%u,\"from\":%u}",
                       session, from);
         const std::string chunk = ask(rig, now_ms, command);
-        if (chunk.find("\"cmd\":\"chunk\"") == std::string::npos) {
+        if (chunk.find("\"command\":\"chunk\"") == std::string::npos) {
             walk.decoded = false;
             return walk;
         }
         if (field(chunk, "log") != "diagnostics") walk.decoded = false;
 
-        const int records = std::atoi(field(chunk, "n").c_str());
+        const int records = std::atoi(field(chunk, "records").c_str());
         uint8_t raw[comms::kLogChunkRawBytes];
         const int bytes = base64_decode(field(chunk, "data"), raw, sizeof(raw));
         if (bytes != records * static_cast<int>(diagnostics::kRecordBytes)) walk.decoded = false;
@@ -74,7 +74,7 @@ Capture offload_capture(Rig& rig, uint32_t& now_ms, uint32_t session) {
             walk.records++;
         }
         from += static_cast<uint32_t>(records);
-        walk.eof = field(chunk, "eof") == "true";
+        walk.ends_session = field(chunk, "ends_session") == "true";
         walk.chunks++;
     }
     return walk;
@@ -210,24 +210,26 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
     CHECK_FALSE(rig.product.capture().capturing());
     const uint32_t written = rig.product.capture().records_written();
 
-    const std::string count = ask(rig, now_ms, "{\"cmd\":\"list\",\"log\":\"diagnostics\"}");
+    const std::string count = ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
     CHECK(field(count, "log") == "diagnostics");
     CHECK(field(count, "sessions") == "1");
 
     const std::string listed =
-        ask(rig, now_ms, "{\"cmd\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
+        ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
     CHECK(field(listed, "session") == std::to_string(session));
     CHECK(field(listed, "records") == std::to_string(written));
     CHECK(field(listed, "closed") == "true");
 
     const Capture walk = offload_capture(rig, now_ms, session);
     CHECK(walk.decoded);
-    CHECK(walk.eof);
+    CHECK(walk.ends_session);
     CHECK(walk.records == written);
     CHECK(walk.flights > 10);
 }
 
-TEST_CASE("capture: a windowed read answers the chunks it was asked for, and stops at eof") {
+TEST_CASE(
+    "capture: a windowed read answers the chunks it was asked for, and stops at the session's "
+    "end") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -247,7 +249,7 @@ TEST_CASE("capture: a windowed read answers the chunks it was asked for, and sto
     REQUIRE(per_chunk > 0);
     char command[128];
     std::snprintf(command, sizeof(command),
-                  "{\"cmd\":\"read\",\"log\":\"diagnostics\",\"session\":%u,\"from\":0,"
+                  "{\"command\":\"read\",\"log\":\"diagnostics\",\"session\":%u,\"from\":0,"
                   "\"count\":3}",
                   session);
     rig.platform.link().clear();
@@ -260,7 +262,7 @@ TEST_CASE("capture: a windowed read answers the chunks it was asked for, and sto
     for (const auto& frame : rig.platform.link().sent) {
         if (frame.endpoint != events::Endpoint::Log) continue;
         chunks++;
-        records += static_cast<uint32_t>(std::atoi(field(frame.bytes, "n").c_str()));
+        records += static_cast<uint32_t>(std::atoi(field(frame.bytes, "records").c_str()));
     }
     CHECK(chunks == 3);
     CHECK(records == static_cast<uint32_t>(3 * per_chunk));
@@ -280,23 +282,25 @@ TEST_CASE("capture: both stores are offloaded in one session, each under its own
     const uint32_t capture = rig.product.capture().session_id();
     REQUIRE(flight != capture);
 
-    const std::string flights = ask(rig, now_ms, "{\"cmd\":\"list\"}");
+    const std::string flights = ask(rig, now_ms, "{\"command\":\"list\"}");
     CHECK(field(flights, "log") == "");
     CHECK(field(flights, "sessions") == "1");
 
-    const std::string diagnostics = ask(rig, now_ms, "{\"cmd\":\"list\",\"log\":\"diagnostics\"}");
+    const std::string diagnostics =
+        ask(rig, now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
     CHECK(field(diagnostics, "log") == "diagnostics");
     CHECK(field(diagnostics, "sessions") == "1");
 
     char command[128];
-    std::snprintf(command, sizeof(command), "{\"cmd\":\"read\",\"session\":%u,\"from\":0}", flight);
+    std::snprintf(command, sizeof(command), "{\"command\":\"read\",\"session\":%u,\"from\":0}",
+                  flight);
     const std::string flight_chunk = ask(rig, now_ms, command);
     CHECK(field(flight_chunk, "log") == "");
     CHECK(field(flight_chunk, "session") == std::to_string(flight));
 
     const Capture walk = offload_capture(rig, now_ms, capture);
     CHECK(walk.decoded);
-    CHECK(walk.eof);
+    CHECK(walk.ends_session);
     CHECK(walk.records > 0);
     CHECK(rig.product.flight_log().link_drops() == 0);
 }
@@ -326,7 +330,7 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     CHECK(rebooted.product.capture().records_written() == 0);
 
     const std::string count =
-        ask(rebooted, rebooted_now_ms, "{\"cmd\":\"list\",\"log\":\"diagnostics\"}");
+        ask(rebooted, rebooted_now_ms, "{\"command\":\"list\",\"log\":\"diagnostics\"}");
     CHECK(field(count, "sessions") == "1");
     const Capture walk = offload_capture(rebooted, rebooted_now_ms, session);
     CHECK(walk.decoded);
@@ -398,8 +402,8 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     REQUIRE(rebooted.setup() == Status::Ok);
     uint32_t rebooted_now_ms = 100;
     taxi(rebooted, rebooted_now_ms, 5);
-    const std::string listed =
-        ask(rebooted, rebooted_now_ms, "{\"cmd\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
+    const std::string listed = ask(rebooted, rebooted_now_ms,
+                                   "{\"command\":\"list\",\"log\":\"diagnostics\",\"index\":0}");
     CHECK(field(listed, "session") == std::to_string(session));
     CHECK(field(listed, "closed") == "true");
     CHECK(field(listed, "truncated") == "false");

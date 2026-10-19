@@ -67,12 +67,12 @@ const char* pps_word(PpsState pps) {
 
 const char* slot_word(timing::SlotState slot) {
     switch (slot) {
-        case timing::SlotState::UplinkRxO: return "O-UP";
-        case timing::SlotState::SwitchOtoM: return "O>M";
+        case timing::SlotState::UplinkRxOBand: return "O-UP";
+        case timing::SlotState::SwitchOBandToMBand: return "O>M";
         case timing::SlotState::Slot0: return "M0";
         case timing::SlotState::Hop: return "HOP";
         case timing::SlotState::Slot1: return "M1";
-        case timing::SlotState::SwitchMtoO: return "M>O";
+        case timing::SlotState::SwitchMBandToOBand: return "M>O";
     }
     return "?";
 }

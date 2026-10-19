@@ -28,7 +28,7 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"get\"}"));
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last_on(events::Endpoint::Config));
     CHECK(link.last().bytes.find("config") != std::string::npos);
@@ -45,13 +45,13 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    config.on_rx(config_frame("{\"cmd\":\"defaults\"}"));
+    config.on_rx(config_frame("{\"command\":\"defaults\"}"));
     const std::string body = link.last().bytes;
     CHECK(body ==
-          "{\"cmd\":\"defaults\",\"aircraft_type\":1,\"alarm\":true,\"alarm_volume\":2,"
+          "{\"command\":\"defaults\",\"aircraft_type\":1,\"alarm_enabled\":true,\"alarm_volume\":2,"
           "\"units\":0,\"callsign\":\"\"}");
 
-    const std::string set = "{\"cmd\":\"set\"" + body.substr(body.find(','));
+    const std::string set = "{\"command\":\"set\"" + body.substr(body.find(','));
     config.on_rx(config_frame(set.c_str()));
     config.confirm();
     const go::Settings shipped = go::defaults();
@@ -68,7 +68,7 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::Set);
     CHECK(link.last().bytes.find("confirm") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);  // not yet applied
@@ -77,7 +77,7 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     CHECK(config.pending() == Pending::None);
     CHECK(int(settings.aircraft_type) == 4);  // applied
     CHECK(config.settings_dirty());
-    CHECK(link.last().bytes.find("\"ack\":true") != std::string::npos);
+    CHECK(link.last().bytes.find("\"acknowledge\":true") != std::string::npos);
 }
 
 // The press authorises what the glass says, so the glass says what the phone sent.
@@ -89,12 +89,12 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    config.on_rx(
-        config_frame("{\"cmd\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
+    config.on_rx(config_frame(
+        "{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
     REQUIRE(config.pending() == Pending::Set);
     CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
 
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"units\":0}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"units\":0}"));
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
@@ -106,7 +106,7 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    const std::string head = "{\"cmd\":\"set\",";
+    const std::string head = "{\"command\":\"set\",";
     const std::string tail = "\"aircraft_type\":4}";
     const std::string full =
         head + std::string(events::RxFrame{}.data.size() - head.size() - tail.size(), ' ') + tail;
@@ -122,7 +122,7 @@ TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Airborne);
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);
@@ -137,7 +137,7 @@ TEST_CASE("comms: unknown flight-state refuses") {
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Unknown);  // never confirmed on ground
     CHECK(config.flight_state() == flight::FlightState::Unknown);
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"alarm\":false}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 
     config.set_flight_state(flight::FlightState::Ground);
@@ -151,7 +151,7 @@ TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") 
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     config.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
     config.confirm();
     CHECK(int(settings.aircraft_type) == 1);  // NOT applied
@@ -166,10 +166,10 @@ TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::state_from(0));
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(config.pending() == Pending::None);
     config.set_flight_state(flight::state_from(1));
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(config.pending() == Pending::Dfu);
 }
 
@@ -182,7 +182,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(1000);
 
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(config.pending() == Pending::Dfu);
     config.tick(1000 + kPromptForgetMs - 1);
     CHECK(config.pending() == Pending::Dfu);
@@ -204,7 +204,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"recovery\"}"));
+    config.on_rx(config_frame("{\"command\":\"recovery\"}"));
     REQUIRE(config.pending() == Pending::Recovery);
 
     config.set_flight_state(flight::FlightState::Airborne);
@@ -237,7 +237,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"alarm\":false}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
     CHECK(config.pending() == Pending::Set);
     config.on_link_down(events::LinkDown{1});
     CHECK(config.pending() == Pending::None);
@@ -267,12 +267,12 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     config.set_battery_state(low, power::PowerLevel::Critical);
     CHECK_FALSE(config.settings_writable());
 
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     // Refused at the door: no prompt to walk over and confirm for a write that
     // was never going to happen.
     CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
-    CHECK(link.last().bytes.find("\"ack\":false") != std::string::npos);
+    CHECK(link.last().bytes.find("\"acknowledge\":false") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);
     CHECK_FALSE(config.settings_dirty());
 
@@ -285,7 +285,7 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     charging.charging = true;
     config.set_battery_state(charging, power::PowerLevel::Normal);
     CHECK(config.settings_writable());
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     REQUIRE(config.pending() == Pending::Set);
     config.confirm();
     CHECK(int(settings.aircraft_type) == 4);
@@ -300,7 +300,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     REQUIRE(config.pending() == Pending::Set);
 
     power::BatteryState low{};
@@ -332,7 +332,7 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
 
     config.set_supply_warned(true);
     CHECK_FALSE(config.settings_writable());
-    config.on_rx(config_frame("{\"cmd\":\"set\",\"aircraft_type\":4}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::None);
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
 }
@@ -351,12 +351,12 @@ TEST_CASE("comms: the status reply carries the die temperature, in whole degrees
     ConfigService config(link, store);
 
     // Nothing has read the sensor yet: the key is absent, not zero.
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("die_temp_c") == std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("die_temperature_c") == std::string::npos);
 
     config.set_die_temperature(412, /*valid=*/true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temp_c\":41") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"die_temperature_c\":41") != std::string::npos);
 }
 
 // A board with no sensor, a driver that refused a measurement and a device at
@@ -370,12 +370,12 @@ TEST_CASE("comms: no reading is no key, never a zero") {
     ConfigService config(link, store);
 
     config.set_die_temperature(0, /*valid=*/true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"die_temperature_c\":0") != std::string::npos);
 
     config.set_die_temperature(0, /*valid=*/false);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("die_temp_c") == std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("die_temperature_c") == std::string::npos);
 }
 
 TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") {
@@ -388,16 +388,16 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     // A cold morning must not read one degree warmer than it is, and a hot
     // afternoon must not read one cooler: -20.6 C is -21, +20.6 C is +21.
     config.set_die_temperature(-206, true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temp_c\":-21") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"die_temperature_c\":-21") != std::string::npos);
 
     config.set_die_temperature(206, true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temp_c\":21") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"die_temperature_c\":21") != std::string::npos);
 
     config.set_die_temperature(-4, true);
-    config.on_rx(config_frame("{\"cmd\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temp_c\":0") != std::string::npos);
+    config.on_rx(config_frame("{\"command\":\"status\"}"));
+    CHECK(link.last().bytes.find("\"die_temperature_c\":0") != std::string::npos);
 }
 
 // J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
@@ -416,12 +416,12 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     dump.rx_ok = 7;
     config.set_range_refused(0);
     link.sent.clear();
-    config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
+    config.on_rx(config_frame("{\"command\":\"radio\"}"));
     REQUIRE_FALSE(link.sent.empty());
     std::string idle;
     for (const platform::host::Link::Frame& frame : link.sent) {
         CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-        CHECK(frame.bytes.find("\"cmd\":\"radio\"") != std::string::npos);
+        CHECK(frame.bytes.find("\"command\":\"radio\"") != std::string::npos);
         CHECK(frame.bytes.find("\"group\":\"radio\"") != std::string::npos);
         idle += frame.bytes;
     }
@@ -437,7 +437,7 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     dump.rx_wait = dump.rx_type = dump.tx_lost = 2147483647u;
     config.set_range_refused(2147483647u);
     link.sent.clear();
-    config.on_rx(config_frame("{\"cmd\":\"radio\"}"));
+    config.on_rx(config_frame("{\"command\":\"radio\"}"));
     std::string body;
     for (const platform::host::Link::Frame& frame : link.sent) {
         CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));

@@ -185,7 +185,7 @@ void FlightLogService::handle(const comms::LogRequest& request) {
     }
     if (!request.understood) {
         acknowledge(request.store, false,
-                    request.reason == nullptr ? "unknown_cmd" : request.reason);
+                    request.reason == nullptr ? "unknown_command" : request.reason);
         return;
     }
     RecordStore* store = store_for(request.store);

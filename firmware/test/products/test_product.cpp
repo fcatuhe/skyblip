@@ -92,7 +92,7 @@ TEST_CASE("product: the identity a tablet is told is the unlock code's, not a st
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link(1);
     rig.run(0, 100);
-    rig.send("{\"cmd\":\"get\"}");
+    rig.send("{\"command\":\"get\"}");
     rig.run(100, 200);
 
     const std::string reply = rig.last_on(events::Endpoint::Config);
@@ -153,7 +153,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
-    const char* json = "{\"cmd\":\"set\",\"alarm_volume\":2}";
+    const char* json = "{\"command\":\"set\",\"alarm_volume\":2}";
     events::RxFrame frame{};
     frame.endpoint = events::Endpoint::Config;
     frame.bytes = static_cast<uint16_t>(__builtin_strlen(json));
@@ -325,7 +325,7 @@ namespace {
 
 std::string status_of(Rig& rig, uint32_t& now_ms) {
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"status\"}");
+    rig.send("{\"command\":\"status\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 250;
     return rig.last_on(events::Endpoint::Config);
@@ -356,7 +356,7 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     CHECK(die.reads() == 1);
     CHECK(rig.product.power().die_temperature_valid());
     CHECK(rig.product.power().die_temperature_dc() == 412);
-    CHECK(status_of(rig, now_ms).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
     // Five seconds of passes: still one measurement.
     rig.run(now_ms, now_ms + 5000);
@@ -381,12 +381,12 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     rig.run(now_ms, now_ms + 10000);
     now_ms += 10050;
     CHECK(die.reads() > before);
-    CHECK(status_of(rig, now_ms).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
     rig.run(now_ms, now_ms + go::PowerService::kDieStaleMs);
     now_ms += go::PowerService::kDieStaleMs + 50;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, now_ms).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
@@ -439,7 +439,7 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     rig.run(now_ms, now_ms + 30000);
     now_ms += 30050;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, now_ms).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // J. The range gate refuses a reception whose claimed position is further away
@@ -454,7 +454,7 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
     REQUIRE(rig.state().own.fix_valid);
 
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"radio\"}");
+    rig.send("{\"command\":\"radio\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 250;
     CHECK(rig.last_on(events::Endpoint::Config).find("\"range_refused\":0") != std::string::npos);
@@ -472,7 +472,7 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
     REQUIRE(rig.state().traffic.implausible() == 1);
 
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"radio\"}");
+    rig.send("{\"command\":\"radio\"}");
     rig.run(now_ms, now_ms + 200);
     CHECK(rig.platform.link().last().bytes.find("\"range_refused\":1") != std::string::npos);
 }

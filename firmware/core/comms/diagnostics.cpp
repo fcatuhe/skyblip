@@ -67,7 +67,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     const bool power = only == nullptr || *only == Group::Power;
 
     if (system) {
-        add_integer(Group::System, "up_s", counter(diagnostics.uptime_s));
+        add_integer(Group::System, "uptime_s", counter(diagnostics.uptime_s));
         add_string(Group::System, "reset", power::to_string(diagnostics.reset));
         add_integer(Group::System, "link_drops", counter(diagnostics.link_drops));
     }
@@ -114,7 +114,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add_integer(Group::Gnss, "raise_fallbacks", counter(diagnostics.gnss_raise_fallbacks));
         // INFO: fc 19sep26 the phase a solution lands at, which kFixMaxAgeMs refuses a burst over
         if (diagnostics.gnss_solution_phase_valid)
-            add_integer(Group::Gnss, "nav_ms", diagnostics.gnss_solution_phase_ms);
+            add_integer(Group::Gnss, "solution_phase_ms", diagnostics.gnss_solution_phase_ms);
         add_integer(Group::Gnss, "overruns", counter(diagnostics.gnss_overruns));
         add_boolean(Group::Gnss, "identified", diagnostics.gnss_identified);
         add_string(Group::Gnss, "firmware", diagnostics.gnss_firmware);
@@ -122,11 +122,12 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add_integer(Group::Gnss, "rejected", counter(diagnostics.gnss_rejected));
         // Absent rather than zero: a device with no two consecutive fixes has no
         // residual, and 0 m is what a perfect one reports.
-        if (diagnostics.residual_valid) add_integer(Group::Gnss, "resid_m", diagnostics.residual_m);
+        if (diagnostics.residual_valid)
+            add_integer(Group::Gnss, "residual_m", diagnostics.residual_m);
     }
 
     if (power) {
-        add_integer(Group::Power, "mv", diagnostics.battery.cell_mv);
+        add_integer(Group::Power, "cell_mv", diagnostics.battery.cell_mv);
         add_integer(Group::Power, "percent", diagnostics.battery.percent);
         add_boolean(Group::Power, "valid", diagnostics.battery.valid);
         add_boolean(Group::Power, "charging", diagnostics.battery.charging);
@@ -136,7 +137,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         // Same rule as the status reply, and the same key: no reading is no key,
         // never a zero, because 0.0 C is a plausible hangar morning.
         if (diagnostics.die_valid)
-            add_integer(Group::Power, "die_temp_c", whole_celsius(diagnostics.die_dc));
+            add_integer(Group::Power, "die_temperature_c", whole_celsius(diagnostics.die_dc));
         if (diagnostics.charge != power::ChargeCondition::Unknown)
             add_string(Group::Power, "charge", power::to_string(diagnostics.charge));
         add_integer(Group::Power, "charge_warnings", counter(diagnostics.charge_warnings));
@@ -163,7 +164,7 @@ void DiagnosticsReport::add_string(Group group, const char* key, const char* val
 
 const char* DiagnosticsReport::group_name(Group group) {
     switch (group) {
-        case Group::System: return "sys";
+        case Group::System: return "system";
         case Group::Radio: return "radio";
         case Group::Traffic: return "traffic";
         case Group::Gnss: return "gnss";
@@ -249,8 +250,8 @@ bool DiagnosticsReport::fits(int payload_bytes) const {
         widest_group = std::max(group, widest_group);
     }
     frame::Budget budget(payload_bytes);
-    return budget.take(frame::string_field_bytes("cmd", command_)) && budget.take(widest_group) &&
-           budget.take(frame::integer_field_bytes("part", count_)) &&
+    return budget.take(frame::string_field_bytes("command", command_)) &&
+           budget.take(widest_group) && budget.take(frame::integer_field_bytes("part", count_)) &&
            budget.take(frame::kMoreFieldBytes) && budget.take(widest_field);
 }
 
@@ -262,7 +263,7 @@ int DiagnosticsReport::next_frame(int payload_bytes, char* out, int capacity) {
 
     const Group group = fields_[at_].group;
     frame::Budget budget(room - 1);
-    budget.take(frame::string_field_bytes("cmd", command_));
+    budget.take(frame::string_field_bytes("command", command_));
     budget.take(frame::string_field_bytes("group", group_name(group)));
     budget.take(frame::integer_field_bytes("part", part_));
     budget.take(frame::kMoreFieldBytes);
@@ -274,7 +275,7 @@ int DiagnosticsReport::next_frame(int payload_bytes, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.add_string("cmd", command_);
+    writer.add_string("command", command_);
     writer.add_string("group", group_name(group));
     writer.add_integer("part", part_);
     writer.add_boolean("more", at_ + packed < count_);

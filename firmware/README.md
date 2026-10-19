@@ -41,7 +41,7 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_deg`, `_cdeg` | degrees, hundredths of a degree | `track_deg`, `track_cdeg` |
 | `_dps`, `_cdps` | degrees per second, hundredths of a degree per second | `turn_dps`, `turn_cdps` |
 | `_mg` | thousandths of a g | `lateral_mg` |
-| `_dc` | tenths of a degree Celsius | `die_dc` |
+| `_c`, `_dc` | whole degrees Celsius, tenths of a degree Celsius | `die_temperature_c`, `die_dc` |
 | `_dbhz` | dB-Hz, a carrier-to-noise density | `cn0_dbhz` |
 | `_px` | pixels on the glass | `kDashPx`, `kMinLeaderPx` |
 

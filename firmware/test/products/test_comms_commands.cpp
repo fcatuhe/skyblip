@@ -46,7 +46,7 @@ struct SpyDfu : ports::Dfu {
 };
 }  // namespace
 
-constexpr const char* kDfu = "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}";
+constexpr const char* kDfu = "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}";
 
 ConfigService& upload_opened(ConfigService& config, SpyDfu& dfu) {
     config.set_flight_state(flight::FlightState::Ground);
@@ -88,12 +88,13 @@ TEST_CASE("comms: the firmware prompt names the version the phone is about to se
     REQUIRE(config.pending() == Pending::Dfu);
     CHECK(std::string(config.prompt_detail()) == "INSTALL 0.2.0+15 FROM THE PHONE");
 
-    config.on_rx(config_frame("{\"cmd\":\"power_off\"}"));
+    config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::PowerOff));
 }
 
 TEST_CASE("comms: a dfu that does not name its version is refused at the door") {
-    for (const char* json : {"{\"cmd\":\"dfu\"}", "{\"cmd\":\"dfu\",\"version\":\"0.2\"}"}) {
+    for (const char* json :
+         {"{\"command\":\"dfu\"}", "{\"command\":\"dfu\",\"version\":\"0.2\"}"}) {
         platform::host::Link link;
         link.raise_link(1);
         go::Settings settings = go::defaults();
@@ -127,7 +128,8 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     CHECK(config.install_requested());
     CHECK_FALSE(config.receiving_firmware());
     CHECK(dfu.triggered == 0);
-    CHECK(link.last().bytes.find("\"ack\":true,\"reason\":\"install\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"acknowledge\":true,\"reason\":\"install\"") !=
+          std::string::npos);
 
     config.clear_install_request();
     config.tick(300);
@@ -188,10 +190,10 @@ TEST_CASE("comms: apply is no longer a command") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"apply\"}"));
+    config.on_rx(config_frame("{\"command\":\"apply\"}"));
     CHECK(config.pending() == Pending::None);
     CHECK_FALSE(config.install_requested());
-    CHECK(link.last().bytes.find("unknown_cmd") != std::string::npos);
+    CHECK(link.last().bytes.find("unknown_command") != std::string::npos);
 }
 
 TEST_CASE("comms: dfu is refused at the door on a critical cell") {
@@ -235,7 +237,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     CHECK(link.last().bytes.find("low_power") != std::string::npos);
 
     // A power-off is not a swap: the same cell is allowed to switch the device off.
-    config.on_rx(config_frame("{\"cmd\":\"power_off\"}"));
+    config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     REQUIRE(config.pending() == Pending::PowerOff);
     config.confirm();
     CHECK(config.power_off_requested());
@@ -261,7 +263,7 @@ TEST_CASE("comms: the update question names the image state and the versions of 
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_rx(config_frame("{\"cmd\":\"update\"}"));
+    config.on_rx(config_frame("{\"command\":\"update\"}"));
     CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
     CHECK(link.last().bytes.find("\"from\"") == std::string::npos);
 
@@ -269,7 +271,7 @@ TEST_CASE("comms: the update question names the image state and the versions of 
     record.from = ports::ImageVersion{0, 1, 0, 12};
     record.to = ports::ImageVersion{0, 2, 0, 15};
     config.set_image_state(dfu::ImageState::Reverted, record);
-    config.on_rx(config_frame("{\"cmd\":\"update\"}"));
+    config.on_rx(config_frame("{\"command\":\"update\"}"));
     CHECK(link.last().bytes.find("\"image\":\"reverted\"") != std::string::npos);
     CHECK(link.last().bytes.find("\"from\":\"0.1.0+12\"") != std::string::npos);
     CHECK(link.last().bytes.find("\"to\":\"0.2.0+15\"") != std::string::npos);
@@ -293,7 +295,7 @@ TEST_CASE(
     link.raise_link(2);
     config.on_link_up(events::LinkUp{2, 244});
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("\"cmd\":\"update\"") != std::string::npos);
+    CHECK(link.last().bytes.find("\"command\":\"update\"") != std::string::npos);
     CHECK(link.last().bytes.find("\"image\":\"probation\"") != std::string::npos);
 }
 
@@ -321,7 +323,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"recovery\"}"));
+    config.on_rx(config_frame("{\"command\":\"recovery\"}"));
     CHECK(config.pending() == Pending::Recovery);
     CHECK_FALSE(config.recovery_requested());
     config.confirm();
@@ -342,7 +344,7 @@ TEST_CASE("comms: recovery refused in flight") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Airborne);
-    config.on_rx(config_frame("{\"cmd\":\"recovery\"}"));
+    config.on_rx(config_frame("{\"command\":\"recovery\"}"));
     CHECK(config.pending() == Pending::None);
     CHECK(dfu.recovery == 0);
 }
@@ -358,7 +360,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    config.on_rx(config_frame("{\"cmd\":\"power_off\"}"));
+    config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::PowerOff);
     CHECK_FALSE(config.power_off_requested());  // a remote request alone turns nothing off
     CHECK(link.last().bytes.find("confirm_power_off") != std::string::npos);
@@ -366,7 +368,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     config.confirm();
     CHECK(config.pending() == Pending::None);
     CHECK(config.power_off_requested());
-    CHECK(link.last().bytes.find("\"ack\":true") != std::string::npos);
+    CHECK(link.last().bytes.find("\"acknowledge\":true") != std::string::npos);
 
     config.clear_power_off_request();
     CHECK_FALSE(config.power_off_requested());
@@ -379,14 +381,14 @@ TEST_CASE("comms: power_off refused in flight") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Airborne);
-    config.on_rx(config_frame("{\"cmd\":\"power_off\"}"));
+    config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::None);
     CHECK_FALSE(config.power_off_requested());
     CHECK(link.last().bytes.find("in_flight") != std::string::npos);
 
     // And a confirmation that arrives after takeoff does not turn it off either.
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"power_off\"}"));
+    config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     REQUIRE(config.pending() == Pending::PowerOff);
     config.set_flight_state(flight::FlightState::Airborne);
     config.confirm();
@@ -408,7 +410,7 @@ TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     config.confirm();
     REQUIRE(config.upload_allowed());
 
@@ -428,7 +430,7 @@ TEST_CASE("comms: upload window expires") {
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(1000);
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     config.confirm();
     REQUIRE(config.upload_allowed());
 
@@ -454,7 +456,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(before);
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     config.confirm();
     REQUIRE(config.upload_allowed());
 
@@ -471,7 +473,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     ConfigService prompt(second_link, store_prompt);
     prompt.set_flight_state(flight::FlightState::Ground);
     prompt.tick(before);
-    prompt.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    prompt.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
     prompt.tick(before + kPromptForgetMs - 1u);
     CHECK(prompt.pending() == Pending::Dfu);
@@ -487,7 +489,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     config.confirm();
     REQUIRE(config.upload_allowed());
 
@@ -504,7 +506,7 @@ TEST_CASE("comms: DFU refused in flight") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Airborne);
-    config.on_rx(config_frame("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     CHECK(config.pending() == Pending::None);
     CHECK(dfu.triggered == 0);
 }

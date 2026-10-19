@@ -83,7 +83,7 @@ class ConfigService {
     // that owns the write (products/skyblip_go/services/config_link.h).
     void set_durable_writes(const timing::DurableWriteWindow* writes) { durable_writes_ = writes; }
 
-    // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, unknown_cmd without
+    // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, else unknown_command
     void set_identity(IdentityLink* identity) { identity_ = identity; }
     // INFO: fc 18oct26 an activated unit's radio runs, so its product places the page write
     bool unlock_due() const { return identity_ != nullptr && identity_->unlock_due(); }
@@ -220,7 +220,7 @@ class ConfigService {
     bool log_erase_requested() const { return log_erase_requested_; }
     void clear_log_erase_request() { log_erase_requested_ = false; }
 
-    // Latched by a confirmed "gnss_cold". A receiver whose almanac is poisoned
+    // Latched by a confirmed "gnss_cold_start". A receiver whose almanac is poisoned
     // takes twenty minutes to fix and a pilot reads that as a broken device, so
     // throwing the stored orbit data away has to be reachable without a cable.
     // It is behind the same confirmation as the rest: a cold start costs the next

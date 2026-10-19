@@ -267,7 +267,7 @@ void RecordStore::serve(const comms::LogRequest& request) {
         case comms::LogCommand::Read: answer_read(request); break;
         case comms::LogCommand::Erase:
         case comms::LogCommand::None:
-            acknowledge(request.link_session, false, "unknown_cmd");
+            acknowledge(request.link_session, false, "unknown_command");
             break;
     }
 }

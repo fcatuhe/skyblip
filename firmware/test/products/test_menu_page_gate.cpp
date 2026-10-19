@@ -57,7 +57,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
     // up. The prompt takes the glass at once.
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 300);
     now_ms += 300;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
@@ -131,7 +131,7 @@ TEST_CASE("product: the volume can be turned up in the air, where a phone is ref
 
     // The companion app cannot: an unattended phone rewriting the whole struct
     // mid-flight is what that rule is for.
-    rig.send("{\"cmd\":\"set\",\"alarm_volume\":2}");
+    rig.send("{\"command\":\"set\",\"alarm_volume\":2}");
     rig.run(now_ms, now_ms + 300);
     now_ms += 300;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);

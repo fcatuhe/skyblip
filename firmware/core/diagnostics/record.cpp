@@ -15,7 +15,7 @@ const char* type_name(Type type) {
         case Type::Dwell: return "dwell";
         case Type::Flight: return "flight";
         case Type::Power: return "power";
-        case Type::Barometer: return "baro";
+        case Type::Barometer: return "barometer";
         case Type::Motion: return "motion";
         case Type::Contact: return "contact";
         case Type::Link: return "link";

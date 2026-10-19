@@ -87,7 +87,7 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
     LogRequest request{};
     if (frame.endpoint != events::Endpoint::Log) return request;
     request.link_session = frame.session_id;
-    request.reason = "unknown_cmd";
+    request.reason = "unknown_command";
 
     json::Reader reader(reinterpret_cast<const char*>(frame.data.data()), frame.bytes);
     if (!parse_store(reader, request)) {
@@ -95,7 +95,7 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
         return request;
     }
     char command[16] = {0};
-    if (!reader.read_string("cmd", command, sizeof(command))) return request;
+    if (!reader.read_string("command", command, sizeof(command))) return request;
 
     if (std::strcmp(command, "list") == 0) {
         request.command = LogCommand::List;
@@ -146,18 +146,18 @@ LogChunkSpan LogWindow::at(int chunk) const {
 int format_log_acknowledgement(char* out, int capacity, bool accepted, const char* reason,
                                LogStore store) {
     json::Writer writer(out, capacity);
-    writer.add_string("cmd", "log");
+    writer.add_string("command", "log");
     if (!named_store(writer, store)) return 0;
-    writer.add_boolean("ack", accepted);
+    writer.add_boolean("acknowledge", accepted);
     if (reason != nullptr) writer.add_string("reason", reason);
     return finished(writer);
 }
 
 int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated, LogStore store) {
     json::Writer writer(out, capacity);
-    writer.add_string("cmd", "log");
+    writer.add_string("command", "log");
     if (!named_store(writer, store)) return 0;
-    writer.add_boolean("ack", true);
+    writer.add_boolean("acknowledge", true);
     writer.add_integer("sessions", static_cast<long>(sessions));
     // The partition holds more flights than the index offers. Said out loud,
     // because a tablet that shows sixteen when there are twenty has lied.
@@ -168,7 +168,7 @@ int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated,
 int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
                        uint32_t records, bool closed, bool truncated, LogStore store) {
     json::Writer writer(out, capacity);
-    writer.add_string("cmd", "session");
+    writer.add_string("command", "session");
     if (!named_store(writer, store)) return 0;
     writer.add_integer("index", static_cast<long>(index));
     writer.add_integer("of", static_cast<long>(count));
@@ -193,12 +193,12 @@ int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from
     if (encoded < 0) return 0;
 
     json::Writer writer(out, capacity);
-    writer.add_string("cmd", "chunk");
+    writer.add_string("command", "chunk");
     if (!named_store(writer, store)) return 0;
     writer.add_integer("session", session_id);
     writer.add_integer("from", static_cast<long>(from));
-    writer.add_integer("n", record_count);
-    writer.add_boolean("eof", ends_session);
+    writer.add_integer("records", record_count);
+    writer.add_boolean("ends_session", ends_session);
     writer.add_string("data", data);
     return finished(writer);
 }

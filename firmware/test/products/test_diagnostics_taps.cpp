@@ -209,14 +209,15 @@ TEST_CASE("diagnostics switch: every dwell change is recorded, with the channel 
     bool to_o_band = false;
     bool to_m_band = false;
     for (const diagnostics::Record& record : records) {
-        diagnostics::Switch change{};
-        if (!diagnostics::read(record, change)) continue;
-        CHECK(change.armed_ahead);
-        if (change.kind == diagnostics::SwitchKind::Hop) hop = change.to_hz == timing::kMBand1Hz;
-        if (change.kind == diagnostics::SwitchKind::ToOBand)
-            to_o_band = change.to_hz == timing::kOBandHz;
-        if (change.kind == diagnostics::SwitchKind::ToMBand)
-            to_m_band = change.to_hz == timing::kMBand0Hz;
+        diagnostics::Switch switch_record{};
+        if (!diagnostics::read(record, switch_record)) continue;
+        CHECK(switch_record.armed_ahead);
+        if (switch_record.change == diagnostics::SwitchKind::Hop)
+            hop = switch_record.to_hz == timing::kMBand1Hz;
+        if (switch_record.change == diagnostics::SwitchKind::ToOBand)
+            to_o_band = switch_record.to_hz == timing::kOBandHz;
+        if (switch_record.change == diagnostics::SwitchKind::ToMBand)
+            to_m_band = switch_record.to_hz == timing::kMBand0Hz;
     }
     CHECK(hop);
     CHECK(to_o_band);
@@ -297,7 +298,7 @@ TEST_CASE("diagnostics link: a central connecting is a record, with the payload 
     rig.raise_link(7);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    rig.send("{\"cmd\":\"status\"}");
+    rig.send("{\"command\":\"status\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     stop(rig, now_ms);

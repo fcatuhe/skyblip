@@ -76,7 +76,7 @@ void ConfigService::challenge() {
     }
     char buffer[96];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_string("cmd", "challenge");
+    writer.add_string("command", "challenge");
     write_hex_field(writer, "nonce", identity_->unit_nonce());
     write_hex_field(writer, "server_key_id", identity_->unit().server_key_id());
     (void)reply(buffer, writer.finish());
@@ -132,7 +132,7 @@ void ConfigService::send_registration() {
     }
     char buffer[IdentityLink::kRegistrationFrameBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
-    writer.add_string("cmd", "registration");
+    writer.add_string("command", "registration");
     write_hex_field(writer, "device_id", unit.device_id());
     write_hex_field(writer, "public_key", unit.public_key());
     writer.add_string("version", version);

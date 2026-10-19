@@ -467,7 +467,7 @@ TEST_CASE("log: a store this build has no service for is refused by name, never 
 
     events::RxFrame frame{};
     frame.endpoint = events::Endpoint::Log;
-    const char* json = "{\"cmd\":\"list\",\"log\":\"diagnostics\"}";
+    const char* json = "{\"command\":\"list\",\"log\":\"diagnostics\"}";
     frame.session_id = rig.link.session_id();
     frame.bytes = static_cast<uint16_t>(std::strlen(json));
     std::memcpy(frame.data.data(), json, frame.bytes);

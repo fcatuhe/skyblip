@@ -65,7 +65,7 @@ TEST_CASE("companion link: the product raises LinkUp through its own platform, n
     CHECK(rig.link_up());
     // Connected is not configuring: nothing is claimed until the app asks.
     CHECK_FALSE(rig.product.config_link().config().claim().held());
-    rig.send("{\"cmd\":\"get\"}");
+    rig.send("{\"command\":\"get\"}");
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
     CHECK(rig.product.config_link().config().claim_holder() == 0x0042);
@@ -104,7 +104,7 @@ TEST_CASE(
     const int pushed = config_frames(rig);
     CHECK(pushed >= 1);
     const std::string status = last_frame_on(rig, events::Endpoint::Config);
-    CHECK(status.find("\"cmd\":\"status\"") != std::string::npos);
+    CHECK(status.find("\"command\":\"status\"") != std::string::npos);
     CHECK(status.find("\"battery_percent\"") != std::string::npos);
 
     rig.drop_link();
@@ -129,7 +129,7 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     taxi(rig, now_ms, 6);
     REQUIRE(rig.settings().callsign[0] == 0);
 
-    rig.send("{\"cmd\":\"set\",\"callsign\":\"F-JABC\"}");
+    rig.send("{\"command\":\"set\",\"callsign\":\"F-JABC\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     // Staged, not applied: the glass has the question and nothing is stored yet.
@@ -157,7 +157,7 @@ TEST_CASE("companion link: a callsign written in flight is refused, not staged")
     uint32_t now_ms = 0;
     fly(rig, now_ms, 6);
 
-    rig.send("{\"cmd\":\"set\",\"callsign\":\"F-JABC\"}");
+    rig.send("{\"command\":\"set\",\"callsign\":\"F-JABC\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
@@ -175,7 +175,7 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -198,7 +198,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     taxi(rig, now_ms, 20);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -230,7 +230,7 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     rig.raise_link(11);
-    rig.send_log("{\"cmd\":\"erase\"}");
+    rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
@@ -245,7 +245,7 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     // was carried forward.
     rig.platform.link().clear();
     rig.raise_link(12);
-    rig.send_log("{\"cmd\":\"list\"}");
+    rig.send_log("{\"command\":\"list\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     REQUIRE(rig.link_up());
@@ -264,7 +264,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
 
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.raise_link(5);
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -311,14 +311,14 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.send_from(1, "{\"cmd\":\"get\"}");
+    rig.send_from(1, "{\"command\":\"get\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     REQUIRE(rig.product.config_link().config().claim_holder() == 1);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
-    rig.send_from(2, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send_from(2, "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     // Refused, with a reason and to the app that asked. Not silence, which a page
@@ -339,7 +339,7 @@ TEST_CASE("companion link: a reply is sized for the app that asked, not the narr
     rig.raise_link(1);
     rig.raise_link(2);
     rig.platform.link().declare_payload_bytes(2, ports::kMinimumLinkPayloadBytes);
-    rig.send_from(1, "{\"cmd\":\"get\"}");
+    rig.send_from(1, "{\"command\":\"get\"}");
     rig.run(now_ms, now_ms + 200);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
     CHECK(rig.last_on(events::Endpoint::Config).size() > ports::kMinimumLinkPayloadBytes);
@@ -356,7 +356,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.send_from(1, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.send_from(1, "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -379,7 +379,7 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.raise_link(2);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
-    rig.send_from(2, "{\"cmd\":\"get\"}");
+    rig.send_from(2, "{\"command\":\"get\"}");
     rig.run(now_ms, now_ms + 200);
     CHECK(rig.product.config_link().config().claim_holder() == 2);
 }
