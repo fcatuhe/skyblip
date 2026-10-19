@@ -165,7 +165,7 @@ class Bme280 : public io::I2c {
                                   static_cast<uint16_t>(kP7),
                                   static_cast<uint16_t>(kP8),
                                   static_cast<uint16_t>(kP9)};
-        for (int i = 0; i < 12; i++) put_u16(registers + kRegCalibration + 2 * i, words[i]);
+        for (size_t i = 0; i < 12; i++) put_u16(registers + kRegCalibration + 2 * i, words[i]);
     }
 
     static double fine_unrounded(int32_t adc_t) {

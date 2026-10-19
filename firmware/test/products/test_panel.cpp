@@ -404,11 +404,11 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
 }
 
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
-// verdict, published on the bus: the page does not compare divider_mv a second
+// verdict, published on the bus: the page does not compare millivolts a second
 // time, so it cannot disagree with the thing that can switch the device off.
 
 // D3, the reporting half. The marker on the page is the cutoff monitor's own
-// verdict, published on the bus: the page does not compare divider_mv a second
+// verdict, published on the bus: the page does not compare millivolts a second
 // time, so it cannot disagree with the thing that can switch the device off.
 TEST_CASE("product: the status page marks a low cell when the monitor says so, not before") {
     Rig rig;
