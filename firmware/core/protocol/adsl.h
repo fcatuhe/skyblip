@@ -21,11 +21,11 @@ struct __attribute__((packed)) AdslPacket {
     // INFO: fc 20sep26 F.2.1 leaves payload 66 to OGN, layout: nrf52-ogn-tracker/src/adsl.h:120
     static constexpr uint8_t kPayloadTypePosition = 0x02;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
-    static constexpr uint8_t kTelemetryTypeInfo = 1;
-    static constexpr uint8_t kInfoTypeRegistration = 5;
-    static constexpr int kInfoHeaderByte = 5;
-    static constexpr int kInfoTextByte = 6;
-    static constexpr int kInfoTextBytes = 14;
+    static constexpr uint8_t kTelemetryTypeInformation = 1;
+    static constexpr uint8_t kInformationTypeRegistration = 5;
+    static constexpr int kInformationHeaderByte = 5;
+    static constexpr int kInformationTextByte = 6;
+    static constexpr int kInformationTextBytes = 14;
 
     uint8_t sync[2];
     uint8_t data_bytes;
@@ -74,17 +74,25 @@ struct __attribute__((packed)) AdslPacket {
 
     bool is_position() const { return payload_type == kPayloadTypePosition; }
 
-    uint8_t telemetry_type() const { return static_cast<uint8_t>(payload[kInfoHeaderByte] >> 6); }
-    uint8_t info_type() const { return static_cast<uint8_t>(payload[kInfoHeaderByte] & 0x3F); }
-    void set_info_header(uint8_t telemetry_type, uint8_t info_type) {
-        payload[kInfoHeaderByte] = static_cast<uint8_t>((telemetry_type << 6) | (info_type & 0x3F));
+    uint8_t telemetry_type() const {
+        return static_cast<uint8_t>(payload[kInformationHeaderByte] >> 6);
+    }
+    uint8_t information_type() const {
+        return static_cast<uint8_t>(payload[kInformationHeaderByte] & 0x3F);
+    }
+    void set_information_header(uint8_t telemetry_type, uint8_t information_type) {
+        payload[kInformationHeaderByte] =
+            static_cast<uint8_t>((telemetry_type << 6) | (information_type & 0x3F));
     }
     bool is_registration() const {
         return payload_type == kPayloadTypeOgnDiagnostics &&
-               telemetry_type() == kTelemetryTypeInfo && info_type() == kInfoTypeRegistration;
+               telemetry_type() == kTelemetryTypeInformation &&
+               information_type() == kInformationTypeRegistration;
     }
-    const char* info_text() const { return reinterpret_cast<const char*>(payload + kInfoTextByte); }
-    char* info_text() { return reinterpret_cast<char*>(payload + kInfoTextByte); }
+    const char* information_text() const {
+        return reinterpret_cast<const char*>(payload + kInformationTextByte);
+    }
+    char* information_text() { return reinterpret_cast<char*>(payload + kInformationTextByte); }
 
     uint32_t address() const { return (get_u32(address_bytes) >> 6) & settings::kAddressMask; }
     void set_address(uint32_t address) {

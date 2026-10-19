@@ -335,25 +335,26 @@ bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
     packet.reset(AdslPacket::kPayloadTypeOgnDiagnostics);
     packet.set_address(*address & settings::kAddressMask);
     packet.set_address_mapping_table(address_mapping_table);
-    packet.set_info_header(AdslPacket::kTelemetryTypeInfo, AdslPacket::kInfoTypeRegistration);
+    packet.set_information_header(AdslPacket::kTelemetryTypeInformation,
+                                  AdslPacket::kInformationTypeRegistration);
 
-    char* text = packet.info_text();
+    char* text = packet.information_text();
     int count = 0;
-    while (count < AdslPacket::kInfoTextBytes && callsign[count] != 0 &&
+    while (count < AdslPacket::kInformationTextBytes && callsign[count] != 0 &&
            is_callsign_char(callsign[count])) {
         text[count] = callsign[count];
         count++;
     }
-    while (count < AdslPacket::kInfoTextBytes) text[count++] = 0;
+    while (count < AdslPacket::kInformationTextBytes) text[count++] = 0;
     return true;
 }
 
 int callsign_of(const AdslPacket& packet, char* out, int capacity) {
     out[0] = 0;
     if (!packet.is_registration() || capacity <= 1) return 0;
-    const char* text = packet.info_text();
+    const char* text = packet.information_text();
     int count = 0;
-    while (count < AdslPacket::kInfoTextBytes && text[count] != 0) {
+    while (count < AdslPacket::kInformationTextBytes && text[count] != 0) {
         if (!is_callsign_char(text[count])) return 0;
         count++;
     }

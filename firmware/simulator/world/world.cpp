@@ -85,7 +85,7 @@ void World::name_aircraft(int index, const char* callsign) {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used || callsign == nullptr) return;
     char* out = aircraft_[index].callsign;
     int n = 0;
-    while (n < protocol::AdslPacket::kInfoTextBytes && callsign[n] != 0) {
+    while (n < protocol::AdslPacket::kInformationTextBytes && callsign[n] != 0) {
         out[n] = callsign[n];
         n++;
     }

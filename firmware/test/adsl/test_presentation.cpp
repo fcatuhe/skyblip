@@ -88,13 +88,13 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
     CHECK_FALSE(p.is_position());
     CHECK(p.is_registration());
     CHECK(p.telemetry_type() == 1);
-    CHECK(p.info_type() == 5);
+    CHECK(p.information_type() == 5);
     // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
-    CHECK(p.payload[protocol::AdslPacket::kInfoHeaderByte] == 0x45);
+    CHECK(p.payload[protocol::AdslPacket::kInformationHeaderByte] == 0x45);
     CHECK(p.address() == 0x123456u);
     CHECK(p.address_mapping_table() == 58);
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 6);
     CHECK(std::string(name) == "D-KXYZ");
 }
@@ -102,16 +102,16 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused, not drawn") {
     protocol::AdslPacket p{};
     protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.info_text()[3] = 0x07;
+    p.information_text()[3] = 0x07;
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 
     // And a telemetry record that is not the registration one is not a name either.
     protocol::AdslPacket other{};
     protocol::from_own_callsign(other, 0x123456, 58, "D-KXYZ");
-    other.set_info_header(0, 5);
+    other.set_information_header(0, 5);
     CHECK_FALSE(other.is_registration());
     CHECK(protocol::callsign_of(other, name, sizeof(name)) == 0);
 }
@@ -119,9 +119,9 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not split into PFLAA") {
     protocol::AdslPacket p{};
     protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-    p.info_text()[1] = ',';
+    p.information_text()[1] = ',';
 
-    char name[protocol::AdslPacket::kInfoTextBytes + 1] = {0};
+    char name[protocol::AdslPacket::kInformationTextBytes + 1] = {0};
     CHECK(protocol::callsign_of(p, name, sizeof(name)) == 0);
     CHECK(name[0] == 0);
 }

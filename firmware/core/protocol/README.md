@@ -52,7 +52,7 @@ The packet layout follows OGN's `adsl.h` and the ALP-TAS frame follows SoftRF's 
 | `crc_bytes`, `spare`, `reset()` | `CRC`, `SpareByte`, `init()` |
 | `get_u24`/`put_u24`, `get_u32`/`put_u32` (`core/util/little_endian.h`) | `get3`/`set3`, `get4`/`set4` |
 | `encode_unsigned_variable_range`, `encode_signed_variable_range` (`core/util/variable_range.h`) | UnsVR, SignVR |
-| `telemetry_type()`, `kTelemetryTypeInfo` | `TelemType` |
+| `telemetry_type()`, `information_type()`, `information_text()` | `TelemType`, `InfoType`, `info_text()` |
 | ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `MsgType`, `Needs3`, `Has3`, `vs` |
 | ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `GpsA`, `GpsB`, `unk8` |
 | ALP-TAS `block_tea`, `encode_scaled`, `decode_scaled` | `btea`, `enscale`, `descale` |
