@@ -1,0 +1,7 @@
+bound:
+  device_id: 0123456789abcdef
+  serial: 1
+
+contested:
+  device_id: fedcba9876543210
+  serial: 2

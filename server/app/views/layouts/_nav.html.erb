@@ -8,7 +8,7 @@
     </ul>
     <div class="site-nav-actions">
       <%= render "layouts/locale_switcher" %>
-      <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("briefing/") || on_page?("manage")) %>
+      <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("briefing/") || on_page?("manage") || on_page?("activate")) %>
       <% if Current.user&.admin? %>
         <%= link_to "Admin", analytics_default_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("admin/")) %>
       <% end %>

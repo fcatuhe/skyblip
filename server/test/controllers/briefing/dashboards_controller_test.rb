@@ -6,6 +6,7 @@ class Briefing::DashboardsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", "Briefing"
+    assert_select "a[href='/activate']"
     assert_select "a[href='/briefing/simulator']"
     assert_select "a[href='/briefing/console']"
     assert_select "a[href='/briefing/ownship']"

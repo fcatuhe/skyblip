@@ -17,7 +17,19 @@ Rails.application.routes.draw do
       end
     end
     resources :users
+    resources :units, only: %i[index show]
+    resources :unit_keys, only: [] do
+      scope module: :unit_keys do
+        resource :promotion, only: :create
+        resource :revocation, only: :create
+      end
+    end
     mount MissionControl::Jobs::Engine, at: :jobs
+  end
+
+  namespace :activation do
+    resources :challenges, only: :create
+    resources :registrations, only: :create
   end
 
   resources :releases, only: [], param: :tag do

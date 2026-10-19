@@ -10,7 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_17_205350) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_094938) do
+  create_table "activation_challenges", force: :cascade do |t|
+    t.string "server_nonce", null: false
+    t.string "unit_nonce", null: false
+    t.string "server_key_id", null: false
+    t.string "ip_address"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_activation_challenges_on_created_at"
+    t.index ["server_nonce"], name: "index_activation_challenges_on_server_nonce", unique: true
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.integer "user_id", null: false
     t.string "ip_address"
@@ -18,6 +29,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_205350) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
+
+  create_table "unit_keys", force: :cascade do |t|
+    t.integer "unit_id", null: false
+    t.string "public_key", null: false
+    t.string "status", null: false
+    t.string "ip_address"
+    t.string "version"
+    t.string "server_key_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "release"
+    t.index ["unit_id", "public_key"], name: "index_unit_keys_on_unit_id_and_public_key", unique: true
+    t.index ["unit_id"], name: "index_unit_keys_on_unit_id_active", unique: true, where: "status = 'active'"
+  end
+
+  create_table "units", force: :cascade do |t|
+    t.string "device_id", null: false
+    t.integer "serial", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["device_id"], name: "index_units_on_device_id", unique: true
+    t.index ["serial"], name: "index_units_on_serial", unique: true
+    t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end
 
   create_table "users", force: :cascade do |t|
@@ -32,4 +67,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_17_205350) do
   end
 
   add_foreign_key "sessions", "users"
+  add_foreign_key "unit_keys", "units"
 end

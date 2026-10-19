@@ -1,0 +1,31 @@
+<div class="manage card"
+     data-controller="activate"
+     data-activate-src-value="<%= activation_module_path %>"
+     data-activate-challenges-value="<%= activation_challenges_path %>"
+     data-activate-registrations-value="<%= activation_registrations_path %>"
+     data-activate-none-value="<%= none %>">
+  <p class="manage-unsupported" data-activate-target="unsupported" hidden><%= unsupported %></p>
+
+  <div class="manage-row">
+    <button type="button" class="manage-button" data-activate-target="connect" data-action="activate#link" disabled><%= connect %></button>
+    <button type="button" class="manage-button manage-button--quiet" data-activate-target="disconnect" data-action="activate#unlink" hidden><%= disconnect %></button>
+    <p class="note" data-activate-target="hint" data-activate-word="connecting"><%= connecting %></p>
+  </div>
+
+  <dl class="manage-facts">
+    <div><dt><%= device %></dt><dd data-activate-target="device">-</dd></div>
+    <div><dt><%= address %></dt><dd data-activate-target="address">-</dd></div>
+  </dl>
+
+  <div class="manage-row">
+    <button type="button" class="manage-button" data-activate-target="activate" data-action="activate#activate" disabled><%= activate %></button>
+  </div>
+
+  <ol class="manage-steps">
+    <% steps.each do |step, words| %>
+      <li data-activate-target="step" data-step="<%= step %>" data-activate-word="step_<%= step %>"><%= words %></li>
+    <% end %>
+  </ol>
+
+  <p class="manage-message" role="status" data-activate-target="message"></p>
+</div>

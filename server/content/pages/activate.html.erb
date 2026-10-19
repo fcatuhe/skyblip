@@ -1,0 +1,162 @@
+---
+title: Activate a skyBlip Go
+nav_title: Activate
+description: A new skyBlip Go stays silent until it holds a serial of its own, signed by skyblip.eu · this page asks for it over Bluetooth, and two presses on the device allow it.
+---
+
+<section id="activate">
+  <p class="kicker">skyBlip Go</p>
+  <h1>A serial of its own, from this page, over Bluetooth.</h1>
+  <p class="lede">
+    A new unit neither transmits nor receives until it holds a serial that
+    skyblip.eu signed for it. Its glass says <span class="mono">ACTIVATE</span>,
+    names this page, and shows four characters, such as
+    <span class="mono">3F2A</span>, which pick it out in your browser&rsquo;s
+    list as <span class="mono">activate 3F2A skyBlip</span>.
+  </p>
+  <p class="lede">
+    The page asks skyblip.eu, the unit asks you on its glass, and once it holds
+    its serial it starts its radio and takes its name, such as
+    <span class="mono">skyBlip Go 00012A</span>. No account, no form: holding the
+    unit is the only proof asked.
+  </p>
+
+  <%= render "shared/activate",
+        unsupported: "This browser has no Web Bluetooth, so this page cannot reach the unit. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.",
+        connect: "Connect",
+        disconnect: "Disconnect",
+        connecting: "Your browser lists the devices in range: pick activate followed by the four characters on the glass.",
+        device: "Device",
+        address: "Address",
+        none: "none yet",
+        activate: "Activate",
+        steps: {
+          ask: "The page asks skyblip.eu for a request signed for this unit, and hands it over.",
+          confirm: "Allow it: the glass says ACTIVATE, SEND THE KEY OF THIS UNIT TO SKYBLIP.EU, press twice.",
+          register: "skyblip.eu gives the unit its serial, and the unit stores it."
+        } %>
+</section>
+
+<section>
+  <h2 class="kicker">Before you start</h2>
+
+  <ul class="points">
+    <li>Chrome or Edge, on a computer or on Android, with an internet connection</li>
+    <li>The unit switched on and close to you, its glass showing ACTIVATE</li>
+    <li>Its barometer answering: a unit without one says so on its glass, and cannot be activated</li>
+    <li>No other app holding the unit&rsquo;s settings</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">What happens</h2>
+
+  <h3>One question on the glass, <span class="highlight">then it flies</span>.</h3>
+  <p class="lede">
+    Activate asks the unit for a number it has just drawn, and skyblip.eu signs
+    it. The unit checks that signature against the key of skyblip.eu built into
+    its firmware, so no one else can start an activation, and asks you on its
+    glass. Press twice.
+  </p>
+  <p class="lede">
+    The unit then signs what identifies it with a key of its own, drawn the first
+    time it started and kept in its chip. skyblip.eu checks that signature,
+    assigns the next serial, and signs it for this unit alone. The unit stores
+    it, starts its radio, and the page shows its address: <span class="mono">00</span>,
+    the prefix ADS-L assigned to skyBlip with manufacturer page 49, then the
+    serial in hexadecimal.
+  </p>
+  <p class="lede">
+    The unit checks its serial at every start, and needs this page only once.
+    Activate it again and it keeps the same serial. It keeps its serial too when
+    it moves between a release and a development firmware, which both trust the
+    same key of skyblip.eu.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">What skyblip.eu keeps</h2>
+
+  <p class="lede">
+    The unit&rsquo;s chip identifier, its public key, its serial, the firmware
+    it runs, the date and the internet address the request came from. No name,
+    no email, no account: the serial belongs to the unit, and the key in it is
+    the proof. A unit given away or sold keeps its serial.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">When the unit says no</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The unit answers</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">keyless</th><td data-activate-word="keyless">The unit could not read or make its own key, or name its firmware. Restart it and activate again, and if it happens again, tell us.</td></tr>
+        <tr><th class="mono">no_session</th><td data-activate-word="no_session">The unit no longer holds the number this activation started from: more than ten minutes passed, or the link dropped. Activate again.</td></tr>
+        <tr><th class="mono">bad_signature</th><td data-activate-word="bad_signature">The unit did not recognise what skyblip.eu signed as made for it, now. Activate again, and if it happens twice, tell us which firmware it runs.</td></tr>
+        <tr><th class="mono">small_mtu</th><td data-activate-word="small_mtu">The Bluetooth link is too narrow for the unit&rsquo;s answer. Use a current Chrome or Edge, which ask for wider packets.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">This unit is already activated, and it has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then activate again.</td></tr>
+        <tr><th class="mono">low_power</th><td data-activate-word="low_power">The battery is critical, too low to write the serial to memory. Charge it, then activate again.</td></tr>
+        <tr><th class="mono">flash</th><td data-activate-word="flash">The unit could not write its serial to its memory. Activate again, and if it happens again, tell us.</td></tr>
+        <tr><th class="mono">expired</th><td data-activate-word="expired">Nobody answered the question on the glass within thirty seconds, which counts as a refusal. Activate again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-activate-word="cancelled">The unit said no: one press refuses the question.</td></tr>
+        <tr><th class="mono">claimed</th><td data-activate-word="claimed">Another app holds this unit&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
+        <tr><th class="mono">unknown_cmd</th><td data-activate-word="unknown_cmd">The firmware on the unit is older than activation, and needs none. Update it from the update page first.</td></tr>
+        <tr><th class="mono">anything else</th><td data-activate-word="refused">The unit refused, with a reason this page does not know:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When skyblip.eu says no</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Unknown key</th><td data-activate-word="server_unknown_server_key">The unit&rsquo;s firmware trusts a key skyblip.eu does not hold: a build made to trust another key, such as a fork&rsquo;s. Install a release from the update page, then activate.</td></tr>
+        <tr><th>Too slow</th><td data-activate-word="server_expired">More than five minutes passed between the request and the presses. Activate again.</td></tr>
+        <tr><th>Signature refused</th><td data-activate-word="server_bad_signature">skyblip.eu could not verify what the unit signed. Activate again, and if it happens twice, tell us which firmware it runs.</td></tr>
+        <tr><th>Another key</th><td data-activate-word="server_other_key">skyblip.eu knows this unit under another key, so it gave no serial. That follows an erase of the unit&rsquo;s chip with a debugger. Write to us with the code the page shows after these words: we check with you, then move the serial to the new key. The code:</td></tr>
+        <tr><th>Key revoked</th><td data-activate-word="server_revoked_key">skyblip.eu revoked the key this unit holds, so it gave no serial. Write to us with the code the page shows after these words. The code:</td></tr>
+        <tr><th>Enough for today</th><td data-activate-word="server_daily_cap">skyblip.eu has activated as many new units today as it does in a day. Try again tomorrow.</td></tr>
+        <tr><th>No serial left</th><td data-activate-word="server_no_serial">Every serial is assigned. Write to us.</td></tr>
+        <tr><th>Too many requests</th><td data-activate-word="server_rate_limited">Too many requests came from your connection within a minute. Wait a minute, then activate again.</td></tr>
+        <tr><th>Not understood</th><td data-activate-word="server_invalid">skyblip.eu could not read what the page sent. Reload the page and activate again.</td></tr>
+        <tr><th>No answer</th><td data-activate-word="server_unreachable">skyblip.eu did not answer: check this device&rsquo;s internet connection, then activate again.</td></tr>
+        <tr><th>Failed</th><td data-activate-word="server_failed">skyblip.eu failed to answer:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When the page stops</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Activated</th><td data-activate-word="activated">Activated: the unit holds its serial and has started its radio. Its name changes to skyBlip Go followed by its address.</td></tr>
+        <tr><th>No Web Bluetooth</th><td data-activate-word="no_bluetooth">This browser has no Web Bluetooth. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.</td></tr>
+        <tr><th>Not a skyBlip</th><td data-activate-word="not_skyblip">The device you picked has no skyBlip settings service: it is not a skyBlip.</td></tr>
+        <tr><th>Link lost</th><td data-activate-word="link_lost">The link dropped. Bring the unit closer, connect again and activate again.</td></tr>
+        <tr><th>Anything else</th><td data-activate-word="failed">Something failed on the way:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "manage", class: "cta cta--previous" %>
+  </p>
+</section>

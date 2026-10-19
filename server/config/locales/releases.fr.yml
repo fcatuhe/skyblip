@@ -23,6 +23,7 @@ fr:
   briefing:
     title: Briefing
     description: Préparez votre appareil avant le vol.
+    activate: Activer un appareil neuf
     manage: Mettre à jour et configurer l'appareil
     ownship: "Dessiner le symbole de l'appareil, un par type d'aéronef"
     simulator: Essayer le simulateur et modifier l'appareil simulé

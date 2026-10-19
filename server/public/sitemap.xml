@@ -11,6 +11,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://skyblip.eu/activate</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://skyblip.eu/ads-l-registry</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -52,6 +57,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/a-venir</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/activer</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

@@ -180,8 +180,9 @@ export default class extends Controller {
     return full ? this.fullValue : this.slimValue
   }
 
-  #notes({ image, status }) {
+  #notes({ image, status, settings, address, activates }) {
     const notes = []
+    if (settings && activates && address === null) notes.push(["not_activated"])
     if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])

@@ -37,6 +37,10 @@ async function serviceOrNull(server, uuid) {
   }
 }
 
+export function addressOf(config) {
+  return 'address' in config ? config.address.toString(16).toUpperCase().padStart(6, '0') : null;
+}
+
 export function hasWebBluetooth() {
   return Boolean(globalThis.navigator && navigator.bluetooth);
 }

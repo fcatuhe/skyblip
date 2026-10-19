@@ -1,4 +1,4 @@
-import { GATT_WRITE_BYTES, connect, hasWebBluetooth } from '#skyblip/ble';
+import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
@@ -59,6 +59,11 @@ function settingsOf(reply) {
   return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
 }
 
+// INFO: fc 19oct26 address_mapping_table marks firmware that speaks #126: older firmware has no activation to ask for
+function identityOf(reply) {
+  return { address: addressOf(reply), activates: 'address_mapping_table' in reply };
+}
+
 function adviceOf({ image, file }) {
   if (!image) return null;
   // INFO: fc 03oct26 before a file is chosen, the blob the device verified stands in for the release's pin
@@ -103,6 +108,8 @@ export class Updater {
     running: null,
     status: null,
     settings: null,
+    address: null,
+    activates: false,
     defaults: null,
     file: null,
     advice: null,
@@ -248,7 +255,7 @@ export class Updater {
     if (!reply) return;
     if (reply.cmd === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.cmd === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.cmd === 'config') this.#set({ settings: settingsOf(reply) });
+    else if (reply.cmd === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.cmd === 'defaults') this.#set({ defaults: settingsOf(reply) });
     else if ('ack' in reply) this.#acked(reply);
   }
@@ -340,11 +347,13 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, defaults: null, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, activates: false, defaults: null, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, defaults: null, progress: null, notice,
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, activates: false, defaults: null,
+      progress: null,
+      notice,
     });
   }
 

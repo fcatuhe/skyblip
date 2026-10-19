@@ -1,6 +1,6 @@
 # server
 
-[skyblip.eu](https://skyblip.eu) runs as one Rails app on the crooz server. Public content lives under `Content`, and `/briefing` links the device update page, Bluetooth console and editable simulator. Users sign in to an admin area, and device registration is future work tracked in #126.
+[skyblip.eu](https://skyblip.eu) runs as one Rails app on the crooz server. Public content lives under `Content`, and `/briefing` links the device update page, Bluetooth console and editable simulator. Users sign in to an admin area, and `/activate` gives each unit its serial (#126).
 
 Every command here runs from this directory, not from the repo root.
 
@@ -47,6 +47,31 @@ maxmind:
 ```
 
 `mise run credentials:production` adds them. The first nightly run after the next deploy downloads the database.
+
+## Activation
+
+A unit transmits nothing until it holds a serial that this server signed for it, and `/activate` (`content/pages/activate.*`) is where it gets one. The wire protocol, both halves of it, is [`schemas/activation.v1.schema.json`](../schemas/activation.v1.schema.json): the page asks the unit for a nonce, `POST /activation/challenges` signs it, the unit asks on its glass and signs its registration with its own key, `POST /activation/registrations` checks that signature and answers the serial with an unlock code, and the unit stores the code. [`activation.v1.vectors.json`](../schemas/activation.v1.vectors.json) is one exchange signed with the public test key, which `test/models/identity/message_test.rb` holds OpenSSL to and the firmware's host suite holds Monocypher to: Ed25519 is deterministic, so two libraries that sign the vectors alike sign everything alike.
+
+`Unit` is the DEVICEID and its serial, dense from 1 to 65535 (0 would put 0x000000 on the air, which decoders read as no address), and `Unit::Key` the public keys it registered with, `active`, `pending` or `revoked`. A new DEVICEID gets the next serial and its key is bound. The same key gets the same serial in a fresh unlock code. Another key is refused as `other_key` and kept as `pending`, with the date, the firmware and the IP it came from. In the admin area, `Units` lists them: promote makes a pending key the active one and revokes the old, revoke leaves the unit with no key, so the next registration binds its key as a first one does. A revoked key stays revoked: it is refused as `revoked_key`, and the page shows the DEVICEID and the start of the key, which is what an owner writes in with and what the `Units` page lists. The unlock code is signed inside the transaction that bound the key, so a revocation lands before it or after it. `Activation::Challenge` is the server nonce, kept five minutes, used once, and forgotten hourly by `config/recurring.yml`.
+
+Both endpoints take ten requests a minute per IP (`rate_limit`, on Solid Cache). Past 50 new units in a day, a new DEVICEID is refused as `daily_cap`. The enrollment that reaches the cap logs an error, and the admin `Units` page carries a banner until midnight UTC: the app has no mailer or error tracker to alert by, so those two are the alert. A server nonce is spent only by a registration its unit signed, since it travels in clear over Bluetooth.
+
+Only skyblip.eu signs for a unit. It holds one Ed25519 key, the server key, which signs every message a unit must trust from it about its identity: the challenge and the unlock code today, any later command that touches identity tomorrow, each under its own `skyblip:<purpose>:v1` label (`Identity::Message`). Every device build, a pull request, `main`, a release or a local build, carries only its public half, `firmware/keys/server.pub`, so a build needs no secret to be activated. The seed, 64 hexadecimal characters, lives in the production credentials alone:
+
+```yaml
+identity:
+  server_private_key: [seed]
+```
+
+The name says private because this is the one place the secret half sits, beside values that are not secret; its public half is `server.pub` in the firmware, and the server key, unqualified, is the pair. `openssl rand -hex 32` makes a seed: in Ed25519 the 32 random bytes are the private key. Add it with `mise run credentials:production`. `Identity::ServerKey` derives the public key from it, and names it by the first four bytes of the SHA-256 of that public key, which is how the unit names the key it trusts in its `challenge` reply. The admin `Units` page shows both, to check against `firmware/keys/server.pub`. To get the public half before a deploy, in your own terminal:
+
+```sh
+read -rs seed && ruby -ropenssl -e 'k = OpenSSL::PKey.new_raw_private_key("ED25519", [ARGV[0]].pack("H*")).raw_public_key; puts k.unpack1("H*"), OpenSSL::Digest::SHA256.digest(k)[0, 4].unpack1("H*")' "$seed"; unset seed
+```
+
+Development and test sign with the public test key of the vectors (`config/initializers/identity.rb`), which only the firmware's host suite and simulator trust, so a local server can never activate a real unit, nor hand one a serial the registry gave another. With no key at all, the activation endpoints fail with an error and the `Units` page says so.
+
+The registration also says whether the unit runs a release build, signed with the rest, and the `Units` page shows it as the build, release or development. Nothing on the air tells them apart: a development unit is a real aircraft with a real serial.
 
 ## Content
 

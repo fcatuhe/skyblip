@@ -3,6 +3,10 @@ production:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
 
+  forget_expired_activation_challenges:
+    command: "Activation::Challenge.expired.delete_all"
+    schedule: every hour at minute 24
+
   purge_non_browser_visits:
     class: Analytics::Visit::PurgeNonBrowserVisitsJob
     schedule: every day at 2am

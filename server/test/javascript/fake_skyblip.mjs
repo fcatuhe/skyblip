@@ -79,9 +79,11 @@ export class FakeSkyblip {
     verdictFirst = false,
     key = PRODUCTION_KEY,
     downgrade = false,
+    address = 0x00012a,
+    identityNames = true,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, identityNames });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -207,7 +209,7 @@ export class FakeSkyblip {
     if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
     if (cmd === 'update') return this.sendUpdate();
     if (cmd === 'status') return this.sendStatus();
-    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, addr: 0x5b5afe, addr_table: 58, ...this.stored });
+    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
     if (!['set', 'dfu', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
     if (!this.onGround) return this.ack(false, 'in_flight');
@@ -221,6 +223,12 @@ export class FakeSkyblip {
       return this.reply({ ack: false, pending: true, reason: 'confirm' });
     }
     this.reply({ ack: false, pending: true, reason: `confirm_${cmd}` });
+  }
+
+  // INFO: fc 19oct26 firmware before #126 names the address addr and always sends it: it has no activation
+  addressFields() {
+    if (!this.identityNames) return { addr: 0x5b5afe, addr_table: 58 };
+    return { ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 };
   }
 
   takeOff() {

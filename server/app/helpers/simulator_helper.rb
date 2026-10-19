@@ -52,6 +52,10 @@ module SimulatorHelper
     asset_path("skyblip/update.js")
   end
 
+  def activation_module_path
+    asset_path("skyblip/activation.js")
+  end
+
   def gauge_marks(dial)
     return fixed_marks(dial) unless dial[:scale]
 
