@@ -23,7 +23,7 @@ class TimingReport {
     // third one coming, has evidence with a hole in it.
     bool fits(int payload) const;
 
-    // The next frame, written into buf. Returns its length, or 0 when the payload
+    // The next frame, written into out. Returns its length, or 0 when the payload
     // is too small to carry a single field - which is a refusal, not a short
     // frame. Advances only when a frame was produced.
     int next_frame(int payload, char* out, int capacity);

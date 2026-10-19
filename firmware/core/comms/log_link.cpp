@@ -14,7 +14,7 @@ const char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01
 uint32_t non_negative(long v) { return v < 0 ? 0u : static_cast<uint32_t>(v); }
 
 // INFO: fc 04aug26 json::Writer leaves out a field that will not fit whole, so a
-// reply built into too small a cap is short but valid - which is exactly the
+// reply built into too small a capacity is short but valid - which is exactly the
 // failure that must not reach a tablet. Every formatter here answers 0 instead,
 // and the service counts it.
 int finished(json::Writer& writer) {
