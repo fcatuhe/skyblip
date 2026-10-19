@@ -7,7 +7,7 @@ module ActivationTestHelper
 
   def signed_registration(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"], release: true)
     public_key = unit_key.raw_public_key.unpack1("H*")
-    fields = { device_id:, public_key:, server_nonce: challenge.server_nonce, server_key: challenge.server_key, release:, version: }
+    fields = { device_id:, public_key:, server_nonce: challenge.server_nonce, server_key_id: challenge.server_key_id, release:, version: }
     message = Identity::Message.registration(**fields, unit_nonce: challenge.unit_nonce)
     fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
   end

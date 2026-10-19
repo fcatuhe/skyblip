@@ -109,9 +109,9 @@ export class Activator {
     this.#set({ phase: 'ready', notice: { key: reply.reason || 'refused' } });
   }
 
-  async #challenge({ nonce, server_key }) {
+  async #challenge({ nonce, server_key_id }) {
     const device = this.#device;
-    const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: nonce, server_key }));
+    const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: nonce, server_key_id }));
     if (!answer) return;
     this.#serverNonce = answer.server_nonce;
     return this.#send({ cmd: 'register', server_nonce: answer.server_nonce, signature: answer.signature });

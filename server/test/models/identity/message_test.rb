@@ -23,7 +23,7 @@ class Identity::MessageTest < ActiveSupport::TestCase
 
   private
     def registration_fields
-      vectors.slice("device_id", "unit_nonce", "server_nonce", "server_key", "release", "version").symbolize_keys.merge(public_key: vectors["unit_public_key"])
+      vectors.slice("device_id", "unit_nonce", "server_nonce", "server_key_id", "release", "version").symbolize_keys.merge(public_key: vectors["unit_public_key"])
     end
 
     def unlock_fields

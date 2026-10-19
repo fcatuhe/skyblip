@@ -22,7 +22,7 @@ test('connecting reads the running version, the image state and the status', asy
 test('the settings carry the address, and a unit not yet activated has none', async () => {
   const { updater, until } = await connected();
   assert.equal((await until(state => state.settings)).address, '5B5AFE');
-  const fresh = await connected({ addr: null });
+  const fresh = await connected({ address: null });
   assert.equal((await fresh.until(state => state.settings)).address, null);
 });
 

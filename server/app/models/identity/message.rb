@@ -5,8 +5,8 @@ module Identity::Message
     label("register") + bytes(unit_nonce, server_nonce)
   end
 
-  def registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key:, release:, version:)
-    label("registration") + bytes(device_id, public_key, unit_nonce, server_nonce, server_key) + [ release ? 1 : 0 ].pack("C") + version.b
+  def registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
+    label("registration") + bytes(device_id, public_key, unit_nonce, server_nonce, server_key_id) + [ release ? 1 : 0 ].pack("C") + version.b
   end
 
   def unlock(device_id:, public_key:, serial:, unit_nonce:)

@@ -8,26 +8,26 @@
     "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
     "device_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
     "public_key": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Pd, the raw Ed25519 public key of the unit, from its seed in UICR CUSTOMER"},
-    "server_key": {"type": "string", "pattern": "^[0-9a-f]{8}$", "description": "The id of the server key the firmware is built to trust: every device build trusts skyblip.eu's server key (firmware/keys/server.pub), the host suite, the simulator and a local server the public test key of the vectors"},
+    "server_key_id": {"type": "string", "pattern": "^[0-9a-f]{8}$", "description": "The id of the server key the firmware is built to trust: every device build trusts skyblip.eu's server key (firmware/keys/server.pub), the host suite, the simulator and a local server the public test key of the vectors"},
     "release": {"type": "boolean", "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
     "serial": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Assigned densely by the server, from 1: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
 
     "challenge": {
-      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'incomplete' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground",
+      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'keyless' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground",
       "type": "object", "required": ["cmd"], "additionalProperties": false,
       "properties": {"cmd": {"const": "challenge"}}
     },
     "challenge_reply": {
       "description": "Unit to browser. The nonce, and the id of the server key the unit trusts, so the server knows which of its keys to sign with",
-      "type": "object", "required": ["cmd", "nonce", "server_key"], "additionalProperties": false,
+      "type": "object", "required": ["cmd", "nonce", "server_key_id"], "additionalProperties": false,
       "properties": {
         "cmd": {"const": "challenge"},
         "nonce": {"$ref": "#/definitions/nonce"},
-        "server_key": {"$ref": "#/definitions/server_key"}
+        "server_key_id": {"$ref": "#/definitions/server_key_id"}
       }
     },
     "register": {
-      "description": "Browser to unit, about 210 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals: 'no_session' (no live nonce), 'bad_signature', 'incomplete', 'small_mtu' (the link cannot carry the registration frame in one notification), 'in_flight' (an activated unit off the ground)",
+      "description": "Browser to unit, about 210 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals: 'no_session' (no live nonce), 'bad_signature', 'keyless', 'small_mtu' (the link cannot carry the registration frame in one notification), 'in_flight' (an activated unit off the ground)",
       "type": "object", "required": ["cmd", "server_nonce", "signature"], "additionalProperties": false,
       "properties": {
         "cmd": {"const": "register"},
@@ -37,13 +37,13 @@
     },
     "registration": {
       "description": "Unit to browser after the two presses, about 310 bytes in one notification, which Chrome's 498-byte ATT MTU carries. signature is S, by the unit's key over the registration message. The browser posts it to /activation/registrations as it is, without cmd",
-      "type": "object", "required": ["cmd", "device_id", "public_key", "version", "server_key", "release", "signature"], "additionalProperties": false,
+      "type": "object", "required": ["cmd", "device_id", "public_key", "version", "server_key_id", "release", "signature"], "additionalProperties": false,
       "properties": {
         "cmd": {"const": "registration"},
         "device_id": {"$ref": "#/definitions/device_id"},
         "public_key": {"$ref": "#/definitions/public_key"},
         "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$", "description": "The running image, as the dfu command writes it: 0.3.0+1234"},
-        "server_key": {"$ref": "#/definitions/server_key"},
+        "server_key_id": {"$ref": "#/definitions/server_key_id"},
         "release": {"$ref": "#/definitions/release"},
         "signature": {"$ref": "#/definitions/signature"}
       }
@@ -60,10 +60,10 @@
 
     "http_challenge_request": {
       "description": "POST /activation/challenges, browser to server: Nu and the key the unit trusts, from the challenge reply. Answered 201 with http_challenge_response, 422 {\"error\":\"unknown_server_key\"} for a key this server does not hold, 422 {\"error\":\"invalid\"} for a malformed nonce, 429 {\"error\":\"rate_limited\"}",
-      "type": "object", "required": ["unit_nonce", "server_key"],
+      "type": "object", "required": ["unit_nonce", "server_key_id"],
       "properties": {
         "unit_nonce": {"$ref": "#/definitions/nonce"},
-        "server_key": {"$ref": "#/definitions/server_key"}
+        "server_key_id": {"$ref": "#/definitions/server_key_id"}
       }
     },
     "http_challenge_response": {
@@ -76,12 +76,12 @@
     },
     "http_registration_request": {
       "description": "POST /activation/registrations, browser to server: the registration frame without cmd, and the Ns it answers. Answered 201 with http_registration_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid', 422 'bad_signature', 409 'other_key' (the DEVICEID is bound to another key: the key is recorded as pending for an admin), 409 'revoked_key' (an admin revoked this key), 503 'daily_cap' (too many new units today), 503 'no_serial' (all 65536 are assigned), 429 'rate_limited'",
-      "type": "object", "required": ["device_id", "public_key", "version", "server_key", "release", "server_nonce", "signature"],
+      "type": "object", "required": ["device_id", "public_key", "version", "server_key_id", "release", "server_nonce", "signature"],
       "properties": {
         "device_id": {"$ref": "#/definitions/device_id"},
         "public_key": {"$ref": "#/definitions/public_key"},
         "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$"},
-        "server_key": {"$ref": "#/definitions/server_key"},
+        "server_key_id": {"$ref": "#/definitions/server_key_id"},
         "release": {"$ref": "#/definitions/release"},
         "server_nonce": {"$ref": "#/definitions/nonce"},
         "signature": {"$ref": "#/definitions/signature"}
