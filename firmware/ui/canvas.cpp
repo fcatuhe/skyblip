@@ -4,8 +4,8 @@ namespace skyblip::ui {
 
 namespace {
 struct Glyph {
-    char c;
-    uint8_t col[5];
+    char character;
+    uint8_t columns[kCharW];
 };
 const Glyph kFont[] = {
     {' ', {0x00, 0x00, 0x00, 0x00, 0x00}}, {'0', {0x3E, 0x51, 0x49, 0x45, 0x3E}},
@@ -34,19 +34,19 @@ const Glyph kFont[] = {
 const uint8_t* find_glyph(char c) {
     if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
     for (const auto& g : kFont)
-        if (g.c == c) return g.col;
-    return kFont[0].col;
+        if (g.character == c) return g.columns;
+    return kFont[0].columns;
 }
 }
 
 void Canvas::clear(bool white) {
     uint8_t v = white ? 0x00 : 0xFF;
-    for (size_t i = 0; i < bytes(); i++) buf_[i] = v;
+    for (size_t i = 0; i < bytes(); i++) data_[i] = v;
 }
 
 void Canvas::set_pixel(int x, int y, bool black) {
-    if (x < 0 || x >= w_ || y < 0 || y >= h_) return;
-    uint8_t& b = buf_[y * stride_ + (x >> 3)];
+    if (x < 0 || x >= width_ || y < 0 || y >= height_) return;
+    uint8_t& b = data_[y * stride_ + (x >> 3)];
     uint8_t m = static_cast<uint8_t>(0x80 >> (x & 7));
     if (black)
         b |= m;
@@ -55,8 +55,8 @@ void Canvas::set_pixel(int x, int y, bool black) {
 }
 
 bool Canvas::get_pixel(int x, int y) const {
-    if (x < 0 || x >= w_ || y < 0 || y >= h_) return false;
-    return buf_[y * stride_ + (x >> 3)] & (0x80 >> (x & 7));
+    if (x < 0 || x >= width_ || y < 0 || y >= height_) return false;
+    return data_[y * stride_ + (x >> 3)] & (0x80 >> (x & 7));
 }
 
 void Canvas::hline(int x, int y, int w, bool black) {
@@ -128,8 +128,8 @@ void Canvas::circle(int cx, int cy, int r, bool black, bool fill) {
 
 int Canvas::draw_char(int x, int y, char c, bool black, int scale) {
     const uint8_t* g = find_glyph(c);
-    for (int col = 0; col < 5; col++) {
-        for (int row = 0; row < 7; row++) {
+    for (int col = 0; col < kCharW; col++) {
+        for (int row = 0; row < kCharH; row++) {
             if (g[col] & (1 << row)) {
                 for (int sx = 0; sx < scale; sx++)
                     for (int sy = 0; sy < scale; sy++)
@@ -137,19 +137,19 @@ int Canvas::draw_char(int x, int y, char c, bool black, int scale) {
             }
         }
     }
-    return x + 6 * scale;
+    return x + kCellW * scale;
 }
 
-int Canvas::draw_text(int x, int y, const char* s, bool black, int scale) {
-    while (*s) {
-        x = draw_char(x, y, *s++, black, scale);
+int Canvas::draw_text(int x, int y, const char* text, bool black, int scale) {
+    while (*text) {
+        x = draw_char(x, y, *text++, black, scale);
     }
     return x;
 }
 
 int Canvas::count_black() const {
     int n = 0;
-    for (size_t i = 0; i < bytes(); i++) n += __builtin_popcount(buf_[i]);
+    for (size_t i = 0; i < bytes(); i++) n += __builtin_popcount(data_[i]);
     return n;
 }
 

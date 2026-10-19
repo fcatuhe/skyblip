@@ -66,9 +66,9 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Dwell` 6 | slot state, band, frequency, start and end, the phase it was read at, duty, noise floor, refusal reason, tx_allowed | whether the dwell map spends the second where §C.5 says, and what refuses a burst when one is refused |
 | `Flight` 7 | speed, climb, altitude, HDOP, VDOP, declared state, latched state, rolling | how close the machine came to deciding the other way. Written on every evaluation, never only on transitions: a transition-only tape cannot say what the margin was, and the margin is the whole question when choosing 12.0 against 8.0 m/s |
 | `Power` 8 | cell millivolts as the gauge's median and the last reading beside it, or what the divider read when it was not the cell, percent, level, charge condition, die temperature, supply warnings, refused readings and charge counts | what a burst does to the rail, and whether `kLowMv`, `kCriticalMv` and `kFlatMv` fire where a real pack needs them to |
-| `Baro` 9 | pressure, derived altitude, the rate taken from it, temperature | the vertical speed window (`kBaroVsWindowMs` against `kGnssVsWindowMs`) measured rather than assumed |
+| `Baro` 9 | pressure, derived altitude, the rate taken from it, temperature | the vertical speed window (`kBaroClimbWindowMs` against `kGnssClimbWindowMs`) measured rather than assumed |
 | `Motion` 10 | ball position, the three g-meter axes now, the normal axis at both extremes, hub error bytes | what the airframe pulled, and whether the filter lengths suit it. Absent on a unit with no hub, which the fitted flag says |
-| `Contact` 11 | contact, edge instant, how long the level had held, the gesture the product decided | `Controls::kLongTouchMs` and `kLongPressHoldMs` against the presses a hand actually makes |
+| `Contact` 11 | contact, edge instant, how long the level had held, the gesture the product decided | `Controls::kLongTouchHoldMs` and `kLongPressHoldMs` against the presses a hand actually makes |
 | `Link` 12 | link session, negotiated payload, action (up, down, claim taken or released, received, sent, dropped), endpoint, frame bytes, drops | what a phone negotiates in the field, and where an offload stalls |
 | `Traffic` 13 | address, distance, bearing, relative altitude, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistM` and `kAdvisoryAltM` against the encounters that happened, and what the ageing rules threw away |
 | `Write` 14 | placement, kind, how long the change waited, the phase it was placed at, requests, writes, forced | whether `kSettleMs` and `kDeferCeilingMs` place a durable write inside its window, and how often one is forced |
@@ -146,9 +146,9 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Baro` | `services/ownship.cpp` `record_baro` | every sample the board polls (`runtime::kBaroPublishPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
-| `Link` | `services/config.cpp` `record_link`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
+| `Link` | `services/config_link.cpp` `record_link`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
-| `Write` | `services/config.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
+| `Write` | `services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
 | `End` | `services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |

@@ -6,7 +6,7 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-constexpr int kCellW = 6;
+using ui::kCellW;
 constexpr int kRight = kGlassWidth - kLeft;
 
 constexpr int kTitleY = 2;
@@ -76,191 +76,192 @@ const char* slot_word(timing::SlotState slot) {
     return "?";
 }
 
-void draw_title(ui::Canvas& canvas, const RawSnapshot& s) {
+void draw_title(ui::Canvas& canvas, const RawSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "RAW", true, 1);
-    char buf[16];
-    int n = format_string(buf, "T+");
-    n += format_uint(buf + n, s.uptime_s % kUptimeClockWrapS);
-    buf[n] = 0;
-    right_aligned(canvas, kRight, kTitleY, buf, n);
+    char text[16];
+    int written = format_string(text, "T+");
+    written += format_uint(text + written, snapshot.uptime_s % kUptimeClockWrapS);
+    text[written] = 0;
+    right_aligned(canvas, kRight, kTitleY, text, written);
     canvas.hline(kLeft, kTitleRuleY, kRight - kLeft, true);
 }
 
 void draw_port(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_keyed(buf, "PORT", g.health.baud);
-    n += format_word(buf + n, ports::to_string(g.health.config_stage));
-    n += format_keyed(buf + n, "OVR", g.health.overruns);
-    n += format_word(buf + n, "ID");
-    n += format_string(buf + n, yes_no(g.health.identified));
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_keyed(text, "PORT", g.health.baud);
+    written += format_word(text + written, ports::to_string(g.health.config_stage));
+    written += format_keyed(text + written, "OVR", g.health.overruns);
+    written += format_word(text + written, "ID");
+    written += format_string(text + written, yes_no(g.health.identified));
+    row(canvas, y, text, written);
 }
 
 void draw_nav(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_word(buf, "NAV");
+    char text[40];
+    int written = format_word(text, "NAV");
     if (g.nav_valid) {
-        n += format_uint(buf + n, g.nav_ms, 3);
-        n += format_string(buf + n, "MS ");
+        written += format_uint(text + written, g.nav_ms, 3);
+        written += format_string(text + written, "MS ");
     } else {
-        n += format_string(buf + n, "--- ");
+        written += format_string(text + written, "--- ");
     }
-    n += format_word(buf + n, "WIRE");
-    n += format_uint(buf + n, g.health.pps_latency_ms);
-    n += format_string(buf + n, "MS ");
-    n += format_keyed(buf + n, "SENT", g.health.sentences);
-    row(canvas, y, buf, n);
+    written += format_word(text + written, "WIRE");
+    written += format_uint(text + written, g.health.pps_latency_ms);
+    written += format_string(text + written, "MS ");
+    written += format_keyed(text + written, "SENT", g.health.sentences);
+    row(canvas, y, text, written);
 }
 
 void draw_fix(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_word(buf, "FIX");
-    n += format_word(buf + n, g.fix_valid ? "OK" : gnss::stage_name(g.stage));
-    n += format_keyed(buf + n, "SV", g.sats);
-    n += format_keyed(buf + n, "USE", g.in_use);
-    n += format_keyed(buf + n, "Q", g.fix_mode);
-    n += format_word(buf + n, "SET");
-    n += format_string(buf + n, yes_no(g.settled));
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "FIX");
+    written += format_word(text + written, g.fix_valid ? "OK" : gnss::stage_name(g.stage));
+    written += format_keyed(text + written, "SV", g.sats);
+    written += format_keyed(text + written, "USE", g.in_use);
+    written += format_keyed(text + written, "Q", g.fix_mode);
+    written += format_word(text + written, "SET");
+    written += format_string(text + written, yes_no(g.settled));
+    row(canvas, y, text, written);
 }
 
 void draw_quality(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_dop(buf, "HDOP", g.hdop_e2);
-    n += format_dop(buf + n, "VDOP", g.vdop_e2);
-    n += format_word(buf + n, "RES");
+    char text[40];
+    int written = format_dop(text, "HDOP", g.hdop_e2);
+    written += format_dop(text + written, "VDOP", g.vdop_e2);
+    written += format_word(text + written, "RES");
     if (g.resid_valid) {
-        n += format_uint(buf + n, g.resid_m);
-        n += format_string(buf + n, "M");
+        written += format_uint(text + written, g.resid_m);
+        written += format_string(text + written, "M");
     } else {
-        n += format_string(buf + n, "---");
+        written += format_string(text + written, "---");
     }
-    row(canvas, y, buf, n);
+    row(canvas, y, text, written);
 }
 
 void draw_refusals(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_word(buf, "REJ");
-    n += format_word(buf + n, gnss::reject_name(g.health.last_reject));
-    n += format_keyed(buf + n, "N", g.health.rejected);
-    n += format_keyed(buf + n, "SOL", g.solutions);
-    n += format_word(buf + n, "GSV");
-    n += format_string(buf + n, yes_no(g.levels_live));
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "REJ");
+    written += format_word(text + written, gnss::reject_name(g.health.last_reject));
+    written += format_keyed(text + written, "N", g.health.rejected);
+    written += format_keyed(text + written, "SOL", g.solutions);
+    written += format_word(text + written, "GSV");
+    written += format_string(text + written, yes_no(g.levels_live));
+    row(canvas, y, text, written);
 }
 
 void draw_clock(ui::Canvas& canvas, int y, const RawGnss& g) {
-    char buf[40];
-    int n = format_word(buf, "PPS");
-    n += format_word(buf + n, pps_word(g.pps));
-    n += format_uint(buf + n, g.pps_age_ms);
-    n += format_string(buf + n, "MS ");
-    n += format_word(buf + n, "UTC");
-    n += g.utc_valid ? format_seconds_of_day(buf + n, g.utc_s) : format_string(buf + n, "--:--:--");
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "PPS");
+    written += format_word(text + written, pps_word(g.pps));
+    written += format_uint(text + written, g.pps_age_ms);
+    written += format_string(text + written, "MS ");
+    written += format_word(text + written, "UTC");
+    written += g.utc_valid ? format_seconds_of_day(text + written, g.utc_s)
+                           : format_string(text + written, "--:--:--");
+    row(canvas, y, text, written);
 }
 
 void draw_dwell(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_word(buf, "DWELL");
-    n += format_word(buf + n, slot_word(r.slot));
-    n += format_uint(buf + n, r.freq_hz / 100000 % 10000, 4, 1);
-    n += format_string(buf + n, " TX ");
-    n += format_string(buf + n, yes_no(r.tx_allowed));
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "DWELL");
+    written += format_word(text + written, slot_word(r.slot));
+    written += format_uint(text + written, r.freq_hz / 100000 % 10000, 4, 1);
+    written += format_string(text + written, " TX ");
+    written += format_string(text + written, yes_no(r.tx_allowed));
+    row(canvas, y, text, written);
 
-    n = format_int(buf, r.noise_dbm, 1, 0, /*plus_sign=*/false);
-    n += format_string(buf + n, "DBM");
-    buf[n] = 0;
-    right_aligned(canvas, kRight, y, buf, n);
+    written = format_int(text, r.noise_dbm, 1, 0, /*plus_sign=*/false);
+    written += format_string(text + written, "DBM");
+    text[written] = 0;
+    right_aligned(canvas, kRight, y, text, written);
 }
 
 void draw_rx(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_keyed(buf, "RX", r.rx_ok);
-    n += format_keyed(buf + n, "CRC", r.rx_bad);
-    n += format_keyed(buf + n, "SYNC", r.rx_unframed);
-    n += format_keyed(buf + n, "KEY", r.rx_miskeyed);
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_keyed(text, "RX", r.rx_ok);
+    written += format_keyed(text + written, "CRC", r.rx_bad);
+    written += format_keyed(text + written, "SYNC", r.rx_unframed);
+    written += format_keyed(text + written, "KEY", r.rx_miskeyed);
+    row(canvas, y, text, written);
 }
 
 void draw_rx_verdicts(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_keyed(buf, "DEC", r.rx_noise);
-    n += format_keyed(buf + n, "TYPE", r.rx_type);
-    n += format_keyed(buf + n, "WAIT", r.rx_wait);
-    n += format_keyed(buf + n, "CALL", r.rx_named);
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_keyed(text, "DEC", r.rx_noise);
+    written += format_keyed(text + written, "TYPE", r.rx_type);
+    written += format_keyed(text + written, "WAIT", r.rx_wait);
+    written += format_keyed(text + written, "CALL", r.rx_named);
+    row(canvas, y, text, written);
 }
 
 void draw_uplink(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_word(buf, "UPLINK");
-    n += format_uint(buf + n, r.uplink_frames);
-    buf[n++] = '/';
-    n += format_uint(buf + n, r.uplink_bad);
-    buf[n++] = '/';
-    n += format_uint(buf + n, r.uplink_targets);
-    buf[n++] = ' ';
-    n += format_keyed(buf + n, "TRK", r.tracked);
-    n += format_keyed(buf + n, "ALM", r.alarm);
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "UPLINK");
+    written += format_uint(text + written, r.uplink_frames);
+    text[written++] = '/';
+    written += format_uint(text + written, r.uplink_bad);
+    text[written++] = '/';
+    written += format_uint(text + written, r.uplink_targets);
+    text[written++] = ' ';
+    written += format_keyed(text + written, "TRK", r.tracked);
+    written += format_keyed(text + written, "ALM", r.alarm);
+    row(canvas, y, text, written);
 }
 
 void draw_tx(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_keyed(buf, "TX", r.tx_ok);
-    n += format_keyed(buf + n, "LOST", r.tx_lost);
-    n += format_keyed(buf + n, "MISS", r.missed);
-    n += format_keyed(buf + n, "HELD", r.refused);
-    n += format_keyed(buf + n, "CALL", r.tx_named);
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_keyed(text, "TX", r.tx_ok);
+    written += format_keyed(text + written, "LOST", r.tx_lost);
+    written += format_keyed(text + written, "MISS", r.missed);
+    written += format_keyed(text + written, "HELD", r.refused);
+    written += format_keyed(text + written, "CALL", r.tx_named);
+    row(canvas, y, text, written);
 }
 
 void draw_burst(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_word(buf, "DUTY");
-    n += format_uint(buf + n, r.duty_permille);
-    n += format_string(buf + n, "/1000 ");
-    n += format_word(buf + n, "KEYED");
-    n += format_uint(buf + n, r.tx_keyed_us);
-    n += format_string(buf + n, "US");
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_word(text, "DUTY");
+    written += format_uint(text + written, r.duty_permille);
+    written += format_string(text + written, "/1000 ");
+    written += format_word(text + written, "KEYED");
+    written += format_uint(text + written, r.tx_keyed_us);
+    written += format_string(text + written, "US");
+    row(canvas, y, text, written);
 }
 
 void draw_error(ui::Canvas& canvas, int y, const RawRadio& r) {
-    char buf[40];
-    int n = format_micros(buf, "SPAN", r.tx_span_us);
-    n += format_micros(buf + n, "SLOT", r.dwell_worst_us);
-    row(canvas, y, buf, n);
+    char text[40];
+    int written = format_micros(text, "SPAN", r.tx_span_us);
+    written += format_micros(text + written, "SLOT", r.dwell_worst_us);
+    row(canvas, y, text, written);
 
-    n = format_micros(buf, "PPS", r.pps_worst_us);
-    n += format_keyed(buf + n, "HOLDOVER", r.holdover);
-    row(canvas, y + kLineH, buf, n - 1);
+    written = format_micros(text, "PPS", r.pps_worst_us);
+    written += format_keyed(text + written, "HOLDOVER", r.holdover);
+    row(canvas, y + kLineH, text, written - 1);
 }
 
 }  // namespace
 
-void draw_raw(ui::Canvas& canvas, const RawSnapshot& s) {
+void draw_raw(ui::Canvas& canvas, const RawSnapshot& snapshot) {
     canvas.clear(true);
-    draw_title(canvas, s);
+    draw_title(canvas, snapshot);
 
-    draw_port(canvas, kGnssTopY, s.gnss);
-    draw_nav(canvas, kGnssTopY + kLineH, s.gnss);
-    draw_fix(canvas, kGnssTopY + 2 * kLineH, s.gnss);
-    draw_quality(canvas, kGnssTopY + 3 * kLineH, s.gnss);
-    draw_refusals(canvas, kGnssTopY + 4 * kLineH, s.gnss);
-    draw_clock(canvas, kGnssTopY + 5 * kLineH, s.gnss);
+    draw_port(canvas, kGnssTopY, snapshot.gnss);
+    draw_nav(canvas, kGnssTopY + kLineH, snapshot.gnss);
+    draw_fix(canvas, kGnssTopY + 2 * kLineH, snapshot.gnss);
+    draw_quality(canvas, kGnssTopY + 3 * kLineH, snapshot.gnss);
+    draw_refusals(canvas, kGnssTopY + 4 * kLineH, snapshot.gnss);
+    draw_clock(canvas, kGnssTopY + 5 * kLineH, snapshot.gnss);
 
     canvas.hline(kLeft, kBlockRuleY, kRight - kLeft, true);
 
-    draw_dwell(canvas, kRadioTopY, s.radio);
-    draw_rx(canvas, kRadioTopY + kLineH, s.radio);
-    draw_rx_verdicts(canvas, kRadioTopY + 2 * kLineH, s.radio);
-    draw_uplink(canvas, kRadioTopY + 3 * kLineH, s.radio);
-    draw_tx(canvas, kRadioTopY + 4 * kLineH, s.radio);
-    draw_burst(canvas, kRadioTopY + 5 * kLineH, s.radio);
-    draw_error(canvas, kRadioTopY + 6 * kLineH, s.radio);
+    draw_dwell(canvas, kRadioTopY, snapshot.radio);
+    draw_rx(canvas, kRadioTopY + kLineH, snapshot.radio);
+    draw_rx_verdicts(canvas, kRadioTopY + 2 * kLineH, snapshot.radio);
+    draw_uplink(canvas, kRadioTopY + 3 * kLineH, snapshot.radio);
+    draw_tx(canvas, kRadioTopY + 4 * kLineH, snapshot.radio);
+    draw_burst(canvas, kRadioTopY + 5 * kLineH, snapshot.radio);
+    draw_error(canvas, kRadioTopY + 6 * kLineH, snapshot.radio);
 }
 
 }  // namespace skyblip::go

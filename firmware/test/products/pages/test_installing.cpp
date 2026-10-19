@@ -9,6 +9,8 @@ using namespace skyblip::go;
 
 namespace {
 
+using ui::kCellW;
+
 int length(const char* s) {
     int n = 0;
     while (s[n]) n++;
@@ -20,7 +22,7 @@ bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
     expected.clear(true);
     expected.draw_text(x, y, text, true, scale);
     for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * kInstallingCellW * scale; dx++)
+        for (int dx = 0; dx < length(text) * kCellW * scale; dx++)
             if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
                 return false;
     return true;
@@ -33,7 +35,7 @@ TEST_CASE("installing page: it says what is happening and what not to do, unclip
     draw_installing(canvas);
     CHECK(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kInstallingTitle, 2));
     for (int row = 0; row < kInstallingBodyRows; row++) {
-        CHECK(length(kInstallingBody[row]) * kInstallingCellW + kInstallingLeftX <= Glass::kW);
+        CHECK(length(kInstallingBody[row]) * kCellW + kInstallingLeftX <= Glass::kW);
         CHECK(reads_at(canvas, kInstallingLeftX, installing_body_y(row), kInstallingBody[row], 1));
     }
     CHECK(installing_body_y(kInstallingBodyRows - 1) + 7 < Glass::kH);
@@ -44,7 +46,7 @@ TEST_CASE("receiving page: it says the install follows on its own, and how to st
     draw_receiving(canvas);
     CHECK(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kReceivingTitle, 2));
     for (int row = 0; row < kReceivingBodyRows; row++) {
-        CHECK(length(kReceivingBody[row]) * kInstallingCellW + kInstallingLeftX <= Glass::kW);
+        CHECK(length(kReceivingBody[row]) * kCellW + kInstallingLeftX <= Glass::kW);
         CHECK(reads_at(canvas, kInstallingLeftX, installing_body_y(row), kReceivingBody[row], 1));
     }
     CHECK_FALSE(reads_at(canvas, kInstallingLeftX, kInstallingTitleY, kInstallingTitle, 2));
@@ -53,8 +55,6 @@ TEST_CASE("receiving page: it says the install follows on its own, and how to st
 TEST_CASE("installing page: it cannot be read as the prompt it replaced") {
     Glass canvas;
     draw_installing(canvas);
-    CHECK_FALSE(
-        reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, 1));
-    CHECK_FALSE(
-        reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
+    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, 1));
+    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
 }

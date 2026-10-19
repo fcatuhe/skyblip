@@ -7,7 +7,7 @@ namespace skyblip::go {
 namespace {
 
 constexpr int kLeft = kConfirmLeftX;
-constexpr int kCellW = kConfirmCellW;
+using ui::kCellW;
 
 int length(const char* s) {
     int n = 0;
@@ -41,15 +41,15 @@ int take_line(const char* text, int from, char* out) {
         while (space > from && text[space] != ' ') space--;
         if (space > from) end = space;
     }
-    int n = 0;
-    for (int i = from; i < end; i++) out[n++] = text[i];
-    out[n] = 0;
+    int written = 0;
+    for (int i = from; i < end; i++) out[written++] = text[i];
+    out[written] = 0;
     return text[end] == ' ' || text[end] == '\n' ? end + 1 : end;
 }
 
 }  // namespace
 
-void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& s) {
+void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
     canvas.clear(true);
 
     // Reversed out across the full width: whatever page was up, this cannot be
@@ -57,13 +57,13 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& s) {
     canvas.rect(0, 0, kGlassWidth, 26, true, /*fill=*/true);
     canvas.draw_text(kLeft + kCellW, kConfirmHeaderY, "AUTHORISE", false, 2);
 
-    canvas.draw_text(kLeft, kConfirmTitleY, s.title, true, 2);
+    canvas.draw_text(kLeft, kConfirmTitleY, snapshot.title, true, 2);
     canvas.hline(kLeft, kConfirmTitleY + 22, kGlassWidth - 2 * kLeft, true);
 
     char line[kConfirmDetailCols + 1];
     int at = 0;
     for (int row = 0; row < kConfirmDetailRows; row++) {
-        at = take_line(s.detail, at, line);
+        at = take_line(snapshot.detail, at, line);
         if (line[0] == 0) break;
         canvas.draw_text(kLeft, confirm_detail_y(row), line, true, 1);
     }
@@ -75,13 +75,13 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& s) {
     canvas.draw_text(kLeft + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
     canvas.draw_text(kLeft + kCellW, kConfirmRefuseY, kConfirmRefuseText, true, 1);
 
-    if (s.timeout_s == 0) return;
-    char buf[32];
-    int n = format_string(buf, "REFUSED AFTER ");
-    n += format_uint(buf + n, s.timeout_s);
-    n += format_string(buf + n, " S");
-    buf[n] = 0;
-    canvas.draw_text(kLeft, kConfirmExpiryY, buf, true, 1);
+    if (snapshot.timeout_s == 0) return;
+    char text[32];
+    int written = format_string(text, "REFUSED AFTER ");
+    written += format_uint(text + written, snapshot.timeout_s);
+    written += format_string(text + written, " S");
+    text[written] = 0;
+    canvas.draw_text(kLeft, kConfirmExpiryY, text, true, 1);
 }
 
 }  // namespace skyblip::go

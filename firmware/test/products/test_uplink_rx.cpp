@@ -88,7 +88,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, in
     const uint32_t at_ms = t + timing::kGroundEmitStartMs;
     rig.run(t, t + 200);
     rig.platform.clock().set_millis(at_ms);
-    rig.product.step(at_ms);
+    rig.product.run_pass(at_ms);
     const bool heard = rig.platform.chips().radio.receive_air(
         burst, static_cast<uint16_t>(burst_len), /*crc_error=*/false, /*rssi=*/-92,
         protocol::kUplinkChipRateBps);
@@ -399,7 +399,7 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
     rig.push_timed_fix(25000, 900);
     rig.run(t, t + 200);
     rig.platform.clock().set_millis(t + timing::kGroundEmitStartMs);
-    rig.product.step(t + timing::kGroundEmitStartMs);
+    rig.product.run_pass(t + timing::kGroundEmitStartMs);
     // The chip reports what its PLL word resolves to, which is a hertz or two
     // off the channel it was asked for.
     CHECK(timing::kObandHz - chip.freq_hz < 100);

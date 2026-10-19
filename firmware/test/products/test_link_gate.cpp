@@ -64,16 +64,16 @@ TEST_CASE("product: paging does not authorise a firmware upload") {
 
     // The prompt owns the glass: the pad neither turns the page nor answers it.
     rig.tap(t);
-    rig.run(t, t + go::ConfirmGesture::kDoublePressMs + 200);
-    t += go::ConfirmGesture::kDoublePressMs + 200;
+    rig.run(t, t + go::ConfirmGesture::kDoublePressWindowMs + 200);
+    t += go::ConfirmGesture::kDoublePressWindowMs + 200;
     CHECK_FALSE(rig.config().upload_allowed());
     CHECK(rig.config().pending() == comms::Pending::Dfu);
     CHECK(rig.product.screen().page() == go::Page::Nearby);
 
     // The button at a prompt is the answer, and one press alone refuses.
     rig.press(t);
-    rig.run(t, t + go::ConfirmGesture::kDoublePressMs + 200);
-    t += go::ConfirmGesture::kDoublePressMs + 200;
+    rig.run(t, t + go::ConfirmGesture::kDoublePressWindowMs + 200);
+    t += go::ConfirmGesture::kDoublePressWindowMs + 200;
     CHECK_FALSE(rig.config().upload_allowed());
     CHECK(rig.config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().mode() == go::Mode::Page);

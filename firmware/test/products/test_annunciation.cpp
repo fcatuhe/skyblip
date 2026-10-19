@@ -106,8 +106,8 @@ TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
     uint32_t t = sky.with_a_contact_in_the_window();
 
     sky.simulator.world().hold_pad(true);
-    sky.run(t, t + go::Controls::kLongTouchMs + 500);
-    t += go::Controls::kLongTouchMs + 500;
+    sky.run(t, t + go::Controls::kLongTouchHoldMs + 500);
+    t += go::Controls::kLongTouchHoldMs + 500;
     sky.simulator.world().hold_pad(false);
     sky.run(t, t + 500);
     t += 500;

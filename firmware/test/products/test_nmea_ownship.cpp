@@ -141,8 +141,8 @@ TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about 
 
 // The cadence arithmetic this relies on: emit_ownship() is two calls inside
 // run_pass(), the same pass PFLAU and PGRMZ already share, at the pass's fixed
-// 1 Hz. NmeaService::kTargetsPerPass and kPassesPerRefreshBound are derived
-// only from kTargetRefreshBoundMs, kMovingTargetRedrawMs and the table's
+// 1 Hz. NmeaService::kTargetsPerPass and kPassesPerRefreshCeiling are derived
+// only from kTargetRefreshCeilingMs, kMovingTargetRedrawPeriodMs and the table's
 // capacity - none of which this reads or writes - so two more sentences a pass
 // changes what a pass costs in bytes, never how many passes the refresh bound
 // allows or how many targets one may carry.

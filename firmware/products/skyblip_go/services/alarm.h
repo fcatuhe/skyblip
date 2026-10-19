@@ -36,16 +36,16 @@ class AlarmService : public runtime::Service {
     bool escalated_since_render() const { return dirty_; }
     void clear_dirty() { dirty_ = false; }
 
-    traffic::Level announcing_level() const { return policy_.announcing_level(); }
+    traffic::Level announcing_level() const { return annunciation_.announcing_level(); }
 
     int formation_members() const { return formation_.members(); }
-    bool sounding() const { return policy_.sounding(); }
+    bool sounding() const { return annunciation_.sounding(); }
 
     // What the table decided, and what the lamp is showing this instant. Both,
     // because they differ in the gaps of a wink and a test has to be able to say
     // which of the two it means.
-    indication::Condition indicator_condition() const { return lamp_.condition(); }
-    indication::Lamp lamp() const { return lamp_.lamp(); }
+    indication::Condition indicator_condition() const { return indication_.condition(); }
+    indication::Lamp lamp() const { return indication_.lamp(); }
 
    private:
     bool silenced(traffic::Target& target, formation::State state);
@@ -81,8 +81,8 @@ class AlarmService : public runtime::Service {
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
     uint32_t recorded_observation_ms_[traffic::TrafficTable::kCapacity]{};
-    annunciation::Policy policy_{};
-    indication::Policy lamp_{};
+    annunciation::Policy annunciation_{};
+    indication::Policy indication_{};
     bool dirty_{false};
     bool running_{true};
     const Settings& settings_;

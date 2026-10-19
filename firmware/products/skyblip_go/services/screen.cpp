@@ -12,13 +12,14 @@ namespace skyblip::go {
 
 namespace {
 bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= ConfirmGesture::kDoublePressMs;
+    return now_ms - since_ms >= ConfirmGesture::kDoublePressWindowMs;
 }
 
 bool second_due(const diag::Instant& at, uint32_t now_ms, uint32_t last_ms, uint32_t period_ms) {
     if (!at.phase_valid) return now_ms - last_ms >= period_ms;
-    if (at.into_ms < ScreenService::kLockedRedrawMs) return false;
-    return now_ms - last_ms > static_cast<uint32_t>(at.into_ms - ScreenService::kLockedRedrawMs);
+    if (at.into_ms < ScreenService::kLockedRedrawWindowStartMs) return false;
+    return now_ms - last_ms >
+           static_cast<uint32_t>(at.into_ms - ScreenService::kLockedRedrawWindowStartMs);
 }
 }  // namespace
 
@@ -210,7 +211,7 @@ void ScreenService::change_screen() {
 }
 
 void ScreenService::enter_menu(uint32_t now_ms) {
-    if (menu_for(page_).n == 0) return;
+    if (menu_for(page_).row_count == 0) return;
     mode_ = Mode::Menu;
     sync_editor(now_ms);
     change_screen();
@@ -309,11 +310,11 @@ void ScreenService::tick(uint32_t now_ms) {
     handle_input(now_ms);
     context_.state.gnss.levels_wanted = showing_sky();
 
-    if (context_.state.alarm_undismissed != last_live_) {
-        const bool escalated_into_glass = alarm_takes_glass() &&
-                                          context_.state.alarm_undismissed > last_live_ &&
-                                          !showing_radar();
-        last_live_ = context_.state.alarm_undismissed;
+    if (context_.state.alarm_undismissed != last_alarm_undismissed_) {
+        const bool escalated_into_glass =
+            alarm_takes_glass() && context_.state.alarm_undismissed > last_alarm_undismissed_ &&
+            !showing_radar();
+        last_alarm_undismissed_ = context_.state.alarm_undismissed;
         dirty_ = true;
         if (escalated_into_glass) show_radar();
     }
@@ -332,7 +333,7 @@ void ScreenService::tick(uint32_t now_ms) {
 
     const diag::Instant at = context_.instant(now_ms);
     const bool due = second_due(at, now_ms, last_render_ms_, kRenderPeriodMs) &&
-                     (!at.phase_valid || at.into_ms < kLockedRedrawEndMs);
+                     (!at.phase_valid || at.into_ms < kLockedRedrawWindowEndMs);
     const bool on_the_second = due && at.phase_valid;
     if (!dirty_ && !due) return;
     if (!context_.roles.display.ready(now_ms)) return;
@@ -352,11 +353,11 @@ void ScreenService::tick(uint32_t now_ms) {
     render_us_ = micros_since(render_began_us);
 
     const bool changed = !presented_once_ || change_ == Change::Wiped ||
-                         std::memcmp(fb_.data(), presented_.data(), Glass::kBytes) != 0;
+                         std::memcmp(framebuffer_.data(), presented_.data(), Glass::kBytes) != 0;
     if (!changed) return;
 
     const uint64_t present_began_us = context_.roles.clock.micros();
-    context_.roles.display.present(fb_, ports::Refresh::Partial, now_ms);
+    context_.roles.display.present(framebuffer_, ports::Refresh::Partial, now_ms);
     present_us_ = micros_since(present_began_us);
     count_refresh(ports::Refresh::Partial);
     note_presented(now_ms);
@@ -378,7 +379,7 @@ bool ScreenService::refresh_allowed() const {
 // TODO: fc 12sep26 a cold glass is unmeasured, and no rule that returns is one full a frame (#62)
 ScreenService::Thermal ScreenService::thermal() const {
     if (!context_.state.power.die_valid) return Thermal::Refresh;
-    if (context_.state.power.die_dc > kHoldAboveDeciCelsius) return Thermal::Hold;
+    if (context_.state.power.die_dc > kRefreshCeilingDeciCelsius) return Thermal::Hold;
     return Thermal::Refresh;
 }
 
@@ -394,7 +395,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
 
 // INFO: fc 09mar26 SoftRF changes page on partials alone: all black through the waveform, then it
 void ScreenService::paint_black(uint32_t now_ms) {
-    fb_.clear(/*white=*/false);
+    framebuffer_.clear(/*white=*/false);
     context_.roles.display.paint_black(now_ms);
     count_refresh(ports::Refresh::Partial);
 }
@@ -402,7 +403,7 @@ void ScreenService::paint_black(uint32_t now_ms) {
 void ScreenService::note_presented(uint32_t now_ms) {
     change_ = Change::None;
     cell_on_glass_ = power::CellOnGlass::None;
-    std::memcpy(presented_.data(), fb_.data(), Glass::kBytes);
+    std::memcpy(presented_.data(), framebuffer_.data(), Glass::kBytes);
     presented_once_ = true;
     context_.state.panel_presented = true;
     prompt_on_glass_ = answering();
@@ -469,7 +470,7 @@ void ScreenService::settle_park(uint32_t now_ms) {
         draw_park_frame(park_frame_);
         const ports::Refresh mode =
             worn_powered_off(park_frame_) ? ports::Refresh::Full : ports::Refresh::Partial;
-        context_.roles.display.present(fb_, mode, now_ms);
+        context_.roles.display.present(framebuffer_, mode, now_ms);
         count_refresh(mode);
         cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
                          : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low
@@ -484,33 +485,33 @@ void ScreenService::settle_park(uint32_t now_ms) {
 
 void ScreenService::draw_park_frame(ParkFrame frame) {
     switch (frame) {
-        case ParkFrame::Installing: draw_installing(fb_); return;
-        case ParkFrame::Recovery: draw_recovery(fb_, recovery_path_); return;
+        case ParkFrame::Installing: draw_installing(framebuffer_); return;
+        case ParkFrame::Recovery: draw_recovery(framebuffer_, recovery_path_); return;
         // INFO: fc 12sep26 months of one image is the ghosting an e-paper never fully loses
-        case ParkFrame::Blank: fb_.clear(/*white=*/true); return;
+        case ParkFrame::Blank: framebuffer_.clear(/*white=*/true); return;
         case ParkFrame::FlatCell: draw_parked_cell("FLAT BATTERY"); return;
         case ParkFrame::LowCell: draw_parked_cell("CHARGE BATTERY"); return;
         case ParkFrame::Wordmark:
         default:
-            fb_.clear(/*white=*/true);
-            ui::draw_wordmark(fb_, kGlassWidth / 2, kGlassHeight / 2);
+            framebuffer_.clear(/*white=*/true);
+            ui::draw_wordmark(framebuffer_, kGlassWidth / 2, kGlassHeight / 2);
             return;
     }
 }
 
 void ScreenService::draw_parked_cell(const char* said) {
-    fb_.clear(/*white=*/true);
-    ui::draw_wordmark(fb_, kGlassWidth / 2, kGlassHeight / 2);
+    framebuffer_.clear(/*white=*/true);
+    ui::draw_wordmark(framebuffer_, kGlassWidth / 2, kGlassHeight / 2);
     const int wordmark_bottom = kGlassHeight / 2 + ui::wordmark_height() / 2;
-    const int y = (wordmark_bottom + kGlassHeight) / 2 - kGlyphRows * kParkedSaidScale / 2;
+    const int y = (wordmark_bottom + kGlassHeight) / 2 - ui::kCharH * kParkedSaidScale / 2;
     centred_text(y, said, kParkedSaidScale);
 }
 
 void ScreenService::centred_text(int y, const char* text, int scale) {
     int n = 0;
     while (text[n] != 0) n++;
-    const int width = n * kGlyphCols * scale;
-    fb_.draw_text((kGlassWidth - width) / 2, y, text, true, scale);
+    const int width = n * ui::kCellW * scale;
+    framebuffer_.draw_text((kGlassWidth - width) / 2, y, text, true, scale);
 }
 
 bool ScreenService::may_present_park_frame() const {

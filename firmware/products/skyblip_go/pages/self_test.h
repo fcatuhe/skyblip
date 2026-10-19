@@ -1,8 +1,8 @@
 // Power-on self test, on the glass. The one page worth having on a first flash:
 // it names the part that did not answer, so a device that refuses to fly says
 // why instead of going dark.
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_BOOT_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_BOOT_H
+#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SELF_TEST_H
+#define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_SELF_TEST_H
 
 #include <cstdint>
 
@@ -16,7 +16,7 @@ namespace skyblip::go {
 // to say which of the two it is looking at.
 enum class PartState : uint8_t { Pass, Absent, Fail };
 
-struct BootPart {
+struct SelfTestPart {
     const char* name{""};
     PartState state{PartState::Absent};
     // Which part answered, when the footprint takes more than one: the barometer
@@ -26,12 +26,12 @@ struct BootPart {
     const char* detail{nullptr};
 };
 
-struct BootSnapshot {
+struct SelfTestSnapshot {
     settings::AirAddress address{};
     const char* reset_reason{"UNKNOWN"};
     bool went_dark_flat{false};
-    const BootPart* parts{nullptr};
-    int n_parts{0};
+    const SelfTestPart* parts{nullptr};
+    int part_count{0};
     // False when a required part is missing. The device stays up and keeps this
     // page: a panel naming the failure is worth more than a reboot loop.
     bool flyable{true};
@@ -42,36 +42,36 @@ struct BootSnapshot {
     // IMU at 0x28 - and this page is the only place a bench can see them.
     const uint8_t* i2c_addresses{nullptr};
     const char* const* i2c_roles{nullptr};
-    int n_i2c_addresses{0};
+    int i2c_address_count{0};
 };
 
 // The most rows the page can carry before the last one falls off the panel. The
 // bus scan's row is one of them.
-constexpr int kBootRows = 15;
+constexpr int kSelfTestRows = 15;
 
 // The grid the page is set on, exported so a test can read a row back off the
 // glass instead of counting ink: "there is ink on the GNSS row" is not the same
 // claim as "the GNSS row says FAIL".
-constexpr int kBootLeftX = 4;
-constexpr int kBootRightX = kGlassWidth - kBootLeftX;
-constexpr int kBootCellW = 6;  // the 5x7 font's advance at scale 1
-constexpr int kBootRowCells = (kGlassWidth - 2 * kBootLeftX) / kBootCellW;
-constexpr int kBootRowH = 9;
-constexpr int kBootFirstRowY = 36;
-constexpr int kBootHeaderY = 26;
+constexpr int kSelfTestLeftX = 4;
+constexpr int kSelfTestRightX = kGlassWidth - kSelfTestLeftX;
+constexpr int kSelfTestRowCells = (kGlassWidth - 2 * kSelfTestLeftX) / ui::kCellW;
+constexpr int kSelfTestRowH = 9;
+constexpr int kSelfTestFirstRowY = 36;
+constexpr int kSelfTestHeaderY = 26;
 
-constexpr int boot_row_y(int row) { return kBootFirstRowY + row * kBootRowH; }
+constexpr int self_test_row_y(int row) { return kSelfTestFirstRowY + row * kSelfTestRowH; }
 
-constexpr int kBootDividerGap = 3;
-constexpr int kBootFooterGap = 5;
-constexpr int kBootVerdictRise = 3;
-constexpr int kBootVerdictH = 13;
-constexpr int kBootFooterH = kBootDividerGap + kBootFooterGap - kBootVerdictRise + kBootVerdictH;
+constexpr int kSelfTestDividerGap = 3;
+constexpr int kSelfTestFooterGap = 5;
+constexpr int kSelfTestVerdictRise = 3;
+constexpr int kSelfTestVerdictH = 13;
+constexpr int kSelfTestFooterH =
+    kSelfTestDividerGap + kSelfTestFooterGap - kSelfTestVerdictRise + kSelfTestVerdictH;
 
-static_assert(boot_row_y(kBootRows) + kBootFooterH <= kGlassHeight,
+static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterH <= kGlassHeight,
               "the last row would fall off the glass");
 
-void draw_boot(ui::Canvas& canvas, const BootSnapshot& snapshot);
+void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

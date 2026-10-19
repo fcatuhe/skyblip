@@ -29,7 +29,7 @@ enum class MenuRow : uint8_t {
 
 struct Menu {
     const MenuRow* rows{nullptr};
-    int n{0};
+    int row_count{0};
 };
 
 Menu menu_for(Page page);
@@ -47,7 +47,7 @@ struct MenuSnapshot {
 
 // Nine characters, which is what the settings blob has always held, and the ring
 // a pad rolls through them: blank, dash, A to Z, 0 to 9, blank again.
-constexpr int kCallsignChars = static_cast<int>(kCallsignCap) - 1;
+constexpr int kCallsignChars = static_cast<int>(kCallsignBytes) - 1;
 constexpr char kCallsignBlank = ' ';
 char next_callsign_char(char c);
 // The stored form: a name is edited nine wide and stored as what a pilot typed.
@@ -69,13 +69,12 @@ constexpr bool opens_a_page(MenuRow row) {
 
 Page page_behind(MenuRow row);
 
-constexpr int kMenuValueCap = 16;
+constexpr int kMenuValueBytes = 16;
 int menu_row_value(char* out, MenuRow row, const MenuValues& values);
 
 constexpr int kMenuScale = 2;
 constexpr int kMenuLeftX = 6;
-constexpr int kSmallCellW = 6;
-constexpr int kMenuCellW = kSmallCellW * kMenuScale;
+constexpr int kMenuCellW = ui::kCellW * kMenuScale;
 constexpr int kMenuRightX = 194;
 constexpr int kMenuRowsTop = 23;
 constexpr int kMenuRowHeight = 23;
@@ -90,7 +89,7 @@ constexpr int text_cells(const char* s) {
     return n;
 }
 
-constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * kSmallCellW) / 2;
+constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * ui::kCellW) / 2;
 constexpr int kMenuLines = (kMenuHintY - kMenuRowsTop) / kMenuRowHeight;
 
 constexpr int menu_line_top(int line) { return kMenuRowsTop + line * kMenuRowHeight; }
@@ -112,7 +111,7 @@ struct CallsignSnapshot {
 bool callsign_press_clears(const char* text, int cursor);
 
 constexpr int kCallsignScale = 3;
-constexpr int kCallsignCellW = kSmallCellW * kCallsignScale;
+constexpr int kCallsignCellW = ui::kCellW * kCallsignScale;
 constexpr int kCallsignTextX = (kGlassWidth - kCallsignChars * kCallsignCellW) / 2;
 constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
@@ -124,7 +123,7 @@ constexpr const char* kCallsignClearHintText = "BUTTON CLEARS";
 constexpr const char* kCallsignClearHelpText = "BLANK THE FIRST TO CLEAR";
 
 constexpr int centred_x(const char* text, int scale) {
-    return (kGlassWidth - text_cells(text) * kSmallCellW * scale) / 2;
+    return (kGlassWidth - text_cells(text) * ui::kCellW * scale) / 2;
 }
 
 constexpr int kCallsignPadHintY = 138;
@@ -136,7 +135,7 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 class MenuEditor {
    public:
     // INFO: cf 02aug26 a menu left open is the traffic picture taken away, and nobody dismissed it
-    static constexpr uint32_t kIdleReturnMs = 60000;
+    static constexpr uint32_t kIdleReturnHoldMs = 60000;
 
     void enter(Page page, uint32_t now_ms);
     void leave();
@@ -176,7 +175,7 @@ class MenuEditor {
     bool active_{false};
     bool editing_{false};
     int cursor_{0};
-    char text_[kCallsignCap]{0};
+    char text_[kCallsignBytes]{0};
 };
 
 }  // namespace skyblip::go

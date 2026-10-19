@@ -14,8 +14,8 @@ using namespace skyblip::go;
 
 TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
     const Menu menu = menu_for(Page::Nearby);
-    REQUIRE(menu.n == 6);
-    for (int i = 0; i < menu.n; i++) CHECK(opens_a_page(menu.rows[i]));
+    REQUIRE(menu.row_count == 6);
+    for (int i = 0; i < menu.row_count; i++) CHECK(opens_a_page(menu.rows[i]));
     CHECK(page_behind(MenuRow::RadioLog) == Page::RadioLog);
     CHECK(page_behind(MenuRow::Raw) == Page::Raw);
     CHECK(page_behind(MenuRow::Capture) == Page::Capture);
@@ -72,7 +72,7 @@ TEST_CASE("menu editor: the light is the first row, and a press on it switches i
     CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
     CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
 
-    char value[kMenuValueCap];
+    char value[kMenuValueBytes];
     menu_row_value(value, MenuRow::Light, bench.values);
     CHECK(std::string(value) == "ON");
 
@@ -165,7 +165,7 @@ TEST_CASE("menu editor: a field nobody finished stores nothing") {
     for (int i = 0; i < 3; i++) bench.move();
     REQUIRE(bench.editor.text()[0] != 'F');
 
-    CHECK(bench.run(MenuEditor::kIdleReturnMs + 100) == MenuAction::Leave);
+    CHECK(bench.run(MenuEditor::kIdleReturnHoldMs + 100) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.editing());
     CHECK(std::string(bench.values.settings.callsign) == "F-JABC");
 }
@@ -293,7 +293,7 @@ TEST_CASE("menu editor: a menu nobody is pressing hands the traffic picture back
     bench.move();
     REQUIRE(bench.editor.active());
 
-    CHECK(bench.run(MenuEditor::kIdleReturnMs - 1000) == MenuAction::None);
+    CHECK(bench.run(MenuEditor::kIdleReturnHoldMs - 1000) == MenuAction::None);
     CHECK(bench.editor.active());
     CHECK(bench.run(2000) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.active());
@@ -302,10 +302,10 @@ TEST_CASE("menu editor: a menu nobody is pressing hands the traffic picture back
     bench.editor.enter(Page::Radar, bench.t);
     bench.focus_on(MenuRow::AircraftType);
     for (int i = 0; i < 3; i++) {
-        bench.run(MenuEditor::kIdleReturnMs - 5000);
+        bench.run(MenuEditor::kIdleReturnHoldMs - 5000);
         bench.editor.button(bench.t);
         bench.run(100);
-        bench.run(MenuEditor::kIdleReturnMs - 5000);
+        bench.run(MenuEditor::kIdleReturnHoldMs - 5000);
         bench.editor.pad(bench.t);
         bench.run(100);
     }

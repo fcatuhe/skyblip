@@ -21,7 +21,7 @@ int differing_in(const Glass& a, const Glass& b, int x0, int y0, int x1, int y1)
 RadarSnapshot with_threat(RadarTarget* one, Level level) {
     RadarSnapshot snapshot = flying(0);
     one->alarm_level = level;
-    snapshot.n_targets = 1;
+    snapshot.target_count = 1;
     snapshot.targets = one;
     return snapshot;
 }
@@ -84,7 +84,7 @@ TEST_CASE("radar: a flashing sector keeps off the formation square, not the glas
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
     RadarSnapshot snapshot = flying(0);
-    snapshot.n_targets = 2;
+    snapshot.target_count = 2;
     snapshot.targets = flight;
     snapshot.formation_members = 1;
 
@@ -146,7 +146,7 @@ TEST_CASE("radar: every graded aircraft flashes a sector of its own") {
     RadarTarget pair[2] = {{0, 1500, 0}, {0, -1500, 0}};
     pair[1].alarm_level = Level::Advisory;
     RadarSnapshot snapshot = with_threat(pair, Level::Advisory);
-    snapshot.n_targets = 2;
+    snapshot.target_count = 2;
 
     snapshot.alarm_flash = false;
     const Glass between = radar(snapshot);

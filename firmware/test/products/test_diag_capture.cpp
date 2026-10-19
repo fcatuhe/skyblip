@@ -366,12 +366,12 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     // Stopped where own-ship may key the PA, so the ring still holds records.
     while (!rig.state().rf.plan.tx_allowed) {
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         t += 10;
     }
     for (int i = 0; i < 20; i++) rig.product.diag().record(bench_record(Rig::kUtcBase + i));
     rig.platform.clock().set_millis(t);
-    rig.product.step(t);
+    rig.product.run_pass(t);
     t += 10;
     const int queued = rig.product.diag().queued();
     REQUIRE(queued > 0);
@@ -379,7 +379,7 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
 
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, t);
     rig.platform.clock().set_millis(t);
-    rig.product.step(t);
+    rig.product.run_pass(t);
     t += 10;
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
 

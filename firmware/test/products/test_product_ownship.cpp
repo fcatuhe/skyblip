@@ -229,7 +229,7 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     REQUIRE(rig.setup() == Status::Ok);
 
     rig.platform.clock().set_micros(12345678);
-    rig.product.step(12345);
+    rig.product.run_pass(12345);
     CHECK(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 12000000u);
     CHECK(rig.state().clock.since_edge_ms == 345u);
@@ -245,7 +245,7 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     // it implies is a plausible one.
     rig.platform.pps().set_locked(false);
     rig.platform.clock().set_micros(13345678);
-    rig.product.step(13345);
+    rig.product.run_pass(13345);
     CHECK_FALSE(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 0u);
 }
@@ -261,7 +261,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     uint16_t first_note_hz = 0;
     for (uint32_t t = 550; t <= 700; t += 10) {
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().pitch_hz();
     }
     CHECK(rig.product.ownship().first_fix().ever_fixed());

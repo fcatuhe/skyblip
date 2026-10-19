@@ -229,15 +229,15 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kLongTouchMs` | 1000 (1 s) | milliseconds | - | [README](../firmware/products/skyblip_go/input/README.md) argues it |
-| `kDoublePressMs` | 600 | milliseconds | - | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
+| `kLongTouchHoldMs` | 1000 (1 s) | milliseconds | Hold | [README](../firmware/products/skyblip_go/input/README.md) argues it |
+| `kDoublePressWindowMs` | 600 | milliseconds | Window | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
 
 ## [`firmware/products/skyblip_go/pages`](../firmware/products/skyblip_go/pages/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kLevelFlightMg` | `flight::kLevelFlightMg` = 1000 | thousandths of g | - | - |
-| `kIdleReturnMs` | 60000 (1 min) | milliseconds | - | a menu left open is the traffic picture taken away, and nobody dismissed it |
+| `kIdleReturnHoldMs` | 60000 (1 min) | milliseconds | Hold | a menu left open is the traffic picture taken away, and nobody dismissed it |
 | `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
 | `kUptimeClockWrapS` | 10000 | seconds | - | four digits of seconds, so a clock with no UTC behind it still fits its column |
 | `kLevelM` | 60 | metres | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
@@ -246,7 +246,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kVsiKneeFpm` | 1000 | feet per minute | - | - |
 | `kVsiMarkFpm` | 500 | feet per minute | - | - |
 | `kStandardRateDps` | 3 | degrees per second | - | - |
-| `kSlipFullMg` | `flight::kSlipFullScaleMg` = 200 | thousandths of g | - | - |
+| `kElapsedCeilingS` | `99 * 60 + 59` = 5999 | seconds | Ceiling | - |
 
 ## `firmware/products/skyblip_go/services`
 
@@ -255,11 +255,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | one pass of slot programs, so the next dwell is armed on time |
 | `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked, and logs its refusal, once a second |
-| `kMovingTargetRedrawMs` | 1000 (1 s) | milliseconds | - | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
-| `kTargetRefreshBoundMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | - | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
+| `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
+| `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
-| `kBaroVsWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
-| `kGnssVsWindowMs` | 2000 (2 s) | milliseconds | Window | - |
+| `kBaroClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
+| `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
 | `kBaroMaxAgeMs` | `3 * runtime::kBaroPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
@@ -270,8 +270,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
-| `kLockedRedrawMs` | 600 | milliseconds | - | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
-| `kLockedRedrawEndMs` | 800 | milliseconds | - | - |
+| `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
+| `kLockedRedrawWindowEndMs` | 800 | milliseconds | Window | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
 
 ## `firmware/runtime`

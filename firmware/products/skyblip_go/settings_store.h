@@ -9,7 +9,7 @@
 
 namespace skyblip::go {
 
-static_assert(comms::kPromptDetailBytes >= kSettingsChangesCap, "the prompt holds every row");
+static_assert(comms::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt holds every row");
 
 class SettingsStore : public comms::ConfigStore {
    public:

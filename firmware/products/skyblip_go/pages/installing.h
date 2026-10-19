@@ -6,7 +6,6 @@
 namespace skyblip::go {
 
 constexpr int kInstallingLeftX = 4;
-constexpr int kInstallingCellW = 6;
 constexpr int kInstallingTitleY = 40;
 constexpr int kInstallingLineH = 14;
 constexpr int kInstallingBodyY = 90;

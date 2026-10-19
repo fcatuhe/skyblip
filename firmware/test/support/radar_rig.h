@@ -17,7 +17,7 @@ inline RadarSnapshot flying(uint16_t track_deg) {
     snapshot.range_step = kDefaultRangeStep;
     snapshot.track_cdeg = track_deg * 100;
     snapshot.flight_time_valid = true;
-    snapshot.in_flight = true;
+    snapshot.flight_running = true;
     snapshot.flight_seconds = 42 * 60;
     snapshot.receiver_listening = true;
     return snapshot;

@@ -9,7 +9,7 @@ TEST_CASE("screen policy: a panel too hot to drive is left unrefreshed, with its
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.churn(t, 20);
     CHECK(rig.chip.present_count == before);
     CHECK_FALSE(rig.chip.rails_on);
@@ -51,7 +51,7 @@ TEST_CASE("screen policy: nothing refreshes a panel held hot, partial or full") 
     rig.run_seconds(t, 1);
     const int before = rig.chip.present_count;
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.run_seconds(t, 600);
     CHECK(rig.chip.present_count == before);
     CHECK_FALSE(rig.chip.rails_on);
@@ -71,7 +71,7 @@ TEST_CASE("screen policy: no refresh starts on a dying rail, partial or full") {
 }
 
 TEST_CASE("screen policy: the hold threshold is the rated limit, not a margin somebody chose") {
-    CHECK(go::ScreenService::kHoldAboveDeciCelsius == 500);
+    CHECK(go::ScreenService::kRefreshCeilingDeciCelsius == 500);
 }
 
 // The rated limit is a temperature the panel works at, not the first one it refuses.
@@ -80,12 +80,12 @@ TEST_CASE("screen policy: the panel still refreshes at exactly its rated limit")
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius);
     const int before = rig.chip.present_count;
     rig.churn(t, 3);
     CHECK(rig.chip.present_count > before);
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     const int held = rig.chip.present_count;
     rig.churn(t, 3);
     CHECK(rig.chip.present_count == held);
@@ -100,7 +100,7 @@ TEST_CASE("screen policy: going hot mid-refresh does not abandon the frame on th
     rig.tick(t += 1000);
     const int in_flight = rig.chip.present_count;
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.tick(t += 100);
     rig.tick(t += 2000);
     CHECK(rig.chip.present_count == in_flight);
@@ -114,7 +114,7 @@ TEST_CASE(
     rig.tick(t += 1000);
     REQUIRE(rig.glass_all_black());
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.run_seconds(t, 2);
     CHECK_FALSE(rig.glass_all_black());
     CHECK_FALSE(rig.chip.rails_on);
@@ -126,7 +126,7 @@ TEST_CASE("screen policy: a page change a held panel cannot finish never starts"
     rig.run_seconds(t, 3);
     const int before = rig.chip.present_count;
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.screen.next_page();
     rig.run_seconds(t, 5);
     CHECK(rig.chip.present_count == before);
@@ -145,7 +145,7 @@ TEST_CASE("screen policy: the traffic picture comes back once the panel has cool
     Rig rig;
     uint32_t t = 0;
     rig.run_seconds(t, 3);
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.churn(t, 5);
     const int held = rig.chip.present_count;
 
@@ -296,7 +296,7 @@ TEST_CASE("screen policy: a held panel puts no new frame on the glass, dirty or 
     uint32_t t = 0;
     rig.run_seconds(t, 3);
 
-    rig.die_temperature(go::ScreenService::kHoldAboveDeciCelsius + 1);
+    rig.die_temperature(go::ScreenService::kRefreshCeilingDeciCelsius + 1);
     rig.run_seconds(t, 5);
     const int held = rig.chip.present_count;
 

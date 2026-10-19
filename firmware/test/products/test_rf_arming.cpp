@@ -500,7 +500,7 @@ struct Outcomes {
 };
 
 void fly_ground_second(Armings& a, Outcomes& outcomes) {
-    std::strncpy(a.settings.callsign, "D-KXYZ", go::kCallsignCap - 1);
+    std::strncpy(a.settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
     a.clock.set_micros(Armings::kEdgeUs);
     REQUIRE(a.radio.setup() == Status::Ok);
     const uint32_t utc_s = 1000 + a.radio.transmitter().ground_second();

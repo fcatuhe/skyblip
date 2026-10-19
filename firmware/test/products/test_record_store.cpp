@@ -370,7 +370,7 @@ TEST_CASE(
     advance_to_slot(rig.capture, 10);
     CHECK(rig.capture.run_slots() == 10);
     advance_to_slot(rig.capture, 20);
-    CHECK(rig.capture.run_slots() == go::kRunMostSlots);
+    CHECK(rig.capture.run_slots() == go::kMaxRunSlots);
     advance_to_slot(rig.capture, rig.pool.slots_per_sector() - 5);
     CHECK(rig.capture.run_slots() == 5);
 }
@@ -424,7 +424,7 @@ TEST_CASE("record store: records written in page runs leave the image one at a t
     runs.capture.begin_session(kCaptureSession);
 
     const uint32_t total = single.pool.slots_per_sector() + 40;
-    uint8_t raw[go::kRunMostSlots * go::kStoreRecordBytes]{};
+    uint8_t raw[go::kMaxRunSlots * go::kStoreRecordBytes]{};
     for (uint32_t i = 0; i < total; i++) {
         numbered_record(i, raw);
         REQUIRE(single.capture.append(raw, 0) == go::Append::Ok);

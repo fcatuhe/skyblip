@@ -86,7 +86,7 @@ struct Flight {
     void listen() {
         rig.roles.capabilities = ports::Capability::Display | ports::Capability::Rf;
         rig.state.clock.pps_locked = true;
-        rig.state.clock.since_edge_ms = go::ScreenService::kLockedRedrawMs;
+        rig.state.clock.since_edge_ms = go::ScreenService::kLockedRedrawWindowStartMs;
     }
 
     bool radar_counts(const char* figure) {

@@ -16,7 +16,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kWindow = go::ConfirmGesture::kDoublePressMs;
+constexpr uint32_t kWindow = go::ConfirmGesture::kDoublePressWindowMs;
 
 // Long enough for a press to have finished meaning one thing before the next
 // one is made: the pairing window, and a little.
@@ -62,7 +62,7 @@ inline void run_past_the_write_settle(Rig& rig, uint32_t& t) {
 }
 
 inline void focus_on(Rig& rig, uint32_t& t, go::MenuRow row) {
-    for (int i = 0; i < go::menu_for(go::Page::Radar).n; i++) {
+    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) {
         if (rig.product.screen().editor().focus() == row) break;
         move(rig, t);
     }

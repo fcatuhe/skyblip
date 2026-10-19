@@ -129,11 +129,11 @@ constexpr ports::Capabilities kPlainTEcho =
     static_cast<ports::Capabilities>(static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
                                      ~static_cast<uint32_t>(ports::Capability::Inclinometer));
 
-const go::BootPart& imu_row(Rig& rig) {
-    for (int i = 0; i < go::kBootPartCount; i++)
-        if (std::string(rig.product.boot_rows()[i].name) == "IMU")
-            return rig.product.boot_rows()[i];
-    return rig.product.boot_rows()[0];
+const go::SelfTestPart& imu_row(Rig& rig) {
+    for (int i = 0; i < go::kSelfTestPartCount; i++)
+        if (std::string(rig.product.self_test_rows()[i].name) == "IMU")
+            return rig.product.self_test_rows()[i];
+    return rig.product.self_test_rows()[0];
 }
 
 std::string update_frame(Rig& rig, uint32_t at_ms) {

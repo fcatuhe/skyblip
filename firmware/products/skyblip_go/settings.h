@@ -29,7 +29,7 @@ enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
 constexpr int kRangeStepCount = 4;
 constexpr int kDefaultRangeStep = 2;
 
-constexpr size_t kCallsignCap = 10;
+constexpr size_t kCallsignBytes = 10;
 
 // The most the radio's centre frequency may be trimmed, in tenths of a ppm, and
 // the reason there is a trim at all. The board fits a TCXO, so zero is the
@@ -40,9 +40,9 @@ constexpr size_t kCallsignCap = 10;
 // datasheet, a field with no way to correct it is a recall. The bound is that
 // tenfold miss and no more (+-10 ppm, +-8.7 kHz at 868.2 MHz): inside it the
 // carrier cannot leave ERC 70-03 band h1.4, and beyond it the part is broken
-// rather than out of trim. sx::kFreqTrimLimitTenthsPpm is the same number where
+// rather than out of trim. sx::kFreqTrimCeilingE1Ppm is the same number where
 // the PLL word is computed.
-constexpr int16_t kFreqTrimLimitTenthsPpm = 100;
+constexpr int16_t kFreqTrimCeilingE1Ppm = 100;
 
 // INFO: fc 12sep26 ADS-L G.1.3's light aircraft, what a device says until a pilot says otherwise
 constexpr uint8_t kAircraftTypeLight = 1;
@@ -83,7 +83,7 @@ struct Settings {
     Units units{Units::Nautical};
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 
     // The companion-link contract, which is what schemas/config.v1.schema.json
     // pins. It moves when a key changes meaning, not when the flash layout does.
@@ -94,23 +94,23 @@ constexpr uint8_t kBlobVersion = 11;
 
 Settings defaults();
 
-Status validate(const Settings& s);
+Status validate(const Settings& settings);
 
 size_t blob_size();
-void to_blob(const Settings& s, uint8_t* out, size_t cap);
+void to_blob(const Settings& settings, uint8_t* out, size_t cap);
 Status from_blob(const uint8_t* in, size_t len, Settings& out);
 
 // INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
 // companion link's "config" reply can tag them and stay one flat object. Nesting
 // them as an escaped string cost 53 bytes of backslashes on a 158-byte body,
 // which is what pushed that reply past what an iPhone will carry.
-void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address);
+void write_json_fields(json::Writer& w, const Settings& settings, settings::AirAddress address);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
-void write_json_settings(json::Writer& w, const Settings& s);
+void write_json_settings(json::Writer& w, const Settings& settings);
 
-int to_json(const Settings& s, settings::AirAddress address, char* buf, int cap);
-Status apply_json(Settings& s, const char* json, int len);
+int to_json(const Settings& settings, settings::AirAddress address, char* out, int cap);
+Status apply_json(Settings& settings, const char* json, int len);
 
 }  // namespace skyblip::go
 

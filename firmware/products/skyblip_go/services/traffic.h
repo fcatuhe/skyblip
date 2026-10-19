@@ -27,7 +27,7 @@ class TrafficService : public runtime::Service {
     Status setup() override;
     void tick(uint32_t now_ms) override;
 
-    bool uplink_enabled() const { return uplink_; }
+    bool uplink_enabled() const { return uplink_enabled_; }
 
    private:
     void on_frame(const events::RfEvent& event, uint32_t now_ms);
@@ -49,7 +49,7 @@ class TrafficService : public runtime::Service {
 
     protocol::AdslUplink uplink_codec_{};
     const Feature declared_;
-    bool uplink_{false};
+    bool uplink_enabled_{false};
 };
 
 }  // namespace skyblip::go

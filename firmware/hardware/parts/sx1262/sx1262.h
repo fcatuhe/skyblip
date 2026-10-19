@@ -42,7 +42,7 @@ struct RadioConfig {
     // Tenths of a ppm added to freq_hz before the PLL word is computed, positive
     // upwards. Zero is the design intent on a TCXO part; the field exists so a
     // batch whose reference is out can be corrected in the field instead of
-    // returned. Clamped to sx::kFreqTrimLimitTenthsPpm either way.
+    // returned. Clamped to sx::kFreqTrimCeilingE1Ppm either way.
     int16_t freq_corr_e1_ppm{0};
 };
 
@@ -332,9 +332,9 @@ constexpr uint8_t kImageBand863to870[2] = {0xD7, 0xDB};
 // against both the 200 kHz channel and the distance from 868.2 MHz to the edges
 // of ERC 70-03 band h1.4 (868.0-868.6 MHz), so no legal trim moves the carrier
 // out of the band it is licensed in. Kept equal to
-// settings::kFreqTrimLimitTenthsPpm, which is the same bound on the stored
+// settings::kFreqTrimCeilingE1Ppm, which is the same bound on the stored
 // value; test/hardware/test_sx1262_level.cpp pins the two together.
-constexpr int16_t kFreqTrimLimitTenthsPpm = 100;
+constexpr int16_t kFreqTrimCeilingE1Ppm = 100;
 // Tenths of a ppm are parts in 10^7.
 constexpr int32_t kFreqTrimPerUnit = 10000000;
 
@@ -343,7 +343,7 @@ constexpr int32_t kFreqTrimPerUnit = 10000000;
 // on a counter needs.
 constexpr uint32_t trimmed_hz(uint32_t freq_hz, int16_t corr_e1_ppm) {
     int32_t corr = corr_e1_ppm;
-    corr = std::clamp<int32_t>(corr, -kFreqTrimLimitTenthsPpm, kFreqTrimLimitTenthsPpm);
+    corr = std::clamp<int32_t>(corr, -kFreqTrimCeilingE1Ppm, kFreqTrimCeilingE1Ppm);
     const int64_t offset = (static_cast<int64_t>(freq_hz) * corr) / kFreqTrimPerUnit;
     return static_cast<uint32_t>(static_cast<int64_t>(freq_hz) + offset);
 }

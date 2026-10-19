@@ -9,7 +9,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kLong = go::Controls::kLongTouchMs;
+constexpr uint32_t kLong = go::Controls::kLongTouchHoldMs;
 
 events::ContactEvent down(events::Contact contact, uint32_t at_ms) {
     return events::ContactEvent{contact, true, at_ms};
@@ -104,8 +104,8 @@ TEST_CASE("gesture: two presses inside the window authorise, one press refuses")
     go::ConfirmGesture lone;
     lone.arm(1000);
     CHECK(lone.press(1100) == go::Answer::None);
-    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressMs - 1) == go::Answer::None);
-    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressMs) == go::Answer::Cancel);
+    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressWindowMs - 1) == go::Answer::None);
+    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
     CHECK_FALSE(lone.armed());
 }
 
@@ -120,17 +120,17 @@ TEST_CASE("gesture: presses made before the prompt, and slow presses, authorise 
     // that came first belongs to the pages, and cannot be counted here.
     g.arm(650);
     CHECK(g.press(700) == go::Answer::None);
-    CHECK(g.tick(700 + go::ConfirmGesture::kDoublePressMs) == go::Answer::Cancel);
+    CHECK(g.tick(700 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
 
     go::ConfirmGesture slow;
     slow.arm(0);
     CHECK(slow.press(100) == go::Answer::None);
-    CHECK(slow.press(100 + go::ConfirmGesture::kDoublePressMs + 1) == go::Answer::None);
+    CHECK(slow.press(100 + go::ConfirmGesture::kDoublePressWindowMs + 1) == go::Answer::None);
 }
 
 // Three meanings on one button stay disjoint, or a pilot has two of them at once.
 TEST_CASE("gesture: the authorising window sits between a press and the power-off hold") {
-    CHECK(go::ConfirmGesture::kDoublePressMs < power::kLongPressHoldMs);
+    CHECK(go::ConfirmGesture::kDoublePressWindowMs < power::kLongPressHoldMs);
 
     go::Controls controls;
     go::ConfirmGesture g;

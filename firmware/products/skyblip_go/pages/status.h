@@ -31,7 +31,7 @@ struct StatusSnapshot {
     int32_t track_cdeg{0};  // hundredths of a degree
     int32_t climb_mm_s{0};  // as measured, not as transmitted
     uint32_t utc_s{0};
-    int n_targets{0};
+    int heard_count{0};
     const char* imu_stage{"NONE"};
     const char* imu_fault{""};
     uint32_t imu_fifo_bytes{0};

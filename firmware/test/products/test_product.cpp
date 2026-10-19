@@ -160,7 +160,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
     rig.platform.link().push_rx(frame);
     rig.run(100, 300);
-    rig.product.config().config().confirm();
+    rig.product.config_link().config().confirm();
     // The write is a request now, not a call: it coalesces for
     // DurableWriteWindow::kSettleMs and then waits for a phase of the second the
     // NVMC may stall the core in. Two seconds is several of both.
@@ -187,7 +187,8 @@ TEST_CASE("product: the reset reason is read once at boot and kept") {
     REQUIRE(fresh.setup() == Status::Ok);
     CHECK(fresh.product.reset_reason() == power::ResetReason::PowerOn);
     // Two different boots must not paint the same page.
-    CHECK(fresh.product.boot_page().count_black() != rig.product.boot_page().count_black());
+    CHECK(fresh.product.self_test_page().count_black() !=
+          rig.product.self_test_page().count_black());
 }
 
 // D5. The panel has the reason at boot and then it is gone; the field diagnosis
@@ -197,14 +198,14 @@ TEST_CASE("product: the link is told at boot why the device came up") {
     Rig rig;
     rig.platform.system_power().causes = power::ResetCause::Watchdog;
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.config().config().reset_reason() == power::ResetReason::Watchdog);
+    CHECK(rig.product.config_link().config().reset_reason() == power::ResetReason::Watchdog);
 
     // A device that came up because someone pressed the button says that, and
     // not the UNKNOWN a reason nobody passed on would read as.
     Rig pressed;
     pressed.platform.system_power().causes = power::ResetCause::Pin;
     REQUIRE(pressed.setup() == Status::Ok);
-    CHECK(pressed.product.config().config().reset_reason() == power::ResetReason::Pin);
+    CHECK(pressed.product.config_link().config().reset_reason() == power::ResetReason::Pin);
 }
 
 // D1. A VBUS event is a wake source on this SoC, so plugging a charger into a
@@ -222,7 +223,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     // Nothing became a device: no service loop, and not a pixel on the glass -
     // the panel still holds whatever was painted when it was switched off.
     CHECK_FALSE(rig.state().started);
-    CHECK(rig.product.boot_page().count_black() == 0);
+    CHECK(rig.product.self_test_page().count_black() == 0);
     CHECK(rig.platform.chips().epd.present_count == 0);
     // And the page it would have painted names the cause anyway, for the case a
     // bench eye holds the button and looks.
@@ -244,7 +245,7 @@ TEST_CASE("product: the same charger with the button held is a boot") {
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::Run);
     CHECK(rig.state().started);
-    CHECK(rig.product.boot_page().count_black() > 0);
+    CHECK(rig.product.self_test_page().count_black() > 0);
 }
 
 // Every other wake is a device. The one that would be catastrophic and silent is

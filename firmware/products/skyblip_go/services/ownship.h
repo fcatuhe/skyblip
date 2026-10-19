@@ -29,7 +29,7 @@ class OwnshipService : public runtime::Service {
 
     void tick(uint32_t now_ms) override;
 
-    bool baro_active() const { return baro_live_; }
+    bool baro_active() const { return baro_active_; }
 
     // ADS-L G.1.2 FlightState, decided by core/flight from the fix stream.
     flight::FlightState flight_state_from(const model::Ownship& own, uint32_t now_ms);
@@ -37,8 +37,8 @@ class OwnshipService : public runtime::Service {
     // The one copy of "has the receiver settled": the transmit gate reads it
     // through state.own.tx_settled, and whoever annunciates the first fix takes
     // the edge from here rather than keeping a second watch of its own.
-    const gnss::FirstFix& first_fix() const { return settle_; }
-    bool take_fix_acquired() { return settle_.take_acquired(); }
+    const gnss::FirstFix& first_fix() const { return first_fix_; }
+    bool take_fix_acquired() { return first_fix_.take_acquired(); }
 
    private:
     const flight::FlightTimer& timer_on_glass(uint32_t now_ms);
@@ -64,8 +64,8 @@ class OwnshipService : public runtime::Service {
     static bool height_solved(const model::Ownship& own);
     void adopt_climb(int32_t mm_s, uint32_t now_ms);
     void withdraw_climb();
-    static bool vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
-                               int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s);
+    static bool climb_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
+                                  int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s);
     bool baro_heard_within_max_age(uint32_t now_ms) const;
 
     flight::SlipBall ball_{};
@@ -77,22 +77,22 @@ class OwnshipService : public runtime::Service {
     flight::FlightTimer timer_{};
     flight::FlightTimer simulated_{};
     flight::GroundLatch ground_{};
-    gnss::FirstFix settle_{};
+    gnss::FirstFix first_fix_{};
     gnss::Acquisition acquisition_{};
-    int32_t vs_ref_alt_mm_{0};
-    uint32_t vs_ref_ms_{0};
+    int32_t gnss_ref_alt_mm_{0};
+    uint32_t gnss_ref_ms_{0};
     int32_t baro_ref_alt_mm_{0};
     uint32_t baro_ref_ms_{0};
     uint32_t baro_heard_ms_{0};
-    bool baro_live_{false};
+    bool baro_active_{false};
     uint32_t turn_ref_ms_{0};
     int32_t turn_ref_track_cdeg_{0};
     uint64_t pps_edge_us_{0};
     uint32_t pps_recorded_ms_{0};
     uint32_t motion_recorded_ms_{0};
 
-    static constexpr uint32_t kBaroVsWindowMs = flight::kClimbWindowFloorMs;
-    static constexpr uint32_t kGnssVsWindowMs = 2000;
+    static constexpr uint32_t kBaroClimbWindowMs = flight::kClimbWindowFloorMs;
+    static constexpr uint32_t kGnssClimbWindowMs = 2000;
     // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
     static constexpr uint32_t kBaroMaxAgeMs = 3 * runtime::kBaroPublishPeriodMs;
     // INFO: fc 20sep26 an edge is a record, and a second that brought none is the record saying so

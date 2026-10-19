@@ -40,7 +40,7 @@ struct Rig {
     void run(uint32_t from, uint32_t to, uint32_t step = 50) {
         for (uint32_t t = from; t <= to; t += step) {
             platform.clock().set_millis(t);
-            product.step(t);
+            product.run_pass(t);
         }
     }
 
@@ -130,7 +130,7 @@ struct Rig {
     void run_span(uint32_t& t, uint32_t span_ms, uint32_t step = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step) {
             platform.clock().set_millis(t);
-            product.step(t);
+            product.run_pass(t);
             t += step;
         }
     }
@@ -143,7 +143,7 @@ struct Rig {
     void run_span_from_us(uint64_t& us, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
             platform.clock().set_micros(us);
-            product.step(platform.clock().millis());
+            product.run_pass(platform.clock().millis());
             us += static_cast<uint64_t>(step_ms) * 1000;
         }
     }
@@ -175,7 +175,7 @@ struct Rig {
     void settle(uint32_t& t) {
         for (int i = 0; i < 2; i++) {
             platform.clock().set_millis(t);
-            product.step(t);
+            product.run_pass(t);
             t += 40;
         }
     }
@@ -189,7 +189,7 @@ struct Rig {
     // The three gestures the device answers, as go::ScreenService names them.
     void tap(uint32_t& t) { touch_pad(t, 200); }
 
-    void long_touch(uint32_t& t) { touch_pad(t, go::Controls::kLongTouchMs + 200); }
+    void long_touch(uint32_t& t) { touch_pad(t, go::Controls::kLongTouchHoldMs + 200); }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu.
     void show(uint32_t& t, go::Page page) {
@@ -198,7 +198,8 @@ struct Rig {
         if (go::walked(page)) return;
         press(t);
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n && product.screen().editor().focus() != row_for(page); i++)
+        for (int i = 0; i < menu.row_count && product.screen().editor().focus() != row_for(page);
+             i++)
             tap(t);
         press(t);
         run(t, t + 200);
@@ -207,7 +208,7 @@ struct Rig {
 
     static go::MenuRow row_for(go::Page page) {
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n; i++)
+        for (int i = 0; i < menu.row_count; i++)
             if (go::page_behind(menu.rows[i]) == page) return menu.rows[i];
         return go::MenuRow::kCount;
     }
@@ -229,7 +230,7 @@ struct Rig {
     void raise_link(uint16_t session_id = 1) { platform.link().raise_link(session_id); }
     void drop_link() { platform.link().drop_link(); }
     void drop_link(uint16_t session_id) { platform.link().drop_link(session_id); }
-    bool link_up() { return product.config().config().link_up(); }
+    bool link_up() { return product.config_link().config().link_up(); }
 
     // The last thing the device said on one endpoint, the NMEA broadcast aside.
     std::string last_on(events::Endpoint endpoint) {

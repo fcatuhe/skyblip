@@ -9,12 +9,12 @@
 namespace skyblip::go {
 
 struct SixPackSnapshot {
-    bool data_valid{false};
+    bool fix_valid{false};
     go::Units units{go::Units::Nautical};
     int32_t speed_kt{0};
     int32_t alt_ft{0};
-    int32_t vs_fpm{0};
-    bool vs_valid{false};
+    int32_t climb_fpm{0};
+    bool climb_valid{false};
     uint16_t track_deg{0};
     int16_t turn_cdps{0};  // rate of turn in hundredths of a degree a second, positive = right
     uint8_t battery_percent{0};

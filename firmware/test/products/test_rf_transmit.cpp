@@ -98,7 +98,7 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
 TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1") {
     simulator::Simulator h;
     REQUIRE(h.setup() == Status::Ok);
-    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignCap - 1);
+    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
     h.world().set_fix(true);
     h.world().set_speed_kt(50);
     const uint32_t from_ms = past_settling(h);

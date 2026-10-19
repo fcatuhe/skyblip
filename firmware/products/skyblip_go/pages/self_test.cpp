@@ -1,4 +1,4 @@
-#include "products/skyblip_go/pages/boot.h"
+#include "products/skyblip_go/pages/self_test.h"
 
 #include "core/util/format.h"
 #include "products/skyblip_go/pages/page.h"
@@ -7,10 +7,10 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr int kLeft = kBootLeftX;
-constexpr int kRight = kBootRightX;
-constexpr int kCellW = kBootCellW;
-constexpr int kLineH = kBootRowH;
+constexpr int kLeft = kSelfTestLeftX;
+constexpr int kRight = kSelfTestRightX;
+using ui::kCellW;
+constexpr int kLineH = kSelfTestRowH;
 
 int length(const char* s) {
     int n = 0;
@@ -39,27 +39,27 @@ void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
 
 }  // namespace
 
-void draw_boot(ui::Canvas& canvas, const BootSnapshot& s) {
+void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
     canvas.clear(true);
 
-    char buf[32];
-    int n = format_string(buf, "SELF TEST");
-    buf[n] = 0;
-    canvas.draw_text(kLeft, 3, buf, true, 2);
+    char text[32];
+    int written = format_string(text, "SELF TEST");
+    text[written] = 0;
+    canvas.draw_text(kLeft, 3, text, true, 2);
     canvas.hline(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     // Identity and why the device is running at all, on one line: the pair a
     // bench log needs before anything below it means something.
-    n = format_string(buf, "ID ");
-    n += format_air_address(buf + n, s.address);
-    buf[n] = 0;
-    canvas.draw_text(kLeft, kBootHeaderY, buf, true, 1);
-    right_aligned(canvas, kRight, kBootHeaderY, s.reset_reason);
+    written = format_string(text, "ID ");
+    written += format_air_address(text + written, snapshot.address);
+    text[written] = 0;
+    canvas.draw_text(kLeft, kSelfTestHeaderY, text, true, 1);
+    right_aligned(canvas, kRight, kSelfTestHeaderY, snapshot.reset_reason);
 
-    int y = kBootFirstRowY;
-    const int rows = s.n_parts < kBootRows ? s.n_parts : kBootRows;
+    int y = kSelfTestFirstRowY;
+    const int rows = snapshot.part_count < kSelfTestRows ? snapshot.part_count : kSelfTestRows;
     for (int i = 0; i < rows; i++) {
-        const BootPart& part = s.parts[i];
+        const SelfTestPart& part = snapshot.parts[i];
         const char* mark = verdict(part.state);
         int name_end = kLeft + (length(part.name) + 1) * kCellW;
         canvas.draw_text(kLeft, y, part.name, true, 1);
@@ -74,40 +74,42 @@ void draw_boot(ui::Canvas& canvas, const BootSnapshot& s) {
         y += kLineH;
     }
 
-    if (s.i2c_addresses && s.n_i2c_addresses > 0 && rows < kBootRows) {
-        char bus[kBootRowCells + 1];
-        n = format_string(bus, "I2C");
-        for (int i = 0; i < s.n_i2c_addresses; i++) {
-            const char* role = s.i2c_roles ? s.i2c_roles[i] : nullptr;
-            if (n + 1 + (role ? length(role) : 2) > kBootRowCells) break;
-            n += format_string(bus + n, " ");
-            n += role ? format_string(bus + n, role) : format_hex(bus + n, s.i2c_addresses[i], 2);
+    if (snapshot.i2c_addresses && snapshot.i2c_address_count > 0 && rows < kSelfTestRows) {
+        char bus[kSelfTestRowCells + 1];
+        written = format_string(bus, "I2C");
+        for (int i = 0; i < snapshot.i2c_address_count; i++) {
+            const char* role = snapshot.i2c_roles ? snapshot.i2c_roles[i] : nullptr;
+            if (written + 1 + (role ? length(role) : 2) > kSelfTestRowCells) break;
+            written += format_string(bus + written, " ");
+            written += role ? format_string(bus + written, role)
+                            : format_hex(bus + written, snapshot.i2c_addresses[i], 2);
         }
-        bus[n] = 0;
+        bus[written] = 0;
         canvas.draw_text(kLeft, y, bus, true, 1);
         y += kLineH;
     }
 
-    y += kBootDividerGap;
+    y += kSelfTestDividerGap;
     canvas.hline(kLeft, y, kGlassWidth - 2 * kLeft, true);
-    y += kBootFooterGap;
+    y += kSelfTestFooterGap;
 
-    n = 0;
-    if (s.battery_valid) {
+    written = 0;
+    if (snapshot.battery_valid) {
         // Centivolts: at boot the number that matters is whether the pack can
         // carry a flight, and two decimals is what a cell is judged on.
-        n = format_string(buf, "BAT ");
-        n += format_uint(buf + n, (s.battery_mv + 5u) / 10u, 1, 2);
-        n += format_string(buf + n, " V");
+        written = format_string(text, "BAT ");
+        written += format_uint(text + written, (snapshot.battery_mv + 5u) / 10u, 1, 2);
+        written += format_string(text + written, " V");
     }
-    if (s.went_dark_flat) n += format_string(buf + n, n > 0 ? " WAS FLAT" : "WAS FLAT");
-    buf[n] = 0;
-    canvas.draw_text(kLeft, y, buf, true, 1);
+    if (snapshot.went_dark_flat)
+        written += format_string(text + written, written > 0 ? " WAS FLAT" : "WAS FLAT");
+    text[written] = 0;
+    canvas.draw_text(kLeft, y, text, true, 1);
 
     // The verdict, inverted so it cannot be read as one more row.
-    const char* status = s.flyable ? "READY" : "GROUNDED";
+    const char* status = snapshot.flyable ? "READY" : "GROUNDED";
     const int w = (length(status) + 2) * kCellW;
-    canvas.rect(kRight - w, y - kBootVerdictRise, w, kBootVerdictH, true, /*fill=*/true);
+    canvas.rect(kRight - w, y - kSelfTestVerdictRise, w, kSelfTestVerdictH, true, /*fill=*/true);
     canvas.draw_text(kRight - w + kCellW, y, status, false, 1);
 }
 

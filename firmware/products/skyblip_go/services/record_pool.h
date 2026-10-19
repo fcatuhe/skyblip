@@ -39,15 +39,15 @@ class RecordPool {
     bool write_header(uint32_t sector, const store::SectorHeader& header);
     bool erase(uint32_t sector);
 
-    int payload_bytes(uint16_t to) const;
-    int reply_cap(uint16_t to) const;
+    int payload_bytes(uint16_t link_session) const;
+    int reply_cap(uint16_t link_session) const;
     char* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
     // False when the frame was dropped. A link at its share holds it for deliver_held().
-    bool send(uint16_t to, int len);
+    bool send(uint16_t link_session, int bytes);
     // Ok once nothing is held, WouldBlock while the link still refuses, anything else a drop.
     Status deliver_held(uint32_t now_ms);
-    bool holding() const { return held_len_ > 0; }
+    bool holding() const { return held_bytes_ > 0; }
     uint32_t link_drops() const { return link_drops_; }
 
    private:
@@ -69,8 +69,8 @@ class RecordPool {
 
     char reply_[comms::kLogReplyBytes]{};
     char held_[comms::kLogReplyBytes]{};
-    int held_len_{0};
-    uint16_t held_to_{0};
+    int held_bytes_{0};
+    uint16_t held_link_session_{0};
     uint32_t held_since_ms_{0};
     uint32_t now_ms_{0};
     uint8_t chunk_[comms::kLogChunkRawBytes]{};

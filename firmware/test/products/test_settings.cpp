@@ -230,13 +230,13 @@ TEST_CASE("settings: the frequency trim is bounded at the boundary, in both fram
     Settings s = defaults();
     CHECK(int(s.freq_trim_e1_ppm) == 0);  // the design intent on a TCXO part
 
-    s.freq_trim_e1_ppm = kFreqTrimLimitTenthsPpm;
+    s.freq_trim_e1_ppm = kFreqTrimCeilingE1Ppm;
     CHECK(validate(s) == Status::Ok);
-    s.freq_trim_e1_ppm = -kFreqTrimLimitTenthsPpm;
+    s.freq_trim_e1_ppm = -kFreqTrimCeilingE1Ppm;
     CHECK(validate(s) == Status::Ok);
-    s.freq_trim_e1_ppm = kFreqTrimLimitTenthsPpm + 1;
+    s.freq_trim_e1_ppm = kFreqTrimCeilingE1Ppm + 1;
     CHECK(validate(s) == Status::OutOfRange);
-    s.freq_trim_e1_ppm = -(kFreqTrimLimitTenthsPpm + 1);
+    s.freq_trim_e1_ppm = -(kFreqTrimCeilingE1Ppm + 1);
     CHECK(validate(s) == Status::OutOfRange);
 
     // And it survives the flash framing, sign and all: a stored trim that came
@@ -371,7 +371,7 @@ TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trim
     Settings s = defaults();
     s.battery_offset_mv = 120;
     s.freq_trim_e1_ppm = -35;
-    std::strncpy(s.callsign, "d-kxyz", kCallsignCap - 1);
+    std::strncpy(s.callsign, "d-kxyz", kCallsignBytes - 1);
     uint8_t blob[128];
     to_blob(s, blob, sizeof(blob));
     Settings out;

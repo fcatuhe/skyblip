@@ -24,9 +24,9 @@ struct RadioLogSnapshot {
     GnssReception gnss{};
     uint32_t rx_ok{0};
     uint32_t tx_ok{0};
-    uint32_t noise{0};
-    int8_t band_dbm{0};
-    int n_rows{0};
+    uint32_t rx_noise{0};
+    int8_t noise_dbm{0};
+    int row_count{0};
     const radio::Log* log{nullptr};
 };
 

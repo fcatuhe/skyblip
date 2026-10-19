@@ -23,7 +23,7 @@ flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own,
 }
 
 void OwnshipService::tick(uint32_t now_ms) {
-    baro_live_ = baro_heard_within_max_age(now_ms);
+    baro_active_ = baro_heard_within_max_age(now_ms);
     gnss::GnssSolution solution{};
     while (context_.bus.gnss.pop(solution)) apply_solution(solution, now_ms);
 
@@ -48,9 +48,9 @@ void OwnshipService::tick(uint32_t now_ms) {
     context_.state.gnss.stage = acquisition_.stage();
     context_.state.gnss.stage_s = acquisition_.stage_ms(now_ms) / 1000;
 
-    context_.state.baro.active = baro_live_;
-    context_.state.own.tx_settled = settle_.settled(now_ms);
-    context_.state.own.fix_acquired = settle_.take_acquired();
+    context_.state.baro.active = baro_active_;
+    context_.state.own.tx_settled = first_fix_.settled(now_ms);
+    context_.state.own.fix_acquired = first_fix_.take_acquired();
 }
 
 // INFO: fc 05oct26 a flight run flies the glass alone: air, flight log and gates read flight_
@@ -96,11 +96,12 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
 
     int32_t mm_s = 0;
     const bool height_fixed = own.fix_valid && height_solved(own);
-    if (!height_fixed) vs_ref_ms_ = 0;
-    const bool have = height_fixed && vs_from_alt_mm(solution.alt_mm, now_ms, kGnssVsWindowMs,
-                                                     vs_ref_alt_mm_, vs_ref_ms_, mm_s);
-    if (!baro_live_) {
-        if (have) adopt_climb(mm_s, now_ms);
+    if (!height_fixed) gnss_ref_ms_ = 0;
+    const bool climb_valid =
+        height_fixed && climb_from_alt_mm(solution.alt_mm, now_ms, kGnssClimbWindowMs,
+                                          gnss_ref_alt_mm_, gnss_ref_ms_, mm_s);
+    if (!baro_active_) {
+        if (climb_valid) adopt_climb(mm_s, now_ms);
         if (!height_fixed) withdraw_climb();
     }
 
@@ -109,8 +110,8 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     ground_.update(declared);
     update_turn_rate(now_ms);
     update_residual(previous);
-    settle_.observe(convergence_of(own), now_ms);
-    own.tx_settled = settle_.settled(now_ms);
+    first_fix_.observe(convergence_of(own), now_ms);
+    own.tx_settled = first_fix_.settled(now_ms);
     record_gnss(solution, now_ms);
     record_flight(now_ms);
 }
@@ -254,10 +255,10 @@ void OwnshipService::apply_baro(const events::BaroSample& sample, uint32_t now_m
     const int32_t alt_mm = flight::pressure_to_alt_mm(sample.pressure_mpa);
     if (!baro_heard_within_max_age(now_ms)) baro_ref_ms_ = 0;
     baro_heard_ms_ = now_ms == 0 ? 1 : now_ms;
-    baro_live_ = true;
+    baro_active_ = true;
     int32_t mm_s = 0;
-    const bool adopted =
-        vs_from_alt_mm(alt_mm, sample.at_ms, kBaroVsWindowMs, baro_ref_alt_mm_, baro_ref_ms_, mm_s);
+    const bool adopted = climb_from_alt_mm(alt_mm, sample.at_ms, kBaroClimbWindowMs,
+                                           baro_ref_alt_mm_, baro_ref_ms_, mm_s);
     if (adopted) adopt_climb(mm_s, now_ms);
     record_baro(sample, alt_mm, mm_s, adopted, now_ms);
 }
@@ -364,8 +365,8 @@ bool OwnshipService::baro_heard_within_max_age(uint32_t now_ms) const {
     return baro_heard_ms_ != 0 && now_ms - baro_heard_ms_ <= kBaroMaxAgeMs;
 }
 
-bool OwnshipService::vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
-                                    int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s) {
+bool OwnshipService::climb_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
+                                       int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s) {
     if (ref_ms == 0) {
         ref_ms = now_ms == 0 ? 1 : now_ms;
         ref_alt_mm = alt_mm;

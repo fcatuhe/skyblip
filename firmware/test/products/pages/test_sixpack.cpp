@@ -69,12 +69,12 @@ bool value_matches(const Glass& canvas, Tile t, const char* text) {
 
 SixPackSnapshot flying() {
     SixPackSnapshot s;
-    s.data_valid = true;
+    s.fix_valid = true;
     s.units = skyblip::go::Units::Nautical;
     s.speed_kt = 90;
     s.alt_ft = 3450;
-    s.vs_fpm = 500;
-    s.vs_valid = true;
+    s.climb_fpm = 500;
+    s.climb_valid = true;
     s.track_deg = 270;
     s.turn_cdps = 300;
     s.battery_percent = 64;
@@ -116,8 +116,8 @@ TEST_CASE("sixpack: without a fix the needles park at zero and the numbers withh
 // The barometer measures a climb of its own, so the vario is not a GNSS instrument.
 TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
     SixPackSnapshot searching;
-    searching.vs_fpm = -1000;
-    searching.vs_valid = true;
+    searching.climb_fpm = -1000;
+    searching.climb_valid = true;
     Glass canvas;
     draw_sixpack(canvas, searching);
 
@@ -128,7 +128,7 @@ TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
 
     // No barometer and no fix is no vertical speed, needle at rest.
     SixPackSnapshot blind = searching;
-    blind.vs_valid = false;
+    blind.climb_valid = false;
     Glass none;
     draw_sixpack(none, blind);
     CHECK(value_matches(none, kTiles[5], "---"));
@@ -138,7 +138,7 @@ TEST_CASE("sixpack: a baro vertical speed reads on without a fix") {
 // Five dials read the receiver and one reads the cell, and a lost fix is the receiver's.
 TEST_CASE("sixpack: a fix lost in flight withholds the dials and leaves the cell alone") {
     SixPackSnapshot lost = flying();
-    lost.data_valid = false;
+    lost.fix_valid = false;
     Glass canvas;
     draw_sixpack(canvas, lost);
     CHECK(value_matches(canvas, kTiles[1], "64%"));
@@ -147,7 +147,7 @@ TEST_CASE("sixpack: a fix lost in flight withholds the dials and leaves the cell
 
 TEST_CASE("sixpack: needles move with the data they show") {
     SixPackSnapshot a;
-    a.data_valid = true;
+    a.fix_valid = true;
     a.units = skyblip::go::Units::Nautical;
     a.speed_kt = 40;
     a.alt_ft = 1200;
@@ -177,7 +177,7 @@ TEST_CASE("sixpack: needles move with the data they show") {
 
 TEST_CASE("sixpack: the altimeter reads like a three-pointer, the card like a compass") {
     SixPackSnapshot s;
-    s.data_valid = true;
+    s.fix_valid = true;
     s.units = skyblip::go::Units::Nautical;
     s.alt_ft = 2500;  // long hand at 500 ft (down), short hand at 2.5/10 (right)
     Glass canvas;
@@ -208,12 +208,12 @@ TEST_CASE("sixpack: the altimeter reads like a three-pointer, the card like a co
 // B4. A dial has one needle and one number, so the km/h pilot has to ask for it.
 TEST_CASE("sixpack: the unit setting decides the speed dial, and only the speed dial") {
     SixPackSnapshot nautical;
-    nautical.data_valid = true;
+    nautical.fix_valid = true;
     nautical.units = skyblip::go::Units::Nautical;
     nautical.speed_kt = 90;  // 166.7 km/h
     nautical.alt_ft = 3450;
-    nautical.vs_fpm = 500;
-    nautical.vs_valid = true;
+    nautical.climb_fpm = 500;
+    nautical.climb_valid = true;
     nautical.track_deg = 7;
     SixPackSnapshot metric = nautical;
     metric.units = skyblip::go::Units::Metric;
@@ -373,7 +373,7 @@ TEST_CASE("sixpack: the horizon carries two wing bars and a dot, clear of each o
     const Tile att = kTiles[1];
     SixPackSnapshot climbing = flying();
     climbing.turn_cdps = 0;
-    climbing.vs_fpm = 1000;  // 8 degrees up at 90 kt, so the ground is well below the bars
+    climbing.climb_fpm = 1000;  // 8 degrees up at 90 kt, so the ground is well below the bars
     Glass canvas;
     draw_sixpack(canvas, climbing);
 
@@ -432,11 +432,11 @@ TEST_CASE("sixpack: the horizon banks with the turn and pitches with climb") {
     SixPackSnapshot level = flying();
     level.speed_kt = 100;
     level.turn_cdps = 0;
-    level.vs_fpm = 0;
+    level.climb_fpm = 0;
     SixPackSnapshot turning = level;
     turning.turn_cdps = 300;  // standard rate at 100 kt is ~15 deg of bank
     SixPackSnapshot climbing = level;
-    climbing.vs_fpm = 1000;
+    climbing.climb_fpm = 1000;
 
     Glass f0, f1, f2;
     draw_sixpack(f0, level);
@@ -494,21 +494,21 @@ TEST_CASE("sixpack: the vertical speed dial stands a 1000 climb up and hangs a 1
     const Tile vsi = kTiles[5];
     SixPackSnapshot s = flying();
 
-    s.vs_fpm = 1000;
+    s.climb_fpm = 1000;
     Glass up;
     draw_sixpack(up, s);
     CHECK(up.get_pixel(vsi.cx, vsi.cy - kFaceR));
     CHECK_FALSE(up.get_pixel(vsi.cx + 3, vsi.cy - kFaceR));
     CHECK_FALSE(up.get_pixel(vsi.cx - 3, vsi.cy - kFaceR));
 
-    s.vs_fpm = -1000;
+    s.climb_fpm = -1000;
     Glass down;
     draw_sixpack(down, s);
     CHECK(down.get_pixel(vsi.cx, vsi.cy + kFaceR));
     CHECK_FALSE(down.get_pixel(vsi.cx + 3, vsi.cy + kFaceR));
     CHECK_FALSE(down.get_pixel(vsi.cx - 3, vsi.cy + kFaceR));
 
-    s.vs_fpm = 0;
+    s.climb_fpm = 0;
     Glass level;
     draw_sixpack(level, s);
     CHECK(level.get_pixel(vsi.cx - kFaceR, vsi.cy));
@@ -518,7 +518,7 @@ TEST_CASE("sixpack: the vertical speed dial stands a 1000 climb up and hangs a 1
 TEST_CASE("sixpack: the vertical speed dial is marked every 500 fpm and shaded past 2000") {
     const Tile vsi = kTiles[5];
     SixPackSnapshot s = flying();
-    s.vs_fpm = 1000;
+    s.climb_fpm = 1000;
     Glass canvas;
     draw_sixpack(canvas, s);
 
@@ -540,20 +540,20 @@ TEST_CASE("sixpack: the vertical speed dial is marked every 500 fpm and shaded p
 TEST_CASE("sixpack: a zero rate carries no sign") {
     SixPackSnapshot s = flying();
     s.turn_cdps = 0;
-    s.vs_fpm = 0;
+    s.climb_fpm = 0;
     Glass canvas;
     draw_sixpack(canvas, s);
     CHECK(value_matches(canvas, kTiles[3], "0"));
     CHECK(value_matches(canvas, kTiles[5], "0"));
 
     s.turn_cdps = -200;
-    s.vs_fpm = -200;
+    s.climb_fpm = -200;
     Glass signed_fb;
     draw_sixpack(signed_fb, s);
     CHECK(value_matches(signed_fb, kTiles[3], "-2"));
     CHECK(value_matches(signed_fb, kTiles[5], "-200"));
 
-    s.vs_fpm = -4;
+    s.climb_fpm = -4;
     Glass jitter;
     draw_sixpack(jitter, s);
     CHECK(value_matches(jitter, kTiles[5], "0"));
@@ -561,7 +561,7 @@ TEST_CASE("sixpack: a zero rate carries no sign") {
 
 TEST_CASE("sixpack: the vertical speed figure moves in tens of feet a minute") {
     SixPackSnapshot s = flying();
-    s.vs_fpm = -243;
+    s.climb_fpm = -243;
     Glass canvas;
     draw_sixpack(canvas, s);
     CHECK(value_matches(canvas, kTiles[5], "-240"));

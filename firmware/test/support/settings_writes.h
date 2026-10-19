@@ -13,7 +13,7 @@ namespace skyblip::settings_writes {
 // the write landed on.
 inline void step_one(Rig& rig, uint32_t& t, uint32_t by_ms = 10) {
     rig.platform.clock().set_millis(t);
-    rig.product.step(t);
+    rig.product.run_pass(t);
     t += by_ms;
 }
 
@@ -33,7 +33,7 @@ inline void fly(Rig& rig, uint32_t& t) { rig.seconds(t, 16, /*speed_mm_s=*/50000
 // and this is how both editors say the struct moved.
 inline void change_volume(Rig& rig, go::AlarmVolume to) {
     rig.settings().alarm_volume = to;
-    rig.product.config().config().note_settings_changed();
+    rig.product.config_link().config().note_settings_changed();
 }
 
 inline uint32_t writes(Rig& rig) { return rig.platform.kv().writes(); }

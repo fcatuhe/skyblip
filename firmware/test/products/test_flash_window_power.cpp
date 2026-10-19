@@ -33,19 +33,19 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
     // Refused, counted once, and never handed to the placement policy - a pending
     // change is one the bound would eventually force onto flash, which is the
     // write this refuses.
-    CHECK(rig.product.config().refused_writes() == 1);
-    CHECK(rig.product.config().holding_for_power());
-    CHECK(rig.product.config().durable_writes().requests() == 0);
-    CHECK(rig.product.config().durable_writes().forced() == 0);
+    CHECK(rig.product.config_link().refused_writes() == 1);
+    CHECK(rig.product.config_link().holding_for_power());
+    CHECK(rig.product.config_link().durable_writes().requests() == 0);
+    CHECK(rig.product.config_link().durable_writes().forced() == 0);
 
     // The cable arrives. The terminal is held above the cell, core/power reports
     // Normal, and the change a pilot made is still there to write.
     rig.platform.battery().external_power = true;
     rig.seconds(t, 3, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().power.level == power::PowerLevel::Normal);
-    CHECK_FALSE(rig.product.config().holding_for_power());
+    CHECK_FALSE(rig.product.config_link().holding_for_power());
     CHECK(writes(rig) - before == 1);
-    CHECK(rig.product.config().durable_writes().forced() == 0);
+    CHECK(rig.product.config_link().durable_writes().forced() == 0);
 
     uint8_t blob[64];
     size_t n = 0;
@@ -79,8 +79,8 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     REQUIRE(rig.product.shutdown().phase() != power::ShutdownPhase::Running);
     CHECK(writes(rig) == before);
-    CHECK(rig.product.config().refused_writes() == 1);
-    CHECK(rig.product.config().holding_for_power());
+    CHECK(rig.product.config_link().refused_writes() == 1);
+    CHECK(rig.product.config_link().holding_for_power());
 }
 
 // A deliberate power-off on a healthy cell is the other half of the same rule,
@@ -102,7 +102,7 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, t);
     step_one(rig, t);
     CHECK(writes(rig) - before == 1);
-    CHECK(rig.product.config().refused_writes() == 0);
+    CHECK(rig.product.config_link().refused_writes() == 0);
 }
 
 // POFCON, through the whole product: the comparator fires in interrupt context on

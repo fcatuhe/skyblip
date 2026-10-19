@@ -21,8 +21,8 @@ RadarSnapshot plotting_all(RadarTarget* targets, int n) {
     RadarSnapshot snapshot = flying(0);
     snapshot.plot = RadarPlot::All;
     snapshot.targets = targets;
-    snapshot.n_targets = n;
-    snapshot.heard = n;
+    snapshot.target_count = n;
+    snapshot.heard_count = n;
     return snapshot;
 }
 
@@ -127,7 +127,7 @@ TEST_CASE("radar rim: a mark and its count take no ink off the glass") {
                              {-11000, 9000, 0, Level::None},  {-9000, 12000, 0, Level::None}};
     const Glass canvas = radar(plotting_all(astern, 6));
     RadarSnapshot unplotted = plotting_all(nullptr, 0);
-    unplotted.heard = 6;
+    unplotted.heard_count = 6;
     const Glass empty = radar(unplotted);
 
     int erased = 0;

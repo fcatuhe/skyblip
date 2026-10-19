@@ -5,9 +5,9 @@
 
 #include "core/settings/blob.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/recovery.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"
@@ -30,7 +30,7 @@ bool glass_reads(const ui::Canvas& canvas, int x, int y, const char* text, int s
     expected.clear(true);
     expected.draw_text(x, y, text, true, scale);
     for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * go::kInstallingCellW * scale; dx++)
+        for (int dx = 0; dx < length(text) * ui::kCellW * scale; dx++)
             if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
                 return false;
     return true;
@@ -110,11 +110,11 @@ struct Rebooted {
     }
 };
 
-const go::BootPart& storage_row(Rig& rig) {
-    for (int i = 0; i < go::kBootPartCount; i++)
-        if (std::string(rig.product.boot_rows()[i].name) == "STORAGE")
-            return rig.product.boot_rows()[i];
-    return rig.product.boot_rows()[0];
+const go::SelfTestPart& storage_row(Rig& rig) {
+    for (int i = 0; i < go::kSelfTestPartCount; i++)
+        if (std::string(rig.product.self_test_rows()[i].name) == "STORAGE")
+            return rig.product.self_test_rows()[i];
+    return rig.product.self_test_rows()[0];
 }
 
 // What a later image stores: one layout ahead of this one, sealed the way every blob is.
@@ -551,7 +551,7 @@ TEST_CASE("product: a set on an image older than its settings never writes over 
     Rebooted after(rig, kRunning, /*confirmed=*/true);
     REQUIRE(after.rig.setup() == Status::Ok);
     CHECK(std::string(after.rig.settings().callsign) == "F-JABC");
-    CHECK(after.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+    CHECK(after.rig.product.config_link().settings_fallback() == settings::Fallback::Prior);
     CHECK(holds(after.rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 
@@ -560,7 +560,7 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
     const NewerBlob newer;
     REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
     CHECK(rig.settings().alarm_volume == go::defaults().alarm_volume);
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
@@ -585,7 +585,7 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
     torn.bytes[3] ^= 0x01;
     REQUIRE(rig.platform.kv().write("settings", torn.bytes, sizeof(torn.bytes)) == Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.config().settings_fallback() == settings::Fallback::Defaults);
+    CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
     uint32_t t = 0;
 
     set_callsign_over_the_link(rig, t, "F-JABC");
@@ -615,7 +615,7 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
     REQUIRE(reverted.rig.setup() == Status::Ok);
     CHECK(config(reverted.rig).image_state() == dfu::ImageState::Reverted);
     CHECK(std::string(reverted.rig.settings().callsign) == "D-KXYZ");
-    CHECK(reverted.rig.product.config().settings_fallback() == settings::Fallback::Prior);
+    CHECK(reverted.rig.product.config_link().settings_fallback() == settings::Fallback::Prior);
 
     reverted.rig.raise_link();
     reverted.rig.run(0, 200);

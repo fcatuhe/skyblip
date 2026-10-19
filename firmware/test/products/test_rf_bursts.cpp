@@ -178,7 +178,7 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
 TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 when they must") {
     simulator::Simulator h;
     REQUIRE(h.setup() == Status::Ok);
-    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignCap - 1);
+    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
     h.world().set_fix(true);
     h.world().set_speed_kt(0);
     run_on(h, past_settling(h), 40000);

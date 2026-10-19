@@ -95,27 +95,27 @@ bool RecordPool::noted(bool ok) {
     return ok;
 }
 
-int RecordPool::payload_bytes(uint16_t to) const {
-    return static_cast<int>(context_.roles.link.payload_bytes_to(to));
+int RecordPool::payload_bytes(uint16_t link_session) const {
+    return static_cast<int>(context_.roles.link.payload_bytes_to(link_session));
 }
 
-int RecordPool::reply_cap(uint16_t to) const {
-    const int room = payload_bytes(to) + 1;
+int RecordPool::reply_cap(uint16_t link_session) const {
+    const int room = payload_bytes(link_session) + 1;
     return room < comms::kLogReplyBytes ? room : comms::kLogReplyBytes;
 }
 
-bool RecordPool::send(uint16_t to, int len) {
-    if (len <= 0 || len > payload_bytes(to) || holding()) {
+bool RecordPool::send(uint16_t link_session, int bytes) {
+    if (bytes <= 0 || bytes > payload_bytes(link_session) || holding()) {
         link_drops_++;
         return false;
     }
     const Status sent = context_.roles.link.send_to(
-        to, events::Endpoint::Log,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(len)));
+        link_session, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(reply_), static_cast<size_t>(bytes)));
     if (sent == Status::WouldBlock) {
-        std::memcpy(held_, reply_, static_cast<size_t>(len));
-        held_len_ = len;
-        held_to_ = to;
+        std::memcpy(held_, reply_, static_cast<size_t>(bytes));
+        held_bytes_ = bytes;
+        held_link_session_ = link_session;
         held_since_ms_ = now_ms_;
         return true;
     }
@@ -128,11 +128,11 @@ Status RecordPool::deliver_held(uint32_t now_ms) {
     now_ms_ = now_ms;
     if (!holding()) return Status::Ok;
     const Status sent = context_.roles.link.send_to(
-        held_to_, events::Endpoint::Log,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
+        held_link_session_, events::Endpoint::Log,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_bytes_)));
     if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
         return Status::WouldBlock;
-    held_len_ = 0;
+    held_bytes_ = 0;
     if (is_ok(sent)) return Status::Ok;
     link_drops_++;
     return sent == Status::WouldBlock ? Status::Timeout : sent;

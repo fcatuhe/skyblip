@@ -1,4 +1,4 @@
-#include "products/skyblip_go/services/config.h"
+#include "products/skyblip_go/services/config_link.h"
 
 #include <cstring>
 
@@ -262,59 +262,60 @@ void ConfigLinkService::load() {
         return;
     }
 
-    uint8_t blob[kBlobCap];
-    size_t n = 0;
-    if (!is_ok(context_.roles.kv.read(kSettingsKey, blob, sizeof(blob), n))) return;
+    uint8_t blob[kBlobBytes];
+    size_t blob_bytes = 0;
+    if (!is_ok(context_.roles.kv.read(kSettingsKey, blob, sizeof(blob), blob_bytes))) return;
     loaded_ = true;
-    if (adopt(blob, n)) {
-        remember(blob, n);
-    } else if (newer_layout(blob, n)) {
+    if (adopt(blob, blob_bytes)) {
+        remember(blob, blob_bytes);
+    } else if (newer_layout(blob, blob_bytes)) {
         newer_kept_ = true;
         load_prior();
     } else {
-        remember(blob, n);
+        remember(blob, blob_bytes);
         fallback_ = settings::Fallback::Defaults;
     }
     config_.set_settings_fallback(fallback_);
 }
 
-bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t n) {
-    return settings::sealed(blob, n) && settings::blob_version(blob) > go::kBlobVersion;
+bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t blob_bytes) {
+    return settings::sealed(blob, blob_bytes) && settings::blob_version(blob) > go::kBlobVersion;
 }
 
 void ConfigLinkService::load_prior() {
-    uint8_t blob[kBlobCap];
-    size_t n = 0;
-    if (is_ok(context_.roles.kv.read(kPriorSettingsKey, blob, sizeof(blob), n)) && adopt(blob, n)) {
-        remember(blob, n);
+    uint8_t blob[kBlobBytes];
+    size_t blob_bytes = 0;
+    if (is_ok(context_.roles.kv.read(kPriorSettingsKey, blob, sizeof(blob), blob_bytes)) &&
+        adopt(blob, blob_bytes)) {
+        remember(blob, blob_bytes);
         fallback_ = settings::Fallback::Prior;
     } else {
         fallback_ = settings::Fallback::Defaults;
     }
 }
 
-bool ConfigLinkService::adopt(const uint8_t* blob, size_t n) {
+bool ConfigLinkService::adopt(const uint8_t* blob, size_t blob_bytes) {
     go::Settings loaded;
-    if (!is_ok(go::from_blob(blob, n, loaded))) return false;
+    if (!is_ok(go::from_blob(blob, blob_bytes, loaded))) return false;
     settings_ = loaded;
     return true;
 }
 
-void ConfigLinkService::remember(const uint8_t* blob, size_t n) {
-    if (n > kBlobCap) return;
-    std::memcpy(stored_, blob, n);
-    stored_len_ = n;
+void ConfigLinkService::remember(const uint8_t* blob, size_t blob_bytes) {
+    if (blob_bytes > kBlobBytes) return;
+    std::memcpy(stored_, blob, blob_bytes);
+    stored_bytes_ = blob_bytes;
 }
 
 bool ConfigLinkService::persist() {
     if (!storable()) return true;
-    uint8_t blob[kBlobCap];
+    uint8_t blob[kBlobBytes];
     go::to_blob(settings_, blob, sizeof(blob));
-    const size_t len = go::blob_size();
-    if (stored_len_ == len && std::memcmp(stored_, blob, len) == 0) return true;
-    if (!is_ok(context_.roles.kv.write(settings_key(), blob, len))) return false;
-    std::memcpy(stored_, blob, len);
-    stored_len_ = len;
+    const size_t blob_bytes = go::blob_size();
+    if (stored_bytes_ == blob_bytes && std::memcmp(stored_, blob, blob_bytes) == 0) return true;
+    if (!is_ok(context_.roles.kv.write(settings_key(), blob, blob_bytes))) return false;
+    std::memcpy(stored_, blob, blob_bytes);
+    stored_bytes_ = blob_bytes;
     return true;
 }
 
@@ -322,20 +323,21 @@ void ConfigLinkService::load_image_state() {
     if (image_state_loaded_) return;
     image_state_loaded_ = true;
     const ports::Capabilities fitted = context_.roles.capabilities;
-    const bool has_dfu = ports::has(fitted, ports::Capability::Dfu);
+    const bool dfu_fitted = ports::has(fitted, ports::Capability::Dfu);
     update_recorded_ = false;
     if (storable()) {
         uint8_t blob[dfu::kUpdateRecordBytes];
-        size_t n = 0;
-        update_recorded_ = is_ok(context_.roles.kv.read(kUpdateKey, blob, sizeof(blob), n)) &&
-                           dfu::from_blob(blob, n, update_record_);
+        size_t blob_bytes = 0;
+        update_recorded_ =
+            is_ok(context_.roles.kv.read(kUpdateKey, blob, sizeof(blob), blob_bytes)) &&
+            dfu::from_blob(blob, blob_bytes, update_record_);
     }
-    image_confirmed_ = !has_dfu || context_.roles.dfu.confirmed();
+    image_confirmed_ = !dfu_fitted || context_.roles.dfu.confirmed();
     image_state_ = image_confirmed_ ? dfu::ImageState::Confirmed : dfu::ImageState::Probation;
 
     dfu::SlotImage running;
     if (update_recorded_) {
-        if (!has_dfu || !context_.roles.dfu.running_version(running.version)) {
+        if (!dfu_fitted || !context_.roles.dfu.running_version(running.version)) {
             forget_update();
         } else {
             running.hashed = context_.roles.dfu.running_hash(running.hash);
@@ -380,7 +382,7 @@ void ConfigLinkService::record_update() {
 // INFO: fc 26sep26 a snapshot that failed costs only the restore, and the reverted image says
 // defaults
 void ConfigLinkService::keep_settings_for_a_revert() {
-    uint8_t blob[kBlobCap];
+    uint8_t blob[kBlobBytes];
     go::to_blob(settings_, blob, sizeof(blob));
     const size_t len = go::blob_size();
     if (!is_ok(context_.roles.kv.write(kPriorSettingsKey, blob, len))) return;

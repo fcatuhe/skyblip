@@ -37,7 +37,7 @@ void hold_button(Rig& rig, uint32_t& t, uint32_t ms, bool down = true) {
     const uint32_t until = t + ms;
     for (; t <= until; t += 50) {
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
     }
 }
 
@@ -68,12 +68,12 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     // either - a press stream that began before the question cannot answer it.
     for (int i = 0; i < 6; i++) {
         rig.press(t);
-        CHECK_FALSE(rig.product.config().config().upload_allowed());
+        CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     }
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
-    CHECK_FALSE(rig.product.config().config().upload_allowed());
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     CHECK(rig.settings().alarm_volume == volume);
 
     // The pilot stops, and the question is on the glass where it can be read.
@@ -95,7 +95,7 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     rig.press(t);
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().upload_allowed());
+    CHECK(rig.product.config_link().config().upload_allowed());
 
     // Back on the rows, at the top: the pilot was reading something else in between.
     CHECK(rig.product.screen().mode() == go::Mode::Menu);
@@ -127,14 +127,14 @@ TEST_CASE("product: the volume can be turned up in the air, where a phone is ref
     uint32_t t = 100;
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
     airborne(rig, t);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Airborne);
+    REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     // The companion app cannot: an unattended phone rewriting the whole struct
     // mid-flight is what that rule is for.
     rig.send("{\"cmd\":\"set\",\"alarm_volume\":2}");
     rig.run(t, t + 300);
     t += 300;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     // The pilot, on the panel, can. Presence is the thing the phone lacks, and

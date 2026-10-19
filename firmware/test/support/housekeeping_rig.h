@@ -27,7 +27,7 @@ struct Rig {
     void run(uint32_t from, uint32_t to, uint32_t step = 50) {
         for (uint32_t t = from; t <= to; t += step) {
             platform.clock().set_millis(t);
-            product.step(t);
+            product.run_pass(t);
         }
     }
 
@@ -38,7 +38,7 @@ struct Rig {
         const uint32_t until = t + ms;
         for (; t <= until; t += 50) {
             platform.clock().set_millis(t);
-            product.step(t);
+            product.run_pass(t);
         }
     }
 
@@ -107,7 +107,7 @@ struct Rig {
         platform.link().push_rx(frame);
     }
 
-    comms::ConfigService& config() { return product.config().config(); }
+    comms::ConfigService& config() { return product.config_link().config(); }
 };
 
 }  // namespace

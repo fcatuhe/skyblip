@@ -3,7 +3,7 @@
 // instrument in, and the image an e-paper wears once its rails are down. A page
 // that is right in a widget test and never presented is a page nobody sees.
 #include "doctest/doctest.h"
-#include "products/skyblip_go/pages/boot.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "test/support/glass_text.h"
 #include "test/support/menu_rig.h"
 #include "test/support/product_rig.h"
@@ -76,7 +76,7 @@ TEST_CASE("product: a ball that never stops is presented once a second, never fa
         const bool left = (t / kSwingMs) % 2 == 0;
         rig.platform.chips().imu.set_acceleration(1000, left ? -150 : 150, 0);
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         if (rig.state().duty.panel_partial_refreshes == seen) continue;
         seen = rig.state().duty.panel_partial_refreshes;
         if (presents > 0) CHECK(t - last_present_ms >= go::ScreenService::kPresentFloorMs);

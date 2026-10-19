@@ -119,8 +119,9 @@ bool FlightLogService::on_ground() const {
 
 void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(reply_to_, comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(reply_to_), ok,
-                                               reason, store));
+    pool.send(reply_link_session_,
+              comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(reply_link_session_), ok,
+                                    reason, store));
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {
@@ -155,7 +156,7 @@ bool FlightLogService::replying() const {
 void FlightLogService::watch_link_drops(uint32_t now_ms) {
     if (link_drops() == recorded_drops_) return;
     recorded_drops_ = link_drops();
-    record_link(diag::LinkAction::Dropped, reply_to_, 0, now_ms);
+    record_link(diag::LinkAction::Dropped, reply_link_session_, 0, now_ms);
 }
 
 void FlightLogService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
@@ -174,7 +175,7 @@ void FlightLogService::record_link(diag::LinkAction action, uint16_t session, ui
 }
 
 void FlightLogService::handle(const comms::LogRequest& request) {
-    reply_to_ = request.link_session;
+    reply_link_session_ = request.link_session;
     if (!config_.claim_link(request.link_session)) {
         ack(request.store, false, "claimed");
         return;

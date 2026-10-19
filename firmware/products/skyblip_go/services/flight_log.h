@@ -63,7 +63,7 @@ class FlightLogService : public runtime::Service {
     flight::LogSession session_{};
     flight::LogEvents events_{};
     uint32_t recorded_drops_{0};
-    uint16_t reply_to_{0};
+    uint16_t reply_link_session_{0};
 
     uint8_t scratch_[kStoreRecordBytes]{};
 };

@@ -347,7 +347,7 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
     uint32_t t = 0;
     taxi(rig, t, 20);
     fly(rig, t, 60);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Airborne);
+    REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     rig.platform.link().clear();
     rig.send_log("{\"cmd\":\"list\"}");
@@ -362,7 +362,7 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
     rig.run(t, t + 200);
     t += 200;
     CHECK(last_log_frame(rig)->bytes.find("in_flight") != std::string::npos);
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
 
     // And it stays refused: the log is still being written to.
     CHECK(rig.product.flight_log().recording());
@@ -386,7 +386,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     t += 3000;
     // The same prompt machine a firmware upload knocks on, so a pilot reads one
     // kind of authorisation on the glass and not two.
-    CHECK(rig.product.config().config().pending() == comms::Pending::EraseLog);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
     CHECK(rig.product.screen().prompt() == comms::Pending::EraseLog);
     CHECK(rig.product.flight_log().sessions_on_flash() >= 1);
 
@@ -394,13 +394,13 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     rig.press(t);
     rig.run(t, t + 1200);
     t += 1200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
     rig.send_log("{\"cmd\":\"erase\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::EraseLog);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
     rig.double_press(t);
     rig.run(t, t + 100);
     t += 100;

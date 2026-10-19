@@ -17,7 +17,8 @@ bool utc_dated(const bus::State& state) {
 }  // namespace
 
 Status TrafficService::setup() {
-    uplink_ = has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
+    uplink_enabled_ =
+        has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
     return Status::Ok;
 }
 
@@ -160,7 +161,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
 // missing without a single number moving.
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
-    if (!uplink_) return;
+    if (!uplink_enabled_) return;
     context_.state.air.uplink_frames++;
 
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];

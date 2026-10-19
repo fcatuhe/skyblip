@@ -15,10 +15,10 @@ void draw_activation(ui::Canvas& canvas, uint16_t bluetooth_tag) {
     canvas.draw_text(kInstallingLeftX, kActivationTagY, tag, true, kActivationTagScale);
 
     char name[32];
-    int n = format_string(name, "ACTIVATE ");
-    n += format_string(name + n, tag);
-    n += format_string(name + n, " SKYBLIP");
-    name[n] = 0;
+    int written = format_string(name, "ACTIVATE ");
+    written += format_string(name + written, tag);
+    written += format_string(name + written, " SKYBLIP");
+    name[written] = 0;
     canvas.draw_text(kInstallingLeftX, kActivationNameY, name, true, 1);
 }
 

@@ -7,11 +7,11 @@
 
 namespace skyblip::go {
 
-constexpr int kSettingsChangesCap = kConfirmDetailRows * (kConfirmDetailCols + 1);
+constexpr int kSettingsChangesBytes = kConfirmDetailRows * (kConfirmDetailCols + 1);
 
 // Rows joined by '\n', at most kConfirmDetailRows of them: past that, the last row counts the
 // rest. Writes nothing and returns 0 when nothing differs, or when cap is under
-// kSettingsChangesCap.
+// kSettingsChangesBytes.
 int describe_settings_changes(const Settings& from, const Settings& to, char* out, int cap);
 
 }  // namespace skyblip::go

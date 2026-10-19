@@ -33,7 +33,7 @@ uint32_t press(simulator::Simulator& h, uint32_t t) {
     return t;
 }
 
-// A touch has to outlast the pad's settle and end well inside go::Controls::kLongTouchMs.
+// A touch has to outlast the pad's settle and end well inside go::Controls::kLongTouchHoldMs.
 uint32_t page(simulator::Simulator& h, uint32_t t) {
     h.world().tap_pad();
     for (int i = 0; i < 5; i++) {
@@ -49,8 +49,8 @@ uint32_t show_sats(simulator::Simulator& h, uint32_t t) {
         t = page(h, t);
     t = press(h, t);
     const go::Menu menu = go::menu_for(go::Page::Nearby);
-    for (int i = 0;
-         i < menu.n && go::page_behind(h.product().screen().editor().focus()) != go::Page::Sats;
+    for (int i = 0; i < menu.row_count &&
+                    go::page_behind(h.product().screen().editor().focus()) != go::Page::Sats;
          i++)
         t = page(h, t);
     return press(h, t);
@@ -491,9 +491,9 @@ TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does
     run(h, 20000, 20200);
     h.world().send_config("{\"cmd\":\"recovery\"}");
     run(h, 20200, 20400);
-    REQUIRE(h.product().config().config().pending() == comms::Pending::Recovery);
+    REQUIRE(h.product().config_link().config().pending() == comms::Pending::Recovery);
 
-    h.product().config().config().confirm();
+    h.product().config_link().config().confirm();
     run(h, 20400, 20400 + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
 
     go::Glass expected;

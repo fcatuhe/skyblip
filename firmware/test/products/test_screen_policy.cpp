@@ -323,8 +323,8 @@ void locked_tick(Rig& rig, uint32_t t) {
 }
 
 bool on_the_redraw_phase(uint32_t t) {
-    return t % kSecondMs >= go::ScreenService::kLockedRedrawMs &&
-           t % kSecondMs < go::ScreenService::kLockedRedrawMs + kPassMs;
+    return t % kSecondMs >= go::ScreenService::kLockedRedrawWindowStartMs &&
+           t % kSecondMs < go::ScreenService::kLockedRedrawWindowStartMs + kPassMs;
 }
 
 int locked_presents(Rig& rig, uint32_t& t, uint32_t ms) {
@@ -383,7 +383,7 @@ TEST_CASE("screen policy: under a PPS lock a redraw the busy glass refused lands
     rig.run_seconds(t, 3);
     for (const uint32_t end = t + 3 * kSecondMs; t < end; t += kPassMs) locked_tick(rig, t);
 
-    t = (t / kSecondMs + 1) * kSecondMs + go::ScreenService::kLockedRedrawMs - 50;
+    t = (t / kSecondMs + 1) * kSecondMs + go::ScreenService::kLockedRedrawWindowStartMs - 50;
     const int before = rig.chip.present_count;
     rig.state.flight.seconds += 60;
     rig.screen.mark_dirty();
@@ -413,8 +413,8 @@ TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second,
             recorded++;
             CAPTURE(t);
             CHECK(record.phase_valid());
-            CHECK(record.into_ms >= go::ScreenService::kLockedRedrawMs);
-            CHECK(record.into_ms < go::ScreenService::kLockedRedrawMs + kPassMs);
+            CHECK(record.into_ms >= go::ScreenService::kLockedRedrawWindowStartMs);
+            CHECK(record.into_ms < go::ScreenService::kLockedRedrawWindowStartMs + kPassMs);
         }
     }
     CHECK(recorded >= 29);
@@ -430,10 +430,10 @@ TEST_CASE(
     locked_presents(rig, t, 3 * kSecondMs);
 
     t = (t / kSecondMs + 1) * kSecondMs;
-    locked_tick(rig, t + go::ScreenService::kLockedRedrawMs - 10);
+    locked_tick(rig, t + go::ScreenService::kLockedRedrawWindowStartMs - 10);
     const int before = rig.chip.present_count;
     rig.state.flight.seconds += 60;
-    locked_tick(rig, t + go::ScreenService::kLockedRedrawEndMs);
+    locked_tick(rig, t + go::ScreenService::kLockedRedrawWindowEndMs);
     CHECK(rig.chip.present_count == before);
 
     t += kSecondMs;

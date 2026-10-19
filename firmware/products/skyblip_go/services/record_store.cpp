@@ -160,7 +160,7 @@ uint32_t RecordStore::run_slots() const {
         (flight::log_record_offset(first + 1) - 1) / store::kPageBytes * store::kPageBytes +
         store::kPageBytes;
     const uint32_t fits = (page_end - store::kSectorHeaderBytes) / kStoreRecordBytes - first;
-    return std::min({fits, ring_.slots_per_sector() - first, kRunMostSlots});
+    return std::min({fits, ring_.slots_per_sector() - first, kMaxRunSlots});
 }
 
 uint32_t RecordStore::append_cost_ms(bool claim_wanted, uint32_t count) const {
@@ -252,11 +252,11 @@ uint32_t RecordStore::sessions_within(uint32_t sectors) const {
     return whole;
 }
 
-void RecordStore::reply(uint16_t to, int len) { pool_.send(to, len); }
+void RecordStore::reply(uint16_t link_session, int bytes) { pool_.send(link_session, bytes); }
 
-void RecordStore::ack(uint16_t to, bool ok, const char* reason) {
-    reply(to,
-          comms::format_log_ack(pool_.reply_buffer(), pool_.reply_cap(to), ok, reason, selector()));
+void RecordStore::ack(uint16_t link_session, bool ok, const char* reason) {
+    reply(link_session, comms::format_log_ack(pool_.reply_buffer(), pool_.reply_cap(link_session),
+                                              ok, reason, selector()));
 }
 
 void RecordStore::serve(const comms::LogRequest& request) {
@@ -269,69 +269,73 @@ void RecordStore::serve(const comms::LogRequest& request) {
 }
 
 void RecordStore::answer_list(const comms::LogRequest& request) {
-    const uint16_t to = request.link_session;
+    const uint16_t link_session = request.link_session;
     if (!request.index_valid) {
         rebuild_index();
-        reply(to, comms::format_log_count(pool_.reply_buffer(), pool_.reply_cap(to), session_count_,
-                                          index_truncated_, selector()));
+        reply(link_session,
+              comms::format_log_count(pool_.reply_buffer(), pool_.reply_cap(link_session),
+                                      session_count_, index_truncated_, selector()));
         return;
     }
     if (request.index >= session_count_) {
-        ack(to, false, "no_session");
+        ack(link_session, false, "no_session");
         return;
     }
     const SessionInfo& entry = index_[request.index];
-    reply(to, comms::format_log_session(pool_.reply_buffer(), pool_.reply_cap(to), request.index,
-                                        session_count_, entry.session_id, entry.records,
-                                        entry.closed, entry.truncated, selector()));
+    reply(link_session,
+          comms::format_log_session(pool_.reply_buffer(), pool_.reply_cap(link_session),
+                                    request.index, session_count_, entry.session_id, entry.records,
+                                    entry.closed, entry.truncated, selector()));
 }
 
 void RecordStore::answer_read(const comms::LogRequest& request) {
-    const uint16_t to = request.link_session;
+    const uint16_t link_session = request.link_session;
     const SessionInfo* entry = find(request.session);
     if (entry == nullptr) {
         rebuild_index();
         entry = find(request.session);
     }
     if (entry == nullptr) {
-        ack(to, false, "no_session");
+        ack(link_session, false, "no_session");
         return;
     }
-    const int per_chunk = comms::log_records_per_chunk(pool_.payload_bytes(to), selector());
+    const int per_chunk =
+        comms::log_records_per_chunk(pool_.payload_bytes(link_session), selector());
     if (per_chunk == 0) {
-        ack(to, false, "payload");
+        ack(link_session, false, "payload");
         return;
     }
     if (ring_.slots_per_sector() == 0 || ring_.sector_count() == 0) {
-        ack(to, false, "no_storage");
+        ack(link_session, false, "no_storage");
         return;
     }
 
     const comms::LogWindow window =
         comms::plan_log_window(request.from, request.count, per_chunk, entry->records);
     if (window.chunks == 0) {
-        reply(to,
-              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to), request.session,
-                                      request.from, pool_.chunk_buffer(), 0, true, selector()));
+        reply(link_session,
+              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(link_session),
+                                      request.session, request.from, pool_.chunk_buffer(), 0, true,
+                                      selector()));
         return;
     }
-    reading_ = Reading{true, to, request.session, window, 0};
+    reading_ = Reading{true, link_session, request.session, window, 0};
     continue_read();
 }
 
 void RecordStore::continue_read() {
     while (reading_.active && !pool_.holding()) {
-        const uint16_t to = reading_.to;
+        const uint16_t link_session = reading_.link_session;
         const comms::LogChunkSpan span = reading_.window.at(reading_.next);
         if (!read_records(reading_.session, span.from, span.records)) {
             reading_.active = false;
-            ack(to, false, "read_failed");
+            ack(link_session, false, "read_failed");
             return;
         }
         const bool sent = pool_.send(
-            to, comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_cap(to), reading_.session,
-                                        span.from, pool_.chunk_buffer(), span.records, span.eof,
-                                        selector()));
+            link_session, comms::format_log_chunk(
+                              pool_.reply_buffer(), pool_.reply_cap(link_session), reading_.session,
+                              span.from, pool_.chunk_buffer(), span.records, span.eof, selector()));
         reading_.next++;
         if (!sent || reading_.next == reading_.window.chunks) reading_.active = false;
     }

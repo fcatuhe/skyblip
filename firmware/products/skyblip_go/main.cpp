@@ -79,7 +79,7 @@ int main(void) {
     for (;;) {
         const int64_t began_ticks = k_uptime_ticks();
         const uint32_t now_ms = static_cast<uint32_t>(k_ticks_to_ms_floor64(began_ticks));
-        g_product.step(now_ms);
+        g_product.run_pass(now_ms);
         g_diagnostics.step(g_product, now_ms);
 
         if (g_product.may_feed_watchdog(now_ms)) {

@@ -31,14 +31,14 @@ constexpr int kRingW = 2;
 constexpr int kRimR = kAllR + 11;
 
 constexpr int ring_r(RadarPlot plot) { return plot == RadarPlot::All ? kAllR : kToScaleR; }
-constexpr int kGlyphH = 7;
+using ui::kCharH;
 constexpr int kClockScale = 2;
 constexpr int kStateScale = 1;
 constexpr int kLabelPad = 2;
 constexpr int kStackGap = 2;
 constexpr int kFooterBottom = kGlassHeight - kMargin;
-constexpr int kClockY = kFooterBottom - kGlyphH * kClockScale;
-constexpr int kStateY = kClockY - kStackGap - kGlyphH * kStateScale;
+constexpr int kClockY = kFooterBottom - kCharH * kClockScale;
+constexpr int kStateY = kClockY - kStackGap - kCharH * kStateScale;
 constexpr int kFooterTop = kStateY - kLabelPad;
 
 struct HeadingUp {
@@ -46,8 +46,8 @@ struct HeadingUp {
     int32_t right;
 };
 
-inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track) {
-    const int64_t c = icos(track), s = isin(track);
+inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track_angle16) {
+    const int64_t c = icos(track_angle16), s = isin(track_angle16);
     return {static_cast<int32_t>((north * c + east * s) / kTrigOne),
             static_cast<int32_t>((east * c - north * s) / kTrigOne)};
 }

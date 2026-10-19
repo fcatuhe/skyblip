@@ -24,7 +24,6 @@ struct ConfirmSnapshot {
 // The grid, exported so a test reads a line back off the glass instead of
 // counting ink: "the page says POWER OFF" is the claim that matters.
 constexpr int kConfirmLeftX = 4;
-constexpr int kConfirmCellW = 6;
 constexpr int kConfirmHeaderY = 6;
 constexpr int kConfirmTitleY = 40;
 constexpr int kConfirmDetailY = 74;

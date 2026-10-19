@@ -1,7 +1,7 @@
 // The cell on the glass: the word the ring wears, the words under the mark, and the note the next
 // boot reads.
 #include "doctest/doctest.h"
-#include "products/skyblip_go/pages/boot.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 #include "ui/widgets/wordmark.h"
@@ -284,7 +284,7 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     REQUIRE(pressed.setup() == Status::Ok);
     REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
     CHECK(pressed.product.went_dark_flat());
-    CHECK(reads_in(pressed.product.boot_page(), "WAS FLAT", 0, 150, 200, 199));
+    CHECK(reads_in(pressed.product.self_test_page(), "WAS FLAT", 0, 150, 200, 199));
     CHECK_FALSE(pressed.platform.system_power().went_dark_flat());
     pressed.send("{\"cmd\":\"status\"}");
     pressed.run(0, 200);
@@ -304,7 +304,7 @@ TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot
     Rig ordinary;
     REQUIRE(ordinary.setup() == Status::Ok);
     CHECK_FALSE(ordinary.product.went_dark_flat());
-    CHECK_FALSE(reads_in(ordinary.product.boot_page(), "WAS FLAT", 0, 0, 200, 199));
+    CHECK_FALSE(reads_in(ordinary.product.self_test_page(), "WAS FLAT", 0, 0, 200, 199));
 }
 
 // The note is the cell's, not the frame's: a panel held off in the heat parks nothing.
@@ -313,7 +313,7 @@ TEST_CASE("product: a cutoff too hot to park a frame still notes the flat cell")
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
         static_cast<uint32_t>(ports::Capability::DieTemperature));
     Rig dying{kWithDie};
-    dying.platform.die_temperature().hold(go::ScreenService::kHoldAboveDeciCelsius + 10);
+    dying.platform.die_temperature().hold(go::ScreenService::kRefreshCeilingDeciCelsius + 10);
     REQUIRE(dying.setup() == Status::Ok);
     dying.run(0, 2000);
     dying.platform.battery().divider_mv = 3100;

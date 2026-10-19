@@ -13,12 +13,12 @@ bool AlarmService::silenced(traffic::Target& target, formation::State state) {
 }
 
 formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t now_ms) {
-    const formation::Report r =
+    const formation::Report report =
         formation_.observe(context_.state.own, target.observation, target.liftoff, now_ms);
     const bool was = target.in_formation;
-    target.in_formation = r.state == formation::State::Together;
+    target.in_formation = report.state == formation::State::Together;
     if (target.in_formation != was) dirty_ = true;
-    return r.state;
+    return report.state;
 }
 
 void AlarmService::tick(uint32_t now_ms) {
@@ -29,19 +29,19 @@ void AlarmService::tick(uint32_t now_ms) {
     formation_.observe_own(context_.state.own, now_ms);
     if (context_.state.own.fix_valid) {
         for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-            traffic::Target* t = context_.state.traffic.at(i);
-            if (!t || !t->used) continue;
-            const formation::State f = watch_formation(*t, now_ms);
-            const traffic::AlarmTracker::Decision d =
-                tracker_.update(context_.state.own, t->observation, now_ms);
-            t->alarm_level = d.assessment.level;
-            t->alarm_dismissed = d.dismissed;
-            const bool quiet = silenced(*t, f);
-            record_traffic(i, *t, d, now_ms);
+            traffic::Target* target = context_.state.traffic.at(i);
+            if (!target || !target->used) continue;
+            const formation::State formation_state = watch_formation(*target, now_ms);
+            const traffic::AlarmTracker::Decision decision =
+                tracker_.update(context_.state.own, target->observation, now_ms);
+            target->alarm_level = decision.assessment.level;
+            target->alarm_dismissed = decision.dismissed;
+            const bool quiet = silenced(*target, formation_state);
+            record_traffic(i, *target, decision, now_ms);
             if (quiet) continue;
-            worst = std::max(d.assessment.level, worst);
-            if (!d.dismissed) live = std::max(d.assessment.level, live);
-            announced = announced || d.notify;
+            worst = std::max(decision.assessment.level, worst);
+            if (!decision.dismissed) live = std::max(decision.assessment.level, live);
+            announced = announced || decision.notify;
         }
     }
     tracker_.forget_stale(now_ms);
@@ -68,8 +68,8 @@ void AlarmService::tick(uint32_t now_ms) {
 }
 
 void AlarmService::accrue_annunciator(uint32_t now_ms) {
-    sounding_.observe(policy_.sounding(), now_ms);
-    vibrating_.observe(policy_.vibrating(), now_ms);
+    sounding_.observe(annunciation_.sounding(), now_ms);
+    vibrating_.observe(annunciation_.vibrating(), now_ms);
     context_.state.duty.annunciator_ms = sounding_.on_ms() + vibrating_.on_ms();
 }
 
@@ -126,12 +126,12 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.power_level = context_.state.power.level;
     situation.fix_valid = context_.state.own.fix_valid;
 
-    const indication::Command command = lamp_.update(situation, now_ms);
+    const indication::Command command = indication_.update(situation, now_ms);
     if (command.changed) context_.roles.indicator.show(command.lamp);
 }
 
 void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_ms) {
-    const annunciation::Command command = policy_.update(situation, now_ms);
+    const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (command.tone_changed) drive_buzzer(command);
     if (command.vibration_changed) drive_motor(command.vibrating);
 }

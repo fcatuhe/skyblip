@@ -135,10 +135,10 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
 
     CHECK(rig.product.screen().page() == go::Page::SelfTest);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
-    CHECK(std::memcmp(rig.product.screen().framebuffer().data(), rig.product.boot_page().data(),
-                      go::Glass::kBytes) == 0);
+    CHECK(std::memcmp(rig.product.screen().framebuffer().data(),
+                      rig.product.self_test_page().data(), go::Glass::kBytes) == 0);
     CHECK(rig.platform.chips().epd.framebuffer().count_black() ==
-          rig.product.boot_page().count_black());
+          rig.product.self_test_page().count_black());
 
     // A tap goes back to the page whose menu opened it, not on to a fourth picture.
     rig.tap(t);
@@ -286,7 +286,7 @@ TEST_CASE("product: walking the rows without changing one writes nothing at all"
     const go::Settings before = rig.settings();
 
     open_menu(rig, t);
-    for (int i = 0; i < go::menu_for(go::Page::Radar).n; i++) move(rig, t);
+    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) move(rig, t);
 
     // Off the last row and back to the traffic picture the pad pages through.
     CHECK(rig.product.screen().page() == go::Page::Radar);
@@ -310,8 +310,8 @@ TEST_CASE("product: a page nobody presses gives the traffic picture back on its 
     open_menu(rig, t);
     focus_on(rig, t, go::MenuRow::Volume);
 
-    rig.run(t, t + go::MenuEditor::kIdleReturnMs + 2000);
-    t += go::MenuEditor::kIdleReturnMs + 2000;
+    rig.run(t, t + go::MenuEditor::kIdleReturnHoldMs + 2000);
+    t += go::MenuEditor::kIdleReturnHoldMs + 2000;
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(rig.product.screen().editor().active());
 }

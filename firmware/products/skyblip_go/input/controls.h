@@ -12,9 +12,9 @@ enum class Gesture : uint8_t { None = 0, Tap = 1, LongTouch = 2, Press = 3 };
 
 class Controls {
    public:
-    static constexpr uint32_t kLongTouchMs = 1000;
+    static constexpr uint32_t kLongTouchHoldMs = 1000;
 
-    static_assert(kLongTouchMs < power::kLongPressHoldMs,
+    static_assert(kLongTouchHoldMs < power::kLongPressHoldMs,
                   "the pad's long touch has to resolve before the press that stows the device");
 
     Gesture read(const events::ContactEvent& event) {
@@ -22,7 +22,8 @@ class Controls {
     }
 
     Gesture tick(uint32_t now_ms) {
-        if (!touching_ || touch_spent_ || now_ms - touched_ms_ < kLongTouchMs) return Gesture::None;
+        if (!touching_ || touch_spent_ || now_ms - touched_ms_ < kLongTouchHoldMs)
+            return Gesture::None;
         touch_spent_ = true;
         return Gesture::LongTouch;
     }
@@ -59,7 +60,7 @@ class Controls {
     }
 
     bool released_before_the_long_touch(uint32_t at_ms) const {
-        return at_ms - touched_ms_ < kLongTouchMs;
+        return at_ms - touched_ms_ < kLongTouchHoldMs;
     }
 
     uint32_t pressed_ms_{0};

@@ -21,7 +21,7 @@ RadarTarget abeam[1] = {{0, 3000, 0, Level::None}};
 RadarSnapshot cruising(int32_t speed_mps) {
     RadarSnapshot snapshot = flying(0);
     snapshot.speed_mm_s = speed_mps * 1000;
-    snapshot.n_targets = 1;
+    snapshot.target_count = 1;
     snapshot.targets = abeam;
     return snapshot;
 }
@@ -40,7 +40,7 @@ int marks_in(const RadarSnapshot& snapshot, int x0, int y0, int x1, int y1) {
 
 RadarSnapshot one_target(RadarTarget* t) {
     RadarSnapshot snapshot = flying(0);
-    snapshot.n_targets = 1;
+    snapshot.target_count = 1;
     snapshot.targets = t;
     return snapshot;
 }
@@ -126,7 +126,7 @@ TEST_CASE("radar: a formation is own ship, counted by quadrant") {
         {-700, -400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
     RadarSnapshot snapshot = flying(0);
-    snapshot.n_targets = 4;
+    snapshot.target_count = 4;
     snapshot.targets = flight;
     snapshot.formation_members = 4;
     const Glass canvas = radar(snapshot);
@@ -162,7 +162,7 @@ TEST_CASE("radar: a turning target's leader is its arc") {
     RadarTarget straight[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     RadarTarget arcing[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0, 200, true}};
     RadarSnapshot snapshot = flying(0);
-    snapshot.n_targets = 1;
+    snapshot.target_count = 1;
 
     snapshot.targets = straight;
     const Glass tangent = radar(snapshot);
@@ -187,7 +187,7 @@ TEST_CASE("radar: traffic past the ring still draws, and the count stays on the 
     RadarTarget beside[1] = {{0, (42 * kMetresPerNm) / 10, 0, Level::Advisory}};
     RadarSnapshot snapshot = flying(0);
     snapshot.speed_mm_s = 30000;
-    snapshot.n_targets = 1;
+    snapshot.target_count = 1;
     snapshot.targets = beside;
     const Glass canvas = radar(snapshot);
 
@@ -201,7 +201,7 @@ TEST_CASE("radar: traffic past the ring still draws, and the count stays on the 
     RadarSnapshot low = snapshot;
     low.targets = behind;
     RadarSnapshot none = snapshot;
-    none.n_targets = 0;
+    none.target_count = 0;
     CHECK(ink_in(radar(low), 20, 150, 90, 199) > ink_in(radar(none), 20, 150, 90, 199));
 
     // Past the glass it is gone altogether, count and all.
@@ -272,7 +272,7 @@ TEST_CASE("radar: the vector rides own ship's turn, not its nose") {
     RadarTarget behind[1] = {{-3000, 0, 0, Level::Advisory}};
     RadarSnapshot right = flying(0);
     right.speed_mm_s = 30000;
-    right.n_targets = 1;
+    right.target_count = 1;
     right.targets = behind;
     right.turn_cdps = 100;
     CHECK(radar(right).get_pixel(110, 82));
@@ -309,7 +309,7 @@ TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
     RadarTarget far_out[1] = {{40000, 0, 0, Level::None}};
     RadarSnapshot beyond = flying(0);
     beyond.speed_mm_s = 30000;
-    beyond.n_targets = 1;
+    beyond.target_count = 1;
     beyond.targets = far_out;
     CHECK_FALSE(radar(beyond).get_pixel(100, 78));
 }
@@ -320,13 +320,13 @@ TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation"
                            abeam[0]};
     RadarSnapshot together = flying(0);
     together.speed_mm_s = 30000;
-    together.n_targets = 1;
+    together.target_count = 1;
     together.targets = pair;
     together.formation_members = 1;
     CHECK(marks_in(together, 0, 0, 200, 200) == 0);
 
     RadarSnapshot with_traffic = together;
-    with_traffic.n_targets = 2;
+    with_traffic.target_count = 2;
     CHECK(radar(with_traffic).get_pixel(100, 78));
     CHECK(radar(with_traffic).get_pixel(97, 56));
 }

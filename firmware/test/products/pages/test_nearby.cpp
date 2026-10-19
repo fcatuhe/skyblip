@@ -61,8 +61,8 @@ NearbySnapshot listing(const traffic::RangeRow* rows, int n, go::Units units) {
     snapshot.own_address = 0x4B1F07;
     snapshot.fix_valid = true;
     snapshot.units = units;
-    snapshot.n_heard = n;
-    snapshot.n_rows = n;
+    snapshot.heard_count = n;
+    snapshot.row_count = n;
     snapshot.rows = rows;
     return snapshot;
 }
@@ -123,14 +123,14 @@ TEST_CASE("nearby: a callsign wider than the column is drawn as far as the colum
     draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
 
     CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "A ABCDEF", kNearbyScale));
-    CHECK(reads_right_of(canvas, kNearbyDistEnd, row_y(0), "0.2", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyDistanceEnd, row_y(0), "0.2", kNearbyScale));
 }
 
 TEST_CASE("nearby: no fix means no range, and the page says so instead of listing") {
     traffic::RangeRow rows[1] = {row_at(4300, 120)};
     NearbySnapshot snapshot = listing(rows, 1, go::Units::Nautical);
     snapshot.fix_valid = false;
-    snapshot.n_heard = 4;
+    snapshot.heard_count = 4;
 
     Glass canvas;
     draw_nearby(canvas, snapshot);
@@ -148,15 +148,16 @@ TEST_CASE("nearby: an empty sky is a word on the second row, not an empty list")
 TEST_CASE("nearby: the header counts what was heard, not what fits") {
     NearbySnapshot snapshot;
     snapshot.fix_valid = true;
-    snapshot.n_heard = 26;
-    snapshot.n_rows = 0;
+    snapshot.heard_count = 26;
+    snapshot.row_count = 0;
     snapshot.rows = nullptr;
 
     Glass canvas;
     draw_nearby(canvas, snapshot);
     // The figure is read, the word only says what was counted: the radar's own ACT arrangement.
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, kNearbyTitleY, "26", 2));
-    CHECK(reads_in(canvas, "TRAFFIC", 0, kNearbyTitleY, kNearbyRelEnd, kNearbyHeadY, 1));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyTitleY, "26", 2));
+    CHECK(
+        reads_in(canvas, "TRAFFIC", 0, kNearbyTitleY, kNearbyRelativeAltitudeEnd, kNearbyHeadY, 1));
     CHECK(ink_in_row(canvas, 0) == 0);
 }
 
@@ -203,8 +204,8 @@ TEST_CASE("nearby: every head stands on the edge of the figures under it") {
     draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
 
     CHECK(reads_at(canvas, kNearbyIdX, kNearbyHeadY, "SRC ID", 1));
-    CHECK(reads_right_of(canvas, kNearbyDistEnd, kNearbyHeadY, "DIST", 1));
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, kNearbyHeadY, "ALT", 1));
+    CHECK(reads_right_of(canvas, kNearbyDistanceEnd, kNearbyHeadY, "DIST", 1));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyHeadY, "ALT", 1));
 }
 
 // B4. A pilot who asked for miles on the instruments is not handed kilometres here.
@@ -215,8 +216,8 @@ TEST_CASE("nearby: the distance column reads in the unit a pilot set") {
     draw_nearby(nautical, listing(rows, 1, go::Units::Nautical));
     draw_nearby(metric, listing(rows, 1, go::Units::Metric));
 
-    CHECK(reads_right_of(nautical, kNearbyDistEnd, row_y(0), "2.3", kNearbyScale));
-    CHECK(reads_right_of(metric, kNearbyDistEnd, row_y(0), "4.3", kNearbyScale));
+    CHECK(reads_right_of(nautical, kNearbyDistanceEnd, row_y(0), "2.3", kNearbyScale));
+    CHECK(reads_right_of(metric, kNearbyDistanceEnd, row_y(0), "4.3", kNearbyScale));
 }
 
 // The vertical is the column next door, so a distance that carried it would say it twice.
@@ -226,8 +227,8 @@ TEST_CASE("nearby: distance is the ground track, whatever the traffic is above o
     Glass canvas;
     draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
 
-    CHECK(reads_right_of(canvas, kNearbyDistEnd, row_y(0), "0.0", kNearbyScale));
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(0), "+98", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyDistanceEnd, row_y(0), "0.0", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(0), "+98", kNearbyScale));
 }
 
 // The column is scanned down, and a figure that changes width moves under the eye doing it.
@@ -237,8 +238,8 @@ TEST_CASE("nearby: relative altitude is two digits and a sign, the width the rad
     Glass canvas;
     draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
 
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(0), "+04", kNearbyScale));
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(1), "-01", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(0), "+04", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(1), "-01", kNearbyScale));
 }
 
 // A separation is cleared and flown in feet wherever the aeroplane is.
@@ -249,8 +250,8 @@ TEST_CASE("nearby: relative altitude reads in hundreds of feet under either unit
     draw_nearby(nautical, listing(rows, 1, go::Units::Nautical));
     draw_nearby(metric, listing(rows, 1, go::Units::Metric));
 
-    CHECK(reads_right_of(nautical, kNearbyRelEnd, row_y(0), "+12", kNearbyScale));
-    CHECK(reads_right_of(metric, kNearbyRelEnd, row_y(0), "+12", kNearbyScale));
+    CHECK(reads_right_of(nautical, kNearbyRelativeAltitudeEnd, row_y(0), "+12", kNearbyScale));
+    CHECK(reads_right_of(metric, kNearbyRelativeAltitudeEnd, row_y(0), "+12", kNearbyScale));
 }
 
 TEST_CASE("nearby: traffic below carries its sign, and traffic at this level carries none") {
@@ -259,9 +260,9 @@ TEST_CASE("nearby: traffic below carries its sign, and traffic at this level car
     Glass canvas;
     draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
 
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(0), "-12", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(0), "-12", kNearbyScale));
     // +0 and -0 are the same number, and a sign an eye has to discard is one not to draw.
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(1), "00", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(1), "00", kNearbyScale));
 }
 
 // Three double-height columns fill the glass, so a figure with one more digit hits its neighbour.
@@ -271,9 +272,9 @@ TEST_CASE("nearby: a distance or a separation past what the column holds is said
     Glass canvas;
     draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
 
-    CHECK(reads_right_of(canvas, kNearbyDistEnd, row_y(0), "FAR", kNearbyScale));
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(0), "+99", kNearbyScale));
-    CHECK(reads_right_of(canvas, kNearbyRelEnd, row_y(1), "-99", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyDistanceEnd, row_y(0), "FAR", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(0), "+99", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(1), "-99", kNearbyScale));
 }
 
 TEST_CASE("nearby: more emitters than rows are cut, never overdrawn") {

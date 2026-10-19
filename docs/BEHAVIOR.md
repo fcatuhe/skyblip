@@ -2302,27 +2302,6 @@ The TCXO on DIO3: it starts once, and no retune, burst or hop pays its 5 ms star
 
 ## pages
 
-### test/products/pages/test_boot.cpp
-
-The power-on self test, on the glass. On a first flash this is the only thing that can name the part that did not answer, so these read the framebuffer back rather than count ink: "there is something on the GNSS row" is not the claim that matters, "the GNSS row says FAIL" is.
-
-**boot**
-
-- a full inventory still fits the panel
-- a part that could be two parts says which one it is
-- a row with no detail is the row it always was
-- a unit that last went dark on a flat cell says so beside the cell's voltage
-- an address the board cannot account for reads as its hex
-  > A part nobody expected is the reason to scan at all, and there is no name for it.
-- every part on the page carries its own verdict
-- the bus row stops at the width of a row rather than running off it
-  > The row is what a bench reads a bus off: it must not run into the row's edge.
-- the bus scan is a row of its own, addresses and no verdict
-- the cell's voltage is on the page when there is a gauge to read
-- the inventory a real unit reports fits with the bus row on it
-- the page says whether the device may fly, in one word
-- the reset reason and the identity share the header
-
 ### test/products/pages/test_capture.cpp
 
 The page that states the price of a capture before it takes it, and what it took.
@@ -2693,6 +2672,27 @@ The satellites page: a bar for every satellite in view, and what stands in befor
 - a receiver that has heard nothing says so rather than drawing an empty chart
 - before the first GSV set the solution stands in for the bars
   > A level nobody has measured yet is not drawn as a level of zero.
+
+### test/products/pages/test_self_test.cpp
+
+The power-on self test, on the glass. On a first flash this is the only thing that can name the part that did not answer, so these read the framebuffer back rather than count ink: "there is something on the GNSS row" is not the claim that matters, "the GNSS row says FAIL" is.
+
+**boot**
+
+- a full inventory still fits the panel
+- a part that could be two parts says which one it is
+- a row with no detail is the row it always was
+- a unit that last went dark on a flat cell says so beside the cell's voltage
+- an address the board cannot account for reads as its hex
+  > A part nobody expected is the reason to scan at all, and there is no name for it.
+- every part on the page carries its own verdict
+- the bus row stops at the width of a row rather than running off it
+  > The row is what a bench reads a bus off: it must not run into the row's edge.
+- the bus scan is a row of its own, addresses and no verdict
+- the cell's voltage is on the page when there is a gauge to read
+- the inventory a real unit reports fits with the bus row on it
+- the page says whether the device may fly, in one word
+- the reset reason and the identity share the header
 
 ### test/products/pages/test_settings_changes.cpp
 
@@ -3555,7 +3555,7 @@ What a tablet is told about own-ship: pressure altitude in $PGRMZ, the cell in $
 
 - $PGRMZ carries pressure altitude on the standard datum
 - GPRMC/GPGGA give a panel-mounted tablet the position it has no GNSS for
-  > The cadence arithmetic this relies on: emit_ownship() is two calls inside run_pass(), the same pass PFLAU and PGRMZ already share, at the pass's fixed 1 Hz. NmeaService::kTargetsPerPass and kPassesPerRefreshBound are derived only from kTargetRefreshBoundMs, kMovingTargetRedrawMs and the table's capacity - none of which this reads or writes - so two more sentences a pass changes what a pass costs in bytes, never how many passes the refresh bound allows or how many targets one may carry.
+  > The cadence arithmetic this relies on: emit_ownship() is two calls inside run_pass(), the same pass PFLAU and PGRMZ already share, at the pass's fixed 1 Hz. NmeaService::kTargetsPerPass and kPassesPerRefreshCeiling are derived only from kTargetRefreshCeilingMs, kMovingTargetRedrawPeriodMs and the table's capacity - none of which this reads or writes - so two more sentences a pass changes what a pass costs in bytes, never how many passes the refresh bound allows or how many targets one may carry.
 - a unit whose barometer went quiet still tells the tablet about its cell
   > $PGRMZ is gated on a barometer because a GNSS altitude under that sentence name would feed a geometric height into an app's altimeter. $LK8EX1 is not, because the cell is not a barometric quantity and this is the only sentence we speak that says anything about power: silence here is a pilot with no way to see a flat unit coming. SoftRF MB sends the same battery-only sentence when no baro chip answered (src/protocol/data/NMEA.cpp:1398-1401).
 - the cell and the temperature reach a tablet in $LK8EX1, on the $PGRMZ pass

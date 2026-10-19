@@ -6,8 +6,8 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-constexpr int kCellW = 6;
-constexpr int kGlyphH = 7;
+using ui::kCellW;
+using ui::kCharH;
 constexpr int kRight = kGlassWidth - kLeft;
 
 constexpr int kTitleY = 2;
@@ -74,114 +74,116 @@ int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system
 void scale_mark(ui::Canvas& canvas) {
     const int y = kBaseY - kGoodDbHz * kBarSpan / kFullScaleDbHz;
     for (int x = kLeft; x < kRight; x += 4) canvas.hline(x, y, 1, true);
-    char buf[4];
-    const int n = format_uint(buf, kGoodDbHz, 2);
-    buf[n] = 0;
-    right_aligned(canvas, kRight, y - kGlyphH - 1, buf, n);
+    char text[4];
+    const int written = format_uint(text, kGoodDbHz, 2);
+    text[written] = 0;
+    right_aligned(canvas, kRight, y - kCharH - 1, text, written);
 }
 
-uint32_t used_count(const SatsSnapshot& s) {
-    if (s.sky != nullptr && s.sky->in_use() > 0) return static_cast<uint32_t>(s.sky->in_use());
-    return s.sats;
+uint32_t used_count(const SatsSnapshot& snapshot) {
+    if (snapshot.sky != nullptr && snapshot.sky->in_use() > 0)
+        return static_cast<uint32_t>(snapshot.sky->in_use());
+    return snapshot.sats;
 }
 
-void draw_counts(ui::Canvas& canvas, const SatsSnapshot& s) {
-    char buf[24];
-    int n = format_string(buf, "USED ");
-    n += format_uint(buf + n, used_count(s), 1);
-    if (s.levels_live && s.sky != nullptr) {
-        n += format_string(buf + n, " OF ");
-        n += format_uint(buf + n, static_cast<uint32_t>(s.sky->count()), 1);
+void draw_counts(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    char text[24];
+    int written = format_string(text, "USED ");
+    written += format_uint(text + written, used_count(snapshot), 1);
+    if (snapshot.levels_live && snapshot.sky != nullptr) {
+        written += format_string(text + written, " OF ");
+        written += format_uint(text + written, static_cast<uint32_t>(snapshot.sky->count()), 1);
     }
-    buf[n] = 0;
-    right_aligned(canvas, kRight, kTitleY, buf, n);
+    text[written] = 0;
+    right_aligned(canvas, kRight, kTitleY, text, written);
 }
 
-void draw_dops(ui::Canvas& canvas, const SatsSnapshot& s) {
-    char buf[32];
-    int n = format_string(buf, "HDOP ");
-    if (s.hdop_e2 > 0)
-        n += format_uint(buf + n, s.hdop_e2, 3, 2);
+void draw_dops(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    char text[32];
+    int written = format_string(text, "HDOP ");
+    if (snapshot.hdop_e2 > 0)
+        written += format_uint(text + written, snapshot.hdop_e2, 3, 2);
     else
-        n += format_string(buf + n, "---");
-    n += format_string(buf + n, "  VDOP ");
-    if (s.vdop_e2 > 0)
-        n += format_uint(buf + n, s.vdop_e2, 3, 2);
+        written += format_string(text + written, "---");
+    written += format_string(text + written, "  VDOP ");
+    if (snapshot.vdop_e2 > 0)
+        written += format_uint(text + written, snapshot.vdop_e2, 3, 2);
     else
-        n += format_string(buf + n, "---");
-    buf[n] = 0;
-    canvas.draw_text(kLeft, kDopY, buf, true, 1);
+        written += format_string(text + written, "---");
+    text[written] = 0;
+    canvas.draw_text(kLeft, kDopY, text, true, 1);
 }
 
-void draw_nav_phase(ui::Canvas& canvas, const SatsSnapshot& s) {
-    if (!s.nav_valid) return;
-    char buf[12];
-    int n = format_string(buf, "NAV ");
-    n += format_uint(buf + n, s.nav_ms, 3);
-    n += format_string(buf + n, "MS");
-    buf[n] = 0;
-    right_aligned(canvas, kRight, kDopY, buf, n);
+void draw_nav_phase(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    if (!snapshot.nav_valid) return;
+    char text[12];
+    int written = format_string(text, "NAV ");
+    written += format_uint(text + written, snapshot.nav_ms, 3);
+    written += format_string(text + written, "MS");
+    text[written] = 0;
+    right_aligned(canvas, kRight, kDopY, text, written);
 }
 
-void draw_port(ui::Canvas& canvas, const SatsSnapshot& s) {
-    if (s.health.baud == 0) return;
-    char buf[32];
-    int n = format_string(buf, "BAUD ");
-    n += format_uint(buf + n, s.health.baud);
-    n += format_string(buf + n, "  ");
-    n += format_string(buf + n, ports::to_string(s.health.config_stage));
-    if (s.health.overruns > 0) {
-        n += format_string(buf + n, "  OVR ");
-        n += format_uint(buf + n, s.health.overruns);
+void draw_port(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    if (snapshot.health.baud == 0) return;
+    char text[32];
+    int written = format_string(text, "BAUD ");
+    written += format_uint(text + written, snapshot.health.baud);
+    written += format_string(text + written, "  ");
+    written += format_string(text + written, ports::to_string(snapshot.health.config_stage));
+    if (snapshot.health.overruns > 0) {
+        written += format_string(text + written, "  OVR ");
+        written += format_uint(text + written, snapshot.health.overruns);
     }
-    buf[n] = 0;
-    canvas.draw_text(kLeft, kPortY, buf, true, 1);
+    text[written] = 0;
+    canvas.draw_text(kLeft, kPortY, text, true, 1);
 }
 
-void draw_stage(ui::Canvas& canvas, const SatsSnapshot& s) {
-    if (s.fix_valid) return;
-    canvas.draw_text(kLeft, kDopY - 12, gnss::stage_name(s.stage), true, 1);
+void draw_stage(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    if (snapshot.fix_valid) return;
+    canvas.draw_text(kLeft, kDopY - 12, gnss::stage_name(snapshot.stage), true, 1);
 }
 
-void draw_used_by_system(ui::Canvas& canvas, const SatsSnapshot& s) {
-    if (s.sky == nullptr) return;
-    char buf[32];
-    int n = 0;
+void draw_used_by_system(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+    if (snapshot.sky == nullptr) return;
+    char text[32];
+    int written = 0;
     for (gnss::System system : kSystemOrder) {
-        const int used = s.sky->in_use_of(system);
+        const int used = snapshot.sky->in_use_of(system);
         if (used == 0) continue;
-        if (n > 0) n += format_string(buf + n, "  ");
-        n += format_string(buf + n, gnss::system_name(system));
-        buf[n++] = ' ';
-        n += format_uint(buf + n, static_cast<uint32_t>(used), 1);
+        if (written > 0) written += format_string(text + written, "  ");
+        written += format_string(text + written, gnss::system_name(system));
+        text[written++] = ' ';
+        written += format_uint(text + written, static_cast<uint32_t>(used), 1);
     }
-    if (n == 0) return;
-    buf[n] = 0;
-    canvas.draw_text(kLeft, kBarTop, buf, true, 1);
+    if (written == 0) return;
+    text[written] = 0;
+    canvas.draw_text(kLeft, kBarTop, text, true, 1);
 }
 
 }  // namespace
 
-void draw_sats(ui::Canvas& canvas, const SatsSnapshot& s) {
+void draw_sats(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
-    draw_counts(canvas, s);
+    draw_counts(canvas, snapshot);
     canvas.hline(kLeft, kRuleY, kRight - kLeft, true);
 
-    draw_dops(canvas, s);
-    draw_nav_phase(canvas, s);
-    draw_port(canvas, s);
-    draw_stage(canvas, s);
+    draw_dops(canvas, snapshot);
+    draw_nav_phase(canvas, snapshot);
+    draw_port(canvas, snapshot);
+    draw_stage(canvas, snapshot);
 
-    if (!s.levels_live || s.sky == nullptr || s.sky->count() == 0) {
-        draw_used_by_system(canvas, s);
+    if (!snapshot.levels_live || snapshot.sky == nullptr || snapshot.sky->count() == 0) {
+        draw_used_by_system(canvas, snapshot);
         canvas.draw_text(kLeft, kNoteY,
-                         used_count(s) == 0 ? "NO SATELLITE HEARD" : "LEVELS COMING UP", true, 1);
+                         used_count(snapshot) == 0 ? "NO SATELLITE HEARD" : "LEVELS COMING UP",
+                         true, 1);
         return;
     }
 
     scale_mark(canvas);
     int x = kLeft;
-    for (gnss::System system : kSystemOrder) x = draw_group(canvas, *s.sky, system, x);
+    for (gnss::System system : kSystemOrder) x = draw_group(canvas, *snapshot.sky, system, x);
     canvas.draw_text(kLeft, kNoteY, "FILLED: IN THE SOLUTION", true, 1);
 }
 

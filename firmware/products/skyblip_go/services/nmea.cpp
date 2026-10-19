@@ -64,15 +64,15 @@ void NmeaService::tick(uint32_t now_ms) {
         // starting from the top, on its first pass.
         cursor_ = 0;
         passed_once_ = false;
-        pass_len_ = pass_sent_ = resume_count_ = 0;
+        pass_bytes_ = pass_sent_ = resume_count_ = 0;
         return;
     }
     drain();
     if (passed_once_) {
         const uint32_t since = now_ms - last_pass_ms_;
-        if (since < kMovingTargetRedrawMs) return;
+        if (since < kMovingTargetRedrawPeriodMs) return;
         if (context_.state.rf.dwell.burst_armed &&
-            since < kMovingTargetRedrawMs + kPassDeferralCeilingMs)
+            since < kMovingTargetRedrawPeriodMs + kPassDeferralCeilingMs)
             return;
     }
     last_pass_ms_ = now_ms;
@@ -86,10 +86,10 @@ void NmeaService::tick(uint32_t now_ms) {
 void NmeaService::run_pass(uint32_t now_ms) {
     const int negotiated = static_cast<int>(context_.roles.link.payload_bytes());
     payload_ = negotiated < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes
-               : negotiated > kFrameBytesCap                ? kFrameBytesCap
+               : negotiated > kFrameBytes                   ? kFrameBytes
                                                             : negotiated;
-    if (pass_sent_ < pass_len_) abandon_pass();
-    pass_len_ = pass_sent_ = resume_count_ = 0;
+    if (pass_sent_ < pass_bytes_) abandon_pass();
+    pass_bytes_ = pass_sent_ = resume_count_ = 0;
     emit_status(now_ms);
     emit_ownship();
     emit_altitude();
@@ -238,7 +238,7 @@ void NmeaService::emit_targets(uint32_t now_ms) {
                                           target->observation.address));
         if (len <= 0) continue;
         write(sentence_, len);
-        resumes_[resume_count_++] = {pass_len_, (slot + 1) % traffic::TrafficTable::kCapacity};
+        resumes_[resume_count_++] = {pass_bytes_, (slot + 1) % traffic::TrafficTable::kCapacity};
         sent++;
     }
 }
@@ -253,17 +253,17 @@ void NmeaService::emit_targets(uint32_t now_ms) {
 // a measured full-table pass is 549 bytes, which is three notifications at a
 // negotiated 244, four at an iPhone's 182 and twenty-eight at the guaranteed 20.
 // INFO: fc 25sep26 more than the link's notify share, so the pass is held here and drained per tick
-void NmeaService::write(const char* bytes, int len) {
-    if (len <= 0 || pass_len_ + len > kPassBytesCap) return;
-    std::memcpy(pass_ + pass_len_, bytes, static_cast<size_t>(len));
-    pass_len_ += len;
+void NmeaService::write(const char* sentence, int bytes) {
+    if (bytes <= 0 || pass_bytes_ + bytes > kPassBytes) return;
+    std::memcpy(pass_ + pass_bytes_, sentence, static_cast<size_t>(bytes));
+    pass_bytes_ += bytes;
 }
 
 // A link that refuses outright ends the pass rather than being argued with: what
 // is left unsent is a second-old picture, and the next pass has a current one.
 void NmeaService::drain() {
-    while (pass_sent_ < pass_len_) {
-        const int rest = pass_len_ - pass_sent_;
+    while (pass_sent_ < pass_bytes_) {
+        const int rest = pass_bytes_ - pass_sent_;
         const int take = rest < payload_ ? rest : payload_;
         const Status sent = context_.roles.link.send(
             events::Endpoint::Nmea,
@@ -282,7 +282,7 @@ void NmeaService::drain() {
 
 void NmeaService::abandon_pass() {
     link_drops_++;
-    pass_len_ = pass_sent_ = 0;
+    pass_bytes_ = pass_sent_ = 0;
 }
 
 }  // namespace skyblip::go

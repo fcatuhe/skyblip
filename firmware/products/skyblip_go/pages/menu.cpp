@@ -56,7 +56,7 @@ Menu menu_for(Page page) {
 }
 
 int menu_row_index(const Menu& menu, MenuRow row) {
-    for (int i = 0; i < menu.n; i++)
+    for (int i = 0; i < menu.row_count; i++)
         if (menu.rows[i] == row) return i;
     return -1;
 }
@@ -122,97 +122,100 @@ bool callsign_press_clears(const char* text, int cursor) {
 }
 
 int callsign_stored(char* out, const char* edited) {
-    int n = 0;
-    while (n < kCallsignChars && edited[n] != 0) {
-        out[n] = edited[n];
-        n++;
+    int written = 0;
+    while (written < kCallsignChars && edited[written] != 0) {
+        out[written] = edited[written];
+        written++;
     }
-    while (n > 0 && out[n - 1] == kCallsignBlank) n--;
-    out[n] = 0;
-    return n;
+    while (written > 0 && out[written - 1] == kCallsignBlank) written--;
+    out[written] = 0;
+    return written;
 }
 
 int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
-    int n = 0;
+    int written = 0;
     switch (row) {
         case MenuRow::AircraftType: {
             const char* name = aircraft_type_name(v.settings.aircraft_type);
             if (name[0] != 0) {
-                n = format_string(out, name);
+                written = format_string(out, name);
             } else {
-                n = format_string(out, "CODE ");
-                n += format_uint(out + n, v.settings.aircraft_type);
+                written = format_string(out, "CODE ");
+                written += format_uint(out + written, v.settings.aircraft_type);
             }
             break;
         }
         case MenuRow::Callsign: {
             if (v.settings.callsign[0] == 0) {
-                n = format_string(out, "NONE");
+                written = format_string(out, "NONE");
                 break;
             }
             // The row has the label beside it, so it shows what a registration
             // is identified by and the field itself shows all nine.
-            while (n < kCallsignRowChars && v.settings.callsign[n] != 0) {
-                out[n] = v.settings.callsign[n];
-                n++;
+            while (written < kCallsignRowChars && v.settings.callsign[written] != 0) {
+                out[written] = v.settings.callsign[written];
+                written++;
             }
             break;
         }
         case MenuRow::Units:
-            n = format_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
+            written =
+                format_string(out, v.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
             break;
         case MenuRow::Range:
-            n = format_uint(
+            written = format_uint(
                 out, static_cast<uint32_t>(range_value(v.settings.range_step, v.settings.units)));
-            n += format_string(out + n, " ");
-            n += format_string(out + n, range_unit(v.settings.units));
+            written += format_string(out + written, " ");
+            written += format_string(out + written, range_unit(v.settings.units));
             break;
         case MenuRow::Plot:
-            n = format_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
+            written = format_string(out, v.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
-        case MenuRow::Light: n = format_string(out, v.light ? "ON" : "OFF"); break;
-        case MenuRow::Alarm: n = format_string(out, v.settings.alarm_enabled ? "ON" : "OFF"); break;
+        case MenuRow::Light: written = format_string(out, v.light ? "ON" : "OFF"); break;
+        case MenuRow::Alarm:
+            written = format_string(out, v.settings.alarm_enabled ? "ON" : "OFF");
+            break;
         case MenuRow::Volume:
-            n = format_string(out, alarm_volume_name(v.settings.alarm_volume));
+            written = format_string(out, alarm_volume_name(v.settings.alarm_volume));
             break;
         default: break;
     }
-    out[n] = 0;
-    return n;
+    out[written] = 0;
+    return written;
 }
 
-void draw_menu(ui::Canvas& canvas, const MenuSnapshot& s) {
+void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
     canvas.clear(true);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, menu_title(s.page), true, kMenuScale);
+    canvas.draw_text(kMenuLeftX - 2, kHeaderY, menu_title(snapshot.page), true, kMenuScale);
     canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
 
-    const Menu menu = menu_for(s.page);
-    const int first = menu_first_row(menu, s.focus);
-    char value[kMenuValueCap];
-    for (int line = 0; line < kMenuLines && first + line < menu.n; line++) {
+    const Menu menu = menu_for(snapshot.page);
+    const int first = menu_first_row(menu, snapshot.focus);
+    char value[kMenuValueBytes];
+    for (int line = 0; line < kMenuLines && first + line < menu.row_count; line++) {
         const MenuRow row = menu.rows[first + line];
-        menu_row_value(value, row, s.values);
-        row_text(canvas, line, menu_row_label(row), value, row == s.focus);
+        menu_row_value(value, row, snapshot.values);
+        row_text(canvas, line, menu_row_label(row), value, row == snapshot.focus);
     }
 
     canvas.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
 }
 
-void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& s) {
+void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
     canvas.clear(true);
     canvas.draw_text(kMenuLeftX - 2, kHeaderY, "CALLSIGN", true, kMenuScale);
     canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
 
-    canvas.draw_text(kCallsignTextX, kCallsignTextY, s.text, true, kCallsignScale);
-    const int at = kCallsignTextX + s.cursor * kCallsignCellW;
+    canvas.draw_text(kCallsignTextX, kCallsignTextY, snapshot.text, true, kCallsignScale);
+    const int at = kCallsignTextX + snapshot.cursor * kCallsignCellW;
     canvas.rect(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorH, true, /*fill=*/true);
 
-    const char* button = s.clears ? kCallsignClearHintText : kCallsignNextHintText;
+    const char* button = snapshot.clears ? kCallsignClearHintText : kCallsignNextHintText;
     canvas.draw_text(centred_x(kCallsignPadHintText, kCallsignHintScale), kCallsignPadHintY,
                      kCallsignPadHintText, true, kCallsignHintScale);
     canvas.draw_text(centred_x(button, kCallsignHintScale), kCallsignButtonHintY, button, true,
                      kCallsignHintScale);
-    if (!s.clears)
+    if (!snapshot.clears)
         canvas.draw_text(centred_x(kCallsignClearHelpText, 1), kCallsignHelpY,
                          kCallsignClearHelpText, true, 1);
 }
@@ -221,7 +224,7 @@ void MenuEditor::enter(Page page, uint32_t now_ms) {
     page_ = page;
     focus_ = 0;
     idle_since_ms_ = now_ms;
-    active_ = menu_for(page).n > 0;
+    active_ = menu_for(page).row_count > 0;
     pending_ = Pending::None;
     editing_ = false;
     cursor_ = 0;
@@ -237,7 +240,7 @@ void MenuEditor::leave() {
 
 MenuRow MenuEditor::focus() const {
     const Menu menu = menu_for(page_);
-    if (focus_ < 0 || focus_ >= menu.n) return MenuRow::kCount;
+    if (focus_ < 0 || focus_ >= menu.row_count) return MenuRow::kCount;
     return menu.rows[focus_];
 }
 
@@ -259,7 +262,7 @@ MenuAction MenuEditor::tick(uint32_t now_ms, const MenuValues& current, MenuValu
     pending_ = Pending::None;
     if (pending == Pending::Act) return editing_ ? step(current, next) : act(current, next);
     if (pending == Pending::Advance) return editing_ ? roll() : advance();
-    if (now_ms - idle_since_ms_ >= kIdleReturnMs) {
+    if (now_ms - idle_since_ms_ >= kIdleReturnHoldMs) {
         leave();
         return MenuAction::Leave;
     }
@@ -267,7 +270,7 @@ MenuAction MenuEditor::tick(uint32_t now_ms, const MenuValues& current, MenuValu
 }
 
 MenuAction MenuEditor::advance() {
-    if (focus_ + 1 >= menu_for(page_).n) {
+    if (focus_ + 1 >= menu_for(page_).row_count) {
         leave();
         return MenuAction::Leave;
     }
@@ -280,12 +283,12 @@ MenuAction MenuEditor::advance() {
 void MenuEditor::edit(const MenuValues& current) {
     editing_ = true;
     cursor_ = 0;
-    int n = 0;
-    while (n < kCallsignChars && current.settings.callsign[n] != 0) {
-        text_[n] = current.settings.callsign[n];
-        n++;
+    int written = 0;
+    while (written < kCallsignChars && current.settings.callsign[written] != 0) {
+        text_[written] = current.settings.callsign[written];
+        written++;
     }
-    while (n < kCallsignChars) text_[n++] = kCallsignBlank;
+    while (written < kCallsignChars) text_[written++] = kCallsignBlank;
     text_[kCallsignChars] = 0;
 }
 

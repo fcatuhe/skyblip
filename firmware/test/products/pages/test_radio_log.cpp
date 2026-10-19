@@ -60,9 +60,9 @@ RadioLogSnapshot with(const radio::Log& log) {
     snapshot.gnss.fix_valid = true;
     snapshot.gnss.sats = 9;
     snapshot.gnss.pps = PpsState::Lock;
-    snapshot.noise = 42;
-    snapshot.band_dbm = -109;
-    snapshot.n_rows = log.count();
+    snapshot.rx_noise = 42;
+    snapshot.noise_dbm = -109;
+    snapshot.row_count = log.count();
     snapshot.log = &log;
     return snapshot;
 }

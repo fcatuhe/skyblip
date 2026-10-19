@@ -78,8 +78,8 @@ class CaptureService : public runtime::Service {
     bool open_{false};
     bool ended_{false};
 
-    diag::Record run_[kRunMostSlots]{};
-    uint8_t scratch_[kRunMostSlots * kStoreRecordBytes]{};
+    diag::Record run_[kMaxRunSlots]{};
+    uint8_t scratch_[kMaxRunSlots * kStoreRecordBytes]{};
 };
 
 }  // namespace skyblip::go

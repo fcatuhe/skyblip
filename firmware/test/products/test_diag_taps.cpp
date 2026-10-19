@@ -33,7 +33,7 @@ void receiver_seconds(Rig& rig, uint32_t& t, uint32_t seconds) {
     for (uint32_t elapsed = 0; elapsed < seconds * 1000; elapsed += 50) {
         rig.platform.chips().gnss.tick(t);
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         t += 50;
     }
 }
@@ -360,7 +360,7 @@ TEST_CASE("diag write: a pending settings write is recorded every evaluation, no
     taxi(rig, t, 3);
     arm(rig, t);
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
-    rig.product.config().config().note_settings_changed();
+    rig.product.config_link().config().note_settings_changed();
     taxi(rig, t, 6);
     stop(rig, t);
     const std::vector<diag::Record> records = captured(rig);
@@ -436,7 +436,7 @@ TEST_CASE("diag: a device nobody armed records nothing at all") {
     rig.raise_link(3);
     rig.press(t);
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
-    rig.product.config().config().note_settings_changed();
+    rig.product.config_link().config().note_settings_changed();
     taxi(rig, t, 6);
 
     CHECK(rig.product.diag().written() == 0);

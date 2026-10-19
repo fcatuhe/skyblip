@@ -54,6 +54,14 @@ constexpr int64_t range_metres(int step, Units units) {
 
 constexpr const char* range_unit(Units units) { return units == Units::Metric ? "KM" : "NM"; }
 
+constexpr int16_t angle16_of_degrees(int32_t deg) {
+    int32_t d = ((deg % 360) + 360) % 360;
+    if (d >= 180) d -= 360;  // keep the cordic value inside int16_t
+    return static_cast<int16_t>((d * kAngle16PerTurn) / 360);
+}
+
+constexpr uint8_t kFewestSatellitesForAltitude = 4;
+
 constexpr int32_t kClimbFigureStepFpm = 10;
 
 constexpr int32_t climb_figure_fpm(int32_t fpm) {

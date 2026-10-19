@@ -10,8 +10,8 @@ struct Sprite {
     const uint32_t* rows;
     int w;
     int h;
-    int dx;
-    int dy;
+    int origin_dx;
+    int origin_dy;
 };
 
 constexpr uint32_t kNearPointRows[] = {
@@ -97,7 +97,7 @@ const Sprite& caret_of(Vertical vertical) {
     return beyond_the_window(vertical) ? kFarCaret : kNearCaret;
 }
 
-int top_row(const Sprite& s, bool flip) { return flip ? -(s.dy + s.h - 1) : s.dy; }
+int top_row(const Sprite& s, bool flip) { return flip ? -(s.origin_dy + s.h - 1) : s.origin_dy; }
 
 int bottom_row(const Sprite& s, bool flip) { return top_row(s, flip) + s.h - 1; }
 
@@ -110,7 +110,7 @@ void blit(Canvas& canvas, int x, int y, const Sprite& s, bool flip, bool fill) {
         while (first < s.w && !(bits & (1u << first))) first++;
         while (last > first && !(bits & (1u << last))) last--;
         for (int col = first; col <= last; col++)
-            if (fill || (bits & (1u << col))) canvas.set_pixel(x + s.dx + col, py, true);
+            if (fill || (bits & (1u << col))) canvas.set_pixel(x + s.origin_dx + col, py, true);
     }
 }
 

@@ -33,7 +33,7 @@ void ScreenService::draw_prompt() {
     snapshot.title = comms::pending_title(prompt_);
     snapshot.detail = config_.prompt_detail();
     snapshot.timeout_s = comms::kPromptForgetMs / 1000;
-    draw_confirm(fb_, snapshot);
+    draw_confirm(framebuffer_, snapshot);
 }
 
 void ScreenService::draw_menu_page() {
@@ -42,14 +42,14 @@ void ScreenService::draw_menu_page() {
         field.text = editor_.text();
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);
-        draw_callsign(fb_, field);
+        draw_callsign(framebuffer_, field);
         return;
     }
     MenuSnapshot snapshot;
     snapshot.page = editor_.page();
     snapshot.values = menu_values();
     snapshot.focus = editor_.focus();
-    draw_menu(fb_, snapshot);
+    draw_menu(framebuffer_, snapshot);
 }
 
 RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
@@ -136,11 +136,11 @@ void ScreenService::render(uint32_t now_ms) {
         return;
     }
     if (receiving_) {
-        draw_receiving(fb_);
+        draw_receiving(framebuffer_);
         return;
     }
     if (!unit_activated()) {
-        draw_activation(fb_, context_.state.activation.bluetooth_tag);
+        draw_activation(framebuffer_, context_.state.activation.bluetooth_tag);
         return;
     }
     if (mode_ == Mode::Menu) {
@@ -148,7 +148,7 @@ void ScreenService::render(uint32_t now_ms) {
         return;
     }
 
-    fb_.clear(/*white=*/true);
+    framebuffer_.clear(/*white=*/true);
 
     const model::Ownship& own = context_.state.own;
     const go::Settings& settings = settings_;
@@ -161,13 +161,13 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.units = settings.units;
             snapshot.range_step = settings.range_step;
             snapshot.plot = settings.plot;
-            snapshot.heard = traffic_outside_formation(context_.state.traffic);
+            snapshot.heard_count = traffic_outside_formation(context_.state.traffic);
             snapshot.track_cdeg = own.track_cdeg;
             snapshot.speed_mm_s = own.speed_mm_s;
             snapshot.turn_cdps = context_.state.indicated.turn_cdps;
             snapshot.flight_seconds = context_.state.flight.seconds;
             snapshot.flight_time_valid = context_.state.flight.time_valid;
-            snapshot.in_flight = context_.state.flight.running;
+            snapshot.flight_running = context_.state.flight.running;
             snapshot.taxiing = taxiing();
             snapshot.receiver_listening = receiver_listening();
             snapshot.alarm_flash = alarm_flash_;
@@ -202,19 +202,19 @@ void ScreenService::render(uint32_t now_ms) {
                     n++;
                 }
             }
-            snapshot.n_targets = n;
+            snapshot.target_count = n;
             snapshot.targets = targets_;
-            draw_radar(fb_, snapshot);
+            draw_radar(framebuffer_, snapshot);
             break;
         }
         case Page::SixPack: {
             SixPackSnapshot snapshot;
-            snapshot.data_valid = own.fix_valid;
+            snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
             snapshot.speed_kt = to_knots(MillimetresPerSecond(own.speed_mm_s)).v;
             snapshot.alt_ft = to_feet(Millimetres(own.alt_hae_mm)).v;
-            snapshot.vs_fpm = climb_fpm();
-            snapshot.vs_valid = climb_measured();
+            snapshot.climb_fpm = climb_fpm();
+            snapshot.climb_valid = climb_measured();
             snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
             snapshot.turn_cdps = context_.state.indicated.turn_cdps;
             snapshot.battery_percent = context_.state.power.battery.percent;
@@ -225,7 +225,7 @@ void ScreenService::render(uint32_t now_ms) {
                 ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
             snapshot.lateral_valid = context_.state.slip.valid;
             snapshot.lateral_mg = context_.state.slip.lateral_mg;
-            draw_sixpack(fb_, snapshot);
+            draw_sixpack(framebuffer_, snapshot);
             break;
         }
         case Page::Sats: {
@@ -241,7 +241,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.nav_valid = context_.state.gnss.solution_phase_valid;
             snapshot.health = context_.roles.gnss.health();
             snapshot.sky = &context_.state.gnss.sky;
-            draw_sats(fb_, snapshot);
+            draw_sats(framebuffer_, snapshot);
             break;
         }
         case Page::Nearby: {
@@ -250,29 +250,29 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.own_callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.n_heard = context_.state.traffic.count();
-            snapshot.n_rows = traffic::rank_by_range(
+            snapshot.heard_count = context_.state.traffic.count();
+            snapshot.row_count = traffic::rank_by_range(
                 context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
             snapshot.rows = nearby_rows_;
-            draw_nearby(fb_, snapshot);
+            draw_nearby(framebuffer_, snapshot);
             break;
         }
         case Page::SelfTest: {
             // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
-            BootSnapshot now = self_test_;
+            SelfTestSnapshot now = self_test_;
             now.address = context_.state.activation.address();
-            draw_boot(fb_, now);
+            draw_self_test(framebuffer_, now);
             break;
         }
         case Page::GMeter: {
             GMeterSnapshot snapshot;
-            snapshot.fitted =
+            snapshot.inclinometer_fitted =
                 ports::has(context_.roles.capabilities, ports::Capability::Inclinometer);
-            snapshot.valid = context_.state.gload.valid;
+            snapshot.gload_valid = context_.state.gload.valid;
             snapshot.now = context_.state.gload.now;
             snapshot.most = context_.state.gload.most;
             snapshot.least = context_.state.gload.least;
-            draw_gmeter(fb_, snapshot);
+            draw_gmeter(framebuffer_, snapshot);
             break;
         }
         case Page::RadioLog: {
@@ -284,19 +284,19 @@ void ScreenService::render(uint32_t now_ms) {
                 static_cast<uint16_t>(context_.state.clock.since_edge_ms / 1000);
             snapshot.rx_ok = context_.state.air.rx_ok;
             snapshot.tx_ok = context_.state.air.tx_ok;
-            snapshot.noise = context_.state.air.rx_noise;
-            snapshot.band_dbm = context_.state.rf.noise_dbm;
-            snapshot.n_rows = context_.state.radio_log.count();
+            snapshot.rx_noise = context_.state.air.rx_noise;
+            snapshot.noise_dbm = context_.state.rf.noise_dbm;
+            snapshot.row_count = context_.state.radio_log.count();
             snapshot.log = &context_.state.radio_log;
-            draw_radio_log(fb_, snapshot);
+            draw_radio_log(framebuffer_, snapshot);
             break;
         }
         case Page::Raw: {
-            draw_raw(fb_, raw_snapshot(now_ms));
+            draw_raw(framebuffer_, raw_snapshot(now_ms));
             break;
         }
         case Page::Capture: {
-            draw_capture(fb_, capture_snapshot(now_ms));
+            draw_capture(framebuffer_, capture_snapshot(now_ms));
             break;
         }
         case Page::Status:
@@ -319,7 +319,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.track_cdeg = own.track_cdeg;
             snapshot.climb_mm_s = own.climb_mm_s;
             snapshot.utc_s = own.utc_s;
-            snapshot.n_targets = context_.state.traffic.count();
+            snapshot.heard_count = context_.state.traffic.count();
             snapshot.imu_stage = context_.state.imu.stage;
             snapshot.imu_fault = context_.state.imu.fault;
             snapshot.imu_fifo_bytes = context_.state.imu.fifo_bytes;
@@ -341,7 +341,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.pressure_mpa = context_.state.baro.pressure_mpa;
             if (context_.state.baro.active)
                 snapshot.alt_std_mm = flight::pressure_to_alt_mm(context_.state.baro.pressure_mpa);
-            draw_status(fb_, snapshot);
+            draw_status(framebuffer_, snapshot);
             break;
         }
     }

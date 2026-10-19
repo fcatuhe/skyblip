@@ -106,7 +106,7 @@ struct Bench {
         return answer_since(before);
     }
 
-    comms::Pending pending() { return rig.product.config().config().pending(); }
+    comms::Pending pending() { return rig.product.config_link().config().pending(); }
     const identity::Activation& activation() { return rig.state().activation; }
 };
 
@@ -422,7 +422,7 @@ struct QueuedUnlock {
         b.boot();
         REQUIRE(b.activation().serial == Identity::kSerial);
         b.rig.seconds(b.t, 20, 0, 300);
-        REQUIRE(b.rig.product.config().config().flight_state() == flight::FlightState::Ground);
+        REQUIRE(b.rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
         const identity::Nonce nonce{4, 2};
         b.rig.platform.identity().queue_random(nonce);

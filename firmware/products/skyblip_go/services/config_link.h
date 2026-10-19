@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_H
+#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_LINK_H
+#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_LINK_H
 
 #include "core/comms/config.h"
 #include "core/diag/payload.h"
@@ -37,13 +37,13 @@ namespace skyblip::go {
 // again; what is protected is every setting they ever made.
 class ConfigLinkService : public runtime::Service {
    public:
-    ConfigLinkService(runtime::Context& ctx, Settings& settings, const PowerService& power)
-        : runtime::Service(ctx),
+    ConfigLinkService(runtime::Context& context, Settings& settings, const PowerService& power)
+        : runtime::Service(context),
           settings_(settings),
-          store_(settings, ctx.state.activation),
-          config_(ctx.roles.link, store_, &ctx.roles.dfu, &ctx.state.rf.timing_stats),
+          store_(settings, context.state.activation),
+          config_(context.roles.link, store_, &context.roles.dfu, &context.state.rf.timing_stats),
           power_(power),
-          unit_(ctx.roles.identity),
+          unit_(context.roles.identity),
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);
@@ -92,7 +92,7 @@ class ConfigLinkService : public runtime::Service {
 
     // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
-    static constexpr size_t kBlobCap = 64;
+    static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kSettingsKey = "settings";
     static constexpr const char* kPriorSettingsKey = "settings.prior";
@@ -102,10 +102,10 @@ class ConfigLinkService : public runtime::Service {
     void drain_settings(uint32_t now_ms);
     void write_settings(uint32_t now_ms, bool forced);
     bool persist();
-    static bool newer_layout(const uint8_t* blob, size_t n);
+    static bool newer_layout(const uint8_t* blob, size_t blob_bytes);
     void load_prior();
-    bool adopt(const uint8_t* blob, size_t n);
-    void remember(const uint8_t* blob, size_t n);
+    bool adopt(const uint8_t* blob, size_t blob_bytes);
+    void remember(const uint8_t* blob, size_t blob_bytes);
     void keep_settings_for_a_revert();
     const char* settings_key() const { return newer_kept_ ? kPriorSettingsKey : kSettingsKey; }
     void load_image_state();
@@ -151,8 +151,8 @@ class ConfigLinkService : public runtime::Service {
     // this is what makes that free, and what keeps the sector - and so the
     // garbage collection the whole budget above is sized against - from filling
     // for no reason.
-    uint8_t stored_[kBlobCap]{};
-    size_t stored_len_{0};
+    uint8_t stored_[kBlobBytes]{};
+    size_t stored_bytes_{0};
     bool newer_kept_{false};
     settings::Fallback fallback_{settings::Fallback::None};
     static constexpr int kConfirmAttempts = 3;

@@ -27,7 +27,7 @@ class Simulator {
     void step(uint32_t now_ms) {
         platform_.clock().set_millis(now_ms);
         world_.step(now_ms, product_.state());
-        product_.step(now_ms);
+        product_.run_pass(now_ms);
         // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
         world_.air().take_own_transmission(platform_.clock().micros(), platform_.chips().radio);
     }
@@ -68,7 +68,7 @@ class Simulator {
 
     // What the device made of the phone the world connected: true only once the
     // event has travelled platform -> board -> bus -> config service.
-    bool companion_connected() { return product_.config().config().link_up(); }
+    bool companion_connected() { return product_.config_link().config().link_up(); }
     int companion_frames(events::Endpoint endpoint) { return platform_.link().count_on(endpoint); }
 
     const parts::Ssd1681Glass& panel() { return platform_.chips().epd.framebuffer(); }
@@ -92,7 +92,7 @@ class Simulator {
     void name_device(const std::string& callsign) {
         char* out = product_.settings().callsign;
         const size_t n =
-            callsign.size() < go::kCallsignCap - 1 ? callsign.size() : go::kCallsignCap - 1;
+            callsign.size() < go::kCallsignBytes - 1 ? callsign.size() : go::kCallsignBytes - 1;
         std::memcpy(out, callsign.c_str(), n);
         out[n] = 0;
     }

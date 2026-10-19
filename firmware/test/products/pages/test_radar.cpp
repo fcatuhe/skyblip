@@ -27,7 +27,7 @@ TEST_CASE("radar: renders rings, own symbol and plots targets") {
         RadarSnapshot s2;
         s2.fix_valid = true;
         s2.range_step = 3;
-        s2.n_targets = 2;
+        s2.target_count = 2;
         s2.targets = pair;
         Glass f2;
         draw_radar(f2, s2);
@@ -47,7 +47,7 @@ TEST_CASE("radar: renders rings, own symbol and plots targets") {
     RadarSnapshot snapshot;
     snapshot.fix_valid = true;
     snapshot.range_step = 3;
-    snapshot.n_targets = 2;
+    snapshot.target_count = 2;
     snapshot.targets = targets;
     draw_radar(canvas, snapshot);
     CHECK(canvas.count_black() > 100);
@@ -142,7 +142,7 @@ TEST_CASE("radar: the range ring is one unbroken stroke, and the only ring on th
 TEST_CASE("radar: the plot turns with the track, so what is ahead is up the glass") {
     RadarTarget east[1] = {{0, 2 * kMetresPerNm, 0, Level::Advisory}};
     RadarSnapshot flying_east = flying(90);
-    flying_east.n_targets = 1;
+    flying_east.target_count = 1;
     flying_east.targets = east;
     const Glass ahead = radar(flying_east);
 
@@ -175,14 +175,14 @@ TEST_CASE("radar: the flight time reads in the bottom-left, and dashes before a 
 // Back on the ground the clock is a logbook entry, and a logbook is filled to the second.
 TEST_CASE("radar: a finished flight carries its seconds, a running one does not") {
     RadarSnapshot landed = flying(0);
-    landed.in_flight = false;
+    landed.flight_running = false;
     landed.flight_seconds = 42 * 60 + 37;
     const Glass canvas = radar(landed);
     CHECK(reads_in(canvas, "0:42", 0, 176, 60, 198, 2));
     CHECK(reads_in(canvas, "37", 45, 183, 80, 198));
 
     RadarSnapshot airborne_again = landed;
-    airborne_again.in_flight = true;
+    airborne_again.flight_running = true;
     CHECK_FALSE(reads_in(radar(airborne_again), "37", 0, 170, 80, 199));
 
     RadarSnapshot never_flown;
@@ -192,7 +192,7 @@ TEST_CASE("radar: a finished flight carries its seconds, a running one does not"
 // The seconds are half the height of the minutes and clear only their own row of the ring.
 TEST_CASE("radar: the seconds take no more ring than they cover") {
     RadarSnapshot landed = flying(0);
-    landed.in_flight = false;
+    landed.flight_running = false;
     landed.flight_seconds = 42 * 60 + 37;
     const Glass canvas = radar(landed);
     const Glass no_seconds = radar(flying(0));
@@ -239,9 +239,9 @@ TEST_CASE(
         {40000, 0, 0, Level::Advisory},  // four rings out: heard, and off the picture
     };
     RadarSnapshot snapshot = flying(0);
-    snapshot.n_targets = 3;
+    snapshot.target_count = 3;
     snapshot.targets = targets;
-    snapshot.heard = 4;  // three placed, one heard without a position
+    snapshot.heard_count = 4;  // three placed, one heard without a position
     const Glass canvas = radar(snapshot);
 
     CHECK(reads_in(canvas, "FLIGHT", 0, 168, 50, 182));
@@ -292,14 +292,14 @@ TEST_CASE("radar: the footer sits on one baseline, a margin clear of the glass e
 // A pilot must not have to read the footer to learn the plot is not being fed.
 TEST_CASE("radar: anything but a flight is said in the ring, and a flight over the clock") {
     RadarSnapshot searching;
-    searching.in_flight = true;  // stale from the last flight: no fix outranks it
+    searching.flight_running = true;  // stale from the last flight: no fix outranks it
     const Glass no_fix = radar(searching);
     CHECK(reads_in(no_fix, "NO FIX", 40, 120, 160, 160, 2));
     CHECK_FALSE(reads_in(no_fix, "NO FIX", 0, 160, 60, 199));
     CHECK_FALSE(reads_in(no_fix, "FLIGHT", 0, 160, 60, 199));
 
     RadarSnapshot parked = flying(0);
-    parked.in_flight = false;
+    parked.flight_running = false;
     const Glass ground = radar(parked);
     CHECK(reads_in(ground, "GROUND", 40, 120, 160, 160, 2));
     CHECK_FALSE(reads_in(ground, "GROUND", 0, 160, 60, 199));
@@ -329,7 +329,7 @@ TEST_CASE("radar: a warned cell takes the ring, at the size the ring is read at"
     // The stack moves down a slot rather than losing a reading: the cell takes the
     // banner, the state word takes the small line, and the receiver's stage drops.
     RadarSnapshot parked = low;
-    parked.in_flight = false;
+    parked.flight_running = false;
     const Glass ground = radar(parked);
     CHECK(reads_in(ground, "BAT 4%", 40, 120, 160, 160, 2));
     CHECK(reads_in(ground, "GROUND", 40, 145, 160, 170));
@@ -389,8 +389,8 @@ TEST_CASE("radar: a blip on the state word is drawn over it, and the word still 
     // 4428 m behind is 54 px on the 4 NM ring, which is where the word stands.
     RadarTarget behind[1] = {{-4428, 0, 0, Level::None}};
     RadarSnapshot parked = flying(0);
-    parked.in_flight = false;
-    parked.n_targets = 1;
+    parked.flight_running = false;
+    parked.target_count = 1;
     parked.targets = behind;
     const Glass canvas = radar(parked);
 

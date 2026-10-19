@@ -198,14 +198,14 @@ TEST_CASE("radio: a trim past the band's own limit is clamped, not programmed") 
     // The two bounds are the same number in two layers: what the flash blob
     // accepts and what the PLL word is allowed to carry. If they ever part, a
     // stored value would be silently altered on its way to the synthesiser.
-    CHECK(int(sx::kFreqTrimLimitTenthsPpm) == int(go::kFreqTrimLimitTenthsPpm));
+    CHECK(int(sx::kFreqTrimCeilingE1Ppm) == int(go::kFreqTrimCeilingE1Ppm));
 
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
     RadioConfig cfg{};
     cfg.freq_hz = 868200000;
-    cfg.freq_corr_e1_ppm = sx::kFreqTrimLimitTenthsPpm;
+    cfg.freq_corr_e1_ppm = sx::kFreqTrimCeilingE1Ppm;
     REQUIRE(r.configure_radio(cfg) == Status::Ok);
     const uint32_t at_limit = chip.freq_hz;
 

@@ -38,7 +38,7 @@ struct Rig {
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{null.link, store};
-    go::BootSnapshot self_test{};
+    go::SelfTestSnapshot self_test{};
     go::AlarmService alarm_service{context, settings};
     go::RecordPool pool{context};
     go::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
@@ -88,7 +88,7 @@ struct Rig {
     void long_touch(uint32_t& t) {
         bus.input.push(events::ContactEvent{events::Contact::Pad, true, t});
         tick(t += 100);
-        tick(t += go::Controls::kLongTouchMs);
+        tick(t += go::Controls::kLongTouchHoldMs);
         bus.input.push(events::ContactEvent{events::Contact::Pad, false, t});
         tick(t += 100);
     }
@@ -115,7 +115,8 @@ struct Rig {
         if (go::walked(page)) return;
         press(t);
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n && go::page_behind(screen.editor().focus()) != page; i++) tap(t);
+        for (int i = 0; i < menu.row_count && go::page_behind(screen.editor().focus()) != page; i++)
+            tap(t);
         press(t);
     }
 

@@ -23,7 +23,7 @@ inline void receiver_speaks_without_a_fix(Rig& rig) {
     rig.product.bus().gnss.push(f);
 }
 
-inline comms::ConfigService& config(Rig& rig) { return rig.product.config().config(); }
+inline comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
 }  // namespace
 

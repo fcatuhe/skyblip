@@ -14,6 +14,8 @@ using namespace skyblip::go;
 
 namespace {
 
+using ui::kCellW;
+
 int length(const char* s) {
     int n = 0;
     while (s[n]) n++;
@@ -27,7 +29,7 @@ bool reads_at(const Glass& canvas, int x, int y, const char* text, int scale) {
     expected.clear(true);
     expected.draw_text(x, y, text, true, scale);
     for (int dy = 0; dy < 7 * scale; dy++)
-        for (int dx = 0; dx < length(text) * kConfirmCellW * scale; dx++)
+        for (int dx = 0; dx < length(text) * kCellW * scale; dx++)
             if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
                 return false;
     return true;
@@ -94,20 +96,19 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
     draw_confirm(canvas, prompt(comms::Pending::Dfu));
 
     // The allowing line is reversed out of a filled block, so it is white ink.
-    CHECK_FALSE(
-        reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, 1));
+    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, 1));
     Glass inverted;
     inverted.clear(true);
-    inverted.rect(kConfirmLeftX, kConfirmAllowY - 4,
-                  (length(kConfirmAllowText) + 2) * kConfirmCellW, 15, true, /*fill=*/true);
-    inverted.draw_text(kConfirmLeftX + kConfirmCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
+    inverted.rect(kConfirmLeftX, kConfirmAllowY - 4, (length(kConfirmAllowText) + 2) * kCellW, 15,
+                  true, /*fill=*/true);
+    inverted.draw_text(kConfirmLeftX + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
     bool same = true;
     for (int y = kConfirmAllowY - 4; y < kConfirmAllowY + 11; y++)
         for (int x = kConfirmLeftX; x < kConfirmLeftX + 130; x++)
             if (canvas.get_pixel(x, y) != inverted.get_pixel(x, y)) same = false;
     CHECK(same);
 
-    CHECK(reads_at(canvas, kConfirmLeftX + kConfirmCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
+    CHECK(reads_at(canvas, kConfirmLeftX + kCellW, kConfirmRefuseY, kConfirmRefuseText, 1));
 
     // And the page says it will refuse on its own, so a prompt left standing is
     // not read as one waiting indefinitely.

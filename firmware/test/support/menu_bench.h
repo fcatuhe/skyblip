@@ -49,7 +49,7 @@ struct Bench {
         return run(100);
     }
 
-    int rows() const { return menu_for(page).n; }
+    int rows() const { return menu_for(page).row_count; }
 
     void focus_on(MenuRow row) {
         for (int i = 0; i < rows() && editor.focus() != row; i++) move();

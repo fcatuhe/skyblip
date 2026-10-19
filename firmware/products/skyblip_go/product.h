@@ -9,10 +9,10 @@
 #include "core/power/wake.h"
 #include "core/util/format.h"
 #include "products/skyblip_go/features.h"
-#include "products/skyblip_go/pages/boot.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/services/alarm.h"
 #include "products/skyblip_go/services/capture.h"
-#include "products/skyblip_go/services/config.h"
+#include "products/skyblip_go/services/config_link.h"
 #include "products/skyblip_go/services/flight_log.h"
 #include "products/skyblip_go/services/nmea.h"
 #include "products/skyblip_go/services/ownship.h"
@@ -37,13 +37,13 @@ constexpr ports::Capabilities kOptional =
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
 
-struct BootPartSpec {
+struct SelfTestPartSpec {
     const char* name;
     ports::Capability capability;
     const char* wired_part;
 };
 
-constexpr BootPartSpec kBootParts[] = {
+constexpr SelfTestPartSpec kSelfTestParts[] = {
     {"RADIO", ports::Capability::Rf, "SX1262"},
     {"GNSS", ports::Capability::Gnss, "L76K"},
     {"BARO", ports::Capability::Baro, "BME280"},
@@ -63,11 +63,12 @@ constexpr BootPartSpec kBootParts[] = {
 constexpr const char* kStorageOnDefaults = "NVS+NOR DEFAULTS";
 constexpr const char* kImuDetailWithoutImage = "BHI260AP NOBLOB";
 
-constexpr int kBootPartCount = static_cast<int>(sizeof(kBootParts) / sizeof(kBootParts[0]));
-static_assert(kBootPartCount < kBootRows, "the self-test page would drop the bus scan");
+constexpr int kSelfTestPartCount =
+    static_cast<int>(sizeof(kSelfTestParts) / sizeof(kSelfTestParts[0]));
+static_assert(kSelfTestPartCount < kSelfTestRows, "the self-test page would drop the bus scan");
 
 // skyBlip Go: one board, one service list. The shell around it only decides how
-// often step() is called and where the pixels go.
+// often run_pass() is called and where the pixels go.
 template <class P>
 class Product {
    public:
@@ -82,8 +83,8 @@ class Product {
         // The register is read once and then only remembered, so the companion
         // link is told at boot: a watchdog bite in the field is diagnosable
         // from a phone, without the panel in hand.
-        config_.config().set_reset_reason(reset_reason_);
-        if (board == Status::Ok) config_.load();
+        config_link_.config().set_reset_reason(reset_reason_);
+        if (board == Status::Ok) config_link_.load();
 
         // The wake cause decides whether this boot becomes a device at all
         // (core/power/wake.h). Answered here, before the panel is painted and
@@ -95,7 +96,7 @@ class Product {
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
         glass_remembered_ = platform_.system_power().cell_on_glass();
         take_went_dark_flat();
-        config_.config().set_went_dark_flat(went_dark_flat_);
+        config_link_.config().set_went_dark_flat(went_dark_flat_);
         if (boot_path_ == power::BootPath::SleepAgain) {
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
             return Status::Ok;
@@ -103,10 +104,10 @@ class Product {
         flyable_ = board == Status::Ok &&
                    ports::without(kRequired, board_.capabilities()) == ports::Capability::None;
         // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
-        if (flyable_) config_.load_identity();
+        if (flyable_) config_link_.load_identity();
 
         draw_self_test();
-        if (!flyable_) roles_.display.present(boot_fb_, ports::Refresh::Full, 0);
+        if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
 
         if (board != Status::Ok) return board;
         if (!flyable_) return Status::Down;
@@ -115,10 +116,10 @@ class Product {
         return loop;
     }
 
-    void step(uint32_t now_ms) {
+    void run_pass(uint32_t now_ms) {
         if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
         if (flyable_ && !shutdown_.going_down()) {
-            meter_.begin_pass(ctx_.instant(now_ms).into_ms);
+            meter_.begin_pass(context_.instant(now_ms).into_ms);
             meter_.timed(diag::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
             // Polled before the services run, so the pass that may write flash is
             // the pass that already knows the rail is going. One atomic read on
@@ -129,16 +130,16 @@ class Product {
             meter_.end_pass();
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
-            if (config_.config().power_off_requested()) {
-                config_.config().clear_power_off_request();
+            if (config_link_.config().power_off_requested()) {
+                config_link_.config().clear_power_off_request();
                 shutdown_.request(power::ShutdownReason::LinkRequest, now_ms);
             }
-            if (config_.config().install_requested()) {
-                config_.config().clear_install_request();
+            if (config_link_.config().install_requested()) {
+                config_link_.config().clear_install_request();
                 shutdown_.request(power::ShutdownReason::Install, now_ms);
             }
-            if (config_.config().recovery_requested()) {
-                config_.config().clear_recovery_request();
+            if (config_link_.config().recovery_requested()) {
+                config_link_.config().clear_recovery_request();
                 shutdown_.request(power::ShutdownReason::Recovery, now_ms);
             }
         }
@@ -185,10 +186,10 @@ class Product {
     // setup() and performs the second one.
     power::BootPath boot_path() const { return boot_path_; }
     const power::BootCell& boot_cell() const { return boot_cell_; }
-    const Glass& boot_page() const { return boot_fb_; }
+    const Glass& self_test_page() const { return self_test_page_; }
     // The rows behind that page, so a test can read what a part answered instead
     // of reading pixels back off the glass to find out.
-    const BootPart* boot_rows() const { return boot_parts_; }
+    const SelfTestPart* self_test_rows() const { return self_test_parts_; }
 
     power::ShutdownSequencer& shutdown() { return shutdown_; }
     const power::ShutdownSequencer& shutdown() const { return shutdown_; }
@@ -226,7 +227,7 @@ class Product {
     AlarmService& alarm() { return alarm_; }
     NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
-    ConfigLinkService& config() { return config_; }
+    ConfigLinkService& config_link() { return config_link_; }
     FlightLogService& flight_log() { return flight_log_; }
     CaptureService& capture() { return capture_; }
     diag::Recorder& diag() { return diag_; }
@@ -236,7 +237,7 @@ class Product {
     // part against. Everything here comes from the bring-up probes
     // (ports/inventory.h), never from what the image was compiled expecting, which
     // is the whole point of the page.
-    const char* boot_detail(const BootPartSpec& spec) {
+    const char* self_test_detail(const SelfTestPartSpec& spec) {
         const ports::Inventory& found = board_.inventory();
         switch (spec.capability) {
             case ports::Capability::Baro:
@@ -250,7 +251,7 @@ class Product {
             case ports::Capability::Inclinometer:
                 return board_.imu_without_image() ? kImuDetailWithoutImage : spec.wired_part;
             case ports::Capability::Storage:
-                return config_.settings_fallback() == settings::Fallback::Defaults
+                return config_link_.settings_fallback() == settings::Fallback::Defaults
                            ? kStorageOnDefaults
                            : spec.wired_part;
             default: return spec.wired_part;
@@ -301,30 +302,31 @@ class Product {
 
     void draw_self_test() {
         const ports::Capabilities fitted = board_.capabilities();
-        for (int i = 0; i < kBootPartCount; i++) {
-            const BootPartSpec& spec = kBootParts[i];
-            boot_parts_[i].name = spec.name;
-            boot_parts_[i].state = ports::has(fitted, spec.capability)      ? PartState::Pass
-                                   : ports::has(kRequired, spec.capability) ? PartState::Fail
-                                                                            : PartState::Absent;
-            boot_parts_[i].detail = boot_detail(spec);
+        for (int i = 0; i < kSelfTestPartCount; i++) {
+            const SelfTestPartSpec& spec = kSelfTestParts[i];
+            self_test_parts_[i].name = spec.name;
+            self_test_parts_[i].state = ports::has(fitted, spec.capability) ? PartState::Pass
+                                        : ports::has(kRequired, spec.capability)
+                                            ? PartState::Fail
+                                            : PartState::Absent;
+            self_test_parts_[i].detail = self_test_detail(spec);
         }
 
-        boot_snapshot_.address = state_.activation.address();
-        boot_snapshot_.reset_reason = power::to_string(reset_reason_);
-        boot_snapshot_.went_dark_flat = went_dark_flat_;
-        boot_snapshot_.parts = boot_parts_;
-        boot_snapshot_.n_parts = kBootPartCount;
-        boot_snapshot_.flyable = flyable_;
-        boot_snapshot_.battery_valid = boot_cell_.valid;
-        boot_snapshot_.battery_mv = boot_cell_.cell_mv;
+        self_test_snapshot_.address = state_.activation.address();
+        self_test_snapshot_.reset_reason = power::to_string(reset_reason_);
+        self_test_snapshot_.went_dark_flat = went_dark_flat_;
+        self_test_snapshot_.parts = self_test_parts_;
+        self_test_snapshot_.part_count = kSelfTestPartCount;
+        self_test_snapshot_.flyable = flyable_;
+        self_test_snapshot_.battery_valid = boot_cell_.valid;
+        self_test_snapshot_.battery_mv = boot_cell_.cell_mv;
         const ports::Inventory& found = board_.inventory();
         for (uint8_t i = 0; i < found.i2c_count; i++)
             i2c_roles_[i] = boards::t_echo_plus::i2c_role(found.i2c_addresses[i]);
-        boot_snapshot_.i2c_addresses = found.i2c_addresses;
-        boot_snapshot_.i2c_roles = i2c_roles_;
-        boot_snapshot_.n_i2c_addresses = found.i2c_count;
-        draw_boot(boot_fb_, boot_snapshot_);
+        self_test_snapshot_.i2c_addresses = found.i2c_addresses;
+        self_test_snapshot_.i2c_roles = i2c_roles_;
+        self_test_snapshot_.i2c_address_count = found.i2c_count;
+        go::draw_self_test(self_test_page_, self_test_snapshot_);
     }
 
     void drive_shutdown(uint32_t now_ms) {
@@ -332,7 +334,7 @@ class Product {
         if (phase == acted_phase_) return;
         acted_phase_ = phase;
         if (phase == power::ShutdownPhase::Off && installing()) {
-            config_.record_update();
+            config_link_.record_update();
             roles_.dfu.trigger();
             return;
         }
@@ -346,7 +348,7 @@ class Product {
         // still waiting for a free phase (core/timing/durable_write.h) goes to
         // flash here rather than dying with the rails. From this point the service
         // loop no longer runs, so this is the last chance there is.
-        config_.flush_settings(now_ms);
+        config_link_.flush_settings(now_ms);
         power_.record_last_pass(now_ms);
         capture_.park(now_ms);
         // Every peripheral that can be left driven is switched off by the owner
@@ -379,7 +381,7 @@ class Product {
     }
 
     void record_loop(uint32_t now_ms) {
-        const diag::Instant at = ctx_.instant(now_ms);
+        const diag::Instant at = context_.instant(now_ms);
         if (at.at_s == loop_window_s_) return;
         loop_window_s_ = at.at_s;
         const diag::Loop window = meter_.take();
@@ -395,30 +397,32 @@ class Product {
     bus::State state_{};
     diag::Recorder diag_{};
     Settings settings_{};
-    Glass boot_fb_{};
-    BootSnapshot boot_snapshot_{};
+    Glass self_test_page_{};
+    SelfTestSnapshot self_test_snapshot_{};
     P& platform_;
     Board board_;
     ports::Roles roles_{board_.roles()};
-    runtime::Context ctx_{roles_, bus_, state_, diag_};
+    runtime::Context context_{roles_, bus_, state_, diag_};
     runtime::LoopMeter meter_{roles_.clock};
     uint32_t loop_window_s_{0};
-    RecordPool pool_{ctx_};
+    RecordPool pool_{context_};
     RecordStore flights_store_{pool_, store::SectorOwner::Flights};
     RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
 
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
-    PowerService power_{ctx_, settings_};
-    ConfigLinkService config_{ctx_, settings_, power_};
-    OwnshipService ownship_{ctx_, settings_};
-    RadioService radio_{ctx_, settings_};
-    TrafficService traffic_{ctx_, kFeatures};
-    AlarmService alarm_{ctx_, settings_};
-    NmeaService nmea_{ctx_, kFeatures, config_.config()};
-    FlightLogService flight_log_{ctx_, flights_store_, &capture_store_, config_.config()};
-    CaptureService capture_{ctx_, capture_store_, flights_store_, settings_, config_.config()};
-    ScreenService screen_{ctx_, settings_, config_.config(), alarm_, capture_, boot_snapshot_};
+    PowerService power_{context_, settings_};
+    ConfigLinkService config_link_{context_, settings_, power_};
+    OwnshipService ownship_{context_, settings_};
+    RadioService radio_{context_, settings_};
+    TrafficService traffic_{context_, kFeatures};
+    AlarmService alarm_{context_, settings_};
+    NmeaService nmea_{context_, kFeatures, config_link_.config()};
+    FlightLogService flight_log_{context_, flights_store_, &capture_store_, config_link_.config()};
+    CaptureService capture_{context_, capture_store_, flights_store_, settings_,
+                            config_link_.config()};
+    ScreenService screen_{context_, settings_, config_link_.config(),
+                          alarm_,   capture_,  self_test_snapshot_};
 
     // The log ticks after own-ship has published the fix and after the radio has
     // published the slot plan it defers to, and before the screen, which is the
@@ -427,17 +431,17 @@ class Product {
     // settled and after the config service has drained the connection, and
     // before the two services that may spend a pass on flash or on pixels.
     static constexpr int kServiceCount = 10;
-    runtime::Service* services_[kServiceCount]{&config_,  &ownship_, &power_, &radio_,
-                                               &traffic_, &alarm_,   &nmea_,  &flight_log_,
-                                               &capture_, &screen_};
+    runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &radio_,
+                                               &traffic_,     &alarm_,   &nmea_,  &flight_log_,
+                                               &capture_,     &screen_};
     static constexpr const char* kServiceNames[kServiceCount] = {
         "config", "ownship", "power",      "radio",   "traffic",
         "alarm",  "nmea",    "flight_log", "capture", "screen"};
     runtime::Loop loop_{services_, kServiceCount, kServiceNames};
 
-    BootPart boot_parts_[kBootPartCount]{};
+    SelfTestPart self_test_parts_[kSelfTestPartCount]{};
     // The barometer's address as the page prints it. A member and not a local:
-    // BootPart holds a pointer, and the page is drawn after boot_detail()
+    // SelfTestPart holds a pointer, and the page is drawn after self_test_detail()
     // has returned.
     char baro_part_[10]{};
     const char* i2c_roles_[ports::Inventory::kMaxI2cAddresses]{};

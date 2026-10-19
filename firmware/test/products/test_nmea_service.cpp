@@ -342,7 +342,7 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
 
     // One bound's worth of passes, and every aircraft in the table has been
     // named at least once inside it.
-    fly(rig, t, go::NmeaService::kTargetRefreshBoundMs / 1000);
+    fly(rig, t, go::NmeaService::kTargetRefreshCeilingMs / 1000);
     const std::vector<std::string> heard = sentences(rig);
     for (int i = 0; i < count; i++) {
         char id[8];
@@ -354,11 +354,11 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
     }
     // No pass spends its whole budget on traffic and drops the alarm sentence.
     CHECK(count_of(rig, "$PFLAU") >=
-          static_cast<int>(go::NmeaService::kTargetRefreshBoundMs / 1000));
+          static_cast<int>(go::NmeaService::kTargetRefreshCeilingMs / 1000));
     // ...and no pass sends more traffic than the cap the bound is derived from.
     CHECK(count_of(rig, "$PFLAA") <=
           go::NmeaService::kTargetsPerPass *
-              (static_cast<int>(go::NmeaService::kTargetRefreshBoundMs / 1000) + 1));
+              (static_cast<int>(go::NmeaService::kTargetRefreshCeilingMs / 1000) + 1));
 }
 
 // The notify share ended each pass at four 20-byte frames: no $PFLAA reached a 20-byte tablet.

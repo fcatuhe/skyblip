@@ -7,8 +7,8 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-constexpr int kCellW = 6;
-constexpr int kGlyphH = 7;
+using ui::kCellW;
+using ui::kCharH;
 constexpr int kTitleY = 3;
 constexpr int kRuleY = 21;
 
@@ -55,11 +55,11 @@ int format_g(char* out, int32_t mg) {
 
 int format_named_g(char* out, int32_t mg, char positive, char negative) {
     const int32_t value = tenths(mg);
-    int n = 0;
-    if (value != 0) out[n++] = value < 0 ? negative : positive;
-    n += format_uint(out + n, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
-    out[n] = 0;
-    return n;
+    int written = 0;
+    if (value != 0) out[written++] = value < 0 ? negative : positive;
+    written += format_uint(out + written, static_cast<uint32_t>(value < 0 ? -value : value), 1, 1);
+    out[written] = 0;
+    return written;
 }
 
 void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len, int scale = 1) {
@@ -116,14 +116,14 @@ void field_scale(ui::Canvas& canvas) {
     }
 }
 
-void field_reading(ui::Canvas& canvas, const GMeterSnapshot& s) {
-    const int left = lateral_x(s.least.lateral_mg);
-    const int right = lateral_x(s.most.lateral_mg);
-    const int top = thrown_down_y(s.least.normal_mg);
-    const int bottom = thrown_down_y(s.most.normal_mg);
+void field_reading(ui::Canvas& canvas, const GMeterSnapshot& snapshot) {
+    const int left = lateral_x(snapshot.least.lateral_mg);
+    const int right = lateral_x(snapshot.most.lateral_mg);
+    const int top = thrown_down_y(snapshot.least.normal_mg);
+    const int bottom = thrown_down_y(snapshot.most.normal_mg);
     canvas.rect(left, top, right - left + 1, bottom - top + 1, true);
-    canvas.circle(lateral_x(s.now.lateral_mg), thrown_down_y(s.now.normal_mg), kMarkerR, true,
-                  true);
+    canvas.circle(lateral_x(snapshot.now.lateral_mg), thrown_down_y(snapshot.now.normal_mg),
+                  kMarkerR, true, true);
 }
 
 void strip_scale(ui::Canvas& canvas) {
@@ -131,15 +131,17 @@ void strip_scale(ui::Canvas& canvas) {
                 kStripBottom - kStripTop + 1, true);
     canvas.hline(kStripCx - kStripHalfW, kFieldCy, 2 * kStripHalfW + 1, true);
     centred(canvas, kStripCx, kStripTop + kStripLabelInset, "DEC", 3);
-    centred(canvas, kStripCx, kStripBottom - kStripLabelInset - kGlyphH, "ACC", 3);
+    centred(canvas, kStripCx, kStripBottom - kStripLabelInset - kCharH, "ACC", 3);
 }
 
-void strip_reading(ui::Canvas& canvas, const GMeterSnapshot& s) {
+void strip_reading(ui::Canvas& canvas, const GMeterSnapshot& snapshot) {
     const int inset = kStripHalfW - 3;
-    canvas.hline(kStripCx - inset, thrown_forward_y(s.most.longitudinal_mg), 2 * inset + 1, true);
-    canvas.hline(kStripCx - inset, thrown_forward_y(s.least.longitudinal_mg), 2 * inset + 1, true);
-    canvas.rect(kStripCx - inset, thrown_forward_y(s.now.longitudinal_mg) - 1, 2 * inset + 1, 3,
-                true, true);
+    canvas.hline(kStripCx - inset, thrown_forward_y(snapshot.most.longitudinal_mg), 2 * inset + 1,
+                 true);
+    canvas.hline(kStripCx - inset, thrown_forward_y(snapshot.least.longitudinal_mg), 2 * inset + 1,
+                 true);
+    canvas.rect(kStripCx - inset, thrown_forward_y(snapshot.now.longitudinal_mg) - 1, 2 * inset + 1,
+                3, true, true);
 }
 
 void row_label(ui::Canvas& canvas, int y, const char* label, bool valid) {
@@ -149,39 +151,41 @@ void row_label(ui::Canvas& canvas, int y, const char* label, bool valid) {
 
 }  // namespace
 
-void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& s) {
+void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& snapshot) {
     canvas.clear(true);
     canvas.draw_text(kLeft, kTitleY, "G METER", true, 2);
     canvas.hline(kLeft, kRuleY, kGlassWidth - 2 * kLeft, true);
 
-    if (!s.fitted) {
-        canvas.draw_text(kLeft, kFieldCy - kGlyphH / 2, "NO SENSOR", true, 1);
+    if (!snapshot.inclinometer_fitted) {
+        canvas.draw_text(kLeft, kFieldCy - kCharH / 2, "NO SENSOR", true, 1);
         return;
     }
 
     field_scale(canvas);
     strip_scale(canvas);
-    if (s.valid) {
-        field_reading(canvas, s);
-        strip_reading(canvas, s);
+    if (snapshot.gload_valid) {
+        field_reading(canvas, snapshot);
+        strip_reading(canvas, snapshot);
     }
 
-    row_label(canvas, kNormalRowY, "G", s.valid);
-    row_label(canvas, kLateralRowY, "SIDE", s.valid);
-    row_label(canvas, kLongitudinalRowY, "ACCEL", s.valid);
-    if (!s.valid) return;
+    row_label(canvas, kNormalRowY, "G", snapshot.gload_valid);
+    row_label(canvas, kLateralRowY, "SIDE", snapshot.gload_valid);
+    row_label(canvas, kLongitudinalRowY, "ACCEL", snapshot.gload_valid);
+    if (!snapshot.gload_valid) return;
 
-    value_at(canvas, kNowEnd, kNormalRowY, s.now.normal_mg, kNowScale);
-    value_at(canvas, kLeastEnd, kNormalRowY + kPeakDrop, s.least.normal_mg);
-    value_at(canvas, kMostEnd, kNormalRowY + kPeakDrop, s.most.normal_mg);
+    value_at(canvas, kNowEnd, kNormalRowY, snapshot.now.normal_mg, kNowScale);
+    value_at(canvas, kLeastEnd, kNormalRowY + kPeakDrop, snapshot.least.normal_mg);
+    value_at(canvas, kMostEnd, kNormalRowY + kPeakDrop, snapshot.most.normal_mg);
 
-    named_at(canvas, kNowEnd, kLateralRowY, s.now.lateral_mg, 'R', 'L', kNowScale);
-    named_at(canvas, kLeastEnd, kLateralRowY + kPeakDrop, s.least.lateral_mg, 'R', 'L');
-    named_at(canvas, kMostEnd, kLateralRowY + kPeakDrop, s.most.lateral_mg, 'R', 'L');
+    named_at(canvas, kNowEnd, kLateralRowY, snapshot.now.lateral_mg, 'R', 'L', kNowScale);
+    named_at(canvas, kLeastEnd, kLateralRowY + kPeakDrop, snapshot.least.lateral_mg, 'R', 'L');
+    named_at(canvas, kMostEnd, kLateralRowY + kPeakDrop, snapshot.most.lateral_mg, 'R', 'L');
 
-    named_at(canvas, kNowEnd, kLongitudinalRowY, s.now.longitudinal_mg, 'A', 'D', kNowScale);
-    named_at(canvas, kLeastEnd, kLongitudinalRowY + kPeakDrop, s.least.longitudinal_mg, 'A', 'D');
-    named_at(canvas, kMostEnd, kLongitudinalRowY + kPeakDrop, s.most.longitudinal_mg, 'A', 'D');
+    named_at(canvas, kNowEnd, kLongitudinalRowY, snapshot.now.longitudinal_mg, 'A', 'D', kNowScale);
+    named_at(canvas, kLeastEnd, kLongitudinalRowY + kPeakDrop, snapshot.least.longitudinal_mg, 'A',
+             'D');
+    named_at(canvas, kMostEnd, kLongitudinalRowY + kPeakDrop, snapshot.most.longitudinal_mg, 'A',
+             'D');
 }
 
 }  // namespace skyblip::go

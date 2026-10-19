@@ -9,8 +9,8 @@
 namespace skyblip::go {
 
 struct GMeterSnapshot {
-    bool fitted{false};
-    bool valid{false};
+    bool inclinometer_fitted{false};
+    bool gload_valid{false};
     flight::GLoad now{};
     flight::GLoad most{};
     flight::GLoad least{};

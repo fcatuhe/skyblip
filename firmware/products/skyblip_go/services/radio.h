@@ -27,11 +27,11 @@ class RadioService : public runtime::Service {
     Status setup() override;
     void tick(uint32_t now_ms) override;
 
-    ports::RfMode armed_mode() const { return flying_.mode; }
+    ports::RfMode armed_mode() const { return current_dwell_.mode; }
     uint32_t arm_count() const { return arm_count_; }
     const timing::Transmitter& transmitter() const { return transmitter_; }
 
-    const timing::NoiseFloor& noise_floor() const { return noise_; }
+    const timing::NoiseFloor& noise_floor() const { return noise_floor_; }
     uint32_t duty_permille(uint32_t now_ms) const {
         return transmitter_.air_time().permille(now_ms);
     }
@@ -40,7 +40,7 @@ class RadioService : public runtime::Service {
    private:
     static constexpr uint64_t kSecondUs = 1000000;
 
-    enum class Role : uint8_t { Flying, Next };
+    enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
     static constexpr int kPayloads = 2;
     static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Callsign};
@@ -51,7 +51,7 @@ class RadioService : public runtime::Service {
         uint64_t from_us{0};
         uint64_t until_us{0};
         uint32_t utc_s{0};
-        uint8_t buffer{0};
+        uint8_t chip_buffer{0};
         bool carried[kPayloads]{};
         uint64_t at_us[kPayloads]{};
 
@@ -130,7 +130,7 @@ class RadioService : public runtime::Service {
     static diag::SwitchKind kind_of(const ports::RfSwitch& change);
 
     timing::Transmitter transmitter_{};
-    timing::NoiseFloor noise_{};
+    timing::NoiseFloor noise_floor_{};
     // The transmit buffer, and the only writer it has: protocol::from_own, out of
     // own-ship state, the device address and the settings. There is deliberately no
     // loopback guard in front of it. SoftRF has one, because a transmission that
@@ -143,12 +143,12 @@ class RadioService : public runtime::Service {
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
     protocol::AdslPacket outgoing_{};
-    // INFO: fc 27sep26 per dwell and payload: the queued bursts are built while the flying keys
+    // INFO: fc 27sep26 per dwell and payload: the queued bursts are built while the current keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
-    Armed flying_{};
-    Armed next_{};
-    Armed retired_{};
-    bool has_next_{false};
+    Armed current_dwell_{};
+    Armed next_dwell_{};
+    Armed retired_dwell_{};
+    bool next_armed_{false};
     uint64_t accounted_us_{0};
     uint64_t armed_us_{0};
     uint32_t arm_count_{0};

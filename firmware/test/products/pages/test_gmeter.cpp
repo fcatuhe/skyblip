@@ -15,8 +15,8 @@ constexpr int kStripCx = 164;
 
 GMeterSnapshot flying() {
     GMeterSnapshot s;
-    s.fitted = true;
-    s.valid = true;
+    s.inclinometer_fitted = true;
+    s.gload_valid = true;
     s.now = flight::GLoad{1000, 0, 0};
     s.most = flight::GLoad{1000, 0, 0};
     s.least = flight::GLoad{1000, 0, 0};
@@ -143,7 +143,7 @@ TEST_CASE("gmeter: a unit with no sensor prints no scale to read nothing off") {
 // The ball's cage is drawn empty for the same reason: the scale is true, the reading is not there.
 TEST_CASE("gmeter: a sensor that has not reported yet leaves the field empty") {
     GMeterSnapshot waiting;
-    waiting.fitted = true;
+    waiting.inclinometer_fitted = true;
     Glass canvas;
     draw_gmeter(canvas, waiting);
 

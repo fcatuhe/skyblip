@@ -64,11 +64,11 @@ TEST_CASE("companion link: the product raises LinkUp through its own platform, n
     t += 100;
     CHECK(rig.link_up());
     // Connected is not configuring: nothing is claimed until the app asks.
-    CHECK_FALSE(rig.product.config().config().claim().held());
+    CHECK_FALSE(rig.product.config_link().config().claim().held());
     rig.send("{\"cmd\":\"get\"}");
     rig.run(t, t + 100);
     t += 100;
-    CHECK(rig.product.config().config().claim_holder() == 0x0042);
+    CHECK(rig.product.config_link().config().claim_holder() == 0x0042);
 
     rig.drop_link();
     CHECK_FALSE(rig.platform.link().up());
@@ -133,7 +133,7 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     rig.run(t, t + 3000);
     t += 3000;
     // Staged, not applied: the glass has the question and nothing is stored yet.
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::Set);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Set);
     CHECK(rig.settings().callsign[0] == 0);
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Set);
@@ -160,7 +160,7 @@ TEST_CASE("companion link: a callsign written in flight is refused, not staged")
     rig.send("{\"cmd\":\"set\",\"callsign\":\"F-JABC\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     rig.double_press(t);
     rig.run(t, t + 200);
     t += 200;
@@ -172,13 +172,13 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     taxi(rig, t, 20);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Ground);
+    REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     rig.raise_link();
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
 
     // The phone that asked is gone. An authorisation left standing on the glass
@@ -186,9 +186,9 @@ TEST_CASE("companion link: a connection that drops takes the standing prompt wit
     rig.drop_link();
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().prompt() == comms::Pending::None);
-    CHECK_FALSE(rig.product.config().config().upload_allowed());
+    CHECK_FALSE(rig.product.config_link().config().upload_allowed());
 }
 
 TEST_CASE("companion link: a dropped connection closes the upload window it opened") {
@@ -201,11 +201,11 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
     rig.double_press(t);
     rig.run(t, t + 200);
     t += 200;
-    REQUIRE(rig.product.config().config().upload_allowed());
+    REQUIRE(rig.product.config_link().config().upload_allowed());
 
     // The window is what the MCUmgr hook consults before it accepts a byte of
     // image, so a phone that walks away with it open leaves the secondary slot
@@ -213,7 +213,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     rig.drop_link();
     rig.run(t, t + 200);
     t += 200;
-    CHECK_FALSE(rig.product.config().config().upload_allowed());
+    CHECK_FALSE(rig.product.config_link().config().upload_allowed());
 }
 
 // The log offload keeps no state between round trips - one command, one reply -
@@ -233,12 +233,12 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     rig.send_log("{\"cmd\":\"erase\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::EraseLog);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
 
     rig.drop_link();
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK_FALSE(rig.product.flight_log().erasing());
 
     // A new phone, and the offload answers it: nothing about the dead session
@@ -249,7 +249,7 @@ TEST_CASE("companion link: a link dropped mid-offload leaves the log ready for t
     rig.run(t, t + 200);
     t += 200;
     REQUIRE(rig.link_up());
-    CHECK(rig.product.config().config().claim_holder() == 12);
+    CHECK(rig.product.config_link().config().claim_holder() == 12);
     CHECK(rig.platform.link().count_on(events::Endpoint::Log) >= 1);
     CHECK(last_frame_on(rig, events::Endpoint::Log).find("\"sessions\"") != std::string::npos);
 }
@@ -267,7 +267,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
     t += 3000;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
 
     // 182 is an iPhone's usual answer, and it lands after the service is already
     // waiting for a button press. The prompt is the phone's, and it is still the
@@ -276,8 +276,8 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     rig.run(t, t + 200);
     t += 200;
     CHECK(rig.link_up());
-    CHECK(rig.product.config().config().claim_holder() == 5);
-    CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
+    CHECK(rig.product.config_link().config().claim_holder() == 5);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
 }
 
 // The traffic picture is the same picture on every screen, so a tablet on the
@@ -314,7 +314,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     rig.send_from(1, "{\"cmd\":\"get\"}");
     rig.run(t, t + 200);
     t += 200;
-    REQUIRE(rig.product.config().config().claim_holder() == 1);
+    REQUIRE(rig.product.config_link().config().claim_holder() == 1);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
 
     rig.platform.link().clear();
@@ -326,7 +326,7 @@ TEST_CASE("companion link: the first app to ask holds config, and the second is 
     const std::string refusal = rig.last_on(events::Endpoint::Config);
     CHECK(refusal.find("\"reason\":\"claimed\"") != std::string::npos);
     CHECK(rig.platform.link().count_to(2, events::Endpoint::Config) == 1);
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
 }
 
 // A central that never exchanged its MTU once capped every reply, and silenced the app that asked.
@@ -359,21 +359,21 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.send_from(1, "{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 200);
     t += 200;
-    REQUIRE(rig.product.config().config().pending() == comms::Pending::Dfu);
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
 
     rig.drop_link(2);
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
-    CHECK(rig.product.config().config().claim_holder() == 1);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK(rig.product.config_link().config().claim_holder() == 1);
 
     // And when the holder leaves, the prompt goes with it and the claim is free
     // for the phone that is still connected.
     rig.drop_link(1);
     rig.run(t, t + 200);
     t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
-    CHECK_FALSE(rig.product.config().config().claim().held());
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+    CHECK_FALSE(rig.product.config_link().config().claim().held());
     CHECK_FALSE(rig.link_up());
 
     rig.raise_link(2);
@@ -381,5 +381,5 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     t += 100;
     rig.send_from(2, "{\"cmd\":\"get\"}");
     rig.run(t, t + 200);
-    CHECK(rig.product.config().config().claim_holder() == 2);
+    CHECK(rig.product.config_link().config().claim_holder() == 2);
 }

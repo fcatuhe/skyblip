@@ -6,14 +6,19 @@
 
 namespace skyblip::ui {
 
+constexpr int kCharW = 5;
+constexpr int kCharH = 7;
+constexpr int kCellW = 6;
+
 class Canvas {
    public:
-    Canvas(uint8_t* buf, int w, int h) : buf_(buf), w_(w), h_(h), stride_((w + 7) / 8) {}
+    Canvas(uint8_t* data, int width, int height)
+        : data_(data), width_(width), height_(height), stride_((width + 7) / 8) {}
 
-    int width() const { return w_; }
-    int height() const { return h_; }
+    int width() const { return width_; }
+    int height() const { return height_; }
     int stride() const { return stride_; }
-    size_t bytes() const { return static_cast<size_t>(stride_) * static_cast<size_t>(h_); }
+    size_t bytes() const { return static_cast<size_t>(stride_) * static_cast<size_t>(height_); }
 
     void clear(bool white = true);
     void set_pixel(int x, int y, bool black);
@@ -26,16 +31,16 @@ class Canvas {
     void circle(int cx, int cy, int r, bool black, bool fill = false);
 
     int draw_char(int x, int y, char c, bool black, int scale = 1);
-    int draw_text(int x, int y, const char* s, bool black, int scale = 1);
+    int draw_text(int x, int y, const char* text, bool black, int scale = 1);
 
-    const uint8_t* data() const { return buf_; }
-    uint8_t* data() { return buf_; }
+    const uint8_t* data() const { return data_; }
+    uint8_t* data() { return data_; }
     int count_black() const;
 
    private:
-    uint8_t* buf_;
-    int w_;
-    int h_;
+    uint8_t* data_;
+    int width_;
+    int height_;
     int stride_;
 };
 

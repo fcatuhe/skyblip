@@ -56,7 +56,7 @@ void pass(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
     const uint32_t until = t + ms;
     for (; t <= until; t += 50) {
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         dump.step(rig.product, t);
     }
 }
@@ -179,7 +179,7 @@ TEST_CASE("diagnostics: nothing is written until a host has opened the port") {
     // nobody. The snapshot was still collected, so the phone that IS there gets a
     // fresh answer.
     CHECK(dump.sink().lines.empty());
-    CHECK(rig.product.config().config().diagnostics().refreshes > 20);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes > 20);
 
     rig.raise_link();
     rig.send("{\"cmd\":\"diag\"}");
@@ -201,12 +201,12 @@ TEST_CASE("diagnostics: one dump every ten seconds, one refresh every second") {
     pass(rig, dump, t, 0);
     const size_t first = dump.sink().lines.size();
     CHECK(first == 5);
-    const uint32_t refreshes = rig.product.config().config().diagnostics().refreshes;
+    const uint32_t refreshes = rig.product.config_link().config().diagnostics().refreshes;
     CHECK(refreshes == 1);
 
     pass(rig, dump, t, 5000);
     CHECK(dump.sink().lines.size() == first);
-    CHECK(rig.product.config().config().diagnostics().refreshes >= refreshes + 5);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes >= refreshes + 5);
 
     pass(rig, dump, t, 5100);
     CHECK(dump.sink().lines.size() == 2 * first);
@@ -266,7 +266,7 @@ namespace {
 void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
     for (uint32_t stepped = 0; stepped <= ms; stepped += 50) {
         rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+        rig.product.run_pass(t);
         dump.step(rig.product, t);
         t += 50;
     }
@@ -286,13 +286,13 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
 
     // Twenty seconds of passes, straddling zero: two more dumps, ten seconds
     // apart, exactly as on any other day.
-    const uint32_t refreshes_before = rig.product.config().config().diagnostics().refreshes;
+    const uint32_t refreshes_before = rig.product.config_link().config().diagnostics().refreshes;
     pass_across_wrap(rig, dump, t, 20000);
     CHECK(dump.sink().lines.size() == 15);
-    CHECK(rig.product.config().config().diagnostics().refreshes >= refreshes_before + 20);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes >= refreshes_before + 20);
 
     // And the uptime is small, positive, and counting again from the wrap.
-    const uint32_t uptime_s = rig.product.config().config().diagnostics().uptime_s;
+    const uint32_t uptime_s = rig.product.config_link().config().diagnostics().uptime_s;
     CHECK(uptime_s < 60u);
     const std::string sys = dump.sink().with("sys");
     CHECK_FALSE(has(sys, "up_s=-"));

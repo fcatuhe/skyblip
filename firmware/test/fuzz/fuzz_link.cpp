@@ -58,8 +58,8 @@ void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* byt
 
 // The gesture arms once the prompt has stood as long as a double press takes.
 void confirm_on_device(Rig& rig, uint32_t& t) {
-    rig.run(t, t + go::ConfirmGesture::kDoublePressMs);
-    t += go::ConfirmGesture::kDoublePressMs;
+    rig.run(t, t + go::ConfirmGesture::kDoublePressWindowMs);
+    t += go::ConfirmGesture::kDoublePressWindowMs;
     rig.double_press(t);
 }
 

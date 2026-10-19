@@ -42,7 +42,7 @@ Said said_on_air(const simulator::Air& air) {
 }
 
 void park_on_the_bench(simulator::Simulator& h) {
-    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignCap - 1);
+    std::strncpy(h.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
     h.world().set_fix(true);
     h.world().set_speed_kt(0);
     h.world().set_altitude_m(300);

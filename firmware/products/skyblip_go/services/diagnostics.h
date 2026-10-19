@@ -27,7 +27,7 @@ template <class Product, class Sink>
 class DiagnosticsDump {
    public:
     void step(Product& product, uint32_t now_ms) {
-        comms::Diagnostics& snapshot = product.config().config().diagnostics();
+        comms::Diagnostics& snapshot = product.config_link().config().diagnostics();
         // Unsigned subtraction throughout, so the 49.7-day wrap of a 32-bit
         // millisecond counter costs one late dump and nothing else.
         if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshPeriodMs) {

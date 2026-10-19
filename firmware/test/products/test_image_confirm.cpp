@@ -4,9 +4,9 @@
 
 #include "core/settings/blob.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/recovery.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"

@@ -11,7 +11,7 @@ using namespace skyblip::go;
 namespace {
 
 std::string described(const Settings& from, const Settings& to) {
-    char out[kSettingsChangesCap];
+    char out[kSettingsChangesBytes];
     const int n = describe_settings_changes(from, to, out, sizeof(out));
     return n == 0 ? std::string() : std::string(out, static_cast<size_t>(n));
 }
@@ -55,12 +55,12 @@ TEST_CASE("settings changes: past four rows the last one counts the rest") {
 
 TEST_CASE("settings changes: nothing changed writes nothing, and neither does a short buffer") {
     const Settings from = defaults();
-    char out[kSettingsChangesCap] = "untouched";
+    char out[kSettingsChangesBytes] = "untouched";
     CHECK(describe_settings_changes(from, from, out, sizeof(out)) == 0);
     CHECK(std::string(out) == "untouched");
 
     Settings to = from;
     to.units = Units::Metric;
-    CHECK(describe_settings_changes(from, to, out, kSettingsChangesCap - 1) == 0);
+    CHECK(describe_settings_changes(from, to, out, kSettingsChangesBytes - 1) == 0);
     CHECK(std::string(out) == "untouched");
 }

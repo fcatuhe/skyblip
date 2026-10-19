@@ -83,7 +83,7 @@ class DurableWriteWindow {
 
     // How long the policy waits for a stream of changes to stop before it writes
     // the one blob they add up to. The panel steps a value on every tap that
-    // lands inside go::ConfirmGesture::kDoublePressMs (600 ms), so a settle
+    // lands inside go::ConfirmGesture::kDoublePressWindowMs (600 ms), so a settle
     // shorter than that window would put a pilot's six taps on flash six times.
     // This is that window plus a service pass and a little.
     static constexpr uint32_t kSettleMs = 750;
