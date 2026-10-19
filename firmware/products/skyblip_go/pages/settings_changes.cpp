@@ -36,11 +36,12 @@ void callsign_row(Rows& rows, const Settings& to) {
     out[n] = 0;
 }
 
-void signed_row(Rows& rows, const char* label, int value, uint8_t dec_point, const char* unit) {
+void signed_row(Rows& rows, const char* label, int value, uint8_t fraction_digits,
+                const char* unit) {
     char* out = rows.next();
     int n = format_string(out, label);
     out[n++] = ' ';
-    n += format_int(out + n, value, 1, dec_point);
+    n += format_int(out + n, value, 1, fraction_digits);
     n += format_string(out + n, unit);
     out[n] = 0;
 }

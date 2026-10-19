@@ -111,8 +111,8 @@ TEST_CASE("product: a long touch the button joins switches the device off, it op
 
     rig.platform.board_gpio().pad_down = true;
     rig.platform.board_gpio().button_down = true;
-    rig.run(t, t + power::kLongPressMs + 400);
-    t += power::kLongPressMs + 400;
+    rig.run(t, t + power::kLongPressHoldMs + 400);
+    t += power::kLongPressHoldMs + 400;
 
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Stow);
     CHECK(rig.product.screen().mode() == go::Mode::Page);

@@ -108,7 +108,7 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
     rig.platform.battery().millivolts = 3800;
     rig.run(0, 12000);
     CHECK(rig.state().power.battery.valid);
-    CHECK(rig.state().power.battery.millivolts == 3800);
+    CHECK(rig.state().power.battery.cell_mv == 3800);
     CHECK(rig.state().power.battery.percent == power::percent_from_mv(3800));
     CHECK_FALSE(rig.state().power.battery.charging);
     CHECK_FALSE(rig.state().power.battery.external_power);
@@ -283,7 +283,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     // cell puts below it.
     trimmed.platform.battery().millivolts = 3540;
     trimmed.run(0, 12000);
-    CHECK(trimmed.state().power.battery.millivolts == 3480);
+    CHECK(trimmed.state().power.battery.cell_mv == 3480);
     CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480));
     // The reader that matters: the same trimmed millivolts reached the rule that
     // decides when the device warns and when it goes down.
@@ -295,7 +295,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     REQUIRE(raw.setup() == Status::Ok);
     raw.platform.battery().millivolts = 3540;
     raw.run(0, 12000);
-    CHECK(raw.state().power.battery.millivolts == 3540);
+    CHECK(raw.state().power.battery.cell_mv == 3540);
     CHECK(raw.state().power.level == power::PowerLevel::Low);
 }
 
@@ -311,7 +311,7 @@ TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider
     REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
     trimmed.platform.battery().millivolts = 3440;
     REQUIRE(trimmed.setup() == Status::Ok);
-    CHECK(trimmed.product.boot_cell().millivolts == 3380);
+    CHECK(trimmed.product.boot_cell().cell_mv == 3380);
     CHECK(trimmed.product.boot_path() == power::BootPath::SleepAgain);
 
     Rig untrimmed;
@@ -468,7 +468,7 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
     ghost.lon_1e7 = rig.state().own.lon_1e7;
     ghost.source = model::Source::AdslDirect;
     REQUIRE(rig.state().traffic.update(ghost, 0) < 0);
-    REQUIRE(rig.state().traffic.implausible_count() == 1);
+    REQUIRE(rig.state().traffic.implausible() == 1);
 
     rig.platform.link().clear();
     rig.send("{\"cmd\":\"radio\"}");

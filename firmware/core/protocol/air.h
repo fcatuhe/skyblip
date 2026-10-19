@@ -84,17 +84,17 @@ struct Frame {
     uint8_t len{0};
     uint16_t bad_chips{0};
     uint8_t data[kRxFrameBytes]{};
-    uint8_t err[kRxFrameBytes]{};
+    uint8_t erasures[kRxFrameBytes]{};
 };
 
 uint8_t frame_bytes(System system);
 
 // The chip stream a transmitter puts on air: the whole sync word, then the
 // frame, both Manchester-encoded.
-size_t encode_mband(uint32_t sync_word, const uint8_t* frame, uint8_t frame_len, uint8_t* chips);
+size_t encode_mband(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 // INFO: fc 15sep26 SX1262 DS 6.2.2: the part inserts the window, the buffer carries the rest
-size_t mband_payload(uint32_t sync_word, const uint8_t* frame, uint8_t frame_len, uint8_t* chips);
+size_t mband_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 // The chips a receiver reports once the shared window matched. Manchester-decode
 // them, name the system by the sync tail, and shift the frame to byte zero.
@@ -126,7 +126,7 @@ size_t encode_oband(const uint8_t* frame, uint8_t* out);
 //
 // Naming a burst is protocol policy, so it lives here rather than in the
 // service that pulls the event: the service moves messages.
-System receive_burst(model::Band band, const uint8_t* data, size_t len, Frame& out);
+System receive_burst(model::Band band, const uint8_t* data, size_t bytes, Frame& out);
 
 }  // namespace skyblip::protocol
 

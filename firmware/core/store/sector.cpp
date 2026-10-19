@@ -45,8 +45,8 @@ Status decode_sector_header(const uint8_t* raw, SectorHeader& out) {
     return Status::Ok;
 }
 
-bool erased(const uint8_t* raw, uint32_t len) {
-    for (uint32_t i = 0; i < len; i++)
+bool erased(const uint8_t* raw, uint32_t bytes) {
+    for (uint32_t i = 0; i < bytes; i++)
         if (raw[i] != 0xFF) return false;
     return true;
 }

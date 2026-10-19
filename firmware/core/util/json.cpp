@@ -1,9 +1,9 @@
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::json {
 
 namespace {
-bool is_ws(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+bool is_whitespace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
 int key_len(const char* k) {
     int n = 0;
     while (k[n]) n++;
@@ -12,26 +12,26 @@ int key_len(const char* k) {
 }
 
 int Reader::value_offset(const char* key) const {
-    int klen = key_len(key);
+    int key_length = key_len(key);
     int i = 0;
-    while (i < len_) {
+    while (i < bytes_) {
         if (data_[i] != '"') {
             i++;
             continue;
         }
-        int ks = i + 1;
-        int ke = ks;
-        while (ke < len_ && data_[ke] != '"') ke++;
-        if (ke >= len_) break;
-        bool match = (ke - ks == klen);
-        for (int j = 0; match && j < klen; j++)
-            if (data_[ks + j] != key[j]) match = false;
-        i = ke + 1;
-        while (i < len_ && is_ws(data_[i])) i++;
-        if (i < len_ && data_[i] == ':') {
+        int key_start = i + 1;
+        int key_end = key_start;
+        while (key_end < bytes_ && data_[key_end] != '"') key_end++;
+        if (key_end >= bytes_) break;
+        bool match = (key_end - key_start == key_length);
+        for (int j = 0; match && j < key_length; j++)
+            if (data_[key_start + j] != key[j]) match = false;
+        i = key_end + 1;
+        while (i < bytes_ && is_whitespace(data_[i])) i++;
+        if (i < bytes_ && data_[i] == ':') {
             i++;
-            while (i < len_ && is_ws(data_[i])) i++;
-            if (match) return i < len_ ? i : -1;
+            while (i < bytes_ && is_whitespace(data_[i])) i++;
+            if (match) return i < bytes_ ? i : -1;
         }
     }
     return -1;
@@ -61,9 +61,9 @@ bool Reader::get_number(const char* key, int64_t& out) const {
         neg = true;
         o++;
     }
-    if (o >= len_ || data_[o] < '0' || data_[o] > '9') return false;
+    if (o >= bytes_ || data_[o] < '0' || data_[o] > '9') return false;
     int64_t v = 0;
-    while (o < len_ && data_[o] >= '0' && data_[o] <= '9') {
+    while (o < bytes_ && data_[o] >= '0' && data_[o] <= '9') {
         v = v * 10 + (data_[o++] - '0');
         if (v > UINT32_MAX) return false;
     }
@@ -74,48 +74,48 @@ bool Reader::get_number(const char* key, int64_t& out) const {
 bool Reader::get_bool(const char* key, bool& out) const {
     int o = value_offset(key);
     if (o < 0) return false;
-    if (o + 4 <= len_ && data_[o] == 't') {
+    if (o + 4 <= bytes_ && data_[o] == 't') {
         out = true;
         return true;
     }
-    if (o + 5 <= len_ && data_[o] == 'f') {
+    if (o + 5 <= bytes_ && data_[o] == 'f') {
         out = false;
         return true;
     }
     return false;
 }
 
-bool Reader::get_str(const char* key, char* buf, int cap) const {
+bool Reader::get_string(const char* key, char* out, int capacity) const {
     int o = value_offset(key);
     if (o < 0 || data_[o] != '"') return false;
     o++;
     int n = 0;
-    while (o < len_ && data_[o] != '"' && n < cap - 1) buf[n++] = data_[o++];
-    buf[n] = 0;
+    while (o < bytes_ && data_[o] != '"' && n < capacity - 1) out[n++] = data_[o++];
+    out[n] = 0;
     return true;
 }
 
 bool Writer::reserve(int extra) {
-    if (n_ + extra > cap_ - 2) {
+    if (length_ + extra > capacity_ - 2) {
         overflowed_ = true;
         return false;
     }
     return true;
 }
 void Writer::sep() {
-    if (!first_) buf_[n_++] = ',';
+    if (!first_) buffer_[length_++] = ',';
     first_ = false;
 }
 void Writer::raw(const char* s) {
-    while (*s) buf_[n_++] = *s++;
+    while (*s) buffer_[length_++] = *s++;
 }
 void Writer::raw_str(const char* s) {
-    buf_[n_++] = '"';
+    buffer_[length_++] = '"';
     while (*s) {
-        if (*s == '"' || *s == '\\') buf_[n_++] = '\\';
-        buf_[n_++] = *s++;
+        if (*s == '"' || *s == '\\') buffer_[length_++] = '\\';
+        buffer_[length_++] = *s++;
     }
-    buf_[n_++] = '"';
+    buffer_[length_++] = '"';
 }
 void Writer::kv_int(const char* key, int64_t v) {
     char tmp[20];
@@ -130,9 +130,9 @@ void Writer::kv_int(const char* key, int64_t v) {
     if (!reserve(need)) return;
     sep();
     raw_str(key);
-    buf_[n_++] = ':';
-    if (neg) buf_[n_++] = '-';
-    while (t > 0) buf_[n_++] = tmp[--t];
+    buffer_[length_++] = ':';
+    if (neg) buffer_[length_++] = '-';
+    while (t > 0) buffer_[length_++] = tmp[--t];
 }
 void Writer::kv_bool(const char* key, bool v) {
     const char* val = v ? "true" : "false";
@@ -140,30 +140,30 @@ void Writer::kv_bool(const char* key, bool v) {
     if (!reserve(need)) return;
     sep();
     raw_str(key);
-    buf_[n_++] = ':';
+    buffer_[length_++] = ':';
     raw(val);
 }
 void Writer::kv_str(const char* key, const char* v) {
-    int vlen = 0;
+    int value_length = 0;
     int escapes = 0;
     for (const char* p = v; *p; p++) {
-        vlen++;
+        value_length++;
         if (*p == '"' || *p == '\\') escapes++;
     }
-    const int need = (first_ ? 0 : 1) + key_len(key) + 2 + 1 + vlen + escapes + 2;
+    const int need = (first_ ? 0 : 1) + key_len(key) + 2 + 1 + value_length + escapes + 2;
     if (!reserve(need)) return;
     sep();
     raw_str(key);
-    buf_[n_++] = ':';
+    buffer_[length_++] = ':';
     raw_str(v);
 }
 int Writer::finish() {
-    if (n_ < cap_ - 1)
-        buf_[n_++] = '}';
+    if (length_ < capacity_ - 1)
+        buffer_[length_++] = '}';
     else
         overflowed_ = true;
-    buf_[n_] = 0;
-    return n_;
+    buffer_[length_] = 0;
+    return length_;
 }
 
 }

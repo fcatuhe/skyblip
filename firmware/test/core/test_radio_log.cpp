@@ -11,7 +11,7 @@ namespace {
 
 radio::Entry heard(uint32_t address, uint32_t at_s) {
     radio::Entry e{};
-    e.event = radio::Event::Received;
+    e.verdict = radio::Verdict::Received;
     e.source = model::Source::AdslDirect;
     e.address = address;
     e.at_s = at_s;
@@ -53,14 +53,14 @@ TEST_CASE("radio log: past capacity the oldest burst is the one dropped") {
 
 TEST_CASE("radio log: every outcome a burst can have is one it keeps") {
     radio::Log log;
-    for (radio::Event event :
-         {radio::Event::Transmitted, radio::Event::Lost, radio::Event::Held, radio::Event::Unarmed,
-          radio::Event::Received, radio::Event::BadCrc, radio::Event::Undecoded,
-          radio::Event::Unsupported, radio::Event::Unattempted}) {
+    for (radio::Verdict verdict :
+         {radio::Verdict::Transmitted, radio::Verdict::Lost, radio::Verdict::Held,
+          radio::Verdict::Unarmed, radio::Verdict::Received, radio::Verdict::BadCrc,
+          radio::Verdict::Undecoded, radio::Verdict::Unsupported, radio::Verdict::Unattempted}) {
         radio::Entry e{};
-        e.event = event;
+        e.verdict = verdict;
         log.record(e);
-        CHECK(log.newest(0).event == event);
+        CHECK(log.newest(0).verdict == verdict);
     }
 }
 
@@ -105,7 +105,7 @@ TEST_CASE("radio log: a sent burst measures from the instant it was aimed at to 
 
 // A span too wide to bound is one this row must not report as a smaller one.
 TEST_CASE("radio log: a span past the column saturates rather than wrapping") {
-    CHECK(radio::tx_span_of(13'000'000, 12'000'000) == radio::kTxSpanLimitUs);
+    CHECK(radio::tx_span_of(13'000'000, 12'000'000) == radio::kTxSpanCeilingUs);
 }
 
 // A report cannot precede the instant the burst was keyed at.

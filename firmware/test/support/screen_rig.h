@@ -143,7 +143,7 @@ struct Rig {
             state.own.lat_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
         observation.lon_1e7 =
             state.own.lon_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
-        observation.alt_m = to_metres(Millimetres(state.own.alt_mm)).v;
+        observation.alt_m = to_metres(Millimetres(state.own.alt_hae_mm)).v;
         observation.received.at_s = now_ms / 1000;
         observation.at_ms = now_ms;
         observation.source = model::Source::AdslDirect;

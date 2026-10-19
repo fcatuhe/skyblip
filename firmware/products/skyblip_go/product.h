@@ -269,7 +269,7 @@ class Product {
         if (!ports::has(board_.capabilities(), ports::Capability::Battery)) return cell;
         uint16_t raw_mv = 0;
         cell.valid = platform_.read_battery_mv(raw_mv);
-        cell.millivolts = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
+        cell.cell_mv = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
         cell.external_power = platform_.external_power();
         return cell;
     }
@@ -317,7 +317,7 @@ class Product {
         boot_snapshot_.n_parts = kBootPartCount;
         boot_snapshot_.flyable = flyable_;
         boot_snapshot_.battery_valid = boot_cell_.valid;
-        boot_snapshot_.battery_mv = boot_cell_.millivolts;
+        boot_snapshot_.battery_mv = boot_cell_.cell_mv;
         const ports::Inventory& found = board_.inventory();
         for (uint8_t i = 0; i < found.i2c_count; i++)
             i2c_roles_[i] = boards::t_echo_plus::i2c_role(found.i2c_addresses[i]);

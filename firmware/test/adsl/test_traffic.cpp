@@ -63,7 +63,7 @@ model::Ownship flying() {
     own.climb_valid = true;
     own.lat_1e7 = 481234500;
     own.lon_1e7 = 81234500;
-    own.alt_mm = 1000000;
+    own.alt_hae_mm = 1000000;
     own.speed_mm_s = 120 * 1000;
     own.climb_mm_s = 10000;
     own.track_cdeg = 9000;
@@ -134,7 +134,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4);
     CHECK_FALSE(p.has_position());
-    CHECK(p.alt_invalid());
+    CHECK_FALSE(p.has_alt());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());
 }
@@ -322,7 +322,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked exampl
     CHECK(alt_code(p) == 0x3FFEu);
     p.set_alt_invalid();
     CHECK(alt_code(p) == 0x3FFFu);
-    CHECK(p.alt_invalid());
+    CHECK_FALSE(p.has_alt());
     CHECK(protocol::AdslPacket::kAltOffsetM == 320);
 }
 
@@ -349,7 +349,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude a
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4);
     CHECK(p.has_position());
-    CHECK(p.alt_invalid());
+    CHECK_FALSE(p.has_alt());
     CHECK(p.has_speed());
 }
 
@@ -453,12 +453,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a target of unknown state is held to the airbo
 
 // A fix older than half a second is replaced, not transmitted: the clause's own deadline.
 TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 500 ms") {
-    CHECK(timing::Transmitter::kFixLagMaxMs == 500);
+    CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
-    const timing::SlotPlan plan = timing::Scheduler::plan(timing::kSlot0Start, clock);
+    const timing::SlotPlan plan = timing::Scheduler::plan(timing::kSlot0StartMs, clock);
 
     timing::Transmitter tx;
     tx.configure(0x123456);

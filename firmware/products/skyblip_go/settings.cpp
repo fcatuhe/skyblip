@@ -6,7 +6,7 @@
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::go {
 
@@ -343,8 +343,8 @@ Status validate(const Settings& s) {
     if (s.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
     if (s.range_step >= kRangeStepCount) return Status::OutOfRange;
     if (s.plot != RadarPlot::All && s.plot != RadarPlot::ToScale) return Status::OutOfRange;
-    if (s.battery_offset_mv > power::kCalibrationLimitMv ||
-        s.battery_offset_mv < -power::kCalibrationLimitMv)
+    if (s.battery_offset_mv > power::kCalibrationCeilingMv ||
+        s.battery_offset_mv < -power::kCalibrationCeilingMv)
         return Status::OutOfRange;
     if (s.freq_trim_e1_ppm > kFreqTrimLimitTenthsPpm ||
         s.freq_trim_e1_ppm < -kFreqTrimLimitTenthsPpm)
@@ -464,7 +464,7 @@ Status apply_json(Settings& s, const char* json, int len) {
     // Narrowed before it is validated, not after: 65536 truncates to 0 in an
     // int16 and would pass a bound check that never saw the value sent.
     if (r.get_int("battery_offset_mv", v)) {
-        if (v < -power::kCalibrationLimitMv || v > power::kCalibrationLimitMv)
+        if (v < -power::kCalibrationCeilingMv || v > power::kCalibrationCeilingMv)
             return Status::OutOfRange;
         n.battery_offset_mv = static_cast<int16_t>(v);
         n.battery_offset_manual = true;
@@ -474,7 +474,7 @@ Status apply_json(Settings& s, const char* json, int len) {
         n.freq_trim_e1_ppm = static_cast<int16_t>(v);
     }
     char callsign[kCallsignCap + 1] = {0};
-    if (r.get_str("callsign", callsign, sizeof(callsign))) {
+    if (r.get_string("callsign", callsign, sizeof(callsign))) {
         if (std::strlen(callsign) >= kCallsignCap) return Status::OutOfRange;
         std::memcpy(n.callsign, callsign, kCallsignCap);
     }

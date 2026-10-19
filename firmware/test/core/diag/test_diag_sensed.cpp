@@ -65,7 +65,7 @@ TEST_CASE("diag record: a PPS edge keeps the sign of its error") {
 
 TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict together") {
     radio::Entry in{};
-    in.event = radio::Event::Miskeyed;
+    in.verdict = radio::Verdict::Miskeyed;
     in.band = model::Band::M;
     in.source = model::Source::Alptas;
     in.address = 0xDD8241;
@@ -94,7 +94,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     radio::Entry out{};
     CHECK(diag::read(decoded, out));
 
-    CHECK(out.event == in.event);
+    CHECK(out.verdict == in.verdict);
     CHECK(out.band == in.band);
     CHECK(out.source == in.source);
     CHECK(out.address == in.address);
@@ -119,10 +119,10 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
 // A name is nine characters and the payload has none free, so the flag and the address are it.
 TEST_CASE("diag record: a burst that carried a callsign says so, and a position burst does not") {
     radio::Entry named{};
-    named.event = radio::Event::Transmitted;
+    named.verdict = radio::Verdict::Transmitted;
     named.callsign = true;
     radio::Entry position{};
-    position.event = radio::Event::Transmitted;
+    position.verdict = radio::Verdict::Transmitted;
 
     radio::Entry out{};
     CHECK(diag::read(diag::record_of(named), out));
@@ -132,16 +132,16 @@ TEST_CASE("diag record: a burst that carried a callsign says so, and a position 
 }
 
 TEST_CASE("diag record: every one of the twelve verdicts survives the slot") {
-    for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Event::Unattempted); i++) {
+    for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Unattempted); i++) {
         radio::Entry in{};
-        in.event = static_cast<radio::Event>(i);
+        in.verdict = static_cast<radio::Verdict>(i);
         uint8_t raw[diag::kRecordBytes]{};
         diag::encode_record(diag::record_of(in), raw);
         diag::Record decoded{};
         CHECK(diag::decode_record(raw, decoded) == Status::Ok);
         radio::Entry out{};
         CHECK(diag::read(decoded, out));
-        CHECK(out.event == in.event);
+        CHECK(out.verdict == in.verdict);
     }
 }
 

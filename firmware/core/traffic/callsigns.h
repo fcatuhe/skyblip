@@ -15,11 +15,12 @@ constexpr uint32_t kCallsignForgetS = 600;
 class CallsignTable {
    public:
     static constexpr int kCapacity = TrafficTable::kCapacity;
-    static constexpr int kTextBytes = protocol::AdslPacket::kInfoMsgBytes + 1;
+    static constexpr int kTextBytes = protocol::AdslPacket::kInfoTextBytes + 1;
 
-    void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign, uint32_t now);
+    void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
+               uint32_t now_s);
     const char* find(uint8_t address_mapping_table, uint32_t address) const;
-    void age_out(uint32_t now, uint32_t forget_s = kCallsignForgetS);
+    void age_out(uint32_t now_s, uint32_t forget_s = kCallsignForgetS);
 
     int count() const;
     void clear();

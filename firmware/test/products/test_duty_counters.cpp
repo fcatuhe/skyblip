@@ -18,9 +18,9 @@ constexpr uint32_t kPassMs = 10;
 
 // The uplink window plus the two M-band dwells either side of the hop guard.
 constexpr uint32_t kDwellMsPerSecond =
-    static_cast<uint32_t>((timing::kUplinkRxEnd - timing::kUplinkRxStart) +
-                          (timing::kSlot0End - timing::kHopGuardMs - timing::kSlot0Start) +
-                          (timing::kSlot1End - timing::kSlot1Start));
+    static_cast<uint32_t>((timing::kUplinkRxEndMs - timing::kUplinkRxStartMs) +
+                          (timing::kSlot0EndMs - timing::kHopGuardMs - timing::kSlot0StartMs) +
+                          (timing::kSlot1EndMs - timing::kSlot1StartMs));
 
 // The radio service alone over ports::NullRf, which answers Down to every plan.
 struct RefusingExecutor {

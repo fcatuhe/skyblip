@@ -14,7 +14,7 @@ class Controls {
    public:
     static constexpr uint32_t kLongTouchMs = 1000;
 
-    static_assert(kLongTouchMs < power::kLongPressMs,
+    static_assert(kLongTouchMs < power::kLongPressHoldMs,
                   "the pad's long touch has to resolve before the press that stows the device");
 
     Gesture read(const events::ContactEvent& event) {
@@ -55,7 +55,7 @@ class Controls {
     }
 
     bool released_before_the_stow(uint32_t at_ms) const {
-        return at_ms - pressed_ms_ < power::kLongPressMs;
+        return at_ms - pressed_ms_ < power::kLongPressHoldMs;
     }
 
     bool released_before_the_long_touch(uint32_t at_ms) const {

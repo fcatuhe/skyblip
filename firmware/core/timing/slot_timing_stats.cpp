@@ -1,4 +1,4 @@
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 
 #include <cstdint>
 #include <limits>
@@ -6,7 +6,7 @@
 namespace skyblip::timing {
 
 namespace {
-int32_t clamp_i32(int64_t v) {
+int32_t saturated_i32(int64_t v) {
     if (v > std::numeric_limits<int32_t>::max()) return std::numeric_limits<int32_t>::max();
     if (v < std::numeric_limits<int32_t>::min()) return std::numeric_limits<int32_t>::min();
     return static_cast<int32_t>(v);
@@ -27,24 +27,25 @@ void SlotTimingStats::bump(uint32_t* buckets, uint32_t& samples, int32_t& worst_
     samples++;
     const int64_t magnitude = error_us < 0 ? -error_us : error_us;
     const int64_t worst_magnitude = worst_us < 0 ? -static_cast<int64_t>(worst_us) : worst_us;
-    if (magnitude > worst_magnitude) worst_us = clamp_i32(error_us);
+    if (magnitude > worst_magnitude) worst_us = saturated_i32(error_us);
 }
 
 void SlotTimingStats::record_edge(uint64_t edge_us, bool locked) {
     if (!locked) {
-        if (prev_edge_valid_) holdover_++;
-        prev_edge_valid_ = false;
+        if (previous_edge_valid_) holdover_++;
+        previous_edge_valid_ = false;
         return;
     }
-    if (!prev_edge_valid_) {
-        prev_edge_us_ = edge_us;
-        prev_edge_valid_ = true;
+    if (!previous_edge_valid_) {
+        previous_edge_us_ = edge_us;
+        previous_edge_valid_ = true;
         return;
     }
-    if (edge_us == prev_edge_us_) return;
+    if (edge_us == previous_edge_us_) return;
 
-    const int64_t delta_us = static_cast<int64_t>(edge_us) - static_cast<int64_t>(prev_edge_us_);
-    prev_edge_us_ = edge_us;
+    const int64_t delta_us =
+        static_cast<int64_t>(edge_us) - static_cast<int64_t>(previous_edge_us_);
+    previous_edge_us_ = edge_us;
     // A clock that ran backwards or skipped an edge is not describable against
     // the nominal second at all: holdover, so it cannot masquerade as an
     // enormous phase error in the histogram below.

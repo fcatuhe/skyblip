@@ -51,25 +51,25 @@ constexpr NauticalMilesE1 to_nm_e1(Metres m) {
     return NauticalMilesE1(div_round(m.v * 10, kMetresPerNm));
 }
 
-struct QuarterMetresPerSec {
+struct QuarterMetresPerSecond {
     uint16_t v{0};
-    constexpr QuarterMetresPerSec() = default;
-    constexpr explicit QuarterMetresPerSec(uint16_t q) : v(q) {}
+    constexpr QuarterMetresPerSecond() = default;
+    constexpr explicit QuarterMetresPerSecond(uint16_t q) : v(q) {}
 };
-struct EighthMetresPerSec {
+struct EighthMetresPerSecond {
     int16_t v{0};
-    constexpr EighthMetresPerSec() = default;
-    constexpr explicit EighthMetresPerSec(int16_t e) : v(e) {}
+    constexpr EighthMetresPerSecond() = default;
+    constexpr explicit EighthMetresPerSecond(int16_t e) : v(e) {}
 };
-struct MetresPerSec {
+struct MetresPerSecond {
     int32_t v{0};
-    constexpr MetresPerSec() = default;
-    constexpr explicit MetresPerSec(int32_t m) : v(m) {}
+    constexpr MetresPerSecond() = default;
+    constexpr explicit MetresPerSecond(int32_t m) : v(m) {}
 };
-struct MillimetresPerSec {
+struct MillimetresPerSecond {
     int32_t v{0};
-    constexpr MillimetresPerSec() = default;
-    constexpr explicit MillimetresPerSec(int32_t mm) : v(mm) {}
+    constexpr MillimetresPerSecond() = default;
+    constexpr explicit MillimetresPerSecond(int32_t mm) : v(mm) {}
 };
 struct Knots {
     int32_t v{0};
@@ -87,40 +87,41 @@ struct FeetPerMinute {
     constexpr explicit FeetPerMinute(int32_t f) : v(f) {}
 };
 
-constexpr int32_t kMmPerSpeedQ = 250;
-constexpr int32_t kMmPerClimbE8 = 125;
+constexpr int32_t kMillimetresPerSpeedQ = 250;
+constexpr int32_t kMillimetresPerClimbE8 = 125;
 
-constexpr MillimetresPerSec to_mm_s(QuarterMetresPerSec q) {
-    return MillimetresPerSec(static_cast<int32_t>(q.v) * kMmPerSpeedQ);
+constexpr MillimetresPerSecond to_mm_s(QuarterMetresPerSecond q) {
+    return MillimetresPerSecond(static_cast<int32_t>(q.v) * kMillimetresPerSpeedQ);
 }
-constexpr MillimetresPerSec to_mm_s(EighthMetresPerSec e) {
-    return MillimetresPerSec(static_cast<int32_t>(e.v) * kMmPerClimbE8);
+constexpr MillimetresPerSecond to_mm_s(EighthMetresPerSecond e) {
+    return MillimetresPerSecond(static_cast<int32_t>(e.v) * kMillimetresPerClimbE8);
 }
-constexpr QuarterMetresPerSec to_speed_q(MillimetresPerSec mm) {
-    const int32_t q = div_round(mm.v < 0 ? 0 : mm.v, kMmPerSpeedQ);
-    return QuarterMetresPerSec(static_cast<uint16_t>(q > 0xFFFF ? 0xFFFF : q));
+constexpr QuarterMetresPerSecond to_speed_q(MillimetresPerSecond mm) {
+    const int32_t q = div_round(mm.v < 0 ? 0 : mm.v, kMillimetresPerSpeedQ);
+    return QuarterMetresPerSecond(static_cast<uint16_t>(q > 0xFFFF ? 0xFFFF : q));
 }
-constexpr EighthMetresPerSec to_climb_e8(MillimetresPerSec mm) {
-    const int32_t e = div_round(mm.v, kMmPerClimbE8);
-    return EighthMetresPerSec(static_cast<int16_t>(e < -32768 ? -32768 : (e > 32767 ? 32767 : e)));
+constexpr EighthMetresPerSecond to_climb_e8(MillimetresPerSecond mm) {
+    const int32_t e = div_round(mm.v, kMillimetresPerClimbE8);
+    return EighthMetresPerSecond(
+        static_cast<int16_t>(e < -32768 ? -32768 : (e > 32767 ? 32767 : e)));
 }
-constexpr MetresPerSec to_mps(MillimetresPerSec mm) {
-    return MetresPerSec(div_round(mm.v, kMillimetresPerMetre));
+constexpr MetresPerSecond to_mps(MillimetresPerSecond mm) {
+    return MetresPerSecond(div_round(mm.v, kMillimetresPerMetre));
 }
-constexpr MetresPerSec to_mps(QuarterMetresPerSec q) { return to_mps(to_mm_s(q)); }
+constexpr MetresPerSecond to_mps(QuarterMetresPerSecond q) { return to_mps(to_mm_s(q)); }
 
 // INFO: fc 18sep26 1 m/s = 1.94384 kt = 3.6 km/h, rounded: truncated, 60 kt flown reads 59
-constexpr Knots to_knots(MillimetresPerSec mm) {
+constexpr Knots to_knots(MillimetresPerSecond mm) {
     return Knots(
         static_cast<int32_t>(div_round<int64_t>(static_cast<int64_t>(mm.v) * 194384, 100000000)));
 }
-constexpr Knots to_knots(QuarterMetresPerSec q) { return to_knots(to_mm_s(q)); }
-constexpr KilometresPerHour to_kmh(MillimetresPerSec mm) {
+constexpr Knots to_knots(QuarterMetresPerSecond q) { return to_knots(to_mm_s(q)); }
+constexpr KilometresPerHour to_kmh(MillimetresPerSecond mm) {
     return KilometresPerHour(
         static_cast<int32_t>(div_round<int64_t>(static_cast<int64_t>(mm.v) * 36, 10000)));
 }
-constexpr KilometresPerHour to_kmh(QuarterMetresPerSec q) { return to_kmh(to_mm_s(q)); }
-constexpr FeetPerMinute to_feet_per_minute(MillimetresPerSec mm) {
+constexpr KilometresPerHour to_kmh(QuarterMetresPerSecond q) { return to_kmh(to_mm_s(q)); }
+constexpr FeetPerMinute to_feet_per_minute(MillimetresPerSecond mm) {
     return FeetPerMinute(
         static_cast<int32_t>(div_round<int64_t>(static_cast<int64_t>(mm.v) * 19685, 100000)));
 }
@@ -174,12 +175,6 @@ constexpr CentiDegrees centi_degrees_of_angle16(uint16_t angle16) {
         div_round<int64_t>(static_cast<int64_t>(angle16) * kCentiDegreesPerTurn, kAngle16PerTurn) %
         kCentiDegreesPerTurn));
 }
-
-struct MilliVolts {
-    int16_t v{0};
-    constexpr MilliVolts() = default;
-    constexpr explicit MilliVolts(int16_t mv) : v(mv) {}
-};
 
 }  // namespace skyblip
 

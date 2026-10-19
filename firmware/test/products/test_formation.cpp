@@ -23,7 +23,7 @@ model::AircraftObservation contact(const model::Ownship& own, int north_m, int e
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(mps * 4);
     t.track_c9 = c9(track_deg);
-    t.alt_m = to_metres(Millimetres(own.alt_mm)).v + up_m;
+    t.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
     t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
         static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
@@ -42,7 +42,7 @@ struct Flight {
         rig.state.own.fix_valid = true;
         rig.state.own.lat_1e7 = 481000000;
         rig.state.own.lon_1e7 = 81000000;
-        rig.state.own.alt_mm = 1000000;
+        rig.state.own.alt_hae_mm = 1000000;
         rig.state.own.speed_mm_s = 40000;
         rig.state.own.track_cdeg = 9000;
     }
@@ -50,7 +50,7 @@ struct Flight {
     void hear(int north_m, int east_m, int up_m, int mps, int track_deg, uint32_t now_ms,
               flight::FlightState says = flight::FlightState::Unknown,
               uint32_t address = 0x515151) {
-        rig.state.own.fix_ms = now_ms;
+        rig.state.own.fix_at_ms = now_ms;
         model::AircraftObservation observation =
             contact(rig.state.own, north_m, east_m, up_m, mps, track_deg, now_ms);
         observation.address = address;
@@ -86,7 +86,7 @@ struct Flight {
     void listen() {
         rig.roles.capabilities = ports::Capability::Display | ports::Capability::Rf;
         rig.state.clock.pps_locked = true;
-        rig.state.clock.ms_since_pps = go::ScreenService::kLockedRedrawMs;
+        rig.state.clock.since_edge_ms = go::ScreenService::kLockedRedrawMs;
     }
 
     bool radar_counts(const char* figure) {
@@ -152,7 +152,7 @@ TEST_CASE("formation: a member under three metres a second of closure stays a me
 
     // 3.25 m/s faster from 60 m right and 120 m behind: 2.9 m/s on the line of sight.
     for (const uint32_t until = t + 10000; t < until; t += 1000) {
-        flight.rig.state.own.fix_ms = t;
+        flight.rig.state.own.fix_at_ms = t;
         model::AircraftObservation observation =
             contact(flight.rig.state.own, -60, -120, 10, 40, 90, t);
         observation.speed_q = 173;

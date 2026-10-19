@@ -14,6 +14,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/nmea_out.h"
+#include "core/traffic/range.h"
 #include "doctest/doctest.h"
 #include "ports/link.h"
 #include "test/support/nmea_checksum.h"
@@ -33,7 +34,7 @@ static model::Ownship own_at(int32_t lat, int32_t lon, int32_t alt_m) {
     o.utc_valid = true;
     o.lat_1e7 = lat;
     o.lon_1e7 = lon;
-    o.alt_mm = alt_m * 1000;
+    o.alt_hae_mm = alt_m * 1000;
     return o;
 }
 
@@ -71,7 +72,7 @@ TEST_CASE("nmea: relative geometry, target due north is +north, ~0 east") {
     t.lon_1e7 = own.lon_1e7;
     t.alt_m = 1200;
     int32_t n_m, e_m, u_m;
-    REQUIRE(relative_ned(own, t, n_m, e_m, u_m));
+    REQUIRE(traffic::relative_ned(own, t, n_m, e_m, u_m));
     CHECK(n_m > 100000);
     CHECK(std::abs(e_m) < 100);
     CHECK(u_m == 200);
@@ -86,7 +87,7 @@ TEST_CASE("nmea: a target across the antimeridian is metres away, not the width 
     t.lon_1e7 = -1799999000;
     t.alt_m = 1000;
     int32_t n_m, e_m, u_m;
-    REQUIRE(relative_ned(own, t, n_m, e_m, u_m));
+    REQUIRE(traffic::relative_ned(own, t, n_m, e_m, u_m));
     CHECK(n_m == 0);
     // 0.0002 deg of longitude at the equator
     CHECK(e_m == doctest::Approx(22).epsilon(0.05));
@@ -154,8 +155,8 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
     for (int c = 1; c < 256; c++) {
         AdslPacket p{};
         from_own_callsign(p, 0x123456, 58, "D-KXYZ");
-        p.info_msg()[1] = static_cast<char>(c);
-        char name[AdslPacket::kInfoMsgBytes + 1] = {0};
+        p.info_text()[1] = static_cast<char>(c);
+        char name[AdslPacket::kInfoTextBytes + 1] = {0};
         if (callsign_of(p, name, sizeof(name)) == 0) continue;
 
         CAPTURE(c);
@@ -256,8 +257,8 @@ TEST_CASE("nmea: PFLAU's TX field follows the transmitter's own gate, not the cl
 }
 
 TEST_CASE("nmea: category mapping ADS-L glider -> ALP-TAS 1") {
-    CHECK(adsl_cat_to_alptas(4) == 0x1);  // glider
-    CHECK(adsl_cat_to_alptas(3) == 0x3);  // heli
+    CHECK(adsl_cat_to_alptas_type(4) == 0x1);  // glider
+    CHECK(adsl_cat_to_alptas_type(3) == 0x3);  // heli
 }
 
 // oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658 is the source for

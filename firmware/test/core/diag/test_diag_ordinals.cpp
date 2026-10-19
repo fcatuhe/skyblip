@@ -67,20 +67,20 @@ uint8_t wire(gnss::Stage value) {
     return kUnpinned;
 }
 
-uint8_t wire(radio::Event value) {
+uint8_t wire(radio::Verdict value) {
     switch (value) {
-        case radio::Event::Transmitted: return 0;
-        case radio::Event::Lost: return 1;
-        case radio::Event::Held: return 2;
-        case radio::Event::Unarmed: return 3;
-        case radio::Event::Received: return 4;
-        case radio::Event::Named: return 5;
-        case radio::Event::BadCrc: return 6;
-        case radio::Event::Unframed: return 7;
-        case radio::Event::Miskeyed: return 8;
-        case radio::Event::Undecoded: return 9;
-        case radio::Event::Unsupported: return 10;
-        case radio::Event::Unattempted: return 11;
+        case radio::Verdict::Transmitted: return 0;
+        case radio::Verdict::Lost: return 1;
+        case radio::Verdict::Held: return 2;
+        case radio::Verdict::Unarmed: return 3;
+        case radio::Verdict::Received: return 4;
+        case radio::Verdict::Named: return 5;
+        case radio::Verdict::BadCrc: return 6;
+        case radio::Verdict::Unframed: return 7;
+        case radio::Verdict::Miskeyed: return 8;
+        case radio::Verdict::Undecoded: return 9;
+        case radio::Verdict::Unsupported: return 10;
+        case radio::Verdict::Unattempted: return 11;
     }
     return kUnpinned;
 }
@@ -239,9 +239,9 @@ void codes_pinned(int count) {
 }  // namespace
 
 TEST_CASE(
-    "diag ordinals: radio::Event's codes are the burst verdict byte, and a code changed here "
+    "diag ordinals: radio::Verdict's codes are the burst verdict byte, and a code changed here "
     "changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it") {
-    codes_pinned<radio::Event>(12);
+    codes_pinned<radio::Verdict>(12);
 }
 
 TEST_CASE(

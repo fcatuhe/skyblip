@@ -60,7 +60,7 @@ CONSUMERS = (
     Consumer("panel partial refresh", 8.0, events("panel_partial_refreshes", 460), False,
              "460 ms is GxEPD2's D67 partial settle, ssd1681.h"),
     Consumer("panel full refresh", 8.0, events("panel_full_refreshes", 2500), False,
-             "2.5 s full settle, ssd1681.h and shutdown.h kParkMs"),
+             "2.5 s full settle, ssd1681.h and shutdown.h kParkSettleMs"),
     Consumer("backlight", 20.0, on_ms("backlight_ms"), False, "an LED nobody has metered"),
     Consumer("Bluetooth connected", 1.5, on_ms("ble_connected_ms"), False,
              "three connections at a 498-byte MTU"),

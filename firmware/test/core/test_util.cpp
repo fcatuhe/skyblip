@@ -30,14 +30,14 @@ TEST_CASE("units: feet<->metres round-trip is close") {
 // Every one truncated, so a speed, a climb and a rate each read a unit below what was flown.
 TEST_CASE("units: a speed and a rate are rounded to the unit shown, not truncated") {
     // 60 kt is 30.87 m/s, which the wire carries as 123 quarter-m/s: 59.77 kt back.
-    CHECK(to_knots(QuarterMetresPerSec(123)).v == 60);
-    CHECK(to_kmh(QuarterMetresPerSec(123)).v == 111);
-    CHECK(to_knots(QuarterMetresPerSec(0)).v == 0);
+    CHECK(to_knots(QuarterMetresPerSecond(123)).v == 60);
+    CHECK(to_kmh(QuarterMetresPerSecond(123)).v == 111);
+    CHECK(to_knots(QuarterMetresPerSecond(0)).v == 0);
 
     // 300 fpm is 1.524 m/s.
-    CHECK(to_feet_per_minute(MillimetresPerSec(1524)).v == 300);
-    CHECK(to_feet_per_minute(MillimetresPerSec(-1524)).v == -300);
-    CHECK(to_feet_per_minute(MillimetresPerSec(0)).v == 0);
+    CHECK(to_feet_per_minute(MillimetresPerSecond(1524)).v == 300);
+    CHECK(to_feet_per_minute(MillimetresPerSecond(-1524)).v == -300);
+    CHECK(to_feet_per_minute(MillimetresPerSecond(0)).v == 0);
 }
 
 TEST_CASE("units: cordic9 to degrees") {

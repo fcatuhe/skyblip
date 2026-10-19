@@ -420,7 +420,7 @@ void ScreenService::count_refresh(ports::Refresh mode) {
 
 void ScreenService::accrue_backlight(uint32_t now_ms) {
     lit_.observe(backlight_, now_ms);
-    context_.state.duty.backlight_ms = lit_.ms();
+    context_.state.duty.backlight_ms = lit_.on_ms();
 }
 
 void ScreenService::set_backlight(bool on) {

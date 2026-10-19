@@ -2,7 +2,7 @@
 #ifndef SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 #define SKYBLIP_CORE_COMMS_TIMING_REPORT_H
 
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 
 namespace skyblip::comms {
 

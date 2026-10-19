@@ -246,7 +246,7 @@ struct Armings {
         state.own.tx_settled = true;
         state.own.flight_state = 2;
         state.own.utc_s = utc_s;
-        state.own.fix_ms = static_cast<uint32_t>(kEdgeUs / 1000);
+        state.own.fix_at_ms = static_cast<uint32_t>(kEdgeUs / 1000);
     }
 };
 
@@ -342,7 +342,7 @@ TEST_CASE("rf: a burst whose gates clear inside the dwell is armed into that dwe
     a.state.own.utc_valid = true;
     a.state.own.tx_settled = true;
     a.state.own.flight_state = 2;
-    a.state.own.fix_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000);
+    a.state.own.fix_at_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000);
 
     a.tick_at(400);
     const uint32_t armed_at_the_edge = a.rf.arms;
@@ -423,7 +423,7 @@ TEST_CASE("rf: a plan the radio refuses is a burst that never armed, not one tha
 
     REQUIRE(a.rf.with_tx >= 1);
     REQUIRE(a.state.radio_log.count() == 1);
-    CHECK(a.state.radio_log.newest(0).event == radio::Event::Unarmed);
+    CHECK(a.state.radio_log.newest(0).verdict == radio::Verdict::Unarmed);
     CHECK(a.state.rf.timing_stats.missed() == 1);
 }
 
@@ -446,12 +446,12 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
     a.tick_at(400);
 
     REQUIRE(a.state.radio_log.count() == 1);
-    CHECK(a.state.radio_log.newest(0).event == radio::Event::Held);
+    CHECK(a.state.radio_log.newest(0).verdict == radio::Verdict::Held);
     CHECK(a.state.radio_log.newest(0).band == model::Band::M);
     CHECK(a.state.rf.timing_stats.refused() == 1);
 
     a.state.own.utc_s += 2;
-    a.state.own.fix_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
+    a.state.own.fix_at_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
     a.tick_in(1, 205);
     a.tick_in(1, 400);
 
@@ -492,7 +492,7 @@ struct Outcomes {
         for (uint32_t i = 0; i < a.rf.handed; i++) {
             const ports::RfPlan& plan = a.rf.plans[i];
             if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs &&
-                plan.tx_at_us < kSecondOneUs + timing::kSlot1Wrap * 1000)
+                plan.tx_at_us < kSecondOneUs + timing::kSlot1WrapMs * 1000)
                 return plan.tx_at_us;
         }
         return 0;
@@ -543,7 +543,7 @@ TEST_CASE("rf: a burst that never reports is counted missed once its report is o
     fly_ground_second(a, outcomes);
 
     const int overdue_ms =
-        timing::kSlot1Wrap + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
+        timing::kSlot1WrapMs + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
     for (int phase = 0; phase < overdue_ms; phase += 10) {
         a.tick_in(1, phase);
         outcomes.report_flown();

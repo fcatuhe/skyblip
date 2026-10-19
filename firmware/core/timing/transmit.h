@@ -24,9 +24,9 @@ class Transmitter {
     // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a contact is hex
     static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
-    static constexpr int32_t kFixLagMaxMs = 500;
+    static constexpr int32_t kFixMaxAgeMs = 500;
     // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
-    static constexpr int kCompletionSlackMs = 2;
+    static constexpr int kCompletionMarginMs = 2;
 
     enum class Payload : uint8_t { Position, Callsign };
 
@@ -52,7 +52,7 @@ class Transmitter {
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
     uint32_t sent_count() const { return sent_; }
-    const AirTime& air_time() const { return air_; }
+    const AirTime& air_time() const { return air_time_; }
     static uint32_t period_s(bool airborne) {
         return flight::report_period_s(airborne ? flight::FlightState::Airborne
                                                 : flight::FlightState::Ground);
@@ -68,8 +68,8 @@ class Transmitter {
    private:
     bool on_schedule(uint32_t utc_s, bool airborne) const;
     bool on_callsign_schedule(uint32_t utc_s) const;
-    bool spoke_in(uint32_t utc_s) const;
-    bool named_in(uint32_t utc_s) const;
+    bool position_sent_in(uint32_t utc_s) const;
+    bool callsign_sent_in(uint32_t utc_s) const;
     static int first_instant_in(int slot);
     static int last_instant_in(int slot);
     // Uniform over the slot's usable width and decorrelated between devices:
@@ -78,13 +78,13 @@ class Transmitter {
     int instant_in(int slot, uint32_t utc_s) const;
     int instant_between(int first, int last, uint32_t utc_s) const;
 
-    AirTime air_{};
+    AirTime air_time_{};
     uint32_t address_{0};
     uint32_t sent_{0};
-    uint32_t last_sent_utc_s_{0};
+    uint32_t last_position_utc_s_{0};
     uint32_t last_callsign_utc_s_{0};
-    bool ever_sent_{false};
-    bool ever_named_{false};
+    bool ever_sent_position_{false};
+    bool ever_sent_callsign_{false};
 };
 
 }  // namespace skyblip::timing

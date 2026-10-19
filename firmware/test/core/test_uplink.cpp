@@ -228,16 +228,16 @@ TEST_CASE("uplink: a frame fits the window the dwell map is cut against") {
 
     // Our own ground station: on air at 210, done at 220.44, and the dwell that
     // was listening for it opened at 205 and closes at 395.
-    const uint32_t ours_start_us = timing::kGroundEmitStart * 1000u;
-    CHECK(ours_start_us > timing::kUplinkRxStart * 1000u);
-    CHECK(ours_start_us + kUplinkBurstUs < timing::kUplinkRxEnd * 1000u);
+    const uint32_t ours_start_us = timing::kGroundEmitStartMs * 1000u;
+    CHECK(ours_start_us > timing::kUplinkRxStartMs * 1000u);
+    CHECK(ours_start_us + kUplinkBurstUs < timing::kUplinkRxEndMs * 1000u);
 
-    // kGroundEmitEnd is a completion deadline and not a start deadline, and the
+    // kGroundEmitEndMs is a completion deadline and not a start deadline, and the
     // difference is 10.44 ms: a burst BEGUN at 390 would still be on air at 400,
     // where the radio has already retuned to the M band.
-    CHECK(timing::kGroundEmitEnd * 1000u + kUplinkBurstUs > timing::kUplinkRxEnd * 1000u);
-    const uint32_t last_start_us = timing::kGroundEmitEnd * 1000u - kUplinkBurstUs;
-    CHECK(last_start_us > timing::kUplinkRxStart * 1000u);
+    CHECK(timing::kGroundEmitEndMs * 1000u + kUplinkBurstUs > timing::kUplinkRxEndMs * 1000u);
+    const uint32_t last_start_us = timing::kGroundEmitEndMs * 1000u - kUplinkBurstUs;
+    CHECK(last_start_us > timing::kUplinkRxStartMs * 1000u);
 
     // And the limit this dwell has, stated rather than discovered: §C.5 gives
     // the uplink slot 200..450 ms and only requires a transmission to complete
@@ -249,8 +249,8 @@ TEST_CASE("uplink: a frame fits the window the dwell map is cut against") {
     // reason, and hearing our own network is the capability we ship; a
     // third-party station that starts late is a known and accepted deaf spot.
     const uint32_t conforming_last_start_us = kUplinkSlotEndMs * 1000u - kUplinkBurstUs;
-    CHECK(conforming_last_start_us > timing::kUplinkRxEnd * 1000u);
-    CHECK(kUplinkSlotStartMs < timing::kUplinkRxStart);
+    CHECK(conforming_last_start_us > timing::kUplinkRxEndMs * 1000u);
+    CHECK(kUplinkSlotStartMs < timing::kUplinkRxStartMs);
 }
 
 // Reed-Solomon can decode to a valid codeword that is not the one that was sent.

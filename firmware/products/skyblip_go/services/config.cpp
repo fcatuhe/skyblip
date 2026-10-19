@@ -35,7 +35,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.set_die_temperature(power_.die_temperature_dc(), power_.die_temperature_valid());
     // The range gate's own counter, read off the table that keeps it rather than
     // recounted here (core/traffic/table.h).
-    config_.set_range_refused(context_.state.traffic.implausible_count());
+    config_.set_range_refused(context_.state.traffic.implausible());
     config_.set_hub_image(context_.state.imu.image);
 
     config_.resume_replies(now_ms);
@@ -112,7 +112,7 @@ void ConfigLinkService::publish_upload_verdict() {
 
 void ConfigLinkService::accrue_connected(uint32_t now_ms) {
     connected_.observe(config_.link_up(), now_ms);
-    context_.state.duty.ble_connected_ms = connected_.ms();
+    context_.state.duty.ble_connected_ms = connected_.on_ms();
 }
 
 void ConfigLinkService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,

@@ -39,11 +39,11 @@ namespace skyblip::traffic {
 // figure in practice is a third of this: 30 km is a ceiling, never a promise.
 //
 // A ceiling is exactly what a sanity gate wants. It cannot hide a contact anyone
-// could act on, because the alarm layer's outermost ring is 3 km
-// (core/traffic/alarm.h kInfoDistM) and the radar's furthest range setting is
+// could act on, because the alarm layer's advisory ring is 3 km
+// (core/traffic/alarm.h kAdvisoryDistM) and the radar's furthest range setting is
 // well inside this figure, and it cannot be reached by a real transmitter on this
 // band with this power. What is past it did not arrive over this link.
-constexpr int32_t kMaxPlausibleRangeM = 30000;
+constexpr int32_t kPlausibleRangeCeilingM = 30000;
 
 // A relayed target did not travel that path. It travelled two: the aircraft to a
 // ground station, and the ground station to us (core/protocol/adsl_uplink.h). The
@@ -54,7 +54,7 @@ constexpr int32_t kMaxPlausibleRangeM = 30000;
 // claimed position stops being a plausible two-hop path and becomes arithmetic on
 // a corrupted field. Gating a relay at the single-hop figure would throw away
 // exactly the distant traffic the uplink exists to provide.
-constexpr int32_t kMaxRelayedRangeM = 2 * kMaxPlausibleRangeM;
+constexpr int32_t kRelayedRangeCeilingM = 2 * kPlausibleRangeCeilingM;
 
 // Which of the two applies to a report, from the path it came over.
 int32_t plausible_range_m(model::Source source);

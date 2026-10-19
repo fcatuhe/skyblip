@@ -111,7 +111,7 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
 
     radio::Entry burst{};
     REQUIRE(last_of(drained(rig.recorder), burst));
-    CHECK(burst.event == radio::Event::BadCrc);
+    CHECK(burst.verdict == radio::Verdict::BadCrc);
     CHECK(burst.at_s == ServiceRig::kUtc);
     CHECK(burst.utc_dated);
 }
@@ -119,7 +119,7 @@ TEST_CASE("diag burst: a second the anchored clock dated is never recorded as bo
 TEST_CASE("diag pps: an edge lost past the field's ceiling reads as the ceiling, not as recent") {
     ServiceRig rig;
     rig.state.clock.pps_locked = false;
-    rig.state.clock.ms_since_pps = timing::kPpsHoldoverMs + 10000;
+    rig.state.clock.since_edge_ms = timing::kPpsHoldoverMs + 10000;
     rig.clock.set_millis(1000);
     rig.ownship.tick(1000);
 

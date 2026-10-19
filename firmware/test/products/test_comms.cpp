@@ -261,7 +261,7 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
 
     power::BatteryState low{};
     low.valid = true;
-    low.millivolts = 3400;
+    low.cell_mv = 3400;
     cs.set_battery_state(low, power::PowerLevel::Critical);
     CHECK_FALSE(cs.settings_writable());
 
@@ -278,7 +278,7 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     // reports Normal again and the door opens.
     power::BatteryState charging{};
     charging.valid = true;
-    charging.millivolts = 3400;
+    charging.cell_mv = 3400;
     charging.external_power = true;
     charging.charging = true;
     cs.set_battery_state(charging, power::PowerLevel::Normal);
@@ -303,7 +303,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
 
     power::BatteryState low{};
     low.valid = true;
-    low.millivolts = 3100;
+    low.cell_mv = 3100;
     cs.set_battery_state(low, power::PowerLevel::Flat);
     cs.confirm();
     CHECK(cs.pending() == Pending::None);
@@ -324,7 +324,7 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
     cs.set_flight_state(flight::FlightState::Ground);
     power::BatteryState healthy{};
     healthy.valid = true;
-    healthy.millivolts = 4000;
+    healthy.cell_mv = 4000;
     cs.set_battery_state(healthy, power::PowerLevel::Normal);
     REQUIRE(cs.settings_writable());
 

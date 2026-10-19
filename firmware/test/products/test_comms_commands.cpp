@@ -204,7 +204,7 @@ TEST_CASE("comms: dfu is refused at the door on a critical cell") {
     cs.set_flight_state(flight::FlightState::Ground);
     power::BatteryState low{};
     low.valid = true;
-    low.millivolts = 3400;
+    low.cell_mv = 3400;
     cs.set_battery_state(low, power::PowerLevel::Critical);
     REQUIRE_FALSE(cs.swap_powered());
 
@@ -224,7 +224,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     ConfigService cs(link, store_cs, &dfu);
     power::BatteryState healthy{};
     healthy.valid = true;
-    healthy.millivolts = 4000;
+    healthy.cell_mv = 4000;
     cs.set_battery_state(healthy, power::PowerLevel::Normal);
     upload_opened(cs, dfu);
 

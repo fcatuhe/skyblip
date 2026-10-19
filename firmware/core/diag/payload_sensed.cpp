@@ -80,7 +80,7 @@ Record record_of(const radio::Entry& value) {
     put_u32(r.payload + 0, value.address);
     put_u16(r.payload + 4, value.tx_keyed_us);
     put_u16(r.payload + 6, value.tx_span_us);
-    r.payload[8] = static_cast<uint8_t>(value.event);
+    r.payload[8] = static_cast<uint8_t>(value.verdict);
     r.payload[9] = static_cast<uint8_t>(value.source);
     r.payload[10] = static_cast<uint8_t>(value.band);
     r.payload[11] = value.channel;
@@ -106,7 +106,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.address = get_u32(record.payload + 0);
     out.tx_keyed_us = get_u16(record.payload + 4);
     out.tx_span_us = get_u16(record.payload + 6);
-    out.event = static_cast<radio::Event>(record.payload[8]);
+    out.verdict = static_cast<radio::Verdict>(record.payload[8]);
     out.source = static_cast<model::Source>(record.payload[9]);
     out.band = static_cast<model::Band>(record.payload[10]);
     out.channel = record.payload[11];

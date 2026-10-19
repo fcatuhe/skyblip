@@ -2,7 +2,7 @@
 #include "core/comms/timing_report.h"
 #include "core/dfu/image.h"
 #include "core/util/format.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "core/util/span.h"
 #include "ports/link.h"
 
@@ -98,7 +98,7 @@ void ConfigService::send_flash() {
     w.kv_int("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
     w.kv_bool("pending", durable_writes_->pending());
     w.kv_int("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
-    w.kv_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kMaxDeferMs));
+    w.kv_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kDeferCeilingMs));
     w.finish();
     (void)reply(buf);
 }

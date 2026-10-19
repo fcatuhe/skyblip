@@ -1,11 +1,11 @@
-// core/timing/timing_stats.h: the bench-facing accumulator behind G6, the
+// core/timing/slot_timing_stats.h: the bench-facing accumulator behind G6, the
 // launch gate's "slot timing proven on silicon". It has exactly two inputs -
 // the PPS edge boards/ already latches every pass, and the outcome an
 // armed dwell reports back against the deadline core/timing::Transmitter chose
 // - so nothing here forms a second opinion about either. ADS-L 4 SRD-860
 // issue 2 §C.5 is the budget both halves are read against.
-#ifndef SKYBLIP_CORE_TIMING_TIMING_STATS_H
-#define SKYBLIP_CORE_TIMING_TIMING_STATS_H
+#ifndef SKYBLIP_CORE_TIMING_SLOT_TIMING_STATS_H
+#define SKYBLIP_CORE_TIMING_SLOT_TIMING_STATS_H
 
 #include <cstdint>
 
@@ -24,7 +24,7 @@ namespace skyblip::timing {
 //  - kHopGuardMs (core/timing/slot.h), the smaller of the two slot-map
 //    guards, paid at every M-band channel change.
 //  - kJitterGuardMs (core/timing/slot.h), the guard both band edges keep, and
-//    the figure core/timing/transmit.h's kCompletionSlackMs is drawn from.
+//    the figure core/timing/transmit.h's kCompletionMarginMs is drawn from.
 //    Past this the error is not something the slot map budgeted for.
 // A count outside the widest pair still lands somewhere: saturated into the
 // outermost bucket, never wrapped, because a fault we cannot bound is one this
@@ -106,8 +106,8 @@ class SlotTimingStats {
     uint32_t switch_to_oband_us_{0};
     uint32_t switch_to_mband_us_{0};
     uint32_t late_dwells_{0};
-    uint64_t prev_edge_us_{0};
-    bool prev_edge_valid_{false};
+    uint64_t previous_edge_us_{0};
+    bool previous_edge_valid_{false};
 };
 
 }  // namespace skyblip::timing

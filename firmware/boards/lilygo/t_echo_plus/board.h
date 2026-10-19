@@ -38,7 +38,7 @@ static_assert(runtime::kBaroConversionCeilingMs < runtime::kBaroConversionPeriod
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                       runtime::kServiceStepMs <
-                  timing::kSlot0Start,
+                  timing::kSlot0StartMs,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
 // The T-Echo Plus, assembled once. P is the platform: silicon or host. Swapping
@@ -154,7 +154,7 @@ class TEchoPlus {
             baro_slot_ = 0;
             trigger_baro(now_ms, true);
         } else if (baro_filler_due(clock, now_ms)) {
-            baro_slot_ = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
+            baro_slot_ = clock.since_edge_ms / runtime::kBaroConversionPeriodMs;
             trigger_baro(now_ms, false);
         }
     }
@@ -183,7 +183,7 @@ class TEchoPlus {
     bool baro_filler_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
             return now_ms - baro_triggered_ms_ >= runtime::kBaroConversionPeriodMs;
-        const uint32_t slot = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
+        const uint32_t slot = clock.since_edge_ms / runtime::kBaroConversionPeriodMs;
         return slot > baro_slot_ && slot < kBaroConversionsPerSecond;
     }
 
@@ -191,7 +191,7 @@ class TEchoPlus {
         const uint32_t since = now_ms - last_baro_ms_;
         if (since < runtime::kBaroPeriodMs / 2) return false;
         if (!clock.pps_locked) return since >= runtime::kBaroPeriodMs;
-        return clock.ms_since_pps < runtime::kBaroPpsWindowMs ||
+        return clock.since_edge_ms < runtime::kBaroPpsWindowMs ||
                since >= 2 * runtime::kBaroPeriodMs;
     }
 
@@ -255,7 +255,7 @@ class TEchoPlus {
 
         const uint64_t now_us = platform_.clock().micros();
         state.clock.pps_locked = platform_.pps().locked();
-        state.clock.ms_since_pps = platform_.pps().ms_since(now_us);
+        state.clock.since_edge_ms = platform_.pps().ms_since(now_us);
         poll_baro_on_pps(state.clock, now_ms);
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding

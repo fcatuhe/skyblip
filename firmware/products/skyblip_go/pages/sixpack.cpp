@@ -108,7 +108,7 @@ void value_center(ui::Canvas& canvas, int cx, int row, bool have, int32_t v, boo
         return;
     }
     char buf[12];
-    int n = format_int(buf, v, min_digits, 0, no_plus || v == 0);
+    int n = format_int(buf, v, min_digits, 0, !no_plus && v != 0);
     buf[n] = 0;
     value_text(canvas, cx, row, buf);
 }

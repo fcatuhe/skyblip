@@ -12,7 +12,7 @@ constexpr uint64_t kLastEdgeUs = 12'000'000;
 void edge_lost(Rig& rig, uint32_t ms_ago, bool locked) {
     rig.state.clock.utc_valid = true;
     rig.state.clock.pps_locked = locked;
-    rig.state.clock.ms_since_pps = ms_ago;
+    rig.state.clock.since_edge_ms = ms_ago;
     rig.state.clock.pps_edge_us = kLastEdgeUs;
 }
 

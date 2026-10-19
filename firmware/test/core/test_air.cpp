@@ -142,7 +142,7 @@ TEST_CASE("air: a chip error inside the frame is reported, not hidden") {
     CHECK(frame.bad_chips > 0);
     bool flagged = false;
     for (uint8_t i = 0; i < frame.len; i++)
-        if (frame.err[i] != 0) flagged = true;
+        if (frame.erasures[i] != 0) flagged = true;
     CHECK(flagged);
 }
 
@@ -201,7 +201,7 @@ TEST_CASE("air: the noise window ends inside the shortest burst the band carries
     CHECK_FALSE(protocol::receive_mband(reported, sizeof(reported), frame));
     int past_the_burst = 0;
     for (uint8_t i = protocol::kNoiseWindowBytes; i < protocol::kRxFrameBytes; i++)
-        past_the_burst += __builtin_popcount(frame.err[i]);
+        past_the_burst += __builtin_popcount(frame.erasures[i]);
     CHECK(past_the_burst > 0);
     CHECK_FALSE(protocol::framed_noise(frame));
 }

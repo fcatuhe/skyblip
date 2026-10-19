@@ -2,9 +2,9 @@
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/protocol/nmea_out.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
+#include "core/traffic/range.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 #include "products/skyblip_go/pages/installing.h"
@@ -63,15 +63,15 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.gnss.health = context_.roles.gnss.health();
     snapshot.gnss.stage = state.gnss.stage;
     snapshot.gnss.pps = pps_state(state.clock);
-    snapshot.gnss.pps_age_ms = state.clock.ms_since_pps;
+    snapshot.gnss.pps_age_ms = state.clock.since_edge_ms;
     snapshot.gnss.solutions = state.flight.gnss_solutions;
     snapshot.gnss.utc_s = own.utc_s;
     snapshot.gnss.nav_ms = state.gnss.solution_phase_ms;
     snapshot.gnss.nav_valid = state.gnss.solution_phase_valid;
     snapshot.gnss.hdop_e2 = own.hdop_e2;
     snapshot.gnss.vdop_e2 = own.vdop_e2;
-    snapshot.gnss.resid_m = own.pred_resid_m;
-    snapshot.gnss.resid_valid = own.pred_resid_valid;
+    snapshot.gnss.resid_m = own.prediction_residual_m;
+    snapshot.gnss.resid_valid = own.prediction_residual_valid;
     snapshot.gnss.sats = own.sats;
     snapshot.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
     snapshot.gnss.fix_mode = state.gnss.fix_mode;
@@ -183,7 +183,7 @@ void ScreenService::render(uint32_t now_ms) {
                     const model::AircraftObservation observation =
                         flight::carried_to(t->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
-                    if (!protocol::relative_ned(own_now, observation, north, east, up)) continue;
+                    if (!traffic::relative_ned(own_now, observation, north, east, up)) continue;
                     targets_[n].north_m = north;
                     targets_[n].east_m = east;
                     targets_[n].up_m = up;
@@ -193,10 +193,10 @@ void ScreenService::render(uint32_t now_ms) {
                     targets_[n].climb_valid = observation.climb_valid;
                     targets_[n].speed_mm_s =
                         observation.speed_valid
-                            ? to_mm_s(QuarterMetresPerSec(observation.speed_q)).v
+                            ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v
                             : 0;
                     targets_[n].track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
-                    targets_[n].turn_cdps = static_cast<int16_t>(t->turn.dps * 100);
+                    targets_[n].turn_cdps = static_cast<int16_t>(t->turn.rate_dps * 100);
                     targets_[n].turn_valid = t->turn.valid;
                     targets_[n].in_formation = t->in_formation;
                     n++;
@@ -211,8 +211,8 @@ void ScreenService::render(uint32_t now_ms) {
             SixPackSnapshot snapshot;
             snapshot.data_valid = own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.speed_kt = to_knots(MillimetresPerSec(own.speed_mm_s)).v;
-            snapshot.alt_ft = to_feet(Millimetres(own.alt_mm)).v;
+            snapshot.speed_kt = to_knots(MillimetresPerSecond(own.speed_mm_s)).v;
+            snapshot.alt_ft = to_feet(Millimetres(own.alt_hae_mm)).v;
             snapshot.vs_fpm = climb_fpm();
             snapshot.vs_valid = climb_measured();
             snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
@@ -281,7 +281,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.gnss.sats = own.sats;
             snapshot.gnss.pps = pps_state(context_.state.clock);
             snapshot.gnss.pps_age_s =
-                static_cast<uint16_t>(context_.state.clock.ms_since_pps / 1000);
+                static_cast<uint16_t>(context_.state.clock.since_edge_ms / 1000);
             snapshot.rx_ok = context_.state.air.rx_ok;
             snapshot.tx_ok = context_.state.air.tx_ok;
             snapshot.noise = context_.state.air.rx_noise;
@@ -314,7 +314,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.fix_mode = context_.state.gnss.fix_mode;
             snapshot.lat_1e7 = own.lat_1e7;
             snapshot.lon_1e7 = own.lon_1e7;
-            snapshot.alt_mm = own.alt_mm;
+            snapshot.alt_mm = own.alt_hae_mm;
             snapshot.speed_mm_s = own.speed_mm_s;
             snapshot.track_cdeg = own.track_cdeg;
             snapshot.climb_mm_s = own.climb_mm_s;

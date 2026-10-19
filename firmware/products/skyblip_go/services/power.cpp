@@ -82,9 +82,8 @@ void PowerService::record_last_pass(uint32_t now_ms) {
 void PowerService::record_power(const diag::Instant& at) {
     const bus::PowerState& power = context_.state.power;
     diag::Power value{};
-    value.cell_mv = power.battery.millivolts;
-    value.sample_offset_mv =
-        diag::sample_offset_mv(power.battery.sample_mv, power.battery.millivolts);
+    value.cell_mv = power.battery.cell_mv;
+    value.sample_offset_mv = diag::sample_offset_mv(power.battery.sample_mv, power.battery.cell_mv);
     value.supply_warnings = cutoff_.supply_warnings();
     value.implausible = gauge_.refused();
     value.charge_warnings = charge_warnings_;

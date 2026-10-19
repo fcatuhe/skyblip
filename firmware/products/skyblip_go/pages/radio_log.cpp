@@ -30,9 +30,9 @@ void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int l
     canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
 }
 
-bool own_burst(radio::Event event) {
-    return event == radio::Event::Transmitted || event == radio::Event::Lost ||
-           event == radio::Event::Held || event == radio::Event::Unarmed;
+bool own_burst(radio::Verdict verdict) {
+    return verdict == radio::Verdict::Transmitted || verdict == radio::Verdict::Lost ||
+           verdict == radio::Verdict::Held || verdict == radio::Verdict::Unarmed;
 }
 
 // What own-ship put on air, in the column a reception spends on its sender: the
@@ -44,19 +44,19 @@ const char* own_burst_word(const radio::Entry& entry) {
 
 // INFO: fc 17sep26 a transmission that worked prints no verdict, as a reception does not
 const char* verdict_of(const radio::Entry& entry) {
-    switch (entry.event) {
-        case radio::Event::Lost:
-        case radio::Event::Unarmed: return "LOST";
-        case radio::Event::Held: return "HELD";
-        case radio::Event::BadCrc: return "CRC";
-        case radio::Event::Unframed: return "SYNC";
-        case radio::Event::Miskeyed: return "KEY";
-        case radio::Event::Undecoded: return "DEC";
-        case radio::Event::Unsupported: return "TYPE";
-        case radio::Event::Unattempted: return "WAIT";
-        case radio::Event::Named: return "NAMED";
-        case radio::Event::Transmitted:
-        case radio::Event::Received:
+    switch (entry.verdict) {
+        case radio::Verdict::Lost:
+        case radio::Verdict::Unarmed: return "LOST";
+        case radio::Verdict::Held: return "HELD";
+        case radio::Verdict::BadCrc: return "CRC";
+        case radio::Verdict::Unframed: return "SYNC";
+        case radio::Verdict::Miskeyed: return "KEY";
+        case radio::Verdict::Undecoded: return "DEC";
+        case radio::Verdict::Unsupported: return "TYPE";
+        case radio::Verdict::Unattempted: return "WAIT";
+        case radio::Verdict::Named: return "NAMED";
+        case radio::Verdict::Transmitted:
+        case radio::Verdict::Received:
         default: return nullptr;
     }
 }
@@ -65,7 +65,7 @@ int format_verdict(char* out, const radio::Entry& entry) {
     const char* word = verdict_of(entry);
     if (word == nullptr) return 0;
     int n = format_string(out, word);
-    if (entry.event == radio::Event::Miskeyed) n += format_int(out + n, entry.key_offset_s);
+    if (entry.verdict == radio::Verdict::Miskeyed) n += format_int(out + n, entry.key_offset_s);
     return n;
 }
 
@@ -133,7 +133,7 @@ void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     canvas.draw_text(kPpsX, kGnssY, buf, true, 1);
 
     n = format_string(buf, "BAND ");
-    n += format_int(buf + n, snapshot.band_dbm, 1, 0, false);
+    n += format_int(buf + n, snapshot.band_dbm, 1, 0, true);
     buf[n] = 0;
     right_aligned(canvas, kRightEnd, kGnssY, buf, n);
 }
@@ -145,7 +145,7 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     buf[n] = 0;
     canvas.draw_text(kClockX, y, buf, true, 1);
 
-    const bool ours = own_burst(entry.event);
+    const bool ours = own_burst(entry.verdict);
     canvas.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
 
     n = format_dwell(buf, entry);
@@ -172,7 +172,7 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     }
 
     if (!entry.rssi_valid) return;
-    n = format_int(buf, entry.rssi_dbm, 1, 0, false);
+    n = format_int(buf, entry.rssi_dbm, 1, 0, true);
     buf[n] = 0;
     right_aligned(canvas, kRightEnd, y, buf, n);
 }

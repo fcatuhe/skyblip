@@ -91,7 +91,7 @@ void hear_adsl(protocol::Frame& frame, const Receiver& at) {
     protocol::AdslPacket p{};
     p.init();
     std::memcpy(p.Data, frame.data, protocol::kAdslFrameBytes);
-    if (p.check_crc() != 0 && (p.correct(frame.err) < 0 || p.check_crc() != 0)) return;
+    if (p.check_crc() != 0 && (p.correct(frame.erasures) < 0 || p.check_crc() != 0)) return;
     p.descramble();
 
     if (p.is_registration()) {
@@ -106,7 +106,7 @@ void hear_adsl(protocol::Frame& frame, const Receiver& at) {
 }
 
 void hear_alptas(protocol::Frame& frame, const Receiver& at) {
-    if (protocol::alptas_correct(frame.data, frame.err) < 0) return;
+    if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return;
     protocol::alptas_address(frame.data);
     model::AircraftObservation observation{};
     if (protocol::alptas_decode(frame.data, at.utc_s, at.lat_1e7, at.lon_1e7, observation) ==

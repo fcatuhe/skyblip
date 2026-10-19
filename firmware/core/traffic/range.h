@@ -20,13 +20,16 @@ struct RangeRow {
     const char* callsign{nullptr};
 };
 
+bool relative_ned(const model::Ownship& own, const model::AircraftObservation& target,
+                  int32_t& north_m, int32_t& east_m, int32_t& up_m);
+
 // INFO: fc 19sep26 ground distance, what the radar ring and the alarm mean by distance
 bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
               RangeRow& out);
 
-// Nearest first, at most cap rows. Returns how many were filled.
+// Nearest first, at most capacity rows. Returns how many were filled.
 int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
-                  const model::Ownship& own, RangeRow* out, int cap);
+                  const model::Ownship& own, RangeRow* out, int capacity);
 
 }  // namespace skyblip::traffic
 

@@ -86,7 +86,7 @@ struct Rig {
         f.lon_1e7 = 85000000;
         f.alt_msl_mm = alt_msl_m * 1000;
         f.alt_mm = f.alt_msl_mm + gnss::kDefaultGeoidSeparationMm;
-        f.geoid_separation_measured = true;
+        f.geoid_measured = true;
         f.speed_mm_s = speed_mm_s;
         f.track_cdeg = 9000;
         f.sats = 10;

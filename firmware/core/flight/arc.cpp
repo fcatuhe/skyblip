@@ -38,11 +38,11 @@ Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdp
                  bool turn_valid) {
     Motion m{};
     m.speed_mm_s =
-        observation.speed_valid ? to_mm_s(QuarterMetresPerSec(observation.speed_q)).v : 0;
+        observation.speed_valid ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v : 0;
     m.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
     m.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
     m.turning = turn_valid;
-    m.climb_mm_s = to_mm_s(EighthMetresPerSec(observation.climb_e8)).v;
+    m.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
     m.climbing = observation.climb_valid;
     return m;
 }

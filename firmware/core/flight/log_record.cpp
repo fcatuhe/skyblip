@@ -135,10 +135,10 @@ LogRecord log_record_from(const model::Ownship& own) {
     r.lat_1e7 = own.lat_1e7;
     r.lon_1e7 = own.lon_1e7;
     r.alt_msl_m = to_metres(Millimetres(own.alt_msl_mm)).v;
-    r.alt_hae_m = to_metres(Millimetres(own.alt_mm)).v;
-    r.speed_q = to_speed_q(MillimetresPerSec(own.speed_mm_s)).v;
+    r.alt_hae_m = to_metres(Millimetres(own.alt_hae_mm)).v;
+    r.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v;
     r.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
-    r.climb_e8 = to_climb_e8(MillimetresPerSec(own.climb_mm_s)).v;
+    r.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v;
     r.hdop_e2 = own.hdop_e2;
     r.sats = own.sats;
     r.flight_state = own.flight_state;
@@ -146,7 +146,7 @@ LogRecord log_record_from(const model::Ownship& own) {
     r.utc_valid = own.utc_valid;
     r.pps_locked = own.pps_locked;
     r.climb_valid = own.climb_valid;
-    r.geoid_measured = own.geoid_separation_measured;
+    r.geoid_measured = own.geoid_measured;
     return r;
 }
 

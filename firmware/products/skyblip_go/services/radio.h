@@ -120,7 +120,7 @@ class RadioService : public runtime::Service {
     diag::Refusal refusal_of(const timing::SlotPlan& slot,
                              const timing::Transmitter::Attempt& attempt, bool armed,
                              bool carries_tx) const;
-    void log_refusal(radio::Event outcome, const timing::SlotPlan& slot, uint32_t now_ms);
+    void log_refusal(radio::Verdict outcome, const timing::SlotPlan& slot, uint32_t now_ms);
     void publish_dwell(uint32_t now_ms);
     void accrue_armed();
     void collect_outcome(uint32_t now_ms);

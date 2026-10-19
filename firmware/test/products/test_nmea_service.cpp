@@ -58,7 +58,7 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     model::Ownship transmitter = rig.state().own;
     transmitter.lat_1e7 += static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     transmitter.lon_1e7 += static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    transmitter.alt_mm += up_m * 1000;
+    transmitter.alt_hae_mm += up_m * 1000;
     transmitter.track_cdeg = to_centi_degrees(Cordic9(track_c9)).v;
     transmitter.speed_mm_s = 40000;
     transmitter.vdop_e2 = 150;

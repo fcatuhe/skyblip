@@ -212,9 +212,9 @@ inline void L76k::emit_gga() {
     s[n++] = ',';
     n += format_uint(s + n, hdop_e2, 3, 2);
     s[n++] = ',';
-    n += format_int(s + n, msl_dm(), 1, 1, true);
+    n += format_int(s + n, msl_dm(), 1, 1, false);
     n += format_string(s + n, ",M,");
-    if (emit_geoid_separation) n += format_int(s + n, geoid_separation_m * 10, 1, 1, true);
+    if (emit_geoid_separation) n += format_int(s + n, geoid_separation_m * 10, 1, 1, false);
     n += format_string(s + n, ",M,,");
     n = protocol::nmea_finish(s, n);
     pending_.append(s, static_cast<size_t>(n));

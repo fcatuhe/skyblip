@@ -1,12 +1,17 @@
 #include "core/protocol/alptas.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 #include "core/fec/crc.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/nmea_out.h"
+#include "core/settings/address.h"
+#include "core/util/bitcount.h"
+#include "core/util/intmath.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::protocol {
 
@@ -67,17 +72,6 @@ void put_field(uint8_t* data, Field f, uint32_t v) {
     }
 }
 
-uint32_t get_word(const uint8_t* data) {
-    return static_cast<uint32_t>(data[0]) | (static_cast<uint32_t>(data[1]) << 8) |
-           (static_cast<uint32_t>(data[2]) << 16) | (static_cast<uint32_t>(data[3]) << 24);
-}
-void put_word(uint8_t* data, uint32_t w) {
-    data[0] = static_cast<uint8_t>(w);
-    data[1] = static_cast<uint8_t>(w >> 8);
-    data[2] = static_cast<uint8_t>(w >> 16);
-    data[3] = static_cast<uint8_t>(w >> 24);
-}
-
 uint32_t btea_mix(uint32_t y, uint32_t z, uint32_t sum, uint32_t p, uint32_t e) {
     return (((z >> 5) ^ (y << 2)) + ((y >> 3) ^ (z << 4))) ^
            ((sum ^ y) + (kBteaKey[(p & 3) ^ e] ^ z));
@@ -125,10 +119,10 @@ void btea4(uint32_t* v, bool encode) {
 // frame arrived in.
 void scramble(uint32_t* data, uint32_t utc_s) {
     uint8_t keys[16];
-    put_word(keys + 0, data[0]);
-    put_word(keys + 4, data[1]);
-    put_word(keys + 8, utc_s >> 4);
-    put_word(keys + 12, kScrambleKey);
+    put_u32(keys + 0, data[0]);
+    put_u32(keys + 4, data[1]);
+    put_u32(keys + 8, utc_s >> 4);
+    put_u32(keys + 12, kScrambleKey);
 
     uint32_t z = keys[15];
     uint32_t sum = 0;
@@ -149,12 +143,12 @@ void scramble(uint32_t* data, uint32_t utc_s) {
         z = last & 0xFF;
     }
 
-    for (uint8_t i = 0; i < 4; i++) data[2 + i] ^= get_word(keys + 4 * static_cast<ptrdiff_t>(i));
+    for (uint8_t i = 0; i < 4; i++) data[2 + i] ^= get_u32(keys + 4 * static_cast<ptrdiff_t>(i));
 }
 
 void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
     uint32_t w[kWords];
-    for (uint8_t i = 0; i < kWords; i++) w[i] = get_word(data + 4 * static_cast<ptrdiff_t>(i));
+    for (uint8_t i = 0; i < kWords; i++) w[i] = get_u32(data + 4 * static_cast<ptrdiff_t>(i));
     if (encode) {
         scramble(w, utc_s);
         btea4(w + 2, true);
@@ -162,13 +156,13 @@ void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
         btea4(w + 2, false);
         scramble(w, utc_s);
     }
-    for (uint8_t i = 0; i < kWords; i++) put_word(data + 4 * static_cast<ptrdiff_t>(i), w[i]);
+    for (uint8_t i = 0; i < kWords; i++) put_u32(data + 4 * static_cast<ptrdiff_t>(i), w[i]);
 }
 
 // INFO: fc 09mar26 longitude quantum in 1e-7 deg as a function of |latitude| in
 // whole degrees: the protocol widens the step towards the poles so a degree of
 // longitude keeps roughly constant ground resolution.
-int32_t londiv(int32_t abs_lat_deg) {
+int32_t longitude_divisor(int32_t abs_lat_deg) {
     static const uint8_t kNear[65] = {
         53,  53,  54,  54,  55,  55,  56,  56,  57,  57,  58,  58,  59,  59,  60,  60,  61,
         61,  62,  62,  63,  63,  64,  64,  65,  65,  67,  68,  70,  71,  73,  74,  76,  77,
@@ -222,19 +216,11 @@ int32_t descale(uint32_t value, uint32_t mbits, uint32_t ebits, uint32_t sbits) 
     return negative ? -out : out;
 }
 
-int32_t div_nearest(int32_t value, int32_t divisor) {
-    int32_t half = divisor >> 1;
-    if (value < 0) return -((-value + half) / divisor);
-    return (value + half) / divisor;
-}
-
 int32_t unwrap20(uint32_t coded, int32_t reference) {
     int32_t delta = static_cast<int32_t>((coded - static_cast<uint32_t>(reference)) & 0x0FFFFFu);
     if (delta >= 0x080000) delta -= 0x100000;
     return delta + reference;
 }
-
-int32_t abs32(int32_t v) { return v < 0 ? -v : v; }
 
 uint16_t carried_crc(const uint8_t* frame) {
     return static_cast<uint16_t>(static_cast<uint16_t>(frame[kAlptasDataBytes] << 8) |
@@ -248,8 +234,6 @@ uint16_t crc_syndrome(uint16_t bit) {
     flipped[bit >> 3] = static_cast<uint8_t>(0x80u >> (bit & 7u));
     return fec::crc16_ccitt(flipped, kAlptasDataBytes, 0);
 }
-
-int count_ones(uint8_t byte) { return __builtin_popcount(byte); }
 
 bool structured(const uint8_t* decrypted) {
     return get_field(decrypted, kFLastByte) == 0 && get_field(decrypted, kFNeeds3) == 3;
@@ -269,28 +253,28 @@ void alptas_set_crc(uint8_t* frame) {
 
 bool alptas_crc_ok(const uint8_t* frame) { return alptas_crc(frame) == carried_crc(frame); }
 
-int alptas_correct(uint8_t* frame, const uint8_t* err, int max_bad_bits) {
+int alptas_correct(uint8_t* frame, const uint8_t* erasures, int max_erasures) {
     uint16_t check = static_cast<uint16_t>(alptas_crc(frame) ^ carried_crc(frame));
     if (check == 0) return 0;
 
-    static constexpr int kCap = 8;
-    max_bad_bits = std::min(max_bad_bits, kCap);
-    uint8_t at[kCap];
-    uint8_t mask[kCap];
-    uint16_t syndrome[kCap];
+    static constexpr int kMaxErasures = 8;
+    max_erasures = std::min(max_erasures, kMaxErasures);
+    uint8_t at[kMaxErasures];
+    uint8_t mask[kMaxErasures];
+    uint16_t syndrome[kMaxErasures];
     int bad = 0;
     for (int byte = 0; byte < kAlptasFrameBytes; byte++) {
         for (int bit = 0; bit < 8; bit++) {
             const uint8_t m = static_cast<uint8_t>(0x80u >> bit);
-            if ((err[byte] & m) == 0) continue;
-            if (bad < max_bad_bits) {
+            if ((erasures[byte] & m) == 0) continue;
+            if (bad < max_erasures) {
                 at[bad] = static_cast<uint8_t>(byte);
                 mask[bad] = m;
                 syndrome[bad] = crc_syndrome(static_cast<uint16_t>(byte * 8 + bit));
             }
             bad++;
         }
-        if (bad > max_bad_bits) return -1;
+        if (bad > max_erasures) return -1;
     }
     if (bad == 0) return -1;
 
@@ -363,8 +347,8 @@ uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_tab
     }
 }
 
-Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e7,
-                     int32_t ref_lon_1e7, model::AircraftObservation& out) {
+Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_lat_1e7,
+                     int32_t reference_lon_1e7, model::AircraftObservation& out) {
     if (!alptas_crc_ok(frame)) return Status::Crc;
 
     uint8_t data[kAlptasDataBytes];
@@ -388,16 +372,17 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e
     uint32_t course_deg = get_field(data, kFCourse) >> 1;
     if (course_deg > 360) return Status::Invalid;
 
-    int32_t lat_ref = div_nearest(ref_lat_1e7, 52);
-    int32_t lat_1e7 = unwrap20(get_field(data, kFLat), lat_ref) * 52;
+    int32_t lat_reference = div_round<int32_t>(reference_lat_1e7, 52);
+    int32_t lat_1e7 = unwrap20(get_field(data, kFLat), lat_reference) * 52;
     if (lat_1e7 < -900000000 || lat_1e7 > 900000000) return Status::Invalid;
-    int32_t divisor = londiv(abs32(lat_1e7) / 10000000);
-    int32_t lon_ref = div_nearest(ref_lon_1e7, divisor);
-    int64_t lon_1e7 = static_cast<int64_t>(unwrap20(get_field(data, kFLon), lon_ref)) * divisor;
+    int32_t divisor = longitude_divisor(std::abs(lat_1e7) / 10000000);
+    int32_t lon_reference = div_round<int32_t>(reference_lon_1e7, divisor);
+    int64_t lon_1e7 =
+        static_cast<int64_t>(unwrap20(get_field(data, kFLon), lon_reference)) * divisor;
     if (lon_1e7 < -1800000000 || lon_1e7 > 1800000000) return Status::Invalid;
 
-    int32_t speed_10 = descale(get_field(data, kFSpeed), 8, 2, 0);
-    int32_t vs_10 = descale(get_field(data, kFVs), 6, 2, 1);
+    int32_t speed_e1 = descale(get_field(data, kFSpeed), 8, 2, 0);
+    int32_t climb_e1 = descale(get_field(data, kFVs), 6, 2, 1);
 
     out = model::AircraftObservation{};
     out.address = get_field(data, kFAddress);
@@ -410,10 +395,10 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e
     out.lat_1e7 = lat_1e7;
     out.lon_1e7 = static_cast<int32_t>(lon_1e7);
     out.alt_m = descale(get_field(data, kFAlt), 12, 1, 0) - 1000;
-    out.speed_q = static_cast<uint16_t>(div_nearest(speed_10 * 2, 5));
-    out.climb_e8 = static_cast<int16_t>(div_nearest(vs_10 * 4, 5));
-    out.track_c9 =
-        static_cast<uint16_t>(div_nearest(static_cast<int32_t>(course_deg) * 512, 360) & 0x1FF);
+    out.speed_q = static_cast<uint16_t>(div_round<int32_t>(speed_e1 * 2, 5));
+    out.climb_e8 = static_cast<int16_t>(div_round<int32_t>(climb_e1 * 4, 5));
+    out.track_c9 = static_cast<uint16_t>(
+        div_round<int32_t>(static_cast<int32_t>(course_deg) * 512, 360) & 0x1FF);
     out.received.at_s = rx_utc_s;
     out.source = model::Source::Alptas;
     out.speed_valid = true;
@@ -423,38 +408,39 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t ref_lat_1e
 }
 
 Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observation, uint32_t utc_s,
-                     int32_t ref_lat_1e7, int32_t ref_lon_1e7) {
+                     int32_t reference_lat_1e7, int32_t reference_lon_1e7) {
     // INFO: fc 09mar26 the reference position is a decode-side input only: the
     // wire carries position modulo 2^20 quanta, absolute, and the receiver
     // reconstructs the high bits from where it is itself (Legacy.cpp:1045).
-    (void)ref_lat_1e7;
-    (void)ref_lon_1e7;
+    (void)reference_lat_1e7;
+    (void)reference_lon_1e7;
     if (!observation.position_valid) return Status::Invalid;
 
     __builtin_memset(frame, 0, kAlptasFrameBytes);
-    put_field(frame, kFAddress, observation.address & 0x00FFFFFFu);
+    put_field(frame, kFAddress, observation.address & settings::kAddressMask);
     put_field(frame, kFMsgType, kAlptasMsgTypePosition);
     put_field(frame, kFAddressType,
               address_mapping_table_to_alptas_address_type(observation.address_mapping_table));
     put_field(frame, kFTimeBits, utc_s & 0x0Fu);
-    put_field(frame, kFAircraftType, adsl_cat_to_alptas(observation.aircraft_cat));
+    put_field(frame, kFAircraftType, adsl_cat_to_alptas_type(observation.aircraft_cat));
     put_field(frame, kFAirborne, observation.flight_state == 1 ? 1 : 2);
     put_field(frame, kFAlt, enscale(observation.alt_m + 1000, 12, 1, 0));
 
-    int32_t lat_coded = div_nearest(observation.lat_1e7, 52);
+    int32_t lat_coded = div_round<int32_t>(observation.lat_1e7, 52);
     put_field(frame, kFLat, static_cast<uint32_t>(lat_coded) & 0x0FFFFFu);
-    int32_t divisor = londiv(abs32(observation.lat_1e7) / 10000000);
-    int32_t lon_coded = div_nearest(observation.lon_1e7, divisor);
+    int32_t divisor = longitude_divisor(std::abs(observation.lat_1e7) / 10000000);
+    int32_t lon_coded = div_round<int32_t>(observation.lon_1e7, divisor);
     put_field(frame, kFLon, static_cast<uint32_t>(lon_coded) & 0x0FFFFFu);
 
-    int32_t speed_10 = observation.speed_valid ? div_nearest(observation.speed_q * 5, 2) : 0;
-    put_field(frame, kFSpeed, enscale(speed_10, 8, 2, 0));
-    int32_t vs_10 = observation.climb_valid ? div_nearest(observation.climb_e8 * 5, 4) : 0;
-    put_field(frame, kFVs, enscale(vs_10, 6, 2, 1));
+    int32_t speed_e1 = observation.speed_valid ? div_round<int32_t>(observation.speed_q * 5, 2) : 0;
+    put_field(frame, kFSpeed, enscale(speed_e1, 8, 2, 0));
+    int32_t climb_e1 =
+        observation.climb_valid ? div_round<int32_t>(observation.climb_e8 * 5, 4) : 0;
+    put_field(frame, kFVs, enscale(climb_e1, 6, 2, 1));
     put_field(frame, kFTurnRate, enscale(0, 6, 2, 1));
 
     uint32_t course_deg =
-        static_cast<uint32_t>(div_nearest(observation.track_c9 * 360, 512)) % 360u;
+        static_cast<uint32_t>(div_round<int32_t>(observation.track_c9 * 360, 512)) % 360u;
     put_field(frame, kFCourse, (course_deg << 1) & 0x03FFu);
 
     // INFO: fc 09mar26 GNSS accuracy and unk8 carry the fixed values upstream

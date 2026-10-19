@@ -44,7 +44,7 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
     ghost.address = 0x4A0002;
     CHECK(tbl.update(ghost, 100) < 0);
     CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible_count() == 1);
+    CHECK(tbl.implausible() == 1);
 
     // Straight up counts too: the altitude field miscorrects as readily as the
     // latitude one, and the slant range is the path the signal took.
@@ -52,7 +52,7 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
     high.address = 0x4A0003;
     CHECK(tbl.update(high, 100) < 0);
     CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible_count() == 2);
+    CHECK(tbl.implausible() == 2);
 }
 
 TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
@@ -64,25 +64,26 @@ TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
     // On the limit is believed, past it is not. The integer geometry rounds, so
     // the boundary is approached from both sides with a metre of margin rather
     // than asserted on the exact metre.
-    model::AircraftObservation on_limit = neighbour(own, kMaxPlausibleRangeM - 1, 0, 0, 30, 180);
+    model::AircraftObservation on_limit =
+        neighbour(own, kPlausibleRangeCeilingM - 1, 0, 0, 30, 180);
     CHECK(range_check(own, on_limit, slant_m) == Plausibility::Believable);
-    CHECK(slant_m <= kMaxPlausibleRangeM);
+    CHECK(slant_m <= kPlausibleRangeCeilingM);
 
     model::AircraftObservation past_limit =
-        neighbour(own, kMaxPlausibleRangeM + 100, 0, 0, 30, 180);
+        neighbour(own, kPlausibleRangeCeilingM + 100, 0, 0, 30, 180);
     CHECK(range_check(own, past_limit, slant_m) == Plausibility::TooFar);
-    CHECK(slant_m > kMaxPlausibleRangeM);
+    CHECK(slant_m > kPlausibleRangeCeilingM);
 
     // And the threshold is the link budget, not a taste: 14 dBm e.r.p. against
     // about -107 dBm of sensitivity is 121 dB, and free space at 868.2 MHz has
     // spent it by the gate. One ring in from the gate the budget still holds,
     // which is what makes this a ceiling rather than a limit on what we display.
-    CHECK(free_space_loss_db(kMaxPlausibleRangeM) >= 120);
-    CHECK(free_space_loss_db(kMaxPlausibleRangeM / 2) < 121);
+    CHECK(free_space_loss_db(kPlausibleRangeCeilingM) >= 120);
+    CHECK(free_space_loss_db(kPlausibleRangeCeilingM / 2) < 121);
 
     // Four times the outermost thing the alarm layer will speak about, so no
     // contact a pilot could act on is inside the part being refused.
-    CHECK(kMaxPlausibleRangeM > 4 * kAdvisoryDistM);
+    CHECK(kPlausibleRangeCeilingM > 4 * kAdvisoryDistM);
 }
 
 // Without a fix there is no point to measure from. The gate says nothing rather
@@ -96,7 +97,7 @@ TEST_CASE("traffic: with no fix of our own nothing is refused for being far away
 
     model::AircraftObservation far_away = neighbour(flying(30, 0), 100000, 0, 0, 30, 180);
     CHECK(tbl.update(far_away, 100) >= 0);
-    CHECK(tbl.implausible_count() == 0);
+    CHECK(tbl.implausible() == 0);
 
     // Same for a report that carries no position at all: it is not a range claim,
     // so it is not this gate's business.
@@ -113,7 +114,7 @@ TEST_CASE("traffic: a table with no reference set behaves exactly as it did befo
     model::AircraftObservation far_away = neighbour(flying(30, 0), 250000, 0, 0, 30, 180);
     CHECK(tbl.update(far_away, 100) >= 0);
     CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible_count() == 0);
+    CHECK(tbl.implausible() == 0);
 }
 
 // The uplink is the case that makes the gate per-observation rather than
@@ -141,7 +142,7 @@ TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets wi
     CHECK(tbl.find(6, 0x4B0001) >= 0);
     CHECK(tbl.find(6, 0x4B0002) == -1);
     CHECK(tbl.find(6, 0x4B0003) >= 0);
-    CHECK(tbl.implausible_count() == 1);
+    CHECK(tbl.implausible() == 1);
 }
 
 // And a refused report never disturbs the aircraft it claims to be. The slot an
@@ -192,9 +193,9 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     CHECK(tbl.count() == 1);
 
     // ALP-TAS is a direct reception like our own protocol: one hop, one ceiling.
-    CHECK(plausible_range_m(model::Source::Alptas) == kMaxPlausibleRangeM);
-    CHECK(plausible_range_m(model::Source::AdslDirect) == kMaxPlausibleRangeM);
-    CHECK(plausible_range_m(model::Source::AdslUplink) == kMaxRelayedRangeM);
+    CHECK(plausible_range_m(model::Source::Alptas) == kPlausibleRangeCeilingM);
+    CHECK(plausible_range_m(model::Source::AdslDirect) == kPlausibleRangeCeilingM);
+    CHECK(plausible_range_m(model::Source::AdslUplink) == kRelayedRangeCeilingM);
 
     // Past the two-hop budget a relay is refused too: a ground station cannot
     // hand us an aircraft it could not have heard either.
@@ -203,5 +204,5 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     relayed_ghost.source = model::Source::AdslUplink;
     CHECK(tbl.update(relayed_ghost, 100) < 0);
     CHECK(tbl.count() == 1);
-    CHECK(tbl.implausible_count() == 2);
+    CHECK(tbl.implausible() == 2);
 }

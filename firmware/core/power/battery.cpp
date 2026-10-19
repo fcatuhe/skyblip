@@ -78,7 +78,7 @@ void Gauge::apply(const events::BatterySample& sample) {
     if (!plausible) refused_++;
     if (!plausible || sample.external_power) {
         seen_ = 0;
-        state_.millivolts = sample.divider_mv;
+        state_.cell_mv = sample.divider_mv;
         state_.percent = 0;
         state_.valid = false;
         return;
@@ -94,7 +94,7 @@ void Gauge::apply(const events::BatterySample& sample) {
         seen_ < kWindowSamples ? recent_[0] : median_of(recent_[0], recent_[1], recent_[2]);
     const uint8_t percent = percent_from_mv(millivolts);
     state_.percent = state_.valid ? std::min(percent, state_.percent) : percent;
-    state_.millivolts = millivolts;
+    state_.cell_mv = millivolts;
     state_.valid = true;
 }
 

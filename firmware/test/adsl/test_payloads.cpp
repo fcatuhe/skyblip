@@ -102,11 +102,11 @@ TEST_CASE(
     "ADS-L.4.SRD860.G.3: the Traffic Uplink rides the O-band HDR channel in the Uplink slot") {
     CHECK(timing::kObandHz == 869525000u);
     CHECK(protocol::kUplinkChipRateBps == 200000u);
-    CHECK(timing::kUplinkRxStart >= 200);
-    CHECK(timing::kUplinkRxEnd <= 450);
+    CHECK(timing::kUplinkRxStartMs >= 200);
+    CHECK(timing::kUplinkRxEndMs <= 450);
     // A whole burst fits the slot it is transmitted in, with the dwell's guard either side.
-    CHECK(timing::kGroundEmitStart + static_cast<int>(protocol::kUplinkBurstUs / 1000) <=
-          timing::kGroundEmitEnd);
+    CHECK(timing::kGroundEmitStartMs + static_cast<int>(protocol::kUplinkBurstUs / 1000) <=
+          timing::kGroundEmitEndMs);
 }
 
 // A ground station reaches every aircraft in range, so what it relays is checked, not trusted.

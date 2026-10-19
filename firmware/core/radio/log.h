@@ -9,7 +9,7 @@
 
 namespace skyblip::radio {
 
-enum class Event : uint8_t {
+enum class Verdict : uint8_t {
     Transmitted = 0,
     Lost = 1,
     Held = 2,
@@ -25,7 +25,7 @@ enum class Event : uint8_t {
 };
 
 struct Entry {
-    Event event{Event::Undecoded};
+    Verdict verdict{Verdict::Undecoded};
     model::Band band{model::Band::M};
     model::Source source{model::Source::AdslDirect};
     uint32_t address{0};
@@ -48,7 +48,7 @@ struct Entry {
 };
 
 // INFO: fc 16sep26 the field's own ceiling: a burst this late is a dwell that already ended
-constexpr uint16_t kTxSpanLimitUs = 65535;
+constexpr uint16_t kTxSpanCeilingUs = 65535;
 
 uint16_t tx_span_of(uint64_t done_at_us, uint64_t deadline_us);
 
@@ -66,7 +66,7 @@ class Log {
     const Entry& newest(int i) const;
 
    private:
-    Entry entry_[kCapacity]{};
+    Entry entries_[kCapacity]{};
     uint32_t written_{0};
 };
 

@@ -26,7 +26,7 @@ The recorder is in the Context rather than on either of the other two because it
 
 ## The partition, and the two logs on it
 
-`record_pool.h` and `record_store.h` are the flash half of a log, and neither is a service: `RecordPool` is the partition - one `store::SectorAllocator`, one boot scan of the labels, one set of reply buffers, one drop counter for the link - and `RecordStore` is one ring on it: recovery, the prepared sector, append, the session index, the erase, and the answers to the Log endpoint. The product owns one pool and two stores, and hands them to the two services that bracket sessions differently.
+`record_pool.h` and `record_store.h` are the flash half of a log, and neither is a service: `RecordPool` is the partition - one `store::SectorAllocator`, one boot scan of the headers, one set of reply buffers, one drop counter for the link - and `RecordStore` is one ring on it: recovery, the prepared sector, append, the session index, the erase, and the answers to the Log endpoint. The product owns one pool and two stores, and hands them to the two services that bracket sessions differently.
 
 `FlightLogService` is `flight::LogSession` and `flight::LogEvents` on top of the flights store: a takeoff opens, a landing closes, and the records come from own-ship, the cell and the traffic table. `CaptureService` is `diag::Recorder` on top of the diagnostics store: the pilot arms, power off or a refused sector closes, and the records come from every tap in the tree.
 

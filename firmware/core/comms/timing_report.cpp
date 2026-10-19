@@ -4,7 +4,7 @@
 
 #include "core/comms/frame_budget.h"
 #include "core/util/format.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::comms {
 
@@ -34,7 +34,7 @@ void TimingReport::add(const char* key, const char* text, long value) {
 
 // pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
 // retune time, core/timing::kHopGuardMs and core/timing::kJitterGuardMs on each
-// side of the centre bucket (core/timing/timing_stats.h). holdover, missed and
+// side of the centre bucket (core/timing/slot_timing_stats.h). holdover, missed and
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
 TimingReport::TimingReport(const timing::SlotTimingStats& stats) {

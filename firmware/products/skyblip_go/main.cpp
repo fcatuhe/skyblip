@@ -39,7 +39,7 @@ int main(void) {
     if (g_product.boot_path() == power::BootPath::SleepAgain) {
         const power::BootCell& cell = g_product.boot_cell();
         LOG_INF("back to sleep at %u mV (lockout %u mV, external power %d), glass: %s",
-                cell.millivolts, power::kBootLockoutMv, static_cast<int>(cell.external_power),
+                cell.cell_mv, power::kBootLockoutMv, static_cast<int>(cell.external_power),
                 power::to_string(g_product.refused_frame()));
         while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get()))) {
             g_platform.watchdog().feed();

@@ -110,7 +110,7 @@ TEST_CASE("product: a long press in the middle of an edit still switches the dev
     focus_on(rig, t, go::MenuRow::Volume);
     const go::AlarmVolume volume = rig.settings().alarm_volume;
 
-    hold_button(rig, t, power::kLongPressMs + 300);
+    hold_button(rig, t, power::kLongPressHoldMs + 300);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK_FALSE(rig.product.screen().powered());

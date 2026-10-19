@@ -23,8 +23,8 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kTelemTypeInfo = 1;
     static constexpr uint8_t kInfoTypeRegistration = 5;
     static constexpr int kInfoHeaderByte = 5;
-    static constexpr int kInfoMsgByte = 6;
-    static constexpr int kInfoMsgBytes = 14;
+    static constexpr int kInfoTextByte = 6;
+    static constexpr int kInfoTextBytes = 14;
 
     uint8_t SYNC[2];
     uint8_t Length;
@@ -81,8 +81,8 @@ struct __attribute__((packed)) AdslPacket {
         return Type == kTypeOgnDiagnostics && telem_type() == kTelemTypeInfo &&
                info_type() == kInfoTypeRegistration;
     }
-    const char* info_msg() const { return reinterpret_cast<const char*>(Byte + kInfoMsgByte); }
-    char* info_msg() { return reinterpret_cast<char*>(Byte + kInfoMsgByte); }
+    const char* info_text() const { return reinterpret_cast<const char*>(Byte + kInfoTextByte); }
+    char* info_text() { return reinterpret_cast<char*>(Byte + kInfoTextByte); }
 
     static uint32_t get4(const uint8_t* b) {
         return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
@@ -116,7 +116,7 @@ struct __attribute__((packed)) AdslPacket {
     }
     uint8_t address_mapping_table() const { return Address[0] & 0x3F; }
     void set_address_mapping_table(uint8_t t) { Address[0] = (Address[0] & 0xC0) | t; }
-    uint32_t address_and_type() const {
+    uint32_t table_and_address() const {
         return (static_cast<uint32_t>(address_mapping_table()) << 24) | address();
     }
     bool is_relay() const { return Address[3] & 0x80; }
@@ -179,7 +179,7 @@ struct __attribute__((packed)) AdslPacket {
 
     int32_t alt_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
     void set_alt_m(int32_t alt);
-    bool alt_invalid() const { return (Position[8] & 0x3F) == 0x3F && Position[7] == 0xFF; }
+    bool has_alt() const { return (Position[8] & 0x3F) != 0x3F || Position[7] != 0xFF; }
     void set_alt_invalid() {
         Position[7] = 0xFF;
         Position[8] = static_cast<uint8_t>((Position[8] & 0xC0) | 0x3F);
@@ -215,12 +215,12 @@ struct __attribute__((packed)) AdslPacket {
     void set_crc();
     uint32_t check_crc() const;
 
-    int correct(const uint8_t* err, int max_bad_bits = 6);
+    int correct(const uint8_t* erasures, int max_erasures = 6);
 };
 
 static_assert(sizeof(AdslPacket) == 28, "AdslPacket wire size must be 28 bytes");
 
-bool to_observation(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
+bool to_observation(const AdslPacket& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out);
 // The TimeStamp field is quarter seconds inside a 15 s cycle, so the instant a
 // burst claims is expressible to 250 ms - and the position it carries has to
@@ -236,17 +236,17 @@ struct BurstInstant {
     int32_t since_fix_ms;
 };
 
-// INFO: fc 18oct26 false, and p untouched, without an address: a unit not activated builds no frame
-bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
+// INFO: fc 18oct26 false, packet untouched, without an address: an unactivated unit builds no frame
+bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat);
-bool from_own(AdslPacket& p, const model::Ownship& own, settings::AirAddress address,
+bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
 bool is_callsign_char(char c);
-bool from_own_callsign(AdslPacket& p, settings::AirAddress address, uint8_t address_mapping_table,
-                       const char* callsign);
-int callsign_of(const AdslPacket& p, char* out, int cap);
+bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
+                       uint8_t address_mapping_table, const char* callsign);
+int callsign_of(const AdslPacket& packet, char* out, int capacity);
 
 }
 

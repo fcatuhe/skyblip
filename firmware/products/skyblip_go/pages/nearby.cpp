@@ -122,7 +122,7 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
     right_aligned(canvas, kNearbyDistEnd, y, buf, n, kNearbyScale);
 
     const int32_t rel = rel_hundreds_of_feet(row.up_m);
-    n = format_int(buf, rel, 2, 0, rel == 0);
+    n = format_int(buf, rel, 2, 0, rel != 0);
     buf[n] = 0;
     right_aligned(canvas, kNearbyRelEnd, y, buf, n, kNearbyScale);
 }

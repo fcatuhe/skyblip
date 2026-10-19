@@ -48,19 +48,19 @@ At the design rate of one 5 ms burst per second we sit at half the allowance, so
 
 ## What the dwell map is for
 
-`kSlot1End` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the draw so it always completes inside both the slot and the dwell that carries it.
+`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the draw so it always completes inside both the slot and the dwell that carries it.
 
 `SlotPlan::own_tx_dwell` is a property of the dwell, not of the phase the service happens to tick on. Slot 0's dwell opens at 400 and its burst is placed from 450, so the plan that opens the dwell has to carry it.
 
 ## The tail names us, once every ten seconds
 
-ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, the one §F.2.1 assigns to them and whose definition it leaves to them (`core/protocol/README.md`). Own-ship sends one in slot 1's tail, `kCallsignStart` to `kCallsignEnd`: §C.5 reserves 0..200 and we transmit there anyway, which is a deliberate deviation and the one in this tree that is not forced by physics.
+ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, the one §F.2.1 assigns to them and whose definition it leaves to them (`core/protocol/README.md`). Own-ship sends one in slot 1's tail, `kCallsignStartMs` to `kCallsignEndMs`: §C.5 reserves 0..200 and we transmit there anyway, which is a deliberate deviation and the one in this tree that is not forced by physics.
 
 The tail is what it costs least. The dwell is already tuned to §C.2.5's channel 1, so there is no retune; the direct slot keeps every position burst it had; and the 5 ms this spends is 0.05% of the hour, taking the duty cycle from half the allowance to 0.55 of it. What is on air there is FLARM-generation traffic and OGN trackers, whose own slot 2 runs to 1200 (`oss/nrf52-ogn-tracker/src/ogn-radio.cpp:1140-1142`), so a burst in the tail is neither novel nor quiet.
 
 The instant is drawn by the same `mix(address ^ mix(utc))` every other burst is drawn by, over the width the window leaves once the air time and the completion slack are taken off it: 1000 to 1190, which is 191 instants, exactly as many as slot 1's own position window offers between 800 and 990.
 
-The second is the address's own ground second, so the name follows the position it belongs to: the position went out 450 to 993 ms into that second, the name goes out 1000 to 1193. A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). On every other ground second, and every odd second airborne, the position rides slot 1 as well, so that dwell carries two bursts, position first. They cannot meet: slot 1's last position instant is 993, which completes inside `kCompletionSlackMs`, and the name's first is 1000.
+The second is the address's own ground second, so the name follows the position it belongs to: the position went out 450 to 993 ms into that second, the name goes out 1000 to 1193. A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). On every other ground second, and every odd second airborne, the position rides slot 1 as well, so that dwell carries two bursts, position first. They cannot meet: slot 1's last position instant is 993, which completes inside `kCompletionMarginMs`, and the name's first is 1000.
 
 What it costs elsewhere is the flash-write window. `core/timing/durable_write.h` places a settings write inside an armed receive dwell that own-ship cannot transmit in, and until the callsign burst existed slot 1's tail was one of the two such stretches. Now there is one, the uplink dwell, which is also the dwell whose traffic we can most afford to be deaf to.
 

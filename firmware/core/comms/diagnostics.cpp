@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "core/comms/frame_budget.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::comms {
 
@@ -110,7 +110,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add_text(Group::Gnss, "config", ports::to_string(diagnostics.gnss_config));
         add_int(Group::Gnss, "raises", counter(diagnostics.gnss_raises));
         add_int(Group::Gnss, "raise_fallbacks", counter(diagnostics.gnss_raise_fallbacks));
-        // INFO: fc 19sep26 the phase a solution lands at, which kFixLagMaxMs refuses a burst over
+        // INFO: fc 19sep26 the phase a solution lands at, which kFixMaxAgeMs refuses a burst over
         if (diagnostics.gnss_nav_valid) add_int(Group::Gnss, "nav_ms", diagnostics.gnss_nav_ms);
         add_int(Group::Gnss, "overruns", counter(diagnostics.gnss_overruns));
         add_bool(Group::Gnss, "identified", diagnostics.gnss_identified);
@@ -123,7 +123,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     }
 
     if (power) {
-        add_int(Group::Power, "mv", diagnostics.battery.millivolts);
+        add_int(Group::Power, "mv", diagnostics.battery.cell_mv);
         add_int(Group::Power, "percent", diagnostics.battery.percent);
         add_bool(Group::Power, "valid", diagnostics.battery.valid);
         add_bool(Group::Power, "charging", diagnostics.battery.charging);

@@ -64,7 +64,7 @@ Diagnostics busy_device() {
     d.resid_m = 13;
     d.resid_valid = true;
 
-    d.battery.millivolts = 3812;
+    d.battery.cell_mv = 3812;
     d.battery.percent = 64;
     d.battery.valid = true;
     d.battery.charging = false;
@@ -121,7 +121,7 @@ Diagnostics widest_device() {
     d.gnss_nav_valid = true;
     d.resid_m = 65535;
     d.resid_valid = true;
-    d.battery.millivolts = 65535;
+    d.battery.cell_mv = 65535;
     d.battery.percent = 255;
     d.level = power::PowerLevel::Critical;  // "CRITICAL"
     d.supply_warnings = 0xFFFFFFFFu;

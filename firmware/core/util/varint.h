@@ -8,23 +8,23 @@ namespace skyblip {
 
 template <class T, int Bits>
 T uns_vr_decode(T value) {
-    const T thres = static_cast<T>(1) << Bits;
+    const T threshold = static_cast<T>(1) << Bits;
     uint8_t range = value >> Bits;
-    value &= thres - 1;
+    value &= threshold - 1;
     if (range == 0) return value;
-    if (range == 1) return thres + 1 + (value << 1);
-    if (range == 2) return 3 * thres + 2 + (value << 2);
-    return 7 * thres + 4 + (value << 3);
+    if (range == 1) return threshold + 1 + (value << 1);
+    if (range == 2) return 3 * threshold + 2 + (value << 2);
+    return 7 * threshold + 4 + (value << 3);
 }
 
 template <class T, int Bits>
 T uns_vr_encode(T value) {
-    const T thres = static_cast<T>(1) << Bits;
-    if (value < thres) return value;
-    if (value < 3 * thres) return thres | ((value - thres) >> 1);
-    if (value < 7 * thres) return 2 * thres | ((value - 3 * thres) >> 2);
-    if (value < 15 * thres) return 3 * thres | ((value - 7 * thres) >> 3);
-    return 4 * thres - 1;
+    const T threshold = static_cast<T>(1) << Bits;
+    if (value < threshold) return value;
+    if (value < 3 * threshold) return threshold | ((value - threshold) >> 1);
+    if (value < 7 * threshold) return 2 * threshold | ((value - 3 * threshold) >> 2);
+    if (value < 15 * threshold) return 3 * threshold | ((value - 7 * threshold) >> 3);
+    return 4 * threshold - 1;
 }
 
 template <class T, int Bits>

@@ -3,14 +3,14 @@
 #include <cstdio>
 #include <cstring>
 
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::simulator {
 
 namespace {
 
 // Split "[{...},{...}]" into its object substrings. The flat reader in
-// core/util/json_min then handles each object, so nothing here re-implements
+// core/util/json then handles each object, so nothing here re-implements
 // number or string parsing.
 std::vector<std::string> objects_in_array(const std::string& text, const char* key) {
     std::vector<std::string> out;
@@ -92,9 +92,9 @@ bool parse_scenario(const char* json, int len, Scenario& out) {
     const json::Reader top(json, len);
 
     char buf[64] = {0};
-    if (top.get_str("name", buf, sizeof(buf))) out.name = buf;
-    if (top.get_str("callsign", buf, sizeof(buf))) out.callsign = buf;
-    if (top.get_str("mode", buf, sizeof(buf))) out.mode = mode_from(buf);
+    if (top.get_string("name", buf, sizeof(buf))) out.name = buf;
+    if (top.get_string("callsign", buf, sizeof(buf))) out.callsign = buf;
+    if (top.get_string("mode", buf, sizeof(buf))) out.mode = mode_from(buf);
 
     out.lat_1e7 = static_cast<int32_t>(int_or(top, "lat_1e7", out.lat_1e7));
     out.lon_1e7 = static_cast<int32_t>(int_or(top, "lon_1e7", out.lon_1e7));
@@ -107,7 +107,7 @@ bool parse_scenario(const char* json, int len, Scenario& out) {
     for (const std::string& obj : objects_in_array(text, "aircraft")) {
         const json::Reader r(obj.c_str(), static_cast<int>(obj.size()));
         ScenarioAircraft a;
-        if (r.get_str("system", buf, sizeof(buf))) a.system = system_from(buf);
+        if (r.get_string("system", buf, sizeof(buf))) a.system = system_from(buf);
         a.north_m = static_cast<double>(int_or(r, "north_m", 0));
         a.east_m = static_cast<double>(int_or(r, "east_m", 0));
         a.up_m = static_cast<double>(int_or(r, "up_m", 0));

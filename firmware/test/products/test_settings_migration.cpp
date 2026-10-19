@@ -7,7 +7,7 @@
 #include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 

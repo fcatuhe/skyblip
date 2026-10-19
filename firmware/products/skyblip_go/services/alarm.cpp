@@ -70,7 +70,7 @@ void AlarmService::tick(uint32_t now_ms) {
 void AlarmService::accrue_annunciator(uint32_t now_ms) {
     sounding_.observe(policy_.sounding(), now_ms);
     vibrating_.observe(policy_.vibrating(), now_ms);
-    context_.state.duty.annunciator_ms = sounding_.ms() + vibrating_.ms();
+    context_.state.duty.annunciator_ms = sounding_.on_ms() + vibrating_.on_ms();
 }
 
 // INFO: fc 20sep26 one record per reception: between two of them nothing new is known about it

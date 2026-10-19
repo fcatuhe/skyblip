@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "core/util/hex.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "doctest/doctest.h"
 
 namespace skyblip {
@@ -29,7 +29,7 @@ class ActivationVectors {
 
     std::string text(const char* key) const {
         char value[512] = {0};
-        REQUIRE_MESSAGE(reader().get_str(key, value, sizeof(value)), "no key ", key);
+        REQUIRE_MESSAGE(reader().get_string(key, value, sizeof(value)), "no key ", key);
         return value;
     }
 

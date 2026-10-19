@@ -3,7 +3,7 @@
 namespace skyblip::traffic {
 
 void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
-                          uint32_t now) {
+                          uint32_t now_s) {
     if (callsign == nullptr || callsign[0] == 0) return;
     int idx = find_slot(address_mapping_table, address);
     if (idx < 0) idx = oldest_slot();
@@ -13,7 +13,7 @@ void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const
     e.used = true;
     e.address = address;
     e.address_mapping_table = address_mapping_table;
-    e.heard_s = now;
+    e.heard_s = now_s;
     int n = 0;
     while (n < kTextBytes - 1 && callsign[n] != 0) {
         e.text[n] = callsign[n];
@@ -28,10 +28,10 @@ const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address)
     return slots_[static_cast<size_t>(idx)].text;
 }
 
-void CallsignTable::age_out(uint32_t now, uint32_t forget_s) {
+void CallsignTable::age_out(uint32_t now_s, uint32_t forget_s) {
     for (Entry& e : slots_) {
         if (!e.used) continue;
-        if (now < e.heard_s || now - e.heard_s <= forget_s) continue;
+        if (now_s < e.heard_s || now_s - e.heard_s <= forget_s) continue;
         e = Entry{};
     }
 }

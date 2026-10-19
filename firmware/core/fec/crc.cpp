@@ -2,7 +2,7 @@
 
 namespace skyblip::fec {
 
-uint32_t adsl_pi_pass(uint32_t crc, uint8_t byte) {
+uint32_t adsl_crc_pass(uint32_t crc, uint8_t byte) {
     const uint32_t kPoly = 0xFFFA0480u;
     crc |= byte;
     for (uint8_t bit = 0; bit < 8; bit++) {
@@ -12,18 +12,18 @@ uint32_t adsl_pi_pass(uint32_t crc, uint8_t byte) {
     return crc;
 }
 
-uint32_t adsl_pi_check(const uint8_t* data, size_t bytes) {
+uint32_t adsl_crc_check(const uint8_t* data, size_t bytes) {
     uint32_t crc = 0;
-    for (size_t i = 0; i < bytes; i++) crc = adsl_pi_pass(crc, data[i]);
+    for (size_t i = 0; i < bytes; i++) crc = adsl_crc_pass(crc, data[i]);
     return crc >> 8;
 }
 
-uint32_t adsl_pi_compute(const uint8_t* data, size_t bytes) {
+uint32_t adsl_crc_compute(const uint8_t* data, size_t bytes) {
     uint32_t crc = 0;
-    for (size_t i = 0; i < bytes; i++) crc = adsl_pi_pass(crc, data[i]);
-    crc = adsl_pi_pass(crc, 0);
-    crc = adsl_pi_pass(crc, 0);
-    crc = adsl_pi_pass(crc, 0);
+    for (size_t i = 0; i < bytes; i++) crc = adsl_crc_pass(crc, data[i]);
+    crc = adsl_crc_pass(crc, 0);
+    crc = adsl_crc_pass(crc, 0);
+    crc = adsl_crc_pass(crc, 0);
     return crc >> 8;
 }
 

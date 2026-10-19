@@ -80,7 +80,7 @@ void install_and_swap(Rig& rig) {
     uint32_t t = 0;
     open_upload_window(rig, t);
     land_upload(rig, t);
-    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 500);
+    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 500);
 }
 
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
@@ -175,7 +175,7 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK(rig.platform.dfu().triggered == 0);
     CHECK_FALSE(attempt_recorded(rig));
 
-    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     CHECK(glass_reads(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
                       go::kInstallingTitleY, go::kInstallingTitle, 2));
     CHECK(rig.platform.dfu().triggered == 1);
@@ -209,7 +209,7 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
     CHECK(rig.product.board().rf().sleeps() == 1);
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
     CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning,
@@ -235,7 +235,7 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.platform.dfu().recoveries == 0);
 
-    rig.run(t, t + power::kParkMs + power::kReleaseSettleMs + 5000);
+    rig.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
     CHECK(glass_reads(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
     CHECK(glass_reads(glass, go::kInstallingLeftX, go::installing_body_y(0),
@@ -356,7 +356,7 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     t += 200;
     config(before).confirm();
     land_upload(before, t);
-    before.run(t, t + power::kParkMs + power::kReleaseSettleMs + 500);
+    before.run(t, t + power::kParkSettleMs + power::kReleaseSettleMs + 500);
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);

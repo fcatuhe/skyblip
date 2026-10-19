@@ -1,7 +1,7 @@
 #ifndef SKYBLIP_CORE_COMMS_CONFIG_STORE_H
 #define SKYBLIP_CORE_COMMS_CONFIG_STORE_H
 
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "core/util/result.h"
 
 namespace skyblip::comms {

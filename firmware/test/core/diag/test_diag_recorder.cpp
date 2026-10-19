@@ -96,7 +96,7 @@ TEST_CASE("diag recorder: a burst carries its own instant off the tape") {
     diag::Recorder recorder{};
     recorder.arm();
     radio::Entry entry{};
-    entry.event = radio::Event::Transmitted;
+    entry.verdict = radio::Verdict::Transmitted;
     entry.at_s = kBaseUtc;
     entry.into_ms = 462;
     entry.phase_valid = true;

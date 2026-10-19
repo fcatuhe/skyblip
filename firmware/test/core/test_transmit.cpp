@@ -51,12 +51,12 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
     for (uint32_t utc_s = 1000; utc_s < 6000; utc_s += 2) {
         const Transmitter::Attempt a = t.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
-        // Not from kSlot0Start: the dwell opens at 400, the direct slot at 450.
-        CHECK(a.at_ms >= kDirectStart);
+        // Not from kSlot0StartMs: the dwell opens at 400, the direct slot at 450.
+        CHECK(a.at_ms >= kDirectStartMs);
         // The burst also has to end before the dwell closes for the channel hop, not just
         // before the direct slot ends at 1000.
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionSlackMs <=
+                  Transmitter::kCompletionMarginMs <=
               Scheduler::dwell_end(0));
         CHECK(a.freq_hz == kMband0Hz);
         if (a.at_ms < earliest) earliest = a.at_ms;
@@ -64,8 +64,8 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
     }
     // The whole slot is usable: an open dwell is a tuned dwell, so 450 itself is
     // a legal instant and no guard is owed at the front.
-    CHECK(earliest == kDirectStart);
-    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionSlackMs -
+    CHECK(earliest == kDirectStartMs);
+    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionMarginMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
 
@@ -80,9 +80,9 @@ TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
         if (a.at_ms < earliest) earliest = a.at_ms;
         if (a.at_ms > latest) latest = a.at_ms;
     }
-    CHECK(earliest == kSlot1Start);
-    CHECK(latest ==
-          kDirectEnd - Transmitter::kCompletionSlackMs - static_cast<int>(Transmitter::kAirTimeMs));
+    CHECK(earliest == kSlot1StartMs);
+    CHECK(latest == kDirectEndMs - Transmitter::kCompletionMarginMs -
+                        static_cast<int>(Transmitter::kAirTimeMs));
 }
 
 TEST_CASE("transmit: two devices do not pick the same instant every second") {
@@ -127,10 +127,10 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
         const Transmitter::Attempt a = t.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(a.go);
         CHECK(a.freq_hz == kMband1Hz);
-        CHECK(a.at_ms >= kSlot1Start);
+        CHECK(a.at_ms >= kSlot1StartMs);
         CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionSlackMs <=
-              kDirectEnd);
+                  Transmitter::kCompletionMarginMs <=
+              kDirectEndMs);
     }
     // And the tail is not a position opportunity, however anchored the clock is.
     CHECK_FALSE(position_burst(t.attempt(slot_plan(100), 500, 500000, true, 0)));
@@ -175,7 +175,7 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every ten"
     constexpr Transmitter::Payload kName = Transmitter::Payload::Callsign;
     Transmitter t = airborne_transmitter();
     const uint32_t owned = t.ground_second();
-    const SlotPlan tail = slot_plan(kSlot1Start);
+    const SlotPlan tail = slot_plan(kSlot1StartMs);
 
     for (uint32_t utc_s = owned + 1; utc_s < owned + Transmitter::kCallsignPeriodS; utc_s++) {
         CAPTURE(utc_s);
@@ -187,8 +187,8 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every ten"
     REQUIRE(a.go);
     CHECK(a.payload == kName);
     CHECK(a.freq_hz == kMband1Hz);
-    CHECK(a.at_ms >= kCallsignStart);
-    CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kCallsignEnd);
+    CHECK(a.at_ms >= kCallsignStartMs);
+    CHECK(a.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kCallsignEndMs);
 
     t.sent(due, due * 1000, kName);
     CHECK_FALSE(t.attempt(tail, due, due * 1000, true, 0, kName).go);
@@ -202,7 +202,7 @@ TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never a
         const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
         if (Transmitter::slot_in(due, false) != Transmitter::kCallsignSlot) continue;
         CAPTURE(address);
-        const SlotPlan slot1 = slot_plan(kSlot1Start);
+        const SlotPlan slot1 = slot_plan(kSlot1StartMs);
         const Transmitter::Attempt position =
             t.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Position);
         const Transmitter::Attempt name =
@@ -211,7 +211,7 @@ TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never a
         REQUIRE(name.go);
         CHECK(position.freq_hz == name.freq_hz);
         CHECK(position.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionSlackMs <=
+                  Transmitter::kCompletionMarginMs <=
               name.at_ms);
         both++;
     }
@@ -228,7 +228,7 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
             int named = 0;
             int positions = 0;
             for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kCallsignPeriodS; utc_s++) {
-                for (const int phase : {500, kSlot1Start}) {
+                for (const int phase : {500, kSlot1StartMs}) {
                     for (const Transmitter::Payload payload :
                          {Transmitter::Payload::Position, Transmitter::Payload::Callsign}) {
                         const Transmitter::Attempt a =
@@ -253,10 +253,10 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
 TEST_CASE("transmit: a late solution refuses the position burst and not the callsign") {
     Transmitter t = airborne_transmitter();
     const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
-    const int32_t late = Transmitter::kFixLagMaxMs + 1;
+    const int32_t late = Transmitter::kFixMaxAgeMs + 1;
 
     CHECK_FALSE(t.attempt(slot_plan(500), due, due * 1000, true, late).go);
-    const Transmitter::Attempt a = t.attempt(slot_plan(kSlot1Start), due, due * 1000, true, late);
+    const Transmitter::Attempt a = t.attempt(slot_plan(kSlot1StartMs), due, due * 1000, true, late);
     REQUIRE(a.go);
     CHECK(a.payload == Transmitter::Payload::Callsign);
 }
@@ -266,8 +266,8 @@ TEST_CASE("transmit: the callsign burst belongs to slot 1 and to no other dwell"
     Transmitter t = airborne_transmitter();
     const uint32_t due = t.ground_second() + Transmitter::kCallsignPeriodS;
     t.sent(due, due * 1000);
-    CHECK_FALSE(t.attempt(slot_plan(kSlot0Start), due, due * 1000, true, 0).go);
-    CHECK(t.attempt(slot_plan(kSlot1Start), due, due * 1000, true, 0).go);
+    CHECK_FALSE(t.attempt(slot_plan(kSlot0StartMs), due, due * 1000, true, 0).go);
+    CHECK(t.attempt(slot_plan(kSlot1StartMs), due, due * 1000, true, 0).go);
 }
 
 // A device that reboots comes back to the same second of the ten, not to a new one.
@@ -306,7 +306,7 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     // Claimed from 400, but the instant is what waits for the direct slot to open at 450.
     const Transmitter::Attempt early = t.attempt(s.plan(420, anchored()), 10, 10000, true, 0);
     CHECK(early.go);
-    CHECK(early.at_ms >= kDirectStart);
+    CHECK(early.at_ms >= kDirectStartMs);
 }
 
 TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {

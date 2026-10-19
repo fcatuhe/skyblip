@@ -16,7 +16,7 @@ constexpr uint32_t kEraseCeilingSectors = 8;
 
 static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
                       static_cast<uint32_t>(timing::kJitterGuardMs) <
-                  static_cast<uint32_t>(timing::kUplinkRxEnd - timing::kUplinkRxStart),
+                  static_cast<uint32_t>(timing::kUplinkRxEndMs - timing::kUplinkRxStartMs),
               "claiming a sector no longer fits inside the narrowest dwell the map offers");
 
 enum class Append : uint8_t { Ok, Deferred, NoSector, Fault };

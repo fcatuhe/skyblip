@@ -33,8 +33,8 @@ TEST_CASE("battery: the trim is a signed millivolt offset, and zero is the ident
 
     CHECK(calibrated_mv(3800, -40) == 3760);
     CHECK(calibrated_mv(3800, 40) == 3840);
-    CHECK(calibrated_mv(3800, kCalibrationLimitMv) == 3800u + kCalibrationLimitMv);
-    CHECK(calibrated_mv(3800, -kCalibrationLimitMv) == 3800u - kCalibrationLimitMv);
+    CHECK(calibrated_mv(3800, kCalibrationCeilingMv) == 3800u + kCalibrationCeilingMv);
+    CHECK(calibrated_mv(3800, -kCalibrationCeilingMv) == 3800u - kCalibrationCeilingMv);
 }
 
 // The bound belongs to the settings boundary (core/settings validates it on the
@@ -82,10 +82,10 @@ TEST_CASE("battery: the trimmed sample is the same sample, charger state and all
         untrimmed_gauge.apply(raw);
         untrimmed_monitor.apply(raw);
     }
-    CHECK(gauge.state().millivolts == 3480);
+    CHECK(gauge.state().cell_mv == 3480);
     CHECK(monitor.level() == PowerLevel::Critical);
     // The same unit, uncalibrated, says the cell is fine.
-    CHECK(untrimmed_gauge.state().millivolts == 3540);
+    CHECK(untrimmed_gauge.state().cell_mv == 3540);
     CHECK(untrimmed_monitor.level() != PowerLevel::Critical);
 }
 
@@ -109,8 +109,8 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
         uncalibrated.apply(sample);
         trimmed.apply(calibrated(sample, s.battery_offset_mv));
     }
-    CHECK(uncalibrated.state().millivolts == kThisUnitReadsMv);
-    CHECK(trimmed.state().millivolts == kBenchMv);
+    CHECK(uncalibrated.state().cell_mv == kThisUnitReadsMv);
+    CHECK(trimmed.state().cell_mv == kBenchMv);
     CHECK(trimmed.state().percent == percent_from_mv(kBenchMv));
     // Ten percentage points of gauge error, from a divider inside tolerance.
     CHECK(int(uncalibrated.state().percent) == 65);

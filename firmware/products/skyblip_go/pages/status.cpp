@@ -44,7 +44,7 @@ int format_elapsed(char* out, uint32_t seconds) {
 constexpr uint32_t kImuCountCeiling = 99;
 constexpr uint8_t kImuMetaInitialised = 16;
 
-int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSec(speed_mm_s)).v; }
+int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).v; }
 
 int32_t centi_kilometres_per_hour(int32_t speed_mm_s) { return div_round(speed_mm_s * 36, 100); }
 
@@ -88,12 +88,12 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aero, Quant
     char buf[16];
     canvas.draw_text(kLeft, y, label, true, 1);
 
-    int n = format_int(buf, aero.value, 1, aero.decimals, no_plus);
+    int n = format_int(buf, aero.value, 1, aero.decimals, !no_plus);
     buf[n] = 0;
     right_aligned(canvas, kAeroNumberEnd, y, buf, n);
     canvas.draw_text(kAeroUnitX, y, aero.unit, true, 1);
 
-    n = format_int(buf, si.value, 1, si.decimals, no_plus);
+    n = format_int(buf, si.value, 1, si.decimals, !no_plus);
     buf[n] = 0;
     right_aligned(canvas, kSiNumberEnd, y, buf, n);
     canvas.draw_text(kSiUnitX, y, si.unit, true, 1);
@@ -149,7 +149,7 @@ void imu_field(ui::Canvas& canvas, int y, const StatusSnapshot& s) {
         n += format_string(buf + n, s.imu_fault);
     } else if (s.slip_valid) {
         n += format_string(buf + n, " ");
-        n += format_int(buf + n, s.slip_mg, 1, 0, false);
+        n += format_int(buf + n, s.slip_mg, 1, 0, true);
         n += format_string(buf + n, "mg");
     } else {
         n += imu_traffic(buf + n, s);
@@ -235,13 +235,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& s) {
     if (s.fix_valid) {
         // Ten characters of latitude do not fit a five-cell value field, so it
         // ends where the first column's unit does: level with TRUE above it.
-        n = format_int(buf, s.lat_1e7, 1, 7, true);
+        n = format_int(buf, s.lat_1e7, 1, 7, false);
         buf[n] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
         right_aligned(canvas, kAeroUnitEnd, y, buf, n);
 
         n = format_string(buf, "LON ");
-        n += format_int(buf + n, s.lon_1e7, 1, 7, true);
+        n += format_int(buf + n, s.lon_1e7, 1, 7, false);
         buf[n] = 0;
         right_aligned(canvas, kGlassW - kLeft, y, buf, n);
     } else {
@@ -283,7 +283,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& s) {
              {centi_kilometres_per_hour(s.speed_mm_s), 2, " km/h"}, true);
     y += kLineH;
 
-    dual_row(canvas, y, "VS", {to_feet_per_minute(MillimetresPerSec(s.climb_mm_s)).v, 0, " fpm"},
+    dual_row(canvas, y, "VS", {to_feet_per_minute(MillimetresPerSecond(s.climb_mm_s)).v, 0, " fpm"},
              {s.climb_mm_s, 3, " m/s"}, false);
     y += kLineH;
 

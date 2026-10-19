@@ -64,7 +64,7 @@ struct Pass {
     void poll_clock(uint64_t now_us) {
         platform.clock().set_micros(now_us);
         state.clock.pps_locked = platform.pps().locked();
-        state.clock.ms_since_pps = platform.pps().ms_since(now_us);
+        state.clock.since_edge_ms = platform.pps().ms_since(now_us);
         state.clock.pps_edge_us = platform.pps().last_edge_us();
     }
 
@@ -77,7 +77,7 @@ struct Pass {
         platform.clock().set_micros(now_us);
         const uint32_t now_ms = static_cast<uint32_t>(now_us / 1000);
         state.own.utc_s = now_ms / 1000;
-        state.own.fix_ms = now_ms;
+        state.own.fix_at_ms = now_ms;
         rf.service(now_ms);
         radio_service.tick(now_ms);
         traffic_service.tick(now_ms);
@@ -177,7 +177,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     // The chip is holding a timer that expires well inside one 400 ms dwell.
     const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx::kTimeoutStepNs / 1000000u;
     CHECK(timeout_ms > 0);
-    CHECK(timeout_ms < timing::kSlot0End - timing::kSlot0Start);
+    CHECK(timeout_ms < timing::kSlot0EndMs - timing::kSlot0StartMs);
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.

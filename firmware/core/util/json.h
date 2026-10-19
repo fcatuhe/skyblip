@@ -1,6 +1,6 @@
-// core/util/json_min.h: a tiny, allocation-free reader/writer for FLAT JSON
-#ifndef SKYBLIP_CORE_UTIL_JSON_MIN_H
-#define SKYBLIP_CORE_UTIL_JSON_MIN_H
+// core/util/json.h: a tiny, allocation-free reader/writer for FLAT JSON
+#ifndef SKYBLIP_CORE_UTIL_JSON_H
+#define SKYBLIP_CORE_UTIL_JSON_H
 
 #include <cstddef>
 #include <cstdint>
@@ -9,17 +9,17 @@ namespace skyblip::json {
 
 class Reader {
    public:
-    Reader(const char* data, int len) : data_(data), len_(len) {}
+    Reader(const char* data, int bytes) : data_(data), bytes_(bytes) {}
 
     bool get_int(const char* key, long& out) const;
     bool get_uint(const char* key, uint32_t& out) const;
     bool get_bool(const char* key, bool& out) const;
-    bool get_str(const char* key, char* buf, int cap) const;
+    bool get_string(const char* key, char* out, int capacity) const;
     bool has(const char* key) const;
 
    private:
     const char* data_;
-    int len_;
+    int bytes_;
     int value_offset(const char* key) const;
     bool get_number(const char* key, int64_t& out) const;
 };
@@ -31,12 +31,14 @@ class Reader {
 // instead of one with a mangled last field nobody asked for.
 class Writer {
    public:
-    Writer(char* buf, int cap) : buf_(buf), cap_(cap) { buf_[n_++] = '{'; }
+    Writer(char* out, int capacity) : buffer_(out), capacity_(capacity) {
+        buffer_[length_++] = '{';
+    }
     void kv_int(const char* key, int64_t v);
     void kv_bool(const char* key, bool v);
     void kv_str(const char* key, const char* v);
     int finish();
-    int length() const { return n_; }
+    int length() const { return length_; }
     bool overflowed() const { return overflowed_; }
 
    private:
@@ -44,9 +46,9 @@ class Writer {
     void sep();
     void raw(const char* s);
     void raw_str(const char* s);
-    char* buf_;
-    int cap_;
-    int n_{0};
+    char* buffer_;
+    int capacity_;
+    int length_{0};
     bool first_{true};
     bool overflowed_{false};
 };

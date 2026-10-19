@@ -85,7 +85,7 @@ void World::name_aircraft(int index, const char* callsign) {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used || callsign == nullptr) return;
     char* out = aircraft_[index].callsign;
     int n = 0;
-    while (n < protocol::AdslPacket::kInfoMsgBytes && callsign[n] != 0) {
+    while (n < protocol::AdslPacket::kInfoTextBytes && callsign[n] != 0) {
         out[n] = callsign[n];
         n++;
     }
@@ -219,7 +219,7 @@ model::AircraftObservation World::as_relayed(const VirtualAircraft& a,
     observation.lon_1e7 = origin_lon_1e7_;
     if (coslat > 0.01)
         observation.lon_1e7 += static_cast<int32_t>(a.east_m * 1e7 / (kMetresPerDegLat * coslat));
-    observation.alt_m = to_metres(Millimetres(own.alt_mm)).v + static_cast<int32_t>(a.up_m);
+    observation.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + static_cast<int32_t>(a.up_m);
     observation.position_valid = true;
     return observation;
 }
@@ -245,7 +245,7 @@ void World::relay(uint64_t epoch_us, const model::Ownship& own) {
     uint8_t burst[protocol::kUplinkBurstBytes] = {0};
     const size_t burst_len = protocol::encode_oband(frame, burst);
 
-    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStart) * 1000, timing::kObandHz,
+    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, timing::kObandHz,
               burst, static_cast<uint16_t>(burst_len), rssi_at(kGroundStationRangeM),
               protocol::kUplinkChipRateBps);
 }
@@ -340,7 +340,7 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::Ownship
     // ALP-TAS keys its frames on the UTC second, so a transmitter has to use the
     // second the receiver is in, not the simulation's own count of seconds.
     const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
-    const int32_t alt_m = to_metres(Millimetres(own.alt_mm)).v + static_cast<int32_t>(a.up_m);
+    const int32_t alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + static_cast<int32_t>(a.up_m);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_len = a.system == protocol::System::Alptas
                                 ? alptas_burst(a, utc_s, alt_m, lat, lon, chips)
@@ -353,7 +353,7 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::Ownship
                                : static_cast<int>(a.transmissions & 1u);
     // A pinned phase inside slot 1's tail belongs to the slot that opened in the
     // previous second, so its burst is 800..1200 ms after that second, not this.
-    const bool tail = a.phase_ms >= 0 && a.phase_ms < timing::kSlot1Wrap;
+    const bool tail = a.phase_ms >= 0 && a.phase_ms < timing::kSlot1WrapMs;
     int phase_ms = a.phase_ms;
     if (phase_ms < 0) {
         const int first = timing::Scheduler::slot_start(slot) + timing::kJitterGuardMs;
@@ -368,7 +368,7 @@ void World::transmit(VirtualAircraft& a, uint64_t epoch_us, const model::Ownship
     const double de = a.east_m - own_east_m();
     const double range_m = std::sqrt(dn * dn + de * de);
     air_.emit(epoch_us + static_cast<uint64_t>(tail ? phase_ms + 1000 : phase_ms) * 1000,
-              timing::Scheduler::slot_freq(slot), chips, static_cast<uint8_t>(chip_len),
+              timing::Scheduler::slot_freq_hz(slot), chips, static_cast<uint8_t>(chip_len),
               rssi_at(range_m));
     name_itself(a, epoch_us, utc_s, range_m);
 }
@@ -384,9 +384,9 @@ void World::name_itself(const VirtualAircraft& a, uint64_t epoch_us, uint32_t ut
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_len = callsign_burst(a, chips);
     if (chip_len == 0) return;
-    const int first = timing::kCallsignStart;
+    const int first = timing::kCallsignStartMs;
     const int last =
-        timing::kCallsignEnd - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
+        timing::kCallsignEndMs - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
     const int phase_ms =
         first + static_cast<int>((a.address * 2654435761u) % static_cast<uint32_t>(last - first));
     air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, timing::kMband1Hz, chips,

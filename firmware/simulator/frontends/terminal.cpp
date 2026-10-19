@@ -76,10 +76,10 @@ void render(simulator::Simulator& s) {
     std::printf("  fix:%-6s sats:%2u  pos:%.5f,%.5f\n", o.fix_valid ? "3D" : "none", o.sats,
                 o.lat_1e7 / 1e7, o.lon_1e7 / 1e7);
     std::printf("  alt:%5dm  spd:%5.1fm/s  trk:%03u  vs:%+.1fm/s\n",
-                to_metres(Millimetres(o.alt_mm)).v, o.speed_mm_s / 1000.0,
+                to_metres(Millimetres(o.alt_hae_mm)).v, o.speed_mm_s / 1000.0,
                 to_degrees(CentiDegrees(o.track_cdeg)).v, o.climb_mm_s / 1000.0);
-    std::printf("  batt:%u.%02uV %3u%%%s\n", st.power.battery.millivolts / 1000,
-                (st.power.battery.millivolts % 1000) / 10, st.power.battery.percent,
+    std::printf("  batt:%u.%02uV %3u%%%s\n", st.power.battery.cell_mv / 1000,
+                (st.power.battery.cell_mv % 1000) / 10, st.power.battery.percent,
                 st.power.battery.charging ? " CHG" : "");
     std::printf("  traffic:%d  rx ok/bad:%u/%u  wait/type:%u/%u  tx ok/lost:%u/%u  ALARM:%s\n",
                 st.traffic.count(), st.air.rx_ok, st.air.rx_bad, st.air.rx_wait, st.air.rx_type,

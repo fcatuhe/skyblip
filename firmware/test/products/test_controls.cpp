@@ -67,11 +67,12 @@ TEST_CASE("controls: a press lands when the thumb comes off, not when it arrives
 TEST_CASE("controls: a press held into the power-off hold says nothing, then or on release") {
     go::Controls controls;
     controls.read(down(events::Contact::Button, 0));
-    CHECK(controls.read(up(events::Contact::Button, power::kLongPressMs)) == go::Gesture::None);
+    CHECK(controls.read(up(events::Contact::Button, power::kLongPressHoldMs)) == go::Gesture::None);
 
     go::Controls quick;
     quick.read(down(events::Contact::Button, 0));
-    CHECK(quick.read(up(events::Contact::Button, power::kLongPressMs - 1)) == go::Gesture::Press);
+    CHECK(quick.read(up(events::Contact::Button, power::kLongPressHoldMs - 1)) ==
+          go::Gesture::Press);
 }
 
 // A touch with the button down is the stow (core/power/shutdown.h), never a page.
@@ -129,14 +130,14 @@ TEST_CASE("gesture: presses made before the prompt, and slow presses, authorise 
 
 // Three meanings on one button stay disjoint, or a pilot has two of them at once.
 TEST_CASE("gesture: the authorising window sits between a press and the power-off hold") {
-    CHECK(go::ConfirmGesture::kDoublePressMs < power::kLongPressMs);
+    CHECK(go::ConfirmGesture::kDoublePressMs < power::kLongPressHoldMs);
 
     go::Controls controls;
     go::ConfirmGesture g;
     g.arm(0);
     controls.read(down(events::Contact::Button, 0));
-    CHECK(controls.read(up(events::Contact::Button, power::kLongPressMs + 200)) ==
+    CHECK(controls.read(up(events::Contact::Button, power::kLongPressHoldMs + 200)) ==
           go::Gesture::None);
-    CHECK(g.tick(power::kLongPressMs) == go::Answer::None);
+    CHECK(g.tick(power::kLongPressHoldMs) == go::Answer::None);
     CHECK(g.armed());
 }

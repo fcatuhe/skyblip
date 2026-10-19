@@ -26,7 +26,7 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
     t = 1000;
     REQUIRE(rig.product.board().rf().sleeps() == 0);
 
-    rig.hold_button(t, power::kLongPressMs + 200);
+    rig.hold_button(t, power::kLongPressHoldMs + 200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     // A receiver armed through most of every second is what flattens the pack,
@@ -37,7 +37,7 @@ TEST_CASE("product: a long press parks the radio and the panel, then asks for th
 
     // Still held: the rails must not go, or a level-sensed wake pin brings the
     // device straight back up.
-    rig.hold_button(t, power::kParkMs + 1000);
+    rig.hold_button(t, power::kParkSettleMs + 1000);
     CHECK_FALSE(rig.product.ready_to_power_off());
     // The park frame has had its seconds by now, so the panel is asleep before the rails go.
     CHECK_FALSE(rig.platform.chips().epd.powered);
@@ -54,11 +54,11 @@ TEST_CASE("product: the rails wait for the park frame, not only for the park win
     rig.run(0, 1000);
     t = 1000;
 
-    rig.hold_button(t, power::kLongPressMs + 200);
+    rig.hold_button(t, power::kLongPressHoldMs + 200);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     rig.platform.chips().epd.busy_stuck = true;
 
-    rig.hold_button(t, power::kParkMs, /*down=*/false);
+    rig.hold_button(t, power::kParkSettleMs, /*down=*/false);
     rig.hold_button(t, power::kReleaseSettleMs + 200, /*down=*/false);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(rig.platform.chips().epd.powered);
@@ -78,7 +78,7 @@ TEST_CASE("product: the hold that switches the device off does not page first") 
     t = 1000;
     const go::Page page = rig.product.screen().page();
 
-    rig.hold_button(t, power::kLongPressMs + 200);
+    rig.hold_button(t, power::kLongPressHoldMs + 200);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.screen().page() == page);
 
@@ -117,7 +117,7 @@ TEST_CASE("product: a confirmed power_off over the link parks the device like a 
     CHECK_FALSE(rig.config().power_off_requested());
 
     // No button was ever down, so there is no release to wait for.
-    rig.run(2000, 2000 + power::kParkMs + power::kReleaseSettleMs + 500);
+    rig.run(2000, 2000 + power::kParkSettleMs + power::kReleaseSettleMs + 500);
     CHECK(rig.product.ready_to_power_off());
 }
 
@@ -258,7 +258,7 @@ TEST_CASE("product: the loop feeds the watchdog while it is flying and through a
     // A device that is deliberately going down is doing what it was told: a
     // held button must not turn a power-off into a watchdog reboot.
     uint32_t t = 3 * runtime::kTaskWatchdogMs;
-    rig.hold_button(t, power::kLongPressMs + 200);
+    rig.hold_button(t, power::kLongPressHoldMs + 200);
     REQUIRE(rig.product.shutdown().going_down());
     rig.hold_button(t, 2 * runtime::kTaskWatchdogMs);
     CHECK(rig.product.may_feed_watchdog(t));

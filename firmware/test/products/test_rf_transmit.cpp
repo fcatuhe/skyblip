@@ -10,7 +10,7 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/timing/slot.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
@@ -56,7 +56,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
         // Always inside the direct slot, even though the dwell that carries the
         // burst runs 200 ms past it.
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEnd);
+        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
         if (last_freq != 0) CHECK(r.freq_hz != last_freq);
         last_freq = r.freq_hz;
     }
@@ -86,7 +86,7 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
     int done = 0;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& e = log.newest(i);
-        if (e.event != radio::Event::Transmitted) continue;
+        if (e.verdict != radio::Verdict::Transmitted) continue;
         done++;
         // 4.8 ms of air from the keying step, read out on the next one.
         CHECK(e.tx_span_us - e.tx_keyed_us <= simulator::Simulator::kStepMs * 1000);
@@ -115,8 +115,8 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
             continue;
         }
         named++;
-        CHECK(r.phase_ms < timing::kSlot1Wrap);
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEnd - 1000);
+        CHECK(r.phase_ms < timing::kSlot1WrapMs);
+        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
         CHECK(simulator::Air::tuned_to(r.freq_hz, timing::kMband1Hz));
     }
     // Twenty-one seconds of flight: twenty-one positions and two names.
@@ -127,7 +127,7 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
     const radio::Log& log = h.product().state().radio_log;
     int rows = 0;
     for (int i = 0; i < log.count(); i++)
-        if (log.newest(i).event == radio::Event::Transmitted && log.newest(i).callsign) rows++;
+        if (log.newest(i).verdict == radio::Verdict::Transmitted && log.newest(i).callsign) rows++;
     CHECK(rows > 0);
 }
 
@@ -172,7 +172,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
         REQUIRE(p.check_crc() == 0);
         p.descramble();
         CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
-        CHECK(p.alt_m() == to_metres(Millimetres(h.product().state().own.alt_mm)).v);
+        CHECK(p.alt_m() == to_metres(Millimetres(h.product().state().own.alt_hae_mm)).v);
         CHECK(p.FlightState == 2);
         checked++;
     }
@@ -269,7 +269,7 @@ TEST_CASE("rf: nothing goes on air while the receiver's solutions still walk") {
     // Not because it has nothing to say: the fix is good and the clock anchored.
     CHECK(h.product().state().own.fix_valid);
     CHECK(h.product().state().clock.pps_locked);
-    CHECK(h.product().state().own.pred_resid_m >= gnss::kSettleResidualM);
+    CHECK(h.product().state().own.prediction_residual_m >= gnss::kSettleResidualM);
     CHECK(h.product().ownship().first_fix().converged_fixes() == 0);
 
     // And there is one copy of that fact. Own-ship owns the window; the flag on
@@ -306,7 +306,7 @@ TEST_CASE("rf: a receiver the model predicts goes on air in seconds, not in twen
     CHECK(settled_at - first_fix_ms >= gnss::kConvergedFixes * 1000);
     CHECK(settled_at - first_fix_ms < gnss::kFirstFixSettleMs / 2);
     CHECK(h.product().ownship().first_fix().converged_fixes() == gnss::kConvergedFixes);
-    CHECK(h.product().state().own.pred_resid_m < gnss::kSettleResidualM);
+    CHECK(h.product().state().own.prediction_residual_m < gnss::kSettleResidualM);
 }
 
 // F3. The burst leaves in the direct slot, 450 to 1000 ms into the second, and
@@ -358,8 +358,8 @@ TEST_CASE("rf: the extrapolation residual is measured against the fix that arriv
     h.world().set_speed_kt(90);
     h.world().set_track_deg(90);
     h.run(6000);
-    CHECK(h.product().state().own.pred_resid_valid);
-    CHECK(h.product().state().own.pred_resid_m <= 2);
+    CHECK(h.product().state().own.prediction_residual_valid);
+    CHECK(h.product().state().own.prediction_residual_m <= 2);
 
     // A track that jumps 90 degrees between two solutions is a manoeuvre no
     // constant-turn model saw coming, and the residual says so on the solution
@@ -369,7 +369,7 @@ TEST_CASE("rf: the extrapolation residual is measured against the fix that arriv
     uint16_t worst_m = 0;
     for (uint32_t t = 6000; t <= 8000; t += simulator::Simulator::kStepMs) {
         h.step(t);
-        const uint16_t resid_m = h.product().state().own.pred_resid_m;
+        const uint16_t resid_m = h.product().state().own.prediction_residual_m;
         if (resid_m > worst_m) worst_m = resid_m;
     }
     CHECK(worst_m > 10);
@@ -417,7 +417,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
         // Still inside the direct slot, still alternating channel: the phase comes
         // off the PPS edge in micros(), which is 64-bit and does not wrap.
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEnd);
+        CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
         if (last_freq != 0) CHECK(r.freq_hz != last_freq);
         last_freq = r.freq_hz;
     }
@@ -450,8 +450,8 @@ TEST_CASE("rf: a device on the ground transmits, and reports no burst it never a
     const radio::Log& log = h.product().state().radio_log;
     int sent = 0, lost = 0;
     for (int i = 0; i < log.count(); i++) {
-        if (log.newest(i).event == radio::Event::Transmitted) sent++;
-        if (log.newest(i).event == radio::Event::Lost) lost++;
+        if (log.newest(i).verdict == radio::Verdict::Transmitted) sent++;
+        if (log.newest(i).verdict == radio::Verdict::Lost) lost++;
     }
     CHECK(sent > 0);
     CHECK(lost == 0);

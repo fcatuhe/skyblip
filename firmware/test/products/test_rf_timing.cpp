@@ -12,7 +12,7 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/timing/slot.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
@@ -84,7 +84,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
 
     const int rows_before = h.product().state().radio_log.count();
     const uint32_t bad_before = h.product().state().air.rx_bad;
-    const uint32_t at_ms = start + 2000 + timing::kSlot0Start + 200;
+    const uint32_t at_ms = start + 2000 + timing::kSlot0StartMs + 200;
     h.step(at_ms);
     REQUIRE(h.platform().chips().radio.receive_air(burst, sizeof(burst), /*crc_error=*/false,
                                                    /*rssi=*/-112, protocol::kMbandChipRateBps));
@@ -109,8 +109,8 @@ TEST_CASE("rf: what happened on air reaches the station log, sent and heard alik
     bool sent = false, heard = false;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& entry = log.newest(i);
-        if (entry.event == radio::Event::Transmitted) sent = true;
-        if (entry.event != radio::Event::Received) continue;
+        if (entry.verdict == radio::Verdict::Transmitted) sent = true;
+        if (entry.verdict != radio::Verdict::Received) continue;
         heard = true;
         CHECK(entry.address != 0);
         CHECK(entry.source == model::Source::AdslDirect);
@@ -136,20 +136,20 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
         const radio::Entry& entry = log.newest(i);
         REQUIRE(entry.phase_valid);
         CHECK(entry.into_ms < 1000);
-        const bool own = entry.event == radio::Event::Transmitted;
+        const bool own = entry.verdict == radio::Verdict::Transmitted;
         // A host step dates a burst ending at 999.8 ms, the direct slot's last, on the next edge.
         const int ended_ms = own && entry.into_ms < simulator::Simulator::kStepMs
                                  ? entry.into_ms + 1000
                                  : entry.into_ms;
         // The phase is where the burst ENDED, so only a dwell it cannot have run into names one.
-        if (entry.band == model::Band::M && ended_ms < timing::kSlot0End - 100) {
+        if (entry.band == model::Band::M && ended_ms < timing::kSlot0EndMs - 100) {
             CHECK(entry.channel == 0);
             channelled++;
         }
         if (!own) continue;
         dated++;
-        CHECK(ended_ms >= timing::kDirectStart);
-        CHECK(ended_ms <= timing::kDirectEnd);
+        CHECK(ended_ms >= timing::kDirectStartMs);
+        CHECK(ended_ms <= timing::kDirectEndMs);
         CHECK(entry.tx_span_valid);
         CHECK(entry.tx_span_us > 0);
     }
@@ -371,7 +371,7 @@ TEST_CASE("rf: a decoded burst claiming an impossible range never reaches the ra
     CHECK(h.product().state().air.rx_bad == 0);
     // And refused by the table, counted, with nothing on the screen.
     CHECK(h.product().state().traffic.count() == 0);
-    CHECK(h.product().state().traffic.implausible_count() > 0);
+    CHECK(h.product().state().traffic.implausible() > 0);
     CHECK(h.product().state().alarm_level == traffic::Level::None);
 }
 
@@ -387,5 +387,5 @@ TEST_CASE("rf: a burst from a range the link budget allows is traffic as before"
 
     CHECK(h.product().state().air.rx_ok > 0);
     CHECK(h.product().state().traffic.count() == 1);
-    CHECK(h.product().state().traffic.implausible_count() == 0);
+    CHECK(h.product().state().traffic.implausible() == 0);
 }

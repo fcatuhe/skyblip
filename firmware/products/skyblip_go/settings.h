@@ -15,7 +15,7 @@
 #include <cstdint>
 
 #include "core/settings/address.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "core/util/result.h"
 
 namespace skyblip::go {
@@ -49,7 +49,7 @@ constexpr uint8_t kAircraftTypeLight = 1;
 
 struct Settings {
     uint8_t version{kCurrentVersion};
-    // The per-unit battery trim, core/power/battery.h's kCalibrationLimitMv
+    // The per-unit battery trim, core/power/battery.h's kCalibrationCeilingMv
     // either way, applied to every reading before the gauge or the cutoff sees
     // it. Placed here rather than at the end because a signed 16-bit value after
     // the 32-bit address costs no padding, so the blob is the same length it was.

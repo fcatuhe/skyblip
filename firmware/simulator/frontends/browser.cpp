@@ -131,13 +131,11 @@ KEEPALIVE int simulator_fix_valid() { return g_simulator.product().state().own.f
 KEEPALIVE int simulator_sats() { return g_simulator.product().state().own.sats; }
 KEEPALIVE int simulator_lat_1e7() { return g_simulator.product().state().own.lat_1e7; }
 KEEPALIVE int simulator_lon_1e7() { return g_simulator.product().state().own.lon_1e7; }
-KEEPALIVE int simulator_alt_mm() { return g_simulator.product().state().own.alt_mm; }
+KEEPALIVE int simulator_alt_mm() { return g_simulator.product().state().own.alt_hae_mm; }
 KEEPALIVE int simulator_pressure_mpa() {
     return static_cast<int>(g_simulator.product().state().baro.pressure_mpa);
 }
-KEEPALIVE int simulator_battery_mv() {
-    return g_simulator.product().state().power.battery.millivolts;
-}
+KEEPALIVE int simulator_battery_mv() { return g_simulator.product().state().power.battery.cell_mv; }
 KEEPALIVE int simulator_battery_percent() {
     return g_simulator.product().state().power.battery.percent;
 }

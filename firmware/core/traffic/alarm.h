@@ -69,7 +69,7 @@ class AlarmTracker {
         bool used{false};
         uint8_t address_mapping_table{0};
         uint32_t address{0};
-        uint32_t obs_key{0};
+        uint32_t reception_key{0};
         uint32_t seen_ms{0};
         uint32_t forget_ms{0};
         Level notified_level{Level::None};

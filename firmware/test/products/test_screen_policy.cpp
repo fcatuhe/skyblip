@@ -318,7 +318,7 @@ constexpr uint32_t kSecondMs = 1000;
 void locked_tick(Rig& rig, uint32_t t) {
     rig.state.clock.utc_valid = true;
     rig.state.clock.pps_locked = true;
-    rig.state.clock.ms_since_pps = t % kSecondMs;
+    rig.state.clock.since_edge_ms = t % kSecondMs;
     rig.tick(t);
 }
 

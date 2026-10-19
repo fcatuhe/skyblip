@@ -42,7 +42,7 @@ model::Ownship own_from_gnss(const char* rmc, const char* gga, const char* gsa) 
     o.pps_locked = true;
     o.lat_1e7 = f.lat_1e7;
     o.lon_1e7 = f.lon_1e7;
-    o.alt_mm = f.alt_mm;
+    o.alt_hae_mm = f.alt_mm;
     o.speed_mm_s = f.speed_mm_s;
     o.track_cdeg = f.track_cdeg;
     o.vdop_e2 = f.vdop_e2;
@@ -101,7 +101,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
 
     // 5) alarm: an aircraft 800 m away and co-altitude is an advisory, and the
     //    closure beside it comes off the relative velocity vector.
-    traffic::AlarmAssessment a = traffic::assess(own, observation, own.fix_ms);
+    traffic::AlarmAssessment a = traffic::assess(own, observation, own.fix_at_ms);
     CHECK(a.valid);
     CHECK(a.rel_dist_m > 700);
     CHECK(a.rel_dist_m < 900);
@@ -113,7 +113,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     // an advisory all the same, because it is there.
     model::AircraftObservation chase = observation;
     chase.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
-    const traffic::AlarmAssessment following = traffic::assess(own, chase, own.fix_ms);
+    const traffic::AlarmAssessment following = traffic::assess(own, chase, own.fix_at_ms);
     CHECK(following.closing_mps <= 0);
     CHECK(following.level == traffic::Level::Advisory);
 

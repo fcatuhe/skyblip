@@ -2,12 +2,12 @@
 #include <cstring>
 #include <string>
 
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
 
-TEST_CASE("json_min: the reader parses ints, bools and strings, the writer emits them") {
+TEST_CASE("json: the reader parses ints, bools and strings, the writer emits them") {
     const char* j = "{\"a\":42,\"b\":true,\"c\":\"hi\",\"d\":-7}";
     json::Reader r(j, static_cast<int>(strlen(j)));
     long v;
@@ -17,7 +17,7 @@ TEST_CASE("json_min: the reader parses ints, bools and strings, the writer emits
     CHECK(v == 42);
     CHECK(r.get_bool("b", b));
     CHECK(b);
-    CHECK(r.get_str("c", s, sizeof(s)));
+    CHECK(r.get_string("c", s, sizeof(s)));
     CHECK(std::string(s) == "hi");
     CHECK(r.get_int("d", v));
     CHECK(v == -7);
@@ -31,7 +31,7 @@ TEST_CASE("json_min: the reader parses ints, bools and strings, the writer emits
     CHECK(std::string(out) == "{\"x\":5,\"y\":false}");
 }
 
-TEST_CASE("json_min: a frame that ends on a colon has no value, and nothing past it is read") {
+TEST_CASE("json: a frame that ends on a colon has no value, and nothing past it is read") {
     const char frame[] = {'{', '"', 'c', 'm', 'd', '"', ':'};
     json::Reader r(frame, static_cast<int>(sizeof(frame)));
     long v = 0;
@@ -39,10 +39,10 @@ TEST_CASE("json_min: a frame that ends on a colon has no value, and nothing past
     char s[8];
     CHECK_FALSE(r.get_int("cmd", v));
     CHECK_FALSE(r.get_bool("cmd", b));
-    CHECK_FALSE(r.get_str("cmd", s, sizeof(s)));
+    CHECK_FALSE(r.get_string("cmd", s, sizeof(s)));
 }
 
-TEST_CASE("json_min: an integer past 32 bits is refused, so the host reads what the device reads") {
+TEST_CASE("json: an integer past 32 bits is refused, so the host reads what the device reads") {
     const char* j =
         "{\"max\":2147483647,\"min\":-2147483648,\"over\":2147483648,\"under\":-2147483649,"
         "\"huge\":99999999999999999999999}";
@@ -61,7 +61,7 @@ TEST_CASE("json_min: an integer past 32 bits is refused, so the host reads what 
 // it: a key that overruns it must never come out half-written. A writer that
 // silently dropped the tail of its last key would still close the brace and
 // look like valid, complete JSON to anything downstream.
-TEST_CASE("json_min: a key that will not fit whole is left out, not cut short") {
+TEST_CASE("json: a key that will not fit whole is left out, not cut short") {
     char out[16];
     json::Writer w(out, sizeof(out));
     w.kv_int("x", 5);
@@ -76,7 +76,7 @@ TEST_CASE("json_min: a key that will not fit whole is left out, not cut short") 
     CHECK(static_cast<int>(std::strlen(out)) == n);  // the reported length is real
 }
 
-TEST_CASE("json_min: a buffer sized for the exact worst case never overflows") {
+TEST_CASE("json: a buffer sized for the exact worst case never overflows") {
     char out[29];
     json::Writer w(out, sizeof(out));
     w.kv_str("k", "say \"hi\"");  // 1-char key, two escaped quotes in the value

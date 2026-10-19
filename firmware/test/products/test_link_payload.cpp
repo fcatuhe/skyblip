@@ -48,7 +48,7 @@ go::Settings widest_settings() {
 
 power::BatteryState full_battery() {
     power::BatteryState b{};
-    b.millivolts = 4200;
+    b.cell_mv = 4200;
     b.percent = 100;  // three digits
     b.external_power = true;
     b.charging = true;

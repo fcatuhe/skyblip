@@ -36,14 +36,14 @@ void Sha256::reset() {
     total_bytes_ = 0;
 }
 
-void Sha256::update(const uint8_t* data, size_t len) {
-    total_bytes_ += len;
-    while (len > 0) {
-        const size_t take = len < kBlockBytes - filled_ ? len : kBlockBytes - filled_;
+void Sha256::update(const uint8_t* data, size_t bytes) {
+    total_bytes_ += bytes;
+    while (bytes > 0) {
+        const size_t take = bytes < kBlockBytes - filled_ ? bytes : kBlockBytes - filled_;
         std::memcpy(block_ + filled_, data, take);
         filled_ += take;
         data += take;
-        len -= take;
+        bytes -= take;
         if (filled_ == kBlockBytes) {
             compress(block_);
             filled_ = 0;
@@ -72,9 +72,9 @@ Sha256::Digest Sha256::finish() {
     return digest;
 }
 
-Sha256::Digest Sha256::of(const uint8_t* data, size_t len) {
+Sha256::Digest Sha256::of(const uint8_t* data, size_t bytes) {
     Sha256 sha;
-    sha.update(data, len);
+    sha.update(data, bytes);
     return sha.finish();
 }
 

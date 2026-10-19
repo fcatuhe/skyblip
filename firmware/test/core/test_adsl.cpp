@@ -191,11 +191,11 @@ TEST_CASE("adsl: an over-range altitude encodes the limit, not 'unavailable'") {
     p.init();
     // G.1.7 worked example: 61104 m or more -> 0x3ffe, invalid -> 0x3fff.
     p.set_alt_m(61104);
-    CHECK_FALSE(p.alt_invalid());
+    CHECK(p.has_alt());
     p.set_alt_m(100000);  // far past the maximum
-    CHECK_FALSE(p.alt_invalid());
+    CHECK(p.has_alt());
     p.set_alt_m(2000000000);
-    CHECK_FALSE(p.alt_invalid());
+    CHECK(p.has_alt());
     // And the spec's other examples still round-trip.
     p.set_alt_m(0);
     CHECK(p.alt_m() == 0);
@@ -205,7 +205,7 @@ TEST_CASE("adsl: an over-range altitude encodes the limit, not 'unavailable'") {
     CHECK(p.alt_m() == -320);
     p.set_alt_m(-5000);  // below the minimum clamps to it, not to invalid
     CHECK(p.alt_m() == -320);
-    CHECK_FALSE(p.alt_invalid());
+    CHECK(p.has_alt());
 }
 
 TEST_CASE("adsl: an over-range ground speed encodes the limit, not 'unavailable'") {
@@ -236,14 +236,14 @@ TEST_CASE("adsl: the invalid codes are reachable on purpose and round-trip") {
     p.set_alt_m(1000);
     p.set_speed_q(100);
     p.set_climb_e8(8);
-    REQUIRE_FALSE(p.alt_invalid());
+    REQUIRE(p.has_alt());
     REQUIRE(p.has_speed());
     REQUIRE(p.has_climb());
 
     p.set_alt_invalid();
     p.set_speed_invalid();
     p.set_climb_invalid();
-    CHECK(p.alt_invalid());
+    CHECK_FALSE(p.has_alt());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());
 
@@ -265,14 +265,14 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     skyblip::model::Ownship own{};
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
-    own.alt_mm = 1500000;  // HAE: what G.1.7 transmits
+    own.alt_hae_mm = 1500000;  // HAE: what G.1.7 transmits
     own.speed_mm_s = 50000;
     own.climb_mm_s = 2000;
 
     // No fix yet: altitude and ground speed are unavailable, not zero.
     AdslPacket p{};
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK(p.alt_invalid());
+    CHECK_FALSE(p.has_alt());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());  // climb_valid is false too
 
@@ -280,7 +280,7 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     own.fix_valid = true;
     own.vdop_e2 = 150;
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK_FALSE(p.alt_invalid());
+    CHECK(p.has_alt());
     CHECK(p.alt_m() == 1500);
     CHECK(p.has_speed());
     CHECK_FALSE(p.has_climb());
@@ -325,7 +325,7 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     skyblip::model::Ownship own{};
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
-    own.alt_mm = 1500000;
+    own.alt_hae_mm = 1500000;
     own.speed_mm_s = 50000;
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;

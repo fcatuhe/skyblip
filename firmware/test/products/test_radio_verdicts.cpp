@@ -84,23 +84,23 @@ const radio::Entry* heard_entry(Rig& rig) {
     const radio::Log& log = rig.state().radio_log;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& entry = log.newest(i);
-        if (entry.event != radio::Event::Transmitted && entry.event != radio::Event::Lost &&
-            entry.event != radio::Event::Held && entry.event != radio::Event::Unarmed)
+        if (entry.verdict != radio::Verdict::Transmitted && entry.verdict != radio::Verdict::Lost &&
+            entry.verdict != radio::Verdict::Held && entry.verdict != radio::Verdict::Unarmed)
             return &entry;
     }
     return nullptr;
 }
 
 // Own-ship's own bursts are the other half of the tape, and a case about receptions ignores them.
-radio::Event heard_verdict(Rig& rig) {
+radio::Verdict heard_verdict(Rig& rig) {
     const radio::Log& log = rig.state().radio_log;
     for (int i = 0; i < log.count(); i++) {
-        const radio::Event event = log.newest(i).event;
-        if (event != radio::Event::Transmitted && event != radio::Event::Lost &&
-            event != radio::Event::Held && event != radio::Event::Unarmed)
-            return event;
+        const radio::Verdict verdict = log.newest(i).verdict;
+        if (verdict != radio::Verdict::Transmitted && verdict != radio::Verdict::Lost &&
+            verdict != radio::Verdict::Held && verdict != radio::Verdict::Unarmed)
+            return verdict;
     }
-    return radio::Event::Transmitted;
+    return radio::Verdict::Transmitted;
 }
 
 void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 25000, 900); }
@@ -129,7 +129,7 @@ TEST_CASE("radio verdicts: a burst heard before own-ship has a fix is a wait, no
     hear_alptas(rig, frame);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Unattempted);
+    CHECK(heard_verdict(rig) == radio::Verdict::Unattempted);
 }
 
 // SoftRF built with USE_INTERLEAVING sends Air V6 between its V7 frames, and we read only V7.
@@ -150,7 +150,7 @@ TEST_CASE("radio verdicts: a message type this firmware does not implement says 
     hear_alptas(rig, frame);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Unsupported);
+    CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
 }
 
 TEST_CASE("radio verdicts: a frame the plausibility gate refuses is still a decode failure") {
@@ -167,7 +167,7 @@ TEST_CASE("radio verdicts: a frame the plausibility gate refuses is still a deco
     hear_alptas(rig, frame);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Undecoded);
+    CHECK(heard_verdict(rig) == radio::Verdict::Undecoded);
 }
 
 // OGN Diagnostics is payload type 66 of the same specification (F.2.1), not this device's fault.
@@ -183,7 +183,7 @@ TEST_CASE("radio verdicts: an ADS-L payload type we do not implement is a dialec
     hear_adsl(rig, p);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Unsupported);
+    CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
     CHECK(rig.state().air.rx_type == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
 }
@@ -196,12 +196,12 @@ TEST_CASE("radio verdicts: an ADS-L Traffic frame carrying no position is a deco
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     protocol::AdslPacket p = adsl_from_neighbour(rig.state().own);
-    REQUIRE_FALSE(p.alt_invalid());
+    REQUIRE(p.has_alt());
     p.set_position_invalid();
     hear_adsl(rig, p);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Undecoded);
+    CHECK(heard_verdict(rig) == radio::Verdict::Undecoded);
     CHECK(rig.state().air.rx_type == 0);
     CHECK(rig.state().air.rx_bad == bad_before + 1);
 }
@@ -220,7 +220,7 @@ TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft
     hear_alptas(rig, frame);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Received);
+    CHECK(heard_verdict(rig) == radio::Verdict::Received);
 }
 
 TEST_CASE("radio verdicts: a registration frame names its sender and is not a target") {
@@ -233,7 +233,7 @@ TEST_CASE("radio verdicts: a registration frame names its sender and is not a ta
     hear_callsign(rig, 0xC5D804, 58, "D-KXYZ");
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Named);
+    CHECK(heard_verdict(rig) == radio::Verdict::Named);
     CHECK(rig.state().air.rx_named == 1);
     CHECK(rig.state().air.rx_type == 0);
     CHECK(rig.state().air.rx_ok == 0);
@@ -319,7 +319,7 @@ TEST_CASE("radio counters: a burst of ours that never completed is not a bad rec
 
     CHECK(rig.state().air.tx_lost == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
-    CHECK(rig.state().radio_log.newest(0).event == radio::Event::Lost);
+    CHECK(rig.state().radio_log.newest(0).verdict == radio::Verdict::Lost);
 }
 
 // 2026-09-19 on the bench: an hour of DEC beside a transmitting SoftRF, both holding a fix.
@@ -340,7 +340,7 @@ TEST_CASE("radio verdicts: a frame keyed on another second says whose second it 
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
-    CHECK(entry->event == radio::Event::Miskeyed);
+    CHECK(entry->verdict == radio::Verdict::Miskeyed);
     CHECK(int(entry->key_offset_s) == 17);  // keyed at utc_s+18, heard in the second after utc_s
     CHECK(rig.state().air.rx_miskeyed == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
@@ -387,7 +387,7 @@ TEST_CASE("radio verdicts: a burst that names neither system is not a decode fai
 
     const radio::Entry* entry = heard_entry(rig);
     REQUIRE(entry != nullptr);
-    CHECK(entry->event == radio::Event::Unframed);
+    CHECK(entry->verdict == radio::Verdict::Unframed);
     CHECK_FALSE(entry->address_valid);
     CHECK(rig.state().air.rx_unframed == 1);
     CHECK(rig.state().air.rx_bad == bad_before);
@@ -409,7 +409,7 @@ TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as 
     hear_alptas(rig, frame, 18);
     settle(rig, t);
 
-    CHECK(heard_verdict(rig) == radio::Event::Received);
+    CHECK(heard_verdict(rig) == radio::Verdict::Received);
     CHECK(rig.state().air.rx_bad == bad_before);
     CHECK(rig.state().traffic.count() == 1);
 }

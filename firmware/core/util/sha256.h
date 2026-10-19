@@ -15,10 +15,10 @@ class Sha256 {
     Sha256() { reset(); }
 
     void reset();
-    void update(const uint8_t* data, size_t len);
+    void update(const uint8_t* data, size_t bytes);
     Digest finish();
 
-    static Digest of(const uint8_t* data, size_t len);
+    static Digest of(const uint8_t* data, size_t bytes);
 
    private:
     static constexpr size_t kBlockBytes = 64;

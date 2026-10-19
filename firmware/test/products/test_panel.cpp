@@ -164,10 +164,10 @@ TEST_CASE("product: the pad held through the press leaves the glass blank") {
 
     rig.platform.board_gpio().pad_down = true;
     rig.platform.board_gpio().button_down = true;
-    rig.run(t, t + power::kLongPressMs + 200);
-    t += power::kLongPressMs + 200;
+    rig.run(t, t + power::kLongPressHoldMs + 200);
+    t += power::kLongPressHoldMs + 200;
 
-    rig.run(t, t + power::kParkMs);
+    rig.run(t, t + power::kParkSettleMs);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Stow);
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK(rig.platform.chips().epd.last_full);
@@ -453,8 +453,8 @@ TEST_CASE("product: the status page marks a cell charging too hot to be charged"
     };
 
     const int warm = charging_at(250);
-    const int hot = charging_at(power::kChargeHotDeciCelsius + 100);
-    const int cold = charging_at(power::kChargeColdDeciCelsius - 100);
+    const int hot = charging_at(power::kChargeHotCeilingDeciCelsius + 100);
+    const int cold = charging_at(power::kChargeColdFloorDeciCelsius - 100);
     CHECK(hot != warm);
     CHECK(cold != warm);
     CHECK(hot != cold);

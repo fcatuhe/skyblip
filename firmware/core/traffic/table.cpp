@@ -3,6 +3,7 @@
 #include "core/flight/state.h"
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
+#include "core/settings/address.h"
 
 namespace skyblip::traffic {
 
@@ -27,36 +28,38 @@ int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
     return -1;
 }
 
-bool TrafficTable::prefer_new(const model::AircraftObservation& in,
-                              const model::AircraftObservation& ex) {
-    const uint32_t tin = observation_at_s(in), tex = observation_at_s(ex);
-    const int rank_in = source_rank(in.source), rank_ex = source_rank(ex.source);
+bool TrafficTable::prefer_new(const model::AircraftObservation& incoming,
+                              const model::AircraftObservation& existing) {
+    const uint32_t incoming_s = observation_at_s(incoming), existing_s = observation_at_s(existing);
+    const int incoming_rank = source_rank(incoming.source),
+              existing_rank = source_rank(existing.source);
     // A ground relay never displaces a first-hand reception the alarm layer
     // would still act on. Being newer is not enough: a relayed frame is always
     // newer than the direct one it repeats, which is how a relay would
     // otherwise walk a target backwards once a second, for ever.
-    if (rank_in < rank_ex && tin >= tex && tin - tex <= direct_preferred_max_age_s(ex))
+    if (incoming_rank < existing_rank && incoming_s >= existing_s &&
+        incoming_s - existing_s <= direct_preferred_max_age_s(existing))
         return false;
-    if (tin != tex) return tin > tex;
-    return rank_in >= rank_ex;
+    if (incoming_s != existing_s) return incoming_s > existing_s;
+    return incoming_rank >= existing_rank;
 }
 
 void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObservation& observation) {
     if (!observation.speed_valid) return;
-    const uint32_t dt = observation.at_ms - turn.ref_ms;
-    if (!turn.armed || dt > kTurnMaxGapMs) {
+    const uint32_t dt = observation.at_ms - turn.reference_at_ms;
+    if (!turn.armed || dt > kTurnMaxAgeMs) {
         turn.armed = true;
         turn.valid = false;
-        turn.dps = 0;
-        turn.ref_ms = observation.at_ms;
-        turn.ref_track_c9 = observation.track_c9;
+        turn.rate_dps = 0;
+        turn.reference_at_ms = observation.at_ms;
+        turn.reference_track_c9 = observation.track_c9;
         return;
     }
     if (dt < flight::kTurnWindowMs) return;
-    turn.dps = flight::turn_rate_dps(observation.track_c9, turn.ref_track_c9, dt);
+    turn.rate_dps = flight::turn_rate_dps(observation.track_c9, turn.reference_track_c9, dt);
     turn.valid = true;
-    turn.ref_ms = observation.at_ms;
-    turn.ref_track_c9 = observation.track_c9;
+    turn.reference_at_ms = observation.at_ms;
+    turn.reference_track_c9 = observation.track_c9;
 }
 
 // INFO: fc 23sep26 a full table keeps the nearest: a flood of far or relayed frames evicts none
@@ -68,33 +71,33 @@ bool TrafficTable::matters_less(const Weight& a, const Weight& b) {
 }
 
 TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& observation,
-                                             uint32_t now) const {
+                                             uint32_t now_s) const {
     int32_t slant_m = 0;
     if (range_check(own_, observation, slant_m) == Plausibility::NoReference) slant_m = 0;
     return Weight{flight::on_ground(observation.flight_state), slant_m,
-                  source_rank(observation.source), now - observation_at_s(observation)};
+                  source_rank(observation.source), now_s - observation_at_s(observation)};
 }
 
-int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now) {
+int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s) {
     for (int i = 0; i < kCapacity; i++)
         if (!slots_[i].used) return i;
     int victim = -1;
     Weight least{};
     for (int i = 0; i < kCapacity; i++) {
         if (slots_[i].alarm_level != Level::None) continue;
-        const Weight w = weight_of(slots_[i].observation, now);
+        const Weight w = weight_of(slots_[i].observation, now_s);
         if (victim < 0 || matters_less(w, least)) {
             victim = i;
             least = w;
         }
     }
-    if (victim >= 0 && !matters_less(least, weight_of(incoming, now))) return -1;
+    if (victim >= 0 && !matters_less(least, weight_of(incoming, now_s))) return -1;
     return victim;
 }
 
-int TrafficTable::update(const model::AircraftObservation& observation, uint32_t now) {
+int TrafficTable::update(const model::AircraftObservation& observation, uint32_t now_s) {
     if (own_address_ != 0 && observation.address_mapping_table == own_address_mapping_table_ &&
-        (observation.address & 0x00FFFFFF) == own_address_)
+        (observation.address & settings::kAddressMask) == own_address_)
         return -1;
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about
@@ -115,7 +118,7 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         }
         return idx;
     }
-    idx = allocate_slot(observation, now);
+    idx = allocate_slot(observation, now_s);
     if (idx < 0) return -1;
     slots_[idx].used = true;
     slots_[idx].observation = observation;
@@ -134,10 +137,10 @@ void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservatio
         target.liftoff = {incoming.at_ms, true};
 }
 
-void TrafficTable::age_out(uint32_t now) {
+void TrafficTable::age_out(uint32_t now_s) {
     for (int i = 0; i < kCapacity; i++) {
         if (!slots_[i].used) continue;
-        if (now - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation)) {
+        if (now_s - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation)) {
             slots_[i].used = false;
             slots_[i].turn = TargetTurn{};
             slots_[i].alarm_level = Level::None;

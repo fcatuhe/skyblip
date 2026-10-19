@@ -29,7 +29,7 @@ const char* to_string(RefusedFrame frame);
 enum class CellOnGlass : uint8_t { None, Low, Flat };
 
 struct BootCell {
-    uint16_t millivolts{0};
+    uint16_t cell_mv{0};
     bool valid{false};
     bool external_power{false};
 };

@@ -32,7 +32,7 @@ SlotPlan holdover_plan(int phase_ms) {
     ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = false;
-    clock.ms_since_pps = 10000;
+    clock.since_edge_ms = 10000;
     clock.pps_edge_us = 12'000'000;
     Scheduler scheduler{};
     return scheduler.plan(phase_ms, clock);
@@ -110,16 +110,16 @@ TEST_CASE("durable write: the free phase is the one the dwell map leaves") {
 // are also where the next dwell gets armed, so they are refused rather than taken
 // for free time: a write there delays the opening of the dwell that follows.
 TEST_CASE("durable write: the retune guards between dwells are not free time") {
-    for (int phase = kSlot1Wrap; phase < kUplinkRxStart; phase++) CHECK_FALSE(free_at(phase));
-    for (int phase = kUplinkRxEnd; phase < kSlot0Start; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = kSlot1WrapMs; phase < kUplinkRxStartMs; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = kUplinkRxEndMs; phase < kSlot0StartMs; phase++) CHECK_FALSE(free_at(phase));
 }
 
 // Slot 0 opens at 400 and the direct slot at 450: a write placed in slot 0's head
 // would still be holding the core at 450, which is an instant core/timing's
 // Transmitter is allowed to have chosen to key the PA at.
 TEST_CASE("durable write: slot 0's head is refused because the direct slot follows it") {
-    for (int phase = kSlot0Start; phase < kDirectStart; phase++) CHECK_FALSE(free_at(phase));
-    for (int phase = kDirectStart; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = kSlot0StartMs; phase < kDirectStartMs; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
 }
 
 // With no lock there is no transmission, so slot 1's body is genuinely free -
@@ -196,17 +196,17 @@ TEST_CASE("durable write: with no dwell armed there is nothing to wait for") {
 }
 
 // The bound outranks the settle. A thumb that keeps stepping a value for longer
-// than kMaxDeferMs buys a second write rather than an unbounded wait, which is the
+// than kDeferCeilingMs buys a second write rather than an unbounded wait, which is the
 // trade this way round on purpose: a setting still not on flash when the cell dies
 // is a setting the pilot will believe they changed.
 TEST_CASE("durable write: the bound outranks the coalescing settle") {
     DurableWriteWindow window;
     uint32_t t = 0;
     window.request(t);
-    while (t < DurableWriteWindow::kMaxDeferMs) {
+    while (t < DurableWriteWindow::kDeferCeilingMs) {
         t += 100;
         window.request(t);
-        if (t < DurableWriteWindow::kMaxDeferMs)
+        if (t < DurableWriteWindow::kDeferCeilingMs)
             CHECK(window.decide(anchored_plan(500), view_at(500, t), t) ==
                   DurableWriteVerdict::Hold);
     }
@@ -216,7 +216,7 @@ TEST_CASE("durable write: the bound outranks the coalescing settle") {
     window.placed(t, true);
     CHECK(window.writes() == 1);
     CHECK(window.forced() == 1);
-    CHECK(window.worst_wait_ms() >= DurableWriteWindow::kMaxDeferMs);
+    CHECK(window.worst_wait_ms() >= DurableWriteWindow::kDeferCeilingMs);
 }
 
 // Past the bound the window is still tried first: forcing is the fallback, not
@@ -224,7 +224,7 @@ TEST_CASE("durable write: the bound outranks the coalescing settle") {
 TEST_CASE("durable write: past the bound a free phase is still preferred") {
     DurableWriteWindow window;
     window.request(0);
-    const uint32_t t = DurableWriteWindow::kMaxDeferMs;
+    const uint32_t t = DurableWriteWindow::kDeferCeilingMs;
     REQUIRE(window.decide(anchored_plan(500), view_at(500, t), t) == DurableWriteVerdict::Forced);
     CHECK(window.decide(anchored_plan(250), view_at(250, t), t) == DurableWriteVerdict::Place);
 }
@@ -250,7 +250,7 @@ TEST_CASE("durable write: a change at any phase of the second is placed within t
             REQUIRE(verdict != DurableWriteVerdict::Forced);
         }
         REQUIRE(placed);
-        CHECK(window.worst_wait_ms() < DurableWriteWindow::kMaxDeferMs);
+        CHECK(window.worst_wait_ms() < DurableWriteWindow::kDeferCeilingMs);
         // The settle is the floor on the wait, and the window adds less than a
         // second on top of it.
         CHECK(window.worst_wait_ms() >= DurableWriteWindow::kSettleMs);
@@ -284,7 +284,7 @@ TEST_CASE("durable write: the settle, the bound and the stale view span the 49.7
     // The bound, measured from a request made before the wrap and spent after it.
     DurableWriteWindow bound;
     bound.request(before);
-    const uint32_t spent = before + DurableWriteWindow::kMaxDeferMs;
+    const uint32_t spent = before + DurableWriteWindow::kDeferCeilingMs;
     CHECK(bound.decide(anchored_plan(500), view_at(500, spent), spent) ==
           DurableWriteVerdict::Forced);
 

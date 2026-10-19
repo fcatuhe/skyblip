@@ -31,7 +31,7 @@ std::string joined(const platform::host::Link& link) {
 
 power::BatteryState battery_of(uint8_t percent, bool charging, bool valid = true) {
     power::BatteryState b{};
-    b.millivolts = 3700;
+    b.cell_mv = 3700;
     b.percent = percent;
     b.external_power = charging;
     b.charging = charging;
@@ -216,7 +216,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     cs.set_flight_state(flight::FlightState::Airborne);
     cs.set_reset_reason(power::ResetReason::Lockup);
     power::BatteryState battery{};
-    battery.millivolts = 4200;
+    battery.cell_mv = 4200;
     battery.percent = 100;
     battery.external_power = true;
     battery.charging = true;

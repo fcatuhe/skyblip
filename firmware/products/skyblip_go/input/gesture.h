@@ -25,7 +25,7 @@ enum class Answer : uint8_t { None, Confirm, Cancel };
 class ConfirmGesture {
    public:
     // INFO: cf 02aug26 Wider than a human double tap (~200 ms) and far narrower
-    // than core/power's kLongPressMs, so the three things the button says stay
+    // than core/power's kLongPressHoldMs, so the three things the button says stay
     // disjoint: one press pages or refuses, two inside this window authorise, a
     // hold past 2 s powers the device down.
     static constexpr uint32_t kDoublePressMs = 600;

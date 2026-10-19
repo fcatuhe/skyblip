@@ -8,7 +8,7 @@
 #include "core/flight/turn.h"
 #include "core/model/ownship.h"
 #include "core/timing/slot.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 
@@ -78,15 +78,15 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.utc_valid = solution.utc_valid;
     own.lat_1e7 = solution.lat_1e7;
     own.lon_1e7 = solution.lon_1e7;
-    own.alt_mm = solution.alt_mm;
+    own.alt_hae_mm = solution.alt_mm;
     own.alt_msl_mm = solution.alt_msl_mm;
-    own.geoid_separation_measured = solution.geoid_separation_measured;
+    own.geoid_measured = solution.geoid_measured;
     own.speed_mm_s = solution.speed_mm_s;
     own.track_cdeg = solution.track_cdeg;
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
     own.utc_s = solution.utc_s;
-    own.fix_ms = solution_instant(solution, now_ms);
+    own.fix_at_ms = solution_instant(solution, now_ms);
     own.sats = solution.sats;
     own.aircraft_cat = settings_.aircraft_type;
 
@@ -121,7 +121,7 @@ void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t no
     const bus::GnssStatus& status = context_.state.gnss;
     diag::Gnss sample{};
     sample.nav_ms = status.solution_phase_ms;
-    sample.resid_m = own.pred_resid_m;
+    sample.resid_m = own.prediction_residual_m;
     sample.hdop_e2 = own.hdop_e2;
     sample.vdop_e2 = own.vdop_e2;
     sample.stage_s = acquisition_.stage_ms(now_ms) / 1000;
@@ -131,9 +131,9 @@ void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t no
     sample.reject = status.reject;
     sample.stage = acquisition_.stage();
     sample.fix_valid = own.fix_valid;
-    sample.resid_valid = own.pred_resid_valid;
+    sample.resid_valid = own.prediction_residual_valid;
     sample.pps_locked = context_.state.clock.pps_locked;
-    sample.geoid_measured = own.geoid_separation_measured;
+    sample.geoid_measured = own.geoid_measured;
     sample.tx_settled = own.tx_settled;
     sample.levels_fresh = status.levels_fresh;
     context_.diag.record(sample, context_.instant(now_ms));
@@ -157,7 +157,7 @@ void OwnshipService::record_pps(uint32_t now_ms) {
                                                timing::SlotTimingStats::kNominalSecondUs);
     sample.samples = stats.pps_samples();
     sample.holdover_events = stats.holdover_events();
-    sample.since_edge_ms = diag::clamp_u16(clock.ms_since_pps);
+    sample.since_edge_ms = diag::clamp_u16(clock.since_edge_ms);
     sample.locked = clock.pps_locked;
     sample.utc_valid = clock.utc_valid;
     context_.diag.record(sample, context_.instant(now_ms));
@@ -184,9 +184,9 @@ void OwnshipService::record_flight(uint32_t now_ms) {
 gnss::Convergence OwnshipService::convergence_of(const model::Ownship& own) {
     gnss::Convergence c{};
     c.fix_valid = own.fix_valid;
-    c.residual_valid = own.pred_resid_valid;
+    c.residual_valid = own.prediction_residual_valid;
     c.height_solved = height_solved(own);
-    c.residual_m = own.pred_resid_m;
+    c.residual_m = own.prediction_residual_m;
     return c;
 }
 
@@ -195,29 +195,30 @@ bool OwnshipService::height_solved(const model::Ownship& own) { return own.vdop_
 void OwnshipService::update_residual(const model::Ownship& previous) {
     model::Ownship& own = context_.state.own;
     if (!previous.fix_valid || !own.fix_valid) {
-        own.pred_resid_valid = false;
+        own.prediction_residual_valid = false;
         return;
     }
-    const int32_t dt_ms = static_cast<int32_t>(own.fix_ms - previous.fix_ms);
+    const int32_t dt_ms = static_cast<int32_t>(own.fix_at_ms - previous.fix_at_ms);
     if (dt_ms <= 0) {
-        own.pred_resid_valid = false;
+        own.prediction_residual_valid = false;
         return;
     }
     const flight::Prediction p = flight::extrapolate(previous, dt_ms);
     if (!p.valid) {
-        own.pred_resid_valid = false;
+        own.prediction_residual_valid = false;
         return;
     }
-    const uint32_t resid = flight::prediction_residual_m(p, own.lat_1e7, own.lon_1e7, own.alt_mm);
-    own.pred_resid_m = resid > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(resid);
-    own.pred_resid_valid = true;
+    const uint32_t resid =
+        flight::prediction_residual_m(p, own.lat_1e7, own.lon_1e7, own.alt_hae_mm);
+    own.prediction_residual_m = resid > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(resid);
+    own.prediction_residual_valid = true;
 }
 
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
 void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution) {
     timing::ClockState& clock = context_.state.clock;
     if (!dates_the_edge(solution, clock)) return;
-    if (context_.state.own.fix_ms != static_cast<uint32_t>(clock.pps_edge_us / 1000)) return;
+    if (context_.state.own.fix_at_ms != static_cast<uint32_t>(clock.pps_edge_us / 1000)) return;
     clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
 }

@@ -44,7 +44,7 @@ model::Ownship flying(uint32_t utc_s, int32_t speed_mm_s) {
     own.utc_s = utc_s;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
-    own.alt_mm = 1000000;
+    own.alt_hae_mm = 1000000;
     own.alt_msl_mm = 954000;
     own.speed_mm_s = speed_mm_s;
     own.track_cdeg = 9000;

@@ -41,7 +41,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::AdslPacket::kInfoMsgBytes + 1]{0};
+    char callsign[protocol::AdslPacket::kInfoTextBytes + 1]{0};
 };
 
 // The sky, the air and the ground the firmware flies through. It drives the part

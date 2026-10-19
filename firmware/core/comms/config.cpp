@@ -5,7 +5,7 @@
 #include "core/comms/timing_report.h"
 #include "core/events/link.h"
 #include "core/util/format.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "core/util/span.h"
 
 namespace skyblip::comms {
@@ -210,7 +210,7 @@ const char* ConfigService::prompt_detail() const {
 void ConfigService::request_firmware(const json::Reader& r) {
     char text[dfu::kVersionTextBytes];
     ports::ImageVersion version;
-    if (!r.get_str("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
+    if (!r.get_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
         ack(false, "no_version");
         return;
     }
@@ -276,7 +276,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     int len = frame.bytes;
     json::Reader reader(data, len);
     char cmd[16] = {0};
-    if (!reader.get_str("cmd", cmd, sizeof(cmd))) {
+    if (!reader.get_string("cmd", cmd, sizeof(cmd))) {
         ack(false, "no_cmd");
         return;
     }

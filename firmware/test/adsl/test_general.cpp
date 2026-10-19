@@ -43,5 +43,5 @@ TEST_CASE("ADS-L.4.SRD860.A.5: the product ships with an installation and a user
 TEST_CASE("ADS-L.4.SRD860.APPENDIX: the transmitter sits inside the nominal power and latency") {
     CHECK(parts::sx::kResultingErpCentiDb >= 1200);
     CHECK(parts::sx::kResultingErpCentiDb <= 1400);
-    CHECK(timing::Transmitter::kFixLagMaxMs <= 500);
+    CHECK(timing::Transmitter::kFixMaxAgeMs <= 500);
 }

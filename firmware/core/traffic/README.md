@@ -77,11 +77,11 @@ What is deliberately absent: there is no co-circling test, no gaggle range gate,
 
 ## Turn rate
 
-ADS-L carries position, speed, track and climb, and no turn rate (G.1.8, G.1.10), so a neighbour's is differentiated from the tracks it has reported. It lives on the table entry rather than inside the alarm, because the screen needs the same number: `flight::kTurnWindowMs` is the shortest window a 1 Hz track says anything over, the same figure own-ship differentiates its own track with, and `kTurnMaxGapMs` is the gap past which two reports are two facts rather than a rate, so the estimate re-arms instead of averaging across what it did not see. `flight::kTurnCeilingDps` clamps what is believed; above it the figure describes the receiver.
+ADS-L carries position, speed, track and climb, and no turn rate (G.1.8, G.1.10), so a neighbour's is differentiated from the tracks it has reported. It lives on the table entry rather than inside the alarm, because the screen needs the same number: `flight::kTurnWindowMs` is the shortest window a 1 Hz track says anything over, the same figure own-ship differentiates its own track with, and `kTurnMaxAgeMs` is the gap past which two reports are two facts rather than a rate, so the estimate re-arms instead of averaging across what it did not see. `flight::kTurnCeilingDps` clamps what is believed; above it the figure describes the receiver.
 
 ## Formation
 
-Aircraft fly together on purpose: a patrol, a tug and its glider, two friends on a task, a gaggle in one thermal. The device cannot see intent, so `formation` names the observable: a contact within `kRangeM` and `kVertM` whose position in own-ship's own heading-up frame has not moved more than `kDriftM` for `kTogetherHoldMs`. That covers all four cases without naming any of them, and a circling pair matches it for the same reason a patrol does.
+Aircraft fly together on purpose: a patrol, a tug and its glider, two friends on a task, a gaggle in one thermal. The device cannot see intent, so `formation` names the observable: a contact within `kRangeM` and `kVerticalM` whose position in own-ship's own heading-up frame has not moved more than `kDriftM` for `kTogetherHoldMs`. That covers all four cases without naming any of them, and a circling pair matches it for the same reason a patrol does.
 
 The station is where the contact was first seen, not where own-ship is. A slot anchors on its first fix inside the band and the box is measured from there, so a contact that appears 40 m off the wing and swings to 40 m off the other one has moved 80 m and holds no station. The anchor used to start at own-ship's own position, which made everything inside 60 m a wingman on arrival - and 60 m is a glider on tow.
 

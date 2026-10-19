@@ -232,13 +232,13 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
     rig.product.step(12345);
     CHECK(rig.state().clock.pps_locked);
     CHECK(rig.state().clock.pps_edge_us == 12000000u);
-    CHECK(rig.state().clock.ms_since_pps == 345u);
+    CHECK(rig.state().clock.since_edge_ms == 345u);
 
     // What the same pass used to publish, rebuilt from the phase: the sub-
     // millisecond remainder was thrown away, and it is not a rounding error but
     // a signed lateness on every plan armed from it.
     const uint64_t rebuilt =
-        12345678u - static_cast<uint64_t>(rig.state().clock.ms_since_pps) * 1000;
+        12345678u - static_cast<uint64_t>(rig.state().clock.since_edge_ms) * 1000;
     CHECK(rebuilt - rig.state().clock.pps_edge_us == 678u);
 
     // No lock, no edge: a stale instant is worse than none, because the phase

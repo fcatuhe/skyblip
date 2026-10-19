@@ -190,7 +190,7 @@ TEST_CASE("diag dwell: every dwell the radio arms is a record, band edges and ho
         uplink = uplink || dwell.freq_hz == timing::kObandHz;
         slot0 = slot0 || dwell.freq_hz == timing::kMband0Hz;
         slot1 = slot1 || dwell.freq_hz == timing::kMband1Hz;
-        if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1End);
+        if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1EndMs);
     }
     CHECK(uplink);
     CHECK(slot0);

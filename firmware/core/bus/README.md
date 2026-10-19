@@ -15,7 +15,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | Field | Writer |
 |---|---|
 | `own` | `ownship` |
-| `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `ms_since_pps` |
+| `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `since_edge_ms` |
 | `traffic` | `traffic` |
 | `radio_log` | `traffic` for what was received, `radio` for what was sent |
 | `rf` | `radio`, except `rf.timing_stats`, whose PPS half is the board's |

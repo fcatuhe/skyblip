@@ -88,7 +88,7 @@ TEST_CASE("wake: on a cell that can run, the button and the reset pin ask for a 
     CHECK(boot_path(ResetCause::Watchdog | ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
 }
 
-// Left to boot, each press costs the panel and kParkMs to reach the same cutoff.
+// Left to boot, each press costs the panel and kParkSettleMs to reach the same cutoff.
 TEST_CASE("wake: a flat cell refuses the boot, whoever asks and however they ask") {
     const BootCell flat = healthy(power::kFlatMv);
     CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/true, flat) == BootPath::SleepAgain);

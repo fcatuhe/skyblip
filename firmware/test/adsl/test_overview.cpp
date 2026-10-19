@@ -23,7 +23,7 @@ protocol::AdslPacket traffic_packet() {
     own.climb_valid = true;
     own.lat_1e7 = 481234500;
     own.lon_1e7 = 81234500;
-    own.alt_mm = 1234000;
+    own.alt_hae_mm = 1234000;
     own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
     own.climb_mm_s = -5500;  // -44 eighths on the wire
     own.track_cdeg = 18000;

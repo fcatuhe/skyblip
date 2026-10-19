@@ -11,7 +11,7 @@
 #include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 
@@ -167,13 +167,13 @@ TEST_CASE("settings: the battery trim is bounded at the boundary, in both framin
     CHECK(int(s.battery_offset_mv) == 0);  // an uncalibrated unit reads as it always did
 
     // The bound itself is inclusive, and one millivolt past it is not.
-    s.battery_offset_mv = power::kCalibrationLimitMv;
+    s.battery_offset_mv = power::kCalibrationCeilingMv;
     CHECK(validate(s) == Status::Ok);
-    s.battery_offset_mv = -power::kCalibrationLimitMv;
+    s.battery_offset_mv = -power::kCalibrationCeilingMv;
     CHECK(validate(s) == Status::Ok);
-    s.battery_offset_mv = power::kCalibrationLimitMv + 1;
+    s.battery_offset_mv = power::kCalibrationCeilingMv + 1;
     CHECK(validate(s) == Status::OutOfRange);
-    s.battery_offset_mv = -(power::kCalibrationLimitMv + 1);
+    s.battery_offset_mv = -(power::kCalibrationCeilingMv + 1);
     CHECK(validate(s) == Status::OutOfRange);
 
     // A blob is the other way in, and it is validated on the way out of flash:

@@ -763,7 +763,7 @@ core/timing's durable-write policy, alone: a slot plan, a phase, a clock the cas
 - slot 0's head is refused because the direct slot follows it
   > Slot 0 opens at 400 and the direct slot at 450: a write placed in slot 0's head would still be holding the core at 450, which is an instant core/timing's Transmitter is allowed to have chosen to key the PA at.
 - the bound outranks the coalescing settle
-  > The bound outranks the settle. A thumb that keeps stepping a value for longer than kMaxDeferMs buys a second write rather than an unbounded wait, which is the trade this way round on purpose: a setting still not on flash when the cell dies is a setting the pilot will believe they changed.
+  > The bound outranks the settle. A thumb that keeps stepping a value for longer than kDeferCeilingMs buys a second write rather than an unbounded wait, which is the trade this way round on purpose: a setting still not on flash when the cell dies is a setting the pilot will believe they changed.
 - the cost is the nRF52840's own page erase plus the copy
   > The datasheet, in the code. If either of these two figures ever moves, every window arithmetic below moves with it and this is the case that says so.
 - the free phase is the one the dwell map leaves
@@ -818,8 +818,8 @@ The bit-level transforms every burst passes through, each checked in both direct
 
 **crc**
 
-- adsl PI detects a good vs corrupted packet
 - crc16-ccitt and crc32 known/stability
+- the ADS-L CRC detects a good vs corrupted packet
 
 **manchester**
 
@@ -1141,11 +1141,11 @@ The state-to-indicator table on its own: given the cell, the fix and the alarm, 
 - the whole state-to-indicator table, in priority order
 - traffic outranks everything the device has to say about itself
 
-### test/core/test_json_min.cpp
+### test/core/test_json.cpp
 
 The JSON the companion link speaks, with no heap: what is refused and what is left out.
 
-**json_min**
+**json**
 
 - a buffer sized for the exact worst case never overflows
 - a frame that ends on a colon has no value, and nothing past it is read
@@ -1351,7 +1351,7 @@ One curve, read off the cable only: on it the divider reads the USB rail and not
   > POFCON. The comparator watches the SoC's own rail, which is at or below the cell, so by the time it fires the divider's opinion is no longer the question.
 - a settings write is refused from critical down, the log record is not
 - the comparator stops writes without switching the device off
-  > It refuses writes; it does not power the device off. POFCON warns about VDD, well under any healthy cell, so there is no orderly shutdown left to run: the panel park alone is kParkMs and the brownout reset is milliseconds away. The voltage rule keeps the shutdown, where three consecutive samples are the evidence.
+  > It refuses writes; it does not power the device off. POFCON warns about VDD, well under any healthy cell, so there is no orderly shutdown left to run: the panel park alone is kParkSettleMs and the brownout reset is milliseconds away. The voltage rule keeps the shutdown, where three consecutive samples are the evidence.
 - the monitor answers it from the samples it already has
 
 ### test/core/test_radio_log.cpp
@@ -1476,6 +1476,24 @@ The ball: where a damped mass hangs in the specific force the case measures.
 - the ball slides away from the force, the way the pilot does
 - the reading is the fraction of the resultant, not of one axis
 
+### test/core/test_slot_timing_stats.cpp
+
+G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds - the latched PPS edge and an armed dwell's outcome - are exercised directly here on virtual time, exactly as core/timing/slot_timing_stats.h promises: no heap, integer only, and no phase math to get wrong across the second wrap.
+
+**timing_stats**
+
+- a clean 1 Hz PPS train lands in the centre bucket
+- a drifting edge walks the buckets outward, one guard at a time
+  > The three named edges, in order: inside the SX1262's own retune time (still the centre bucket - that error is the chip doing what its datasheet promises), past it but inside the hop guard, past that but inside the jitter guard, and past the whole budget.
+- a lost PPS becomes holdover, not a phase outlier
+- an edge gap while still reporting locked is holdover too
+- an extreme error saturates the outer bucket, never indexes past it
+- an out-of-range bucket index reads zero, not memory past the array
+- missed and refused are counted apart from the phase histograms
+- polling between edges never inflates the sample count
+- the dwell-phase error is exact across the UTC second wrap
+  > Slot 1's dwell opens at 800 ms and its tail runs to 200 ms past the second it started in (core/timing/slot.h kSlot1WrapMs). An armed deadline just before the wrap and a landed instant just after it are still only a few thousand microseconds apart - not a second, and not undefined, because nothing here is derived from a phase.
+
 ### test/core/test_store.cpp
 
 The shared sector pool: what a label carries, and which sector a ring is handed next.
@@ -1542,24 +1560,6 @@ One radio, one second, two bands: the dwell map decides what the receiver can he
 - the dwell owns its burst from the instant it opens
   > The executor cannot be handed a burst mid-dwell: a plan queues behind the one it is flying.
 - uplink window and direct slot predicates
-
-### test/core/test_timing_stats.cpp
-
-G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds - the latched PPS edge and an armed dwell's outcome - are exercised directly here on virtual time, exactly as core/timing/timing_stats.h promises: no heap, integer only, and no phase math to get wrong across the second wrap.
-
-**timing_stats**
-
-- a clean 1 Hz PPS train lands in the centre bucket
-- a drifting edge walks the buckets outward, one guard at a time
-  > The three named edges, in order: inside the SX1262's own retune time (still the centre bucket - that error is the chip doing what its datasheet promises), past it but inside the hop guard, past that but inside the jitter guard, and past the whole budget.
-- a lost PPS becomes holdover, not a phase outlier
-- an edge gap while still reporting locked is holdover too
-- an extreme error saturates the outer bucket, never indexes past it
-- an out-of-range bucket index reads zero, not memory past the array
-- missed and refused are counted apart from the phase histograms
-- polling between edges never inflates the sample count
-- the dwell-phase error is exact across the UTC second wrap
-  > Slot 1's dwell opens at 800 ms and its tail runs to 200 ms past the second it started in (core/timing/slot.h kSlot1Wrap). An armed deadline just before the wrap and a landed instant just after it are still only a few thousand microseconds apart - not a second, and not undefined, because nothing here is derived from a phase.
 
 ### test/core/test_traffic.cpp
 
@@ -1768,7 +1768,7 @@ The reset cause and the cell at boot decide whether a wake gets a running device
 - a flat cell refused under the low word names itself instead
   > A cell that went on draining after a switch-off asked for the cable has run past asking.
 - a flat cell refuses the boot, whoever asks and however they ask
-  > Left to boot, each press costs the panel and kParkMs to reach the same cutoff.
+  > Left to boot, each press costs the panel and kParkSettleMs to reach the same cutoff.
 - a pilot holding the button while plugging in gets the device
 - a unit that reset itself runs on any cell the cutoff would have kept flying
   > A fault reset in flight met the switch-on lockout and left the pilot dark until a cable.
@@ -1827,7 +1827,7 @@ Every enum a diagnostics payload writes as a byte, pinned to the code the corpus
 - power::DurableWrite's codes are the write kind byte, and a code changed here changes WRITE_KIND in scripts/blip_records.py and the schema's kind enum with it
 - power::PowerLevel's codes are the power level byte, and a code changed here changes POWER_LEVEL in scripts/blip_records.py and the schema's level enum
 - power::ResetReason's codes are the boot reset byte, and a code changed here changes RESET in scripts/blip_records.py and the schema's reset enum with it
-- radio::Event's codes are the burst verdict byte, and a code changed here changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it
+- radio::Verdict's codes are the burst verdict byte, and a code changed here changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it
 - timing::DurableWriteVerdict's codes are the write placement byte, and a code changed here changes PLACEMENT in blip_records.py and the schema's placement enum
 - timing::SlotState's codes are the dwell state byte, and a code changed here changes SLOT_STATE in scripts/blip_records.py and the schema's state enum with it
 - traffic::Level's codes are the traffic and screen alarm byte, and a member added here raises the maximum the schema puts on alarm

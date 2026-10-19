@@ -3,7 +3,7 @@
 #include <cstring>
 
 #include "core/events/link.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::comms {
 
@@ -30,7 +30,7 @@ bool named_store(json::Writer& writer, LogStore store) {
 
 bool parse_store(const json::Reader& reader, LogRequest& request) {
     char name[16] = {0};
-    if (!reader.get_str("log", name, sizeof(name))) return true;
+    if (!reader.get_string("log", name, sizeof(name))) return true;
     for (LogStore store : {LogStore::Flights, LogStore::Diagnostics}) {
         if (std::strcmp(name, log_store_name(store)) != 0) continue;
         request.store = store;
@@ -95,7 +95,7 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
         return request;
     }
     char command[16] = {0};
-    if (!reader.get_str("cmd", command, sizeof(command))) return request;
+    if (!reader.get_string("cmd", command, sizeof(command))) return request;
 
     if (std::strcmp(command, "list") == 0) {
         request.command = LogCommand::List;

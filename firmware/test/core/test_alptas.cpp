@@ -68,15 +68,16 @@ int32_t lon_quantum(int32_t lat_1e7) {
     return 806;  // never tighter than the coarsest step; latitudes above are exact
 }
 
-void check_position_round_trip(int32_t lat_1e7, int32_t lon_1e7, int32_t ref_lat_1e7,
-                               int32_t ref_lon_1e7) {
+void check_position_round_trip(int32_t lat_1e7, int32_t lon_1e7, int32_t reference_lat_1e7,
+                               int32_t reference_lon_1e7) {
     CAPTURE(lat_1e7);
     CAPTURE(lon_1e7);
     model::AircraftObservation observation = make_observation(lat_1e7, lon_1e7);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtc, ref_lat_1e7, ref_lon_1e7) == Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtc, reference_lat_1e7, reference_lon_1e7) ==
+            Status::Ok);
     model::AircraftObservation got{};
-    REQUIRE(alptas_decode(frame, kUtc, ref_lat_1e7, ref_lon_1e7, got) == Status::Ok);
+    REQUIRE(alptas_decode(frame, kUtc, reference_lat_1e7, reference_lon_1e7, got) == Status::Ok);
     CHECK(std::abs(got.lat_1e7 - lat_1e7) <= 26);
     CHECK(std::abs(got.lon_1e7 - lon_1e7) <= lon_quantum(lat_1e7));
 }
@@ -331,7 +332,7 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
     static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x7, 0x8, 0xB, 0xD};
     for (uint8_t type : kInvertible) {
         CAPTURE(type);
-        CHECK(int(adsl_cat_to_alptas(alptas_type_to_adsl_cat(type))) == int(type));
+        CHECK(int(adsl_cat_to_alptas_type(alptas_type_to_adsl_cat(type))) == int(type));
     }
     CHECK(int(alptas_type_to_adsl_cat(0x1)) == 4);   // glider
     CHECK(int(alptas_type_to_adsl_cat(0x8)) == 1);   // powered aircraft -> light
@@ -361,13 +362,13 @@ TEST_CASE("alptas: the chip pairs the air destroyed are flipped back to the fram
     for (int seed = 1; seed <= 20; seed++) {
         uint8_t frame[kAlptasFrameBytes];
         std::memcpy(frame, sent, sizeof(frame));
-        uint8_t err[kAlptasFrameBytes] = {0};
+        uint8_t erasures[kAlptasFrameBytes] = {0};
         models::RfChannel channel(static_cast<uint32_t>(seed));
-        const int flipped = channel.apply_ber(frame, sizeof(frame), 0.012, err);
+        const int flipped = channel.apply_ber(frame, sizeof(frame), 0.012, erasures);
         CAPTURE(seed);
         CAPTURE(flipped);
         if (flipped == 0 || flipped > 6) continue;
-        CHECK(alptas_correct(frame, err) == flipped);
+        CHECK(alptas_correct(frame, erasures) == flipped);
         CHECK(std::memcmp(frame, sent, sizeof(frame)) == 0);
         model::AircraftObservation got{};
         CHECK(alptas_decode(frame, kUtc, 480000000, 87000000, got) == Status::Ok);
@@ -391,11 +392,11 @@ TEST_CASE("alptas: damage nothing flagged, or too much of it, leaves the frame a
 
     uint8_t beyond[kAlptasFrameBytes];
     std::memcpy(beyond, sent, sizeof(beyond));
-    uint8_t err[kAlptasFrameBytes] = {0};
+    uint8_t erasures[kAlptasFrameBytes] = {0};
     models::RfChannel channel(7);
-    channel.apply_ber(beyond, sizeof(beyond), 0.25, err);
+    channel.apply_ber(beyond, sizeof(beyond), 0.25, erasures);
     std::memcpy(as_arrived, beyond, sizeof(as_arrived));
-    CHECK(alptas_correct(beyond, err) == -1);
+    CHECK(alptas_correct(beyond, erasures) == -1);
     CHECK(std::memcmp(beyond, as_arrived, sizeof(as_arrived)) == 0);
 
     CHECK(alptas_correct(sent, none) == 0);  // a frame that arrived whole is not touched

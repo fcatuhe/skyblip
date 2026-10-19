@@ -200,7 +200,7 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
         CAPTURE(r.at_us);
         // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
         CHECK(position_at_us != 0);
-        CHECK(r.at_us - position_at_us < (timing::kCallsignEnd - timing::kDirectStart) * 1000);
+        CHECK(r.at_us - position_at_us < (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
         if (position_on_channel1) shared_dwell++;
     }
     CHECK(names >= 3);
@@ -212,10 +212,10 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     int rows = 0;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& e = log.newest(i);
-        if (e.event != radio::Event::Transmitted) continue;
+        if (e.verdict != radio::Verdict::Transmitted) continue;
         rows++;
         CAPTURE(e.at_s);
-        CHECK(e.callsign == (e.into_ms < timing::kSlot1Wrap));
+        CHECK(e.callsign == (e.into_ms < timing::kSlot1WrapMs));
         // one 5 ms host step late at most, a neighbour's instant would be 10 ms or more off
         CHECK(e.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
     }

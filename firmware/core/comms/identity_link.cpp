@@ -5,7 +5,7 @@
 #include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/util/hex.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::comms {
 
@@ -15,7 +15,7 @@ constexpr long kSerialCeiling = 0xFFFF;
 template <size_t N>
 bool read_hex_field(const json::Reader& r, const char* key, std::array<uint8_t, N>& out) {
     char text[2 * N + 2] = {0};
-    return r.get_str(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
+    return r.get_string(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
 }
 
 template <size_t N>

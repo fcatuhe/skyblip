@@ -6,6 +6,7 @@
 
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/settings/address.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/lease.h"
 #include "core/traffic/sanity.h"
@@ -13,11 +14,11 @@
 namespace skyblip::traffic {
 
 struct TargetTurn {
-    int16_t dps{0};
+    int16_t rate_dps{0};
     bool valid{false};
     bool armed{false};
-    uint32_t ref_ms{0};
-    uint16_t ref_track_c9{0};
+    uint32_t reference_at_ms{0};
+    uint16_t reference_track_c9{0};
 };
 
 struct Target {
@@ -30,7 +31,7 @@ struct Target {
     bool used{false};
 };
 
-constexpr uint32_t kTurnMaxGapMs = 3000;
+constexpr uint32_t kTurnMaxAgeMs = 3000;
 
 class TrafficTable {
    public:
@@ -43,7 +44,7 @@ class TrafficTable {
     // table nobody told has to assume.
     void set_own_address(uint8_t address_mapping_table, uint32_t address) {
         own_address_mapping_table_ = address_mapping_table;
-        own_address_ = address & 0x00FFFFFF;
+        own_address_ = address & settings::kAddressMask;
     }
 
     // Where own-ship is, for the range gate below. This is the table's door and
@@ -58,11 +59,11 @@ class TrafficTable {
     // Receptions refused because the position they claimed was further away than
     // this radio can hear (core/traffic/sanity.h). Not silent: a rate that climbs
     // is a receiver at the edge of its budget or a decoder that is wrong.
-    uint32_t implausible_count() const { return implausible_; }
+    uint32_t implausible() const { return implausible_; }
 
-    int update(const model::AircraftObservation& observation, uint32_t now);
+    int update(const model::AircraftObservation& observation, uint32_t now_s);
 
-    void age_out(uint32_t now);
+    void age_out(uint32_t now_s);
 
     int count() const;
     const Target* at(int i) const { return (i >= 0 && i < kCapacity) ? &slots_[i] : nullptr; }
@@ -90,8 +91,8 @@ class TrafficTable {
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
     static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
     static bool matters_less(const Weight& a, const Weight& b);
-    Weight weight_of(const model::AircraftObservation& observation, uint32_t now) const;
-    int allocate_slot(const model::AircraftObservation& incoming, uint32_t now);
+    Weight weight_of(const model::AircraftObservation& observation, uint32_t now_s) const;
+    int allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s);
 };
 
 }

@@ -13,16 +13,16 @@
 
 using namespace skyblip::fec;
 
-TEST_CASE("crc: adsl PI detects a good vs corrupted packet") {
+TEST_CASE("crc: the ADS-L CRC detects a good vs corrupted packet") {
     uint8_t data[24];
     for (int i = 0; i < 21; i++) data[i] = static_cast<uint8_t>(i * 7 + 1);
-    uint32_t pi = adsl_pi_compute(data, 21);
-    data[21] = static_cast<uint8_t>(pi >> 16);
-    data[22] = static_cast<uint8_t>(pi >> 8);
-    data[23] = static_cast<uint8_t>(pi);
-    CHECK(adsl_pi_check(data, 24) == 0);  // consistent
-    data[5] ^= 0x10;                      // corrupt one bit
-    CHECK(adsl_pi_check(data, 24) != 0);
+    uint32_t crc = adsl_crc_compute(data, 21);
+    data[21] = static_cast<uint8_t>(crc >> 16);
+    data[22] = static_cast<uint8_t>(crc >> 8);
+    data[23] = static_cast<uint8_t>(crc);
+    CHECK(adsl_crc_check(data, 24) == 0);  // consistent
+    data[5] ^= 0x10;                       // corrupt one bit
+    CHECK(adsl_crc_check(data, 24) != 0);
 }
 
 TEST_CASE("crc: crc16-ccitt and crc32 known/stability") {

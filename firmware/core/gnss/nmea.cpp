@@ -302,12 +302,11 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int len) {
                             : 0;
 
     int64_t separation_mm = 0;
-    solution_.geoid_separation_measured =
-        field_count > 11 && parse_scaled(fields[11], 1000, separation_mm) && separation_mm != 0 &&
-        separation_mm > -200000 && separation_mm < 200000;
-    solution_.geoid_separation_mm = solution_.geoid_separation_measured
-                                        ? static_cast<int32_t>(separation_mm)
-                                        : kDefaultGeoidSeparationMm;
+    solution_.geoid_measured = field_count > 11 && parse_scaled(fields[11], 1000, separation_mm) &&
+                               separation_mm != 0 && separation_mm > -200000 &&
+                               separation_mm < 200000;
+    solution_.geoid_separation_mm =
+        solution_.geoid_measured ? static_cast<int32_t>(separation_mm) : kDefaultGeoidSeparationMm;
 
     int64_t msl_mm = 0;
     solution_.alt_msl_valid = parse_scaled(fields[9], 1000, msl_mm) &&

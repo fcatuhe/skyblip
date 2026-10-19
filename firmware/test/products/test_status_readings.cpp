@@ -49,7 +49,7 @@ TEST_CASE("status readings: the ball is the last sample, not the damped ball the
 TEST_CASE("status readings: the cell is the last sample, not the median the gauge keeps") {
     Rig rig;
     rig.state.power.battery.valid = true;
-    rig.state.power.battery.millivolts = 3950;
+    rig.state.power.battery.cell_mv = 3950;
     rig.state.power.battery.sample_mv = 3871;
     uint32_t t = 0;
     show_status(rig, t);

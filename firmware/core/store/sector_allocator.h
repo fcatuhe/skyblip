@@ -90,7 +90,7 @@ class SectorAllocator {
     bool matches(const Match& match, uint32_t sector) const;
 
     uint32_t sequence_of_[kMaxPoolSectors]{};
-    uint32_t session_of_[kMaxPoolSectors]{};
+    uint32_t session_id_of_[kMaxPoolSectors]{};
     uint8_t owner_of_[kMaxPoolSectors]{};
     bool session_start_[kMaxPoolSectors]{};
     uint32_t lost_sectors_[2]{};

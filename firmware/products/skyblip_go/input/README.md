@@ -10,7 +10,7 @@ The board pushes one `events::ContactEvent` per settled edge, stamped when the l
 | pad held past `Controls::kLongTouchMs` (1 s) | `LongTouch` | a standing alarm is dismissed, and with none standing, the radar, through black even when the radar is already on the glass | the radar |
 | button pressed | `Press` | opens this page's menu | changes the focused row, or opens the page it names |
 | button pressed twice inside `ConfirmGesture::kDoublePressMs` | `Press`, twice | nothing, unless a prompt stands: then it authorises, or on `capture`, where it arms and stops the diagnostics capture | the same |
-| button held past `power::kLongPressMs` (2 s) | none | off | off |
+| button held past `power::kLongPressHoldMs` (2 s) | none | off | off |
 | pad held through that press | none | off, with a blank panel: the stow | the stow |
 
 One vocabulary on two contacts: the pad is touched, the button is pressed, and the long one of each is the second thing that contact says. The pad moves, the button acts, and the long touch is the way back to the traffic picture from anywhere. Nothing a pilot learns on the pages has to be unlearned on the rows.

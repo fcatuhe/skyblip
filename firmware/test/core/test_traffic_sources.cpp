@@ -27,10 +27,10 @@ constexpr int32_t kFourHundredMetresNorthE7 = 400 * 1000000 / 11132;
 model::Ownship own_at(uint32_t at_ms) {
     model::Ownship o{};
     o.fix_valid = true;
-    o.fix_ms = at_ms;
+    o.fix_at_ms = at_ms;
     o.lat_1e7 = kOwnLat;
     o.lon_1e7 = kOwnLon;
-    o.alt_mm = kOwnAltM * 1000;
+    o.alt_hae_mm = kOwnAltM * 1000;
     o.speed_mm_s = 30000;
     return o;
 }

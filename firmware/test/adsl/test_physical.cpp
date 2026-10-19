@@ -85,7 +85,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
         const int slot = timing::Transmitter::slot_in(utc_s, /*airborne=*/true);
-        const uint32_t freq = timing::Scheduler::slot_freq(slot);
+        const uint32_t freq = timing::Scheduler::slot_freq_hz(slot);
         CHECK((freq == timing::kMband0Hz || freq == timing::kMband1Hz));
         if (previous != 0) CHECK(freq != previous);
         previous = freq;
@@ -137,8 +137,8 @@ TEST_CASE("ADS-L.4.SRD860.C.4.3: the O-band HDR sync word is 0x2D 0xD4, uncoded"
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else") {
-    CHECK(timing::kDirectStart == 450);
-    CHECK(timing::kDirectEnd == 1000);
+    CHECK(timing::kDirectStartMs == 450);
+    CHECK(timing::kDirectEndMs == 1000);
 
     timing::ClockState clock{};
     clock.utc_valid = true;
@@ -156,7 +156,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
                 if (a.payload == timing::Transmitter::Payload::Callsign) continue;
                 CHECK(timing::Scheduler::in_direct_slot(a.at_ms));
                 CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                      timing::kDirectEnd);
+                      timing::kDirectEndMs);
             }
         }
     }
@@ -169,7 +169,7 @@ TEST_CASE(
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1Start, clock);
+    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1StartMs, clock);
 
     int seen = 0;
     for (uint32_t address = 1; address < 64; address++) {
@@ -181,9 +181,9 @@ TEST_CASE(
             seen++;
             // Past the direct slot, inside slot 1's dwell, and complete before it ends.
             CHECK_FALSE(timing::Scheduler::in_direct_slot(a.at_ms));
-            CHECK(a.at_ms >= timing::kCallsignStart);
+            CHECK(a.at_ms >= timing::kCallsignStartMs);
             CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kCallsignEnd);
+                  timing::kCallsignEndMs);
             CHECK(a.freq_hz == timing::kMband1Hz);
         }
     }
@@ -191,11 +191,11 @@ TEST_CASE(
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {
-    CHECK(timing::kUplinkRxStart >= 200);
-    CHECK(timing::kUplinkRxEnd <= 450);
-    for (int phase = timing::kUplinkRxStart; phase < timing::kUplinkRxEnd; phase++) {
+    CHECK(timing::kUplinkRxStartMs >= 200);
+    CHECK(timing::kUplinkRxEndMs <= 450);
+    for (int phase = timing::kUplinkRxStartMs; phase < timing::kUplinkRxEndMs; phase++) {
         CHECK(timing::Scheduler::band_at(phase) == timing::Band::O);
-        CHECK(timing::Scheduler::freq_at(phase) == timing::kObandHz);
+        CHECK(timing::Scheduler::freq_hz_at(phase) == timing::kObandHz);
     }
     for (int phase = 0; phase < 200; phase++) CHECK_FALSE(timing::Scheduler::in_direct_slot(phase));
 }

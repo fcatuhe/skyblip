@@ -95,7 +95,7 @@ class DurableWriteWindow {
     // find a clear channel. Long enough that the settle above and the widest gap
     // between two free windows cannot spend it between them; short enough that
     // what a pilot loses to a dead cell is the change they were still making.
-    static constexpr uint32_t kMaxDeferMs = 3000;
+    static constexpr uint32_t kDeferCeilingMs = 3000;
 
     // A published view older than this is not evidence about where the second is
     // any more, so it refuses rather than guesses. Ten service passes, and wider
@@ -108,11 +108,11 @@ class DurableWriteWindow {
     // The one stretch the second offers, proved against the map it is cut from
     // rather than restated: the uplink dwell (core/timing/README.md).
     static_assert(kWorstWriteMs + static_cast<uint32_t>(kJitterGuardMs) <
-                      static_cast<uint32_t>(kUplinkRxEnd - kUplinkRxStart),
+                      static_cast<uint32_t>(kUplinkRxEndMs - kUplinkRxStartMs),
                   "one settings write no longer fits inside the uplink dwell");
     static_assert(kPartialEraseMs < static_cast<uint32_t>(kJitterGuardMs),
                   "a forced write could move a dwell edge past the slot map's guard");
-    static_assert(kMaxDeferMs > kSettleMs + 1000,
+    static_assert(kDeferCeilingMs > kSettleMs + 1000,
                   "the settle and one whole second could spend the bound between them");
 
     // A change was accepted. Coalescing lives here: the first call starts the
@@ -132,7 +132,7 @@ class DurableWriteWindow {
 
     bool pending() const { return pending_; }
 
-    // INFO: fc 20sep26 the wait kMaxDeferMs bounds, measured from the oldest unwritten change
+    // INFO: fc 20sep26 the wait kDeferCeilingMs bounds, measured from the oldest unwritten change
     uint32_t waited_ms(uint32_t now_ms) const { return pending_ ? now_ms - first_request_ms_ : 0; }
 
     // What the bench reads: how many changes arrived, how many writes they cost

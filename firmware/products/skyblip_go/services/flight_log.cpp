@@ -79,7 +79,7 @@ void FlightLogService::watch(uint32_t now_ms) {
 flight::LogStatus FlightLogService::status_now() const {
     const bus::PowerState& power = context_.state.power;
     flight::LogStatus status{};
-    status.cell_mv = power.battery.millivolts;
+    status.cell_mv = power.battery.cell_mv;
     status.percent = power.battery.percent;
     status.power_level = static_cast<uint8_t>(power.level);
     status.charge = static_cast<uint8_t>(power.charge);

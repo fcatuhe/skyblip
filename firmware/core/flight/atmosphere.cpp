@@ -102,6 +102,6 @@ bool climb_mm_s_from_alt(int32_t alt_mm_now, int32_t alt_mm_then, uint32_t dt_ms
     return true;
 }
 
-int16_t climb_e8_from_mm_s(int32_t mm_s) { return to_climb_e8(MillimetresPerSec(mm_s)).v; }
+int16_t climb_e8_from_mm_s(int32_t mm_s) { return to_climb_e8(MillimetresPerSecond(mm_s)).v; }
 
 }  // namespace skyblip::flight

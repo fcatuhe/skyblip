@@ -18,7 +18,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -97,7 +97,7 @@ struct GnssStatus {
     gnss::Stage stage{gnss::Stage::Silent};
     uint32_t stage_s{0};
     uint8_t fix_mode{0};
-    // INFO: fc 19sep26 how far into its own second a solution landed, what kFixLagMaxMs bounds
+    // INFO: fc 19sep26 how far into its own second a solution landed, what kFixMaxAgeMs bounds
     uint16_t solution_phase_ms{0};
     bool solution_phase_valid{false};
     bool levels_wanted{false};

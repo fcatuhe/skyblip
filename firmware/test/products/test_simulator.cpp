@@ -81,7 +81,7 @@ TEST_CASE("simulator: simulated GNSS drives own-ship state via the real NMEA par
     CHECK(h.product().state().own.fix_valid);
     CHECK(h.product().state().own.utc_valid);
     CHECK(int(h.product().state().own.sats) == 11);
-    CHECK(h.product().state().own.alt_mm == 1500000);
+    CHECK(h.product().state().own.alt_hae_mm == 1500000);
     CHECK(h.product().state().own.track_cdeg == 9000);
     CHECK(h.product().state().own.speed_mm_s > 25000);  // 50 kt is 25.7 m/s
     CHECK(h.product().state().own.lat_1e7 > 484000000);
@@ -169,13 +169,13 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own ship 
     const traffic::Target* target = h.product().state().traffic.at(0);
     REQUIRE(target != nullptr);
     const int32_t level_at = target->observation.alt_m;
-    const int32_t own_at = to_metres(Millimetres(h.product().state().own.alt_mm)).v;
+    const int32_t own_at = to_metres(Millimetres(h.product().state().own.alt_hae_mm)).v;
 
     h.world().set_climb_mm_s(5000);
     run(h, 6000, 16000);
 
     // Own ship gains 50 m; the target holds its level within the second of own-ship lag.
-    CHECK(to_metres(Millimetres(h.product().state().own.alt_mm)).v > own_at + 40);
+    CHECK(to_metres(Millimetres(h.product().state().own.alt_hae_mm)).v > own_at + 40);
     CHECK(target->observation.alt_m < level_at + 10);
     CHECK(target->observation.alt_m > level_at - 10);
 }
@@ -310,8 +310,9 @@ TEST_CASE("simulator: a turn and a climb held steady are published steady") {
         const model::Ownship& own = h.product().state().own;
         worst_turn = std::max(worst_turn, std::abs(own.turn_cdps - 300));
         worst_vs = std::max(
-            worst_vs, std::abs(to_feet_per_minute(MillimetresPerSec(own.climb_mm_s)).v - 300));
-        worst_kt = std::max(worst_kt, std::abs(to_knots(MillimetresPerSec(own.speed_mm_s)).v - 60));
+            worst_vs, std::abs(to_feet_per_minute(MillimetresPerSecond(own.climb_mm_s)).v - 300));
+        worst_kt =
+            std::max(worst_kt, std::abs(to_knots(MillimetresPerSecond(own.speed_mm_s)).v - 60));
     }
     CHECK(worst_turn <= 10);
     // An ADC count is 0.17 Pa, 1.5 cm up here, and a climb may be two counts off: 6 ft/min.
@@ -424,17 +425,17 @@ TEST_CASE("simulator: holding the button switches the device off, a tap never do
     run(h, 0, 2000);
 
     uint32_t t = press(h, 2000);
-    run(h, t, t + power::kLongPressMs);
+    run(h, t, t + power::kLongPressHoldMs);
     CHECK(h.product().shutdown().phase() == power::ShutdownPhase::Running);
 
-    t += power::kLongPressMs;
+    t += power::kLongPressHoldMs;
     h.world().hold_button(true);
-    run(h, t, t + power::kLongPressMs + 100);
-    t += power::kLongPressMs + 100;
+    run(h, t, t + power::kLongPressHoldMs + 100);
+    t += power::kLongPressHoldMs + 100;
     CHECK(h.product().shutdown().reason() == power::ShutdownReason::LongPress);
 
     h.world().hold_button(false);
-    run(h, t, t + power::kParkMs + power::kReleaseSettleMs + 100);
+    run(h, t, t + power::kParkSettleMs + power::kReleaseSettleMs + 100);
     CHECK(h.product().ready_to_power_off());
     CHECK_FALSE(h.panel_powered());
 }
@@ -493,7 +494,7 @@ TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does
     REQUIRE(h.product().config().config().pending() == comms::Pending::Recovery);
 
     h.product().config().config().confirm();
-    run(h, 20400, 20400 + power::kParkMs + power::kReleaseSettleMs + 5000);
+    run(h, 20400, 20400 + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
 
     go::Glass expected;
     go::draw_recovery(expected, ports::RecoveryPath::PowerOffToFinish);

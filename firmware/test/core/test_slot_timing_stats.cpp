@@ -1,10 +1,10 @@
 // G6: the accumulator behind the bench PPS-to-lock histogram. Its two feeds -
 // the latched PPS edge and an armed dwell's outcome - are exercised directly
-// here on virtual time, exactly as core/timing/timing_stats.h promises: no
+// here on virtual time, exactly as core/timing/slot_timing_stats.h promises: no
 // heap, integer only, and no phase math to get wrong across the second wrap.
 #include <limits>
 
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip::timing;
@@ -106,7 +106,7 @@ TEST_CASE("timing_stats: an edge gap while still reporting locked is holdover to
 }
 
 // Slot 1's dwell opens at 800 ms and its tail runs to 200 ms past the second
-// it started in (core/timing/slot.h kSlot1Wrap). An armed deadline just before
+// it started in (core/timing/slot.h kSlot1WrapMs). An armed deadline just before
 // the wrap and a landed instant just after it are still only a few thousand
 // microseconds apart - not a second, and not undefined, because nothing here
 // is derived from a phase.

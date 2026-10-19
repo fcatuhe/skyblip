@@ -28,7 +28,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
 
     const uint32_t before = writes(rig);
     change_volume(rig, go::AlarmVolume::Soft);
-    step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
+    step_until(rig, t, t + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Refused, counted once, and never handed to the placement policy - a pending
     // change is one the bound would eventually force onto flash, which is the
@@ -91,7 +91,7 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     fly(rig, t);
-    step_until(rig, t, t + static_cast<uint32_t>(timing::kDirectStart) + 20);
+    step_until(rig, t, t + static_cast<uint32_t>(timing::kDirectStartMs) + 20);
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 
@@ -126,7 +126,7 @@ TEST_CASE("flash window: a fired power-failure comparator stops settings writes"
     CHECK(rig.product.power().supply_warnings() == 1);
 
     change_volume(rig, go::AlarmVolume::Soft);
-    step_until(rig, t, t + timing::DurableWriteWindow::kMaxDeferMs + 2000);
+    step_until(rig, t, t + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Latching: a rail that came back up does not make it un-happen.
     CHECK_FALSE(rig.product.power().may_write(power::DurableWrite::Settings));

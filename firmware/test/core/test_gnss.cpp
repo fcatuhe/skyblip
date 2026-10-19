@@ -212,7 +212,7 @@ TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values") {
     CHECK(f.alt_msl_valid);
     CHECK(f.alt_msl_mm == 545400);
     CHECK(f.geoid_separation_mm == 46900);
-    CHECK(f.geoid_separation_measured);
+    CHECK(f.geoid_measured);
     CHECK(f.alt_hae_valid);
     CHECK(f.alt_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
 }
@@ -227,7 +227,7 @@ TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says 
     NmeaParser p;
     const char* omitted = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,,M,,*52";
     REQUIRE(p.parse_line(omitted, static_cast<int>(strlen(omitted))));
-    CHECK_FALSE(p.solution().geoid_separation_measured);
+    CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
     CHECK(p.solution().alt_msl_mm == 545400);
     CHECK(p.solution().alt_mm == 545400 + kDefaultGeoidSeparationMm);
@@ -237,7 +237,7 @@ TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
     NmeaParser p;
     const char* zero = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,0.0,M,,*7C";
     REQUIRE(p.parse_line(zero, static_cast<int>(strlen(zero))));
-    CHECK_FALSE(p.solution().geoid_separation_measured);
+    CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
     CHECK(p.solution().alt_mm == 545400 + kDefaultGeoidSeparationMm);
 }
@@ -442,6 +442,6 @@ TEST_CASE("gnss: a solution is kept at the precision the receiver reported, not 
     CHECK(f.track_cdeg == 8443);
 
     // And the wire's own units are still one conversion away, rounded.
-    CHECK(skyblip::to_speed_q(skyblip::MillimetresPerSec(f.speed_mm_s)).v == 46);
+    CHECK(skyblip::to_speed_q(skyblip::MillimetresPerSecond(f.speed_mm_s)).v == 46);
     CHECK(skyblip::to_cordic9(skyblip::CentiDegrees(f.track_cdeg)).v == 120);
 }

@@ -36,29 +36,29 @@ TEST_CASE("timing: dwell map matches the decided band split") {
 }
 
 TEST_CASE("timing: every band edge keeps its guard") {
-    CHECK(kUplinkRxStart <= kGroundEmitStart - kJitterGuardMs);
-    CHECK(kUplinkRxEnd >= kGroundEmitEnd + kJitterGuardMs);
+    CHECK(kUplinkRxStartMs <= kGroundEmitStartMs - kJitterGuardMs);
+    CHECK(kUplinkRxEndMs >= kGroundEmitEndMs + kJitterGuardMs);
     // M->O after slot 1's tail, then O->M before slot 0.
-    CHECK(kUplinkRxStart - kSlot1Wrap == kJitterGuardMs);
-    CHECK(kSlot0Start - kUplinkRxEnd == kJitterGuardMs);
+    CHECK(kUplinkRxStartMs - kSlot1WrapMs == kJitterGuardMs);
+    CHECK(kSlot0StartMs - kUplinkRxEndMs == kJitterGuardMs);
     // Two equal M-band dwells, one channel each.
-    CHECK(kSlot0End - kSlot0Start == kSlot1End - kSlot1Start);
+    CHECK(kSlot0EndMs - kSlot0StartMs == kSlot1EndMs - kSlot1StartMs);
 }
 
 TEST_CASE("timing: band and channel per dwell") {
     CHECK(Scheduler::band_at(300) == Band::O);
     // The tail of slot 1: still M-band, still the second channel.
     CHECK(Scheduler::band_at(100) == Band::M);
-    CHECK(Scheduler::freq_at(100) == kMband1Hz);
+    CHECK(Scheduler::freq_hz_at(100) == kMband1Hz);
     CHECK(Scheduler::slot_of(100) == 1);
     CHECK(Scheduler::band_at(420) == Band::M);
     CHECK(Scheduler::band_at(500) == Band::M);
     CHECK(Scheduler::band_at(900) == Band::M);
     // §C.2: two M-band channels, one per direct half, so a receiver visits both.
-    CHECK(Scheduler::freq_at(300) == kObandHz);
-    CHECK(Scheduler::freq_at(420) == kMband0Hz);
-    CHECK(Scheduler::freq_at(500) == kMband0Hz);
-    CHECK(Scheduler::freq_at(900) == kMband1Hz);
+    CHECK(Scheduler::freq_hz_at(300) == kObandHz);
+    CHECK(Scheduler::freq_hz_at(420) == kMband0Hz);
+    CHECK(Scheduler::freq_hz_at(500) == kMband0Hz);
+    CHECK(Scheduler::freq_hz_at(900) == kMband1Hz);
 }
 
 TEST_CASE("timing: uplink window and direct slot predicates") {
@@ -82,14 +82,14 @@ TEST_CASE("timing: uplink window and direct slot predicates") {
 TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
     Scheduler s;
     // Slot 0 opens at 400 and places its burst from 450, so 400 is where the plan must carry it.
-    CHECK_FALSE(Scheduler::in_direct_slot(kSlot0Start));
-    CHECK(Scheduler::in_own_tx_dwell(kSlot0Start));
-    CHECK(s.plan(kSlot0Start, anchored()).tx_allowed);
-    CHECK(Scheduler::in_own_tx_dwell(kSlot1Start));
-    CHECK(s.plan(kSlot1Start, anchored()).tx_allowed);
+    CHECK_FALSE(Scheduler::in_direct_slot(kSlot0StartMs));
+    CHECK(Scheduler::in_own_tx_dwell(kSlot0StartMs));
+    CHECK(s.plan(kSlot0StartMs, anchored()).tx_allowed);
+    CHECK(Scheduler::in_own_tx_dwell(kSlot1StartMs));
+    CHECK(s.plan(kSlot1StartMs, anchored()).tx_allowed);
     // Slot 1's tail is the same dwell, and it carries the callsign burst.
     CHECK(Scheduler::in_own_tx_dwell(0));
-    CHECK(Scheduler::in_own_tx_dwell(kSlot1Wrap - 1));
+    CHECK(Scheduler::in_own_tx_dwell(kSlot1WrapMs - 1));
     CHECK(s.plan(100, anchored()).tx_allowed);
     // The uplink dwell and both band edges own no direct-slot time at all.
     CHECK_FALSE(Scheduler::in_own_tx_dwell(202));
@@ -100,15 +100,15 @@ TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
 TEST_CASE("timing: a dwell stops early enough to retune before the next one") {
     Scheduler s;
     // The O->M edge is the safety-critical one: 5 ms of guard, then M-band at 400.
-    CHECK(s.plan(300, anchored()).start_ms == kUplinkRxStart);
-    CHECK(s.plan(300, anchored()).end_ms == kUplinkRxEnd);
+    CHECK(s.plan(300, anchored()).start_ms == kUplinkRxStartMs);
+    CHECK(s.plan(300, anchored()).end_ms == kUplinkRxEndMs);
     // The tail is the same dwell as 900 ms: one plan, 800..1200.
-    CHECK(s.plan(100, anchored()).start_ms == kSlot1Start);
-    CHECK(s.plan(100, anchored()).end_ms == kSlot1End);
-    CHECK(s.plan(500, anchored()).start_ms == kSlot0Start);
-    CHECK(s.plan(500, anchored()).end_ms == kSlot0End - kHopGuardMs);
-    CHECK(s.plan(900, anchored()).end_ms == kSlot1End);
-    CHECK(s.plan(900, anchored()).start_ms == kSlot1Start);
+    CHECK(s.plan(100, anchored()).start_ms == kSlot1StartMs);
+    CHECK(s.plan(100, anchored()).end_ms == kSlot1EndMs);
+    CHECK(s.plan(500, anchored()).start_ms == kSlot0StartMs);
+    CHECK(s.plan(500, anchored()).end_ms == kSlot0EndMs - kHopGuardMs);
+    CHECK(s.plan(900, anchored()).end_ms == kSlot1EndMs);
+    CHECK(s.plan(900, anchored()).start_ms == kSlot1StartMs);
 }
 
 TEST_CASE("timing: TX only in M-band direct slots when clock is anchored") {

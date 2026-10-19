@@ -113,8 +113,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kWindowSamples` | 3 | samples | Window | - |
 | `kLevelSamples` | 3 | samples | Samples | More than two consecutive samples, so the third one acts. |
 | `kRailSettleMs` | 20 | milliseconds | Settle | the 20 ms MB spends between driving the enable pins low and releasing them (nRF52.cpp:2075). |
-| `kLongPressMs` | 2000 (2 s) | milliseconds | - | Long enough that it cannot be the page press, short enough to do with gloves on. |
-| `kParkMs` | 3000 (3 s) | milliseconds | - | A power-off parks the panel with a full refresh, which the SSD1681 clocks out in about 2.5 s, and an install or a recovery through black, about a second. |
+| `kLongPressHoldMs` | 2000 (2 s) | milliseconds | Hold | Long enough that it cannot be the page press, short enough to do with gloves on. |
+| `kParkSettleMs` | 3000 (3 s) | milliseconds | Settle | A power-off parks the panel with a full refresh, which the SSD1681 clocks out in about 2.5 s, and an install or a recovery through black, about a second. |
 | `kReleaseSettleMs` | 100 | milliseconds | Settle | nRF52 SENSE is a level detect, not an edge, so arming the wake pin while the button is still down wakes the device the instant SYSTEM OFF latches. |
 
 ## [`firmware/core/protocol`](../firmware/core/protocol/README.md)
@@ -138,7 +138,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kTxSpanLimitUs` | 65535 (65.535 ms) | microseconds | - | the field's own ceiling: a burst this late is a dwell that already ended |
+| `kTxSpanCeilingUs` | 65535 (65.535 ms) | microseconds | Ceiling | the field's own ceiling: a burst this late is a dwell that already ended |
 
 ## [`firmware/core/store`](../firmware/core/store/README.md)
 
@@ -164,8 +164,21 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kWorstWriteMs` | `kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000` = 86 | milliseconds | - | - |
 | `kPartialEraseMs` | 4 | milliseconds | - | The longest SINGLE stall inside that worst case, which is a different number: |
 | `kSettleMs` | 750 | milliseconds | Settle | How long the policy waits for a stream of changes to stop before it writes the one blob they add up to. |
-| `kMaxDeferMs` | 3000 (3 s) | milliseconds | - | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |
+| `kDeferCeilingMs` | 3000 (3 s) | milliseconds | Ceiling | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |
 | `kViewStaleMs` | 100 | milliseconds | Stale | A published view older than this is not evidence about where the second is any more, so it refuses rather than guesses. |
+| `kGroundEmitStartMs` | 210 | milliseconds | - | §C.5 gives the second to the bands: 200..450 ms is the uplink slot the ground infrastructure transmits in, 450..1000 the direct slot. |
+| `kGroundEmitEndMs` | 390 | milliseconds | - | - |
+| `kUplinkRxStartMs` | 205 | milliseconds | - | - |
+| `kUplinkRxEndMs` | 395 | milliseconds | - | - |
+| `kSlot0StartMs` | 400 | milliseconds | - | - |
+| `kSlot0EndMs` | 800 | milliseconds | - | - |
+| `kSlot1StartMs` | 800 | milliseconds | - | - |
+| `kSlot1EndMs` | 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kSlot1WrapMs` | `kSlot1EndMs - 1000` = 200 | milliseconds | - | How far slot 1 reaches past the second it started in. |
+| `kDirectStartMs` | 450 | milliseconds | - | The ADS-L direct slot, which our own bursts respect on top of the dwell map: we listen on M-band from 400 ms, we start transmitting at 450. |
+| `kDirectEndMs` | 1000 (1 s) | milliseconds | - | - |
+| `kCallsignStartMs` | `kDirectEndMs` = 1000 (1 s) | milliseconds | - | §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on |
+| `kCallsignEndMs` | `kSlot1EndMs` = 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
 | `kHopGuardMs` | 2 | milliseconds | - | bench worst dwell end to listening 1.16 ms over 2880 hops, 2 leaves 0.84 |
 | `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
@@ -176,8 +189,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a contact is hex |
-| `kFixLagMaxMs` | 500 | milliseconds | - | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
-| `kCompletionSlackMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
+| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
+| `kCompletionMarginMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -191,9 +204,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kGroundRenotifyFloorMs` | 60000 (1 min) | milliseconds | Floor | a touch-and-go or a stop-and-go is back in the air well inside a minute |
 | `kCallsignForgetS` | 600 | seconds | Forget | a name outlives the target it belongs to, which ages out in seconds |
 | `kRangeM` | 1000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
-| `kVertM` | 100 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
+| `kVerticalM` | 100 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kDriftM` | 60 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
-| `kVertDriftM` | 30 | metres | - | - |
+| `kVerticalDriftM` | 30 | metres | - | - |
 | `kTogetherHoldMs` | 6000 (6 s) | milliseconds | Hold | [README](../firmware/core/traffic/README.md) argues it |
 | `kBreakFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kClosingMps` | 3 | metres per second | - | [README](../firmware/core/traffic/README.md) argues it |
@@ -202,9 +215,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * flight::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * flight::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
-| `kMaxPlausibleRangeM` | 30000 | metres | - | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
-| `kMaxRelayedRangeM` | `2 * kMaxPlausibleRangeM` = 60000 | metres | - | A relayed target did not travel that path. |
-| `kTurnMaxGapMs` | 3000 (3 s) | milliseconds | - | [README](../firmware/core/traffic/README.md) argues it |
+| `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
+| `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
+| `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
@@ -217,7 +230,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kLongTouchMs` | 1000 (1 s) | milliseconds | - | [README](../firmware/products/skyblip_go/input/README.md) argues it |
-| `kDoublePressMs` | 600 | milliseconds | - | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
+| `kDoublePressMs` | 600 | milliseconds | - | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
 
 ## [`firmware/products/skyblip_go/pages`](../firmware/products/skyblip_go/pages/README.md)
 
@@ -277,4 +290,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-172 constants over 18 folders.
+185 constants over 18 folders.

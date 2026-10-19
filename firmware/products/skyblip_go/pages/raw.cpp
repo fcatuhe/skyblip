@@ -48,7 +48,7 @@ int format_dop(char* out, const char* key, uint16_t dop_e2) {
 
 int format_micros(char* out, const char* key, int32_t us) {
     int n = format_word(out, key);
-    n += format_int(out + n, us, 1, 0, /*no_plus=*/true);
+    n += format_int(out + n, us, 1, 0, /*plus_sign=*/false);
     n += format_string(out + n, "US ");
     return n;
 }
@@ -169,7 +169,7 @@ void draw_dwell(ui::Canvas& canvas, int y, const RawRadio& r) {
     n += format_string(buf + n, yes_no(r.tx_allowed));
     row(canvas, y, buf, n);
 
-    n = format_int(buf, r.noise_dbm, 1, 0, /*no_plus=*/true);
+    n = format_int(buf, r.noise_dbm, 1, 0, /*plus_sign=*/false);
     n += format_string(buf + n, "DBM");
     buf[n] = 0;
     right_aligned(canvas, kRight, y, buf, n);

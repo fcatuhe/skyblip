@@ -14,7 +14,7 @@ namespace skyblip::gnss {
 // SoftRF special-cases the always-zero chipsets (oss/SoftRF-lyusupov
 // .../src/driver/GNSS.cpp:1681-1684). Our operating region is central Europe,
 // where EGM96 separation runs 45-48 m, so 46 m is the assumption we make and
-// declare through geoid_separation_measured.
+// declare through geoid_measured.
 constexpr int32_t kDefaultGeoidSeparationMm = 46000;
 
 // INFO: fc 03aug26 A GGA that stops mid-sentence still carries a checksum over
@@ -79,7 +79,7 @@ struct GnssSolution {
     uint8_t fix_mode{0};
     bool alt_msl_valid{false};
     bool alt_hae_valid{false};
-    bool geoid_separation_measured{false};
+    bool geoid_measured{false};
     uint32_t updates{0};
 };
 

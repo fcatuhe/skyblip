@@ -23,8 +23,8 @@ namespace {
 
 bool below(const BootCell& cell, uint16_t floor_mv) {
     if (!cell.valid || cell.external_power) return false;
-    if (cell.millivolts <= kImplausibleFloorMv) return false;
-    return cell.millivolts < floor_mv;
+    if (cell.cell_mv <= kImplausibleFloorMv) return false;
+    return cell.cell_mv < floor_mv;
 }
 
 bool too_flat_to_run(const BootCell& cell) { return below(cell, kBootLockoutMv); }

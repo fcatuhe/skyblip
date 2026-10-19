@@ -157,7 +157,7 @@ int64_t RadioService::second_origin_us() const {
 // a second that started before the clock did.
 int64_t RadioService::dwell_origin_us() const {
     const int64_t origin_us = second_origin_us();
-    const bool in_slot1_tail = phase_ms() < timing::kSlot1Wrap;
+    const bool in_slot1_tail = phase_ms() < timing::kSlot1WrapMs;
     return in_slot1_tail ? origin_us - static_cast<int64_t>(kSecondUs) : origin_us;
 }
 
@@ -168,12 +168,12 @@ uint64_t RadioService::at_us(int64_t origin_us, int phase_ms) {
 RadioService::Upcoming RadioService::upcoming_after(const timing::SlotPlan& plan,
                                                     int64_t origin_us) const {
     const timing::ClockState& clock = context_.state.clock;
-    if (plan.start_ms == timing::kSlot0Start)
-        return {timing::Scheduler::plan(timing::kSlot1Start, clock), origin_us};
-    if (plan.start_ms == timing::kSlot1Start)
-        return {timing::Scheduler::plan(timing::kUplinkRxStart, clock),
+    if (plan.start_ms == timing::kSlot0StartMs)
+        return {timing::Scheduler::plan(timing::kSlot1StartMs, clock), origin_us};
+    if (plan.start_ms == timing::kSlot1StartMs)
+        return {timing::Scheduler::plan(timing::kUplinkRxStartMs, clock),
                 origin_us + static_cast<int64_t>(kSecondUs)};
-    return {timing::Scheduler::plan(timing::kSlot0Start, clock), origin_us};
+    return {timing::Scheduler::plan(timing::kSlot0StartMs, clock), origin_us};
 }
 
 bool RadioService::holds(const Armed& dwell, const timing::SlotPlan& plan) {
@@ -208,13 +208,13 @@ protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::At
     protocol::BurstInstant at{};
     at.utc_s = utc_s;
     at.into_utc_ms = a.at_ms;
-    at.since_fix_ms = static_cast<int32_t>(tx_ms - context_.state.own.fix_ms);
+    at.since_fix_ms = static_cast<int32_t>(tx_ms - context_.state.own.fix_at_ms);
     return at;
 }
 
 uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
-    const bool in_slot1_tail = phase_ms() < timing::kSlot1Wrap;
+    const bool in_slot1_tail = phase_ms() < timing::kSlot1WrapMs;
     return (in_slot1_tail && utc_s > 0) ? utc_s - 1 : utc_s;
 }
 
@@ -299,7 +299,7 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
 int32_t RadioService::fix_lag_ms() const {
     const uint32_t second_ms = static_cast<uint32_t>(at_us(dwell_origin_us(), 0) / 1000);
-    return static_cast<int32_t>(second_ms - context_.state.own.fix_ms);
+    return static_cast<int32_t>(second_ms - context_.state.own.fix_at_ms);
 }
 
 void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, uint32_t now_ms,
@@ -330,7 +330,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
     if (first.over_budget) {
         context_.state.rf.timing_stats.record_refused();
         if (!held_logged_) {
-            log_refusal(radio::Event::Held, slot, now_ms);
+            log_refusal(radio::Verdict::Held, slot, now_ms);
             held_logged_ = true;
         }
     }
@@ -374,7 +374,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
             }
             if (role == Role::Flying) {
                 context_.state.rf.timing_stats.record_missed();
-                log_refusal(radio::Event::Unarmed, slot, now_ms);
+                log_refusal(radio::Verdict::Unarmed, slot, now_ms);
             }
             continue;
         }
@@ -407,7 +407,7 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
                                 bool carried_tx, uint32_t now_ms) {
     if (role == Role::Next) return;
     context_.state.rf.timing_stats.record_missed();
-    if (carried_tx) log_refusal(radio::Event::Unarmed, slot, now_ms);
+    if (carried_tx) log_refusal(radio::Verdict::Unarmed, slot, now_ms);
     record_dwell(slot, first, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
 }
 
@@ -465,14 +465,14 @@ diag::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
     return diag::Refusal::OffSchedule;
 }
 
-void RadioService::log_refusal(radio::Event outcome, const timing::SlotPlan& slot,
+void RadioService::log_refusal(radio::Verdict outcome, const timing::SlotPlan& slot,
                                uint32_t now_ms) {
     const bus::State& state = context_.state;
     const events::Stamp stamp =
         events::stamp_of(context_.roles.clock.micros(), state.clock.pps_edge_us,
                          state.clock.pps_locked, state.traffic_now_s(now_ms));
     radio::Entry entry{};
-    entry.event = outcome;
+    entry.verdict = outcome;
     entry.band = slot.band;
     entry.channel = slot.freq_hz == timing::kMband1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;

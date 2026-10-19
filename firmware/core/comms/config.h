@@ -17,7 +17,7 @@
 #include "core/power/reset_reason.h"
 #include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_stats.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
 

@@ -21,7 +21,7 @@ model::Ownship flying(double lat_deg, double lon_deg, double mps, double track_d
     own.fix_valid = true;
     own.lat_1e7 = static_cast<int32_t>(lat_deg * 1e7);
     own.lon_1e7 = static_cast<int32_t>(lon_deg * 1e7);
-    own.alt_mm = 1200000;
+    own.alt_hae_mm = 1200000;
     own.alt_msl_mm = 1155000;
     own.speed_mm_s = static_cast<int32_t>(mps * 1000);
     own.track_cdeg = static_cast<int32_t>(track_deg * 100);
@@ -50,7 +50,7 @@ TEST_CASE("extrapolate: a straight leg moves the fix along its own track") {
     CHECK(east_m(own, at.lon_1e7) == doctest::Approx(40.0).epsilon(0.01));
     CHECK(north_m(own.lat_1e7, at.lat_1e7) == doctest::Approx(0.0).epsilon(0.01));
     CHECK(at.track_cdeg == own.track_cdeg);
-    CHECK(at.alt_mm == own.alt_mm);
+    CHECK(at.alt_mm == own.alt_hae_mm);
 
     // Half the time is half the distance, and the model runs backwards as well:
     // measuring the residual means predicting into the past.
@@ -64,7 +64,7 @@ TEST_CASE("extrapolate: flying east across the antimeridian comes out at 180 wes
     const Prediction at = extrapolate(own, 1000);
     REQUIRE(at.valid);
     CHECK(at.lon_1e7 < -1799990000);
-    CHECK(prediction_residual_m(at, own.lat_1e7, own.lon_1e7, own.alt_mm) ==
+    CHECK(prediction_residual_m(at, own.lat_1e7, own.lon_1e7, own.alt_hae_mm) ==
           doctest::Approx(60).epsilon(0.05));
 }
 
@@ -131,15 +131,15 @@ TEST_CASE("extrapolate: the climb carries both altitudes, and only when it is kn
     const model::Ownship climbing = flying(48.5, 8.5, 30.0, 45.0, 2.0);
     const Prediction at = extrapolate(climbing, 1000);
     REQUIRE(at.valid);
-    CHECK(at.alt_mm == climbing.alt_mm + 2000);
+    CHECK(at.alt_mm == climbing.alt_hae_mm + 2000);
     CHECK(at.alt_msl_mm == climbing.alt_msl_mm + 2000);
-    CHECK(extrapolate(climbing, -500).alt_mm == climbing.alt_mm - 1000);
+    CHECK(extrapolate(climbing, -500).alt_mm == climbing.alt_hae_mm - 1000);
 
     // G.1.9's "unavailable" is not zero, and neither is it a level prediction we
     // are entitled to make: without a vertical rate the altitude stands still.
     model::Ownship unknown = climbing;
     unknown.climb_valid = false;
-    CHECK(extrapolate(unknown, 1000).alt_mm == unknown.alt_mm);
+    CHECK(extrapolate(unknown, 1000).alt_mm == unknown.alt_hae_mm);
 }
 
 // The bound, and which side of it we chose: past it the fix passes through
@@ -156,7 +156,7 @@ TEST_CASE("extrapolate: a gap longer than the bound is not predicted at all") {
     CHECK_FALSE(outside.valid);
     CHECK(outside.lat_1e7 == own.lat_1e7);
     CHECK(outside.lon_1e7 == own.lon_1e7);
-    CHECK(outside.alt_mm == own.alt_mm);
+    CHECK(outside.alt_mm == own.alt_hae_mm);
     CHECK(outside.track_cdeg == own.track_cdeg);
 
     CHECK_FALSE(extrapolate(own, -(kExtrapolationCeilingMs + 1)).valid);
@@ -201,7 +201,7 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
     own.fix_valid = true;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
-    own.alt_mm = 1200000;
+    own.alt_hae_mm = 1200000;
     own.speed_mm_s = 50000;
     own.track_cdeg = 9000;  // due east
     own.climb_mm_s = 2000;
@@ -233,7 +233,7 @@ TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix"
     own.fix_valid = true;
     own.lat_1e7 = 485000000;
     own.lon_1e7 = 85000000;
-    own.alt_mm = 1200000;
+    own.alt_hae_mm = 1200000;
     own.speed_mm_s = 50000;
     own.track_cdeg = 9000;
     own.utc_s = 1000;

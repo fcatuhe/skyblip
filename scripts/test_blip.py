@@ -141,7 +141,7 @@ class DiagnosticsPayloads(unittest.TestCase):
         self.assertTrue(decoded(5, payload, 0b0100_0000)["callsign"])
         self.assertFalse(decoded(5, payload, 0b0000_0000)["callsign"])
 
-    # radio::Event gained Named at 5 in PR #69 and the six verdicts behind it each moved one up.
+    # radio::Verdict gained Named at 5 in PR #69 and the six verdicts behind it each moved one up.
     def test_the_verdict_behind_received_is_the_callsign_one_and_not_a_bad_crc(self):
         payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, 5, 0, 0, 0, 20, -70, 0)
         self.assertEqual(decoded(5, payload)["verdict"], "named")

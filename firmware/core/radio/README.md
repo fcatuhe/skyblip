@@ -4,7 +4,7 @@ The station log: every burst this radio sent or heard, in the order it happened,
 
 `rx_ok` and `tx_ok` are totals, and a total cannot tell an empty sky from a receiver that frames nothing. The traffic table only ever holds what already decoded, so a burst that arrived and did not become a frame leaves no trace in it. That burst is the one worth seeing: it is the difference between "nobody is transmitting" and "everybody is transmitting and I am deaf to them", and the two have the same reading on every other page. Two skyBlips that both transmit and neither hears is the fault this exists for, and it happened: `git log core/protocol/air.cpp`.
 
-`Event` names the twelve things that can happen to a burst.
+`Verdict` names the twelve things that can happen to a burst.
 
 | | |
 |---|---|

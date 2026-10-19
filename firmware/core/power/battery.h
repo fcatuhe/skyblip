@@ -35,7 +35,7 @@ constexpr bool plausible_mv(uint16_t millivolts) {
 // where the value enters the device (core/settings validates it, on the blob and
 // on the JSON alike); nothing here re-checks it, only the arithmetic is kept
 // from leaving the range a millivolt reading can hold.
-constexpr int16_t kCalibrationLimitMv = 250;
+constexpr int16_t kCalibrationCeilingMv = 250;
 
 // The sample as this unit's front end should have read it. Applied once, by the
 // service that drains the queue, so the gauge and the cutoff monitor act on the
@@ -48,7 +48,7 @@ events::BatterySample calibrated(const events::BatterySample& raw, int16_t offse
 uint8_t percent_from_mv(uint16_t millivolts);
 
 struct BatteryState {
-    uint16_t millivolts{0};
+    uint16_t cell_mv{0};
     uint16_t sample_mv{0};
     uint8_t percent{0};
     bool external_power{false};
@@ -62,7 +62,7 @@ struct BatteryState {
 // readings rather than an average: a transient is discarded whole, while a cell
 // that is really moving is followed within two samples. Off the cable the
 // percentage only falls. On the cable, or on a reading outside plausible_mv, the
-// gauge has no cell to show: valid drops, millivolts is what the divider read,
+// gauge has no cell to show: valid drops, cell_mv is what the divider read,
 // and the next reading of the cell starts the median over.
 //
 // INFO: fc 03aug26 No time-remaining estimate here, and that is a decision, not

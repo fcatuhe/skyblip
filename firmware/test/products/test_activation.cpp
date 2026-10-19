@@ -389,7 +389,7 @@ TEST_CASE(
                    go::kGlassH));
 
     b.rig.platform.board_gpio().button_down = true;
-    b.pass(power::kLongPressMs + 1000);
+    b.pass(power::kLongPressHoldMs + 1000);
     CHECK(b.rig.product.shutdown().going_down());
     CHECK(b.rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
 }

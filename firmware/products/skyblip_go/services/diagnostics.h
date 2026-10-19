@@ -77,8 +77,8 @@ class DiagnosticsDump {
 
         d.gnss_fixes = state.flight.gnss_solutions;
         d.fix_valid = state.own.fix_valid;
-        d.resid_m = state.own.pred_resid_m;
-        d.resid_valid = state.own.pred_resid_valid;
+        d.resid_m = state.own.prediction_residual_m;
+        d.resid_valid = state.own.prediction_residual_valid;
 
         // The receiver's own answers, which nothing else on the device reads: a
         // unit talking at a rate the devicetree did not ask for, or one whose fixes

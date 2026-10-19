@@ -56,7 +56,7 @@ model::AircraftObservation relayed_aircraft(Rig& rig, uint32_t address, int32_t 
         own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     observation.lon_1e7 =
         own.lon_1e7 + static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    observation.alt_m = to_metres(Millimetres(own.alt_mm)).v + up_m;
+    observation.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
     observation.position_valid = true;
     return observation;
 }
@@ -85,7 +85,7 @@ bool relay(Rig& rig, uint32_t& t, const model::AircraftObservation* aircraft, in
     // Into the dwell, not around it: the radio has to have opened the O-band
     // window (205 ms, one jitter guard before the ground station starts) before
     // a burst arriving there means anything at all.
-    const uint32_t at_ms = t + timing::kGroundEmitStart;
+    const uint32_t at_ms = t + timing::kGroundEmitStartMs;
     rig.run(t, t + 200);
     rig.platform.clock().set_millis(at_ms);
     rig.product.step(at_ms);
@@ -109,7 +109,7 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int
     model::Ownship transmitter = own;
     transmitter.lat_1e7 += static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     transmitter.lon_1e7 += static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    transmitter.alt_mm += up_m * 1000;
+    transmitter.alt_hae_mm += up_m * 1000;
     transmitter.speed_mm_s = 40000;
     transmitter.track_cdeg = 18000;
 
@@ -398,8 +398,8 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
     // wide enough for its 250 kHz channel, and 255 bytes to read.
     rig.push_timed_fix(25000, 900);
     rig.run(t, t + 200);
-    rig.platform.clock().set_millis(t + timing::kGroundEmitStart);
-    rig.product.step(t + timing::kGroundEmitStart);
+    rig.platform.clock().set_millis(t + timing::kGroundEmitStartMs);
+    rig.product.step(t + timing::kGroundEmitStartMs);
     // The chip reports what its PLL word resolves to, which is a hertz or two
     // off the channel it was asked for.
     CHECK(timing::kObandHz - chip.freq_hz < 100);
@@ -417,7 +417,7 @@ TEST_CASE("uplink: the O-band dwell is armed for the modulation SRD-860 C.4 defi
     CHECK(chip.sync[2] == protocol::kUplinkFrameBytes);
 
     // And back on the M band, §C.2's, which is not the same modulation.
-    rig.run(t + timing::kGroundEmitStart + 10, t + 500);
+    rig.run(t + timing::kGroundEmitStartMs + 10, t + 500);
     CHECK(chip.bitrate == protocol::kMbandChipRateBps);
     CHECK(chip.pulse_shape == parts::sx::kGaussianBt0p5);
     CHECK(chip.payload_bytes == protocol::kRxChipBytes);

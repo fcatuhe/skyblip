@@ -91,7 +91,7 @@ Prediction extrapolate(const model::Ownship& own, int32_t dt_ms) {
     Carried motion{};
     motion.lat_1e7 = own.lat_1e7;
     motion.lon_1e7 = own.lon_1e7;
-    motion.alt_mm = own.alt_mm;
+    motion.alt_mm = own.alt_hae_mm;
     motion.alt_msl_mm = own.alt_msl_mm;
     motion.speed_mm_s = own.speed_mm_s;
     motion.track_cdeg = own.track_cdeg;
@@ -109,20 +109,20 @@ Prediction extrapolate(const model::AircraftObservation& observation, int32_t dt
     motion.lon_1e7 = observation.lon_1e7;
     motion.alt_mm = to_millimetres(Metres(observation.alt_m)).v;
     motion.alt_msl_mm = motion.alt_mm;
-    motion.speed_mm_s = to_mm_s(QuarterMetresPerSec(observation.speed_q)).v;
+    motion.speed_mm_s = to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v;
     motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
-    motion.climb_mm_s = to_mm_s(EighthMetresPerSec(observation.climb_e8)).v;
+    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
     motion.fix_valid = observation.position_valid && observation.speed_valid;
     motion.climb_valid = observation.climb_valid;
     return carry(motion, dt_ms);
 }
 
 model::Ownship carried_to(const model::Ownship& own, uint32_t now_ms) {
-    const Prediction p = extrapolate(own, static_cast<int32_t>(now_ms - own.fix_ms));
+    const Prediction p = extrapolate(own, static_cast<int32_t>(now_ms - own.fix_at_ms));
     model::Ownship out = own;
     out.lat_1e7 = p.lat_1e7;
     out.lon_1e7 = p.lon_1e7;
-    out.alt_mm = p.alt_mm;
+    out.alt_hae_mm = p.alt_mm;
     out.alt_msl_mm = p.alt_msl_mm;
     out.track_cdeg = p.track_cdeg;
     return out;
