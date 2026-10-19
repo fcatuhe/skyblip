@@ -87,15 +87,15 @@ int TimingReport::next_frame(int payload, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.key_value_str("cmd", "timing");
-    writer.key_value_int("part", part_);
-    writer.key_value_bool("more", at_ + packed < count_);
+    writer.add_string("cmd", "timing");
+    writer.add_integer("part", part_);
+    writer.add_boolean("more", at_ + packed < count_);
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         if (field.text != nullptr)
-            writer.key_value_str(field.key, field.text);
+            writer.add_string(field.key, field.text);
         else
-            writer.key_value_int(field.key, field.value);
+            writer.add_integer(field.key, field.value);
     }
     const int length = writer.finish();
     if (writer.overflowed()) return 0;

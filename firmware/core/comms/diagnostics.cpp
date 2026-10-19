@@ -271,16 +271,16 @@ int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.key_value_str("cmd", command_);
-    writer.key_value_str("group", group_name(group));
-    writer.key_value_int("part", part_);
-    writer.key_value_bool("more", at_ + packed < count_);
+    writer.add_string("cmd", command_);
+    writer.add_string("group", group_name(group));
+    writer.add_integer("part", part_);
+    writer.add_boolean("more", at_ + packed < count_);
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         switch (field.kind) {
-            case Kind::Int: writer.key_value_int(field.key, field.value); break;
-            case Kind::Bool: writer.key_value_bool(field.key, field.value != 0); break;
-            case Kind::Text: writer.key_value_str(field.key, field.text); break;
+            case Kind::Int: writer.add_integer(field.key, field.value); break;
+            case Kind::Bool: writer.add_boolean(field.key, field.value != 0); break;
+            case Kind::Text: writer.add_string(field.key, field.text); break;
         }
     }
     const int length = writer.finish();

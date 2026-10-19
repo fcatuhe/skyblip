@@ -121,7 +121,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
     const model::Ownship& own = context_.state.own;
-    const bus::GnssStatus& status = context_.state.gnss;
+    const bus::GnssState& status = context_.state.gnss;
     diagnostics::Gnss sample{};
     sample.nav_ms = status.solution_phase_ms;
     sample.resid_m = own.prediction_residual_m;
@@ -235,7 +235,7 @@ bool OwnshipService::dates_the_edge(const gnss::GnssSolution& solution,
 // INFO: fc 19sep26 a pass late at worst, and the deadline it is read against is 450 ms wide
 void OwnshipService::publish_solution_phase(uint32_t now_ms) {
     const timing::ClockState& clock = context_.state.clock;
-    bus::GnssStatus& status = context_.state.gnss;
+    bus::GnssState& status = context_.state.gnss;
     status.solution_phase_valid = clock.pps_locked;
     if (!status.solution_phase_valid) return;
     const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);

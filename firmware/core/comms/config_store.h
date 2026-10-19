@@ -10,9 +10,9 @@ class ConfigStore {
    public:
     virtual ~ConfigStore() = default;
 
-    virtual void write_fields(json::Writer& w) const = 0;
+    virtual void write_fields(json::Writer& writer) const = 0;
 
-    virtual void write_default_fields(json::Writer& w) const = 0;
+    virtual void write_default_fields(json::Writer& writer) const = 0;
 
     virtual Status apply(const char* json, int bytes) = 0;
 

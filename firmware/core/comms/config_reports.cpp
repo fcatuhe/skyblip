@@ -10,18 +10,19 @@ namespace skyblip::comms {
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
 int ConfigService::format_status(char* buffer, int cap) {
-    json::Writer w(buffer, cap);
-    w.key_value_str("cmd", "status");
-    w.key_value_str("flight", flight_name(flight_state_));
-    w.key_value_bool("upload", upload_allowed());
+    json::Writer writer(buffer, cap);
+    writer.add_string("cmd", "status");
+    writer.add_string("flight", flight_name(flight_state_));
+    writer.add_boolean("upload", upload_allowed());
     const power::BatteryState& battery = diagnostics_.battery;
-    if (battery.valid) w.key_value_int("battery_percent", static_cast<long>(battery.percent));
-    w.key_value_bool("charging", battery.charging);
-    w.key_value_str("power_level", power::to_string(diagnostics_.level));
-    w.key_value_bool("went_dark_flat", went_dark_flat_);
-    if (diagnostics_.die_valid) w.key_value_int("die_temp_c", whole_celsius(diagnostics_.die_dc));
-    const int length = w.finish();
-    return w.overflowed() ? 0 : length;
+    if (battery.valid) writer.add_integer("battery_percent", static_cast<long>(battery.percent));
+    writer.add_boolean("charging", battery.charging);
+    writer.add_string("power_level", power::to_string(diagnostics_.level));
+    writer.add_boolean("went_dark_flat", went_dark_flat_);
+    if (diagnostics_.die_valid)
+        writer.add_integer("die_temp_c", whole_celsius(diagnostics_.die_dc));
+    const int length = writer.finish();
+    return writer.overflowed() ? 0 : length;
 }
 
 void ConfigService::send_status() {
@@ -37,11 +38,11 @@ void ConfigService::send_status() {
 
 void ConfigService::send_defaults() {
     char buffer[kSmallestSupportedPayload + 1];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_str("cmd", "defaults");
-    store_.write_default_fields(w);
-    const int length = w.finish();
-    if (w.overflowed()) {
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("cmd", "defaults");
+    store_.write_default_fields(writer);
+    const int length = writer.finish();
+    if (writer.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
@@ -89,17 +90,17 @@ void ConfigService::send_flash() {
         return;
     }
     char buffer[192];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_str("cmd", "flash");
-    w.key_value_bool("writable", settings_writable());
-    w.key_value_int("changes", static_cast<long>(durable_writes_->requests()));
-    w.key_value_int("writes", static_cast<long>(durable_writes_->writes()));
-    w.key_value_int("forced", static_cast<long>(durable_writes_->forced()));
-    w.key_value_int("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
-    w.key_value_bool("pending", durable_writes_->pending());
-    w.key_value_int("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
-    w.key_value_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kDeferCeilingMs));
-    w.finish();
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("cmd", "flash");
+    writer.add_boolean("writable", settings_writable());
+    writer.add_integer("changes", static_cast<long>(durable_writes_->requests()));
+    writer.add_integer("writes", static_cast<long>(durable_writes_->writes()));
+    writer.add_integer("forced", static_cast<long>(durable_writes_->forced()));
+    writer.add_integer("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
+    writer.add_boolean("pending", durable_writes_->pending());
+    writer.add_integer("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
+    writer.add_integer("bound_ms", static_cast<long>(timing::DurableWriteWindow::kDeferCeilingMs));
+    writer.finish();
     (void)reply(buffer);
 }
 
@@ -121,25 +122,25 @@ void ConfigService::send_update(uint16_t session_id) {
     dfu::format_version(update_record_.to, to, sizeof(to));
     dfu::format_hub_image(hub_image_, hub, sizeof(hub));
     char buffer[kSmallestSupportedPayload + 1];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_str("cmd", "update");
-    w.key_value_str("image", dfu::to_string(image_state_));
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("cmd", "update");
+    writer.add_string("image", dfu::to_string(image_state_));
     if (image_state_ != dfu::ImageState::Confirmed) {
-        w.key_value_str("from", from);
-        w.key_value_str("to", to);
+        writer.add_string("from", from);
+        writer.add_string("to", to);
     }
     if (settings_fallback_ != settings::Fallback::None)
-        w.key_value_str("settings", settings::to_string(settings_fallback_));
-    w.key_value_bool("swap_powered", swap_powered());
-    w.key_value_str("imu", hub);
-    if (dfu_ != nullptr && dfu_->downgrade_allowed()) w.key_value_bool("downgrade", true);
+        writer.add_string("settings", settings::to_string(settings_fallback_));
+    writer.add_boolean("swap_powered", swap_powered());
+    writer.add_string("imu", hub);
+    if (dfu_ != nullptr && dfu_->downgrade_allowed()) writer.add_boolean("downgrade", true);
     ports::SigningKeyHash trusted;
     if (dfu_ != nullptr && dfu_->running_key(trusted)) {
         char key[9];
         key[format_hex(key, dfu::key_prefix(trusted), 8)] = 0;
-        w.key_value_str("key", key);
+        writer.add_string("key", key);
     }
-    const int length = w.finish();
+    const int length = writer.finish();
     (void)reply_to(session_id, buffer, length);
 }
 

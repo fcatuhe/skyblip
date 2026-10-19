@@ -13,16 +13,16 @@ namespace {
 constexpr long kSerialCeiling = 0xFFFF;
 
 template <size_t N>
-bool read_hex_field(const json::Reader& r, const char* key, std::array<uint8_t, N>& out) {
+bool read_hex_field(const json::Reader& reader, const char* key, std::array<uint8_t, N>& out) {
     char text[2 * N + 2] = {0};
-    return r.get_string(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
+    return reader.get_string(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
 }
 
 template <size_t N>
-void write_hex_field(json::Writer& w, const char* key, const std::array<uint8_t, N>& bytes) {
+void write_hex_field(json::Writer& writer, const char* key, const std::array<uint8_t, N>& bytes) {
     char text[2 * N + 1];
     text[hex::write(ConstByteSpan(bytes.data(), N), text)] = 0;
-    w.key_value_str(key, text);
+    writer.add_string(key, text);
 }
 }  // namespace
 
@@ -43,14 +43,14 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
 }
 
 // INFO: fc 18oct26 each refusal is refuse("word"): the server's activation page greps them
-bool ConfigService::answer_identity(const char* command, const json::Reader& r) {
+bool ConfigService::answer_identity(const char* command, const json::Reader& reader) {
     if (identity_ == nullptr) return false;
     if (std::strcmp(command, "challenge") == 0) {
         challenge();
     } else if (std::strcmp(command, "register") == 0) {
-        register_unit(r);
+        register_unit(reader);
     } else if (std::strcmp(command, "unlock") == 0) {
-        unlock(r);
+        unlock(reader);
     } else {
         return false;
     }
@@ -73,14 +73,14 @@ void ConfigService::challenge() {
         return;
     }
     char buffer[96];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_str("cmd", "challenge");
-    write_hex_field(w, "nonce", identity_->unit_nonce());
-    write_hex_field(w, "server_key_id", identity_->unit().server_key_id());
-    (void)reply(buffer, w.finish());
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("cmd", "challenge");
+    write_hex_field(writer, "nonce", identity_->unit_nonce());
+    write_hex_field(writer, "server_key_id", identity_->unit().server_key_id());
+    (void)reply(buffer, writer.finish());
 }
 
-void ConfigService::register_unit(const json::Reader& r) {
+void ConfigService::register_unit(const json::Reader& reader) {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};
     if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version))) {
@@ -97,8 +97,8 @@ void ConfigService::register_unit(const json::Reader& r) {
     }
     identity::Nonce server_nonce{};
     crypto::Ed25519::Signature signature{};
-    if (!read_hex_field(r, "server_nonce", server_nonce) ||
-        !read_hex_field(r, "signature", signature) ||
+    if (!read_hex_field(reader, "server_nonce", server_nonce) ||
+        !read_hex_field(reader, "signature", signature) ||
         !identity_->unit().registers(identity_->unit_nonce(), server_nonce, signature)) {
         refuse("bad_signature");
         return;
@@ -129,16 +129,16 @@ void ConfigService::send_registration() {
         return;
     }
     char buffer[IdentityLink::kRegistrationFrameBytes + 1];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_str("cmd", "registration");
-    write_hex_field(w, "device_id", unit.device_id());
-    write_hex_field(w, "public_key", unit.public_key());
-    w.key_value_str("version", version);
-    write_hex_field(w, "server_key_id", unit.server_key_id());
-    w.key_value_bool("release", release);
-    write_hex_field(w, "signature", *signature);
-    const int length = w.finish();
-    if (w.overflowed()) {
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("cmd", "registration");
+    write_hex_field(writer, "device_id", unit.device_id());
+    write_hex_field(writer, "public_key", unit.public_key());
+    writer.add_string("version", version);
+    write_hex_field(writer, "server_key_id", unit.server_key_id());
+    writer.add_boolean("release", release);
+    write_hex_field(writer, "signature", *signature);
+    const int length = writer.finish();
+    if (writer.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
@@ -146,7 +146,7 @@ void ConfigService::send_registration() {
 }
 
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
-void ConfigService::unlock(const json::Reader& r) {
+void ConfigService::unlock(const json::Reader& reader) {
     if (identity_refused_in_flight()) return;
     if (!identity_->live(claim_.holder(), now_ms_)) {
         refuse("no_session");
@@ -160,8 +160,8 @@ void ConfigService::unlock(const json::Reader& r) {
     code.nonce = identity_->unit_nonce();
     identity_->close();
     long serial = -1;
-    if (!r.get_int("serial", serial) || serial < identity::kFirstSerial ||
-        serial > kSerialCeiling || !read_hex_field(r, "signature", code.signature)) {
+    if (!reader.get_int("serial", serial) || serial < identity::kFirstSerial ||
+        serial > kSerialCeiling || !read_hex_field(reader, "signature", code.signature)) {
         refuse("bad_signature");
         return;
     }

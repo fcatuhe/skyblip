@@ -285,13 +285,13 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
-    bool answer_identity(const char* command, const json::Reader& r);
+    bool answer_identity(const char* command, const json::Reader& reader);
     void challenge();
-    void register_unit(const json::Reader& r);
+    void register_unit(const json::Reader& reader);
     void send_registration();
     bool running_version_text(char* out, size_t cap) const;
     bool identity_refused_in_flight();
-    void unlock(const json::Reader& r);
+    void unlock(const json::Reader& reader);
     void refuse(const char* reason) { ack(false, reason); }
     template <class Report, class... Args>
     void start_report(std::optional<Report>& report, int frame_cap, const Args&... args);
@@ -300,7 +300,7 @@ class ConfigService {
     void hold(uint16_t session_id, const char* json, int length);
     void drop_replies();
     static const char* flight_name(flight::FlightState state);
-    void request_firmware(const json::Reader& r);
+    void request_firmware(const json::Reader& reader);
     void install_received_image();
     bool signed_by_trusted_key() const;
     bool on_ground() const { return flight_state_ == flight::FlightState::Ground; }

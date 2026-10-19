@@ -114,7 +114,7 @@ void Writer::raw_str(const char* s) {
     }
     buffer_[length_++] = '"';
 }
-void Writer::key_value_int(const char* key, int64_t v) {
+void Writer::add_integer(const char* key, int64_t v) {
     char temporary[20];
     int t = 0;
     bool neg = v < 0;
@@ -132,7 +132,7 @@ void Writer::key_value_int(const char* key, int64_t v) {
     if (neg) buffer_[length_++] = '-';
     while (t > 0) buffer_[length_++] = temporary[--t];
 }
-void Writer::key_value_bool(const char* key, bool v) {
+void Writer::add_boolean(const char* key, bool v) {
     const char* val = v ? "true" : "false";
     const int need = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
                      static_cast<int>(std::strlen(val));
@@ -142,7 +142,7 @@ void Writer::key_value_bool(const char* key, bool v) {
     buffer_[length_++] = ':';
     raw(val);
 }
-void Writer::key_value_str(const char* key, const char* v) {
+void Writer::add_string(const char* key, const char* v) {
     int value_length = 0;
     int escapes = 0;
     for (const char* p = v; *p; p++) {

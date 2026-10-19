@@ -172,11 +172,11 @@ Status ConfigService::reply(const char* json) {
 
 void ConfigService::refuse_unclaimed(uint16_t session_id) {
     char buffer[96];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_bool("ack", false);
-    w.key_value_str("reason", "claimed");
-    w.key_value_int("by", static_cast<long>(claim_.holder()));
-    const int length = w.finish();
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_boolean("ack", false);
+    writer.add_string("reason", "claimed");
+    writer.add_integer("by", static_cast<long>(claim_.holder()));
+    const int length = writer.finish();
     (void)reply_to(session_id, buffer, length);
 }
 
@@ -185,20 +185,20 @@ void ConfigService::stage(Pending pending, const char* reason) {
     pending_since_ms_ = now_ms_;
     prompt_detail_[0] = 0;
     char buffer[64];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_bool("ack", false);
-    w.key_value_bool("pending", true);
-    w.key_value_str("reason", reason);
-    w.finish();
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_boolean("ack", false);
+    writer.add_boolean("pending", true);
+    writer.add_string("reason", reason);
+    writer.finish();
     (void)reply(buffer);
 }
 
 void ConfigService::ack(bool ok, const char* reason) {
     char buffer[96];
-    json::Writer w(buffer, sizeof(buffer));
-    w.key_value_bool("ack", ok);
-    if (reason) w.key_value_str("reason", reason);
-    w.finish();
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_boolean("ack", ok);
+    if (reason) writer.add_string("reason", reason);
+    writer.finish();
     (void)reply(buffer);
 }
 
@@ -207,10 +207,10 @@ const char* ConfigService::prompt_detail() const {
 }
 
 // INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
-void ConfigService::request_firmware(const json::Reader& r) {
+void ConfigService::request_firmware(const json::Reader& reader) {
     char text[dfu::kVersionTextBytes];
     ports::ImageVersion version;
-    if (!r.get_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
+    if (!reader.get_string("version", text, sizeof(text)) || !dfu::parse_version(text, version)) {
         ack(false, "no_version");
         return;
     }
@@ -289,11 +289,11 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         // support, and refused rather than answered short - an app that receives
         // a config object with fields missing renders defaults a pilot never set.
         char buffer[kSmallestSupportedPayload + 1];
-        json::Writer w(buffer, sizeof(buffer));
-        w.key_value_str("cmd", "config");
-        store_.write_fields(w);
-        const int reply_length = w.finish();
-        if (w.overflowed()) {
+        json::Writer writer(buffer, sizeof(buffer));
+        writer.add_string("cmd", "config");
+        store_.write_fields(writer);
+        const int reply_length = writer.finish();
+        if (writer.overflowed()) {
             diagnostics_.link_drops++;
             return;
         }

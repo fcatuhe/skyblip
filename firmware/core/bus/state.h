@@ -84,7 +84,7 @@ struct PowerState {
     bool die_valid{false};
 };
 
-struct FlightStatus {
+struct FlightState {
     uint32_t gnss_solutions{0};
     uint32_t seconds{0};
     bool time_valid{false};
@@ -93,7 +93,7 @@ struct FlightStatus {
     flight::FlightState confirmed_state{flight::FlightState::Unknown};
 };
 
-struct GnssStatus {
+struct GnssState {
     gnss::Stage stage{gnss::Stage::Silent};
     uint32_t stage_s{0};
     uint8_t fix_mode{0};
@@ -189,8 +189,8 @@ struct State {
     radio::Log radio_log{};
     RfState rf{};
     PowerState power{};
-    FlightStatus flight{};
-    GnssStatus gnss{};
+    FlightState flight{};
+    GnssState gnss{};
     BarometerState barometer{};
     SlipState slip{};
     IndicatedState indicated{};

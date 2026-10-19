@@ -427,18 +427,18 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
 }
 
 void write_json_fields(json::Writer& w, const Settings& settings, settings::AirAddress address) {
-    w.key_value_int("version", settings.version);
-    if (address) w.key_value_int("address", static_cast<long>(*address));
-    w.key_value_int("address_mapping_table", settings::kAddressMappingTable);
+    w.add_integer("version", settings.version);
+    if (address) w.add_integer("address", static_cast<long>(*address));
+    w.add_integer("address_mapping_table", settings::kAddressMappingTable);
     write_json_settings(w, settings);
 }
 
 void write_json_settings(json::Writer& w, const Settings& settings) {
-    w.key_value_int("aircraft_type", settings.aircraft_type);
-    w.key_value_bool("alarm", settings.alarm_enabled);
-    w.key_value_int("alarm_volume", static_cast<long>(settings.alarm_volume));
-    w.key_value_int("units", static_cast<long>(settings.units));
-    w.key_value_str("callsign", settings.callsign);
+    w.add_integer("aircraft_type", settings.aircraft_type);
+    w.add_boolean("alarm", settings.alarm_enabled);
+    w.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
+    w.add_integer("units", static_cast<long>(settings.units));
+    w.add_string("callsign", settings.callsign);
 }
 
 int to_json(const Settings& settings, settings::AirAddress address, char* out, int cap) {

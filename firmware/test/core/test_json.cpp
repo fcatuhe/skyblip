@@ -25,8 +25,8 @@ TEST_CASE("json: the reader parses ints, bools and strings, the writer emits the
 
     char out[64];
     json::Writer w(out, sizeof(out));
-    w.key_value_int("x", 5);
-    w.key_value_bool("y", false);
+    w.add_integer("x", 5);
+    w.add_boolean("y", false);
     w.finish();
     CHECK(std::string(out) == "{\"x\":5,\"y\":false}");
 }
@@ -64,10 +64,10 @@ TEST_CASE("json: an integer past 32 bits is refused, so the host reads what the 
 TEST_CASE("json: a key that will not fit whole is left out, not cut short") {
     char out[16];
     json::Writer w(out, sizeof(out));
-    w.key_value_int("x", 5);
+    w.add_integer("x", 5);
     CHECK_FALSE(w.overflowed());
 
-    w.key_value_bool("yy", true);  // does not fit in what is left of a 16-byte buffer
+    w.add_boolean("yy", true);  // does not fit in what is left of a 16-byte buffer
     CHECK(w.overflowed());
 
     const int n = w.finish();
@@ -79,8 +79,8 @@ TEST_CASE("json: a key that will not fit whole is left out, not cut short") {
 TEST_CASE("json: a buffer sized for the exact worst case never overflows") {
     char out[29];
     json::Writer w(out, sizeof(out));
-    w.key_value_str("k", "say \"hi\"");  // 1-char key, two escaped quotes in the value
-    w.key_value_bool("b", false);
+    w.add_string("k", "say \"hi\"");  // 1-char key, two escaped quotes in the value
+    w.add_boolean("b", false);
     const int n = w.finish();
     CHECK_FALSE(w.overflowed());
     CHECK(static_cast<int>(std::strlen(out)) == n);
