@@ -313,20 +313,20 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
         Bench b;
         b.rig.platform.identity().keyed = false;
         b.boot();
-        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("incomplete"));
+        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no randomness") {
         Bench b;
         b.boot();
         b.rig.platform.identity().random_fails = true;
-        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("incomplete"));
+        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no running version") {
         Bench b;
         b.rig.platform.dfu().has_running = false;
         b.boot();
         b.challenge_with_vectors_nonce();
-        CHECK(b.register_with_vectors() == refusal("incomplete"));
+        CHECK(b.register_with_vectors() == refusal("keyless"));
     }
 }
 

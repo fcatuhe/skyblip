@@ -46,7 +46,7 @@ Every identity refusal is written in `identity_link.cpp` as `refuse("word")`, an
 
 | Word | When |
 |---|---|
-| `incomplete` | the unit has no key, drew no nonce, or cannot read its own version: it cannot be activated as it is. A unit short of a required part never gets this far, because it runs no service and advertises nothing |
+| `keyless` | the unit has no key, drew no nonce, or cannot read its own version: it cannot be activated as it is. A unit short of a required part never gets this far, because it runs no service and advertises nothing |
 | `in_flight` | an activated unit off the ground |
 | `low_power` | an `unlock` while the cell is below the settings write rule (`core/power/cutoff.h`): the nonce stays live for a retry on the charger |
 | `no_session` | no live nonce for this claim holder: no `challenge`, a spent nonce, a dropped link, ten minutes, or a `challenge` since the registration was staged |

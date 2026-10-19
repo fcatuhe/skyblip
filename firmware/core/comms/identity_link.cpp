@@ -67,7 +67,7 @@ bool ConfigService::identity_refused_in_flight() {
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     if (!identity_->unit().keyed() || !identity_->open(claim_.holder(), now_ms_)) {
-        refuse("incomplete");
+        refuse("keyless");
         return;
     }
     char buf[96];
@@ -82,7 +82,7 @@ void ConfigService::register_unit(const json::Reader& r) {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextCap] = {0};
     if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version))) {
-        refuse("incomplete");
+        refuse("keyless");
         return;
     }
     if (!identity_->live(claim_.holder(), now_ms_)) {
@@ -113,7 +113,7 @@ void ConfigService::send_registration() {
     identity::Unit& unit = identity_->unit();
     char version[dfu::kVersionTextCap] = {0};
     if (!running_version_text(version, sizeof(version))) {
-        refuse("incomplete");
+        refuse("keyless");
         return;
     }
     const bool release = dfu_ != nullptr && dfu_->release_build();
@@ -123,7 +123,7 @@ void ConfigService::send_registration() {
                                                  unit.server_key(), release, version)
                       .bytes());
     if (!signature) {
-        refuse("incomplete");
+        refuse("keyless");
         return;
     }
     char buf[IdentityLink::kRegistrationFrameBytes + 1];
