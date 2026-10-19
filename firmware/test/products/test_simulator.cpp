@@ -57,8 +57,8 @@ uint32_t show_sats(simulator::Simulator& h, uint32_t t) {
 }
 
 bool glass_is(const ui::Canvas& glass, const ui::Canvas& expected) {
-    for (int y = 0; y < go::kGlassH; y++)
-        for (int x = 0; x < go::kGlassW; x++)
+    for (int y = 0; y < go::kGlassHeight; y++)
+        for (int x = 0; x < go::kGlassWidth; x++)
             if (glass.get_pixel(x, y) != expected.get_pixel(x, y)) return false;
     return true;
 }

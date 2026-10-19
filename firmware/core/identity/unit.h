@@ -20,7 +20,7 @@ class Unit {
 
     void load();
 
-    bool keyed() const { return keyed_; }
+    bool key_provisioned() const { return key_provisioned_; }
     const DeviceId& device_id() const { return device_id_; }
     const Ed25519::PublicKey& public_key() const { return public_key_; }
     const ServerKeyId& server_key_id() const { return server_key_id_; }
@@ -39,7 +39,7 @@ class Unit {
     Ed25519::PublicKey public_key_{};
     ServerKeyId server_key_id_{};
     Activation activation_{};
-    bool keyed_{false};
+    bool key_provisioned_{false};
 };
 
 }  // namespace skyblip::identity

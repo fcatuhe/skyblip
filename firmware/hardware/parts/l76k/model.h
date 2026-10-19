@@ -23,7 +23,7 @@ namespace skyblip::models {
 class L76k : public io::Uart, public io::UartRate {
    public:
     // Modelled receiver state, driven by the caller.
-    bool fix{true};
+    bool fix_valid{true};
     uint8_t sats{9};
     int32_t lat_1e7{485000000};  // 48.5 N
     int32_t lon_1e7{85000000};   //  8.5 E
@@ -48,7 +48,7 @@ class L76k : public io::Uart, public io::UartRate {
     double turn_dps{0};
     // INFO: fc 18sep26 millimetres per second, so any rate a pilot can ask for is one the air holds
     int32_t climb_mm_s{0};
-    uint32_t utc_sod{12 * 3600 + 34 * 60 + 56};
+    uint32_t utc_seconds_of_day{12 * 3600 + 34 * 60 + 56};
     // RMC field 9, ddmmyy. "010180" is the MTK fake date a receiver with no
     // almanac reports beside a position that looks perfectly ordinary.
     const char* date{"010125"};
@@ -75,7 +75,7 @@ class L76k : public io::Uart, public io::UartRate {
 
     // The rate the receiver itself is talking at. The MCU end is set through
     // io::UartRate, and the two only agree because someone made them.
-    uint32_t baud{parts::L76k::kBaudRate};
+    uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
 
     // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner. A
@@ -91,8 +91,8 @@ class L76k : public io::Uart, public io::UartRate {
     static constexpr uint32_t kRebootMs = 300;
 
     // INFO: fc 18sep26 a cold receiver's solutions walk: metres of error at the first fix, decaying
-    uint32_t walk_m{0};
-    uint32_t walk_ms{15000};
+    uint32_t walk_amplitude_m{0};
+    uint32_t walk_duration_ms{15000};
 
     uint32_t solution_period_ms{kFactoryPeriodMs};
     uint8_t constellations{0};
@@ -220,7 +220,7 @@ class L76k : public io::Uart, public io::UartRate {
    private:
     static constexpr int kCommandCap = 64;
 
-    uint32_t sod_ms_{0};
+    uint32_t seconds_of_day_ms_{0};
     double climbed_m_{0};
     double turned_deg_{0};
     double lat_frac_1e7_{0};
@@ -240,7 +240,7 @@ class L76k : public io::Uart, public io::UartRate {
     bool deaf_{false};
     bool rebooting_{false};
     bool cold_{false};
-    uint32_t port_baud_{parts::L76k::kBaudRate};
+    uint32_t port_baud_{parts::L76k::kFactoryBaudRate};
     uint32_t solving_since_ms_{0};
     uint32_t walk_step_{0};
     uint32_t solutions_{0};
@@ -363,9 +363,9 @@ class L76k : public io::Uart, public io::UartRate {
 
     // INFO: fc 18sep26 NMEA carries whole seconds, so every solution of one second stamps the same
     void advance_clock(int32_t dt_ms) {
-        sod_ms_ += static_cast<uint32_t>(dt_ms);
-        utc_sod = (utc_sod + sod_ms_ / 1000u) % 86400u;
-        sod_ms_ %= 1000u;
+        seconds_of_day_ms_ += static_cast<uint32_t>(dt_ms);
+        utc_seconds_of_day = (utc_seconds_of_day + seconds_of_day_ms_ / 1000u) % 86400u;
+        seconds_of_day_ms_ %= 1000u;
     }
 
     // $PCAS10,n: 0 hot, 1 warm, 2 cold, 3 factory. The module reboots either
@@ -393,10 +393,11 @@ class L76k : public io::Uart, public io::UartRate {
     }
 
     int32_t walk_now_m() const {
-        if (walk_m == 0 || !solving_since_set_) return 0;
+        if (walk_amplitude_m == 0 || !solving_since_set_) return 0;
         const uint32_t elapsed = last_tick_ms_ - solving_since_ms_;
-        if (elapsed >= walk_ms) return 0;
-        const uint32_t amplitude = walk_m * (walk_ms - elapsed) / walk_ms;
+        if (elapsed >= walk_duration_ms) return 0;
+        const uint32_t amplitude =
+            walk_amplitude_m * (walk_duration_ms - elapsed) / walk_duration_ms;
         return static_cast<int32_t>(amplitude) * (walk_step_ % 2 == 0 ? 1 : -1);
     }
 
@@ -421,7 +422,7 @@ class L76k : public io::Uart, public io::UartRate {
     bool deaf() const { return deaf_ && last_tick_ms_ - deaf_since_ms_ < kWakeMs; }
     bool rebooting() const { return rebooting_ && last_tick_ms_ - reboot_since_ms_ < kRebootMs; }
     bool cold() const { return cold_ && last_tick_ms_ - cold_since_ms_ < kColdStartTtffMs; }
-    bool solving() const { return fix && !cold(); }
+    bool solving() const { return fix_valid && !cold(); }
 
     void emit_burst();
     void emit_version();

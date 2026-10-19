@@ -260,7 +260,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
 | `kBaroVsWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssVsWindowMs` | 2000 (2 s) | milliseconds | Window | - |
-| `kBaroMaxAgeMs` | `3 * runtime::kBaroPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
+| `kBaroMaxAgeMs` | `3 * runtime::kBaroPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
@@ -278,16 +278,15 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kServiceStepMs` | 10 | milliseconds | - | - |
+| `kServicePassCeilingMs` | 10 | milliseconds | Ceiling | - |
 | `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
-| `kTaskWatchdogMs` | 5000 (5 s) | milliseconds | - | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
-| `kHardwareWatchdogMs` | 12000 (12 s) | milliseconds | - | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
-| `kRadioNoRxReinitMs` | 30000 (30 s) | milliseconds | - | - |
-| `kPpsLossListenOnlyMs` | 60000 (1 min) | milliseconds | - | - |
-| `kBaroPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
-| `kBaroPpsWindowMs` | `2 * kServiceStepMs` = 20 | milliseconds | Window | - |
+| `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
+| `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
+| `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
+| `kBaroPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
+| `kBaroPpsWindowMs` | `2 * kServicePassCeilingMs` = 20 | milliseconds | Window | - |
 | `kBaroConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
 | `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-185 constants over 18 folders.
+184 constants over 18 folders.

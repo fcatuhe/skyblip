@@ -143,7 +143,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
 | `Flight` | `services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
 | `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
-| `Baro` | `services/ownship.cpp` `record_baro` | every sample the board polls (`runtime::kBaroPeriodMs`) |
+| `Baro` | `services/ownship.cpp` `record_baro` | every sample the board polls (`runtime::kBaroPublishPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `services/config.cpp` `record_link`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |

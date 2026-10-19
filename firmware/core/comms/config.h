@@ -59,7 +59,7 @@ constexpr uint8_t kBatteryPushStepPercent = 5;
 // An iOS central commonly settles at ATT_MTU 185, three of which are the
 // notification header, so 182 is the narrowest real phone in the field and every
 // reply that a pilot's app depends on is sized under it at its worst case rather
-// than against a local buffer. ports::kMinimumLinkPayload (20) is lower still and
+// than against a local buffer. ports::kMinimumLinkPayloadBytes (20) is lower still and
 // is what BLE guarantees; a link that comes up there gets a counted refusal, not
 // a notification the controller will fail.
 constexpr int kSmallestSupportedPayload = 182;

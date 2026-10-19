@@ -90,7 +90,7 @@ constexpr int text_cells(const char* s) {
     return n;
 }
 
-constexpr int kMenuHintX = (kGlassW - text_cells(kMenuHintText) * kSmallCellW) / 2;
+constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * kSmallCellW) / 2;
 constexpr int kMenuLines = (kMenuHintY - kMenuRowsTop) / kMenuRowHeight;
 
 constexpr int menu_line_top(int line) { return kMenuRowsTop + line * kMenuRowHeight; }
@@ -113,7 +113,7 @@ bool callsign_press_clears(const char* text, int cursor);
 
 constexpr int kCallsignScale = 3;
 constexpr int kCallsignCellW = kSmallCellW * kCallsignScale;
-constexpr int kCallsignTextX = (kGlassW - kCallsignChars * kCallsignCellW) / 2;
+constexpr int kCallsignTextX = (kGlassWidth - kCallsignChars * kCallsignCellW) / 2;
 constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorH = 3;
@@ -124,7 +124,7 @@ constexpr const char* kCallsignClearHintText = "BUTTON CLEARS";
 constexpr const char* kCallsignClearHelpText = "BLANK THE FIRST TO CLEAR";
 
 constexpr int centred_x(const char* text, int scale) {
-    return (kGlassW - text_cells(text) * kSmallCellW * scale) / 2;
+    return (kGlassWidth - text_cells(text) * kSmallCellW * scale) / 2;
 }
 
 constexpr int kCallsignPadHintY = 138;

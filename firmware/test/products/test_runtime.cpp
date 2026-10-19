@@ -83,7 +83,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     CHECK(a.setups == 1);
     CHECK(b.setups == 1);
 
-    loop.step(1234);
+    loop.run_pass(1234);
     CHECK(a.ticks == 1);
     CHECK(b.ticks == 1);
     CHECK(a.last_ms == 1234);
@@ -146,7 +146,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
         render.cost_us = i == 2 ? 190000 : 2000;
         meter.begin_pass(phases[i]);
         meter.timed(diag::kLoopBoardPoll, [&] { clock.us += 100; });
-        loop.step(clock.millis(), &meter);
+        loop.run_pass(clock.millis(), &meter);
         meter.end_pass();
         clock.us += sleeps_us[i];
     }
@@ -252,7 +252,7 @@ TEST_CASE("watchdog: a task that stops checking in stops the feed and is named")
     }
     feed.check_in(radio, 1000);
     CHECK_FALSE(feed.may_feed(1000));
-    CHECK(feed.stalled(1000) == gnss);
+    CHECK(feed.stalled_service(1000) == gnss);
     CHECK(__builtin_strcmp(feed.name(gnss), "gnss") == 0);
     CHECK(feed.silent_ms(gnss, 1000) == 1000);
 
@@ -260,7 +260,7 @@ TEST_CASE("watchdog: a task that stops checking in stops the feed and is named")
     // the bite is what latches it.
     feed.check_in(gnss, 1100);
     CHECK(feed.may_feed(1100));
-    CHECK(feed.stalled(1100) == runtime::FeedDecision::kNone);
+    CHECK(feed.stalled_service(1100) == runtime::FeedDecision::kNone);
 }
 
 TEST_CASE("watchdog: each task carries its own rope") {
@@ -271,7 +271,7 @@ TEST_CASE("watchdog: each task carries its own rope") {
     feed.check_in(slow, 0);
 
     CHECK_FALSE(feed.may_feed(200));
-    CHECK(feed.stalled(200) == fast);
+    CHECK(feed.stalled_service(200) == fast);
 
     feed.check_in(fast, 200);
     CHECK(feed.may_feed(250));
@@ -312,19 +312,20 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
     // runs a thousand of them and the ordering is pinned above.
-    for (uint32_t t = 0; t < runtime::kTaskWatchdogMs; t += runtime::kServiceStepMs) {
+    for (uint32_t t = 0; t < runtime::kServiceSilenceCeilingMs;
+         t += runtime::kServicePassCeilingMs) {
         order[0] = 0;
-        loop.step(t);
+        loop.run_pass(t);
         CHECK(loop.may_feed_watchdog(t));
     }
 
     // It keeps being ticked and keeps returning. It just is not getting
     // anywhere, and the whole point is that the loop must not vouch for it.
     wedged.alive = false;
-    uint32_t t = runtime::kTaskWatchdogMs;
-    for (; t < 2 * runtime::kTaskWatchdogMs; t += runtime::kServiceStepMs) {
+    uint32_t t = runtime::kServiceSilenceCeilingMs;
+    for (; t < 2 * runtime::kServiceSilenceCeilingMs; t += runtime::kServicePassCeilingMs) {
         order[0] = 0;
-        loop.step(t);
+        loop.run_pass(t);
     }
     CHECK_FALSE(loop.may_feed_watchdog(t));
     CHECK(loop.stalled_service(t) == 1);
@@ -360,7 +361,7 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
     CHECK(feed.silent_ms(gnss, 744u) == 1000);
     CHECK(feed.may_feed(743u));
     CHECK_FALSE(feed.may_feed(744u));
-    CHECK(feed.stalled(744u) == gnss);
+    CHECK(feed.stalled_service(744u) == gnss);
     // The one that is still checking in is not the one named.
     CHECK(feed.silent_ms(radio, 744u) == 1);
 }

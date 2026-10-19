@@ -53,9 +53,9 @@ constexpr int kBootRows = 15;
 // glass instead of counting ink: "there is ink on the GNSS row" is not the same
 // claim as "the GNSS row says FAIL".
 constexpr int kBootLeftX = 4;
-constexpr int kBootRightX = kGlassW - kBootLeftX;
+constexpr int kBootRightX = kGlassWidth - kBootLeftX;
 constexpr int kBootCellW = 6;  // the 5x7 font's advance at scale 1
-constexpr int kBootRowCells = (kGlassW - 2 * kBootLeftX) / kBootCellW;
+constexpr int kBootRowCells = (kGlassWidth - 2 * kBootLeftX) / kBootCellW;
 constexpr int kBootRowH = 9;
 constexpr int kBootFirstRowY = 36;
 constexpr int kBootHeaderY = 26;
@@ -68,7 +68,7 @@ constexpr int kBootVerdictRise = 3;
 constexpr int kBootVerdictH = 13;
 constexpr int kBootFooterH = kBootDividerGap + kBootFooterGap - kBootVerdictRise + kBootVerdictH;
 
-static_assert(boot_row_y(kBootRows) + kBootFooterH <= kGlassH,
+static_assert(boot_row_y(kBootRows) + kBootFooterH <= kGlassHeight,
               "the last row would fall off the glass");
 
 void draw_boot(ui::Canvas& canvas, const BootSnapshot& snapshot);

@@ -62,9 +62,9 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     // A cell in the flat middle, and air the aircraft is really flying through.
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     rig.platform.baro().chip.set_pressure_mpa(90000000);
-    rig.platform.baro().chip.set_temperature_decicelsius(-72);
+    rig.platform.baro().chip.set_temperature_dc(-72);
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 2);
@@ -113,7 +113,7 @@ TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about 
     Rig rig(kBaroByHand);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    rig.platform.battery().millivolts = 3600;
+    rig.platform.battery().divider_mv = 3600;
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 2);

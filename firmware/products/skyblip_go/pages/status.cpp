@@ -155,7 +155,7 @@ void imu_field(ui::Canvas& canvas, int y, const StatusSnapshot& s) {
         n += imu_traffic(buf + n, s);
     }
     buf[n] = 0;
-    right_aligned(canvas, kGlassW - kLeft, y, buf, n);
+    right_aligned(canvas, kGlassWidth - kLeft, y, buf, n);
 }
 
 // INFO: fc 05oct26 on the cable the divider reads the USB rail, so CHG stands in for the numbers
@@ -197,8 +197,8 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& s) {
     buf[n] = 0;
     canvas.draw_text(kLeft, 3, buf, true, 2);
     if (s.callsign != nullptr && s.callsign[0] != 0)
-        right_aligned(canvas, kGlassW - kLeft, 8, s.callsign, length(s.callsign));
-    canvas.hline(kLeft, 21, kGlassW - 2 * kLeft, true);
+        right_aligned(canvas, kGlassWidth - kLeft, 8, s.callsign, length(s.callsign));
+    canvas.hline(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     // Everything that is one free-form string first, then the block where every
     // number lines up in its column.
@@ -243,7 +243,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& s) {
         n = format_string(buf, "LON ");
         n += format_int(buf + n, s.lon_1e7, 1, 7, false);
         buf[n] = 0;
-        right_aligned(canvas, kGlassW - kLeft, y, buf, n);
+        right_aligned(canvas, kGlassWidth - kLeft, y, buf, n);
     } else {
         row(canvas, y, "LAT", "no fix");
     }

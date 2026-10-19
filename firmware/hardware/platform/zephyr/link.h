@@ -20,8 +20,8 @@ class Link : public ports::Link {
     // side - see link.cpp.
     uint16_t payload_bytes() const override;
     uint16_t payload_bytes_to(uint16_t session_id) const override;
-    Status send(events::Endpoint ep, ConstByteSpan bytes) override;
-    Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) override;
+    Status send(events::Endpoint endpoint, ConstByteSpan bytes) override;
+    Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) override;
     Status advertise_as(const char* name) override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell
@@ -35,7 +35,7 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out);
 
    private:
-    static Status notify_one(struct bt_conn* conn, events::Endpoint ep, ConstByteSpan bytes);
+    static Status notify_one(struct bt_conn* conn, events::Endpoint endpoint, ConstByteSpan bytes);
 };
 
 Link& link();

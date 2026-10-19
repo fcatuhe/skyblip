@@ -91,7 +91,7 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
     arm_power_run(rig, t);
     rig.run(t, t + 40000);
     t += 40000;
-    rig.platform.battery().millivolts = kBelowCutoffMv;
+    rig.platform.battery().divider_mv = kBelowCutoffMv;
     run_until_parked(rig, t);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
 

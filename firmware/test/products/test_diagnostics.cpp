@@ -97,7 +97,7 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     // The receiver's own answers, which nothing else on this device reads.
     const std::string gnss = console.with("gnss ");
     REQUIRE_FALSE(gnss.empty());
-    CHECK(has(gnss, "baud=9600"));  // parts::L76k::kBaudRate, unless autobaud moved
+    CHECK(has(gnss, "baud=9600"));  // parts::L76k::kFactoryBaudRate, unless autobaud moved
     CHECK(has(gnss, "identified=true"));
     CHECK(has(gnss, "firmware=\"URANUS5,V5.1.0.0\""));
     CHECK_FALSE(has(gnss, "fixes=0"));
@@ -139,7 +139,7 @@ TEST_CASE("diagnostics: the faults nobody could see reach the console") {
     // A collapsing rail, as the comparator reports it, and a divider that is not
     // connected: core/power counts both and acts on neither.
     rig.platform.system_power().supply_warning = true;
-    rig.platform.battery().millivolts = 900;
+    rig.platform.battery().divider_mv = 900;
     pass(rig, dump, t, 12000);
 
     const std::string power = dump.sink().with("power ");
@@ -219,7 +219,7 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
     uint32_t t = 0;
-    rig.platform.battery().millivolts = 3812;
+    rig.platform.battery().divider_mv = 3812;
     for (int i = 0; i < 4; i++) {
         rig.push_timed_fix(50000, 500);
         pass(rig, dump, t, 950);

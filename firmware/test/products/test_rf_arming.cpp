@@ -58,7 +58,7 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
     stranded.freq_hz = timing::kMband1Hz;
     stranded.start_us = 455000;
     stranded.tx = frame;
-    stranded.tx_len = sizeof(frame);
+    stranded.tx_bytes = sizeof(frame);
     stranded.tx_at_us = 600000;
     CHECK(rf.arm(stranded) == Status::WouldBlock);
 
@@ -118,7 +118,7 @@ TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahea
     rf.service(395);
     CHECK(tuned_khz(chip) == timing::kMband0Hz / 1000);
     CHECK(chip.receiving);
-    CHECK(rf.switching().late == 0);
+    CHECK(rf.switching().late_starts == 0);
     const ports::RfSwitch& change = rf.switching().last;
     CHECK(change.from == ports::RfMode::RxOband);
     CHECK(change.to == ports::RfMode::RxMband);
@@ -147,7 +147,7 @@ TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late")
     rf.service(810);
 
     CHECK(tuned_khz(chip) == timing::kMband1Hz / 1000);
-    CHECK(rf.switching().late == 1);
+    CHECK(rf.switching().late_starts == 1);
     CHECK(rf.switching().last.late_start());
     CHECK(rf.switching().last.margin_us() == -10000);
 }
@@ -386,7 +386,7 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
     ports::RfPlan burst = dwell;
     burst.start_us = 455000;
     burst.tx = frame;
-    burst.tx_len = sizeof(frame);
+    burst.tx_bytes = sizeof(frame);
     burst.tx_at_us = 600000;
     REQUIRE(rf.arm(burst) == Status::Ok);
 

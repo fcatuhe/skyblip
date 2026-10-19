@@ -90,10 +90,10 @@ TEST_CASE(
 
     for (int16_t deci : {int16_t{-200}, int16_t{150}, int16_t{452}}) {
         for (uint32_t pa = 30000; pa <= 110000; pa += 7919) {
-            b.chip.set_temperature_decicelsius(deci);
+            b.chip.set_temperature_dc(deci);
             b.chip.set_pressure_mpa(pa * 1000 + 371);
             const parts::Bme280::Reading reading = b.convert();
-            CHECK(reading.temperature_decicelsius == deci);
+            CHECK(reading.temperature_dc == deci);
             const int64_t error = int64_t{reading.pressure_mpa} - (int64_t{pa} * 1000 + 371);
             // DS 4.2.3 and DS 8.1 part by up to 13 t_fine counts at -20 C, which is 0.45 Pa.
             CHECK(error <= 600);

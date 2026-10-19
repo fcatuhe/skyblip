@@ -70,7 +70,8 @@ TEST_CASE("panel model: the driver's own output is what the model shows") {
     draw_status(canvas, s);
 
     skyblip::models::Ssd1681 panel;
-    skyblip::parts::Ssd1681 driver(panel, panel, panel, panel.dc, panel.rst, panel.busy);
+    skyblip::parts::Ssd1681 driver(panel, panel, panel, panel.dc_pin, panel.reset_pin,
+                                   panel.busy_pin);
     driver.begin();
     driver.present(canvas, skyblip::ports::Refresh::Full, 0);
 

@@ -62,17 +62,18 @@ class AlarmService : public runtime::Service {
     // cadence the ear gets is the cadence written in core/annunciation, to
     // within one pass of the loop.
     static constexpr uint32_t kPassesPerShortestPhase = 8;
-    static_assert(runtime::kServiceStepMs * kPassesPerShortestPhase <=
+    static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestPhase <=
                       annunciation::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest note");
-    static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kTaskWatchdogMs,
+    static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kServiceSilenceCeilingMs,
                   "the annunciator's guard has to cut before the watchdog bites");
 
     // Three passes through the shortest flash in the table. An LED needs far less
     // time than a piezo to be seen, so the figure is smaller than the one above -
     // but a flash the loop cannot resolve is a flash nobody sees.
     static constexpr uint32_t kPassesPerShortestFlash = 3;
-    static_assert(runtime::kServiceStepMs * kPassesPerShortestFlash <= indication::kShortestPhaseMs,
+    static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
+                      indication::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest flash");
 
     power::OnTime sounding_{};

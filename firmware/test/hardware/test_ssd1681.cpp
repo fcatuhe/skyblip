@@ -14,7 +14,8 @@ using namespace skyblip;
 namespace {
 
 parts::Ssd1681 make_turned(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc, f.rst, f.busy, -1, parts::GlassRotation::Deg270);
+    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin, -1,
+                          parts::GlassRotation::Deg270);
 }
 
 // One pixel of panel RAM, addressed as the controller does: a source on a gate line, black at 0.
@@ -30,11 +31,11 @@ TEST_CASE("epd: begin() runs the SSD1681 init sequence and resets the panel") {
     parts::Ssd1681 d = make(f);
     d.begin();
     CHECK(f.reset_pulses >= 1);
-    CHECK(f.saw_cmd(0x12));  // SW reset
-    CHECK(f.saw_cmd(0x01));  // driver output control
-    CHECK(f.saw_cmd(0x11));  // data entry mode
-    CHECK(f.saw_cmd(0x3C));  // border waveform
-    CHECK(f.saw_cmd(0x18));  // temperature sensor
+    CHECK(f.saw_command(0x12));  // SW reset
+    CHECK(f.saw_command(0x01));  // driver output control
+    CHECK(f.saw_command(0x11));  // data entry mode
+    CHECK(f.saw_command(0x3C));  // border waveform
+    CHECK(f.saw_command(0x18));  // temperature sensor
 }
 
 // 10 ms as a literal: the test this replaced compared epd::kResetHoldSpins with itself.
@@ -63,19 +64,19 @@ TEST_CASE("epd: RES# is held low for the vendor's 10 ms, at begin and at every w
 TEST_CASE("epd: a RES# pulse one microsecond under 10 ms leaves a sleeping panel asleep") {
     models::Ssd1681 f;
     const uint8_t deep_sleep = 0x10;
-    f.set(f.dc, false);
+    f.set(f.dc_pin, false);
     f.transfer(&deep_sleep, nullptr, 1);
     REQUIRE_FALSE(f.powered);
 
-    f.set(f.rst, false);
+    f.set(f.reset_pin, false);
     f.wait_at_least_us(9999);
-    f.set(f.rst, true);
+    f.set(f.reset_pin, true);
     CHECK_FALSE(f.powered);
     CHECK(f.short_resets == 1);
 
-    f.set(f.rst, false);
+    f.set(f.reset_pin, false);
     f.wait_at_least_us(10000);
-    f.set(f.rst, true);
+    f.set(f.reset_pin, true);
     CHECK(f.powered);
     CHECK(f.reset_pulses == 1);
 }
@@ -95,8 +96,8 @@ TEST_CASE("epd: present() writes a full framebuffer with correct black/white pol
     for (uint8_t b : f.ram)
         if (b != 0xFF) all_ff = false;
     CHECK(all_ff);
-    CHECK(f.saw_cmd(0x24));  // WriteRAM
-    CHECK(f.saw_cmd(0x20));  // Master activation
+    CHECK(f.saw_command(0x24));  // WriteRAM
+    CHECK(f.saw_command(0x20));  // Master activation
 }
 
 TEST_CASE("epd: a black pixel flips the corresponding RAM bit to 0") {
@@ -164,8 +165,8 @@ TEST_CASE("epd: a turned glass writes the same count of black pixels it was hand
     d.present(canvas, ports::Refresh::Full, 0);
 
     int black = 0;
-    for (int gate = 0; gate < parts::Ssd1681::kGlassH; gate++)
-        for (int source = 0; source < parts::Ssd1681::kGlassW; source++)
+    for (int gate = 0; gate < parts::Ssd1681::kGlassHeight; gate++)
+        for (int source = 0; source < parts::Ssd1681::kGlassWidth; source++)
             if (ram_black(f, source, gate)) black++;
     CHECK(black == canvas.count_black());
 }
@@ -185,14 +186,16 @@ TEST_CASE("epd: the five signatures shipped in T-Echos are told apart") {
 TEST_CASE("epd: 2118 and 2129 are the same in 0x2D and only 0x2E separates them") {
     // The reason the ident reads both registers. A table keyed on 0x2D alone
     // would answer this question with whichever row it happened to try first.
-    for (int i = 0; i < parts::kPanelIdBytesA; i++)
-        CHECK(parts::panels::kGdeh0154D67Syx2118.a[i] == parts::panels::kGdeh0154D67Syx2129.a[i]);
+    for (int i = 0; i < parts::kPanelIdBytes2d; i++)
+        CHECK(parts::panels::kGdeh0154D67Syx2118.register_2d[i] ==
+              parts::panels::kGdeh0154D67Syx2129.register_2d[i]);
 
-    bool b_differs = false;
-    for (int i = 0; i < parts::kPanelIdBytesB; i++)
-        if (parts::panels::kGdeh0154D67Syx2118.b[i] != parts::panels::kGdeh0154D67Syx2129.b[i])
-            b_differs = true;
-    CHECK(b_differs);
+    bool register_2e_differs = false;
+    for (int i = 0; i < parts::kPanelIdBytes2e; i++)
+        if (parts::panels::kGdeh0154D67Syx2118.register_2e[i] !=
+            parts::panels::kGdeh0154D67Syx2129.register_2e[i])
+            register_2e_differs = true;
+    CHECK(register_2e_differs);
 }
 
 TEST_CASE("epd: a signature nobody has recorded is unlisted, and an unread one is neither") {
@@ -200,9 +203,9 @@ TEST_CASE("epd: a signature nobody has recorded is unlisted, and an unread one i
     // carries no bytes at all, only the string "20.05.21". So this is the answer
     // this board is expected to give until somebody reads one on a bench.
     parts::PanelSignature unrecorded{};
-    unrecorded.read = true;
-    unrecorded.a[0] = 0x12;
-    unrecorded.b[3] = 0x34;
+    unrecorded.valid = true;
+    unrecorded.register_2d[0] = 0x12;
+    unrecorded.register_2e[3] = 0x34;
     CHECK(parts::identify_panel(unrecorded) == parts::Panel::Unlisted);
 
     // A fingerprint that was never taken is a different miss: nobody read it.
@@ -211,7 +214,7 @@ TEST_CASE("epd: a signature nobody has recorded is unlisted, and an unread one i
     // Even when the bytes would otherwise match a shipped panel: an unread
     // register file is all zeroes, and all zeroes is DEPG0150BN.
     parts::PanelSignature zeroes = parts::panels::kDepg0150Bn;
-    zeroes.read = false;
+    zeroes.valid = false;
     CHECK(parts::identify_panel(zeroes) == parts::Panel::Unknown);
 }
 

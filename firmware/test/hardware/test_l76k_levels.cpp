@@ -151,16 +151,15 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
 
 // At the rate the receiver boots at, the widest GSV set did not fit in the second the fix rides.
 TEST_CASE("l76k: the satellites-in-view burst fits the second only at the raised rate") {
-    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kBaudRate) >
+    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           parts::L76k::kSolutionPeriodMs);
     CHECK(parts::L76k::kSearchingBurstMs < parts::L76k::kSolutionPeriodMs);
-    CHECK(parts::L76k::kSolutionPeriodMs == parts::L76k::kFixPeriodMs);
 }
 
 // A receiver still searching reports satellites in view it is not yet tracking.
 TEST_CASE("l76k: a satellite in view with no level is not a satellite at zero dB-Hz") {
     models::L76k chip;
-    chip.fix = false;
+    chip.fix_valid = false;
     parts::L76k gnss(chip, chip);
     run(gnss, chip, 0, kBringUpLeadMs + 4000);
     gnss.request_satellites_in_view(true);

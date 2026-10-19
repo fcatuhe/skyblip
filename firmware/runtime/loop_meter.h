@@ -28,13 +28,13 @@ class LoopMeter {
     }
 
     template <class Work>
-    void timed(uint8_t who, Work&& work) {
+    void timed(uint8_t service, Work&& work) {
         const uint64_t began_us = clock_.micros();
         work();
         const uint64_t took_us = clock_.micros() - began_us;
         if (took_us > worst_tick_us_) {
             worst_tick_us_ = took_us;
-            window_.worst_service = who;
+            window_.worst_service = service;
         }
     }
 

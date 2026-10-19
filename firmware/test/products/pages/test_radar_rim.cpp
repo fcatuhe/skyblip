@@ -131,8 +131,8 @@ TEST_CASE("radar rim: a mark and its count take no ink off the glass") {
     const Glass empty = radar(unplotted);
 
     int erased = 0;
-    for (int y = 0; y < kGlassH; y++)
-        for (int x = 0; x < kGlassW; x++)
+    for (int y = 0; y < kGlassHeight; y++)
+        for (int x = 0; x < kGlassWidth; x++)
             if (empty.get_pixel(x, y) && !canvas.get_pixel(x, y)) erased++;
     CHECK(erased == 0);
     CHECK(ink_in(canvas, 0, 150, 200, 200) > ink_in(empty, 0, 150, 200, 200));

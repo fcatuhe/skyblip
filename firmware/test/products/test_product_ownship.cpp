@@ -262,7 +262,7 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
     for (uint32_t t = 550; t <= 700; t += 10) {
         rig.platform.clock().set_millis(t);
         rig.product.step(t);
-        if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().hz();
+        if (first_note_hz == 0) first_note_hz = rig.platform.annunciator().pitch_hz();
     }
     CHECK(rig.product.ownship().first_fix().ever_fixed());
     CHECK(first_note_hz == annunciation::kFirstFixJingle[0].pitch_hz);

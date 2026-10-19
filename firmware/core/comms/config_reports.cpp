@@ -194,7 +194,8 @@ void ConfigService::resume_replies(uint32_t now_ms) {
         const Status sent = link_.send_to(held_to_, events::Endpoint::Config,
                                           ConstByteSpan(reinterpret_cast<const uint8_t*>(held_),
                                                         static_cast<size_t>(held_bytes_)));
-        if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs) return;
+        if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
+            return;
         held_bytes_ = 0;
         if (!is_ok(sent)) {
             diagnostics_.link_drops++;

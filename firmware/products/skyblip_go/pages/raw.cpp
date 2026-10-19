@@ -7,7 +7,7 @@ namespace skyblip::go {
 namespace {
 constexpr int kLeft = 4;
 constexpr int kCellW = 6;
-constexpr int kRight = kGlassW - kLeft;
+constexpr int kRight = kGlassWidth - kLeft;
 
 constexpr int kTitleY = 2;
 constexpr int kTitleRuleY = 12;
@@ -89,7 +89,7 @@ void draw_title(ui::Canvas& canvas, const RawSnapshot& s) {
 void draw_port(ui::Canvas& canvas, int y, const RawGnss& g) {
     char buf[40];
     int n = format_keyed(buf, "PORT", g.health.baud);
-    n += format_word(buf + n, ports::to_string(g.health.config));
+    n += format_word(buf + n, ports::to_string(g.health.config_stage));
     n += format_keyed(buf + n, "OVR", g.health.overruns);
     n += format_word(buf + n, "ID");
     n += format_string(buf + n, yes_no(g.health.identified));
@@ -141,7 +141,7 @@ void draw_quality(ui::Canvas& canvas, int y, const RawGnss& g) {
 void draw_refusals(ui::Canvas& canvas, int y, const RawGnss& g) {
     char buf[40];
     int n = format_word(buf, "REJ");
-    n += format_word(buf + n, gnss::reject_name(g.health.reject));
+    n += format_word(buf + n, gnss::reject_name(g.health.last_reject));
     n += format_keyed(buf + n, "N", g.health.rejected);
     n += format_keyed(buf + n, "SOL", g.solutions);
     n += format_word(buf + n, "GSV");

@@ -71,7 +71,7 @@ TEST_CASE("screen pps: an edge 61 s old is past holdover and reads NONE") {
     CHECK(raw_reads(rig, "PPS NONE"));
 }
 
-// Pps::ms_since() reads 0 before the first edge, which the pages once showed as HOLD 0.
+// Pps::since_edge_ms() reads 0 before the first edge, which the pages once showed as HOLD 0.
 TEST_CASE("screen pps: a clock with UTC and no edge ever reads NONE, and transmits nothing") {
     Rig rig;
     uint32_t t = 0;

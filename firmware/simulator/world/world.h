@@ -84,7 +84,7 @@ class World {
     models::Bhi260& imu() { return platform_.chips().imu; }
     platform::host::Platform& platform() { return platform_; }
 
-    void set_fix(bool on) { gnss().fix = on; }
+    void set_fix(bool on) { gnss().fix_valid = on; }
     void set_sats(int n) { gnss().sats = static_cast<uint8_t>(n < 0 ? 0 : (n > 32 ? 32 : n)); }
     void set_altitude_m(int32_t m) { gnss().alt_m = m; }
     void set_speed_kt(int32_t kt) { gnss().speed_mm_s = div_round(kt * 514444, 1000); }
@@ -99,7 +99,7 @@ class World {
     // The cell as the world holds it: what the divider reads, and whether a
     // cable is in. Everything else about the battery is the firmware's opinion.
     void set_battery_mv(int32_t mv) {
-        platform_.battery().millivolts = static_cast<uint16_t>(mv < 0 ? 0 : mv);
+        platform_.battery().divider_mv = static_cast<uint16_t>(mv < 0 ? 0 : mv);
     }
     void set_external_power(bool on) { platform_.battery().external_power = on; }
     void press_button() { press_pending_ = true; }

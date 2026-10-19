@@ -96,15 +96,15 @@ TEST_CASE("radio: a hop between the M-band channels writes the frequency and not
     REQUIRE(r.begin() == Status::Ok);
     REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(r.start_receive() == Status::Ok);
-    chip.cmds_seen.clear();
+    chip.commands_seen.clear();
 
     REQUIRE(r.configure_radio(dwell(868400000)) == Status::Ok);
     CHECK(chip.receiving);
     CHECK((chip.freq_hz + 500) / 1000 == 868400);
-    CHECK(chip.saw_cmd(sx::kSetRfFrequency));
-    CHECK_FALSE(chip.saw_cmd(sx::kSetModulationParams));
-    CHECK_FALSE(chip.saw_cmd(sx::kSetPacketParams));
-    CHECK_FALSE(chip.saw_cmd(sx::kWriteRegister));
+    CHECK(chip.saw_command(sx::kSetRfFrequency));
+    CHECK_FALSE(chip.saw_command(sx::kSetModulationParams));
+    CHECK_FALSE(chip.saw_command(sx::kSetPacketParams));
+    CHECK_FALSE(chip.saw_command(sx::kWriteRegister));
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
 }
@@ -132,11 +132,13 @@ TEST_CASE("radio: re-arming the dwell the radio is already tuned for keeps the T
     REQUIRE(r.begin() == Status::Ok);
     REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(r.start_receive() == Status::Ok);
-    const auto standbys = std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetStandby);
+    const auto standbys =
+        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetStandby);
 
     REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
     REQUIRE(r.start_receive() == Status::Ok);
-    CHECK(std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetStandby) == standbys);
+    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetStandby) ==
+          standbys);
     CHECK(chip.receiving);
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
@@ -166,9 +168,9 @@ TEST_CASE("radio: after a sleep the same dwell is written again, not trusted to 
     r.sleep();
     REQUIRE(r.wake() == Status::Ok);
     const auto tunes =
-        std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetRfFrequency);
+        std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetRfFrequency);
 
     REQUIRE(r.configure_radio(dwell(868200000)) == Status::Ok);
-    CHECK(std::count(chip.cmds_seen.begin(), chip.cmds_seen.end(), sx::kSetRfFrequency) ==
+    CHECK(std::count(chip.commands_seen.begin(), chip.commands_seen.end(), sx::kSetRfFrequency) ==
           tunes + 1);
 }

@@ -10,7 +10,7 @@ namespace {
 
 constexpr int kLeft = 4;
 constexpr int kCellW = 6;
-constexpr int kRight = kGlassW - kLeft;
+constexpr int kRight = kGlassWidth - kLeft;
 constexpr int kTitleY = 2;
 constexpr int kTitleRuleY = 12;
 constexpr int kTopY = 20;
@@ -85,7 +85,8 @@ void draw_state(ui::Canvas& canvas, const CaptureSnapshot& s) {
 
 void draw_offered_capture(ui::Canvas& canvas, int line, diag::Profile profile, bool focused) {
     const int y = line_y(line);
-    if (focused) canvas.rect(2, y - kFocusBarRise, kGlassW - 4, kLineH - 1, true, /*fill=*/true);
+    if (focused)
+        canvas.rect(2, y - kFocusBarRise, kGlassWidth - 4, kLineH - 1, true, /*fill=*/true);
     const bool ink = !focused;
     const char* subjects = capture_subjects(profile);
     canvas.draw_text(kLeft, y, capture_name(profile), ink, 1);

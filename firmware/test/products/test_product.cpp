@@ -105,7 +105,7 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(rig.state().power.battery.valid);
 
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     rig.run(0, 12000);
     CHECK(rig.state().power.battery.valid);
     CHECK(rig.state().power.battery.cell_mv == 3800);
@@ -118,12 +118,12 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
 TEST_CASE("product: on USB power the gauge shows the cable and no state of charge") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 3750;
+    rig.platform.battery().divider_mv = 3750;
     rig.run(0, 12000);
     REQUIRE(rig.state().power.battery.valid);
 
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 4690;
+    rig.platform.battery().divider_mv = 4690;
     rig.run(12000, 24000);
     CHECK(rig.state().power.battery.charging);
     CHECK(rig.state().power.battery.external_power);
@@ -231,7 +231,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     // What the shell does with that: the rails go down the same way a long press
     // takes them down, in the order core/power owns.
     rig.platform.system_power().system_off();
-    CHECK(rig.platform.system_power().offs == 1);
+    CHECK(rig.platform.system_power().system_offs == 1);
     CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
           power::kPowerDownStepCount - 1);
 }
@@ -281,7 +281,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
 
     // A reading the raw sample puts above the low-battery warning and the real
     // cell puts below it.
-    trimmed.platform.battery().millivolts = 3540;
+    trimmed.platform.battery().divider_mv = 3540;
     trimmed.run(0, 12000);
     CHECK(trimmed.state().power.battery.cell_mv == 3480);
     CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480));
@@ -293,7 +293,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     // agree with each other and both are wrong by the same 60 mV.
     Rig raw;
     REQUIRE(raw.setup() == Status::Ok);
-    raw.platform.battery().millivolts = 3540;
+    raw.platform.battery().divider_mv = 3540;
     raw.run(0, 12000);
     CHECK(raw.state().power.battery.cell_mv == 3540);
     CHECK(raw.state().power.level == power::PowerLevel::Low);
@@ -309,13 +309,13 @@ TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider
     // 3440 raw is above the lockout, 3380 trimmed is below it.
     Rig trimmed;
     REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
-    trimmed.platform.battery().millivolts = 3440;
+    trimmed.platform.battery().divider_mv = 3440;
     REQUIRE(trimmed.setup() == Status::Ok);
     CHECK(trimmed.product.boot_cell().cell_mv == 3380);
     CHECK(trimmed.product.boot_path() == power::BootPath::SleepAgain);
 
     Rig untrimmed;
-    untrimmed.platform.battery().millivolts = 3440;
+    untrimmed.platform.battery().divider_mv = 3440;
     REQUIRE(untrimmed.setup() == Status::Ok);
     CHECK(untrimmed.product.boot_path() == power::BootPath::Run);
 }

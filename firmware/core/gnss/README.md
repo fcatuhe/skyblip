@@ -16,7 +16,7 @@ The stage carries the instant it was entered, and the elapsed figure beside it i
 
 ## The port rate, and the deadline it is chosen against
 
-The rate the receiver is met at is not the rate it is worked at. `L76k::kBaudRate` is 9600 because that is what the part boots at (L76K GNSS Protocol Specification V1.1, Appendix C Table 17) and what the devicetree pins; `kTargetBaudRate` is 115200 because of a deadline that has nothing to do with the receiver.
+The rate the receiver is met at is not the rate it is worked at. `L76k::kFactoryBaudRate` is 9600 because that is what the part boots at (L76K GNSS Protocol Specification V1.1, Appendix C Table 17) and what the devicetree pins; `kTargetBaudRate` is 115200 because of a deadline that has nothing to do with the receiver.
 
 The deadline is `timing::kDirectStartMs`, 450 ms. A solution is the second's only once RMC has closed it, and until then `Transmitter::kFixMaxAgeMs` reads the fix as a whole second old and refuses the burst. So the whole NMEA burst has to be parsed before 450 ms, and what the budget actually contains is the receiver's own start latency plus line time. SoftRF has measured the first: this part talks 70 ms after the second, GGA first, RMC at 135 (`.../src/driver/GNSS.cpp:83-91`), which is `kBurstStartMs` here.
 
@@ -56,11 +56,11 @@ A 2D solution never counts. It reports no VDOP, its altitude is not a measuremen
 
 The clock is a ceiling and never a floor. A receiver manoeuvring in rough air, or one with a genuinely poor antenna, can sit over the threshold indefinitely; a device that then never transmits at all is a worse failure than one transmitting a velocity that is a second behind. So it is three clean residuals or `kFirstFixSettleMs`, whichever comes first, and `kRefixSettleMs` after a receiver that only blinked.
 
-What can falsify all of this is `models::L76k::walk_m`: metres of position error at the first solving second, decaying to none over `walk_ms`, alternating in sign so consecutive solutions disagree the way a walking receiver's do. Zero by default, because the ordinary model is a converged receiver and a cold one is something a case asks for.
+What can falsify all of this is `models::L76k::walk_amplitude_m`: metres of position error at the first solving second, decaying to none over `walk_duration_ms`, alternating in sign so consecutive solutions disagree the way a walking receiver's do. Zero by default, because the ordinary model is a converged receiver and a cold one is something a case asks for.
 
 ## The rate
 
-One solution per second, `L76k::kFixRateHz`. The receiver goes to 5 Hz and it would buy nothing here: the nav rate does not change acquisition, so a cold start is no faster, and the extra solutions are noisier rather than more accurate. What a higher rate does buy is lower latency on velocity during a manoeuvre, which `flight::extrapolate` already covers by carrying the fix forward to the burst's own instant. The part's own protocol specification pairs anything faster than 1 Hz with a single sentence type and 115200 (V1.1 §2.3.2), and `L76k` static-asserts what that note is about: the burst has to fit inside one solution period, satellites in view and all.
+One solution per second, `L76k::kSolutionPeriodMs`. The receiver goes to 5 Hz and it would buy nothing here: the nav rate does not change acquisition, so a cold start is no faster, and the extra solutions are noisier rather than more accurate. What a higher rate does buy is lower latency on velocity during a manoeuvre, which `flight::extrapolate` already covers by carrying the fix forward to the burst's own instant. The part's own protocol specification pairs anything faster than 1 Hz with a single sentence type and 115200 (V1.1 §2.3.2), and `L76k` static-asserts what that note is about: the burst has to fit inside one solution period, satellites in view and all.
 
 ## PPS, and what it is worth
 

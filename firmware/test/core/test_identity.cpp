@@ -174,19 +174,19 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
     SUBCASE("the code the vectors' server signed") {
         Exchange x;
         Identity port(std::nullopt);
-        port.stored =
+        port.stored_unlock_code =
             identity::UnlockCode{x.serial, x.unit_nonce, x.v.bytes<64>("unlock_signature")};
         identity::Unit unit(port);
         unit.load();
-        CHECK(unit.keyed());
+        CHECK(unit.key_provisioned());
         CHECK(unit.activation().serial == x.serial);
         CHECK(unit.activation().address() == settings::AirAddress{0x00012Au});
     }
     SUBCASE("the same code with another serial in front of it") {
         Exchange x;
         Identity port(std::nullopt);
-        port.stored = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
-                                           x.v.bytes<64>("unlock_signature")};
+        port.stored_unlock_code = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
+                                                       x.v.bytes<64>("unlock_signature")};
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -200,7 +200,7 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                                    Ed25519::public_key_of(Identity::kUnitSeed),
                                                    code.serial, code.nonce)
                               .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -215,7 +215,7 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
             identity::unlock_message(other, Ed25519::public_key_of(Identity::kUnitSeed),
                                      code.serial, code.nonce)
                 .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -229,31 +229,31 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
             identity::unlock_message(Identity::kDeviceId, Ed25519::public_key_of(other_unit),
                                      code.serial, code.nonce)
                 .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a code the trusted key signed for serial 0") {
         Identity port(std::nullopt);
-        port.stored = Identity::unlock_code_for(0, identity::Nonce{});
+        port.stored_unlock_code = Identity::unlock_code_for(0, identity::Nonce{});
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a unit whose key could not be read") {
         Identity port(Identity::kSerial);
-        port.keyed = false;
+        port.key_provisioned = false;
         identity::Unit unit(port);
         unit.load();
-        CHECK_FALSE(unit.keyed());
+        CHECK_FALSE(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("an erased page") {
         Identity port(std::nullopt);
         identity::Unit unit(port);
         unit.load();
-        CHECK(unit.keyed());
+        CHECK(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
         CHECK(unit.activation().bluetooth_tag == Identity::kBluetoothTag);
     }

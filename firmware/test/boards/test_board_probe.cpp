@@ -17,8 +17,6 @@ using namespace skyblip;
 namespace {
 
 using Board = boards::TEchoPlus<platform::host::Platform>;
-using boards::t_echo_plus::kHapticDriverAddress;
-using boards::t_echo_plus::kImuAddress;
 using boards::t_echo_plus::kRtcAddress;
 
 }  // namespace
@@ -37,13 +35,13 @@ TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
     CHECK_FALSE(inventory.has_i2c_address(0x77));
 
     // The haptic driver, which is the whole reason the scan exists.
-    CHECK(inventory.has_i2c_address(kHapticDriverAddress));
+    CHECK(inventory.has_i2c_address(parts::Drv2605::kAddress));
 
     // And the two parts nothing drives, because a scan that hid the soldered-on
     // parts would be a scan nobody could use: this is the entire evidence for the
     // RTC that project/2-DEVICES.md records as fitted.
     CHECK(inventory.has_i2c_address(kRtcAddress));
-    CHECK(inventory.has_i2c_address(kImuAddress));
+    CHECK(inventory.has_i2c_address(parts::Bhi260::kAddress));
 
     // Ascending, so the page reads the same way twice.
     for (uint8_t i = 1; i < inventory.i2c_count; i++)
@@ -141,7 +139,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Haptic));
     CHECK(board.inventory().haptic == ports::HapticKind::None);
-    CHECK_FALSE(board.inventory().has_i2c_address(kHapticDriverAddress));
+    CHECK_FALSE(board.inventory().has_i2c_address(parts::Drv2605::kAddress));
 
     // The call site does not change and does not check: it asks for a pulse and
     // gets whatever this board can make, which here is nothing at all.
@@ -157,7 +155,7 @@ TEST_CASE("board: the panel it identified is on the inventory by name") {
     Board board{platform, bus};
 
     CHECK(board.display().panel() == parts::Panel::Gdeh0154D67Syx2118);
-    CHECK(std::string(board.inventory().panel) == "D67/2118");
+    CHECK(std::string(board.inventory().panel_name) == "D67/2118");
 }
 
 TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
@@ -168,7 +166,7 @@ TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
     // The default: no fingerprint taken, which is what this board will report on
     // silicon until a Plus is read on a bench.
     CHECK(board.display().panel() == parts::Panel::Unknown);
-    CHECK(std::string(board.inventory().panel) == "NO ID");
+    CHECK(std::string(board.inventory().panel_name) == "NO ID");
     // And the display is still a capability. An identification that could refuse
     // to drive the glass would blank the one page that explains a dead device.
     CHECK(ports::has(board.capabilities(), ports::Capability::Display));

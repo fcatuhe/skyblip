@@ -114,7 +114,7 @@ TEST_CASE("diag gnss: a solution the receiver refused carries the reason it was 
     uint32_t t = 100;
     taxi(rig, t, 3);
     arm(rig, t);
-    rig.platform.chips().gnss.fix = false;
+    rig.platform.chips().gnss.fix_valid = false;
     receiver_seconds(rig, t, 5);
     stop(rig, t);
     const std::vector<diag::Record> records = captured(rig);

@@ -11,33 +11,33 @@ class KvStore : public ports::KvStore {
    public:
     bool ready() const override { return !refuse_mount; }
 
-    Status read(const char* key, uint8_t* buf, size_t cap, size_t& out_len) override {
-        for (auto& e : e_)
-            if (e.used && e.key == key) {
-                if (e.len > cap) return Status::OutOfRange;
-                for (size_t i = 0; i < e.len; i++) buf[i] = e.data[i];
-                out_len = e.len;
+    Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
+        for (auto& entry : entries_)
+            if (entry.used && entry.key == key) {
+                if (entry.len > capacity) return Status::OutOfRange;
+                for (size_t i = 0; i < entry.len; i++) out[i] = entry.data[i];
+                out_bytes = entry.len;
                 return Status::Ok;
             }
         return Status::NotFound;
     }
 
-    Status write(const char* key, const uint8_t* buf, size_t len) override {
+    Status write(const char* key, const uint8_t* data, size_t bytes) override {
         if (refuse_writes) return Status::Full;
         Entry* slot = nullptr;
-        for (auto& e : e_)
-            if (e.used && e.key == key) slot = &e;
+        for (auto& entry : entries_)
+            if (entry.used && entry.key == key) slot = &entry;
         if (!slot)
-            for (auto& e : e_)
-                if (!e.used) {
-                    slot = &e;
+            for (auto& entry : entries_)
+                if (!entry.used) {
+                    slot = &entry;
                     slot->key = key;
                     slot->used = true;
                     break;
                 }
-        if (!slot || len > sizeof(slot->data)) return Status::Full;
-        for (size_t i = 0; i < len; i++) slot->data[i] = buf[i];
-        slot->len = len;
+        if (!slot || bytes > sizeof(slot->data)) return Status::Full;
+        for (size_t i = 0; i < bytes; i++) slot->data[i] = data[i];
+        slot->len = bytes;
         writes_++;
         return Status::Ok;
     }
@@ -51,8 +51,8 @@ class KvStore : public ports::KvStore {
     bool refuse_mount{false};
 
     Status erase(const char* key) override {
-        for (auto& e : e_)
-            if (e.used && e.key == key) e.used = false;
+        for (auto& entry : entries_)
+            if (entry.used && entry.key == key) entry.used = false;
         return Status::Ok;
     }
 
@@ -63,7 +63,7 @@ class KvStore : public ports::KvStore {
         uint8_t data[64]{};
         size_t len{0};
     };
-    Entry e_[4];
+    Entry entries_[4];
     uint32_t writes_{0};
 };
 

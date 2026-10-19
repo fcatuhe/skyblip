@@ -30,7 +30,7 @@ constexpr uint8_t kFlashDeepPowerDown = 0xB9;
 // the devicetree would not compile. Both parts specify it in microseconds; this
 // is generous by any reading of that and costs nothing, because the next step
 // takes the supply away. Move it to the devicetree the day a datasheet lands.
-constexpr uint32_t kFlashEnterDpdUs = 200;
+constexpr uint32_t kFlashDeepPowerDownSettleUs = 200;
 
 // The part is already parked when this runs (the product sleeps the radio when
 // it parks the panel), so BUSY is low and this is one dropped-command insurance
@@ -227,7 +227,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     void flash_deep_power_down() {
         uint8_t frame[1] = {kFlashDeepPowerDown};
         write_spi(flash_bus_, flash_cs_, frame, sizeof(frame));
-        k_busy_wait(kFlashEnterDpdUs);
+        k_busy_wait(kFlashDeepPowerDownSettleUs);
     }
 
     // Manual CS, matching the drivers: the transfer and the chip select are two
@@ -238,19 +238,19 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         gpio_pin_configure_dt(&cs, GPIO_OUTPUT_ACTIVE);
         struct spi_buf buf{const_cast<uint8_t*>(data), len};
         struct spi_buf_set tx{&buf, 1};
-        spi_write(bus, &kSpiCfg, &tx);
+        spi_write(bus, &kSpiConfig, &tx);
         gpio_pin_set_dt(&cs, 0);
     }
 
     // INFO: fc 13sep26 SPIM2 drives SCK and MOSI until the pads stop being outputs
     void release_panel_lines() {
-        gpio_pin_configure_dt(&panel_sck_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_mosi_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_dc_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_reset_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_busy_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_backlight_, GPIO_INPUT);
-        gpio_pin_configure_dt(&panel_cs_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_sck_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_mosi_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_dc_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_reset_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_busy_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_backlight_, GPIO_INPUT);
+        gpio_pin_configure_dt(&epd_cs_, GPIO_INPUT);
     }
 
     // The rails have collapsed by now, so nothing here can back-feed a part
@@ -302,7 +302,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         return causes;
     }
 
-    static constexpr struct spi_config kSpiCfg = {
+    static constexpr struct spi_config kSpiConfig = {
         .frequency = 8000000U,
         .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
         .slave = 0,
@@ -326,14 +326,13 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     struct gpio_dt_spec flash_hold_ = GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios);
     struct gpio_dt_spec gnss_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_enable), gpios);
     struct gpio_dt_spec gnss_reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
-    struct gpio_dt_spec panel_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(epd_spi), cs_gpios, 0);
-    struct gpio_dt_spec panel_dc_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_dc_gpio), gpios);
-    struct gpio_dt_spec panel_reset_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_reset_gpio), gpios);
-    struct gpio_dt_spec panel_busy_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_busy_gpio), gpios);
-    struct gpio_dt_spec panel_sck_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_sck_gpio), gpios);
-    struct gpio_dt_spec panel_mosi_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_mosi_gpio), gpios);
-    struct gpio_dt_spec panel_backlight_ =
-        GPIO_DT_SPEC_GET(DT_NODELABEL(epd_backlight_gpio), gpios);
+    struct gpio_dt_spec epd_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(epd_spi), cs_gpios, 0);
+    struct gpio_dt_spec epd_dc_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_dc_gpio), gpios);
+    struct gpio_dt_spec epd_reset_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_reset_gpio), gpios);
+    struct gpio_dt_spec epd_busy_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_busy_gpio), gpios);
+    struct gpio_dt_spec epd_sck_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_sck_gpio), gpios);
+    struct gpio_dt_spec epd_mosi_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_mosi_gpio), gpios);
+    struct gpio_dt_spec epd_backlight_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_backlight_gpio), gpios);
 };
 
 }  // namespace skyblip::platform::zephyr

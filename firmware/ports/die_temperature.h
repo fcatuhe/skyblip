@@ -32,8 +32,8 @@ class DieTemperature {
     // Tenths of a degree Celsius. False leaves the caller's value untouched: the
     // sensor is absent, not ready, or refused this measurement, and a reading
     // nobody took must never be published as one that was.
-    virtual bool read(int16_t& decicelsius) {
-        (void)decicelsius;
+    virtual bool read(int16_t& die_dc) {
+        (void)die_dc;
         return false;
     }
 };

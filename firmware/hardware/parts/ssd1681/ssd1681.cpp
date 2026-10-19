@@ -32,8 +32,8 @@ constexpr uint8_t kSequenceWipe = 0xFC;
 constexpr uint8_t kBorderFollowLut1 = 0x05;
 constexpr uint8_t kBorderVcom = 0x80;
 
-constexpr int kW = Ssd1681::kGlassW;
-constexpr int kH = Ssd1681::kGlassH;
+constexpr int kW = Ssd1681::kGlassWidth;
+constexpr int kH = Ssd1681::kGlassHeight;
 constexpr int kStride = Ssd1681::kGlassStride;
 
 // INFO: fc 01aug25 panel RAM is 1=white, the framebuffer 1=black
@@ -67,9 +67,9 @@ void turn_block(const uint8_t* rows, uint8_t* gates) {
 }  // namespace
 
 void Ssd1681::begin() {
-    gpio_.mode_output(dc_);
-    gpio_.mode_output(rst_);
-    gpio_.mode_input(busy_, false);
+    gpio_.mode_output(dc_pin_);
+    gpio_.mode_output(reset_pin_);
+    gpio_.mode_input(busy_pin_, false);
     init_panel();
     glass_known_ = false;
     refreshing_ = false;
@@ -83,7 +83,7 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
     const bool full = mode == ports::Refresh::Full || !glass_known_;
 
     set_window(0, 0, kW - 1, kH - 1);
-    cmd(kBorderWaveform);
+    command(kBorderWaveform);
     data(full ? kBorderFollowLut1 : kBorderVcom);
     if (full) {
         // INFO: fc 09mar26 GxEPD2 writes the new frame into both banks before a full refresh
@@ -103,7 +103,7 @@ void Ssd1681::paint_black(uint32_t now_ms) {
     ensure_awake();
 
     set_window(0, 0, kW - 1, kH - 1);
-    cmd(kBorderWaveform);
+    command(kBorderWaveform);
     data(kBorderVcom);
     std::memset(shadow_, kRamWhite, sizeof(shadow_));
     write_bank(kWriteRamPrevious);
@@ -121,9 +121,9 @@ void Ssd1681::ensure_awake() {
 }
 
 void Ssd1681::activate(uint8_t sequence, bool full, uint32_t now_ms) {
-    cmd(kDisplayUpdateCtrl2);
+    command(kDisplayUpdateCtrl2);
     data(sequence);
-    cmd(kMasterActivation);
+    command(kMasterActivation);
 
     glass_known_ = true;
     refreshing_ = true;
@@ -135,7 +135,7 @@ void Ssd1681::activate(uint8_t sequence, bool full, uint32_t now_ms) {
 bool Ssd1681::ready(uint32_t now_ms) {
     if (!refreshing_) return true;
     if (static_cast<int32_t>(now_ms - ready_at_ms_) < 0) return false;
-    if (gpio_.get(busy_)) {
+    if (gpio_.get(busy_pin_)) {
         if (static_cast<int32_t>(now_ms - timeout_at_ms_) < 0) return false;
         init_panel();
         glass_known_ = false;
@@ -163,37 +163,37 @@ void Ssd1681::abort_refresh() {
 }
 
 void Ssd1681::set_backlight(bool on) {
-    if (backlight_ < 0) return;
-    gpio_.mode_output(backlight_);
-    gpio_.set(backlight_, on);
+    if (backlight_pin_ < 0) return;
+    gpio_.mode_output(backlight_pin_);
+    gpio_.set(backlight_pin_, on);
 }
 
 void Ssd1681::init_panel() {
-    gpio_.set(rst_, true);
-    gpio_.set(rst_, false);
+    gpio_.set(reset_pin_, true);
+    gpio_.set(reset_pin_, false);
     delay_.wait_at_least_us(epd::kResetHoldUs);
-    gpio_.set(rst_, true);
+    gpio_.set(reset_pin_, true);
     delay_.wait_at_least_us(epd::kResetHoldUs);
     wait_busy();
 
-    cmd(kSwReset);
+    command(kSwReset);
     wait_busy();
 
-    cmd(kDriverOutputCtrl);
+    command(kDriverOutputCtrl);
     data(0xC7);  // 200 - 1 gates
     data(0x00);
     data(0x00);
 
-    cmd(kDataEntryMode);
+    command(kDataEntryMode);
     data(0x03);  // X inc, Y inc
 
     set_window(0, 0, kW - 1, kH - 1);
 
-    cmd(kBorderWaveform);
+    command(kBorderWaveform);
     data(kBorderFollowLut1);
 
     // INFO: fc 01aug25 internal sensor selects the temperature-compensated OTP LUT
-    cmd(kTempSensorCtrl);
+    command(kTempSensorCtrl);
     data(0x80);
 
     set_cursor(0, 0);
@@ -203,50 +203,51 @@ void Ssd1681::init_panel() {
 void Ssd1681::finish_refresh() { refreshing_ = false; }
 
 void Ssd1681::enter_sleep() {
-    cmd(kDeepSleep);
+    command(kDeepSleep);
     data(kDeepSleepRetainRam);
     asleep_ = true;
 }
 
-void Ssd1681::cmd(uint8_t c) {
-    gpio_.set(dc_, false);
+void Ssd1681::command(uint8_t opcode) {
+    gpio_.set(dc_pin_, false);
     spi_.select(true);
-    spi_.transfer(&c, nullptr, 1);
+    spi_.transfer(&opcode, nullptr, 1);
     spi_.select(false);
 }
 
-void Ssd1681::data(uint8_t d) {
-    gpio_.set(dc_, true);
+void Ssd1681::data(uint8_t byte) {
+    gpio_.set(dc_pin_, true);
     spi_.select(true);
-    spi_.transfer(&d, nullptr, 1);
+    spi_.transfer(&byte, nullptr, 1);
     spi_.select(false);
 }
 
-void Ssd1681::write_bank(uint8_t command) {
+void Ssd1681::write_bank(uint8_t opcode) {
     set_cursor(0, 0);
-    cmd(command);
-    gpio_.set(dc_, true);
+    command(opcode);
+    gpio_.set(dc_pin_, true);
     spi_.select(true);
     spi_.transfer(shadow_, nullptr, kGlassBytes);
     spi_.select(false);
 }
 
-void Ssd1681::stage(const uint8_t* fb_bytes) {
+void Ssd1681::stage(const uint8_t* canvas_bytes) {
     if (rotation_ == GlassRotation::Deg0) {
-        for (size_t i = 0; i < kGlassBytes; i++) shadow_[i] = static_cast<uint8_t>(~fb_bytes[i]);
+        for (size_t i = 0; i < kGlassBytes; i++)
+            shadow_[i] = static_cast<uint8_t>(~canvas_bytes[i]);
     } else {
         for (size_t band = 0; band < kStride; band++)
             for (size_t column = 0; column < kStride; column++)
-                turn_block(fb_bytes + band * 8 * kStride + column,
+                turn_block(canvas_bytes + band * 8 * kStride + column,
                            shadow_ + (kH - 8 - column * 8) * kStride + band);
     }
 }
 
 void Ssd1681::set_window(int x0, int y0, int x1, int y1) {
-    cmd(kSetRamXAddr);
+    command(kSetRamXAddr);
     data(static_cast<uint8_t>(x0 / 8));
     data(static_cast<uint8_t>(x1 / 8));
-    cmd(kSetRamYAddr);
+    command(kSetRamYAddr);
     data(static_cast<uint8_t>(y0));
     data(static_cast<uint8_t>(y0 >> 8));
     data(static_cast<uint8_t>(y1));
@@ -254,16 +255,16 @@ void Ssd1681::set_window(int x0, int y0, int x1, int y1) {
 }
 
 void Ssd1681::set_cursor(int x, int y) {
-    cmd(kSetRamXCounter);
+    command(kSetRamXCounter);
     data(static_cast<uint8_t>(x / 8));
-    cmd(kSetRamYCounter);
+    command(kSetRamYCounter);
     data(static_cast<uint8_t>(y));
     data(static_cast<uint8_t>(y >> 8));
 }
 
 bool Ssd1681::wait_busy(uint32_t max_spins) {
     for (uint32_t i = 0; i < max_spins; i++) {
-        if (!gpio_.get(busy_)) return true;
+        if (!gpio_.get(busy_pin_)) return true;
     }
     return false;
 }

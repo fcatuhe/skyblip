@@ -38,7 +38,7 @@ Nothing here blocks or sleeps. Every wait is a deadline against the `now_ms` the
 
 ### Why the upload is paced, and why the bus runs at 400 kHz
 
-The image is 101 KB. A 240-byte chunk is 5.4 ms of bus at 400 kHz and 22 ms at 100 kHz, and the service loop's pass is 10 ms (`runtime::kServiceStepMs`), so the bus was moved to fast mode in the devicetree rather than the chunk made smaller: at 100 kHz one chunk is longer than the pass it is sent from. One chunk per pass puts the ball on the glass about four seconds after boot, with the radio thread - which is cooperative and higher priority than the loop - untouched throughout.
+The image is 101 KB. A 240-byte chunk is 5.4 ms of bus at 400 kHz and 22 ms at 100 kHz, and the service loop's pass is 10 ms (`runtime::kServicePassCeilingMs`), so the bus was moved to fast mode in the devicetree rather than the chunk made smaller: at 100 kHz one chunk is longer than the pass it is sent from. One chunk per pass puts the ball on the glass about four seconds after boot, with the radio thread - which is cooperative and higher priority than the loop - untouched throughout.
 
 Chunk framing follows the reference (`BHY2_SensorAPI`, `bhy2_hif.c`): the first packet carries the four-byte command header, `UPLOAD_TO_PROGRAM_RAM` with the length in 32-bit words, and every packet after it is raw image bytes written to the command channel at register 0x00, padded to a word.
 

@@ -64,12 +64,12 @@ class LinkSessions {
         for (const Slot& slot : slots_)
             if (slot.used && (smallest == 0 || slot.payload_bytes < smallest))
                 smallest = slot.payload_bytes;
-        return smallest == 0 ? ports::kMinimumLinkPayload : smallest;
+        return smallest == 0 ? ports::kMinimumLinkPayloadBytes : smallest;
     }
 
     uint16_t payload_bytes(uint16_t session_id) const {
         const Slot* slot = find(session_id);
-        return slot == nullptr ? ports::kMinimumLinkPayload : slot->payload_bytes;
+        return slot == nullptr ? ports::kMinimumLinkPayloadBytes : slot->payload_bytes;
     }
 
     uint32_t dropped() const { return dropped_; }
@@ -78,12 +78,12 @@ class LinkSessions {
    private:
     struct Slot {
         uint16_t session_id{0};
-        uint16_t payload_bytes{ports::kMinimumLinkPayload};
+        uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
         bool used{false};
     };
 
     static uint16_t floor_payload(uint16_t bytes) {
-        return bytes < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : bytes;
+        return bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
     }
 
     Slot* find(uint16_t session_id) {

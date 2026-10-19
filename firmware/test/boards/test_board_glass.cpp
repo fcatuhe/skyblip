@@ -21,8 +21,8 @@ TEST_CASE("board: the host glass is unturned, so the simulator shows the framebu
 
     const parts::Ssd1681Glass& glass = platform.chips().epd.framebuffer();
     int mismatches = 0;
-    for (int y = 0; y < parts::Ssd1681::kGlassH; y++)
-        for (int x = 0; x < parts::Ssd1681::kGlassW; x++)
+    for (int y = 0; y < parts::Ssd1681::kGlassHeight; y++)
+        for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++)
             if (glass.get_pixel(x, y) != canvas.get_pixel(x, y)) mismatches++;
     CHECK(mismatches == 0);
 }

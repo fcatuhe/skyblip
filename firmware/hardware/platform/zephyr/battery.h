@@ -35,8 +35,8 @@ class Battery {
         struct sensor_value volts{};
         if (sensor_channel_get(dev_, SENSOR_CHAN_VOLTAGE, &volts) != 0) return false;
 
-        const int32_t millivolts = volts.val1 * 1000 + volts.val2 / 1000;
-        out_mv = static_cast<uint16_t>(std::clamp<int32_t>(millivolts, 0, UINT16_MAX));
+        const int32_t divider_mv = volts.val1 * 1000 + volts.val2 / 1000;
+        out_mv = static_cast<uint16_t>(std::clamp<int32_t>(divider_mv, 0, UINT16_MAX));
         return power::plausible_mv(out_mv);
     }
 

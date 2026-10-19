@@ -17,11 +17,11 @@ void PowerService::sample_die_temperature(uint32_t now_ms) {
     if (die_sampled_ && now_ms - die_read_ms_ < kDiePeriodMs) return;
     die_sampled_ = true;
     die_read_ms_ = now_ms;
-    int16_t decicelsius = 0;
+    int16_t die_dc = 0;
     // A refused measurement leaves the last good one standing rather than
     // publishing a zero: the reading is minutes old by design anyway.
-    if (!context_.roles.die_temperature.read(decicelsius)) return;
-    die_dc_ = decicelsius;
+    if (!context_.roles.die_temperature.read(die_dc)) return;
+    die_dc_ = die_dc;
     die_valid_ = true;
     die_valid_ms_ = now_ms;
 }

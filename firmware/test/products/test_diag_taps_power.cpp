@@ -73,11 +73,11 @@ TEST_CASE("diag power: the knee is recorded on both sides of it, as the level") 
     Rig rig;
     uint32_t t = 100;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     taxi(rig, t, 3);
     arm(rig, t);
     taxi(rig, t, 4);
-    rig.platform.battery().millivolts = 3550;
+    rig.platform.battery().divider_mv = 3550;
     taxi(rig, t, 6);
     stop(rig, t);
 
@@ -95,17 +95,17 @@ TEST_CASE("diag power: the reading the median threw out rides beside it, to the 
     Rig rig;
     uint32_t t = 100;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     taxi(rig, t, 3);
     arm(rig, t);
     taxi(rig, t, 4);
-    rig.platform.battery().millivolts = 3737;
+    rig.platform.battery().divider_mv = 3737;
     taxi(rig, t, 1);
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     taxi(rig, t, 3);
-    rig.platform.battery().millivolts = 3500;
+    rig.platform.battery().divider_mv = 3500;
     taxi(rig, t, 1);
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     taxi(rig, t, 3);
     stop(rig, t);
 
@@ -126,11 +126,11 @@ TEST_CASE("diag power: on the cable the record carries the cable and what the di
     uint32_t t = 100;
     REQUIRE(rig.setup() == Status::Ok);
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 4812;
+    rig.platform.battery().divider_mv = 4812;
     taxi(rig, t, 3);
     arm(rig, t);
     taxi(rig, t, 4);
-    rig.platform.battery().present = false;
+    rig.platform.battery().fitted = false;
     taxi(rig, t, 3);
     stop(rig, t);
 

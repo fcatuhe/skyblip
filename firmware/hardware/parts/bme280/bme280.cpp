@@ -86,7 +86,7 @@ bool Bme280::compensate(int32_t adc_p, int32_t adc_t, Reading& out) const {
     if (deci < kMinPlausibleDeciCelsius || deci > kMaxPlausibleDeciCelsius) return false;
     if (mpa < kMinPlausibleMpa || mpa > kMaxPlausibleMpa) return false;
     out.pressure_mpa = static_cast<uint32_t>(mpa);
-    out.temperature_decicelsius = static_cast<int16_t>(deci);
+    out.temperature_dc = static_cast<int16_t>(deci);
     return true;
 }
 

@@ -40,7 +40,7 @@ TEST_CASE("radio: the IRQ mask and the DIO1 mask are programmed before the recei
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.irq_mask == 0);
     REQUIRE(r.start_receive() == Status::Ok);
-    CHECK(chip.cmd_order(sx::kSetDioIrqParams) < chip.cmd_order(sx::kSetRx));
+    CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetRx));
     CHECK((chip.irq_mask & sx::kIrqRxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqCrcErr) != 0);
     // DIO1 is the only interrupt line wired on this board.
@@ -56,7 +56,7 @@ TEST_CASE("radio: the IRQ mask is programmed before the transmitter is keyed") {
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
     REQUIRE(r.transmit(frame, sizeof(frame)) == Status::Ok);
-    CHECK(chip.cmd_order(sx::kSetDioIrqParams) < chip.cmd_order(sx::kSetTx));
+    CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetTx));
     CHECK((chip.irq_mask & sx::kIrqTxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqTimeout) != 0);
     chip.signal_tx_done();
@@ -77,7 +77,7 @@ TEST_CASE("radio: the PA is the SX1262 high-power configuration, ordered before 
     CHECK(chip.pa_config[2] == 0x00);
     CHECK(chip.pa_config[3] == 0x01);
     CHECK(sx::kPaConfigHighPowerRatedDbm == 22);
-    CHECK(chip.cmd_order(sx::kSetPaConfig) < chip.cmd_order(sx::kSetTxParams));
+    CHECK(chip.command_order(sx::kSetPaConfig) < chip.command_order(sx::kSetTxParams));
 }
 
 // The register takes conducted power and the law limits radiated power, so what
@@ -125,13 +125,13 @@ TEST_CASE("radio: image rejection is calibrated for 863-870 MHz after the TCXO i
     CHECK(chip.image_calibrated);
     CHECK(chip.image_band[0] == 0xD7);
     CHECK(chip.image_band[1] == 0xDB);
-    CHECK(chip.cmd_order(sx::kSetDio3AsTcxoCtrl) < chip.cmd_order(sx::kCalibrateImage));
-    CHECK(chip.cmd_order(sx::kCalibrate) < chip.cmd_order(sx::kCalibrateImage));
+    CHECK(chip.command_order(sx::kSetDio3AsTcxoCtrl) < chip.command_order(sx::kCalibrateImage));
+    CHECK(chip.command_order(sx::kCalibrate) < chip.command_order(sx::kCalibrateImage));
     CHECK(chip.fault == models::Sx1262::Fault::None);
     // Once per band: the second dwell does not pay for it again.
-    const int before = chip.cmd_order(sx::kCalibrateImage);
+    const int before = chip.command_order(sx::kCalibrateImage);
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
-    CHECK(chip.cmd_order(sx::kCalibrateImage) == before);
+    CHECK(chip.command_order(sx::kCalibrateImage) == before);
 }
 
 // A5. The previous dwell leaves the chip in continuous RX, and SetRfFrequency
@@ -147,12 +147,12 @@ TEST_CASE("radio: retuning a receiving radio is bracketed by standby and returns
     REQUIRE(r.mode() == RadioMode::Rx);
 
     int standbys = 0;
-    for (uint8_t c : chip.cmds_seen)
+    for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) standbys++;
     cfg.freq_hz = 868400000;
     REQUIRE(r.configure_radio(cfg) == Status::Ok);
     int after = 0;
-    for (uint8_t c : chip.cmds_seen)
+    for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) after++;
     CHECK(after == standbys + 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);

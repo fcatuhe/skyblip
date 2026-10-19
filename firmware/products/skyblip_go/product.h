@@ -101,7 +101,7 @@ class Product {
             return Status::Ok;
         }
         flyable_ = board == Status::Ok &&
-                   ports::missing(board_.capabilities(), kRequired) == ports::Capability::None;
+                   ports::without(kRequired, board_.capabilities()) == ports::Capability::None;
         // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
         if (flyable_) config_.load_identity();
 
@@ -125,7 +125,7 @@ class Product {
             // the silicon side; nothing here is allowed to be slower than that,
             // because the warning's whole value is the milliseconds it is early.
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.step(now_ms, &meter_);
+            loop_.run_pass(now_ms, &meter_);
             meter_.end_pass();
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
@@ -173,7 +173,7 @@ class Product {
 
     ports::Capabilities capabilities() const { return board_.capabilities(); }
     ports::Capabilities degraded() const {
-        return ports::missing(board_.capabilities(), kOptional);
+        return ports::without(kOptional, board_.capabilities());
     }
 
     // False when a required capability is missing: the loop refuses to fly, the
@@ -243,7 +243,7 @@ class Product {
                 return found.baro_address == 0 ? spec.wired_part : baro_part(found.baro_address);
             case ports::Capability::Display:
                 return ports::has(board_.capabilities(), ports::Capability::Display)
-                           ? found.panel
+                           ? found.panel_name
                            : spec.wired_part;
             case ports::Capability::Haptic:
                 return found.haptic == ports::HapticKind::PinMotor ? "PIN" : spec.wired_part;

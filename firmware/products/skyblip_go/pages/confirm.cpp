@@ -54,11 +54,11 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& s) {
 
     // Reversed out across the full width: whatever page was up, this cannot be
     // mistaken for one of them at arm's length.
-    canvas.rect(0, 0, kGlassW, 26, true, /*fill=*/true);
+    canvas.rect(0, 0, kGlassWidth, 26, true, /*fill=*/true);
     canvas.draw_text(kLeft + kCellW, kConfirmHeaderY, "AUTHORISE", false, 2);
 
     canvas.draw_text(kLeft, kConfirmTitleY, s.title, true, 2);
-    canvas.hline(kLeft, kConfirmTitleY + 22, kGlassW - 2 * kLeft, true);
+    canvas.hline(kLeft, kConfirmTitleY + 22, kGlassWidth - 2 * kLeft, true);
 
     char line[kConfirmDetailCols + 1];
     int at = 0;

@@ -72,7 +72,7 @@ void draw_own_id(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
 void banner(ui::Canvas& canvas, const char* text) {
     int n = 0;
     while (text[n]) n++;
-    canvas.draw_text((kGlassW - n * kSmallCellW * kNearbyScale) / 2, kNearbyBannerY, text, true,
+    canvas.draw_text((kGlassWidth - n * kSmallCellW * kNearbyScale) / 2, kNearbyBannerY, text, true,
                      kNearbyScale);
 }
 

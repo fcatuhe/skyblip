@@ -73,7 +73,7 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     // Nothing fits in what BLE merely guarantees; an iPhone carries three; the
     // 247-byte MTU the old fixed five was aimed at still carries five; and a
     // phone that negotiates the whole L2CAP MTU is not short-changed.
-    CHECK(comms::log_records_per_chunk(ports::kMinimumLinkPayload) == 0);
+    CHECK(comms::log_records_per_chunk(ports::kMinimumLinkPayloadBytes) == 0);
     CHECK(comms::log_records_per_chunk(comms::kSmallestSupportedPayload) == 3);
     CHECK(comms::log_records_per_chunk(244) == 5);
     CHECK(comms::log_records_per_chunk(495) == comms::kMaxLogRecordsPerChunk);
@@ -101,7 +101,7 @@ TEST_CASE("log link: a reply that will not fit the frame is refused, never short
     // a session line with no record count. A tablet must not be handed either.
     uint8_t raw[comms::kLogChunkRawBytes] = {0};
     char buf[comms::kLogReplyBytes];
-    const int tiny = ports::kMinimumLinkPayload + 1;
+    const int tiny = ports::kMinimumLinkPayloadBytes + 1;
     CHECK(comms::format_log_chunk(buf, tiny, 1785628800u, 0, raw, 1, false) == 0);
     CHECK(comms::format_log_session(buf, tiny, 0, 3, 1785628800u, 1700, false, false) == 0);
     CHECK(comms::format_log_count(buf, tiny, 3, false) == 0);

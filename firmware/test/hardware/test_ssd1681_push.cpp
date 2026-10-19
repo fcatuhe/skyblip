@@ -14,15 +14,16 @@ namespace {
 constexpr int kStride = parts::Ssd1681::kGlassStride;
 
 parts::Ssd1681 make_turned(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc, f.rst, f.busy, -1, parts::GlassRotation::Deg270);
+    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin, -1,
+                          parts::GlassRotation::Deg270);
 }
 
 std::vector<uint8_t> per_pixel_bank(const parts::Ssd1681Glass& canvas) {
     const uint8_t* fb_bytes = canvas.data();
     std::vector<uint8_t> bank(parts::Ssd1681::kGlassBytes);
-    for (int gate = 0; gate < parts::Ssd1681::kGlassH; gate++)
+    for (int gate = 0; gate < parts::Ssd1681::kGlassHeight; gate++)
         for (int column = 0; column < kStride; column++) {
-            const int x = parts::Ssd1681::kGlassW - 1 - gate;
+            const int x = parts::Ssd1681::kGlassWidth - 1 - gate;
             uint8_t bits = 0;
             for (int source = 0; source < 8; source++) {
                 const int y = column * 8 + source;
@@ -42,8 +43,8 @@ std::vector<parts::Ssd1681Glass> patterns() {
     out.push_back(canvas);
 
     canvas.clear(true);
-    for (int y = 0; y < parts::Ssd1681::kGlassH; y++)
-        for (int x = 0; x < parts::Ssd1681::kGlassW; x++) canvas.set_pixel(x, y, (x + y) & 1);
+    for (int y = 0; y < parts::Ssd1681::kGlassHeight; y++)
+        for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++) canvas.set_pixel(x, y, (x + y) & 1);
     out.push_back(canvas);
 
     std::mt19937 rng(874);

@@ -23,7 +23,7 @@ namespace {
 // them.
 struct Rig {
     models::Ssd1681 chip;
-    parts::Ssd1681 epd{chip, chip, chip, chip.dc, chip.rst, chip.busy};
+    parts::Ssd1681 epd{chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin};
     platform::host::Clock clock;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
@@ -81,7 +81,7 @@ struct Rig {
     }
 
     bool glass_all_black() const {
-        return chip.framebuffer().count_black() == go::kGlassW * go::kGlassH;
+        return chip.framebuffer().count_black() == go::kGlassWidth * go::kGlassHeight;
     }
 
     // The pad held past the way home, a gesture read on the tick, not the release.
@@ -157,8 +157,8 @@ struct Rig {
     static constexpr uint32_t kThreatAddress = 0x424242;
     static constexpr uint8_t kThreatTable = 6;
 
-    void die_temperature(int16_t decicelsius) {
-        state.power.die_dc = decicelsius;
+    void die_temperature(int16_t die_dc) {
+        state.power.die_dc = die_dc;
         state.power.die_valid = true;
     }
 };

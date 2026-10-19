@@ -49,7 +49,7 @@ struct Executor {
     ports::RfPlan carrying(const uint8_t* frame, uint64_t at_us) const {
         ports::RfPlan plan = slot1();
         plan.tx = frame;
-        plan.tx_len = protocol::AdslPacket::kTxBytes;
+        plan.tx_bytes = protocol::AdslPacket::kTxBytes;
         plan.tx_at_us = at_us;
         return plan;
     }

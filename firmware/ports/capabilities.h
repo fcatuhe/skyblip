@@ -48,8 +48,8 @@ constexpr bool has(Capabilities set, Capabilities wanted) {
            static_cast<uint32_t>(wanted);
 }
 
-constexpr Capabilities missing(Capabilities set, Capabilities required) {
-    return static_cast<Capabilities>(static_cast<uint32_t>(required) & ~static_cast<uint32_t>(set));
+constexpr Capabilities without(Capabilities set, Capabilities removed) {
+    return static_cast<Capabilities>(static_cast<uint32_t>(set) & ~static_cast<uint32_t>(removed));
 }
 
 }  // namespace skyblip::ports

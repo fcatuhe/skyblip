@@ -22,8 +22,8 @@ namespace skyblip::go::radar {
 // pixels, never one. That makes the own ship exactly centred (its fuselage
 // straddles 99|100), the rings exactly concentric with it, and every target
 // offset measured from the same point in both directions.
-constexpr int kNear = kGlassW / 2 - 1;
-constexpr int kFar = kGlassW / 2;
+constexpr int kNear = kGlassWidth / 2 - 1;
+constexpr int kFar = kGlassWidth / 2;
 constexpr int kMargin = 4;
 constexpr int kToScaleR = 92;
 constexpr int kAllR = 76;
@@ -36,7 +36,7 @@ constexpr int kClockScale = 2;
 constexpr int kStateScale = 1;
 constexpr int kLabelPad = 2;
 constexpr int kStackGap = 2;
-constexpr int kFooterBottom = kGlassH - kMargin;
+constexpr int kFooterBottom = kGlassHeight - kMargin;
 constexpr int kClockY = kFooterBottom - kGlyphH * kClockScale;
 constexpr int kStateY = kClockY - kStackGap - kGlyphH * kStateScale;
 constexpr int kFooterTop = kStateY - kLabelPad;

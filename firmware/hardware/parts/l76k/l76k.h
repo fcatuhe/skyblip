@@ -23,10 +23,10 @@ class L76k : public ports::Gnss {
     explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate)
         : uart_(uart), rate_(rate) {}
 
-    using Config = ports::GnssConfig;
+    using ConfigStage = ports::GnssConfigStage;
 
     // INFO: gn 09jun25 t_echo_plus.dts:278 `current-speed` must equal this, nothing checks it
-    static constexpr uint32_t kBaudRate = 9600;
+    static constexpr uint32_t kFactoryBaudRate = 9600;
 
     // INFO: fc 19sep26 $PCAS01 takes 0..5 for 4800..115200, L76K protocol spec V1.1 SS2.3.1
     static constexpr uint32_t kTargetBaudRate = 115200;
@@ -47,9 +47,7 @@ class L76k : public ports::Gnss {
     };
 
     // INFO: fc 13sep26 one solution per second, transmitted extrapolated to the burst's own instant
-    static constexpr uint32_t kFixRateHz = 1;
     static constexpr uint32_t kSolutionPeriodMs = 1000;
-    static constexpr uint32_t kFixPeriodMs = 1000 / kFixRateHz;
 
     // INFO: fc 13sep26 GGA + three GSA (one per constellation) + RMC, the widest burst we ask for
     static constexpr uint32_t kBurstBytes = 320;
@@ -93,7 +91,7 @@ class L76k : public ports::Gnss {
     static constexpr uint32_t kSatellitesInViewBytes = 648;
     static constexpr uint32_t kSearchingBurstBytes = kBurstBytes + kSatellitesInViewBytes;
     static constexpr uint32_t kSearchingBurstMs = wire_ms(kSearchingBurstBytes, kTargetBaudRate);
-    static_assert(kSearchingBurstMs < kFixPeriodMs,
+    static_assert(kSearchingBurstMs < kSolutionPeriodMs,
                   "the burst must fit inside one solution period, satellites in view and all");
 
     // $PCAS10 reboots the receiver. It answers nothing for about a second after
@@ -108,16 +106,16 @@ class L76k : public ports::Gnss {
 
     // INFO: fc 13sep26 the rate we ask for is the factory rate, so obedience is the sentence set
     static constexpr uint32_t kVerifyWindowMs = 3000;
-    static constexpr uint32_t kMinVerifyUpdates = 2;
+    static constexpr uint32_t kMinVerifySentences = 2;
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
     // Drive the configuration sequence. Until it has run the receiver is on its
     // factory defaults, which is a degraded receiver wearing a working one's face.
     void service(uint32_t now_ms);
 
-    Config config_state() const { return state_; }
-    bool configured() const { return state_ == Config::Ready; }
-    bool degraded() const { return state_ == Config::Degraded; }
+    ConfigStage config_stage() const { return stage_; }
+    bool configured() const { return stage_ == ConfigStage::Ready; }
+    bool degraded() const { return stage_ == ConfigStage::Degraded; }
 
     // Drain whatever the receiver has said into the parser. Returns true when
     // that produced a NEW fix, or when the fix we already published stopped
@@ -135,7 +133,7 @@ class L76k : public ports::Gnss {
     // Why the last solution was not a fix, and how many times that has happened.
     // Both are for the self-test page and a support case, and nothing else reads
     // them: the fix's own `valid` is the answer every service uses.
-    gnss::FixReject reject_reason() const { return validity_.last_reject(); }
+    gnss::FixReject last_reject() const { return validity_.last_reject(); }
     uint32_t rejected() const { return validity_.rejected(); }
 
     // The rate we are actually talking to the receiver at, which is only the
@@ -149,18 +147,18 @@ class L76k : public ports::Gnss {
 
     uint32_t port_overruns() const { return uart_.overruns(); }
 
-    uint32_t raises() const { return raises_; }
+    uint32_t raises() const { return baud_raises_; }
     uint32_t raise_fallbacks() const { return raise_fallbacks_; }
 
     ports::GnssHealth health() const override {
         ports::GnssHealth h{};
         h.baud = baud_rate();
         h.overruns = port_overruns();
-        h.sentences = updates();
+        h.sentences = sentences();
         h.rejected = rejected();
         h.pps_latency_ms = pps_latency_ms();
-        h.reject = reject_reason();
-        h.config = state_;
+        h.last_reject = last_reject();
+        h.config_stage = stage_;
         h.identified = identified();
         return h;
     }
@@ -175,8 +173,10 @@ class L76k : public ports::Gnss {
     // configuration with it, so the sequence runs again behind it.
     void request_restart(ports::Restart kind) override;
 
-    void request_satellites_in_view(bool wanted) { gsv_wanted_ = wanted; }
-    bool satellites_in_view_live() const { return gsv_every_ != 0 && gsv_wanted_; }
+    void request_satellites_in_view(bool wanted) { satellites_in_view_wanted_ = wanted; }
+    bool satellites_in_view_live() const {
+        return satellites_in_view_every_ != 0 && satellites_in_view_wanted_;
+    }
     // The last published solution closed a burst that carried a GSV set.
     bool levels_fresh() const { return levels_fresh_; }
 
@@ -185,10 +185,10 @@ class L76k : public ports::Gnss {
     // Sentences the parser accepted since boot. A receiver that is wired but
     // silent (or babbling at the wrong baud) never moves this off zero, which is
     // what the DFU health gate watches.
-    uint32_t updates() const { return parser_.solution().updates; }
+    uint32_t sentences() const { return parser_.solution().updates; }
 
    private:
-    static constexpr size_t kChunk = 64;
+    static constexpr size_t kReadChunkBytes = 64;
 
     static constexpr uint8_t kNoRestart = 0xFF;
 
@@ -215,23 +215,23 @@ class L76k : public ports::Gnss {
     gnss::NmeaParser parser_{};
     gnss::FixValidity validity_{};
     gnss::GnssSolution solution_{};
-    uint32_t verify_unrequested_{0};
+    uint32_t unrequested_at_verify_{0};
 
-    Config state_{Config::Idle};
+    ConfigStage stage_{ConfigStage::Idle};
     uint32_t serviced_ms_{0};
     uint32_t last_command_ms_{0};
     uint32_t verify_start_ms_{0};
-    uint32_t verify_updates_{0};
+    uint32_t verify_sentences_{0};
     int next_command_{0};
     int baud_index_{0};
-    uint32_t baud_before_raise_{kBaudRate};
+    uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};
-    uint32_t raises_{0};
+    uint32_t baud_raises_{0};
     uint32_t raise_fallbacks_{0};
     uint8_t attempts_{0};
     uint8_t pending_restart_{kNoRestart};
-    bool gsv_wanted_{false};
-    uint8_t gsv_every_{0};
+    bool satellites_in_view_wanted_{false};
+    uint8_t satellites_in_view_every_{0};
     bool levels_heard_{false};
     bool burst_levels_{false};
     bool levels_fresh_{false};

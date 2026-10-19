@@ -132,7 +132,7 @@ TEST_CASE("product: powering the panel down leaves the wordmark on it") {
 
     go::Glass expected;
     expected.clear(true);
-    ui::draw_wordmark(expected, go::kGlassW / 2, go::kGlassH / 2);
+    ui::draw_wordmark(expected, go::kGlassWidth / 2, go::kGlassHeight / 2);
 
     rig.product.screen().set_power(false);
     rig.run(1000, 7000);
@@ -200,7 +200,7 @@ TEST_CASE("product: a flat cell takes the front light down with the panel") {
     change(rig, t);
     REQUIRE(rig.platform.chips().epd.backlight);
 
-    rig.platform.battery().millivolts = 3100;
+    rig.platform.battery().divider_mv = 3100;
     rig.run(t, t + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     CHECK(rig.product.ready_to_power_off());
@@ -220,7 +220,7 @@ TEST_CASE("product: a park with no frame to push still puts the front light out"
     REQUIRE(rig.platform.chips().epd.backlight);
 
     rig.platform.system_power().supply_warning = true;
-    rig.platform.battery().millivolts = 3100;
+    rig.platform.battery().divider_mv = 3100;
     rig.run(t, t + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     REQUIRE(rig.product.power().supply_warned());
@@ -355,7 +355,7 @@ TEST_CASE("product: the status page carries the device's name and a cell that is
     auto status_ink = [](const char* callsign, uint16_t millivolts, bool on_cable = false) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        rig.platform.battery().millivolts = millivolts;
+        rig.platform.battery().divider_mv = millivolts;
         rig.platform.battery().external_power = on_cable;
         for (int i = 0; callsign[i] != 0 && i < 9; i++) rig.settings().callsign[i] = callsign[i];
         uint32_t t = 100;
@@ -383,7 +383,7 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
     auto sixpack = [](bool on_cable) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        rig.platform.battery().millivolts = on_cable ? 4790 : 4050;
+        rig.platform.battery().divider_mv = on_cable ? 4790 : 4050;
         rig.platform.battery().external_power = on_cable;
         uint32_t t = 100;
         rig.show(t, go::Page::SixPack);
@@ -413,7 +413,7 @@ TEST_CASE("product: the six-pack reads the charge rail on the cable and the cell
 TEST_CASE("product: the status page marks a low cell when the monitor says so, not before") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 3450;
+    rig.platform.battery().divider_mv = 3450;
     uint32_t t = 100;
     rig.show(t, go::Page::Status);
     REQUIRE(rig.product.screen().page() == go::Page::Status);
@@ -438,11 +438,11 @@ TEST_CASE("product: the status page marks a cell charging too hot to be charged"
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) |
         static_cast<uint32_t>(ports::Capability::DieTemperature));
 
-    auto charging_at = [](int16_t decicelsius) {
+    auto charging_at = [](int16_t die_dc) {
         Rig rig{kWithDie};
         REQUIRE(rig.setup() == Status::Ok);
-        rig.platform.die_temperature().hold(decicelsius);
-        rig.platform.battery().millivolts = 4000;
+        rig.platform.die_temperature().hold(die_dc);
+        rig.platform.battery().divider_mv = 4000;
         rig.platform.battery().external_power = true;
         uint32_t t = 100;
         rig.show(t, go::Page::Status);

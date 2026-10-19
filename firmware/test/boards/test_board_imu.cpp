@@ -21,7 +21,7 @@ using Board = boards::TEchoPlus<platform::host::Platform>;
 uint32_t run(platform::host::Platform& platform, Board& board, bus::State& state, uint32_t from_ms,
              uint32_t for_ms) {
     uint32_t t = from_ms;
-    for (; t < from_ms + for_ms; t += runtime::kServiceStepMs) {
+    for (; t < from_ms + for_ms; t += runtime::kServicePassCeilingMs) {
         platform.clock().set_millis(t);
         board.poll(state, t);
     }
@@ -46,7 +46,7 @@ TEST_CASE("board: a sensor hub that answers and names itself is an inclinometer"
     Board board{platform, bus};
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer") {
@@ -56,17 +56,17 @@ TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer
     Board board{platform, bus};
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK_FALSE(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK_FALSE(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 // The chip is a quarter turn from the case and face down with it: +X is up, +Y right, +Z forward.
@@ -107,7 +107,7 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
 
 TEST_CASE("board: nothing is asked of a bus with no hub on it") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
@@ -231,7 +231,7 @@ TEST_CASE("board: a full image replaces a copy that is not its own") {
 
 TEST_CASE("board: a plain T-Echo reports no hub and keeps nothing on flash") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
@@ -259,7 +259,7 @@ TEST_CASE("board: the copy waits for a flash window, as the log does") {
 TEST_CASE("board: a hub that answers but whose flash does not is reported unreadable") {
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
-    platform.imu_flash().set_present(false);
+    platform.imu_flash().set_fitted(false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;

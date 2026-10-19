@@ -181,7 +181,7 @@ bool same_dwell(const SlotPlan& a, const SlotPlan& b) {
 
 }  // namespace
 
-// Pps::ms_since() reads 0 before the first edge, which used to pass for an edge just now.
+// Pps::since_edge_ms() reads 0 before the first edge, which used to pass for an edge just now.
 TEST_CASE("timing: an edge never seen is no holdover, and plans the same dwells as before") {
     const ClockState never{true, false, 0, 0};
     const ClockState past{true, false, kPpsHoldoverMs + 1, kLastEdgeUs};

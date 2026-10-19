@@ -67,7 +67,7 @@ bool inside_ring(int32_t right, int32_t ahead, int ring) {
     return right * right + ahead * ahead <= ring * ring;
 }
 
-bool on_glass(int x, int y) { return x >= 0 && x < kGlassW && y >= 0 && y < kGlassH; }
+bool on_glass(int x, int y) { return x >= 0 && x < kGlassWidth && y >= 0 && y < kGlassHeight; }
 
 bool pixel_within(int x, int y, int r) {
     const int64_t px = 2 * (x - kFar) + 1, py = 2 * (y - kFar) + 1;
@@ -304,7 +304,8 @@ Rect count_box_beside(const RimMark& m, int along_x, int along_y) {
 
 bool count_fits(const Rect& box, const RimMark& own, const RimMark* marks, int n,
                 const Rect& label) {
-    if (box.left < 0 || box.top < 0 || box.right >= kGlassW || box.bottom >= kGlassH) return false;
+    if (box.left < 0 || box.top < 0 || box.right >= kGlassWidth || box.bottom >= kGlassHeight)
+        return false;
     if (overlap(box, label)) return false;
     for (int i = 0; i < n; i++)
         if (&marks[i] != &own && overlap(box, grown(mark_box(marks[i].p), kCountClearPx)))

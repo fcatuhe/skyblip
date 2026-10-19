@@ -13,20 +13,20 @@ enum class GlassRotation : uint8_t { Deg0, Deg270 };
 
 class Ssd1681 : public ports::Display {
    public:
-    Ssd1681(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int dc, int rst, int busy,
-            int backlight = -1, GlassRotation rotation = GlassRotation::Deg0)
+    Ssd1681(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int dc_pin, int reset_pin, int busy_pin,
+            int backlight_pin = -1, GlassRotation rotation = GlassRotation::Deg0)
         : spi_(spi),
           gpio_(gpio),
           delay_(delay),
-          dc_(dc),
-          rst_(rst),
-          busy_(busy),
-          backlight_(backlight),
+          dc_pin_(dc_pin),
+          reset_pin_(reset_pin),
+          busy_pin_(busy_pin),
+          backlight_pin_(backlight_pin),
           rotation_(rotation) {}
 
     void begin();
 
-    // Which panel the board found glued to it. The fingerprint read is the
+    // Which panel the board found glued to it. The signature read is the
     // board's, not the driver's: on silicon it needs the panel's one data line
     // reversed, which is only possible before a bus driver owns the pins
     // (hardware/parts/ssd1681/panel.h). Called before begin(); not calling it at
@@ -36,13 +36,13 @@ class Ssd1681 : public ports::Display {
     const char* panel_name() const { return parts::panel_name(panel_); }
 
     // INFO: fc 19sep26 SSD1681 drives 200 source x 200 gate lines, datasheet 6.1
-    static constexpr int kGlassW = 200;
-    static constexpr int kGlassH = 200;
-    static constexpr int kGlassStride = (kGlassW + 7) / 8;
-    static constexpr size_t kGlassBytes = static_cast<size_t>(kGlassStride) * kGlassH;
+    static constexpr int kGlassWidth = 200;
+    static constexpr int kGlassHeight = 200;
+    static constexpr int kGlassStride = (kGlassWidth + 7) / 8;
+    static constexpr size_t kGlassBytes = static_cast<size_t>(kGlassStride) * kGlassHeight;
 
     static bool drives(const ui::Canvas& canvas) {
-        return canvas.width() == kGlassW && canvas.height() == kGlassH;
+        return canvas.width() == kGlassWidth && canvas.height() == kGlassHeight;
     }
 
     void present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t now_ms) override;
@@ -70,10 +70,10 @@ class Ssd1681 : public ports::Display {
     void abort_refresh();
     void finish_refresh();
     void enter_sleep();
-    void cmd(uint8_t c);
-    void data(uint8_t d);
-    void write_bank(uint8_t command);
-    void stage(const uint8_t* fb_bytes);
+    void command(uint8_t opcode);
+    void data(uint8_t byte);
+    void write_bank(uint8_t opcode);
+    void stage(const uint8_t* canvas_bytes);
     void set_window(int x0, int y0, int x1, int y1);
     void set_cursor(int x, int y);
     bool wait_busy(uint32_t max_spins = 200000);
@@ -81,7 +81,7 @@ class Ssd1681 : public ports::Display {
     io::Spi& spi_;
     io::Gpio& gpio_;
     io::Delay& delay_;
-    int dc_, rst_, busy_, backlight_;
+    int dc_pin_, reset_pin_, busy_pin_, backlight_pin_;
     GlassRotation rotation_;
     // INFO: fc 03oct26 the glass as sent, in RAM order: a partial's 0x26, staging for every bank
     uint8_t shadow_[kGlassBytes]{};
@@ -94,7 +94,7 @@ class Ssd1681 : public ports::Display {
     uint32_t timeout_at_ms_{0};
 };
 
-using Ssd1681Glass = ui::Panel<Ssd1681::kGlassW, Ssd1681::kGlassH>;
+using Ssd1681Glass = ui::Panel<Ssd1681::kGlassWidth, Ssd1681::kGlassHeight>;
 
 namespace epd {
 // INFO: fc 04sep26 GxEPD2, Good Display, SoftRF hold RES# 10 ms; only this reset ends deep sleep

@@ -18,8 +18,8 @@ class Pps {
     Status begin() {
         if (!device_is_ready(pin_.port)) return Status::Down;
         if (gpio_pin_configure_dt(&pin_, GPIO_INPUT) != 0) return Status::Down;
-        gpio_init_callback(&cb_, on_edge, BIT(pin_.pin));
-        if (gpio_add_callback(pin_.port, &cb_) != 0) return Status::Down;
+        gpio_init_callback(&edge_callback_, on_edge, BIT(pin_.pin));
+        if (gpio_add_callback(pin_.port, &edge_callback_) != 0) return Status::Down;
         if (gpio_pin_interrupt_configure_dt(&pin_, GPIO_INT_EDGE_RISING) != 0) return Status::Down;
         self_ = this;
         return Status::Ok;
@@ -33,7 +33,7 @@ class Pps {
         return edge_us != 0 && timing::since_edge_us(edge_us, now_us) < kHoldoverUs;
     }
 
-    uint32_t ms_since(uint64_t now_us) const {
+    uint32_t since_edge_ms(uint64_t now_us) const {
         const uint64_t edge_us = last_edge_us();
         if (edge_us == 0) return 0;
         return static_cast<uint32_t>(timing::since_edge_us(edge_us, now_us) / 1000);
@@ -60,7 +60,7 @@ class Pps {
     static Pps* self_;
 
     struct gpio_dt_spec pin_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_pps), gpios);
-    struct gpio_callback cb_{};
+    struct gpio_callback edge_callback_{};
     volatile uint64_t edge_us_{0};
     volatile uint32_t edges_{0};
 };

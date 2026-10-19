@@ -65,10 +65,10 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
 }
 
 void stage_versions(Rig& rig) {
-    rig.platform.dfu().has_running = true;
-    rig.platform.dfu().running = kRunning;
-    rig.platform.dfu().has_staged = true;
-    rig.platform.dfu().staged = kStaged;
+    rig.platform.dfu().running_version_valid = true;
+    rig.platform.dfu().running_image_version = kRunning;
+    rig.platform.dfu().staged_version_valid = true;
+    rig.platform.dfu().staged_image_version = kStaged;
 }
 
 void land_upload(Rig& rig, uint32_t& t) {
@@ -102,11 +102,11 @@ struct Rebooted {
     Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
              std::optional<ports::ImageVersion> slot1 = std::nullopt) {
         rig.platform.kv() = before.platform.kv();
-        rig.platform.dfu().has_running = true;
-        rig.platform.dfu().running = running;
+        rig.platform.dfu().running_version_valid = true;
+        rig.platform.dfu().running_image_version = running;
         rig.platform.dfu().image_confirmed = confirmed;
-        rig.platform.dfu().has_staged = slot1.has_value();
-        if (slot1) rig.platform.dfu().staged = *slot1;
+        rig.platform.dfu().staged_version_valid = slot1.has_value();
+        if (slot1) rig.platform.dfu().staged_image_version = *slot1;
     }
 };
 
@@ -221,7 +221,7 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
 TEST_CASE("product: under a running watchdog a recovery asks for the press, then drops the rails") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    REQUIRE(rig.platform.watchdog().arm(runtime::kHardwareWatchdogMs) == Status::Ok);
+    REQUIRE(rig.platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) == Status::Ok);
     uint32_t t = 0;
     on_ground(rig, t);
 
@@ -301,7 +301,7 @@ TEST_CASE("product: an upload that lands on a critical cell is refused and nothi
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     open_upload_window(rig, t);
-    rig.platform.battery().millivolts = 3400;
+    rig.platform.battery().divider_mv = 3400;
     rig.run(t, t + 8000);
     t += 8000;
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
@@ -343,10 +343,10 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     constexpr ports::ImageHash kFull{{0xF0, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}};
     Rig before;
     stage_versions(before);
-    before.platform.dfu().staged = kRunning;
-    before.platform.dfu().has_running_hash = true;
+    before.platform.dfu().staged_image_version = kRunning;
+    before.platform.dfu().running_hash_valid = true;
     before.platform.dfu().running_image_hash = kSlim;
-    before.platform.dfu().has_staged_hash = true;
+    before.platform.dfu().staged_hash_valid = true;
     before.platform.dfu().staged_image_hash = kFull;
     REQUIRE(before.setup() == Status::Ok);
     uint32_t t = 0;
@@ -360,15 +360,15 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
     REQUIRE(before.platform.dfu().triggered == 1);
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
-    after.rig.platform.dfu().has_running_hash = true;
+    after.rig.platform.dfu().running_hash_valid = true;
     after.rig.platform.dfu().running_image_hash = kSlim;
-    after.rig.platform.dfu().has_staged_hash = true;
+    after.rig.platform.dfu().staged_hash_valid = true;
     after.rig.platform.dfu().staged_image_hash = kFull;
     REQUIRE(after.rig.setup() == Status::Ok);
     CHECK(config(after.rig).image_state() == dfu::ImageState::Reverted);
 
     Rebooted landed(before, kRunning, /*confirmed=*/true);
-    landed.rig.platform.dfu().has_running_hash = true;
+    landed.rig.platform.dfu().running_hash_valid = true;
     landed.rig.platform.dfu().running_image_hash = kFull;
     REQUIRE(landed.rig.setup() == Status::Ok);
     CHECK(config(landed.rig).image_state() == dfu::ImageState::Confirmed);
@@ -420,8 +420,8 @@ TEST_CASE("product: an image staged before a restart is not installed by the nex
     REQUIRE(before.setup() == Status::Ok);
 
     Rebooted after(before, kRunning, /*confirmed=*/true);
-    after.rig.platform.dfu().has_staged = true;
-    after.rig.platform.dfu().staged = kStaged;
+    after.rig.platform.dfu().staged_version_valid = true;
+    after.rig.platform.dfu().staged_image_version = kStaged;
     REQUIRE(after.rig.setup() == Status::Ok);
     uint32_t t = 0;
     open_upload_window(after.rig, t);
@@ -450,9 +450,9 @@ std::string land(Rig& rig) {
 }
 
 void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
-    rig.platform.dfu().has_running_key = true;
-    rig.platform.dfu().trusted_key.fill(trusted);
-    rig.platform.dfu().has_staged_key = true;
+    rig.platform.dfu().running_key_valid = true;
+    rig.platform.dfu().running_signer.fill(trusted);
+    rig.platform.dfu().staged_key_valid = true;
     rig.platform.dfu().staged_signer.fill(signer);
 }
 }  // namespace
@@ -472,7 +472,7 @@ TEST_CASE("product: an image with no key hash at all is refused as the wrong key
     Rig rig;
     stage_versions(rig);
     sign(rig, 0x21, 0x21);
-    rig.platform.dfu().has_staged_key = false;
+    rig.platform.dfu().staged_key_valid = false;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
     CHECK(rig.platform.dfu().triggered == 0);
@@ -495,7 +495,7 @@ TEST_CASE("product: a release unit refuses to ask for an older image, and asks f
 TEST_CASE("product: a development unit asks for an older image") {
     Rig rig;
     stage_versions(rig);
-    rig.platform.dfu().downgrades = true;
+    rig.platform.dfu().allows_downgrade = true;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(ask_for(rig, "0.1.0+3").find("confirm_dfu") != std::string::npos);
     CHECK(config(rig).pending() == comms::Pending::Dfu);
@@ -504,7 +504,7 @@ TEST_CASE("product: a development unit asks for an older image") {
 TEST_CASE("product: the update frame names the trusted key and, on a development unit, the rule") {
     Rig release;
     sign(release, 0x21, 0x21);
-    release.platform.dfu().trusted_key[1] = 0x26;
+    release.platform.dfu().running_signer[1] = 0x26;
     REQUIRE(release.setup() == Status::Ok);
     release.send("{\"cmd\":\"update\"}");
     release.run(0, 200);
@@ -514,7 +514,7 @@ TEST_CASE("product: the update frame names the trusted key and, on a development
 
     Rig development;
     sign(development, 0x21, 0x21);
-    development.platform.dfu().downgrades = true;
+    development.platform.dfu().allows_downgrade = true;
     REQUIRE(development.setup() == Status::Ok);
     development.send("{\"cmd\":\"update\"}");
     development.run(0, 200);

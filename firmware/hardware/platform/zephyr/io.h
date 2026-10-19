@@ -59,25 +59,25 @@ class Delay : public io::Delay {
 // of the Zephyr spi_config and the line is toggled here.
 class Spi : public io::Spi {
    public:
-    Spi(const struct device* spi, const struct spi_config& cfg, const struct gpio_dt_spec& cs)
-        : spi_(spi), cfg_(cfg), cs_(cs) {
+    Spi(const struct device* spi, const struct spi_config& config, const struct gpio_dt_spec& cs)
+        : spi_(spi), config_(config), cs_(cs) {
         gpio_pin_configure_dt(&cs_, GPIO_OUTPUT_INACTIVE);
     }
 
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         static uint8_t zeros[64] = {0};
         const uint8_t* txp = tx ? tx : zeros;  // clock zeros when tx==nullptr
-        struct spi_buf tb{const_cast<uint8_t*>(txp), len};
-        struct spi_buf rb{rx, len};
+        struct spi_buf tb{const_cast<uint8_t*>(txp), bytes};
+        struct spi_buf rb{rx, bytes};
         struct spi_buf_set txs{&tb, 1};
         struct spi_buf_set rxs{&rb, 1};
-        spi_transceive(spi_, &cfg_, &txs, rx ? &rxs : nullptr);
+        spi_transceive(spi_, &config_, &txs, rx ? &rxs : nullptr);
     }
     void select(bool on) override { gpio_pin_set_dt(&cs_, on ? 1 : 0); }
 
    private:
     const struct device* spi_;
-    struct spi_config cfg_;
+    struct spi_config config_;
     struct gpio_dt_spec cs_;
 };
 
@@ -94,19 +94,19 @@ class I2c : public io::I2c {
    public:
     explicit I2c(const struct device* bus) : bus_(bus) {}
 
-    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
+    bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
         if (!device_is_ready(bus_)) return false;
-        if (len == 0) {
+        if (bytes == 0) {
             uint8_t nothing = 0;
             struct i2c_msg msg{&nothing, 0, I2C_MSG_WRITE | I2C_MSG_STOP};
-            return i2c_transfer(bus_, &msg, 1, addr) == 0;
+            return i2c_transfer(bus_, &msg, 1, address) == 0;
         }
-        return i2c_write(bus_, data, len, addr) == 0;
+        return i2c_write(bus_, data, bytes, address) == 0;
     }
 
-    bool read(uint8_t addr, uint8_t* data, size_t len) override {
+    bool read(uint8_t address, uint8_t* out, size_t bytes) override {
         if (!device_is_ready(bus_)) return false;
-        return i2c_read(bus_, data, len, addr) == 0;
+        return i2c_read(bus_, out, bytes, address) == 0;
     }
 
    private:
@@ -146,12 +146,12 @@ class Uart : public io::Uart, public io::UartRate {
         config.baudrate = baud;
         return uart_configure(uart_, &config) == 0;
     }
-    size_t write(const uint8_t* data, size_t len) override {
-        for (size_t i = 0; i < len; i++) uart_poll_out(uart_, data[i]);
-        return len;
+    size_t write(const uint8_t* data, size_t bytes) override {
+        for (size_t i = 0; i < bytes; i++) uart_poll_out(uart_, data[i]);
+        return bytes;
     }
-    size_t read(uint8_t* data, size_t cap) override {
-        return ring_buf_get(&rx_, data, static_cast<uint32_t>(cap));
+    size_t read(uint8_t* out, size_t capacity) override {
+        return ring_buf_get(&rx_, out, static_cast<uint32_t>(capacity));
     }
     size_t available() override { return ring_buf_size_get(&rx_); }
 

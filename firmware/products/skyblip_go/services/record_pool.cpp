@@ -130,7 +130,7 @@ Status RecordPool::deliver_held(uint32_t now_ms) {
     const Status sent = context_.roles.link.send_to(
         held_to_, events::Endpoint::Log,
         ConstByteSpan(reinterpret_cast<const uint8_t*>(held_), static_cast<size_t>(held_len_)));
-    if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyHoldMs)
+    if (sent == Status::WouldBlock && now_ms - held_since_ms_ < ports::kReplyWaitCeilingMs)
         return Status::WouldBlock;
     held_len_ = 0;
     if (is_ok(sent)) return Status::Ok;

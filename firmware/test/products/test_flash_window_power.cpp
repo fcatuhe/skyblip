@@ -20,7 +20,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    rig.platform.battery().millivolts = 3400;
+    rig.platform.battery().divider_mv = 3400;
     // The board samples the cell once a second and the monitor acts on the third
     // consecutive reading, so a low cell takes four seconds to become a decision.
     rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
@@ -63,7 +63,7 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    rig.platform.battery().millivolts = 3400;
+    rig.platform.battery().divider_mv = 3400;
     rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     const uint32_t before = writes(rig);
@@ -74,7 +74,7 @@ TEST_CASE("flash window: a cell at its cutoff powers off without touching the se
     REQUIRE(writes(rig) == before);
 
     // And now the cell reaches its cutoff, which is the flush this refuses.
-    rig.platform.battery().millivolts = 3100;
+    rig.platform.battery().divider_mv = 3100;
     rig.seconds(t, 5, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     REQUIRE(rig.product.shutdown().phase() != power::ShutdownPhase::Running);

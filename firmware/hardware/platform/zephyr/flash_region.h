@@ -41,14 +41,14 @@ class FlashRegion : public ports::FlashRegion {
     uint32_t sector_bytes() const override { return sector_bytes_; }
     uint32_t sector_count() const override { return sector_count_; }
 
-    Status read(uint32_t offset, uint8_t* buf, uint32_t len) override {
+    Status read(uint32_t offset, uint8_t* out, uint32_t bytes) override {
         if (!ready_) return Status::Down;
-        return flash_area_read(area_, offset, buf, len) == 0 ? Status::Ok : Status::Down;
+        return flash_area_read(area_, offset, out, bytes) == 0 ? Status::Ok : Status::Down;
     }
 
-    Status write(uint32_t offset, const uint8_t* buf, uint32_t len) override {
+    Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) override {
         if (!ready_) return Status::Down;
-        return flash_area_write(area_, offset, buf, len) == 0 ? Status::Ok : Status::Down;
+        return flash_area_write(area_, offset, data, bytes) == 0 ? Status::Ok : Status::Down;
     }
 
     Status erase_sector(uint32_t index) override {

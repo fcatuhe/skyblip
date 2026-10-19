@@ -36,7 +36,8 @@ TEST_CASE("epd: paint_black drives every pixel from white, on the partial wavefo
     REQUIRE(f.ram.size() == parts::Ssd1681Glass::kBytes);
     for (uint8_t b : f.ram_previous) REQUIRE(b == 0xFF);  // panel RAM 1 is white
     for (uint8_t b : f.ram) REQUIRE(b == 0x00);
-    CHECK(f.framebuffer().count_black() == parts::Ssd1681::kGlassW * parts::Ssd1681::kGlassH);
+    CHECK(f.framebuffer().count_black() ==
+          parts::Ssd1681::kGlassWidth * parts::Ssd1681::kGlassHeight);
 }
 
 // The wipe is never the last frame: the page behind it spends the rails it left up.

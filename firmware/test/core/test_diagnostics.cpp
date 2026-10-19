@@ -52,7 +52,7 @@ Diagnostics busy_device() {
     d.gnss_fixes = 5210;
     d.fix_valid = true;
     d.gnss_baud = 38400;
-    d.gnss_config = ports::GnssConfig::Ready;
+    d.gnss_config = ports::GnssConfigStage::Ready;
     d.gnss_raises = 1;
     d.gnss_identified = true;
     d.gnss_firmware = "URANUS5,V5.1.0.0";
@@ -108,7 +108,7 @@ Diagnostics widest_device() {
     d.alarm = 255;
     d.gnss_fixes = 0xFFFFFFFFu;
     d.gnss_baud = 921600;
-    d.gnss_config = ports::GnssConfig::Degraded;  // "DEGRADED"
+    d.gnss_config = ports::GnssConfigStage::Degraded;  // "DEGRADED"
     d.gnss_raises = 0xFFFFFFFFu;
     d.gnss_raise_fallbacks = 0xFFFFFFFFu;
     // The driver's version buffer is 24 bytes, so 23 characters is the longest
@@ -306,7 +306,7 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
     d.gnss_identified = false;
     d.gnss_firmware = "";
     d.gnss_baud = 9600;
-    d.gnss_config = ports::GnssConfig::Degraded;
+    d.gnss_config = ports::GnssConfigStage::Degraded;
     d.gnss_raises = 2;
     d.gnss_raise_fallbacks = 2;
     d.gnss_reject = gnss::FixReject::NoDate;
@@ -388,7 +388,7 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
     const Diagnostics d = widest_device();
     DiagnosticsReport report(d, "diag");
     CHECK(report.fits(kSmallestSupportedPayload));
-    // ports::kMinimumLinkPayload, which is all BLE guarantees: not one worst-case
+    // ports::kMinimumLinkPayloadBytes, which is all BLE guarantees: not one worst-case
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
 

@@ -46,7 +46,7 @@ void draw_boot(ui::Canvas& canvas, const BootSnapshot& s) {
     int n = format_string(buf, "SELF TEST");
     buf[n] = 0;
     canvas.draw_text(kLeft, 3, buf, true, 2);
-    canvas.hline(kLeft, 21, kGlassW - 2 * kLeft, true);
+    canvas.hline(kLeft, 21, kGlassWidth - 2 * kLeft, true);
 
     // Identity and why the device is running at all, on one line: the pair a
     // bench log needs before anything below it means something.
@@ -89,7 +89,7 @@ void draw_boot(ui::Canvas& canvas, const BootSnapshot& s) {
     }
 
     y += kBootDividerGap;
-    canvas.hline(kLeft, y, kGlassW - 2 * kLeft, true);
+    canvas.hline(kLeft, y, kGlassWidth - 2 * kLeft, true);
     y += kBootFooterGap;
 
     n = 0;

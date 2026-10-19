@@ -88,7 +88,7 @@ TEST_CASE(
     rig.platform.link().clear();
 
     // Nobody is listening yet: the cell can do what it likes and nothing is sent.
-    rig.platform.battery().millivolts = 3900;
+    rig.platform.battery().divider_mv = 3900;
     taxi(rig, t, 3);
     CHECK(config_frames(rig) == 0);
 
@@ -99,7 +99,7 @@ TEST_CASE(
     // A connection on its own is not news about the battery.
     CHECK(config_frames(rig) == 0);
 
-    rig.platform.battery().millivolts = 3600;
+    rig.platform.battery().divider_mv = 3600;
     taxi(rig, t, 4);
     const int pushed = config_frames(rig);
     CHECK(pushed >= 1);
@@ -115,7 +115,7 @@ TEST_CASE(
     // A charger going in is the loudest thing that can happen to the gauge, and
     // with nobody there it is silence, not a notification into a dead handle.
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 4100;
+    rig.platform.battery().divider_mv = 4100;
     taxi(rig, t, 5);
     CHECK(config_frames(rig) == pushed);
 }
@@ -262,7 +262,7 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
     uint32_t t = 0;
     taxi(rig, t, 20);
 
-    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.raise_link(5);
     rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(t, t + 3000);
@@ -338,11 +338,11 @@ TEST_CASE("companion link: a reply is sized for the app that asked, not the narr
 
     rig.raise_link(1);
     rig.raise_link(2);
-    rig.platform.link().declare_payload_bytes(2, ports::kMinimumLinkPayload);
+    rig.platform.link().declare_payload_bytes(2, ports::kMinimumLinkPayloadBytes);
     rig.send_from(1, "{\"cmd\":\"get\"}");
     rig.run(t, t + 200);
     REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Config) == 1);
-    CHECK(rig.last_on(events::Endpoint::Config).size() > ports::kMinimumLinkPayload);
+    CHECK(rig.last_on(events::Endpoint::Config).size() > ports::kMinimumLinkPayloadBytes);
     CHECK(rig.platform.link().refused_oversize == 0);
 }
 

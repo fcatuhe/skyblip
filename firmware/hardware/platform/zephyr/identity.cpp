@@ -29,8 +29,8 @@ Status Identity::begin() {
     }
     for (size_t i = 0; i < sizeof(id); i++) device_id_[i] = id[i];
     bluetooth_tag_ = static_cast<uint16_t>(nrf_ficr_deviceaddr_get(NRF_FICR, 0) & 0xFFFFu);
-    if (flash_area_open(PARTITION_ID(identity_partition), &page_) != 0) {
-        page_ = nullptr;
+    if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0) {
+        unlock_page_ = nullptr;
         LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");
     }
     if (!device_is_ready(entropy_)) {
@@ -80,9 +80,9 @@ bool Identity::seed(crypto::Ed25519::Seed& out) const {
 const crypto::Ed25519::PublicKey& Identity::trusted_server_key() const { return kTrustedServerKey; }
 
 Status Identity::read_unlock_code(identity::UnlockCode& out) {
-    if (page_ == nullptr) return Status::Down;
+    if (unlock_page_ == nullptr) return Status::Down;
     identity::UnlockPage page{};
-    if (flash_area_read(page_, 0, page.data(), page.size()) != 0) return Status::Down;
+    if (flash_area_read(unlock_page_, 0, page.data(), page.size()) != 0) return Status::Down;
     const std::optional<identity::UnlockCode> code = identity::code_on(page);
     if (!code) return Status::NotFound;
     out = *code;
@@ -91,18 +91,18 @@ Status Identity::read_unlock_code(identity::UnlockCode& out) {
 
 // INFO: fc 18oct26 through the flash driver, which syncs each NVMC step with the Bluetooth radio
 Status Identity::write_unlock_code(const identity::UnlockCode& code) {
-    if (page_ == nullptr) return Status::Down;
+    if (unlock_page_ == nullptr) return Status::Down;
     const identity::UnlockPage page = identity::page_of(code);
-    if (flash_area_erase(page_, 0, page_->fa_size) != 0) {
+    if (flash_area_erase(unlock_page_, 0, unlock_page_->fa_size) != 0) {
         LOG_ERR("identity: the unlock page did not erase");
         return Status::Down;
     }
-    if (flash_area_write(page_, 0, page.data(), page.size()) != 0) {
+    if (flash_area_write(unlock_page_, 0, page.data(), page.size()) != 0) {
         LOG_ERR("identity: the unlock code was not written");
         return Status::Down;
     }
     identity::UnlockPage back{};
-    if (flash_area_read(page_, 0, back.data(), back.size()) != 0 || back != page) {
+    if (flash_area_read(unlock_page_, 0, back.data(), back.size()) != 0 || back != page) {
         LOG_ERR("identity: the unlock code did not read back as written");
         return Status::Down;
     }

@@ -246,7 +246,7 @@ TEST_CASE("boot: the bus row stops at the width of a row rather than running off
     draw_boot(canvas, s);
 
     for (int y = boot_row_y(1); y < boot_row_y(1) + 7; y++)
-        for (int x = kBootRightX; x < kGlassW; x++) CHECK_FALSE(canvas.get_pixel(x, y));
+        for (int x = kBootRightX; x < kGlassWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }
 
 TEST_CASE("boot: the inventory a real unit reports fits with the bus row on it") {

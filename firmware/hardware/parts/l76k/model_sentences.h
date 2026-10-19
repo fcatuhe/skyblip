@@ -58,9 +58,9 @@ inline int32_t L76k::msl_dm() const {
 
 inline int L76k::put_time(char* s) const {
     int n = 0;
-    n += format_uint(s + n, utc_sod / 3600u, 2);
-    n += format_uint(s + n, (utc_sod / 60u) % 60u, 2);
-    n += format_uint(s + n, utc_sod % 60u, 2);
+    n += format_uint(s + n, utc_seconds_of_day / 3600u, 2);
+    n += format_uint(s + n, (utc_seconds_of_day / 60u) % 60u, 2);
+    n += format_uint(s + n, utc_seconds_of_day % 60u, 2);
     return n;
 }
 

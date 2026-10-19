@@ -24,8 +24,8 @@ class Drv2605 : public io::I2c, public io::Gpio {
     // io::I2c. A register write is address then value, a register read is a
     // one-byte write of the address followed by a read, which is what the driver
     // does and what the datasheet's protocol section describes.
-    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
-        if (addr != kAddress || !answers) return false;
+    bool write(uint8_t address, const uint8_t* data, size_t len) override {
+        if (address != kAddress || !answers) return false;
         writes++;
         if (len == 0) return true;  // the bus's presence probe
         pointer = data[0];
@@ -37,8 +37,8 @@ class Drv2605 : public io::I2c, public io::Gpio {
         return true;
     }
 
-    bool read(uint8_t addr, uint8_t* data, size_t len) override {
-        if (addr != kAddress || !answers) return false;
+    bool read(uint8_t address, uint8_t* data, size_t len) override {
+        if (address != kAddress || !answers) return false;
         reads++;
         for (size_t i = 0; i < len; i++) {
             const uint8_t reg = static_cast<uint8_t>(pointer + i);

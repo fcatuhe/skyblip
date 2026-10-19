@@ -49,7 +49,7 @@ class SentenceWire : public io::Uart {
 
 TEST_CASE("l76k: a new fix is reported exactly once") {
     models::L76k chip;
-    chip.fix = true;
+    chip.fix_valid = true;
     chip.sats = 9;
     chip.alt_m = 1200;
     chip.lat_1e7 = 485000000;
@@ -73,19 +73,19 @@ TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
     models::L76k chip;  // never ticked: powered, connected, saying nothing
     parts::L76k gnss(chip);
     for (uint32_t t = 0; t <= 5000; t += 100) CHECK_FALSE(gnss.poll());
-    CHECK(gnss.updates() == 0);
+    CHECK(gnss.sentences() == 0);
 }
 
 TEST_CASE("l76k: losing the fix is reported like any other update") {
     models::L76k chip;
-    chip.fix = true;
+    chip.fix_valid = true;
     parts::L76k gnss(chip);
     chip.tick(0);
     chip.tick(1000);
     REQUIRE(gnss.poll());
     REQUIRE(gnss.solution().fix_valid);
 
-    chip.fix = false;
+    chip.fix_valid = false;
     chip.tick(2000);
     CHECK(gnss.poll());
     CHECK_FALSE(gnss.solution().fix_valid);
@@ -123,8 +123,8 @@ TEST_CASE("l76k: a receiver reporting no VDOP leaves the fix without one") {
 
 // The rate rule refuses a MISSED solution, not the wait between the top of the second and the slot.
 TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
-    CHECK(parts::L76k::kFixPeriodMs == 1000);
-    CHECK(static_cast<int32_t>(parts::L76k::kFixPeriodMs) > timing::Transmitter::kFixMaxAgeMs);
+    CHECK(parts::L76k::kSolutionPeriodMs == 1000);
+    CHECK(static_cast<int32_t>(parts::L76k::kSolutionPeriodMs) > timing::Transmitter::kFixMaxAgeMs);
 
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
@@ -137,7 +137,7 @@ TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
         gnss.service(t);
         if (gnss.poll()) fixes++;
     }
-    CHECK(fixes >= 4000 / parts::L76k::kFixPeriodMs);
+    CHECK(fixes >= 4000 / parts::L76k::kSolutionPeriodMs);
 }
 
 // The pinned bug: a fix published per SENTENCE reached the bus twice, the first one half updated.
@@ -175,14 +175,14 @@ TEST_CASE("l76k: the fix carries the part's burst-to-PPS latency") {
 
 // Nothing in the build compares the driver's baud with the devicetree's, so the driver states it.
 TEST_CASE("l76k: the rate the receiver is met at is the baud the devicetree pins") {
-    CHECK(parts::L76k::kBaudRate == 9600);
-    CHECK(parts::L76k::kBaudCandidates[0] == parts::L76k::kBaudRate);
+    CHECK(parts::L76k::kFactoryBaudRate == 9600);
+    CHECK(parts::L76k::kBaudCandidates[0] == parts::L76k::kFactoryBaudRate);
 }
 
 // The fix is refused as too old unless it is parsed before the radio's first transmit instant.
 TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites in view and all") {
     // GGA, three GSA and RMC: 333 ms of 9600 baud line, 28 ms of 115200.
-    CHECK(parts::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kBaudRate) ==
+    CHECK(parts::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate) ==
           doctest::Approx(333).epsilon(0.02));
     CHECK(parts::L76k::kBurstMs == doctest::Approx(28).epsilon(0.04));
 
@@ -191,7 +191,7 @@ TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites
           uint32_t(timing::kDirectStartMs));
     // The same burst at the rate the receiver boots at: past the slot, and past the second.
     CHECK(parts::L76k::kBurstStartMs +
-              parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kBaudRate) >
+              parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           uint32_t(timing::kDirectStartMs));
 }
 
@@ -300,7 +300,7 @@ TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
 
     CHECK(withdrawn_at > quiet_from);
     CHECK(withdrawn_at - quiet_from <= gnss::kSentenceMaxAgeMs + 20);
-    CHECK(gnss.reject_reason() == gnss::FixReject::Stale);
+    CHECK(gnss.last_reject() == gnss::FixReject::Stale);
     // One withdrawal, not one per poll: the bus queue is two deep and the
     // downstream services react to changes.
     CHECK(updates == 1);
@@ -317,9 +317,9 @@ TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     run(gnss, chip, 0, kBringUpLeadMs + 5000);
 
     CHECK(gnss.configured());                // the receiver is fine, it is being obeyed
-    CHECK(gnss.updates() > 0);               // and it is talking
+    CHECK(gnss.sentences() > 0);             // and it is talking
     CHECK_FALSE(gnss.solution().fix_valid);  // and none of that is a fix
-    CHECK(gnss.reject_reason() == gnss::FixReject::NoDate);
+    CHECK(gnss.last_reject() == gnss::FixReject::NoDate);
 
     // The almanac lands and the date becomes real: the fix follows, with no
     // reconfiguration and no reset.

@@ -70,12 +70,12 @@ class Bhi260 {
     bool running() const { return stage_ == Stage::Running; }
     uint8_t address() const { return address_; }
     uint16_t kernel_version() const { return kernel_version_; }
-    uint32_t uploaded_bytes() const { return uploaded_; }
-    uint32_t unparsed_events() const { return unparsed_; }
+    uint32_t uploaded_bytes() const { return uploaded_bytes_; }
+    uint32_t unparsed_events() const { return unparsed_events_; }
     uint32_t fifo_bytes() const { return fifo_bytes_; }
-    uint8_t hub_error() const { return error_; }
+    uint8_t hub_error() const { return hub_error_; }
     uint8_t meta_event() const { return meta_event_; }
-    uint8_t interrupt_status() const { return interrupt_; }
+    uint8_t interrupt_status() const { return interrupt_status_; }
     uint8_t sensor_error() const { return sensor_error_; }
     uint8_t errored_sensor() const { return errored_sensor_; }
 
@@ -126,13 +126,13 @@ class Bhi260 {
     static constexpr uint16_t kFirmwareMagic = 0x662B;
     static constexpr uint8_t kErrorHostChannelEmpty = 0x77;
     static constexpr uint8_t kSensorAccelerometer = 0x04;
-    static constexpr uint8_t kAccelEventBytes = 7;
+    static constexpr uint8_t kAccelerometerEventBytes = 7;
     static constexpr int32_t kCountsPerRange = 32768;
     static constexpr uint16_t kCommandHeaderBytes = 4;
 
     bool write_registers(uint8_t reg, const uint8_t* data, uint16_t len);
     bool read_registers(uint8_t reg, uint8_t* out, uint16_t len);
-    bool command(uint16_t cmd, const uint8_t* payload, uint16_t len);
+    bool command(uint16_t opcode, const uint8_t* payload, uint16_t len);
     bool boot_status(uint8_t& out);
     void fail(Status why);
 
@@ -167,20 +167,20 @@ class Bhi260 {
     Status fault_{Status::Ok};
     uint8_t address_{kAddress};
     Stage failed_stage_{Stage::Absent};
-    uint32_t since_ms_{0};
+    uint32_t stage_since_ms_{0};
     uint32_t polled_ms_{0};
-    uint32_t uploaded_{0};
-    uint32_t unparsed_{0};
+    uint32_t uploaded_bytes_{0};
+    uint32_t unparsed_events_{0};
     uint32_t fifo_bytes_{0};
     Setup setup_{Setup::Kernel};
-    uint8_t error_{0};
-    uint8_t interrupt_{0};
+    uint8_t hub_error_{0};
+    uint8_t interrupt_status_{0};
     uint8_t meta_event_{0};
     uint8_t sensor_error_{0};
     uint8_t errored_sensor_{0};
     uint16_t kernel_version_{0};
     Acceleration sample_{};
-    bool fresh_{false};
+    bool sample_fresh_{false};
     uint8_t frame_[1 + kCommandHeaderBytes + kUploadChunkBytes]{};
     Fifo wakeup_{kRegFifoWakeup};
     Fifo non_wakeup_{kRegFifoNonWakeup};

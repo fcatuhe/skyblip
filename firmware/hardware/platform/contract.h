@@ -28,7 +28,7 @@ namespace skyblip::platform {
 
 struct BaroReading {
     uint32_t pressure_mpa{0};
-    int16_t temperature_decicelsius{0};
+    int16_t temperature_dc{0};
     bool temperature_valid{false};
 };
 
@@ -93,8 +93,8 @@ constexpr bool fills_the_platform_contract() {
         "platform: identity() -> ports::Identity&, the unit's key provisioned before the link "
         "comes up");
 
-    static_assert(std::is_convertible_v<decltype(std::declval<Self>().start_baro()), bool>,
-                  "platform: start_baro() -> bool, one conversion started, never waited on");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().trigger_baro()), bool>,
+                  "platform: trigger_baro() -> bool, one conversion started, never waited on");
     static_assert(
         std::is_convertible_v<
             decltype(std::declval<Self>().read_baro(std::declval<BaroReading&>())), bool>,

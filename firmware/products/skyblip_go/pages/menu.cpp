@@ -39,7 +39,7 @@ const char* alarm_volume_name(go::AlarmVolume volume) {
 void row_text(ui::Canvas& canvas, int line, const char* label, const char* value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
-    if (focused) canvas.rect(2, top, kGlassW - 4, kMenuBarH, true, /*fill=*/true);
+    if (focused) canvas.rect(2, top, kGlassWidth - 4, kMenuBarH, true, /*fill=*/true);
     const bool ink = !focused;
     canvas.draw_text(kMenuLeftX, y, label, ink, kMenuScale);
     canvas.draw_text(kMenuRightX - text_cells(value) * kMenuCellW, y, value, ink, kMenuScale);
@@ -184,7 +184,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& v) {
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& s) {
     canvas.clear(true);
     canvas.draw_text(kMenuLeftX - 2, kHeaderY, menu_title(s.page), true, kMenuScale);
-    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
+    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
 
     const Menu menu = menu_for(s.page);
     const int first = menu_first_row(menu, s.focus);
@@ -201,7 +201,7 @@ void draw_menu(ui::Canvas& canvas, const MenuSnapshot& s) {
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& s) {
     canvas.clear(true);
     canvas.draw_text(kMenuLeftX - 2, kHeaderY, "CALLSIGN", true, kMenuScale);
-    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassW - 2 * (kMenuLeftX - 2), true);
+    canvas.hline(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
 
     canvas.draw_text(kCallsignTextX, kCallsignTextY, s.text, true, kCallsignScale);
     const int at = kCallsignTextX + s.cursor * kCallsignCellW;

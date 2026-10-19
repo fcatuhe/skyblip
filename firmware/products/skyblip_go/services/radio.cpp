@@ -103,9 +103,10 @@ int RadioService::phase_at(uint64_t now_us) const {
 
 void RadioService::take_switching(uint32_t now_ms) {
     const ports::RfSwitching s = context_.roles.rf.switching();
-    context_.state.rf.timing_stats.record_switching(s.hop_us, s.to_oband_us, s.to_mband_us, s.late);
-    if (s.count == seen_switches_) return;
-    seen_switches_ = s.count;
+    context_.state.rf.timing_stats.record_switching(s.hop_us, s.to_oband_us, s.to_mband_us,
+                                                    s.late_starts);
+    if (s.switches == seen_switches_) return;
+    seen_switches_ = s.switches;
     record_switch(s.last, now_ms);
 }
 
@@ -231,7 +232,7 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     if (band == timing::Band::O) {
         plan.sync = protocol::kUplinkSync;
         plan.sync_bits = protocol::kUplinkSyncBits;
-        plan.rx_len = protocol::kUplinkFrameBytes;
+        plan.rx_bytes = protocol::kUplinkFrameBytes;
         plan.bitrate = protocol::kUplinkChipRateBps;
         plan.fdev_hz = protocol::kUplinkDeviationHz;
         plan.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
@@ -240,7 +241,7 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     }
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
-    plan.rx_len = protocol::kRxChipBytes;
+    plan.rx_bytes = protocol::kRxChipBytes;
     plan.bitrate = protocol::kMbandChipRateBps;
     plan.fdev_hz = protocol::kMbandDeviationHz;
     plan.bandwidth_hz = protocol::kMbandChannelBandwidthHz;
@@ -360,12 +361,12 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         if (!a.go || tx_at_us < std::max(plan.start_us, now_us) || tx_at_us >= plan.end_us)
             continue;
         uint8_t* chips = outgoing_chips_[armed.buffer][static_cast<int>(payload)];
-        const uint8_t tx_len = encode(a, tx_at_us, armed.utc_s, chips);
+        const uint8_t tx_bytes = encode(a, tx_at_us, armed.utc_s, chips);
         // INFO: fc 18oct26 defence in depth, unreachable: ownship_transmits needs an address
-        if (tx_len == 0) continue;
+        if (tx_bytes == 0) continue;
         ports::RfPlan with_burst = plan;
         with_burst.tx = chips;
-        with_burst.tx_len = tx_len;
+        with_burst.tx_bytes = tx_bytes;
         with_burst.tx_at_us = tx_at_us;
         if (context_.roles.rf.arm(with_burst) != Status::Ok) {
             if (!dwell_armed) {

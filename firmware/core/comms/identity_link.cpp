@@ -67,7 +67,7 @@ bool ConfigService::identity_refused_in_flight() {
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};
-    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version)) ||
+    if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version)) ||
         !identity_->open(claim_.holder(), now_ms_)) {
         refuse("keyless");
         return;
@@ -83,7 +83,7 @@ void ConfigService::challenge() {
 void ConfigService::register_unit(const json::Reader& r) {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};
-    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version))) {
+    if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version))) {
         refuse("keyless");
         return;
     }

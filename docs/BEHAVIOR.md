@@ -1549,7 +1549,7 @@ One radio, one second, two bands: the dwell map decides what the receiver can he
 - an edge latched after now was read is no age at all, not an underflow
   > Bench, 28sep26: an edge latched between the two reads made the edge 584,000 years old for one pass, so the clock called PPS lost and the radio re-planned against a free-running second.
 - an edge never seen is no holdover, and plans the same dwells as before
-  > Pps::ms_since() reads 0 before the first edge, which used to pass for an edge just now.
+  > Pps::since_edge_ms() reads 0 before the first edge, which used to pass for an edge just now.
 - band and channel per dwell
 - dwell map matches the decided band split
   > Our cut of the second: two 400 ms M-band dwells, one channel each, so slot 1 runs 800..1200 and its tail is the head of the next second. The uplink dwell is framed on the window our own ground station transmits in (210..390 ms, a burst that completes by 390). The M-band dwell opens at 400 to catch FLARM-generation traffic that starts around 405, earlier than the ADS-L direct slot our own bursts respect.
@@ -4159,7 +4159,7 @@ The PPS word on the diagnostics pages, read off the glass against the slot map's
 **screen pps**
 
 - a clock with UTC and no edge ever reads NONE, and transmits nothing
-  > Pps::ms_since() reads 0 before the first edge, which the pages once showed as HOLD 0.
+  > Pps::since_edge_ms() reads 0 before the first edge, which the pages once showed as HOLD 0.
 - an edge 10 s old reads HOLD with its age while the slot map flies on
 - an edge 2 s old on a locked clock reads LOCK on both pages
   > Pps::locked() holds for 3 s, so a late edge is still anchored and still transmitting.

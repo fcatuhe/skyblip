@@ -51,9 +51,9 @@ void render(simulator::Simulator& s) {
     const go::Glass& canvas = s.panel();
     constexpr int step = 4;
     std::printf("\033[2J\033[H+----------------------------------------------------+\n");
-    for (int y = 0; y < go::kGlassH; y += step) {
+    for (int y = 0; y < go::kGlassHeight; y += step) {
         std::printf("|");
-        for (int x = 0; x < go::kGlassW; x += step) {
+        for (int x = 0; x < go::kGlassWidth; x += step) {
             bool black = false;
             for (int dy = 0; dy < step && !black; dy++)
                 for (int dx = 0; dx < step && !black; dx++)

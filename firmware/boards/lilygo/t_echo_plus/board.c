@@ -130,7 +130,7 @@ SYS_INIT(board_power_up_gated_rails, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_D
 // LilyGO fits more than one part behind the same footprint, so two facts have to
 // be READ rather than declared: which e-paper is glued on, and whether the
 // buzzer pin is capable of swinging anything. Both need pins that a Zephyr
-// driver owns from POST_KERNEL onwards - the e-paper fingerprint is clocked out
+// driver owns from POST_KERNEL onwards - the e-paper signature is clocked out
 // over MOSI with the line reversed (this board's SPI MISO is a placeholder: the
 // panel is write-only in normal operation), and the buzzer pin has to be read
 // high-Z while the PWM peripheral is not driving it. PRE_KERNEL_1 is the one
@@ -161,13 +161,13 @@ enum {
 	BUZZER_PULLUP_SETTLE_US = 1000,
 	// Between the two registers, as the reference does (delay(1)).
 	PANEL_INTER_REGISTER_US = 1000,
-	PANEL_ID_A_BYTES = 11,
-	PANEL_ID_B_BYTES = 10,
+	PANEL_ID_2D_BYTES = 11,
+	PANEL_ID_2E_BYTES = 10,
 };
 
-#define PANEL_ID_REGISTER_A 0x2D
-#define PANEL_ID_REGISTER_B 0x2E
-#define PANEL_FINGERPRINT_BYTES (PANEL_ID_A_BYTES + PANEL_ID_B_BYTES)
+#define PANEL_ID_REGISTER_2D 0x2D
+#define PANEL_ID_REGISTER_2E 0x2E
+#define PANEL_SIGNATURE_BYTES (PANEL_ID_2D_BYTES + PANEL_ID_2E_BYTES)
 
 static const struct gpio_dt_spec epd_cs =
 	GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(epd_spi), cs_gpios, 0);
@@ -179,8 +179,8 @@ static const struct gpio_dt_spec epd_sck = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_sck
 static const struct gpio_dt_spec buzzer_sense =
 	GPIO_DT_SPEC_GET(DT_NODELABEL(buzzer_sense_gpio), gpios);
 
-static uint8_t panel_fingerprint[PANEL_FINGERPRINT_BYTES];
-static bool panel_fingerprint_read;
+static uint8_t panel_signature[PANEL_SIGNATURE_BYTES];
+static bool panel_signature_read;
 static bool buzzer_pin_low_against_pullup;
 
 // Mode 0, MSB first, half duplex: the panel's one data line is the host's MOSI,
@@ -235,7 +235,7 @@ static void panel_read_register(uint8_t reg, uint8_t *out, size_t len)
 
 // No critical section, unlike the reference, which wraps each register in
 // taskENTER_CRITICAL: at PRE_KERNEL_1 there is no scheduler to be preempted by.
-static void board_read_panel_fingerprint(void)
+static void board_read_panel_signature(void)
 {
 	if (!gpio_is_ready_dt(&epd_cs) || !gpio_is_ready_dt(&epd_dc) ||
 	    !gpio_is_ready_dt(&epd_mosi) || !gpio_is_ready_dt(&epd_sck)) {
@@ -257,12 +257,12 @@ static void board_read_panel_fingerprint(void)
 	k_busy_wait(PANEL_SETTLE_US);
 	gpio_pin_configure_dt(&epd_busy, GPIO_INPUT);
 
-	panel_read_register(PANEL_ID_REGISTER_A, panel_fingerprint, PANEL_ID_A_BYTES);
+	panel_read_register(PANEL_ID_REGISTER_2D, panel_signature, PANEL_ID_2D_BYTES);
 	k_busy_wait(PANEL_INTER_REGISTER_US);
-	panel_read_register(PANEL_ID_REGISTER_B, panel_fingerprint + PANEL_ID_A_BYTES,
-			    PANEL_ID_B_BYTES);
+	panel_read_register(PANEL_ID_REGISTER_2E, panel_signature + PANEL_ID_2D_BYTES,
+			    PANEL_ID_2E_BYTES);
 
-	panel_fingerprint_read = true;
+	panel_signature_read = true;
 }
 
 // INFO: fc 18sep26 SoftRF reads the same pin the same way to tell two boards apart (nRF52.cpp:1265)
@@ -287,18 +287,18 @@ static void board_probe_buzzer_pin(void)
 
 static void board_probe_fitted_parts(void)
 {
-	board_read_panel_fingerprint();
+	board_read_panel_signature();
 	board_probe_buzzer_pin();
 }
 
-size_t board_panel_fingerprint(uint8_t *out, size_t capacity)
+size_t board_panel_signature(uint8_t *out, size_t capacity)
 {
-	if (!panel_fingerprint_read || capacity < PANEL_FINGERPRINT_BYTES) {
+	if (!panel_signature_read || capacity < PANEL_SIGNATURE_BYTES) {
 		return 0;
 	}
 
-	memcpy(out, panel_fingerprint, PANEL_FINGERPRINT_BYTES);
-	return PANEL_FINGERPRINT_BYTES;
+	memcpy(out, panel_signature, PANEL_SIGNATURE_BYTES);
+	return PANEL_SIGNATURE_BYTES;
 }
 
 int board_buzzer_pin_held_low(void)
@@ -312,7 +312,7 @@ static void board_probe_fitted_parts(void)
 {
 }
 
-size_t board_panel_fingerprint(uint8_t *out, size_t capacity)
+size_t board_panel_signature(uint8_t *out, size_t capacity)
 {
 	(void)out;
 	(void)capacity;

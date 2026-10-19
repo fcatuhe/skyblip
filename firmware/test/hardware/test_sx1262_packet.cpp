@@ -73,8 +73,8 @@ TEST_CASE("radio: configure programs the sync window and the fixed read length")
     cfg.sync_bits = protocol::kSharedSyncBits;
     cfg.payload_bytes = protocol::kRxChipBytes;
     CHECK(r.configure_radio(cfg) == Status::Ok);
-    CHECK(chip.saw_cmd(sx::kWriteRegister));
-    CHECK(chip.saw_cmd(sx::kSetPacketParams));
+    CHECK(chip.saw_command(sx::kWriteRegister));
+    CHECK(chip.saw_command(sx::kSetPacketParams));
     CHECK(chip.sync[0] == protocol::kSharedSync[0]);
     CHECK(chip.sync[1] == protocol::kSharedSync[1]);
     CHECK(chip.sync_bits == protocol::kSharedSyncBits);
@@ -92,9 +92,9 @@ TEST_CASE("radio: the interrupt line is readable without a word on the bus") {
 
     const uint8_t pkt[4] = {1, 2, 3, 4};
     chip.queue_rx(pkt, sizeof(pkt));
-    const size_t said_before = chip.cmds_seen.size();
+    const size_t said_before = chip.commands_seen.size();
     CHECK(r.irq_asserted());
-    CHECK(chip.cmds_seen.size() == said_before);
+    CHECK(chip.commands_seen.size() == said_before);
 
     uint8_t buf[32];
     CHECK(r.poll(buf, sizeof(buf)).type == RadioEventType::RxDone);

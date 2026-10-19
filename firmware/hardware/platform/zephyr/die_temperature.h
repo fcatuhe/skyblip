@@ -25,7 +25,7 @@ class DieTemperature : public ports::DieTemperature {
    public:
     bool ready() const { return dev_ != nullptr && device_is_ready(dev_); }
 
-    bool read(int16_t& decicelsius) override {
+    bool read(int16_t& die_dc) override {
         if (!ready()) return false;
         if (sensor_sample_fetch(dev_) != 0) return false;
         struct sensor_value temp{};
@@ -37,7 +37,7 @@ class DieTemperature : public ports::DieTemperature {
         // the nRF52840 datasheet's own operating range is -40 to +105 C, and a
         // reading past it must not be published as a temperature.
         if (deci < -500 || deci > 1250) return false;
-        decicelsius = static_cast<int16_t>(deci);
+        die_dc = static_cast<int16_t>(deci);
         return true;
     }
 

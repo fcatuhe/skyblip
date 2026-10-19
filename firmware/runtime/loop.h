@@ -13,40 +13,41 @@ class Loop {
     // names is a parallel array of literals, for the log line that says which
     // service went quiet. Optional: a loop with no names still supervises.
     Loop(Service* const* services, int count, const char* const* names = nullptr)
-        : s_(services), n_(count) {
-        for (int i = 0; i < n_; i++) feed_.add(names != nullptr ? names[i] : "?", kTaskWatchdogMs);
+        : services_(services), count_(count) {
+        for (int i = 0; i < count_; i++)
+            feed_decision_.add(names != nullptr ? names[i] : "?", kServiceSilenceCeilingMs);
     }
 
     Status setup() {
         Status first = Status::Ok;
-        for (int i = 0; i < n_; i++) {
-            const Status s = s_[i]->setup();
+        for (int i = 0; i < count_; i++) {
+            const Status s = services_[i]->setup();
             if (s != Status::Ok && first == Status::Ok) first = s;
         }
         return first;
     }
 
-    void step(uint32_t now_ms, LoopMeter* meter = nullptr) {
+    void run_pass(uint32_t now_ms, LoopMeter* meter = nullptr) {
         // Registration happens at construction, before there is a time base to
         // stamp, so the deadlines start counting from the first pass.
-        if (!feed_.started()) feed_.begin(now_ms);
-        for (int i = 0; i < n_; i++) {
+        if (!feed_decision_.started()) feed_decision_.begin(now_ms);
+        for (int i = 0; i < count_; i++) {
             if (meter != nullptr)
-                meter->timed(static_cast<uint8_t>(i), [&] { s_[i]->tick(now_ms); });
+                meter->timed(static_cast<uint8_t>(i), [&] { services_[i]->tick(now_ms); });
             else
-                s_[i]->tick(now_ms);
-            if (s_[i]->progressing(now_ms)) feed_.check_in(i, now_ms);
+                services_[i]->tick(now_ms);
+            if (services_[i]->progressing(now_ms)) feed_decision_.check_in(i, now_ms);
         }
     }
 
-    bool may_feed_watchdog(uint32_t now_ms) const { return feed_.may_feed(now_ms); }
-    int stalled_service(uint32_t now_ms) const { return feed_.stalled(now_ms); }
-    const FeedDecision& feed_decision() const { return feed_; }
+    bool may_feed_watchdog(uint32_t now_ms) const { return feed_decision_.may_feed(now_ms); }
+    int stalled_service(uint32_t now_ms) const { return feed_decision_.stalled_service(now_ms); }
+    const FeedDecision& feed_decision() const { return feed_decision_; }
 
    private:
-    Service* const* s_;
-    int n_;
-    FeedDecision feed_{};
+    Service* const* services_;
+    int count_;
+    FeedDecision feed_decision_{};
 };
 
 }  // namespace skyblip::runtime

@@ -50,8 +50,8 @@ struct Bench {
 
     explicit Bench(ports::Capabilities fitted = platform::host::Platform::kFullyFitted)
         : rig(fitted, std::nullopt) {
-        rig.platform.dfu().has_running = true;
-        rig.platform.dfu().running = ports::ImageVersion{0, 3, 0, 1234};
+        rig.platform.dfu().running_version_valid = true;
+        rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         rig.platform.link().declare_payload_bytes(kChromePayloadBytes);
     }
 
@@ -133,10 +133,10 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
     b.boot();
     CHECK(b.rig.platform.link().advertised == "activate 3F2A skyBlip");
     const go::Glass& glass = b.rig.product.screen().framebuffer();
-    CHECK(reads_in(glass, go::kActivationWhere, 0, 0, go::kGlassW, go::kGlassH));
-    CHECK(reads_in(glass, "3F2A", 0, go::kActivationTagY - 1, go::kGlassW, go::kGlassH,
+    CHECK(reads_in(glass, go::kActivationWhere, 0, 0, go::kGlassWidth, go::kGlassHeight));
+    CHECK(reads_in(glass, "3F2A", 0, go::kActivationTagY - 1, go::kGlassWidth, go::kGlassHeight,
                    go::kActivationTagScale));
-    CHECK(reads_in(glass, "ACTIVATE 3F2A SKYBLIP", 0, 0, go::kGlassW, go::kGlassH));
+    CHECK(reads_in(glass, "ACTIVATE 3F2A SKYBLIP", 0, 0, go::kGlassWidth, go::kGlassHeight));
 }
 
 // The server's update page reads 'address' in the reply as activated.
@@ -175,8 +175,8 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(b.activation().serial == 298);
     CHECK(b.activation().address() == settings::AirAddress{0x00012Au});
     CHECK(b.rig.platform.identity().writes == 1);
-    REQUIRE(b.rig.platform.identity().stored);
-    CHECK(b.rig.platform.identity().stored->serial == 298);
+    REQUIRE(b.rig.platform.identity().stored_unlock_code);
+    CHECK(b.rig.platform.identity().stored_unlock_code->serial == 298);
 }
 
 TEST_CASE("activation: once unlocked the unit names itself, reports its address, arms its radio") {
@@ -192,7 +192,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     CHECK(b.say("{\"cmd\":\"get\"}").find("\"address\":298") != std::string::npos);
     CHECK(b.rig.product.radio().arm_count() > 0);
     CHECK_FALSE(reads_in(b.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
-                         go::kGlassW, go::kGlassH));
+                         go::kGlassWidth, go::kGlassHeight));
 }
 
 TEST_CASE("activation: the glass names the operation two presses authorise") {
@@ -203,9 +203,9 @@ TEST_CASE("activation: the glass names the operation two presses authorise") {
     b.read_the_prompt();
     REQUIRE(b.rig.product.screen().prompt() == comms::Pending::Register);
     const go::Glass& glass = b.rig.product.screen().framebuffer();
-    CHECK(reads_in(glass, comms::pending_title(comms::Pending::Register), 0, 0, go::kGlassW,
-                   go::kGlassH, 2));
-    CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassW, go::kGlassH));
+    CHECK(reads_in(glass, comms::pending_title(comms::Pending::Register), 0, 0, go::kGlassWidth,
+                   go::kGlassHeight, 2));
+    CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight));
 }
 
 TEST_CASE("activation: one press cancels the registration, thirty seconds expire it") {
@@ -311,7 +311,7 @@ TEST_CASE("activation: the nonce dies with the link that holds the claim, and af
 TEST_CASE("activation: a unit with no key, or no version to report, cannot be activated") {
     SUBCASE("no key") {
         Bench b;
-        b.rig.platform.identity().keyed = false;
+        b.rig.platform.identity().key_provisioned = false;
         b.boot();
         CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
     }
@@ -323,7 +323,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
     }
     SUBCASE("no running version") {
         Bench b;
-        b.rig.platform.dfu().has_running = false;
+        b.rig.platform.dfu().running_version_valid = false;
         b.boot();
         CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("keyless"));
     }
@@ -331,7 +331,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
         Bench b;
         b.boot();
         b.challenge_with_vectors_nonce();
-        b.rig.platform.dfu().has_running = false;
+        b.rig.platform.dfu().running_version_valid = false;
         CHECK(b.register_with_vectors() == refusal("keyless"));
     }
 }
@@ -385,8 +385,8 @@ TEST_CASE(
     CHECK(b.rig.product.screen().mode() == go::Mode::Page);
     CHECK(b.rig.product.screen().page() == go::Page::Radar);
     CHECK(std::memcmp(&b.rig.settings(), &before, sizeof(go::Settings)) == 0);
-    CHECK(reads_in(b.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0, go::kGlassW,
-                   go::kGlassH));
+    CHECK(reads_in(b.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
+                   go::kGlassWidth, go::kGlassHeight));
 
     b.rig.platform.board_gpio().button_down = true;
     b.pass(power::kLongPressHoldMs + 1000);
@@ -405,7 +405,7 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     b.rig.show(b.t, go::Page::SelfTest);
     b.pass(2000);
     REQUIRE(b.rig.product.screen().page() == go::Page::SelfTest);
-    CHECK(reads_in(b.rig.product.screen().framebuffer(), "ID 00012A", 0, 0, go::kGlassW, 40));
+    CHECK(reads_in(b.rig.product.screen().framebuffer(), "ID 00012A", 0, 0, go::kGlassWidth, 40));
 }
 
 namespace {
@@ -417,7 +417,7 @@ struct QueuedUnlock {
     static constexpr uint16_t kNewSerial = 0x0101;
 
     QueuedUnlock() {
-        b.rig.platform.identity().stored =
+        b.rig.platform.identity().stored_unlock_code =
             Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
         b.boot();
         REQUIRE(b.activation().serial == Identity::kSerial);
@@ -533,8 +533,8 @@ struct Desk {
     explicit Desk(std::optional<uint16_t> serial = std::nullopt) : port(serial) {
         link.declare_payload_bytes(kChromePayloadBytes);
         link.raise_link(1);
-        dfu.has_running = true;
-        dfu.running = ports::ImageVersion{0, 3, 0, 1234};
+        dfu.running_version_valid = true;
+        dfu.running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         unit.load();
         config.set_identity(&identity);
     }
@@ -686,7 +686,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
 // The widest version and release false make the widest frame, the size register checks.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk d;
-    d.dfu.running = dfu::kWidestVersion;
+    d.dfu.running_image_version = dfu::kWidestVersion;
     d.say("{\"cmd\":\"challenge\"}");
     const identity::Nonce unit_nonce = d.identity.unit_nonce();
     char nonce_hex[33] = {0};

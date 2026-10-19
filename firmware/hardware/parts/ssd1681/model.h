@@ -16,7 +16,7 @@ namespace skyblip::models {
 
 class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
    public:
-    int dc{0}, rst{1}, busy{2}, backlight_pin{3};
+    int dc_pin{0}, reset_pin{1}, busy_pin{2}, backlight_pin{3};
 
     // INFO: fc 13sep26 GxEPD2_154_D67.h: partial_refresh_time 500, full_refresh_time 2600
     static constexpr uint32_t kPartialBusyMs = 500;
@@ -35,16 +35,16 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     void set(int pin, bool level) override {
-        if (pin == dc) dc_high_ = level;
+        if (pin == dc_pin) dc_high_ = level;
         if (pin == backlight_pin) backlight = level;
-        if (pin == rst) {
-            if (!level && rst_level_) reset_low_since_us_ = elapsed_us;
-            if (level && !rst_level_) release_reset();
-            rst_level_ = level;
+        if (pin == reset_pin) {
+            if (!level && reset_level_) reset_low_since_us_ = elapsed_us;
+            if (level && !reset_level_) release_reset();
+            reset_level_ = level;
         }
     }
     bool get(int pin) override {
-        if (pin != busy) return false;
+        if (pin != busy_pin) return false;
         return busy_stuck || refreshing();
     }
     void mode_output(int) override {}
@@ -60,7 +60,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
             if (!dc_high_) {
                 // INFO: fc 13sep26 a command over a live BUSY aborts the waveform mid-pixel
                 if (refreshing()) commands_while_busy++;
-                cmds.push_back(b);
+                commands.push_back(b);
                 if (b == kWriteRam) ram.clear();
                 if (b == kWriteRamPrevious) ram_previous.clear();
                 if (b == kDeepSleep) {
@@ -95,8 +95,8 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
         }
     }
 
-    bool saw_cmd(uint8_t c) const {
-        return std::any_of(cmds.begin(), cmds.end(), [c](uint8_t x) { return x == c; });
+    bool saw_command(uint8_t c) const {
+        return std::any_of(commands.begin(), commands.end(), [c](uint8_t x) { return x == c; });
     }
 
     // What the panel would be showing: RAM read back through the driver's own
@@ -107,9 +107,10 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     bool save_pgm(const char* path) const {
         FILE* f = std::fopen(path, "wb");
         if (!f) return false;
-        std::fprintf(f, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassW, parts::Ssd1681::kGlassH);
-        for (int y = 0; y < parts::Ssd1681::kGlassH; y++)
-            for (int x = 0; x < parts::Ssd1681::kGlassW; x++) {
+        std::fprintf(f, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassWidth,
+                     parts::Ssd1681::kGlassHeight);
+        for (int y = 0; y < parts::Ssd1681::kGlassHeight; y++)
+            for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++) {
                 uint8_t v = panel_.get_pixel(x, y) ? 0 : 255;
                 std::fwrite(&v, 1, 1, f);
             }
@@ -118,14 +119,14 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     // Which lot the virtual glass is from. Not served over the SPI seam, because
-    // on real hardware it is not readable there either: the fingerprint needs the
+    // on real hardware it is not readable there either: the signature needs the
     // panel's single data line reversed, so the board port takes it before any
     // bus driver owns the pins and the platform hands it over. The default is a
-    // fingerprint that was never taken, which is what this board is expected to
+    // signature that was never taken, which is what this board is expected to
     // report until a bench read exists.
     parts::PanelSignature signature{};
 
-    std::vector<uint8_t> cmds;
+    std::vector<uint8_t> commands;
     std::vector<uint8_t> ram;
     std::vector<uint8_t> ram_previous;
     int reset_pulses{0};
@@ -184,7 +185,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     parts::Ssd1681Glass panel_{};
     uint8_t sequence_{0};
     bool dc_high_{false};
-    bool rst_level_{true};
+    bool reset_level_{true};
     uint64_t reset_low_since_us_{0};
     uint8_t pending_{0};
 };

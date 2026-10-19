@@ -35,7 +35,7 @@
 
 // Two questions only the board port can answer, because on this SoC they have to
 // be asked BEFORE the bus drivers claim the pins at POST_KERNEL: the e-paper's
-// fingerprint (its one data line has to be reversed, and the SPIM owns MOSI and
+// signature (its one data line has to be reversed, and the SPIM owns MOSI and
 // SCK from init onwards) and the buzzer pin read high-Z against a pull-up (the
 // PWM peripheral drives it from init onwards). Both are taken once, at
 // PRE_KERNEL_1, by boards/<board>/board.c, and read back here.
@@ -45,7 +45,7 @@
 // driver: a driver that could only be called during board init would be a driver
 // nothing could call.
 extern "C" {
-size_t board_panel_fingerprint(uint8_t* out, size_t capacity);
+size_t board_panel_signature(uint8_t* out, size_t capacity);
 int board_buzzer_pin_held_low(void);
 }
 
@@ -73,7 +73,7 @@ class Platform {
         annunciator_.begin();
         indicator_.begin();
         // INFO: fc 18oct26 the key goes into UICR before Bluetooth starts
-        keyed_ = identity_.begin() == Status::Ok;
+        key_provisioned_ = identity_.begin() == Status::Ok;
         link_up_ = link_.begin() == Status::Ok;
         (void)bme280_.begin();
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
@@ -108,7 +108,7 @@ class Platform {
     bool pps_armed() const { return pps_armed_; }
     bool storage_mounted() const { return storage_mounted_; }
     bool link_up() const { return link_up_; }
-    bool keyed() const { return keyed_; }
+    bool key_provisioned() const { return key_provisioned_; }
     zephyr::Identity& identity() { return identity_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
@@ -127,10 +127,11 @@ class Platform {
     // not take them at all.
     bool read_panel_signature(parts::PanelSignature& out) {
         uint8_t raw[parts::kPanelSignatureBytes] = {0};
-        if (board_panel_fingerprint(raw, sizeof(raw)) != sizeof(raw)) return false;
-        for (int i = 0; i < parts::kPanelIdBytesA; i++) out.a[i] = raw[i];
-        for (int i = 0; i < parts::kPanelIdBytesB; i++) out.b[i] = raw[parts::kPanelIdBytesA + i];
-        out.read = true;
+        if (board_panel_signature(raw, sizeof(raw)) != sizeof(raw)) return false;
+        for (int i = 0; i < parts::kPanelIdBytes2d; i++) out.register_2d[i] = raw[i];
+        for (int i = 0; i < parts::kPanelIdBytes2e; i++)
+            out.register_2e[i] = raw[parts::kPanelIdBytes2d + i];
+        out.valid = true;
         return true;
     }
 
@@ -139,12 +140,12 @@ class Platform {
 
     // INFO: fc 18sep26 our Plus reads this pin low and our plain T-Echo reads it high
     bool buzzer_pin_held_low() const { return board_buzzer_pin_held_low() != 0; }
-    bool start_baro() { return bme280_.trigger(); }
+    bool trigger_baro() { return bme280_.trigger(); }
     bool read_baro(BaroReading& out) {
         parts::Bme280::Reading reading{};
         if (!bme280_.read(reading)) return false;
         out.pressure_mpa = reading.pressure_mpa;
-        out.temperature_decicelsius = reading.temperature_decicelsius;
+        out.temperature_dc = reading.temperature_dc;
         out.temperature_valid = true;
         return true;
     }
@@ -172,7 +173,7 @@ class Platform {
     }
 
    private:
-    static constexpr struct spi_config kSpiCfg = {
+    static constexpr struct spi_config kSpiConfig = {
         .frequency = 8000000U,
         .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
         .slave = 0,
@@ -205,8 +206,8 @@ class Platform {
     zephyr::Clock clock_{};
     Gpio gpio_{gpio0_, gpio1_};
     Delay delay_{};
-    Spi radio_spi_{radio_spi_dev_, kSpiCfg, radio_cs_};
-    Spi epd_spi_{epd_spi_dev_, kSpiCfg, epd_cs_};
+    Spi radio_spi_{radio_spi_dev_, kSpiConfig, radio_cs_};
+    Spi epd_spi_{epd_spi_dev_, kSpiConfig, epd_cs_};
     Uart gnss_uart_{gnss_uart_dev_};
     I2c sensor_i2c_{sensor_i2c_dev_};
     parts::Bme280 bme280_{sensor_i2c_};
@@ -228,7 +229,7 @@ class Platform {
     bool pps_armed_{false};
     bool storage_mounted_{false};
     bool link_up_{false};
-    bool keyed_{false};
+    bool key_provisioned_{false};
     zephyr::Watchdog watchdog_{};
     zephyr::SystemPower system_power_{button_};
 };

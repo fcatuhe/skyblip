@@ -34,7 +34,7 @@ void World::step(uint32_t now_ms, const bus::State& state) {
     const int32_t alt_msl_mm = gnss().alt_mm() - gnss().geoid_separation_m * 1000;
     baro().set_pressure_mpa(flight::alt_mm_to_pressure_mpa(
         alt_msl_mm + flight::pressure_to_alt_mm(airmass_qnh_pa_ * 1000)));
-    baro().set_temperature_decicelsius(flight::isa_temperature_dc(alt_msl_mm));
+    baro().set_temperature_dc(flight::isa_temperature_dc(alt_msl_mm));
 
     update_inertial();
     service_button(now_ms);
@@ -433,7 +433,7 @@ void World::apply_events(uint32_t now_ms, const bus::State& state) {
         switch (e.kind) {
             case EventKind::Fix: set_fix(e.value != 0); break;
             case EventKind::Pps: set_pps_locked(e.value != 0); break;
-            case EventKind::Baro: platform_.baro().present = e.value != 0; break;
+            case EventKind::Baro: platform_.baro().fitted = e.value != 0; break;
             case EventKind::BatteryMv: set_battery_mv(static_cast<int32_t>(e.value)); break;
             case EventKind::ExternalPower: set_external_power(e.value != 0); break;
             case EventKind::Button: press_button(); break;

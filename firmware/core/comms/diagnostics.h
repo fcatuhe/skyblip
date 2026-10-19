@@ -56,7 +56,7 @@ struct Diagnostics {
     uint32_t gnss_fixes{0};
     bool fix_valid{false};
     uint32_t gnss_baud{0};
-    ports::GnssConfig gnss_config{ports::GnssConfig::Idle};
+    ports::GnssConfigStage gnss_config{ports::GnssConfigStage::Idle};
     uint32_t gnss_raises{0};
     uint32_t gnss_raise_fallbacks{0};
     bool gnss_identified{false};

@@ -27,7 +27,7 @@ struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(BaroByHand) : Rig() { platform.baro().present = false; }
+    explicit Rig(BaroByHand) : Rig() { platform.baro().fitted = false; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
                  std::optional<uint16_t> serial = platform::host::Identity::kSerial)

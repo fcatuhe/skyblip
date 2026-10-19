@@ -171,7 +171,7 @@ TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
     rig.run(0, 2000);
     REQUIRE_FALSE(rig.product.power().cutoff());
 
-    rig.platform.battery().millivolts = 3100;
+    rig.platform.battery().divider_mv = 3100;
     rig.run(2000, 8000);
     CHECK(rig.product.power().cutoff());
     CHECK(rig.product.shutdown().going_down());
@@ -185,20 +185,20 @@ TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
 // The ratchet: switched off at the cutoff, pressed back on, flattened a bit more.
 TEST_CASE("product: a cell too flat to run refuses the boot instead of spending it") {
     Rig rig;
-    rig.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     CHECK(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
     CHECK(rig.platform.chips().epd.present_count == 0);
     CHECK_FALSE(rig.state().started);
 
     Rig on_charge;
-    on_charge.platform.battery().millivolts = power::kBootLockoutMv - 1;
+    on_charge.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     on_charge.platform.battery().external_power = true;
     CHECK(on_charge.setup() == Status::Ok);
     CHECK(on_charge.product.boot_path() == power::BootPath::Run);
 
     Rig healthy;
-    healthy.platform.battery().millivolts = power::kBootLockoutMv;
+    healthy.platform.battery().divider_mv = power::kBootLockoutMv;
     CHECK(healthy.setup() == Status::Ok);
     CHECK(healthy.product.boot_path() == power::BootPath::Run);
 }
@@ -212,7 +212,7 @@ TEST_CASE("product: a device that cannot fly still switches itself off on a flat
     REQUIRE(rig.setup() == Status::Down);
     REQUIRE_FALSE(rig.product.flyable());
 
-    rig.platform.battery().millivolts = 3100;
+    rig.platform.battery().divider_mv = 3100;
     rig.run(0, 8000);
     CHECK(rig.product.power().cutoff());
     CHECK(rig.state().power.battery.valid);
@@ -225,7 +225,7 @@ TEST_CASE("product: a device that cannot fly still switches itself off on a flat
 TEST_CASE("product: critical comes before the cutoff, and a floating sense never acts") {
     Rig warned;
     REQUIRE(warned.setup() == Status::Ok);
-    warned.platform.battery().millivolts = 3400;
+    warned.platform.battery().divider_mv = 3400;
     warned.run(0, 8000);
     // The level is published on the bus, which is where the status page reads
     // it: nothing downstream compares millivolts a second time.
@@ -237,7 +237,7 @@ TEST_CASE("product: critical comes before the cutoff, and a floating sense never
     // in someone's hand.
     Rig floating;
     REQUIRE(floating.setup() == Status::Ok);
-    floating.platform.battery().millivolts = 200;
+    floating.platform.battery().divider_mv = 200;
     floating.run(0, 20000);
     CHECK(floating.product.power().implausible_samples() > 3);
     CHECK_FALSE(floating.product.power().cutoff());
@@ -249,7 +249,7 @@ TEST_CASE("product: critical comes before the cutoff, and a floating sense never
 TEST_CASE("product: the loop feeds the watchdog while it is flying and through a shutdown") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    for (uint32_t t = 0; t <= 3 * runtime::kTaskWatchdogMs; t += 100) {
+    for (uint32_t t = 0; t <= 3 * runtime::kServiceSilenceCeilingMs; t += 100) {
         rig.platform.clock().set_millis(t);
         rig.product.step(t);
         CHECK(rig.product.may_feed_watchdog(t));
@@ -257,9 +257,9 @@ TEST_CASE("product: the loop feeds the watchdog while it is flying and through a
 
     // A device that is deliberately going down is doing what it was told: a
     // held button must not turn a power-off into a watchdog reboot.
-    uint32_t t = 3 * runtime::kTaskWatchdogMs;
+    uint32_t t = 3 * runtime::kServiceSilenceCeilingMs;
     rig.hold_button(t, power::kLongPressHoldMs + 200);
     REQUIRE(rig.product.shutdown().going_down());
-    rig.hold_button(t, 2 * runtime::kTaskWatchdogMs);
+    rig.hold_button(t, 2 * runtime::kServiceSilenceCeilingMs);
     CHECK(rig.product.may_feed_watchdog(t));
 }

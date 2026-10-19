@@ -28,7 +28,7 @@ namespace skyblip::platform::zephyr {
 // guard budget.
 class Rf : public ports::Rf {
    public:
-    static constexpr int kStackSize = 2048;
+    static constexpr int kStackBytes = 2048;
     static constexpr int kSpinUs = 200;
     // INFO: fc 03oct26 under a burst's 4.64 ms of air: a dead DIO1 still reads each frame in turn
     static constexpr uint64_t kSafetyPollUs = 4000;
@@ -57,12 +57,12 @@ class Rf : public ports::Rf {
         s = radio_.configure_radio(parts::RadioConfig{});
         if (s != Status::Ok) return s;
         self_ = this;
-        gpio_init_callback(&dio1_cb_, on_dio1, BIT(dio1_.pin));
-        dio1_wakes_ = gpio_add_callback(dio1_.port, &dio1_cb_) == 0 && arm_dio1();
-        tid_ = k_thread_create(&thread_, stack_, K_THREAD_STACK_SIZEOF(stack_), entry, this,
-                               nullptr, nullptr,
-                               K_PRIO_COOP(static_cast<int>(runtime::TaskPrio::Rf)), 0, K_NO_WAIT);
-        k_thread_name_set(tid_, "rf_exec");
+        gpio_init_callback(&dio1_callback_, on_dio1, BIT(dio1_.pin));
+        dio1_wakes_ = gpio_add_callback(dio1_.port, &dio1_callback_) == 0 && arm_dio1();
+        thread_id_ = k_thread_create(
+            &thread_, stack_, K_THREAD_STACK_SIZEOF(stack_), entry, this, nullptr, nullptr,
+            K_PRIO_COOP(static_cast<int>(runtime::TaskPriority::Rf)), 0, K_NO_WAIT);
+        k_thread_name_set(thread_id_, "rf_exec");
         return Status::Ok;
     }
 
@@ -154,12 +154,12 @@ class Rf : public ports::Rf {
     // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
     bool joins_flying_dwell(const ports::RfPlan& plan) {
         if (!flying_ || plan.tx == nullptr) return false;
-        if (plan.mode != flying_mode_ || plan.freq_hz != flying_freq_) return false;
+        if (plan.mode != flying_mode_ || plan.freq_hz != flying_freq_hz_) return false;
         return plan.tx_at_us >= clock_.micros() && plan.tx_at_us < flying_end_us_;
     }
 
     static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_len, plan.tx_at_us};
+        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us};
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
@@ -182,7 +182,7 @@ class Rf : public ports::Rf {
     }
 
     void run() {
-        health_us_ = clock_.micros();
+        health_checked_us_ = clock_.micros();
         for (;;) {
             const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
             health(reinit_affordable());
@@ -228,7 +228,7 @@ class Rf : public ports::Rf {
             queued_ = false;
             flying_bursts_ = queued_bursts_;
             flying_mode_ = plan.mode;
-            flying_freq_ = plan.freq_hz;
+            flying_freq_hz_ = plan.freq_hz;
             flying_end_us_ = plan.end_us;
             flying_ = true;
         }
@@ -242,12 +242,12 @@ class Rf : public ports::Rf {
     // clock the deadlines do, so a dwell that overran is counted, not lost.
     void health(bool may_reinit) {
         const uint64_t now_us = clock_.micros();
-        if (now_us <= health_us_) return;
-        const uint32_t elapsed_ms = static_cast<uint32_t>((now_us - health_us_) / 1000);
+        if (now_us <= health_checked_us_) return;
+        const uint32_t elapsed_ms = static_cast<uint32_t>((now_us - health_checked_us_) / 1000);
         if (elapsed_ms == 0) return;
-        health_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
+        health_checked_us_ += static_cast<uint64_t>(elapsed_ms) * 1000;
         const uint32_t rope_ms =
-            may_reinit ? runtime::kRadioNoRxReinitMs : std::numeric_limits<uint32_t>::max();
+            may_reinit ? runtime::kRadioRxSilenceCeilingMs : std::numeric_limits<uint32_t>::max();
         // INFO: fc 03oct26 a reinit reconfigures DIO1 as an input, and nrfx GPIO drops its trigger
         if (radio_.service(elapsed_ms, rope_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
     }
@@ -299,17 +299,17 @@ class Rf : public ports::Rf {
     // modulations (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4) and the plan
     // carries both halves.
     static parts::RadioConfig dwell_config(const ports::RfPlan& plan) {
-        parts::RadioConfig cfg{};
-        cfg.freq_hz = plan.freq_hz;
-        if (plan.bitrate != 0) cfg.bitrate = plan.bitrate;
-        if (plan.fdev_hz != 0) cfg.fdev_hz = plan.fdev_hz;
-        if (plan.bandwidth_hz != 0) cfg.bandwidth_hz = plan.bandwidth_hz;
-        cfg.gaussian_bt_e2 = plan.gaussian_bt_e2;
-        cfg.freq_corr_e1_ppm = plan.freq_corr_e1_ppm;
-        cfg.sync = plan.sync;
-        cfg.sync_bits = plan.sync_bits;
-        cfg.payload_bytes = plan.rx_len;
-        return cfg;
+        parts::RadioConfig config{};
+        config.freq_hz = plan.freq_hz;
+        if (plan.bitrate != 0) config.bitrate = plan.bitrate;
+        if (plan.fdev_hz != 0) config.fdev_hz = plan.fdev_hz;
+        if (plan.bandwidth_hz != 0) config.bandwidth_hz = plan.bandwidth_hz;
+        config.gaussian_bt_e2 = plan.gaussian_bt_e2;
+        config.freq_corr_e1_ppm = plan.freq_corr_e1_ppm;
+        config.sync = plan.sync;
+        config.sync_bits = plan.sync_bits;
+        config.payload_bytes = plan.rx_bytes;
+        return config;
     }
 
     // INFO: fc 15sep26 the last read is kWindowUs after the first whatever a read costs on the bus
@@ -321,7 +321,7 @@ class Rf : public ports::Rf {
             const uint64_t due_us =
                 opened_us + static_cast<uint64_t>(i) * timing::ChannelLevel::kSampleSpacingUs;
             while (clock_.micros() < due_us) k_busy_wait(1);
-            window[i] = radio_.rssi_inst();
+            window[i] = radio_.instant_rssi_dbm();
         }
         carrier_.dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
         carrier_.samples++;
@@ -331,12 +331,12 @@ class Rf : public ports::Rf {
     // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx and not the whole buffer write
     void key(const ports::RfBurst& burst) {
         tx_at_us_ = burst.at_us;
-        (void)radio_.stage_tx(burst.chips, burst.len);
+        (void)radio_.stage_tx(burst.chips, burst.bytes);
         staged_at_us_ = clock_.micros();
         while (clock_.micros() < burst.at_us) k_busy_wait(1);
         (void)radio_.key_tx();
         keyed_at_us_ = clock_.micros();
-        tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.len);
+        tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.bytes);
     }
 
     // INFO: fc 03oct26 build 892's TxDone edge woke 0.3 ms after the status bit, RxDone's on time
@@ -460,17 +460,17 @@ class Rf : public ports::Rf {
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t freq_hz_{0};
-    uint64_t health_us_{0};
+    uint64_t health_checked_us_{0};
     struct k_sem armed_{};
     struct k_sem wake_{};
     struct gpio_dt_spec dio1_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_dio1_gpio), gpios);
-    struct gpio_callback dio1_cb_{};
+    struct gpio_callback dio1_callback_{};
     volatile bool dio1_wakes_{false};
     volatile uint32_t dio1_edges_{0};
     uint32_t dio1_missed_{0};
     struct k_thread thread_{};
-    k_tid_t tid_{nullptr};
-    K_KERNEL_STACK_MEMBER(stack_, kStackSize);
+    k_tid_t thread_id_{nullptr};
+    K_KERNEL_STACK_MEMBER(stack_, kStackBytes);
     ports::RfBursts flying_bursts_{};
     ports::RfBursts queued_bursts_{};
     uint64_t keyed_at_us_{0};
@@ -479,7 +479,7 @@ class Rf : public ports::Rf {
     uint64_t irq_at_us_{0};
     uint64_t tail_from_us_{0};
     uint64_t flying_end_us_{0};
-    uint32_t flying_freq_{0};
+    uint32_t flying_freq_hz_{0};
     ports::RfMode flying_mode_{ports::RfMode::Idle};
     volatile bool flying_{false};
     bool queued_{false};

@@ -11,23 +11,23 @@ void L76k::send(const char* sentence, uint32_t now_ms) {
 
 void L76k::start_sequence(uint32_t now_ms) {
     next_command_ = 0;
-    gsv_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
+    satellites_in_view_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
     levels_heard_ = false;
-    state_ = Config::Sending;
+    stage_ = ConfigStage::Sending;
     send_next(now_ms);
 }
 
 void L76k::send_next(uint32_t now_ms) {
     send(kCommands[next_command_++], now_ms);
     if (next_command_ < kCommandCount) return;
-    state_ = Config::Verifying;
+    stage_ = ConfigStage::Verifying;
     begin_verify(now_ms);
 }
 
 void L76k::begin_verify(uint32_t now_ms) {
     verify_start_ms_ = now_ms;
-    verify_updates_ = parser_.solution().updates;
-    verify_unrequested_ = parser_.unrequested();
+    verify_sentences_ = parser_.solution().updates;
+    unrequested_at_verify_ = parser_.unrequested();
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -36,7 +36,7 @@ bool L76k::raise_baud(uint32_t now_ms) {
     if (!port_can_retune()) return false;
     baud_before_raise_ = baud_rate();
     send(kBaudCommand, now_ms);
-    raises_++;
+    baud_raises_++;
     return adopt_baud(kTargetBaudRate);
 }
 
@@ -59,7 +59,7 @@ void L76k::begin_wake(uint32_t now_ms) {
     const uint8_t wake = kWakeByte;
     uart_.write(&wake, 1);
     last_command_ms_ = now_ms;
-    state_ = Config::Waking;
+    stage_ = ConfigStage::Waking;
 }
 
 bool L76k::next_baud() {
@@ -76,14 +76,14 @@ void L76k::verify_failed(uint32_t now_ms) {
     // at all is a receiver we cannot hear, and the rate is the first suspect. A
     // receiver that is talking has the right rate and is simply not obeying, and
     // walking the baud rates would only lose the sentences we do get.
-    const bool heard_nothing = parser_.solution().updates == verify_updates_;
+    const bool heard_nothing = parser_.solution().updates == verify_sentences_;
     if (heard_nothing && next_baud()) {
         attempts_ = 1;
         begin_wake(now_ms);
         return;
     }
     if (attempts_ >= kMaxConfigAttempts) {
-        state_ = Config::Degraded;
+        stage_ = ConfigStage::Degraded;
         return;
     }
     attempts_++;
@@ -105,75 +105,76 @@ void L76k::service(uint32_t now_ms) {
         // orbit data, which is the whole point of asking for one.
         if (factory) {
             validity_.reset();
-            adopt_baud(kBaudRate);
-            state_ = Config::Restarting;
+            adopt_baud(kFactoryBaudRate);
+            stage_ = ConfigStage::Restarting;
         }
         return;
     }
 
-    switch (state_) {
-        case Config::Idle:
+    switch (stage_) {
+        case ConfigStage::Idle:
             attempts_ = 1;
             begin_wake(now_ms);
             break;
-        case Config::Restarting:
+        case ConfigStage::Restarting:
             if (now_ms - last_command_ms_ < kRestartSettleMs) break;
             attempts_ = 1;
             begin_wake(now_ms);
             break;
-        case Config::Waking:
+        case ConfigStage::Waking:
             if (now_ms - last_command_ms_ < kWakeDelayMs) break;
             send(kIdentifyCommand, now_ms);
-            state_ = Config::Identifying;
+            stage_ = ConfigStage::Identifying;
             break;
-        case Config::Identifying:
+        case ConfigStage::Identifying:
             // Either it named itself or it did not answer in time. It gets the
             // sequence regardless: the only alternative on this board is a
             // receiver left on its factory defaults.
             if (parser_.identified() || now_ms - last_command_ms_ >= kIdentifyWindowMs)
                 start_sequence(now_ms);
             break;
-        case Config::Sending:
+        case ConfigStage::Sending:
             if (now_ms - last_command_ms_ >= kCommandGapMs) send_next(now_ms);
             break;
-        case Config::Verifying:
+        case ConfigStage::Verifying:
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
-            if (parser_.solution().updates - verify_updates_ < kMinVerifyUpdates || !obeying()) {
+            if (parser_.solution().updates - verify_sentences_ < kMinVerifySentences ||
+                !obeying()) {
                 verify_failed(now_ms);
                 break;
             }
-            state_ = raise_baud(now_ms) ? Config::Confirming : Config::Ready;
+            stage_ = raise_baud(now_ms) ? ConfigStage::Confirming : ConfigStage::Ready;
             begin_verify(now_ms);
             break;
         // INFO: fc 19sep26 a sentence that checksums at the new rate is the ack $PCAS01 never sends
-        case Config::Confirming:
-            if (parser_.solution().updates != verify_updates_) {
-                state_ = Config::Ready;
+        case ConfigStage::Confirming:
+            if (parser_.solution().updates != verify_sentences_) {
+                stage_ = ConfigStage::Ready;
                 break;
             }
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
             adopt_baud(baud_before_raise_);
             raise_fallbacks_++;
-            state_ = Config::Ready;
+            stage_ = ConfigStage::Ready;
             break;
-        case Config::Ready:
-        case Config::Degraded: break;
+        case ConfigStage::Ready:
+        case ConfigStage::Degraded: break;
     }
 
-    if (state_ == Config::Ready) pace_satellites_in_view(now_ms);
+    if (stage_ == ConfigStage::Ready) pace_satellites_in_view(now_ms);
 }
 
 void L76k::pace_satellites_in_view(uint32_t now_ms) {
     const uint8_t every = satellites_in_view_every();
-    if (every == gsv_every_) return;
+    if (every == satellites_in_view_every_) return;
     send(satellites_in_view_command(every), now_ms);
-    gsv_every_ = every;
+    satellites_in_view_every_ = every;
     if (every == 0) levels_heard_ = false;
 }
 
 // INFO: fc 29sep26 every solution until the first set lands, so the page still fills in a second
 uint8_t L76k::satellites_in_view_every() const {
-    if (!gsv_wanted_) return 0;
+    if (!satellites_in_view_wanted_) return 0;
     return levels_heard_ ? kSatellitesInViewPeriodSolutions : 1;
 }
 
@@ -183,10 +184,10 @@ const char* L76k::satellites_in_view_command(uint8_t every) {
 }
 
 // INFO: fc 13sep26 a $PCAS sentence is acknowledged only by what the receiver stops saying
-bool L76k::obeying() const { return parser_.unrequested() == verify_unrequested_; }
+bool L76k::obeying() const { return parser_.unrequested() == unrequested_at_verify_; }
 
 bool L76k::poll(uint32_t now_ms) {
-    uint8_t buf[kChunk];
+    uint8_t buf[kReadChunkBytes];
     bool closed = false;
     for (;;) {
         size_t n = uart_.read(buf, sizeof(buf));
@@ -195,13 +196,14 @@ bool L76k::poll(uint32_t now_ms) {
             if (!parser_.feed(static_cast<char>(buf[i]))) continue;
             const gnss::Sentence sentence = parser_.last_sentence();
             validity_.observe(parser_.solution(), sentence, now_ms);
-            burst_levels_ = burst_levels_ || (sentence == gnss::Sentence::Gsv && gsv_every_ != 0);
+            burst_levels_ = burst_levels_ ||
+                            (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
             closed = closed || sentence == kBurstClosingSentence;
         }
         if (n < sizeof(buf)) break;  // drained
     }
     // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
-    if (closed && gsv_every_ == 0) parser_.forget_satellites_in_view();
+    if (closed && satellites_in_view_every_ == 0) parser_.forget_satellites_in_view();
     levels_heard_ = levels_heard_ || burst_levels_;
 
     const bool valid = validity_.check(now_ms) == gnss::FixReject::None;
@@ -210,7 +212,7 @@ bool L76k::poll(uint32_t now_ms) {
     // its own right, and it is the one that matters most.
     if (!closed && valid == solution_.fix_valid) return false;
 
-    levels_fresh_ = closed && burst_levels_ && gsv_every_ != 0;
+    levels_fresh_ = closed && burst_levels_ && satellites_in_view_every_ != 0;
     if (closed) burst_levels_ = false;
     solution_ = parser_.solution();
     solution_.fix_valid = valid;

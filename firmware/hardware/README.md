@@ -25,7 +25,7 @@ The producers the board polls, which are not ports because nothing calls them on
 
 | Member | Becomes |
 |---|---|
-| `read_baro(platform::BaroReading&)` | `events::BaroSample` |
+| `trigger_baro()`, `read_baro(platform::BaroReading&)` | `events::BaroSample` |
 | `imu_firmware()` | the image `parts::Bhi260` uploads, which becomes `events::AccelSample` |
 | `read_battery_mv(uint16_t&)`, `external_power()` | `events::BatterySample` |
 | `button_down()`, `pad_down()` | `events::ContactEvent` |
@@ -43,6 +43,6 @@ And what the board asks about the unit it is running on: `begin()`, `capabilitie
 
 The buzzer pin is read high-Z and then against the internal pull-up. Held down both times, something on the board is pulling it to ground, and on this hardware that something is the piezo's drive stage: our T-Echo Plus reads it low and sounds, our plain T-Echo has an empty pad, follows the pull-up up and has no buzzer to sound. The board concludes `Capability::Buzzer` from that reading alone (`boards/lilygo/t_echo_plus/board.h`), the same way it concludes `Capability::Haptic` from a DRV2605 answering at 0x5A. Until September 2026 the rule ran the other way round - a fitted buzzer was read as an empty pad - which is how a Plus flew silent while a plain T-Echo reported a buzzer it does not have.
 
-The panel signature has two ways of missing, and `parts/ssd1681/panel.h` keeps them apart because different people fix them. `Panel::Unknown`, printed `NO ID`, is a fingerprint that could not be clocked out at all: the board port did not run, or the pins were not ready, and nothing was read. `Panel::Unlisted`, printed `UNLISTED`, is a fingerprint that was read and matches no row of SoftRF's table - which is the honest answer for a T-Echo Plus, whose row in that table carries a date string and no bytes. A bench that sees `UNLISTED` has a panel worth writing down; a bench that sees `NO ID` has a board that answered nothing.
+The panel signature has two ways of missing, and `parts/ssd1681/panel.h` keeps them apart because different people fix them. `Panel::Unknown`, printed `NO ID`, is a signature that could not be clocked out at all: the board port did not run, or the pins were not ready, and nothing was read. `Panel::Unlisted`, printed `UNLISTED`, is a signature that was read and matches no row of SoftRF's table - which is the honest answer for a T-Echo Plus, whose row in that table carries a date string and no bytes. A bench that sees `UNLISTED` has a panel worth writing down; a bench that sees `NO ID` has a board that answered nothing.
 
 A platform that is missing one of these fails at `platform/contract.h`, which both platforms assert themselves against at the bottom of their own header: the error names the member and points at the platform rather than at whichever call in `boards/` happened to need it first. No vtable is involved, the assertions are compile time and the table above is what the file spells out.

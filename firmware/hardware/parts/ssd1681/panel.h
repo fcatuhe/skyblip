@@ -16,19 +16,19 @@
 namespace skyblip::parts {
 
 // The two registers, and the byte counts SoftRF reads from each.
-constexpr uint8_t kPanelIdRegisterA = 0x2D;
-constexpr uint8_t kPanelIdRegisterB = 0x2E;
-constexpr int kPanelIdBytesA = 11;
-constexpr int kPanelIdBytesB = 10;
-constexpr int kPanelSignatureBytes = kPanelIdBytesA + kPanelIdBytesB;
+constexpr uint8_t kPanelIdRegister2d = 0x2D;
+constexpr uint8_t kPanelIdRegister2e = 0x2E;
+constexpr int kPanelIdBytes2d = 11;
+constexpr int kPanelIdBytes2e = 10;
+constexpr int kPanelSignatureBytes = kPanelIdBytes2d + kPanelIdBytes2e;
 
 struct PanelSignature {
-    uint8_t a[kPanelIdBytesA]{};  // register 0x2D
-    uint8_t b[kPanelIdBytesB]{};  // register 0x2E
-    // False when the fingerprint could not be taken at all. On silicon the read
+    uint8_t register_2d[kPanelIdBytes2d]{};
+    uint8_t register_2e[kPanelIdBytes2e]{};
+    // False when the signature could not be taken at all. On silicon the read
     // needs the panel's data line reversed, which only the board port can do,
     // and a board that cannot do it says so here rather than reporting a panel.
-    bool read{false};
+    bool valid{false};
 };
 
 enum class Panel : uint8_t {
@@ -89,15 +89,15 @@ constexpr PanelSignature kElecrowM1{
 }  // namespace panels
 
 inline bool panel_signature_equal(const PanelSignature& x, const PanelSignature& y) {
-    for (int i = 0; i < kPanelIdBytesA; i++)
-        if (x.a[i] != y.a[i]) return false;
-    for (int i = 0; i < kPanelIdBytesB; i++)
-        if (x.b[i] != y.b[i]) return false;
+    for (int i = 0; i < kPanelIdBytes2d; i++)
+        if (x.register_2d[i] != y.register_2d[i]) return false;
+    for (int i = 0; i < kPanelIdBytes2e; i++)
+        if (x.register_2e[i] != y.register_2e[i]) return false;
     return true;
 }
 
 inline Panel identify_panel(const PanelSignature& signature) {
-    if (!signature.read) return Panel::Unknown;
+    if (!signature.valid) return Panel::Unknown;
     if (panel_signature_equal(signature, panels::kGdeh0154D67Syx1942))
         return Panel::Gdeh0154D67Syx1942;
     if (panel_signature_equal(signature, panels::kGdeh0154D67Syx2118))

@@ -9,7 +9,7 @@
 namespace skyblip {
 
 inline parts::Ssd1681 make(models::Ssd1681& f) {
-    return parts::Ssd1681(f, f, f, f.dc, f.rst, f.busy);
+    return parts::Ssd1681(f, f, f, f.dc_pin, f.reset_pin, f.busy_pin);
 }
 
 // Drives the present to ready cycle to completion, as the screen service would

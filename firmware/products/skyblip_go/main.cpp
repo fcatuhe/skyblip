@@ -28,7 +28,7 @@ go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 
 int main(void) {
     // INFO: fc 05oct26 before setup, so a refused boot cannot hang awake; SYSTEM OFF stops it
-    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogMs) != Status::Ok)
+    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok)
         LOG_ERR("watchdog: not armed, the loop is unsupervised");
 
     const Status started = g_product.setup();
@@ -43,7 +43,7 @@ int main(void) {
                 power::to_string(g_product.refused_frame()));
         while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get()))) {
             g_platform.watchdog().feed();
-            k_sleep(K_MSEC(runtime::kServiceStepMs));
+            k_sleep(K_MSEC(runtime::kServicePassCeilingMs));
         }
         g_platform.system_power().system_off();
     }
@@ -52,7 +52,8 @@ int main(void) {
     if (!g_platform.storage_mounted())
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
     if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
-    if (!g_platform.keyed()) LOG_ERR("identity: no unit key, the unit can never be activated");
+    if (!g_platform.key_provisioned())
+        LOG_ERR("identity: no unit key, the unit can never be activated");
     if (!g_product.state().activation.activated())
         LOG_INF("identity: not activated, the radio stays off until skyblip.eu/activate");
 
@@ -71,7 +72,7 @@ int main(void) {
         // The self-test page is already on the glass and names the part that
         // did not answer. Staying up with it beats returning from main.
         LOG_ERR("self test %s: missing=%u", to_string(started),
-                static_cast<unsigned>(ports::missing(g_product.capabilities(), go::kRequired)));
+                static_cast<unsigned>(ports::without(go::kRequired, g_product.capabilities())));
     }
 
     bool reported_stall = false;

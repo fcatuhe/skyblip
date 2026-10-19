@@ -165,7 +165,7 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
         sky.simulator.world().add_threat();
         REQUIRE(sky.step_until_sounding(2000, 8000) > 0);
 
-        CHECK(sky.buzzer().hz() == annunciation::kNoteA7Hz);
+        CHECK(sky.buzzer().pitch_hz() == annunciation::kNoteA7Hz);
         CHECK(sky.buzzer().motor_starts() == 1);
         CHECK(sky.buzzer().vibrating());
         CHECK(sky.buzzer().loudness() ==
@@ -264,7 +264,7 @@ TEST_CASE("product: the first fix plays its tune, and traffic takes the buzzer o
     for (uint32_t t = 0; t <= 5000; t += kStepMs) {
         sky.simulator.step(t);
         if (!sky.buzzer().sounding()) continue;
-        const uint16_t hz = sky.buzzer().hz();
+        const uint16_t hz = sky.buzzer().pitch_hz();
         if (started == 0) {
             started = t;
             first_note_hz = hz;

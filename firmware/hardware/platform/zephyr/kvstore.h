@@ -33,19 +33,19 @@ class KvStore : public ports::KvStore {
 
     bool ready() const override { return mounted_; }
 
-    Status read(const char* key, uint8_t* buf, size_t cap, size_t& out_len) override {
+    Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t n = nvs_read(&fs_, id(key), buf, cap);
+        ssize_t n = nvs_read(&fs_, id(key), out, capacity);
         if (n <= 0) return Status::NotFound;
-        // INFO: fc 23sep26 nvs_read answers the stored length, and copies only cap of it
-        if (static_cast<size_t>(n) > cap) return Status::OutOfRange;
-        out_len = static_cast<size_t>(n);
+        // INFO: fc 23sep26 nvs_read answers the stored length, and copies only capacity of it
+        if (static_cast<size_t>(n) > capacity) return Status::OutOfRange;
+        out_bytes = static_cast<size_t>(n);
         return Status::Ok;
     }
-    Status write(const char* key, const uint8_t* buf, size_t len) override {
+    Status write(const char* key, const uint8_t* data, size_t bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t n = nvs_write(&fs_, id(key), buf, len);
-        return (n == static_cast<ssize_t>(len) || n == 0) ? Status::Ok : Status::Full;
+        ssize_t n = nvs_write(&fs_, id(key), data, bytes);
+        return (n == static_cast<ssize_t>(bytes) || n == 0) ? Status::Ok : Status::Full;
     }
     Status erase(const char* key) override {
         if (!mounted_) return Status::Down;

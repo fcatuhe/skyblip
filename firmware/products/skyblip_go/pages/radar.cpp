@@ -217,7 +217,7 @@ void traffic_count(ui::Canvas& canvas, int heard, bool counting) {
         buf[format_uint(buf, static_cast<uint32_t>(heard))] = 0;
     else
         buf[format_string(buf, "-")] = 0;
-    const int x = kGlassW - kMargin - text_width(buf, kTrafficScale);
+    const int x = kGlassWidth - kMargin - text_width(buf, kTrafficScale);
     canvas.draw_text(x, kFooterBottom - kGlyphH * kTrafficScale, buf, true, kTrafficScale);
     canvas.draw_text(x - kUnitGap - text_width("TFC", 1), kFooterY, "TFC", true, 1);
 }
@@ -336,7 +336,7 @@ void invert_wedges(ui::Canvas& canvas, int outer_r, const Wedge* wedges, int n_w
                    const Box* keep_out, int n_keep_out, const Box* formation) {
     const int inside = outer_r - kRingW;
     const int64_t outer2 = 4 * static_cast<int64_t>(inside) * inside;
-    const int bottom = kFar + outer_r < kGlassH ? kFar + outer_r : kGlassH;
+    const int bottom = kFar + outer_r < kGlassHeight ? kFar + outer_r : kGlassHeight;
     for (int y = kFar - outer_r; y < bottom; y++) {
         const int64_t py = 2 * (y - kFar) + 1;
         for (int x = kFar - outer_r; x < kFar + outer_r; x++) {

@@ -360,7 +360,7 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     CHECK(status <= comms::kSmallestSupportedPayload);
     // And neither fits what BLE merely guarantees, which is why a sender here
     // cannot assume a frame is a sentence.
-    CHECK(traffic > ports::kMinimumLinkPayload);
+    CHECK(traffic > ports::kMinimumLinkPayloadBytes);
 
     own.speed_mm_s = 16383750;
     own.track_cdeg = 35999;

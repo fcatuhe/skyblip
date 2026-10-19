@@ -187,7 +187,7 @@ TEST_CASE("radio: a healthy bring-up reports no device error and says so") {
     Sx1262 r = make(chip);
     CHECK(r.begin() == Status::Ok);
     CHECK(r.device_errors() == 0);
-    CHECK(chip.saw_cmd(sx::kGetDeviceErrors));
+    CHECK(chip.saw_command(sx::kGetDeviceErrors));
 }
 
 // The bits above PA_RAMP_ERR are RFU, and a part that floats them has not failed a calibration.

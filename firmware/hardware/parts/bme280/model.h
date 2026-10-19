@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/flight/atmosphere.h"
+#include "core/util/little_endian.h"
 #include "hardware/io/io.h"
 #include "ports/clock.h"
 
@@ -46,8 +47,8 @@ class Bme280 : public io::I2c {
     void set_altitude_mm(int32_t mm) { pressure_mpa_ = flight::alt_mm_to_pressure_mpa(mm); }
     void set_pressure_mpa(uint32_t mpa) { pressure_mpa_ = mpa; }
     uint32_t pressure_mpa() const { return pressure_mpa_; }
-    void set_temperature_decicelsius(int16_t deci) { temperature_decicelsius_ = deci; }
-    int16_t temperature_decicelsius() const { return temperature_decicelsius_; }
+    void set_temperature_dc(int16_t deci) { temperature_dc_ = deci; }
+    int16_t temperature_dc() const { return temperature_dc_; }
 
     bool write(uint8_t addr, const uint8_t* data, size_t len) override {
         if (addr != address || !answers) return false;
@@ -164,10 +165,7 @@ class Bme280 : public io::I2c {
                                   static_cast<uint16_t>(kP7),
                                   static_cast<uint16_t>(kP8),
                                   static_cast<uint16_t>(kP9)};
-        for (int i = 0; i < 12; i++) {
-            registers[kRegCalibration + 2 * i] = static_cast<uint8_t>(words[i] & 0xFF);
-            registers[kRegCalibration + 2 * i + 1] = static_cast<uint8_t>(words[i] >> 8);
-        }
+        for (int i = 0; i < 12; i++) put_u16(registers + kRegCalibration + 2 * i, words[i]);
     }
 
     static double fine_unrounded(int32_t adc_t) {
@@ -193,7 +191,7 @@ class Bme280 : public io::I2c {
     }
 
     int32_t temperature_adc() const {
-        const double want = temperature_decicelsius_ / 10.0 * 5120.0;
+        const double want = temperature_dc_ / 10.0 * 5120.0;
         int32_t lo = 0;
         int32_t hi = kAdcTop;
         while (lo < hi) {
@@ -226,7 +224,7 @@ class Bme280 : public io::I2c {
     int32_t pending_t_{kSkippedResult};
     int32_t pending_p_{kSkippedResult};
     uint32_t pressure_mpa_{flight::kIsaSeaLevelPa * 1000};
-    int16_t temperature_decicelsius_{flight::kIsaSeaLevelDeciCelsius};
+    int16_t temperature_dc_{flight::kIsaSeaLevelDeciCelsius};
 };
 
 }  // namespace skyblip::models

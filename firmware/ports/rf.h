@@ -27,7 +27,7 @@ struct RfPlan {
     // protocol it expects to get.
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
-    uint8_t rx_len{0};
+    uint8_t rx_bytes{0};
     // And what the modem has to be programmed to before any of that means
     // anything. The two bands are two modulations, not one modulation on two
     // frequencies (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4), so a dwell that
@@ -45,14 +45,14 @@ struct RfPlan {
     // plan would be a value the next retune throws away.
     int16_t freq_corr_e1_ppm{0};
     const uint8_t* tx{nullptr};
-    uint8_t tx_len{0};
+    uint8_t tx_bytes{0};
     // INFO: fc 15sep26 the burst keys here, full stop: nothing the receiver hears moves it
     uint64_t tx_at_us{0};
 };
 
 struct RfBurst {
     const uint8_t* chips{nullptr};
-    uint8_t len{0};
+    uint8_t bytes{0};
     uint64_t at_us{0};
 };
 
@@ -88,7 +88,7 @@ struct RfBursts {
 
     static RfBursts of(const RfPlan& plan) {
         RfBursts bursts{};
-        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_len, plan.tx_at_us});
+        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us});
         return bursts;
     }
 };
@@ -140,14 +140,14 @@ struct RfSwitching {
     uint32_t hop_us{0};
     uint32_t to_oband_us{0};
     uint32_t to_mband_us{0};
-    uint32_t late{0};
-    uint32_t count{0};
+    uint32_t late_starts{0};
+    uint32_t switches{0};
     RfSwitch last{};
 
     void note(const RfSwitch& change) {
-        count++;
+        switches++;
         last = change;
-        if (change.late_start()) late++;
+        if (change.late_start()) late_starts++;
         uint32_t* worst = nullptr;
         const RfMode from = change.from;
         const RfMode to = change.to;

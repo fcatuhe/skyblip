@@ -12,7 +12,7 @@ enum class Loudness : uint8_t { Soft, Loud };
 class Annunciator {
    public:
     virtual ~Annunciator() = default;
-    virtual void tone(uint16_t hz, Loudness loudness) = 0;
+    virtual void tone(uint16_t pitch_hz, Loudness loudness) = 0;
     virtual void silence() = 0;
     virtual void vibrate() = 0;
     virtual void still() = 0;

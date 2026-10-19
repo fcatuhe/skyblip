@@ -38,9 +38,9 @@ TEST_CASE("radio: carrier sense reads the level on the tuned channel") {
     REQUIRE(r.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(r.start_receive() == Status::Ok);
     chip.rssi_dbm = -110;
-    CHECK(r.rssi_inst() == -110);
+    CHECK(r.instant_rssi_dbm() == -110);
     chip.rssi_dbm = -48;
-    CHECK(r.rssi_inst() == -48);
+    CHECK(r.instant_rssi_dbm() == -48);
 }
 
 TEST_CASE("radio: an assessment interval is a run of reads, each answering for its own instant") {
@@ -56,14 +56,14 @@ TEST_CASE("radio: an assessment interval is a run of reads, each answering for i
         for (int i = 0; i < 4; i++) {
             CAPTURE(pass);
             CAPTURE(i);
-            CHECK(r.rssi_inst() == levels[i]);
+            CHECK(r.instant_rssi_dbm() == levels[i]);
         }
 
     // With no sequence loaded the chip answers one steady level, as before.
     chip.set_rssi_sequence(nullptr, 0);
     chip.rssi_dbm = -97;
-    CHECK(r.rssi_inst() == -97);
-    CHECK(r.rssi_inst() == -97);
+    CHECK(r.instant_rssi_dbm() == -97);
+    CHECK(r.instant_rssi_dbm() == -97);
 }
 
 TEST_CASE("radio: a delivered packet carries the level it arrived with") {
@@ -99,8 +99,8 @@ TEST_CASE("radio: the modem is programmed for 100 kbps, 50 kHz deviation, 234.3 
     CHECK(chip.pulse_shape == sx::kPulseShapeNone);
     CHECK(chip.rx_bandwidth == sx::kRxBandwidth234kHz);
     // DS 13.1.4: the packet handler is configured after the modem, not before.
-    CHECK(chip.cmd_order(sx::kSetRfFrequency) < chip.cmd_order(sx::kSetModulationParams));
-    CHECK(chip.cmd_order(sx::kSetModulationParams) < chip.cmd_order(sx::kSetPacketParams));
+    CHECK(chip.command_order(sx::kSetRfFrequency) < chip.command_order(sx::kSetModulationParams));
+    CHECK(chip.command_order(sx::kSetModulationParams) < chip.command_order(sx::kSetPacketParams));
 }
 
 TEST_CASE("radio: the O band is programmed for 200 kbps GMSK in a 250 kHz channel") {

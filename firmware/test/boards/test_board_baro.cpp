@@ -23,7 +23,7 @@ struct Unit {
 
     std::vector<uint32_t> sample_instants(uint32_t from_ms, uint32_t to_ms) {
         std::vector<uint32_t> at;
-        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServiceStepMs) {
+        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServicePassCeilingMs) {
             events::BaroSample sample{};
             if (pass(t, sample)) at.push_back(sample.at_ms);
         }
@@ -32,7 +32,7 @@ struct Unit {
 
     std::vector<uint32_t> trigger_instants(uint32_t from_ms, uint32_t to_ms) {
         std::vector<uint32_t> at;
-        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServiceStepMs) {
+        for (uint32_t t = from_ms; t < to_ms; t += runtime::kServicePassCeilingMs) {
             const int before = chip().conversions;
             events::BaroSample sample{};
             pass(t, sample);
@@ -112,7 +112,7 @@ TEST_CASE("board: a barometer sample is dated at its conversion, not at its read
 TEST_CASE("board: the published sample is the one triggered at the edge") {
     Unit u;
     std::vector<uint32_t> published;
-    for (uint32_t t = 0; t < 4000; t += runtime::kServiceStepMs) {
+    for (uint32_t t = 0; t < 4000; t += runtime::kServicePassCeilingMs) {
         u.chip().set_pressure_mpa(t % 1000 == 0 ? 95000000 : 90000000);
         events::BaroSample sample{};
         if (u.pass(t, sample)) published.push_back(sample.pressure_mpa);
@@ -131,7 +131,7 @@ TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
     CHECK(at.front() == 1000 + kMidpointMs);
     for (size_t i = 0; i < at.size(); i++) {
         CHECK((at[i] - kMidpointMs) % 1000 < runtime::kBaroPpsWindowMs);
-        if (i > 0) CHECK(at[i] - at[i - 1] == runtime::kBaroPeriodMs);
+        if (i > 0) CHECK(at[i] - at[i - 1] == runtime::kBaroPublishPeriodMs);
     }
 }
 
@@ -143,7 +143,8 @@ TEST_CASE("board: with no PPS the barometer keeps its own second and its own qua
     const std::vector<uint32_t> triggers = u.trigger_instants(10055, 12055);
 
     REQUIRE(at.size() >= 9);
-    for (size_t i = 1; i < at.size(); i++) CHECK(at[i] - at[i - 1] == runtime::kBaroPeriodMs);
+    for (size_t i = 1; i < at.size(); i++)
+        CHECK(at[i] - at[i - 1] == runtime::kBaroPublishPeriodMs);
     REQUIRE(triggers.size() == 8);
     for (size_t i = 1; i < triggers.size(); i++)
         CHECK(triggers[i] - triggers[i - 1] == runtime::kBaroConversionPeriodMs);
@@ -166,7 +167,7 @@ TEST_CASE("board: a conversion that never ends is given up at its ceiling and co
 
 TEST_CASE("board: a sample the sensor refused is not a sample of the last pressure") {
     Unit u;
-    u.platform.baro().present = false;
+    u.platform.baro().fitted = false;
 
     CHECK(u.sample_instants(1000, 5000).empty());
     CHECK(u.board.baro_faults() == 16);

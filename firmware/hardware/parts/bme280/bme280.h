@@ -25,7 +25,7 @@ class Bme280 {
 
     struct Reading {
         uint32_t pressure_mpa{0};
-        int16_t temperature_decicelsius{0};
+        int16_t temperature_dc{0};
     };
 
     explicit Bme280(io::I2c& bus) : bus_(bus) {}

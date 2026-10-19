@@ -14,9 +14,9 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     power::ResetCause reset_causes() const override { return causes; }
 
     void system_off() override {
-        performed = 0;
+        performed_count = 0;
         power::power_down(*this);
-        offs++;
+        system_offs++;
     }
 
     void reboot() override { reboots++; }
@@ -36,8 +36,8 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     // Where a step ended up in what actually ran, -1 if it never did.
     int order_of(power::PowerDownStep step) const {
-        for (int i = 0; i < performed; i++)
-            if (sequence[i] == step) return i;
+        for (int i = 0; i < performed_count; i++)
+            if (performed_steps[i] == step) return i;
         return -1;
     }
 
@@ -52,14 +52,14 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // INFO: fc 21sep26 both survive a rig's system_off the way GPREGRET2 survives SYSTEM OFF
     power::CellOnGlass glass_cell{power::CellOnGlass::None};
     bool dark_flat{false};
-    int offs{0};
+    int system_offs{0};
     int reboots{0};
-    power::PowerDownStep sequence[power::kPowerDownStepCount]{};
-    int performed{0};
+    power::PowerDownStep performed_steps[power::kPowerDownStepCount]{};
+    int performed_count{0};
 
    private:
     void perform(power::PowerDownStep step) override {
-        if (performed < power::kPowerDownStepCount) sequence[performed++] = step;
+        if (performed_count < power::kPowerDownStepCount) performed_steps[performed_count++] = step;
     }
 };
 

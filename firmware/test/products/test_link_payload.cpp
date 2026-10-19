@@ -95,9 +95,9 @@ TEST_CASE("link: a link that has not been told what it carries promises what BLE
     // 23 bytes of default ATT_MTU less the three of notification header. Both
     // upstream SoftRF forks stop here and never send more; we only do better
     // when a central has agreed to.
-    CHECK(ports::kMinimumLinkPayload == 20);
+    CHECK(ports::kMinimumLinkPayloadBytes == 20);
     ports::NullLink absent;
-    CHECK(absent.payload_bytes() == ports::kMinimumLinkPayload);
+    CHECK(absent.payload_bytes() == ports::kMinimumLinkPayloadBytes);
 
     platform::host::Link link;
 
@@ -105,7 +105,7 @@ TEST_CASE("link: a link that has not been told what it carries promises what BLE
 
     link.raise_link(1);
     link.declare_payload_bytes(4);
-    CHECK(link.payload_bytes() == ports::kMinimumLinkPayload);
+    CHECK(link.payload_bytes() == ports::kMinimumLinkPayloadBytes);
 
     // And a frame longer than that is refused rather than shortened, which is
     // what a controller does with an oversized notification.
@@ -178,9 +178,9 @@ TEST_CASE(
     go::SettingsStore store_cs(s, kWidestAddress);
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu(watchdog);
-    dfu.has_running_key = true;
-    dfu.trusted_key.fill(0xff);
-    dfu.downgrades = true;
+    dfu.running_key_valid = true;
+    dfu.running_signer.fill(0xff);
+    dfu.allows_downgrade = true;
     ConfigService cs(link, store_cs, &dfu);
     cs.set_image_state(dfu::ImageState::Probation,
                        dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
@@ -208,7 +208,7 @@ TEST_CASE("comms: a link that came up at the BLE minimum is answered with a coun
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(ports::kMinimumLinkPayload);
+    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     go::Settings s = widest_settings();
     go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
@@ -319,7 +319,7 @@ TEST_CASE("comms: a push that will never fit is counted once and not retried for
     platform::host::Link link;
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(ports::kMinimumLinkPayload);
+    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     go::Settings s = go::defaults();
     go::SettingsStore store_cs(s, kWidestAddress);
     ConfigService cs(link, store_cs);
@@ -400,9 +400,9 @@ TEST_CASE("comms: a central that never takes its reply loses it, counted, and fr
     cs.set_flight_state(flight::FlightState::Ground);
     cs.on_rx(frame("{\"cmd\":\"get\"}"));
     cs.on_rx(frame("{\"cmd\":\"status\"}"));
-    cs.resume_replies(ports::kReplyHoldMs - 1);
+    cs.resume_replies(ports::kReplyWaitCeilingMs - 1);
     CHECK(cs.replying());
-    cs.resume_replies(ports::kReplyHoldMs);
+    cs.resume_replies(ports::kReplyWaitCeilingMs);
     CHECK_FALSE(cs.replying());
     CHECK(cs.link_drops() == 1);
     CHECK(link.sent.size() == 1);

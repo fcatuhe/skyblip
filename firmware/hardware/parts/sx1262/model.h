@@ -178,8 +178,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    bool saw_cmd(uint8_t opcode) const {
-        return std::any_of(cmds_seen.begin(), cmds_seen.end(),
+    bool saw_command(uint8_t opcode) const {
+        return std::any_of(commands_seen.begin(), commands_seen.end(),
                            [opcode](uint8_t c) { return c == opcode; });
     }
 
@@ -253,12 +253,12 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint32_t tx_timeout_ticks{0};
     Fault fault{Fault::None};
     uint32_t faults{0};
-    std::vector<uint8_t> cmds_seen;
+    std::vector<uint8_t> commands_seen;
 
     // Where an opcode sits in the order it was actually issued, -1 if never.
-    int cmd_order(uint8_t opcode) const {
-        for (size_t i = 0; i < cmds_seen.size(); i++)
-            if (cmds_seen[i] == opcode) return static_cast<int>(i);
+    int command_order(uint8_t opcode) const {
+        for (size_t i = 0; i < commands_seen.size(); i++)
+            if (commands_seen[i] == opcode) return static_cast<int>(i);
         return -1;
     }
 
@@ -334,7 +334,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint8_t process(uint8_t in) {
         if (seq_ == 0) {
             opcode_ = in;
-            cmds_seen.push_back(in);
+            commands_seen.push_back(in);
             if (standby_only(in) && !standby) note_fault(Fault::ConfigOutsideStandby);
             if (opcode_ == parts::sx::kClearIrqStatus) irq_flags = 0;
             if (opcode_ == parts::sx::kSetStandby) standby = true;

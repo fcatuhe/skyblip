@@ -62,7 +62,7 @@ class Sx1262 {
     Status probe();
 
     Status begin();
-    Status configure_radio(const RadioConfig& cfg);
+    Status configure_radio(const RadioConfig& config);
 
     Status transmit(const uint8_t* data, uint8_t len);
     Status stage_tx(const uint8_t* data, uint8_t len);
@@ -75,7 +75,7 @@ class Sx1262 {
     Status wake();
 
     // INFO: fc 15sep26 DS 13.5.2: an instant, and valid only while the receiver is running
-    int8_t rssi_inst();
+    int8_t instant_rssi_dbm();
 
     // The last command's switch, done: BUSY falls once the part has reached the mode it was sent
     // to.
@@ -96,8 +96,8 @@ class Sx1262 {
    private:
     Status wait_busy_low(uint32_t max_spins = 100000);
     void select_when_ready();
-    void cmd(uint8_t opcode, const uint8_t* params, size_t n);
-    void cmd_read(uint8_t opcode, uint8_t* out, size_t n);
+    void command(uint8_t opcode, const uint8_t* params, size_t n);
+    void read_command(uint8_t opcode, uint8_t* out, size_t n);
     void write_frame(const uint8_t* head, size_t head_n, const uint8_t* data, size_t n);
     void read_frame(const uint8_t* head, size_t head_n, uint8_t* out, size_t n);
     void write_register(uint16_t addr, const uint8_t* data, size_t n);
@@ -107,11 +107,11 @@ class Sx1262 {
     Status enter_standby();
     Status enter_standby_on_tcxo();
     Status enter_standby_on(uint8_t clock);
-    bool holds(const RadioConfig& cfg) const;
-    bool hops_to(const RadioConfig& cfg) const;
-    Status retune(const RadioConfig& cfg, RadioMode was);
-    void write_frequency(const RadioConfig& cfg);
-    void configure_modulation(const RadioConfig& cfg);
+    bool holds(const RadioConfig& config) const;
+    bool hops_to(const RadioConfig& config) const;
+    Status retune(const RadioConfig& config, RadioMode was);
+    void write_frequency(const RadioConfig& config);
+    void configure_modulation(const RadioConfig& config);
     void configure_rx_gain();
     void configure_tx_clamp();
     void configure_tx_modulation();
@@ -121,7 +121,7 @@ class Sx1262 {
     uint8_t read_payload(uint8_t* rx_buf, uint8_t cap);
     Status check_device_errors();
     void clear_device_errors();
-    void configure_frame(const RadioConfig& cfg);
+    void configure_frame(const RadioConfig& config);
     void write_packet_params(uint8_t payload_bytes);
     uint32_t tx_timeout_ticks(uint8_t len) const;
     void recover_tx();
@@ -136,13 +136,13 @@ class Sx1262 {
     uint8_t frame_[kWriteFrameBytes]{};
     int busy_, reset_, dio1_;
     RadioMode mode_{RadioMode::Sleep};
-    RadioConfig cfg_{};
+    RadioConfig config_{};
     bool brought_up_{false};
     bool configured_{false};
     bool tuned_{false};
     uint8_t packet_bytes_{0};
     uint8_t staged_bytes_{0};
-    uint32_t ms_since_rx_{0};
+    uint32_t since_rx_ms_{0};
     uint32_t reinit_count_{0};
     bool reinit_owed_{false};
     uint32_t tx_recovery_count_{0};

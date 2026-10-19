@@ -145,7 +145,7 @@
 	/*
 	 * The pins board.c has to ask a question BEFORE any bus driver claims them,
 	 * and the only place on this SoC where that is possible: the e-paper's
-	 * fingerprint needs its single data line reversed (the SPIM owns MOSI and SCK
+	 * signature needs its single data line reversed (the SPIM owns MOSI and SCK
 	 * from POST_KERNEL onwards, and this board's SPI MISO is a placeholder), and
 	 * the buzzer pin has to be read high-Z against a pull-up before the PWM
 	 * peripheral starts driving it.
@@ -158,7 +158,7 @@
 		status = "disabled";
 
 		/* SSD1681 control lines. DC and RST are plain GPIOs in normal
-		 * operation too; MOSI and SCK are bit-banged for the fingerprint read
+		 * operation too; MOSI and SCK are bit-banged for the signature read
 		 * and belong to spi2's pinctrl for everything else. */
 		epd_dc_gpio: epd_dc {
 			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;

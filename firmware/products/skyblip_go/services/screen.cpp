@@ -493,16 +493,16 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
         case ParkFrame::Wordmark:
         default:
             fb_.clear(/*white=*/true);
-            ui::draw_wordmark(fb_, kGlassW / 2, kGlassH / 2);
+            ui::draw_wordmark(fb_, kGlassWidth / 2, kGlassHeight / 2);
             return;
     }
 }
 
 void ScreenService::draw_parked_cell(const char* said) {
     fb_.clear(/*white=*/true);
-    ui::draw_wordmark(fb_, kGlassW / 2, kGlassH / 2);
-    const int wordmark_bottom = kGlassH / 2 + ui::wordmark_height() / 2;
-    const int y = (wordmark_bottom + kGlassH) / 2 - kGlyphRows * kParkedSaidScale / 2;
+    ui::draw_wordmark(fb_, kGlassWidth / 2, kGlassHeight / 2);
+    const int wordmark_bottom = kGlassHeight / 2 + ui::wordmark_height() / 2;
+    const int y = (wordmark_bottom + kGlassHeight) / 2 - kGlyphRows * kParkedSaidScale / 2;
     centred_text(y, said, kParkedSaidScale);
 }
 
@@ -510,7 +510,7 @@ void ScreenService::centred_text(int y, const char* text, int scale) {
     int n = 0;
     while (text[n] != 0) n++;
     const int width = n * kGlyphCols * scale;
-    fb_.draw_text((kGlassW - width) / 2, y, text, true, scale);
+    fb_.draw_text((kGlassWidth - width) / 2, y, text, true, scale);
 }
 
 bool ScreenService::may_present_park_frame() const {

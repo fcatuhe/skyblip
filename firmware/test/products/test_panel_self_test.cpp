@@ -80,14 +80,14 @@ TEST_CASE("product: the self-test page names the part, not just the failure") {
     const go::Glass& good = whole.product.boot_page();
     int row_difference = 0;
     for (int y = go::boot_row_y(1); y < go::boot_row_y(1) + 8; y++)
-        for (int x = 0; x < go::kGlassW; x++)
+        for (int x = 0; x < go::kGlassWidth; x++)
             row_difference += bad.get_pixel(x, y) != good.get_pixel(x, y) ? 1 : 0;
     CHECK(row_difference > 0);
 
     // The radio row is identical on both: only the part that failed changed.
     int radio_difference = 0;
     for (int y = go::boot_row_y(0); y < go::boot_row_y(0) + 8; y++)
-        for (int x = 0; x < go::kGlassW; x++)
+        for (int x = 0; x < go::kGlassWidth; x++)
             radio_difference += bad.get_pixel(x, y) != good.get_pixel(x, y) ? 1 : 0;
     CHECK(radio_difference == 0);
 }

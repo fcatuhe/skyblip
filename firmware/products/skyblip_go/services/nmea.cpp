@@ -85,9 +85,9 @@ void NmeaService::tick(uint32_t now_ms) {
 // cannot be the one a full sky pushes off the end.
 void NmeaService::run_pass(uint32_t now_ms) {
     const int negotiated = static_cast<int>(context_.roles.link.payload_bytes());
-    payload_ = negotiated < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload
-               : negotiated > kFrameBytesCap           ? kFrameBytesCap
-                                                       : negotiated;
+    payload_ = negotiated < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes
+               : negotiated > kFrameBytesCap                ? kFrameBytesCap
+                                                            : negotiated;
     if (pass_sent_ < pass_len_) abandon_pass();
     pass_len_ = pass_sent_ = resume_count_ = 0;
     emit_status(now_ms);

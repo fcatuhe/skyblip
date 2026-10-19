@@ -24,7 +24,7 @@ class Watchdog : public ports::Watchdog {
     // INFO: fc 26sep26 under MIN_TIMEOUT, so task_wdt's background feed never renews the rope
     static_assert(CONFIG_TASK_WDT_MIN_TIMEOUT > 1000, "kChannelMs would wrap below zero");
     static constexpr uint32_t kChannelMs = CONFIG_TASK_WDT_MIN_TIMEOUT - 1000;
-    static_assert(kRopeMs == runtime::kHardwareWatchdogMs,
+    static_assert(kRopeMs == runtime::kHardwareWatchdogCeilingMs,
                   "prj.conf's task_wdt window must be the rope the loop is supervised by");
 
     Status arm(uint32_t timeout_ms) override {

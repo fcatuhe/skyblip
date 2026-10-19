@@ -28,7 +28,7 @@ void Bhi260ImageStore::check() {
         return;
     }
     const Header header = decode(raw);
-    if (header.magic != kMagic || header.layout != kLayout || header.length == 0 ||
+    if (header.magic != kMagic || header.layout != kLayoutVersion || header.length == 0 ||
         header.length > capacity()) {
         holding_ = Holding::Corrupt;
         return;
@@ -53,9 +53,9 @@ bool Bhi260ImageStore::begin_write(ConstByteSpan image, const Sha256::Digest& di
     source_ = image;
     digest_ = digest;
     length_ = static_cast<uint32_t>(image.size());
-    sectors_ = (kHeaderBytes + length_ + flash_.sector_bytes() - 1) / flash_.sector_bytes();
+    sector_count_ = (kHeaderBytes + length_ + flash_.sector_bytes() - 1) / flash_.sector_bytes();
     next_sector_ = 0;
-    done_ = 0;
+    done_bytes_ = 0;
     phase_ = Phase::Erase;
     holding_ = Holding::Writing;
     return true;
@@ -121,26 +121,26 @@ void Bhi260ImageStore::step_erase() {
         return;
     }
     next_sector_++;
-    if (next_sector_ < sectors_) return;
+    if (next_sector_ < sector_count_) return;
     phase_ = Phase::Program;
-    done_ = 0;
+    done_bytes_ = 0;
 }
 
 void Bhi260ImageStore::step_program() {
-    const uint32_t take = at_most(store::kPageBytes, length_ - done_);
-    if (!is_ok(flash_.write(kHeaderBytes + done_, source_.data() + done_, take))) {
+    const uint32_t take = at_most(store::kPageBytes, length_ - done_bytes_);
+    if (!is_ok(flash_.write(kHeaderBytes + done_bytes_, source_.data() + done_bytes_, take))) {
         stop(Holding::Unreadable);
         return;
     }
-    done_ += take;
-    if (done_ < length_) return;
+    done_bytes_ += take;
+    if (done_bytes_ < length_) return;
     phase_ = Phase::Commit;
 }
 
 void Bhi260ImageStore::step_commit() {
     Header header;
     header.magic = kMagic;
-    header.layout = kLayout;
+    header.layout = kLayoutVersion;
     header.length = length_;
     header.digest = digest_;
     uint8_t raw[kHeaderUsedBytes];
@@ -150,19 +150,19 @@ void Bhi260ImageStore::step_commit() {
         return;
     }
     phase_ = Phase::Verify;
-    done_ = 0;
+    done_bytes_ = 0;
     verifying_.reset();
 }
 
 void Bhi260ImageStore::step_verify() {
-    const uint32_t take = at_most(kVerifyChunkBytes, length_ - done_);
-    if (!is_ok(flash_.read(kHeaderBytes + done_, chunk_, take))) {
+    const uint32_t take = at_most(kVerifyChunkBytes, length_ - done_bytes_);
+    if (!is_ok(flash_.read(kHeaderBytes + done_bytes_, chunk_, take))) {
         stop(Holding::Unreadable);
         return;
     }
     verifying_.update(chunk_, take);
-    done_ += take;
-    if (done_ < length_) return;
+    done_bytes_ += take;
+    if (done_bytes_ < length_) return;
     stop(verifying_.finish() == digest_ ? Holding::Held : Holding::Corrupt);
 }
 

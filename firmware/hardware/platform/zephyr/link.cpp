@@ -36,13 +36,13 @@ static struct bt_uuid_16 hm10_svc_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 hm10_chr_uuid = BT_UUID_INIT_16(0xFFE1);
 
 // INFO: fc 18sep26 Our own base: config and log are our protocol, not a UART apps would misread.
-#define SKB_UUID(v) BT_UUID_128_ENCODE(0x69c21300 | (v), 0x0187, 0x4204, 0xa91d, 0x02eb8858b440)
-static struct bt_uuid_128 skb_svc_uuid = BT_UUID_INIT_128(SKB_UUID(0x01));
-static struct bt_uuid_128 cfg_uuid = BT_UUID_INIT_128(SKB_UUID(0x02));
+#define SKYBLIP_UUID(v) BT_UUID_128_ENCODE(0x69c21300 | (v), 0x0187, 0x4204, 0xa91d, 0x02eb8858b440)
+static struct bt_uuid_128 skyblip_svc_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x01));
+static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x02));
 // The log offload is thousands of small round trips. On its own characteristic
 // it cannot starve the one the pilot's prompts travel on, and an app that does
 // not want logs simply never subscribes.
-static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKB_UUID(0x03));
+static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x03));
 
 // INFO: fc 04aug26 The ATT notification header - opcode plus value handle. What
 // is left of the ATT_MTU is what one notification may carry, which is why 185
@@ -124,8 +124,8 @@ ssize_t accept_write(struct bt_conn* conn, Endpoint endpoint, const void* buf, u
     return len;
 }
 
-ssize_t on_cfg_write(struct bt_conn* conn, const struct bt_gatt_attr*, const void* buf,
-                     uint16_t len, uint16_t /*offset*/, uint8_t /*flags*/) {
+ssize_t on_config_write(struct bt_conn* conn, const struct bt_gatt_attr*, const void* buf,
+                        uint16_t len, uint16_t /*offset*/, uint8_t /*flags*/) {
     return accept_write(conn, Endpoint::Config, buf, len);
 }
 
@@ -159,35 +159,36 @@ BT_GATT_SERVICE_DEFINE(hm10_svc, BT_GATT_PRIMARY_SERVICE(&hm10_svc_uuid),
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
 constexpr int kHm10NotifyAttr = 2;
 
-BT_GATT_SERVICE_DEFINE(skb_svc, BT_GATT_PRIMARY_SERVICE(&skb_svc_uuid),
-                       BT_GATT_CHARACTERISTIC(&cfg_uuid.uuid,
+BT_GATT_SERVICE_DEFINE(skyblip_svc, BT_GATT_PRIMARY_SERVICE(&skyblip_svc_uuid),
+                       BT_GATT_CHARACTERISTIC(&config_uuid.uuid,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
                                                   BT_GATT_CHRC_NOTIFY,
-                                              BT_GATT_PERM_WRITE, nullptr, on_cfg_write, nullptr),
+                                              BT_GATT_PERM_WRITE, nullptr, on_config_write,
+                                              nullptr),
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
                        BT_GATT_CHARACTERISTIC(&log_uuid.uuid,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
                                                   BT_GATT_CHRC_NOTIFY,
                                               BT_GATT_PERM_WRITE, nullptr, on_log_write, nullptr),
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
-constexpr int kCfgNotifyAttr = 2;
+constexpr int kConfigNotifyAttr = 2;
 constexpr int kLogNotifyAttr = 5;
 constexpr int kMaxNotifyAttrs = 2;
 
-int notify_attrs(Endpoint ep, const struct bt_gatt_attr** out) {
-    switch (ep) {
+int notify_attrs(Endpoint endpoint, const struct bt_gatt_attr** out) {
+    switch (endpoint) {
         case Endpoint::Nmea:
             out[0] = &nus_svc.attrs[kNusNotifyAttr];
             out[1] = &hm10_svc.attrs[kHm10NotifyAttr];
             return 2;
-        case Endpoint::Config: out[0] = &skb_svc.attrs[kCfgNotifyAttr]; return 1;
-        case Endpoint::Log: out[0] = &skb_svc.attrs[kLogNotifyAttr]; return 1;
+        case Endpoint::Config: out[0] = &skyblip_svc.attrs[kConfigNotifyAttr]; return 1;
+        case Endpoint::Log: out[0] = &skyblip_svc.attrs[kLogNotifyAttr]; return 1;
     }
     return 0;
 }
 
 // INFO: fc 18sep26 XCSoar scan-filters by service UUID, so a name-only advert is invisible to it.
-const struct bt_data adv[] = {
+const struct bt_data advertising_data[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR),
     BT_DATA_BYTES(BT_DATA_UUID128_ALL, NUS_UUID(0x0001)),
     BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(0xFFE0)),
@@ -207,8 +208,8 @@ atomic_t g_advertising = ATOMIC_INIT(0);
 
 int start_advertising() {
     const ScanResponse* response = static_cast<const ScanResponse*>(atomic_ptr_get(&g_response));
-    return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, adv, ARRAY_SIZE(adv), response->sd,
-                           ARRAY_SIZE(response->sd));
+    return bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, advertising_data, ARRAY_SIZE(advertising_data),
+                           response->sd, ARRAY_SIZE(response->sd));
 }
 
 // INFO: fc 18sep26 -ENOMEM is every connection object in use, and recycled() is what undoes it.
@@ -297,7 +298,8 @@ Status Link::advertise_as(const char* name) {
         rc = start_advertising();
         if (rc == 0) atomic_set(&g_advertising, 1);
     } else {
-        rc = bt_le_adv_update_data(adv, ARRAY_SIZE(adv), next->sd, ARRAY_SIZE(next->sd));
+        rc = bt_le_adv_update_data(advertising_data, ARRAY_SIZE(advertising_data), next->sd,
+                                   ARRAY_SIZE(next->sd));
         if (rc == -EAGAIN) rc = 0;
     }
     if (rc != 0) LOG_ERR("bluetooth: advertising as %s failed (%d)", next->name, rc);
@@ -314,20 +316,20 @@ uint16_t Link::payload_bytes() const {
         bt_conn_unref(conn);
         if (smallest == 0 || payload < smallest) smallest = payload;
     }
-    return smallest < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : smallest;
+    return smallest < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : smallest;
 }
 
 uint16_t Link::payload_bytes_to(uint16_t session_id) const {
     struct bt_conn* conn = conn_of(session_id);
-    if (conn == nullptr) return ports::kMinimumLinkPayload;
+    if (conn == nullptr) return ports::kMinimumLinkPayloadBytes;
     const uint16_t payload = payload_from_mtu(bt_gatt_get_mtu(conn));
     bt_conn_unref(conn);
-    return payload < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : payload;
+    return payload < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : payload;
 }
 
-Status Link::notify_one(struct bt_conn* conn, Endpoint ep, ConstByteSpan bytes) {
+Status Link::notify_one(struct bt_conn* conn, Endpoint endpoint, ConstByteSpan bytes) {
     const struct bt_gatt_attr* attrs[kMaxNotifyAttrs] = {};
-    const int n = notify_attrs(ep, attrs);
+    const int n = notify_attrs(endpoint, attrs);
     atomic_t* in_flight = &g_in_flight[bt_conn_index(conn)];
     Status result = Status::WouldBlock;
     bool subscribed = false;
@@ -349,14 +351,14 @@ Status Link::notify_one(struct bt_conn* conn, Endpoint ep, ConstByteSpan bytes) 
     return subscribed ? result : Status::WouldBlock;
 }
 
-Status Link::send(Endpoint ep, ConstByteSpan bytes) {
+Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
     if (bytes.size() > payload_bytes()) return Status::OutOfRange;
     Status result = Status::Down;
     bool delivered = false;
     for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {
         struct bt_conn* conn = conn_ref(i);
         if (conn == nullptr) continue;
-        const Status one = notify_one(conn, ep, bytes);
+        const Status one = notify_one(conn, endpoint, bytes);
         bt_conn_unref(conn);
         if (one == Status::Ok)
             delivered = true;
@@ -366,11 +368,11 @@ Status Link::send(Endpoint ep, ConstByteSpan bytes) {
     return delivered ? Status::Ok : result;
 }
 
-Status Link::send_to(uint16_t session_id, Endpoint ep, ConstByteSpan bytes) {
+Status Link::send_to(uint16_t session_id, Endpoint endpoint, ConstByteSpan bytes) {
     if (bytes.size() > payload_bytes_to(session_id)) return Status::OutOfRange;
     struct bt_conn* conn = conn_of(session_id);
     if (conn == nullptr) return Status::Down;
-    const Status sent = notify_one(conn, ep, bytes);
+    const Status sent = notify_one(conn, endpoint, bytes);
     bt_conn_unref(conn);
     return sent;
 }

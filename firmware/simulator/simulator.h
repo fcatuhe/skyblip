@@ -20,7 +20,7 @@ class Simulator {
 
     Status setup() {
         const Status started = product_.setup();
-        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogMs);
+        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
         return started == Status::Ok ? armed : started;
     }
 

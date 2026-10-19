@@ -8,7 +8,7 @@ namespace {
 constexpr int kLeft = 4;
 constexpr int kCellW = 6;
 constexpr int kGlyphH = 7;
-constexpr int kRight = kGlassW - kLeft;
+constexpr int kRight = kGlassWidth - kLeft;
 
 constexpr int kTitleY = 2;
 constexpr int kRuleY = 13;
@@ -129,7 +129,7 @@ void draw_port(ui::Canvas& canvas, const SatsSnapshot& s) {
     int n = format_string(buf, "BAUD ");
     n += format_uint(buf + n, s.health.baud);
     n += format_string(buf + n, "  ");
-    n += format_string(buf + n, ports::to_string(s.health.config));
+    n += format_string(buf + n, ports::to_string(s.health.config_stage));
     if (s.health.overruns > 0) {
         n += format_string(buf + n, "  OVR ");
         n += format_uint(buf + n, s.health.overruns);

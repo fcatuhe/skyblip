@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "core/util/little_endian.h"
 #include "hardware/io/io.h"
 
 namespace skyblip::models {
@@ -13,10 +14,10 @@ class Bhi260 : public io::I2c {
     static constexpr uint8_t kAddress = 0x28;
     static constexpr uint16_t kFirmwareMagic = 0x662B;
     static constexpr uint16_t kKernelVersion = 0x1234;
-    static constexpr int kMaxStream = 64;
+    static constexpr int kMaxStreamBytes = 64;
 
     struct Stream {
-        uint8_t bytes[kMaxStream]{};
+        uint8_t bytes[kMaxStreamBytes]{};
         size_t len{0};
         size_t pos{0};
     };
@@ -151,9 +152,8 @@ class Bhi260 : public io::I2c {
         while (pos < len) {
             if (expected_ == 0 && received_ == 0 && command_ == 0) {
                 if (len - pos < 4) return false;
-                command_ = static_cast<uint16_t>(data[pos] | (data[pos + 1] << 8));
-                const uint16_t declared =
-                    static_cast<uint16_t>(data[pos + 2] | (data[pos + 3] << 8));
+                command_ = get_u16(data + pos);
+                const uint16_t declared = get_u16(data + pos + 2);
                 expected_ = command_ == kCmdUploadToProgramRam ? declared * 4u : declared;
                 pos += 4;
                 payload_bytes_ = 0;
@@ -188,16 +188,12 @@ class Bhi260 : public io::I2c {
                 break;
             case kCmdChangeRange:
                 if (!announced_ || payload_bytes_ < 3) break;
-                if (payload_[0] == kSensorAccelerometer)
-                    accel_range_g = static_cast<uint16_t>(payload_[1] | (payload_[2] << 8));
-                if (payload_[0] == kSensorGyroscope)
-                    gyro_range_dps = static_cast<uint16_t>(payload_[1] | (payload_[2] << 8));
+                if (payload_[0] == kSensorAccelerometer) accel_range_g = get_u16(payload_ + 1);
+                if (payload_[0] == kSensorGyroscope) gyro_range_dps = get_u16(payload_ + 1);
                 break;
             case kCmdConfigureSensor: {
                 if (!announced_ || !accepts_configuration || payload_bytes_ < 8) break;
-                uint32_t bits = 0;
-                for (int i = 0; i < 4; i++)
-                    bits |= static_cast<uint32_t>(payload_[1 + i]) << (8 * i);
+                const uint32_t bits = get_u32(payload_ + 1);
                 float rate = 0;
                 std::memcpy(&rate, &bits, sizeof(rate));
                 if (payload_[0] == kSensorGyroscope) {
@@ -263,9 +259,8 @@ class Bhi260 : public io::I2c {
             n = kSensorConfigBytes;
             uint32_t bits = 0;
             std::memcpy(&bits, &sample_rate_hz, sizeof(bits));
-            for (int i = 0; i < 4; i++) payload[i] = static_cast<uint8_t>(bits >> (8 * i));
-            payload[10] = static_cast<uint8_t>(accel_range_g & 0xFF);
-            payload[11] = static_cast<uint8_t>(accel_range_g >> 8);
+            put_u32(payload, bits);
+            put_u16(payload + 10, accel_range_g);
         } else {
             return;
         }
@@ -328,8 +323,7 @@ class Bhi260 : public io::I2c {
 
     static int put_counts(uint8_t* out, int16_t value, int range, int per_unit) {
         const int32_t counts = static_cast<int32_t>(value) * kCountsPerRange / (range * per_unit);
-        out[0] = static_cast<uint8_t>(counts & 0xFF);
-        out[1] = static_cast<uint8_t>((counts >> 8) & 0xFF);
+        put_u16(out, static_cast<uint16_t>(counts));
         return 2;
     }
 

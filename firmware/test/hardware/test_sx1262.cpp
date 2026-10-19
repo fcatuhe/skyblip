@@ -15,9 +15,9 @@ TEST_CASE("radio: begin configures the TCXO (DIO3) and RF switch (DIO2) for T-Ec
     Sx1262 r = make(chip);
     CHECK(r.begin() == Status::Ok);
     // Without these two the SX1262 has no clock / no antenna path on this board.
-    CHECK(chip.saw_cmd(sx::kSetDio2AsRfSwitch));
-    CHECK(chip.saw_cmd(sx::kSetDio3AsTcxoCtrl));
-    CHECK(chip.saw_cmd(sx::kCalibrate));
+    CHECK(chip.saw_command(sx::kSetDio2AsRfSwitch));
+    CHECK(chip.saw_command(sx::kSetDio3AsTcxoCtrl));
+    CHECK(chip.saw_command(sx::kCalibrate));
 }
 
 // B1. The reset default is LDO-only and there is no symptom: the radio works,
@@ -27,13 +27,13 @@ TEST_CASE("radio: begin puts the part on its DC-DC converter, before it calibrat
     models::Sx1262 chip;
     Sx1262 r = make(chip);
     REQUIRE(r.begin() == Status::Ok);
-    CHECK(chip.saw_cmd(sx::kSetRegulatorMode));
+    CHECK(chip.saw_command(sx::kSetRegulatorMode));
     CHECK(chip.regulator_dcdc);
     CHECK(chip.regulator_mode == sx::kRegulatorDcDc);
     // DS 13.1.4 is a standby-only command, and the calibration runs against the
     // supply configuration that is in force when it runs.
-    CHECK(chip.cmd_order(sx::kSetRegulatorMode) < chip.cmd_order(sx::kCalibrate));
-    CHECK(chip.cmd_order(sx::kSetRegulatorMode) < chip.cmd_order(sx::kCalibrateImage));
+    CHECK(chip.command_order(sx::kSetRegulatorMode) < chip.command_order(sx::kCalibrate));
+    CHECK(chip.command_order(sx::kSetRegulatorMode) < chip.command_order(sx::kCalibrateImage));
     CHECK(chip.fault == models::Sx1262::Fault::None);
 }
 

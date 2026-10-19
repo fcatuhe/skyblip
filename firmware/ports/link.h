@@ -15,10 +15,10 @@ namespace skyblip::ports {
 // BLE NUS paths, and their `setMTU` call is commented out with the note "Apple
 // needs 23 apparently". We do better than 20 when the central agrees to, which
 // is the only reason payload_bytes() exists.
-constexpr uint16_t kMinimumLinkPayload = 20;
+constexpr uint16_t kMinimumLinkPayloadBytes = 20;
 
 // INFO: fc 25sep26 WouldBlock is a link at its share of notifications, and a reply waits this long
-constexpr uint32_t kReplyHoldMs = 2000;
+constexpr uint32_t kReplyWaitCeilingMs = 2000;
 
 class Link {
    public:
@@ -32,16 +32,16 @@ class Link {
     // so a port that forgets to override this under-promises instead of lying.
     //
     // INFO: fc 18sep26 With several centrals this is the smallest, one frame goes to all.
-    virtual uint16_t payload_bytes() const { return kMinimumLinkPayload; }
+    virtual uint16_t payload_bytes() const { return kMinimumLinkPayloadBytes; }
     virtual uint16_t payload_bytes_to(uint16_t /*session_id*/) const { return payload_bytes(); }
 
     // INFO: fc 04aug26 Longer than payload_bytes() is refused, never truncated:
     // a controller does not shorten an oversized notification, it fails it, and
     // a caller that learns nothing about that has silently dropped the frame.
-    virtual Status send(events::Endpoint ep, ConstByteSpan bytes) = 0;
+    virtual Status send(events::Endpoint endpoint, ConstByteSpan bytes) = 0;
 
     // INFO: fc 18sep26 send() is every subscribed central, send_to() is the one that asked.
-    virtual Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) = 0;
+    virtual Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) = 0;
 
     // INFO: fc 18oct26 starts advertising under name, or renames a link already advertising
     virtual Status advertise_as(const char* name) = 0;

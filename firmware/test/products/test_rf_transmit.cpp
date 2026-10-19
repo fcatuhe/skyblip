@@ -259,8 +259,8 @@ TEST_CASE("rf: nothing goes on air while the receiver's solutions still walk") {
     h.world().set_fix(true);
     h.world().set_speed_kt(50);
     // Sixty metres of error at the first fix, decaying over half a minute.
-    h.world().gnss().walk_m = 60;
-    h.world().gnss().walk_ms = 30000;
+    h.world().gnss().walk_amplitude_m = 60;
+    h.world().gnss().walk_duration_ms = 30000;
 
     h.run(gnss::kFirstFixSettleMs - 2000);
     CHECK_FALSE(h.product().state().own.tx_settled);

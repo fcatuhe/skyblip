@@ -152,7 +152,7 @@ void row_label(ui::Canvas& canvas, int y, const char* label, bool valid) {
 void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& s) {
     canvas.clear(true);
     canvas.draw_text(kLeft, kTitleY, "G METER", true, 2);
-    canvas.hline(kLeft, kRuleY, kGlassW - 2 * kLeft, true);
+    canvas.hline(kLeft, kRuleY, kGlassWidth - 2 * kLeft, true);
 
     if (!s.fitted) {
         canvas.draw_text(kLeft, kFieldCy - kGlyphH / 2, "NO SENSOR", true, 1);

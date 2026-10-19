@@ -16,7 +16,7 @@ class Bhi260ImageStore : public Bhi260::Image {
 
     // INFO: fc 03oct26 "SKBH" in a hex dump of the partition
     static constexpr uint32_t kMagic = 0x48424B53;
-    static constexpr uint16_t kLayout = 1;
+    static constexpr uint16_t kLayoutVersion = 1;
     static constexpr uint32_t kHeaderBytes = 256;
     static constexpr uint32_t kVerifyChunkBytes = 1024;
 
@@ -68,8 +68,8 @@ class Bhi260ImageStore : public Bhi260::Image {
     ConstByteSpan source_{};
     Phase phase_{Phase::Erase};
     uint32_t next_sector_{0};
-    uint32_t sectors_{0};
-    uint32_t done_{0};
+    uint32_t sector_count_{0};
+    uint32_t done_bytes_{0};
     Sha256 verifying_{};
     uint8_t chunk_[kVerifyChunkBytes]{};
 };

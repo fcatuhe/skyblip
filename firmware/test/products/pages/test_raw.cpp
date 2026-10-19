@@ -13,12 +13,12 @@ RawSnapshot bench_device() {
     snapshot.uptime_s = 1234;
 
     snapshot.gnss.health.baud = 115200;
-    snapshot.gnss.health.config = skyblip::ports::GnssConfig::Ready;
+    snapshot.gnss.health.config_stage = skyblip::ports::GnssConfigStage::Ready;
     snapshot.gnss.health.overruns = 0;
     snapshot.gnss.health.sentences = 5210;
     snapshot.gnss.health.rejected = 6;
     snapshot.gnss.health.pps_latency_ms = 28;
-    snapshot.gnss.health.reject = skyblip::gnss::FixReject::Stale;
+    snapshot.gnss.health.last_reject = skyblip::gnss::FixReject::Stale;
     snapshot.gnss.health.identified = true;
     snapshot.gnss.nav_ms = 98;
     snapshot.gnss.nav_valid = true;

@@ -29,32 +29,33 @@ class FlashRegion : public ports::FlashRegion {
         : sector_count_(sector_count),
           bytes_(static_cast<size_t>(sector_count) * kSectorBytes, 0xFF) {}
 
-    bool ready() const override { return present_; }
-    void set_present(bool on) { present_ = on; }
+    bool ready() const override { return fitted_; }
+    void set_fitted(bool on) { fitted_ = on; }
 
     uint32_t sector_bytes() const override { return kSectorBytes; }
     uint32_t sector_count() const override { return sector_count_; }
 
-    Status read(uint32_t offset, uint8_t* buf, uint32_t len) override {
-        if (!present_) return Status::Down;
-        if (offset + len > bytes_.size()) return Status::OutOfRange;
-        std::memcpy(buf, bytes_.data() + offset, len);
+    Status read(uint32_t offset, uint8_t* out, uint32_t bytes) override {
+        if (!fitted_) return Status::Down;
+        if (offset + bytes > bytes_.size()) return Status::OutOfRange;
+        std::memcpy(out, bytes_.data() + offset, bytes);
         reads++;
-        read_bytes += len;
+        read_bytes += bytes;
         return Status::Ok;
     }
 
-    Status write(uint32_t offset, const uint8_t* buf, uint32_t len) override {
-        if (!present_) return Status::Down;
-        if (offset + len > bytes_.size()) return Status::OutOfRange;
+    Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) override {
+        if (!fitted_) return Status::Down;
+        if (offset + bytes > bytes_.size()) return Status::OutOfRange;
         if (dead_) return Status::Down;
-        uint32_t n = len;
+        uint32_t n = bytes;
         if (cut_after_ >= 0) {
-            n = static_cast<uint32_t>(cut_after_) < len ? static_cast<uint32_t>(cut_after_) : len;
+            n = static_cast<uint32_t>(cut_after_) < bytes ? static_cast<uint32_t>(cut_after_)
+                                                          : bytes;
             cut_after_ = -1;
             dead_ = true;
         }
-        for (uint32_t i = 0; i < n; i++) bytes_[offset + i] &= buf[i];
+        for (uint32_t i = 0; i < n; i++) bytes_[offset + i] &= data[i];
         writes++;
         if (n > 0) programs += (offset + n - 1) / kPageBytes - offset / kPageBytes + 1;
         write_bytes += n;
@@ -62,7 +63,7 @@ class FlashRegion : public ports::FlashRegion {
     }
 
     Status erase_sector(uint32_t index) override {
-        if (!present_) return Status::Down;
+        if (!fitted_) return Status::Down;
         if (index >= sector_count_) return Status::OutOfRange;
         if (dead_) return Status::Down;
         std::memset(bytes_.data() + static_cast<size_t>(index) * kSectorBytes, 0xFF, kSectorBytes);
@@ -92,7 +93,7 @@ class FlashRegion : public ports::FlashRegion {
     std::vector<uint8_t> bytes_;
     int32_t cut_after_{-1};
     bool dead_{false};
-    bool present_{true};
+    bool fitted_{true};
 };
 
 }  // namespace skyblip::platform::host

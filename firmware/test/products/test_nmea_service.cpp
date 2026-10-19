@@ -290,7 +290,7 @@ TEST_CASE(
     // The phone that never exchanges an MTU: 23 bytes of ATT, 20 of payload.
     // A $PFLAA does not fit in one of those, so a sender that framed one
     // sentence per notification would send this pilot nothing at all.
-    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 1);
@@ -301,7 +301,7 @@ TEST_CASE(
     for (const auto& frame : rig.platform.link().sent) {
         if (frame.endpoint != events::Endpoint::Nmea) continue;
         frames++;
-        CHECK(frame.bytes.size() <= ports::kMinimumLinkPayload);
+        CHECK(frame.bytes.size() <= ports::kMinimumLinkPayloadBytes);
     }
     CHECK(frames > 0);
     // The controller's refusal never happened: nothing oversized was offered.
@@ -368,7 +368,7 @@ TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE
     uint32_t t = 0;
     fly(rig, t, 3);
     rig.raise_link();
-    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayload);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     fly(rig, t, 1);
     for (int i = 0; i < 4; i++)
         hear(rig, 0x300000u + static_cast<uint32_t>(i), 500 + 100 * i, 200, 40 + 5 * i);

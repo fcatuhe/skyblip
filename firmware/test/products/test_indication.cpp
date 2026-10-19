@@ -91,7 +91,7 @@ TEST_CASE("product: a critical cell blinks the lamp red") {
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
     // Below kCriticalMv and above the cutoff, so the device warns and keeps flying.
-    rig.platform.battery().millivolts = power::kCriticalMv - 100;
+    rig.platform.battery().divider_mv = power::kCriticalMv - 100;
     settle(rig, t, 5000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
@@ -108,7 +108,7 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
     settle(rig, t);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
 
-    rig.platform.battery().millivolts = power::kLowMv - 50;
+    rig.platform.battery().divider_mv = power::kLowMv - 50;
     settle(rig, t, 5000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Low);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
@@ -121,7 +121,7 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
     CHECK(low.off_ms == alive.off_ms);
 
     // And the warning still outranks it, at its own rate.
-    rig.platform.battery().millivolts = power::kCriticalMv - 100;
+    rig.platform.battery().divider_mv = power::kCriticalMv - 100;
     settle(rig, t, 5000);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
 }
@@ -132,7 +132,7 @@ TEST_CASE("product: a divider that reads nothing does not blink like a flat cell
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(/*alt_m=*/500, /*updates=*/1);
-    rig.platform.battery().millivolts = 200;
+    rig.platform.battery().divider_mv = 200;
     uint32_t t = 0;
     settle(rig, t, 8000);
 
@@ -149,7 +149,7 @@ TEST_CASE("product: a cable in leaves the lamp saying what the charger cannot") 
     settle(rig, t);
 
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 4000;
+    rig.platform.battery().divider_mv = 4000;
     settle(rig, t, 5000);
     REQUIRE(rig.state().power.battery.charging);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
@@ -162,7 +162,7 @@ TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor i
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
-    rig.platform.battery().millivolts = power::kCriticalMv - 200;
+    rig.platform.battery().divider_mv = power::kCriticalMv - 200;
     settle(rig, t, 6000);
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Critical);

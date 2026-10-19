@@ -94,7 +94,7 @@ class OwnshipService : public runtime::Service {
     static constexpr uint32_t kBaroVsWindowMs = flight::kClimbWindowFloorMs;
     static constexpr uint32_t kGnssVsWindowMs = 2000;
     // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
-    static constexpr uint32_t kBaroMaxAgeMs = 3 * runtime::kBaroPeriodMs;
+    static constexpr uint32_t kBaroMaxAgeMs = 3 * runtime::kBaroPublishPeriodMs;
     // INFO: fc 20sep26 an edge is a record, and a second that brought none is the record saying so
     static constexpr uint32_t kPpsRecordPeriodMs = 1000;
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds
