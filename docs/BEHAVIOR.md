@@ -2795,9 +2795,11 @@ Activation end to end on the running product: silent until the server signs it a
 - a link that never takes the name is asked at most once a second
   > A Bluetooth that failed to come up refuses forever, and must not flood the console doing it.
 - a link that refuses the first name is asked again, once a second
+- a nonce lives kNonceForgetMs after its challenge, then is dead
+  > The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
 - a register the trusted server did not sign is refused at the door
-- a second hello replaces the nonce, and R over the first is refused
-  > A fresh hello replaces Nu, so R over the old one no longer checks.
+- a second challenge replaces the nonce, and R over the first is refused
+  > A fresh challenge replaces Nu, so R over the old one no longer checks.
 - a supply warning before the write window drops the unlock as low_power
   > A held unlock is never forced onto a cell the settings writer would not touch.
 - a unit with no barometer neither flies, nor advertises, nor answers
@@ -2810,11 +2812,11 @@ Activation end to end on the running product: silent until the server signs it a
   > Issue #126: the first of three refusals, each with its own case.
 - an activated unit on the ground answers an unlock once the write is placed
   > The radio of an activated unit is running, so its unlock page is placed outside a dwell, later.
-- an activated unit refuses hello, register and unlock off the ground
+- an activated unit refuses challenge, register and unlock off the ground
   > An activated unit transmits, so it owes every identity command the ground gate the others obey.
 - an activated unit's register prompt is cancelled at take-off
 - an expired nonce stays dead when millis() wraps back into its window
-  > 2^32 ms after hello, millis() names a moment inside the window again: the sweep must have closed it.
+  > 2^32 ms after a challenge, millis() is inside the window again: the sweep must have closed it.
 - an identity page that will not take the code is refused as flash
 - an unactivated unit confirms its register prompt whatever the flight state
   > A bench indoors has no fix, and an unactivated unit is silent: no ground gate is owed.
@@ -2828,7 +2830,7 @@ Activation end to end on the running product: silent until the server signs it a
 - once unlocked the unit names itself, reports its addr and arms its radio
 - one press cancels the registration, thirty seconds expire it/no press
 - one press cancels the registration, thirty seconds expire it/one press
-- register and unlock without a hello have no session to sign against
+- register and unlock without a challenge have no session to sign against
 - the glass names the operation two presses authorise
 - the name is Go+ with inclinometer, buzzer and haptic fitted, Go without/a Plus whose hub has no image to boot is still fitted
 - the name is Go+ with inclinometer, buzzer and haptic fitted, Go without/all three fitted
@@ -2836,8 +2838,6 @@ Activation end to end on the running product: silent until the server signs it a
 - the name is Go+ with inclinometer, buzzer and haptic fitted, Go without/no haptic
 - the nonce dies with the link that holds the claim, and after ten minutes/ten minutes pass
 - the nonce dies with the link that holds the claim, and after ten minutes/the link drops
-- the nonce is live until kNonceForgetMs after hello, and dead from then on
-  > The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
 - the registration frame at the widest version is exactly the size checked
   > The widest version and release false make the widest frame, the size register checks.
 - the registration says whether the build is a release, and signs it

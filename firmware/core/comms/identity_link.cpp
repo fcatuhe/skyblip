@@ -45,8 +45,8 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
 // INFO: fc 18oct26 each refusal is refuse("word"): the server's activation page greps them
 bool ConfigService::answer_identity(const char* cmd, const json::Reader& r) {
     if (identity_ == nullptr) return false;
-    if (std::strcmp(cmd, "hello") == 0) {
-        hello();
+    if (std::strcmp(cmd, "challenge") == 0) {
+        challenge();
     } else if (std::strcmp(cmd, "register") == 0) {
         register_unit(r);
     } else if (std::strcmp(cmd, "unlock") == 0) {
@@ -64,7 +64,7 @@ bool ConfigService::identity_refused_in_flight() {
     return true;
 }
 
-void ConfigService::hello() {
+void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     if (!identity_->unit().keyed() || !identity_->open(claim_.holder(), now_ms_)) {
         refuse("incomplete");
@@ -72,7 +72,7 @@ void ConfigService::hello() {
     }
     char buf[96];
     json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "hello");
+    w.kv_str("cmd", "challenge");
     write_hex_field(w, "nonce", identity_->unit_nonce());
     write_hex_field(w, "server_key", identity_->unit().server_key());
     (void)reply(buf, w.finish());

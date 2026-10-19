@@ -82,9 +82,9 @@ struct Bench {
         return answer;
     }
 
-    std::string hello_with_vectors_nonce() {
+    std::string challenge_with_vectors_nonce() {
         rig.platform.identity().queue_random(v.bytes<16>("unit_nonce"));
-        return say("{\"cmd\":\"hello\"}");
+        return say("{\"cmd\":\"challenge\"}");
     }
 
     std::string register_with_vectors() {
@@ -155,9 +155,9 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     b.rig.platform.dfu().release = true;
     b.boot();
 
-    CHECK(b.hello_with_vectors_nonce() == "{\"cmd\":\"hello\",\"nonce\":\"" +
-                                              b.v.text("unit_nonce") + "\",\"server_key\":\"" +
-                                              b.v.text("server_key") + "\"}");
+    CHECK(b.challenge_with_vectors_nonce() == "{\"cmd\":\"challenge\",\"nonce\":\"" +
+                                                  b.v.text("unit_nonce") + "\",\"server_key\":\"" +
+                                                  b.v.text("server_key") + "\"}");
 
     CHECK(b.register_with_vectors() ==
           "{\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}");
@@ -182,7 +182,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
 TEST_CASE("activation: once unlocked the unit names itself, reports its addr and arms its radio") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     b.register_with_vectors();
     b.press_twice();
     REQUIRE(b.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
@@ -198,7 +198,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its addr and
 TEST_CASE("activation: the glass names the operation two presses authorise") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     b.register_with_vectors();
     b.read_the_prompt();
     REQUIRE(b.rig.product.screen().prompt() == comms::Pending::Register);
@@ -212,7 +212,7 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
     SUBCASE("one press") {
         Bench b;
         b.boot();
-        b.hello_with_vectors_nonce();
+        b.challenge_with_vectors_nonce();
         b.register_with_vectors();
         b.read_the_prompt();
         const size_t before = b.rig.platform.link().sent.size();
@@ -223,7 +223,7 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
     SUBCASE("no press") {
         Bench b;
         b.boot();
-        b.hello_with_vectors_nonce();
+        b.challenge_with_vectors_nonce();
         b.register_with_vectors();
         const size_t before = b.rig.platform.link().sent.size();
         b.pass(comms::kConfirmWindowMs + 500);
@@ -231,7 +231,7 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
     }
 }
 
-TEST_CASE("activation: register and unlock without a hello have no session to sign against") {
+TEST_CASE("activation: register and unlock without a challenge have no session to sign against") {
     Bench b;
     b.boot();
     CHECK(b.register_with_vectors() == refusal("no_session"));
@@ -242,7 +242,7 @@ TEST_CASE("activation: register and unlock without a hello have no session to si
 TEST_CASE("activation: a register the trusted server did not sign is refused at the door") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     std::string forged = b.v.text("register_signature");
     forged[0] = forged[0] == '0' ? '1' : '0';
     CHECK(b.say(register_command(b.v.text("server_nonce"), forged)) == refusal("bad_signature"));
@@ -251,12 +251,12 @@ TEST_CASE("activation: a register the trusted server did not sign is refused at 
     CHECK(b.pending() == comms::Pending::None);
 }
 
-// A fresh hello replaces Nu, so R over the old one no longer checks.
-TEST_CASE("activation: a second hello replaces the nonce, and R over the first is refused") {
+// A fresh challenge replaces Nu, so R over the old one no longer checks.
+TEST_CASE("activation: a second challenge replaces the nonce, and R over the first is refused") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
-    b.say("{\"cmd\":\"hello\"}");
+    b.challenge_with_vectors_nonce();
+    b.say("{\"cmd\":\"challenge\"}");
     CHECK(b.register_with_vectors() == refusal("bad_signature"));
 }
 
@@ -266,7 +266,7 @@ TEST_CASE(
     Bench b;
     b.boot();
     b.rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayload);
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     CHECK(b.register_with_vectors() == refusal("small_mtu"));
     CHECK(b.pending() == comms::Pending::None);
 }
@@ -274,7 +274,7 @@ TEST_CASE(
 TEST_CASE("activation: an unlock code that does not verify spends the nonce all the same") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     CHECK(b.say(unlock_command(299, b.v.text("unlock_signature"))) == refusal("bad_signature"));
     CHECK(b.unlock_with_vectors() == refusal("no_session"));
     CHECK_FALSE(b.activation().activated());
@@ -285,7 +285,7 @@ TEST_CASE("activation: an identity page that will not take the code is refused a
     Bench b;
     b.boot();
     b.rig.platform.identity().write_fails = true;
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     CHECK(b.unlock_with_vectors() == refusal("flash"));
     CHECK_FALSE(b.activation().activated());
 }
@@ -294,7 +294,7 @@ TEST_CASE("activation: the nonce dies with the link that holds the claim, and af
     SUBCASE("the link drops") {
         Bench b;
         b.boot();
-        b.hello_with_vectors_nonce();
+        b.challenge_with_vectors_nonce();
         b.rig.drop_link();
         b.pass(200);
         CHECK(b.unlock_with_vectors() == refusal("no_session"));
@@ -302,7 +302,7 @@ TEST_CASE("activation: the nonce dies with the link that holds the claim, and af
     SUBCASE("ten minutes pass") {
         Bench b;
         b.boot();
-        b.hello_with_vectors_nonce();
+        b.challenge_with_vectors_nonce();
         b.pass(comms::IdentityLink::kNonceForgetMs);
         CHECK(b.unlock_with_vectors() == refusal("no_session"));
     }
@@ -313,19 +313,19 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
         Bench b;
         b.rig.platform.identity().keyed = false;
         b.boot();
-        CHECK(b.say("{\"cmd\":\"hello\"}") == refusal("incomplete"));
+        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("incomplete"));
     }
     SUBCASE("no randomness") {
         Bench b;
         b.boot();
         b.rig.platform.identity().random_fails = true;
-        CHECK(b.say("{\"cmd\":\"hello\"}") == refusal("incomplete"));
+        CHECK(b.say("{\"cmd\":\"challenge\"}") == refusal("incomplete"));
     }
     SUBCASE("no running version") {
         Bench b;
         b.rig.platform.dfu().has_running = false;
         b.boot();
-        b.hello_with_vectors_nonce();
+        b.challenge_with_vectors_nonce();
         CHECK(b.register_with_vectors() == refusal("incomplete"));
     }
 }
@@ -334,7 +334,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
 TEST_CASE("activation: a unit with no barometer neither flies, nor advertises, nor answers") {
     Bench b(without(ports::Capability::Baro));
     REQUIRE(b.rig.setup() == Status::Down);
-    CHECK(b.say("{\"cmd\":\"hello\"}").empty());
+    CHECK(b.say("{\"cmd\":\"challenge\"}").empty());
     b.pass(3000);
     CHECK(b.rig.product.radio().arm_count() == 0);
     CHECK_FALSE(b.activation().activated());
@@ -391,7 +391,7 @@ TEST_CASE(
 TEST_CASE("activation: the self-test page shows the address an unlock gave, without a reboot") {
     Bench b;
     b.boot();
-    b.hello_with_vectors_nonce();
+    b.challenge_with_vectors_nonce();
     b.register_with_vectors();
     b.press_twice();
     REQUIRE(b.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
@@ -420,7 +420,7 @@ struct QueuedUnlock {
 
         const identity::Nonce nonce{4, 2};
         b.rig.platform.identity().queue_random(nonce);
-        REQUIRE(b.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
+        REQUIRE(b.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
         const identity::UnlockCode code = Identity::unlock_code_for(kNewSerial, nonce);
         std::string signature(128, '?');
         hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
@@ -565,7 +565,7 @@ TEST_CASE(
         d.dfu.release = d.v.flag("release");
         d.config.set_flight_state(fs);
         d.port.queue_random(d.v.bytes<16>("unit_nonce"));
-        d.say("{\"cmd\":\"hello\"}");
+        d.say("{\"cmd\":\"challenge\"}");
         d.say(register_command(d.v.text("server_nonce"), d.v.text("register_signature")));
         REQUIRE(d.config.pending() == comms::Pending::Register);
         d.config.set_flight_state(fs);
@@ -576,13 +576,13 @@ TEST_CASE(
 }
 
 // An activated unit transmits, so it owes every identity command the ground gate the others obey.
-TEST_CASE("activation: an activated unit refuses hello, register and unlock off the ground") {
+TEST_CASE("activation: an activated unit refuses challenge, register and unlock off the ground") {
     for (flight::FlightState fs : {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
         CAPTURE(static_cast<int>(fs));
         Desk d(Identity::kSerial);
         REQUIRE(d.identity.activated());
         d.config.set_flight_state(fs);
-        CHECK(d.say("{\"cmd\":\"hello\"}") == refusal("in_flight"));
+        CHECK(d.say("{\"cmd\":\"challenge\"}") == refusal("in_flight"));
         CHECK(d.say(register_command(d.v.text("server_nonce"), d.v.text("register_signature"))) ==
               refusal("in_flight"));
         CHECK(d.say(unlock_command(298, d.v.text("unlock_signature"))) == refusal("in_flight"));
@@ -592,7 +592,7 @@ TEST_CASE("activation: an activated unit refuses hello, register and unlock off 
 TEST_CASE("activation: an activated unit's register prompt is cancelled at take-off") {
     Desk d(Identity::kSerial);
     d.config.set_flight_state(flight::FlightState::Ground);
-    REQUIRE(d.say("{\"cmd\":\"hello\"}").find("\"nonce\"") != std::string::npos);
+    REQUIRE(d.say("{\"cmd\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
     d.register_signed_by_the_test_server();
     REQUIRE(d.config.pending() == comms::Pending::Register);
     d.config.set_flight_state(flight::FlightState::Airborne);
@@ -602,7 +602,7 @@ TEST_CASE("activation: an activated unit's register prompt is cancelled at take-
 
 TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {
     Desk d;
-    d.say("{\"cmd\":\"hello\"}");
+    d.say("{\"cmd\":\"challenge\"}");
     d.config.set_supply_warned(true);
     CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("low_power"));
     CHECK(d.port.writes == 0);
@@ -613,23 +613,23 @@ TEST_CASE("activation: a cell too low to write settings refuses an unlock and ke
 // The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
 TEST_CASE("activation: an unlock code for serial 0 is refused, however well it is signed") {
     Desk d;
-    d.say("{\"cmd\":\"hello\"}");
+    d.say("{\"cmd\":\"challenge\"}");
     CHECK(d.unlock_signed_by_the_test_server(0) == refusal("bad_signature"));
     CHECK(d.port.writes == 0);
     CHECK_FALSE(d.identity.activated());
 }
 
 // The nonce has a deadline, not a sweep: the pass that reaches it already finds it dead.
-TEST_CASE("activation: the nonce is live until kNonceForgetMs after hello, and dead from then on") {
-    constexpr uint32_t kHelloMs = 5000;
+TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is dead") {
+    constexpr uint32_t kChallengeMs = 5000;
     for (uint32_t after :
          {comms::IdentityLink::kNonceForgetMs - 1, comms::IdentityLink::kNonceForgetMs,
           comms::IdentityLink::kNonceForgetMs + 1}) {
         CAPTURE(after);
         Desk d;
-        d.config.tick(kHelloMs);
-        d.say("{\"cmd\":\"hello\"}");
-        d.config.tick(kHelloMs + after);
+        d.config.tick(kChallengeMs);
+        d.say("{\"cmd\":\"challenge\"}");
+        d.config.tick(kChallengeMs + after);
         const std::string answer = d.unlock_signed_by_the_test_server(0x0042);
         if (after < comms::IdentityLink::kNonceForgetMs)
             CHECK(answer == "{\"ack\":true,\"reason\":\"unlock\"}");
@@ -638,15 +638,14 @@ TEST_CASE("activation: the nonce is live until kNonceForgetMs after hello, and d
     }
 }
 
-// 2^32 ms after hello, millis() names a moment inside the window again: the sweep must have closed
-// it.
+// 2^32 ms after a challenge, millis() is inside the window again: the sweep must have closed it.
 TEST_CASE("activation: an expired nonce stays dead when millis() wraps back into its window") {
-    constexpr uint32_t kHelloMs = 0xFFFF0000u;
+    constexpr uint32_t kChallengeMs = 0xFFFF0000u;
     Desk d;
-    d.config.tick(kHelloMs);
-    d.say("{\"cmd\":\"hello\"}");
-    d.config.tick(kHelloMs + comms::IdentityLink::kNonceForgetMs);
-    d.config.tick(kHelloMs + 5);
+    d.config.tick(kChallengeMs);
+    d.say("{\"cmd\":\"challenge\"}");
+    d.config.tick(kChallengeMs + comms::IdentityLink::kNonceForgetMs);
+    d.config.tick(kChallengeMs + 5);
     CHECK(d.unlock_signed_by_the_test_server(0x0042) == refusal("no_session"));
     CHECK(d.port.writes == 0);
 }
@@ -657,7 +656,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         CAPTURE(release);
         Desk d;
         d.dfu.release = release;
-        d.say("{\"cmd\":\"hello\"}");
+        d.say("{\"cmd\":\"challenge\"}");
         d.register_signed_by_the_test_server();
         REQUIRE(d.config.pending() == comms::Pending::Register);
         d.config.confirm();
@@ -682,7 +681,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk d;
     d.dfu.running = dfu::kWidestVersion;
-    d.say("{\"cmd\":\"hello\"}");
+    d.say("{\"cmd\":\"challenge\"}");
     const identity::Nonce unit_nonce = d.identity.unit_nonce();
     char nonce_hex[33] = {0};
     hex::write(ConstByteSpan(unit_nonce.data(), unit_nonce.size()), nonce_hex);

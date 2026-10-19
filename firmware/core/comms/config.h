@@ -83,7 +83,7 @@ class ConfigService {
     // that owns the write (products/skyblip_go/services/config.h).
     void set_durable_writes(const timing::DurableWriteWindow* writes) { writes_ = writes; }
 
-    // INFO: fc 18oct26 hello, register and unlock live in identity_link.cpp, unknown_cmd without
+    // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, unknown_cmd without
     void set_identity(IdentityLink* identity) { identity_ = identity; }
     // INFO: fc 18oct26 an activated unit's radio runs, so its product places the page write
     bool unlock_waiting() const { return identity_ != nullptr && identity_->unlock_due(); }
@@ -288,7 +288,7 @@ class ConfigService {
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
     bool answer_identity(const char* cmd, const json::Reader& r);
-    void hello();
+    void challenge();
     void register_unit(const json::Reader& r);
     void send_registration();
     bool running_version_text(char* out, size_t cap) const;

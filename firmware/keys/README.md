@@ -31,6 +31,6 @@ Anyone who builds this firmware with their own key can install it on their own u
 | `server.pub` | every device build | `8c06724d` | `identity.server_key` in the server's production credentials |
 | the test key in `schemas/activation.v1.vectors.json` | the host suite and the simulator | `890026b1` | in the same file, because it is a test key |
 
-The id is the first four bytes of the SHA-256 of the raw public key, which is how `hello` names the key a unit trusts. `cmake/skyblip.cmake` compiles the file into the image and refuses to configure a device build without it, so no image ever ships that nothing can activate.
+The id is the first four bytes of the SHA-256 of the raw public key, which is how `challenge` names the key a unit trusts. `cmake/skyblip.cmake` compiles the file into the image and refuses to configure a device build without it, so no image ever ships that nothing can activate.
 
 The owner generated the seed into the server's production credentials and derived the public half here (`server/README.md`, Activation); no agent touches those credentials. Without this file every device build fails to configure, so a key is never missing silently. After a deploy, the admin `Units` page shows the server's key id, which must read `8c06724d`.
