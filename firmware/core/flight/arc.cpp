@@ -7,14 +7,14 @@ namespace skyblip::flight {
 
 namespace {
 
-constexpr int64_t kCentiDegreeMsPerTurn = 36000000;
-constexpr int64_t kMmPerM = 1000;
+constexpr int64_t kCentiDegreeMillisecondsPerTurn = 36000000;
 
 }  // namespace
 
-int32_t turn_angle16(int16_t turn_cdps, int32_t dt_ms) {
-    return static_cast<int32_t>(div_round(static_cast<int64_t>(turn_cdps) * dt_ms * kAngle16PerTurn,
-                                          kCentiDegreeMsPerTurn));
+int32_t turn_angle16(int16_t turn_cdps, int32_t elapsed_ms) {
+    return static_cast<int32_t>(
+        div_round(static_cast<int64_t>(turn_cdps) * elapsed_ms * kAngle16PerTurn,
+                  kCentiDegreeMillisecondsPerTurn));
 }
 
 int16_t clamped_turn_cdps(int32_t turn_cdps) {
@@ -24,33 +24,33 @@ int16_t clamped_turn_cdps(int32_t turn_cdps) {
 }
 
 Motion motion_of(const model::Ownship& own) {
-    Motion m{};
-    m.speed_mm_s = own.speed_mm_s;
-    m.track_cdeg = own.track_cdeg;
-    m.turn_cdps = clamped_turn_cdps(own.turn_cdps);
-    m.turning = true;
-    m.climb_mm_s = own.climb_mm_s;
-    m.climbing = own.climb_valid;
-    return m;
+    Motion motion{};
+    motion.speed_mm_s = own.speed_mm_s;
+    motion.track_cdeg = own.track_cdeg;
+    motion.turn_cdps = clamped_turn_cdps(own.turn_cdps);
+    motion.turning = true;
+    motion.climb_mm_s = own.climb_mm_s;
+    motion.climbing = own.climb_valid;
+    return motion;
 }
 
 Motion motion_of(const model::AircraftObservation& observation, int16_t turn_cdps,
                  bool turn_valid) {
-    Motion m{};
-    m.speed_mm_s =
+    Motion motion{};
+    motion.speed_mm_s =
         observation.speed_valid ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v : 0;
-    m.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
-    m.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
-    m.turning = turn_valid;
-    m.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
-    m.climbing = observation.climb_valid;
-    return m;
+    motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
+    motion.turn_cdps = turn_valid ? clamped_turn_cdps(turn_cdps) : 0;
+    motion.turning = turn_valid;
+    motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
+    motion.climbing = observation.climb_valid;
+    return motion;
 }
 
 Arc::Arc(const Motion& motion, uint32_t step_ms)
-    : north_mm_(static_cast<int64_t>(motion.north_m) * kMmPerM),
-      east_mm_(static_cast<int64_t>(motion.east_m) * kMmPerM),
-      up_mm_(static_cast<int64_t>(motion.up_m) * kMmPerM),
+    : north_mm_(static_cast<int64_t>(motion.north_m) * kMillimetresPerMetre),
+      east_mm_(static_cast<int64_t>(motion.east_m) * kMillimetresPerMetre),
+      up_mm_(static_cast<int64_t>(motion.up_m) * kMillimetresPerMetre),
       climb_mm_s_(motion.climbing ? motion.climb_mm_s : 0),
       step_ms_(static_cast<int32_t>(step_ms)) {
     const int16_t angle = to_angle16(CentiDegrees(motion.track_cdeg));
@@ -61,24 +61,24 @@ Arc::Arc(const Motion& motion, uint32_t step_ms)
     const int32_t half_turn =
         motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2) : 0;
     const int16_t half = static_cast<int16_t>(static_cast<uint16_t>(half_turn));
-    half_cos_ = icos(half);
-    half_sin_ = isin(half);
+    half_cosine_ = icos(half);
+    half_sine_ = isin(half);
 }
 
 Position Arc::here() const {
-    Position p{};
-    p.north_m = static_cast<int32_t>(div_round(north_mm_, kMmPerM));
-    p.east_m = static_cast<int32_t>(div_round(east_mm_, kMmPerM));
-    p.up_m = static_cast<int32_t>(div_round(up_mm_, kMmPerM));
-    return p;
+    Position position{};
+    position.north_m = static_cast<int32_t>(div_round<int64_t>(north_mm_, kMillimetresPerMetre));
+    position.east_m = static_cast<int32_t>(div_round<int64_t>(east_mm_, kMillimetresPerMetre));
+    position.up_m = static_cast<int32_t>(div_round<int64_t>(up_mm_, kMillimetresPerMetre));
+    return position;
 }
 
 void Arc::rotate_half() {
-    const int64_t n = velocity_north_mm_s_, e = velocity_east_mm_s_;
-    velocity_north_mm_s_ =
-        static_cast<int32_t>(div_round<int64_t>(n * half_cos_ - e * half_sin_, kTrigOne));
-    velocity_east_mm_s_ =
-        static_cast<int32_t>(div_round<int64_t>(n * half_sin_ + e * half_cos_, kTrigOne));
+    const int64_t north = velocity_north_mm_s_, east = velocity_east_mm_s_;
+    velocity_north_mm_s_ = static_cast<int32_t>(
+        div_round<int64_t>(north * half_cosine_ - east * half_sine_, kTrigOne));
+    velocity_east_mm_s_ = static_cast<int32_t>(
+        div_round<int64_t>(north * half_sine_ + east * half_cosine_, kTrigOne));
 }
 
 Position Arc::advance() {

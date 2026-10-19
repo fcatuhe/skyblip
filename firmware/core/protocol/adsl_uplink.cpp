@@ -55,7 +55,7 @@ bool plausible(const model::AircraftObservation& target) {
 Status AdslUplink::encode(const model::AircraftObservation* targets, int count, uint8_t key_index,
                           uint8_t out_frame[kFrameBytes]) const {
     if (count < 0 || count > kMaxTargets) return Status::Full;
-    uint8_t data[fec::ReedSolomon255::kK];
+    uint8_t data[fec::ReedSolomon255::kDataBytes];
     std::memset(data, 0, sizeof(data));
     data[0] = kVersion;
     data[1] = static_cast<uint8_t>(count);
@@ -63,27 +63,27 @@ Status AdslUplink::encode(const model::AircraftObservation* targets, int count, 
     for (int i = 0; i < count; i++) {
         pack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, targets[i]);
     }
-    uint32_t words[fec::ReedSolomon255::kK / 4];
+    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
     fec::xxtea_scramble_key0(words, sizeof(words) / 4, 6);
     std::memcpy(data, words, sizeof(words));
 
-    std::memcpy(out_frame, data, fec::ReedSolomon255::kK);
-    rs_.encode(data, out_frame + fec::ReedSolomon255::kK);
+    std::memcpy(out_frame, data, fec::ReedSolomon255::kDataBytes);
+    rs_.encode(data, out_frame + fec::ReedSolomon255::kDataBytes);
     return Status::Ok;
 }
 
 Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
                           int capacity, DecodeStats& stats) const {
-    uint8_t cw[fec::ReedSolomon255::kN];
+    uint8_t cw[fec::ReedSolomon255::kCodewordBytes];
     std::memcpy(cw, frame, sizeof(cw));
     int corrected = rs_.decode(cw);
     if (corrected < 0) return Status::Crc;
     stats.corrected = corrected;
 
-    uint8_t data[fec::ReedSolomon255::kK];
-    std::memcpy(data, cw, fec::ReedSolomon255::kK);
-    uint32_t words[fec::ReedSolomon255::kK / 4];
+    uint8_t data[fec::ReedSolomon255::kDataBytes];
+    std::memcpy(data, cw, fec::ReedSolomon255::kDataBytes);
+    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
     fec::xxtea_descramble_key0(words, sizeof(words) / 4, 6);
     std::memcpy(data, words, sizeof(words));

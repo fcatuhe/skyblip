@@ -39,34 +39,34 @@ model::AircraftObservation make_target(uint32_t address) {
 
 TEST_CASE("reed-solomon: encode then decode with no errors returns 0 corrections") {
     ReedSolomon255 rs;
-    uint8_t data[ReedSolomon255::kK];
-    for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(i * 3 + 1);
-    uint8_t cw[ReedSolomon255::kN];
-    std::memcpy(cw, data, ReedSolomon255::kK);
-    rs.encode(data, cw + ReedSolomon255::kK);
+    uint8_t data[ReedSolomon255::kDataBytes];
+    for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(i * 3 + 1);
+    uint8_t cw[ReedSolomon255::kCodewordBytes];
+    std::memcpy(cw, data, ReedSolomon255::kDataBytes);
+    rs.encode(data, cw + ReedSolomon255::kDataBytes);
     CHECK(rs.syndromes_zero(cw));
     CHECK(rs.decode(cw) == 0);
-    CHECK(std::memcmp(cw, data, ReedSolomon255::kK) == 0);
+    CHECK(std::memcmp(cw, data, ReedSolomon255::kDataBytes) == 0);
 }
 
 TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
     ReedSolomon255 rs;
     Random rng(0xBEEF);
-    uint8_t data[ReedSolomon255::kK];
-    for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(rng.next());
-    uint8_t base[ReedSolomon255::kN];
-    std::memcpy(base, data, ReedSolomon255::kK);
-    rs.encode(data, base + ReedSolomon255::kK);
+    uint8_t data[ReedSolomon255::kDataBytes];
+    for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(rng.next());
+    uint8_t base[ReedSolomon255::kCodewordBytes];
+    std::memcpy(base, data, ReedSolomon255::kDataBytes);
+    rs.encode(data, base + ReedSolomon255::kDataBytes);
 
     for (int nerr = 1; nerr <= 16; nerr++) {
         for (int trial = 0; trial < 200; trial++) {
-            uint8_t cw[ReedSolomon255::kN];
-            std::memcpy(cw, base, ReedSolomon255::kN);
-            bool used[ReedSolomon255::kN] = {false};
+            uint8_t cw[ReedSolomon255::kCodewordBytes];
+            std::memcpy(cw, base, ReedSolomon255::kCodewordBytes);
+            bool used[ReedSolomon255::kCodewordBytes] = {false};
             for (int e = 0; e < nerr; e++) {
                 int position;
                 do {
-                    position = rng.next() % ReedSolomon255::kN;
+                    position = rng.next() % ReedSolomon255::kCodewordBytes;
                 } while (used[position]);
                 used[position] = true;
                 uint8_t v;
@@ -77,7 +77,7 @@ TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
             }
             int corrected = rs.decode(cw);
             CHECK(corrected == nerr);
-            CHECK(std::memcmp(cw, base, ReedSolomon255::kN) == 0);
+            CHECK(std::memcmp(cw, base, ReedSolomon255::kCodewordBytes) == 0);
         }
     }
 }
@@ -85,23 +85,23 @@ TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
 TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, counted") {
     ReedSolomon255 rs;
     Random rng(0x1234);
-    uint8_t data[ReedSolomon255::kK];
-    for (int i = 0; i < ReedSolomon255::kK; i++) data[i] = static_cast<uint8_t>(rng.next());
-    uint8_t base[ReedSolomon255::kN];
-    std::memcpy(base, data, ReedSolomon255::kK);
-    rs.encode(data, base + ReedSolomon255::kK);
+    uint8_t data[ReedSolomon255::kDataBytes];
+    for (int i = 0; i < ReedSolomon255::kDataBytes; i++) data[i] = static_cast<uint8_t>(rng.next());
+    uint8_t base[ReedSolomon255::kCodewordBytes];
+    std::memcpy(base, data, ReedSolomon255::kDataBytes);
+    rs.encode(data, base + ReedSolomon255::kDataBytes);
 
     int detected = 0, silent = 0, lucky = 0;
     const int kTrials = 4000;
     for (int t = 0; t < kTrials; t++) {
-        uint8_t cw[ReedSolomon255::kN];
-        std::memcpy(cw, base, ReedSolomon255::kN);
+        uint8_t cw[ReedSolomon255::kCodewordBytes];
+        std::memcpy(cw, base, ReedSolomon255::kCodewordBytes);
         int nerr = 17 + (rng.next() % 20);  // 17..36 errors
-        bool used[ReedSolomon255::kN] = {false};
+        bool used[ReedSolomon255::kCodewordBytes] = {false};
         for (int e = 0; e < nerr; e++) {
             int position;
             do {
-                position = rng.next() % ReedSolomon255::kN;
+                position = rng.next() % ReedSolomon255::kCodewordBytes;
             } while (used[position]);
             used[position] = true;
             uint8_t v;
@@ -113,7 +113,7 @@ TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, cou
         int r = rs.decode(cw);
         if (r < 0) {
             detected++;  // safe
-        } else if (std::memcmp(cw, base, ReedSolomon255::kN) == 0) {
+        } else if (std::memcmp(cw, base, ReedSolomon255::kCodewordBytes) == 0) {
             lucky++;  // happened to fully recover (rare)
         } else {
             silent++;  // decoded to a WRONG codeword: the danger mode

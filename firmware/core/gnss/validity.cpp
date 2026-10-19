@@ -5,7 +5,7 @@
 namespace skyblip::gnss {
 
 namespace {
-int32_t magnitude(int32_t v) { return v < 0 ? -v : v; }
+int32_t magnitude(int32_t value) { return value < 0 ? -value : value; }
 }
 
 const char* reject_name(FixReject reason) {
@@ -34,7 +34,7 @@ void FixValidity::reset() {
 void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t now_ms) {
     if (which == Sentence::Gga) {
         gga_heard_ = true;
-        gga_ms_ = now_ms;
+        gga_heard_ms_ = now_ms;
         gga_fix_valid_ = solution.fix_quality >= kQualityGps &&
                          solution.fix_quality <= kQualityFloatRtk && solution.altitude_msl_valid;
         return;
@@ -42,7 +42,7 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
     if (which != Sentence::Rmc) return;
 
     rmc_heard_ = true;
-    rmc_ms_ = now_ms;
+    rmc_heard_ms_ = now_ms;
     rmc_fix_valid_ = solution.fix_valid;
     utc_valid_ = solution.utc_valid;
 
@@ -85,7 +85,8 @@ FixReject FixValidity::evaluate(uint32_t now_ms) const {
         reason = FixReject::MissingRmc;
     else if (!gga_heard_)
         reason = FixReject::MissingGga;
-    else if (now_ms - rmc_ms_ > kSentenceMaxAgeMs || now_ms - gga_ms_ > kSentenceMaxAgeMs)
+    else if (now_ms - rmc_heard_ms_ > kSentenceMaxAgeMs ||
+             now_ms - gga_heard_ms_ > kSentenceMaxAgeMs)
         reason = FixReject::Stale;
     else if (!rmc_fix_valid_ || !gga_fix_valid_)
         reason = FixReject::NoSolution;

@@ -39,12 +39,12 @@ size_t manchester_decode(const uint8_t* coded, size_t out_bytes, uint8_t* out,
                          uint8_t* error_mask) {
     size_t bad_bits = 0;
     for (size_t i = 0; i < out_bytes; i++) {
-        uint8_t hi = kDecode[coded[2 * i]];
-        uint8_t lo = kDecode[coded[2 * i + 1]];
-        out[i] = static_cast<uint8_t>(((hi & 0x0F) << 4) | (lo & 0x0F));
-        uint8_t e = static_cast<uint8_t>((hi & 0xF0) | ((lo & 0xF0) >> 4));
-        if (error_mask) error_mask[i] = e;
-        bad_bits += __builtin_popcount(e);
+        uint8_t high = kDecode[coded[2 * i]];
+        uint8_t low = kDecode[coded[2 * i + 1]];
+        out[i] = static_cast<uint8_t>(((high & 0x0F) << 4) | (low & 0x0F));
+        uint8_t errors = static_cast<uint8_t>((high & 0xF0) | ((low & 0xF0) >> 4));
+        if (error_mask) error_mask[i] = errors;
+        bad_bits += __builtin_popcount(errors);
     }
     return bad_bits;
 }

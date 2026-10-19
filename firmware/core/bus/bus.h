@@ -13,12 +13,12 @@
 namespace skyblip::bus {
 
 // INFO: fc 04sep26 one producer, one consumer, two threads on silicon: release/acquire is the lock
-template <class T, int Capacity>
+template <class Item, int Capacity>
 class Queue {
    public:
     static constexpr int kCapacity = Capacity;
 
-    bool push(const T& item) {
+    bool push(const Item& item) {
         const int head = head_.load(std::memory_order_relaxed);
         const int next = (head + 1) % (Capacity + 1);
         if (next == tail_.load(std::memory_order_acquire)) {
@@ -30,7 +30,7 @@ class Queue {
         return true;
     }
 
-    bool pop(T& out) {
+    bool pop(Item& out) {
         const int tail = tail_.load(std::memory_order_relaxed);
         if (tail == head_.load(std::memory_order_acquire)) return false;
         out = slots_[tail];
@@ -44,7 +44,7 @@ class Queue {
     uint32_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
 
    private:
-    T slots_[Capacity + 1]{};
+    Item slots_[Capacity + 1]{};
     std::atomic<int> head_{0};
     std::atomic<int> tail_{0};
     std::atomic<uint32_t> dropped_{0};

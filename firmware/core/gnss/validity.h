@@ -68,8 +68,8 @@ class FixValidity {
     void reset();
 
    private:
-    uint32_t rmc_ms_{0};
-    uint32_t gga_ms_{0};
+    uint32_t rmc_heard_ms_{0};
+    uint32_t gga_heard_ms_{0};
     int32_t previous_latitude_1e7_{0};
     int32_t previous_longitude_1e7_{0};
     uint32_t rejected_{0};

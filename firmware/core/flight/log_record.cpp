@@ -22,16 +22,16 @@ constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
 constexpr uint8_t kTargetFlagDismissed = 1u << 0;
 constexpr uint8_t kTargetFlagInFormation = 1u << 1;
 
-int16_t clamp_i16(int32_t v) {
-    if (v > 32767) return 32767;
-    if (v < -32768) return -32768;
-    return static_cast<int16_t>(v);
+int16_t clamp_i16(int32_t value) {
+    if (value > 32767) return 32767;
+    if (value < -32768) return -32768;
+    return static_cast<int16_t>(value);
 }
 
-int8_t clamp_i8(int32_t v) {
-    if (v > 127) return 127;
-    if (v < -128) return -128;
-    return static_cast<int8_t>(v);
+int8_t clamp_i8(int32_t value) {
+    if (value > 127) return 127;
+    if (value < -128) return -128;
+    return static_cast<int8_t>(value);
 }
 
 void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
@@ -130,24 +130,24 @@ void decode_target(const uint8_t* raw, LogTarget& out) {
 }  // namespace
 
 LogRecord log_record_from(const model::Ownship& own) {
-    LogRecord r{};
-    r.utc_s = own.utc_s;
-    r.latitude_1e7 = own.latitude_1e7;
-    r.longitude_1e7 = own.longitude_1e7;
-    r.altitude_msl_m = to_metres(Millimetres(own.altitude_msl_mm)).v;
-    r.altitude_hae_m = to_metres(Millimetres(own.altitude_hae_mm)).v;
-    r.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v;
-    r.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
-    r.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v;
-    r.hdop_e2 = own.hdop_e2;
-    r.satellites = own.satellites;
-    r.flight_state = own.flight_state;
-    r.fix_valid = own.fix_valid;
-    r.utc_valid = own.utc_valid;
-    r.pps_locked = own.pps_locked;
-    r.climb_valid = own.climb_valid;
-    r.geoid_measured = own.geoid_measured;
-    return r;
+    LogRecord record{};
+    record.utc_s = own.utc_s;
+    record.latitude_1e7 = own.latitude_1e7;
+    record.longitude_1e7 = own.longitude_1e7;
+    record.altitude_msl_m = to_metres(Millimetres(own.altitude_msl_mm)).v;
+    record.altitude_hae_m = to_metres(Millimetres(own.altitude_hae_mm)).v;
+    record.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v;
+    record.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
+    record.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v;
+    record.hdop_e2 = own.hdop_e2;
+    record.satellites = own.satellites;
+    record.flight_state = own.flight_state;
+    record.fix_valid = own.fix_valid;
+    record.utc_valid = own.utc_valid;
+    record.pps_locked = own.pps_locked;
+    record.climb_valid = own.climb_valid;
+    record.geoid_measured = own.geoid_measured;
+    return record;
 }
 
 void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out) {

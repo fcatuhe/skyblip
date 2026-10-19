@@ -34,9 +34,9 @@ uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm);
 constexpr uint32_t kClimbWindowFloorMs = 500;
 constexpr uint32_t kClimbWindowCeilingMs = 10000;
 
-bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then, uint32_t dt_ms,
-                              int32_t& out_mm_s);
-int16_t climb_e8_from_mm_s(int32_t mm_s);
+bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
+                              uint32_t elapsed_ms, int32_t& out_mm_s);
+int16_t climb_e8_from_mm_s(int32_t climb_mm_s);
 
 }  // namespace skyblip::flight
 

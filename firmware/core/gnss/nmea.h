@@ -85,7 +85,7 @@ struct GnssSolution {
 
 class NmeaParser {
    public:
-    bool feed(char c);
+    bool feed(char character);
 
     bool parse_line(const char* line, int bytes);
 
@@ -120,10 +120,10 @@ class NmeaParser {
     Sentence last_sentence_{Sentence::None};
 
     bool apply_rmc(const char* fields[], int field_count);
-    bool apply_gga(const char* fields[], int field_count, int length);
+    bool apply_gga(const char* fields[], int field_count, int bytes);
     bool apply_gsa(const char* fields[], int field_count);
     bool apply_gsv(const char* talker, const char* fields[], int field_count);
-    bool apply_txt(const char* line, int length);
+    bool apply_txt(const char* line, int bytes);
 };
 
 bool nmea_checksum_ok(const char* line, int bytes);

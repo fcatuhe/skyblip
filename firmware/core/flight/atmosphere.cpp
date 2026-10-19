@@ -34,16 +34,17 @@ constexpr int32_t kAltitudeCm[] = {
     -69831,
 };
 
-constexpr int kN = static_cast<int>(sizeof(kAltitudeCm) / sizeof(kAltitudeCm[0]));
-constexpr uint32_t kTableHighestPa = kTableLowestPa + static_cast<uint32_t>(kN - 1) * kStepPa;
+constexpr int kTableEntries = static_cast<int>(sizeof(kAltitudeCm) / sizeof(kAltitudeCm[0]));
+constexpr uint32_t kTableHighestPa =
+    kTableLowestPa + static_cast<uint32_t>(kTableEntries - 1) * kStepPa;
 
-constexpr int64_t kIsaLapseDeciCelsiusPerKm = 65;
-constexpr int64_t kMmPerKm = 1000000;
+constexpr int64_t kIsaLapseDeciCelsiusPerKilometre = 65;
+constexpr int64_t kMillimetresPerKilometre = 1000000;
 
-constexpr uint32_t kMilli = 1000;
-constexpr uint32_t kTableLowestMpa = kTableLowestPa * kMilli;
-constexpr uint32_t kTableHighestMpa = kTableHighestPa * kMilli;
-constexpr uint32_t kStepMpa = kStepPa * kMilli;
+constexpr uint32_t kMillipascalsPerPascal = 1000;
+constexpr uint32_t kTableLowestMpa = kTableLowestPa * kMillipascalsPerPascal;
+constexpr uint32_t kTableHighestMpa = kTableHighestPa * kMillipascalsPerPascal;
+constexpr uint32_t kStepMpa = kStepPa * kMillipascalsPerPascal;
 
 constexpr int32_t altitude_mm_at(int i) { return kAltitudeCm[i] * 10; }
 
@@ -51,7 +52,7 @@ constexpr int32_t altitude_mm_at(int i) { return kAltitudeCm[i] * 10; }
 
 int32_t pressure_to_altitude_mm(uint32_t pressure_mpa) {
     if (pressure_mpa <= kTableLowestMpa) return altitude_mm_at(0);
-    if (pressure_mpa >= kTableHighestMpa) return altitude_mm_at(kN - 1);
+    if (pressure_mpa >= kTableHighestMpa) return altitude_mm_at(kTableEntries - 1);
 
     const uint32_t offset_mpa = pressure_mpa - kTableLowestMpa;
     const int i = static_cast<int>(offset_mpa / kStepMpa);
@@ -65,43 +66,48 @@ int32_t pressure_to_altitude_mm(uint32_t pressure_mpa) {
 
 int16_t isa_temperature_dc(int32_t altitude_mm) {
     const int64_t drop =
-        div_round<int64_t>(static_cast<int64_t>(altitude_mm) * kIsaLapseDeciCelsiusPerKm, kMmPerKm);
+        div_round<int64_t>(static_cast<int64_t>(altitude_mm) * kIsaLapseDeciCelsiusPerKilometre,
+                           kMillimetresPerKilometre);
     return static_cast<int16_t>(kIsaSeaLevelDeciCelsius - drop);
 }
 
 int32_t pressure_to_altitude_cm(uint32_t pressure_pa) {
-    if (pressure_pa >= kTableHighestPa) return kAltitudeCm[kN - 1];
-    return div_round(pressure_to_altitude_mm(pressure_pa * kMilli), 10);
+    if (pressure_pa >= kTableHighestPa) return kAltitudeCm[kTableEntries - 1];
+    return div_round(pressure_to_altitude_mm(pressure_pa * kMillipascalsPerPascal), 10);
 }
 
 uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm) {
     if (altitude_mm >= altitude_mm_at(0)) return kTableLowestMpa;
-    if (altitude_mm <= altitude_mm_at(kN - 1)) return kTableHighestMpa;
+    if (altitude_mm <= altitude_mm_at(kTableEntries - 1)) return kTableHighestMpa;
 
-    uint32_t lo = kTableLowestMpa, hi = kTableHighestMpa;
-    while (hi - lo > 1) {
-        const uint32_t mid = lo + (hi - lo) / 2;
-        if (pressure_to_altitude_mm(mid) > altitude_mm)
-            lo = mid;  // still too high up: raise the pressure
+    uint32_t low = kTableLowestMpa, high = kTableHighestMpa;
+    while (high - low > 1) {
+        const uint32_t middle = low + (high - low) / 2;
+        if (pressure_to_altitude_mm(middle) > altitude_mm)
+            low = middle;  // still too high up: raise the pressure
         else
-            hi = mid;
+            high = middle;
     }
-    return hi;
+    return high;
 }
 
 uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm) {
-    return (altitude_mm_to_pressure_mpa(altitude_cm * 10) + kMilli / 2) / kMilli;
+    return (altitude_mm_to_pressure_mpa(altitude_cm * 10) + kMillipascalsPerPascal / 2) /
+           kMillipascalsPerPascal;
 }
 
-bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then, uint32_t dt_ms,
-                              int32_t& out_mm_s) {
-    if (dt_ms < kClimbWindowFloorMs || dt_ms > kClimbWindowCeilingMs) return false;
+bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
+                              uint32_t elapsed_ms, int32_t& out_mm_s) {
+    if (elapsed_ms < kClimbWindowFloorMs || elapsed_ms > kClimbWindowCeilingMs) return false;
 
-    const int64_t d_mm = static_cast<int64_t>(altitude_mm_now) - altitude_mm_then;
-    out_mm_s = static_cast<int32_t>(div_round<int64_t>(d_mm * 1000, static_cast<int64_t>(dt_ms)));
+    const int64_t climbed_mm = static_cast<int64_t>(altitude_mm_now) - altitude_mm_then;
+    out_mm_s = static_cast<int32_t>(
+        div_round<int64_t>(climbed_mm * 1000, static_cast<int64_t>(elapsed_ms)));
     return true;
 }
 
-int16_t climb_e8_from_mm_s(int32_t mm_s) { return to_climb_e8(MillimetresPerSecond(mm_s)).v; }
+int16_t climb_e8_from_mm_s(int32_t climb_mm_s) {
+    return to_climb_e8(MillimetresPerSecond(climb_mm_s)).v;
+}
 
 }  // namespace skyblip::flight

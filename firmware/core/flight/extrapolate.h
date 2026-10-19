@@ -41,10 +41,10 @@ struct Prediction {
 
 // Pure: own-ship state and a signed offset from the instant that state is from.
 // A negative offset predicts backwards, which is how the residual is measured.
-Prediction extrapolate(const model::Ownship& own, int32_t dt_ms);
+Prediction extrapolate(const model::Ownship& own, int32_t elapsed_ms);
 
 // INFO: fc 13sep26 a neighbour's burst carries position, speed and track, and no turn rate
-Prediction extrapolate(const model::AircraftObservation& observation, int32_t dt_ms);
+Prediction extrapolate(const model::AircraftObservation& observation, int32_t elapsed_ms);
 
 // INFO: fc 13sep26 a separation only means something between two states carried to one instant
 model::Ownship carried_to(const model::Ownship& own, uint32_t now_ms);

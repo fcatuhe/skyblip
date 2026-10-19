@@ -162,9 +162,9 @@ TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints"
 }
 
 TEST_CASE("ADS-L.4.SRD860.E.3.2: the forward error correction is Reed-Solomon over 255 bytes") {
-    CHECK(fec::ReedSolomon255::kN == 255);
-    CHECK(fec::ReedSolomon255::kK == 223);
-    CHECK(fec::ReedSolomon255::kParity == 32);
+    CHECK(fec::ReedSolomon255::kCodewordBytes == 255);
+    CHECK(fec::ReedSolomon255::kDataBytes == 223);
+    CHECK(fec::ReedSolomon255::kParityBytes == 32);
     CHECK(fec::ReedSolomon255::kMaxErrors == 16);
 }
 

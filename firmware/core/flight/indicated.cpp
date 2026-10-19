@@ -7,9 +7,9 @@ namespace skyblip::flight {
 void IndicatedRate::observe(int32_t measured, uint32_t now_ms) {
     const int64_t sampled = static_cast<int64_t>(measured) * kScale;
     if (seen_) {
-        const int64_t dt = now_ms - last_ms_;
-        damped_accumulator_ +=
-            div_round<int64_t>((sampled - damped_accumulator_) * dt, dt + kIndicatedRateDampingMs);
+        const int64_t elapsed_ms = now_ms - last_ms_;
+        damped_accumulator_ += div_round<int64_t>((sampled - damped_accumulator_) * elapsed_ms,
+                                                  elapsed_ms + kIndicatedRateDampingMs);
     } else {
         damped_accumulator_ = sampled;
     }

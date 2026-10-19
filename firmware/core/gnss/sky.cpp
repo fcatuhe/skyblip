@@ -70,17 +70,17 @@ bool SkyView::used(System system, uint8_t id) const {
 }
 
 int SkyView::in_view_of(System system) const {
-    int n = 0;
+    int satellites = 0;
     for (int i = 0; i < count_; i++)
-        if (satellites_[i].system == system) n++;
-    return n;
+        if (satellites_[i].system == system) satellites++;
+    return satellites;
 }
 
 int SkyView::in_use_of(System system) const {
-    int n = 0;
+    int satellites = 0;
     for (int i = 0; i < in_use_count_; i++)
-        if (used_[i].system == system) n++;
-    return n;
+        if (used_[i].system == system) satellites++;
+    return satellites;
 }
 
 }  // namespace skyblip::gnss

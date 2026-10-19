@@ -85,8 +85,9 @@ size_t transmit_mband(FuzzedDataProvider& in, Sealing sealing, const Receiver& r
 
 size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, uint8_t* codeword) {
     static const fec::ReedSolomon255 parity;
-    in.ConsumeData(codeword, fec::ReedSolomon255::kK);
-    if (sealing != Sealing::Raw) parity.encode(codeword, codeword + fec::ReedSolomon255::kK);
+    in.ConsumeData(codeword, fec::ReedSolomon255::kDataBytes);
+    if (sealing != Sealing::Raw)
+        parity.encode(codeword, codeword + fec::ReedSolomon255::kDataBytes);
     return protocol::kUplinkFrameBytes;
 }
 

@@ -34,7 +34,7 @@ constexpr int16_t kTurnCeilingDps = 30;
 constexpr int16_t kTurnCeilingCdps = kTurnCeilingDps * 100;
 
 int16_t clamped_turn_cdps(int32_t turn_cdps);
-int32_t turn_angle16(int16_t turn_cdps, int32_t dt_ms);
+int32_t turn_angle16(int16_t turn_cdps, int32_t elapsed_ms);
 
 class Arc {
    public:
@@ -53,8 +53,8 @@ class Arc {
     int32_t velocity_east_mm_s_;
     int32_t climb_mm_s_;
     int32_t step_ms_;
-    int16_t half_cos_;
-    int16_t half_sin_;
+    int16_t half_cosine_;
+    int16_t half_sine_;
 };
 
 }  // namespace skyblip::flight
