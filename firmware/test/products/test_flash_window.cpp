@@ -1,11 +1,11 @@
 // The settings write through the whole product: a change goes in where a pilot or
-// a phone makes it, and what comes out is counted writes on the host KvStore.
+// a phone makes it, and what comes out is counted writes on the host KeyValueStore.
 // Nothing below the services is stubbed, so the dwell the write has to dodge is
 // the one the radio service actually armed.
 //
 // What is being defended is 1-ARCHITECTURE.md §5.1's "no flash work inside a
 // dwell". The settings page lets a pilot change alarm volume and the altimeter
-// subscale IN FLIGHT, and on the nRF52840 the store behind ports::KvStore is the
+// subscale IN FLIGHT, and on the nRF52840 the store behind ports::KeyValueStore is the
 // internal storage_partition: a write there is an NVMC stall on the same core that
 // arms PPS-anchored deadlines. Before the page existed a settings write could only
 // happen on the ground, because a companion "set" is refused airborne.
@@ -125,7 +125,7 @@ TEST_CASE("flash window: six rapid changes are one write") {
     // the instant it is written.
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Off);
@@ -309,7 +309,7 @@ TEST_CASE("flash window: a hundred patches cost one write") {
     // And what one write cost is the hundredth value, not the first.
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
@@ -321,7 +321,7 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     fly(rig, t);
-    rig.platform.kv().refuse_writes = true;
+    rig.platform.key_value().refuse_writes = true;
     change_volume(rig, go::AlarmVolume::Soft);
     step_until(rig, t, t + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(rig.product.config_link().failed_writes() > 0);
@@ -329,12 +329,12 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
     CHECK(rig.product.config_link().durable_writes().forced() <= 4);
     CHECK(rig.product.config_link().durable_writes().pending());
 
-    rig.platform.kv().refuse_writes = false;
+    rig.platform.key_value().refuse_writes = false;
     step_until(rig, t, t + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK_FALSE(rig.product.config_link().durable_writes().pending());
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
@@ -348,13 +348,13 @@ TEST_CASE("flash window: a refused write is neither a write nor a change on the 
     const timing::DurableWriteWindow& window = rig.product.config_link().durable_writes();
     const uint32_t requests_before = window.requests();
     const uint32_t writes_before = window.writes();
-    rig.platform.kv().refuse_writes = true;
+    rig.platform.key_value().refuse_writes = true;
     change_volume(rig, go::AlarmVolume::Soft);
     step_until(rig, t, t + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(rig.product.config_link().failed_writes() > 1);
     CHECK(window.writes() == writes_before);
 
-    rig.platform.kv().refuse_writes = false;
+    rig.platform.key_value().refuse_writes = false;
     step_until(rig, t, t + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(window.writes() == writes_before + 1);
     CHECK(window.requests() == requests_before + 1);
@@ -362,13 +362,13 @@ TEST_CASE("flash window: a refused write is neither a write nor a change on the 
 
 TEST_CASE("flash window: a store that did not mount is never written, and nothing is owed to it") {
     Rig rig;
-    rig.platform.kv().refuse_mount = true;
+    rig.platform.key_value().refuse_mount = true;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     fly(rig, t);
     change_volume(rig, go::AlarmVolume::Soft);
     step_until(rig, t, t + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
-    CHECK(rig.platform.kv().writes() == 0);
+    CHECK(rig.platform.key_value().writes() == 0);
     CHECK(rig.product.config_link().failed_writes() == 0);
     CHECK_FALSE(rig.product.config_link().durable_writes().pending());
 }

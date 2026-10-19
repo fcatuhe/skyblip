@@ -72,7 +72,7 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.gnss.vdop_e2 = own.vdop_e2;
     snapshot.gnss.resid_m = own.prediction_residual_m;
     snapshot.gnss.resid_valid = own.prediction_residual_valid;
-    snapshot.gnss.sats = own.sats;
+    snapshot.gnss.satellites = own.satellites;
     snapshot.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
     snapshot.gnss.fix_mode = state.gnss.fix_mode;
     snapshot.gnss.fix_valid = own.fix_valid;
@@ -106,7 +106,7 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.radio.alarm = traffic::to_number(state.alarm_level);
     snapshot.radio.noise_dbm = state.rf.noise_dbm;
     snapshot.radio.slot = state.rf.plan.state;
-    snapshot.radio.freq_hz = state.rf.plan.freq_hz;
+    snapshot.radio.frequency_hz = state.rf.plan.frequency_hz;
     snapshot.radio.tx_allowed = state.rf.plan.tx_allowed;
     return snapshot;
 }
@@ -116,7 +116,7 @@ CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
     snapshot.uptime_s = now_ms / 1000;
     snapshot.capture = context_.state.capture;
     snapshot.focus = capture_in_focus_;
-    snapshot.running = context_.diag.profile();
+    snapshot.running = context_.diagnostics.profile();
     snapshot.focus_keeps_s = capture_.keeps_s(capture_in_focus_);
     snapshot.arming = arming_.pressed();
     return snapshot;
@@ -212,7 +212,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
             snapshot.speed_kt = to_knots(MillimetresPerSecond(own.speed_mm_s)).v;
-            snapshot.alt_ft = to_feet(Millimetres(own.alt_hae_mm)).v;
+            snapshot.altitude_ft = to_feet(Millimetres(own.altitude_hae_mm)).v;
             snapshot.climb_fpm = climb_fpm();
             snapshot.climb_valid = climb_measured();
             snapshot.track_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
@@ -228,20 +228,20 @@ void ScreenService::render(uint32_t now_ms) {
             draw_sixpack(framebuffer_, snapshot);
             break;
         }
-        case Page::Sats: {
-            SatsSnapshot snapshot;
+        case Page::Satellites: {
+            SatellitesSnapshot snapshot;
             snapshot.fix_valid = own.fix_valid;
             snapshot.levels_live = context_.state.gnss.levels_live;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.stage_s = context_.state.gnss.stage_s;
-            snapshot.sats = own.sats;
+            snapshot.satellites = own.satellites;
             snapshot.hdop_e2 = own.hdop_e2;
             snapshot.vdop_e2 = own.vdop_e2;
             snapshot.nav_ms = context_.state.gnss.solution_phase_ms;
             snapshot.nav_valid = context_.state.gnss.solution_phase_valid;
             snapshot.health = context_.roles.gnss.health();
             snapshot.sky = &context_.state.gnss.sky;
-            draw_sats(framebuffer_, snapshot);
+            draw_satellites(framebuffer_, snapshot);
             break;
         }
         case Page::Nearby: {
@@ -278,7 +278,7 @@ void ScreenService::render(uint32_t now_ms) {
         case Page::RadioLog: {
             RadioLogSnapshot snapshot;
             snapshot.gnss.fix_valid = own.fix_valid;
-            snapshot.gnss.sats = own.sats;
+            snapshot.gnss.satellites = own.satellites;
             snapshot.gnss.pps = pps_state(context_.state.clock);
             snapshot.gnss.pps_age_s =
                 static_cast<uint16_t>(context_.state.clock.since_edge_ms / 1000);
@@ -308,13 +308,13 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.utc_valid = own.utc_valid;
             snapshot.transmitting = timing::ownship_transmits(own, context_.state.clock,
                                                               context_.state.activation.address());
-            snapshot.sats = own.sats;
+            snapshot.satellites = own.satellites;
             snapshot.stage = context_.state.gnss.stage;
             snapshot.stage_s = context_.state.gnss.stage_s;
             snapshot.fix_mode = context_.state.gnss.fix_mode;
-            snapshot.lat_1e7 = own.lat_1e7;
-            snapshot.lon_1e7 = own.lon_1e7;
-            snapshot.alt_mm = own.alt_hae_mm;
+            snapshot.latitude_1e7 = own.latitude_1e7;
+            snapshot.longitude_1e7 = own.longitude_1e7;
+            snapshot.altitude_mm = own.altitude_hae_mm;
             snapshot.speed_mm_s = own.speed_mm_s;
             snapshot.track_cdeg = own.track_cdeg;
             snapshot.climb_mm_s = own.climb_mm_s;
@@ -331,16 +331,17 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.imu_errored_sensor = context_.state.imu.errored_sensor;
             snapshot.slip_valid = context_.state.slip.valid;
             snapshot.slip_mg = context_.state.slip.measured_mg;
-            snapshot.baro_valid = context_.state.baro.active;
+            snapshot.barometer_valid = context_.state.barometer.active;
             snapshot.battery_valid = context_.state.power.battery.valid;
             snapshot.battery_mv = context_.state.power.battery.sample_mv;
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.charging = context_.state.power.battery.charging;
             snapshot.charge = context_.state.power.charge;
             snapshot.battery_low = battery_low();
-            snapshot.pressure_mpa = context_.state.baro.pressure_mpa;
-            if (context_.state.baro.active)
-                snapshot.alt_std_mm = flight::pressure_to_alt_mm(context_.state.baro.pressure_mpa);
+            snapshot.pressure_mpa = context_.state.barometer.pressure_mpa;
+            if (context_.state.barometer.active)
+                snapshot.altitude_standard_mm =
+                    flight::pressure_to_altitude_mm(context_.state.barometer.pressure_mpa);
             draw_status(framebuffer_, snapshot);
             break;
         }

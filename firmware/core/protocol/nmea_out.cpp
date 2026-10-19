@@ -25,10 +25,10 @@ int nmea_finish(char* s, int body_bytes) {
     return n;
 }
 
-uint8_t adsl_cat_to_alptas_type(uint8_t adsl_cat) {
+uint8_t adsl_category_to_alptas_type(uint8_t adsl_category) {
     static const uint8_t kMap[18] = {0x0, 0x8, 0x8, 0x3, 0x1, 0xB, 0xC, 0x7, 0x4,
                                      0x8, 0x3, 0xD, 0xD, 0xD, 0x0, 0x0, 0x0, 0x0};
-    return adsl_cat < 18 ? kMap[adsl_cat] : 0;
+    return adsl_category < 18 ? kMap[adsl_category] : 0;
 }
 
 // INFO: fc 03aug26 SkyDemon draws nothing at IDType 0, so ICAO is 1 and all else 2 (README.md)
@@ -76,7 +76,7 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
         out[n++] = '0';
     }
     out[n++] = ',';
-    out[n++] = hex_digit(adsl_cat_to_alptas_type(target.aircraft_cat));
+    out[n++] = hex_digit(adsl_category_to_alptas_type(target.aircraft_category));
     return nmea_finish(out, n);
 }
 
@@ -88,7 +88,8 @@ uint8_t pflau_gps(const model::Ownship& own) {
 
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
                  int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
-                 int16_t rel_bearing_deg, int32_t rel_alt_m, int32_t rel_dist_m) {
+                 int16_t relative_bearing_deg, int32_t relative_altitude_m,
+                 int32_t relative_distance_m) {
     (void)capacity;
     int n = 0;
     n += format_string(out + n, "$PFLAU,");
@@ -103,13 +104,14 @@ int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool tra
     n += format_uint(out + n, alarm_level);
     out[n++] = ',';
     if (threat) {
-        n += format_int(out + n, static_cast<int32_t>(rel_bearing_deg), 1, 0, false);
+        n += format_int(out + n, static_cast<int32_t>(relative_bearing_deg), 1, 0, false);
         out[n++] = ',';
         n += format_uint(out + n, alarm_level ? 2u : 0u);
         out[n++] = ',';
-        n += format_int(out + n, rel_alt_m, 1, 0, false);
+        n += format_int(out + n, relative_altitude_m, 1, 0, false);
         out[n++] = ',';
-        n += format_uint(out + n, static_cast<uint32_t>(rel_dist_m < 0 ? 0 : rel_dist_m));
+        n += format_uint(out + n,
+                         static_cast<uint32_t>(relative_distance_m < 0 ? 0 : relative_distance_m));
         out[n++] = ',';
         n += format_hex(out + n, threat->address, 6);
     } else {
@@ -122,11 +124,11 @@ int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool tra
     return nmea_finish(out, n);
 }
 
-int format_pgrmz(char* out, size_t capacity, int32_t alt_ft, bool fix_valid) {
+int format_pgrmz(char* out, size_t capacity, int32_t altitude_ft, bool fix_valid) {
     (void)capacity;
     int n = 0;
     n += format_string(out + n, "$PGRMZ,");
-    n += format_int(out + n, alt_ft, 1, 0, false);
+    n += format_int(out + n, altitude_ft, 1, 0, false);
     n += format_string(out + n, ",F,");
     out[n++] = fix_valid ? '3' : '1';
     return nmea_finish(out, n);
@@ -147,9 +149,9 @@ int format_lk8ex1(char* out, size_t capacity, const Lk8Ex1& reading) {
         reading.pressure_valid
             ? (reading.pressure_pa > kLk8MaxPressurePa ? kLk8MaxPressurePa : reading.pressure_pa)
             : kLk8NoPressurePa;
-    const int32_t alt = reading.alt_valid
-                            ? std::clamp(reading.alt_m, kLk8MinAltitudeM, kLk8MaxAltitudeM)
-                            : kLk8NoAltitudeM;
+    const int32_t altitude =
+        reading.altitude_valid ? std::clamp(reading.altitude_m, kLk8MinAltitudeM, kLk8MaxAltitudeM)
+                               : kLk8NoAltitudeM;
     const int32_t vario = reading.vario_valid
                               ? std::clamp(reading.vario_cm_s, kLk8MinVarioCmS, kLk8MaxVarioCmS)
                               : kLk8NoVarioCmS;
@@ -165,7 +167,7 @@ int format_lk8ex1(char* out, size_t capacity, const Lk8Ex1& reading) {
     n += format_string(out + n, "$LK8EX1,");
     n += format_uint(out + n, pressure);
     out[n++] = ',';
-    n += format_int(out + n, alt, 1, 0, false);
+    n += format_int(out + n, altitude, 1, 0, false);
     out[n++] = ',';
     n += format_int(out + n, vario, 1, 0, false);
     out[n++] = ',';
@@ -220,9 +222,9 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
     n += format_uint(out + n, static_cast<uint32_t>(mm), 2);
     n += format_uint(out + n, static_cast<uint32_t>(ss), 2);
     n += format_string(out + n, ",A,");
-    n += format_nmea_lat(out + n, own.lat_1e7);
+    n += format_nmea_latitude(out + n, own.latitude_1e7);
     out[n++] = ',';
-    n += format_nmea_lon(out + n, own.lon_1e7);
+    n += format_nmea_longitude(out + n, own.longitude_1e7);
     out[n++] = ',';
     // Ground speed is knots on this sentence, kept to one decimal.
     const uint32_t knots_e1 = static_cast<uint32_t>(
@@ -245,18 +247,18 @@ int format_gpgga(char* out, size_t capacity, const model::Ownship& own) {
     n += format_string(out + n, "$GPGGA,");
     n += put_hhmmss(out + n, own.utc_s);
     out[n++] = ',';
-    n += format_nmea_lat(out + n, own.lat_1e7);
+    n += format_nmea_latitude(out + n, own.latitude_1e7);
     out[n++] = ',';
-    n += format_nmea_lon(out + n, own.lon_1e7);
+    n += format_nmea_longitude(out + n, own.longitude_1e7);
     n += format_string(out + n, ",1,");
-    n += format_uint(out + n, own.sats, 2);
+    n += format_uint(out + n, own.satellites, 2);
     out[n++] = ',';
     n += format_uint(out + n, own.hdop_e2, 3, 2);
     out[n++] = ',';
-    n += format_int(out + n, to_metres(Millimetres(own.alt_msl_mm)).v, 1, 0, false);
+    n += format_int(out + n, to_metres(Millimetres(own.altitude_msl_mm)).v, 1, 0, false);
     n += format_string(out + n, ",M,");
-    n +=
-        format_int(out + n, to_metres(Millimetres(own.alt_hae_mm - own.alt_msl_mm)).v, 1, 0, false);
+    n += format_int(out + n, to_metres(Millimetres(own.altitude_hae_mm - own.altitude_msl_mm)).v, 1,
+                    0, false);
     n += format_string(out + n, ",M,,");
     return nmea_finish(out, n);
 }

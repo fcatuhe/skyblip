@@ -13,11 +13,11 @@ using ui::kCellW;
 using ui::kCharH;
 constexpr int kCountScale = 2;
 constexpr int kRuleY = 32;
-constexpr int kRelHundredsCeiling = 99;
+constexpr int kRelativeHundredsCeiling = 99;
 constexpr int32_t kDistanceCeilingE1 = 999;
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len, int scale) {
-    canvas.draw_text(x_end - len * kCellW * scale, y, text, true, scale);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length, int scale) {
+    canvas.draw_text(x_end - length * kCellW * scale, y, text, true, scale);
 }
 
 void right_aligned_text(ui::Canvas& canvas, int x_end, int y, const char* text, int scale) {
@@ -47,10 +47,10 @@ int format_own_name(char* out, const char* callsign) {
 }
 
 void draw_own_address(ui::Canvas& canvas, int x, int y, settings::AirAddress address, int scale) {
-    char buf[8];
-    const int n = format_air_address(buf, address);
-    buf[n] = 0;
-    canvas.draw_text(x, y, buf, true, scale);
+    char buffer[8];
+    const int n = format_air_address(buffer, address);
+    buffer[n] = 0;
+    canvas.draw_text(x, y, buffer, true, scale);
 }
 
 void draw_own_id(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
@@ -87,11 +87,11 @@ void draw_header(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
     canvas.hline(kNearbyIdX, kRuleY, kNearbyRelativeAltitudeEnd - kNearbyIdX, true);
 }
 
-int32_t rel_hundreds_of_feet(int32_t up_m) {
+int32_t relative_hundreds_of_feet(int32_t up_m) {
     const int32_t feet = to_feet(Metres(up_m)).v;
     const int32_t rounded = (feet >= 0 ? feet + 50 : feet - 50) / 100;
-    if (rounded > kRelHundredsCeiling) return kRelHundredsCeiling;
-    if (rounded < -kRelHundredsCeiling) return -kRelHundredsCeiling;
+    if (rounded > kRelativeHundredsCeiling) return kRelativeHundredsCeiling;
+    if (rounded < -kRelativeHundredsCeiling) return -kRelativeHundredsCeiling;
     return rounded;
 }
 
@@ -115,16 +115,16 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
     text[n_id] = 0;
     canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
 
-    const int32_t dist_e1 =
+    const int32_t distance_e1 =
         metric ? div_round(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).v;
-    int written = dist_e1 > kDistanceCeilingE1
+    int written = distance_e1 > kDistanceCeilingE1
                       ? format_string(text, "FAR")
-                      : format_uint(text, static_cast<uint32_t>(dist_e1), 2, 1);
+                      : format_uint(text, static_cast<uint32_t>(distance_e1), 2, 1);
     text[written] = 0;
     right_aligned(canvas, kNearbyDistanceEnd, y, text, written, kNearbyScale);
 
-    const int32_t rel = rel_hundreds_of_feet(row.up_m);
-    written = format_int(text, rel, 2, 0, rel != 0);
+    const int32_t relative = relative_hundreds_of_feet(row.up_m);
+    written = format_int(text, relative, 2, 0, relative != 0);
     text[written] = 0;
     right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, text, written, kNearbyScale);
 }

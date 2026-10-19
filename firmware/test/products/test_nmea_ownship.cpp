@@ -28,11 +28,11 @@ TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     // The air the aircraft is actually flying through, nowhere near standard.
-    rig.platform.baro().chip.set_pressure_mpa(90000000);
+    rig.platform.barometer().chip.set_pressure_mpa(90000000);
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 2);
-    REQUIRE(rig.state().baro.active);
+    REQUIRE(rig.state().barometer.active);
 
     std::string altitude;
     for (const std::string& s : sentences(rig))
@@ -43,8 +43,8 @@ TEST_CASE("nmea: $PGRMZ carries pressure altitude on the standard datum") {
     REQUIRE(f.size() >= 3);
     CHECK(f[2] == "F");
 
-    const uint32_t pressure_pa = rig.state().baro.pressure_mpa / 1000;
-    const int32_t standard_cm = flight::pressure_to_alt_cm(pressure_pa);
+    const uint32_t pressure_pa = rig.state().barometer.pressure_mpa / 1000;
+    const int32_t standard_cm = flight::pressure_to_altitude_cm(pressure_pa);
     const int32_t sent_cm = static_cast<int32_t>(std::stoi(f[1])) * 3048 / 100;
     // What an EFB does with this figure is apply its own QNH, so the figure has
     // to be the datum-free one: pressure altitude on 1013.25, within a foot.
@@ -63,12 +63,12 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
     uint32_t t = 0;
     // A cell in the flat middle, and air the aircraft is really flying through.
     rig.platform.battery().divider_mv = 3800;
-    rig.platform.baro().chip.set_pressure_mpa(90000000);
-    rig.platform.baro().chip.set_temperature_dc(-72);
+    rig.platform.barometer().chip.set_pressure_mpa(90000000);
+    rig.platform.barometer().chip.set_temperature_dc(-72);
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 2);
-    REQUIRE(rig.state().baro.active);
+    REQUIRE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
     std::string lk8;
@@ -81,18 +81,19 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
     REQUIRE(f.size() == 6);
     // Field 1 is the raw pressure in pascals, which is what a consumer prefers
     // over field 2 because it can apply its own datum to it.
-    CHECK(std::stol(f[1]) == static_cast<long>((rig.state().baro.pressure_mpa + 500) / 1000));
+    CHECK(std::stol(f[1]) == static_cast<long>((rig.state().barometer.pressure_mpa + 500) / 1000));
     // Field 2 is metres on 1013.25, the same datum-free figure $PGRMZ carries.
     CHECK(std::abs(std::stol(f[2]) -
-                   flight::pressure_to_alt_cm(rig.state().baro.pressure_mpa / 1000) / 100) <= 1);
+                   flight::pressure_to_altitude_cm(rig.state().barometer.pressure_mpa / 1000) /
+                       100) <= 1);
     // Field 5 is the gauge's own percentage, offset by 1000. A device that says
     // 55% on its panel and something else on the tablet is a support call.
     CHECK(std::stol(f[5]) == 1000 + rig.state().power.battery.percent);
     CHECK(std::stol(f[5]) >= 1000);
     CHECK(int(rig.state().power.battery.percent) == 55);
     // Field 4 is what the part measured, carried in the whole degrees the sentence is read in.
-    REQUIRE(rig.state().baro.temperature_valid);
-    CHECK(rig.state().baro.temperature_dc == -72);
+    REQUIRE(rig.state().barometer.temperature_valid);
+    CHECK(rig.state().barometer.temperature_dc == -72);
     CHECK(f[4] == "-7");
 
     // Same pass as $PGRMZ, so the same cadence, second for second.
@@ -110,14 +111,14 @@ TEST_CASE("nmea: the cell and the temperature reach a tablet in $LK8EX1, on the 
 // see a flat unit coming. SoftRF MB sends the same battery-only sentence when no
 // baro chip answered (src/protocol/data/NMEA.cpp:1398-1401).
 TEST_CASE("nmea: a unit whose barometer went quiet still tells the tablet about its cell") {
-    Rig rig(kBaroByHand);
+    Rig rig(kBarometerByHand);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
     rig.platform.battery().divider_mv = 3600;
     fly(rig, t, 3);
     rig.raise_link();
     fly(rig, t, 2);
-    REQUIRE_FALSE(rig.state().baro.active);
+    REQUIRE_FALSE(rig.state().barometer.active);
     REQUIRE(rig.state().power.battery.valid);
 
     // No $PGRMZ at all, and an $LK8EX1 every second regardless.

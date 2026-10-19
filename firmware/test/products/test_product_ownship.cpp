@@ -14,14 +14,14 @@
 using namespace skyblip;
 
 TEST_CASE("product: barometric pressure drives vertical speed") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK_FALSE(rig.product.ownship().baro_active());
+    CHECK_FALSE(rig.product.ownship().barometer_active());
 
-    rig.push_baro(100000, 1000);
+    rig.push_barometer(100000, 1000);
     rig.run(1000, 1000);
-    CHECK(rig.product.ownship().baro_active());
-    rig.push_baro(101000, 3000);
+    CHECK(rig.product.ownship().barometer_active());
+    rig.push_barometer(101000, 3000);
     rig.run(3000, 3000);
 
     // +10 m in 2 s
@@ -29,17 +29,17 @@ TEST_CASE("product: barometric pressure drives vertical speed") {
 }
 
 TEST_CASE("product: a baro sample inside the window is ignored, not extrapolated") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_baro(100000, 1000);
+    rig.push_barometer(100000, 1000);
     rig.run(1000, 1000);
-    rig.push_baro(199000, 1100);
+    rig.push_barometer(199000, 1100);
     rig.run(1100, 1100);
     CHECK(rig.state().own.climb_mm_s == 0);
 }
 
 TEST_CASE("product: with no barometer, vertical speed comes from GNSS") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
 
     rig.push_fix(1000, 1);
@@ -47,52 +47,52 @@ TEST_CASE("product: with no barometer, vertical speed comes from GNSS") {
     rig.push_fix(1010, 2);
     rig.run(3000, 3000);
 
-    CHECK_FALSE(rig.product.ownship().baro_active());
+    CHECK_FALSE(rig.product.ownship().barometer_active());
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
 }
 
 TEST_CASE("product: once the barometer speaks, GNSS stops setting vertical speed") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
 
-    rig.push_baro(100000, 500);
+    rig.push_barometer(100000, 500);
     rig.run(500, 500);
-    rig.push_baro(100200, 1500);  // +2 m in 1 s
+    rig.push_barometer(100200, 1500);  // +2 m in 1 s
     rig.run(1500, 1500);
-    const int32_t from_baro = rig.state().own.climb_mm_s;
-    CHECK(from_baro == doctest::Approx(2000).epsilon(0.1));
+    const int32_t from_barometer = rig.state().own.climb_mm_s;
+    CHECK(from_barometer == doctest::Approx(2000).epsilon(0.1));
 
     rig.push_fix(1000, 1);
     rig.run(2000, 2000);
     rig.push_fix(1200, 2);
     rig.run(4000, 4000);
 
-    CHECK(rig.state().own.climb_mm_s == from_baro);
+    CHECK(rig.state().own.climb_mm_s == from_barometer);
 }
 
 // Once active the barometer stayed in charge for ever, and a dead one froze its last climb on air.
 TEST_CASE("product: a barometer that stops answering hands vertical speed back to GNSS") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_baro(100000, 500);
+    rig.push_barometer(100000, 500);
     rig.run(500, 500);
-    rig.push_baro(100200, 1500);  // +2 m in 1 s
+    rig.push_barometer(100200, 1500);  // +2 m in 1 s
     rig.run(1500, 1500);
-    REQUIRE(rig.product.ownship().baro_active());
+    REQUIRE(rig.product.ownship().barometer_active());
 
     rig.push_fix(1000, 1);
     rig.run(6000, 6000);
     rig.push_fix(1010, 2);
     rig.run(8000, 8000);
 
-    CHECK_FALSE(rig.product.ownship().baro_active());
+    CHECK_FALSE(rig.product.ownship().barometer_active());
     CHECK(rig.state().own.climb_valid);
     // +10 m in 2 s of GNSS
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(5000).epsilon(0.05));
 }
 
 TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(1000, 1);
     rig.run(1000, 1000);
@@ -107,7 +107,7 @@ TEST_CASE("product: with neither a fix nor a barometer the climb is not valid") 
 
 // A 2D fix differentiated the height it held and sent a climb of zero as valid.
 TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-L G.1.9)") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     rig.push_fix(1000, 1);
     rig.run(1000, 1000);
@@ -125,15 +125,15 @@ TEST_CASE("product: a 2D fix goes on air with its climb marked unavailable (ADS-
 }
 
 TEST_CASE("product: the glass reads the climb damped, the air reads it as measured") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_baro(0, 500);
+    rig.push_barometer(0, 500);
     rig.run(500, 500);
-    rig.push_baro(0, 1500);
+    rig.push_barometer(0, 1500);
     rig.run(1500, 1500);
     REQUIRE(rig.state().indicated.climb_mm_s == 0);
 
-    rig.push_baro(300, 2500);  // +3 m in 1 s
+    rig.push_barometer(300, 2500);  // +3 m in 1 s
     rig.run(2500, 2500);
 
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(3000).epsilon(0.02));
@@ -149,7 +149,7 @@ namespace {
 void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t updates) {
     gnss::GnssSolution f{};
     f.fix_valid = true;
-    f.alt_hae_mm = 1000000;
+    f.altitude_hae_mm = 1000000;
     f.vdop_e2 = 150;
     f.hdop_e2 = 100;
     f.speed_mm_s = speed_mm_s;
@@ -162,7 +162,7 @@ void push_moving_fix(Rig& rig, int32_t speed_mm_s, int32_t track_cdeg, uint32_t 
 
 // A receiver at a standstill reports a track that wanders, and it read as a turn every second.
 TEST_CASE("product: a stopped aircraft is not turning, whatever track the receiver reports") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     constexpr int32_t kStandstillMmS = 200;
     int32_t widest = 0;
@@ -177,7 +177,7 @@ TEST_CASE("product: a stopped aircraft is not turning, whatever track the receiv
 }
 
 TEST_CASE("product: rolling again, the turn is measured from the first fix that rolled") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     push_moving_fix(rig, 200, 27000, 1);
     rig.run(1000, 1000);
@@ -192,7 +192,7 @@ TEST_CASE("product: rolling again, the turn is measured from the first fix that 
 
 // The climb reference outlived a 2D spell, and the height 3D came back with read as a climb.
 TEST_CASE("product: the height a 3D fix returns with after a 2D spell is not a climb") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t updates = 0;
     int32_t steepest_mm_s = 0;
@@ -301,24 +301,24 @@ TEST_CASE("product: the first fix is announced once, then own-ship settles befor
 // climb through the wrap instant looks like: a climb, measured over its window,
 // not a 4.29-billion-millisecond interval that reads as no climb at all.
 TEST_CASE("product: vertical speed is measured across the 49.7-day wrap") {
-    Rig rig{kBaroByHand};
+    Rig rig{kBarometerByHand};
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0u - 500u;  // half a second short of the wrap
 
-    rig.push_baro(100000, t);
+    rig.push_barometer(100000, t);
     rig.run_span(t, 0);
-    CHECK(rig.product.ownship().baro_active());
+    CHECK(rig.product.ownship().barometer_active());
 
     // +10 m over the second that straddles zero.
     const uint32_t after = t + 950u;
-    rig.push_baro(101000, after);
+    rig.push_barometer(101000, after);
     t = after;
     rig.run_span(t, 0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 
     // And a sample inside the window is still refused after the wrap, rather than
     // being taken as a 49-day interval that reads as no climb at all.
-    rig.push_baro(199000, t);
+    rig.push_barometer(199000, t);
     rig.run_span(t, 0);
     CHECK(rig.state().own.climb_mm_s == doctest::Approx(10000).epsilon(0.1));
 }

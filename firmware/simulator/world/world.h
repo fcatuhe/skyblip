@@ -41,7 +41,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::AdslPacket::kInfoMsgBytes + 1]{0};
+    char callsign[protocol::AdslPacket::kInfoTextBytes + 1]{0};
 };
 
 // The sky, the air and the ground the firmware flies through. It drives the part
@@ -80,13 +80,15 @@ class World {
     Air& air() { return air_; }
     models::L76k& gnss() { return platform_.chips().gnss; }
     const models::L76k& gnss() const { return platform_.chips().gnss; }
-    models::Bme280& baro() { return platform_.baro().chip; }
+    models::Bme280& barometer() { return platform_.barometer().chip; }
     models::Bhi260& imu() { return platform_.chips().imu; }
     platform::host::Platform& platform() { return platform_; }
 
     void set_fix(bool on) { gnss().fix_valid = on; }
-    void set_sats(int n) { gnss().sats = static_cast<uint8_t>(n < 0 ? 0 : (n > 32 ? 32 : n)); }
-    void set_altitude_m(int32_t m) { gnss().alt_m = m; }
+    void set_satellites(int n) {
+        gnss().satellites = static_cast<uint8_t>(n < 0 ? 0 : (n > 32 ? 32 : n));
+    }
+    void set_altitude_m(int32_t m) { gnss().altitude_m = m; }
     void set_speed_kt(int32_t kt) { gnss().speed_mm_s = div_round(kt * 514444, 1000); }
     void set_track_deg(int32_t deg) { gnss().track_deg = ((deg % 360) + 360) % 360; }
     void set_turn_dps(double dps) { gnss().turn_dps = dps; }
@@ -163,8 +165,8 @@ class World {
     int32_t slip_mg_{0};
     uint32_t press_since_ms_{0};
     uint32_t tap_since_ms_{0};
-    int32_t origin_lat_1e7_{0};
-    int32_t origin_lon_1e7_{0};
+    int32_t origin_latitude_1e7_{0};
+    int32_t origin_longitude_1e7_{0};
     bool origin_valid_{false};
     uint32_t scheduled_second_{0};
     bool scheduled_{false};

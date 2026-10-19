@@ -19,7 +19,7 @@ TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
     CHECK(page_behind(MenuRow::RadioLog) == Page::RadioLog);
     CHECK(page_behind(MenuRow::Raw) == Page::Raw);
     CHECK(page_behind(MenuRow::Capture) == Page::Capture);
-    CHECK(page_behind(MenuRow::Sats) == Page::Sats);
+    CHECK(page_behind(MenuRow::Satellites) == Page::Satellites);
     CHECK(page_behind(MenuRow::Status) == Page::Status);
     CHECK(page_behind(MenuRow::SelfTest) == Page::SelfTest);
 

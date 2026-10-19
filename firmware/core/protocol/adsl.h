@@ -23,8 +23,8 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kTelemTypeInfo = 1;
     static constexpr uint8_t kInfoTypeRegistration = 5;
     static constexpr int kInfoHeaderByte = 5;
-    static constexpr int kInfoMsgByte = 6;
-    static constexpr int kInfoMsgBytes = 14;
+    static constexpr int kInfoTextByte = 6;
+    static constexpr int kInfoTextBytes = 14;
 
     uint8_t SYNC[2];
     uint8_t Length;
@@ -39,18 +39,18 @@ struct __attribute__((packed)) AdslPacket {
                     uint8_t Type;        // 0x02 = iConspicuity; bit7 = unicast
                     uint8_t Address[4];  // Address[30]/Reserved[1]/RelayForward[1]
                     // Meta[2]: Time[6]/FlightState[2]/Cat[5]/Emergency[3]
-                    uint8_t TimeStamp : 6;    // [0.25 s]
-                    uint8_t FlightState : 2;  // 0=unknown,1=ground,2=airborne
-                    uint8_t AcftCat : 5;      // ADS-L category
-                    uint8_t Emergency : 3;    // 1 = OK
-                    uint8_t Position[11];     // Lat[24]/Lon[24]/Speed[8]/Alt[14]/Climb[9]/Track[9]
+                    uint8_t TimeStamp : 6;         // [0.25 s]
+                    uint8_t FlightState : 2;       // 0=unknown,1=ground,2=airborne
+                    uint8_t AircraftCategory : 5;  // ADS-L category
+                    uint8_t Emergency : 3;         // 1 = OK
+                    uint8_t Position[11];  // Lat[24]/Lon[24]/Speed[8]/Alt[14]/Climb[9]/Track[9]
                     // Integrity[2]: SIL[2]/SDA[2]/NIC[4]/NACp[3]/GVA[2]/NACv[2]/Reserved[1]
                     uint8_t SourceIntegrity : 2;
                     uint8_t DesignAssurance : 2;
                     uint8_t NavigIntegrity : 4;
                     uint8_t HorizAccuracy : 3;
                     uint8_t VertAccuracy : 2;
-                    uint8_t VelAccuracy : 2;
+                    uint8_t VelocityAccuracy : 2;
                     uint8_t Reserved : 1;
                 };
             };
@@ -81,8 +81,8 @@ struct __attribute__((packed)) AdslPacket {
         return Type == kTypeOgnDiagnostics && telem_type() == kTelemTypeInfo &&
                info_type() == kInfoTypeRegistration;
     }
-    const char* info_msg() const { return reinterpret_cast<const char*>(Byte + kInfoMsgByte); }
-    char* info_msg() { return reinterpret_cast<char*>(Byte + kInfoMsgByte); }
+    const char* info_text() const { return reinterpret_cast<const char*>(Byte + kInfoTextByte); }
+    char* info_text() { return reinterpret_cast<char*>(Byte + kInfoTextByte); }
 
     static uint32_t get4(const uint8_t* b) {
         return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
@@ -129,24 +129,24 @@ struct __attribute__((packed)) AdslPacket {
         return static_cast<int32_t>((static_cast<int64_t>(c) * 5003959 + (1 << 21)) >> 22);
     }
 
-    int32_t lat_cordic() const {
+    int32_t latitude_cordic() const {
         int32_t v = static_cast<int32_t>(get3(Position));
         v <<= 8;
         v >>= 1;
         return v;
     }
-    int32_t lon_cordic() const {
+    int32_t longitude_cordic() const {
         int32_t v = static_cast<int32_t>(get3(Position + 3));
         v <<= 8;
         return v;
     }
-    void set_lat_cordic(int32_t lat) {
-        lat = (lat + 0x40) >> 7;
-        set3(Position, lat);
+    void set_latitude_cordic(int32_t latitude) {
+        latitude = (latitude + 0x40) >> 7;
+        set3(Position, latitude);
     }
-    void set_lon_cordic(int32_t lon) {
-        lon = (lon + 0x80) >> 8;
-        set3(Position + 3, lon);
+    void set_longitude_cordic(int32_t longitude) {
+        longitude = (longitude + 0x80) >> 8;
+        set3(Position + 3, longitude);
     }
     // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
@@ -157,30 +157,30 @@ struct __attribute__((packed)) AdslPacket {
         set3(Position, kPositionInvalidCode);
         set3(Position + 3, kPositionInvalidCode);
     }
-    int32_t lat_1e7() const { return cordic_to_1e7(lat_cordic()); }
-    int32_t lon_1e7() const { return cordic_to_1e7(lon_cordic()); }
-    void set_lat_1e7(int32_t v) { set_lat_cordic(e7_to_cordic(v)); }
-    void set_lon_1e7(int32_t v) { set_lon_cordic(e7_to_cordic(v)); }
+    int32_t latitude_1e7() const { return cordic_to_1e7(latitude_cordic()); }
+    int32_t longitude_1e7() const { return cordic_to_1e7(longitude_cordic()); }
+    void set_latitude_1e7(int32_t v) { set_latitude_cordic(e7_to_cordic(v)); }
+    void set_longitude_1e7(int32_t v) { set_longitude_cordic(e7_to_cordic(v)); }
 
     // Three fields carry an explicit "invalid" code, and the spec is emphatic
     // that it means UNAVAILABLE, not out-of-range: an over-range value "shall be
     // encoded" as the limit (ADS-L 4 SRD860 issue 2, G.1.7 / G.1.8 / G.1.9). The
     // setters below honour that. The set_*_invalid() calls are how a shell says
     // it genuinely does not know.
-    static constexpr uint16_t kSpeedInvalidCode = 0xFF;   // G.1.8, 8 bits
-    static constexpr uint16_t kClimbInvalidCode = 0x1FF;  // G.1.9, 9 bits
-    static constexpr uint16_t kAltInvalidCode = 0x3FFF;   // G.1.7, 14 bits
-    static constexpr int32_t kAltOffsetM = 320;           // G.1.7 encoding offset
+    static constexpr uint16_t kSpeedInvalidCode = 0xFF;       // G.1.8, 8 bits
+    static constexpr uint16_t kClimbInvalidCode = 0x1FF;      // G.1.9, 9 bits
+    static constexpr uint16_t kAltitudeInvalidCode = 0x3FFF;  // G.1.7, 14 bits
+    static constexpr int32_t kAltitudeOffsetM = 320;          // G.1.7 encoding offset
 
     uint16_t speed_q() const;      // [0.25 m/s]
     void set_speed_q(uint16_t s);  // [0.25 m/s]
     bool has_speed() const { return Position[6] != kSpeedInvalidCode; }
     void set_speed_invalid() { Position[6] = kSpeedInvalidCode; }
 
-    int32_t alt_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
-    void set_alt_m(int32_t alt);
-    bool has_alt() const { return (Position[8] & 0x3F) != 0x3F || Position[7] != 0xFF; }
-    void set_alt_invalid() {
+    int32_t altitude_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
+    void set_altitude_m(int32_t altitude);
+    bool has_altitude() const { return (Position[8] & 0x3F) != 0x3F || Position[7] != 0xFF; }
+    void set_altitude_invalid() {
         Position[7] = 0xFF;
         Position[8] = static_cast<uint8_t>((Position[8] & 0xC0) | 0x3F);
     }
@@ -238,9 +238,9 @@ struct BurstInstant {
 
 // INFO: fc 18oct26 false, packet untouched, without an address: an unactivated unit builds no frame
 bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat);
+              uint8_t address_mapping_table, uint8_t aircraft_category);
 bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at);
+              uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
 bool is_callsign_char(char c);

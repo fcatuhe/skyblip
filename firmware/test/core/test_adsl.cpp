@@ -24,11 +24,11 @@ AdslPacket make_reference() {
     p.set_address_mapping_table(6);  // FLARM/ALP-TAS table
     p.TimeStamp = 4 * 4;             // 4.0 s
     p.FlightState = 2;               // airborne
-    p.AcftCat = 4;                   // glider
+    p.AircraftCategory = 4;          // glider
     p.Emergency = 1;
-    p.set_lat_1e7(481234500);  // 48.12345 deg
-    p.set_lon_1e7(81234500);   //  8.12345 deg
-    p.set_alt_m(1234);
+    p.set_latitude_1e7(481234500);  // 48.12345 deg
+    p.set_longitude_1e7(81234500);  //  8.12345 deg
+    p.set_altitude_m(1234);
     p.set_speed_q(45 * 4);
     p.set_climb_e8(-44);  // -5.5 m/s
     p.set_track_c9(256);  // 180 deg
@@ -37,7 +37,7 @@ AdslPacket make_reference() {
     p.NavigIntegrity = 11;
     p.HorizAccuracy = 6;
     p.VertAccuracy = 3;
-    p.VelAccuracy = 2;
+    p.VelocityAccuracy = 2;
     return p;
 }
 }  // namespace
@@ -48,10 +48,10 @@ TEST_CASE("adsl: field accessors round-trip through the wire layout") {
     CHECK(p.address_mapping_table() == 6);
     CHECK(int(p.TimeStamp) == 16);
     CHECK(int(p.FlightState) == 2);
-    CHECK(int(p.AcftCat) == 4);
-    CHECK(std::abs(p.lat_1e7() - 481234500) < 200);
-    CHECK(std::abs(p.lon_1e7() - 81234500) < 200);
-    CHECK(std::abs(p.alt_m() - 1234) <= 8);
+    CHECK(int(p.AircraftCategory) == 4);
+    CHECK(std::abs(p.latitude_1e7() - 481234500) < 200);
+    CHECK(std::abs(p.longitude_1e7() - 81234500) < 200);
+    CHECK(std::abs(p.altitude_m() - 1234) <= 8);
     CHECK(std::abs(int(p.speed_q()) - 180) <= 4);
     CHECK(p.has_climb());
     CHECK(std::abs(int(p.climb_e8()) - (-44)) <= 8);
@@ -69,18 +69,18 @@ TEST_CASE("adsl: scramble+crc, then descramble+check round-trip is lossless (BER
     // payload identical to golden (compare the scrambled region bytes)
     CHECK(std::memcmp(p.Byte, golden.Byte, 20) == 0);
     CHECK(p.address() == golden.address());
-    CHECK(p.lat_1e7() == golden.lat_1e7());
+    CHECK(p.latitude_1e7() == golden.latitude_1e7());
 }
 
 TEST_CASE("adsl: single-bit error is corrected via CRC syndrome") {
     AdslPacket p = make_reference();
     p.scramble();
     p.set_crc();
-    uint8_t err[AdslPacket::kDataBytes] = {0};
+    uint8_t error[AdslPacket::kDataBytes] = {0};
     // flip a data bit (in the CRC-covered region)
     p.Data[7] ^= 0x08;
     CHECK(p.check_crc() != 0);
-    int corrected = p.correct(err, 6);
+    int corrected = p.correct(error, 6);
     CHECK(corrected == 1);
     CHECK(p.check_crc() == 0);
 }
@@ -90,7 +90,7 @@ TEST_CASE("adsl: multi-bit errors within flagged (weak) bits are corrected") {
     p.scramble();
     p.set_crc();
     uint8_t* d = p.Data;
-    uint8_t err[AdslPacket::kDataBytes] = {0};
+    uint8_t error[AdslPacket::kDataBytes] = {0};
     // flip 3 bits and mark them weak (as a Manchester decoder would)
     struct BitLoc {
         int byte;
@@ -98,10 +98,10 @@ TEST_CASE("adsl: multi-bit errors within flagged (weak) bits are corrected") {
     } locs[3] = {{3, 0x40}, {9, 0x02}, {15, 0x80}};
     for (auto& l : locs) {
         d[l.byte] ^= l.mask;
-        err[l.byte] |= l.mask;
+        error[l.byte] |= l.mask;
     }
     CHECK(p.check_crc() != 0);
-    int corrected = p.correct(err, 6);
+    int corrected = p.correct(error, 6);
     CHECK(corrected >= 0);
     CHECK(p.check_crc() == 0);
 }
@@ -111,12 +111,12 @@ TEST_CASE("adsl: a flagged bit past the eighth is searched, not wrapped back ont
     p.scramble();
     p.set_crc();
     const AdslPacket sent = p;
-    uint8_t err[AdslPacket::kDataBytes] = {0};
-    for (int byte = 2; byte < 12; byte++) err[byte] = 0x10;
+    uint8_t error[AdslPacket::kDataBytes] = {0};
+    for (int byte = 2; byte < 12; byte++) error[byte] = 0x10;
     for (int byte : {9, 10, 11}) p.Data[byte] ^= 0x10;
     REQUIRE(p.check_crc() != 0);
 
-    CHECK(p.correct(err, 16) == 3);
+    CHECK(p.correct(error, 16) == 3);
     CHECK(std::memcmp(p.Data, sent.Data, AdslPacket::kDataBytes) == 0);
 }
 
@@ -138,7 +138,7 @@ TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") 
 
         AdslPacket rx = tx;
         uint8_t* d = rx.Data;
-        uint8_t err[AdslPacket::kDataBytes] = {0};
+        uint8_t error[AdslPacket::kDataBytes] = {0};
 
         // Inject up to 3 bit errors, and flag ~70% of them as weak.
         int nerr = (rng.next() % 4);  // 0..3
@@ -147,10 +147,10 @@ TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") 
             int byte = bit >> 3;
             uint8_t mask = static_cast<uint8_t>(1 << (7 - (bit & 7)));
             d[byte] ^= mask;
-            if ((rng.next() % 10) < 7) err[byte] |= mask;
+            if ((rng.next() % 10) < 7) error[byte] |= mask;
         }
 
-        rx.correct(err, 6);
+        rx.correct(error, 6);
         bool crc_ok = (rx.check_crc() == 0);
         bool same = (std::memcmp(rx.Byte, tx.Byte, 20) == 0) && rx.Version == tx.Version;
 
@@ -179,22 +179,22 @@ TEST_CASE("adsl: an over-range altitude encodes the limit, not 'unavailable'") {
     AdslPacket p{};
     p.init();
     // G.1.7 worked example: 61104 m or more -> 0x3ffe, invalid -> 0x3fff.
-    p.set_alt_m(61104);
-    CHECK(p.has_alt());
-    p.set_alt_m(100000);  // far past the maximum
-    CHECK(p.has_alt());
-    p.set_alt_m(2000000000);
-    CHECK(p.has_alt());
+    p.set_altitude_m(61104);
+    CHECK(p.has_altitude());
+    p.set_altitude_m(100000);  // far past the maximum
+    CHECK(p.has_altitude());
+    p.set_altitude_m(2000000000);
+    CHECK(p.has_altitude());
     // And the spec's other examples still round-trip.
-    p.set_alt_m(0);
-    CHECK(p.alt_m() == 0);
-    p.set_alt_m(1000);
-    CHECK(p.alt_m() == 1000);
-    p.set_alt_m(-320);
-    CHECK(p.alt_m() == -320);
-    p.set_alt_m(-5000);  // below the minimum clamps to it, not to invalid
-    CHECK(p.alt_m() == -320);
-    CHECK(p.has_alt());
+    p.set_altitude_m(0);
+    CHECK(p.altitude_m() == 0);
+    p.set_altitude_m(1000);
+    CHECK(p.altitude_m() == 1000);
+    p.set_altitude_m(-320);
+    CHECK(p.altitude_m() == -320);
+    p.set_altitude_m(-5000);  // below the minimum clamps to it, not to invalid
+    CHECK(p.altitude_m() == -320);
+    CHECK(p.has_altitude());
 }
 
 TEST_CASE("adsl: an over-range ground speed encodes the limit, not 'unavailable'") {
@@ -222,46 +222,46 @@ TEST_CASE("adsl: an over-range sink rate encodes the limit, not 'unavailable'") 
 TEST_CASE("adsl: the invalid codes are reachable on purpose and round-trip") {
     AdslPacket p{};
     p.init();
-    p.set_alt_m(1000);
+    p.set_altitude_m(1000);
     p.set_speed_q(100);
     p.set_climb_e8(8);
-    REQUIRE(p.has_alt());
+    REQUIRE(p.has_altitude());
     REQUIRE(p.has_speed());
     REQUIRE(p.has_climb());
 
-    p.set_alt_invalid();
+    p.set_altitude_invalid();
     p.set_speed_invalid();
     p.set_climb_invalid();
-    CHECK_FALSE(p.has_alt());
+    CHECK_FALSE(p.has_altitude());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());
 
     // Marking one field invalid must not corrupt its packed neighbours: altitude,
     // climb and track share bytes 7..10.
-    p.set_alt_m(1000);
+    p.set_altitude_m(1000);
     p.set_climb_invalid();
     p.set_track_c9(256);
-    CHECK(p.alt_m() == 1000);
+    CHECK(p.altitude_m() == 1000);
     CHECK_FALSE(p.has_climb());
     CHECK(p.track_c9() == 256);
     p.set_climb_e8(-16);
-    CHECK(p.alt_m() == 1000);
+    CHECK(p.altitude_m() == 1000);
     CHECK(p.climb_e8() == -16);
     CHECK(p.track_c9() == 256);
 }
 
 TEST_CASE("adsl: from_own marks what own-ship does not know") {
     skyblip::model::Ownship own{};
-    own.lat_1e7 = 485000000;
-    own.lon_1e7 = 85000000;
-    own.alt_hae_mm = 1500000;  // HAE: what G.1.7 transmits
+    own.latitude_1e7 = 485000000;
+    own.longitude_1e7 = 85000000;
+    own.altitude_hae_mm = 1500000;  // HAE: what G.1.7 transmits
     own.speed_mm_s = 50000;
     own.climb_mm_s = 2000;
 
     // No fix yet: altitude and ground speed are unavailable, not zero.
     AdslPacket p{};
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK_FALSE(p.has_alt());
+    CHECK_FALSE(p.has_altitude());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());  // climb_valid is false too
 
@@ -269,8 +269,8 @@ TEST_CASE("adsl: from_own marks what own-ship does not know") {
     own.fix_valid = true;
     own.vdop_e2 = 150;
     from_own(p, own, 0xABCDEF, 6, 4);
-    CHECK(p.has_alt());
-    CHECK(p.alt_m() == 1500);
+    CHECK(p.has_altitude());
+    CHECK(p.altitude_m() == 1500);
     CHECK(p.has_speed());
     CHECK_FALSE(p.has_climb());
 
@@ -312,9 +312,9 @@ TEST_CASE("adsl: without an address the encoder builds no frame, position or nam
 // accordingly. Without a fix that is the truthful answer; with one it is not.
 TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     skyblip::model::Ownship own{};
-    own.lat_1e7 = 485000000;
-    own.lon_1e7 = 85000000;
-    own.alt_hae_mm = 1500000;
+    own.latitude_1e7 = 485000000;
+    own.longitude_1e7 = 85000000;
+    own.altitude_hae_mm = 1500000;
     own.speed_mm_s = 50000;
     own.hdop_e2 = 90;
     own.vdop_e2 = 150;
@@ -325,7 +325,7 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     CHECK(int(p.NavigIntegrity) == 0);
     CHECK(int(p.HorizAccuracy) == 0);
     CHECK(int(p.VertAccuracy) == 0);
-    CHECK(int(p.VelAccuracy) == 0);
+    CHECK(int(p.VelocityAccuracy) == 0);
 
     // HDOP 0.9 and VDOP 1.5 with a fix: 10.8 m horizontal and 18 m vertical, 2 * DOP * 6 m.
     own.fix_valid = true;
@@ -333,9 +333,9 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     CHECK(int(p.SourceIntegrity) == 0);
     CHECK(int(p.DesignAssurance) == AdslPacket::kDesignAssuranceNone);
     CHECK(int(p.NavigIntegrity) == 0);
-    CHECK(int(p.HorizAccuracy) == 5);  // HFOM < 30 m
-    CHECK(int(p.VertAccuracy) == 2);   // VFOM < 45 m
-    CHECK(int(p.VelAccuracy) == 1);    // < 10 m/s
+    CHECK(int(p.HorizAccuracy) == 5);     // HFOM < 30 m
+    CHECK(int(p.VertAccuracy) == 2);      // VFOM < 45 m
+    CHECK(int(p.VelocityAccuracy) == 1);  // < 10 m/s
 
     // A 2D solution reports no VDOP, and a height nothing measured the quality
     // of gets no claim at all: the horizontal half of the block still stands.
@@ -388,19 +388,19 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
     from_own(p, own, 1, 6, 4);
     CHECK(int(p.HorizAccuracy) == 5);
     CHECK(int(p.VertAccuracy) == 2);
-    CHECK(int(p.VelAccuracy) == 1);
+    CHECK(int(p.VelocityAccuracy) == 1);
 
     own.hdop_e2 = 800;  // 96 m horizontal
     own.vdop_e2 = 800;  // 96 m vertical
     from_own(p, own, 1, 6, 4);
     CHECK(int(p.HorizAccuracy) == 3);  // 0.05 to 0.1 NM
     CHECK(int(p.VertAccuracy) == 1);
-    CHECK(int(p.VelAccuracy) == 0);
+    CHECK(int(p.VelocityAccuracy) == 0);
 
     own.hdop_e2 = 9999;  // 1200 m: beyond 0.5 NM, the same code as no fix
     own.vdop_e2 = 9999;
     from_own(p, own, 1, 6, 4);
     CHECK(int(p.HorizAccuracy) == 0);
     CHECK(int(p.VertAccuracy) == 0);  // beyond 150 m: no claim at all
-    CHECK(int(p.VelAccuracy) == 0);
+    CHECK(int(p.VelocityAccuracy) == 0);
 }

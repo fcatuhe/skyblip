@@ -33,15 +33,15 @@ struct Field {
     uint8_t width;
 };
 constexpr Field kFAddress{0, 24};
-constexpr Field kFMsgType{24, 4};
+constexpr Field kFMessageType{24, 4};
 constexpr Field kFAddressType{28, 3};
 constexpr Field kFNeeds3{56, 4};
 constexpr Field kFHas3{60, 4};
 constexpr Field kFTimeBits{66, 4};
 constexpr Field kFAircraftType{70, 4};
-constexpr Field kFAlt{75, 13};
-constexpr Field kFLat{88, 20};
-constexpr Field kFLon{108, 20};
+constexpr Field kFAltitude{75, 13};
+constexpr Field kFLatitude{88, 20};
+constexpr Field kFLongitude{108, 20};
 constexpr Field kFTurnRate{128, 9};
 constexpr Field kFSpeed{137, 10};
 constexpr Field kFVs{147, 9};
@@ -162,17 +162,17 @@ void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
 // INFO: fc 09mar26 longitude quantum in 1e-7 deg as a function of |latitude| in
 // whole degrees: the protocol widens the step towards the poles so a degree of
 // longitude keeps roughly constant ground resolution.
-int32_t longitude_divisor(int32_t abs_lat_deg) {
+int32_t longitude_divisor(int32_t abs_latitude_deg) {
     static const uint8_t kNear[65] = {
         53,  53,  54,  54,  55,  55,  56,  56,  57,  57,  58,  58,  59,  59,  60,  60,  61,
         61,  62,  62,  63,  63,  64,  64,  65,  65,  67,  68,  70,  71,  73,  74,  76,  77,
         79,  80,  82,  83,  85,  86,  88,  89,  91,  94,  98,  101, 105, 108, 112, 115, 119,
         122, 126, 129, 137, 144, 152, 159, 167, 174, 190, 205, 221, 236, 252};
     static const uint16_t kPolar[11] = {267, 299, 330, 362, 425, 489, 552, 616, 679, 743, 806};
-    if (abs_lat_deg < 14) return 52;
-    if (abs_lat_deg < 79) return kNear[abs_lat_deg - 14];
-    if (abs_lat_deg > 89) return 806;
-    return kPolar[abs_lat_deg - 79];
+    if (abs_latitude_deg < 14) return 52;
+    if (abs_latitude_deg < 79) return kNear[abs_latitude_deg - 14];
+    if (abs_latitude_deg > 89) return 806;
+    return kPolar[abs_latitude_deg - 79];
 }
 
 uint32_t enscale(int32_t value, uint32_t mbits, uint32_t ebits, uint32_t sbits) {
@@ -297,7 +297,7 @@ int alptas_correct(uint8_t* frame, const uint8_t* erasures, int max_erasures) {
 
 Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc_s) {
     if (!alptas_crc_ok(frame)) return Status::Crc;
-    if (get_field(frame, kFMsgType) != kAlptasMsgTypePosition) return Status::Unsupported;
+    if (get_field(frame, kFMessageType) != kAlptasMessageTypePosition) return Status::Unsupported;
 
     const uint32_t first = (rx_utc_s - kAlptasKeyWindowS) >> 4;
     const uint32_t last = (rx_utc_s + kAlptasKeyWindowS) >> 4;
@@ -317,7 +317,7 @@ Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& ke
 
 uint32_t alptas_address(const uint8_t* frame) { return get_field(frame, kFAddress); }
 
-uint8_t alptas_type_to_adsl_cat(uint8_t alptas_type) {
+uint8_t alptas_type_to_adsl_category(uint8_t alptas_type) {
     static const uint8_t kMap[16] = {0, 4, 1, 3, 8, 1, 7, 7, 1, 2, 3, 5, 5, 11, 0, 0};
     return alptas_type < 16 ? kMap[alptas_type] : 0;
 }
@@ -347,13 +347,13 @@ uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_tab
     }
 }
 
-Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_lat_1e7,
-                     int32_t reference_lon_1e7, model::AircraftObservation& out) {
+Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,
+                     int32_t reference_longitude_1e7, model::AircraftObservation& out) {
     if (!alptas_crc_ok(frame)) return Status::Crc;
 
     uint8_t data[kAlptasDataBytes];
     __builtin_memcpy(data, frame, kAlptasDataBytes);
-    if (get_field(data, kFMsgType) != kAlptasMsgTypePosition) return Status::Unsupported;
+    if (get_field(data, kFMessageType) != kAlptasMessageTypePosition) return Status::Unsupported;
 
     crypt_frame(data, rx_utc_s, false);
 
@@ -372,14 +372,14 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     uint32_t course_deg = get_field(data, kFCourse) >> 1;
     if (course_deg > 360) return Status::Invalid;
 
-    int32_t lat_reference = div_round<int32_t>(reference_lat_1e7, 52);
-    int32_t lat_1e7 = unwrap20(get_field(data, kFLat), lat_reference) * 52;
-    if (lat_1e7 < -900000000 || lat_1e7 > 900000000) return Status::Invalid;
-    int32_t divisor = longitude_divisor(std::abs(lat_1e7) / 10000000);
-    int32_t lon_reference = div_round<int32_t>(reference_lon_1e7, divisor);
-    int64_t lon_1e7 =
-        static_cast<int64_t>(unwrap20(get_field(data, kFLon), lon_reference)) * divisor;
-    if (lon_1e7 < -1800000000 || lon_1e7 > 1800000000) return Status::Invalid;
+    int32_t latitude_reference = div_round<int32_t>(reference_latitude_1e7, 52);
+    int32_t latitude_1e7 = unwrap20(get_field(data, kFLatitude), latitude_reference) * 52;
+    if (latitude_1e7 < -900000000 || latitude_1e7 > 900000000) return Status::Invalid;
+    int32_t divisor = longitude_divisor(std::abs(latitude_1e7) / 10000000);
+    int32_t longitude_reference = div_round<int32_t>(reference_longitude_1e7, divisor);
+    int64_t longitude_1e7 =
+        static_cast<int64_t>(unwrap20(get_field(data, kFLongitude), longitude_reference)) * divisor;
+    if (longitude_1e7 < -1800000000 || longitude_1e7 > 1800000000) return Status::Invalid;
 
     int32_t speed_e1 = descale(get_field(data, kFSpeed), 8, 2, 0);
     int32_t climb_e1 = descale(get_field(data, kFVs), 6, 2, 1);
@@ -388,13 +388,13 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     out.address = get_field(data, kFAddress);
     out.address_mapping_table = alptas_address_type_to_address_mapping_table(
         static_cast<uint8_t>(get_field(data, kFAddressType)));
-    out.aircraft_cat =
-        alptas_type_to_adsl_cat(static_cast<uint8_t>(get_field(data, kFAircraftType)));
+    out.aircraft_category =
+        alptas_type_to_adsl_category(static_cast<uint8_t>(get_field(data, kFAircraftType)));
     out.flight_state = alptas_flight_state(static_cast<uint8_t>(get_field(data, kFAirborne)));
     out.emergency = 1;  // INFO: fc 09mar26 no emergency field on the wire; 1 is ADS-L "OK"
-    out.lat_1e7 = lat_1e7;
-    out.lon_1e7 = static_cast<int32_t>(lon_1e7);
-    out.alt_m = descale(get_field(data, kFAlt), 12, 1, 0) - 1000;
+    out.latitude_1e7 = latitude_1e7;
+    out.longitude_1e7 = static_cast<int32_t>(longitude_1e7);
+    out.altitude_m = descale(get_field(data, kFAltitude), 12, 1, 0) - 1000;
     out.speed_q = static_cast<uint16_t>(div_round<int32_t>(speed_e1 * 2, 5));
     out.climb_e8 = static_cast<int16_t>(div_round<int32_t>(climb_e1 * 4, 5));
     out.track_c9 = static_cast<uint16_t>(
@@ -408,29 +408,29 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
 }
 
 Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observation, uint32_t utc_s,
-                     int32_t reference_lat_1e7, int32_t reference_lon_1e7) {
+                     int32_t reference_latitude_1e7, int32_t reference_longitude_1e7) {
     // INFO: fc 09mar26 the reference position is a decode-side input only: the
     // wire carries position modulo 2^20 quanta, absolute, and the receiver
     // reconstructs the high bits from where it is itself (Legacy.cpp:1045).
-    (void)reference_lat_1e7;
-    (void)reference_lon_1e7;
+    (void)reference_latitude_1e7;
+    (void)reference_longitude_1e7;
     if (!observation.position_valid) return Status::Invalid;
 
     __builtin_memset(frame, 0, kAlptasFrameBytes);
     put_field(frame, kFAddress, observation.address & settings::kAddressMask);
-    put_field(frame, kFMsgType, kAlptasMsgTypePosition);
+    put_field(frame, kFMessageType, kAlptasMessageTypePosition);
     put_field(frame, kFAddressType,
               address_mapping_table_to_alptas_address_type(observation.address_mapping_table));
     put_field(frame, kFTimeBits, utc_s & 0x0Fu);
-    put_field(frame, kFAircraftType, adsl_cat_to_alptas_type(observation.aircraft_cat));
+    put_field(frame, kFAircraftType, adsl_category_to_alptas_type(observation.aircraft_category));
     put_field(frame, kFAirborne, observation.flight_state == 1 ? 1 : 2);
-    put_field(frame, kFAlt, enscale(observation.alt_m + 1000, 12, 1, 0));
+    put_field(frame, kFAltitude, enscale(observation.altitude_m + 1000, 12, 1, 0));
 
-    int32_t lat_coded = div_round<int32_t>(observation.lat_1e7, 52);
-    put_field(frame, kFLat, static_cast<uint32_t>(lat_coded) & 0x0FFFFFu);
-    int32_t divisor = longitude_divisor(std::abs(observation.lat_1e7) / 10000000);
-    int32_t lon_coded = div_round<int32_t>(observation.lon_1e7, divisor);
-    put_field(frame, kFLon, static_cast<uint32_t>(lon_coded) & 0x0FFFFFu);
+    int32_t latitude_coded = div_round<int32_t>(observation.latitude_1e7, 52);
+    put_field(frame, kFLatitude, static_cast<uint32_t>(latitude_coded) & 0x0FFFFFu);
+    int32_t divisor = longitude_divisor(std::abs(observation.latitude_1e7) / 10000000);
+    int32_t longitude_coded = div_round<int32_t>(observation.longitude_1e7, divisor);
+    put_field(frame, kFLongitude, static_cast<uint32_t>(longitude_coded) & 0x0FFFFFu);
 
     int32_t speed_e1 = observation.speed_valid ? div_round<int32_t>(observation.speed_q * 5, 2) : 0;
     put_field(frame, kFSpeed, enscale(speed_e1, 8, 2, 0));

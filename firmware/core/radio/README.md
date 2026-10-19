@@ -63,7 +63,7 @@ Slot 1 opens at 800 ms and closes 200 ms into the next second, so a burst in tha
 
 A phase is refused rather than guessed. Without a PPS lock there is no edge to measure from, and past `kStampReachUs` the event and the edge are not two views of one second. The row then prints the second alone, which is what the receiver actually knows.
 
-`Entry::channel` is the dwell's own, carried on the event from the executor that armed it (`RfEvent::freq_hz`): §C.2.5 makes traffic alternate between 868.2 and 868.4 MHz, and a receiver that never visits the second channel hears half its neighbours. Deriving it from the phase instead would have agreed with the slot map exactly when the radio did not, which is the one case worth printing.
+`Entry::channel` is the dwell's own, carried on the event from the executor that armed it (`RfEvent::frequency_hz`): §C.2.5 makes traffic alternate between 868.2 and 868.4 MHz, and a receiver that never visits the second channel hears half its neighbours. Deriving it from the phase instead would have agreed with the slot map exactly when the radio did not, which is the one case worth printing.
 
 For that label to be true, a dwell drains its own tail before it closes. A burst framed as the window ends leaves its flag in the chip, and the next dwell's first poll used to read it and stamp it with the new band, the new channel and the new phase. Clearing the register on the way in would have been worse: between two dwells the receiver is still tuned where it was, so a frame arriving there is a real reception on the dwell that just closed, and that is the one it is reported as.
 
@@ -99,7 +99,7 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 
 `tx_lost` is `messages::RfEventType::Missed`, which is only ever emitted for a dwell or a transmission of ours that did not complete and was never a reception at all. It was counted as a bad reception until the same day, which is [#61](https://github.com/fcatuhe/skyblip/issues/61), now closed.
 
-All eleven reach `core/comms/diagnostics.h`'s radio group, so they leave on the USB console line, in the `diag` dump and in the `radio` reply, under the names above. The radio group no longer fits one 182-byte notification even at rest, and answers in two: the dump has been framed per group since it existed, and `fits()` still refuses a link that cannot carry a whole field. The tape's own header keeps `RX`, `TX` and `NOISE`, because the panel's reader of `WAIT` and `TYPE` is the sixteen rows underneath it.
+All eleven reach `core/comms/diagnostics.h`'s radio group, so they leave on the USB console line, in the `diagnostics` dump and in the `radio` reply, under the names above. The radio group no longer fits one 182-byte notification even at rest, and answers in two: the dump has been framed per group since it existed, and `fits()` still refuses a link that cannot carry a whole field. The tape's own header keeps `RX`, `TX` and `NOISE`, because the panel's reader of `WAIT` and `TYPE` is the sixteen rows underneath it.
 
 ## Who writes what
 

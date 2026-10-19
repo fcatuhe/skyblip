@@ -7,9 +7,9 @@
 
 namespace skyblip {
 
-int RfChannel::apply_ber(uint8_t* data, size_t len, double ber, uint8_t* error_mask) {
+int RfChannel::apply_ber(uint8_t* data, size_t length, double ber, uint8_t* error_mask) {
     int flips = 0;
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < length; i++) {
         for (int b = 0; b < 8; b++) {
             if (uniform() < ber) {
                 uint8_t mask = static_cast<uint8_t>(0x80 >> b);
@@ -22,8 +22,8 @@ int RfChannel::apply_ber(uint8_t* data, size_t len, double ber, uint8_t* error_m
     return flips;
 }
 
-int RfChannel::apply_burst(uint8_t* data, size_t len, int burst_bits, uint8_t* error_mask) {
-    size_t total_bits = len * 8;
+int RfChannel::apply_burst(uint8_t* data, size_t length, int burst_bits, uint8_t* error_mask) {
+    size_t total_bits = length * 8;
     if (total_bits == 0) return 0;
     size_t start = next() % total_bits;
     int flips = 0;
@@ -38,11 +38,11 @@ int RfChannel::apply_burst(uint8_t* data, size_t len, int burst_bits, uint8_t* e
     return flips;
 }
 
-int RfChannel::apply_symbol_errors(uint8_t* data, size_t len, int symbol_errors) {
-    if (len == 0) return 0;
+int RfChannel::apply_symbol_errors(uint8_t* data, size_t length, int symbol_errors) {
+    if (length == 0) return 0;
     int applied = 0;
     for (int i = 0; i < symbol_errors; i++) {
-        size_t byte_index = next() % len;
+        size_t byte_index = next() % length;
         uint8_t flip;
         do {
             flip = static_cast<uint8_t>(next());

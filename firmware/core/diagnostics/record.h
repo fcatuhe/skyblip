@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_CORE_DIAG_RECORD_H
-#define SKYBLIP_CORE_DIAG_RECORD_H
+#ifndef SKYBLIP_CORE_DIAGNOSTICS_RECORD_H
+#define SKYBLIP_CORE_DIAGNOSTICS_RECORD_H
 
 #include <cstdint>
 
@@ -7,7 +7,7 @@
 #include "core/util/little_endian.h"
 #include "core/util/result.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 constexpr uint32_t kRecordBytes = 24;
 constexpr uint32_t kPayloadBytes = 16;
@@ -24,7 +24,7 @@ enum class Type : uint8_t {
     Dwell = 6,
     Flight = 7,
     Power = 8,
-    Baro = 9,
+    Barometer = 9,
     Motion = 10,
     Contact = 11,
     Link = 12,

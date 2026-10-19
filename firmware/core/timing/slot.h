@@ -106,7 +106,7 @@ bool in_pps_holdover(const ClockState& clock);
 struct SlotPlan {
     SlotState state{SlotState::UplinkRxO};
     Band band{Band::O};
-    uint32_t freq_hz{kObandHz};
+    uint32_t frequency_hz{kObandHz};
     // The dwell this state belongs to, as a phase in the second. Guards are
     // already subtracted: a dwell that runs to its end_ms leaves the radio time
     // to retune before the next one starts.
@@ -123,7 +123,7 @@ class Scheduler {
 
     static SlotState state_at(int phase_ms);
     static Band band_at(int phase_ms);
-    static uint32_t freq_hz_at(int phase_ms);
+    static uint32_t frequency_hz_at(int phase_ms);
     static bool in_uplink_rx(int phase_ms) {
         return phase_ms >= kUplinkRxStartMs && phase_ms < kUplinkRxEndMs;
     }
@@ -138,7 +138,7 @@ class Scheduler {
     // Which M-band dwell, and so which channel, a phase belongs to. -1 outside
     // the M-band half of the second.
     static int slot_of(int phase_ms);
-    static uint32_t slot_freq_hz(int slot) { return slot == 1 ? kMband1Hz : kMband0Hz; }
+    static uint32_t slot_frequency_hz(int slot) { return slot == 1 ? kMband1Hz : kMband0Hz; }
     static int slot_start(int slot) { return slot == 1 ? kSlot1StartMs : kSlot0StartMs; }
     static int slot_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs; }
     static int dwell_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs - kHopGuardMs; }

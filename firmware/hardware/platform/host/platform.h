@@ -109,7 +109,7 @@ class Dfu : public ports::Dfu {
     const ports::Watchdog& watchdog_;
 };
 
-class Baro : public io::I2c {
+class Barometer : public io::I2c {
    public:
     bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
         return fitted && chip.write(address, data, bytes);
@@ -172,7 +172,7 @@ class Platform {
     using Link = host::Link;
 
     static constexpr ports::Capabilities kFullyFitted =
-        ports::Capability::Display | ports::Capability::Gnss | ports::Capability::Baro |
+        ports::Capability::Display | ports::Capability::Gnss | ports::Capability::Barometer |
         ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
         ports::Capability::Buzzer | ports::Capability::Haptic | ports::Capability::Contacts |
         ports::Capability::Battery | ports::Capability::Indicator | ports::Capability::Inclinometer;
@@ -184,8 +184,8 @@ class Platform {
         : identity_(serial), fitted_(fitted) {
         chips_.epd.attach_clock(clock_);
         buzzer_pin_held_low_ = ports::has(fitted, ports::Capability::Buzzer);
-        baro_.fitted = ports::has(fitted, ports::Capability::Baro);
-        baro_.chip.attach_clock(clock_);
+        barometer_.fitted = ports::has(fitted, ports::Capability::Barometer);
+        barometer_.chip.attach_clock(clock_);
         battery_.fitted = ports::has(fitted, ports::Capability::Battery);
         log_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
         imu_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
@@ -216,12 +216,12 @@ class Platform {
 
     host::Clock& clock() { return clock_; }
     host::Link& link() { return link_; }
-    host::KvStore& kv() { return kv_; }
+    host::KeyValueStore& key_value() { return key_value_; }
     host::FlashRegion& log_flash() { return log_flash_; }
     host::Annunciator& annunciator() { return annunciator_; }
     host::Indicator& indicator() { return indicator_; }
     host::Dfu& dfu() { return dfu_; }
-    host::Baro& baro() { return baro_; }
+    host::Barometer& barometer() { return barometer_; }
     host::Battery& battery() { return battery_; }
     host::DieTemperature& die_temperature() { return die_temperature_; }
     host::Pps& pps() { return pps_; }
@@ -252,8 +252,8 @@ class Platform {
 
     bool buzzer_pin_held_low() const { return buzzer_pin_held_low_; }
     void set_buzzer_pin_held_low(bool held) { buzzer_pin_held_low_ = held; }
-    bool trigger_baro() { return bme280_.trigger(); }
-    bool read_baro(BaroReading& out) {
+    bool trigger_barometer() { return bme280_.trigger(); }
+    bool read_barometer(BarometerReading& out) {
         parts::Bme280::Reading reading{};
         if (!bme280_.read(reading)) return false;
         out.pressure_mpa = reading.pressure_mpa;
@@ -273,8 +273,8 @@ class Platform {
 
    private:
     void wire_i2c() {
-        if (ports::has(fitted_, ports::Capability::Baro))
-            i2c_.attach(models::Bme280::kAddress, baro_);
+        if (ports::has(fitted_, ports::Capability::Barometer))
+            i2c_.attach(models::Bme280::kAddress, barometer_);
         if (ports::has(fitted_, ports::Capability::Haptic))
             i2c_.attach(models::Drv2605::kAddress, chips_.haptic);
         if (ports::has(fitted_, ports::Capability::Inclinometer))
@@ -297,14 +297,14 @@ class Platform {
     parts::Bme280 bme280_{i2c_};
     host::Clock clock_{};
     host::Link link_{};
-    host::KvStore kv_{};
+    host::KeyValueStore key_value_{};
     host::FlashRegion log_flash_{};
     host::FlashRegion imu_flash_{kImuFlashSectors};
     host::Annunciator annunciator_{};
     host::Indicator indicator_{};
     host::Watchdog watchdog_{};
     host::Dfu dfu_{watchdog_};
-    host::Baro baro_{};
+    host::Barometer barometer_{};
     host::Battery battery_{};
     host::DieTemperature die_temperature_{};
     host::Pps pps_{clock_};

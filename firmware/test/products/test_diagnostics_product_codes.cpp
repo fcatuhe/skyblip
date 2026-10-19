@@ -1,7 +1,7 @@
-// The ordinals a diagnostics record carries that core/diag does not own: gesture, page, mode,
-// prompt.
+// The ordinals a diagnostics record carries that core/diagnostics does not own: gesture, page,
+// mode, prompt.
 #include "core/comms/config.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/page.h"
@@ -31,7 +31,7 @@ uint8_t wire(go::Page value) {
         case go::Page::SixPack: return 2;
         case go::Page::GMeter: return 3;
         case go::Page::Status: return 4;
-        case go::Page::Sats: return 5;
+        case go::Page::Satellites: return 5;
         case go::Page::RadioLog: return 6;
         case go::Page::Raw: return 7;
         case go::Page::Capture: return 8;

@@ -49,7 +49,7 @@ radio::Entry received(uint32_t address, int8_t rssi_dbm) {
 RadioLogSnapshot with(const radio::Log& log) {
     RadioLogSnapshot snapshot;
     snapshot.gnss.fix_valid = true;
-    snapshot.gnss.sats = 9;
+    snapshot.gnss.satellites = 9;
     snapshot.gnss.pps = PpsState::Lock;
     snapshot.rx_noise = 42;
     snapshot.noise_dbm = -109;
@@ -296,7 +296,7 @@ TEST_CASE("radio log page: a refused frame whose CRC held still names who sent i
 TEST_CASE("radio log page: a failed burst spends no column on the length every burst has") {
     radio::Log log;
     radio::Entry bad = entry_of(radio::Verdict::BadCrc);
-    bad.len = 58;
+    bad.length = 58;
     log.record(bad);
 
     Glass canvas;
@@ -395,7 +395,7 @@ TEST_CASE("radio log page: no fix is stated rather than left blank") {
     radio::Log log;
     RadioLogSnapshot snapshot = with(log);
     snapshot.gnss.fix_valid = false;
-    snapshot.gnss.sats = 0;
+    snapshot.gnss.satellites = 0;
 
     Glass canvas;
     draw_radio_log(canvas, snapshot);

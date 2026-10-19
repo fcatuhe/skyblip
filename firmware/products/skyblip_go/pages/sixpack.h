@@ -12,7 +12,7 @@ struct SixPackSnapshot {
     bool fix_valid{false};
     go::Units units{go::Units::Nautical};
     int32_t speed_kt{0};
-    int32_t alt_ft{0};
+    int32_t altitude_ft{0};
     int32_t climb_fpm{0};
     bool climb_valid{false};
     uint16_t track_deg{0};

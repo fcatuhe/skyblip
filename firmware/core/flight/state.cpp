@@ -28,8 +28,8 @@ enum class AdslG13Category : uint8_t {
 
 }  // namespace
 
-bool flies_at_no_ground_speed(uint8_t aircraft_cat) {
-    switch (static_cast<AdslG13Category>(aircraft_cat)) {
+bool flies_at_no_ground_speed(uint8_t aircraft_category) {
+    switch (static_cast<AdslG13Category>(aircraft_category)) {
         case AdslG13Category::LightRotorcraft:
         case AdslG13Category::LighterThanAir:
         case AdslG13Category::Paraglider:
@@ -63,8 +63,8 @@ FlightState state_from(uint8_t adsl_code) {
     return FlightState::Unknown;
 }
 
-uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat) {
-    if (state_from(adsl_code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_cat))
+uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_category) {
+    if (state_from(adsl_code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_category))
         return static_cast<uint8_t>(FlightState::Unknown);
     return adsl_code;
 }

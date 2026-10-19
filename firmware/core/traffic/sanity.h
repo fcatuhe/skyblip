@@ -40,7 +40,7 @@ namespace skyblip::traffic {
 //
 // A ceiling is exactly what a sanity gate wants. It cannot hide a contact anyone
 // could act on, because the alarm layer's advisory ring is 3 km
-// (core/traffic/alarm.h kAdvisoryDistM) and the radar's furthest range setting is
+// (core/traffic/alarm.h kAdvisoryDistanceM) and the radar's furthest range setting is
 // well inside this figure, and it cannot be reached by a real transmitter on this
 // band with this power. What is past it did not arrive over this link.
 constexpr int32_t kPlausibleRangeCeilingM = 30000;

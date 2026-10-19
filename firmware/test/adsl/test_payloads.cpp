@@ -13,11 +13,11 @@ model::AircraftObservation target(uint32_t address) {
     model::AircraftObservation t{};
     t.address = address;
     t.address_mapping_table = 6;
-    t.aircraft_cat = 1;
+    t.aircraft_category = 1;
     t.flight_state = 2;
-    t.lat_1e7 = 481234500;
-    t.lon_1e7 = 81234500;
-    t.alt_m = 1200;
+    t.latitude_1e7 = 481234500;
+    t.longitude_1e7 = 81234500;
+    t.altitude_m = 1200;
     t.speed_q = 160;
     t.speed_valid = true;
     t.position_valid = true;
@@ -114,7 +114,7 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[4] = {target(0x300001), target(0), target(0x300003),
                                              target(0x300004)};
-    targets[3].lat_1e7 = 1800000000;
+    targets[3].latitude_1e7 = 1800000000;
 
     uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
     REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);

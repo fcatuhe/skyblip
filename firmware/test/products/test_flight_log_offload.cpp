@@ -50,8 +50,8 @@ void write_records(Rig& rig, uint32_t sector, uint32_t session, uint32_t first_u
     for (uint32_t i = 0; i < count; i++) {
         flight::LogRecord record{};
         record.utc_s = first_utc_s + i * 4;
-        record.lat_1e7 = 485000000;
-        record.lon_1e7 = 85000000;
+        record.latitude_1e7 = 485000000;
+        record.longitude_1e7 = 85000000;
         record.fix_valid = true;
         record.utc_valid = true;
         record.session_end = closes && i + 1 == count;
@@ -164,14 +164,14 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
     REQUIRE(alarm != nullptr);
     CHECK(alarm->contact.address == 0xDD5EED);
     CHECK(alarm->contact.alarm == traffic::to_number(traffic::Level::Advisory));
-    CHECK(alarm->contact.dist_m <= traffic::kAdvisoryDistM);
+    CHECK(alarm->contact.distance_m <= traffic::kAdvisoryDistanceM);
 
     const flight::LogEvent* pass = first_of(walk, flight::LogKind::Encounter);
     REQUIRE(pass != nullptr);
     CHECK(pass->contact.address == 0xDD5EED);
     CHECK(pass->contact.alarm == traffic::to_number(traffic::Level::Advisory));
     // Placed 200 m north at its closest; own-ship's second of flight since the fix moves that.
-    CHECK(pass->contact.dist_m < 300);
+    CHECK(pass->contact.distance_m < 300);
     CHECK(pass->contact.heard_s >= 30);
 }
 

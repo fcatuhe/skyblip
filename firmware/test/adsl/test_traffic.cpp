@@ -61,9 +61,9 @@ model::Ownship flying() {
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
-    own.lat_1e7 = 481234500;
-    own.lon_1e7 = 81234500;
-    own.alt_hae_mm = 1000000;
+    own.latitude_1e7 = 481234500;
+    own.longitude_1e7 = 81234500;
+    own.altitude_hae_mm = 1000000;
     own.speed_mm_s = 120 * 1000;
     own.climb_mm_s = 10000;
     own.track_cdeg = 9000;
@@ -79,7 +79,7 @@ protocol::AdslPacket traffic_packet() {
     return p;
 }
 
-uint32_t alt_code(const protocol::AdslPacket& p) { return field(payload_of(p), 72, 14); }
+uint32_t altitude_code(const protocol::AdslPacket& p) { return field(payload_of(p), 72, 14); }
 uint32_t speed_code(const protocol::AdslPacket& p) { return field(payload_of(p), 64, 8); }
 uint32_t climb_code(const protocol::AdslPacket& p) { return field(payload_of(p), 86, 9); }
 }  // namespace
@@ -90,12 +90,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the tabl
     p.init();
     p.TimeStamp = 37;
     p.FlightState = 2;
-    p.AcftCat = 9;
+    p.AircraftCategory = 9;
     p.Emergency = 5;
-    p.set_lat_1e7(481234500);
-    p.set_lon_1e7(81234500);
+    p.set_latitude_1e7(481234500);
+    p.set_longitude_1e7(81234500);
     p.set_speed_q(120 * 4);
-    p.set_alt_m(1000);
+    p.set_altitude_m(1000);
     p.set_climb_e8(80);
     p.set_track_c9(400);
     p.SourceIntegrity = 2;
@@ -103,7 +103,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the tabl
     p.NavigIntegrity = 11;
     p.HorizAccuracy = 6;
     p.VertAccuracy = 3;
-    p.VelAccuracy = 2;
+    p.VelocityAccuracy = 2;
     p.Reserved = 0;
 
     const uint8_t* payload = payload_of(p);
@@ -111,8 +111,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the tabl
     CHECK(field(payload, 6, 2) == 2u);
     CHECK(field(payload, 8, 5) == 9u);
     CHECK(field(payload, 13, 3) == 5u);
-    CHECK(signed_field(payload, 16, 24) == p.lat_cordic() >> 7);
-    CHECK(signed_field(payload, 40, 24) == p.lon_cordic() >> 8);
+    CHECK(signed_field(payload, 16, 24) == p.latitude_cordic() >> 7);
+    CHECK(signed_field(payload, 40, 24) == p.longitude_cordic() >> 8);
     CHECK(field(payload, 64, 8) == 0xC4u);
     CHECK(field(payload, 72, 14) == 0x0528u);
     CHECK(field(payload, 86, 9) == 0x048u);
@@ -134,7 +134,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4);
     CHECK_FALSE(p.has_position());
-    CHECK_FALSE(p.has_alt());
+    CHECK_FALSE(p.has_altitude());
     CHECK_FALSE(p.has_speed());
     CHECK_FALSE(p.has_climb());
 }
@@ -172,10 +172,10 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position
     protocol::AdslPacket at_named{};
     at_named.init();
     const flight::Prediction there = flight::extrapolate(own, named_ms);
-    at_named.set_lat_1e7(there.lat_1e7);
-    at_named.set_lon_1e7(there.lon_1e7);
-    CHECK(p.lat_1e7() == at_named.lat_1e7());
-    CHECK(p.lon_1e7() == at_named.lon_1e7());
+    at_named.set_latitude_1e7(there.latitude_1e7);
+    at_named.set_longitude_1e7(there.longitude_1e7);
+    CHECK(p.latitude_1e7() == at_named.latitude_1e7());
+    CHECK(p.longitude_1e7() == at_named.longitude_1e7());
 }
 
 // It dates the navigation solution, and the position is carried to it, so the pair is one moment.
@@ -195,7 +195,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp and the position name the same in
     protocol::from_own(at_fix, own, 0x123456, 6, 4, protocol::BurstInstant{own.utc_s, 0, 0});
     CHECK(at_fix.TimeStamp == protocol::timestamp_code(own.utc_s, 0));
     // Half a second due east at 120 m/s: the transmitted position moved with the timestamp.
-    CHECK(p.lon_1e7() > at_fix.lon_1e7());
+    CHECK(p.longitude_1e7() > at_fix.longitude_1e7());
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airborne, never 3") {
@@ -214,16 +214,16 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glider is 4") {
-    for (uint8_t cat = 0; cat < 32; cat++) {
+    for (uint8_t category = 0; category < 32; category++) {
         model::Ownship own = flying();
         protocol::AdslPacket p{};
-        protocol::from_own(p, own, 0x123456, 6, cat);
-        CHECK(p.AcftCat == cat);
-        CHECK(field(payload_of(p), 8, 5) == cat);
+        protocol::from_own(p, own, 0x123456, 6, category);
+        CHECK(p.AircraftCategory == category);
+        CHECK(field(payload_of(p), 8, 5) == category);
     }
     protocol::AdslPacket glider{};
     protocol::from_own(glider, flying(), 0x123456, 6, 4);
-    CHECK(glider.AcftCat == 4);
+    CHECK(glider.AircraftCategory == 4);
 
     // Every category a pilot can pick here is one issue 1 names too, which is what E.1.1 rests on.
     const int issue1_named_categories = 14;
@@ -245,20 +245,20 @@ TEST_CASE("ADS-L.4.SRD860.G.1.4: the emergency status transmitted is 1, no emerg
 TEST_CASE("ADS-L.4.SRD860.G.1.5: latitude counts 1/93206 of a degree and longitude 1/46603") {
     protocol::AdslPacket p{};
     p.init();
-    p.set_lat_1e7(481234500);
-    p.set_lon_1e7(81234500);
-    const int32_t lat_raw = signed_field(payload_of(p), 16, 24);
-    const int32_t lon_raw = signed_field(payload_of(p), 40, 24);
-    CHECK(std::abs(lat_raw - static_cast<int32_t>(48.12345 * 93206)) <= 1);
-    CHECK(std::abs(lon_raw - static_cast<int32_t>(8.12345 * 46603)) <= 1);
+    p.set_latitude_1e7(481234500);
+    p.set_longitude_1e7(81234500);
+    const int32_t latitude_raw = signed_field(payload_of(p), 16, 24);
+    const int32_t longitude_raw = signed_field(payload_of(p), 40, 24);
+    CHECK(std::abs(latitude_raw - static_cast<int32_t>(48.12345 * 93206)) <= 1);
+    CHECK(std::abs(longitude_raw - static_cast<int32_t>(8.12345 * 46603)) <= 1);
 
     // North and East positive, so the southern and western halves of the globe come back negative.
-    p.set_lat_1e7(-481234500);
-    p.set_lon_1e7(-81234500);
+    p.set_latitude_1e7(-481234500);
+    p.set_longitude_1e7(-81234500);
     CHECK(signed_field(payload_of(p), 16, 24) < 0);
     CHECK(signed_field(payload_of(p), 40, 24) < 0);
-    CHECK(std::abs(p.lat_1e7() + 481234500) < 200);
-    CHECK(std::abs(p.lon_1e7() + 81234500) < 200);
+    CHECK(std::abs(p.latitude_1e7() + 481234500) < 200);
+    CHECK(std::abs(p.longitude_1e7() + 81234500) < 200);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an aircraft") {
@@ -308,38 +308,38 @@ TEST_CASE("ADS-L.4.SRD860.G.1.6: the exponential encoding is the clause's, over 
 TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked examples") {
     protocol::AdslPacket p{};
     p.init();
-    p.set_alt_m(-320);
-    CHECK(alt_code(p) == 0x0000u);
-    p.set_alt_m(-400);
-    CHECK(alt_code(p) == 0x0000u);
-    p.set_alt_m(0);
-    CHECK(alt_code(p) == 0x0140u);
-    p.set_alt_m(1000);
-    CHECK(alt_code(p) == 0x0528u);
-    p.set_alt_m(61104);
-    CHECK(alt_code(p) == 0x3FFEu);
-    p.set_alt_m(100000);
-    CHECK(alt_code(p) == 0x3FFEu);
-    p.set_alt_invalid();
-    CHECK(alt_code(p) == 0x3FFFu);
-    CHECK_FALSE(p.has_alt());
-    CHECK(protocol::AdslPacket::kAltOffsetM == 320);
+    p.set_altitude_m(-320);
+    CHECK(altitude_code(p) == 0x0000u);
+    p.set_altitude_m(-400);
+    CHECK(altitude_code(p) == 0x0000u);
+    p.set_altitude_m(0);
+    CHECK(altitude_code(p) == 0x0140u);
+    p.set_altitude_m(1000);
+    CHECK(altitude_code(p) == 0x0528u);
+    p.set_altitude_m(61104);
+    CHECK(altitude_code(p) == 0x3FFEu);
+    p.set_altitude_m(100000);
+    CHECK(altitude_code(p) == 0x3FFEu);
+    p.set_altitude_invalid();
+    CHECK(altitude_code(p) == 0x3FFFu);
+    CHECK_FALSE(p.has_altitude());
+    CHECK(protocol::AdslPacket::kAltitudeOffsetM == 320);
 }
 
 // The invalid code decoded as 61116 m, and the range gate threw a 2D neighbour 60 km up.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: an altitude marked invalid decodes as no altitude, not 61 km") {
     protocol::AdslPacket p = traffic_packet();
-    p.set_alt_invalid();
+    p.set_altitude_invalid();
     model::AircraftObservation observation{};
     REQUIRE(
         protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, observation));
     CHECK(observation.position_valid);
-    CHECK_FALSE(observation.alt_valid);
-    CHECK(observation.alt_m == 0);
+    CHECK_FALSE(observation.altitude_valid);
+    CHECK(observation.altitude_m == 0);
 
     REQUIRE(protocol::to_observation(traffic_packet(), events::Stamp{}, -80,
                                      model::Source::AdslDirect, observation));
-    CHECK(observation.alt_valid);
+    CHECK(observation.altitude_valid);
 }
 
 // A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
@@ -349,7 +349,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude a
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4);
     CHECK(p.has_position());
-    CHECK_FALSE(p.has_alt());
+    CHECK_FALSE(p.has_altitude());
     CHECK(p.has_speed());
 }
 
@@ -424,8 +424,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
 
     const flight::Prediction carried = flight::extrapolate(observation, 1000);
     CHECK_FALSE(carried.valid);
-    CHECK(carried.lat_1e7 == observation.lat_1e7);
-    CHECK(carried.lon_1e7 == observation.lon_1e7);
+    CHECK(carried.latitude_1e7 == observation.latitude_1e7);
+    CHECK(carried.longitude_1e7 == observation.longitude_1e7);
 
     // A ground speed of zero is the clause's other invalid track, and it moves no further.
     protocol::AdslPacket parked = traffic_packet();
@@ -435,8 +435,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
     REQUIRE(
         protocol::to_observation(parked, events::Stamp{}, -80, model::Source::AdslDirect, still));
     const flight::Prediction stays = flight::extrapolate(still, 1000);
-    CHECK(stays.lat_1e7 == still.lat_1e7);
-    CHECK(stays.lon_1e7 == still.lon_1e7);
+    CHECK(stays.latitude_1e7 == still.latitude_1e7);
+    CHECK(stays.longitude_1e7 == still.longitude_1e7);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz on the ground") {

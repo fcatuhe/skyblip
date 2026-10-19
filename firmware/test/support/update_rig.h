@@ -11,7 +11,7 @@ using namespace skyblip;
 namespace {
 
 inline void on_ground(Rig& rig, uint32_t& now_ms) {
-    rig.push_fix(/*alt_m=*/0, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
 }

@@ -14,28 +14,28 @@ const int16_t kSineQuarter[65] = {
 int16_t isin(int16_t angle) {
     uint16_t a = static_cast<uint16_t>(angle);
     uint16_t quadrant = (a >> 14) & 3;
-    uint16_t idx = (a >> 8) & 0x3F;
-    uint16_t frac = a & 0xFF;
+    uint16_t index = (a >> 8) & 0x3F;
+    uint16_t fraction = a & 0xFF;
     int32_t lo, hi;
     switch (quadrant) {
         case 0:
-            lo = kSineQuarter[idx];
-            hi = kSineQuarter[idx + 1];
+            lo = kSineQuarter[index];
+            hi = kSineQuarter[index + 1];
             break;
         case 1:
-            lo = kSineQuarter[64 - idx];
-            hi = kSineQuarter[63 - idx];
+            lo = kSineQuarter[64 - index];
+            hi = kSineQuarter[63 - index];
             break;
         case 2:
-            lo = -kSineQuarter[idx];
-            hi = -kSineQuarter[idx + 1];
+            lo = -kSineQuarter[index];
+            hi = -kSineQuarter[index + 1];
             break;
         default:
-            lo = -kSineQuarter[64 - idx];
-            hi = -kSineQuarter[63 - idx];
+            lo = -kSineQuarter[64 - index];
+            hi = -kSineQuarter[63 - index];
             break;
     }
-    int32_t v = lo + ((hi - lo) * static_cast<int32_t>(frac)) / 256;
+    int32_t v = lo + ((hi - lo) * static_cast<int32_t>(fraction)) / 256;
     return static_cast<int16_t>(v);
 }
 

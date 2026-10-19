@@ -27,7 +27,7 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 |---|---|---|
 | BME280 forced 4 times a second, x16 / x2 oversampling and IIR 4 | 0.66 Pa RMS noise | 5.5 cm |
 | what `parts::Bme280` compensates to (DS 4.2.3, Q24.8) | 1/256 Pa | 0.3 mm |
-| `pressure_to_alt_mm` | 1 mPa | 0.008 mm |
+| `pressure_to_altitude_mm` | 1 mPa | 0.008 mm |
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
 | `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
 
@@ -35,7 +35,7 @@ The chain used to truncate the driver's reading to a whole pascal, which is nine
 
 The rate is therefore measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`). Every screen, and the `$LK8EX1` vario, reads the measurement. `kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history.
 
-Two sources are differentiated over two windows, and `products/skyblip_go/services/ownship` names both: `kBaroClimbWindowMs` is `kClimbWindowFloorMs` itself, so every barometric sample yields a rate over the second before it, and `kGnssClimbWindowMs` is four times that, because a GNSS height jitters by metres where the barometer jitters by centimetres and a metre over a second is 200 ft/min of invented climb. A barometer, once it has spoken, owns the rate; the GNSS reference keeps moving underneath so losing the part falls back without a step.
+Two sources are differentiated over two windows, and `products/skyblip_go/services/ownship` names both: `kBarometerClimbWindowMs` is `kClimbWindowFloorMs` itself, so every barometric sample yields a rate over the second before it, and `kGnssClimbWindowMs` is four times that, because a GNSS height jitters by metres where the barometer jitters by centimetres and a metre over a second is 200 ft/min of invented climb. A barometer, once it has spoken, owns the rate; the GNSS reference keeps moving underneath so losing the part falls back without a step.
 
 The barometer converts four times a second on the PPS quarters and the conversion triggered on the edge is the one published (`boards/lilygo/t_echo_plus/board.h`), so the second a rate is taken over is the second the fix stream is dated in. Forced mode starts the conversion when we ask, so the sample is dated at its pressure phase, 21 ms after the edge trigger, at the same offset from PPS every second, and the difference is still the true rate. The part's IIR 4 runs over all four conversions, a 0.75 s delay that is the same every second. The board does not wait for it: a later pass reads the result once the part's status says it is done (`hardware/parts/bme280/README.md`).
 
@@ -199,7 +199,7 @@ Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its
 | 21 | flags and the G.1.2 flight state | | |
 | 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
 
-The enum codes are the diagnostics capture's, pinned by the same tests (`../diag/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
+The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
 
 ## log_events
 

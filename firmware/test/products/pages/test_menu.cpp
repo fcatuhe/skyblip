@@ -164,7 +164,7 @@ TEST_CASE("menu page: a menu is titled what it holds, not the page a thumb came 
 }
 
 TEST_CASE("menu page: a page with nothing behind it opens no menu at all") {
-    for (Page page : {Page::SixPack, Page::GMeter, Page::Status, Page::Sats, Page::RadioLog,
+    for (Page page : {Page::SixPack, Page::GMeter, Page::Status, Page::Satellites, Page::RadioLog,
                       Page::Raw, Page::SelfTest})
         CHECK(menu_for(page).row_count == 0);
 

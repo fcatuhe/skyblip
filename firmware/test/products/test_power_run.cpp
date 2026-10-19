@@ -2,12 +2,12 @@
 #include <cstddef>
 #include <vector>
 
-#include "core/diag/payload.h"
-#include "core/diag/profile.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
 #include "core/power/cutoff.h"
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
-#include "test/support/diag_corpus.h"
+#include "test/support/diagnostics_corpus.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -19,7 +19,7 @@ constexpr uint16_t kBelowCutoffMv = power::kFlatMv - 100;
 void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
 
 void arm_power_run(Rig& rig, uint32_t& t) {
-    rig.product.diag().arm(diag::Profile::PowerRun);
+    rig.product.diagnostics().arm(diagnostics::Profile::PowerRun);
     rig.run(t, t + 100);
     t += 100;
     REQUIRE(rig.product.capture().capturing());
@@ -35,19 +35,19 @@ void run_until_parked(Rig& rig, uint32_t& t) {
     REQUIRE_FALSE(rig.product.capture().capturing());
 }
 
-std::vector<diag::Record> tail(const std::vector<diag::Record>& records, size_t n) {
+std::vector<diagnostics::Record> tail(const std::vector<diagnostics::Record>& records, size_t n) {
     REQUIRE(records.size() >= n);
     return {records.end() - static_cast<std::ptrdiff_t>(n), records.end()};
 }
 
-bool same_instant(const diag::Record& a, const diag::Record& b) {
+bool same_instant(const diagnostics::Record& a, const diagnostics::Record& b) {
     return a.at_s == b.at_s && a.into_ms == b.into_ms;
 }
 
 uint32_t quoted_keeps_s(Rig& rig) { return rig.state().capture.keeps_s; }
 
 uint32_t nominal_keeps_s(Rig& rig) {
-    return rig.product.capture().keeps_s(diag::Profile::PowerRun);
+    return rig.product.capture().keeps_s(diagnostics::Profile::PowerRun);
 }
 
 }  // namespace
@@ -95,12 +95,12 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
     run_until_parked(rig, t);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
 
-    const std::vector<diag::Record> last = tail(captured(rig), 3);
-    diag::Power power{};
-    REQUIRE(diag::read(last[0], power));
+    const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
+    diagnostics::Power power{};
+    REQUIRE(diagnostics::read(last[0], power));
     CHECK(power.level == power::PowerLevel::Flat);
-    CHECK(last[1].type == diag::Type::Duty);
-    CHECK(last[2].type == diag::Type::End);
+    CHECK(last[1].type == diagnostics::Type::Duty);
+    CHECK(last[2].type == diagnostics::Type::End);
     CHECK(same_instant(last[0], last[1]));
 }
 
@@ -115,13 +115,13 @@ TEST_CASE("park: a power run the pilot switches off closes on power, then duty, 
     rig.product.shutdown().request(power::ShutdownReason::LongPress, t);
     run_until_parked(rig, t);
 
-    const std::vector<diag::Record> records = captured(rig);
-    const std::vector<diag::Record> last = tail(records, 3);
-    diag::Power power{};
-    REQUIRE(diag::read(last[0], power));
+    const std::vector<diagnostics::Record> records = captured(rig);
+    const std::vector<diagnostics::Record> last = tail(records, 3);
+    diagnostics::Power power{};
+    REQUIRE(diagnostics::read(last[0], power));
     CHECK(power.level == power::PowerLevel::Normal);
-    CHECK(last[1].type == diag::Type::Duty);
-    CHECK(last[2].type == diag::Type::End);
+    CHECK(last[1].type == diagnostics::Type::Duty);
+    CHECK(last[2].type == diagnostics::Type::End);
     CHECK(same_instant(last[0], last[1]));
     // Boot, Config, the pair the 30 s gate wrote, the pair the park wrote, End
     CHECK(records.size() == 7);
@@ -132,14 +132,14 @@ TEST_CASE("park: a full capture closes on the same pair, off its own cadence") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
     taxi(rig, t, 3);
-    rig.product.diag().arm(diag::Profile::Full);
+    rig.product.diagnostics().arm(diagnostics::Profile::Full);
     taxi(rig, t, 4);
     rig.product.shutdown().request(power::ShutdownReason::LinkRequest, t);
     run_until_parked(rig, t);
 
-    const std::vector<diag::Record> last = tail(captured(rig), 3);
-    CHECK(last[0].type == diag::Type::Power);
-    CHECK(last[1].type == diag::Type::Duty);
-    CHECK(last[2].type == diag::Type::End);
+    const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
+    CHECK(last[0].type == diagnostics::Type::Power);
+    CHECK(last[1].type == diagnostics::Type::Duty);
+    CHECK(last[2].type == diagnostics::Type::End);
     CHECK(same_instant(last[0], last[1]));
 }

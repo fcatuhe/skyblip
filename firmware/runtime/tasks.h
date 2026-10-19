@@ -21,12 +21,12 @@ constexpr uint32_t kServiceSilenceCeilingMs = 5000;
 // to feed is what is seen first, and the bite is the backstop under it.
 constexpr uint32_t kHardwareWatchdogCeilingMs = 12000;
 constexpr uint32_t kRadioRxSilenceCeilingMs = 30000;
-constexpr uint32_t kBaroPublishPeriodMs = 1000;
-constexpr uint32_t kBaroPpsWindowMs = 2 * kServicePassCeilingMs;
+constexpr uint32_t kBarometerPublishPeriodMs = 1000;
+constexpr uint32_t kBarometerPpsWindowMs = 2 * kServicePassCeilingMs;
 // INFO: fc 03oct26 four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA
-constexpr uint32_t kBaroConversionPeriodMs = 250;
+constexpr uint32_t kBarometerConversionPeriodMs = 250;
 // INFO: fc 03oct26 Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case
-constexpr uint32_t kBaroConversionCeilingMs = 150;
+constexpr uint32_t kBarometerConversionCeilingMs = 150;
 // A cell moves over minutes. The gauge needs three readings before it can throw
 // out a transient, so a second between them is the slowest cadence that still
 // shows the state of charge on the first screen a pilot sees.

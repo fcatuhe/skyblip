@@ -22,7 +22,7 @@ class Bhi260 {
        public:
         virtual ~Image() = default;
         virtual uint32_t size() const = 0;
-        virtual bool read(uint32_t offset, uint8_t* out, uint16_t len) = 0;
+        virtual bool read(uint32_t offset, uint8_t* out, uint16_t length) = 0;
     };
 
     static constexpr uint8_t kAddress = 0x28;
@@ -87,34 +87,34 @@ class Bhi260 {
     };
 
     struct Fifo {
-        uint8_t reg{0};
+        uint8_t register_address{0};
         uint16_t remaining{0};
         uint16_t carried{0};
         bool resync{false};
         uint8_t bytes[kFifoReadBytes]{};
     };
 
-    static constexpr uint8_t kRegCommand = 0x00;
-    static constexpr uint8_t kRegFifoWakeup = 0x01;
-    static constexpr uint8_t kRegFifoNonWakeup = 0x02;
-    static constexpr uint8_t kRegStatusChannel = 0x03;
-    static constexpr uint8_t kRegChipControl = 0x05;
-    static constexpr uint8_t kRegHostInterfaceControl = 0x06;
-    static constexpr uint8_t kRegResetRequest = 0x14;
-    static constexpr uint8_t kRegProductId = 0x1C;
-    static constexpr uint8_t kRegKernelVersion = 0x20;
-    static constexpr uint8_t kRegBootStatus = 0x25;
-    static constexpr uint8_t kRegInterruptStatus = 0x2D;
-    static constexpr uint8_t kRegErrorValue = 0x2E;
+    static constexpr uint8_t kRegisterCommand = 0x00;
+    static constexpr uint8_t kRegisterFifoWakeup = 0x01;
+    static constexpr uint8_t kRegisterFifoNonWakeup = 0x02;
+    static constexpr uint8_t kRegisterStatusChannel = 0x03;
+    static constexpr uint8_t kRegisterChipControl = 0x05;
+    static constexpr uint8_t kRegisterHostInterfaceControl = 0x06;
+    static constexpr uint8_t kRegisterResetRequest = 0x14;
+    static constexpr uint8_t kRegisterProductId = 0x1C;
+    static constexpr uint8_t kRegisterKernelVersion = 0x20;
+    static constexpr uint8_t kRegisterBootStatus = 0x25;
+    static constexpr uint8_t kRegisterInterruptStatus = 0x2D;
+    static constexpr uint8_t kRegisterErrorValue = 0x2E;
 
-    static constexpr uint16_t kCmdUploadToProgramRam = 0x0002;
-    static constexpr uint16_t kCmdBootProgramRam = 0x0003;
-    static constexpr uint16_t kCmdConfigureSensor = 0x000D;
-    static constexpr uint16_t kCmdChangeRange = 0x000E;
+    static constexpr uint16_t kCommandUploadToProgramRam = 0x0002;
+    static constexpr uint16_t kCommandBootProgramRam = 0x0003;
+    static constexpr uint16_t kCommandConfigureSensor = 0x000D;
+    static constexpr uint16_t kCommandChangeRange = 0x000E;
 
-    static constexpr uint16_t kParamReadMask = 0x1000;
-    static constexpr uint16_t kParamSensorsPresent = 0x011F;
-    static constexpr uint16_t kParamSensorConfig = 0x0500;
+    static constexpr uint16_t kParameterReadMask = 0x1000;
+    static constexpr uint16_t kParameterSensorsPresent = 0x011F;
+    static constexpr uint16_t kParameterSensorConfig = 0x0500;
     static constexpr uint16_t kSensorsPresentBytes = 32;
     static constexpr uint16_t kSensorConfigBytes = 12;
     static constexpr uint8_t kInterruptStatusChannel = 0x20;
@@ -130,9 +130,9 @@ class Bhi260 {
     static constexpr int32_t kCountsPerRange = 32768;
     static constexpr uint16_t kCommandHeaderBytes = 4;
 
-    bool write_registers(uint8_t reg, const uint8_t* data, uint16_t len);
-    bool read_registers(uint8_t reg, uint8_t* out, uint16_t len);
-    bool command(uint16_t opcode, const uint8_t* payload, uint16_t len);
+    bool write_registers(uint8_t register_address, const uint8_t* data, uint16_t length);
+    bool read_registers(uint8_t register_address, uint8_t* out, uint16_t length);
+    bool command(uint16_t opcode, const uint8_t* payload, uint16_t length);
     bool boot_status(uint8_t& out);
     void fail(Status why);
 
@@ -147,7 +147,7 @@ class Bhi260 {
     void send_configuration(uint32_t now_ms);
     void confirm_configuration(uint32_t now_ms);
     void start_running(uint32_t now_ms);
-    bool request_parameter(uint16_t param);
+    bool request_parameter(uint16_t parameter);
     bool parameter_ready();
     int read_status_channel(uint16_t& code, uint8_t* out, uint16_t max);
     void step_running(uint32_t now_ms);
@@ -156,7 +156,7 @@ class Bhi260 {
     void read_hub_error();
     void drain_fifos(uint32_t now_ms);
     void drain_fifo(Fifo& fifo, uint32_t now_ms);
-    uint16_t parse_fifo(Fifo& fifo, uint16_t len, uint32_t now_ms);
+    uint16_t parse_fifo(Fifo& fifo, uint16_t length, uint32_t now_ms);
     void note_meta_event(const uint8_t* event);
     static uint8_t event_bytes(uint8_t id);
     static int16_t to_milli_g(const uint8_t* le16);
@@ -182,8 +182,8 @@ class Bhi260 {
     Acceleration sample_{};
     bool sample_fresh_{false};
     uint8_t frame_[1 + kCommandHeaderBytes + kUploadChunkBytes]{};
-    Fifo wakeup_{kRegFifoWakeup};
-    Fifo non_wakeup_{kRegFifoNonWakeup};
+    Fifo wakeup_{kRegisterFifoWakeup};
+    Fifo non_wakeup_{kRegisterFifoNonWakeup};
 };
 
 class LinkedImage : public Bhi260::Image {
@@ -191,7 +191,7 @@ class LinkedImage : public Bhi260::Image {
     explicit LinkedImage(ConstByteSpan bytes) : bytes_(bytes) {}
 
     uint32_t size() const override { return static_cast<uint32_t>(bytes_.size()); }
-    bool read(uint32_t offset, uint8_t* out, uint16_t len) override;
+    bool read(uint32_t offset, uint8_t* out, uint16_t length) override;
 
    private:
     ConstByteSpan bytes_;

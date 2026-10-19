@@ -2,15 +2,15 @@
 #include <vector>
 
 #include "core/bus/state.h"
-#include "core/diag/payload.h"
-#include "core/diag/profile.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
 #include "core/settings/address.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/screen.h"
-#include "test/support/diag_corpus.h"
-#include "test/support/diag_taps.h"
+#include "test/support/diagnostics_corpus.h"
+#include "test/support/diagnostics_taps.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -18,11 +18,11 @@ using namespace skyblip;
 namespace {
 
 // A Duty record whose Power is the one written on the same pass, under the same instant.
-int paired_with_power(const std::vector<diag::Record>& records) {
+int paired_with_power(const std::vector<diagnostics::Record>& records) {
     int paired = 0;
     for (size_t i = 1; i < records.size(); i++) {
-        if (records[i].type != diag::Type::Duty) continue;
-        if (records[i - 1].type != diag::Type::Power) continue;
+        if (records[i].type != diagnostics::Type::Duty) continue;
+        if (records[i - 1].type != diagnostics::Type::Power) continue;
         if (records[i - 1].at_s != records[i].at_s) continue;
         if (records[i - 1].into_ms != records[i].into_ms) continue;
         paired++;
@@ -30,11 +30,11 @@ int paired_with_power(const std::vector<diag::Record>& records) {
     return paired;
 }
 
-std::vector<uint32_t> duty_spacing_ms(const std::vector<diag::Record>& records) {
+std::vector<uint32_t> duty_spacing_ms(const std::vector<diagnostics::Record>& records) {
     std::vector<uint32_t> out;
-    const diag::Record* previous = nullptr;
-    for (const diag::Record& record : records) {
-        if (record.type != diag::Type::Duty) continue;
+    const diagnostics::Record* previous = nullptr;
+    for (const diagnostics::Record& record : records) {
+        if (record.type != diagnostics::Type::Duty) continue;
         if (previous != nullptr)
             out.push_back((record.at_s - previous->at_s) * 1000 + record.into_ms -
                           previous->into_ms);
@@ -43,11 +43,12 @@ std::vector<uint32_t> duty_spacing_ms(const std::vector<diag::Record>& records) 
     return out;
 }
 
-std::vector<diag::Power> every_power_record(const std::vector<diag::Record>& records) {
-    std::vector<diag::Power> out;
-    for (const diag::Record& record : records) {
-        diag::Power power{};
-        if (diag::read(record, power)) out.push_back(power);
+std::vector<diagnostics::Power> every_power_record(
+    const std::vector<diagnostics::Record>& records) {
+    std::vector<diagnostics::Power> out;
+    for (const diagnostics::Record& record : records) {
+        diagnostics::Power power{};
+        if (diagnostics::read(record, power)) out.push_back(power);
     }
     return out;
 }
@@ -58,11 +59,11 @@ TEST_CASE("diag power: the cell is recorded on the cadence it is sampled at") {
     Rig rig;
     uint32_t t = 100;
     const int seconds = 8;
-    const std::vector<diag::Record> records = armed_taxi(rig, t, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, t, seconds);
 
-    CHECK(count_of(records, diag::Type::Power) >= seconds - 1);
-    CHECK(count_of(records, diag::Type::Power) <= seconds + 1);
-    diag::Power power{};
+    CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
+    CHECK(count_of(records, diagnostics::Type::Power) <= seconds + 1);
+    diagnostics::Power power{};
     REQUIRE(last_of(records, power));
     CHECK(power.valid);
     CHECK(power.cell_mv > 3000);
@@ -81,7 +82,7 @@ TEST_CASE("diag power: the knee is recorded on both sides of it, as the level") 
     taxi(rig, t, 6);
     stop(rig, t);
 
-    const std::vector<diag::Power> cell = every_power_record(captured(rig));
+    const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 8);
     CHECK(cell.front().level == power::PowerLevel::Normal);
     CHECK(cell.front().cell_mv == 3800);
@@ -110,10 +111,10 @@ TEST_CASE("diag power: the reading the median threw out rides beside it, to the 
     stop(rig, t);
 
     bool dip_seen = false, sag_seen = false;
-    for (const diag::Power& power : every_power_record(captured(rig))) {
+    for (const diagnostics::Power& power : every_power_record(captured(rig))) {
         CHECK(power.cell_mv == 3800);
         dip_seen = dip_seen || power.sample_offset_mv == -63;
-        sag_seen = sag_seen || power.sample_offset_mv == diag::kSampleOffsetFloorMv;
+        sag_seen = sag_seen || power.sample_offset_mv == diagnostics::kSampleOffsetFloorMv;
     }
     CHECK(dip_seen);
     // 300 mV under the median saturates: the record says at least that far
@@ -134,9 +135,9 @@ TEST_CASE("diag power: on the cable the record carries the cable and what the di
     taxi(rig, t, 3);
     stop(rig, t);
 
-    const std::vector<diag::Power> cell = every_power_record(captured(rig));
+    const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 6);
-    for (const diag::Power& power : cell) {
+    for (const diagnostics::Power& power : cell) {
         CHECK(power.external_power);
         CHECK(power.charging);
         CHECK_FALSE(power.valid);
@@ -153,10 +154,10 @@ TEST_CASE("diag duty: a duty record rides a power pass, on a slower cadence of i
     Rig rig;
     uint32_t t = 100;
     const int seconds = 22;
-    const std::vector<diag::Record> records = armed_taxi(rig, t, seconds);
+    const std::vector<diagnostics::Record> records = armed_taxi(rig, t, seconds);
 
-    CHECK(count_of(records, diag::Type::Power) >= seconds - 1);
-    const int duty = count_of(records, diag::Type::Duty);
+    CHECK(count_of(records, diagnostics::Type::Power) >= seconds - 1);
+    const int duty = count_of(records, diagnostics::Type::Duty);
     // 22 s of capture at one duty record every 10 s
     CHECK(duty >= 2);
     CHECK(duty <= 3);
@@ -168,22 +169,22 @@ TEST_CASE("diag duty: a power run writes the pair every 30 s and lists nothing e
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 100;
     taxi(rig, t, 3);
-    arm(rig, t, diag::Profile::PowerRun);
+    arm(rig, t, diagnostics::Profile::PowerRun);
     rig.run(t, t + 95000);
     t += 95000;
     stop(rig, t);
-    const std::vector<diag::Record> records = captured(rig);
+    const std::vector<diagnostics::Record> records = captured(rig);
 
     // pairs land about 30, 60 and 90 s after arming, and the pilot's stop at 95 s writes none
-    CHECK(count_of(records, diag::Type::Duty) == 3);
-    CHECK(count_of(records, diag::Type::Power) == 3);
+    CHECK(count_of(records, diagnostics::Type::Duty) == 3);
+    CHECK(count_of(records, diagnostics::Type::Power) == 3);
     CHECK(paired_with_power(records) == 3);
     const std::vector<uint32_t> spacing = duty_spacing_ms(records);
     REQUIRE(spacing.size() == 2);
-    CHECK(spacing[0] == diag::kPowerRunRecordPeriodMs);
-    CHECK(spacing[1] == diag::kPowerRunRecordPeriodMs);
-    CHECK(count_of(records, diag::Type::Gnss) == 0);
-    CHECK(count_of(records, diag::Type::Dwell) == 0);
+    CHECK(spacing[0] == diagnostics::kPowerRunRecordPeriodMs);
+    CHECK(spacing[1] == diagnostics::kPowerRunRecordPeriodMs);
+    CHECK(count_of(records, diagnostics::Type::Gnss) == 0);
+    CHECK(count_of(records, diagnostics::Type::Dwell) == 0);
 }
 
 TEST_CASE("diag duty: the record carries what each service published, not a count of its own") {
@@ -198,7 +199,7 @@ TEST_CASE("diag duty: the record carries what each service published, not a coun
     const bus::DutyState published = rig.state().duty;
     stop(rig, t);
 
-    diag::Duty duty{};
+    diagnostics::Duty duty{};
     REQUIRE(last_of(captured(rig), duty));
     CHECK(duty.panel_partial_refreshes > 0);
     CHECK(duty.panel_partial_refreshes <= published.panel_partial_refreshes);

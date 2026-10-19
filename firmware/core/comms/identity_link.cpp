@@ -22,7 +22,7 @@ template <size_t N>
 void write_hex_field(json::Writer& w, const char* key, const std::array<uint8_t, N>& bytes) {
     char text[2 * N + 1];
     text[hex::write(ConstByteSpan(bytes.data(), N), text)] = 0;
-    w.kv_str(key, text);
+    w.key_value_str(key, text);
 }
 }  // namespace
 
@@ -43,13 +43,13 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
 }
 
 // INFO: fc 18oct26 each refusal is refuse("word"): the server's activation page greps them
-bool ConfigService::answer_identity(const char* cmd, const json::Reader& r) {
+bool ConfigService::answer_identity(const char* command, const json::Reader& r) {
     if (identity_ == nullptr) return false;
-    if (std::strcmp(cmd, "challenge") == 0) {
+    if (std::strcmp(command, "challenge") == 0) {
         challenge();
-    } else if (std::strcmp(cmd, "register") == 0) {
+    } else if (std::strcmp(command, "register") == 0) {
         register_unit(r);
-    } else if (std::strcmp(cmd, "unlock") == 0) {
+    } else if (std::strcmp(command, "unlock") == 0) {
         unlock(r);
     } else {
         return false;
@@ -72,12 +72,12 @@ void ConfigService::challenge() {
         refuse("keyless");
         return;
     }
-    char buf[96];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "challenge");
+    char buffer[96];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_str("cmd", "challenge");
     write_hex_field(w, "nonce", identity_->unit_nonce());
     write_hex_field(w, "server_key_id", identity_->unit().server_key_id());
-    (void)reply(buf, w.finish());
+    (void)reply(buffer, w.finish());
 }
 
 void ConfigService::register_unit(const json::Reader& r) {
@@ -128,21 +128,21 @@ void ConfigService::send_registration() {
         refuse("keyless");
         return;
     }
-    char buf[IdentityLink::kRegistrationFrameBytes + 1];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "registration");
+    char buffer[IdentityLink::kRegistrationFrameBytes + 1];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_str("cmd", "registration");
     write_hex_field(w, "device_id", unit.device_id());
     write_hex_field(w, "public_key", unit.public_key());
-    w.kv_str("version", version);
+    w.key_value_str("version", version);
     write_hex_field(w, "server_key_id", unit.server_key_id());
-    w.kv_bool("release", release);
+    w.key_value_bool("release", release);
     write_hex_field(w, "signature", *signature);
-    const int len = w.finish();
+    const int length = w.finish();
     if (w.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
-    (void)reply(buf, len);
+    (void)reply(buffer, length);
 }
 
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it

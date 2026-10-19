@@ -2,7 +2,7 @@
 #include <cstring>
 #include <string>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/events/link.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
@@ -61,15 +61,16 @@ Capture offload_capture(Rig& rig, uint32_t& t, uint32_t session) {
         const int n = std::atoi(field(chunk, "n").c_str());
         uint8_t raw[comms::kLogChunkRawBytes];
         const int bytes = base64_decode(field(chunk, "data"), raw, sizeof(raw));
-        if (bytes != n * static_cast<int>(diag::kRecordBytes)) walk.decoded = false;
+        if (bytes != n * static_cast<int>(diagnostics::kRecordBytes)) walk.decoded = false;
         for (int i = 0; i < n; i++) {
-            diag::Record record{};
-            if (diag::decode_record(raw + i * diag::kRecordBytes, record) != Status::Ok) {
+            diagnostics::Record record{};
+            if (diagnostics::decode_record(raw + i * diagnostics::kRecordBytes, record) !=
+                Status::Ok) {
                 walk.decoded = false;
                 return walk;
             }
-            if (record.type == diag::Type::Gap) walk.gaps++;
-            if (record.type == diag::Type::Flight) walk.flights++;
+            if (record.type == diagnostics::Type::Gap) walk.gaps++;
+            if (record.type == diagnostics::Type::Flight) walk.flights++;
             walk.records++;
         }
         from += static_cast<uint32_t>(n);
@@ -109,13 +110,13 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     rig.press(t);
     rig.run(t, t + 2000);
     t += 2000;
-    CHECK_FALSE(rig.product.diag().armed());
+    CHECK_FALSE(rig.product.diagnostics().armed());
 
     rig.double_press(t);
     rig.run(t, t + 1200);
     t += 1200;
-    CHECK(rig.product.diag().armed());
-    CHECK(rig.product.diag().profile() == diag::Profile::Full);
+    CHECK(rig.product.diagnostics().armed());
+    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::Full);
     CHECK(rig.product.capture().capturing());
     CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED FULL", 0, 0, 200, 200));
     CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO STOP", 0, 0, 200, 200));
@@ -129,9 +130,11 @@ TEST_CASE("capture: the page prices every capture, and the pad picks between the
     open_capture_page(rig, t);
 
     const go::CaptureService& capture = rig.product.capture();
-    CHECK(capture.keeps_s(diag::Profile::Full) > 0);
-    CHECK(capture.keeps_s(diag::Profile::PowerRun) > 100 * capture.keeps_s(diag::Profile::Full));
-    CHECK(capture.keeps_s(diag::Profile::FlightRun) == capture.keeps_s(diag::Profile::PowerRun));
+    CHECK(capture.keeps_s(diagnostics::Profile::Full) > 0);
+    CHECK(capture.keeps_s(diagnostics::Profile::PowerRun) >
+          100 * capture.keeps_s(diagnostics::Profile::Full));
+    CHECK(capture.keeps_s(diagnostics::Profile::FlightRun) ==
+          capture.keeps_s(diagnostics::Profile::PowerRun));
 
     const go::Glass& glass = rig.product.screen().framebuffer();
     CHECK(reads_in(glass, "FULL", 0, 0, 200, 200, 1, /*ink=*/false));
@@ -158,14 +161,15 @@ TEST_CASE("capture: the double press arms the capture in focus, and no other") {
     taxi(rig, t, 5);
     arm_the_power_run(rig, t);
 
-    CHECK(rig.product.diag().armed());
-    CHECK(rig.product.diag().profile() == diag::Profile::PowerRun);
+    CHECK(rig.product.diagnostics().armed());
+    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
     CHECK(rig.product.capture().capturing());
 
     taxi(rig, t, 5);
     CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED POWER RUN", 0, 0, 200, 200));
     // A capture recording two subjects every 30 s outlasts one recording eleven a second.
-    CHECK(rig.state().capture.keeps_s > 10 * rig.product.capture().keeps_s(diag::Profile::Full));
+    CHECK(rig.state().capture.keeps_s >
+          10 * rig.product.capture().keeps_s(diagnostics::Profile::Full));
 }
 
 // The pad walks off the last capture rather than trapping the thumb on the page.
@@ -189,7 +193,7 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
     uint32_t t = 100;
     taxi(rig, t, 5);
     arm_from_the_page(rig, t);
-    REQUIRE(rig.product.diag().armed());
+    REQUIRE(rig.product.diagnostics().armed());
     const uint32_t session = rig.product.capture().session_id();
     CHECK(session >= Rig::kBaseUtcS);
 
@@ -202,7 +206,7 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
     rig.double_press(t);
     rig.run(t, t + 1000);
     t += 1000;
-    CHECK_FALSE(rig.product.diag().armed());
+    CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
     const uint32_t written = rig.product.capture().records_written();
 
@@ -303,12 +307,12 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     uint32_t t = 100;
     taxi(flight, t, 5);
     arm_the_power_run(flight, t);
-    REQUIRE(flight.product.diag().profile() == diag::Profile::PowerRun);
+    REQUIRE(flight.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
     taxi(flight, t, 20);
     const uint32_t session = flight.product.capture().session_id();
     const uint32_t written = flight.product.capture().records_written();
     REQUIRE(written > 0);
-    REQUIRE(flight.product.diag().armed());
+    REQUIRE(flight.product.diagnostics().armed());
 
     Rig rebooted;
     rebooted.platform.log_flash().restore(flight.platform.log_flash().bytes());
@@ -316,8 +320,8 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     uint32_t rt = 100;
     taxi(rebooted, rt, 20);
 
-    CHECK_FALSE(rebooted.product.diag().armed());
-    CHECK(rebooted.product.diag().profile() == diag::Profile::Full);
+    CHECK_FALSE(rebooted.product.diagnostics().armed());
+    CHECK(rebooted.product.diagnostics().profile() == diagnostics::Profile::Full);
     CHECK_FALSE(rebooted.product.capture().capturing());
     CHECK(rebooted.product.capture().records_written() == 0);
 
@@ -337,8 +341,9 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     const uint32_t session = rig.product.capture().session_id();
 
     uint32_t refused = 0;
-    for (int i = 0; i < diag::Recorder::kCapacity * 2; i++)
-        if (!rig.product.diag().record(bench_record(Rig::kBaseUtcS + static_cast<uint32_t>(i))))
+    for (int i = 0; i < diagnostics::Recorder::kCapacity * 2; i++)
+        if (!rig.product.diagnostics().record(
+                bench_record(Rig::kBaseUtcS + static_cast<uint32_t>(i))))
             refused++;
     CHECK(refused > 0);
     CHECK(rig.product.capture().records_dropped() == refused);
@@ -369,11 +374,11 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
         rig.product.run_pass(t);
         t += 10;
     }
-    for (int i = 0; i < 20; i++) rig.product.diag().record(bench_record(Rig::kBaseUtcS + i));
+    for (int i = 0; i < 20; i++) rig.product.diagnostics().record(bench_record(Rig::kBaseUtcS + i));
     rig.platform.clock().set_millis(t);
     rig.product.run_pass(t);
     t += 10;
-    const int queued = rig.product.diag().queued();
+    const int queued = rig.product.diagnostics().queued();
     REQUIRE(queued > 0);
     const uint32_t written = rig.product.capture().records_written();
 
@@ -383,7 +388,7 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     t += 10;
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
 
-    CHECK(rig.product.diag().queued() == 0);
+    CHECK(rig.product.diagnostics().queued() == 0);
     CHECK_FALSE(rig.product.capture().capturing());
     CHECK(rig.product.capture().records_written() >= written + static_cast<uint32_t>(queued));
 
@@ -415,6 +420,6 @@ TEST_CASE("capture: a device with no partition offers no capture to arm") {
     rig.double_press(t);
     rig.run(t, t + 1000);
     t += 1000;
-    CHECK_FALSE(rig.product.diag().armed());
+    CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
 }

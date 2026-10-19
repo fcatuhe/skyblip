@@ -81,10 +81,10 @@ void Bhi260ImageStore::step() {
     }
 }
 
-bool Bhi260ImageStore::read(uint32_t offset, uint8_t* out, uint16_t len) {
+bool Bhi260ImageStore::read(uint32_t offset, uint8_t* out, uint16_t length) {
     if (holding_ != Holding::Held) return false;
-    if (offset > length_ || len > length_ - offset) return false;
-    return is_ok(flash_.read(kHeaderBytes + offset, out, len));
+    if (offset > length_ || length > length_ - offset) return false;
+    return is_ok(flash_.read(kHeaderBytes + offset, out, length));
 }
 
 void Bhi260ImageStore::encode(const Header& header, uint8_t* out) {

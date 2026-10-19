@@ -15,7 +15,8 @@ bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
     return now_ms - since_ms >= ConfirmGesture::kDoublePressWindowMs;
 }
 
-bool second_due(const diag::Instant& at, uint32_t now_ms, uint32_t last_ms, uint32_t period_ms) {
+bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_ms,
+                uint32_t period_ms) {
     if (!at.phase_valid) return now_ms - last_ms >= period_ms;
     if (at.into_ms < ScreenService::kLockedRedrawWindowStartMs) return false;
     return now_ms - last_ms >
@@ -81,21 +82,21 @@ void ScreenService::record_contact(const events::ContactEvent& event, Gesture ge
     const int which = static_cast<int>(event.contact);
     const uint32_t held_ms = event.at_ms - contact_edge_ms_[which];
     contact_edge_ms_[which] = event.at_ms;
-    if (!context_.diag.armed()) return;
-    diag::Contact value{};
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Contact value{};
     value.at_ms = event.at_ms;
     value.held_ms = held_ms;
     value.contact = event.contact;
     value.gesture = static_cast<uint8_t>(gesture);
     value.down = event.down;
-    context_.diag.record(value, context_.instant(now_ms));
+    context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
 void ScreenService::record_screen(uint32_t now_ms) {
     if (!second_due(context_.instant(now_ms), now_ms, recorded_ms_, kRecordPeriodMs)) return;
     recorded_ms_ = now_ms;
-    if (!context_.diag.armed()) return;
-    diag::Screen value{};
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Screen value{};
     value.since_ms = now_ms - screen_since_ms_;
     value.page = static_cast<uint8_t>(page_);
     value.mode = static_cast<uint8_t>(mode_);
@@ -106,7 +107,7 @@ void ScreenService::record_screen(uint32_t now_ms) {
     value.holding = thermal() == Thermal::Hold;
     value.render_us = render_us_;
     value.present_us = present_us_;
-    context_.diag.record(value, context_.instant(now_ms));
+    context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
 uint32_t ScreenService::micros_since(uint64_t began_us) const {
@@ -125,14 +126,14 @@ void ScreenService::sync_arming(uint32_t now_ms) {
 }
 
 void ScreenService::toggle_capture() {
-    if (context_.diag.armed())
-        context_.diag.disarm();
+    if (context_.diagnostics.armed())
+        context_.diagnostics.disarm();
     else
-        context_.diag.arm(capture_in_focus_);
+        context_.diagnostics.arm(capture_in_focus_);
 }
 
 bool ScreenService::picking_a_capture() const {
-    return on_capture_page() && !context_.diag.armed() && context_.state.capture.available;
+    return on_capture_page() && !context_.diagnostics.armed() && context_.state.capture.available;
 }
 
 bool ScreenService::step_capture_focus() {
@@ -331,7 +332,7 @@ void ScreenService::tick(uint32_t now_ms) {
         return;
     }
 
-    const diag::Instant at = context_.instant(now_ms);
+    const diagnostics::Instant at = context_.instant(now_ms);
     const bool due = second_due(at, now_ms, last_render_ms_, kRenderPeriodMs) &&
                      (!at.phase_valid || at.into_ms < kLockedRedrawWindowEndMs);
     const bool on_the_second = due && at.phase_valid;

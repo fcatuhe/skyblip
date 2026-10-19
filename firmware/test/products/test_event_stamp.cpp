@@ -16,13 +16,13 @@ namespace {
 
 // What the modem hands up: chips from the end of the matched window, not from
 // the start of the buffer a transmitter filled.
-void deliver(const uint8_t* chips, size_t chip_len, uint8_t* out, size_t out_len) {
+void deliver(const uint8_t* chips, size_t chip_length, uint8_t* out, size_t out_length) {
     const size_t first_bit = protocol::kSharedSyncEndChip;
-    for (size_t i = 0; i < out_len; i++) {
+    for (size_t i = 0; i < out_length; i++) {
         uint8_t byte = 0;
         for (int b = 0; b < 8; b++) {
             const size_t bit = first_bit + i * 8 + static_cast<size_t>(b);
-            const bool set = bit < chip_len * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
+            const bool set = bit < chip_length * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
             byte = static_cast<uint8_t>((byte << 1) | (set ? 1u : 0u));
         }
         out[i] = byte;
@@ -38,12 +38,12 @@ struct StampRig {
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
-        clock,          null.rf,          null.link, null.display,         null.kv,
+        clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
         null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::TrafficService traffic{context, go::kFeatures};
 
@@ -52,9 +52,9 @@ struct StampRig {
         state.own.fix_valid = true;
         state.own.utc_valid = true;
         state.own.utc_s = kUtcS;
-        state.own.lat_1e7 = 485000000;
-        state.own.lon_1e7 = 85000000;
-        state.own.alt_hae_mm = 500000;
+        state.own.latitude_1e7 = 485000000;
+        state.own.longitude_1e7 = 85000000;
+        state.own.altitude_hae_mm = 500000;
         state.own.vdop_e2 = 150;
         state.clock.pps_locked = true;
         state.clock.pps_edge_us = kPpsEdgeUs;
@@ -64,7 +64,7 @@ struct StampRig {
 
     void hear(uint32_t address, uint64_t at_us, uint32_t now_ms) {
         model::Ownship sender = state.own;
-        sender.lat_1e7 += 7000;
+        sender.latitude_1e7 += 7000;
         protocol::AdslPacket tx;
         protocol::from_own(tx, sender, address, 6, 4);
         tx.scramble();
@@ -76,10 +76,10 @@ struct StampRig {
         event.at_us = at_us;
         event.rssi_dbm = -80;
         uint8_t chips[protocol::kTxChipBytes] = {0};
-        const size_t chip_len = protocol::encode_mband(protocol::kAdslSyncWord, tx.Data,
-                                                       protocol::AdslPacket::kDataBytes, chips);
-        deliver(chips, chip_len, event.data.data(), protocol::kRxChipBytes);
-        event.len = protocol::kRxChipBytes;
+        const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, tx.Data,
+                                                          protocol::AdslPacket::kDataBytes, chips);
+        deliver(chips, chip_length, event.data.data(), protocol::kRxChipBytes);
+        event.length = protocol::kRxChipBytes;
         bus.rf.push(event);
         traffic.tick(now_ms);
     }

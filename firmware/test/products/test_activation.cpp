@@ -342,7 +342,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
 
 // Issue #126: the barometer is required, so a unit without one is refused and serves nothing.
 TEST_CASE("activation: a unit with no barometer neither flies, nor advertises, nor answers") {
-    Bench bench(without(ports::Capability::Baro));
+    Bench bench(without(ports::Capability::Barometer));
     REQUIRE(bench.rig.setup() == Status::Down);
     CHECK(bench.say("{\"cmd\":\"challenge\"}").empty());
     bench.pass(3000);

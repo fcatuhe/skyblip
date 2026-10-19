@@ -2,13 +2,13 @@
 """Fail if the status frame the firmware writes and schemas/status.v1.schema.json disagree.
 
 The frame is written by one function, ConfigService::format_status in
-firmware/core/comms/config_reports.cpp, one `w.kv_<type>("key", ...)` per key. The
+firmware/core/comms/config_reports.cpp, one `w.key_value_<type>("key", ...)` per key. The
 schema lists the same keys as its properties. Four things must match:
 
   keys      the schema declares every key the firmware writes, and nothing more
   order     in the order the firmware writes them, which is the order on the wire
   required  a key written under an `if` may be absent, every other one is required
-  types     kv_int is an integer, kv_bool a boolean, kv_str a string
+  types     key_value_int is an integer, key_value_bool a boolean, key_value_str a string
 """
 import json
 import os
@@ -20,7 +20,7 @@ SOURCE = os.path.join(ROOT, "firmware", "core", "comms", "config_reports.cpp")
 SCHEMA = os.path.join(ROOT, "schemas", "status.v1.schema.json")
 
 BODY = re.compile(r"int ConfigService::format_status\([^)]*\) \{\n(.*?)\n\}", re.S)
-FIELD = re.compile(r'^\s*(if \(.*\) )?w\.kv_(int|bool|str)\("(\w+)"', re.M)
+FIELD = re.compile(r'^\s*(if \(.*\) )?w\.key_value_(int|bool|str)\("(\w+)"', re.M)
 TYPES = {"int": "integer", "bool": "boolean", "str": "string"}
 
 

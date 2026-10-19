@@ -41,7 +41,7 @@ template <typename T>
 class Result {
    public:
     constexpr Result(T value) : value_(value), status_(Status::Ok) {}
-    constexpr Result(Status err) : value_{}, status_(err) {}
+    constexpr Result(Status error) : value_{}, status_(error) {}
 
     constexpr bool ok() const { return status_ == Status::Ok; }
     constexpr Status status() const { return status_; }

@@ -37,12 +37,20 @@ struct Pass {
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
-    ports::Roles roles{platform.clock(),     rf,        null.link,
-                       null.display,         null.kv,   null.log_flash,
-                       null.annunciator,     null.dfu,  null.die_temperature,
-                       null.indicator,       null.gnss, platform.identity(),
+    ports::Roles roles{platform.clock(),
+                       rf,
+                       null.link,
+                       null.display,
+                       null.key_value,
+                       null.log_flash,
+                       null.annunciator,
+                       null.dfu,
+                       null.die_temperature,
+                       null.indicator,
+                       null.gnss,
+                       platform.identity(),
                        ports::Capability::Rf};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
@@ -110,7 +118,7 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
     const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.frequency_hz = timing::kMband0Hz;
     plan.start_us = 450000;
     plan.end_us = 795000;
     plan.tx = frame;
@@ -129,8 +137,8 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
 
     // The same dwell one second later on a quiet channel keys at the same instant.
     uint8_t sent[protocol::kTxPayloadChipBytes];
-    uint8_t sent_len = 0;
-    REQUIRE(chip.take_tx(sent, sent_len));
+    uint8_t sent_length = 0;
+    REQUIRE(chip.take_tx(sent, sent_length));
     chip.rssi_dbm = simulator::Air::kNoiseFloorDbm;
     plan.start_us += 1000000;
     plan.end_us += 1000000;
@@ -165,7 +173,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     REQUIRE(radio.begin() == Status::Ok);
     parts::RadioConfig config{};
-    config.freq_hz = timing::kMband0Hz;
+    config.frequency_hz = timing::kMband0Hz;
     config.sync = protocol::kSharedSync;
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
@@ -181,7 +189,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.
-    config.freq_hz = timing::kMband1Hz;
+    config.frequency_hz = timing::kMband1Hz;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.standby);
     CHECK_FALSE(chip.receiving);
@@ -263,7 +271,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     events::RfEvent burst{};
     burst.type = events::RfEventType::CrcError;
     burst.band = model::Band::M;
-    burst.freq_hz = timing::kMband1Hz;
+    burst.frequency_hz = timing::kMband1Hz;
     burst.at_us = edge_us + 954'000;
     burst.rssi_dbm = -101;
     burst.rssi_valid = true;
@@ -359,7 +367,7 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
 
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.frequency_hz = timing::kMband0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
@@ -400,7 +408,7 @@ TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it he
         if (t % 400 == 0) {
             ports::RfPlan plan{};
             plan.mode = ports::RfMode::RxMband;
-            plan.freq_hz = timing::kMband0Hz;
+            plan.frequency_hz = timing::kMband0Hz;
             plan.start_us = static_cast<uint64_t>(t) * 1000;
             plan.end_us = plan.start_us + 390000;
             REQUIRE(rf.arm(plan) == Status::Ok);
@@ -423,7 +431,7 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
 
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.frequency_hz = timing::kMband0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
@@ -454,7 +462,7 @@ TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so
     const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband1Hz;
+    plan.frequency_hz = timing::kMband1Hz;
     plan.start_us = 400000;
     plan.end_us = 799000;
     plan.tx = frame;

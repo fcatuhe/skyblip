@@ -4,7 +4,7 @@
 #include <optional>
 
 #include "core/comms/config.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/power/duty.h"
 #include "core/power/wake.h"
@@ -23,7 +23,7 @@
 #include "products/skyblip_go/pages/radar.h"
 #include "products/skyblip_go/pages/radio_log.h"
 #include "products/skyblip_go/pages/raw.h"
-#include "products/skyblip_go/pages/sats.h"
+#include "products/skyblip_go/pages/satellites.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/pages/sixpack.h"
 #include "products/skyblip_go/pages/status.h"
@@ -149,11 +149,11 @@ class ScreenService : public runtime::Service {
 
     bool climb_measured() const {
         return context_.state.own.climb_valid &&
-               (context_.state.own.fix_valid || context_.state.baro.active);
+               (context_.state.own.fix_valid || context_.state.barometer.active);
     }
 
     bool showing_sky() const {
-        return powered_ && mode_ == Mode::Page && page_ == Page::Sats &&
+        return powered_ && mode_ == Mode::Page && page_ == Page::Satellites &&
                ports::has(context_.roles.capabilities, ports::Capability::Display);
     }
 
@@ -194,7 +194,7 @@ class ScreenService : public runtime::Service {
     AlarmService& alarm_;
     const CaptureService& capture_;
     const SelfTestSnapshot& self_test_;
-    diag::Profile capture_in_focus_{kFirstCapture};
+    diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     Controls controls_{};
     ConfirmGesture confirm_{};

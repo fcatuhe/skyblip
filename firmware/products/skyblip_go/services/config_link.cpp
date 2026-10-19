@@ -42,7 +42,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     events::RxFrame frame{};
     while (!config_.replying() && context_.bus.link_rx.pop(frame)) {
         config_.on_rx(frame);
-        record_link(diag::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
+        record_link(diagnostics::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
     place_unlock(now_ms);
     publish_identity(now_ms);
@@ -115,10 +115,10 @@ void ConfigLinkService::accrue_connected(uint32_t now_ms) {
     context_.state.duty.ble_connected_ms = connected_.on_ms();
 }
 
-void ConfigLinkService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
-                                    uint32_t now_ms) {
-    if (!context_.diag.armed()) return;
-    diag::Link event{};
+void ConfigLinkService::record_link(diagnostics::LinkAction action, uint16_t session,
+                                    uint16_t frame_bytes, uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Link event{};
     event.link_session = session;
     event.payload_bytes = context_.roles.link.payload_bytes();
     event.frame_bytes = frame_bytes;
@@ -127,7 +127,7 @@ void ConfigLinkService::record_link(diag::LinkAction action, uint16_t session, u
     event.action = action;
     event.endpoint = events::Endpoint::Config;
     event.claim_held = config_.claim().held();
-    context_.diag.record(event, context_.instant(now_ms));
+    context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
 // INFO: fc 20sep26 one central at a time commands the device, and which one is what stalls the next
@@ -138,14 +138,15 @@ void ConfigLinkService::watch_claim(uint32_t now_ms) {
     recorded_claim_held_ = taken;
     const uint16_t was = recorded_holder_;
     recorded_holder_ = claim.holder();
-    record_link(taken ? diag::LinkAction::ClaimTaken : diag::LinkAction::ClaimReleased,
-                taken ? claim.holder() : was, 0, now_ms);
+    record_link(
+        taken ? diagnostics::LinkAction::ClaimTaken : diagnostics::LinkAction::ClaimReleased,
+        taken ? claim.holder() : was, 0, now_ms);
 }
 
 void ConfigLinkService::watch_link_drops(uint32_t now_ms) {
     if (config_.link_drops() == recorded_drops_) return;
     recorded_drops_ = config_.link_drops();
-    record_link(diag::LinkAction::Dropped, config_.claim_holder(), 0, now_ms);
+    record_link(diagnostics::LinkAction::Dropped, config_.claim_holder(), 0, now_ms);
 }
 
 // A cold start costs the next fix and the driver puts our configuration back
@@ -171,8 +172,8 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
             config_.on_link_up(events::LinkUp{event.session_id, event.payload_bytes});
         else
             config_.on_link_down(events::LinkDown{event.session_id});
-        record_link(up ? diag::LinkAction::Up : diag::LinkAction::Down, event.session_id, 0,
-                    now_ms);
+        record_link(up ? diagnostics::LinkAction::Up : diagnostics::LinkAction::Down,
+                    event.session_id, 0, now_ms);
     }
 }
 
@@ -228,8 +229,8 @@ void ConfigLinkService::write_settings(uint32_t now_ms, bool forced) {
 }
 
 void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms) {
-    if (!context_.diag.armed()) return;
-    diag::Write value{};
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Write value{};
     value.waited_ms = writes_.waited_ms(now_ms);
     value.phase_ms = static_cast<uint16_t>(context_.state.rf.dwell.phase_ms);
     value.requests = writes_.requests();
@@ -238,7 +239,7 @@ void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32
     value.placement = verdict;
     value.kind = power::DurableWrite::Settings;
     value.pending = writes_.pending();
-    context_.diag.record(value, context_.instant(now_ms));
+    context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
 // The deliberate power-off. Same gate: a cell that is collapsing takes the log
@@ -264,7 +265,7 @@ void ConfigLinkService::load() {
 
     uint8_t blob[kBlobBytes];
     size_t blob_bytes = 0;
-    if (!is_ok(context_.roles.kv.read(kSettingsKey, blob, sizeof(blob), blob_bytes))) return;
+    if (!is_ok(context_.roles.key_value.read(kSettingsKey, blob, sizeof(blob), blob_bytes))) return;
     loaded_ = true;
     if (adopt(blob, blob_bytes)) {
         remember(blob, blob_bytes);
@@ -285,7 +286,7 @@ bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t blob_bytes) {
 void ConfigLinkService::load_prior() {
     uint8_t blob[kBlobBytes];
     size_t blob_bytes = 0;
-    if (is_ok(context_.roles.kv.read(kPriorSettingsKey, blob, sizeof(blob), blob_bytes)) &&
+    if (is_ok(context_.roles.key_value.read(kPriorSettingsKey, blob, sizeof(blob), blob_bytes)) &&
         adopt(blob, blob_bytes)) {
         remember(blob, blob_bytes);
         fallback_ = settings::Fallback::Prior;
@@ -313,7 +314,7 @@ bool ConfigLinkService::persist() {
     go::to_blob(settings_, blob, sizeof(blob));
     const size_t blob_bytes = go::blob_size();
     if (stored_bytes_ == blob_bytes && std::memcmp(stored_, blob, blob_bytes) == 0) return true;
-    if (!is_ok(context_.roles.kv.write(settings_key(), blob, blob_bytes))) return false;
+    if (!is_ok(context_.roles.key_value.write(settings_key(), blob, blob_bytes))) return false;
     std::memcpy(stored_, blob, blob_bytes);
     stored_bytes_ = blob_bytes;
     return true;
@@ -329,7 +330,7 @@ void ConfigLinkService::load_image_state() {
         uint8_t blob[dfu::kUpdateRecordBytes];
         size_t blob_bytes = 0;
         update_recorded_ =
-            is_ok(context_.roles.kv.read(kUpdateKey, blob, sizeof(blob), blob_bytes)) &&
+            is_ok(context_.roles.key_value.read(kUpdateKey, blob, sizeof(blob), blob_bytes)) &&
             dfu::from_blob(blob, blob_bytes, update_record_);
     }
     image_confirmed_ = !dfu_fitted || context_.roles.dfu.confirmed();
@@ -373,7 +374,7 @@ void ConfigLinkService::record_update() {
                     context_.roles.dfu.staged_hash(record.to_hash);
     uint8_t blob[dfu::kUpdateRecordBytes];
     const size_t n = dfu::to_blob(record, blob, sizeof(blob));
-    if (!is_ok(context_.roles.kv.write(kUpdateKey, blob, n))) return;
+    if (!is_ok(context_.roles.key_value.write(kUpdateKey, blob, n))) return;
     update_record_ = record;
     update_recorded_ = true;
     keep_settings_for_a_revert();
@@ -384,14 +385,14 @@ void ConfigLinkService::record_update() {
 void ConfigLinkService::keep_settings_for_a_revert() {
     uint8_t blob[kBlobBytes];
     go::to_blob(settings_, blob, sizeof(blob));
-    const size_t len = go::blob_size();
-    if (!is_ok(context_.roles.kv.write(kPriorSettingsKey, blob, len))) return;
-    if (newer_kept_) remember(blob, len);
+    const size_t length = go::blob_size();
+    if (!is_ok(context_.roles.key_value.write(kPriorSettingsKey, blob, length))) return;
+    if (newer_kept_) remember(blob, length);
 }
 
 void ConfigLinkService::forget_update() {
     // INFO: fc 23sep26 a failed erase leaves the record for the next boot, which forgets it again
-    if (update_recorded_) (void)context_.roles.kv.erase(kUpdateKey);
+    if (update_recorded_) (void)context_.roles.key_value.erase(kUpdateKey);
     update_recorded_ = false;
     update_record_ = dfu::UpdateRecord{};
 }

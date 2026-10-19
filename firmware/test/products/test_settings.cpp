@@ -63,9 +63,10 @@ TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships
 TEST_CASE(
     "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
     Settings settings = defaults();
-    char buf[256];
-    const std::string json(buf, static_cast<size_t>(to_json(settings, settings::address_of(0x3456),
-                                                            buf, sizeof(buf))));
+    char buffer[256];
+    const std::string json(
+        buffer, static_cast<size_t>(
+                    to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer))));
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
@@ -99,10 +100,10 @@ TEST_CASE("settings: wrong version blob is Unsupported (migrate/default)") {
 
 TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
     Settings settings = defaults();
-    char buf[256];
-    int n = to_json(settings, settings::address_of(0x3456), buf, sizeof(buf));
+    char buffer[256];
+    int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
     CHECK(n > 0);
-    json::Reader r(buf, n);
+    json::Reader r(buffer, n);
     long v;
     CHECK(r.get_int("aircraft_type", v));
     CHECK(v == kAircraftTypeLight);
@@ -139,9 +140,9 @@ TEST_CASE("address: the prefix, then the serial the server signed") {
 // Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
     CHECK(int(kAddressMappingTable) == 58);
-    char buf[256];
-    const int n = to_json(defaults(), address_of(0x0042), buf, static_cast<int>(sizeof(buf)));
-    json::Reader r(buf, n);
+    char buffer[256];
+    const int n = to_json(defaults(), address_of(0x0042), buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader r(buffer, n);
     long v = 0;
     CHECK(r.get_int("address", v));
     CHECK(v == 0x000042);
@@ -150,9 +151,9 @@ TEST_CASE("address: the table is a constant, not a field anything can hold") {
 }
 
 TEST_CASE("address: a unit with no serial reports no address, and still its table") {
-    char buf[256];
-    const int n = to_json(defaults(), std::nullopt, buf, static_cast<int>(sizeof(buf)));
-    json::Reader r(buf, n);
+    char buffer[256];
+    const int n = to_json(defaults(), std::nullopt, buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader r(buffer, n);
     long v = 0;
     CHECK_FALSE(r.has("address"));
     CHECK(r.get_int("address_mapping_table", v));
@@ -228,33 +229,33 @@ TEST_CASE("settings: the battery trim is set over the link and refused whole whe
 // out it is wrong, so the bound is what says "out of trim" rather than "broken".
 TEST_CASE("settings: the frequency trim is bounded at the boundary, in both framings") {
     Settings settings = defaults();
-    CHECK(int(settings.freq_trim_e1_ppm) == 0);  // the design intent on a TCXO part
+    CHECK(int(settings.frequency_trim_e1_ppm) == 0);  // the design intent on a TCXO part
 
-    settings.freq_trim_e1_ppm = kFreqTrimCeilingE1Ppm;
+    settings.frequency_trim_e1_ppm = kFrequencyTrimCeilingE1Ppm;
     CHECK(validate(settings) == Status::Ok);
-    settings.freq_trim_e1_ppm = -kFreqTrimCeilingE1Ppm;
+    settings.frequency_trim_e1_ppm = -kFrequencyTrimCeilingE1Ppm;
     CHECK(validate(settings) == Status::Ok);
-    settings.freq_trim_e1_ppm = kFreqTrimCeilingE1Ppm + 1;
+    settings.frequency_trim_e1_ppm = kFrequencyTrimCeilingE1Ppm + 1;
     CHECK(validate(settings) == Status::OutOfRange);
-    settings.freq_trim_e1_ppm = -(kFreqTrimCeilingE1Ppm + 1);
+    settings.frequency_trim_e1_ppm = -(kFrequencyTrimCeilingE1Ppm + 1);
     CHECK(validate(settings) == Status::OutOfRange);
 
     // And it survives the flash framing, sign and all: a stored trim that came
     // back as its own negation would move the carrier twice as far the wrong way.
-    settings.freq_trim_e1_ppm = -37;
+    settings.frequency_trim_e1_ppm = -37;
     REQUIRE(validate(settings) == Status::Ok);
     uint8_t blob[128] = {0};
     to_blob(settings, blob, sizeof(blob));
     Settings out;
     REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
-    CHECK(int(out.freq_trim_e1_ppm) == -37);
+    CHECK(int(out.frequency_trim_e1_ppm) == -37);
 }
 
 TEST_CASE("settings: the frequency trim is set over the link and refused whole when it is not") {
     Settings settings = defaults();
     const char* set = "{\"freq_trim_e1_ppm\":-25,\"alarm_volume\":1}";
     REQUIRE(apply_json(settings, set, static_cast<int>(strlen(set))) == Status::Ok);
-    CHECK(int(settings.freq_trim_e1_ppm) == -25);
+    CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
     // Out of range is refused as a whole patch, not clamped and not partly
@@ -262,21 +263,21 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     // and silently storing 10 ppm instead would hide that.
     const char* far = "{\"freq_trim_e1_ppm\":5000,\"alarm_volume\":2}";
     CHECK(apply_json(settings, far, static_cast<int>(strlen(far))) == Status::OutOfRange);
-    CHECK(int(settings.freq_trim_e1_ppm) == -25);
+    CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
     // Narrowed before it is validated: 65536 tenths of a ppm truncates to 0 in
     // an int16 and would pass a bound check that never saw the value sent.
     const char* wrapped = "{\"freq_trim_e1_ppm\":65536}";
     CHECK(apply_json(settings, wrapped, static_cast<int>(strlen(wrapped))) == Status::OutOfRange);
-    CHECK(int(settings.freq_trim_e1_ppm) == -25);
+    CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 
     // Write-only over the link, for the same reason battery_offset_mv is: the
     // "get" reply is one frame at comms::kSmallestSupportedPayload with 29
     // bytes of headroom, too few for both trims.
-    char buf[256];
-    const int n = to_json(settings, settings::address_of(0x3456), buf, sizeof(buf));
-    CHECK(std::string(buf, static_cast<size_t>(n)).find("freq_trim") == std::string::npos);
+    char buffer[256];
+    const int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
+    CHECK(std::string(buffer, static_cast<size_t>(n)).find("freq_trim") == std::string::npos);
 }
 
 TEST_CASE("settings: a blob from a version this firmware never wrote is refused") {
@@ -290,9 +291,9 @@ TEST_CASE("settings: a blob from a version this firmware never wrote is refused"
 
 TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     Settings settings = defaults();
-    char buf[256];
-    const int n = to_json(settings, settings::address_of(0x3456), buf, sizeof(buf));
-    const std::string json(buf, static_cast<size_t>(n));
+    char buffer[256];
+    const int n = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
+    const std::string json(buffer, static_cast<size_t>(n));
     // Removed with their fields: no reader outside this module, and a page that
     // accepts a setting nothing reads is worse than one that does not offer it.
     CHECK(json.find("region") == std::string::npos);
@@ -370,7 +371,7 @@ TEST_CASE("settings: a callsign is only what the menu can type, so a comma or a 
 TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trims beside it kept") {
     Settings settings = defaults();
     settings.battery_offset_mv = 120;
-    settings.freq_trim_e1_ppm = -35;
+    settings.frequency_trim_e1_ppm = -35;
     std::strncpy(settings.callsign, "d-kxyz", kCallsignBytes - 1);
     uint8_t blob[128];
     to_blob(settings, blob, sizeof(blob));
@@ -378,7 +379,7 @@ TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trim
     REQUIRE(from_blob(blob, blob_size(), out) == Status::Ok);
     CHECK(std::string(out.callsign).empty());
     CHECK(out.battery_offset_mv == 120);
-    CHECK(out.freq_trim_e1_ppm == -35);
+    CHECK(out.frequency_trim_e1_ppm == -35);
 }
 
 TEST_CASE("settings: a type or a volume is refused before it is narrowed, never stored wrapped") {
@@ -399,9 +400,9 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     CHECK(apply_json(settings, icao, static_cast<int>(strlen(icao))) == Status::Ok);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
-    char buf[256];
-    const int n = to_json(settings, 0x5B7E57, buf, static_cast<int>(sizeof(buf)));
-    json::Reader r(buf, n);
+    char buffer[256];
+    const int n = to_json(settings, 0x5B7E57, buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader r(buffer, n);
     long v = 0;
     CHECK(r.get_int("address", v));
     CHECK(v == 0x5B7E57);

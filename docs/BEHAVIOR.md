@@ -311,7 +311,7 @@ ADS-L 4 SRD-860 issue 2 G.1: every Traffic payload field, at the offset and in t
 
 ## boards - one assembly, its parts probed on both platforms
 
-### test/boards/test_board_baro.cpp
+### test/boards/test_board_barometer.cpp
 
 When the board reads the barometer: that interval is what a vertical speed is taken over.
 
@@ -1778,9 +1778,9 @@ The reset cause and the cell at boot decide whether a wake gets a running device
 - the boot a flat cell refuses names it for the unit that never shut down
   > A cell emptied on a shelf ran no shutdown, so the refusal is the only thing left to name it.
 
-## diag
+## diagnostics
 
-### test/core/diag/test_diag_decided.cpp
+### test/core/diagnostics/test_diagnostics_decided.cpp
 
 What the device decided: the build it booted, the dwell, the flight state, the alarm, the write.
 
@@ -1805,7 +1805,7 @@ What the device decided: the build it booted, the dwell, the flight state, the a
 - the transmitter's power sits in config bytes 12 and 13 on the wire
 - two duty records a wrap apart subtract to the true interval
 
-### test/core/diag/test_diag_ordinals.cpp
+### test/core/diagnostics/test_diagnostics_ordinals.cpp
 
 Every enum a diagnostics payload writes as a byte, pinned to the code the corpus holds.
 
@@ -1832,7 +1832,7 @@ Every enum a diagnostics payload writes as a byte, pinned to the code the corpus
 - timing::SlotState's codes are the dwell state byte, and a code changed here changes SLOT_STATE in scripts/blip_records.py and the schema's state enum with it
 - traffic::Level's codes are the traffic and screen alarm byte, and a member added here raises the maximum the schema puts on alarm
 
-### test/core/diag/test_diag_record.cpp
+### test/core/diagnostics/test_diagnostics_record.cpp
 
 The envelope: 24 bytes in the flight log's own geometry, and type tags a decoded corpus needs.
 
@@ -1847,7 +1847,7 @@ The envelope: 24 bytes in the flight log's own geometry, and type tags a decoded
 - the header is written where a host decoder reads it
 - the type tag is the corpus, and these numbers never move
 
-### test/core/diag/test_diag_recorder.cpp
+### test/core/diagnostics/test_diagnostics_recorder.cpp
 
 The RAM ring a capture fills: disarmed at boot, drained by the writer, honest about every drop.
 
@@ -1873,7 +1873,7 @@ The RAM ring a capture fills: disarmed at boot, drained by the writer, honest ab
 - the gap lands before the first record that came after it
 - the hole is a gap record where the hole is
 
-### test/core/diag/test_diag_sensed.cpp
+### test/core/diagnostics/test_diagnostics_sensed.cpp
 
 What the device sensed: a fix, a PPS edge, a burst, the barometer, the hub, the cell, a thumb.
 
@@ -2661,7 +2661,7 @@ The page the glass wears while the factory bootloader has the device, read back 
 - it cannot be read as the prompt it replaced
 - it names the drive, the file and the way back, unclipped
 
-### test/products/pages/test_sats.cpp
+### test/products/pages/test_satellites.cpp
 
 The satellites page: a bar for every satellite in view, and what stands in before any GSV.
 
@@ -3021,7 +3021,24 @@ What a contact means on a skyBlip Go: the pad moves, the button acts, and the do
   > Three meanings on one button stay disjoint, or a pilot has two of them at once.
 - two presses inside the window authorise, one press refuses
 
-### test/products/test_diag_capture.cpp
+### test/products/test_diagnostics.cpp
+
+The status dump on the running product: where each number comes from, how often it leaves, and the fact that it only leaves at all when somebody has opened the port.  Nothing below the services is stubbed. The receiver's baud rate, its firmware string and its refusals come off the same L76K driver the silicon build runs, through the board; the radio's floor and duty come off the radio service; the gauge's discarded readings come off the cutoff monitor inside the power service. That is the point of the case: the collector is the only thing on the device that reads any of them, so if a wire is missing here, nobody notices in the field either.
+
+**diagnostics**
+
+- nothing is written until a host has opened the port
+- one dump every ten seconds, one refresh every second
+  > Ten seconds is OGN's console cadence and a bench can read one dump before the next arrives. The snapshot behind it is refreshed every second, because the link may ask at any instant and a fix lost nine seconds ago is not news.
+- the air's four outcomes leave the collector as four numbers
+- the cadence and the uptime survive the 49.7-day wrap
+- the console and the link cannot disagree
+  > One snapshot, two surfaces. A laptop on the bench and a phone on the wing report the same device or the dump is worse than nothing.
+- the dump reads the device, subsystem by subsystem
+- the faults nobody could see reach the console
+  > The counters that only move when something is wrong. Each one is somebody else's and none of them had a reader before the dump: a POFCON firing, a gauge reading the sanity floor threw away, and a reception the range gate refused.
+
+### test/products/test_diagnostics_capture.cpp
 
 The capture end to end: what arming writes, what the floor refuses, what reads back.
 
@@ -3041,7 +3058,7 @@ The capture end to end: what arming writes, what the floor refuses, what reads b
 - what is still queued reaches the flash on the way to power off
   > The queue dies with the rails: the drain has to run after the radio is asleep.
 
-### test/products/test_diag_capture_flash.cpp
+### test/products/test_diagnostics_capture_flash.cpp
 
 What a capture does to the flash: the sectors it takes from the flights ring down to the floor, what the floor refuses, the rotation, and when a pass may write at all.
 
@@ -3067,7 +3084,7 @@ What a capture does to the flash: the sectors it takes from the flights ring dow
 
 - a store this build has no service for is refused by name, never in silence
 
-### test/products/test_diag_honesty.cpp
+### test/products/test_diagnostics_honesty.cpp
 
 Four facts a replayed corpus would have read as true: the tap that gathers them decides here.
 
@@ -3090,9 +3107,9 @@ Four facts a replayed corpus would have read as true: the tap that gathers them 
 - the page recorded is the one the alarm put up, not the one it replaced
   > Recorded before the alarm navigated, the page is the one the pilot was taken off.
 
-### test/products/test_diag_product_codes.cpp
+### test/products/test_diagnostics_product_codes.cpp
 
-The ordinals a diagnostics record carries that core/diag does not own: gesture, page, mode, prompt.
+The ordinals a diagnostics record carries that core/diagnostics does not own: gesture, page, mode, prompt.
 
 **diag product codes**
 
@@ -3101,7 +3118,7 @@ The ordinals a diagnostics record carries that core/diag does not own: gesture, 
 - go::Mode's codes are the screen record's mode byte, and a member added here raises the maximum the schema puts on mode
 - go::Page's codes are the screen record's page byte, and a page given a code here renames that page in every corpus already written unless the schema moves
 
-### test/products/test_diag_taps.cpp
+### test/products/test_diagnostics_taps.cpp
 
 One case per record type, at the service that decides the fact it carries.
 
@@ -3175,7 +3192,7 @@ One case per record type, at the service that decides the fact it carries.
 
 - a pending settings write is recorded every evaluation, not only the write
 
-### test/products/test_diag_taps_power.cpp
+### test/products/test_diagnostics_taps_power.cpp
 
 The power and duty records: the cell on its cadence, the knee, the cable, and the duty pair.
 
@@ -3194,23 +3211,6 @@ The power and duty records: the cell on its cadence, the knee, the cable, and th
 - the knee is recorded on both sides of it, as the level
 - the reading the median threw out rides beside it, to the millivolt
   > The median kept the gauge still through a sag, and the corpus could not see the sag at all.
-
-### test/products/test_diagnostics.cpp
-
-The status dump on the running product: where each number comes from, how often it leaves, and the fact that it only leaves at all when somebody has opened the port.  Nothing below the services is stubbed. The receiver's baud rate, its firmware string and its refusals come off the same L76K driver the silicon build runs, through the board; the radio's floor and duty come off the radio service; the gauge's discarded readings come off the cutoff monitor inside the power service. That is the point of the case: the collector is the only thing on the device that reads any of them, so if a wire is missing here, nobody notices in the field either.
-
-**diagnostics**
-
-- nothing is written until a host has opened the port
-- one dump every ten seconds, one refresh every second
-  > Ten seconds is OGN's console cadence and a bench can read one dump before the next arrives. The snapshot behind it is refreshed every second, because the link may ask at any instant and a fix lost nine seconds ago is not news.
-- the air's four outcomes leave the collector as four numbers
-- the cadence and the uptime survive the 49.7-day wrap
-- the console and the link cannot disagree
-  > One snapshot, two surfaces. A laptop on the bench and a phone on the wing report the same device or the dump is worse than nothing.
-- the dump reads the device, subsystem by subsystem
-- the faults nobody could see reach the console
-  > The counters that only move when something is wrong. Each one is somebody else's and none of them had a reader before the dump: a POFCON firing, a gauge reading the sanity floor threw away, and a reception the range gate refused.
 
 ### test/products/test_duty_counters.cpp
 
@@ -3279,7 +3279,7 @@ The whole product taking an update; the bootloader is the one thing the host can
 
 ### test/products/test_flash_window.cpp
 
-The settings write through the whole product: a change goes in where a pilot or a phone makes it, and what comes out is counted writes on the host KvStore. Nothing below the services is stubbed, so the dwell the write has to dodge is the one the radio service actually armed.  What is being defended is 1-ARCHITECTURE.md §5.1's "no flash work inside a dwell". The settings page lets a pilot change alarm volume and the altimeter subscale IN FLIGHT, and on the nRF52840 the store behind ports::KvStore is the internal storage_partition: a write there is an NVMC stall on the same core that arms PPS-anchored deadlines. Before the page existed a settings write could only happen on the ground, because a companion "set" is refused airborne.
+The settings write through the whole product: a change goes in where a pilot or a phone makes it, and what comes out is counted writes on the host KeyValueStore. Nothing below the services is stubbed, so the dwell the write has to dodge is the one the radio service actually armed.  What is being defended is 1-ARCHITECTURE.md §5.1's "no flash work inside a dwell". The settings page lets a pilot change alarm volume and the altimeter subscale IN FLIGHT, and on the nRF52840 the store behind ports::KeyValueStore is the internal storage_partition: a write there is an NVMC stall on the same core that arms PPS-anchored deadlines. Before the page existed a settings write could only happen on the ground, because a companion "set" is refused airborne.
 
 **flash window**
 

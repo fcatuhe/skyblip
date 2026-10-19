@@ -1,18 +1,15 @@
 #include "core/util/json.h"
 
+#include <cstring>
+
 namespace skyblip::json {
 
 namespace {
 bool is_whitespace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
-int key_len(const char* k) {
-    int n = 0;
-    while (k[n]) n++;
-    return n;
-}
 }
 
 int Reader::value_offset(const char* key) const {
-    int key_length = key_len(key);
+    int key_length = static_cast<int>(std::strlen(key));
     int i = 0;
     while (i < bytes_) {
         if (data_[i] != '"') {
@@ -117,40 +114,43 @@ void Writer::raw_str(const char* s) {
     }
     buffer_[length_++] = '"';
 }
-void Writer::kv_int(const char* key, int64_t v) {
-    char tmp[20];
+void Writer::key_value_int(const char* key, int64_t v) {
+    char temporary[20];
     int t = 0;
     bool neg = v < 0;
     uint64_t uv = neg ? 0 - static_cast<uint64_t>(v) : static_cast<uint64_t>(v);
     do {
-        tmp[t++] = static_cast<char>('0' + uv % 10);
+        temporary[t++] = static_cast<char>('0' + uv % 10);
         uv /= 10;
     } while (uv);
-    const int need = (first_ ? 0 : 1) + key_len(key) + 2 + 1 + (neg ? 1 : 0) + t;
+    const int need =
+        (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 + (neg ? 1 : 0) + t;
     if (!reserve(need)) return;
     sep();
     raw_str(key);
     buffer_[length_++] = ':';
     if (neg) buffer_[length_++] = '-';
-    while (t > 0) buffer_[length_++] = tmp[--t];
+    while (t > 0) buffer_[length_++] = temporary[--t];
 }
-void Writer::kv_bool(const char* key, bool v) {
+void Writer::key_value_bool(const char* key, bool v) {
     const char* val = v ? "true" : "false";
-    const int need = (first_ ? 0 : 1) + key_len(key) + 2 + 1 + key_len(val);
+    const int need = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
+                     static_cast<int>(std::strlen(val));
     if (!reserve(need)) return;
     sep();
     raw_str(key);
     buffer_[length_++] = ':';
     raw(val);
 }
-void Writer::kv_str(const char* key, const char* v) {
+void Writer::key_value_str(const char* key, const char* v) {
     int value_length = 0;
     int escapes = 0;
     for (const char* p = v; *p; p++) {
         value_length++;
         if (*p == '"' || *p == '\\') escapes++;
     }
-    const int need = (first_ ? 0 : 1) + key_len(key) + 2 + 1 + value_length + escapes + 2;
+    const int need =
+        (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 + value_length + escapes + 2;
     if (!reserve(need)) return;
     sep();
     raw_str(key);

@@ -20,22 +20,22 @@ Status Bme280::begin() {
     if (address_ == 0) return Status::Down;
 
     // INFO: fc 03oct26 DS 5.4.6: config writes in normal mode may be ignored, so sleep first
-    if (!write_register(kRegCtrlMeas, kModeSleep)) return Status::Down;
+    if (!write_register(kRegisterControlMeasurement, kModeSleep)) return Status::Down;
     uint8_t raw[kCalibrationBytes] = {};
-    if (!read_registers(address_, kRegCalibration, raw, sizeof(raw))) return Status::Down;
+    if (!read_registers(address_, kRegisterCalibration, raw, sizeof(raw))) return Status::Down;
     trim_ = Trim{get_u16(raw),      get_i16(raw + 2),  get_i16(raw + 4),  get_u16(raw + 6),
                  get_i16(raw + 8),  get_i16(raw + 10), get_i16(raw + 12), get_i16(raw + 14),
                  get_i16(raw + 16), get_i16(raw + 18), get_i16(raw + 20), get_i16(raw + 22)};
 
-    if (!write_register(kRegCtrlHum, kOversamplingSkipped)) return Status::Down;
-    if (!write_register(kRegConfig, kConfigFilter4)) return Status::Down;
+    if (!write_register(kRegisterControlHumidity, kOversamplingSkipped)) return Status::Down;
+    if (!write_register(kRegisterConfig, kConfigFilter4)) return Status::Down;
     ready_ = true;
     return Status::Ok;
 }
 
 bool Bme280::trigger() {
     if (!ready_ && begin() != Status::Ok) return false;
-    converting_ = write_register(kRegCtrlMeas, kCtrlMeasForced);
+    converting_ = write_register(kRegisterControlMeasurement, kControlMeasurementForced);
     ready_ = converting_;
     return converting_;
 }
@@ -44,14 +44,14 @@ bool Bme280::trigger() {
 bool Bme280::read(Reading& out) {
     if (!converting_) return false;
     uint8_t status[kStatusBytes] = {};
-    if (!read_registers(address_, kRegStatus, status, sizeof(status)) ||
+    if (!read_registers(address_, kRegisterStatus, status, sizeof(status)) ||
         status[2] != kConfigFilter4)
         return forget_configuration();
     if ((status[0] & kStatusBusy) != 0) return false;
     converting_ = false;
 
     uint8_t raw[kResultBytes] = {};
-    if (!read_registers(address_, kRegResult, raw, sizeof(raw))) return forget_configuration();
+    if (!read_registers(address_, kRegisterResult, raw, sizeof(raw))) return forget_configuration();
     const int32_t adc_p = adc_word(raw);
     const int32_t adc_t = adc_word(raw + 3);
     if (adc_p == kSkippedResult || adc_t == kSkippedResult) return forget_configuration();
@@ -66,15 +66,16 @@ bool Bme280::forget_configuration() {
 
 bool Bme280::identifies(uint8_t address) const {
     uint8_t id = 0;
-    return read_registers(address, kRegChipId, &id, 1) && id == kChipId;
+    return read_registers(address, kRegisterChipId, &id, 1) && id == kChipId;
 }
 
-bool Bme280::read_registers(uint8_t address, uint8_t reg, uint8_t* out, size_t len) const {
-    return bus_.write(address, &reg, 1) && bus_.read(address, out, len);
+bool Bme280::read_registers(uint8_t address, uint8_t register_address, uint8_t* out,
+                            size_t length) const {
+    return bus_.write(address, &register_address, 1) && bus_.read(address, out, length);
 }
 
-bool Bme280::write_register(uint8_t reg, uint8_t value) {
-    const uint8_t pair[2] = {reg, value};
+bool Bme280::write_register(uint8_t register_address, uint8_t value) {
+    const uint8_t pair[2] = {register_address, value};
     return bus_.write(address_, pair, sizeof(pair));
 }
 

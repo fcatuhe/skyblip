@@ -16,8 +16,8 @@ TEST_CASE("status page: every value reads in the aeronautical unit first, then S
     StatusSnapshot s;
     s.fix_valid = true;
     s.utc_valid = true;
-    s.sats = 9;
-    s.alt_mm = 1500000;
+    s.satellites = 9;
+    s.altitude_mm = 1500000;
     s.speed_mm_s = 20000;
     s.climb_mm_s = 2000;
     s.track_cdeg = 9000;
@@ -25,19 +25,19 @@ TEST_CASE("status page: every value reads in the aeronautical unit first, then S
 
     // The barometric rows only exist when a barometer answered: the pressure it
     // reads, and pressure altitude on the 1013.25 standard setting.
-    Glass with_baro;
+    Glass with_barometer;
     StatusSnapshot b = s;
-    b.baro_valid = true;
+    b.barometer_valid = true;
     b.pressure_mpa = 84556000;
-    b.alt_std_mm = 1500000;
-    draw_status(with_baro, b);
-    CHECK(with_baro.count_black() > both.count_black());
+    b.altitude_standard_mm = 1500000;
+    draw_status(with_barometer, b);
+    CHECK(with_barometer.count_black() > both.count_black());
 }
 
 TEST_CASE("status page: the barometer row reads what the sensor resolves") {
     Glass canvas;
     StatusSnapshot s;
-    s.baro_valid = true;
+    s.barometer_valid = true;
     s.pressure_mpa = 101325253;  // the BME280's own tenths of a pascal
     s.climb_mm_s = -1234;        // -243 fpm, a rate the 0.125 m/s of ADS-L cannot hold
     draw_status(canvas, s);
@@ -51,10 +51,10 @@ TEST_CASE("status page: every reading is printed to the resolution it is held in
     Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
-    s.baro_valid = true;
+    s.barometer_valid = true;
     s.track_cdeg = 9025;
-    s.alt_mm = 1234500;  // GGA carries tenths of a metre
-    s.alt_std_mm = 1500123;
+    s.altitude_mm = 1234500;  // GGA carries tenths of a metre
+    s.altitude_standard_mm = 1500123;
     s.speed_mm_s = 12345;  // 44.442 km/h
     s.climb_mm_s = 1234;
     s.battery_valid = true;
@@ -241,7 +241,7 @@ TEST_CASE(
 
 TEST_CASE("status page: a receiver with no fix says how far it has got, and for how long") {
     StatusSnapshot s;
-    s.sats = 9;
+    s.satellites = 9;
     s.stage = skyblip::gnss::Stage::Blind;
     s.stage_s = 48;
     Glass searching;
@@ -280,7 +280,7 @@ TEST_CASE("status page: a receiver with no fix says how far it has got, and for 
 TEST_CASE("status page: a solution without height reads 2D") {
     StatusSnapshot s;
     s.fix_valid = true;
-    s.sats = 9;
+    s.satellites = 9;
     s.fix_mode = skyblip::gnss::kFixMode2D;
     Glass two_d;
     draw_status(two_d, s);
@@ -288,12 +288,12 @@ TEST_CASE("status page: a solution without height reads 2D") {
 
     StatusSnapshot unreported = s;
     unreported.fix_mode = 0;
-    unreported.sats = 3;
+    unreported.satellites = 3;
     Glass inferred;
     draw_status(inferred, unreported);
     CHECK(reads_in(inferred, "2D", 0, 24, 140, 40));
 
-    unreported.sats = 9;
+    unreported.satellites = 9;
     Glass plenty;
     draw_status(plenty, unreported);
     CHECK(reads_in(plenty, "3D", 0, 24, 140, 40));
@@ -303,7 +303,7 @@ TEST_CASE("status page: a solution without height reads 2D") {
 TEST_CASE("status page: the page reports whether own-ship is transmitting, not the PPS pin") {
     StatusSnapshot s;
     s.fix_valid = true;
-    s.sats = 9;
+    s.satellites = 9;
     Glass silent;
     draw_status(silent, s);
     CHECK(reads_in(silent, "TX OFF", 100, 65, 200, 85));
@@ -360,8 +360,8 @@ TEST_CASE("status page: the widest position on earth still fits its row") {
     Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
-    s.lat_1e7 = -900000000;
-    s.lon_1e7 = -1800000000;
+    s.latitude_1e7 = -900000000;
+    s.longitude_1e7 = -1800000000;
     draw_status(canvas, s);
 
     const int y0 = 43, y1 = 50;  // the LAT/LON row, one glyph tall

@@ -41,10 +41,10 @@ void SkyView::open(System system) {
     count_ = kept;
 }
 
-void SkyView::add(SatelliteView sat) {
+void SkyView::add(SatelliteView satellite) {
     if (count_ >= kMaxSatellitesInView) return;
-    sat.in_use = used(sat.system, sat.id);
-    satellites_[count_++] = sat;
+    satellite.in_use = used(satellite.system, satellite.id);
+    satellites_[count_++] = satellite;
 }
 
 void SkyView::solving(System system, uint8_t id) {

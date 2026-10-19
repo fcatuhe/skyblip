@@ -15,7 +15,7 @@ enum class PpsState : uint8_t { None, Lock, Holdover };
 
 struct GnssReception {
     bool fix_valid{false};
-    uint8_t sats{0};
+    uint8_t satellites{0};
     PpsState pps{PpsState::None};
     uint16_t pps_age_s{0};
 };

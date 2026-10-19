@@ -15,14 +15,14 @@ class Bme280 : public io::I2c {
    public:
     static constexpr uint8_t kAddress = 0x76;
     static constexpr uint8_t kChipId = 0x60;
-    static constexpr uint8_t kRegCalibration = 0x88;
-    static constexpr uint8_t kRegChipId = 0xD0;
-    static constexpr uint8_t kRegReset = 0xE0;
-    static constexpr uint8_t kRegCtrlHum = 0xF2;
-    static constexpr uint8_t kRegStatus = 0xF3;
-    static constexpr uint8_t kRegCtrlMeas = 0xF4;
-    static constexpr uint8_t kRegConfig = 0xF5;
-    static constexpr uint8_t kRegResult = 0xF7;
+    static constexpr uint8_t kRegisterCalibration = 0x88;
+    static constexpr uint8_t kRegisterChipId = 0xD0;
+    static constexpr uint8_t kRegisterReset = 0xE0;
+    static constexpr uint8_t kRegisterControlHumidity = 0xF2;
+    static constexpr uint8_t kRegisterStatus = 0xF3;
+    static constexpr uint8_t kRegisterControlMeasurement = 0xF4;
+    static constexpr uint8_t kRegisterConfig = 0xF5;
+    static constexpr uint8_t kRegisterResult = 0xF7;
     static constexpr uint8_t kResetWord = 0xB6;
     static constexpr int32_t kSkippedResult = 0x80000;
     static constexpr uint8_t kStatusMeasuring = 0x08;
@@ -44,51 +44,55 @@ class Bme280 : public io::I2c {
 
     void attach_clock(const ports::Clock& clock) { clock_ = &clock; }
 
-    void set_altitude_mm(int32_t mm) { pressure_mpa_ = flight::alt_mm_to_pressure_mpa(mm); }
+    void set_altitude_mm(int32_t mm) { pressure_mpa_ = flight::altitude_mm_to_pressure_mpa(mm); }
     void set_pressure_mpa(uint32_t mpa) { pressure_mpa_ = mpa; }
     uint32_t pressure_mpa() const { return pressure_mpa_; }
     void set_temperature_dc(int16_t deci) { temperature_dc_ = deci; }
     int16_t temperature_dc() const { return temperature_dc_; }
 
-    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
+    bool write(uint8_t addr, const uint8_t* data, size_t length) override {
         if (addr != address || !answers) return false;
         writes++;
-        if (len == 0) return true;
+        if (length == 0) return true;
         pointer = data[0];
-        for (size_t i = 0; i + 1 < len; i += 2) write_register(data[i], data[i + 1]);
+        for (size_t i = 0; i + 1 < length; i += 2) write_register(data[i], data[i + 1]);
         return true;
     }
 
-    bool read(uint8_t addr, uint8_t* data, size_t len) override {
+    bool read(uint8_t addr, uint8_t* data, size_t length) override {
         if (addr != address || !answers) return false;
         reads++;
-        if (pointer == kRegResult) result_reads++;
+        if (pointer == kRegisterResult) result_reads++;
         latch_result();
-        registers[kRegStatus] = measuring() ? kStatusMeasuring : 0;
-        for (size_t i = 0; i < len; i++) data[i] = registers[static_cast<uint8_t>(pointer + i)];
+        registers[kRegisterStatus] = measuring() ? kStatusMeasuring : 0;
+        for (size_t i = 0; i < length; i++) data[i] = registers[static_cast<uint8_t>(pointer + i)];
         return true;
     }
 
     void power_on_reset() {
         for (uint8_t& r : registers) r = 0;
-        registers[kRegChipId] = chip_id;
+        registers[kRegisterChipId] = chip_id;
         store_calibration();
-        store_word(kRegResult, kSkippedResult);
-        store_word(kRegResult + 3, kSkippedResult);
+        store_word(kRegisterResult, kSkippedResult);
+        store_word(kRegisterResult + 3, kSkippedResult);
         converting = false;
     }
 
     bool measuring() const { return converting && now_us() < done_us_; }
 
-    uint8_t mode() const { return registers[kRegCtrlMeas] & 0x03; }
-    int pressure_oversampling() const { return oversampling(registers[kRegCtrlMeas] >> 2); }
-    int temperature_oversampling() const { return oversampling(registers[kRegCtrlMeas] >> 5); }
-    int humidity_oversampling() const { return oversampling(registers[kRegCtrlHum]); }
+    uint8_t mode() const { return registers[kRegisterControlMeasurement] & 0x03; }
+    int pressure_oversampling() const {
+        return oversampling(registers[kRegisterControlMeasurement] >> 2);
+    }
+    int temperature_oversampling() const {
+        return oversampling(registers[kRegisterControlMeasurement] >> 5);
+    }
+    int humidity_oversampling() const { return oversampling(registers[kRegisterControlHumidity]); }
     int filter_coefficient() const {
-        const int code = (registers[kRegConfig] >> 2) & 0x07;
+        const int code = (registers[kRegisterConfig] >> 2) & 0x07;
         return code == 0 ? 1 : (code >= 4 ? 16 : 1 << code);
     }
-    uint8_t standby_code() const { return registers[kRegConfig] >> 5; }
+    uint8_t standby_code() const { return registers[kRegisterConfig] >> 5; }
 
     uint8_t registers[256]{};
     uint8_t pointer{0};
@@ -100,7 +104,7 @@ class Bme280 : public io::I2c {
     int writes{0};
     int reads{0};
     int result_reads{0};
-    int ctrl_meas_writes{0};
+    int control_measurement_writes{0};
     int conversions{0};
 
    private:
@@ -111,18 +115,20 @@ class Bme280 : public io::I2c {
         return c == 0 ? 0 : (c >= 5 ? 16 : 1 << (c - 1));
     }
 
-    void write_register(uint8_t reg, uint8_t value) {
-        if (reg == kRegReset) {
+    void write_register(uint8_t register_address, uint8_t value) {
+        if (register_address == kRegisterReset) {
             if (value == kResetWord) power_on_reset();
             return;
         }
-        if (reg != kRegCtrlHum && reg != kRegCtrlMeas && reg != kRegConfig) return;
-        registers[reg] = value;
-        if (reg != kRegCtrlMeas) return;
-        ctrl_meas_writes++;
+        if (register_address != kRegisterControlHumidity &&
+            register_address != kRegisterControlMeasurement && register_address != kRegisterConfig)
+            return;
+        registers[register_address] = value;
+        if (register_address != kRegisterControlMeasurement) return;
+        control_measurement_writes++;
         if ((value & 0x03) == 0) return;
         start_conversion();
-        registers[kRegCtrlMeas] = static_cast<uint8_t>(value & ~0x03);
+        registers[kRegisterControlMeasurement] = static_cast<uint8_t>(value & ~0x03);
     }
 
     void start_conversion() {
@@ -140,16 +146,16 @@ class Bme280 : public io::I2c {
 
     void latch_result() {
         if (!converting || measuring()) return;
-        store_word(kRegResult + 3, pending_t_);
-        store_word(kRegResult, pending_p_);
+        store_word(kRegisterResult + 3, pending_t_);
+        store_word(kRegisterResult, pending_p_);
     }
 
     uint64_t now_us() const { return clock_ ? clock_->micros() : 0; }
 
-    void store_word(int reg, int32_t adc) {
-        registers[reg] = static_cast<uint8_t>(adc >> 12);
-        registers[reg + 1] = static_cast<uint8_t>(adc >> 4);
-        registers[reg + 2] = static_cast<uint8_t>((adc & 0x0F) << 4);
+    void store_word(int register_address, int32_t adc) {
+        registers[register_address] = static_cast<uint8_t>(adc >> 12);
+        registers[register_address + 1] = static_cast<uint8_t>(adc >> 4);
+        registers[register_address + 2] = static_cast<uint8_t>((adc & 0x0F) << 4);
     }
 
     void store_calibration() {
@@ -165,7 +171,7 @@ class Bme280 : public io::I2c {
                                   static_cast<uint16_t>(kP7),
                                   static_cast<uint16_t>(kP8),
                                   static_cast<uint16_t>(kP9)};
-        for (size_t i = 0; i < 12; i++) put_u16(registers + kRegCalibration + 2 * i, words[i]);
+        for (size_t i = 0; i < 12; i++) put_u16(registers + kRegisterCalibration + 2 * i, words[i]);
     }
 
     static double fine_unrounded(int32_t adc_t) {

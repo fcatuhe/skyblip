@@ -25,8 +25,8 @@ constexpr int kMaxLines = 16;
 
 constexpr int32_t kTaxiMmS = 0;
 constexpr int32_t kCruiseMmS = 50000;
-constexpr int32_t kFieldAltM = 300;
-constexpr int32_t kCruiseAltM = 800;
+constexpr int32_t kFieldAltitudeM = 300;
+constexpr int32_t kCruiseAltitudeM = 800;
 constexpr uint32_t kTaxiOutSeconds = 20;
 constexpr uint32_t kFlightSeconds = 80;
 constexpr uint32_t kTaxiInSeconds = 40;
@@ -37,22 +37,22 @@ const std::vector<uint8_t>& logbook() {
         Rig flight(kNoGlass);
         if (flight.setup() != Status::Ok) __builtin_trap();
         uint32_t t = 0;
-        flight.seconds(t, kTaxiOutSeconds, kTaxiMmS, kFieldAltM);
-        flight.seconds(t, kFlightSeconds, kCruiseMmS, kCruiseAltM);
-        flight.seconds(t, kTaxiInSeconds, kTaxiMmS, kFieldAltM);
+        flight.seconds(t, kTaxiOutSeconds, kTaxiMmS, kFieldAltitudeM);
+        flight.seconds(t, kFlightSeconds, kCruiseMmS, kCruiseAltitudeM);
+        flight.seconds(t, kTaxiInSeconds, kTaxiMmS, kFieldAltitudeM);
         return flight.platform.log_flash().bytes();
     }();
     return image;
 }
 
 // INFO: fc 25sep26 a longer write is refused by the ATT layer (hardware/platform/zephyr/link.cpp)
-void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* bytes, size_t len) {
+void write(Rig& rig, uint16_t app, events::Endpoint endpoint, const uint8_t* bytes, size_t length) {
     events::RxFrame frame{};
-    if (len > frame.data.size()) return;
+    if (length > frame.data.size()) return;
     frame.session_id = app;
     frame.endpoint = endpoint;
-    frame.bytes = static_cast<uint16_t>(len);
-    std::memcpy(frame.data.data(), bytes, len);
+    frame.bytes = static_cast<uint16_t>(length);
+    std::memcpy(frame.data.data(), bytes, length);
     rig.platform.link().push_rx(frame);
 }
 
@@ -63,15 +63,15 @@ void confirm_on_device(Rig& rig, uint32_t& t) {
     rig.double_press(t);
 }
 
-void act(Rig& rig, uint32_t& t, const uint8_t* line, size_t len) {
-    if (len == 0) return;
+void act(Rig& rig, uint32_t& t, const uint8_t* line, size_t length) {
+    if (length == 0) return;
     const uint8_t* body = line + 1;
-    const size_t body_len = len - 1;
+    const size_t body_length = length - 1;
     switch (line[0]) {
-        case 'C': write(rig, kFirstApp, events::Endpoint::Config, body, body_len); break;
-        case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_len); break;
-        case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_len); break;
-        case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_len); break;
+        case 'C': write(rig, kFirstApp, events::Endpoint::Config, body, body_length); break;
+        case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_length); break;
+        case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_length); break;
+        case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_length); break;
         case 'P': confirm_on_device(rig, t); return;
         default: return;
     }
@@ -87,7 +87,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     if (rig.setup() != Status::Ok) __builtin_trap();
     rig.utc_offset_s = kTaxiOutSeconds + kFlightSeconds + kTaxiInSeconds;
     uint32_t t = 0;
-    rig.seconds(t, kGroundSeconds, kTaxiMmS, kFieldAltM);
+    rig.seconds(t, kGroundSeconds, kTaxiMmS, kFieldAltitudeM);
     rig.raise_link(kFirstApp);
     rig.raise_link(kSecondApp);
 

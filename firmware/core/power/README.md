@@ -43,7 +43,7 @@ Three of the steps are a `PowerLevel`, and the level is the one fact every reade
 
 An `Unknown` monitor has seen no believable reading yet, which is also what an unpopulated divider reads for ever, and it acts like `Normal`. Its first reading at or above `kLowMv` makes it `Normal`; one under waits for the run like any other step.
 
-The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diag/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
+The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diagnostics/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
 
 ## The write rule, and the supply warning
 

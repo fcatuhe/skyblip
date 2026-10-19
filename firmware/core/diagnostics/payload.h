@@ -1,10 +1,10 @@
-#ifndef SKYBLIP_CORE_DIAG_PAYLOAD_H
-#define SKYBLIP_CORE_DIAG_PAYLOAD_H
+#ifndef SKYBLIP_CORE_DIAGNOSTICS_PAYLOAD_H
+#define SKYBLIP_CORE_DIAGNOSTICS_PAYLOAD_H
 
 #include <cstdint>
 
 #include "core/dfu/update.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/events/input.h"
 #include "core/events/link.h"
 #include "core/flight/state.h"
@@ -20,7 +20,7 @@
 #include "core/timing/slot.h"
 #include "core/traffic/alarm.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 enum class Profile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2 };
 
@@ -45,7 +45,7 @@ constexpr uint8_t kConfigFlagBatteryTrimManual = 1u << 4;
 struct Config {
     uint32_t address{0};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     uint8_t aircraft_type{0};
     uint8_t address_mapping_table{0};
     uint8_t alarm_volume{0};
@@ -70,8 +70,8 @@ struct Gnss {
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
     uint32_t stage_s{0};
-    uint8_t sats{0};
-    uint8_t sats_in_view{0};
+    uint8_t satellites{0};
+    uint8_t satellites_in_view{0};
     uint8_t fix_mode{0};
     gnss::FixReject reject{gnss::FixReject::None};
     gnss::Stage stage{gnss::Stage::Silent};
@@ -117,7 +117,7 @@ constexpr uint8_t kDwellFlagArmed = 1u << 5;
 constexpr uint8_t kDwellFlagBurstArmed = 1u << 6;
 
 struct Dwell {
-    uint32_t freq_hz{0};
+    uint32_t frequency_hz{0};
     uint16_t start_ms{0};
     uint16_t end_ms{0};
     uint16_t phase_ms{0};
@@ -141,7 +141,7 @@ constexpr uint8_t kFlightFlagTxSettled = 1u << 5;
 struct Flight {
     int32_t speed_mm_s{0};
     int32_t climb_mm_s{0};
-    int16_t alt_msl_m{0};
+    int16_t altitude_msl_m{0};
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
     flight::FlightState declared{flight::FlightState::Unknown};
@@ -175,13 +175,13 @@ struct Power {
     bool die_valid{false};
 };
 
-constexpr uint8_t kBaroFlagActive = 1u << 2;
-constexpr uint8_t kBaroFlagTemperatureValid = 1u << 3;
-constexpr uint8_t kBaroFlagClimbAdopted = 1u << 4;
+constexpr uint8_t kBarometerFlagActive = 1u << 2;
+constexpr uint8_t kBarometerFlagTemperatureValid = 1u << 3;
+constexpr uint8_t kBarometerFlagClimbAdopted = 1u << 4;
 
-struct Baro {
+struct Barometer {
     uint32_t pressure_mpa{0};
-    int32_t alt_mm{0};
+    int32_t altitude_mm{0};
     int32_t climb_mm_s{0};
     int16_t temperature_dc{0};
     bool active{false};
@@ -247,9 +247,9 @@ constexpr uint8_t kTrafficFlagPositionValid = 1u << 5;
 
 struct Traffic {
     uint32_t address{0};
-    uint16_t dist_m{0};
+    uint16_t distance_m{0};
     uint16_t bearing_deg{0};
-    int16_t rel_alt_m{0};
+    int16_t relative_altitude_m{0};
     int16_t closing_mps{0};
     traffic::Level alarm{traffic::Level::None};
     model::Source source{model::Source::AdslDirect};
@@ -354,7 +354,7 @@ Record record_of(const radio::Entry& value);
 Record record_of(const Dwell& value, const Instant& at);
 Record record_of(const Flight& value, const Instant& at);
 Record record_of(const Power& value, const Instant& at);
-Record record_of(const Baro& value, const Instant& at);
+Record record_of(const Barometer& value, const Instant& at);
 Record record_of(const Motion& value, const Instant& at);
 Record record_of(const Contact& value, const Instant& at);
 Record record_of(const Link& value, const Instant& at);
@@ -375,7 +375,7 @@ bool read(const Record& record, radio::Entry& out);
 bool read(const Record& record, Dwell& out);
 bool read(const Record& record, Flight& out);
 bool read(const Record& record, Power& out);
-bool read(const Record& record, Baro& out);
+bool read(const Record& record, Barometer& out);
 bool read(const Record& record, Motion& out);
 bool read(const Record& record, Contact& out);
 bool read(const Record& record, Link& out);

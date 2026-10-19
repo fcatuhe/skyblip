@@ -21,9 +21,9 @@ protocol::AdslPacket traffic_packet() {
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
-    own.lat_1e7 = 481234500;
-    own.lon_1e7 = 81234500;
-    own.alt_hae_mm = 1234000;
+    own.latitude_1e7 = 481234500;
+    own.longitude_1e7 = 81234500;
+    own.altitude_hae_mm = 1234000;
     own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
     own.climb_mm_s = -5500;  // -44 eighths on the wire
     own.track_cdeg = 18000;
@@ -70,7 +70,7 @@ TEST_CASE("ADS-L.4.SRD860.B.3: a field starts at the bit its offset names, count
     p.init();
     p.TimeStamp = 0x2A;
     p.FlightState = 2;
-    p.AcftCat = 0x15;
+    p.AircraftCategory = 0x15;
     p.Emergency = 5;
     const uint8_t* meta = &p.Address[4];
     CHECK(meta[0] == static_cast<uint8_t>(0x2A | (2u << 6)));
@@ -90,14 +90,14 @@ TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, n
     p.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t len =
+    const size_t length =
         protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes, chips);
-    CHECK(len == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
+    CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 
     uint8_t decoded[protocol::kSyncWordBytes + protocol::kAdslFrameBytes] = {0};
-    uint8_t err[sizeof(decoded)] = {0};
-    fec::manchester_decode(chips, sizeof(decoded), decoded, err);
-    for (uint8_t e : err) CHECK(e == 0);
+    uint8_t error[sizeof(decoded)] = {0};
+    fec::manchester_decode(chips, sizeof(decoded), decoded, error);
+    for (uint8_t e : error) CHECK(e == 0);
     CHECK(decoded[1] == 0x72);
     CHECK(decoded[2] == 0x4B);
     CHECK(decoded[3] == protocol::kAdslFrameBytes);
@@ -128,11 +128,11 @@ TEST_CASE("ADS-L.4.SRD860.B.6: a reserved bit a sender filled changes nothing a 
 
     CHECK(from_noisy.address == from_clean.address);
     CHECK(from_noisy.address_mapping_table == from_clean.address_mapping_table);
-    CHECK(from_noisy.lat_1e7 == from_clean.lat_1e7);
-    CHECK(from_noisy.lon_1e7 == from_clean.lon_1e7);
-    CHECK(from_noisy.alt_m == from_clean.alt_m);
+    CHECK(from_noisy.latitude_1e7 == from_clean.latitude_1e7);
+    CHECK(from_noisy.longitude_1e7 == from_clean.longitude_1e7);
+    CHECK(from_noisy.altitude_m == from_clean.altitude_m);
     CHECK(from_noisy.speed_q == from_clean.speed_q);
     CHECK(from_noisy.climb_e8 == from_clean.climb_e8);
     CHECK(from_noisy.track_c9 == from_clean.track_c9);
-    CHECK(from_noisy.aircraft_cat == from_clean.aircraft_cat);
+    CHECK(from_noisy.aircraft_category == from_clean.aircraft_category);
 }

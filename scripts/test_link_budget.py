@@ -5,7 +5,7 @@
 
 Stdlib alone, no radio and no clock. Every record here is handcrafted bytes put
 through the same chunk decoder and session sink blip.py fetch uses, so a Burst
-or Config field that moves in firmware/core/diag/payload.h fails here rather
+or Config field that moves in firmware/core/diagnostics/payload.h fails here rather
 than reading as a quiet zero.
 """
 import base64

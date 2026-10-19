@@ -37,13 +37,13 @@ class Bme280 {
     uint8_t address() const { return address_; }
 
    private:
-    static constexpr uint8_t kRegCalibration = 0x88;
-    static constexpr uint8_t kRegChipId = 0xD0;
-    static constexpr uint8_t kRegCtrlHum = 0xF2;
-    static constexpr uint8_t kRegStatus = 0xF3;
-    static constexpr uint8_t kRegCtrlMeas = 0xF4;
-    static constexpr uint8_t kRegConfig = 0xF5;
-    static constexpr uint8_t kRegResult = 0xF7;
+    static constexpr uint8_t kRegisterCalibration = 0x88;
+    static constexpr uint8_t kRegisterChipId = 0xD0;
+    static constexpr uint8_t kRegisterControlHumidity = 0xF2;
+    static constexpr uint8_t kRegisterStatus = 0xF3;
+    static constexpr uint8_t kRegisterControlMeasurement = 0xF4;
+    static constexpr uint8_t kRegisterConfig = 0xF5;
+    static constexpr uint8_t kRegisterResult = 0xF7;
     static constexpr size_t kCalibrationBytes = 24;
     static constexpr size_t kStatusBytes = 3;
     static constexpr size_t kResultBytes = 6;
@@ -56,7 +56,7 @@ class Bme280 {
     static constexpr uint8_t kOversamplingX2 = 0b010;
     static constexpr uint8_t kOversamplingX16 = 0b101;
     static constexpr uint8_t kFilter4 = 0b010;
-    static constexpr uint8_t kCtrlMeasForced =
+    static constexpr uint8_t kControlMeasurementForced =
         kOversamplingX2 << 5 | kOversamplingX16 << 2 | kModeForced;
     static constexpr uint8_t kConfigFilter4 = kFilter4 << 2;
 
@@ -73,8 +73,9 @@ class Bme280 {
     };
 
     bool identifies(uint8_t address) const;
-    bool read_registers(uint8_t address, uint8_t reg, uint8_t* out, size_t len) const;
-    bool write_register(uint8_t reg, uint8_t value);
+    bool read_registers(uint8_t address, uint8_t register_address, uint8_t* out,
+                        size_t length) const;
+    bool write_register(uint8_t register_address, uint8_t value);
     bool forget_configuration();
     bool compensate(int32_t adc_p, int32_t adc_t, Reading& out) const;
     int32_t fine_temperature(int32_t adc_t) const;

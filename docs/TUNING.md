@@ -43,7 +43,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDiagnosticsDumpPeriodMs` | 10000 (10 s) | milliseconds | Period | - |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 
-## [`firmware/core/diag`](../firmware/core/diag/README.md)
+## [`firmware/core/diagnostics`](../firmware/core/diagnostics/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
@@ -122,7 +122,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kCycleMs` | `static_cast<int64_t>(kTimeStampCycleS) * 1000` | milliseconds | - | - |
-| `kAltOffsetM` | 320 | metres | - | - |
+| `kAltitudeOffsetM` | 320 | metres | - | - |
 | `kTimeStampCycleS` | 15 | seconds | - | The TimeStamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
 | `kTimeStampQuarterMs` | 250 | milliseconds | - | - |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | - |
@@ -196,8 +196,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kAdvisoryAltM` | 300 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
-| `kAdvisoryDistM` | 3000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
+| `kAdvisoryAltitudeM` | 300 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
+| `kAdvisoryDistanceM` | 3000 | metres | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kUnknownTargetSpeedMps` | 30 | metres per second | - | a relayed target arrives with no velocity, and zero would make it the safest dot |
 | `kAlertMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | SoftRF alerts only on targets seen within ALERT_EXPIRATION_TIME (5 s) and re-checks no more often than every 2 s (oss/SoftRF-lyusupov .../src/TrafficHelper.h:58-59, .../src/TrafficHelper.cpp:236-260). |
 | `kRenotifyFloorMs` | 2000 (2 s) | milliseconds | Floor | [README](../firmware/core/traffic/README.md) argues it |
@@ -258,9 +258,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
 | `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
-| `kBaroClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
+| `kBarometerClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
-| `kBaroMaxAgeMs` | `3 * runtime::kBaroPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
+| `kBarometerMaxAgeMs` | `3 * runtime::kBarometerPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
 | `kPpsRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | an edge is a record, and a second that brought none is the record saying so |
 | `kMotionRecordPeriodMs` | 1000 (1 s) | milliseconds | Period | the hub reports faster than the filters behind it move, in whole seconds |
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
@@ -283,10 +283,10 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
 | `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
 | `kRadioRxSilenceCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | - |
-| `kBaroPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
-| `kBaroPpsWindowMs` | `2 * kServicePassCeilingMs` = 20 | milliseconds | Window | - |
-| `kBaroConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
-| `kBaroConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
+| `kBarometerPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
+| `kBarometerPpsWindowMs` | `2 * kServicePassCeilingMs` = 20 | milliseconds | Window | - |
+| `kBarometerConversionPeriodMs` | 250 | milliseconds | Period | four forced conversions a second feed IIR 4: 0.75 s of lag for 0.1 mA |
+| `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
 184 constants over 18 folders.

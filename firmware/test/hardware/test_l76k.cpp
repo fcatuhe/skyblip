@@ -21,13 +21,13 @@ class SentenceWire : public io::Uart {
    public:
     explicit SentenceWire(models::L76k& chip) : chip_(chip) {}
 
-    size_t write(const uint8_t* data, size_t len) override { return chip_.write(data, len); }
+    size_t write(const uint8_t* data, size_t length) override { return chip_.write(data, length); }
 
     size_t read(uint8_t* out, size_t cap) override {
         if (buffered_.empty()) {
-            uint8_t buf[1024];
-            const size_t n = chip_.read(buf, sizeof(buf));
-            buffered_.assign(reinterpret_cast<const char*>(buf), n);
+            uint8_t buffer[1024];
+            const size_t n = chip_.read(buffer, sizeof(buffer));
+            buffered_.assign(reinterpret_cast<const char*>(buffer), n);
         }
         if (buffered_.empty()) return 0;
         const size_t line = buffered_.find('\n');
@@ -50,9 +50,9 @@ class SentenceWire : public io::Uart {
 TEST_CASE("l76k: a new fix is reported exactly once") {
     models::L76k chip;
     chip.fix_valid = true;
-    chip.sats = 9;
-    chip.alt_m = 1200;
-    chip.lat_1e7 = 485000000;
+    chip.satellites = 9;
+    chip.altitude_m = 1200;
+    chip.latitude_1e7 = 485000000;
     parts::L76k gnss(chip);
 
     CHECK_FALSE(gnss.poll());  // the receiver has said nothing yet
@@ -62,9 +62,9 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
     chip.tick(1000);  // one $GPRMC + $GPGGA burst, >64 B so the chunked read wraps
     CHECK(gnss.poll());
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.solution().sats == 9);
-    CHECK(gnss.solution().alt_hae_mm == 1200000);
-    CHECK(gnss.solution().lat_1e7 == doctest::Approx(485000000).epsilon(0.0001));
+    CHECK(gnss.solution().satellites == 9);
+    CHECK(gnss.solution().altitude_hae_mm == 1200000);
+    CHECK(gnss.solution().latitude_1e7 == doctest::Approx(485000000).epsilon(0.0001));
 
     CHECK_FALSE(gnss.poll());  // no new bytes: the same fix is not re-delivered
 }
@@ -150,7 +150,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
     REQUIRE(gnss.solution().fix_valid);
 
     const uint32_t at = kBringUpLeadMs + 6000;
-    chip.alt_m = 1500;
+    chip.altitude_m = 1500;
     chip.tick(at);
 
     int published = 0;
@@ -158,7 +158,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
         if (gnss.poll(at)) published++;
 
     CHECK(published == 1);
-    CHECK(gnss.solution().alt_hae_mm == 1500000);
+    CHECK(gnss.solution().altitude_hae_mm == 1500000);
 }
 
 // The estimate own-ship falls back to with no PPS edge latched, stamped by the part that knows it.
@@ -199,7 +199,7 @@ TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites
 TEST_CASE("l76k: the receiver solves continuously and reports on its cadence") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    chip.alt_m = 1000;
+    chip.altitude_m = 1000;
     chip.track_deg = 90;
     chip.climb_mm_s = 1500;
     chip.turn_dps = 3;
@@ -207,7 +207,7 @@ TEST_CASE("l76k: the receiver solves continuously and reports on its cadence") {
     chip.tick(0);
     chip.tick(100);
 
-    CHECK(chip.alt_mm() == 1000 * 1000 + 150);
+    CHECK(chip.altitude_mm() == 1000 * 1000 + 150);
     CHECK(chip.heading_deg() == doctest::Approx(90.3));
     CHECK(chip.available() == 0);  // a tenth of a second in, it has said nothing
 
@@ -220,13 +220,13 @@ TEST_CASE("l76k: a clock that steps backwards leaves the aircraft where it is") 
     models::L76k chip;
     chip.tick(0);
     chip.tick(1000);
-    const int32_t lat_1e7 = chip.lat_1e7;
-    const int32_t lon_1e7 = chip.lon_1e7;
+    const int32_t latitude_1e7 = chip.latitude_1e7;
+    const int32_t longitude_1e7 = chip.longitude_1e7;
 
     chip.tick(995);
 
-    CHECK(chip.lat_1e7 == lat_1e7);
-    CHECK(chip.lon_1e7 == lon_1e7);
+    CHECK(chip.latitude_1e7 == latitude_1e7);
+    CHECK(chip.longitude_1e7 == longitude_1e7);
 }
 
 // The geometry the circling scenarios rest on, checked against the model that
@@ -241,22 +241,22 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
     chip.speed_mm_s = 23150;  // 45 kt
     chip.track_deg = 0;
     chip.turn_dps = 13;
-    const int32_t start_lat = chip.lat_1e7;
-    const int32_t start_lon = chip.lon_1e7;
+    const int32_t start_latitude = chip.latitude_1e7;
+    const int32_t start_longitude = chip.longitude_1e7;
 
-    int32_t east_lat = 0, east_lon = 0;
+    int32_t east_latitude = 0, east_longitude = 0;
     for (uint32_t t = 0; t <= 27700; t += 100) {
         chip.tick(t);
         // A quarter of the way round a right turn from north, own-ship is due
         // east of where it started by one radius and level with the centre.
         if (t == 6900) {
-            east_lat = chip.lat_1e7;
-            east_lon = chip.lon_1e7;
+            east_latitude = chip.latitude_1e7;
+            east_longitude = chip.longitude_1e7;
         }
     }
 
-    const double north_m = (east_lat - start_lat) * 11132 / 1e6;
-    const double east_m = (east_lon - start_lon) * 11132 / 1e6 * 0.6626;
+    const double north_m = (east_latitude - start_latitude) * 11132 / 1e6;
+    const double east_m = (east_longitude - start_longitude) * 11132 / 1e6 * 0.6626;
     MESSAGE("quarter circle: " << north_m << " m north, " << east_m << " m east");
     CHECK(east_m == doctest::Approx(102).epsilon(0.05));
     CHECK(north_m == doctest::Approx(102).epsilon(0.05));
@@ -264,7 +264,7 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
     // A full circle later the track is back where it started and so is the
     // aircraft: the integration closes the loop rather than spiralling.
     CHECK((chip.track_deg <= 3 || chip.track_deg >= 357));
-    const double closed_m = (chip.lat_1e7 - start_lat) * 11132 / 1e6;
+    const double closed_m = (chip.latitude_1e7 - start_latitude) * 11132 / 1e6;
     CHECK(closed_m < 5.0);
     CHECK(closed_m > -5.0);
 }

@@ -15,7 +15,7 @@ constexpr uint32_t kCallsignForgetS = 600;
 class CallsignTable {
    public:
     static constexpr int kCapacity = TrafficTable::kCapacity;
-    static constexpr int kTextBytes = protocol::AdslPacket::kInfoMsgBytes + 1;
+    static constexpr int kTextBytes = protocol::AdslPacket::kInfoTextBytes + 1;
 
     void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
                uint32_t now_s);

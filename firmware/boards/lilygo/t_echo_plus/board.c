@@ -213,13 +213,13 @@ static uint8_t panel_clock_in(void)
 	return value;
 }
 
-static void panel_read_register(uint8_t reg, uint8_t *out, size_t len)
+static void panel_read_register(uint8_t register_address, uint8_t *out, size_t len)
 {
 	gpio_pin_configure_dt(&epd_mosi, GPIO_OUTPUT_INACTIVE);
 	gpio_pin_set_dt(&epd_dc, 0); /* command */
 	gpio_pin_set_dt(&epd_cs, 1); /* active low in the devicetree: 1 selects */
 
-	panel_clock_out(reg);
+	panel_clock_out(register_address);
 
 	gpio_pin_configure_dt(&epd_mosi, GPIO_INPUT);
 	gpio_pin_set_dt(&epd_dc, 1); /* data */

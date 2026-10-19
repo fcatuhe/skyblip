@@ -9,9 +9,9 @@ using go::GMeterSnapshot;
 
 namespace {
 
-constexpr int kFieldCx = 82;
-constexpr int kFieldCy = 82;
-constexpr int kStripCx = 164;
+constexpr int kFieldCentreX = 82;
+constexpr int kFieldCentreY = 82;
+constexpr int kStripCentreX = 164;
 
 GMeterSnapshot flying() {
     GMeterSnapshot s;
@@ -37,7 +37,7 @@ TEST_CASE("gmeter page: level flight puts the marker in the middle of the field"
     Glass canvas;
     draw_gmeter(canvas, flying());
 
-    CHECK(marker_at(canvas, kFieldCx, kFieldCy));
+    CHECK(marker_at(canvas, kFieldCentreX, kFieldCentreY));
     CHECK(reads_in(canvas, "+1.0", 40, 138, 120, 156, 2));
 }
 
@@ -72,22 +72,22 @@ TEST_CASE("gmeter page: the marker moves the way the aircraft is loaded") {
     pulling.most = flight::GLoad{3000, 0, 0};
     Glass up;
     draw_gmeter(up, pulling);
-    CHECK(marker_at(up, kFieldCx, kFieldCy + 32));
-    CHECK_FALSE(marker_at(up, kFieldCx, kFieldCy));
+    CHECK(marker_at(up, kFieldCentreX, kFieldCentreY + 32));
+    CHECK_FALSE(marker_at(up, kFieldCentreX, kFieldCentreY));
 
     GMeterSnapshot pushing = flying();
     pushing.now = flight::GLoad{-1000, 0, 0};
     pushing.least = flight::GLoad{-1000, 0, 0};
     Glass over;
     draw_gmeter(over, pushing);
-    CHECK(marker_at(over, kFieldCx, kFieldCy - 32));
+    CHECK(marker_at(over, kFieldCentreX, kFieldCentreY - 32));
 
     GMeterSnapshot skidding = flying();
     skidding.now = flight::GLoad{1000, -500, 0};
     skidding.least = flight::GLoad{1000, -500, 0};
     Glass left;
     draw_gmeter(left, skidding);
-    CHECK(marker_at(left, kFieldCx - 26, kFieldCy));
+    CHECK(marker_at(left, kFieldCentreX - 26, kFieldCentreY));
 }
 
 // Braking throws you at the nose, which is the top of the strip.
@@ -98,8 +98,8 @@ TEST_CASE("gmeter page: the longitudinal strip stands up, with the nose at the t
     Glass canvas;
     draw_gmeter(canvas, braking);
 
-    CHECK(canvas.get_pixel(kStripCx, kFieldCy - 18));
-    CHECK_FALSE(canvas.get_pixel(kStripCx, kFieldCy + 18));
+    CHECK(canvas.get_pixel(kStripCentreX, kFieldCentreY - 18));
+    CHECK_FALSE(canvas.get_pixel(kStripCentreX, kFieldCentreY + 18));
 
     GMeterSnapshot accelerating = flying();
     accelerating.now = flight::GLoad{1000, 0, 500};
@@ -107,8 +107,8 @@ TEST_CASE("gmeter page: the longitudinal strip stands up, with the nose at the t
     Glass takeoff;
     draw_gmeter(takeoff, accelerating);
 
-    CHECK(takeoff.get_pixel(kStripCx, kFieldCy + 18));
-    CHECK_FALSE(takeoff.get_pixel(kStripCx, kFieldCy - 18));
+    CHECK(takeoff.get_pixel(kStripCentreX, kFieldCentreY + 18));
+    CHECK_FALSE(takeoff.get_pixel(kStripCentreX, kFieldCentreY - 18));
 }
 
 // A hand on a nothing is noise: zero is zero whichever way it is not leaning.
@@ -148,6 +148,6 @@ TEST_CASE("gmeter page: a sensor that has not reported yet leaves the field empt
     draw_gmeter(canvas, waiting);
 
     CHECK(scale_drawn(canvas));
-    CHECK_FALSE(marker_at(canvas, kFieldCx, kFieldCy));
+    CHECK_FALSE(marker_at(canvas, kFieldCentreX, kFieldCentreY));
     CHECK(reads_in(canvas, "----", 88, 142, 120, 152));
 }

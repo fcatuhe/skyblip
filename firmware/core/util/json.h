@@ -34,9 +34,9 @@ class Writer {
     Writer(char* out, int capacity) : buffer_(out), capacity_(capacity) {
         buffer_[length_++] = '{';
     }
-    void kv_int(const char* key, int64_t v);
-    void kv_bool(const char* key, bool v);
-    void kv_str(const char* key, const char* v);
+    void key_value_int(const char* key, int64_t v);
+    void key_value_bool(const char* key, bool v);
+    void key_value_str(const char* key, const char* v);
     int finish();
     int length() const { return length_; }
     bool overflowed() const { return overflowed_; }

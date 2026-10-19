@@ -24,20 +24,20 @@ int format_hex(char* out, uint32_t value, uint8_t digits) {
 }
 
 int format_uint(char* out, uint32_t value, uint8_t min_digits, uint8_t fraction_digits) {
-    char tmp[12];
-    int len = 0;
+    char temporary[12];
+    int length = 0;
     do {
-        tmp[len++] = static_cast<char>('0' + (value % 10));
+        temporary[length++] = static_cast<char>('0' + (value % 10));
         value /= 10;
     } while (value);
-    while (len < min_digits) tmp[len++] = '0';
+    while (length < min_digits) temporary[length++] = '0';
     if (fraction_digits) {
-        while (len <= fraction_digits) tmp[len++] = '0';
+        while (length <= fraction_digits) temporary[length++] = '0';
     }
     int n = 0;
-    for (int i = len - 1; i >= 0; i--) {
+    for (int i = length - 1; i >= 0; i--) {
         if (fraction_digits && i + 1 == fraction_digits) out[n++] = '.';
-        out[n++] = tmp[i];
+        out[n++] = temporary[i];
     }
     return n;
 }
@@ -62,12 +62,12 @@ int format_dm(char* out, int32_t coord_1e7, int deg_digits) {
     uint64_t rem = static_cast<uint64_t>(a) - static_cast<uint64_t>(deg) * 10000000u;
     uint64_t minutes_e4 = div_round<uint64_t>(rem * 60u * 10000u, 10000000u);
     uint32_t minutes = static_cast<uint32_t>(minutes_e4 / 10000u);
-    uint32_t frac = static_cast<uint32_t>(minutes_e4 % 10000u);
+    uint32_t fraction = static_cast<uint32_t>(minutes_e4 % 10000u);
     int n = 0;
     n += format_uint(out + n, deg, static_cast<uint8_t>(deg_digits));
     n += format_uint(out + n, minutes, 2);
     out[n++] = '.';
-    n += format_uint(out + n, frac, 4);
+    n += format_uint(out + n, fraction, 4);
     return n;
 }
 }
@@ -98,17 +98,17 @@ int format_flight_clock(char* out, uint32_t seconds, bool flight_time_valid) {
     return n;
 }
 
-int format_nmea_lat(char* out, int32_t lat_1e7) {
-    int n = format_dm(out, lat_1e7, 2);
+int format_nmea_latitude(char* out, int32_t latitude_1e7) {
+    int n = format_dm(out, latitude_1e7, 2);
     out[n++] = ',';
-    out[n++] = lat_1e7 < 0 ? 'S' : 'N';
+    out[n++] = latitude_1e7 < 0 ? 'S' : 'N';
     return n;
 }
 
-int format_nmea_lon(char* out, int32_t lon_1e7) {
-    int n = format_dm(out, lon_1e7, 3);
+int format_nmea_longitude(char* out, int32_t longitude_1e7) {
+    int n = format_dm(out, longitude_1e7, 3);
     out[n++] = ',';
-    out[n++] = lon_1e7 < 0 ? 'W' : 'E';
+    out[n++] = longitude_1e7 < 0 ? 'W' : 'E';
     return n;
 }
 

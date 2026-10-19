@@ -23,7 +23,7 @@ RawSnapshot bench_device() {
     snapshot.gnss.nav_ms = 98;
     snapshot.gnss.nav_valid = true;
     snapshot.gnss.fix_valid = true;
-    snapshot.gnss.sats = 22;
+    snapshot.gnss.satellites = 22;
     snapshot.gnss.in_use = 12;
     snapshot.gnss.fix_mode = 3;
     snapshot.gnss.hdop_e2 = 90;
@@ -62,7 +62,7 @@ RawSnapshot bench_device() {
     snapshot.radio.alarm = 1;
     snapshot.radio.noise_dbm = -104;
     snapshot.radio.slot = skyblip::timing::SlotState::Slot0;
-    snapshot.radio.freq_hz = skyblip::timing::kMband0Hz;
+    snapshot.radio.frequency_hz = skyblip::timing::kMband0Hz;
     snapshot.radio.tx_allowed = true;
     return snapshot;
 }

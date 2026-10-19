@@ -18,7 +18,7 @@ Status Drv2605::begin() {
     if (!bus_.write(kAddress, nullptr, 0)) return Status::Down;
 
     uint8_t status = 0;
-    if (!read_register(kRegStatus, status)) return Status::Down;
+    if (!read_register(kRegisterStatus, status)) return Status::Down;
     device_id_ = static_cast<uint8_t>(status >> 5);
     switch (device_id_) {
         case 3:  // DRV2605
@@ -32,22 +32,22 @@ Status Drv2605::begin() {
 
     // Out of software standby first: every register below is only writable with
     // the part awake.
-    if (!write_register(kRegMode, kModeInternalTrigger)) return Status::Down;
-    write_register(kRegRtpInput, 0x00);
-    write_register(kRegLibrary, kErmLibraryA);
-    write_register(kRegWaveSeq1, 0x01);
-    write_register(kRegWaveSeq2, 0x00);  // the terminator: a sequence with no end runs on
-    write_register(kRegOverdrive, 0x00);
-    write_register(kRegSustainPositive, 0x00);
-    write_register(kRegSustainNegative, 0x00);
-    write_register(kRegBreak, 0x00);
-    write_register(kRegAudioMax, kAudioMaxDefault);
-    update_register(kRegFeedback, kFeedbackLraSelect, 0x00);
-    update_register(kRegControl3, 0x00, kControl3ErmOpenLoop);
+    if (!write_register(kRegisterMode, kModeInternalTrigger)) return Status::Down;
+    write_register(kRegisterRtpInput, 0x00);
+    write_register(kRegisterLibrary, kErmLibraryA);
+    write_register(kRegisterWaveSequence1, 0x01);
+    write_register(kRegisterWaveSequence2, 0x00);  // the terminator: a sequence with no end runs on
+    write_register(kRegisterOverdrive, 0x00);
+    write_register(kRegisterSustainPositive, 0x00);
+    write_register(kRegisterSustainNegative, 0x00);
+    write_register(kRegisterBreak, 0x00);
+    write_register(kRegisterAudioMax, kAudioMaxDefault);
+    update_register(kRegisterFeedback, kFeedbackLraSelect, 0x00);
+    update_register(kRegisterControl3, 0x00, kControl3ErmOpenLoop);
 
     // Configured and idle. Standby rather than awake: this device counts
     // microamps in a flight bag, and an idle driver stage is milliamps.
-    write_register(kRegMode, kModeStandby);
+    write_register(kRegisterMode, kModeStandby);
     ready_ = true;
     return Status::Ok;
 }
@@ -55,19 +55,19 @@ Status Drv2605::begin() {
 void Drv2605::start() {
     if (!ready_ || driving_) return;
     driving_ = true;
-    write_register(kRegMode, kModeRealTimePlayback);
-    write_register(kRegRtpInput, kRtpFullScale);
+    write_register(kRegisterMode, kModeRealTimePlayback);
+    write_register(kRegisterRtpInput, kRtpFullScale);
 }
 
 void Drv2605::stop() {
     if (!ready_) return;
     driving_ = false;
-    write_register(kRegRtpInput, 0x00);
+    write_register(kRegisterRtpInput, 0x00);
     // GO is cleared too, so a part left mid-sequence by anything else - a reset
     // in the middle of a pulse, a ROM effect from a bench session - is silent
     // when the alarm releases it.
-    write_register(kRegGo, 0x00);
-    write_register(kRegMode, kModeStandby);
+    write_register(kRegisterGo, 0x00);
+    write_register(kRegisterMode, kModeStandby);
 }
 
 void Drv2605::park() {
@@ -79,21 +79,21 @@ void Drv2605::park() {
     gpio_.mode_input(enable_pin_, false);
 }
 
-bool Drv2605::write_register(uint8_t reg, uint8_t value) {
-    const uint8_t frame[2] = {reg, value};
+bool Drv2605::write_register(uint8_t register_address, uint8_t value) {
+    const uint8_t frame[2] = {register_address, value};
     return bus_.write(kAddress, frame, sizeof(frame));
 }
 
-bool Drv2605::read_register(uint8_t reg, uint8_t& out) {
-    if (!bus_.write(kAddress, &reg, 1)) return false;
+bool Drv2605::read_register(uint8_t register_address, uint8_t& out) {
+    if (!bus_.write(kAddress, &register_address, 1)) return false;
     return bus_.read(kAddress, &out, 1);
 }
 
-bool Drv2605::update_register(uint8_t reg, uint8_t clear_mask, uint8_t set_mask) {
+bool Drv2605::update_register(uint8_t register_address, uint8_t clear_mask, uint8_t set_mask) {
     uint8_t value = 0;
-    if (!read_register(reg, value)) return false;
+    if (!read_register(register_address, value)) return false;
     const uint8_t updated = static_cast<uint8_t>((value & ~clear_mask) | set_mask);
-    return write_register(reg, updated);
+    return write_register(register_address, updated);
 }
 
 }  // namespace skyblip::parts

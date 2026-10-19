@@ -3,7 +3,7 @@
 
 #include "core/comms/config.h"
 #include "core/comms/log_link.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/events/link.h"
 #include "core/flight/log_record.h"
 #include "core/store/sector.h"
@@ -85,13 +85,13 @@ TEST_CASE("log link: how many records ride in a chunk follows the payload, not a
     const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
     for (int payload : payloads) {
         const int records = comms::log_records_per_chunk(payload);
-        char buf[comms::kLogReplyBytes];
-        const int len =
-            comms::format_log_chunk(buf, payload + 1, 4294967295u, 4294967295u, raw, records, true);
-        CHECK(len > 0);
-        CHECK(len <= payload);
-        CHECK(std::strstr(buf, "\"cmd\":\"chunk\"") != nullptr);
-        CHECK(std::strstr(buf, "\"eof\":true") != nullptr);
+        char buffer[comms::kLogReplyBytes];
+        const int length = comms::format_log_chunk(buffer, payload + 1, 4294967295u, 4294967295u,
+                                                   raw, records, true);
+        CHECK(length > 0);
+        CHECK(length <= payload);
+        CHECK(std::strstr(buffer, "\"cmd\":\"chunk\"") != nullptr);
+        CHECK(std::strstr(buffer, "\"eof\":true") != nullptr);
     }
 }
 
@@ -100,28 +100,28 @@ TEST_CASE("log link: a reply that will not fit the frame is refused, never short
     // yields a short but perfectly valid object - a chunk with no "data" key, or
     // a session line with no record count. A tablet must not be handed either.
     uint8_t raw[comms::kLogChunkRawBytes] = {0};
-    char buf[comms::kLogReplyBytes];
+    char buffer[comms::kLogReplyBytes];
     const int tiny = ports::kMinimumLinkPayloadBytes + 1;
-    CHECK(comms::format_log_chunk(buf, tiny, 1785628800u, 0, raw, 1, false) == 0);
-    CHECK(comms::format_log_session(buf, tiny, 0, 3, 1785628800u, 1700, false, false) == 0);
-    CHECK(comms::format_log_count(buf, tiny, 3, false) == 0);
+    CHECK(comms::format_log_chunk(buffer, tiny, 1785628800u, 0, raw, 1, false) == 0);
+    CHECK(comms::format_log_session(buffer, tiny, 0, 3, 1785628800u, 1700, false, false) == 0);
+    CHECK(comms::format_log_count(buffer, tiny, 3, false) == 0);
 }
 
 TEST_CASE("log link: the count comes first and says whether it is the whole truth") {
-    char buf[comms::kLogReplyBytes];
-    CHECK(comms::format_log_count(buf, sizeof(buf), 3, false) > 0);
-    CHECK(std::strstr(buf, "\"sessions\":3") != nullptr);
-    CHECK(std::strstr(buf, "\"truncated\":false") != nullptr);
+    char buffer[comms::kLogReplyBytes];
+    CHECK(comms::format_log_count(buffer, sizeof(buffer), 3, false) > 0);
+    CHECK(std::strstr(buffer, "\"sessions\":3") != nullptr);
+    CHECK(std::strstr(buffer, "\"truncated\":false") != nullptr);
 }
 
 TEST_CASE("log link: a session line says how many records and whether the flight ended") {
-    char buf[comms::kLogReplyBytes];
-    const int len =
-        comms::format_log_session(buf, sizeof(buf), 0, 3, 1785628800u, 1700, false, false);
-    CHECK(len > 0);
-    CHECK(std::strstr(buf, "\"records\":1700") != nullptr);
+    char buffer[comms::kLogReplyBytes];
+    const int length =
+        comms::format_log_session(buffer, sizeof(buffer), 0, 3, 1785628800u, 1700, false, false);
+    CHECK(length > 0);
+    CHECK(std::strstr(buffer, "\"records\":1700") != nullptr);
     // The one thing a tablet must not hide: this flight stops where the power did.
-    CHECK(std::strstr(buf, "\"closed\":false") != nullptr);
+    CHECK(std::strstr(buffer, "\"closed\":false") != nullptr);
 }
 
 TEST_CASE("log link: a flight opened after January 2038 is read and named by its own second") {
@@ -131,12 +131,13 @@ TEST_CASE("log link: a flight opened after January 2038 is read and named by its
     CHECK(read.understood);
     CHECK(read.session == kNewYear2040);
 
-    char buf[comms::kLogReplyBytes];
-    REQUIRE(comms::format_log_session(buf, sizeof(buf), 0, 1, kNewYear2040, 10, true, false) > 0);
-    CHECK(std::strstr(buf, "\"session\":2208988800,") != nullptr);
+    char buffer[comms::kLogReplyBytes];
+    REQUIRE(comms::format_log_session(buffer, sizeof(buffer), 0, 1, kNewYear2040, 10, true, false) >
+            0);
+    CHECK(std::strstr(buffer, "\"session\":2208988800,") != nullptr);
     const uint8_t raw[flight::kLogRecordBytes] = {0};
-    REQUIRE(comms::format_log_chunk(buf, sizeof(buf), kNewYear2040, 0, raw, 1, true) > 0);
-    CHECK(std::strstr(buf, "\"session\":2208988800,") != nullptr);
+    REQUIRE(comms::format_log_chunk(buffer, sizeof(buffer), kNewYear2040, 0, raw, 1, true) > 0);
+    CHECK(std::strstr(buffer, "\"session\":2208988800,") != nullptr);
 }
 
 TEST_CASE("log link: an absent store is the flights every client asks for today") {
@@ -228,25 +229,25 @@ TEST_CASE("log link: a window is clamped so one fetch cannot monopolise the link
 TEST_CASE("log link: every reply names the store it answers for") {
     const store::SectorOwner diagnostics = store::SectorOwner::Diagnostics;
     uint8_t raw[comms::kLogChunkRawBytes] = {0};
-    char buf[comms::kLogReplyBytes];
+    char buffer[comms::kLogReplyBytes];
 
-    REQUIRE(comms::format_log_chunk(buf, sizeof(buf), 7, 0, raw, 3, false, diagnostics) > 0);
-    CHECK(std::strstr(buf, "\"log\":\"diagnostics\"") != nullptr);
-    REQUIRE(comms::format_log_ack(buf, sizeof(buf), false, "busy", diagnostics) > 0);
-    CHECK(std::strstr(buf, "\"log\":\"diagnostics\"") != nullptr);
-    REQUIRE(comms::format_log_count(buf, sizeof(buf), 2, false, diagnostics) > 0);
-    CHECK(std::strstr(buf, "\"log\":\"diagnostics\"") != nullptr);
-    REQUIRE(comms::format_log_session(buf, sizeof(buf), 0, 2, 7, 900, true, false, diagnostics) >
-            0);
-    CHECK(std::strstr(buf, "\"log\":\"diagnostics\"") != nullptr);
+    REQUIRE(comms::format_log_chunk(buffer, sizeof(buffer), 7, 0, raw, 3, false, diagnostics) > 0);
+    CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
+    REQUIRE(comms::format_log_ack(buffer, sizeof(buffer), false, "busy", diagnostics) > 0);
+    CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
+    REQUIRE(comms::format_log_count(buffer, sizeof(buffer), 2, false, diagnostics) > 0);
+    CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
+    REQUIRE(comms::format_log_session(buffer, sizeof(buffer), 0, 2, 7, 900, true, false,
+                                      diagnostics) > 0);
+    CHECK(std::strstr(buffer, "\"log\":\"diagnostics\"") != nullptr);
 
     // Absent is flights on the reply as in the request, so a client that predates the field reads
     // the bytes it always read.
-    REQUIRE(comms::format_log_chunk(buf, sizeof(buf), 7, 0, raw, 3, false) > 0);
-    CHECK(std::strstr(buf, "\"log\"") == nullptr);
+    REQUIRE(comms::format_log_chunk(buffer, sizeof(buffer), 7, 0, raw, 3, false) > 0);
+    CHECK(std::strstr(buffer, "\"log\"") == nullptr);
 
     // A free sector owns no records, so no reply can answer for it.
-    CHECK(comms::format_log_chunk(buf, sizeof(buf), 7, 0, raw, 3, false,
+    CHECK(comms::format_log_chunk(buffer, sizeof(buffer), 7, 0, raw, 3, false,
                                   store::SectorOwner::None) == 0);
 }
 
@@ -262,17 +263,17 @@ TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it
     for (size_t i = 0; i < sizeof(raw); i++) raw[i] = static_cast<uint8_t>(0xA0 + i);
     const int payloads[3] = {comms::kSmallestSupportedPayload, 244, 495};
     for (int payload : payloads) {
-        char buf[comms::kLogReplyBytes];
-        const int len = comms::format_log_chunk(buf, payload + 1, 4294967295u, 4294967295u, raw,
-                                                comms::log_records_per_chunk(payload, diagnostics),
-                                                true, diagnostics);
-        CHECK(len > 0);
-        CHECK(len <= payload);
+        char buffer[comms::kLogReplyBytes];
+        const int length = comms::format_log_chunk(
+            buffer, payload + 1, 4294967295u, 4294967295u, raw,
+            comms::log_records_per_chunk(payload, diagnostics), true, diagnostics);
+        CHECK(length > 0);
+        CHECK(length <= payload);
     }
 }
 
 // The chunking, the base64 and the resumable offload are the flights store's and shared as they
 // stand: a diagnostics record that stopped being 24 bytes would silently break every chunk.
 TEST_CASE("log link: a diagnostics record is the same 24 bytes a chunk is cut for") {
-    CHECK(diag::kRecordBytes == flight::kLogRecordBytes);
+    CHECK(diagnostics::kRecordBytes == flight::kLogRecordBytes);
 }

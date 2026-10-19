@@ -39,7 +39,7 @@ TEST_CASE(
     to.callsign[0] = 0;
     to.alarm_enabled = false;
     to.battery_offset_mv = -20;
-    to.freq_trim_e1_ppm = 15;
+    to.frequency_trim_e1_ppm = 15;
     CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nBATTERY -20 MV\nFREQ TRIM +1.5 PPM");
 }
 

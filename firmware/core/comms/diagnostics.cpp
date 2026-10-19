@@ -44,12 +44,14 @@ int whole_celsius(int16_t temperature_dc) {
     return (temperature_dc + bias) / 10;
 }
 
-DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd) : cmd_(cmd) {
+DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char* command)
+    : command_(command) {
     build(diagnostics, nullptr);
 }
 
-DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd, Group only)
-    : cmd_(cmd) {
+DiagnosticsReport::DiagnosticsReport(const Diagnostics& diagnostics, const char* command,
+                                     Group only)
+    : command_(command) {
     build(diagnostics, &only);
 }
 
@@ -244,7 +246,7 @@ bool DiagnosticsReport::fits(int payload) const {
         widest_group = std::max(group, widest_group);
     }
     frame::Budget budget(payload);
-    return budget.take(frame::text_field_bytes("cmd", cmd_)) && budget.take(widest_group) &&
+    return budget.take(frame::text_field_bytes("cmd", command_)) && budget.take(widest_group) &&
            budget.take(frame::int_field_bytes("part", count_)) &&
            budget.take(frame::kMoreFieldBytes) && budget.take(widest_field);
 }
@@ -257,7 +259,7 @@ int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
 
     const Group group = fields_[at_].group;
     frame::Budget budget(room - 1);
-    budget.take(frame::text_field_bytes("cmd", cmd_));
+    budget.take(frame::text_field_bytes("cmd", command_));
     budget.take(frame::text_field_bytes("group", group_name(group)));
     budget.take(frame::int_field_bytes("part", part_));
     budget.take(frame::kMoreFieldBytes);
@@ -269,24 +271,24 @@ int DiagnosticsReport::next_frame(int payload, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.kv_str("cmd", cmd_);
-    writer.kv_str("group", group_name(group));
-    writer.kv_int("part", part_);
-    writer.kv_bool("more", at_ + packed < count_);
+    writer.key_value_str("cmd", command_);
+    writer.key_value_str("group", group_name(group));
+    writer.key_value_int("part", part_);
+    writer.key_value_bool("more", at_ + packed < count_);
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         switch (field.kind) {
-            case Kind::Int: writer.kv_int(field.key, field.value); break;
-            case Kind::Bool: writer.kv_bool(field.key, field.value != 0); break;
-            case Kind::Text: writer.kv_str(field.key, field.text); break;
+            case Kind::Int: writer.key_value_int(field.key, field.value); break;
+            case Kind::Bool: writer.key_value_bool(field.key, field.value != 0); break;
+            case Kind::Text: writer.key_value_str(field.key, field.text); break;
         }
     }
-    const int len = writer.finish();
+    const int length = writer.finish();
     if (writer.overflowed()) return 0;
 
     at_ += packed;
     part_++;
-    return len;
+    return length;
 }
 
 }  // namespace skyblip::comms

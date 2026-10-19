@@ -49,7 +49,7 @@ bool event_from(const json::Reader& r, ScenarioEvent& out) {
     static const Named kKeys[] = {
         {"fix", EventKind::Fix},
         {"pps", EventKind::Pps},
-        {"baro", EventKind::Baro},
+        {"baro", EventKind::Barometer},
         {"battery_mv", EventKind::BatteryMv},
         {"external_power", EventKind::ExternalPower},
         {"button", EventKind::Button},
@@ -81,24 +81,24 @@ protocol::System system_from(const std::string& name) {
 Mode mode_from(const std::string& name) {
     if (name == "demo") return Mode::Demo;
     if (name == "training") return Mode::Training;
-    return Mode::Dev;
+    return Mode::Device;
 }
 
 }  // namespace
 
-bool parse_scenario(const char* json, int len, Scenario& out) {
-    if (json == nullptr || len <= 0) return false;
-    const std::string text(json, static_cast<size_t>(len));
-    const json::Reader top(json, len);
+bool parse_scenario(const char* json, int length, Scenario& out) {
+    if (json == nullptr || length <= 0) return false;
+    const std::string text(json, static_cast<size_t>(length));
+    const json::Reader top(json, length);
 
-    char buf[64] = {0};
-    if (top.get_string("name", buf, sizeof(buf))) out.name = buf;
-    if (top.get_string("callsign", buf, sizeof(buf))) out.callsign = buf;
-    if (top.get_string("mode", buf, sizeof(buf))) out.mode = mode_from(buf);
+    char buffer[64] = {0};
+    if (top.get_string("name", buffer, sizeof(buffer))) out.name = buffer;
+    if (top.get_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
+    if (top.get_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
 
-    out.lat_1e7 = static_cast<int32_t>(int_or(top, "lat_1e7", out.lat_1e7));
-    out.lon_1e7 = static_cast<int32_t>(int_or(top, "lon_1e7", out.lon_1e7));
-    out.alt_m = static_cast<int32_t>(int_or(top, "alt_m", out.alt_m));
+    out.latitude_1e7 = static_cast<int32_t>(int_or(top, "lat_1e7", out.latitude_1e7));
+    out.longitude_1e7 = static_cast<int32_t>(int_or(top, "lon_1e7", out.longitude_1e7));
+    out.altitude_m = static_cast<int32_t>(int_or(top, "alt_m", out.altitude_m));
     out.speed_kt = static_cast<int32_t>(int_or(top, "speed_kt", out.speed_kt));
     out.track_deg = static_cast<int32_t>(int_or(top, "track_deg", out.track_deg));
     out.turn_dps = static_cast<int32_t>(int_or(top, "turn_dps", out.turn_dps));
@@ -107,7 +107,7 @@ bool parse_scenario(const char* json, int len, Scenario& out) {
     for (const std::string& obj : objects_in_array(text, "aircraft")) {
         const json::Reader r(obj.c_str(), static_cast<int>(obj.size()));
         ScenarioAircraft a;
-        if (r.get_string("system", buf, sizeof(buf))) a.system = system_from(buf);
+        if (r.get_string("system", buffer, sizeof(buffer))) a.system = system_from(buffer);
         a.north_m = static_cast<double>(int_or(r, "north_m", 0));
         a.east_m = static_cast<double>(int_or(r, "east_m", 0));
         a.up_m = static_cast<double>(int_or(r, "up_m", 0));

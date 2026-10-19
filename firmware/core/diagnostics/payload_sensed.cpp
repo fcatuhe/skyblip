@@ -1,6 +1,6 @@
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 Record record_of(const Gnss& value, const Instant& at) {
     Record r = framed(Type::Gnss, at);
@@ -9,8 +9,8 @@ Record record_of(const Gnss& value, const Instant& at) {
     put_u16(r.payload + 4, value.hdop_e2);
     put_u16(r.payload + 6, value.vdop_e2);
     put_u16(r.payload + 8, clamp_u16(value.stage_s));
-    r.payload[10] = value.sats;
-    r.payload[11] = value.sats_in_view;
+    r.payload[10] = value.satellites;
+    r.payload[11] = value.satellites_in_view;
     r.payload[12] = value.fix_mode;
     r.payload[13] = static_cast<uint8_t>(value.reject);
     r.payload[14] = static_cast<uint8_t>(value.stage);
@@ -31,8 +31,8 @@ bool read(const Record& record, Gnss& out) {
     out.hdop_e2 = get_u16(record.payload + 4);
     out.vdop_e2 = get_u16(record.payload + 6);
     out.stage_s = get_u16(record.payload + 8);
-    out.sats = record.payload[10];
-    out.sats_in_view = record.payload[11];
+    out.satellites = record.payload[10];
+    out.satellites_in_view = record.payload[11];
     out.fix_mode = record.payload[12];
     out.reject = static_cast<gnss::FixReject>(record.payload[13]);
     out.stage = static_cast<gnss::Stage>(record.payload[14]);
@@ -84,7 +84,7 @@ Record record_of(const radio::Entry& value) {
     r.payload[9] = static_cast<uint8_t>(value.source);
     r.payload[10] = static_cast<uint8_t>(value.band);
     r.payload[11] = value.channel;
-    r.payload[12] = value.len;
+    r.payload[12] = value.length;
     put_i8(r.payload + 13, value.rssi_dbm);
     put_i8(r.payload + 14, value.key_offset_s);
     put_i8(r.payload + 15, stage_margin_steps(value.tx_stage_margin_us));
@@ -110,7 +110,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.source = static_cast<model::Source>(record.payload[9]);
     out.band = static_cast<model::Band>(record.payload[10]);
     out.channel = record.payload[11];
-    out.len = record.payload[12];
+    out.length = record.payload[12];
     out.rssi_dbm = get_i8(record.payload + 13);
     out.key_offset_s = get_i8(record.payload + 14);
     out.tx_stage_margin_us = static_cast<int16_t>(get_i8(record.payload + 15) * kStageMarginStepUs);
@@ -122,28 +122,28 @@ bool read(const Record& record, radio::Entry& out) {
     return true;
 }
 
-Record record_of(const Baro& value, const Instant& at) {
-    Record r = framed(Type::Baro, at);
+Record record_of(const Barometer& value, const Instant& at) {
+    Record r = framed(Type::Barometer, at);
     put_u32(r.payload + 0, value.pressure_mpa);
-    put_i32(r.payload + 4, value.alt_mm);
+    put_i32(r.payload + 4, value.altitude_mm);
     put_i32(r.payload + 8, value.climb_mm_s);
     put_i16(r.payload + 12, value.temperature_dc);
-    set_flag(r.flags, kBaroFlagActive, value.active);
-    set_flag(r.flags, kBaroFlagTemperatureValid, value.temperature_valid);
-    set_flag(r.flags, kBaroFlagClimbAdopted, value.climb_adopted);
+    set_flag(r.flags, kBarometerFlagActive, value.active);
+    set_flag(r.flags, kBarometerFlagTemperatureValid, value.temperature_valid);
+    set_flag(r.flags, kBarometerFlagClimbAdopted, value.climb_adopted);
     return r;
 }
 
-bool read(const Record& record, Baro& out) {
-    if (record.type != Type::Baro) return false;
-    out = Baro{};
+bool read(const Record& record, Barometer& out) {
+    if (record.type != Type::Barometer) return false;
+    out = Barometer{};
     out.pressure_mpa = get_u32(record.payload + 0);
-    out.alt_mm = get_i32(record.payload + 4);
+    out.altitude_mm = get_i32(record.payload + 4);
     out.climb_mm_s = get_i32(record.payload + 8);
     out.temperature_dc = get_i16(record.payload + 12);
-    out.active = record.flagged(kBaroFlagActive);
-    out.temperature_valid = record.flagged(kBaroFlagTemperatureValid);
-    out.climb_adopted = record.flagged(kBaroFlagClimbAdopted);
+    out.active = record.flagged(kBarometerFlagActive);
+    out.temperature_valid = record.flagged(kBarometerFlagTemperatureValid);
+    out.climb_adopted = record.flagged(kBarometerFlagClimbAdopted);
     return true;
 }
 

@@ -1,7 +1,7 @@
 // The satellites page: a bar for every satellite in view, and what stands in before any GSV.
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
-#include "products/skyblip_go/pages/sats.h"
+#include "products/skyblip_go/pages/satellites.h"
 #include "test/support/glass_ink.h"
 #include "test/support/glass_text.h"
 
@@ -17,19 +17,19 @@ skyblip::gnss::SkyView sky_of(int gps, int beidou, int used) {
     for (int i = 0; i < used; i++) sky.solving(System::Gps, static_cast<uint8_t>(1 + i));
     sky.open(System::Gps);
     for (int i = 0; i < gps; i++) {
-        SatelliteView sat;
-        sat.id = static_cast<uint8_t>(1 + i);
-        sat.system = System::Gps;
-        sat.cn0_dbhz = static_cast<uint8_t>(i < gps - 1 ? 45 - i : 0);
-        sky.add(sat);
+        SatelliteView satellite;
+        satellite.id = static_cast<uint8_t>(1 + i);
+        satellite.system = System::Gps;
+        satellite.cn0_dbhz = static_cast<uint8_t>(i < gps - 1 ? 45 - i : 0);
+        sky.add(satellite);
     }
     sky.open(System::Beidou);
     for (int i = 0; i < beidou; i++) {
-        SatelliteView sat;
-        sat.id = static_cast<uint8_t>(7 + i);
-        sat.system = System::Beidou;
-        sat.cn0_dbhz = 38;
-        sky.add(sat);
+        SatelliteView satellite;
+        satellite.id = static_cast<uint8_t>(7 + i);
+        satellite.system = System::Beidou;
+        satellite.cn0_dbhz = 38;
+        sky.add(satellite);
     }
     return sky;
 }
@@ -40,7 +40,7 @@ skyblip::gnss::SkyView sky_of(int gps, int beidou, int used) {
 TEST_CASE(
     "satellites page: a bar for every satellite in view, filled for the ones in the solution") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
-    SatsSnapshot snapshot;
+    SatellitesSnapshot snapshot;
     snapshot.levels_live = true;
     snapshot.sky = &sky;
     snapshot.hdop_e2 = 90;
@@ -48,7 +48,7 @@ TEST_CASE(
     snapshot.nav_ms = 98;
     snapshot.nav_valid = true;
     Glass canvas;
-    draw_sats(canvas, snapshot);
+    draw_satellites(canvas, snapshot);
 
     CHECK(reads_in(canvas, "SATELLITES", 0, 0, 120, 12));
     CHECK(reads_in(canvas, "NAV 098MS", 130, 150, 200, 168));
@@ -66,13 +66,13 @@ TEST_CASE(
 // A level nobody has measured yet is not drawn as a level of zero.
 TEST_CASE("satellites page: before the first GSV set the solution stands in for the bars") {
     const skyblip::gnss::SkyView sky = sky_of(6, 4, 3);
-    SatsSnapshot snapshot;
+    SatellitesSnapshot snapshot;
     snapshot.fix_valid = true;
     snapshot.levels_live = false;
     snapshot.sky = &sky;
-    snapshot.sats = 9;
+    snapshot.satellites = 9;
     Glass canvas;
-    draw_sats(canvas, snapshot);
+    draw_satellites(canvas, snapshot);
 
     CHECK(reads_in(canvas, "LEVELS COMING UP", 0, 176, 200, 196));
     CHECK(reads_in(canvas, "USED 3", 60, 0, 200, 12));
@@ -82,10 +82,10 @@ TEST_CASE("satellites page: before the first GSV set the solution stands in for 
 
 TEST_CASE(
     "satellites page: a receiver that heard nothing says so rather than drawing an empty chart") {
-    SatsSnapshot snapshot;
+    SatellitesSnapshot snapshot;
     snapshot.stage = skyblip::gnss::Stage::Blind;
     Glass canvas;
-    draw_sats(canvas, snapshot);
+    draw_satellites(canvas, snapshot);
     CHECK(reads_in(canvas, "NO SATELLITE HEARD", 0, 176, 200, 196));
     CHECK(reads_in(canvas, "BLIND", 0, 140, 80, 158));
     CHECK(reads_in(canvas, "HDOP ---", 0, 150, 130, 168));

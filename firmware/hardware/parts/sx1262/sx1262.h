@@ -17,7 +17,7 @@ enum class RadioEventType : uint8_t { None, RxDone, CrcError, TxDone, Timeout, F
 
 struct RadioEvent {
     RadioEventType type{RadioEventType::None};
-    uint8_t len{0};
+    uint8_t length{0};
     int8_t rssi_dbm{0};
     bool rssi_valid{false};
 };
@@ -27,7 +27,7 @@ struct RadioEvent {
 // part, and they are two modulations, so nothing here is allowed to be a
 // hard-coded M-band figure.
 struct RadioConfig {
-    uint32_t freq_hz{868200000};
+    uint32_t frequency_hz{868200000};
     uint32_t bitrate{100000};
     uint32_t fdev_hz{50000};
     uint32_t bandwidth_hz{200000};
@@ -39,11 +39,11 @@ struct RadioConfig {
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
     uint8_t payload_bytes{0};
-    // Tenths of a ppm added to freq_hz before the PLL word is computed, positive
+    // Tenths of a ppm added to frequency_hz before the PLL word is computed, positive
     // upwards. Zero is the design intent on a TCXO part; the field exists so a
     // batch whose reference is out can be corrected in the field instead of
-    // returned. Clamped to sx::kFreqTrimCeilingE1Ppm either way.
-    int16_t freq_corr_e1_ppm{0};
+    // returned. Clamped to sx::kFrequencyTrimCeilingE1Ppm either way.
+    int16_t frequency_correction_e1_ppm{0};
 };
 
 class Sx1262 {
@@ -64,10 +64,10 @@ class Sx1262 {
     Status begin();
     Status configure_radio(const RadioConfig& config);
 
-    Status transmit(const uint8_t* data, uint8_t len);
-    Status stage_tx(const uint8_t* data, uint8_t len);
+    Status transmit(const uint8_t* data, uint8_t length);
+    Status stage_tx(const uint8_t* data, uint8_t length);
     Status key_tx();
-    uint32_t air_us(uint8_t len) const;
+    uint32_t air_us(uint8_t length) const;
     Status start_receive();
 
     // The lowest-power state the part has, and the way back out of it.
@@ -81,7 +81,7 @@ class Sx1262 {
     // to.
     Status wait_ready() { return wait_busy_low(); }
 
-    RadioEvent poll(uint8_t* rx_buf, uint8_t cap);
+    RadioEvent poll(uint8_t* rx_buffer, uint8_t cap);
     // INFO: fc 16sep26 DIO1 is a level here, not an edge | 03oct26 an edge only wakes the executor
     bool irq_asserted() { return gpio_.get(dio1_); }
 
@@ -96,7 +96,7 @@ class Sx1262 {
    private:
     Status wait_busy_low(uint32_t max_spins = 100000);
     void select_when_ready();
-    void command(uint8_t opcode, const uint8_t* params, size_t n);
+    void command(uint8_t opcode, const uint8_t* parameters, size_t n);
     void read_command(uint8_t opcode, uint8_t* out, size_t n);
     void write_frame(const uint8_t* head, size_t head_n, const uint8_t* data, size_t n);
     void read_frame(const uint8_t* head, size_t head_n, uint8_t* out, size_t n);
@@ -118,12 +118,12 @@ class Sx1262 {
     void configure_power();
     void configure_irq();
     int8_t packet_rssi_dbm();
-    uint8_t read_payload(uint8_t* rx_buf, uint8_t cap);
+    uint8_t read_payload(uint8_t* rx_buffer, uint8_t cap);
     Status check_device_errors();
     void clear_device_errors();
     void configure_frame(const RadioConfig& config);
-    void write_packet_params(uint8_t payload_bytes);
-    uint32_t tx_timeout_ticks(uint8_t len) const;
+    void write_packet_parameters(uint8_t payload_bytes);
+    uint32_t tx_timeout_ticks(uint8_t length) const;
     void recover_tx();
     Status reinit();
 
@@ -170,7 +170,7 @@ constexpr uint8_t kSetRegulatorMode = 0x96;
 // closes it.
 constexpr uint8_t kRegulatorLdo = 0x00;
 constexpr uint8_t kRegulatorDcDc = 0x01;
-constexpr uint8_t kSetDio3AsTcxoCtrl = 0x97;
+constexpr uint8_t kSetDio3AsTcxoControl = 0x97;
 constexpr uint8_t kSetDio2AsRfSwitch = 0x9D;
 constexpr uint8_t kCalibrate = 0x89;
 constexpr uint8_t kTcxoVolt1v8 = 0x02;  // DIO3 TCXO 1.8 V (T-Echo Plus)
@@ -179,11 +179,11 @@ constexpr uint8_t kSetTx = 0x83;
 constexpr uint8_t kSetRx = 0x82;
 constexpr uint8_t kSetRfFrequency = 0x86;
 constexpr uint8_t kSetPacketType = 0x8A;
-constexpr uint8_t kSetModulationParams = 0x8B;
-constexpr uint8_t kSetPacketParams = 0x8C;
+constexpr uint8_t kSetModulationParameters = 0x8B;
+constexpr uint8_t kSetPacketParameters = 0x8C;
 constexpr uint8_t kSetPaConfig = 0x95;
-constexpr uint8_t kSetTxParams = 0x8E;
-constexpr uint8_t kSetDioIrqParams = 0x08;
+constexpr uint8_t kSetTxParameters = 0x8E;
+constexpr uint8_t kSetDioIrqParameters = 0x08;
 constexpr uint8_t kWriteRegister = 0x0D;
 constexpr uint8_t kReadRegister = 0x1D;
 constexpr uint8_t kSetSleep = 0x84;
@@ -239,25 +239,25 @@ constexpr uint8_t kGetStatus = 0xC0;
 constexpr uint8_t kGetDeviceErrors = 0x17;
 constexpr uint8_t kClearDeviceErrors = 0x07;
 // INFO: fc 05sep26 DS 13.5.5 OpError: the only report a failed calibration ever makes
-constexpr uint16_t kErrRc64kCalib = 0x0001;
-constexpr uint16_t kErrRc13mCalib = 0x0002;
-constexpr uint16_t kErrPllCalib = 0x0004;
-constexpr uint16_t kErrAdcCalib = 0x0008;
-constexpr uint16_t kErrImageCalib = 0x0010;
-constexpr uint16_t kErrXoscStart = 0x0020;
-constexpr uint16_t kErrPllLock = 0x0040;
-constexpr uint16_t kErrPaRamp = 0x0100;
+constexpr uint16_t kErrorRc64kCalibration = 0x0001;
+constexpr uint16_t kErrorRc13mCalibration = 0x0002;
+constexpr uint16_t kErrorPllCalibration = 0x0004;
+constexpr uint16_t kErrorAdcCalibration = 0x0008;
+constexpr uint16_t kErrorImageCalibration = 0x0010;
+constexpr uint16_t kErrorXoscStart = 0x0020;
+constexpr uint16_t kErrorPllLock = 0x0040;
+constexpr uint16_t kErrorPaRamp = 0x0100;
 constexpr uint16_t kDeviceErrorMask = 0x01FF;
 constexpr uint8_t kGetRssiInst = 0x15;
 constexpr uint8_t kGetRxBufferStatus = 0x13;
 constexpr uint8_t kGetPacketStatus = 0x14;
 constexpr uint16_t kIrqTxDone = 0x0001;
 constexpr uint16_t kIrqRxDone = 0x0002;
-constexpr uint16_t kIrqCrcErr = 0x0040;
+constexpr uint16_t kIrqCrcError = 0x0040;
 constexpr uint16_t kIrqTimeout = 0x0200;
 // INFO: wr 02aug26 DS 13.3.1: IrqMask is 0x0000 out of reset and gates the whole
 // IRQ status register, so an unmasked bit is a bit GetIrqStatus never reports.
-constexpr uint16_t kIrqMask = kIrqTxDone | kIrqRxDone | kIrqCrcErr | kIrqTimeout;
+constexpr uint16_t kIrqMask = kIrqTxDone | kIrqRxDone | kIrqCrcError | kIrqTimeout;
 
 constexpr uint32_t kXtalHz = 32000000;
 // DS 13.4.6 GFSK modulation params: pulse shape and RX bandwidth are table
@@ -332,20 +332,22 @@ constexpr uint8_t kImageBand863to870[2] = {0xD7, 0xDB};
 // against both the 200 kHz channel and the distance from 868.2 MHz to the edges
 // of ERC 70-03 band h1.4 (868.0-868.6 MHz), so no legal trim moves the carrier
 // out of the band it is licensed in. Kept equal to
-// settings::kFreqTrimCeilingE1Ppm, which is the same bound on the stored
+// settings::kFrequencyTrimCeilingE1Ppm, which is the same bound on the stored
 // value; test/hardware/test_sx1262_level.cpp pins the two together.
-constexpr int16_t kFreqTrimCeilingE1Ppm = 100;
+constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 // Tenths of a ppm are parts in 10^7.
-constexpr int32_t kFreqTrimPerUnit = 10000000;
+constexpr int32_t kFrequencyTrimPerUnit = 10000000;
 
 // The frequency actually programmed, once the reference's own error is taken
 // out. Positive trim moves the carrier up, which is what a part measuring low
 // on a counter needs.
-constexpr uint32_t trimmed_hz(uint32_t freq_hz, int16_t corr_e1_ppm) {
-    int32_t corr = corr_e1_ppm;
-    corr = std::clamp<int32_t>(corr, -kFreqTrimCeilingE1Ppm, kFreqTrimCeilingE1Ppm);
-    const int64_t offset = (static_cast<int64_t>(freq_hz) * corr) / kFreqTrimPerUnit;
-    return static_cast<uint32_t>(static_cast<int64_t>(freq_hz) + offset);
+constexpr uint32_t trimmed_hz(uint32_t frequency_hz, int16_t correction_e1_ppm) {
+    int32_t correction = correction_e1_ppm;
+    correction =
+        std::clamp<int32_t>(correction, -kFrequencyTrimCeilingE1Ppm, kFrequencyTrimCeilingE1Ppm);
+    const int64_t offset =
+        (static_cast<int64_t>(frequency_hz) * correction) / kFrequencyTrimPerUnit;
+    return static_cast<uint32_t>(static_cast<int64_t>(frequency_hz) + offset);
 }
 
 // DS 13.4.1: the SetTx timeout counts 15.625 us steps, 24 bits wide. 0 disables

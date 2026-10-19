@@ -8,16 +8,16 @@ namespace skyblip {
 
 // INFO: fc 19sep26 integer division truncates toward zero, which reads a measurement a unit low
 template <class T>
-constexpr T div_round(T num, T den) {
-    return num >= 0 ? (num + den / 2) / den : -((-num + den / 2) / den);
+constexpr T div_round(T number, T den) {
+    return number >= 0 ? (number + den / 2) / den : -((-number + den / 2) / den);
 }
 
 constexpr int64_t kE7PerTurn = 3600000000LL;
 
-constexpr int32_t wrapped_lon_1e7(int64_t lon_1e7) {
+constexpr int32_t wrapped_longitude_1e7(int64_t longitude_1e7) {
     const int64_t half_turn = kE7PerTurn / 2;
-    return static_cast<int32_t>(((lon_1e7 + half_turn) % kE7PerTurn + kE7PerTurn) % kE7PerTurn -
-                                half_turn);
+    return static_cast<int32_t>(
+        ((longitude_1e7 + half_turn) % kE7PerTurn + kE7PerTurn) % kE7PerTurn - half_turn);
 }
 
 constexpr int32_t kTrigOne = 16384;

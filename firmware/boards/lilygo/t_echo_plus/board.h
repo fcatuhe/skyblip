@@ -33,7 +33,7 @@ static_assert(t_echo_plus::kGlassWidth == parts::Ssd1681::kGlassWidth &&
                   t_echo_plus::kGlassHeight == parts::Ssd1681::kGlassHeight,
               "the glass on this board is what its controller drives");
 
-static_assert(runtime::kBaroConversionCeilingMs < runtime::kBaroConversionPeriodMs,
+static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConversionPeriodMs,
               "a barometer conversion is read or given up before the next one is triggered");
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
@@ -98,7 +98,7 @@ class TEchoPlus {
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }
-    uint32_t baro_faults() const { return baro_faults_; }
+    uint32_t barometer_faults() const { return barometer_faults_; }
 
     // What answered, by name and address, behind the capability bits. The
     // self-test page reads it: two BME280 addresses, five shipped e-paper
@@ -118,8 +118,8 @@ class TEchoPlus {
                 ? static_cast<ports::Display&>(display_)
                 : null_.display,
             ports::has(capabilities_, ports::Capability::Storage)
-                ? static_cast<ports::KvStore&>(platform_.kv())
-                : null_.kv,
+                ? static_cast<ports::KeyValueStore&>(platform_.key_value())
+                : null_.key_value,
             ports::has(capabilities_, ports::Capability::Storage)
                 ? static_cast<ports::FlashRegion&>(platform_.log_flash())
                 : null_.log_flash,
@@ -145,54 +145,55 @@ class TEchoPlus {
         };
     }
 
-    void poll_baro_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
-        if (!ports::has(capabilities_, ports::Capability::Baro)) return;
-        if (baro_converting_) collect_baro(now_ms);
-        if (baro_converting_) return;
-        if (baro_due(clock, now_ms)) {
-            last_baro_ms_ = now_ms;
-            baro_quarter_ = 0;
-            trigger_baro(now_ms, true);
-        } else if (unpublished_baro_due(clock, now_ms)) {
-            baro_quarter_ = clock.since_edge_ms / runtime::kBaroConversionPeriodMs;
-            trigger_baro(now_ms, false);
+    void poll_barometer_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
+        if (!ports::has(capabilities_, ports::Capability::Barometer)) return;
+        if (barometer_converting_) collect_barometer(now_ms);
+        if (barometer_converting_) return;
+        if (barometer_due(clock, now_ms)) {
+            last_barometer_ms_ = now_ms;
+            barometer_quarter_ = 0;
+            trigger_barometer(now_ms, true);
+        } else if (unpublished_barometer_due(clock, now_ms)) {
+            barometer_quarter_ = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+            trigger_barometer(now_ms, false);
         }
     }
 
-    void trigger_baro(uint32_t now_ms, bool published) {
-        baro_triggered_ms_ = now_ms;
-        baro_published_ = published;
-        baro_converting_ = platform_.trigger_baro();
-        if (!baro_converting_) baro_faults_++;
+    void trigger_barometer(uint32_t now_ms, bool published) {
+        barometer_triggered_ms_ = now_ms;
+        barometer_published_ = published;
+        barometer_converting_ = platform_.trigger_barometer();
+        if (!barometer_converting_) barometer_faults_++;
     }
 
-    void collect_baro(uint32_t now_ms) {
-        platform::BaroReading reading{};
-        if (baro_published_ && platform_.read_baro(reading)) {
-            baro_converting_ = false;
-            bus_.baro.push(events::BaroSample{
-                reading.pressure_mpa, baro_triggered_ms_ + parts::Bme280::kConversionMidpointMs,
+    void collect_barometer(uint32_t now_ms) {
+        platform::BarometerReading reading{};
+        if (barometer_published_ && platform_.read_barometer(reading)) {
+            barometer_converting_ = false;
+            bus_.barometer.push(events::BarometerSample{
+                reading.pressure_mpa,
+                barometer_triggered_ms_ + parts::Bme280::kConversionMidpointMs,
                 reading.temperature_dc, reading.temperature_valid});
             return;
         }
-        if (now_ms - baro_triggered_ms_ < runtime::kBaroConversionCeilingMs) return;
-        baro_converting_ = false;
-        if (baro_published_) baro_faults_++;
+        if (now_ms - barometer_triggered_ms_ < runtime::kBarometerConversionCeilingMs) return;
+        barometer_converting_ = false;
+        if (barometer_published_) barometer_faults_++;
     }
 
-    bool unpublished_baro_due(const timing::ClockState& clock, uint32_t now_ms) const {
+    bool unpublished_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
-            return now_ms - baro_triggered_ms_ >= runtime::kBaroConversionPeriodMs;
-        const uint32_t slot = clock.since_edge_ms / runtime::kBaroConversionPeriodMs;
-        return slot > baro_quarter_ && slot < kBaroConversionsPerSecond;
+            return now_ms - barometer_triggered_ms_ >= runtime::kBarometerConversionPeriodMs;
+        const uint32_t slot = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+        return slot > barometer_quarter_ && slot < kBarometerConversionsPerSecond;
     }
 
-    bool baro_due(const timing::ClockState& clock, uint32_t now_ms) const {
-        const uint32_t since = now_ms - last_baro_ms_;
-        if (since < runtime::kBaroPublishPeriodMs / 2) return false;
-        if (!clock.pps_locked) return since >= runtime::kBaroPublishPeriodMs;
-        return clock.since_edge_ms < runtime::kBaroPpsWindowMs ||
-               since >= 2 * runtime::kBaroPublishPeriodMs;
+    bool barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
+        const uint32_t since = now_ms - last_barometer_ms_;
+        if (since < runtime::kBarometerPublishPeriodMs / 2) return false;
+        if (!clock.pps_locked) return since >= runtime::kBarometerPublishPeriodMs;
+        return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
+               since >= 2 * runtime::kBarometerPublishPeriodMs;
     }
 
     void publish_contact(events::Contact which, input::Contact& contact, bool level,
@@ -256,7 +257,7 @@ class TEchoPlus {
         const uint64_t now_us = platform_.clock().micros();
         state.clock.pps_locked = platform_.pps().locked();
         state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
-        poll_baro_on_pps(state.clock, now_ms);
+        poll_barometer_on_pps(state.clock, now_ms);
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding
         // it from the millisecond phase threw away up to a millisecond of the
@@ -278,8 +279,8 @@ class TEchoPlus {
     parts::Drv2605& haptic() { return haptic_; }
 
    private:
-    static constexpr uint32_t kBaroConversionsPerSecond =
-        runtime::kBaroPublishPeriodMs / runtime::kBaroConversionPeriodMs;
+    static constexpr uint32_t kBarometerConversionsPerSecond =
+        runtime::kBarometerPublishPeriodMs / runtime::kBarometerConversionPeriodMs;
 
     // What this board needs when a probe contradicts what the platform declared.
     ports::Capabilities without(ports::Capability bit) const {
@@ -304,11 +305,12 @@ class TEchoPlus {
         // it would miss the part entirely.
         haptic_.power_up();
         inventory_ = t_echo_plus::scan_i2c(platform_.i2c(io::BusId::Sensor));
-        inventory_.baro_address = inventory_.has_i2c_address(parts::Bme280::kAddressPrimary)
-                                      ? parts::Bme280::kAddressPrimary
-                                  : inventory_.has_i2c_address(parts::Bme280::kAddressAlternate)
-                                      ? parts::Bme280::kAddressAlternate
-                                      : 0;
+        inventory_.barometer_address =
+            inventory_.has_i2c_address(parts::Bme280::kAddressPrimary)
+                ? parts::Bme280::kAddressPrimary
+            : inventory_.has_i2c_address(parts::Bme280::kAddressAlternate)
+                ? parts::Bme280::kAddressAlternate
+                : 0;
     }
 
     // The haptic is a part on a bus, not a pin. Capability::Haptic is granted by
@@ -364,7 +366,7 @@ class TEchoPlus {
             if (imu_.stage() == parts::Bhi260::Stage::Idle) load_imu(now_ms);
             imu_.service(now_ms);
             if (imu_.poll())
-                bus_.accel.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
+                bus_.accelerometer.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
         }
         publish_imu_image(state);
     }
@@ -453,12 +455,12 @@ class TEchoPlus {
     input::Contact pad_{t_echo_plus::kPadSettleMs};
     ports::NullRoles null_{};
     ports::Capabilities capabilities_;
-    uint32_t last_baro_ms_{0};
-    uint32_t baro_triggered_ms_{0};
-    uint32_t baro_quarter_{0};
-    uint32_t baro_faults_{0};
-    bool baro_converting_{false};
-    bool baro_published_{false};
+    uint32_t last_barometer_ms_{0};
+    uint32_t barometer_triggered_ms_{0};
+    uint32_t barometer_quarter_{0};
+    uint32_t barometer_faults_{0};
+    bool barometer_converting_{false};
+    bool barometer_published_{false};
     uint32_t last_battery_ms_{0};
 };
 

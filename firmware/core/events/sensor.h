@@ -4,14 +4,14 @@
 #include <cstdint>
 
 namespace skyblip::events {
-struct BaroSample {
+struct BarometerSample {
     uint32_t pressure_mpa;
     uint32_t at_ms;
     int16_t temperature_dc;
     bool temperature_valid;
 };
 
-struct AccelSample {
+struct AccelerometerSample {
     int16_t right_mg;
     int16_t up_mg;
     int16_t aft_mg;

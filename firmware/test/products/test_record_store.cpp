@@ -3,7 +3,7 @@
 #include <cstring>
 #include <string>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/record_store.h"
@@ -25,9 +25,9 @@ class BlindSectorFlash : public platform::host::FlashRegion {
    public:
     BlindSectorFlash(uint32_t sectors, uint32_t blind) : FlashRegion(sectors), blind_(blind) {}
 
-    Status read(uint32_t offset, uint8_t* buf, uint32_t len) override {
+    Status read(uint32_t offset, uint8_t* buffer, uint32_t length) override {
         if (offset / kSectorBytes == blind_) return Status::Down;
-        return FlashRegion::read(offset, buf, len);
+        return FlashRegion::read(offset, buffer, length);
     }
 
    private:
@@ -43,7 +43,7 @@ struct StoreRig {
     ports::Roles roles;
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::RecordPool pool{context};
     go::RecordStore flights{pool, store::SectorOwner::Flights};
@@ -51,7 +51,7 @@ struct StoreRig {
 
     explicit StoreRig(ports::FlashRegion& region)
         : flash(region),
-          roles{clock,     null.rf,          link,     null.display,         null.kv,
+          roles{clock,     null.rf,          link,     null.display,         null.key_value,
                 region,    null.annunciator, null.dfu, null.die_temperature, null.indicator,
                 null.gnss, identity} {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
@@ -103,20 +103,22 @@ void write_flight_record(go::RecordStore& store, uint32_t utc_s, bool session_en
     REQUIRE(store.append(raw, 0) == go::Append::Ok);
 }
 
-void write_diag_record(go::RecordStore& store, diag::Type type, uint32_t at_s) {
-    diag::Instant at{};
+void write_diagnostics_record(go::RecordStore& store, diagnostics::Type type, uint32_t at_s) {
+    diagnostics::Instant at{};
     at.at_s = at_s;
     at.utc_dated = true;
-    const diag::Record record = type == diag::Type::End ? diag::record_of(diag::End{}, at)
-                                                        : diag::record_of(diag::Gnss{}, at);
+    const diagnostics::Record record = type == diagnostics::Type::End
+                                           ? diagnostics::record_of(diagnostics::End{}, at)
+                                           : diagnostics::record_of(diagnostics::Gnss{}, at);
     uint8_t raw[go::kStoreRecordBytes]{};
-    diag::encode_record(record, raw);
+    diagnostics::encode_record(record, raw);
     REQUIRE(store.append(raw, 0) == go::Append::Ok);
 }
 
 go::Append append_one(go::RecordStore& store, uint32_t now_ms = 0) {
     uint8_t raw[go::kStoreRecordBytes]{};
-    diag::encode_record(diag::record_of(diag::Gnss{}, diag::Instant{}), raw);
+    diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, diagnostics::Instant{}),
+                               raw);
     return store.append(raw, now_ms);
 }
 
@@ -182,8 +184,8 @@ TEST_CASE("record store: a capture that lost its first sector is listed truncate
     rig.capture.begin_session(kCaptureSession);
     const uint32_t slots = rig.pool.slots_per_sector();
     for (uint32_t i = 0; i <= slots * 3; i++)
-        write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession + i);
-    write_diag_record(rig.capture, diag::Type::End, kFlightSession);
+        write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + i);
+    write_diagnostics_record(rig.capture, diagnostics::Type::End, kFlightSession);
     rig.capture.end_session();
     rig.capture.rebuild_index();
 
@@ -198,13 +200,13 @@ TEST_CASE("record store: a capture is closed by its end marker and by nothing el
     rig.open();
 
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
     rig.capture.end_session();
     rig.capture.rebuild_index();
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"closed\":false"));
 
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::End, kFlightSession + 1);
+    write_diagnostics_record(rig.capture, diagnostics::Type::End, kFlightSession + 1);
     rig.capture.end_session();
     rig.capture.rebuild_index();
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"closed\":true"));
@@ -216,7 +218,7 @@ TEST_CASE("record store: a write the part refused is a fault the caller can retr
     StoreRig rig{flash};
     rig.open();
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
 
     const uint32_t faults = rig.pool.faults();
     flash.cut_power_after(0);
@@ -248,7 +250,7 @@ TEST_CASE("record store: a session opens without touching the flash") {
     CHECK(flash.writes == writes);
     CHECK(flash.erases == erases);
 
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
     CHECK(flash.erases > erases);
 }
 
@@ -344,10 +346,10 @@ TEST_CASE("record store: both rings writing in one pass share the window that pa
 namespace {
 
 void numbered_record(uint32_t i, uint8_t* out) {
-    diag::Instant at{};
+    diagnostics::Instant at{};
     at.at_s = kFlightSession + i;
     at.utc_dated = true;
-    diag::encode_record(diag::record_of(diag::Gnss{}, at), out);
+    diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, at), out);
 }
 
 void advance_to_slot(go::RecordStore& store, uint32_t slot) {

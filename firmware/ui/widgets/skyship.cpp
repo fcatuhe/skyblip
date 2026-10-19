@@ -71,14 +71,14 @@ constexpr Sprite kDefaultSprite{kGlyphW, kGlyphH, kGlyphOriginRow, kOwnshipRows}
 // s.w is EVEN, so the fuselage straddles the pixel pair (cx-1|cx) and the sprite
 // is exactly centred. The hot-spot row is laid on cy, which puts the aircraft's
 // position on the plot origin itself, not half a pixel off it.
-void draw_skyship(Canvas& canvas, int cx, int cy) {
+void draw_skyship(Canvas& canvas, int centre_x, int centre_y) {
     const Sprite& s = kDefaultSprite;
     static_assert(kGlyphW % 2 == 0, "even width: the centre is a pixel PAIR");
     static_assert(kGlyphOriginRow == kSkyshipRowsToNose,
                   "the nose a screen clears is this sprite's");
     static_assert(kGlyphW == kSkyshipSpan, "the span a screen measures against is this sprite's");
     static_assert(kGlyphH == kSkyshipRows, "the rows a screen measures against are this sprite's");
-    const int x0 = cx - s.w / 2, y0 = cy - s.origin_row;
+    const int x0 = centre_x - s.w / 2, y0 = centre_y - s.origin_row;
     for (int row = 0; row < s.h; row++) {
         uint32_t bits = s.rows[row];
         for (int col = 0; bits; col++, bits >>= 1) {

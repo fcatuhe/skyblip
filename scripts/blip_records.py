@@ -1,6 +1,6 @@
 """Decode the 24-byte records a skyBlip offloads, and read the NDJSON they are kept in.
 
-Byte-exact against firmware/core/diag/record.h with firmware/core/diag/payload.h
+Byte-exact against firmware/core/diagnostics/record.h with firmware/core/diagnostics/payload.h
 (the diagnostics capture) and firmware/core/flight/log_record.h (the flights
 log). Field names and enum spellings follow schemas/diagnostics_log.v1.schema.json
 and schemas/flight_log.v1.schema.json.

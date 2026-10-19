@@ -138,9 +138,9 @@ std::string console(const Diagnostics& d) {
     std::string all;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
-        const int len = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(len > 0);
-        CHECK(static_cast<int>(std::string(line).size()) == len);
+        const int length = report.line(i, line, static_cast<int>(sizeof(line)));
+        REQUIRE(length > 0);
+        CHECK(static_cast<int>(std::string(line).size()) == length);
         all += line;
         all += "\n";
     }
@@ -155,17 +155,17 @@ struct Frames {
     std::string last;
 };
 
-Frames frames(const Diagnostics& d, int payload, const char* cmd = "diag") {
-    DiagnosticsReport report(d, cmd);
+Frames frames(const Diagnostics& d, int payload, const char* command = "diag") {
+    DiagnosticsReport report(d, command);
     Frames out;
-    char buf[DiagnosticsReport::kFrameBytes];
+    char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
-        const int len = report.next_frame(payload, buf, static_cast<int>(sizeof(buf)));
-        REQUIRE(len > 0);
-        REQUIRE(len <= payload);
-        out.joined += std::string(buf, static_cast<size_t>(len));
-        out.last = std::string(buf, static_cast<size_t>(len));
-        if (len > out.widest) out.widest = len;
+        const int length = report.next_frame(payload, buffer, static_cast<int>(sizeof(buffer)));
+        REQUIRE(length > 0);
+        REQUIRE(length <= payload);
+        out.joined += std::string(buffer, static_cast<size_t>(length));
+        out.last = std::string(buffer, static_cast<size_t>(length));
+        if (length > out.widest) out.widest = length;
         out.count++;
         REQUIRE(out.count < 32);  // a dump that never ends is a bug, not a report
     }
@@ -251,9 +251,9 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     int widest = 0;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
-        const int len = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(len > 0);
-        if (len > widest) widest = len;
+        const int length = report.line(i, line, static_cast<int>(sizeof(line)));
+        REQUIRE(length > 0);
+        if (length > widest) widest = length;
     }
     CHECK(widest + 1 <= DiagnosticsReport::kLineBytes);
     // And a buffer one byte short of the line refuses it whole rather than
@@ -363,11 +363,11 @@ TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry
 
 TEST_CASE("diagnostics: a frame never mixes two subsystems") {
     DiagnosticsReport report(widest_device(), "diag");
-    char buf[DiagnosticsReport::kFrameBytes];
+    char buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
-        const int len = report.next_frame(kSmallestSupportedPayload, buf, sizeof(buf));
-        REQUIRE(len > 0);
-        const std::string body(buf, static_cast<size_t>(len));
+        const int length = report.next_frame(kSmallestSupportedPayload, buffer, sizeof(buffer));
+        REQUIRE(length > 0);
+        const std::string body(buffer, static_cast<size_t>(length));
         // The radio's keys cannot appear in a frame that says it is the receiver's,
         // whichever way round the report packed them.
         if (has(body, "\"group\":\"gnss\"")) {
@@ -392,9 +392,9 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
     // field plus the four keys that name the frame.
     CHECK_FALSE(report.fits(20));
 
-    char buf[DiagnosticsReport::kFrameBytes];
+    char buffer[DiagnosticsReport::kFrameBytes];
     DiagnosticsReport narrow(d, "diag");
-    CHECK(narrow.next_frame(20, buf, sizeof(buf)) == 0);
+    CHECK(narrow.next_frame(20, buffer, sizeof(buffer)) == 0);
     CHECK_FALSE(narrow.exhausted());
 }
 
@@ -403,12 +403,12 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     DiagnosticsReport report(d, "radio", DiagnosticsReport::Group::Radio);
     CHECK(report.line_count() == 1);
 
-    char buf[DiagnosticsReport::kFrameBytes];
+    char buffer[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {
-        const int len = report.next_frame(kSmallestSupportedPayload, buf, sizeof(buf));
-        REQUIRE(len > 0);
-        body += std::string(buf, static_cast<size_t>(len));
+        const int length = report.next_frame(kSmallestSupportedPayload, buffer, sizeof(buffer));
+        REQUIRE(length > 0);
+        body += std::string(buffer, static_cast<size_t>(length));
     }
     CHECK(has(body, "\"cmd\":\"radio\""));
     CHECK(has(body, "\"group\":\"radio\""));

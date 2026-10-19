@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "ports/clock.h"
 
 namespace skyblip::runtime {
@@ -49,13 +49,13 @@ class LoopMeter {
         }
     }
 
-    diag::Loop take() {
-        diag::Loop window = window_;
+    diagnostics::Loop take() {
+        diagnostics::Loop window = window_;
         const uint64_t busy_ms = busy_us_ / 1000;
         window.busy_ms = busy_ms > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(busy_ms);
         const uint64_t tick_ms = worst_tick_us_ / 1000;
         window.worst_tick_ms = tick_ms > 0xFF ? 0xFF : static_cast<uint8_t>(tick_ms);
-        window_ = diag::Loop{};
+        window_ = diagnostics::Loop{};
         busy_us_ = 0;
         worst_tick_us_ = 0;
         return window;
@@ -63,7 +63,7 @@ class LoopMeter {
 
    private:
     const ports::Clock& clock_;
-    diag::Loop window_{};
+    diagnostics::Loop window_{};
     uint64_t busy_us_{0};
     uint64_t worst_tick_us_{0};
     uint64_t pass_began_us_{0};

@@ -13,7 +13,7 @@
 
 namespace skyblip::platform::zephyr {
 
-class KvStore : public ports::KvStore {
+class KeyValueStore : public ports::KeyValueStore {
    public:
     // Mount NVS on the DT-defined `storage_partition`. Returns Ok on success.
     Status begin() {

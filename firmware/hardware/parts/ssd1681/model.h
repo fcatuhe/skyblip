@@ -52,9 +52,9 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     void wait_at_least_us(uint32_t us) override { elapsed_us += us; }
 
     void select(bool) override {}
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t length) override {
         transfers++;
-        for (size_t i = 0; i < len; i++) {
+        for (size_t i = 0; i < length; i++) {
             uint8_t b = tx ? tx[i] : 0;
             if (rx) rx[i] = 0;
             if (!dc_high_) {
@@ -86,7 +86,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
             } else {
                 if (pending_ == kWriteRam) ram.push_back(b);
                 if (pending_ == kWriteRamPrevious) ram_previous.push_back(b);
-                if (pending_ == kUpdateCtrl2) {
+                if (pending_ == kUpdateControl2) {
                     sequence_ = b;
                     if (b & kDisplay) last_full = !(b & kLoadLutMode2);
                 }
@@ -148,7 +148,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr uint8_t kWriteRam = 0x24;
     static constexpr uint8_t kWriteRamPrevious = 0x26;
     static constexpr uint8_t kMasterActivation = 0x20;
-    static constexpr uint8_t kUpdateCtrl2 = 0x22;
+    static constexpr uint8_t kUpdateControl2 = 0x22;
     static constexpr uint8_t kBorderWaveform = 0x3C;
     static constexpr uint8_t kDeepSleep = 0x10;
     static constexpr uint8_t kEnableAnalog = 0x40;

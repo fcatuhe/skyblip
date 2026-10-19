@@ -60,8 +60,9 @@ RecordStore::Tail RecordStore::diagnostics_tail_of(uint32_t sector) {
     tail.records = frontier_slot(sector);
     if (tail.records == 0) return tail;
     if (!pool_.read_slot(sector, tail.records - 1, scratch_)) return tail;
-    diag::Record record{};
-    tail.closed = is_ok(diag::decode_record(scratch_, record)) && record.type == diag::Type::End;
+    diagnostics::Record record{};
+    tail.closed = is_ok(diagnostics::decode_record(scratch_, record)) &&
+                  record.type == diagnostics::Type::End;
     return tail;
 }
 

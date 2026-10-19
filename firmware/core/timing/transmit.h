@@ -33,7 +33,7 @@ class Transmitter {
     struct Attempt {
         bool go{false};
         int at_ms{0};
-        uint32_t freq_hz{0};
+        uint32_t frequency_hz{0};
         Payload payload{Payload::Position};
         // The one refusal that is not a rate rule: the hour's air time is spent.
         bool over_budget{false};

@@ -20,7 +20,7 @@ platform::zephyr::Platform g_platform;
 Go g_product{g_platform};
 
 // Reads what the services and the board already count, one line per subsystem on
-// the USB console, and holds the snapshot the `diag` command answers from. Not a
+// the USB console, and holds the snapshot the `diagnostics` command answers from. Not a
 // service: it consumes the product rather than being stepped by it.
 go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 

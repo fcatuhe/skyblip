@@ -18,13 +18,13 @@ uint32_t non_negative(long v) { return v < 0 ? 0u : static_cast<uint32_t>(v); }
 // failure that must not reach a tablet. Every formatter here answers 0 instead,
 // and the service counts it.
 int finished(json::Writer& writer) {
-    const int len = writer.finish();
-    return writer.overflowed() ? 0 : len;
+    const int length = writer.finish();
+    return writer.overflowed() ? 0 : length;
 }
 
 bool named_store(json::Writer& writer, LogStore store) {
     if (store == LogStore::None) return false;
-    if (store != LogStore::Flights) writer.kv_str("log", log_store_name(store));
+    if (store != LogStore::Flights) writer.key_value_str("log", log_store_name(store));
     return true;
 }
 
@@ -145,41 +145,41 @@ LogChunkSpan LogWindow::at(int nth) const {
 
 int format_log_ack(char* out, int capacity, bool ok, const char* reason, LogStore store) {
     json::Writer writer(out, capacity);
-    writer.kv_str("cmd", "log");
+    writer.key_value_str("cmd", "log");
     if (!named_store(writer, store)) return 0;
-    writer.kv_bool("ack", ok);
-    if (reason != nullptr) writer.kv_str("reason", reason);
+    writer.key_value_bool("ack", ok);
+    if (reason != nullptr) writer.key_value_str("reason", reason);
     return finished(writer);
 }
 
 int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated, LogStore store) {
     json::Writer writer(out, capacity);
-    writer.kv_str("cmd", "log");
+    writer.key_value_str("cmd", "log");
     if (!named_store(writer, store)) return 0;
-    writer.kv_bool("ack", true);
-    writer.kv_int("sessions", static_cast<long>(sessions));
+    writer.key_value_bool("ack", true);
+    writer.key_value_int("sessions", static_cast<long>(sessions));
     // The partition holds more flights than the index offers. Said out loud,
     // because a tablet that shows sixteen when there are twenty has lied.
-    writer.kv_bool("truncated", truncated);
+    writer.key_value_bool("truncated", truncated);
     return finished(writer);
 }
 
 int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
                        uint32_t records, bool closed, bool truncated, LogStore store) {
     json::Writer writer(out, capacity);
-    writer.kv_str("cmd", "session");
+    writer.key_value_str("cmd", "session");
     if (!named_store(writer, store)) return 0;
-    writer.kv_int("index", static_cast<long>(index));
-    writer.kv_int("of", static_cast<long>(count));
+    writer.key_value_int("index", static_cast<long>(index));
+    writer.key_value_int("of", static_cast<long>(count));
     // The session's opening UTC second: its name, and the base every one of its
     // records is timed against.
-    writer.kv_int("session", session_id);
-    writer.kv_int("records", static_cast<long>(records));
+    writer.key_value_int("session", session_id);
+    writer.key_value_int("records", static_cast<long>(records));
     // False means the log stops where the power did. The tablet says so instead
     // of presenting a truncated flight as a complete one.
-    writer.kv_bool("closed", closed);
+    writer.key_value_bool("closed", closed);
     // INFO: fc 20sep26 the session opened in a sector the ring recycled: a suffix, not the run
-    writer.kv_bool("truncated", truncated);
+    writer.key_value_bool("truncated", truncated);
     return finished(writer);
 }
 
@@ -191,13 +191,13 @@ int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from
     if (encoded < 0) return 0;
 
     json::Writer writer(out, capacity);
-    writer.kv_str("cmd", "chunk");
+    writer.key_value_str("cmd", "chunk");
     if (!named_store(writer, store)) return 0;
-    writer.kv_int("session", session_id);
-    writer.kv_int("from", static_cast<long>(from));
-    writer.kv_int("n", record_count);
-    writer.kv_bool("eof", eof);
-    writer.kv_str("data", data);
+    writer.key_value_int("session", session_id);
+    writer.key_value_int("from", static_cast<long>(from));
+    writer.key_value_int("n", record_count);
+    writer.key_value_bool("eof", eof);
+    writer.key_value_str("data", data);
     return finished(writer);
 }
 

@@ -27,7 +27,7 @@ constexpr int kSiUnitX = kColumn(22);
 const char* solution_dimensions(const StatusSnapshot& snapshot) {
     if (snapshot.fix_mode == gnss::kFixMode3D) return "3D";
     if (snapshot.fix_mode == gnss::kFixMode2D) return "2D";
-    return snapshot.sats >= kFewestSatellitesForAltitude ? "3D" : "2D";
+    return snapshot.satellites >= kFewestSatellitesForAltitude ? "3D" : "2D";
 }
 
 int format_elapsed(char* out, uint32_t seconds) {
@@ -52,8 +52,8 @@ void row(ui::Canvas& canvas, int y, const char* label, const char* value) {
     canvas.draw_text(kValueX, y, value, true, 1);
 }
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
-    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
+    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
 }
 
 int length(const char* s) {
@@ -99,12 +99,12 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aero, Quant
 
 // What the sensor reads, to the tenth of a pascal it measures in.
 void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
-    char baro[12];
-    const int written = format_uint(baro, div_round<uint32_t>(pressure_mpa, 100), 1, 3);
-    baro[written] = 0;
+    char barometer[12];
+    const int written = format_uint(barometer, div_round<uint32_t>(pressure_mpa, 100), 1, 3);
+    barometer[written] = 0;
 
     canvas.draw_text(kLeft, y, "BARO", true, 1);
-    right_aligned(canvas, kAeroUnitEnd, y, baro, written);
+    right_aligned(canvas, kAeroUnitEnd, y, barometer, written);
     canvas.draw_text(kSiUnitX, y, " hPa", true, 1);
 }
 
@@ -211,10 +211,10 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     text[written] = 0;
 
     if (snapshot.fix_valid) {
-        char sats[4];
-        written = format_uint(sats, snapshot.sats, 2);
-        sats[written] = 0;
-        text_row(canvas, y, "GNSS", sats, " SAT", "UTC", text);
+        char satellites[4];
+        written = format_uint(satellites, snapshot.satellites, 2);
+        satellites[written] = 0;
+        text_row(canvas, y, "GNSS", satellites, " SAT", "UTC", text);
         canvas.draw_text(kValueX, y, solution_dimensions(snapshot), true, 1);
     } else {
         char stage[16];
@@ -234,13 +234,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     if (snapshot.fix_valid) {
         // Ten characters of latitude do not fit a five-cell value field, so it
         // ends where the first column's unit does: level with TRUE above it.
-        written = format_int(text, snapshot.lat_1e7, 1, 7, false);
+        written = format_int(text, snapshot.latitude_1e7, 1, 7, false);
         text[written] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
         right_aligned(canvas, kAeroUnitEnd, y, text, written);
 
         written = format_string(text, "LON ");
-        written += format_int(text + written, snapshot.lon_1e7, 1, 7, false);
+        written += format_int(text + written, snapshot.longitude_1e7, 1, 7, false);
         text[written] = 0;
         right_aligned(canvas, kGlassWidth - kLeft, y, text, written);
     } else {
@@ -263,19 +263,20 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     // The aligned block: the pressure the altitudes depend on, the geometric
     // altitude, and pressure altitude on the 1013.25 hPa standard setting - the
     // one a flight level counts in hundreds of feet. Then the motion pair.
-    if (snapshot.baro_valid)
+    if (snapshot.barometer_valid)
         pressure_row(canvas, y, snapshot.pressure_mpa);
     else
         row(canvas, y, "BARO", "no sensor");
     y += kLineH;
 
-    dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.alt_mm)).v, 0, " ft"},
-             {div_round(snapshot.alt_mm, 100), 1, " m"}, false);
+    dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).v, 0, " ft"},
+             {div_round(snapshot.altitude_mm, 100), 1, " m"}, false);
     y += kLineH;
 
-    if (snapshot.baro_valid)
-        dual_row(canvas, y, "STD", {to_feet(Millimetres(snapshot.alt_std_mm)).v, 0, " ft"},
-                 {div_round(snapshot.alt_std_mm, 10), 2, " m"}, false);
+    if (snapshot.barometer_valid)
+        dual_row(canvas, y, "STD",
+                 {to_feet(Millimetres(snapshot.altitude_standard_mm)).v, 0, " ft"},
+                 {div_round(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
     y += kLineH;
 
     dual_row(canvas, y, "SPD", {knots(snapshot.speed_mm_s), 0, " kt"},

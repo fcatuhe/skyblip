@@ -2,7 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_POOL_H
 
 #include "core/comms/log_link.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/flight/log_record.h"
 #include "core/store/sector_allocator.h"
 #include "runtime/service.h"
@@ -10,7 +10,7 @@
 namespace skyblip::go {
 
 // INFO: fc 20sep26 both rings write 24-byte slots, so the partition has one slot geometry
-static_assert(flight::kLogRecordBytes == diag::kRecordBytes,
+static_assert(flight::kLogRecordBytes == diagnostics::kRecordBytes,
               "the two rings share a partition and must share its slot size");
 constexpr uint32_t kStoreRecordBytes = flight::kLogRecordBytes;
 

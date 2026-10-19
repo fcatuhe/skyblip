@@ -83,7 +83,7 @@ TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
 
     // Four times the outermost thing the alarm layer will speak about, so no
     // contact a pilot could act on is inside the part being refused.
-    CHECK(kPlausibleRangeCeilingM > 4 * kAdvisoryDistM);
+    CHECK(kPlausibleRangeCeilingM > 4 * kAdvisoryDistanceM);
 }
 
 // Without a fix there is no point to measure from. The gate says nothing rather
@@ -155,9 +155,9 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
 
     model::AircraftObservation real_contact = neighbour(own, 1200, 0, 0, 30, 180, 100000);
     real_contact.address = 0x4C0001;
-    const int idx = table.update(real_contact, 100);
-    REQUIRE(idx >= 0);
-    table.at(idx)->alarm_level = Level::Advisory;
+    const int index = table.update(real_contact, 100);
+    REQUIRE(index >= 0);
+    table.at(index)->alarm_level = Level::Advisory;
 
     model::AircraftObservation same_aircraft_wrong_place =
         neighbour(own, 120000, 0, 0, 30, 180, 101000);
@@ -165,10 +165,10 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
     CHECK(table.update(same_aircraft_wrong_place, 101) < 0);
 
     CHECK(table.count() == 1);
-    CHECK(table.find(6, 0x4C0001) == idx);
-    CHECK(table.at(idx)->observation.lat_1e7 == real_contact.lat_1e7);
-    CHECK(table.at(idx)->observation.received.at_s == real_contact.received.at_s);
-    CHECK(table.at(idx)->alarm_level == Level::Advisory);
+    CHECK(table.find(6, 0x4C0001) == index);
+    CHECK(table.at(index)->observation.latitude_1e7 == real_contact.latitude_1e7);
+    CHECK(table.at(index)->observation.received.at_s == real_contact.received.at_s);
+    CHECK(table.at(index)->alarm_level == Level::Advisory);
 }
 
 // A relayed target crossed two links, so it is allowed to be further away than

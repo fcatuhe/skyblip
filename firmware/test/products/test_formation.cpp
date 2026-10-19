@@ -21,12 +21,13 @@ model::AircraftObservation contact(const model::Ownship& own, int north_m, int e
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(speed_mps * 4);
     t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).v;
-    t.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
-    t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
+    t.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).v + up_m;
+    t.latitude_1e7 =
+        own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
-        static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
+        static_cast<int16_t>((static_cast<int64_t>(own.latitude_1e7) * 65536) / 3600000000LL);
     const int64_t east_scaled = static_cast<int64_t>(east_m) * kTrigOne / icos(ang);
-    t.lon_1e7 = own.lon_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
+    t.longitude_1e7 = own.longitude_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     t.received.at_s = at_ms / 1000;
     t.at_ms = at_ms;
     t.source = model::Source::AdslDirect;
@@ -38,9 +39,9 @@ struct Flight {
 
     Flight() {
         rig.state.own.fix_valid = true;
-        rig.state.own.lat_1e7 = 481000000;
-        rig.state.own.lon_1e7 = 81000000;
-        rig.state.own.alt_hae_mm = 1000000;
+        rig.state.own.latitude_1e7 = 481000000;
+        rig.state.own.longitude_1e7 = 81000000;
+        rig.state.own.altitude_hae_mm = 1000000;
         rig.state.own.speed_mm_s = 40000;
         rig.state.own.track_cdeg = 9000;
     }

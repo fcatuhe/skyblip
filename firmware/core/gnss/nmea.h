@@ -41,27 +41,27 @@ constexpr int kGsaVdopField = 17;
 // with
 constexpr int kGsaFixModeField = 2;
 constexpr int kGsaPdopField = 15;
-constexpr int kGsaFirstSatField = 3;
-constexpr int kGsaSatSlots = 12;
+constexpr int kGsaFirstSatelliteField = 3;
+constexpr int kGsaSatelliteSlots = 12;
 constexpr int kGsaSystemField = 18;
 
 // INFO: fc 18sep26 GSV repeats id, elevation, azimuth and C/N0 for up to four satellites a sentence
-constexpr int kGsvFirstSatField = 4;
-constexpr int kGsvFieldsPerSat = 4;
+constexpr int kGsvFirstSatelliteField = 4;
+constexpr int kGsvFieldsPerSatellite = 4;
 constexpr uint8_t kFixMode2D = 2;
 constexpr uint8_t kFixMode3D = 3;
 
 struct GnssSolution {
     bool fix_valid{false};
     bool utc_valid{false};
-    int32_t lat_1e7{0};
-    int32_t lon_1e7{0};
-    // INFO: gn 09Jun25 alt_hae_mm is height above the WGS-84 ELLIPSOID (HAE), which is
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    // INFO: gn 09Jun25 altitude_hae_mm is height above the WGS-84 ELLIPSOID (HAE), which is
     // what ADS-L 4 SRD860 issue 2 G.1.7 transmits and what every received
-    // neighbour altitude is measured in. alt_msl_mm is GGA field 9, the value a
+    // neighbour altitude is measured in. altitude_msl_mm is GGA field 9, the value a
     // panel or an IGC file wants.
-    int32_t alt_hae_mm{0};
-    int32_t alt_msl_mm{0};
+    int32_t altitude_hae_mm{0};
+    int32_t altitude_msl_mm{0};
     int32_t geoid_separation_mm{kDefaultGeoidSeparationMm};
     // INFO: fc 19sep26 what the receiver resolves, not what the wire carries: RMC fields 7 and 8
     int32_t speed_mm_s{0};
@@ -74,11 +74,11 @@ struct GnssSolution {
     // How late this solution reached us relative to the PPS edge it describes.
     // Zero until a driver that knows its part stamps it.
     uint16_t pps_latency_ms{0};
-    uint8_t sats{0};
+    uint8_t satellites{0};
     uint8_t fix_quality{0};
     uint8_t fix_mode{0};
-    bool alt_msl_valid{false};
-    bool alt_hae_valid{false};
+    bool altitude_msl_valid{false};
+    bool altitude_hae_valid{false};
     bool geoid_measured{false};
     uint32_t sentences{0};
 };
@@ -120,10 +120,10 @@ class NmeaParser {
     Sentence last_sentence_{Sentence::None};
 
     bool apply_rmc(const char* fields[], int field_count);
-    bool apply_gga(const char* fields[], int field_count, int len);
+    bool apply_gga(const char* fields[], int field_count, int length);
     bool apply_gsa(const char* fields[], int field_count);
     bool apply_gsv(const char* talker, const char* fields[], int field_count);
-    bool apply_txt(const char* line, int len);
+    bool apply_txt(const char* line, int length);
 };
 
 bool nmea_checksum_ok(const char* line, int bytes);

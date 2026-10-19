@@ -19,8 +19,8 @@ namespace {
 constexpr int32_t kHundredthCmPerFoot = 3048;
 constexpr int32_t kHalfFootHundredthCm = kHundredthCmPerFoot / 2;
 
-int32_t centimetres_to_feet(int32_t alt_cm) {
-    const int32_t hundredths = alt_cm * 100;
+int32_t centimetres_to_feet(int32_t altitude_cm) {
+    const int32_t hundredths = altitude_cm * 100;
     return (hundredths >= 0 ? hundredths + kHalfFootHundredthCm
                             : hundredths - kHalfFootHundredthCm) /
            kHundredthCmPerFoot;
@@ -117,8 +117,9 @@ void NmeaService::emit_status(uint32_t now_ms) {
             traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
         const bool higher = target->alarm_level > worst_level;
-        const bool nearer = target->alarm_level == worst_level &&
-                            (threat == nullptr || assessment.rel_dist_m < worst.rel_dist_m);
+        const bool nearer =
+            target->alarm_level == worst_level &&
+            (threat == nullptr || assessment.relative_distance_m < worst.relative_distance_m);
         if (!higher && !nearer) continue;
         threat = target;
         worst = assessment;
@@ -127,15 +128,15 @@ void NmeaService::emit_status(uint32_t now_ms) {
 
     const bool transmitting =
         timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
-    const int len =
-        threat != nullptr
-            ? protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
-                                     &threat->observation, traffic::to_number(worst_level),
-                                     static_cast<int16_t>(signed_bearing(worst.rel_bearing_deg)),
-                                     worst.rel_alt_m, worst.rel_dist_m)
-            : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
-                                     nullptr, 0, 0, 0, 0);
-    write(sentence_, len);
+    const int length = threat != nullptr
+                           ? protocol::format_pflau(
+                                 sentence_, sizeof(sentence_), own, transmitting, heard,
+                                 &threat->observation, traffic::to_number(worst_level),
+                                 static_cast<int16_t>(signed_bearing(worst.relative_bearing_deg)),
+                                 worst.relative_altitude_m, worst.relative_distance_m)
+                           : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting,
+                                                    heard, nullptr, 0, 0, 0, 0);
+    write(sentence_, length);
 }
 
 // $GPRMC/$GPGGA: ownship's own absolute position, for the EFB that has none of
@@ -164,11 +165,11 @@ void NmeaService::emit_ownship() {
 // GNSS altitude - both SoftRF forks gate the same sentence on a baro chip being
 // present for the same reason.
 void NmeaService::emit_altitude() {
-    if (!context_.state.baro.active) return;
-    const int32_t alt_cm =
-        flight::pressure_to_alt_cm(div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000));
+    if (!context_.state.barometer.active) return;
+    const int32_t altitude_cm = flight::pressure_to_altitude_cm(
+        div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000));
     write(sentence_,
-          protocol::format_pgrmz(sentence_, sizeof(sentence_), centimetres_to_feet(alt_cm),
+          protocol::format_pgrmz(sentence_, sizeof(sentence_), centimetres_to_feet(altitude_cm),
                                  context_.state.own.fix_valid));
 }
 
@@ -187,20 +188,20 @@ void NmeaService::emit_vario_and_battery() {
     const model::Ownship& own = context_.state.own;
     protocol::Lk8Ex1 v{};
 
-    if (context_.state.baro.active) {
-        v.pressure_pa = div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000);
+    if (context_.state.barometer.active) {
+        v.pressure_pa = div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
         v.pressure_valid = true;
         // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
         // carries and for the same reason: the consumer applies its own
         // subscale. A consumer that read field 1 recomputes this and ignores it.
-        v.alt_m = div_round(
-            flight::pressure_to_alt_cm(div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000)),
-            100);
-        v.alt_valid = true;
+        v.altitude_m = div_round(flight::pressure_to_altitude_cm(div_round<uint32_t>(
+                                     context_.state.barometer.pressure_mpa, 1000)),
+                                 100);
+        v.altitude_valid = true;
     }
 
-    if (context_.state.baro.temperature_valid) {
-        v.temperature_c = div_round<int32_t>(context_.state.baro.temperature_dc, 10);
+    if (context_.state.barometer.temperature_valid) {
+        v.temperature_c = div_round<int32_t>(context_.state.barometer.temperature_dc, 10);
         v.temperature_valid = true;
     }
 
@@ -231,13 +232,13 @@ void NmeaService::emit_targets(uint32_t now_ms) {
         const int slot = (from + step) % traffic::TrafficTable::kCapacity;
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
-        const int len = protocol::format_pflaa(
+        const int length = protocol::format_pflaa(
             sentence_, sizeof(sentence_), own, flight::carried_to(target->observation, now_ms),
             traffic::to_number(target->alarm_level),
             context_.state.callsigns.find(target->observation.address_mapping_table,
                                           target->observation.address));
-        if (len <= 0) continue;
-        write(sentence_, len);
+        if (length <= 0) continue;
+        write(sentence_, length);
         resumes_[resume_count_++] = {pass_bytes_, (slot + 1) % traffic::TrafficTable::kCapacity};
         sent++;
     }

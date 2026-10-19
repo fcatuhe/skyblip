@@ -12,9 +12,9 @@ protocol::AdslPacket from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = tru
     model::Ownship own{};
     own.fix_valid = fix;
     own.utc_valid = true;
-    own.lat_1e7 = 481234500;
-    own.lon_1e7 = 81234500;
-    own.alt_hae_mm = 1000000;
+    own.latitude_1e7 = 481234500;
+    own.longitude_1e7 = 81234500;
+    own.altitude_hae_mm = 1000000;
     own.speed_mm_s = 100000;
     own.hdop_e2 = hdop_e2;
     own.vdop_e2 = vdop_e2;
@@ -112,7 +112,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: with no fix the whole quality block claims not
     CHECK(p.NavigIntegrity == 0);
     CHECK(p.HorizAccuracy == 0);
     CHECK(p.VertAccuracy == 0);
-    CHECK(p.VelAccuracy == 0);
+    CHECK(p.VelocityAccuracy == 0);
 }
 
 // A receiver that reports no HDOP is not a receiver reporting a good one.
@@ -120,7 +120,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: a fix with no reported HDOP claims no accuracy
     protocol::AdslPacket p = from_dop(0, 0);
     CHECK(p.HorizAccuracy == 0);
     CHECK(p.NavigIntegrity == 0);
-    CHECK(p.VelAccuracy == 0);
+    CHECK(p.VelocityAccuracy == 0);
 }
 
 // The accuracy claim moves with the fix, which is what the clause asks an uncertified device for.
@@ -129,7 +129,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static z
     const protocol::AdslPacket poor = from_dop(800, 800);
     CHECK(good.HorizAccuracy > poor.HorizAccuracy);
     CHECK(good.VertAccuracy >= poor.VertAccuracy);
-    CHECK(good.VelAccuracy > poor.VelAccuracy);
+    CHECK(good.VelocityAccuracy > poor.VelocityAccuracy);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {

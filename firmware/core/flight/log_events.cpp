@@ -52,7 +52,7 @@ void LogEvents::heard(int slot, const LogContact& now, uint32_t utc_s) {
         track.alarm = now.alarm;
     }
     track.alarm_peak = std::max(now.alarm, track.alarm_peak);
-    if (now.dist_m < track.closest.dist_m) {
+    if (now.distance_m < track.closest.distance_m) {
         track.closest = now;
         track.closest_utc_s = utc_s;
     }

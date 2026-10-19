@@ -64,8 +64,8 @@ TEST_CASE("panel model: the driver's own output is what the model shows") {
     Glass canvas;
     StatusSnapshot s;
     s.fix_valid = true;
-    s.alt_mm = 900000;
-    s.baro_valid = true;
+    s.altitude_mm = 900000;
+    s.barometer_valid = true;
     s.pressure_mpa = 90810000;
     draw_status(canvas, s);
 

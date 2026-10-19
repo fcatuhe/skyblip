@@ -44,7 +44,7 @@ uint32_t tap(simulator::Simulator& simulator, uint32_t t) {
 }
 
 // Reached the way a thumb reaches it: the pad along the walk, then the menu row.
-uint32_t show_sats(simulator::Simulator& simulator, uint32_t t) {
+uint32_t show_satellites(simulator::Simulator& simulator, uint32_t t) {
     for (int i = 0; i < go::kPageCount && simulator.product().screen().page() != go::Page::Nearby;
          i++)
         t = tap(simulator, t);
@@ -52,7 +52,7 @@ uint32_t show_sats(simulator::Simulator& simulator, uint32_t t) {
     const go::Menu menu = go::menu_for(go::Page::Nearby);
     for (int i = 0;
          i < menu.row_count &&
-         go::page_behind(simulator.product().screen().editor().focus()) != go::Page::Sats;
+         go::page_behind(simulator.product().screen().editor().focus()) != go::Page::Satellites;
          i++)
         t = tap(simulator, t);
     return press(simulator, t);
@@ -71,23 +71,23 @@ TEST_CASE("simulator: simulated GNSS drives own-ship state via the real NMEA par
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
-    simulator.world().set_sats(11);
+    simulator.world().set_satellites(11);
     simulator.world().set_altitude_m(1500);
     simulator.world().set_speed_kt(50);
     simulator.world().set_track_deg(90);
-    simulator.world().gnss().lat_1e7 = 485000000;
-    simulator.world().gnss().lon_1e7 = 85000000;
+    simulator.world().gnss().latitude_1e7 = 485000000;
+    simulator.world().gnss().longitude_1e7 = 85000000;
 
     run(simulator, 0, 3000);
 
     CHECK(simulator.product().state().own.fix_valid);
     CHECK(simulator.product().state().own.utc_valid);
-    CHECK(int(simulator.product().state().own.sats) == 11);
-    CHECK(simulator.product().state().own.alt_hae_mm == 1500000);
+    CHECK(int(simulator.product().state().own.satellites) == 11);
+    CHECK(simulator.product().state().own.altitude_hae_mm == 1500000);
     CHECK(simulator.product().state().own.track_cdeg == 9000);
     CHECK(simulator.product().state().own.speed_mm_s > 25000);  // 50 kt is 25.7 m/s
-    CHECK(simulator.product().state().own.lat_1e7 > 484000000);
-    CHECK(simulator.product().state().own.lon_1e7 > 85000000);  // moved east on track 090
+    CHECK(simulator.product().state().own.latitude_1e7 > 484000000);
+    CHECK(simulator.product().state().own.longitude_1e7 > 85000000);  // moved east on track 090
 }
 
 TEST_CASE("simulator: losing the fix clears own-ship validity (fail closed)") {
@@ -155,9 +155,9 @@ TEST_CASE("simulator: a climbing aircraft broadcasts its rate and gains height a
     // 3 m/s is 24 eighths, and 590 fpm, which is past the chevron's 500.
     CHECK(int(target->observation.climb_e8) == 24);
 
-    const int32_t was = target->observation.alt_m;
+    const int32_t was = target->observation.altitude_m;
     run(simulator, 8000, 18000);
-    CHECK(target->observation.alt_m > was + 20);
+    CHECK(target->observation.altitude_m > was + 20);
     CHECK(simulator.world().aircraft_at(0)->up_m > 40);
 }
 
@@ -170,16 +170,17 @@ TEST_CASE("simulator: traffic reporting no climb holds its level while own-ship 
 
     const traffic::Target* target = simulator.product().state().traffic.at(0);
     REQUIRE(target != nullptr);
-    const int32_t level_at = target->observation.alt_m;
-    const int32_t own_at = to_metres(Millimetres(simulator.product().state().own.alt_hae_mm)).v;
+    const int32_t level_at = target->observation.altitude_m;
+    const int32_t own_at =
+        to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v;
 
     simulator.world().set_climb_mm_s(5000);
     run(simulator, 6000, 16000);
 
     // Own ship gains 50 m; the target holds its level within the second of own-ship lag.
-    CHECK(to_metres(Millimetres(simulator.product().state().own.alt_hae_mm)).v > own_at + 40);
-    CHECK(target->observation.alt_m < level_at + 10);
-    CHECK(target->observation.alt_m > level_at - 10);
+    CHECK(to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v > own_at + 40);
+    CHECK(target->observation.altitude_m < level_at + 10);
+    CHECK(target->observation.altitude_m > level_at - 10);
 }
 
 TEST_CASE("simulator: a converging aircraft raises the collision alarm and buzzer") {
@@ -288,7 +289,7 @@ TEST_CASE("simulator: a modelled climb reaches own-ship state through the barome
     CHECK(simulator.product().state().own.climb_mm_s > 2000);
     CHECK(simulator.product().state().own.climb_mm_s < 4000);
     // above sea level
-    CHECK(simulator.world().baro().pressure_mpa() < flight::kIsaSeaLevelPa * 1000);
+    CHECK(simulator.world().barometer().pressure_mpa() < flight::kIsaSeaLevelPa * 1000);
 
     simulator.world().set_climb_mm_s(-3000);  // now sinking
     run(simulator, 6000, 14000);
@@ -453,9 +454,9 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
     CHECK_FALSE(simulator.product().state().gnss.levels_live);
     CHECK(simulator.product().state().gnss.sky.count() == 0);
 
-    uint32_t t = show_sats(simulator, 6000);
+    uint32_t t = show_satellites(simulator, 6000);
     run(simulator, t, t + 3000);
-    REQUIRE(simulator.product().screen().page() == go::Page::Sats);
+    REQUIRE(simulator.product().screen().page() == go::Page::Satellites);
     CHECK(simulator.world().gnss().gsv_enabled());
     CHECK(simulator.product().state().gnss.levels_live);
     CHECK(simulator.product().state().gnss.sky.count() > 0);
@@ -464,12 +465,12 @@ TEST_CASE("simulator: satellites in view are asked for by the page that draws th
 
     t = tap(simulator, t + 3000);
     run(simulator, t, t + 3000);
-    REQUIRE(simulator.product().screen().page() != go::Page::Sats);
+    REQUIRE(simulator.product().screen().page() != go::Page::Satellites);
     CHECK_FALSE(simulator.world().gnss().gsv_enabled());
     CHECK_FALSE(simulator.product().state().gnss.levels_live);
     CHECK(simulator.product().state().gnss.sky.count() == 0);
 
-    t = show_sats(simulator, t + 3000);
+    t = show_satellites(simulator, t + 3000);
     simulator.world().set_fix(true);
     run(simulator, t, t + 20000);
     REQUIRE(simulator.product().state().own.fix_valid);

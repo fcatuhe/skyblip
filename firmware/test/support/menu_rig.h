@@ -25,11 +25,11 @@ inline void settle(Rig& rig, uint32_t& now_ms) {
     now_ms += kDoublePressWindowMs + 200;
 }
 
-inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t alt_msl_m) {
+inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {
     gnss::GnssSolution solution{};
     solution.fix_valid = true;
     solution.speed_mm_s = speed_mm_s;
-    solution.alt_msl_mm = alt_msl_m * 1000;
+    solution.altitude_msl_mm = altitude_msl_m * 1000;
     solution.sentences = 1;
     rig.product.bus().gnss.push(solution);
 }
@@ -72,7 +72,8 @@ inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
 inline bool stored_settings(Rig& rig, go::Settings& out) {
     uint8_t blob[64];
     size_t n = 0;
-    if (rig.platform.kv().read("settings", blob, sizeof(blob), n) != Status::Ok) return false;
+    if (rig.platform.key_value().read("settings", blob, sizeof(blob), n) != Status::Ok)
+        return false;
     return go::from_blob(blob, n, out) == Status::Ok;
 }
 

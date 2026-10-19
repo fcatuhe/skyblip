@@ -17,15 +17,15 @@ struct StatusSnapshot {
     bool fix_valid{false};
     bool utc_valid{false};
     bool transmitting{false};
-    bool baro_valid{false};
-    uint8_t sats{0};
+    bool barometer_valid{false};
+    uint8_t satellites{0};
     gnss::Stage stage{gnss::Stage::Silent};
     uint32_t stage_s{0};
     uint8_t fix_mode{0};
-    int32_t lat_1e7{0};
-    int32_t lon_1e7{0};
-    int32_t alt_mm{0};      // GNSS, WGS-84 ellipsoid
-    int32_t alt_std_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    int32_t altitude_mm{0};           // GNSS, WGS-84 ellipsoid
+    int32_t altitude_standard_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
     uint32_t pressure_mpa{0};
     int32_t speed_mm_s{0};  // as measured, not as transmitted
     int32_t track_cdeg{0};  // hundredths of a degree

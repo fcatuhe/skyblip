@@ -9,9 +9,9 @@
 
 namespace skyblip::ports {
 
-class KvStore {
+class KeyValueStore {
    public:
-    virtual ~KvStore() = default;
+    virtual ~KeyValueStore() = default;
 
     // INFO: fc 25sep26 as FlashRegion::ready(): Storage says meant to have, this says came up
     virtual bool ready() const = 0;

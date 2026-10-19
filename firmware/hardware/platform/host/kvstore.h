@@ -7,16 +7,16 @@
 
 namespace skyblip::platform::host {
 
-class KvStore : public ports::KvStore {
+class KeyValueStore : public ports::KeyValueStore {
    public:
     bool ready() const override { return !refuse_mount; }
 
     Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
         for (auto& entry : entries_)
             if (entry.used && entry.key == key) {
-                if (entry.len > capacity) return Status::OutOfRange;
-                for (size_t i = 0; i < entry.len; i++) out[i] = entry.data[i];
-                out_bytes = entry.len;
+                if (entry.length > capacity) return Status::OutOfRange;
+                for (size_t i = 0; i < entry.length; i++) out[i] = entry.data[i];
+                out_bytes = entry.length;
                 return Status::Ok;
             }
         return Status::NotFound;
@@ -37,7 +37,7 @@ class KvStore : public ports::KvStore {
                 }
         if (!slot || bytes > sizeof(slot->data)) return Status::Full;
         for (size_t i = 0; i < bytes; i++) slot->data[i] = data[i];
-        slot->len = bytes;
+        slot->length = bytes;
         writes_++;
         return Status::Ok;
     }
@@ -61,7 +61,7 @@ class KvStore : public ports::KvStore {
         bool used{false};
         std::string key;
         uint8_t data[64]{};
-        size_t len{0};
+        size_t length{0};
     };
     Entry entries_[4];
     uint32_t writes_{0};

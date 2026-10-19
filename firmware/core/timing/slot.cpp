@@ -42,7 +42,7 @@ Band Scheduler::band_at(int phase_ms) {
                                                                                    : Band::O;
 }
 
-uint32_t Scheduler::freq_hz_at(int phase_ms) {
+uint32_t Scheduler::frequency_hz_at(int phase_ms) {
     switch (state_at(phase_ms)) {
         case SlotState::Slot0:
         case SlotState::Hop: return kMband0Hz;
@@ -70,7 +70,7 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     SlotPlan p{};
     p.state = state_at(phase_ms);
     p.band = band_at(phase_ms);
-    p.freq_hz = freq_hz_at(phase_ms);
+    p.frequency_hz = frequency_hz_at(phase_ms);
     p.own_tx_dwell = in_own_tx_dwell(phase_ms);
 
     switch (p.state) {

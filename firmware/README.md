@@ -29,12 +29,12 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 
 | Suffix | Unit | Example |
 |---|---|---|
-| none | the SI base unit, whole | `alt_m`, `speed_mps`, `freq_hz` |
+| none | the SI base unit, whole | `altitude_m`, `speed_mps`, `frequency_hz` |
 | `_ms`, `_us`, `_s` | milliseconds, microseconds, seconds | `at_ms`, `tx_at_us`, `flight_seconds` |
 | `_mm_s` | millimetres per second | `climb_mm_s` |
-| `_cm`, `_ft` | centimetres, feet | `hfom_cm`, `alt_ft` |
+| `_cm`, `_ft` | centimetres, feet | `hfom_cm`, `altitude_ft` |
 | `_kt`, `_fpm` | knots, feet per minute | `speed_kt`, `climb_fpm` |
-| `_1e7`, `_e8`, `_e2`, `_e1` | scaled by that power of ten | `lat_1e7`, `climb_e8`, `hdop_e2` |
+| `_1e7`, `_e8`, `_e2`, `_e1` | scaled by that power of ten | `latitude_1e7`, `climb_e8`, `hdop_e2` |
 | `_q` | quarter units, the ADS-L velocity encoding | `speed_q` |
 | `_c9` | ADS-L's 9-bit course, 360 degrees over 512 counts | `track_c9` |
 | `_dbm`, `_mv`, `_mpa`, `_pa` | dBm, millivolts, millipascals, pascals | `rssi_dbm`, `battery_offset_mv`, `pressure_mpa` |

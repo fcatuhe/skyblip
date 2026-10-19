@@ -95,12 +95,12 @@ void encode_contact(const LogContact& contact, uint8_t* out) {
     out[3] = static_cast<uint8_t>(address >> 8);
     out[4] = static_cast<uint8_t>(address >> 16);
     out[5] = contact.address_mapping_table;
-    put_u16(out + 6, contact.dist_m);
-    put_u16(out + 8, static_cast<uint16_t>(contact.rel_alt_m));
-    put_u16(out + 10, contact.rel_bearing_deg);
+    put_u16(out + 6, contact.distance_m);
+    put_u16(out + 8, static_cast<uint16_t>(contact.relative_altitude_m));
+    put_u16(out + 10, contact.relative_bearing_deg);
     put_u16(out + 12, static_cast<uint16_t>(contact.closing_mps));
     out[14] = contact.alarm;
-    out[15] = contact.aircraft_cat;
+    out[15] = contact.aircraft_category;
     out[17] = contact.source;
     out[18] = static_cast<uint8_t>(contact.rssi_dbm);
     uint8_t flags = 0;
@@ -114,12 +114,12 @@ void decode_contact(const uint8_t* raw, LogContact& out) {
     out.address = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
                   (static_cast<uint32_t>(raw[4]) << 16);
     out.address_mapping_table = raw[5];
-    out.dist_m = get_u16(raw + 6);
-    out.rel_alt_m = static_cast<int16_t>(get_u16(raw + 8));
-    out.rel_bearing_deg = get_u16(raw + 10);
+    out.distance_m = get_u16(raw + 6);
+    out.relative_altitude_m = static_cast<int16_t>(get_u16(raw + 8));
+    out.relative_bearing_deg = get_u16(raw + 10);
     out.closing_mps = static_cast<int16_t>(get_u16(raw + 12));
     out.alarm = raw[14];
-    out.aircraft_cat = raw[15];
+    out.aircraft_category = raw[15];
     out.source = raw[17];
     out.rssi_dbm = static_cast<int8_t>(raw[18]);
     out.dismissed = (raw[19] & kContactFlagDismissed) != 0;
@@ -132,15 +132,15 @@ void decode_contact(const uint8_t* raw, LogContact& out) {
 LogRecord log_record_from(const model::Ownship& own) {
     LogRecord r{};
     r.utc_s = own.utc_s;
-    r.lat_1e7 = own.lat_1e7;
-    r.lon_1e7 = own.lon_1e7;
-    r.alt_msl_m = to_metres(Millimetres(own.alt_msl_mm)).v;
-    r.alt_hae_m = to_metres(Millimetres(own.alt_hae_mm)).v;
+    r.latitude_1e7 = own.latitude_1e7;
+    r.longitude_1e7 = own.longitude_1e7;
+    r.altitude_msl_m = to_metres(Millimetres(own.altitude_msl_mm)).v;
+    r.altitude_hae_m = to_metres(Millimetres(own.altitude_hae_mm)).v;
     r.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v;
     r.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).v;
     r.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).v;
     r.hdop_e2 = own.hdop_e2;
-    r.sats = own.sats;
+    r.satellites = own.satellites;
     r.flight_state = own.flight_state;
     r.fix_valid = own.fix_valid;
     r.utc_valid = own.utc_valid;
@@ -152,17 +152,17 @@ LogRecord log_record_from(const model::Ownship& own) {
 
 void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out) {
     put_offset(out + 0, record.utc_s, base_utc_s);
-    put_u32(out + 2, static_cast<uint32_t>(record.lat_1e7));
-    put_u32(out + 6, static_cast<uint32_t>(record.lon_1e7));
-    put_u16(out + 10, static_cast<uint16_t>(clamp_i16(record.alt_msl_m)));
+    put_u32(out + 2, static_cast<uint32_t>(record.latitude_1e7));
+    put_u32(out + 6, static_cast<uint32_t>(record.longitude_1e7));
+    put_u16(out + 10, static_cast<uint16_t>(clamp_i16(record.altitude_msl_m)));
     // Height above the ellipsoid is stored as its distance from mean sea level:
     // EGM96 runs -107 m to +85 m over the whole planet, so one signed byte
     // carries the pair that two four-byte altitudes would have cost.
-    out[12] = static_cast<uint8_t>(clamp_i8(record.alt_hae_m - record.alt_msl_m));
+    out[12] = static_cast<uint8_t>(clamp_i8(record.altitude_hae_m - record.altitude_msl_m));
     put_u16(out + 13, record.speed_q);
     put_u16(out + 15, record.track_c9 & kTrackMask);
     put_u16(out + 17, static_cast<uint16_t>(record.climb_e8));
-    out[19] = record.sats;
+    out[19] = record.satellites;
     const uint32_t tenths = (record.hdop_e2 + 5u) / 10u;
     out[20] = static_cast<uint8_t>(tenths > kHdopTenthsCeiling ? kHdopTenthsCeiling : tenths);
 
@@ -188,14 +188,14 @@ Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out
 
     out = LogRecord{};
     out.utc_s = base_utc_s + get_u16(raw + 0);
-    out.lat_1e7 = static_cast<int32_t>(get_u32(raw + 2));
-    out.lon_1e7 = static_cast<int32_t>(get_u32(raw + 6));
-    out.alt_msl_m = static_cast<int16_t>(get_u16(raw + 10));
-    out.alt_hae_m = out.alt_msl_m + static_cast<int8_t>(raw[12]);
+    out.latitude_1e7 = static_cast<int32_t>(get_u32(raw + 2));
+    out.longitude_1e7 = static_cast<int32_t>(get_u32(raw + 6));
+    out.altitude_msl_m = static_cast<int16_t>(get_u16(raw + 10));
+    out.altitude_hae_m = out.altitude_msl_m + static_cast<int8_t>(raw[12]);
     out.speed_q = get_u16(raw + 13);
     out.track_c9 = get_u16(raw + 15);
     out.climb_e8 = static_cast<int16_t>(get_u16(raw + 17));
-    out.sats = raw[19];
+    out.satellites = raw[19];
     out.hdop_e2 = static_cast<uint16_t>(raw[20] * 10u);
 
     const uint8_t flags = raw[21];

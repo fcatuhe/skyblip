@@ -117,45 +117,45 @@ int ConfigService::payload_to(uint16_t session_id) const {
 // fails, so it is counted here and never handed down. Everything that comes
 // through this door is a request/response answer except the status push, so the
 // recovery from a lost one is the phone's next command; the push has tick().
-Status ConfigService::reply(const char* json, int len) {
-    return reply_to(claim_.holder(), json, len);
+Status ConfigService::reply(const char* json, int length) {
+    return reply_to(claim_.holder(), json, length);
 }
 
-Status ConfigService::broadcast(const char* json, int len) {
-    if (len <= 0 || len > payload()) {
+Status ConfigService::broadcast(const char* json, int length) {
+    if (length <= 0 || length > payload()) {
         diagnostics_.link_drops++;
         return Status::OutOfRange;
     }
-    const Status sent =
-        link_.send(events::Endpoint::Config,
-                   ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(len)));
+    const Status sent = link_.send(
+        events::Endpoint::Config,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(length)));
     if (!is_ok(sent)) diagnostics_.link_drops++;
     return sent;
 }
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
-Status ConfigService::reply_to(uint16_t session_id, const char* json, int len) {
-    if (len <= 0 || len > payload_to(session_id) || held_bytes_ > 0) {
+Status ConfigService::reply_to(uint16_t session_id, const char* json, int length) {
+    if (length <= 0 || length > payload_to(session_id) || held_bytes_ > 0) {
         diagnostics_.link_drops++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
     }
     const Status sent = link_.send_to(
         session_id, events::Endpoint::Config,
-        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(len)));
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(json), static_cast<size_t>(length)));
     if (sent == Status::WouldBlock)
-        hold(session_id, json, len);
+        hold(session_id, json, length);
     else if (!is_ok(sent))
         diagnostics_.link_drops++;
     return sent;
 }
 
-void ConfigService::hold(uint16_t session_id, const char* json, int len) {
-    if (len > kHeldFrameBytes) {
+void ConfigService::hold(uint16_t session_id, const char* json, int length) {
+    if (length > kHeldFrameBytes) {
         diagnostics_.link_drops++;
         return;
     }
-    std::memcpy(held_, json, static_cast<size_t>(len));
-    held_bytes_ = len;
+    std::memcpy(held_, json, static_cast<size_t>(length));
+    held_bytes_ = length;
     held_to_ = session_id;
     held_since_ms_ = now_ms_;
 }
@@ -171,35 +171,35 @@ Status ConfigService::reply(const char* json) {
 }
 
 void ConfigService::refuse_unclaimed(uint16_t session_id) {
-    char buf[96];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_bool("ack", false);
-    w.kv_str("reason", "claimed");
-    w.kv_int("by", static_cast<long>(claim_.holder()));
-    const int len = w.finish();
-    (void)reply_to(session_id, buf, len);
+    char buffer[96];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_bool("ack", false);
+    w.key_value_str("reason", "claimed");
+    w.key_value_int("by", static_cast<long>(claim_.holder()));
+    const int length = w.finish();
+    (void)reply_to(session_id, buffer, length);
 }
 
 void ConfigService::stage(Pending pending, const char* reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
     prompt_detail_[0] = 0;
-    char buf[64];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_bool("ack", false);
-    w.kv_bool("pending", true);
-    w.kv_str("reason", reason);
+    char buffer[64];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_bool("ack", false);
+    w.key_value_bool("pending", true);
+    w.key_value_str("reason", reason);
     w.finish();
-    (void)reply(buf);
+    (void)reply(buffer);
 }
 
 void ConfigService::ack(bool ok, const char* reason) {
-    char buf[96];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_bool("ack", ok);
-    if (reason) w.kv_str("reason", reason);
+    char buffer[96];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_bool("ack", ok);
+    if (reason) w.key_value_str("reason", reason);
     w.finish();
-    (void)reply(buf);
+    (void)reply(buffer);
 }
 
 const char* ConfigService::prompt_detail() const {
@@ -273,72 +273,72 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         return;
     }
     const char* data = reinterpret_cast<const char*>(frame.data.data());
-    int len = frame.bytes;
-    json::Reader reader(data, len);
-    char cmd[16] = {0};
-    if (!reader.get_string("cmd", cmd, sizeof(cmd))) {
+    int length = frame.bytes;
+    json::Reader reader(data, length);
+    char command[16] = {0};
+    if (!reader.get_string("cmd", command, sizeof(command))) {
         ack(false, "no_cmd");
         return;
     }
 
-    if (std::strcmp(cmd, "get") == 0) {
+    if (std::strcmp(command, "get") == 0) {
         // INFO: fc 04aug26 One flat object, which is also what
         // schemas/config.v1.schema.json describes: the settings used to travel
         // nested as an escaped string, and the backslashes alone were 53 bytes
         // on a 158-byte body. Sized by its buffer at the smallest payload we
         // support, and refused rather than answered short - an app that receives
         // a config object with fields missing renders defaults a pilot never set.
-        char buf[kSmallestSupportedPayload + 1];
-        json::Writer w(buf, sizeof(buf));
-        w.kv_str("cmd", "config");
+        char buffer[kSmallestSupportedPayload + 1];
+        json::Writer w(buffer, sizeof(buffer));
+        w.key_value_str("cmd", "config");
         store_.write_fields(w);
-        const int reply_len = w.finish();
+        const int reply_length = w.finish();
         if (w.overflowed()) {
             diagnostics_.link_drops++;
             return;
         }
-        (void)reply(buf, reply_len);
+        (void)reply(buffer, reply_length);
         return;
     }
 
-    if (std::strcmp(cmd, "defaults") == 0) {
+    if (std::strcmp(command, "defaults") == 0) {
         send_defaults();
         return;
     }
 
-    if (std::strcmp(cmd, "status") == 0) {
+    if (std::strcmp(command, "status") == 0) {
         send_status();
         return;
     }
 
-    if (std::strcmp(cmd, "timing") == 0) {
+    if (std::strcmp(command, "timing") == 0) {
         send_timing();
         return;
     }
 
-    if (std::strcmp(cmd, "flash") == 0) {
+    if (std::strcmp(command, "flash") == 0) {
         send_flash();
         return;
     }
 
-    if (std::strcmp(cmd, "radio") == 0) {
+    if (std::strcmp(command, "radio") == 0) {
         send_radio();
         return;
     }
 
-    if (std::strcmp(cmd, "update") == 0) {
+    if (std::strcmp(command, "update") == 0) {
         send_update(claim_.holder());
         return;
     }
 
-    if (std::strcmp(cmd, "diag") == 0) {
+    if (std::strcmp(command, "diag") == 0) {
         send_diagnostics();
         return;
     }
 
-    if (answer_identity(cmd, reader)) return;
+    if (answer_identity(command, reader)) return;
 
-    if (std::strcmp(cmd, "set") == 0) {
+    if (std::strcmp(command, "set") == 0) {
         if (!on_ground()) {
             ack(false, "in_flight");
             return;
@@ -350,8 +350,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
             ack(false, "low_power");
             return;
         }
-        pending_set_bytes_ = len < static_cast<int>(sizeof(pending_set_json_)) - 1
-                                 ? len
+        pending_set_bytes_ = length < static_cast<int>(sizeof(pending_set_json_)) - 1
+                                 ? length
                                  : static_cast<int>(sizeof(pending_set_json_)) - 1;
         std::memcpy(pending_set_json_, data, static_cast<size_t>(pending_set_bytes_));
         pending_set_json_[pending_set_bytes_] = 0;
@@ -364,16 +364,16 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     // INFO: fc 03oct26 the dfu image travels over SMP, not this channel (simulator/README.md)
     Pending requested = Pending::None;
     const char* reason = nullptr;
-    if (std::strcmp(cmd, "dfu") == 0) {
+    if (std::strcmp(command, "dfu") == 0) {
         requested = Pending::Dfu;
         reason = "confirm_dfu";
-    } else if (std::strcmp(cmd, "recovery") == 0) {
+    } else if (std::strcmp(command, "recovery") == 0) {
         requested = Pending::Recovery;
         reason = "confirm_recovery";
-    } else if (std::strcmp(cmd, "power_off") == 0) {
+    } else if (std::strcmp(command, "power_off") == 0) {
         requested = Pending::PowerOff;
         reason = "confirm_power_off";
-    } else if (std::strcmp(cmd, "gnss_cold") == 0) {
+    } else if (std::strcmp(command, "gnss_cold") == 0) {
         requested = Pending::GnssCold;
         reason = "confirm_gnss_cold";
     }

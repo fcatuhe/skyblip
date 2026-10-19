@@ -12,7 +12,7 @@ namespace skyblip::go {
 using namespace radar;
 
 namespace {
-constexpr int kCx = kFar;  // only for centring text, which has no such nicety
+constexpr int kCentreX = kFar;  // only for centring text, which has no such nicety
 using ui::kCellW;
 constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
@@ -147,7 +147,8 @@ RangeText range_text(const RadarSnapshot& snapshot) {
 
 Box range_box(const RadarSnapshot& snapshot) {
     const int w = range_text(snapshot).w;
-    return padded(kCx - w / 2, layout_of(snapshot).range_y, w, kCharH * kRangeScale, kRangePad);
+    return padded(kCentreX - w / 2, layout_of(snapshot).range_y, w, kCharH * kRangeScale,
+                  kRangePad);
 }
 
 void range_label(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
@@ -196,7 +197,7 @@ const char* ring_note(const RadarSnapshot& snapshot, char* out) {
 
 Box note_box(const char* note, int y) {
     const int w = text_width(note, kNoteScale);
-    return padded(kCx - w / 2, y, w, kCharH * kNoteScale);
+    return padded(kCentreX - w / 2, y, w, kCharH * kNoteScale);
 }
 
 void state_note(ui::Canvas& canvas, const char* note, int y) {
@@ -218,7 +219,7 @@ void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
 
 Box banner_box(const char* word, int y) {
     const int w = text_width(word, kBannerScale);
-    return padded(kCx - w / 2, y, w, kCharH * kBannerScale);
+    return padded(kCentreX - w / 2, y, w, kCharH * kBannerScale);
 }
 
 void state_banner(ui::Canvas& canvas, const char* word, int y) {
@@ -360,12 +361,12 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
 
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int n_readings = 2;
-    char word_buf[12], note_buf[12];
-    if (const char* word = ring_word(snapshot, word_buf)) {
+    char word_buffer[12], note_buffer[12];
+    if (const char* word = ring_word(snapshot, word_buffer)) {
         state_banner(canvas, word, layout.banner_y);
         readings[n_readings++] = banner_box(word, layout.banner_y);
     }
-    if (const char* note = ring_note(snapshot, note_buf)) {
+    if (const char* note = ring_note(snapshot, note_buffer)) {
         state_note(canvas, note, layout.note_y);
         readings[n_readings++] = note_box(note, layout.note_y);
     }

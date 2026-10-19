@@ -71,17 +71,17 @@ void Canvas::line(int x0, int y0, int x1, int y1, bool black) {
     int dy = y1 > y0 ? y1 - y0 : y0 - y1;
     int sx = x0 < x1 ? 1 : -1;
     int sy = y0 < y1 ? 1 : -1;
-    int err = dx - dy;
+    int error = dx - dy;
     for (;;) {
         set_pixel(x0, y0, black);
         if (x0 == x1 && y0 == y1) break;
-        int e2 = 2 * err;
+        int e2 = 2 * error;
         if (e2 > -dy) {
-            err -= dy;
+            error -= dy;
             x0 += sx;
         }
         if (e2 < dx) {
-            err += dx;
+            error += dx;
             y0 += sy;
         }
     }
@@ -98,30 +98,30 @@ void Canvas::rect(int x, int y, int w, int h, bool black, bool fill) {
     }
 }
 
-void Canvas::circle(int cx, int cy, int r, bool black, bool fill) {
-    int x = r, y = 0, err = 1 - r;
+void Canvas::circle(int centre_x, int centre_y, int r, bool black, bool fill) {
+    int x = r, y = 0, error = 1 - r;
     while (x >= y) {
         if (fill) {
-            hline(cx - x, cy + y, 2 * x + 1, black);
-            hline(cx - x, cy - y, 2 * x + 1, black);
-            hline(cx - y, cy + x, 2 * y + 1, black);
-            hline(cx - y, cy - x, 2 * y + 1, black);
+            hline(centre_x - x, centre_y + y, 2 * x + 1, black);
+            hline(centre_x - x, centre_y - y, 2 * x + 1, black);
+            hline(centre_x - y, centre_y + x, 2 * y + 1, black);
+            hline(centre_x - y, centre_y - x, 2 * y + 1, black);
         } else {
-            set_pixel(cx + x, cy + y, black);
-            set_pixel(cx - x, cy + y, black);
-            set_pixel(cx + x, cy - y, black);
-            set_pixel(cx - x, cy - y, black);
-            set_pixel(cx + y, cy + x, black);
-            set_pixel(cx - y, cy + x, black);
-            set_pixel(cx + y, cy - x, black);
-            set_pixel(cx - y, cy - x, black);
+            set_pixel(centre_x + x, centre_y + y, black);
+            set_pixel(centre_x - x, centre_y + y, black);
+            set_pixel(centre_x + x, centre_y - y, black);
+            set_pixel(centre_x - x, centre_y - y, black);
+            set_pixel(centre_x + y, centre_y + x, black);
+            set_pixel(centre_x - y, centre_y + x, black);
+            set_pixel(centre_x + y, centre_y - x, black);
+            set_pixel(centre_x - y, centre_y - x, black);
         }
         y++;
-        if (err < 0) {
-            err += 2 * y + 1;
+        if (error < 0) {
+            error += 2 * y + 1;
         } else {
             x--;
-            err += 2 * (y - x) + 1;
+            error += 2 * (y - x) + 1;
         }
     }
 }

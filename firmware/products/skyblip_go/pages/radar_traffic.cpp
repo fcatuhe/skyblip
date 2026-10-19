@@ -43,7 +43,7 @@ struct Plotted {
 ui::Vertical vertical_of(int32_t up_m) {
     const int32_t apart = up_m < 0 ? -up_m : up_m;
     if (apart <= kLevelM) return ui::Vertical::Level;
-    const bool beyond = apart > traffic::kAdvisoryAltM;
+    const bool beyond = apart > traffic::kAdvisoryAltitudeM;
     if (up_m > 0) return beyond ? ui::Vertical::FarAbove : ui::Vertical::Above;
     return beyond ? ui::Vertical::FarBelow : ui::Vertical::Below;
 }
@@ -152,17 +152,17 @@ struct DashPen {
         const int dy = y1 > at_y ? y1 - at_y : at_y - y1;
         const int sx = at_x < x1 ? 1 : -1, sy = at_y < y1 ? 1 : -1;
         const bool steep = dy >= dx;
-        int err = dx - dy;
+        int error = dx - dy;
         if (fresh) dash(at_x, at_y, steep);
         fresh = false;
         while (at_x != x1 || at_y != y1) {
-            const int e2 = 2 * err;
+            const int e2 = 2 * error;
             if (e2 > -dy) {
-                err -= dy;
+                error -= dy;
                 at_x += sx;
             }
             if (e2 < dx) {
-                err += dx;
+                error += dx;
                 at_y += sy;
             }
             dash(at_x, at_y, steep);
@@ -213,17 +213,17 @@ Leader leader_of(const RadarSnapshot& snapshot, const RadarTarget& t, int16_t tr
 void line_inside_ring(ui::Canvas& canvas, int x0, int y0, int x1, int y1, int ring) {
     const int dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y1 - y0 : y0 - y1;
     const int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    int err = dx - dy;
+    int error = dx - dy;
     for (;;) {
         if (pixel_within(x0, y0, ring - kRingW)) canvas.set_pixel(x0, y0, true);
         if (x0 == x1 && y0 == y1) return;
-        const int e2 = 2 * err;
+        const int e2 = 2 * error;
         if (e2 > -dy) {
-            err -= dy;
+            error -= dy;
             x0 += sx;
         }
         if (e2 < dx) {
-            err += dx;
+            error += dx;
             y0 += sy;
         }
     }

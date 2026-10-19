@@ -22,7 +22,7 @@ struct RawGnss {
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
     uint16_t resid_m{0};
-    uint8_t sats{0};
+    uint8_t satellites{0};
     uint8_t in_use{0};
     uint8_t fix_mode{0};
     bool nav_valid{false};
@@ -60,7 +60,7 @@ struct RawRadio {
     uint8_t alarm{0};
     int8_t noise_dbm{0};
     timing::SlotState slot{timing::SlotState::UplinkRxO};
-    uint32_t freq_hz{0};
+    uint32_t frequency_hz{0};
     bool tx_allowed{false};
 };
 

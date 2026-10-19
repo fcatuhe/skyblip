@@ -33,10 +33,10 @@ TEST_CASE("sx1262: the current limit survives every dwell, not only the first") 
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
+    RadioConfig config{};
     for (uint32_t hz : {868200000u, 868400000u, 868200000u}) {
-        cfg.freq_hz = hz;
-        REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+        config.frequency_hz = hz;
+        REQUIRE(radio.configure_radio(config) == Status::Ok);
         CAPTURE(hz);
         CHECK(chip.ocp == sx::kOcpLimit);
     }
@@ -68,10 +68,10 @@ TEST_CASE("sx1262: a dwell reprogrammed on the other band keeps the modulation-q
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
-    RadioConfig cfg{};
-    cfg.freq_hz = 868400000;
-    cfg.gaussian_bt_e2 = 50;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    RadioConfig config{};
+    config.frequency_hz = 868400000;
+    config.gaussian_bt_e2 = 50;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK((chip.tx_modulation & sx::kTxModulationGfskBit) != 0);
 }
 
@@ -158,28 +158,28 @@ TEST_CASE("sx1262: no command is put on the bus while the part is still busy wit
 TEST_CASE("sx1262: a bring-up whose calibration failed reports the failing block, not silence") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrPllCalib;
+    chip.fail_calibration = sx::kErrorPllCalibration;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrPllCalib) != 0);
+    CHECK((radio.device_errors() & sx::kErrorPllCalibration) != 0);
     CHECK(chip.device_errors == 0);  // cleared, so the next bring-up answers for itself
 }
 
 TEST_CASE("sx1262: an image calibration that failed is not a radio that came up") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrImageCalib | sx::kErrPllLock;
+    chip.fail_calibration = sx::kErrorImageCalibration | sx::kErrorPllLock;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrImageCalib) != 0);
-    CHECK((radio.device_errors() & sx::kErrPllLock) != 0);
+    CHECK((radio.device_errors() & sx::kErrorImageCalibration) != 0);
+    CHECK((radio.device_errors() & sx::kErrorPllLock) != 0);
 }
 
 // The clock really not appearing is not the flag the TCXO raises for free at power-on.
 TEST_CASE("sx1262: an XOSC that never starts is still caught, once the free flag is cleared") {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
-    chip.fail_calibration = sx::kErrXoscStart;
+    chip.fail_calibration = sx::kErrorXoscStart;
     CHECK(radio.begin() == Status::Down);
-    CHECK((radio.device_errors() & sx::kErrXoscStart) != 0);
+    CHECK((radio.device_errors() & sx::kErrorXoscStart) != 0);
 }
 
 TEST_CASE("sx1262: a healthy bring-up reports no device error and says so") {

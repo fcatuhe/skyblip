@@ -187,8 +187,8 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     Rig again;
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
-    REQUIRE(again.platform.kv().write("settings", blob, n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(again.platform.key_value().write("settings", blob, n) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
     CHECK(again.settings().alarm_volume == go::AlarmVolume::Soft);
 }
@@ -216,8 +216,8 @@ TEST_CASE("product: the range and the plot a pilot picks on the panel survive a 
     Rig again;
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
-    REQUIRE(again.platform.kv().write("settings", blob, n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(again.platform.key_value().write("settings", blob, n) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
     CHECK(again.product.screen().range_step() == go::kDefaultRangeStep + 1);
     CHECK(again.settings().plot == go::RadarPlot::ToScale);
@@ -240,12 +240,12 @@ TEST_CASE("product: the aircraft type set on the panel is the one that goes on t
     REQUIRE(stored_settings(rig, stored));
     CHECK(stored.aircraft_type == 3);
 
-    // The category the transmitter puts in the frame is own.aircraft_cat, and
+    // The category the transmitter puts in the frame is own.aircraft_category, and
     // the own-ship service copies it off the settings on the next fix: the page
     // does not need a second wire, and it must not grow one.
     push_fix(rig, 25000, 500);
     rig.run(t, t + 1000);
-    CHECK(rig.state().own.aircraft_cat == 3);
+    CHECK(rig.state().own.aircraft_category == 3);
 }
 
 // G3 again, for the one setting that is text: a pilot with no phone can name

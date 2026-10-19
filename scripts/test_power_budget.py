@@ -5,7 +5,7 @@
 
 Stdlib alone, no radio and no clock. Every record here is handcrafted bytes put
 through the same chunk decoder and session sink blip.py fetch uses, so a Duty
-field that moves in firmware/core/diag/payload.h fails here rather than reading
+field that moves in firmware/core/diagnostics/payload.h fails here rather than reading
 as a quiet zero.
 """
 import base64
@@ -24,7 +24,7 @@ import blip_records as records  # noqa: E402
 import power_budget  # noqa: E402
 
 FIRMWARE = pathlib.Path(__file__).resolve().parents[1] / "firmware"
-PAYLOAD_H = FIRMWARE / "core" / "diag" / "payload.h"
+PAYLOAD_H = FIRMWARE / "core" / "diagnostics" / "payload.h"
 CAPABILITIES_H = FIRMWARE / "ports" / "capabilities.h"
 TRANSMIT_H = FIRMWARE / "core" / "timing" / "transmit.h"
 

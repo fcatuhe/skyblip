@@ -19,9 +19,9 @@ extern "C" {
 KEEPALIVE void simulator_setup() { (void)g_simulator.setup(); }
 KEEPALIVE void simulator_step(unsigned ms) { g_simulator.step(ms); }
 KEEPALIVE int simulator_park_refusal(unsigned ms) { return g_simulator.park_refusal(ms) ? 1 : 0; }
-KEEPALIVE int simulator_load_scenario(const char* json, int len) {
+KEEPALIVE int simulator_load_scenario(const char* json, int length) {
     simulator::Scenario s;
-    if (!simulator::parse_scenario(json, len, s)) return 0;
+    if (!simulator::parse_scenario(json, length, s)) return 0;
     g_simulator.load(s);
     return 1;
 }
@@ -42,7 +42,7 @@ KEEPALIVE void simulator_set_range(int step) {
 
 KEEPALIVE void simulator_set_fix(int on) { g_simulator.world().set_fix(on != 0); }
 KEEPALIVE void simulator_set_pps(int on) { g_simulator.world().set_pps_locked(on != 0); }
-KEEPALIVE void simulator_set_sats(int n) { g_simulator.world().set_sats(n); }
+KEEPALIVE void simulator_set_satellites(int n) { g_simulator.world().set_satellites(n); }
 KEEPALIVE void simulator_set_altitude_m(int m) { g_simulator.world().set_altitude_m(m); }
 KEEPALIVE void simulator_set_speed_kt(int kt) { g_simulator.world().set_speed_kt(kt); }
 KEEPALIVE void simulator_set_track_deg(int deg) { g_simulator.world().set_track_deg(deg); }
@@ -60,9 +60,9 @@ KEEPALIVE void simulator_set_battery_mv(int mv) { g_simulator.world().set_batter
 KEEPALIVE void simulator_set_external_power(int on) {
     g_simulator.world().set_external_power(on != 0);
 }
-KEEPALIVE void simulator_set_position(int lat_1e7, int lon_1e7) {
-    g_simulator.world().gnss().lat_1e7 = lat_1e7;
-    g_simulator.world().gnss().lon_1e7 = lon_1e7;
+KEEPALIVE void simulator_set_position(int latitude_1e7, int longitude_1e7) {
+    g_simulator.world().gnss().latitude_1e7 = latitude_1e7;
+    g_simulator.world().gnss().longitude_1e7 = longitude_1e7;
 }
 
 // alptas picks what the aircraft is equipped with: 0 is ADS-L, anything else is
@@ -132,12 +132,14 @@ KEEPALIVE int simulator_capabilities() {
     return static_cast<int>(g_simulator.product().capabilities());
 }
 KEEPALIVE int simulator_fix_valid() { return g_simulator.product().state().own.fix_valid ? 1 : 0; }
-KEEPALIVE int simulator_sats() { return g_simulator.product().state().own.sats; }
-KEEPALIVE int simulator_lat_1e7() { return g_simulator.product().state().own.lat_1e7; }
-KEEPALIVE int simulator_lon_1e7() { return g_simulator.product().state().own.lon_1e7; }
-KEEPALIVE int simulator_alt_hae_mm() { return g_simulator.product().state().own.alt_hae_mm; }
+KEEPALIVE int simulator_satellites() { return g_simulator.product().state().own.satellites; }
+KEEPALIVE int simulator_latitude_1e7() { return g_simulator.product().state().own.latitude_1e7; }
+KEEPALIVE int simulator_longitude_1e7() { return g_simulator.product().state().own.longitude_1e7; }
+KEEPALIVE int simulator_altitude_hae_mm() {
+    return g_simulator.product().state().own.altitude_hae_mm;
+}
 KEEPALIVE int simulator_pressure_mpa() {
-    return static_cast<int>(g_simulator.product().state().baro.pressure_mpa);
+    return static_cast<int>(g_simulator.product().state().barometer.pressure_mpa);
 }
 KEEPALIVE int simulator_battery_mv() { return g_simulator.product().state().power.battery.cell_mv; }
 KEEPALIVE int simulator_battery_percent() {
@@ -189,8 +191,8 @@ KEEPALIVE int simulator_tx_lost() {
 KEEPALIVE int simulator_slot_state() {
     return static_cast<int>(g_simulator.product().state().rf.plan.state);
 }
-KEEPALIVE int simulator_dwell_freq_khz() {
-    return static_cast<int>(g_simulator.product().state().rf.plan.freq_hz / 1000);
+KEEPALIVE int simulator_dwell_frequency_khz() {
+    return static_cast<int>(g_simulator.product().state().rf.plan.frequency_hz / 1000);
 }
 
 // The tape: every burst that was on the air, heard or not.
@@ -199,8 +201,8 @@ KEEPALIVE int simulator_air_phase_ms(int i) { return g_simulator.world().air().r
 KEEPALIVE int simulator_air_event(int i) {
     return static_cast<int>(g_simulator.world().air().record(i).event);
 }
-KEEPALIVE int simulator_air_freq_khz(int i) {
-    return static_cast<int>(g_simulator.world().air().record(i).freq_hz / 1000);
+KEEPALIVE int simulator_air_frequency_khz(int i) {
+    return static_cast<int>(g_simulator.world().air().record(i).frequency_hz / 1000);
 }
 KEEPALIVE int simulator_air_rssi_dbm(int i) { return g_simulator.world().air().record(i).rssi_dbm; }
 KEEPALIVE const char* simulator_air_line(int i) {

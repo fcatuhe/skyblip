@@ -27,7 +27,7 @@ namespace skyblip::go {
 
 // What this product cannot fly without, and what it can lose and keep flying.
 constexpr ports::Capabilities kRequired =
-    ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Baro;
+    ports::Capability::Rf | ports::Capability::Gnss | ports::Capability::Barometer;
 constexpr ports::Capabilities kOptional =
     ports::Capability::Display | ports::Capability::Buzzer | ports::Capability::Haptic |
     ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
@@ -46,7 +46,7 @@ struct SelfTestPartSpec {
 constexpr SelfTestPartSpec kSelfTestParts[] = {
     {"RADIO", ports::Capability::Rf, "SX1262"},
     {"GNSS", ports::Capability::Gnss, "L76K"},
-    {"BARO", ports::Capability::Baro, "BME280"},
+    {"BARO", ports::Capability::Barometer, "BME280"},
     {"PANEL", ports::Capability::Display, "SSD1681"},
     {"IMU", ports::Capability::Inclinometer, "BHI260AP"},
     {"TEMP", ports::Capability::DieTemperature, "NRF52840"},
@@ -120,7 +120,7 @@ class Product {
         if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
         if (flyable_ && !shutdown_.going_down()) {
             meter_.begin_pass(context_.instant(now_ms).into_ms);
-            meter_.timed(diag::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
             // Polled before the services run, so the pass that may write flash is
             // the pass that already knows the rail is going. One atomic read on
             // the silicon side; nothing here is allowed to be slower than that,
@@ -230,7 +230,7 @@ class Product {
     ConfigLinkService& config_link() { return config_link_; }
     FlightLogService& flight_log() { return flight_log_; }
     CaptureService& capture() { return capture_; }
-    diag::Recorder& diag() { return diag_; }
+    diagnostics::Recorder& diagnostics() { return diagnostics_; }
 
    private:
     // Which part answered, for the three footprints LilyGO ships more than one
@@ -240,8 +240,9 @@ class Product {
     const char* self_test_detail(const SelfTestPartSpec& spec) {
         const ports::Inventory& found = board_.inventory();
         switch (spec.capability) {
-            case ports::Capability::Baro:
-                return found.baro_address == 0 ? spec.wired_part : baro_part(found.baro_address);
+            case ports::Capability::Barometer:
+                return found.barometer_address == 0 ? spec.wired_part
+                                                    : barometer_part(found.barometer_address);
             case ports::Capability::Display:
                 return ports::has(board_.capabilities(), ports::Capability::Display)
                            ? found.panel_name
@@ -258,11 +259,11 @@ class Product {
         }
     }
 
-    const char* baro_part(uint8_t address) {
-        int n = skyblip::format_string(baro_part_, "BME280 ");
-        n += skyblip::format_hex(baro_part_ + n, address, 2);
-        baro_part_[n] = 0;
-        return baro_part_;
+    const char* barometer_part(uint8_t address) {
+        int n = skyblip::format_string(barometer_part_, "BME280 ");
+        n += skyblip::format_hex(barometer_part_ + n, address, 2);
+        barometer_part_[n] = 0;
+        return barometer_part_;
     }
 
     power::BootCell read_boot_cell() {
@@ -381,11 +382,11 @@ class Product {
     }
 
     void record_loop(uint32_t now_ms) {
-        const diag::Instant at = context_.instant(now_ms);
+        const diagnostics::Instant at = context_.instant(now_ms);
         if (at.at_s == loop_window_s_) return;
         loop_window_s_ = at.at_s;
-        const diag::Loop window = meter_.take();
-        if (diag_.armed()) diag_.record(window, at);
+        const diagnostics::Loop window = meter_.take();
+        if (diagnostics_.armed()) diagnostics_.record(window, at);
     }
 
     void publish_radio_asleep() {
@@ -395,14 +396,14 @@ class Product {
 
     bus::Bus bus_{};
     bus::State state_{};
-    diag::Recorder diag_{};
+    diagnostics::Recorder diagnostics_{};
     Settings settings_{};
     Glass self_test_page_{};
     SelfTestSnapshot self_test_snapshot_{};
     P& platform_;
     Board board_;
     ports::Roles roles_{board_.roles()};
-    runtime::Context context_{roles_, bus_, state_, diag_};
+    runtime::Context context_{roles_, bus_, state_, diagnostics_};
     runtime::LoopMeter meter_{roles_.clock};
     uint32_t loop_window_s_{0};
     RecordPool pool_{context_};
@@ -443,7 +444,7 @@ class Product {
     // The barometer's address as the page prints it. A member and not a local:
     // SelfTestPart holds a pointer, and the page is drawn after self_test_detail()
     // has returned.
-    char baro_part_[10]{};
+    char barometer_part_[10]{};
     const char* i2c_roles_[ports::Inventory::kMaxI2cAddresses]{};
     power::ShutdownSequencer shutdown_{};
     power::ShutdownPhase acted_phase_{power::ShutdownPhase::Running};

@@ -9,55 +9,55 @@
 namespace skyblip::comms {
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
-int ConfigService::format_status(char* buf, int cap) {
-    json::Writer w(buf, cap);
-    w.kv_str("cmd", "status");
-    w.kv_str("flight", flight_name(flight_state_));
-    w.kv_bool("upload", upload_allowed());
+int ConfigService::format_status(char* buffer, int cap) {
+    json::Writer w(buffer, cap);
+    w.key_value_str("cmd", "status");
+    w.key_value_str("flight", flight_name(flight_state_));
+    w.key_value_bool("upload", upload_allowed());
     const power::BatteryState& battery = diagnostics_.battery;
-    if (battery.valid) w.kv_int("battery_percent", static_cast<long>(battery.percent));
-    w.kv_bool("charging", battery.charging);
-    w.kv_str("power_level", power::to_string(diagnostics_.level));
-    w.kv_bool("went_dark_flat", went_dark_flat_);
-    if (diagnostics_.die_valid) w.kv_int("die_temp_c", whole_celsius(diagnostics_.die_dc));
-    const int len = w.finish();
-    return w.overflowed() ? 0 : len;
+    if (battery.valid) w.key_value_int("battery_percent", static_cast<long>(battery.percent));
+    w.key_value_bool("charging", battery.charging);
+    w.key_value_str("power_level", power::to_string(diagnostics_.level));
+    w.key_value_bool("went_dark_flat", went_dark_flat_);
+    if (diagnostics_.die_valid) w.key_value_int("die_temp_c", whole_celsius(diagnostics_.die_dc));
+    const int length = w.finish();
+    return w.overflowed() ? 0 : length;
 }
 
 void ConfigService::send_status() {
-    char buf[kSmallestSupportedPayload + 1];
-    const int len = format_status(buf, static_cast<int>(sizeof(buf)));
-    if (len == 0) {
+    char buffer[kSmallestSupportedPayload + 1];
+    const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
+    if (length == 0) {
         diagnostics_.link_drops++;
         status_push_due_ = false;
         return;
     }
-    (void)reply(buf, len);
+    (void)reply(buffer, length);
 }
 
 void ConfigService::send_defaults() {
-    char buf[kSmallestSupportedPayload + 1];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "defaults");
+    char buffer[kSmallestSupportedPayload + 1];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_str("cmd", "defaults");
     store_.write_default_fields(w);
-    const int len = w.finish();
+    const int length = w.finish();
     if (w.overflowed()) {
         diagnostics_.link_drops++;
         return;
     }
-    (void)reply(buf, len);
+    (void)reply(buffer, length);
 }
 
 // INFO: fc 18sep26 Nobody asked for this one, so every app subscribed to it gets it.
 void ConfigService::push_status() {
-    char buf[kSmallestSupportedPayload + 1];
-    const int len = format_status(buf, static_cast<int>(sizeof(buf)));
-    if (len == 0) {
+    char buffer[kSmallestSupportedPayload + 1];
+    const int length = format_status(buffer, static_cast<int>(sizeof(buffer)));
+    if (length == 0) {
         diagnostics_.link_drops++;
         status_push_due_ = false;
         return;
     }
-    status_push_due_ = broadcast(buf, len) == Status::WouldBlock;
+    status_push_due_ = broadcast(buffer, length) == Status::WouldBlock;
 }
 
 // INFO: fc 04aug26 The one sender allowed more than one frame, and the reason
@@ -88,19 +88,19 @@ void ConfigService::send_flash() {
         ack(false, "no_stats");
         return;
     }
-    char buf[192];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "flash");
-    w.kv_bool("writable", settings_writable());
-    w.kv_int("changes", static_cast<long>(durable_writes_->requests()));
-    w.kv_int("writes", static_cast<long>(durable_writes_->writes()));
-    w.kv_int("forced", static_cast<long>(durable_writes_->forced()));
-    w.kv_int("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
-    w.kv_bool("pending", durable_writes_->pending());
-    w.kv_int("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
-    w.kv_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kDeferCeilingMs));
+    char buffer[192];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_str("cmd", "flash");
+    w.key_value_bool("writable", settings_writable());
+    w.key_value_int("changes", static_cast<long>(durable_writes_->requests()));
+    w.key_value_int("writes", static_cast<long>(durable_writes_->writes()));
+    w.key_value_int("forced", static_cast<long>(durable_writes_->forced()));
+    w.key_value_int("worst_wait_ms", static_cast<long>(durable_writes_->worst_wait_ms()));
+    w.key_value_bool("pending", durable_writes_->pending());
+    w.key_value_int("budget_ms", static_cast<long>(timing::DurableWriteWindow::kWorstWriteMs));
+    w.key_value_int("bound_ms", static_cast<long>(timing::DurableWriteWindow::kDeferCeilingMs));
     w.finish();
-    (void)reply(buf);
+    (void)reply(buffer);
 }
 
 // The radio's half of the same bench, still its own question rather than four
@@ -120,27 +120,27 @@ void ConfigService::send_update(uint16_t session_id) {
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
     dfu::format_hub_image(hub_image_, hub, sizeof(hub));
-    char buf[kSmallestSupportedPayload + 1];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "update");
-    w.kv_str("image", dfu::to_string(image_state_));
+    char buffer[kSmallestSupportedPayload + 1];
+    json::Writer w(buffer, sizeof(buffer));
+    w.key_value_str("cmd", "update");
+    w.key_value_str("image", dfu::to_string(image_state_));
     if (image_state_ != dfu::ImageState::Confirmed) {
-        w.kv_str("from", from);
-        w.kv_str("to", to);
+        w.key_value_str("from", from);
+        w.key_value_str("to", to);
     }
     if (settings_fallback_ != settings::Fallback::None)
-        w.kv_str("settings", settings::to_string(settings_fallback_));
-    w.kv_bool("swap_powered", swap_powered());
-    w.kv_str("imu", hub);
-    if (dfu_ != nullptr && dfu_->downgrade_allowed()) w.kv_bool("downgrade", true);
+        w.key_value_str("settings", settings::to_string(settings_fallback_));
+    w.key_value_bool("swap_powered", swap_powered());
+    w.key_value_str("imu", hub);
+    if (dfu_ != nullptr && dfu_->downgrade_allowed()) w.key_value_bool("downgrade", true);
     ports::SigningKeyHash trusted;
     if (dfu_ != nullptr && dfu_->running_key(trusted)) {
         char key[9];
         key[format_hex(key, dfu::key_prefix(trusted), 8)] = 0;
-        w.kv_str("key", key);
+        w.key_value_str("key", key);
     }
-    const int len = w.finish();
-    (void)reply_to(session_id, buf, len);
+    const int length = w.finish();
+    (void)reply_to(session_id, buffer, length);
 }
 
 // A whole dump nobody has collected is a dump of zeros, and zeros here read as a
@@ -174,15 +174,15 @@ void ConfigService::start_report(std::optional<Report>& report, int frame_cap,
 // INFO: fc 25sep26 a frame held for the link still counts as sent, so the next one follows it
 template <class Report>
 void ConfigService::continue_report(std::optional<Report>& report) {
-    char buf[kHeldFrameBytes];
+    char buffer[kHeldFrameBytes];
     while (report && held_bytes_ == 0) {
-        const int len = report->next_frame(report_payload_, buf, report_frame_cap_);
-        if (len <= 0) {
+        const int length = report->next_frame(report_payload_, buffer, report_frame_cap_);
+        if (length <= 0) {
             diagnostics_.link_drops++;
             report.reset();
             return;
         }
-        const Status sent = reply(buf, len);
+        const Status sent = reply(buffer, length);
         if (report->exhausted() || (sent != Status::Ok && sent != Status::WouldBlock))
             report.reset();
     }

@@ -21,13 +21,13 @@ using namespace skyblip;
 
 namespace {
 
-constexpr int32_t kPoleLat1e7 = 900000000;
-constexpr int32_t kAntimeridianLon1e7 = 1800000000;
+constexpr int32_t kPoleLatitude1e7 = 900000000;
+constexpr int32_t kAntimeridianLongitude1e7 = 1800000000;
 
 struct Receiver {
     uint32_t utc_s;
-    int32_t lat_1e7;
-    int32_t lon_1e7;
+    int32_t latitude_1e7;
+    int32_t longitude_1e7;
 };
 
 // Raw sends the input's bytes, Sealed fixes their checksum, Encoded builds the frame from fields.
@@ -46,12 +46,13 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
     model::AircraftObservation observation{};
     observation.address = in.ConsumeIntegral<uint32_t>();
     observation.address_mapping_table = in.ConsumeIntegral<uint8_t>();
-    observation.aircraft_cat = in.ConsumeIntegral<uint8_t>();
+    observation.aircraft_category = in.ConsumeIntegral<uint8_t>();
     observation.flight_state = in.ConsumeIntegral<uint8_t>();
-    observation.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
-    observation.lon_1e7 =
-        in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
-    observation.alt_m = in.ConsumeIntegral<int16_t>();
+    observation.latitude_1e7 =
+        in.ConsumeIntegralInRange<int32_t>(-kPoleLatitude1e7, kPoleLatitude1e7);
+    observation.longitude_1e7 =
+        in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLongitude1e7, kAntimeridianLongitude1e7);
+    observation.altitude_m = in.ConsumeIntegral<int16_t>();
     observation.climb_e8 = in.ConsumeIntegral<int16_t>();
     observation.speed_q = in.ConsumeIntegral<uint16_t>();
     observation.track_c9 = in.ConsumeIntegral<uint16_t>();
@@ -62,7 +63,7 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
                                                                    protocol::kAlptasKeyWindowS);
     (void)protocol::alptas_encode(frame, observation,
                                   receiver.utc_s + static_cast<uint32_t>(keyed_off_s),
-                                  receiver.lat_1e7, receiver.lon_1e7);
+                                  receiver.latitude_1e7, receiver.longitude_1e7);
 }
 
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.
@@ -70,15 +71,15 @@ size_t transmit_mband(FuzzedDataProvider& in, Sealing sealing, const Receiver& r
                       uint8_t* chips) {
     const bool adsl = in.ConsumeBool();
     const uint32_t sync_word = adsl ? protocol::kAdslSyncWord : protocol::kAlptasSyncWord;
-    const uint8_t frame_len = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
+    const uint8_t frame_length = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
     uint8_t frame[protocol::kAlptasFrameBytes]{};
     if (sealing == Sealing::Encoded && !adsl)
         encode_alptas(in, receiver, frame);
     else
-        in.ConsumeData(frame, frame_len);
+        in.ConsumeData(frame, frame_length);
     if (sealing != Sealing::Raw && adsl) seal_adsl(frame);
     if (sealing == Sealing::Sealed && !adsl) protocol::alptas_set_crc(frame);
-    protocol::mband_payload(sync_word, frame, frame_len, chips);
+    protocol::mband_payload(sync_word, frame, frame_length, chips);
     return protocol::kRxChipBytes;
 }
 
@@ -111,8 +112,8 @@ void hear_alptas(protocol::Frame& frame, const Receiver& receiver) {
     if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return;
     protocol::alptas_address(frame.data);
     model::AircraftObservation observation{};
-    if (protocol::alptas_decode(frame.data, receiver.utc_s, receiver.lat_1e7, receiver.lon_1e7,
-                                observation) == Status::Ok)
+    if (protocol::alptas_decode(frame.data, receiver.utc_s, receiver.latitude_1e7,
+                                receiver.longitude_1e7, observation) == Status::Ok)
         return;
     uint32_t keyed = 0;
     (void)protocol::alptas_keyed_second(frame.data, receiver.utc_s, keyed);
@@ -131,20 +132,20 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     FuzzedDataProvider in(data, size);
     Receiver receiver{};
     receiver.utc_s = in.ConsumeIntegral<uint32_t>();
-    receiver.lat_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLat1e7, kPoleLat1e7);
-    receiver.lon_1e7 =
-        in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLon1e7, kAntimeridianLon1e7);
+    receiver.latitude_1e7 = in.ConsumeIntegralInRange<int32_t>(-kPoleLatitude1e7, kPoleLatitude1e7);
+    receiver.longitude_1e7 =
+        in.ConsumeIntegralInRange<int32_t>(-kAntimeridianLongitude1e7, kAntimeridianLongitude1e7);
     const Sealing sealing = in.PickValueInArray({Sealing::Raw, Sealing::Sealed, Sealing::Encoded});
     const model::Band band = in.ConsumeBool() ? model::Band::O : model::Band::M;
 
     uint8_t burst[events::kRfEventBytes]{};
-    const size_t len = band == model::Band::O ? transmit_uplink(in, sealing, burst)
-                                              : transmit_mband(in, sealing, receiver, burst);
+    const size_t length = band == model::Band::O ? transmit_uplink(in, sealing, burst)
+                                                 : transmit_mband(in, sealing, receiver, burst);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
     for (size_t i = 0; i < noise.size() && i < sizeof(burst); i++) burst[i] ^= noise[i];
 
     protocol::Frame frame{};
-    switch (protocol::receive_burst(band, burst, len, frame)) {
+    switch (protocol::receive_burst(band, burst, length, frame)) {
         case protocol::System::AdslDirect: hear_adsl(frame, receiver); break;
         case protocol::System::Alptas: hear_alptas(frame, receiver); break;
         case protocol::System::AdslUplink: hear_uplink(burst); break;

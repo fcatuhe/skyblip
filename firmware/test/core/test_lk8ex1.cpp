@@ -14,12 +14,12 @@ using namespace skyblip;
 using namespace skyblip::protocol;
 
 TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the cell") {
-    char buf[128];
+    char buffer[128];
     Lk8Ex1 v{};
     v.pressure_pa = 90000;
     v.pressure_valid = true;
-    v.alt_m = 988;
-    v.alt_valid = true;
+    v.altitude_m = 988;
+    v.altitude_valid = true;
     v.vario_cm_s = -125;
     v.vario_valid = true;
     v.temperature_c = -7;
@@ -27,8 +27,8 @@ TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the c
     v.battery_percent = 38;
     v.battery_valid = true;
 
-    const int n = format_lk8ex1(buf, sizeof(buf), v);
-    const std::string s(buf, static_cast<size_t>(n));
+    const int n = format_lk8ex1(buffer, sizeof(buffer), v);
+    const std::string s(buffer, static_cast<size_t>(n));
     CHECK(s.rfind("$LK8EX1,90000,988,-125,-7,1038*", 0) == 0);
     CHECK(checksum_ok(s));
     CHECK(s.substr(s.size() - 2) == "\r\n");
@@ -43,24 +43,24 @@ TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the c
 // MB src/driver/Baro.cpp:406-407); we send the percentage, because it is also
 // the number our own panel draws and the two must not disagree.
 TEST_CASE("nmea: LK8EX1 battery is a percentage plus 1000, never a bare percentage") {
-    char buf[128];
+    char buffer[128];
     Lk8Ex1 v{};
     v.battery_valid = true;
 
     v.battery_percent = 0;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).find(",1000*") != std::string::npos);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).find(",1000*") != std::string::npos);
 
     v.battery_percent = 100;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).find(",1100*") != std::string::npos);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).find(",1100*") != std::string::npos);
 
     // Nothing may land in the voltage half of the field, which is every value
     // below 1000, and nothing above a full cell.
     for (int percent = 0; percent <= 255; percent++) {
         v.battery_percent = static_cast<uint8_t>(percent);
-        const int n = format_lk8ex1(buf, sizeof(buf), v);
-        const std::string s(buf, static_cast<size_t>(n));
+        const int n = format_lk8ex1(buffer, sizeof(buffer), v);
+        const std::string s(buffer, static_cast<size_t>(n));
         const size_t last = s.rfind(',');
         const long field = std::stol(s.substr(last + 1, s.find('*') - last - 1));
         CHECK(field >= 1000);
@@ -72,10 +72,10 @@ TEST_CASE("nmea: LK8EX1 battery is a percentage plus 1000, never a bare percenta
 // A unit with no barometer still has a cell, and that alone is a sentence worth
 // sending: it is the only one we speak that says anything about power.
 TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defines") {
-    char buf[128];
+    char buffer[128];
     Lk8Ex1 nothing{};
-    const int n = format_lk8ex1(buf, sizeof(buf), nothing);
-    const std::string s(buf, static_cast<size_t>(n));
+    const int n = format_lk8ex1(buffer, sizeof(buffer), nothing);
+    const std::string s(buffer, static_cast<size_t>(n));
     CHECK(s.rfind("$LK8EX1,999999,99999,9999,99,999*", 0) == 0);
     CHECK(checksum_ok(s));
 
@@ -84,34 +84,34 @@ TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defi
     Lk8Ex1 v{};
     v.pressure_pa = 101325;
     v.pressure_valid = true;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,101325,99999,9999,99,999*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,101325,99999,9999,99,999*", 0) == 0);
 
     v = Lk8Ex1{};
-    v.alt_m = -300;
-    v.alt_valid = true;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,999999,-300,9999,99,999*", 0) == 0);
+    v.altitude_m = -300;
+    v.altitude_valid = true;
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,999999,-300,9999,99,999*", 0) == 0);
 
     v = Lk8Ex1{};
     v.vario_cm_s = 250;
     v.vario_valid = true;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,250,99,999*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,999999,99999,250,99,999*", 0) == 0);
 
     // A real 99 C is not sendable, because 99 is the sentinel: the clamp below
     // stops at 98 and this is the boundary that proves the two never collide.
     v = Lk8Ex1{};
     v.temperature_c = 21;
     v.temperature_valid = true;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,9999,21,999*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,999999,99999,9999,21,999*", 0) == 0);
 
     v = Lk8Ex1{};
     v.battery_percent = 92;
     v.battery_valid = true;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,999999,99999,9999,99,1092*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,999999,99999,9999,99,1092*", 0) == 0);
 }
 
 // A reading that happens to equal a sentinel would be read as no reading at all,
@@ -119,21 +119,21 @@ TEST_CASE("nmea: LK8EX1 says 'not available' with the sentinel the protocol defi
 // temperature bounds are SoftRF's own (constrain(-1000, 99998) and
 // constrain(-99, 98), lyusupov NMEA.cpp:250-253).
 TEST_CASE("nmea: LK8EX1 clamps every field short of its own 'not available' value") {
-    char buf[128];
+    char buffer[128];
     Lk8Ex1 v{};
-    v.pressure_valid = v.alt_valid = v.vario_valid = v.temperature_valid = true;
+    v.pressure_valid = v.altitude_valid = v.vario_valid = v.temperature_valid = true;
     v.pressure_pa = 999999;
-    v.alt_m = 99999;
+    v.altitude_m = 99999;
     v.vario_cm_s = 9999;
     v.temperature_c = 99;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,999998,99998,9998,98,999*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,999998,99998,9998,98,999*", 0) == 0);
 
     // And the low ends, where an aircraft below sea level and a cold soak live.
     v.pressure_pa = 0;
-    v.alt_m = -32000;
+    v.altitude_m = -32000;
     v.vario_cm_s = -9999;
     v.temperature_c = -100;
-    format_lk8ex1(buf, sizeof(buf), v);
-    CHECK(std::string(buf).rfind("$LK8EX1,0,-1000,-9998,-99,999*", 0) == 0);
+    format_lk8ex1(buffer, sizeof(buffer), v);
+    CHECK(std::string(buffer).rfind("$LK8EX1,0,-1000,-9998,-99,999*", 0) == 0);
 }

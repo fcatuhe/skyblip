@@ -21,15 +21,15 @@ using namespace skyblip::protocol;
 namespace {
 constexpr uint32_t kUtcS = 1700000000;  // 1700000000 % 16 == 0, so timebits == 0
 
-model::AircraftObservation make_observation(int32_t lat_1e7, int32_t lon_1e7) {
+model::AircraftObservation make_observation(int32_t latitude_1e7, int32_t longitude_1e7) {
     model::AircraftObservation observation{};
     observation.address = 0x123456;
     observation.address_mapping_table = 0x06;  // FLARM-issued address
-    observation.aircraft_cat = 4;              // glider
+    observation.aircraft_category = 4;         // glider
     observation.flight_state = 2;              // airborne
-    observation.lat_1e7 = lat_1e7;
-    observation.lon_1e7 = lon_1e7;
-    observation.alt_m = 1234;
+    observation.latitude_1e7 = latitude_1e7;
+    observation.longitude_1e7 = longitude_1e7;
+    observation.altitude_m = 1234;
     observation.speed_q = 45 * 4;  // 45 m/s
     observation.climb_e8 = -44;    // -5.5 m/s
     observation.track_c9 = 256;    // 180 deg
@@ -41,8 +41,8 @@ model::AircraftObservation make_observation(int32_t lat_1e7, int32_t lon_1e7) {
 
 // Longitude quantum in 1e-7 deg at this latitude, from the protocol's own table:
 // this is the tolerance a longitude round trip is entitled to.
-int32_t lon_quantum(int32_t lat_1e7) {
-    int32_t deg = std::abs(lat_1e7) / 10000000;
+int32_t longitude_quantum(int32_t latitude_1e7) {
+    int32_t deg = std::abs(latitude_1e7) / 10000000;
     static const int32_t kStep[] = {52, 65, 80, 101, 129, 174, 252, 362, 552, 806};
     if (deg >= 89) return kStep[9];
     if (deg >= 84) return kStep[8];
@@ -56,18 +56,19 @@ int32_t lon_quantum(int32_t lat_1e7) {
     return 806;  // never tighter than the coarsest step; latitudes above are exact
 }
 
-void check_position_round_trip(int32_t lat_1e7, int32_t lon_1e7, int32_t reference_lat_1e7,
-                               int32_t reference_lon_1e7) {
-    CAPTURE(lat_1e7);
-    CAPTURE(lon_1e7);
-    model::AircraftObservation observation = make_observation(lat_1e7, lon_1e7);
+void check_position_round_trip(int32_t latitude_1e7, int32_t longitude_1e7,
+                               int32_t reference_latitude_1e7, int32_t reference_longitude_1e7) {
+    CAPTURE(latitude_1e7);
+    CAPTURE(longitude_1e7);
+    model::AircraftObservation observation = make_observation(latitude_1e7, longitude_1e7);
     uint8_t frame[kAlptasFrameBytes];
-    REQUIRE(alptas_encode(frame, observation, kUtcS, reference_lat_1e7, reference_lon_1e7) ==
-            Status::Ok);
+    REQUIRE(alptas_encode(frame, observation, kUtcS, reference_latitude_1e7,
+                          reference_longitude_1e7) == Status::Ok);
     model::AircraftObservation got{};
-    REQUIRE(alptas_decode(frame, kUtcS, reference_lat_1e7, reference_lon_1e7, got) == Status::Ok);
-    CHECK(std::abs(got.lat_1e7 - lat_1e7) <= 26);
-    CHECK(std::abs(got.lon_1e7 - lon_1e7) <= lon_quantum(lat_1e7));
+    REQUIRE(alptas_decode(frame, kUtcS, reference_latitude_1e7, reference_longitude_1e7, got) ==
+            Status::Ok);
+    CHECK(std::abs(got.latitude_1e7 - latitude_1e7) <= 26);
+    CHECK(std::abs(got.longitude_1e7 - longitude_1e7) <= longitude_quantum(latitude_1e7));
 }
 }  // namespace
 
@@ -81,9 +82,9 @@ TEST_CASE("alptas: encode then decode preserves the identity and motion fields")
 
     CHECK(got.address == 0x123456u);
     CHECK(int(got.address_mapping_table) == 0x06);
-    CHECK(int(got.aircraft_cat) == 4);
+    CHECK(int(got.aircraft_category) == 4);
     CHECK(int(got.flight_state) == 2);
-    CHECK(std::abs(got.alt_m - observation.alt_m) <= 2);
+    CHECK(std::abs(got.altitude_m - observation.altitude_m) <= 2);
     CHECK(std::abs(int(got.speed_q) - int(observation.speed_q)) <= 2);
     CHECK(std::abs(int(got.climb_e8) - int(observation.climb_e8)) <= 2);
     CHECK(std::abs(int(got.track_c9) - int(observation.track_c9)) <= 2);
@@ -188,15 +189,15 @@ TEST_CASE("alptas: speed, climb and track round trip over their ranges") {
 
 TEST_CASE("alptas: altitude round trips including below sea level and high up") {
     static const int32_t kAlts[] = {-400, -50, 0, 300, 1234, 3096, 5000, 11000};
-    for (int32_t alt : kAlts) {
+    for (int32_t altitude : kAlts) {
         model::AircraftObservation observation = make_observation(481234567, 87654321);
-        observation.alt_m = alt;
+        observation.altitude_m = altitude;
         uint8_t frame[kAlptasFrameBytes];
         REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
         REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
-        CAPTURE(alt);
-        CHECK(std::abs(got.alt_m - alt) <= 2);
+        CAPTURE(altitude);
+        CHECK(std::abs(got.altitude_m - altitude) <= 2);
     }
 }
 
@@ -290,16 +291,17 @@ TEST_CASE("alptas: a non-position message type is not decoded as traffic") {
 }
 
 TEST_CASE("alptas: a position that unwraps past the pole or the antimeridian is not a target") {
-    constexpr int32_t kRefLat1e7 = 895000000;
-    constexpr int32_t kRefLon1e7 = 1799900000;
-    check_position_round_trip(895000000, 1799000000, kRefLat1e7, kRefLon1e7);
+    constexpr int32_t kReferenceLatitude1e7 = 895000000;
+    constexpr int32_t kReferenceLongitude1e7 = 1799900000;
+    check_position_round_trip(895000000, 1799000000, kReferenceLatitude1e7, kReferenceLongitude1e7);
 
     uint8_t frame[kAlptasFrameBytes];
     model::AircraftObservation got{};
     // 635974 quanta of 806e-7 deg, unwrapped against 179.99E, is 2 * 2^20 further east: 220 deg
-    REQUIRE(alptas_encode(frame, make_observation(kRefLat1e7, 512595044), kUtcS, kRefLat1e7,
-                          kRefLon1e7) == Status::Ok);
-    CHECK(alptas_decode(frame, kUtcS, kRefLat1e7, kRefLon1e7, got) == Status::Invalid);
+    REQUIRE(alptas_encode(frame, make_observation(kReferenceLatitude1e7, 512595044), kUtcS,
+                          kReferenceLatitude1e7, kReferenceLongitude1e7) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS, kReferenceLatitude1e7, kReferenceLongitude1e7, got) ==
+          Status::Invalid);
 
     // 722784 quanta of 52e-7 deg, unwrapped against 89.99N, is 16 * 2^20 further north: 91 deg
     REQUIRE(alptas_encode(frame, make_observation(37584768, 0), kUtcS, 899900000, 0) == Status::Ok);
@@ -321,25 +323,26 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
     static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x7, 0x8, 0xB, 0xD};
     for (uint8_t type : kInvertible) {
         CAPTURE(type);
-        CHECK(int(adsl_cat_to_alptas_type(alptas_type_to_adsl_cat(type))) == int(type));
+        CHECK(int(adsl_category_to_alptas_type(alptas_type_to_adsl_category(type))) == int(type));
     }
-    CHECK(int(alptas_type_to_adsl_cat(0x1)) == 4);   // glider
-    CHECK(int(alptas_type_to_adsl_cat(0x8)) == 1);   // powered aircraft -> light
-    CHECK(int(alptas_type_to_adsl_cat(0x9)) == 2);   // jet -> small-heavy
-    CHECK(int(alptas_type_to_adsl_cat(0xD)) == 11);  // UAV
-    CHECK(int(alptas_type_to_adsl_cat(0xF)) == 0);   // static object -> no info
-    CHECK(int(alptas_type_to_adsl_cat(0x20)) == 0);  // out of range is not a crash
+    CHECK(int(alptas_type_to_adsl_category(0x1)) == 4);   // glider
+    CHECK(int(alptas_type_to_adsl_category(0x8)) == 1);   // powered aircraft -> light
+    CHECK(int(alptas_type_to_adsl_category(0x9)) == 2);   // jet -> small-heavy
+    CHECK(int(alptas_type_to_adsl_category(0xD)) == 11);  // UAV
+    CHECK(int(alptas_type_to_adsl_category(0xF)) == 0);   // static object -> no info
+    CHECK(int(alptas_type_to_adsl_category(0x20)) == 0);  // out of range is not a crash
 
     // And the whole way round, through the wire.
-    for (uint8_t cat : {uint8_t(1), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(8), uint8_t(11)}) {
+    for (uint8_t category :
+         {uint8_t(1), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(8), uint8_t(11)}) {
         model::AircraftObservation observation = make_observation(481234567, 87654321);
-        observation.aircraft_cat = cat;
+        observation.aircraft_category = category;
         uint8_t frame[kAlptasFrameBytes];
         REQUIRE(alptas_encode(frame, observation, kUtcS, 481000000, 87000000) == Status::Ok);
         model::AircraftObservation got{};
         REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
-        CAPTURE(cat);
-        CHECK(int(got.aircraft_cat) == int(cat));
+        CAPTURE(category);
+        CHECK(int(got.aircraft_category) == int(category));
     }
 }
 
@@ -416,7 +419,7 @@ TEST_CASE("alptas: a second further out than a clock can plausibly be is not sea
     // A frame nothing keyed: noise that framed and held its CRC by accident is not a clock fault.
     uint8_t noise[kAlptasFrameBytes];
     for (int i = 0; i < kAlptasDataBytes; i++) noise[i] = static_cast<uint8_t>(i * 37 + 11);
-    noise[3] = static_cast<uint8_t>((noise[3] & 0xF0) | kAlptasMsgTypePosition);
+    noise[3] = static_cast<uint8_t>((noise[3] & 0xF0) | kAlptasMessageTypePosition);
     alptas_set_crc(noise);
     CHECK(alptas_keyed_second(noise, kUtcS, keyed) == Status::Invalid);
 

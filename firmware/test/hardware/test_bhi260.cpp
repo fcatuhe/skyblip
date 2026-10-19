@@ -75,8 +75,8 @@ TEST_CASE("bhi260: the accelerometer is configured for the range and rate the ba
 
     bring_up(imu);
 
-    CHECK(int(chip.accel_sensor_id) == 4);
-    CHECK(int(chip.accel_range_g) == parts::Bhi260::kRangeG);
+    CHECK(int(chip.accelerometer_sensor_id) == 4);
+    CHECK(int(chip.accelerometer_range_g) == parts::Bhi260::kRangeG);
     CHECK(chip.sample_rate_hz == doctest::Approx(12.5));
     CHECK(chip.latency_ms == 0);
 }
@@ -91,7 +91,7 @@ TEST_CASE("bhi260: the accelerometer is configured after the hub says it is init
 
     CHECK(imu.stage() == Stage::Running);
     CHECK(chip.running());
-    CHECK(int(chip.accel_sensor_id) == 4);
+    CHECK(int(chip.accelerometer_sensor_id) == 4);
 }
 
 TEST_CASE("bhi260: a hub that never announces itself is configured anyway, once the wait is up") {
@@ -124,7 +124,7 @@ TEST_CASE("bhi260: a configuration that did not stick is read back, and named") 
 
 TEST_CASE("bhi260: an image with no accelerometer to enable is named, not waited on") {
     models::Bhi260 chip;
-    chip.accel_present = false;
+    chip.accelerometer_present = false;
     parts::Bhi260 imu{chip};
     REQUIRE(imu.probe() == Status::Ok);
 
@@ -133,7 +133,7 @@ TEST_CASE("bhi260: an image with no accelerometer to enable is named, not waited
     CHECK(imu.stage() == Stage::Failed);
     CHECK(imu.fault() == Status::NotFound);
     CHECK(imu.fault_text() == doctest::String("NOSENS"));
-    CHECK(int(chip.accel_sensor_id) == 0);
+    CHECK(int(chip.accelerometer_sensor_id) == 0);
 }
 
 TEST_CASE("bhi260: an image with no Bosch magic is refused before the bus is touched") {
@@ -296,8 +296,8 @@ TEST_CASE("bhi260: the gyroscope in the image is never subscribed to") {
     uint32_t now_ms = bring_up(imu);
     REQUIRE(imu.stage() == Stage::Running);
 
-    CHECK(int(chip.gyro_sensor_id) == 0);
-    CHECK(chip.gyro_rate_hz == doctest::Approx(0));
+    CHECK(int(chip.gyroscope_sensor_id) == 0);
+    CHECK(chip.gyroscope_rate_hz == doctest::Approx(0));
 
     chip.set_angular_rate(300, -250, 40);
     now_ms += parts::Bhi260::kSamplePeriodMs;

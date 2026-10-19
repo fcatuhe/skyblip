@@ -19,15 +19,15 @@ constexpr uint8_t kParaglider = 7;          // ADS-L G.1.3
 flight::LogRecord sample_record() {
     flight::LogRecord r{};
     r.utc_s = kBaseUtcS + 1234;
-    r.lat_1e7 = 485212345;
-    r.lon_1e7 = -21234567;
-    r.alt_msl_m = 1487;
-    r.alt_hae_m = 1487 + 46;
+    r.latitude_1e7 = 485212345;
+    r.longitude_1e7 = -21234567;
+    r.altitude_msl_m = 1487;
+    r.altitude_hae_m = 1487 + 46;
     r.speed_q = 253;
     r.track_c9 = 401;
     r.climb_e8 = -37;
     r.hdop_e2 = 120;
-    r.sats = 11;
+    r.satellites = 11;
     r.flight_state = 2;
     r.fix_valid = true;
     r.utc_valid = true;
@@ -42,13 +42,13 @@ model::Ownship flying(uint32_t utc_s, int32_t speed_mm_s) {
     own.fix_valid = true;
     own.utc_valid = true;
     own.utc_s = utc_s;
-    own.lat_1e7 = 485000000;
-    own.lon_1e7 = 85000000;
-    own.alt_hae_mm = 1000000;
-    own.alt_msl_mm = 954000;
+    own.latitude_1e7 = 485000000;
+    own.longitude_1e7 = 85000000;
+    own.altitude_hae_mm = 1000000;
+    own.altitude_msl_mm = 954000;
     own.speed_mm_s = speed_mm_s;
     own.track_cdeg = 9000;
-    own.sats = 10;
+    own.satellites = 10;
     own.hdop_e2 = 100;
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
     return own;
@@ -70,16 +70,16 @@ TEST_CASE("log record: twenty-four bytes carry the instant own-ship publishes") 
     flight::LogRecord out{};
     REQUIRE(flight::decode_log_record(raw, kBaseUtcS, out) == Status::Ok);
     CHECK(out.utc_s == in.utc_s);
-    CHECK(out.lat_1e7 == in.lat_1e7);
-    CHECK(out.lon_1e7 == in.lon_1e7);
-    CHECK(out.alt_msl_m == in.alt_msl_m);
+    CHECK(out.latitude_1e7 == in.latitude_1e7);
+    CHECK(out.longitude_1e7 == in.longitude_1e7);
+    CHECK(out.altitude_msl_m == in.altitude_msl_m);
     // Both datums survive: the ellipsoidal height is stored as its distance from
     // mean sea level, so a reader gets back the pair own-ship published.
-    CHECK(out.alt_hae_m == in.alt_hae_m);
+    CHECK(out.altitude_hae_m == in.altitude_hae_m);
     CHECK(out.speed_q == in.speed_q);
     CHECK(out.track_c9 == in.track_c9);
     CHECK(out.climb_e8 == in.climb_e8);
-    CHECK(out.sats == in.sats);
+    CHECK(out.satellites == in.satellites);
     CHECK(out.hdop_e2 == in.hdop_e2);
     CHECK(out.flight_state == in.flight_state);
     CHECK(out.pps_locked);
@@ -148,7 +148,7 @@ TEST_CASE("log session: a device parked on a trailer writes nothing") {
 TEST_CASE("log session: a wing that flies at no ground speed is logged while it moves") {
     flight::LogSession session;
     model::Ownship wing = parked(kBaseUtcS);
-    wing.aircraft_cat = kParaglider;
+    wing.aircraft_category = kParaglider;
     CHECK(session.update(wing, false, 0) == flight::LogAction::Idle);
 
     wing.utc_s = kBaseUtcS + 4;
@@ -170,7 +170,7 @@ TEST_CASE("log session: a wing that flies at no ground speed is logged while it 
 TEST_CASE("log session: a parked wing and a taxiing aeroplane write nothing") {
     flight::LogSession session;
     model::Ownship wing = parked(kBaseUtcS);
-    wing.aircraft_cat = kParaglider;
+    wing.aircraft_category = kParaglider;
     model::Ownship taxiing = parked(kBaseUtcS);
     taxiing.speed_mm_s = 5000;
     for (uint32_t i = 0; i < 100; i++) {

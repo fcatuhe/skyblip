@@ -154,7 +154,7 @@ class Rf : public ports::Rf {
     // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
     bool joins_flying_dwell(const ports::RfPlan& plan) {
         if (!flying_ || plan.tx == nullptr) return false;
-        if (plan.mode != flying_mode_ || plan.freq_hz != flying_freq_hz_) return false;
+        if (plan.mode != flying_mode_ || plan.frequency_hz != flying_frequency_hz_) return false;
         return plan.tx_at_us >= clock_.micros() && plan.tx_at_us < flying_end_us_;
     }
 
@@ -163,7 +163,8 @@ class Rf : public ports::Rf {
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
-        return one.mode == other.mode && one.freq_hz == other.freq_hz && one.end_us == other.end_us;
+        return one.mode == other.mode && one.frequency_hz == other.frequency_hz &&
+               one.end_us == other.end_us;
     }
 
     ports::RfBursts flying_bursts() {
@@ -228,7 +229,7 @@ class Rf : public ports::Rf {
             queued_ = false;
             flying_bursts_ = queued_bursts_;
             flying_mode_ = plan.mode;
-            flying_freq_hz_ = plan.freq_hz;
+            flying_frequency_hz_ = plan.frequency_hz;
             flying_end_us_ = plan.end_us;
             flying_ = true;
         }
@@ -272,9 +273,9 @@ class Rf : public ports::Rf {
     bool start(const ports::RfPlan& plan, uint64_t armed_at_us) {
         const uint64_t from_us = clock_.micros();
         band_ = plan.mode == ports::RfMode::RxOband ? model::Band::O : model::Band::M;
-        freq_hz_ = plan.freq_hz;
+        frequency_hz_ = plan.frequency_hz;
         if (radio_.wake() != Status::Ok) return false;
-        if (plan.freq_hz != 0 && radio_.configure_radio(dwell_config(plan)) != Status::Ok)
+        if (plan.frequency_hz != 0 && radio_.configure_radio(dwell_config(plan)) != Status::Ok)
             return false;
         if (radio_.mode() != parts::RadioMode::Rx && radio_.start_receive() != Status::Ok)
             return false;
@@ -282,8 +283,8 @@ class Rf : public ports::Rf {
         ports::RfSwitch change{};
         change.from = last_mode_;
         change.to = plan.mode;
-        change.from_hz = last_freq_hz_;
-        change.to_hz = plan.freq_hz;
+        change.from_hz = last_frequency_hz_;
+        change.to_hz = plan.frequency_hz;
         change.previous_end_us = last_end_us_;
         change.began_us = from_us;
         change.ready_us = clock_.micros();
@@ -291,7 +292,7 @@ class Rf : public ports::Rf {
         change.armed_ahead = armed_at_us < plan.start_us;
         switching_.note(change);
         last_mode_ = plan.mode;
-        last_freq_hz_ = plan.freq_hz;
+        last_frequency_hz_ = plan.frequency_hz;
         return true;
     }
 
@@ -300,12 +301,12 @@ class Rf : public ports::Rf {
     // carries both halves.
     static parts::RadioConfig dwell_config(const ports::RfPlan& plan) {
         parts::RadioConfig config{};
-        config.freq_hz = plan.freq_hz;
+        config.frequency_hz = plan.frequency_hz;
         if (plan.bitrate != 0) config.bitrate = plan.bitrate;
         if (plan.fdev_hz != 0) config.fdev_hz = plan.fdev_hz;
         if (plan.bandwidth_hz != 0) config.bandwidth_hz = plan.bandwidth_hz;
         config.gaussian_bt_e2 = plan.gaussian_bt_e2;
-        config.freq_corr_e1_ppm = plan.freq_corr_e1_ppm;
+        config.frequency_correction_e1_ppm = plan.frequency_correction_e1_ppm;
         config.sync = plan.sync;
         config.sync_bits = plan.sync_bits;
         config.payload_bytes = plan.rx_bytes;
@@ -425,7 +426,7 @@ class Rf : public ports::Rf {
     void push_rx(const parts::RadioEvent& ev, uint64_t at_us) {
         rx_.type = events::RfEventType::RxDone;
         rx_.band = band_;
-        rx_.freq_hz = freq_hz_;
+        rx_.frequency_hz = frequency_hz_;
         rx_.len = ev.len;
         rx_.rssi_dbm = ev.rssi_dbm;
         rx_.rssi_valid = ev.rssi_valid;
@@ -437,7 +438,7 @@ class Rf : public ports::Rf {
         events::RfEvent e{};
         e.type = type;
         e.band = band_;
-        e.freq_hz = freq_hz_;
+        e.frequency_hz = frequency_hz_;
         e.rssi_dbm = ev.rssi_dbm;
         e.rssi_valid = ev.rssi_valid;
         e.at_us = at_us;
@@ -454,12 +455,12 @@ class Rf : public ports::Rf {
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
-    uint32_t last_freq_hz_{0};
+    uint32_t last_frequency_hz_{0};
     uint64_t last_end_us_{0};
     uint64_t plan_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
-    uint32_t freq_hz_{0};
+    uint32_t frequency_hz_{0};
     uint64_t health_checked_us_{0};
     struct k_sem armed_{};
     struct k_sem wake_{};
@@ -479,7 +480,7 @@ class Rf : public ports::Rf {
     uint64_t irq_at_us_{0};
     uint64_t tail_from_us_{0};
     uint64_t flying_end_us_{0};
-    uint32_t flying_freq_hz_{0};
+    uint32_t flying_frequency_hz_{0};
     ports::RfMode flying_mode_{ports::RfMode::Idle};
     volatile bool flying_{false};
     bool queued_{false};

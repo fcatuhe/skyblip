@@ -12,7 +12,7 @@ What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev
 
 ## The setting
 
-Forced mode, four conversions a second (`runtime::kBaroConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter memory advances on every forced conversion, so the three unread conversions of each second feed the one that is published.
+Forced mode, four conversions a second (`runtime::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter memory advances on every forced conversion, so the three unread conversions of each second feed the one that is published.
 
 | Figure | Value | Source |
 |---|---|---|
@@ -44,7 +44,7 @@ The filter delay and the noise are one trade as long as the part's IIR is the es
 
 ## Timing
 
-Each trigger is one write of `ctrl_meas` and the pass returns. On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, with the published one on the board's own second. A trigger waits for the previous conversion to be read or given up. Only the edge conversion is read: each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, which is about 40 ms in, well before the 250 ms trigger overwrites the result registers. The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger: the same offset from PPS every second, one sample a second as before. A published conversion not read within `runtime::kBaroConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `baro_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
+Each trigger is one write of `ctrl_meas` and the pass returns. On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, with the published one on the board's own second. A trigger waits for the previous conversion to be read or given up. Only the edge conversion is read: each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, which is about 40 ms in, well before the 250 ms trigger overwrites the result registers. The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger: the same offset from PPS every second, one sample a second as before. A published conversion not read within `runtime::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
 
 ## Recovery
 

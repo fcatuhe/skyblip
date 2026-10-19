@@ -24,7 +24,7 @@ struct Roles {
     Rf& rf;
     Link& link;
     Display& display;
-    KvStore& kv;
+    KeyValueStore& key_value;
     FlashRegion& log_flash;
     Annunciator& annunciator;
     Dfu& dfu;

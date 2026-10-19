@@ -1,4 +1,4 @@
-#include "products/skyblip_go/pages/sats.h"
+#include "products/skyblip_go/pages/satellites.h"
 
 #include "core/util/format.h"
 
@@ -33,8 +33,8 @@ constexpr gnss::System kSystemOrder[] = {gnss::System::Gps, gnss::System::Beidou
                                          gnss::System::Glonass, gnss::System::Qzss,
                                          gnss::System::Unknown};
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
-    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
+    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
 }
 
 int bar_height(uint8_t cn0_dbhz) {
@@ -43,13 +43,13 @@ int bar_height(uint8_t cn0_dbhz) {
     return clipped * kBarSpan / kFullScaleDbHz;
 }
 
-void bar(ui::Canvas& canvas, int x, const gnss::SatelliteView& sat) {
-    const int h = bar_height(sat.cn0_dbhz);
+void bar(ui::Canvas& canvas, int x, const gnss::SatelliteView& satellite) {
+    const int h = bar_height(satellite.cn0_dbhz);
     if (h <= 0) {
         canvas.hline(x, kBaseY - 1, kBarW, true);
         return;
     }
-    if (sat.in_use) {
+    if (satellite.in_use) {
         canvas.rect(x, kBaseY - h, kBarW, h, true, true);
         return;
     }
@@ -61,10 +61,10 @@ int draw_group(ui::Canvas& canvas, const gnss::SkyView& sky, gnss::System system
     if (sky.in_view_of(system) == 0) return x;
     int at = x;
     for (int i = 0; i < sky.count(); i++) {
-        const gnss::SatelliteView& sat = sky.at(i);
-        if (sat.system != system) continue;
+        const gnss::SatelliteView& satellite = sky.at(i);
+        if (satellite.system != system) continue;
         if (at + kBarW > kRight) break;
-        bar(canvas, at, sat);
+        bar(canvas, at, satellite);
         at += kBarPitch;
     }
     canvas.draw_text(x, kGroupLabelY, gnss::system_name(system), true, 1);
@@ -80,13 +80,13 @@ void scale_mark(ui::Canvas& canvas) {
     right_aligned(canvas, kRight, y - kCharH - 1, text, written);
 }
 
-uint32_t used_count(const SatsSnapshot& snapshot) {
+uint32_t used_count(const SatellitesSnapshot& snapshot) {
     if (snapshot.sky != nullptr && snapshot.sky->in_use() > 0)
         return static_cast<uint32_t>(snapshot.sky->in_use());
-    return snapshot.sats;
+    return snapshot.satellites;
 }
 
-void draw_counts(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_counts(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     char text[24];
     int written = format_string(text, "USED ");
     written += format_uint(text + written, used_count(snapshot), 1);
@@ -98,7 +98,7 @@ void draw_counts(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
     right_aligned(canvas, kRight, kTitleY, text, written);
 }
 
-void draw_dops(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_dops(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     char text[32];
     int written = format_string(text, "HDOP ");
     if (snapshot.hdop_e2 > 0)
@@ -114,7 +114,7 @@ void draw_dops(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
     canvas.draw_text(kLeft, kDopY, text, true, 1);
 }
 
-void draw_nav_phase(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_nav_phase(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (!snapshot.nav_valid) return;
     char text[12];
     int written = format_string(text, "NAV ");
@@ -124,7 +124,7 @@ void draw_nav_phase(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
     right_aligned(canvas, kRight, kDopY, text, written);
 }
 
-void draw_port(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_port(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.health.baud == 0) return;
     char text[32];
     int written = format_string(text, "BAUD ");
@@ -139,12 +139,12 @@ void draw_port(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
     canvas.draw_text(kLeft, kPortY, text, true, 1);
 }
 
-void draw_stage(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_stage(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.fix_valid) return;
     canvas.draw_text(kLeft, kDopY - 12, gnss::stage_name(snapshot.stage), true, 1);
 }
 
-void draw_used_by_system(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_used_by_system(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (snapshot.sky == nullptr) return;
     char text[32];
     int written = 0;
@@ -163,7 +163,7 @@ void draw_used_by_system(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
 
 }  // namespace
 
-void draw_sats(ui::Canvas& canvas, const SatsSnapshot& snapshot) {
+void draw_satellites(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     canvas.draw_text(kLeft, kTitleY, "SATELLITES", true, 1);
     draw_counts(canvas, snapshot);
     canvas.hline(kLeft, kRuleY, kRight - kLeft, true);

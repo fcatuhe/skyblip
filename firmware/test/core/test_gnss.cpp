@@ -35,13 +35,13 @@ TEST_CASE("gnss: checksum validation") {
 }
 
 TEST_CASE("gnss: a DDMM.mmmm coordinate parses to 1e-7 degrees") {
-    int32_t lat = 0;
-    REQUIRE(nmea_parse_coordinate("4807.038", 'N', lat));  // 48 deg 07.038' = 48.1173
-    CHECK(std::abs(lat - 481173000) < 20000);
-    int32_t lon = 0;
-    REQUIRE(nmea_parse_coordinate("01131.000", 'W', lon));  // -11.51667
-    CHECK(lon < 0);
-    CHECK(std::abs(lon + 115166667) < 30000);
+    int32_t latitude = 0;
+    REQUIRE(nmea_parse_coordinate("4807.038", 'N', latitude));  // 48 deg 07.038' = 48.1173
+    CHECK(std::abs(latitude - 481173000) < 20000);
+    int32_t longitude = 0;
+    REQUIRE(nmea_parse_coordinate("01131.000", 'W', longitude));  // -11.51667
+    CHECK(longitude < 0);
+    CHECK(std::abs(longitude + 115166667) < 30000);
 }
 
 TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
@@ -52,8 +52,8 @@ TEST_CASE("gnss: RMC updates fix position, time, speed, track") {
     const GnssSolution& f = p.solution();
     CHECK(f.fix_valid);
     CHECK(f.utc_valid);
-    CHECK(f.lat_1e7 > 480000000);
-    CHECK(f.lon_1e7 > 0);
+    CHECK(f.latitude_1e7 > 480000000);
+    CHECK(f.longitude_1e7 > 0);
     // 22.4 knots is 11.524 m/s, and the tenth of a knot the sentence carries survives
     CHECK(f.speed_mm_s == 11524);
     // 84.4 degrees, kept as the receiver reported it rather than as the wire will carry it
@@ -89,8 +89,8 @@ TEST_CASE("gnss: a latitude past 90, a longitude past 180 or a 60th minute is no
     NmeaParser p;
     REQUIRE(parse(p, checksummed("GPRMC,123519,A,9000.000,S,18000.000,W,022.4,084.4,230825,,")));
     CHECK(p.solution().fix_valid);
-    CHECK(p.solution().lat_1e7 == -900000000);
-    CHECK(p.solution().lon_1e7 == -1800000000);
+    CHECK(p.solution().latitude_1e7 == -900000000);
+    CHECK(p.solution().longitude_1e7 == -1800000000);
 }
 
 TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, never overflowed") {
@@ -106,7 +106,7 @@ TEST_CASE("gnss: a speed or an altitude no civil receiver reports is refused, ne
         const std::string body =
             std::string("GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,") + altitude + ",M,46.9,M,,";
         REQUIRE(parse(p, checksummed(body.c_str())));
-        CHECK_FALSE(p.solution().alt_msl_valid);
+        CHECK_FALSE(p.solution().altitude_msl_valid);
     }
 }
 
@@ -193,8 +193,8 @@ TEST_CASE("gnss: GGA updates altitude and sats") {
     const char* gga = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
     CHECK(p.parse_line(gga, static_cast<int>(strlen(gga))));
     const GnssSolution& f = p.solution();
-    CHECK(f.alt_msl_mm == 545400);
-    CHECK(int(f.sats) == 8);
+    CHECK(f.altitude_msl_mm == 545400);
+    CHECK(int(f.satellites) == 8);
     CHECK(int(f.fix_quality) == 1);
 }
 
@@ -209,12 +209,12 @@ TEST_CASE("gnss: GGA carries MSL and ellipsoidal height as separate values") {
     const char* gga = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
     REQUIRE(p.parse_line(gga, static_cast<int>(strlen(gga))));
     const GnssSolution& f = p.solution();
-    CHECK(f.alt_msl_valid);
-    CHECK(f.alt_msl_mm == 545400);
+    CHECK(f.altitude_msl_valid);
+    CHECK(f.altitude_msl_mm == 545400);
     CHECK(f.geoid_separation_mm == 46900);
     CHECK(f.geoid_measured);
-    CHECK(f.alt_hae_valid);
-    CHECK(f.alt_hae_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
+    CHECK(f.altitude_hae_valid);
+    CHECK(f.altitude_hae_mm == 592300);  // 545.4 + 46.9, the value ADS-L wants
 }
 
 // Some receivers omit field 11 entirely and some always answer "0.0,M": OGN
@@ -229,8 +229,8 @@ TEST_CASE("gnss: a receiver that omits the geoid separation falls back and says 
     REQUIRE(p.parse_line(omitted, static_cast<int>(strlen(omitted))));
     CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
-    CHECK(p.solution().alt_msl_mm == 545400);
-    CHECK(p.solution().alt_hae_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(p.solution().altitude_msl_mm == 545400);
+    CHECK(p.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
 TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
@@ -239,7 +239,7 @@ TEST_CASE("gnss: a receiver stuck at 0.0 separation falls back too") {
     REQUIRE(p.parse_line(zero, static_cast<int>(strlen(zero))));
     CHECK_FALSE(p.solution().geoid_measured);
     CHECK(p.solution().geoid_separation_mm == kDefaultGeoidSeparationMm);
-    CHECK(p.solution().alt_hae_mm == 545400 + kDefaultGeoidSeparationMm);
+    CHECK(p.solution().altitude_hae_mm == 545400 + kDefaultGeoidSeparationMm);
 }
 
 // GGA field 8. Without it every integrity and accuracy field we transmit is a
@@ -320,8 +320,8 @@ TEST_CASE("gnss: a GGA without a solution reports no altitude") {
     NmeaParser p;
     const char* none = "$GPGGA,101530,4736.2417,N,00834.9028,E,0,00,99.99,,M,,M,,*7F";
     REQUIRE(p.parse_line(none, static_cast<int>(strlen(none))));
-    CHECK_FALSE(p.solution().alt_msl_valid);
-    CHECK_FALSE(p.solution().alt_hae_valid);
+    CHECK_FALSE(p.solution().altitude_msl_valid);
+    CHECK_FALSE(p.solution().altitude_hae_valid);
     CHECK(int(p.solution().fix_quality) == 0);
 }
 
@@ -331,8 +331,8 @@ TEST_CASE("gnss: byte-wise feed reconstructs a sentence") {
     bool got = false;
     for (const char* c = gga; *c; c++) got |= p.feed(*c);
     CHECK(got);
-    CHECK(p.solution().alt_msl_mm == 545400);
-    CHECK(p.solution().alt_hae_mm == 592300);
+    CHECK(p.solution().altitude_msl_mm == 545400);
+    CHECK(p.solution().altitude_hae_mm == 592300);
 }
 
 // A burst is always late relative to the PPS edge whose second it describes, so
@@ -376,7 +376,7 @@ TEST_CASE("gnss: a truncated GGA is refused, checksum or no checksum") {
     NmeaParser p;
     const char* whole = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47";
     REQUIRE(p.parse_line(whole, static_cast<int>(strlen(whole))));
-    REQUIRE(p.solution().alt_msl_mm == 545400);
+    REQUIRE(p.solution().altitude_msl_mm == 545400);
 
     // Cut after HDOP, re-checksummed: eight fields where ten are needed.
     const char* cut = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9*7C";
@@ -391,7 +391,7 @@ TEST_CASE("gnss: a truncated GGA is refused, checksum or no checksum") {
     CHECK_FALSE(p.parse_line(empty, static_cast<int>(strlen(empty))));
 
     // Neither of them touched the solution we already had.
-    CHECK(p.solution().alt_msl_mm == 545400);
+    CHECK(p.solution().altitude_msl_mm == 545400);
     CHECK(p.solution().sentences == 1);
 }
 

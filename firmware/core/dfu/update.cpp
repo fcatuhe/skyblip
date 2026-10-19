@@ -61,11 +61,11 @@ ports::ImageVersion get_version(const uint8_t* in) {
 }  // namespace
 
 size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t capacity) {
-    const size_t len = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
-    if (capacity < len) return 0;
+    const size_t length = record.hashed ? kUpdateRecordBytes : kVersionsOnlyRecordBytes;
+    if (capacity < length) return 0;
     put_version(out, record.from);
     put_version(out + 8, record.to);
-    if (!record.hashed) return len;
+    if (!record.hashed) return length;
     std::memcpy(out + kVersionsOnlyRecordBytes, record.from_hash.bytes, ports::ImageHash::kBytes);
     std::memcpy(out + kVersionsOnlyRecordBytes + ports::ImageHash::kBytes, record.to_hash.bytes,
                 ports::ImageHash::kBytes);

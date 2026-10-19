@@ -19,21 +19,21 @@ The buses a part is constructed over:
 | `gpio()`, `wire(const PinMap&)` | the lines a part drives, and the board's map of them |
 | `delay()` | the windows a datasheet asks a part to hold |
 
-The ports a platform fills directly, handed to `ports::Roles` by the board: `clock()`, `link()`, `kv()`, `log_flash()`, `annunciator()`, `indicator()`, `dfu()`, `die_temperature()`. `link()` is the one with a wire format an outside app depends on, and which GATT services it exposes is `platform/zephyr/README.md`.
+The ports a platform fills directly, handed to `ports::Roles` by the board: `clock()`, `link()`, `key_value()`, `log_flash()`, `annunciator()`, `indicator()`, `dfu()`, `die_temperature()`. `link()` is the one with a wire format an outside app depends on, and which GATT services it exposes is `platform/zephyr/README.md`.
 
 The producers the board polls, which are not ports because nothing calls them on the core's behalf. What reaches a service is the event the board pushes:
 
 | Member | Becomes |
 |---|---|
-| `trigger_baro()`, `read_baro(platform::BaroReading&)` | `events::BaroSample` |
-| `imu_firmware()` | the image `parts::Bhi260` uploads, which becomes `events::AccelSample` |
+| `trigger_barometer()`, `read_barometer(platform::BarometerReading&)` | `events::BarometerSample` |
+| `imu_firmware()` | the image `parts::Bhi260` uploads, which becomes `events::AccelerometerSample` |
 | `read_battery_mv(uint16_t&)`, `external_power()` | `events::BatterySample` |
 | `button_down()`, `pad_down()` | `events::ContactEvent` |
 | `pps()` | the PPS edge on `bus::State::clock` |
 
 And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `identity()`, `glass_rotation()`, `read_panel_signature()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`.
 
-`read_baro()` is one fetch because the BME280 measures pressure and ambient temperature in the same conversion, and asking twice would pay for two. The temperature carries its own validity beside it: a part that answers with a pressure and no temperature is still a pressure, and the `$LK8EX1` a tablet reads has a sentinel for the field that is missing. What the sensor reads is what goes out - it sits inside the case, so it reads warm, and no correction is invented for it.
+`read_barometer()` is one fetch because the BME280 measures pressure and ambient temperature in the same conversion, and asking twice would pay for two. The temperature carries its own validity beside it: a part that answers with a pressure and no temperature is still a pressure, and the `$LK8EX1` a tablet reads has a sentinel for the field that is missing. What the sensor reads is what goes out - it sits inside the case, so it reads warm, and no correction is invented for it.
 
 `imu_firmware()` is the odd one: not a reading, but a hundred kilobytes of vendor firmware the BHI260AP has to be given before it is a sensor at all. It is a platform member rather than a constant in the part because only the device image should carry it - the host build hands over eight bytes and its part model boots on them, and the WASM the browser downloads stays the size it was. A slim image carries none and hands over an empty span: it has `imu_firmware_digest()`, the SHA-256 of the image it was built against, and `imu_flash()`, the partition where a full image left a copy (`parts/bhi260/firmware/README.md`).
 

@@ -59,7 +59,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
                        null.rf,
                        null.link,
                        null.display,
-                       null.kv,
+                       null.key_value,
                        null.log_flash,
                        null.annunciator,
                        null.dfu,
@@ -70,7 +70,7 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
                        ports::Capability::None};
     bus::Bus bus;
     bus::State state;
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
@@ -120,7 +120,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
                        null.rf,
                        null.link,
                        null.display,
-                       null.kv,
+                       null.key_value,
                        null.log_flash,
                        null.annunciator,
                        null.dfu,
@@ -131,7 +131,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
                        ports::Capability::None};
     bus::Bus bus;
     bus::State state;
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     Slow quick(context, clock, 300);
     Slow render(context, clock, 2000);
@@ -145,13 +145,13 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     for (int i = 0; i < 4; i++) {
         render.cost_us = i == 2 ? 190000 : 2000;
         meter.begin_pass(phases[i]);
-        meter.timed(diag::kLoopBoardPoll, [&] { clock.us += 100; });
+        meter.timed(diagnostics::kLoopBoardPoll, [&] { clock.us += 100; });
         loop.run_pass(clock.millis(), &meter);
         meter.end_pass();
         clock.us += sleeps_us[i];
     }
 
-    const diag::Loop window = meter.take();
+    const diagnostics::Loop window = meter.take();
     CHECK(window.passes == 4);
     CHECK(window.worst_service == 1);
     CHECK(window.worst_tick_ms == 190);
@@ -176,7 +176,7 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
                        null.rf,
                        null.link,
                        null.display,
-                       null.kv,
+                       null.key_value,
                        null.log_flash,
                        null.annunciator,
                        null.dfu,
@@ -187,7 +187,7 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
                        ports::Capability::None};
     bus::Bus bus;
     bus::State state;
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};
@@ -206,8 +206,8 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
     CHECK(null.rf.arm(ports::RfPlan{}) == Status::Down);
     CHECK(null.link.send(events::Endpoint::Nmea, ConstByteSpan{}) == Status::Down);
     size_t n = 0;
-    uint8_t buf[4];
-    CHECK(null.kv.read("k", buf, sizeof(buf), n) == Status::NotFound);
+    uint8_t buffer[4];
+    CHECK(null.key_value.read("k", buffer, sizeof(buffer), n) == Status::NotFound);
     null.annunciator.tone(4000,
                           ports::Loudness::Loud);  // must not crash: absent hardware is silent
     null.display.power_off();
@@ -289,7 +289,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
                        null.rf,
                        null.link,
                        null.display,
-                       null.kv,
+                       null.key_value,
                        null.log_flash,
                        null.annunciator,
                        null.dfu,
@@ -300,7 +300,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
                        ports::Capability::None};
     bus::Bus bus;
     bus::State state;
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
 
     int order[8]{0};

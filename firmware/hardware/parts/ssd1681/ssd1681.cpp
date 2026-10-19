@@ -6,12 +6,12 @@
 namespace skyblip::parts {
 
 namespace {
-constexpr uint8_t kDriverOutputCtrl = 0x01;
+constexpr uint8_t kDriverOutputControl = 0x01;
 constexpr uint8_t kDataEntryMode = 0x11;
 constexpr uint8_t kSwReset = 0x12;
-constexpr uint8_t kTempSensorCtrl = 0x18;
+constexpr uint8_t kTemperatureSensorControl = 0x18;
 constexpr uint8_t kMasterActivation = 0x20;
-constexpr uint8_t kDisplayUpdateCtrl2 = 0x22;
+constexpr uint8_t kDisplayUpdateControl2 = 0x22;
 constexpr uint8_t kWriteRam = 0x24;
 constexpr uint8_t kWriteRamPrevious = 0x26;
 constexpr uint8_t kBorderWaveform = 0x3C;
@@ -121,7 +121,7 @@ void Ssd1681::ensure_awake() {
 }
 
 void Ssd1681::activate(uint8_t sequence, bool full, uint32_t now_ms) {
-    command(kDisplayUpdateCtrl2);
+    command(kDisplayUpdateControl2);
     data(sequence);
     command(kMasterActivation);
 
@@ -179,7 +179,7 @@ void Ssd1681::init_panel() {
     command(kSwReset);
     wait_busy();
 
-    command(kDriverOutputCtrl);
+    command(kDriverOutputControl);
     data(0xC7);  // 200 - 1 gates
     data(0x00);
     data(0x00);
@@ -193,7 +193,7 @@ void Ssd1681::init_panel() {
     data(kBorderFollowLut1);
 
     // INFO: fc 01aug25 internal sensor selects the temperature-compensated OTP LUT
-    command(kTempSensorCtrl);
+    command(kTemperatureSensorControl);
     data(0x80);
 
     set_cursor(0, 0);

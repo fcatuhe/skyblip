@@ -38,7 +38,7 @@ inline void change_volume(Rig& rig, go::AlarmVolume to) {
     rig.product.config_link().config().note_settings_changed();
 }
 
-inline uint32_t writes(Rig& rig) { return rig.platform.kv().writes(); }
+inline uint32_t writes(Rig& rig) { return rig.platform.key_value().writes(); }
 
 // The phase of the second the device believes it is at, read off the radio's own
 // published view rather than recomputed here.

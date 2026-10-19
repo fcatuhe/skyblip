@@ -14,12 +14,12 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 
 ## The model
 
-There is one level, and it is a place. An aircraft inside `kAdvisoryDistM` of us and inside `kAdvisoryAltM` of our altitude is a traffic advisory; everything else is a contact on the plot and nothing more.
+There is one level, and it is a place. An aircraft inside `kAdvisoryDistanceM` of us and inside `kAdvisoryAltitudeM` of our altitude is a traffic advisory; everything else is a contact on the plot and nothing more.
 
 | Constant | Value | Where the number comes from |
 |---|---|---|
-| `kAdvisoryDistM` | 3000 | ours. At 240 kt of head-on closure it is 24 s, which is the band TCAS II issues a traffic advisory in at low level (SL3: tau 25 s, DMOD 0.33 NM). It is twice FLARM's own advisory ring |
-| `kAdvisoryAltM` | 300 | FLARM's, exactly: its `$PFLAU` traffic advisory is an aircraft entering 1.5 km horizontally and 300 m vertically |
+| `kAdvisoryDistanceM` | 3000 | ours. At 240 kt of head-on closure it is 24 s, which is the band TCAS II issues a traffic advisory in at low level (SL3: tau 25 s, DMOD 0.33 NM). It is twice FLARM's own advisory ring |
+| `kAdvisoryAltitudeM` | 300 | FLARM's, exactly: its `$PFLAU` traffic advisory is an aircraft entering 1.5 km horizontally and 300 m vertically |
 
 Advisory is the industry's word for this alert and the honest one for this device: a caution that says look, never an instruction. The level above it in every other system is the resolution advisory, which tells a crew to climb or descend and is coordinated with the other aircraft. This device has no link to coordinate over and no authority to give one, so it has nothing above the advisory and never will. `to_number` is the number the wire carries, and 1 is what `$PFLAA` and `$PFLAU` are sent: FLARM's level 1 is the lowest real alarm and the only band a 3 km ring does not overstate.
 

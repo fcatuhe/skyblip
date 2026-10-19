@@ -49,7 +49,7 @@ TEST_CASE("flash window: a change is held, not written, while the cell is critic
 
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Soft);

@@ -27,7 +27,7 @@ Status Bhi260::probe() {
         if (!bus_.write(candidate, nullptr, 0)) continue;
         address_ = candidate;
         uint8_t id = 0;
-        if (!read_registers(kRegProductId, &id, 1)) continue;
+        if (!read_registers(kRegisterProductId, &id, 1)) continue;
         if (id == kProductId) {
             stage_ = Stage::Idle;
             return Status::Ok;
@@ -41,8 +41,8 @@ Status Bhi260::probe() {
 void Bhi260::load(Image& image, uint32_t now_ms) {
     image_ = &image;
     uploaded_bytes_ = 0;
-    wakeup_ = Fifo{kRegFifoWakeup};
-    non_wakeup_ = Fifo{kRegFifoNonWakeup};
+    wakeup_ = Fifo{kRegisterFifoWakeup};
+    non_wakeup_ = Fifo{kRegisterFifoNonWakeup};
     sample_fresh_ = false;
     fault_ = Status::Ok;
     meta_event_ = 0;
@@ -58,7 +58,7 @@ void Bhi260::load(Image& image, uint32_t now_ms) {
     }
 
     const uint8_t request = 1;
-    if (!write_registers(kRegResetRequest, &request, 1)) {
+    if (!write_registers(kRegisterResetRequest, &request, 1)) {
         fail(Status::Down);
         return;
     }
@@ -145,11 +145,11 @@ void Bhi260::step_upload(uint32_t now_ms) {
     if (payload > left) payload = static_cast<uint16_t>(left);
 
     uint16_t n = 0;
-    frame_[n++] = kRegCommand;
+    frame_[n++] = kRegisterCommand;
     if (first) {
         const uint32_t words = (image_->size() + 3) / 4;
-        frame_[n++] = static_cast<uint8_t>(kCmdUploadToProgramRam & 0xFF);
-        frame_[n++] = static_cast<uint8_t>(kCmdUploadToProgramRam >> 8);
+        frame_[n++] = static_cast<uint8_t>(kCommandUploadToProgramRam & 0xFF);
+        frame_[n++] = static_cast<uint8_t>(kCommandUploadToProgramRam >> 8);
         frame_[n++] = static_cast<uint8_t>(words & 0xFF);
         frame_[n++] = static_cast<uint8_t>((words >> 8) & 0xFF);
     }
@@ -167,7 +167,7 @@ void Bhi260::step_upload(uint32_t now_ms) {
     uploaded_bytes_ += payload;
     if (uploaded_bytes_ < image_->size()) return;
 
-    if (!command(kCmdBootProgramRam, nullptr, 0)) {
+    if (!command(kCommandBootProgramRam, nullptr, 0)) {
         fail(Status::Down);
         return;
     }
@@ -217,7 +217,7 @@ void Bhi260::step_configure(uint32_t now_ms) {
 
 void Bhi260::read_kernel_version(uint32_t now_ms) {
     uint8_t version[2] = {0, 0};
-    if (!read_registers(kRegKernelVersion, version, sizeof(version))) {
+    if (!read_registers(kRegisterKernelVersion, version, sizeof(version))) {
         fail(Status::Down);
         return;
     }
@@ -226,7 +226,7 @@ void Bhi260::read_kernel_version(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (!request_parameter(kParamSensorsPresent)) {
+    if (!request_parameter(kParameterSensorsPresent)) {
         fail(Status::Down);
         return;
     }
@@ -247,7 +247,7 @@ void Bhi260::check_accelerometer_present(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (code == kParamSensorsPresent && n == kSensorsPresentBytes) {
+    if (code == kParameterSensorsPresent && n == kSensorsPresentBytes) {
         if (!bit_set(present, kSensorAccelerometer)) {
             fail(Status::NotFound);
             return;
@@ -261,7 +261,7 @@ void Bhi260::send_configuration(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (!request_parameter(kParamSensorConfig + kSensorAccelerometer)) {
+    if (!request_parameter(kParameterSensorConfig + kSensorAccelerometer)) {
         fail(Status::Down);
         return;
     }
@@ -282,7 +282,7 @@ void Bhi260::confirm_configuration(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (code == kParamSensorConfig + kSensorAccelerometer && n >= 4 && get_u32(config) == 0) {
+    if (code == kParameterSensorConfig + kSensorAccelerometer && n >= 4 && get_u32(config) == 0) {
         fail(Status::Unsupported);
         return;
     }
@@ -294,32 +294,32 @@ void Bhi260::start_running(uint32_t now_ms) {
     polled_ms_ = now_ms;
 }
 
-bool Bhi260::request_parameter(uint16_t param) {
-    return command(static_cast<uint16_t>(param | kParamReadMask), nullptr, 0);
+bool Bhi260::request_parameter(uint16_t parameter) {
+    return command(static_cast<uint16_t>(parameter | kParameterReadMask), nullptr, 0);
 }
 
 bool Bhi260::parameter_ready() {
     uint8_t status = 0;
-    if (!read_registers(kRegInterruptStatus, &status, 1)) return false;
+    if (!read_registers(kRegisterInterruptStatus, &status, 1)) return false;
     interrupt_status_ = status;
     return (status & kInterruptStatusChannel) != 0;
 }
 
 int Bhi260::read_status_channel(uint16_t& code, uint8_t* out, uint16_t max) {
     uint8_t header[4] = {};
-    if (!read_registers(kRegStatusChannel, header, sizeof(header))) return -1;
+    if (!read_registers(kRegisterStatusChannel, header, sizeof(header))) return -1;
     code = get_u16(header);
-    const uint16_t len = get_u16(header + 2);
-    if (len == 0) return 0;
-    if (len > max) return -1;
-    if (!read_registers(kRegStatusChannel, out, len)) return -1;
-    return len;
+    const uint16_t length = get_u16(header + 2);
+    if (length == 0) return 0;
+    if (length > max) return -1;
+    if (!read_registers(kRegisterStatusChannel, out, length)) return -1;
+    return length;
 }
 
 bool Bhi260::configure_sensor(uint8_t sensor, int32_t range_units) {
     const uint8_t range[4] = {sensor, static_cast<uint8_t>(range_units & 0xFF),
                               static_cast<uint8_t>(range_units >> 8), 0};
-    if (!command(kCmdChangeRange, range, sizeof(range))) return false;
+    if (!command(kCommandChangeRange, range, sizeof(range))) return false;
 
     const uint8_t config[8] = {sensor,
                                static_cast<uint8_t>(kSampleRateBits & 0xFF),
@@ -329,7 +329,7 @@ bool Bhi260::configure_sensor(uint8_t sensor, int32_t range_units) {
                                0,
                                0,
                                0};
-    return command(kCmdConfigureSensor, config, sizeof(config));
+    return command(kCommandConfigureSensor, config, sizeof(config));
 }
 
 void Bhi260::step_running(uint32_t now_ms) {
@@ -341,9 +341,9 @@ void Bhi260::step_running(uint32_t now_ms) {
 
 void Bhi260::read_hub_error() {
     uint8_t value = 0;
-    if (!read_registers(kRegErrorValue, &value, 1)) return;
+    if (!read_registers(kRegisterErrorValue, &value, 1)) return;
     hub_error_ = value == kErrorHostChannelEmpty ? 0 : value;
-    read_registers(kRegInterruptStatus, &interrupt_status_, 1);
+    read_registers(kRegisterInterruptStatus, &interrupt_status_, 1);
 }
 
 void Bhi260::drain_fifos(uint32_t now_ms) {
@@ -355,7 +355,7 @@ void Bhi260::drain_fifos(uint32_t now_ms) {
 void Bhi260::drain_fifo(Fifo& fifo, uint32_t now_ms) {
     if (fifo.remaining == 0) {
         uint8_t available[2] = {0, 0};
-        if (!read_registers(fifo.reg, available, sizeof(available))) {
+        if (!read_registers(fifo.register_address, available, sizeof(available))) {
             fail(Status::Down);
             return;
         }
@@ -371,7 +371,7 @@ void Bhi260::drain_fifo(Fifo& fifo, uint32_t now_ms) {
         fifo.carried = 0;
         return;
     }
-    if (!read_registers(fifo.reg, fifo.bytes + fifo.carried, want)) {
+    if (!read_registers(fifo.register_address, fifo.bytes + fifo.carried, want)) {
         fail(Status::Down);
         return;
     }
@@ -379,36 +379,36 @@ void Bhi260::drain_fifo(Fifo& fifo, uint32_t now_ms) {
     fifo_bytes_ += want;
     if (fifo.resync) return;
 
-    const uint16_t len = static_cast<uint16_t>(fifo.carried + want);
-    const uint16_t used = parse_fifo(fifo, len, now_ms);
-    fifo.carried = static_cast<uint16_t>(len - used);
+    const uint16_t length = static_cast<uint16_t>(fifo.carried + want);
+    const uint16_t used = parse_fifo(fifo, length, now_ms);
+    fifo.carried = static_cast<uint16_t>(length - used);
     for (uint16_t i = 0; i < fifo.carried; i++) fifo.bytes[i] = fifo.bytes[used + i];
 }
 
-uint16_t Bhi260::parse_fifo(Fifo& fifo, uint16_t len, uint32_t now_ms) {
+uint16_t Bhi260::parse_fifo(Fifo& fifo, uint16_t length, uint32_t now_ms) {
     const uint8_t* data = fifo.bytes;
-    uint16_t pos = 0;
-    while (pos < len) {
-        const uint8_t id = data[pos];
+    uint16_t position = 0;
+    while (position < length) {
+        const uint8_t id = data[position];
         const uint8_t size = event_bytes(id);
         if (size == 0) {
             unparsed_events_++;
             fifo.resync = true;
-            return len;
+            return length;
         }
-        if (pos + size > len) break;
+        if (position + size > length) break;
         if (id == kSensorAccelerometer) {
-            sample_.x_mg = to_milli_g(data + pos + 1);
-            sample_.y_mg = to_milli_g(data + pos + 3);
-            sample_.z_mg = to_milli_g(data + pos + 5);
+            sample_.x_mg = to_milli_g(data + position + 1);
+            sample_.y_mg = to_milli_g(data + position + 3);
+            sample_.z_mg = to_milli_g(data + position + 5);
             sample_.at_ms = now_ms;
             sample_fresh_ = true;
         } else if (id == kSysIdMetaEvent || id == kSysIdMetaEventWakeup) {
-            note_meta_event(data + pos + 1);
+            note_meta_event(data + position + 1);
         }
-        pos = static_cast<uint16_t>(pos + size);
+        position = static_cast<uint16_t>(position + size);
     }
-    return pos;
+    return position;
 }
 
 void Bhi260::note_meta_event(const uint8_t* event) {
@@ -430,31 +430,31 @@ int16_t Bhi260::to_milli_g(const uint8_t* le16_bytes) {
     return static_cast<int16_t>(raw * kRangeG * 1000 / kCountsPerRange);
 }
 
-bool Bhi260::write_registers(uint8_t reg, const uint8_t* data, uint16_t len) {
-    frame_[0] = reg;
-    for (uint16_t i = 0; i < len; i++) frame_[1 + i] = data[i];
-    return bus_.write(address_, frame_, static_cast<size_t>(len) + 1);
+bool Bhi260::write_registers(uint8_t register_address, const uint8_t* data, uint16_t length) {
+    frame_[0] = register_address;
+    for (uint16_t i = 0; i < length; i++) frame_[1 + i] = data[i];
+    return bus_.write(address_, frame_, static_cast<size_t>(length) + 1);
 }
 
-bool Bhi260::read_registers(uint8_t reg, uint8_t* out, uint16_t len) {
-    if (!bus_.write(address_, &reg, 1)) return false;
-    return bus_.read(address_, out, len);
+bool Bhi260::read_registers(uint8_t register_address, uint8_t* out, uint16_t length) {
+    if (!bus_.write(address_, &register_address, 1)) return false;
+    return bus_.read(address_, out, length);
 }
 
-bool Bhi260::command(uint16_t opcode, const uint8_t* payload, uint16_t len) {
+bool Bhi260::command(uint16_t opcode, const uint8_t* payload, uint16_t length) {
     uint16_t n = 0;
-    frame_[n++] = kRegCommand;
+    frame_[n++] = kRegisterCommand;
     frame_[n++] = static_cast<uint8_t>(opcode & 0xFF);
     frame_[n++] = static_cast<uint8_t>(opcode >> 8);
-    frame_[n++] = static_cast<uint8_t>(len & 0xFF);
-    frame_[n++] = static_cast<uint8_t>(len >> 8);
-    for (uint16_t i = 0; i < len; i++) frame_[n++] = payload[i];
+    frame_[n++] = static_cast<uint8_t>(length & 0xFF);
+    frame_[n++] = static_cast<uint8_t>(length >> 8);
+    for (uint16_t i = 0; i < length; i++) frame_[n++] = payload[i];
     while ((n - 1) % 4 != 0) frame_[n++] = 0;
     return bus_.write(address_, frame_, n);
 }
 
 bool Bhi260::boot_status(uint8_t& out) {
-    if (read_registers(kRegBootStatus, &out, 1)) return true;
+    if (read_registers(kRegisterBootStatus, &out, 1)) return true;
     fail(Status::Down);
     return false;
 }
@@ -465,9 +465,9 @@ void Bhi260::fail(Status why) {
     fault_ = why;
 }
 
-bool LinkedImage::read(uint32_t offset, uint8_t* out, uint16_t len) {
-    if (offset > bytes_.size() || len > bytes_.size() - offset) return false;
-    for (uint16_t i = 0; i < len; i++) out[i] = bytes_[offset + i];
+bool LinkedImage::read(uint32_t offset, uint8_t* out, uint16_t length) {
+    if (offset > bytes_.size() || length > bytes_.size() - offset) return false;
+    for (uint16_t i = 0; i < length; i++) out[i] = bytes_[offset + i];
     return true;
 }
 

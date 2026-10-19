@@ -15,8 +15,8 @@ constexpr uint16_t kTlvKeyHash = 0x01;
 constexpr size_t kTlvInfoBytes = 4;
 constexpr size_t kTlvEntryBytes = 4;
 
-size_t past_protected_area(const uint8_t* tlvs, size_t len) {
-    if (len >= kTlvInfoBytes && get_u16(tlvs) == kProtectedTlvMagic) return get_u16(tlvs + 2);
+size_t past_protected_area(const uint8_t* tlvs, size_t length) {
+    if (length >= kTlvInfoBytes && get_u16(tlvs) == kProtectedTlvMagic) return get_u16(tlvs + 2);
     return 0;
 }
 

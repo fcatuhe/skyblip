@@ -2,7 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_LINK_H
 
 #include "core/comms/config.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/identity/unit.h"
 #include "core/power/cutoff.h"
 #include "core/power/duty.h"
@@ -82,7 +82,7 @@ class ConfigLinkService : public runtime::Service {
     void advertise(uint32_t now_ms);
     void place_unlock(uint32_t now_ms);
     void spend_gnss_cold_start();
-    void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
+    void record_link(diagnostics::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
     void record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms);
     void watch_claim(uint32_t now_ms);
@@ -120,7 +120,7 @@ class ConfigLinkService : public runtime::Service {
     // question has no owner.
     bool storable() const {
         return ports::has(context_.roles.capabilities, ports::Capability::Storage) &&
-               context_.roles.kv.ready();
+               context_.roles.key_value.ready();
     }
     bool may_persist() const { return power_.may_write(power::DurableWrite::Settings); }
     bool hold_for_power();

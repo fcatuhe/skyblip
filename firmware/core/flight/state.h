@@ -45,10 +45,10 @@ constexpr uint32_t report_period_s(FlightState state) {
     return state == FlightState::Ground ? kGroundReportPeriodS : kAirborneReportPeriodS;
 }
 
-bool flies_at_no_ground_speed(uint8_t aircraft_cat);
+bool flies_at_no_ground_speed(uint8_t aircraft_category);
 
 // INFO: fc 23sep26 G.1.2's Undefined: no ground speed shows that a craft able to hover has landed
-uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat);
+uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_category);
 inline bool reduced_rate(uint8_t announced) { return state_from(announced) == FlightState::Ground; }
 
 class FlightMonitor {

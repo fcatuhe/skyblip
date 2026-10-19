@@ -12,14 +12,14 @@ struct Ownship {
     // window) and can come from a barometer the unit may not have, so it carries
     // its own validity. ADS-L G.1.9 has an explicit "unavailable" code for it.
     bool climb_valid;
-    int32_t lat_1e7;
-    int32_t lon_1e7;
+    int32_t latitude_1e7;
+    int32_t longitude_1e7;
     // Height above the WGS-84 ellipsoid: ADS-L G.1.7 transmits HAE, and every
     // neighbour altitude we receive is measured against the same datum, so a
-    // relative height only means something if ours uses it too. alt_msl_mm is the
+    // relative height only means something if ours uses it too. altitude_msl_mm is the
     // geoid-referenced figure a panel or an IGC file wants.
-    int32_t alt_hae_mm;
-    int32_t alt_msl_mm;
+    int32_t altitude_hae_mm;
+    int32_t altitude_msl_mm;
     int32_t climb_mm_s;
     // INFO: fc 19sep26 what the instruments resolve: the wire's coarser units are the encoder's
     int32_t speed_mm_s;
@@ -40,7 +40,7 @@ struct Ownship {
     uint16_t hdop_e2;
     // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
     uint16_t vdop_e2;
-    // False when the geoid separation behind alt_m came from a regional constant
+    // False when the geoid separation behind altitude_m came from a regional constant
     // rather than from the receiver.
     bool geoid_measured;
     // How far the constant-speed, constant-turn, constant-climb model missed the
@@ -55,8 +55,8 @@ struct Ownship {
     // Own-ship is the only writer, so whoever annunciates it reads it here
     // instead of keeping a second watch on the same fact.
     bool fix_acquired;
-    uint8_t sats;
-    uint8_t aircraft_cat;
+    uint8_t satellites;
+    uint8_t aircraft_category;
     uint8_t flight_state;
 };
 

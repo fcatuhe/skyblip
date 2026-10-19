@@ -2,7 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 
 #include "core/annunciation/annunciator.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/indication/lamp.h"
 #include "core/power/duty.h"
 #include "core/traffic/alarm.h"

@@ -38,7 +38,7 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& t) {
         gnss::GnssSolution climbing{};
         climbing.fix_valid = true;
         climbing.speed_mm_s = 50000;
-        climbing.alt_msl_mm = 1200 * 1000;
+        climbing.altitude_msl_mm = 1200 * 1000;
         climbing.sentences = 1;
         rig.product.bus().gnss.push(climbing);
         for (int i = 0; i < 10; i++) {
@@ -77,7 +77,7 @@ std::string update_frame(Rig& rig) {
 bool attempt_recorded(Rig& rig) {
     uint8_t blob[dfu::kUpdateRecordBytes];
     size_t n = 0;
-    return rig.platform.kv().read("update", blob, sizeof(blob), n) == Status::Ok;
+    return rig.platform.key_value().read("update", blob, sizeof(blob), n) == Status::Ok;
 }
 
 // The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.
@@ -85,7 +85,7 @@ struct Rebooted {
     Rig rig;
     Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
              std::optional<ports::ImageVersion> slot1 = std::nullopt) {
-        rig.platform.kv() = before.platform.kv();
+        rig.platform.key_value() = before.platform.key_value();
         rig.platform.dfu().running_version_valid = true;
         rig.platform.dfu().running_image_version = running;
         rig.platform.dfu().image_confirmed = confirmed;
@@ -111,11 +111,11 @@ struct NewerBlob {
     }
 };
 
-bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t len) {
+bool holds(Rig& rig, const char* key, const uint8_t* blob, size_t length) {
     uint8_t stored[64];
     size_t n = 0;
-    if (rig.platform.kv().read(key, stored, sizeof(stored), n) != Status::Ok) return false;
-    return n == len && std::memcmp(stored, blob, len) == 0;
+    if (rig.platform.key_value().read(key, stored, sizeof(stored), n) != Status::Ok) return false;
+    return n == length && std::memcmp(stored, blob, length) == 0;
 }
 
 void set_callsign_over_the_link(Rig& rig, uint32_t& t, const char* callsign) {
@@ -168,7 +168,7 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
 
     uint8_t blob[dfu::kUpdateRecordBytes];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("update", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("update", blob, sizeof(blob), n) == Status::Ok);
     dfu::UpdateRecord record;
     REQUIRE(dfu::from_blob(blob, n, record));
     CHECK(record.from == kRunning);
@@ -523,7 +523,8 @@ TEST_CASE("product: an image nobody staged over the air clears a stale attempt")
 TEST_CASE("product: a set on an image older than its settings never writes over them") {
     Rig rig;
     const NewerBlob newer;
-    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+            Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t t = 0;
 
@@ -541,7 +542,8 @@ TEST_CASE("product: a set on an image older than its settings never writes over 
 TEST_CASE("product: an image with nothing of its own beside a newer blob starts from defaults") {
     Rig rig;
     const NewerBlob newer;
-    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+            Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
     CHECK(rig.settings().alarm_volume == go::defaults().alarm_volume);
@@ -551,7 +553,8 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
 TEST_CASE("product: settings that fell back to defaults are said on the self test and to a phone") {
     Rig rig;
     const NewerBlob newer;
-    REQUIRE(rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) == Status::Ok);
+    REQUIRE(rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+            Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(std::string(storage_row(rig).detail) == go::kStorageOnDefaults);
 
@@ -566,7 +569,8 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
     Rig rig;
     NewerBlob torn;
     torn.bytes[3] ^= 0x01;
-    REQUIRE(rig.platform.kv().write("settings", torn.bytes, sizeof(torn.bytes)) == Status::Ok);
+    REQUIRE(rig.platform.key_value().write("settings", torn.bytes, sizeof(torn.bytes)) ==
+            Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
     uint32_t t = 0;
@@ -574,7 +578,7 @@ TEST_CASE("product: a sector that lost a bit is written over, not kept as a newe
     set_callsign_over_the_link(rig, t, "F-JABC");
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored;
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(std::string(stored.callsign) == "F-JABC");
@@ -591,7 +595,7 @@ TEST_CASE("product: a revert puts back the settings the pilot had when the swap 
 
     Rebooted landed(before, kStaged, /*confirmed=*/false);
     const NewerBlob newer;
-    REQUIRE(landed.rig.platform.kv().write("settings", newer.bytes, sizeof(newer.bytes)) ==
+    REQUIRE(landed.rig.platform.key_value().write("settings", newer.bytes, sizeof(newer.bytes)) ==
             Status::Ok);
 
     Rebooted reverted(landed.rig, kRunning, /*confirmed=*/true, kStaged);

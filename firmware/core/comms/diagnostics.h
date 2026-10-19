@@ -114,8 +114,8 @@ class DiagnosticsReport {
 
     // cmd is the name the reply answers under, because the link already has a
     // question that asks for the radio group alone.
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd);
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd, Group only);
+    DiagnosticsReport(const Diagnostics& diagnostics, const char* command);
+    DiagnosticsReport(const Diagnostics& diagnostics, const char* command, Group only);
 
     // The console surface: one subsystem per line, "radio noise_dbm=-105 ...".
     int line_count() const { return line_count_; }
@@ -154,7 +154,7 @@ class DiagnosticsReport {
     // line.
     int line_start(int index) const;
 
-    const char* cmd_;
+    const char* command_;
     Field fields_[kMaxFields]{};
     int count_{0};
     int line_count_{0};

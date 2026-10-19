@@ -26,20 +26,20 @@ void AdslPacket::set_speed_q(uint16_t s) {
     Position[6] = static_cast<uint8_t>(w);
 }
 
-int32_t AdslPacket::alt_m() const {
+int32_t AdslPacket::altitude_m() const {
     int32_t w = Position[8] & 0x3F;
     w <<= 8;
     w |= Position[7];
     return uns_vr_decode<int32_t, 12>(w) - 320;
 }
-void AdslPacket::set_alt_m(int32_t alt) {
-    alt += kAltOffsetM;
-    alt = std::max(alt, 0);  // G.1.7: below -320 m encodes the limit, 0x0000
-    uint32_t w = uns_vr_encode<uint32_t, 12>(static_cast<uint32_t>(alt));
+void AdslPacket::set_altitude_m(int32_t altitude) {
+    altitude += kAltitudeOffsetM;
+    altitude = std::max(altitude, 0);  // G.1.7: below -320 m encodes the limit, 0x0000
+    uint32_t w = uns_vr_encode<uint32_t, 12>(static_cast<uint32_t>(altitude));
     // Same collision as ground speed: saturation lands on 0x3FFF, the code for
     // "no 3D fix". G.1.7 wants the limit (0x3FFE, 61104 m) instead - the
     // difference between "very high" and "no idea".
-    if (w >= kAltInvalidCode) w = kAltInvalidCode - 1;
+    if (w >= kAltitudeInvalidCode) w = kAltitudeInvalidCode - 1;
     Position[7] = static_cast<uint8_t>(w);
     Position[8] = static_cast<uint8_t>((Position[8] & 0xC0) | ((w >> 8) & 0x3F));
 }
@@ -114,11 +114,11 @@ uint32_t AdslPacket::check_crc() const { return fec::adsl_crc_check(Data, kDataB
 namespace {
 constexpr uint16_t kBits = AdslPacket::kDataBytes * 8;
 
-void flip_bit(uint8_t* byte, int bit_idx) {
-    int byte_idx = bit_idx >> 3;
-    bit_idx &= 7;
-    bit_idx = 7 - bit_idx;
-    byte[byte_idx] ^= static_cast<uint8_t>(1 << bit_idx);
+void flip_bit(uint8_t* byte, int bit_index) {
+    int byte_index = bit_index >> 3;
+    bit_index &= 7;
+    bit_index = 7 - bit_index;
+    byte[byte_index] ^= static_cast<uint8_t>(1 << bit_index);
 }
 
 uint32_t crc_syndrome(uint8_t bit) {
@@ -205,7 +205,7 @@ int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
 
     static constexpr int kMaxErasures = 16;
     max_erasures = std::min(max_erasures, kMaxErasures);
-    uint8_t idx[kMaxErasures];
+    uint8_t index[kMaxErasures];
     uint8_t mask[kMaxErasures];
     uint32_t syn[kMaxErasures];
     int bad = 0;
@@ -215,7 +215,7 @@ int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
         for (int k = 0; k < 8; k++) {
             if (byte & m) {
                 if (bad < max_erasures) {
-                    idx[bad] = static_cast<uint8_t>(bi);
+                    index[bad] = static_cast<uint8_t>(bi);
                     mask[bad] = m;
                     syn[bad] = crc_syndrome(static_cast<uint8_t>(bi * 8 + k));
                 }
@@ -228,13 +228,13 @@ int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
     if (bad > max_erasures) return -1;
 
     int loops = 1 << bad;
-    uint16_t prev_gray = 0;
+    uint16_t previous_gray = 0;
     for (int i = 1; i < loops; i++) {
         uint16_t gray = static_cast<uint16_t>(i ^ (i >> 1));
-        uint16_t bit_exp = gray ^ prev_gray;
+        uint16_t bit_exp = gray ^ previous_gray;
         int bit = 0;
         while (bit_exp >>= 1) bit++;
-        data[idx[bit]] ^= mask[bit];
+        data[index[bit]] ^= mask[bit];
         crc ^= syn[bit];
         if (crc == 0) return count_ones(gray);
         uint8_t e = find_crc_syndrome(crc);
@@ -242,7 +242,7 @@ int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
             flip_bit(data, e);
             return count_ones(gray) + 1;
         }
-        prev_gray = gray;
+        previous_gray = gray;
     }
     return -1;
 }
@@ -253,13 +253,13 @@ bool to_observation(const AdslPacket& packet, const events::Stamp& received, int
     if (!packet.is_position() || !packet.has_position()) return false;
     out.address = packet.address();
     out.address_mapping_table = packet.address_mapping_table();
-    out.aircraft_cat = packet.AcftCat;
+    out.aircraft_category = packet.AircraftCategory;
     out.flight_state = packet.FlightState;
     out.emergency = packet.Emergency;
-    out.lat_1e7 = packet.lat_1e7();
-    out.lon_1e7 = packet.lon_1e7();
-    out.alt_valid = packet.has_alt();
-    out.alt_m = out.alt_valid ? packet.alt_m() : 0;
+    out.latitude_1e7 = packet.latitude_1e7();
+    out.longitude_1e7 = packet.longitude_1e7();
+    out.altitude_valid = packet.has_altitude();
+    out.altitude_m = out.altitude_valid ? packet.altitude_m() : 0;
     out.climb_valid = packet.has_climb();
     out.climb_e8 = out.climb_valid ? packet.climb_e8() : 0;
     out.speed_valid = packet.has_speed();
@@ -301,7 +301,7 @@ void AdslPacket::set_integrity_unknown() {
     NavigIntegrity = 0;
     HorizAccuracy = 0;
     VertAccuracy = 0;
-    VelAccuracy = 0;
+    VelocityAccuracy = 0;
 }
 
 // INFO: fc 13sep26 no VDOP is a 2D solution, whose height is not a figure to claim accuracy for
@@ -312,7 +312,7 @@ void AdslPacket::set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     const uint32_t vfom_cm = div_round<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
     HorizAccuracy = horizontal_accuracy_code(hfom_cm);
     VertAccuracy = vdop_e2 == 0 ? 0 : vertical_accuracy_code(vfom_cm);
-    VelAccuracy = velocity_accuracy_code(HorizAccuracy);
+    VelocityAccuracy = velocity_accuracy_code(HorizAccuracy);
 }
 
 uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms) {
@@ -335,22 +335,22 @@ bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
     packet.set_address_mapping_table(address_mapping_table);
     packet.set_info_header(AdslPacket::kTelemTypeInfo, AdslPacket::kInfoTypeRegistration);
 
-    char* text = packet.info_msg();
+    char* text = packet.info_text();
     int n = 0;
-    while (n < AdslPacket::kInfoMsgBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
+    while (n < AdslPacket::kInfoTextBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
         text[n] = callsign[n];
         n++;
     }
-    while (n < AdslPacket::kInfoMsgBytes) text[n++] = 0;
+    while (n < AdslPacket::kInfoTextBytes) text[n++] = 0;
     return true;
 }
 
 int callsign_of(const AdslPacket& packet, char* out, int capacity) {
     out[0] = 0;
     if (!packet.is_registration() || capacity <= 1) return 0;
-    const char* text = packet.info_msg();
+    const char* text = packet.info_text();
     int n = 0;
-    while (n < AdslPacket::kInfoMsgBytes && text[n] != 0) {
+    while (n < AdslPacket::kInfoTextBytes && text[n] != 0) {
         if (!is_callsign_char(text[n])) return 0;
         n++;
     }
@@ -361,13 +361,13 @@ int callsign_of(const AdslPacket& packet, char* out, int capacity) {
 }
 
 bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat) {
-    return from_own(packet, own, address, address_mapping_table, aircraft_cat,
+              uint8_t address_mapping_table, uint8_t aircraft_category) {
+    return from_own(packet, own, address, address_mapping_table, aircraft_category,
                     BurstInstant{own.utc_s, 0, 0});
 }
 
 bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at) {
+              uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at) {
     if (!address) return false;
     packet.init(AdslPacket::kTypePosition);
     packet.set_address(*address & settings::kAddressMask);
@@ -383,11 +383,11 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
         flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
     packet.TimeStamp =
         timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
-    packet.FlightState = flight::announced_state(own.flight_state, aircraft_cat);
-    packet.AcftCat = aircraft_cat;
+    packet.FlightState = flight::announced_state(own.flight_state, aircraft_category);
+    packet.AircraftCategory = aircraft_category;
     packet.Emergency = 1;
-    packet.set_lat_1e7(where.lat_1e7);
-    packet.set_lon_1e7(where.lon_1e7);
+    packet.set_latitude_1e7(where.latitude_1e7);
+    packet.set_longitude_1e7(where.longitude_1e7);
 
     // Altitude and ground speed come from the 3D fix, so without one they are
     // UNAVAILABLE and must say so (G.1.7, G.1.8). Transmitting a stale or zeroed
@@ -395,14 +395,14 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
     // would compute relative vertical separation against it.
     if (own.fix_valid) {
         if (own.vdop_e2 != 0)
-            packet.set_alt_m(to_metres(Millimetres(where.alt_hae_mm)).v);
+            packet.set_altitude_m(to_metres(Millimetres(where.altitude_hae_mm)).v);
         else
-            packet.set_alt_invalid();
+            packet.set_altitude_invalid();
         packet.set_speed_q(to_speed_q(MillimetresPerSecond(own.speed_mm_s)).v);
         packet.set_integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
     } else {
         packet.set_position_invalid();
-        packet.set_alt_invalid();
+        packet.set_altitude_invalid();
         packet.set_speed_invalid();
         packet.set_integrity_unknown();
     }

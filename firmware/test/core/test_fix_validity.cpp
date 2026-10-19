@@ -21,8 +21,8 @@ struct Burst {
     FixValidity validity;
 
     void feed(const char* line, uint32_t at_ms) {
-        const int len = static_cast<int>(std::strlen(line));
-        REQUIRE(parser.parse_line(line, len));
+        const int length = static_cast<int>(std::strlen(line));
+        REQUIRE(parser.parse_line(line, length));
         validity.observe(parser.solution(), parser.last_sentence(), at_ms);
     }
 };
@@ -125,10 +125,10 @@ TEST_CASE("fix validity: crossing the antimeridian is flight, not a jump") {
     b.feed(kRmc, 1000);
     b.feed(kGga, 1000);
     GnssSolution west_edge = b.parser.solution();
-    west_edge.lon_1e7 = 1799999000;
+    west_edge.longitude_1e7 = 1799999000;
     b.validity.observe(west_edge, Sentence::Rmc, 1200);
     GnssSolution east_edge = west_edge;
-    east_edge.lon_1e7 = -1799999000;
+    east_edge.longitude_1e7 = -1799999000;
     b.validity.observe(east_edge, Sentence::Rmc, 1400);
     CHECK(b.validity.valid(1400));
 }
@@ -138,15 +138,15 @@ TEST_CASE("fix validity: the jump gate is drawn where moshe-braner draws it") {
     Burst b;
     b.feed(kRmc, 1000);
     b.feed(kGga, 1000);
-    const int32_t base_lat = b.parser.solution().lat_1e7;
+    const int32_t base_latitude = b.parser.solution().latitude_1e7;
 
     GnssSolution inside = b.parser.solution();
-    inside.lat_1e7 = base_lat + kLatitudeJumpCeiling1e7;
+    inside.latitude_1e7 = base_latitude + kLatitudeJumpCeiling1e7;
     b.validity.observe(inside, Sentence::Rmc, 1200);
     CHECK(b.validity.valid(1200));
 
     GnssSolution outside = inside;
-    outside.lat_1e7 = inside.lat_1e7 + kLatitudeJumpCeiling1e7 + 1;
+    outside.latitude_1e7 = inside.latitude_1e7 + kLatitudeJumpCeiling1e7 + 1;
     b.validity.observe(outside, Sentence::Rmc, 1400);
     CHECK(b.validity.evaluate(1400) == FixReject::Jump);
 }

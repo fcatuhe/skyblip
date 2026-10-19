@@ -17,9 +17,9 @@ protocol::AdslPacket traffic_packet() {
     own.fix_valid = true;
     own.utc_valid = true;
     own.climb_valid = true;
-    own.lat_1e7 = 481234500;
-    own.lon_1e7 = 81234500;
-    own.alt_hae_mm = 1234000;
+    own.latitude_1e7 = 481234500;
+    own.longitude_1e7 = 81234500;
+    own.altitude_hae_mm = 1234000;
     own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
     own.climb_mm_s = -5500;  // -44 eighths on the wire
     own.track_cdeg = 18000;
@@ -56,11 +56,11 @@ void spec_xxtea(uint32_t* data, uint32_t words, const uint32_t* key, uint32_t ro
 }
 
 // E.3.1's own sample implementation, transcribed.
-uint32_t spec_crc24(const uint8_t* data, size_t len) {
+uint32_t spec_crc24(const uint8_t* data, size_t length) {
     const uint32_t kPoly = 0xFFFA0480u;
     uint32_t crc = 0;
-    for (size_t i = 0; i < len + 3; i++) {
-        crc |= i < len ? data[i] : 0u;
+    for (size_t i = 0; i < length + 3; i++) {
+        crc |= i < length ? data[i] : 0u;
         for (uint8_t bit = 0; bit < 8; bit++) {
             if (crc & 0x80000000u) crc ^= kPoly;
             crc <<= 1;
@@ -97,8 +97,8 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload rea
     REQUIRE(protocol::to_observation(issue2, events::Stamp{}, -80, model::Source::AdslDirect,
                                      as_received));
     CHECK(as_received.address == as_sent.address);
-    CHECK(as_received.lat_1e7 == as_sent.lat_1e7);
-    CHECK(as_received.alt_m == as_sent.alt_m);
+    CHECK(as_received.latitude_1e7 == as_sent.latitude_1e7);
+    CHECK(as_received.altitude_m == as_sent.altitude_m);
 }
 
 // No signature promised, so the packet ends at its parity: 27 bytes of air, sync word included.
@@ -185,9 +185,9 @@ TEST_CASE("ADS-L.4.SRD860.E.4: nothing is signed, and nothing says it is") {
     CHECK(protocol::kAdslFrameBytes == protocol::AdslPacket::kDataBytes);
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t len =
+    const size_t length =
         protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes, chips);
-    CHECK(len == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
+    CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 }
 
 // TODO: fc 18sep26 no signature, so no UNIX timestamp is appended to one either

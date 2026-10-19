@@ -19,18 +19,18 @@ using namespace skyblip::traffic;
 namespace {
 
 constexpr uint32_t kUtcS = 1700000000;
-constexpr int32_t kOwnLat1e7 = 481000000;
-constexpr int32_t kOwnLon1e7 = 81000000;
-constexpr int32_t kOwnAltM = 1000;
+constexpr int32_t kOwnLatitude1e7 = 481000000;
+constexpr int32_t kOwnLongitude1e7 = 81000000;
+constexpr int32_t kOwnAltitudeM = 1000;
 constexpr int32_t kFourHundredMetresNorth1e7 = 400 * 1000000 / 11132;
 
 model::Ownship own_at(uint32_t at_ms) {
     model::Ownship o{};
     o.fix_valid = true;
     o.fix_at_ms = at_ms;
-    o.lat_1e7 = kOwnLat1e7;
-    o.lon_1e7 = kOwnLon1e7;
-    o.alt_hae_mm = kOwnAltM * 1000;
+    o.latitude_1e7 = kOwnLatitude1e7;
+    o.longitude_1e7 = kOwnLongitude1e7;
+    o.altitude_hae_mm = kOwnAltitudeM * 1000;
     o.speed_mm_s = 30000;
     return o;
 }
@@ -39,11 +39,11 @@ model::AircraftObservation sender(flight::FlightState state) {
     model::AircraftObservation o{};
     o.address = 0x3C4D5E;
     o.address_mapping_table = 5;
-    o.aircraft_cat = 4;
+    o.aircraft_category = 4;
     o.flight_state = static_cast<uint8_t>(state);
-    o.lat_1e7 = kOwnLat1e7 + kFourHundredMetresNorth1e7;
-    o.lon_1e7 = kOwnLon1e7;
-    o.alt_m = kOwnAltM;
+    o.latitude_1e7 = kOwnLatitude1e7 + kFourHundredMetresNorth1e7;
+    o.longitude_1e7 = kOwnLongitude1e7;
+    o.altitude_m = kOwnAltitudeM;
     o.speed_valid = true;
     o.position_valid = true;
     return o;
@@ -61,11 +61,11 @@ model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
     p.set_address(sent.address);
     p.set_address_mapping_table(sent.address_mapping_table);
     p.FlightState = sent.flight_state;
-    p.AcftCat = sent.aircraft_cat;
+    p.AircraftCategory = sent.aircraft_category;
     p.Emergency = 1;
-    p.set_lat_1e7(sent.lat_1e7);
-    p.set_lon_1e7(sent.lon_1e7);
-    p.set_alt_m(sent.alt_m);
+    p.set_latitude_1e7(sent.latitude_1e7);
+    p.set_longitude_1e7(sent.longitude_1e7);
+    p.set_altitude_m(sent.altitude_m);
     p.set_speed_q(sent.speed_q);
     model::AircraftObservation heard{};
     REQUIRE(protocol::to_observation(p, events::Stamp{}, 0, model::Source::AdslDirect, heard));
@@ -85,9 +85,11 @@ model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
 
 model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
     uint8_t frame[protocol::kAlptasFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS, kOwnLat1e7, kOwnLon1e7) == Status::Ok);
+    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS, kOwnLatitude1e7, kOwnLongitude1e7) ==
+            Status::Ok);
     model::AircraftObservation heard{};
-    REQUIRE(protocol::alptas_decode(frame, kUtcS, kOwnLat1e7, kOwnLon1e7, heard) == Status::Ok);
+    REQUIRE(protocol::alptas_decode(frame, kUtcS, kOwnLatitude1e7, kOwnLongitude1e7, heard) ==
+            Status::Ok);
     return stamped(heard);
 }
 

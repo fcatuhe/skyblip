@@ -109,26 +109,26 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         implausible_++;
         return -1;
     }
-    int idx = find(observation.address_mapping_table, observation.address);
-    if (idx >= 0) {
-        if (prefer_new(observation, slots_[idx].observation)) {
-            watch_liftoff(slots_[idx], observation);
-            slots_[idx].observation = observation;
-            sample_turn(slots_[idx].turn, observation);
+    int index = find(observation.address_mapping_table, observation.address);
+    if (index >= 0) {
+        if (prefer_new(observation, slots_[index].observation)) {
+            watch_liftoff(slots_[index], observation);
+            slots_[index].observation = observation;
+            sample_turn(slots_[index].turn, observation);
         }
-        return idx;
+        return index;
     }
-    idx = allocate_slot(observation, now_s);
-    if (idx < 0) return -1;
-    slots_[idx].used = true;
-    slots_[idx].observation = observation;
-    slots_[idx].turn = TargetTurn{};
-    slots_[idx].liftoff = flight::Liftoff{};
-    sample_turn(slots_[idx].turn, observation);
-    slots_[idx].alarm_level = Level::None;
-    slots_[idx].alarm_dismissed = false;
-    slots_[idx].in_formation = false;
-    return idx;
+    index = allocate_slot(observation, now_s);
+    if (index < 0) return -1;
+    slots_[index].used = true;
+    slots_[index].observation = observation;
+    slots_[index].turn = TargetTurn{};
+    slots_[index].liftoff = flight::Liftoff{};
+    sample_turn(slots_[index].turn, observation);
+    slots_[index].alarm_level = Level::None;
+    slots_[index].alarm_dismissed = false;
+    slots_[index].in_formation = false;
+    return index;
 }
 
 void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservation& incoming) {

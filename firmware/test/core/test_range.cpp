@@ -11,27 +11,28 @@ namespace {
 
 // 1e-7 degrees of latitude per metre north, the same 11132 m/deg the position
 // maths uses, so a test distance and the code's distance cannot drift apart.
-int32_t lat_offset_for(int32_t north_m) {
+int32_t latitude_offset_for(int32_t north_m) {
     return static_cast<int32_t>((static_cast<int64_t>(north_m) * 1000000) / 11132);
 }
 
 model::Ownship own_at_equator() {
     model::Ownship o{};
     o.fix_valid = true;
-    o.lat_1e7 = 0;
-    o.lon_1e7 = 0;
-    o.alt_hae_mm = 1000000;
+    o.latitude_1e7 = 0;
+    o.longitude_1e7 = 0;
+    o.altitude_hae_mm = 1000000;
     return o;
 }
 
-model::AircraftObservation emitter(int32_t north_m, model::Source src = model::Source::AdslDirect) {
+model::AircraftObservation emitter(int32_t north_m,
+                                   model::Source source = model::Source::AdslDirect) {
     model::AircraftObservation t{};
     t.position_valid = true;
     t.address = 0xABCD;
-    t.lat_1e7 = lat_offset_for(north_m);
-    t.lon_1e7 = 0;
-    t.alt_m = 1000;
-    t.source = src;
+    t.latitude_1e7 = latitude_offset_for(north_m);
+    t.longitude_1e7 = 0;
+    t.altitude_m = 1000;
+    t.source = source;
     return t;
 }
 
@@ -59,7 +60,7 @@ TEST_CASE("range: an emitter without a position cannot be ranged") {
 
 TEST_CASE("range: an aircraft directly overhead is no distance away, only above") {
     model::AircraftObservation t = emitter(0);
-    t.alt_m = 3000;
+    t.altitude_m = 3000;
     RangeRow row;
     REQUIRE(range_to(own_at_equator(), t, row));
     CHECK(row.up_m == 2000);
@@ -68,7 +69,7 @@ TEST_CASE("range: an aircraft directly overhead is no distance away, only above"
 
 TEST_CASE("range: distance is the ground track, and height above is its own figure") {
     model::AircraftObservation t = emitter(3000);
-    t.alt_m = 5000;
+    t.altitude_m = 5000;
     RangeRow row;
     REQUIRE(range_to(own_at_equator(), t, row));
     CHECK(row.up_m == 4000);

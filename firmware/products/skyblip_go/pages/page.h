@@ -17,7 +17,7 @@ enum class Page : uint8_t {
     SixPack = 2,
     GMeter = 3,
     Status = 4,
-    Sats = 5,
+    Satellites = 5,
     RadioLog = 6,
     Raw = 7,
     Capture = 8,
@@ -97,7 +97,7 @@ constexpr const char* page_title(Page page) {
         case Page::Nearby: return "NEARBY";
         case Page::SixPack: return "SIX-PACK";
         case Page::Status: return "STATUS";
-        case Page::Sats: return "SATELLITES";
+        case Page::Satellites: return "SATELLITES";
         case Page::RadioLog: return "RADIO LOG";
         case Page::Raw: return "RAW";
         case Page::Capture: return "CAPTURE";

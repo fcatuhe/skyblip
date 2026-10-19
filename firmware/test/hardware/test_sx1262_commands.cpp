@@ -25,12 +25,12 @@ TEST_CASE("sx1262: an IRQ bit that was never unmasked is never reported") {
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
-    uint8_t pkt[4] = {1, 2, 3, 4};
-    chip.queue_rx(pkt, 4);
-    uint8_t buf[32];
-    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::None);
+    uint8_t packet[4] = {1, 2, 3, 4};
+    chip.queue_rx(packet, 4);
+    uint8_t buffer[32];
+    CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::None);
     CHECK(radio.start_receive() == Status::Ok);
-    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::RxDone);
+    CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::RxDone);
 }
 
 TEST_CASE("sx1262: the IRQ mask and the DIO1 mask are programmed before the receiver is started") {
@@ -40,9 +40,9 @@ TEST_CASE("sx1262: the IRQ mask and the DIO1 mask are programmed before the rece
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     CHECK(chip.irq_mask == 0);
     REQUIRE(radio.start_receive() == Status::Ok);
-    CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetRx));
+    CHECK(chip.command_order(sx::kSetDioIrqParameters) < chip.command_order(sx::kSetRx));
     CHECK((chip.irq_mask & sx::kIrqRxDone) != 0);
-    CHECK((chip.irq_mask & sx::kIrqCrcErr) != 0);
+    CHECK((chip.irq_mask & sx::kIrqCrcError) != 0);
     // DIO1 is the only interrupt line wired on this board.
     CHECK(chip.dio1_mask == chip.irq_mask);
     chip.queue_rx(nullptr, 0);
@@ -56,12 +56,12 @@ TEST_CASE("sx1262: the IRQ mask is programmed before the transmitter is keyed") 
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     const uint8_t frame[4] = {1, 2, 3, 4};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
-    CHECK(chip.command_order(sx::kSetDioIrqParams) < chip.command_order(sx::kSetTx));
+    CHECK(chip.command_order(sx::kSetDioIrqParameters) < chip.command_order(sx::kSetTx));
     CHECK((chip.irq_mask & sx::kIrqTxDone) != 0);
     CHECK((chip.irq_mask & sx::kIrqTimeout) != 0);
     chip.signal_tx_done();
-    uint8_t buf[8];
-    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::TxDone);
+    uint8_t buffer[8];
+    CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::TxDone);
 }
 
 // A3. Nothing in this tree set output power. The PA config is also the write
@@ -77,7 +77,7 @@ TEST_CASE("sx1262: the PA is the SX1262 high-power configuration, ordered before
     CHECK(chip.pa_config[2] == 0x00);
     CHECK(chip.pa_config[3] == 0x01);
     CHECK(sx::kPaConfigHighPowerRatedDbm == 22);
-    CHECK(chip.command_order(sx::kSetPaConfig) < chip.command_order(sx::kSetTxParams));
+    CHECK(chip.command_order(sx::kSetPaConfig) < chip.command_order(sx::kSetTxParameters));
 }
 
 // The register takes conducted power and the law limits radiated power, so what
@@ -125,7 +125,7 @@ TEST_CASE("sx1262: image rejection is calibrated for 863-870 MHz after the TCXO 
     CHECK(chip.image_calibrated);
     CHECK(chip.image_band[0] == 0xD7);
     CHECK(chip.image_band[1] == 0xDB);
-    CHECK(chip.command_order(sx::kSetDio3AsTcxoCtrl) < chip.command_order(sx::kCalibrateImage));
+    CHECK(chip.command_order(sx::kSetDio3AsTcxoControl) < chip.command_order(sx::kCalibrateImage));
     CHECK(chip.command_order(sx::kCalibrate) < chip.command_order(sx::kCalibrateImage));
     CHECK(chip.fault == models::Sx1262::Fault::None);
     // Once per band: the second dwell does not pay for it again.
@@ -141,7 +141,7 @@ TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and return
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     RadioConfig config{};
-    config.freq_hz = 868200000;
+    config.frequency_hz = 868200000;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     REQUIRE(radio.mode() == RadioMode::Rx);
@@ -149,14 +149,14 @@ TEST_CASE("sx1262: retuning a receiving radio is bracketed by standby and return
     int standbys = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) standbys++;
-    config.freq_hz = 868400000;
+    config.frequency_hz = 868400000;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     int after = 0;
     for (uint8_t c : chip.commands_seen)
         if (c == sx::kSetStandby) after++;
     CHECK(after == standbys + 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
-    CHECK(chip.freq_hz > 868399000);
+    CHECK(chip.frequency_hz > 868399000);
     CHECK(radio.mode() == RadioMode::Rx);
     CHECK(chip.receiving);
 }

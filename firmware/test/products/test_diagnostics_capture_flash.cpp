@@ -3,7 +3,7 @@
 #include <cstring>
 #include <string>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/events/link.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
@@ -25,7 +25,7 @@ void label_sector(platform::host::FlashRegion& flash, uint32_t sector, store::Se
     header.owner = owner;
     header.sequence = sequence;
     header.session_id = session;
-    header.record_bytes = static_cast<uint8_t>(diag::kRecordBytes);
+    header.record_bytes = static_cast<uint8_t>(diagnostics::kRecordBytes);
     uint8_t raw[store::kSectorHeaderBytes];
     store::encode_sector_header(header, raw);
     REQUIRE(
@@ -98,12 +98,12 @@ struct SmallPoolRig {
     platform::host::FlashRegion flash;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
-    ports::Roles roles{clock,     null.rf,          link,     null.display,         null.kv,
+    ports::Roles roles{clock,     null.rf,          link,     null.display,         null.key_value,
                        flash,     null.annunciator, null.dfu, null.die_temperature, null.indicator,
                        null.gnss, identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
@@ -139,7 +139,7 @@ struct SmallPoolRig {
     uint32_t feed_until_stopped(uint32_t& t, uint32_t records) {
         uint32_t pushed = 0;
         while (pushed < records && capture.capturing()) {
-            for (int i = 0; i < diag::Recorder::kCapacity && pushed < records; i++)
+            for (int i = 0; i < diagnostics::Recorder::kCapacity && pushed < records; i++)
                 if (recorder.record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
             capture.tick(t);
             t += 50;
@@ -163,18 +163,18 @@ CaptureWalk walk_sectors(SmallPoolRig& rig, uint32_t session) {
     while (rig.pool.allocator().session_sector(store::SectorOwner::Diagnostics, session, index,
                                                sector)) {
         for (uint32_t slot = 0; slot < rig.pool.slots_per_sector(); slot++) {
-            uint8_t raw[diag::kRecordBytes];
+            uint8_t raw[diagnostics::kRecordBytes];
             if (!rig.pool.read_slot(sector, slot, raw)) break;
-            diag::Record record{};
-            if (diag::decode_record(raw, record) != Status::Ok) break;
-            if (record.type == diag::Type::Gap) {
-                diag::Gap gap{};
-                REQUIRE(diag::read(record, gap));
+            diagnostics::Record record{};
+            if (diagnostics::decode_record(raw, record) != Status::Ok) break;
+            if (record.type == diagnostics::Type::Gap) {
+                diagnostics::Gap gap{};
+                REQUIRE(diagnostics::read(record, gap));
                 walk.gaps++;
                 if (gap.dropped > walk.biggest_gap) walk.biggest_gap = gap.dropped;
             }
-            if (walk.gaps > 0 && record.type == diag::Type::Boot) walk.boots_after_gap++;
-            if (walk.gaps > 0 && record.type == diag::Type::Config) walk.configs_after_gap++;
+            if (walk.gaps > 0 && record.type == diagnostics::Type::Boot) walk.boots_after_gap++;
+            if (walk.gaps > 0 && record.type == diagnostics::Type::Config) walk.configs_after_gap++;
         }
         index++;
     }
@@ -218,19 +218,19 @@ TEST_CASE("capture: the floor refuses a sector, the refusal reaches the flash, t
     CHECK(rig.pool.allocator().owned(store::SectorOwner::Flights) == floor_sectors);
     CHECK(rig.capture.sectors_owned() == 1);
 
-    uint8_t raw[diag::kRecordBytes];
+    uint8_t raw[diagnostics::kRecordBytes];
     const uint32_t last = rig.capture.records_written() - 1;
     REQUIRE(rig.pool.read_slot(floor_sectors, last, raw));
-    diag::Record ended{};
-    REQUIRE(diag::decode_record(raw, ended) == Status::Ok);
-    CHECK(ended.type == diag::Type::End);
+    diagnostics::Record ended{};
+    REQUIRE(diagnostics::decode_record(raw, ended) == Status::Ok);
+    CHECK(ended.type == diagnostics::Type::End);
 
     REQUIRE(rig.pool.read_slot(floor_sectors, last - 1, raw));
-    diag::Record record{};
-    REQUIRE(diag::decode_record(raw, record) == Status::Ok);
-    CHECK(record.type == diag::Type::Gap);
-    diag::Gap gap{};
-    REQUIRE(diag::read(record, gap));
+    diagnostics::Record record{};
+    REQUIRE(diagnostics::decode_record(raw, record) == Status::Ok);
+    CHECK(record.type == diagnostics::Type::Gap);
+    diagnostics::Gap gap{};
+    REQUIRE(diagnostics::read(record, gap));
     CHECK(gap.dropped > 0);
 }
 
@@ -295,7 +295,7 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
     rig.capture.tick(t);
     REQUIRE(rig.capture.capturing());
 
-    for (int i = 0; i < diag::Recorder::kCapacity; i++)
+    for (int i = 0; i < diagnostics::Recorder::kCapacity; i++)
         REQUIRE(rig.recorder.record(bench_record(Rig::kBaseUtcS)));
     const int queued = rig.recorder.queued();
     rig.capture.tick(t += 50);
@@ -306,7 +306,7 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
 namespace {
 
 constexpr uint32_t kRecordsPerPage =
-    platform::host::FlashRegion::kPageBytes / static_cast<uint32_t>(diag::kRecordBytes);
+    platform::host::FlashRegion::kPageBytes / static_cast<uint32_t>(diagnostics::kRecordBytes);
 
 uint32_t frontier_slot(SmallPoolRig& rig) {
     return rig.pool.slots_per_sector() - rig.capture_store.slots_left();
@@ -335,7 +335,7 @@ void drain_to_slot(SmallPoolRig& rig, uint32_t& t, uint32_t slot) {
     REQUIRE(frontier_slot(rig) == slot);
 }
 
-diag::Record numbered(uint32_t i) { return bench_record(Rig::kBaseUtcS + 1000 + i); }
+diagnostics::Record numbered(uint32_t i) { return bench_record(Rig::kBaseUtcS + 1000 + i); }
 
 void queue_numbered(SmallPoolRig& rig, uint32_t count) {
     for (uint32_t i = 0; i < count; i++) REQUIRE(rig.recorder.record(numbered(i)));
@@ -344,9 +344,9 @@ void queue_numbered(SmallPoolRig& rig, uint32_t count) {
 void check_numbered(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t from,
                     uint32_t count) {
     for (uint32_t i = 0; i < count; i++) {
-        uint8_t want[diag::kRecordBytes];
-        diag::encode_record(numbered(from + i), want);
-        uint8_t got[diag::kRecordBytes];
+        uint8_t want[diagnostics::kRecordBytes];
+        diagnostics::encode_record(numbered(from + i), want);
+        uint8_t got[diagnostics::kRecordBytes];
         REQUIRE(rig.pool.read_slot(sector, slot + i, got));
         CHECK(std::memcmp(got, want, sizeof(want)) == 0);
     }
@@ -354,7 +354,7 @@ void check_numbered(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t 
 
 void check_erased(SmallPoolRig& rig, uint32_t sector, uint32_t slot, uint32_t count) {
     for (uint32_t i = 0; i < count; i++) {
-        uint8_t got[diag::kRecordBytes];
+        uint8_t got[diagnostics::kRecordBytes];
         REQUIRE(rig.pool.read_slot(sector, slot + i, got));
         CHECK(store::erased(got, sizeof(got)));
     }
@@ -373,7 +373,7 @@ TEST_CASE("capture: a drained second costs one flash write per NOR page, not one
     const uint32_t writes = rig.flash.writes;
     const uint32_t programs = rig.flash.programs;
 
-    const uint32_t second = diag::Recorder::kPeriodicRecordsPerSecond;
+    const uint32_t second = diagnostics::Recorder::kPeriodicRecordsPerSecond;
     queue_numbered(rig, second);
     rig.capture.tick(t += 50);
 

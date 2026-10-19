@@ -29,9 +29,9 @@ constexpr int kOfferedFaultsLine = 8;
 
 int line_y(int line) { return kTopY + line * kLineH; }
 
-void row(ui::Canvas& canvas, int line, char* buf, int n) {
-    buf[n] = 0;
-    canvas.draw_text(kLeft, line_y(line), buf, true, 1);
+void row(ui::Canvas& canvas, int line, char* buffer, int n) {
+    buffer[n] = 0;
+    canvas.draw_text(kLeft, line_y(line), buffer, true, 1);
 }
 
 int format_word(char* out, const char* word) {
@@ -47,8 +47,8 @@ int format_span(char* out, uint32_t seconds) {
     return n;
 }
 
-const char* capture_subjects(diag::Profile profile) {
-    return diag::paced(profile) ? "POWER AND DUTY" : "EVERY SUBJECT";
+const char* capture_subjects(diagnostics::Profile profile) {
+    return diagnostics::paced(profile) ? "POWER AND DUTY" : "EVERY SUBJECT";
 }
 
 const char* stopped_word(bus::CaptureStop stopped) {
@@ -83,7 +83,8 @@ void draw_state(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     row(canvas, kStateLine, text, written);
 }
 
-void draw_offered_capture(ui::Canvas& canvas, int line, diag::Profile profile, bool focused) {
+void draw_offered_capture(ui::Canvas& canvas, int line, diagnostics::Profile profile,
+                          bool focused) {
     const int y = line_y(line);
     if (focused)
         canvas.rect(2, y - kFocusBarRise, kGlassWidth - 4, kLineH - 1, true, /*fill=*/true);
@@ -126,7 +127,7 @@ void draw_wrote(ui::Canvas& canvas, const bus::CaptureState& c) {
 void draw_offer(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     if (snapshot.capture.available) {
         int line = kOfferLine;
-        diag::Profile profile = kFirstCapture;
+        diagnostics::Profile profile = kFirstCapture;
         do {
             draw_offered_capture(canvas, line++, profile, snapshot.focus == profile);
             profile = next_capture(profile);
@@ -176,11 +177,11 @@ void draw_hint(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
 
 }  // namespace
 
-const char* capture_name(diag::Profile profile) {
+const char* capture_name(diagnostics::Profile profile) {
     switch (profile) {
-        case diag::Profile::PowerRun: return "POWER RUN";
-        case diag::Profile::FlightRun: return "FLIGHT RUN";
-        case diag::Profile::Full: break;
+        case diagnostics::Profile::PowerRun: return "POWER RUN";
+        case diagnostics::Profile::FlightRun: return "FLIGHT RUN";
+        case diagnostics::Profile::Full: break;
     }
     return "FULL";
 }

@@ -74,7 +74,7 @@ SixPackSnapshot flying() {
     s.fix_valid = true;
     s.units = skyblip::go::Units::Nautical;
     s.speed_kt = 90;
-    s.alt_ft = 3450;
+    s.altitude_ft = 3450;
     s.climb_fpm = 500;
     s.climb_valid = true;
     s.track_deg = 270;
@@ -152,11 +152,11 @@ TEST_CASE("sixpack page: needles move with the data they show") {
     a.fix_valid = true;
     a.units = skyblip::go::Units::Nautical;
     a.speed_kt = 40;
-    a.alt_ft = 1200;
+    a.altitude_ft = 1200;
     a.track_deg = 0;
     SixPackSnapshot b = a;
     b.speed_kt = 140;
-    b.alt_ft = 1900;
+    b.altitude_ft = 1900;
     b.track_deg = 180;
 
     Glass fa, fbuf;
@@ -181,15 +181,18 @@ TEST_CASE("sixpack page: the altimeter reads like a three-pointer, the card like
     SixPackSnapshot s;
     s.fix_valid = true;
     s.units = skyblip::go::Units::Nautical;
-    s.alt_ft = 2500;  // long hand at 500 ft (down), short hand at 2.5/10 (right)
+    s.altitude_ft = 2500;  // long hand at 500 ft (down), short hand at 2.5/10 (right)
     Glass canvas;
     draw_sixpack(canvas, s);
 
-    const Tile alt = kTiles[2];
-    CHECK(canvas.get_pixel(alt.centre_x, alt.centre_y + 20));        // hundreds hand, straight down
-    CHECK(canvas.get_pixel(alt.centre_x + 12, alt.centre_y));        // thousands hand, quarter turn
-    CHECK_FALSE(canvas.get_pixel(alt.centre_x + 20, alt.centre_y));  // and it is the SHORT one
-    CHECK_FALSE(canvas.get_pixel(alt.centre_x, alt.centre_y - 20));
+    const Tile altitude = kTiles[2];
+    CHECK(canvas.get_pixel(altitude.centre_x,
+                           altitude.centre_y + 20));  // hundreds hand, straight down
+    CHECK(canvas.get_pixel(altitude.centre_x + 12,
+                           altitude.centre_y));  // thousands hand, quarter turn
+    CHECK_FALSE(
+        canvas.get_pixel(altitude.centre_x + 20, altitude.centre_y));  // and it is the SHORT one
+    CHECK_FALSE(canvas.get_pixel(altitude.centre_x, altitude.centre_y - 20));
 
     // The compass card turns with the track: north swings to the right when the
     // aircraft flies west.
@@ -213,7 +216,7 @@ TEST_CASE("sixpack page: the unit setting decides the speed dial, and only the s
     nautical.fix_valid = true;
     nautical.units = skyblip::go::Units::Nautical;
     nautical.speed_kt = 90;  // 166.7 km/h
-    nautical.alt_ft = 3450;
+    nautical.altitude_ft = 3450;
     nautical.climb_fpm = 500;
     nautical.climb_valid = true;
     nautical.track_deg = 7;

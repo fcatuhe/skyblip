@@ -16,9 +16,9 @@ inline model::Ownship flying(int speed_mps, int track_deg, int16_t turn_dps = 0,
     o.turn_cdps = static_cast<int16_t>(turn_dps * 100);
     o.fix_at_ms = at_ms;
     o.fix_valid = true;
-    o.lat_1e7 = 481000000;
-    o.lon_1e7 = 81000000;
-    o.alt_hae_mm = 1000000;
+    o.latitude_1e7 = 481000000;
+    o.longitude_1e7 = 81000000;
+    o.altitude_hae_mm = 1000000;
     o.speed_mm_s = speed_mps * 1000;
     o.track_cdeg = track_deg * 100;
     return o;
@@ -36,12 +36,13 @@ inline model::AircraftObservation neighbour(const model::Ownship& own, int north
     t.speed_valid = true;
     t.speed_q = static_cast<uint16_t>(speed_mps * 4);
     t.track_c9 = to_cordic9(CentiDegrees(track_deg * 100)).v;
-    t.alt_m = to_metres(Millimetres(own.alt_hae_mm)).v + up_m;
-    t.lat_1e7 = own.lat_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
+    t.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).v + up_m;
+    t.latitude_1e7 =
+        own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t ang =
-        static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
+        static_cast<int16_t>((static_cast<int64_t>(own.latitude_1e7) * 65536) / 3600000000LL);
     const int64_t east_scaled = static_cast<int64_t>(east_m) * kTrigOne / icos(ang);
-    t.lon_1e7 = own.lon_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
+    t.longitude_1e7 = own.longitude_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     t.received.at_s = at_ms / 1000;
     t.received.into_ms = static_cast<uint16_t>(at_ms % 1000);
     t.at_ms = at_ms;
@@ -57,9 +58,9 @@ inline model::AircraftObservation observation(uint32_t address, uint8_t address_
     o.received.at_s = at_s;
     o.source = source;
     o.position_valid = true;
-    o.lat_1e7 = 481000000;
-    o.lon_1e7 = 81000000;
-    o.alt_m = 1000;
+    o.latitude_1e7 = 481000000;
+    o.longitude_1e7 = 81000000;
+    o.altitude_m = 1000;
     return o;
 }
 

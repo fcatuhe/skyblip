@@ -1,5 +1,7 @@
 #include "products/skyblip_go/pages/confirm.h"
 
+#include <cstring>
+
 #include "core/util/format.h"
 
 namespace skyblip::go {
@@ -8,12 +10,6 @@ namespace {
 
 constexpr int kLeft = kConfirmLeftX;
 using ui::kCellW;
-
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
 
 int break_within(const char* text, int from, int to) {
     for (int i = from; i < to; i++)
@@ -25,17 +21,17 @@ int break_within(const char* text, int from, int to) {
 // sentence a pilot has to read in a hurry does not split a word, or where the
 // detail breaks it with '\n', one setting to a row.
 int take_line(const char* text, int from, char* out) {
-    const int len = length(text);
-    if (from >= len) {
+    const int length = static_cast<int>(std::strlen(text));
+    if (from >= length) {
         out[0] = 0;
         return from;
     }
     int end = from + kConfirmDetailCols;
-    const int newline = break_within(text, from, end < len ? end + 1 : len);
+    const int newline = break_within(text, from, end < length ? end + 1 : length);
     if (newline >= 0) {
         end = newline;
-    } else if (end >= len) {
-        end = len;
+    } else if (end >= length) {
+        end = length;
     } else {
         int space = end;
         while (space > from && text[space] != ' ') space--;
@@ -70,7 +66,7 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
 
     // The allowing gesture is reversed out and the refusing one is not, so the
     // two are told apart by shape before either is read.
-    const int w = (length(kConfirmAllowText) + 2) * kCellW;
+    const int w = (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellW;
     canvas.rect(kLeft, kConfirmAllowY - 4, w, 15, true, /*fill=*/true);
     canvas.draw_text(kLeft + kCellW, kConfirmAllowY, kConfirmAllowText, false, 1);
     canvas.draw_text(kLeft + kCellW, kConfirmRefuseY, kConfirmRefuseText, true, 1);

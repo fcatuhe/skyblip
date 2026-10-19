@@ -79,16 +79,17 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
                                   uint32_t now_ms) {
     if (target.observation.at_ms == recorded_observation_ms_[slot]) return;
     recorded_observation_ms_[slot] = target.observation.at_ms;
-    if (!context_.diag.armed()) return;
+    if (!context_.diagnostics.armed()) return;
 
     const traffic::AlarmAssessment& assessment = decision.assessment;
-    diag::Traffic value{};
+    diagnostics::Traffic value{};
     value.address = target.observation.address;
-    value.dist_m = diag::clamp_u16(
-        assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
-    value.bearing_deg = assessment.rel_bearing_deg;
-    value.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
-    value.closing_mps = diag::clamp_i16(assessment.closing_mps);
+    value.distance_m = diagnostics::clamp_u16(
+        assessment.relative_distance_m < 0 ? 0
+                                           : static_cast<uint32_t>(assessment.relative_distance_m));
+    value.bearing_deg = assessment.relative_bearing_deg;
+    value.relative_altitude_m = diagnostics::clamp_i16(assessment.relative_altitude_m);
+    value.closing_mps = diagnostics::clamp_i16(assessment.closing_mps);
     value.alarm = target.alarm_level;
     value.source = target.observation.source;
     value.rssi_dbm = target.observation.rssi_dbm;
@@ -97,7 +98,7 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
     value.dismissed = decision.dismissed;
     value.in_formation = target.in_formation;
     value.position_valid = target.observation.position_valid;
-    context_.diag.record(value, context_.instant(now_ms));
+    context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
 void AlarmService::park(uint32_t now_ms) {

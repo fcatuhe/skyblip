@@ -52,7 +52,7 @@ inline uint32_t L76k::heading_e2() const {
 }
 
 inline int32_t L76k::msl_dm() const {
-    const int32_t mm = alt_mm() - geoid_separation_m * 1000;
+    const int32_t mm = altitude_mm() - geoid_separation_m * 1000;
     return (mm >= 0 ? mm + 50 : mm - 50) / 100;
 }
 
@@ -70,9 +70,9 @@ inline void L76k::emit_rmc() {
     int n = format_string(s, "$GPRMC,");
     n += put_time(s + n);
     n += format_string(s + n, solving() ? ",A," : ",V,");
-    n += format_nmea_lat(s + n, walked_lat_1e7());
+    n += format_nmea_latitude(s + n, walked_latitude_1e7());
     s[n++] = ',';
-    n += format_nmea_lon(s + n, lon_1e7);
+    n += format_nmea_longitude(s + n, longitude_1e7);
     s[n++] = ',';
     n += format_uint(s + n, knots_e2(), 1, 2);
     s[n++] = ',';
@@ -86,7 +86,7 @@ inline void L76k::emit_rmc() {
 
 // INFO: fc 18sep26 one GSA per constellation, each naming its own satellites and system id
 inline void L76k::emit_gsa() {
-    const uint8_t budget = solving() ? sats : uint8_t{0};
+    const uint8_t budget = solving() ? satellites : uint8_t{0};
     const uint8_t in_view = static_cast<uint8_t>(gps_in_view + beidou_in_view + glonass_in_view);
     const uint8_t gps = share_of_solution(budget, gps_in_view, in_view);
     const uint8_t beidou = share_of_solution(budget, beidou_in_view, in_view);
@@ -129,9 +129,9 @@ inline void L76k::emit_gsa_for(uint8_t system_id, uint8_t first_id, uint8_t in_v
 inline void L76k::emit_gll() {
     char s[128];
     int n = format_string(s, "$GPGLL,");
-    n += format_nmea_lat(s + n, walked_lat_1e7());
+    n += format_nmea_latitude(s + n, walked_latitude_1e7());
     s[n++] = ',';
-    n += format_nmea_lon(s + n, lon_1e7);
+    n += format_nmea_longitude(s + n, longitude_1e7);
     s[n++] = ',';
     n += put_time(s + n);
     n += format_string(s + n, solving() ? ",A,A" : ",V,N");
@@ -202,13 +202,13 @@ inline void L76k::emit_gga() {
     int n = format_string(s, "$GPGGA,");
     n += put_time(s + n);
     s[n++] = ',';
-    n += format_nmea_lat(s + n, walked_lat_1e7());
+    n += format_nmea_latitude(s + n, walked_latitude_1e7());
     s[n++] = ',';
-    n += format_nmea_lon(s + n, lon_1e7);
+    n += format_nmea_longitude(s + n, longitude_1e7);
     s[n++] = ',';
     n += format_uint(s + n, solving() ? 1u : 0u, 1);
     s[n++] = ',';
-    n += format_uint(s + n, solving() ? sats : uint8_t{0}, 2);
+    n += format_uint(s + n, solving() ? satellites : uint8_t{0}, 2);
     s[n++] = ',';
     n += format_uint(s + n, hdop_e2, 3, 2);
     s[n++] = ',';

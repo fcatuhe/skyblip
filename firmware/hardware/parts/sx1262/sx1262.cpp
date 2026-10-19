@@ -18,8 +18,8 @@ void Sx1262::select_when_ready() {
     spi_.select(true);
 }
 
-void Sx1262::command(uint8_t opcode, const uint8_t* params, size_t n) {
-    write_frame(&opcode, 1, params, n);
+void Sx1262::command(uint8_t opcode, const uint8_t* parameters, size_t n) {
+    write_frame(&opcode, 1, parameters, n);
 }
 
 void Sx1262::read_command(uint8_t opcode, uint8_t* out, size_t n) {
@@ -121,12 +121,12 @@ Status Sx1262::begin() {
     command(sx::kSetDio2AsRfSwitch, &rfsw, 1);
     // SetDIO3AsTcxoCtrl: voltage byte + 3-byte startup delay (~5 ms @ 15.625 us).
     uint8_t tcxo[4] = {sx::kTcxoVolt1v8, 0x00, 0x01, 0x40};
-    command(sx::kSetDio3AsTcxoCtrl, tcxo, 4);
+    command(sx::kSetDio3AsTcxoControl, tcxo, 4);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     // INFO: fc 05sep26 DS 13.3.6: a TCXO part raises XOSC_START_ERR here for free
     clear_device_errors();
-    uint8_t calib = 0x7F;  // calibrate all blocks after switching to the TCXO
-    command(sx::kCalibrate, &calib, 1);
+    uint8_t calibration = 0x7F;  // calibrate all blocks after switching to the TCXO
+    command(sx::kCalibrate, &calibration, 1);
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     // INFO: wr 02aug26 DS 13.1.12: image rejection is calibrated per band and
     // only once the TCXO clock the calibration runs on is the chip's clock.
@@ -152,9 +152,9 @@ void Sx1262::clear_device_errors() {
 }
 
 Status Sx1262::check_device_errors() {
-    uint8_t err[2] = {0, 0};
-    read_command(sx::kGetDeviceErrors, err, 2);
-    device_errors_ = static_cast<uint16_t>(((err[0] << 8) | err[1]) & sx::kDeviceErrorMask);
+    uint8_t error[2] = {0, 0};
+    read_command(sx::kGetDeviceErrors, error, 2);
+    device_errors_ = static_cast<uint16_t>(((error[0] << 8) | error[1]) & sx::kDeviceErrorMask);
     if (device_errors_ == 0) return Status::Ok;
     clear_device_errors();
     return Status::Down;
@@ -208,7 +208,8 @@ bool same_modem(const RadioConfig& a, const RadioConfig& b) {
 }
 
 bool same_dwell(const RadioConfig& a, const RadioConfig& b) {
-    return a.freq_hz == b.freq_hz && a.freq_corr_e1_ppm == b.freq_corr_e1_ppm && same_modem(a, b);
+    return a.frequency_hz == b.frequency_hz &&
+           a.frequency_correction_e1_ppm == b.frequency_correction_e1_ppm && same_modem(a, b);
 }
 
 }  // namespace
@@ -229,16 +230,16 @@ void Sx1262::configure_modulation(const RadioConfig& config) {
     const uint32_t br = static_cast<uint32_t>(32ULL * sx::kXtalHz / bitrate);
     const uint32_t fdev =
         static_cast<uint32_t>((static_cast<uint64_t>(config.fdev_hz) << 25) / sx::kXtalHz);
-    uint8_t params[8];
-    params[0] = static_cast<uint8_t>(br >> 16);
-    params[1] = static_cast<uint8_t>(br >> 8);
-    params[2] = static_cast<uint8_t>(br);
-    params[3] = pulse_shape_index(config.gaussian_bt_e2);
-    params[4] = rx_bandwidth_index(config.bandwidth_hz);
-    params[5] = static_cast<uint8_t>(fdev >> 16);
-    params[6] = static_cast<uint8_t>(fdev >> 8);
-    params[7] = static_cast<uint8_t>(fdev);
-    command(sx::kSetModulationParams, params, sizeof(params));
+    uint8_t parameters[8];
+    parameters[0] = static_cast<uint8_t>(br >> 16);
+    parameters[1] = static_cast<uint8_t>(br >> 8);
+    parameters[2] = static_cast<uint8_t>(br);
+    parameters[3] = pulse_shape_index(config.gaussian_bt_e2);
+    parameters[4] = rx_bandwidth_index(config.bandwidth_hz);
+    parameters[5] = static_cast<uint8_t>(fdev >> 16);
+    parameters[6] = static_cast<uint8_t>(fdev >> 8);
+    parameters[7] = static_cast<uint8_t>(fdev);
+    command(sx::kSetModulationParameters, parameters, sizeof(parameters));
 }
 
 // About 2 mA for about 3 dB, taken deliberately (sx1262.h, kRxGainBoosted).
@@ -255,16 +256,16 @@ void Sx1262::configure_tx_clamp() {
 }
 
 void Sx1262::configure_tx_modulation() {
-    uint8_t reg = 0;
-    read_register(sx::kTxModulationRegister, &reg, 1);
-    reg = static_cast<uint8_t>(reg | sx::kTxModulationGfskBit);
-    write_register(sx::kTxModulationRegister, &reg, 1);
+    uint8_t register_address = 0;
+    read_register(sx::kTxModulationRegister, &register_address, 1);
+    register_address = static_cast<uint8_t>(register_address | sx::kTxModulationGfskBit);
+    write_register(sx::kTxModulationRegister, &register_address, 1);
 }
 
 void Sx1262::configure_power() {
     command(sx::kSetPaConfig, sx::kPaConfigHighPower, sizeof(sx::kPaConfigHighPower));
-    uint8_t params[2] = {static_cast<uint8_t>(sx::kConductedDbm), sx::kRampTime200Us};
-    command(sx::kSetTxParams, params, sizeof(params));
+    uint8_t parameters[2] = {static_cast<uint8_t>(sx::kConductedDbm), sx::kRampTime200Us};
+    command(sx::kSetTxParameters, parameters, sizeof(parameters));
     const uint8_t ocp = sx::kOcpLimit;
     write_register(sx::kOcpRegister, &ocp, 1);
 }
@@ -274,29 +275,29 @@ void Sx1262::configure_power() {
 void Sx1262::configure_irq() {
     const uint8_t hi = static_cast<uint8_t>(sx::kIrqMask >> 8);
     const uint8_t lo = static_cast<uint8_t>(sx::kIrqMask);
-    uint8_t params[8] = {hi, lo, hi, lo, 0, 0, 0, 0};
-    command(sx::kSetDioIrqParams, params, sizeof(params));
+    uint8_t parameters[8] = {hi, lo, hi, lo, 0, 0, 0, 0};
+    command(sx::kSetDioIrqParameters, parameters, sizeof(parameters));
 }
 
 void Sx1262::configure_frame(const RadioConfig& config) {
     if (config.sync_bits == 0) return;
     write_register(sx::kSyncWordRegister, config.sync, (config.sync_bits + 7u) / 8u);
-    write_packet_params(config.payload_bytes);
+    write_packet_parameters(config.payload_bytes);
 }
 
 // DS 13.4.6 SetPacketParams, GFSK, in the datasheet's order.
-void Sx1262::write_packet_params(uint8_t payload_bytes) {
-    uint8_t params[9] = {0};
-    params[0] = static_cast<uint8_t>(sx::kPreambleChips >> 8);
-    params[1] = static_cast<uint8_t>(sx::kPreambleChips);
-    params[2] = sx::kPreambleDetect8Chips;
-    params[3] = config_.sync_bits;
-    params[4] = sx::kAddrCompOff;
-    params[5] = sx::kFixedLength;
-    params[6] = payload_bytes;
-    params[7] = sx::kCrcOff;
-    params[8] = sx::kWhiteningOff;
-    command(sx::kSetPacketParams, params, sizeof(params));
+void Sx1262::write_packet_parameters(uint8_t payload_bytes) {
+    uint8_t parameters[9] = {0};
+    parameters[0] = static_cast<uint8_t>(sx::kPreambleChips >> 8);
+    parameters[1] = static_cast<uint8_t>(sx::kPreambleChips);
+    parameters[2] = sx::kPreambleDetect8Chips;
+    parameters[3] = config_.sync_bits;
+    parameters[4] = sx::kAddrCompOff;
+    parameters[5] = sx::kFixedLength;
+    parameters[6] = payload_bytes;
+    parameters[7] = sx::kCrcOff;
+    parameters[8] = sx::kWhiteningOff;
+    command(sx::kSetPacketParameters, parameters, sizeof(parameters));
     packet_bytes_ = payload_bytes;
 }
 
@@ -341,7 +342,8 @@ Status Sx1262::retune(const RadioConfig& config, RadioMode was) {
 // is computed, so receive and transmit are trimmed by construction and
 // nothing downstream carries a second copy of the correction.
 void Sx1262::write_frequency(const RadioConfig& config) {
-    const uint32_t tuned_hz = sx::trimmed_hz(config.freq_hz, config.freq_corr_e1_ppm);
+    const uint32_t tuned_hz =
+        sx::trimmed_hz(config.frequency_hz, config.frequency_correction_e1_ppm);
     uint64_t frf = (static_cast<uint64_t>(tuned_hz) << 25) / 32000000ULL;
     uint8_t f[4] = {static_cast<uint8_t>(frf >> 24), static_cast<uint8_t>(frf >> 16),
                     static_cast<uint8_t>(frf >> 8), static_cast<uint8_t>(frf)};
@@ -350,35 +352,36 @@ void Sx1262::write_frequency(const RadioConfig& config) {
 
 // Preamble, sync window and payload at the configured bit rate, plus the margin
 // SoftRF uses to decide a burst is never going to end (almic.cpp:510).
-uint32_t Sx1262::tx_timeout_ticks(uint8_t len) const {
+uint32_t Sx1262::tx_timeout_ticks(uint8_t length) const {
     const uint64_t ticks =
-        (static_cast<uint64_t>(air_us(len)) + sx::kTxGuardUs) * 1000ULL / sx::kTimeoutStepNs;
+        (static_cast<uint64_t>(air_us(length)) + sx::kTxGuardUs) * 1000ULL / sx::kTimeoutStepNs;
     return ticks > sx::kTimeoutTicksMax ? sx::kTimeoutTicksMax : static_cast<uint32_t>(ticks);
 }
 
-uint32_t Sx1262::air_us(uint8_t len) const {
+uint32_t Sx1262::air_us(uint8_t length) const {
     const uint32_t bitrate = config_.bitrate != 0 ? config_.bitrate : 100000u;
-    const uint32_t bits = sx::kPreambleChips + config_.sync_bits + static_cast<uint32_t>(len) * 8u;
+    const uint32_t bits =
+        sx::kPreambleChips + config_.sync_bits + static_cast<uint32_t>(length) * 8u;
     return static_cast<uint32_t>(static_cast<uint64_t>(bits) * 1000000ULL / bitrate);
 }
 
-Status Sx1262::transmit(const uint8_t* data, uint8_t len) {
-    const Status staged = stage_tx(data, len);
+Status Sx1262::transmit(const uint8_t* data, uint8_t length) {
+    const Status staged = stage_tx(data, length);
     if (staged != Status::Ok) return staged;
     return key_tx();
 }
 
 // INFO: fc 28sep26 DS 13.1: SetPacketParams is standby-only, so the burst's length leaves RX
-Status Sx1262::stage_tx(const uint8_t* data, uint8_t len) {
+Status Sx1262::stage_tx(const uint8_t* data, uint8_t length) {
     if (!configured_) return Status::Invalid;
     if (wait_busy_low() != Status::Ok) return Status::Timeout;
     if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
         return Status::Timeout;
-    if (packet_bytes_ != len) write_packet_params(len);
+    if (packet_bytes_ != length) write_packet_parameters(length);
     const uint8_t head[2] = {sx::kWriteBuffer, 0};
-    write_frame(head, sizeof(head), data, len);
+    write_frame(head, sizeof(head), data, length);
     configure_irq();
-    staged_bytes_ = len;
+    staged_bytes_ = length;
     return Status::Ok;
 }
 
@@ -399,7 +402,7 @@ Status Sx1262::start_receive() {
     if (config_.sync_bits != 0 && packet_bytes_ != config_.payload_bytes) {
         if (mode_ != RadioMode::Standby && enter_standby_on_tcxo() != Status::Ok)
             return Status::Timeout;
-        write_packet_params(config_.payload_bytes);
+        write_packet_parameters(config_.payload_bytes);
     }
     configure_irq();
     uint8_t cont[3] = {0xFF, 0xFF, 0xFF};
@@ -444,60 +447,60 @@ int8_t Sx1262::packet_rssi_dbm() {
     return static_cast<int8_t>(-(static_cast<int>(st3[2]) / 2));
 }
 
-uint8_t Sx1262::read_payload(uint8_t* rx_buf, uint8_t cap) {
+uint8_t Sx1262::read_payload(uint8_t* rx_buffer, uint8_t cap) {
     uint8_t st[2];
     read_command(sx::kGetRxBufferStatus, st, 2);
-    uint8_t len = st[0];
-    len = std::min(len, cap);
+    uint8_t length = st[0];
+    length = std::min(length, cap);
     select_when_ready();
     uint8_t header[3] = {sx::kReadBuffer, st[1], 0};
     spi_.transfer(header, nullptr, sizeof(header));
-    for (int read = 0; read < len; read += sx::kReadChunkBytes) {
-        const int left = len - read;
-        spi_.transfer(nullptr, rx_buf + read,
+    for (int read = 0; read < length; read += sx::kReadChunkBytes) {
+        const int left = length - read;
+        spi_.transfer(nullptr, rx_buffer + read,
                       static_cast<size_t>(left < sx::kReadChunkBytes ? left : sx::kReadChunkBytes));
     }
     spi_.select(false);
-    return len;
+    return length;
 }
 
-RadioEvent Sx1262::poll(uint8_t* rx_buf, uint8_t cap) {
-    RadioEvent ev{};
+RadioEvent Sx1262::poll(uint8_t* rx_buffer, uint8_t cap) {
+    RadioEvent event{};
     if (wait_busy_low(10000) != Status::Ok) {
-        ev.type = RadioEventType::Fault;
-        return ev;
+        event.type = RadioEventType::Fault;
+        return event;
     }
     uint8_t irq[2];
     read_command(sx::kGetIrqStatus, irq, 2);
     uint16_t flags = static_cast<uint16_t>((irq[0] << 8) | irq[1]);
-    if (flags == 0) return ev;
+    if (flags == 0) return event;
 
     uint8_t clr[2] = {irq[0], irq[1]};
     command(sx::kClearIrqStatus, clr, 2);
 
     if (flags & sx::kIrqTxDone) {
-        ev.type = RadioEventType::TxDone;
-        return ev;
+        event.type = RadioEventType::TxDone;
+        return event;
     }
     if (flags & sx::kIrqTimeout) {
-        ev.type = RadioEventType::Timeout;
+        event.type = RadioEventType::Timeout;
         if (mode_ == RadioMode::Tx) recover_tx();
-        return ev;
+        return event;
     }
-    if (flags & sx::kIrqCrcErr) {
-        ev.type = RadioEventType::CrcError;
-        ev.rssi_dbm = packet_rssi_dbm();
-        ev.rssi_valid = true;
-        return ev;
+    if (flags & sx::kIrqCrcError) {
+        event.type = RadioEventType::CrcError;
+        event.rssi_dbm = packet_rssi_dbm();
+        event.rssi_valid = true;
+        return event;
     }
     if (flags & sx::kIrqRxDone) {
-        ev.len = read_payload(rx_buf, cap);
-        ev.rssi_dbm = packet_rssi_dbm();
-        ev.rssi_valid = true;
-        ev.type = RadioEventType::RxDone;
+        event.length = read_payload(rx_buffer, cap);
+        event.rssi_dbm = packet_rssi_dbm();
+        event.rssi_valid = true;
+        event.type = RadioEventType::RxDone;
         since_rx_ms_ = 0;
     }
-    return ev;
+    return event;
 }
 
 // The PA is keyed until something unkeys it. The chip's own SetTx timeout is

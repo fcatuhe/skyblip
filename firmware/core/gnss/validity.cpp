@@ -36,7 +36,7 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
         gga_heard_ = true;
         gga_ms_ = now_ms;
         gga_fix_valid_ = solution.fix_quality >= kQualityGps &&
-                         solution.fix_quality <= kQualityFloatRtk && solution.alt_msl_valid;
+                         solution.fix_quality <= kQualityFloatRtk && solution.altitude_msl_valid;
         return;
     }
     if (which != Sentence::Rmc) return;
@@ -56,16 +56,16 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
         return;
     }
 
-    const int32_t lon_step_1e7 =
-        wrapped_lon_1e7(static_cast<int64_t>(solution.lon_1e7) - previous_lon_1e7_);
-    jumped_ = previous_valid_ &&
-              (magnitude(solution.lat_1e7 - previous_lat_1e7_) > kLatitudeJumpCeiling1e7 ||
-               magnitude(lon_step_1e7) > kLongitudeJumpCeiling1e7);
+    const int32_t longitude_step_1e7 = wrapped_longitude_1e7(
+        static_cast<int64_t>(solution.longitude_1e7) - previous_longitude_1e7_);
+    jumped_ = previous_valid_ && (magnitude(solution.latitude_1e7 - previous_latitude_1e7_) >
+                                      kLatitudeJumpCeiling1e7 ||
+                                  magnitude(longitude_step_1e7) > kLongitudeJumpCeiling1e7);
     // The new position becomes the reference either way: one implausible step
     // costs one fix, not every fix after it. Two receivers disagreeing about
     // where we are is a stuck state; a single spike is a spike.
-    previous_lat_1e7_ = solution.lat_1e7;
-    previous_lon_1e7_ = solution.lon_1e7;
+    previous_latitude_1e7_ = solution.latitude_1e7;
+    previous_longitude_1e7_ = solution.longitude_1e7;
     previous_valid_ = true;
 }
 

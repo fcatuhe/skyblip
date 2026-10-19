@@ -2,8 +2,8 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CAPTURE_H
 
 #include "core/comms/config.h"
-#include "core/diag/payload.h"
-#include "core/diag/profile.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
 #include "products/skyblip_go/services/record_store.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
@@ -37,11 +37,11 @@ class CaptureService : public runtime::Service {
     bool capturing() const { return open_; }
     uint32_t session_id() const { return session_id_; }
     uint32_t records_written() const { return store_.session_records(); }
-    uint32_t records_dropped() const { return context_.diag.dropped(); }
+    uint32_t records_dropped() const { return context_.diagnostics.dropped(); }
     uint32_t sectors_owned() const { return store_.sectors_owned(); }
     bus::CaptureStop stopped() const { return stopped_; }
 
-    uint32_t keeps_s(diag::Profile profile) const;
+    uint32_t keeps_s(diagnostics::Profile profile) const;
 
    private:
     void open(uint32_t now_ms);
@@ -56,7 +56,7 @@ class CaptureService : public runtime::Service {
     bool write_gap(uint32_t now_ms);
     void publish(uint32_t now_ms);
     bool publish_due(uint32_t now_ms) const;
-    void count_toward_rate(diag::Type type, uint32_t now_ms);
+    void count_toward_rate(diagnostics::Type type, uint32_t now_ms);
     uint32_t records_per_hour() const;
     uint32_t measured_records_per_hour() const;
     uint32_t growth_slots() const;
@@ -78,7 +78,7 @@ class CaptureService : public runtime::Service {
     bool open_{false};
     bool ended_{false};
 
-    diag::Record run_[kMaxRunSlots]{};
+    diagnostics::Record run_[kMaxRunSlots]{};
     uint8_t scratch_[kMaxRunSlots * kStoreRecordBytes]{};
 };
 

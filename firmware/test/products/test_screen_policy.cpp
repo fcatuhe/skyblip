@@ -195,7 +195,7 @@ TEST_CASE("screen policy: presents wait for the panel, none is issued mid-refres
     rig.tick(t += 1000);  // boot full: the glass is busy 2.5 s
     const int count = rig.chip.present_count;
 
-    rig.state.own.sats = 8;  // a visible change, right away
+    rig.state.own.satellites = 8;  // a visible change, right away
     rig.screen.mark_dirty();
     rig.tick(t += 100);  // 1.1 s: full not settled yet
     CHECK(rig.chip.present_count == count);
@@ -401,7 +401,7 @@ TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second,
     uint32_t t = 0;
     rig.recorder.arm();
     rig.run_seconds(t, 3);
-    diag::Record record{};
+    diagnostics::Record record{};
     while (rig.recorder.peek(record)) rig.recorder.commit();
 
     int recorded = 0;
@@ -409,7 +409,7 @@ TEST_CASE("screen policy: under a PPS lock the screen is recorded once a second,
         locked_tick(rig, t);
         while (rig.recorder.peek(record)) {
             rig.recorder.commit();
-            if (record.type != diag::Type::Screen) continue;
+            if (record.type != diagnostics::Type::Screen) continue;
             recorded++;
             CAPTURE(t);
             CHECK(record.phase_valid());

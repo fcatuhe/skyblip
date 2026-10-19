@@ -1,19 +1,19 @@
 // What the device sensed: a fix, a PPS edge, a burst, the barometer, the hub, the cell, a thumb.
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
-#include "test/support/diag_round_trip.h"
+#include "test/support/diagnostics_round_trip.h"
 
 using namespace skyblip;
 
 TEST_CASE("diag record: a fix carries where in its second it landed and why it was refused") {
-    diag::Gnss in{};
+    diagnostics::Gnss in{};
     in.nav_ms = 287;
     in.resid_m = 41;
     in.hdop_e2 = 123;
     in.vdop_e2 = 211;
     in.stage_s = 4096;
-    in.sats = 11;
-    in.sats_in_view = 19;
+    in.satellites = 11;
+    in.satellites_in_view = 19;
     in.fix_mode = 3;
     in.reject = gnss::FixReject::Jump;
     in.stage = gnss::Stage::Solving;
@@ -24,14 +24,14 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
     in.tx_settled = true;
     in.levels_fresh = true;
 
-    const diag::Gnss out = diag_round_trip(in);
+    const diagnostics::Gnss out = diagnostics_round_trip(in);
     CHECK(out.nav_ms == in.nav_ms);
     CHECK(out.resid_m == in.resid_m);
     CHECK(out.hdop_e2 == in.hdop_e2);
     CHECK(out.vdop_e2 == in.vdop_e2);
     CHECK(out.stage_s == in.stage_s);
-    CHECK(out.sats == in.sats);
-    CHECK(out.sats_in_view == in.sats_in_view);
+    CHECK(out.satellites == in.satellites);
+    CHECK(out.satellites_in_view == in.satellites_in_view);
     CHECK(out.fix_mode == in.fix_mode);
     CHECK(out.reject == in.reject);
     CHECK(out.stage == in.stage);
@@ -44,7 +44,7 @@ TEST_CASE("diag record: a fix carries where in its second it landed and why it w
 }
 
 TEST_CASE("diag record: a PPS edge keeps the sign of its error") {
-    diag::Pps in{};
+    diagnostics::Pps in{};
     in.interval_us = 999873;
     in.error_us = -127;
     in.samples = 3600;
@@ -53,7 +53,7 @@ TEST_CASE("diag record: a PPS edge keeps the sign of its error") {
     in.locked = true;
     in.utc_valid = true;
 
-    const diag::Pps out = diag_round_trip(in);
+    const diagnostics::Pps out = diagnostics_round_trip(in);
     CHECK(out.interval_us == in.interval_us);
     CHECK(out.error_us == in.error_us);
     CHECK(out.samples == in.samples);
@@ -69,7 +69,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.band = model::Band::M;
     in.source = model::Source::Alptas;
     in.address = 0xDD8241;
-    in.at_s = kDiagTestUtcS;
+    in.at_s = kDiagnosticsTestUtcS;
     in.into_ms = 462;
     in.tx_keyed_us = 619;
     in.tx_span_us = 6014;
@@ -77,7 +77,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.rssi_dbm = -97;
     in.key_offset_s = -18;
     in.channel = 1;
-    in.len = 26;
+    in.length = 26;
     in.address_valid = true;
     in.rssi_valid = true;
     in.utc_dated = true;
@@ -86,13 +86,13 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     in.tx_span_valid = true;
     in.callsign = true;
 
-    const diag::Record record = diag::record_of(in);
-    uint8_t raw[diag::kRecordBytes]{};
-    diag::encode_record(record, raw);
-    diag::Record decoded{};
-    CHECK(diag::decode_record(raw, decoded) == Status::Ok);
+    const diagnostics::Record record = diagnostics::record_of(in);
+    uint8_t raw[diagnostics::kRecordBytes]{};
+    diagnostics::encode_record(record, raw);
+    diagnostics::Record decoded{};
+    CHECK(diagnostics::decode_record(raw, decoded) == Status::Ok);
     radio::Entry out{};
-    CHECK(diag::read(decoded, out));
+    CHECK(diagnostics::read(decoded, out));
 
     CHECK(out.verdict == in.verdict);
     CHECK(out.band == in.band);
@@ -106,7 +106,7 @@ TEST_CASE("diag record: a burst is the whole tape entry, instant and verdict tog
     CHECK(out.rssi_dbm == in.rssi_dbm);
     CHECK(out.key_offset_s == in.key_offset_s);
     CHECK(out.channel == in.channel);
-    CHECK(out.len == in.len);
+    CHECK(out.length == in.length);
     CHECK(out.address_valid);
     CHECK(out.rssi_valid);
     CHECK(out.utc_dated);
@@ -125,9 +125,9 @@ TEST_CASE("diag record: a burst that carried a callsign says so, and a position 
     position.verdict = radio::Verdict::Transmitted;
 
     radio::Entry out{};
-    CHECK(diag::read(diag::record_of(named), out));
+    CHECK(diagnostics::read(diagnostics::record_of(named), out));
     CHECK(out.callsign);
-    CHECK(diag::read(diag::record_of(position), out));
+    CHECK(diagnostics::read(diagnostics::record_of(position), out));
     CHECK_FALSE(out.callsign);
 }
 
@@ -135,29 +135,29 @@ TEST_CASE("diag record: every one of the twelve verdicts survives the slot") {
     for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Unattempted); i++) {
         radio::Entry in{};
         in.verdict = static_cast<radio::Verdict>(i);
-        uint8_t raw[diag::kRecordBytes]{};
-        diag::encode_record(diag::record_of(in), raw);
-        diag::Record decoded{};
-        CHECK(diag::decode_record(raw, decoded) == Status::Ok);
+        uint8_t raw[diagnostics::kRecordBytes]{};
+        diagnostics::encode_record(diagnostics::record_of(in), raw);
+        diagnostics::Record decoded{};
+        CHECK(diagnostics::decode_record(raw, decoded) == Status::Ok);
         radio::Entry out{};
-        CHECK(diag::read(decoded, out));
+        CHECK(diagnostics::read(decoded, out));
         CHECK(out.verdict == in.verdict);
     }
 }
 
 TEST_CASE("diag record: baro keeps the pressure beside the altitude derived from it") {
-    diag::Baro in{};
+    diagnostics::Barometer in{};
     in.pressure_mpa = 101325000;
-    in.alt_mm = -412;
+    in.altitude_mm = -412;
     in.climb_mm_s = -2100;
     in.temperature_dc = 231;
     in.active = true;
     in.temperature_valid = true;
     in.climb_adopted = true;
 
-    const diag::Baro out = diag_round_trip(in);
+    const diagnostics::Barometer out = diagnostics_round_trip(in);
     CHECK(out.pressure_mpa == in.pressure_mpa);
-    CHECK(out.alt_mm == in.alt_mm);
+    CHECK(out.altitude_mm == in.altitude_mm);
     CHECK(out.climb_mm_s == in.climb_mm_s);
     CHECK(out.temperature_dc == in.temperature_dc);
     CHECK(out.active);
@@ -166,7 +166,7 @@ TEST_CASE("diag record: baro keeps the pressure beside the altitude derived from
 }
 
 TEST_CASE("diag record: motion keeps the ball and both ends of the g-meter") {
-    diag::Motion in{};
+    diagnostics::Motion in{};
     in.slip_mg = -87;
     in.normal_mg = 1620;
     in.lateral_mg = -140;
@@ -179,7 +179,7 @@ TEST_CASE("diag record: motion keeps the ball and both ends of the g-meter") {
     in.gload_valid = true;
     in.fitted = true;
 
-    const diag::Motion out = diag_round_trip(in);
+    const diagnostics::Motion out = diagnostics_round_trip(in);
     CHECK(out.slip_mg == in.slip_mg);
     CHECK(out.normal_mg == in.normal_mg);
     CHECK(out.lateral_mg == in.lateral_mg);
@@ -194,7 +194,7 @@ TEST_CASE("diag record: motion keeps the ball and both ends of the g-meter") {
 }
 
 TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings counted") {
-    diag::Power in{};
+    diagnostics::Power in{};
     in.cell_mv = 3987;
     in.supply_warnings = 3;
     in.implausible = 12;
@@ -209,7 +209,7 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
     in.valid = true;
     in.die_valid = true;
 
-    const diag::Power out = diag_round_trip(in);
+    const diagnostics::Power out = diagnostics_round_trip(in);
     CHECK(out.cell_mv == in.cell_mv);
     CHECK(out.supply_warnings == in.supply_warnings);
     CHECK(out.implausible == in.implausible);
@@ -226,36 +226,36 @@ TEST_CASE("diag record: power keeps the cell, the verdict on it and the warnings
 }
 
 TEST_CASE("diag record: the knee rides inside the level, and the bit it used to ride stays clear") {
-    diag::Power in{};
+    diagnostics::Power in{};
     in.cell_mv = 3550;
     in.level = power::PowerLevel::Low;
 
-    CHECK((diag::record_of(in, diag_test_instant()).flags & (1u << 6)) == 0);
-    CHECK(diag_round_trip(in).level == power::PowerLevel::Low);
+    CHECK((diagnostics::record_of(in, diagnostics_test_instant()).flags & (1u << 6)) == 0);
+    CHECK(diagnostics_round_trip(in).level == power::PowerLevel::Low);
 }
 
 TEST_CASE("diag record: the retired trim bit and bytes are written clear and never reused") {
-    diag::Power in{};
+    diagnostics::Power in{};
     in.cell_mv = 4812;
     in.sample_offset_mv = -5;
     in.external_power = true;
     in.charging = true;
 
-    const diag::Record r = diag::record_of(in, diag_test_instant());
+    const diagnostics::Record r = diagnostics::record_of(in, diagnostics_test_instant());
     CHECK((r.flags & (1u << 7)) == 0);
     CHECK(r.payload[13] == 0);
     CHECK(r.payload[14] == 0);
 }
 
 TEST_CASE("diag record: a contact keeps the instant the level moved, not the poll that saw it") {
-    diag::Contact in{};
+    diagnostics::Contact in{};
     in.at_ms = 4294967295u;
     in.held_ms = 1004;
     in.contact = events::Contact::Pad;
     in.gesture = 2;
     in.down = true;
 
-    const diag::Contact out = diag_round_trip(in);
+    const diagnostics::Contact out = diagnostics_round_trip(in);
     CHECK(out.at_ms == in.at_ms);
     CHECK(out.held_ms == in.held_ms);
     CHECK(out.contact == in.contact);
@@ -264,17 +264,17 @@ TEST_CASE("diag record: a contact keeps the instant the level moved, not the pol
 }
 
 TEST_CASE("diag record: a link event keeps the payload the central negotiated") {
-    diag::Link in{};
+    diagnostics::Link in{};
     in.link_session = 41;
     in.payload_bytes = 182;
     in.frame_bytes = 96;
     in.holder = 41;
     in.drops = 3;
-    in.action = diag::LinkAction::ClaimTaken;
+    in.action = diagnostics::LinkAction::ClaimTaken;
     in.endpoint = events::Endpoint::Log;
     in.claim_held = true;
 
-    const diag::Link out = diag_round_trip(in);
+    const diagnostics::Link out = diagnostics_round_trip(in);
     CHECK(out.link_session == in.link_session);
     CHECK(out.payload_bytes == in.payload_bytes);
     CHECK(out.frame_bytes == in.frame_bytes);
@@ -286,25 +286,25 @@ TEST_CASE("diag record: a link event keeps the payload the central negotiated") 
 }
 
 TEST_CASE("diag record: a counter past what the field holds saturates rather than wrapping") {
-    diag::Power in{};
+    diagnostics::Power in{};
     in.supply_warnings = 70000;
     in.implausible = 65535;
-    const diag::Power out = diag_round_trip(in);
+    const diagnostics::Power out = diagnostics_round_trip(in);
     CHECK(out.supply_warnings == 65535);
     CHECK(out.implausible == 65535);
 }
 
 TEST_CASE("diag record: a dwell change carries how long it took and how early it listened") {
-    diag::Switch in{};
+    diagnostics::Switch in{};
     in.to_hz = 868400000;
     in.margin_us = -2921;
     in.took_us = 5921;
     in.gap_us = 412;
-    in.kind = diag::SwitchKind::Hop;
+    in.kind = diagnostics::SwitchKind::Hop;
     in.armed_ahead = true;
     in.late = true;
 
-    const diag::Switch out = diag_round_trip(in);
+    const diagnostics::Switch out = diagnostics_round_trip(in);
     CHECK(out.to_hz == in.to_hz);
     CHECK(out.margin_us == in.margin_us);
     CHECK(out.took_us == in.took_us);
@@ -322,8 +322,8 @@ TEST_CASE("diag record: a stage margin past what the byte holds saturates at its
     early.tx_stage_margin_us = 1999;
 
     radio::Entry out{};
-    CHECK(diag::read(diag::record_of(late), out));
+    CHECK(diagnostics::read(diagnostics::record_of(late), out));
     CHECK(out.tx_stage_margin_us == -1280);
-    CHECK(diag::read(diag::record_of(early), out));
+    CHECK(diagnostics::read(diagnostics::record_of(early), out));
     CHECK(out.tx_stage_margin_us == 1270);
 }

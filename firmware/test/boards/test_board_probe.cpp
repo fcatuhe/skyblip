@@ -30,7 +30,7 @@ TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
 
     // The barometer, at the address that actually answered rather than at
     // whichever of the two the devicetree happened to declare first.
-    CHECK(int(inventory.baro_address) == 0x76);
+    CHECK(int(inventory.barometer_address) == 0x76);
     CHECK(inventory.has_i2c_address(0x76));
     CHECK_FALSE(inventory.has_i2c_address(0x77));
 
@@ -207,7 +207,7 @@ TEST_CASE("board: a barometer at LilyGO's address is the one reported") {
     platform.i2c_bus().answer(0x77, true);
     Board board{platform, bus};
 
-    CHECK(int(board.inventory().baro_address) == 0x77);
+    CHECK(int(board.inventory().barometer_address) == 0x77);
 }
 
 TEST_CASE("board: the status lamp is a devicetree fact, and a board without one says so") {

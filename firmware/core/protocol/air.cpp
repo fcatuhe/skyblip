@@ -25,13 +25,13 @@ System system_of(const uint8_t* data) {
     return System::Unknown;
 }
 
-void shift_left(uint8_t* bytes, size_t len, uint8_t bits) {
+void shift_left(uint8_t* bytes, size_t length, uint8_t bits) {
     const size_t byte_offset = bits >> 3;
     const uint8_t rest = bits & 7;
-    for (size_t i = 0; i < len; i++) {
-        const size_t src = i + byte_offset;
-        const uint32_t high = src < len ? bytes[src] : 0u;
-        const uint32_t low = src + 1 < len ? bytes[src + 1] : 0u;
+    for (size_t i = 0; i < length; i++) {
+        const size_t source = i + byte_offset;
+        const uint32_t high = source < length ? bytes[source] : 0u;
+        const uint32_t low = source + 1 < length ? bytes[source + 1] : 0u;
         bytes[i] = static_cast<uint8_t>((high << rest) | (rest != 0 ? low >> (8u - rest) : 0u));
     }
 }

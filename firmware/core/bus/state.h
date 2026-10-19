@@ -109,7 +109,7 @@ struct GnssStatus {
     gnss::SkyView sky{};
 };
 
-struct BaroState {
+struct BarometerState {
     uint32_t pressure_mpa{0};
     int16_t temperature_dc{0};
     bool temperature_valid{false};
@@ -191,7 +191,7 @@ struct State {
     PowerState power{};
     FlightStatus flight{};
     GnssStatus gnss{};
-    BaroState baro{};
+    BarometerState barometer{};
     SlipState slip{};
     IndicatedState indicated{};
     GLoadState gload{};

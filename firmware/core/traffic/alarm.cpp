@@ -22,17 +22,17 @@ void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& ea
 }
 
 Level level_for(const AlarmAssessment& assessment) {
-    const bool in_window =
-        std::abs(assessment.rel_alt_m) <= kAdvisoryAltM && assessment.rel_dist_m <= kAdvisoryDistM;
+    const bool in_window = std::abs(assessment.relative_altitude_m) <= kAdvisoryAltitudeM &&
+                           assessment.relative_distance_m <= kAdvisoryDistanceM;
     return in_window ? Level::Advisory : Level::None;
 }
 
 }  // namespace
 
 int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
-                     int32_t north_m, int32_t east_m, int32_t dist_m) {
+                     int32_t north_m, int32_t east_m, int32_t distance_m) {
     constexpr int32_t unknown_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
-    if (dist_m <= 0) return unknown_mm_s;
+    if (distance_m <= 0) return unknown_mm_s;
 
     int64_t own_n = 0, own_e = 0;
     velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
@@ -42,7 +42,7 @@ int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation
                      to_angle16(Cordic9(target.track_c9)), target_n, target_e);
 
     const int64_t along = (target_n - own_n) * north_m + (target_e - own_e) * east_m;
-    const int64_t scale = static_cast<int64_t>(dist_m) * kTrigOne;
+    const int64_t scale = static_cast<int64_t>(distance_m) * kTrigOne;
     int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
     if (!target.speed_valid) closing += unknown_mm_s;
     return closing;
@@ -58,17 +58,19 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     int32_t north_m, east_m, up_m;
     if (!flight::relative_ned(own, target, north_m, east_m, up_m)) return assessment;
     assessment.valid = true;
-    assessment.rel_alt_m = up_m;
-    assessment.rel_dist_m = static_cast<int32_t>(idistance(north_m, east_m));
-    assessment.closing_mps = div_round(
-        closing_mm_s(own, target, north_m, east_m, assessment.rel_dist_m), kMillimetresPerMetre);
+    assessment.relative_altitude_m = up_m;
+    assessment.relative_distance_m = static_cast<int32_t>(idistance(north_m, east_m));
+    assessment.closing_mps =
+        div_round(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
+                  kMillimetresPerMetre);
 
     const int16_t bearing = iatan2(east_m, north_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
     const int bearing_deg = static_cast<int>(
         div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
         360);
-    assessment.rel_bearing_deg = static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);
+    assessment.relative_bearing_deg =
+        static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);
 
     const bool grounded =
         flight::on_ground(reported.flight_state) || flight::on_ground(own.flight_state);

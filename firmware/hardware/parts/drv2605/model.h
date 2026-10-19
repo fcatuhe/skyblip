@@ -24,25 +24,25 @@ class Drv2605 : public io::I2c, public io::Gpio {
     // io::I2c. A register write is address then value, a register read is a
     // one-byte write of the address followed by a read, which is what the driver
     // does and what the datasheet's protocol section describes.
-    bool write(uint8_t address, const uint8_t* data, size_t len) override {
+    bool write(uint8_t address, const uint8_t* data, size_t length) override {
         if (address != kAddress || !answers) return false;
         writes++;
-        if (len == 0) return true;  // the bus's presence probe
+        if (length == 0) return true;  // the bus's presence probe
         pointer = data[0];
-        for (size_t i = 1; i < len; i++) {
-            const uint8_t reg = static_cast<uint8_t>(pointer + i - 1);
-            if (reg < kRegisterCount) registers[reg] = data[i];
-            if (reg == kRegGo && data[i] != 0) go_pulses++;
+        for (size_t i = 1; i < length; i++) {
+            const uint8_t register_address = static_cast<uint8_t>(pointer + i - 1);
+            if (register_address < kRegisterCount) registers[register_address] = data[i];
+            if (register_address == kRegisterGo && data[i] != 0) go_pulses++;
         }
         return true;
     }
 
-    bool read(uint8_t address, uint8_t* data, size_t len) override {
+    bool read(uint8_t address, uint8_t* data, size_t length) override {
         if (address != kAddress || !answers) return false;
         reads++;
-        for (size_t i = 0; i < len; i++) {
-            const uint8_t reg = static_cast<uint8_t>(pointer + i);
-            data[i] = reg < kRegisterCount ? registers[reg] : 0xFF;
+        for (size_t i = 0; i < length; i++) {
+            const uint8_t register_address = static_cast<uint8_t>(pointer + i);
+            data[i] = register_address < kRegisterCount ? registers[register_address] : 0xFF;
         }
         return true;
     }
@@ -59,18 +59,18 @@ class Drv2605 : public io::I2c, public io::Gpio {
         if (pin == enable_pin) enabled = false;
     }
 
-    uint8_t mode() const { return registers[kRegMode] & 0x07; }
-    bool standby() const { return (registers[kRegMode] & kStandby) != 0; }
-    uint8_t library() const { return registers[kRegLibrary] & 0x07; }
-    bool erm_selected() const { return (registers[kRegFeedback] & 0x80) == 0; }
-    bool open_loop() const { return (registers[kRegControl3] & 0x20) != 0; }
+    uint8_t mode() const { return registers[kRegisterMode] & 0x07; }
+    bool standby() const { return (registers[kRegisterMode] & kStandby) != 0; }
+    uint8_t library() const { return registers[kRegisterLibrary] & 0x07; }
+    bool erm_selected() const { return (registers[kRegisterFeedback] & 0x80) == 0; }
+    bool open_loop() const { return (registers[kRegisterControl3] & 0x20) != 0; }
 
     // What the actuator is actually being driven with, 0 for nothing. Real-time
     // playback holds its value; a waveform sequence only moves while GO is set.
     uint8_t drive() const {
         if (standby()) return 0;
-        if (mode() == kModeRealTimePlayback) return registers[kRegRtpInput];
-        if (registers[kRegGo] != 0) return registers[kRegWaveSeq1] != 0 ? 0xFF : 0;
+        if (mode() == kModeRealTimePlayback) return registers[kRegisterRtpInput];
+        if (registers[kRegisterGo] != 0) return registers[kRegisterWaveSequence1] != 0 ? 0xFF : 0;
         return 0;
     }
     bool moving() const { return drive() != 0; }
@@ -86,13 +86,13 @@ class Drv2605 : public io::I2c, public io::Gpio {
     int reads{0};
 
    private:
-    static constexpr uint8_t kRegMode = 0x01;
-    static constexpr uint8_t kRegRtpInput = 0x02;
-    static constexpr uint8_t kRegLibrary = 0x03;
-    static constexpr uint8_t kRegWaveSeq1 = 0x04;
-    static constexpr uint8_t kRegGo = 0x0C;
-    static constexpr uint8_t kRegFeedback = 0x1A;
-    static constexpr uint8_t kRegControl3 = 0x1D;
+    static constexpr uint8_t kRegisterMode = 0x01;
+    static constexpr uint8_t kRegisterRtpInput = 0x02;
+    static constexpr uint8_t kRegisterLibrary = 0x03;
+    static constexpr uint8_t kRegisterWaveSequence1 = 0x04;
+    static constexpr uint8_t kRegisterGo = 0x0C;
+    static constexpr uint8_t kRegisterFeedback = 0x1A;
+    static constexpr uint8_t kRegisterControl3 = 0x1D;
     static constexpr uint8_t kStandby = 0x40;
     static constexpr uint8_t kModeRealTimePlayback = 0x05;
 };

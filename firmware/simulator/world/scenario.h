@@ -9,12 +9,12 @@
 
 namespace skyblip::simulator {
 
-enum class Mode : uint8_t { Dev, Demo, Training };
+enum class Mode : uint8_t { Device, Demo, Training };
 
 enum class EventKind : uint8_t {
     Fix,
     Pps,
-    Baro,
+    Barometer,
     BatteryMv,
     ExternalPower,
     Button,
@@ -62,10 +62,10 @@ constexpr const char* kDefaultCallsign = "S-BLIP";
 struct Scenario {
     std::string name;
     std::string callsign{kDefaultCallsign};
-    Mode mode{Mode::Dev};
-    int32_t lat_1e7{485000000};
-    int32_t lon_1e7{85000000};
-    int32_t alt_m{1000};
+    Mode mode{Mode::Device};
+    int32_t latitude_1e7{485000000};
+    int32_t longitude_1e7{85000000};
+    int32_t altitude_m{1000};
     int32_t speed_kt{45};
     int32_t track_deg{90};
     int32_t turn_dps{0};
@@ -74,7 +74,7 @@ struct Scenario {
     std::vector<ScenarioEvent> events;
 };
 
-bool parse_scenario(const char* json, int len, Scenario& out);
+bool parse_scenario(const char* json, int length, Scenario& out);
 bool load_scenario(const char* path, Scenario& out);
 
 }  // namespace skyblip::simulator

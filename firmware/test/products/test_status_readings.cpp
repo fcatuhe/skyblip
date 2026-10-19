@@ -61,8 +61,8 @@ TEST_CASE("status readings: the cell is the last sample, not the median the gaug
 
 TEST_CASE("status readings: pressure altitude is taken from the millipascal, not the pascal") {
     ScreenRig rig;
-    rig.state.baro.active = true;
-    rig.state.baro.pressure_mpa = flight::alt_mm_to_pressure_mpa(1500123);
+    rig.state.barometer.active = true;
+    rig.state.barometer.pressure_mpa = flight::altitude_mm_to_pressure_mpa(1500123);
     uint32_t t = 0;
     show_status(rig, t);
 

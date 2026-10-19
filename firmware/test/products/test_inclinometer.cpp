@@ -13,9 +13,9 @@ using namespace skyblip;
 
 namespace {
 
-constexpr int kTurnCoordinatorCx = 34;
-constexpr int kTurnCoordinatorCy = 133;
-constexpr int kBallY = kTurnCoordinatorCy + 18;
+constexpr int kTurnCoordinatorCentreX = 34;
+constexpr int kTurnCoordinatorCentreY = 133;
+constexpr int kBallY = kTurnCoordinatorCentreY + 18;
 constexpr uint32_t kBootToBallMs = 4000;
 
 // The chip is a quarter turn from the case and face down with it (imu_mount.h): +X up, +Y right.
@@ -58,8 +58,9 @@ TEST_CASE("inclinometer: the ball goes the way the pilot slides, and the rudder 
     go::Glass canvas;
     go::draw_sixpack(canvas, snapshot);
 
-    CHECK(ink_between(canvas, kTurnCoordinatorCx + 1, kTurnCoordinatorCx + 20, kBallY));
-    CHECK_FALSE(ink_between(canvas, kTurnCoordinatorCx - 20, kTurnCoordinatorCx - 8, kBallY));
+    CHECK(ink_between(canvas, kTurnCoordinatorCentreX + 1, kTurnCoordinatorCentreX + 20, kBallY));
+    CHECK_FALSE(
+        ink_between(canvas, kTurnCoordinatorCentreX - 20, kTurnCoordinatorCentreX - 8, kBallY));
 }
 
 TEST_CASE("inclinometer: a hub that stops answering takes the ball off the glass") {
@@ -102,7 +103,7 @@ TEST_CASE("inclinometer: the hub runs no gyroscope, and the turn rate comes off 
     rig.run(0, kBootToBallMs);
 
     REQUIRE(rig.product.board().imu().stage() == parts::Bhi260::Stage::Running);
-    CHECK(rig.platform.chips().imu.gyro_rate_hz == doctest::Approx(0));
+    CHECK(rig.platform.chips().imu.gyroscope_rate_hz == doctest::Approx(0));
     CHECK(rig.state().own.turn_cdps == 0);
 }
 
@@ -120,7 +121,8 @@ TEST_CASE("inclinometer: a unit with no hub keeps the dial empty rather than cen
     go::SixPackSnapshot snapshot;
     go::Glass canvas;
     go::draw_sixpack(canvas, snapshot);
-    CHECK_FALSE(ink_between(canvas, kTurnCoordinatorCx - 20, kTurnCoordinatorCx + 20, kBallY));
+    CHECK_FALSE(
+        ink_between(canvas, kTurnCoordinatorCentreX - 20, kTurnCoordinatorCentreX + 20, kBallY));
 }
 
 namespace {

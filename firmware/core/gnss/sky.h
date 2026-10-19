@@ -32,7 +32,7 @@ struct SatelliteView {
 class SkyView {
    public:
     void open(System system);
-    void add(SatelliteView sat);
+    void add(SatelliteView satellite);
     void solving(System system, uint8_t id);
     void clear_solution();
     void forget_in_view();

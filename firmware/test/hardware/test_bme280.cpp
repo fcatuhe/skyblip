@@ -17,16 +17,16 @@ struct Bench {
     Bench() { chip.attach_clock(clock); }
 
     parts::Bme280::Reading convert() {
-        REQUIRE(baro.trigger());
+        REQUIRE(barometer.trigger());
         clock.advance(kConvertedMs);
         parts::Bme280::Reading reading{};
-        REQUIRE(baro.read(reading));
+        REQUIRE(barometer.read(reading));
         return reading;
     }
 
     platform::host::Clock clock;
     models::Bme280 chip;
-    parts::Bme280 baro{chip};
+    parts::Bme280 barometer{chip};
 };
 
 }  // namespace
@@ -34,7 +34,7 @@ struct Bench {
 TEST_CASE("bme280: bring-up sets the IIR filter to 4 and humidity off, and converts nothing") {
     Bench bench;
 
-    REQUIRE(bench.baro.begin() == Status::Ok);
+    REQUIRE(bench.barometer.begin() == Status::Ok);
 
     CHECK(int(bench.chip.mode()) == 0);
     CHECK(bench.chip.conversions == 0);
@@ -45,11 +45,11 @@ TEST_CASE("bme280: bring-up sets the IIR filter to 4 and humidity off, and conve
 // The Zephyr fetch wrote ctrl_meas and slept out the conversion: 43 ms of the loop at every PPS.
 TEST_CASE("bme280: a trigger starts one forced conversion and does not wait for it") {
     Bench bench;
-    REQUIRE(bench.baro.begin() == Status::Ok);
+    REQUIRE(bench.barometer.begin() == Status::Ok);
     const int writes = bench.chip.writes;
     const int reads = bench.chip.reads;
 
-    REQUIRE(bench.baro.trigger());
+    REQUIRE(bench.barometer.trigger());
 
     CHECK(bench.chip.writes - writes == 1);
     CHECK(bench.chip.reads == reads);
@@ -62,19 +62,19 @@ TEST_CASE("bme280: a trigger starts one forced conversion and does not wait for 
 TEST_CASE("bme280: a read before the conversion ends reports nothing and a later one gets it") {
     Bench bench;
     bench.chip.set_pressure_mpa(95000000);
-    REQUIRE(bench.baro.trigger());
+    REQUIRE(bench.barometer.trigger());
 
     bench.clock.advance(10);
     parts::Bme280::Reading reading{};
-    CHECK_FALSE(bench.baro.read(reading));
+    CHECK_FALSE(bench.barometer.read(reading));
     CHECK(bench.chip.result_reads == 0);
 
     bench.clock.advance(kConvertedMs - 10);
-    REQUIRE(bench.baro.read(reading));
+    REQUIRE(bench.barometer.read(reading));
     CHECK(bench.chip.result_reads == 1);
     CHECK(std::abs(int64_t{reading.pressure_mpa} - 95000000) <= 600);
 
-    CHECK_FALSE(bench.baro.read(reading));
+    CHECK_FALSE(bench.barometer.read(reading));
     CHECK(bench.chip.result_reads == 1);
 }
 
@@ -105,12 +105,12 @@ TEST_CASE(
 TEST_CASE("bme280: the air is the air at the trigger, not at the read") {
     Bench bench;
     bench.chip.set_pressure_mpa(95000000);
-    REQUIRE(bench.baro.trigger());
+    REQUIRE(bench.barometer.trigger());
     bench.chip.set_pressure_mpa(94000000);
     bench.clock.advance(kConvertedMs);
 
     parts::Bme280::Reading reading{};
-    REQUIRE(bench.baro.read(reading));
+    REQUIRE(bench.barometer.read(reading));
     CHECK(std::abs(int64_t{reading.pressure_mpa} - 95000000) <= 600);
 }
 
@@ -118,9 +118,9 @@ TEST_CASE("bme280: a part strapped to the alternate address is found there") {
     Bench bench;
     bench.chip.address = parts::Bme280::kAddressAlternate;
 
-    CHECK(bench.baro.answers());
-    REQUIRE(bench.baro.begin() == Status::Ok);
-    CHECK(int(bench.baro.address()) == 0x77);
+    CHECK(bench.barometer.answers());
+    REQUIRE(bench.barometer.begin() == Status::Ok);
+    CHECK(int(bench.barometer.address()) == 0x77);
     bench.convert();
 }
 
@@ -129,9 +129,9 @@ TEST_CASE("bme280: an address that names another chip is not a barometer") {
     bench.chip.chip_id = 0x58;
     bench.chip.power_on_reset();
 
-    CHECK_FALSE(bench.baro.answers());
-    CHECK(bench.baro.begin() != Status::Ok);
-    CHECK_FALSE(bench.baro.trigger());
+    CHECK_FALSE(bench.barometer.answers());
+    CHECK(bench.barometer.begin() != Status::Ok);
+    CHECK_FALSE(bench.barometer.trigger());
     CHECK(bench.chip.conversions == 0);
 }
 
@@ -140,10 +140,10 @@ TEST_CASE("bme280: a part that reset under us is configured again before its nex
     bench.convert();
 
     bench.chip.power_on_reset();
-    REQUIRE(bench.baro.trigger());
+    REQUIRE(bench.barometer.trigger());
     bench.clock.advance(kConvertedMs);
     parts::Bme280::Reading reading{};
-    CHECK_FALSE(bench.baro.read(reading));
+    CHECK_FALSE(bench.barometer.read(reading));
     CHECK(bench.chip.filter_coefficient() == 1);
 
     bench.chip.set_pressure_mpa(95000000);
@@ -157,7 +157,7 @@ TEST_CASE("bme280: a read with no conversion in flight reports nothing and touch
     const int reads = bench.chip.reads;
 
     parts::Bme280::Reading reading{};
-    CHECK_FALSE(bench.baro.read(reading));
+    CHECK_FALSE(bench.barometer.read(reading));
     CHECK(bench.chip.reads == reads);
 }
 
@@ -166,9 +166,9 @@ TEST_CASE("bme280: a part that stops answering is not read as its last pressure"
     bench.convert();
 
     bench.chip.answers = false;
-    CHECK_FALSE(bench.baro.trigger());
+    CHECK_FALSE(bench.barometer.trigger());
     parts::Bme280::Reading reading{};
-    CHECK_FALSE(bench.baro.read(reading));
+    CHECK_FALSE(bench.barometer.read(reading));
 
     bench.chip.answers = true;
     bench.convert();

@@ -18,24 +18,25 @@ constexpr int64_t kMicrometresPerMillimetre = 1000;
 // Below this cosine a metre of easting is more than a degree of longitude and
 // the scaling stops meaning anything. 88 degrees of latitude is 500 km further
 // north than anything this device will fly over.
-constexpr int64_t kLatCosineFloor = 512;
+constexpr int64_t kLatitudeCosineFloor = 512;
 
 int64_t iabs64(int64_t v) { return v < 0 ? -v : v; }
 
-int16_t lat_angle16(int32_t lat_1e7) {
-    return static_cast<int16_t>((static_cast<int64_t>(lat_1e7) * kAngle16PerTurn) / kE7PerTurn);
+int16_t latitude_angle16(int32_t latitude_1e7) {
+    return static_cast<int16_t>((static_cast<int64_t>(latitude_1e7) * kAngle16PerTurn) /
+                                kE7PerTurn);
 }
 
-int64_t lat_cosine(int32_t lat_1e7) {
-    const int64_t c = icos(lat_angle16(lat_1e7));
-    return c < kLatCosineFloor ? kLatCosineFloor : c;
+int64_t latitude_cosine(int32_t latitude_1e7) {
+    const int64_t c = icos(latitude_angle16(latitude_1e7));
+    return c < kLatitudeCosineFloor ? kLatitudeCosineFloor : c;
 }
 
 struct Carried {
-    int32_t lat_1e7;
-    int32_t lon_1e7;
-    int32_t alt_hae_mm;
-    int32_t alt_msl_mm;
+    int32_t latitude_1e7;
+    int32_t longitude_1e7;
+    int32_t altitude_hae_mm;
+    int32_t altitude_msl_mm;
     int32_t speed_mm_s;
     int32_t track_cdeg;
     int32_t climb_mm_s;
@@ -46,10 +47,10 @@ struct Carried {
 
 Prediction carry(const Carried& motion, int32_t dt_ms) {
     Prediction out{};
-    out.lat_1e7 = motion.lat_1e7;
-    out.lon_1e7 = motion.lon_1e7;
-    out.alt_hae_mm = motion.alt_hae_mm;
-    out.alt_msl_mm = motion.alt_msl_mm;
+    out.latitude_1e7 = motion.latitude_1e7;
+    out.longitude_1e7 = motion.longitude_1e7;
+    out.altitude_hae_mm = motion.altitude_hae_mm;
+    out.altitude_msl_mm = motion.altitude_msl_mm;
     out.track_cdeg = wrapped(CentiDegrees(motion.track_cdeg)).v;
     out.valid = false;
 
@@ -66,16 +67,18 @@ Prediction carry(const Carried& motion, int32_t dt_ms) {
     const int64_t travel = div_round<int64_t>(
         static_cast<int64_t>(motion.speed_mm_s) * dt_ms * kMicrometresPerMillimetre,
         kMillisecondsPerSecond);
-    out.lat_1e7 = motion.lat_1e7 + static_cast<int32_t>(div_round(travel * icos(heading), scale));
+    out.latitude_1e7 =
+        motion.latitude_1e7 + static_cast<int32_t>(div_round(travel * icos(heading), scale));
     const int64_t east = div_round(travel * isin(heading), scale);
-    out.lon_1e7 = wrapped_lon_1e7(static_cast<int64_t>(motion.lon_1e7) +
-                                  div_round(east * kTrigOne, lat_cosine(motion.lat_1e7)));
+    out.longitude_1e7 =
+        wrapped_longitude_1e7(static_cast<int64_t>(motion.longitude_1e7) +
+                              div_round(east * kTrigOne, latitude_cosine(motion.latitude_1e7)));
 
     if (motion.climb_valid) {
         const int32_t rise = static_cast<int32_t>(div_round<int64_t>(
             static_cast<int64_t>(motion.climb_mm_s) * dt_ms, kMillisecondsPerSecond));
-        out.alt_hae_mm = motion.alt_hae_mm + rise;
-        out.alt_msl_mm = motion.alt_msl_mm + rise;
+        out.altitude_hae_mm = motion.altitude_hae_mm + rise;
+        out.altitude_msl_mm = motion.altitude_msl_mm + rise;
     }
 
     out.track_cdeg =
@@ -89,10 +92,10 @@ Prediction carry(const Carried& motion, int32_t dt_ms) {
 
 Prediction extrapolate(const model::Ownship& own, int32_t dt_ms) {
     Carried motion{};
-    motion.lat_1e7 = own.lat_1e7;
-    motion.lon_1e7 = own.lon_1e7;
-    motion.alt_hae_mm = own.alt_hae_mm;
-    motion.alt_msl_mm = own.alt_msl_mm;
+    motion.latitude_1e7 = own.latitude_1e7;
+    motion.longitude_1e7 = own.longitude_1e7;
+    motion.altitude_hae_mm = own.altitude_hae_mm;
+    motion.altitude_msl_mm = own.altitude_msl_mm;
     motion.speed_mm_s = own.speed_mm_s;
     motion.track_cdeg = own.track_cdeg;
     motion.climb_mm_s = own.climb_mm_s;
@@ -105,10 +108,10 @@ Prediction extrapolate(const model::Ownship& own, int32_t dt_ms) {
 // INFO: fc 13sep26 ADS-L carries no turn rate, so a neighbour is carried straight (G.1.8, G.1.10)
 Prediction extrapolate(const model::AircraftObservation& observation, int32_t dt_ms) {
     Carried motion{};
-    motion.lat_1e7 = observation.lat_1e7;
-    motion.lon_1e7 = observation.lon_1e7;
-    motion.alt_hae_mm = to_millimetres(Metres(observation.alt_m)).v;
-    motion.alt_msl_mm = motion.alt_hae_mm;
+    motion.latitude_1e7 = observation.latitude_1e7;
+    motion.longitude_1e7 = observation.longitude_1e7;
+    motion.altitude_hae_mm = to_millimetres(Metres(observation.altitude_m)).v;
+    motion.altitude_msl_mm = motion.altitude_hae_mm;
     motion.speed_mm_s = to_mm_s(QuarterMetresPerSecond(observation.speed_q)).v;
     motion.track_cdeg = to_centi_degrees(Cordic9(observation.track_c9)).v;
     motion.climb_mm_s = to_mm_s(EighthMetresPerSecond(observation.climb_e8)).v;
@@ -120,10 +123,10 @@ Prediction extrapolate(const model::AircraftObservation& observation, int32_t dt
 model::Ownship carried_to(const model::Ownship& own, uint32_t now_ms) {
     const Prediction p = extrapolate(own, static_cast<int32_t>(now_ms - own.fix_at_ms));
     model::Ownship out = own;
-    out.lat_1e7 = p.lat_1e7;
-    out.lon_1e7 = p.lon_1e7;
-    out.alt_hae_mm = p.alt_hae_mm;
-    out.alt_msl_mm = p.alt_msl_mm;
+    out.latitude_1e7 = p.latitude_1e7;
+    out.longitude_1e7 = p.longitude_1e7;
+    out.altitude_hae_mm = p.altitude_hae_mm;
+    out.altitude_msl_mm = p.altitude_msl_mm;
     out.track_cdeg = p.track_cdeg;
     return out;
 }
@@ -132,35 +135,40 @@ model::AircraftObservation carried_to(const model::AircraftObservation& observat
                                       uint32_t now_ms) {
     const Prediction p = extrapolate(observation, static_cast<int32_t>(now_ms - observation.at_ms));
     model::AircraftObservation out = observation;
-    out.lat_1e7 = p.lat_1e7;
-    out.lon_1e7 = p.lon_1e7;
-    out.alt_m = to_metres(Millimetres(p.alt_hae_mm)).v;
+    out.latitude_1e7 = p.latitude_1e7;
+    out.longitude_1e7 = p.longitude_1e7;
+    out.altitude_m = to_metres(Millimetres(p.altitude_hae_mm)).v;
     return out;
 }
 
-uint32_t prediction_residual_m(const Prediction& predicted, int32_t lat_1e7, int32_t lon_1e7,
-                               int32_t alt_hae_mm) {
-    const int64_t dlat = static_cast<int64_t>(lat_1e7) - predicted.lat_1e7;
-    const int64_t dlon = wrapped_lon_1e7(static_cast<int64_t>(lon_1e7) - predicted.lon_1e7);
+uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7,
+                               int32_t longitude_1e7, int32_t altitude_hae_mm) {
+    const int64_t dlat = static_cast<int64_t>(latitude_1e7) - predicted.latitude_1e7;
+    const int64_t dlon =
+        wrapped_longitude_1e7(static_cast<int64_t>(longitude_1e7) - predicted.longitude_1e7);
     const int64_t north = div_round(dlat * kMicrometresPerE7, kMicrometresPerMetre);
-    const int64_t east = div_round(dlon * kMicrometresPerE7 * lat_cosine(predicted.lat_1e7),
-                                   kMicrometresPerMetre * kTrigOne);
-    const int64_t up = div_round<int64_t>(static_cast<int64_t>(alt_hae_mm) - predicted.alt_hae_mm,
-                                          kMillimetresPerMetre);
+    const int64_t east =
+        div_round(dlon * kMicrometresPerE7 * latitude_cosine(predicted.latitude_1e7),
+                  kMicrometresPerMetre * kTrigOne);
+    const int64_t up = div_round<int64_t>(
+        static_cast<int64_t>(altitude_hae_mm) - predicted.altitude_hae_mm, kMillimetresPerMetre);
     return static_cast<uint32_t>(iabs64(north) + iabs64(east) + iabs64(up));
 }
 
 bool relative_ned(const model::Ownship& own, const model::AircraftObservation& target,
                   int32_t& north_m, int32_t& east_m, int32_t& up_m) {
     if (!own.fix_valid || !target.position_valid) return false;
-    int64_t dlat = static_cast<int64_t>(target.lat_1e7) - own.lat_1e7;
-    int64_t dlon = wrapped_lon_1e7(static_cast<int64_t>(target.lon_1e7) - own.lon_1e7);
+    int64_t dlat = static_cast<int64_t>(target.latitude_1e7) - own.latitude_1e7;
+    int64_t dlon =
+        wrapped_longitude_1e7(static_cast<int64_t>(target.longitude_1e7) - own.longitude_1e7);
     north_m = static_cast<int32_t>(div_round<int64_t>(dlat * 11132, 1000000));
-    int16_t ang = static_cast<int16_t>((static_cast<int64_t>(own.lat_1e7) * 65536) / 3600000000LL);
+    int16_t ang =
+        static_cast<int16_t>((static_cast<int64_t>(own.latitude_1e7) * 65536) / 3600000000LL);
     int64_t coslat = icos(ang);
     int64_t east_um = div_round<int64_t>(dlon * 11132 * coslat, kTrigOne);
     east_m = static_cast<int32_t>(div_round<int64_t>(east_um, 1000000));
-    up_m = target.alt_valid ? target.alt_m - to_metres(Millimetres(own.alt_hae_mm)).v : 0;
+    up_m = target.altitude_valid ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).v
+                                 : 0;
     return true;
 }
 

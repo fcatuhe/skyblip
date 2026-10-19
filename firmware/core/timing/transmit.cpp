@@ -98,11 +98,11 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     if (payload == Payload::Position) {
         const int slot = slot_in(utc_s, airborne);
         a.at_ms = instant_in(slot, utc_s);
-        a.freq_hz = Scheduler::slot_freq_hz(slot);
+        a.frequency_hz = Scheduler::slot_frequency_hz(slot);
         return a;
     }
     a.at_ms = instant_between(kCallsignStartMs, last_callsign_instant(), utc_s);
-    a.freq_hz = Scheduler::slot_freq_hz(kCallsignSlot);
+    a.frequency_hz = Scheduler::slot_frequency_hz(kCallsignSlot);
     return a;
 }
 

@@ -28,7 +28,7 @@ class Canvas {
     void vline(int x, int y, int h, bool black);
     void line(int x0, int y0, int x1, int y1, bool black);
     void rect(int x, int y, int w, int h, bool black, bool fill = false);
-    void circle(int cx, int cy, int r, bool black, bool fill = false);
+    void circle(int centre_x, int centre_y, int r, bool black, bool fill = false);
 
     int draw_char(int x, int y, char c, bool black, int scale = 1);
     int draw_text(int x, int y, const char* text, bool black, int scale = 1);

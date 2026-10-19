@@ -10,7 +10,7 @@ enum class Capability : uint32_t {
     Rf = 1u << 0,
     Gnss = 1u << 1,
     Display = 1u << 2,
-    Baro = 1u << 3,
+    Barometer = 1u << 3,
     Buzzer = 1u << 4,
     Haptic = 1u << 5,
     Link = 1u << 6,

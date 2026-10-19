@@ -13,17 +13,17 @@ using namespace skyblip::parts;
 
 namespace {
 
-RadioConfig dwell(uint32_t freq_hz) {
-    RadioConfig cfg{};
-    cfg.freq_hz = freq_hz;
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    return cfg;
+RadioConfig dwell(uint32_t frequency_hz) {
+    RadioConfig config{};
+    config.frequency_hz = frequency_hz;
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    return config;
 }
 
-void command(models::Sx1262& chip, uint8_t opcode, uint8_t param) {
-    const uint8_t bytes[2] = {opcode, param};
+void command(models::Sx1262& chip, uint8_t opcode, uint8_t parameter) {
+    const uint8_t bytes[2] = {opcode, parameter};
     chip.select(true);
     chip.transfer(bytes, nullptr, sizeof(bytes));
     chip.select(false);
@@ -67,7 +67,7 @@ TEST_CASE("sx1262: a retune keeps the TCXO running, so the next dwell listens wi
     uplink.bitrate = protocol::kUplinkChipRateBps;
     REQUIRE(radio.configure_radio(uplink) == Status::Ok);
     CHECK(chip.receiving);
-    CHECK((chip.freq_hz + 500) / 1000 == 869525);
+    CHECK((chip.frequency_hz + 500) / 1000 == 869525);
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);
 }
@@ -99,10 +99,10 @@ TEST_CASE("sx1262: a hop between the M-band channels writes the frequency and no
 
     REQUIRE(radio.configure_radio(dwell(868400000)) == Status::Ok);
     CHECK(chip.receiving);
-    CHECK((chip.freq_hz + 500) / 1000 == 868400);
+    CHECK((chip.frequency_hz + 500) / 1000 == 868400);
     CHECK(chip.saw_command(sx::kSetRfFrequency));
-    CHECK_FALSE(chip.saw_command(sx::kSetModulationParams));
-    CHECK_FALSE(chip.saw_command(sx::kSetPacketParams));
+    CHECK_FALSE(chip.saw_command(sx::kSetModulationParameters));
+    CHECK_FALSE(chip.saw_command(sx::kSetPacketParameters));
     CHECK_FALSE(chip.saw_command(sx::kWriteRegister));
     CHECK(chip.tcxo_starts == 1);
     CHECK(chip.fault == models::Sx1262::Fault::None);

@@ -37,7 +37,7 @@ class Bhi260ImageStore : public Bhi260::Image {
     uint32_t capacity() const;
 
     uint32_t size() const override { return holding_ == Holding::Held ? length_ : 0; }
-    bool read(uint32_t offset, uint8_t* out, uint16_t len) override;
+    bool read(uint32_t offset, uint8_t* out, uint16_t length) override;
 
    private:
     enum class Phase : uint8_t { Erase, Program, Commit, Verify };

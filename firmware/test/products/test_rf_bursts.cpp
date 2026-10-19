@@ -40,7 +40,7 @@ struct Executor {
     static ports::RfPlan slot1() {
         ports::RfPlan plan{};
         plan.mode = ports::RfMode::RxMband;
-        plan.freq_hz = timing::kMband1Hz;
+        plan.frequency_hz = timing::kMband1Hz;
         plan.start_us = 800000;
         plan.end_us = 1200000;
         return plan;
@@ -60,9 +60,9 @@ struct Executor {
             clock.set_millis(t);
             rf.service(t);
             uint8_t sent[protocol::kTxPayloadChipBytes];
-            uint8_t len = 0;
-            if (!completes || !chip.take_tx(sent, len)) continue;
-            keyed.push_back({sent[len - protocol::AdslPacket::kTxBytes], t});
+            uint8_t length = 0;
+            if (!completes || !chip.take_tx(sent, length)) continue;
+            keyed.push_back({sent[length - protocol::AdslPacket::kTxBytes], t});
             chip.signal_tx_done();
         }
         return keyed;
@@ -105,7 +105,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
     ports::RfPlan slot0 = Executor::slot1();
-    slot0.freq_hz = timing::kMband0Hz;
+    slot0.frequency_hz = timing::kMband0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 797000;
     executor.clock.set_millis(400);
@@ -193,7 +193,7 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
         if (timing::Scheduler::in_direct_slot(r.phase_ms)) {
             positions++;
             position_at_us = r.at_us;
-            position_on_channel1 = simulator::Air::tuned_to(r.freq_hz, timing::kMband1Hz);
+            position_on_channel1 = simulator::Air::tuned_to(r.frequency_hz, timing::kMband1Hz);
             continue;
         }
         names++;

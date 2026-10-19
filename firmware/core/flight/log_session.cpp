@@ -54,7 +54,7 @@ void LogSession::reset() {
 // instead
 bool LogSession::flying(const model::Ownship& own, bool rolling, uint32_t now_ms) {
     if (airborne(own.flight_state)) return true;
-    if (!flies_at_no_ground_speed(own.aircraft_cat)) return false;
+    if (!flies_at_no_ground_speed(own.aircraft_category)) return false;
     if (rolling) {
         last_rolled_ms_ = now_ms;
         return true;

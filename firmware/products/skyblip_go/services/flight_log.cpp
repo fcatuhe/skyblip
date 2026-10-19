@@ -1,6 +1,6 @@
 #include "products/skyblip_go/services/flight_log.h"
 
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 
@@ -61,12 +61,14 @@ void FlightLogService::watch(uint32_t now_ms) {
         flight::LogContact contact{};
         contact.address = target->observation.address;
         contact.address_mapping_table = target->observation.address_mapping_table;
-        contact.aircraft_cat = target->observation.aircraft_cat;
-        contact.dist_m = diag::clamp_u16(
-            assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
-        contact.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
-        contact.rel_bearing_deg = assessment.rel_bearing_deg;
-        contact.closing_mps = diag::clamp_i16(assessment.closing_mps);
+        contact.aircraft_category = target->observation.aircraft_category;
+        contact.distance_m =
+            diagnostics::clamp_u16(assessment.relative_distance_m < 0
+                                       ? 0
+                                       : static_cast<uint32_t>(assessment.relative_distance_m));
+        contact.relative_altitude_m = diagnostics::clamp_i16(assessment.relative_altitude_m);
+        contact.relative_bearing_deg = assessment.relative_bearing_deg;
+        contact.closing_mps = diagnostics::clamp_i16(assessment.closing_mps);
         contact.alarm = traffic::to_number(target->alarm_level);
         contact.source = static_cast<uint8_t>(target->observation.source);
         contact.rssi_dbm = target->observation.rssi_dbm;
@@ -139,7 +141,7 @@ void FlightLogService::serve_link(uint32_t now_ms) {
     events::RxFrame frame{};
     while (!replying() && context_.bus.log_rx.pop(frame)) {
         handle(comms::parse_log_request(frame));
-        record_link(diag::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
+        record_link(diagnostics::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
 }
 
@@ -156,13 +158,13 @@ bool FlightLogService::replying() const {
 void FlightLogService::watch_link_drops(uint32_t now_ms) {
     if (link_drops() == recorded_drops_) return;
     recorded_drops_ = link_drops();
-    record_link(diag::LinkAction::Dropped, reply_link_session_, 0, now_ms);
+    record_link(diagnostics::LinkAction::Dropped, reply_link_session_, 0, now_ms);
 }
 
-void FlightLogService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
-                                   uint32_t now_ms) {
-    if (!context_.diag.armed()) return;
-    diag::Link event{};
+void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t session,
+                                   uint16_t frame_bytes, uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Link event{};
     event.link_session = session;
     event.payload_bytes = context_.roles.link.payload_bytes();
     event.frame_bytes = frame_bytes;
@@ -171,7 +173,7 @@ void FlightLogService::record_link(diag::LinkAction action, uint16_t session, ui
     event.action = action;
     event.endpoint = events::Endpoint::Log;
     event.claim_held = config_.claim().held();
-    context_.diag.record(event, context_.instant(now_ms));
+    context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
 void FlightLogService::handle(const comms::LogRequest& request) {

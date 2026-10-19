@@ -87,22 +87,22 @@ int TimingReport::next_frame(int payload, char* out, int capacity) {
     if (packed == 0) return 0;
 
     json::Writer writer(out, room);
-    writer.kv_str("cmd", "timing");
-    writer.kv_int("part", part_);
-    writer.kv_bool("more", at_ + packed < count_);
+    writer.key_value_str("cmd", "timing");
+    writer.key_value_int("part", part_);
+    writer.key_value_bool("more", at_ + packed < count_);
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
         if (field.text != nullptr)
-            writer.kv_str(field.key, field.text);
+            writer.key_value_str(field.key, field.text);
         else
-            writer.kv_int(field.key, field.value);
+            writer.key_value_int(field.key, field.value);
     }
-    const int len = writer.finish();
+    const int length = writer.finish();
     if (writer.overflowed()) return 0;
 
     at_ += packed;
     part_++;
-    return len;
+    return length;
 }
 
 }  // namespace skyblip::comms

@@ -135,7 +135,7 @@ TEST_CASE("settings: a blob written by version-10 firmware comes back on three v
     struct V10 {
         uint8_t version{1};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         bool battery_offset_manual{false};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
@@ -180,7 +180,7 @@ TEST_CASE(
     struct V9 {
         uint8_t version{1};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         bool battery_offset_manual{false};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
@@ -192,7 +192,7 @@ TEST_CASE(
     V9 old{};
     old.battery_offset_mv = 40;
     old.battery_offset_manual = true;
-    old.freq_trim_e1_ppm = 12;
+    old.frequency_trim_e1_ppm = 12;
     old.aircraft_type = 7;
     old.alarm_volume = 1;
     std::memcpy(old.callsign, "F-JABC", 7);
@@ -207,7 +207,7 @@ TEST_CASE(
     REQUIRE(from_blob(blob, 1 + sizeof(V9) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == 40);
     CHECK(out.battery_offset_manual);
-    CHECK(int(out.freq_trim_e1_ppm) == 12);
+    CHECK(int(out.frequency_trim_e1_ppm) == 12);
     CHECK(int(out.aircraft_type) == 7);
     CHECK(out.alarm_volume == AlarmVolume::Soft);
     CHECK(out.units == Units::Metric);
@@ -221,7 +221,7 @@ TEST_CASE("settings: a trim stored by version-8 firmware is a hand-set trim") {
     struct V8 {
         uint8_t version{1};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
@@ -231,7 +231,7 @@ TEST_CASE("settings: a trim stored by version-8 firmware is a hand-set trim") {
 
     V8 old{};
     old.battery_offset_mv = -120;
-    old.freq_trim_e1_ppm = -37;
+    old.frequency_trim_e1_ppm = -37;
     old.aircraft_type = 9;
     std::memcpy(old.callsign, "D-KXYZ", 7);
 
@@ -245,7 +245,7 @@ TEST_CASE("settings: a trim stored by version-8 firmware is a hand-set trim") {
     REQUIRE(from_blob(blob, 1 + sizeof(V8) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(out.battery_offset_manual);
-    CHECK(int(out.freq_trim_e1_ppm) == -37);
+    CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
     // A unit that stored no trim never had one measured, so the charger may set it.
@@ -268,7 +268,7 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
         uint8_t version{1};
         uint32_t device_addr{0};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         uint8_t addr_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
@@ -280,7 +280,7 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     V7 old{};
     old.device_addr = 0xDD1234;
     old.battery_offset_mv = -120;
-    old.freq_trim_e1_ppm = -37;
+    old.frequency_trim_e1_ppm = -37;
     old.addr_table = 5;
     old.aircraft_type = 9;
     old.alarm_volume = 5;
@@ -296,14 +296,15 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     Settings out;
     REQUIRE(from_blob(blob, 1 + sizeof(V7) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == -120);
-    CHECK(int(out.freq_trim_e1_ppm) == -37);
+    CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
     CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
-    char buf[256];
-    const int n = to_json(out, settings::address_of(0x3456), buf, static_cast<int>(sizeof(buf)));
-    json::Reader r(buf, n);
+    char buffer[256];
+    const int n =
+        to_json(out, settings::address_of(0x3456), buffer, static_cast<int>(sizeof(buffer)));
+    json::Reader r(buffer, n);
     long v = 0;
     CHECK(r.get_int("address", v));
     CHECK(v == 0x003456);  // the unlock code's, not the 0xDD1234 that blob carried
@@ -317,13 +318,13 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
         uint8_t version{1};
         uint32_t device_addr{0};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         uint8_t addr_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
         uint8_t alarm_volume{3};
         bool stealth{false};
-        bool gyro_enabled{false};
+        bool gyroscope_enabled{false};
         Units units{Units::Metric};
         char callsign[10]{0};
     };
@@ -331,13 +332,13 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     V6 old{};
     old.device_addr = 0x5B7E57;
     old.battery_offset_mv = -120;
-    old.freq_trim_e1_ppm = -37;
+    old.frequency_trim_e1_ppm = -37;
     old.addr_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
     old.alarm_volume = 5;
     old.stealth = true;
-    old.gyro_enabled = true;
+    old.gyroscope_enabled = true;
     old.units = Units::Nautical;
     std::memcpy(old.callsign, "D-KXYZ", 7);
 
@@ -350,7 +351,7 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     Settings out;
     REQUIRE(from_blob(blob, 1 + sizeof(V6) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == -120);
-    CHECK(int(out.freq_trim_e1_ppm) == -37);
+    CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
     CHECK(out.alarm_volume == AlarmVolume::Loud);
@@ -415,7 +416,7 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     // A unit that stored its settings before the radio trim existed was never
     // measured, so it comes back on the reference its TCXO actually has: the
     // frequency it has been transmitting on all along.
-    CHECK(int(out.freq_trim_e1_ppm) == 0);
+    CHECK(int(out.frequency_trim_e1_ppm) == 0);
 
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
@@ -423,7 +424,7 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     Settings again;
     REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
     CHECK(int(again.battery_offset_mv) == -120);
-    CHECK(int(again.freq_trim_e1_ppm) == 0);
+    CHECK(int(again.frequency_trim_e1_ppm) == 0);
 }
 
 // K, the migration: version 6 is version 4's length again, and the version byte parts them.
@@ -433,7 +434,7 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
         uint8_t version{1};
         uint32_t device_addr{0};
         int16_t battery_offset_mv{0};
-        int16_t freq_trim_e1_ppm{0};
+        int16_t frequency_trim_e1_ppm{0};
         uint8_t addr_table{0};
         uint8_t aircraft_type{4};
         bool alarm_enabled{true};
@@ -447,7 +448,7 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     V4 old{};
     old.device_addr = 0x5B7E57;
     old.battery_offset_mv = -120;
-    old.freq_trim_e1_ppm = -37;
+    old.frequency_trim_e1_ppm = -37;
     old.addr_table = 6;
     old.aircraft_type = 9;
     old.alarm_enabled = false;
@@ -466,7 +467,7 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     Settings out;
     REQUIRE(from_blob(blob, 1 + sizeof(V4) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == -120);
-    CHECK(int(out.freq_trim_e1_ppm) == -37);
+    CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
     CHECK_FALSE(out.alarm_enabled);
     CHECK(out.alarm_volume == AlarmVolume::Loud);

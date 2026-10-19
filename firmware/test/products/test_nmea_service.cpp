@@ -56,29 +56,31 @@ namespace {
 void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t up_m,
           uint16_t track_c9 = 256) {
     model::Ownship transmitter = rig.state().own;
-    transmitter.lat_1e7 += static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
-    transmitter.lon_1e7 += static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
-    transmitter.alt_hae_mm += up_m * 1000;
+    transmitter.latitude_1e7 +=
+        static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
+    transmitter.longitude_1e7 +=
+        static_cast<int32_t>(static_cast<int64_t>(east_m) * 1000000 / 7460);
+    transmitter.altitude_hae_mm += up_m * 1000;
     transmitter.track_cdeg = to_centi_degrees(Cordic9(track_c9)).v;
     transmitter.speed_mm_s = 40000;
     transmitter.vdop_e2 = 150;
 
     protocol::AdslPacket packet;
     protocol::from_own(packet, transmitter, address, /*address_mapping_table=*/6,
-                       /*aircraft_cat=*/4);
+                       /*aircraft_category=*/4);
     packet.scramble();
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_len = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
-                                                   protocol::kAdslFrameBytes, chips);
+    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
+                                                      protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
-    event.len = models::Sx1262::deliver_after_sync(chips, static_cast<uint8_t>(chip_len),
-                                                   protocol::kSharedSync, protocol::kSharedSyncBits,
-                                                   event.data.data(), protocol::kRxChipBytes);
+    event.length = models::Sx1262::deliver_after_sync(
+        chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
+        event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
 }
 
@@ -90,15 +92,15 @@ void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_len = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
-                                                   protocol::kAdslFrameBytes, chips);
+    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
+                                                      protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;
-    event.len = models::Sx1262::deliver_after_sync(chips, static_cast<uint8_t>(chip_len),
-                                                   protocol::kSharedSync, protocol::kSharedSyncBits,
-                                                   event.data.data(), protocol::kRxChipBytes);
+    event.length = models::Sx1262::deliver_after_sync(
+        chips, static_cast<uint8_t>(chip_length), protocol::kSharedSync, protocol::kSharedSyncBits,
+        event.data.data(), protocol::kRxChipBytes);
     rig.product.bus().rf.push(event);
 }
 
@@ -404,12 +406,12 @@ struct FeatureRig {
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::Roles roles{
-        clock,          null.rf,          link,     null.display,         null.kv,
+        clock,          null.rf,          link,     null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu, null.die_temperature, null.indicator,
         null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
@@ -421,8 +423,8 @@ struct FeatureRig {
         roles.capabilities = fitted;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.lat_1e7 = 485000000;
-        state.own.lon_1e7 = 85000000;
+        state.own.latitude_1e7 = 485000000;
+        state.own.longitude_1e7 = 85000000;
         config.on_link_up(events::LinkUp{1, platform::host::Link::kDefaultPayloadBytes});
         REQUIRE(nmea.setup() == Status::Ok);
     }

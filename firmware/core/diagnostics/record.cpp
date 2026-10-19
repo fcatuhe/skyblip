@@ -1,8 +1,8 @@
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 
 #include "core/store/sector.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 const char* type_name(Type type) {
     switch (type) {
@@ -15,7 +15,7 @@ const char* type_name(Type type) {
         case Type::Dwell: return "dwell";
         case Type::Flight: return "flight";
         case Type::Power: return "power";
-        case Type::Baro: return "baro";
+        case Type::Barometer: return "baro";
         case Type::Motion: return "motion";
         case Type::Contact: return "contact";
         case Type::Link: return "link";

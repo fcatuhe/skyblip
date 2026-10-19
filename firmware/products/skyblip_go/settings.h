@@ -40,9 +40,9 @@ constexpr size_t kCallsignBytes = 10;
 // datasheet, a field with no way to correct it is a recall. The bound is that
 // tenfold miss and no more (+-10 ppm, +-8.7 kHz at 868.2 MHz): inside it the
 // carrier cannot leave ERC 70-03 band h1.4, and beyond it the part is broken
-// rather than out of trim. sx::kFreqTrimCeilingE1Ppm is the same number where
+// rather than out of trim. sx::kFrequencyTrimCeilingE1Ppm is the same number where
 // the PLL word is computed.
-constexpr int16_t kFreqTrimCeilingE1Ppm = 100;
+constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 
 // INFO: fc 12sep26 ADS-L G.1.3's light aircraft, what a device says until a pilot says otherwise
 constexpr uint8_t kAircraftTypeLight = 1;
@@ -74,7 +74,7 @@ struct Settings {
     // reads the value back, so a bench that sets it has to trust its own record
     // and its spectrum analyser - which is the instrument that had to be there
     // to know the number in the first place.
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
@@ -98,7 +98,7 @@ Status validate(const Settings& settings);
 
 size_t blob_size();
 void to_blob(const Settings& settings, uint8_t* out, size_t cap);
-Status from_blob(const uint8_t* in, size_t len, Settings& out);
+Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 // INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
 // companion link's "config" reply can tag them and stay one flat object. Nesting
@@ -110,7 +110,7 @@ void write_json_fields(json::Writer& w, const Settings& settings, settings::AirA
 void write_json_settings(json::Writer& w, const Settings& settings);
 
 int to_json(const Settings& settings, settings::AirAddress address, char* out, int cap);
-Status apply_json(Settings& settings, const char* json, int len);
+Status apply_json(Settings& settings, const char* json, int length);
 
 }  // namespace skyblip::go
 

@@ -17,12 +17,12 @@ struct ThermalRig {
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     platform::host::DieTemperature sensor{};
-    ports::Roles roles{clock,   null.rf,        null.link,        null.display,
-                       null.kv, null.log_flash, null.annunciator, null.dfu,
-                       sensor,  null.indicator, null.gnss,        identity};
+    ports::Roles roles{clock,          null.rf,        null.link,        null.display,
+                       null.key_value, null.log_flash, null.annunciator, null.dfu,
+                       sensor,         null.indicator, null.gnss,        identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::PowerService power{context, settings};

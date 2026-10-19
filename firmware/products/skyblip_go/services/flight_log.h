@@ -3,7 +3,7 @@
 
 #include "core/comms/config.h"
 #include "core/comms/log_link.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/flight/log_events.h"
 #include "core/flight/log_session.h"
 #include "core/traffic/table.h"
@@ -50,7 +50,7 @@ class FlightLogService : public runtime::Service {
     // While true the next command waits on the bus: its answer would have nowhere to go.
     bool replying() const;
     void handle(const comms::LogRequest& request);
-    void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
+    void record_link(diagnostics::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     RecordStore* store_for(comms::LogStore store);

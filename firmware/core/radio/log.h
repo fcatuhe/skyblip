@@ -37,7 +37,7 @@ struct Entry {
     int8_t rssi_dbm{0};
     int8_t key_offset_s{0};
     uint8_t channel{0};
-    uint8_t len{0};
+    uint8_t length{0};
     bool address_valid{false};
     bool rssi_valid{false};
     bool utc_dated{false};

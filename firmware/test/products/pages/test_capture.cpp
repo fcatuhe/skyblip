@@ -5,7 +5,7 @@
 
 using namespace skyblip::go;
 using skyblip::reads_in;
-using skyblip::diag::Profile;
+using skyblip::diagnostics::Profile;
 
 namespace {
 

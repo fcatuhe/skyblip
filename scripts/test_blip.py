@@ -4,7 +4,7 @@
     python3 scripts/test_blip.py
 
 Stdlib alone and no radio: every record here is handcrafted bytes, laid out
-against firmware/core/diag/payload_*.cpp and firmware/core/flight/log_record.cpp.
+against firmware/core/diagnostics/payload_*.cpp and firmware/core/flight/log_record.cpp.
 Those two files and these tables are the same layout written twice, once on each
 side of a Bluetooth link, and nothing but a test holds them together.
 
@@ -261,7 +261,7 @@ class DiagnosticsPayloads(unittest.TestCase):
             backlight_ms=41_250, rx_armed_ms=58_300, tx_keyed_ms=1420, ble_connected_ms=22_700,
             annunciator_ms=640))
 
-    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to, 30 s apart.
+    # The bytes firmware/test/core/diagnostics/test_diagnostics_decided.cpp pins the encoder to, 30 s apart.
     def test_two_duty_records_a_wrap_apart_subtract_to_the_true_interval(self):
         before = records.decode_diag_record(bytes.fromhex(
             "1202000040f9a16a00000000e8fd60ea0000000000000000"))
@@ -273,7 +273,7 @@ class DiagnosticsPayloads(unittest.TestCase):
         self.assertEqual((after["rx_armed_ms"] - before["rx_armed_ms"]) & 0xFFFF, 30_000)
 
 
-    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to.
+    # The bytes firmware/test/core/diagnostics/test_diagnostics_decided.cpp pins the encoder to.
     def test_a_config_record_names_the_transmitter_it_was_captured_on(self):
         decoded = records.decode_diag_record(bytes.fromhex(
             "0202000040f9a16afeca5b0000000000000700010e160000"))

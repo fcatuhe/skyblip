@@ -362,7 +362,7 @@ TEST_CASE("product: a unit with no haptic driver flies, sounds, and says what is
     // And the voice it does have still works: the first fix is chirped by the
     // same service that would have pulsed the motor.
     uint32_t t = 0;
-    rig.push_timed_fix(/*speed_mm_s=*/0, /*alt_msl_m=*/300);
+    rig.push_timed_fix(/*speed_mm_s=*/0, /*altitude_msl_m=*/300);
     rig.run(t, t + 1000);
     CHECK(rig.platform.annunciator().tone_commands() >= 1);
     CHECK(rig.platform.chips().haptic.moving() == false);

@@ -52,8 +52,8 @@ TEST_CASE("product: step() runs the service cycle deterministically under a mode
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 3000);
-    uint8_t pkt[6] = {1, 2, 3, 4, 5, 6};
-    rig.platform.chips().radio.queue_rx(pkt, sizeof(pkt));
+    uint8_t packet[6] = {1, 2, 3, 4, 5, 6};
+    rig.platform.chips().radio.queue_rx(packet, sizeof(packet));
     rig.run(3000, 4200);
     CHECK(rig.state().air.rx_unframed >= 1);  // too short to frame as either system
     CHECK(rig.state().air.rx_bad == 0);
@@ -80,7 +80,7 @@ TEST_CASE("product: persisted settings are loaded on setup") {
     settings.alarm_volume = go::AlarmVolume::Soft;
     uint8_t blob[64];
     go::to_blob(settings, blob, sizeof(blob));
-    REQUIRE(rig.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
+    REQUIRE(rig.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
 
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
@@ -150,7 +150,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
     // The only way the device can be told it is on the ground: one stationary
     // solution, which core/flight answers Ground to and the link's gate reads.
-    rig.push_fix(/*alt_m=*/0, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
     const char* json = "{\"cmd\":\"set\",\"alarm_volume\":2}";
@@ -168,7 +168,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
 
     uint8_t blob[64];
     size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), n) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
@@ -276,7 +276,7 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     settings.battery_offset_mv = -60;
     uint8_t blob[64];
     go::to_blob(settings, blob, sizeof(blob));
-    REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
     REQUIRE(trimmed.setup() == Status::Ok);
     REQUIRE(trimmed.settings().battery_offset_mv == -60);
 
@@ -309,7 +309,7 @@ TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider
 
     // 3440 raw is above the lockout, 3380 trimmed is below it.
     Rig trimmed;
-    REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
     trimmed.platform.battery().divider_mv = 3440;
     REQUIRE(trimmed.setup() == Status::Ok);
     CHECK(trimmed.product.boot_cell().cell_mv == 3380);
@@ -465,8 +465,8 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
     ghost.address = 0x00ABCDEF;
     ghost.address_mapping_table = 5;
     ghost.position_valid = true;
-    ghost.lat_1e7 = rig.state().own.lat_1e7 + 50000000;  // five degrees north
-    ghost.lon_1e7 = rig.state().own.lon_1e7;
+    ghost.latitude_1e7 = rig.state().own.latitude_1e7 + 50000000;  // five degrees north
+    ghost.longitude_1e7 = rig.state().own.longitude_1e7;
     ghost.source = model::Source::AdslDirect;
     REQUIRE(rig.state().traffic.update(ghost, 0) < 0);
     REQUIRE(rig.state().traffic.implausible() == 1);

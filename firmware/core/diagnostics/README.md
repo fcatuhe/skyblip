@@ -1,4 +1,4 @@
-# core/diag
+# core/diagnostics
 
 The diagnostics capture: one fixed-size record per thing the device sensed or decided, buffered in RAM while a capture is armed, so a bench or a flight can be replayed on a laptop and the tuning constants re-derived from what actually happened.
 
@@ -40,7 +40,7 @@ Every field is written and read one at a time, little-endian, exactly as `core/f
 
 `at_s` is UTC once the receiver has given us a second and time since boot before that, which is the same rule and the same reason as `radio::Entry::at_s`: the capture outlives a first fix and the records either side of one are dated differently. Which of the two it is, is `kFlagUtcDated` on the record rather than a flag on the capture. `kFlagPhaseValid` says `into_ms` was measured against a PPS edge instead of guessed at, and without it the millisecond field means nothing. Those two bits mean the same thing on every type; bits 2 to 7 belong to the type and are named beside it in `payload.h`.
 
-A type is retired, never renumbered. A recorded corpus outlives the firmware that wrote it, and a laptop decoding a flight from last season has nothing but the number to go on - `test/core/diag/test_diag_record.cpp` fails if one moves. Type 0 is not a record, so an all-zero slot decodes as nothing rather than as a boot, and a slot no writer has reached reads erased (`store::erased`) rather than as a record of zeroes.
+A type is retired, never renumbered. A recorded corpus outlives the firmware that wrote it, and a laptop decoding a flight from last season has nothing but the number to go on - `test/core/diagnostics/test_diagnostics_record.cpp` fails if one moves. Type 0 is not a record, so an all-zero slot decodes as nothing rather than as a boot, and a slot no writer has reached reads erased (`store::erased`) rather than as a record of zeroes.
 
 ### A stored code is a wire format
 
@@ -50,7 +50,7 @@ So every enum a record stores now writes its numbers down. `BadCrc = 6` is the w
 
 The numbers fill 0 up to one less than the count, with no holes, because the host decoder reads a byte through a tuple it indexes by: a hole would shift every spelling behind it. That is what `codes_pinned` in the two pin tests checks, alongside each member's own number.
 
-Those pins are on both sides and separately, because nothing compares C++ to Python automatically. `test/core/diag/test_diag_ordinals.cpp` pins every enum this layer writes as a byte, and `test/products/test_diag_product_codes.cpp` the codes the product owns. Each maps its members through a `switch` that carries no default: a member added fails the build and the compiler names it, a member renumbered fails the case, and the case is named after the two files that have to move with it. On the host side `scripts/test_blip.py` holds every decoder tuple in `scripts/blip_records.py` against the schema enum of the same name, in order and in length, and refuses a schema enum no tuple decodes. The schema lists the numbers beside the spellings, which is what says the firmware's member and the decoder's word are the same value, so a member added here is an edit to the decoder and to `schemas/diagnostics_log.v1.schema.json` in the same commit.
+Those pins are on both sides and separately, because nothing compares C++ to Python automatically. `test/core/diagnostics/test_diagnostics_ordinals.cpp` pins every enum this layer writes as a byte, and `test/products/test_diagnostics_product_codes.cpp` the codes the product owns. Each maps its members through a `switch` that carries no default: a member added fails the build and the compiler names it, a member renumbered fails the case, and the case is named after the two files that have to move with it. On the host side `scripts/test_blip.py` holds every decoder tuple in `scripts/blip_records.py` against the schema enum of the same name, in order and in length, and refuses a schema enum no tuple decodes. The schema lists the numbers beside the spellings, which is what says the firmware's member and the decoder's word are the same value, so a member added here is an edit to the decoder and to `schemas/diagnostics_log.v1.schema.json` in the same commit.
 
 ## What each type answers
 
@@ -66,11 +66,11 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Dwell` 6 | slot state, band, frequency, start and end, the phase it was read at, duty, noise floor, refusal reason, tx_allowed | whether the dwell map spends the second where §C.5 says, and what refuses a burst when one is refused |
 | `Flight` 7 | speed, climb, altitude, HDOP, VDOP, declared state, latched state, rolling | how close the machine came to deciding the other way. Written on every evaluation, never only on transitions: a transition-only tape cannot say what the margin was, and the margin is the whole question when choosing 12.0 against 8.0 m/s |
 | `Power` 8 | cell millivolts as the gauge's median and the last reading beside it, or what the divider read when it was not the cell, percent, level, charge condition, die temperature, supply warnings, refused readings and charge counts | what a burst does to the rail, and whether `kLowMv`, `kCriticalMv` and `kFlatMv` fire where a real pack needs them to |
-| `Baro` 9 | pressure, derived altitude, the rate taken from it, temperature | the vertical speed window (`kBaroClimbWindowMs` against `kGnssClimbWindowMs`) measured rather than assumed |
+| `Barometer` 9 | pressure, derived altitude, the rate taken from it, temperature | the vertical speed window (`kBarometerClimbWindowMs` against `kGnssClimbWindowMs`) measured rather than assumed |
 | `Motion` 10 | ball position, the three g-meter axes now, the normal axis at both extremes, hub error bytes | what the airframe pulled, and whether the filter lengths suit it. Absent on a unit with no hub, which the fitted flag says |
 | `Contact` 11 | contact, edge instant, how long the level had held, the gesture the product decided | `Controls::kLongTouchHoldMs` and `kLongPressHoldMs` against the presses a hand actually makes |
 | `Link` 12 | link session, negotiated payload, action (up, down, claim taken or released, received, sent, dropped), endpoint, frame bytes, drops | what a phone negotiates in the field, and where an offload stalls |
-| `Traffic` 13 | address, distance, bearing, relative altitude, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistM` and `kAdvisoryAltM` against the encounters that happened, and what the ageing rules threw away |
+| `Traffic` 13 | address, distance, bearing, relative altitude, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistanceM` and `kAdvisoryAltitudeM` against the encounters that happened, and what the ageing rules threw away |
 | `Write` 14 | placement, kind, how long the change waited, the phase it was placed at, requests, writes, forced | whether `kSettleMs` and `kDeferCeilingMs` place a durable write inside its window, and how often one is forced |
 | `Screen` 15 | page, mode, prompt, alarm level, how long it had been up, backlight, powered, thermal hold, how long the last render and the last present took | `ScreenService::kPresentFloorMs` and the refresh cadence against what a pilot was shown, and what a page costs the loop |
 | `Gap` 16 | records dropped, the span they cover, the total since arming, the ring capacity | nothing. It is the hole itself, written where the hole is |
@@ -107,7 +107,7 @@ There is no current sense on this hardware. What a capture can say about power i
 
 A reader turns it into energy by hand. Take two `Duty` records, subtract each field, divide by the seconds between their two instants, and multiply the resulting fraction of the interval by the milliamp figure that consumer draws on the bench. The refresh counts work the same way against a milliamp-seconds figure per refresh. What comes out is an estimate whose error is the bench measurement's, which is the honest bound on a device with no shunt, and the terminal voltage over the same interval is what says whether the estimate matches the pack.
 
-All seven fields are `uint16_t` and the counters they come from on `bus::State` are `uint32_t`, so the codec keeps the low half. That is a wrap and not a clamp, and it is deliberate: every reader subtracts two records, and unsigned subtraction crosses a wrap correctly as long as one interval's delta stays under 65536. A clamp would stick at 65535 and report an interval that never happened. The `diag` dump already reads milliseconds the same way, across the 49.7-day wrap of the millisecond clock.
+All seven fields are `uint16_t` and the counters they come from on `bus::State` are `uint32_t`, so the codec keeps the low half. That is a wrap and not a clamp, and it is deliberate: every reader subtracts two records, and unsigned subtraction crosses a wrap correctly as long as one interval's delta stays under 65536. A clamp would stick at 65535 and report an interval that never happened. The `diagnostics` dump already reads milliseconds the same way, across the 49.7-day wrap of the millisecond clock.
 
 What buys that is a bound on how far apart two records can be, so the bound is written down as `kDutyPeriodCeilingMs`, 60 s, and the service that emits the record asserts its own period against it. At a 30 s cadence the worst interval holds about 30 partial refreshes, 30,000 ms of backlight, 30,000 ms of receiver armed, 30,000 ms of BLE connected and 150 ms of PA keyed (one 5 ms burst a second airborne, half the 300 ms the 1% band M allowance grants over 30 s), every one of them with room to spare. At 60 s each doubles and the widest is still 60,000. Past that the arithmetic stops being true, which is why the cadence is a constant with an assertion behind it rather than a number chosen in a service.
 
@@ -143,7 +143,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
 | `Flight` | `services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
 | `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
-| `Baro` | `services/ownship.cpp` `record_baro` | every sample the board polls (`runtime::kBaroPublishPeriodMs`) |
+| `Barometer` | `services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `services/config_link.cpp` `record_link`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
@@ -152,7 +152,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
 | `End` | `services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
-| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diag::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
+| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diagnostics::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
 
 `Gnss::reject` is the receiver's own verdict and reaches the tap the way every other receiver fact does: `gnss::FixValidity` lives on the L76K driver, which no `runtime::Context` reaches, so the board publishes its reason and its count onto `bus::State` beside the sky view as it pushes the solution, and own-ship reads them there. The board is a writer of that group by the table in `core/bus/README.md`.
 
@@ -203,7 +203,7 @@ The blocking window is about a second: the store erases a 4 KB sector when the f
 
 It is a bound, not a promise: a sky that produces more is a sky whose gaps are recorded as gaps.
 
-`kPeriodicRecordsPerSecond` is the other half of that arithmetic and a much smaller number, fifteen, counted off the taps above: eight subjects that write once a second whatever the sky is doing (`Gnss`, `Pps`, `Flight`, `Baro`, `Power`, `Motion`, `Screen`, `Loop`), the three dwells the radio arms as the second crosses its two band edges and its M-band hop, the three `Switch` records those dwells cost, and own-ship's own `Burst`. The ring is sized on the worst second, but how long a partition lasts is a question about the quiet ones, so that is the rate the capture page quotes before a capture is armed. Once one is running the page quotes what it is actually producing instead. `test/products/test_diag_taps.cpp` measures an armed device against that number, so the page cannot go on quoting a rate the taps stopped producing.
+`kPeriodicRecordsPerSecond` is the other half of that arithmetic and a much smaller number, fifteen, counted off the taps above: eight subjects that write once a second whatever the sky is doing (`Gnss`, `Pps`, `Flight`, `Barometer`, `Power`, `Motion`, `Screen`, `Loop`), the three dwells the radio arms as the second crosses its two band edges and its M-band hop, the three `Switch` records those dwells cost, and own-ship's own `Burst`. The ring is sized on the worst second, but how long a partition lasts is a question about the quiet ones, so that is the rate the capture page quotes before a capture is armed. Once one is running the page quotes what it is actually producing instead. `test/products/test_diagnostics_taps.cpp` measures an armed device against that number, so the page cannot go on quoting a rate the taps stopped producing.
 
 ## Where the recorder lives
 

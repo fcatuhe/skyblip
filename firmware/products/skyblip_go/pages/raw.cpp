@@ -17,13 +17,13 @@ constexpr int kGnssRows = 6;
 constexpr int kBlockRuleY = kGnssTopY + kGnssRows * kLineH + 1;
 constexpr int kRadioTopY = kBlockRuleY + 5;
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
-    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
+    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
 }
 
-void row(ui::Canvas& canvas, int y, char* buf, int n) {
-    buf[n] = 0;
-    canvas.draw_text(kLeft, y, buf, true, 1);
+void row(ui::Canvas& canvas, int y, char* buffer, int n) {
+    buffer[n] = 0;
+    canvas.draw_text(kLeft, y, buffer, true, 1);
 }
 
 int format_word(char* out, const char* word) {
@@ -116,7 +116,7 @@ void draw_fix(ui::Canvas& canvas, int y, const RawGnss& g) {
     char text[40];
     int written = format_word(text, "FIX");
     written += format_word(text + written, g.fix_valid ? "OK" : gnss::stage_name(g.stage));
-    written += format_keyed(text + written, "SV", g.sats);
+    written += format_keyed(text + written, "SV", g.satellites);
     written += format_keyed(text + written, "USE", g.in_use);
     written += format_keyed(text + written, "Q", g.fix_mode);
     written += format_word(text + written, "SET");
@@ -165,7 +165,7 @@ void draw_dwell(ui::Canvas& canvas, int y, const RawRadio& r) {
     char text[40];
     int written = format_word(text, "DWELL");
     written += format_word(text + written, slot_word(r.slot));
-    written += format_uint(text + written, r.freq_hz / 100000 % 10000, 4, 1);
+    written += format_uint(text + written, r.frequency_hz / 100000 % 10000, 4, 1);
     written += format_string(text + written, " TX ");
     written += format_string(text + written, yes_no(r.tx_allowed));
     row(canvas, y, text, written);

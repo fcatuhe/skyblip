@@ -54,14 +54,14 @@ struct Peer {
     }
 
     bool frames(const simulator::AirRecord& burst, protocol::Frame& out) {
-        if (!chip.receive_air(burst.chips, burst.len, /*crc_error=*/false, burst.rssi_dbm,
+        if (!chip.receive_air(burst.chips, burst.length, /*crc_error=*/false, burst.rssi_dbm,
                               burst.chip_rate_bps))
             return false;
-        uint8_t buf[events::kRfEventBytes];
-        const parts::RadioEvent ev = radio.poll(buf, sizeof(buf));
+        uint8_t buffer[events::kRfEventBytes];
+        const parts::RadioEvent event = radio.poll(buffer, sizeof(buffer));
         REQUIRE(radio.start_receive() == Status::Ok);
-        if (ev.type != parts::RadioEventType::RxDone) return false;
-        return protocol::receive_mband(buf, ev.len, out);
+        if (event.type != parts::RadioEventType::RxDone) return false;
+        return protocol::receive_mband(buffer, event.length, out);
     }
 };
 
@@ -339,8 +339,8 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         for (int j = 0; j < air.record_count(); j++) {
             const simulator::AirRecord& heard = air.record(j);
             if (heard.event != simulator::AirEvent::Rx) continue;
-            const bool identical =
-                heard.len == mine.len && std::memcmp(heard.chips, mine.chips, mine.len) == 0;
+            const bool identical = heard.length == mine.length &&
+                                   std::memcmp(heard.chips, mine.chips, mine.length) == 0;
             CHECK_FALSE(identical);
         }
     }

@@ -50,7 +50,7 @@ TEST_CASE("product: a running device with no fix winks blue, and green once it h
     REQUIRE(step_until_lit(rig, t, 3500) > 0);
     CHECK(lamp_of(rig).lamp() == indication::Lamp::Blue);
 
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     settle(rig, t, 500);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
     REQUIRE(step_until_lit(rig, t, 3500) > 0);
@@ -63,7 +63,7 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
     // minute of flying.
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
 
     uint32_t lit_passes = 0;
     uint32_t passes = 0;
@@ -85,7 +85,7 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
 TEST_CASE("product: a critical cell blinks the lamp red") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t t = 0;
     settle(rig, t);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
@@ -103,7 +103,7 @@ TEST_CASE("product: a critical cell blinks the lamp red") {
 TEST_CASE("product: a cell past the knee winks red at the rate a healthy one winks green") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t t = 0;
     settle(rig, t);
     REQUIRE(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
@@ -131,7 +131,7 @@ TEST_CASE("product: a divider that reads nothing does not blink like a flat cell
     // floor throws away, leaving the level Unknown for ever. Unknown is not low.
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     rig.platform.battery().divider_mv = 200;
     uint32_t t = 0;
     settle(rig, t, 8000);
@@ -144,7 +144,7 @@ TEST_CASE("product: a cable in leaves the lamp saying what the charger cannot") 
     // The charger IC drives its own LED, so a charge takes no row and the fix keeps the lamp.
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t t = 0;
     settle(rig, t);
 
@@ -212,7 +212,7 @@ TEST_CASE("product: a unit with no status LED flies and lights nothing") {
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Indicator));
     CHECK(ports::has(rig.product.degraded(), ports::Capability::Indicator));
 
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t t = 0;
     settle(rig, t, 10000);
 
@@ -230,7 +230,7 @@ TEST_CASE("product: switching alarms off silences the buzzer and does not darken
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm_enabled = false;
-    rig.push_fix(/*alt_m=*/500, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t t = 0;
     settle(rig, t);
 

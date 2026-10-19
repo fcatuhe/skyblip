@@ -31,11 +31,11 @@ TEST_CASE("traffic: dedup merges the same target, fresher and direct win") {
     // direct, same time -> should replace uplink (direct preferred)
     table.update(observation(0x111, 6, 100, model::Source::AdslDirect), 100);
     CHECK(table.count() == 1);
-    int idx = table.find(6, 0x111);
-    CHECK(table.at(idx)->observation.source == model::Source::AdslDirect);
+    int index = table.find(6, 0x111);
+    CHECK(table.at(index)->observation.source == model::Source::AdslDirect);
     // older observation must not overwrite a fresher one
     table.update(observation(0x111, 6, 90, model::Source::AdslUplink), 100);
-    CHECK(table.at(idx)->observation.received.at_s == 100);
+    CHECK(table.at(index)->observation.received.at_s == 100);
 }
 
 // A ground relay is a rebroadcast, so it is always the newer report and always
@@ -44,15 +44,15 @@ TEST_CASE("traffic: dedup merges the same target, fresher and direct win") {
 TEST_CASE("traffic: a relay does not displace a direct reception that is still fresh") {
     TrafficTable table;
     table.update(observation(0x111, 6, 100, model::Source::AdslDirect), 100);
-    const int idx = table.find(6, 0x111);
-    REQUIRE(idx >= 0);
+    const int index = table.find(6, 0x111);
+    REQUIRE(index >= 0);
 
     const uint32_t hold_s = direct_preferred_max_age_s(observation(0x111, 6, 100));
     for (uint32_t later = 101; later <= 100 + hold_s; later++) {
         table.update(observation(0x111, 6, later, model::Source::AdslUplink), later);
         CHECK(table.count() == 1);
-        CHECK(table.at(idx)->observation.source == model::Source::AdslDirect);
-        CHECK(table.at(idx)->observation.received.at_s == 100);
+        CHECK(table.at(index)->observation.source == model::Source::AdslDirect);
+        CHECK(table.at(index)->observation.received.at_s == 100);
     }
 
     // And the hold is a hold, not a block: past it the direct track is as stale
@@ -61,15 +61,15 @@ TEST_CASE("traffic: a relay does not displace a direct reception that is still f
     const uint32_t past = 100 + hold_s + 1;
     table.update(observation(0x111, 6, past, model::Source::AdslUplink), past);
     CHECK(table.count() == 1);
-    CHECK(table.at(idx)->observation.source == model::Source::AdslUplink);
-    CHECK(table.at(idx)->observation.received.at_s == past);
+    CHECK(table.at(index)->observation.source == model::Source::AdslUplink);
+    CHECK(table.at(index)->observation.received.at_s == past);
 
     // A relay never blocks a target of its own, and a direct reception takes it
     // straight back.
     table.update(observation(0x222, 6, past, model::Source::AdslUplink), past);
     CHECK(table.count() == 2);
     table.update(observation(0x111, 6, past, model::Source::AdslDirect), past);
-    CHECK(table.at(idx)->observation.source == model::Source::AdslDirect);
+    CHECK(table.at(index)->observation.source == model::Source::AdslDirect);
 }
 
 // The hold is core/traffic/alarm.h's own freshness rule wearing a different
@@ -84,14 +84,14 @@ TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one
 
     TrafficTable table;
     table.update(parked(0x111, 6, 100), 100);
-    const int idx = table.find(6, 0x111);
-    REQUIRE(idx >= 0);
+    const int index = table.find(6, 0x111);
+    REQUIRE(index >= 0);
 
     table.update(parked(0x111, 6, 106, model::Source::AdslUplink), 106);
-    CHECK(table.at(idx)->observation.source == model::Source::AdslDirect);
+    CHECK(table.at(index)->observation.source == model::Source::AdslDirect);
 
     table.update(parked(0x111, 6, 111, model::Source::AdslUplink), 111);
-    CHECK(table.at(idx)->observation.source == model::Source::AdslUplink);
+    CHECK(table.at(index)->observation.source == model::Source::AdslUplink);
 }
 
 // A ground station relays every aircraft it heard, and it heard us. Own-ship on
@@ -193,10 +193,10 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
-    const auto at = [&](uint32_t address, int north_m, model::Source src, uint32_t t) {
+    const auto at = [&](uint32_t address, int north_m, model::Source source, uint32_t t) {
         model::AircraftObservation o = neighbour(own, north_m, 0, 0, 30, 0);
         o.address = address;
-        o.source = src;
+        o.source = source;
         o.received.at_s = t;
         return o;
     };
@@ -218,26 +218,26 @@ TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     TrafficTable table;
     // fill capacity
     for (int i = 0; i < TrafficTable::kCapacity; i++) {
-        int idx = table.update(observation(0x1000 + i, 6, 100 + i), 200);
-        REQUIRE(idx >= 0);
+        int index = table.update(observation(0x1000 + i, 6, 100 + i), 200);
+        REQUIRE(index >= 0);
     }
     // mark the oldest entry as an active alarm so it can't be evicted
     int oldest = table.find(6, 0x1000);
     table.at(oldest)->alarm_level = Level::Advisory;
-    int idx = table.update(observation(0x9999, 6, 300), 300);
-    CHECK(idx >= 0);                    // newcomer placed
+    int index = table.update(observation(0x9999, 6, 300), 300);
+    CHECK(index >= 0);                  // newcomer placed
     CHECK(table.find(6, 0x1000) >= 0);  // protected alarm still present
 }
 
 // The radar counts a slot by its formation flag, so a newcomer must not inherit a departed
 // wingman's.
 TEST_CASE("traffic: a slot handed to a new aircraft keeps nothing of the last one's standing") {
-    const auto standing = [](TrafficTable& table, int idx) {
-        table.at(idx)->in_formation = true;
-        table.at(idx)->alarm_dismissed = true;
+    const auto standing = [](TrafficTable& table, int index) {
+        table.at(index)->in_formation = true;
+        table.at(index)->alarm_dismissed = true;
     };
-    const auto fresh = [](const TrafficTable& table, int idx) {
-        return idx >= 0 && !table.at(idx)->in_formation && !table.at(idx)->alarm_dismissed;
+    const auto fresh = [](const TrafficTable& table, int index) {
+        return index >= 0 && !table.at(index)->in_formation && !table.at(index)->alarm_dismissed;
     };
 
     TrafficTable full;

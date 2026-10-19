@@ -16,7 +16,7 @@ TEST_CASE("sx1262: begin configures the TCXO (DIO3) and RF switch (DIO2) for T-E
     CHECK(radio.begin() == Status::Ok);
     // Without these two the SX1262 has no clock / no antenna path on this board.
     CHECK(chip.saw_command(sx::kSetDio2AsRfSwitch));
-    CHECK(chip.saw_command(sx::kSetDio3AsTcxoCtrl));
+    CHECK(chip.saw_command(sx::kSetDio3AsTcxoControl));
     CHECK(chip.saw_command(sx::kCalibrate));
 }
 
@@ -155,14 +155,14 @@ TEST_CASE("sx1262: a queued RX packet is delivered via poll") {
     REQUIRE(radio.begin() == Status::Ok);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
-    uint8_t pkt[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-    chip.queue_rx(pkt, 8);
-    uint8_t buf[32];
-    RadioEvent ev = radio.poll(buf, sizeof(buf));
-    CHECK(ev.type == RadioEventType::RxDone);
-    CHECK(int(ev.len) == 8);
-    CHECK(buf[0] == 0x11);
-    CHECK(buf[7] == 0x88);
+    uint8_t packet[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+    chip.queue_rx(packet, 8);
+    uint8_t buffer[32];
+    RadioEvent event = radio.poll(buffer, sizeof(buffer));
+    CHECK(event.type == RadioEventType::RxDone);
+    CHECK(int(event.length) == 8);
+    CHECK(buffer[0] == 0x11);
+    CHECK(buffer[7] == 0x88);
 }
 
 TEST_CASE("sx1262: a CRC-error RX is reported as CrcError, NOT delivered") {
@@ -171,11 +171,11 @@ TEST_CASE("sx1262: a CRC-error RX is reported as CrcError, NOT delivered") {
     REQUIRE(radio.begin() == Status::Ok);
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
-    uint8_t pkt[4] = {1, 2, 3, 4};
-    chip.queue_rx(pkt, 4, /*crc_error=*/true);
-    uint8_t buf[32];
-    RadioEvent ev = radio.poll(buf, sizeof(buf));
-    CHECK(ev.type == RadioEventType::CrcError);
+    uint8_t packet[4] = {1, 2, 3, 4};
+    chip.queue_rx(packet, 4, /*crc_error=*/true);
+    uint8_t buffer[32];
+    RadioEvent event = radio.poll(buffer, sizeof(buffer));
+    CHECK(event.type == RadioEventType::CrcError);
 }
 
 TEST_CASE("sx1262: BUSY stuck high is surfaced as a fault, not a hang") {
@@ -185,9 +185,9 @@ TEST_CASE("sx1262: BUSY stuck high is surfaced as a fault, not a hang") {
     REQUIRE(radio.configure_radio(RadioConfig{}) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
     chip.busy_stuck = true;
-    uint8_t buf[32];
-    RadioEvent ev = radio.poll(buf, sizeof(buf));
-    CHECK(ev.type == RadioEventType::Fault);
+    uint8_t buffer[32];
+    RadioEvent event = radio.poll(buffer, sizeof(buffer));
+    CHECK(event.type == RadioEventType::Fault);
 }
 
 TEST_CASE("sx1262: health watchdog reinitialises after no-RX timeout (no-RX-in-N reinit, tested)") {
@@ -204,10 +204,10 @@ TEST_CASE("sx1262: health watchdog reinitialises after no-RX timeout (no-RX-in-N
     CHECK(radio.reinit_count() == 1);
     CHECK(radio.mode() == RadioMode::Rx);  // back to receiving
     // a received packet resets the staleness timer
-    uint8_t pkt[2] = {0xAB, 0xCD};
-    chip.queue_rx(pkt, 2);
-    uint8_t buf[8];
-    radio.poll(buf, sizeof(buf));
+    uint8_t packet[2] = {0xAB, 0xCD};
+    chip.queue_rx(packet, 2);
+    uint8_t buffer[8];
+    radio.poll(buffer, sizeof(buffer));
     CHECK_FALSE(radio.service(29000, 30000));
 }
 
@@ -265,8 +265,8 @@ TEST_CASE("sx1262: a transmission that never completes is recovered to RX and co
     REQUIRE(radio.mode() == RadioMode::Tx);
     CHECK(radio.tx_recovery_count() == 0);
     REQUIRE(chip.expire_tx());  // TxDone never comes; the chip's timeout does
-    uint8_t buf[32];
-    CHECK(radio.poll(buf, sizeof(buf)).type == RadioEventType::Timeout);
+    uint8_t buffer[32];
+    CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::Timeout);
     CHECK(radio.tx_recovery_count() == 1);
     CHECK(radio.mode() == RadioMode::Rx);
     CHECK(chip.receiving);

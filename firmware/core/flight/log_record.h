@@ -58,15 +58,15 @@ constexpr uint8_t kLogFlagSessionEnd = 1u << 7;
 // here and relative on flash: the sector header holds the base.
 struct LogRecord {
     uint32_t utc_s{0};
-    int32_t lat_1e7{0};
-    int32_t lon_1e7{0};
-    int32_t alt_msl_m{0};
-    int32_t alt_hae_m{0};
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    int32_t altitude_msl_m{0};
+    int32_t altitude_hae_m{0};
     uint16_t speed_q{0};
     uint16_t track_c9{0};
     int16_t climb_e8{0};
     uint16_t hdop_e2{0};
-    uint8_t sats{0};
+    uint8_t satellites{0};
     uint8_t flight_state{0};
     bool fix_valid{false};
     bool utc_valid{false};
@@ -98,10 +98,10 @@ struct LogStatus {
 struct LogContact {
     uint32_t address{0};
     uint8_t address_mapping_table{0};
-    uint8_t aircraft_cat{0};
-    uint16_t dist_m{0};
-    int16_t rel_alt_m{0};
-    uint16_t rel_bearing_deg{0};
+    uint8_t aircraft_category{0};
+    uint16_t distance_m{0};
+    int16_t relative_altitude_m{0};
+    uint16_t relative_bearing_deg{0};
     int16_t closing_mps{0};
     uint8_t alarm{0};
     uint8_t source{0};

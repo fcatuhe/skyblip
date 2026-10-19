@@ -1,13 +1,13 @@
-#ifndef SKYBLIP_CORE_DIAG_RECORDER_H
-#define SKYBLIP_CORE_DIAG_RECORDER_H
+#ifndef SKYBLIP_CORE_DIAGNOSTICS_RECORDER_H
+#define SKYBLIP_CORE_DIAGNOSTICS_RECORDER_H
 
 #include <cstdint>
 
-#include "core/diag/payload.h"
-#include "core/diag/profile.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
+#include "core/diagnostics/record.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 class Recorder {
    public:

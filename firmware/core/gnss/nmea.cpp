@@ -14,9 +14,9 @@ int hex_value(char c) {
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     return -1;
 }
-long parse_long(const char* s, int len) {
+long parse_long(const char* s, int length) {
     long v = 0;
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < length; i++) {
         if (s[i] < '0' || s[i] > '9') break;
         v = v * 10 + (s[i] - '0');
     }
@@ -186,30 +186,32 @@ bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
         field_count > kGsaSystemField
             ? system_of_gsa_id(static_cast<uint8_t>(parse_long(fields[kGsaSystemField], 1)))
             : System::Unknown;
-    for (int slot = 0; slot < kGsaSatSlots && kGsaFirstSatField + slot < field_count; slot++)
-        sky_.solving(system, static_cast<uint8_t>(parse_long(fields[kGsaFirstSatField + slot], 3)));
+    for (int slot = 0; slot < kGsaSatelliteSlots && kGsaFirstSatelliteField + slot < field_count;
+         slot++)
+        sky_.solving(system,
+                     static_cast<uint8_t>(parse_long(fields[kGsaFirstSatelliteField + slot], 3)));
     return true;
 }
 
 // INFO: fc 18sep26 QZSS rides on the GP talker and is told apart by its satellite id alone
 bool NmeaParser::apply_gsv(const char* talker, const char* fields[], int field_count) {
-    if (field_count <= kGsvFirstSatField) return false;
+    if (field_count <= kGsvFirstSatelliteField) return false;
     last_sentence_ = Sentence::Gsv;
     const System talker_system = system_of_talker(talker, 0);
     if (parse_long(fields[2], 2) == 1) {
         sky_.open(talker_system);
         if (talker_system == System::Gps) sky_.open(System::Qzss);
     }
-    for (int at = kGsvFirstSatField; at + kGsvFieldsPerSat - 1 < field_count;
-         at += kGsvFieldsPerSat) {
-        SatelliteView sat;
-        sat.id = static_cast<uint8_t>(parse_long(fields[at], 3));
-        if (sat.id == 0) continue;
-        sat.system = system_of_talker(talker, sat.id);
-        sat.elevation_deg = static_cast<uint8_t>(parse_long(fields[at + 1], 2));
-        sat.azimuth_deg = static_cast<uint16_t>(parse_long(fields[at + 2], 3));
-        sat.cn0_dbhz = static_cast<uint8_t>(parse_long(fields[at + 3], 2));
-        sky_.add(sat);
+    for (int at = kGsvFirstSatelliteField; at + kGsvFieldsPerSatellite - 1 < field_count;
+         at += kGsvFieldsPerSatellite) {
+        SatelliteView satellite;
+        satellite.id = static_cast<uint8_t>(parse_long(fields[at], 3));
+        if (satellite.id == 0) continue;
+        satellite.system = system_of_talker(talker, satellite.id);
+        satellite.elevation_deg = static_cast<uint8_t>(parse_long(fields[at + 1], 2));
+        satellite.azimuth_deg = static_cast<uint16_t>(parse_long(fields[at + 2], 3));
+        satellite.cn0_dbhz = static_cast<uint8_t>(parse_long(fields[at + 3], 2));
+        sky_.add(satellite);
     }
     return true;
 }
@@ -220,17 +222,18 @@ bool NmeaParser::apply_gsv(const char* talker, const char* fields[], int field_c
 // The version text carries commas of its own ("SW=URANUS5,V5.1.0.0"), so it is
 // read off the raw line rather than out of the split fields: it is one string,
 // not three, and SoftRF takes the same run of characters up to the checksum.
-bool NmeaParser::apply_txt(const char* line, int len) {
+bool NmeaParser::apply_txt(const char* line, int length) {
     int at = 0;
-    for (int commas = 0; at < len && commas < 4; at++)
+    for (int commas = 0; at < length && commas < 4; at++)
         if (line[at] == ',') commas++;
     // Only the SW= banner. The part also emits $GPTXT for antenna status and
     // start-up notices, and a version field that is sometimes an antenna warning
     // is worse than no version field.
-    if (len - at < 3 || line[at] != 'S' || line[at + 1] != 'W' || line[at + 2] != '=') return false;
+    if (length - at < 3 || line[at] != 'S' || line[at + 1] != 'W' || line[at + 2] != '=')
+        return false;
     at += 3;
     int n = 0;
-    for (; at < len && line[at] != '*' && n < kVersionBytes - 1; at++, n++)
+    for (; at < length && line[at] != '*' && n < kVersionBytes - 1; at++, n++)
         firmware_version_[n] = line[at];
     firmware_version_[n] = 0;
     last_sentence_ = Sentence::Txt;
@@ -249,11 +252,11 @@ bool NmeaParser::apply_txt(const char* line, int len) {
 bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
     if (field_count < 10) return false;
     last_sentence_ = Sentence::Rmc;
-    int32_t lat_1e7 = 0;
-    int32_t lon_1e7 = 0;
+    int32_t latitude_1e7 = 0;
+    int32_t longitude_1e7 = 0;
     solution_.fix_valid = fields[2][0] == 'A' &&
-                          nmea_parse_coordinate(fields[3], fields[4][0], lat_1e7) &&
-                          nmea_parse_coordinate(fields[5], fields[6][0], lon_1e7);
+                          nmea_parse_coordinate(fields[3], fields[4][0], latitude_1e7) &&
+                          nmea_parse_coordinate(fields[5], fields[6][0], longitude_1e7);
     solution_.utc_valid = false;
     if (digits(fields[1], kRmcStampDigits) && digits(fields[9], kRmcStampDigits)) {
         int hh = d2(fields[1]), mm = d2(fields[1] + 2), ss = d2(fields[1] + 4);
@@ -268,8 +271,8 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
         }
     }
     if (solution_.fix_valid) {
-        solution_.lat_1e7 = lat_1e7;
-        solution_.lon_1e7 = lon_1e7;
+        solution_.latitude_1e7 = latitude_1e7;
+        solution_.longitude_1e7 = longitude_1e7;
         int64_t knots_e2 = 0;
         int64_t speed_mm_s = -1;
         if (parse_scaled(fields[7], 100, knots_e2))
@@ -287,14 +290,14 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
     return true;
 }
 
-bool NmeaParser::apply_gga(const char* fields[], int field_count, int len) {
+bool NmeaParser::apply_gga(const char* fields[], int field_count, int length) {
     // A sentence that stopped early still checksums: length is the only thing
     // that catches it, which is why moshe-braner measures it.
-    if (field_count < 10 || len < kGgaLengthFloorBytes) return false;
+    if (field_count < 10 || length < kGgaLengthFloorBytes) return false;
     last_sentence_ = Sentence::Gga;
     sky_.clear_solution();
     solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
-    solution_.sats = static_cast<uint8_t>(parse_long(fields[7], 2));
+    solution_.satellites = static_cast<uint8_t>(parse_long(fields[7], 2));
 
     int64_t hdop_e2 = 0;
     solution_.hdop_e2 = parse_scaled(fields[8], 100, hdop_e2) && hdop_e2 > 0 && hdop_e2 <= 0xFFFF
@@ -309,13 +312,13 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int len) {
         solution_.geoid_measured ? static_cast<int32_t>(separation_mm) : kDefaultGeoidSeparationMm;
 
     int64_t msl_mm = 0;
-    solution_.alt_msl_valid = parse_scaled(fields[9], 1000, msl_mm) &&
-                              msl_mm >= kAltitudeFloorM * 1000 &&
-                              msl_mm <= kAltitudeCeilingM * 1000;
-    solution_.alt_hae_valid = solution_.alt_msl_valid;
-    if (solution_.alt_msl_valid) {
-        solution_.alt_msl_mm = static_cast<int32_t>(msl_mm);
-        solution_.alt_hae_mm = solution_.alt_msl_mm + solution_.geoid_separation_mm;
+    solution_.altitude_msl_valid = parse_scaled(fields[9], 1000, msl_mm) &&
+                                   msl_mm >= kAltitudeFloorM * 1000 &&
+                                   msl_mm <= kAltitudeCeilingM * 1000;
+    solution_.altitude_hae_valid = solution_.altitude_msl_valid;
+    if (solution_.altitude_msl_valid) {
+        solution_.altitude_msl_mm = static_cast<int32_t>(msl_mm);
+        solution_.altitude_hae_mm = solution_.altitude_msl_mm + solution_.geoid_separation_mm;
     }
 
     solution_.sentences++;

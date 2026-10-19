@@ -26,15 +26,15 @@ TEST_CASE("crc: the ADS-L CRC detects a good vs corrupted packet") {
 }
 
 TEST_CASE("crc: crc16-ccitt and crc32 known/stability") {
-    const uint8_t msg[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    CHECK(crc16_ccitt(msg, 9) == 0x31C3);  // CCITT-FALSE(init0) check value
-    uint32_t a = crc32(msg, 9);
-    uint32_t b = crc32(msg, 9);
+    const uint8_t message[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
+    CHECK(crc16_ccitt(message, 9) == 0x31C3);  // CCITT-FALSE(init0) check value
+    uint32_t a = crc32(message, 9);
+    uint32_t b = crc32(message, 9);
     CHECK(a == b);
-    uint8_t msg2[9];
-    std::memcpy(msg2, msg, 9);
-    msg2[0] ^= 1;
-    CHECK(crc32(msg2, 9) != a);
+    uint8_t message2[9];
+    std::memcpy(message2, message, 9);
+    message2[0] ^= 1;
+    CHECK(crc32(message2, 9) != a);
 }
 
 TEST_CASE("manchester: encode/decode round-trip is clean") {
@@ -42,11 +42,11 @@ TEST_CASE("manchester: encode/decode round-trip is clean") {
     for (int i = 0; i < 21; i++) data[i] = static_cast<uint8_t>(i * 11 + 3);
     uint8_t coded[42];
     manchester_encode(data, 21, coded);
-    uint8_t out[21], err[21];
-    size_t bad = manchester_decode(coded, 21, out, err);
+    uint8_t out[21], error[21];
+    size_t bad = manchester_decode(coded, 21, out, error);
     CHECK(bad == 0);
     CHECK(std::memcmp(data, out, 21) == 0);
-    for (int i = 0; i < 21; i++) CHECK(err[i] == 0);
+    for (int i = 0; i < 21; i++) CHECK(error[i] == 0);
 }
 
 TEST_CASE("manchester: a flipped chip is flagged as an error bit") {
@@ -54,10 +54,10 @@ TEST_CASE("manchester: a flipped chip is flagged as an error bit") {
     uint8_t coded[8];
     manchester_encode(data, 4, coded);
     coded[0] ^= 0x80;  // break one Manchester symbol -> illegal 00/11
-    uint8_t out[4], err[4];
-    size_t bad = manchester_decode(coded, 4, out, err);
+    uint8_t out[4], error[4];
+    size_t bad = manchester_decode(coded, 4, out, error);
     CHECK(bad >= 1);
-    CHECK(err[0] != 0);
+    CHECK(error[0] != 0);
 }
 
 TEST_CASE("scramble: descramble is the exact inverse (property)") {

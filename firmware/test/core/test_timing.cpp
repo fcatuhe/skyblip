@@ -49,16 +49,16 @@ TEST_CASE("timing: band and channel per dwell") {
     CHECK(Scheduler::band_at(300) == Band::O);
     // The tail of slot 1: still M-band, still the second channel.
     CHECK(Scheduler::band_at(100) == Band::M);
-    CHECK(Scheduler::freq_hz_at(100) == kMband1Hz);
+    CHECK(Scheduler::frequency_hz_at(100) == kMband1Hz);
     CHECK(Scheduler::slot_of(100) == 1);
     CHECK(Scheduler::band_at(420) == Band::M);
     CHECK(Scheduler::band_at(500) == Band::M);
     CHECK(Scheduler::band_at(900) == Band::M);
     // §C.2: two M-band channels, one per direct half, so a receiver visits both.
-    CHECK(Scheduler::freq_hz_at(300) == kObandHz);
-    CHECK(Scheduler::freq_hz_at(420) == kMband0Hz);
-    CHECK(Scheduler::freq_hz_at(500) == kMband0Hz);
-    CHECK(Scheduler::freq_hz_at(900) == kMband1Hz);
+    CHECK(Scheduler::frequency_hz_at(300) == kObandHz);
+    CHECK(Scheduler::frequency_hz_at(420) == kMband0Hz);
+    CHECK(Scheduler::frequency_hz_at(500) == kMband0Hz);
+    CHECK(Scheduler::frequency_hz_at(900) == kMband1Hz);
 }
 
 TEST_CASE("timing: uplink window and direct slot predicates") {
@@ -174,7 +174,7 @@ TEST_CASE("timing: past holdover or no UTC, listen only, fail closed") {
 namespace {
 
 bool same_dwell(const SlotPlan& a, const SlotPlan& b) {
-    return a.state == b.state && a.band == b.band && a.freq_hz == b.freq_hz &&
+    return a.state == b.state && a.band == b.band && a.frequency_hz == b.frequency_hz &&
            a.start_ms == b.start_ms && a.end_ms == b.end_ms && a.tx_allowed == b.tx_allowed &&
            a.own_tx_dwell == b.own_tx_dwell;
 }

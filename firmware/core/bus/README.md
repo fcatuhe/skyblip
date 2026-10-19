@@ -8,7 +8,7 @@ Two things travel between services, and they are not the same kind of thing.
 
 The rule that makes the blackboard safe is one writer per field. It is not enforced by the compiler, so it is written down here, and a second writer appearing in this table is a bug report.
 
-The groups are subjects, not owners. A reader wants every barometric fact in one place whoever wrote it, so `baro` holds the pressure the sensor gave and the subscale the pilot set, and the table below is what says those two came from different services.
+The groups are subjects, not owners. A reader wants every barometric fact in one place whoever wrote it, so `barometer` holds the pressure the sensor gave and the subscale the pilot set, and the table below is what says those two came from different services.
 
 ## Who writes what
 
@@ -23,7 +23,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `power` | `power` |
 | `flight` | `ownship` |
 | `gnss` | `ownship` for the acquisition stage, the fix mode and the phase a solution landed at, `screen` for `levels_wanted`, the board for what only the receiver knows: the sky view, whether levels are live, and the `reject` verdict and `rejected` count behind the solution it just pushed |
-| `baro` | `ownship` |
+| `barometer` | `ownship` |
 | `slip` | `ownship` |
 | `imu` | the board, which owns the sensor hub the ball comes from and is the only code that can see where its bring-up stopped |
 | `capture` | `capture`, the diagnostics writer, read by the page that arms it |
@@ -34,7 +34,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 
 Four entries have more than one writer and all four are deliberate. `clock`, `gnss` and `rf.timing_stats` are split between the board, which is the only code holding the part and therefore the only code that can say when the PPS edge arrived or why the receiver refused a solution, and the services that decide what to do with either. `radio_log` is one ring with two ends of the same conversation in it.
 
-`duty` is the fifth, and it is four writers rather than two: the group is a subject like the others, and the subject is what the device spent. A reader of the power budget wants the panel, the backlight, the receiver, the annunciator and the phone in one place, and each of those facts is known only to the service that drives that consumer, so the split is the same one `baro` and `gnss` make.
+`duty` is the fifth, and it is four writers rather than two: the group is a subject like the others, and the subject is what the device spent. A reader of the power budget wants the panel, the backlight, the receiver, the annunciator and the phone in one place, and each of those facts is known only to the service that drives that consumer, so the split is the same one `barometer` and `gnss` make.
 
 `rf.tx_done_at_us` looks misfiled and is not: `traffic` is the single reader of `bus.rf`, so it is the only code that sees the executor's `TxDone`, and `radio` reads the instant from here rather than opening a second drain of the same queue.
 

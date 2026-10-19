@@ -48,11 +48,11 @@ TEST_CASE("ADS-L.4.SRD860.C.2.1: a one is sent as 01 and a zero as 10") {
     uint8_t chips[2 * protocol::kAdslFrameBytes] = {0};
     fec::manchester_encode(frame, sizeof(frame), chips);
     uint8_t back[sizeof(frame)] = {0};
-    uint8_t err[sizeof(frame)] = {0};
-    fec::manchester_decode(chips, sizeof(frame), back, err);
+    uint8_t error[sizeof(frame)] = {0};
+    fec::manchester_decode(chips, sizeof(frame), back, error);
     for (size_t i = 0; i < sizeof(frame); i++) {
         CHECK(back[i] == frame[i]);
-        CHECK(err[i] == 0);
+        CHECK(error[i] == 0);
     }
 }
 
@@ -85,10 +85,10 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
         const int slot = timing::Transmitter::slot_in(utc_s, /*airborne=*/true);
-        const uint32_t freq = timing::Scheduler::slot_freq_hz(slot);
-        CHECK((freq == timing::kMband0Hz || freq == timing::kMband1Hz));
-        if (previous != 0) CHECK(freq != previous);
-        previous = freq;
+        const uint32_t frequency = timing::Scheduler::slot_frequency_hz(slot);
+        CHECK((frequency == timing::kMband0Hz || frequency == timing::kMband1Hz));
+        if (previous != 0) CHECK(frequency != previous);
+        previous = frequency;
     }
 }
 
@@ -184,7 +184,7 @@ TEST_CASE(
             CHECK(a.at_ms >= timing::kCallsignStartMs);
             CHECK(a.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
                   timing::kCallsignEndMs);
-            CHECK(a.freq_hz == timing::kMband1Hz);
+            CHECK(a.frequency_hz == timing::kMband1Hz);
         }
     }
     CHECK(seen > 0);
@@ -195,7 +195,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, ins
     CHECK(timing::kUplinkRxEndMs <= 450);
     for (int phase = timing::kUplinkRxStartMs; phase < timing::kUplinkRxEndMs; phase++) {
         CHECK(timing::Scheduler::band_at(phase) == timing::Band::O);
-        CHECK(timing::Scheduler::freq_hz_at(phase) == timing::kObandHz);
+        CHECK(timing::Scheduler::frequency_hz_at(phase) == timing::kObandHz);
     }
     for (int phase = 0; phase < 200; phase++) CHECK_FALSE(timing::Scheduler::in_direct_slot(phase));
 }

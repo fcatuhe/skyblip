@@ -25,13 +25,13 @@ model::AircraftObservation make_target(uint32_t address) {
     model::AircraftObservation t{};
     t.address = address & 0xFFFFFF;
     t.address_mapping_table = 6;
-    t.aircraft_cat = 4;
+    t.aircraft_category = 4;
     t.flight_state = 2;
     t.speed_q = 180;
     t.speed_valid = true;
-    t.lat_1e7 = 481234500;
-    t.lon_1e7 = 81234500;
-    t.alt_m = 1234;
+    t.latitude_1e7 = 481234500;
+    t.longitude_1e7 = 81234500;
+    t.altitude_m = 1234;
     t.position_valid = true;
     return t;
 }
@@ -64,16 +64,16 @@ TEST_CASE("reed-solomon: corrects ALL patterns up to 16 symbol errors") {
             std::memcpy(cw, base, ReedSolomon255::kN);
             bool used[ReedSolomon255::kN] = {false};
             for (int e = 0; e < nerr; e++) {
-                int pos;
+                int position;
                 do {
-                    pos = rng.next() % ReedSolomon255::kN;
-                } while (used[pos]);
-                used[pos] = true;
+                    position = rng.next() % ReedSolomon255::kN;
+                } while (used[position]);
+                used[position] = true;
                 uint8_t v;
                 do {
                     v = static_cast<uint8_t>(rng.next());
                 } while (v == 0);
-                cw[pos] ^= v;
+                cw[position] ^= v;
             }
             int corrected = rs.decode(cw);
             CHECK(corrected == nerr);
@@ -99,16 +99,16 @@ TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, cou
         int nerr = 17 + (rng.next() % 20);  // 17..36 errors
         bool used[ReedSolomon255::kN] = {false};
         for (int e = 0; e < nerr; e++) {
-            int pos;
+            int position;
             do {
-                pos = rng.next() % ReedSolomon255::kN;
-            } while (used[pos]);
-            used[pos] = true;
+                position = rng.next() % ReedSolomon255::kN;
+            } while (used[position]);
+            used[position] = true;
             uint8_t v;
             do {
                 v = static_cast<uint8_t>(rng.next());
             } while (v == 0);
-            cw[pos] ^= v;
+            cw[position] ^= v;
         }
         int r = rs.decode(cw);
         if (r < 0) {
@@ -143,10 +143,10 @@ TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock
     CHECK(st.corrected == 0);
     for (int i = 0; i < n; i++) {
         CHECK(rx[i].address == tx[i].address);
-        CHECK(rx[i].lat_1e7 == tx[i].lat_1e7);
-        CHECK(rx[i].lon_1e7 == tx[i].lon_1e7);
-        CHECK(rx[i].alt_m == tx[i].alt_m);
-        CHECK(int(rx[i].aircraft_cat) == int(tx[i].aircraft_cat));
+        CHECK(rx[i].latitude_1e7 == tx[i].latitude_1e7);
+        CHECK(rx[i].longitude_1e7 == tx[i].longitude_1e7);
+        CHECK(rx[i].altitude_m == tx[i].altitude_m);
+        CHECK(int(rx[i].aircraft_category) == int(tx[i].aircraft_category));
     }
 }
 
@@ -161,12 +161,12 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     // inject 16 symbol errors
     bool used[AdslUplink::kFrameBytes] = {false};
     for (int e = 0; e < 16; e++) {
-        int pos;
+        int position;
         do {
-            pos = rng.next() % AdslUplink::kFrameBytes;
-        } while (used[pos]);
-        used[pos] = true;
-        frame[pos] ^= static_cast<uint8_t>(0x80 | (rng.next() & 0x7F));
+            position = rng.next() % AdslUplink::kFrameBytes;
+        } while (used[position]);
+        used[position] = true;
+        frame[position] ^= static_cast<uint8_t>(0x80 | (rng.next() & 0x7F));
     }
     model::AircraftObservation rx[4];
     AdslUplink::DecodeStats st;
@@ -174,7 +174,7 @@ TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
     CHECK(st.corrected == 16);
     CHECK(st.targets == 4);
     CHECK(rx[0].address == tx[0].address);
-    CHECK(rx[3].lat_1e7 == tx[3].lat_1e7);
+    CHECK(rx[3].latitude_1e7 == tx[3].latitude_1e7);
 }
 
 TEST_CASE("uplink: a destroyed frame is DETECTED (Status::Crc), never silently wrong") {
@@ -251,7 +251,7 @@ TEST_CASE("uplink: a record with no address and no place on the globe is refused
     AdslUplink up;
     model::AircraftObservation tx[3] = {make_target(0x600001), make_target(0),
                                         make_target(0x600003)};
-    tx[2].lat_1e7 = 1200000000;  // 120 degrees north of nowhere
+    tx[2].latitude_1e7 = 1200000000;  // 120 degrees north of nowhere
     uint8_t frame[AdslUplink::kFrameBytes];
     REQUIRE(up.encode(tx, 3, 0, frame) == Status::Ok);
 

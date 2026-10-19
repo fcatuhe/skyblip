@@ -49,7 +49,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
 
     const simulator::Air& air = simulator.world().air();
     int transmissions = 0;
-    uint32_t last_freq = 0;
+    uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& r = air.record(i);
         if (r.event != simulator::AirEvent::Tx) continue;
@@ -58,8 +58,8 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
         // burst runs 200 ms past it.
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
         CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
-        if (last_freq != 0) CHECK(r.freq_hz != last_freq);
-        last_freq = r.freq_hz;
+        if (last_frequency != 0) CHECK(r.frequency_hz != last_frequency);
+        last_frequency = r.frequency_hz;
     }
     // Six seconds of flight, one burst a second, less the one the cleared tape cut in half.
     CHECK(transmissions >= 5);
@@ -120,7 +120,7 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
         named++;
         CHECK(r.phase_ms < timing::kSlot1WrapMs);
         CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
-        CHECK(simulator::Air::tuned_to(r.freq_hz, timing::kMband1Hz));
+        CHECK(simulator::Air::tuned_to(r.frequency_hz, timing::kMband1Hz));
     }
     // Twenty-one seconds of flight: twenty-one positions and two names.
     CHECK(positions >= 19);
@@ -175,7 +175,8 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
         REQUIRE(p.check_crc() == 0);
         p.descramble();
         CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
-        CHECK(p.alt_m() == to_metres(Millimetres(simulator.product().state().own.alt_hae_mm)).v);
+        CHECK(p.altitude_m() ==
+              to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v);
         CHECK(p.FlightState == 2);
         checked++;
     }
@@ -412,7 +413,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
 
     const simulator::Air& air = simulator.world().air();
     int transmissions = 0;
-    uint32_t last_freq = 0;
+    uint32_t last_frequency = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& r = air.record(i);
         if (r.event != simulator::AirEvent::Tx) continue;
@@ -421,8 +422,8 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
         // off the PPS edge in micros(), which is 64-bit and does not wrap.
         CHECK(timing::Scheduler::in_direct_slot(r.phase_ms));
         CHECK(r.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
-        if (last_freq != 0) CHECK(r.freq_hz != last_freq);
-        last_freq = r.freq_hz;
+        if (last_frequency != 0) CHECK(r.frequency_hz != last_frequency);
+        last_frequency = r.frequency_hz;
     }
     // Eight seconds of flight is eight bursts, give or take the one the step
     // boundary lands on. A wrap that broke the rate rule would show up as zero.

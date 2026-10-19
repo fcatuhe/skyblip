@@ -24,12 +24,12 @@ class L76k : public io::Uart, public io::UartRate {
    public:
     // Modelled receiver state, driven by the caller.
     bool fix_valid{true};
-    uint8_t sats{9};
-    int32_t lat_1e7{485000000};  // 48.5 N
-    int32_t lon_1e7{85000000};   //  8.5 E
+    uint8_t satellites{9};
+    int32_t latitude_1e7{485000000};  // 48.5 N
+    int32_t longitude_1e7{85000000};  //  8.5 E
     // Height above the WGS-84 ellipsoid. The GGA this emits carries field 9 as
-    // alt_m - geoid_separation_m, which is what a receiver actually reports.
-    int32_t alt_m{1000};
+    // altitude_m - geoid_separation_m, which is what a receiver actually reports.
+    int32_t altitude_m{1000};
     int32_t geoid_separation_m{47};
     bool emit_geoid_separation{true};
     uint8_t gps_in_view{9};
@@ -136,8 +136,8 @@ class L76k : public io::Uart, public io::UartRate {
     }
     uint32_t port_baud() const { return port_baud_; }
 
-    size_t write(const uint8_t* data, size_t len) override {
-        for (size_t i = 0; i < len; i++) {
+    size_t write(const uint8_t* data, size_t length) override {
+        for (size_t i = 0; i < length; i++) {
             // A rate mismatch is not silence: the bits arrive and frame as
             // rubbish, which fails the checksum and is therefore indistinguishable
             // from nothing having been said.
@@ -156,21 +156,21 @@ class L76k : public io::Uart, public io::UartRate {
             }
             if (deaf()) {
                 deaf_bytes++;
-                command_len_ = 0;
+                command_length_ = 0;
                 continue;
             }
             const char c = static_cast<char>(data[i]);
             if (c == '$') {
-                command_len_ = 0;
-                command_[command_len_++] = c;
+                command_length_ = 0;
+                command_[command_length_++] = c;
             } else if (c == '\r' || c == '\n') {
-                if (command_len_ > 0) apply_command();
-                command_len_ = 0;
-            } else if (command_len_ > 0 && command_len_ < kCommandBytes - 1) {
-                command_[command_len_++] = c;
+                if (command_length_ > 0) apply_command();
+                command_length_ = 0;
+            } else if (command_length_ > 0 && command_length_ < kCommandBytes - 1) {
+                command_[command_length_++] = c;
             }
         }
-        return len;
+        return length;
     }
     size_t read(uint8_t* data, size_t cap) override {
         // It is talking and we cannot frame a byte of it: the sentences went
@@ -187,7 +187,9 @@ class L76k : public io::Uart, public io::UartRate {
     }
     size_t available() override { return pending_.size(); }
 
-    int32_t alt_mm() const { return alt_m * 1000 + static_cast<int32_t>(climbed_m_ * 1000); }
+    int32_t altitude_mm() const {
+        return altitude_m * 1000 + static_cast<int32_t>(climbed_m_ * 1000);
+    }
     // INFO: fc 18sep26 the heading flown, fraction included: NMEA's whole degree is the report
     double heading_deg() const { return track_deg + turned_deg_; }
 
@@ -223,10 +225,10 @@ class L76k : public io::Uart, public io::UartRate {
     uint32_t seconds_of_day_ms_{0};
     double climbed_m_{0};
     double turned_deg_{0};
-    double lat_frac_1e7_{0};
-    double lon_frac_1e7_{0};
+    double latitude_fraction_1e7_{0};
+    double longitude_fraction_1e7_{0};
     char command_[kCommandBytes]{};
-    int command_len_{0};
+    int command_length_{0};
     // Three windows, each a START instant plus a flag rather than an end instant.
     // core/../ports/clock.h states the rule and section M found the bug it prevents:
     // an end instant compared with `<` inverts across the 49.7-day wrap, and here
@@ -247,47 +249,47 @@ class L76k : public io::Uart, public io::UartRate {
     bool solving_since_set_{false};
     std::string heard_;
 
-    static bool starts_with(const char* s, int len, const char* prefix) {
+    static bool starts_with(const char* s, int length, const char* prefix) {
         int i = 0;
         for (; prefix[i]; i++) {
-            if (i >= len || s[i] != prefix[i]) return false;
+            if (i >= length || s[i] != prefix[i]) return false;
         }
         return true;
     }
-    static uint32_t argument(const char* s, int len, int at) {
+    static uint32_t argument(const char* s, int length, int at) {
         uint32_t v = 0;
-        for (int i = at; i < len && s[i] >= '0' && s[i] <= '9'; i++) v = v * 10 + (s[i] - '0');
+        for (int i = at; i < length && s[i] >= '0' && s[i] <= '9'; i++) v = v * 10 + (s[i] - '0');
         return v;
     }
 
     void apply_command() {
         commands_seen++;
-        if (!gnss::nmea_checksum_ok(command_, command_len_)) {
+        if (!gnss::nmea_checksum_ok(command_, command_length_)) {
             commands_rejected++;
             return;
         }
-        for (int i = 1; i < command_len_ && i < 7; i++) heard_ += command_[i];
+        for (int i = 1; i < command_length_ && i < 7; i++) heard_ += command_[i];
         heard_ += ',';
 
         // The version banner is the part naming itself, not a setting: a
         // receiver that obeys nothing still answers it.
-        if (starts_with(command_, command_len_, "$PCAS06,")) {
+        if (starts_with(command_, command_length_, "$PCAS06,")) {
             if (answers_identification) emit_version();
             return;
         }
         if (!accepts_commands) return;
-        if (starts_with(command_, command_len_, "$PCAS01,"))
-            apply_baud(static_cast<int>(argument(command_, command_len_, 8)));
-        else if (starts_with(command_, command_len_, "$PCAS04,"))
-            constellations = static_cast<uint8_t>(argument(command_, command_len_, 8));
-        else if (starts_with(command_, command_len_, "$PCAS03,"))
+        if (starts_with(command_, command_length_, "$PCAS01,"))
+            apply_baud(static_cast<int>(argument(command_, command_length_, 8)));
+        else if (starts_with(command_, command_length_, "$PCAS04,"))
+            constellations = static_cast<uint8_t>(argument(command_, command_length_, 8));
+        else if (starts_with(command_, command_length_, "$PCAS03,"))
             apply_sentence_set();
-        else if (starts_with(command_, command_len_, "$PCAS11,"))
-            dynamic_model = static_cast<uint8_t>(argument(command_, command_len_, 8));
-        else if (starts_with(command_, command_len_, "$PCAS02,"))
-            solution_period_ms = argument(command_, command_len_, 8);
-        else if (starts_with(command_, command_len_, "$PCAS10,"))
-            apply_restart(static_cast<int>(argument(command_, command_len_, 8)));
+        else if (starts_with(command_, command_length_, "$PCAS11,"))
+            dynamic_model = static_cast<uint8_t>(argument(command_, command_length_, 8));
+        else if (starts_with(command_, command_length_, "$PCAS02,"))
+            solution_period_ms = argument(command_, command_length_, 8);
+        else if (starts_with(command_, command_length_, "$PCAS10,"))
+            apply_restart(static_cast<int>(argument(command_, command_length_, 8)));
     }
 
     // INFO: fc 19sep26 $PCAS01 numbers the rates 0..5, L76K protocol spec V1.1 SS2.3.1
@@ -305,12 +307,12 @@ class L76k : public io::Uart, public io::UartRate {
                           nullptr,      &rmc_enabled, &vtg_enabled};
         int field = 0;
         int at = 8;
-        while (at < command_len_ && field < 6) {
+        while (at < command_length_ && field < 6) {
             const bool empty = command_[at] == ',' || command_[at] == '*';
-            const uint8_t every = static_cast<uint8_t>(argument(command_, command_len_, at));
+            const uint8_t every = static_cast<uint8_t>(argument(command_, command_length_, at));
             if (!empty && field == kGsvField) gsv_every = every;
             if (!empty && field != kGsvField) *flags[field] = every != 0;
-            while (at < command_len_ && command_[at] != ',') at++;
+            while (at < command_length_ && command_[at] != ',') at++;
             at++;
             field++;
         }
@@ -322,29 +324,29 @@ class L76k : public io::Uart, public io::UartRate {
         const double v_mps = speed_mm_s / 1000.0;
         const double secs = dt_ms / 1000.0;
         const double rad = mid_step_track_deg(secs) * 3.14159265358979 / 180.0;
-        advance_lat(v_mps * std::cos(rad) * secs);
-        const double coslat = std::cos(lat_1e7 / 1e7 * 3.14159265358979 / 180.0);
-        if (coslat > 0.01) advance_lon(v_mps * std::sin(rad) * secs, coslat);
+        advance_latitude(v_mps * std::cos(rad) * secs);
+        const double coslat = std::cos(latitude_1e7 / 1e7 * 3.14159265358979 / 180.0);
+        if (coslat > 0.01) advance_longitude(v_mps * std::sin(rad) * secs, coslat);
         advance_track(secs);
-        advance_alt(secs);
+        advance_altitude(secs);
         advance_clock(dt_ms);
     }
 
     double mid_step_track_deg(double secs) const { return track_deg + turn_dps * secs * 0.5; }
 
     // INFO: fc 18sep26 a step moves less than the 1.1 cm 1e-7 deg carries, so the rest is banked
-    void advance_lat(double north_m) {
-        lat_frac_1e7_ += north_m * 1e7 / 111320.0;
-        const int32_t whole = static_cast<int32_t>(lat_frac_1e7_);
-        lat_frac_1e7_ -= whole;
-        lat_1e7 += whole;
+    void advance_latitude(double north_m) {
+        latitude_fraction_1e7_ += north_m * 1e7 / 111320.0;
+        const int32_t whole = static_cast<int32_t>(latitude_fraction_1e7_);
+        latitude_fraction_1e7_ -= whole;
+        latitude_1e7 += whole;
     }
 
-    void advance_lon(double east_m, double coslat) {
-        lon_frac_1e7_ += east_m * 1e7 / (111320.0 * coslat);
-        const int32_t whole = static_cast<int32_t>(lon_frac_1e7_);
-        lon_frac_1e7_ -= whole;
-        lon_1e7 += whole;
+    void advance_longitude(double east_m, double coslat) {
+        longitude_fraction_1e7_ += east_m * 1e7 / (111320.0 * coslat);
+        const int32_t whole = static_cast<int32_t>(longitude_fraction_1e7_);
+        longitude_fraction_1e7_ -= whole;
+        longitude_1e7 += whole;
     }
 
     void advance_track(double secs) {
@@ -354,10 +356,10 @@ class L76k : public io::Uart, public io::UartRate {
         track_deg = ((track_deg + whole_deg) % 360 + 360) % 360;
     }
 
-    void advance_alt(double secs) {
+    void advance_altitude(double secs) {
         climbed_m_ += climb_mm_s * secs / 1000.0;
         const int32_t whole_m = static_cast<int32_t>(climbed_m_);
-        alt_m += whole_m;
+        altitude_m += whole_m;
         climbed_m_ -= whole_m;
     }
 
@@ -401,8 +403,8 @@ class L76k : public io::Uart, public io::UartRate {
         return static_cast<int32_t>(amplitude) * (walk_step_ % 2 == 0 ? 1 : -1);
     }
 
-    int32_t walked_lat_1e7() const {
-        return lat_1e7 + static_cast<int32_t>(walk_now_m() * 1e7 / 111320.0);
+    int32_t walked_latitude_1e7() const {
+        return latitude_1e7 + static_cast<int32_t>(walk_now_m() * 1e7 / 111320.0);
     }
 
     void step_walk() {

@@ -22,14 +22,14 @@ class Fifo {
     Status push(const T& item) {
         size_t n = next(head_);
         if (n == tail_) return Status::Full;
-        buf_[head_] = item;
+        buffer_[head_] = item;
         head_ = n;
         return Status::Ok;
     }
 
     Result<T> pop() {
         if (empty()) return Status::Empty;
-        T item = buf_[tail_];
+        T item = buffer_[tail_];
         tail_ = next(tail_);
         return item;
     }
@@ -38,7 +38,7 @@ class Fifo {
 
    private:
     static constexpr size_t next(size_t i) { return (i + 1) % Capacity; }
-    std::array<T, Capacity> buf_{};
+    std::array<T, Capacity> buffer_{};
     size_t head_{0};
     size_t tail_{0};
 };

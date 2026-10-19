@@ -1,6 +1,6 @@
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 Record record_of(const Boot& value, const Instant& at) {
     Record r = framed(Type::Boot, at);
@@ -35,7 +35,7 @@ Record record_of(const Config& value, const Instant& at) {
     Record r = framed(Type::Config, at);
     put_u32(r.payload + 0, value.address);
     put_i16(r.payload + 4, value.battery_offset_mv);
-    put_i16(r.payload + 6, value.freq_trim_e1_ppm);
+    put_i16(r.payload + 6, value.frequency_trim_e1_ppm);
     r.payload[8] = value.aircraft_type;
     r.payload[9] = value.address_mapping_table;
     r.payload[10] = value.alarm_volume;
@@ -53,7 +53,7 @@ bool read(const Record& record, Config& out) {
     out = Config{};
     out.address = get_u32(record.payload + 0);
     out.battery_offset_mv = get_i16(record.payload + 4);
-    out.freq_trim_e1_ppm = get_i16(record.payload + 6);
+    out.frequency_trim_e1_ppm = get_i16(record.payload + 6);
     out.aircraft_type = record.payload[8];
     out.address_mapping_table = record.payload[9];
     out.alarm_volume = record.payload[10];
@@ -68,7 +68,7 @@ bool read(const Record& record, Config& out) {
 
 Record record_of(const Dwell& value, const Instant& at) {
     Record r = framed(Type::Dwell, at);
-    put_u32(r.payload + 0, value.freq_hz);
+    put_u32(r.payload + 0, value.frequency_hz);
     put_u16(r.payload + 4, value.start_ms);
     put_u16(r.payload + 6, value.end_ms);
     put_u16(r.payload + 8, value.phase_ms);
@@ -88,7 +88,7 @@ Record record_of(const Dwell& value, const Instant& at) {
 bool read(const Record& record, Dwell& out) {
     if (record.type != Type::Dwell) return false;
     out = Dwell{};
-    out.freq_hz = get_u32(record.payload + 0);
+    out.frequency_hz = get_u32(record.payload + 0);
     out.start_ms = get_u16(record.payload + 4);
     out.end_ms = get_u16(record.payload + 6);
     out.phase_ms = get_u16(record.payload + 8);
@@ -109,7 +109,7 @@ Record record_of(const Flight& value, const Instant& at) {
     Record r = framed(Type::Flight, at);
     put_i32(r.payload + 0, value.speed_mm_s);
     put_i32(r.payload + 4, value.climb_mm_s);
-    put_i16(r.payload + 8, value.alt_msl_m);
+    put_i16(r.payload + 8, value.altitude_msl_m);
     put_u16(r.payload + 10, value.hdop_e2);
     put_u16(r.payload + 12, value.vdop_e2);
     r.payload[14] = static_cast<uint8_t>(value.declared);
@@ -126,7 +126,7 @@ bool read(const Record& record, Flight& out) {
     out = Flight{};
     out.speed_mm_s = get_i32(record.payload + 0);
     out.climb_mm_s = get_i32(record.payload + 4);
-    out.alt_msl_m = get_i16(record.payload + 8);
+    out.altitude_msl_m = get_i16(record.payload + 8);
     out.hdop_e2 = get_u16(record.payload + 10);
     out.vdop_e2 = get_u16(record.payload + 12);
     out.declared = static_cast<flight::FlightState>(record.payload[14]);
@@ -141,9 +141,9 @@ bool read(const Record& record, Flight& out) {
 Record record_of(const Traffic& value, const Instant& at) {
     Record r = framed(Type::Traffic, at);
     put_u32(r.payload + 0, value.address);
-    put_u16(r.payload + 4, value.dist_m);
+    put_u16(r.payload + 4, value.distance_m);
     put_u16(r.payload + 6, value.bearing_deg);
-    put_i16(r.payload + 8, value.rel_alt_m);
+    put_i16(r.payload + 8, value.relative_altitude_m);
     put_i16(r.payload + 10, value.closing_mps);
     r.payload[12] = static_cast<uint8_t>(value.alarm);
     r.payload[13] = static_cast<uint8_t>(value.source);
@@ -160,9 +160,9 @@ bool read(const Record& record, Traffic& out) {
     if (record.type != Type::Traffic) return false;
     out = Traffic{};
     out.address = get_u32(record.payload + 0);
-    out.dist_m = get_u16(record.payload + 4);
+    out.distance_m = get_u16(record.payload + 4);
     out.bearing_deg = get_u16(record.payload + 6);
-    out.rel_alt_m = get_i16(record.payload + 8);
+    out.relative_altitude_m = get_i16(record.payload + 8);
     out.closing_mps = get_i16(record.payload + 10);
     out.alarm = static_cast<traffic::Level>(record.payload[12]);
     out.source = static_cast<model::Source>(record.payload[13]);

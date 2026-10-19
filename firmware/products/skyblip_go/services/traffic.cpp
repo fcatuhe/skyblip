@@ -76,7 +76,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = event.band;
-    entry.channel = event.freq_hz == timing::kMband1Hz ? 1 : 0;
+    entry.channel = event.frequency_hz == timing::kMband1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
@@ -84,7 +84,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.airborne = flight::airborne(state.own.flight_state);
     entry.rssi_dbm = event.rssi_dbm;
     entry.rssi_valid = event.rssi_valid;
-    if (event.type == events::RfEventType::RxDone) entry.len = event.len;
+    if (event.type == events::RfEventType::RxDone) entry.length = event.length;
     if (event.type == events::RfEventType::TxDone || event.type == events::RfEventType::Missed)
         entry.callsign = event.tx_at_us != 0 && event.tx_at_us == state.rf.callsign_at_us;
     if (outcome == radio::Verdict::Transmitted && event.tx_at_us != 0) {
@@ -102,14 +102,14 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
         entry.address_valid = observation->source != model::Source::AdslUplink;
     }
     context_.state.radio_log.record(entry);
-    context_.diag.record(entry);
+    context_.diagnostics.record(entry);
 }
 
 void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     const events::Stamp stamp = stamp_for(event, now_ms);
     protocol::Frame frame{};
     const protocol::System system =
-        protocol::receive_burst(event.band, event.data.data(), event.len, frame);
+        protocol::receive_burst(event.band, event.data.data(), event.length, frame);
     if (system == protocol::System::AdslUplink) {
         on_uplink(event, stamp, now_ms);
         return;
@@ -251,12 +251,13 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
     if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
     observation.address = protocol::alptas_address(frame.data);
     observation.source = model::Source::Alptas;
-    const int32_t lat = own.lat_1e7;
-    const int32_t lon = own.lon_1e7;
+    const int32_t latitude = own.latitude_1e7;
+    const int32_t longitude = own.longitude_1e7;
     radio::Verdict verdict =
-        verdict_of(protocol::alptas_decode(frame.data, utc_s, lat, lon, observation));
+        verdict_of(protocol::alptas_decode(frame.data, utc_s, latitude, longitude, observation));
     if (verdict == radio::Verdict::Undecoded && !dated && utc_s != 0)
-        verdict = verdict_of(protocol::alptas_decode(frame.data, utc_s - 1, lat, lon, observation));
+        verdict = verdict_of(
+            protocol::alptas_decode(frame.data, utc_s - 1, latitude, longitude, observation));
     if (verdict != radio::Verdict::Undecoded) return verdict;
 
     uint32_t keyed = 0;

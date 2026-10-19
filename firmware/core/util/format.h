@@ -24,8 +24,8 @@ int format_seconds_of_day(char* out, uint32_t seconds);
 
 int format_flight_clock(char* out, uint32_t seconds, bool flight_time_valid);
 
-int format_nmea_lat(char* out, int32_t lat_1e7);
-int format_nmea_lon(char* out, int32_t lon_1e7);
+int format_nmea_latitude(char* out, int32_t latitude_1e7);
+int format_nmea_longitude(char* out, int32_t longitude_1e7);
 
 }
 

@@ -29,11 +29,11 @@ struct ScreenRig {
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::Roles roles{
         clock,          null.rf,        null.link,        epd,  // epd fills Display
-        null.kv,        null.log_flash, null.annunciator, null.dfu, null.die_temperature,
+        null.key_value, null.log_flash, null.annunciator, null.dfu, null.die_temperature,
         null.indicator, null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
@@ -53,7 +53,7 @@ struct ScreenRig {
         // With a fix the radar page draws rings and the range label, so churn()
         // below produces real pixel changes.
         state.own.fix_valid = true;
-        state.own.sats = 9;
+        state.own.satellites = 9;
         state.flight.time_valid = true;
         epd.begin();
     }
@@ -141,11 +141,11 @@ struct ScreenRig {
         observation.address = kThreatAddress;
         observation.address_mapping_table = kThreatAddressMappingTable;
         observation.position_valid = true;
-        observation.lat_1e7 =
-            state.own.lat_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
-        observation.lon_1e7 =
-            state.own.lon_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
-        observation.alt_m = to_metres(Millimetres(state.own.alt_hae_mm)).v;
+        observation.latitude_1e7 =
+            state.own.latitude_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
+        observation.longitude_1e7 =
+            state.own.longitude_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
+        observation.altitude_m = to_metres(Millimetres(state.own.altitude_hae_mm)).v;
         observation.received.at_s = now_ms / 1000;
         observation.at_ms = now_ms;
         observation.source = model::Source::AdslDirect;

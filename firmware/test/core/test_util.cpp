@@ -164,11 +164,11 @@ TEST_CASE("format: hex, dec, fixed point") {
 
 TEST_CASE("format: nmea lat/lon") {
     char b[32];
-    int n = format_nmea_lat(b, 481234500);  // 48.12345 deg
+    int n = format_nmea_latitude(b, 481234500);  // 48.12345 deg
     std::string s(b, n);
     CHECK(s.substr(0, 2) == "48");
     CHECK(s.back() == 'N');
-    n = format_nmea_lon(b, -81234500);
+    n = format_nmea_longitude(b, -81234500);
     s.assign(b, n);
     CHECK(s.substr(0, 3) == "008");
     CHECK(s.back() == 'W');

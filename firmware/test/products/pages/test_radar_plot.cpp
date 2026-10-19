@@ -79,13 +79,14 @@ TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
 
 // Near-size covers exactly the separation that can alarm, so size is a fact and not a flourish.
 TEST_CASE("radar page: past the advisory's own altitude window the blip is the small one") {
-    RadarTarget inside[1] = {{2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltM, Level::None}};
+    RadarTarget inside[1] = {
+        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltitudeM, Level::None}};
     const Glass near = radar(one_target(inside));
     CHECK(near.get_pixel(kPlotX, kPlotY - 7));
     CHECK(near.get_pixel(kPlotX - 8, kPlotY + 1));
 
     RadarTarget outside[1] = {
-        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltM + 1, Level::None}};
+        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltitudeM + 1, Level::None}};
     const Glass far = radar(one_target(outside));
     CHECK(far.get_pixel(kPlotX, kPlotY - 5));
     CHECK_FALSE(far.get_pixel(kPlotX, kPlotY - 7));

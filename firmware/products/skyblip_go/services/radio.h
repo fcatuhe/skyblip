@@ -1,7 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
@@ -47,7 +47,7 @@ class RadioService : public runtime::Service {
 
     struct Armed {
         ports::RfMode mode{ports::RfMode::Idle};
-        uint32_t freq_hz{0};
+        uint32_t frequency_hz{0};
         uint64_t from_us{0};
         uint64_t until_us{0};
         uint32_t utc_s{0};
@@ -117,9 +117,9 @@ class RadioService : public runtime::Service {
                       int phase, Role role, bool carried_tx, uint32_t now_ms);
     void record_dwell(const timing::SlotPlan& slot, const timing::Transmitter::Attempt& attempt,
                       int phase, bool armed, bool carries_tx, uint32_t now_ms);
-    diag::Refusal refusal_of(const timing::SlotPlan& slot,
-                             const timing::Transmitter::Attempt& attempt, bool armed,
-                             bool carries_tx) const;
+    diagnostics::Refusal refusal_of(const timing::SlotPlan& slot,
+                                    const timing::Transmitter::Attempt& attempt, bool armed,
+                                    bool carries_tx) const;
     void log_refusal(radio::Verdict outcome, const timing::SlotPlan& slot, uint32_t now_ms);
     void publish_dwell(uint32_t now_ms);
     void accrue_armed();
@@ -127,7 +127,7 @@ class RadioService : public runtime::Service {
     void take_carrier_samples();
     void take_switching(uint32_t now_ms);
     void record_switch(const ports::RfSwitch& change, uint32_t now_ms);
-    static diag::SwitchKind kind_of(const ports::RfSwitch& change);
+    static diagnostics::SwitchKind kind_of(const ports::RfSwitch& change);
 
     timing::Transmitter transmitter_{};
     timing::NoiseFloor noise_floor_{};

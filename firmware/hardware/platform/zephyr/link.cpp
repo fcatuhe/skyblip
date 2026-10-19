@@ -27,17 +27,17 @@ namespace {
 
 // INFO: fc 18sep26 Nordic's roles: the app writes RX, we notify TX (XCSoar BleSerialPort.java:100).
 #define NUS_UUID(v) BT_UUID_128_ENCODE(0x6e400000 | (v), 0xb5a3, 0xf393, 0xe0a9, 0xe50e24dcca9e)
-static struct bt_uuid_128 nus_svc_uuid = BT_UUID_INIT_128(NUS_UUID(0x0001));
+static struct bt_uuid_128 nus_service_uuid = BT_UUID_INIT_128(NUS_UUID(0x0001));
 static struct bt_uuid_128 nus_rx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0002));
 static struct bt_uuid_128 nus_tx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0003));
 
 // INFO: fc 18sep26 HM-10, what PowerFLARM Flex ships and LK8000 only speaks: one characteristic.
-static struct bt_uuid_16 hm10_svc_uuid = BT_UUID_INIT_16(0xFFE0);
+static struct bt_uuid_16 hm10_service_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 hm10_chr_uuid = BT_UUID_INIT_16(0xFFE1);
 
 // INFO: fc 18sep26 Our own base: config and log are our protocol, not a UART apps would misread.
 #define SKYBLIP_UUID(v) BT_UUID_128_ENCODE(0x69c21300 | (v), 0x0187, 0x4204, 0xa91d, 0x02eb8858b440)
-static struct bt_uuid_128 skyblip_svc_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x01));
+static struct bt_uuid_128 skyblip_service_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x01));
 static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x02));
 // The log offload is thousands of small round trips. On its own characteristic
 // it cannot starve the one the pilot's prompts travel on, and an app that does
@@ -55,7 +55,7 @@ Fifo<RxFrame, 8> g_rx;
 // interleaved with a frame must not tear either of them.
 struct k_spinlock g_lock;
 comms::LinkSessions g_sessions;
-struct bt_conn* g_conns[CONFIG_BT_MAX_CONN] = {};
+struct bt_conn* g_connections[CONFIG_BT_MAX_CONN] = {};
 static_assert(CONFIG_BT_MAX_CONN <= static_cast<int>(comms::LinkSessions::kMaxSessions),
               "the controller admits more centrals than core will serve");
 
@@ -78,16 +78,17 @@ void notified(struct bt_conn* conn, void* /*user_data*/) {
 uint16_t session_of(struct bt_conn* conn) { return static_cast<uint16_t>(bt_conn_index(conn) + 1); }
 
 // INFO: fc 23sep26 referenced under the callbacks' lock, so a released connection is never notified
-struct bt_conn* conn_ref(size_t index) {
+struct bt_conn* connection_reference(size_t index) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    struct bt_conn* conn = g_conns[index] != nullptr ? bt_conn_ref(g_conns[index]) : nullptr;
+    struct bt_conn* conn =
+        g_connections[index] != nullptr ? bt_conn_ref(g_connections[index]) : nullptr;
     k_spin_unlock(&g_lock, key);
     return conn;
 }
 
-struct bt_conn* conn_of(uint16_t session_id) {
-    if (session_id == 0 || session_id > ARRAY_SIZE(g_conns)) return nullptr;
-    return conn_ref(session_id - 1);
+struct bt_conn* connection_of(uint16_t session_id) {
+    if (session_id == 0 || session_id > ARRAY_SIZE(g_connections)) return nullptr;
+    return connection_reference(session_id - 1);
 }
 
 uint16_t payload_from_mtu(uint16_t mtu) {
@@ -140,7 +141,7 @@ ssize_t on_stream_write(struct bt_conn*, const struct bt_gatt_attr*, const void*
     return len;
 }
 
-BT_GATT_SERVICE_DEFINE(nus_svc, BT_GATT_PRIMARY_SERVICE(&nus_svc_uuid),
+BT_GATT_SERVICE_DEFINE(nus_service, BT_GATT_PRIMARY_SERVICE(&nus_service_uuid),
                        BT_GATT_CHARACTERISTIC(&nus_rx_uuid.uuid,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                                               BT_GATT_PERM_WRITE, nullptr, on_stream_write,
@@ -150,7 +151,7 @@ BT_GATT_SERVICE_DEFINE(nus_svc, BT_GATT_PRIMARY_SERVICE(&nus_svc_uuid),
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
 constexpr int kNusNotifyAttr = 4;
 
-BT_GATT_SERVICE_DEFINE(hm10_svc, BT_GATT_PRIMARY_SERVICE(&hm10_svc_uuid),
+BT_GATT_SERVICE_DEFINE(hm10_service, BT_GATT_PRIMARY_SERVICE(&hm10_service_uuid),
                        BT_GATT_CHARACTERISTIC(&hm10_chr_uuid.uuid,
                                               BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE |
                                                   BT_GATT_CHRC_WRITE_WITHOUT_RESP,
@@ -159,7 +160,7 @@ BT_GATT_SERVICE_DEFINE(hm10_svc, BT_GATT_PRIMARY_SERVICE(&hm10_svc_uuid),
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
 constexpr int kHm10NotifyAttr = 2;
 
-BT_GATT_SERVICE_DEFINE(skyblip_svc, BT_GATT_PRIMARY_SERVICE(&skyblip_svc_uuid),
+BT_GATT_SERVICE_DEFINE(skyblip_service, BT_GATT_PRIMARY_SERVICE(&skyblip_service_uuid),
                        BT_GATT_CHARACTERISTIC(&config_uuid.uuid,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
                                                   BT_GATT_CHRC_NOTIFY,
@@ -178,11 +179,11 @@ constexpr int kMaxNotifyAttrs = 2;
 int notify_attrs(Endpoint endpoint, const struct bt_gatt_attr** out) {
     switch (endpoint) {
         case Endpoint::Nmea:
-            out[0] = &nus_svc.attrs[kNusNotifyAttr];
-            out[1] = &hm10_svc.attrs[kHm10NotifyAttr];
+            out[0] = &nus_service.attrs[kNusNotifyAttr];
+            out[1] = &hm10_service.attrs[kHm10NotifyAttr];
             return 2;
-        case Endpoint::Config: out[0] = &skyblip_svc.attrs[kConfigNotifyAttr]; return 1;
-        case Endpoint::Log: out[0] = &skyblip_svc.attrs[kLogNotifyAttr]; return 1;
+        case Endpoint::Config: out[0] = &skyblip_service.attrs[kConfigNotifyAttr]; return 1;
+        case Endpoint::Log: out[0] = &skyblip_service.attrs[kLogNotifyAttr]; return 1;
     }
     return 0;
 }
@@ -233,16 +234,16 @@ void connected(struct bt_conn* conn, uint8_t err) {
     struct bt_conn* held = bt_conn_ref(conn);
     atomic_set(&g_in_flight[index], 0);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    g_conns[index] = held;
+    g_connections[index] = held;
     g_sessions.connected(session_of(conn), payload_from_mtu(bt_gatt_get_mtu(conn)));
     k_spin_unlock(&g_lock, key);
     resume_advertising();
 }
 void disconnected(struct bt_conn* conn, uint8_t /*reason*/) {
     const uint8_t index = bt_conn_index(conn);
-    if (g_conns[index] != conn) return;
+    if (g_connections[index] != conn) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    g_conns[index] = nullptr;
+    g_connections[index] = nullptr;
     g_sessions.disconnected(session_of(conn));
     k_spin_unlock(&g_lock, key);
     bt_conn_unref(conn);
@@ -257,7 +258,7 @@ BT_CONN_CB_DEFINE(conn_cbs) = {
 // figure goes onto the bus. tx is our side of the pair - what a notification we
 // send may carry.
 void mtu_updated(struct bt_conn* conn, uint16_t tx, uint16_t /*rx*/) {
-    if (g_conns[bt_conn_index(conn)] != conn) return;
+    if (g_connections[bt_conn_index(conn)] != conn) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     g_sessions.payload_changed(session_of(conn), payload_from_mtu(tx));
     k_spin_unlock(&g_lock, key);
@@ -287,7 +288,7 @@ Status Link::advertise_as(const char* name) {
     }
     next->name[n] = 0;
     next->sd[0].type = BT_DATA_NAME_COMPLETE;
-    next->sd[0].data_len = static_cast<uint8_t>(n);
+    next->sd[0].data_length = static_cast<uint8_t>(n);
     next->sd[0].data = reinterpret_cast<const uint8_t*>(next->name);
     atomic_ptr_set(&g_response, next);
 
@@ -309,8 +310,8 @@ Status Link::advertise_as(const char* name) {
 // INFO: fc 28sep26 the central starts the MTU exchange, an Android app that never asks stays at 23
 uint16_t Link::payload_bytes() const {
     uint16_t smallest = 0;
-    for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {
-        struct bt_conn* conn = conn_ref(i);
+    for (size_t i = 0; i < ARRAY_SIZE(g_connections); i++) {
+        struct bt_conn* conn = connection_reference(i);
         if (conn == nullptr) continue;
         const uint16_t payload = payload_from_mtu(bt_gatt_get_mtu(conn));
         bt_conn_unref(conn);
@@ -320,7 +321,7 @@ uint16_t Link::payload_bytes() const {
 }
 
 uint16_t Link::payload_bytes_to(uint16_t session_id) const {
-    struct bt_conn* conn = conn_of(session_id);
+    struct bt_conn* conn = connection_of(session_id);
     if (conn == nullptr) return ports::kMinimumLinkPayloadBytes;
     const uint16_t payload = payload_from_mtu(bt_gatt_get_mtu(conn));
     bt_conn_unref(conn);
@@ -355,8 +356,8 @@ Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
     if (bytes.size() > payload_bytes()) return Status::OutOfRange;
     Status result = Status::Down;
     bool delivered = false;
-    for (size_t i = 0; i < ARRAY_SIZE(g_conns); i++) {
-        struct bt_conn* conn = conn_ref(i);
+    for (size_t i = 0; i < ARRAY_SIZE(g_connections); i++) {
+        struct bt_conn* conn = connection_reference(i);
         if (conn == nullptr) continue;
         const Status one = notify_one(conn, endpoint, bytes);
         bt_conn_unref(conn);
@@ -370,7 +371,7 @@ Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
 
 Status Link::send_to(uint16_t session_id, Endpoint endpoint, ConstByteSpan bytes) {
     if (bytes.size() > payload_bytes_to(session_id)) return Status::OutOfRange;
-    struct bt_conn* conn = conn_of(session_id);
+    struct bt_conn* conn = connection_of(session_id);
     if (conn == nullptr) return Status::Down;
     const Status sent = notify_one(conn, endpoint, bytes);
     bt_conn_unref(conn);

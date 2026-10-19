@@ -59,7 +59,7 @@ class Platform {
     Status begin() {
         system_power_.begin();
         if (!device_is_ready(gpio0_) || !device_is_ready(gpio1_)) return Status::Down;
-        if (!device_is_ready(radio_spi_dev_)) return Status::Down;
+        if (!device_is_ready(radio_spi_device_)) return Status::Down;
         if (gnss_uart_.begin() != Status::Ok) return Status::Down;
         // The gated rails are raised at board level so MCUboot sees them too;
         // what is still owed here is the SX1262 TCXO settling time.
@@ -98,7 +98,7 @@ class Platform {
 
     zephyr::Clock& clock() { return clock_; }
     zephyr::Link& link() { return link_; }
-    zephyr::KvStore& kv() { return kv_; }
+    zephyr::KeyValueStore& key_value() { return kv_; }
     zephyr::FlashRegion& log_flash() { return log_flash_; }
     zephyr::FlashRegion& imu_flash() { return imu_flash_; }
     zephyr::Annunciator& annunciator() { return annunciator_; }
@@ -140,8 +140,8 @@ class Platform {
 
     // INFO: fc 18sep26 our Plus reads this pin low and our plain T-Echo reads it high
     bool buzzer_pin_held_low() const { return board_buzzer_pin_held_low() != 0; }
-    bool trigger_baro() { return bme280_.trigger(); }
-    bool read_baro(BaroReading& out) {
+    bool trigger_barometer() { return bme280_.trigger(); }
+    bool read_barometer(BarometerReading& out) {
         parts::Bme280::Reading reading{};
         if (!bme280_.read(reading)) return false;
         out.pressure_mpa = reading.pressure_mpa;
@@ -157,10 +157,10 @@ class Platform {
         ports::Capabilities c =
             ports::Capability::Storage | ports::Capability::Dfu | ports::Capability::Link;
         if (gpio_is_ready_dt(&button_) && gpio_is_ready_dt(&pad_)) c |= ports::Capability::Contacts;
-        if (device_is_ready(epd_spi_dev_)) c |= ports::Capability::Display;
-        if (device_is_ready(gnss_uart_dev_)) c |= ports::Capability::Gnss;
-        if (bme280_.answers()) c |= ports::Capability::Baro;
-        if (device_is_ready(battery_dev_)) c |= ports::Capability::Battery;
+        if (device_is_ready(epd_spi_device_)) c |= ports::Capability::Display;
+        if (device_is_ready(gnss_uart_device_)) c |= ports::Capability::Gnss;
+        if (bme280_.answers()) c |= ports::Capability::Barometer;
+        if (device_is_ready(battery_device_)) c |= ports::Capability::Battery;
         // Only when the driver answered. A build with no CONFIG_TEMP_NRF5, or a
         // devicetree without the node, is a device with no die reading - and
         // saying so once here is what keeps a zero out of the status reply.
@@ -182,10 +182,10 @@ class Platform {
 
     const struct device* gpio0_{DEVICE_DT_GET(DT_NODELABEL(gpio0))};
     const struct device* gpio1_{DEVICE_DT_GET(DT_NODELABEL(gpio1))};
-    const struct device* radio_spi_dev_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
-    const struct device* epd_spi_dev_{DEVICE_DT_GET(DT_ALIAS(epd_spi))};
-    const struct device* gnss_uart_dev_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
-    const struct device* battery_dev_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
+    const struct device* radio_spi_device_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
+    const struct device* epd_spi_device_{DEVICE_DT_GET(DT_ALIAS(epd_spi))};
+    const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
+    const struct device* battery_device_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
     const struct device* sensor_i2c_dev_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
     // Assigned, not brace-initialised: the DT_SPEC macros ARE brace lists, so
     // member{MACRO} nests them one level too deep and the first field eats the
@@ -206,9 +206,9 @@ class Platform {
     zephyr::Clock clock_{};
     Gpio gpio_{gpio0_, gpio1_};
     Delay delay_{};
-    Spi radio_spi_{radio_spi_dev_, kSpiConfig, radio_cs_};
-    Spi epd_spi_{epd_spi_dev_, kSpiConfig, epd_cs_};
-    Uart gnss_uart_{gnss_uart_dev_};
+    Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
+    Spi epd_spi_{epd_spi_device_, kSpiConfig, epd_cs_};
+    Uart gnss_uart_{gnss_uart_device_};
     I2c sensor_i2c_{sensor_i2c_dev_};
     parts::Bme280 bme280_{sensor_i2c_};
     // The default haptic: the pin, driven directly. The board replaces it the
@@ -217,13 +217,13 @@ class Platform {
     PinMotor motor_{haptic_enable_};
     Annunciator annunciator_{buzzer_, motor_};
     Indicator indicator_{led_green_, led_red_, led_blue_};
-    KvStore kv_{};
+    KeyValueStore kv_{};
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
     zephyr::Identity identity_{};
-    zephyr::Battery battery_{battery_dev_};
+    zephyr::Battery battery_{battery_device_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};
     bool pps_armed_{false};

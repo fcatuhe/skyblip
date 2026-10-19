@@ -89,7 +89,7 @@ A board that senses no current cannot report milliamps, and this one senses none
 
 Charge the unit to full and unplug it. Arm `POWER RUN` on the CAPTURE page, which is the row that records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: the page prints `KEEPS 188H25 ROLLING` against the full capture's `1H08`, and 188 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
 
-`FLIGHT RUN`, the row under it, records the same and keeps the same 188 hours, and runs the glass as in flight for as long as it is armed: the radar's flight clock and `FLIGHT` word, the g-meter's extremes cleared at the double press. Leave it on the page you are measuring: the panel refreshes only when the frame changes, so the page decides the refreshes the `duty` records count. On an empty sky the flying radar changes once a minute, with its clock. It cannot fly the rest, because what else flight changes is what goes on air or into the pilot's log: the unit keeps the ground cadence and the on-ground flag (ADS-L G.1.16), and writes no flight (`firmware/core/diag/README.md`).
+`FLIGHT RUN`, the row under it, records the same and keeps the same 188 hours, and runs the glass as in flight for as long as it is armed: the radar's flight clock and `FLIGHT` word, the g-meter's extremes cleared at the double press. Leave it on the page you are measuring: the panel refreshes only when the frame changes, so the page decides the refreshes the `duty` records count. On an empty sky the flying radar changes once a minute, with its clock. It cannot fly the rest, because what else flight changes is what goes on air or into the pilot's log: the unit keeps the ground cadence and the on-ground flag (ADS-L G.1.16), and writes no flight (`firmware/core/diagnostics/README.md`).
 
 ```
 ./scripts/blip.py fetch --log diagnostics --all --out run.ndjson
@@ -168,7 +168,7 @@ Done is a run whose ceiling is printed for both directions: the `kFeedLossCentiD
 
 ## The decoders
 
-`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`u16(4)`, `i8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diag/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
+`blip_records.py` holds one table per record type: a tuple of `(name, codec)` pairs, where a codec is a small closure over an offset (`u16(4)`, `i8(13)`, `enum8(9, SOURCE)`, `flag(2)`). Adding a record type is one entry in `DIAG_TYPES`, and adding a field is one pair in its tuple. The tables are byte-exact against `firmware/core/diagnostics/payload_sensed.cpp`, `payload_decided.cpp` and `firmware/core/flight/log_record.cpp`, and the field names and enum spellings are `schemas/diagnostics_log.v1.schema.json`'s.
 
 Import it directly for analysis, the CLI is not in the way:
 

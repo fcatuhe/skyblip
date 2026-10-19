@@ -34,14 +34,14 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a contact and nev
     const AlarmAssessment graded = assess(own, apron, 0);
     CHECK(graded.level == Level::None);
     CHECK(graded.valid);
-    CHECK(graded.rel_dist_m == doctest::Approx(400).epsilon(0.02));
+    CHECK(graded.relative_distance_m == doctest::Approx(400).epsilon(0.02));
 }
 
 TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at our level") {
     const model::Ownship own = flying(30, 0);
     model::AircraftObservation no_altitude = neighbour(own, 55, 0, 0, 30, 180);
-    no_altitude.alt_valid = false;
-    no_altitude.alt_m = 61116;
+    no_altitude.altitude_valid = false;
+    no_altitude.altitude_m = 61116;
     int32_t slant_m = 0;
     CHECK(range_check(own, no_altitude, slant_m) == Plausibility::Believable);
     CHECK(slant_m == doctest::Approx(55).epsilon(0.05));
@@ -68,14 +68,15 @@ TEST_CASE("alarm: both sides are carried to the instant the geometry is read at"
     const model::Ownship own = flying(30, 0, 0, 10'000);
     const model::AircraftObservation head_on = neighbour(own, 1000, 0, 0, 30, 180, 10'000);
 
-    CHECK(assess(own, head_on, 10'000).rel_dist_m == doctest::Approx(1000).epsilon(0.02));
+    CHECK(assess(own, head_on, 10'000).relative_distance_m == doctest::Approx(1000).epsilon(0.02));
 
     // A second on, with nothing heard since: 30 m/s each, nose to nose, 60 m of it gone.
-    CHECK(assess(own, head_on, 11'000).rel_dist_m == doctest::Approx(940).epsilon(0.02));
+    CHECK(assess(own, head_on, 11'000).relative_distance_m == doctest::Approx(940).epsilon(0.02));
 
     // Past the model's reach, both stand where they were last known to be.
     const uint32_t too_late = 10'000 + flight::kExtrapolationCeilingMs + 1;
-    CHECK(assess(own, head_on, too_late).rel_dist_m == doctest::Approx(1000).epsilon(0.02));
+    CHECK(assess(own, head_on, too_late).relative_distance_m ==
+          doctest::Approx(1000).epsilon(0.02));
 }
 
 // The bug this replaced added both speeds together whatever the geometry, so a

@@ -70,8 +70,8 @@ class FixValidity {
    private:
     uint32_t rmc_ms_{0};
     uint32_t gga_ms_{0};
-    int32_t previous_lat_1e7_{0};
-    int32_t previous_lon_1e7_{0};
+    int32_t previous_latitude_1e7_{0};
+    int32_t previous_longitude_1e7_{0};
     uint32_t rejected_{0};
     FixReject last_reject_{FixReject::None};
     bool rmc_heard_{false};

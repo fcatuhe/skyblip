@@ -15,11 +15,11 @@ class RfChannel : public Random {
    public:
     explicit RfChannel(uint32_t seed = 1) : Random(seed) {}
 
-    int apply_ber(uint8_t* data, size_t len, double ber, uint8_t* error_mask = nullptr);
+    int apply_ber(uint8_t* data, size_t length, double ber, uint8_t* error_mask = nullptr);
 
-    int apply_burst(uint8_t* data, size_t len, int burst_bits, uint8_t* error_mask = nullptr);
+    int apply_burst(uint8_t* data, size_t length, int burst_bits, uint8_t* error_mask = nullptr);
 
-    int apply_symbol_errors(uint8_t* data, size_t len, int symbol_errors);
+    int apply_symbol_errors(uint8_t* data, size_t length, int symbol_errors);
 };
 
 }  // namespace skyblip

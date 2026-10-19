@@ -14,11 +14,11 @@ void pack_record(uint8_t* r, const model::AircraftObservation& target) {
     put_u24(r, target.address & settings::kAddressMask);
     r[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
                                 ((target.flight_state & 0x03) << 6));
-    r[4] = target.aircraft_cat;
+    r[4] = target.aircraft_category;
     r[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
-    put_i32(r + 6, target.lat_1e7);
-    put_i32(r + 10, target.lon_1e7);
-    put_i16(r + 14, static_cast<int16_t>(target.alt_m));
+    put_i32(r + 6, target.latitude_1e7);
+    put_i32(r + 10, target.longitude_1e7);
+    put_i16(r + 14, static_cast<int16_t>(target.altitude_m));
 }
 
 void unpack_record(const uint8_t* r, model::AircraftObservation& target) {
@@ -26,12 +26,12 @@ void unpack_record(const uint8_t* r, model::AircraftObservation& target) {
     target.address = get_u24(r);
     target.address_mapping_table = r[3] & 0x3F;
     target.flight_state = (r[3] >> 6) & 0x03;
-    target.aircraft_cat = r[4];
+    target.aircraft_category = r[4];
     target.speed_q = r[5];
     target.speed_valid = r[5] != 0;
-    target.lat_1e7 = get_i32(r + 6);
-    target.lon_1e7 = get_i32(r + 10);
-    target.alt_m = get_i16(r + 14);
+    target.latitude_1e7 = get_i32(r + 6);
+    target.longitude_1e7 = get_i32(r + 10);
+    target.altitude_m = get_i16(r + 14);
     target.position_valid = true;
     target.source = model::Source::AdslUplink;
     target.emergency = 1;
@@ -46,8 +46,8 @@ void unpack_record(const uint8_t* r, model::AircraftObservation& target) {
 // position.
 bool plausible(const model::AircraftObservation& target) {
     if (target.address == 0) return false;
-    if (target.lat_1e7 < -900000000 || target.lat_1e7 > 900000000) return false;
-    if (target.lon_1e7 < -1800000000 || target.lon_1e7 > 1800000000) return false;
+    if (target.latitude_1e7 < -900000000 || target.latitude_1e7 > 900000000) return false;
+    if (target.longitude_1e7 < -1800000000 || target.longitude_1e7 > 1800000000) return false;
     return true;
 }
 }

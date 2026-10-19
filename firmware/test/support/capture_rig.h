@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "test/support/product_rig.h"
 #include "test/support/rig_moves.h"
@@ -25,21 +25,21 @@ inline void arm_from_the_page(Rig& rig, uint32_t& now_ms) {
     now_ms += 200;
 }
 
-inline diag::Record bench_record(uint32_t at_s) {
-    diag::Instant at{};
+inline diagnostics::Record bench_record(uint32_t at_s) {
+    diagnostics::Instant at{};
     at.at_s = at_s;
     at.utc_dated = true;
-    diag::Gnss value{};
-    value.sats = 9;
+    diagnostics::Gnss value{};
+    value.satellites = 9;
     value.fix_valid = true;
-    return diag::record_of(value, at);
+    return diagnostics::record_of(value, at);
 }
 
 inline uint32_t feed(Rig& rig, uint32_t& now_ms, uint32_t records) {
     uint32_t pushed = 0;
     while (pushed < records && rig.product.capture().capturing()) {
-        for (int i = 0; i < diag::Recorder::kCapacity && pushed < records; i++)
-            if (rig.product.diag().record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
+        for (int i = 0; i < diagnostics::Recorder::kCapacity && pushed < records; i++)
+            if (rig.product.diagnostics().record(bench_record(Rig::kBaseUtcS + pushed))) pushed++;
         rig.run(now_ms, now_ms + 50);
         now_ms += 50;
     }

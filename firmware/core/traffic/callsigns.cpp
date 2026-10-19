@@ -5,11 +5,11 @@ namespace skyblip::traffic {
 void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
                           uint32_t now_s) {
     if (callsign == nullptr || callsign[0] == 0) return;
-    int idx = find_slot(address_mapping_table, address);
-    if (idx < 0) idx = oldest_slot();
-    if (idx < 0) return;
+    int index = find_slot(address_mapping_table, address);
+    if (index < 0) index = oldest_slot();
+    if (index < 0) return;
 
-    Entry& e = slots_[static_cast<size_t>(idx)];
+    Entry& e = slots_[static_cast<size_t>(index)];
     e.used = true;
     e.address = address;
     e.address_mapping_table = address_mapping_table;
@@ -23,9 +23,9 @@ void CallsignTable::learn(uint8_t address_mapping_table, uint32_t address, const
 }
 
 const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address) const {
-    const int idx = find_slot(address_mapping_table, address);
-    if (idx < 0) return nullptr;
-    return slots_[static_cast<size_t>(idx)].text;
+    const int index = find_slot(address_mapping_table, address);
+    if (index < 0) return nullptr;
+    return slots_[static_cast<size_t>(index)].text;
 }
 
 void CallsignTable::age_out(uint32_t now_s, uint32_t forget_s) {

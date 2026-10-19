@@ -40,14 +40,14 @@ model::Ownship own_from_gnss(const char* rmc, const char* gga, const char* gsa) 
     o.fix_valid = f.fix_valid;
     o.utc_valid = f.utc_valid;
     o.pps_locked = true;
-    o.lat_1e7 = f.lat_1e7;
-    o.lon_1e7 = f.lon_1e7;
-    o.alt_hae_mm = f.alt_hae_mm;
+    o.latitude_1e7 = f.latitude_1e7;
+    o.longitude_1e7 = f.longitude_1e7;
+    o.altitude_hae_mm = f.altitude_hae_mm;
     o.speed_mm_s = f.speed_mm_s;
     o.track_cdeg = f.track_cdeg;
     o.vdop_e2 = f.vdop_e2;
     o.utc_s = f.utc_s;
-    o.sats = f.sats;
+    o.satellites = f.satellites;
     o.flight_state = 2;
     return o;
 }
@@ -65,7 +65,8 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     //    constant 800 m and alarms for the range alone - the assertion below
     //    says which of the two this fixture means.
     model::Ownship intruder_state = own;
-    intruder_state.lat_1e7 = own.lat_1e7 + static_cast<int32_t>((int64_t)800 * 1000000 / 11132);
+    intruder_state.latitude_1e7 =
+        own.latitude_1e7 + static_cast<int32_t>((int64_t)800 * 1000000 / 11132);
     intruder_state.track_cdeg = 18000;  // due south
     intruder_state.utc_s = own.utc_s;
     protocol::AdslPacket tx;
@@ -81,9 +82,9 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     chan.apply_ber(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
     protocol::AdslPacket rx = tx;  // start from a copy; overwrite the data region
-    uint8_t err[protocol::AdslPacket::kDataBytes];
-    fec::manchester_decode(coded, protocol::AdslPacket::kDataBytes, rx.Data, err);
-    rx.correct(err, 6);
+    uint8_t error[protocol::AdslPacket::kDataBytes];
+    fec::manchester_decode(coded, protocol::AdslPacket::kDataBytes, rx.Data, error);
+    rx.correct(error, 6);
     REQUIRE(rx.check_crc() == 0);  // recovered a valid packet
     rx.descramble();
 
@@ -92,20 +93,20 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     REQUIRE(protocol::to_observation(rx, events::Stamp{own.utc_s, 500, true}, -80,
                                      model::Source::AdslDirect, observation));
     CHECK(observation.address == 0xC5D804u);
-    CHECK(observation.alt_valid);
+    CHECK(observation.altitude_valid);
 
     traffic::TrafficTable table;
-    int idx = table.update(observation, own.utc_s);
-    REQUIRE(idx >= 0);
+    int index = table.update(observation, own.utc_s);
+    REQUIRE(index >= 0);
     CHECK(table.count() == 1);
 
     // 5) alarm: an aircraft 800 m away and co-altitude is an advisory, and the
     //    closure beside it comes off the relative velocity vector.
     traffic::AlarmAssessment a = traffic::assess(own, observation, own.fix_at_ms);
     CHECK(a.valid);
-    CHECK(a.rel_dist_m > 700);
-    CHECK(a.rel_dist_m < 900);
-    CHECK(a.rel_alt_m == 0);
+    CHECK(a.relative_distance_m > 700);
+    CHECK(a.relative_distance_m < 900);
+    CHECK(a.relative_altitude_m == 0);
     CHECK(a.closing_mps > 40);
     CHECK(a.level == traffic::Level::Advisory);
 
@@ -117,22 +118,22 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     CHECK(following.closing_mps <= 0);
     CHECK(following.level == traffic::Level::Advisory);
 
-    table.at(idx)->alarm_level = a.level;
+    table.at(index)->alarm_level = a.level;
 
     // 6) NMEA out to the EFB link
     platform::host::Link efb;
     efb.raise_link(1);
-    char buf[128];
-    int n = protocol::format_pflaa(buf, sizeof(buf), own, observation, traffic::to_number(a.level),
-                                   nullptr);
+    char buffer[128];
+    int n = protocol::format_pflaa(buffer, sizeof(buffer), own, observation,
+                                   traffic::to_number(a.level), nullptr);
     REQUIRE(n > 0);
-    REQUIRE(efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n)) ==
-            Status::Ok);
-    n = protocol::format_pflau(buf, sizeof(buf), own, true, table.count(), &observation,
-                               traffic::to_number(a.level), a.rel_bearing_deg, a.rel_alt_m,
-                               a.rel_dist_m);
-    REQUIRE(efb.send(events::Endpoint::Nmea, ConstByteSpan(reinterpret_cast<uint8_t*>(buf), n)) ==
-            Status::Ok);
+    REQUIRE(efb.send(events::Endpoint::Nmea,
+                     ConstByteSpan(reinterpret_cast<uint8_t*>(buffer), n)) == Status::Ok);
+    n = protocol::format_pflau(buffer, sizeof(buffer), own, true, table.count(), &observation,
+                               traffic::to_number(a.level), a.relative_bearing_deg,
+                               a.relative_altitude_m, a.relative_distance_m);
+    REQUIRE(efb.send(events::Endpoint::Nmea,
+                     ConstByteSpan(reinterpret_cast<uint8_t*>(buffer), n)) == Status::Ok);
     CHECK(efb.count_on(events::Endpoint::Nmea) == 2);
     CHECK(efb.sent[0].bytes.find("C5D804") != std::string::npos);
 }
@@ -147,9 +148,9 @@ TEST_CASE("scenario: uplink RX merges with direct RX (dedup, prefer direct)") {
     up.address = 0x3FBEEF;
     up.address_mapping_table = 5;  // ICAO (from ADS-B via uplink)
     up.position_valid = true;
-    up.lat_1e7 = own.lat_1e7 + 50000;
-    up.lon_1e7 = own.lon_1e7;
-    up.alt_m = 1100;
+    up.latitude_1e7 = own.latitude_1e7 + 50000;
+    up.longitude_1e7 = own.longitude_1e7;
+    up.altitude_m = 1100;
     up.source = model::Source::AdslUplink;
     up.received.at_s = own.utc_s;
 

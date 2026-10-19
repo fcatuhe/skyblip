@@ -1,6 +1,6 @@
-#include "core/diag/recorder.h"
+#include "core/diagnostics/recorder.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 namespace {
 

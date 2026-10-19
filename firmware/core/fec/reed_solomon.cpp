@@ -61,8 +61,8 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
     if (all_zero) return 0;
 
     uint8_t lambda[kParity + 1] = {1};
-    uint8_t prev[kParity + 1] = {1};
-    uint8_t tmp[kParity + 1];
+    uint8_t previous[kParity + 1] = {1};
+    uint8_t temporary[kParity + 1];
     int l = 0;
     int m = 1;
     uint8_t b = 1;
@@ -72,18 +72,18 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
         if (delta == 0) {
             m++;
         } else if (2 * l <= n) {
-            for (int i = 0; i <= kParity; i++) tmp[i] = lambda[i];
+            for (int i = 0; i <= kParity; i++) temporary[i] = lambda[i];
             uint8_t coef = mul(delta, inv(b));
             for (int i = 0; i + m <= kParity; i++)
-                lambda[i + m] = static_cast<uint8_t>(lambda[i + m] ^ mul(coef, prev[i]));
+                lambda[i + m] = static_cast<uint8_t>(lambda[i + m] ^ mul(coef, previous[i]));
             l = n + 1 - l;
-            for (int i = 0; i <= kParity; i++) prev[i] = tmp[i];
+            for (int i = 0; i <= kParity; i++) previous[i] = temporary[i];
             b = delta;
             m = 1;
         } else {
             uint8_t coef = mul(delta, inv(b));
             for (int i = 0; i + m <= kParity; i++)
-                lambda[i + m] = static_cast<uint8_t>(lambda[i + m] ^ mul(coef, prev[i]));
+                lambda[i + m] = static_cast<uint8_t>(lambda[i + m] ^ mul(coef, previous[i]));
             m++;
         }
     }
@@ -119,8 +119,8 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
         for (int j = 0; j <= i; j++) omega[i] ^= mul(lambda[j], syndromes[i - j]);
     }
     for (int k = 0; k < found; k++) {
-        int pos = error_positions[k];
-        uint8_t xinv = exp_[(255 - pos) % 255];
+        int position = error_positions[k];
+        uint8_t xinv = exp_[(255 - position) % 255];
         uint8_t omega_v = 0;
         uint8_t xp = 1;
         for (int j = 0; j < kParity; j++) {
@@ -134,9 +134,9 @@ int ReedSolomon255::decode(uint8_t codeword[kN]) const {
             xq = mul(xq, mul(xinv, xinv));
         }
         if (lambda_der == 0) return -1;
-        uint8_t xk = exp_[pos];
+        uint8_t xk = exp_[position];
         uint8_t magnitude = mul(xk, mul(omega_v, inv(lambda_der)));
-        int byte_index = kN - 1 - pos;
+        int byte_index = kN - 1 - position;
         if (byte_index < 0 || byte_index >= kN) return -1;
         codeword[byte_index] ^= magnitude;
     }

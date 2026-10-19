@@ -74,8 +74,8 @@ int describe_settings_changes(const Settings& from, const Settings& to, char* ou
     if (to.alarm_volume != from.alarm_volume) menu_row(rows, MenuRow::Volume, to);
     if (to.battery_offset_mv != from.battery_offset_mv)
         signed_row(rows, "BATTERY", to.battery_offset_mv, 0, " MV");
-    if (to.freq_trim_e1_ppm != from.freq_trim_e1_ppm)
-        signed_row(rows, "FREQ TRIM", to.freq_trim_e1_ppm, 1, " PPM");
+    if (to.frequency_trim_e1_ppm != from.frequency_trim_e1_ppm)
+        signed_row(rows, "FREQ TRIM", to.frequency_trim_e1_ppm, 1, " PPM");
     if (rows.count == 0) return 0;
     return join(rows, out);
 }

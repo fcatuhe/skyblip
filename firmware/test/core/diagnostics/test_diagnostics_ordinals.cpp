@@ -1,5 +1,5 @@
 // Every enum a diagnostics payload writes as a byte, pinned to the code the corpus holds.
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -25,11 +25,11 @@ uint8_t wire(power::ResetReason value) {
     return kUnpinned;
 }
 
-uint8_t wire(diag::Profile value) {
+uint8_t wire(diagnostics::Profile value) {
     switch (value) {
-        case diag::Profile::Full: return 0;
-        case diag::Profile::PowerRun: return 1;
-        case diag::Profile::FlightRun: return 2;
+        case diagnostics::Profile::Full: return 0;
+        case diagnostics::Profile::PowerRun: return 1;
+        case diagnostics::Profile::FlightRun: return 2;
     }
     return kUnpinned;
 }
@@ -115,24 +115,24 @@ uint8_t wire(timing::SlotState value) {
     return kUnpinned;
 }
 
-uint8_t wire(diag::Refusal value) {
+uint8_t wire(diagnostics::Refusal value) {
     switch (value) {
-        case diag::Refusal::None: return 0;
-        case diag::Refusal::OverBudget: return 1;
-        case diag::Refusal::Unarmed: return 2;
-        case diag::Refusal::Unsettled: return 3;
-        case diag::Refusal::OffSchedule: return 4;
+        case diagnostics::Refusal::None: return 0;
+        case diagnostics::Refusal::OverBudget: return 1;
+        case diagnostics::Refusal::Unarmed: return 2;
+        case diagnostics::Refusal::Unsettled: return 3;
+        case diagnostics::Refusal::OffSchedule: return 4;
     }
     return kUnpinned;
 }
 
-uint8_t wire(diag::SwitchKind value) {
+uint8_t wire(diagnostics::SwitchKind value) {
     switch (value) {
-        case diag::SwitchKind::Retune: return 0;
-        case diag::SwitchKind::Hop: return 1;
-        case diag::SwitchKind::ToOband: return 2;
-        case diag::SwitchKind::ToMband: return 3;
-        case diag::SwitchKind::Wake: return 4;
+        case diagnostics::SwitchKind::Retune: return 0;
+        case diagnostics::SwitchKind::Hop: return 1;
+        case diagnostics::SwitchKind::ToOband: return 2;
+        case diagnostics::SwitchKind::ToMband: return 3;
+        case diagnostics::SwitchKind::Wake: return 4;
     }
     return kUnpinned;
 }
@@ -175,15 +175,15 @@ uint8_t wire(events::Contact value) {
     return kUnpinned;
 }
 
-uint8_t wire(diag::LinkAction value) {
+uint8_t wire(diagnostics::LinkAction value) {
     switch (value) {
-        case diag::LinkAction::Up: return 0;
-        case diag::LinkAction::Down: return 1;
-        case diag::LinkAction::ClaimTaken: return 2;
-        case diag::LinkAction::ClaimReleased: return 3;
-        case diag::LinkAction::Received: return 4;
-        case diag::LinkAction::Sent: return 5;
-        case diag::LinkAction::Dropped: return 6;
+        case diagnostics::LinkAction::Up: return 0;
+        case diagnostics::LinkAction::Down: return 1;
+        case diagnostics::LinkAction::ClaimTaken: return 2;
+        case diagnostics::LinkAction::ClaimReleased: return 3;
+        case diagnostics::LinkAction::Received: return 4;
+        case diagnostics::LinkAction::Sent: return 5;
+        case diagnostics::LinkAction::Dropped: return 6;
     }
     return kUnpinned;
 }
@@ -259,7 +259,7 @@ TEST_CASE(
 TEST_CASE(
     "diag ordinals: diag::Profile's codes are the boot profile byte, and a code changed here "
     "changes PROFILE in scripts/blip_records.py and the schema's profile enum with it") {
-    codes_pinned<diag::Profile>(3);
+    codes_pinned<diagnostics::Profile>(3);
 }
 
 TEST_CASE(
@@ -295,13 +295,13 @@ TEST_CASE(
 TEST_CASE(
     "diag ordinals: diag::Refusal's codes are the dwell refusal byte, and a code changed here "
     "changes REFUSAL in scripts/blip_records.py and the schema's refusal enum with it") {
-    codes_pinned<diag::Refusal>(5);
+    codes_pinned<diagnostics::Refusal>(5);
 }
 
 TEST_CASE(
     "diag ordinals: diag::SwitchKind's codes are the switch change byte, and a code changed "
     "here changes CHANGE in scripts/blip_records.py and the schema's change enum with it") {
-    codes_pinned<diag::SwitchKind>(5);
+    codes_pinned<diagnostics::SwitchKind>(5);
 }
 
 TEST_CASE(
@@ -331,7 +331,7 @@ TEST_CASE(
 TEST_CASE(
     "diag ordinals: diag::LinkAction's codes are the link action byte, and a code changed "
     "here changes LINK_ACTION in scripts/blip_records.py and the schema's action enum") {
-    codes_pinned<diag::LinkAction>(7);
+    codes_pinned<diagnostics::LinkAction>(7);
 }
 
 TEST_CASE(

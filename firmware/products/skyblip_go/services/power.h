@@ -1,7 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
 
-#include "core/diag/profile.h"
+#include "core/diagnostics/profile.h"
 #include "core/power/battery.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
@@ -63,7 +63,7 @@ class PowerService : public runtime::Service {
 
     // INFO: fc 21sep26 a counter of screen, receiver and buzzer seconds needs no finer grain
     static constexpr uint32_t kDutyRecordPeriodMs = 10000;
-    static_assert(kDutyRecordPeriodMs <= diag::kDutyPeriodCeilingMs,
+    static_assert(kDutyRecordPeriodMs <= diagnostics::kDutyPeriodCeilingMs,
                   "two Duty records this far apart cannot be subtracted");
 
    private:
@@ -81,8 +81,8 @@ class PowerService : public runtime::Service {
     void sample_die_temperature(uint32_t now_ms);
     void watch_charge();
     void record_pass(uint32_t now_ms);
-    void record_power(const diag::Instant& at);
-    void record_duty(const diag::Instant& at);
+    void record_power(const diagnostics::Instant& at);
+    void record_duty(const diagnostics::Instant& at);
     uint32_t power_period_ms() const;
     uint32_t duty_period_ms() const;
 

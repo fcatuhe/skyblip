@@ -20,14 +20,14 @@ namespace skyblip {
 using Go = go::Product<platform::host::Platform>;
 
 // INFO: fc 18oct26 the barometer is required, so these cases fit one and silence it after bring-up
-struct BaroByHand {};
-constexpr BaroByHand kBaroByHand{};
+struct BarometerByHand {};
+constexpr BarometerByHand kBarometerByHand{};
 
 struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(BaroByHand) : Rig() { platform.baro().fitted = false; }
+    explicit Rig(BarometerByHand) : Rig() { platform.barometer().fitted = false; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
                  std::optional<uint16_t> serial = platform::host::Identity::kSerial)
@@ -52,21 +52,21 @@ struct Rig {
         }
     }
 
-    void push_fix(int32_t alt_m, uint32_t updates) {
+    void push_fix(int32_t altitude_m, uint32_t updates) {
         gnss::GnssSolution f{};
         f.fix_valid = true;
-        f.alt_hae_mm = alt_m * 1000;
+        f.altitude_hae_mm = altitude_m * 1000;
         f.vdop_e2 = 150;
         f.sentences = updates;
         product.bus().gnss.push(f);
     }
 
     // A receiver that lost its vertical solution: no VDOP, and the last height it solved.
-    void push_2d_fix(int32_t alt_m, uint32_t updates) {
+    void push_2d_fix(int32_t altitude_m, uint32_t updates) {
         gnss::GnssSolution f{};
         f.fix_valid = true;
         f.fix_mode = gnss::kFixMode2D;
-        f.alt_hae_mm = alt_m * 1000;
+        f.altitude_hae_mm = altitude_m * 1000;
         f.sentences = updates;
         product.bus().gnss.push(f);
     }
@@ -77,19 +77,19 @@ struct Rig {
 
     // A solution as a receiver reports one in flight: moving, timed, solved in 3D, and
     // referenced to both datums. core/flight decides what it means.
-    void push_timed_fix(int32_t speed_mm_s, int32_t alt_msl_m) {
+    void push_timed_fix(int32_t speed_mm_s, int32_t altitude_msl_m) {
         gnss::GnssSolution f{};
         f.fix_valid = true;
         f.utc_valid = true;
         f.utc_s = kBaseUtcS + utc_offset_s;
-        f.lat_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
-        f.lon_1e7 = 85000000;
-        f.alt_msl_mm = alt_msl_m * 1000;
-        f.alt_hae_mm = f.alt_msl_mm + gnss::kDefaultGeoidSeparationMm;
+        f.latitude_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
+        f.longitude_1e7 = 85000000;
+        f.altitude_msl_mm = altitude_msl_m * 1000;
+        f.altitude_hae_mm = f.altitude_msl_mm + gnss::kDefaultGeoidSeparationMm;
         f.geoid_measured = true;
         f.speed_mm_s = speed_mm_s;
         f.track_cdeg = 9000;
-        f.sats = 10;
+        f.satellites = 10;
         f.hdop_e2 = 100;
         f.vdop_e2 = 150;
         f.sentences = ++fix_updates;
@@ -97,8 +97,8 @@ struct Rig {
     }
 
     // One second of the world: a solution, then the passes that follow it.
-    void second(uint32_t& now_ms, int32_t speed_mm_s, int32_t alt_msl_m) {
-        push_timed_fix(speed_mm_s, alt_msl_m);
+    void second(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        push_timed_fix(speed_mm_s, altitude_msl_m);
         run(now_ms, now_ms + 950);
         now_ms += 1000;
         utc_offset_s++;
@@ -119,8 +119,8 @@ struct Rig {
         for (uint32_t i = 0; i < n; i++) blind_second(now_ms);
     }
 
-    void seconds(uint32_t& now_ms, uint32_t n, int32_t speed_mm_s, int32_t alt_msl_m) {
-        for (uint32_t i = 0; i < n; i++) second(now_ms, speed_mm_s, alt_msl_m);
+    void seconds(uint32_t& now_ms, uint32_t n, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        for (uint32_t i = 0; i < n; i++) second(now_ms, speed_mm_s, altitude_msl_m);
     }
 
     // The same passes, counted instead of bounded: `now_ms <= to_ms` above cannot cross
@@ -150,17 +150,17 @@ struct Rig {
 
     // One second of the world, wherever the counter happens to be: run_span(950)
     // in 50 ms steps is the whole second.
-    void second_across(uint32_t& now_ms, int32_t speed_mm_s, int32_t alt_msl_m) {
-        push_timed_fix(speed_mm_s, alt_msl_m);
+    void second_across(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        push_timed_fix(speed_mm_s, altitude_msl_m);
         run_span(now_ms, 950);
         utc_offset_s++;
     }
 
-    void push_baro(int32_t alt_cm, uint32_t at_ms) {
-        events::BaroSample sample{};
-        sample.pressure_mpa = flight::alt_mm_to_pressure_mpa(alt_cm * 10);
+    void push_barometer(int32_t altitude_cm, uint32_t at_ms) {
+        events::BarometerSample sample{};
+        sample.pressure_mpa = flight::altitude_mm_to_pressure_mpa(altitude_cm * 10);
         sample.at_ms = at_ms;
-        product.bus().baro.push(sample);
+        product.bus().barometer.push(sample);
     }
 
     // Held across steps, then released across steps: a level has to be stable

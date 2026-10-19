@@ -24,8 +24,8 @@ constexpr int kRightEnd = kColumn(32);
 
 constexpr int kPpsX = kColumn(9);
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int len) {
-    canvas.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
+    canvas.draw_text(x_end - length * kCellW, y, text, true, 1);
 }
 
 bool own_burst(radio::Verdict verdict) {
@@ -120,8 +120,9 @@ void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     if (!gnss.fix_valid) {
         written = format_string(text, "NO FIX");
     } else {
-        written = format_string(text, gnss.sats >= kFewestSatellitesForAltitude ? "3D " : "2D ");
-        written += format_uint(text + written, gnss.sats);
+        written =
+            format_string(text, gnss.satellites >= kFewestSatellitesForAltitude ? "3D " : "2D ");
+        written += format_uint(text + written, gnss.satellites);
         written += format_string(text + written, "SV");
     }
     text[written] = 0;

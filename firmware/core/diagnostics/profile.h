@@ -1,12 +1,12 @@
-#ifndef SKYBLIP_CORE_DIAG_PROFILE_H
-#define SKYBLIP_CORE_DIAG_PROFILE_H
+#ifndef SKYBLIP_CORE_DIAGNOSTICS_PROFILE_H
+#define SKYBLIP_CORE_DIAGNOSTICS_PROFILE_H
 
 #include <cstdint>
 
-#include "core/diag/payload.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/record.h"
 
-namespace skyblip::diag {
+namespace skyblip::diagnostics {
 
 constexpr bool paced(Profile profile) { return profile != Profile::Full; }
 
@@ -34,7 +34,7 @@ constexpr bool lists(Profile profile, Type type) {
         case Type::Burst:
         case Type::Dwell:
         case Type::Flight:
-        case Type::Baro:
+        case Type::Barometer:
         case Type::Motion:
         case Type::Contact:
         case Type::Link:

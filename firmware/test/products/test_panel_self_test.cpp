@@ -81,23 +81,23 @@ TEST_CASE("product: the self-test page carries what the probes found, not what w
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
 
-    const go::SelfTestPart* baro = nullptr;
+    const go::SelfTestPart* barometer = nullptr;
     const go::SelfTestPart* haptic = nullptr;
     const go::SelfTestPart* radio = nullptr;
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
         const go::SelfTestPart& row = rig.product.self_test_rows()[i];
-        if (go::kSelfTestParts[i].capability == ports::Capability::Baro) baro = &row;
+        if (go::kSelfTestParts[i].capability == ports::Capability::Barometer) barometer = &row;
         if (go::kSelfTestParts[i].capability == ports::Capability::Haptic) haptic = &row;
         if (go::kSelfTestParts[i].capability == ports::Capability::Rf) radio = &row;
     }
-    REQUIRE(baro != nullptr);
+    REQUIRE(barometer != nullptr);
     REQUIRE(haptic != nullptr);
     REQUIRE(radio != nullptr);
 
     // The host bus answers the BOM's address, and the page prints the address
     // that answered rather than the one in the devicetree.
-    REQUIRE(baro->detail != nullptr);
-    CHECK(std::string(baro->detail) == "BME280 76");
+    REQUIRE(barometer->detail != nullptr);
+    CHECK(std::string(barometer->detail) == "BME280 76");
     // The haptic on this platform is the waveform driver, so the row says which.
     REQUIRE(haptic->detail != nullptr);
     CHECK(std::string(haptic->detail) == "DRV2605");
@@ -165,14 +165,14 @@ TEST_CASE("product: an optional part nothing answered reads NOT FITTED and names
 
 // The row already says FAIL, and "00" would read as a part at address zero.
 TEST_CASE("product: a footprint nothing answered names the part and prints no address") {
-    constexpr ports::Capabilities kNoBaro = static_cast<ports::Capabilities>(
+    constexpr ports::Capabilities kNoBarometer = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
-        ~static_cast<uint32_t>(ports::Capability::Baro));
-    Rig rig{kNoBaro};
+        ~static_cast<uint32_t>(ports::Capability::Barometer));
+    Rig rig{kNoBarometer};
     REQUIRE(rig.setup() == Status::Down);
 
     for (int i = 0; i < go::kSelfTestPartCount; i++) {
-        if (go::kSelfTestParts[i].capability != ports::Capability::Baro) continue;
+        if (go::kSelfTestParts[i].capability != ports::Capability::Barometer) continue;
         const go::SelfTestPart& row = rig.product.self_test_rows()[i];
         CHECK(row.state == go::PartState::Fail);
         REQUIRE(row.detail != nullptr);

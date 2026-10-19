@@ -250,9 +250,9 @@ class ConfigService {
 
    private:
     Status reply(const char* json);
-    Status reply(const char* json, int len);
-    Status reply_to(uint16_t session_id, const char* json, int len);
-    Status broadcast(const char* json, int len);
+    Status reply(const char* json, int length);
+    Status reply_to(uint16_t session_id, const char* json, int length);
+    Status broadcast(const char* json, int length);
     void refuse_unclaimed(uint16_t session_id);
     void note_up(uint16_t session_id);
     void note_down(uint16_t session_id);
@@ -264,7 +264,7 @@ class ConfigService {
     void send_status();
     void send_defaults();
     void push_status();
-    int format_status(char* buf, int cap);
+    int format_status(char* buffer, int cap);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that
     // answers "get" and "status" answers "timing" from the one accumulator
     // core/timing::SlotTimingStats keeps, over the link the phone already has
@@ -285,7 +285,7 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
-    bool answer_identity(const char* cmd, const json::Reader& r);
+    bool answer_identity(const char* command, const json::Reader& r);
     void challenge();
     void register_unit(const json::Reader& r);
     void send_registration();
@@ -297,7 +297,7 @@ class ConfigService {
     void start_report(std::optional<Report>& report, int frame_cap, const Args&... args);
     template <class Report>
     void continue_report(std::optional<Report>& report);
-    void hold(uint16_t session_id, const char* json, int len);
+    void hold(uint16_t session_id, const char* json, int length);
     void drop_replies();
     static const char* flight_name(flight::FlightState state);
     void request_firmware(const json::Reader& r);

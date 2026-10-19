@@ -3,15 +3,15 @@
 #include <cstring>
 #include <vector>
 
-#include "core/diag/payload.h"
-#include "core/diag/profile.h"
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/profile.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
 #include "core/timing/slot.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
-#include "test/support/diag_taps.h"
+#include "test/support/diagnostics_taps.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 #include "test/support/rig_moves.h"
@@ -50,14 +50,14 @@ void park_on_the_bench(simulator::Simulator& simulator) {
 
 uint32_t arm_a_flight_run(simulator::Simulator& simulator) {
     const uint32_t armed_ms = past_settling(simulator);
-    simulator.product().diag().arm(diag::Profile::FlightRun);
+    simulator.product().diagnostics().arm(diagnostics::Profile::FlightRun);
     run_on(simulator, armed_ms, 1000);
     REQUIRE(simulator.product().capture().capturing());
     simulator.world().air().clear();
     return armed_ms + 1000;
 }
 
-void arm_flight_run(Rig& rig, uint32_t& t) { arm(rig, t, diag::Profile::FlightRun); }
+void arm_flight_run(Rig& rig, uint32_t& t) { arm(rig, t, diagnostics::Profile::FlightRun); }
 
 const go::Glass& glass(Rig& rig) { return rig.product.screen().framebuffer(); }
 
@@ -104,8 +104,8 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
         p.descramble();
         CHECK(p.FlightState == static_cast<uint8_t>(flight::FlightState::Ground));
         // the payload carries latitude in steps of 107 and longitude of 215, in 1e-7 degrees
-        CHECK(std::abs(p.lat_1e7() - own.lat_1e7) < 200);
-        CHECK(std::abs(p.lon_1e7() - own.lon_1e7) < 400);
+        CHECK(std::abs(p.latitude_1e7() - own.latitude_1e7) < 200);
+        CHECK(std::abs(p.longitude_1e7() - own.longitude_1e7) < 400);
         CHECK(p.speed_q() == 0);
         checked++;
     }
@@ -121,17 +121,17 @@ TEST_CASE("flight run: records the pair every 30 s, and its boot names the profi
     rig.run(t, t + 65000);
     t += 65000;
     stop(rig, t);
-    const std::vector<diag::Record> records = captured(rig);
+    const std::vector<diagnostics::Record> records = captured(rig);
 
-    CHECK(count_of(records, diag::Type::Power) == 2);
-    CHECK(count_of(records, diag::Type::Duty) == 2);
-    CHECK(count_of(records, diag::Type::Flight) == 0);
-    diag::Boot boot{};
+    CHECK(count_of(records, diagnostics::Type::Power) == 2);
+    CHECK(count_of(records, diagnostics::Type::Duty) == 2);
+    CHECK(count_of(records, diagnostics::Type::Flight) == 0);
+    diagnostics::Boot boot{};
     REQUIRE(first_of(records, boot));
     CHECK(boot.profile_recorded);
-    CHECK(boot.profile == diag::Profile::FlightRun);
-    CHECK(rig.product.capture().keeps_s(diag::Profile::FlightRun) ==
-          rig.product.capture().keeps_s(diag::Profile::PowerRun));
+    CHECK(boot.profile == diagnostics::Profile::FlightRun);
+    CHECK(rig.product.capture().keeps_s(diagnostics::Profile::FlightRun) ==
+          rig.product.capture().keeps_s(diagnostics::Profile::PowerRun));
 }
 
 // A simulated flight in the pilot's log could not be told from a real one, so it writes none.
@@ -161,7 +161,7 @@ TEST_CASE("flight run: the glass refreshes as a flown one does, and a parked one
     REQUIRE(parked.setup() == Status::Ok);
     uint32_t pt = 100;
     taxi(parked, pt, 3);
-    arm(parked, pt, diag::Profile::PowerRun);
+    arm(parked, pt, diagnostics::Profile::PowerRun);
     const uint32_t parked_from = parked.state().duty.panel_partial_refreshes;
     taxi(parked, pt, 130);
 
@@ -198,7 +198,8 @@ TEST_CASE("flight run: a stop lands the glass, and leaves no flight time behind"
 }
 
 TEST_CASE("flight run: a power run and a full capture leave the glass on the ground") {
-    for (const diag::Profile profile : {diag::Profile::Full, diag::Profile::PowerRun}) {
+    for (const diagnostics::Profile profile :
+         {diagnostics::Profile::Full, diagnostics::Profile::PowerRun}) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
         uint32_t t = 100;

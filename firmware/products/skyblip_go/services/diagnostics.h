@@ -114,8 +114,8 @@ class DiagnosticsDump {
         comms::DiagnosticsReport report(d, "diag");
         char line[comms::DiagnosticsReport::kLineBytes];
         for (int i = 0; i < report.line_count(); i++) {
-            const int len = report.line(i, line, static_cast<int>(sizeof(line)));
-            if (len > 0) sink_.line(line, len);
+            const int length = report.line(i, line, static_cast<int>(sizeof(line)));
+            if (length > 0) sink_.line(line, length);
         }
     }
 

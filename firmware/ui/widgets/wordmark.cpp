@@ -107,8 +107,8 @@ constexpr unsigned char kBits[kStride * kH] = {
 };
 }  // namespace
 
-void draw_wordmark(Canvas& canvas, int cx, int cy) {
-    const int x0 = cx - kW / 2, y0 = cy - kMidlineRow;
+void draw_wordmark(Canvas& canvas, int centre_x, int centre_y) {
+    const int x0 = centre_x - kW / 2, y0 = centre_y - kMidlineRow;
     for (int y = 0; y < kH; y++)
         for (int x = 0; x < kW; x++)
             if (kBits[y * kStride + (x >> 3)] & (0x80 >> (x & 7)))

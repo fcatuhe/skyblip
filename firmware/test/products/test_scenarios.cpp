@@ -34,11 +34,11 @@ void replay(simulator::Simulator& simulator) {
 
 TEST_CASE("scenario: the parser reads own-ship, traffic and events") {
     simulator::Scenario scenario;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, scenario));
+    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, length, scenario));
     CHECK(scenario.name == "inline");
     CHECK(scenario.mode == simulator::Mode::Training);
-    CHECK(scenario.alt_m == 900);
+    CHECK(scenario.altitude_m == 900);
     CHECK(scenario.track_deg == 90);
     CHECK(scenario.duration_ms == 6000);
     REQUIRE(scenario.aircraft.size() == 1);
@@ -59,8 +59,8 @@ TEST_CASE("scenario: a loaded scenario names the device, and a file can say whic
     REQUIRE(simulator.setup() == Status::Ok);
 
     simulator::Scenario sc;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, sc));
+    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, length, sc));
     simulator.load(sc);
     CHECK(std::string(simulator.product().settings().callsign) == "S-BLIP");
 
@@ -93,8 +93,8 @@ TEST_CASE("scenario: a training scenario's expectations hold when replayed") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator::Scenario sc;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, sc));
+    const int length = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, length, sc));
     simulator.load(sc);
     replay(simulator);
 
@@ -181,11 +181,11 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
         if (t == nullptr || !t->used || t->observation.source != model::Source::Alptas) continue;
         found++;
         // 900 m north and 250 m east of us at the start, closing from the south.
-        const int64_t dlat = t->observation.lat_1e7 - own.lat_1e7;
+        const int64_t dlat = t->observation.latitude_1e7 - own.latitude_1e7;
         const int32_t north_m = static_cast<int32_t>((dlat * 11132) / 1000000);
         CHECK(north_m > 400);
         CHECK(north_m < 1100);
-        CHECK(t->observation.alt_m < to_metres(Millimetres(own.alt_hae_mm)).v);
+        CHECK(t->observation.altitude_m < to_metres(Millimetres(own.altitude_hae_mm)).v);
         // A FLARM-taxonomy address is reported as one, so an EFB labels it IDType 2.
         CHECK(protocol::address_mapping_table_to_idtype(t->observation.address_mapping_table) == 2);
         CHECK(t->observation.position_valid);
@@ -292,7 +292,7 @@ Encounter measure(simulator::Simulator& simulator) {
         const traffic::AlarmAssessment a = traffic::assess(state.own, target->observation, t);
         if (!a.valid) continue;
         const uint8_t level = traffic::to_number(state.alarm_level);
-        const int32_t range_m = a.rel_dist_m;
+        const int32_t range_m = a.relative_distance_m;
         const int32_t true_separation_m = static_cast<int32_t>(simulator.world().separation_m(0));
 
         if (level >= 1 && !e.announced) {
@@ -366,7 +366,7 @@ TEST_CASE("scenario: a glider joining the thermal on a straight line is still ca
     // Inside the window from the first report it made, and spoken about there:
     // 2 km at 68 m/s of closure is half a minute of looking.
     CHECK(e.announced);
-    CHECK(e.first_range_m <= traffic::kAdvisoryDistM);
+    CHECK(e.first_range_m <= traffic::kAdvisoryDistanceM);
     CHECK(e.first_range_m > 1800);
     CHECK(e.first_ms < 5000);
     CHECK(e.min_true_separation_ms - e.first_ms > 30000);
