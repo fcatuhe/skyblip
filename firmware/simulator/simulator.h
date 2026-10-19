@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_SIMULATOR_SIM_H
-#define SKYBLIP_SIMULATOR_SIM_H
+#ifndef SKYBLIP_SIMULATOR_SIMULATOR_H
+#define SKYBLIP_SIMULATOR_SIMULATOR_H
 
 #include <cstring>
 #include <string>

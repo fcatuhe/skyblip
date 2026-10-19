@@ -33,7 +33,7 @@ struct AirRecord {
     // The chip rate the burst was sent at. It is part of the burst, not of the
     // receiver: the two bands are two modulations and a dwell framing the wrong
     // one is deaf on air, which is a bug the tape has to be able to show.
-    uint32_t bitrate{protocol::kMbandChipRateBps};
+    uint32_t chip_rate_bps{protocol::kMbandChipRateBps};
     uint16_t phase_ms{0};
     uint16_t len{0};
     AirEvent event{AirEvent::Deaf};
@@ -57,7 +57,7 @@ class Air {
     static constexpr uint32_t kChannelToleranceHz = 100000;
     static constexpr int8_t kSensitivityDbm = -115;
     static constexpr int kMaxBursts = 16;
-    static constexpr int kLogSize = 96;
+    static constexpr int kMaxRecords = 96;
 
     static bool tuned_to(uint32_t radio_hz, uint32_t burst_hz) {
         return (radio_hz > burst_hz ? radio_hz - burst_hz : burst_hz - radio_hz) <
@@ -68,15 +68,15 @@ class Air {
     // rate. Derived rather than remembered, because the O band sends eleven
     // times the bytes at twice the rate and a fixed figure would be wrong for
     // one of the two.
-    static uint64_t air_time_us(uint16_t len, uint32_t bitrate) {
-        return static_cast<uint64_t>(len) * 8u * 1000000u / bitrate;
+    static uint64_t air_time_us(uint16_t len, uint32_t chip_rate_bps) {
+        return static_cast<uint64_t>(len) * 8u * 1000000u / chip_rate_bps;
     }
 
     // A burst is chips on a frequency, at a chip rate: the sync word the
     // transmitter used is part of them, which is what decides whether a
     // listening receiver frames it, and so is the rate it clocked them out at.
     void emit(uint64_t at_us, uint32_t freq_hz, const uint8_t* chips, uint16_t len, int8_t rssi_dbm,
-              uint32_t bitrate = protocol::kMbandChipRateBps);
+              uint32_t chip_rate_bps = protocol::kMbandChipRateBps);
 
     void step(uint64_t now_us, models::Sx1262& radio);
     void take_own_transmission(uint64_t now_us, models::Sx1262& radio);
@@ -93,7 +93,7 @@ class Air {
 
     void clear();
 
-    int record_count() const { return count_ < kLogSize ? count_ : kLogSize; }
+    int record_count() const { return count_ < kMaxRecords ? count_ : kMaxRecords; }
     const AirRecord& record(int i) const;
     int format(int i, char* out, int cap) const;
     uint32_t heard() const { return heard_; }
@@ -110,7 +110,7 @@ class Air {
         uint64_t at_us{0};
         uint64_t air_time_us{0};
         uint32_t freq_hz{0};
-        uint32_t bitrate{protocol::kMbandChipRateBps};
+        uint32_t chip_rate_bps{protocol::kMbandChipRateBps};
         int8_t rssi_dbm{0};
         uint16_t len{0};
         uint8_t chips[kMaxBurstBytes]{};
@@ -121,7 +121,7 @@ class Air {
     void set_carrier(uint64_t now_us, models::Sx1262& radio);
 
     Burst burst_[kMaxBursts]{};
-    AirRecord log_[kLogSize]{};
+    AirRecord records_[kMaxRecords]{};
     int count_{0};
     uint32_t heard_{0};
     uint32_t deaf_{0};

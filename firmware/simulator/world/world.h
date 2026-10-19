@@ -103,7 +103,7 @@ class World {
     }
     void set_external_power(bool on) { platform_.battery().external_power = on; }
     void press_button() { press_pending_ = true; }
-    void hold_button(bool down) { holding_ = down; }
+    void hold_button(bool down) { button_held_ = down; }
     void tap_pad() { tap_pending_ = true; }
     void hold_pad(bool down) { pad_held_ = down; }
 
@@ -158,21 +158,21 @@ class World {
     Scenario scenario_{};
     size_t next_event_{0};
     uint32_t start_ms_{0};
-    uint32_t last_aircraft_ms_{0};
+    uint32_t aircraft_moved_ms_{0};
     uint32_t airmass_qnh_pa_{flight::kIsaSeaLevelPa};
     int32_t slip_mg_{0};
     uint32_t press_since_ms_{0};
     uint32_t tap_since_ms_{0};
     int32_t origin_lat_1e7_{0};
     int32_t origin_lon_1e7_{0};
-    bool origin_set_{false};
-    uint32_t scheduled_sec_{0};
+    bool origin_valid_{false};
+    uint32_t scheduled_second_{0};
     bool scheduled_{false};
     int failures_{0};
-    bool armed_{false};
+    bool started_{false};
     bool press_pending_{false};
     bool pressing_{false};
-    bool holding_{false};
+    bool button_held_{false};
     bool tap_pending_{false};
     bool tapping_{false};
     bool pad_held_{false};

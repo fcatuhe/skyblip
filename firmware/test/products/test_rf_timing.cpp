@@ -55,7 +55,7 @@ struct Peer {
 
     bool frames(const simulator::AirRecord& burst, protocol::Frame& out) {
         if (!chip.receive_air(burst.chips, burst.len, /*crc_error=*/false, burst.rssi_dbm,
-                              burst.bitrate))
+                              burst.chip_rate_bps))
             return false;
         uint8_t buf[events::kRfEventBytes];
         const parts::RadioEvent ev = radio.poll(buf, sizeof(buf));

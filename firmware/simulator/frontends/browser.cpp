@@ -27,13 +27,15 @@ KEEPALIVE int simulator_load_scenario(const char* json, int len) {
 }
 KEEPALIVE int simulator_mode() { return static_cast<int>(g_simulator.mode()); }
 
-KEEPALIVE void simulator_button() { g_simulator.world().press_button(); }
-KEEPALIVE void simulator_button_down(int down) { g_simulator.world().hold_button(down != 0); }
-KEEPALIVE void simulator_pad_down(int down) { g_simulator.world().hold_pad(down != 0); }
-KEEPALIVE void simulator_backlight(int on) {
+KEEPALIVE void simulator_press_button() { g_simulator.world().press_button(); }
+KEEPALIVE void simulator_hold_button(int down) { g_simulator.world().hold_button(down != 0); }
+KEEPALIVE void simulator_hold_pad(int down) { g_simulator.world().hold_pad(down != 0); }
+KEEPALIVE void simulator_set_backlight(int on) {
     g_simulator.product().screen().set_backlight(on != 0);
 }
-KEEPALIVE void simulator_power(int on) { g_simulator.product().screen().set_power(on != 0); }
+KEEPALIVE void simulator_set_panel_power(int on) {
+    g_simulator.product().screen().set_power(on != 0);
+}
 KEEPALIVE void simulator_set_range(int step) {
     g_simulator.product().screen().set_range_step(step);
 }
@@ -41,14 +43,16 @@ KEEPALIVE void simulator_set_range(int step) {
 KEEPALIVE void simulator_set_fix(int on) { g_simulator.world().set_fix(on != 0); }
 KEEPALIVE void simulator_set_pps(int on) { g_simulator.world().set_pps_locked(on != 0); }
 KEEPALIVE void simulator_set_sats(int n) { g_simulator.world().set_sats(n); }
-KEEPALIVE void simulator_set_alt(int m) { g_simulator.world().set_altitude_m(m); }
-KEEPALIVE void simulator_set_speed(int kt) { g_simulator.world().set_speed_kt(kt); }
-KEEPALIVE void simulator_set_track(int deg) { g_simulator.world().set_track_deg(deg); }
-KEEPALIVE void simulator_set_climb(int mm_s) { g_simulator.world().set_climb_mm_s(mm_s); }
-KEEPALIVE void simulator_set_turn(int dps_e1) { g_simulator.world().set_turn_dps(dps_e1 / 10.0); }
-KEEPALIVE void simulator_set_slip(int mg) { g_simulator.world().set_slip_mg(mg); }
+KEEPALIVE void simulator_set_altitude_m(int m) { g_simulator.world().set_altitude_m(m); }
+KEEPALIVE void simulator_set_speed_kt(int kt) { g_simulator.world().set_speed_kt(kt); }
+KEEPALIVE void simulator_set_track_deg(int deg) { g_simulator.world().set_track_deg(deg); }
+KEEPALIVE void simulator_set_climb_mm_s(int mm_s) { g_simulator.world().set_climb_mm_s(mm_s); }
+KEEPALIVE void simulator_set_turn_dps_e1(int dps_e1) {
+    g_simulator.world().set_turn_dps(dps_e1 / 10.0);
+}
+KEEPALIVE void simulator_set_slip_mg(int mg) { g_simulator.world().set_slip_mg(mg); }
 // The air outside, in pascals.
-KEEPALIVE void simulator_set_airmass(int pa) {
+KEEPALIVE void simulator_set_airmass_qnh_pa(int pa) {
     g_simulator.world().set_airmass_qnh_pa(static_cast<uint32_t>(pa));
 }
 // The cell and the cable: the same two facts the board can read on silicon.
@@ -99,7 +103,7 @@ KEEPALIVE void simulator_send_config(const char* json) { g_simulator.world().sen
 KEEPALIVE void simulator_name_aircraft(int index, const char* callsign) {
     g_simulator.world().name_aircraft(index, callsign);
 }
-KEEPALIVE void simulator_clear_traffic() { g_simulator.world().clear_aircraft(); }
+KEEPALIVE void simulator_clear_aircraft() { g_simulator.world().clear_aircraft(); }
 KEEPALIVE void simulator_remove_aircraft(int index) { g_simulator.world().remove_aircraft(index); }
 KEEPALIVE int simulator_formation_members() {
     return g_simulator.product().alarm().formation_members();
@@ -119,7 +123,7 @@ KEEPALIVE int simulator_panel_refresh_is_full() {
 KEEPALIVE int simulator_present_count() { return g_simulator.present_count(); }
 
 KEEPALIVE int simulator_backlight_on() { return g_simulator.backlight() ? 1 : 0; }
-KEEPALIVE int simulator_powered() { return g_simulator.panel_powered() ? 1 : 0; }
+KEEPALIVE int simulator_panel_powered() { return g_simulator.panel_powered() ? 1 : 0; }
 KEEPALIVE int simulator_page() { return static_cast<int>(g_simulator.product().screen().page()); }
 KEEPALIVE int simulator_menu_open() {
     return g_simulator.product().screen().mode() == go::Mode::Menu ? 1 : 0;
@@ -185,7 +189,7 @@ KEEPALIVE int simulator_tx_lost() {
 KEEPALIVE int simulator_slot_state() {
     return static_cast<int>(g_simulator.product().state().rf.plan.state);
 }
-KEEPALIVE int simulator_dwell_freq() {
+KEEPALIVE int simulator_dwell_freq_khz() {
     return static_cast<int>(g_simulator.product().state().rf.plan.freq_hz / 1000);
 }
 
@@ -198,7 +202,7 @@ KEEPALIVE int simulator_air_event(int i) {
 KEEPALIVE int simulator_air_freq_khz(int i) {
     return static_cast<int>(g_simulator.world().air().record(i).freq_hz / 1000);
 }
-KEEPALIVE int simulator_air_rssi(int i) { return g_simulator.world().air().record(i).rssi_dbm; }
+KEEPALIVE int simulator_air_rssi_dbm(int i) { return g_simulator.world().air().record(i).rssi_dbm; }
 KEEPALIVE const char* simulator_air_line(int i) {
     static char line[160];
     g_simulator.world().air().format(i, line, sizeof(line));

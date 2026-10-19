@@ -21,7 +21,7 @@ const char* channel_name(uint32_t freq_hz) {
 }  // namespace
 
 void Air::emit(uint64_t at_us, uint32_t freq_hz, const uint8_t* chips, uint16_t len,
-               int8_t rssi_dbm, uint32_t bitrate) {
+               int8_t rssi_dbm, uint32_t chip_rate_bps) {
     for (Burst& b : burst_) {
         if (b.used) continue;
         b = Burst{};
@@ -29,9 +29,9 @@ void Air::emit(uint64_t at_us, uint32_t freq_hz, const uint8_t* chips, uint16_t 
         b.at_us = at_us;
         b.freq_hz = freq_hz;
         b.rssi_dbm = rssi_dbm;
-        b.bitrate = bitrate;
+        b.chip_rate_bps = chip_rate_bps;
         b.len = len > sizeof(b.chips) ? static_cast<uint16_t>(sizeof(b.chips)) : len;
-        b.air_time_us = air_time_us(b.len, bitrate);
+        b.air_time_us = air_time_us(b.len, chip_rate_bps);
         std::memcpy(b.chips, chips, b.len);
         return;
     }
@@ -41,10 +41,10 @@ bool Air::detected_by(models::Sx1262& radio, Burst& b) {
     if (b.collided) {
         collisions_++;
         log(b, AirEvent::Collision);
-        radio.receive_air(b.chips, b.len, /*crc_error=*/true, b.rssi_dbm, b.bitrate);
+        radio.receive_air(b.chips, b.len, /*crc_error=*/true, b.rssi_dbm, b.chip_rate_bps);
         return true;
     }
-    if (!radio.receive_air(b.chips, b.len, /*crc_error=*/false, b.rssi_dbm, b.bitrate))
+    if (!radio.receive_air(b.chips, b.len, /*crc_error=*/false, b.rssi_dbm, b.chip_rate_bps))
         return false;
     heard_++;
     log(b, AirEvent::Rx);
@@ -114,7 +114,7 @@ void Air::set_carrier(uint64_t now_us, models::Sx1262& radio) {
 }
 
 void Air::log(const Burst& b, AirEvent event) {
-    AirRecord& r = log_[count_ % kLogSize];
+    AirRecord& r = records_[count_ % kMaxRecords];
     r.at_us = b.at_us;
     r.freq_hz = b.freq_hz;
     // The phase belongs to the burst's own instant. Taking it at log time, which
@@ -123,7 +123,7 @@ void Air::log(const Burst& b, AirEvent event) {
     r.event = event;
     r.rssi_dbm = b.rssi_dbm;
     r.len = b.len;
-    r.bitrate = b.bitrate;
+    r.chip_rate_bps = b.chip_rate_bps;
     std::memcpy(r.chips, b.chips, b.len);
     count_++;
 }
@@ -142,8 +142,8 @@ bool Air::framed_uplink(const AirRecord& record, uint8_t* frame) {
 }
 
 const AirRecord& Air::record(int i) const {
-    const int first = count_ <= kLogSize ? 0 : count_ % kLogSize;
-    return log_[(first + (i < 0 ? 0 : i)) % kLogSize];
+    const int first = count_ <= kMaxRecords ? 0 : count_ % kMaxRecords;
+    return records_[(first + (i < 0 ? 0 : i)) % kMaxRecords];
 }
 
 void Air::clear() {
