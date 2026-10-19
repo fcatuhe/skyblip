@@ -74,7 +74,7 @@ void ConfigService::challenge() {
     json::Writer w(buf, sizeof(buf));
     w.kv_str("cmd", "challenge");
     write_hex_field(w, "nonce", identity_->unit_nonce());
-    write_hex_field(w, "server_key", identity_->unit().server_key());
+    write_hex_field(w, "server_key_id", identity_->unit().server_key_id());
     (void)reply(buf, w.finish());
 }
 
@@ -120,7 +120,7 @@ void ConfigService::send_registration() {
     const std::optional<crypto::Ed25519::Signature> signature =
         unit.sign(identity::registration_message(unit.device_id(), unit.public_key(),
                                                  identity_->unit_nonce(), identity_->server_nonce(),
-                                                 unit.server_key(), release, version)
+                                                 unit.server_key_id(), release, version)
                       .bytes());
     if (!signature) {
         refuse("keyless");
@@ -132,7 +132,7 @@ void ConfigService::send_registration() {
     write_hex_field(w, "device_id", unit.device_id());
     write_hex_field(w, "public_key", unit.public_key());
     w.kv_str("version", version);
-    write_hex_field(w, "server_key", unit.server_key());
+    write_hex_field(w, "server_key_id", unit.server_key_id());
     w.kv_bool("release", release);
     write_hex_field(w, "signature", *signature);
     const int len = w.finish();

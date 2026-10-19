@@ -42,7 +42,7 @@ Message register_message(const Nonce& unit_nonce, const Nonce& server_nonce);
 // INFO: fc 18oct26 release: one byte, 1 for a release build, after the server key id
 Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                              const Nonce& unit_nonce, const Nonce& server_nonce,
-                             const ServerKeyId& server_key, bool release, const char* version);
+                             const ServerKeyId& server_key_id, bool release, const char* version);
 Message unlock_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                        uint16_t serial, const Nonce& unit_nonce);
 

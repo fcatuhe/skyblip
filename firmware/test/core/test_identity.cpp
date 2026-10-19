@@ -52,7 +52,7 @@ TEST_CASE(
     CHECK(Ed25519::public_key_of(x.server_seed) == x.server_key);
     CHECK(Ed25519::public_key_of(x.unit_seed) == x.unit_key);
     const identity::ServerKeyId id = identity::server_key_id(x.server_key);
-    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == x.v.text("server_key"));
+    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == x.v.text("server_key_id"));
 }
 
 TEST_CASE("identity: the register message is the label, Nu and Ns, and the server's R checks") {

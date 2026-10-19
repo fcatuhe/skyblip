@@ -46,7 +46,7 @@ Message register_message(const Nonce& unit_nonce, const Nonce& server_nonce) {
 
 Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                              const Nonce& unit_nonce, const Nonce& server_nonce,
-                             const ServerKeyId& server_key, bool release, const char* version) {
+                             const ServerKeyId& server_key_id, bool release, const char* version) {
     const uint8_t release_byte = release ? 1 : 0;
     size_t version_bytes = 0;
     while (version_bytes < kVersionMaxBytes && version[version_bytes] != 0) version_bytes++;
@@ -56,7 +56,7 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
         .append(span_of(unit_key))
         .append(span_of(unit_nonce))
         .append(span_of(server_nonce))
-        .append(span_of(server_key))
+        .append(span_of(server_key_id))
         .append(ConstByteSpan(&release_byte, 1))
         .append(ConstByteSpan(reinterpret_cast<const uint8_t*>(version), version_bytes));
     return m;

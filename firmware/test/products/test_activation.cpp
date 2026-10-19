@@ -155,20 +155,20 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     b.rig.platform.dfu().release = true;
     b.boot();
 
-    CHECK(b.challenge_with_vectors_nonce() == "{\"cmd\":\"challenge\",\"nonce\":\"" +
-                                                  b.v.text("unit_nonce") + "\",\"server_key\":\"" +
-                                                  b.v.text("server_key") + "\"}");
+    CHECK(b.challenge_with_vectors_nonce() ==
+          "{\"cmd\":\"challenge\",\"nonce\":\"" + b.v.text("unit_nonce") +
+              "\",\"server_key_id\":\"" + b.v.text("server_key_id") + "\"}");
 
     CHECK(b.register_with_vectors() ==
           "{\"ack\":false,\"pending\":true,\"reason\":\"confirm_register\"}");
     REQUIRE(b.pending() == comms::Pending::Register);
 
     const std::string registration = b.press_twice();
-    CHECK(registration == "{\"cmd\":\"registration\",\"device_id\":\"" + b.v.text("device_id") +
-                              "\",\"public_key\":\"" + b.v.text("unit_public_key") +
-                              "\",\"version\":\"" + b.v.text("version") + "\",\"server_key\":\"" +
-                              b.v.text("server_key") + "\",\"release\":true,\"signature\":\"" +
-                              b.v.text("registration_signature") + "\"}");
+    CHECK(registration ==
+          "{\"cmd\":\"registration\",\"device_id\":\"" + b.v.text("device_id") +
+              "\",\"public_key\":\"" + b.v.text("unit_public_key") + "\",\"version\":\"" +
+              b.v.text("version") + "\",\"server_key_id\":\"" + b.v.text("server_key_id") +
+              "\",\"release\":true,\"signature\":\"" + b.v.text("registration_signature") + "\"}");
     CHECK_FALSE(b.activation().activated());
 
     CHECK(b.unlock_with_vectors() == "{\"ack\":true,\"reason\":\"unlock\"}");
@@ -663,12 +663,12 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         const std::string frame = d.link.last().bytes;
         CHECK(frame.find(release ? "\"release\":true," : "\"release\":false,") !=
               std::string::npos);
-        CHECK(frame.find("\"server_key\":\"890026b1\",\"release\"") != std::string::npos);
+        CHECK(frame.find("\"server_key_id\":\"890026b1\",\"release\"") != std::string::npos);
 
         const identity::Nonce server_nonce{9};
         const identity::Message signed_over = identity::registration_message(
             Identity::kDeviceId, crypto::Ed25519::public_key_of(Identity::kUnitSeed),
-            d.identity.unit_nonce(), server_nonce, d.unit.server_key(), release, "0.3.0+1234");
+            d.identity.unit_nonce(), server_nonce, d.unit.server_key_id(), release, "0.3.0+1234");
         crypto::Ed25519::Signature s{};
         const size_t at = frame.find("\"signature\":\"") + 13;
         REQUIRE(hex::read(frame.substr(at, 128).c_str(), ByteSpan(s.data(), s.size())));

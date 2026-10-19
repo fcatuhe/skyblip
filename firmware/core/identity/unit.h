@@ -23,7 +23,7 @@ class Unit {
     bool keyed() const { return keyed_; }
     const DeviceId& device_id() const { return device_id_; }
     const Ed25519::PublicKey& public_key() const { return public_key_; }
-    const ServerKeyId& server_key() const { return server_key_; }
+    const ServerKeyId& server_key_id() const { return server_key_id_; }
     Activation activation() const { return activation_; }
 
     bool draw_nonce(Nonce& out) { return port_.draw_random(ByteSpan(out.data(), out.size())); }
@@ -37,7 +37,7 @@ class Unit {
     ports::Identity& port_;
     DeviceId device_id_{};
     Ed25519::PublicKey public_key_{};
-    ServerKeyId server_key_{};
+    ServerKeyId server_key_id_{};
     Activation activation_{};
     bool keyed_{false};
 };

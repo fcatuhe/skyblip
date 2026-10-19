@@ -4,7 +4,7 @@ namespace skyblip::identity {
 
 void Unit::load() {
     device_id_ = port_.device_id();
-    server_key_ = server_key_id(port_.trusted_server_key());
+    server_key_id_ = identity::server_key_id(port_.trusted_server_key());
     activation_ = Activation{};
     activation_.bluetooth_tag = port_.bluetooth_tag();
     Ed25519::Seed seed{};
