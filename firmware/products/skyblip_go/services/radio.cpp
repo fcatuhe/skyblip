@@ -430,7 +430,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& a, uint64_t tx_
     if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
-    return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.Data,
+    return static_cast<uint8_t>(protocol::mband_payload(protocol::kAdslSyncWord, outgoing_.data,
                                                         protocol::kAdslFrameBytes, chips));
 }
 

@@ -30,27 +30,27 @@ constexpr uint32_t kSpecUereM = 6;
 
 TEST_CASE("ADS-L.4.SRD860.G.1.11: the source integrity level is two bits, and 0 is undefined") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     for (uint8_t code = 0; code < 4; code++) {
-        p.SourceIntegrity = code;
-        CHECK(p.SourceIntegrity == code);
+        p.source_integrity = code;
+        CHECK(p.source_integrity == code);
     }
     p.set_integrity_unknown();
-    CHECK(p.SourceIntegrity == 0);
+    CHECK(p.source_integrity == 0);
 }
 
 // No design assurance credit is held for this firmware, and the clause has a code that says so.
 TEST_CASE("ADS-L.4.SRD860.G.1.12: the design assurance transmitted is 0, none") {
     CHECK(protocol::AdslPacket::kDesignAssuranceNone == 0);
-    CHECK(from_dop(90, 150).DesignAssurance == 0);
-    CHECK(from_dop(0, 0, /*fix=*/false).DesignAssurance == 0);
+    CHECK(from_dop(90, 150).design_assurance == 0);
+    CHECK(from_dop(0, 0, /*fix=*/false).design_assurance == 0);
 }
 
 // The table asks for a protection level, and a receiver that reports none leaves it at 0 (G.1.17).
 TEST_CASE("ADS-L.4.SRD860.G.1.13: without a protection level the navigation integrity is 0") {
-    CHECK(from_dop(90, 150).NavigIntegrity == 0);
-    CHECK(from_dop(900, 1500).NavigIntegrity == 0);
-    CHECK(from_dop(0, 0, /*fix=*/false).NavigIntegrity == 0);
+    CHECK(from_dop(90, 150).navigation_integrity == 0);
+    CHECK(from_dop(900, 1500).navigation_integrity == 0);
+    CHECK(from_dop(0, 0, /*fix=*/false).navigation_integrity == 0);
 }
 
 // The NACp table, in centimetres of 95% horizontal error bound.
@@ -74,7 +74,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.14: the horizontal accuracy code sits on the table
 TEST_CASE("ADS-L.4.SRD860.G.1.14: HFOM is derived from HDOP as 2 * HDOP * 6 m") {
     const uint16_t hdop_e2 = 90;
     const uint32_t spec_hfom_cm = 2u * hdop_e2 * kSpecUereM;
-    CHECK(from_dop(hdop_e2, 150).HorizAccuracy ==
+    CHECK(from_dop(hdop_e2, 150).horizontal_accuracy ==
           protocol::AdslPacket::horizontal_accuracy_code(spec_hfom_cm));
 }
 
@@ -90,8 +90,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: the vertical accuracy code sits on the table's
 
 // A 2D solution reports no VDOP, and a height nothing measured the quality of gets no claim at all.
 TEST_CASE("ADS-L.4.SRD860.G.1.15: a solution with no VDOP claims no vertical accuracy") {
-    CHECK(from_dop(90, 0).VertAccuracy == 0);
-    CHECK(from_dop(90, 150).VertAccuracy > 0);
+    CHECK(from_dop(90, 0).vertical_accuracy == 0);
+    CHECK(from_dop(90, 150).vertical_accuracy > 0);
 }
 
 // The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
@@ -107,34 +107,34 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code foll
 // Every code in the block has a zero meaning "no fix", and without one that is the honest answer.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: with no fix the whole quality block claims nothing") {
     protocol::AdslPacket p = from_dop(90, 150, /*fix=*/false);
-    CHECK(p.SourceIntegrity == 0);
-    CHECK(p.DesignAssurance == 0);
-    CHECK(p.NavigIntegrity == 0);
-    CHECK(p.HorizAccuracy == 0);
-    CHECK(p.VertAccuracy == 0);
-    CHECK(p.VelocityAccuracy == 0);
+    CHECK(p.source_integrity == 0);
+    CHECK(p.design_assurance == 0);
+    CHECK(p.navigation_integrity == 0);
+    CHECK(p.horizontal_accuracy == 0);
+    CHECK(p.vertical_accuracy == 0);
+    CHECK(p.velocity_accuracy == 0);
 }
 
 // A receiver that reports no HDOP is not a receiver reporting a good one.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: a fix with no reported HDOP claims no accuracy either") {
     protocol::AdslPacket p = from_dop(0, 0);
-    CHECK(p.HorizAccuracy == 0);
-    CHECK(p.NavigIntegrity == 0);
-    CHECK(p.VelocityAccuracy == 0);
+    CHECK(p.horizontal_accuracy == 0);
+    CHECK(p.navigation_integrity == 0);
+    CHECK(p.velocity_accuracy == 0);
 }
 
 // The accuracy claim moves with the fix, which is what the clause asks an uncertified device for.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static zero") {
     const protocol::AdslPacket good = from_dop(90, 150);
     const protocol::AdslPacket poor = from_dop(800, 800);
-    CHECK(good.HorizAccuracy > poor.HorizAccuracy);
-    CHECK(good.VertAccuracy >= poor.VertAccuracy);
-    CHECK(good.VelocityAccuracy > poor.VelocityAccuracy);
+    CHECK(good.horizontal_accuracy > poor.horizontal_accuracy);
+    CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
+    CHECK(good.velocity_accuracy > poor.velocity_accuracy);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
     const protocol::AdslPacket p = from_dop(90, 150);
-    CHECK(p.SourceIntegrity == 0);
-    CHECK(p.DesignAssurance == 0);
-    CHECK(p.NavigIntegrity == 0);
+    CHECK(p.source_integrity == 0);
+    CHECK(p.design_assurance == 0);
+    CHECK(p.navigation_integrity == 0);
 }

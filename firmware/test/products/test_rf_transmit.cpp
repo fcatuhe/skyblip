@@ -170,14 +170,14 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
         REQUIRE(simulator::Air::framed(r, frame));
         REQUIRE(frame.system == protocol::System::AdslDirect);
         protocol::AdslPacket p{};
-        p.init();
-        std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
+        p.reset();
+        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
         REQUIRE(p.check_crc() == 0);
         p.descramble();
         CHECK(p.address() == settings::address_of(platform::host::Identity::kSerial));
         CHECK(p.altitude_m() ==
               to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).v);
-        CHECK(p.FlightState == 2);
+        CHECK(p.flight_state == 2);
         checked++;
     }
     CHECK(checked > 0);
@@ -336,16 +336,16 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         protocol::Frame frame{};
         REQUIRE(simulator::Air::framed(r, frame));
         protocol::AdslPacket p{};
-        p.init();
-        std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
+        p.reset();
+        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
         REQUIRE(p.check_crc() == 0);
         p.descramble();
         REQUIRE(p.address() == settings::address_of(platform::host::Identity::kSerial));
 
         // Inside the direct slot the quarter is 1, 2 or 3. Zero is the old bug.
         REQUIRE(timing::Scheduler::in_direct_slot(r.phase_ms));
-        CHECK(int(p.TimeStamp % 4) == r.phase_ms / 250);
-        CHECK(int(p.TimeStamp % 4) != 0);
+        CHECK(int(p.timestamp % 4) == r.phase_ms / 250);
+        CHECK(int(p.timestamp % 4) != 0);
         checked++;
     }
     CHECK(checked >= 4);

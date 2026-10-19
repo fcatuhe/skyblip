@@ -1,7 +1,7 @@
 // The integer arithmetic the rest of the firmware trusts without checking: fixed
 // point instead of floats, a CORDIC sine, an integer square root, the variable
 // resolution codecs ADS-L packs its fields into. Every one is a silent failure
-// mode. A varint that rounds the wrong way or an iatan2 that is a quadrant out
+// mode. A variable range that rounds the wrong way or an iatan2 that is a quadrant out
 // reaches the pilot as a target in the wrong place, with nothing logged.
 #include <cmath>
 #include <cstdlib>  // std::abs
@@ -13,7 +13,7 @@
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "core/util/result.h"
-#include "core/util/varint.h"
+#include "core/util/variable_range.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -73,32 +73,26 @@ TEST_CASE("fifo: bounded ring behaviour") {
     CHECK(q.pop().status() == Status::Empty);
 }
 
-TEST_CASE("varint: UnsVR encode/decode round-trip (within representable range)") {
+TEST_CASE("variable range: unsigned encode/decode round-trip (within representable range)") {
     // Bits=6 range encoding is representable up to ~956. Below that the coarsest
     // quantization step is 8.
     for (uint16_t v = 0; v < 900; v += 7) {
-        uint16_t enc = uns_vr_encode<uint16_t, 6>(v);
-        uint16_t dec = uns_vr_decode<uint16_t, 6>(enc);
+        uint16_t enc = encode_unsigned_variable_range<uint16_t, 6>(v);
+        uint16_t dec = decode_unsigned_variable_range<uint16_t, 6>(enc);
         CHECK(std::abs(int(dec) - int(v)) <= 8);  // within the coarsest step
     }
     // Saturation: large values clamp to the max code, not garbage.
-    CHECK(uns_vr_decode<uint16_t, 6>(uns_vr_encode<uint16_t, 6>(5000)) <= 960);
+    CHECK(decode_unsigned_variable_range<uint16_t, 6>(
+              encode_unsigned_variable_range<uint16_t, 6>(5000)) <= 960);
 }
 
-TEST_CASE("varint: SignVR preserves sign and magnitude bucket") {
+TEST_CASE("variable range: signed preserves sign and magnitude bucket") {
     for (int16_t v = -900; v < 900; v += 13) {
-        int16_t enc = sign_vr_encode<int16_t, 6>(v);
-        int16_t dec = sign_vr_decode<int16_t, 6>(enc);
+        int16_t enc = encode_signed_variable_range<int16_t, 6>(v);
+        int16_t dec = decode_signed_variable_range<int16_t, 6>(enc);
         bool sign_ok = ((v < 0) == (dec < 0)) || (dec == 0);
         CHECK(sign_ok);
         CHECK(std::abs(std::abs(v) - std::abs(dec)) <= 8);
-    }
-}
-
-TEST_CASE("varint: UR2V8 battery codec round-trip") {
-    for (uint16_t v = 0; v < 3832; v += 11) {
-        uint16_t dec = decode_ur2v8(encode_ur2v8(v));
-        CHECK(std::abs(int(dec) - int(v)) <= 8);
     }
 }
 

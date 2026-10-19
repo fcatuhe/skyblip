@@ -216,8 +216,8 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
     protocol::AdslPacket p{};
-    p.init();
-    __builtin_memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
+    p.reset();
+    __builtin_memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
     if (p.check_crc() != 0 && (p.correct(frame.erasures) < 0 || p.check_crc() != 0))
         return radio::Verdict::BadCrc;
     p.descramble();

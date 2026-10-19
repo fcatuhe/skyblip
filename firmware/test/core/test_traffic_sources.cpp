@@ -57,12 +57,12 @@ model::AircraftObservation stamped(model::AircraftObservation heard) {
 
 model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
     protocol::AdslPacket p;
-    p.init();
+    p.reset();
     p.set_address(sent.address);
     p.set_address_mapping_table(sent.address_mapping_table);
-    p.FlightState = sent.flight_state;
-    p.AircraftCategory = sent.aircraft_category;
-    p.Emergency = 1;
+    p.flight_state = sent.flight_state;
+    p.aircraft_category = sent.aircraft_category;
+    p.emergency = 1;
     p.set_latitude_1e7(sent.latitude_1e7);
     p.set_longitude_1e7(sent.longitude_1e7);
     p.set_altitude_m(sent.altitude_m);

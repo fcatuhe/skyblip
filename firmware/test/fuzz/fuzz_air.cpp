@@ -35,10 +35,10 @@ enum class Sealing : uint8_t { Raw, Sealed, Encoded };
 
 void seal_adsl(uint8_t* frame) {
     protocol::AdslPacket p{};
-    p.init();
-    std::memcpy(p.Data, frame, protocol::kAdslFrameBytes);
+    p.reset();
+    std::memcpy(p.data, frame, protocol::kAdslFrameBytes);
     p.set_crc();
-    std::memcpy(frame, p.Data, protocol::kAdslFrameBytes);
+    std::memcpy(frame, p.data, protocol::kAdslFrameBytes);
 }
 
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
@@ -93,8 +93,8 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, uint8_t* codewor
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
     protocol::AdslPacket p{};
-    p.init();
-    std::memcpy(p.Data, frame.data, protocol::kAdslFrameBytes);
+    p.reset();
+    std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
     if (p.check_crc() != 0 && (p.correct(frame.erasures) < 0 || p.check_crc() != 0)) return;
     p.descramble();
 

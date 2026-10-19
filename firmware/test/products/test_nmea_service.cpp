@@ -72,7 +72,7 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
+    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
                                                       protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};
@@ -92,7 +92,7 @@ void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
+    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
                                                       protocol::kAdslFrameBytes, chips);
 
     events::RfEvent event{};

@@ -9,14 +9,14 @@
 #include "core/protocol/adsl.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
-#include "core/util/varint.h"
+#include "core/util/variable_range.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/menu.h"
 
 using namespace skyblip;
 
 namespace {
-const uint8_t* payload_of(const protocol::AdslPacket& p) { return p.Byte + 5; }
+const uint8_t* payload_of(const protocol::AdslPacket& p) { return p.payload + 5; }
 
 // A field, read the way B.3 lays one out: bit 0 of the payload is bit 0 of its first byte.
 uint32_t field(const uint8_t* payload, int offset, int width) {
@@ -87,24 +87,24 @@ uint32_t climb_code(const protocol::AdslPacket& p) { return field(payload_of(p),
 // The whole layout in one case: move a field by a bit and this is what catches it.
 TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the table gives it") {
     protocol::AdslPacket p{};
-    p.init();
-    p.TimeStamp = 37;
-    p.FlightState = 2;
-    p.AircraftCategory = 9;
-    p.Emergency = 5;
+    p.reset();
+    p.timestamp = 37;
+    p.flight_state = 2;
+    p.aircraft_category = 9;
+    p.emergency = 5;
     p.set_latitude_1e7(481234500);
     p.set_longitude_1e7(81234500);
     p.set_speed_q(120 * 4);
     p.set_altitude_m(1000);
     p.set_climb_e8(80);
     p.set_track_c9(400);
-    p.SourceIntegrity = 2;
-    p.DesignAssurance = 1;
-    p.NavigIntegrity = 11;
-    p.HorizAccuracy = 6;
-    p.VertAccuracy = 3;
-    p.VelocityAccuracy = 2;
-    p.Reserved = 0;
+    p.source_integrity = 2;
+    p.design_assurance = 1;
+    p.navigation_integrity = 11;
+    p.horizontal_accuracy = 6;
+    p.vertical_accuracy = 3;
+    p.velocity_accuracy = 2;
+    p.reserved = 0;
 
     const uint8_t* payload = payload_of(p);
     CHECK(field(payload, 0, 6) == 37u);
@@ -141,8 +141,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
 
 // Quarter seconds since the hour, modulo 60: a 15-second cycle, never the four unused codes.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp is a quarter second inside a 15-second cycle") {
-    CHECK(protocol::kTimeStampCycleS == 15u);
-    CHECK(protocol::kTimeStampQuarterMs == 250u);
+    CHECK(protocol::kTimestampCycleS == 15u);
+    CHECK(protocol::kTimestampQuarterMs == 250u);
     for (uint32_t utc_s = 1785628800; utc_s < 1785628860; utc_s++) {
         for (int32_t lead = -1000; lead <= 1000; lead += 125) {
             const uint8_t code = protocol::timestamp_code(utc_s, lead);
@@ -165,12 +165,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4,
                        protocol::BurstInstant{own.utc_s, into_utc_ms, into_utc_ms});
-    const int32_t named_ms = static_cast<int32_t>(p.TimeStamp % 4u) *
-                             static_cast<int32_t>(protocol::kTimeStampQuarterMs);
+    const int32_t named_ms = static_cast<int32_t>(p.timestamp % 4u) *
+                             static_cast<int32_t>(protocol::kTimestampQuarterMs);
     CHECK(named_ms == 500);
 
     protocol::AdslPacket at_named{};
-    at_named.init();
+    at_named.reset();
     const flight::Prediction there = flight::extrapolate(own, named_ms);
     at_named.set_latitude_1e7(there.latitude_1e7);
     at_named.set_longitude_1e7(there.longitude_1e7);
@@ -189,11 +189,11 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp and the position name the same in
 
     protocol::AdslPacket p{};
     protocol::from_own(p, own, 0x123456, 6, 4, at);
-    CHECK(p.TimeStamp == protocol::timestamp_code(own.utc_s, 500));
+    CHECK(p.timestamp == protocol::timestamp_code(own.utc_s, 500));
 
     protocol::AdslPacket at_fix{};
     protocol::from_own(at_fix, own, 0x123456, 6, 4, protocol::BurstInstant{own.utc_s, 0, 0});
-    CHECK(at_fix.TimeStamp == protocol::timestamp_code(own.utc_s, 0));
+    CHECK(at_fix.timestamp == protocol::timestamp_code(own.utc_s, 0));
     // Half a second due east at 120 m/s: the transmitted position moved with the timestamp.
     CHECK(p.longitude_1e7() > at_fix.longitude_1e7());
 }
@@ -208,8 +208,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
         own.flight_state = state;
         protocol::AdslPacket p{};
         protocol::from_own(p, own, 0x123456, 6, 4);
-        CHECK(p.FlightState == state);
-        CHECK(p.FlightState != 3);
+        CHECK(p.flight_state == state);
+        CHECK(p.flight_state != 3);
     }
 }
 
@@ -218,12 +218,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
         model::Ownship own = flying();
         protocol::AdslPacket p{};
         protocol::from_own(p, own, 0x123456, 6, category);
-        CHECK(p.AircraftCategory == category);
+        CHECK(p.aircraft_category == category);
         CHECK(field(payload_of(p), 8, 5) == category);
     }
     protocol::AdslPacket glider{};
     protocol::from_own(glider, flying(), 0x123456, 6, 4);
-    CHECK(glider.AircraftCategory == 4);
+    CHECK(glider.aircraft_category == 4);
 
     // Every category a pilot can pick here is one issue 1 names too, which is what E.1.1 rests on.
     const int issue1_named_categories = 14;
@@ -233,7 +233,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
 // No pilot here can declare an emergency, so what goes out is the code for "no emergency".
 TEST_CASE("ADS-L.4.SRD860.G.1.4: the emergency status transmitted is 1, no emergency") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK(p.Emergency == 1);
+    CHECK(p.emergency == 1);
     CHECK(field(payload_of(p), 13, 3) == 1u);
 
     model::AircraftObservation observation{};
@@ -244,7 +244,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.4: the emergency status transmitted is 1, no emerg
 
 TEST_CASE("ADS-L.4.SRD860.G.1.5: latitude counts 1/93206 of a degree and longitude 1/46603") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     p.set_latitude_1e7(481234500);
     p.set_longitude_1e7(81234500);
     const int32_t latitude_raw = signed_field(payload_of(p), 16, 24);
@@ -279,27 +279,28 @@ TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an air
 // The clause's own algorithm, against the codec the three variable-range fields share.
 TEST_CASE("ADS-L.4.SRD860.G.1.6: the exponential encoding is the clause's, over its whole range") {
     for (uint32_t value = 0; value < 960; value++) {
-        const uint32_t code = uns_vr_encode<uint32_t, 6>(value);
+        const uint32_t code = encode_unsigned_variable_range<uint32_t, 6>(value);
         CHECK(code == spec_exponential(value, 6));
     }
     for (uint32_t value = 0; value < 61440; value += 7) {
-        const uint32_t code = uns_vr_encode<uint32_t, 12>(value);
+        const uint32_t code = encode_unsigned_variable_range<uint32_t, 12>(value);
         CHECK(code == spec_exponential(value, 12));
     }
     // A decoded value names a bucket 2^exponent wide, and this decoder answers from inside it.
     for (uint32_t code = 0; code < 256; code++) {
         const uint32_t floor_value = spec_exponential_decode(code, 6);
         const uint32_t width = 1u << (code >> 6);
-        const uint32_t decoded = uns_vr_decode<uint32_t, 6>(code);
+        const uint32_t decoded = decode_unsigned_variable_range<uint32_t, 6>(code);
         CHECK(decoded >= floor_value);
         CHECK(decoded < floor_value + width);
-        CHECK(uns_vr_encode<uint32_t, 6>(decoded) == code);
+        CHECK(encode_unsigned_variable_range<uint32_t, 6>(decoded) == code);
     }
     // A signed field spends the freed leading bit on the sign, and a zero value is positive.
-    CHECK((sign_vr_encode<int16_t, 6>(-80) & 0x100) == 0x100);
-    CHECK((sign_vr_encode<int16_t, 6>(80) & 0x100) == 0);
-    CHECK(sign_vr_encode<int16_t, 6>(0) == 0);
-    const int16_t back = sign_vr_decode<int16_t, 6>(sign_vr_encode<int16_t, 6>(-80));
+    CHECK((encode_signed_variable_range<int16_t, 6>(-80) & 0x100) == 0x100);
+    CHECK((encode_signed_variable_range<int16_t, 6>(80) & 0x100) == 0);
+    CHECK(encode_signed_variable_range<int16_t, 6>(0) == 0);
+    const int16_t back =
+        decode_signed_variable_range<int16_t, 6>(encode_signed_variable_range<int16_t, 6>(-80));
     CHECK(back <= -80);
     CHECK(back >= -81);
 }
@@ -307,7 +308,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.6: the exponential encoding is the clause's, over 
 // Every row of the clause's example table, read off the wire.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked examples") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     p.set_altitude_m(-320);
     CHECK(altitude_code(p) == 0x0000u);
     p.set_altitude_m(-400);
@@ -355,7 +356,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude a
 
 TEST_CASE("ADS-L.4.SRD860.G.1.8: the ground speed encodes the clause's worked examples") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     p.set_speed_q(0);
     CHECK(speed_code(p) == 0x00u);
     p.set_speed_q(1);
@@ -375,7 +376,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.8: the ground speed encodes the clause's worked ex
 
 TEST_CASE("ADS-L.4.SRD860.G.1.9: the vertical rate encodes the clause's worked examples") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     p.set_climb_e8(0);
     CHECK(climb_code(p) == 0x000u);
     p.set_climb_e8(1);
@@ -399,7 +400,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.9: the vertical rate encodes the clause's worked e
 
 TEST_CASE("ADS-L.4.SRD860.G.1.10: the ground track is 512 steps of 0.703125 degrees") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     for (uint16_t code :
          {uint16_t(0), uint16_t(128), uint16_t(256), uint16_t(384), uint16_t(511)}) {
         p.set_track_c9(code);

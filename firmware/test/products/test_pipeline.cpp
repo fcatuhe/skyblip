@@ -77,13 +77,13 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     // 3) go over the air: manchester encode 24 data bytes, inject light BER,
     //    manchester decode, CRC-correct, verify, descramble.
     uint8_t coded[48];
-    fec::manchester_encode(tx.Data, protocol::AdslPacket::kDataBytes, coded);
+    fec::manchester_encode(tx.data, protocol::AdslPacket::kDataBytes, coded);
     RfChannel chan(12345);
     chan.apply_ber(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
     protocol::AdslPacket rx = tx;  // start from a copy; overwrite the data region
     uint8_t error[protocol::AdslPacket::kDataBytes];
-    fec::manchester_decode(coded, protocol::AdslPacket::kDataBytes, rx.Data, error);
+    fec::manchester_decode(coded, protocol::AdslPacket::kDataBytes, rx.data, error);
     rx.correct(error, 6);
     REQUIRE(rx.check_crc() == 0);  // recovered a valid packet
     rx.descramble();

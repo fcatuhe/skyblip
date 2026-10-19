@@ -98,11 +98,11 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
         protocol::Frame frame{};
         REQUIRE(simulator::Air::framed(r, frame));
         protocol::AdslPacket p{};
-        p.init();
-        std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
+        p.reset();
+        std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
         REQUIRE(p.check_crc() == 0);
         p.descramble();
-        CHECK(p.FlightState == static_cast<uint8_t>(flight::FlightState::Ground));
+        CHECK(p.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
         // the payload carries latitude in steps of 107 and longitude of 215, in 1e-7 degrees
         CHECK(std::abs(p.latitude_1e7() - own.latitude_1e7) < 200);
         CHECK(std::abs(p.longitude_1e7() - own.longitude_1e7) < 400);

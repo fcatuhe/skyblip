@@ -47,9 +47,9 @@ TEST_CASE(
     const int network_header = 1;
     const int adsl_data = 20;
     const int parity = 3;
-    CHECK(int(p.Length) == network_header + adsl_data + parity);
-    CHECK(int(p.Length) == protocol::AdslPacket::kDataBytes);
-    CHECK(int(p.Length) == int(protocol::kAdslSyncWord & 0xFFu));
+    CHECK(int(p.data_bytes) == network_header + adsl_data + parity);
+    CHECK(int(p.data_bytes) == protocol::AdslPacket::kDataBytes);
+    CHECK(int(p.data_bytes) == int(protocol::kAdslSyncWord & 0xFFu));
     CHECK(protocol::kUplinkSync[2] == protocol::kUplinkFrameBytes);
 }
 
@@ -67,17 +67,17 @@ TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the netwo
     const protocol::AdslPacket plain = p;
     p.scramble();
     p.set_crc();
-    CHECK(std::memcmp(p.Byte, plain.Byte, 20) != 0);
+    CHECK(std::memcmp(p.payload, plain.payload, 20) != 0);
     CHECK(p.check_crc() == 0);
 
     protocol::AdslPacket flipped = p;
-    flipped.Version ^= 0x01;
+    flipped.version ^= 0x01;
     CHECK(flipped.check_crc() != 0);
 
     protocol::AdslPacket descrambled = p;
     descrambled.descramble();
     CHECK(descrambled.check_crc() != 0);
-    CHECK(std::memcmp(descrambled.Byte, plain.Byte, 20) == 0);
+    CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);
 }
 
 // TODO: fc 18sep26 no listen-before-talk: the hour's duty cycle is the only rule refusing a burst

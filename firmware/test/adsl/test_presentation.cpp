@@ -7,6 +7,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
+#include "core/util/little_endian.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 
@@ -34,32 +35,32 @@ TEST_CASE("ADS-L.4.SRD860.F.1: the ADS-L data is a 40-bit header and a payload b
     const int header_bits = 40;
     const int traffic_payload_bits = 120;
     CHECK((header_bits + traffic_payload_bits) / 8 == 20);
-    CHECK(sizeof(protocol::AdslPacket{}.Byte) == 20);
+    CHECK(sizeof(protocol::AdslPacket{}.payload) == 20);
     // The clause's rule for a payload width: 24 + N*32 bits.
     CHECK((traffic_payload_bits - 24) % 32 == 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, reserved, relay") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK(p.Type == 0x02);
+    CHECK(p.payload_type == 0x02);
     CHECK(p.address() == 0x123456u);
     CHECK(p.address_mapping_table() == 6);
     CHECK_FALSE(p.is_relay());
 
     p.set_relay();
     CHECK(p.is_relay());
-    CHECK((p.Address[3] & 0x80) != 0);
+    CHECK((p.address_bytes[3] & 0x80) != 0);
 
     // One little-endian word: the AMT in bits 0 to 5, the address in bits 6 to 29.
-    CHECK((protocol::AdslPacket::get4(p.Address) & 0x3Fu) == 6u);
-    CHECK(((protocol::AdslPacket::get4(p.Address) >> 6) & 0x00FFFFFFu) == 0x123456u);
+    CHECK((get_u32(p.address_bytes) & 0x3Fu) == 6u);
+    CHECK(((get_u32(p.address_bytes) >> 6) & 0x00FFFFFFu) == 0x123456u);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a Traffic payload is type 2, in the broadcast half of the range") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK(p.Type == 0x02);
+    CHECK(p.payload_type == 0x02);
     CHECK(p.is_position());
-    CHECK(p.Type < 0x80);
+    CHECK(p.payload_type < 0x80);
 }
 
 // Issue 2 puts Status, Remote ID and the uplinks on this band, and none of them is an aeroplane.
@@ -68,7 +69,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a payload that is not Traffic never becomes an 
     for (uint8_t type : {uint8_t(0x00), uint8_t(0x03), uint8_t(0x04), uint8_t(0x05), uint8_t(0x06),
                          uint8_t(0x42), uint8_t(0x82)}) {
         protocol::AdslPacket p = traffic_packet();
-        p.Type = type;
+        p.payload_type = type;
         CHECK_FALSE(p.is_position());
         CHECK_FALSE(protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect,
                                              observation));
@@ -81,15 +82,15 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
     protocol::AdslPacket p{};
     protocol::from_own_callsign(p, 0x123456, 58, "D-KXYZ");
 
-    CHECK(p.Type == 0x42);
-    CHECK(p.Type == 66);
-    CHECK(p.Type < 0x80);
+    CHECK(p.payload_type == 0x42);
+    CHECK(p.payload_type == 66);
+    CHECK(p.payload_type < 0x80);
     CHECK_FALSE(p.is_position());
     CHECK(p.is_registration());
-    CHECK(p.telem_type() == 1);
+    CHECK(p.telemetry_type() == 1);
     CHECK(p.info_type() == 5);
     // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
-    CHECK(p.Byte[protocol::AdslPacket::kInfoHeaderByte] == 0x45);
+    CHECK(p.payload[protocol::AdslPacket::kInfoHeaderByte] == 0x45);
     CHECK(p.address() == 0x123456u);
     CHECK(p.address_mapping_table() == 58);
 
@@ -127,7 +128,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not spl
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
     protocol::AdslPacket p{};
-    p.init();
+    p.reset();
     p.set_address_mapping_table(63);
     p.set_address(0x00FFFFFFu);
     CHECK(p.address_mapping_table() == 63);

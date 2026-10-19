@@ -197,8 +197,8 @@ int Air::format(int i, char* out, int cap) const {
     }
 
     protocol::AdslPacket p{};
-    p.init();
-    std::memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
+    p.reset();
+    std::memcpy(p.data, frame.data, protocol::kAdslFrameBytes);
     const bool crc_ok = p.check_crc() == 0;
     p.descramble();
     return head + std::snprintf(out + head, left, "ADS-L %06X %+.5f,%+.5f %5d m %s", p.address(),

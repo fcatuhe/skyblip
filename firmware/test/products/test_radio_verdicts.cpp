@@ -59,7 +59,7 @@ void hear_alptas(Rig& rig, const uint8_t* frame, int dead_chip_byte = -1) {
 void hear_adsl(Rig& rig, protocol::AdslPacket& p) {
     p.scramble();
     p.set_crc();
-    hear_mband(rig, protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes);
+    hear_mband(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
 }
 
 protocol::AdslPacket adsl_from_neighbour(const model::Ownship& own) {
@@ -78,7 +78,7 @@ void hear_callsign(Rig& rig, uint32_t address, uint8_t address_mapping_table,
     protocol::from_own_callsign(p, address, address_mapping_table, callsign);
     p.scramble();
     p.set_crc();
-    hear_mband(rig, protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes);
+    hear_mband(rig, protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes);
 }
 
 const radio::Entry* heard_entry(Rig& rig) {
@@ -180,7 +180,7 @@ TEST_CASE("radio verdicts: an ADS-L payload type we do not implement is a dialec
     const uint32_t bad_before = rig.state().air.rx_bad;
 
     protocol::AdslPacket p = adsl_from_neighbour(rig.state().own);
-    p.Type = 66;
+    p.payload_type = 66;
     hear_adsl(rig, p);
     settle(rig, t);
 

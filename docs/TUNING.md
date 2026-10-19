@@ -122,10 +122,10 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kCycleMs` | `static_cast<int64_t>(kTimeStampCycleS) * 1000` | milliseconds | - | - |
+| `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
 | `kAltitudeOffsetM` | 320 | metres | - | - |
-| `kTimeStampCycleS` | 15 | seconds | - | The TimeStamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
-| `kTimeStampQuarterMs` | 250 | milliseconds | - | - |
+| `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
+| `kTimestampQuarterMs` | 250 | milliseconds | - | - |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | - |
 | `kAlptasKeyWindowS` | 18 | seconds | Window | GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by |
 | `kLk8NoAltitudeM` | 99999 | metres | - | - |

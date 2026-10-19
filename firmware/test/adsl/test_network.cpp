@@ -72,27 +72,27 @@ uint32_t spec_crc24(const uint8_t* data, size_t length) {
 
 TEST_CASE("ADS-L.4.SRD860.E.1: the network header is one byte, and this one claims nothing") {
     protocol::AdslPacket p = traffic_packet();
-    const uint8_t version = p.Version & 0x0F;
-    const uint8_t signed_flag = (p.Version >> 4) & 0x01;
-    const uint8_t key_index = (p.Version >> 5) & 0x03;
-    const uint8_t error_control = (p.Version >> 7) & 0x01;
+    const uint8_t version = p.version & 0x0F;
+    const uint8_t signed_flag = (p.version >> 4) & 0x01;
+    const uint8_t key_index = (p.version >> 5) & 0x03;
+    const uint8_t error_control = (p.version >> 7) & 0x01;
     CHECK(version == 0);
     CHECK(signed_flag == 0);
     CHECK(key_index == 0);
     CHECK(error_control == 0);
-    CHECK(p.Version == 0x00);
+    CHECK(p.version == 0x00);
 }
 
 // Issue 2 is version 1, but this payload encodes as Issue 1's did, and the clause wants the lowest.
 TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload reads the same way") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK((p.Version & 0x0F) == 0);
+    CHECK((p.version & 0x0F) == 0);
 
     model::AircraftObservation as_sent{};
     REQUIRE(protocol::to_observation(p, events::Stamp{}, -80, model::Source::AdslDirect, as_sent));
 
     protocol::AdslPacket issue2 = p;
-    issue2.Version = (issue2.Version & 0xF0) | 0x01;
+    issue2.version = (issue2.version & 0xF0) | 0x01;
     model::AircraftObservation as_received{};
     REQUIRE(protocol::to_observation(issue2, events::Stamp{}, -80, model::Source::AdslDirect,
                                      as_received));
@@ -104,14 +104,14 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload rea
 // No signature promised, so the packet ends at its parity: 27 bytes of air, sync word included.
 TEST_CASE("ADS-L.4.SRD860.E.1.2: no signature is promised, so nothing follows the parity") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK(((p.Version >> 4) & 0x01) == 0);
+    CHECK(((p.version >> 4) & 0x01) == 0);
     CHECK(protocol::AdslPacket::kTxBytes == 27);
     CHECK(protocol::AdslPacket::kTxBytes == 3 + protocol::AdslPacket::kDataBytes);
 }
 
 TEST_CASE("ADS-L.4.SRD860.E.1.3: key 0 is the scrambling key, and it is the key used") {
     protocol::AdslPacket p = traffic_packet();
-    CHECK(((p.Version >> 5) & 0x03) == 0);
+    CHECK(((p.version >> 5) & 0x03) == 0);
 
     uint32_t words[5] = {0x11223344u, 0x55667788u, 0x99AABBCCu, 0xDDEEFF00u, 0x12345678u};
     uint32_t mirror[5];
@@ -127,17 +127,17 @@ TEST_CASE("ADS-L.4.SRD860.E.1.3: key 0 is the scrambling key, and it is the key 
 TEST_CASE("ADS-L.4.SRD860.E.2: the scrambler is XXTEA over the ADS-L data, six rounds") {
     protocol::AdslPacket p = traffic_packet();
     uint32_t mirror[5];
-    std::memcpy(mirror, p.Byte, sizeof(mirror));
+    std::memcpy(mirror, p.payload, sizeof(mirror));
     const uint32_t zero_key[4] = {0, 0, 0, 0};
     spec_xxtea(mirror, 5, zero_key, 6);
 
     p.scramble();
-    CHECK(std::memcmp(p.Byte, mirror, sizeof(mirror)) == 0);
+    CHECK(std::memcmp(p.payload, mirror, sizeof(mirror)) == 0);
     CHECK(sizeof(mirror) % 4 == 0);
 
     p.descramble();
     protocol::AdslPacket again = traffic_packet();
-    CHECK(std::memcmp(p.Byte, again.Byte, 20) == 0);
+    CHECK(std::memcmp(p.payload, again.payload, 20) == 0);
 }
 
 // INFO: fc 18sep26 prose: the layer's remit, and the note that issue 1 defined only the CRC variant
@@ -153,10 +153,10 @@ TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints"
     p.scramble();
     p.set_crc();
 
-    const uint32_t expected = spec_crc24(p.Data, protocol::AdslPacket::kCrcCoverBytes);
-    CHECK(p.CRC[0] == static_cast<uint8_t>(expected >> 16));
-    CHECK(p.CRC[1] == static_cast<uint8_t>(expected >> 8));
-    CHECK(p.CRC[2] == static_cast<uint8_t>(expected));
+    const uint32_t expected = spec_crc24(p.data, protocol::AdslPacket::kCrcCoverBytes);
+    CHECK(p.crc_bytes[0] == static_cast<uint8_t>(expected >> 16));
+    CHECK(p.crc_bytes[1] == static_cast<uint8_t>(expected >> 8));
+    CHECK(p.crc_bytes[2] == static_cast<uint8_t>(expected));
     CHECK(p.check_crc() == 0);
     CHECK(protocol::AdslPacket::kCrcCoverBytes == 21);
 }
@@ -181,12 +181,12 @@ TEST_CASE("ADS-L.4.SRD860.E.4: nothing is signed, and nothing says it is") {
     protocol::AdslPacket p = traffic_packet();
     p.scramble();
     p.set_crc();
-    CHECK(((p.Version >> 4) & 0x01) == 0);
+    CHECK(((p.version >> 4) & 0x01) == 0);
     CHECK(protocol::kAdslFrameBytes == protocol::AdslPacket::kDataBytes);
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t length =
-        protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes, chips);
+        protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
     CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 }
 

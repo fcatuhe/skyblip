@@ -8,6 +8,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::protocol {
 
@@ -18,149 +19,130 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kDataBytes = kTxBytes - 3;      // 24: Version+payload+CRC
     static constexpr uint8_t kCrcCoverBytes = kTxBytes - 6;  // 21: Version+payload
     // INFO: fc 20sep26 F.2.1 leaves payload 66 to OGN, layout: nrf52-ogn-tracker/src/adsl.h:120
-    static constexpr uint8_t kTypePosition = 0x02;
-    static constexpr uint8_t kTypeOgnDiagnostics = 0x42;
-    static constexpr uint8_t kTelemTypeInfo = 1;
+    static constexpr uint8_t kPayloadTypePosition = 0x02;
+    static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
+    static constexpr uint8_t kTelemetryTypeInfo = 1;
     static constexpr uint8_t kInfoTypeRegistration = 5;
     static constexpr int kInfoHeaderByte = 5;
     static constexpr int kInfoTextByte = 6;
     static constexpr int kInfoTextBytes = 14;
 
-    uint8_t SYNC[2];
-    uint8_t Length;
+    uint8_t sync[2];
+    uint8_t data_bytes;
     union {
-        uint8_t Data[kDataBytes];  // Version..CRC, what the CRC and the FEC address
+        uint8_t data[kDataBytes];  // Version..CRC, what the CRC and the FEC address
         struct __attribute__((packed)) {
-            uint8_t Version;  // Version[4]/Signature[1]/Key[2]/Reserved[1]
+            uint8_t version;  // Version[4]/Signature[1]/Key[2]/Reserved[1]
             union {
-                uint32_t Word[5];
-                uint8_t Byte[20];
+                uint32_t payload_words[5];
+                uint8_t payload[20];
                 struct __attribute__((packed)) {
-                    uint8_t Type;        // 0x02 = iConspicuity; bit7 = unicast
-                    uint8_t Address[4];  // Address[30]/Reserved[1]/RelayForward[1]
+                    uint8_t payload_type;      // 0x02 = iConspicuity; bit7 = unicast
+                    uint8_t address_bytes[4];  // Address[30]/Reserved[1]/RelayForward[1]
                     // Meta[2]: Time[6]/FlightState[2]/Cat[5]/Emergency[3]
-                    uint8_t TimeStamp : 6;         // [0.25 s]
-                    uint8_t FlightState : 2;       // 0=unknown,1=ground,2=airborne
-                    uint8_t AircraftCategory : 5;  // ADS-L category
-                    uint8_t Emergency : 3;         // 1 = OK
-                    uint8_t Position[11];  // Lat[24]/Lon[24]/Speed[8]/Alt[14]/Climb[9]/Track[9]
+                    uint8_t timestamp : 6;          // [0.25 s]
+                    uint8_t flight_state : 2;       // 0=unknown,1=ground,2=airborne
+                    uint8_t aircraft_category : 5;  // ADS-L category
+                    uint8_t emergency : 3;          // 1 = OK
+                    // Position[11]: Lat[24]/Lon[24]/Speed[8]/Alt[14]/Climb[9]/Track[9]
+                    uint8_t position_bytes[11];
                     // Integrity[2]: SIL[2]/SDA[2]/NIC[4]/NACp[3]/GVA[2]/NACv[2]/Reserved[1]
-                    uint8_t SourceIntegrity : 2;
-                    uint8_t DesignAssurance : 2;
-                    uint8_t NavigIntegrity : 4;
-                    uint8_t HorizAccuracy : 3;
-                    uint8_t VertAccuracy : 2;
-                    uint8_t VelocityAccuracy : 2;
-                    uint8_t Reserved : 1;
+                    uint8_t source_integrity : 2;
+                    uint8_t design_assurance : 2;
+                    uint8_t navigation_integrity : 4;
+                    uint8_t horizontal_accuracy : 3;
+                    uint8_t vertical_accuracy : 2;
+                    uint8_t velocity_accuracy : 2;
+                    uint8_t reserved : 1;
                 };
             };
-            uint8_t CRC[3];
+            uint8_t crc_bytes[3];
         };
     };
-    uint8_t SpareByte;
+    uint8_t spare;
 
-    void init(uint8_t type = kTypePosition) {
-        SYNC[0] = kSync1;
-        SYNC[1] = kSync2;
-        Length = kTxBytes - 3;
-        Version = 0x00;
-        for (int i = 0; i < 5; i++) Word[i] = 0;
-        Type = type;
-        SpareByte = 0;
-        CRC[0] = CRC[1] = CRC[2] = 0;
+    void reset(uint8_t type = kPayloadTypePosition) {
+        sync[0] = kSync1;
+        sync[1] = kSync2;
+        data_bytes = kTxBytes - 3;
+        version = 0x00;
+        for (int i = 0; i < 5; i++) payload_words[i] = 0;
+        payload_type = type;
+        spare = 0;
+        crc_bytes[0] = crc_bytes[1] = crc_bytes[2] = 0;
     }
 
-    bool is_position() const { return Type == kTypePosition; }
+    bool is_position() const { return payload_type == kPayloadTypePosition; }
 
-    uint8_t telem_type() const { return static_cast<uint8_t>(Byte[kInfoHeaderByte] >> 6); }
-    uint8_t info_type() const { return static_cast<uint8_t>(Byte[kInfoHeaderByte] & 0x3F); }
-    void set_info_header(uint8_t telem_type, uint8_t info_type) {
-        Byte[kInfoHeaderByte] = static_cast<uint8_t>((telem_type << 6) | (info_type & 0x3F));
+    uint8_t telemetry_type() const { return static_cast<uint8_t>(payload[kInfoHeaderByte] >> 6); }
+    uint8_t info_type() const { return static_cast<uint8_t>(payload[kInfoHeaderByte] & 0x3F); }
+    void set_info_header(uint8_t telemetry_type, uint8_t info_type) {
+        payload[kInfoHeaderByte] = static_cast<uint8_t>((telemetry_type << 6) | (info_type & 0x3F));
     }
     bool is_registration() const {
-        return Type == kTypeOgnDiagnostics && telem_type() == kTelemTypeInfo &&
-               info_type() == kInfoTypeRegistration;
+        return payload_type == kPayloadTypeOgnDiagnostics &&
+               telemetry_type() == kTelemetryTypeInfo && info_type() == kInfoTypeRegistration;
     }
-    const char* info_text() const { return reinterpret_cast<const char*>(Byte + kInfoTextByte); }
-    char* info_text() { return reinterpret_cast<char*>(Byte + kInfoTextByte); }
+    const char* info_text() const { return reinterpret_cast<const char*>(payload + kInfoTextByte); }
+    char* info_text() { return reinterpret_cast<char*>(payload + kInfoTextByte); }
 
-    static uint32_t get4(const uint8_t* b) {
-        return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
-               (static_cast<uint32_t>(b[2]) << 16) | (static_cast<uint32_t>(b[3]) << 24);
+    uint32_t address() const { return (get_u32(address_bytes) >> 6) & settings::kAddressMask; }
+    void set_address(uint32_t address) {
+        put_u32(address_bytes, (get_u32(address_bytes) & 0xC000003F) | (address << 6));
     }
-    static void set4(uint8_t* b, uint32_t w) {
-        b[0] = static_cast<uint8_t>(w);
-        b[1] = static_cast<uint8_t>(w >> 8);
-        b[2] = static_cast<uint8_t>(w >> 16);
-        b[3] = static_cast<uint8_t>(w >> 24);
+    uint8_t address_mapping_table() const { return address_bytes[0] & 0x3F; }
+    void set_address_mapping_table(uint8_t table) {
+        address_bytes[0] = (address_bytes[0] & 0xC0) | table;
     }
-    static uint32_t get3(const uint8_t* b) {
-        int32_t w = b[2];
-        w <<= 8;
-        w |= b[1];
-        w <<= 8;
-        w |= b[0];
-        return w;
-    }
-    static void set3(uint8_t* b, uint32_t w) {
-        b[0] = static_cast<uint8_t>(w);
-        b[1] = static_cast<uint8_t>(w >> 8);
-        b[2] = static_cast<uint8_t>(w >> 16);
-    }
-
-    uint32_t address() const { return (get4(Address) >> 6) & 0x00FFFFFF; }
-    void set_address(uint32_t a) {
-        uint32_t w = get4(Address);
-        w = (w & 0xC000003F) | (a << 6);
-        set4(Address, w);
-    }
-    uint8_t address_mapping_table() const { return Address[0] & 0x3F; }
-    void set_address_mapping_table(uint8_t t) { Address[0] = (Address[0] & 0xC0) | t; }
     uint32_t table_and_address() const {
         return (static_cast<uint32_t>(address_mapping_table()) << 24) | address();
     }
-    bool is_relay() const { return Address[3] & 0x80; }
-    void set_relay(uint8_t r = 1) { Address[3] = (Address[3] & 0x7F) | (r << 7); }
-
-    static int32_t cordic_to_1e7(int32_t c) {
-        return static_cast<int32_t>((static_cast<int64_t>(c) * 900007296 + (1 << 29)) >> 30);
+    bool is_relay() const { return address_bytes[3] & 0x80; }
+    void set_relay(uint8_t relay = 1) {
+        address_bytes[3] = (address_bytes[3] & 0x7F) | (relay << 7);
     }
-    static int32_t e7_to_cordic(int32_t c) {
-        return static_cast<int32_t>((static_cast<int64_t>(c) * 5003959 + (1 << 21)) >> 22);
+
+    static int32_t cordic_to_1e7(int32_t cordic) {
+        return static_cast<int32_t>((static_cast<int64_t>(cordic) * 900007296 + (1 << 29)) >> 30);
+    }
+    static int32_t cordic_from_1e7(int32_t degrees_1e7) {
+        return static_cast<int32_t>((static_cast<int64_t>(degrees_1e7) * 5003959 + (1 << 21)) >>
+                                    22);
     }
 
     int32_t latitude_cordic() const {
-        int32_t v = static_cast<int32_t>(get3(Position));
-        v <<= 8;
-        v >>= 1;
-        return v;
+        int32_t cordic = static_cast<int32_t>(get_u24(position_bytes));
+        cordic <<= 8;
+        cordic >>= 1;
+        return cordic;
     }
     int32_t longitude_cordic() const {
-        int32_t v = static_cast<int32_t>(get3(Position + 3));
-        v <<= 8;
-        return v;
+        int32_t cordic = static_cast<int32_t>(get_u24(position_bytes + 3));
+        cordic <<= 8;
+        return cordic;
     }
     void set_latitude_cordic(int32_t latitude) {
         latitude = (latitude + 0x40) >> 7;
-        set3(Position, latitude);
+        put_u24(position_bytes, latitude);
     }
     void set_longitude_cordic(int32_t longitude) {
         longitude = (longitude + 0x80) >> 8;
-        set3(Position + 3, longitude);
+        put_u24(position_bytes + 3, longitude);
     }
     // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
     bool has_position() const {
-        return get3(Position) != kPositionInvalidCode && get3(Position + 3) != kPositionInvalidCode;
+        return get_u24(position_bytes) != kPositionInvalidCode &&
+               get_u24(position_bytes + 3) != kPositionInvalidCode;
     }
     void set_position_invalid() {
-        set3(Position, kPositionInvalidCode);
-        set3(Position + 3, kPositionInvalidCode);
+        put_u24(position_bytes, kPositionInvalidCode);
+        put_u24(position_bytes + 3, kPositionInvalidCode);
     }
     int32_t latitude_1e7() const { return cordic_to_1e7(latitude_cordic()); }
     int32_t longitude_1e7() const { return cordic_to_1e7(longitude_cordic()); }
-    void set_latitude_1e7(int32_t v) { set_latitude_cordic(e7_to_cordic(v)); }
-    void set_longitude_1e7(int32_t v) { set_longitude_cordic(e7_to_cordic(v)); }
+    void set_latitude_1e7(int32_t latitude) { set_latitude_cordic(cordic_from_1e7(latitude)); }
+    void set_longitude_1e7(int32_t longitude) { set_longitude_cordic(cordic_from_1e7(longitude)); }
 
     // Three fields carry an explicit "invalid" code, and the spec is emphatic
     // that it means UNAVAILABLE, not out-of-range: an over-range value "shall be
@@ -172,26 +154,28 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint16_t kAltitudeInvalidCode = 0x3FFF;  // G.1.7, 14 bits
     static constexpr int32_t kAltitudeOffsetM = 320;          // G.1.7 encoding offset
 
-    uint16_t speed_q() const;      // [0.25 m/s]
-    void set_speed_q(uint16_t s);  // [0.25 m/s]
-    bool has_speed() const { return Position[6] != kSpeedInvalidCode; }
-    void set_speed_invalid() { Position[6] = kSpeedInvalidCode; }
+    uint16_t speed_q() const;          // [0.25 m/s]
+    void set_speed_q(uint16_t speed);  // [0.25 m/s]
+    bool has_speed() const { return position_bytes[6] != kSpeedInvalidCode; }
+    void set_speed_invalid() { position_bytes[6] = kSpeedInvalidCode; }
 
     int32_t altitude_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
     void set_altitude_m(int32_t altitude);
-    bool has_altitude() const { return (Position[8] & 0x3F) != 0x3F || Position[7] != 0xFF; }
+    bool has_altitude() const {
+        return (position_bytes[8] & 0x3F) != 0x3F || position_bytes[7] != 0xFF;
+    }
     void set_altitude_invalid() {
-        Position[7] = 0xFF;
-        Position[8] = static_cast<uint8_t>((Position[8] & 0xC0) | 0x3F);
+        position_bytes[7] = 0xFF;
+        position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0xC0) | 0x3F);
     }
 
     int16_t climb_e8() const;  // [0.125 m/s]
-    void set_climb_e8(int16_t c);
+    void set_climb_e8(int16_t climb);
     bool has_climb() const;
     void set_climb_invalid() { write_climb_code(kClimbInvalidCode); }
 
     uint16_t track_c9() const;  // 9-bit cordic (512 == 360 deg)
-    void set_track_c9(uint16_t w);
+    void set_track_c9(uint16_t track);
 
     // The Integrity[2] block, G.1.10 to G.1.15. Every one of these fields has a
     // zero code that means "unknown / no fix", so leaving the block at its
@@ -208,7 +192,7 @@ struct __attribute__((packed)) AdslPacket {
     void set_integrity_unknown();
     void set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2);
 
-    void write_climb_code(uint16_t w);
+    void write_climb_code(uint16_t code);
 
     void scramble();
     void descramble();
@@ -222,14 +206,14 @@ static_assert(sizeof(AdslPacket) == 28, "AdslPacket wire size must be 28 bytes")
 
 bool to_observation(const AdslPacket& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out);
-// The TimeStamp field is quarter seconds inside a 15 s cycle, so the instant a
+// The timestamp field is quarter seconds inside a 15 s cycle, so the instant a
 // burst claims is expressible to 250 ms - and the position it carries has to
 // belong to that instant rather than to whenever the receiver last spoke.
-static constexpr uint32_t kTimeStampCycleS = 15;
-static constexpr uint32_t kTimeStampQuarterMs = 250;
+static constexpr uint32_t kTimestampCycleS = 15;
+static constexpr uint32_t kTimestampQuarterMs = 250;
 uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms);
 
-// INFO: fc 13sep26 TimeStamp names the UTC instant, since_fix_ms the interval carried over
+// INFO: fc 13sep26 timestamp names the UTC instant, since_fix_ms the interval carried over
 struct BurstInstant {
     uint32_t utc_s;
     int32_t into_utc_ms;

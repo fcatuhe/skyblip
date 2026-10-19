@@ -275,35 +275,35 @@ size_t callsign_burst(const VirtualAircraft& aircraft, uint8_t* chips) {
     protocol::from_own_callsign(p, aircraft.address, 6, aircraft.callsign);
     p.scramble();
     p.set_crc();
-    return protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes,
+    return protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
                                   chips);
 }
 
 size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altitude_m,
                   int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
     protocol::AdslPacket p;
-    p.init();
+    p.reset();
     p.set_address(aircraft.address);
     p.set_address_mapping_table(6);
-    p.TimeStamp = static_cast<uint8_t>((utc_s % 15) * 4);
-    p.FlightState = 2;
-    p.AircraftCategory = 4;
-    p.Emergency = 1;
+    p.timestamp = static_cast<uint8_t>((utc_s % 15) * 4);
+    p.flight_state = 2;
+    p.aircraft_category = 4;
+    p.emergency = 1;
     p.set_latitude_1e7(latitude_1e7);
     p.set_longitude_1e7(longitude_1e7);
     p.set_altitude_m(altitude_m);
     p.set_speed_q(static_cast<uint16_t>(aircraft.speed_mps * 4));
     p.set_climb_e8(climb_e8_of(aircraft));
     p.set_track_c9(static_cast<uint16_t>(aircraft.track_deg * 512 / 360) & 0x1FF);
-    p.SourceIntegrity = 3;
-    p.DesignAssurance = 2;
-    p.NavigIntegrity = 11;
-    p.HorizAccuracy = 6;
-    p.VertAccuracy = 3;
-    p.VelocityAccuracy = 2;
+    p.source_integrity = 3;
+    p.design_assurance = 2;
+    p.navigation_integrity = 11;
+    p.horizontal_accuracy = 6;
+    p.vertical_accuracy = 3;
+    p.velocity_accuracy = 2;
     p.scramble();
     p.set_crc();
-    return protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes,
+    return protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes,
                                   chips);
 }
 

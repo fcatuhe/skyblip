@@ -76,7 +76,7 @@ struct StampRig {
         event.at_us = at_us;
         event.rssi_dbm = -80;
         uint8_t chips[protocol::kTxChipBytes] = {0};
-        const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, tx.Data,
+        const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, tx.data,
                                                           protocol::AdslPacket::kDataBytes, chips);
         deliver(chips, chip_length, event.data.data(), protocol::kRxChipBytes);
         event.bytes = protocol::kRxChipBytes;

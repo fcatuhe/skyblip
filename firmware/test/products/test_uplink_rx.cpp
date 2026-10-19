@@ -122,7 +122,7 @@ void hear_directly(Rig& rig, uint32_t& t, uint32_t address, int32_t north_m, int
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.Data,
+    const size_t chip_length = protocol::encode_mband(protocol::kAdslSyncWord, packet.data,
                                                       protocol::kAdslFrameBytes, chips);
 
     // 500 ms is inside the direct slot and inside the first M-band dwell.

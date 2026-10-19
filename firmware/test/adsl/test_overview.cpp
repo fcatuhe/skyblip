@@ -5,6 +5,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
+#include "core/util/little_endian.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -51,28 +52,28 @@ TEST_CASE("ADS-L.4.SRD860.B.2: ADS-L is a stateless broadcast protocol over five
 // The clause's own Example 1: 1328922 (0x14471A) leaves as 0x1A, 0x47, 0x14.
 TEST_CASE("ADS-L.4.SRD860.B.3: an integer rides the air least significant byte first") {
     uint8_t three[3] = {0, 0, 0};
-    protocol::AdslPacket::set3(three, 0x14471Au);
+    put_u24(three, 0x14471Au);
     CHECK(three[0] == 0x1A);
     CHECK(three[1] == 0x47);
     CHECK(three[2] == 0x14);
-    CHECK(protocol::AdslPacket::get3(three) == 0x14471Au);
+    CHECK(get_u24(three) == 0x14471Au);
 
     uint8_t four[4] = {0, 0, 0, 0};
-    protocol::AdslPacket::set4(four, 0x89ABCDEFu);
+    put_u32(four, 0x89ABCDEFu);
     CHECK(four[0] == 0xEF);
     CHECK(four[3] == 0x89);
-    CHECK(protocol::AdslPacket::get4(four) == 0x89ABCDEFu);
+    CHECK(get_u32(four) == 0x89ABCDEFu);
 }
 
 // Example 2's packing rule, read off the Meta block G.1 puts at payload offset 0.
 TEST_CASE("ADS-L.4.SRD860.B.3: a field starts at the bit its offset names, counting from bit 0") {
     protocol::AdslPacket p{};
-    p.init();
-    p.TimeStamp = 0x2A;
-    p.FlightState = 2;
-    p.AircraftCategory = 0x15;
-    p.Emergency = 5;
-    const uint8_t* meta = &p.Address[4];
+    p.reset();
+    p.timestamp = 0x2A;
+    p.flight_state = 2;
+    p.aircraft_category = 0x15;
+    p.emergency = 5;
+    const uint8_t* meta = &p.address_bytes[4];
     CHECK(meta[0] == static_cast<uint8_t>(0x2A | (2u << 6)));
     CHECK(meta[1] == static_cast<uint8_t>(0x15 | (5u << 5)));
 }
@@ -91,7 +92,7 @@ TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, n
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t length =
-        protocol::encode_mband(protocol::kAdslSyncWord, p.Data, protocol::kAdslFrameBytes, chips);
+        protocol::encode_mband(protocol::kAdslSyncWord, p.data, protocol::kAdslFrameBytes, chips);
     CHECK(length == 2u * (protocol::kSyncWordBytes + protocol::kAdslFrameBytes));
 
     uint8_t decoded[protocol::kSyncWordBytes + protocol::kAdslFrameBytes] = {0};
@@ -102,7 +103,7 @@ TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, n
     CHECK(decoded[2] == 0x4B);
     CHECK(decoded[3] == protocol::kAdslFrameBytes);
     for (int i = 0; i < protocol::kAdslFrameBytes; i++)
-        CHECK(decoded[protocol::kSyncWordBytes + i] == p.Data[i]);
+        CHECK(decoded[protocol::kSyncWordBytes + i] == p.data[i]);
 }
 
 // TODO: fc 18sep26 soft versioning needs G.2's Max Protocol Version, neither sent nor tracked
@@ -116,8 +117,8 @@ TEST_CASE("ADS-L.4.SRD860.B.5: the version transmitted is one every close neighb
 TEST_CASE("ADS-L.4.SRD860.B.6: a reserved bit a sender filled changes nothing a receiver reads") {
     protocol::AdslPacket clean = traffic_packet();
     protocol::AdslPacket noisy = clean;
-    noisy.Address[3] |= 0x40;
-    noisy.Reserved = 1;
+    noisy.address_bytes[3] |= 0x40;
+    noisy.reserved = 1;
 
     model::AircraftObservation from_clean{};
     model::AircraftObservation from_noisy{};
