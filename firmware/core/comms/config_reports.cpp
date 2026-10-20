@@ -9,8 +9,11 @@ namespace skyblip::comms {
 
 namespace {
 constexpr int kFlashFrameBytes = 64;
-constexpr size_t kKeyPrefixBytes = 4;
-}
+static_assert(dfu::HubImageReport::kDigestBytes == link::update_bytes::kImuDigest,
+              "the update frame carries the whole digest the hub image report holds");
+static_assert(link::update_bytes::kKey <= std::tuple_size<ports::SigningKeyHash>::value,
+              "the update frame's key is a prefix of the signing key's hash");
+}  // namespace
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
 int ConfigService::format_status(uint8_t* out, int capacity) {
@@ -135,12 +138,13 @@ void ConfigService::send_update(uint16_t session_id) {
     writer.add_code(link::update_key::kImu, hub_image_.holding);
     if (hub_image_.holding == dfu::HubImage::Held)
         writer.add_bytes(link::update_key::kImuDigest,
-                         ConstByteSpan(hub_image_.digest, dfu::HubImageReport::kDigestBytes));
+                         ConstByteSpan(hub_image_.digest, link::update_bytes::kImuDigest));
     if (dfu_ != nullptr && dfu_->downgrade_allowed())
         writer.add_boolean(link::update_key::kDowngrade, true);
     ports::SigningKeyHash trusted;
     if (dfu_ != nullptr && dfu_->running_key(trusted))
-        writer.add_bytes(link::update_key::kKey, ConstByteSpan(trusted.data(), kKeyPrefixBytes));
+        writer.add_bytes(link::update_key::kKey,
+                         ConstByteSpan(trusted.data(), link::update_bytes::kKey));
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;

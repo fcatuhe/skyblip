@@ -106,7 +106,8 @@ def generated(registry):
 
 def firmware_header(registry):
     lines = ["#ifndef SKYBLIP_CORE_COMMS_LINK_REGISTRY_H",
-             "#define SKYBLIP_CORE_COMMS_LINK_REGISTRY_H", "", "#include <cstdint>", "",
+             "#define SKYBLIP_CORE_COMMS_LINK_REGISTRY_H", "", "#include <cstddef>",
+             "#include <cstdint>", "",
              "namespace skyblip::link {", "",
              "constexpr uint32_t kCommandKey = %d;" % COMMAND_KEY["number"], ""]
     for name in ("command", "reason"):
@@ -118,6 +119,12 @@ def firmware_header(registry):
         for key in frame["keys"][1:]:
             lines.append("    %s = %d," % (constant(key["name"]), key["number"]))
         lines += ["};", "}", ""]
+        widths = [key for key in frame["keys"] if "bytes" in key]
+        if widths:
+            lines.append("namespace %s_bytes {" % frame["command"])
+            lines += ["constexpr size_t %s = %d;" % (constant(key["name"]), key["bytes"])
+                      for key in widths]
+            lines += ["}", ""]
     for frame in registry["frames"]:
         if "keys_of" in frame:
             lines += ["namespace %s_key = %s_key;" % (frame["command"], frame["keys_of"]), ""]

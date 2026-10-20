@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_COMMS_LINK_REGISTRY_H
 #define SKYBLIP_CORE_COMMS_LINK_REGISTRY_H
 
+#include <cstddef>
 #include <cstdint>
 
 namespace skyblip::link {
@@ -218,6 +219,11 @@ enum : uint32_t {
 };
 }
 
+namespace update_bytes {
+constexpr size_t kImuDigest = 8;
+constexpr size_t kKey = 4;
+}
+
 namespace dfu_key {
 enum : uint32_t {
     kVersion = 1,
@@ -231,11 +237,21 @@ enum : uint32_t {
 };
 }
 
+namespace challenge_bytes {
+constexpr size_t kNonce = 16;
+constexpr size_t kServerKeyId = 4;
+}
+
 namespace register_key {
 enum : uint32_t {
     kServerNonce = 1,
     kSignature = 2,
 };
+}
+
+namespace register_bytes {
+constexpr size_t kServerNonce = 16;
+constexpr size_t kSignature = 64;
 }
 
 namespace registration_key {
@@ -249,11 +265,22 @@ enum : uint32_t {
 };
 }
 
+namespace registration_bytes {
+constexpr size_t kDeviceId = 8;
+constexpr size_t kPublicKey = 32;
+constexpr size_t kServerKeyId = 4;
+constexpr size_t kSignature = 64;
+}
+
 namespace unlock_key {
 enum : uint32_t {
     kSerial = 1,
     kSignature = 2,
 };
+}
+
+namespace unlock_bytes {
+constexpr size_t kSignature = 64;
 }
 
 namespace list_key {

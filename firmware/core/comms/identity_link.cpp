@@ -9,13 +9,15 @@ namespace skyblip::comms {
 namespace {
 constexpr uint32_t kSerialCeiling = 0xFFFF;
 
-template <size_t Bytes>
+template <size_t Width, size_t Bytes>
 bool read_bytes(const cbor::Reader& frame, uint32_t key, std::array<uint8_t, Bytes>& out) {
+    static_assert(Width == Bytes, "the registry fixes the width the identity type holds");
     return frame.read_bytes(key, ByteSpan(out.data(), Bytes)) == Status::Ok;
 }
 
-template <size_t Bytes>
+template <size_t Width, size_t Bytes>
 void add_bytes(cbor::Writer& writer, uint32_t key, const std::array<uint8_t, Bytes>& bytes) {
+    static_assert(Width == Bytes, "the registry fixes the width the identity type holds");
     writer.add_bytes(key, ConstByteSpan(bytes.data(), Bytes));
 }
 }  // namespace
@@ -69,8 +71,10 @@ void ConfigService::challenge() {
     uint8_t frame[IdentityLink::kChallengeFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Challenge);
-    add_bytes(writer, link::challenge_key::kNonce, identity_->unit_nonce());
-    add_bytes(writer, link::challenge_key::kServerKeyId, identity_->unit().server_key_id());
+    add_bytes<link::challenge_bytes::kNonce>(writer, link::challenge_key::kNonce,
+                                             identity_->unit_nonce());
+    add_bytes<link::challenge_bytes::kServerKeyId>(writer, link::challenge_key::kServerKeyId,
+                                                   identity_->unit().server_key_id());
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;
@@ -96,8 +100,10 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
     }
     identity::Nonce server_nonce{};
     crypto::Ed25519::Signature signature{};
-    if (!read_bytes(frame, link::register_key::kServerNonce, server_nonce) ||
-        !read_bytes(frame, link::register_key::kSignature, signature) ||
+    if (!read_bytes<link::register_bytes::kServerNonce>(frame, link::register_key::kServerNonce,
+                                                        server_nonce) ||
+        !read_bytes<link::register_bytes::kSignature>(frame, link::register_key::kSignature,
+                                                      signature) ||
         !identity_->unit().registers(identity_->unit_nonce(), server_nonce, signature)) {
         refuse(link::Reason::BadSignature);
         return;
@@ -130,12 +136,16 @@ void ConfigService::send_registration() {
     uint8_t frame[IdentityLink::kRegistrationFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Registration);
-    add_bytes(writer, link::registration_key::kDeviceId, unit.device_id());
-    add_bytes(writer, link::registration_key::kPublicKey, unit.public_key());
+    add_bytes<link::registration_bytes::kDeviceId>(writer, link::registration_key::kDeviceId,
+                                                   unit.device_id());
+    add_bytes<link::registration_bytes::kPublicKey>(writer, link::registration_key::kPublicKey,
+                                                    unit.public_key());
     writer.add_text(link::registration_key::kVersion, version);
-    add_bytes(writer, link::registration_key::kServerKeyId, unit.server_key_id());
+    add_bytes<link::registration_bytes::kServerKeyId>(writer, link::registration_key::kServerKeyId,
+                                                      unit.server_key_id());
     writer.add_boolean(link::registration_key::kRelease, release);
-    add_bytes(writer, link::registration_key::kSignature, *signature);
+    add_bytes<link::registration_bytes::kSignature>(writer, link::registration_key::kSignature,
+                                                    *signature);
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;
@@ -161,7 +171,8 @@ void ConfigService::unlock(const cbor::Reader& frame) {
     const Result<uint32_t> serial = frame.read_unsigned(link::unlock_key::kSerial);
     if (!serial.ok() || serial.value() < identity::kFirstSerial ||
         serial.value() > kSerialCeiling ||
-        !read_bytes(frame, link::unlock_key::kSignature, code.signature)) {
+        !read_bytes<link::unlock_bytes::kSignature>(frame, link::unlock_key::kSignature,
+                                                    code.signature)) {
         refuse(link::Reason::BadSignature);
         return;
     }
