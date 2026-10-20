@@ -9,7 +9,7 @@ import { noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 1, units: 1, callsign: 'F-JABC' };
+const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
@@ -43,9 +43,9 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 2, units: 0, callsign: '' });
+  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '' });
   device.press();
-  const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 0);
+  const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
   assert.deepEqual(settings, DEFAULTS);
 });
 
@@ -58,7 +58,7 @@ test('a firmware that does not know its defaults offers no reset', async () => {
 
 test('a save refused on the glass says so, and the settings stay as stored', async () => {
   const { device, updater, until } = await withSettings();
-  updater.saveSettings({ units: 0 });
+  updater.saveSettings({ units: 'nautical' });
   await until(asking('set'));
   device.refuse();
   assert.equal((await until(settled)).notice.key, 'cancelled');
@@ -71,20 +71,20 @@ test('off the ground the page asks nothing at all, and landing gives it back', a
   await until(state => state.status.flight === 'airborne');
   assert.equal(updater.onGround, false);
   const sent = device.commands.length;
-  updater.saveSettings({ units: 0 });
+  updater.saveSettings({ units: 'nautical' });
   updater.recover();
   await updater.install();
   assert.equal(updater.state.notice.key, 'in_flight');
   assert.equal(device.commands.length, sent);
   device.land();
   await until(state => state.status.flight === 'ground');
-  updater.saveSettings({ units: 0 });
+  updater.saveSettings({ units: 'nautical' });
   await until(asking('set'));
 });
 
 test('taking off while the glass asks takes the question away, and the page says why', async () => {
   const { device, updater, until } = await withSettings();
-  updater.saveSettings({ units: 0 });
+  updater.saveSettings({ units: 'nautical' });
   await until(asking('set'));
   device.takeOff();
   assert.equal((await until(settled)).notice.key, 'in_flight');
@@ -116,7 +116,6 @@ for (const [reported, advice] of [
   ['corrupt', 'full'],
   ['unreadable', 'full'],
   ['writing', 'full'],
-  [null, 'full'],
 ]) {
   test(`a device reporting imu ${reported} is advised the ${advice} image before any file is chosen`, async () => {
     const { updater } = await connected({ imu: reported });
@@ -136,7 +135,7 @@ test('a verified blob other than the one the chosen file pins turns the advice t
   assert.equal(updater.state.notice.key, 'needs_full');
 });
 
-for (const reported of ['missing', 'corrupt', 'unreadable', 'writing', null]) {
+for (const reported of ['missing', 'corrupt', 'unreadable', 'writing']) {
   test(`a slim file chosen for a device reporting imu ${reported} says it needs the full one, and still installs`, async () => {
     const { updater, until } = await choosing({ imu: reported }, SLIM, 'skyblip-go.signed.bin');
     assert.equal(updater.state.notice.key, 'needs_full');

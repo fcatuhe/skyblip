@@ -1,11 +1,10 @@
 import { decode, encode } from '#skyblip/cbor';
 import { UUID } from '#skyblip/ble';
 import { compareVersions, parseVersion, readImage, versionText } from '#skyblip/image';
+import { decodeFrame, encodeFrame } from '#skyblip/link';
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 const SMP_HEADER_BYTES = 8;
-const ATT_HEADER_BYTES = 3;
+export const ATT_HEADER_BYTES = 3;
 const PREPARE_HEADER_BYTES = 5;
 // INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments
 const PREPARE_COUNT = 2;
@@ -16,8 +15,9 @@ const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
 export const PRODUCTION_KEY = 0xb2;
-export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 2, units: 0, callsign: '' };
+export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' };
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
+const DIGEST = /^[0-9a-f]{16}$/;
 const IMAGE_HEADER_BYTES = 32;
 const TLV_INFO = 0x6907;
 const TLV_KEYHASH = 0x01;
@@ -199,21 +199,22 @@ export class FakeSkyblip {
     });
   }
 
-  reply(json) {
-    setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(json))));
+  reply(fields) {
+    const frame = encodeFrame(fields);
+    setImmediate(() => this.connected && this.config.notify(frame));
   }
 
   acknowledge(ok, reason) {
-    this.reply({ acknowledge: ok, reason });
+    this.reply({ command: 'acknowledgement', acknowledge: ok, reason });
   }
 
   onConfig(bytes) {
-    this.answer(JSON.parse(decoder.decode(bytes)));
+    this.answer(decodeFrame(bytes));
   }
 
   answer({ command, ...fields }) {
     this.commands.push(command);
-    if (this.claimedBy !== null) return this.reply({ acknowledge: false, reason: 'claimed', by: this.claimedBy });
+    if (this.claimedBy !== null) return this.reply({ command: 'acknowledgement', acknowledge: false, reason: 'claimed', by: this.claimedBy });
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
@@ -227,9 +228,9 @@ export class FakeSkyblip {
     this.pending = command;
     if (command === 'set') {
       this.staged = fields;
-      return this.reply({ acknowledge: false, pending: true, reason: 'confirm' });
+      return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
     }
-    this.reply({ acknowledge: false, pending: true, reason: `confirm_${command}` });
+    this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: `confirm_${command}` });
   }
 
   addressFields() {
@@ -269,7 +270,8 @@ export class FakeSkyblip {
     const frame = { command: 'update', image: this.image };
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
-    if (this.imu !== null) frame.imu = this.imu;
+    if (DIGEST.test(this.imu)) Object.assign(frame, { imu: 'held', imu_digest: this.imu });
+    else frame.imu = this.imu;
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
@@ -283,7 +285,7 @@ export class FakeSkyblip {
       upload: this.windowOpen && this.onGround,
       battery_percent: this.swapPowered ? 80 : 12,
       charging: false,
-      power_level: this.swapPowered ? 'OK' : 'LOW',
+      power_level: this.swapPowered ? 'normal' : 'low',
       went_dark_flat: false,
       die_temperature_c: 21,
     });
@@ -294,7 +296,7 @@ export class FakeSkyblip {
     this.pending = null;
     if (task === 'set') {
       Object.assign(this.stored, this.staged);
-      return this.reply({ acknowledge: true });
+      return this.reply({ command: 'acknowledgement', acknowledge: true });
     }
     if (task === 'dfu') {
       this.windowOpen = true;
@@ -316,8 +318,8 @@ export class FakeSkyblip {
     this.acknowledge(false, 'expired');
   }
 
-  push(json) {
-    this.reply(json);
+  push(fields) {
+    this.reply(fields);
   }
 
   onSmp(bytes) {

@@ -1,7 +1,7 @@
 import { createHash, createPrivateKey, createPublicKey, randomBytes, sign, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import { FakeSkyblip } from './fake_skyblip.mjs';
+import { ATT_HEADER_BYTES, FakeSkyblip } from './fake_skyblip.mjs';
 import { ServerRefusal } from '#skyblip/activation';
 
 export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activation.v1.vectors.json', import.meta.url), 'utf8'));
@@ -9,7 +9,7 @@ export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activat
 // INFO: fc 18oct26 the DER headers that wrap a raw Ed25519 seed or public key for node:crypto
 const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
-const REGISTRATION_FRAME_BYTES = 349;
+export const REGISTRATION_FRAME_BYTES = 138;
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
 const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
@@ -124,13 +124,14 @@ export class FakeUnit extends FakeSkyblip {
   }
 
   register({ server_nonce, signature }) {
-    if (!verifies(this.trusted, signature, messages.register({ unitNonce: this.nonce, serverNonce: server_nonce }))) {
+    const serverNonce = hex(server_nonce);
+    if (!verifies(this.trusted, hex(signature), messages.register({ unitNonce: this.nonce, serverNonce }))) {
       return this.acknowledge(false, 'bad_signature');
     }
-    if (this.mtu - 3 < REGISTRATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
-    this.serverNonce = server_nonce;
+    if (this.mtu - ATT_HEADER_BYTES < REGISTRATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
+    this.serverNonce = serverNonce;
     this.pending = 'register';
-    this.reply({ acknowledge: false, pending: true, reason: 'confirm_register' });
+    this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_register' });
   }
 
   press() {
@@ -148,9 +149,9 @@ export class FakeUnit extends FakeSkyblip {
     const nonce = this.nonce;
     this.nonce = null;
     const message = messages.unlock({ deviceId: this.deviceId, publicKey: this.unitKey.publicKey, serial, unitNonce: nonce });
-    if (!verifies(this.trusted, signature, message)) return this.acknowledge(false, 'bad_signature');
+    if (!verifies(this.trusted, hex(signature), message)) return this.acknowledge(false, 'bad_signature');
     this.address = serial;
-    this.unlockCode = { serial, nonce, signature };
+    this.unlockCode = { serial, nonce, signature: hex(signature) };
     this.acknowledge(true, 'unlock');
   }
 

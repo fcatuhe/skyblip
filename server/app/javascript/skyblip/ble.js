@@ -1,3 +1,5 @@
+import { decodeFrame, encodeFrame } from '#skyblip/link';
+
 export const UUID = {
   nus: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
   nusRx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
@@ -98,12 +100,14 @@ async function openConfig(server, onReply) {
   const chr = await svc.getCharacteristic(UUID.config);
   await chr.startNotifications();
   chr.addEventListener('characteristicvaluechanged', event => {
-    const text = decoder.decode(event.target.value);
+    const bytes = bytesOf(event);
+    let frame;
     try {
-      onReply(JSON.parse(text), text);
-    } catch {
-      onReply(null, text);
+      frame = decodeFrame(bytes);
+    } catch (error) {
+      return onReply(null, bytes, error);
     }
+    onReply(frame, bytes);
   });
   return chr;
 }
@@ -151,10 +155,9 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
       }
     },
 
-    // INFO: fc 19sep26 One write is one command: a truncated "set" applies the fields that survived.
-    async sendConfig(command) {
+    async sendConfig(fields) {
       if (!config) throw new Error('This device has no config endpoint.');
-      const bytes = encoder.encode(JSON.stringify(command));
+      const bytes = encodeFrame(fields);
       await exclusive(() => config.writeValueWithResponse(bytes));
     },
 

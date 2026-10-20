@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { connect } from "#skyblip/ble"
+import { hex, printable } from "#skyblip/link"
 
 const COMMANDS = ["get", "defaults", "status", "timing", "flash", "radio", "update", "diagnostics"]
 
@@ -37,8 +38,10 @@ export default class extends Controller {
     try {
       const device = await connect({
         onLine: line => { if (!signal.aborted) this.write("stream", line) },
-        onReply: (json, text) => {
-          if (!signal.aborted) this.write("replies", json ? JSON.stringify(json) : text, json ? "ok" : "warn")
+        onReply: (frame, bytes, error) => {
+          if (signal.aborted) return
+          if (frame) this.write("replies", printable(frame), "ok")
+          else this.write("replies", `${error.message}: ${hex(bytes)}`, "warn")
         },
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })
@@ -95,7 +98,7 @@ export default class extends Controller {
     if (!this.device) return this.state("not connected", "down")
     try {
       await this.device.sendConfig(body)
-      this.write("replies", "> " + JSON.stringify(body), "out")
+      this.write("replies", "> " + printable(body), "out")
     } catch (error) {
       this.write("replies", error.message, "bad")
     }

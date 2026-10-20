@@ -66,3 +66,18 @@ test('config and SMP writes issued together never overlap on the link', async ()
   assert.deepEqual(device.commands, ['status', 'update']);
   link.disconnect();
 });
+
+test('a config notification arrives decoded by name, and one that is no frame arrives as its bytes and why', async () => {
+  const device = new FakeSkyblip().install();
+  const replies = [];
+  const link = await connect({ onReply: (...reply) => replies.push(reply), onSmp: () => {}, onClose: () => {} });
+  await link.sendConfig({ command: 'status' });
+  await new Promise(resolve => setImmediate(resolve));
+  device.config.notify(Uint8Array.of(0xa1, 0x00, 0x18, 0x05));
+  assert.equal(replies[0][0].command, 'status');
+  assert.equal(replies[0][0].flight, 'ground');
+  assert.equal(replies[1][0], null);
+  assert.deepEqual(replies[1][1], Uint8Array.of(0xa1, 0x00, 0x18, 0x05));
+  assert.match(replies[1][2].message, /shortest form/);
+  link.disconnect();
+});

@@ -71,6 +71,16 @@ test('both pages word the same keys', () => {
   assert.deepEqual([...english].sort(), [...french].sort());
 });
 
+const registryNames = enumeration => LINK_REGISTRY.enums[enumeration].values.map(({ name }) => name);
+const offered = (page, list) => [...read(page).match(new RegExp(`${list}: \\{([^}]*)\\}`))[1].matchAll(/(\w+): "/g)].map(match => match[1]);
+
+for (const page of PAGES) {
+  test(`${page.split('/').pop()} offers the units and the alarm volumes under the registry's names`, () => {
+    assert.deepEqual(offered(page, 'unit_names'), registryNames('units'));
+    assert.deepEqual(offered(page, 'volume_names'), registryNames('alarm_volume'));
+  });
+}
+
 test('the firmware still refuses activation with the reasons this test reads', () => {
   assert.ok(identityRefusals().includes('small_mtu'), `${IDENTITY} no longer reads as it did`);
 });

@@ -1,4 +1,5 @@
 import { addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
+import { hex } from '#skyblip/link';
 
 export { hasWebBluetooth };
 
@@ -97,7 +98,7 @@ export class Activator {
     if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true });
     else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
     else if (reply.command === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
-    else if ('acknowledge' in reply) this.#acked(reply);
+    else if (reply.command === 'acknowledgement') this.#acked(reply);
   }
 
   #acked(reply) {
@@ -111,14 +112,15 @@ export class Activator {
 
   async #challenge({ nonce, server_key_id }) {
     const device = this.#device;
-    const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: nonce, server_key_id }));
+    const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: hex(nonce), server_key_id: hex(server_key_id) }));
     if (!answer) return;
     this.#serverNonce = answer.server_nonce;
     return this.#send({ command: 'register', server_nonce: answer.server_nonce, signature: answer.signature });
   }
 
-  async #register({ command, ...registration }) {
+  async #register({ command, ...frame }) {
     const device = this.#device;
+    const registration = relayed(frame);
     const unit = `${registration.device_id} ${registration.public_key.slice(0, 8)}`;
     this.#set({ phase: 'registering' });
     const answer = await this.#ask(device, () => this.#server.register({ ...registration, server_nonce: this.#serverNonce }), unit);
@@ -155,4 +157,8 @@ export class Activator {
     this.#state = { ...this.#state, ...patch };
     this.#onChange(this.#state);
   }
+}
+
+function relayed(frame) {
+  return Object.fromEntries(Object.entries(frame).map(([name, value]) => [name, value instanceof Uint8Array ? hex(value) : value]));
 }

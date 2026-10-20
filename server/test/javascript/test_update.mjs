@@ -17,7 +17,7 @@ test('connecting reads the running version, the image state and the status', asy
   assert.equal(updater.state.running, '0.1.0+12');
   assert.equal(updater.state.image.state, 'confirmed');
   assert.deepEqual(updater.state.status, {
-    flight: 'ground', upload: false, batteryPercent: 80, charging: false, powerLevel: 'OK', wentDarkFlat: false,
+    flight: 'ground', upload: false, batteryPercent: 80, charging: false, powerLevel: 'normal', wentDarkFlat: false,
   });
 });
 
@@ -78,16 +78,21 @@ test('at an iPhone MTU the requests shrink to the 182 bytes it carries, and noth
   assert.ok(device.uploadWrites.every(writes => writes === 1));
 });
 
-test('a link whose MTU was never exchanged hears no config reply, and its install is refused at the write', async () => {
-  const { device, updater, until } = await unexchanged();
+test('a link whose MTU was never exchanged hears the status but not the update frame or the settings', async () => {
+  const { device, updater } = await unexchanged();
   assert.equal(updater.state.running, '0.1.0+12');
-  assert.deepEqual([updater.state.status, updater.state.image, updater.state.settings], [null, null, null]);
-  assert.ok(device.refusedNotifications >= 3, `refused ${device.refusedNotifications}`);
+  assert.equal(updater.state.status.flight, 'ground');
+  assert.deepEqual([updater.state.image, updater.state.settings], [null, null]);
+  assert.equal(device.refusedNotifications, 2);
+});
+
+test('a link whose MTU was never exchanged still installs, asked on the glass', async () => {
+  const { device, updater, until } = await unexchanged();
   updater.install();
-  const refused = await until(settled);
-  assert.equal(refused.notice.key, 'failed');
-  assert.match(refused.notice.detail, /Prepare queue full/);
-  assert.ok(!device.commands.includes('dfu'));
+  await until(asking('dfu'));
+  device.press();
+  await until(installing);
+  assert.deepEqual(device.slot, signedImage(NEWER, IMAGE_BYTES));
 });
 
 test('a device that does not echo is written in 20-byte slices', async () => {
@@ -319,16 +324,9 @@ test('an update frame arriving later replaces the one before it', async () => {
   assert.equal(image.from, null);
 });
 
-test('a status frame from before #87 hides a gauge that has no divider', async () => {
+test('a status frame says the cell went flat, and has no percent until the gauge reads', async () => {
   const { device, until } = await connected();
-  device.push({ command: 'status', reset: 'POWER ON', flight: 'ground', upload: false, battery_percent: 0, battery_valid: false, charging: false, power_level: '--' });
-  const { status } = await until(state => state.status.powerLevel === '--');
-  assert.equal(status.batteryPercent, null);
-});
-
-test('a status frame from #87 says the cell went flat, and has no percent until the gauge reads', async () => {
-  const { device, until } = await connected();
-  device.push({ command: 'status', flight: 'ground', upload: false, charging: true, power_level: 'LOW', went_dark_flat: true });
+  device.push({ command: 'status', flight: 'ground', upload: false, charging: true, power_level: 'low', went_dark_flat: true });
   const { status } = await until(state => state.status.wentDarkFlat);
   assert.equal(status.batteryPercent, null);
   assert.equal(status.charging, true);
