@@ -79,10 +79,7 @@ The register, command and parameter constants are spelled in full. The names abo
 | `kBootFirmwareVerifyDone` | `FW_VERIFY_DONE` |
 | `kCommandUploadToProgramRam` (0x0002) | `UPLOAD_TO_PROGRAM_RAM` |
 | `kCommandBootProgramRam` (0x0003) | `BOOT_PROGRAM_RAM` |
-| `kParameterSensorsPresent` (0x011F) | the virtual sensor present bitmap |
-| `kParameterSensorConfig` (0x0500) | the sensor configuration parameter, plus the sensor id |
-| `kSystemEventIdPadding`, `kFirstSystemEventId` (0, 245) | the system ids, padding and the first of the table |
-| `kSystemEventIdMetaEvent`, `kSystemEventIdMetaEventWakeup` (254, 248) | the meta event system ids |
+| `kSystemEventIdPadding`, `kSystemEventIdMetaEvent`, `kSystemEventIdMetaEventWakeup` (0, 254, 248) | the system ids for padding and meta events |
 
 ## What this part does not do
 

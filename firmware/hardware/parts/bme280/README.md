@@ -12,19 +12,17 @@ What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev
 
 ## Names
 
-The compensation is the datasheet's, in full words. Where the two differ, this is the pair.
+The compensation is the datasheet's, in full words. Where the two differ, this is the pair, the right column spelled as this tree's prose or earlier identifiers cited it.
 
 | Our name | Datasheet name |
 |---|---|
-| `Trim::temperature_1` to `temperature_3`, the model's `kTemperatureTrim1` to `kTemperatureTrim3` | dig_T1 to dig_T3 |
-| `Trim::pressure_1` to `pressure_9`, the model's `kPressureTrim1` to `kPressureTrim9` | dig_P1 to dig_P9 |
-| `raw_temperature`, `raw_pressure` | adc_T, adc_P |
+| `Trim::temperature_1` to `temperature_3`, the model's `kTemperatureTrim1` to `kTemperatureTrim3` | t1 to t3 |
+| `Trim::pressure_1` to `pressure_9`, the model's `kPressureTrim1` to `kPressureTrim9` | p1 to p9 |
+| `raw_temperature`, `raw_pressure` | adc_t, adc_p |
 | `fine_temperature`, `fine_temperature_from()` | t_fine |
 | `first_term`, `second_term` | var1, var2 |
 | `kRegisterControlMeasurement` | ctrl_meas (0xF4) |
-| `kRegisterControlHumidity` | ctrl_hum (0xF2) |
-| `kRegisterCalibration` | calib00 (0x88) |
-| `kRegisterResult` | press_msb (0xF7), the first of the six result bytes |
+| `kRegisterControlHumidity` | CtrlHum (0xF2) |
 
 ## The setting
 

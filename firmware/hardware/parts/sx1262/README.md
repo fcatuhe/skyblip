@@ -4,26 +4,21 @@ The Semtech SX1262 radio, driven over `io::Spi` and `io::Gpio` by `Sx1262`, with
 
 ## Names
 
-The constants are spelled in full, so the datasheet's own spelling is what a reader searches for when a comment cites a section. Where the two differ, this is the pair.
+The constants are spelled in full, so the datasheet's own spelling is what a reader searches for when a comment cites a section. Where the two differ, this is the pair, the right column spelled as this tree's comments or earlier identifiers cited it.
 
 | Our name | Datasheet name |
 |---|---|
-| `kStandbyOnRcOscillator` | STDBY_RC |
-| `kStandbyOnCrystalOscillator` | STDBY_XOSC |
+| `kStandbyOnRcOscillator`, `kFallbackStandbyOnRcOscillator` | STDBY_RC |
+| `kStandbyOnCrystalOscillator`, `kFallbackStandbyOnCrystalOscillator` | STDBY_XOSC |
 | `kFallbackFrequencySynthesis` | FS, in SetRxTxFallbackMode (DS 13.1.15) |
-| `kFallbackStandbyOnRcOscillator` | STDBY_RC |
-| `kFallbackStandbyOnCrystalOscillator` | STDBY_XOSC |
-| `kSetDio3AsTcxoControl` | SetDIO3AsTCXOCtrl |
-| `kTcxoVoltage1v8` | tcxoVoltage 0x02, 1.8 V |
+| `kSetDio3AsTcxoControl` | SetDio3AsTcxoCtrl |
 | `kSetModulationParameters` | SetModulationParams (DS 13.4.6) |
 | `kSetPacketParameters` | SetPacketParams (DS 13.4.6) |
 | `kSetDioIrqParameters` | SetDioIrqParams (DS 13.3.1) |
 | `kGetInstantRssi` | GetRssiInst (DS 13.5.2) |
 | `kErrorCrystalOscillatorStart` | XOSC_START_ERR in OpError (DS 13.5.5) |
-| `kCrystalHz` | the 32 MHz reference, FXTAL |
 | `kAddressFilteringOff` | AddrComp off, in SetPacketParams |
-| `kOcpLimitSteps` | the OCP register value, 2.5 mA a step (DS 5.1) |
-| `kTimeoutTicksCeiling` | the 24-bit SetTx timeout, in 15.625 us steps (DS 13.4.1) |
-| `RadioConfig::deviation_hz`, `ports::RfPlan::deviation_hz` | Fdev |
-| `bitrate_word`, `deviation_word` in `configure_modulation()` | br and Fdev as SetModulationParams takes them |
-| `pll_word` in `write_frequency()` | RFfreq, the SetRfFrequency argument |
+| `kOcpLimitSteps` | the OCP register, 2.5 mA a step (DS 5.1) |
+| `kTimeoutTicksCeiling` | the SetTx timeout, 24 bits of 15.625 us steps (DS 13.4.1) |
+| `RadioConfig::deviation_hz`, `ports::RfPlan::deviation_hz` | fdev |
+| `bitrate_word`, `deviation_word` in `configure_modulation()` | br and fdev, as SetModulationParams takes them |
