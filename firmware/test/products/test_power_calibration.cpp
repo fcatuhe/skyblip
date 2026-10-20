@@ -39,7 +39,7 @@ TEST_CASE("battery: the trim is a signed millivolt offset, and zero is the ident
 }
 
 // The bound belongs to the settings boundary (core/settings validates it on the
-// blob and on the JSON alike), so nothing here re-checks it. What is kept here
+// blob and on the link alike), so nothing here re-checks it. What is kept here
 // is the arithmetic: a reading is an unsigned 16-bit millivolt figure and must
 // stay one whatever it is handed, because a wrap would turn a flat cell into a
 // full one on the way past a cutoff.
