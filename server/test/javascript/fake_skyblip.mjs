@@ -7,9 +7,8 @@ const decoder = new TextDecoder();
 const SMP_HEADER_BYTES = 8;
 const ATT_HEADER_BYTES = 3;
 const PREPARE_HEADER_BYTES = 5;
-// INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments | 20oct26 two before #151
-const PREPARE_COUNT = 3;
-const LEGACY_PREPARE_COUNT = 2;
+// INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments
+const PREPARE_COUNT = 2;
 const MGMT_ERR_EMSGSIZE = 7;
 const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
@@ -48,6 +47,10 @@ class Characteristic {
   }
 
   notify(bytes) {
+    if (bytes.length > this.link.mtu - ATT_HEADER_BYTES) {
+      this.link.refusedNotifications++;
+      return;
+    }
     const value = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     for (const listener of this.listeners) listener({ target: { value } });
   }
@@ -107,6 +110,7 @@ export class FakeSkyblip {
     this.longestWrite = 0;
     this.longestAttempt = 0;
     this.longestPacket = 0;
+    this.refusedNotifications = 0;
     this.overlaps = 0;
     this.writing = false;
     this.approved = null;
@@ -183,7 +187,7 @@ export class FakeSkyblip {
     this.longestAttempt = Math.max(this.longestAttempt, Math.min(bytes.length, segment));
     await tick();
     this.writing = false;
-    if (Math.ceil(bytes.length / segment) > (this.legacy ? LEGACY_PREPARE_COUNT : PREPARE_COUNT)) throw new Error('GATT Error: Prepare queue full.');
+    if (Math.ceil(bytes.length / segment) > PREPARE_COUNT) throw new Error('GATT Error: Prepare queue full.');
     this.longestWrite = Math.max(this.longestWrite, Math.min(bytes.length, segment));
     characteristic.onWrite(Uint8Array.from(bytes));
   }

@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import TABLE from '#skyblip/legacy_dialect_table';
 import { Dialect, LINK, current, currentSimulator, legacy } from '#skyblip/legacy_dialect';
 import { DEFAULTS } from './fake_skyblip.mjs';
-import { asking, chosen, connected, installing } from './update_session.mjs';
+import { asking, connected, settled, unexchanged } from './update_session.mjs';
 
 const SCHEMA = JSON.parse(readFileSync(new URL('../../../schemas/legacy_dialect.v1.json', import.meta.url), 'utf8'));
 
@@ -90,12 +90,12 @@ for (const legacyUnit of [true, false]) {
     assert.equal(saved.phase, 'ready');
   });
 
-  test(`${age} takes an install over a link that never exchanged its MTU`, async () => {
-    const { device, updater, until } = await chosen({ legacy: legacyUnit, bufSize: 300, mtu: 23 });
+  test(`${age} answers nothing over a link that never exchanged its MTU, so the doubled dfu is refused at the write`, async () => {
+    const { device, updater, until } = await unexchanged({ legacy: legacyUnit });
+    assert.deepEqual(device.heard.map(frame => frame.cmd ?? frame.command), ['update', 'status', 'get']);
+    assert.equal(updater.state.status, null);
     updater.install();
-    await until(asking('dfu'));
-    assert.deepEqual(device.heard.at(-1), ownWords('dfu', { version: '0.2.0+15' }));
-    device.press();
-    await until(installing);
+    assert.equal((await until(settled)).notice.key, 'failed');
+    assert.ok(!device.commands.includes('dfu'));
   });
 }

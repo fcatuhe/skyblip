@@ -7,7 +7,9 @@ import {
 import { GATT_WRITE_BYTES } from '#skyblip/ble';
 import { Updater } from '#skyblip/update';
 
-import { NEWER, IMAGE_BYTES, session, READS, asking, installing, settled, connected, chosen } from './update_session.mjs';
+import {
+  NEWER, IMAGE_BYTES, session, READS, asking, installing, settled, connected, chosen, unexchanged,
+} from './update_session.mjs';
 
 test('connecting reads the running version, the image state and the status', async () => {
   const { updater } = await connected({ running: '0.1.0.12' });
@@ -82,10 +84,16 @@ test('at an iPhone MTU the requests shrink to the 182 bytes it carries, and noth
   assert.ok(device.uploadWrites.every(writes => writes === 1));
 });
 
-test('a link whose MTU was never exchanged sends the whole buffer in 20-byte slices', async () => {
-  const { device } = await uploaded({ bufSize: 2475, mtu: 23 });
-  assert.equal(device.longestAttempt, 20);
-  assert.ok(device.longestPacket > 2000, `packet of ${device.longestPacket}`);
+test('a link whose MTU was never exchanged hears no config reply, and its install is refused at the write', async () => {
+  const { device, updater, until } = await unexchanged();
+  assert.equal(updater.state.running, '0.1.0+12');
+  assert.deepEqual([updater.state.status, updater.state.image, updater.state.settings], [null, null, null]);
+  assert.ok(device.refusedNotifications >= 3, `refused ${device.refusedNotifications}`);
+  updater.install();
+  const refused = await until(settled);
+  assert.equal(refused.notice.key, 'failed');
+  assert.match(refused.notice.detail, /Prepare queue full/);
+  assert.ok(!device.commands.includes('dfu'));
 });
 
 test('a device that does not echo is written in 20-byte slices', async () => {
@@ -99,13 +107,13 @@ test('a write the browser refuses steps down to a smaller one, and the upload ca
   assert.equal(device.overlaps, 0);
 });
 
-test('no GATT write is longer than BLE guarantees, none overlaps, no packet overflows the buffer', async () => {
-  const { device, updater, until } = await chosen({ bufSize: 300, mtu: 23 });
+test('without an echo no SMP write is longer than BLE guarantees, none overlaps, no packet overflows the buffer', async () => {
+  const { device, updater, until } = await chosen({ bufSize: 300, echo: false });
   updater.install();
   await until(asking('dfu'));
   device.press();
   await until(installing);
-  assert.equal(device.longestWrite, GATT_WRITE_BYTES);
+  assert.equal(device.smp.longestAttempt, GATT_WRITE_BYTES);
   assert.ok(device.longestPacket <= 300, `packet of ${device.longestPacket}`);
   assert.equal(device.overlaps, 0);
 });
