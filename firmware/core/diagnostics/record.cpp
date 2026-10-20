@@ -71,4 +71,4 @@ Status decode_record(const uint8_t* raw, Record& out) {
     return Status::Ok;
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics

@@ -52,6 +52,6 @@ constexpr bool recurs(Type type) {
            type != Type::End;
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics
 
 #endif

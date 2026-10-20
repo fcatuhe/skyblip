@@ -290,4 +290,4 @@ bool read(const Record& record, Switch& out) {
     return true;
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics

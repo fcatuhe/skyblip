@@ -68,6 +68,6 @@ class Recorder {
     bool armed_{false};
 };
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics
 
 #endif

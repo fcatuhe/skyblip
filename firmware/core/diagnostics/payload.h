@@ -388,6 +388,6 @@ bool read(const Record& record, Duty& out);
 bool read(const Record& record, Switch& out);
 bool read(const Record& record, Loop& out);
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics
 
 #endif

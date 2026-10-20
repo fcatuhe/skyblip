@@ -101,6 +101,6 @@ inline int8_t stage_margin_steps(int32_t margin_us) {
     return static_cast<int8_t>(steps);
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics
 
 #endif

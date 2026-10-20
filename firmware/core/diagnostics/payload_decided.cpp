@@ -320,4 +320,4 @@ bool read(const Record& record, Duty& out) {
     return true;
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics

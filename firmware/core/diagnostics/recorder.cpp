@@ -87,4 +87,4 @@ void Recorder::commit() {
     count_--;
 }
 
-}  // namespace skyblip::diag
+}  // namespace skyblip::diagnostics
