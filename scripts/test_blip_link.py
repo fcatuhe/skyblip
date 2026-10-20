@@ -168,6 +168,13 @@ class ReplyFraming(unittest.TestCase):
             blip.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})
         self.assertIn("in_flight", str(caught.exception))
 
+    # A refusal for width names what the pilot can do, not only the reason's code.
+    def test_a_reply_refused_as_too_wide_says_the_link_kept_its_smallest_packet(self):
+        for command in ("log", "acknowledgement"):
+            with self.subTest(command=command), self.assertRaises(SystemExit) as caught:
+                blip.refuse_if_nacked({"command": command, "acknowledge": False, "reason": "small_mtu"})
+            self.assertIn("smallest packet size, 20 bytes", str(caught.exception))
+
     def test_an_acknowledged_reply_passes_through_untouched(self):
         frame = {"command": "log", "acknowledge": True, "sessions": 2}
         self.assertIs(blip.refuse_if_nacked(frame), frame)

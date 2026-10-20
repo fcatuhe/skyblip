@@ -77,7 +77,7 @@ A session the device reports as unclosed stopped where the power did, and a diag
 
 A session the device reports as truncated lost its beginning to the sector allocator, and with it the `boot` and `config` records a capture opens on. The header line carries `"truncated": true`, the summary names it, and an analysis reading that corpus knows it cannot say which build or which settings produced it.
 
-Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying.
+Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying. A third comes from the link rather than the device: a reply wider than the payload the link settled on is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says the computer kept Bluetooth's smallest packet size and what to try, under the frame for `command` and in place of the fetch for `fetch`.
 
 A diagnostics capture lives in RAM and is armed from the device's own diagnostics screen. It does not survive a power cycle, so fetch it before switching the device off.
 

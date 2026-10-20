@@ -33,6 +33,9 @@ NAME_PREFIXES = ("skyBlip", "SoftRF")
 SERVICE_UUIDS = (NUS_SERVICE, HM10_SERVICE)
 # INFO: fc 20sep26 comms::kMaxLogReadChunks, the clamp a read's "count" meets on the device
 LOG_READ_CHUNKS_MAX = 8
+SMALL_MTU = ("the reply did not fit the link: this computer kept Bluetooth's smallest packet size, "
+             "20 bytes. Connect again, and if it happens again, update the computer's Bluetooth "
+             "or use another computer")
 
 
 def main():
@@ -131,6 +134,8 @@ async def run_command(args):
     async with await connect(args, config=True) as link:
         for delay, frame in await link.command(body, args.timeout):
             print("%7.1f ms  %s" % (delay * 1000, frames.printable(frame)))
+            if refused_as_too_wide(frame):
+                print(SMALL_MTU, file=sys.stderr)
     return 0
 
 
@@ -340,9 +345,15 @@ async def list_sessions(link, args):
 
 
 def refuse_if_nacked(frame):
+    if refused_as_too_wide(frame):
+        raise SystemExit("device refused: small_mtu, %s" % SMALL_MTU)
     if frame.get("acknowledge") is False:
         raise SystemExit("device refused: %s" % frame.get("reason", "no reason given"))
     return frame
+
+
+def refused_as_too_wide(frame):
+    return frame.get("acknowledge") is False and frame.get("reason") == "small_mtu"
 
 
 def nmea_checksum(body):
