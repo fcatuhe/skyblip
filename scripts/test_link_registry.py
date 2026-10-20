@@ -3,9 +3,12 @@
 
     python3 scripts/test_link_registry.py
 
-Stdlib and clang-format (CLANG_FORMAT names it), as check_link_registry.py needs.
+Stdlib, clang-format (CLANG_FORMAT names it), as check_link_registry.py needs, and a C++
+compiler (CXX names it) for the mirrors.
 """
+import os
 import pathlib
+import subprocess
 import sys
 import unittest
 
@@ -41,6 +44,27 @@ class Check(unittest.TestCase):
         read = committed_with(link_registry.FIRMWARE_HEADER, "enum class Command : uint8_t {\n",
                               "enum class Command : uint8_t\n{\n")
         self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.FIRMWARE_HEADER])
+
+
+def compiled(source):
+    firmware = link_registry.ROOT / "firmware"
+    return subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-fsyntax-only",
+                           "-I%s" % firmware, "-I%s" % (firmware / "vendor"), "-x", "c++", "-"],
+                          input=source, capture_output=True, text=True)
+
+
+class Mirrors(unittest.TestCase):
+    def test_the_registry_as_it_stands_compiles_against_the_cpp_enums(self):
+        result = compiled(link_registry.mirrors_test(link_registry.load()))
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    # The static_asserts only ran registry to C++: an enumerator the registry lacked passed.
+    def test_a_cpp_enumerator_the_registry_lacks_fails_the_build(self):
+        registry = link_registry.load()
+        registry["enums"]["reset"]["values"].pop()
+        result = compiled(link_registry.mirrors_test(registry))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Debug", result.stderr)
 
 
 if __name__ == "__main__":

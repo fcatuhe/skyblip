@@ -173,17 +173,34 @@ def mirrors_test(registry):
     mirrored = {name: enum for name, enum in registry["enums"].items() if "mirrors" in enum}
     headers = sorted({enum["mirrors"]["header"] for enum in mirrored.values()})
     lines = ["#include <cstdint>", ""] + ["#include \"%s\"" % header for header in headers]
-    lines += ["", "namespace skyblip {", "", "template <class Enumeration>",
-              "constexpr uint32_t code(Enumeration value) {",
-              "    return static_cast<uint32_t>(value);", "}", ""]
+    lines += ["", "#pragma GCC diagnostic error \"-Wswitch\"", "", "namespace skyblip {", "",
+              "template <class Enumeration>", "constexpr uint32_t code(Enumeration value) {",
+              "    return static_cast<uint32_t>(value);", "}", "", "namespace {", ""]
+    for enum in mirrored.values():
+        lines += exhaustive_switch(enum)
+    lines += ["}", ""]
     for name, enum in mirrored.items():
         cpp = enum["mirrors"]["type"]
         for value in enum["values"]:
             lines.append("static_assert(code(%s::%s) == %d, \"%s %s\");" % (
                 cpp, value["mirrors"], value["code"], name, value["name"]))
-        lines.append("")
+        first = "%s::%s" % (cpp, enum["values"][0]["mirrors"])
+        lines += ["static_assert(on_the_wire(%s), \"%s\");" % (first, name), ""]
     lines += ["}"]
     return "\n".join(lines) + "\n"
+
+
+def exhaustive_switch(enum):
+    """A switch -Wswitch refuses to compile once the C++ enum holds a value the registry lacks."""
+    cpp = enum["mirrors"]["type"]
+    lines = ["constexpr bool on_the_wire(%s value) {" % cpp, "    switch (value) {"]
+    lines += ["        case %s::%s:" % (cpp, value["mirrors"]) for value in enum["values"]]
+    lines.append("            return true;")
+    off = enum["mirrors"].get("off_the_wire", [])
+    lines += ["        case %s::%s:" % (cpp, enumerator) for enumerator in off]
+    if off:
+        lines.append("            return false;")
+    return lines + ["    }", "    return false;", "}", ""]
 
 
 def javascript_module(registry):
