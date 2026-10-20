@@ -44,6 +44,13 @@ class Briefing::OwnshipsTest < ApplicationSystemTestCase
     assert_text "Your image stays in this browser"
   end
 
+  test "the Bluetooth command is the registry's ownship frame by name, counted in CBOR bytes" do
+    visit "/briefing/ownship?type=glider"
+
+    assert_field "Bluetooth command, proposed", with: /\A\{"command":"ownship","aircraft_type":\d+,"width":24,"hot_spot":\d+,"rows":"\h{88}"\}\z/
+    assert_text "58 bytes of CBOR"
+  end
+
   test "choosing a type loads its drawing" do
     visit "/briefing/ownship?type=glider"
 
@@ -94,6 +101,7 @@ class Briefing::OwnshipsTest < ApplicationSystemTestCase
 
   private
     def center_of(label)
+      find("[aria-label='#{label}']")
       x, y = page.evaluate_script("(() => { const r = document.querySelector(`[aria-label='#{label}']`).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2] })()")
       { x:, y: }
     end

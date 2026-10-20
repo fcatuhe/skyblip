@@ -1446,6 +1446,40 @@ export const LINK_REGISTRY = Object.freeze({
           "enum": "command"
         }
       ]
+    },
+    {
+      "command": "ownship",
+      "code": 25,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "aircraft_type",
+          "number": 1,
+          "type": "unsigned"
+        },
+        {
+          "name": "width",
+          "number": 2,
+          "type": "unsigned"
+        },
+        {
+          "name": "hot_spot",
+          "number": 3,
+          "type": "unsigned"
+        },
+        {
+          "name": "rows",
+          "number": 4,
+          "type": "bytes"
+        }
+      ]
     }
   ],
   "enums": {
@@ -2144,6 +2178,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "gnss_cold_start",
           "code": 24
+        },
+        {
+          "name": "ownship",
+          "code": 25
         }
       ]
     }

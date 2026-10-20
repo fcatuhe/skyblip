@@ -189,8 +189,9 @@ inline constexpr Value kCommandValues[] = {
     {"session", 22},
     {"chunk", 23},
     {"gnss_cold_start", 24},
+    {"ownship", 25},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 25};
+inline constexpr Enumeration kCommand{kCommandValues, 26};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0},  {"acknowledge", 1, Type::Boolean, nullptr, 0},
@@ -399,6 +400,12 @@ inline constexpr Key kGnssColdStartKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0},
 };
 
+inline constexpr Key kOwnshipKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0}, {"aircraft_type", 1, Type::Unsigned, nullptr, 0},
+    {"width", 2, Type::Unsigned, nullptr, 0}, {"hot_spot", 3, Type::Unsigned, nullptr, 0},
+    {"rows", 4, Type::Bytes, nullptr, 0},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, kGetKeys, 1},
@@ -425,6 +432,7 @@ inline constexpr Frame kFrames[] = {
     {"session", 22, events::Endpoint::Log, kSessionKeys, 8},
     {"chunk", 23, events::Endpoint::Log, kChunkKeys, 6},
     {"gnss_cold_start", 24, events::Endpoint::Config, kGnssColdStartKeys, 1},
+    {"ownship", 25, events::Endpoint::Config, kOwnshipKeys, 5},
 };
 
 }

@@ -196,6 +196,22 @@ TEST_CASE("comms: a command code the registry does not hold is refused as unknow
     CHECK(link_text(link.last().bytes).find("unknown_command") != std::string::npos);
 }
 
+// The editor's ownship frame is a proposal: the registry numbers it, the firmware reads none yet.
+TEST_CASE("comms: an ownship drawing is refused as unknown_command, nothing stored") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(
+        config_frame("{\"command\":\"ownship\",\"aircraft_type\":1,\"width\":3,\"hot_spot\":0,"
+                     "\"rows\":\"00000002\"}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}");
+}
+
 TEST_CASE("comms: dfu is refused at the door on a critical cell") {
     platform::host::Link link;
     link.raise_link(1);

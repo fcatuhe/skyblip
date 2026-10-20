@@ -34,6 +34,7 @@ enum class Command : uint8_t {
     Session = 22,
     Chunk = 23,
     GnssColdStart = 24,
+    Ownship = 25,
 };
 
 enum class Reason : uint8_t {
@@ -334,6 +335,15 @@ enum : uint32_t {
     kFrom = 3,
     kEndsSession = 4,
     kRecords = 5,
+};
+}
+
+namespace ownship_key {
+enum : uint32_t {
+    kAircraftType = 1,
+    kWidth = 2,
+    kHotSpot = 3,
+    kRows = 4,
 };
 }
 

@@ -50,10 +50,10 @@ A first version had a canopy pod 4 px wide and an 8 px tail. The pod read as the
 
 ## The Bluetooth command, proposed
 
-The editor shows the command a device could take a drawing in. No firmware reads it yet.
+The editor shows the frame a device could take a drawing in, `ownship` in [`schemas/link.v1.json`](../../../schemas/link.v1.json), named as `blip.py command` and the console page take it and counted in the CBOR bytes it travels as. It is a proposal: the registry numbers it so the editor, `blip.py` and the firmware agree on its shape, and no firmware reads it yet, so a unit answers `unknown_command`.
 
 ```json
-{"command":"ownship","type":4,"w":24,"o":5,"rows":"<8 hex digits per row, leftmost column in the lowest bit>"}
+{"command":"ownship","aircraft_type":4,"width":24,"hot_spot":5,"rows":"<4 bytes per row, big-endian, leftmost column in the lowest bit>"}
 ```
 
-It is one write on the config endpoint, beside `set`, and the tallest symbol the box allows, 16 rows like the light aircraft, comes to 181 bytes, inside the 182 an iPhone link carries (`firmware/core/comms/README.md`). Like a `set`, the device would ask on its glass before storing it, store one drawing per type, and draw the one of the type it is set to, the compiled symbol remaining for a type it holds nothing for. A drawing it cannot fit is refused by the same rules as above, which is why they are the device's box and not the editor's taste.
+`rows` is one byte string, each row the 32-bit word the firmware table holds, so its length says how many rows there are. It is one write on the config endpoint, beside `set`: the tallest symbol the box allows, 16 rows like the light aircraft, comes to 78 bytes, and the largest drawing the editor takes, 32 rows of 32 columns, to 143, both inside the 182 an iPhone link carries (`firmware/core/comms/README.md`). Like a `set`, the device would ask on its glass before storing it, store one drawing per type, and draw the one of the type it is set to, the compiled symbol remaining for a type it holds nothing for. A drawing it cannot fit is refused by the same rules as above, which is why they are the device's box and not the editor's taste.

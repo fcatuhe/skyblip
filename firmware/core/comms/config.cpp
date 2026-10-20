@@ -304,7 +304,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Erase:
         case link::Command::Log:
         case link::Command::Session:
-        case link::Command::Chunk: break;
+        case link::Command::Chunk:
+        case link::Command::Ownship: break;
     }
     acknowledge(false, link::Reason::UnknownCommand);
 }

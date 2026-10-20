@@ -238,7 +238,13 @@
         {"name": "records", "number": 5, "type": "bytes"}
       ]
     },
-    {"command": "gnss_cold_start", "code": 24, "endpoint": "config", "sender": "host", "keys": []}
+    {"command": "gnss_cold_start", "code": 24, "endpoint": "config", "sender": "host", "keys": []},
+    {"command": "ownship", "code": 25, "endpoint": "config", "sender": "host", "keys": [
+      {"name": "aircraft_type", "number": 1, "type": "unsigned"},
+      {"name": "width", "number": 2, "type": "unsigned"},
+      {"name": "hot_spot", "number": 3, "type": "unsigned"},
+      {"name": "rows", "number": 4, "type": "bytes"}
+    ]}
   ],
   "enums": {
     "reason": {

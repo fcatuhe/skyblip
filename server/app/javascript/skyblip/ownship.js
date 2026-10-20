@@ -1,3 +1,5 @@
+import { encodeFrame, printable } from '#skyblip/link';
+
 export const MAX_WIDTH = 32;
 export const MAX_HEIGHT = 32;
 const WING_RUN = 11;
@@ -84,7 +86,9 @@ export function toCpp(g) {
 }
 
 export function toCommand(g, typeCode) {
-  return JSON.stringify({ command: 'ownship', type: typeCode, w: width(g), o: hotSpot(g), rows: hexRows(g).join('') });
+  const rows = Uint8Array.from(words(g).flatMap(word => [24, 16, 8, 0].map(shift => Math.floor(word / 2 ** shift) % 256)));
+  const fields = { command: 'ownship', aircraft_type: typeCode, width: width(g), hot_spot: hotSpot(g), rows };
+  return { text: printable(fields), bytes: encodeFrame(fields).length };
 }
 
 export function problems(g, limits) {
