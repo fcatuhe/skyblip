@@ -26,10 +26,11 @@ class SettingsStore : public comms::ConfigStore {
 
     Status apply(const cbor::Reader& frame) override { return apply_settings(settings_, frame); }
 
-    int describe_changes(const cbor::Reader& frame, char* out, int capacity) const override {
+    Status describe_changes(const cbor::Reader& frame, char* out, int capacity) const override {
         Settings next = settings_;
-        if (apply_settings(next, frame) != Status::Ok) return 0;
-        return describe_settings_changes(settings_, next, out, capacity);
+        const Status applied = apply_settings(next, frame);
+        if (applied == Status::Ok) (void)describe_settings_changes(settings_, next, out, capacity);
+        return applied;
     }
 
    private:

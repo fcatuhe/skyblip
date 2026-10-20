@@ -12,7 +12,11 @@ namespace skyblip::comms {
 
 namespace {
 constexpr int kAcknowledgementFrameBytes = 16;
+
+link::Reason settings_refusal(Status status) {
+    return status == Status::OutOfRange ? link::Reason::OutOfRange : link::Reason::Invalid;
 }
+}  // namespace
 
 void ConfigService::tick(uint32_t now_ms) {
     now_ms_ = now_ms;
@@ -333,12 +337,18 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
         acknowledge(false, link::Reason::LowPower);
         return;
     }
+    char detail[sizeof(prompt_detail_)]{};
+    const Status described =
+        store_.describe_changes(cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)), detail,
+                                static_cast<int>(sizeof(detail)));
+    if (described != Status::Ok) {
+        acknowledge(false, settings_refusal(described));
+        return;
+    }
     pending_set_bytes_ = frame.bytes;
     std::memcpy(pending_set_frame_, frame.data.data(), frame.bytes);
     stage(Pending::Set, link::Reason::Confirm);
-    (void)store_.describe_changes(
-        cbor::Reader(ConstByteSpan(pending_set_frame_, static_cast<size_t>(pending_set_bytes_))),
-        prompt_detail_, static_cast<int>(sizeof(prompt_detail_)));
+    std::memcpy(prompt_detail_, detail, sizeof(detail));
 }
 
 // INFO: fc 03oct26 the dfu image travels over SMP, not this channel (simulator/README.md)
@@ -405,8 +415,7 @@ void ConfigService::confirm() {
             settings_dirty_ = true;
             acknowledge(true);
         } else {
-            acknowledge(false, applied == Status::OutOfRange ? link::Reason::OutOfRange
-                                                             : link::Reason::Invalid);
+            acknowledge(false, settings_refusal(applied));
         }
     } else if (pending_ == Pending::Dfu && !swap_powered()) {
         pending_ = Pending::None;

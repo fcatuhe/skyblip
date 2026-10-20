@@ -101,6 +101,27 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
+// A set the store refuses used to stand on the glass and fail only after two presses.
+TEST_CASE("comms: a set out of range or invalid is refused at the door, never staged") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":300}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"out_of_range\"}");
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"callsign\":\"F*JXYZ\"}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"invalid\"}");
+    CHECK(int(settings.aircraft_type) == 1);
+}
+
 TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") {
     platform::host::Link link;
     link.raise_link(1);
