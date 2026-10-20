@@ -21,6 +21,7 @@ namespace skyblip::platform::zephyr {
 
 using skyblip::events::Endpoint;
 using skyblip::events::LinkEvent;
+using skyblip::events::MtuRequest;
 using skyblip::events::RxFrame;
 
 namespace {
@@ -217,6 +218,29 @@ int start_advertising() {
                            response->scan_data, ARRAY_SIZE(response->scan_data));
 }
 
+void note_mtu_request(struct bt_conn* connection, MtuRequest outcome, uint8_t error) {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    g_sessions.mtu_requested(session_of(connection), outcome, error);
+    k_spin_unlock(&g_lock, key);
+}
+
+void mtu_exchanged(struct bt_conn* connection, uint8_t error,
+                   struct bt_gatt_exchange_params* /*parameters*/) {
+    if (g_connections[bt_conn_index(connection)] != connection) return;
+    note_mtu_request(connection, error == 0 ? MtuRequest::Exchanged : MtuRequest::Refused, error);
+}
+
+struct bt_gatt_exchange_params g_mtu_exchange = {.func = mtu_exchanged};
+
+void request_mtu(struct bt_conn* connection) {
+    note_mtu_request(connection, MtuRequest::Pending, 0);
+    const int error = bt_gatt_exchange_mtu(connection, &g_mtu_exchange);
+    if (error == -EALREADY)
+        note_mtu_request(connection, MtuRequest::AlreadyExchanged, 0);
+    else if (error != 0)
+        note_mtu_request(connection, MtuRequest::Unsent, static_cast<uint8_t>(-error));
+}
+
 // INFO: fc 18sep26 -ENOMEM is every connection object in use, and recycled() is what undoes it.
 void resume_advertising() {
     if (atomic_get(&g_advertising) == 0) return;
@@ -241,6 +265,7 @@ void connected(struct bt_conn* connection, uint8_t error) {
     g_connections[index] = held;
     g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)));
     k_spin_unlock(&g_lock, key);
+    request_mtu(connection);
     resume_advertising();
 }
 void disconnected(struct bt_conn* connection, uint8_t /*reason*/) {
@@ -257,10 +282,10 @@ void recycled() { resume_advertising(); }
 BT_CONN_CB_DEFINE(connection_callbacks) = {
     .connected = connected, .disconnected = disconnected, .recycled = recycled};
 
-// The central's ATT_EXCHANGE_MTU_REQ, landing after the connection is up: this is
-// where the payload figure is actually learnt, so it is where the refreshed
-// figure goes onto the bus. tx is our side of the pair - what a notification we
-// send may carry.
+// An ATT_EXCHANGE_MTU_REQ answered, the central's or the unit's own, landing after
+// the connection is up: this is where the payload figure is actually learnt, so it
+// is where the refreshed figure goes onto the bus. tx is our side of the pair -
+// what a notification we send may carry.
 void mtu_updated(struct bt_conn* connection, uint16_t tx, uint16_t /*rx*/) {
     if (g_connections[bt_conn_index(connection)] != connection) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
@@ -311,7 +336,6 @@ Status Link::advertise_as(const char* name) {
     return named == 0 && error == 0 ? Status::Ok : Status::Down;
 }
 
-// INFO: fc 28sep26 the central starts the MTU exchange, an Android app that never asks stays at 23
 uint16_t Link::payload_bytes() const {
     uint16_t smallest = 0;
     for (size_t i = 0; i < ARRAY_SIZE(g_connections); i++) {
