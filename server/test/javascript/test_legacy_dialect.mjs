@@ -18,6 +18,7 @@ test('every legacy frame of the link reads in today\'s words and writes back to 
   for (const entry of LINK.frames) {
     for (const selected of entry.when) {
       const frame = { cmd: Object.keys(commands).find(old => commands[old] === selected) ?? selected };
+      for (const [key, held] of Object.entries(entry.where ?? {})) frame[key] = held[0];
       for (const old of Object.keys(entry.keys ?? {})) frame[old] = 1;
       for (const [key, spellings] of Object.entries(entry.values ?? {})) frame[key] = Object.keys(spellings)[0];
       const read = current(LINK, frame);
@@ -26,6 +27,13 @@ test('every legacy frame of the link reads in today\'s words and writes back to 
       assert.deepEqual(legacy(LINK, read), frame);
     }
   }
+});
+
+test('the dump\'s valid is the battery in its power group and the fix in its gnss group', () => {
+  const power = { cmd: 'diag', group: 'power', valid: true, level: 'LOW' };
+  assert.deepEqual(current(LINK, power), { command: 'diagnostics', group: 'power', battery_valid: true, power_level: 'LOW' });
+  assert.deepEqual(legacy(LINK, current(LINK, power)), power);
+  assert.deepEqual(current(LINK, { cmd: 'diag', group: 'gnss', valid: true }), { command: 'diagnostics', group: 'gnss', valid: true });
 });
 
 test('a refusal from before #151 reads in today\'s words', () => {

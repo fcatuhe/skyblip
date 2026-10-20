@@ -172,9 +172,9 @@ DIAGNOSTICS_TYPES = {
     8: ("power", (
         ("cell_mv", uint16(0)), ("supply_warnings", uint16(2)), ("implausible", uint16(4)),
         ("charge_warnings", uint16(6)), ("die_dc", int16(8)), ("percent", uint8(10)),
-        ("level", enum8(11, POWER_LEVEL)), ("charge", enum8(12, CHARGE)),
+        ("power_level", enum8(11, POWER_LEVEL)), ("charge", enum8(12, CHARGE)),
         ("trim_offset_mv", int16(13)), ("sample_offset_mv", int8(15)), ("charging", flag(2)), ("external_power", flag(3)),
-        ("valid", flag(4)), ("die_valid", flag(5)), ("caution", flag(6)),
+        ("battery_valid", flag(4)), ("die_valid", flag(5)), ("caution", flag(6)),
         ("trim_learned", flag(7)))),
     9: ("barometer", (
         ("pressure_mpa", uint32(0)), ("altitude_mm", int32(4)), ("climb_mm_s", int32(8)),

@@ -4,14 +4,16 @@ export const LINK = TABLE.link;
 export const SIMULATOR = TABLE.simulator;
 
 export function current(section, frame) {
-  const read = respelled(renamed(frame, section.keys), section.values);
-  const entry = entryFor(section, read[section.select]);
-  return entry ? respelled(renamed(read, entry.keys), entry.values) : read;
+  let read = respelled(renamed(frame, section.keys), section.values);
+  for (const entry of section.frames ?? []) {
+    if (applies(section, entry, read)) read = respelled(renamed(read, entry.keys), entry.values);
+  }
+  return read;
 }
 
 export function legacy(section, frame) {
-  const entry = entryFor(section, frame[section.select]);
-  const written = entry ? renamed(respelled(frame, inverted(entry.values)), inverse(entry.keys)) : frame;
+  const entries = (section.frames ?? []).filter(entry => applies(section, entry, frame));
+  const written = entries.reduceRight((out, entry) => renamed(respelled(out, inverted(entry.values)), inverse(entry.keys)), frame);
   return renamed(respelled(written, inverted(section.values)), inverse(section.keys));
 }
 
@@ -39,8 +41,9 @@ export class Dialect {
   }
 }
 
-function entryFor(section, selected) {
-  return (section.frames ?? []).find(entry => entry.when.includes(selected));
+function applies(section, entry, frame) {
+  return entry.when.includes(frame[section.select]) &&
+    Object.entries(entry.where ?? {}).every(([key, held]) => held.includes(frame[key]));
 }
 
 function renamed(frame, keys = {}) {

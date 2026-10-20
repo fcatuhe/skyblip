@@ -188,12 +188,12 @@ Record record_of(const Power& value, const Instant& at) {
     put_u16(record.payload + 6, clamp_u16(value.charge_warnings));
     put_i16(record.payload + 8, value.die_dc);
     record.payload[10] = value.percent;
-    record.payload[11] = static_cast<uint8_t>(value.level);
+    record.payload[11] = static_cast<uint8_t>(value.power_level);
     record.payload[12] = static_cast<uint8_t>(value.charge);
     record.payload[15] = static_cast<uint8_t>(value.sample_offset_mv);
     set_flag(record.flags, kPowerFlagCharging, value.charging);
     set_flag(record.flags, kPowerFlagExternalPower, value.external_power);
-    set_flag(record.flags, kPowerFlagValid, value.valid);
+    set_flag(record.flags, kPowerFlagBatteryValid, value.battery_valid);
     set_flag(record.flags, kPowerFlagDieValid, value.die_valid);
     return record;
 }
@@ -207,12 +207,12 @@ bool read(const Record& record, Power& out) {
     out.charge_warnings = get_u16(record.payload + 6);
     out.die_dc = get_i16(record.payload + 8);
     out.percent = record.payload[10];
-    out.level = static_cast<power::PowerLevel>(record.payload[11]);
+    out.power_level = static_cast<power::PowerLevel>(record.payload[11]);
     out.charge = static_cast<power::ChargeCondition>(record.payload[12]);
     out.sample_offset_mv = get_i8(record.payload + 15);
     out.charging = record.flagged(kPowerFlagCharging);
     out.external_power = record.flagged(kPowerFlagExternalPower);
-    out.valid = record.flagged(kPowerFlagValid);
+    out.battery_valid = record.flagged(kPowerFlagBatteryValid);
     out.die_valid = record.flagged(kPowerFlagDieValid);
     return true;
 }

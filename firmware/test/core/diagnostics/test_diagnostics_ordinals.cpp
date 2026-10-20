@@ -320,7 +320,7 @@ TEST_CASE(
 
 TEST_CASE(
     "diagnostics ordinals: power::PowerLevel's codes are the power level byte, and a code changed "
-    "here changes POWER_LEVEL in scripts/blip_records.py and the schema's level enum") {
+    "here changes POWER_LEVEL in scripts/blip_records.py and the schema's power_level enum") {
     codes_pinned<power::PowerLevel>(5);
 }
 

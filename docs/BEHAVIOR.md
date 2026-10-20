@@ -1824,7 +1824,7 @@ Every enum a diagnostics payload writes as a byte, pinned to the code the corpus
 - model::Source's codes are the burst and traffic source byte, and a code changed here changes SOURCE in scripts/blip_records.py and the schema's source enum
 - power::ChargeCondition's codes are the power charge byte, and a code changed here changes CHARGE in scripts/blip_records.py and the schema's charge enum
 - power::DurableWrite's codes are the write kind byte, and a code changed here changes WRITE_KIND in scripts/blip_records.py and the schema's kind enum with it
-- power::PowerLevel's codes are the power level byte, and a code changed here changes POWER_LEVEL in scripts/blip_records.py and the schema's level enum
+- power::PowerLevel's codes are the power level byte, and a code changed here changes POWER_LEVEL in scripts/blip_records.py and the schema's power_level enum
 - power::ResetReason's codes are the boot reset byte, and a code changed here changes RESET in scripts/blip_records.py and the schema's reset enum with it
 - radio::Verdict's codes are the burst verdict byte, and a code changed here changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it
 - timing::DurableWriteVerdict's codes are the write placement byte, and a code changed here changes PLACEMENT in blip_records.py and the schema's placement enum

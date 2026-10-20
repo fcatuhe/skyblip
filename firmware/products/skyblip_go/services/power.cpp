@@ -90,11 +90,11 @@ void PowerService::record_power(const diagnostics::Instant& at) {
     value.charge_warnings = charge_warnings_;
     value.die_dc = power.die_dc;
     value.percent = power.battery.percent;
-    value.level = power.level;
+    value.power_level = power.level;
     value.charge = power.charge;
     value.charging = power.battery.charging;
     value.external_power = power.battery.external_power;
-    value.valid = power.battery.valid;
+    value.battery_valid = power.battery.valid;
     value.die_valid = power.die_valid;
     context_.diagnostics.record(value, at);
 }

@@ -262,11 +262,11 @@ def discharge(run):
 
 def short_of_whole(stretch):
     """Why this stretch is not a run from full to cutoff, or None when it is one."""
-    readings = [record for record in stretch if record["valid"]]
+    readings = [record for record in stretch if record["battery_valid"]]
     if not readings:
         return "no believable reading on battery alone"
-    if stretch[-1]["level"] != "flat":
-        return "it did not end at cutoff, the last level read %s" % stretch[-1]["level"]
+    if stretch[-1]["power_level"] != "flat":
+        return "it did not end at cutoff, the last level read %s" % stretch[-1]["power_level"]
     if readings[0]["percent"] < FULL_PERCENT:
         return "it did not start full, the first reading on battery alone is %d%%" % (
             readings[0]["percent"])
@@ -278,7 +278,7 @@ def measure(run, pack_mah):
     if pack_mah is None:
         return None, "pass --pack-mah, the device cannot know the pack it runs on"
     stretch = discharge(run)
-    readings = [record for record in stretch if record["valid"]]
+    readings = [record for record in stretch if record["battery_valid"]]
     whole = short_of_whole(stretch) is None
     if len(readings) < 2 and not whole:
         return None, "fewer than two believable readings on battery alone"
@@ -299,8 +299,8 @@ def measure(run, pack_mah):
         "points": points,
         "from_mv": first["cell_mv"],
         "to_mv": readings[-1]["cell_mv"],
-        "from_level": first["level"],
-        "to_level": last["level"],
+        "from_level": first["power_level"],
+        "to_level": last["power_level"],
     }, None
 
 

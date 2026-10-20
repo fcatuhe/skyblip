@@ -99,7 +99,7 @@ TEST_CASE("park: a power run taken down by its cell ends on a cutoff power recor
     const std::vector<diagnostics::Record> last = tail(captured(rig), 3);
     diagnostics::Power power{};
     REQUIRE(diagnostics::read(last[0], power));
-    CHECK(power.level == power::PowerLevel::Flat);
+    CHECK(power.power_level == power::PowerLevel::Flat);
     CHECK(last[1].type == diagnostics::Type::Duty);
     CHECK(last[2].type == diagnostics::Type::End);
     CHECK(same_instant(last[0], last[1]));
@@ -120,7 +120,7 @@ TEST_CASE("park: a power run the pilot switches off closes on power, then duty, 
     const std::vector<diagnostics::Record> last = tail(records, 3);
     diagnostics::Power power{};
     REQUIRE(diagnostics::read(last[0], power));
-    CHECK(power.level == power::PowerLevel::Normal);
+    CHECK(power.power_level == power::PowerLevel::Normal);
     CHECK(last[1].type == diagnostics::Type::Duty);
     CHECK(last[2].type == diagnostics::Type::End);
     CHECK(same_instant(last[0], last[1]));

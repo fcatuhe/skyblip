@@ -166,7 +166,8 @@ class ConfigService {
     // written: below the low-battery warning the settings sector is not touched,
     // and a companion app that patched a value per keystroke has to be told so.
     bool settings_writable() const {
-        return power::may_write(diagnostics_.level, supply_warned_, power::DurableWrite::Settings);
+        return power::may_write(diagnostics_.power_level, supply_warned_,
+                                power::DurableWrite::Settings);
     }
 
     // INFO: fc 07sep26 a swap is 15-25 s of erases on the cell, and probation ends next boot

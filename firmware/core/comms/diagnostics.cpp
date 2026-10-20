@@ -129,9 +129,9 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     if (power) {
         add_integer(Group::Power, "cell_mv", diagnostics.battery.cell_mv);
         add_integer(Group::Power, "percent", diagnostics.battery.percent);
-        add_boolean(Group::Power, "valid", diagnostics.battery.valid);
+        add_boolean(Group::Power, "battery_valid", diagnostics.battery.valid);
         add_boolean(Group::Power, "charging", diagnostics.battery.charging);
-        add_string(Group::Power, "level", power::to_string(diagnostics.level));
+        add_string(Group::Power, "power_level", power::to_string(diagnostics.power_level));
         add_integer(Group::Power, "supply_warnings", counter(diagnostics.supply_warnings));
         add_integer(Group::Power, "implausible", counter(diagnostics.battery_implausible));
         // Same rule as the status reply, and the same key: no reading is no key,

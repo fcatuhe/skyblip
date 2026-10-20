@@ -97,12 +97,12 @@ uint8_t battery_step(uint8_t percent) {
 
 void ConfigService::set_battery_state(const power::BatteryState& battery, power::PowerLevel level) {
     const bool charging_changed = battery.charging != diagnostics_.battery.charging;
-    const bool level_changed = level != diagnostics_.level;
+    const bool level_changed = level != diagnostics_.power_level;
     const bool step_changed =
         battery_step(battery.percent) != battery_step(diagnostics_.battery.percent);
 
     diagnostics_.battery = battery;
-    diagnostics_.level = level;
+    diagnostics_.power_level = level;
 
     if (link_up() && (charging_changed || level_changed || step_changed)) push_status();
 }

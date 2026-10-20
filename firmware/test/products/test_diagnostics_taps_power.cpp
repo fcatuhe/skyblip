@@ -65,9 +65,9 @@ TEST_CASE("diagnostics power: the cell is recorded on the cadence it is sampled 
     CHECK(count_of(records, diagnostics::Type::Power) <= seconds + 1);
     diagnostics::Power power{};
     REQUIRE(last_of(records, power));
-    CHECK(power.valid);
+    CHECK(power.battery_valid);
     CHECK(power.cell_mv > 3000);
-    CHECK(power.level == rig.state().power.level);
+    CHECK(power.power_level == rig.state().power.level);
 }
 
 TEST_CASE("diagnostics power: the knee is recorded on both sides of it, as the level") {
@@ -84,11 +84,11 @@ TEST_CASE("diagnostics power: the knee is recorded on both sides of it, as the l
 
     const std::vector<diagnostics::Power> cell = every_power_record(captured(rig));
     REQUIRE(cell.size() >= 8);
-    CHECK(cell.front().level == power::PowerLevel::Normal);
+    CHECK(cell.front().power_level == power::PowerLevel::Normal);
     CHECK(cell.front().cell_mv == 3800);
-    CHECK(cell.back().level == power::PowerLevel::Low);
+    CHECK(cell.back().power_level == power::PowerLevel::Low);
     CHECK(cell.back().cell_mv == 3550);
-    CHECK(cell.back().level == rig.state().power.level);
+    CHECK(cell.back().power_level == rig.state().power.level);
 }
 
 // The median kept the gauge still through a sag, and the corpus could not see the sag at all.
@@ -141,8 +141,8 @@ TEST_CASE(
     for (const diagnostics::Power& power : cell) {
         CHECK(power.external_power);
         CHECK(power.charging);
-        CHECK_FALSE(power.valid);
-        CHECK(power.level == power::PowerLevel::Normal);
+        CHECK_FALSE(power.battery_valid);
+        CHECK(power.power_level == power::PowerLevel::Normal);
     }
     CHECK(cell.front().cell_mv == 4812);
     CHECK(cell.front().implausible >= 4);

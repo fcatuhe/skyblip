@@ -154,7 +154,7 @@ struct Flight {
 
 constexpr uint8_t kPowerFlagCharging = 1u << 2;
 constexpr uint8_t kPowerFlagExternalPower = 1u << 3;
-constexpr uint8_t kPowerFlagValid = 1u << 4;
+constexpr uint8_t kPowerFlagBatteryValid = 1u << 4;
 constexpr uint8_t kPowerFlagDieValid = 1u << 5;
 // INFO: fc 30sep26 bit 6 was caution until the level carried Low, and is never reused
 // INFO: fc 05oct26 bit 7 and payload bytes 13-14 were the learned trim, and are never reused
@@ -167,11 +167,11 @@ struct Power {
     int16_t die_dc{0};
     int8_t sample_offset_mv{0};
     uint8_t percent{0};
-    power::PowerLevel level{power::PowerLevel::Unknown};
+    power::PowerLevel power_level{power::PowerLevel::Unknown};
     power::ChargeCondition charge{power::ChargeCondition::Unknown};
     bool charging{false};
     bool external_power{false};
-    bool valid{false};
+    bool battery_valid{false};
     bool die_valid{false};
 };
 

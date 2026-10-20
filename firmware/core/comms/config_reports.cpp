@@ -17,7 +17,7 @@ int ConfigService::format_status(char* out, int capacity) {
     const power::BatteryState& battery = diagnostics_.battery;
     if (battery.valid) writer.add_integer("battery_percent", static_cast<long>(battery.percent));
     writer.add_boolean("charging", battery.charging);
-    writer.add_string("power_level", power::to_string(diagnostics_.level));
+    writer.add_string("power_level", power::to_string(diagnostics_.power_level));
     writer.add_boolean("went_dark_flat", went_dark_flat_);
     if (diagnostics_.die_valid)
         writer.add_integer("die_temperature_c", whole_celsius(diagnostics_.die_dc));

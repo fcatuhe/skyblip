@@ -58,7 +58,9 @@ class LegacyUnit:
             return [{"cmd": "status", "flight": "ground", "die_temp_c": 21}]
         if command == "diag":
             return [{"cmd": "diag", "group": "sys", "part": 0, "more": True, "up_s": 42},
-                    {"cmd": "diag", "group": "power", "part": 1, "more": False, "mv": 3800}]
+                    {"cmd": "diag", "group": "gnss", "part": 1, "more": True, "valid": False},
+                    {"cmd": "diag", "group": "power", "part": 2, "more": False, "mv": 3800,
+                     "valid": True, "level": "LOW"}]
         if command == "set" and "alarm" in frame:
             return [{"ack": False, "pending": True, "reason": "confirm"}]
         if command == "list" and "index" in frame:
@@ -88,8 +90,10 @@ class CurrentUnit(LegacyUnit):
         if command == "diagnostics":
             return [{"command": "diagnostics", "group": "system", "part": 0, "more": True,
                      "uptime_s": 42},
-                    {"command": "diagnostics", "group": "power", "part": 1, "more": False,
-                     "cell_mv": 3800}]
+                    {"command": "diagnostics", "group": "gnss", "part": 1, "more": True,
+                     "valid": False},
+                    {"command": "diagnostics", "group": "power", "part": 2, "more": False,
+                     "cell_mv": 3800, "battery_valid": True, "power_level": "LOW"}]
         if command == "set" and "alarm_enabled" in frame:
             return [{"acknowledge": False, "pending": True, "reason": "confirm"}]
         if command == "list" and "index" in frame:
@@ -139,9 +143,11 @@ class AnyUnit:
 
     def test_the_dump_reads_in_todays_names(self):
         dump, = converse(self.unit(), {"command": "diagnostics"})
-        self.assertEqual([frame["group"] for frame in dump], ["system", "power"])
+        self.assertEqual([frame["group"] for frame in dump], ["system", "gnss", "power"])
         self.assertEqual(dump[0]["uptime_s"], 42)
-        self.assertEqual(dump[1]["cell_mv"], 3800)
+        self.assertEqual(dump[1]["valid"], False)
+        self.assertEqual((dump[2]["cell_mv"], dump[2]["battery_valid"], dump[2]["power_level"]),
+                         (3800, True, "LOW"))
         self.assertTrue(all(frame["command"] == "diagnostics" for frame in dump))
 
     def test_a_settings_change_after_the_first_reply_reaches_the_unit_in_its_own_words(self):
@@ -176,11 +182,26 @@ def sections():
 
 
 class Table(unittest.TestCase):
+    def test_the_dumps_valid_is_the_battery_in_the_power_group_and_the_fix_in_the_gnss_group(self):
+        power = {"cmd": "diag", "group": "power", "valid": True, "level": "LOW"}
+        gnss = {"cmd": "diag", "group": "gnss", "valid": True}
+        self.assertEqual(legacy_dialect.current(legacy_dialect.LINK, power),
+                         {"command": "diagnostics", "group": "power", "battery_valid": True,
+                          "power_level": "LOW"})
+        self.assertEqual(legacy_dialect.current(legacy_dialect.LINK, gnss),
+                         {"command": "diagnostics", "group": "gnss", "valid": True})
+        self.assertEqual(legacy_dialect.legacy(legacy_dialect.LINK,
+                                               legacy_dialect.current(legacy_dialect.LINK, power)),
+                         power)
+
     def test_no_current_key_is_a_legacy_key_of_the_same_frame_so_reading_twice_changes_nothing(self):
         for name, section in sections():
-            for entry in section["frames"]:
-                keys = {**section.get("keys", {}), **entry.get("keys", {})}
-                self.assertFalse(set(keys) & set(keys.values()), (name, entry["when"]))
+            for selected in {value for entry in section["frames"] for value in entry["when"]}:
+                keys = dict(section.get("keys", {}))
+                for entry in section["frames"]:
+                    if selected in entry["when"]:
+                        keys.update(entry.get("keys", {}))
+                self.assertFalse(set(keys) & set(keys.values()), (name, selected))
 
     def test_every_legacy_frame_reads_and_writes_back_to_itself(self):
         legacy_select = {"link": "cmd", "records": "type"}
@@ -191,6 +212,7 @@ class Table(unittest.TestCase):
                     old_selected = next((old for old, new in values.items() if new == selected),
                                         selected)
                     frame = {legacy_select[name]: old_selected}
+                    frame.update({key: held[0] for key, held in entry.get("where", {}).items()})
                     frame.update({old: 1 for old in entry.get("keys", {})})
                     for key, spellings in entry.get("values", {}).items():
                         old_key = next((old for old, new in entry.get("keys", {}).items()
@@ -205,7 +227,7 @@ class Table(unittest.TestCase):
         renamed = {}
         for entry in legacy_dialect.RECORDS["frames"]:
             for type_name in entry["when"]:
-                renamed[type_name] = set(entry.get("keys", {}))
+                renamed.setdefault(type_name, set()).update(entry.get("keys", {}))
         legacy_types = set(legacy_dialect.RECORDS["values"]["type"])
         decoders = [(name, fields) for name, fields in records.DIAGNOSTICS_TYPES.values()]
         decoders.append(("fix", records.FLIGHT_FIELDS))

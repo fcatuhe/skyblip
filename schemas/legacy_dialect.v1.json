@@ -1,5 +1,5 @@
 {
-  "description": "The one table between the dialect firmware before #151 spoke and the one it speaks since, read as data by every client (scripts/blip_records.py, the server's pages) and copied nowhere by hand: the server's pages load server/app/javascript/skyblip/legacy_dialect_table.js, which bin/rails legacy_dialect:generate writes from this file and a server test holds to it. Three sections: 'link' for the companion link's JSON frames, both endpoints, both directions, 'records' for the decoded flight-log and diagnostics records an NDJSON capture holds, and 'simulator' for the members of the object the simulator's firmware/simulator/web/embed.js load() returns, which the server loads from every release that carries one. 'link' and 'records' have the same shape. 'keys' renames a key, legacy name to current name, in every frame. 'values' maps a current key name to {legacy value: current value}, in every frame. 'select' names the key that tells frames apart, read after 'keys' and 'values' are applied, so it is always the current spelling. 'frames' is a list of {when, keys, values}: 'when' lists the values of 'select' the entry applies to, and its 'keys' and 'values' work like the section's own, for those frames only. To read a legacy frame: rename the section's keys, translate the section's values, then find the entry whose 'when' holds the frame's 'select' value and apply its keys and values. To write one: the same steps reversed, the entry first and the section last. Reading is idempotent, since no current key is a legacy key of the same frame, so a reader may normalise every frame and every NDJSON line without knowing its age. Writing needs the unit's dialect: 'link.detect' lists the keys only a legacy frame carries and the keys only a current frame carries, and every frame a unit sends carries one of them, so the first frame received decides. A client that speaks before the unit has (blip.py's every command, the server's first 'get') sends its frame in both dialects at once, the current keys and values beside the legacy ones: each firmware reads its own keys and ignores the rest. 'simulator' has 'keys' only, legacy member name to current one: a reader gives an older release's object its current names beside the ones it has.",
+  "description": "The one table between the dialect firmware before #151 spoke and the one it speaks since, read as data by every client (scripts/blip_records.py, the server's pages) and copied nowhere by hand: the server's pages load server/app/javascript/skyblip/legacy_dialect_table.js, which bin/rails legacy_dialect:generate writes from this file and a server test holds to it. Three sections: 'link' for the companion link's JSON frames, both endpoints, both directions, 'records' for the decoded flight-log and diagnostics records an NDJSON capture holds, and 'simulator' for the members of the object the simulator's firmware/simulator/web/embed.js load() returns, which the server loads from every release that carries one. 'link' and 'records' have the same shape. 'keys' renames a key, legacy name to current name, in every frame. 'values' maps a current key name to {legacy value: current value}, in every frame. 'select' names the key that tells frames apart, read after 'keys' and 'values' are applied, so it is always the current spelling. 'frames' is a list of {when, where, keys, values}: 'when' lists the values of 'select' the entry applies to, the optional 'where' maps another key to the values it must hold too (the diagnostics dump's 'valid' is the battery's only in its power group), and its 'keys' and 'values' work like the section's own, for those frames only. To read a legacy frame: rename the section's keys, translate the section's values, then apply every entry that applies, in the table's order, each tested on the frame as read so far. To write one: the same steps reversed, the entries that apply to the current frame first, last entry first, and the section last. Reading is idempotent, since no current key is a legacy key of the same frame, so a reader may normalise every frame and every NDJSON line without knowing its age. Writing needs the unit's dialect: 'link.detect' lists the keys only a legacy frame carries and the keys only a current frame carries, and every frame a unit sends carries one of them, so the first frame received decides. A client that speaks before the unit has (blip.py's every command, the server's first 'get') sends its frame in both dialects at once, the current keys and values beside the legacy ones: each firmware reads its own keys and ignores the rest. 'simulator' has 'keys' only, legacy member name to current one: a reader gives an older release's object its current names beside the ones it has.",
   "link": {
     "detect": {
       "legacy": ["cmd", "ack"],
@@ -58,6 +58,11 @@
         }
       },
       {
+        "when": ["diagnostics"],
+        "where": {"group": ["power"]},
+        "keys": {"level": "power_level", "valid": "battery_valid"}
+      },
+      {
         "when": ["chunk"],
         "keys": {"n": "records", "eof": "ends_session"}
       }
@@ -83,7 +88,7 @@
         }
       },
       {
-        "when": ["status"],
+        "when": ["status", "power"],
         "keys": {"level": "power_level", "valid": "battery_valid"}
       },
       {

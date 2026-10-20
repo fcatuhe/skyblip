@@ -68,7 +68,7 @@ Diagnostics busy_device() {
     diagnostics.battery.percent = 64;
     diagnostics.battery.valid = true;
     diagnostics.battery.charging = false;
-    diagnostics.level = power::PowerLevel::Normal;
+    diagnostics.power_level = power::PowerLevel::Normal;
     diagnostics.supply_warnings = 1;
     diagnostics.battery_implausible = 2;
     diagnostics.die_dc = 415;
@@ -123,7 +123,7 @@ Diagnostics widest_device() {
     diagnostics.residual_valid = true;
     diagnostics.battery.cell_mv = 65535;
     diagnostics.battery.percent = 255;
-    diagnostics.level = power::PowerLevel::Critical;  // "CRITICAL"
+    diagnostics.power_level = power::PowerLevel::Critical;  // "CRITICAL"
     diagnostics.supply_warnings = 0xFFFFFFFFu;
     diagnostics.battery_implausible = 0xFFFFFFFFu;
     diagnostics.die_dc = -1250;
@@ -194,10 +194,10 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "
               "solution_phase_ms=98 overruns=0 identified=true "
               "firmware=\"URANUS5,V5.1.0.0\" reject=\"STALE\" rejected=6 residual_m=13\n"));
-    CHECK(has(
-        text,
-        "power cell_mv=3812 percent=64 valid=true charging=false level=\"OK\" supply_warnings=1 "
-        "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
+    CHECK(has(text,
+              "power cell_mv=3812 percent=64 battery_valid=true charging=false power_level=\"OK\" "
+              "supply_warnings=1 "
+              "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
 
     DiagnosticsReport report(busy_device(), "diagnostics");
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);

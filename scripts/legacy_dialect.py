@@ -20,25 +20,23 @@ RECORDS = TABLE["records"]
 
 def current(section, frame):
     out = translated(frame, section.get("keys", {}), section.get("values", {}))
-    entry = entry_for(section, out.get(section["select"]))
-    if entry is None:
-        return out
-    return translated(out, entry.get("keys", {}), entry.get("values", {}))
+    for entry in section.get("frames", ()):
+        if applies(section, entry, out):
+            out = translated(out, entry.get("keys", {}), entry.get("values", {}))
+    return out
 
 
 def legacy(section, frame):
     out = dict(frame)
-    entry = entry_for(section, out.get(section["select"]))
-    if entry is not None:
+    for entry in reversed([entry for entry in section.get("frames", ())
+                           if applies(section, entry, frame)]):
         out = reversed_translation(out, entry.get("keys", {}), entry.get("values", {}))
     return reversed_translation(out, section.get("keys", {}), section.get("values", {}))
 
 
-def entry_for(section, selected):
-    for entry in section.get("frames", ()):
-        if selected in entry["when"]:
-            return entry
-    return None
+def applies(section, entry, frame):
+    return (frame.get(section["select"]) in entry["when"]
+            and all(frame.get(key) in values for key, values in entry.get("where", {}).items()))
 
 
 def translated(frame, keys, values):

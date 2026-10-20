@@ -204,11 +204,11 @@ TEST_CASE("diagnostics record: power keeps the cell, the verdict on it and the w
     in.die_dc = -206;
     in.sample_offset_mv = -128;
     in.percent = 64;
-    in.level = power::PowerLevel::Critical;
+    in.power_level = power::PowerLevel::Critical;
     in.charge = power::ChargeCondition::TooHot;
     in.charging = true;
     in.external_power = true;
-    in.valid = true;
+    in.battery_valid = true;
     in.die_valid = true;
 
     const diagnostics::Power out = diagnostics_round_trip(in);
@@ -219,11 +219,11 @@ TEST_CASE("diagnostics record: power keeps the cell, the verdict on it and the w
     CHECK(out.die_dc == in.die_dc);
     CHECK(out.sample_offset_mv == in.sample_offset_mv);
     CHECK(out.percent == in.percent);
-    CHECK(out.level == in.level);
+    CHECK(out.power_level == in.power_level);
     CHECK(out.charge == in.charge);
     CHECK(out.charging);
     CHECK(out.external_power);
-    CHECK(out.valid);
+    CHECK(out.battery_valid);
     CHECK(out.die_valid);
 }
 
@@ -232,10 +232,10 @@ TEST_CASE(
     "clear") {
     diagnostics::Power in{};
     in.cell_mv = 3550;
-    in.level = power::PowerLevel::Low;
+    in.power_level = power::PowerLevel::Low;
 
     CHECK((diagnostics::record_of(in, diagnostics_test_instant()).flags & (1u << 6)) == 0);
-    CHECK(diagnostics_round_trip(in).level == power::PowerLevel::Low);
+    CHECK(diagnostics_round_trip(in).power_level == power::PowerLevel::Low);
 }
 
 TEST_CASE("diagnostics record: the retired trim bit and bytes are written clear and never reused") {

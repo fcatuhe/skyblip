@@ -84,7 +84,7 @@ struct Diagnostics {
     uint32_t link_drops{0};
     uint32_t range_refused{0};
     power::BatteryState battery{};
-    power::PowerLevel level{power::PowerLevel::Unknown};
+    power::PowerLevel power_level{power::PowerLevel::Unknown};
     int16_t die_dc{0};
     bool die_valid{false};
 };
