@@ -50,11 +50,17 @@ The packet layout follows OGN's `adsl.h` and the ALP-TAS frame follows SoftRF's 
 | `source_integrity`, `design_assurance`, `navigation_integrity` | `SourceIntegrity`, `DesignAssurance`, `NavigIntegrity` |
 | `horizontal_accuracy`, `vertical_accuracy`, `velocity_accuracy`, `reserved` | `HorizAccuracy`, `VertAccuracy`, `VelAccuracy`, `Reserved` |
 | `crc_bytes`, `spare`, `reset()` | `CRC`, `SpareByte`, `init()` |
-| `get_uint24`/`put_uint24`, `get_uint32`/`put_uint32` (`core/util/little_endian.h`) | `get3`/`set3`, `get4`/`set4` |
-| `encode_unsigned_variable_range`, `encode_signed_variable_range` (`core/util/variable_range.h`) | UnsVR, SignVR |
-| `telemetry_type()`, `information_type()`, `information_text()` | `TelemType`, `InfoType`, `info_text()` |
-| ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `MsgType`, `Needs3`, `Has3`, `vs` |
-| ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `GpsA`, `GpsB`, `unk8` |
-| ALP-TAS `block_tea`, `encode_scaled`, `decode_scaled` | `btea`, `enscale`, `descale` |
-| `block_tea` and `scramble` locals `next`, `previous`, `index`, `key_index` | XXTEA's `y`, `z`, `p`, `e` |
-| `civil_from_epoch` locals `days_since_march_epoch`, `day_of_era`, `year_of_era`, `day_of_year`, `march_month` | Hinnant's `z`, `doe`, `yoe`, `doy`, `mp` |
+| `kPayloadTypePosition`, `kPayloadTypeOgnDiagnostics` | `kTypePosition`, `kTypeOgnDiagnostics` |
+| `telemetry_type()`, `information_type()`, `set_information_header()`, `information_text()` | `telem_type()`, `info_type()`, `set_info_header()`, `info_msg()` |
+| `kTelemetryTypeInformation`, `kInformationTypeRegistration` | `kTelemTypeInfo`, `kInfoTypeRegistration` |
+| `kInformationHeaderOffset`, `kInformationTextOffset`, `kInformationTextBytes` | `kInfoHeaderByte`, `kInfoMsgByte`, `kInfoMsgBytes` |
+| `get_uint24`/`put_uint24`, `get_uint32`/`put_uint32` (`core/util/little_endian.h`) | `AdslPacket::get3`/`set3`, `get4`/`set4` |
+| `encode_unsigned_variable_range`, `decode_unsigned_variable_range`, `encode_signed_variable_range`, `decode_signed_variable_range` (`core/util/variable_range.h`) | `uns_vr_encode`, `uns_vr_decode`, `sign_vr_encode`, `sign_vr_decode` (`core/util/varint.h`) |
+| ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `kFMsgType`, `kFNeeds3`, `kFHas3`, `kFVs` |
+| ALP-TAS `kAltitudeField`, `kLatitudeField`, `kLongitudeField` | `kFAlt`, `kFLat`, `kFLon` |
+| ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `kFGpsA`, `kFGpsB`, `kFUnk8` |
+| ALP-TAS every other `k<Name>Field`, such as `kAddressField` | `kF<Name>`, such as `kFAddress` |
+| ALP-TAS `block_tea`, `block_tea_mix`, `kBlockTeaRounds`, `kBlockTeaKey` | `btea4`, `btea_mix`, `kBteaRounds`, `kBteaKey` |
+| ALP-TAS `encode_scaled`, `decode_scaled`, `longitude_divisor` | `enscale`, `descale`, `londiv` |
+| `block_tea` and `scramble` locals `next`, `previous`, `index`, `key_index`, `round`, `mixed`, `count` | XXTEA's `y`, `z`, `p`, `e`, `r` and `q`, `x`, `n` |
+| `civil_from_epoch` locals `days_since_march_epoch`, `day_of_era`, `year_of_era`, `march_year`, `day_of_year`, `march_month` | Hinnant's `z`, `doe`, `yoe`, `y`, `doy`, `mp` |
