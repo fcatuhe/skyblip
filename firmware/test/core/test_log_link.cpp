@@ -324,8 +324,7 @@ TEST_CASE("log link: a diagnostics chunk pays for its name out of the records it
     }
 }
 
-// The chunking and the resumable offload are the flights store's and shared as they
-// stand: a diagnostics record that stopped being 24 bytes would silently break every chunk.
+// The stores share the flights chunking, so a diagnostics record not 24 bytes breaks every chunk.
 TEST_CASE("log link: a diagnostics record is the same 24 bytes a chunk is cut for") {
     CHECK(diagnostics::kRecordBytes == flight::kLogRecordBytes);
 }

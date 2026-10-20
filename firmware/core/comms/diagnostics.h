@@ -113,8 +113,7 @@ class DiagnosticsReport {
     // buffer the caller lends.
     static constexpr int kFrameBytes = 384;
 
-    // command is the one the reply answers under, because the link already has a
-    // question that asks for the radio group alone.
+    // INFO: fc 20oct26 command is what the reply answers under: radio asks for one group
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command);
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command, Group only);
 
@@ -125,9 +124,7 @@ class DiagnosticsReport {
     // in half is a counter misread, so it is refused instead.
     int line(int index, char* out, int capacity) const;
 
-    // The link surface: as many complete flat maps as the negotiated payload
-    // needs, each carrying "command", "group", "part" and "more". A frame never mixes
-    // two subsystems, so a reader that only wants one can stop at its group.
+    // INFO: fc 20oct26 whole maps with command, group, part and more, never two groups in one
     bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
     int next_frame(int payload_bytes, uint8_t* out, int capacity);

@@ -54,9 +54,7 @@ struct Settings {
     // it. Placed here rather than at the end because a signed 16-bit value after
     // the 32-bit address costs no padding, so the blob is the same length it was.
     //
-    // The "config" reply does not carry it back: it is written on the line and read back as
-    // the millivolts the status reply and the panel already show, which is the figure the line
-    // is comparing against a bench supply anyway.
+    // INFO: fc 20oct26 set-only: read back as the millivolts the status reply and the panel show
     int16_t battery_offset_mv{0};
     // The radio's frequency trim in tenths of a ppm, positive upwards, applied
     // to every dwell the radio arms (hardware/parts/sx1262). Beside
@@ -64,11 +62,7 @@ struct Settings {
     // padding, and because they are the same kind of field: a per-unit
     // correction set on a bench, not a pilot's setting.
     //
-    // Like battery_offset_mv it is accepted on "set" and absent from the "get"
-    // reply. Unlike the battery trim there is nothing on the device that reads
-    // the value back, so a bench that sets it has to trust its own record and its
-    // spectrum analyser - which is the instrument that had to be there to know the
-    // number in the first place.
+    // INFO: fc 20oct26 set-only and never read back: the bench's spectrum analyser is the record
     int16_t frequency_trim_e1_ppm{0};
     // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
@@ -95,8 +89,7 @@ size_t blob_size();
 void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
-// INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
-// companion link's "config" reply can tag them and stay one flat map.
+// INFO: fc 04aug26 the fields alone, into the caller's writer, so the config reply is one map
 void write_config_fields(cbor::Writer& writer, const Settings& settings,
                          settings::AirAddress address);
 

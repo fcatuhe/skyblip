@@ -310,9 +310,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     acknowledge(false, link::Reason::UnknownCommand);
 }
 
-// INFO: fc 04aug26 Sized at the smallest payload we support and refused rather
-// than answered short: an app that receives a config object with fields missing
-// renders defaults a pilot never set.
+// INFO: fc 04aug26 refused, never answered short: a config reply missing a field renders defaults
 void ConfigService::send_config() {
     uint8_t frame[kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
@@ -331,9 +329,7 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }
-    // Refused at the door and not after the button press: a prompt a pilot
-    // walks over and confirms, for a write that was never going to happen,
-    // is worse than a refusal they can read on the phone in their hand.
+    // INFO: fc 20oct26 refused at the door: a pilot must never confirm a write that cannot happen
     if (!settings_writable()) {
         acknowledge(false, link::Reason::LowPower);
         return;

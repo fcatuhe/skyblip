@@ -290,9 +290,7 @@ TEST_CASE("settings: the config reply offers nothing the firmware does not read"
     // six-pack graduates its dials in km/h, metres and m/s or in kt, ft and
     // fpm, and there is nowhere else a value appears exactly once.
     CHECK(json.find("units") != std::string::npos);
-    // The one exception, and it goes the other way: the firmware reads
-    // battery_offset_mv and the reply does not offer it. It is written on the line
-    // and read back as the millivolts the status reply and the panel already show.
+    // The exception the other way: the firmware reads battery_offset_mv, the reply omits it.
     CHECK(json.find("battery_offset_mv") == std::string::npos);
     const char* metric = "{\"units\":1}";
     CHECK(apply_patch(settings, metric) == Status::Ok);

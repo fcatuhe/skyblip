@@ -77,8 +77,7 @@ Diagnostics busy_device() {
     return diagnostics;
 }
 
-// Every field at the widest it can be: every counter at the widest value the dump
-// can carry, and the longest word every string field can hold.
+// Every counter at the widest value the dump carries, every string at the longest it can hold.
 Diagnostics widest_device() {
     Diagnostics diagnostics{};
     diagnostics.refreshes = 0xFFFFFFFFu;
@@ -457,9 +456,7 @@ TEST_CASE("diagnostics: a counter is never printed negative, on any platform") {
     CHECK(has(frames(diagnostics, 182).joined, "\"noise_dbm\":-105"));
 }
 
-// A dump is a witness. A witness that consumes its evidence makes the second
-// reader wrong, which is why every read in the collector is a const accessor and
-// why two reports of the same snapshot are the same bytes.
+// A dump is a witness: one that consumed its evidence would make the second reader wrong.
 TEST_CASE("diagnostics: reading the dump neither clears nor changes anything") {
     const Diagnostics diagnostics = busy_device();
     const std::string first = console(diagnostics);

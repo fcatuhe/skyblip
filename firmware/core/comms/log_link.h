@@ -64,15 +64,12 @@ constexpr int kLogReplyBytes = 512;
 // each record against the same checksum the flash holds - the transfer is checked
 // end to end rather than hop by hop.
 //
-// INFO: fc 04aug26 How many of them ride in one chunk is derived from the
-// negotiated payload, not fixed: nineteen is the ceiling because that is what a
-// 498-byte ATT_MTU reaches, one byte string of 24-byte records behind the envelope.
+// INFO: fc 04aug26 records per chunk follow the payload, nineteen being what ATT_MTU 498 reaches
 constexpr int kMaxLogRecordsPerChunk = 19;
 constexpr int kLogChunkRawBytes =
     kMaxLogRecordsPerChunk * static_cast<int>(flight::kLogRecordBytes);
 
-// The chunk envelope at its widest: the map, the command, the longest session id
-// and record index the partition can produce, the end flag and the records' key.
+// INFO: fc 20oct26 the widest chunk envelope, measured in README.md's How wide the frames are
 constexpr int kLogChunkEnvelopeBytes = 18;
 
 // INFO: fc 20sep26 the log key and the diagnostics code, the only store spelled on the wire

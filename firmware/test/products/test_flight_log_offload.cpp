@@ -233,8 +233,7 @@ TEST_CASE(
     CHECK(small.most_records_in_a_chunk == 6);
     CHECK(small.chunks == static_cast<int>((written + 5) / 6));
 
-    // The same flight over a link that negotiated the whole L2CAP MTU: the same
-    // records, three times as many per frame, a third of the round trips.
+    // At the whole L2CAP MTU: three times the records per frame, a third of the round trips.
     rig.platform.link().declare_payload_bytes(495);
     const Offload large = offload(rig, now_ms, session);
     CHECK(large.ends_session);

@@ -248,8 +248,7 @@ int DiagnosticsReport::line(int index, char* out, int capacity) const {
     int need = cbor::text_bytes(group_name(group));
     while (end < count_ && fields_[end].group == group) {
         const Field& field = fields_[end];
-        // " key=" plus the value, which is quoted when it is text so a reset
-        // reason with a space in it stays one field on a line.
+        // INFO: fc 20oct26 " key=" and the value, text quoted: a reason with a space is one field
         need += 2 + cbor::text_bytes(field.name);
         switch (field.kind) {
             case Kind::Unsigned:

@@ -270,8 +270,7 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     CHECK(body.find("\"refused\":1") != std::string::npos);
     // Nothing listens before talking, so there is no threshold to report.
     CHECK(body.find("carrier_sense") == std::string::npos);
-    // Every frame is a complete map of its own, and no frame is longer than
-    // the link said it would carry.
+    // Every frame a whole map, none longer than the link said it would carry.
     for (const platform::host::Link::Frame& frame : link.sent) {
         CHECK_FALSE(link_text(frame.bytes).empty());
         CHECK(frame.bytes.size() <= link.payload_bytes());
@@ -391,8 +390,7 @@ TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
     CHECK(config.diagnostics().range_refused == 7);
 }
 
-// M. The other 32-bit boundary in this section, and it is not the clock: a count a
-// laboratory reads goes out as an unsigned integer on every platform.
+// M. The other 32-bit boundary here: a count a laboratory reads is unsigned on every platform.
 TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     platform::host::Link link;
     link.raise_link(1);
