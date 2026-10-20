@@ -22,7 +22,6 @@ import sys
 import time
 
 import blip_records as records
-import legacy_dialect
 
 NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -127,9 +126,8 @@ async def run_stream(args):
 
 
 async def run_command(args):
-    body = legacy_dialect.current(legacy_dialect.LINK, json.loads(args.json))
     async with await connect(args, config=True) as link:
-        for delay, text in await link.command(body, args.timeout):
+        for delay, text in await link.command(json.loads(args.json), args.timeout):
             print("%7.1f ms  %s" % (delay * 1000, text))
     return 0
 
@@ -404,7 +402,6 @@ class Link:
         self.frames = asyncio.Queue()
         self.notifications = []
         self.assembler = LineAssembler()
-        self.dialect = legacy_dialect.Dialect()
 
     @property
     def address(self):
@@ -435,21 +432,10 @@ class Link:
             self.lines.put_nowait((at, line))
 
     def on_config(self, _, data):
-        self.replies.put_nowait((time.monotonic(), self.received(bytes(data))))
+        self.replies.put_nowait((time.monotonic(), bytes(data).decode(errors="replace")))
 
     def on_log(self, _, data):
-        self.frames.put_nowait(self.received(bytes(data)))
-
-    def received(self, data):
-        """A frame as text in today's names, or as it came when it is not a JSON object."""
-        text = data.decode(errors="replace")
-        try:
-            frame = json.loads(text)
-        except json.JSONDecodeError:
-            return text
-        if not isinstance(frame, dict):
-            return text
-        return json.dumps(self.dialect.receive(frame), separators=(",", ":"))
+        self.frames.put_nowait(bytes(data).decode(errors="replace"))
 
     async def command(self, body, timeout):
         """Every frame of one config reply, ended by its own more flag and not by a count."""
@@ -466,7 +452,7 @@ class Link:
         await self.client.write_gatt_char(LOG_CHAR, self.encoded(body), response=True)
 
     def encoded(self, body):
-        return json.dumps(self.dialect.send(body), separators=(",", ":")).encode()
+        return json.dumps(body, separators=(",", ":")).encode()
 
     async def frame(self, timeout):
         try:

@@ -12,8 +12,6 @@ import base64
 import datetime
 import json
 
-import legacy_dialect
-
 RECORD_BYTES = 24
 PAYLOAD_OFFSET = 8
 STORES = ("flights", "diagnostics")
@@ -427,11 +425,10 @@ class SessionSink:
 
 
 def read_ndjson(path):
-    """Every line in today's names, whichever blip.py fetched it."""
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             if line.strip():
-                yield legacy_dialect.current(legacy_dialect.RECORDS, json.loads(line))
+                yield json.loads(line)
 
 
 def resume_point(path):

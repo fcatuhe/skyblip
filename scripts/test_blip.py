@@ -9,8 +9,7 @@ Those two files and these tables are the same layout written twice, once on each
 side of a Bluetooth link, and nothing but a test holds them together.
 
 test_blip_offload.py holds the log endpoint conversation, test_blip_link.py the NMEA
-reassembly, reply framing and resume, test_legacy_dialect.py the old units' dialect, and all
-three run with this file.
+reassembly, reply framing and resume, and both run with this file.
 """
 import base64
 import json
@@ -551,10 +550,9 @@ class Summaries(unittest.TestCase):
 
 
 def load_tests(loader, tests, pattern):
-    """CI runs this file by name, so it loads the offload, link and dialect suites as well."""
+    """CI runs this file by name, so it loads the offload and link suites as well."""
     tests.addTests(loader.loadTestsFromName("test_blip_offload"))
     tests.addTests(loader.loadTestsFromName("test_blip_link"))
-    tests.addTests(loader.loadTestsFromName("test_legacy_dialect"))
     return tests
 
 

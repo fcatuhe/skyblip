@@ -6,7 +6,6 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
-| [`legacy_dialect.py`](legacy_dialect.py) | the reader of `schemas/legacy_dialect.v1.json`: the words units before #151 speak, and the names captures fetched before it carry |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
@@ -16,7 +15,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
-| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_legacy_dialect.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
 
@@ -179,12 +178,6 @@ for record in records.read_ndjson("capture.ndjson"):
     ...
 ```
 
-## Units before #151
-
-Firmware before #151 spoke the same link in shorter words: `cmd` and `ack`, `diag`, `eof`, `n`, `nav_ms`, and a dozen more. Units in the field keep speaking it until they update, and captures fetched before it keep their names. [`schemas/legacy_dialect.v1.json`](../schemas/legacy_dialect.v1.json) is the one table between the two, and `legacy_dialect.py` reads it as data, so neither `blip.py` nor an analysis script spells an old word anywhere else.
-
-`blip.py` writes and reads today's names. Every frame it receives is read through the table, which is a no-op on a frame already in today's names, and the first one decides which dialect the unit speaks: a frame carrying `cmd` or `ack` is an old unit. Until a unit has answered once, a frame goes out in both dialects at once, `{"command":"diagnostics","cmd":"diag"}`, and each firmware reads its own keys and ignores the others; from then on it goes out in the unit's own. `command` accepts either dialect on its command line. `read_ndjson()` reads every line through the same table, so `scripts/bench/` reads the captures under `docs/bench/data/` as they were recorded.
-
 ## Tests
 
 ```
@@ -194,4 +187,4 @@ python3 scripts/test_power_budget.py
 python3 scripts/test_link_budget.py
 ```
 
-No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, `test_blip_offload.py`, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued, and `test_legacy_dialect.py`, which holds the table to its own rules and runs the link against a fake unit of each age.
+No radio, no network, no sleeps, stdlib only. `test_blip.py` covers the decoders against handcrafted bytes and against vectors the firmware's own encoders produced, and the chunk framing. It also checks the tables against the schema: a type name or a field name that drifts fails there. It loads `test_blip_link.py` with it, which covers the NMEA checksum and line reassembly, the reply framing and the resume logic, and `test_blip_offload.py`, which answers a `read` the way `log_link.cpp` does and fails a host that waits for a frame the device never sent or sends a command while a reply to the last one is still queued.
