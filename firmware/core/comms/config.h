@@ -252,8 +252,10 @@ class ConfigService {
    private:
     Status reply(const uint8_t* frame, int bytes);
     Status reply_to(uint16_t session_id, const uint8_t* frame, int bytes);
+    Status deliver(uint16_t session_id, const uint8_t* frame, int bytes);
     Status broadcast(const uint8_t* frame, int bytes);
     void refuse_unclaimed(uint16_t session_id);
+    void refuse_too_wide();
     void note_connected(uint16_t session_id);
     void note_disconnected(uint16_t session_id);
     bool connected(uint16_t session_id) const;
@@ -281,7 +283,9 @@ class ConfigService {
     // more keys on "status": that reply is the one this service PUSHES
     // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
-    void send_update(uint16_t session_id);
+    void send_update();
+    void push_update(uint16_t session_id);
+    int format_update(uint8_t* out, int capacity);
     // And the whole dump, which is the same table as the console's: one frame per
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).

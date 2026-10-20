@@ -77,7 +77,6 @@ enum class Reason : uint8_t {
     NoStorage = 36,
     Busy = 37,
     FlightsOnly = 38,
-    Payload = 39,
     ReadFailed = 40,
     Erased = 41,
 };

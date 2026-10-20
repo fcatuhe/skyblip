@@ -101,12 +101,21 @@ int RecordPool::payload_bytes(uint16_t link_session) const {
     return static_cast<int>(context_.roles.link.payload_bytes_to(link_session));
 }
 
-int RecordPool::reply_capacity(uint16_t link_session) const {
-    const int room = payload_bytes(link_session) + 1;
-    return room < comms::kLogReplyBytes ? room : comms::kLogReplyBytes;
+bool RecordPool::send(uint16_t link_session, int bytes, comms::LogStore store) {
+    if (bytes > payload_bytes(link_session) && !holding()) {
+        link_drops_++;
+        refuse_too_wide(link_session, store);
+        return false;
+    }
+    return deliver(link_session, bytes);
 }
 
-bool RecordPool::send(uint16_t link_session, int bytes) {
+void RecordPool::refuse_too_wide(uint16_t link_session, comms::LogStore store) {
+    (void)deliver(link_session, comms::format_log_acknowledgement(reply_, reply_capacity(), false,
+                                                                  link::Reason::SmallMtu, store));
+}
+
+bool RecordPool::deliver(uint16_t link_session, int bytes) {
     if (bytes <= 0 || bytes > payload_bytes(link_session) || holding()) {
         link_drops_++;
         return false;

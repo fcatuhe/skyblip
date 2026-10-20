@@ -95,7 +95,7 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
         return;
     }
     if (payload_bytes_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
-        refuse(link::Reason::SmallMtu);
+        refuse_too_wide();
         return;
     }
     identity::Nonce server_nonce{};

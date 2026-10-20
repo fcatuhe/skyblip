@@ -119,13 +119,32 @@ void ConfigService::send_radio() {
                  link::Command::Radio, DiagnosticsReport::Group::Radio);
 }
 
-void ConfigService::send_update(uint16_t session_id) {
+void ConfigService::send_update() {
+    uint8_t frame[kSmallestSupportedPayloadBytes];
+    const int bytes = format_update(frame, static_cast<int>(sizeof(frame)));
+    if (bytes == 0) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(frame, bytes);
+}
+
+void ConfigService::push_update(uint16_t session_id) {
+    uint8_t frame[kSmallestSupportedPayloadBytes];
+    const int bytes = format_update(frame, static_cast<int>(sizeof(frame)));
+    if (bytes == 0) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)deliver(session_id, frame, bytes);
+}
+
+int ConfigService::format_update(uint8_t* out, int capacity) {
     char from[dfu::kVersionTextBytes];
     char to[dfu::kVersionTextBytes];
     dfu::format_version(update_record_.from, from, sizeof(from));
     dfu::format_version(update_record_.to, to, sizeof(to));
-    uint8_t frame[kSmallestSupportedPayloadBytes];
-    cbor::Writer writer(frame, sizeof(frame));
+    cbor::Writer writer(out, capacity);
     writer.add_code(link::kCommandKey, link::Command::Update);
     writer.add_code(link::update_key::kImage, image_state_);
     if (image_state_ != dfu::ImageState::Confirmed) {
@@ -145,12 +164,7 @@ void ConfigService::send_update(uint16_t session_id) {
     if (dfu_ != nullptr && dfu_->running_key(trusted))
         writer.add_bytes(link::update_key::kKey,
                          ConstByteSpan(trusted.data(), link::update_bytes::kKey));
-    const int bytes = writer.finish();
-    if (bytes == 0) {
-        diagnostics_.link_drops++;
-        return;
-    }
-    (void)reply_to(session_id, frame, bytes);
+    return writer.finish();
 }
 
 // A whole dump nobody has collected is a dump of zeros, and zeros here read as a
@@ -177,6 +191,7 @@ void ConfigService::start_report(std::optional<Report>& report, int frame_bytes,
     if (!report.emplace(arguments...).fits(report_payload_bytes_)) {
         diagnostics_.link_drops++;
         report.reset();
+        refuse_too_wide();
         return;
     }
     continue_report(report);

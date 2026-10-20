@@ -12,6 +12,9 @@ namespace skyblip::comms {
 
 namespace {
 constexpr int kAcknowledgementFrameBytes = 16;
+static_assert(
+    kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
+    "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
 link::Reason settings_refusal(Status status) {
     return status == Status::OutOfRange ? link::Reason::OutOfRange : link::Reason::Invalid;
@@ -80,7 +83,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
     note_connected(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
-        send_update(event.session_id);
+        push_update(event.session_id);
 }
 
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
@@ -141,8 +144,14 @@ Status ConfigService::broadcast(const uint8_t* frame, int bytes) {
     return sent;
 }
 
-// INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
 Status ConfigService::reply_to(uint16_t session_id, const uint8_t* frame, int bytes) {
+    const Status sent = deliver(session_id, frame, bytes);
+    if (sent == Status::OutOfRange && bytes > 0 && claim_.holds(session_id)) refuse_too_wide();
+    return sent;
+}
+
+// INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
+Status ConfigService::deliver(uint16_t session_id, const uint8_t* frame, int bytes) {
     if (bytes <= 0 || bytes > payload_bytes_to(session_id) || held_bytes_ > 0) {
         diagnostics_.link_drops++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
@@ -182,6 +191,8 @@ void ConfigService::refuse_unclaimed(uint16_t session_id) {
     writer.add_unsigned(link::acknowledgement_key::kBy, claim_.holder());
     (void)reply_to(session_id, frame, writer.finish());
 }
+
+void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
 
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;
@@ -284,7 +295,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Timing: send_timing(); return;
         case link::Command::Flash: send_flash(); return;
         case link::Command::Radio: send_radio(); return;
-        case link::Command::Update: send_update(claim_.holder()); return;
+        case link::Command::Update: send_update(); return;
         case link::Command::Diagnostics: send_diagnostics(); return;
         case link::Command::Set: stage_settings(frame); return;
         case link::Command::Dfu:

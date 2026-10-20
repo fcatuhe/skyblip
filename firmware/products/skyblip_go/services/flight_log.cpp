@@ -121,10 +121,10 @@ bool FlightLogService::on_ground() const {
 
 void FlightLogService::acknowledge(comms::LogStore store, bool ok, link::Reason reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(
-        reply_link_session_,
-        comms::format_log_acknowledgement(
-            pool.reply_buffer(), pool.reply_capacity(reply_link_session_), ok, reason, store));
+    pool.send(reply_link_session_,
+              comms::format_log_acknowledgement(pool.reply_buffer(), pool.reply_capacity(), ok,
+                                                reason, store),
+              store);
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {

@@ -13,7 +13,7 @@
     "serial": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Assigned densely by the server, from 1: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
 
     "challenge": {
-      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'keyless' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground",
+      "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'keyless' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground. A link that cannot carry the challenge reply, 27 bytes, is answered 'small_mtu' instead",
       "type": "object", "required": ["command"], "additionalProperties": false,
       "properties": {"command": {"const": "challenge"}}
     },

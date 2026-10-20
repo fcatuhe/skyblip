@@ -288,7 +288,6 @@
         {"name": "no_storage", "code": 36},
         {"name": "busy", "code": 37},
         {"name": "flights_only", "code": 38},
-        {"name": "payload", "code": 39},
         {"name": "read_failed", "code": 40},
         {"name": "erased", "code": 41}
       ]

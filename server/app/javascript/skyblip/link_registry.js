@@ -1642,10 +1642,6 @@ export const LINK_REGISTRY = Object.freeze({
           "code": 38
         },
         {
-          "name": "payload",
-          "code": 39
-        },
-        {
           "name": "read_failed",
           "code": 40
         },

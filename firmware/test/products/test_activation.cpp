@@ -280,6 +280,15 @@ TEST_CASE(
     CHECK(bench.pending() == comms::Pending::None);
 }
 
+// A central that never exchanged its MTU stopped the activation at its first step, unanswered.
+TEST_CASE("activation: a link that cannot carry the challenge reply is answered small_mtu") {
+    Bench bench;
+    bench.boot();
+    bench.rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
+    CHECK(bench.challenge_with_vectors_nonce() == refusal("small_mtu"));
+    CHECK(bench.rig.product.config_link().config().link_drops() == 1);
+}
+
 TEST_CASE("activation: an unlock code that does not verify spends the nonce all the same") {
     Bench bench;
     bench.boot();

@@ -52,6 +52,12 @@ A log chunk's envelope is 18 bytes at its widest session id and record index, th
 
 On the host side the widest writes are a `register`, 88 bytes, and an `unlock`, 74. Every other command, `set` with every key included at 28, fits the two 18-byte prepare segments a link that never exchanged its MTU reassembles.
 
+## A reply too wide for its link
+
+A reply that is whole but wider than the payload of the session that asked is never handed down, and never left unanswered: the sender counts a `link_drops` and answers `small_mtu` instead, an acknowledgement of 8 bytes on the config endpoint and 8 or 10 on the log endpoint, where it names its store like every log reply, so it reaches a link that never exchanged its MTU. Each endpoint does it in the one place its replies leave, `ConfigService::reply_to()` and `RecordPool::send()`, so no frame carries a check of its own. Three refusals come before any frame exists and are not counted as drops: a timing or diagnostics report whose fields cannot be split into frames this narrow, a `register` whose registration frame the link could not carry, and a `read` whose chunk could not hold one record (the log dialect's `payload` reason, folded into this one). At 20 bytes that is the config reply past serial 23 or with a callsign, the challenge reply, an asked `update` frame with versions or a digest, the timing report, every chunk, and a session entry once it holds 256 records.
+
+A frame nobody asked for is not refused, because the refusal would be noise. The `status` push fits every link. The `update` frame a connection is pushed leaves on its first `Up`, before most centrals have exchanged their MTU, and the late exchange's second `Up` pushes it again: a refusal on the first would tell a page its phone is too narrow a moment before the frame arrives. A push that does not fit is counted in `link_drops` and dropped, as it always was.
+
 ## Activation
 
 `challenge`, `register` and `unlock` travel on the config endpoint like every other command, and live apart from it: `IdentityLink` in `identity_link.h` holds the session, and the three handlers are `ConfigService` methods defined beside it in `identity_link.cpp`. `schemas/activation.v1.schema.json` is the contract and `core/identity/README.md` the messages they sign.
@@ -60,7 +66,7 @@ On the host side the widest writes are a `register`, 88 bytes, and an `unlock`, 
 
 On an unactivated unit none of it is gated on the ground. Every other prompt is refused unless the flight state is positively `Ground`, and `Unknown`, a unit with no fix since boot, is not: activation on a bench indoors would always fail. A unit with no serial transmits nothing, so the gate would protect nothing, and its `Pending::Register` confirms, and survives a take-off, whatever the flight state. An activated unit transmits, so it owes the gate like every other command: `challenge`, `register` and `unlock` are refused `in_flight` unless it is on the ground, and its register prompt is cancelled at take-off. One press still cancels a prompt, thirty seconds still expire it, and a dropped link still takes it.
 
-Every identity refusal is written in `identity_link.cpp` as `refuse(link::Reason::Word)`, and none as `acknowledge(false, ...)` in `config.cpp`, so the server's activation page can grep its rows apart from the update page's:
+Every identity refusal but `small_mtu` is written in `identity_link.cpp` as `refuse(link::Reason::Word)`, and none as `acknowledge(false, ...)` in `config.cpp`, so the server's activation page can grep its rows apart from the update page's. `small_mtu` is `refuse_too_wide()`, the refusal every reply shares, which `config.cpp` writes, so both pages word it:
 
 | Word | When |
 |---|---|
@@ -69,7 +75,7 @@ Every identity refusal is written in `identity_link.cpp` as `refuse(link::Reason
 | `low_power` | an `unlock` while the cell is below the settings write rule (`core/power/cutoff.h`): the nonce stays live for a retry on the charger |
 | `no_session` | no live nonce for this claim holder: no `challenge`, a spent nonce, a dropped link, ten minutes, or a `challenge` since the registration was staged |
 | `bad_signature` | R or U does not verify with the trusted key, or the field is not a byte string of the width the registry pins |
-| `small_mtu` | the claim holder's link cannot carry the registration frame, `IdentityLink::kRegistrationFrameBytes` (138) at the widest version, in one notification: an iPhone's 182 bytes carry it |
+| `small_mtu` | the claim holder's link cannot carry the registration frame, `IdentityLink::kRegistrationFrameBytes` (138) at the widest version, in one notification: an iPhone's 182 bytes carry it. The challenge reply, 27 bytes, is answered the same way by any link narrower than it (A reply too wide for its link) |
 | `flash` | the identity page did not take the code, or did not read it back |
 
 `cancelled` and `expired` come from the prompt machinery every command shares, `claimed` and `unknown_command` from the dispatch. A product that hands `ConfigService` no `IdentityLink` answers all three commands `unknown_command`.

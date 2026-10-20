@@ -261,8 +261,34 @@ TEST_CASE(
     rig.run(now_ms, now_ms + 100);
     REQUIRE(last_log_frame(rig) != nullptr);
     CHECK(link_text(last_log_frame(rig)->bytes) ==
-          "{\"command\":\"log\",\"acknowledge\":false,\"reason\":\"payload\"}");
+          "{\"command\":\"log\",\"acknowledge\":false,\"reason\":\"small_mtu\"}");
     CHECK(rig.product.flight_log().link_drops() == drops_before);
+    CHECK(rig.platform.link().refused_oversize == 0);
+}
+
+// A session entry is 21 bytes once it holds 256 records, one past what an unexchanged MTU carries.
+TEST_CASE("flight log: a reply wider than the asking link carries is answered small_mtu, counted") {
+    Rig rig;
+    const uint32_t session = Rig::kBaseUtcS - 7200;
+    const uint32_t slots = flight::kLogSlotsPerSector;
+    label_sector(rig, 0, store::SectorOwner::Flights, 1, session);
+    write_records(rig, 0, session, session, slots, false);
+    label_sector(rig, 1, store::SectorOwner::Flights, 2, session);
+    write_records(rig, 1, session, session + slots * 4, slots, true);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    REQUIRE(field(list_session(rig, now_ms, 0), "records") == std::to_string(2 * slots));
+
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
+    rig.platform.link().clear();
+    rig.send_log("{\"command\":\"list\",\"index\":0}");
+    rig.run(now_ms, now_ms + 100);
+    REQUIRE(last_log_frame(rig) != nullptr);
+    CHECK(link_text(last_log_frame(rig)->bytes) ==
+          "{\"command\":\"log\",\"acknowledge\":false,\"reason\":\"small_mtu\"}");
+    CHECK(last_log_frame(rig)->bytes.size() == 8);
+    CHECK(rig.product.flight_log().link_drops() == 1);
     CHECK(rig.platform.link().refused_oversize == 0);
 }
 

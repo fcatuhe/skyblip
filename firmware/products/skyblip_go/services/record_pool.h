@@ -40,11 +40,12 @@ class RecordPool {
     bool erase(uint32_t sector);
 
     int payload_bytes(uint16_t link_session) const;
-    int reply_capacity(uint16_t link_session) const;
+    int reply_capacity() const { return static_cast<int>(sizeof(reply_)); }
     uint8_t* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
     // False when the frame was dropped. A link at its share holds it for deliver_held().
-    bool send(uint16_t link_session, int bytes);
+    bool send(uint16_t link_session, int bytes, comms::LogStore store);
+    void refuse_too_wide(uint16_t link_session, comms::LogStore store);
     // Ok once nothing is held, WouldBlock while the link still refuses, anything else a drop.
     Status deliver_held(uint32_t now_ms);
     bool holding() const { return held_bytes_ > 0; }
@@ -53,6 +54,7 @@ class RecordPool {
    private:
     void scan();
     bool noted(bool ok);
+    bool deliver(uint16_t link_session, int bytes);
     uint32_t offset_of(uint32_t sector) const { return sector * sector_bytes_; }
 
     runtime::Context& context_;
