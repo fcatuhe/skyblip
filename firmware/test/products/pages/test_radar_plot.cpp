@@ -64,10 +64,10 @@ TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
     // Below you is that same blip, flipped about the point it is plotted on.
     RadarTarget below[1] = {{2 * kMetresPerNm, 0, -300, Level::None}};
     const Glass points_down = radar(one_target(below));
-    for (int dy = -11; dy <= 11; dy++)
-        for (int dx = -9; dx <= 9; dx++)
-            CHECK(points_up.get_pixel(kPlotX + dx, kPlotY + dy) ==
-                  points_down.get_pixel(kPlotX + dx, kPlotY - dy));
+    for (int delta_y = -11; delta_y <= 11; delta_y++)
+        for (int delta_x = -9; delta_x <= 9; delta_x++)
+            CHECK(points_up.get_pixel(kPlotX + delta_x, kPlotY + delta_y) ==
+                  points_down.get_pixel(kPlotX + delta_x, kPlotY - delta_y));
 
     RadarTarget advisory[1] = {{2 * kMetresPerNm, 0, 0, Level::Advisory}};
     const Glass filled = radar(one_target(advisory));

@@ -160,7 +160,7 @@ void OwnshipService::record_pps(uint32_t now_ms) {
                                                timing::SlotTimingStatistics::kNominalSecondUs);
     sample.samples = statistics.pps_samples();
     sample.holdover_events = statistics.holdover_events();
-    sample.since_edge_ms = clamp_u16(clock.since_edge_ms);
+    sample.since_edge_ms = clamp_uint16(clock.since_edge_ms);
     sample.locked = clock.pps_locked;
     sample.utc_valid = clock.utc_valid;
     context_.diagnostics.record(sample, context_.instant(now_ms));

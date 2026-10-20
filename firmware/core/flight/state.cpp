@@ -8,7 +8,7 @@ namespace {
 
 int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     if (hdop_e2 <= kDopUnityE2) return evidence;
-    return div_round(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
+    return divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
 
 enum class AdslG13Category : uint8_t {

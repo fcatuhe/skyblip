@@ -52,8 +52,8 @@ TEST_CASE("ADS-L.4.SRD860.F.2: the header is a type byte, 30 bits of sender, res
     CHECK((packet.address_bytes[3] & 0x80) != 0);
 
     // One little-endian word: the AMT in bits 0 to 5, the address in bits 6 to 29.
-    CHECK((get_u32(packet.address_bytes) & 0x3Fu) == 6u);
-    CHECK(((get_u32(packet.address_bytes) >> 6) & 0x00FFFFFFu) == 0x123456u);
+    CHECK((get_uint32(packet.address_bytes) & 0x3Fu) == 6u);
+    CHECK(((get_uint32(packet.address_bytes) >> 6) & 0x00FFFFFFu) == 0x123456u);
 }
 
 TEST_CASE("ADS-L.4.SRD860.F.2.1: a Traffic payload is type 2, in the broadcast half of the range") {
@@ -90,7 +90,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has n
     CHECK(packet.telemetry_type() == 1);
     CHECK(packet.information_type() == 5);
     // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
-    CHECK(packet.payload[protocol::AdslPacket::kInformationHeaderByte] == 0x45);
+    CHECK(packet.payload[protocol::AdslPacket::kInformationHeaderOffset] == 0x45);
     CHECK(packet.address() == 0x123456u);
     CHECK(packet.address_mapping_table() == 58);
 

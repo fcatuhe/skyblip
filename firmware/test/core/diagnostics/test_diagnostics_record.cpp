@@ -50,8 +50,8 @@ TEST_CASE("diagnostics record: the header is written where a host decoder reads 
     CHECK((raw[1] & diagnostics::kFlagUtcDated) != 0);
     CHECK(raw[2] == 0xCE);
     CHECK(raw[3] == 0x01);
-    CHECK(get_u32(raw + 4) == kDiagnosticsTestUtcS);
-    CHECK(get_u16(raw + diagnostics::kPayloadOffset) == 287);
+    CHECK(get_uint32(raw + 4) == kDiagnosticsTestUtcS);
+    CHECK(get_uint16(raw + diagnostics::kPayloadOffset) == 287);
 }
 
 TEST_CASE("diagnostics record: an erased slot is empty rather than a record of zeroes") {

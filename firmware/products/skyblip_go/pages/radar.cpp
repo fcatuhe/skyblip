@@ -249,12 +249,12 @@ void formation_square(ui::Canvas& canvas) {
     canvas.vertical_line(x1, y0 + corner + 1, y1 - y0 - 2 * corner - 1, true);
     for (int step = 0; step <= 90; step++) {
         const int16_t angle = angle16_of_degrees(step);
-        const int dx = corner - (corner * cosine(angle)) / kTrigOne,
-                  dy = corner - (corner * sine(angle)) / kTrigOne;
-        canvas.set_pixel(x0 + dx, y0 + dy, true);
-        canvas.set_pixel(x1 - dx, y0 + dy, true);
-        canvas.set_pixel(x0 + dx, y1 - dy, true);
-        canvas.set_pixel(x1 - dx, y1 - dy, true);
+        const int delta_x = corner - (corner * cosine(angle)) / kTrigOne,
+                  delta_y = corner - (corner * sine(angle)) / kTrigOne;
+        canvas.set_pixel(x0 + delta_x, y0 + delta_y, true);
+        canvas.set_pixel(x1 - delta_x, y0 + delta_y, true);
+        canvas.set_pixel(x0 + delta_x, y1 - delta_y, true);
+        canvas.set_pixel(x1 - delta_x, y1 - delta_y, true);
     }
 }
 
@@ -321,9 +321,9 @@ bool inside_rounded(const Box& box, int corner, int x, int y) {
     const int past_top = box.y + corner - y;
     const int past_bottom = y - (box.y + box.height - 1 - corner);
     if (x < box.x || y < box.y || past_right > corner || past_bottom > corner) return false;
-    const int dx = past_left > 0 ? past_left : (past_right > 0 ? past_right : 0);
-    const int dy = past_top > 0 ? past_top : (past_bottom > 0 ? past_bottom : 0);
-    return dx * dx + dy * dy <= corner * corner;
+    const int delta_x = past_left > 0 ? past_left : (past_right > 0 ? past_right : 0);
+    const int delta_y = past_top > 0 ? past_top : (past_bottom > 0 ? past_bottom : 0);
+    return delta_x * delta_x + delta_y * delta_y <= corner * corner;
 }
 
 bool spared(const Box* keep_out, int keep_out_count, int x, int y) {

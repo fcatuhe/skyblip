@@ -23,9 +23,10 @@ Status Bme280::begin() {
     if (!write_register(kRegisterControlMeasurement, kModeSleep)) return Status::Down;
     uint8_t raw[kCalibrationBytes] = {};
     if (!read_registers(address_, kRegisterCalibration, raw, sizeof(raw))) return Status::Down;
-    trim_ = Trim{get_u16(raw),      get_i16(raw + 2),  get_i16(raw + 4),  get_u16(raw + 6),
-                 get_i16(raw + 8),  get_i16(raw + 10), get_i16(raw + 12), get_i16(raw + 14),
-                 get_i16(raw + 16), get_i16(raw + 18), get_i16(raw + 20), get_i16(raw + 22)};
+    trim_ =
+        Trim{get_uint16(raw),     get_int16(raw + 2),  get_int16(raw + 4),  get_uint16(raw + 6),
+             get_int16(raw + 8),  get_int16(raw + 10), get_int16(raw + 12), get_int16(raw + 14),
+             get_int16(raw + 16), get_int16(raw + 18), get_int16(raw + 20), get_int16(raw + 22)};
 
     if (!write_register(kRegisterControlHumidity, kOversamplingSkipped)) return Status::Down;
     if (!write_register(kRegisterConfig, kConfigFilter4)) return Status::Down;
@@ -83,9 +84,9 @@ bool Bme280::write_register(uint8_t register_address, uint8_t value) {
 bool Bme280::compensate(int32_t raw_pressure, int32_t raw_temperature, Reading& out) const {
     const int32_t fine_temperature = fine_temperature_from(raw_temperature);
     const int32_t centi_celsius = (fine_temperature * 5 + 128) >> 8;
-    const int32_t temperature_dc = div_round<int32_t>(centi_celsius, 10);
-    const int64_t pressure_mpa =
-        div_round<int64_t>(int64_t{pressure_q24_8(raw_pressure, fine_temperature)} * 1000, 256);
+    const int32_t temperature_dc = divide_rounded<int32_t>(centi_celsius, 10);
+    const int64_t pressure_mpa = divide_rounded<int64_t>(
+        int64_t{pressure_q24_8(raw_pressure, fine_temperature)} * 1000, 256);
     if (temperature_dc < kPlausibleTemperatureFloorDeciCelsius ||
         temperature_dc > kPlausibleTemperatureCeilingDeciCelsius)
         return false;

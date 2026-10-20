@@ -310,8 +310,8 @@ void AdslPacket::set_integrity_unknown() {
 void AdslPacket::set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     set_integrity_unknown();
     if (hdop_e2 == 0) return;
-    const uint32_t hfom_cm = div_round<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
-    const uint32_t vfom_cm = div_round<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
+    const uint32_t hfom_cm = divide_rounded<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
+    const uint32_t vfom_cm = divide_rounded<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
     horizontal_accuracy = horizontal_accuracy_code(hfom_cm);
     vertical_accuracy = vdop_e2 == 0 ? 0 : vertical_accuracy_code(vfom_cm);
     velocity_accuracy = velocity_accuracy_code(horizontal_accuracy);

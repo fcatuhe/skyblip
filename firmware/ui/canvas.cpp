@@ -67,21 +67,21 @@ void Canvas::vertical_line(int x, int y, int height, bool black) {
 }
 
 void Canvas::line(int x0, int y0, int x1, int y1, bool black) {
-    int dx = x1 > x0 ? x1 - x0 : x0 - x1;
-    int dy = y1 > y0 ? y1 - y0 : y0 - y1;
+    int delta_x = x1 > x0 ? x1 - x0 : x0 - x1;
+    int delta_y = y1 > y0 ? y1 - y0 : y0 - y1;
     int step_x = x0 < x1 ? 1 : -1;
     int step_y = y0 < y1 ? 1 : -1;
-    int error = dx - dy;
+    int error = delta_x - delta_y;
     for (;;) {
         set_pixel(x0, y0, black);
         if (x0 == x1 && y0 == y1) break;
         int doubled_error = 2 * error;
-        if (doubled_error > -dy) {
-            error -= dy;
+        if (doubled_error > -delta_y) {
+            error -= delta_y;
             x0 += step_x;
         }
-        if (doubled_error < dx) {
-            error += dx;
+        if (doubled_error < delta_x) {
+            error += delta_x;
             y0 += step_y;
         }
     }

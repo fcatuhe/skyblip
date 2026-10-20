@@ -34,13 +34,13 @@ constexpr Millimetres to_millimetres(Metres metres) {
     return Millimetres(metres.value * kMillimetresPerMetre);
 }
 constexpr Metres to_metres(Millimetres millimetres) {
-    return Metres(div_round(millimetres.value, kMillimetresPerMetre));
+    return Metres(divide_rounded(millimetres.value, kMillimetresPerMetre));
 }
 constexpr Metres to_metres(Feet feet) { return Metres((feet.value * 2497 + 4096) >> 13); }
 constexpr Feet to_feet(Metres metres) { return Feet((metres.value * 3360 + 512) >> 10); }
 constexpr Feet to_feet(Millimetres millimetres) {
     return Feet(static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(millimetres.value) * 3360, 1024000)));
+        divide_rounded<int64_t>(static_cast<int64_t>(millimetres.value) * 3360, 1024000)));
 }
 
 constexpr int32_t kMetresPerNm = 1852;
@@ -52,7 +52,7 @@ struct NauticalMilesE1 {
 };
 
 constexpr NauticalMilesE1 to_nm_e1(Metres metres) {
-    return NauticalMilesE1(div_round(metres.value * 10, kMetresPerNm));
+    return NauticalMilesE1(divide_rounded(metres.value * 10, kMetresPerNm));
 }
 
 struct QuarterMetresPerSecond {
@@ -103,33 +103,34 @@ constexpr MillimetresPerSecond to_mm_s(EighthMetresPerSecond climb) {
     return MillimetresPerSecond(static_cast<int32_t>(climb.value) * kMillimetresPerClimbE8);
 }
 constexpr QuarterMetresPerSecond to_speed_q(MillimetresPerSecond speed) {
-    const int32_t quarters = div_round(speed.value < 0 ? 0 : speed.value, kMillimetresPerSpeedQ);
+    const int32_t quarters =
+        divide_rounded(speed.value < 0 ? 0 : speed.value, kMillimetresPerSpeedQ);
     return QuarterMetresPerSecond(static_cast<uint16_t>(quarters > 0xFFFF ? 0xFFFF : quarters));
 }
 constexpr EighthMetresPerSecond to_climb_e8(MillimetresPerSecond climb) {
-    const int32_t eighths = div_round(climb.value, kMillimetresPerClimbE8);
+    const int32_t eighths = divide_rounded(climb.value, kMillimetresPerClimbE8);
     return EighthMetresPerSecond(
         static_cast<int16_t>(eighths < -32768 ? -32768 : (eighths > 32767 ? 32767 : eighths)));
 }
 constexpr MetresPerSecond to_mps(MillimetresPerSecond speed) {
-    return MetresPerSecond(div_round(speed.value, kMillimetresPerMetre));
+    return MetresPerSecond(divide_rounded(speed.value, kMillimetresPerMetre));
 }
 constexpr MetresPerSecond to_mps(QuarterMetresPerSecond speed) { return to_mps(to_mm_s(speed)); }
 
 // INFO: fc 18sep26 1 m/s = 1.94384 kt = 3.6 km/h, rounded: truncated, 60 kt flown reads 59
 constexpr Knots to_knots(MillimetresPerSecond speed) {
     return Knots(static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(speed.value) * 194384, 100000000)));
+        divide_rounded<int64_t>(static_cast<int64_t>(speed.value) * 194384, 100000000)));
 }
 constexpr Knots to_knots(QuarterMetresPerSecond speed) { return to_knots(to_mm_s(speed)); }
 constexpr KilometresPerHour to_kmh(MillimetresPerSecond speed) {
-    return KilometresPerHour(
-        static_cast<int32_t>(div_round<int64_t>(static_cast<int64_t>(speed.value) * 36, 10000)));
+    return KilometresPerHour(static_cast<int32_t>(
+        divide_rounded<int64_t>(static_cast<int64_t>(speed.value) * 36, 10000)));
 }
 constexpr KilometresPerHour to_kmh(QuarterMetresPerSecond speed) { return to_kmh(to_mm_s(speed)); }
 constexpr FeetPerMinute to_feet_per_minute(MillimetresPerSecond speed) {
     return FeetPerMinute(static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(speed.value) * 19685, 100000)));
+        divide_rounded<int64_t>(static_cast<int64_t>(speed.value) * 19685, 100000)));
 }
 
 struct CentiDegrees {
@@ -157,14 +158,15 @@ constexpr CentiDegrees wrapped(CentiDegrees angle) {
 }
 constexpr Cordic9 to_cordic9(CentiDegrees angle) {
     return Cordic9(static_cast<uint16_t>(
-        div_round(wrapped(angle).value * kCordic9PerTurn, kCentiDegreesPerTurn) % kCordic9PerTurn));
+        divide_rounded(wrapped(angle).value * kCordic9PerTurn, kCentiDegreesPerTurn) %
+        kCordic9PerTurn));
 }
 constexpr CentiDegrees to_centi_degrees(Cordic9 cordic) {
     return CentiDegrees(
-        div_round(static_cast<int32_t>(cordic.value) * kCentiDegreesPerTurn, kCordic9PerTurn));
+        divide_rounded(static_cast<int32_t>(cordic.value) * kCentiDegreesPerTurn, kCordic9PerTurn));
 }
 constexpr Degrees to_degrees(CentiDegrees angle) {
-    return Degrees(static_cast<uint16_t>(div_round(wrapped(angle).value, 100) % 360));
+    return Degrees(static_cast<uint16_t>(divide_rounded(wrapped(angle).value, 100) % 360));
 }
 constexpr Degrees to_degrees(Cordic9 cordic) { return to_degrees(to_centi_degrees(cordic)); }
 
@@ -172,13 +174,14 @@ constexpr int32_t kAngle16PerTurn = 65536;
 
 // INFO: fc 19sep26 the angle core/util/intmath's sine table is indexed by, 65536 to the turn
 constexpr int16_t to_angle16(CentiDegrees angle) {
-    return static_cast<int16_t>(static_cast<uint16_t>(div_round<int64_t>(
+    return static_cast<int16_t>(static_cast<uint16_t>(divide_rounded<int64_t>(
         static_cast<int64_t>(wrapped(angle).value) * kAngle16PerTurn, kCentiDegreesPerTurn)));
 }
 constexpr int16_t to_angle16(Cordic9 cordic) { return to_angle16(to_centi_degrees(cordic)); }
 constexpr CentiDegrees centi_degrees_of_angle16(uint16_t angle16) {
     return CentiDegrees(static_cast<int32_t>(
-        div_round<int64_t>(static_cast<int64_t>(angle16) * kCentiDegreesPerTurn, kAngle16PerTurn) %
+        divide_rounded<int64_t>(static_cast<int64_t>(angle16) * kCentiDegreesPerTurn,
+                                kAngle16PerTurn) %
         kCentiDegreesPerTurn));
 }
 

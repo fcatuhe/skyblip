@@ -133,16 +133,16 @@ void dial(ui::Canvas& canvas, int centre_x, int row, const char* title, int tick
 
 void dead_sector(ui::Canvas& canvas, int centre_x, int centre_y, int32_t from_deg, int32_t to_deg) {
     const int16_t from = angle16_of_degrees(from_deg), to = angle16_of_degrees(to_deg);
-    for (int dy = -kDialRadius; dy <= kDialRadius; dy++) {
-        for (int dx = -kDialRadius; dx <= kDialRadius; dx++) {
-            if (((dx + dy) & 1) != 0) continue;
-            const int radius_squared = dx * dx + dy * dy;
+    for (int delta_y = -kDialRadius; delta_y <= kDialRadius; delta_y++) {
+        for (int delta_x = -kDialRadius; delta_x <= kDialRadius; delta_x++) {
+            if (((delta_x + delta_y) & 1) != 0) continue;
+            const int radius_squared = delta_x * delta_x + delta_y * delta_y;
             if (radius_squared > kDialRadius * kDialRadius ||
                 radius_squared <= kDeadInnerRadius * kDeadInnerRadius)
                 continue;
-            const int16_t angle = arctangent(dx, -dy);
+            const int16_t angle = arctangent(delta_x, -delta_y);
             if (from <= to ? (angle < from || angle > to) : (angle < from && angle > to)) continue;
-            canvas.set_pixel(centre_x + dx, centre_y + dy, true);
+            canvas.set_pixel(centre_x + delta_x, centre_y + delta_y, true);
         }
     }
 }
@@ -190,12 +190,12 @@ void horizon(ui::Canvas& canvas, int centre_x, int centre_y, int32_t pitch_deg, 
     const int16_t angle =
         angle16_of_degrees(std::clamp<int32_t>(bank_deg, -kBankLimitDeg, kBankLimitDeg));
     const int32_t unit_x = sine(angle), unit_y = cosine(angle);
-    for (int dx = -kDialRadius + 1; dx < kDialRadius; dx++) {
-        const int chord = static_cast<int>(
-            square_root<uint32_t>(static_cast<uint32_t>(kDialRadius * kDialRadius - dx * dx)));
+    for (int delta_x = -kDialRadius + 1; delta_x < kDialRadius; delta_x++) {
+        const int chord = static_cast<int>(square_root<uint32_t>(
+            static_cast<uint32_t>(kDialRadius * kDialRadius - delta_x * delta_x)));
         const int32_t horizon_y =
-            std::clamp<int32_t>(pitch_offset - (dx * unit_x) / unit_y, -chord, chord);
-        const int x = centre_x + dx;
+            std::clamp<int32_t>(pitch_offset - (delta_x * unit_x) / unit_y, -chord, chord);
+        const int x = centre_x + delta_x;
         for (int y = centre_y + static_cast<int>(horizon_y); y <= centre_y + chord; y++) {
             if (((x + y) & 1) == 0) canvas.set_pixel(x, y, true);
         }
@@ -287,7 +287,7 @@ void battery_dial(ui::Canvas& canvas, int centre_x, int row, const SixPackSnapsh
     if (snapshot.charging) {
         dial(canvas, centre_x, row, "CHARGE V", 0);
         written = format_unsigned(
-            text, static_cast<uint32_t>(div_round<int32_t>(snapshot.battery_mv, 10)), 1, 2);
+            text, static_cast<uint32_t>(divide_rounded<int32_t>(snapshot.battery_mv, 10)), 1, 2);
     } else {
         dial(canvas, centre_x, row, "BATTERY", 0);
         written = snapshot.battery_valid ? format_unsigned(text, snapshot.battery_percent)

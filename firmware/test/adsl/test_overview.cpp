@@ -52,17 +52,17 @@ TEST_CASE("ADS-L.4.SRD860.B.2: ADS-L is a stateless broadcast protocol over five
 // The clause's own Example 1: 1328922 (0x14471A) leaves as 0x1A, 0x47, 0x14.
 TEST_CASE("ADS-L.4.SRD860.B.3: an integer rides the air least significant byte first") {
     uint8_t three[3] = {0, 0, 0};
-    put_u24(three, 0x14471Au);
+    put_uint24(three, 0x14471Au);
     CHECK(three[0] == 0x1A);
     CHECK(three[1] == 0x47);
     CHECK(three[2] == 0x14);
-    CHECK(get_u24(three) == 0x14471Au);
+    CHECK(get_uint24(three) == 0x14471Au);
 
     uint8_t four[4] = {0, 0, 0, 0};
-    put_u32(four, 0x89ABCDEFu);
+    put_uint32(four, 0x89ABCDEFu);
     CHECK(four[0] == 0xEF);
     CHECK(four[3] == 0x89);
-    CHECK(get_u32(four) == 0x89ABCDEFu);
+    CHECK(get_uint32(four) == 0x89ABCDEFu);
 }
 
 // Example 2's packing rule, read off the Meta block G.1 puts at payload offset 0.

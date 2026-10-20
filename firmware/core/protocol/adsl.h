@@ -23,8 +23,8 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
     static constexpr uint8_t kTelemetryTypeInformation = 1;
     static constexpr uint8_t kInformationTypeRegistration = 5;
-    static constexpr int kInformationHeaderByte = 5;
-    static constexpr int kInformationTextByte = 6;
+    static constexpr int kInformationHeaderOffset = 5;
+    static constexpr int kInformationTextOffset = 6;
     static constexpr int kInformationTextBytes = 14;
 
     uint8_t sync[2];
@@ -75,13 +75,13 @@ struct __attribute__((packed)) AdslPacket {
     bool is_position() const { return payload_type == kPayloadTypePosition; }
 
     uint8_t telemetry_type() const {
-        return static_cast<uint8_t>(payload[kInformationHeaderByte] >> 6);
+        return static_cast<uint8_t>(payload[kInformationHeaderOffset] >> 6);
     }
     uint8_t information_type() const {
-        return static_cast<uint8_t>(payload[kInformationHeaderByte] & 0x3F);
+        return static_cast<uint8_t>(payload[kInformationHeaderOffset] & 0x3F);
     }
     void set_information_header(uint8_t telemetry_type, uint8_t information_type) {
-        payload[kInformationHeaderByte] =
+        payload[kInformationHeaderOffset] =
             static_cast<uint8_t>((telemetry_type << 6) | (information_type & 0x3F));
     }
     bool is_registration() const {
@@ -90,13 +90,13 @@ struct __attribute__((packed)) AdslPacket {
                information_type() == kInformationTypeRegistration;
     }
     const char* information_text() const {
-        return reinterpret_cast<const char*>(payload + kInformationTextByte);
+        return reinterpret_cast<const char*>(payload + kInformationTextOffset);
     }
-    char* information_text() { return reinterpret_cast<char*>(payload + kInformationTextByte); }
+    char* information_text() { return reinterpret_cast<char*>(payload + kInformationTextOffset); }
 
-    uint32_t address() const { return (get_u32(address_bytes) >> 6) & settings::kAddressMask; }
+    uint32_t address() const { return (get_uint32(address_bytes) >> 6) & settings::kAddressMask; }
     void set_address(uint32_t address) {
-        put_u32(address_bytes, (get_u32(address_bytes) & 0xC000003F) | (address << 6));
+        put_uint32(address_bytes, (get_uint32(address_bytes) & 0xC000003F) | (address << 6));
     }
     uint8_t address_mapping_table() const { return address_bytes[0] & 0x3F; }
     void set_address_mapping_table(uint8_t table) {
@@ -119,33 +119,33 @@ struct __attribute__((packed)) AdslPacket {
     }
 
     int32_t latitude_cordic() const {
-        int32_t cordic = static_cast<int32_t>(get_u24(position_bytes));
+        int32_t cordic = static_cast<int32_t>(get_uint24(position_bytes));
         cordic <<= 8;
         cordic >>= 1;
         return cordic;
     }
     int32_t longitude_cordic() const {
-        int32_t cordic = static_cast<int32_t>(get_u24(position_bytes + 3));
+        int32_t cordic = static_cast<int32_t>(get_uint24(position_bytes + 3));
         cordic <<= 8;
         return cordic;
     }
     void set_latitude_cordic(int32_t latitude) {
         latitude = (latitude + 0x40) >> 7;
-        put_u24(position_bytes, latitude);
+        put_uint24(position_bytes, latitude);
     }
     void set_longitude_cordic(int32_t longitude) {
         longitude = (longitude + 0x80) >> 8;
-        put_u24(position_bytes + 3, longitude);
+        put_uint24(position_bytes + 3, longitude);
     }
     // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
     bool has_position() const {
-        return get_u24(position_bytes) != kPositionInvalidCode &&
-               get_u24(position_bytes + 3) != kPositionInvalidCode;
+        return get_uint24(position_bytes) != kPositionInvalidCode &&
+               get_uint24(position_bytes + 3) != kPositionInvalidCode;
     }
     void set_position_invalid() {
-        put_u24(position_bytes, kPositionInvalidCode);
-        put_u24(position_bytes + 3, kPositionInvalidCode);
+        put_uint24(position_bytes, kPositionInvalidCode);
+        put_uint24(position_bytes + 3, kPositionInvalidCode);
     }
     int32_t latitude_1e7() const { return cordic_to_1e7(latitude_cordic()); }
     int32_t longitude_1e7() const { return cordic_to_1e7(longitude_cordic()); }

@@ -28,9 +28,9 @@ bool ink_at(const Glass& canvas, Tile tile, double degrees, int radius = kFaceRa
     const double radians = degrees * 3.14159265358979 / 180.0;
     const int x = tile.centre_x + static_cast<int>(std::lround(radius * std::sin(radians)));
     const int y = tile.centre_y - static_cast<int>(std::lround(radius * std::cos(radians)));
-    for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
-            if (canvas.get_pixel(x + dx, y + dy)) return true;
+    for (int delta_y = -1; delta_y <= 1; delta_y++)
+        for (int delta_x = -1; delta_x <= 1; delta_x++)
+            if (canvas.get_pixel(x + delta_x, y + delta_y)) return true;
     return false;
 }
 
@@ -395,10 +395,10 @@ TEST_CASE("sixpack page: the horizon carries two wing bars and a dot, clear of e
         CHECK_FALSE(canvas.get_pixel(attitude.centre_x - i, attitude.centre_y));
         CHECK_FALSE(canvas.get_pixel(attitude.centre_x + i, attitude.centre_y));
     }
-    for (int dy = -2; dy <= 2; dy++)
-        for (int dx = -2; dx <= 2; dx++)
-            CHECK(canvas.get_pixel(attitude.centre_x + dx, attitude.centre_y + dy) ==
-                  (dx * dx + dy * dy < 8));
+    for (int delta_y = -2; delta_y <= 2; delta_y++)
+        for (int delta_x = -2; delta_x <= 2; delta_x++)
+            CHECK(canvas.get_pixel(attitude.centre_x + delta_x, attitude.centre_y + delta_y) ==
+                  (delta_x * delta_x + delta_y * delta_y < 8));
     CHECK_FALSE(canvas.get_pixel(attitude.centre_x - 21, attitude.centre_y));
     CHECK_FALSE(canvas.get_pixel(attitude.centre_x + 21, attitude.centre_y));
 }

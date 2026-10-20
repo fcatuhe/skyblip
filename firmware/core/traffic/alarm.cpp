@@ -44,7 +44,7 @@ int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation
 
     const int64_t along = (target_north - own_north) * north_m + (target_east - own_east) * east_m;
     const int64_t scale = static_cast<int64_t>(distance_m) * kTrigOne;
-    int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
+    int32_t closing = static_cast<int32_t>(divide_rounded<int64_t>(-along, scale));
     if (!target.speed_valid) closing += unknown_closing_mm_s;
     return closing;
 }
@@ -62,13 +62,13 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     assessment.relative_altitude_m = up_m;
     assessment.relative_distance_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
     assessment.closing_mps =
-        div_round(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
-                  kMillimetresPerMetre);
+        divide_rounded(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
+                       kMillimetresPerMetre);
 
     const int16_t bearing = arctangent(east_m, north_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
     const int bearing_deg = static_cast<int>(
-        div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
+        divide_rounded<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
         360);
     assessment.relative_bearing_deg =
         static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);

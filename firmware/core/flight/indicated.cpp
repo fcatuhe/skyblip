@@ -8,8 +8,8 @@ void IndicatedRate::observe(int32_t measured, uint32_t now_ms) {
     const int64_t sampled = static_cast<int64_t>(measured) * kScale;
     if (seen_) {
         const int64_t elapsed_ms = now_ms - last_ms_;
-        damped_accumulator_ += div_round<int64_t>((sampled - damped_accumulator_) * elapsed_ms,
-                                                  elapsed_ms + kIndicatedRateDampingMs);
+        damped_accumulator_ += divide_rounded<int64_t>((sampled - damped_accumulator_) * elapsed_ms,
+                                                       elapsed_ms + kIndicatedRateDampingMs);
     } else {
         damped_accumulator_ = sampled;
     }
@@ -19,7 +19,7 @@ void IndicatedRate::observe(int32_t measured, uint32_t now_ms) {
 
 int32_t IndicatedRate::value() const {
     if (!seen_) return 0;
-    return static_cast<int32_t>(div_round<int64_t>(damped_accumulator_, kScale));
+    return static_cast<int32_t>(divide_rounded<int64_t>(damped_accumulator_, kScale));
 }
 
 }  // namespace skyblip::flight

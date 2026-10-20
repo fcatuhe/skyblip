@@ -115,7 +115,7 @@ bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t
     long minutes_e4 = minutes_whole * 10000 + (scale ? fraction * (10000 / scale) : 0);
     int64_t coordinate_1e7 =
         static_cast<int64_t>(degrees) * 10000000LL +
-        div_round<int64_t>(static_cast<int64_t>(minutes_e4) * 10000000LL, 600000LL);
+        divide_rounded<int64_t>(static_cast<int64_t>(minutes_e4) * 10000000LL, 600000LL);
     if (coordinate_1e7 > (latitude ? 900000000 : 1800000000)) return false;
     out_1e7 = static_cast<int32_t>(hemisphere == 'S' || hemisphere == 'W' ? -coordinate_1e7
                                                                           : coordinate_1e7);
@@ -278,7 +278,7 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
         int64_t knots_e2 = 0;
         int64_t speed_mm_s = -1;
         if (parse_scaled(fields[7], 100, knots_e2))
-            speed_mm_s = div_round<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000);
+            speed_mm_s = divide_rounded<int64_t>(knots_e2 * kMillimetresPerSecondPerKnotE3, 100000);
         solution_.speed_mm_s = speed_mm_s >= 0 && speed_mm_s <= kSpeedCeilingMmS
                                    ? static_cast<int32_t>(speed_mm_s)
                                    : 0;

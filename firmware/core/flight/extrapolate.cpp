@@ -64,18 +64,18 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
         static_cast<uint16_t>(to_angle16(CentiDegrees(motion.track_cdeg)) + turn_angle / 2));
 
     const int64_t scale = kTrigOne * kMicrometresPerE7;
-    const int64_t travel = div_round<int64_t>(
+    const int64_t travel = divide_rounded<int64_t>(
         static_cast<int64_t>(motion.speed_mm_s) * elapsed_ms * kMicrometresPerMillimetre,
         kMillisecondsPerSecond);
     out.latitude_1e7 =
-        motion.latitude_1e7 + static_cast<int32_t>(div_round(travel * cosine(heading), scale));
-    const int64_t east = div_round(travel * sine(heading), scale);
-    out.longitude_1e7 =
-        wrapped_longitude_1e7(static_cast<int64_t>(motion.longitude_1e7) +
-                              div_round(east * kTrigOne, latitude_cosine(motion.latitude_1e7)));
+        motion.latitude_1e7 + static_cast<int32_t>(divide_rounded(travel * cosine(heading), scale));
+    const int64_t east = divide_rounded(travel * sine(heading), scale);
+    out.longitude_1e7 = wrapped_longitude_1e7(
+        static_cast<int64_t>(motion.longitude_1e7) +
+        divide_rounded(east * kTrigOne, latitude_cosine(motion.latitude_1e7)));
 
     if (motion.climb_valid) {
-        const int32_t rise = static_cast<int32_t>(div_round<int64_t>(
+        const int32_t rise = static_cast<int32_t>(divide_rounded<int64_t>(
             static_cast<int64_t>(motion.climb_mm_s) * elapsed_ms, kMillisecondsPerSecond));
         out.altitude_hae_mm = motion.altitude_hae_mm + rise;
         out.altitude_msl_mm = motion.altitude_msl_mm + rise;
@@ -147,11 +147,12 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
     const int64_t latitude_delta_1e7 = static_cast<int64_t>(latitude_1e7) - predicted.latitude_1e7;
     const int64_t longitude_delta_1e7 =
         wrapped_longitude_1e7(static_cast<int64_t>(longitude_1e7) - predicted.longitude_1e7);
-    const int64_t north = div_round(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre);
-    const int64_t east =
-        div_round(longitude_delta_1e7 * kMicrometresPerE7 * latitude_cosine(predicted.latitude_1e7),
-                  kMicrometresPerMetre * kTrigOne);
-    const int64_t up = div_round<int64_t>(
+    const int64_t north =
+        divide_rounded(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre);
+    const int64_t east = divide_rounded(
+        longitude_delta_1e7 * kMicrometresPerE7 * latitude_cosine(predicted.latitude_1e7),
+        kMicrometresPerMetre * kTrigOne);
+    const int64_t up = divide_rounded<int64_t>(
         static_cast<int64_t>(altitude_hae_mm) - predicted.altitude_hae_mm, kMillimetresPerMetre);
     return static_cast<uint32_t>(absolute(north) + absolute(east) + absolute(up));
 }
@@ -163,11 +164,11 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
     const int64_t longitude_delta_1e7 =
         wrapped_longitude_1e7(static_cast<int64_t>(target.longitude_1e7) - own.longitude_1e7);
     north_m = static_cast<int32_t>(
-        div_round<int64_t>(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre));
+        divide_rounded<int64_t>(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre));
     const int64_t cosine_of_latitude = cosine(latitude_angle16(own.latitude_1e7));
-    const int64_t east_micrometres =
-        div_round<int64_t>(longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
-    east_m = static_cast<int32_t>(div_round<int64_t>(east_micrometres, kMicrometresPerMetre));
+    const int64_t east_micrometres = divide_rounded<int64_t>(
+        longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
+    east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_micrometres, kMicrometresPerMetre));
     up_m = target.altitude_valid
                ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value
                : 0;

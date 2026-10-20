@@ -56,7 +56,8 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
         for (int row = 0; row < kConfirmDetailRows; row++) {
             const int y = confirm_detail_y(row);
             for (int x = kConfirmLeftX; x < Glass::kWidth; x++)
-                for (int dy = 0; dy < 7; dy++) drawn += canvas.get_pixel(x, y + dy) ? 1 : 0;
+                for (int delta_y = 0; delta_y < 7; delta_y++)
+                    drawn += canvas.get_pixel(x, y + delta_y) ? 1 : 0;
         }
         CHECK(drawn > 0);
         CHECK(static_cast<int>(std::strlen(detail)) <= kConfirmDetailColumns * kConfirmDetailRows);

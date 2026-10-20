@@ -167,7 +167,7 @@ void NmeaService::emit_ownship() {
 void NmeaService::emit_altitude() {
     if (!context_.state.barometer.active) return;
     const int32_t altitude_cm = flight::pressure_to_altitude_cm(
-        div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000));
+        divide_rounded<uint32_t>(context_.state.barometer.pressure_mpa, 1000));
     write(sentence_,
           protocol::format_pgrmz(sentence_, sizeof(sentence_), centimetres_to_feet(altitude_cm),
                                  context_.state.own.fix_valid));
@@ -189,19 +189,19 @@ void NmeaService::emit_vario_and_battery() {
     protocol::Lk8Ex1 vario{};
 
     if (context_.state.barometer.active) {
-        vario.pressure_pa = div_round<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
+        vario.pressure_pa = divide_rounded<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
         vario.pressure_valid = true;
         // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
         // carries and for the same reason: the consumer applies its own
         // subscale. A consumer that read field 1 recomputes this and ignores it.
-        vario.altitude_m = div_round(flight::pressure_to_altitude_cm(div_round<uint32_t>(
-                                         context_.state.barometer.pressure_mpa, 1000)),
-                                     100);
+        vario.altitude_m = divide_rounded(flight::pressure_to_altitude_cm(divide_rounded<uint32_t>(
+                                              context_.state.barometer.pressure_mpa, 1000)),
+                                          100);
         vario.altitude_valid = true;
     }
 
     if (context_.state.barometer.temperature_valid) {
-        vario.temperature_c = div_round<int32_t>(context_.state.barometer.temperature_dc, 10);
+        vario.temperature_c = divide_rounded<int32_t>(context_.state.barometer.temperature_dc, 10);
         vario.temperature_valid = true;
     }
 

@@ -56,9 +56,9 @@ void render(simulator::Simulator& simulator) {
         std::printf("|");
         for (int x = 0; x < go::kGlassWidth; x += step) {
             bool black = false;
-            for (int dy = 0; dy < step && !black; dy++)
-                for (int dx = 0; dx < step && !black; dx++)
-                    if (canvas.get_pixel(x + dx, y + dy)) black = true;
+            for (int delta_y = 0; delta_y < step && !black; delta_y++)
+                for (int delta_x = 0; delta_x < step && !black; delta_x++)
+                    if (canvas.get_pixel(x + delta_x, y + delta_y)) black = true;
             std::printf("%c", black ? '#' : ' ');
         }
         std::printf("|\n");

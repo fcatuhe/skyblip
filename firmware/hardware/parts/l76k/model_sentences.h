@@ -36,13 +36,13 @@ inline void L76k::emit_version() {
 
 // INFO: fc 19sep26 a real receiver reports hundredths of a knot and of a degree, and decimetres
 inline uint32_t L76k::knots_e2() const {
-    return static_cast<uint32_t>(div_round<int64_t>(
+    return static_cast<uint32_t>(divide_rounded<int64_t>(
         static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 194384, 1000000));
 }
 
 inline uint32_t L76k::kmh_e2() const {
     return static_cast<uint32_t>(
-        div_round<int64_t>(static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 36, 100));
+        divide_rounded<int64_t>(static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 36, 100));
 }
 
 inline uint32_t L76k::heading_e2() const {

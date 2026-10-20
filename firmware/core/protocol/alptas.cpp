@@ -120,10 +120,10 @@ void block_tea(uint32_t* words, bool encode) {
 // frame arrived in.
 void scramble(uint32_t* data, uint32_t utc_s) {
     uint8_t keys[16];
-    put_u32(keys + 0, data[0]);
-    put_u32(keys + 4, data[1]);
-    put_u32(keys + 8, utc_s >> 4);
-    put_u32(keys + 12, kScrambleKey);
+    put_uint32(keys + 0, data[0]);
+    put_uint32(keys + 4, data[1]);
+    put_uint32(keys + 8, utc_s >> 4);
+    put_uint32(keys + 12, kScrambleKey);
 
     uint32_t previous = keys[15];
     uint32_t sum = 0;
@@ -146,12 +146,13 @@ void scramble(uint32_t* data, uint32_t utc_s) {
         previous = last & 0xFF;
     }
 
-    for (uint8_t i = 0; i < 4; i++) data[2 + i] ^= get_u32(keys + 4 * static_cast<ptrdiff_t>(i));
+    for (uint8_t i = 0; i < 4; i++) data[2 + i] ^= get_uint32(keys + 4 * static_cast<ptrdiff_t>(i));
 }
 
 void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
     uint32_t words[kWords];
-    for (uint8_t i = 0; i < kWords; i++) words[i] = get_u32(data + 4 * static_cast<ptrdiff_t>(i));
+    for (uint8_t i = 0; i < kWords; i++)
+        words[i] = get_uint32(data + 4 * static_cast<ptrdiff_t>(i));
     if (encode) {
         scramble(words, utc_s);
         block_tea(words + 2, true);
@@ -159,7 +160,7 @@ void crypt_frame(uint8_t* data, uint32_t utc_s, bool encode) {
         block_tea(words + 2, false);
         scramble(words, utc_s);
     }
-    for (uint8_t i = 0; i < kWords; i++) put_u32(data + 4 * static_cast<ptrdiff_t>(i), words[i]);
+    for (uint8_t i = 0; i < kWords; i++) put_uint32(data + 4 * static_cast<ptrdiff_t>(i), words[i]);
 }
 
 // INFO: fc 09mar26 longitude quantum in 1e-7 deg as a function of |latitude| in
@@ -380,11 +381,11 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     uint32_t course_deg = get_field(data, kCourseField) >> 1;
     if (course_deg > 360) return Status::Invalid;
 
-    int32_t latitude_reference = div_round<int32_t>(reference_latitude_1e7, 52);
+    int32_t latitude_reference = divide_rounded<int32_t>(reference_latitude_1e7, 52);
     int32_t latitude_1e7 = unwrap20(get_field(data, kLatitudeField), latitude_reference) * 52;
     if (latitude_1e7 < -900000000 || latitude_1e7 > 900000000) return Status::Invalid;
     int32_t divisor = longitude_divisor(std::abs(latitude_1e7) / 10000000);
-    int32_t longitude_reference = div_round<int32_t>(reference_longitude_1e7, divisor);
+    int32_t longitude_reference = divide_rounded<int32_t>(reference_longitude_1e7, divisor);
     int64_t longitude_1e7 =
         static_cast<int64_t>(unwrap20(get_field(data, kLongitudeField), longitude_reference)) *
         divisor;
@@ -404,10 +405,10 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     out.latitude_1e7 = latitude_1e7;
     out.longitude_1e7 = static_cast<int32_t>(longitude_1e7);
     out.altitude_m = decode_scaled(get_field(data, kAltitudeField), 12, 1, 0) - 1000;
-    out.speed_q = static_cast<uint16_t>(div_round<int32_t>(speed_e1 * 2, 5));
-    out.climb_e8 = static_cast<int16_t>(div_round<int32_t>(climb_e1 * 4, 5));
+    out.speed_q = static_cast<uint16_t>(divide_rounded<int32_t>(speed_e1 * 2, 5));
+    out.climb_e8 = static_cast<int16_t>(divide_rounded<int32_t>(climb_e1 * 4, 5));
     out.track_c9 = static_cast<uint16_t>(
-        div_round<int32_t>(static_cast<int32_t>(course_deg) * 512, 360) & 0x1FF);
+        divide_rounded<int32_t>(static_cast<int32_t>(course_deg) * 512, 360) & 0x1FF);
     out.received.at_s = rx_utc_s;
     out.source = model::Source::Alptas;
     out.speed_valid = true;
@@ -436,21 +437,22 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observati
     put_field(frame, kAirborneField, observation.flight_state == 1 ? 1 : 2);
     put_field(frame, kAltitudeField, encode_scaled(observation.altitude_m + 1000, 12, 1, 0));
 
-    int32_t latitude_coded = div_round<int32_t>(observation.latitude_1e7, 52);
+    int32_t latitude_coded = divide_rounded<int32_t>(observation.latitude_1e7, 52);
     put_field(frame, kLatitudeField, static_cast<uint32_t>(latitude_coded) & 0x0FFFFFu);
     int32_t divisor = longitude_divisor(std::abs(observation.latitude_1e7) / 10000000);
-    int32_t longitude_coded = div_round<int32_t>(observation.longitude_1e7, divisor);
+    int32_t longitude_coded = divide_rounded<int32_t>(observation.longitude_1e7, divisor);
     put_field(frame, kLongitudeField, static_cast<uint32_t>(longitude_coded) & 0x0FFFFFu);
 
-    int32_t speed_e1 = observation.speed_valid ? div_round<int32_t>(observation.speed_q * 5, 2) : 0;
+    int32_t speed_e1 =
+        observation.speed_valid ? divide_rounded<int32_t>(observation.speed_q * 5, 2) : 0;
     put_field(frame, kSpeedField, encode_scaled(speed_e1, 8, 2, 0));
     int32_t climb_e1 =
-        observation.climb_valid ? div_round<int32_t>(observation.climb_e8 * 5, 4) : 0;
+        observation.climb_valid ? divide_rounded<int32_t>(observation.climb_e8 * 5, 4) : 0;
     put_field(frame, kClimbField, encode_scaled(climb_e1, 6, 2, 1));
     put_field(frame, kTurnRateField, encode_scaled(0, 6, 2, 1));
 
     uint32_t course_deg =
-        static_cast<uint32_t>(div_round<int32_t>(observation.track_c9 * 360, 512)) % 360u;
+        static_cast<uint32_t>(divide_rounded<int32_t>(observation.track_c9 * 360, 512)) % 360u;
     put_field(frame, kCourseField, (course_deg << 1) & 0x03FFu);
 
     // INFO: fc 09mar26 GNSS accuracy and unk8 carry the fixed values upstream

@@ -20,9 +20,11 @@ inline bool reads_in(const ui::Canvas& canvas, const char* text, int x0, int y0,
     for (int y = y0; y + height <= y1; y++) {
         for (int x = x0; x + width <= x1; x++) {
             bool same = true;
-            for (int dy = 0; dy < height && same; dy++)
-                for (int dx = 0; dx < width && same; dx++)
-                    if (canvas.get_pixel(x + dx, y + dy) != wanted.get_pixel(dx, dy)) same = false;
+            for (int delta_y = 0; delta_y < height && same; delta_y++)
+                for (int delta_x = 0; delta_x < width && same; delta_x++)
+                    if (canvas.get_pixel(x + delta_x, y + delta_y) !=
+                        wanted.get_pixel(delta_x, delta_y))
+                        same = false;
             if (same) return true;
         }
     }
@@ -36,9 +38,10 @@ inline bool reads_at(const ui::Canvas& canvas, int x, int y, const char* text, i
     expected.clear(ink);
     expected.draw_text(x, y, text, ink, scale);
     const int width = static_cast<int>(std::strlen(text)) * ui::kCellWidth * scale;
-    for (int dy = 0; dy < ui::kCharacterHeight * scale; dy++)
-        for (int dx = 0; dx < width; dx++)
-            if (canvas.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy))
+    for (int delta_y = 0; delta_y < ui::kCharacterHeight * scale; delta_y++)
+        for (int delta_x = 0; delta_x < width; delta_x++)
+            if (canvas.get_pixel(x + delta_x, y + delta_y) !=
+                expected.get_pixel(x + delta_x, y + delta_y))
                 return false;
     return true;
 }

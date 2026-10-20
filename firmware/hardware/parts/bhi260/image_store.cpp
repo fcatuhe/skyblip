@@ -84,18 +84,18 @@ bool Bhi260ImageStore::read(uint32_t offset, uint8_t* out, uint16_t bytes) {
 }
 
 void Bhi260ImageStore::encode(const Header& header, uint8_t* out) {
-    put_u32(out, header.magic);
-    put_u16(out + 4, header.layout_version);
-    put_u16(out + 6, 0);
-    put_u32(out + 8, header.image_bytes);
+    put_uint32(out, header.magic);
+    put_uint16(out + 4, header.layout_version);
+    put_uint16(out + 6, 0);
+    put_uint32(out + 8, header.image_bytes);
     std::memcpy(out + 12, header.digest.data(), Sha256::kDigestBytes);
 }
 
 Bhi260ImageStore::Header Bhi260ImageStore::decode(const uint8_t* raw) {
     Header header;
-    header.magic = get_u32(raw);
-    header.layout_version = get_u16(raw + 4);
-    header.image_bytes = get_u32(raw + 8);
+    header.magic = get_uint32(raw);
+    header.layout_version = get_uint16(raw + 4);
+    header.image_bytes = get_uint32(raw + 8);
     std::memcpy(header.digest.data(), raw + 12, Sha256::kDigestBytes);
     return header;
 }

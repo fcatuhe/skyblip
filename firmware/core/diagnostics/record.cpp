@@ -53,8 +53,8 @@ Record framed(Type type, const Instant& at) {
 void encode_record(const Record& record, uint8_t* out) {
     out[0] = static_cast<uint8_t>(record.type);
     out[1] = record.flags;
-    put_u16(out + 2, record.into_ms);
-    put_u32(out + 4, record.at_s);
+    put_uint16(out + 2, record.into_ms);
+    put_uint32(out + 4, record.at_s);
     for (uint32_t i = 0; i < kPayloadBytes; i++) out[kPayloadOffset + i] = record.payload[i];
 }
 
@@ -65,8 +65,8 @@ Status decode_record(const uint8_t* raw, Record& out) {
     out = Record{};
     out.type = static_cast<Type>(raw[0]);
     out.flags = raw[1];
-    out.into_ms = get_u16(raw + 2);
-    out.at_s = get_u32(raw + 4);
+    out.into_ms = get_uint16(raw + 2);
+    out.at_s = get_uint32(raw + 4);
     for (uint32_t i = 0; i < kPayloadBytes; i++) out.payload[i] = raw[kPayloadOffset + i];
     return Status::Ok;
 }

@@ -65,7 +65,7 @@ constexpr uint8_t kFewestSatellitesForAltitude = 4;
 constexpr int32_t kClimbFigureStepFpm = 10;
 
 constexpr int32_t climb_figure_fpm(int32_t climb_fpm) {
-    return div_round(climb_fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
+    return divide_rounded(climb_fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
 }
 
 constexpr RadarPlot next_radar_plot(RadarPlot plot) {

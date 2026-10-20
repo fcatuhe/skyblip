@@ -8,7 +8,7 @@ namespace skyblip {
 
 // INFO: fc 19sep26 integer division truncates toward zero, which reads a measurement a unit low
 template <class T>
-constexpr T div_round(T number, T divisor) {
+constexpr T divide_rounded(T number, T divisor) {
     return number >= 0 ? (number + divisor / 2) / divisor : -((-number + divisor / 2) / divisor);
 }
 
@@ -44,9 +44,9 @@ T square_root(T square) {
     return root;
 }
 
-inline uint32_t hypotenuse(int32_t dx, int32_t dy) {
-    return static_cast<uint32_t>(square_root<uint64_t>(
-        static_cast<uint64_t>(static_cast<int64_t>(dx) * dx + static_cast<int64_t>(dy) * dy)));
+inline uint32_t hypotenuse(int32_t delta_x, int32_t delta_y) {
+    return static_cast<uint32_t>(square_root<uint64_t>(static_cast<uint64_t>(
+        static_cast<int64_t>(delta_x) * delta_x + static_cast<int64_t>(delta_y) * delta_y)));
 }
 
 }

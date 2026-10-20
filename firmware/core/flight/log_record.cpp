@@ -25,17 +25,17 @@ constexpr uint8_t kTargetFlagInFormation = 1u << 1;
 
 void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
     const uint32_t elapsed = utc_s > base_utc_s ? utc_s - base_utc_s : 0;
-    put_u16(out,
-            static_cast<uint16_t>(elapsed > kTimeOffsetCeilingS ? kTimeOffsetCeilingS : elapsed));
+    put_uint16(
+        out, static_cast<uint16_t>(elapsed > kTimeOffsetCeilingS ? kTimeOffsetCeilingS : elapsed));
 }
 
 void seal(uint8_t* out) {
-    put_u16(out + kChecksummedBytes, fec::crc16_ccitt(out, kChecksummedBytes));
+    put_uint16(out + kChecksummedBytes, fec::crc16_ccitt(out, kChecksummedBytes));
 }
 
 Status checked(const uint8_t* raw) {
     if (log_slot_erased(raw, kLogRecordBytes)) return Status::Empty;
-    if (fec::crc16_ccitt(raw, kChecksummedBytes) != get_u16(raw + kChecksummedBytes))
+    if (fec::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
         return Status::Crc;
     return Status::Ok;
 }
@@ -53,7 +53,7 @@ bool known_event(uint8_t code) {
 }
 
 void encode_status(const LogStatus& status, uint8_t* out) {
-    put_u16(out + 2, status.cell_mv);
+    put_uint16(out + 2, status.cell_mv);
     out[4] = status.percent;
     out[5] = status.power_level;
     out[6] = status.charge;
@@ -67,7 +67,7 @@ void encode_status(const LogStatus& status, uint8_t* out) {
 }
 
 void decode_status(const uint8_t* raw, LogStatus& out) {
-    out.cell_mv = get_u16(raw + 2);
+    out.cell_mv = get_uint16(raw + 2);
     out.percent = raw[4];
     out.power_level = raw[5];
     out.charge = raw[6];
@@ -84,10 +84,10 @@ void encode_target(const LogTarget& target, uint8_t* out) {
     out[3] = static_cast<uint8_t>(address >> 8);
     out[4] = static_cast<uint8_t>(address >> 16);
     out[5] = target.address_mapping_table;
-    put_u16(out + 6, target.distance_m);
-    put_u16(out + 8, static_cast<uint16_t>(target.relative_altitude_m));
-    put_u16(out + 10, target.relative_bearing_deg);
-    put_u16(out + 12, static_cast<uint16_t>(target.closing_mps));
+    put_uint16(out + 6, target.distance_m);
+    put_uint16(out + 8, static_cast<uint16_t>(target.relative_altitude_m));
+    put_uint16(out + 10, target.relative_bearing_deg);
+    put_uint16(out + 12, static_cast<uint16_t>(target.closing_mps));
     out[14] = target.alarm;
     out[15] = target.aircraft_category;
     out[17] = target.source;
@@ -96,24 +96,24 @@ void encode_target(const LogTarget& target, uint8_t* out) {
     if (target.dismissed) flags |= kTargetFlagDismissed;
     if (target.in_formation) flags |= kTargetFlagInFormation;
     out[19] = flags;
-    put_u16(out + 20, target.heard_s);
+    put_uint16(out + 20, target.heard_s);
 }
 
 void decode_target(const uint8_t* raw, LogTarget& out) {
     out.address = static_cast<uint32_t>(raw[2]) | (static_cast<uint32_t>(raw[3]) << 8) |
                   (static_cast<uint32_t>(raw[4]) << 16);
     out.address_mapping_table = raw[5];
-    out.distance_m = get_u16(raw + 6);
-    out.relative_altitude_m = static_cast<int16_t>(get_u16(raw + 8));
-    out.relative_bearing_deg = get_u16(raw + 10);
-    out.closing_mps = static_cast<int16_t>(get_u16(raw + 12));
+    out.distance_m = get_uint16(raw + 6);
+    out.relative_altitude_m = static_cast<int16_t>(get_uint16(raw + 8));
+    out.relative_bearing_deg = get_uint16(raw + 10);
+    out.closing_mps = static_cast<int16_t>(get_uint16(raw + 12));
     out.alarm = raw[14];
     out.aircraft_category = raw[15];
     out.source = raw[17];
     out.rssi_dbm = static_cast<int8_t>(raw[18]);
     out.dismissed = (raw[19] & kTargetFlagDismissed) != 0;
     out.in_formation = (raw[19] & kTargetFlagInFormation) != 0;
-    out.heard_s = get_u16(raw + 20);
+    out.heard_s = get_uint16(raw + 20);
 }
 
 }  // namespace
@@ -141,16 +141,16 @@ LogRecord log_record_from(const model::Ownship& own) {
 
 void encode_log_record(const LogRecord& record, uint32_t base_utc_s, uint8_t* out) {
     put_offset(out + 0, record.utc_s, base_utc_s);
-    put_u32(out + 2, static_cast<uint32_t>(record.latitude_1e7));
-    put_u32(out + 6, static_cast<uint32_t>(record.longitude_1e7));
-    put_u16(out + 10, static_cast<uint16_t>(clamp_i16(record.altitude_msl_m)));
+    put_uint32(out + 2, static_cast<uint32_t>(record.latitude_1e7));
+    put_uint32(out + 6, static_cast<uint32_t>(record.longitude_1e7));
+    put_uint16(out + 10, static_cast<uint16_t>(clamp_int16(record.altitude_msl_m)));
     // Height above the ellipsoid is stored as its distance from mean sea level:
     // EGM96 runs -107 m to +85 m over the whole planet, so one signed byte
     // carries the pair that two four-byte altitudes would have cost.
-    out[12] = static_cast<uint8_t>(clamp_i8(record.altitude_hae_m - record.altitude_msl_m));
-    put_u16(out + 13, record.speed_q);
-    put_u16(out + 15, record.track_c9 & kTrackMask);
-    put_u16(out + 17, static_cast<uint16_t>(record.climb_e8));
+    out[12] = static_cast<uint8_t>(clamp_int8(record.altitude_hae_m - record.altitude_msl_m));
+    put_uint16(out + 13, record.speed_q);
+    put_uint16(out + 15, record.track_c9 & kTrackMask);
+    put_uint16(out + 17, static_cast<uint16_t>(record.climb_e8));
     out[19] = record.satellites;
     const uint32_t tenths = (record.hdop_e2 + 5u) / 10u;
     out[20] = static_cast<uint8_t>(tenths > kHdopTenthsCeiling ? kHdopTenthsCeiling : tenths);
@@ -176,14 +176,14 @@ Status decode_log_record(const uint8_t* raw, uint32_t base_utc_s, LogRecord& out
     if (event_slot(raw)) return Status::Unsupported;
 
     out = LogRecord{};
-    out.utc_s = base_utc_s + get_u16(raw + 0);
-    out.latitude_1e7 = static_cast<int32_t>(get_u32(raw + 2));
-    out.longitude_1e7 = static_cast<int32_t>(get_u32(raw + 6));
-    out.altitude_msl_m = static_cast<int16_t>(get_u16(raw + 10));
+    out.utc_s = base_utc_s + get_uint16(raw + 0);
+    out.latitude_1e7 = static_cast<int32_t>(get_uint32(raw + 2));
+    out.longitude_1e7 = static_cast<int32_t>(get_uint32(raw + 6));
+    out.altitude_msl_m = static_cast<int16_t>(get_uint16(raw + 10));
     out.altitude_hae_m = out.altitude_msl_m + static_cast<int8_t>(raw[12]);
-    out.speed_q = get_u16(raw + 13);
-    out.track_c9 = get_u16(raw + 15);
-    out.climb_e8 = static_cast<int16_t>(get_u16(raw + 17));
+    out.speed_q = get_uint16(raw + 13);
+    out.track_c9 = get_uint16(raw + 15);
+    out.climb_e8 = static_cast<int16_t>(get_uint16(raw + 17));
     out.satellites = raw[19];
     out.hdop_e2 = static_cast<uint16_t>(raw[20] * 10u);
 
@@ -218,7 +218,7 @@ Status decode_log_event(const uint8_t* raw, uint32_t base_utc_s, LogEvent& out) 
 
     out = LogEvent{};
     out.kind = static_cast<LogKind>(code);
-    out.utc_s = base_utc_s + get_u16(raw + 0);
+    out.utc_s = base_utc_s + get_uint16(raw + 0);
     if (out.kind == LogKind::Status)
         decode_status(raw, out.status);
     else

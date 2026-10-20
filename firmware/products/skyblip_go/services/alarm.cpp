@@ -84,12 +84,12 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
     const traffic::AlarmAssessment& assessment = decision.assessment;
     diagnostics::Traffic value{};
     value.address = target.observation.address;
-    value.distance_m = clamp_u16(assessment.relative_distance_m < 0
-                                     ? 0
-                                     : static_cast<uint32_t>(assessment.relative_distance_m));
+    value.distance_m = clamp_uint16(assessment.relative_distance_m < 0
+                                        ? 0
+                                        : static_cast<uint32_t>(assessment.relative_distance_m));
     value.bearing_deg = assessment.relative_bearing_deg;
-    value.relative_altitude_m = clamp_i16(assessment.relative_altitude_m);
-    value.closing_mps = clamp_i16(assessment.closing_mps);
+    value.relative_altitude_m = clamp_int16(assessment.relative_altitude_m);
+    value.closing_mps = clamp_int16(assessment.closing_mps);
     value.alarm = target.alarm_level;
     value.source = target.observation.source;
     value.rssi_dbm = target.observation.rssi_dbm;

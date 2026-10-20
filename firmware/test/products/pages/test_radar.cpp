@@ -129,8 +129,8 @@ TEST_CASE("radar page: the range ring is one unbroken stroke, and the only ring 
     for (int y = 1; y < 170; y++)  // above the footer, where no label bites the arc
         for (int x = 1; x < 199; x++) {
             if (!canvas.get_pixel(x, y)) continue;
-            const int dx = x < 100 ? 99 - x : x - 100, dy = y < 100 ? 99 - y : y - 100;
-            const int distance_squared = dx * dx + dy * dy;
+            const int delta_x = x < 100 ? 99 - x : x - 100, delta_y = y < 100 ? 99 - y : y - 100;
+            const int distance_squared = delta_x * delta_x + delta_y * delta_y;
             if (distance_squared < 80 * 80 || distance_squared > 95 * 95) continue;
             const int neighbours = canvas.get_pixel(x - 1, y) + canvas.get_pixel(x + 1, y) +
                                    canvas.get_pixel(x, y - 1) + canvas.get_pixel(x, y + 1);

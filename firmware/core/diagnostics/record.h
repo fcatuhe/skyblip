@@ -77,9 +77,9 @@ inline void set_flag(uint8_t& flags, uint8_t bit, bool on) {
     if (on) flags |= bit;
 }
 
-inline void put_i8(uint8_t* out, int8_t value) { *out = static_cast<uint8_t>(value); }
+inline void put_int8(uint8_t* out, int8_t value) { *out = static_cast<uint8_t>(value); }
 
-inline int8_t get_i8(const uint8_t* raw) { return static_cast<int8_t>(*raw); }
+inline int8_t get_int8(const uint8_t* raw) { return static_cast<int8_t>(*raw); }
 
 constexpr int8_t kSampleOffsetFloorMv = -128;
 constexpr int8_t kSampleOffsetCeilingMv = 127;

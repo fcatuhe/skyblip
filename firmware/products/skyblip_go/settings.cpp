@@ -331,7 +331,7 @@ bool callsign_is_typeable(const char* callsign) {
     return false;
 }
 
-bool fits_u8(long value) { return value >= 0 && value <= UINT8_MAX; }
+bool fits_uint8(long value) { return value >= 0 && value <= UINT8_MAX; }
 
 }  // namespace
 
@@ -454,12 +454,12 @@ Status apply_json(Settings& settings, const char* json, int length) {
     bool flag;
     Settings next = settings;
     if (reader.read_integer("aircraft_type", value)) {
-        if (!fits_u8(value)) return Status::OutOfRange;
+        if (!fits_uint8(value)) return Status::OutOfRange;
         next.aircraft_type = static_cast<uint8_t>(value);
     }
     if (reader.read_boolean("alarm_enabled", flag)) next.alarm_enabled = flag;
     if (reader.read_integer("alarm_volume", value)) {
-        if (!fits_u8(value)) return Status::OutOfRange;
+        if (!fits_uint8(value)) return Status::OutOfRange;
         next.alarm_volume = static_cast<AlarmVolume>(value);
     }
     if (reader.read_integer("units", value)) next.units = value ? Units::Metric : Units::Nautical;

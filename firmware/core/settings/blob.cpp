@@ -10,7 +10,7 @@ namespace skyblip::settings {
 namespace {
 
 uint32_t stored_crc(const uint8_t* data, size_t payload_bytes) {
-    return get_u32(data + 1 + payload_bytes);
+    return get_uint32(data + 1 + payload_bytes);
 }
 
 }  // namespace
@@ -29,7 +29,7 @@ void seal(uint8_t version, const void* payload, size_t payload_bytes, uint8_t* o
     if (capacity < blob_bytes(payload_bytes)) return;
     out[0] = version;
     std::memcpy(out + 1, payload, payload_bytes);
-    put_u32(out + 1 + payload_bytes, fec::crc32(out, 1 + payload_bytes));
+    put_uint32(out + 1 + payload_bytes, fec::crc32(out, 1 + payload_bytes));
 }
 
 Status open(const uint8_t* data, size_t bytes, size_t payload_bytes, void* payload_out) {

@@ -86,12 +86,13 @@ Plotted plot_point(const RadarSnapshot& snapshot, const RadarTarget& target,
     const int ring = ring_radius(snapshot.plot);
     const int64_t range = ring_metres(snapshot);
     const HeadingUp at = heading_up(target.north_m, target.east_m, track_angle16);
-    const int32_t dx = to_pixels(at.right, range, ring), dy = to_pixels(at.ahead, range, ring);
-    const bool in_ring = inside_ring(dx, dy, ring);
+    const int32_t delta_x = to_pixels(at.right, range, ring),
+                  delta_y = to_pixels(at.ahead, range, ring);
+    const bool in_ring = inside_ring(delta_x, delta_y, ring);
     const bool pinned = !in_ring && snapshot.plot == RadarPlot::All;
-    const HeadingUp drawn = pinned ? on_the_rim(dx, dy) : HeadingUp{dy, dx};
-    Plotted plotted{dx,      dy,   glass_x_of(drawn.right),  glass_y_of(drawn.ahead),
-                    in_ring, true, vertical_of(target.up_m), trend_of(target)};
+    const HeadingUp drawn = pinned ? on_the_rim(delta_x, delta_y) : HeadingUp{delta_y, delta_x};
+    Plotted plotted{delta_x, delta_y, glass_x_of(drawn.right),  glass_y_of(drawn.ahead),
+                    in_ring, true,    vertical_of(target.up_m), trend_of(target)};
     plotted.shown = pinned || on_glass(plotted.x, plotted.y);
     return plotted;
 }
@@ -115,11 +116,11 @@ HeadingUp on_glass_at(const flight::Position& position, const RadarSnapshot& sna
 
 void minute_ball(ui::Canvas& canvas, int x, int y) {
     const int radius = kMinuteBallRadius;
-    for (int dy = -radius; dy < radius; dy++)
-        for (int dx = -radius; dx < radius; dx++) {
-            const int half_x = 2 * dx + 1, half_y = 2 * dy + 1;
+    for (int delta_y = -radius; delta_y < radius; delta_y++)
+        for (int delta_x = -radius; delta_x < radius; delta_x++) {
+            const int half_x = 2 * delta_x + 1, half_y = 2 * delta_y + 1;
             if (half_x * half_x + half_y * half_y <= 4 * radius * radius)
-                canvas.set_pixel(x + dx, y + dy, true);
+                canvas.set_pixel(x + delta_x, y + delta_y, true);
         }
 }
 
@@ -151,21 +152,21 @@ struct DashPen {
 
     void stroke(int x1, int y1) {
         int at_x = x, at_y = y;
-        const int dx = x1 > at_x ? x1 - at_x : at_x - x1;
-        const int dy = y1 > at_y ? y1 - at_y : at_y - y1;
+        const int delta_x = x1 > at_x ? x1 - at_x : at_x - x1;
+        const int delta_y = y1 > at_y ? y1 - at_y : at_y - y1;
         const int step_x = at_x < x1 ? 1 : -1, step_y = at_y < y1 ? 1 : -1;
-        const bool steep = dy >= dx;
-        int error = dx - dy;
+        const bool steep = delta_y >= delta_x;
+        int error = delta_x - delta_y;
         if (fresh) dash(at_x, at_y, steep);
         fresh = false;
         while (at_x != x1 || at_y != y1) {
             const int doubled_error = 2 * error;
-            if (doubled_error > -dy) {
-                error -= dy;
+            if (doubled_error > -delta_y) {
+                error -= delta_y;
                 at_x += step_x;
             }
-            if (doubled_error < dx) {
-                error += dx;
+            if (doubled_error < delta_x) {
+                error += delta_x;
                 at_y += step_y;
             }
             dash(at_x, at_y, steep);
@@ -215,19 +216,19 @@ Leader leader_of(const RadarSnapshot& snapshot, const RadarTarget& target, int16
 }
 
 void line_inside_ring(ui::Canvas& canvas, int x0, int y0, int x1, int y1, int ring) {
-    const int dx = x1 > x0 ? x1 - x0 : x0 - x1, dy = y1 > y0 ? y1 - y0 : y0 - y1;
+    const int delta_x = x1 > x0 ? x1 - x0 : x0 - x1, delta_y = y1 > y0 ? y1 - y0 : y0 - y1;
     const int step_x = x0 < x1 ? 1 : -1, step_y = y0 < y1 ? 1 : -1;
-    int error = dx - dy;
+    int error = delta_x - delta_y;
     for (;;) {
         if (pixel_within(x0, y0, ring - kRingWidth)) canvas.set_pixel(x0, y0, true);
         if (x0 == x1 && y0 == y1) return;
         const int doubled_error = 2 * error;
-        if (doubled_error > -dy) {
-            error -= dy;
+        if (doubled_error > -delta_y) {
+            error -= delta_y;
             x0 += step_x;
         }
-        if (doubled_error < dx) {
-            error += dx;
+        if (doubled_error < delta_x) {
+            error += delta_x;
             y0 += step_y;
         }
     }
@@ -279,8 +280,11 @@ bool outranks(const RimMark& mark, const RimMark& other) {
 
 RimMark* covered_by(RimMark* drawn, int count, const Plotted& plotted) {
     for (int i = 0; i < count; i++) {
-        const int dx = drawn[i].plotted.x - plotted.x, dy = drawn[i].plotted.y - plotted.y;
-        if ((dx < 0 ? -dx : dx) < kRimMarkPx && (dy < 0 ? -dy : dy) < kRimMarkPx) return &drawn[i];
+        const int delta_x = drawn[i].plotted.x - plotted.x,
+                  delta_y = drawn[i].plotted.y - plotted.y;
+        if ((delta_x < 0 ? -delta_x : delta_x) < kRimMarkPx &&
+            (delta_y < 0 ? -delta_y : delta_y) < kRimMarkPx)
+            return &drawn[i];
     }
     return nullptr;
 }
@@ -326,15 +330,15 @@ bool count_fits(const Bounds& box, const RimMark& own, const RimMark* marks, int
 }
 
 bool abeam(const Plotted& plotted) {
-    const int dy = plotted.y - kFar;
-    return (dy < 0 ? -dy : dy) < kRimMarkPx / 2;
+    const int delta_y = plotted.y - kFar;
+    return (delta_y < 0 ? -delta_y : delta_y) < kRimMarkPx / 2;
 }
 
 void rim_count(ui::Canvas& canvas, const RimMark& mark, const RimMark* marks, int mark_count,
                const Bounds& label) {
-    const int dx = mark.plotted.x - kFar, dy = mark.plotted.y - kFar;
-    int along_x = -dy, along_y = dx;
-    if ((along_x > 0) != (dx >= 0)) {
+    const int delta_x = mark.plotted.x - kFar, delta_y = mark.plotted.y - kFar;
+    int along_x = -delta_y, along_y = delta_x;
+    if ((along_x > 0) != (delta_x >= 0)) {
         along_x = -along_x;
         along_y = -along_y;
     }
@@ -344,7 +348,7 @@ void rim_count(ui::Canvas& canvas, const RimMark& mark, const RimMark* marks, in
     }
     const Bounds spots[] = {count_box_beside(mark, along_x, along_y),
                             count_box_beside(mark, -along_x, -along_y),
-                            count_box_beside(mark, dx, dy)};
+                            count_box_beside(mark, delta_x, delta_y)};
     const Bounds* box = nullptr;
     for (const Bounds& spot : spots)
         if (!box && count_fits(spot, mark, marks, mark_count, label)) box = &spot;
@@ -394,8 +398,8 @@ Plotted clear_of(const Plotted& plotted, const Bounds& label) {
     if (!under_the_label(plotted, label)) return plotted;
     Plotted moved = plotted;
     moved.x = slid_x(plotted, label);
-    const int32_t dx = moved.x - kFar;
-    moved.y = kFar + square_root<int32_t>(kRimRadius * kRimRadius - dx * dx);
+    const int32_t delta_x = moved.x - kFar;
+    moved.y = kFar + square_root<int32_t>(kRimRadius * kRimRadius - delta_x * delta_x);
     return moved;
 }
 

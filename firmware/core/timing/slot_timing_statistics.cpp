@@ -20,7 +20,7 @@ void SlotTimingStatistics::record_sample(uint32_t* buckets, uint32_t& samples, i
     samples++;
     const int64_t magnitude = error_us < 0 ? -error_us : error_us;
     const int64_t worst_magnitude = worst_us < 0 ? -static_cast<int64_t>(worst_us) : worst_us;
-    if (magnitude > worst_magnitude) worst_us = clamp_i32(error_us);
+    if (magnitude > worst_magnitude) worst_us = clamp_int32(error_us);
 }
 
 void SlotTimingStatistics::record_edge(uint64_t edge_us, bool locked) {

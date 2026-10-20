@@ -18,11 +18,11 @@ constexpr int column_x(int cell) { return kLeft + cell * kCellWidth; }
 // what keeps a five-character value off it. km/h then runs one cell past the
 // field, which is what it costs to have every unit start in the same column.
 constexpr int kValueX = column_x(5);
-constexpr int kAeroNumberEnd = column_x(10);
-constexpr int kAeroUnitX = column_x(10);
-constexpr int kAeroUnitEnd = column_x(15);  // past a leading space and four characters
-constexpr int kSiNumberEnd = column_x(22);
-constexpr int kSiUnitX = column_x(22);
+constexpr int kAeronauticalNumberEnd = column_x(10);
+constexpr int kAeronauticalUnitX = column_x(10);
+constexpr int kAeronauticalUnitEnd = column_x(15);  // past a leading space and four characters
+constexpr int kMetricNumberEnd = column_x(22);
+constexpr int kMetricUnitX = column_x(22);
 
 const char* solution_dimensions(const StatusSnapshot& snapshot) {
     if (snapshot.fix_mode == gnss::kFixMode3D) return "3D";
@@ -44,7 +44,9 @@ constexpr uint8_t kImuMetaEventInitialised = 16;
 
 int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).value; }
 
-int32_t centi_kilometres_per_hour(int32_t speed_mm_s) { return div_round(speed_mm_s * 36, 100); }
+int32_t centi_kilometres_per_hour(int32_t speed_mm_s) {
+    return divide_rounded(speed_mm_s * 36, 100);
+}
 
 // Draw "LABEL  value" on one row.
 void row(ui::Canvas& canvas, int y, const char* label, const char* value) {
@@ -67,10 +69,10 @@ int length(const char* text) {
 void text_row(ui::Canvas& canvas, int y, const char* label, const char* value, const char* unit,
               const char* second_value = "", const char* second_unit = "") {
     canvas.draw_text(kLeft, y, label, true, 1);
-    right_aligned(canvas, kAeroNumberEnd, y, value, length(value));
-    canvas.draw_text(kAeroUnitX, y, unit, true, 1);
-    right_aligned(canvas, kSiNumberEnd, y, second_value, length(second_value));
-    canvas.draw_text(kSiUnitX, y, second_unit, true, 1);
+    right_aligned(canvas, kAeronauticalNumberEnd, y, value, length(value));
+    canvas.draw_text(kAeronauticalUnitX, y, unit, true, 1);
+    right_aligned(canvas, kMetricNumberEnd, y, second_value, length(second_value));
+    canvas.draw_text(kMetricUnitX, y, second_unit, true, 1);
 }
 
 struct Quantity {
@@ -81,31 +83,32 @@ struct Quantity {
 
 // Aeronautical unit in the first column, SI in the second: the pilot reads the
 // left, the engineer checks the right.
-void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aero, Quantity si,
+void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aeronautical, Quantity metric,
               bool plus_sign) {
     char text[16];
     canvas.draw_text(kLeft, y, label, true, 1);
 
-    int written = format_signed(text, aero.value, 1, aero.decimals, plus_sign);
+    int written = format_signed(text, aeronautical.value, 1, aeronautical.decimals, plus_sign);
     text[written] = 0;
-    right_aligned(canvas, kAeroNumberEnd, y, text, written);
-    canvas.draw_text(kAeroUnitX, y, aero.unit, true, 1);
+    right_aligned(canvas, kAeronauticalNumberEnd, y, text, written);
+    canvas.draw_text(kAeronauticalUnitX, y, aeronautical.unit, true, 1);
 
-    written = format_signed(text, si.value, 1, si.decimals, plus_sign);
+    written = format_signed(text, metric.value, 1, metric.decimals, plus_sign);
     text[written] = 0;
-    right_aligned(canvas, kSiNumberEnd, y, text, written);
-    canvas.draw_text(kSiUnitX, y, si.unit, true, 1);
+    right_aligned(canvas, kMetricNumberEnd, y, text, written);
+    canvas.draw_text(kMetricUnitX, y, metric.unit, true, 1);
 }
 
 // What the sensor reads, to the tenth of a pascal it measures in.
 void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
     char barometer[12];
-    const int written = format_unsigned(barometer, div_round<uint32_t>(pressure_mpa, 100), 1, 3);
+    const int written =
+        format_unsigned(barometer, divide_rounded<uint32_t>(pressure_mpa, 100), 1, 3);
     barometer[written] = 0;
 
     canvas.draw_text(kLeft, y, "BARO", true, 1);
-    right_aligned(canvas, kAeroUnitEnd, y, barometer, written);
-    canvas.draw_text(kSiUnitX, y, " hPa", true, 1);
+    right_aligned(canvas, kAeronauticalUnitEnd, y, barometer, written);
+    canvas.draw_text(kMetricUnitX, y, " hPa", true, 1);
 }
 
 uint32_t at_most(uint32_t value, uint32_t ceiling) { return value > ceiling ? ceiling : value; }
@@ -237,7 +240,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         written = format_signed(text, snapshot.latitude_1e7, 1, 7, false);
         text[written] = 0;
         canvas.draw_text(kLeft, y, "LAT", true, 1);
-        right_aligned(canvas, kAeroUnitEnd, y, text, written);
+        right_aligned(canvas, kAeronauticalUnitEnd, y, text, written);
 
         written = format_string(text, "LON ");
         written += format_signed(text + written, snapshot.longitude_1e7, 1, 7, false);
@@ -270,13 +273,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     y += kLineHeight;
 
     dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).value, 0, " ft"},
-             {div_round(snapshot.altitude_mm, 100), 1, " m"}, false);
+             {divide_rounded(snapshot.altitude_mm, 100), 1, " m"}, false);
     y += kLineHeight;
 
     if (snapshot.barometer_valid)
         dual_row(canvas, y, "STD",
                  {to_feet(Millimetres(snapshot.altitude_standard_mm)).value, 0, " ft"},
-                 {div_round(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
+                 {divide_rounded(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
     y += kLineHeight;
 
     dual_row(canvas, y, "SPD", {knots(snapshot.speed_mm_s), 0, " kt"},

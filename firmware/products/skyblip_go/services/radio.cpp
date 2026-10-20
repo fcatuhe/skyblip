@@ -117,8 +117,8 @@ void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms)
     value.margin_us = static_cast<int32_t>(
         std::clamp<int64_t>(change.margin_us(), std::numeric_limits<int32_t>::min(),
                             std::numeric_limits<int32_t>::max()));
-    value.took_us = clamp_u16(change.took_us());
-    value.gap_us = clamp_u16(change.gap_us());
+    value.took_us = clamp_uint16(change.took_us());
+    value.gap_us = clamp_uint16(change.gap_us());
     value.change = kind_of(change);
     value.armed_ahead = change.armed_ahead;
     value.late = change.late_start();

@@ -11,27 +11,27 @@ namespace skyblip::protocol {
 
 namespace {
 void pack_record(uint8_t* record, const model::AircraftObservation& target) {
-    put_u24(record, target.address & settings::kAddressMask);
+    put_uint24(record, target.address & settings::kAddressMask);
     record[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
                                      ((target.flight_state & 0x03) << 6));
     record[4] = target.aircraft_category;
     record[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
-    put_i32(record + 6, target.latitude_1e7);
-    put_i32(record + 10, target.longitude_1e7);
-    put_i16(record + 14, static_cast<int16_t>(target.altitude_m));
+    put_int32(record + 6, target.latitude_1e7);
+    put_int32(record + 10, target.longitude_1e7);
+    put_int16(record + 14, static_cast<int16_t>(target.altitude_m));
 }
 
 void unpack_record(const uint8_t* record, model::AircraftObservation& target) {
     target = model::AircraftObservation{};
-    target.address = get_u24(record);
+    target.address = get_uint24(record);
     target.address_mapping_table = record[3] & 0x3F;
     target.flight_state = (record[3] >> 6) & 0x03;
     target.aircraft_category = record[4];
     target.speed_q = record[5];
     target.speed_valid = record[5] != 0;
-    target.latitude_1e7 = get_i32(record + 6);
-    target.longitude_1e7 = get_i32(record + 10);
-    target.altitude_m = get_i16(record + 14);
+    target.latitude_1e7 = get_int32(record + 6);
+    target.longitude_1e7 = get_int32(record + 10);
+    target.altitude_m = get_int16(record + 14);
     target.position_valid = true;
     target.source = model::Source::AdslUplink;
     target.emergency = 1;

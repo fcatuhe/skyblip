@@ -152,8 +152,8 @@ class Bhi260 : public io::I2c {
         while (position < bytes) {
             if (expected_bytes_ == 0 && received_bytes_ == 0 && command_ == 0) {
                 if (bytes - position < 4) return false;
-                command_ = get_u16(data + position);
-                const uint16_t declared = get_u16(data + position + 2);
+                command_ = get_uint16(data + position);
+                const uint16_t declared = get_uint16(data + position + 2);
                 expected_bytes_ = command_ == kCommandUploadToProgramRam ? declared * 4u : declared;
                 position += 4;
                 payload_bytes_ = 0;
@@ -190,12 +190,12 @@ class Bhi260 : public io::I2c {
             case kCommandChangeRange:
                 if (!announced_ || payload_bytes_ < 3) break;
                 if (payload_[0] == kSensorAccelerometer)
-                    accelerometer_range_g = get_u16(payload_ + 1);
-                if (payload_[0] == kSensorGyroscope) gyroscope_range_dps = get_u16(payload_ + 1);
+                    accelerometer_range_g = get_uint16(payload_ + 1);
+                if (payload_[0] == kSensorGyroscope) gyroscope_range_dps = get_uint16(payload_ + 1);
                 break;
             case kCommandConfigureSensor: {
                 if (!announced_ || !accepts_configuration || payload_bytes_ < 8) break;
-                const uint32_t bits = get_u32(payload_ + 1);
+                const uint32_t bits = get_uint32(payload_ + 1);
                 float rate = 0;
                 std::memcpy(&rate, &bits, sizeof(rate));
                 if (payload_[0] == kSensorGyroscope) {
@@ -261,8 +261,8 @@ class Bhi260 : public io::I2c {
             answer_bytes = kSensorConfigBytes;
             uint32_t bits = 0;
             std::memcpy(&bits, &sample_rate_hz, sizeof(bits));
-            put_u32(payload, bits);
-            put_u16(payload + 10, accelerometer_range_g);
+            put_uint32(payload, bits);
+            put_uint16(payload + 10, accelerometer_range_g);
         } else {
             return;
         }
@@ -331,7 +331,7 @@ class Bhi260 : public io::I2c {
 
     static int put_counts(uint8_t* out, int16_t value, int range, int per_unit) {
         const int32_t counts = static_cast<int32_t>(value) * kCountsPerRange / (range * per_unit);
-        put_u16(out, static_cast<uint16_t>(counts));
+        put_uint16(out, static_cast<uint16_t>(counts));
         return 2;
     }
 

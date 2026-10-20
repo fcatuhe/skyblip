@@ -19,9 +19,9 @@ void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ah
     const int16_t track = to_angle16(CentiDegrees(track_cdeg));
     const int64_t cosine_of_track = cosine(track), sine_of_track = sine(track);
     ahead_m = static_cast<int32_t>(
-        div_round<int64_t>(north_m * cosine_of_track + east_m * sine_of_track, kTrigOne));
+        divide_rounded<int64_t>(north_m * cosine_of_track + east_m * sine_of_track, kTrigOne));
     right_m = static_cast<int32_t>(
-        div_round<int64_t>(east_m * cosine_of_track - north_m * sine_of_track, kTrigOne));
+        divide_rounded<int64_t>(east_m * cosine_of_track - north_m * sine_of_track, kTrigOne));
 }
 
 uint32_t reception_key(const model::AircraftObservation& observation) {

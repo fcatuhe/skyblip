@@ -230,7 +230,7 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
     out[written++] = ',';
     // Ground speed is knots on this sentence, kept to one decimal.
     const uint32_t knots_e1 = static_cast<uint32_t>(
-        div_round<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
+        divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
     written += format_unsigned(out + written, knots_e1, 1, 1);
     out[written++] = ',';
     written += format_unsigned(out + written, to_degrees(CentiDegrees(own.track_cdeg)).value, 1);

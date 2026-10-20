@@ -90,7 +90,9 @@ class World {
             static_cast<uint8_t>(satellites < 0 ? 0 : (satellites > 32 ? 32 : satellites));
     }
     void set_altitude_m(int32_t altitude_m) { gnss().altitude_m = altitude_m; }
-    void set_speed_kt(int32_t speed_kt) { gnss().speed_mm_s = div_round(speed_kt * 514444, 1000); }
+    void set_speed_kt(int32_t speed_kt) {
+        gnss().speed_mm_s = divide_rounded(speed_kt * 514444, 1000);
+    }
     void set_track_deg(int32_t track_deg) { gnss().track_deg = ((track_deg % 360) + 360) % 360; }
     void set_turn_dps(double turn_dps) { gnss().turn_dps = turn_dps; }
     void set_climb_mm_s(int32_t climb_mm_s) { gnss().climb_mm_s = climb_mm_s; }
