@@ -127,7 +127,12 @@
         {"name": "implausible", "number": 47, "type": "unsigned"},
         {"name": "die_temperature_c", "number": 48, "type": "integer"},
         {"name": "charge", "number": 49, "type": "enum", "enum": "charge"},
-        {"name": "charge_warnings", "number": 50, "type": "unsigned"}
+        {"name": "charge_warnings", "number": 50, "type": "unsigned"},
+        {"name": "mtu_exchanged_by_central", "number": 51, "type": "unsigned"},
+        {"name": "mtu_exchanged_by_unit", "number": 52, "type": "unsigned"},
+        {"name": "mtu_never_exchanged", "number": 53, "type": "unsigned"},
+        {"name": "mtu_requests_failed", "number": 54, "type": "unsigned"},
+        {"name": "replies_too_wide", "number": 55, "type": "unsigned"}
       ]
     },
     {

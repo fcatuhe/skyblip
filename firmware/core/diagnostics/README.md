@@ -69,7 +69,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Barometer` 9 | pressure, derived altitude, the rate taken from it, temperature | the vertical speed window (`kBarometerClimbWindowMs` against `kGnssClimbWindowMs`) measured rather than assumed |
 | `Motion` 10 | ball position, the three g-meter axes now, the normal axis at both extremes, hub error bytes | what the airframe pulled, and whether the filter lengths suit it. Absent on a unit with no hub, which the fitted flag says |
 | `Contact` 11 | contact, edge instant, how long the level had held, the gesture the product decided | `Controls::kLongTouchHoldMs` and `kLongPressHoldMs` against the presses a hand actually makes |
-| `Link` 12 | link session, negotiated payload, action (up, down, claim taken or released, received, sent, dropped), endpoint, frame bytes, drops | what a phone negotiates in the field, and where an offload stalls |
+| `Link` 12 | link session, the payload of that session, action (up, down, claim taken or released, received, sent, dropped), endpoint, frame bytes, drops; on `down`, who exchanged the MTU, what became of the unit's own request and its error, how long the payload took to settle and the replies refused `small_mtu` | what a phone negotiates in the field, whether frames need splitting (`../comms/README.md`, Measuring what links settle on), and where an offload stalls |
 | `Traffic` 13 | address, distance, bearing, relative altitude, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistanceM` and `kAdvisoryAltitudeM` against the encounters that happened, and what the ageing rules threw away |
 | `Write` 14 | placement, kind, how long the change waited, the phase it was placed at, requests, writes, forced | whether `kSettleMs` and `kDeferCeilingMs` place a durable write inside its window, and how often one is forced |
 | `Screen` 15 | page, mode, prompt, alarm level, how long it had been up, backlight, powered, thermal hold, how long the last render and the last present took | `ScreenService::kPresentFloorMs` and the refresh cadence against what a pilot was shown, and what a page costs the loop |
@@ -146,7 +146,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Barometer` | `services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
-| `Link` | `services/config_link.cpp` `record_link`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
+| `Link` | `services/config_link.cpp` `record_link` and `record_link_down`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Write` | `services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |

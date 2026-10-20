@@ -382,6 +382,12 @@ Status Link::send_to(uint16_t session_id, Endpoint endpoint, ConstByteSpan bytes
     return sent;
 }
 
+void Link::note_reply_too_wide(uint16_t session_id) {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    g_sessions.reply_too_wide(session_id);
+    k_spin_unlock(&g_lock, key);
+}
+
 bool Link::pop_rx(RxFrame& out) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     Result<RxFrame> popped = g_rx.pop();

@@ -111,6 +111,7 @@ bool RecordPool::send(uint16_t link_session, int bytes, comms::LogStore store) {
 }
 
 void RecordPool::refuse_too_wide(uint16_t link_session, comms::LogStore store) {
+    context_.roles.link.note_reply_too_wide(link_session);
     (void)deliver(link_session, comms::format_log_acknowledgement(reply_, reply_capacity(), false,
                                                                   link::Reason::SmallMtu, store));
 }

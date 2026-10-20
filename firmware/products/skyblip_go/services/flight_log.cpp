@@ -167,7 +167,7 @@ void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t sess
     if (!context_.diagnostics.armed()) return;
     diagnostics::Link event{};
     event.link_session = session;
-    event.payload_bytes = context_.roles.link.payload_bytes();
+    event.payload_bytes = context_.roles.link.payload_bytes_to(session);
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
     event.drops = link_drops();

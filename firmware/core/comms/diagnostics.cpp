@@ -79,6 +79,17 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             static_cast<int64_t>(diagnostics.reset), power::to_string(diagnostics.reset));
         add(Group::System, "link_drops", link::diagnostics_key::kLinkDrops, Kind::Unsigned,
             diagnostics.link_drops);
+        add(Group::System, "mtu_exchanged_by_central",
+            link::diagnostics_key::kMtuExchangedByCentral, Kind::Unsigned,
+            diagnostics.mtu_exchanged_by_central);
+        add(Group::System, "mtu_exchanged_by_unit", link::diagnostics_key::kMtuExchangedByUnit,
+            Kind::Unsigned, diagnostics.mtu_exchanged_by_unit);
+        add(Group::System, "mtu_never_exchanged", link::diagnostics_key::kMtuNeverExchanged,
+            Kind::Unsigned, diagnostics.mtu_never_exchanged);
+        add(Group::System, "mtu_requests_failed", link::diagnostics_key::kMtuRequestsFailed,
+            Kind::Unsigned, diagnostics.mtu_requests_failed);
+        add(Group::System, "replies_too_wide", link::diagnostics_key::kRepliesTooWide,
+            Kind::Unsigned, diagnostics.replies_too_wide);
     }
 
     if (radio) {

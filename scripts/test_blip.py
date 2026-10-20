@@ -214,10 +214,20 @@ class DiagnosticsPayloads(unittest.TestCase):
             "contact", 0b0100, at_ms=123_456, held_ms=1040, contact="pad", gesture=2, down=True))
 
     def test_link_names_the_action_the_endpoint_and_the_negotiated_payload(self):
-        payload = struct.pack("<5H2B", 3, 182, 96, 3, 5, 2, 2)
+        payload = struct.pack("<3H2BH2BH2B", 3, 182, 96, 3, 0, 5, 2, 2, 0, 0, 0)
         self.assertEqual(decoded(12, payload, 0b0100), whole(
             "link", 0b0100, link_session=3, payload_bytes=182, frame_bytes=96, holder=3, drops=5,
-            action="claim_taken", endpoint="log", claim_held=True))
+            action="claim_taken", endpoint="log", claim_held=True,
+            mtu_request_error=0, mtu_settled_after_ms=0, replies_too_wide=0, mtu_request="not_asked",
+            mtu_exchanged_by_central=False, mtu_exchanged_by_unit=False))
+
+    def test_a_link_that_ended_says_who_exchanged_its_mtu_when_and_what_it_refused(self):
+        payload = struct.pack("<3H2BH2BH2B", 2, 244, 0, 2, 0x0E, 1, 1, 0, 412, 3, 4)
+        self.assertEqual(decoded(12, payload, 0b0000_1000), whole(
+            "link", 0b0000_1000, link_session=2, payload_bytes=244, frame_bytes=0, holder=2, drops=1,
+            action="down", endpoint="config", claim_held=False, mtu_request_error=0x0E,
+            mtu_settled_after_ms=412, replies_too_wide=3, mtu_request="refused",
+            mtu_exchanged_by_central=True, mtu_exchanged_by_unit=False))
 
     def test_traffic_reads_the_encounter_geometry_with_signed_altitude(self):
         payload = struct.pack("<I2H2h2BbB", 0xDD1234, 2450, 270, -180, 32, 1, 1, -88, 12)

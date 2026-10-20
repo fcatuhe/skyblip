@@ -13,6 +13,9 @@ namespace skyblip {
 
 inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
 
+inline constexpr const char* kSmallMtuRefusal =
+    "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"small_mtu\"}";
+
 inline events::RxFrame link_frame(events::Endpoint endpoint, uint16_t session_id,
                                   const char* json) {
     events::RxFrame frame{};

@@ -118,15 +118,35 @@ void ConfigLinkService::accrue_connected(uint32_t now_ms) {
 void ConfigLinkService::record_link(diagnostics::LinkAction action, uint16_t session,
                                     uint16_t frame_bytes, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
+    context_.diagnostics.record(link_record(action, session, frame_bytes),
+                                context_.instant(now_ms));
+}
+
+diagnostics::Link ConfigLinkService::link_record(diagnostics::LinkAction action, uint16_t session,
+                                                 uint16_t frame_bytes) const {
     diagnostics::Link event{};
     event.link_session = session;
-    event.payload_bytes = context_.roles.link.payload_bytes();
+    event.payload_bytes = context_.roles.link.payload_bytes_to(session);
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
     event.drops = config_.link_drops();
     event.action = action;
     event.endpoint = events::Endpoint::Config;
     event.claim_held = config_.claim().held();
+    return event;
+}
+
+void ConfigLinkService::record_link_down(const events::LinkDown& down, uint32_t settled_after_ms,
+                                         uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Link event = link_record(diagnostics::LinkAction::Down, down.session_id, 0);
+    event.payload_bytes = down.payload_bytes;
+    event.mtu_settled_after_ms = settled_after_ms;
+    event.replies_too_wide = down.replies_too_wide;
+    event.mtu_request = down.exchange.request;
+    event.mtu_request_error = down.exchange.request_error;
+    event.mtu_exchanged_by_central = down.exchange.by_central;
+    event.mtu_exchanged_by_unit = down.exchange.by_unit;
     context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
@@ -167,14 +187,40 @@ void ConfigLinkService::spend_gnss_cold_start() {
 void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     events::LinkEvent event{};
     while (context_.bus.link_events.pop(event)) {
-        const bool up = event.type == events::LinkEventType::Up;
-        if (up)
+        if (event.type == events::LinkEventType::Up) {
+            time_link_up(event.session_id, now_ms);
             config_.on_link_up(events::LinkUp{event.session_id, event.payload_bytes});
-        else
-            config_.on_link_down(events::LinkDown{event.session_id});
-        record_link(up ? diagnostics::LinkAction::Up : diagnostics::LinkAction::Down,
-                    event.session_id, 0, now_ms);
+            record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
+        } else {
+            const events::LinkDown down{event.session_id, event.payload_bytes, event.exchange,
+                                        event.replies_too_wide};
+            config_.on_link_down(down);
+            record_link_down(down, forget_link_timing(event.session_id), now_ms);
+        }
     }
+}
+
+void ConfigLinkService::time_link_up(uint16_t session_id, uint32_t now_ms) {
+    for (LinkTiming& timing : link_timings_) {
+        if (timing.session_id != session_id) continue;
+        timing.settled_after_ms = now_ms - timing.connected_ms;
+        return;
+    }
+    for (LinkTiming& timing : link_timings_) {
+        if (timing.session_id != 0) continue;
+        timing = LinkTiming{session_id, now_ms, 0};
+        return;
+    }
+}
+
+uint32_t ConfigLinkService::forget_link_timing(uint16_t session_id) {
+    for (LinkTiming& timing : link_timings_) {
+        if (timing.session_id != session_id) continue;
+        const uint32_t settled_after_ms = timing.settled_after_ms;
+        timing = LinkTiming{};
+        return settled_after_ms;
+    }
+    return 0;
 }
 
 // The whole of the deferral, and it is short because the policy owns the

@@ -306,6 +306,11 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"die_temperature_c", 48, Type::Integer, nullptr, 0},
     {"charge", 49, Type::Enum, &kCharge, 0},
     {"charge_warnings", 50, Type::Unsigned, nullptr, 0},
+    {"mtu_exchanged_by_central", 51, Type::Unsigned, nullptr, 0},
+    {"mtu_exchanged_by_unit", 52, Type::Unsigned, nullptr, 0},
+    {"mtu_never_exchanged", 53, Type::Unsigned, nullptr, 0},
+    {"mtu_requests_failed", 54, Type::Unsigned, nullptr, 0},
+    {"replies_too_wide", 55, Type::Unsigned, nullptr, 0},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -414,8 +419,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, kStatusKeys, 8},
     {"timing", 6, events::Endpoint::Config, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, kDiagnosticsKeys, 51},
-    {"diagnostics", 9, events::Endpoint::Config, kDiagnosticsKeys, 51},
+    {"radio", 8, events::Endpoint::Config, kDiagnosticsKeys, 56},
+    {"diagnostics", 9, events::Endpoint::Config, kDiagnosticsKeys, 56},
     {"update", 10, events::Endpoint::Config, kUpdateKeys, 10},
     {"dfu", 11, events::Endpoint::Config, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, kRecoveryKeys, 1},

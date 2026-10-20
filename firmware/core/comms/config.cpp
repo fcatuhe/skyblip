@@ -89,6 +89,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
 // prompt.
 void ConfigService::on_link_down(const events::LinkDown& event) {
+    tally_exchange(event);
     note_disconnected(event.session_id);
     if (identity_ != nullptr) identity_->forget(event.session_id);
     if (!claim_.holds(event.session_id)) return;
@@ -98,6 +99,17 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     upload_window_open_ = false;
     status_push_due_ = false;
     drop_replies();
+}
+
+void ConfigService::tally_exchange(const events::LinkDown& event) {
+    const events::MtuExchange& exchange = event.exchange;
+    if (exchange.by_central) diagnostics_.mtu_exchanged_by_central++;
+    if (exchange.by_unit) diagnostics_.mtu_exchanged_by_unit++;
+    if (!exchange.by_central && !exchange.by_unit) diagnostics_.mtu_never_exchanged++;
+    if (exchange.request == events::MtuRequest::Refused ||
+        exchange.request == events::MtuRequest::Unsent)
+        diagnostics_.mtu_requests_failed++;
+    diagnostics_.replies_too_wide += event.replies_too_wide;
 }
 
 namespace {
@@ -192,7 +204,10 @@ void ConfigService::refuse_unclaimed(uint16_t session_id) {
     (void)reply_to(session_id, frame, writer.finish());
 }
 
-void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
+void ConfigService::refuse_too_wide() {
+    link_.note_reply_too_wide(claim_.holder());
+    acknowledge(false, link::Reason::SmallMtu);
+}
 
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;

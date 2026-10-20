@@ -712,6 +712,31 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "charge_warnings",
           "number": 50,
           "type": "unsigned"
+        },
+        {
+          "name": "mtu_exchanged_by_central",
+          "number": 51,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_exchanged_by_unit",
+          "number": 52,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_never_exchanged",
+          "number": 53,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_requests_failed",
+          "number": 54,
+          "type": "unsigned"
+        },
+        {
+          "name": "replies_too_wide",
+          "number": 55,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -982,6 +1007,31 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "charge_warnings",
           "number": 50,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_exchanged_by_central",
+          "number": 51,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_exchanged_by_unit",
+          "number": 52,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_never_exchanged",
+          "number": 53,
+          "type": "unsigned"
+        },
+        {
+          "name": "mtu_requests_failed",
+          "number": 54,
+          "type": "unsigned"
+        },
+        {
+          "name": "replies_too_wide",
+          "number": 55,
           "type": "unsigned"
         }
       ]

@@ -65,6 +65,17 @@ class Link : public ports::Link {
         sessions_.payload_changed(session_id, bytes);
     }
 
+    void exchange_mtu_by_unit(uint16_t session_id, uint16_t bytes) {
+        sessions_.payload_changed(session_id, bytes);
+        sessions_.mtu_requested(session_id, events::MtuRequest::Exchanged);
+    }
+
+    void settle_mtu_request(uint16_t session_id, events::MtuRequest outcome, uint8_t error = 0) {
+        sessions_.mtu_requested(session_id, outcome, error);
+    }
+
+    void note_reply_too_wide(uint16_t session_id) override { sessions_.reply_too_wide(session_id); }
+
     uint16_t payload_bytes() const override { return sessions_.payload_bytes(); }
     uint16_t payload_bytes_to(uint16_t session_id) const override {
         return sessions_.payload_bytes(session_id);

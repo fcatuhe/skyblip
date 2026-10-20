@@ -1,4 +1,5 @@
 // One case per record type, at the service that decides the fact it carries.
+#include <cstring>
 #include <vector>
 
 #include "core/bus/state.h"
@@ -317,6 +318,43 @@ TEST_CASE("diagnostics link: a central connecting is a record, with the payload 
     REQUIRE(link_action(records, diagnostics::LinkAction::ClaimTaken, claimed));
     CHECK(claimed.claim_held);
     CHECK(claimed.holder == 7);
+}
+
+// One record a connection, the Down it already wrote, answers whether option B is needed.
+TEST_CASE(
+    "diagnostics link: a link that ended says who exchanged its MTU, when, and what it cost") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
+    rig.raise_link(4);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    std::memcpy(rig.settings().callsign, "ABCDEFGHI", 10);
+    rig.send("{\"command\":\"get\"}");
+    rig.run(now_ms, now_ms + 300);
+    now_ms += 300;
+    rig.platform.link().exchange_mtu_by_unit(4, 244);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.drop_link(4);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    stop(rig, now_ms);
+    const std::vector<diagnostics::Record> records = captured(rig);
+
+    diagnostics::Link down{};
+    REQUIRE(link_action(records, diagnostics::LinkAction::Down, down));
+    CHECK(down.link_session == 4);
+    CHECK(down.payload_bytes == 244);
+    CHECK(down.mtu_exchanged_by_unit);
+    CHECK_FALSE(down.mtu_exchanged_by_central);
+    CHECK(down.mtu_request == events::MtuRequest::Exchanged);
+    CHECK(down.replies_too_wide == 1);
+    CHECK(down.mtu_settled_after_ms >= 500);
+    CHECK(down.mtu_settled_after_ms <= 800);
 }
 
 TEST_CASE(

@@ -288,6 +288,30 @@ TEST_CASE("diagnostics record: a link event keeps the payload the central negoti
     CHECK(out.action == in.action);
     CHECK(out.endpoint == in.endpoint);
     CHECK(out.claim_held);
+    CHECK_FALSE(out.mtu_exchanged_by_central);
+    CHECK(out.mtu_request == events::MtuRequest::NotAsked);
+}
+
+TEST_CASE("diagnostics record: a link that ended keeps how its MTU was exchanged") {
+    diagnostics::Link in{};
+    in.link_session = 2;
+    in.payload_bytes = 244;
+    in.action = diagnostics::LinkAction::Down;
+    in.mtu_settled_after_ms = 70000;
+    in.replies_too_wide = 300;
+    in.mtu_request = events::MtuRequest::Refused;
+    in.mtu_request_error = 0x0E;
+    in.mtu_exchanged_by_central = true;
+
+    const diagnostics::Link out = diagnostics_round_trip(in);
+    CHECK(out.payload_bytes == 244);
+    CHECK(out.mtu_settled_after_ms == 65535);
+    CHECK(out.replies_too_wide == 255);
+    CHECK(out.mtu_request == events::MtuRequest::Refused);
+    CHECK(out.mtu_request_error == 0x0E);
+    CHECK(out.mtu_exchanged_by_central);
+    CHECK_FALSE(out.mtu_exchanged_by_unit);
+    CHECK_FALSE(out.claim_held);
 }
 
 TEST_CASE(

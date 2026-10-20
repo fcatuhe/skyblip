@@ -113,9 +113,6 @@ std::string joined(const platform::host::Link& link) {
     return all;
 }
 
-const char* const kSmallMtuRefusal =
-    "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"small_mtu\"}";
-
 int occurrences(const std::string& haystack, const char* needle) {
     int count = 0;
     for (size_t at = haystack.find(needle); at != std::string::npos;
@@ -266,48 +263,6 @@ TEST_CASE(
     REQUIRE(bench.link.sent.size() == 1);
     CHECK(link_text(bench.link.last().bytes) == kSmallMtuRefusal);
     CHECK(bench.config.link_drops() == 1);
-}
-
-// The push races the MTU exchange at every connect, so a refusal there would be noise.
-TEST_CASE("comms: an update pushed at link-up that does not fit is counted, never refused") {
-    platform::host::Link link;
-    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    link.raise_link(1);
-    go::Settings settings = widest_settings();
-    go::SettingsStore store(settings, kWidestAddress);
-    ConfigService config(link, store);
-    config.set_image_state(dfu::ImageState::Probation,
-                           dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
-    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
-    CHECK(link.sent.empty());
-    CHECK(config.link_drops() == 1);
-}
-
-TEST_CASE(
-    "comms: a link that came up at the BLE minimum hears what fits, and small_mtu for what does "
-    "not") {
-    platform::host::Link link;
-    link.raise_link(1);
-    link.raise_link(1);
-    link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    go::Settings settings = widest_settings();
-    go::SettingsStore store(settings, kWidestAddress);
-    ConfigService config(link, store);
-    config.set_flight_state(flight::FlightState::Ground);
-
-    // The status and a refusal fit twenty bytes; the config reply is counted, never sent short.
-    config.on_rx(config_frame("{\"command\":\"status\"}"));
-    config.on_rx(config_frame("{\"command\":\"get\"}"));
-    config.on_rx(config_frame("{\"command\":99}"));
-    REQUIRE(link.sent.size() == 3);
-    CHECK(link_text(link.sent[0].bytes).find("{\"command\":\"status\",") == 0);
-    CHECK(link_text(link.sent[1].bytes) == kSmallMtuRefusal);
-    CHECK(link.sent[1].bytes.size() == 8);
-    CHECK(link_text(link.sent[2].bytes) ==
-          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}");
-    CHECK(config.link_drops() == 1);
-    // The refusal happened above the port: nothing was ever handed down.
-    CHECK(link.refused_oversize == 0);
 }
 
 TEST_CASE("comms: the bench's timing report is one frame on a wide link and several on a narrow") {
