@@ -1,5 +1,7 @@
 #include "core/flight/extrapolate.h"
 
+#include <cstdlib>
+
 #include "core/flight/arc.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
@@ -19,8 +21,6 @@ constexpr int64_t kMicrometresPerMillimetre = 1000;
 // the scaling stops meaning anything. 88 degrees of latitude is 500 km further
 // north than anything this device will fly over.
 constexpr int64_t kLatitudeCosineFloor = 512;
-
-int64_t absolute(int64_t value) { return value < 0 ? -value : value; }
 
 int16_t latitude_angle16(int32_t latitude_1e7) {
     return static_cast<int16_t>((static_cast<int64_t>(latitude_1e7) * kAngle16PerTurn) /
@@ -154,7 +154,7 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
         kMicrometresPerMetre * kTrigOne);
     const int64_t up = divide_rounded<int64_t>(
         static_cast<int64_t>(altitude_hae_mm) - predicted.altitude_hae_mm, kMillimetresPerMetre);
-    return static_cast<uint32_t>(absolute(north) + absolute(east) + absolute(up));
+    return static_cast<uint32_t>(std::abs(north) + std::abs(east) + std::abs(up));
 }
 
 bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,

@@ -1,7 +1,7 @@
 // The integer arithmetic the rest of the firmware trusts without checking: fixed
 // point instead of floats, a CORDIC sine, an integer square root, the variable
 // resolution codecs ADS-L packs its fields into. Every one is a silent failure
-// mode. A variable range that rounds the wrong way or an arctangent that is a quadrant out
+// mode. A variable-range codec that rounds the wrong way or an arctangent that is a quadrant out
 // reaches the pilot as a target in the wrong place, with nothing logged.
 #include <cmath>
 #include <cstdlib>  // std::abs
