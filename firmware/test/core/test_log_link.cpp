@@ -20,6 +20,17 @@ namespace {
 
 events::RxFrame log_frame(const char* json) { return link_frame(events::Endpoint::Log, 0, json); }
 
+template <class Fill>
+events::RxFrame written_log_frame(link::Command command, Fill fill) {
+    events::RxFrame frame{};
+    frame.endpoint = events::Endpoint::Log;
+    cbor::Writer writer(frame.data.data(), static_cast<int>(frame.data.size()));
+    writer.add_code(link::kCommandKey, command);
+    fill(writer);
+    frame.bytes = static_cast<uint16_t>(writer.finish());
+    return frame;
+}
+
 std::string text(const uint8_t* frame, int bytes) {
     return link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
 }
@@ -49,6 +60,37 @@ TEST_CASE("log link: the three commands, and nothing else") {
     events::RxFrame wrong = framed("{\"command\":\"list\"}");
     wrong.endpoint = events::Endpoint::Config;
     CHECK_FALSE(comms::parse_log_request(wrong).understood);
+}
+
+// A field of the wrong type used to read as absent, so a read from record "170" started at 0.
+TEST_CASE(
+    "log link: an index, a session, a from or a count of the wrong type is refused as invalid") {
+    const events::RxFrame frames[] = {
+        written_log_frame(
+            link::Command::List,
+            [](cbor::Writer& writer) { writer.add_text(link::list_key::kIndex, "1"); }),
+        written_log_frame(
+            link::Command::Read,
+            [](cbor::Writer& writer) { writer.add_text(link::read_key::kSession, "7"); }),
+        written_log_frame(link::Command::Read,
+                          [](cbor::Writer& writer) {
+                              writer.add_unsigned(link::read_key::kSession, 7);
+                              writer.add_boolean(link::read_key::kFrom, true);
+                          }),
+        written_log_frame(link::Command::Read,
+                          [](cbor::Writer& writer) {
+                              writer.add_unsigned(link::read_key::kSession, 7);
+                              writer.add_integer(link::read_key::kCount, -2);
+                          }),
+    };
+    for (const events::RxFrame& frame : frames) {
+        CAPTURE(
+            link_text(std::string(reinterpret_cast<const char*>(frame.data.data()), frame.bytes)));
+        const comms::LogRequest request = comms::parse_log_request(frame);
+        CHECK_FALSE(request.understood);
+        CHECK(request.command == comms::LogCommand::None);
+        CHECK(request.reason == link::Reason::Invalid);
+    }
 }
 
 TEST_CASE("log link: how many records ride in a chunk follows the payload, not a guess") {

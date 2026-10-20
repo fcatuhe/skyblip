@@ -34,6 +34,20 @@ uint32_t clamped_chunk_count(uint32_t count) {
 
 bool is(uint32_t code, link::Command command) { return code == static_cast<uint32_t>(command); }
 
+bool read_if_present(const cbor::Reader& frame, uint32_t key, std::optional<uint32_t>& out) {
+    const Result<uint32_t> value = frame.read_unsigned(key);
+    if (value.status() == Status::NotFound) return true;
+    if (!value.ok()) return false;
+    out = value.value();
+    return true;
+}
+
+LogRequest refused(LogRequest request, link::Reason reason) {
+    request.command = LogCommand::None;
+    request.reason = reason;
+    return request;
+}
+
 }  // namespace
 
 int log_records_per_chunk(int payload_bytes, LogStore store) {
@@ -61,8 +75,10 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
     if (is(code.value(), link::Command::List)) {
         request.command = LogCommand::List;
         store_key = link::list_key::kLog;
-        const Result<uint32_t> index = reader.read_unsigned(link::list_key::kIndex);
-        request.index_valid = index.ok();
+        std::optional<uint32_t> index;
+        if (!read_if_present(reader, link::list_key::kIndex, index))
+            return refused(request, link::Reason::Invalid);
+        request.index_valid = index.has_value();
         request.index = index.value_or(0);
     } else if (is(code.value(), link::Command::Erase)) {
         request.command = LogCommand::Erase;
@@ -71,19 +87,19 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
         request.command = LogCommand::Read;
         store_key = link::read_key::kLog;
         const Result<uint32_t> session = reader.read_unsigned(link::read_key::kSession);
-        if (!session.ok()) return request;
+        if (session.status() == Status::NotFound) return request;
+        std::optional<uint32_t> from;
+        std::optional<uint32_t> count;
+        if (!session.ok() || !read_if_present(reader, link::read_key::kFrom, from) ||
+            !read_if_present(reader, link::read_key::kCount, count))
+            return refused(request, link::Reason::Invalid);
         request.session = session.value();
-        request.from = reader.read_unsigned(link::read_key::kFrom).value_or(0);
-        const Result<uint32_t> count = reader.read_unsigned(link::read_key::kCount);
-        request.count = count.ok() ? clamped_chunk_count(count.value()) : 1;
+        request.from = from.value_or(0);
+        request.count = count ? clamped_chunk_count(*count) : 1;
     } else {
         return request;
     }
-    if (!parse_store(reader, store_key, request)) {
-        request.command = LogCommand::None;
-        request.reason = link::Reason::UnknownLog;
-        return request;
-    }
+    if (!parse_store(reader, store_key, request)) return refused(request, link::Reason::UnknownLog);
     request.understood = true;
     request.reason.reset();
     return request;

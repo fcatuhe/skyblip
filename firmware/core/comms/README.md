@@ -82,7 +82,7 @@ Every identity refusal is written in `identity_link.cpp` as `refuse(link::Reason
 
 ### Either store, named on both halves
 
-`core/store` puts two rings on the partition and this dialect addresses either through an optional `log` key on any command: `flights`, `diagnostics`, or absent, which is flights. A code that is neither is refused as `unknown_log`; it is never quietly read as flights, because the two stores share a session id space and the wrong one would answer with a plausible flight. The selector is `store::SectorOwner` itself rather than a second enum beside it, so a store this dialect can name is a store the allocator owns.
+`core/store` puts two rings on the partition and this dialect addresses either through an optional `log` key on any command: `flights`, `diagnostics`, or absent, which is flights. A code that is neither is refused as `unknown_log`; it is never quietly read as flights, because the two stores share a session id space and the wrong one would answer with a plausible flight. The selector is `store::SectorOwner` itself rather than a second enum beside it, so a store this dialect can name is a store the allocator owns. The same holds for the numbers a command carries: an `index`, a `session`, a `from` or a `count` that is not an unsigned integer is refused as `invalid`, never read as absent, which would have read a session from record 0 or a list as a bare count.
 
 The service side refuses by name for the same reason the parser does: a store this build has no writer for is `no_diagnostics` rather than `no_storage`, because a phone told the partition is missing would stop asking, and an erase aimed at a store that is recycled rather than erased is `flights_only`.
 
