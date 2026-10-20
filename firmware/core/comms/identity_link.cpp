@@ -74,12 +74,17 @@ void ConfigService::challenge() {
         refuse("keyless");
         return;
     }
-    char buffer[96];
+    char buffer[IdentityLink::kChallengeFrameBytes + 1];
     json::Writer writer(buffer, sizeof(buffer));
     writer.add_string("command", "challenge");
     write_hex_field(writer, "nonce", identity_->unit_nonce());
     write_hex_field(writer, "server_key_id", identity_->unit().server_key_id());
-    (void)reply(buffer, writer.finish());
+    const int bytes = writer.finish();
+    if (writer.overflowed()) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(buffer, bytes);
 }
 
 void ConfigService::register_unit(const json::Reader& reader) {

@@ -700,6 +700,15 @@ TEST_CASE("activation: the registration says whether the build is a release, and
     }
 }
 
+// A nonce and a key id of fixed width make every challenge reply the same size.
+TEST_CASE("activation: the challenge reply is exactly the size its buffer holds") {
+    Desk desk;
+    desk.say("{\"command\":\"challenge\"}");
+    CHECK(desk.link.last().bytes.size() == size_t(comms::IdentityLink::kChallengeFrameBytes));
+    CHECK(desk.link.last().bytes.find("\"server_key_id\":\"") != std::string::npos);
+    CHECK(desk.config.link_drops() == 0);
+}
+
 // The widest version and release false make the widest frame, the size register checks.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk desk;

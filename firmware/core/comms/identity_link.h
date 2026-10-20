@@ -15,6 +15,7 @@ class IdentityLink {
     static constexpr uint32_t kNonceForgetMs = 10u * 60u * 1000u;
     // INFO: fc 18oct26 the widest registration frame: version 9.99.99+99999, release false
     static constexpr int kRegistrationFrameBytes = 349;
+    static constexpr int kChallengeFrameBytes = 93;
 
     explicit IdentityLink(identity::Unit& unit) : unit_(unit) {}
 
