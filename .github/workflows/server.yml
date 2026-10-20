@@ -151,6 +151,9 @@ jobs:
         run: bin/rails db:test:prepare test
       - name: Run deployment and release workflow tests
         run: bundle exec ruby ../.github/test/deployment_test.rb
+      # firmware.yml skips server/, so a change to link_registry.js alone is only checked here.
+      - name: Check the files generated from the link registry are current
+        run: python3 ../scripts/check_link_registry.py
       - name: Run browser protocol and firmware word tests
         run: node --test test/javascript/test_*.mjs
       - name: Check the content sitemap is current
