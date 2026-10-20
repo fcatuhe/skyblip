@@ -1,3 +1,5 @@
+import { hex } from '#skyblip/link';
+
 const MCUBOOT_MAGIC = 0x96f3b83d;
 const HEADER_BYTES = 32;
 const HEADER_SIZE_OFFSET = 8;
@@ -47,10 +49,6 @@ function imuOf(view) {
     at = value + length;
   }
   return imu;
-}
-
-function hex(bytes) {
-  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function fullImageNeeded(deviceImu, pin) {

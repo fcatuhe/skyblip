@@ -50,6 +50,12 @@ function put(out, value) {
   } else if (value instanceof Uint8Array) {
     head(out, MAJOR.bytes, value.length);
     for (const byte of value) out.push(byte);
+  } else if (value instanceof Map) {
+    head(out, MAJOR.map, value.size);
+    for (const [key, item] of value) {
+      put(out, key);
+      put(out, item);
+    }
   } else if (Array.isArray(value)) {
     head(out, MAJOR.array, value.length);
     for (const item of value) put(out, item);
@@ -65,16 +71,17 @@ function put(out, value) {
   }
 }
 
-export function decode(bytes) {
-  const reader = new Reader(bytes);
+export function decode(bytes, { deterministic = false } = {}) {
+  const reader = new Reader(bytes, deterministic);
   const value = reader.item();
   if (reader.at !== bytes.length) throw new RangeError(`cbor: ${bytes.length - reader.at} bytes after the item`);
   return value;
 }
 
 class Reader {
-  constructor(bytes) {
+  constructor(bytes, deterministic) {
     this.bytes = bytes;
+    this.deterministic = deterministic;
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     this.at = 0;
   }
@@ -100,11 +107,12 @@ class Reader {
 
   argument(info) {
     if (info < 24) return info;
-    if (info === 24) return this.number(1);
-    if (info === 25) return this.number(2);
-    if (info === 26) return this.number(4);
-    if (info === 27) return this.number(8);
-    throw new RangeError(`cbor: reserved additional information ${info}`);
+    if (info > 27) throw new RangeError(`cbor: reserved additional information ${info}`);
+    const width = 2 ** (info - 24);
+    const value = this.number(width);
+    const shortest = width === 1 ? 24 : 2 ** (4 * width);
+    if (this.deterministic && value < shortest) throw new RangeError(`cbor: ${value} is not in its shortest form`);
+    return value;
   }
 
   atBreak() {
@@ -118,6 +126,7 @@ class Reader {
     const initial = this.byte();
     const major = initial >> 5;
     const info = initial & 0x1f;
+    if (this.deterministic) refuseOutsideSubset(major, info);
     if (major === MAJOR.simple) return this.simple(info);
     if (info === INDEFINITE) return this.indefinite(major);
     const argument = this.argument(info);
@@ -128,6 +137,7 @@ class Reader {
       case MAJOR.text: return decoder.decode(this.take(argument));
       case MAJOR.array: return Array.from({ length: argument }, () => this.item());
       case MAJOR.map: {
+        if (this.deterministic) return this.ascending(argument);
         let remaining = argument;
         return this.entries(() => remaining-- > 0);
       }
@@ -174,6 +184,19 @@ class Reader {
     return map;
   }
 
+  ascending(count) {
+    const map = new Map();
+    let last = -1;
+    for (let entry = 0; entry < count; entry++) {
+      const initial = this.byte();
+      const key = initial >> 5 === MAJOR.uint ? this.argument(initial & 0x1f) : -1;
+      if (key <= last) throw new RangeError('cbor: map keys are unsigned and ascending');
+      map.set(key, this.item());
+      last = key;
+    }
+    return map;
+  }
+
   simple(info) {
     switch (info) {
       case SIMPLE.false: return false;
@@ -192,6 +215,11 @@ class Reader {
     this.take(width);
     return value;
   }
+}
+
+function refuseOutsideSubset(major, info) {
+  const allowed = major === MAJOR.simple ? info === SIMPLE.false || info === SIMPLE.true : major !== MAJOR.tag && info !== INDEFINITE;
+  if (!allowed) throw new RangeError(`cbor: major type ${major}, additional information ${info} is outside the deterministic subset`);
 }
 
 function half(bits) {
