@@ -9,7 +9,6 @@ on any file that differs from what this would write.
 import json
 import os
 import pathlib
-import re
 import shutil
 import subprocess
 import sys
@@ -192,27 +191,44 @@ def javascript_module(registry):
     return "export const LINK_REGISTRY = Object.freeze(%s);\n" % body
 
 
-def same_tokens(left, right):
-    """Equal once whitespace is gone, which is all clang-format changes in a generated file."""
-    return re.sub(r"\s+", "", left) == re.sub(r"\s+", "", right)
+def written(registry, clang_format):
+    """Every generated file and its text as committed: the C++ ones through clang-format."""
+    return {relative: formatted(relative, text, clang_format) if is_cpp(relative) else text
+            for relative, text in generated(registry).items()}
+
+
+def is_cpp(relative):
+    return pathlib.PurePath(relative).suffix in (".h", ".cpp")
+
+
+def formatted(relative, text, clang_format):
+    result = subprocess.run([clang_format, "--style=file", "--assume-filename=%s" % (ROOT / relative)],
+                            input=text, capture_output=True, text=True, check=True)
+    return result.stdout
+
+
+def stale(expected, read):
+    """The generated files whose committed text is not, byte for byte, what the registry writes."""
+    return [relative for relative, text in expected.items() if read(relative) != text]
+
+
+def committed(relative):
+    path = ROOT / relative
+    return path.read_text(encoding="utf-8") if path.exists() else None
 
 
 def formatter():
     found = os.environ.get("CLANG_FORMAT") or shutil.which("clang-format")
     if found is None:
-        raise SystemExit("no clang-format: set CLANG_FORMAT, the C++ files must be written formatted")
+        raise SystemExit("no clang-format: set CLANG_FORMAT, the C++ files are compared formatted")
     return found
 
 
 def main():
-    registry = load()
-    clang_format = formatter()
-    for relative, text in generated(registry).items():
+    for relative, text in written(load(), formatter()).items():
         path = ROOT / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-        if path.suffix in (".h", ".cpp"):
-            subprocess.run([clang_format, "-i", "--style=file", str(path)], check=True)
         print("wrote %s" % relative)
     return 0
 

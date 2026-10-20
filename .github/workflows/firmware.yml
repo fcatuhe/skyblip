@@ -79,9 +79,14 @@ jobs:
       # companion app pins: a key renamed, reordered or dropped must fail here.
       - name: status frame matches its schema
         run: python3 scripts/check_status_schema.py
+      # The generated C++ is compared as clang-format writes it, so the check needs the lint job's pinned formatter.
+      - name: install the pinned clang-format
+        run: pip install --disable-pip-version-check "$(grep '^clang-format==' .github/lint/requirements.txt)"
       # The firmware, the simulator, the suite and the server read the link's numbers from files generated off one registry.
       - name: files generated from the link registry are current
         run: python3 scripts/check_link_registry.py
+      - name: the registry check refuses a file that differs by one byte
+        run: python3 scripts/test_link_registry.py
       # All that stands between a partition edit and an install that erases the
       # factory bootloader. Stdlib only, so it runs here and not on the slow job.
       - name: mkuf2 range guards

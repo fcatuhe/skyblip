@@ -3,8 +3,9 @@
 
     python3 scripts/check_link_registry.py
 
-The C++ files are compared without their whitespace, because scripts/link_registry.py
-writes them through clang-format and the formatting gate owns the layout.
+Every file is compared byte for byte: the JavaScript module as generated, the C++ files
+as generated and then put through clang-format (CLANG_FORMAT names it), which is how
+scripts/link_registry.py writes them.
 """
 import pathlib
 import sys
@@ -15,12 +16,8 @@ import link_registry  # noqa: E402
 
 
 def main():
-    stale = []
-    for relative, expected in link_registry.generated(link_registry.load()).items():
-        path = link_registry.ROOT / relative
-        written = path.read_text(encoding="utf-8") if path.exists() else ""
-        if not link_registry.same_tokens(written, expected):
-            stale.append(relative)
+    expected = link_registry.written(link_registry.load(), link_registry.formatter())
+    stale = link_registry.stale(expected, link_registry.committed)
     for relative in stale:
         print("%s: differs from schemas/link.v1.json, run scripts/link_registry.py" % relative,
               file=sys.stderr)
