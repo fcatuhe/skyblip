@@ -59,9 +59,8 @@ function settingsOf(reply) {
   return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
 }
 
-// INFO: fc 19oct26 address_mapping_table marks firmware that speaks #126: older firmware has no activation to ask for
 function identityOf(reply) {
-  return { address: addressOf(reply), activates: 'address_mapping_table' in reply };
+  return { address: addressOf(reply) };
 }
 
 function adviceOf({ image, file }) {
@@ -109,7 +108,6 @@ export class Updater {
     status: null,
     settings: null,
     address: null,
-    activates: false,
     defaults: null,
     file: null,
     advice: null,
@@ -347,11 +345,11 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, activates: false, defaults: null, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, activates: false, defaults: null,
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null,
       progress: null,
       notice,
     });

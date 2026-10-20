@@ -84,10 +84,9 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     address = 0x00012a,
-    identityNames = true,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, identityNames });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -233,9 +232,7 @@ export class FakeSkyblip {
     this.reply({ acknowledge: false, pending: true, reason: `confirm_${command}` });
   }
 
-  // INFO: fc 19oct26 firmware before #126 names the address addr and always sends it: it has no activation
   addressFields() {
-    if (!this.identityNames) return { addr: 0x5b5afe, addr_table: 58 };
     return { ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 };
   }
 
