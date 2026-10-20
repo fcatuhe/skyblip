@@ -408,6 +408,18 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
     CHECK_FALSE(narrow.exhausted());
 }
 
+// The radio group is the widest a dump writes, each frame of the whole dump as of the radio reply.
+TEST_CASE("diagnostics: the widest radio frame is 112 bytes, one frame on an iPhone's link") {
+    for (link::Command command : {link::Command::Diagnostics, link::Command::Radio}) {
+        DiagnosticsReport report(widest_device(), command, DiagnosticsReport::Group::Radio);
+        uint8_t buffer[DiagnosticsReport::kFrameBytes];
+        // 1 + four 2-byte heads + noise 3 + duty 4 + twelve counters of 6 + two of 4 + 2 + two
+        // of 7.
+        CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 112);
+        CHECK(report.exhausted());
+    }
+}
+
 TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own name") {
     const Diagnostics diagnostics = busy_device();
     DiagnosticsReport report(diagnostics, link::Command::Radio, DiagnosticsReport::Group::Radio);

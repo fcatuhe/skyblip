@@ -81,6 +81,32 @@ void run_bench(timing::SlotTimingStatistics& statistics) {
     statistics.record_refused();
 }
 
+// Every timing field at 65536 or more, which CBOR writes in five bytes as it writes UINT32_MAX.
+void run_widest_bench(timing::SlotTimingStatistics& statistics) {
+    using Statistics = timing::SlotTimingStatistics;
+    const int64_t past_the_guard = Statistics::kJitterGuardUs + 70000;
+    const int64_t one_per_bucket[Statistics::kBuckets] = {
+        -past_the_guard,       -Statistics::kHopGuardUs, -Statistics::kRetuneUs, 0,
+        Statistics::kRetuneUs, Statistics::kHopGuardUs,  past_the_guard};
+    const uint32_t samples = Statistics::kBuckets * 65536u;
+    uint64_t edge_us = Statistics::kNominalSecondUs;
+    statistics.record_edge(edge_us, true);
+    for (uint32_t i = 0; i < samples; i++) {
+        const int64_t error_us = one_per_bucket[i % Statistics::kBuckets];
+        edge_us += static_cast<uint64_t>(Statistics::kNominalSecondUs + error_us);
+        statistics.record_edge(edge_us, true);
+        statistics.record_dwell_phase(error_us);
+    }
+    for (uint32_t i = 0; i < 65536u; i++) {
+        statistics.record_edge(edge_us, false);
+        edge_us += static_cast<uint64_t>(Statistics::kNominalSecondUs);
+        statistics.record_edge(edge_us, true);
+        statistics.record_missed();
+        statistics.record_refused();
+    }
+    statistics.record_switching(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX);
+}
+
 std::string joined(const platform::host::Link& link) {
     std::string all;
     for (const platform::host::Link::Frame& frame : link.sent) all += link_text(frame.bytes);
@@ -319,6 +345,38 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     on_hopeless.on_rx(config_frame("{\"command\":\"timing\"}"));
     CHECK(hopeless.sent.empty());
     CHECK(on_hopeless.link_drops() == 1);
+}
+
+// The widest the bench can make it: every histogram bucket and counter written in five bytes.
+TEST_CASE("comms: the widest timing report is 147 bytes, one frame on an iPhone's link") {
+    timing::SlotTimingStatistics statistics;
+    run_widest_bench(statistics);
+    for (int i = 0; i < timing::SlotTimingStatistics::kBuckets; i++) {
+        CHECK(statistics.pps_bucket(i) >= 65536u);
+        CHECK(statistics.dwell_bucket(i) >= 65536u);
+    }
+    CHECK(statistics.holdover_events() == 65536u);
+    CHECK(statistics.pps_worst_us() <= -65536);
+    CHECK(statistics.dwell_worst_us() <= -65536);
+    go::Settings settings = go::defaults();
+
+    platform::host::Link iphone;
+    iphone.raise_link(1);
+    iphone.declare_payload_bytes(kSmallestSupportedPayloadBytes);
+    go::SettingsStore store_on_iphone(settings, kWidestAddress);
+    ConfigService on_iphone(iphone, store_on_iphone, nullptr, &statistics);
+    on_iphone.on_rx(config_frame("{\"command\":\"timing\"}"));
+    REQUIRE(iphone.sent.size() == 1);
+    // 1 + command 2 + part 2 + more 2 + two histograms of 1 + 1 + 7 x 5 + eleven fields of 1 + 5.
+    CHECK(iphone.last().bytes.size() == 147);
+
+    platform::host::Link one_short;
+    one_short.raise_link(1);
+    one_short.declare_payload_bytes(146);
+    go::SettingsStore store_on_one_short(settings, kWidestAddress);
+    ConfigService on_one_short(one_short, store_on_one_short, nullptr, &statistics);
+    on_one_short.on_rx(config_frame("{\"command\":\"timing\"}"));
+    CHECK(one_short.sent.size() == 2);
 }
 
 TEST_CASE("comms: a status push the controller could not take is retried, not lost") {
