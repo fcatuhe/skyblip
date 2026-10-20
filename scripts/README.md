@@ -45,7 +45,7 @@ Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser cl
 
 `./scripts/blip.py command '{"command":"diagnostics"}'` takes one command as JSON with the registry's full names, writes it to the config endpoint (`69c21302`) as the numbered CBOR the unit reads, and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A name the registry does not hold is refused before anything is sent. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
 
-`blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains is a key `blip.py` speaks with no edit here. Its decoder refuses what the unit's own does, a frame outside the deterministic subset the registry describes, and `blip.py` stops on one, printing its bytes, rather than guessing.
+`blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains is a key `blip.py` speaks with no edit here. Its decoder refuses what the unit's own does, a frame outside the grammar the registry describes, and its encoder refuses a value its key's type does not take, a boolean where a number goes, a negative where an unsigned one does, hex that is not hex or a byte string of the wrong width, as the pages' does: `schemas/link.v1.vectors.json` lists both. `blip.py` stops on either with a `FrameError` it prints, the bytes of a frame it could not read beside it, rather than guessing.
 
 ### Benchmark a link
 

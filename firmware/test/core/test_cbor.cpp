@@ -5,8 +5,10 @@
 #include <string>
 #include <vector>
 
+#include "core/comms/link_registry.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
+#include "test/support/link_vectors.h"
 
 using namespace skyblip;
 
@@ -45,13 +47,32 @@ TEST_CASE("cbor: integers are written in the shortest form RFC 8949 gives them")
     CHECK(one_unsigned(24) == bytes_of({0xA1, 0x00, 0x18, 0x18}));
     CHECK(one_unsigned(1000) == bytes_of({0xA1, 0x00, 0x19, 0x03, 0xE8}));
     CHECK(one_unsigned(1000000) == bytes_of({0xA1, 0x00, 0x1A, 0x00, 0x0F, 0x42, 0x40}));
-    CHECK(one_unsigned(1000000000000) ==
-          bytes_of({0xA1, 0x00, 0x1B, 0x00, 0x00, 0x00, 0xE8, 0xD4, 0xA5, 0x10, 0x00}));
     CHECK(one_integer(-1) == bytes_of({0xA1, 0x00, 0x20}));
     CHECK(one_integer(-100) == bytes_of({0xA1, 0x00, 0x38, 0x63}));
     CHECK(one_integer(-1000) == bytes_of({0xA1, 0x00, 0x39, 0x03, 0xE7}));
-    CHECK(one_integer(INT64_MIN) ==
-          bytes_of({0xA1, 0x00, 0x3B, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}));
+}
+
+TEST_CASE("cbor: an integer past 32 bits refuses the frame, which the link's grammar stops at") {
+    CHECK(one_unsigned(UINT32_MAX) == bytes_of({0xA1, 0x00, 0x1A, 0xFF, 0xFF, 0xFF, 0xFF}));
+    CHECK(one_integer(-int64_t{UINT32_MAX} - 1) ==
+          bytes_of({0xA1, 0x00, 0x3A, 0xFF, 0xFF, 0xFF, 0xFF}));
+    CHECK(one_unsigned(uint64_t{UINT32_MAX} + 1).empty());
+    CHECK(one_integer(int64_t{UINT32_MAX} + 1).empty());
+    CHECK(one_integer(-int64_t{UINT32_MAX} - 2).empty());
+}
+
+TEST_CASE("cbor: text that is not UTF-8 refuses the frame, so no reader is handed one") {
+    uint8_t out[16];
+    cbor::Writer valid(out, sizeof(out));
+    valid.add_text(0, "\xC3\xA9t\xC3\xA9");
+    CHECK(valid.finish() == 8);
+    for (const char* malformed :
+         {"\xC3(", "\xFF", "\x80", "\xC0\xAF", "\xED\xA0\x80", "\xF4\x90\x80\x80"}) {
+        CAPTURE(malformed);
+        cbor::Writer writer(out, sizeof(out));
+        writer.add_text(0, malformed);
+        CHECK(writer.finish() == 0);
+    }
 }
 
 TEST_CASE("cbor: booleans, text, byte strings and arrays are written as RFC 8949 spells them") {
@@ -134,7 +155,7 @@ TEST_CASE("cbor: the reader finds each key, and says absent, wrong type or too w
     writer.add_boolean(2, true);
     writer.add_text(3, "ABCD");
     writer.add_bytes(4, ConstByteSpan(nonce, sizeof(nonce)));
-    writer.add_unsigned(5, 0x100000000ULL);
+    writer.add_unsigned(5, UINT32_MAX);
     const cbor::Reader reader(ConstByteSpan(out, static_cast<size_t>(writer.finish())));
     REQUIRE(reader.valid());
 
@@ -151,7 +172,7 @@ TEST_CASE("cbor: the reader finds each key, and says absent, wrong type or too w
     CHECK(reader.read_unsigned(9).status() == Status::NotFound);
     CHECK(reader.read_unsigned(1).status() == Status::Invalid);
     CHECK(reader.read_boolean(0).status() == Status::Invalid);
-    CHECK(reader.read_unsigned(5).status() == Status::OutOfRange);
+    CHECK(reader.read_integer(5).status() == Status::OutOfRange);
     char short_text[4];
     CHECK(reader.read_text(3, short_text, sizeof(short_text)) == Status::OutOfRange);
     uint8_t wider[4];
@@ -180,6 +201,21 @@ TEST_CASE("cbor: an array of counts is read item by item") {
     CHECK(cbor::Reader::array_item(entry, 1).value() == 300u);
     CHECK(cbor::Reader::array_item(entry, 2).value() == 70000u);
     CHECK(cbor::Reader::array_item(entry, 3).status() == Status::NotFound);
+}
+
+// One grammar for the three readers of the link: the firmware's, blip.py's and the pages'.
+TEST_CASE("cbor: the reader refuses every frame the link's shared vectors say is not one") {
+    const LinkVectors vectors;
+    for (const std::vector<uint8_t>& frame : vectors.frames("not_frames")) {
+        CAPTURE(frame.size());
+        CHECK_FALSE(reader_of(frame).valid());
+    }
+    for (const std::vector<uint8_t>& frame : vectors.frames("no_command")) {
+        CAPTURE(frame.size());
+        const cbor::Reader reader = reader_of(frame);
+        CHECK(reader.valid());
+        CHECK_FALSE(reader.read_unsigned(link::kCommandKey).ok());
+    }
 }
 
 // The deterministic subset is the only one a client writes, so anything else is not a frame.

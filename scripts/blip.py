@@ -127,12 +127,23 @@ async def run_stream(args):
 
 
 async def run_command(args):
-    body = json.loads(args.json)
-    frames.encode_frame(body)
+    body = command_fields(args.json)
     async with await connect(args, config=True) as link:
         for delay, frame in await link.command(body, args.timeout):
             print("%7.1f ms  %s" % (delay * 1000, frames.printable(frame)))
     return 0
+
+
+def command_fields(text):
+    """The command a person typed, refused here when the unit could not be sent it."""
+    try:
+        fields = json.loads(text)
+        frames.encode_frame(fields)
+    except json.JSONDecodeError as error:
+        raise SystemExit("not JSON (%s): %s" % (error, text))
+    except frames.FrameError as error:
+        raise SystemExit("not a frame the registry allows (%s): %s" % (error, text))
+    return fields
 
 
 async def run_bench(args):
@@ -490,7 +501,7 @@ class Link:
 def decoded_or_refused(data):
     try:
         return frames.decode_frame(data)
-    except (frames.FrameError, UnicodeDecodeError) as error:
+    except frames.FrameError as error:
         raise SystemExit("the unit sent a frame outside the registry (%s): %s" % (error, data.hex()))
 
 

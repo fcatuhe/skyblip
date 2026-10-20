@@ -5,6 +5,7 @@
 
 Stdlib alone and no radio. Run by test_blip.py as well, which is the file CI invokes.
 """
+import json
 import pathlib
 import sys
 import unittest
@@ -13,13 +14,17 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip_frames as frames  # noqa: E402
 
+VECTORS = json.loads((pathlib.Path(__file__).resolve().parent.parent / "schemas"
+                      / "link.v1.vectors.json").read_text(encoding="utf-8"))
+
 
 class Codec(unittest.TestCase):
     # RFC 8949 Appendix A, each value behind the one-entry map {0: value}.
     def test_integers_are_written_in_their_shortest_form(self):
         for value, tail in ((0, "00"), (23, "17"), (24, "1818"), (1000, "1903e8"),
-                            (1000000, "1a000f4240"), (1000000000000, "1b000000e8d4a51000"),
-                            (-1, "20"), (-100, "3863"), (-1000, "3903e7")):
+                            (1000000, "1a000f4240"), (2 ** 32 - 1, "1affffffff"),
+                            (-1, "20"), (-100, "3863"), (-1000, "3903e7"),
+                            (-2 ** 32, "3affffffff")):
             self.assertEqual(frames.encode({0: value}).hex(), "a100" + tail)
             self.assertEqual(frames.decode(bytes.fromhex("a100" + tail)), {0: value})
 
@@ -30,6 +35,17 @@ class Codec(unittest.TestCase):
 
     def test_keys_go_out_ascending_whatever_order_they_were_given_in(self):
         self.assertEqual(frames.encode({3: 1, 1: 2}).hex(), "a2010203" "01")
+
+    def test_an_integer_past_32_bits_is_not_written(self):
+        for value in (2 ** 32, -2 ** 32 - 1):
+            with self.subTest(value=value), self.assertRaises(frames.FrameError):
+                frames.encode({0: value})
+
+    # One grammar for the three readers of the link: the firmware's, blip.py's and the pages'.
+    def test_what_the_shared_vectors_say_is_not_a_frame_is_refused(self):
+        for vector in VECTORS["not_frames"] + VECTORS["no_command"]:
+            with self.subTest(vector["why"]), self.assertRaises(frames.FrameError):
+                frames.decode_frame(bytes.fromhex(vector["hex"]))
 
     def test_what_the_deterministic_subset_does_not_allow_is_refused(self):
         for refused in ("a1001805", "a1180005", "bf0005ff", "a1007f6161ff", "a100f93c00",
@@ -62,6 +78,12 @@ class Registry(unittest.TestCase):
         self.assertEqual(frames.printable(decoded),
                          '{"command":"challenge","nonce":"%s","server_key_id":"890026b1"}'
                          % ("00" * 16))
+
+    # The same refusals as the pages' encoder, so blip.py cannot send what a page would not.
+    def test_what_the_shared_vectors_say_is_not_encodable_is_refused_before_anything_is_sent(self):
+        for vector in VECTORS["not_encodable"]:
+            with self.subTest(vector["why"]), self.assertRaises(frames.FrameError):
+                frames.encode_frame(vector["fields"])
 
     def test_a_name_the_registry_does_not_hold_is_refused_before_anything_is_sent(self):
         for bad in ({"command": "apply"}, {"command": "set", "region": 3},

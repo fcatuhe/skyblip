@@ -144,6 +144,25 @@ class ReplyFraming(unittest.TestCase):
             blip.decoded_or_refused(b"<truncated")
         self.assertIn("3c7472756e6361746564", str(caught.exception))
 
+    # A key 0 that is an array used to escape as a TypeError traceback, not a refusal.
+    def test_a_frame_whose_command_is_not_a_code_stops_the_collection_by_name(self):
+        for data in (bytes.fromhex("a1008100"), bytes.fromhex("a10161ff")):
+            with self.subTest(data=data.hex()), self.assertRaises(SystemExit) as caught:
+                blip.decoded_or_refused(data)
+            self.assertIn(data.hex(), str(caught.exception))
+
+    # A typed command the registry refuses is said before connecting, never a traceback.
+    def test_a_typed_command_the_registry_refuses_is_refused_by_name(self):
+        for text in ('{"command":"set","units":"imperial"}', '{"command":"challenge","nonce":"zz"}',
+                     '{"command":["set"]}', '["set"]', '{"command":'):
+            with self.subTest(text=text), self.assertRaises(SystemExit) as caught:
+                blip.command_fields(text)
+            self.assertIn(text, str(caught.exception))
+
+    def test_a_typed_command_the_registry_allows_is_handed_on_as_typed(self):
+        self.assertEqual(blip.command_fields('{"command":"set","units":"metric"}'),
+                         {"command": "set", "units": "metric"})
+
     def test_a_refused_command_raises_with_the_reason_the_device_gave(self):
         with self.assertRaises(SystemExit) as caught:
             blip.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})

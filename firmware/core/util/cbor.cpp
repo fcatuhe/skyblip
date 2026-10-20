@@ -8,7 +8,7 @@ namespace {
 
 constexpr uint8_t kAdditionalMask = 0x1F;
 constexpr uint8_t kOneByteArgument = 24;
-constexpr uint8_t kEightByteArgument = 27;
+constexpr uint8_t kFourByteArgument = 26;
 constexpr uint8_t kFalseValue = 20;
 constexpr uint8_t kTrueValue = 21;
 
@@ -27,13 +27,51 @@ bool read_head(ConstByteSpan frame, size_t& at, Head& out) {
         out.argument = out.additional;
         return true;
     }
-    if (out.additional > kEightByteArgument) return false;
+    if (out.additional > kFourByteArgument) return false;
     const size_t width = size_t{1} << (out.additional - kOneByteArgument);
     if (frame.size() - at < width) return false;
     uint64_t argument = 0;
     for (size_t i = 0; i < width; i++) argument = (argument << 8) | frame[at++];
     out.argument = argument;
     return head_bytes(argument) == static_cast<int>(1 + width);
+}
+
+bool valid_utf8(ConstByteSpan text) {
+    size_t at = 0;
+    while (at < text.size()) {
+        const uint8_t lead = text[at];
+        size_t continuations = 0;
+        uint32_t code = 0;
+        uint32_t floor = 0;
+        if (lead < 0x80) {
+            at++;
+            continue;
+        }
+        if ((lead & 0xE0) == 0xC0) {
+            continuations = 1;
+            code = lead & 0x1Fu;
+            floor = 0x80;
+        } else if ((lead & 0xF0) == 0xE0) {
+            continuations = 2;
+            code = lead & 0x0Fu;
+            floor = 0x800;
+        } else if ((lead & 0xF8) == 0xF0) {
+            continuations = 3;
+            code = lead & 0x07u;
+            floor = 0x10000;
+        } else {
+            return false;
+        }
+        if (text.size() - at - 1 < continuations) return false;
+        for (size_t i = 1; i <= continuations; i++) {
+            const uint8_t next = text[at + i];
+            if ((next & 0xC0) != 0x80) return false;
+            code = (code << 6) | (next & 0x3Fu);
+        }
+        if (code < floor || code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF)) return false;
+        at += continuations + 1;
+    }
+    return true;
 }
 
 bool read_value(ConstByteSpan frame, size_t& at, Entry& out) {
@@ -50,7 +88,7 @@ bool read_value(ConstByteSpan frame, size_t& at, Entry& out) {
             out.type = head.major == Major::Bytes ? Type::Bytes : Type::Text;
             out.content = frame.subspan(at, static_cast<size_t>(head.argument));
             at += static_cast<size_t>(head.argument);
-            return true;
+            return out.type == Type::Bytes || valid_utf8(out.content);
         case Major::Array: {
             if (head.argument > frame.size() - at) return false;
             const size_t items_start = at;
@@ -161,19 +199,20 @@ void Writer::write_head(Major major, uint64_t argument) {
     const int width = bytes - 1;
     const uint8_t additional = width == 1   ? kOneByteArgument
                                : width == 2 ? kOneByteArgument + 1
-                               : width == 4 ? kOneByteArgument + 2
-                                            : kEightByteArgument;
+                                            : kFourByteArgument;
     out_[length_++] = static_cast<uint8_t>(type | additional);
     for (int shift = (width - 1) * 8; shift >= 0; shift -= 8)
         out_[length_++] = static_cast<uint8_t>(argument >> shift);
 }
 
 void Writer::add_unsigned(uint32_t key, uint64_t value) {
+    if (value > UINT32_MAX) refused_ = true;
     if (!open_entry(key, unsigned_entry_bytes(key, value))) return;
     write_head(Major::Unsigned, value);
 }
 
 void Writer::add_integer(uint32_t key, int64_t value) {
+    if (value < -int64_t{UINT32_MAX} - 1 || value > int64_t{UINT32_MAX}) refused_ = true;
     if (!open_entry(key, integer_entry_bytes(key, value))) return;
     if (value < 0)
         write_head(Major::Negative, static_cast<uint64_t>(-(value + 1)));
@@ -187,8 +226,9 @@ void Writer::add_boolean(uint32_t key, bool value) {
 }
 
 void Writer::add_text(uint32_t key, const char* text) {
-    if (!open_entry(key, text_entry_bytes(key, text))) return;
     const size_t bytes = std::strlen(text);
+    if (!valid_utf8(ConstByteSpan(reinterpret_cast<const uint8_t*>(text), bytes))) refused_ = true;
+    if (!open_entry(key, text_entry_bytes(key, text))) return;
     write_head(Major::Text, bytes);
     std::memcpy(out_ + length_, text, bytes);
     length_ += static_cast<int>(bytes);

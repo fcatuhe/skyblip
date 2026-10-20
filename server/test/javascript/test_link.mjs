@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
+import { decode } from '#skyblip/cbor';
 import { FrameError, decodeFrame, encodeFrame, hex, printable } from '#skyblip/link';
 import { LINK_REGISTRY } from '#skyblip/link_registry';
 
 const bytes = text => Uint8Array.from(text.match(/../g) ?? [], pair => parseInt(pair, 16));
+const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/link.v1.vectors.json', import.meta.url), 'utf8'));
 
 test('the widest status is the twenty bytes the firmware pins', () => {
   const status = {
@@ -63,6 +66,25 @@ test('what the registry does not hold is refused before anything is sent', () =>
 test('a code the registry does not hold stays a number for a person to read', () => {
   assert.deepEqual(decodeFrame(bytes('a300000318c80901')), { command: 'acknowledgement', reason: 200, 9: 1 });
   assert.deepEqual(decodeFrame(bytes('a100181e')), { command: 30 });
+});
+
+// One grammar for the three readers of the link: the firmware's, blip.py's and the pages'.
+test('what the shared vectors say is not a frame is refused', () => {
+  for (const { hex: frame, why } of [...VECTORS.not_frames, ...VECTORS.no_command]) {
+    assert.throws(() => decodeFrame(bytes(frame)), FrameError, why);
+  }
+});
+
+// The same refusals as blip.py's encoder, so a page cannot send what blip.py would not.
+test('what the shared vectors say is not encodable is refused before anything is sent', () => {
+  for (const { fields, why } of VECTORS.not_encodable) {
+    assert.throws(() => encodeFrame(fields), FrameError, why);
+  }
+});
+
+test('the generic decoder still reads what SMP sends: nested maps, indefinite lengths, floats', () => {
+  assert.deepEqual(decode(bytes('bf6172a16161f5ff')), { r: { a: true } });
+  assert.deepEqual(decode(bytes('a1616183616101f93c00')), { a: ['a', 1, 1] });
 });
 
 test('what the deterministic subset does not allow is refused', () => {

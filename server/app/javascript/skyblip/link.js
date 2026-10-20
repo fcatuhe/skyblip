@@ -8,12 +8,13 @@ export class FrameError extends Error {}
 const FRAMES = new Map(LINK_REGISTRY.frames.map(frame => [frame.command, tableOf(frame)]));
 const BY_CODE = new Map([...FRAMES.values()].map(frame => [frame.code, frame]));
 
-const isUnsigned = value => Number.isSafeInteger(value) && value >= 0;
+const ARGUMENT_CEILING = 2 ** 32 - 1;
+const isUnsigned = value => Number.isInteger(value) && value >= 0 && value <= ARGUMENT_CEILING;
 const ACCEPTS = {
   unsigned: isUnsigned,
-  integer: Number.isSafeInteger,
+  integer: value => Number.isInteger(value) && value >= -ARGUMENT_CEILING - 1 && value <= ARGUMENT_CEILING,
   boolean: value => typeof value === 'boolean',
-  text: value => typeof value === 'string',
+  text: value => typeof value === 'string' && value.isWellFormed(),
   bytes: value => value instanceof Uint8Array,
   unsigned_array: value => Array.isArray(value) && value.every(isUnsigned),
   enum: isUnsigned,
@@ -29,6 +30,7 @@ function tableOf({ command, code, keys }) {
 }
 
 export function encodeFrame(fields) {
+  if (fields === null || typeof fields !== 'object' || Array.isArray(fields)) throw new FrameError(`a frame is an object of names, not ${printable(fields)}`);
   const frame = frameOf(fields.command);
   const entries = Object.entries(fields).filter(([, value]) => value !== undefined).map(([name, value]) => {
     const key = frame.byName.get(name);
@@ -39,7 +41,7 @@ export function encodeFrame(fields) {
 }
 
 function frameOf(command) {
-  const frame = typeof command === 'string' ? FRAMES.get(command) : BY_CODE.get(command);
+  const frame = typeof command === 'string' ? FRAMES.get(command) : isUnsigned(command) ? BY_CODE.get(command) : undefined;
   if (!frame) throw new FrameError(`no frame is commanded ${JSON.stringify(command)}`);
   return frame;
 }
@@ -67,8 +69,13 @@ function bytesOfHex(key, text) {
 }
 
 export function decodeFrame(bytes) {
-  const entries = decode(bytes, { deterministic: true });
-  if (!(entries instanceof Map)) throw new FrameError('a frame is a map');
+  let entries;
+  try {
+    entries = decode(bytes, { deterministic: true });
+  } catch (error) {
+    throw new FrameError(error.message);
+  }
+  if (!isUnsigned(entries.get(COMMAND_KEY))) throw new FrameError(`key 0 names the frame, and ${printable(entries.get(COMMAND_KEY))} does not`);
   const frame = BY_CODE.get(entries.get(COMMAND_KEY));
   const fields = {};
   for (const [number, value] of entries) {
