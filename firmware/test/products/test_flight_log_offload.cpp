@@ -122,7 +122,7 @@ Offload offload(Rig& rig, uint32_t& now_ms, uint32_t session) {
 void fly_past(Rig& rig, uint32_t& now_ms, int north_m) {
     fly(rig, now_ms, 1);
     const model::Ownship& own = rig.state().own;
-    model::AircraftObservation glider = neighbour(own, north_m, 0, 0, 0, 0, now_ms);
+    model::AircraftObservation glider = target_at(own, north_m, 0, 0, 0, 0, now_ms);
     glider.address = 0xDD5EED;
     const uint32_t now_s = rig.state().traffic_now_s(now_ms);
     glider.received.at_s = now_s;

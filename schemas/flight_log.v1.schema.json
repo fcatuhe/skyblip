@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://skyblip.eu/schemas/flight_log.v1.schema.json",
   "title": "skyBlip flight log record (v1)",
-  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's base64 chunks. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a contact's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc_s; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
+  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's base64 chunks. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a target's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc_s; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
   "type": "object",
   "required": [
     "type",
@@ -210,7 +210,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "alarm, encounter. On an alarm the level the contact just took, on an encounter the highest it reached: 0 none, 1 advisory, byte 14"
+      "description": "alarm, encounter. On an alarm the level the target just took, on an encounter the highest it reached: 0 none, 1 advisory, byte 14"
     },
     "aircraft_category": {
       "type": "integer",

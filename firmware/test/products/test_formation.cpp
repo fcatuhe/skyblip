@@ -12,7 +12,7 @@ using namespace skyblip;
 
 namespace {
 
-model::AircraftObservation neighbour(const model::Ownship& own, int north_m, int east_m, int up_m,
+model::AircraftObservation target_at(const model::Ownship& own, int north_m, int east_m, int up_m,
                                      int speed_mps, int track_deg, uint32_t at_ms) {
     model::AircraftObservation observation{};
     observation.address = 0x515151;
@@ -52,7 +52,7 @@ struct Flight {
               uint32_t address = 0x515151) {
         rig.state.own.fix_at_ms = now_ms;
         model::AircraftObservation observation =
-            neighbour(rig.state.own, north_m, east_m, up_m, speed_mps, track_deg, now_ms);
+            target_at(rig.state.own, north_m, east_m, up_m, speed_mps, track_deg, now_ms);
         observation.address = address;
         observation.flight_state = static_cast<uint8_t>(says);
         rig.state.traffic.update(observation, now_ms / 1000);
@@ -154,7 +154,7 @@ TEST_CASE("formation: a member under three metres a second of closure stays a me
     for (const uint32_t until = now_ms + 10000; now_ms < until; now_ms += 1000) {
         flight.rig.state.own.fix_at_ms = now_ms;
         model::AircraftObservation observation =
-            neighbour(flight.rig.state.own, -60, -120, 10, 40, 90, now_ms);
+            target_at(flight.rig.state.own, -60, -120, 10, 40, 90, now_ms);
         observation.speed_q = 173;
         flight.rig.state.traffic.update(observation, now_ms / 1000);
         flight.rig.alarm_service.tick(now_ms);

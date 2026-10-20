@@ -239,7 +239,7 @@ FLIGHT_FIELDS = (
 FLIGHT_EVENT_MARK = 0x80
 FLIGHT_KIND_OFFSET = 16
 
-CONTACT_FIELDS = (
+TARGET_FIELDS = (
     ("address", uint24(2)), ("address_mapping_table", uint8(5)), ("distance_m", uint16(6)),
     ("relative_altitude_m", int16(8)), ("relative_bearing_deg", uint16(10)), ("closing_mps", int16(12)), ("alarm", uint8(14)),
     ("aircraft_category", uint8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", int8(18)),
@@ -252,8 +252,8 @@ FLIGHT_EVENTS = {
         ("cell_mv", uint16(2)), ("percent", uint8(4)), ("power_level", enum8(5, POWER_LEVEL)),
         ("charge", enum8(6, CHARGE)), ("tracked", uint8(7)), ("tracked_peak", uint8(8)),
         ("battery_valid", flag(0)), ("charging", flag(1)), ("external_power", flag(2)))),
-    2: ("alarm", 19, CONTACT_FIELDS),
-    3: ("encounter", 19, CONTACT_FIELDS + (("heard_s", uint16(20)),)),
+    2: ("alarm", 19, TARGET_FIELDS),
+    3: ("encounter", 19, TARGET_FIELDS + (("heard_s", uint16(20)),)),
 }
 
 

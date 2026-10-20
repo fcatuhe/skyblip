@@ -34,13 +34,13 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
 
     // Ten kilometres out is a real target on this band: it is well inside the
     // budget and it is what the radar's outer ring is for.
-    model::AircraftObservation near_by = neighbour(own, 10000, 0, 0, 30, 180);
+    model::AircraftObservation near_by = target_at(own, 10000, 0, 0, 30, 180);
     near_by.address = 0x4A0001;
     CHECK(table.update(near_by, 100) >= 0);
 
     // A hundred kilometres is not. Nothing at 14 dBm e.r.p. on 868 MHz reaches
     // this receiver from there, so the frame that said so was wrong.
-    model::AircraftObservation ghost = neighbour(own, 100000, 0, 0, 30, 180);
+    model::AircraftObservation ghost = target_at(own, 100000, 0, 0, 30, 180);
     ghost.address = 0x4A0002;
     CHECK(table.update(ghost, 100) < 0);
     CHECK(table.count() == 1);
@@ -48,7 +48,7 @@ TEST_CASE("traffic: a target further away than the radio can hear is a mis-decod
 
     // Straight up counts too: the altitude field miscorrects as readily as the
     // latitude one, and the slant range is the path the signal took.
-    model::AircraftObservation high = neighbour(own, 0, 0, 60000, 0, 0);
+    model::AircraftObservation high = target_at(own, 0, 0, 60000, 0, 0);
     high.address = 0x4A0003;
     CHECK(table.update(high, 100) < 0);
     CHECK(table.count() == 1);
@@ -65,12 +65,12 @@ TEST_CASE("traffic: the plausibility gate is exact at its own boundary") {
     // the boundary is approached from both sides with a metre of margin rather
     // than asserted on the exact metre.
     model::AircraftObservation on_limit =
-        neighbour(own, kPlausibleRangeCeilingM - 1, 0, 0, 30, 180);
+        target_at(own, kPlausibleRangeCeilingM - 1, 0, 0, 30, 180);
     CHECK(range_check(own, on_limit, slant_m) == Plausibility::Believable);
     CHECK(slant_m <= kPlausibleRangeCeilingM);
 
     model::AircraftObservation past_limit =
-        neighbour(own, kPlausibleRangeCeilingM + 100, 0, 0, 30, 180);
+        target_at(own, kPlausibleRangeCeilingM + 100, 0, 0, 30, 180);
     CHECK(range_check(own, past_limit, slant_m) == Plausibility::TooFar);
     CHECK(slant_m > kPlausibleRangeCeilingM);
 
@@ -95,7 +95,7 @@ TEST_CASE("traffic: with no fix of our own nothing is refused for being far away
     TrafficTable table;
     table.set_own_reference(own);
 
-    model::AircraftObservation far_away = neighbour(flying(30, 0), 100000, 0, 0, 30, 180);
+    model::AircraftObservation far_away = target_at(flying(30, 0), 100000, 0, 0, 30, 180);
     CHECK(table.update(far_away, 100) >= 0);
     CHECK(table.implausible() == 0);
 
@@ -111,7 +111,7 @@ TEST_CASE("traffic: with no fix of our own nothing is refused for being far away
 // as no fix: the gate is a refinement on the door, never a new way to be blind.
 TEST_CASE("traffic: a table with no reference set behaves exactly as it did before") {
     TrafficTable table;
-    model::AircraftObservation far_away = neighbour(flying(30, 0), 250000, 0, 0, 30, 180);
+    model::AircraftObservation far_away = target_at(flying(30, 0), 250000, 0, 0, 30, 180);
     CHECK(table.update(far_away, 100) >= 0);
     CHECK(table.count() == 1);
     CHECK(table.implausible() == 0);
@@ -125,13 +125,13 @@ TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets wi
     TrafficTable table;
     table.set_own_reference(own);
 
-    model::AircraftObservation good = neighbour(own, 2000, 500, 100, 30, 90);
+    model::AircraftObservation good = target_at(own, 2000, 500, 100, 30, 90);
     good.address = 0x4B0001;
     good.source = model::Source::AdslUplink;
-    model::AircraftObservation ghost = neighbour(own, 400000, -200000, 0, 30, 270);
+    model::AircraftObservation ghost = target_at(own, 400000, -200000, 0, 30, 270);
     ghost.address = 0x4B0002;
     ghost.source = model::Source::AdslUplink;
-    model::AircraftObservation also_good = neighbour(own, -1500, 800, -200, 25, 180);
+    model::AircraftObservation also_good = target_at(own, -1500, 800, -200, 25, 180);
     also_good.address = 0x4B0003;
     also_good.source = model::Source::AdslUplink;
 
@@ -153,14 +153,14 @@ TEST_CASE("traffic: a mis-decode of a tracked aircraft does not move the aircraf
     TrafficTable table;
     table.set_own_reference(own);
 
-    model::AircraftObservation real_target = neighbour(own, 1200, 0, 0, 30, 180, 100000);
+    model::AircraftObservation real_target = target_at(own, 1200, 0, 0, 30, 180, 100000);
     real_target.address = 0x4C0001;
     const int index = table.update(real_target, 100);
     REQUIRE(index >= 0);
     table.at(index)->alarm_level = Level::Advisory;
 
     model::AircraftObservation same_aircraft_wrong_place =
-        neighbour(own, 120000, 0, 0, 30, 180, 101000);
+        target_at(own, 120000, 0, 0, 30, 180, 101000);
     same_aircraft_wrong_place.address = 0x4C0001;
     CHECK(table.update(same_aircraft_wrong_place, 101) < 0);
 
@@ -181,7 +181,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     table.set_own_reference(own);
     int32_t slant_m = 0;
 
-    model::AircraftObservation distant = neighbour(own, 45000, 0, 0, 30, 180);
+    model::AircraftObservation distant = target_at(own, 45000, 0, 0, 30, 180);
     distant.address = 0x4D0001;
     distant.source = model::Source::AdslDirect;
     CHECK(range_check(own, distant, slant_m) == Plausibility::TooFar);
@@ -199,7 +199,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
 
     // Past the two-hop budget a relay is refused too: a ground station cannot
     // hand us an aircraft it could not have heard either.
-    model::AircraftObservation relayed_ghost = neighbour(own, 200000, 0, 0, 30, 180);
+    model::AircraftObservation relayed_ghost = target_at(own, 200000, 0, 0, 30, 180);
     relayed_ghost.address = 0x4D0002;
     relayed_ghost.source = model::Source::AdslUplink;
     CHECK(table.update(relayed_ghost, 100) < 0);

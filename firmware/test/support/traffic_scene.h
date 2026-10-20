@@ -26,7 +26,7 @@ inline model::Ownship flying(int speed_mps, int track_deg, int16_t turn_dps = 0,
 
 // Placed by offset from own-ship, so a case reads as the picture out of the
 // canopy rather than as two coordinates.
-inline model::AircraftObservation neighbour(const model::Ownship& own, int north_m, int east_m,
+inline model::AircraftObservation target_at(const model::Ownship& own, int north_m, int east_m,
                                             int up_m, int speed_mps, int track_deg,
                                             uint32_t at_ms = 0) {
     model::AircraftObservation observation{};

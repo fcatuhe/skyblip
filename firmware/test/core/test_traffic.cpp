@@ -162,7 +162,7 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
     for (uint32_t now_ms = 1000; now_ms <= 1000 + formation::kTogetherHoldMs + 1000;
          now_ms += 1000) {
         const model::Ownship own = flying(40, 90, 0, now_ms);
-        wingman = neighbour(own, -60, -120, 10, 40, 90, now_ms);
+        wingman = target_at(own, -60, -120, 10, 40, 90, now_ms);
         table.update(wingman, wingman.received.at_s);
         tracker.update(own, wingman, now_ms);
         wingmen.observe(own, wingman, {}, now_ms);
@@ -195,7 +195,7 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
     TrafficTable table;
     table.set_own_reference(own);
     const auto at = [&](uint32_t address, int north_m, model::Source source, uint32_t now_ms) {
-        model::AircraftObservation observation = neighbour(own, north_m, 0, 0, 30, 0);
+        model::AircraftObservation observation = target_at(own, north_m, 0, 0, 30, 0);
         observation.address = address;
         observation.source = source;
         observation.received.at_s = now_ms;
@@ -264,14 +264,14 @@ TEST_CASE("traffic: a table full of parked aircraft gives way to one in the air,
     TrafficTable table;
     table.set_own_reference(own);
     for (int i = 0; i < TrafficTable::kMaxTargets; i++) {
-        model::AircraftObservation apron = neighbour(own, 200 + 10 * i, 0, 0, 0, 0);
+        model::AircraftObservation apron = target_at(own, 200 + 10 * i, 0, 0, 0, 0);
         apron.address = 0x100000u + static_cast<uint32_t>(i);
         apron.received.at_s = 100;
         apron.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         REQUIRE(table.update(apron, 100) >= 0);
     }
 
-    model::AircraftObservation arriving = neighbour(own, 8000, 0, 0, 40, 180);
+    model::AircraftObservation arriving = target_at(own, 8000, 0, 0, 40, 180);
     arriving.address = 0x200000;
     arriving.received.at_s = 100;
     arriving.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
@@ -315,7 +315,7 @@ TEST_CASE("alarm: a target is announced and forgotten across the 49.7-day wrap")
     const uint32_t before = 0xFFFFF000u;  // 4096 ms short of the wrap
 
     // A target announced on one side of the wrap instant, still standing on the other.
-    model::AircraftObservation target = neighbour(own, 400, 0, 0, 30, 180, before);
+    model::AircraftObservation target = target_at(own, 400, 0, 0, 30, 180, before);
     REQUIRE(tracker.update(own, target, before).notify);
     CHECK(tracker.announced_level(before) == Level::Advisory);
 

@@ -24,7 +24,7 @@ model::Ownship flying(int speed_mps, int track_deg, uint32_t at_ms = 0) {
     return own;
 }
 
-model::AircraftObservation neighbour(const model::Ownship& own, int north_m, int east_m, int up_m,
+model::AircraftObservation target_at(const model::Ownship& own, int north_m, int east_m, int up_m,
                                      int speed_mps, int track_deg, uint32_t at_ms) {
     model::AircraftObservation observation{};
     observation.address = 0x424242;
@@ -50,7 +50,7 @@ uint32_t fly_on_station(Tracker& tracker) {
     uint32_t now_ms = 1000;
     for (; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
     return now_ms - 1000;
 }
@@ -62,7 +62,7 @@ TEST_CASE("formation: a wingman holding station is flying with us after the stea
     Report report{};
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        report = tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::Together);
     CHECK(tracker.together(6, 0x424242));
@@ -76,7 +76,7 @@ TEST_CASE("formation: a target crossing our path never joins") {
         const uint32_t now_ms = 1000 + static_cast<uint32_t>(i) * 1000;
         const model::Ownship own = flying(40, 0, now_ms);
         report =
-            tracker.observe(own, neighbour(own, 600, 400 - 80 * i, 0, 40, 270, now_ms), {}, now_ms);
+            tracker.observe(own, target_at(own, 600, 400 - 80 * i, 0, 40, 270, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::None);
 }
@@ -85,26 +85,26 @@ TEST_CASE("formation: a member drifting away is parting, and it takes two fixes"
     Tracker tracker;
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
 
     uint32_t now_ms = 1000 + kTogetherHoldMs + 2000;
     model::Ownship own = flying(40, 90, now_ms);
     // One bad solution does not break a formation.
-    CHECK(tracker.observe(own, neighbour(own, -60, -400, 10, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -400, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::Together);
     CHECK(tracker.together(6, 0x424242));
 
     now_ms += 1000;
     own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -700, 10, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -700, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::Parting);
     CHECK_FALSE(tracker.together(6, 0x424242));
     CHECK(tracker.members() == 0);
 
     now_ms += 1000;
     own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -900, 10, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -900, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::Parting);
 }
 
@@ -125,7 +125,7 @@ TEST_CASE("formation: a member peeling off at any speed parts once and stays par
             const model::Ownship own = flying(40, 90, now_ms);
             const State now =
                 tracker
-                    .observe(own, neighbour(own, -60 - away_m, -120, 10, 40, 90, now_ms), {},
+                    .observe(own, target_at(own, -60 - away_m, -120, 10, 40, 90, now_ms), {},
                              now_ms)
                     .state;
             if (was == State::Together && now == State::Parting) breaks++;
@@ -143,12 +143,12 @@ TEST_CASE("formation: a pair that parts is two aircraft again once it leaves the
     Tracker tracker;
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
 
     const uint32_t now_ms = 1000 + kTogetherHoldMs + 2000;
     const model::Ownship own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -1600, 10, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -1600, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::None);
     CHECK_FALSE(tracker.together(6, 0x424242));
 }
@@ -158,14 +158,14 @@ TEST_CASE("formation: a parted neighbour that comes back to its station rejoins"
     uint32_t now_ms = fly_on_station(tracker) + 1000;
     for (int i = 0; i < kBreakFixes; i++, now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -300 - 200 * i, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -300 - 200 * i, 10, 40, 90, now_ms), {}, now_ms);
     }
     REQUIRE_FALSE(tracker.together(6, 0x424242));
 
     Report report{};
     for (const uint32_t until = now_ms + kTogetherHoldMs + 1000; now_ms <= until; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        report = tracker.observe(own, neighbour(own, -60, -140, 10, 40, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -60, -140, 10, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::Together);
 }
@@ -176,13 +176,13 @@ TEST_CASE("formation: a parted neighbour holding a station elsewhere is still pa
     uint32_t now_ms = fly_on_station(tracker) + 1000;
     for (int i = 0; i < kBreakFixes; i++, now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -300 - 200 * i, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -300 - 200 * i, 10, 40, 90, now_ms), {}, now_ms);
     }
 
     Report report{};
     for (const uint32_t until = now_ms + 3 * kTogetherHoldMs; now_ms <= until; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        report = tracker.observe(own, neighbour(own, -60, -700, 10, 40, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -60, -700, 10, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::Parting);
     CHECK(tracker.members() == 0);
@@ -196,17 +196,17 @@ TEST_CASE("formation: one fix of closure is noise, two release the member and re
 
     // On station, but 4 m/s faster from behind: 3.6 m/s of it on the line of sight.
     model::Ownship own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -120, 10, 44, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -120, 10, 44, 90, now_ms), {}, now_ms).state ==
           State::Together);
 
     now_ms += 1000;
     own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -120, 10, 44, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -120, 10, 44, 90, now_ms), {}, now_ms).state ==
           State::None);
 
     now_ms += 1000;
     own = flying(40, 90, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms).state ==
           State::None);
 }
 
@@ -217,7 +217,7 @@ TEST_CASE("formation: a break is counted in receptions, not in passes of the loo
     REQUIRE(tracker.together(6, 0x424242));
 
     const model::Ownship own = flying(40, 90, now_ms);
-    const model::AircraftObservation bad = neighbour(own, -60, -400, 10, 40, 90, now_ms);
+    const model::AircraftObservation bad = target_at(own, -60, -400, 10, 40, 90, now_ms);
     for (uint32_t pass = 0; pass < 100; pass++) tracker.observe(own, bad, {}, now_ms + pass * 10);
     CHECK(tracker.together(6, 0x424242));
 }
@@ -236,7 +236,7 @@ TEST_CASE("formation: two gliders on one thermal circle are flying together") {
         const int north_m = static_cast<int>(-222.0 * std::sin(heading));
         const int east_m = static_cast<int>(222.0 * std::cos(heading));
         report = tracker.observe(
-            own, neighbour(own, north_m, east_m, 0, 23, track_deg + 180, now_ms), {}, now_ms);
+            own, target_at(own, north_m, east_m, 0, 23, track_deg + 180, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::Together);
 }
@@ -245,7 +245,7 @@ TEST_CASE("formation: a target nobody has heard from is forgotten, membership an
     Tracker tracker;
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        tracker.observe(own, neighbour(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
+        tracker.observe(own, target_at(own, -60, -120, 10, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(tracker.members() == 1);
 
@@ -262,7 +262,7 @@ TEST_CASE("formation: a target that appears alongside is anchored where it was f
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
         const int right_m = (now_ms / 1000) % 2 == 0 ? 40 : -40;
-        report = tracker.observe(own, neighbour(own, -right_m, 0, 0, 40, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -right_m, 0, 0, 40, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::None);
 }
@@ -273,7 +273,7 @@ TEST_CASE("formation: an aircraft that says it is on the ground is never a wingm
     Report report{};
     for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
         const model::Ownship own = flying(40, 90, now_ms);
-        model::AircraftObservation parked = neighbour(own, -60, -120, 10, 40, 90, now_ms);
+        model::AircraftObservation parked = target_at(own, -60, -120, 10, 40, 90, now_ms);
         parked.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
         report = tracker.observe(own, parked, {}, now_ms);
     }
@@ -288,7 +288,7 @@ TEST_CASE("formation: a member that reports itself on the ground leaves at once"
     REQUIRE(tracker.members() == 1);
 
     const model::Ownship own = flying(40, 90, now_ms);
-    model::AircraftObservation landed = neighbour(own, -60, -120, 10, 40, 90, now_ms);
+    model::AircraftObservation landed = target_at(own, -60, -120, 10, 40, 90, now_ms);
     landed.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     CHECK(tracker.observe(own, landed, {}, now_ms).state == State::None);
     CHECK(tracker.members() == 0);
@@ -319,7 +319,7 @@ TEST_CASE("formation: nothing flies in formation while own-ship is on the ground
     for (uint32_t now_ms = 1000; now_ms <= 1000 + 3 * kTogetherHoldMs; now_ms += 1000) {
         const model::Ownship own = parked_at(now_ms);
         tracker.observe_own(own, now_ms);
-        report = tracker.observe(own, neighbour(own, -10, -20, 0, 0, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -10, -20, 0, 0, 90, now_ms), {}, now_ms);
     }
     CHECK(report.state == State::None);
     CHECK(tracker.members() == 0);
@@ -345,13 +345,13 @@ TEST_CASE("formation: a target beside us as we lift off is joining until it hold
     for (; now_ms < 1000 + kTogetherHoldMs; now_ms += 1000) {
         const model::Ownship own = airborne_at(now_ms);
         tracker.observe_own(own, now_ms);
-        report = tracker.observe(own, neighbour(own, -20, -30, 0, 40, 90, now_ms), {}, now_ms);
+        report = tracker.observe(own, target_at(own, -20, -30, 0, 40, 90, now_ms), {}, now_ms);
         CHECK(report.state == State::Joining);
         CHECK(tracker.members() == 0);
     }
     const model::Ownship own = airborne_at(now_ms);
     tracker.observe_own(own, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, -20, -30, 0, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, -20, -30, 0, 40, 90, now_ms), {}, now_ms).state ==
           State::Together);
 }
 
@@ -363,7 +363,7 @@ TEST_CASE("formation: a target that lifts off beside us is joining") {
     tracker.observe_own(own, now_ms);
 
     const flight::Liftoff just_now{now_ms, true};
-    CHECK(tracker.observe(own, neighbour(own, 0, 60, 0, 40, 90, now_ms), just_now, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, 60, 0, 40, 90, now_ms), just_now, now_ms).state ==
           State::Joining);
 }
 
@@ -372,13 +372,13 @@ TEST_CASE("formation: a target first heard in the air is traffic, not a joiner")
     const uint32_t now_ms = 30000;
     const model::Ownship own = airborne_at(now_ms);
     tracker.observe_own(own, now_ms);
-    CHECK(tracker.observe(own, neighbour(own, 0, 60, 0, 40, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, 60, 0, 40, 90, now_ms), {}, now_ms).state ==
           State::None);
 
     Tracker later;
     later.observe_own(own, now_ms);
     const flight::Liftoff long_ago{now_ms - kLiftoffWindowMs, true};
-    CHECK(later.observe(own, neighbour(own, 0, 60, 0, 40, 90, now_ms), long_ago, now_ms).state ==
+    CHECK(later.observe(own, target_at(own, 0, 60, 0, 40, 90, now_ms), long_ago, now_ms).state ==
           State::None);
 }
 
@@ -389,17 +389,17 @@ TEST_CASE("formation: a joiner that leaves its station is traffic on that fix, a
     tracker.observe_own(own, now_ms);
     const flight::Liftoff just_now{now_ms, true};
     REQUIRE(
-        tracker.observe(own, neighbour(own, 0, 60, 0, 40, 90, now_ms), just_now, now_ms).state ==
+        tracker.observe(own, target_at(own, 0, 60, 0, 40, 90, now_ms), just_now, now_ms).state ==
         State::Joining);
 
     now_ms += 1000;
     own = airborne_at(now_ms);
-    CHECK(tracker.observe(own, neighbour(own, 0, 300, 0, 40, 90, now_ms), just_now, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, 300, 0, 40, 90, now_ms), just_now, now_ms).state ==
           State::None);
 
     now_ms += 1000;
     own = airborne_at(now_ms);
-    CHECK(tracker.observe(own, neighbour(own, 0, 300, 0, 40, 90, now_ms), just_now, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, 300, 0, 40, 90, now_ms), just_now, now_ms).state ==
           State::None);
 }
 
@@ -411,16 +411,16 @@ TEST_CASE("formation: a joiner closing on us is traffic after two fixes of it") 
     uint32_t now_ms = 1000;
     model::Ownship own = airborne_at(now_ms);
     tracker.observe_own(own, now_ms);
-    REQUIRE(tracker.observe(own, neighbour(own, 0, -300, 0, 50, 90, now_ms), {}, now_ms).state ==
+    REQUIRE(tracker.observe(own, target_at(own, 0, -300, 0, 50, 90, now_ms), {}, now_ms).state ==
             State::Joining);
 
     now_ms += 1000;
     own = airborne_at(now_ms);
-    CHECK(tracker.observe(own, neighbour(own, 0, -290, 0, 50, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, -290, 0, 50, 90, now_ms), {}, now_ms).state ==
           State::Joining);
 
     now_ms += 1000;
     own = airborne_at(now_ms);
-    CHECK(tracker.observe(own, neighbour(own, 0, -280, 0, 50, 90, now_ms), {}, now_ms).state ==
+    CHECK(tracker.observe(own, target_at(own, 0, -280, 0, 50, 90, now_ms), {}, now_ms).state ==
           State::None);
 }
