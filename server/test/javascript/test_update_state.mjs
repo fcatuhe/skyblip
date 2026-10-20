@@ -9,7 +9,7 @@ import { noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, alarm: true, alarm_volume: 1, units: 1, callsign: 'F-JABC' };
+const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 1, units: 1, callsign: 'F-JABC' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });

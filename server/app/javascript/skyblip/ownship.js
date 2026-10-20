@@ -84,7 +84,7 @@ export function toCpp(g) {
 }
 
 export function toCommand(g, typeCode) {
-  return JSON.stringify({ cmd: 'ownship', type: typeCode, w: width(g), o: hotSpot(g), rows: hexRows(g).join('') });
+  return JSON.stringify({ command: 'ownship', type: typeCode, w: width(g), o: hotSpot(g), rows: hexRows(g).join('') });
 }
 
 export function problems(g, limits) {

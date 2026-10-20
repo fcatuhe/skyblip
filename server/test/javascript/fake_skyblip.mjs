@@ -7,8 +7,9 @@ const decoder = new TextDecoder();
 const SMP_HEADER_BYTES = 8;
 const ATT_HEADER_BYTES = 3;
 const PREPARE_HEADER_BYTES = 5;
-// INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments
-const PREPARE_COUNT = 2;
+// INFO: fc 03oct26 CONFIG_BT_ATT_PREPARE_COUNT in prj.conf: Zephyr reassembles that many segments | 20oct26 two before #151
+const PREPARE_COUNT = 3;
+const LEGACY_PREPARE_COUNT = 2;
 const MGMT_ERR_EMSGSIZE = 7;
 const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
@@ -16,7 +17,11 @@ const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
 export const PRODUCTION_KEY = 0xb2;
-export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 2, units: 0, callsign: '' };
+export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 2, units: 0, callsign: '' };
+// INFO: fc 20oct26 the words firmware before #151 used for the fake's own, written out here rather than read from the table under test
+const LEGACY_KEYS = { command: 'cmd', acknowledge: 'ack', alarm_enabled: 'alarm', die_temperature_c: 'die_temp_c' };
+const LEGACY_REASONS = { unknown_command: 'unknown_cmd' };
+const CURRENT_KEYS = Object.fromEntries(Object.entries(LEGACY_KEYS).map(([name, word]) => [word, name]));
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const IMAGE_HEADER_BYTES = 32;
 const TLV_INFO = 0x6907;
@@ -81,10 +86,11 @@ export class FakeSkyblip {
     downgrade = false,
     address = 0x00012a,
     identityNames = true,
+    legacy = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, identityNames });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, legacy });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -96,6 +102,7 @@ export class FakeSkyblip {
     this.finished = false;
     this.upload = null;
     this.commands = [];
+    this.heard = [];
     this.uploadOffsets = [];
     this.longestWrite = 0;
     this.longestAttempt = 0;
@@ -176,7 +183,7 @@ export class FakeSkyblip {
     this.longestAttempt = Math.max(this.longestAttempt, Math.min(bytes.length, segment));
     await tick();
     this.writing = false;
-    if (Math.ceil(bytes.length / segment) > PREPARE_COUNT) throw new Error('GATT Error: Prepare queue full.');
+    if (Math.ceil(bytes.length / segment) > (this.legacy ? LEGACY_PREPARE_COUNT : PREPARE_COUNT)) throw new Error('GATT Error: Prepare queue full.');
     this.longestWrite = Math.max(this.longestWrite, Math.min(bytes.length, segment));
     characteristic.onWrite(Uint8Array.from(bytes));
   }
@@ -196,33 +203,46 @@ export class FakeSkyblip {
   }
 
   reply(json) {
-    setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(json))));
+    const frame = this.legacy ? legacyWords(json) : json;
+    setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(frame))));
   }
 
-  ack(ok, reason) {
-    this.reply({ ack: ok, reason });
+  acknowledge(ok, reason) {
+    this.reply({ acknowledge: ok, reason });
+  }
+
+  // INFO: fc 20oct26 each firmware's flat reader takes its own keys and ignores the other dialect's
+  read(bytes) {
+    const frame = JSON.parse(decoder.decode(bytes));
+    this.heard.push(frame);
+    const othersWords = this.legacy ? LEGACY_KEYS : CURRENT_KEYS;
+    const own = Object.entries(frame).filter(([key]) => !Object.hasOwn(othersWords, key));
+    return Object.fromEntries(this.legacy ? own.map(([key, value]) => [Object.hasOwn(CURRENT_KEYS, key) ? CURRENT_KEYS[key] : key, value]) : own);
   }
 
   onConfig(bytes) {
-    const { cmd, ...fields } = JSON.parse(decoder.decode(bytes));
-    this.commands.push(cmd);
-    if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
-    if (cmd === 'update') return this.sendUpdate();
-    if (cmd === 'status') return this.sendStatus();
-    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...this.addressFields(), ...this.stored });
-    if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
-    if (!['set', 'dfu', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
-    if (!this.onGround) return this.ack(false, 'in_flight');
-    if (cmd !== 'recovery' && !this.swapPowered) return this.ack(false, 'low_power');
-    if (cmd === 'dfu' && !fields.version) return this.ack(false, 'no_version');
-    if (cmd === 'dfu' && this.older(parseVersion(fields.version))) return this.ack(false, 'older');
-    if (cmd === 'dfu') this.approved = fields.version;
-    this.pending = cmd;
-    if (cmd === 'set') {
+    this.answer(this.read(bytes));
+  }
+
+  answer({ command, ...fields }) {
+    this.commands.push(command);
+    if (this.claimedBy !== null) return this.reply({ acknowledge: false, reason: 'claimed', by: this.claimedBy });
+    if (command === 'update') return this.sendUpdate();
+    if (command === 'status') return this.sendStatus();
+    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
+    if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
+    if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
+    if (!this.onGround) return this.acknowledge(false, 'in_flight');
+    if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
+    if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
+    if (command === 'dfu' && this.older(parseVersion(fields.version))) return this.acknowledge(false, 'older');
+    if (command === 'dfu') this.approved = fields.version;
+    this.pending = command;
+    if (command === 'set') {
       this.staged = fields;
-      return this.reply({ ack: false, pending: true, reason: 'confirm' });
+      return this.reply({ acknowledge: false, pending: true, reason: 'confirm' });
     }
-    this.reply({ ack: false, pending: true, reason: `confirm_${cmd}` });
+    this.reply({ acknowledge: false, pending: true, reason: `confirm_${command}` });
   }
 
   // INFO: fc 19oct26 firmware before #126 names the address addr and always sends it: it has no activation
@@ -236,7 +256,7 @@ export class FakeSkyblip {
     this.windowOpen = false;
     if (this.pending) {
       this.pending = null;
-      this.ack(false, 'in_flight');
+      this.acknowledge(false, 'in_flight');
     }
     this.sendStatus();
   }
@@ -249,10 +269,10 @@ export class FakeSkyblip {
   installLanded() {
     this.windowOpen = false;
     const image = readImage(this.slot);
-    if (this.refuseInstall) return this.ack(false, this.refuseInstall);
-    if (!image || versionText(image.version) !== this.approved) return this.ack(false, 'not_approved');
-    if (this.key !== null && image.key !== keyName(this.key)) return this.ack(false, 'wrong_key');
-    this.ack(true, 'install');
+    if (this.refuseInstall) return this.acknowledge(false, this.refuseInstall);
+    if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
+    if (this.key !== null && image.key !== keyName(this.key)) return this.acknowledge(false, 'wrong_key');
+    this.acknowledge(true, 'install');
     setImmediate(() => setImmediate(() => this.drop()));
   }
 
@@ -261,7 +281,7 @@ export class FakeSkyblip {
   }
 
   sendUpdate() {
-    const frame = { cmd: 'update', image: this.image };
+    const frame = { command: 'update', image: this.image };
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
     if (this.imu !== null) frame.imu = this.imu;
@@ -273,14 +293,14 @@ export class FakeSkyblip {
 
   sendStatus() {
     this.reply({
-      cmd: 'status',
+      command: 'status',
       flight: this.onGround ? 'ground' : 'airborne',
       upload: this.windowOpen && this.onGround,
       battery_percent: this.swapPowered ? 80 : 12,
       charging: false,
       power_level: this.swapPowered ? 'OK' : 'LOW',
       went_dark_flat: false,
-      die_temp_c: 21,
+      die_temperature_c: 21,
     });
   }
 
@@ -289,26 +309,26 @@ export class FakeSkyblip {
     this.pending = null;
     if (task === 'set') {
       Object.assign(this.stored, this.staged);
-      return this.reply({ ack: true });
+      return this.reply({ acknowledge: true });
     }
     if (task === 'dfu') {
       this.windowOpen = true;
       this.finished = false;
-      return this.ack(true, 'dfu');
+      return this.acknowledge(true, 'dfu');
     }
-    this.ack(true, task);
+    this.acknowledge(true, task);
     setImmediate(() => setImmediate(() => this.drop()));
   }
 
   refuse() {
     this.pending = null;
     this.windowOpen = false;
-    this.ack(false, 'cancelled');
+    this.acknowledge(false, 'cancelled');
   }
 
   expire() {
     this.pending = null;
-    this.ack(false, 'expired');
+    this.acknowledge(false, 'expired');
   }
 
   push(json) {
@@ -444,6 +464,12 @@ function tlvArea(magic, entries) {
     at += 4 + value.length;
   }
   return area;
+}
+
+function legacyWords(frame) {
+  const words = Object.fromEntries(Object.entries(frame).map(([key, value]) => [Object.hasOwn(LEGACY_KEYS, key) ? LEGACY_KEYS[key] : key, value]));
+  if (Object.hasOwn(LEGACY_REASONS, words.reason)) words.reason = LEGACY_REASONS[words.reason];
+  return words;
 }
 
 function keyName(byte) {

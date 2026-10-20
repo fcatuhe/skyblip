@@ -35,7 +35,7 @@ test('the address keeps the leftmost column in the lowest bit, and the hot spot 
 // 16 rows of 8 hex digits and the envelope must fit the 182 bytes an iPhone link carries.
 test('the Bluetooth command carries the type code, the hot spot and every row inside one write', () => {
   const command = ownship.toCommand(ownship.parse(CASES[0].text), 10);
-  assert.deepEqual(Object.keys(JSON.parse(command)), ['cmd', 'type', 'w', 'o', 'rows']);
+  assert.deepEqual(Object.keys(JSON.parse(command)), ['command', 'type', 'w', 'o', 'rows']);
   assert.equal(JSON.parse(command).rows.length, 16 * 8);
   assert.ok(command.length <= 182, `${command.length} bytes`);
 });

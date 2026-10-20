@@ -70,7 +70,7 @@ export class Activator {
     }
     this.#device = device;
     this.#set({ phase: 'ready', device: device.name });
-    await this.#send({ cmd: 'get' });
+    await this.#send({ command: 'get' });
   }
 
   disconnect() {
@@ -81,7 +81,7 @@ export class Activator {
   activate() {
     if (this.#state.phase !== 'ready') return;
     this.#set({ phase: 'asking', notice: null });
-    return this.#send({ cmd: 'challenge' });
+    return this.#send({ command: 'challenge' });
   }
 
   async #send(command) {
@@ -94,10 +94,10 @@ export class Activator {
 
   #receive(reply) {
     if (!reply) return;
-    if (reply.cmd === 'config') this.#set({ address: addressOf(reply), read: true });
-    else if (reply.cmd === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
-    else if (reply.cmd === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
-    else if ('ack' in reply) this.#acked(reply);
+    if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true });
+    else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
+    else if (reply.command === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
+    else if ('acknowledge' in reply) this.#acked(reply);
   }
 
   #acked(reply) {
@@ -105,7 +105,7 @@ export class Activator {
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', notice: { key: 'claimed' } });
     if (!BUSY.has(phase)) return;
     if (reply.pending && reply.reason === 'confirm_register') return this.#set({ phase: 'confirming' });
-    if (reply.ack && reply.reason === 'unlock' && phase === 'unlocking') return this.#unlocked();
+    if (reply.acknowledge && reply.reason === 'unlock' && phase === 'unlocking') return this.#unlocked();
     this.#set({ phase: 'ready', notice: { key: reply.reason || 'refused' } });
   }
 
@@ -114,17 +114,17 @@ export class Activator {
     const answer = await this.#ask(device, () => this.#server.challenge({ unit_nonce: nonce, server_key_id }));
     if (!answer) return;
     this.#serverNonce = answer.server_nonce;
-    return this.#send({ cmd: 'register', server_nonce: answer.server_nonce, signature: answer.signature });
+    return this.#send({ command: 'register', server_nonce: answer.server_nonce, signature: answer.signature });
   }
 
-  async #register({ cmd, ...registration }) {
+  async #register({ command, ...registration }) {
     const device = this.#device;
     const unit = `${registration.device_id} ${registration.public_key.slice(0, 8)}`;
     this.#set({ phase: 'registering' });
     const answer = await this.#ask(device, () => this.#server.register({ ...registration, server_nonce: this.#serverNonce }), unit);
     if (!answer) return;
     this.#set({ phase: 'unlocking' });
-    return this.#send({ cmd: 'unlock', serial: answer.serial, signature: answer.signature });
+    return this.#send({ command: 'unlock', serial: answer.serial, signature: answer.signature });
   }
 
   // INFO: fc 18oct26 an answer for a link that dropped meanwhile belongs to no unit, not to the next one
@@ -141,7 +141,7 @@ export class Activator {
 
   #unlocked() {
     this.#set({ phase: 'ready', notice: { key: 'activated' } });
-    return this.#send({ cmd: 'get' });
+    return this.#send({ command: 'get' });
   }
 
   #closed() {

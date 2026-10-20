@@ -48,7 +48,7 @@ test('an install asks once on the glass, naming the version, and installs once t
   const after = await until(state => state.phase === 'rebooting');
   assert.equal(after.notice, null);
   assert.equal(after.running, null, 'the version that ran before the install is not shown as running');
-  assert.deepEqual(device.commands.filter(cmd => !READS.has(cmd)), ['dfu']);
+  assert.deepEqual(device.commands.filter(command => !READS.has(command)), ['dfu']);
 });
 
 test('a verdict that lands before the reply to the last chunk still reads as installing', async () => {
@@ -269,7 +269,7 @@ test('an image of the running version is sent', async () => {
 
 test('a device that does not name its key refuses a foreign one once it lands, in its own words', async () => {
   const { device, updater, until } = await connected();
-  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  device.push({ command: 'update', image: 'confirmed', swap_powered: true });
   await until(state => state.image.key === null);
   await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
   updater.install();
@@ -312,7 +312,7 @@ test('an update frame pushed on connect is read without being asked', async () =
 
 test('an update frame arriving later replaces the one before it', async () => {
   const { device, until } = await connected({ image: 'probation', from: '0.1.0+12', to: '0.2.0+15' });
-  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  device.push({ command: 'update', image: 'confirmed', swap_powered: true });
   const { image } = await until(state => state.image.state === 'confirmed');
   assert.equal(image.from, null);
 });

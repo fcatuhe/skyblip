@@ -9,7 +9,7 @@ export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activat
 // INFO: fc 18oct26 the DER headers that wrap a raw Ed25519 seed or public key for node:crypto
 const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
-const REGISTRATION_FRAME_BYTES = 345;
+const REGISTRATION_FRAME_BYTES = 349;
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
 const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
@@ -108,30 +108,29 @@ export class FakeUnit extends FakeSkyblip {
     this.unlockCode = null;
   }
 
-  onConfig(raw) {
-    const fields = JSON.parse(new TextDecoder().decode(raw));
-    if (this.claimedBy !== null || !['challenge', 'register', 'unlock'].includes(fields.cmd)) return super.onConfig(raw);
-    this.commands.push(fields.cmd);
-    if (!this.keyed) return this.ack(false, 'keyless');
-    if (fields.cmd === 'challenge') return this.challenge();
-    if (!this.nonce) return this.ack(false, 'no_session');
-    if (fields.cmd === 'register') return this.register(fields);
+  answer(fields) {
+    if (this.claimedBy !== null || !['challenge', 'register', 'unlock'].includes(fields.command)) return super.answer(fields);
+    this.commands.push(fields.command);
+    if (!this.keyed) return this.acknowledge(false, 'keyless');
+    if (fields.command === 'challenge') return this.challenge();
+    if (!this.nonce) return this.acknowledge(false, 'no_session');
+    if (fields.command === 'register') return this.register(fields);
     return this.unlock(fields);
   }
 
   challenge() {
     this.nonce = hex(randomBytes(16));
-    this.reply({ cmd: 'challenge', nonce: this.nonce, server_key_id: this.trustedId });
+    this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.trustedId });
   }
 
   register({ server_nonce, signature }) {
     if (!verifies(this.trusted, signature, messages.register({ unitNonce: this.nonce, serverNonce: server_nonce }))) {
-      return this.ack(false, 'bad_signature');
+      return this.acknowledge(false, 'bad_signature');
     }
-    if (this.mtu - 3 < REGISTRATION_FRAME_BYTES) return this.ack(false, 'small_mtu');
+    if (this.mtu - 3 < REGISTRATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
     this.serverNonce = server_nonce;
     this.pending = 'register';
-    this.reply({ ack: false, pending: true, reason: 'confirm_register' });
+    this.reply({ acknowledge: false, pending: true, reason: 'confirm_register' });
   }
 
   press() {
@@ -140,7 +139,7 @@ export class FakeUnit extends FakeSkyblip {
     const fields = { deviceId: this.deviceId, publicKey: this.unitKey.publicKey, unitNonce: this.nonce, serverNonce: this.serverNonce,
       serverKeyId: this.trustedId, release: this.release, version: this.version };
     this.reply({
-      cmd: 'registration', device_id: this.deviceId, public_key: this.unitKey.publicKey, version: this.version,
+      command: 'registration', device_id: this.deviceId, public_key: this.unitKey.publicKey, version: this.version,
       server_key_id: this.trustedId, release: this.release, signature: this.unitKey.sign(messages.registration(fields)),
     });
   }
@@ -149,10 +148,10 @@ export class FakeUnit extends FakeSkyblip {
     const nonce = this.nonce;
     this.nonce = null;
     const message = messages.unlock({ deviceId: this.deviceId, publicKey: this.unitKey.publicKey, serial, unitNonce: nonce });
-    if (!verifies(this.trusted, signature, message)) return this.ack(false, 'bad_signature');
+    if (!verifies(this.trusted, signature, message)) return this.acknowledge(false, 'bad_signature');
     this.address = serial;
     this.unlockCode = { serial, nonce, signature };
-    this.ack(true, 'unlock');
+    this.acknowledge(true, 'unlock');
   }
 
   drop() {

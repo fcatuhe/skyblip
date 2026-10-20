@@ -96,7 +96,7 @@ class Device {
   fly({ kt, ft, track, fpm, dps, slip }) {
     const { sim } = this;
     if (kt !== undefined) sim.setSpeed(kt);
-    if (ft !== undefined) sim.setAlt(Math.round(ft / FEET_PER_METRE));
+    if (ft !== undefined) sim.setAltitude(Math.round(ft / FEET_PER_METRE));
     if (track !== undefined) sim.setTrack(track);
     if (fpm !== undefined) sim.setClimb(Math.round((fpm * FPM_TO_MM_S) / 1000));
     if (dps !== undefined) sim.setTurn(Math.round(dps * 10));
@@ -147,8 +147,8 @@ class Device {
   }
 
   frame() {
-    const base = this.sim.fb();
-    return new Uint8Array(this.memory.buffer, base, this.sim.H * this.sim.STRIDE).slice();
+    const base = this.sim.panel();
+    return new Uint8Array(this.memory.buffer, base, this.sim.height * this.sim.stride).slice();
   }
 
   ink() {
@@ -201,8 +201,8 @@ function png({ w, h, stride, bits }) {
 }
 
 function panel(device) {
-  const { W, H, STRIDE } = device.sim;
-  return { w: W, h: H, stride: STRIDE, bits: device.frame() };
+  const { width, height, stride } = device.sim;
+  return { w: width, h: height, stride, bits: device.frame() };
 }
 
 const OWN_CALLSIGN = "S-BLIP";
@@ -211,7 +211,7 @@ const OWN_CALLSIGN = "S-BLIP";
 // endpoint, the glass asks, and two presses allow it. A write is refused unless
 // the device knows it is on the ground, so the aircraft is parked first.
 function asks(device, callsign) {
-  return asksFor(device, `{"cmd":"set","callsign":"${callsign}"}`);
+  return asksFor(device, `{"command":"set","callsign":"${callsign}"}`);
 }
 
 function asksFor(device, command) {
@@ -515,7 +515,7 @@ const scenes = [
   {
     name: "recovery",
     powered: false,
-    shot: device => asksFor(device, `{"cmd":"recovery"}`).allow().run(6000)
+    shot: device => asksFor(device, `{"command":"recovery"}`).allow().run(6000)
   },
   {
     name: "off",

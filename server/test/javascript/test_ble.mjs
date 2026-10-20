@@ -58,9 +58,9 @@ test('config and SMP writes issued together never overlap on the link', async ()
   const device = new FakeSkyblip().install();
   const link = await connect({ onReply: () => {}, onSmp: () => {}, onClose: () => {} });
   await Promise.all([
-    link.sendConfig({ cmd: 'status' }),
+    link.sendConfig({ command: 'status' }),
     link.sendSmp(packet({ op: OP.read, group: GROUP.image, id: ID.imageState, seq: 0, body: { pad: 'x'.repeat(40) } })),
-    link.sendConfig({ cmd: 'update' }),
+    link.sendConfig({ command: 'update' }),
   ]);
   assert.equal(device.overlaps, 0);
   assert.deepEqual(device.commands, ['status', 'update']);

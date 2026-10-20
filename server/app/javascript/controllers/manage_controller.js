@@ -225,7 +225,7 @@ export default class extends Controller {
     this.#choose(elements.aircraft_type, settings.aircraft_type)
     elements.callsign.value = settings.callsign
     elements.units.value = settings.units
-    elements.alarm.checked = settings.alarm
+    elements.alarm_enabled.checked = settings.alarm_enabled
     this.#choose(elements.alarm_volume, settings.alarm_volume)
   }
 

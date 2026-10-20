@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { currentSimulator } from "#skyblip/legacy_dialect"
 
 const MAX_CATCHUP_MS = 250
 const ACTIVATION_KEYS = [" ", "Enter"]
@@ -77,7 +78,7 @@ const AXES = {
              ASI_ZERO_DEG + (Math.min(kt, ASI_FULL_KT) * ASI_SPAN_DEG) / ASI_FULL_KT)
   },
   altitude: {
-    flown: (sim, ft) => sim.setAlt(Math.round(ft / FEET_PER_METRE)),
+    flown: (sim, ft) => sim.setAltitude(Math.round(ft / FEET_PER_METRE)),
     read: ft => `${ft} ft`,
     paint: (gauge, ft) => {
       turned(gauge, ".gauge-needle", (ft % 1000) * ALT_DEG_PER_HUNDRED_FT)
@@ -171,7 +172,7 @@ export default class extends Controller {
     const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return
     this.pages = PAGES
-    const sim = await load()
+    const sim = currentSimulator(await load())
     if (generation !== this.#generation) return
     this.sim = sim
     this.departures = new Map()
@@ -381,7 +382,7 @@ export default class extends Controller {
   }
 
   #flownState() {
-    this.#show("altitude", Math.round((this.sim.altMm() * FEET_PER_METRE) / 10_000) * 10)
+    this.#show("altitude", Math.round((this.sim.altitudeHaeMm() * FEET_PER_METRE) / 10_000) * 10)
     this.#show("track", Math.round(this.sim.trackCdeg() / 100) % 360)
   }
 

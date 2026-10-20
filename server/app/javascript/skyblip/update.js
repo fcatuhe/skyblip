@@ -23,7 +23,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
-const SETTING_KEYS = ['aircraft_type', 'alarm', 'alarm_volume', 'units', 'callsign'];
+const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign'];
 
 class LinkLost extends Error {
   constructor() {
@@ -196,7 +196,7 @@ export class Updater {
   }
 
   refresh() {
-    return this.#send({ cmd: 'update' });
+    return this.#send({ command: 'update' });
   }
 
   saveSettings(values) {
@@ -220,10 +220,9 @@ export class Updater {
   }
 
   async #learn() {
-    await this.#send({ cmd: 'update' });
-    await this.#send({ cmd: 'status' });
-    await this.#send({ cmd: 'get' });
-    await this.#send({ cmd: 'defaults' });
+    await this.#send({ command: 'update' });
+    await this.#send({ command: 'status' });
+    await this.#send({ command: 'get' });
     try {
       this.#packetBytes = await packetBudget(this.#smp);
       this.#running = parseVersion(await runningVersion(this.#smp));
@@ -248,16 +247,22 @@ export class Updater {
 
   #ask(task, fields = {}) {
     this.#set({ phase: 'asking', task });
-    return this.#send({ cmd: task, ...fields });
+    return this.#send({ command: task, ...fields });
   }
 
   #receive(reply) {
     if (!reply) return;
-    if (reply.cmd === 'update') this.#set({ image: imageOf(reply) });
-    else if (reply.cmd === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.cmd === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
-    else if (reply.cmd === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if ('ack' in reply) this.#acked(reply);
+    if (reply.command === 'update') this.#set({ image: imageOf(reply) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
+    else if (reply.command === 'config') this.#configured(reply);
+    else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
+    else if ('acknowledge' in reply) this.#acked(reply);
+  }
+
+  // INFO: fc 20oct26 asked once the unit has answered, in one dialect: doubled, it outgrows the 36 bytes an old unit reassembles
+  #configured(reply) {
+    if (!this.#state.settings) this.#send({ command: 'defaults' });
+    this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
   }
 
   #acked(reply) {
@@ -265,8 +270,8 @@ export class Updater {
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
-    if (reply.ack && task === 'set' && !reply.reason) return this.#saved();
-    if (reply.ack && reply.reason === task) return this.#granted(task);
+    if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
+    if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
   }
@@ -282,7 +287,7 @@ export class Updater {
 
   #saved() {
     this.#set({ phase: 'ready', task: null, notice: { key: 'saved' } });
-    return this.#send({ cmd: 'get' });
+    return this.#send({ command: 'get' });
   }
 
   async #upload() {

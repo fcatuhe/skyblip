@@ -1,9 +1,11 @@
+import { currentSimulator } from '#skyblip/legacy_dialect';
+
 export async function mountSimulator(element, src, manifest, signal) {
   const { load, PAGES, ALARM, DWELL, SHUTDOWN, REFRESH } = await import(src);
 
   const SIM = {};
 
-  const f = await load();
+  const f = currentSimulator(await load());
   if (signal.aborted) return;
   let frame;
   const startedAt = performance.now();
@@ -21,10 +23,10 @@ export async function mountSimulator(element, src, manifest, signal) {
   SIM.power = () => { pwr = !pwr; f.power(pwr ? 1 : 0); };
   SIM.toggleFix = () => { fix = !fix; f.setFix(fix ? 1 : 0);
                           $('fixbtn').textContent = 'Fix: ' + (fix ? 'ON' : 'OFF'); };
-  SIM.sats  = v => { f.setSats(+v);  $('sats_o').textContent = v + ' sats'; };
+  SIM.sats  = v => { f.setSatellites(+v);  $('sats_o').textContent = v + ' sats'; };
   const FEET_PER_METRE = 3.28084;
   const FPM_PER_MM_S = 0.19685;
-  SIM.alt   = v => { f.setAlt(Math.round(v / FEET_PER_METRE));
+  SIM.alt   = v => { f.setAltitude(Math.round(v / FEET_PER_METRE));
                      $('alt_o').textContent = v + ' ft'; };
   SIM.speed = v => { f.setSpeed(+v); $('spd_o').textContent = v + ' kt'; };
   SIM.track = v => { f.setTrack(+v); $('trk_o').textContent = String(v).padStart(3,'0') + '°'; };
@@ -191,7 +193,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     band.fillText('869.525', 8, 42); band.fillText('868.200', 8, 62); band.fillText('868.400', 8, 82);
     const n = f.airCount();
     for (let i = 0; i < n; i++) {
-      const khz = f.airFreqKhz(i);
+      const khz = f.airFrequencyKhz(i);
       const y = LANE[khz > 869000 ? 869525 : (khz > 868300 ? 868400 : 868200)];
       band.fillStyle = EVENT_COLOR[EVENT[f.airEvent(i)]];
       band.fillRect(ms(f.airPhase(i)) - 1, y - 10, 3, 11);
@@ -213,7 +215,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     f.advance(Math.min(f.elapsedMs() + 100, performance.now() - startedAt));
     f.paint(canvas);
     const refresh = f.refreshing() ? (f.refreshIsFull() ? 2 : 1) : 0;
-    canvas.className = 'sb-glass ' + (f.powered() ? '' : 'off ') + (f.blOn() ? 'bl ' : '') +
+    canvas.className = 'sb-glass ' + (f.powered() ? '' : 'off ') + (f.backlightOn() ? 'bl ' : '') +
         (refresh ? (refresh === 2 ? 'refreshing full' : 'refreshing') : '');
     $('refreshstate').textContent = REFRESH[refresh];
     $('refreshstate').className = refresh === 2 ? 'full' : '';
@@ -221,14 +223,14 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('led_alarm').className = 'sb-led sb-led--alarm' + (f.alarm() ? ' sb-led--lit' : '');
     $('led_charge').className = 'sb-led sb-led--charge' + (f.batteryCharging() ? ' sb-led--lit' : '');
     $('pagehint').textContent = 'page: ' + PAGES[f.page()] +
-        '  ·  backlight ' + (f.blOn() ? 'on' : 'off') +
+        '  ·  backlight ' + (f.backlightOn() ? 'on' : 'off') +
         '  ·  power ' + (f.powered() ? 'on' : 'off') +
         '  ·  ' + SHUTDOWN[f.shutdownPhase()];
 
     $('t_fix').textContent  = f.fixValid() ? '3D' : 'no fix';
-    $('t_sats').textContent = f.sats();
-    $('t_pos').textContent  = (f.lat()/1e7).toFixed(5) + ', ' + (f.lon()/1e7).toFixed(5);
-    $('t_alt').textContent  = (f.altMm()/1000).toFixed(1) + ' m';
+    $('t_sats').textContent = f.satellites();
+    $('t_pos').textContent  = (f.latitude1e7()/1e7).toFixed(5) + ', ' + (f.longitude1e7()/1e7).toFixed(5);
+    $('t_alt').textContent  = (f.altitudeHaeMm()/1000).toFixed(1) + ' m';
     $('t_spd').textContent  = (f.speedMmS()/1000).toFixed(2) + ' m/s';
     $('t_trk').textContent  = (f.trackCdeg()/100).toFixed(2).padStart(6,'0') + '°';
     const turn = f.turnCdps()/100;

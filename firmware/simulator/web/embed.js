@@ -36,8 +36,8 @@ export async function load(options = {}) {
     setRange: call('simulator_set_range', null, oneNumber),
     setFix: call('simulator_set_fix', null, oneNumber),
     setPps: call('simulator_set_pps', null, oneNumber),
-    setSats: call('simulator_set_satellites', null, oneNumber),
-    setAlt: call('simulator_set_altitude_m', null, oneNumber),
+    setSatellites: call('simulator_set_satellites', null, oneNumber),
+    setAltitude: call('simulator_set_altitude_m', null, oneNumber),
     setSpeed: call('simulator_set_speed_kt', null, oneNumber),
     setTrack: call('simulator_set_track_deg', null, oneNumber),
     setClimb: call('simulator_set_climb_mm_s', null, oneNumber),
@@ -60,24 +60,24 @@ export async function load(options = {}) {
     aircraftCount: call('simulator_aircraft_count', 'number', noArgs),
     formationMembers: call('simulator_formation_members', 'number', noArgs),
 
-    fb: call('simulator_panel', 'number', noArgs),
-    W: call('simulator_panel_width', 'number', noArgs)(),
-    H: call('simulator_panel_height', 'number', noArgs)(),
-    STRIDE: call('simulator_panel_stride', 'number', noArgs)(),
+    panel: call('simulator_panel', 'number', noArgs),
+    width: call('simulator_panel_width', 'number', noArgs)(),
+    height: call('simulator_panel_height', 'number', noArgs)(),
+    stride: call('simulator_panel_stride', 'number', noArgs)(),
     refreshing: call('simulator_panel_refreshing', 'number', noArgs),
     refreshIsFull: call('simulator_panel_refresh_is_full', 'number', noArgs),
     presents: call('simulator_present_count', 'number', noArgs),
-    blOn: call('simulator_backlight_on', 'number', noArgs),
+    backlightOn: call('simulator_backlight_on', 'number', noArgs),
     powered: call('simulator_panel_powered', 'number', noArgs),
     page: call('simulator_page', 'number', noArgs),
     menuOpen: call('simulator_menu_open', 'number', noArgs),
     shutdownPhase: call('simulator_shutdown_phase', 'number', noArgs),
 
     fixValid: call('simulator_fix_valid', 'number', noArgs),
-    sats: call('simulator_satellites', 'number', noArgs),
-    lat: call('simulator_latitude_1e7', 'number', noArgs),
-    lon: call('simulator_longitude_1e7', 'number', noArgs),
-    altMm: call('simulator_altitude_hae_mm', 'number', noArgs),
+    satellites: call('simulator_satellites', 'number', noArgs),
+    latitude1e7: call('simulator_latitude_1e7', 'number', noArgs),
+    longitude1e7: call('simulator_longitude_1e7', 'number', noArgs),
+    altitudeHaeMm: call('simulator_altitude_hae_mm', 'number', noArgs),
     speedMmS: call('simulator_speed_mm_s', 'number', noArgs),
     trackCdeg: call('simulator_track_cdeg', 'number', noArgs),
     climbMmS: call('simulator_climb_mm_s', 'number', noArgs),
@@ -99,11 +99,11 @@ export async function load(options = {}) {
     txOk: call('simulator_tx_ok', 'number', noArgs),
     txLost: call('simulator_tx_lost', 'number', noArgs),
     slotState: call('simulator_slot_state', 'number', noArgs),
-    dwellFreqKhz: call('simulator_dwell_frequency_khz', 'number', noArgs),
+    dwellFrequencyKhz: call('simulator_dwell_frequency_khz', 'number', noArgs),
     airCount: call('simulator_air_record_count', 'number', noArgs),
     airPhase: call('simulator_air_phase_ms', 'number', oneNumber),
     airEvent: call('simulator_air_event', 'number', oneNumber),
-    airFreqKhz: call('simulator_air_frequency_khz', 'number', oneNumber),
+    airFrequencyKhz: call('simulator_air_frequency_khz', 'number', oneNumber),
     airLine: call('simulator_air_line', 'string', oneNumber),
   };
 
@@ -122,14 +122,14 @@ export async function load(options = {}) {
 
   sim.paint = (canvas) => {
     const context = canvas.getContext('2d');
-    if (image === null) image = context.createImageData(sim.W, sim.H);
-    const base = sim.fb();
+    if (image === null) image = context.createImageData(sim.width, sim.height);
+    const base = sim.panel();
     const heap = module.HEAPU8;
-    for (let y = 0; y < sim.H; y++) {
-      for (let x = 0; x < sim.W; x++) {
-        const black = heap[base + y * sim.STRIDE + (x >> 3)] & (0x80 >> (x & 7));
+    for (let y = 0; y < sim.height; y++) {
+      for (let x = 0; x < sim.width; x++) {
+        const black = heap[base + y * sim.stride + (x >> 3)] & (0x80 >> (x & 7));
         const pixel = black ? INK : PAPER;
-        const offset = (y * sim.W + x) * 4;
+        const offset = (y * sim.width + x) * 4;
         image.data[offset] = pixel[0];
         image.data[offset + 1] = pixel[1];
         image.data[offset + 2] = pixel[2];

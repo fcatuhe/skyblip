@@ -1,5 +1,5 @@
 {
-  "description": "The one table between the dialect firmware before #151 spoke and the one it speaks since, read as data by every client (scripts/blip_records.py, the server's pages) and copied nowhere. Two sections: 'link' for the companion link's JSON frames, both endpoints, both directions, and 'records' for the decoded flight-log and diagnostics records an NDJSON capture holds. Each section has the same shape. 'keys' renames a key, legacy name to current name, in every frame. 'values' maps a current key name to {legacy value: current value}, in every frame. 'select' names the key that tells frames apart, read after 'keys' and 'values' are applied, so it is always the current spelling. 'frames' is a list of {when, keys, values}: 'when' lists the values of 'select' the entry applies to, and its 'keys' and 'values' work like the section's own, for those frames only. To read a legacy frame: rename the section's keys, translate the section's values, then find the entry whose 'when' holds the frame's 'select' value and apply its keys and values. To write one: the same steps reversed, the entry first and the section last. Reading is idempotent, since no current key is a legacy key of the same frame, so a reader may normalise every frame and every NDJSON line without knowing its age. Writing needs the unit's dialect: 'link.detect' lists the keys only a legacy frame carries and the keys only a current frame carries, and every frame a unit sends carries one of them, so the first frame received decides. A client that speaks before the unit has (blip.py's every command, the server's first 'get') sends its frame in both dialects at once, the current keys and values beside the legacy ones: each firmware reads its own keys and ignores the rest.",
+  "description": "The one table between the dialect firmware before #151 spoke and the one it speaks since, read as data by every client (scripts/blip_records.py, the server's pages) and copied nowhere by hand: the server's pages load server/app/javascript/skyblip/legacy_dialect_table.js, which bin/rails legacy_dialect:generate writes from this file and a server test holds to it. Three sections: 'link' for the companion link's JSON frames, both endpoints, both directions, 'records' for the decoded flight-log and diagnostics records an NDJSON capture holds, and 'simulator' for the members of the object the simulator's firmware/simulator/web/embed.js load() returns, which the server loads from every release that carries one. 'link' and 'records' have the same shape. 'keys' renames a key, legacy name to current name, in every frame. 'values' maps a current key name to {legacy value: current value}, in every frame. 'select' names the key that tells frames apart, read after 'keys' and 'values' are applied, so it is always the current spelling. 'frames' is a list of {when, keys, values}: 'when' lists the values of 'select' the entry applies to, and its 'keys' and 'values' work like the section's own, for those frames only. To read a legacy frame: rename the section's keys, translate the section's values, then find the entry whose 'when' holds the frame's 'select' value and apply its keys and values. To write one: the same steps reversed, the entry first and the section last. Reading is idempotent, since no current key is a legacy key of the same frame, so a reader may normalise every frame and every NDJSON line without knowing its age. Writing needs the unit's dialect: 'link.detect' lists the keys only a legacy frame carries and the keys only a current frame carries, and every frame a unit sends carries one of them, so the first frame received decides. A client that speaks before the unit has (blip.py's every command, the server's first 'get') sends its frame in both dialects at once, the current keys and values beside the legacy ones: each firmware reads its own keys and ignores the rest. 'simulator' has 'keys' only, legacy member name to current one: a reader gives an older release's object its current names beside the ones it has.",
   "link": {
     "detect": {
       "legacy": ["cmd", "ack"],
@@ -156,5 +156,22 @@
         }
       }
     ]
+  },
+  "simulator": {
+    "keys": {
+      "setSats": "setSatellites",
+      "setAlt": "setAltitude",
+      "fb": "panel",
+      "W": "width",
+      "H": "height",
+      "STRIDE": "stride",
+      "blOn": "backlightOn",
+      "sats": "satellites",
+      "lat": "latitude1e7",
+      "lon": "longitude1e7",
+      "altMm": "altitudeHaeMm",
+      "dwellFreq": "dwellFrequencyKhz",
+      "airFreqKhz": "airFrequencyKhz"
+    }
   }
 }
