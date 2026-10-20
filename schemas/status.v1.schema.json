@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["command", "flight", "upload", "charging", "power_level", "went_dark_flat"],
   "properties": {
-    "command": {"type": "string", "const": "status", "description": "Firmware before #151 sent 'cmd'"},
+    "command": {"type": "string", "const": "status"},
     "flight": {"type": "string", "enum": ["ground", "airborne", "unknown"],
                "description": "The confirmed flight state. Every settings change and upload is refused unless this reads ground, so 'unknown' refuses too"},
     "upload": {"type": "boolean",
@@ -20,7 +20,7 @@
     "went_dark_flat": {"type": "boolean",
                        "description": "The last time this unit went dark it was for a flat cell: the cutoff took it down, or a switch-on was refused below the boot lockout. The glass says FLAT BATTERY until a charger wakes the unit, and this outlives that frame: true for the whole of the one boot that followed, false from the boot after. The self-test page prints the same fact as WAS FLAT"},
     "die_temperature_c": {"type": "integer", "minimum": -50, "maximum": 125,
-                   "description": "Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading younger than 30 seconds exists, because 0.0 C is a plausible hangar morning. Same key and same value as diagnostics.v1's. Firmware before #151 sent 'die_temp_c'"}
+                   "description": "Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading younger than 30 seconds exists, because 0.0 C is a plausible hangar morning. Same key and same value as diagnostics.v1's."}
   },
   "additionalProperties": false
 }

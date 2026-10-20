@@ -15,13 +15,13 @@
     "challenge": {
       "description": "Browser to unit. Opens an activation session: the unit draws a fresh Nu, which replaces any it held. The nonce dies when it is used by unlock, when the link of the session that holds the claim drops, or after ten minutes. Refused as 'keyless' by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as 'in_flight' unless it is on the ground",
       "type": "object", "required": ["command"], "additionalProperties": false,
-      "properties": {"command": {"const": "challenge", "description": "Firmware before #151 sent 'cmd'"}}
+      "properties": {"command": {"const": "challenge"}}
     },
     "challenge_reply": {
       "description": "Unit to browser. The nonce, and the id of the server key the unit trusts, so the server knows which of its keys to sign with",
       "type": "object", "required": ["command", "nonce", "server_key_id"], "additionalProperties": false,
       "properties": {
-        "command": {"const": "challenge", "description": "Firmware before #151 sent 'cmd'"},
+        "command": {"const": "challenge"},
         "nonce": {"$ref": "#/definitions/nonce"},
         "server_key_id": {"$ref": "#/definitions/server_key_id"}
       }
@@ -30,7 +30,7 @@
       "description": "Browser to unit, about 215 bytes. signature is R, by the server over the register message. The unit checks it with the key it trusts and the nonce of this session, then asks on its glass: {\"acknowledge\":false,\"pending\":true,\"reason\":\"confirm_register\"}. Two presses answer the registration frame, one press 'cancelled', thirty seconds 'expired'. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals: 'no_session' (no live nonce), 'bad_signature', 'keyless', 'small_mtu' (the link cannot carry the registration frame in one notification), 'in_flight' (an activated unit off the ground)",
       "type": "object", "required": ["command", "server_nonce", "signature"], "additionalProperties": false,
       "properties": {
-        "command": {"const": "register", "description": "Firmware before #151 sent 'cmd'"},
+        "command": {"const": "register"},
         "server_nonce": {"$ref": "#/definitions/nonce"},
         "signature": {"$ref": "#/definitions/signature"}
       }
@@ -39,7 +39,7 @@
       "description": "Unit to browser after the two presses, at most 349 bytes in one notification, which Chrome's 498-byte ATT MTU carries. signature is S, by the unit's key over the registration message. The browser posts it to /activation/registrations as it is, without command",
       "type": "object", "required": ["command", "device_id", "public_key", "version", "server_key_id", "release", "signature"], "additionalProperties": false,
       "properties": {
-        "command": {"const": "registration", "description": "Firmware before #151 sent 'cmd'"},
+        "command": {"const": "registration"},
         "device_id": {"$ref": "#/definitions/device_id"},
         "public_key": {"$ref": "#/definitions/public_key"},
         "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$", "description": "The running image, as the dfu command writes it: 0.3.0+1234"},
@@ -52,7 +52,7 @@
       "description": "Browser to unit, about 180 bytes. signature is U, by the server over the unlock message. The unit stores serial, Nu and U in its identity page only if U verifies with the key it trusts over its own DEVICEID, its current Pd and the nonce of this session, then answers {\"acknowledge\":true,\"reason\":\"unlock\"} and uses the serial from then on. The nonce is spent either way. Refusals: 'no_session', 'bad_signature' (serial 0 included), 'flash' (the identity page could not be written), 'low_power' (the cell cannot take a flash write), 'in_flight' (an activated unit off the ground)",
       "type": "object", "required": ["command", "serial", "signature"], "additionalProperties": false,
       "properties": {
-        "command": {"const": "unlock", "description": "Firmware before #151 sent 'cmd'"},
+        "command": {"const": "unlock"},
         "serial": {"$ref": "#/definitions/serial"},
         "signature": {"$ref": "#/definitions/signature"}
       }

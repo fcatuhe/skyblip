@@ -7,16 +7,16 @@
   "required": ["command", "group", "part", "more"],
   "properties": {
     "command": {"type": "string", "enum": ["diagnostics", "radio"],
-                "description": "The question this frame answers. 'diagnostics' is every group; 'radio' is the radio group alone. Firmware before #151 sent 'cmd', and 'diag' for 'diagnostics'"},
+                "description": "The question this frame answers. 'diagnostics' is every group; 'radio' is the radio group alone."},
     "group": {"type": "string", "enum": ["system", "radio", "traffic", "gnss", "power"],
-              "description": "The subsystem every field in this frame belongs to. One console line per group, in this order. Firmware before #151 sent 'sys' for 'system'"},
+              "description": "The subsystem every field in this frame belongs to. One console line per group, in this order."},
     "part": {"type": "integer", "minimum": 0,
              "description": "Frame index within one answer, from 0. A group that does not fit the negotiated payload spans consecutive parts"},
     "more": {"type": "boolean",
              "description": "Another frame follows. Exactly one frame per answer carries false"},
 
     "uptime_s": {"type": "integer", "minimum": 0,
-             "description": "system. Seconds since boot, from hal::Clock::millis(). Wraps with the 32-bit millisecond counter at 49.7 days. Firmware before #151 sent 'up_s'"},
+             "description": "system. Seconds since boot, from hal::Clock::millis(). Wraps with the 32-bit millisecond counter at 49.7 days."},
     "reset": {"type": "string",
               "description": "system. Why the device came up, as core/power/reset_reason.cpp spells it: POWER ON, RESET PIN, BROWNOUT, SOFTWARE, WATCHDOG, CPU LOCKUP, CHARGER, WAKE, DEBUGGER, UNKNOWN"},
     "link_drops": {"type": "integer", "minimum": 0,
@@ -75,23 +75,23 @@
     "rejected": {"type": "integer", "minimum": 0,
                  "description": "gnss. Solutions refused since boot, one event per run of the same reason"},
     "residual_m": {"type": "integer", "minimum": 0, "maximum": 65535,
-                "description": "gnss. The extrapolation residual in metres: the model the transmitter applies, run over the interval that just elapsed and measured against the fix that closed it. ABSENT rather than zero when there is no pair of consecutive fixes to measure, because 0 m is what a perfect prediction reports. Firmware before #151 sent 'resid_m'"},
+                "description": "gnss. The extrapolation residual in metres: the model the transmitter applies, run over the interval that just elapsed and measured against the fix that closed it. ABSENT rather than zero when there is no pair of consecutive fixes to measure, because 0 m is what a perfect prediction reports."},
 
     "cell_mv": {"type": "integer", "minimum": 0, "maximum": 65535,
-           "description": "power. The battery reading in millivolts, after the per-unit trim (settings.battery_offset_mv): the cell when battery_valid, otherwise what the divider last read, 0 when the ADC gave nothing. Firmware before #151 sent 'mv'"},
+           "description": "power. The battery reading in millivolts, after the per-unit trim (settings.battery_offset_mv): the cell when battery_valid, otherwise what the divider last read, 0 when the ADC gave nothing."},
     "percent": {"type": "integer", "minimum": 0, "maximum": 100,
                 "description": "power. State of charge from the same reading, on the discharge curve. 0 unless battery_valid"},
     "battery_valid": {"type": "boolean",
-                      "description": "power. Whether cell_mv is the cell. False with no divider, on a reading outside 1800 to 4700 mV, and on the cable, where the divider reads the USB rail. Firmware before #151 sent 'valid'"},
+                      "description": "power. Whether cell_mv is the cell. False with no divider, on a reading outside 1800 to 4700 mV, and on the cable, where the divider reads the USB rail."},
     "charging": {"type": "boolean", "description": "power. The cable is in. No pin says when the charge ends, so a full cell on the cable still reads true"},
     "power_level": {"type": "string", "enum": ["OK", "LOW", "CRITICAL", "FLAT", "--"],
-              "description": "power. What core/power's cutoff rule made of the same samples: LOW about 12%, CRITICAL about 5%, FLAT the device taking itself down. '--' is Unknown: no believable reading yet. Firmware before #151 sent 'level'"},
+              "description": "power. What core/power's cutoff rule made of the same samples: LOW about 12%, CRITICAL about 5%, FLAT the device taking itself down. '--' is Unknown: no believable reading yet."},
     "supply_warnings": {"type": "integer", "minimum": 0,
                         "description": "power. Times the nRF52840's power-failure comparator (POFCON) has fired. Any at all on a healthy cell is a supply problem or a threshold set too high, and both are bench work"},
     "implausible": {"type": "integer", "minimum": 0,
                     "description": "power. Readings the gauge refused: at or under 1800 mV, an unpopulated or unconnected divider rather than a flat cell, or over 4700 mV, which no 4.2 V cell reaches and a rail does. On the cable or off it. cell_mv holds the last one while battery_valid is false"},
     "die_temperature_c": {"type": "integer", "minimum": -50, "maximum": 125,
-                   "description": "power. Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading exists, because 0.0 C is a plausible hangar morning. Same key and same value as the status reply's. Firmware before #151 sent 'die_temp_c'"}
+                   "description": "power. Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading exists, because 0.0 C is a plausible hangar morning. Same key and same value as the status reply's."}
   },
   "additionalProperties": false
 }

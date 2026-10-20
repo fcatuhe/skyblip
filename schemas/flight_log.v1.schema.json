@@ -23,23 +23,23 @@
     "utc_s": {
       "type": "integer",
       "minimum": 0,
-      "description": "Every type. The UTC second this record describes: the session id, which is the first second of the session, plus the 16-bit offset in bytes 0-1, saturating 18 hours in. An encounter is dated at its closest approach, so it is written after records later than it: sort by utc_s, not by index. Captures fetched before #151 name it 'utc'"
+      "description": "Every type. The UTC second this record describes: the session id, which is the first second of the session, plus the 16-bit offset in bytes 0-1, saturating 18 hours in. An encounter is dated at its closest approach, so it is written after records later than it: sort by utc_s, not by index."
     },
     "latitude_1e7": {
       "type": "integer",
-      "description": "fix. Latitude, 1e-7 degrees, bytes 2-5. Captures fetched before #151 name it 'lat_1e7'"
+      "description": "fix. Latitude, 1e-7 degrees, bytes 2-5."
     },
     "longitude_1e7": {
       "type": "integer",
-      "description": "fix. Longitude, 1e-7 degrees, bytes 6-9. Captures fetched before #151 name it 'lon_1e7'"
+      "description": "fix. Longitude, 1e-7 degrees, bytes 6-9."
     },
     "altitude_msl_m": {
       "type": "integer",
-      "description": "fix. Altitude above mean sea level, metres, bytes 10-11. Captures fetched before #151 name it 'alt_msl_m'"
+      "description": "fix. Altitude above mean sea level, metres, bytes 10-11."
     },
     "altitude_hae_m": {
       "type": "integer",
-      "description": "fix. Height above the WGS84 ellipsoid, metres: altitude_msl_m plus the signed geoid separation in byte 12. Captures fetched before #151 name it 'alt_hae_m'"
+      "description": "fix. Height above the WGS84 ellipsoid, metres: altitude_msl_m plus the signed geoid separation in byte 12."
     },
     "speed_q": {
       "type": "integer",
@@ -76,7 +76,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "fix. Satellites in the solution, byte 19. Captures fetched before #151 name it 'sats'"
+      "description": "fix. Satellites in the solution, byte 19."
     },
     "hdop_e2": {
       "type": "integer",
@@ -138,7 +138,7 @@
         "flat",
         "low"
       ],
-      "description": "status. core/power's cutoff level, byte 5. Codes: 0 unknown, 1 normal, 2 critical, 3 flat, 4 low, the same as the diagnostics power record. Captures fetched before #151 name it 'level'"
+      "description": "status. core/power's cutoff level, byte 5. Codes: 0 unknown, 1 normal, 2 critical, 3 flat, 4 low, the same as the diagnostics power record."
     },
     "charge": {
       "type": "string",
@@ -164,7 +164,7 @@
     },
     "battery_valid": {
       "type": "boolean",
-      "description": "status. Bit 0 of byte 9: cell_mv and percent are the cell's. Captures fetched before #151 name it 'valid'"
+      "description": "status. Bit 0 of byte 9: cell_mv and percent are the cell's."
     },
     "charging": {
       "type": "boolean",
@@ -190,17 +190,17 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 65535,
-      "description": "alarm, encounter. Horizontal distance in metres, both positions carried to the same instant, bytes 6-7. Captures fetched before #151 name it 'dist_m'"
+      "description": "alarm, encounter. Horizontal distance in metres, both positions carried to the same instant, bytes 6-7."
     },
     "relative_altitude_m": {
       "type": "integer",
-      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9. Captures fetched before #151 name it 'rel_alt_m'"
+      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9."
     },
     "relative_bearing_deg": {
       "type": "integer",
       "minimum": 0,
       "maximum": 359,
-      "description": "alarm, encounter. Bearing to it, degrees clockwise from own-ship's track, bytes 10-11. Captures fetched before #151 name it 'rel_bearing_deg'"
+      "description": "alarm, encounter. Bearing to it, degrees clockwise from own-ship's track, bytes 10-11."
     },
     "closing_mps": {
       "type": "integer",
@@ -216,7 +216,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "alarm, encounter. Its ADS-L G.1.3 aircraft category, byte 15. Captures fetched before #151 name it 'aircraft_cat'"
+      "description": "alarm, encounter. Its ADS-L G.1.3 aircraft category, byte 15."
     },
     "source": {
       "type": "string",
