@@ -8,7 +8,6 @@ and schemas/flight_log.v1.schema.json.
 Importable on its own: an analysis script wants these tables without the BLE
 transport in blip.py.
 """
-import base64
 import datetime
 import json
 
@@ -343,9 +342,8 @@ def crc16_ccitt(data, crc=0):
     return crc
 
 
-def decode_chunk(store, encoded, base_utc_s, first_index):
-    """One chunk's base64 into decoded records, each stamped with its own index."""
-    raw = base64.b64decode(encoded, validate=True)
+def decode_chunk(store, raw, base_utc_s, first_index):
+    """One chunk's raw records, decoded, each stamped with its own index."""
     if len(raw) % RECORD_BYTES:
         raise ValueError("chunk of %d bytes is not whole records" % len(raw))
     out = []

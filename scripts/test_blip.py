@@ -9,9 +9,9 @@ Those two files and these tables are the same layout written twice, once on each
 side of a Bluetooth link, and nothing but a test holds them together.
 
 test_blip_offload.py holds the log endpoint conversation, test_blip_link.py the NMEA
-reassembly, reply framing and resume, and both run with this file.
+reassembly, reply framing and resume, test_blip_frames.py the CBOR codec and the
+registry, and all three run with this file.
 """
-import base64
 import json
 import pathlib
 import struct
@@ -487,14 +487,14 @@ class FlightRecords(unittest.TestCase):
 
 class Chunks(unittest.TestCase):
     def test_a_chunk_numbers_its_records_from_the_index_it_was_asked_for(self):
-        blob = base64.b64encode(diagnostics_record(16, (1).to_bytes(4, "little"))
-                                + diagnostics_record(4, bytes(16))).decode()
+        blob = (diagnostics_record(16, (1).to_bytes(4, "little"))
+                + diagnostics_record(4, bytes(16)))
         decoded = records.decode_chunk("diagnostics", blob, 0, 24)
         self.assertEqual([record["index"] for record in decoded], [24, 25])
         self.assertEqual([record["type"] for record in decoded], ["gap", "pps"])
 
     def test_an_unreadable_slot_stays_in_the_stream_as_a_hole(self):
-        blob = base64.b64encode(diagnostics_record(99, bytes(16))).decode()
+        blob = diagnostics_record(99, bytes(16))
         decoded = records.decode_chunk("diagnostics", blob, 0, 7)
         self.assertEqual(decoded[0]["type"], "unreadable")
         self.assertEqual(decoded[0]["index"], 7)
@@ -502,10 +502,10 @@ class Chunks(unittest.TestCase):
 
     def test_a_chunk_that_is_not_whole_records_is_refused(self):
         with self.assertRaises(ValueError):
-            records.decode_chunk("diagnostics", base64.b64encode(b"\x01" * 30).decode(), 0, 0)
+            records.decode_chunk("diagnostics", b"\x01" * 30, 0, 0)
 
     def test_a_flights_chunk_is_decoded_against_the_session_base(self):
-        blob = base64.b64encode(flight_record(offset_s=5)).decode()
+        blob = flight_record(offset_s=5)
         decoded = records.decode_chunk("flights", blob, 1_600_000_000, 0)
         self.assertEqual(decoded[0]["utc_s"], 1_600_000_005)
 
@@ -550,9 +550,10 @@ class Summaries(unittest.TestCase):
 
 
 def load_tests(loader, tests, pattern):
-    """CI runs this file by name, so it loads the offload and link suites as well."""
+    """CI runs this file by name, so it loads the offload, link and frame suites as well."""
     tests.addTests(loader.loadTestsFromName("test_blip_offload"))
     tests.addTests(loader.loadTestsFromName("test_blip_link"))
+    tests.addTests(loader.loadTestsFromName("test_blip_frames"))
     return tests
 
 

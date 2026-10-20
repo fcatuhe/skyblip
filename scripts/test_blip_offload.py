@@ -10,7 +10,6 @@ while a reply of the last one is still queued.
 """
 import argparse
 import asyncio
-import base64
 import contextlib
 import io
 import json
@@ -22,9 +21,10 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip  # noqa: E402
+import blip_frames as frames  # noqa: E402
 import blip_records as records  # noqa: E402
 
-RECORDS_PER_CHUNK = 12
+RECORDS_PER_CHUNK = 19
 DEVICE_CHUNKS_MAX = 8
 PPS_TYPE = 4
 INTERVAL_US_AT = records.PAYLOAD_OFFSET
@@ -89,13 +89,14 @@ class LogEndpoint:
         if self.pending:
             raise AssertionError("a read went out with %d replies of the last one unread"
                                  % len(self.pending))
+        body = frames.decode_frame(frames.encode_frame(body))
         self.counts_asked.append(body.get("count"))
         self.pending = self.window_from(body["from"], device_clamp(body.get("count")))
 
     async def frame(self, timeout):
         if not self.pending:
             raise AssertionError("the host waited for a frame the device never sent")
-        return self.pending.pop(0)
+        return frames.decode_frame(frames.encode_frame(self.pending.pop(0)))
 
     def window_from(self, start, chunks):
         left = max(len(self.slots) - start, 0)
@@ -110,8 +111,7 @@ class LogEndpoint:
     def chunk(self, start, count):
         blob = b"".join(self.slots[start:start + count])
         return {"command": "chunk", "log": self.log, "session": self.session["session"],
-                "from": start, "records": count, "ends_session": start + count >= len(self.slots),
-                "data": base64.b64encode(blob).decode()}
+                "from": start, "ends_session": start + count >= len(self.slots), "records": blob}
 
 
 class RefusingEndpoint(LogEndpoint):
@@ -140,12 +140,12 @@ def of_type(lines, name):
 
 class WindowedRead(unittest.TestCase):
     def test_a_window_is_chunks_and_the_default_is_the_eight_the_device_allows(self):
-        endpoint = LogEndpoint(100)
+        endpoint = LogEndpoint(200)
         fetch(endpoint)
         self.assertEqual(endpoint.counts_asked, [8, 8])
 
     def test_a_window_the_device_would_clamp_is_asked_for_already_clamped(self):
-        endpoint = LogEndpoint(100)
+        endpoint = LogEndpoint(200)
         fetch(endpoint, window=60)
         self.assertEqual(endpoint.counts_asked, [8, 8])
 
@@ -157,7 +157,7 @@ class WindowedRead(unittest.TestCase):
     def test_a_window_of_zero_asks_for_one_chunk_at_a_time(self):
         endpoint = LogEndpoint(100)
         fetch(endpoint, window=0)
-        self.assertEqual(endpoint.counts_asked, [1] * 9)
+        self.assertEqual(endpoint.counts_asked, [1] * 6)
 
     def test_a_read_that_runs_past_the_end_stops_where_the_session_ends_and_not_on_the_count(self):
         endpoint = LogEndpoint(20)
@@ -174,9 +174,9 @@ class WindowedRead(unittest.TestCase):
         self.assertEqual([line["interval_us"] for line in lines], list(range(100)))
 
     def test_a_session_of_exactly_one_window_ends_on_its_eighth_chunk(self):
-        endpoint = LogEndpoint(96)
+        endpoint = LogEndpoint(8 * RECORDS_PER_CHUNK)
         lines = of_type(fetched_lines(endpoint), "pps")
-        self.assertEqual(len(lines), 96)
+        self.assertEqual(len(lines), 8 * RECORDS_PER_CHUNK)
         self.assertEqual(endpoint.counts_asked, [8])
 
     def test_a_refusal_in_place_of_a_chunk_stops_the_fetch_with_the_reason_given(self):

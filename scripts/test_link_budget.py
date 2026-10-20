@@ -8,7 +8,6 @@ through the same chunk decoder and session sink blip.py fetch uses, so a Burst
 or Config field that moves in firmware/core/diagnostics/payload.h fails here rather
 than reading as a quiet zero.
 """
-import base64
 import contextlib
 import io
 import json
@@ -106,11 +105,11 @@ def gap(at_s, dropped=12):
 
 def session_lines(raw_records, session=1):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
-    encoded = base64.b64encode(b"".join(raw_records)).decode("ascii")
+    raw = b"".join(raw_records)
     lines = []
     sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": True, "truncated": False}, lines.append)
-    for record in records.decode_chunk("diagnostics", encoded, 0, 0):
+    for record in records.decode_chunk("diagnostics", raw, 0, 0):
         sink.write(record)
     sink.finish(complete=True)
     return lines

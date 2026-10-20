@@ -21,6 +21,7 @@ import statistics
 import sys
 import time
 
+import blip_frames as frames
 import blip_records as records
 
 NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
@@ -52,7 +53,7 @@ def main():
     stream.set_defaults(run=run_stream)
 
     one = sub.add_parser("command", help="one config command, all of its reply frames")
-    one.add_argument("json")
+    one.add_argument("json", help="the command as JSON with full names, sent as numbered CBOR")
     one.add_argument("--timeout", type=float, default=4.0)
     one.set_defaults(run=run_command)
 
@@ -126,9 +127,11 @@ async def run_stream(args):
 
 
 async def run_command(args):
+    body = json.loads(args.json)
+    frames.encode_frame(body)
     async with await connect(args, config=True) as link:
-        for delay, text in await link.command(json.loads(args.json), args.timeout):
-            print("%7.1f ms  %s" % (delay * 1000, text))
+        for delay, frame in await link.command(body, args.timeout):
+            print("%7.1f ms  %s" % (delay * 1000, frames.printable(frame)))
     return 0
 
 
@@ -145,11 +148,11 @@ async def run_bench(args):
         report_spread("status rtt", trips, "ms")
 
         began = time.monotonic()
-        frames = await link.command({"command": "diagnostics"}, args.timeout)
+        replies = await link.command({"command": "diagnostics"}, args.timeout)
         span = max(time.monotonic() - began, 1e-6)
-        size = sum(len(text) for _, text in frames)
+        size = sum(link.reply_bytes[-len(replies):])
         print("diagnostics %d frames, %d bytes in %.0f ms (%.1f kB/s)"
-              % (len(frames), size, span * 1000, size / span / 1024))
+              % (len(replies), size, span * 1000, size / span / 1024))
 
         link.forget_stream()
         deadline = time.monotonic() + args.seconds
@@ -252,17 +255,19 @@ async def fetch_session(link, args, session, start, out):
     total = session["records"]
     began = time.monotonic()
     sink = records.SessionSink(args.log, session, line_writer(out))
-    encoded_bytes = 0
+    raw_bytes = 0
     at = start
     while at < total:
         for chunk in await read_window(link, args, session_id, at):
-            if chunk["from"] != at or (chunk["records"] == 0 and not chunk.get("ends_session")):
+            raw = chunk.get("records", b"")
+            if chunk.get("from") != at or (not raw and not chunk.get("ends_session")):
                 raise SystemExit("session %d was asked for index %d and answered %s"
-                                 % (session_id, at, json.dumps(chunk)))
-            encoded_bytes += len(chunk.get("data", ""))
-            for record in records.decode_chunk(args.log, chunk.get("data", ""), session_id, at):
+                                 % (session_id, at, frames.printable(chunk)))
+            raw_bytes += len(raw)
+            decoded = records.decode_chunk(args.log, raw, session_id, at)
+            for record in decoded:
                 sink.write(record)
-            at += chunk["records"]
+            at += len(decoded)
             if chunk.get("ends_session"):
                 total = at
         if out:
@@ -272,9 +277,9 @@ async def fetch_session(link, args, session, start, out):
         out.flush()
 
     span = max(time.monotonic() - began, 1e-6)
-    print("session %d: %d records kept, %d unreadable, %.0f rec/s, %.1f kB/s of base64"
+    print("session %d: %d records kept, %d unreadable, %.0f rec/s, %.1f kB/s of records"
           % (session_id, sink.kept, sink.unreadable, (sink.kept + sink.unreadable) / span,
-             encoded_bytes / span / 1024))
+             raw_bytes / span / 1024))
     if sink.torn is not None:
         print("session %d: index %d dropped, %s" % (session_id, sink.torn["index"],
                                                     records.TORN_TAIL_REASON))
@@ -297,7 +302,7 @@ async def read_window(link, args, session_id, at):
     while len(chunks) < asked:
         frame = refuse_if_nacked(await link.frame(args.timeout))
         if frame.get("command") != "chunk":
-            raise SystemExit("unexpected reply to read: %s" % json.dumps(frame))
+            raise SystemExit("unexpected reply to read: %s" % frames.printable(frame))
         chunks.append(frame)
         if frame.get("ends_session"):
             break
@@ -399,7 +404,8 @@ class Link:
         self.connect_ms = connect_ms
         self.lines = asyncio.Queue()
         self.replies = asyncio.Queue()
-        self.frames = asyncio.Queue()
+        self.log_frames = asyncio.Queue()
+        self.reply_bytes = []
         self.notifications = []
         self.assembler = LineAssembler()
 
@@ -432,31 +438,30 @@ class Link:
             self.lines.put_nowait((at, line))
 
     def on_config(self, _, data):
-        self.replies.put_nowait((time.monotonic(), bytes(data).decode(errors="replace")))
+        self.reply_bytes.append(len(data))
+        self.replies.put_nowait((time.monotonic(), bytes(data)))
 
     def on_log(self, _, data):
-        self.frames.put_nowait(bytes(data).decode(errors="replace"))
+        self.log_frames.put_nowait(bytes(data))
 
     async def command(self, body, timeout):
-        """Every frame of one config reply, ended by its own more flag and not by a count."""
+        """Every frame of one config reply, decoded, ended by its own more flag and not by a count."""
         sent = time.monotonic()
-        await self.client.write_gatt_char(CONFIG_CHAR, self.encoded(body), response=True)
+        await self.client.write_gatt_char(CONFIG_CHAR, frames.encode_frame(body), response=True)
         out = []
         while True:
-            at, text = await asyncio.wait_for(self.replies.get(), timeout)
-            out.append((at - sent, text))
-            if not more_follows(text):
+            at, data = await asyncio.wait_for(self.replies.get(), timeout)
+            frame = decoded_or_refused(data)
+            out.append((at - sent, frame))
+            if not frames.more_follows(frame):
                 return out
 
     async def write(self, body):
-        await self.client.write_gatt_char(LOG_CHAR, self.encoded(body), response=True)
-
-    def encoded(self, body):
-        return json.dumps(body, separators=(",", ":")).encode()
+        await self.client.write_gatt_char(LOG_CHAR, frames.encode_frame(body), response=True)
 
     async def frame(self, timeout):
         try:
-            return json.loads(await asyncio.wait_for(self.frames.get(), timeout))
+            return decoded_or_refused(await asyncio.wait_for(self.log_frames.get(), timeout))
         except asyncio.TimeoutError:
             raise SystemExit("no reply on the log endpoint within %.1f s" % timeout)
 
@@ -482,11 +487,12 @@ class Link:
         await self.client.disconnect()
 
 
-def more_follows(text):
+def decoded_or_refused(data):
     try:
-        return bool(json.loads(text).get("more"))
-    except (json.JSONDecodeError, AttributeError):
-        return False
+        return frames.decode_frame(data)
+    except (frames.FrameError, UnicodeDecodeError) as error:
+        raise SystemExit("the unit sent a frame outside the registry (%s): %s" % (error, data.hex()))
+
 
 
 if __name__ == "__main__":
