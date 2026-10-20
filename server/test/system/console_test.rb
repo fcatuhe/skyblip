@@ -21,4 +21,13 @@ class ConsoleTest < ApplicationSystemTestCase
     click_button "Write"
     assert_selector "#replies .bad", text: "units has no value named imperial"
   end
+
+  test "the console explains a reply refused as too wide for the link" do
+    visit "/briefing/console"
+    page.execute_script("fakeSkyblip.mtu = 23")
+    click_button "Connect"
+    click_button "get"
+    assert_selector "#replies .ok", text: '{"command":"acknowledgement","acknowledge":false,"reason":"small_mtu"}'
+    assert_selector "#replies .warn", text: "this browser kept Bluetooth's smallest packet size, 20 bytes"
+  end
 end

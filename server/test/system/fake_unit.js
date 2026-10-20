@@ -4,6 +4,7 @@
   const PKCS8_ED25519 = '302e020100300506032b657004220420';
   const encoder = new TextEncoder();
   const link = () => import('#skyblip/link');
+  const SMALL_MTU = { command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' };
   const bytes = (...hex) => Uint8Array.from(hex.join('').match(/../g), pair => parseInt(pair, 16));
   const hex = buffer => [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   const join = (...parts) => {
@@ -22,6 +23,7 @@
     nonce: null,
     serverNonce: null,
     address: null,
+    mtu: 247,
     listeners: [],
     commands: [],
 
@@ -43,7 +45,9 @@
 
     async reply(fields) {
       const { encodeFrame } = await link();
-      const value = new DataView(encodeFrame(fields).buffer);
+      const whole = encodeFrame(fields);
+      const frame = whole.length <= this.mtu - 3 ? whole : encodeFrame(SMALL_MTU);
+      const value = new DataView(frame.buffer);
       setTimeout(() => this.listeners.forEach(listener => listener({ target: { value } })));
     },
 

@@ -103,7 +103,7 @@ export class Activator {
 
   #acked(reply) {
     const { phase } = this.#state;
-    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', notice: { key: 'claimed' } });
+    if (reply.reason === 'claimed' || reply.reason === 'small_mtu') return this.#set({ phase: 'ready', notice: { key: reply.reason } });
     if (!BUSY.has(phase)) return;
     if (reply.pending && reply.reason === 'confirm_register') return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && reply.reason === 'unlock' && phase === 'unlocking') return this.#unlocked();

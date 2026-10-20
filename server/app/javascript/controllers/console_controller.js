@@ -3,6 +3,7 @@ import { connect } from "#skyblip/ble"
 import { hex, printable } from "#skyblip/link"
 
 const COMMANDS = ["get", "defaults", "status", "timing", "flash", "radio", "update", "diagnostics"]
+const SMALL_MTU = "small_mtu: the reply did not fit the link, because this browser kept Bluetooth's smallest packet size, 20 bytes. Disconnect and connect again, or use another browser or computer."
 
 export default class extends Controller {
   connect() {
@@ -42,6 +43,7 @@ export default class extends Controller {
           if (signal.aborted) return
           if (frame) this.write("replies", printable(frame), "ok")
           else this.write("replies", `${error.message}: ${hex(bytes)}`, "warn")
+          if (frame?.reason === "small_mtu") this.write("replies", SMALL_MTU, "warn")
         },
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })

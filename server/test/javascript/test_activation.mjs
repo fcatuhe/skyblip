@@ -163,15 +163,15 @@ test('an iPhone link carries the registration frame', async () => {
   assert.equal((await until(state => state.address)).address, '000001');
 });
 
-test('a link whose MTU was never exchanged reads the unit, and never hears the challenge reply', async () => {
-  const { unit, server, activator } = await connected({ mtu: 23 });
+test('a link whose MTU was never exchanged reads the unit, and is told small_mtu for the challenge reply', async () => {
+  const { unit, server, activator, until } = await connected({ mtu: 23 });
   assert.equal(activator.state.address, null);
-  await activator.activate();
-  await new Promise(resolve => setImmediate(resolve));
+  activator.activate();
+  assert.equal((await until(settled)).notice.key, 'small_mtu');
   assert.deepEqual(unit.commands, ['get', 'challenge']);
-  assert.equal(unit.refusedNotifications, 1);
+  assert.equal(unit.smallMtuRefusals, 1);
+  assert.equal(unit.refusedNotifications, 0);
   assert.deepEqual(server.requests, []);
-  assert.equal(activator.state.phase, 'asking');
 });
 
 test('a link lost while the glass asks is said as such', async () => {

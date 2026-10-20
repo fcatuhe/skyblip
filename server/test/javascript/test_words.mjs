@@ -23,6 +23,7 @@ const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../conten
 const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
 // INFO: fc 18oct26 what the prompt machinery and the claim answer any command, activation included
 const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_command'];
+const REPLY_REFUSALS = ['small_mtu'];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
@@ -52,6 +53,7 @@ function firmwareRefusals() {
 
 test('the firmware still refuses with the reasons this test reads', () => {
   assert.ok(firmwareRefusals().includes('not_approved'), `${CONFIG} no longer reads as it did`);
+  assert.ok(firmwareRefusals().includes('small_mtu'), `${CONFIG} no longer refuses a reply too wide for its link`);
 });
 
 for (const page of PAGES) {
@@ -82,12 +84,12 @@ for (const page of PAGES) {
 }
 
 test('the firmware still refuses activation with the reasons this test reads', () => {
-  assert.ok(identityRefusals().includes('small_mtu'), `${IDENTITY} no longer reads as it did`);
+  assert.ok(identityRefusals().includes('bad_signature'), `${IDENTITY} no longer reads as it did`);
 });
 
 for (const page of ACTIVATION_PAGES) {
   test(`every refusal and notice of an activation has words on ${page.split('/').pop()}`, () => {
-    const keys = [...identityRefusals(), ...PROMPT_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES];
+    const keys = [...identityRefusals(), ...PROMPT_REFUSALS, ...REPLY_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES];
     const missing = keys.filter(key => !words(page, 'activate').has(key));
     assert.deepEqual(missing, []);
   });

@@ -4,15 +4,19 @@
   const SMP_SERVICE = '8d53dc1d-1db7-4cd3-868b-8a527460aa84';
   const SMP = 'da2e7828-fbce-4e01-ae9e-261174997c48';
   const link = () => import('#skyblip/link');
+  const SMALL_MTU = { command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' };
 
   const unit = {
     stored: { aircraft_type: 4, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-CABC' },
     staged: null,
+    mtu: 247,
     listeners: [],
 
     async reply(fields) {
       const { encodeFrame } = await link();
-      const value = new DataView(encodeFrame(fields).buffer);
+      const whole = encodeFrame(fields);
+      const frame = whole.length <= this.mtu - 3 ? whole : encodeFrame(SMALL_MTU);
+      const value = new DataView(frame.buffer);
       setTimeout(() => this.listeners.forEach(listener => listener({ target: { value } })));
     },
 

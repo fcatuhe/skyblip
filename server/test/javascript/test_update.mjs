@@ -78,12 +78,22 @@ test('at an iPhone MTU the requests shrink to the 182 bytes it carries, and noth
   assert.ok(device.uploadWrites.every(writes => writes === 1));
 });
 
-test('a link whose MTU was never exchanged hears the status but not the update frame or the settings', async () => {
-  const { device, updater } = await unexchanged();
+test('a link whose MTU was never exchanged hears the status, and small_mtu for the update frame and the settings', async () => {
+  const { device, updater } = await connected({ mtu: 23 });
   assert.equal(updater.state.running, '0.1.0+12');
   assert.equal(updater.state.status.flight, 'ground');
   assert.deepEqual([updater.state.image, updater.state.settings], [null, null]);
-  assert.equal(device.refusedNotifications, 2);
+  assert.equal(updater.state.notice.key, 'small_mtu');
+  assert.equal(device.linkDrops, 2);
+  assert.equal(device.smallMtuRefusals, 2);
+  assert.equal(device.refusedNotifications, 0);
+});
+
+test('an update frame pushed at link-up that does not fit is dropped unannounced', async () => {
+  const { device, updater } = await connected({ mtu: 23, image: 'probation', from: '0.1.0+11', to: '0.1.0+12' });
+  assert.equal(device.linkDrops, 3);
+  assert.equal(device.smallMtuRefusals, 2);
+  assert.equal(updater.state.notice.key, 'small_mtu');
 });
 
 test('a link whose MTU was never exchanged still installs, asked on the glass', async () => {

@@ -24,4 +24,13 @@ class ManageTest < ApplicationSystemTestCase
       assert_select "Alarm volume", selected: "Loud"
     end
   end
+
+  test "a phone that kept the smallest Bluetooth packet is told so, and what to do" do
+    VCR.use_cassette("github/releases") do
+      visit "/manage"
+      page.execute_script("fakeSkyblip.mtu = 23")
+      click_button "Connect"
+      assert_selector "[role=status]", text: "smallest packet size, 20 bytes. Disconnect and connect again"
+    end
+  end
 end

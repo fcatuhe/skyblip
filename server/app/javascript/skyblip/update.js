@@ -262,12 +262,18 @@ export class Updater {
   #acked(reply) {
     const { phase, task } = this.#state;
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
+    if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
+  }
+
+  #narrow() {
+    const asked = this.#state.phase === 'asking' ? { phase: 'ready', task: null } : {};
+    this.#set({ ...asked, notice: { key: 'small_mtu' } });
   }
 
   #granted(task) {

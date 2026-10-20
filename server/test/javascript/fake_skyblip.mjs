@@ -104,6 +104,8 @@ export class FakeSkyblip {
     this.longestAttempt = 0;
     this.longestPacket = 0;
     this.refusedNotifications = 0;
+    this.linkDrops = 0;
+    this.smallMtuRefusals = 0;
     this.overlaps = 0;
     this.writing = false;
     this.approved = null;
@@ -195,13 +197,20 @@ export class FakeSkyblip {
 
   linkUp() {
     setImmediate(() => {
-      if (this.image !== 'confirmed' || this.settings) this.sendUpdate();
+      if (this.image !== 'confirmed' || this.settings) this.sendUpdate({ asked: false });
     });
   }
 
-  reply(fields) {
+  reply(fields, { asked = true } = {}) {
     const frame = encodeFrame(fields);
-    setImmediate(() => this.connected && this.config.notify(frame));
+    setImmediate(() => {
+      if (!this.connected) return;
+      if (frame.length <= this.mtu - ATT_HEADER_BYTES) return this.config.notify(frame);
+      this.linkDrops++;
+      if (!asked) return;
+      this.smallMtuRefusals++;
+      this.config.notify(encodeFrame({ command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' }));
+    });
   }
 
   acknowledge(ok, reason) {
@@ -266,7 +275,7 @@ export class FakeSkyblip {
     return !this.downgrade && compareVersions(version, parseVersion(this.running)) < 0;
   }
 
-  sendUpdate() {
+  sendUpdate({ asked = true } = {}) {
     const frame = { command: 'update', image: this.image };
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
@@ -275,7 +284,7 @@ export class FakeSkyblip {
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
-    this.reply(frame);
+    this.reply(frame, { asked });
   }
 
   sendStatus() {
@@ -319,7 +328,7 @@ export class FakeSkyblip {
   }
 
   push(fields) {
-    this.reply(fields);
+    this.reply(fields, { asked: false });
   }
 
   onSmp(bytes) {
