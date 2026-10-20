@@ -11,6 +11,7 @@
 // A link model and scripted JSON, no device: the product's own two ends of the
 // range are walked in test/products/test_flight_log.cpp.
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -186,16 +187,16 @@ struct UpdateBench {
     platform::host::Dfu dfu{watchdog};
     ConfigService config{link, store, &dfu};
 
-    explicit UpdateBench(bool allows_downgrade) {
+    explicit UpdateBench(bool allows_downgrade, ports::ImageVersion version = dfu::kWidestVersion) {
         link.raise_link(1);
         link.raise_link(1);
         link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
         dfu.running_key_valid = true;
         dfu.running_signer.fill(0xff);
         dfu.allows_downgrade = allows_downgrade;
-        config.set_image_state(dfu::ImageState::Probation,
-                               dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
+        config.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{version, version});
         config.set_settings_fallback(settings::Fallback::Defaults);
+        config.set_battery_state(full_battery(), power::PowerLevel::Critical);
         dfu::HubImageReport held{};
         held.holding = dfu::HubImage::Held;
         for (uint8_t& byte : held.digest) byte = 0xAB;
@@ -203,6 +204,27 @@ struct UpdateBench {
         config.on_rx(config_frame("{\"command\":\"update\"}"));
     }
 };
+
+long version_field(const std::string& text, const char* key) {
+    const size_t at = text.find(key);
+    REQUIRE_MESSAGE(at != std::string::npos, "no ", key);
+    return std::strtol(text.c_str() + text.find('=', at) + 1, nullptr, 10);
+}
+
+ports::ImageVersion widest_build_of_this_version() {
+    const char* path = "products/skyblip_go/VERSION";
+    std::FILE* file = std::fopen(path, "rb");
+    REQUIRE_MESSAGE(file != nullptr, "cannot open ", path);
+    std::string text;
+    char chunk[256];
+    size_t count = 0;
+    while ((count = std::fread(chunk, 1, sizeof(chunk), file)) > 0) text.append(chunk, count);
+    std::fclose(file);
+    return ports::ImageVersion{static_cast<uint8_t>(version_field(text, "\nVERSION_MAJOR")),
+                               static_cast<uint8_t>(version_field(text, "\nVERSION_MINOR")),
+                               static_cast<uint16_t>(version_field(text, "\nPATCHLEVEL")),
+                               dfu::kWidestVersion.build};
+}
 
 }  // namespace
 
@@ -212,12 +234,12 @@ TEST_CASE(
     UpdateBench bench(false);
     REQUIRE(bench.link.sent.size() == 1);
     const std::string body = bench.link.last().bytes;
-    // 168 bytes: the widest release build's report, every key written
-    CHECK(body.size() == 168);
+    // The widest release build's report, every key written and the swap refused for power.
+    CHECK(body.size() == 169);
+    CHECK(body.find("\"swap_powered\":false") != std::string::npos);
     CHECK(body.find("\"from\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"to\":\"9.99.99+99999\"") != std::string::npos);
     CHECK(body.find("\"settings\":\"defaults\"") != std::string::npos);
-    CHECK(body.find("\"swap_powered\"") != std::string::npos);
     CHECK(body.find("\"imu\":\"abababababababab\"") != std::string::npos);
     CHECK(body.find("\"key\":\"FFFFFFFF\"") != std::string::npos);
     CHECK(bench.config.link_drops() == 0);
@@ -229,6 +251,20 @@ TEST_CASE(
     UpdateBench bench(true);
     CHECK(bench.link.sent.empty());
     CHECK(bench.config.link_drops() == 1);
+}
+
+// scripts/build_image.sh stamps the VERSION file's triple and a commit count of at most 99999.
+TEST_CASE(
+    "comms: a development build's update report fits, at the widest version this product's "
+    "VERSION file can stamp") {
+    const ports::ImageVersion widest = widest_build_of_this_version();
+    UpdateBench bench(true, widest);
+    REQUIRE(bench.link.sent.size() == 1);
+    const std::string body = bench.link.last().bytes;
+    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+    CHECK(body.find("\"downgrade\":true") != std::string::npos);
+    CHECK(body.find("\"key\":\"FFFFFFFF\"") != std::string::npos);
+    CHECK(bench.config.link_drops() == 0);
 }
 
 TEST_CASE("comms: a link that came up at the BLE minimum is answered with a count, not a frame") {
