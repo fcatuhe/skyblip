@@ -34,7 +34,7 @@ namespace {
 // 20 px abeam 11 degrees off its true bearing (and 4% off in range: 435 m at
 // the 10 km setting). DO-257A's guidance is 1% of the depiction, so that was
 // twice the accepted figure.
-constexpr int kGlyphW = 24;
+constexpr int kGlyphWidth = 24;
 constexpr int kGlyphOriginRow = 5;
 constexpr uint32_t kOwnshipRows[] = {
     0x00001800,  // ...........##...........
@@ -64,7 +64,7 @@ struct Sprite {
     int origin_row;        // hot spot: this row lands on the centre point
     const uint32_t* rows;  // one word per row, LSB = leftmost column
 };
-constexpr Sprite kDefaultSprite{kGlyphW, kGlyphHeight, kGlyphOriginRow, kOwnshipRows};
+constexpr Sprite kDefaultSprite{kGlyphWidth, kGlyphHeight, kGlyphOriginRow, kOwnshipRows};
 
 }  // namespace
 
@@ -73,10 +73,11 @@ constexpr Sprite kDefaultSprite{kGlyphW, kGlyphHeight, kGlyphOriginRow, kOwnship
 // aircraft's position on the plot origin itself, not half a pixel off it.
 void draw_skyship(Canvas& canvas, int centre_x, int centre_y) {
     const Sprite& sprite = kDefaultSprite;
-    static_assert(kGlyphW % 2 == 0, "even width: the centre is a pixel PAIR");
+    static_assert(kGlyphWidth % 2 == 0, "even width: the centre is a pixel PAIR");
     static_assert(kGlyphOriginRow == kSkyshipRowsToNose,
                   "the nose a screen clears is this sprite's");
-    static_assert(kGlyphW == kSkyshipSpan, "the span a screen measures against is this sprite's");
+    static_assert(kGlyphWidth == kSkyshipSpan,
+                  "the span a screen measures against is this sprite's");
     static_assert(kGlyphHeight == kSkyshipRows,
                   "the rows a screen measures against are this sprite's");
     const int x0 = centre_x - sprite.width / 2, y0 = centre_y - sprite.origin_row;

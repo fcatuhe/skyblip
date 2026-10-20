@@ -1,6 +1,6 @@
 class Ownship::Widget
   PATH = Rails.root.join("../firmware/ui/widgets/skyship.cpp")
-  TABLE = /constexpr int kGlyphW = \d+;\s*\nconstexpr int kGlyphOriginRow = \d+;\s*\nconstexpr uint32_t kOwnshipRows\[\] = \{.*?\n\};/m
+  TABLE = /constexpr int kGlyphWidth = \d+;\s*\nconstexpr int kGlyphOriginRow = \d+;\s*\nconstexpr uint32_t kOwnshipRows\[\] = \{.*?\n\};/m
 
   Unfit = Class.new(StandardError)
 

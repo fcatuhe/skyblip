@@ -43,7 +43,7 @@
   },
   {
     "why": "the C++ table carries its hot spot and its width",
-    "text": "// 200x200, as drawn\nconstexpr int kGlyphW = 6;\nconstexpr int kGlyphOriginRow = 1;\n 0x0c,\n 0x3f,\n 0x0c,\n",
+    "text": "// 200x200, as drawn\nconstexpr int kGlyphWidth = 6;\nconstexpr int kGlyphOriginRow = 1;\n 0x0c,\n 0x3f,\n 0x0c,\n",
     "hot_spot": 1,
     "problems": []
   }
