@@ -220,8 +220,6 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     power::BatteryState battery{};
     battery.cell_mv = 4200;
     battery.percent = 100;
-    battery.external_power = true;
-    battery.charging = true;
     battery.valid = true;
     config.set_battery_state(battery, power::PowerLevel::Critical);
     // The driver gates -50 to +125 C, the formatter does not: int16 prints widest.
@@ -233,7 +231,7 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     CHECK(
         body ==
         "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
-        "\"charging\":true,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
+        "\"charging\":false,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
         "\"die_temperature_c\":-3277}");
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);

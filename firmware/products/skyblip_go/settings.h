@@ -56,10 +56,10 @@ struct Settings {
     //
     // It is the one field the "config" reply does not carry back. That reply is
     // one frame at core/comms/config.h's kSmallestSupportedPayloadBytes, its worst
-    // case is already 173 of those 182 bytes, and no honest name for this key
-    // fits in nine. It is written on the line and read back as the millivolts
-    // the status reply and the panel already show, which is the figure the line
-    // is comparing against a bench supply anyway.
+    // case is already 166 of those 182 bytes, and no honest name for this key
+    // fits in the eight letters that leaves. It is written on the line and read back as the
+    // millivolts the status reply and the panel already show, which is the figure the line is
+    // comparing against a bench supply anyway.
     int16_t battery_offset_mv{0};
     // The radio's frequency trim in tenths of a ppm, positive upwards, applied
     // to every dwell the radio arms (hardware/parts/sx1262). Beside
@@ -70,7 +70,7 @@ struct Settings {
     // Like battery_offset_mv it is accepted on "set" and absent from the "get"
     // reply, for the same reason: that reply is one frame at
     // core/comms/config.h's kSmallestSupportedPayloadBytes and its worst case leaves
-    // 29 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
+    // 16 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
     // reads the value back, so a bench that sets it has to trust its own record
     // and its spectrum analyser - which is the instrument that had to be there
     // to know the number in the first place.

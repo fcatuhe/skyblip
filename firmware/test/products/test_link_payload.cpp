@@ -40,6 +40,7 @@ const identity::Activation kWidestAddress{0xFFFF, 0xFFFF};
 go::Settings widest_settings() {
     go::Settings settings = go::defaults();
     settings.aircraft_type = 17;
+    settings.alarm_enabled = false;
     settings.alarm_volume = go::AlarmVolume::Loud;
     settings.units = go::Units::Nautical;
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
@@ -56,11 +57,15 @@ power::BatteryState full_battery() {
     return battery;
 }
 
-// A device at its most talkative: the longest flight word, the longest power
-// level, a full cell, and the widest temperature an int16 of tenths can print.
+// A device at its most talkative, field by field rather than as one state a cell
+// could be in: the longest flight word, the longest power level, a full cell off
+// the cable, and the widest temperature an int16 of tenths can print.
 void make_worst_case(ConfigService& config) {
+    power::BatteryState unplugged = full_battery();
+    unplugged.external_power = false;
+    unplugged.charging = false;
     config.set_flight_state(flight::FlightState::Airborne);
-    config.set_battery_state(full_battery(), power::PowerLevel::Flat);
+    config.set_battery_state(unplugged, power::PowerLevel::Critical);
     config.set_die_temperature(INT16_MIN, true);
 }
 
@@ -130,6 +135,9 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+    CHECK(body.size() == 168);
+    CHECK(body.find("\"charging\":false") != std::string::npos);
+    CHECK(body.find("\"power_level\":\"CRITICAL\"") != std::string::npos);
     CHECK(link.refused_oversize == 0);
     CHECK(config.link_drops() == 0);
 
@@ -151,8 +159,9 @@ TEST_CASE("comms: the config reply fits it too, as one flat object instead of an
     REQUIRE(link.sent.size() == 1);
     const std::string body = link.last().bytes;
     CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-    // 165 bytes, counted by hand: every key, address 65535, aircraft_type 17, nine letters.
-    CHECK(body.size() == 165);
+    // Counted by hand: every key, address 65535, aircraft_type 17, the alarm off, nine letters.
+    CHECK(body.size() == 166);
+    CHECK(body.find("\"alarm_enabled\":false") != std::string::npos);
     CHECK(config.link_drops() == 0);
 
     // The settings used to ride as a JSON string inside the reply, and the
