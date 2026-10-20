@@ -77,19 +77,21 @@ Offload offload(Rig& rig, uint32_t& now_ms, uint32_t session) {
         rig.send_log(command);
         rig.run(now_ms, now_ms + 100);
         now_ms += 100;
-        const platform::host::Link::Frame* chunk = last_log_frame(rig);
-        if (chunk == nullptr || chunk->bytes.find("\"command\":\"chunk\"") == std::string::npos) {
+        const platform::host::Link::Frame* frame = last_log_frame(rig);
+        const std::string chunk = frame == nullptr ? "" : link_text(frame->bytes);
+        if (chunk.find("\"command\":\"chunk\"") == std::string::npos) {
             walk.decoded = false;
             return walk;
         }
-        if (static_cast<int>(chunk->bytes.size()) > walk.widest_frame)
-            walk.widest_frame = static_cast<int>(chunk->bytes.size());
+        if (static_cast<int>(frame->bytes.size()) > walk.widest_frame)
+            walk.widest_frame = static_cast<int>(frame->bytes.size());
 
-        const int records = std::atoi(field(chunk->bytes, "records").c_str());
-        if (records > walk.most_records_in_a_chunk) walk.most_records_in_a_chunk = records;
         uint8_t raw[comms::kLogChunkRawBytes];
-        const int bytes = base64_decode(field(chunk->bytes, "data"), raw, sizeof(raw));
-        if (bytes != records * static_cast<int>(flight::kLogRecordBytes)) walk.decoded = false;
+        const int bytes = chunk_records(frame->bytes, raw, sizeof(raw));
+        if (bytes < 0 || bytes % static_cast<int>(flight::kLogRecordBytes) != 0)
+            walk.decoded = false;
+        const int records = bytes / static_cast<int>(flight::kLogRecordBytes);
+        if (records > walk.most_records_in_a_chunk) walk.most_records_in_a_chunk = records;
 
         for (int i = 0; i < records; i++) {
             const uint8_t* slot = raw + i * flight::kLogRecordBytes;
@@ -112,7 +114,7 @@ Offload offload(Rig& rig, uint32_t& now_ms, uint32_t session) {
             walk.records++;
         }
         from += static_cast<uint32_t>(records);
-        walk.ends_session = field(chunk->bytes, "ends_session") == "true";
+        walk.ends_session = field(chunk, "ends_session") == "true";
         walk.chunks++;
     }
     return walk;
@@ -175,7 +177,7 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
     CHECK(pass->target.heard_s >= 30);
 }
 
-TEST_CASE("flight log: the tablet lists a flight and reads it back four records at a time") {
+TEST_CASE("flight log: the tablet lists a flight and reads it back nine records at a time") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -194,9 +196,8 @@ TEST_CASE("flight log: the tablet lists a flight and reads it back four records 
     // the next command IS the acknowledgement, so a dropped connection resumes
     // by asking again.
     const int per_chunk = comms::log_records_per_chunk(rig.platform.link().payload_bytes());
-    // The host link comes up as a phone that negotiated ATT_MTU 247, which is
-    // the size the abandoned fixed five was chosen against.
-    CHECK(per_chunk == 4);
+    // The host link comes up as a phone that negotiated ATT_MTU 247.
+    CHECK(per_chunk == 9);
 
     const Offload walk = offload(rig, now_ms, session);
     CHECK(walk.ends_session);
@@ -209,7 +210,7 @@ TEST_CASE("flight log: the tablet lists a flight and reads it back four records 
 }
 
 TEST_CASE(
-    "flight log: the offload completes on an iPhone's payload, and in a sixth the frames on"
+    "flight log: the offload completes on an iPhone's payload, and in a third the frames on"
     " a large one") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -229,12 +230,11 @@ TEST_CASE(
     CHECK(small.decoded);
     CHECK(small.records == written);
     CHECK(small.widest_frame <= comms::kSmallestSupportedPayloadBytes);
-    CHECK(small.most_records_in_a_chunk == 2);
-    CHECK(small.chunks == static_cast<int>((written + 1) / 2));
+    CHECK(small.most_records_in_a_chunk == 6);
+    CHECK(small.chunks == static_cast<int>((written + 5) / 6));
 
     // The same flight over a link that negotiated the whole L2CAP MTU: the same
-    // records, six times as many per frame, a sixth of the round trips. This
-    // is the half of the bug that was costing throughput rather than breaking.
+    // records, three times as many per frame, a third of the round trips.
     rig.platform.link().declare_payload_bytes(495);
     const Offload large = offload(rig, now_ms, session);
     CHECK(large.ends_session);
@@ -244,16 +244,14 @@ TEST_CASE(
     CHECK(large.most_records_in_a_chunk == comms::kMaxLogRecordsPerChunk);
     CHECK(large.chunks == static_cast<int>((written + comms::kMaxLogRecordsPerChunk - 1) /
                                            comms::kMaxLogRecordsPerChunk));
-    CHECK(large.chunks <= small.chunks / 5 + 1);
+    CHECK(large.chunks <= small.chunks / 3 + 1);
 
     // Nothing was refused at either end of the range, and nothing was truncated:
     // both walks decoded every record against the checksum the flash holds.
     CHECK(rig.product.flight_log().link_drops() == 0);
     CHECK(rig.platform.link().refused_oversize == 0);
 
-    // And a link that never got past what BLE guarantees is told nothing at all
-    // rather than handed a chunk with no data in it: not one record fits twenty
-    // bytes, the refusal is counted, and nothing reaches the port.
+    // Not one record fits what BLE guarantees, so the read is refused by name, not answered empty.
     rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     const uint32_t drops_before = rig.product.flight_log().link_drops();
     rig.platform.link().clear();
@@ -262,8 +260,10 @@ TEST_CASE(
                   session);
     rig.send_log(command);
     rig.run(now_ms, now_ms + 100);
-    CHECK(last_log_frame(rig) == nullptr);
-    CHECK(rig.product.flight_log().link_drops() > drops_before);
+    REQUIRE(last_log_frame(rig) != nullptr);
+    CHECK(link_text(last_log_frame(rig)->bytes) ==
+          "{\"command\":\"log\",\"acknowledge\":false,\"reason\":\"payload\"}");
+    CHECK(rig.product.flight_log().link_drops() == drops_before);
     CHECK(rig.platform.link().refused_oversize == 0);
 }
 
@@ -301,11 +301,14 @@ TEST_CASE("flight log: eight chunks over a link that takes four at a time arrive
     REQUIRE(sent.size() == 9);
     uint32_t from = 0;
     for (size_t i = 0; i < 8 && i < sent.size(); i++) {
-        CHECK(field(sent[i], "command") == "chunk");
-        CHECK(field(sent[i], "from") == std::to_string(from));
-        from += static_cast<uint32_t>(std::atoi(field(sent[i], "records").c_str()));
+        const std::string chunk = link_text(sent[i]);
+        CHECK(field(chunk, "command") == "chunk");
+        CHECK(field(chunk, "from") == std::to_string(from));
+        uint8_t raw[comms::kLogChunkRawBytes];
+        from += static_cast<uint32_t>(chunk_records(sent[i], raw, sizeof(raw)) /
+                                      static_cast<int>(flight::kLogRecordBytes));
     }
-    CHECK(field(sent.back(), "sessions") == "1");
+    CHECK(field(link_text(sent.back()), "sessions") == "1");
     CHECK(rig.product.flight_log().link_drops() == 0);
 }
 
@@ -355,13 +358,13 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
     now_ms += 200;
     const auto* refused = last_log_frame(rig);
     REQUIRE(refused != nullptr);
-    CHECK(refused->bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(refused->bytes).find("in_flight") != std::string::npos);
 
     rig.platform.link().clear();
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
-    CHECK(last_log_frame(rig)->bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(last_log_frame(rig)->bytes).find("in_flight") != std::string::npos);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
 
     // And it stays refused: the log is still being written to.
@@ -437,5 +440,5 @@ TEST_CASE("flight log: with no storage the device flies and logs nothing") {
     rig.send_log("{\"command\":\"list\"}");
     rig.run(now_ms, now_ms + 200);
     // And it says so, rather than answering an empty log.
-    CHECK(last_log_frame(rig)->bytes.find("no_storage") != std::string::npos);
+    CHECK(link_text(last_log_frame(rig)->bytes).find("no_storage") != std::string::npos);
 }

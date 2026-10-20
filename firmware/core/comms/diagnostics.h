@@ -8,6 +8,7 @@
 
 #include <cstdint>
 
+#include "core/comms/link_registry.h"
 #include "core/gnss/validity.h"
 #include "core/power/battery.h"
 #include "core/power/charging.h"
@@ -112,10 +113,10 @@ class DiagnosticsReport {
     // buffer the caller lends.
     static constexpr int kFrameBytes = 384;
 
-    // command is the name the reply answers under, because the link already has a
+    // command is the one the reply answers under, because the link already has a
     // question that asks for the radio group alone.
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* command);
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* command, Group only);
+    DiagnosticsReport(const Diagnostics& diagnostics, link::Command command);
+    DiagnosticsReport(const Diagnostics& diagnostics, link::Command command, Group only);
 
     // The console surface: one subsystem per line, "radio noise_dbm=-105 ...".
     int line_count() const { return line_count_; }
@@ -124,20 +125,21 @@ class DiagnosticsReport {
     // in half is a counter misread, so it is refused instead.
     int line(int index, char* out, int capacity) const;
 
-    // The link surface: as many complete flat objects as the negotiated payload
+    // The link surface: as many complete flat maps as the negotiated payload
     // needs, each carrying "command", "group", "part" and "more". A frame never mixes
     // two subsystems, so a reader that only wants one can stop at its group.
     bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
-    int next_frame(int payload_bytes, char* out, int capacity);
+    int next_frame(int payload_bytes, uint8_t* out, int capacity);
 
    private:
-    enum class Kind : uint8_t { Integer, Boolean, String };
+    enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, Code };
 
     struct Field {
-        const char* key;
+        const char* name;
+        uint32_t key;
         const char* text;
-        long value;
+        int64_t value;
         Kind kind;
         Group group;
     };
@@ -145,16 +147,15 @@ class DiagnosticsReport {
     static constexpr int kMaxFields = 47;
 
     void build(const Diagnostics& diagnostics, const Group* only);
-    void add_integer(Group group, const char* key, long value);
-    void add_boolean(Group group, const char* key, bool value);
-    void add_string(Group group, const char* key, const char* value);
+    void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
+             const char* text = nullptr);
     static int field_bytes(const Field& field);
     static const char* group_name(Group group);
     // Where the index-th line's fields start, or count_ when there is no such
     // line.
     int line_start(int index) const;
 
-    const char* command_;
+    link::Command command_;
     Field fields_[kMaxFields]{};
     int count_{0};
     int line_count_{0};

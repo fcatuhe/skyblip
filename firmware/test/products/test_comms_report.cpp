@@ -1,7 +1,7 @@
 // What the companion link REPORTS, as opposed to what it authorises: why the
 // device came up, the state of the cell a pilot's tablet draws, and the bench
 // numbers a laboratory copies into a compliance report. A link model and
-// scripted JSON, no device, exactly as in test_comms.cpp - which keeps the
+// scripted frames, no device, exactly as in test_comms.cpp - which keeps the
 // authorisation state machine and nothing else.
 #include <cstdint>
 #include <cstring>
@@ -25,7 +25,7 @@ namespace {
 // nothing has to be asked for twice.
 std::string joined(const platform::host::Link& link) {
     std::string all;
-    for (const platform::host::Link::Frame& frame : link.sent) all += frame.bytes;
+    for (const platform::host::Link::Frame& frame : link.sent) all += link_text(frame.bytes);
     return all;
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
-    const std::string body = link.last().bytes;
+    const std::string body = link_text(link.last().bytes);
     CHECK(body.find("\"command\":\"status\"") != std::string::npos);
     CHECK(body.find("\"flight\":\"ground\"") != std::string::npos);
     // State, and only state. The callsign and the device address are what the
@@ -63,11 +63,11 @@ TEST_CASE("comms: status carries state, and why the device came up is the dump's
     CHECK(body.find("\"address\"") == std::string::npos);
     CHECK(body.find("\"reset\"") == std::string::npos);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
-    CHECK(link.last().bytes.find("D-KXYZ") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("D-KXYZ") != std::string::npos);
 
     link.clear();
     config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
-    CHECK(joined(link).find("\"reset\":\"WATCHDOG\"") != std::string::npos);
+    CHECK(joined(link).find("\"reset\":\"watchdog\"") != std::string::npos);
 }
 
 TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
@@ -88,11 +88,11 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     REQUIRE(!link.sent.empty());
     // The last frame is the one that says there is nothing after it, whether
     // that is the first frame or the third.
-    CHECK(link.sent.back().bytes.find("\"more\":false") != std::string::npos);
+    CHECK(link_text(link.sent.back().bytes).find("\"more\":false") != std::string::npos);
     const std::string body = joined(link);
     CHECK(body.find("\"command\":\"timing\"") != std::string::npos);
-    CHECK(body.find("\"pps_us\":\"0,0,0,1,0,0,0\"") != std::string::npos);
-    CHECK(body.find("\"dwell_us\":\"0,0,0,0,1,0,0\"") != std::string::npos);
+    CHECK(body.find("\"pps_us\":[0,0,0,1,0,0,0]") != std::string::npos);
+    CHECK(body.find("\"dwell_us\":[0,0,0,0,1,0,0]") != std::string::npos);
     CHECK(body.find("\"pps_samples\":1") != std::string::npos);
     CHECK(body.find("\"dwell_worst_us\":200") != std::string::npos);
     CHECK(body.find("\"holdover_events\":0") != std::string::npos);
@@ -108,7 +108,7 @@ TEST_CASE("comms: timing without an accumulator wired up says so, not zeros") {
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("no_statistics") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("no_statistics") != std::string::npos);
 }
 
 TEST_CASE("comms: status carries state of charge, the charging flag and the level") {
@@ -122,10 +122,10 @@ TEST_CASE("comms: status carries state of charge, the charging flag and the leve
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
-    const std::string body = link.last().bytes;
+    const std::string body = link_text(link.last().bytes);
     CHECK(body.find("\"battery_percent\":61") != std::string::npos);
     CHECK(body.find("\"charging\":false") != std::string::npos);
-    CHECK(body.find("\"power_level\":\"OK\"") != std::string::npos);
+    CHECK(body.find("\"power_level\":\"normal\"") != std::string::npos);
 }
 
 TEST_CASE("comms: a battery nobody has read has no percentage, never a false zero") {
@@ -138,9 +138,9 @@ TEST_CASE("comms: a battery nobody has read has no percentage, never a false zer
     // No set_battery_state call at all: no sample has ever arrived.
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    const std::string body = link.last().bytes;
+    const std::string body = link_text(link.last().bytes);
     CHECK(body.find("battery_percent") == std::string::npos);
-    CHECK(body.find("\"power_level\":\"--\"") != std::string::npos);
+    CHECK(body.find("\"power_level\":\"unknown\"") != std::string::npos);
 }
 
 TEST_CASE(
@@ -197,17 +197,17 @@ TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat i
 
     config.set_flight_state(flight::FlightState::Ground);
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("\"flight\":\"ground\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"flight\":\"ground\"") != std::string::npos);
 
     config.set_flight_state(flight::FlightState::Ground);
     CHECK(link.sent.size() == 1);
 
     config.set_flight_state(flight::FlightState::Airborne);
     REQUIRE(link.sent.size() == 2);
-    CHECK(link.last().bytes.find("\"flight\":\"airborne\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"flight\":\"airborne\"") != std::string::npos);
 }
 
-TEST_CASE("comms: status at its widest is this frame, field for field, inside 182 bytes") {
+TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 bytes") {
     platform::host::Link link;
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
@@ -222,18 +222,21 @@ TEST_CASE("comms: status at its widest is this frame, field for field, inside 18
     battery.percent = 100;
     battery.valid = true;
     config.set_battery_state(battery, power::PowerLevel::Critical);
-    // The driver gates -50 to +125 C, the formatter does not: int16 prints widest.
+    // The driver gates -50 to +125 C, the formatter does not: int16 is widest.
     config.set_die_temperature(INT16_MIN, true);
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
-    const std::string body = link.last().bytes;
-    CHECK(
-        body ==
-        "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,\"battery_percent\":100,"
-        "\"charging\":false,\"power_level\":\"CRITICAL\",\"went_dark_flat\":false,"
-        "\"die_temperature_c\":-3277}");
-    CHECK(body.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
+    const std::string frame = link.last().bytes;
+    // An eight-entry map; airborne and critical are 2, and -3277 is the negative integer 0x0CCC.
+    const uint8_t golden[] = {0xA8, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,
+                              0x04, 0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC};
+    CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
+    CHECK(link_text(frame) ==
+          "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,"
+          "\"battery_percent\":100,\"charging\":false,\"power_level\":\"critical\","
+          "\"went_dark_flat\":false,\"die_temperature_c\":-3277}");
+    CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }
 
@@ -245,11 +248,11 @@ TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {
     ConfigService config(link, store);
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"went_dark_flat\":false") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"went_dark_flat\":false") != std::string::npos);
 
     config.set_went_dark_flat(true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"went_dark_flat\":true") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"went_dark_flat\":true") != std::string::npos);
 }
 
 TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure") {
@@ -267,11 +270,10 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     CHECK(body.find("\"refused\":1") != std::string::npos);
     // Nothing listens before talking, so there is no threshold to report.
     CHECK(body.find("carrier_sense") == std::string::npos);
-    // Every frame is a complete object of its own, and no frame is longer than
+    // Every frame is a complete map of its own, and no frame is longer than
     // the link said it would carry.
     for (const platform::host::Link::Frame& frame : link.sent) {
-        CHECK(frame.bytes.front() == '{');
-        CHECK(frame.bytes.back() == '}');
+        CHECK_FALSE(link_text(frame.bytes).empty());
         CHECK(frame.bytes.size() <= link.payload_bytes());
     }
 }
@@ -317,7 +319,7 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
 
     CHECK(body.find("\"group\":\"system\"") != std::string::npos);
     CHECK(body.find("\"uptime_s\":3725") != std::string::npos);
-    CHECK(body.find("\"reset\":\"WATCHDOG\"") != std::string::npos);
+    CHECK(body.find("\"reset\":\"watchdog\"") != std::string::npos);
     CHECK(body.find("\"noise_dbm\":-101") != std::string::npos);
     CHECK(body.find("\"rx_ok\":1204") != std::string::npos);
     CHECK(body.find("\"range_refused\":5") != std::string::npos);
@@ -325,7 +327,7 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     CHECK(body.find("\"fixes\":5210") != std::string::npos);
     CHECK(body.find("\"baud\":9600") != std::string::npos);
     CHECK(body.find("\"firmware\":\"URANUS5,V5.1.0.0\"") != std::string::npos);
-    CHECK(body.find("\"reject\":\"STALE\"") != std::string::npos);
+    CHECK(body.find("\"reject\":\"stale\"") != std::string::npos);
     CHECK(body.find("\"rejected\":6") != std::string::npos);
     CHECK(body.find("\"supply_warnings\":1") != std::string::npos);
     CHECK(body.find("\"implausible\":2") != std::string::npos);
@@ -334,14 +336,13 @@ TEST_CASE("comms: one question answers every subsystem, in frames the link can c
     CHECK(body.find("\"percent\":64") != std::string::npos);
     CHECK(body.find("\"die_temperature_c\":42") != std::string::npos);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"battery_percent\":64") != std::string::npos);
-    CHECK(link.last().bytes.find("\"die_temperature_c\":42") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"battery_percent\":64") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":42") != std::string::npos);
 
     // Every frame whole, none longer than the narrowest phone in the field, and
     // nothing refused on the way out.
     for (const platform::host::Link::Frame& frame : link.sent) {
-        CHECK(frame.bytes.front() == '{');
-        CHECK(frame.bytes.back() == '}');
+        CHECK_FALSE(link_text(frame.bytes).empty());
         CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     }
     CHECK(config.link_drops() == 0);
@@ -355,17 +356,17 @@ TEST_CASE("comms: a dump nobody has collected says so, not zeros") {
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"diagnostics\"}"));
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("no_statistics") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("no_statistics") != std::string::npos);
     // A device with a dead receiver and a dead radio reports zeros for real, so
     // the difference has to be visible: the refusal names the wiring.
-    CHECK(link.last().bytes.find("\"acknowledge\":false") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":false") != std::string::npos);
 
     // The radio group is not gated, and that asymmetry is deliberate: its own key
     // has a writer that runs every pass, and a radio that has heard nothing
     // truthfully has zero receptions. A receiver's firmware string does not.
     link.clear();
     config.on_rx(config_frame("{\"command\":\"radio\"}"));
-    CHECK(link.last().bytes.find("\"command\":\"radio\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"command\":\"radio\"") != std::string::npos);
 }
 
 // Asking is not clearing. Every counter in the dump belongs to somebody else and
@@ -391,13 +392,7 @@ TEST_CASE("comms: asking for the dump twice answers the same numbers twice") {
 }
 
 // M. The other 32-bit boundary in this section, and it is not the clock: a count a
-// laboratory reads. json::Writer and the console writer both carry a long, which is
-// 64-bit on this host and 32-bit on the nRF52840, so a uint32_t counter cast
-// straight to long prints correctly here and NEGATIVELY on the device - the one
-// divergence a host suite cannot see, since the suite is the thing being trusted.
-// The timing report's sample counts were naked casts until 2026-08-06; they go
-// through the one saturating conversion both reports share now
-// (core/comms/frame_budget.h, pinned in test/core/test_diagnostics.cpp).
+// laboratory reads goes out as an unsigned integer on every platform.
 TEST_CASE("comms: the timing report's counts are unsigned on every platform") {
     platform::host::Link link;
     link.raise_link(1);

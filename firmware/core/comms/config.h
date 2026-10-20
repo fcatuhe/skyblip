@@ -7,6 +7,7 @@
 #include "core/comms/diagnostics.h"
 #include "core/comms/identity_link.h"
 #include "core/comms/link_claim.h"
+#include "core/comms/link_registry.h"
 #include "core/comms/link_sessions.h"
 #include "core/comms/timing_report.h"
 #include "core/dfu/update.h"
@@ -18,6 +19,7 @@
 #include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
 #include "core/timing/slot_timing_statistics.h"
+#include "core/util/cbor.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
 
@@ -241,8 +243,6 @@ class ConfigService {
     bool recovery_requested() const { return recovery_requested_; }
     void clear_recovery_request() { recovery_requested_ = false; }
 
-    const char* pending_set_json() const { return pending_set_json_; }
-
     // INFO: fc 04aug26 Every frame this service could not put on the link: one
     // that would not fit the negotiated payload, one the controller refused, and
     // one a writer left incomplete. Silence towards a phone is a fault worth a
@@ -250,22 +250,22 @@ class ConfigService {
     uint32_t link_drops() const { return diagnostics_.link_drops; }
 
    private:
-    Status reply(const char* json);
-    Status reply(const char* json, int bytes);
-    Status reply_to(uint16_t session_id, const char* json, int bytes);
-    Status broadcast(const char* json, int bytes);
+    Status reply(const uint8_t* frame, int bytes);
+    Status reply_to(uint16_t session_id, const uint8_t* frame, int bytes);
+    Status broadcast(const uint8_t* frame, int bytes);
     void refuse_unclaimed(uint16_t session_id);
     void note_connected(uint16_t session_id);
     void note_disconnected(uint16_t session_id);
     bool connected(uint16_t session_id) const;
     int payload_bytes() const;
     int payload_bytes_to(uint16_t session_id) const;
-    void stage(Pending pending, const char* reason);
-    void acknowledge(bool accepted, const char* reason);
+    void stage(Pending pending, link::Reason reason);
+    void acknowledge(bool accepted, std::optional<link::Reason> reason = std::nullopt);
+    void send_config();
     void send_status();
     void send_defaults();
     void push_status();
-    int format_status(char* out, int capacity);
+    int format_status(uint8_t* out, int capacity);
     // The bench's plug-in-and-read for G6: the same on_rx dispatch that
     // answers "get" and "status" answers "timing" from the one accumulator
     // core/timing::SlotTimingStatistics keeps, over the link the phone already has
@@ -286,23 +286,24 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
-    bool answer_identity(const char* command, const json::Reader& reader);
+    bool answer_identity(link::Command command, const cbor::Reader& frame);
     void challenge();
-    void register_unit(const json::Reader& reader);
+    void register_unit(const cbor::Reader& frame);
     void send_registration();
     bool running_version_text(char* out, size_t capacity) const;
     bool identity_refused_in_flight();
-    void unlock(const json::Reader& reader);
-    void refuse(const char* reason) { acknowledge(false, reason); }
+    void unlock(const cbor::Reader& frame);
+    void refuse(link::Reason reason) { acknowledge(false, reason); }
     template <class Report, class... Arguments>
     void start_report(std::optional<Report>& report, int frame_bytes,
                       const Arguments&... arguments);
     template <class Report>
     void continue_report(std::optional<Report>& report);
-    void hold(uint16_t session_id, const char* json, int bytes);
+    void hold(uint16_t session_id, const uint8_t* frame, int bytes);
     void drop_replies();
-    static const char* flight_name(flight::FlightState state);
-    void request_firmware(const json::Reader& reader);
+    void request_firmware(const cbor::Reader& frame);
+    void stage_settings(const events::RxFrame& frame);
+    void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void install_received_image();
     bool signed_by_trusted_key() const;
     bool on_ground() const { return flight_state_ == flight::FlightState::Ground; }
@@ -336,13 +337,13 @@ class ConfigService {
     uint32_t pending_since_ms_{0};
     ports::ImageVersion approved_version_{};
     char prompt_detail_[kPromptDetailBytes]{};
-    char pending_set_json_[sizeof(events::RxFrame::data) + 1]{0};
+    uint8_t pending_set_frame_[sizeof(events::RxFrame::data)]{};
     static constexpr int kHeldFrameBytes = kTimingFrameBytes;
     static_assert(kHeldFrameBytes >= DiagnosticsReport::kFrameBytes,
                   "a report frame must be holdable");
     static_assert(kHeldFrameBytes >= IdentityLink::kRegistrationFrameBytes,
                   "a registration frame must be holdable");
-    char held_frame_[kHeldFrameBytes]{};
+    uint8_t held_frame_[kHeldFrameBytes]{};
     int held_bytes_{0};
     uint16_t held_for_session_id_{0};
     uint32_t held_since_ms_{0};

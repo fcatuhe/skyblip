@@ -111,7 +111,9 @@ KEEPALIVE int simulator_rx_named() {
 KEEPALIVE int simulator_prompt() {
     return g_simulator.product().screen().prompt() != comms::Pending::None ? 1 : 0;
 }
-KEEPALIVE void simulator_send_config(const char* json) { g_simulator.world().send_config(json); }
+KEEPALIVE int simulator_send_config(const char* json) {
+    return g_simulator.world().send_config(json) ? 1 : 0;
+}
 KEEPALIVE void simulator_name_aircraft(int index, const char* callsign) {
     g_simulator.world().name_aircraft(index, callsign);
 }

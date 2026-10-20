@@ -2,36 +2,36 @@
 
 #include <algorithm>
 
-#include "core/comms/frame_budget.h"
-#include "core/util/format.h"
-#include "core/util/json.h"
+#include "core/comms/link_registry.h"
+#include "core/util/cbor.h"
 
 namespace skyblip::comms {
 
 namespace {
 
-int format_buckets(const timing::SlotTimingStatistics& statistics, bool pps, char* out,
-                   int capacity) {
-    int written = 0;
-    for (int i = 0; i < timing::SlotTimingStatistics::kBuckets && written < capacity - 1; i++) {
-        if (i > 0) out[written++] = ',';
-        written += format_unsigned(out + written,
-                                   pps ? statistics.pps_bucket(i) : statistics.dwell_bucket(i));
-    }
-    out[written] = 0;
-    return written;
+constexpr int kBuckets = timing::SlotTimingStatistics::kBuckets;
+
+int command_bytes() {
+    return cbor::unsigned_entry_bytes(link::kCommandKey,
+                                      static_cast<uint8_t>(link::Command::Timing));
 }
 
 }  // namespace
 
 int TimingReport::field_bytes(const Field& field) {
-    return field.text != nullptr ? frame::string_field_bytes(field.key, field.text)
-                                 : frame::integer_field_bytes(field.key, field.value);
+    switch (field.kind) {
+        case Kind::Unsigned:
+            return cbor::unsigned_entry_bytes(field.key, static_cast<uint64_t>(field.value));
+        case Kind::Integer: return cbor::integer_entry_bytes(field.key, field.value);
+        case Kind::Buckets:
+            return cbor::unsigned_array_entry_bytes(field.key, field.buckets, kBuckets);
+    }
+    return 0;
 }
 
-void TimingReport::add(const char* key, const char* text, long value) {
+void TimingReport::add(uint32_t key, Kind kind, int64_t value, const uint32_t* buckets) {
     if (count_ >= kMaxFields) return;
-    fields_[count_++] = Field{key, text, value};
+    fields_[count_++] = Field{key, kind, value, buckets};
 }
 
 // pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
@@ -40,67 +40,64 @@ void TimingReport::add(const char* key, const char* text, long value) {
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.
 TimingReport::TimingReport(const timing::SlotTimingStatistics& statistics) {
-    format_buckets(statistics, true, pps_buckets_, kBucketsTextBytes);
-    format_buckets(statistics, false, dwell_buckets_, kBucketsTextBytes);
-
-    // Every count goes through frame::counter and not through a cast: the worst_us
-    // pair is signed on both platforms and stays as it is, but a uint32_t sample
-    // count cast straight to long is a negative number on the nRF52 and a correct
-    // one in this suite (core/comms/frame_budget.h).
-    add("pps_us", pps_buckets_, 0);
-    add("pps_worst_us", nullptr, statistics.pps_worst_us());
-    add("pps_samples", nullptr, frame::counter(statistics.pps_samples()));
-    add("dwell_us", dwell_buckets_, 0);
-    add("dwell_worst_us", nullptr, statistics.dwell_worst_us());
-    add("dwell_samples", nullptr, frame::counter(statistics.dwell_samples()));
-    add("holdover_events", nullptr, frame::counter(statistics.holdover_events()));
-    add("missed", nullptr, frame::counter(statistics.missed()));
-    add("refused", nullptr, frame::counter(statistics.refused()));
-    add("switch_hop_us", nullptr, frame::counter(statistics.switch_hop_us()));
-    add("switch_to_o_band_us", nullptr, frame::counter(statistics.switch_to_o_band_us()));
-    add("switch_to_m_band_us", nullptr, frame::counter(statistics.switch_to_m_band_us()));
-    add("late_dwells", nullptr, frame::counter(statistics.late_dwells()));
+    for (int i = 0; i < kBuckets; i++) {
+        pps_buckets_[i] = statistics.pps_bucket(i);
+        dwell_buckets_[i] = statistics.dwell_bucket(i);
+    }
+    add(link::timing_key::kPpsUs, Kind::Buckets, 0, pps_buckets_);
+    add(link::timing_key::kPpsWorstUs, Kind::Integer, statistics.pps_worst_us());
+    add(link::timing_key::kPpsSamples, Kind::Unsigned, statistics.pps_samples());
+    add(link::timing_key::kDwellUs, Kind::Buckets, 0, dwell_buckets_);
+    add(link::timing_key::kDwellWorstUs, Kind::Integer, statistics.dwell_worst_us());
+    add(link::timing_key::kDwellSamples, Kind::Unsigned, statistics.dwell_samples());
+    add(link::timing_key::kHoldoverEvents, Kind::Unsigned, statistics.holdover_events());
+    add(link::timing_key::kMissed, Kind::Unsigned, statistics.missed());
+    add(link::timing_key::kRefused, Kind::Unsigned, statistics.refused());
+    add(link::timing_key::kSwitchHopUs, Kind::Unsigned, statistics.switch_hop_us());
+    add(link::timing_key::kSwitchToOBandUs, Kind::Unsigned, statistics.switch_to_o_band_us());
+    add(link::timing_key::kSwitchToMBandUs, Kind::Unsigned, statistics.switch_to_m_band_us());
+    add(link::timing_key::kLateDwells, Kind::Unsigned, statistics.late_dwells());
 }
 
 bool TimingReport::fits(int payload_bytes) const {
     int widest = 0;
-    for (int i = 0; i < count_; i++) {
-        const int bytes = field_bytes(fields_[i]);
-        widest = std::max(bytes, widest);
-    }
-    frame::Budget budget(payload_bytes);
-    return budget.take(field_bytes(Field{"command", "timing", 0})) &&
-           budget.take(field_bytes(Field{"part", nullptr, count_})) &&
-           budget.take(frame::kMoreFieldBytes) && budget.take(widest);
+    for (int i = 0; i < count_; i++) widest = std::max(field_bytes(fields_[i]), widest);
+    cbor::MapBudget budget(payload_bytes);
+    return budget.take(command_bytes()) &&
+           budget.take(cbor::unsigned_entry_bytes(link::timing_key::kPart, count_)) &&
+           budget.take(cbor::boolean_entry_bytes(link::timing_key::kMore)) && budget.take(widest);
 }
 
-int TimingReport::next_frame(int payload_bytes, char* out, int capacity) {
+int TimingReport::next_frame(int payload_bytes, uint8_t* out, int capacity) {
     if (exhausted()) return 0;
 
-    int room = payload_bytes + 1;
-    room = std::min(room, capacity);
-
-    frame::Budget budget(room - 1);
-    budget.take(field_bytes(Field{"command", "timing", 0}));
-    budget.take(field_bytes(Field{"part", nullptr, part_}));
-    budget.take(frame::kMoreFieldBytes);
+    const int room = std::min(payload_bytes, capacity);
+    cbor::MapBudget budget(room);
+    budget.take(command_bytes());
+    budget.take(cbor::unsigned_entry_bytes(link::timing_key::kPart, part_));
+    budget.take(cbor::boolean_entry_bytes(link::timing_key::kMore));
     int packed = 0;
     while (at_ + packed < count_ && budget.take(field_bytes(fields_[at_ + packed]))) packed++;
     if (packed == 0) return 0;
 
-    json::Writer writer(out, room);
-    writer.add_string("command", "timing");
-    writer.add_integer("part", part_);
-    writer.add_boolean("more", at_ + packed < count_);
+    cbor::Writer writer(out, room);
+    writer.add_code(link::kCommandKey, link::Command::Timing);
+    writer.add_unsigned(link::timing_key::kPart, part_);
+    writer.add_boolean(link::timing_key::kMore, at_ + packed < count_);
     for (int i = 0; i < packed; i++) {
         const Field& field = fields_[at_ + i];
-        if (field.text != nullptr)
-            writer.add_string(field.key, field.text);
-        else
-            writer.add_integer(field.key, field.value);
+        switch (field.kind) {
+            case Kind::Unsigned:
+                writer.add_unsigned(field.key, static_cast<uint64_t>(field.value));
+                break;
+            case Kind::Integer: writer.add_integer(field.key, field.value); break;
+            case Kind::Buckets:
+                writer.add_unsigned_array(field.key, field.buckets, kBuckets);
+                break;
+        }
     }
     const int bytes = writer.finish();
-    if (writer.overflowed()) return 0;
+    if (bytes == 0) return 0;
 
     at_ += packed;
     part_++;

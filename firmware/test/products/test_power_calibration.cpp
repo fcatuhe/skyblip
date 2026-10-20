@@ -12,6 +12,7 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/product_rig.h"
+#include "test/support/settings_link.h"
 
 using namespace skyblip;
 using namespace skyblip::power;
@@ -97,8 +98,7 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     constexpr uint16_t kThisUnitReadsMv = 3850;
 
     go::Settings settings = go::defaults();
-    const char* patch = "{\"battery_offset_mv\":-50}";
-    REQUIRE(go::apply_json(settings, patch, 25) == Status::Ok);
+    REQUIRE(apply_patch(settings, "{\"battery_offset_mv\":-50}") == Status::Ok);
 
     events::BatterySample sample{};
     sample.divider_mv = kThisUnitReadsMv;

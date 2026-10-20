@@ -1,11 +1,11 @@
 // products/skyblip_go/settings.h: the config struct a pilot can change, its defaults,
-// and the two framings it survives in: a versioned CRC blob for flash, JSON for
+// and the two framings it survives in: a versioned CRC blob for flash, CBOR for
 // the companion link. Validation is one function, so no path can store a value
 // another path would refuse.
 //
 // Every field here has a reader outside this module. A page that accepts a
 // setting the firmware ignores is worse than one that does not offer it, so a
-// field that loses its last reader leaves the struct, the JSON and the schema
+// field that loses its last reader leaves the struct, the link and the schema
 // together, and the blob layout is versioned so a device that stored the old
 // one still comes back up as itself.
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SETTINGS_H
@@ -15,7 +15,7 @@
 #include <cstdint>
 
 #include "core/settings/address.h"
-#include "core/util/json.h"
+#include "core/util/cbor.h"
 #include "core/util/result.h"
 
 namespace skyblip::go {
@@ -54,12 +54,9 @@ struct Settings {
     // it. Placed here rather than at the end because a signed 16-bit value after
     // the 32-bit address costs no padding, so the blob is the same length it was.
     //
-    // It is the one field the "config" reply does not carry back. That reply is
-    // one frame at core/comms/config.h's kSmallestSupportedPayloadBytes, its worst
-    // case is already 166 of those 182 bytes, and no honest name for this key
-    // fits in the eight letters that leaves. It is written on the line and read back as the
-    // millivolts the status reply and the panel already show, which is the figure the line is
-    // comparing against a bench supply anyway.
+    // The "config" reply does not carry it back: it is written on the line and read back as
+    // the millivolts the status reply and the panel already show, which is the figure the line
+    // is comparing against a bench supply anyway.
     int16_t battery_offset_mv{0};
     // The radio's frequency trim in tenths of a ppm, positive upwards, applied
     // to every dwell the radio arms (hardware/parts/sx1262). Beside
@@ -68,12 +65,10 @@ struct Settings {
     // correction set on a bench, not a pilot's setting.
     //
     // Like battery_offset_mv it is accepted on "set" and absent from the "get"
-    // reply, for the same reason: that reply is one frame at
-    // core/comms/config.h's kSmallestSupportedPayloadBytes and its worst case leaves
-    // 16 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
-    // reads the value back, so a bench that sets it has to trust its own record
-    // and its spectrum analyser - which is the instrument that had to be there
-    // to know the number in the first place.
+    // reply. Unlike the battery trim there is nothing on the device that reads
+    // the value back, so a bench that sets it has to trust its own record and its
+    // spectrum analyser - which is the instrument that had to be there to know the
+    // number in the first place.
     int16_t frequency_trim_e1_ppm{0};
     // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
@@ -101,17 +96,14 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 // INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
-// companion link's "config" reply can tag them and stay one flat object. Nesting
-// them as an escaped string cost 53 bytes of backslashes on a 158-byte body,
-// which is what pushed that reply past what an iPhone will carry.
-void write_json_fields(json::Writer& writer, const Settings& settings,
-                       settings::AirAddress address);
+// companion link's "config" reply can tag them and stay one flat map.
+void write_config_fields(cbor::Writer& writer, const Settings& settings,
+                         settings::AirAddress address);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
-void write_json_settings(json::Writer& writer, const Settings& settings);
+void write_settings_fields(cbor::Writer& writer, const Settings& settings);
 
-int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity);
-Status apply_json(Settings& settings, const char* json, int length);
+Status apply_settings(Settings& settings, const cbor::Reader& frame);
 
 }  // namespace skyblip::go
 

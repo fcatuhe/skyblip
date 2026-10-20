@@ -153,12 +153,8 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
-    const char* json = "{\"command\":\"set\",\"alarm_volume\":2}";
-    events::RxFrame frame{};
-    frame.endpoint = events::Endpoint::Config;
-    frame.bytes = static_cast<uint16_t>(__builtin_strlen(json));
-    for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
-    rig.platform.link().push_rx(frame);
+    rig.platform.link().push_rx(
+        link_frame(events::Endpoint::Config, 0, "{\"command\":\"set\",\"alarm_volume\":\"loud\"}"));
     rig.run(100, 300);
     rig.product.config_link().config().confirm();
     // The write is a request now, not a call: it coalesces for
@@ -474,5 +470,6 @@ TEST_CASE("product: the range gate's refusals leave the device over the link") {
     rig.platform.link().clear();
     rig.send("{\"command\":\"radio\"}");
     rig.run(now_ms, now_ms + 200);
-    CHECK(rig.platform.link().last().bytes.find("\"range_refused\":1") != std::string::npos);
+    CHECK(link_text(rig.platform.link().last().bytes).find("\"range_refused\":1") !=
+          std::string::npos);
 }

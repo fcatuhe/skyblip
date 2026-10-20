@@ -181,8 +181,9 @@ TEST_CASE("inclinometer: the phone is told what the flash holds for the hub") {
     char expected[17];
     for (int i = 0; i < 8; i++)
         std::snprintf(expected + 2 * i, 3, "%02x", pin[static_cast<size_t>(i)]);
-    CHECK(update_frame(full, 2000).find(std::string("\"imu\":\"") + expected + "\"") !=
-          std::string::npos);
+    const std::string held = update_frame(full, 2000);
+    CHECK(held.find("\"imu\":\"held\",") != std::string::npos);
+    CHECK(held.find(std::string("\"imu_digest\":\"") + expected + "\"") != std::string::npos);
 
     Rig slim;
     slim.platform.set_imu_firmware_linked(false);

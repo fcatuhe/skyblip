@@ -1,5 +1,5 @@
 // The status dump, formatted: one line per subsystem for a laptop on the USB
-// console, and the same table as JSON frames for the companion page. Both
+// console, and the same table as CBOR frames for the companion page. Both
 // surfaces come out of comms::DiagnosticsReport, so this is where it is proved
 // that they carry the same numbers under the same names, that neither is ever
 // truncated, and that reading one does not disturb anything.
@@ -9,8 +9,9 @@
 
 #include "core/comms/config.h"  // kSmallestSupportedPayloadBytes: the ceiling both surfaces answer under
 #include "core/comms/diagnostics.h"
-#include "core/comms/frame_budget.h"
+#include "core/comms/link_registry.h"
 #include "doctest/doctest.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 using namespace skyblip::comms;
@@ -77,8 +78,7 @@ Diagnostics busy_device() {
 }
 
 // Every field at the widest it can be: every counter at the widest value the dump
-// can carry, and the longest word every string field can hold. The counters are
-// handed in wider than that on purpose - see the saturation case below.
+// can carry, and the longest word every string field can hold.
 Diagnostics widest_device() {
     Diagnostics diagnostics{};
     diagnostics.refreshes = 0xFFFFFFFFu;
@@ -134,7 +134,7 @@ Diagnostics widest_device() {
 }
 
 std::string console(const Diagnostics& diagnostics) {
-    DiagnosticsReport report(diagnostics, "diagnostics");
+    DiagnosticsReport report(diagnostics, link::Command::Diagnostics);
     std::string all;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -155,16 +155,22 @@ struct Frames {
     std::string last;
 };
 
-Frames frames(const Diagnostics& diagnostics, int payload, const char* command = "diagnostics") {
+std::string text(const uint8_t* frame, int bytes) {
+    return link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
+}
+
+Frames frames(const Diagnostics& diagnostics, int payload,
+              link::Command command = link::Command::Diagnostics) {
     DiagnosticsReport report(diagnostics, command);
     Frames out;
-    char buffer[DiagnosticsReport::kFrameBytes];
+    uint8_t buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
         const int written = report.next_frame(payload, buffer, static_cast<int>(sizeof(buffer)));
         REQUIRE(written > 0);
         REQUIRE(written <= payload);
-        out.joined += std::string(buffer, static_cast<size_t>(written));
-        out.last = std::string(buffer, static_cast<size_t>(written));
+        out.last = text(buffer, written);
+        REQUIRE(!out.last.empty());
+        out.joined += out.last;
         if (written > out.widest) out.widest = written;
         out.count++;
         REQUIRE(out.count < 32);  // a dump that never ends is a bug, not a report
@@ -199,7 +205,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "supply_warnings=1 "
               "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
 
-    DiagnosticsReport report(busy_device(), "diagnostics");
+    DiagnosticsReport report(busy_device(), link::Command::Diagnostics);
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
     // Past the end is nothing at all, not an empty line a reader would parse.
     char line[DiagnosticsReport::kLineBytes];
@@ -225,11 +231,11 @@ TEST_CASE("diagnostics: the three things that are not a bad reception each have 
 
 // A support case is pasted into an email, so the console form has to stay
 // machine-readable: "CPU LOCKUP" is one value, not two fields.
-TEST_CASE("diagnostics: a text value is quoted on both surfaces, spaces and all") {
+TEST_CASE("diagnostics: a reason is quoted words on the console and its code on the link") {
     Diagnostics diagnostics = busy_device();
     diagnostics.reset = power::ResetReason::Lockup;
     CHECK(has(console(diagnostics), "reset=\"CPU LOCKUP\""));
-    CHECK(has(frames(diagnostics, 182).joined, "\"reset\":\"CPU LOCKUP\""));
+    CHECK(has(frames(diagnostics, 182).joined, "\"reset\":\"lockup\""));
 }
 
 // A cable in the sun is the support case, and this is the only trace it leaves.
@@ -241,14 +247,14 @@ TEST_CASE("diagnostics: the charge window reads out only when there is a cable t
     diagnostics.charge = power::ChargeCondition::TooHot;
     diagnostics.charge_warnings = 3;
     CHECK(has(console(diagnostics), "charge=\"HOT\" charge_warnings=3"));
-    CHECK(has(frames(diagnostics, 182).joined, "\"charge\":\"HOT\""));
+    CHECK(has(frames(diagnostics, 182).joined, "\"charge\":\"too_hot\""));
 }
 
 // The buffer the caller lends is a constant in the header, so the widest line
 // this dump can ever produce has to be measured rather than assumed.
 TEST_CASE("diagnostics: the widest dump every field can produce still fits one console line") {
     const Diagnostics diagnostics = widest_device();
-    DiagnosticsReport report(diagnostics, "diagnostics");
+    DiagnosticsReport report(diagnostics, link::Command::Diagnostics);
     int widest = 0;
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
@@ -260,7 +266,7 @@ TEST_CASE("diagnostics: the widest dump every field can produce still fits one c
     // And a buffer one byte short of the line refuses it whole rather than
     // handing back half a counter.
     char tight[DiagnosticsReport::kLineBytes];
-    DiagnosticsReport again(diagnostics, "diagnostics");
+    DiagnosticsReport again(diagnostics, link::Command::Diagnostics);
     int longest_index = 0;
     for (int i = 0; i < again.line_count(); i++) {
         if (again.line(i, line, static_cast<int>(sizeof(line))) == widest) longest_index = i;
@@ -338,8 +344,11 @@ TEST_CASE("diagnostics: the receiver's own answers reach the dump, named not num
 // object naming the subsystem it belongs to.
 TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry, whole") {
     const Diagnostics diagnostics = widest_device();
-    const Frames narrow = frames(diagnostics, kSmallestSupportedPayloadBytes);
-    CHECK(narrow.widest <= kSmallestSupportedPayloadBytes);
+    const Frames iphone = frames(diagnostics, kSmallestSupportedPayloadBytes);
+    CHECK(iphone.widest <= kSmallestSupportedPayloadBytes);
+    CHECK(iphone.count == DiagnosticsReport::kGroupCount);
+    const Frames narrow = frames(diagnostics, 64);
+    CHECK(narrow.widest <= 64);
     CHECK(narrow.count > DiagnosticsReport::kGroupCount);  // the widest values need a second pass
     CHECK(has(narrow.last, "\"more\":false"));
     // Only the last frame says there is nothing after it.
@@ -363,13 +372,13 @@ TEST_CASE("diagnostics: the link form is frames the negotiated payload can carry
 }
 
 TEST_CASE("diagnostics: a frame never mixes two subsystems") {
-    DiagnosticsReport report(widest_device(), "diagnostics");
-    char buffer[DiagnosticsReport::kFrameBytes];
+    DiagnosticsReport report(widest_device(), link::Command::Diagnostics);
+    uint8_t buffer[DiagnosticsReport::kFrameBytes];
     while (!report.exhausted()) {
         const int written =
             report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
         REQUIRE(written > 0);
-        const std::string body(buffer, static_cast<size_t>(written));
+        const std::string body = text(buffer, written);
         // The radio's keys cannot appear in a frame that says it is the receiver's,
         // whichever way round the report packed them.
         if (has(body, "\"group\":\"gnss\"")) {
@@ -388,30 +397,29 @@ TEST_CASE("diagnostics: a frame never mixes two subsystems") {
 // fault it cannot see is absent.
 TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered short") {
     const Diagnostics diagnostics = widest_device();
-    DiagnosticsReport report(diagnostics, "diagnostics");
+    DiagnosticsReport report(diagnostics, link::Command::Diagnostics);
     CHECK(report.fits(kSmallestSupportedPayloadBytes));
-    // ports::kMinimumLinkPayloadBytes, which is all BLE guarantees: not one worst-case
-    // field plus the four keys that name the frame.
+    // What BLE guarantees cannot carry the receiver's 23-character banner and the frame's keys.
     CHECK_FALSE(report.fits(20));
 
-    char buffer[DiagnosticsReport::kFrameBytes];
-    DiagnosticsReport narrow(diagnostics, "diagnostics");
-    CHECK(narrow.next_frame(20, buffer, sizeof(buffer)) == 0);
+    uint8_t buffer[DiagnosticsReport::kFrameBytes];
+    DiagnosticsReport narrow(diagnostics, link::Command::Diagnostics);
+    CHECK(narrow.next_frame(12, buffer, sizeof(buffer)) == 0);
     CHECK_FALSE(narrow.exhausted());
 }
 
 TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own name") {
     const Diagnostics diagnostics = busy_device();
-    DiagnosticsReport report(diagnostics, "radio", DiagnosticsReport::Group::Radio);
+    DiagnosticsReport report(diagnostics, link::Command::Radio, DiagnosticsReport::Group::Radio);
     CHECK(report.line_count() == 1);
 
-    char buffer[DiagnosticsReport::kFrameBytes];
+    uint8_t buffer[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {
         const int written =
             report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer));
         REQUIRE(written > 0);
-        body += std::string(buffer, static_cast<size_t>(written));
+        body += text(buffer, written);
     }
     CHECK(has(body, "\"command\":\"radio\""));
     CHECK(has(body, "\"group\":\"radio\""));
@@ -421,29 +429,25 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     CHECK_FALSE(has(body, "firmware"));
 }
 
-// A dump is a witness. A witness that consumes its evidence makes the second
-// reader wrong, which is why every read in the collector is a const accessor and
-// why two reports of the same snapshot are the same bytes.
-// json::Writer carries a long, which is 64-bit on this host and 32-bit on the
-// nRF52. A naked cast would therefore print a negative count on the device and a
-// correct one right here, in the suite we look at. So it saturates, at a ceiling
-// no device reaches: 2147483647 receptions is thirteen years of them at 5 Hz.
+// A count is unsigned on the link and on the console, so the widest one is printed whole.
 TEST_CASE("diagnostics: a counter is never printed negative, on any platform") {
     Diagnostics diagnostics{};
     diagnostics.rx_ok = 0xFFFFFFFFu;
     diagnostics.gnss_rejected = 0x80000000u;
     diagnostics.link_drops = 0x7FFFFFFFu;
     const std::string text = console(diagnostics);
-    CHECK(has(text, "rx_ok=2147483647"));
-    CHECK(has(text, "rejected=2147483647"));
+    CHECK(has(text, "rx_ok=4294967295"));
+    CHECK(has(text, "rejected=2147483648"));
     CHECK(has(text, "link_drops=2147483647"));
     // The dBm figures are signed and stay signed; a COUNT never is.
     CHECK(has(text, "noise_dbm=-105"));
-    CHECK_FALSE(has(text, "rx_ok=-"));
-    CHECK_FALSE(has(text, "rejected=-"));
-    CHECK_FALSE(has(frames(diagnostics, 182).joined, "\"rx_ok\":-"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"rx_ok\":4294967295"));
+    CHECK(has(frames(diagnostics, 182).joined, "\"noise_dbm\":-105"));
 }
 
+// A dump is a witness. A witness that consumes its evidence makes the second
+// reader wrong, which is why every read in the collector is a const accessor and
+// why two reports of the same snapshot are the same bytes.
 TEST_CASE("diagnostics: reading the dump neither clears nor changes anything") {
     const Diagnostics diagnostics = busy_device();
     const std::string first = console(diagnostics);
@@ -456,17 +460,20 @@ TEST_CASE("diagnostics: reading the dump neither clears nor changes anything") {
     CHECK(diagnostics.supply_warnings == 1);
 }
 
-// M. The clamp itself, since both link reports now share it and neither of them
-// can reach 2^31 of anything in a test: the dump above proves it through rx_ok,
-// this proves the conversion, and core/comms/timing_report.cpp is the second
-// caller. The ceiling is a saturation and not a wrap, so the widest count still
-// costs ten characters in a frame that was sized before it was written.
-TEST_CASE("diagnostics: the shared counter conversion saturates, and stays ten digits") {
-    CHECK(frame::counter(0u) == 0);
-    CHECK(frame::counter(1000u) == 1000);
-    CHECK(frame::counter(0x7FFFFFFFu) == 2147483647L);
-    CHECK(frame::counter(0x80000000u) == 2147483647L);
-    CHECK(frame::counter(0xFFFFFFFFu) == 2147483647L);
-    CHECK(frame::counter(0xFFFFFFFFu) > 0);
-    CHECK(frame::number_bytes(frame::counter(0xFFFFFFFFu)) == 10);
+// The registry names each key the link carries, and the console prints the same name.
+TEST_CASE("diagnostics: the console and the link name every field alike") {
+    const Diagnostics diagnostics = widest_device();
+    const std::string link = frames(diagnostics, 512).joined;
+    const std::string lines = console(diagnostics);
+    size_t at = 0;
+    int fields = 0;
+    while ((at = lines.find('=', at)) != std::string::npos) {
+        const size_t start = lines.find_last_of(' ', at) + 1;
+        const std::string name = lines.substr(start, at - start);
+        CAPTURE(name);
+        CHECK(has(link, ("\"" + name + "\":").c_str()));
+        fields++;
+        at++;
+    }
+    CHECK(fields == 47);
 }

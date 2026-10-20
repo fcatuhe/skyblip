@@ -6,7 +6,7 @@ Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each
 |---|---|---|
 | `fuzz_air` | the radio: ADS-L, ALP-TAS and the O-band uplink | a receiver (UTC, position), a transmitter's frame, then chip noise |
 | `fuzz_nmea` | the L76K's UART | the byte stream, as the parser's `feed()` sees it |
-| `fuzz_link` | the companion link's Config and Log writes | one write per line, on a whole product |
+| `fuzz_link` | the companion link's Config and Log writes | one action after another, on a whole product |
 
 `make fuzz` builds all three in `build/fuzz/` and runs them in turn, 30 s for `fuzz_nmea`, 60 s for `fuzz_air` and 90 s for `fuzz_link`, which is the slow one. `FUZZ_SECONDS` sets all three at once, and `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
 
@@ -22,19 +22,19 @@ A mutation that breaks a checksum stops at the checksum, and the fuzzer never se
 
 ## The link's input
 
-One line per action, sixteen at most. The first character says who acts, the rest of the line is the write:
+Sixteen actions at most, back to back. A frame is binary CBOR, so no byte can mark the end of one: each action is its byte, then a write's length in two bytes, little-endian, then the write.
 
-| First character | Action |
+| Byte | Action |
 |---|---|
 | `C`, `c` | a Config write from the first or the second app |
 | `L`, `l` | a Log write from the first or the second app |
-| `P` | the pilot confirms whatever prompt is standing: wait for the gesture to arm, press twice |
+| `P` | the pilot confirms whatever prompt is standing: wait for the gesture to arm, press twice. No length, no write |
 
-A write longer than an `events::RxFrame` is dropped, because the ATT layer refuses it on silicon. The logged flight's session id is `1785628800`, which is in the dictionary.
+Any other byte is skipped, and a length past the end of the input takes what is left. A write longer than an `events::RxFrame` is dropped, because the ATT layer refuses it on silicon. The logged flight's session id is `1785628800`, which is in the dictionary as the CBOR integer it travels as. The seeds were written with `scripts/blip_frames.py`, one per conversation: reads, a confirmed `set`, the prompts, the log offload, and an activation signed with the test key of `schemas/activation.v1.vectors.json`.
 
 ## Seeds and dictionaries
 
-`corpus/<name>/` holds hand-written seeds and `<name>.dict` the words the parsers compare against. Both are read-only to a run: new inputs go to `build/fuzz/corpus/<name>/`, which CI caches between runs so the corpus keeps growing. `fuzz_air` needs none: the harness is the transmitter, so every input is already a framed burst.
+`corpus/<name>/` holds the seeds and `<name>.dict` the tokens the parsers compare against: for the link, the action bytes, the command key with each command code, and the CBOR heads the frames open with. Both are read-only to a run: new inputs go to `build/fuzz/corpus/<name>/`, which CI caches between runs so the corpus keeps growing. `fuzz_air` needs none: the harness is the transmitter, so every input is already a framed burst.
 
 ## When one crashes
 

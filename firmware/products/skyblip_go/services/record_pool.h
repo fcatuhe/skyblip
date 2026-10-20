@@ -41,7 +41,7 @@ class RecordPool {
 
     int payload_bytes(uint16_t link_session) const;
     int reply_capacity(uint16_t link_session) const;
-    char* reply_buffer() { return reply_; }
+    uint8_t* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
     // False when the frame was dropped. A link at its share holds it for deliver_held().
     bool send(uint16_t link_session, int bytes);
@@ -67,8 +67,8 @@ class RecordPool {
     bool opened_{false};
     bool available_{false};
 
-    char reply_[comms::kLogReplyBytes]{};
-    char held_[comms::kLogReplyBytes]{};
+    uint8_t reply_[comms::kLogReplyBytes]{};
+    uint8_t held_[comms::kLogReplyBytes]{};
     int held_bytes_{0};
     uint16_t held_link_session_{0};
     uint32_t held_since_ms_{0};

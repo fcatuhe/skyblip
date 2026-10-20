@@ -18,6 +18,7 @@ export async function load(options = {}) {
   const call = (name, ret, args) => module.cwrap(name, ret, args);
   const noArgs = [];
   const oneNumber = ['number'];
+  const sendConfigText = call('simulator_send_config', 'number', ['string']);
 
   const sim = {
     setup: call('simulator_setup', null, noArgs),
@@ -49,7 +50,11 @@ export async function load(options = {}) {
 
     addAircraft: call('simulator_add_aircraft', 'number', Array(9).fill('number')),
     addAircraftAt: call('simulator_add_aircraft_at', null, Array(8).fill('number')),
-    sendConfig: call('simulator_send_config', null, ['string']),
+    sendConfig: (command) => {
+      if (sendConfigText(JSON.stringify(command)) !== 1) {
+        throw new Error(`the link registry has no frame for ${JSON.stringify(command)}`);
+      }
+    },
     prompt: call('simulator_prompt', 'number', noArgs),
     txNamed: call('simulator_tx_named', 'number', noArgs),
     rxNamed: call('simulator_rx_named', 'number', noArgs),

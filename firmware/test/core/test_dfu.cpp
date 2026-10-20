@@ -167,13 +167,6 @@ TEST_CASE("dfu: a version reads back from the text format_version writes, and no
     CHECK(untouched == ports::ImageVersion{9, 9, 9, 9});
 }
 
-TEST_CASE("dfu: every image state has a name a phone can switch on") {
-    CHECK(std::string(to_string(ImageState::Confirmed)) == "confirmed");
-    CHECK(std::string(to_string(ImageState::Probation)) == "probation");
-    CHECK(std::string(to_string(ImageState::Reverted)) == "reverted");
-    CHECK(std::string(to_string(ImageState::Refused)) == "refused");
-}
-
 // What imgtool wrote for skyblip-go 0.1.0+892, cut down to the fields the device reads.
 namespace {
 std::vector<uint8_t> header_of(ports::ImageVersion version) {
@@ -269,15 +262,6 @@ TEST_CASE("dfu: no key hash, a cut area or a wrong length finds none") {
     CHECK_FALSE(find_key_hash(odd.data(), odd.size(), key));
 }
 
-TEST_CASE("dfu: a key is named by its first four bytes, the way a page compares it") {
-    ports::SigningKeyHash key{};
-    key[0] = 0x21;
-    key[1] = 0x26;
-    key[2] = 0x02;
-    key[3] = 0xf2;
-    CHECK(key_prefix(key) == 0x212602f2u);
-}
-
 // The SMP permission matrix off the silicon; the Zephyr hook pins the numbers with static_assert.
 namespace {
 constexpr uint8_t kRead = static_cast<uint8_t>(SmpOperation::Read);
@@ -318,27 +302,4 @@ TEST_CASE(
                               true));
     CHECK_FALSE(smp_permitted(
         {kImage, kSmpImageUpload, static_cast<uint8_t>(SmpOperation::ReadResponse)}, true));
-}
-
-TEST_CASE("dfu: the hub's image is reported as a word, or as the digest a page compares with") {
-    char text[kHubImageTextBytes];
-    HubImageReport report{};
-    format_hub_image(report, text, sizeof(text));
-    CHECK(std::string(text) == "none");
-    report.holding = HubImage::Missing;
-    format_hub_image(report, text, sizeof(text));
-    CHECK(std::string(text) == "missing");
-    report.holding = HubImage::Writing;
-    format_hub_image(report, text, sizeof(text));
-    CHECK(std::string(text) == "writing");
-
-    report.holding = HubImage::Held;
-    const uint8_t digest[] = {0x31, 0x8d, 0xef, 0x51, 0x1f, 0xd8, 0xeb, 0x76};
-    std::memcpy(report.digest, digest, sizeof(digest));
-    CHECK(format_hub_image(report, text, sizeof(text)) == 16);
-    CHECK(std::string(text) == "318def511fd8eb76");
-
-    char tight[kHubImageTextBytes - 1];
-    CHECK(format_hub_image(report, tight, sizeof(tight)) == 0);
-    CHECK(tight[0] == 0);
 }

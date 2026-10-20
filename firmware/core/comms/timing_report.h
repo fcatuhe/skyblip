@@ -26,29 +26,25 @@ class TimingReport {
     // The next frame, written into out. Returns its length, or 0 when the payload
     // is too small to carry a single field - which is a refusal, not a short
     // frame. Advances only when a frame was produced.
-    int next_frame(int payload_bytes, char* out, int capacity);
+    int next_frame(int payload_bytes, uint8_t* out, int capacity);
 
    private:
-    // One key and its value, measurable before it is written. text != nullptr
-    // means a string value.
+    enum class Kind : uint8_t { Unsigned, Integer, Buckets };
+
     struct Field {
-        const char* key;
-        const char* text;
-        long value;
+        uint32_t key;
+        Kind kind;
+        int64_t value;
+        const uint32_t* buckets;
     };
 
-    // Seven counts, comma-joined: cheaper than a JSON array over a FLAT-JSON
-    // writer that does not have one, and just as readable on a bench terminal.
-    // Room for the widest count a bucket can reach.
-    static constexpr int kBucketsTextBytes = timing::SlotTimingStatistics::kBuckets * 11 + 1;
     static constexpr int kMaxFields = 13;
 
-    void add(const char* key, const char* text, long value);
-    // "key":value, excluding the comma that joins it to the field before it.
+    void add(uint32_t key, Kind kind, int64_t value, const uint32_t* buckets = nullptr);
     static int field_bytes(const Field& field);
 
-    char pps_buckets_[kBucketsTextBytes]{};
-    char dwell_buckets_[kBucketsTextBytes]{};
+    uint32_t pps_buckets_[timing::SlotTimingStatistics::kBuckets]{};
+    uint32_t dwell_buckets_[timing::SlotTimingStatistics::kBuckets]{};
     Field fields_[kMaxFields]{};
     int count_{0};
     int at_{0};

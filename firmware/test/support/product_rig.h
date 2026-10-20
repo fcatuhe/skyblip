@@ -14,6 +14,7 @@
 #include "hardware/platform/host/platform.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/product.h"
+#include "test/support/config_frame.h"
 
 namespace skyblip {
 
@@ -232,11 +233,11 @@ struct Rig {
     void drop_link(uint16_t session_id) { platform.link().drop_link(session_id); }
     bool link_up() { return product.config_link().config().link_up(); }
 
-    // The last thing the device said on one endpoint, the NMEA broadcast aside.
+    // The last thing the device said on one endpoint, the NMEA broadcast aside, named in JSON.
     std::string last_on(events::Endpoint endpoint) {
         const auto& sent = platform.link().sent;
         for (auto it = sent.rbegin(); it != sent.rend(); ++it)
-            if (it->endpoint == endpoint) return it->bytes;
+            if (it->endpoint == endpoint) return link_text(it->bytes);
         return std::string();
     }
 
@@ -249,12 +250,7 @@ struct Rig {
 
     // Which app is talking, because config and the log answer one of them.
     void send_from(uint16_t session_id, const char* json) {
-        events::RxFrame frame{};
-        frame.session_id = session_id;
-        frame.endpoint = events::Endpoint::Config;
-        frame.bytes = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.bytes);
-        platform.link().push_rx(frame);
+        platform.link().push_rx(link_frame(events::Endpoint::Config, session_id, json));
     }
 
     // The same app on the log endpoint, which is a separate characteristic and
@@ -265,12 +261,7 @@ struct Rig {
     }
 
     void send_log_from(uint16_t session_id, const char* json) {
-        events::RxFrame frame{};
-        frame.session_id = session_id;
-        frame.endpoint = events::Endpoint::Log;
-        frame.bytes = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.bytes);
-        platform.link().push_rx(frame);
+        platform.link().push_rx(link_frame(events::Endpoint::Log, session_id, json));
     }
 
     uint32_t utc_offset_s{0};

@@ -255,7 +255,7 @@ uint32_t RecordStore::sessions_within(uint32_t sectors) const {
 
 void RecordStore::reply(uint16_t link_session, int bytes) { pool_.send(link_session, bytes); }
 
-void RecordStore::acknowledge(uint16_t link_session, bool ok, const char* reason) {
+void RecordStore::acknowledge(uint16_t link_session, bool ok, link::Reason reason) {
     reply(link_session,
           comms::format_log_acknowledgement(
               pool_.reply_buffer(), pool_.reply_capacity(link_session), ok, reason, selector()));
@@ -267,7 +267,7 @@ void RecordStore::serve(const comms::LogRequest& request) {
         case comms::LogCommand::Read: answer_read(request); break;
         case comms::LogCommand::Erase:
         case comms::LogCommand::None:
-            acknowledge(request.link_session, false, "unknown_command");
+            acknowledge(request.link_session, false, link::Reason::UnknownCommand);
             break;
     }
 }
@@ -282,7 +282,7 @@ void RecordStore::answer_list(const comms::LogRequest& request) {
         return;
     }
     if (request.index >= session_count_) {
-        acknowledge(link_session, false, "no_session");
+        acknowledge(link_session, false, link::Reason::NoSession);
         return;
     }
     const SessionInfo& entry = index_[request.index];
@@ -300,17 +300,17 @@ void RecordStore::answer_read(const comms::LogRequest& request) {
         entry = find(request.session);
     }
     if (entry == nullptr) {
-        acknowledge(link_session, false, "no_session");
+        acknowledge(link_session, false, link::Reason::NoSession);
         return;
     }
     const int per_chunk =
         comms::log_records_per_chunk(pool_.payload_bytes(link_session), selector());
     if (per_chunk == 0) {
-        acknowledge(link_session, false, "payload");
+        acknowledge(link_session, false, link::Reason::Payload);
         return;
     }
     if (ring_.slots_per_sector() == 0 || ring_.sector_count() == 0) {
-        acknowledge(link_session, false, "no_storage");
+        acknowledge(link_session, false, link::Reason::NoStorage);
         return;
     }
 
@@ -333,7 +333,7 @@ void RecordStore::continue_read() {
         const comms::LogChunkSpan span = reading_.window.at(reading_.next);
         if (!read_records(reading_.session, span.from, span.records)) {
             reading_.active = false;
-            acknowledge(link_session, false, "read_failed");
+            acknowledge(link_session, false, link::Reason::ReadFailed);
             return;
         }
         const bool sent = pool_.send(

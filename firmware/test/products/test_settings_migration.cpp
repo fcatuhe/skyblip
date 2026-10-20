@@ -7,9 +7,9 @@
 #include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
-#include "core/util/json.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/settings_link.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -301,15 +301,10 @@ TEST_CASE("settings: a blob written by version-7 firmware comes back without its
     CHECK(out.alarm_volume == AlarmVolume::Loud);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
-    char buffer[256];
-    const int written =
-        to_json(out, settings::address_of(0x3456), buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader reader(buffer, written);
-    long value = 0;
-    CHECK(reader.read_integer("address", value));
-    CHECK(value == 0x003456);  // the unlock code's, not the 0xDD1234 that blob carried
-    CHECK(reader.read_integer("address_mapping_table", value));
-    CHECK(value == 58);
+    const std::string json = config_fields(out, settings::address_of(0x3456));
+    CHECK(json.find("\"address\":13398,") !=
+          std::string::npos);  // the unlock code's, not the 0xDD1234 that blob carried
+    CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 
 // L, the migration: the two settings that left take their stored bytes with them.

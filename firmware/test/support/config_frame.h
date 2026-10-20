@@ -1,23 +1,36 @@
-// Harness, not a test: a JSON request as it arrives on the Config endpoint, from a known device.
+// Harness, not a test: a request as a companion app writes it, named in JSON and sent as CBOR.
 #ifndef SKYBLIP_TEST_SUPPORT_CONFIG_FRAME_H
 #define SKYBLIP_TEST_SUPPORT_CONFIG_FRAME_H
 
 #include <cstdint>
-#include <cstring>
+#include <string>
 
 #include "core/events/link.h"
 #include "core/identity/activation.h"
+#include "simulator/world/link_text.h"
 
 namespace skyblip {
 
 inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
-inline events::RxFrame config_frame(const char* json) {
+
+inline events::RxFrame link_frame(events::Endpoint endpoint, uint16_t session_id,
+                                  const char* json) {
     events::RxFrame frame{};
-    frame.session_id = 1;
-    frame.endpoint = events::Endpoint::Config;
-    frame.bytes = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(frame.data.data(), json, frame.bytes);
+    frame.session_id = session_id;
+    frame.endpoint = endpoint;
+    const int bytes = simulator::link_text::frame_from_text(json, frame.data.data(),
+                                                            static_cast<int>(frame.data.size()));
+    if (bytes == 0) __builtin_trap();
+    frame.bytes = static_cast<uint16_t>(bytes);
     return frame;
+}
+
+inline events::RxFrame config_frame(const char* json) {
+    return link_frame(events::Endpoint::Config, 1, json);
+}
+
+inline std::string link_text(const std::string& frame) {
+    return simulator::link_text::text_from_frame(frame);
 }
 
 }  // namespace skyblip

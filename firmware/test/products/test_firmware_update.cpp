@@ -69,8 +69,10 @@ void install_and_swap(Rig& rig) {
 
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
 std::string update_frame(Rig& rig) {
-    for (const auto& frame : rig.platform.link().sent)
-        if (frame.bytes.find("\"command\":\"update\"") != std::string::npos) return frame.bytes;
+    for (const auto& frame : rig.platform.link().sent) {
+        const std::string text = link_text(frame.bytes);
+        if (text.find("\"command\":\"update\"") != std::string::npos) return text;
+    }
     return "";
 }
 
