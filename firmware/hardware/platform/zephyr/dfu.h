@@ -128,7 +128,7 @@ class Dfu : public ports::Dfu {
         out.major = header.h.v1.sem_ver.major;
         out.minor = header.h.v1.sem_ver.minor;
         out.revision = header.h.v1.sem_ver.revision;
-        out.build = header.h.v1.sem_ver.build_number;
+        out.build = header.h.v1.sem_ver.build_num;
         return true;
     }
 

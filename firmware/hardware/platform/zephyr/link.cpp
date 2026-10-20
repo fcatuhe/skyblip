@@ -292,7 +292,7 @@ Status Link::advertise_as(const char* name) {
     }
     next->name[name_bytes] = 0;
     next->scan_data[0].type = BT_DATA_NAME_COMPLETE;
-    next->scan_data[0].data_length = static_cast<uint8_t>(name_bytes);
+    next->scan_data[0].data_len = static_cast<uint8_t>(name_bytes);
     next->scan_data[0].data = reinterpret_cast<const uint8_t*>(next->name);
     atomic_ptr_set(&g_response, next);
 
