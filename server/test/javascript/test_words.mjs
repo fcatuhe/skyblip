@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { LINK_REGISTRY } from '#skyblip/link_registry';
+
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 const PAGES = ['../../content/pages/manage.html.erb', '../../content/pages/manage.fr.html.erb'];
@@ -28,15 +30,24 @@ const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lo
 
 const words = (path, kind = 'manage') => new Set([...read(path).matchAll(new RegExp(`data-${kind}-word="(\\w+)"`, 'g'))].map(match => match[1]));
 
+const pascal = name => name.replace(/(?:^|_)(\w)/g, (_, letter) => letter.toUpperCase());
+const REASONS = new Map(LINK_REGISTRY.enums.reason.values.map(({ name }) => [pascal(name), name]));
+
+function reasonsIn(path, call) {
+  const source = read(path).replace(/\/\/.*$/gm, '');
+  const enumerators = [...source.matchAll(new RegExp(`${call}link::Reason::(\\w+)\\)`, 'g'))].map(match => match[1]);
+  return [...new Set(enumerators)].map(enumerator => {
+    assert.ok(REASONS.has(enumerator), `${path} refuses with link::Reason::${enumerator}, which the registry does not name`);
+    return REASONS.get(enumerator);
+  });
+}
+
 function identityRefusals() {
-  const source = read(IDENTITY).replace(/\/\/.*$/gm, '');
-  return [...new Set([...source.matchAll(/refuse\("(\w+)"\)/g)].map(match => match[1]))];
+  return reasonsIn(IDENTITY, 'refuse\\(');
 }
 
 function firmwareRefusals() {
-  const source = read(CONFIG);
-  const acked = [...source.matchAll(/acknowledge\(false, "(\w+)"\)/g)].map(match => match[1]);
-  return [...new Set(acked)].filter(reason => !NEVER_ASKED_BY_THE_PAGE.has(reason));
+  return reasonsIn(CONFIG, 'acknowledge\\(false, ').filter(reason => !NEVER_ASKED_BY_THE_PAGE.has(reason));
 }
 
 test('the firmware still refuses with the reasons this test reads', () => {
