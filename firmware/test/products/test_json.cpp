@@ -2,10 +2,10 @@
 #include <cstring>
 #include <string>
 
-#include "core/util/json.h"
 #include "doctest/doctest.h"
+#include "simulator/world/json.h"
 
-using namespace skyblip;
+using namespace skyblip::simulator;
 
 TEST_CASE("json: the reader parses integers, booleans and strings") {
     const char* j = "{\"a\":42,\"b\":true,\"c\":\"hi\",\"d\":-7}";

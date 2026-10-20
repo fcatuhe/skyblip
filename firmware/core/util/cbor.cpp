@@ -293,11 +293,6 @@ bool Reader::find(uint32_t key, Entry& out) const {
     return false;
 }
 
-bool Reader::has(uint32_t key) const {
-    Entry entry;
-    return find(key, entry);
-}
-
 Result<uint32_t> Reader::read_unsigned(uint32_t key) const {
     Entry entry;
     if (!find(key, entry)) return Status::NotFound;

@@ -243,6 +243,5 @@ TEST_CASE("cbor: the reader refuses what the deterministic subset does not allow
 TEST_CASE("cbor: nothing is found in a frame the reader refused") {
     const cbor::Reader reader = reader_of(bytes_of({0xA1, 0x00, 0x18, 0x05}));
     CHECK(reader.count() == 0);
-    CHECK_FALSE(reader.has(0));
     CHECK(reader.read_unsigned(0).status() == Status::NotFound);
 }

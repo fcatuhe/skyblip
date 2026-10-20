@@ -1,8 +1,8 @@
-#include "core/util/json.h"
+#include "simulator/world/json.h"
 
 #include <cstring>
 
-namespace skyblip::json {
+namespace skyblip::simulator::json {
 
 namespace {
 bool is_whitespace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }

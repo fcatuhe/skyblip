@@ -3,14 +3,14 @@
 #include <cstdio>
 #include <cstring>
 
-#include "core/util/json.h"
+#include "simulator/world/json.h"
 
 namespace skyblip::simulator {
 
 namespace {
 
 // Split "[{...},{...}]" into its object substrings. The flat reader in
-// core/util/json then handles each object, so nothing here re-implements
+// simulator/world/json then handles each object, so nothing here re-implements
 // number or string parsing.
 std::vector<std::string> objects_in_array(const std::string& text, const char* key) {
     std::vector<std::string> out;

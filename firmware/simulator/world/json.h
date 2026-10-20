@@ -1,11 +1,10 @@
-// core/util/json.h: a tiny, allocation-free reader for FLAT JSON
-#ifndef SKYBLIP_CORE_UTIL_JSON_H
-#define SKYBLIP_CORE_UTIL_JSON_H
+#ifndef SKYBLIP_SIMULATOR_WORLD_JSON_H
+#define SKYBLIP_SIMULATOR_WORLD_JSON_H
 
 #include <cstddef>
 #include <cstdint>
 
-namespace skyblip::json {
+namespace skyblip::simulator::json {
 
 class Reader {
    public:

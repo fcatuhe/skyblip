@@ -5,7 +5,7 @@
 #include "core/comms/link_registry.h"
 #include "core/util/cbor.h"
 #include "core/util/hex.h"
-#include "core/util/json.h"
+#include "simulator/world/json.h"
 #include "simulator/world/link_names.h"
 
 namespace skyblip::simulator::link_text {

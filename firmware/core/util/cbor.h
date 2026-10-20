@@ -91,7 +91,6 @@ class Reader {
     bool valid() const { return valid_; }
     int count() const { return valid_ ? count_ : 0; }
     bool entry(int index, Entry& out) const;
-    bool has(uint32_t key) const;
 
     Result<uint32_t> read_unsigned(uint32_t key) const;
     Result<int32_t> read_integer(uint32_t key) const;
