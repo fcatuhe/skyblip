@@ -1,6 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
 import { connect } from "#skyblip/ble"
-import { LINK, current } from "#skyblip/legacy_dialect"
 
 const COMMANDS = ["get", "defaults", "status", "timing", "flash", "radio", "update", "diagnostics"]
 
@@ -88,11 +87,7 @@ export default class extends Controller {
       this.write("replies", "not JSON: " + error.message, "bad")
       return
     }
-    if (body === null || typeof body !== "object" || Array.isArray(body)) {
-      this.write("replies", "not a JSON object", "bad")
-      return
-    }
-    await this.command(current(LINK, body))
+    await this.command(body)
     this.field("json").value = ""
   }
 

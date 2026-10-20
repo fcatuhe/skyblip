@@ -69,17 +69,6 @@ test('activating asks the server, then the glass, then stores the unlock code an
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
 });
 
-test('a unit from before #151 is activated in its own words', async () => {
-  const { unit, activator, until } = await connected({ legacy: true });
-  activator.activate();
-  await until(confirming);
-  unit.press();
-  const done = await until(state => state.notice?.key === 'activated' && state.address);
-  assert.equal(done.address, '000001');
-  assert.deepEqual(unit.heard.map(frame => Object.keys(frame).filter(key => key === 'cmd' || key === 'command')),
-    [['cmd', 'command'], ['cmd'], ['cmd'], ['cmd'], ['cmd']]);
-});
-
 test('a unit activated again keeps its serial', async () => {
   const server = new FakeServer();
   for (let round = 0; round < 2; round++) {

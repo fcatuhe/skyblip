@@ -1,11 +1,9 @@
-import { currentSimulator } from '#skyblip/legacy_dialect';
-
 export async function mountSimulator(element, src, manifest, signal) {
   const { load, PAGES, ALARM, DWELL, SHUTDOWN, REFRESH } = await import(src);
 
   const SIM = {};
 
-  const f = currentSimulator(await load());
+  const f = await load();
   if (signal.aborted) return;
   let frame;
   const startedAt = performance.now();

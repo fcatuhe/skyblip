@@ -1,5 +1,3 @@
-import { Dialect } from '#skyblip/legacy_dialect';
-
 export const UUID = {
   nus: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
   nusRx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
@@ -94,29 +92,20 @@ async function openStream(server, onLine) {
   return { write: chr, transport: 'HM-10' };
 }
 
-async function openConfig(server, dialect, onReply) {
+async function openConfig(server, onReply) {
   const svc = await serviceOrNull(server, UUID.skyblip);
   if (!svc) return null;
   const chr = await svc.getCharacteristic(UUID.config);
   await chr.startNotifications();
   chr.addEventListener('characteristicvaluechanged', event => {
     const text = decoder.decode(event.target.value);
-    const frame = parsed(text);
-    onReply(isObject(frame) ? dialect.receive(frame) : frame, text);
+    try {
+      onReply(JSON.parse(text), text);
+    } catch {
+      onReply(null, text);
+    }
   });
   return chr;
-}
-
-function parsed(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function openSmp(server, onSmp) {
@@ -143,8 +132,7 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
   device.addEventListener('gattserverdisconnected', () => onClose(device.name));
 
   const stream = onLine ? await openStream(server, onLine) : null;
-  const dialect = new Dialect();
-  const config = await openConfig(server, dialect, onReply);
+  const config = await openConfig(server, onReply);
   const smp = onSmp ? await openSmp(server, onSmp) : null;
   if (!stream && !config) throw new Error('No serial or config service on this device.');
   const exclusive = gattQueue();
@@ -166,7 +154,7 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
     // INFO: fc 19sep26 One write is one command: a truncated "set" applies the fields that survived.
     async sendConfig(command) {
       if (!config) throw new Error('This device has no config endpoint.');
-      const bytes = encoder.encode(JSON.stringify(dialect.send(command)));
+      const bytes = encoder.encode(JSON.stringify(command));
       await exclusive(() => config.writeValueWithResponse(bytes));
     },
 

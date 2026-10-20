@@ -327,14 +327,14 @@ test('an update frame arriving later replaces the one before it', async () => {
 
 test('a status frame from before #87 hides a gauge that has no divider', async () => {
   const { device, until } = await connected();
-  device.push({ cmd: 'status', reset: 'POWER ON', flight: 'ground', upload: false, battery_percent: 0, battery_valid: false, charging: false, power_level: '--' });
+  device.push({ command: 'status', reset: 'POWER ON', flight: 'ground', upload: false, battery_percent: 0, battery_valid: false, charging: false, power_level: '--' });
   const { status } = await until(state => state.status.powerLevel === '--');
   assert.equal(status.batteryPercent, null);
 });
 
 test('a status frame from #87 says the cell went flat, and has no percent until the gauge reads', async () => {
   const { device, until } = await connected();
-  device.push({ cmd: 'status', flight: 'ground', upload: false, charging: true, power_level: 'LOW', went_dark_flat: true });
+  device.push({ command: 'status', flight: 'ground', upload: false, charging: true, power_level: 'LOW', went_dark_flat: true });
   const { status } = await until(state => state.status.wentDarkFlat);
   assert.equal(status.batteryPercent, null);
   assert.equal(status.charging, true);

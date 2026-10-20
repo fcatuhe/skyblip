@@ -1,5 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import { currentSimulator } from "#skyblip/legacy_dialect"
 
 const MAX_CATCHUP_MS = 250
 const ACTIVATION_KEYS = [" ", "Enter"]
@@ -172,7 +171,7 @@ export default class extends Controller {
     const { load, PAGES } = await import(this.srcValue)
     if (generation !== this.#generation) return
     this.pages = PAGES
-    const sim = currentSimulator(await load())
+    const sim = await load()
     if (generation !== this.#generation) return
     this.sim = sim
     this.departures = new Map()

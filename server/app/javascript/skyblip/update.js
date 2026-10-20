@@ -223,6 +223,7 @@ export class Updater {
     await this.#send({ command: 'update' });
     await this.#send({ command: 'status' });
     await this.#send({ command: 'get' });
+    await this.#send({ command: 'defaults' });
     try {
       this.#packetBytes = await packetBudget(this.#smp);
       this.#running = parseVersion(await runningVersion(this.#smp));
@@ -254,15 +255,9 @@ export class Updater {
     if (!reply) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.command === 'config') this.#configured(reply);
+    else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
     else if ('acknowledge' in reply) this.#acked(reply);
-  }
-
-  // INFO: fc 20oct26 asked once the unit has answered, in one dialect: doubled, it outgrows the 36 bytes an old unit reassembles
-  #configured(reply) {
-    if (!this.#state.settings) this.#send({ command: 'defaults' });
-    this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
   }
 
   #acked(reply) {

@@ -17,10 +17,6 @@ export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
 export const PRODUCTION_KEY = 0xb2;
 export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 2, units: 0, callsign: '' };
-// INFO: fc 20oct26 the words firmware before #151 used for the fake's own, written out here rather than read from the table under test
-const LEGACY_KEYS = { command: 'cmd', acknowledge: 'ack', alarm_enabled: 'alarm', die_temperature_c: 'die_temp_c' };
-const LEGACY_REASONS = { unknown_command: 'unknown_cmd' };
-const CURRENT_KEYS = Object.fromEntries(Object.entries(LEGACY_KEYS).map(([name, word]) => [word, name]));
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const IMAGE_HEADER_BYTES = 32;
 const TLV_INFO = 0x6907;
@@ -89,11 +85,10 @@ export class FakeSkyblip {
     downgrade = false,
     address = 0x00012a,
     identityNames = true,
-    legacy = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, identityNames });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, legacy });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -105,7 +100,6 @@ export class FakeSkyblip {
     this.finished = false;
     this.upload = null;
     this.commands = [];
-    this.heard = [];
     this.uploadOffsets = [];
     this.longestWrite = 0;
     this.longestAttempt = 0;
@@ -207,25 +201,15 @@ export class FakeSkyblip {
   }
 
   reply(json) {
-    const frame = this.legacy ? legacyWords(json) : json;
-    setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(frame))));
+    setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(json))));
   }
 
   acknowledge(ok, reason) {
     this.reply({ acknowledge: ok, reason });
   }
 
-  // INFO: fc 20oct26 each firmware's flat reader takes its own keys and ignores the other dialect's
-  read(bytes) {
-    const frame = JSON.parse(decoder.decode(bytes));
-    this.heard.push(frame);
-    const othersWords = this.legacy ? LEGACY_KEYS : CURRENT_KEYS;
-    const own = Object.entries(frame).filter(([key]) => !Object.hasOwn(othersWords, key));
-    return Object.fromEntries(this.legacy ? own.map(([key, value]) => [Object.hasOwn(CURRENT_KEYS, key) ? CURRENT_KEYS[key] : key, value]) : own);
-  }
-
   onConfig(bytes) {
-    this.answer(this.read(bytes));
+    this.answer(JSON.parse(decoder.decode(bytes)));
   }
 
   answer({ command, ...fields }) {
@@ -468,12 +452,6 @@ function tlvArea(magic, entries) {
     at += 4 + value.length;
   }
   return area;
-}
-
-function legacyWords(frame) {
-  const words = Object.fromEntries(Object.entries(frame).map(([key, value]) => [Object.hasOwn(LEGACY_KEYS, key) ? LEGACY_KEYS[key] : key, value]));
-  if (Object.hasOwn(LEGACY_REASONS, words.reason)) words.reason = LEGACY_REASONS[words.reason];
-  return words;
 }
 
 function keyName(byte) {
