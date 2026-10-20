@@ -466,7 +466,7 @@ class Link:
         await self.client.write_gatt_char(LOG_CHAR, self.encoded(body), response=True)
 
     def encoded(self, body):
-        return json.dumps(self.dialect.send(body)).encode()
+        return json.dumps(self.dialect.send(body), separators=(",", ":")).encode()
 
     async def frame(self, timeout):
         try:
