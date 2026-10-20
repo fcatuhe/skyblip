@@ -16,4 +16,4 @@ None of this is anybody's to change, because none of it is stored as a setting. 
 
 The split is what lets two products keep different settings without two copies of the framing, and it is why the CRC is tested here against a payload that is not anybody's `Settings`.
 
-The companion link's side of the same line is `core/comms/config_store.h`: `comms::ConfigService` speaks JSON in and JSON out, and the product hands it the two calls that turn its own struct into that.
+The companion link's side of the same line is `core/comms/config_store.h`: `comms::ConfigService` reads and writes the link's CBOR frames, and the product hands it the calls that turn its own struct into their fields and a `set` back into it.

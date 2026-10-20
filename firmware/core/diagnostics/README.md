@@ -16,7 +16,7 @@ What it deliberately does not hold:
 |---|---|
 | the flash writing, the sector ring, the recovery scan | `core/store/`, and the service that owns the partition |
 | the CRC over a record | the sector label's, `core/store/sector.h`: this geometry has no room for one, and the torn tail is answered by the `End` marker below |
-| the BLE offload, the chunking, the base64 | `core/comms/log_link.h`, shared with the flights store |
+| the BLE offload and the chunking | `core/comms/log_link.h`, shared with the flights store |
 | the taps that fill these records | the services in `products/`, one call each, behind `armed()`: the table below says which |
 | where the capture is armed from | the product's diagnostics screen, `products/skyblip_go/pages/capture.cpp` |
 | draining this ring to flash | `products/skyblip_go/services/capture.cpp`, over the store both logs share |
@@ -26,7 +26,7 @@ The armed flag lives in RAM and in nothing else. It is not a setting, it is neve
 
 ## The record
 
-24 bytes, the same geometry as `flight::LogRecord`, because the sector ring, the chunking, the base64 and the resumable offload are the flights store's and must not be written twice.
+24 bytes, the same geometry as `flight::LogRecord`, because the sector ring, the chunking and the resumable offload are the flights store's and must not be written twice.
 
 | Offset | Bytes | Field |
 |---|---|---|
