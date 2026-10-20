@@ -428,6 +428,16 @@ TEST_CASE("gnss: the receiver names itself in a $GPTXT, and the version is kept"
     CHECK(strcmp(parser.firmware_version(), "URANUS5,V5.1.0.0") == 0);
 }
 
+// A raw byte copied into the banner made the diagnostics frame carrying it text no reader takes.
+TEST_CASE("gnss: a banner keeps its printable ASCII only, whatever bytes the checksum covered") {
+    NmeaParser parser;
+    CHECK(parse(parser, checksummed("GPTXT,01,01,02,SW=URAN\xC3US5,V5.1\x01.0\xFF.0\x7F")));
+    CHECK(strcmp(parser.firmware_version(), "URANUS5,V5.1.0.0") == 0);
+
+    CHECK_FALSE(parse(parser, checksummed("GPTXT,01,01,02,SW=\xC3\xA9")));
+    CHECK(strcmp(parser.firmware_version(), "URANUS5,V5.1.0.0") == 0);
+}
+
 TEST_CASE("gnss: corrupt checksum is rejected, no update") {
     NmeaParser parser;
     const char* bad = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*00";
