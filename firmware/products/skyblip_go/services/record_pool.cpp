@@ -117,7 +117,7 @@ void RecordPool::refuse_too_wide(uint16_t link_session, comms::LogStore store) {
 }
 
 bool RecordPool::deliver(uint16_t link_session, int bytes) {
-    if (bytes <= 0 || bytes > payload_bytes(link_session) || holding()) {
+    if (bytes <= 0 || holding()) {
         link_drops_++;
         return false;
     }
