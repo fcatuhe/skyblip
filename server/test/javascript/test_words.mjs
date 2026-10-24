@@ -17,7 +17,7 @@ const DEVICE_NOTES = [
   'probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat',
   'imu_writing', 'no_key', 'not_activated',
 ];
-const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version']);
+const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version', 'invalid']);
 
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
 const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
