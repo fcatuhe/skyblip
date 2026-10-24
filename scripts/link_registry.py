@@ -146,12 +146,15 @@ def names_header(registry):
              "#define SKYBLIP_SIMULATOR_WORLD_LINK_NAMES_H", "", "#include <cstdint>", "",
              "#include \"core/events/link.h\"", "", "namespace skyblip::simulator::link_names {", "",
              "enum class Type : uint8_t { %s };" % ", ".join(CPP_TYPES[kind] for kind in TYPES), "",
+             "enum class Sender : uint8_t { %s };" % ", ".join(pascal(sender) for sender in SENDERS),
+             "",
              "struct Value {", "    const char* name;", "    uint32_t code;", "};", "",
              "struct Enumeration {", "    const Value* values;", "    int count;", "};", "",
              "struct Key {", "    const char* name;", "    uint32_t number;", "    Type type;",
-             "    const Enumeration* enumeration;", "    int bytes;", "};", "",
+             "    const Enumeration* enumeration;", "    int bytes;", "    bool required;", "};", "",
              "struct Frame {", "    const char* command;", "    uint32_t code;",
-             "    events::Endpoint endpoint;", "    const Key* keys;", "    int count;", "};", ""]
+             "    events::Endpoint endpoint;", "    Sender sender;", "    const Key* keys;",
+             "    int count;", "};", ""]
     for name, enum in registry["enums"].items():
         lines.append("inline constexpr Value k%sValues[] = {" % pascal(name))
         for value in enum["values"]:
@@ -164,16 +167,16 @@ def names_header(registry):
         lines.append("inline constexpr Key k%sKeys[] = {" % pascal(frame["command"]))
         for key in frame["keys"]:
             enumeration = "&k%s" % pascal(key["enum"]) if key["type"] == "enum" else "nullptr"
-            lines.append("    {\"%s\", %d, Type::%s, %s, %d}," % (
+            lines.append("    {\"%s\", %d, Type::%s, %s, %d, %s}," % (
                 key["name"], key["number"], CPP_TYPES[key["type"]], enumeration,
-                key.get("bytes", 0)))
+                key.get("bytes", 0), "true" if key.get("required") else "false"))
         lines += ["};", ""]
     lines.append("inline constexpr Frame kFrames[] = {")
     for frame in registry["frames"]:
         table = pascal(frame.get("keys_of", frame["command"]))
-        lines.append("    {\"%s\", %d, events::Endpoint::%s, k%sKeys, %d}," % (
-            frame["command"], frame["code"], pascal(frame["endpoint"]), table,
-            len(frame["keys"])))
+        lines.append("    {\"%s\", %d, events::Endpoint::%s, Sender::%s, k%sKeys, %d}," % (
+            frame["command"], frame["code"], pascal(frame["endpoint"]), pascal(frame["sender"]),
+            table, len(frame["keys"])))
     lines += ["};", "", "}", "", "#endif"]
     return "\n".join(lines) + "\n"
 
