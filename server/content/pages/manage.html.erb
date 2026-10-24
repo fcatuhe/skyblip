@@ -37,10 +37,10 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
           callsign: "Callsign",
           callsign_hint: "Up to nine letters, digits, dashes or blanks. Empty transmits no name.",
           units: "Units",
-          unit_names: ["Nautical: NM and kt", "Metric: km and km/h"],
+          unit_names: { nautical: "Nautical: NM and kt", metric: "Metric: km and km/h" },
           alarm_enabled: "Alarm sound",
           alarm_volume: "Alarm volume",
-          volume_names: ["Off", "Soft", "Loud"],
+          volume_names: { off: "Off", soft: "Soft", loud: "Loud" },
           save: "Save",
           reset: "Back to defaults",
           default: "Default: %{value}",
@@ -205,6 +205,7 @@ description: New firmware and settings for a skyBlip Go from your browser, over 
         <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The device said no: one press refuses the question, and one press on RECEIVING stops the upload.</td></tr>
         <tr><th class="mono">nothing_staged</th><td data-manage-word="nothing_staged">The upload ended, but the device could not read the image back. Install again to send it.</td></tr>
         <tr><th class="mono">not_approved</th><td data-manage-word="not_approved">The image that arrived is not the version the glass asked you about, so the device did not install it. Install again.</td></tr>
+        <tr><th class="mono">small_mtu</th><td data-manage-word="small_mtu">The answer did not fit the link: this phone or browser kept Bluetooth&rsquo;s smallest packet size, 20 bytes. Disconnect and connect again. If it happens again, update the browser and the phone, or connect from another phone or a computer with Chrome or Edge.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
         <tr><th class="mono">window_closed</th><td data-manage-word="window_closed">The upload window closed: it lasts ten minutes, and a take-off, one press on the glass or a dropped link closes it sooner. Install again: the upload picks up where it stopped, unless the device restarted.</td></tr>
         <tr><th class="mono">older</th><td data-manage-word="older">This image is older than the firmware on the device, and a device on released firmware never goes back over Bluetooth. The same version installs again, a newer one too.</td></tr>

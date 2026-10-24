@@ -1,8 +1,8 @@
-#include "core/util/json.h"
+#include "simulator/world/json.h"
 
 #include <cstring>
 
-namespace skyblip::json {
+namespace skyblip::simulator::json {
 
 namespace {
 bool is_whitespace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
@@ -91,80 +91,6 @@ bool Reader::read_string(const char* key, char* out, int capacity) const {
         out[count++] = data_[offset++];
     out[count] = 0;
     return true;
-}
-
-bool Writer::reserve(int extra) {
-    if (length_ + extra > capacity_ - 2) {
-        overflowed_ = true;
-        return false;
-    }
-    return true;
-}
-void Writer::write_separator() {
-    if (!first_) buffer_[length_++] = ',';
-    first_ = false;
-}
-void Writer::write_text(const char* text) {
-    while (*text) buffer_[length_++] = *text++;
-}
-void Writer::write_quoted(const char* text) {
-    buffer_[length_++] = '"';
-    while (*text) {
-        if (*text == '"' || *text == '\\') buffer_[length_++] = '\\';
-        buffer_[length_++] = *text++;
-    }
-    buffer_[length_++] = '"';
-}
-void Writer::add_integer(const char* key, int64_t value) {
-    char digits[20];
-    int digit_count = 0;
-    bool negative = value < 0;
-    uint64_t magnitude = negative ? 0 - static_cast<uint64_t>(value) : static_cast<uint64_t>(value);
-    do {
-        digits[digit_count++] = static_cast<char>('0' + magnitude % 10);
-        magnitude /= 10;
-    } while (magnitude);
-    const int needed = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
-                       (negative ? 1 : 0) + digit_count;
-    if (!reserve(needed)) return;
-    write_separator();
-    write_quoted(key);
-    buffer_[length_++] = ':';
-    if (negative) buffer_[length_++] = '-';
-    while (digit_count > 0) buffer_[length_++] = digits[--digit_count];
-}
-void Writer::add_boolean(const char* key, bool value) {
-    const char* text = value ? "true" : "false";
-    const int needed = (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 +
-                       static_cast<int>(std::strlen(text));
-    if (!reserve(needed)) return;
-    write_separator();
-    write_quoted(key);
-    buffer_[length_++] = ':';
-    write_text(text);
-}
-void Writer::add_string(const char* key, const char* value) {
-    int value_length = 0;
-    int escapes = 0;
-    for (const char* character = value; *character; character++) {
-        value_length++;
-        if (*character == '"' || *character == '\\') escapes++;
-    }
-    const int needed =
-        (first_ ? 0 : 1) + static_cast<int>(std::strlen(key)) + 2 + 1 + value_length + escapes + 2;
-    if (!reserve(needed)) return;
-    write_separator();
-    write_quoted(key);
-    buffer_[length_++] = ':';
-    write_quoted(value);
-}
-int Writer::finish() {
-    if (length_ < capacity_ - 1)
-        buffer_[length_++] = '}';
-    else
-        overflowed_ = true;
-    buffer_[length_] = 0;
-    return length_;
 }
 
 }

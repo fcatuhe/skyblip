@@ -248,6 +248,7 @@ Record record_of(const Link& value, const Instant& at) {
     put_uint16(record.payload + 8, clamp_uint16(value.drops));
     record.payload[10] = static_cast<uint8_t>(value.action);
     record.payload[11] = static_cast<uint8_t>(value.endpoint);
+    record.payload[12] = static_cast<uint8_t>(value.mtu_exchange_started_by);
     set_flag(record.flags, kLinkFlagClaimHeld, value.claim_held);
     return record;
 }
@@ -262,6 +263,7 @@ bool read(const Record& record, Link& out) {
     out.drops = get_uint16(record.payload + 8);
     out.action = static_cast<LinkAction>(record.payload[10]);
     out.endpoint = static_cast<events::Endpoint>(record.payload[11]);
+    out.mtu_exchange_started_by = static_cast<events::MtuExchangeStarter>(record.payload[12]);
     out.claim_held = record.flagged(kLinkFlagClaimHeld);
     return true;
 }

@@ -4,12 +4,15 @@
 #include <initializer_list>
 #include <string>
 
+#include "core/comms/link_registry.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
+#include "core/util/cbor.h"
 #include "core/util/little_endian.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 
@@ -165,17 +168,18 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
 // The clause asks a device to disallow an inconsistent configuration: this one cannot make any.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
     go::Settings settings = go::defaults();
-    const char* icao = "{\"address\":3934737,\"address_mapping_table\":5}";  // 0x3C0A11 under ICAO
-    CHECK(go::apply_json(settings, icao, static_cast<int>(strlen(icao))) == Status::Ok);
+    // 0x3C0A11 under ICAO
+    const events::RxFrame icao =
+        config_frame("{\"command\":\"set\",\"address\":3934737,\"address_mapping_table\":5}");
+    CHECK(go::apply_settings(settings, cbor::Reader(ConstByteSpan(icao.data.data(), icao.bytes))) ==
+          Status::Ok);
 
-    char buffer[256];
-    const int written = go::to_json(settings, 0x123456, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader reader(buffer, written);
-    long value = 0;
-    CHECK(reader.read_integer("address", value));
-    CHECK(value == 0x123456);
-    CHECK(reader.read_integer("address_mapping_table", value));
-    CHECK(value == 58);
+    uint8_t frame[64];
+    cbor::Writer writer(frame, sizeof(frame));
+    go::write_config_fields(writer, settings, 0x123456);
+    const cbor::Reader reader(ConstByteSpan(frame, static_cast<size_t>(writer.finish())));
+    CHECK(reader.read_unsigned(link::config_key::kAddress).value() == 0x123456u);
+    CHECK(reader.read_unsigned(link::config_key::kAddressMappingTable).value() == 58u);
 }
 
 // Every ADS-L data block has to be scramblable, and XXTEA works on whole 32-bit words.

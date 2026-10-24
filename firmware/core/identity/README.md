@@ -1,6 +1,6 @@
 # core/identity
 
-Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a key of its own, the server key the build trusts, and once the server has signed one, a serial. The design is issue #126, the wire contract `schemas/activation.v1.schema.json`. Nothing here uses the firmware signing keys.
+Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a key of its own, the server key the build trusts, and once the server has signed one, a serial. The design is issue #126, the wire contract the activation frames of `schemas/link.v1.json` and `schemas/activation.v1.schema.json`. Nothing here uses the firmware signing keys.
 
 ## The three messages
 

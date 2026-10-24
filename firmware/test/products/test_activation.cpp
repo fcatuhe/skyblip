@@ -75,10 +75,11 @@ struct Bench {
     std::string answer_since(size_t before) {
         const auto& sent = rig.platform.link().sent;
         std::string answer;
-        for (size_t i = before; i < sent.size(); i++)
-            if (sent[i].endpoint == events::Endpoint::Config &&
-                sent[i].bytes.rfind("{\"command\":\"status\"", 0) != 0)
-                answer = sent[i].bytes;
+        for (size_t i = before; i < sent.size(); i++) {
+            if (sent[i].endpoint != events::Endpoint::Config) continue;
+            const std::string text = link_text(sent[i].bytes);
+            if (text.rfind("{\"command\":\"status\"", 0) != 0) answer = text;
+        }
         return answer;
     }
 
@@ -112,7 +113,8 @@ struct Bench {
 };
 
 std::string refusal(const char* word) {
-    return std::string("{\"acknowledge\":false,\"reason\":\"") + word + "\"}";
+    return std::string("{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"") +
+           word + "\"}";
 }
 
 }  // namespace
@@ -161,7 +163,8 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
               "\",\"server_key_id\":\"" + bench.vectors.text("server_key_id") + "\"}");
 
     CHECK(bench.register_with_vectors() ==
-          "{\"acknowledge\":false,\"pending\":true,\"reason\":\"confirm_register\"}");
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,\"reason\":"
+          "\"confirm_register\"}");
     REQUIRE(bench.pending() == comms::Pending::Register);
 
     const std::string registration = bench.press_twice();
@@ -173,7 +176,8 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
               bench.vectors.text("registration_signature") + "\"}");
     CHECK_FALSE(bench.activation().activated());
 
-    CHECK(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+    CHECK(bench.unlock_with_vectors() ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(bench.activation().serial == 298);
     CHECK(bench.activation().address() == settings::AirAddress{0x00012Au});
     CHECK(bench.rig.platform.identity().writes == 1);
@@ -187,7 +191,8 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
     bench.press_twice();
-    REQUIRE(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+    REQUIRE(bench.unlock_with_vectors() ==
+            "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
 
     CHECK(bench.rig.platform.link().advertised == "skyBlip Go+ 00012A");
@@ -263,15 +268,25 @@ TEST_CASE("activation: a second challenge replaces the nonce, and R over the fir
     CHECK(bench.register_with_vectors() == refusal("bad_signature"));
 }
 
-// Chrome negotiates 495 bytes and an iPhone 182: the frame cannot travel on the second.
+// An iPhone's 182 bytes carry the frame, and a link one byte short of it cannot.
 TEST_CASE(
     "activation: a link that cannot carry the registration frame is told so before the prompt") {
     Bench bench;
     bench.boot();
-    bench.rig.platform.link().declare_payload_bytes(comms::kSmallestSupportedPayloadBytes);
+    bench.rig.platform.link().declare_payload_bytes(comms::IdentityLink::kRegistrationFrameBytes -
+                                                    1);
     bench.challenge_with_vectors_nonce();
     CHECK(bench.register_with_vectors() == refusal("small_mtu"));
     CHECK(bench.pending() == comms::Pending::None);
+}
+
+// A central that never exchanged its MTU stopped the activation at its first step, unanswered.
+TEST_CASE("activation: a link that cannot carry the challenge reply is answered small_mtu") {
+    Bench bench;
+    bench.boot();
+    bench.rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
+    CHECK(bench.challenge_with_vectors_nonce() == refusal("small_mtu"));
+    CHECK(bench.rig.product.config_link().config().link_drops() == 1);
 }
 
 TEST_CASE("activation: an unlock code that does not verify spends the nonce all the same") {
@@ -404,7 +419,8 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
     bench.press_twice();
-    REQUIRE(bench.unlock_with_vectors() == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+    REQUIRE(bench.unlock_with_vectors() ==
+            "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
     bench.rig.show(bench.now_ms, go::Page::SelfTest);
     bench.pass(2000);
@@ -448,7 +464,7 @@ struct QueuedUnlock {
         const auto& sent = bench.rig.platform.link().sent;
         for (size_t i = before; i < sent.size(); i++)
             if (sent[i].endpoint == events::Endpoint::Config &&
-                sent[i].bytes.find("\"reason\"") != std::string::npos)
+                link_text(sent[i].bytes).find("\"reason\"") != std::string::npos)
                 count++;
         return count;
     }
@@ -461,7 +477,8 @@ TEST_CASE(
     "activation: an activated unit on the ground answers an unlock once the write is placed") {
     QueuedUnlock queue;
     queue.bench.rig.seconds(queue.bench.now_ms, 4, 0, 300);
-    CHECK(queue.bench.answer_since(queue.before) == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+    CHECK(queue.bench.answer_since(queue.before) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     CHECK(queue.bench.rig.platform.identity().writes == 1);
     CHECK(queue.bench.activation().serial == QueuedUnlock::kNewSerial);
 }
@@ -547,7 +564,7 @@ struct Desk {
 
     std::string say(const std::string& json) {
         config.on_rx(config_frame(json.c_str()));
-        return link.sent.empty() ? std::string() : link.last().bytes;
+        return link.sent.empty() ? std::string() : link_text(link.last().bytes);
     }
 
     std::string register_signed_by_the_test_server() {
@@ -585,7 +602,7 @@ TEST_CASE(
         desk.config.set_flight_state(flight_state);
         REQUIRE(desk.config.pending() == comms::Pending::Register);
         desk.config.confirm();
-        CHECK(desk.link.last().bytes.find(desk.vectors.text("registration_signature")) !=
+        CHECK(link_text(desk.link.last().bytes).find(desk.vectors.text("registration_signature")) !=
               std::string::npos);
     }
 }
@@ -615,7 +632,7 @@ TEST_CASE("activation: an activated unit's register prompt is cancelled at take-
     REQUIRE(desk.config.pending() == comms::Pending::Register);
     desk.config.set_flight_state(flight::FlightState::Airborne);
     CHECK(desk.config.pending() == comms::Pending::None);
-    CHECK(desk.link.last().bytes == refusal("in_flight"));
+    CHECK(link_text(desk.link.last().bytes) == refusal("in_flight"));
 }
 
 TEST_CASE("activation: a cell too low to write settings refuses an unlock and keeps the nonce") {
@@ -626,7 +643,7 @@ TEST_CASE("activation: a cell too low to write settings refuses an unlock and ke
     CHECK(desk.port.writes == 0);
     desk.config.set_supply_warned(false);
     CHECK(desk.unlock_signed_by_the_test_server(0x0042) ==
-          "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
 }
 
 // The server assigns from 1: serial 0 would put 0x000000, read as no address, on the air.
@@ -651,7 +668,8 @@ TEST_CASE("activation: a nonce lives kNonceForgetMs after its challenge, then is
         desk.config.tick(kChallengeMs + after);
         const std::string answer = desk.unlock_signed_by_the_test_server(0x0042);
         if (after < comms::IdentityLink::kNonceForgetMs)
-            CHECK(answer == "{\"acknowledge\":true,\"reason\":\"unlock\"}");
+            CHECK(answer ==
+                  "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
         else
             CHECK(answer == refusal("no_session"));
     }
@@ -681,7 +699,7 @@ TEST_CASE("activation: the registration says whether the build is a release, and
         desk.register_signed_by_the_test_server();
         REQUIRE(desk.config.pending() == comms::Pending::Register);
         desk.config.confirm();
-        const std::string frame = desk.link.last().bytes;
+        const std::string frame = link_text(desk.link.last().bytes);
         CHECK(frame.find(release ? "\"release\":true," : "\"release\":false,") !=
               std::string::npos);
         CHECK(frame.find("\"server_key_id\":\"890026b1\",\"release\"") != std::string::npos);
@@ -705,11 +723,11 @@ TEST_CASE("activation: the challenge reply is exactly the size its buffer holds"
     Desk desk;
     desk.say("{\"command\":\"challenge\"}");
     CHECK(desk.link.last().bytes.size() == size_t(comms::IdentityLink::kChallengeFrameBytes));
-    CHECK(desk.link.last().bytes.find("\"server_key_id\":\"") != std::string::npos);
+    CHECK(link_text(desk.link.last().bytes).find("\"server_key_id\":\"") != std::string::npos);
     CHECK(desk.config.link_drops() == 0);
 }
 
-// The widest version and release false make the widest frame, the size register checks.
+// The widest version makes the widest frame, the size register checks.
 TEST_CASE("activation: the registration frame at the widest version is exactly the size checked") {
     Desk desk;
     desk.dfu.running_image_version = dfu::kWidestVersion;
@@ -728,7 +746,7 @@ TEST_CASE("activation: the registration frame at the widest version is exactly t
     REQUIRE(desk.config.pending() == comms::Pending::Register);
     desk.config.confirm();
     CHECK(desk.link.last().bytes.size() == size_t(comms::IdentityLink::kRegistrationFrameBytes));
-    CHECK(desk.link.last().bytes.find("9.99.99+99999") != std::string::npos);
-    CHECK(desk.link.last().bytes.find("\"release\":false") != std::string::npos);
-    CHECK(comms::IdentityLink::kRegistrationFrameBytes <= kChromePayloadBytes);
+    CHECK(link_text(desk.link.last().bytes).find("9.99.99+99999") != std::string::npos);
+    CHECK(link_text(desk.link.last().bytes).find("\"release\":false") != std::string::npos);
+    CHECK(comms::IdentityLink::kRegistrationFrameBytes <= comms::kSmallestSupportedPayloadBytes);
 }

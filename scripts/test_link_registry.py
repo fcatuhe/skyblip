@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Self-check for link_registry.py: the check that holds the generated files to the registry.
+
+    python3 scripts/test_link_registry.py
+
+Stdlib, clang-format (CLANG_FORMAT names it), as check_link_registry.py needs, and a C++
+compiler (CXX names it) for the mirrors.
+"""
+import os
+import pathlib
+import subprocess
+import sys
+import unittest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+import check_link_registry  # noqa: E402
+import link_registry  # noqa: E402
+
+EXPECTED = link_registry.written(link_registry.load(), link_registry.formatter())
+
+
+def committed_with(relative, before, after):
+    text = link_registry.committed(relative)
+    assert before in text, "%s no longer holds %r" % (relative, before)
+    mutated = {relative: text.replace(before, after, 1)}
+    return lambda name: mutated.get(name, link_registry.committed(name))
+
+
+class Check(unittest.TestCase):
+    def test_the_committed_files_are_what_the_registry_writes(self):
+        self.assertEqual(link_registry.stale(EXPECTED, link_registry.committed), [])
+
+    # A whitespace-blind comparison passed an enumeration named "unknown_ command".
+    def test_a_space_inside_a_javascript_string_is_a_stale_module(self):
+        read = committed_with(link_registry.JAVASCRIPT_MODULE, '"unknown_command"',
+                              '"unknown_ command"')
+        self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.JAVASCRIPT_MODULE])
+
+    def test_a_space_inside_a_cpp_string_is_a_stale_header(self):
+        read = committed_with(link_registry.NAMES_HEADER, '"unknown_command"', '"unknown_ command"')
+        self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.NAMES_HEADER])
+
+    def test_a_cpp_header_laid_out_other_than_clang_format_lays_it_is_stale(self):
+        read = committed_with(link_registry.FIRMWARE_HEADER, "enum class Command : uint8_t {\n",
+                              "enum class Command : uint8_t\n{\n")
+        self.assertEqual(link_registry.stale(EXPECTED, read), [link_registry.FIRMWARE_HEADER])
+
+
+def compiled(source):
+    firmware = link_registry.ROOT / "firmware"
+    return subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-fsyntax-only",
+                           "-I%s" % firmware, "-I%s" % (firmware / "vendor"), "-x", "c++", "-"],
+                          input=source, capture_output=True, text=True)
+
+
+class Mirrors(unittest.TestCase):
+    def test_the_registry_as_it_stands_compiles_against_the_cpp_enums(self):
+        result = compiled(link_registry.mirrors_test(link_registry.load()))
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    # The static_asserts only ran registry to C++: an enumerator the registry lacked passed.
+    def test_a_cpp_enumerator_the_registry_lacks_fails_the_build(self):
+        registry = link_registry.load()
+        registry["enums"]["reset"]["values"].pop()
+        result = compiled(link_registry.mirrors_test(registry))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Debug", result.stderr)
+
+
+def status_key(registry, name):
+    status = next(frame for frame in registry["frames"] if frame["command"] == "status")
+    return next(key for key in status["keys"] if key["name"] == name)
+
+
+class HostKeys(unittest.TestCase):
+    # keys_within() reads one bit a key from a uint64_t, so a host frame key numbered 64 has none.
+    def test_a_host_frame_key_numbered_64_is_refused(self):
+        registry = link_registry.load()
+        unlock = next(frame for frame in registry["frames"] if frame["command"] == "unlock")
+        unlock["keys"][-1]["number"] = 64
+        with self.assertRaises(ValueError):
+            link_registry.host_keys(registry["frames"])
+
+
+class Registry(unittest.TestCase):
+    def test_a_frame_or_a_key_without_a_description_is_named(self):
+        registry = link_registry.load()
+        self.assertEqual(check_link_registry.undescribed(registry), [])
+        del status_key(registry, "upload")["description"]
+        del next(frame for frame in registry["frames"] if frame["command"] == "get")["description"]
+        self.assertEqual(check_link_registry.undescribed(registry), ["get", "status.upload"])
+
+    # The status frame is pushed to phones unasked: a key renamed, reordered or made optional fails here.
+    def test_the_status_writer_is_held_to_the_keys_the_registry_gives_the_frame(self):
+        source = check_link_registry.STATUS_WRITER.read_text(encoding="utf-8")
+        registry = link_registry.load()
+        self.assertEqual(list(check_link_registry.status_writer_failures(registry, source)), [])
+        status_key(registry, "battery_percent")["required"] = True
+        status_key(registry, "charging")["type"] = "unsigned"
+        failures = list(check_link_registry.status_writer_failures(registry, source))
+        self.assertEqual(len(failures), 2, failures)
+        self.assertIn("the registry requires", failures[0])
+        self.assertIn("charging: format_status calls add_boolean", failures[1])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

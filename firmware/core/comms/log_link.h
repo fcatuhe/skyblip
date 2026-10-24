@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_CORE_COMMS_LOG_LINK_H
 #define SKYBLIP_CORE_COMMS_LOG_LINK_H
 
+#include <optional>
+
+#include "core/comms/link_registry.h"
 #include "core/events/link.h"
 #include "core/flight/log_record.h"
 #include "core/store/sector.h"
@@ -28,12 +31,10 @@ struct LogRequest {
     uint32_t index{0};
     bool index_valid{false};
     bool understood{false};
-    const char* reason{nullptr};
+    std::optional<link::Reason> reason{};
 };
 
 LogRequest parse_log_request(const events::RxFrame& frame);
-
-const char* log_store_name(LogStore store);
 
 struct LogChunkSpan {
     uint32_t from{0};
@@ -63,43 +64,33 @@ constexpr int kLogReplyBytes = 512;
 // each record against the same checksum the flash holds - the transfer is checked
 // end to end rather than hop by hop.
 //
-// INFO: fc 04aug26 How many of them ride in one chunk is derived from the
-// negotiated payload, not fixed at five: five was chosen against a 256-byte
-// buffer, which an iPhone's 182 bytes cannot carry and a large-MTU phone would be
-// short-changed by. Twelve is the ceiling because that is what a 498-byte ATT_MTU
-// reaches; the base64 of 24 raw bytes is exactly 32 characters, so the arithmetic
-// below is exact rather than an estimate.
-constexpr int kMaxLogRecordsPerChunk = 12;
+// INFO: fc 04aug26 records per chunk follow the payload, nineteen being what ATT_MTU 498 reaches
+constexpr int kMaxLogRecordsPerChunk = 19;
 constexpr int kLogChunkRawBytes =
     kMaxLogRecordsPerChunk * static_cast<int>(flight::kLogRecordBytes);
-constexpr int kLogChunkBase64PerRecord = static_cast<int>(flight::kLogRecordBytes) / 3 * 4;
 
-// The chunk envelope at its widest: the longest session id and record index the
-// partition can produce, the two-digit count, and an empty data string.
-constexpr int kLogChunkEnvelopeBytes = 102;
+// INFO: fc 20oct26 the widest chunk envelope, measured in README.md's How wide the frames are
+constexpr int kLogChunkEnvelopeBytes = 18;
 
-// INFO: fc 20sep26 `,"log":"diagnostics"`, the only store spelled on the wire
-constexpr int kLogStoreFieldBytes = 20;
+// INFO: fc 20sep26 the log key and the diagnostics code, the only store spelled on the wire
+constexpr int kLogStoreFieldBytes = 2;
 
 // How many records a chunk may carry over a link that negotiated this payload.
 // Zero means not even one fits, which is a refusal for the caller to count.
 int log_records_per_chunk(int payload_bytes, LogStore store = LogStore::Flights);
 
-// Returns the number of characters written, excluding the terminator.
-int format_log_acknowledgement(char* out, int capacity, bool accepted, const char* reason,
+// Each returns the bytes written, or 0 when the frame does not fit whole.
+int format_log_acknowledgement(uint8_t* out, int capacity, bool accepted,
+                               std::optional<link::Reason> reason,
                                LogStore store = LogStore::Flights);
-int format_log_count(char* out, int capacity, uint32_t sessions, bool truncated,
+int format_log_count(uint8_t* out, int capacity, uint32_t sessions, bool truncated,
                      LogStore store = LogStore::Flights);
-int format_log_session(char* out, int capacity, uint32_t index, uint32_t count, uint32_t session_id,
-                       uint32_t records, bool closed, bool truncated,
+int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t count,
+                       uint32_t session_id, uint32_t records, bool closed, bool truncated,
                        LogStore store = LogStore::Flights);
-int format_log_chunk(char* out, int capacity, uint32_t session_id, uint32_t from,
+int format_log_chunk(uint8_t* out, int capacity, uint32_t session_id, uint32_t from,
                      const uint8_t* records, int record_count, bool ends_session,
                      LogStore store = LogStore::Flights);
-
-// Standard base64, no padding omitted, no line breaks. Returns characters
-// written, or -1 if they would not fit.
-int base64_encode(const uint8_t* data, int bytes, char* out, int capacity);
 
 }  // namespace skyblip::comms
 

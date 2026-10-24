@@ -1,5 +1,6 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
+import { hex } from '#skyblip/link';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
@@ -49,9 +50,9 @@ function imageOf(reply) {
     to: reply.to ?? null,
     settings: reply.settings ?? null,
     swapPowered: reply.swap_powered !== false,
-    imu: reply.imu ?? null,
+    imu: reply.imu === 'held' ? hex(reply.imu_digest) : reply.imu,
     downgrade: reply.downgrade === true,
-    key: reply.key ?? null,
+    key: reply.key ? hex(reply.key).toUpperCase() : null,
   };
 }
 
@@ -78,7 +79,7 @@ function statusOf(reply) {
   return {
     flight: reply.flight ?? null,
     upload: reply.upload === true,
-    batteryPercent: reply.battery_valid === false ? null : reply.battery_percent ?? null,
+    batteryPercent: reply.battery_percent ?? null,
     charging: reply.charging === true,
     powerLevel: reply.power_level ?? null,
     wentDarkFlat: reply.went_dark_flat === true,
@@ -255,18 +256,24 @@ export class Updater {
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if ('acknowledge' in reply) this.#acked(reply);
+    else if (reply.command === 'acknowledgement') this.#acked(reply);
   }
 
   #acked(reply) {
     const { phase, task } = this.#state;
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
+    if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
+  }
+
+  #narrow() {
+    const asked = this.#state.phase === 'asking' ? { phase: 'ready', task: null } : {};
+    this.#set({ ...asked, notice: { key: 'small_mtu' } });
   }
 
   #granted(task) {

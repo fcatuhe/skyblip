@@ -16,8 +16,8 @@ class Link : public ports::Link {
     // INFO: fc 04aug26 Read from the connection every time rather than latched
     // at connect: bt_gatt_get_mtu() already tracks the exchange, so a central
     // that negotiates late (iOS exchanges after it has discovered the service)
-    // cannot leave a stale figure behind. No exchange is requested from this
-    // side - see link.cpp.
+    // cannot leave a stale figure behind. The unit asks for one too, at
+    // connect - see core/comms/README.md.
     uint16_t payload_bytes() const override;
     uint16_t payload_bytes_to(uint16_t session_id) const override;
     Status send(events::Endpoint endpoint, ConstByteSpan bytes) override;

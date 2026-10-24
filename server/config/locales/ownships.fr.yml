@@ -64,7 +64,7 @@ fr:
         fidelity: "Face au contour, étiré à la grille : recouvrement %{iou}, %{missing} du contour manquant, %{extra} dessiné hors du contour. Noir : les deux, orange : le dessin seul, gris : le contour seul."
         export: "L'emporter sur l'appareil"
         command: "Commande Bluetooth, proposée"
-        command_hint: "%{bytes} octets, une écriture sur le canal de configuration. Aucun firmware ne la lit encore : c'est la forme qu'aurait l'envoi."
+        command_hint: "%{bytes} octets de CBOR, la trame ownship du registre du lien, une écriture sur le canal de configuration. Une proposition : aucun firmware ne la lit encore, et un appareil répond unknown_command."
         cpp: "Table du firmware, pour ui/widgets/skyship.cpp"
         choose: "Choisir"
         draft: "Voici votre dessin pour le type %{type}, gardé dans ce navigateur."

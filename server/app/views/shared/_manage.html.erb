@@ -51,8 +51,8 @@
       <div class="manage-field">
         <label for="manage-units"><%= settings[:units] %></label>
         <select id="manage-units" name="units">
-          <% settings[:unit_names].each_with_index do |name, code| %>
-            <option value="<%= code %>"><%= name %></option>
+          <% settings[:unit_names].each do |value, name| %>
+            <option value="<%= value %>"><%= name %></option>
           <% end %>
         </select>
         <p class="manage-default" data-manage-target="default" data-setting="units" hidden></p>
@@ -67,8 +67,8 @@
       <div class="manage-field">
         <label for="manage-alarm-volume"><%= settings[:alarm_volume] %></label>
         <select id="manage-alarm-volume" name="alarm_volume">
-          <% settings[:volume_names].each_with_index do |name, code| %>
-            <option value="<%= code %>"><%= name %></option>
+          <% settings[:volume_names].each do |value, name| %>
+            <option value="<%= value %>"><%= name %></option>
           <% end %>
         </select>
         <p class="manage-default" data-manage-target="default" data-setting="alarm_volume" hidden></p>

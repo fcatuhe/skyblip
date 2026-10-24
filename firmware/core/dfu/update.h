@@ -11,8 +11,6 @@ namespace skyblip::dfu {
 
 enum class ImageState : uint8_t { Confirmed = 0, Probation = 1, Reverted = 2, Refused = 3 };
 
-const char* to_string(ImageState state);
-
 struct UpdateRecord {
     ports::ImageVersion from{};
     ports::ImageVersion to{};
@@ -50,10 +48,6 @@ struct HubImageReport {
     HubImage holding{HubImage::None};
     uint8_t digest[kDigestBytes]{};
 };
-
-constexpr size_t kHubImageTextBytes = 2 * HubImageReport::kDigestBytes + 1;
-
-int format_hub_image(const HubImageReport& report, char* out, size_t capacity);
 
 // INFO: fc 03oct26 the update frame is sized for this version, build_image.sh signs nothing wider
 constexpr ports::ImageVersion kWidestVersion{9, 99, 99, 99999};

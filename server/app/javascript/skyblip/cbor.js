@@ -50,6 +50,12 @@ function put(out, value) {
   } else if (value instanceof Uint8Array) {
     head(out, MAJOR.bytes, value.length);
     for (const byte of value) out.push(byte);
+  } else if (value instanceof Map) {
+    head(out, MAJOR.map, value.size);
+    for (const [key, item] of value) {
+      put(out, key);
+      put(out, item);
+    }
   } else if (Array.isArray(value)) {
     head(out, MAJOR.array, value.length);
     for (const item of value) put(out, item);
@@ -65,16 +71,17 @@ function put(out, value) {
   }
 }
 
-export function decode(bytes) {
-  const reader = new Reader(bytes);
-  const value = reader.item();
+export function decode(bytes, { deterministic = false } = {}) {
+  const reader = new Reader(bytes, deterministic);
+  const value = deterministic ? reader.frame() : reader.item();
   if (reader.at !== bytes.length) throw new RangeError(`cbor: ${bytes.length - reader.at} bytes after the item`);
   return value;
 }
 
 class Reader {
-  constructor(bytes) {
+  constructor(bytes, deterministic) {
     this.bytes = bytes;
+    this.deterministic = deterministic;
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     this.at = 0;
   }
@@ -100,11 +107,12 @@ class Reader {
 
   argument(info) {
     if (info < 24) return info;
-    if (info === 24) return this.number(1);
-    if (info === 25) return this.number(2);
-    if (info === 26) return this.number(4);
-    if (info === 27) return this.number(8);
-    throw new RangeError(`cbor: reserved additional information ${info}`);
+    if (info > (this.deterministic ? 26 : 27)) throw new RangeError(`cbor: additional information ${info} is outside the grammar`);
+    const width = 2 ** (info - 24);
+    const value = this.number(width);
+    const shortest = width === 1 ? 24 : 2 ** (4 * width);
+    if (this.deterministic && value < shortest) throw new RangeError(`cbor: ${value} is not in its shortest form`);
+    return value;
   }
 
   atBreak() {
@@ -172,6 +180,50 @@ class Reader {
       Object.defineProperty(map, key, { value: this.item(), enumerable: true, writable: true, configurable: true });
     }
     return map;
+  }
+
+  frame() {
+    const initial = this.byte();
+    if (initial >> 5 !== MAJOR.map) throw new RangeError('cbor: a link frame is a map');
+    const count = this.counted(this.argument(initial & 0x1f));
+    const map = new Map();
+    let last = -1;
+    for (let entry = 0; entry < count; entry++) {
+      const head = this.byte();
+      const key = head >> 5 === MAJOR.uint ? this.argument(head & 0x1f) : -1;
+      if (key <= last) throw new RangeError('cbor: map keys are unsigned and ascending');
+      map.set(key, this.value());
+      last = key;
+    }
+    return map;
+  }
+
+  value() {
+    const initial = this.byte();
+    const major = initial >> 5;
+    const info = initial & 0x1f;
+    if (major === MAJOR.simple && (info === SIMPLE.false || info === SIMPLE.true)) return info === SIMPLE.true;
+    if (major === MAJOR.simple) throw new RangeError(`cbor: simple value ${info} is outside the link's grammar`);
+    const argument = this.argument(info);
+    switch (major) {
+      case MAJOR.uint: return argument;
+      case MAJOR.nint: return -1 - argument;
+      case MAJOR.bytes: return this.take(argument);
+      case MAJOR.text: return decoder.decode(this.take(argument));
+      case MAJOR.array: return Array.from({ length: this.counted(argument) }, () => this.unsignedItem());
+      default: throw new RangeError(`cbor: major type ${major} is outside the link's grammar`);
+    }
+  }
+
+  unsignedItem() {
+    const initial = this.byte();
+    if (initial >> 5 !== MAJOR.uint) throw new RangeError('cbor: a link array holds unsigned integers only');
+    return this.argument(initial & 0x1f);
+  }
+
+  counted(count) {
+    if (count > this.bytes.length - this.at) throw new RangeError('cbor: truncated');
+    return count;
   }
 
   simple(info) {

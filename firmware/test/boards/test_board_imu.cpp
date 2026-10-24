@@ -131,9 +131,21 @@ void store_on_flash(platform::host::Platform& platform, const uint8_t* image, si
 }
 
 std::string reported(const bus::State& state) {
-    char text[dfu::kHubImageTextBytes];
-    dfu::format_hub_image(state.imu.image, text, sizeof(text));
-    return text;
+    static const char kHexDigits[] = "0123456789abcdef";
+    switch (state.imu.image.holding) {
+        case dfu::HubImage::None: return "none";
+        case dfu::HubImage::Missing: return "missing";
+        case dfu::HubImage::Corrupt: return "corrupt";
+        case dfu::HubImage::Unreadable: return "unreadable";
+        case dfu::HubImage::Writing: return "writing";
+        case dfu::HubImage::Held: break;
+    }
+    std::string out;
+    for (uint8_t byte : state.imu.image.digest) {
+        out += kHexDigits[byte >> 4];
+        out += kHexDigits[byte & 0x0F];
+    }
+    return out;
 }
 
 std::string hex_prefix(const Sha256::Digest& digest) {

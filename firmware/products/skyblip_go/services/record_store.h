@@ -73,7 +73,7 @@ class RecordStore {
     void continue_read();
     void abandon_read() { reading_.active = false; }
     bool reading() const { return reading_.active; }
-    void acknowledge(uint16_t link_session, bool ok, const char* reason);
+    void acknowledge(uint16_t link_session, bool ok, link::Reason reason);
 
    private:
     struct Tail {

@@ -233,8 +233,9 @@ export default class extends Controller {
 
     this.textTarget.value = ownship.toText(g)
     this.cppTarget.value = ownship.toCpp(g)
-    this.commandTarget.value = ownship.toCommand(g, this.typeValue.code)
-    this.bytesTarget.textContent = this.#say(words.command_hint, { bytes: this.commandTarget.value.length })
+    const command = ownship.toCommand(g, this.typeValue.code)
+    this.commandTarget.value = command.text
+    this.bytesTarget.textContent = this.#say(words.command_hint, { bytes: command.bytes })
     this.copiedTarget.textContent = ""
     this.unreadableTarget.hidden = true
     this.referenceTargets.forEach(section => { section.hidden = section.dataset.outline !== this.outlineValue })

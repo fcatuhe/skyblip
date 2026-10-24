@@ -21,7 +21,8 @@ constexpr uint16_t kFirstApp = 1;
 constexpr uint16_t kSecondApp = 2;
 constexpr uint32_t kGroundSeconds = 1;
 constexpr uint32_t kWriteGapMs = 100;
-constexpr int kMaxLines = 16;
+constexpr int kMaxActions = 16;
+constexpr size_t kWriteHeadBytes = 3;
 
 constexpr int32_t kTaxiMmS = 0;
 constexpr int32_t kCruiseMmS = 50000;
@@ -64,20 +65,27 @@ void confirm_on_device(Rig& rig, uint32_t& now_ms) {
     rig.double_press(now_ms);
 }
 
-void act(Rig& rig, uint32_t& now_ms, const uint8_t* line, size_t byte_count) {
-    if (byte_count == 0) return;
-    const uint8_t* body = line + 1;
-    const size_t body_bytes = byte_count - 1;
-    switch (line[0]) {
-        case 'C': write(rig, kFirstApp, events::Endpoint::Config, body, body_bytes); break;
-        case 'c': write(rig, kSecondApp, events::Endpoint::Config, body, body_bytes); break;
-        case 'L': write(rig, kFirstApp, events::Endpoint::Log, body, body_bytes); break;
-        case 'l': write(rig, kSecondApp, events::Endpoint::Log, body, body_bytes); break;
-        case 'P': confirm_on_device(rig, now_ms); return;
-        default: return;
+size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {
+    const uint8_t action = input[0];
+    if (action == 'P') {
+        confirm_on_device(rig, now_ms);
+        return 1;
+    }
+    if (left < kWriteHeadBytes) return left;
+    const size_t declared = static_cast<size_t>(input[1] | (input[2] << 8));
+    const size_t frame_bytes =
+        declared < left - kWriteHeadBytes ? declared : left - kWriteHeadBytes;
+    const uint8_t* frame = input + kWriteHeadBytes;
+    switch (action) {
+        case 'C': write(rig, kFirstApp, events::Endpoint::Config, frame, frame_bytes); break;
+        case 'c': write(rig, kSecondApp, events::Endpoint::Config, frame, frame_bytes); break;
+        case 'L': write(rig, kFirstApp, events::Endpoint::Log, frame, frame_bytes); break;
+        case 'l': write(rig, kSecondApp, events::Endpoint::Log, frame, frame_bytes); break;
+        default: return 1;
     }
     rig.run(now_ms, now_ms + kWriteGapMs);
     now_ms += kWriteGapMs;
+    return kWriteHeadBytes + frame_bytes;
 }
 
 }  // namespace
@@ -92,13 +100,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     rig.raise_link(kFirstApp);
     rig.raise_link(kSecondApp);
 
-    const uint8_t* end = data + size;
-    const uint8_t* line = data;
-    for (int line_index = 0; line_index < kMaxLines && line < end; line_index++) {
-        const uint8_t* line_end = static_cast<const uint8_t*>(std::memchr(line, '\n', end - line));
-        if (line_end == nullptr) line_end = end;
-        act(rig, now_ms, line, static_cast<size_t>(line_end - line));
-        line = line_end + 1;
-    }
+    size_t at = 0;
+    for (int action = 0; action < kMaxActions && at < size; action++)
+        at += act(rig, now_ms, data + at, size - at);
     return 0;
 }

@@ -8,12 +8,14 @@
 #include <initializer_list>
 #include <string>
 
+#include "core/comms/link_registry.h"
 #include "core/fec/crc.h"
 #include "core/power/battery.h"
 #include "core/settings/address.h"
-#include "core/util/json.h"
+#include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/settings_link.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -63,15 +65,12 @@ TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships
 TEST_CASE(
     "settings: the range and the plot are the glass's, and the link neither shows nor sets them") {
     Settings settings = defaults();
-    char buffer[256];
-    const std::string json(
-        buffer, static_cast<size_t>(
-                    to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer))));
+    const std::string json = config_fields(settings, settings::address_of(0x3456));
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
     const char* patch = "{\"range_step\":0,\"plot\":1,\"alarm_volume\":1}";
-    CHECK(apply_json(settings, patch, static_cast<int>(strlen(patch))) == Status::Ok);
+    CHECK(apply_patch(settings, patch) == Status::Ok);
     CHECK(int(settings.range_step) == kDefaultRangeStep);
     CHECK(settings.plot == RadarPlot::All);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
@@ -98,34 +97,29 @@ TEST_CASE("settings: wrong version blob is Unsupported (migrate/default)") {
     CHECK((status == Status::Unsupported || status == Status::Crc));
 }
 
-TEST_CASE("settings: to_json/apply_json round-trip of a patch") {
+TEST_CASE("settings: the config fields and a set patch round-trip over the link") {
     Settings settings = defaults();
-    char buffer[256];
-    int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    CHECK(written > 0);
-    json::Reader reader(buffer, written);
-    long value;
-    CHECK(reader.read_integer("aircraft_type", value));
-    CHECK(value == kAircraftTypeLight);
+    CHECK(config_fields(settings, settings::address_of(0x3456)).find("\"aircraft_type\":1,") !=
+          std::string::npos);
 
     // apply a patch: change type + alarm volume + units
     const char* patch = "{\"aircraft_type\":4,\"alarm_volume\":0,\"units\":1}";
-    CHECK(apply_json(settings, patch, static_cast<int>(strlen(patch))) == Status::Ok);
+    CHECK(apply_patch(settings, patch) == Status::Ok);
     CHECK(int(settings.aircraft_type) == 4);
     CHECK(settings.alarm_volume == AlarmVolume::Off);
     CHECK(settings.units == Units::Metric);
 }
 
-TEST_CASE("settings: apply_json rejects out-of-range atomically") {
+TEST_CASE("settings: a set patch out of range is refused atomically") {
     Settings settings = defaults();
     uint8_t before = settings.aircraft_type;
     const char* bad = "{\"aircraft_type\":99}";  // > 17
-    CHECK(apply_json(settings, bad, static_cast<int>(strlen(bad))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, bad) == Status::OutOfRange);
     CHECK(settings.aircraft_type == before);  // unchanged (atomic)
 
     // The six-step scale an older companion sent tops out past loud.
     const char* six_step = "{\"alarm_volume\":3}";
-    CHECK(apply_json(settings, six_step, static_cast<int>(strlen(six_step))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, six_step) == Status::OutOfRange);
     CHECK(settings.alarm_volume == AlarmVolume::Loud);
 }
 
@@ -140,25 +134,15 @@ TEST_CASE("address: the prefix, then the serial the server signed") {
 // Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
     CHECK(int(kAddressMappingTable) == 58);
-    char buffer[256];
-    const int written =
-        to_json(defaults(), address_of(0x0042), buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader reader(buffer, written);
-    long value = 0;
-    CHECK(reader.read_integer("address", value));
-    CHECK(value == 0x000042);
-    CHECK(reader.read_integer("address_mapping_table", value));
-    CHECK(value == 58);
+    const std::string json = config_fields(defaults(), address_of(0x0042));
+    CHECK(json.find("\"address\":66,") != std::string::npos);
+    CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 
 TEST_CASE("address: a unit with no serial reports no address, and still its table") {
-    char buffer[256];
-    const int written = to_json(defaults(), std::nullopt, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader reader(buffer, written);
-    long value = 0;
-    CHECK_FALSE(reader.has("address"));
-    CHECK(reader.read_integer("address_mapping_table", value));
-    CHECK(value == 58);
+    const std::string json = config_fields(defaults(), std::nullopt);
+    CHECK(json.find("\"address\"") == std::string::npos);
+    CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }
 
 // H. The per-unit gauge trim: one signed millivolt offset, set once on the line
@@ -183,7 +167,7 @@ TEST_CASE("settings: the battery trim is bounded at the boundary, in both framin
     // cell through it.
     // Setting it is what makes it a hand-set trim, so the charger stops proposing.
     Settings by_hand = defaults();
-    REQUIRE(apply_json(by_hand, "{\"battery_offset_mv\":-47}", 25) == Status::Ok);
+    REQUIRE(apply_patch(by_hand, "{\"battery_offset_mv\":-47}") == Status::Ok);
     CHECK(by_hand.battery_offset_manual);
     CHECK(int(by_hand.battery_offset_mv) == -47);
     CHECK_FALSE(defaults().battery_offset_manual);
@@ -204,12 +188,12 @@ TEST_CASE("settings: the battery trim is bounded at the boundary, in both framin
 TEST_CASE("settings: the battery trim is set over the link and refused whole when it is not") {
     Settings settings = defaults();
     const char* trim = "{\"battery_offset_mv\":-40}";
-    CHECK(apply_json(settings, trim, static_cast<int>(strlen(trim))) == Status::Ok);
+    CHECK(apply_patch(settings, trim) == Status::Ok);
     CHECK(int(settings.battery_offset_mv) == -40);
 
     // Out of bound, and the rest of the patch does not land either.
     const char* far_out = "{\"alarm_volume\":1,\"battery_offset_mv\":900}";
-    CHECK(apply_json(settings, far_out, static_cast<int>(strlen(far_out))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, far_out) == Status::OutOfRange);
     CHECK(int(settings.battery_offset_mv) == -40);
     CHECK(settings.alarm_volume == AlarmVolume::Loud);
 
@@ -217,12 +201,10 @@ TEST_CASE("settings: the battery trim is set over the link and refused whole whe
     // int16, and 65576 truncates to 40 - both inside the bound, neither what
     // the client sent. The check has to happen before the narrowing.
     const char* wraps_to_zero = "{\"battery_offset_mv\":65536}";
-    CHECK(apply_json(settings, wraps_to_zero, static_cast<int>(strlen(wraps_to_zero))) ==
-          Status::OutOfRange);
+    CHECK(apply_patch(settings, wraps_to_zero) == Status::OutOfRange);
     CHECK(int(settings.battery_offset_mv) == -40);
     const char* wraps_into_range = "{\"battery_offset_mv\":65576}";
-    CHECK(apply_json(settings, wraps_into_range, static_cast<int>(strlen(wraps_into_range))) ==
-          Status::OutOfRange);
+    CHECK(apply_patch(settings, wraps_into_range) == Status::OutOfRange);
     CHECK(int(settings.battery_offset_mv) == -40);
 }
 
@@ -255,7 +237,7 @@ TEST_CASE("settings: the frequency trim is bounded at the boundary, in both fram
 TEST_CASE("settings: the frequency trim is set over the link and refused whole when it is not") {
     Settings settings = defaults();
     const char* set = "{\"frequency_trim_e1_ppm\":-25,\"alarm_volume\":1}";
-    REQUIRE(apply_json(settings, set, static_cast<int>(strlen(set))) == Status::Ok);
+    REQUIRE(apply_patch(settings, set) == Status::Ok);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
@@ -263,22 +245,19 @@ TEST_CASE("settings: the frequency trim is set over the link and refused whole w
     // applied: a bench that asked for 500 ppm has the wrong number written down,
     // and silently storing 10 ppm instead would hide that.
     const char* far = "{\"frequency_trim_e1_ppm\":5000,\"alarm_volume\":2}";
-    CHECK(apply_json(settings, far, static_cast<int>(strlen(far))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, far) == Status::OutOfRange);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
     // Narrowed before it is validated: 65536 tenths of a ppm truncates to 0 in
     // an int16 and would pass a bound check that never saw the value sent.
     const char* wrapped = "{\"frequency_trim_e1_ppm\":65536}";
-    CHECK(apply_json(settings, wrapped, static_cast<int>(strlen(wrapped))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, wrapped) == Status::OutOfRange);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 
-    // Write-only over the link, for the same reason battery_offset_mv is: the
-    // "get" reply is one frame at comms::kSmallestSupportedPayloadBytes with 29
-    // bytes of headroom, too few for both trims.
-    char buffer[256];
-    const int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    CHECK(std::string(buffer, static_cast<size_t>(written)).find("freq_trim") == std::string::npos);
+    // Write-only over the link, as battery_offset_mv is.
+    CHECK(config_fields(settings, settings::address_of(0x3456)).find("frequency_trim") ==
+          std::string::npos);
 }
 
 TEST_CASE("settings: a blob from a version this firmware never wrote is refused") {
@@ -290,11 +269,9 @@ TEST_CASE("settings: a blob from a version this firmware never wrote is refused"
     CHECK(from_blob(blob, blob_size(), out) == Status::Unsupported);
 }
 
-TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
+TEST_CASE("settings: the config reply offers nothing the firmware does not read") {
     Settings settings = defaults();
-    char buffer[256];
-    const int written = to_json(settings, settings::address_of(0x3456), buffer, sizeof(buffer));
-    const std::string json(buffer, static_cast<size_t>(written));
+    const std::string json = config_fields(settings, settings::address_of(0x3456));
     // Removed with their fields: no reader outside this module, and a page that
     // accepts a setting nothing reads is worse than one that does not offer it.
     CHECK(json.find("region") == std::string::npos);
@@ -313,31 +290,32 @@ TEST_CASE("settings: the JSON offers nothing the firmware does not read") {
     // six-pack graduates its dials in km/h, metres and m/s or in kt, ft and
     // fpm, and there is nowhere else a value appears exactly once.
     CHECK(json.find("units") != std::string::npos);
-    // The one exception, and it goes the other way: the firmware reads
-    // battery_offset_mv and the reply does not offer it. The "config" reply is
-    // one frame at comms::kSmallestSupportedPayloadBytes, its worst case is already
-    // 173 of those 182 bytes, and no honest name for a signed millivolt trim
-    // fits in nine. It is written on the line and read back as the millivolts
-    // the status reply and the panel already show.
+    // The exception the other way: the firmware reads battery_offset_mv, the reply omits it.
     CHECK(json.find("battery_offset_mv") == std::string::npos);
     const char* metric = "{\"units\":1}";
-    CHECK(apply_json(settings, metric, static_cast<int>(strlen(metric))) == Status::Ok);
+    CHECK(apply_patch(settings, metric) == Status::Ok);
     CHECK(settings.units == Units::Metric);
     const char* nautical = "{\"units\":0}";
-    CHECK(apply_json(settings, nautical, static_cast<int>(strlen(nautical))) == Status::Ok);
+    CHECK(apply_patch(settings, nautical) == Status::Ok);
     CHECK(settings.units == Units::Nautical);
 
-    // An older client still sending the dropped keys is not an error: the rest
-    // of its patch applies, and the keys nothing reads are ignored.
-    const char* stale = "{\"region\":3,\"rotation\":2,\"power_save\":true,\"alarm_volume\":1}";
-    CHECK(apply_json(settings, stale, static_cast<int>(strlen(stale))) == Status::Ok);
+    // Keys nothing reads are ignored, and the rest of the patch applies.
+    uint8_t stale[16];
+    cbor::Writer writer(stale, sizeof(stale));
+    writer.add_code(link::kCommandKey, link::Command::Set);
+    writer.add_unsigned(link::set_key::kAlarmVolume, 1);
+    writer.add_unsigned(40, 3);
+    writer.add_boolean(41, true);
+    const int stale_bytes = writer.finish();
+    CHECK(apply_settings(settings, cbor::Reader(ConstByteSpan(
+                                       stale, static_cast<size_t>(stale_bytes)))) == Status::Ok);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 }
 
 TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is not is refused") {
     Settings settings = defaults();
     const char* ok = "{\"callsign\":\"G-ABCD\"}";
-    CHECK(apply_json(settings, ok, static_cast<int>(strlen(ok))) == Status::Ok);
+    CHECK(apply_patch(settings, ok) == Status::Ok);
     CHECK(std::string(settings.callsign) == "G-ABCD");
 
     Settings bad = settings;
@@ -346,14 +324,14 @@ TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is no
 
     // Nine characters plus the terminator is the whole field, and it survives.
     const char* full = "{\"callsign\":\"123456789\"}";
-    CHECK(apply_json(settings, full, static_cast<int>(strlen(full))) == Status::Ok);
+    CHECK(apply_patch(settings, full) == Status::Ok);
     CHECK(std::string(settings.callsign) == "123456789");
 }
 
 TEST_CASE("settings: a callsign longer than the field is refused, not cut to fit") {
     Settings settings = defaults();
     const char* ten = "{\"callsign\":\"1234567890\"}";
-    CHECK(apply_json(settings, ten, static_cast<int>(strlen(ten))) == Status::OutOfRange);
+    CHECK(apply_patch(settings, ten) == Status::OutOfRange);
     CHECK(std::string(settings.callsign).empty());
 }
 
@@ -363,7 +341,7 @@ TEST_CASE("settings: a callsign is only what the menu can type, so a comma or a 
           "{\"callsign\":\"D!KXYZ\"}", "{\"callsign\":\"d-kxyz\"}"}) {
         CAPTURE(patch);
         Settings settings = defaults();
-        CHECK(apply_json(settings, patch, static_cast<int>(strlen(patch))) == Status::Invalid);
+        CHECK(apply_patch(settings, patch) == Status::Invalid);
         CHECK(std::string(settings.callsign).empty());
     }
 }
@@ -384,11 +362,17 @@ TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trim
 }
 
 TEST_CASE("settings: a type or a volume is refused before it is narrowed, never stored wrapped") {
-    for (const char* patch : {"{\"aircraft_type\":260}", "{\"aircraft_type\":-252}",
-                              "{\"alarm_volume\":256}", "{\"alarm_volume\":-253}"}) {
+    for (const char* patch : {"{\"aircraft_type\":260}", "{\"alarm_volume\":256}"}) {
         CAPTURE(patch);
         Settings settings = defaults();
-        CHECK(apply_json(settings, patch, static_cast<int>(strlen(patch))) == Status::OutOfRange);
+        CHECK(apply_patch(settings, patch) == Status::OutOfRange);
+        CHECK(int(settings.aircraft_type) == int(defaults().aircraft_type));
+        CHECK(int(settings.alarm_volume) == int(defaults().alarm_volume));
+    }
+    for (const char* patch : {"{\"aircraft_type\":-252}", "{\"alarm_volume\":-253}"}) {
+        CAPTURE(patch);
+        Settings settings = defaults();
+        CHECK(apply_patch(settings, patch) == Status::Invalid);
         CHECK(int(settings.aircraft_type) == int(defaults().aircraft_type));
         CHECK(int(settings.alarm_volume) == int(defaults().alarm_volume));
     }
@@ -398,15 +382,10 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     Settings settings = defaults();
     const char* icao =
         "{\"address\":14488116,\"address_mapping_table\":5,\"alarm_volume\":1}";  // 0xDD1234
-    CHECK(apply_json(settings, icao, static_cast<int>(strlen(icao))) == Status::Ok);
+    CHECK(apply_patch(settings, icao) == Status::Ok);
     CHECK(settings.alarm_volume == AlarmVolume::Soft);
 
-    char buffer[256];
-    const int written = to_json(settings, 0x5B7E57, buffer, static_cast<int>(sizeof(buffer)));
-    json::Reader reader(buffer, written);
-    long value = 0;
-    CHECK(reader.read_integer("address", value));
-    CHECK(value == 0x5B7E57);
-    CHECK(reader.read_integer("address_mapping_table", value));
-    CHECK(value == 58);
+    const std::string json = config_fields(settings, 0x5B7E57);
+    CHECK(json.find("\"address\":5996119,") != std::string::npos);
+    CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
 }

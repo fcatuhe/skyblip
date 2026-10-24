@@ -22,8 +22,6 @@ bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out);
 
 bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out);
 
-uint32_t key_prefix(const ports::SigningKeyHash& key);
-
 }  // namespace skyblip::dfu
 
 #endif

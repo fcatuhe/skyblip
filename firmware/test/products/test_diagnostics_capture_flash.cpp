@@ -11,6 +11,7 @@
 #include "products/skyblip_go/services/flight_log.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
+#include "test/support/config_frame.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 
@@ -465,17 +466,12 @@ TEST_CASE("log: a store this build has no service for is refused by name, never 
     rig.setup();
     go::FlightLogService log{rig.context, rig.flights, nullptr, rig.config};
 
-    events::RxFrame frame{};
-    frame.endpoint = events::Endpoint::Log;
-    const char* json = "{\"command\":\"list\",\"log\":\"diagnostics\"}";
-    frame.session_id = rig.link.session_id();
-    frame.bytes = static_cast<uint16_t>(std::strlen(json));
-    std::memcpy(frame.data.data(), json, frame.bytes);
-    rig.bus.log_rx.push(frame);
+    rig.bus.log_rx.push(link_frame(events::Endpoint::Log, rig.link.session_id(),
+                                   "{\"command\":\"list\",\"log\":\"diagnostics\"}"));
     log.tick(0);
 
     REQUIRE_FALSE(rig.link.sent.empty());
-    const std::string answer = rig.link.sent.back().bytes;
+    const std::string answer = link_text(rig.link.sent.back().bytes);
     CHECK(answer.find("diagnostics") != std::string::npos);
     CHECK(answer.find("no_diagnostics") != std::string::npos);
 }

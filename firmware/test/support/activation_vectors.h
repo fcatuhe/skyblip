@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "core/util/hex.h"
-#include "core/util/json.h"
 #include "doctest/doctest.h"
+#include "simulator/world/json.h"
 
 namespace skyblip {
 
@@ -60,8 +60,8 @@ class ActivationVectors {
     }
 
    private:
-    json::Reader reader() const {
-        return json::Reader(text_.data(), static_cast<int>(text_.size()));
+    simulator::json::Reader reader() const {
+        return simulator::json::Reader(text_.data(), static_cast<int>(text_.size()));
     }
 
     std::string text_;

@@ -3,7 +3,8 @@
   const CONFIG = '69c21302-0187-4204-a91d-02eb8858b440';
   const PKCS8_ED25519 = '302e020100300506032b657004220420';
   const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+  const link = () => import('#skyblip/link');
+  const SMALL_MTU = { command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' };
   const bytes = (...hex) => Uint8Array.from(hex.join('').match(/../g), pair => parseInt(pair, 16));
   const hex = buffer => [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   const join = (...parts) => {
@@ -22,6 +23,7 @@
     nonce: null,
     serverNonce: null,
     address: null,
+    mtu: 247,
     listeners: [],
     commands: [],
 
@@ -38,16 +40,24 @@
 
     async verifies(signature, message) {
       const key = await crypto.subtle.importKey('raw', bytes(this.vectors.server_public_key), { name: 'Ed25519' }, false, ['verify']);
-      return crypto.subtle.verify('Ed25519', key, bytes(signature), message);
+      return crypto.subtle.verify('Ed25519', key, signature, message);
     },
 
-    reply(json) {
-      const value = new DataView(encoder.encode(JSON.stringify(json)).buffer);
+    async reply(fields) {
+      const { encodeFrame } = await link();
+      const whole = encodeFrame(fields);
+      const frame = whole.length <= this.mtu - 3 ? whole : encodeFrame(SMALL_MTU);
+      const value = new DataView(frame.buffer);
       setTimeout(() => this.listeners.forEach(listener => listener({ target: { value } })));
     },
 
+    acknowledge(acknowledge, reason, pending = undefined) {
+      return this.reply({ command: 'acknowledgement', acknowledge, pending, reason });
+    },
+
     async write(raw) {
-      const { command, ...fields } = JSON.parse(decoder.decode(raw));
+      const { decodeFrame } = await link();
+      const { command, ...fields } = decodeFrame(raw);
       this.commands.push(command);
       if (command === 'get') return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 });
       if (command === 'challenge') {
@@ -55,21 +65,21 @@
         return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
       }
       if (command === 'register') {
-        if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce, fields.server_nonce))))) {
-          return this.reply({ acknowledge: false, reason: 'bad_signature' });
+        if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce), fields.server_nonce)))) {
+          return this.acknowledge(false, 'bad_signature');
         }
-        this.serverNonce = fields.server_nonce;
-        return this.reply({ acknowledge: false, pending: true, reason: 'confirm_register' });
+        this.serverNonce = hex(fields.server_nonce);
+        return this.acknowledge(false, 'confirm_register', true);
       }
       if (command === 'unlock') {
         const serial = new Uint8Array([fields.serial >> 8, fields.serial & 0xff]);
         const message = join(label('unlock'), bytes(this.vectors.device_id, this.vectors.unit_public_key), serial, bytes(this.nonce));
         this.nonce = null;
-        if (!(await this.verifies(fields.signature, message))) return this.reply({ acknowledge: false, reason: 'bad_signature' });
+        if (!(await this.verifies(fields.signature, message))) return this.acknowledge(false, 'bad_signature');
         this.address = fields.serial;
-        return this.reply({ acknowledge: true, reason: 'unlock' });
+        return this.acknowledge(true, 'unlock');
       }
-      return this.reply({ acknowledge: false, reason: 'unknown_command' });
+      return this.acknowledge(false, 'unknown_command');
     },
   };
 

@@ -237,6 +237,7 @@ struct Link {
     uint32_t drops{0};
     LinkAction action{LinkAction::Up};
     events::Endpoint endpoint{events::Endpoint::Config};
+    events::MtuExchangeStarter mtu_exchange_started_by{events::MtuExchangeStarter::None};
     bool claim_held{false};
 };
 

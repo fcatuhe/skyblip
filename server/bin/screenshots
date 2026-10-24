@@ -211,14 +211,14 @@ const OWN_CALLSIGN = "S-BLIP";
 // endpoint, the glass asks, and two presses allow it. A write is refused unless
 // the device knows it is on the ground, so the aircraft is parked first.
 function asks(device, callsign) {
-  return asksFor(device, `{"command":"set","callsign":"${callsign}"}`);
+  return asksFor(device, { command: "set", callsign });
 }
 
 function asksFor(device, command) {
   device.fly({ ...CRUISE, kt: 0 }).run(GROUND_MS);
   device.sim.sendConfig(command);
   device.run(PROMPT_MS);
-  if (!device.sim.prompt()) throw new Error(`${command} never reached the glass`);
+  if (!device.sim.prompt()) throw new Error(`${JSON.stringify(command)} never reached the glass`);
   return device;
 }
 
@@ -515,7 +515,7 @@ const scenes = [
   {
     name: "recovery",
     powered: false,
-    shot: device => asksFor(device, `{"command":"recovery"}`).allow().run(6000)
+    shot: device => asksFor(device, { command: "recovery" }).allow().run(6000)
   },
   {
     name: "off",

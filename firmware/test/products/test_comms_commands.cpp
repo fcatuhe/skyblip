@@ -103,7 +103,7 @@ TEST_CASE("comms: a dfu that does not name its version is refused at the door") 
         config.set_flight_state(flight::FlightState::Ground);
         config.on_rx(config_frame(json));
         CHECK(config.pending() == Pending::None);
-        CHECK(link.last().bytes.find("no_version") != std::string::npos);
+        CHECK(link_text(link.last().bytes).find("no_version") != std::string::npos);
     }
 }
 
@@ -128,7 +128,7 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     CHECK(config.install_requested());
     CHECK_FALSE(config.receiving_firmware());
     CHECK(dfu.triggered == 0);
-    CHECK(link.last().bytes.find("\"acknowledge\":true,\"reason\":\"install\"") !=
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":true,\"reason\":\"install\"") !=
           std::string::npos);
 
     config.clear_install_request();
@@ -147,7 +147,7 @@ TEST_CASE("comms: an image other than the one the press named is refused, not in
     upload_opened(config, dfu).tick(100);
     CHECK_FALSE(config.install_requested());
     CHECK_FALSE(config.receiving_firmware());
-    CHECK(link.last().bytes.find("not_approved") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("not_approved") != std::string::npos);
 }
 
 TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebooted into") {
@@ -160,7 +160,7 @@ TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebo
     ConfigService config(link, store, &dfu);
     upload_opened(config, dfu).tick(100);
     CHECK_FALSE(config.install_requested());
-    CHECK(link.last().bytes.find("nothing_staged") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("nothing_staged") != std::string::npos);
 }
 
 TEST_CASE("comms: opening an upload window forgets the upload an earlier one finished") {
@@ -182,7 +182,7 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
     CHECK_FALSE(config.install_requested());
 }
 
-TEST_CASE("comms: apply is no longer a command") {
+TEST_CASE("comms: a command code the registry does not hold is refused as unknown_command") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -190,10 +190,26 @@ TEST_CASE("comms: apply is no longer a command") {
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"apply\"}"));
+    config.on_rx(config_frame("{\"command\":99}"));
     CHECK(config.pending() == Pending::None);
     CHECK_FALSE(config.install_requested());
-    CHECK(link.last().bytes.find("unknown_command") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("unknown_command") != std::string::npos);
+}
+
+// The editor's ownship frame is a proposal: the registry numbers it, the firmware reads none yet.
+TEST_CASE("comms: an ownship drawing is refused as unknown_command, nothing stored") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(
+        config_frame("{\"command\":\"ownship\",\"aircraft_type\":1,\"width\":3,\"hot_spot\":0,"
+                     "\"rows\":\"00000002\"}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}");
 }
 
 TEST_CASE("comms: dfu is refused at the door on a critical cell") {
@@ -212,7 +228,7 @@ TEST_CASE("comms: dfu is refused at the door on a critical cell") {
 
     config.on_rx(config_frame(kDfu));
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
     CHECK_FALSE(config.upload_allowed());
 }
 
@@ -234,7 +250,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     config.tick(100);
     CHECK_FALSE(config.install_requested());
     CHECK_FALSE(config.receiving_firmware());
-    CHECK(link.last().bytes.find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
 
     // A power-off is not a swap: the same cell is allowed to switch the device off.
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
@@ -254,7 +270,7 @@ TEST_CASE("comms: a landed upload on a device no longer proven on the ground is 
     config.set_flight_state(flight::FlightState::Unknown);
     config.tick(100);
     CHECK_FALSE(config.install_requested());
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 }
 
 TEST_CASE("comms: the update question names the image state and the versions of the attempt") {
@@ -264,18 +280,18 @@ TEST_CASE("comms: the update question names the image state and the versions of 
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"update\"}"));
-    CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"from\"") == std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"from\"") == std::string::npos);
 
     dfu::UpdateRecord record;
     record.from = ports::ImageVersion{0, 1, 0, 12};
     record.to = ports::ImageVersion{0, 2, 0, 15};
     config.set_image_state(dfu::ImageState::Reverted, record);
     config.on_rx(config_frame("{\"command\":\"update\"}"));
-    CHECK(link.last().bytes.find("\"image\":\"reverted\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"from\":\"0.1.0+12\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"to\":\"0.2.0+15\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"swap_powered\":true") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"image\":\"reverted\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"from\":\"0.1.0+12\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"to\":\"0.2.0+15\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"swap_powered\":true") != std::string::npos);
 }
 
 // A phone that connects to a device whose last update did not take is told so
@@ -295,8 +311,8 @@ TEST_CASE(
     link.raise_link(2);
     config.on_link_up(events::LinkUp{2, 244});
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("\"command\":\"update\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"image\":\"probation\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"command\":\"update\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"image\":\"probation\"") != std::string::npos);
 }
 
 TEST_CASE("comms: a link that comes up on settings that fell back is told, on a confirmed image") {
@@ -308,9 +324,9 @@ TEST_CASE("comms: a link that comes up on settings that fell back is told, on a 
     config.set_settings_fallback(settings::Fallback::Defaults);
     config.on_link_up(events::LinkUp{1, 244});
     REQUIRE(link.sent.size() == 1);
-    CHECK(link.last().bytes.find("\"image\":\"confirmed\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"settings\":\"defaults\"") != std::string::npos);
-    CHECK(link.last().bytes.find("\"from\"") == std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"image\":\"confirmed\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"settings\":\"defaults\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"from\"") == std::string::npos);
 }
 
 // The product paints the recovery page first, so a confirmed recovery is a latch the sequencer
@@ -330,7 +346,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     CHECK(config.recovery_requested());
     CHECK(dfu.recovery == 0);
     CHECK_FALSE(config.power_off_requested());
-    CHECK(link.last().bytes.find("\"reason\":\"recovery\"") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"reason\":\"recovery\"") != std::string::npos);
 
     config.clear_recovery_request();
     CHECK_FALSE(config.recovery_requested());
@@ -363,12 +379,12 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::PowerOff);
     CHECK_FALSE(config.power_off_requested());  // a remote request alone turns nothing off
-    CHECK(link.last().bytes.find("confirm_power_off") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("confirm_power_off") != std::string::npos);
 
     config.confirm();
     CHECK(config.pending() == Pending::None);
     CHECK(config.power_off_requested());
-    CHECK(link.last().bytes.find("\"acknowledge\":true") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":true") != std::string::npos);
 
     config.clear_power_off_request();
     CHECK_FALSE(config.power_off_requested());
@@ -384,7 +400,7 @@ TEST_CASE("comms: power_off refused in flight") {
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(config.pending() == Pending::None);
     CHECK_FALSE(config.power_off_requested());
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 
     // And a confirmation that arrives after takeoff does not turn it off either.
     config.set_flight_state(flight::FlightState::Ground);
@@ -479,7 +495,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     CHECK(prompt.pending() == Pending::Dfu);
     prompt.tick(before + kPromptForgetMs);
     CHECK(prompt.pending() == Pending::None);
-    CHECK(second_link.last().bytes.find("expired") != std::string::npos);
+    CHECK(link_text(second_link.last().bytes).find("expired") != std::string::npos);
 }
 
 TEST_CASE("comms: disconnect closes the upload window") {

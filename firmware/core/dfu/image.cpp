@@ -56,9 +56,4 @@ bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out
     return false;
 }
 
-uint32_t key_prefix(const ports::SigningKeyHash& key) {
-    return (static_cast<uint32_t>(key[0]) << 24) | (static_cast<uint32_t>(key[1]) << 16) |
-           (static_cast<uint32_t>(key[2]) << 8) | key[3];
-}
-
 }  // namespace skyblip::dfu

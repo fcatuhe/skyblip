@@ -16,22 +16,21 @@ class SettingsStore : public comms::ConfigStore {
     SettingsStore(Settings& settings, const identity::Activation& activation)
         : settings_(settings), activation_(activation) {}
 
-    void write_fields(json::Writer& writer) const override {
-        write_json_fields(writer, settings_, activation_.address());
+    void write_fields(cbor::Writer& writer) const override {
+        write_config_fields(writer, settings_, activation_.address());
     }
 
-    void write_default_fields(json::Writer& writer) const override {
-        write_json_settings(writer, defaults());
+    void write_default_fields(cbor::Writer& writer) const override {
+        write_settings_fields(writer, defaults());
     }
 
-    Status apply(const char* json, int bytes) override {
-        return apply_json(settings_, json, bytes);
-    }
+    Status apply(const cbor::Reader& frame) override { return apply_settings(settings_, frame); }
 
-    int describe_changes(const char* json, int bytes, char* out, int capacity) const override {
+    Status describe_changes(const cbor::Reader& frame, char* out, int capacity) const override {
         Settings next = settings_;
-        if (apply_json(next, json, bytes) != Status::Ok) return 0;
-        return describe_settings_changes(settings_, next, out, capacity);
+        const Status applied = apply_settings(next, frame);
+        if (applied == Status::Ok) (void)describe_settings_changes(settings_, next, out, capacity);
+        return applied;
     }
 
    private:

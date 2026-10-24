@@ -32,7 +32,7 @@ int config_frames(Rig& rig) { return rig.platform.link().count_on(events::Endpoi
 std::string last_frame_on(Rig& rig, events::Endpoint endpoint) {
     const auto& sent = rig.platform.link().sent;
     for (auto it = sent.rbegin(); it != sent.rend(); ++it)
-        if (it->endpoint == endpoint) return it->bytes;
+        if (it->endpoint == endpoint) return link_text(it->bytes);
     return std::string();
 }
 

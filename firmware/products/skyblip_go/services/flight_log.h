@@ -54,7 +54,7 @@ class FlightLogService : public runtime::Service {
                      uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     RecordStore* store_for(comms::LogStore store);
-    void acknowledge(comms::LogStore store, bool ok, const char* reason);
+    void acknowledge(comms::LogStore store, bool ok, link::Reason reason);
     bool on_ground() const;
 
     RecordStore& flights_;
