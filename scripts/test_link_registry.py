@@ -73,6 +73,16 @@ def status_key(registry, name):
     return next(key for key in status["keys"] if key["name"] == name)
 
 
+class HostKeys(unittest.TestCase):
+    # keys_within() reads one bit a key from a uint64_t, so a host frame key numbered 64 has none.
+    def test_a_host_frame_key_numbered_64_is_refused(self):
+        registry = link_registry.load()
+        unlock = next(frame for frame in registry["frames"] if frame["command"] == "unlock")
+        unlock["keys"][-1]["number"] = 64
+        with self.assertRaises(ValueError):
+            link_registry.host_keys(registry["frames"])
+
+
 class Registry(unittest.TestCase):
     def test_a_frame_or_a_key_without_a_description_is_named(self):
         registry = link_registry.load()
