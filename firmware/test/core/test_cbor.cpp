@@ -188,6 +188,21 @@ TEST_CASE("cbor: a signed read holds to 32 bits, as the device's own fields do")
           Status::OutOfRange);
 }
 
+TEST_CASE("cbor: a frame holds its keys within a set of numbers, or names one outside it") {
+    uint8_t out[16];
+    cbor::Writer writer(out, sizeof(out));
+    writer.add_unsigned(0, 1);
+    writer.add_unsigned(3, 1);
+    const cbor::Reader reader(ConstByteSpan(out, static_cast<size_t>(writer.finish())));
+    CHECK(reader.keys_within(0b1001));
+    CHECK_FALSE(reader.keys_within(0b0001));
+
+    cbor::Writer past(out, sizeof(out));
+    past.add_unsigned(64, 1);
+    const cbor::Reader beyond(ConstByteSpan(out, static_cast<size_t>(past.finish())));
+    CHECK_FALSE(beyond.keys_within(UINT64_MAX));
+}
+
 TEST_CASE("cbor: an array of counts is read item by item") {
     uint8_t out[16];
     cbor::Writer writer(out, sizeof(out));

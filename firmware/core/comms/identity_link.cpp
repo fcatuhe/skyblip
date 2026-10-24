@@ -38,21 +38,6 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
     return true;
 }
 
-// INFO: fc 18oct26 each refusal is refuse(link::Reason::Word): the activation page greps them
-bool ConfigService::answer_identity(link::Command command, const cbor::Reader& frame) {
-    if (identity_ == nullptr) return false;
-    if (command == link::Command::Challenge) {
-        challenge();
-    } else if (command == link::Command::Register) {
-        register_unit(frame);
-    } else if (command == link::Command::Unlock) {
-        unlock(frame);
-    } else {
-        return false;
-    }
-    return true;
-}
-
 // INFO: fc 18oct26 an unactivated unit is silent and a bench has no fix: only activated is gated
 bool ConfigService::identity_refused_in_flight() {
     if (!identity_->activated() || on_ground()) return false;
@@ -60,6 +45,7 @@ bool ConfigService::identity_refused_in_flight() {
     return true;
 }
 
+// INFO: fc 18oct26 each refusal is refuse(link::Reason::Word): the activation page greps them
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
     char version[dfu::kVersionTextBytes] = {0};

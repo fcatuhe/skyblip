@@ -288,6 +288,14 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
     const link::Command command = code.value() <= UINT8_MAX
                                       ? static_cast<link::Command>(code.value())
                                       : link::Command::Acknowledgement;
+    if (!answers(command)) {
+        acknowledge(false, link::Reason::UnknownCommand);
+        return;
+    }
+    if (!reader.keys_within(link::host_keys(command))) {
+        acknowledge(false, link::Reason::Invalid);
+        return;
+    }
     switch (command) {
         case link::Command::Get: send_config(); return;
         case link::Command::Defaults: send_defaults(); return;
@@ -302,11 +310,31 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Recovery:
         case link::Command::PowerOff:
         case link::Command::GnssColdStart: answer_prompt_request(command, reader); return;
+        case link::Command::Challenge: challenge(); return;
+        case link::Command::Register: register_unit(reader); return;
+        case link::Command::Unlock: unlock(reader); return;
+        default: return;
+    }
+}
+
+bool ConfigService::answers(link::Command command) const {
+    switch (command) {
+        case link::Command::Get:
+        case link::Command::Defaults:
+        case link::Command::Status:
+        case link::Command::Timing:
+        case link::Command::Flash:
+        case link::Command::Radio:
+        case link::Command::Update:
+        case link::Command::Diagnostics:
+        case link::Command::Set:
+        case link::Command::Dfu:
+        case link::Command::Recovery:
+        case link::Command::PowerOff:
+        case link::Command::GnssColdStart: return true;
         case link::Command::Challenge:
         case link::Command::Register:
-        case link::Command::Unlock:
-            if (answer_identity(command, reader)) return;
-            break;
+        case link::Command::Unlock: return identity_ != nullptr;
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:
@@ -316,9 +344,9 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Log:
         case link::Command::Session:
         case link::Command::Chunk:
-        case link::Command::Ownship: break;
+        case link::Command::Ownship: return false;
     }
-    acknowledge(false, link::Reason::UnknownCommand);
+    return false;
 }
 
 // INFO: fc 04aug26 refused, never answered short: a config reply missing a field renders defaults

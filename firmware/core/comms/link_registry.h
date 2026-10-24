@@ -352,6 +352,38 @@ namespace set_key = config_key;
 
 namespace radio_key = diagnostics_key;
 
+constexpr uint64_t host_keys(Command command) {
+    switch (command) {
+        case Command::Acknowledgement:
+        case Command::Get:
+        case Command::Config:
+        case Command::Defaults:
+        case Command::Status:
+        case Command::Timing:
+        case Command::Flash:
+        case Command::Radio:
+        case Command::Diagnostics:
+        case Command::Update:
+        case Command::Recovery:
+        case Command::PowerOff:
+        case Command::Challenge:
+        case Command::Registration:
+        case Command::Log:
+        case Command::Session:
+        case Command::Chunk:
+        case Command::GnssColdStart: return 0x1;
+        case Command::Set: return 0x7FF;
+        case Command::Dfu:
+        case Command::Erase: return 0x3;
+        case Command::Register:
+        case Command::Unlock:
+        case Command::List: return 0x7;
+        case Command::Read:
+        case Command::Ownship: return 0x1F;
+    }
+    return 0;
+}
+
 }
 
 #endif

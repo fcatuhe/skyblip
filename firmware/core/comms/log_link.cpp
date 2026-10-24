@@ -32,7 +32,12 @@ uint32_t clamped_chunk_count(uint32_t count) {
     return count > kMaxLogReadChunks ? kMaxLogReadChunks : count;
 }
 
-bool is(uint32_t code, link::Command command) { return code == static_cast<uint32_t>(command); }
+LogCommand log_command(uint32_t code) {
+    if (code == static_cast<uint32_t>(link::Command::List)) return LogCommand::List;
+    if (code == static_cast<uint32_t>(link::Command::Read)) return LogCommand::Read;
+    if (code == static_cast<uint32_t>(link::Command::Erase)) return LogCommand::Erase;
+    return LogCommand::None;
+}
 
 bool read_if_present(const cbor::Reader& frame, uint32_t key, std::optional<uint32_t>& out) {
     const Result<uint32_t> value = frame.read_unsigned(key);
@@ -71,20 +76,23 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
     const Result<uint32_t> code = reader.read_unsigned(link::kCommandKey);
     if (!code.ok()) return request;
 
+    const LogCommand command = log_command(code.value());
+    if (command == LogCommand::None) return request;
+    if (!reader.keys_within(link::host_keys(static_cast<link::Command>(code.value()))))
+        return refused(request, link::Reason::Invalid);
+    request.command = command;
+
     uint32_t store_key = 0;
-    if (is(code.value(), link::Command::List)) {
-        request.command = LogCommand::List;
+    if (command == LogCommand::List) {
         store_key = link::list_key::kLog;
         std::optional<uint32_t> index;
         if (!read_if_present(reader, link::list_key::kIndex, index))
             return refused(request, link::Reason::Invalid);
         request.index_valid = index.has_value();
         request.index = index.value_or(0);
-    } else if (is(code.value(), link::Command::Erase)) {
-        request.command = LogCommand::Erase;
+    } else if (command == LogCommand::Erase) {
         store_key = link::erase_key::kLog;
-    } else if (is(code.value(), link::Command::Read)) {
-        request.command = LogCommand::Read;
+    } else {
         store_key = link::read_key::kLog;
         const Result<uint32_t> session = reader.read_unsigned(link::read_key::kSession);
         if (session.status() == Status::NotFound) return request;
@@ -96,8 +104,6 @@ LogRequest parse_log_request(const events::RxFrame& frame) {
         request.session = session.value();
         request.from = from.value_or(0);
         request.count = count ? clamped_chunk_count(*count) : 1;
-    } else {
-        return request;
     }
     if (!parse_store(reader, store_key, request)) return refused(request, link::Reason::UnknownLog);
     request.understood = true;

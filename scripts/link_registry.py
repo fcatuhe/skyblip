@@ -130,8 +130,25 @@ def firmware_header(registry):
     for frame in registry["frames"]:
         if "keys_of" in frame:
             lines += ["namespace %s_key = %s_key;" % (frame["command"], frame["keys_of"]), ""]
+    lines += host_keys(registry["frames"])
     lines += ["}", "", "#endif"]
     return "\n".join(lines) + "\n"
+
+
+def host_keys(frames):
+    """The key numbers a host frame of each command may carry, one bit each: a bare ask carries none."""
+    commands_by_bits = {}
+    for frame in frames:
+        numbers = [key["number"] for key in frame["keys"]] if frame["sender"] == "host" else [0]
+        if max(numbers) >= 64:
+            raise ValueError("%s: a host frame's keys are numbered under 64" % frame["command"])
+        bits = sum(1 << number for number in numbers)
+        commands_by_bits.setdefault(bits, []).append(frame["command"])
+    lines = ["constexpr uint64_t host_keys(Command command) {", "    switch (command) {"]
+    for bits, commands in commands_by_bits.items():
+        lines += ["        case Command::%s:" % pascal(command) for command in commands]
+        lines.append("            return 0x%X;" % bits)
+    return lines + ["    }", "    return 0;", "}", ""]
 
 
 def enum_class(name, values):

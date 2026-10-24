@@ -283,6 +283,16 @@ bool Reader::entry(int index, Entry& out) const {
     return true;
 }
 
+bool Reader::keys_within(uint64_t key_bits) const {
+    size_t at = first_entry_;
+    for (int i = 0; i < count(); i++) {
+        Entry entry;
+        read_entry(frame_, at, entry);
+        if (entry.key >= 64 || ((key_bits >> entry.key) & 1) == 0) return false;
+    }
+    return true;
+}
+
 bool Reader::find(uint32_t key, Entry& out) const {
     size_t at = first_entry_;
     for (int i = 0; i < count(); i++) {

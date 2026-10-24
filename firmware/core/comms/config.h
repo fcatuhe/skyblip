@@ -290,7 +290,7 @@ class ConfigService {
     // subsystem where the payload allows it, more where it does not, and never a
     // frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
-    bool answer_identity(link::Command command, const cbor::Reader& frame);
+    bool answers(link::Command command) const;
     void challenge();
     void register_unit(const cbor::Reader& frame);
     void send_registration();

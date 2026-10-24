@@ -1,5 +1,7 @@
-// Every frame the unit sends, decoded and held to schemas/link.v1.json.
+// Every frame the unit sends, decoded and held to schemas/link.v1.json, and every command it reads.
+#include <algorithm>
 #include <cstdint>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -191,6 +193,14 @@ struct GroundedUnitWithLogs {
         rig.press(now_ms);
         taxi(rig, now_ms, 2);
     }
+
+    bool answered(size_t before, events::Endpoint endpoint, const std::string& prefix) {
+        const auto& sent = rig.platform.link().sent;
+        for (size_t i = before; i < sent.size(); i++)
+            if (sent[i].endpoint == endpoint && link_text(sent[i].bytes).rfind(prefix, 0) == 0)
+                return true;
+        return false;
+    }
 };
 
 void speak_every_reply(GroundedUnitWithLogs& unit) {
@@ -277,4 +287,151 @@ TEST_CASE("link registry: every frame the unit sends carries its keys, types and
     speak_every_key_the_rig_leaves_out(desk);
     witness.hold(desk);
     CHECK(witness.unheard() == std::vector<std::string>{});
+}
+
+namespace {
+
+struct Answer {
+    const char* command;
+    events::Endpoint endpoint;
+    std::string reads;
+    const char* foreign_key_refused_as;
+};
+
+constexpr events::Endpoint kConfig = events::Endpoint::Config;
+constexpr events::Endpoint kLog = events::Endpoint::Log;
+
+std::string reply(const char* command) { return std::string("{\"command\":\"") + command + "\""; }
+
+std::string prompt(const char* reason) {
+    return std::string(
+               "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
+               "\"reason\":\"") +
+           reason + "\"}";
+}
+
+const std::vector<Answer> kAnswers = {
+    {"get", kConfig, reply("config"), "invalid"},
+    {"defaults", kConfig, reply("defaults"), "invalid"},
+    {"set", kConfig, prompt("confirm"), "invalid"},
+    {"status", kConfig, reply("status"), "invalid"},
+    {"timing", kConfig, reply("timing"), "invalid"},
+    {"flash", kConfig, reply("flash"), "invalid"},
+    {"radio", kConfig, reply("radio"), "invalid"},
+    {"diagnostics", kConfig, reply("diagnostics"), "invalid"},
+    {"update", kConfig, reply("update"), "invalid"},
+    {"dfu", kConfig, prompt("confirm_dfu"), "invalid"},
+    {"recovery", kConfig, prompt("confirm_recovery"), "invalid"},
+    {"power_off", kConfig, prompt("confirm_power_off"), "invalid"},
+    {"challenge", kConfig, reply("challenge"), "invalid"},
+    {"register", kConfig, prompt("confirm_register"), "invalid"},
+    {"unlock", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}", "invalid"},
+    {"list", kLog, reply("session"), "invalid"},
+    {"read", kLog, reply("chunk"), "invalid"},
+    {"erase", kConfig, prompt("confirm_erase_log"), "invalid"},
+    {"gnss_cold_start", kConfig, prompt("confirm_gnss_cold_start"), "invalid"},
+    {"ownship", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
+     "unknown_command"},
+};
+
+const Answer* answer_to(const names::Frame& frame) {
+    for (const Answer& answer : kAnswers)
+        if (std::string(answer.command) == frame.command) return &answer;
+    return nullptr;
+}
+
+std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
+    return {
+        {"set.version", "1"},
+        {"set.address", "298"},
+        {"set.address_mapping_table", "58"},
+        {"set.aircraft_type", "1"},
+        {"set.alarm_enabled", "true"},
+        {"set.alarm_volume", "\"soft\""},
+        {"set.units", "\"metric\""},
+        {"set.callsign", "\"D-KXYZ\""},
+        {"set.battery_offset_mv", "10"},
+        {"set.frequency_trim_e1_ppm", "-5"},
+        {"dfu.version", "\"0.4.0+1\""},
+        {"register.server_nonce",
+         "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
+        {"register.signature", "\"" + register_signature() + "\""},
+        {"unlock.serial", std::to_string(Identity::kSerial)},
+        {"unlock.signature", "\"" + unlock_signature() + "\""},
+        {"list.log", "\"flights\""},
+        {"list.index", "0"},
+        {"read.log", "\"flights\""},
+        {"read.session", std::to_string(unit.flight)},
+        {"read.from", "0"},
+        {"read.count", "1"},
+        {"erase.log", "\"flights\""},
+        {"ownship.aircraft_type", "1"},
+        {"ownship.width", "8"},
+        {"ownship.hot_spot", "2"},
+        {"ownship.rows", "\"00ff00ff\""},
+    };
+}
+
+std::string with_every_key(const names::Frame& frame,
+                           const std::map<std::string, std::string>& values) {
+    std::string json = std::string("{\"command\":\"") + frame.command + "\"";
+    if (frame.sender == names::Sender::Both) return json + "}";
+    for (int i = 0; i < frame.count; i++) {
+        const names::Key& key = frame.keys[i];
+        if (key.number == link::kCommandKey) continue;
+        const std::string name = std::string(frame.command) + "." + key.name;
+        REQUIRE_MESSAGE(values.count(name) == 1, "no sample for ", name);
+        json += ",\"" + std::string(key.name) + "\":" + values.at(name);
+    }
+    return json + "}";
+}
+
+events::RxFrame with_a_foreign_key(const names::Frame& frame) {
+    uint32_t foreign = 1;
+    if (frame.sender == names::Sender::Host)
+        for (int i = 0; i < frame.count; i++) foreign = std::max(foreign, frame.keys[i].number + 1);
+    events::RxFrame out{};
+    out.session_id = 1;
+    out.endpoint = frame.endpoint;
+    cbor::Writer writer(out.data.data(), static_cast<int>(out.data.size()));
+    writer.add_unsigned(link::kCommandKey, frame.code);
+    writer.add_unsigned(foreign, 0);
+    out.bytes = static_cast<uint16_t>(writer.finish());
+    return out;
+}
+
+std::string refusal(const names::Frame& frame, const Answer& answer) {
+    const std::string command = frame.endpoint == kLog ? "log" : "acknowledgement";
+    return "{\"command\":\"" + command + "\",\"acknowledge\":false,\"reason\":\"" +
+           answer.foreign_key_refused_as + "\"}";
+}
+
+}  // namespace
+
+// A host frame the firmware ignored a key of, or refused one it lists, was invisible to a page.
+TEST_CASE("link registry: the unit reads every key a host frame may carry, and refuses any other") {
+    GroundedUnitWithLogs unit;
+    unit.rig.raise_link(1);
+    unit.rig.platform.identity().queue_random(kUnitNonce);
+    const std::map<std::string, std::string> values = samples(unit);
+    for (const names::Frame& frame : names::kFrames) {
+        if (frame.sender == names::Sender::Unit) continue;
+        const Answer* answer = answer_to(frame);
+        REQUIRE_MESSAGE(answer != nullptr, "no answer for ", std::string(frame.command));
+        const std::string json = with_every_key(frame, values);
+        CAPTURE(json);
+
+        size_t before = unit.rig.platform.link().sent.size();
+        unit.say(frame.endpoint, json);
+        taxi(unit.rig, unit.now_ms, 3);
+        CHECK(unit.answered(before, answer->endpoint, answer->reads));
+        if (answer->reads.find("\"pending\":true") != std::string::npos) unit.cancel();
+
+        before = unit.rig.platform.link().sent.size();
+        unit.rig.platform.link().push_rx(with_a_foreign_key(frame));
+        taxi(unit.rig, unit.now_ms, 3);
+        CHECK(unit.answered(before, frame.endpoint, refusal(frame, *answer)));
+    }
 }
