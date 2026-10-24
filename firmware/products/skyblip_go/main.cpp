@@ -20,7 +20,7 @@ platform::zephyr::Platform g_platform;
 Go g_product{g_platform};
 
 // Reads what the services and the board already count, one line per subsystem on
-// the USB console, and holds the snapshot the `diag` command answers from. Not a
+// the USB console, and holds the snapshot the `diagnostics` command answers from. Not a
 // service: it consumes the product rather than being stepped by it.
 go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 
@@ -28,7 +28,7 @@ go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
 
 int main(void) {
     // INFO: fc 05oct26 before setup, so a refused boot cannot hang awake; SYSTEM OFF stops it
-    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogMs) != Status::Ok)
+    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok)
         LOG_ERR("watchdog: not armed, the loop is unsupervised");
 
     const Status started = g_product.setup();
@@ -39,11 +39,11 @@ int main(void) {
     if (g_product.boot_path() == power::BootPath::SleepAgain) {
         const power::BootCell& cell = g_product.boot_cell();
         LOG_INF("back to sleep at %u mV (lockout %u mV, external power %d), glass: %s",
-                cell.millivolts, power::kBootLockoutMv, static_cast<int>(cell.external_power),
+                cell.cell_mv, power::kBootLockoutMv, static_cast<int>(cell.external_power),
                 power::to_string(g_product.refused_frame()));
         while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get()))) {
             g_platform.watchdog().feed();
-            k_sleep(K_MSEC(runtime::kServiceStepMs));
+            k_sleep(K_MSEC(runtime::kServicePassCeilingMs));
         }
         g_platform.system_power().system_off();
     }
@@ -52,7 +52,8 @@ int main(void) {
     if (!g_platform.storage_mounted())
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
     if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
-    if (!g_platform.keyed()) LOG_ERR("identity: no unit key, the unit can never be activated");
+    if (!g_platform.key_provisioned())
+        LOG_ERR("identity: no unit key, the unit can never be activated");
     if (!g_product.state().activation.activated())
         LOG_INF("identity: not activated, the radio stays off until skyblip.eu/activate");
 
@@ -71,14 +72,14 @@ int main(void) {
         // The self-test page is already on the glass and names the part that
         // did not answer. Staying up with it beats returning from main.
         LOG_ERR("self test %s: missing=%u", to_string(started),
-                static_cast<unsigned>(ports::missing(g_product.capabilities(), go::kRequired)));
+                static_cast<unsigned>(ports::without(go::kRequired, g_product.capabilities())));
     }
 
     bool reported_stall = false;
     for (;;) {
         const int64_t began_ticks = k_uptime_ticks();
         const uint32_t now_ms = static_cast<uint32_t>(k_ticks_to_ms_floor64(began_ticks));
-        g_product.step(now_ms);
+        g_product.run_pass(now_ms);
         g_diagnostics.step(g_product, now_ms);
 
         if (g_product.may_feed_watchdog(now_ms)) {

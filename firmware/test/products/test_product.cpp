@@ -52,8 +52,8 @@ TEST_CASE("product: step() runs the service cycle deterministically under a mode
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 3000);
-    uint8_t pkt[6] = {1, 2, 3, 4, 5, 6};
-    rig.platform.chips().radio.queue_rx(pkt, sizeof(pkt));
+    uint8_t packet[6] = {1, 2, 3, 4, 5, 6};
+    rig.platform.chips().radio.queue_rx(packet, sizeof(packet));
     rig.run(3000, 4200);
     CHECK(rig.state().air.rx_unframed >= 1);  // too short to frame as either system
     CHECK(rig.state().air.rx_bad == 0);
@@ -76,11 +76,11 @@ TEST_CASE("product: the e-paper refreshes on change, not on cadence") {
 
 TEST_CASE("product: persisted settings are loaded on setup") {
     Rig rig;
-    go::Settings s = go::defaults();
-    s.alarm_volume = go::AlarmVolume::Soft;
+    go::Settings settings = go::defaults();
+    settings.alarm_volume = go::AlarmVolume::Soft;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
-    REQUIRE(rig.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
+    go::to_blob(settings, blob, sizeof(blob));
+    REQUIRE(rig.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
 
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
@@ -92,7 +92,7 @@ TEST_CASE("product: the identity a tablet is told is the unlock code's, not a st
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link(1);
     rig.run(0, 100);
-    rig.send("{\"cmd\":\"get\"}");
+    rig.send("{\"command\":\"get\"}");
     rig.run(100, 200);
 
     const std::string reply = rig.last_on(events::Endpoint::Config);
@@ -105,10 +105,10 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(rig.state().power.battery.valid);
 
-    rig.platform.battery().millivolts = 3800;
+    rig.platform.battery().divider_mv = 3800;
     rig.run(0, 12000);
     CHECK(rig.state().power.battery.valid);
-    CHECK(rig.state().power.battery.millivolts == 3800);
+    CHECK(rig.state().power.battery.cell_mv == 3800);
     CHECK(rig.state().power.battery.percent == power::percent_from_mv(3800));
     CHECK_FALSE(rig.state().power.battery.charging);
     CHECK_FALSE(rig.state().power.battery.external_power);
@@ -118,12 +118,12 @@ TEST_CASE("product: the board reads the cell and the gauge publishes it") {
 TEST_CASE("product: on USB power the gauge shows the cable and no state of charge") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.platform.battery().millivolts = 3750;
+    rig.platform.battery().divider_mv = 3750;
     rig.run(0, 12000);
     REQUIRE(rig.state().power.battery.valid);
 
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 4690;
+    rig.platform.battery().divider_mv = 4690;
     rig.run(12000, 24000);
     CHECK(rig.state().power.battery.charging);
     CHECK(rig.state().power.battery.external_power);
@@ -150,27 +150,27 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
     // The only way the device can be told it is on the ground: one stationary
     // solution, which core/flight answers Ground to and the link's gate reads.
-    rig.push_fix(/*alt_m=*/0, /*updates=*/1);
+    rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
-    const char* json = "{\"cmd\":\"set\",\"alarm_volume\":2}";
+    const char* json = "{\"command\":\"set\",\"alarm_volume\":2}";
     events::RxFrame frame{};
     frame.endpoint = events::Endpoint::Config;
-    frame.len = static_cast<uint16_t>(__builtin_strlen(json));
-    for (uint16_t i = 0; i < frame.len; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
+    frame.bytes = static_cast<uint16_t>(__builtin_strlen(json));
+    for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = static_cast<uint8_t>(json[i]);
     rig.platform.link().push_rx(frame);
     rig.run(100, 300);
-    rig.product.config().config().confirm();
+    rig.product.config_link().config().confirm();
     // The write is a request now, not a call: it coalesces for
     // DurableWriteWindow::kSettleMs and then waits for a phase of the second the
     // NVMC may stall the core in. Two seconds is several of both.
     rig.run(300, 2400);
 
     uint8_t blob[64];
-    size_t n = 0;
-    REQUIRE(rig.platform.kv().read("settings", blob, sizeof(blob), n) == Status::Ok);
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
-    REQUIRE(go::from_blob(blob, n, stored) == Status::Ok);
+    REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
     CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
 }
 
@@ -187,7 +187,8 @@ TEST_CASE("product: the reset reason is read once at boot and kept") {
     REQUIRE(fresh.setup() == Status::Ok);
     CHECK(fresh.product.reset_reason() == power::ResetReason::PowerOn);
     // Two different boots must not paint the same page.
-    CHECK(fresh.product.boot_page().count_black() != rig.product.boot_page().count_black());
+    CHECK(fresh.product.self_test_page().count_black() !=
+          rig.product.self_test_page().count_black());
 }
 
 // D5. The panel has the reason at boot and then it is gone; the field diagnosis
@@ -197,14 +198,14 @@ TEST_CASE("product: the link is told at boot why the device came up") {
     Rig rig;
     rig.platform.system_power().causes = power::ResetCause::Watchdog;
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.product.config().config().reset_reason() == power::ResetReason::Watchdog);
+    CHECK(rig.product.config_link().config().reset_reason() == power::ResetReason::Watchdog);
 
     // A device that came up because someone pressed the button says that, and
     // not the UNKNOWN a reason nobody passed on would read as.
     Rig pressed;
     pressed.platform.system_power().causes = power::ResetCause::Pin;
     REQUIRE(pressed.setup() == Status::Ok);
-    CHECK(pressed.product.config().config().reset_reason() == power::ResetReason::Pin);
+    CHECK(pressed.product.config_link().config().reset_reason() == power::ResetReason::Pin);
 }
 
 // D1. A VBUS event is a wake source on this SoC, so plugging a charger into a
@@ -222,7 +223,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     // Nothing became a device: no service loop, and not a pixel on the glass -
     // the panel still holds whatever was painted when it was switched off.
     CHECK_FALSE(rig.state().started);
-    CHECK(rig.product.boot_page().count_black() == 0);
+    CHECK(rig.product.self_test_page().count_black() == 0);
     CHECK(rig.platform.chips().epd.present_count == 0);
     // And the page it would have painted names the cause anyway, for the case a
     // bench eye holds the button and looks.
@@ -231,7 +232,7 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     // What the shell does with that: the rails go down the same way a long press
     // takes them down, in the order core/power owns.
     rig.platform.system_power().system_off();
-    CHECK(rig.platform.system_power().offs == 1);
+    CHECK(rig.platform.system_power().system_offs == 1);
     CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
           power::kPowerDownStepCount - 1);
 }
@@ -244,7 +245,7 @@ TEST_CASE("product: the same charger with the button held is a boot") {
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::Run);
     CHECK(rig.state().started);
-    CHECK(rig.product.boot_page().count_black() > 0);
+    CHECK(rig.product.self_test_page().count_black() > 0);
 }
 
 // Every other wake is a device. The one that would be catastrophic and silent is
@@ -271,19 +272,19 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     // This unit reads 60 mV high, measured once on the line against a bench
     // supply and written into settings.
     Rig trimmed;
-    go::Settings s = go::defaults();
-    s.battery_offset_mv = -60;
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
-    REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
+    go::to_blob(settings, blob, sizeof(blob));
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
     REQUIRE(trimmed.setup() == Status::Ok);
     REQUIRE(trimmed.settings().battery_offset_mv == -60);
 
     // A reading the raw sample puts above the low-battery warning and the real
     // cell puts below it.
-    trimmed.platform.battery().millivolts = 3540;
+    trimmed.platform.battery().divider_mv = 3540;
     trimmed.run(0, 12000);
-    CHECK(trimmed.state().power.battery.millivolts == 3480);
+    CHECK(trimmed.state().power.battery.cell_mv == 3480);
     CHECK(trimmed.state().power.battery.percent == power::percent_from_mv(3480));
     // The reader that matters: the same trimmed millivolts reached the rule that
     // decides when the device warns and when it goes down.
@@ -293,40 +294,40 @@ TEST_CASE("product: the battery trim reaches the gauge and the cutoff rule toget
     // agree with each other and both are wrong by the same 60 mV.
     Rig raw;
     REQUIRE(raw.setup() == Status::Ok);
-    raw.platform.battery().millivolts = 3540;
+    raw.platform.battery().divider_mv = 3540;
     raw.run(0, 12000);
-    CHECK(raw.state().power.battery.millivolts == 3540);
+    CHECK(raw.state().power.battery.cell_mv == 3540);
     CHECK(raw.state().power.level == power::PowerLevel::Low);
 }
 
 // Taken before any service runs, so it is the reader that could have been raw.
 TEST_CASE("product: the boot lockout reads the trimmed cell, not the raw divider") {
-    go::Settings s = go::defaults();
-    s.battery_offset_mv = -60;
+    go::Settings settings = go::defaults();
+    settings.battery_offset_mv = -60;
     uint8_t blob[64];
-    go::to_blob(s, blob, sizeof(blob));
+    go::to_blob(settings, blob, sizeof(blob));
 
     // 3440 raw is above the lockout, 3380 trimmed is below it.
     Rig trimmed;
-    REQUIRE(trimmed.platform.kv().write("settings", blob, go::blob_size()) == Status::Ok);
-    trimmed.platform.battery().millivolts = 3440;
+    REQUIRE(trimmed.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
+    trimmed.platform.battery().divider_mv = 3440;
     REQUIRE(trimmed.setup() == Status::Ok);
-    CHECK(trimmed.product.boot_cell().millivolts == 3380);
+    CHECK(trimmed.product.boot_cell().cell_mv == 3380);
     CHECK(trimmed.product.boot_path() == power::BootPath::SleepAgain);
 
     Rig untrimmed;
-    untrimmed.platform.battery().millivolts = 3440;
+    untrimmed.platform.battery().divider_mv = 3440;
     REQUIRE(untrimmed.setup() == Status::Ok);
     CHECK(untrimmed.product.boot_path() == power::BootPath::Run);
 }
 
 namespace {
 
-std::string status_of(Rig& rig, uint32_t& t) {
+std::string status_of(Rig& rig, uint32_t& now_ms) {
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"status\"}");
-    rig.run(t, t + 200);
-    t += 250;
+    rig.send("{\"command\":\"status\"}");
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 250;
     return rig.last_on(events::Endpoint::Config);
 }
 
@@ -346,30 +347,30 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(412);
 
-    uint32_t t = 0;
-    rig.run(t, t + 100);
-    t += 150;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 150;
     // Read on the first pass rather than ten seconds into the boot: the first
     // status a phone is pushed should carry a temperature, and the self-test page
     // is the moment a bench eye is looking.
     CHECK(die.reads() == 1);
     CHECK(rig.product.power().die_temperature_valid());
     CHECK(rig.product.power().die_temperature_dc() == 412);
-    CHECK(status_of(rig, t).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
     // Five seconds of passes: still one measurement.
-    rig.run(t, t + 5000);
-    t += 5050;
+    rig.run(now_ms, now_ms + 5000);
+    now_ms += 5050;
     CHECK(die.reads() == 1);
 
     // Past ten seconds from the first: a second one.
-    rig.run(t, t + 6000);
-    t += 6050;
+    rig.run(now_ms, now_ms + 6000);
+    now_ms += 6050;
     CHECK(die.reads() == 2);
     // And nothing has read it hundreds of times, which is what a per-pass reader
     // would have done by now.
-    rig.run(t, t + 30000);
-    t += 30050;
+    rig.run(now_ms, now_ms + 30000);
+    now_ms += 30050;
     CHECK(die.reads() <= 6);
 
     // A refused measurement leaves the last good reading standing rather than
@@ -377,15 +378,15 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     // still believe it: past kDieStaleMs the tablet is shown no temperature either.
     const int before = die.reads();
     die.refuse();
-    rig.run(t, t + 10000);
-    t += 10050;
+    rig.run(now_ms, now_ms + 10000);
+    now_ms += 10050;
     CHECK(die.reads() > before);
-    CHECK(status_of(rig, t).find("\"die_temp_c\":41") != std::string::npos);
+    CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
-    rig.run(t, t + go::PowerService::kDieStaleMs);
-    t += go::PowerService::kDieStaleMs + 50;
+    rig.run(now_ms, now_ms + go::PowerService::kDieStaleMs);
+    now_ms += go::PowerService::kDieStaleMs + 50;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, t).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // The research prohibits charging in the 72.4 C soak; nothing here could see it.
@@ -398,28 +399,28 @@ TEST_CASE("product: a cable in the heat is named, counted and left counted") {
     platform::host::DieTemperature& die = rig.platform.die_temperature();
     die.hold(250);
 
-    uint32_t t = 0;
-    rig.run(t, t + 2000);
-    t += 2050;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     rig.platform.battery().external_power = true;
-    rig.run(t, t + 2000);
-    t += 2050;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Ok);
     CHECK(rig.product.power().charge_warnings() == 0);
 
     die.hold(724);
-    rig.run(t, t + 15000);
-    t += 15050;
+    rig.run(now_ms, now_ms + 15000);
+    now_ms += 15050;
     CHECK(rig.state().power.charge == power::ChargeCondition::TooHot);
     // One event, however many passes read the same sensor.
     CHECK(rig.product.power().charge_warnings() == 1);
 
     rig.platform.battery().external_power = false;
-    rig.run(t, t + 2000);
-    t += 2050;
+    rig.run(now_ms, now_ms + 2000);
+    now_ms += 2050;
     CHECK(rig.state().power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.product.power().charge_warnings() == 1);
 }
@@ -434,11 +435,11 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
     CHECK(rig.product.degraded() == ports::Capability::None);
 
-    uint32_t t = 0;
-    rig.run(t, t + 30000);
-    t += 30050;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 30000);
+    now_ms += 30050;
     CHECK_FALSE(rig.product.power().die_temperature_valid());
-    CHECK(status_of(rig, t).find("die_temp_c") == std::string::npos);
+    CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
 // J. The range gate refuses a reception whose claimed position is further away
@@ -448,30 +449,30 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
 TEST_CASE("product: the range gate's refusals leave the device over the link") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.seconds(t, 3, /*speed_mm_s=*/0, 0);
+    uint32_t now_ms = 0;
+    rig.seconds(now_ms, 3, /*speed_mm_s=*/0, 0);
     REQUIRE(rig.state().own.fix_valid);
 
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"radio\"}");
-    rig.run(t, t + 200);
-    t += 250;
+    rig.send("{\"command\":\"radio\"}");
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 250;
     CHECK(rig.last_on(events::Endpoint::Config).find("\"range_refused\":0") != std::string::npos);
 
-    // A contact on the other side of the country, claimed by a frame that passed
+    // A target on the other side of the country, claimed by a frame that passed
     // its CRC. Pushed at the table's own door, which is where the gate lives.
-    model::AircraftObs ghost{};
+    model::AircraftObservation ghost{};
     ghost.address = 0x00ABCDEF;
     ghost.address_mapping_table = 5;
     ghost.position_valid = true;
-    ghost.lat_1e7 = rig.state().own.lat_1e7 + 50000000;  // five degrees north
-    ghost.lon_1e7 = rig.state().own.lon_1e7;
+    ghost.latitude_1e7 = rig.state().own.latitude_1e7 + 50000000;  // five degrees north
+    ghost.longitude_1e7 = rig.state().own.longitude_1e7;
     ghost.source = model::Source::AdslDirect;
     REQUIRE(rig.state().traffic.update(ghost, 0) < 0);
-    REQUIRE(rig.state().traffic.implausible_count() == 1);
+    REQUIRE(rig.state().traffic.implausible() == 1);
 
     rig.platform.link().clear();
-    rig.send("{\"cmd\":\"radio\"}");
-    rig.run(t, t + 200);
+    rig.send("{\"command\":\"radio\"}");
+    rig.run(now_ms, now_ms + 200);
     CHECK(rig.platform.link().last().bytes.find("\"range_refused\":1") != std::string::npos);
 }

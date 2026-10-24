@@ -9,14 +9,14 @@
 namespace skyblip::go {
 
 struct GMeterSnapshot {
-    bool fitted{false};
-    bool valid{false};
+    bool inclinometer_fitted{false};
+    bool gload_valid{false};
     flight::GLoad now{};
     flight::GLoad most{};
     flight::GLoad least{};
 };
 
-void draw_gmeter(ui::Canvas& fb, const GMeterSnapshot& snap);
+void draw_gmeter(ui::Canvas& canvas, const GMeterSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

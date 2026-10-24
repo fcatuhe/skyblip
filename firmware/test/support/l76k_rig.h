@@ -12,9 +12,9 @@ namespace skyblip {
 // One service call and one drain per 10 ms runtime tick, which is how the board
 // polls this part.
 inline void run(parts::L76k& driver, models::L76k& chip, uint32_t from_ms, uint32_t to_ms) {
-    for (uint32_t t = from_ms; t <= to_ms; t += 10) {
-        chip.tick(t);
-        driver.service(t);
+    for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += 10) {
+        chip.tick(now_ms);
+        driver.service(now_ms);
         driver.poll();
     }
 }

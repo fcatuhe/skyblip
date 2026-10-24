@@ -17,7 +17,7 @@ enum class Page : uint8_t {
     SixPack = 2,
     GMeter = 3,
     Status = 4,
-    Sats = 5,
+    Satellites = 5,
     RadioLog = 6,
     Raw = 7,
     Capture = 8,
@@ -28,8 +28,8 @@ enum class Page : uint8_t {
 constexpr int kPageCount = static_cast<int>(Page::kCount);
 
 // INFO: fc 18oct26 six dashes where a unit not yet activated has no address to print
-inline int fmt_air_address(char* out, settings::AirAddress address) {
-    return address ? fmt_hex(out, *address, 6) : fmt_string(out, "------");
+inline int format_air_address(char* out, settings::AirAddress address) {
+    return address ? format_hex(out, *address, 6) : format_string(out, "------");
 }
 
 constexpr int32_t kRangeStepsNm[kRangeStepCount] = {1, 2, 4, 8};
@@ -54,10 +54,18 @@ constexpr int64_t range_metres(int step, Units units) {
 
 constexpr const char* range_unit(Units units) { return units == Units::Metric ? "KM" : "NM"; }
 
+constexpr int16_t angle16_of_degrees(int32_t degrees) {
+    int32_t wrapped = ((degrees % 360) + 360) % 360;
+    if (wrapped >= 180) wrapped -= 360;  // keep the cordic value inside int16_t
+    return static_cast<int16_t>((wrapped * kAngle16PerTurn) / 360);
+}
+
+constexpr uint8_t kFewestSatellitesForAltitude = 4;
+
 constexpr int32_t kClimbFigureStepFpm = 10;
 
-constexpr int32_t climb_figure_fpm(int32_t fpm) {
-    return div_round(fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
+constexpr int32_t climb_figure_fpm(int32_t climb_fpm) {
+    return divide_rounded(climb_fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
 }
 
 constexpr RadarPlot next_radar_plot(RadarPlot plot) {
@@ -89,7 +97,7 @@ constexpr const char* page_title(Page page) {
         case Page::Nearby: return "NEARBY";
         case Page::SixPack: return "SIX-PACK";
         case Page::Status: return "STATUS";
-        case Page::Sats: return "SATELLITES";
+        case Page::Satellites: return "SATELLITES";
         case Page::RadioLog: return "RADIO LOG";
         case Page::Raw: return "RAW";
         case Page::Capture: return "CAPTURE";

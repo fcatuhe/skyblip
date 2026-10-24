@@ -37,10 +37,10 @@ TEST_CASE("link sessions: a connect and a disconnect arrive as one ordered pair"
 // An iOS central connects first and exchanges the MTU afterwards.
 TEST_CASE("link sessions: a late MTU exchange refreshes the session it belongs to") {
     LinkSessions sessions;
-    sessions.connected(7, ports::kMinimumLinkPayload);
+    sessions.connected(7, ports::kMinimumLinkPayloadBytes);
     LinkEvent event{};
     REQUIRE(sessions.pop(event));
-    CHECK(event.payload_bytes == ports::kMinimumLinkPayload);
+    CHECK(event.payload_bytes == ports::kMinimumLinkPayloadBytes);
 
     sessions.payload_changed(7, 182);
     REQUIRE(sessions.pop(event));
@@ -63,8 +63,8 @@ TEST_CASE("link sessions: a payload below what BLE guarantees is floored, never 
     sessions.connected(1, 0);
     LinkEvent event{};
     REQUIRE(sessions.pop(event));
-    CHECK(event.payload_bytes == ports::kMinimumLinkPayload);
-    CHECK(sessions.payload_bytes() == ports::kMinimumLinkPayload);
+    CHECK(event.payload_bytes == ports::kMinimumLinkPayloadBytes);
+    CHECK(sessions.payload_bytes() == ports::kMinimumLinkPayloadBytes);
 
     sessions.payload_changed(1, 4);
     CHECK_FALSE(sessions.pop(event));
@@ -112,7 +112,7 @@ TEST_CASE("link sessions: a second central joins, and the first one stays up") {
 // One NMEA frame is formatted once for every central, so it has to fit the narrowest.
 TEST_CASE("link sessions: the payload figure is the smallest central connected") {
     LinkSessions sessions;
-    CHECK(sessions.payload_bytes() == ports::kMinimumLinkPayload);
+    CHECK(sessions.payload_bytes() == ports::kMinimumLinkPayloadBytes);
 
     sessions.connected(1, 244);
     CHECK(sessions.payload_bytes() == 244);
@@ -140,7 +140,7 @@ TEST_CASE("link sessions: a central beyond the table is refused and counted") {
 
 TEST_CASE("link sessions: a lifecycle event that does not fit is counted, not lost quietly") {
     LinkSessions sessions;
-    for (uint16_t round = 0; round < LinkSessions::kEventCapacity; round++) {
+    for (uint16_t round = 0; round < LinkSessions::kMaxEvents; round++) {
         sessions.connected(1, 244);
         sessions.disconnected(1);
     }

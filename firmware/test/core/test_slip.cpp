@@ -47,17 +47,17 @@ TEST_CASE("slip: free fall has nothing for a ball to hang from") {
 
 TEST_CASE("slip: the ball is damped, so turbulence does not throw it across the cage") {
     flight::SlipBall ball;
-    for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * 80u);
-    REQUIRE(ball.mg() == 0);
+    for (int i = 0; i < 40; i++) ball.observe(force_of(0), 100 + i * 80u);
+    REQUIRE(ball.damped_mg() == 0);
 
-    ball.update(force_of(-200), 3300);
-    CHECK(ball.mg() > 0);
-    CHECK(ball.mg() < 100);
+    ball.observe(force_of(-200), 3300);
+    CHECK(ball.damped_mg() > 0);
+    CHECK(ball.damped_mg() < 100);
 
-    for (int i = 0; i < 40; i++) ball.update(force_of(-200), 3400 + i * 80u);
+    for (int i = 0; i < 40; i++) ball.observe(force_of(-200), 3400 + i * 80u);
     // Within a pixel of full scale: the ball's travel is 12.5 mg to the pixel.
-    CHECK(ball.mg() > flight::kSlipFullScaleMg - 13);
-    CHECK(ball.mg() <= flight::kSlipFullScaleMg);
+    CHECK(ball.damped_mg() > flight::kSlipFullScaleMg - 13);
+    CHECK(ball.damped_mg() <= flight::kSlipFullScaleMg);
 }
 
 // The glass shows a frame a second: a ball still travelling at the next one is lag a pilot sees.
@@ -65,18 +65,18 @@ TEST_CASE("slip: the ball is within a pixel of a step before the glass shows its
     constexpr uint32_t kSampleMs = 80;
     constexpr uint32_t kFrameMs = 1000;
     flight::SlipBall ball;
-    for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * kSampleMs);
-    REQUIRE(ball.mg() == 0);
+    for (int i = 0; i < 40; i++) ball.observe(force_of(0), 100 + i * kSampleMs);
+    REQUIRE(ball.damped_mg() == 0);
 
-    for (uint32_t at = 0; at < kFrameMs; at += kSampleMs) ball.update(force_of(-200), 3300 + at);
-    CHECK(ball.mg() > flight::kSlipFullScaleMg - 13);
+    for (uint32_t at = 0; at < kFrameMs; at += kSampleMs) ball.observe(force_of(-200), 3300 + at);
+    CHECK(ball.damped_mg() > flight::kSlipFullScaleMg - 13);
 }
 
 TEST_CASE("slip: the ball is damped, the sample it was damped from is not") {
     flight::SlipBall ball;
-    for (int i = 0; i < 40; i++) ball.update(force_of(0), 100 + i * 80u);
-    ball.update(force_of(-200), 3300);
-    CHECK(ball.mg() < 100);
+    for (int i = 0; i < 40; i++) ball.observe(force_of(0), 100 + i * 80u);
+    ball.observe(force_of(-200), 3300);
+    CHECK(ball.damped_mg() < 100);
     CHECK(ball.measured_mg() == slip_of(-200));
 }
 
@@ -84,7 +84,7 @@ TEST_CASE("slip: a sensor that stops answering takes the ball with it") {
     flight::SlipBall ball;
     CHECK_FALSE(ball.valid(0));
 
-    ball.update(force_of(-100), 1000);
+    ball.observe(force_of(-100), 1000);
     CHECK(ball.valid(1000));
     CHECK(ball.valid(1000 + flight::kIndicatedStaleMs - 1));
     CHECK_FALSE(ball.valid(1000 + flight::kIndicatedStaleMs));

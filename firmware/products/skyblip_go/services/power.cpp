@@ -1,6 +1,6 @@
 #include "products/skyblip_go/services/power.h"
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/events/sensor.h"
 
 namespace skyblip::go {
@@ -17,23 +17,23 @@ void PowerService::sample_die_temperature(uint32_t now_ms) {
     if (die_sampled_ && now_ms - die_read_ms_ < kDiePeriodMs) return;
     die_sampled_ = true;
     die_read_ms_ = now_ms;
-    int16_t decicelsius = 0;
+    int16_t die_dc = 0;
     // A refused measurement leaves the last good one standing rather than
     // publishing a zero: the reading is minutes old by design anyway.
-    if (!context_.roles.die_temperature.read(decicelsius)) return;
-    die_dc_ = decicelsius;
+    if (!context_.roles.die_temperature.read(die_dc)) return;
+    die_dc_ = die_dc;
     die_valid_ = true;
     die_valid_ms_ = now_ms;
 }
 
 void PowerService::watch_charge() {
-    const power::ChargeCondition was = charge_;
+    const power::ChargeCondition previous = charge_;
     const bus::PowerState& published = context_.state.power;
     charge_ = power::charge_condition(published.battery.external_power, published.die_valid,
                                       published.die_dc);
     const bool out_of_window =
         charge_ == power::ChargeCondition::TooCold || charge_ == power::ChargeCondition::TooHot;
-    if (out_of_window && charge_ != was) charge_warnings_++;
+    if (out_of_window && charge_ != previous) charge_warnings_++;
     context_.state.power.charge = charge_;
 }
 
@@ -48,7 +48,7 @@ void PowerService::tick(uint32_t now_ms) {
         const events::BatterySample sample = power::calibrated(raw, settings_.battery_offset_mv);
         gauge_.apply(sample);
         // INFO: fc 05oct26 a refused reading is no step on the ladder, the cable still overrides it
-        if (sample.external_power || power::plausible_mv(sample.millivolts)) cutoff_.apply(sample);
+        if (sample.external_power || power::plausible_mv(sample.divider_mv)) cutoff_.apply(sample);
     }
     context_.state.power.battery = gauge_.state();
     context_.state.power.level = cutoff_.level();
@@ -63,9 +63,9 @@ void PowerService::tick(uint32_t now_ms) {
 void PowerService::record_pass(uint32_t now_ms) {
     if (now_ms - recorded_ms_ < power_period_ms()) return;
     recorded_ms_ = now_ms;
-    if (!context_.diag.armed()) return;
+    if (!context_.diagnostics.armed()) return;
 
-    const diag::Instant at = context_.instant(now_ms);
+    const diagnostics::Instant at = context_.instant(now_ms);
     record_power(at);
     if (now_ms - duty_recorded_ms_ < duty_period_ms()) return;
     duty_recorded_ms_ = now_ms;
@@ -73,35 +73,35 @@ void PowerService::record_pass(uint32_t now_ms) {
 }
 
 void PowerService::record_last_pass(uint32_t now_ms) {
-    if (!context_.diag.armed()) return;
-    const diag::Instant at = context_.instant(now_ms);
+    if (!context_.diagnostics.armed()) return;
+    const diagnostics::Instant at = context_.instant(now_ms);
     record_power(at);
     record_duty(at);
 }
 
-void PowerService::record_power(const diag::Instant& at) {
+void PowerService::record_power(const diagnostics::Instant& at) {
     const bus::PowerState& power = context_.state.power;
-    diag::Power value{};
-    value.cell_mv = power.battery.millivolts;
+    diagnostics::Power value{};
+    value.cell_mv = power.battery.cell_mv;
     value.sample_offset_mv =
-        diag::sample_offset_mv(power.battery.sample_mv, power.battery.millivolts);
+        diagnostics::sample_offset_mv(power.battery.sample_mv, power.battery.cell_mv);
     value.supply_warnings = cutoff_.supply_warnings();
     value.implausible = gauge_.refused();
     value.charge_warnings = charge_warnings_;
     value.die_dc = power.die_dc;
     value.percent = power.battery.percent;
-    value.level = power.level;
+    value.power_level = power.level;
     value.charge = power.charge;
     value.charging = power.battery.charging;
     value.external_power = power.battery.external_power;
-    value.valid = power.battery.valid;
+    value.battery_valid = power.battery.valid;
     value.die_valid = power.die_valid;
-    context_.diag.record(value, at);
+    context_.diagnostics.record(value, at);
 }
 
-void PowerService::record_duty(const diag::Instant& at) {
+void PowerService::record_duty(const diagnostics::Instant& at) {
     const bus::DutyState& duty = context_.state.duty;
-    diag::Duty value{};
+    diagnostics::Duty value{};
     value.panel_partial_refreshes = duty.panel_partial_refreshes;
     value.panel_full_refreshes = duty.panel_full_refreshes;
     value.backlight_ms = duty.backlight_ms;
@@ -109,16 +109,17 @@ void PowerService::record_duty(const diag::Instant& at) {
     value.tx_keyed_ms = duty.tx_keyed_ms;
     value.ble_connected_ms = duty.ble_connected_ms;
     value.annunciator_ms = duty.annunciator_ms;
-    context_.diag.record(value, at);
+    context_.diagnostics.record(value, at);
 }
 
 uint32_t PowerService::power_period_ms() const {
-    return diag::paced(context_.diag.profile()) ? diag::kPowerRunRecordPeriodMs : kRecordPeriodMs;
+    return diagnostics::paced(context_.diagnostics.profile()) ? diagnostics::kPowerRunRecordPeriodMs
+                                                              : kRecordPeriodMs;
 }
 
 uint32_t PowerService::duty_period_ms() const {
-    return diag::paced(context_.diag.profile()) ? diag::kPowerRunRecordPeriodMs
-                                                : kDutyRecordPeriodMs;
+    return diagnostics::paced(context_.diagnostics.profile()) ? diagnostics::kPowerRunRecordPeriodMs
+                                                              : kDutyRecordPeriodMs;
 }
 
 }  // namespace skyblip::go

@@ -1,4 +1,4 @@
-"""Where the service loop's time goes, per screen page, from build 876's loop, screen and burst fields.
+"""Where the service loop's time goes, per screen page, from build 876's loop, screen and burst series.
 
 usage: python3 scripts/bench/loop_check.py <capture.ndjson>...
 
@@ -9,11 +9,11 @@ how late it was keyed.
 """
 import collections
 import pathlib
-import statistics as st
+import statistics
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-import blip_records as r
+import blip_records
 
 SLOW_MS = 100
 
@@ -21,15 +21,15 @@ SLOW_MS = 100
 def spread(values):
     if not values:
         return "n=0"
-    v = sorted(values)
-    return "n=%d med %s p99 %s max %s" % (len(v), v[len(v) // 2], v[int(len(v) * 0.99)], v[-1])
+    ordered = sorted(values)
+    return "n=%d med %s p99 %s max %s" % (len(ordered), ordered[len(ordered) // 2], ordered[int(len(ordered) * 0.99)], ordered[-1])
 
 
 def report(path):
-    recs = [x for x in r.read_ndjson(path) if x.get("type") not in r.NOTE_TYPES]
-    builds = sorted({x["fw_build"] for x in recs if x["type"] == "boot"})
+    records = [record for record in blip_records.read_ndjson(path) if record.get("type") not in blip_records.NOTE_TYPES]
+    builds = sorted({record["firmware_build"] for record in records if record["type"] == "boot"})
     print("== %s  build %s" % (path.split("/")[-1], builds))
-    loops = [x for x in recs if x["type"] == "loop"]
+    loops = [record for record in records if record["type"] == "loop"]
     if not loops:
         print("   no loop records: this build predates them")
         return
@@ -38,50 +38,50 @@ def report(path):
     page_of = {}
     nav_of = {}
     by_page = collections.defaultdict(lambda: collections.defaultdict(list))
-    for x in recs:
-        if x["type"] == "screen":
-            page = x["page"]
-            if x["render_us"]:
-                by_page[page]["render_ms"].append(round(x["render_us"] / 1000, 1))
-            if x["present_us"]:
-                by_page[page]["present_ms"].append(round(x["present_us"] / 1000, 1))
-        if x["type"] == "gnss":
-            nav_of[x["at_s"]] = x["nav_ms"]
-            by_page[page]["nav_ms"].append(x["nav_ms"])
-        if x["type"] == "loop":
-            page_of[x["at_s"]] = page
+    for record in records:
+        if record["type"] == "screen":
+            page = record["page"]
+            if record["render_us"]:
+                by_page[page]["render_ms"].append(round(record["render_us"] / 1000, 1))
+            if record["present_us"]:
+                by_page[page]["present_ms"].append(round(record["present_us"] / 1000, 1))
+        if record["type"] == "gnss":
+            nav_of[record["at_s"]] = record["solution_phase_ms"]
+            by_page[page]["solution_phase_ms"].append(record["solution_phase_ms"])
+        if record["type"] == "loop":
+            page_of[record["at_s"]] = page
 
-    for x in loops:
-        p = page_of[x["at_s"]]
-        by_page[p]["passes"].append(x["passes"])
-        by_page[p]["busy_ms"].append(x["busy_ms"])
-        by_page[p]["worst_pass_ms"].append(x["worst_pass_us"] // 1000)
-        by_page[p]["worst_gap_ms"].append(x["worst_gap_ms"])
-        by_page[p]["holder"].append(x["worst_service"])
+    for record in loops:
+        shown_page = page_of[record["at_s"]]
+        by_page[shown_page]["passes"].append(record["passes"])
+        by_page[shown_page]["busy_ms"].append(record["busy_ms"])
+        by_page[shown_page]["worst_pass_ms"].append(record["worst_pass_us"] // 1000)
+        by_page[shown_page]["worst_gap_ms"].append(record["worst_gap_ms"])
+        by_page[shown_page]["holder"].append(record["worst_service"])
 
-    for p in sorted(by_page, key=lambda k: -1 if k is None else k):
-        d = by_page[p]
-        if not d["passes"]:
+    for shown_page in sorted(by_page, key=lambda page_key: -1 if page_key is None else page_key):
+        series = by_page[shown_page]
+        if not series["passes"]:
             continue
-        print("   page %s  %d s" % (p, len(d["passes"])))
-        for key in ("passes", "busy_ms", "worst_pass_ms", "worst_gap_ms", "render_ms", "present_ms", "nav_ms"):
-            print("     %-14s %s" % (key, spread(d[key])))
-        print("     holder         %s" % dict(collections.Counter(d["holder"]).most_common()))
+        print("   page %s  %d s" % (shown_page, len(series["passes"])))
+        for key in ("passes", "busy_ms", "worst_pass_ms", "worst_gap_ms", "render_ms", "present_ms", "solution_phase_ms"):
+            print("     %-14s %s" % (key, spread(series[key])))
+        print("     holder         %s" % dict(collections.Counter(series["holder"]).most_common()))
 
-    slow = [x for x in loops if x["worst_gap_ms"] >= SLOW_MS or x["worst_pass_us"] >= SLOW_MS * 1000]
+    slow = [record for record in loops if record["worst_gap_ms"] >= SLOW_MS or record["worst_pass_us"] >= SLOW_MS * 1000]
     print("   seconds with a pass or a gap >= %d ms: %d of %d" % (SLOW_MS, len(slow), len(loops)))
-    for x in slow[:40]:
+    for record in slow[:40]:
         print("     at %d  page %s  pass %5.1f ms at %3d  gap %3d ms at %3d  holder %s %d ms  nav %s" % (
-            x["at_s"], page_of[x["at_s"]], x["worst_pass_us"] / 1000, x["worst_pass_phase_ms"],
-            x["worst_gap_ms"], x["worst_gap_phase_ms"], x["worst_service"], x["worst_tick_ms"],
-            nav_of.get(x["at_s"] - 1)))
+            record["at_s"], page_of[record["at_s"]], record["worst_pass_us"] / 1000, record["worst_pass_phase_ms"],
+            record["worst_gap_ms"], record["worst_gap_phase_ms"], record["worst_service"], record["worst_tick_ms"],
+            nav_of.get(record["at_s"] - 1)))
 
-    sent = [x for x in recs if x["type"] == "burst" and x["verdict"] == "transmitted"]
+    sent = [record for record in records if record["type"] == "burst" and record["verdict"] == "transmitted"]
     if sent:
-        print("   stage margin us  %s" % spread([x["tx_stage_margin_us"] for x in sent]))
-        late = [x for x in sent if x["tx_keyed_us"] > 130]
+        print("   stage margin us  %s" % spread([record["tx_stage_margin_us"] for record in sent]))
+        late = [record for record in sent if record["tx_keyed_us"] > 130]
         print("   keyed > 130 us: %d of %d, their stage margin %s" % (
-            len(late), len(sent), [x["tx_stage_margin_us"] for x in late]))
+            len(late), len(sent), [record["tx_stage_margin_us"] for record in late]))
 
 
 def main():

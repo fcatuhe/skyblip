@@ -41,11 +41,11 @@ struct RadarSnapshot {
     int32_t speed_mm_s{0};
     uint32_t flight_seconds{0};
     bool flight_time_valid{false};
-    bool in_flight{false};
+    bool flight_running{false};
     bool taxiing{false};
     bool receiver_listening{false};
-    int heard{0};
-    int n_targets{0};
+    int heard_count{0};
+    int target_count{0};
     const RadarTarget* targets{nullptr};
     bool alarm_flash{false};
     int formation_members{0};
@@ -53,7 +53,7 @@ struct RadarSnapshot {
     bool battery_low{false};
 };
 
-void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap);
+void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot);
 
 }
 

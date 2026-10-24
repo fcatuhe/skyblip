@@ -18,9 +18,9 @@ struct ImageHeader {
     uint32_t tlv_offset() const { return header_bytes + body_bytes; }
 };
 
-bool read_header(const uint8_t* bytes, size_t len, ImageHeader& out);
+bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out);
 
-bool find_key_hash(const uint8_t* tlvs, size_t len, ports::SigningKeyHash& out);
+bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out);
 
 uint32_t key_prefix(const ports::SigningKeyHash& key);
 

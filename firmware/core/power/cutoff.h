@@ -101,9 +101,9 @@ class CutoffMonitor {
 
    private:
     static constexpr int kSteps = 3;
-    void count(uint16_t millivolts);
+    void count(uint16_t divider_mv);
     void forget_runs();
-    PowerLevel settled(uint16_t millivolts) const;
+    PowerLevel settled(uint16_t divider_mv) const;
 
     PowerLevel level_{PowerLevel::Unknown};
     uint8_t below_[kSteps]{};

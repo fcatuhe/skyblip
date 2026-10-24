@@ -17,16 +17,16 @@ struct RawGnss {
     PpsState pps{PpsState::None};
     uint32_t pps_age_ms{0};
     uint32_t solutions{0};
-    uint32_t utc{0};
-    uint16_t nav_ms{0};
+    uint32_t utc_s{0};
+    uint16_t solution_phase_ms{0};
     uint16_t hdop_e2{0};
     uint16_t vdop_e2{0};
-    uint16_t resid_m{0};
-    uint8_t sats{0};
+    uint16_t residual_m{0};
+    uint8_t satellites{0};
     uint8_t in_use{0};
     uint8_t fix_mode{0};
-    bool nav_valid{false};
-    bool resid_valid{false};
+    bool solution_phase_valid{false};
+    bool residual_valid{false};
     bool fix_valid{false};
     bool utc_valid{false};
     bool settled{false};
@@ -59,8 +59,8 @@ struct RawRadio {
     uint16_t tracked{0};
     uint8_t alarm{0};
     int8_t noise_dbm{0};
-    timing::SlotState slot{timing::SlotState::UplinkRxO};
-    uint32_t freq_hz{0};
+    timing::SlotState slot{timing::SlotState::UplinkRxOBand};
+    uint32_t frequency_hz{0};
     bool tx_allowed{false};
 };
 
@@ -70,7 +70,7 @@ struct RawSnapshot {
     RawRadio radio{};
 };
 
-void draw_raw(ui::Canvas& fb, const RawSnapshot& snap);
+void draw_raw(ui::Canvas& canvas, const RawSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

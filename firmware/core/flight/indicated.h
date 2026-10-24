@@ -15,7 +15,7 @@ class IndicatedRate {
 
    private:
     static constexpr int64_t kScale = 256;
-    int64_t damped_acc_{0};
+    int64_t damped_accumulator_{0};
     uint32_t last_ms_{0};
     bool seen_{false};
 };

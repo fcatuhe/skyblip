@@ -180,9 +180,9 @@ export default class extends Controller {
     return full ? this.fullValue : this.slimValue
   }
 
-  #notes({ image, status, settings, address, activates }) {
+  #notes({ image, status, settings, address }) {
     const notes = []
-    if (settings && activates && address === null) notes.push(["not_activated"])
+    if (settings && address === null) notes.push(["not_activated"])
     if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
@@ -225,7 +225,7 @@ export default class extends Controller {
     this.#choose(elements.aircraft_type, settings.aircraft_type)
     elements.callsign.value = settings.callsign
     elements.units.value = settings.units
-    elements.alarm.checked = settings.alarm
+    elements.alarm_enabled.checked = settings.alarm_enabled
     this.#choose(elements.alarm_volume, settings.alarm_volume)
   }
 

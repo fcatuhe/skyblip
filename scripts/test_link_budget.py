@@ -5,7 +5,7 @@
 
 Stdlib alone, no radio and no clock. Every record here is handcrafted bytes put
 through the same chunk decoder and session sink blip.py fetch uses, so a Burst
-or Config field that moves in firmware/core/diag/payload.h fails here rather
+or Config field that moves in firmware/core/diagnostics/payload.h fails here rather
 than reading as a quiet zero.
 """
 import base64
@@ -48,7 +48,7 @@ FIX_AT = 1_789_000_000
 
 VERDICTS = {name: code for code, name in enumerate(records.VERDICT)}
 
-QW = "ANT-868-CW-QW-SMA"
+QUARTER_WAVE_ANTENNA = "ANT-868-CW-QW-SMA"
 
 
 def slot(type_id, payload, flags, at_s, into_ms=0):
@@ -61,21 +61,21 @@ def slot(type_id, payload, flags, at_s, into_ms=0):
     return bytes(raw)
 
 
-def config(addr, power_dbm=14, pa_rated_dbm=22):
+def config(address, power_dbm=14, pa_rated_dbm=22):
     payload = bytearray(16)
-    payload[0:4] = addr.to_bytes(4, "little")
+    payload[0:4] = address.to_bytes(4, "little")
     payload[12] = power_dbm & 0xFF
     payload[13] = pa_rated_dbm & 0xFF
     return slot(CONFIG, bytes(payload), DATED, FIX_AT)
 
 
-def burst(verdict, at_s, into_ms, addr=0, channel=0, rssi_dbm=0, flags=DATED):
+def burst(verdict, at_s, into_ms, address=0, channel=0, rssi_dbm=0, flags=DATED):
     payload = bytearray(16)
-    payload[0:4] = addr.to_bytes(4, "little")
+    payload[0:4] = address.to_bytes(4, "little")
     payload[8] = VERDICTS[verdict]
     payload[11] = channel
     payload[13] = rssi_dbm & 0xFF
-    if addr:
+    if address:
         flags |= ADDR_VALID
     if verdict not in link_budget.OWN_VERDICTS:
         flags |= RSSI_VALID
@@ -87,13 +87,13 @@ def sent(at_s, into_ms=462, channel=0, flags=DATED):
 
 
 def heard(sender, at_s, into_ms=463, rssi_dbm=-40, channel=0, verdict="received", flags=DATED):
-    return burst(verdict, at_s, into_ms, addr=sender, channel=channel, rssi_dbm=rssi_dbm,
+    return burst(verdict, at_s, into_ms, address=sender, channel=channel, rssi_dbm=rssi_dbm,
                  flags=flags)
 
 
-def traffic(addr, at_s, dist_m):
+def traffic(address, at_s, dist_m):
     payload = bytearray(16)
-    payload[0:4] = addr.to_bytes(4, "little")
+    payload[0:4] = address.to_bytes(4, "little")
     payload[4:6] = dist_m.to_bytes(2, "little")
     return slot(TRAFFIC, bytes(payload), DATED | POSITION_VALID, at_s)
 
@@ -104,11 +104,11 @@ def gap(at_s, dropped=12):
     return slot(GAP, bytes(payload), DATED, at_s)
 
 
-def session_lines(raws, session=1):
+def session_lines(raw_records, session=1):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
-    encoded = base64.b64encode(b"".join(raws)).decode("ascii")
+    encoded = base64.b64encode(b"".join(raw_records)).decode("ascii")
     lines = []
-    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raws),
+    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": True, "truncated": False}, lines.append)
     for record in records.decode_chunk("diagnostics", encoded, 0, 0):
         sink.write(record)
@@ -136,7 +136,7 @@ def ceiling_of(rssi_dbm, distance_m=16.7, height_m=1.2):
 
 def expected_erp(rssi_dbm, distance_m):
     level = rssi_dbm - link_budget.RSSI_TRUNCATION_DB
-    receive_chain = link_budget.ANTENNAS[QW].gain_dbi - link_budget.FEED_LOSS_DB
+    receive_chain = link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA].gain_dbi - link_budget.FEED_LOSS_DB
     return level + link_budget.free_space_db(distance_m) - receive_chain - link_budget.DBI_TO_DBD_DB
 
 
@@ -146,24 +146,24 @@ class Case(unittest.TestCase):
         self.addCleanup(folder.cleanup)
         self.folder = pathlib.Path(folder.name)
 
-    def capture(self, name, raws):
+    def capture(self, name, raw_records):
         path = self.folder / name
-        path.write_text("".join(json.dumps(line) + "\n" for line in session_lines(raws)),
+        path.write_text("".join(json.dumps(line) + "\n" for line in session_lines(raw_records)),
                         encoding="utf-8")
         return str(path)
 
-    def sides(self, raws_a, raws_b):
-        return (link_budget.Side("a", self.capture("a.ndjson", raws_a), QW),
-                link_budget.Side("b", self.capture("b.ndjson", raws_b), QW))
+    def sides(self, raw_records_a, raw_records_b):
+        return (link_budget.Side("a", self.capture("a.ndjson", raw_records_a), QUARTER_WAVE_ANTENNA),
+                link_budget.Side("b", self.capture("b.ndjson", raw_records_b), QUARTER_WAVE_ANTENNA))
 
-    def text(self, raws_a, raws_b, distance_m=16.7, height_m=1.2):
+    def text(self, raw_records_a, raw_records_b, distance_m=16.7, height_m=1.2):
         lines = []
-        a, b = self.sides(raws_a, raws_b)
+        a, b = self.sides(raw_records_a, raw_records_b)
         link_budget.report(a, b, distance_m, height_m, lines.append)
         return "\n".join(lines)
 
-    def link(self, raws_a, raws_b):
-        a, b = self.sides(raws_a, raws_b)
+    def link(self, raw_records_a, raw_records_b):
+        a, b = self.sides(raw_records_a, raw_records_b)
         return link_budget.pair(a, UNIT_A, b)
 
 
@@ -231,7 +231,7 @@ class Estimate(Case):
         side_a, side_b = self.sides(a, b)
         tx_a, _ = link_budget.transmitter(side_a)
         result = link_budget.direction(link_budget.pair(side_a, UNIT_A, side_b), tx_a,
-                                       link_budget.ANTENNAS[QW], link_budget.ANTENNAS[QW],
+                                       link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA], link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA],
                                        16.7, 1.2)
         self.assertAlmostEqual(result["erp"], expected_erp(-40, 16.7), places=9)
         self.assertAlmostEqual(result["erp_chain"], 12.95, places=9)
@@ -243,7 +243,7 @@ class Estimate(Case):
         side_a, side_b = self.sides(a, b)
         tx_a, _ = link_budget.transmitter(side_a)
         result = link_budget.direction(link_budget.pair(side_a, UNIT_A, side_b), tx_a,
-                                       link_budget.ANTENNAS[QW], link_budget.ANTENNAS[QW],
+                                       link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA], link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA],
                                        16.7, 1.2)
         self.assertLess(abs(result["excess"]), 0.5)
 
@@ -328,7 +328,7 @@ class Refusals(Case):
         path = self.capture("a.ndjson", [config(UNIT_A)])
         with self.assertRaises(SystemExit) as refused, contextlib.redirect_stderr(io.StringIO()):
             link_budget.main([path, path, "--distance", "16.7", "--height", "1.2",
-                              "--antenna-a", QW, "--antenna-b", "stock whip"])
+                              "--antenna-a", QUARTER_WAVE_ANTENNA, "--antenna-b", "stock whip"])
         self.assertEqual(refused.exception.code, 2)
 
     def test_a_distance_of_nothing_is_refused_at_the_command_line(self):
@@ -337,7 +337,7 @@ class Refusals(Case):
             with self.assertRaises(SystemExit) as refused, \
                     contextlib.redirect_stderr(io.StringIO()):
                 link_budget.main([path, path, "--distance", distance, "--height", "1.2",
-                                  "--antenna-a", QW, "--antenna-b", QW])
+                                  "--antenna-a", QUARTER_WAVE_ANTENNA, "--antenna-b", QUARTER_WAVE_ANTENNA])
             self.assertEqual(refused.exception.code, 2, distance)
 
     def test_a_refused_capture_exits_non_zero(self):
@@ -345,7 +345,7 @@ class Refusals(Case):
         b = self.capture("b.ndjson", [config(UNIT_B)])
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(link_budget.main([a, b, "--distance", "16.7", "--height", "1.2",
-                                               "--antenna-a", QW, "--antenna-b", QW]), 1)
+                                               "--antenna-a", QUARTER_WAVE_ANTENNA, "--antenna-b", QUARTER_WAVE_ANTENNA]), 1)
 
 
 class Firmware(Case):
@@ -362,19 +362,19 @@ class Firmware(Case):
     def test_the_chain_this_compares_against_is_the_one_sx1262_h_takes(self):
         self.assertAlmostEqual(link_budget.FEED_LOSS_DB * 100,
                                self.constant(SX1262_H, "kFeedLossCentiDb"))
-        self.assertAlmostEqual(link_budget.ANTENNAS[QW].gain_dbi * 100,
+        self.assertAlmostEqual(link_budget.ANTENNAS[QUARTER_WAVE_ANTENNA].gain_dbi * 100,
                                self.constant(SX1262_H, "kAntennaPeakGainDbiCentiDb"))
 
     def test_the_frequency_is_midway_between_the_two_m_band_channels(self):
-        channels = (self.constant(SLOT_H, "kMband0Hz"), self.constant(SLOT_H, "kMband1Hz"))
+        channels = (self.constant(SLOT_H, "kMBand0Hz"), self.constant(SLOT_H, "kMBand1Hz"))
         self.assertEqual(link_budget.MBAND_HZ, sum(channels) // 2)
 
     def test_every_field_the_link_reads_is_a_field_the_decoder_decodes(self):
         for raw, fields in ((config(UNIT_A), ("address", "tx_power_dbm", "pa_rated_dbm")),
                             (heard(UNIT_A, FIX_AT), ("address", "verdict", "band", "channel",
                                                      "rssi_dbm", "address_valid", "rssi_valid")),
-                            (traffic(UNIT_A, FIX_AT, 17), ("address", "dist_m", "position_valid"))):
-            decoded = records.decode_diag_record(raw)
+                            (traffic(UNIT_A, FIX_AT, 17), ("address", "distance_m", "position_valid"))):
+            decoded = records.decode_diagnostics_record(raw)
             for field in fields:
                 self.assertIn(field, decoded)
 

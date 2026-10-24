@@ -24,25 +24,24 @@ struct ConfirmSnapshot {
 // The grid, exported so a test reads a line back off the glass instead of
 // counting ink: "the page says POWER OFF" is the claim that matters.
 constexpr int kConfirmLeftX = 4;
-constexpr int kConfirmCellW = 6;
 constexpr int kConfirmHeaderY = 6;
 constexpr int kConfirmTitleY = 40;
 constexpr int kConfirmDetailY = 74;
-constexpr int kConfirmLineH = 11;
-constexpr int kConfirmDetailCols = 30;
+constexpr int kConfirmLineHeight = 11;
+constexpr int kConfirmDetailColumns = 30;
 constexpr int kConfirmDetailRows = 4;
 constexpr int kConfirmAllowY = 130;
 constexpr int kConfirmRefuseY = 148;
 constexpr int kConfirmExpiryY = 172;
 
-constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfirmLineH; }
+constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfirmLineHeight; }
 
 // The two halves of the gesture, spelled out. They are constants because the
 // page and its test must not be able to disagree about what the device accepts.
 constexpr const char* kConfirmAllowText = "PRESS TWICE TO ALLOW";
 constexpr const char* kConfirmRefuseText = "ONE PRESS REFUSES";
 
-void draw_confirm(ui::Canvas& fb, const ConfirmSnapshot& snapshot);
+void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

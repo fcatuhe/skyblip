@@ -1,6 +1,6 @@
-C{"cmd":"dfu","version":"0.2.0+15"}
+C{"command":"dfu","version":"0.2.0+15"}
 P
-C{"cmd":"update"}
-c{"cmd":"apply"}
-C{"cmd":"gnss_cold"}
+C{"command":"update"}
+c{"command":"apply"}
+C{"command":"gnss_cold_start"}
 P

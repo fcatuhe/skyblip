@@ -25,7 +25,7 @@ const char* to_string(PowerDownStep step) {
         case PowerDownStep::GnssResetAsserted: return "GNSS RESET";
         case PowerDownStep::RadioResetAsserted: return "RADIO RESET";
         case PowerDownStep::PeripheralRailOff: return "RAIL OFF";
-        case PowerDownStep::AuxRailOff: return "AUX RAIL OFF";
+        case PowerDownStep::AuxiliaryRailOff: return "AUX RAIL OFF";
         case PowerDownStep::DrivenPinsReleased: return "PINS RELEASED";
         case PowerDownStep::WakePinArmed: return "WAKE ARMED";
     }
@@ -51,7 +51,7 @@ bool ButtonRelease::settled(uint32_t now_ms, bool button_down) {
 
 void ShutdownSequencer::enter(ShutdownPhase phase, uint32_t now_ms) {
     phase_ = phase;
-    since_ms_ = now_ms;
+    phase_since_ms_ = now_ms;
 }
 
 void ShutdownSequencer::request(ShutdownReason reason, uint32_t now_ms) {
@@ -82,12 +82,12 @@ void ShutdownSequencer::tick(uint32_t now_ms, bool button_down, bool pad_down) {
                 return;
             }
             if (!pad_down) stowing_ = false;
-            if (hold_armed_ && now_ms - hold_since_ms_ >= kLongPressMs)
+            if (hold_armed_ && now_ms - hold_since_ms_ >= kLongPressHoldMs)
                 request(stowing_ ? ShutdownReason::Stow : ShutdownReason::LongPress, now_ms);
             return;
 
         case ShutdownPhase::Parking:
-            if (now_ms - since_ms_ < kParkMs) return;
+            if (now_ms - phase_since_ms_ < kParkSettleMs) return;
             enter(ShutdownPhase::AwaitRelease, now_ms);
             return;
 

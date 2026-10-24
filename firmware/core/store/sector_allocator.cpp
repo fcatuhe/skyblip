@@ -10,7 +10,7 @@ constexpr uint8_t kFree = static_cast<uint8_t>(SectorOwner::None);
 // INFO: fc 20sep26 not an owner: a sector whose label this build could not read or does not know
 constexpr uint8_t kQuarantined = 0xFF;
 
-uint32_t slot_of(SectorOwner owner) { return owner == SectorOwner::Diagnostics ? 1 : 0; }
+uint32_t ring_of(SectorOwner owner) { return owner == SectorOwner::Diagnostics ? 1 : 0; }
 
 }  // namespace
 
@@ -24,7 +24,7 @@ bool SectorAllocator::configure(uint32_t sector_count, uint32_t floor_sectors) {
 void SectorAllocator::reset() {
     for (uint32_t sector = 0; sector < kMaxPoolSectors; sector++) {
         sequence_of_[sector] = 0;
-        session_of_[sector] = 0;
+        session_id_of_[sector] = 0;
         owner_of_[sector] = kFree;
         session_start_[sector] = false;
     }
@@ -43,7 +43,7 @@ void SectorAllocator::note_sector(uint32_t sector, const SectorHeader& header) {
     if (header.sequence == 0) return;
     owner_of_[sector] = static_cast<uint8_t>(header.owner);
     sequence_of_[sector] = header.sequence;
-    session_of_[sector] = header.session_id;
+    session_id_of_[sector] = header.session_id;
     session_start_[sector] = header.session_start;
     if (!claimed_ || header.sequence > sequence_) {
         sequence_ = header.sequence;
@@ -78,7 +78,8 @@ Claim SectorAllocator::claim(SectorOwner owner, uint32_t session_id) {
 
 bool SectorAllocator::owns_session(SectorOwner owner, uint32_t session_id) const {
     for (uint32_t sector = 0; sector < sector_count_; sector++)
-        if (owner_of_[sector] == static_cast<uint8_t>(owner) && session_of_[sector] == session_id)
+        if (owner_of_[sector] == static_cast<uint8_t>(owner) &&
+            session_id_of_[sector] == session_id)
             return true;
     return false;
 }
@@ -91,12 +92,12 @@ void SectorAllocator::note_taken(uint32_t sector) {
     uint32_t frontier_sector = 0;
     uint32_t frontier_sequence = 0;
     if (!frontier(owner, frontier_sector, frontier_sequence)) return;
-    if (session_of_[frontier_sector] != session_of_[sector]) return;
-    lost_sectors_[slot_of(owner)]++;
+    if (session_id_of_[frontier_sector] != session_id_of_[sector]) return;
+    lost_sectors_[ring_of(owner)]++;
 }
 
 uint32_t SectorAllocator::lost_sectors(SectorOwner owner) const {
-    return owner == SectorOwner::None ? 0 : lost_sectors_[slot_of(owner)];
+    return owner == SectorOwner::None ? 0 : lost_sectors_[ring_of(owner)];
 }
 
 Claim SectorAllocator::prepare(SectorOwner owner) {
@@ -113,7 +114,7 @@ Claim SectorAllocator::prepare(SectorOwner owner) {
         spare.reserved = true;
         owner_of_[sector] = kFree;
         sequence_of_[sector] = 0;
-        session_of_[sector] = 0;
+        session_id_of_[sector] = 0;
         session_start_[sector] = false;
     }
     out.sector = spare.sector;
@@ -132,7 +133,7 @@ void SectorAllocator::release(SectorOwner owner) {
         if (owner_of_[sector] != static_cast<uint8_t>(owner)) continue;
         owner_of_[sector] = kFree;
         sequence_of_[sector] = 0;
-        session_of_[sector] = 0;
+        session_id_of_[sector] = 0;
         session_start_[sector] = false;
     }
     spare_of(owner) = Spare{};
@@ -142,7 +143,7 @@ void SectorAllocator::quarantine(uint32_t sector) {
     if (sector >= sector_count_) return;
     owner_of_[sector] = kQuarantined;
     sequence_of_[sector] = 0;
-    session_of_[sector] = 0;
+    session_id_of_[sector] = 0;
     session_start_[sector] = false;
 }
 
@@ -170,7 +171,7 @@ SectorOwner SectorAllocator::owner_of(uint32_t sector) const {
 }
 
 uint32_t SectorAllocator::session_of(uint32_t sector) const {
-    return sector < sector_count_ ? session_of_[sector] : 0;
+    return sector < sector_count_ ? session_id_of_[sector] : 0;
 }
 
 bool SectorAllocator::session_start(uint32_t sector) const {
@@ -201,11 +202,11 @@ bool SectorAllocator::session_run(SectorOwner owner, uint32_t above_sequence,
     if (!lowest_above(Match{owner, true, 0}, above_sequence, first_sector, first_sequence))
         return false;
     run = SessionRun{};
-    run.session_id = session_of_[first_sector];
+    run.session_id = session_id_of_[first_sector];
     uint32_t until = UINT32_MAX;
     for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
         if (owner_of_[candidate] != static_cast<uint8_t>(owner)) continue;
-        if (session_of_[candidate] == run.session_id) continue;
+        if (session_id_of_[candidate] == run.session_id) continue;
         const uint32_t sequence = sequence_of_[candidate];
         if (sequence > above_sequence && sequence < until) until = sequence;
     }
@@ -238,11 +239,11 @@ bool SectorAllocator::session_sector(SectorOwner owner, uint32_t session_id, uin
     uint32_t low = lowest + labels_before;
     uint32_t high = highest - labels_after;
     while (low < high) {
-        const uint32_t mid = low + (high - low) / 2;
-        if (matching_up_to(match, mid) > index)
-            high = mid;
+        const uint32_t middle = low + (high - low) / 2;
+        if (matching_up_to(match, middle) > index)
+            high = middle;
         else
-            low = mid + 1;
+            low = middle + 1;
     }
     for (uint32_t candidate = 0; candidate < sector_count_; candidate++) {
         if (!matches(match, candidate) || sequence_of_[candidate] != low) continue;
@@ -295,7 +296,7 @@ void SectorAllocator::take(uint32_t sector, SectorOwner owner, uint32_t session_
     sequence_++;
     owner_of_[sector] = static_cast<uint8_t>(owner);
     sequence_of_[sector] = sequence_;
-    session_of_[sector] = session_id;
+    session_id_of_[sector] = session_id;
     newest_ = sector;
     claimed_ = true;
 }
@@ -322,11 +323,11 @@ bool SectorAllocator::lowest_above(const Match& match, uint32_t above, uint32_t&
 
 bool SectorAllocator::matches(const Match& match, uint32_t sector) const {
     if (owner_of_[sector] != static_cast<uint8_t>(match.owner)) return false;
-    return match.any_session || session_of_[sector] == match.session_id;
+    return match.any_session || session_id_of_[sector] == match.session_id;
 }
 
 SectorAllocator::Spare& SectorAllocator::spare_of(SectorOwner owner) {
-    return spares_[slot_of(owner)];
+    return spares_[ring_of(owner)];
 }
 
 }  // namespace skyblip::store

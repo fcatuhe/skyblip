@@ -99,29 +99,31 @@ struct Message {
 }  // namespace
 
 TEST_CASE("ed25519: every RFC 8032 vector derives its public key from its seed") {
-    for (const Vector& v : kRfc8032) {
-        CAPTURE(v.name);
-        const auto seed = bytes_of<Ed25519::kSeedBytes>(v.seed);
-        CHECK(Ed25519::public_key_of(seed) == bytes_of<Ed25519::kPublicKeyBytes>(v.public_key));
+    for (const Vector& vector : kRfc8032) {
+        CAPTURE(vector.name);
+        const auto seed = bytes_of<Ed25519::kSeedBytes>(vector.seed);
+        CHECK(Ed25519::public_key_of(seed) ==
+              bytes_of<Ed25519::kPublicKeyBytes>(vector.public_key));
     }
 }
 
 TEST_CASE("ed25519: every RFC 8032 vector signs byte for byte and verifies") {
-    for (const Vector& v : kRfc8032) {
-        CAPTURE(v.name);
-        const Message message(v.message);
-        const auto expected = bytes_of<Ed25519::kSignatureBytes>(v.signature);
-        CHECK(Ed25519::sign(bytes_of<Ed25519::kSeedBytes>(v.seed), message.span()) == expected);
-        CHECK(Ed25519::verify(expected, bytes_of<Ed25519::kPublicKeyBytes>(v.public_key),
+    for (const Vector& vector : kRfc8032) {
+        CAPTURE(vector.name);
+        const Message message(vector.message);
+        const auto expected = bytes_of<Ed25519::kSignatureBytes>(vector.signature);
+        CHECK(Ed25519::sign(bytes_of<Ed25519::kSeedBytes>(vector.seed), message.span()) ==
+              expected);
+        CHECK(Ed25519::verify(expected, bytes_of<Ed25519::kPublicKeyBytes>(vector.public_key),
                               message.span()));
     }
 }
 
 TEST_CASE("ed25519: a flipped bit in the message, the signature or the key fails the check") {
-    const Vector& v = kRfc8032[2];
-    Message message(v.message);
-    const auto signature = bytes_of<Ed25519::kSignatureBytes>(v.signature);
-    const auto key = bytes_of<Ed25519::kPublicKeyBytes>(v.public_key);
+    const Vector& vector = kRfc8032[2];
+    Message message(vector.message);
+    const auto signature = bytes_of<Ed25519::kSignatureBytes>(vector.signature);
+    const auto key = bytes_of<Ed25519::kPublicKeyBytes>(vector.public_key);
     REQUIRE(Ed25519::verify(signature, key, message.span()));
 
     message.bytes[1] ^= 0x01;

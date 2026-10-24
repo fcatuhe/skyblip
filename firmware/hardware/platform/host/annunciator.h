@@ -22,20 +22,20 @@ class PinMotor : public ports::Haptic {
 
 class Annunciator : public ports::Annunciator {
    public:
-    void tone(uint16_t hz, ports::Loudness loudness) override {
-        if (hz == 0) {
+    void tone(uint16_t pitch_hz, ports::Loudness loudness) override {
+        if (pitch_hz == 0) {
             silence();
             return;
         }
         if (!sounding_) tone_guard_.arm();
-        hz_ = hz;
+        pitch_hz_ = pitch_hz;
         loudness_ = loudness;
         sounding_ = true;
         tone_commands_++;
     }
 
     void silence() override {
-        hz_ = 0;
+        pitch_hz_ = 0;
         sounding_ = false;
         tone_guard_.disarm();
         silences_++;
@@ -59,7 +59,7 @@ class Annunciator : public ports::Annunciator {
     // INFO: fc 17oct26 the guards' clock, counted from the first pass after turn-on
     void service(uint32_t now_ms) {
         if (tone_guard_.expired(now_ms)) {
-            hz_ = 0;
+            pitch_hz_ = 0;
             sounding_ = false;
             guard_cuts_++;
         }
@@ -72,7 +72,7 @@ class Annunciator : public ports::Annunciator {
 
     void attach_haptic(ports::Haptic& haptic) { haptic_ = &haptic; }
 
-    uint16_t hz() const { return hz_; }
+    uint16_t pitch_hz() const { return pitch_hz_; }
     bool sounding() const { return sounding_; }
     ports::Loudness loudness() const { return loudness_; }
     bool vibrating() const { return vibrating_; }
@@ -106,7 +106,7 @@ class Annunciator : public ports::Annunciator {
         }
     };
 
-    uint16_t hz_{0};
+    uint16_t pitch_hz_{0};
     ports::Loudness loudness_{ports::Loudness::Loud};
     bool sounding_{false};
     bool vibrating_{false};

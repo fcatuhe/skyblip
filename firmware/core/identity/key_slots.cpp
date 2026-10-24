@@ -11,9 +11,10 @@ size_t at(int slot, int word) {
 }
 
 uint32_t word_of(const crypto::Ed25519::Seed& seed, int i) {
-    const size_t b = 4 * static_cast<size_t>(i);
-    return static_cast<uint32_t>(seed[b]) | (static_cast<uint32_t>(seed[b + 1]) << 8) |
-           (static_cast<uint32_t>(seed[b + 2]) << 16) | (static_cast<uint32_t>(seed[b + 3]) << 24);
+    const size_t first = 4 * static_cast<size_t>(i);
+    return static_cast<uint32_t>(seed[first]) | (static_cast<uint32_t>(seed[first + 1]) << 8) |
+           (static_cast<uint32_t>(seed[first + 2]) << 16) |
+           (static_cast<uint32_t>(seed[first + 3]) << 24);
 }
 }  // namespace
 
@@ -42,8 +43,8 @@ crypto::Ed25519::Seed KeySlots::seed_in(const Words& words, int slot) {
     crypto::Ed25519::Seed seed{};
     for (int i = 0; i < kWordsPerSlot; i++) {
         const uint32_t word = words[at(slot, i)];
-        for (size_t b = 0; b < 4; b++)
-            seed[4 * static_cast<size_t>(i) + b] = static_cast<uint8_t>(word >> (8 * b));
+        for (size_t byte = 0; byte < 4; byte++)
+            seed[4 * static_cast<size_t>(i) + byte] = static_cast<uint8_t>(word >> (8 * byte));
     }
     return seed;
 }

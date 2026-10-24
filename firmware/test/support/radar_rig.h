@@ -11,22 +11,22 @@
 namespace skyblip::go {
 
 inline RadarSnapshot flying(uint16_t track_deg) {
-    RadarSnapshot snap;
-    snap.fix_valid = true;
-    snap.plot = RadarPlot::ToScale;
-    snap.range_step = kDefaultRangeStep;
-    snap.track_cdeg = track_deg * 100;
-    snap.flight_time_valid = true;
-    snap.in_flight = true;
-    snap.flight_seconds = 42 * 60;
-    snap.receiver_listening = true;
-    return snap;
+    RadarSnapshot snapshot;
+    snapshot.fix_valid = true;
+    snapshot.plot = RadarPlot::ToScale;
+    snapshot.range_step = kDefaultRangeStep;
+    snapshot.track_cdeg = track_deg * 100;
+    snapshot.flight_time_valid = true;
+    snapshot.flight_running = true;
+    snapshot.flight_seconds = 42 * 60;
+    snapshot.receiver_listening = true;
+    return snapshot;
 }
 
-inline Glass radar(const RadarSnapshot& snap) {
-    Glass fb;
-    draw_radar(fb, snap);
-    return fb;
+inline Glass radar(const RadarSnapshot& snapshot) {
+    Glass canvas;
+    draw_radar(canvas, snapshot);
+    return canvas;
 }
 
 }  // namespace skyblip::go

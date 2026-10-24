@@ -14,7 +14,7 @@
 
 namespace skyblip::indication {
 
-enum class Condition : uint8_t { Off, Alarm, Critical, Low, NoFix, Alive, kCount };
+enum class Condition : uint8_t { Off, Alarm, Critical, Low, NoFix, Alive, Count };
 
 // An LED reaches full brightness in microseconds, so core/annunciation's 90 ms
 // floor - an ear figure, the shortest blip a pilot can place and count - does not
@@ -51,7 +51,7 @@ struct Row {
     const char* meaning;
 };
 
-constexpr int kRowCount = static_cast<int>(Condition::kCount);
+constexpr int kRowCount = static_cast<int>(Condition::Count);
 
 inline constexpr Row kTable[kRowCount] = {
     {Condition::Off, {indication::Lamp::None, 0, 0}, Budget::Dark, "dark: off, or on its way down"},

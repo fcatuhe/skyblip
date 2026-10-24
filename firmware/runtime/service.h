@@ -3,7 +3,7 @@
 
 #include "core/bus/bus.h"
 #include "core/bus/state.h"
-#include "core/diag/recorder.h"
+#include "core/diagnostics/recorder.h"
 #include "core/util/result.h"
 #include "ports/roles.h"
 
@@ -14,14 +14,14 @@ struct Context {
     ports::Roles& roles;
     bus::Bus& bus;
     bus::State& state;
-    diag::Recorder& diag;
+    diagnostics::Recorder& diagnostics;
 
-    diag::Instant instant(uint32_t now_ms) const {
-        diag::Instant at{};
-        at.at_s = state.traffic_now(now_ms);
+    diagnostics::Instant instant(uint32_t now_ms) const {
+        diagnostics::Instant at{};
+        at.at_s = state.traffic_now_s(now_ms);
         at.utc_dated = (state.clock.pps_locked && state.clock.utc_s != 0) || state.own.utc_valid;
-        at.phase_valid = state.clock.pps_locked && state.clock.ms_since_pps < 1000;
-        at.into_ms = at.phase_valid ? static_cast<uint16_t>(state.clock.ms_since_pps)
+        at.phase_valid = state.clock.pps_locked && state.clock.since_edge_ms < 1000;
+        at.into_ms = at.phase_valid ? static_cast<uint16_t>(state.clock.since_edge_ms)
                                     : static_cast<uint16_t>(now_ms % 1000);
         return at;
     }

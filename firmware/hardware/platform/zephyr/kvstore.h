@@ -13,52 +13,53 @@
 
 namespace skyblip::platform::zephyr {
 
-class KvStore : public ports::KvStore {
+class KeyValueStore : public ports::KeyValueStore {
    public:
     // Mount NVS on the DT-defined `storage_partition`. Returns Ok on success.
     Status begin() {
         // FIXED_PARTITION_* are __DEPRECATED_MACRO aliases in Zephyr 4.4, and the
         // PARTITION_* spellings are the same macros under the intended names.
-        fs_.flash_device = PARTITION_DEVICE(storage_partition);
-        if (!device_is_ready(fs_.flash_device)) return Status::Down;
-        fs_.offset = PARTITION_OFFSET(storage_partition);
+        file_system_.flash_device = PARTITION_DEVICE(storage_partition);
+        if (!device_is_ready(file_system_.flash_device)) return Status::Down;
+        file_system_.offset = PARTITION_OFFSET(storage_partition);
         struct flash_pages_info info;
-        if (flash_get_page_info_by_offs(fs_.flash_device, fs_.offset, &info) != 0)
+        if (flash_get_page_info_by_offs(file_system_.flash_device, file_system_.offset, &info) != 0)
             return Status::Down;
-        fs_.sector_size = info.size;
-        fs_.sector_count = 3U;
-        mounted_ = nvs_mount(&fs_) == 0;
+        file_system_.sector_size = info.size;
+        file_system_.sector_count = 3U;
+        mounted_ = nvs_mount(&file_system_) == 0;
         return mounted_ ? Status::Ok : Status::Down;
     }
 
     bool ready() const override { return mounted_; }
 
-    Status read(const char* key, uint8_t* buf, size_t cap, size_t& out_len) override {
+    Status read(const char* key, uint8_t* out, size_t capacity, size_t& out_bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t n = nvs_read(&fs_, id(key), buf, cap);
-        if (n <= 0) return Status::NotFound;
-        // INFO: fc 23sep26 nvs_read answers the stored length, and copies only cap of it
-        if (static_cast<size_t>(n) > cap) return Status::OutOfRange;
-        out_len = static_cast<size_t>(n);
+        ssize_t stored = nvs_read(&file_system_, record_id(key), out, capacity);
+        if (stored <= 0) return Status::NotFound;
+        // INFO: fc 23sep26 nvs_read answers the stored length, and copies only capacity of it
+        if (static_cast<size_t>(stored) > capacity) return Status::OutOfRange;
+        out_bytes = static_cast<size_t>(stored);
         return Status::Ok;
     }
-    Status write(const char* key, const uint8_t* buf, size_t len) override {
+    Status write(const char* key, const uint8_t* data, size_t bytes) override {
         if (!mounted_) return Status::Down;
-        ssize_t n = nvs_write(&fs_, id(key), buf, len);
-        return (n == static_cast<ssize_t>(len) || n == 0) ? Status::Ok : Status::Full;
+        ssize_t written = nvs_write(&file_system_, record_id(key), data, bytes);
+        return (written == static_cast<ssize_t>(bytes) || written == 0) ? Status::Ok : Status::Full;
     }
     Status erase(const char* key) override {
         if (!mounted_) return Status::Down;
-        return nvs_delete(&fs_, id(key)) == 0 ? Status::Ok : Status::NotFound;
+        return nvs_delete(&file_system_, record_id(key)) == 0 ? Status::Ok : Status::NotFound;
     }
 
    private:
-    static uint16_t id(const char* key) {
-        uint32_t h = 2166136261u;
-        for (const char* p = key; *p; ++p) h = (h ^ static_cast<uint8_t>(*p)) * 16777619u;
-        return static_cast<uint16_t>(h & 0xFFFF) | 1u;  // avoid id 0
+    static uint16_t record_id(const char* key) {
+        uint32_t hash = 2166136261u;
+        for (const char* character = key; *character; ++character)
+            hash = (hash ^ static_cast<uint8_t>(*character)) * 16777619u;
+        return static_cast<uint16_t>(hash & 0xFFFF) | 1u;  // avoid id 0
     }
-    struct nvs_fs fs_{};
+    struct nvs_fs file_system_{};
     bool mounted_{false};
 };
 

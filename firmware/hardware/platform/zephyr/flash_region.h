@@ -22,13 +22,13 @@ class FlashRegion : public ports::FlashRegion {
 
     Status begin() {
         if (flash_area_open(partition_id_, &area_) != 0) return Status::Down;
-        const struct device* dev = flash_area_get_device(area_);
-        if (dev == nullptr || !device_is_ready(dev)) return Status::Down;
+        const struct device* controller = flash_area_get_device(area_);
+        if (controller == nullptr || !device_is_ready(controller)) return Status::Down;
         struct flash_pages_info info;
         // SFDP told the driver the geometry at boot; asking it is how one image
         // serves both candidate parts. The constant is the fallback, not the
         // assertion.
-        sector_bytes_ = flash_get_page_info_by_offs(dev, area_->fa_off, &info) == 0
+        sector_bytes_ = flash_get_page_info_by_offs(controller, area_->fa_off, &info) == 0
                             ? static_cast<uint32_t>(info.size)
                             : flight::kLogSectorBytes;
         if (sector_bytes_ == 0) return Status::Down;
@@ -41,14 +41,14 @@ class FlashRegion : public ports::FlashRegion {
     uint32_t sector_bytes() const override { return sector_bytes_; }
     uint32_t sector_count() const override { return sector_count_; }
 
-    Status read(uint32_t offset, uint8_t* buf, uint32_t len) override {
+    Status read(uint32_t offset, uint8_t* out, uint32_t bytes) override {
         if (!ready_) return Status::Down;
-        return flash_area_read(area_, offset, buf, len) == 0 ? Status::Ok : Status::Down;
+        return flash_area_read(area_, offset, out, bytes) == 0 ? Status::Ok : Status::Down;
     }
 
-    Status write(uint32_t offset, const uint8_t* buf, uint32_t len) override {
+    Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) override {
         if (!ready_) return Status::Down;
-        return flash_area_write(area_, offset, buf, len) == 0 ? Status::Ok : Status::Down;
+        return flash_area_write(area_, offset, data, bytes) == 0 ? Status::Ok : Status::Down;
     }
 
     Status erase_sector(uint32_t index) override {

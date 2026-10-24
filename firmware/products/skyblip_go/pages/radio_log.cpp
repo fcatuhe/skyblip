@@ -6,33 +6,31 @@ namespace skyblip::go {
 
 namespace {
 constexpr int kLeft = 4;
-constexpr int kCellW = 6;  // the 5x7 font's advance at scale 1
-constexpr int kColumn(int cell) { return kLeft + cell * kCellW; }
+using ui::kCellWidth;
+constexpr int column_x(int cell) { return kLeft + cell * kCellWidth; }
 
 constexpr int kTitleY = 2;
 constexpr int kGnssY = 13;
 constexpr int kRuleY = 23;
 constexpr int kFirstRowY = 27;
-constexpr int kLineH = 10;
+constexpr int kLineHeight = 10;
 
-constexpr int kClockX = kColumn(0);
-constexpr int kWayX = kColumn(10);
-constexpr int kBandX = kColumn(13);
-constexpr int kVerdictX = kColumn(16);
-constexpr int kAddressX = kColumn(22);
-constexpr int kRightEnd = kColumn(32);
+constexpr int kClockX = column_x(0);
+constexpr int kWayX = column_x(10);
+constexpr int kBandX = column_x(13);
+constexpr int kVerdictX = column_x(16);
+constexpr int kAddressX = column_x(22);
+constexpr int kRightEnd = column_x(32);
 
-constexpr int kPpsX = kColumn(9);
+constexpr int kPpsX = column_x(9);
 
-constexpr uint8_t kFewestSatsForAltitude = 4;
-
-void right_aligned(ui::Canvas& fb, int x_end, int y, const char* text, int len) {
-    fb.draw_text(x_end - len * kCellW, y, text, true, 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length) {
+    canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
-bool own_burst(radio::Event event) {
-    return event == radio::Event::Transmitted || event == radio::Event::Lost ||
-           event == radio::Event::Held || event == radio::Event::Unarmed;
+bool own_burst(radio::Verdict verdict) {
+    return verdict == radio::Verdict::Transmitted || verdict == radio::Verdict::Lost ||
+           verdict == radio::Verdict::Held || verdict == radio::Verdict::Unarmed;
 }
 
 // What own-ship put on air, in the column a reception spends on its sender: the
@@ -44,153 +42,156 @@ const char* own_burst_word(const radio::Entry& entry) {
 
 // INFO: fc 17sep26 a transmission that worked prints no verdict, as a reception does not
 const char* verdict_of(const radio::Entry& entry) {
-    switch (entry.event) {
-        case radio::Event::Lost:
-        case radio::Event::Unarmed: return "LOST";
-        case radio::Event::Held: return "HELD";
-        case radio::Event::BadCrc: return "CRC";
-        case radio::Event::Unframed: return "SYNC";
-        case radio::Event::Miskeyed: return "KEY";
-        case radio::Event::Undecoded: return "DEC";
-        case radio::Event::Unsupported: return "TYPE";
-        case radio::Event::Unattempted: return "WAIT";
-        case radio::Event::Named: return "NAMED";
-        case radio::Event::Transmitted:
-        case radio::Event::Received:
+    switch (entry.verdict) {
+        case radio::Verdict::Lost:
+        case radio::Verdict::Unarmed: return "LOST";
+        case radio::Verdict::Held: return "HELD";
+        case radio::Verdict::BadCrc: return "CRC";
+        case radio::Verdict::Unframed: return "SYNC";
+        case radio::Verdict::Miskeyed: return "KEY";
+        case radio::Verdict::Undecoded: return "DEC";
+        case radio::Verdict::Unsupported: return "TYPE";
+        case radio::Verdict::Unattempted: return "WAIT";
+        case radio::Verdict::Named: return "NAMED";
+        case radio::Verdict::Transmitted:
+        case radio::Verdict::Received:
         default: return nullptr;
     }
 }
 
-int fmt_verdict(char* out, const radio::Entry& entry) {
+int format_verdict(char* out, const radio::Entry& entry) {
     const char* word = verdict_of(entry);
     if (word == nullptr) return 0;
-    int n = fmt_string(out, word);
-    if (entry.event == radio::Event::Miskeyed) n += fmt_int(out + n, entry.key_offset_s);
-    return n;
+    int written = format_string(out, word);
+    if (entry.verdict == radio::Verdict::Miskeyed)
+        written += format_signed(out + written, entry.key_offset_s);
+    return written;
 }
 
-int fmt_stamp(char* out, const radio::Entry& entry) {
-    if (!entry.utc) {
-        int n = fmt_string(out, "T+");
-        return n + fmt_uint(out + n, entry.at_s % kUptimeClockWrapS);
+int format_stamp(char* out, const radio::Entry& entry) {
+    if (!entry.utc_dated) {
+        int written = format_string(out, "T+");
+        return written + format_unsigned(out + written, entry.at_s % kUptimeClockWrapS);
     }
-    int n = fmt_uint(out, entry.at_s / 60 % 60, 2);
-    out[n++] = ':';
-    n += fmt_uint(out + n, entry.at_s % 60, 2);
-    if (!entry.phase_valid) return n;
-    out[n++] = '.';
-    return n + fmt_uint(out + n, entry.into_ms, 3);
+    int written = format_unsigned(out, entry.at_s / 60 % 60, 2);
+    out[written++] = ':';
+    written += format_unsigned(out + written, entry.at_s % 60, 2);
+    if (!entry.phase_valid) return written;
+    out[written++] = '.';
+    return written + format_unsigned(out + written, entry.into_ms, 3);
 }
 
-int fmt_dwell(char* out, const radio::Entry& entry) {
-    if (entry.band == model::Band::O) return fmt_string(out, "O");
-    int n = fmt_string(out, "M");
-    return n + fmt_uint(out + n, entry.channel);
+int format_dwell(char* out, const radio::Entry& entry) {
+    if (entry.band == model::Band::O) return format_string(out, "O");
+    int written = format_string(out, "M");
+    return written + format_unsigned(out + written, entry.channel);
 }
 
-void draw_title(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    fb.draw_text(kLeft, kTitleY, "RADIO LOG", true, 1);
+void draw_title(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    canvas.draw_text(kLeft, kTitleY, "RADIO LOG", true, 1);
 
-    char buf[32];
-    int n = fmt_string(buf, "RX ");
-    n += fmt_uint(buf + n, snap.rx_ok);
-    n += fmt_string(buf + n, " TX ");
-    n += fmt_uint(buf + n, snap.tx_ok);
-    n += fmt_string(buf + n, " NOISE ");
-    n += fmt_uint(buf + n, snap.noise);
-    buf[n] = 0;
-    right_aligned(fb, kRightEnd, kTitleY, buf, n);
+    char text[32];
+    int written = format_string(text, "RX ");
+    written += format_unsigned(text + written, snapshot.rx_ok);
+    written += format_string(text + written, " TX ");
+    written += format_unsigned(text + written, snapshot.tx_ok);
+    written += format_string(text + written, " NOISE ");
+    written += format_unsigned(text + written, snapshot.rx_noise);
+    text[written] = 0;
+    right_aligned(canvas, kRightEnd, kTitleY, text, written);
 }
 
-int fmt_pps(char* out, const GnssReception& gnss) {
-    int n = fmt_string(out, "PPS ");
+int format_pps(char* out, const GnssReception& gnss) {
+    int written = format_string(out, "PPS ");
     switch (gnss.pps) {
-        case PpsState::Lock: return n + fmt_string(out + n, "LOCK");
+        case PpsState::Lock: return written + format_string(out + written, "LOCK");
         case PpsState::Holdover:
-            n += fmt_string(out + n, "HOLD ");
-            return n + fmt_uint(out + n, gnss.pps_age_s);
+            written += format_string(out + written, "HOLD ");
+            return written + format_unsigned(out + written, gnss.pps_age_s);
         case PpsState::None:
-        default: return n + fmt_string(out + n, "NONE");
+        default: return written + format_string(out + written, "NONE");
     }
 }
 
-void draw_gnss(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    const GnssReception& gnss = snap.gnss;
-    char buf[32];
-    int n = 0;
+void draw_gnss(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    const GnssReception& gnss = snapshot.gnss;
+    char text[32];
+    int written = 0;
     if (!gnss.fix_valid) {
-        n = fmt_string(buf, "NO FIX");
+        written = format_string(text, "NO FIX");
     } else {
-        n = fmt_string(buf, gnss.sats >= kFewestSatsForAltitude ? "3D " : "2D ");
-        n += fmt_uint(buf + n, gnss.sats);
-        n += fmt_string(buf + n, "SV");
+        written =
+            format_string(text, gnss.satellites >= kFewestSatellitesForAltitude ? "3D " : "2D ");
+        written += format_unsigned(text + written, gnss.satellites);
+        written += format_string(text + written, "SV");
     }
-    buf[n] = 0;
-    fb.draw_text(kLeft, kGnssY, buf, true, 1);
+    text[written] = 0;
+    canvas.draw_text(kLeft, kGnssY, text, true, 1);
 
-    n = fmt_pps(buf, gnss);
-    buf[n] = 0;
-    fb.draw_text(kPpsX, kGnssY, buf, true, 1);
+    written = format_pps(text, gnss);
+    text[written] = 0;
+    canvas.draw_text(kPpsX, kGnssY, text, true, 1);
 
-    n = fmt_string(buf, "BAND ");
-    n += fmt_int(buf + n, snap.band_dbm, 1, 0, false);
-    buf[n] = 0;
-    right_aligned(fb, kRightEnd, kGnssY, buf, n);
+    written = format_string(text, "BAND ");
+    written += format_signed(text + written, snapshot.noise_dbm, 1, 0, true);
+    text[written] = 0;
+    right_aligned(canvas, kRightEnd, kGnssY, text, written);
 }
 
-void draw_row(ui::Canvas& fb, int y, const radio::Entry& entry) {
-    char buf[16];
+void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
+    char text[16];
 
-    int n = fmt_stamp(buf, entry);
-    buf[n] = 0;
-    fb.draw_text(kClockX, y, buf, true, 1);
+    int written = format_stamp(text, entry);
+    text[written] = 0;
+    canvas.draw_text(kClockX, y, text, true, 1);
 
-    const bool ours = own_burst(entry.event);
-    fb.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
+    const bool ours = own_burst(entry.verdict);
+    canvas.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
 
-    n = fmt_dwell(buf, entry);
-    buf[n] = 0;
-    fb.draw_text(kBandX, y, buf, true, 1);
+    written = format_dwell(text, entry);
+    text[written] = 0;
+    canvas.draw_text(kBandX, y, text, true, 1);
 
-    n = fmt_verdict(buf, entry);
-    if (n > 0) {
-        buf[n] = 0;
-        fb.draw_text(kVerdictX, y, buf, true, 1);
+    written = format_verdict(text, entry);
+    if (written > 0) {
+        text[written] = 0;
+        canvas.draw_text(kVerdictX, y, text, true, 1);
     } else if (!ours) {
-        fb.draw_text(kVerdictX, y, model::source_word(entry.source), true, 1);
+        canvas.draw_text(kVerdictX, y, model::source_word(entry.source), true, 1);
     }
 
     if (ours) {
-        fb.draw_text(kAddressX, y, own_burst_word(entry), true, 1);
+        canvas.draw_text(kAddressX, y, own_burst_word(entry), true, 1);
         return;
     }
 
     if (entry.address_valid) {
-        n = fmt_hex(buf, entry.address, 6);
-        buf[n] = 0;
-        fb.draw_text(kAddressX, y, buf, true, 1);
+        written = format_hex(text, entry.address, 6);
+        text[written] = 0;
+        canvas.draw_text(kAddressX, y, text, true, 1);
     }
 
     if (!entry.rssi_valid) return;
-    n = fmt_int(buf, entry.rssi_dbm, 1, 0, false);
-    buf[n] = 0;
-    right_aligned(fb, kRightEnd, y, buf, n);
+    written = format_signed(text, entry.rssi_dbm, 1, 0, true);
+    text[written] = 0;
+    right_aligned(canvas, kRightEnd, y, text, written);
 }
 
 }  // namespace
 
-void draw_radio_log(ui::Canvas& fb, const RadioLogSnapshot& snap) {
-    draw_title(fb, snap);
-    draw_gnss(fb, snap);
-    fb.hline(kLeft, kRuleY, kRightEnd - kLeft, true);
+void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
+    draw_title(canvas, snapshot);
+    draw_gnss(canvas, snapshot);
+    canvas.horizontal_line(kLeft, kRuleY, kRightEnd - kLeft, true);
 
-    if (snap.log == nullptr || snap.n_rows == 0) {
-        fb.draw_text(kLeft, kFirstRowY + kLineH, "NOTHING ON AIR YET", true, 1);
+    if (snapshot.log == nullptr || snapshot.row_count == 0) {
+        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NOTHING ON AIR YET", true, 1);
         return;
     }
 
-    const int rows = snap.n_rows < kRadioLogRows ? snap.n_rows : kRadioLogRows;
-    for (int i = 0; i < rows; i++) draw_row(fb, kFirstRowY + i * kLineH, snap.log->newest(i));
+    const int rows = snapshot.row_count < kRadioLogRows ? snapshot.row_count : kRadioLogRows;
+    for (int i = 0; i < rows; i++)
+        draw_row(canvas, kFirstRowY + i * kLineHeight, snapshot.log->newest(i));
 }
 
 }  // namespace skyblip::go

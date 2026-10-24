@@ -15,7 +15,7 @@
 #include <cstdint>
 
 #include "core/settings/address.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "core/util/result.h"
 
 namespace skyblip::go {
@@ -29,7 +29,7 @@ enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
 constexpr int kRangeStepCount = 4;
 constexpr int kDefaultRangeStep = 2;
 
-constexpr size_t kCallsignCap = 10;
+constexpr size_t kCallsignBytes = 10;
 
 // The most the radio's centre frequency may be trimmed, in tenths of a ppm, and
 // the reason there is a trim at all. The board fits a TCXO, so zero is the
@@ -40,26 +40,26 @@ constexpr size_t kCallsignCap = 10;
 // datasheet, a field with no way to correct it is a recall. The bound is that
 // tenfold miss and no more (+-10 ppm, +-8.7 kHz at 868.2 MHz): inside it the
 // carrier cannot leave ERC 70-03 band h1.4, and beyond it the part is broken
-// rather than out of trim. sx::kFreqTrimLimitTenthsPpm is the same number where
+// rather than out of trim. sx1262::kFrequencyTrimCeilingE1Ppm is the same number where
 // the PLL word is computed.
-constexpr int16_t kFreqTrimLimitTenthsPpm = 100;
+constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 
 // INFO: fc 12sep26 ADS-L G.1.3's light aircraft, what a device says until a pilot says otherwise
 constexpr uint8_t kAircraftTypeLight = 1;
 
 struct Settings {
     uint8_t version{kCurrentVersion};
-    // The per-unit battery trim, core/power/battery.h's kCalibrationLimitMv
+    // The per-unit battery trim, core/power/battery.h's kCalibrationCeilingMv
     // either way, applied to every reading before the gauge or the cutoff sees
     // it. Placed here rather than at the end because a signed 16-bit value after
     // the 32-bit address costs no padding, so the blob is the same length it was.
     //
     // It is the one field the "config" reply does not carry back. That reply is
-    // one frame at core/comms/config.h's kSmallestSupportedPayload, its worst
-    // case is already 173 of those 182 bytes, and no honest name for this key
-    // fits in nine. It is written on the line and read back as the millivolts
-    // the status reply and the panel already show, which is the figure the line
-    // is comparing against a bench supply anyway.
+    // one frame at core/comms/config.h's kSmallestSupportedPayloadBytes, its worst
+    // case is already 166 of those 182 bytes, and no honest name for this key
+    // fits in the eight letters that leaves. It is written on the line and read back as the
+    // millivolts the status reply and the panel already show, which is the figure the line is
+    // comparing against a bench supply anyway.
     int16_t battery_offset_mv{0};
     // The radio's frequency trim in tenths of a ppm, positive upwards, applied
     // to every dwell the radio arms (hardware/parts/sx1262). Beside
@@ -69,12 +69,12 @@ struct Settings {
     //
     // Like battery_offset_mv it is accepted on "set" and absent from the "get"
     // reply, for the same reason: that reply is one frame at
-    // core/comms/config.h's kSmallestSupportedPayload and its worst case leaves
-    // 29 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
+    // core/comms/config.h's kSmallestSupportedPayloadBytes and its worst case leaves
+    // 16 bytes, too few for both trims. Unlike the battery trim there is nothing on the device that
     // reads the value back, so a bench that sets it has to trust its own record
     // and its spectrum analyser - which is the instrument that had to be there
     // to know the number in the first place.
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
@@ -83,7 +83,7 @@ struct Settings {
     Units units{Units::Nautical};
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 
     // The companion-link contract, which is what schemas/config.v1.schema.json
     // pins. It moves when a key changes meaning, not when the flash layout does.
@@ -94,23 +94,24 @@ constexpr uint8_t kBlobVersion = 11;
 
 Settings defaults();
 
-Status validate(const Settings& s);
+Status validate(const Settings& settings);
 
 size_t blob_size();
-void to_blob(const Settings& s, uint8_t* out, size_t cap);
-Status from_blob(const uint8_t* in, size_t len, Settings& out);
+void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
+Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 // INFO: fc 04aug26 The fields alone, into a writer the caller opened, so the
 // companion link's "config" reply can tag them and stay one flat object. Nesting
 // them as an escaped string cost 53 bytes of backslashes on a 158-byte body,
 // which is what pushed that reply past what an iPhone will carry.
-void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address);
+void write_json_fields(json::Writer& writer, const Settings& settings,
+                       settings::AirAddress address);
 
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
-void write_json_settings(json::Writer& w, const Settings& s);
+void write_json_settings(json::Writer& writer, const Settings& settings);
 
-int to_json(const Settings& s, settings::AirAddress address, char* buf, int cap);
-Status apply_json(Settings& s, const char* json, int len);
+int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity);
+Status apply_json(Settings& settings, const char* json, int length);
 
 }  // namespace skyblip::go
 

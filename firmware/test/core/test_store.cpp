@@ -11,7 +11,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kBaseUtc = 1785628800;  // 2026-08-02T00:00:00Z
+constexpr uint32_t kBaseUtcS = 1785628800;  // 2026-08-02T00:00:00Z
 constexpr uint32_t kSecondsPerSector = 170;
 constexpr uint32_t kSomeSession = 1;
 
@@ -56,7 +56,7 @@ TEST_CASE("sector label: sixteen bytes carry the owner, and a half-written one i
     store::SectorHeader in{};
     in.owner = SectorOwner::Flights;
     in.sequence = 4242;
-    in.session_id = kBaseUtc;
+    in.session_id = kBaseUtcS;
     in.record_bytes = 24;
     uint8_t raw[store::kSectorHeaderBytes];
     store::encode_sector_header(in, raw);
@@ -65,7 +65,7 @@ TEST_CASE("sector label: sixteen bytes carry the owner, and a half-written one i
     REQUIRE(store::decode_sector_header(raw, out) == Status::Ok);
     CHECK(out.owner == SectorOwner::Flights);
     CHECK(out.sequence == 4242);
-    CHECK(out.session_id == kBaseUtc);
+    CHECK(out.session_id == kBaseUtcS);
     CHECK(out.record_bytes == 24);
 
     uint8_t erased[store::kSectorHeaderBytes];
@@ -114,13 +114,13 @@ TEST_CASE("sector pool: only the first sector of a session is labelled as its st
     store::SectorAllocator pool;
     REQUIRE(pool.configure(4, 0));
 
-    const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtc);
+    const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtcS);
     CHECK(first.session_start);
     CHECK(pool.session_start(first.sector));
-    const store::Claim second = pool.claim(SectorOwner::Flights, kBaseUtc);
+    const store::Claim second = pool.claim(SectorOwner::Flights, kBaseUtcS);
     CHECK_FALSE(second.session_start);
     CHECK_FALSE(pool.session_start(second.sector));
-    CHECK(pool.claim(SectorOwner::Flights, kBaseUtc + 900).session_start);
+    CHECK(pool.claim(SectorOwner::Flights, kBaseUtcS + 900).session_start);
 }
 
 // Rotation is the design; a rotation nobody counted is the defect.
@@ -148,10 +148,10 @@ TEST_CASE("sector pool: a ring recycling under its own frontier counts what the 
 TEST_CASE("sector pool: flights eating a live capture sector is the capture's loss to report") {
     store::SectorAllocator pool;
     REQUIRE(pool.configure(3, 0));
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     fill(pool, SectorOwner::Diagnostics, 2);
 
-    CHECK(pool.claim(SectorOwner::Flights, kBaseUtc).granted);
+    CHECK(pool.claim(SectorOwner::Flights, kBaseUtcS).granted);
     CHECK(pool.lost_sectors(SectorOwner::Diagnostics) == 1);
 }
 
@@ -182,13 +182,13 @@ TEST_CASE("sector pool: the first sector of a virgin partition is sector zero") 
     store::SectorAllocator pool;
     REQUIRE(pool.configure(4, 0));
 
-    const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtc);
+    const store::Claim first = pool.claim(SectorOwner::Flights, kBaseUtcS);
     CHECK(first.granted);
     CHECK(first.sector == 0);
     CHECK(first.sequence == 1);
     CHECK_FALSE(first.erased);
     CHECK(pool.owned(SectorOwner::Flights) == 1);
-    CHECK(pool.session_of(first.sector) == kBaseUtc);
+    CHECK(pool.session_of(first.sector) == kBaseUtcS);
 }
 
 TEST_CASE("sector pool: a free sector goes to whoever asks for it") {
@@ -371,24 +371,24 @@ TEST_CASE("sector pool: a header scan in any physical order finds both frontiers
 TEST_CASE("sector pool: a session's sectors come back in the order they were written") {
     store::SectorAllocator pool;
     REQUIRE(pool.configure(6, 0));
-    const uint32_t first = claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    const uint32_t first = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     const uint32_t capture = claimed_sector(pool, SectorOwner::Diagnostics, 99);
-    const uint32_t second = claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
-    const uint32_t next_flight = claimed_sector(pool, SectorOwner::Flights, kBaseUtc + 600);
+    const uint32_t second = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
+    const uint32_t next_flight = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS + 600);
 
-    CHECK(session_sector(pool, kBaseUtc, 0) == first);
-    CHECK(session_sector(pool, kBaseUtc, 1) == second);
+    CHECK(session_sector(pool, kBaseUtcS, 0) == first);
+    CHECK(session_sector(pool, kBaseUtcS, 1) == second);
     uint32_t beyond = 0;
-    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtc, 2, beyond));
-    CHECK(session_sector(pool, kBaseUtc + 600, 0) == next_flight);
+    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtcS, 2, beyond));
+    CHECK(session_sector(pool, kBaseUtcS + 600, 0) == next_flight);
     CHECK(pool.session_of(capture) == 99);
 
     store::SessionRun run{};
     REQUIRE(pool.session_run(SectorOwner::Flights, 0, run));
-    CHECK(run.session_id == kBaseUtc);
+    CHECK(run.session_id == kBaseUtcS);
     CHECK(run.sectors == 2);
     REQUIRE(pool.session_run(SectorOwner::Flights, run.last_sequence, run));
-    CHECK(run.session_id == kBaseUtc + 600);
+    CHECK(run.session_id == kBaseUtcS + 600);
     CHECK(run.sectors == 1);
     CHECK_FALSE(pool.session_run(SectorOwner::Flights, run.last_sequence, run));
 }
@@ -398,13 +398,13 @@ TEST_CASE("sector pool: a ring is walked a session run at a time, the other ring
     store::SectorAllocator pool;
     REQUIRE(pool.configure(12, 0));
     fill(pool, SectorOwner::Diagnostics, 1);
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     fill(pool, SectorOwner::Diagnostics, 2);
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc + 600);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS + 600);
     fill(pool, SectorOwner::Diagnostics, 1);
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc + 600);
-    claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS + 600);
+    claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
 
     store::SessionRun run{};
     uint32_t walked = 0;
@@ -414,7 +414,7 @@ TEST_CASE("sector pool: a ring is walked a session run at a time, the other ring
         walked = run.last_sequence;
     }
     const std::vector<std::pair<uint32_t, uint32_t>> expected{
-        {kBaseUtc, 2}, {kBaseUtc + 600, 2}, {kBaseUtc, 1}};
+        {kBaseUtcS, 2}, {kBaseUtcS + 600, 2}, {kBaseUtcS, 1}};
     CHECK(runs == expected);
 }
 
@@ -425,27 +425,27 @@ TEST_CASE("sector pool: every sector of a long session is found by its index, ga
     fill(pool, SectorOwner::Diagnostics, 17);
     std::vector<uint32_t> written;
     for (uint32_t i = 0; i < 280; i++) {
-        written.push_back(claimed_sector(pool, SectorOwner::Flights, kBaseUtc));
+        written.push_back(claimed_sector(pool, SectorOwner::Flights, kBaseUtcS));
         if (i % 20 == 3) fill(pool, SectorOwner::Diagnostics, 1 + i / 20 % 2);
     }
 
     for (uint32_t index = 0; index < written.size(); index++)
-        CHECK(session_sector(pool, kBaseUtc, index) == written[index]);
+        CHECK(session_sector(pool, kBaseUtcS, index) == written[index]);
     uint32_t beyond = 0;
-    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtc, 280, beyond));
-    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtc + 1, 0, beyond));
+    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtcS, 280, beyond));
+    CHECK_FALSE(pool.session_sector(SectorOwner::Flights, kBaseUtcS + 1, 0, beyond));
 }
 
 TEST_CASE("sector pool: a session that wrapped is still walked in sequence order") {
     store::SectorAllocator pool;
     REQUIRE(pool.configure(330, 64));
-    note_label(pool, 328, SectorOwner::Flights, 11, kBaseUtc);
+    note_label(pool, 328, SectorOwner::Flights, 11, kBaseUtcS);
     note_label(pool, 329, SectorOwner::Diagnostics, 12, 99);
-    note_label(pool, 0, SectorOwner::Flights, 13, kBaseUtc);
+    note_label(pool, 0, SectorOwner::Flights, 13, kBaseUtcS);
 
     // Physically 0 comes first and it is the last sector the session wrote.
-    CHECK(session_sector(pool, kBaseUtc, 0) == 328);
-    CHECK(session_sector(pool, kBaseUtc, 1) == 0);
+    CHECK(session_sector(pool, kBaseUtcS, 0) == 328);
+    CHECK(session_sector(pool, kBaseUtcS, 1) == 0);
 }
 
 TEST_CASE("sector pool: a partition larger than the pool can track is refused, not truncated") {
@@ -458,7 +458,7 @@ TEST_CASE("sector pool: a partition larger than the pool can track is refused, n
 TEST_CASE("sector pool: one ring erased gives its sectors back and leaves the other standing") {
     store::SectorAllocator pool;
     REQUIRE(pool.configure(8, 2));
-    const uint32_t flight = claimed_sector(pool, SectorOwner::Flights, kBaseUtc);
+    const uint32_t flight = claimed_sector(pool, SectorOwner::Flights, kBaseUtcS);
     const uint32_t capture = claimed_sector(pool, SectorOwner::Diagnostics, 99);
     const uint32_t sequence_before = pool.sequence();
     CHECK(pool.owner_of(flight) == SectorOwner::Flights);
@@ -471,5 +471,5 @@ TEST_CASE("sector pool: one ring erased gives its sectors back and leaves the ot
     CHECK(pool.session_of(capture) == 99);
 
     // The counter never repeats, whatever was handed back.
-    CHECK(pool.claim(SectorOwner::Flights, kBaseUtc).sequence == sequence_before + 1);
+    CHECK(pool.claim(SectorOwner::Flights, kBaseUtcS).sequence == sequence_before + 1);
 }

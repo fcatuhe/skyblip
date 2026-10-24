@@ -21,18 +21,18 @@ class SentenceWire : public io::Uart {
    public:
     explicit SentenceWire(models::L76k& chip) : chip_(chip) {}
 
-    size_t write(const uint8_t* data, size_t len) override { return chip_.write(data, len); }
+    size_t write(const uint8_t* data, size_t bytes) override { return chip_.write(data, bytes); }
 
-    size_t read(uint8_t* out, size_t cap) override {
+    size_t read(uint8_t* out, size_t capacity) override {
         if (buffered_.empty()) {
-            uint8_t buf[1024];
-            const size_t n = chip_.read(buf, sizeof(buf));
-            buffered_.assign(reinterpret_cast<const char*>(buf), n);
+            uint8_t buffer[1024];
+            const size_t bytes = chip_.read(buffer, sizeof(buffer));
+            buffered_.assign(reinterpret_cast<const char*>(buffer), bytes);
         }
         if (buffered_.empty()) return 0;
         const size_t line = buffered_.find('\n');
         size_t take = line == std::string::npos ? buffered_.size() : line + 1;
-        if (take > cap) take = cap;
+        if (take > capacity) take = capacity;
         for (size_t i = 0; i < take; i++) out[i] = static_cast<uint8_t>(buffered_[i]);
         buffered_.erase(0, take);
         return take;
@@ -49,10 +49,10 @@ class SentenceWire : public io::Uart {
 
 TEST_CASE("l76k: a new fix is reported exactly once") {
     models::L76k chip;
-    chip.fix = true;
-    chip.sats = 9;
-    chip.alt_m = 1200;
-    chip.lat_1e7 = 485000000;
+    chip.fix_valid = true;
+    chip.satellites = 9;
+    chip.altitude_m = 1200;
+    chip.latitude_1e7 = 485000000;
     parts::L76k gnss(chip);
 
     CHECK_FALSE(gnss.poll());  // the receiver has said nothing yet
@@ -62,9 +62,9 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
     chip.tick(1000);  // one $GPRMC + $GPGGA burst, >64 B so the chunked read wraps
     CHECK(gnss.poll());
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.solution().sats == 9);
-    CHECK(gnss.solution().alt_mm == 1200000);
-    CHECK(gnss.solution().lat_1e7 == doctest::Approx(485000000).epsilon(0.0001));
+    CHECK(gnss.solution().satellites == 9);
+    CHECK(gnss.solution().altitude_hae_mm == 1200000);
+    CHECK(gnss.solution().latitude_1e7 == doctest::Approx(485000000).epsilon(0.0001));
 
     CHECK_FALSE(gnss.poll());  // no new bytes: the same fix is not re-delivered
 }
@@ -72,20 +72,20 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
 TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
     models::L76k chip;  // never ticked: powered, connected, saying nothing
     parts::L76k gnss(chip);
-    for (uint32_t t = 0; t <= 5000; t += 100) CHECK_FALSE(gnss.poll());
-    CHECK(gnss.updates() == 0);
+    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) CHECK_FALSE(gnss.poll());
+    CHECK(gnss.sentences() == 0);
 }
 
 TEST_CASE("l76k: losing the fix is reported like any other update") {
     models::L76k chip;
-    chip.fix = true;
+    chip.fix_valid = true;
     parts::L76k gnss(chip);
     chip.tick(0);
     chip.tick(1000);
     REQUIRE(gnss.poll());
     REQUIRE(gnss.solution().fix_valid);
 
-    chip.fix = false;
+    chip.fix_valid = false;
     chip.tick(2000);
     CHECK(gnss.poll());
     CHECK_FALSE(gnss.solution().fix_valid);
@@ -123,8 +123,8 @@ TEST_CASE("l76k: a receiver reporting no VDOP leaves the fix without one") {
 
 // The rate rule refuses a MISSED solution, not the wait between the top of the second and the slot.
 TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
-    CHECK(parts::L76k::kFixPeriodMs == 1000);
-    CHECK(static_cast<int32_t>(parts::L76k::kFixPeriodMs) > timing::Transmitter::kFixLagMaxMs);
+    CHECK(parts::L76k::kSolutionPeriodMs == 1000);
+    CHECK(static_cast<int32_t>(parts::L76k::kSolutionPeriodMs) > timing::Transmitter::kFixMaxAgeMs);
 
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
@@ -132,12 +132,12 @@ TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
     uint32_t fixes = 0;
-    for (uint32_t t = kBringUpLeadMs + 1010; t <= kBringUpLeadMs + 5010; t += 10) {
-        chip.tick(t);
-        gnss.service(t);
+    for (uint32_t now_ms = kBringUpLeadMs + 1010; now_ms <= kBringUpLeadMs + 5010; now_ms += 10) {
+        chip.tick(now_ms);
+        gnss.service(now_ms);
         if (gnss.poll()) fixes++;
     }
-    CHECK(fixes >= 4000 / parts::L76k::kFixPeriodMs);
+    CHECK(fixes >= 4000 / parts::L76k::kSolutionPeriodMs);
 }
 
 // The pinned bug: a fix published per SENTENCE reached the bus twice, the first one half updated.
@@ -150,7 +150,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
     REQUIRE(gnss.solution().fix_valid);
 
     const uint32_t at = kBringUpLeadMs + 6000;
-    chip.alt_m = 1500;
+    chip.altitude_m = 1500;
     chip.tick(at);
 
     int published = 0;
@@ -158,7 +158,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
         if (gnss.poll(at)) published++;
 
     CHECK(published == 1);
-    CHECK(gnss.solution().alt_mm == 1500000);
+    CHECK(gnss.solution().altitude_hae_mm == 1500000);
 }
 
 // The estimate own-ship falls back to with no PPS edge latched, stamped by the part that knows it.
@@ -175,31 +175,31 @@ TEST_CASE("l76k: the fix carries the part's burst-to-PPS latency") {
 
 // Nothing in the build compares the driver's baud with the devicetree's, so the driver states it.
 TEST_CASE("l76k: the rate the receiver is met at is the baud the devicetree pins") {
-    CHECK(parts::L76k::kBaudRate == 9600);
-    CHECK(parts::L76k::kBaudCandidates[0] == parts::L76k::kBaudRate);
+    CHECK(parts::L76k::kFactoryBaudRate == 9600);
+    CHECK(parts::L76k::kBaudCandidates[0] == parts::L76k::kFactoryBaudRate);
 }
 
 // The fix is refused as too old unless it is parsed before the radio's first transmit instant.
 TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites in view and all") {
     // GGA, three GSA and RMC: 333 ms of 9600 baud line, 28 ms of 115200.
-    CHECK(parts::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kBaudRate) ==
+    CHECK(parts::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate) ==
           doctest::Approx(333).epsilon(0.02));
     CHECK(parts::L76k::kBurstMs == doctest::Approx(28).epsilon(0.04));
 
-    CHECK(parts::L76k::kBurstStartMs + parts::L76k::kBurstMs < uint32_t(timing::kDirectStart));
+    CHECK(parts::L76k::kBurstStartMs + parts::L76k::kBurstMs < uint32_t(timing::kDirectStartMs));
     CHECK(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs <
-          uint32_t(timing::kDirectStart));
+          uint32_t(timing::kDirectStartMs));
     // The same burst at the rate the receiver boots at: past the slot, and past the second.
     CHECK(parts::L76k::kBurstStartMs +
-              parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kBaudRate) >
-          uint32_t(timing::kDirectStart));
+              parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
+          uint32_t(timing::kDirectStartMs));
 }
 
 // The gyroscope and the barometer beside this part sample far faster than it reports.
 TEST_CASE("l76k: the receiver solves continuously and reports on its cadence") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    chip.alt_m = 1000;
+    chip.altitude_m = 1000;
     chip.track_deg = 90;
     chip.climb_mm_s = 1500;
     chip.turn_dps = 3;
@@ -207,7 +207,7 @@ TEST_CASE("l76k: the receiver solves continuously and reports on its cadence") {
     chip.tick(0);
     chip.tick(100);
 
-    CHECK(chip.alt_mm() == 1000 * 1000 + 150);
+    CHECK(chip.altitude_mm() == 1000 * 1000 + 150);
     CHECK(chip.heading_deg() == doctest::Approx(90.3));
     CHECK(chip.available() == 0);  // a tenth of a second in, it has said nothing
 
@@ -220,13 +220,13 @@ TEST_CASE("l76k: a clock that steps backwards leaves the aircraft where it is") 
     models::L76k chip;
     chip.tick(0);
     chip.tick(1000);
-    const int32_t lat_1e7 = chip.lat_1e7;
-    const int32_t lon_1e7 = chip.lon_1e7;
+    const int32_t latitude_1e7 = chip.latitude_1e7;
+    const int32_t longitude_1e7 = chip.longitude_1e7;
 
     chip.tick(995);
 
-    CHECK(chip.lat_1e7 == lat_1e7);
-    CHECK(chip.lon_1e7 == lon_1e7);
+    CHECK(chip.latitude_1e7 == latitude_1e7);
+    CHECK(chip.longitude_1e7 == longitude_1e7);
 }
 
 // The geometry the circling scenarios rest on, checked against the model that
@@ -241,22 +241,22 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
     chip.speed_mm_s = 23150;  // 45 kt
     chip.track_deg = 0;
     chip.turn_dps = 13;
-    const int32_t start_lat = chip.lat_1e7;
-    const int32_t start_lon = chip.lon_1e7;
+    const int32_t start_latitude = chip.latitude_1e7;
+    const int32_t start_longitude = chip.longitude_1e7;
 
-    int32_t east_lat = 0, east_lon = 0;
-    for (uint32_t t = 0; t <= 27700; t += 100) {
-        chip.tick(t);
+    int32_t east_latitude = 0, east_longitude = 0;
+    for (uint32_t now_ms = 0; now_ms <= 27700; now_ms += 100) {
+        chip.tick(now_ms);
         // A quarter of the way round a right turn from north, own-ship is due
         // east of where it started by one radius and level with the centre.
-        if (t == 6900) {
-            east_lat = chip.lat_1e7;
-            east_lon = chip.lon_1e7;
+        if (now_ms == 6900) {
+            east_latitude = chip.latitude_1e7;
+            east_longitude = chip.longitude_1e7;
         }
     }
 
-    const double north_m = (east_lat - start_lat) * 11132 / 1e6;
-    const double east_m = (east_lon - start_lon) * 11132 / 1e6 * 0.6626;
+    const double north_m = (east_latitude - start_latitude) * 11132 / 1e6;
+    const double east_m = (east_longitude - start_longitude) * 11132 / 1e6 * 0.6626;
     MESSAGE("quarter circle: " << north_m << " m north, " << east_m << " m east");
     CHECK(east_m == doctest::Approx(102).epsilon(0.05));
     CHECK(north_m == doctest::Approx(102).epsilon(0.05));
@@ -264,7 +264,7 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
     // A full circle later the track is back where it started and so is the
     // aircraft: the integration closes the loop rather than spiralling.
     CHECK((chip.track_deg <= 3 || chip.track_deg >= 357));
-    const double closed_m = (chip.lat_1e7 - start_lat) * 11132 / 1e6;
+    const double closed_m = (chip.latitude_1e7 - start_latitude) * 11132 / 1e6;
     CHECK(closed_m < 5.0);
     CHECK(closed_m > -5.0);
 }
@@ -290,17 +290,17 @@ TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
     const uint32_t rejects_before = gnss.rejected();
     uint32_t withdrawn_at = 0;
     uint32_t updates = 0;
-    for (uint32_t t = quiet_from + 10; t <= quiet_from + 10000; t += 10) {
-        gnss.service(t);
+    for (uint32_t now_ms = quiet_from + 10; now_ms <= quiet_from + 10000; now_ms += 10) {
+        gnss.service(now_ms);
         if (gnss.poll()) {
             updates++;
-            if (!gnss.solution().fix_valid && withdrawn_at == 0) withdrawn_at = t;
+            if (!gnss.solution().fix_valid && withdrawn_at == 0) withdrawn_at = now_ms;
         }
     }
 
     CHECK(withdrawn_at > quiet_from);
     CHECK(withdrawn_at - quiet_from <= gnss::kSentenceMaxAgeMs + 20);
-    CHECK(gnss.reject_reason() == gnss::FixReject::Stale);
+    CHECK(gnss.last_reject() == gnss::FixReject::Stale);
     // One withdrawal, not one per poll: the bus queue is two deep and the
     // downstream services react to changes.
     CHECK(updates == 1);
@@ -317,9 +317,9 @@ TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     run(gnss, chip, 0, kBringUpLeadMs + 5000);
 
     CHECK(gnss.configured());                // the receiver is fine, it is being obeyed
-    CHECK(gnss.updates() > 0);               // and it is talking
+    CHECK(gnss.sentences() > 0);             // and it is talking
     CHECK_FALSE(gnss.solution().fix_valid);  // and none of that is a fix
-    CHECK(gnss.reject_reason() == gnss::FixReject::NoDate);
+    CHECK(gnss.last_reject() == gnss::FixReject::NoDate);
 
     // The almanac lands and the date becomes real: the fix follows, with no
     // reconfiguration and no reset.

@@ -16,95 +16,95 @@ export async function load(options = {}) {
   const { boot, ...moduleOptions } = options;
   const module = await createModule(moduleOptions);
   const call = (name, ret, args) => module.cwrap(name, ret, args);
-  const n = [];
-  const num = ['number'];
+  const noArgs = [];
+  const oneNumber = ['number'];
 
   const sim = {
-    setup: call('simulator_setup', null, n),
-    step: call('simulator_step', null, num),
-    parkRefusal: call('simulator_park_refusal', 'number', num),
+    setup: call('simulator_setup', null, noArgs),
+    step: call('simulator_step', null, oneNumber),
+    parkRefusal: call('simulator_park_refusal', 'number', oneNumber),
     loadScenario: call('simulator_load_scenario', 'number', ['string', 'number']),
-    mode: call('simulator_mode', 'number', n),
-    failures: call('simulator_failures', 'number', n),
+    mode: call('simulator_mode', 'number', noArgs),
+    failures: call('simulator_failures', 'number', noArgs),
 
-    button: call('simulator_button', null, n),
-    holdButton: call('simulator_button_down', null, num),
-    holdPad: call('simulator_pad_down', null, num),
-    backlight: call('simulator_backlight', null, num),
-    power: call('simulator_power', null, num),
+    button: call('simulator_press_button', null, noArgs),
+    holdButton: call('simulator_hold_button', null, oneNumber),
+    holdPad: call('simulator_hold_pad', null, oneNumber),
+    backlight: call('simulator_set_backlight', null, oneNumber),
+    power: call('simulator_set_panel_power', null, oneNumber),
 
-    setRange: call('simulator_set_range', null, num),
-    setFix: call('simulator_set_fix', null, num),
-    setPps: call('simulator_set_pps', null, num),
-    setSats: call('simulator_set_sats', null, num),
-    setAlt: call('simulator_set_alt', null, num),
-    setSpeed: call('simulator_set_speed', null, num),
-    setTrack: call('simulator_set_track', null, num),
-    setClimb: call('simulator_set_climb', null, num),
-    setTurn: call('simulator_set_turn', null, num),
-    setSlip: call('simulator_set_slip', null, num),
-    setAirmass: call('simulator_set_airmass', null, num),
-    setBatteryMv: call('simulator_set_battery_mv', null, num),
-    setExternalPower: call('simulator_set_external_power', null, num),
+    setRange: call('simulator_set_range', null, oneNumber),
+    setFix: call('simulator_set_fix', null, oneNumber),
+    setPps: call('simulator_set_pps', null, oneNumber),
+    setSatellites: call('simulator_set_satellites', null, oneNumber),
+    setAltitude: call('simulator_set_altitude_m', null, oneNumber),
+    setSpeed: call('simulator_set_speed_kt', null, oneNumber),
+    setTrack: call('simulator_set_track_deg', null, oneNumber),
+    setClimb: call('simulator_set_climb_mm_s', null, oneNumber),
+    setTurn: call('simulator_set_turn_dps_e1', null, oneNumber),
+    setSlip: call('simulator_set_slip_mg', null, oneNumber),
+    setAirmass: call('simulator_set_airmass_qnh_pa', null, oneNumber),
+    setBatteryMv: call('simulator_set_battery_mv', null, oneNumber),
+    setExternalPower: call('simulator_set_external_power', null, oneNumber),
 
     addAircraft: call('simulator_add_aircraft', 'number', Array(9).fill('number')),
     addAircraftAt: call('simulator_add_aircraft_at', null, Array(8).fill('number')),
     sendConfig: call('simulator_send_config', null, ['string']),
-    prompt: call('simulator_prompt', 'number', n),
-    txNamed: call('simulator_tx_named', 'number', n),
-    rxNamed: call('simulator_rx_named', 'number', n),
+    prompt: call('simulator_prompt', 'number', noArgs),
+    txNamed: call('simulator_tx_named', 'number', noArgs),
+    rxNamed: call('simulator_rx_named', 'number', noArgs),
     nameAircraft: call('simulator_name_aircraft', null, ['number', 'string']),
-    addThreat: call('simulator_add_threat', null, num),
-    clearTraffic: call('simulator_clear_traffic', null, n),
-    removeAircraft: call('simulator_remove_aircraft', null, num),
-    aircraftCount: call('simulator_aircraft_count', 'number', n),
-    formationMembers: call('simulator_formation_members', 'number', n),
+    addThreat: call('simulator_add_threat', null, oneNumber),
+    clearTraffic: call('simulator_clear_aircraft', null, noArgs),
+    removeAircraft: call('simulator_remove_aircraft', null, oneNumber),
+    aircraftCount: call('simulator_aircraft_count', 'number', noArgs),
+    formationMembers: call('simulator_formation_members', 'number', noArgs),
 
-    fb: call('simulator_fb', 'number', n),
-    W: call('simulator_fb_w', 'number', n)(),
-    H: call('simulator_fb_h', 'number', n)(),
-    STRIDE: call('simulator_fb_stride', 'number', n)(),
-    refreshing: call('simulator_panel_refreshing', 'number', n),
-    refreshIsFull: call('simulator_panel_refresh_is_full', 'number', n),
-    presents: call('simulator_present_count', 'number', n),
-    blOn: call('simulator_backlight_on', 'number', n),
-    powered: call('simulator_powered', 'number', n),
-    page: call('simulator_page', 'number', n),
-    menuOpen: call('simulator_menu_open', 'number', n),
-    shutdownPhase: call('simulator_shutdown_phase', 'number', n),
+    panel: call('simulator_panel', 'number', noArgs),
+    width: call('simulator_panel_width', 'number', noArgs)(),
+    height: call('simulator_panel_height', 'number', noArgs)(),
+    stride: call('simulator_panel_stride', 'number', noArgs)(),
+    refreshing: call('simulator_panel_refreshing', 'number', noArgs),
+    refreshIsFull: call('simulator_panel_refresh_is_full', 'number', noArgs),
+    presents: call('simulator_present_count', 'number', noArgs),
+    backlightOn: call('simulator_backlight_on', 'number', noArgs),
+    powered: call('simulator_panel_powered', 'number', noArgs),
+    page: call('simulator_page', 'number', noArgs),
+    menuOpen: call('simulator_menu_open', 'number', noArgs),
+    shutdownPhase: call('simulator_shutdown_phase', 'number', noArgs),
 
-    fixValid: call('simulator_fix_valid', 'number', n),
-    sats: call('simulator_sats', 'number', n),
-    lat: call('simulator_lat_1e7', 'number', n),
-    lon: call('simulator_lon_1e7', 'number', n),
-    altMm: call('simulator_alt_mm', 'number', n),
-    speedMmS: call('simulator_speed_mm_s', 'number', n),
-    trackCdeg: call('simulator_track_cdeg', 'number', n),
-    climbMmS: call('simulator_climb_mm_s', 'number', n),
-    turnCdps: call('simulator_turn_cdps', 'number', n),
-    pressureMpa: call('simulator_pressure_mpa', 'number', n),
-    batteryMv: call('simulator_battery_mv', 'number', n),
-    batteryPercent: call('simulator_battery_percent', 'number', n),
-    batteryCharging: call('simulator_battery_charging', 'number', n),
+    fixValid: call('simulator_fix_valid', 'number', noArgs),
+    satellites: call('simulator_satellites', 'number', noArgs),
+    latitude1e7: call('simulator_latitude_1e7', 'number', noArgs),
+    longitude1e7: call('simulator_longitude_1e7', 'number', noArgs),
+    altitudeHaeMm: call('simulator_altitude_hae_mm', 'number', noArgs),
+    speedMmS: call('simulator_speed_mm_s', 'number', noArgs),
+    trackCdeg: call('simulator_track_cdeg', 'number', noArgs),
+    climbMmS: call('simulator_climb_mm_s', 'number', noArgs),
+    turnCdps: call('simulator_turn_cdps', 'number', noArgs),
+    pressureMpa: call('simulator_pressure_mpa', 'number', noArgs),
+    batteryMv: call('simulator_battery_mv', 'number', noArgs),
+    batteryPercent: call('simulator_battery_percent', 'number', noArgs),
+    batteryCharging: call('simulator_battery_charging', 'number', noArgs),
 
-    traffic: call('simulator_traffic_count', 'number', n),
-    alarm: call('simulator_alarm_level', 'number', n),
-    alarmDismissed: call('simulator_alarm_dismissed', 'number', n),
-    rxOk: call('simulator_rx_ok', 'number', n),
-    rxBad: call('simulator_rx_bad', 'number', n),
-    rxWait: call('simulator_rx_wait', 'number', n),
-    rxType: call('simulator_rx_type', 'number', n),
-    rxUnframed: call('simulator_rx_unframed', 'number', n),
-    rxMiskeyed: call('simulator_rx_miskeyed', 'number', n),
-    txOk: call('simulator_tx_ok', 'number', n),
-    txLost: call('simulator_tx_lost', 'number', n),
-    slotState: call('simulator_slot_state', 'number', n),
-    dwellFreq: call('simulator_dwell_freq', 'number', n),
-    airCount: call('simulator_air_count', 'number', n),
-    airPhase: call('simulator_air_phase_ms', 'number', num),
-    airEvent: call('simulator_air_event', 'number', num),
-    airFreqKhz: call('simulator_air_freq_khz', 'number', num),
-    airLine: call('simulator_air_line', 'string', num),
+    traffic: call('simulator_traffic_count', 'number', noArgs),
+    alarm: call('simulator_alarm_level', 'number', noArgs),
+    alarmDismissed: call('simulator_alarm_dismissed', 'number', noArgs),
+    rxOk: call('simulator_rx_ok', 'number', noArgs),
+    rxBad: call('simulator_rx_bad', 'number', noArgs),
+    rxWait: call('simulator_rx_wait', 'number', noArgs),
+    rxType: call('simulator_rx_type', 'number', noArgs),
+    rxUnframed: call('simulator_rx_unframed', 'number', noArgs),
+    rxMiskeyed: call('simulator_rx_miskeyed', 'number', noArgs),
+    txOk: call('simulator_tx_ok', 'number', noArgs),
+    txLost: call('simulator_tx_lost', 'number', noArgs),
+    slotState: call('simulator_slot_state', 'number', noArgs),
+    dwellFrequencyKhz: call('simulator_dwell_frequency_khz', 'number', noArgs),
+    airCount: call('simulator_air_record_count', 'number', noArgs),
+    airPhase: call('simulator_air_phase_ms', 'number', oneNumber),
+    airEvent: call('simulator_air_event', 'number', oneNumber),
+    airFrequencyKhz: call('simulator_air_frequency_khz', 'number', oneNumber),
+    airLine: call('simulator_air_line', 'string', oneNumber),
   };
 
   let simMs = 0;
@@ -122,14 +122,14 @@ export async function load(options = {}) {
 
   sim.paint = (canvas) => {
     const context = canvas.getContext('2d');
-    if (image === null) image = context.createImageData(sim.W, sim.H);
-    const base = sim.fb();
+    if (image === null) image = context.createImageData(sim.width, sim.height);
+    const base = sim.panel();
     const heap = module.HEAPU8;
-    for (let y = 0; y < sim.H; y++) {
-      for (let x = 0; x < sim.W; x++) {
-        const black = heap[base + y * sim.STRIDE + (x >> 3)] & (0x80 >> (x & 7));
+    for (let y = 0; y < sim.height; y++) {
+      for (let x = 0; x < sim.width; x++) {
+        const black = heap[base + y * sim.stride + (x >> 3)] & (0x80 >> (x & 7));
         const pixel = black ? INK : PAPER;
-        const offset = (y * sim.W + x) * 4;
+        const offset = (y * sim.width + x) * 4;
         image.data[offset] = pixel[0];
         image.data[offset + 1] = pixel[1];
         image.data[offset + 2] = pixel[2];

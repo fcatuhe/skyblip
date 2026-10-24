@@ -9,7 +9,7 @@ namespace skyblip::power {
 namespace {
 
 struct Point {
-    uint16_t millivolts;
+    uint16_t cell_mv;
     uint8_t percent;
 };
 
@@ -19,34 +19,33 @@ constexpr Point kDischargeCurve[] = {
     {3850, 65}, {3900, 75}, {3950, 83}, {4000, 89}, {4100, 95}, {4200, 100},
 };
 
-static_assert(kDischargeCurve[0].millivolts == kEmptyMv,
+static_assert(kDischargeCurve[0].cell_mv == kEmptyMv,
               "the gauge reads zero where the device stops, or a pilot flies on a percentage "
               "that ran out before the cell did");
 static_assert(kDischargeCurve[0].percent == 0 &&
-                  kDischargeCurve[sizeof(kDischargeCurve) / sizeof(Point) - 1].millivolts ==
-                      kFullMv,
+                  kDischargeCurve[sizeof(kDischargeCurve) / sizeof(Point) - 1].cell_mv == kFullMv,
               "a curve that does not span empty to full is read past its ends");
 
-uint16_t median_of(uint16_t a, uint16_t b, uint16_t c) {
-    if (a > b) {
-        const uint16_t swap = a;
-        a = b;
-        b = swap;
+uint16_t median_of(uint16_t first, uint16_t second, uint16_t third) {
+    if (first > second) {
+        const uint16_t swap = first;
+        first = second;
+        second = swap;
     }
-    if (b > c) b = c > a ? c : a;
-    return b;
+    if (second > third) second = third > first ? third : first;
+    return second;
 }
 
 template <int N>
-uint8_t percent_on(const Point (&curve)[N], uint16_t millivolts) {
-    if (millivolts <= curve[0].millivolts) return curve[0].percent;
+uint8_t percent_on(const Point (&curve)[N], uint16_t cell_mv) {
+    if (cell_mv <= curve[0].cell_mv) return curve[0].percent;
     for (int i = 1; i < N; i++) {
-        if (millivolts > curve[i].millivolts) continue;
+        if (cell_mv > curve[i].cell_mv) continue;
         const Point& low = curve[i - 1];
         const Point& high = curve[i];
-        const int32_t span_mv = high.millivolts - low.millivolts;
+        const int32_t span_mv = high.cell_mv - low.cell_mv;
         const int32_t span_percent = high.percent - low.percent;
-        const int32_t into = millivolts - low.millivolts;
+        const int32_t into = cell_mv - low.cell_mv;
         return static_cast<uint8_t>(low.percent + (into * span_percent + span_mv / 2) / span_mv);
     }
     return curve[N - 1].percent;
@@ -63,38 +62,38 @@ uint16_t calibrated_mv(uint16_t raw_mv, int16_t offset_mv) {
 
 events::BatterySample calibrated(const events::BatterySample& raw, int16_t offset_mv) {
     events::BatterySample out = raw;
-    out.millivolts = calibrated_mv(raw.millivolts, offset_mv);
+    out.divider_mv = calibrated_mv(raw.divider_mv, offset_mv);
     return out;
 }
 
-uint8_t percent_from_mv(uint16_t millivolts) { return percent_on(kDischargeCurve, millivolts); }
+uint8_t percent_from_mv(uint16_t cell_mv) { return percent_on(kDischargeCurve, cell_mv); }
 
 void Gauge::apply(const events::BatterySample& sample) {
-    state_.sample_mv = sample.millivolts;
+    state_.sample_mv = sample.divider_mv;
     state_.external_power = sample.external_power;
     state_.charging = sample.external_power;
 
-    const bool plausible = plausible_mv(sample.millivolts);
+    const bool plausible = plausible_mv(sample.divider_mv);
     if (!plausible) refused_++;
     if (!plausible || sample.external_power) {
         seen_ = 0;
-        state_.millivolts = sample.millivolts;
+        state_.cell_mv = sample.divider_mv;
         state_.percent = 0;
         state_.valid = false;
         return;
     }
 
     for (int i = kWindowSamples - 1; i > 0; i--) recent_[i] = recent_[i - 1];
-    recent_[0] = sample.millivolts;
+    recent_[0] = sample.divider_mv;
     if (seen_ < kWindowSamples) seen_++;
 
     // Rejecting a transient takes three readings. Before that the newest is
     // everything the gauge knows.
-    const uint16_t millivolts =
+    const uint16_t cell_mv =
         seen_ < kWindowSamples ? recent_[0] : median_of(recent_[0], recent_[1], recent_[2]);
-    const uint8_t percent = percent_from_mv(millivolts);
+    const uint8_t percent = percent_from_mv(cell_mv);
     state_.percent = state_.valid ? std::min(percent, state_.percent) : percent;
-    state_.millivolts = millivolts;
+    state_.cell_mv = cell_mv;
     state_.valid = true;
 }
 

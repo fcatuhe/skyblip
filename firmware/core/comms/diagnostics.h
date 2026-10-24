@@ -56,7 +56,7 @@ struct Diagnostics {
     uint32_t gnss_fixes{0};
     bool fix_valid{false};
     uint32_t gnss_baud{0};
-    ports::GnssConfig gnss_config{ports::GnssConfig::Idle};
+    ports::GnssConfigStage gnss_config{ports::GnssConfigStage::Idle};
     uint32_t gnss_raises{0};
     uint32_t gnss_raise_fallbacks{0};
     bool gnss_identified{false};
@@ -65,14 +65,14 @@ struct Diagnostics {
     gnss::FixReject gnss_reject{gnss::FixReject::None};
     uint32_t gnss_rejected{0};
     uint32_t gnss_overruns{0};
-    uint16_t gnss_nav_ms{0};
-    bool gnss_nav_valid{false};
+    uint16_t gnss_solution_phase_ms{0};
+    bool gnss_solution_phase_valid{false};
     // The extrapolation the transmitter applies, measured against the fix that
     // closed the interval (products/skyblip_go/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
     // receiver rather than with the radio.
-    uint16_t resid_m{0};
-    bool resid_valid{false};
+    uint16_t residual_m{0};
+    bool residual_valid{false};
 
     uint32_t supply_warnings{0};
     uint32_t battery_implausible{0};
@@ -84,8 +84,8 @@ struct Diagnostics {
     uint32_t link_drops{0};
     uint32_t range_refused{0};
     power::BatteryState battery{};
-    power::PowerLevel level{power::PowerLevel::Unknown};
-    int16_t die_decicelsius{0};
+    power::PowerLevel power_level{power::PowerLevel::Unknown};
+    int16_t die_dc{0};
     bool die_valid{false};
 };
 
@@ -94,45 +94,45 @@ struct Diagnostics {
 // resolution away at the port is not the port's decision. Rounded away from zero
 // on both sides, so -20.6 C does not read as -20. One implementation, because the
 // status reply and the dump must not round a support case differently.
-int whole_celsius(int16_t decicelsius);
+int whole_celsius(int16_t temperature_dc);
 
 // The dump, rendered. Built cheaply on the stack from a snapshot, read either as
 // console lines or as link frames, and then thrown away.
 class DiagnosticsReport {
    public:
-    enum class Group : uint8_t { Sys, Radio, Traffic, Gnss, Power };
+    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power };
     static constexpr int kGroupCount = 5;
 
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
     // trusting it.
-    static constexpr int kLineCap = 377;
+    static constexpr int kLineBytes = 377;
     // Enough for one frame at its widest on a link that can carry a whole group;
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
-    static constexpr int kFrameCap = 384;
+    static constexpr int kFrameBytes = 384;
 
-    // cmd is the name the reply answers under, because the link already has a
+    // command is the name the reply answers under, because the link already has a
     // question that asks for the radio group alone.
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd);
-    DiagnosticsReport(const Diagnostics& diagnostics, const char* cmd, Group only);
+    DiagnosticsReport(const Diagnostics& diagnostics, const char* command);
+    DiagnosticsReport(const Diagnostics& diagnostics, const char* command, Group only);
 
     // The console surface: one subsystem per line, "radio noise_dbm=-105 ...".
     int line_count() const { return line_count_; }
     // Writes line `index`, NUL-terminated, and returns its length. 0 when the
     // index is past the end or the buffer cannot hold the line whole - a line cut
     // in half is a counter misread, so it is refused instead.
-    int line(int index, char* buf, int cap) const;
+    int line(int index, char* out, int capacity) const;
 
     // The link surface: as many complete flat objects as the negotiated payload
-    // needs, each carrying "cmd", "group", "part" and "more". A frame never mixes
+    // needs, each carrying "command", "group", "part" and "more". A frame never mixes
     // two subsystems, so a reader that only wants one can stop at its group.
-    bool fits(int payload) const;
+    bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
-    int next_frame(int payload, char* buf, int cap);
+    int next_frame(int payload_bytes, char* out, int capacity);
 
    private:
-    enum class Kind : uint8_t { Int, Bool, Text };
+    enum class Kind : uint8_t { Integer, Boolean, String };
 
     struct Field {
         const char* key;
@@ -145,16 +145,16 @@ class DiagnosticsReport {
     static constexpr int kMaxFields = 47;
 
     void build(const Diagnostics& diagnostics, const Group* only);
-    void add_int(Group group, const char* key, long value);
-    void add_bool(Group group, const char* key, bool value);
-    void add_text(Group group, const char* key, const char* value);
+    void add_integer(Group group, const char* key, long value);
+    void add_boolean(Group group, const char* key, bool value);
+    void add_string(Group group, const char* key, const char* value);
     static int field_bytes(const Field& field);
     static const char* group_name(Group group);
     // Where the index-th line's fields start, or count_ when there is no such
     // line.
     int line_start(int index) const;
 
-    const char* cmd_;
+    const char* command_;
     Field fields_[kMaxFields]{};
     int count_{0};
     int line_count_{0};
@@ -172,10 +172,10 @@ class DiagnosticsReport {
 // pull-only, so a phone pays for exactly the dumps it asks for.
 //
 // The refresh is the cheaper half (thirty loads and four accessor calls) and is
-// separate because the link may ask at any instant: a "diag" answered from a
+// separate because the link may ask at any instant: a "diagnostics" answered from a
 // ten-second-old snapshot would report a fix that was lost nine seconds ago.
-constexpr uint32_t kDiagnosticsRefreshMs = 1000;
-constexpr uint32_t kDiagnosticsDumpMs = 10000;
+constexpr uint32_t kDiagnosticsRefreshPeriodMs = 1000;
+constexpr uint32_t kDiagnosticsDumpPeriodMs = 10000;
 
 }  // namespace skyblip::comms
 

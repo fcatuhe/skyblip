@@ -14,12 +14,12 @@ using namespace skyblip::go;
 
 TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
     const Menu menu = menu_for(Page::Nearby);
-    REQUIRE(menu.n == 6);
-    for (int i = 0; i < menu.n; i++) CHECK(opens_a_page(menu.rows[i]));
+    REQUIRE(menu.row_count == 6);
+    for (int i = 0; i < menu.row_count; i++) CHECK(opens_a_page(menu.rows[i]));
     CHECK(page_behind(MenuRow::RadioLog) == Page::RadioLog);
     CHECK(page_behind(MenuRow::Raw) == Page::Raw);
     CHECK(page_behind(MenuRow::Capture) == Page::Capture);
-    CHECK(page_behind(MenuRow::Sats) == Page::Sats);
+    CHECK(page_behind(MenuRow::Satellites) == Page::Satellites);
     CHECK(page_behind(MenuRow::Status) == Page::Status);
     CHECK(page_behind(MenuRow::SelfTest) == Page::SelfTest);
 
@@ -72,11 +72,11 @@ TEST_CASE("menu editor: the light is the first row, and a press on it switches i
     CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
     CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
 
-    char value[kMenuValueCap];
+    char value[kMenuValueBytes];
     menu_row_value(value, MenuRow::Light, bench.values);
     CHECK(std::string(value) == "ON");
 
-    bench.editor.enter(Page::Radar, bench.t);
+    bench.editor.enter(Page::Radar, bench.now_ms);
     CHECK(bench.change() == MenuAction::Light);
     CHECK_FALSE(bench.values.light);
     menu_row_value(value, MenuRow::Light, bench.values);
@@ -103,8 +103,8 @@ TEST_CASE("menu editor: the callsign is rolled a character at a time and stored 
     CHECK(bench.editor.cursor() == 1);
     bench.move();
     CHECK(bench.editor.text()[1] == '-');
-    for (int i = 2; i < kCallsignChars; i++) CHECK(bench.change() == MenuAction::Moved);
-    CHECK(bench.editor.cursor() == kCallsignChars - 1);
+    for (int i = 2; i < kCallsignCharacters; i++) CHECK(bench.change() == MenuAction::Moved);
+    CHECK(bench.editor.cursor() == kCallsignCharacters - 1);
 
     CHECK(bench.change() == MenuAction::Changed);
     CHECK_FALSE(bench.editor.editing());
@@ -122,7 +122,7 @@ TEST_CASE("menu editor: the callsign field opens on what is stored") {
     CHECK(std::string(bench.editor.text()) == "F-JABC   ");
 
     // Walked through unchanged, it is stored as it was.
-    for (int i = 1; i < kCallsignChars; i++) bench.change();
+    for (int i = 1; i < kCallsignCharacters; i++) bench.change();
     CHECK(bench.change() == MenuAction::Changed);
     CHECK(std::string(bench.values.settings.callsign) == "F-JABC");
 }
@@ -165,7 +165,7 @@ TEST_CASE("menu editor: a field nobody finished stores nothing") {
     for (int i = 0; i < 3; i++) bench.move();
     REQUIRE(bench.editor.text()[0] != 'F');
 
-    CHECK(bench.run(MenuEditor::kIdleReturnMs + 100) == MenuAction::Leave);
+    CHECK(bench.run(MenuEditor::kIdleReturnHoldMs + 100) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.editing());
     CHECK(std::string(bench.values.settings.callsign) == "F-JABC");
 }
@@ -183,7 +183,7 @@ TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu"
     CHECK_FALSE(bench.editor.active());
 
     // The next entry starts at the top again, so the focus cycle is closed.
-    bench.editor.enter(Page::Radar, bench.t);
+    bench.editor.enter(Page::Radar, bench.now_ms);
     CHECK(bench.editor.focus() == MenuRow::Light);
     CHECK(bench.editor.active());
 }
@@ -293,20 +293,20 @@ TEST_CASE("menu editor: a menu nobody is pressing hands the traffic picture back
     bench.move();
     REQUIRE(bench.editor.active());
 
-    CHECK(bench.run(MenuEditor::kIdleReturnMs - 1000) == MenuAction::None);
+    CHECK(bench.run(MenuEditor::kIdleReturnHoldMs - 1000) == MenuAction::None);
     CHECK(bench.editor.active());
     CHECK(bench.run(2000) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.active());
 
     // Either contact resets the clock: a pilot working the rows is never dropped.
-    bench.editor.enter(Page::Radar, bench.t);
+    bench.editor.enter(Page::Radar, bench.now_ms);
     bench.focus_on(MenuRow::AircraftType);
     for (int i = 0; i < 3; i++) {
-        bench.run(MenuEditor::kIdleReturnMs - 5000);
-        bench.editor.button(bench.t);
+        bench.run(MenuEditor::kIdleReturnHoldMs - 5000);
+        bench.editor.button(bench.now_ms);
         bench.run(100);
-        bench.run(MenuEditor::kIdleReturnMs - 5000);
-        bench.editor.pad(bench.t);
+        bench.run(MenuEditor::kIdleReturnHoldMs - 5000);
+        bench.editor.pad(bench.now_ms);
         bench.run(100);
     }
     CHECK(bench.editor.active());

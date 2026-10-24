@@ -10,7 +10,7 @@ enum class Capability : uint32_t {
     Rf = 1u << 0,
     Gnss = 1u << 1,
     Display = 1u << 2,
-    Baro = 1u << 3,
+    Barometer = 1u << 3,
     Buzzer = 1u << 4,
     Haptic = 1u << 5,
     Link = 1u << 6,
@@ -34,13 +34,13 @@ enum class Capability : uint32_t {
 
 using Capabilities = Capability;
 
-constexpr Capabilities operator|(Capabilities a, Capabilities b) {
-    return static_cast<Capabilities>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+constexpr Capabilities operator|(Capabilities left, Capabilities right) {
+    return static_cast<Capabilities>(static_cast<uint32_t>(left) | static_cast<uint32_t>(right));
 }
 
-constexpr Capabilities& operator|=(Capabilities& a, Capabilities b) {
-    a = a | b;
-    return a;
+constexpr Capabilities& operator|=(Capabilities& left, Capabilities right) {
+    left = left | right;
+    return left;
 }
 
 constexpr bool has(Capabilities set, Capabilities wanted) {
@@ -48,8 +48,8 @@ constexpr bool has(Capabilities set, Capabilities wanted) {
            static_cast<uint32_t>(wanted);
 }
 
-constexpr Capabilities missing(Capabilities set, Capabilities required) {
-    return static_cast<Capabilities>(static_cast<uint32_t>(required) & ~static_cast<uint32_t>(set));
+constexpr Capabilities without(Capabilities set, Capabilities removed) {
+    return static_cast<Capabilities>(static_cast<uint32_t>(set) & ~static_cast<uint32_t>(removed));
 }
 
 }  // namespace skyblip::ports

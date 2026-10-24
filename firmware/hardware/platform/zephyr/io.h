@@ -23,28 +23,28 @@ class Gpio : public io::Gpio {
    public:
     Gpio(const struct device* gpio0, const struct device* gpio1) : port_{gpio0, gpio1} {}
 
-    void set(int pin, bool level) override { gpio_pin_set(dev(pin), bit(pin), level ? 1 : 0); }
-    bool get(int pin) override { return gpio_pin_get(dev(pin), bit(pin)) == 1; }
-    void mode_output(int pin) override { gpio_pin_configure(dev(pin), bit(pin), GPIO_OUTPUT); }
+    void set(int pin, bool level) override { gpio_pin_set(port_of(pin), bit(pin), level ? 1 : 0); }
+    bool get(int pin) override { return gpio_pin_get(port_of(pin), bit(pin)) == 1; }
+    void mode_output(int pin) override { gpio_pin_configure(port_of(pin), bit(pin), GPIO_OUTPUT); }
     void mode_input(int pin, bool pullup) override {
-        gpio_pin_configure(dev(pin), bit(pin), GPIO_INPUT | (pullup ? GPIO_PULL_UP : 0));
+        gpio_pin_configure(port_of(pin), bit(pin), GPIO_INPUT | (pullup ? GPIO_PULL_UP : 0));
     }
 
    private:
-    const struct device* dev(int pin) const { return port_[(pin >> 5) & 1]; }
+    const struct device* port_of(int pin) const { return port_[(pin >> 5) & 1]; }
     static gpio_pin_t bit(int pin) { return static_cast<gpio_pin_t>(pin & 31); }
     const struct device* port_[2];
 };
 
 class Delay : public io::Delay {
    public:
-    void wait_at_least_us(uint32_t us) override {
-        if (!may_sleep_through(us)) {
-            k_busy_wait(us);
+    void wait_at_least_us(uint32_t hold_us) override {
+        if (!may_sleep_through(hold_us)) {
+            k_busy_wait(hold_us);
             return;
         }
         // INFO: fc 26sep26 k_usleep returns early, with the time still owed, if the thread is woken
-        int32_t owed_us = static_cast<int32_t>(us);
+        int32_t owed_us = static_cast<int32_t>(hold_us);
         while (owed_us > 0) owed_us = k_usleep(owed_us);
     }
 
@@ -52,32 +52,32 @@ class Delay : public io::Delay {
     static constexpr uint32_t kTickUs =
         (1000000u + CONFIG_SYS_CLOCK_TICKS_PER_SEC - 1) / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
 
-    static bool may_sleep_through(uint32_t us) { return us >= kTickUs && k_can_yield(); }
+    static bool may_sleep_through(uint32_t hold_us) { return hold_us >= kTickUs && k_can_yield(); }
 };
 
 // Manual-CS SPI: the drivers drive CS themselves via select(), so CS stays out
 // of the Zephyr spi_config and the line is toggled here.
 class Spi : public io::Spi {
    public:
-    Spi(const struct device* spi, const struct spi_config& cfg, const struct gpio_dt_spec& cs)
-        : spi_(spi), cfg_(cfg), cs_(cs) {
+    Spi(const struct device* spi, const struct spi_config& config, const struct gpio_dt_spec& cs)
+        : spi_(spi), config_(config), cs_(cs) {
         gpio_pin_configure_dt(&cs_, GPIO_OUTPUT_INACTIVE);
     }
 
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         static uint8_t zeros[64] = {0};
-        const uint8_t* txp = tx ? tx : zeros;  // clock zeros when tx==nullptr
-        struct spi_buf tb{const_cast<uint8_t*>(txp), len};
-        struct spi_buf rb{rx, len};
-        struct spi_buf_set txs{&tb, 1};
-        struct spi_buf_set rxs{&rb, 1};
-        spi_transceive(spi_, &cfg_, &txs, rx ? &rxs : nullptr);
+        const uint8_t* transmitted = tx ? tx : zeros;  // clock zeros when tx==nullptr
+        struct spi_buf tx_buffer{const_cast<uint8_t*>(transmitted), bytes};
+        struct spi_buf rx_buffer{rx, bytes};
+        struct spi_buf_set tx_buffers{&tx_buffer, 1};
+        struct spi_buf_set rx_buffers{&rx_buffer, 1};
+        spi_transceive(spi_, &config_, &tx_buffers, rx ? &rx_buffers : nullptr);
     }
     void select(bool on) override { gpio_pin_set_dt(&cs_, on ? 1 : 0); }
 
    private:
     const struct device* spi_;
-    struct spi_config cfg_;
+    struct spi_config config_;
     struct gpio_dt_spec cs_;
 };
 
@@ -94,19 +94,19 @@ class I2c : public io::I2c {
    public:
     explicit I2c(const struct device* bus) : bus_(bus) {}
 
-    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
+    bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
         if (!device_is_ready(bus_)) return false;
-        if (len == 0) {
+        if (bytes == 0) {
             uint8_t nothing = 0;
-            struct i2c_msg msg{&nothing, 0, I2C_MSG_WRITE | I2C_MSG_STOP};
-            return i2c_transfer(bus_, &msg, 1, addr) == 0;
+            struct i2c_msg probe{&nothing, 0, I2C_MSG_WRITE | I2C_MSG_STOP};
+            return i2c_transfer(bus_, &probe, 1, address) == 0;
         }
-        return i2c_write(bus_, data, len, addr) == 0;
+        return i2c_write(bus_, data, bytes, address) == 0;
     }
 
-    bool read(uint8_t addr, uint8_t* data, size_t len) override {
+    bool read(uint8_t address, uint8_t* out, size_t bytes) override {
         if (!device_is_ready(bus_)) return false;
-        return i2c_read(bus_, data, len, addr) == 0;
+        return i2c_read(bus_, out, bytes, address) == 0;
     }
 
    private:
@@ -146,12 +146,12 @@ class Uart : public io::Uart, public io::UartRate {
         config.baudrate = baud;
         return uart_configure(uart_, &config) == 0;
     }
-    size_t write(const uint8_t* data, size_t len) override {
-        for (size_t i = 0; i < len; i++) uart_poll_out(uart_, data[i]);
-        return len;
+    size_t write(const uint8_t* data, size_t bytes) override {
+        for (size_t i = 0; i < bytes; i++) uart_poll_out(uart_, data[i]);
+        return bytes;
     }
-    size_t read(uint8_t* data, size_t cap) override {
-        return ring_buf_get(&rx_, data, static_cast<uint32_t>(cap));
+    size_t read(uint8_t* out, size_t capacity) override {
+        return ring_buf_get(&rx_, out, static_cast<uint32_t>(capacity));
     }
     size_t available() override { return ring_buf_size_get(&rx_); }
 
@@ -164,16 +164,16 @@ class Uart : public io::Uart, public io::UartRate {
         k_busy_wait(kBytesOnTheWire * kBitsPerByte * 1000000u / baud);
     }
 
-    static void on_rx_ready(const struct device* dev, void* user_data) {
+    static void on_rx_ready(const struct device* uart, void* user_data) {
         Uart* self = static_cast<Uart*>(user_data);
         bool line_ended = false;
-        while (uart_irq_update(dev) == 1 && uart_irq_rx_ready(dev) == 1) {
+        while (uart_irq_update(uart) == 1 && uart_irq_rx_ready(uart) == 1) {
             uint8_t chunk[16];
-            const int n = uart_fifo_read(dev, chunk, sizeof(chunk));
-            if (n <= 0) break;
-            const uint32_t placed = ring_buf_put(&self->rx_, chunk, static_cast<uint32_t>(n));
-            if (placed < static_cast<uint32_t>(n)) self->overruns_++;
-            line_ended = line_ended || memchr(chunk, '\n', static_cast<size_t>(n)) != nullptr;
+            const int fetched = uart_fifo_read(uart, chunk, sizeof(chunk));
+            if (fetched <= 0) break;
+            const uint32_t placed = ring_buf_put(&self->rx_, chunk, static_cast<uint32_t>(fetched));
+            if (placed < static_cast<uint32_t>(fetched)) self->overruns_++;
+            line_ended = line_ended || memchr(chunk, '\n', static_cast<size_t>(fetched)) != nullptr;
         }
         // INFO: fc 03oct26 RMC ends the second's burst: parse it now, not up to a pass later
         if (line_ended) g_loop_wake.wake();

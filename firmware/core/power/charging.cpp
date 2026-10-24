@@ -12,10 +12,11 @@ const char* to_string(ChargeCondition condition) {
     return "UNKNOWN";
 }
 
-ChargeCondition charge_condition(bool external_power, bool temperature_valid, int16_t decicelsius) {
+ChargeCondition charge_condition(bool external_power, bool temperature_valid,
+                                 int16_t temperature_dc) {
     if (!external_power || !temperature_valid) return ChargeCondition::Unknown;
-    if (decicelsius < kChargeColdDeciCelsius) return ChargeCondition::TooCold;
-    if (decicelsius > kChargeHotDeciCelsius) return ChargeCondition::TooHot;
+    if (temperature_dc < kChargeColdFloorDeciCelsius) return ChargeCondition::TooCold;
+    if (temperature_dc > kChargeHotCeilingDeciCelsius) return ChargeCondition::TooHot;
     return ChargeCondition::Ok;
 }
 

@@ -14,11 +14,11 @@ class NoiseFloor {
 
     void sample(int8_t rssi_dbm);
 
-    int8_t dbm() const;
+    int8_t level_dbm() const;
     uint32_t samples() const { return samples_; }
 
    private:
-    int32_t centi_dbm_{static_cast<int32_t>(kSeedDbm) * 100};
+    int32_t level_centi_dbm_{static_cast<int32_t>(kSeedDbm) * 100};
     uint32_t samples_{0};
 };
 
@@ -33,7 +33,7 @@ class ChannelLevel {
     static_assert(kSampleSpacingUs * (kSamples - 1) >= kWindowUs,
                   "the window is shorter than the interval the figure came from");
 
-    static int8_t mean_dbm(const int8_t* samples, uint8_t n);
+    static int8_t mean_dbm(const int8_t* samples, uint8_t count);
 };
 
 // Sixty one-minute buckets on a ring that turns by elapsed time, so a bucket that
@@ -58,7 +58,7 @@ class AirTime {
     uint32_t total_ms() const { return total_ms_; }
 
    private:
-    uint32_t ms_[kBuckets]{};
+    uint32_t bucket_ms_[kBuckets]{};
     // The bucket now_ms falls in, and the instant it opened. The ring turns by
     // ELAPSED time and every age below is an unsigned difference from that
     // instant, because a bucket numbered now_ms / kBucketMs is not a bucket: that

@@ -10,20 +10,20 @@ using namespace skyblip;
 
 namespace {
 
-inline void on_ground(Rig& rig, uint32_t& t) {
-    rig.push_fix(/*alt_m=*/0, /*updates=*/1);
-    rig.run(t, t + 200);
-    t += 200;
+inline void on_ground(Rig& rig, uint32_t& now_ms) {
+    rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
 }
 
 inline void receiver_speaks_without_a_fix(Rig& rig) {
-    gnss::GnssSolution f{};
-    f.fix_valid = false;
-    f.updates = 1;
-    rig.product.bus().gnss.push(f);
+    gnss::GnssSolution solution{};
+    solution.fix_valid = false;
+    solution.sentences = 1;
+    rig.product.bus().gnss.push(solution);
 }
 
-inline comms::ConfigService& config(Rig& rig) { return rig.product.config().config(); }
+inline comms::ConfigService& config(Rig& rig) { return rig.product.config_link().config(); }
 
 }  // namespace
 

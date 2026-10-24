@@ -21,9 +21,9 @@ struct Unit {
     std::vector<events::BatterySample> passes(int count) {
         std::vector<events::BatterySample> published;
         for (int i = 0; i < count; i++) {
-            t += runtime::kBatteryPeriodMs;
-            platform.clock().set_millis(t);
-            board.poll(state, t);
+            now_ms += runtime::kBatteryPeriodMs;
+            platform.clock().set_milliseconds(now_ms);
+            board.poll(state, now_ms);
             events::BatterySample sample{};
             while (bus.battery.pop(sample)) published.push_back(sample);
         }
@@ -34,7 +34,7 @@ struct Unit {
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
-    uint32_t t{0};
+    uint32_t now_ms{0};
 };
 
 }  // namespace
@@ -43,35 +43,35 @@ struct Unit {
 TEST_CASE("board battery: a refused reading still publishes the cable and what was read") {
     Unit unit;
     unit.platform.battery().external_power = true;
-    unit.platform.battery().millivolts = 4812;
+    unit.platform.battery().divider_mv = 4812;
 
     const std::vector<events::BatterySample> published = unit.passes(3);
     REQUIRE(published.size() == 3);
     for (const events::BatterySample& sample : published) {
         CHECK(sample.external_power);
-        CHECK(sample.millivolts == 4812);
+        CHECK(sample.divider_mv == 4812);
     }
 }
 
 TEST_CASE("board battery: an ADC that gave nothing still publishes the cable, at zero") {
     Unit unit;
     unit.platform.battery().external_power = true;
-    unit.platform.battery().present = false;
+    unit.platform.battery().fitted = false;
 
     const std::vector<events::BatterySample> published = unit.passes(3);
     REQUIRE(published.size() == 3);
     for (const events::BatterySample& sample : published) {
         CHECK(sample.external_power);
-        CHECK(sample.millivolts == 0);
+        CHECK(sample.divider_mv == 0);
     }
 }
 
 TEST_CASE("board battery: a believable reading off the cable goes out as it was read") {
     Unit unit;
-    unit.platform.battery().millivolts = 3870;
+    unit.platform.battery().divider_mv = 3870;
 
     const std::vector<events::BatterySample> published = unit.passes(2);
     REQUIRE(published.size() == 2);
-    CHECK(published.back().millivolts == 3870);
+    CHECK(published.back().divider_mv == 3870);
     CHECK_FALSE(published.back().external_power);
 }

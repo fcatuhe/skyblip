@@ -29,10 +29,10 @@ struct Inventory {
     uint8_t i2c_count{0};
 
     // 0 when no barometer answered.
-    uint8_t baro_address{0};
+    uint8_t barometer_address{0};
     // parts::panel_name() of the identified panel, or its unknown label. Never
     // null: the page prints it.
-    const char* panel{"?"};
+    const char* panel_name{"?"};
     HapticKind haptic{HapticKind::None};
 
     bool has_i2c_address(uint8_t address) const {

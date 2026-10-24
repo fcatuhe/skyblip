@@ -35,7 +35,7 @@ bool DurableWriteWindow::free_at(const SlotPlan& plan, int phase_ms, uint32_t co
     // §C.5's direct slot is narrower than the M-band dwells at both ends, so a
     // write placed in slot 0's head would still be holding the core at 450 ms,
     // which is an instant core/timing::Transmitter is allowed to have chosen.
-    if (at_ms < kDirectStart && done_ms + kJitterGuardMs > kDirectStart) return false;
+    if (at_ms < kDirectStartMs && done_ms + kJitterGuardMs > kDirectStartMs) return false;
     const int next_edge_ms = at_ms < kSecondMs ? kSecondMs : 2 * kSecondMs;
     return done_ms + kJitterGuardMs <= next_edge_ms;
 }
@@ -72,7 +72,7 @@ DurableWriteVerdict DurableWriteWindow::decide(const SlotPlan& plan, const Dwell
     // The bound outranks the coalescing settle, and then the window: a thumb that
     // keeps stepping a value for longer than the bound buys a second write, which
     // is the trade this way round on purpose.
-    const bool bound_spent = now_ms - first_request_ms_ >= kMaxDeferMs;
+    const bool bound_spent = now_ms - first_request_ms_ >= kDeferCeilingMs;
     if (!bound_spent && now_ms - last_request_ms_ < kSettleMs) return DurableWriteVerdict::Hold;
     if (placeable(plan, dwell, now_ms)) return DurableWriteVerdict::Place;
     return bound_spent ? DurableWriteVerdict::Forced : DurableWriteVerdict::Hold;

@@ -18,25 +18,25 @@ namespace skyblip::flight {
 constexpr uint32_t kIsaSeaLevelPa = 101325;
 constexpr int16_t kIsaSeaLevelDeciCelsius = 150;
 
-int16_t isa_temperature_decicelsius(int32_t alt_mm);
+int16_t isa_temperature_dc(int32_t altitude_mm);
 
-int32_t pressure_to_alt_mm(uint32_t mpa);
-int32_t pressure_to_alt_cm(uint32_t pa);
+int32_t pressure_to_altitude_mm(uint32_t pressure_mpa);
+int32_t pressure_to_altitude_cm(uint32_t pressure_pa);
 
 // The inverse, by bisection over the SAME table, so a caller that needs to go
 // the other way (a modelled barometer, a test) cannot drift from the forward
 // curve. Slower, and never on the flight path.
-uint32_t alt_mm_to_pressure_mpa(int32_t alt_mm);
-uint32_t alt_cm_to_pressure(int32_t alt_cm);
+uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm);
+uint32_t altitude_cm_to_pressure_pa(int32_t altitude_cm);
 
 // Shortest window that still averages out sensor noise, and the longest one
 // whose answer is still "now" rather than a history lesson.
-constexpr uint32_t kMinWindowMs = 500;
-constexpr uint32_t kMaxWindowMs = 10000;
+constexpr uint32_t kClimbWindowFloorMs = 500;
+constexpr uint32_t kClimbWindowCeilingMs = 10000;
 
-bool climb_mm_s_from_alt(int32_t alt_mm_now, int32_t alt_mm_then, uint32_t dt_ms,
-                         int32_t& out_mm_s);
-int16_t climb_e8_from_mm_s(int32_t mm_s);
+bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
+                              uint32_t elapsed_ms, int32_t& out_mm_s);
+int16_t climb_e8_from_mm_s(int32_t climb_mm_s);
 
 }  // namespace skyblip::flight
 

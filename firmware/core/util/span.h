@@ -13,7 +13,7 @@ class Span {
     constexpr Span() = default;
     constexpr Span(T* data, size_t size) : data_(data), size_(size) {}
     template <size_t N>
-    constexpr Span(T (&arr)[N]) : data_(arr), size_(N) {}
+    constexpr Span(T (&array)[N]) : data_(array), size_(N) {}
 
     constexpr T* data() const { return data_; }
     constexpr size_t size() const { return size_; }

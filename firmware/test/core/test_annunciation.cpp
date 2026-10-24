@@ -26,7 +26,7 @@ constexpr uint32_t kStepMs = 10;
 struct Buzzer {
     Policy policy{};
     bool on{false};
-    uint16_t hz{0};
+    uint16_t pitch_hz{0};
     int tone_commands{0};
     int pitch_steps{0};
     int silences{0};
@@ -58,9 +58,9 @@ struct Buzzer {
             vibrate_started_ms = now_ms;
             if (vibrations <= kRecorded) vibrated_at_ms[vibrations - 1] = now_ms;
         } else if (command.vibration_changed) {
-            const uint32_t ms = now_ms - vibrate_started_ms;
-            if (vibrations <= kRecorded) vibrate_ms_of[vibrations - 1] = ms;
-            if (ms > longest_vibration_ms) longest_vibration_ms = ms;
+            const uint32_t vibrating_ms = now_ms - vibrate_started_ms;
+            if (vibrations <= kRecorded) vibrate_ms_of[vibrations - 1] = vibrating_ms;
+            if (vibrating_ms > longest_vibration_ms) longest_vibration_ms = vibrating_ms;
         }
         vibrating = command.vibrating;
         if (!command.tone_changed) return;
@@ -74,13 +74,13 @@ struct Buzzer {
                     hz_of[beeps - 1] = command.tone_hz;
                     gap_before[beeps - 1] = last_gap_ms;
                 }
-            } else if (command.tone_hz != hz) {
+            } else if (command.tone_hz != pitch_hz) {
                 pitch_steps++;
                 if (beeps <= kRecorded) stepped_after_ms_of[beeps - 1] = now_ms - beep_started_ms;
             }
             on = true;
-            hz = command.tone_hz;
-            if (beeps <= kRecorded) ended_on_hz[beeps - 1] = hz;
+            pitch_hz = command.tone_hz;
+            if (beeps <= kRecorded) ended_on_hz[beeps - 1] = pitch_hz;
             return;
         }
         silences++;
@@ -91,23 +91,23 @@ struct Buzzer {
             off_since_ms = now_ms;
         }
         on = false;
-        hz = 0;
+        pitch_hz = 0;
     }
 
     // Hold one situation for a while, at the rate the product asks at.
-    void run(Situation situation, uint32_t& t, uint32_t ms) {
-        const uint32_t until = t + ms;
-        for (; t < until; t += kStepMs) apply(policy.update(situation, t), t);
+    void run(Situation situation, uint32_t& now_ms, uint32_t for_ms) {
+        const uint32_t until = now_ms + for_ms;
+        for (; now_ms < until; now_ms += kStepMs) apply(policy.update(situation, now_ms), now_ms);
     }
 
     // The same, with the announced flag true on the first pass only: that is
     // exactly how the tracker reports one aircraft entering the window.
-    void announce(Situation situation, uint32_t& t, uint32_t ms) {
+    void announce(Situation situation, uint32_t& now_ms, uint32_t for_ms) {
         situation.announced = true;
-        apply(policy.update(situation, t), t);
-        t += kStepMs;
+        apply(policy.update(situation, now_ms), now_ms);
+        now_ms += kStepMs;
         situation.announced = false;
-        run(situation, t, ms - kStepMs);
+        run(situation, now_ms, for_ms - kStepMs);
     }
 };
 
@@ -119,18 +119,18 @@ int calls_in(Tune tune) {
 }
 
 uint32_t sounding_ms_of(Tune tune) {
-    uint32_t ms = 0;
-    for (uint8_t i = 0; i < tune.count; i++) ms += tune.notes[i].tone_ms;
-    return ms;
+    uint32_t sounding_ms = 0;
+    for (uint8_t i = 0; i < tune.count; i++) sounding_ms += tune.notes[i].tone_ms;
+    return sounding_ms;
 }
 
 const int kAdvisoryCalls = calls_in(kAdvisoryTune);
 const uint32_t kLastCallMs = kAdvisorySkyMs + kAdvisoryLongBlipMs;
 
 Situation standing(Level level) {
-    Situation s{};
-    s.level = level;
-    return s;
+    Situation situation{};
+    situation.level = level;
+    return situation;
 }
 
 }  // namespace
@@ -140,8 +140,8 @@ TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and
     CHECK(kAdvisoryCalls == 2);
 
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 5000);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 5000);
 
     CHECK(buzzer.beeps == kAdvisoryCalls);
     CHECK(buzzer.gap_before[1] == kAdvisoryRestMs);
@@ -152,8 +152,8 @@ TEST_CASE("annunciation: the advisory is sky-blip twice with a rest between, and
 // A held tone is masked by a noise that a moving one is heard through.
 TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last blip long") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 5000);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 5000);
     REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
     for (int i = 0; i < kAdvisoryCalls; i++) {
@@ -174,8 +174,8 @@ TEST_CASE("annunciation: each advisory call rises a third across 4 kHz, the last
 // Under a headset the motor is what gets through, so it says the same calls the buzzer does.
 TEST_CASE("annunciation: the motor is felt for each advisory call, as long as the call") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 5000);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 5000);
 
     REQUIRE(buzzer.vibrations == kAdvisoryCalls);
     CHECK(buzzer.vibrated_at_ms[0] == 1000);
@@ -191,11 +191,11 @@ TEST_CASE("annunciation: the motor is felt for each advisory call, as long as th
 // arrives and not again, which is what a pilot can live with in a gaggle.
 TEST_CASE("annunciation: a standing advisory is said once, however long it stands") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 5000);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 5000);
     REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
-    buzzer.run(standing(Level::Advisory), t, 60000);
+    buzzer.run(standing(Level::Advisory), now_ms, 60000);
     CHECK(buzzer.beeps == kAdvisoryCalls);
     CHECK(buzzer.vibrations == kAdvisoryCalls);
     CHECK(buzzer.on_ms == sounding_ms_of(kAdvisoryTune));
@@ -206,11 +206,11 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
     // Four ways for the reason to go, and the tone and the motor stop for every one of them.
     SUBCASE("the level falls to nothing: the target has gone") {
         Buzzer buzzer;
-        uint32_t t = 1000;
-        buzzer.announce(standing(Level::Advisory), t, 200);
+        uint32_t now_ms = 1000;
+        buzzer.announce(standing(Level::Advisory), now_ms, 200);
         REQUIRE(buzzer.on);
         REQUIRE(buzzer.vibrating);
-        buzzer.run(standing(Level::None), t, kStepMs);
+        buzzer.run(standing(Level::None), now_ms, kStepMs);
         CHECK_FALSE(buzzer.on);
         CHECK_FALSE(buzzer.vibrating);
         CHECK(buzzer.silences == 1);  // the release, mid-beep
@@ -218,59 +218,59 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
 
         // And it stays gone: nothing re-announces an empty sky.
         const int commands = buzzer.tone_commands;
-        buzzer.run(standing(Level::None), t, 10000);
+        buzzer.run(standing(Level::None), now_ms, 10000);
         CHECK(buzzer.tone_commands == commands);
     }
 
     SUBCASE("alarms are switched off in settings, mid-pulse") {
         Buzzer buzzer;
-        uint32_t t = 1000;
-        buzzer.announce(standing(Level::Advisory), t, 40);
+        uint32_t now_ms = 1000;
+        buzzer.announce(standing(Level::Advisory), now_ms, 40);
         REQUIRE(buzzer.on);
 
         Situation off = standing(Level::Advisory);
         off.enabled = false;
-        buzzer.run(off, t, kStepMs);
+        buzzer.run(off, now_ms, kStepMs);
         CHECK_FALSE(buzzer.on);
         CHECK_FALSE(buzzer.vibrating);
 
         // Silent and still for as long as it is switched off, threat or no threat.
         const int commands = buzzer.tone_commands;
         const int vibrations = buzzer.vibrations;
-        buzzer.run(off, t, 10000);
+        buzzer.run(off, now_ms, 10000);
         CHECK(buzzer.tone_commands == commands);
         CHECK(buzzer.vibrations == vibrations);
 
         // And it comes back, heard and felt, when the pilot turns it on again.
-        buzzer.run(standing(Level::Advisory), t, 200);
+        buzzer.run(standing(Level::Advisory), now_ms, 200);
         CHECK(buzzer.tone_commands > commands);
         CHECK(buzzer.vibrations > vibrations);
     }
 
     SUBCASE("the device is going down, mid-pulse") {
         Buzzer buzzer;
-        uint32_t t = 1000;
-        buzzer.announce(standing(Level::Advisory), t, 40);
+        uint32_t now_ms = 1000;
+        buzzer.announce(standing(Level::Advisory), now_ms, 40);
         REQUIRE(buzzer.on);
 
         Situation down = standing(Level::Advisory);
         down.running = false;
-        buzzer.run(down, t, kStepMs);
+        buzzer.run(down, now_ms, kStepMs);
         CHECK_FALSE(buzzer.on);
         CHECK_FALSE(buzzer.vibrating);
         const int commands = buzzer.tone_commands;
-        buzzer.run(down, t, 30000);
+        buzzer.run(down, now_ms, 30000);
         CHECK(buzzer.tone_commands == commands);
     }
 
     SUBCASE("the fix tune ends on its own clock, with nothing to release it") {
         Buzzer buzzer;
-        uint32_t t = 1000;
+        uint32_t now_ms = 1000;
         Situation fix{};
         fix.first_fix = true;
-        buzzer.apply(buzzer.policy.update(fix, t), t);
-        t += kStepMs;
-        buzzer.run(standing(Level::None), t, 5000);
+        buzzer.apply(buzzer.policy.update(fix, now_ms), now_ms);
+        now_ms += kStepMs;
+        buzzer.run(standing(Level::None), now_ms, 5000);
         CHECK(buzzer.beeps == kFirstFixTune.count);
         CHECK(buzzer.last_beep_ms == kFirstFixHeldNoteMs);
         CHECK_FALSE(buzzer.on);
@@ -281,12 +281,12 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
 // The motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
 TEST_CASE("annunciation: the fix tune is heard and never felt") {
     Buzzer buzzer;
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     Situation fix{};
     fix.first_fix = true;
-    buzzer.apply(buzzer.policy.update(fix, t), t);
-    t += kStepMs;
-    buzzer.run(Situation{}, t, 5000);
+    buzzer.apply(buzzer.policy.update(fix, now_ms), now_ms);
+    now_ms += kStepMs;
+    buzzer.run(Situation{}, now_ms, 5000);
 
     REQUIRE(buzzer.beeps == kFirstFixTune.count);
     CHECK(buzzer.vibrations == 0);
@@ -294,17 +294,17 @@ TEST_CASE("annunciation: the fix tune is heard and never felt") {
 
 TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneven rhythm") {
     Buzzer buzzer;
-    uint32_t t = 1000;
+    uint32_t now_ms = 1000;
     Situation fix{};
     fix.first_fix = true;
-    buzzer.apply(buzzer.policy.update(fix, t), t);
-    t += kStepMs;
-    buzzer.run(Situation{}, t, 5000);
+    buzzer.apply(buzzer.policy.update(fix, now_ms), now_ms);
+    now_ms += kStepMs;
+    buzzer.run(Situation{}, now_ms, 5000);
 
     REQUIRE(buzzer.beeps == kFirstFixTune.count);
     uint32_t tone_ms = 0;
     for (uint8_t i = 0; i < kFirstFixTune.count; i++) {
-        CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].hz);
+        CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].pitch_hz);
         if (i > 0) CHECK(buzzer.gap_before[i] == kFirstFixJingle[i - 1].gap_ms);
         tone_ms += kFirstFixJingle[i].tone_ms;
     }
@@ -320,18 +320,18 @@ TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneve
 
 TEST_CASE("annunciation: both tunes are over inside two seconds") {
     Buzzer advisory;
-    uint32_t t = 1000;
-    advisory.announce(standing(Level::Advisory), t, 5000);
+    uint32_t now_ms = 1000;
+    advisory.announce(standing(Level::Advisory), now_ms, 5000);
     REQUIRE(advisory.beeps == kAdvisoryCalls);
     CHECK(advisory.off_since_ms - 1000 < 2000);
 
     Buzzer fix_tune;
-    uint32_t u = 1000;
+    uint32_t fix_tune_now_ms = 1000;
     Situation fix{};
     fix.first_fix = true;
-    fix_tune.apply(fix_tune.policy.update(fix, u), u);
-    u += kStepMs;
-    fix_tune.run(Situation{}, u, 5000);
+    fix_tune.apply(fix_tune.policy.update(fix, fix_tune_now_ms), fix_tune_now_ms);
+    fix_tune_now_ms += kStepMs;
+    fix_tune.run(Situation{}, fix_tune_now_ms, 5000);
     REQUIRE(fix_tune.beeps == kFirstFixTune.count);
     CHECK(fix_tune.off_since_ms - 1000 < 2000);
 }
@@ -340,11 +340,11 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
     // A chirp while traffic stands is refused: one owner at a time, and the
     // pilot's answer to "where is the traffic" is not a chirp.
     Buzzer standing_traffic;
-    uint32_t t = 1000;
-    standing_traffic.announce(standing(Level::Advisory), t, 100);
+    uint32_t now_ms = 1000;
+    standing_traffic.announce(standing(Level::Advisory), now_ms, 100);
     Situation both = standing(Level::Advisory);
     both.first_fix = true;
-    standing_traffic.apply(standing_traffic.policy.update(both, t), t);
+    standing_traffic.apply(standing_traffic.policy.update(both, now_ms), now_ms);
     CHECK(standing_traffic.policy.voice() == Voice::Traffic);
     CHECK(standing_traffic.policy.announcing_level() == Level::Advisory);
     CHECK(standing_traffic.vibrations == 1);
@@ -353,16 +353,16 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
     // traffic wants it. The chirp is cut, a rest follows, and from there the
     // traffic tune owns the cadence.
     Buzzer chirping;
-    uint32_t u = 1000;
+    uint32_t chirp_now_ms = 1000;
     Situation fix{};
     fix.first_fix = true;
-    chirping.apply(chirping.policy.update(fix, u), u);
-    u += kStepMs;
-    chirping.run(Situation{}, u, kFirstFixNoteMs - 2 * kStepMs);
+    chirping.apply(chirping.policy.update(fix, chirp_now_ms), chirp_now_ms);
+    chirp_now_ms += kStepMs;
+    chirping.run(Situation{}, chirp_now_ms, kFirstFixNoteMs - 2 * kStepMs);
     REQUIRE(chirping.on);
     REQUIRE(chirping.policy.voice() == Voice::FirstFix);
 
-    chirping.announce(standing(Level::Advisory), u, 3000);
+    chirping.announce(standing(Level::Advisory), chirp_now_ms, 3000);
     CHECK(chirping.policy.voice() == Voice::Traffic);
     CHECK(chirping.policy.announcing_level() == Level::Advisory);
     CHECK(chirping.beeps == 1 + kAdvisoryCalls);
@@ -374,13 +374,13 @@ TEST_CASE("annunciation: traffic owns the buzzer, the fix tune only borrows it")
 
 TEST_CASE("annunciation: a second aircraft is announced, though the level has not moved") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 2000);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 2000);
     REQUIRE(buzzer.beeps == kAdvisoryCalls);
 
     // With one level, the level alone never changes: the tracker saying that an
     // aircraft was announced is the only thing that can speak for the second one.
-    buzzer.announce(standing(Level::Advisory), t, 2000);
+    buzzer.announce(standing(Level::Advisory), now_ms, 2000);
     CHECK(buzzer.beeps == 2 * kAdvisoryCalls);
     CHECK(buzzer.vibrations == 2 * kAdvisoryCalls);
 }
@@ -388,12 +388,12 @@ TEST_CASE("annunciation: a second aircraft is announced, though the level has no
 TEST_CASE(
     "annunciation: an aircraft announced mid-call is a new call after a rest, heard and felt") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    buzzer.announce(standing(Level::Advisory), t, 100);
+    uint32_t now_ms = 1000;
+    buzzer.announce(standing(Level::Advisory), now_ms, 100);
     REQUIRE(buzzer.on);
     REQUIRE(buzzer.vibrating);
 
-    buzzer.announce(standing(Level::Advisory), t, 3000);
+    buzzer.announce(standing(Level::Advisory), now_ms, 3000);
     CHECK(buzzer.beeps == 1 + kAdvisoryCalls);
     CHECK(buzzer.vibrations == 1 + kAdvisoryCalls);
     CHECK(buzzer.beep_ms_of[0] == 100);
@@ -404,9 +404,9 @@ TEST_CASE(
 // A gaggle can announce faster than a call ends, and the guard must not be what ends it.
 TEST_CASE("annunciation: a stream of announcements never holds an output past the longest call") {
     Buzzer buzzer;
-    uint32_t t = 1000;
-    for (int i = 0; i < 20; i++) buzzer.announce(standing(Level::Advisory), t, 150);
-    buzzer.run(standing(Level::Advisory), t, 2000);
+    uint32_t now_ms = 1000;
+    for (int i = 0; i < 20; i++) buzzer.announce(standing(Level::Advisory), now_ms, 150);
+    buzzer.run(standing(Level::Advisory), now_ms, 2000);
 
     CHECK(buzzer.beeps > 1);
     CHECK_FALSE(buzzer.on);

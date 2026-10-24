@@ -9,7 +9,7 @@ namespace skyblip::ports {
 
 enum class Restart : uint8_t { Hot, Warm, Cold, Factory };
 
-enum class GnssConfig : uint8_t {
+enum class GnssConfigStage : uint8_t {
     Idle,
     Restarting,
     Waking,
@@ -21,17 +21,17 @@ enum class GnssConfig : uint8_t {
     Degraded
 };
 
-constexpr const char* to_string(GnssConfig state) {
+constexpr const char* to_string(GnssConfigStage state) {
     switch (state) {
-        case GnssConfig::Idle: return "IDLE";
-        case GnssConfig::Restarting: return "RESTART";
-        case GnssConfig::Waking: return "WAKING";
-        case GnssConfig::Identifying: return "IDENT";
-        case GnssConfig::Sending: return "SENDING";
-        case GnssConfig::Verifying: return "VERIFY";
-        case GnssConfig::Confirming: return "CONFIRM";
-        case GnssConfig::Ready: return "READY";
-        case GnssConfig::Degraded: return "DEGRADED";
+        case GnssConfigStage::Idle: return "IDLE";
+        case GnssConfigStage::Restarting: return "RESTART";
+        case GnssConfigStage::Waking: return "WAKING";
+        case GnssConfigStage::Identifying: return "IDENT";
+        case GnssConfigStage::Sending: return "SENDING";
+        case GnssConfigStage::Verifying: return "VERIFY";
+        case GnssConfigStage::Confirming: return "CONFIRM";
+        case GnssConfigStage::Ready: return "READY";
+        case GnssConfigStage::Degraded: return "DEGRADED";
     }
     return "?";
 }
@@ -42,8 +42,8 @@ struct GnssHealth {
     uint32_t sentences{0};
     uint32_t rejected{0};
     uint16_t pps_latency_ms{0};
-    gnss::FixReject reject{gnss::FixReject::None};
-    GnssConfig config{GnssConfig::Idle};
+    gnss::FixReject last_reject{gnss::FixReject::None};
+    GnssConfigStage config_stage{GnssConfigStage::Idle};
     bool identified{false};
 };
 

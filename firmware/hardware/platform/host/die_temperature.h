@@ -9,15 +9,15 @@ namespace skyblip::platform::host {
 
 class DieTemperature : public ports::DieTemperature {
    public:
-    bool read(int16_t& decicelsius) override {
+    bool read(int16_t& die_dc) override {
         reads_++;
         if (!answers_) return false;
-        decicelsius = value_;
+        die_dc = die_dc_;
         return true;
     }
 
-    void hold(int16_t decicelsius) {
-        value_ = decicelsius;
+    void hold(int16_t die_dc) {
+        die_dc_ = die_dc;
         answers_ = true;
     }
     void refuse() { answers_ = false; }
@@ -25,7 +25,7 @@ class DieTemperature : public ports::DieTemperature {
 
    private:
     int reads_{0};
-    int16_t value_{0};
+    int16_t die_dc_{0};
     bool answers_{true};
 };
 

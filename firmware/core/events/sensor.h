@@ -4,14 +4,14 @@
 #include <cstdint>
 
 namespace skyblip::events {
-struct BaroSample {
+struct BarometerSample {
     uint32_t pressure_mpa;
     uint32_t at_ms;
-    int16_t temperature_decicelsius;
+    int16_t temperature_dc;
     bool temperature_valid;
 };
 
-struct AccelSample {
+struct AccelerometerSample {
     int16_t right_mg;
     int16_t up_mg;
     int16_t aft_mg;
@@ -21,7 +21,7 @@ struct AccelSample {
 // What the divider read, and whether something is feeding the charger. Whether
 // that reading is the cell at all is core/power's problem, not the board's.
 struct BatterySample {
-    uint16_t millivolts;
+    uint16_t divider_mv;
     bool external_power;
 };
 

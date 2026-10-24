@@ -35,6 +35,16 @@ export async function connected(options = {}) {
   return { device, updater, until };
 }
 
+// INFO: fc 20oct26 an unexchanged MTU of 23: no config reply fits its 20 bytes, so only SMP's running version arrives
+export async function unexchanged(options = {}) {
+  const device = new FakeSkyblip({ bufSize: 300, mtu: 23, ...options }).install();
+  const { updater, until } = session();
+  await updater.connect();
+  await until(state => state.running);
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES), 'skyblip_go-0.2.0+15.signed.bin');
+  return { device, updater, until };
+}
+
 export async function chosen(options) {
   const link = await connected(options);
   await link.updater.choose(signedImage(NEWER, IMAGE_BYTES), 'skyblip_go-0.2.0+15.signed.bin');

@@ -4,64 +4,37 @@
 
 #include "core/fec/scramble.h"
 #include "core/model/aircraft.h"
+#include "core/settings/address.h"
+#include "core/util/little_endian.h"
 
 namespace skyblip::protocol {
 
 namespace {
-void put_u24(uint8_t* b, uint32_t v) {
-    b[0] = static_cast<uint8_t>(v);
-    b[1] = static_cast<uint8_t>(v >> 8);
-    b[2] = static_cast<uint8_t>(v >> 16);
-}
-uint32_t get_u24(const uint8_t* b) {
-    return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
-           (static_cast<uint32_t>(b[2]) << 16);
-}
-void put_i32(uint8_t* b, int32_t v) {
-    uint32_t u = static_cast<uint32_t>(v);
-    b[0] = static_cast<uint8_t>(u);
-    b[1] = static_cast<uint8_t>(u >> 8);
-    b[2] = static_cast<uint8_t>(u >> 16);
-    b[3] = static_cast<uint8_t>(u >> 24);
-}
-int32_t get_i32(const uint8_t* b) {
-    return static_cast<int32_t>(static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) |
-                                (static_cast<uint32_t>(b[2]) << 16) |
-                                (static_cast<uint32_t>(b[3]) << 24));
-}
-void put_i16(uint8_t* b, int16_t v) {
-    uint16_t u = static_cast<uint16_t>(v);
-    b[0] = static_cast<uint8_t>(u);
-    b[1] = static_cast<uint8_t>(u >> 8);
-}
-int16_t get_i16(const uint8_t* b) {
-    return static_cast<int16_t>(static_cast<uint16_t>(b[0]) | (static_cast<uint16_t>(b[1]) << 8));
+void pack_record(uint8_t* record, const model::AircraftObservation& target) {
+    put_uint24(record, target.address & settings::kAddressMask);
+    record[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
+                                     ((target.flight_state & 0x03) << 6));
+    record[4] = target.aircraft_category;
+    record[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
+    put_int32(record + 6, target.latitude_1e7);
+    put_int32(record + 10, target.longitude_1e7);
+    put_int16(record + 14, static_cast<int16_t>(target.altitude_m));
 }
 
-void pack_record(uint8_t* r, const model::AircraftObs& t) {
-    put_u24(r, t.address & 0x00FFFFFF);
-    r[3] = static_cast<uint8_t>((t.address_mapping_table & 0x3F) | ((t.flight_state & 0x03) << 6));
-    r[4] = t.aircraft_cat;
-    r[5] = static_cast<uint8_t>(t.speed_q > 255 ? 255 : t.speed_q);
-    put_i32(r + 6, t.lat_1e7);
-    put_i32(r + 10, t.lon_1e7);
-    put_i16(r + 14, static_cast<int16_t>(t.alt_m));
-}
-
-void unpack_record(const uint8_t* r, model::AircraftObs& t) {
-    t = model::AircraftObs{};
-    t.address = get_u24(r);
-    t.address_mapping_table = r[3] & 0x3F;
-    t.flight_state = (r[3] >> 6) & 0x03;
-    t.aircraft_cat = r[4];
-    t.speed_q = r[5];
-    t.speed_valid = r[5] != 0;
-    t.lat_1e7 = get_i32(r + 6);
-    t.lon_1e7 = get_i32(r + 10);
-    t.alt_m = get_i16(r + 14);
-    t.position_valid = true;
-    t.source = model::Source::AdslUplink;
-    t.emergency = 1;
+void unpack_record(const uint8_t* record, model::AircraftObservation& target) {
+    target = model::AircraftObservation{};
+    target.address = get_uint24(record);
+    target.address_mapping_table = record[3] & 0x3F;
+    target.flight_state = (record[3] >> 6) & 0x03;
+    target.aircraft_category = record[4];
+    target.speed_q = record[5];
+    target.speed_valid = record[5] != 0;
+    target.latitude_1e7 = get_int32(record + 6);
+    target.longitude_1e7 = get_int32(record + 10);
+    target.altitude_m = get_int16(record + 14);
+    target.position_valid = true;
+    target.source = model::Source::AdslUplink;
+    target.emergency = 1;
 }
 
 // The gate between a codeword that satisfied parity and a target on a pilot's
@@ -71,64 +44,64 @@ void unpack_record(const uint8_t* r, model::AircraftObs& t) {
 // would otherwise put a whole screenful of phantoms in front of everybody at
 // once. An address of zero is no aircraft, and a position off the globe is no
 // position.
-bool plausible(const model::AircraftObs& t) {
-    if (t.address == 0) return false;
-    if (t.lat_1e7 < -900000000 || t.lat_1e7 > 900000000) return false;
-    if (t.lon_1e7 < -1800000000 || t.lon_1e7 > 1800000000) return false;
+bool plausible(const model::AircraftObservation& target) {
+    if (target.address == 0) return false;
+    if (target.latitude_1e7 < -900000000 || target.latitude_1e7 > 900000000) return false;
+    if (target.longitude_1e7 < -1800000000 || target.longitude_1e7 > 1800000000) return false;
     return true;
 }
 }
 
-Status AdslUplink::encode(const model::AircraftObs* targets, int n, uint8_t key_index,
+Status AdslUplink::encode(const model::AircraftObservation* targets, int count, uint8_t key_index,
                           uint8_t out_frame[kFrameBytes]) const {
-    if (n < 0 || n > kMaxTargets) return Status::Full;
-    uint8_t data[fec::ReedSolomon255::kK];
+    if (count < 0 || count > kMaxTargets) return Status::Full;
+    uint8_t data[fec::ReedSolomon255::kDataBytes];
     std::memset(data, 0, sizeof(data));
     data[0] = kVersion;
-    data[1] = static_cast<uint8_t>(n);
+    data[1] = static_cast<uint8_t>(count);
     data[2] = key_index;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < count; i++) {
         pack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, targets[i]);
     }
-    uint32_t words[fec::ReedSolomon255::kK / 4];
+    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
     fec::xxtea_scramble_key0(words, sizeof(words) / 4, 6);
     std::memcpy(data, words, sizeof(words));
 
-    std::memcpy(out_frame, data, fec::ReedSolomon255::kK);
-    rs_.encode(data, out_frame + fec::ReedSolomon255::kK);
+    std::memcpy(out_frame, data, fec::ReedSolomon255::kDataBytes);
+    reed_solomon_.encode(data, out_frame + fec::ReedSolomon255::kDataBytes);
     return Status::Ok;
 }
 
-Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObs* targets, int cap,
-                          DecodeStats& stats) const {
-    uint8_t cw[fec::ReedSolomon255::kN];
-    std::memcpy(cw, frame, sizeof(cw));
-    int corrected = rs_.decode(cw);
+Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
+                          int capacity, DecodeStatistics& statistics) const {
+    uint8_t codeword[fec::ReedSolomon255::kCodewordBytes];
+    std::memcpy(codeword, frame, sizeof(codeword));
+    int corrected = reed_solomon_.decode(codeword);
     if (corrected < 0) return Status::Crc;
-    stats.corrected = corrected;
+    statistics.corrected = corrected;
 
-    uint8_t data[fec::ReedSolomon255::kK];
-    std::memcpy(data, cw, fec::ReedSolomon255::kK);
-    uint32_t words[fec::ReedSolomon255::kK / 4];
+    uint8_t data[fec::ReedSolomon255::kDataBytes];
+    std::memcpy(data, codeword, fec::ReedSolomon255::kDataBytes);
+    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
     fec::xxtea_descramble_key0(words, sizeof(words) / 4, 6);
     std::memcpy(data, words, sizeof(words));
 
     if (data[0] != kVersion) return Status::Unsupported;
-    int n = data[1];
-    if (n > kMaxTargets) return Status::Invalid;
-    int out = 0;
-    for (int i = 0; i < n && out < cap; i++) {
-        model::AircraftObs t{};
-        unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, t);
-        if (!plausible(t)) {
-            stats.rejected++;
+    int carried = data[1];
+    if (carried > kMaxTargets) return Status::Invalid;
+    int kept = 0;
+    for (int i = 0; i < carried && kept < capacity; i++) {
+        model::AircraftObservation target{};
+        unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, target);
+        if (!plausible(target)) {
+            statistics.rejected++;
             continue;
         }
-        targets[out++] = t;
+        targets[kept++] = target;
     }
-    stats.targets = out;
+    statistics.targets = kept;
     return Status::Ok;
 }
 

@@ -19,34 +19,34 @@ RadarTarget abeam[1] = {{0, 3000, 0, Level::None}};
 
 // The dots are only struck when the plot has company, so every case has some.
 RadarSnapshot cruising(int32_t speed_mps) {
-    RadarSnapshot snap = flying(0);
-    snap.speed_mm_s = speed_mps * 1000;
-    snap.n_targets = 1;
-    snap.targets = abeam;
-    return snap;
+    RadarSnapshot snapshot = flying(0);
+    snapshot.speed_mm_s = speed_mps * 1000;
+    snapshot.target_count = 1;
+    snapshot.targets = abeam;
+    return snapshot;
 }
 
 // Own-ship's vector and nothing else: the same plot without the run under it.
-int marks_in(const RadarSnapshot& snap, int x0, int y0, int x1, int y1) {
-    RadarSnapshot still = snap;
+int marks_in(const RadarSnapshot& snapshot, int x0, int y0, int x1, int y1) {
+    RadarSnapshot still = snapshot;
     still.speed_mm_s = 0;
-    const Glass with = radar(snap), without = radar(still);
-    int n = 0;
+    const Glass with = radar(snapshot), without = radar(still);
+    int count = 0;
     for (int y = y0; y < y1; y++)
         for (int x = x0; x < x1; x++)
-            if (with.get_pixel(x, y) && !without.get_pixel(x, y)) n++;
-    return n;
+            if (with.get_pixel(x, y) && !without.get_pixel(x, y)) count++;
+    return count;
 }
 
-RadarSnapshot one_target(RadarTarget* t) {
-    RadarSnapshot snap = flying(0);
-    snap.n_targets = 1;
-    snap.targets = t;
-    return snap;
+RadarSnapshot one_target(RadarTarget* target) {
+    RadarSnapshot snapshot = flying(0);
+    snapshot.target_count = 1;
+    snapshot.targets = target;
+    return snapshot;
 }
 
 // One blip, three ways up: a diamond at your level, pointing up above you, down below.
-TEST_CASE("radar: traffic is a blip, and the advisory fills it") {
+TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
     RadarTarget level[1] = {{2 * kMetresPerNm, 0, 0, Level::None}};
     const Glass diamond = radar(one_target(level));
     CHECK_FALSE(diamond.get_pixel(kPlotX, kPlotY));
@@ -64,10 +64,10 @@ TEST_CASE("radar: traffic is a blip, and the advisory fills it") {
     // Below you is that same blip, flipped about the point it is plotted on.
     RadarTarget below[1] = {{2 * kMetresPerNm, 0, -300, Level::None}};
     const Glass points_down = radar(one_target(below));
-    for (int dy = -11; dy <= 11; dy++)
-        for (int dx = -9; dx <= 9; dx++)
-            CHECK(points_up.get_pixel(kPlotX + dx, kPlotY + dy) ==
-                  points_down.get_pixel(kPlotX + dx, kPlotY - dy));
+    for (int delta_y = -11; delta_y <= 11; delta_y++)
+        for (int delta_x = -9; delta_x <= 9; delta_x++)
+            CHECK(points_up.get_pixel(kPlotX + delta_x, kPlotY + delta_y) ==
+                  points_down.get_pixel(kPlotX + delta_x, kPlotY - delta_y));
 
     RadarTarget advisory[1] = {{2 * kMetresPerNm, 0, 0, Level::Advisory}};
     const Glass filled = radar(one_target(advisory));
@@ -78,14 +78,15 @@ TEST_CASE("radar: traffic is a blip, and the advisory fills it") {
 }
 
 // Near-size covers exactly the separation that can alarm, so size is a fact and not a flourish.
-TEST_CASE("radar: past the advisory's own altitude window the blip is the small one") {
-    RadarTarget inside[1] = {{2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltM, Level::None}};
+TEST_CASE("radar page: past the advisory's own altitude window the blip is the small one") {
+    RadarTarget inside[1] = {
+        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltitudeM, Level::None}};
     const Glass near = radar(one_target(inside));
     CHECK(near.get_pixel(kPlotX, kPlotY - 7));
     CHECK(near.get_pixel(kPlotX - 8, kPlotY + 1));
 
     RadarTarget outside[1] = {
-        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltM + 1, Level::None}};
+        {2 * kMetresPerNm, 0, skyblip::traffic::kAdvisoryAltitudeM + 1, Level::None}};
     const Glass far = radar(one_target(outside));
     CHECK(far.get_pixel(kPlotX, kPlotY - 5));
     CHECK_FALSE(far.get_pixel(kPlotX, kPlotY - 7));
@@ -93,7 +94,7 @@ TEST_CASE("radar: past the advisory's own altitude window the blip is the small 
     CHECK_FALSE(far.get_pixel(kPlotX - 8, kPlotY + 1));
 }
 
-TEST_CASE("radar: a leader line runs the minute ahead of the target, out to the glass") {
+TEST_CASE("radar page: a leader line runs the minute ahead of the target, out to the glass") {
     // 30 m/s for 60 s is 1800 m, which is 22 px on the 4 NM ring.
     RadarTarget north[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     const Glass ahead = radar(one_target(north));
@@ -118,56 +119,56 @@ TEST_CASE("radar: a leader line runs the minute ahead of the target, out to the 
 
 // Own ship becomes the formation: one 28 px square, one digit per quadrant, and the airframe
 // untouched.
-TEST_CASE("radar: a formation is own ship, counted by quadrant") {
+TEST_CASE("radar page: a formation is own-ship, counted by quadrant") {
     RadarTarget flight[4] = {
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
         {700, 600, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
         {-600, 500, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
         {-700, -400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
-    RadarSnapshot snap = flying(0);
-    snap.n_targets = 4;
-    snap.targets = flight;
-    snap.formation_members = 4;
-    const Glass fb = radar(snap);
+    RadarSnapshot snapshot = flying(0);
+    snapshot.target_count = 4;
+    snapshot.targets = flight;
+    snapshot.formation_members = 4;
+    const Glass canvas = radar(snapshot);
 
     // The square is 86..113 on both axes, one blank pixel clear of the wingtips.
-    CHECK(fb.get_pixel(86, 100));
-    CHECK(fb.get_pixel(113, 100));
-    CHECK(fb.get_pixel(100, 86));
-    CHECK(fb.get_pixel(100, 113));
-    CHECK_FALSE(fb.get_pixel(87, 99));
-    CHECK_FALSE(fb.get_pixel(112, 99));
+    CHECK(canvas.get_pixel(86, 100));
+    CHECK(canvas.get_pixel(113, 100));
+    CHECK(canvas.get_pixel(100, 86));
+    CHECK(canvas.get_pixel(100, 113));
+    CHECK_FALSE(canvas.get_pixel(87, 99));
+    CHECK_FALSE(canvas.get_pixel(112, 99));
 
     // Two off the right nose, one on each quarter behind, none off the left nose.
-    CHECK(reads_in(fb, "2", 106, 89, 111, 96, 1));
-    CHECK(reads_in(fb, "1", 89, 104, 94, 111, 1));
-    CHECK(reads_in(fb, "1", 106, 104, 111, 111, 1));
-    CHECK(ink_in(fb, 89, 89, 94, 96) == 0);
+    CHECK(reads_in(canvas, "2", 106, 89, 111, 96, 1));
+    CHECK(reads_in(canvas, "1", 89, 104, 94, 111, 1));
+    CHECK(reads_in(canvas, "1", 106, 104, 111, 111, 1));
+    CHECK(ink_in(canvas, 89, 89, 94, 96) == 0);
 
     // A member is not also plotted as traffic: the square is its depiction.
-    RadarSnapshot apart = snap;
+    RadarSnapshot apart = snapshot;
     apart.formation_members = 0;
     RadarTarget loose[4] = {flight[0], flight[1], flight[2], flight[3]};
-    for (RadarTarget& t : loose) t.in_formation = false;
+    for (RadarTarget& target : loose) target.in_formation = false;
     apart.targets = loose;
     const Glass separate = radar(apart);
-    CHECK(ink_in(separate, 100, 80, 120, 95) > ink_in(fb, 100, 80, 120, 95));
+    CHECK(ink_in(separate, 100, 80, 120, 95) > ink_in(canvas, 100, 80, 120, 95));
     CHECK_FALSE(separate.get_pixel(86, 100));
     CHECK_FALSE(separate.get_pixel(113, 100));
 }
 
 // The leader is the arc the alarm grades, so a target in a turn does not draw a tangent.
-TEST_CASE("radar: a turning target's leader is its arc") {
+TEST_CASE("radar page: a turning target's leader is its arc") {
     RadarTarget straight[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0}};
     RadarTarget arcing[1] = {{2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0, 200, true}};
-    RadarSnapshot snap = flying(0);
-    snap.n_targets = 1;
+    RadarSnapshot snapshot = flying(0);
+    snapshot.target_count = 1;
 
-    snap.targets = straight;
-    const Glass tangent = radar(snap);
-    snap.targets = arcing;
-    const Glass curved = radar(snap);
+    snapshot.targets = straight;
+    const Glass tangent = radar(snapshot);
+    snapshot.targets = arcing;
+    const Glass curved = radar(snapshot);
 
     // 30 m/s at 2 deg/s is an 859 m radius: the minute ends 16 px right, 9 px up.
     CHECK(tangent.get_pixel(kPlotX, kPlotY - 22));
@@ -177,36 +178,36 @@ TEST_CASE("radar: a turning target's leader is its arc") {
     // A target whose turn rate nobody has measured yet is flown straight.
     RadarTarget unknown[1] = {
         {2 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 0, 200, false}};
-    snap.targets = unknown;
-    CHECK(radar(snap).get_pixel(kPlotX, kPlotY - 22));
+    snapshot.targets = unknown;
+    CHECK(radar(snapshot).get_pixel(kPlotX, kPlotY - 22));
 }
 
 // The ring is the scale the footer reads in, and the glass around it is spare.
-TEST_CASE("radar: traffic past the ring still draws, and the count stays on the ring") {
+TEST_CASE("radar page: traffic past the ring still draws, and the count stays on the ring") {
     // 4.2 NM abeam is off the 4 NM ring and still on the glass, at 96 px.
     RadarTarget beside[1] = {{0, (42 * kMetresPerNm) / 10, 0, Level::Advisory}};
-    RadarSnapshot snap = flying(0);
-    snap.speed_mm_s = 30000;
-    snap.n_targets = 1;
-    snap.targets = beside;
-    const Glass fb = radar(snap);
+    RadarSnapshot snapshot = flying(0);
+    snapshot.speed_mm_s = 30000;
+    snapshot.target_count = 1;
+    snapshot.targets = beside;
+    const Glass canvas = radar(snapshot);
 
-    CHECK(fb.get_pixel(196, 100));
-    CHECK(fb.get_pixel(192, 100));
-    CHECK(reads_in(fb, "0", 170, 170, 200, 200, 3));
-    CHECK_FALSE(fb.get_pixel(99, 77));
+    CHECK(canvas.get_pixel(196, 100));
+    CHECK(canvas.get_pixel(192, 100));
+    CHECK(reads_in(canvas, "0", 170, 170, 200, 200, 3));
+    CHECK_FALSE(canvas.get_pixel(99, 77));
 
     // Down in the corner it lands on the clock, at (50, 180), and is drawn over it.
     RadarTarget behind[1] = {{-6500, -4000, -200, Level::None, 0, false, 30000, 2000}};
-    RadarSnapshot low = snap;
+    RadarSnapshot low = snapshot;
     low.targets = behind;
-    RadarSnapshot none = snap;
-    none.n_targets = 0;
+    RadarSnapshot none = snapshot;
+    none.target_count = 0;
     CHECK(ink_in(radar(low), 20, 150, 90, 199) > ink_in(radar(none), 20, 150, 90, 199));
 
     // Past the glass it is gone altogether, count and all.
     RadarTarget far_out[1] = {{0, 8 * kMetresPerNm, 0, Level::Advisory}};
-    RadarSnapshot beyond = snap;
+    RadarSnapshot beyond = snapshot;
     beyond.targets = far_out;
     const Glass empty = radar(beyond);
     CHECK_FALSE(empty.get_pixel(196, 100));
@@ -214,40 +215,40 @@ TEST_CASE("radar: traffic past the ring still draws, and the count stays on the 
     CHECK(reads_in(empty, "0", 170, 170, 200, 200, 3));
 }
 
-TEST_CASE("radar: own ship's track is a line, with a ball on each of the next two minutes") {
-    const Glass fb = radar(cruising(30));
+TEST_CASE("radar page: own-ship's track is a line, with a ball on each of the next two minutes") {
+    const Glass canvas = radar(cruising(30));
 
     // 30 m/s for 60 s is 1800 m, 22 px up the glass: the ball straddles the 99|100 pair.
-    CHECK(fb.get_pixel(99, 78));
-    CHECK(fb.get_pixel(100, 78));
-    CHECK(fb.get_pixel(97, 78));
-    CHECK(fb.get_pixel(102, 78));
-    CHECK_FALSE(fb.get_pixel(96, 78));
-    CHECK_FALSE(fb.get_pixel(103, 78));
+    CHECK(canvas.get_pixel(99, 78));
+    CHECK(canvas.get_pixel(100, 78));
+    CHECK(canvas.get_pixel(97, 78));
+    CHECK(canvas.get_pixel(102, 78));
+    CHECK_FALSE(canvas.get_pixel(96, 78));
+    CHECK_FALSE(canvas.get_pixel(103, 78));
     // Six rows across, 75..80, and round: the corners are off it.
-    CHECK(fb.get_pixel(100, 75));
-    CHECK(fb.get_pixel(100, 80));
-    CHECK_FALSE(fb.get_pixel(100, 74));
-    CHECK_FALSE(fb.get_pixel(97, 75));
+    CHECK(canvas.get_pixel(100, 75));
+    CHECK(canvas.get_pixel(100, 80));
+    CHECK_FALSE(canvas.get_pixel(100, 74));
+    CHECK_FALSE(canvas.get_pixel(97, 75));
 
     // The line joins it to the aeroplane, and stands clear of the nose at 94.
-    CHECK(fb.get_pixel(100, 85));
-    CHECK(fb.get_pixel(100, 91));
-    CHECK_FALSE(fb.get_pixel(100, 92));
+    CHECK(canvas.get_pixel(100, 85));
+    CHECK(canvas.get_pixel(100, 91));
+    CHECK_FALSE(canvas.get_pixel(100, 92));
 
     // Two pixels across, on that same pair, and dashed: 3 px of line, 3 px of glass.
-    CHECK(fb.get_pixel(99, 85));
-    CHECK_FALSE(fb.get_pixel(98, 85));
-    CHECK_FALSE(fb.get_pixel(101, 85));
-    CHECK(fb.get_pixel(100, 83));
-    CHECK_FALSE(fb.get_pixel(99, 87));
-    CHECK_FALSE(fb.get_pixel(100, 87));
+    CHECK(canvas.get_pixel(99, 85));
+    CHECK_FALSE(canvas.get_pixel(98, 85));
+    CHECK_FALSE(canvas.get_pixel(101, 85));
+    CHECK(canvas.get_pixel(100, 83));
+    CHECK_FALSE(canvas.get_pixel(99, 87));
+    CHECK_FALSE(canvas.get_pixel(100, 87));
 
     // The second minute is twice as far up the same line, and the line ends on it.
-    CHECK(fb.get_pixel(100, 56));
-    CHECK(fb.get_pixel(97, 56));
-    CHECK(fb.get_pixel(100, 65));
-    CHECK_FALSE(fb.get_pixel(100, 52));
+    CHECK(canvas.get_pixel(100, 56));
+    CHECK(canvas.get_pixel(97, 56));
+    CHECK(canvas.get_pixel(100, 65));
+    CHECK_FALSE(canvas.get_pixel(100, 52));
 
     // Twice the speed puts the first ball where the second one was.
     CHECK(radar(cruising(60)).get_pixel(97, 56));
@@ -267,12 +268,12 @@ TEST_CASE("radar: own ship's track is a line, with a ball on each of the next tw
 }
 
 // A pilot in a turn is not going where the nose points, and the line is where they will be.
-TEST_CASE("radar: the vector rides own ship's turn, not its nose") {
+TEST_CASE("radar page: the vector rides own-ship's turn, not its nose") {
     // 30 m/s at 1 deg/s is a 1719 m radius: 60 deg of it is 10 px right, 18 px up.
     RadarTarget behind[1] = {{-3000, 0, 0, Level::Advisory}};
     RadarSnapshot right = flying(0);
     right.speed_mm_s = 30000;
-    right.n_targets = 1;
+    right.target_count = 1;
     right.targets = behind;
     right.turn_cdps = 100;
     CHECK(radar(right).get_pixel(110, 82));
@@ -297,7 +298,7 @@ TEST_CASE("radar: the vector rides own ship's turn, not its nose") {
 }
 
 // An empty ring needs no scale: the vector is read against traffic or not at all.
-TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
+TEST_CASE("radar page: own-ship's vector keeps off a plot with nothing on it") {
     RadarSnapshot alone = flying(0);
     alone.speed_mm_s = 30000;
     CHECK_FALSE(radar(alone).get_pixel(100, 78));
@@ -309,31 +310,31 @@ TEST_CASE("radar: own ship's vector keeps off a plot with nothing on it") {
     RadarTarget far_out[1] = {{40000, 0, 0, Level::None}};
     RadarSnapshot beyond = flying(0);
     beyond.speed_mm_s = 30000;
-    beyond.n_targets = 1;
+    beyond.target_count = 1;
     beyond.targets = far_out;
     CHECK_FALSE(radar(beyond).get_pixel(100, 78));
 }
 
 // The square is the member's depiction, so a ring holding only the formation is an empty ring.
-TEST_CASE("radar: own ship's vector keeps off a ring holding only the formation") {
+TEST_CASE("radar page: own-ship's vector keeps off a ring holding only the formation") {
     RadarTarget pair[2] = {{-60, -120, 10, Level::None, 0, false, 30000, 0, 0, false, true},
                            abeam[0]};
     RadarSnapshot together = flying(0);
     together.speed_mm_s = 30000;
-    together.n_targets = 1;
+    together.target_count = 1;
     together.targets = pair;
     together.formation_members = 1;
     CHECK(marks_in(together, 0, 0, 200, 200) == 0);
 
     RadarSnapshot with_traffic = together;
-    with_traffic.n_targets = 2;
+    with_traffic.target_count = 2;
     CHECK(radar(with_traffic).get_pixel(100, 78));
     CHECK(radar(with_traffic).get_pixel(97, 56));
 }
 
 // The caret rides the blip, not the tag: a crowded glass drops tags, and a climb through your
 // level is not droppable.
-TEST_CASE("radar: a caret on the blip says climbing or sinking, past 500 fpm") {
+TEST_CASE("radar page: a caret on the blip says climbing or sinking, past 500 fpm") {
     RadarTarget steady[1] = {{2 * kMetresPerNm, 0, 300, Level::Advisory, 0, true}};
     const Glass flat = radar(one_target(steady));
     CHECK_FALSE(flat.get_pixel(kPlotX, kPlotY - 11));

@@ -1,12 +1,13 @@
 #include "core/traffic/alarm.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/protocol/nmea_out.h"
 #include "core/traffic/lease.h"
+#include "core/traffic/range.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 
@@ -14,81 +15,83 @@ namespace skyblip::traffic {
 
 namespace {
 
-constexpr int32_t kTrigOne = 16384;
-
 // Millimetres a second, north and east, scaled by the cordic one.
-void velocity_ned(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
-    north = static_cast<int64_t>(speed_mm_s) * icos(angle);
-    east = static_cast<int64_t>(speed_mm_s) * isin(angle);
+void velocity_north_east(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
+    north = static_cast<int64_t>(speed_mm_s) * cosine(angle);
+    east = static_cast<int64_t>(speed_mm_s) * sine(angle);
 }
 
-int32_t iabs32(int32_t v) { return v < 0 ? -v : v; }
-
-Level level_for(const AlarmAssessment& a) {
-    const bool in_window = iabs32(a.rel_alt_m) <= kAdvisoryAltM && a.rel_dist_m <= kAdvisoryDistM;
+Level level_for(const AlarmAssessment& assessment) {
+    const bool in_window = std::abs(assessment.relative_altitude_m) <= kAdvisoryAltitudeM &&
+                           assessment.relative_distance_m <= kAdvisoryDistanceM;
     return in_window ? Level::Advisory : Level::None;
 }
 
 }  // namespace
 
-int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
-                     int32_t east_m, int32_t dist_m) {
-    constexpr int32_t unknown_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
-    if (dist_m <= 0) return unknown_mm_s;
+int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
+                     int32_t north_m, int32_t east_m, int32_t distance_m) {
+    constexpr int32_t unknown_closing_mm_s = kUnknownTargetSpeedMps * kMillimetresPerMetre;
+    if (distance_m <= 0) return unknown_closing_mm_s;
 
-    int64_t own_n = 0, own_e = 0;
-    velocity_ned(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_n, own_e);
-    int64_t target_n = 0, target_e = 0;
+    int64_t own_north = 0, own_east = 0;
+    velocity_north_east(own.speed_mm_s, to_angle16(CentiDegrees(own.track_cdeg)), own_north,
+                        own_east);
+    int64_t target_north = 0, target_east = 0;
     if (target.speed_valid)
-        velocity_ned(to_mm_s(QuarterMetresPerSec(target.speed_q)).v,
-                     to_angle16(Cordic9(target.track_c9)), target_n, target_e);
+        velocity_north_east(to_mm_s(QuarterMetresPerSecond(target.speed_q)).value,
+                            to_angle16(Cordic9(target.track_c9)), target_north, target_east);
 
-    const int64_t along = (target_n - own_n) * north_m + (target_e - own_e) * east_m;
-    const int64_t scale = static_cast<int64_t>(dist_m) * kTrigOne;
-    int32_t closing = static_cast<int32_t>(div_round<int64_t>(-along, scale));
-    if (!target.speed_valid) closing += unknown_mm_s;
+    const int64_t along = (target_north - own_north) * north_m + (target_east - own_east) * east_m;
+    const int64_t scale = static_cast<int64_t>(distance_m) * kTrigOne;
+    int32_t closing = static_cast<int32_t>(divide_rounded<int64_t>(-along, scale));
+    if (!target.speed_valid) closing += unknown_closing_mm_s;
     return closing;
 }
 
 // INFO: fc 13sep26 two positions from different instants are not a separation, so both are carried
 // to now
-AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
+AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                        uint32_t now_ms) {
-    const model::OwnState own = flight::carried_to(own_fix, now_ms);
-    const model::AircraftObs target = flight::carried_to(reported, now_ms);
-    AlarmAssessment a{};
-    int32_t n_m, e_m, u_m;
-    if (!protocol::relative_ned(own, target, n_m, e_m, u_m)) return a;
-    a.valid = true;
-    a.rel_alt_m = u_m;
-    a.rel_dist_m = static_cast<int32_t>(idistance(n_m, e_m));
-    a.closing_mps =
-        div_round(closing_mm_s(own, target, n_m, e_m, a.rel_dist_m), kMillimetresPerMetre);
+    const model::Ownship own = flight::carried_to(own_fix, now_ms);
+    const model::AircraftObservation target = flight::carried_to(reported, now_ms);
+    AlarmAssessment assessment{};
+    int32_t north_m, east_m, up_m;
+    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m)) return assessment;
+    assessment.valid = true;
+    assessment.relative_altitude_m = up_m;
+    assessment.relative_distance_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
+    assessment.closing_mps =
+        divide_rounded(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
+                       kMillimetresPerMetre);
 
-    const int16_t brg = iatan2(e_m, n_m);
-    const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).v;
-    const int brg_deg = static_cast<int>(
-        div_round<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(brg)) * 360, 65536) % 360);
-    a.rel_bearing_deg = static_cast<uint16_t>(((brg_deg - own_deg) % 360 + 360) % 360);
+    const int16_t bearing = arctangent(east_m, north_m);
+    const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
+    const int bearing_deg = static_cast<int>(
+        divide_rounded<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
+        360);
+    assessment.relative_bearing_deg =
+        static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);
 
     const bool grounded =
         flight::on_ground(reported.flight_state) || flight::on_ground(own.flight_state);
-    a.level = grounded ? Level::None : level_for(a);
-    return a;
+    assessment.level = grounded ? Level::None : level_for(assessment);
+    return assessment;
 }
 
-AlarmTracker::Decision AlarmTracker::update(const model::OwnState& own,
-                                            const model::AircraftObs& target, uint32_t now_ms) {
-    Decision d{};
-    d.assessment = assess(own, target, now_ms);
-    if (!d.assessment.valid) return d;
+AlarmTracker::Decision AlarmTracker::update(const model::Ownship& own,
+                                            const model::AircraftObservation& target,
+                                            uint32_t now_ms) {
+    Decision decision{};
+    decision.assessment = assess(own, target, now_ms);
+    if (!decision.assessment.valid) return decision;
 
     Slot* slot = slot_for(target, now_ms);
-    if (slot == nullptr) return d;
+    if (slot == nullptr) return decision;
 
     const uint32_t key = target.received.at_s * 1000u + target.received.into_ms;
-    if (key != slot->obs_key) {
-        slot->obs_key = key;
+    if (key != slot->reception_key) {
+        slot->reception_key = key;
         slot->seen_ms = now_ms;
     }
     slot->forget_ms = forget_ms(target);
@@ -97,11 +100,11 @@ AlarmTracker::Decision AlarmTracker::update(const model::OwnState& own,
         flight::on_ground(target.flight_state) || flight::on_ground(own.flight_state);
     const uint32_t floor_ms = grounded ? kGroundRenotifyFloorMs : kRenotifyFloorMs;
     if (now_ms - target.at_ms <= kAlertMaxAgeMs)
-        d.notify = notify_for(*slot, d.assessment.level, floor_ms, now_ms);
-    if (d.notify) slot->dismissed = false;
-    if (slot->dismissed) d.notify = false;
-    d.dismissed = slot->dismissed;
-    return d;
+        decision.notify = notify_for(*slot, decision.assessment.level, floor_ms, now_ms);
+    if (decision.notify) slot->dismissed = false;
+    if (slot->dismissed) decision.notify = false;
+    decision.dismissed = slot->dismissed;
+    return decision;
 }
 
 bool AlarmTracker::notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms) {
@@ -123,18 +126,20 @@ bool AlarmTracker::notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32
     return speak;
 }
 
-AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObs& target, uint32_t now_ms) {
+AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& target,
+                                           uint32_t now_ms) {
     Slot* free_slot = nullptr;
     Slot* oldest = nullptr;
-    for (Slot& s : slots_) {
-        if (s.used && s.address == target.address &&
-            s.address_mapping_table == target.address_mapping_table)
-            return &s;
-        if (!s.used) {
-            if (free_slot == nullptr) free_slot = &s;
+    for (Slot& candidate : slots_) {
+        if (candidate.used && candidate.address == target.address &&
+            candidate.address_mapping_table == target.address_mapping_table)
+            return &candidate;
+        if (!candidate.used) {
+            if (free_slot == nullptr) free_slot = &candidate;
             continue;
         }
-        if (oldest == nullptr || now_ms - s.seen_ms > now_ms - oldest->seen_ms) oldest = &s;
+        if (oldest == nullptr || now_ms - candidate.seen_ms > now_ms - oldest->seen_ms)
+            oldest = &candidate;
     }
     Slot* slot = free_slot != nullptr ? free_slot : oldest;
     if (slot == nullptr) return nullptr;
@@ -147,41 +152,42 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObs& target, uin
 }
 
 void AlarmTracker::withdraw(uint8_t address_mapping_table, uint32_t address) {
-    for (Slot& s : slots_) {
-        if (!s.used || s.address != address || s.address_mapping_table != address_mapping_table)
+    for (Slot& slot : slots_) {
+        if (!slot.used || slot.address != address ||
+            slot.address_mapping_table != address_mapping_table)
             continue;
-        s.notified_level = Level::None;
-        s.falling = false;
-        s.dismissed = false;
+        slot.notified_level = Level::None;
+        slot.falling = false;
+        slot.dismissed = false;
     }
 }
 
 void AlarmTracker::dismiss() {
-    for (Slot& s : slots_)
-        if (s.used && s.notified_level != Level::None) s.dismissed = true;
+    for (Slot& slot : slots_)
+        if (slot.used && slot.notified_level != Level::None) slot.dismissed = true;
 }
 
 bool AlarmTracker::dismissed() const {
     bool any = false;
-    for (const Slot& s : slots_) {
-        if (!s.used || s.notified_level == Level::None) continue;
-        if (!s.dismissed) return false;
+    for (const Slot& slot : slots_) {
+        if (!slot.used || slot.notified_level == Level::None) continue;
+        if (!slot.dismissed) return false;
         any = true;
     }
     return any;
 }
 
 void AlarmTracker::forget_stale(uint32_t now_ms) {
-    for (Slot& s : slots_) {
-        if (s.used && now_ms - s.seen_ms > s.forget_ms) s = Slot{};
+    for (Slot& slot : slots_) {
+        if (slot.used && now_ms - slot.seen_ms > slot.forget_ms) slot = Slot{};
     }
 }
 
 Level AlarmTracker::announced_level(uint32_t now_ms) const {
     Level level = Level::None;
-    for (const Slot& s : slots_) {
-        if (!s.used || s.dismissed || now_ms - s.seen_ms > kAlertMaxAgeMs) continue;
-        level = std::max(s.notified_level, level);
+    for (const Slot& slot : slots_) {
+        if (!slot.used || slot.dismissed || now_ms - slot.seen_ms > kAlertMaxAgeMs) continue;
+        level = std::max(slot.notified_level, level);
     }
     return level;
 }

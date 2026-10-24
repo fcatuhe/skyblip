@@ -11,28 +11,29 @@ namespace {
 
 // 1e-7 degrees of latitude per metre north, the same 11132 m/deg the position
 // maths uses, so a test distance and the code's distance cannot drift apart.
-int32_t lat_offset_for(int32_t north_m) {
+int32_t latitude_offset_for(int32_t north_m) {
     return static_cast<int32_t>((static_cast<int64_t>(north_m) * 1000000) / 11132);
 }
 
-model::OwnState own_at_equator() {
-    model::OwnState o{};
-    o.fix_valid = true;
-    o.lat_1e7 = 0;
-    o.lon_1e7 = 0;
-    o.alt_mm = 1000000;
-    return o;
+model::Ownship own_at_equator() {
+    model::Ownship own{};
+    own.fix_valid = true;
+    own.latitude_1e7 = 0;
+    own.longitude_1e7 = 0;
+    own.altitude_hae_mm = 1000000;
+    return own;
 }
 
-model::AircraftObs emitter(int32_t north_m, model::Source src = model::Source::AdslDirect) {
-    model::AircraftObs t{};
-    t.position_valid = true;
-    t.address = 0xABCD;
-    t.lat_1e7 = lat_offset_for(north_m);
-    t.lon_1e7 = 0;
-    t.alt_m = 1000;
-    t.source = src;
-    return t;
+model::AircraftObservation emitter(int32_t north_m,
+                                   model::Source source = model::Source::AdslDirect) {
+    model::AircraftObservation observation{};
+    observation.position_valid = true;
+    observation.address = 0xABCD;
+    observation.latitude_1e7 = latitude_offset_for(north_m);
+    observation.longitude_1e7 = 0;
+    observation.altitude_m = 1000;
+    observation.source = source;
+    return observation;
 }
 
 }  // namespace
@@ -47,30 +48,30 @@ TEST_CASE("range: an emitter carries the address and the system it was heard on"
 }
 
 TEST_CASE("range: an emitter without a position cannot be ranged") {
-    model::AircraftObs t = emitter(1000);
-    t.position_valid = false;
+    model::AircraftObservation observation = emitter(1000);
+    observation.position_valid = false;
     RangeRow row;
-    CHECK_FALSE(range_to(own_at_equator(), t, row));
+    CHECK_FALSE(range_to(own_at_equator(), observation, row));
 
-    model::OwnState blind = own_at_equator();
+    model::Ownship blind = own_at_equator();
     blind.fix_valid = false;
     CHECK_FALSE(range_to(blind, emitter(1000), row));
 }
 
 TEST_CASE("range: an aircraft directly overhead is no distance away, only above") {
-    model::AircraftObs t = emitter(0);
-    t.alt_m = 3000;
+    model::AircraftObservation observation = emitter(0);
+    observation.altitude_m = 3000;
     RangeRow row;
-    REQUIRE(range_to(own_at_equator(), t, row));
+    REQUIRE(range_to(own_at_equator(), observation, row));
     CHECK(row.up_m == 2000);
     CHECK(row.ground_m == 0);
 }
 
 TEST_CASE("range: distance is the ground track, and height above is its own figure") {
-    model::AircraftObs t = emitter(3000);
-    t.alt_m = 5000;
+    model::AircraftObservation observation = emitter(3000);
+    observation.altitude_m = 5000;
     RangeRow row;
-    REQUIRE(range_to(own_at_equator(), t, row));
+    REQUIRE(range_to(own_at_equator(), observation, row));
     CHECK(row.up_m == 4000);
     CHECK(row.ground_m == doctest::Approx(3000).epsilon(0.01));
 }
@@ -79,36 +80,36 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
     TrafficTable table;
     const int32_t ranges[6] = {8000, 1000, 5000, 300, 12000, 2500};
     for (int i = 0; i < 6; i++) {
-        model::AircraftObs t = emitter(ranges[i]);
-        t.address = 0x100u + static_cast<uint32_t>(i);
-        table.update(t, 100);
+        model::AircraftObservation observation = emitter(ranges[i]);
+        observation.address = 0x100u + static_cast<uint32_t>(i);
+        table.update(observation, 100);
     }
 
     RangeRow rows[4];
     const CallsignTable callsigns;
-    const int n = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
-    REQUIRE(n == 4);
+    const int ranked = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
+    REQUIRE(ranked == 4);
     CHECK(rows[0].address == 0x103);  // 300 m
     CHECK(rows[1].address == 0x101);  // 1000 m
     CHECK(rows[2].address == 0x105);  // 2500 m
     CHECK(rows[3].address == 0x102);  // 5000 m
-    for (int i = 1; i < n; i++) CHECK(rows[i - 1].ground_m <= rows[i].ground_m);
+    for (int i = 1; i < ranked; i++) CHECK(rows[i - 1].ground_m <= rows[i].ground_m);
 }
 
 TEST_CASE("range: ranking skips what it cannot range") {
     TrafficTable table;
-    model::AircraftObs positioned = emitter(4000);
+    model::AircraftObservation positioned = emitter(4000);
     positioned.address = 0x200;
     table.update(positioned, 100);
 
-    model::AircraftObs blind = emitter(1000);
+    model::AircraftObservation blind = emitter(1000);
     blind.address = 0x201;
     blind.position_valid = false;
     table.update(blind, 100);
 
     RangeRow rows[4];
     const CallsignTable callsigns;
-    const int n = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
-    CHECK(n == 1);
+    const int ranked = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
+    CHECK(ranked == 1);
     CHECK(rows[0].address == 0x200);
 }

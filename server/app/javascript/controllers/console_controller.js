@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { connect } from "#skyblip/ble"
 
-const COMMANDS = ["get", "defaults", "status", "timing", "flash", "radio", "update", "diag"]
+const COMMANDS = ["get", "defaults", "status", "timing", "flash", "radio", "update", "diagnostics"]
 
 export default class extends Controller {
   connect() {
@@ -12,11 +12,11 @@ export default class extends Controller {
     this.listen("send", "submit", event => this.sendLine(event))
     this.listen("sendjson", "submit", event => this.sendJson(event))
     this.listen("clearstream", "click", () => { this.field("stream").textContent = "-" })
-    this.field("commands").replaceChildren(...COMMANDS.map(cmd => {
+    this.field("commands").replaceChildren(...COMMANDS.map(command => {
       const button = document.createElement("button")
       button.type = "button"
-      button.textContent = cmd
-      button.addEventListener("click", () => this.command({ cmd }), { signal: this.session.signal })
+      button.textContent = command
+      button.addEventListener("click", () => this.command({ command }), { signal: this.session.signal })
       return button
     }))
     if (!navigator.bluetooth) {

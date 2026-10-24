@@ -36,7 +36,7 @@ export const rowsAft = g => height(g) - hotSpot(g);
 export function parse(text) {
   const words = [...text.matchAll(/(?<![0-9a-zA-Z])0x([0-9a-fA-F]{1,8})\s*,/g)].map(match => parseInt(match[1], 16));
   if (words.length > 2) {
-    const width = Number(text.match(/kGlyphW\s*=\s*(\d+)/)?.[1] ?? MAX_WIDTH);
+    const width = Number(text.match(/kGlyphWidth\s*=\s*(\d+)/)?.[1] ?? MAX_WIDTH);
     const origin = text.match(/kGlyphOriginRow\s*=\s*(\d+)/)?.[1];
     return fromWords(words, width, origin === undefined ? null : Number(origin));
   }
@@ -75,7 +75,7 @@ export function toText(g) {
 
 export function toCpp(g) {
   return [
-    `constexpr int kGlyphW = ${width(g)};`,
+    `constexpr int kGlyphWidth = ${width(g)};`,
     `constexpr int kGlyphOriginRow = ${hotSpot(g)};`,
     'constexpr uint32_t kOwnshipRows[] = {',
     ...g.pixels.map((row, r) => `    0x${hexRows(g)[r]},  // ${rowArt(row)}`),
@@ -84,7 +84,7 @@ export function toCpp(g) {
 }
 
 export function toCommand(g, typeCode) {
-  return JSON.stringify({ cmd: 'ownship', type: typeCode, w: width(g), o: hotSpot(g), rows: hexRows(g).join('') });
+  return JSON.stringify({ command: 'ownship', type: typeCode, w: width(g), o: hotSpot(g), rows: hexRows(g).join('') });
 }
 
 export function problems(g, limits) {

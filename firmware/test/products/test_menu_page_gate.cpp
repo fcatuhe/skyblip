@@ -18,26 +18,26 @@ namespace {
 // core/flight decides what a fix stream means, and the companion link's gate
 // reads what it decided. Standing still is on the ground; five seconds of
 // believed motion is airborne.
-void on_ground(Rig& rig, uint32_t& t) {
-    push_solution(rig, 0, 0);
-    rig.run(t, t + 200);
-    t += 200;
+void on_ground(Rig& rig, uint32_t& now_ms) {
+    push_fix(rig, 0, 0);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
 }
 
-void airborne(Rig& rig, uint32_t& t) {
+void airborne(Rig& rig, uint32_t& now_ms) {
     for (int i = 0; i < 14; i++) {
-        push_solution(rig, 50000, 1200);
-        rig.run(t, t + 500);
-        t += 500;
+        push_fix(rig, 50000, 1200);
+        rig.run(now_ms, now_ms + 500);
+        now_ms += 500;
     }
 }
 
-void hold_button(Rig& rig, uint32_t& t, uint32_t ms, bool down = true) {
+void hold_button(Rig& rig, uint32_t& now_ms, uint32_t held_ms, bool down = true) {
     rig.platform.board_gpio().button_down = down;
-    const uint32_t until = t + ms;
-    for (; t <= until; t += 50) {
-        rig.platform.clock().set_millis(t);
-        rig.product.step(t);
+    const uint32_t until = now_ms + held_ms;
+    for (; now_ms <= until; now_ms += 50) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
     }
 }
 
@@ -49,17 +49,17 @@ void hold_button(Rig& rig, uint32_t& t, uint32_t ms, bool down = true) {
 TEST_CASE("product: a prompt takes the page, and the taps already in flight cannot answer it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    on_ground(rig, t);
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
+    uint32_t now_ms = 100;
+    on_ground(rig, now_ms);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
     const go::AlarmVolume volume = rig.settings().alarm_volume;
 
     // A phone asks to overwrite the firmware while the pilot is tapping a value
     // up. The prompt takes the glass at once.
-    rig.send("{\"cmd\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(t, t + 300);
-    t += 300;
+    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
+    rig.run(now_ms, now_ms + 300);
+    now_ms += 300;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Dfu);
 
     // The thumb has not caught up: it keeps tapping at the rhythm that was
@@ -67,22 +67,22 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     // those taps authorises anything, and none of them reaches the value
     // either - a press stream that began before the question cannot answer it.
     for (int i = 0; i < 6; i++) {
-        rig.press(t);
-        CHECK_FALSE(rig.product.config().config().upload_allowed());
+        rig.press(now_ms);
+        CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     }
-    rig.run(t, t + 200);
-    t += 200;
-    CHECK(rig.product.config().config().pending() == comms::Pending::Dfu);
-    CHECK_FALSE(rig.product.config().config().upload_allowed());
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
+    CHECK_FALSE(rig.product.config_link().config().upload_allowed());
     CHECK(rig.settings().alarm_volume == volume);
 
     // The pilot stops, and the question is on the glass where it can be read.
-    rig.run(t, t + 4000);
-    t += 4000;
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Dfu);
     expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
-    expect.timeout_s = comms::kConfirmWindowMs / 1000;
+    expect.timeout_s = comms::kPromptForgetMs / 1000;
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),
@@ -91,11 +91,11 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 
     // Only now is it answerable, and only by the gesture: physical presence,
     // deliberately, after the reading.
-    rig.press(t);
-    rig.press(t);
-    rig.run(t, t + 200);
-    t += 200;
-    CHECK(rig.product.config().config().upload_allowed());
+    rig.press(now_ms);
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    CHECK(rig.product.config_link().config().upload_allowed());
 
     // Back on the rows, at the top: the pilot was reading something else in between.
     CHECK(rig.product.screen().mode() == go::Mode::Menu);
@@ -105,12 +105,12 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
 TEST_CASE("product: a long press in the middle of an edit still switches the device off") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
     const go::AlarmVolume volume = rig.settings().alarm_volume;
 
-    hold_button(rig, t, power::kLongPressMs + 300);
+    hold_button(rig, now_ms, power::kLongPressHoldMs + 300);
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK_FALSE(rig.product.screen().powered());
@@ -124,27 +124,27 @@ TEST_CASE("product: a long press in the middle of an edit still switches the dev
 TEST_CASE("product: the volume can be turned up in the air, where a phone is refused") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 100;
+    uint32_t now_ms = 100;
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
-    airborne(rig, t);
-    REQUIRE(rig.product.config().config().flight_state() == flight::FlightState::Airborne);
+    airborne(rig, now_ms);
+    REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Airborne);
 
     // The companion app cannot: an unattended phone rewriting the whole struct
     // mid-flight is what that rule is for.
-    rig.send("{\"cmd\":\"set\",\"alarm_volume\":2}");
-    rig.run(t, t + 300);
-    t += 300;
-    CHECK(rig.product.config().config().pending() == comms::Pending::None);
+    rig.send("{\"command\":\"set\",\"alarm_volume\":2}");
+    rig.run(now_ms, now_ms + 300);
+    now_ms += 300;
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     // The pilot, on the panel, can. Presence is the thing the phone lacks, and
     // an alarm that is too quiet under a headset is a thing you find out about
     // in the air.
-    open_menu(rig, t);
-    focus_on(rig, t, go::MenuRow::Volume);
-    change(rig, t);
-    change(rig, t);
-    run_past_the_write_settle(rig, t);
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::Volume);
+    change(rig, now_ms);
+    change(rig, now_ms);
+    run_past_the_write_settle(rig, now_ms);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
 
     go::Settings stored{};

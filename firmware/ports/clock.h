@@ -1,6 +1,6 @@
 // ports/clock.h: capability port: a monotonic clock core/ can read.
 //
-// millis() WRAPS. It is a 32-bit millisecond counter, so it counts to 49.7 days
+// milliseconds() WRAPS. It is a 32-bit millisecond counter, so it counts to 49.7 days
 // and then continues from zero, and this device is expected to fly through that
 // instant rather than reboot around it the way SoftRF does
 // (oss/SoftRF-lyusupov/.../src/platform/nRF52.h:270-276: a ground station may
@@ -22,7 +22,7 @@
 //
 // Nothing here needs an interval longer than 49.7 days, so no 64-bit accumulator
 // is maintained from this tick: the widest deadline in the tree is the rolling
-// duty-cycle hour (core/timing/channel.h) and the rest are seconds. micros() is
+// duty-cycle hour (core/timing/channel.h) and the rest are seconds. microseconds() is
 // already 64-bit and does not wrap in any life this device has, which is why
 // ports/rf.h arms slot deadlines on it and slot timing is not exposed to any of
 // the above.
@@ -41,8 +41,8 @@ namespace skyblip::ports {
 class Clock {
    public:
     virtual ~Clock() = default;
-    virtual uint32_t millis() const = 0;
-    virtual uint64_t micros() const = 0;
+    virtual uint32_t milliseconds() const = 0;
+    virtual uint64_t microseconds() const = 0;
 };
 
 }

@@ -10,7 +10,7 @@ namespace skyblip::go {
 // The dump's collector: it reads counters the device already keeps and writes
 // them into the one snapshot the companion link answers from
 // (core/comms/diagnostics.h), then puts the same table on the console every
-// kDiagnosticsDumpMs. No formatting and no policy live here - that is core's, and
+// kDiagnosticsDumpPeriodMs. No formatting and no policy live here - that is core's, and
 // host-tested there.
 //
 // Not a runtime::Service, deliberately. A service is handed roles, the bus and
@@ -27,14 +27,14 @@ template <class Product, class Sink>
 class DiagnosticsDump {
    public:
     void step(Product& product, uint32_t now_ms) {
-        comms::Diagnostics& snapshot = product.config().config().diagnostics();
+        comms::Diagnostics& snapshot = product.config_link().config().diagnostics();
         // Unsigned subtraction throughout, so the 49.7-day wrap of a 32-bit
         // millisecond counter costs one late dump and nothing else.
-        if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshMs) {
+        if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshPeriodMs) {
             refresh(product, snapshot, now_ms);
             refreshed_ms_ = now_ms;
         }
-        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpMs) {
+        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpPeriodMs) {
             dumped_ms_ = now_ms;
             emit(snapshot);
         }
@@ -47,38 +47,38 @@ class DiagnosticsDump {
     // Every read here is a const accessor of a counter that lives somewhere else.
     // Nothing is cleared by being read: a dump is a witness, and a witness that
     // consumes its evidence makes the second reader wrong.
-    void refresh(Product& product, comms::Diagnostics& d, uint32_t now_ms) {
+    void refresh(Product& product, comms::Diagnostics& snapshot, uint32_t now_ms) {
         const bus::State& state = product.state();
 
-        d.uptime_s = now_ms / 1000;
+        snapshot.uptime_s = now_ms / 1000;
 
-        d.noise_dbm = product.radio().noise_floor().dbm();
-        d.duty_permille = state.rf.duty_permille;
-        d.rx_ok = state.air.rx_ok;
-        d.rx_bad = state.air.rx_bad;
-        d.rx_wait = state.air.rx_wait;
-        d.rx_type = state.air.rx_type;
-        d.rx_unframed = state.air.rx_unframed;
-        d.rx_miskeyed = state.air.rx_miskeyed;
-        d.rx_noise = state.air.rx_noise;
-        d.rx_named = state.air.rx_named;
-        d.tx_ok = state.air.tx_ok;
-        d.tx_lost = state.air.tx_lost;
-        d.tx_named = state.air.tx_named;
-        d.tx_keyed_us = state.rf.last_tx_keyed_us;
-        d.tx_span_us = state.rf.last_tx_span_us;
+        snapshot.noise_dbm = product.radio().noise_floor().level_dbm();
+        snapshot.duty_permille = state.rf.duty_permille;
+        snapshot.rx_ok = state.air.rx_ok;
+        snapshot.rx_bad = state.air.rx_bad;
+        snapshot.rx_wait = state.air.rx_wait;
+        snapshot.rx_type = state.air.rx_type;
+        snapshot.rx_unframed = state.air.rx_unframed;
+        snapshot.rx_miskeyed = state.air.rx_miskeyed;
+        snapshot.rx_noise = state.air.rx_noise;
+        snapshot.rx_named = state.air.rx_named;
+        snapshot.tx_ok = state.air.tx_ok;
+        snapshot.tx_lost = state.air.tx_lost;
+        snapshot.tx_named = state.air.tx_named;
+        snapshot.tx_keyed_us = state.rf.last_tx_keyed_us;
+        snapshot.tx_span_us = state.rf.last_tx_span_us;
         const ports::RfDio1 dio1 = product.board().roles().rf.dio1();
-        d.dio1_armed = dio1.armed;
-        d.dio1_edges = dio1.edges;
-        d.dio1_missed = dio1.missed;
+        snapshot.dio1_armed = dio1.armed;
+        snapshot.dio1_edges = dio1.edges;
+        snapshot.dio1_missed = dio1.missed;
 
-        d.tracked = static_cast<uint32_t>(state.traffic.count());
-        d.alarm = traffic::to_number(state.alarm_level);
+        snapshot.tracked = static_cast<uint32_t>(state.traffic.count());
+        snapshot.alarm = traffic::to_number(state.alarm_level);
 
-        d.gnss_fixes = state.flight.gnss_solutions;
-        d.fix_valid = state.own.fix_valid;
-        d.resid_m = state.own.pred_resid_m;
-        d.resid_valid = state.own.pred_resid_valid;
+        snapshot.gnss_fixes = state.flight.gnss_solutions;
+        snapshot.fix_valid = state.own.fix_valid;
+        snapshot.residual_m = state.own.prediction_residual_m;
+        snapshot.residual_valid = state.own.prediction_residual_valid;
 
         // The receiver's own answers, which nothing else on the device reads: a
         // unit talking at a rate the devicetree did not ask for, or one whose fixes
@@ -86,36 +86,36 @@ class DiagnosticsDump {
         // generates. The part is reached through the board because it is a part and
         // not a role - there is no ports:: seam that could carry a firmware string.
         const auto& gnss = product.board().gnss();
-        d.gnss_baud = gnss.baud_rate();
-        d.gnss_config = gnss.config_state();
-        d.gnss_raises = gnss.raises();
-        d.gnss_raise_fallbacks = gnss.raise_fallbacks();
-        d.gnss_identified = gnss.identified();
-        d.gnss_firmware = gnss.firmware_version();
-        d.gnss_reject = gnss.reject_reason();
-        d.gnss_rejected = gnss.rejected();
-        d.gnss_overruns = gnss.port_overruns();
-        d.gnss_nav_ms = state.gnss.solution_phase_ms;
-        d.gnss_nav_valid = state.gnss.solution_phase_valid;
+        snapshot.gnss_baud = gnss.baud_rate();
+        snapshot.gnss_config = gnss.config_stage();
+        snapshot.gnss_raises = gnss.baud_raises();
+        snapshot.gnss_raise_fallbacks = gnss.raise_fallbacks();
+        snapshot.gnss_identified = gnss.identified();
+        snapshot.gnss_firmware = gnss.firmware_version();
+        snapshot.gnss_reject = gnss.last_reject();
+        snapshot.gnss_rejected = gnss.rejected();
+        snapshot.gnss_overruns = gnss.port_overruns();
+        snapshot.gnss_solution_phase_ms = state.gnss.solution_phase_ms;
+        snapshot.gnss_solution_phase_valid = state.gnss.solution_phase_valid;
 
         // The two counters core/power keeps and acts on nothing for: comparator
         // firings, and readings the sanity floor threw away. They tell a bench a
         // supply problem from a divider problem and they had no reader at all.
-        d.supply_warnings = product.power().supply_warnings();
-        d.battery_implausible = product.power().implausible_samples();
-        d.charge = product.power().charge_condition();
-        d.charge_warnings = product.power().charge_warnings();
+        snapshot.supply_warnings = product.power().supply_warnings();
+        snapshot.battery_implausible = product.power().implausible_samples();
+        snapshot.charge = product.power().charge_condition();
+        snapshot.charge_warnings = product.power().charge_warnings();
 
-        d.refreshes++;
+        snapshot.refreshes++;
     }
 
-    void emit(const comms::Diagnostics& d) {
+    void emit(const comms::Diagnostics& snapshot) {
         if (!sink_.ready()) return;
-        comms::DiagnosticsReport report(d, "diag");
-        char line[comms::DiagnosticsReport::kLineCap];
+        comms::DiagnosticsReport report(snapshot, "diagnostics");
+        char line[comms::DiagnosticsReport::kLineBytes];
         for (int i = 0; i < report.line_count(); i++) {
-            const int len = report.line(i, line, static_cast<int>(sizeof(line)));
-            if (len > 0) sink_.line(line, len);
+            const int length = report.line(i, line, static_cast<int>(sizeof(line)));
+            if (length > 0) sink_.line(line, length);
         }
     }
 

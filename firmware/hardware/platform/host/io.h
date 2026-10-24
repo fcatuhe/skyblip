@@ -18,14 +18,14 @@ struct Chips {
     models::Bhi260 imu;
 };
 
-// INFO: fc 26sep26 not the world clock: a hold that advanced it would make set_millis() wrap
+// INFO: fc 26sep26 not the world clock: a hold that advanced it would make set_milliseconds() wrap
 class Delay : public io::Delay {
    public:
     explicit Delay(Chips& chips) : chips_(chips) {}
 
-    void wait_at_least_us(uint32_t us) override {
-        chips_.radio.wait_at_least_us(us);
-        chips_.epd.wait_at_least_us(us);
+    void wait_at_least_us(uint32_t hold_us) override {
+        chips_.radio.wait_at_least_us(hold_us);
+        chips_.epd.wait_at_least_us(hold_us);
     }
 
    private:
@@ -64,18 +64,18 @@ class I2cBus : public io::I2c {
                (answers_[address >> 3] & static_cast<uint8_t>(1u << (address & 7))) != 0;
     }
 
-    bool write(uint8_t address, const uint8_t* data, size_t len) override {
+    bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
         if (!answers(address)) return false;
         io::I2c* device = route(address);
-        if (device) return device->write(address, data, len);
+        if (device) return device->write(address, data, bytes);
         return true;  // acknowledged, and nothing listened
     }
 
-    bool read(uint8_t address, uint8_t* data, size_t len) override {
+    bool read(uint8_t address, uint8_t* out, size_t bytes) override {
         if (!answers(address)) return false;
         io::I2c* device = route(address);
-        if (device) return device->read(address, data, len);
-        for (size_t i = 0; i < len; i++) data[i] = 0xFF;
+        if (device) return device->read(address, out, bytes);
+        for (size_t i = 0; i < bytes; i++) out[i] = 0xFF;
         return true;
     }
 
@@ -112,36 +112,36 @@ class Gpio : public io::Gpio {
 
     void wire(const io::PinMap& map) {
         for (int i = 0; i < map.count; i++) {
-            const io::PinRole& r = map.roles[i];
-            switch (r.fn) {
-                case io::PinFn::RadioBusy: chips_.radio.busy_pin = r.pin; break;
-                case io::PinFn::RadioReset: chips_.radio.reset_pin = r.pin; break;
-                case io::PinFn::RadioIrq: chips_.radio.dio1_pin = r.pin; break;
-                case io::PinFn::EpdDc: chips_.epd.dc = r.pin; break;
-                case io::PinFn::EpdReset: chips_.epd.rst = r.pin; break;
-                case io::PinFn::EpdBusy: chips_.epd.busy = r.pin; break;
-                case io::PinFn::EpdBacklight: chips_.epd.backlight_pin = r.pin; break;
+            const io::PinRole& role = map.roles[i];
+            switch (role.function) {
+                case io::PinFunction::RadioBusy: chips_.radio.busy_pin = role.pin; break;
+                case io::PinFunction::RadioReset: chips_.radio.reset_pin = role.pin; break;
+                case io::PinFunction::RadioDio1: chips_.radio.dio1_pin = role.pin; break;
+                case io::PinFunction::EpdDc: chips_.epd.dc_pin = role.pin; break;
+                case io::PinFunction::EpdReset: chips_.epd.reset_pin = role.pin; break;
+                case io::PinFunction::EpdBusy: chips_.epd.busy_pin = role.pin; break;
+                case io::PinFunction::EpdBacklight: chips_.epd.backlight_pin = role.pin; break;
             }
-            owner_[i] = r;
+            owner_[i] = role;
             count_ = i + 1;
         }
     }
 
     void set(int pin, bool level) override {
-        io::Gpio* t = route(pin);
-        if (t) t->set(pin, level);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->set(pin, level);
     }
     bool get(int pin) override {
-        io::Gpio* t = route(pin);
-        return t ? t->get(pin) : false;
+        io::Gpio* owner = route(pin);
+        return owner ? owner->get(pin) : false;
     }
     void mode_output(int pin) override {
-        io::Gpio* t = route(pin);
-        if (t) t->mode_output(pin);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->mode_output(pin);
     }
     void mode_input(int pin, bool pullup) override {
-        io::Gpio* t = route(pin);
-        if (t) t->mode_input(pin, pullup);
+        io::Gpio* owner = route(pin);
+        if (owner) owner->mode_input(pin, pullup);
     }
 
     bool button_down{false};
@@ -153,14 +153,14 @@ class Gpio : public io::Gpio {
     io::Gpio* route(int pin) {
         for (int i = 0; i < count_; i++) {
             if (owner_[i].pin != pin) continue;
-            switch (owner_[i].fn) {
-                case io::PinFn::RadioBusy:
-                case io::PinFn::RadioReset:
-                case io::PinFn::RadioIrq: return &chips_.radio;
-                case io::PinFn::EpdDc:
-                case io::PinFn::EpdReset:
-                case io::PinFn::EpdBusy:
-                case io::PinFn::EpdBacklight: return &chips_.epd;
+            switch (owner_[i].function) {
+                case io::PinFunction::RadioBusy:
+                case io::PinFunction::RadioReset:
+                case io::PinFunction::RadioDio1: return &chips_.radio;
+                case io::PinFunction::EpdDc:
+                case io::PinFunction::EpdReset:
+                case io::PinFunction::EpdBusy:
+                case io::PinFunction::EpdBacklight: return &chips_.epd;
             }
         }
         return nullptr;

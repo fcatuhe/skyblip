@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "core/util/hex.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 #include "doctest/doctest.h"
 
 namespace skyblip {
@@ -19,29 +19,29 @@ class ActivationVectors {
     static constexpr const char* kPath = "../schemas/activation.v1.vectors.json";
 
     ActivationVectors() {
-        std::FILE* f = std::fopen(kPath, "rb");
-        REQUIRE_MESSAGE(f != nullptr, "cannot open ", kPath);
+        std::FILE* file = std::fopen(kPath, "rb");
+        REQUIRE_MESSAGE(file != nullptr, "cannot open ", kPath);
         char chunk[512];
-        size_t n = 0;
-        while ((n = std::fread(chunk, 1, sizeof(chunk), f)) > 0) text_.append(chunk, n);
-        std::fclose(f);
+        size_t count = 0;
+        while ((count = std::fread(chunk, 1, sizeof(chunk), file)) > 0) text_.append(chunk, count);
+        std::fclose(file);
     }
 
     std::string text(const char* key) const {
         char value[512] = {0};
-        REQUIRE_MESSAGE(reader().get_str(key, value, sizeof(value)), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_string(key, value, sizeof(value)), "no key ", key);
         return value;
     }
 
     bool flag(const char* key) const {
         bool value = false;
-        REQUIRE_MESSAGE(reader().get_bool(key, value), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_boolean(key, value), "no key ", key);
         return value;
     }
 
     long number(const char* key) const {
         long value = 0;
-        REQUIRE_MESSAGE(reader().get_int(key, value), "no key ", key);
+        REQUIRE_MESSAGE(reader().read_integer(key, value), "no key ", key);
         return value;
     }
 

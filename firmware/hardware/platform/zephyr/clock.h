@@ -10,8 +10,8 @@ namespace skyblip::platform::zephyr {
 
 class Clock : public ports::Clock {
    public:
-    uint32_t millis() const override { return static_cast<uint32_t>(k_uptime_get()); }
-    uint64_t micros() const override { return k_ticks_to_us_floor64(k_uptime_ticks()); }
+    uint32_t milliseconds() const override { return static_cast<uint32_t>(k_uptime_get()); }
+    uint64_t microseconds() const override { return k_ticks_to_us_floor64(k_uptime_ticks()); }
 };
 
 }  // namespace skyblip::platform::zephyr

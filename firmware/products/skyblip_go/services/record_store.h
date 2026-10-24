@@ -9,14 +9,14 @@
 namespace skyblip::go {
 
 // INFO: fc 03oct26 the record that straddles into a page, then the ten the page holds
-constexpr uint32_t kRunMostSlots = (store::kPageBytes + kStoreRecordBytes - 1) / kStoreRecordBytes;
+constexpr uint32_t kMaxRunSlots = (store::kPageBytes + kStoreRecordBytes - 1) / kStoreRecordBytes;
 
 // INFO: fc 20sep26 a bulk erase still owes the dwell map its re-arm, so it goes a window at a time
 constexpr uint32_t kEraseCeilingSectors = 8;
 
 static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
                       static_cast<uint32_t>(timing::kJitterGuardMs) <
-                  static_cast<uint32_t>(timing::kUplinkRxEnd - timing::kUplinkRxStart),
+                  static_cast<uint32_t>(timing::kUplinkRxEndMs - timing::kUplinkRxStartMs),
               "claiming a sector no longer fits inside the narrowest dwell the map offers");
 
 enum class Append : uint8_t { Ok, Deferred, NoSector, Fault };
@@ -73,7 +73,7 @@ class RecordStore {
     void continue_read();
     void abandon_read() { reading_.active = false; }
     bool reading() const { return reading_.active; }
-    void ack(uint16_t to, bool ok, const char* reason);
+    void acknowledge(uint16_t link_session, bool ok, const char* reason);
 
    private:
     struct Tail {
@@ -83,7 +83,7 @@ class RecordStore {
 
     struct Reading {
         bool active{false};
-        uint16_t to{0};
+        uint16_t link_session{0};
         uint32_t session{0};
         comms::LogWindow window{};
         int next{0};
@@ -101,7 +101,7 @@ class RecordStore {
     void answer_list(const comms::LogRequest& request);
     void answer_read(const comms::LogRequest& request);
     bool read_records(uint32_t session_id, uint32_t from, int count);
-    void reply(uint16_t to, int len);
+    void reply(uint16_t link_session, int bytes);
     comms::LogStore selector() const { return owner_; }
 
     RecordPool& pool_;

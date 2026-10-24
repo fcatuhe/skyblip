@@ -154,7 +154,7 @@ TEST_CASE("bhi260 store: a header that is not ours is corrupt, not an image") {
 
 TEST_CASE("bhi260 store: a flash that does not answer is unreadable, for checks and writes") {
     Flash flash{kSectors};
-    flash.set_present(false);
+    flash.set_fitted(false);
     parts::Bhi260ImageStore store{flash};
     store.check();
     CHECK(store.holding() == Holding::Unreadable);

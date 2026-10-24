@@ -14,12 +14,12 @@ class TappedWire : public io::Uart {
    public:
     explicit TappedWire(models::L76k& chip) : chip_(chip) {}
 
-    size_t write(const uint8_t* data, size_t len) override { return chip_.write(data, len); }
+    size_t write(const uint8_t* data, size_t bytes) override { return chip_.write(data, bytes); }
 
-    size_t read(uint8_t* out, size_t cap) override {
-        const size_t n = chip_.read(out, cap);
-        heard_.append(reinterpret_cast<const char*>(out), n);
-        return n;
+    size_t read(uint8_t* out, size_t capacity) override {
+        const size_t bytes = chip_.read(out, capacity);
+        heard_.append(reinterpret_cast<const char*>(out), bytes);
+        return bytes;
     }
 
     size_t available() override { return chip_.available(); }
@@ -41,12 +41,12 @@ struct Burst {
 };
 
 Burst read_burst(const std::string& wire) {
-    Burst b{};
+    Burst burst{};
     const size_t rmc = wire.find("$GPRMC");
-    if (rmc == std::string::npos) return b;
-    b.ahead_of_fix_bytes = static_cast<uint32_t>(wire.find('\n', rmc) + 1);
-    b.carried_levels = wire.find("GSV,") < rmc;
-    return b;
+    if (rmc == std::string::npos) return burst;
+    burst.ahead_of_fix_bytes = static_cast<uint32_t>(wire.find('\n', rmc) + 1);
+    burst.carried_levels = wire.find("GSV,") < rmc;
+    return burst;
 }
 
 uint8_t in_view(const models::L76k& chip) {
@@ -129,18 +129,18 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
     int with_levels = 0;
     int clean = 0;
     uint32_t paced_ms = 0;
-    for (uint32_t t = kBringUpLeadMs + 7010; t < kBringUpLeadMs + 17010; t += 1000) {
-        run(gnss, chip, t, t + 990);
-        const Burst b = read_burst(wire.take());
-        const uint32_t fix_ms = parts::wire_ms(b.ahead_of_fix_bytes, gnss.baud_rate());
-        if (b.carried_levels) {
+    for (uint32_t now_ms = kBringUpLeadMs + 7010; now_ms < kBringUpLeadMs + 17010; now_ms += 1000) {
+        run(gnss, chip, now_ms, now_ms + 990);
+        const Burst burst = read_burst(wire.take());
+        const uint32_t fix_ms = parts::wire_ms(burst.ahead_of_fix_bytes, gnss.baud_rate());
+        if (burst.carried_levels) {
             with_levels++;
             paced_ms = fix_ms;
         } else if (fix_ms <= parts::L76k::kBurstMs) {
             clean++;
         }
         CHECK(gnss.sky().count() == in_view(chip));
-        CHECK(gnss.levels_fresh() == b.carried_levels);
+        CHECK(gnss.levels_fresh() == burst.carried_levels);
     }
 
     CHECK(with_levels == 2);
@@ -151,16 +151,15 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
 
 // At the rate the receiver boots at, the widest GSV set did not fit in the second the fix rides.
 TEST_CASE("l76k: the satellites-in-view burst fits the second only at the raised rate") {
-    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kBaudRate) >
+    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           parts::L76k::kSolutionPeriodMs);
     CHECK(parts::L76k::kSearchingBurstMs < parts::L76k::kSolutionPeriodMs);
-    CHECK(parts::L76k::kSolutionPeriodMs == parts::L76k::kFixPeriodMs);
 }
 
 // A receiver still searching reports satellites in view it is not yet tracking.
 TEST_CASE("l76k: a satellite in view with no level is not a satellite at zero dB-Hz") {
     models::L76k chip;
-    chip.fix = false;
+    chip.fix_valid = false;
     parts::L76k gnss(chip, chip);
     run(gnss, chip, 0, kBringUpLeadMs + 4000);
     gnss.request_satellites_in_view(true);

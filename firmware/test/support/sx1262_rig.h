@@ -7,8 +7,8 @@
 
 namespace skyblip {
 
-inline parts::Sx1262 make(models::Sx1262& f) {
-    return parts::Sx1262(f, f, f, f.busy_pin, f.reset_pin, f.dio1_pin);
+inline parts::Sx1262 driver_for(models::Sx1262& chip) {
+    return parts::Sx1262(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
 }
 
 }  // namespace skyblip

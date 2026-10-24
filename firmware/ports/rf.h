@@ -7,62 +7,62 @@
 
 namespace skyblip::ports {
 
-enum class RfMode : uint8_t { Idle, RxMband, RxOband };
+enum class RfMode : uint8_t { Idle, RxMBand, RxOBand };
 
 // One armed dwell, in absolute microseconds on the clock the executor reads.
 // A dwell that cannot complete before end_us is refused, never truncated on air:
 // ADS-L 4 SRD-860 issue 2 §C.5 requires a burst to finish inside its slot.
 //
-// A dwell may carry one transmission: the executor receives on freq_hz until
+// A dwell may carry one transmission: the executor receives on frequency_hz until
 // tx_at_us, puts the burst on air, and returns to receiving for the remainder.
 // Splitting that into two plans would leave the slot deaf between them.
 struct RfPlan {
     uint64_t start_us{0};
     uint64_t end_us{0};
     RfMode mode{RfMode::Idle};
-    uint32_t freq_hz{0};
+    uint32_t frequency_hz{0};
     // What the receiver's sync detector matches during this dwell, and how many
     // bytes it reads once it has. A window can be shared by two systems
     // (core/protocol/air.h), so this is what the dwell listens FOR, never which
     // protocol it expects to get.
     const uint8_t* sync{nullptr};
     uint8_t sync_bits{0};
-    uint8_t rx_len{0};
+    uint8_t rx_bytes{0};
     // And what the modem has to be programmed to before any of that means
     // anything. The two bands are two modulations, not one modulation on two
     // frequencies (ADS-L 4 SRD-860 issue 2 §C.2 against §C.4), so a dwell that
-    // carried only freq_hz retuned the synthesiser and left the receiver
+    // carried only frequency_hz retuned the synthesiser and left the receiver
     // framing the wrong band's chip rate. Zero means "whatever the last dwell
     // used", which is what a plan built before this field existed asked for.
     // gaussian_bt_e2 is the Gaussian filter's BT in hundredths; 0 is unshaped.
     uint32_t bitrate{0};
-    uint32_t fdev_hz{0};
+    uint32_t deviation_hz{0};
     uint32_t bandwidth_hz{0};
     uint16_t gaussian_bt_e2{0};
     // The reference's own error, in tenths of a ppm, positive upwards. It travels
-    // with the dwell rather than being programmed once at boot because freq_hz
+    // with the dwell rather than being programmed once at boot because frequency_hz
     // is: the executor retunes on every dwell, so a trim that was not part of the
     // plan would be a value the next retune throws away.
-    int16_t freq_corr_e1_ppm{0};
+    int16_t frequency_correction_e1_ppm{0};
     const uint8_t* tx{nullptr};
-    uint8_t tx_len{0};
+    uint8_t tx_bytes{0};
     // INFO: fc 15sep26 the burst keys here, full stop: nothing the receiver hears moves it
     uint64_t tx_at_us{0};
 };
 
 struct RfBurst {
     const uint8_t* chips{nullptr};
-    uint8_t len{0};
+    uint8_t bytes{0};
     uint64_t at_us{0};
 };
 
 struct RfBursts {
-    static constexpr uint8_t kCapacity = 2;
+    static constexpr uint8_t kMaxBursts = 2;
     static constexpr uint64_t kNever = UINT64_MAX;
-    RfBurst burst[kCapacity]{};
+    RfBurst burst[kMaxBursts]{};
     uint8_t count{0};
 
-    bool full() const { return count == kCapacity; }
+    bool full() const { return count == kMaxBursts; }
 
     // INFO: fc 29sep26 none while one is on air: the next stages into the buffer it is sent from
     uint64_t stage_at_us(uint8_t keyed, uint8_t done, uint64_t lead_us) const {
@@ -77,25 +77,25 @@ struct RfBursts {
         return false;
     }
 
-    bool add(const RfBurst& b) {
-        if (holds(b.at_us)) return true;
+    bool add(const RfBurst& added) {
+        if (holds(added.at_us)) return true;
         if (full()) return false;
         uint8_t at = count++;
-        for (; at > 0 && burst[at - 1].at_us > b.at_us; at--) burst[at] = burst[at - 1];
-        burst[at] = b;
+        for (; at > 0 && burst[at - 1].at_us > added.at_us; at--) burst[at] = burst[at - 1];
+        burst[at] = added;
         return true;
     }
 
     static RfBursts of(const RfPlan& plan) {
         RfBursts bursts{};
-        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_len, plan.tx_at_us});
+        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us});
         return bursts;
     }
 };
 
 // INFO: fc 15sep26 a diagnostic the pilot reads, never a gate: core/timing/README.md
 struct RfCarrier {
-    int8_t dbm{0};
+    int8_t level_dbm{0};
     uint32_t samples{0};
 };
 
@@ -138,22 +138,22 @@ struct RfSwitch {
 // of change, and how many dwells armed ahead were still not listening at their start.
 struct RfSwitching {
     uint32_t hop_us{0};
-    uint32_t to_oband_us{0};
-    uint32_t to_mband_us{0};
-    uint32_t late{0};
-    uint32_t count{0};
+    uint32_t to_o_band_us{0};
+    uint32_t to_m_band_us{0};
+    uint32_t late_starts{0};
+    uint32_t switches{0};
     RfSwitch last{};
 
     void note(const RfSwitch& change) {
-        count++;
+        switches++;
         last = change;
-        if (change.late_start()) late++;
+        if (change.late_start()) late_starts++;
         uint32_t* worst = nullptr;
         const RfMode from = change.from;
         const RfMode to = change.to;
-        if (to == RfMode::RxOband && from == RfMode::RxMband) worst = &to_oband_us;
-        if (to == RfMode::RxMband && from == RfMode::RxOband) worst = &to_mband_us;
-        if (to == RfMode::RxMband && from == RfMode::RxMband && change.to_hz != change.from_hz)
+        if (to == RfMode::RxOBand && from == RfMode::RxMBand) worst = &to_o_band_us;
+        if (to == RfMode::RxMBand && from == RfMode::RxOBand) worst = &to_m_band_us;
+        if (to == RfMode::RxMBand && from == RfMode::RxMBand && change.to_hz != change.from_hz)
             worst = &hop_us;
         if (worst != nullptr && change.took_us() > *worst) *worst = change.took_us();
     }

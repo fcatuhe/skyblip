@@ -1,9 +1,9 @@
-L{"cmd":"list"}
-L{"cmd":"list","index":0}
-L{"cmd":"read","session":1785628800,"from":0,"count":8}
-L{"cmd":"read","session":1785628800,"from":20,"count":3}
-l{"cmd":"read","session":1785628800,"log":"diagnostics","from":3}
-L{"cmd":"list","log":"diagnostics"}
-L{"cmd":"erase","log":"flights"}
+L{"command":"list"}
+L{"command":"list","index":0}
+L{"command":"read","session":1785628800,"from":0,"count":8}
+L{"command":"read","session":1785628800,"from":20,"count":3}
+l{"command":"read","session":1785628800,"log":"diagnostics","from":3}
+L{"command":"list","log":"diagnostics"}
+L{"command":"erase","log":"flights"}
 P
-L{"cmd":"list"}
+L{"command":"list"}

@@ -9,8 +9,9 @@
 namespace skyblip::boards::t_echo_plus {
 
 // INFO: fc 19sep26 a bench read the g-meter inverted, so the chip is face down as well as turned
-inline events::AccelSample device_frame(const parts::Acceleration& chip, uint32_t now_ms) {
-    return events::AccelSample{chip.y_mg, chip.x_mg, static_cast<int16_t>(-chip.z_mg), now_ms};
+inline events::AccelerometerSample device_frame(const parts::Acceleration& chip, uint32_t now_ms) {
+    return events::AccelerometerSample{chip.y_mg, chip.x_mg, static_cast<int16_t>(-chip.z_mg),
+                                       now_ms};
 }
 
 }  // namespace skyblip::boards::t_echo_plus

@@ -17,18 +17,18 @@ namespace {
 constexpr int kRimAheadY = 13;
 constexpr int kRingTopY = 24;
 
-RadarSnapshot plotting_all(RadarTarget* targets, int n) {
-    RadarSnapshot snap = flying(0);
-    snap.plot = RadarPlot::All;
-    snap.targets = targets;
-    snap.n_targets = n;
-    snap.heard = n;
-    return snap;
+RadarSnapshot plotting_all(RadarTarget* targets, int count) {
+    RadarSnapshot snapshot = flying(0);
+    snapshot.plot = RadarPlot::All;
+    snapshot.targets = targets;
+    snapshot.target_count = count;
+    snapshot.heard_count = count;
+    return snapshot;
 }
 
-bool diamond_on(const Glass& fb, int x, int y) {
-    return fb.get_pixel(x - 7, y) && fb.get_pixel(x + 7, y) && fb.get_pixel(x, y - 7) &&
-           fb.get_pixel(x, y + 7) && !fb.get_pixel(x, y);
+bool diamond_on(const Glass& canvas, int x, int y) {
+    return canvas.get_pixel(x - 7, y) && canvas.get_pixel(x + 7, y) && canvas.get_pixel(x, y - 7) &&
+           canvas.get_pixel(x, y + 7) && !canvas.get_pixel(x, y);
 }
 
 }  // namespace
@@ -64,10 +64,10 @@ TEST_CASE("radar rim: the ring shrinks to leave the rim its band, and the range 
 TEST_CASE("radar rim: a pinned aircraft's leader is the part of its minute inside the ring") {
     // 5 NM ahead at 70 m/s south is 2.73 NM in a minute: 52 px out, inside the 76 px ring.
     RadarTarget inbound[1] = {{5 * kMetresPerNm, 0, 0, Level::None, 0, false, 70000, 18000}};
-    const Glass fb = radar(plotting_all(inbound, 1));
-    CHECK(ink_in(fb, 98, 30, 102, 44) > 0);
-    CHECK(ink_in(fb, 98, 56, 102, 90) == 0);
-    CHECK(ink_in(fb, 98, 21, 102, kRingTopY) == 0);
+    const Glass canvas = radar(plotting_all(inbound, 1));
+    CHECK(ink_in(canvas, 98, 30, 102, 44) > 0);
+    CHECK(ink_in(canvas, 98, 56, 102, 90) == 0);
+    CHECK(ink_in(canvas, 98, 21, 102, kRingTopY) == 0);
 
     RadarTarget crossing[1] = {{5 * kMetresPerNm, 0, 0, Level::None, 0, false, 30000, 9000}};
     const Glass passing = radar(plotting_all(crossing, 1));
@@ -77,9 +77,9 @@ TEST_CASE("radar rim: a pinned aircraft's leader is the part of its minute insid
 TEST_CASE("radar rim: marks that would overlap are one mark, with the count beside it") {
     RadarTarget pair[2] = {{6 * kMetresPerNm, 0, 0, Level::None},
                            {6 * kMetresPerNm + 800, 200, 250, Level::None}};
-    const Glass fb = radar(plotting_all(pair, 2));
-    CHECK(diamond_on(fb, 100, kRimAheadY));
-    CHECK(reads_in(fb, "2", 108, 5, 125, 22));
+    const Glass canvas = radar(plotting_all(pair, 2));
+    CHECK(diamond_on(canvas, 100, kRimAheadY));
+    CHECK(reads_in(canvas, "2", 108, 5, 125, 22));
 }
 
 // The one drawn is the one a pilot needs first: the advisory, then the nearest in altitude.
@@ -100,9 +100,9 @@ TEST_CASE("radar rim: a count gives way to another aircraft's mark") {
     RadarTarget crowded[3] = {{6 * kMetresPerNm, 0, 0, Level::None},
                               {6 * kMetresPerNm + 800, 200, 250, Level::None},
                               {10870, 2310, 0, Level::None}};
-    const Glass fb = radar(plotting_all(crowded, 3));
-    CHECK_FALSE(reads_in(fb, "2", 105, 3, 130, 25));
-    CHECK(reads_in(fb, "2", 75, 3, 95, 25));
+    const Glass canvas = radar(plotting_all(crowded, 3));
+    CHECK_FALSE(reads_in(canvas, "2", 105, 3, 130, 25));
+    CHECK(reads_in(canvas, "2", 75, 3, 95, 25));
 }
 
 TEST_CASE("radar rim: abeam, the count stands under its mark") {
@@ -113,11 +113,11 @@ TEST_CASE("radar rim: abeam, the count stands under its mark") {
 
 TEST_CASE("radar rim: an aircraft astern steps out from under the range label") {
     RadarTarget astern[1] = {{-6 * kMetresPerNm, 0, 0, Level::None}};
-    const Glass fb = radar(plotting_all(astern, 1));
+    const Glass canvas = radar(plotting_all(astern, 1));
     const Glass empty = radar(plotting_all(nullptr, 0));
     // the label's patch on the rim layout: x 84..115, y 164..185
-    CHECK(ink_in(fb, 84, 164, 116, 186) == ink_in(empty, 84, 164, 116, 186));
-    CHECK(ink_in(fb, 119, 172, 137, 192) > 0);
+    CHECK(ink_in(canvas, 84, 164, 116, 186) == ink_in(empty, 84, 164, 116, 186));
+    CHECK(ink_in(canvas, 119, 172, 137, 192) > 0);
 }
 
 // A mark is ink on the glass and never a patch: FLIGHT, the clock and the next mark stay whole.
@@ -125,15 +125,15 @@ TEST_CASE("radar rim: a mark and its count take no ink off the glass") {
     RadarTarget astern[6] = {{-11000, -9000, 0, Level::None}, {-11300, -9100, 200, Level::None},
                              {-14000, -4000, 0, Level::None}, {-14000, 4000, 0, Level::None},
                              {-11000, 9000, 0, Level::None},  {-9000, 12000, 0, Level::None}};
-    const Glass fb = radar(plotting_all(astern, 6));
+    const Glass canvas = radar(plotting_all(astern, 6));
     RadarSnapshot unplotted = plotting_all(nullptr, 0);
-    unplotted.heard = 6;
+    unplotted.heard_count = 6;
     const Glass empty = radar(unplotted);
 
     int erased = 0;
-    for (int y = 0; y < kGlassH; y++)
-        for (int x = 0; x < kGlassW; x++)
-            if (empty.get_pixel(x, y) && !fb.get_pixel(x, y)) erased++;
+    for (int y = 0; y < kGlassHeight; y++)
+        for (int x = 0; x < kGlassWidth; x++)
+            if (empty.get_pixel(x, y) && !canvas.get_pixel(x, y)) erased++;
     CHECK(erased == 0);
-    CHECK(ink_in(fb, 0, 150, 200, 200) > ink_in(empty, 0, 150, 200, 200));
+    CHECK(ink_in(canvas, 0, 150, 200, 200) > ink_in(empty, 0, 150, 200, 200));
 }

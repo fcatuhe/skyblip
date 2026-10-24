@@ -31,18 +31,18 @@ namespace skyblip::platform::zephyr {
 class Console {
    public:
     bool ready() const {
-        const struct device* dev = console_device();
-        if (dev == nullptr || !device_is_ready(dev)) return false;
+        const struct device* console = console_device();
+        if (console == nullptr || !device_is_ready(console)) return false;
         uint32_t dtr = 0;
-        const int err = uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
-        if (err == -ENOSYS || err == -ENOTSUP) return true;
-        if (err != 0) return false;
+        const int error = uart_line_ctrl_get(console, UART_LINE_CTRL_DTR, &dtr);
+        if (error == -ENOSYS || error == -ENOTSUP) return true;
+        if (error != 0) return false;
         return dtr != 0;
     }
 
     // text is NUL-terminated by the formatter (core/comms/diagnostics.h), which
-    // also bounds its length; len is passed for the sinks that want it.
-    void line(const char* text, int /*len*/) { printk("%s\n", text); }
+    // also bounds its length; length is passed for the sinks that want it.
+    void line(const char* text, int /*length*/) { printk("%s\n", text); }
 
    private:
     static const struct device* console_device() {

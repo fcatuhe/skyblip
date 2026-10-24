@@ -33,8 +33,8 @@ TEST_CASE("battery: the trim is a signed millivolt offset, and zero is the ident
 
     CHECK(calibrated_mv(3800, -40) == 3760);
     CHECK(calibrated_mv(3800, 40) == 3840);
-    CHECK(calibrated_mv(3800, kCalibrationLimitMv) == 3800u + kCalibrationLimitMv);
-    CHECK(calibrated_mv(3800, -kCalibrationLimitMv) == 3800u - kCalibrationLimitMv);
+    CHECK(calibrated_mv(3800, kCalibrationCeilingMv) == 3800u + kCalibrationCeilingMv);
+    CHECK(calibrated_mv(3800, -kCalibrationCeilingMv) == 3800u - kCalibrationCeilingMv);
 }
 
 // The bound belongs to the settings boundary (core/settings validates it on the
@@ -58,19 +58,19 @@ TEST_CASE("battery: the trimmed sample is the same sample, charger state and all
     // and the cutoff monitor read the cell at all, and a trim has no opinion
     // about it.
     events::BatterySample on_the_cable{};
-    on_the_cable.millivolts = 4000;
+    on_the_cable.divider_mv = 4000;
     on_the_cable.external_power = true;
     CHECK(calibrated(on_the_cable, -60).external_power);
-    CHECK(calibrated(on_the_cable, -60).millivolts == 3940);
+    CHECK(calibrated(on_the_cable, -60).divider_mv == 3940);
 
     // The boundary that matters: this unit reads 60 mV high, so a cell the raw
     // sample puts above the low-battery warning is really below it, and both
     // readers must agree on which side of the line it is.
     events::BatterySample raw{};
-    raw.millivolts = 3540;
+    raw.divider_mv = 3540;
     const events::BatterySample trimmed = calibrated(raw, -60);
-    CHECK(raw.millivolts > kCriticalMv);
-    CHECK(trimmed.millivolts < kCriticalMv);
+    CHECK(raw.divider_mv > kCriticalMv);
+    CHECK(trimmed.divider_mv < kCriticalMv);
 
     Gauge gauge;
     CutoffMonitor monitor;
@@ -82,10 +82,10 @@ TEST_CASE("battery: the trimmed sample is the same sample, charger state and all
         untrimmed_gauge.apply(raw);
         untrimmed_monitor.apply(raw);
     }
-    CHECK(gauge.state().millivolts == 3480);
+    CHECK(gauge.state().cell_mv == 3480);
     CHECK(monitor.level() == PowerLevel::Critical);
     // The same unit, uncalibrated, says the cell is fine.
-    CHECK(untrimmed_gauge.state().millivolts == 3540);
+    CHECK(untrimmed_gauge.state().cell_mv == 3540);
     CHECK(untrimmed_monitor.level() != PowerLevel::Critical);
 }
 
@@ -96,21 +96,21 @@ TEST_CASE("battery: a unit that reads high is corrected by one number from the l
     constexpr uint16_t kBenchMv = 3800;
     constexpr uint16_t kThisUnitReadsMv = 3850;
 
-    go::Settings s = go::defaults();
+    go::Settings settings = go::defaults();
     const char* patch = "{\"battery_offset_mv\":-50}";
-    REQUIRE(go::apply_json(s, patch, 25) == Status::Ok);
+    REQUIRE(go::apply_json(settings, patch, 25) == Status::Ok);
 
     events::BatterySample sample{};
-    sample.millivolts = kThisUnitReadsMv;
+    sample.divider_mv = kThisUnitReadsMv;
 
     Gauge uncalibrated;
     Gauge trimmed;
     for (int i = 0; i < 3; i++) {
         uncalibrated.apply(sample);
-        trimmed.apply(calibrated(sample, s.battery_offset_mv));
+        trimmed.apply(calibrated(sample, settings.battery_offset_mv));
     }
-    CHECK(uncalibrated.state().millivolts == kThisUnitReadsMv);
-    CHECK(trimmed.state().millivolts == kBenchMv);
+    CHECK(uncalibrated.state().cell_mv == kThisUnitReadsMv);
+    CHECK(trimmed.state().cell_mv == kBenchMv);
     CHECK(trimmed.state().percent == percent_from_mv(kBenchMv));
     // Ten percentage points of gauge error, from a divider inside tolerance.
     CHECK(int(uncalibrated.state().percent) == 65);
@@ -123,12 +123,12 @@ TEST_CASE("product: a charge however long leaves the trim where the line set it"
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().battery_offset_mv = -15;
 
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     rig.platform.battery().external_power = true;
-    rig.platform.battery().millivolts = 3960;
-    rig.run(t, t + 10000);
-    t += 10000;
-    rig.platform.battery().millivolts = 4160;
-    rig.run(t, t + 300000);
+    rig.platform.battery().divider_mv = 3960;
+    rig.run(now_ms, now_ms + 10000);
+    now_ms += 10000;
+    rig.platform.battery().divider_mv = 4160;
+    rig.run(now_ms, now_ms + 300000);
     CHECK(int(rig.settings().battery_offset_mv) == -15);
 }

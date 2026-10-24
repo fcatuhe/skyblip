@@ -6,10 +6,10 @@
 
 namespace skyblip::go {
 
-constexpr int kGlassW = boards::t_echo_plus::kGlassW;
-constexpr int kGlassH = boards::t_echo_plus::kGlassH;
+constexpr int kGlassWidth = boards::t_echo_plus::kGlassWidth;
+constexpr int kGlassHeight = boards::t_echo_plus::kGlassHeight;
 
-using Glass = ui::Panel<kGlassW, kGlassH>;
+using Glass = ui::Panel<kGlassWidth, kGlassHeight>;
 
 }  // namespace skyblip::go
 

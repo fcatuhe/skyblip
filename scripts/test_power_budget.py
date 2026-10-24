@@ -5,7 +5,7 @@
 
 Stdlib alone, no radio and no clock. Every record here is handcrafted bytes put
 through the same chunk decoder and session sink blip.py fetch uses, so a Duty
-field that moves in firmware/core/diag/payload.h fails here rather than reading
+field that moves in firmware/core/diagnostics/payload.h fails here rather than reading
 as a quiet zero.
 """
 import base64
@@ -24,7 +24,7 @@ import blip_records as records  # noqa: E402
 import power_budget  # noqa: E402
 
 FIRMWARE = pathlib.Path(__file__).resolve().parents[1] / "firmware"
-PAYLOAD_H = FIRMWARE / "core" / "diag" / "payload.h"
+PAYLOAD_H = FIRMWARE / "core" / "diagnostics" / "payload.h"
 CAPABILITIES_H = FIRMWARE / "ports" / "capabilities.h"
 TRANSMIT_H = FIRMWARE / "core" / "timing" / "transmit.h"
 
@@ -100,27 +100,27 @@ def end(at_s, flags=PHASE_VALID):
 def discharging(seconds, from_percent=100, to_percent=0, closing_level="flat", rx_share=0.0,
                 start_s=0, clock=0, period_s=30):
     """A Power and a Duty record every period, then the pair a parking capture closes on."""
-    raws = []
+    raw_records = []
     for at in list(range(0, seconds, period_s)) + [seconds]:
         percent = round(from_percent + (to_percent - from_percent) * at / seconds)
         level = closing_level if at == seconds else "normal" if percent > 20 else "low"
-        raws.append(power(start_s + at, cell_mv=4187 - 986 * at // seconds, percent=percent,
+        raw_records.append(power(start_s + at, cell_mv=4187 - 986 * at // seconds, percent=percent,
                           level=level, flags=PHASE_VALID | GAUGE_VALID | clock))
-        raws.append(duty(start_s + at, rx_armed_ms=int(rx_share * at * 1000),
+        raw_records.append(duty(start_s + at, rx_armed_ms=int(rx_share * at * 1000),
                          flags=PHASE_VALID | clock))
-    return raws
+    return raw_records
 
 
 def whole_run(seconds, **kwargs):
     return [boot(0)] + discharging(seconds, **kwargs) + [end(seconds)]
 
 
-def session_lines(raws, session=1, closed=True, truncated=False, missing=()):
+def session_lines(raw_records, session=1, closed=True, truncated=False, missing=()):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
-    encoded = base64.b64encode(b"".join(raws)).decode("ascii")
+    encoded = base64.b64encode(b"".join(raw_records)).decode("ascii")
     decoded = records.decode_chunk("diagnostics", encoded, 0, 0)
     lines = []
-    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raws),
+    sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": closed, "truncated": truncated},
                                lines.append)
     for record in decoded:
@@ -141,8 +141,8 @@ class Case(unittest.TestCase):
         path.write_text("".join(json.dumps(line) + "\n" for line in lines), encoding="utf-8")
         return str(path)
 
-    def only_run(self, raws, **kwargs):
-        runs = power_budget.read(self.capture(session_lines(raws, **kwargs)))
+    def only_run(self, raw_records, **kwargs):
+        runs = power_budget.read(self.capture(session_lines(raw_records, **kwargs)))
         self.assertEqual(len(runs), 1)
         return runs[0]
 
@@ -250,8 +250,8 @@ class FlightRuns(Case):
 
 
 class Holes(Case):
-    def refusal(self, raws, **kwargs):
-        charge, seconds, _, skipped = power_budget.model(self.only_run(raws, **kwargs))
+    def refusal(self, raw_records, **kwargs):
+        charge, seconds, _, skipped = power_budget.model(self.only_run(raw_records, **kwargs))
         self.assertEqual(seconds, 0)
         self.assertEqual(sum(charge.values()), 0)
         return skipped
@@ -301,9 +301,9 @@ class Holes(Case):
 
     # The park pair skips the cadence gate, so it can share the last regular pair's instant.
     def test_a_park_pair_on_the_instant_of_the_last_regular_pair_drops_no_interval(self):
-        raws = whole_run(3600)
-        raws[-3:-3] = [power(3600, percent=0, level="low"), duty(3600)]
-        run = self.only_run(raws)
+        raw_records = whole_run(3600)
+        raw_records[-3:-3] = [power(3600, percent=0, level="low"), duty(3600)]
+        run = self.only_run(raw_records)
         _, seconds, _, skipped = power_budget.model(run)
         self.assertEqual(skipped, [])
         self.assertEqual(seconds, 3600)
@@ -318,9 +318,9 @@ class Holes(Case):
         self.assertAlmostEqual(charge["868 MHz receive"], 4.8 * 1.4, places=6)
 
     def test_a_park_that_writes_a_gap_after_its_pair_still_ends_on_it(self):
-        raws = whole_run(3600)
-        raws[-1:-1] = [gap(3600)]
-        run = self.only_run(raws)
+        raw_records = whole_run(3600)
+        raw_records[-1:-1] = [gap(3600)]
+        run = self.only_run(raw_records)
         _, seconds, _, skipped = power_budget.model(run)
         self.assertEqual((seconds, skipped), (3600, []))
         self.assertTrue(power_budget.measure(run, 2400)[0]["whole"])
@@ -342,8 +342,8 @@ class Holes(Case):
 
 
 class Measured(Case):
-    def measure(self, raws, pack_mah=2400):
-        return power_budget.measure(self.only_run(raws), pack_mah)
+    def measure(self, raw_records, pack_mah=2400):
+        return power_budget.measure(self.only_run(raw_records), pack_mah)
 
     def test_a_run_from_full_to_cutoff_spends_the_pack_and_needs_no_curve(self):
         cell, _ = self.measure(whole_run(7200))
@@ -360,9 +360,9 @@ class Measured(Case):
         self.assertAlmostEqual(cell["milliamps"], 1200)
 
     def test_a_cutoff_whose_reading_failed_the_sanity_floor_still_ends_a_whole_run(self):
-        raws = whole_run(7200)
-        raws[-3] = power(7200, cell_mv=2100, percent=0, level="flat", flags=PHASE_VALID)
-        cell, _ = self.measure(raws)
+        raw_records = whole_run(7200)
+        raw_records[-3] = power(7200, cell_mv=2100, percent=0, level="flat", flags=PHASE_VALID)
+        cell, _ = self.measure(raw_records)
         self.assertTrue(cell["whole"])
         self.assertAlmostEqual(cell["milliamps"], 1200)
 
@@ -398,9 +398,9 @@ class Measured(Case):
         self.assertEqual(why, "the gauge did not fall, 60% to 65%")
 
     def test_a_run_on_the_charger_throughout_is_no_measurement(self):
-        raws = [power(at, percent=40 + at // 90, flags=PHASE_VALID | GAUGE_VALID | CHARGING)
+        raw_records = [power(at, percent=40 + at // 90, flags=PHASE_VALID | GAUGE_VALID | CHARGING)
                 for at in range(0, 3600, 30)]
-        cell, why = self.measure(raws)
+        cell, why = self.measure(raw_records)
         self.assertIsNone(cell)
         self.assertEqual(why, "fewer than two believable readings on battery alone")
 
@@ -412,9 +412,9 @@ class Measured(Case):
         self.assertAlmostEqual(cell["hours"], 2)
 
     def test_a_run_the_ring_recycled_under_is_measured_across_the_rotation(self):
-        raws = whole_run(3600, from_percent=80, to_percent=60, closing_level="normal")
-        raws[121:121] = [gap(1800), boot(1800)]
-        cell, _ = self.measure(raws)
+        raw_records = whole_run(3600, from_percent=80, to_percent=60, closing_level="normal")
+        raw_records[121:121] = [gap(1800), boot(1800)]
+        cell, _ = self.measure(raw_records)
         self.assertAlmostEqual(cell["hours"], 1)
         self.assertAlmostEqual(cell["mah"], 480)
 
@@ -456,16 +456,16 @@ class Caveats(Case):
 
     def test_a_pack_of_no_capacity_is_refused_at_the_command_line(self):
         path = self.capture(session_lines(whole_run(3600)))
-        for mah in ("0", "-2400", "nan"):
+        for pack_mah in ("0", "-2400", "nan"):
             with self.assertRaises(SystemExit) as refused, \
                     contextlib.redirect_stderr(io.StringIO()):
-                power_budget.main([path, "--pack-mah", mah])
-            self.assertEqual(refused.exception.code, 2, mah)
+                power_budget.main([path, "--pack-mah", pack_mah])
+            self.assertEqual(refused.exception.code, 2, pack_mah)
 
 
 class Fields(Case):
     def test_every_duty_field_the_budget_reads_is_a_field_the_decoder_decodes(self):
-        decoded = records.decode_diag_record(duty(0))
+        decoded = records.decode_diagnostics_record(duty(0))
         for consumer in power_budget.CONSUMERS:
             kind, field, _ = consumer.counter
             if kind != "elapsed":
@@ -477,8 +477,8 @@ class Fields(Case):
         self.assertEqual(power_budget.INCLINOMETER, 1 << int(bit.group(1)))
 
     def test_the_longest_interval_the_budget_subtracts_is_the_firmwares_bound(self):
-        bound = re.search(r"kDutyMaxPeriodMs = (\d+);", PAYLOAD_H.read_text(encoding="utf-8"))
-        self.assertIsNotNone(bound, "kDutyMaxPeriodMs moved out of %s" % PAYLOAD_H)
+        bound = re.search(r"kDutyPeriodCeilingMs = (\d+);", PAYLOAD_H.read_text(encoding="utf-8"))
+        self.assertIsNotNone(bound, "kDutyPeriodCeilingMs moved out of %s" % PAYLOAD_H)
         self.assertEqual(power_budget.DUTY_MAX_PERIOD_S * 1000, int(bound.group(1)))
 
 

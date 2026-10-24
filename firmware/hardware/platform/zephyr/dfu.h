@@ -22,7 +22,7 @@
 
 // INFO: fc 03oct26 img_mgmt.h drags in bootutil/image.h, off the app include path
 struct image_version;
-extern "C" int img_mgmt_read_info(int image_slot, struct image_version* ver, uint8_t* hash,
+extern "C" int img_mgmt_read_info(int image_slot, struct image_version* version, uint8_t* hash,
                                   uint32_t* flags);
 
 namespace skyblip::platform::zephyr {
@@ -143,9 +143,9 @@ class Dfu : public ports::Dfu {
             dfu::read_header(header_bytes, sizeof(header_bytes), header)) {
             const size_t at = start + header.tlv_offset();
             uint8_t tlvs[kTlvReadBytes];
-            const size_t len = at < area->fa_size ? MIN(sizeof(tlvs), area->fa_size - at) : 0;
-            found = len > 0 && flash_area_read(area, at, tlvs, len) == 0 &&
-                    dfu::find_key_hash(tlvs, len, out);
+            const size_t tlv_bytes = at < area->fa_size ? MIN(sizeof(tlvs), area->fa_size - at) : 0;
+            found = tlv_bytes > 0 && flash_area_read(area, at, tlvs, tlv_bytes) == 0 &&
+                    dfu::find_key_hash(tlvs, tlv_bytes, out);
         }
         flash_area_close(area);
         return found;

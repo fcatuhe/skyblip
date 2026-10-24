@@ -23,7 +23,7 @@ class OwnshipTest < ActiveSupport::TestCase
 
   # The comment block of skyship.cpp says 200x200, which must not parse as the word 0x200.
   test "a dimension in a comment is not a table word" do
-    ownship = Ownship.parse("// 200x200, as drawn\nconstexpr int kGlyphW = 4;\n 0x6,\n 0xf,\n 0x6,\n")
+    ownship = Ownship.parse("// 200x200, as drawn\nconstexpr int kGlyphWidth = 4;\n 0x6,\n 0xf,\n 0x6,\n")
 
     assert_equal 3, ownship.height
     assert_equal [ 0, 1, 1, 0 ], ownship.pixels.first
@@ -32,7 +32,7 @@ class OwnshipTest < ActiveSupport::TestCase
   # A width or a row count past the limits is refused before a row is built, the page being open to anyone.
   test "an oversized glyph is refused before it is built" do
     assert_raises(Ownship::Unreadable) { Ownship.from_param(([ "1" ] * 200).join("."), width: "200000") }
-    assert_raises(Ownship::Unreadable) { Ownship.parse("kGlyphW = 200000;\n" + ("0x1,\n" * 300)) }
+    assert_raises(Ownship::Unreadable) { Ownship.parse("kGlyphWidth = 200000;\n" + ("0x1,\n" * 300)) }
     assert_raises(Ownship::Unreadable) { Ownship.from_param(([ "1" ] * 33).join("."), width: "8") }
   end
 

@@ -27,15 +27,15 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 |---|---|---|
 | BME280 forced 4 times a second, x16 / x2 oversampling and IIR 4 | 0.66 Pa RMS noise | 5.5 cm |
 | what `parts::Bme280` compensates to (DS 4.2.3, Q24.8) | 1/256 Pa | 0.3 mm |
-| `pressure_to_alt_mm` | 1 mPa | 0.008 mm |
+| `pressure_to_altitude_mm` | 1 mPa | 0.008 mm |
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
 | `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
 
 The chain used to truncate the driver's reading to a whole pascal, which is nine centimetres at sea level, twice the sensor's own noise and forty times what the driver handed over: over a one-second window that is 17 ft/min of quantisation invented after the measurement. Millipascals cost nothing here - the table lookup is the same two loads and a multiply - and what they buy is a vertical speed whose error is the barometer's rather than ours.
 
-The rate is therefore measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`). Every screen, and the `$LK8EX1` vario, reads the measurement. `kMinWindowMs` and `kMaxWindowMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history.
+The rate is therefore measured in mm/s and encoded to eighths of a metre per second only where the radio needs it (`core/protocol/adsl.cpp`). Every screen, and the `$LK8EX1` vario, reads the measurement. `kClimbWindowFloorMs` and `kClimbWindowCeilingMs` bound the interval a rate may be taken over: too short and the sensor noise is the answer, too long and it is history.
 
-Two sources are differentiated over two windows, and `products/skyblip_go/services/ownship` names both: `kBaroVsWindowMs` is `kMinWindowMs` itself, so every barometric sample yields a rate over the second before it, and `kGnssVsWindowMs` is four times that, because a GNSS height jitters by metres where the barometer jitters by centimetres and a metre over a second is 200 ft/min of invented climb. A barometer, once it has spoken, owns the rate; the GNSS reference keeps moving underneath so losing the part falls back without a step.
+Two sources are differentiated over two windows, and `products/skyblip_go/services/ownship` names both: `kBarometerClimbWindowMs` is `kClimbWindowFloorMs` itself, so every barometric sample yields a rate over the second before it, and `kGnssClimbWindowMs` is four times that, because a GNSS height jitters by metres where the barometer jitters by centimetres and a metre over a second is 200 ft/min of invented climb. A barometer, once it has spoken, owns the rate; the GNSS reference keeps moving underneath so losing the part falls back without a step.
 
 The barometer converts four times a second on the PPS quarters and the conversion triggered on the edge is the one published (`boards/lilygo/t_echo_plus/board.h`), so the second a rate is taken over is the second the fix stream is dated in. Forced mode starts the conversion when we ask, so the sample is dated at its pressure phase, 21 ms after the edge trigger, at the same offset from PPS every second, and the difference is still the true rate. The part's IIR 4 runs over all four conversions, a 0.75 s delay that is the same every second. The board does not wait for it: a later pass reads the result once the part's status says it is done (`hardware/parts/bme280/README.md`).
 
@@ -69,7 +69,7 @@ The gyroscope in the sensor hub would be neither, and it is deliberately not rea
 
 `kTurnWindowMs` is the shortest window a 1 Hz track says anything over, and it lives here because both callers differentiate a track with it: own-ship's own in `products/skyblip_go/services/ownship`, a target's in `core/traffic/table`.
 
-A stopped aircraft is not turning, whatever its track says. Below walking pace the track is the receiver's noise rather than a direction, and differenced once a second it read as a turn on every frame of a device sitting on a bench. So the rate is zero whenever `FlightMonitor::rolling()` is false, and it restarts from the first fix that rolls rather than from the last one that did not. There is no constant of its own: `rolling` already decides moving from stopped, on `kTaxiSpeedMmS` and `kGroundSpeedMmS` with the hysteresis between them, and a second threshold here would be a second opinion about the same speed. It covers a paraglider hovering over one spot too, whose track means as little.
+A stopped aircraft is not turning, whatever its track says. Below walking pace the track is the receiver's noise rather than a direction, and differenced once a second it read as a turn on every frame of a device sitting on a bench. So the rate is zero whenever `FlightMonitor::rolling()` is false, and it restarts from the first fix that rolls rather than from the last one that did not. There is no constant of its own: `rolling` already decides moving from stopped, on `kRollingSpeedMmS` and `kGroundSpeedMmS` with the hysteresis between them, and a second threshold here would be a second opinion about the same speed. It covers a paraglider hovering over one spot too, whose track means as little.
 
 `own.turn_cdps` carries hundredths, where `own.turn_dps` rounds to whole degrees a second for the ADS-L extrapolation and the alarm's arcs, which is all those need.
 
@@ -99,13 +99,13 @@ The peaks reset when the flight timer starts, so they are this flight's, and a u
 
 ## arc
 
-`extrapolate` and `arc` answer the same question over two horizons, and they are deliberately not one function. `extrapolate` closes the gap between the instant a fix was solved and the instant a position is used, so its ceiling is `kMaxExtrapolationMs`, a little over a second: past that the transmitter would be putting an invented position on the air, and §G.1.16 already refuses a solution older than 500 ms. `arc` is asked about a future nobody has to stand behind. It is what the radar's leader line draws, so it runs to a minute and carries no obligation to the radio at all. Widening the first to serve the second was the tempting mistake.
+`extrapolate` and `arc` answer the same question over two horizons, and they are deliberately not one function. `extrapolate` closes the gap between the instant a fix was solved and the instant a position is used, so its ceiling is `kExtrapolationCeilingMs`, a little over a second: past that the transmitter would be putting an invented position on the air, and §G.1.16 already refuses a solution older than 500 ms. `arc` is asked about a future nobody has to stand behind. It is what the radar's leader line draws, so it runs to a minute and carries no obligation to the radio at all. Widening the first to serve the second was the tempting mistake.
 
 The model is the same one, OGN's: constant ground speed on a constant turn rate, the turn applied half before the step and half after, which keeps a circling aircraft on its arc instead of on the tangent. A path is walked, never indexed: `Arc::advance()` rotates the velocity vector by half a step's worth of turn, moves, and rotates again, so a whole minute costs two sine lookups per aircraft rather than two per sample. Position is carried in millimetres and rotations are rounded rather than truncated, because a Q14 rotation applied thirty times in a row loses a metre a step otherwise.
 
-A target's turn rate is not on the wire. ADS-L carries position, speed, track and climb, so `motion_of(obs, ...)` takes the rate `core/traffic` estimated from that target's own track history, and flies it straight when there is no estimate yet. The screen draws that estimate, and the tag beside a turning target is the same number the table holds.
+A target's turn rate is not on the wire. ADS-L carries position, speed, track and climb, so `motion_of(observation, ...)` takes the rate `core/traffic` estimated from that target's own track history, and flies it straight when there is no estimate yet. The screen draws that estimate, and the tag beside a turning target is the same number the table holds.
 
-`kMaxTurnDps` is 30. Above it the number is describing the receiver rather than the aircraft: a differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aeroplane this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
+`kTurnCeilingDps` is 30. Above it the number is describing the receiver rather than the aircraft: a differentiated 1 Hz track produces tens of degrees per second out of a bad fix, and no aeroplane this device rides in holds that rate for the length of the projection. The clamp is applied where a motion is built, so nothing downstream has to remember it.
 
 ## state
 
@@ -118,7 +118,7 @@ Two bands and one hold, and nothing between them moves:
 | flight | ground speed >= 12.0 m/s | `kFlightSpeedMmS` | a speed no aircraft taxis at |
 | landing | ground speed < 8.0 m/s for 10 s, airborne | `kLandingSpeedMmS`, `kLandingHoldMs` | slower than a taxi for longer than any circle |
 | ground | ground speed < 1.0 m/s | `kGroundSpeedMmS` | stopped |
-| rolling | ground speed >= 1.5 m/s, on the ground | `kTaxiSpeedMmS` | the word TAXI rather than GROUND |
+| rolling | ground speed >= 1.5 m/s, on the ground | `kRollingSpeedMmS` | the word TAXI rather than GROUND |
 | between | keep the state you had | | |
 
 Ground speed is the whole rule. There is no altitude in it, no vertical rate and no barometer, so what decides the two states a radio and a firmware lock depend on is one number the receiver solves directly, on every fix, whether or not any other sensor on the board is alive.
@@ -161,7 +161,7 @@ There is no longer an altitude that means flight on its own either. The 2000 m r
 
 `GroundLatch` is the second question, the one a door asks: may this device be written to, erased, updated. `Unknown` is not a ground - a device that has never had a fix has not proven anything - and once `Airborne` has been seen, only a positive `Ground` clears it. A fix lost in flight is therefore never a landing: without the latch, a receiver dropping out over a ridge would unlock the firmware update mid-flight, which is the one failure `state` itself has no hold left to prevent.
 
-There is one latch, owned by the service that owns the monitor (`products/skyblip_go/services/ownship.cpp`) and published as `state.confirmed_flight_state`. The DFU and settings gate in `core/comms/config.h` and the flight log's offload gate both read that one value rather than deriving a second opinion or asking each other, so "on the ground" means the same thing to all three.
+There is one latch, owned by the service that owns the monitor (`products/skyblip_go/services/ownship.cpp`) and published as `state.flight.confirmed_state`. The DFU and settings gate in `core/comms/config.h` and the flight log's offload gate both read that one value rather than deriving a second opinion or asking each other, so "on the ground" means the same thing to all three.
 
 ## timer
 
@@ -177,7 +177,7 @@ Nothing but a takeoff starts it and nothing but switching the device off clears 
 
 A device switched on in the air is timed from the first solution rather than from the wheels, because `FlightMonitor` declares `Airborne` immediately in that case and nothing on board saw the takeoff. The alternative is withholding the number from exactly the pilot who has been flying longest.
 
-The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::millis()` is one ordinary second of flight.
+The count is a difference of unsigned milliseconds, so the 49.7-day wrap of `ports::Clock::milliseconds()` is one ordinary second of flight.
 
 ## log_record
 
@@ -199,7 +199,7 @@ Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its
 | 21 | flags and the G.1.2 flight state | | |
 | 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
 
-The enum codes are the diagnostics capture's, pinned by the same tests (`../diag/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
+The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
 
 ## log_events
 

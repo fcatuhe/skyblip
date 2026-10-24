@@ -2,7 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
 
 #include "core/annunciation/annunciator.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/indication/lamp.h"
 #include "core/power/duty.h"
 #include "core/traffic/alarm.h"
@@ -36,16 +36,16 @@ class AlarmService : public runtime::Service {
     bool escalated_since_render() const { return dirty_; }
     void clear_dirty() { dirty_ = false; }
 
-    traffic::Level announcing_level() const { return policy_.announcing_level(); }
+    traffic::Level announcing_level() const { return annunciation_.announcing_level(); }
 
     int formation_members() const { return formation_.members(); }
-    bool sounding() const { return policy_.sounding(); }
+    bool sounding() const { return annunciation_.sounding(); }
 
     // What the table decided, and what the lamp is showing this instant. Both,
     // because they differ in the gaps of a wink and a test has to be able to say
     // which of the two it means.
-    indication::Condition indicator_condition() const { return lamp_.condition(); }
-    indication::Lamp lamp() const { return lamp_.lamp(); }
+    indication::Condition indicator_condition() const { return indication_.condition(); }
+    indication::Lamp lamp() const { return indication_.lamp(); }
 
    private:
     bool silenced(traffic::Target& target, formation::State state);
@@ -62,26 +62,27 @@ class AlarmService : public runtime::Service {
     // cadence the ear gets is the cadence written in core/annunciation, to
     // within one pass of the loop.
     static constexpr uint32_t kPassesPerShortestPhase = 8;
-    static_assert(runtime::kServiceStepMs * kPassesPerShortestPhase <=
+    static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestPhase <=
                       annunciation::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest note");
-    static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kTaskWatchdogMs,
+    static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kServiceSilenceCeilingMs,
                   "the annunciator's guard has to cut before the watchdog bites");
 
     // Three passes through the shortest flash in the table. An LED needs far less
     // time than a piezo to be seen, so the figure is smaller than the one above -
     // but a flash the loop cannot resolve is a flash nobody sees.
     static constexpr uint32_t kPassesPerShortestFlash = 3;
-    static_assert(runtime::kServiceStepMs * kPassesPerShortestFlash <= indication::kShortestPhaseMs,
+    static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
+                      indication::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest flash");
 
     power::OnTime sounding_{};
     power::OnTime vibrating_{};
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
-    uint32_t recorded_obs_ms_[traffic::TrafficTable::kCapacity]{};
-    annunciation::Policy policy_{};
-    indication::Policy lamp_{};
+    uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
+    annunciation::Policy annunciation_{};
+    indication::Policy indication_{};
     bool dirty_{false};
     bool running_{true};
     const Settings& settings_;

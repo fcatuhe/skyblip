@@ -14,7 +14,7 @@ constexpr int kActivationTagY = 136;
 constexpr int kActivationTagScale = 4;
 constexpr int kActivationNameY = 180;
 
-void draw_activation(ui::Canvas& fb, uint16_t bluetooth_tag);
+void draw_activation(ui::Canvas& canvas, uint16_t bluetooth_tag);
 
 }  // namespace skyblip::go
 

@@ -38,7 +38,7 @@ struct LinkEvent {
 struct RxFrame {
     uint16_t session_id;
     Endpoint endpoint;
-    uint16_t len;
+    uint16_t bytes;
     std::array<uint8_t, 256> data;
 };
 

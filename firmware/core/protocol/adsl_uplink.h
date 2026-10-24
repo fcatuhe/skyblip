@@ -18,10 +18,11 @@ namespace skyblip::protocol {
 // excluding the length byte itself, which for this frame is the whole RS
 // codeword. Arming on all three costs nothing and rejects a burst of any other
 // length before the decoder ever sees it.
-static_assert(fec::ReedSolomon255::kN <= 255, "the §D.1.1 length field is one byte wide");
-static_assert(fec::ReedSolomon255::kN <= events::kRfEventBytes,
+static_assert(fec::ReedSolomon255::kCodewordBytes <= 255,
+              "the §D.1.1 length field is one byte wide");
+static_assert(fec::ReedSolomon255::kCodewordBytes <= events::kRfEventBytes,
               "an uplink frame would be truncated on its way off the radio");
-constexpr uint8_t kUplinkFrameBytes = static_cast<uint8_t>(fec::ReedSolomon255::kN);
+constexpr uint8_t kUplinkFrameBytes = static_cast<uint8_t>(fec::ReedSolomon255::kCodewordBytes);
 constexpr uint8_t kUplinkSync[3] = {0x2D, 0xD4, kUplinkFrameBytes};
 constexpr uint8_t kUplinkSyncBits = 24;
 constexpr int kUplinkBurstBytes = static_cast<int>(sizeof(kUplinkSync)) + kUplinkFrameBytes;
@@ -50,10 +51,11 @@ class AdslUplink {
     static constexpr int kVersion = 1;
     static constexpr int kRecordBytes = 16;
     static constexpr int kHeaderBytes = 3;
-    static constexpr int kMaxTargets = (fec::ReedSolomon255::kK - kHeaderBytes) / kRecordBytes;
-    static constexpr int kFrameBytes = fec::ReedSolomon255::kN;
+    static constexpr int kMaxTargets =
+        (fec::ReedSolomon255::kDataBytes - kHeaderBytes) / kRecordBytes;
+    static constexpr int kFrameBytes = fec::ReedSolomon255::kCodewordBytes;
 
-    struct DecodeStats {
+    struct DecodeStatistics {
         int targets{0};
         int corrected{0};
         // Records the frame carried and the decoder refused. Reed-Solomon can
@@ -65,14 +67,14 @@ class AdslUplink {
 
     AdslUplink() = default;
 
-    Status encode(const model::AircraftObs* targets, int n, uint8_t key_index,
+    Status encode(const model::AircraftObservation* targets, int count, uint8_t key_index,
                   uint8_t out_frame[kFrameBytes]) const;
 
-    Status decode(const uint8_t frame[kFrameBytes], model::AircraftObs* targets, int cap,
-                  DecodeStats& stats) const;
+    Status decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
+                  int capacity, DecodeStatistics& statistics) const;
 
    private:
-    fec::ReedSolomon255 rs_;
+    fec::ReedSolomon255 reed_solomon_;
 };
 
 }

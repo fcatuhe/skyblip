@@ -16,7 +16,7 @@ namespace skyblip::models {
 
 class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
    public:
-    int dc{0}, rst{1}, busy{2}, backlight_pin{3};
+    int dc_pin{0}, reset_pin{1}, busy_pin{2}, backlight_pin{3};
 
     // INFO: fc 13sep26 GxEPD2_154_D67.h: partial_refresh_time 500, full_refresh_time 2600
     static constexpr uint32_t kPartialBusyMs = 500;
@@ -31,50 +31,50 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
 
     bool refreshing() const {
         if (clock_ == nullptr || refresh_span_ms_ == 0) return false;
-        return clock_->millis() - refresh_since_ms_ < refresh_span_ms_;
+        return clock_->milliseconds() - refresh_since_ms_ < refresh_span_ms_;
     }
 
     void set(int pin, bool level) override {
-        if (pin == dc) dc_high_ = level;
+        if (pin == dc_pin) dc_high_ = level;
         if (pin == backlight_pin) backlight = level;
-        if (pin == rst) {
-            if (!level && rst_level_) reset_low_since_us_ = elapsed_us;
-            if (level && !rst_level_) release_reset();
-            rst_level_ = level;
+        if (pin == reset_pin) {
+            if (!level && reset_level_) reset_low_since_us_ = elapsed_us;
+            if (level && !reset_level_) release_reset();
+            reset_level_ = level;
         }
     }
     bool get(int pin) override {
-        if (pin != busy) return false;
+        if (pin != busy_pin) return false;
         return busy_stuck || refreshing();
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
-    void wait_at_least_us(uint32_t us) override { elapsed_us += us; }
+    void wait_at_least_us(uint32_t hold_us) override { elapsed_us += hold_us; }
 
     void select(bool) override {}
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
         transfers++;
-        for (size_t i = 0; i < len; i++) {
-            uint8_t b = tx ? tx[i] : 0;
+        for (size_t i = 0; i < bytes; i++) {
+            uint8_t byte = tx ? tx[i] : 0;
             if (rx) rx[i] = 0;
             if (!dc_high_) {
                 // INFO: fc 13sep26 a command over a live BUSY aborts the waveform mid-pixel
                 if (refreshing()) commands_while_busy++;
-                cmds.push_back(b);
-                if (b == kWriteRam) ram.clear();
-                if (b == kWriteRamPrevious) ram_previous.clear();
-                if (b == kDeepSleep) {
+                commands.push_back(byte);
+                if (byte == kWriteRam) ram.clear();
+                if (byte == kWriteRamPrevious) ram_previous.clear();
+                if (byte == kDeepSleep) {
                     powered = false;
                     rails_on = false;
                     deep_sleeps++;
                 }
-                if (b == kMasterActivation) {
+                if (byte == kMasterActivation) {
                     rails_on =
                         powered && (sequence_ & kEnableAnalog) && !(sequence_ & kDisableAnalog);
                     if (sequence_ & kDisplay) {
                         present_count++;
                         if (clock_ != nullptr) {
-                            refresh_since_ms_ = clock_->millis();
+                            refresh_since_ms_ = clock_->milliseconds();
                             refresh_span_ms_ = last_full ? kFullBusyMs : partial_busy_ms();
                         }
                         // In deep sleep the panel's charge pump is off: it latches
@@ -82,21 +82,22 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
                         if (powered) rasterise();
                     }
                 }
-                pending_ = b;
+                pending_opcode_ = byte;
             } else {
-                if (pending_ == kWriteRam) ram.push_back(b);
-                if (pending_ == kWriteRamPrevious) ram_previous.push_back(b);
-                if (pending_ == kUpdateCtrl2) {
-                    sequence_ = b;
-                    if (b & kDisplay) last_full = !(b & kLoadLutMode2);
+                if (pending_opcode_ == kWriteRam) ram.push_back(byte);
+                if (pending_opcode_ == kWriteRamPrevious) ram_previous.push_back(byte);
+                if (pending_opcode_ == kDisplayUpdateControl2) {
+                    sequence_ = byte;
+                    if (byte & kDisplay) last_full = !(byte & kLoadLutMode2);
                 }
-                if (pending_ == kBorderWaveform) border = b;
+                if (pending_opcode_ == kBorderWaveform) border = byte;
             }
         }
     }
 
-    bool saw_cmd(uint8_t c) const {
-        return std::any_of(cmds.begin(), cmds.end(), [c](uint8_t x) { return x == c; });
+    bool saw_command(uint8_t opcode) const {
+        return std::any_of(commands.begin(), commands.end(),
+                           [opcode](uint8_t seen) { return seen == opcode; });
     }
 
     // What the panel would be showing: RAM read back through the driver's own
@@ -105,27 +106,28 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     const parts::Ssd1681Glass& framebuffer() const { return panel_; }
 
     bool save_pgm(const char* path) const {
-        FILE* f = std::fopen(path, "wb");
-        if (!f) return false;
-        std::fprintf(f, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassW, parts::Ssd1681::kGlassH);
-        for (int y = 0; y < parts::Ssd1681::kGlassH; y++)
-            for (int x = 0; x < parts::Ssd1681::kGlassW; x++) {
-                uint8_t v = panel_.get_pixel(x, y) ? 0 : 255;
-                std::fwrite(&v, 1, 1, f);
+        FILE* file = std::fopen(path, "wb");
+        if (!file) return false;
+        std::fprintf(file, "P5\n%d %d\n255\n", parts::Ssd1681::kGlassWidth,
+                     parts::Ssd1681::kGlassHeight);
+        for (int y = 0; y < parts::Ssd1681::kGlassHeight; y++)
+            for (int x = 0; x < parts::Ssd1681::kGlassWidth; x++) {
+                uint8_t shade = panel_.get_pixel(x, y) ? 0 : 255;
+                std::fwrite(&shade, 1, 1, file);
             }
-        std::fclose(f);
+        std::fclose(file);
         return true;
     }
 
     // Which lot the virtual glass is from. Not served over the SPI seam, because
-    // on real hardware it is not readable there either: the fingerprint needs the
+    // on real hardware it is not readable there either: the signature needs the
     // panel's single data line reversed, so the board port takes it before any
     // bus driver owns the pins and the platform hands it over. The default is a
-    // fingerprint that was never taken, which is what this board is expected to
+    // signature that was never taken, which is what this board is expected to
     // report until a bench read exists.
     parts::PanelSignature signature{};
 
-    std::vector<uint8_t> cmds;
+    std::vector<uint8_t> commands;
     std::vector<uint8_t> ram;
     std::vector<uint8_t> ram_previous;
     int reset_pulses{0};
@@ -147,7 +149,7 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     static constexpr uint8_t kWriteRam = 0x24;
     static constexpr uint8_t kWriteRamPrevious = 0x26;
     static constexpr uint8_t kMasterActivation = 0x20;
-    static constexpr uint8_t kUpdateCtrl2 = 0x22;
+    static constexpr uint8_t kDisplayUpdateControl2 = 0x22;
     static constexpr uint8_t kBorderWaveform = 0x3C;
     static constexpr uint8_t kDeepSleep = 0x10;
     static constexpr uint8_t kEnableAnalog = 0x40;
@@ -184,9 +186,9 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
     parts::Ssd1681Glass panel_{};
     uint8_t sequence_{0};
     bool dc_high_{false};
-    bool rst_level_{true};
+    bool reset_level_{true};
     uint64_t reset_low_since_us_{0};
-    uint8_t pending_{0};
+    uint8_t pending_opcode_{0};
 };
 
 }  // namespace skyblip::models

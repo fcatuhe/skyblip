@@ -2,11 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://skyblip.eu/schemas/flight_log.v1.schema.json",
   "title": "skyBlip flight log record (v1)",
-  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's base64 chunks. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a contact's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
+  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's base64 chunks. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a target's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc_s; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
   "type": "object",
   "required": [
     "type",
-    "utc"
+    "utc_s"
   ],
   "additionalProperties": false,
   "properties": {
@@ -20,26 +20,26 @@
       ],
       "description": "What this record is. A fix carries byte 16 as the high byte of its nine-bit track, so the byte is 0 or 1; an event sets its top bit and names its kind in the other seven: status=0x81, alarm=0x82, encounter=0x83. A kind is retired, never renumbered, because a flight on the partition outlives the firmware that wrote it."
     },
-    "utc": {
+    "utc_s": {
       "type": "integer",
       "minimum": 0,
-      "description": "Every type. The UTC second this record describes: the session id, which is the first second of the session, plus the 16-bit offset in bytes 0-1, saturating 18 hours in. An encounter is dated at its closest approach, so it is written after records later than it: sort by utc, not by index."
+      "description": "Every type. The UTC second this record describes: the session id, which is the first second of the session, plus the 16-bit offset in bytes 0-1, saturating 18 hours in. An encounter is dated at its closest approach, so it is written after records later than it: sort by utc_s, not by index."
     },
-    "lat_1e7": {
+    "latitude_1e7": {
       "type": "integer",
-      "description": "fix. Latitude, 1e-7 degrees, bytes 2-5"
+      "description": "fix. Latitude, 1e-7 degrees, bytes 2-5."
     },
-    "lon_1e7": {
+    "longitude_1e7": {
       "type": "integer",
-      "description": "fix. Longitude, 1e-7 degrees, bytes 6-9"
+      "description": "fix. Longitude, 1e-7 degrees, bytes 6-9."
     },
-    "alt_msl_m": {
+    "altitude_msl_m": {
       "type": "integer",
-      "description": "fix. Altitude above mean sea level, metres, bytes 10-11"
+      "description": "fix. Altitude above mean sea level, metres, bytes 10-11."
     },
-    "alt_hae_m": {
+    "altitude_hae_m": {
       "type": "integer",
-      "description": "fix. Height above the WGS84 ellipsoid, metres: alt_msl_m plus the signed geoid separation in byte 12"
+      "description": "fix. Height above the WGS84 ellipsoid, metres: altitude_msl_m plus the signed geoid separation in byte 12."
     },
     "speed_q": {
       "type": "integer",
@@ -72,11 +72,11 @@
       "type": "integer",
       "description": "fix. climb_e8 in millimetres per second"
     },
-    "sats": {
+    "satellites": {
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "fix. Satellites in the solution, byte 19"
+      "description": "fix. Satellites in the solution, byte 19."
     },
     "hdop_e2": {
       "type": "integer",
@@ -129,7 +129,7 @@
       "maximum": 100,
       "description": "status. State of charge the gauge shows, byte 4"
     },
-    "level": {
+    "power_level": {
       "type": "string",
       "enum": [
         "unknown",
@@ -138,7 +138,7 @@
         "flat",
         "low"
       ],
-      "description": "status. core/power's cutoff level, byte 5. Codes: 0 unknown, 1 normal, 2 critical, 3 flat, 4 low, the same as the diagnostics power record"
+      "description": "status. core/power's cutoff level, byte 5. Codes: 0 unknown, 1 normal, 2 critical, 3 flat, 4 low, the same as the diagnostics power record."
     },
     "charge": {
       "type": "string",
@@ -162,9 +162,9 @@
       "maximum": 255,
       "description": "status. The most aircraft in the table at once since the previous status, byte 8"
     },
-    "valid": {
+    "battery_valid": {
       "type": "boolean",
-      "description": "status. Bit 0 of byte 9: cell_mv and percent are the cell's"
+      "description": "status. Bit 0 of byte 9: cell_mv and percent are the cell's."
     },
     "charging": {
       "type": "boolean",
@@ -186,21 +186,21 @@
       "maximum": 255,
       "description": "alarm, encounter. The address table it belongs to, byte 5"
     },
-    "dist_m": {
+    "distance_m": {
       "type": "integer",
       "minimum": 0,
       "maximum": 65535,
-      "description": "alarm, encounter. Horizontal distance in metres, both positions carried to the same instant, bytes 6-7"
+      "description": "alarm, encounter. Horizontal distance in metres, both positions carried to the same instant, bytes 6-7."
     },
-    "rel_alt_m": {
+    "relative_altitude_m": {
       "type": "integer",
-      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9"
+      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9."
     },
-    "rel_bearing_deg": {
+    "relative_bearing_deg": {
       "type": "integer",
       "minimum": 0,
       "maximum": 359,
-      "description": "alarm, encounter. Bearing to it, degrees clockwise from own-ship's track, bytes 10-11"
+      "description": "alarm, encounter. Bearing to it, degrees clockwise from own-ship's track, bytes 10-11."
     },
     "closing_mps": {
       "type": "integer",
@@ -210,13 +210,13 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "alarm, encounter. On an alarm the level the contact just took, on an encounter the highest it reached: 0 none, 1 advisory, byte 14"
+      "description": "alarm, encounter. On an alarm the level the target just took, on an encounter the highest it reached: 0 none, 1 advisory, byte 14"
     },
-    "aircraft_cat": {
+    "aircraft_category": {
       "type": "integer",
       "minimum": 0,
       "maximum": 255,
-      "description": "alarm, encounter. Its ADS-L G.1.3 aircraft category, byte 15"
+      "description": "alarm, encounter. Its ADS-L G.1.3 aircraft category, byte 15."
     },
     "source": {
       "type": "string",

@@ -60,7 +60,7 @@ CONSUMERS = (
     Consumer("panel partial refresh", 8.0, events("panel_partial_refreshes", 460), False,
              "460 ms is GxEPD2's D67 partial settle, ssd1681.h"),
     Consumer("panel full refresh", 8.0, events("panel_full_refreshes", 2500), False,
-             "2.5 s full settle, ssd1681.h and shutdown.h kParkMs"),
+             "2.5 s full settle, ssd1681.h and shutdown.h kParkSettleMs"),
     Consumer("backlight", 20.0, on_ms("backlight_ms"), False, "an LED nobody has metered"),
     Consumer("Bluetooth connected", 1.5, on_ms("ble_connected_ms"), False,
              "three connections at a 498-byte MTU"),
@@ -98,21 +98,21 @@ class Run:
 
     @property
     def duty(self):
-        return [r for r in self.records if r["type"] == "duty"]
+        return [record for record in self.records if record["type"] == "duty"]
 
     @property
     def capabilities(self):
         """What the unit found fitted at boot, or None when no Boot record survived."""
-        boots = [r for r in self.records if r["type"] == "boot"]
+        boots = [record for record in self.records if record["type"] == "boot"]
         return boots[0]["capabilities"] if boots else None
 
     @property
     def gaps(self):
-        return [r for r in self.records if r["type"] == "gap"]
+        return [record for record in self.records if record["type"] == "gap"]
 
     @property
     def unreadable(self):
-        return [r for r in self.records if r.get("error")]
+        return [record for record in self.records if record.get("error")]
 
 
 def read(path):
@@ -135,7 +135,7 @@ def read(path):
         elif "index" in line:
             runs[number].records.append(line)
     for run in runs.values():
-        run.records.sort(key=lambda r: r["index"])
+        run.records.sort(key=lambda record: record["index"])
     return [runs[number] for number in order]
 
 
@@ -158,11 +158,11 @@ def refused(before, after, between):
     """Why this pair of Duty records cannot be subtracted, or None."""
     if after["index"] - before["index"] - 1 > len(between):
         return "indices are missing inside the interval"
-    if any(r.get("error") for r in between):
+    if any(record.get("error") for record in between):
         return "a slot inside the interval is unreadable"
-    if any(r["type"] == "gap" for r in between):
+    if any(record["type"] == "gap" for record in between):
         return "the ring refused records inside the interval"
-    if any(r["type"] == "boot" for r in between):
+    if any(record["type"] == "boot" for record in between):
         return "the ring recycled under the session inside the interval"
     if before["utc_dated"] != after["utc_dated"]:
         return "the clock became UTC-dated inside the interval"
@@ -170,7 +170,7 @@ def refused(before, after, between):
         return "the interval does not move forwards"
     if stamp(after) - stamp(before) > DUTY_MAX_PERIOD_S:
         return "the interval is longer than the %d s a counter can span" % DUTY_MAX_PERIOD_S
-    if not all(on_battery_alone(r) for r in between if r["type"] == "power"):
+    if not all(on_battery_alone(record) for record in between if record["type"] == "power"):
         return "the cell was on external power or charging"
     return None
 
@@ -182,9 +182,9 @@ def superseded(duty, following):
 
 def duty_pairs(run):
     """Each Duty record with the next one and every record between them."""
-    at = [position for position, r in enumerate(run.records) if r["type"] == "duty"]
-    at = [p for p, q in zip(at, at[1:])
-          if not superseded(run.records[p], run.records[q])] + at[-1:]
+    at = [position for position, record in enumerate(run.records) if record["type"] == "duty"]
+    at = [current for current, following in zip(at, at[1:])
+          if not superseded(run.records[current], run.records[following])] + at[-1:]
     for start, end in zip(at, at[1:]):
         yield run.records[start], run.records[end], run.records[start + 1:end]
 
@@ -222,7 +222,7 @@ def posture(before, after, seconds, simulating=False):
 
 def unsent_transmit_milliamps(simulated_s, seconds):
     """What a flier keys over a flight run's grounded intervals, averaged over the whole span."""
-    transmit = next(c for c in CONSUMERS if c.counter == on_ms("tx_keyed_ms"))
+    transmit = next(consumer for consumer in CONSUMERS if consumer.counter == on_ms("tx_keyed_ms"))
     keyed_share = FLIGHT_RUN_UNSENT_BURSTS_PER_MINUTE * BURST_KEYED_MS / 60000.0
     return transmit.milliamps * keyed_share * simulated_s / seconds
 
@@ -250,7 +250,7 @@ def model(run):
 def discharge(run):
     """The Power records of the last stretch on battery alone and on one clock."""
     stretch = []
-    for power in (r for r in run.records if r["type"] == "power"):
+    for power in (record for record in run.records if record["type"] == "power"):
         if not on_battery_alone(power):
             stretch = []
         elif stretch and stretch[-1]["utc_dated"] != power["utc_dated"]:
@@ -262,11 +262,11 @@ def discharge(run):
 
 def short_of_whole(stretch):
     """Why this stretch is not a run from full to cutoff, or None when it is one."""
-    readings = [r for r in stretch if r["valid"]]
+    readings = [record for record in stretch if record["battery_valid"]]
     if not readings:
         return "no believable reading on battery alone"
-    if stretch[-1]["level"] != "flat":
-        return "it did not end at cutoff, the last level read %s" % stretch[-1]["level"]
+    if stretch[-1]["power_level"] != "flat":
+        return "it did not end at cutoff, the last level read %s" % stretch[-1]["power_level"]
     if readings[0]["percent"] < FULL_PERCENT:
         return "it did not start full, the first reading on battery alone is %d%%" % (
             readings[0]["percent"])
@@ -278,7 +278,7 @@ def measure(run, pack_mah):
     if pack_mah is None:
         return None, "pass --pack-mah, the device cannot know the pack it runs on"
     stretch = discharge(run)
-    readings = [r for r in stretch if r["valid"]]
+    readings = [record for record in stretch if record["battery_valid"]]
     whole = short_of_whole(stretch) is None
     if len(readings) < 2 and not whole:
         return None, "fewer than two believable readings on battery alone"
@@ -290,17 +290,17 @@ def measure(run, pack_mah):
     points = first["percent"] - last["percent"]
     if not whole and points <= 0:
         return None, "the gauge did not fall, %d%% to %d%%" % (first["percent"], last["percent"])
-    mah = pack_mah if whole else pack_mah * points / 100.0
+    spent_mah = pack_mah if whole else pack_mah * points / 100.0
     return {
         "hours": hours,
-        "mah": mah,
-        "milliamps": mah / hours,
+        "mah": spent_mah,
+        "milliamps": spent_mah / hours,
         "whole": whole,
         "points": points,
         "from_mv": first["cell_mv"],
         "to_mv": readings[-1]["cell_mv"],
-        "from_level": first["level"],
-        "to_level": last["level"],
+        "from_level": first["power_level"],
+        "to_level": last["power_level"],
     }, None
 
 
@@ -358,11 +358,11 @@ def report(run, pack_mah, out):
     modelled_mas = sum(charge.values())
     out("%-26s %8s %7s %6s  %s" % ("consumer", "mAh", "mA", "share", "milliamps from"))
     for consumer in CONSUMERS:
-        mas = charge[consumer.name]
-        if mas <= 0:
+        charge_mas = charge[consumer.name]
+        if charge_mas <= 0:
             continue
         out("%-26s %8.1f %7.2f %5.0f%%  %s%s"
-            % (consumer.name, mas / 3600.0, mas / seconds, 100.0 * mas / modelled_mas,
+            % (consumer.name, charge_mas / 3600.0, charge_mas / seconds, 100.0 * charge_mas / modelled_mas,
                "" if consumer.cited else "(est) ", consumer.source))
     out("%-26s %8.1f %7.2f %5.0f%%" % ("modelled", modelled_mas / 3600.0,
                                        modelled_mas / seconds, 100.0))
@@ -391,10 +391,10 @@ def report(run, pack_mah, out):
 
 
 def capacity(text):
-    mah = float(text)
-    if not mah > 0:
+    pack_mah = float(text)
+    if not pack_mah > 0:
         raise argparse.ArgumentTypeError("a pack holds more than zero mAh, not %s" % text)
-    return mah
+    return pack_mah
 
 
 def main(argv=None):

@@ -2,6 +2,8 @@
 
 The Bosch BHI260AP on the T-Echo Plus sensor bus, at 0x28 (0x29 with the address pin high). It is what puts the ball in the six-pack's turn coordinator, and it is the only part on this board that arrives without a program.
 
+The references only trust an IMU after a settling delay: "MPU9250 or ICM20948 start-up time for register R/W is 11-100 ms", and SoftRF (`platform/nRF52.cpp:1145-1147`) waits 90 ms before probing one. Here the rails go up in `board.c` at `PRE_KERNEL_1` and the I2C scan (`boards/lilygo/t_echo_plus/i2c_scan.h`) runs after the whole driver model is initialised, milliseconds of clock, flash and USB setup later, so boot order pays the delay rather than a sleep. The day the scan moves earlier, that stops being true.
+
 ## Why this is not a register map
 
 A BMA423 or an ICM-20948 is a chip with an accelerometer behind some registers: probe it, set a range, read six bytes. The BHI260AP is a sensor hub - a Fuser2 core, a boot ROM, and 100 KB of RAM with nothing in it. Until a host uploads Bosch's firmware image and boots the core from RAM, the part answers its address, names itself `0x89` on `PRODUCT_ID`, and has no accelerometer to read at all. There is no flash on this board for it to boot from itself (`BOOT_STATUS` reports `NO_FLASH`), and the rail it hangs off is switched, so the upload is paid again after every power cycle and after every `SYSTEM OFF`.
@@ -38,7 +40,7 @@ Nothing here blocks or sleeps. Every wait is a deadline against the `now_ms` the
 
 ### Why the upload is paced, and why the bus runs at 400 kHz
 
-The image is 101 KB. A 240-byte chunk is 5.4 ms of bus at 400 kHz and 22 ms at 100 kHz, and the service loop's pass is 10 ms (`runtime::kServiceStepMs`), so the bus was moved to fast mode in the devicetree rather than the chunk made smaller: at 100 kHz one chunk is longer than the pass it is sent from. One chunk per pass puts the ball on the glass about four seconds after boot, with the radio thread - which is cooperative and higher priority than the loop - untouched throughout.
+The image is 101 KB. A 240-byte chunk is 5.4 ms of bus at 400 kHz and 22 ms at 100 kHz, and the service loop's pass is 10 ms (`runtime::kServicePassCeilingMs`), so the bus was moved to fast mode in the devicetree rather than the chunk made smaller: at 100 kHz one chunk is longer than the pass it is sent from. One chunk per pass puts the ball on the glass about four seconds after boot, with the radio thread - which is cooperative and higher priority than the loop - untouched throughout.
 
 Chunk framing follows the reference (`BHY2_SensorAPI`, `bhy2_hif.c`): the first packet carries the four-byte command header, `UPLOAD_TO_PROGRAM_RAM` with the length in 32-bit words, and every packet after it is raw image bytes written to the command channel at register 0x00, padded to a word.
 
@@ -62,6 +64,23 @@ Both are answered only when the hub answers. A parameter read that times out (50
 
 Both FIFOs are read the way the reference does: two bytes for the count when nothing is outstanding, then up to 64 bytes a pass until the count is drained. The non-wakeup one (0x02) is where a non-wakeup virtual sensor puts its frames, the wakeup one (0x01) carries its own copy of every meta event, and a channel nobody reads is a channel that fills; each keeps its own carry, because an event can straddle two passes on either. Events are parsed by the size table the reference carries for system ids (padding, the three timestamp forms, meta events, filler) plus the seven bytes an accelerometer frame takes. An id with no size is an id we cannot step over, so the rest of that stream is dropped and the count is on `unparsed_events()`: the next transaction starts on an event boundary again.
 
+## Names
+
+The register, command and parameter constants are spelled in full. The names above are the reference's (`BHY2_SensorAPI`), and this is how they map.
+
+| Our name | Reference name |
+|---|---|
+| `kRegisterResetRequest` (0x14) | `RESET_REQ` |
+| `kRegisterProductId` (0x1C) | `PRODUCT_ID` |
+| `kRegisterKernelVersion` (0x20) | `KERNEL_VERSION` |
+| `kRegisterBootStatus` (0x25) | `BOOT_STATUS` |
+| `kRegisterInterruptStatus` (0x2D) | `INT_STATUS` |
+| `kBootHostInterfaceReady` | `HOST_INTERFACE_READY` |
+| `kBootFirmwareVerifyDone` | `FW_VERIFY_DONE` |
+| `kCommandUploadToProgramRam` (0x0002) | `UPLOAD_TO_PROGRAM_RAM` |
+| `kCommandBootProgramRam` (0x0003) | `BOOT_PROGRAM_RAM` |
+| `kSystemEventIdPadding`, `kSystemEventIdMetaEvent`, `kSystemEventIdMetaEventWakeup` (0, 254, 248) | the system ids for padding and meta events |
+
 ## What this part does not do
 
 No gyroscope, no fusion output, no step counter, no wrist gestures, no interrupt line - the Plus leaves HIRQ unconnected, so everything here is polled. The hub is capable of all of it and none of it has a reader, so none of it is configured: the six-pack needs one lateral acceleration, and `core/flight/slip.h` is where that becomes a ball. The gyroscope is the one worth naming, because it is in the image and costs the better part of a milliamp against the accelerometer's tens of microamps: no instrument on this device reads a body rate, so virtual sensor 13 is never subscribed to and the part stays powered down.
@@ -70,4 +89,4 @@ No gyroscope, no fusion output, no step counter, no wrist gestures, no interrupt
 
 The driver reports the chip's own axes. Which way the chip sits in the case is the board's fact and lives in `boards/lilygo/t_echo_plus/imu_mount.h`: the one place a rotation gets corrected, and nothing downstream has an axis in it.
 
-The bench measured it in three readings: a quarter turn on the first unit with a working ball, the ball's direction on the second, and the g-meter reading inverted on the third, which is the one that showed the part is face down as well as turned. The mount maps the chip's +X to the case's up, its +Y to the case's right and its +Z out the nose, and the rates with it. That is the same turn the panel is mounted at (`GlassRotation::Deg270` in `hardware/platform/zephyr/platform.h`), which is what a part placed on a board that sits sideways in its case looks like from both ends.
+The bench measured it in three readings: a quarter turn on the first unit with a working ball, the ball's direction on the second, and the g-meter reading inverted on the third, which is the one that showed the part is face down as well as turned. The mount maps the chip's +X to the case's up, its +Y to the case's right and its +Z out the nose, and the rates with it. That is the same turn the panel is mounted at (`GlassRotation::Degrees270` in `hardware/platform/zephyr/platform.h`), which is what a part placed on a board that sits sideways in its case looks like from both ends.

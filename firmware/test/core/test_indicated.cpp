@@ -26,8 +26,8 @@ TEST_CASE("indicated: the first reading is shown as measured, with nothing to bl
 
 TEST_CASE("indicated: a step at one reading a second shows a third, then 70%, then 94%") {
     IndicatedRate indicated = settled_at(0);
-    uint32_t t = kSecondMs;
-    const auto second = [&] { indicated.observe(3000, t += kSecondMs); };
+    uint32_t now_ms = kSecondMs;
+    const auto second = [&] { indicated.observe(3000, now_ms += kSecondMs); };
 
     second();
     CHECK(indicated.value() == 1000);
@@ -53,10 +53,10 @@ TEST_CASE("indicated: a reading that swings every second is shown at a fraction 
 TEST_CASE("indicated: the damping is time, so a two-second cadence settles like a one-second one") {
     IndicatedRate every_second = settled_at(0);
     IndicatedRate every_other = settled_at(0);
-    for (uint32_t t = 2 * kSecondMs; t <= 7 * kSecondMs; t += kSecondMs)
-        every_second.observe(1000, t);
-    for (uint32_t t = 3 * kSecondMs; t <= 7 * kSecondMs; t += 2 * kSecondMs)
-        every_other.observe(1000, t);
+    for (uint32_t now_ms = 2 * kSecondMs; now_ms <= 7 * kSecondMs; now_ms += kSecondMs)
+        every_second.observe(1000, now_ms);
+    for (uint32_t now_ms = 3 * kSecondMs; now_ms <= 7 * kSecondMs; now_ms += 2 * kSecondMs)
+        every_other.observe(1000, now_ms);
 
     CHECK(every_second.value() == doctest::Approx(912).epsilon(0.01));
     CHECK(every_other.value() == doctest::Approx(875).epsilon(0.01));

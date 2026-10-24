@@ -3,7 +3,7 @@
 
 #include "core/comms/config.h"
 #include "core/comms/log_link.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/flight/log_events.h"
 #include "core/flight/log_session.h"
 #include "core/traffic/table.h"
@@ -12,8 +12,8 @@
 
 namespace skyblip::go {
 
-static_assert(flight::kLogContactSlots == traffic::TrafficTable::kCapacity,
-              "the flight log follows one contact per traffic table slot");
+static_assert(flight::kLogTargetSlots == traffic::TrafficTable::kMaxTargets,
+              "the flight log follows one target per traffic table slot");
 
 class FlightLogService : public runtime::Service {
    public:
@@ -28,7 +28,7 @@ class FlightLogService : public runtime::Service {
     void tick(uint32_t now_ms) override;
 
     bool available() const { return flights_.available(); }
-    bool recording() const { return session_.open(); }
+    bool recording() const { return session_.recording(); }
     uint32_t session_id() const { return session_.session_id(); }
     uint32_t records_written() const { return flights_.records_written(); }
     uint32_t records_dropped() const { return session_.dropped(); }
@@ -50,11 +50,11 @@ class FlightLogService : public runtime::Service {
     // While true the next command waits on the bus: its answer would have nowhere to go.
     bool replying() const;
     void handle(const comms::LogRequest& request);
-    void record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
+    void record_link(diagnostics::LinkAction action, uint16_t session, uint16_t frame_bytes,
                      uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     RecordStore* store_for(comms::LogStore store);
-    void ack(comms::LogStore store, bool ok, const char* reason);
+    void acknowledge(comms::LogStore store, bool ok, const char* reason);
     bool on_ground() const;
 
     RecordStore& flights_;
@@ -63,7 +63,7 @@ class FlightLogService : public runtime::Service {
     flight::LogSession session_{};
     flight::LogEvents events_{};
     uint32_t recorded_drops_{0};
-    uint16_t reply_to_{0};
+    uint16_t reply_link_session_{0};
 
     uint8_t scratch_[kStoreRecordBytes]{};
 };

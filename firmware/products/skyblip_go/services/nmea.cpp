@@ -19,8 +19,8 @@ namespace {
 constexpr int32_t kHundredthCmPerFoot = 3048;
 constexpr int32_t kHalfFootHundredthCm = kHundredthCmPerFoot / 2;
 
-int32_t centimetres_to_feet(int32_t alt_cm) {
-    const int32_t hundredths = alt_cm * 100;
+int32_t centimetres_to_feet(int32_t altitude_cm) {
+    const int32_t hundredths = altitude_cm * 100;
     return (hundredths >= 0 ? hundredths + kHalfFootHundredthCm
                             : hundredths - kHalfFootHundredthCm) /
            kHundredthCmPerFoot;
@@ -36,8 +36,8 @@ constexpr uint16_t kHalfTurnDeg = 180;
 constexpr int32_t kFullTurnDeg = 360;
 
 int32_t signed_bearing(uint16_t clockwise_deg) {
-    const int32_t deg = static_cast<int32_t>(clockwise_deg);
-    return deg > kHalfTurnDeg ? deg - kFullTurnDeg : deg;
+    const int32_t bearing_deg = static_cast<int32_t>(clockwise_deg);
+    return bearing_deg > kHalfTurnDeg ? bearing_deg - kFullTurnDeg : bearing_deg;
 }
 
 }  // namespace
@@ -64,15 +64,15 @@ void NmeaService::tick(uint32_t now_ms) {
         // starting from the top, on its first pass.
         cursor_ = 0;
         passed_once_ = false;
-        pass_len_ = pass_sent_ = resume_count_ = 0;
+        pass_bytes_ = pass_sent_ = resume_count_ = 0;
         return;
     }
     drain();
     if (passed_once_) {
         const uint32_t since = now_ms - last_pass_ms_;
-        if (since < kMovingTargetRedrawMs) return;
+        if (since < kMovingTargetRedrawPeriodMs) return;
         if (context_.state.rf.dwell.burst_armed &&
-            since < kMovingTargetRedrawMs + kPassDeferralCeilingMs)
+            since < kMovingTargetRedrawPeriodMs + kPassDeferralCeilingMs)
             return;
     }
     last_pass_ms_ = now_ms;
@@ -85,11 +85,11 @@ void NmeaService::tick(uint32_t now_ms) {
 // cannot be the one a full sky pushes off the end.
 void NmeaService::run_pass(uint32_t now_ms) {
     const int negotiated = static_cast<int>(context_.roles.link.payload_bytes());
-    payload_ = negotiated < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload
-               : negotiated > kFrameBytesCap           ? kFrameBytesCap
-                                                       : negotiated;
-    if (pass_sent_ < pass_len_) abandon_pass();
-    pass_len_ = pass_sent_ = resume_count_ = 0;
+    payload_ = negotiated < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes
+               : negotiated > kFrameBytes                   ? kFrameBytes
+                                                            : negotiated;
+    if (pass_sent_ < pass_bytes_) abandon_pass();
+    pass_bytes_ = pass_sent_ = resume_count_ = 0;
     emit_status(now_ms);
     emit_ownship();
     emit_altitude();
@@ -98,26 +98,28 @@ void NmeaService::run_pass(uint32_t now_ms) {
     drain();
 }
 
-// $PFLAU: how many we hear, whether we have a fix, and the one contact that
+// $PFLAU: how many we hear, whether we have a fix, and the one target that
 // matters most - highest level, nearest at equal level. The level is the one
 // core/traffic already published on the target (products/.../alarm.cpp is its
 // single writer), so the tablet's alarm and the buzzer cannot disagree.
 void NmeaService::emit_status(uint32_t now_ms) {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const traffic::Target* threat = nullptr;
     traffic::AlarmAssessment worst{};
     traffic::Level worst_level = traffic::Level::None;
     int heard = 0;
 
-    for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
+    for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
         heard++;
-        const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
         const bool higher = target->alarm_level > worst_level;
-        const bool nearer = target->alarm_level == worst_level &&
-                            (threat == nullptr || assessment.rel_dist_m < worst.rel_dist_m);
+        const bool nearer =
+            target->alarm_level == worst_level &&
+            (threat == nullptr || assessment.relative_distance_m < worst.relative_distance_m);
         if (!higher && !nearer) continue;
         threat = target;
         worst = assessment;
@@ -125,16 +127,16 @@ void NmeaService::emit_status(uint32_t now_ms) {
     }
 
     const bool transmitting =
-        timing::own_ship_transmits(own, context_.state.clock, context_.state.activation.address());
-    const int len =
-        threat != nullptr
-            ? protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
-                                     &threat->obs, traffic::to_number(worst_level),
-                                     static_cast<int16_t>(signed_bearing(worst.rel_bearing_deg)),
-                                     worst.rel_alt_m, worst.rel_dist_m)
-            : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting, heard,
-                                     nullptr, 0, 0, 0, 0);
-    write(sentence_, len);
+        timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
+    const int length = threat != nullptr
+                           ? protocol::format_pflau(
+                                 sentence_, sizeof(sentence_), own, transmitting, heard,
+                                 &threat->observation, traffic::to_number(worst_level),
+                                 static_cast<int16_t>(signed_bearing(worst.relative_bearing_deg)),
+                                 worst.relative_altitude_m, worst.relative_distance_m)
+                           : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting,
+                                                    heard, nullptr, 0, 0, 0, 0);
+    write(sentence_, length);
 }
 
 // $GPRMC/$GPGGA: ownship's own absolute position, for the EFB that has none of
@@ -144,7 +146,7 @@ void NmeaService::emit_status(uint32_t now_ms) {
 // core/protocol on the same fix and UTC validity $PGRMZ and $PFLAU already
 // read off own, so there is nothing to gate here a second time.
 void NmeaService::emit_ownship() {
-    const model::OwnState& own = context_.state.own;
+    const model::Ownship& own = context_.state.own;
     const int rmc = protocol::format_gprmc(sentence_, sizeof(sentence_), own);
     if (rmc > 0) write(sentence_, rmc);
     const int gga = protocol::format_gpgga(sentence_, sizeof(sentence_), own);
@@ -163,11 +165,11 @@ void NmeaService::emit_ownship() {
 // GNSS altitude - both SoftRF forks gate the same sentence on a baro chip being
 // present for the same reason.
 void NmeaService::emit_altitude() {
-    if (!context_.state.baro.active) return;
-    const int32_t alt_cm =
-        flight::pressure_to_alt_cm(div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000));
+    if (!context_.state.barometer.active) return;
+    const int32_t altitude_cm = flight::pressure_to_altitude_cm(
+        divide_rounded<uint32_t>(context_.state.barometer.pressure_mpa, 1000));
     write(sentence_,
-          protocol::format_pgrmz(sentence_, sizeof(sentence_), centimetres_to_feet(alt_cm),
+          protocol::format_pgrmz(sentence_, sizeof(sentence_), centimetres_to_feet(altitude_cm),
                                  context_.state.own.fix_valid));
 }
 
@@ -183,36 +185,36 @@ void NmeaService::emit_altitude() {
 //
 // INFO: cc 19sep26 the BME280 sits inside the case, so field 4 goes out warm and uncorrected
 void NmeaService::emit_vario_and_battery() {
-    const model::OwnState& own = context_.state.own;
-    protocol::Lk8Ex1 v{};
+    const model::Ownship& own = context_.state.own;
+    protocol::Lk8Ex1 vario{};
 
-    if (context_.state.baro.active) {
-        v.pressure_pa = div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000);
-        v.pressure_valid = true;
+    if (context_.state.barometer.active) {
+        vario.pressure_pa = divide_rounded<uint32_t>(context_.state.barometer.pressure_mpa, 1000);
+        vario.pressure_valid = true;
         // Field 2 is the 1013.25 datum, the same datum-free figure $PGRMZ
         // carries and for the same reason: the consumer applies its own
         // subscale. A consumer that read field 1 recomputes this and ignores it.
-        v.alt_m = div_round(
-            flight::pressure_to_alt_cm(div_round<uint32_t>(context_.state.baro.pressure_mpa, 1000)),
-            100);
-        v.alt_valid = true;
+        vario.altitude_m = divide_rounded(flight::pressure_to_altitude_cm(divide_rounded<uint32_t>(
+                                              context_.state.barometer.pressure_mpa, 1000)),
+                                          100);
+        vario.altitude_valid = true;
     }
 
-    if (context_.state.baro.temperature_valid) {
-        v.temperature_c = div_round<int32_t>(context_.state.baro.temperature_decicelsius, 10);
-        v.temperature_valid = true;
+    if (context_.state.barometer.temperature_valid) {
+        vario.temperature_c = divide_rounded<int32_t>(context_.state.barometer.temperature_dc, 10);
+        vario.temperature_valid = true;
     }
 
     if (own.climb_valid) {
-        const int32_t mm_s = own.climb_mm_s;
-        v.vario_cm_s = (mm_s >= 0 ? mm_s + 5 : mm_s - 5) / 10;
-        v.vario_valid = true;
+        const int32_t climb_mm_s = own.climb_mm_s;
+        vario.vario_cm_s = (climb_mm_s >= 0 ? climb_mm_s + 5 : climb_mm_s - 5) / 10;
+        vario.vario_valid = true;
     }
 
-    v.battery_percent = context_.state.power.battery.percent;
-    v.battery_valid = context_.state.power.battery.valid;
+    vario.battery_percent = context_.state.power.battery.percent;
+    vario.battery_valid = context_.state.power.battery.valid;
 
-    write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), v));
+    write(sentence_, protocol::format_lk8ex1(sentence_, sizeof(sentence_), vario));
 }
 
 // The rotation: at most kTargetsPerPass targets, resuming where the last pass
@@ -221,22 +223,24 @@ void NmeaService::emit_vario_and_battery() {
 // the first N slots every second, means slot 11 is a target the tablet is never
 // told about at all.
 void NmeaService::emit_targets(uint32_t now_ms) {
-    const model::OwnState own = flight::carried_to(context_.state.own, now_ms);
+    const model::Ownship own = flight::carried_to(context_.state.own, now_ms);
     if (!own.fix_valid) return;
 
     int sent = 0;
     const int from = cursor_;
-    for (int step = 0; step < traffic::TrafficTable::kCapacity && sent < kTargetsPerPass; step++) {
-        const int slot = (from + step) % traffic::TrafficTable::kCapacity;
+    for (int step = 0; step < traffic::TrafficTable::kMaxTargets && sent < kTargetsPerPass;
+         step++) {
+        const int slot = (from + step) % traffic::TrafficTable::kMaxTargets;
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) continue;
-        const int len = protocol::format_pflaa(
-            sentence_, sizeof(sentence_), own, flight::carried_to(target->obs, now_ms),
+        const int length = protocol::format_pflaa(
+            sentence_, sizeof(sentence_), own, flight::carried_to(target->observation, now_ms),
             traffic::to_number(target->alarm_level),
-            context_.state.callsigns.find(target->obs.address_mapping_table, target->obs.address));
-        if (len <= 0) continue;
-        write(sentence_, len);
-        resumes_[resume_count_++] = {pass_len_, (slot + 1) % traffic::TrafficTable::kCapacity};
+            context_.state.callsigns.find(target->observation.address_mapping_table,
+                                          target->observation.address));
+        if (length <= 0) continue;
+        write(sentence_, length);
+        resumes_[resume_count_++] = {pass_bytes_, (slot + 1) % traffic::TrafficTable::kMaxTargets};
         sent++;
     }
 }
@@ -251,17 +255,17 @@ void NmeaService::emit_targets(uint32_t now_ms) {
 // a measured full-table pass is 549 bytes, which is three notifications at a
 // negotiated 244, four at an iPhone's 182 and twenty-eight at the guaranteed 20.
 // INFO: fc 25sep26 more than the link's notify share, so the pass is held here and drained per tick
-void NmeaService::write(const char* bytes, int len) {
-    if (len <= 0 || pass_len_ + len > kPassBytesCap) return;
-    std::memcpy(pass_ + pass_len_, bytes, static_cast<size_t>(len));
-    pass_len_ += len;
+void NmeaService::write(const char* sentence, int bytes) {
+    if (bytes <= 0 || pass_bytes_ + bytes > kPassBytes) return;
+    std::memcpy(pass_ + pass_bytes_, sentence, static_cast<size_t>(bytes));
+    pass_bytes_ += bytes;
 }
 
 // A link that refuses outright ends the pass rather than being argued with: what
 // is left unsent is a second-old picture, and the next pass has a current one.
 void NmeaService::drain() {
-    while (pass_sent_ < pass_len_) {
-        const int rest = pass_len_ - pass_sent_;
+    while (pass_sent_ < pass_bytes_) {
+        const int rest = pass_bytes_ - pass_sent_;
         const int take = rest < payload_ ? rest : payload_;
         const Status sent = context_.roles.link.send(
             events::Endpoint::Nmea,
@@ -280,7 +284,7 @@ void NmeaService::drain() {
 
 void NmeaService::abandon_pass() {
     link_drops_++;
-    pass_len_ = pass_sent_ = 0;
+    pass_bytes_ = pass_sent_ = 0;
 }
 
 }  // namespace skyblip::go

@@ -28,11 +28,11 @@ class FlashRegion {
     virtual uint32_t sector_bytes() const = 0;
     virtual uint32_t sector_count() const = 0;
 
-    virtual Status read(uint32_t offset, uint8_t* buf, uint32_t len) = 0;
+    virtual Status read(uint32_t offset, uint8_t* out, uint32_t bytes) = 0;
     // NOR semantics, stated because callers depend on them: a program can only
     // clear bits, so the target must have been erased and no byte may be written
     // twice.
-    virtual Status write(uint32_t offset, const uint8_t* buf, uint32_t len) = 0;
+    virtual Status write(uint32_t offset, const uint8_t* data, uint32_t bytes) = 0;
     virtual Status erase_sector(uint32_t index) = 0;
 };
 

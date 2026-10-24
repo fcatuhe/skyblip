@@ -9,7 +9,7 @@
 
 namespace skyblip::radio {
 
-enum class Event : uint8_t {
+enum class Verdict : uint8_t {
     Transmitted = 0,
     Lost = 1,
     Held = 2,
@@ -25,7 +25,7 @@ enum class Event : uint8_t {
 };
 
 struct Entry {
-    Event event{Event::Undecoded};
+    Verdict verdict{Verdict::Undecoded};
     model::Band band{model::Band::M};
     model::Source source{model::Source::AdslDirect};
     uint32_t address{0};
@@ -37,10 +37,10 @@ struct Entry {
     int8_t rssi_dbm{0};
     int8_t key_offset_s{0};
     uint8_t channel{0};
-    uint8_t len{0};
+    uint8_t bytes{0};
     bool address_valid{false};
     bool rssi_valid{false};
-    bool utc{false};
+    bool utc_dated{false};
     bool airborne{false};
     bool phase_valid{false};
     bool tx_span_valid{false};
@@ -48,7 +48,7 @@ struct Entry {
 };
 
 // INFO: fc 16sep26 the field's own ceiling: a burst this late is a dwell that already ended
-constexpr uint16_t kTxSpanLimitUs = 65535;
+constexpr uint16_t kTxSpanCeilingUs = 65535;
 
 uint16_t tx_span_of(uint64_t done_at_us, uint64_t deadline_us);
 
@@ -57,16 +57,16 @@ int16_t tx_stage_margin_of(uint64_t staged_at_us, uint64_t deadline_us);
 
 class Log {
    public:
-    static constexpr int kCapacity = 16;
+    static constexpr int kMaxEntries = 16;
 
     void record(const Entry& entry);
     void clear() { written_ = 0; }
 
-    int count() const { return written_ < kCapacity ? static_cast<int>(written_) : kCapacity; }
-    const Entry& newest(int i) const;
+    int count() const { return written_ < kMaxEntries ? static_cast<int>(written_) : kMaxEntries; }
+    const Entry& newest(int index) const;
 
    private:
-    Entry entry_[kCapacity]{};
+    Entry entries_[kMaxEntries]{};
     uint32_t written_{0};
 };
 

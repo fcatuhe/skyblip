@@ -8,15 +8,15 @@ The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_u
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
 
-`from_own_callsign` writes the one record of it we speak. Type 66, the same 6+24 sender address our position frames carry, then a header byte of `TelemType` 1 and `InfoType` 5, then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
+`from_own_callsign` writes the one record of it we speak. Type 66, the same 6+24 sender address our position frames carry, then a header byte of telemetry type 1 and info type 5 (OGN's `TelemType` and `InfoType`), then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
 
-`callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_char` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObs` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
+`callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_character` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObservation` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
 
 An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pulls `getInfo(Call, 5)` out of it and hangs the name on the target of that address (`oss/nrf52-ogn-tracker/src/proc.cpp:715-733`), with no opinion about our AMT 58. It transmits the same record itself every 40 to 60 seconds, hopping between four channels, so we hear one of theirs perhaps once in four.
 
 ## What ALP-TAS costs us
 
-`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `address_mapping_table_to_idtype`, and it is a lie chosen from a short list of lies.
+`$PFLAA` carries an `IDType` with three values, and ADS-L's address mapping table has 64. The mapping is `address_mapping_table_to_id_type`, and it is a lie chosen from a short list of lies.
 
 SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658`: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2"). Leaving an address at IDType 0 draws nothing on that app at all, which is the one failure worth never causing again. Between the two values left, 1 (ICAO) claims a permanent, registry-issued identity; 2 (FLARM) claims a device-class kinship that is at least true of the mechanism, self-assigned and transient. So ICAO is reported as ICAO and everything else becomes FLARM.
 
@@ -24,7 +24,7 @@ What that costs: this device's own table, 58 (`settings::kAddressMappingTable`),
 
 ## The flight state every decoder owes
 
-Every decoder here writes `AircraftObs::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself.
+Every decoder here writes `AircraftObservation::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself.
 
 ALP-TAS carries a two-bit state of its own, with no public specification and one reference: SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) sends 1 on the ground, 2 airborne, 3 airborne and circling, and never 0. `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
 
@@ -34,6 +34,33 @@ ALP-TAS carries a two-bit state of its own, with no public specification and one
 
 Until 2026-09-19 the ALP-TAS path checked the CRC and threw the frame away, so every burst with one dead chip pair was a `CRC` row while the same damage on an ADS-L frame was corrected and drawn. On a bench that difference is invisible, because nothing at -15 dBm has dead chips. At range it is receptions.
 
-`alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two structural fields the protocol offers (`LastByte == 0`, `Needs3 == 3`), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
+`alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc_s >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two structural fields the protocol offers (`LastByte == 0`, `Needs3 == 3`), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
 
 The frame is refused either way. What the search buys is the tape saying `KEY+18` instead of `DEC`, which is the difference between a support case about a radio and one about a receiver's time.
+
+## Our names for upstream fields
+
+The packet layout follows OGN's `adsl.h` and the ALP-TAS frame follows SoftRF's `Legacy.cpp`, but the names are ours, spelled in full. The right column is the name this tree carried before, shaped after the reference source, so a reader holding that source finds each field here.
+
+| Ours | Before, after the reference |
+|---|---|
+| `AdslPacket::sync`, `data_bytes`, `data`, `version` | `SYNC`, `Length`, `Data`, `Version` |
+| `payload`, `payload_words`, `payload_type`, `address_bytes` | `Byte`, `Word`, `Type`, `Address` |
+| `timestamp`, `flight_state`, `aircraft_category`, `emergency`, `position_bytes` | `TimeStamp`, `FlightState`, `AcftCat`, `Emergency`, `Position` |
+| `source_integrity`, `design_assurance`, `navigation_integrity` | `SourceIntegrity`, `DesignAssurance`, `NavigIntegrity` |
+| `horizontal_accuracy`, `vertical_accuracy`, `velocity_accuracy`, `reserved` | `HorizAccuracy`, `VertAccuracy`, `VelAccuracy`, `Reserved` |
+| `crc_bytes`, `spare`, `reset()` | `CRC`, `SpareByte`, `init()` |
+| `kPayloadTypePosition`, `kPayloadTypeOgnDiagnostics` | `kTypePosition`, `kTypeOgnDiagnostics` |
+| `telemetry_type()`, `information_type()`, `set_information_header()`, `information_text()` | `telem_type()`, `info_type()`, `set_info_header()`, `info_msg()` |
+| `kTelemetryTypeInformation`, `kInformationTypeRegistration` | `kTelemTypeInfo`, `kInfoTypeRegistration` |
+| `kInformationHeaderOffset`, `kInformationTextOffset`, `kInformationTextBytes` | `kInfoHeaderByte`, `kInfoMsgByte`, `kInfoMsgBytes` |
+| `get_uint24`/`put_uint24`, `get_uint32`/`put_uint32` (`core/util/little_endian.h`) | `AdslPacket::get3`/`set3`, `get4`/`set4` |
+| `encode_unsigned_variable_range`, `decode_unsigned_variable_range`, `encode_signed_variable_range`, `decode_signed_variable_range` (`core/util/variable_range.h`) | `uns_vr_encode`, `uns_vr_decode`, `sign_vr_encode`, `sign_vr_decode` (`core/util/varint.h`) |
+| ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `kFMsgType`, `kFNeeds3`, `kFHas3`, `kFVs` |
+| ALP-TAS `kAltitudeField`, `kLatitudeField`, `kLongitudeField` | `kFAlt`, `kFLat`, `kFLon` |
+| ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `kFGpsA`, `kFGpsB`, `kFUnk8` |
+| ALP-TAS every other `k<Name>Field`, such as `kAddressField` | `kF<Name>`, such as `kFAddress` |
+| ALP-TAS `block_tea`, `block_tea_mix`, `kBlockTeaRounds`, `kBlockTeaKey` | `btea4`, `btea_mix`, `kBteaRounds`, `kBteaKey` |
+| ALP-TAS `encode_scaled`, `decode_scaled`, `longitude_divisor` | `enscale`, `descale`, `londiv` |
+| `block_tea` and `scramble` locals `next`, `previous`, `index`, `key_index`, `round`, `mixed`, `count` | XXTEA's `y`, `z`, `p`, `e`, `r` and `q`, `x`, `n` |
+| `civil_from_epoch` locals `days_since_march_epoch`, `day_of_era`, `year_of_era`, `march_year`, `day_of_year`, `march_month` | Hinnant's `z`, `doe`, `yoe`, `y`, `doy`, `mp` |

@@ -13,15 +13,17 @@ TEST_CASE("charge: a cable in the cold and a cable in the sun are both named") {
     // The parked-cockpit soak project/research/enclosure-and-mount-go.md designs against.
     CHECK(charge_condition(true, true, 724) == ChargeCondition::TooHot);
 
-    CHECK(charge_condition(true, true, kChargeColdDeciCelsius) == ChargeCondition::Ok);
-    CHECK(charge_condition(true, true, kChargeColdDeciCelsius - 1) == ChargeCondition::TooCold);
-    CHECK(charge_condition(true, true, kChargeHotDeciCelsius) == ChargeCondition::Ok);
-    CHECK(charge_condition(true, true, kChargeHotDeciCelsius + 1) == ChargeCondition::TooHot);
+    CHECK(charge_condition(true, true, kChargeColdFloorDeciCelsius) == ChargeCondition::Ok);
+    CHECK(charge_condition(true, true, kChargeColdFloorDeciCelsius - 1) ==
+          ChargeCondition::TooCold);
+    CHECK(charge_condition(true, true, kChargeHotCeilingDeciCelsius) == ChargeCondition::Ok);
+    CHECK(charge_condition(true, true, kChargeHotCeilingDeciCelsius + 1) ==
+          ChargeCondition::TooHot);
 }
 
 // Plating a cell below freezing is permanent, and the die sits above the air.
 TEST_CASE("charge: the cold limit is a die reading, not an ambient one") {
-    CHECK(kChargeColdDeciCelsius >= 50);
+    CHECK(kChargeColdFloorDeciCelsius >= 50);
     CHECK(charge_condition(true, true, 40) == ChargeCondition::TooCold);
 }
 

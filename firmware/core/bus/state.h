@@ -18,7 +18,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
-#include "core/timing/timing_stats.h"
+#include "core/timing/slot_timing_statistics.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -32,17 +32,17 @@ struct RfState {
     timing::SlotPlan plan{};
     timing::DwellPhase dwell{};
     // INFO: fc 27sep26 G6: boards/ writes the PPS half, services/traffic.cpp the dwell half
-    timing::SlotTimingStats timing_stats{};
+    timing::SlotTimingStatistics timing_statistics{};
     // INFO: fc 27sep26 names the callsign burst among a dwell's two, for the row the tape writes
     uint64_t callsign_at_us{0};
     // INFO: fc 28sep26 a TxDone can reach the radio after its dwell closed, its instant says whose
     static constexpr uint32_t kTxDonesKept = 4;
-    uint64_t tx_done_at_us[kTxDonesKept]{};
+    uint64_t tx_done_ring_us[kTxDonesKept]{};
     void note_tx_done(uint32_t index, uint64_t tx_at_us) {
-        tx_done_at_us[index % kTxDonesKept] = tx_at_us;
+        tx_done_ring_us[index % kTxDonesKept] = tx_at_us;
     }
-    uint64_t tx_done_at(uint32_t index, uint32_t count) const {
-        return count - index <= kTxDonesKept ? tx_done_at_us[index % kTxDonesKept] : 0;
+    uint64_t tx_done_at_us(uint32_t index, uint32_t count) const {
+        return count - index <= kTxDonesKept ? tx_done_ring_us[index % kTxDonesKept] : 0;
     }
     uint32_t duty_permille{0};
     uint16_t last_tx_keyed_us{0};
@@ -84,7 +84,7 @@ struct PowerState {
     bool die_valid{false};
 };
 
-struct FlightStatus {
+struct FlightState {
     uint32_t gnss_solutions{0};
     uint32_t seconds{0};
     bool time_valid{false};
@@ -93,11 +93,11 @@ struct FlightStatus {
     flight::FlightState confirmed_state{flight::FlightState::Unknown};
 };
 
-struct GnssStatus {
+struct GnssState {
     gnss::Stage stage{gnss::Stage::Silent};
     uint32_t stage_s{0};
     uint8_t fix_mode{0};
-    // INFO: fc 19sep26 how far into its own second a solution landed, what kFixLagMaxMs bounds
+    // INFO: fc 19sep26 how far into its own second a solution landed, what kFixMaxAgeMs bounds
     uint16_t solution_phase_ms{0};
     bool solution_phase_valid{false};
     bool levels_wanted{false};
@@ -109,9 +109,9 @@ struct GnssStatus {
     gnss::SkyView sky{};
 };
 
-struct BaroState {
+struct BarometerState {
     uint32_t pressure_mpa{0};
-    int16_t temperature_decicelsius{0};
+    int16_t temperature_dc{0};
     bool temperature_valid{false};
     bool active{false};
 };
@@ -144,10 +144,10 @@ struct ImuState {
     dfu::HubImageReport image{};
     bool bootable{true};
     uint32_t fifo_bytes{0};
-    uint32_t unparsed{0};
+    uint32_t unparsed_events{0};
     uint8_t error{0};
     uint8_t interrupt{0};
-    uint8_t meta{0};
+    uint8_t meta_event{0};
     uint8_t sensor_error{0};
     uint8_t errored_sensor{0};
 };
@@ -170,8 +170,8 @@ struct CaptureState {
     uint32_t dropped{0};
     uint32_t sectors{0};
     uint32_t pool_sectors{0};
-    uint32_t price_sectors{0};
-    uint32_t price_flights{0};
+    uint32_t growth_sectors{0};
+    uint32_t evicted_flights{0};
     // INFO: fc 20sep26 the ring rotates: what the partition keeps of a capture, not a deadline
     uint32_t keeps_s{0};
     uint32_t faults{0};
@@ -182,16 +182,16 @@ struct CaptureState {
 };
 
 struct State {
-    model::OwnState own{};
+    model::Ownship own{};
     timing::ClockState clock{};
     traffic::TrafficTable traffic{};
     traffic::CallsignTable callsigns{};
     radio::Log radio_log{};
     RfState rf{};
     PowerState power{};
-    FlightStatus flight{};
-    GnssStatus gnss{};
-    BaroState baro{};
+    FlightState flight{};
+    GnssState gnss{};
+    BarometerState barometer{};
     SlipState slip{};
     IndicatedState indicated{};
     GLoadState gload{};
@@ -203,7 +203,7 @@ struct State {
     identity::Activation activation{};
 
     traffic::Level alarm_level{traffic::Level::None};
-    traffic::Level alarm_live{traffic::Level::None};
+    traffic::Level alarm_undismissed{traffic::Level::None};
 
     struct AirCounts {
         uint32_t rx_ok{0};
@@ -223,7 +223,7 @@ struct State {
         // The third is smaller than the aircraft the frames carried whenever the
         // ground station relayed one back that the table refuses - own-ship, or an
         // aircraft we are hearing better first-hand. Until 2026-08-05 an uplink
-        // frame reached protocol::receive_mband, failed to frame as either M-band
+        // frame reached protocol::receive_m_band, failed to frame as either M-band
         // system and landed in rx_bad: the whole feature was absent and its absence
         // looked like radio noise, which is what hid it.
         uint32_t uplink_frames{0};
@@ -236,9 +236,9 @@ struct State {
 
     // The traffic table's single time base. Mixing GNSS epoch seconds with
     // boot-relative seconds underflows uint32 and ages every target out at once.
-    uint32_t traffic_now(uint32_t now_ms) const {
+    uint32_t traffic_now_s(uint32_t now_ms) const {
         if (clock.pps_locked && clock.utc_s != 0) return clock.utc_s;
-        return own.utc_valid ? own.utc : now_ms / 1000;
+        return own.utc_valid ? own.utc_s : now_ms / 1000;
     }
 };
 

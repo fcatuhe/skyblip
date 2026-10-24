@@ -3,7 +3,7 @@
 #include <cstring>
 #include <string>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/services/record_store.h"
@@ -18,16 +18,16 @@ constexpr uint32_t kCaptureSession = 9000;
 constexpr int kClaimCostMs =
     static_cast<int>(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs);
 // The last phase of the uplink dwell a claim still finishes a guard's width before its end.
-constexpr int kLastClaimPhase = timing::kUplinkRxEnd - timing::kJitterGuardMs - kClaimCostMs;
+constexpr int kLastClaimPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs - kClaimCostMs;
 
 // One sector of the partition answers every read Status::Down, the boot-scan fault.
 class BlindSectorFlash : public platform::host::FlashRegion {
    public:
     BlindSectorFlash(uint32_t sectors, uint32_t blind) : FlashRegion(sectors), blind_(blind) {}
 
-    Status read(uint32_t offset, uint8_t* buf, uint32_t len) override {
+    Status read(uint32_t offset, uint8_t* buffer, uint32_t bytes) override {
         if (offset / kSectorBytes == blind_) return Status::Down;
-        return FlashRegion::read(offset, buf, len);
+        return FlashRegion::read(offset, buffer, bytes);
     }
 
    private:
@@ -43,7 +43,7 @@ struct StoreRig {
     ports::Roles roles;
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::RecordPool pool{context};
     go::RecordStore flights{pool, store::SectorOwner::Flights};
@@ -51,7 +51,7 @@ struct StoreRig {
 
     explicit StoreRig(ports::FlashRegion& region)
         : flash(region),
-          roles{clock,     null.rf,          link,     null.display,         null.kv,
+          roles{clock,     null.rf,          link,     null.display,         null.key_value,
                 region,    null.annunciator, null.dfu, null.die_temperature, null.indicator,
                 null.gnss, identity} {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
@@ -84,7 +84,7 @@ struct StoreRig {
         anchored.pps_locked = true;
         state.rf.plan = timing::Scheduler::plan(phase_ms, anchored);
         state.rf.dwell = timing::DwellPhase{pass_ms, phase_ms, true, false};
-        clock.set_millis(pass_ms);
+        clock.set_milliseconds(pass_ms);
     }
 };
 
@@ -92,9 +92,9 @@ bool says(const std::string& reply, const char* key_value) {
     return reply.find(key_value) != std::string::npos;
 }
 
-void write_flight_record(go::RecordStore& store, uint32_t utc, bool session_end) {
+void write_flight_record(go::RecordStore& store, uint32_t utc_s, bool session_end) {
     flight::LogRecord record{};
-    record.utc = utc;
+    record.utc_s = utc_s;
     record.fix_valid = true;
     record.utc_valid = true;
     record.session_end = session_end;
@@ -103,20 +103,22 @@ void write_flight_record(go::RecordStore& store, uint32_t utc, bool session_end)
     REQUIRE(store.append(raw, 0) == go::Append::Ok);
 }
 
-void write_diag_record(go::RecordStore& store, diag::Type type, uint32_t at_s) {
-    diag::Instant at{};
+void write_diagnostics_record(go::RecordStore& store, diagnostics::Type type, uint32_t at_s) {
+    diagnostics::Instant at{};
     at.at_s = at_s;
     at.utc_dated = true;
-    const diag::Record record = type == diag::Type::End ? diag::record_of(diag::End{}, at)
-                                                        : diag::record_of(diag::Gnss{}, at);
+    const diagnostics::Record record = type == diagnostics::Type::End
+                                           ? diagnostics::record_of(diagnostics::End{}, at)
+                                           : diagnostics::record_of(diagnostics::Gnss{}, at);
     uint8_t raw[go::kStoreRecordBytes]{};
-    diag::encode_record(record, raw);
+    diagnostics::encode_record(record, raw);
     REQUIRE(store.append(raw, 0) == go::Append::Ok);
 }
 
 go::Append append_one(go::RecordStore& store, uint32_t now_ms = 0) {
     uint8_t raw[go::kStoreRecordBytes]{};
-    diag::encode_record(diag::record_of(diag::Gnss{}, diag::Instant{}), raw);
+    diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, diagnostics::Instant{}),
+                               raw);
     return store.append(raw, now_ms);
 }
 
@@ -182,8 +184,8 @@ TEST_CASE("record store: a capture that lost its first sector is listed truncate
     rig.capture.begin_session(kCaptureSession);
     const uint32_t slots = rig.pool.slots_per_sector();
     for (uint32_t i = 0; i <= slots * 3; i++)
-        write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession + i);
-    write_diag_record(rig.capture, diag::Type::End, kFlightSession);
+        write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + i);
+    write_diagnostics_record(rig.capture, diagnostics::Type::End, kFlightSession);
     rig.capture.end_session();
     rig.capture.rebuild_index();
 
@@ -198,13 +200,13 @@ TEST_CASE("record store: a capture is closed by its end marker and by nothing el
     rig.open();
 
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
     rig.capture.end_session();
     rig.capture.rebuild_index();
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"closed\":false"));
 
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::End, kFlightSession + 1);
+    write_diagnostics_record(rig.capture, diagnostics::Type::End, kFlightSession + 1);
     rig.capture.end_session();
     rig.capture.rebuild_index();
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"closed\":true"));
@@ -216,7 +218,7 @@ TEST_CASE("record store: a write the part refused is a fault the caller can retr
     StoreRig rig{flash};
     rig.open();
     rig.capture.begin_session(kCaptureSession);
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
 
     const uint32_t faults = rig.pool.faults();
     flash.cut_power_after(0);
@@ -248,7 +250,7 @@ TEST_CASE("record store: a session opens without touching the flash") {
     CHECK(flash.writes == writes);
     CHECK(flash.erases == erases);
 
-    write_diag_record(rig.capture, diag::Type::Gnss, kFlightSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
     CHECK(flash.erases > erases);
 }
 
@@ -310,15 +312,15 @@ TEST_CASE("record store: a write is placed at the instant it starts, not when it
 
     // Earlier services held the loop this long, inside the view's staleness bound.
     constexpr int kRanLongMs = 50;
-    constexpr int kPassPhase = kLastClaimPhase - kRanLongMs;
-    constexpr uint32_t kPassMs = 10'000 + kPassPhase;
-    rig.publish_dwell(kPassMs, kPassPhase);
-    rig.clock.set_millis(kPassMs + kRanLongMs + 1);
+    constexpr int kPassPhaseMs = kLastClaimPhaseMs - kRanLongMs;
+    constexpr uint32_t kPassMs = 10'000 + kPassPhaseMs;
+    rig.publish_dwell(kPassMs, kPassPhaseMs);
+    rig.clock.set_milliseconds(kPassMs + kRanLongMs + 1);
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
     CHECK(flash.erases == erases);
 
-    rig.publish_dwell(kPassMs + 1000, kPassPhase);
-    rig.clock.set_millis(kPassMs + 1000 + kRanLongMs);
+    rig.publish_dwell(kPassMs + 1000, kPassPhaseMs);
+    rig.clock.set_milliseconds(kPassMs + 1000 + kRanLongMs);
     CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
     CHECK(flash.erases > erases);
 }
@@ -332,22 +334,22 @@ TEST_CASE("record store: both rings writing in one pass share the window that pa
     rig.capture.begin_session(kCaptureSession);
 
     constexpr uint32_t kPassMs = 10'000;
-    rig.publish_dwell(kPassMs, kLastClaimPhase);
+    rig.publish_dwell(kPassMs, kLastClaimPhaseMs);
     CHECK(append_one(rig.flights, kPassMs) == go::Append::Ok);
     CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
     CHECK(rig.capture.sectors_owned() == 0);
 
-    rig.publish_dwell(kPassMs + 1000, timing::kUplinkRxStart);
+    rig.publish_dwell(kPassMs + 1000, timing::kUplinkRxStartMs);
     CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
 }
 
 namespace {
 
 void numbered_record(uint32_t i, uint8_t* out) {
-    diag::Instant at{};
+    diagnostics::Instant at{};
     at.at_s = kFlightSession + i;
     at.utc_dated = true;
-    diag::encode_record(diag::record_of(diag::Gnss{}, at), out);
+    diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, at), out);
 }
 
 void advance_to_slot(go::RecordStore& store, uint32_t slot) {
@@ -370,7 +372,7 @@ TEST_CASE(
     advance_to_slot(rig.capture, 10);
     CHECK(rig.capture.run_slots() == 10);
     advance_to_slot(rig.capture, 20);
-    CHECK(rig.capture.run_slots() == go::kRunMostSlots);
+    CHECK(rig.capture.run_slots() == go::kMaxRunSlots);
     advance_to_slot(rig.capture, rig.pool.slots_per_sector() - 5);
     CHECK(rig.capture.run_slots() == 5);
 }
@@ -401,7 +403,7 @@ TEST_CASE("record store: a write that spans a page edge is booked as two page pr
     advance_to_slot(rig.capture, 20);
 
     constexpr int kOneProgramLeft =
-        timing::kUplinkRxEnd - timing::kJitterGuardMs - static_cast<int>(store::kSlotWriteCostMs);
+        timing::kUplinkRxEndMs - timing::kJitterGuardMs - static_cast<int>(store::kSlotWriteCostMs);
     constexpr uint32_t kPassMs = 10'000;
     rig.publish_dwell(kPassMs, kOneProgramLeft);
     const uint32_t programs = flash.programs;
@@ -424,14 +426,15 @@ TEST_CASE("record store: records written in page runs leave the image one at a t
     runs.capture.begin_session(kCaptureSession);
 
     const uint32_t total = single.pool.slots_per_sector() + 40;
-    uint8_t raw[go::kRunMostSlots * go::kStoreRecordBytes]{};
+    uint8_t raw[go::kMaxRunSlots * go::kStoreRecordBytes]{};
     for (uint32_t i = 0; i < total; i++) {
         numbered_record(i, raw);
         REQUIRE(single.capture.append(raw, 0) == go::Append::Ok);
     }
     for (uint32_t i = 0; i < total;) {
         const uint32_t run = std::min(runs.capture.run_slots(), total - i);
-        for (uint32_t k = 0; k < run; k++) numbered_record(i + k, raw + k * go::kStoreRecordBytes);
+        for (uint32_t offset = 0; offset < run; offset++)
+            numbered_record(i + offset, raw + offset * go::kStoreRecordBytes);
         REQUIRE(runs.capture.append(raw, run, 0) == go::Append::Ok);
         i += run;
     }

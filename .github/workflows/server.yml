@@ -49,6 +49,7 @@ jobs:
               - 'firmware/scenarios/*.json'
               - 'firmware/ui/widgets/skyship.cpp'
               - 'firmware/ui/widgets/skyship.h'
+              - 'schemas/**'
 
   scan_ruby:
     name: scan Ruby (brakeman, bundler-audit)

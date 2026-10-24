@@ -20,14 +20,14 @@ namespace skyblip {
 using Go = go::Product<platform::host::Platform>;
 
 // INFO: fc 18oct26 the barometer is required, so these cases fit one and silence it after bring-up
-struct BaroByHand {};
-constexpr BaroByHand kBaroByHand{};
+struct BarometerByHand {};
+constexpr BarometerByHand kBarometerByHand{};
 
 struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(BaroByHand) : Rig() { platform.baro().present = false; }
+    explicit Rig(BarometerByHand) : Rig() { platform.barometer().fitted = false; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
                  std::optional<uint16_t> serial = platform::host::Identity::kSerial)
@@ -37,188 +37,189 @@ struct Rig {
 
     go::Settings& settings() { return product.settings(); }
 
-    void run(uint32_t from, uint32_t to, uint32_t step = 50) {
-        for (uint32_t t = from; t <= to; t += step) {
-            platform.clock().set_millis(t);
-            product.step(t);
+    void run(uint32_t from_ms, uint32_t to_ms, uint32_t step_ms = 50) {
+        for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
+            platform.clock().set_milliseconds(now_ms);
+            product.run_pass(now_ms);
         }
     }
 
     // The shell's other loop: a refused boot settles the frame it owes the glass.
-    void sleep_again(uint32_t step = 50) {
-        for (uint32_t t = 0; t <= 20000; t += step) {
-            platform.clock().set_millis(t);
-            if (product.park_refusal(t)) return;
+    void sleep_again(uint32_t step_ms = 50) {
+        for (uint32_t now_ms = 0; now_ms <= 20000; now_ms += step_ms) {
+            platform.clock().set_milliseconds(now_ms);
+            if (product.park_refusal(now_ms)) return;
         }
     }
 
-    void push_fix(int32_t alt_m, uint32_t updates) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.alt_mm = alt_m * 1000;
-        f.vdop_e2 = 150;
-        f.updates = updates;
-        product.bus().gnss.push(f);
+    void push_fix(int32_t altitude_m, uint32_t updates) {
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.altitude_hae_mm = altitude_m * 1000;
+        solution.vdop_e2 = 150;
+        solution.sentences = updates;
+        product.bus().gnss.push(solution);
     }
 
     // A receiver that lost its vertical solution: no VDOP, and the last height it solved.
-    void push_2d_fix(int32_t alt_m, uint32_t updates) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.fix_mode = gnss::kFixMode2D;
-        f.alt_mm = alt_m * 1000;
-        f.updates = updates;
-        product.bus().gnss.push(f);
+    void push_2d_fix(int32_t altitude_m, uint32_t updates) {
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.fix_mode = gnss::kFixMode2D;
+        solution.altitude_hae_mm = altitude_m * 1000;
+        solution.sentences = updates;
+        product.bus().gnss.push(solution);
     }
 
     // 2026-08-02T00:00:00Z. A fix with no UTC cannot name a session, so the
     // helpers below carry one and advance it a second at a time.
-    static constexpr uint32_t kUtcBase = 1785628800;
+    static constexpr uint32_t kBaseUtcS = 1785628800;
 
     // A solution as a receiver reports one in flight: moving, timed, solved in 3D, and
     // referenced to both datums. core/flight decides what it means.
-    void push_timed_fix(int32_t speed_mm_s, int32_t alt_msl_m) {
-        gnss::GnssSolution f{};
-        f.fix_valid = true;
-        f.utc_valid = true;
-        f.utc = kUtcBase + utc_offset_s;
-        f.lat_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
-        f.lon_1e7 = 85000000;
-        f.alt_msl_mm = alt_msl_m * 1000;
-        f.alt_mm = f.alt_msl_mm + gnss::kDefaultGeoidSeparationMm;
-        f.geoid_separation_measured = true;
-        f.speed_mm_s = speed_mm_s;
-        f.track_cdeg = 9000;
-        f.sats = 10;
-        f.hdop_e2 = 100;
-        f.vdop_e2 = 150;
-        f.updates = ++fix_updates;
-        product.bus().gnss.push(f);
+    void push_timed_fix(int32_t speed_mm_s, int32_t altitude_msl_m) {
+        gnss::GnssSolution solution{};
+        solution.fix_valid = true;
+        solution.utc_valid = true;
+        solution.utc_s = kBaseUtcS + utc_offset_s;
+        solution.latitude_1e7 = 485000000 + static_cast<int32_t>(utc_offset_s) * 3000;
+        solution.longitude_1e7 = 85000000;
+        solution.altitude_msl_mm = altitude_msl_m * 1000;
+        solution.altitude_hae_mm = solution.altitude_msl_mm + gnss::kDefaultGeoidSeparationMm;
+        solution.geoid_measured = true;
+        solution.speed_mm_s = speed_mm_s;
+        solution.track_cdeg = 9000;
+        solution.satellites = 10;
+        solution.hdop_e2 = 100;
+        solution.vdop_e2 = 150;
+        solution.sentences = ++fix_updates;
+        product.bus().gnss.push(solution);
     }
 
     // One second of the world: a solution, then the passes that follow it.
-    void second(uint32_t& t, int32_t speed_mm_s, int32_t alt_msl_m) {
-        push_timed_fix(speed_mm_s, alt_msl_m);
-        run(t, t + 950);
-        t += 1000;
+    void second(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        push_timed_fix(speed_mm_s, altitude_msl_m);
+        run(now_ms, now_ms + 950);
+        now_ms += 1000;
         utc_offset_s++;
     }
 
     // What the driver publishes once the receiver has gone quiet: not a fix.
-    void blind_second(uint32_t& t) {
-        gnss::GnssSolution f{};
-        f.fix_valid = false;
-        f.updates = ++fix_updates;
-        product.bus().gnss.push(f);
-        run(t, t + 950);
-        t += 1000;
+    void blind_second(uint32_t& now_ms) {
+        gnss::GnssSolution solution{};
+        solution.fix_valid = false;
+        solution.sentences = ++fix_updates;
+        product.bus().gnss.push(solution);
+        run(now_ms, now_ms + 950);
+        now_ms += 1000;
         utc_offset_s++;
     }
 
-    void blind_seconds(uint32_t& t, uint32_t n) {
-        for (uint32_t i = 0; i < n; i++) blind_second(t);
+    void blind_seconds(uint32_t& now_ms, uint32_t seconds) {
+        for (uint32_t i = 0; i < seconds; i++) blind_second(now_ms);
     }
 
-    void seconds(uint32_t& t, uint32_t n, int32_t speed_mm_s, int32_t alt_msl_m) {
-        for (uint32_t i = 0; i < n; i++) second(t, speed_mm_s, alt_msl_m);
+    void seconds(uint32_t& now_ms, uint32_t seconds, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        for (uint32_t i = 0; i < seconds; i++) second(now_ms, speed_mm_s, altitude_msl_m);
     }
 
-    // The same passes, counted instead of bounded: `t <= to` above cannot cross
-    // the 49.7-day wrap of ports::Clock::millis(), because that is a comparison of
+    // The same passes, counted instead of bounded: `now_ms <= to_ms` above cannot cross
+    // the 49.7-day wrap of ports::Clock::milliseconds(), because that is a comparison of
     // two instants (ports/clock.h). A case that wants the device stepped THROUGH the
-    // wrap advances by an elapsed span instead. Steps t forward by span + step.
-    void run_span(uint32_t& t, uint32_t span_ms, uint32_t step = 50) {
-        for (uint32_t stepped = 0; stepped <= span_ms; stepped += step) {
-            platform.clock().set_millis(t);
-            product.step(t);
-            t += step;
+    // wrap advances by an elapsed span instead. Steps now_ms forward by span + step_ms.
+    void run_span(uint32_t& now_ms, uint32_t span_ms, uint32_t step_ms = 50) {
+        for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
+            platform.clock().set_milliseconds(now_ms);
+            product.run_pass(now_ms);
+            now_ms += step_ms;
         }
     }
 
     // The same passes, driven from the 64-bit clock the way both platforms do it:
-    // now_ms is the low 32 bits of the uptime micros() reports
+    // now_ms is the low 32 bits of the uptime microseconds() reports
     // (hardware/platform/{host,zephyr}/clock.h), so this is the only way to step a
-    // case through the 49.7-day wrap of millis() while micros() keeps counting -
-    // which is what the silicon does and what set_millis() cannot express.
-    void run_span_from_us(uint64_t& us, uint32_t span_ms, uint32_t step_ms = 50) {
+    // case through the 49.7-day wrap of milliseconds() while microseconds() keeps counting -
+    // which is what the silicon does and what set_milliseconds() cannot express.
+    void run_span_from_us(uint64_t& now_us, uint32_t span_ms, uint32_t step_ms = 50) {
         for (uint32_t stepped = 0; stepped <= span_ms; stepped += step_ms) {
-            platform.clock().set_micros(us);
-            product.step(platform.clock().millis());
-            us += static_cast<uint64_t>(step_ms) * 1000;
+            platform.clock().set_microseconds(now_us);
+            product.run_pass(platform.clock().milliseconds());
+            now_us += static_cast<uint64_t>(step_ms) * 1000;
         }
     }
 
     // One second of the world, wherever the counter happens to be: run_span(950)
     // in 50 ms steps is the whole second.
-    void second_across(uint32_t& t, int32_t speed_mm_s, int32_t alt_msl_m) {
-        push_timed_fix(speed_mm_s, alt_msl_m);
-        run_span(t, 950);
+    void second_across(uint32_t& now_ms, int32_t speed_mm_s, int32_t altitude_msl_m) {
+        push_timed_fix(speed_mm_s, altitude_msl_m);
+        run_span(now_ms, 950);
         utc_offset_s++;
     }
 
-    void push_baro(int32_t alt_cm, uint32_t at_ms) {
-        events::BaroSample sample{};
-        sample.pressure_mpa = flight::alt_mm_to_pressure_mpa(alt_cm * 10);
+    void push_barometer(int32_t altitude_cm, uint32_t at_ms) {
+        events::BarometerSample sample{};
+        sample.pressure_mpa = flight::altitude_mm_to_pressure_mpa(altitude_cm * 10);
         sample.at_ms = at_ms;
-        product.bus().baro.push(sample);
+        product.bus().barometer.push(sample);
     }
 
     // Held across steps, then released across steps: a level has to be stable
     // through the board's debounce window before it is an edge at all.
-    void press(uint32_t& t) {
+    void press(uint32_t& now_ms) {
         platform.board_gpio().button_down = true;
-        settle(t);
+        settle(now_ms);
         platform.board_gpio().button_down = false;
-        settle(t);
+        settle(now_ms);
     }
 
-    void settle(uint32_t& t) {
+    void settle(uint32_t& now_ms) {
         for (int i = 0; i < 2; i++) {
-            platform.clock().set_millis(t);
-            product.step(t);
-            t += 40;
+            platform.clock().set_milliseconds(now_ms);
+            product.run_pass(now_ms);
+            now_ms += 40;
         }
     }
 
     // The authorising gesture: two presses inside go::ConfirmGesture's window.
-    void double_press(uint32_t& t) {
-        press(t);
-        press(t);
+    void double_press(uint32_t& now_ms) {
+        press(now_ms);
+        press(now_ms);
     }
 
     // The three gestures the device answers, as go::ScreenService names them.
-    void tap(uint32_t& t) { touch_pad(t, 200); }
+    void tap(uint32_t& now_ms) { touch_pad(now_ms, 200); }
 
-    void long_touch(uint32_t& t) { touch_pad(t, go::Controls::kLongTouchMs + 200); }
+    void long_touch(uint32_t& now_ms) { touch_pad(now_ms, go::Controls::kLongTouchHoldMs + 200); }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu.
-    void show(uint32_t& t, go::Page page) {
+    void show(uint32_t& now_ms, go::Page page) {
         for (int i = 0; i < go::kPageCount && product.screen().page() != go::menu_owner(page); i++)
-            tap(t);
+            tap(now_ms);
         if (go::walked(page)) return;
-        press(t);
+        press(now_ms);
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n && product.screen().editor().focus() != row_for(page); i++)
-            tap(t);
-        press(t);
-        run(t, t + 200);
-        t += 200;
+        for (int i = 0; i < menu.row_count && product.screen().editor().focus() != row_for(page);
+             i++)
+            tap(now_ms);
+        press(now_ms);
+        run(now_ms, now_ms + 200);
+        now_ms += 200;
     }
 
     static go::MenuRow row_for(go::Page page) {
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n; i++)
+        for (int i = 0; i < menu.row_count; i++)
             if (go::page_behind(menu.rows[i]) == page) return menu.rows[i];
         return go::MenuRow::kCount;
     }
 
-    void touch_pad(uint32_t& t, uint32_t ms) {
+    void touch_pad(uint32_t& now_ms, uint32_t held_ms) {
         platform.board_gpio().pad_down = true;
-        run(t, t + ms);
-        t += ms;
+        run(now_ms, now_ms + held_ms);
+        now_ms += held_ms;
         platform.board_gpio().pad_down = false;
-        run(t, t + 100);
-        t += 100;
+        run(now_ms, now_ms + 100);
+        now_ms += 100;
     }
 
     bus::State& state() { return product.state(); }
@@ -229,7 +230,7 @@ struct Rig {
     void raise_link(uint16_t session_id = 1) { platform.link().raise_link(session_id); }
     void drop_link() { platform.link().drop_link(); }
     void drop_link(uint16_t session_id) { platform.link().drop_link(session_id); }
-    bool link_up() { return product.config().config().link_up(); }
+    bool link_up() { return product.config_link().config().link_up(); }
 
     // The last thing the device said on one endpoint, the NMEA broadcast aside.
     std::string last_on(events::Endpoint endpoint) {
@@ -251,8 +252,8 @@ struct Rig {
         events::RxFrame frame{};
         frame.session_id = session_id;
         frame.endpoint = events::Endpoint::Config;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         platform.link().push_rx(frame);
     }
 
@@ -267,8 +268,8 @@ struct Rig {
         events::RxFrame frame{};
         frame.session_id = session_id;
         frame.endpoint = events::Endpoint::Log;
-        frame.len = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.len);
+        frame.bytes = static_cast<uint16_t>(std::strlen(json));
+        std::memcpy(frame.data.data(), json, frame.bytes);
         platform.link().push_rx(frame);
     }
 

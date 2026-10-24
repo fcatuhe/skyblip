@@ -38,12 +38,12 @@ namespace skyblip::traffic {
 // installation loses several dB into a cockpit at each end, so the air-to-air
 // figure in practice is a third of this: 30 km is a ceiling, never a promise.
 //
-// A ceiling is exactly what a sanity gate wants. It cannot hide a contact anyone
-// could act on, because the alarm layer's outermost ring is 3 km
-// (core/traffic/alarm.h kInfoDistM) and the radar's furthest range setting is
+// A ceiling is exactly what a sanity gate wants. It cannot hide a target anyone
+// could act on, because the alarm layer's advisory ring is 3 km
+// (core/traffic/alarm.h kAdvisoryDistanceM) and the radar's furthest range setting is
 // well inside this figure, and it cannot be reached by a real transmitter on this
 // band with this power. What is past it did not arrive over this link.
-constexpr int32_t kMaxPlausibleRangeM = 30000;
+constexpr int32_t kPlausibleRangeCeilingM = 30000;
 
 // A relayed target did not travel that path. It travelled two: the aircraft to a
 // ground station, and the ground station to us (core/protocol/adsl_uplink.h). The
@@ -54,7 +54,7 @@ constexpr int32_t kMaxPlausibleRangeM = 30000;
 // claimed position stops being a plausible two-hop path and becomes arithmetic on
 // a corrupted field. Gating a relay at the single-hop figure would throw away
 // exactly the distant traffic the uplink exists to provide.
-constexpr int32_t kMaxRelayedRangeM = 2 * kMaxPlausibleRangeM;
+constexpr int32_t kRelayedRangeCeilingM = 2 * kPlausibleRangeCeilingM;
 
 // Which of the two applies to a report, from the path it came over.
 int32_t plausible_range_m(model::Source source);
@@ -68,9 +68,9 @@ enum class Plausibility : uint8_t { Believable, NoReference, TooFar };
 
 // slant_m is written whenever the answer is Believable or TooFar, so a caller
 // that wants to log the refusal has the figure that caused it. Which ceiling is
-// applied depends on obs.source, because that is what says how many hops the
+// applied depends on observation.source, because that is what says how many hops the
 // report crossed.
-Plausibility range_check(const model::OwnState& own, const model::AircraftObs& obs,
+Plausibility range_check(const model::Ownship& own, const model::AircraftObservation& observation,
                          int32_t& slant_m);
 
 }  // namespace skyblip::traffic

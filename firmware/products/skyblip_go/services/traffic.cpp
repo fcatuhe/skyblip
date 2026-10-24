@@ -10,14 +10,15 @@
 namespace skyblip::go {
 
 namespace {
-// INFO: fc 20sep26 the branch bus::State::traffic_now() takes is what dates the second it returns
+// INFO: fc 20sep26 the branch bus::State::traffic_now_s() takes is what dates the second it returns
 bool utc_dated(const bus::State& state) {
     return (state.clock.pps_locked && state.clock.utc_s != 0) || state.own.utc_valid;
 }
 }  // namespace
 
 Status TrafficService::setup() {
-    uplink_ = has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
+    uplink_enabled_ =
+        has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
     return Status::Ok;
 }
 
@@ -35,22 +36,22 @@ void TrafficService::tick(uint32_t now_ms) {
             case events::RfEventType::RxDone: on_frame(event, now_ms); break;
             case events::RfEventType::CrcError:
                 context_.state.air.rx_bad++;
-                log(event, stamp_for(event, now_ms), radio::Event::BadCrc);
+                log(event, stamp_for(event, now_ms), radio::Verdict::BadCrc);
                 break;
             case events::RfEventType::Missed:
                 context_.state.air.tx_lost++;
-                log(event, stamp_for(event, now_ms), radio::Event::Lost);
+                log(event, stamp_for(event, now_ms), radio::Verdict::Lost);
                 break;
             case events::RfEventType::TxDone:
                 context_.state.rf.note_tx_done(context_.state.air.tx_ok, event.tx_at_us);
                 context_.state.air.tx_ok++;
-                context_.state.rf.timing_stats.record_dwell_phase(
+                context_.state.rf.timing_statistics.record_dwell_phase(
                     static_cast<int64_t>(event.keyed_at_us) - static_cast<int64_t>(event.tx_at_us));
-                log(event, stamp_for(event, now_ms), radio::Event::Transmitted);
+                log(event, stamp_for(event, now_ms), radio::Verdict::Transmitted);
                 break;
         }
     }
-    const uint32_t now_s = context_.state.traffic_now(now_ms);
+    const uint32_t now_s = context_.state.traffic_now_s(now_ms);
     context_.state.traffic.age_out(now_s);
     context_.state.callsigns.age_out(now_s);
 }
@@ -58,34 +59,35 @@ void TrafficService::tick(uint32_t now_ms) {
 events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t now_ms) const {
     const bus::State& state = context_.state;
     return events::stamp_of(event.at_us, state.clock.pps_edge_us, state.clock.pps_locked,
-                            state.traffic_now(now_ms));
+                            state.traffic_now_s(now_ms));
 }
 
-// INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1Wrap past the second its sender keyed in
-uint32_t TrafficService::keyed_utc(const events::Stamp& stamp, uint32_t now_s) {
+// INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1WrapMs past the second its sender keyed in
+uint32_t TrafficService::keyed_utc_s(const events::Stamp& stamp, uint32_t now_s) {
     if (!stamp.phase_valid) return now_s;
-    const bool in_slot1_tail = stamp.into_ms < timing::kSlot1Wrap;
+    const bool in_slot1_tail = stamp.into_ms < timing::kSlot1WrapMs;
     return (in_slot1_tail && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
 }
 
 void TrafficService::log(const events::RfEvent& event, const events::Stamp& stamp,
-                         radio::Event outcome, const model::AircraftObs* obs, int8_t key_offset_s) {
+                         radio::Verdict outcome, const model::AircraftObservation* observation,
+                         int8_t key_offset_s) {
     const bus::State& state = context_.state;
     radio::Entry entry{};
-    entry.event = outcome;
+    entry.verdict = outcome;
     entry.band = event.band;
-    entry.channel = event.freq_hz == timing::kMband1Hz ? 1 : 0;
+    entry.channel = event.frequency_hz == timing::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
-    entry.utc = utc_dated(state);
+    entry.utc_dated = utc_dated(state);
     entry.airborne = flight::airborne(state.own.flight_state);
     entry.rssi_dbm = event.rssi_dbm;
     entry.rssi_valid = event.rssi_valid;
-    if (event.type == events::RfEventType::RxDone) entry.len = event.len;
+    if (event.type == events::RfEventType::RxDone) entry.bytes = event.bytes;
     if (event.type == events::RfEventType::TxDone || event.type == events::RfEventType::Missed)
         entry.callsign = event.tx_at_us != 0 && event.tx_at_us == state.rf.callsign_at_us;
-    if (outcome == radio::Event::Transmitted && event.tx_at_us != 0) {
+    if (outcome == radio::Verdict::Transmitted && event.tx_at_us != 0) {
         entry.tx_keyed_us = radio::tx_span_of(event.keyed_at_us, event.tx_at_us);
         entry.tx_span_us = radio::tx_span_of(event.at_us, event.tx_at_us);
         entry.tx_stage_margin_us = radio::tx_stage_margin_of(event.staged_at_us, event.tx_at_us);
@@ -94,20 +96,20 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
         context_.state.rf.last_tx_span_us = entry.tx_span_us;
     }
     entry.key_offset_s = key_offset_s;
-    if (obs != nullptr) {
-        entry.source = obs->source;
-        entry.address = obs->address;
-        entry.address_valid = obs->source != model::Source::AdslUplink;
+    if (observation != nullptr) {
+        entry.source = observation->source;
+        entry.address = observation->address;
+        entry.address_valid = observation->source != model::Source::AdslUplink;
     }
     context_.state.radio_log.record(entry);
-    context_.diag.record(entry);
+    context_.diagnostics.record(entry);
 }
 
 void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     const events::Stamp stamp = stamp_for(event, now_ms);
     protocol::Frame frame{};
     const protocol::System system =
-        protocol::receive_burst(event.band, event.data.data(), event.len, frame);
+        protocol::receive_burst(event.band, event.data.data(), event.bytes, frame);
     if (system == protocol::System::AdslUplink) {
         on_uplink(event, stamp, now_ms);
         return;
@@ -117,38 +119,38 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
             context_.state.air.rx_noise++;
             return;
         }
-        count_refusal(radio::Event::Unframed);
-        log(event, stamp, radio::Event::Unframed);
+        count_refusal(radio::Verdict::Unframed);
+        log(event, stamp, radio::Verdict::Unframed);
         return;
     }
 
-    const uint32_t utc = context_.state.traffic_now(now_ms);
-    const uint32_t keyed = keyed_utc(stamp, utc);
-    model::AircraftObs obs{};
+    const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
+    const uint32_t keyed = keyed_utc_s(stamp, utc_s);
+    model::AircraftObservation observation{};
     const bool alptas = system == protocol::System::Alptas;
     int8_t key_offset_s = 0;
-    const radio::Event outcome =
-        alptas ? decode_alptas(frame, keyed, stamp.phase_valid, obs, key_offset_s)
-               : decode_adsl(frame, keyed, stamp, obs);
-    if (outcome == radio::Event::Named) {
+    const radio::Verdict outcome =
+        alptas ? decode_alptas(frame, keyed, stamp.phase_valid, observation, key_offset_s)
+               : decode_adsl(frame, keyed, stamp, observation);
+    if (outcome == radio::Verdict::Named) {
         context_.state.air.rx_named++;
-        log(event, stamp, outcome, &obs);
+        log(event, stamp, outcome, &observation);
         return;
     }
-    if (outcome != radio::Event::Received) {
+    if (outcome != radio::Verdict::Received) {
         count_refusal(outcome);
         const bool named = alptas && names_its_sender(outcome);
-        log(event, stamp, outcome, named ? &obs : nullptr, key_offset_s);
+        log(event, stamp, outcome, named ? &observation : nullptr, key_offset_s);
         return;
     }
 
-    obs.received.into_ms = stamp.into_ms;
-    obs.received.phase_valid = stamp.phase_valid;
-    obs.at_ms = now_ms;
-    obs.rssi_dbm = event.rssi_dbm;
-    context_.state.traffic.update(obs, utc);
+    observation.received.into_ms = stamp.into_ms;
+    observation.received.phase_valid = stamp.phase_valid;
+    observation.at_ms = now_ms;
+    observation.rssi_dbm = event.rssi_dbm;
+    context_.state.traffic.update(observation, utc_s);
     context_.state.air.rx_ok++;
-    log(event, stamp, radio::Event::Received, &obs);
+    log(event, stamp, radio::Verdict::Received, &observation);
 }
 
 // One frame from the ground, up to thirteen aircraft in it (§C.4's higher rate
@@ -159,15 +161,15 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
 // missing without a single number moving.
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
-    if (!uplink_) return;
+    if (!uplink_enabled_) return;
     context_.state.air.uplink_frames++;
 
-    model::AircraftObs relayed[protocol::AdslUplink::kMaxTargets];
-    protocol::AdslUplink::DecodeStats stats{};
+    model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
+    protocol::AdslUplink::DecodeStatistics statistics{};
     if (uplink_codec_.decode(event.data.data(), relayed, protocol::AdslUplink::kMaxTargets,
-                             stats) != Status::Ok) {
+                             statistics) != Status::Ok) {
         context_.state.air.uplink_bad++;
-        log(event, stamp, radio::Event::BadCrc);
+        log(event, stamp, radio::Verdict::BadCrc);
         return;
     }
 
@@ -176,95 +178,102 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
     // much. Stamping it with the second it arrived in is the only honest
     // reading, and core/traffic/table.h is what stops that recency from
     // outranking a direct reception of the same aircraft.
-    model::AircraftObs relay{};
+    model::AircraftObservation relay{};
     relay.source = model::Source::AdslUplink;
-    log(event, stamp, radio::Event::Received, &relay);
+    log(event, stamp, radio::Verdict::Received, &relay);
 
-    const uint32_t utc = context_.state.traffic_now(now_ms);
-    for (int i = 0; i < stats.targets; i++) {
-        model::AircraftObs& obs = relayed[i];
-        obs.received = stamp;
-        obs.received.at_s = utc;
-        obs.at_ms = now_ms;
-        obs.rssi_dbm = event.rssi_dbm;
-        if (context_.state.traffic.update(obs, utc) >= 0) context_.state.air.uplink_targets++;
+    const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
+    for (int i = 0; i < statistics.targets; i++) {
+        model::AircraftObservation& observation = relayed[i];
+        observation.received = stamp;
+        observation.received.at_s = utc_s;
+        observation.at_ms = now_ms;
+        observation.rssi_dbm = event.rssi_dbm;
+        if (context_.state.traffic.update(observation, utc_s) >= 0)
+            context_.state.air.uplink_targets++;
     }
 }
 
-void TrafficService::count_refusal(radio::Event outcome) {
+void TrafficService::count_refusal(radio::Verdict outcome) {
     switch (outcome) {
-        case radio::Event::Unattempted: context_.state.air.rx_wait++; break;
-        case radio::Event::Unsupported: context_.state.air.rx_type++; break;
-        case radio::Event::Unframed: context_.state.air.rx_unframed++; break;
-        case radio::Event::Miskeyed: context_.state.air.rx_miskeyed++; break;
+        case radio::Verdict::Unattempted: context_.state.air.rx_wait++; break;
+        case radio::Verdict::Unsupported: context_.state.air.rx_type++; break;
+        case radio::Verdict::Unframed: context_.state.air.rx_unframed++; break;
+        case radio::Verdict::Miskeyed: context_.state.air.rx_miskeyed++; break;
         default: context_.state.air.rx_bad++; break;
     }
 }
 
 // INFO: fc 19sep26 the address word is in clear and the frame CRC covers it
-bool TrafficService::names_its_sender(radio::Event outcome) {
-    return outcome == radio::Event::Unsupported || outcome == radio::Event::Miskeyed ||
-           outcome == radio::Event::Undecoded;
+bool TrafficService::names_its_sender(radio::Verdict outcome) {
+    return outcome == radio::Verdict::Unsupported || outcome == radio::Verdict::Miskeyed ||
+           outcome == radio::Verdict::Undecoded;
 }
 
 // The Manchester error map travels with the frame, so the forward correction
 // knows which bits the air already told us not to trust.
-radio::Event TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc,
-                                         const events::Stamp& stamp, model::AircraftObs& obs) {
-    protocol::AdslPacket p{};
-    p.init();
-    __builtin_memcpy(&p.Version, frame.data, protocol::kAdslFrameBytes);
-    if (p.check_crc() != 0 && (p.correct(frame.err) < 0 || p.check_crc() != 0))
-        return radio::Event::BadCrc;
-    p.descramble();
-    if (p.is_registration()) return learn_callsign(p, utc, obs);
-    if (!p.is_position()) return radio::Event::Unsupported;
+radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
+                                           const events::Stamp& stamp,
+                                           model::AircraftObservation& observation) {
+    protocol::AdslPacket packet{};
+    packet.reset();
+    __builtin_memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
+        return radio::Verdict::BadCrc;
+    packet.descramble();
+    if (packet.is_registration()) return learn_callsign(packet, utc_s, observation);
+    if (!packet.is_position()) return radio::Verdict::Unsupported;
     events::Stamp received = stamp;
-    received.at_s = utc;
-    if (!protocol::to_obs(p, received, 0, model::Source::AdslDirect, obs))
-        return radio::Event::Undecoded;
-    return radio::Event::Received;
+    received.at_s = utc_s;
+    if (!protocol::to_observation(packet, received, 0, model::Source::AdslDirect, observation))
+        return radio::Verdict::Undecoded;
+    return radio::Verdict::Received;
 }
 
-radio::Event TrafficService::learn_callsign(const protocol::AdslPacket& p, uint32_t utc,
-                                            model::AircraftObs& obs) {
+radio::Verdict TrafficService::learn_callsign(const protocol::AdslPacket& packet, uint32_t utc_s,
+                                              model::AircraftObservation& observation) {
     char callsign[traffic::CallsignTable::kTextBytes];
-    if (protocol::callsign_of(p, callsign, sizeof(callsign)) == 0) return radio::Event::Undecoded;
-    obs.address = p.address();
-    obs.address_mapping_table = p.address_mapping_table();
-    obs.source = model::Source::AdslDirect;
-    context_.state.callsigns.learn(obs.address_mapping_table, obs.address, callsign, utc);
-    return radio::Event::Named;
+    if (protocol::callsign_of(packet, callsign, sizeof(callsign)) == 0)
+        return radio::Verdict::Undecoded;
+    observation.address = packet.address();
+    observation.address_mapping_table = packet.address_mapping_table();
+    observation.source = model::Source::AdslDirect;
+    context_.state.callsigns.learn(observation.address_mapping_table, observation.address, callsign,
+                                   utc_s);
+    return radio::Verdict::Named;
 }
 
 // INFO: fc 16sep26 ALP-TAS keys on the second its sender keyed in, so an undated burst is a guess
-radio::Event TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc, bool dated,
-                                           model::AircraftObs& obs, int8_t& key_offset_s) const {
-    const model::OwnState& own = context_.state.own;
-    if (!own.fix_valid || !own.utc_valid) return radio::Event::Unattempted;
-    if (protocol::alptas_correct(frame.data, frame.err) < 0) return radio::Event::BadCrc;
-    obs.address = protocol::alptas_address(frame.data);
-    obs.source = model::Source::Alptas;
-    const int32_t lat = own.lat_1e7;
-    const int32_t lon = own.lon_1e7;
-    radio::Event verdict = verdict_of(protocol::alptas_decode(frame.data, utc, lat, lon, obs));
-    if (verdict == radio::Event::Undecoded && !dated && utc != 0)
-        verdict = verdict_of(protocol::alptas_decode(frame.data, utc - 1, lat, lon, obs));
-    if (verdict != radio::Event::Undecoded) return verdict;
+radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
+                                             model::AircraftObservation& observation,
+                                             int8_t& key_offset_s) const {
+    const model::Ownship& own = context_.state.own;
+    if (!own.fix_valid || !own.utc_valid) return radio::Verdict::Unattempted;
+    if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
+    observation.address = protocol::alptas_address(frame.data);
+    observation.source = model::Source::Alptas;
+    const int32_t latitude = own.latitude_1e7;
+    const int32_t longitude = own.longitude_1e7;
+    radio::Verdict verdict =
+        verdict_of(protocol::alptas_decode(frame.data, utc_s, latitude, longitude, observation));
+    if (verdict == radio::Verdict::Undecoded && !dated && utc_s != 0)
+        verdict = verdict_of(
+            protocol::alptas_decode(frame.data, utc_s - 1, latitude, longitude, observation));
+    if (verdict != radio::Verdict::Undecoded) return verdict;
 
     uint32_t keyed = 0;
-    if (protocol::alptas_keyed_second(frame.data, utc, keyed) != Status::Ok) return verdict;
-    const int32_t offset = static_cast<int32_t>(keyed - utc);
+    if (protocol::alptas_keyed_second(frame.data, utc_s, keyed) != Status::Ok) return verdict;
+    const int32_t offset = static_cast<int32_t>(keyed - utc_s);
     if (offset == 0) return verdict;
     key_offset_s = static_cast<int8_t>(offset);
-    return radio::Event::Miskeyed;
+    return radio::Verdict::Miskeyed;
 }
 
-radio::Event TrafficService::verdict_of(Status decoded) {
+radio::Verdict TrafficService::verdict_of(Status decoded) {
     switch (decoded) {
-        case Status::Ok: return radio::Event::Received;
-        case Status::Unsupported: return radio::Event::Unsupported;
-        default: return radio::Event::Undecoded;
+        case Status::Ok: return radio::Verdict::Received;
+        case Status::Unsupported: return radio::Verdict::Unsupported;
+        default: return radio::Verdict::Undecoded;
     }
 }
 

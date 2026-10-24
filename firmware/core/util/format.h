@@ -6,26 +6,27 @@
 
 namespace skyblip {
 
-inline char hex_digit(uint8_t v) {
-    v &= 0x0F;
-    return static_cast<char>(v < 10 ? '0' + v : 'A' + v - 10);
+inline char hex_digit(uint8_t nibble) {
+    nibble &= 0x0F;
+    return static_cast<char>(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
 }
 
-int fmt_string(char* out, const char* s);
+int format_string(char* out, const char* text);
 
-int fmt_hex(char* out, uint32_t value, uint8_t digits);
+int format_hex(char* out, uint32_t value, uint8_t digits);
 
-int fmt_uint(char* out, uint32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0);
+int format_unsigned(char* out, uint32_t value, uint8_t minimum_digits = 1,
+                    uint8_t fraction_digits = 0);
 
-int fmt_int(char* out, int32_t value, uint8_t min_digits = 1, uint8_t dec_point = 0,
-            bool no_plus = false);
+int format_signed(char* out, int32_t value, uint8_t minimum_digits = 1, uint8_t fraction_digits = 0,
+                  bool plus_sign = true);
 
-int fmt_seconds_of_day(char* out, uint32_t seconds);
+int format_seconds_of_day(char* out, uint32_t seconds);
 
-int fmt_flight_clock(char* out, uint32_t seconds, bool have_time);
+int format_flight_clock(char* out, uint32_t seconds, bool flight_time_valid);
 
-int fmt_nmea_lat(char* out, int32_t lat_1e7);
-int fmt_nmea_lon(char* out, int32_t lon_1e7);
+int format_nmea_latitude(char* out, int32_t latitude_1e7);
+int format_nmea_longitude(char* out, int32_t longitude_1e7);
 
 }
 

@@ -36,7 +36,7 @@ class NullLink : public Link {
     Status advertise_as(const char*) override { return Status::Down; }
 };
 
-class NullKvStore : public KvStore {
+class NullKeyValueStore : public KeyValueStore {
    public:
     bool ready() const override { return false; }
     Status read(const char*, uint8_t*, size_t, size_t&) override { return Status::NotFound; }
@@ -70,7 +70,7 @@ struct NullRoles {
     NullDisplay display;
     NullAnnunciator annunciator;
     NullLink link;
-    NullKvStore kv;
+    NullKeyValueStore key_value;
     NullFlashRegion log_flash;
     NullDfu dfu;
     NullRf rf;

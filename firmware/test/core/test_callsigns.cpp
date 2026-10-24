@@ -43,12 +43,12 @@ TEST_CASE("callsigns: a name outlives the target and then it is forgotten") {
 // One name slot per target slot, so a full table is one that heard more aircraft than it can track.
 TEST_CASE("callsigns: a full table drops the name heard longest ago") {
     CallsignTable names;
-    for (int i = 0; i < CallsignTable::kCapacity; i++)
+    for (int i = 0; i < CallsignTable::kMaxCallsigns; i++)
         names.learn(58, static_cast<uint32_t>(0x1000 + i), "FULL", static_cast<uint32_t>(100 + i));
-    CHECK(names.count() == CallsignTable::kCapacity);
+    CHECK(names.count() == CallsignTable::kMaxCallsigns);
 
     names.learn(58, 0x2000, "NEW", 500);
-    CHECK(names.count() == CallsignTable::kCapacity);
+    CHECK(names.count() == CallsignTable::kMaxCallsigns);
     CHECK(names.find(58, 0x1000) == nullptr);
     CHECK(names.find(58, 0x1001) != nullptr);
     REQUIRE(names.find(58, 0x2000) != nullptr);

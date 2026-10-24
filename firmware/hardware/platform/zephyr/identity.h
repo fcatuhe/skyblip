@@ -40,7 +40,7 @@ class Identity : public ports::Identity {
 
     const struct device* entropy_{DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy))};
     Uicr uicr_{entropy_};
-    const struct flash_area* page_{nullptr};
+    const struct flash_area* unlock_page_{nullptr};
     identity::DeviceId device_id_{};
     uint16_t bluetooth_tag_{0};
 };

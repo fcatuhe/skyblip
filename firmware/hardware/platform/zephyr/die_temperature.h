@@ -23,32 +23,32 @@ namespace skyblip::platform::zephyr {
 // thread.
 class DieTemperature : public ports::DieTemperature {
    public:
-    bool ready() const { return dev_ != nullptr && device_is_ready(dev_); }
+    bool ready() const { return sensor_ != nullptr && device_is_ready(sensor_); }
 
-    bool read(int16_t& decicelsius) override {
+    bool read(int16_t& die_dc) override {
         if (!ready()) return false;
-        if (sensor_sample_fetch(dev_) != 0) return false;
-        struct sensor_value temp{};
-        if (sensor_channel_get(dev_, SENSOR_CHAN_DIE_TEMP, &temp) != 0) return false;
+        if (sensor_sample_fetch(sensor_) != 0) return false;
+        struct sensor_value reading{};
+        if (sensor_channel_get(sensor_, SENSOR_CHAN_DIE_TEMP, &reading) != 0) return false;
         // val1 is whole degrees, val2 micro-degrees, either of which may be
         // negative on a cold morning.
-        const int32_t deci = temp.val1 * 10 + temp.val2 / 100000;
+        const int32_t measured_dc = reading.val1 * 10 + reading.val2 / 100000;
         // Outside this the sensor is broken rather than the device cold or hot:
         // the nRF52840 datasheet's own operating range is -40 to +105 C, and a
         // reading past it must not be published as a temperature.
-        if (deci < -500 || deci > 1250) return false;
-        decicelsius = static_cast<int16_t>(deci);
+        if (measured_dc < -500 || measured_dc > 1250) return false;
+        die_dc = static_cast<int16_t>(measured_dc);
         return true;
     }
 
    private:
 #if DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf_temp)
-    const struct device* dev_{DEVICE_DT_GET_ONE(nordic_nrf_temp)};
+    const struct device* sensor_{DEVICE_DT_GET_ONE(nordic_nrf_temp)};
 #else
     // A build without the sensor driver is a build with an absent capability, and
     // it still links: that is the whole point of the null answer in
     // ports/die_temperature.h.
-    const struct device* dev_{nullptr};
+    const struct device* sensor_{nullptr};
 #endif
 };
 

@@ -16,7 +16,7 @@ const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
 export const PRODUCTION_KEY = 0xb2;
-export const DEFAULTS = { aircraft_type: 1, alarm: true, alarm_volume: 2, units: 0, callsign: '' };
+export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 2, units: 0, callsign: '' };
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const IMAGE_HEADER_BYTES = 32;
 const TLV_INFO = 0x6907;
@@ -43,6 +43,10 @@ class Characteristic {
   }
 
   notify(bytes) {
+    if (bytes.length > this.link.mtu - ATT_HEADER_BYTES) {
+      this.link.refusedNotifications++;
+      return;
+    }
     const value = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     for (const listener of this.listeners) listener({ target: { value } });
   }
@@ -80,10 +84,9 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     address = 0x00012a,
-    identityNames = true,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, identityNames });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -100,6 +103,7 @@ export class FakeSkyblip {
     this.longestWrite = 0;
     this.longestAttempt = 0;
     this.longestPacket = 0;
+    this.refusedNotifications = 0;
     this.overlaps = 0;
     this.writing = false;
     this.approved = null;
@@ -199,35 +203,36 @@ export class FakeSkyblip {
     setImmediate(() => this.connected && this.config.notify(encoder.encode(JSON.stringify(json))));
   }
 
-  ack(ok, reason) {
-    this.reply({ ack: ok, reason });
+  acknowledge(ok, reason) {
+    this.reply({ acknowledge: ok, reason });
   }
 
   onConfig(bytes) {
-    const { cmd, ...fields } = JSON.parse(decoder.decode(bytes));
-    this.commands.push(cmd);
-    if (this.claimedBy !== null) return this.reply({ ack: false, reason: 'claimed', by: this.claimedBy });
-    if (cmd === 'update') return this.sendUpdate();
-    if (cmd === 'status') return this.sendStatus();
-    if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...this.addressFields(), ...this.stored });
-    if (cmd === 'defaults' && this.knowsDefaults) return this.reply({ cmd: 'defaults', ...DEFAULTS });
-    if (!['set', 'dfu', 'recovery'].includes(cmd)) return this.ack(false, 'unknown_cmd');
-    if (!this.onGround) return this.ack(false, 'in_flight');
-    if (cmd !== 'recovery' && !this.swapPowered) return this.ack(false, 'low_power');
-    if (cmd === 'dfu' && !fields.version) return this.ack(false, 'no_version');
-    if (cmd === 'dfu' && this.older(parseVersion(fields.version))) return this.ack(false, 'older');
-    if (cmd === 'dfu') this.approved = fields.version;
-    this.pending = cmd;
-    if (cmd === 'set') {
-      this.staged = fields;
-      return this.reply({ ack: false, pending: true, reason: 'confirm' });
-    }
-    this.reply({ ack: false, pending: true, reason: `confirm_${cmd}` });
+    this.answer(JSON.parse(decoder.decode(bytes)));
   }
 
-  // INFO: fc 19oct26 firmware before #126 names the address addr and always sends it: it has no activation
+  answer({ command, ...fields }) {
+    this.commands.push(command);
+    if (this.claimedBy !== null) return this.reply({ acknowledge: false, reason: 'claimed', by: this.claimedBy });
+    if (command === 'update') return this.sendUpdate();
+    if (command === 'status') return this.sendStatus();
+    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
+    if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
+    if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
+    if (!this.onGround) return this.acknowledge(false, 'in_flight');
+    if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
+    if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
+    if (command === 'dfu' && this.older(parseVersion(fields.version))) return this.acknowledge(false, 'older');
+    if (command === 'dfu') this.approved = fields.version;
+    this.pending = command;
+    if (command === 'set') {
+      this.staged = fields;
+      return this.reply({ acknowledge: false, pending: true, reason: 'confirm' });
+    }
+    this.reply({ acknowledge: false, pending: true, reason: `confirm_${command}` });
+  }
+
   addressFields() {
-    if (!this.identityNames) return { addr: 0x5b5afe, addr_table: 58 };
     return { ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 };
   }
 
@@ -236,7 +241,7 @@ export class FakeSkyblip {
     this.windowOpen = false;
     if (this.pending) {
       this.pending = null;
-      this.ack(false, 'in_flight');
+      this.acknowledge(false, 'in_flight');
     }
     this.sendStatus();
   }
@@ -249,10 +254,10 @@ export class FakeSkyblip {
   installLanded() {
     this.windowOpen = false;
     const image = readImage(this.slot);
-    if (this.refuseInstall) return this.ack(false, this.refuseInstall);
-    if (!image || versionText(image.version) !== this.approved) return this.ack(false, 'not_approved');
-    if (this.key !== null && image.key !== keyName(this.key)) return this.ack(false, 'wrong_key');
-    this.ack(true, 'install');
+    if (this.refuseInstall) return this.acknowledge(false, this.refuseInstall);
+    if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
+    if (this.key !== null && image.key !== keyName(this.key)) return this.acknowledge(false, 'wrong_key');
+    this.acknowledge(true, 'install');
     setImmediate(() => setImmediate(() => this.drop()));
   }
 
@@ -261,7 +266,7 @@ export class FakeSkyblip {
   }
 
   sendUpdate() {
-    const frame = { cmd: 'update', image: this.image };
+    const frame = { command: 'update', image: this.image };
     if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
     if (this.settings) frame.settings = this.settings;
     if (this.imu !== null) frame.imu = this.imu;
@@ -273,14 +278,14 @@ export class FakeSkyblip {
 
   sendStatus() {
     this.reply({
-      cmd: 'status',
+      command: 'status',
       flight: this.onGround ? 'ground' : 'airborne',
       upload: this.windowOpen && this.onGround,
       battery_percent: this.swapPowered ? 80 : 12,
       charging: false,
       power_level: this.swapPowered ? 'OK' : 'LOW',
       went_dark_flat: false,
-      die_temp_c: 21,
+      die_temperature_c: 21,
     });
   }
 
@@ -289,26 +294,26 @@ export class FakeSkyblip {
     this.pending = null;
     if (task === 'set') {
       Object.assign(this.stored, this.staged);
-      return this.reply({ ack: true });
+      return this.reply({ acknowledge: true });
     }
     if (task === 'dfu') {
       this.windowOpen = true;
       this.finished = false;
-      return this.ack(true, 'dfu');
+      return this.acknowledge(true, 'dfu');
     }
-    this.ack(true, task);
+    this.acknowledge(true, task);
     setImmediate(() => setImmediate(() => this.drop()));
   }
 
   refuse() {
     this.pending = null;
     this.windowOpen = false;
-    this.ack(false, 'cancelled');
+    this.acknowledge(false, 'cancelled');
   }
 
   expire() {
     this.pending = null;
-    this.ack(false, 'expired');
+    this.acknowledge(false, 'expired');
   }
 
   push(json) {
