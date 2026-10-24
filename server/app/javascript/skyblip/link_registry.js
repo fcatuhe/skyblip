@@ -1,6 +1,5 @@
 export const LINK_REGISTRY = Object.freeze({
   "title": "skyBlip companion link registry (v1)",
-  "description": "Every frame on the companion link's config and log endpoints, and the number each of its keys travels under. A frame is one CBOR map (RFC 8949) in one write or one notification, in one grammar every reader of the link holds to: the map's keys unsigned and ascending, every head in its shortest form and its argument within 32 bits, definite lengths only, no floats, no tags, no null, and nothing nested but an array of unsigned integers. Text is UTF-8: the firmware writes nothing else and every reader refuses a malformed sequence. link.v1.vectors.json holds what the readers refuse and what the clients' encoders refuse, and the firmware, blip.py and the server each test against it. Key 0 is 'command' in every frame and is not listed under 'keys': its value is the 'code' of a frame below, which says which frame this is and therefore which key table applies. A frame's 'keys' list every other key it may carry, each with its 'name' (what a client shows and accepts, and what the JSON Schemas in this directory call it), its 'number', assigned once and never reused within the frame, and its 'type': 'unsigned' and 'integer' (a CBOR unsigned or negative integer; 'unsigned' is never negative), 'boolean', 'text' (UTF-8, only for free text a person reads or types), 'bytes' (a byte string, never hex or base64; 'bytes' with a number is its fixed length), 'unsigned_array' (an array of unsigned integers) and 'enum' (an unsigned integer whose names are the values of the enum named by 'enum'). A frame with 'keys_of' shares the key table of the frame it names, so the same key is the same number in both: 'set', 'config' and 'defaults' are one table, so a 'defaults' reply with its command swapped is a 'set', and 'radio' is the radio group of 'diagnostics'. 'endpoint' is the characteristic it travels on, 'sender' who writes it: 'host' (a page, blip.py), 'unit', or 'both' when the host asks with the bare command and the unit answers under the same one. Under 'enums', each value has a 'name' and a 'code'; 'mirrors' names the C++ enum whose numbering the codes are and, under 'off_the_wire', the enumerators the link never carries, and a value's 'mirrors' its enumerator. firmware/test/core/test_link_mirrors.cpp holds them to it both ways: each code to its enumerator, and the enum to the registry through a switch over every value named here, which -Wswitch refuses to compile once the C++ enum gains one the registry lacks. Which keys a frame carries when, their ranges and their meaning are the JSON Schemas' (status.v1, config.v1, diagnostics.v1, activation.v1) and firmware/core/comms/README.md's; the numbers are only here, and scripts/check_link_schemas.py fails when a frame's schema does not name exactly the keys numbered here. scripts/link_registry.py generates firmware/core/comms/link_registry.h, firmware/simulator/world/link_names.h, firmware/test/core/test_link_mirrors.cpp and server/app/javascript/skyblip/link_registry.js from this file, and scripts/check_link_registry.py fails when one of them differs from what it would write. scripts/blip_frames.py, which scripts/blip.py speaks through, reads this file directly.",
   "frames": [
     {
       "command": "acknowledgement",
@@ -17,7 +16,8 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "acknowledge",
           "number": 1,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "pending",
@@ -267,12 +267,14 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "flight",
           "number": 1,
           "type": "enum",
-          "enum": "flight"
+          "enum": "flight",
+          "required": true
         },
         {
           "name": "upload",
           "number": 2,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "battery_percent",
@@ -282,18 +284,21 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "charging",
           "number": 4,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "power_level",
           "number": 5,
           "type": "enum",
-          "enum": "power_level"
+          "enum": "power_level",
+          "required": true
         },
         {
           "name": "went_dark_flat",
           "number": 6,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "die_temperature_c",
@@ -317,12 +322,14 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "part",
           "number": 1,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "more",
           "number": 2,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "pps_us",
@@ -406,42 +413,50 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "writable",
           "number": 1,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "requests",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "writes",
           "number": 3,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "forced",
           "number": 4,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "worst_wait_ms",
           "number": 5,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "pending",
           "number": 6,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "budget_ms",
           "number": 7,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "bound_ms",
           "number": 8,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         }
       ]
     },
@@ -461,17 +476,20 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "group",
           "number": 1,
           "type": "enum",
-          "enum": "group"
+          "enum": "group",
+          "required": true
         },
         {
           "name": "part",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "more",
           "number": 3,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "uptime_s",
@@ -732,17 +750,20 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "group",
           "number": 1,
           "type": "enum",
-          "enum": "group"
+          "enum": "group",
+          "required": true
         },
         {
           "name": "part",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "more",
           "number": 3,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "uptime_s",
@@ -1002,7 +1023,8 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "image",
           "number": 1,
           "type": "enum",
-          "enum": "image"
+          "enum": "image",
+          "required": true
         },
         {
           "name": "from",
@@ -1023,13 +1045,15 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "swap_powered",
           "number": 5,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "imu",
           "number": 6,
           "type": "enum",
-          "enum": "hub_image"
+          "enum": "hub_image",
+          "required": true
         },
         {
           "name": "imu_digest",
@@ -1065,7 +1089,8 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "version",
           "number": 1,
-          "type": "text"
+          "type": "text",
+          "required": true
         }
       ]
     },
@@ -1113,13 +1138,15 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "nonce",
           "number": 1,
           "type": "bytes",
-          "bytes": 16
+          "bytes": 16,
+          "required": true
         },
         {
           "name": "server_key_id",
           "number": 2,
           "type": "bytes",
-          "bytes": 4
+          "bytes": 4,
+          "required": true
         }
       ]
     },
@@ -1139,13 +1166,15 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "server_nonce",
           "number": 1,
           "type": "bytes",
-          "bytes": 16
+          "bytes": 16,
+          "required": true
         },
         {
           "name": "signature",
           "number": 2,
           "type": "bytes",
-          "bytes": 64
+          "bytes": 64,
+          "required": true
         }
       ]
     },
@@ -1165,35 +1194,41 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "device_id",
           "number": 1,
           "type": "bytes",
-          "bytes": 8
+          "bytes": 8,
+          "required": true
         },
         {
           "name": "public_key",
           "number": 2,
           "type": "bytes",
-          "bytes": 32
+          "bytes": 32,
+          "required": true
         },
         {
           "name": "version",
           "number": 3,
-          "type": "text"
+          "type": "text",
+          "required": true
         },
         {
           "name": "server_key_id",
           "number": 4,
           "type": "bytes",
-          "bytes": 4
+          "bytes": 4,
+          "required": true
         },
         {
           "name": "release",
           "number": 5,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "signature",
           "number": 6,
           "type": "bytes",
-          "bytes": 64
+          "bytes": 64,
+          "required": true
         }
       ]
     },
@@ -1212,13 +1247,15 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "serial",
           "number": 1,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "signature",
           "number": 2,
           "type": "bytes",
-          "bytes": 64
+          "bytes": 64,
+          "required": true
         }
       ]
     },
@@ -1268,7 +1305,8 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "session",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "from",
@@ -1323,7 +1361,8 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "acknowledge",
           "number": 2,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "reason",
@@ -1364,32 +1403,38 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "index",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "of",
           "number": 3,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "session",
           "number": 4,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "records",
           "number": 5,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "closed",
           "number": 6,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "truncated",
           "number": 7,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         }
       ]
     },
@@ -1414,22 +1459,26 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "session",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "from",
           "number": 3,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "ends_session",
           "number": 4,
-          "type": "boolean"
+          "type": "boolean",
+          "required": true
         },
         {
           "name": "records",
           "number": 5,
-          "type": "bytes"
+          "type": "bytes",
+          "required": true
         }
       ]
     },
@@ -1462,22 +1511,26 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "aircraft_type",
           "number": 1,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "width",
           "number": 2,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "hot_spot",
           "number": 3,
-          "type": "unsigned"
+          "type": "unsigned",
+          "required": true
         },
         {
           "name": "rows",
           "number": 4,
-          "type": "bytes"
+          "type": "bytes",
+          "required": true
         }
       ]
     }

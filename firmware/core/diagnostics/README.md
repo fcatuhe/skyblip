@@ -213,4 +213,4 @@ A capture that runs out of partition ends with a `Gap` too, and so does one that
 
 ## The schema
 
-[`schemas/diagnostics_log.v1.schema.json`](../../../schemas/diagnostics_log.v1.schema.json) is what one decoded record looks like, per type, so the host decoder and this directory cannot drift. It is not `schemas/diagnostics.v1.schema.json`, which is the live status dump the companion link answers with (`core/comms/diagnostics.h`) and a different thing entirely.
+[`schemas/diagnostics_log.v1.schema.json`](../../../schemas/diagnostics_log.v1.schema.json) is what one decoded record looks like, per type, so the host decoder and this directory cannot drift. It is not the `diagnostics` frame of `schemas/link.v1.json`, which is the live status dump the companion link answers with (`core/comms/diagnostics.h`) and a different thing entirely.

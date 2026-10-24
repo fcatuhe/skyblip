@@ -14,6 +14,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import check_link_registry  # noqa: E402
 import link_registry  # noqa: E402
 
 EXPECTED = link_registry.written(link_registry.load(), link_registry.formatter())
@@ -65,6 +66,32 @@ class Mirrors(unittest.TestCase):
         result = compiled(link_registry.mirrors_test(registry))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Debug", result.stderr)
+
+
+def status_key(registry, name):
+    status = next(frame for frame in registry["frames"] if frame["command"] == "status")
+    return next(key for key in status["keys"] if key["name"] == name)
+
+
+class Registry(unittest.TestCase):
+    def test_a_frame_or_a_key_without_a_description_is_named(self):
+        registry = link_registry.load()
+        self.assertEqual(check_link_registry.undescribed(registry), [])
+        del status_key(registry, "upload")["description"]
+        del next(frame for frame in registry["frames"] if frame["command"] == "get")["description"]
+        self.assertEqual(check_link_registry.undescribed(registry), ["get", "status.upload"])
+
+    # The status frame is pushed to phones unasked: a key renamed, reordered or made optional fails here.
+    def test_the_status_writer_is_held_to_the_keys_the_registry_gives_the_frame(self):
+        source = check_link_registry.STATUS_WRITER.read_text(encoding="utf-8")
+        registry = link_registry.load()
+        self.assertEqual(list(check_link_registry.status_writer_failures(registry, source)), [])
+        status_key(registry, "battery_percent")["required"] = True
+        status_key(registry, "charging")["type"] = "unsigned"
+        failures = list(check_link_registry.status_writer_failures(registry, source))
+        self.assertEqual(len(failures), 2, failures)
+        self.assertIn("the registry requires", failures[0])
+        self.assertIn("charging: format_status calls add_boolean", failures[1])
 
 
 if __name__ == "__main__":

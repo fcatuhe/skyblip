@@ -74,8 +74,8 @@ struct Settings {
     RadarPlot plot{RadarPlot::All};
     char callsign[kCallsignBytes]{0};
 
-    // The companion-link contract, which is what schemas/config.v1.schema.json
-    // pins. It moves when a key changes meaning, not when the flash layout does.
+    // The companion-link contract, which the config frame of schemas/link.v1.json
+    // describes. It moves when a key changes meaning, not when the flash layout does.
     static constexpr uint8_t kCurrentVersion = 1;
 };
 

@@ -1,250 +1,293 @@
 {
   "title": "skyBlip companion link registry (v1)",
-  "description": "Every frame on the companion link's config and log endpoints, and the number each of its keys travels under. A frame is one CBOR map (RFC 8949) in one write or one notification, in one grammar every reader of the link holds to: the map's keys unsigned and ascending, every head in its shortest form and its argument within 32 bits, definite lengths only, no floats, no tags, no null, and nothing nested but an array of unsigned integers. Text is UTF-8: the firmware writes nothing else and every reader refuses a malformed sequence. link.v1.vectors.json holds what the readers refuse and what the clients' encoders refuse, and the firmware, blip.py and the server each test against it. Key 0 is 'command' in every frame and is not listed under 'keys': its value is the 'code' of a frame below, which says which frame this is and therefore which key table applies. A frame's 'keys' list every other key it may carry, each with its 'name' (what a client shows and accepts, and what the JSON Schemas in this directory call it), its 'number', assigned once and never reused within the frame, and its 'type': 'unsigned' and 'integer' (a CBOR unsigned or negative integer; 'unsigned' is never negative), 'boolean', 'text' (UTF-8, only for free text a person reads or types), 'bytes' (a byte string, never hex or base64; 'bytes' with a number is its fixed length), 'unsigned_array' (an array of unsigned integers) and 'enum' (an unsigned integer whose names are the values of the enum named by 'enum'). A frame with 'keys_of' shares the key table of the frame it names, so the same key is the same number in both: 'set', 'config' and 'defaults' are one table, so a 'defaults' reply with its command swapped is a 'set', and 'radio' is the radio group of 'diagnostics'. 'endpoint' is the characteristic it travels on, 'sender' who writes it: 'host' (a page, blip.py), 'unit', or 'both' when the host asks with the bare command and the unit answers under the same one. Under 'enums', each value has a 'name' and a 'code'; 'mirrors' names the C++ enum whose numbering the codes are and, under 'off_the_wire', the enumerators the link never carries, and a value's 'mirrors' its enumerator. firmware/test/core/test_link_mirrors.cpp holds them to it both ways: each code to its enumerator, and the enum to the registry through a switch over every value named here, which -Wswitch refuses to compile once the C++ enum gains one the registry lacks. Which keys a frame carries when, their ranges and their meaning are the JSON Schemas' (status.v1, config.v1, diagnostics.v1, activation.v1) and firmware/core/comms/README.md's; the numbers are only here, and scripts/check_link_schemas.py fails when a frame's schema does not name exactly the keys numbered here. scripts/link_registry.py generates firmware/core/comms/link_registry.h, firmware/simulator/world/link_names.h, firmware/test/core/test_link_mirrors.cpp and server/app/javascript/skyblip/link_registry.js from this file, and scripts/check_link_registry.py fails when one of them differs from what it would write. scripts/blip_frames.py, which scripts/blip.py speaks through, reads this file directly.",
+  "description": "Every frame on the companion link's config and log endpoints, and the number each of its keys travels under. A frame is one CBOR map (RFC 8949) in one write or one notification, in one grammar every reader of the link holds to: the map's keys unsigned and ascending, every head in its shortest form and its argument within 32 bits, definite lengths only, no floats, no tags, no null, and nothing nested but an array of unsigned integers. Text is UTF-8: the firmware writes nothing else and every reader refuses a malformed sequence. link.v1.vectors.json holds what the readers refuse and what the clients' encoders refuse, and the firmware, blip.py and the server each test against it. Key 0 is 'command' in every frame and is not listed under 'keys': its value is the 'code' of a frame below, which says which frame this is and therefore which key table applies. A frame's 'keys' list every other key it may carry, each with its 'name' (what a client shows and accepts), its 'number', assigned once and never reused within the frame, and its 'type': 'unsigned' and 'integer' (a CBOR unsigned or negative integer; 'unsigned' is never negative), 'boolean', 'text' (UTF-8, only for free text a person reads or types), 'bytes' (a byte string, never hex or base64; 'bytes' with a number is its fixed length), 'unsigned_array' (an array of unsigned integers) and 'enum' (an unsigned integer whose names are the values of the enum named by 'enum'). Every frame and every key has a 'description': what it means, when it is present and the range it takes. A key with 'required' true is in every frame of its command that carries keys: the unit's answer where the host asks with the bare command, the host's own frame where only the host sends one. A frame with 'keys_of' shares the key table of the frame it names, so the same key is the same number in both: 'set', 'config' and 'defaults' are one table, so a 'defaults' reply with its command swapped is a 'set', and 'radio' is the radio group of 'diagnostics'. 'endpoint' is the characteristic it travels on, 'sender' who writes it: 'host' (a page, blip.py), 'unit', or 'both' when the host asks with the bare command and the unit answers under the same one. Under 'enums', each value has a 'name' and a 'code'; 'mirrors' names the C++ enum whose numbering the codes are and, under 'off_the_wire', the enumerators the link never carries, and a value's 'mirrors' its enumerator. firmware/test/core/test_link_mirrors.cpp holds them to it both ways: each code to its enumerator, and the enum to the registry through a switch over every value named here, which -Wswitch refuses to compile once the C++ enum gains one the registry lacks. firmware/core/comms/README.md says how the link carries them, and schemas/activation.v1.schema.json what the activation signatures cover and the JSON the browser posts to the server. scripts/link_registry.py generates firmware/core/comms/link_registry.h, firmware/simulator/world/link_names.h, firmware/test/core/test_link_mirrors.cpp and server/app/javascript/skyblip/link_registry.js from this file, and scripts/check_link_registry.py fails when one of them differs from what it would write, when a frame or a key has no description, and when firmware/core/comms/config_reports.cpp writes the status frame other than its keys say. scripts/blip_frames.py, which scripts/blip.py speaks through, reads this file directly.",
   "frames": [
     {
       "command": "acknowledgement", "code": 0, "endpoint": "config", "sender": "unit",
+      "description": "Unit to host on the config endpoint: the verdict on a command that has no reply of its own, a refusal of any command, or a prompt standing on the glass. 11 bytes at its widest, so every link carries it.",
       "keys": [
-        {"name": "acknowledge", "number": 1, "type": "boolean"},
-        {"name": "pending", "number": 2, "type": "boolean"},
-        {"name": "reason", "number": 3, "type": "enum", "enum": "reason"},
-        {"name": "by", "number": 4, "type": "unsigned"}
+        {"name": "acknowledge", "number": 1, "type": "boolean", "required": true, "description": "The command was carried out. False is a refusal, or a prompt waiting on the glass when pending is true"},
+        {"name": "pending", "number": 2, "type": "boolean", "description": "A prompt stands on the glass under the word in reason: two presses answer it with the command's verdict, one press answers cancelled, thirty seconds expired, and the asking link dropping takes it"},
+        {"name": "reason", "number": 3, "type": "enum", "enum": "reason", "description": "The word for the verdict, the refusal or the prompt, from the one enumeration every frame shares (firmware/core/comms/README.md and server/app/javascript/skyblip/README.md say which command answers which)"},
+        {"name": "by", "number": 4, "type": "unsigned", "description": "On a claimed refusal, the session that holds the claim: one central at a time commands the unit (firmware/core/comms/README.md, The claim)"}
       ]
     },
-    {"command": "get", "code": 1, "endpoint": "config", "sender": "host", "keys": []},
+    {
+      "command": "get", "code": 1, "endpoint": "config", "sender": "host", "keys": [],
+      "description": "Host to unit: asks for the stored settings, answered under command config."
+    },
     {
       "command": "config", "code": 2, "endpoint": "config", "sender": "unit",
+      "description": "Unit to host, the answer to get: the settings a companion app reads, one CBOR map in one frame. config, set and defaults share this key table. Every key here is read by the firmware: settings with no reader were removed rather than accepted and ignored (region, rotation, power_save, dropped after v1.0; page_mask, dropped when the pad's walk became three pages nothing may hide; stealth and gyro, dropped with the features themselves). Every key but the two per-unit bench trims (battery_offset_mv, frequency_trim_e1_ppm) is returned, 31 bytes at the widest. The radar's range and plot are stored settings with no key here: they are set on the device's own menu, and the link neither shows nor sets them. A key with no reading behind it is absent, never a zero.",
       "keys": [
-        {"name": "version", "number": 1, "type": "unsigned"},
-        {"name": "address", "number": 2, "type": "unsigned"},
-        {"name": "address_mapping_table", "number": 3, "type": "unsigned"},
-        {"name": "aircraft_type", "number": 4, "type": "unsigned"},
-        {"name": "alarm_enabled", "number": 5, "type": "boolean"},
-        {"name": "alarm_volume", "number": 6, "type": "enum", "enum": "alarm_volume"},
-        {"name": "units", "number": 7, "type": "enum", "enum": "units"},
-        {"name": "callsign", "number": 8, "type": "text"},
-        {"name": "battery_offset_mv", "number": 9, "type": "integer"},
-        {"name": "frequency_trim_e1_ppm", "number": 10, "type": "integer"}
+        {"name": "version", "number": 1, "type": "unsigned", "description": "The settings contract, always 1 in a config reply and absent from defaults. It moves when a key changes meaning, not when the flash layout does (products/skyblip_go/settings.h, kCurrentVersion)"},
+        {"name": "address", "number": 2, "type": "unsigned", "description": "The 24-bit ADS-L address this unit transmits under, read-only: manufacturer prefix 0x00 followed by the 16-bit serial skyblip.eu assigned from 1 and signed at activation (activation.v1.schema.json). Absent until the unit is activated, as any key with no reading behind it is: a unit with no serial has no address and neither transmits nor receives, so a page reads 'address' in the reply as activated. Not a stored setting: the unit re-verifies its unlock code at every boot, so a 'set' carrying this key is ignored like any key with no reader"},
+        {"name": "address_mapping_table", "number": 3, "type": "unsigned", "description": "ADS-L address mapping table (issue 2 F.2.2), 0 to 63: 0=random/privacy, 1-4 reserved, 5=ICAO, 6=FLARM, 7=OGN-Tracker, 8=FANET, 9+ manufacturer pages, each a registry-assigned 8-bit prefix and a 16-bit base address. A constant 58 on this device, manufacturer page 49 with prefix 0x00 as the ADS-L registry assigned it, so address is that prefix and the unit's serial. Present whether or not the unit is activated, read-only like address."},
+        {"name": "aircraft_type", "number": 4, "type": "unsigned", "description": "ADS-L aircraft category, 0 to 17"},
+        {"name": "alarm_enabled", "number": 5, "type": "boolean", "description": "The traffic alarm sounds. False silences the buzzer and the haptic both, as alarm_volume off does"},
+        {"name": "alarm_volume", "number": 6, "type": "enum", "enum": "alarm_volume", "description": "The three steps of the radar menu's VOLUME row. Off silences the buzzer and the haptic both, as 'alarm_enabled' false does. Soft and loud pulse the haptic with each call. A device ships on loud. Firmware before this scale took 0 to 5, where 3 and up all drove the piezo at the same duty; a stored value comes back as 0 off, 1 and 2 soft, 3 to 5 loud"},
+        {"name": "units", "number": 7, "type": "enum", "enum": "units", "description": "nautical (NM, kt) or metric (km, km/h): the aeronautical unit is the first one because it is the one a pilot flies, and a device ships on it. Decides every page that prints a distance or a speed: the radar's range ring, the nearby page's distance column, the six-pack's speed dial. Altitudes and vertical speeds stay in feet whatever this says, and the status page shows the aeronautical figure and the SI one side by side"},
+        {"name": "callsign", "number": 8, "type": "text", "description": "Upper-case letters, digits, dash and blank, the characters the radar menu types and the ones a $PFLAA ID field can carry, and the aircraft's registration as the radio says it. Set on the radar menu or over this link, shown on the status page, reported back here, and transmitted once every ten seconds: ADS-L's own Traffic payload carries no name, so it goes out under payload type 66, the entry F.2.1 assigns to OGN and whose definition it leaves to them (TelemType 1, InfoType 5, 14 characters). Empty means nothing is transmitted, which is the default and the privacy answer: an address a receiver cannot resolve stays anonymous, and a registration in clear does not. Nine characters here against the wire's fourteen, because that is what the stored settings blob has always held"},
+        {"name": "battery_offset_mv", "number": 9, "type": "integer", "description": "From -250 to 250. Per-unit battery gauge trim in millivolts, added to every reading before a state of charge or a cutoff is read into it. Set once on the production line against a bench supply: two 1% divider resistors put the ratio out by up to 2% (84 mV at a full cell) and the SAADC's gain and reference error adds to that, on a curve whose flat middle spends 250 mV crossing 60 percentage points. The bound is three times the divider's own worst case; beyond it the unit is wired wrong, not out of trim. Write-only over the link: set on the line, it is read back as the millivolts the status reply and the panel already show"},
+        {"name": "frequency_trim_e1_ppm", "number": 10, "type": "integer", "description": "From -100 to 100. Radio centre-frequency trim in tenths of a ppm, positive upwards, applied to every dwell the SX1262 arms (receive and transmit alike). The board fits a TCXO, so 0 is the design intent and the expected value on every unit; the field exists because nothing on the device can measure the reference, and a batch of TCXOs ten times worse than its datasheet would otherwise be a recall. The bound is that tenfold miss (+-10 ppm, +-8.7 kHz at 868.2 MHz): inside it the carrier cannot leave ERC 70-03 band h1.4 (868.0-868.6 MHz), beyond it the part is broken rather than out of trim. Set only against a spectrum analyser or a frequency counter. Write-only over the link, like battery_offset_mv: the device has nothing that could measure the value back for itself."}
       ]
     },
-    {"command": "defaults", "code": 3, "endpoint": "config", "sender": "both", "keys_of": "config"},
-    {"command": "set", "code": 4, "endpoint": "config", "sender": "host", "keys_of": "config"},
+    {
+      "command": "defaults", "code": 3, "endpoint": "config", "sender": "both", "keys_of": "config",
+      "description": "Asked with the bare command, answered under defaults with the keys of config a pilot can set, as a new unit ships them: no version and no address keys, so the reply with its command swapped for set puts a unit back on its defaults. The per-unit trims and the radar's range and plot are not in it and are left as they are."
+    },
+    {
+      "command": "set", "code": 4, "endpoint": "config", "sender": "host", "keys_of": "config",
+      "description": "Host to unit: the keys of config to change, every one accepted, the others left as stored. The unit asks on its glass under confirm, and two presses store them and answer a bare acknowledgement, on the ground only."
+    },
     {
       "command": "status", "code": 5, "endpoint": "config", "sender": "both",
+      "description": "Asked with the bare command, and the one frame the unit also sends without being asked: while a link is up, a change of flight state, a charging flip, a change of power level or a five-percent step of the state of charge pushes it to every subscribed central. With every key at its widest it is 20 bytes, the payload every link guarantees, pinned byte for byte in firmware/test/products/test_comms_report.cpp. It carries what a pilot's screen shows and nothing a bench reads: why the device came up is reset and whether a gauge is fitted is battery_valid in diagnostics, the address and the callsign are config's. A key with no reading behind it is absent, never a zero. The firmware writes the keys in ascending number, and scripts/check_link_registry.py holds firmware/core/comms/config_reports.cpp to this table: the keys, their order, their types and which may be absent.",
       "keys": [
-        {"name": "flight", "number": 1, "type": "enum", "enum": "flight"},
-        {"name": "upload", "number": 2, "type": "boolean"},
-        {"name": "battery_percent", "number": 3, "type": "unsigned"},
-        {"name": "charging", "number": 4, "type": "boolean"},
-        {"name": "power_level", "number": 5, "type": "enum", "enum": "power_level"},
-        {"name": "went_dark_flat", "number": 6, "type": "boolean"},
-        {"name": "die_temperature_c", "number": 7, "type": "integer"}
+        {"name": "flight", "number": 1, "type": "enum", "enum": "flight", "required": true, "description": "The confirmed flight state. Every settings change and upload is refused unless this reads ground, so 'unknown' refuses too"},
+        {"name": "upload", "number": 2, "type": "boolean", "required": true, "description": "A firmware upload window is open: granted by the confirmation gesture on the device, true only on the ground, closed for good by a takeoff"},
+        {"name": "battery_percent", "number": 3, "type": "unsigned", "description": "0 to 100. State of charge, 0 where the device takes itself down rather than where a datasheet calls the cell empty, read on the discharge curve. ABSENT until the gauge has a reading of the cell, for ever on a board with no divider, and while the cable is in, because the divider reads the USB rail there and not the cell"},
+        {"name": "charging", "number": 4, "type": "boolean", "required": true, "description": "The cable is in. No pin says when the charge ends, so a full cell on the cable still reads true"},
+        {"name": "power_level", "number": 5, "type": "enum", "enum": "power_level", "required": true, "description": "What core/power's cutoff rule made of the same samples, three consecutive readings to step down and three to step back up. low is the cell past the knee, about 12%: the device asks for a charger and refuses nothing. critical, about 5%, refuses every durable write but the flight record. flat is the device taking itself down. unknown: no believable reading yet. The glass and the USB console print OK, LOW, CRITICAL, FLAT and --"},
+        {"name": "went_dark_flat", "number": 6, "type": "boolean", "required": true, "description": "The last time this unit went dark it was for a flat cell: the cutoff took it down, or a switch-on was refused below the boot lockout. The glass says FLAT BATTERY until a charger wakes the unit, and this outlives that frame: true for the whole of the one boot that followed, false from the boot after. The self-test page prints the same fact as WAS FLAT"},
+        {"name": "die_temperature_c", "number": 7, "type": "integer", "description": "From -50 to 125. Die temperature in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading younger than 30 seconds exists, because 0.0 C is a plausible hangar morning. Same key and same value as diagnostics'."}
       ]
     },
     {
       "command": "timing", "code": 6, "endpoint": "config", "sender": "both",
+      "description": "The bench's slot timing report, asked with the bare command (core/timing/slot_timing_statistics.h): the PPS and dwell histograms and the executor's switching figures, since boot. One frame on a 182-byte link, 147 bytes at its widest, and consecutive parts on a narrower one. Refused no_statistics where no accumulator is wired.",
       "keys": [
-        {"name": "part", "number": 1, "type": "unsigned"},
-        {"name": "more", "number": 2, "type": "boolean"},
-        {"name": "pps_us", "number": 3, "type": "unsigned_array"},
-        {"name": "pps_worst_us", "number": 4, "type": "integer"},
-        {"name": "pps_samples", "number": 5, "type": "unsigned"},
-        {"name": "dwell_us", "number": 6, "type": "unsigned_array"},
-        {"name": "dwell_worst_us", "number": 7, "type": "integer"},
-        {"name": "dwell_samples", "number": 8, "type": "unsigned"},
-        {"name": "holdover_events", "number": 9, "type": "unsigned"},
-        {"name": "missed", "number": 10, "type": "unsigned"},
-        {"name": "refused", "number": 11, "type": "unsigned"},
-        {"name": "switch_hop_us", "number": 12, "type": "unsigned"},
-        {"name": "switch_to_o_band_us", "number": 13, "type": "unsigned"},
-        {"name": "switch_to_m_band_us", "number": 14, "type": "unsigned"},
-        {"name": "late_dwells", "number": 15, "type": "unsigned"}
+        {"name": "part", "number": 1, "type": "unsigned", "required": true, "description": "Frame index within one answer, from 0"},
+        {"name": "more", "number": 2, "type": "boolean", "required": true, "description": "Another frame follows. Exactly one frame per answer carries false"},
+        {"name": "pps_us", "number": 3, "type": "unsigned_array", "description": "Counts of PPS interval errors in seven buckets, signed and symmetric about zero, edged at kRetuneUs, kHopGuardUs and kJitterGuardUs. An error past the widest edge saturates into the outermost bucket"},
+        {"name": "pps_worst_us", "number": 4, "type": "integer", "description": "The largest PPS interval error since boot, signed, in microseconds"},
+        {"name": "pps_samples", "number": 5, "type": "unsigned", "description": "PPS intervals counted in pps_us"},
+        {"name": "dwell_us", "number": 6, "type": "unsigned_array", "description": "Counts of dwell phase errors, from the armed instant to the burst keying, in the seven buckets of pps_us"},
+        {"name": "dwell_worst_us", "number": 7, "type": "integer", "description": "The largest dwell phase error since boot, signed, in microseconds"},
+        {"name": "dwell_samples", "number": 8, "type": "unsigned", "description": "Dwell phases counted in dwell_us"},
+        {"name": "holdover_events", "number": 9, "type": "unsigned", "description": "PPS gaps longer than 1.5 s, at least one edge missing, which is holdover and not a sample for pps_us"},
+        {"name": "missed", "number": 10, "type": "unsigned", "description": "Dwells that carried a plan and closed without the outcome they were armed for"},
+        {"name": "refused", "number": 11, "type": "unsigned", "description": "Plans never armed because the hour's air-time budget was spent (core/timing/transmit.h)"},
+        {"name": "switch_hop_us", "number": 12, "type": "unsigned", "description": "The executor's slowest M-band channel hop since boot, in microseconds, the figure the hop guard is sized from"},
+        {"name": "switch_to_o_band_us", "number": 13, "type": "unsigned", "description": "The executor's slowest change from the M band to the O band since boot, in microseconds"},
+        {"name": "switch_to_m_band_us", "number": 14, "type": "unsigned", "description": "The executor's slowest change from the O band back to the M band since boot, in microseconds"},
+        {"name": "late_dwells", "number": 15, "type": "unsigned", "description": "Dwells armed ahead that were still not listening at their start"}
       ]
     },
     {
       "command": "flash", "code": 7, "endpoint": "config", "sender": "both",
+      "description": "The durable-write window's bench figures, asked with the bare command (core/timing/durable_write.h): how the settings writes were placed against the radio's dwells since boot. Refused no_statistics where no window is wired.",
       "keys": [
-        {"name": "writable", "number": 1, "type": "boolean"},
-        {"name": "requests", "number": 2, "type": "unsigned"},
-        {"name": "writes", "number": 3, "type": "unsigned"},
-        {"name": "forced", "number": 4, "type": "unsigned"},
-        {"name": "worst_wait_ms", "number": 5, "type": "unsigned"},
-        {"name": "pending", "number": 6, "type": "boolean"},
-        {"name": "budget_ms", "number": 7, "type": "unsigned"},
-        {"name": "bound_ms", "number": 8, "type": "unsigned"}
+        {"name": "writable", "number": 1, "type": "boolean", "required": true, "description": "The power rule allows a settings write now (core/power/cutoff.h)"},
+        {"name": "requests", "number": 2, "type": "unsigned", "required": true, "description": "Changes that asked for a durable write since boot"},
+        {"name": "writes", "number": 3, "type": "unsigned", "required": true, "description": "Writes those changes cost: requests over writes is the coalescing ratio"},
+        {"name": "forced", "number": 4, "type": "unsigned", "required": true, "description": "Writes that could not be placed outside a dwell inside the bound and were forced"},
+        {"name": "worst_wait_ms", "number": 5, "type": "unsigned", "required": true, "description": "The longest a change waited for its write, from the oldest unwritten change"},
+        {"name": "pending", "number": 6, "type": "boolean", "required": true, "description": "A change is waiting for its write now"},
+        {"name": "budget_ms", "number": 7, "type": "unsigned", "required": true, "description": "kWorstWriteMs, the longest one settings write may take, which a placed write keeps clear of the next dwell"},
+        {"name": "bound_ms", "number": 8, "type": "unsigned", "required": true, "description": "kDeferCeilingMs, the longest a change may wait before its write is forced"}
       ]
     },
-    {"command": "radio", "code": 8, "endpoint": "config", "sender": "both", "keys_of": "diagnostics"},
+    {
+      "command": "radio", "code": 8, "endpoint": "config", "sender": "both", "keys_of": "diagnostics",
+      "description": "Asked with the bare command: the radio group of diagnostics alone, answered under radio with the keys of diagnostics. Unlike the whole dump it is answered before a dump has been collected, since a radio that has heard nothing truthfully has zero receptions."
+    },
     {
       "command": "diagnostics", "code": 9, "endpoint": "config", "sender": "both",
+      "description": "One dump, two surfaces, one table behind both (firmware/core/comms/diagnostics.h). Asked with the bare command and answered as one frame per subsystem, or more where the negotiated payload cannot carry a subsystem whole: every frame carries group, part and more, no frame mixes two groups, and no frame exceeds the payload the asking central negotiated. Over USB CDC the same table is printed every ten seconds as one line per subsystem, '<group> key=value key=\"text value\" ...', with the same group names, keys and values, an enumeration printed as the words the glass uses (reset=\"CPU LOCKUP\" where the link carries lockup): a laptop on the bench and a phone on the wing must not report a device differently. Asking for the whole dump before the device has collected one is refused no_statistics, since a device must not report health it has not measured. Nothing here is reset by being read. Each key's description starts with the group it belongs to. The widest group, the radio's, is 112 bytes.",
       "keys": [
-        {"name": "group", "number": 1, "type": "enum", "enum": "group"},
-        {"name": "part", "number": 2, "type": "unsigned"},
-        {"name": "more", "number": 3, "type": "boolean"},
-        {"name": "uptime_s", "number": 4, "type": "unsigned"},
-        {"name": "reset", "number": 5, "type": "enum", "enum": "reset"},
-        {"name": "link_drops", "number": 6, "type": "unsigned"},
-        {"name": "noise_dbm", "number": 7, "type": "integer"},
-        {"name": "duty_permille", "number": 8, "type": "unsigned"},
-        {"name": "rx_ok", "number": 9, "type": "unsigned"},
-        {"name": "rx_bad", "number": 10, "type": "unsigned"},
-        {"name": "rx_wait", "number": 11, "type": "unsigned"},
-        {"name": "rx_type", "number": 12, "type": "unsigned"},
-        {"name": "rx_unframed", "number": 13, "type": "unsigned"},
-        {"name": "rx_miskeyed", "number": 14, "type": "unsigned"},
-        {"name": "rx_noise", "number": 15, "type": "unsigned"},
-        {"name": "rx_named", "number": 16, "type": "unsigned"},
-        {"name": "tx_ok", "number": 17, "type": "unsigned"},
-        {"name": "tx_lost", "number": 18, "type": "unsigned"},
-        {"name": "tx_named", "number": 19, "type": "unsigned"},
-        {"name": "tx_keyed_us", "number": 20, "type": "unsigned"},
-        {"name": "tx_span_us", "number": 21, "type": "unsigned"},
-        {"name": "range_refused", "number": 22, "type": "unsigned"},
-        {"name": "dio1_armed", "number": 23, "type": "boolean"},
-        {"name": "dio1_edges", "number": 24, "type": "unsigned"},
-        {"name": "dio1_missed", "number": 25, "type": "unsigned"},
-        {"name": "tracked", "number": 26, "type": "unsigned"},
-        {"name": "alarm", "number": 27, "type": "unsigned"},
-        {"name": "fixes", "number": 28, "type": "unsigned"},
-        {"name": "valid", "number": 29, "type": "boolean"},
-        {"name": "baud", "number": 30, "type": "unsigned"},
-        {"name": "config", "number": 31, "type": "enum", "enum": "gnss_config"},
-        {"name": "raises", "number": 32, "type": "unsigned"},
-        {"name": "raise_fallbacks", "number": 33, "type": "unsigned"},
-        {"name": "solution_phase_ms", "number": 34, "type": "unsigned"},
-        {"name": "overruns", "number": 35, "type": "unsigned"},
-        {"name": "identified", "number": 36, "type": "boolean"},
-        {"name": "firmware", "number": 37, "type": "text"},
-        {"name": "reject", "number": 38, "type": "enum", "enum": "reject"},
-        {"name": "rejected", "number": 39, "type": "unsigned"},
-        {"name": "residual_m", "number": 40, "type": "unsigned"},
-        {"name": "cell_mv", "number": 41, "type": "unsigned"},
-        {"name": "percent", "number": 42, "type": "unsigned"},
-        {"name": "battery_valid", "number": 43, "type": "boolean"},
-        {"name": "charging", "number": 44, "type": "boolean"},
-        {"name": "power_level", "number": 45, "type": "enum", "enum": "power_level"},
-        {"name": "supply_warnings", "number": 46, "type": "unsigned"},
-        {"name": "implausible", "number": 47, "type": "unsigned"},
-        {"name": "die_temperature_c", "number": 48, "type": "integer"},
-        {"name": "charge", "number": 49, "type": "enum", "enum": "charge"},
-        {"name": "charge_warnings", "number": 50, "type": "unsigned"}
+        {"name": "group", "number": 1, "type": "enum", "enum": "group", "required": true, "description": "The subsystem every field in this frame belongs to. One console line per group, in this order."},
+        {"name": "part", "number": 2, "type": "unsigned", "required": true, "description": "Frame index within one answer, from 0. A group that does not fit the negotiated payload spans consecutive parts"},
+        {"name": "more", "number": 3, "type": "boolean", "required": true, "description": "Another frame follows. Exactly one frame per answer carries false"},
+        {"name": "uptime_s", "number": 4, "type": "unsigned", "description": "system. Seconds since boot, from hal::Clock::millis(). Wraps with the 32-bit millisecond counter at 49.7 days."},
+        {"name": "reset", "number": 5, "type": "enum", "enum": "reset", "description": "system. Why the device came up (core/power/reset_reason.h). The console prints the words core/power/reset_reason.cpp spells: UNKNOWN, POWER ON, RESET PIN, BROWNOUT, SOFT RESET, WATCHDOG, CPU LOCKUP, CHARGER WAKE, BUTTON WAKE, DEBUGGER"},
+        {"name": "link_drops", "number": 6, "type": "unsigned", "description": "system. Frames the companion link could not send: over the negotiated payload, refused by the controller, or left incomplete by a writer. Silence towards a phone is a fault worth a number"},
+        {"name": "noise_dbm", "number": 7, "type": "integer", "description": "radio. The measured noise floor, core/timing::NoiseFloor, in dBm, from -128 to 127. A diagnostic and nothing else: nothing on this device defers a burst to what it hears, so a loud site is reported rather than transmitted around (firmware/core/timing/README.md)"},
+        {"name": "duty_permille", "number": 8, "type": "unsigned", "description": "radio. Parts per thousand, 0 to 1000, of the transmit allowance spent over the hour's sliding window (EN 300 220-2 V3.3.1 Table 4 band M, 1%). The declared channel-access route, and the only rule that refuses a burst"},
+        {"name": "rx_ok", "number": 9, "type": "unsigned", "description": "radio. Frames received and decoded"},
+        {"name": "rx_bad", "number": 10, "type": "unsigned", "description": "radio. Receptions that are a fault: a frame that framed, was attempted and was refused, plus the integrity failures an error correction could not rescue. Not a burst nothing was attempted on (rx_wait), not a message type this firmware does not implement (rx_type), not a burst that named no system at all (rx_unframed), not a frame keyed on a second we disagree with (rx_miskeyed), and not a transmission of ours that never completed (tx_lost)"},
+        {"name": "rx_wait", "number": 11, "type": "unsigned", "description": "radio. Frames no decode was attempted on, because an ALP-TAS position is coded relative to the receiver and keyed on the UTC second, so it needs a fix and a date of our own. Climbs on a device still acquiring next to a transmitting neighbour, which is correct behaviour and not a failure"},
+        {"name": "rx_type", "number": 12, "type": "unsigned", "description": "radio. Frames that framed and carried a message type this firmware does not implement: ALP-TAS reads its 2024 position frame and nothing else, so a SoftRF interleaving Air V6 with Air V7 lands here. The neighbour's dialect, not our failure"},
+        {"name": "rx_unframed", "number": 13, "type": "unsigned", "description": "radio. Bursts that held the shared sync window and decoded too cleanly to be noise, but whose sync tail named neither M-band system. A neighbour on another dialect, or a receiver framing at the wrong offset: either way not a frame this firmware refused"},
+        {"name": "rx_miskeyed", "number": 14, "type": "unsigned", "description": "radio. ALP-TAS frames whose CRC held and whose sender keyed them on a second inside 18 s of ours but not ours: the key stage moves every 16 s and the frame carries the low 4 bits of its own second, so a clock disagreement is reported as the offset it is rather than as a decode failure. Climbing here means one of the two clocks is wrong, not the radio"},
+        {"name": "rx_noise", "number": 15, "type": "unsigned", "description": "radio. What the band's own noise framed: a sync window that filled with something carrying no frame at all. The floor under every other reception counter, and the one that tells a deaf receiver from an empty sky"},
+        {"name": "rx_named", "number": 16, "type": "unsigned", "description": "radio. Bursts that framed and carried an aircraft's registration instead of its position: ADS-L payload 66, OGN's, read for the callsign and filed under the sender's address (core/radio/README.md, radio::Verdict::Named). Counted apart from rx_ok, which counts positions"},
+        {"name": "tx_ok", "number": 17, "type": "unsigned", "description": "radio. Bursts the executor reported as transmitted"},
+        {"name": "tx_lost", "number": 18, "type": "unsigned", "description": "radio. Bursts of ours that were armed and never completed: the dwell ran out, or the radio's transmit timeout did. Never a reception"},
+        {"name": "tx_named", "number": 19, "type": "unsigned", "description": "radio. How many of the bursts in tx_ok carried own-ship's registration rather than a position: the callsign goes on the air once every ten seconds, in slot 1's tail (core/timing/README.md)"},
+        {"name": "tx_keyed_us", "number": 20, "type": "unsigned", "description": "radio. Microseconds the last burst held the carrier keyed, measured by the executor rather than budgeted"},
+        {"name": "tx_span_us", "number": 21, "type": "unsigned", "description": "radio. Microseconds from arming the last burst to the radio reporting it sent, which is the keyed time plus everything around it"},
+        {"name": "range_refused", "number": 22, "type": "unsigned", "description": "radio. Receptions core/traffic refused because the position they claimed was further away than this radio can hear (core/traffic/sanity.h). A rate that climbs is a receiver at the edge of its link budget or a decoder that is silently miscorrecting"},
+        {"name": "dio1_armed", "number": 23, "type": "boolean", "description": "radio. The executor holds a rising-edge interrupt on the SX1262's DIO1 and sleeps on it between events. False on the host executor, which has no interrupt line, and on silicon when the GPIO driver refused the trigger: the executor then reads DIO1 every 200 us instead"},
+        {"name": "dio1_edges", "number": 24, "type": "unsigned", "description": "radio. DIO1 rising edges the interrupt handler saw since boot. Near rx and tx events combined on a healthy line; zero with dio1_armed true is a trigger that never fires"},
+        {"name": "dio1_missed", "number": 25, "type": "unsigned", "description": "radio. Events a status read found while DIO1 still read low: a TxDone read in the tail of a burst, the 4 ms safety poll, or the drain at a dwell's end. Rising with tx_ok means DIO1 trails TxDone, rising with rx_ok means it trails RxDone too"},
+        {"name": "tracked", "number": 26, "type": "unsigned", "description": "traffic. Aircraft currently in the table, after ageing out, at most 48"},
+        {"name": "alarm", "number": 27, "type": "unsigned", "description": "traffic. The alarm level standing right now: 0 none, 1 info, 2 important, 3 urgent"},
+        {"name": "fixes", "number": 28, "type": "unsigned", "description": "gnss. Solutions the own-ship service has accepted since boot. Zero on a device whose receiver is wired but silent"},
+        {"name": "valid", "number": 29, "type": "boolean", "description": "gnss. Whether own-ship currently holds a valid fix"},
+        {"name": "baud", "number": 30, "type": "unsigned", "description": "gnss. The rate we are ACTUALLY talking to the receiver at, which is the devicetree's rate until autobaud had to move. A receiver silently at another rate is a GNSS-less device that looks fitted"},
+        {"name": "config", "number": 31, "type": "enum", "enum": "gnss_config", "description": "gnss. Where the receiver's configuration sequence stands (ports::GnssConfigStage, run by hardware/parts/l76k): idle before it starts, restarting, waking, identifying by the $PCAS06 banner, sending the $PCAS sentences, verifying that the receiver obeys them, confirming while a raised port rate waits for its first sentence, then ready; degraded once three verifications failed with no other rate left to try. The console prints IDLE, RESTART, WAKING, IDENT, SENDING, VERIFY, CONFIRM, READY and DEGRADED"},
+        {"name": "raises", "number": 32, "type": "unsigned", "description": "gnss. Times the driver asked the receiver to move to 115200 baud with $PCAS01, which it does only after the receiver passed verification and only on a port that can retune (core/gnss/README.md)"},
+        {"name": "raise_fallbacks", "number": 33, "type": "unsigned", "description": "gnss. Raises after which no sentence checksummed at the new rate inside the 3 s verify window, so the port went back to the rate before: a receiver that ignored $PCAS01, which never acknowledges"},
+        {"name": "solution_phase_ms", "number": 34, "type": "unsigned", "description": "gnss. Milliseconds after the latched PPS edge at which own-ship last published a solution, modulo 1000 (products/skyblip_go/services/ownship.cpp). A solution that lands past the 450 ms direct slot start is read as a second old and its burst refused (core/gnss/README.md). ABSENT while PPS is not locked"},
+        {"name": "overruns", "number": 35, "type": "unsigned", "description": "gnss. Times the UART interrupt read bytes from the receiver that its receive ring had no room for, and dropped them (hardware/platform/zephyr/io.h): a service pass that stalled longer than the ring holds at the port's rate"},
+        {"name": "identified", "number": 36, "type": "boolean", "description": "gnss. The receiver answered the $PCAS06 handshake and named itself. False means an unidentified part, still configured, but a $PCAS dialect we cannot confirm"},
+        {"name": "firmware", "number": 37, "type": "text", "description": "gnss. The receiver's own firmware banner, at most 23 characters of printable ASCII, e.g. URANUS5,V5.1.0.0. Empty when it never introduced itself"},
+        {"name": "reject", "number": 38, "type": "enum", "enum": "reject", "description": "gnss. Why the last solution was not accepted as a fix (core/gnss/validity.h). A named cause, because every one of these has been a support case in one of the reference projects"},
+        {"name": "rejected", "number": 39, "type": "unsigned", "description": "gnss. Solutions refused since boot, one event per run of the same reason"},
+        {"name": "residual_m", "number": 40, "type": "unsigned", "description": "gnss. The extrapolation residual in metres, saturating at 65535: the model the transmitter applies, run over the interval that just elapsed and measured against the fix that closed it. ABSENT rather than zero when there is no pair of consecutive fixes to measure, because 0 m is what a perfect prediction reports."},
+        {"name": "cell_mv", "number": 41, "type": "unsigned", "description": "power. The battery reading in millivolts, after the per-unit trim (settings.battery_offset_mv): the cell when battery_valid, otherwise what the divider last read, 0 when the ADC gave nothing."},
+        {"name": "percent", "number": 42, "type": "unsigned", "description": "power. State of charge from the same reading, on the discharge curve, 0 to 100. 0 unless battery_valid"},
+        {"name": "battery_valid", "number": 43, "type": "boolean", "description": "power. Whether cell_mv is the cell. False with no divider, on a reading outside 1800 to 4700 mV, and on the cable, where the divider reads the USB rail."},
+        {"name": "charging", "number": 44, "type": "boolean", "description": "power. The cable is in. No pin says when the charge ends, so a full cell on the cable still reads true"},
+        {"name": "power_level", "number": 45, "type": "enum", "enum": "power_level", "description": "power. What core/power's cutoff rule made of the same samples: low about 12%, critical about 5%, flat the device taking itself down, unknown no believable reading yet. The console prints OK, LOW, CRITICAL, FLAT and --."},
+        {"name": "supply_warnings", "number": 46, "type": "unsigned", "description": "power. Times the nRF52840's power-failure comparator (POFCON) has fired. Any at all on a healthy cell is a supply problem or a threshold set too high, and both are bench work"},
+        {"name": "implausible", "number": 47, "type": "unsigned", "description": "power. Readings the gauge refused: at or under 1800 mV, an unpopulated or unconnected divider rather than a flat cell, or over 4700 mV, which no 4.2 V cell reaches and a rail does. On the cable or off it. cell_mv holds the last one while battery_valid is false"},
+        {"name": "die_temperature_c", "number": 48, "type": "integer", "description": "power. Die temperature from -50 to 125 in whole degrees Celsius, rounded away from zero. ABSENT rather than zero when no reading exists, because 0.0 C is a plausible hangar morning. Same key and same value as the status reply's."},
+        {"name": "charge", "number": 49, "type": "enum", "enum": "charge", "description": "power. Whether the die temperature allows the cell to charge (core/power/charging.h): too_cold under 5.0 C, too_hot over 60.0 C, ok between, against LilyGO's 0 to 60 C window with the die's own warmth as the margin at the cold end. Judged only on the cable with a die reading, and ABSENT otherwise, so unknown never travels. The console prints OK, COLD and HOT"},
+        {"name": "charge_warnings", "number": 50, "type": "unsigned", "description": "power. Times the charge condition changed into too_cold or too_hot (products/skyblip_go/services/power.cpp): a cable left in a cold cockpit is one warning, not one a pass"}
       ]
     },
     {
       "command": "update", "code": 10, "endpoint": "config", "sender": "both",
+      "description": "The image's state and what an install needs, asked with the bare command and pushed to a connection when it comes up (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build.",
       "keys": [
-        {"name": "image", "number": 1, "type": "enum", "enum": "image"},
-        {"name": "from", "number": 2, "type": "text"},
-        {"name": "to", "number": 3, "type": "text"},
-        {"name": "settings", "number": 4, "type": "enum", "enum": "settings_fallback"},
-        {"name": "swap_powered", "number": 5, "type": "boolean"},
-        {"name": "imu", "number": 6, "type": "enum", "enum": "hub_image"},
-        {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8},
-        {"name": "downgrade", "number": 8, "type": "boolean"},
-        {"name": "key", "number": 9, "type": "bytes", "bytes": 4}
+        {"name": "image", "number": 1, "type": "enum", "enum": "image", "required": true, "description": "What became of the last install: confirmed, probation (running, not yet confirmed), reverted (started and never confirmed itself, so the bootloader swapped the old one back) or refused (never started)"},
+        {"name": "from", "number": 2, "type": "text", "description": "The version the last install replaced, as dfu writes it, 0.3.0+1234. Present unless image is confirmed"},
+        {"name": "to", "number": 3, "type": "text", "description": "The version the last install brought, as dfu writes it. Present unless image is confirmed"},
+        {"name": "settings", "number": 4, "type": "enum", "enum": "settings_fallback", "description": "What the settings in use fell back to at boot: prior, the copy written on the way into a swap, or defaults (products/skyblip_go/README.md). Absent when they loaded as stored"},
+        {"name": "swap_powered", "number": 5, "type": "boolean", "required": true, "description": "The cell allows the flash writes an install needs, by the settings write rule (core/power/cutoff.h)"},
+        {"name": "imu", "number": 6, "type": "enum", "enum": "hub_image", "required": true, "description": "What the sensor hub's partition holds: none (no hub answered), missing, corrupt, unreadable (the external flash did not answer), writing (a full image is writing it now, up to a minute) or held"},
+        {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the verified hub blob's SHA-256, present when imu is held"},
+        {"name": "downgrade", "number": 8, "type": "boolean", "description": "Present and true on a development unit, which accepts an image older than the running one"},
+        {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the signing key the bootloader trusts, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"}
       ]
     },
     {
       "command": "dfu", "code": 11, "endpoint": "config", "sender": "host",
+      "description": "Host to unit: asks to install the image of version. The unit answers confirm_dfu and asks on its glass, naming the version, and two presses open a ten-minute upload window for MCUmgr, on the ground only (server/app/javascript/skyblip/README.md).",
       "keys": [
-        {"name": "version", "number": 1, "type": "text"}
+        {"name": "version", "number": 1, "type": "text", "required": true, "description": "The image's version as read off its header, 0.2.0+15. Absent is refused no_version, and on a release unit a version older than the running one older"}
       ]
     },
-    {"command": "recovery", "code": 12, "endpoint": "config", "sender": "host", "keys": []},
-    {"command": "power_off", "code": 13, "endpoint": "config", "sender": "host", "keys": []},
+    {
+      "command": "recovery", "code": 12, "endpoint": "config", "sender": "host", "keys": [],
+      "description": "Host to unit: asks to enter the UF2 bootloader. The unit answers confirm_recovery and asks on its glass, and two presses answer recovery and hand the unit to the bootloader, a USB drive named TECHOBOOT (products/skyblip_go/README.md)."
+    },
+    {
+      "command": "power_off", "code": 13, "endpoint": "config", "sender": "host", "keys": [],
+      "description": "Host to unit: asks to switch the unit off. The unit answers confirm_power_off and asks on its glass, and two presses answer power_off."
+    },
     {
       "command": "challenge", "code": 14, "endpoint": "config", "sender": "both",
+      "description": "Opens an activation session (schemas/activation.v1.schema.json says what each signature covers). The host asks with the bare command, the unit draws a fresh Nu, which replaces any it held, and answers it with the id of the server key it trusts, so the server knows which of its keys to sign with: 27 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when unlock uses it, when the link of the session that holds the claim drops, or after ten minutes. Refused keyless by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as in_flight unless it is on the ground.",
       "keys": [
-        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16},
-        {"name": "server_key_id", "number": 2, "type": "bytes", "bytes": 4}
+        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Nu, 16 random bytes from the hardware RNG, used once"},
+        {"name": "server_key_id", "number": 2, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the firmware is built to trust, the first four bytes of the SHA-256 of its raw 32-byte public key: every device build trusts skyblip.eu's server key (firmware/keys/server.pub), the host suite, the simulator and a local server the public test key of schemas/activation.v1.vectors.json"}
       ]
     },
     {
       "command": "register", "code": 15, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, 88 bytes. The unit checks R with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. Two presses answer the registration frame, one press cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals: no_session (no live nonce), bad_signature, keyless, small_mtu (the link cannot carry the registration frame in one notification), in_flight (an activated unit off the ground).",
       "keys": [
-        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64}
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, the server's 16 random bytes, used once"},
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "R, the server's Ed25519 signature over the register message, 'skyblip:register:v1' || Nu || Ns"}
       ]
     },
     {
       "command": "registration", "code": 16, "endpoint": "config", "sender": "unit",
+      "description": "Unit to host after the two presses that answer register, at most 138 bytes in one notification, which an iPhone's 182-byte payload carries. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
       "keys": [
-        {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8},
-        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32},
-        {"name": "version", "number": 3, "type": "text"},
-        {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4},
-        {"name": "release", "number": 5, "type": "boolean"},
-        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64}
+        {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian"},
+        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "Pd, the raw 32-byte Ed25519 public key of the unit, from its seed in UICR CUSTOMER"},
+        {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image, as the dfu command writes it, 0.3.0+1234: at most 23 characters of 0-9, A-Z, a-z, '.', '+' and '-'"},
+        {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the unit trusts, as in the challenge reply"},
+        {"name": "release", "number": 5, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
+        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64, "required": true, "description": "S, the unit's Ed25519 signature over the registration message (schemas/activation.v1.schema.json)"}
       ]
     },
     {
       "command": "unlock", "code": 17, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, at most 74 bytes, carrying what the server answered the registration with. The unit stores serial, Nu and U in its identity page only if U verifies with the key it trusts over its own DEVICEID, its current Pd, the serial and the nonce of this session, then answers acknowledgement with reason unlock and uses the serial from then on. The nonce is spent either way. Refusals: no_session, bad_signature (serial 0 included), flash (the identity page could not be written), low_power (the cell cannot take a flash write), in_flight (an activated unit off the ground).",
       "keys": [
-        {"name": "serial", "number": 1, "type": "unsigned"},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64}
+        {"name": "serial", "number": 1, "type": "unsigned", "required": true, "description": "Assigned densely by the server, from 1 to 65535: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "U, the server's Ed25519 signature over the unlock message, 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu"}
       ]
     },
     {
       "command": "list", "code": 18, "endpoint": "log", "sender": "host",
+      "description": "Host to unit on the log endpoint: without index, how many sessions the store holds, answered by a log frame, and with index, that session's entry, answered by a session frame (firmware/core/comms/README.md, The log dialect).",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"},
-        {"name": "index", "number": 2, "type": "unsigned"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "Which store the command addresses: flights, or diagnostics. Absent is flights, and a code that is neither is refused unknown_log"},
+        {"name": "index", "number": 2, "type": "unsigned", "description": "The entry to describe, from 0. Past the last one is refused no_session"}
       ]
     },
     {
       "command": "read", "code": 19, "endpoint": "log", "sender": "host",
+      "description": "Host to unit on the log endpoint: asks for count chunks of session from record from, answered back to back by chunk frames. A chunk carries as many whole records as the asking link's payload holds, six at 182 bytes, nine at 244 and nineteen at 495. A link that cannot carry one record is answered small_mtu.",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"},
-        {"name": "session", "number": 2, "type": "unsigned"},
-        {"name": "from", "number": 3, "type": "unsigned"},
-        {"name": "count", "number": 4, "type": "unsigned"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "Which store the command addresses: flights, or diagnostics. Absent is flights, and a code that is neither is refused unknown_log"},
+        {"name": "session", "number": 2, "type": "unsigned", "required": true, "description": "The session to read, by its id as a session frame names it"},
+        {"name": "from", "number": 3, "type": "unsigned", "description": "The record to start at, absent meaning 0"},
+        {"name": "count", "number": 4, "type": "unsigned", "description": "Chunks to send back to back, absent meaning 1, clamped to 1 to 8 (kMaxLogReadChunks)"}
       ]
     },
     {
       "command": "erase", "code": 20, "endpoint": "log", "sender": "host",
+      "description": "Host to unit on the log endpoint: asks to erase the store. The unit answers confirm_erase_log and asks on its glass, and two presses answer erase_log. The diagnostics store, which is recycled rather than erased, is refused flights_only.",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "Which store the command addresses: flights, or diagnostics. Absent is flights, and a code that is neither is refused unknown_log"}
       ]
     },
     {
       "command": "log", "code": 21, "endpoint": "log", "sender": "unit",
+      "description": "Unit to host on the log endpoint: the acknowledgement of a log command, and the answer to list without an index.",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"},
-        {"name": "acknowledge", "number": 2, "type": "boolean"},
-        {"name": "reason", "number": 3, "type": "enum", "enum": "reason"},
-        {"name": "sessions", "number": 4, "type": "unsigned"},
-        {"name": "truncated", "number": 5, "type": "boolean"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "The store this reply is about: diagnostics on every diagnostics reply, absent for flights, so two fetches on one link never misfile a chunk"},
+        {"name": "acknowledge", "number": 2, "type": "boolean", "required": true, "description": "The command was carried out. False is a refusal named by reason"},
+        {"name": "reason", "number": 3, "type": "enum", "enum": "reason", "description": "Why a log command was refused or what it did, from the enumeration every frame shares"},
+        {"name": "sessions", "number": 4, "type": "unsigned", "description": "How many sessions the store's index offers, on the answer to list"},
+        {"name": "truncated", "number": 5, "type": "boolean", "description": "On the answer to list, the partition holds more sessions than the index offers"}
       ]
     },
     {
       "command": "session", "code": 22, "endpoint": "log", "sender": "unit",
+      "description": "Unit to host on the log endpoint: one entry of the store's index, the answer to list with an index. An entry of 256 records or more does not fit the 20 bytes of a link that never exchanged its MTU.",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"},
-        {"name": "index", "number": 2, "type": "unsigned"},
-        {"name": "of", "number": 3, "type": "unsigned"},
-        {"name": "session", "number": 4, "type": "unsigned"},
-        {"name": "records", "number": 5, "type": "unsigned"},
-        {"name": "closed", "number": 6, "type": "boolean"},
-        {"name": "truncated", "number": 7, "type": "boolean"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "The store this reply is about: diagnostics on every diagnostics reply, absent for flights, so two fetches on one link never misfile a chunk"},
+        {"name": "index", "number": 2, "type": "unsigned", "required": true, "description": "The entry this is, from 0"},
+        {"name": "of", "number": 3, "type": "unsigned", "required": true, "description": "How many entries the index holds"},
+        {"name": "session", "number": 4, "type": "unsigned", "required": true, "description": "The session's id, its opening UTC second: its name, and the base every one of its records is timed against"},
+        {"name": "records", "number": 5, "type": "unsigned", "required": true, "description": "Records the session holds"},
+        {"name": "closed", "number": 6, "type": "boolean", "required": true, "description": "The session was closed. False means the log stops where the power did, and a reader says so rather than present a cut flight as whole"},
+        {"name": "truncated", "number": 7, "type": "boolean", "required": true, "description": "The session opened in a sector the ring recycled since, so what is left is a suffix renumbered from record 0, not the whole run"}
       ]
     },
     {
       "command": "chunk", "code": 23, "endpoint": "log", "sender": "unit",
+      "description": "Unit to host on the log endpoint: records of one session, an answer to read. Each chunk carries the index it starts at, so the next read is the acknowledgement and asking again from the last index kept is the whole recovery.",
       "keys": [
-        {"name": "log", "number": 1, "type": "enum", "enum": "log"},
-        {"name": "session", "number": 2, "type": "unsigned"},
-        {"name": "from", "number": 3, "type": "unsigned"},
-        {"name": "ends_session", "number": 4, "type": "boolean"},
-        {"name": "records", "number": 5, "type": "bytes"}
+        {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "The store this reply is about: diagnostics on every diagnostics reply, absent for flights, so two fetches on one link never misfile a chunk"},
+        {"name": "session", "number": 2, "type": "unsigned", "required": true, "description": "The session these records belong to"},
+        {"name": "from", "number": 3, "type": "unsigned", "required": true, "description": "The index of the first record in records"},
+        {"name": "ends_session", "number": 4, "type": "boolean", "required": true, "description": "This chunk holds the session's last record, and no other chunk of a window says so"},
+        {"name": "records", "number": 5, "type": "bytes", "required": true, "description": "Whole records, 24 bytes each as the flash holds them, CRC and all, so the host checks each against the checksum the flash wrote. Their count is the length over 24"}
       ]
     },
-    {"command": "gnss_cold_start", "code": 24, "endpoint": "config", "sender": "host", "keys": []},
-    {"command": "ownship", "code": 25, "endpoint": "config", "sender": "host", "keys": [
-      {"name": "aircraft_type", "number": 1, "type": "unsigned"},
-      {"name": "width", "number": 2, "type": "unsigned"},
-      {"name": "hot_spot", "number": 3, "type": "unsigned"},
-      {"name": "rows", "number": 4, "type": "bytes"}
-    ]}
+    {
+      "command": "gnss_cold_start", "code": 24, "endpoint": "config", "sender": "host", "keys": [],
+      "description": "Host to unit: asks for a cold start of the GNSS receiver. The unit answers confirm_gnss_cold_start and asks on its glass, and two presses answer gnss_cold_start and restart the receiver cold."
+    },
+    {
+      "command": "ownship", "code": 25, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, proposed: a drawing of the own-ship symbol for one aircraft type, which the ownship editor shows (server/content/ownships/README.md). No firmware reads it yet, so a unit answers unknown_command.",
+      "keys": [
+        {"name": "aircraft_type", "number": 1, "type": "unsigned", "required": true, "description": "The ADS-L aircraft category the drawing is for"},
+        {"name": "width", "number": 2, "type": "unsigned", "required": true, "description": "The drawing's width in columns, at most 32"},
+        {"name": "hot_spot", "number": 3, "type": "unsigned", "required": true, "description": "The row the aircraft's position is drawn on"},
+        {"name": "rows", "number": 4, "type": "bytes", "required": true, "description": "The drawing, one 32-bit word per row, big-endian, leftmost column in the lowest bit, so its length over 4 is the number of rows"}
+      ]
+    }
   ],
   "enums": {
     "reason": {

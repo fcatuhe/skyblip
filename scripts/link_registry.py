@@ -55,6 +55,8 @@ def normalised(registry):
                  "sender": frame["sender"], "keys": keys}
         if "keys_of" in frame:
             entry["keys_of"] = frame["keys_of"]
+        if "description" in frame:
+            entry["description"] = frame["description"]
         resolved.append(entry)
     enums["command"] = {"values": [{"name": frame["command"], "code": frame["code"]}
                                    for frame in frames]}
@@ -211,8 +213,17 @@ def exhaustive_switch(enum):
 
 
 def javascript_module(registry):
-    body = json.dumps(registry, indent=2, ensure_ascii=False)
+    body = json.dumps(undocumented(registry), indent=2, ensure_ascii=False)
     return "export const LINK_REGISTRY = Object.freeze(%s);\n" % body
+
+
+def undocumented(node):
+    """The registry without its descriptions, which no page reads."""
+    if isinstance(node, dict):
+        return {name: undocumented(value) for name, value in node.items() if name != "description"}
+    if isinstance(node, list):
+        return [undocumented(item) for item in node]
+    return node
 
 
 def written(registry, clang_format):

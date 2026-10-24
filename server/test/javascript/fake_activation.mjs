@@ -95,7 +95,7 @@ export class FakeServer {
   }
 }
 
-// INFO: fc 18oct26 the activation dialect of schemas/activation.v1.schema.json, over the fake's config endpoint
+// INFO: fc 18oct26 the activation frames of schemas/link.v1.json, over the fake's config endpoint
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
     version = VECTORS.version, release = VECTORS.release, keyed = true, ...options } = {}) {
