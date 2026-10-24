@@ -122,7 +122,7 @@ POWER_LEVEL = ("unknown", "normal", "critical", "flat", "low")
 CHARGE = ("unknown", "ok", "too_cold", "too_hot")
 CONTACT = ("button", "pad")
 LINK_ACTION = ("up", "down", "claim_taken", "claim_released", "received", "sent", "dropped")
-MTU_REQUEST = ("not_asked", "pending", "exchanged", "already_exchanged", "refused", "unsent")
+MTU_EXCHANGE_STARTER = ("none", "central", "unit", "both")
 ENDPOINT = ("config", "nmea", "log")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
@@ -188,11 +188,9 @@ DIAGNOSTICS_TYPES = {
         ("gesture", uint8(9)), ("down", flag(2)))),
     12: ("link", (
         ("link_session", uint16(0)), ("payload_bytes", uint16(2)), ("frame_bytes", uint16(4)),
-        ("holder", uint8(6)), ("mtu_request_error", uint8(7)), ("drops", uint16(8)),
-        ("action", enum8(10, LINK_ACTION)), ("endpoint", enum8(11, ENDPOINT)),
-        ("mtu_settled_after_ms", uint16(12)), ("replies_too_wide", uint8(14)),
-        ("mtu_request", enum8(15, MTU_REQUEST)), ("claim_held", flag(2)),
-        ("mtu_exchanged_by_central", flag(3)), ("mtu_exchanged_by_unit", flag(4)))),
+        ("holder", uint16(6)), ("drops", uint16(8)), ("action", enum8(10, LINK_ACTION)),
+        ("endpoint", enum8(11, ENDPOINT)),
+        ("mtu_exchange_started_by", enum8(12, MTU_EXCHANGE_STARTER)), ("claim_held", flag(2)))),
     13: ("traffic", (
         ("address", uint32(0)), ("distance_m", uint16(4)), ("bearing_deg", uint16(6)),
         ("relative_altitude_m", int16(8)),

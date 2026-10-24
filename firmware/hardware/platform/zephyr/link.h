@@ -22,7 +22,6 @@ class Link : public ports::Link {
     uint16_t payload_bytes_to(uint16_t session_id) const override;
     Status send(events::Endpoint endpoint, ConstByteSpan bytes) override;
     Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) override;
-    void note_reply_too_wide(uint16_t session_id) override;
     Status advertise_as(const char* name) override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell

@@ -20,27 +20,12 @@ struct LinkUp {
     uint16_t payload_bytes;
 };
 
-enum class MtuRequest : uint8_t {
-    NotAsked = 0,
-    Pending = 1,
-    Exchanged = 2,
-    AlreadyExchanged = 3,
-    Refused = 4,
-    Unsent = 5
-};
+enum class MtuRequest : uint8_t { NotAsked, Pending, Exchanged, AlreadyExchanged, Refused, Unsent };
 
-struct MtuExchange {
-    MtuRequest request{MtuRequest::NotAsked};
-    uint8_t request_error{0};
-    bool by_central{false};
-    bool by_unit{false};
-};
+enum class MtuExchangeStarter : uint8_t { None = 0, Central = 1, Unit = 2, Both = 3 };
 
 struct LinkDown {
-    uint16_t session_id{0};
-    uint16_t payload_bytes{0};
-    MtuExchange exchange{};
-    uint16_t replies_too_wide{0};
+    uint16_t session_id;
 };
 
 // INFO: le 04aug26 One tagged event on one queue, not a queue of LinkUp beside a
@@ -51,10 +36,9 @@ enum class LinkEventType : uint8_t { Up, Down };
 
 struct LinkEvent {
     LinkEventType type;
+    MtuExchangeStarter mtu_exchange_started_by;
     uint16_t session_id;
     uint16_t payload_bytes;
-    MtuExchange exchange;
-    uint16_t replies_too_wide;
 };
 
 struct RxFrame {

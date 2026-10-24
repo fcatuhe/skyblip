@@ -87,9 +87,7 @@ class ConfigLinkService : public runtime::Service {
                      uint32_t now_ms);
     diagnostics::Link link_record(diagnostics::LinkAction action, uint16_t session,
                                   uint16_t frame_bytes) const;
-    void record_link_down(const events::LinkDown& down, uint32_t settled_after_ms, uint32_t now_ms);
-    void time_link_up(uint16_t session_id, uint32_t now_ms);
-    uint32_t forget_link_timing(uint16_t session_id);
+    void record_link_down(const events::LinkEvent& down, uint32_t now_ms);
     void record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms);
     void watch_claim(uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
@@ -145,12 +143,6 @@ class ConfigLinkService : public runtime::Service {
     timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};
     power::OnTime connected_{};
-    struct LinkTiming {
-        uint16_t session_id{0};
-        uint32_t connected_ms{0};
-        uint32_t settled_after_ms{0};
-    };
-    LinkTiming link_timings_[comms::LinkSessions::kMaxSessions]{};
     uint16_t recorded_holder_{0};
     bool recorded_claim_held_{false};
     uint32_t recorded_drops_{0};

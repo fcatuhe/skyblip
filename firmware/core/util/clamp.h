@@ -14,7 +14,6 @@ constexpr Narrow clamped(Wide value) {
 }
 
 constexpr int8_t clamp_int8(int32_t value) { return clamped<int8_t>(value); }
-constexpr uint8_t clamp_uint8(uint32_t value) { return clamped<uint8_t>(value); }
 constexpr int16_t clamp_int16(int32_t value) { return clamped<int16_t>(value); }
 constexpr uint16_t clamp_uint16(uint32_t value) { return clamped<uint16_t>(value); }
 constexpr int32_t clamp_int32(int64_t value) { return clamped<int32_t>(value); }

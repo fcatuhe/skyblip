@@ -228,8 +228,6 @@ enum class LinkAction : uint8_t {
 };
 
 constexpr uint8_t kLinkFlagClaimHeld = 1u << 2;
-constexpr uint8_t kLinkFlagMtuExchangedByCentral = 1u << 3;
-constexpr uint8_t kLinkFlagMtuExchangedByUnit = 1u << 4;
 
 struct Link {
     uint16_t link_session{0};
@@ -237,15 +235,10 @@ struct Link {
     uint16_t frame_bytes{0};
     uint16_t holder{0};
     uint32_t drops{0};
-    uint32_t mtu_settled_after_ms{0};
-    uint32_t replies_too_wide{0};
     LinkAction action{LinkAction::Up};
     events::Endpoint endpoint{events::Endpoint::Config};
-    events::MtuRequest mtu_request{events::MtuRequest::NotAsked};
-    uint8_t mtu_request_error{0};
+    events::MtuExchangeStarter mtu_exchange_started_by{events::MtuExchangeStarter::None};
     bool claim_held{false};
-    bool mtu_exchanged_by_central{false};
-    bool mtu_exchanged_by_unit{false};
 };
 
 constexpr uint8_t kTrafficFlagAssessed = 1u << 2;

@@ -136,17 +136,11 @@ diagnostics::Link ConfigLinkService::link_record(diagnostics::LinkAction action,
     return event;
 }
 
-void ConfigLinkService::record_link_down(const events::LinkDown& down, uint32_t settled_after_ms,
-                                         uint32_t now_ms) {
+void ConfigLinkService::record_link_down(const events::LinkEvent& down, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
     diagnostics::Link event = link_record(diagnostics::LinkAction::Down, down.session_id, 0);
     event.payload_bytes = down.payload_bytes;
-    event.mtu_settled_after_ms = settled_after_ms;
-    event.replies_too_wide = down.replies_too_wide;
-    event.mtu_request = down.exchange.request;
-    event.mtu_request_error = down.exchange.request_error;
-    event.mtu_exchanged_by_central = down.exchange.by_central;
-    event.mtu_exchanged_by_unit = down.exchange.by_unit;
+    event.mtu_exchange_started_by = down.mtu_exchange_started_by;
     context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
@@ -188,39 +182,13 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     events::LinkEvent event{};
     while (context_.bus.link_events.pop(event)) {
         if (event.type == events::LinkEventType::Up) {
-            time_link_up(event.session_id, now_ms);
             config_.on_link_up(events::LinkUp{event.session_id, event.payload_bytes});
             record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
         } else {
-            const events::LinkDown down{event.session_id, event.payload_bytes, event.exchange,
-                                        event.replies_too_wide};
-            config_.on_link_down(down);
-            record_link_down(down, forget_link_timing(event.session_id), now_ms);
+            config_.on_link_down(events::LinkDown{event.session_id});
+            record_link_down(event, now_ms);
         }
     }
-}
-
-void ConfigLinkService::time_link_up(uint16_t session_id, uint32_t now_ms) {
-    for (LinkTiming& timing : link_timings_) {
-        if (timing.session_id != session_id) continue;
-        timing.settled_after_ms = now_ms - timing.connected_ms;
-        return;
-    }
-    for (LinkTiming& timing : link_timings_) {
-        if (timing.session_id != 0) continue;
-        timing = LinkTiming{session_id, now_ms, 0};
-        return;
-    }
-}
-
-uint32_t ConfigLinkService::forget_link_timing(uint16_t session_id) {
-    for (LinkTiming& timing : link_timings_) {
-        if (timing.session_id != session_id) continue;
-        const uint32_t settled_after_ms = timing.settled_after_ms;
-        timing = LinkTiming{};
-        return settled_after_ms;
-    }
-    return 0;
 }
 
 // The whole of the deferral, and it is short because the policy owns the

@@ -83,11 +83,6 @@ struct Diagnostics {
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
-    uint32_t mtu_exchanged_by_central{0};
-    uint32_t mtu_exchanged_by_unit{0};
-    uint32_t mtu_never_exchanged{0};
-    uint32_t mtu_requests_failed{0};
-    uint32_t replies_too_wide{0};
     uint32_t range_refused{0};
     power::BatteryState battery{};
     power::PowerLevel power_level{power::PowerLevel::Unknown};
@@ -146,7 +141,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 52;
+    static constexpr int kMaxFields = 47;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,

@@ -39,16 +39,9 @@ class LinkSessions {
         raise(events::LinkEventType::Up, *slot);
     }
 
-    void mtu_requested(uint16_t session_id, events::MtuRequest outcome, uint8_t error = 0) {
+    void mtu_requested(uint16_t session_id, events::MtuRequest outcome, uint8_t = 0) {
         Slot* slot = find(session_id);
-        if (slot == nullptr) return;
-        slot->request = outcome;
-        slot->request_error = error;
-    }
-
-    void reply_too_wide(uint16_t session_id) {
-        Slot* slot = find(session_id);
-        if (slot != nullptr && slot->replies_too_wide < UINT16_MAX) slot->replies_too_wide++;
+        if (slot != nullptr) slot->exchanged_by_unit = outcome == events::MtuRequest::Exchanged;
     }
 
     void disconnected(uint16_t session_id) {
@@ -95,20 +88,17 @@ class LinkSessions {
     struct Slot {
         uint16_t session_id{0};
         uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
-        uint16_t replies_too_wide{0};
         uint8_t mtu_updates{0};
-        uint8_t request_error{0};
-        events::MtuRequest request{events::MtuRequest::NotAsked};
+        bool exchanged_by_unit{false};
         bool used{false};
     };
 
-    static events::MtuExchange exchange_of(const Slot& slot) {
-        events::MtuExchange exchange{};
-        exchange.request = slot.request;
-        exchange.request_error = slot.request_error;
-        exchange.by_unit = slot.request == events::MtuRequest::Exchanged;
-        exchange.by_central = slot.mtu_updates > (exchange.by_unit ? 1 : 0);
-        return exchange;
+    static events::MtuExchangeStarter starter_of(const Slot& slot) {
+        const bool by_central = slot.mtu_updates > (slot.exchanged_by_unit ? 1 : 0);
+        if (by_central && slot.exchanged_by_unit) return events::MtuExchangeStarter::Both;
+        if (by_central) return events::MtuExchangeStarter::Central;
+        if (slot.exchanged_by_unit) return events::MtuExchangeStarter::Unit;
+        return events::MtuExchangeStarter::None;
     }
 
     static uint16_t floor_payload(uint16_t bytes) {
@@ -138,10 +128,7 @@ class LinkSessions {
         event.type = type;
         event.session_id = slot.session_id;
         event.payload_bytes = slot.payload_bytes;
-        if (type == events::LinkEventType::Down) {
-            event.exchange = exchange_of(slot);
-            event.replies_too_wide = slot.replies_too_wide;
-        }
+        if (type == events::LinkEventType::Down) event.mtu_exchange_started_by = starter_of(slot);
         if (!is_ok(events_.push(event))) dropped_++;
     }
 

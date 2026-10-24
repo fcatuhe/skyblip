@@ -202,11 +202,6 @@ enum : uint32_t {
     kDieTemperatureC = 48,
     kCharge = 49,
     kChargeWarnings = 50,
-    kMtuExchangedByCentral = 51,
-    kMtuExchangedByUnit = 52,
-    kMtuNeverExchanged = 53,
-    kMtuRequestsFailed = 54,
-    kRepliesTooWide = 55,
 };
 }
 

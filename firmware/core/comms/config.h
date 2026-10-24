@@ -258,7 +258,6 @@ class ConfigService {
     void refuse_too_wide();
     void note_connected(uint16_t session_id);
     void note_disconnected(uint16_t session_id);
-    void tally_exchange(const events::LinkDown& event);
     bool connected(uint16_t session_id) const;
     int payload_bytes() const;
     int payload_bytes_to(uint16_t session_id) const;

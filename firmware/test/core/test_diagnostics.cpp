@@ -26,10 +26,6 @@ Diagnostics busy_device() {
     diagnostics.uptime_s = 3725;
     diagnostics.reset = power::ResetReason::Watchdog;
     diagnostics.link_drops = 2;
-    diagnostics.mtu_exchanged_by_central = 6;
-    diagnostics.mtu_exchanged_by_unit = 4;
-    diagnostics.mtu_never_exchanged = diagnostics.mtu_requests_failed = 1;
-    diagnostics.replies_too_wide = 3;
 
     diagnostics.noise_dbm = -101;
     diagnostics.duty_permille = 7;
@@ -87,9 +83,7 @@ Diagnostics widest_device() {
     diagnostics.refreshes = 0xFFFFFFFFu;
     diagnostics.uptime_s = 0xFFFFFFFFu;
     diagnostics.reset = power::ResetReason::Lockup;  // "CPU LOCKUP"
-    diagnostics.link_drops = diagnostics.mtu_exchanged_by_central = 0xFFFFFFFFu;
-    diagnostics.mtu_exchanged_by_unit = diagnostics.mtu_never_exchanged = 0xFFFFFFFFu;
-    diagnostics.mtu_requests_failed = diagnostics.replies_too_wide = 0xFFFFFFFFu;
+    diagnostics.link_drops = 0xFFFFFFFFu;
     diagnostics.noise_dbm = -128;
     diagnostics.duty_permille = 1000;
     diagnostics.rx_ok = 0xFFFFFFFFu;
@@ -194,10 +188,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
 
     // Five subsystems, in the order a bench eye wants them: how long it has been
     // up, then the radio, then what it heard, then what it knows about itself.
-    CHECK(has(text,
-              "system uptime_s=3725 reset=\"WATCHDOG\" link_drops=2 mtu_exchanged_by_central=6 "
-              "mtu_exchanged_by_unit=4 mtu_never_exchanged=1 mtu_requests_failed=1 "
-              "replies_too_wide=3\n"));
+    CHECK(has(text, "system uptime_s=3725 reset=\"WATCHDOG\" link_drops=2\n"));
     CHECK(has(text,
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
               "rx_unframed=11 rx_miskeyed=7 rx_noise=96 rx_named=12 tx_ok=880 tx_lost=3 "
@@ -493,5 +484,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 52);
+    CHECK(fields == 47);
 }
