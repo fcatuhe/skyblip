@@ -11,27 +11,45 @@ bool is_whitespace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '
 int Reader::value_offset(const char* key) const {
     int key_length = static_cast<int>(std::strlen(key));
     int i = 0;
+    int key_start = 0;
+    int key_end = 0;
+    while (next_key(i, key_start, key_end)) {
+        bool match = (key_end - key_start == key_length);
+        for (int j = 0; match && j < key_length; j++)
+            if (data_[key_start + j] != key[j]) match = false;
+        if (match) return i < bytes_ ? i : -1;
+    }
+    return -1;
+}
+
+int Reader::key_count() const {
+    int count = 0;
+    int i = 0;
+    int key_start = 0;
+    int key_end = 0;
+    while (next_key(i, key_start, key_end)) count++;
+    return count;
+}
+
+bool Reader::next_key(int& i, int& key_start, int& key_end) const {
     while (i < bytes_) {
         if (data_[i] != '"') {
             i++;
             continue;
         }
-        int key_start = i + 1;
-        int key_end = key_start;
+        key_start = i + 1;
+        key_end = key_start;
         while (key_end < bytes_ && data_[key_end] != '"') key_end++;
-        if (key_end >= bytes_) break;
-        bool match = (key_end - key_start == key_length);
-        for (int j = 0; match && j < key_length; j++)
-            if (data_[key_start + j] != key[j]) match = false;
+        if (key_end >= bytes_) return false;
         i = key_end + 1;
         while (i < bytes_ && is_whitespace(data_[i])) i++;
         if (i < bytes_ && data_[i] == ':') {
             i++;
             while (i < bytes_ && is_whitespace(data_[i])) i++;
-            if (match) return i < bytes_ ? i : -1;
+            return true;
         }
     }
-    return -1;
+    return false;
 }
 
 bool Reader::has(const char* key) const { return value_offset(key) >= 0; }

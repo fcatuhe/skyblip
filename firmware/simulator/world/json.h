@@ -15,11 +15,13 @@ class Reader {
     bool read_boolean(const char* key, bool& out) const;
     bool read_string(const char* key, char* out, int capacity) const;
     bool has(const char* key) const;
+    int key_count() const;
 
    private:
     const char* data_;
     int bytes_;
     int value_offset(const char* key) const;
+    bool next_key(int& i, int& key_start, int& key_end) const;
     bool read_number(const char* key, int64_t& out) const;
 };
 

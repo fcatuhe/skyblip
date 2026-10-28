@@ -15,6 +15,7 @@
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
+#include "simulator/world/link_names.h"
 #include "test/support/settings_link.h"
 
 using namespace skyblip;
@@ -69,11 +70,16 @@ TEST_CASE(
     CHECK(json.find("range") == std::string::npos);
     CHECK(json.find("plot") == std::string::npos);
 
-    const char* patch = "{\"range_step\":0,\"plot\":1,\"alarm_volume\":1}";
-    CHECK(apply_patch(settings, patch) == Status::Ok);
-    CHECK(int(settings.range_step) == kDefaultRangeStep);
-    CHECK(settings.plot == RadarPlot::All);
-    CHECK(settings.alarm_volume == AlarmVolume::Soft);
+    int set_frames = 0;
+    for (const simulator::link_names::Frame& frame : simulator::link_names::kFrames) {
+        if (std::strcmp(frame.command, "set") != 0) continue;
+        set_frames++;
+        for (int i = 0; i < frame.count; i++) {
+            CHECK(std::string(frame.keys[i].name).find("range") == std::string::npos);
+            CHECK(std::string(frame.keys[i].name).find("plot") == std::string::npos);
+        }
+    }
+    CHECK(set_frames == 1);
 }
 
 TEST_CASE("settings: a corrupted blob is detected (CRC), caller falls back") {

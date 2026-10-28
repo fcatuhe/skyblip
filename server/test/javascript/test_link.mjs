@@ -30,6 +30,12 @@ test('keys leave ascending whatever order they were given in', () => {
   assert.equal(hex(frame), 'a3000407010866462d4a58595a');
 });
 
+test('text comes back byte for byte, a leading byte order mark included, as the firmware and Python read it', () => {
+  const frame = encodeFrame({ command: 'set', callsign: '\ufeffF-ABC' });
+  assert.equal(hex(frame), 'a200040868efbbbf462d414243');
+  assert.equal(decodeFrame(frame).callsign, '\ufeffF-ABC');
+});
+
 test('a set and a defaults reply share one key table', () => {
   const defaults = { command: 'defaults', aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' };
   assert.deepEqual(encodeFrame(defaults).slice(3), encodeFrame({ ...defaults, command: 'set' }).slice(3));

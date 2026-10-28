@@ -147,20 +147,26 @@ int frame_from_text(const char* json, uint8_t* out, int capacity) {
     const Frame* frame = nullptr;
     char command[kTextBytes];
     long code = 0;
+    int keys_read = 0;
     if (reader.read_string("command", command, sizeof(command))) {
         frame = frame_named(command);
         if (frame == nullptr) return 0;
         writer.add_unsigned(link::kCommandKey, frame->code);
+        keys_read++;
     } else if (reader.read_integer("command", code)) {
         writer.add_integer(link::kCommandKey, code);
         if (code >= 0) frame = frame_coded(static_cast<uint64_t>(code));
+        keys_read++;
     }
     if (frame != nullptr) {
         for (int i = 0; i < frame->count; i++) {
-            if (frame->keys[i].number == link::kCommandKey) continue;
-            if (!add_key(writer, reader, frame->keys[i])) return 0;
+            const Key& key = frame->keys[i];
+            if (key.number == link::kCommandKey || !reader.has(key.name)) continue;
+            if (!add_key(writer, reader, key)) return 0;
+            keys_read++;
         }
     }
+    if (keys_read != reader.key_count()) return 0;
     return writer.finish();
 }
 

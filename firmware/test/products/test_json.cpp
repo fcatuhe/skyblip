@@ -25,7 +25,7 @@ TEST_CASE("json: the reader parses integers, booleans and strings") {
 }
 
 TEST_CASE("json: a frame that ends on a colon has no value, and nothing past it is read") {
-    const char frame[] = {'{', '"', 'c', 'm', 'd', '"', ':'};
+    const char frame[] = {'{', '"', 'c', 'o', 'm', 'm', 'a', 'n', 'd', '"', ':'};
     json::Reader reader(frame, static_cast<int>(sizeof(frame)));
     long value = 0;
     bool flag = false;

@@ -65,6 +65,18 @@ TEST_CASE("link text: a name the registry does not hold is refused, a number is 
           "{\"0\":99}");
 }
 
+// The browser and Python encoders refuse it too: a typo must not become a shorter, valid command.
+TEST_CASE("link text: a key the frame does not hold is refused, not dropped") {
+    uint8_t out[32];
+    CHECK(link_text::frame_from_text("{\"command\":\"set\",\"call_sign\":\"F-ABC\"}", out,
+                                     sizeof(out)) == 0);
+    CHECK(link_text::frame_from_text("{\"command\":\"gnss_cold_start\",\"typo\":true}", out,
+                                     sizeof(out)) == 0);
+    CHECK(link_text::frame_from_text("{\"command\":99,\"typo\":1}", out, sizeof(out)) == 0);
+    CHECK(link_text::frame_from_text("{\"command\":\"set\",\"callsign\":\"F-ABC\"}", out,
+                                     sizeof(out)) > 0);
+}
+
 TEST_CASE("link text: the timing histograms read back as arrays") {
     uint8_t out[32];
     cbor::Writer writer(out, sizeof(out));

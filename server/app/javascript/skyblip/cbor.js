@@ -5,7 +5,7 @@ const SIMPLE = { false: 20, true: 21, null: 22, undefined: 23, half: 25, single:
 const TWO_TO_32 = 2 ** 32;
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder('utf-8', { fatal: true });
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 export function encode(value) {
   const out = [];

@@ -87,7 +87,7 @@
                  "description": "pps. That interval less a nominal second, signed. The slot map's whole anchor is this number staying small"},
     "samples": {"type": "integer", "minimum": 0, "description": "pps. Edges measured since boot"},
     "holdover_events": {"type": "integer", "minimum": 0, "maximum": 65535,
-                        "description": "pps. Times at least one edge went missing (core/timing/slot_timing_stats.h). kPpsHoldoverMs is 60 s of patience, and this is what says whether that is the right number"},
+                        "description": "pps. Times at least one edge went missing (core/timing/slot_timing_statistics.h). kPpsHoldoverMs is 60 s of patience, and this is what says whether that is the right number"},
     "since_edge_ms": {"type": "integer", "minimum": 0, "maximum": 65535, "description": "pps. How long ago the edge was, as the board reports it"},
     "locked": {"type": "boolean", "description": "pps. The board considered the PPS locked"},
     "utc_valid": {"type": "boolean", "description": "pps. A UTC second was known for that edge"},
