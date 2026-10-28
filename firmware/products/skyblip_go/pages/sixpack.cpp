@@ -70,7 +70,7 @@ constexpr int kReferenceDotRadius = 2;
 // integer division truncates toward zero and pulls both ends of a mark inward.
 int radial_half(int32_t radius_in_halves, int32_t axis) {
     const int32_t product = radius_in_halves * axis;
-    return static_cast<int>((product + (product < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne));
+    return (product + (product < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne);
 }
 
 int radial(int32_t radius, int32_t axis) { return radial_half(2 * radius, axis); }
@@ -222,8 +222,8 @@ void inclinometer(ui::Canvas& canvas, int centre_x, int centre_y, const SixPackS
     if (!snapshot.lateral_valid) return;
     const int32_t swing = std::clamp<int32_t>(snapshot.lateral_mg, -flight::kSlipFullScaleMg,
                                               flight::kSlipFullScaleMg);
-    canvas.circle(centre_x + static_cast<int>((swing * kBallTravel) / flight::kSlipFullScaleMg), y,
-                  kBallRadius, true, true);
+    canvas.circle(centre_x + (swing * kBallTravel) / flight::kSlipFullScaleMg, y, kBallRadius, true,
+                  true);
 }
 
 void turn_coordinator(ui::Canvas& canvas, int centre_x, int centre_y, int32_t turn_cdps) {

@@ -143,7 +143,7 @@ bool NmeaParser::feed(char character) {
 
 bool NmeaParser::parse_line(const char* line, int bytes) {
     if (!nmea_checksum_ok(line, bytes)) return false;
-    char line_copy[100];
+    char line_copy[100] = {};
     int copied = 0;
     for (int i = 0; i < bytes && line[i] != '*' && copied < 99; i++) line_copy[copied++] = line[i];
     line_copy[copied] = 0;

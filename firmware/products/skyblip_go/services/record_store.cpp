@@ -351,10 +351,9 @@ bool RecordStore::read_records(uint32_t session_id, uint32_t from, int count) {
     uint32_t sector = 0;
     for (int i = 0; i < count; i++) {
         const uint32_t index = from + static_cast<uint32_t>(i);
-        if (i == 0 || index % slots == 0) {
-            if (!pool_.allocator().session_sector(owner_, session_id, index / slots, sector))
-                return false;
-        }
+        if ((i == 0 || index % slots == 0) &&
+            !pool_.allocator().session_sector(owner_, session_id, index / slots, sector))
+            return false;
         if (!pool_.read_slot(sector, index % slots,
                              pool_.chunk_buffer() + static_cast<size_t>(i) * kStoreRecordBytes))
             return false;

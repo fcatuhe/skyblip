@@ -67,9 +67,9 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
 
     const int16_t bearing = arctangent(east_m, north_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
-    const int bearing_deg = static_cast<int>(
+    const int bearing_deg =
         divide_rounded<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
-        360);
+        360;
     assessment.relative_bearing_deg =
         static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);
 

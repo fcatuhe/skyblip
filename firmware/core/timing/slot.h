@@ -68,7 +68,7 @@ constexpr int kSwitchLeadMs = kJitterGuardMs;
 constexpr uint32_t kPpsHoldoverMs = 60000;
 
 // One name for the band, spelled where a received burst can carry it.
-using Band = model::Band;
+using model::Band;
 
 enum class SlotState : uint8_t {
     UplinkRxOBand = 0,
