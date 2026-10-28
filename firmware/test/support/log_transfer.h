@@ -4,39 +4,31 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <string>
 
+#include "core/comms/link_registry.h"
 #include "core/events/link.h"
+#include "core/util/cbor.h"
 #include "hardware/platform/host/link.h"
 #include "test/support/product_rig.h"
 
 namespace skyblip {
 
-// The tablet's side of the transfer, and the only decoder in the tree: the
-// device never speaks IGC, it hands over the raw records and the CRC that came
-// off the flash with them.
-inline int base64_decode(const std::string& in, uint8_t* out, int capacity) {
-    auto value = [](char character) -> int {
-        if (character >= 'A' && character <= 'Z') return character - 'A';
-        if (character >= 'a' && character <= 'z') return character - 'a' + 26;
-        if (character >= '0' && character <= '9') return character - '0' + 52;
-        if (character == '+') return 62;
-        if (character == '/') return 63;
-        return -1;
-    };
-    int count = 0;
-    uint32_t buffer = 0;
-    int bits = 0;
-    for (char character : in) {
-        const int digit = value(character);
-        if (digit < 0) continue;
-        buffer = (buffer << 6) | static_cast<uint32_t>(digit);
-        bits += 6;
-        if (bits < 8) continue;
-        bits -= 8;
-        if (count < capacity) out[count++] = static_cast<uint8_t>((buffer >> bits) & 0xFF);
+// The tablet's side: the device never speaks IGC, it hands over the raw records, CRC and all.
+inline int chunk_records(const std::string& frame, uint8_t* out, int capacity) {
+    const cbor::Reader reader(
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(frame.data()), frame.size()));
+    for (int i = 0; i < reader.count(); i++) {
+        cbor::Entry entry;
+        reader.entry(i, entry);
+        if (entry.key != link::chunk_key::kRecords || entry.type != cbor::Type::Bytes) continue;
+        const int bytes = static_cast<int>(entry.content.size());
+        if (bytes > capacity) return -1;
+        std::memcpy(out, entry.content.data(), entry.content.size());
+        return bytes;
     }
-    return count;
+    return -1;
 }
 
 inline std::string field(const std::string& json, const char* key) {
@@ -69,7 +61,7 @@ inline std::string list_session(Rig& rig, uint32_t& now_ms, uint32_t index) {
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     const platform::host::Link::Frame* frame = last_log_frame(rig);
-    return frame == nullptr ? "" : frame->bytes;
+    return frame == nullptr ? "" : link_text(frame->bytes);
 }
 
 inline std::string list_count(Rig& rig, uint32_t& now_ms) {
@@ -78,7 +70,7 @@ inline std::string list_count(Rig& rig, uint32_t& now_ms) {
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     const platform::host::Link::Frame* frame = last_log_frame(rig);
-    return frame == nullptr ? "" : frame->bytes;
+    return frame == nullptr ? "" : link_text(frame->bytes);
 }
 
 }  // namespace skyblip

@@ -33,7 +33,7 @@ constexpr bool plausible_mv(uint16_t divider_mv) {
 // not out of trim, it is wired wrong or reading another rail, and a calibration
 // field that accepts anything is a support incident of its own. It is enforced
 // where the value enters the device (core/settings validates it, on the blob and
-// on the JSON alike); nothing here re-checks it, only the arithmetic is kept
+// on the link alike); nothing here re-checks it, only the arithmetic is kept
 // from leaving the range a millivolt reading can hold.
 constexpr int16_t kCalibrationCeilingMv = 250;
 

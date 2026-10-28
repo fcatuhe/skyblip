@@ -6,6 +6,8 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec and the names `schemas/link.v1.json` gives its numbers, which `blip.py` speaks through |
+| [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image, and refuse to build a dangerous one |
@@ -13,9 +15,9 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
 | `build_image.sh` | build, sign and check the slim and full images in a ready workspace: what `build_local.sh`, CI and a release share |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
-| `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images |
+| `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
-| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_blip_frames.py`, `test_link_registry.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
 
 ## blip.py
 
@@ -41,7 +43,9 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 
 Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser client does (a notification is a slice of a byte stream, not a sentence), verifies every NMEA checksum and prints each sentence with a host timestamp. A sentence whose checksum does not match is printed and flagged, never dropped.
 
-`./scripts/blip.py command '{"command":"diagnostics"}'` writes one JSON command to the config endpoint (`69c21302`) and prints every reply frame with its round trip. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
+`./scripts/blip.py command '{"command":"diagnostics"}'` takes one command as JSON with the registry's full names, writes it to the config endpoint (`69c21302`) as the numbered CBOR the unit reads, and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A name the registry does not hold is refused before anything is sent. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
+
+`blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains is a key `blip.py` speaks with no edit here. Its decoder refuses what the unit's own does, a frame outside the grammar the registry describes, and its encoder refuses a value its key's type does not take, a boolean where a number goes, a negative where an unsigned one does, hex that is not hex or a byte string of the wrong width, as the pages' does: `schemas/link.v1.vectors.json` lists both. `blip.py` stops on either with a `FrameError` it prints, the bytes of a frame it could not read beside it, rather than guessing.
 
 ### Benchmark a link
 
@@ -61,9 +65,9 @@ The round trip is stamped before the write goes out, not when `write_gatt_char` 
 ./scripts/blip.py decode capture.ndjson --summary
 ```
 
-`fetch` speaks the log endpoint (`69c21303`): `list` for the session count and one frame per session, then `read` for base64 chunks of 24-byte records. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line carrying its store, session and index. A flights record is a `fix` or one of the events written beside the track, `status`, `alarm` and `encounter`, laid out in [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) and in write order rather than time order, so sort on `utc_s`. Flights records are verified against the CRC-16-CCITT they were written with; diagnostics records carry no CRC of their own (the sector header holds it, `core/store/sector.h`), so a diagnostics slot is checked for a known type and a whole 24 bytes and nothing more.
+`fetch` speaks the log endpoint (`69c21303`): `list` for the session count and one frame per session, then `read` for chunks, each one byte string of 24-byte records whose length is their count. Each session opens with a header line naming its record count, whether the device closed it and whether it is truncated, and each record follows as one NDJSON line carrying its store, session and index. A flights record is a `fix` or one of the events written beside the track, `status`, `alarm` and `encounter`, laid out in [`schemas/flight_log.v1.schema.json`](../schemas/flight_log.v1.schema.json) and in write order rather than time order, so sort on `utc_s`. Flights records are verified against the CRC-16-CCITT they were written with; diagnostics records carry no CRC of their own (the sector header holds it, `core/store/sector.h`), so a diagnostics slot is checked for a known type and a whole 24 bytes and nothing more.
 
-`count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 96 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer, the last of them saying `ends_session`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
+`count` on a `read` is chunks, the way `core/comms/log_link.cpp` parses it, so `--window N` is chunks too: clamped to 1 to 8 here exactly as the device clamps it, 8 by default, which is 152 records over a link that negotiated a 498-byte MTU. A read is answered by that many chunks or by fewer, the last of them saying `ends_session`, and `fetch` consumes every one of them before the next command goes out. There is nothing to resync from, and nothing that resyncs.
 
 A dead fetch resumes. The next command is the acknowledgement in this protocol, so the recovery is to ask again from the last index kept: run the same line, and `fetch` reads the tail of `--out`, skips the sessions already whole and restarts the interrupted one at the record after its last line. Sessions the device opened since follow it, so a capture re-armed between two fetches loses nothing. `--restart` ignores what the file holds.
 
@@ -73,7 +77,7 @@ A session the device reports as unclosed stopped where the power did, and a diag
 
 A session the device reports as truncated lost its beginning to the sector allocator, and with it the `boot` and `config` records a capture opens on. The header line carries `"truncated": true`, the summary names it, and an analysis reading that corpus knows it cannot say which build or which settings produced it.
 
-Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying.
+Two things the device will say no to: a command while it is flying (an offload is thousands of round trips beside a receiver anchored to a PPS edge) and a command from a second app while another holds the claim. Both come back as `acknowledge: false` with a reason, and `blip.py` stops with that reason rather than retrying. A third comes from the link rather than the device: a reply wider than the payload the link settled on is answered `small_mtu` (`firmware/core/comms/README.md`), and `blip.py` says the computer kept Bluetooth's smallest packet size and what to try, under the frame for `command` and in place of the fetch for `fetch`.
 
 A diagnostics capture lives in RAM and is armed from the device's own diagnostics screen. It does not survive a power cycle, so fetch it before switching the device off.
 

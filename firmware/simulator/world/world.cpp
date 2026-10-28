@@ -10,6 +10,7 @@
 #include "core/protocol/adsl_uplink.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
+#include "simulator/world/link_text.h"
 
 namespace skyblip::simulator {
 
@@ -406,16 +407,17 @@ void World::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint
               static_cast<uint8_t>(chip_bytes), rssi_at(range_m));
 }
 
-void World::send_config(const char* json) {
-    if (!platform_.link().up()) connect_companion();
+bool World::send_config(const char* json) {
     events::RxFrame frame{};
+    const int bytes =
+        link_text::frame_from_text(json, frame.data.data(), static_cast<int>(frame.data.size()));
+    if (bytes == 0) return false;
+    if (!platform_.link().up()) connect_companion();
     frame.session_id = platform_.link().session_id();
     frame.endpoint = events::Endpoint::Config;
-    const size_t json_bytes = std::strlen(json);
-    frame.bytes =
-        static_cast<uint16_t>(json_bytes < frame.data.size() ? json_bytes : frame.data.size());
-    std::memcpy(frame.data.data(), json, frame.bytes);
+    frame.bytes = static_cast<uint16_t>(bytes);
     platform_.link().push_rx(frame);
+    return true;
 }
 
 void World::load(const Scenario& scenario) {

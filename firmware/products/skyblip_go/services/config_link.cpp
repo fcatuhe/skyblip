@@ -118,15 +118,29 @@ void ConfigLinkService::accrue_connected(uint32_t now_ms) {
 void ConfigLinkService::record_link(diagnostics::LinkAction action, uint16_t session,
                                     uint16_t frame_bytes, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
+    context_.diagnostics.record(link_record(action, session, frame_bytes),
+                                context_.instant(now_ms));
+}
+
+diagnostics::Link ConfigLinkService::link_record(diagnostics::LinkAction action, uint16_t session,
+                                                 uint16_t frame_bytes) const {
     diagnostics::Link event{};
     event.link_session = session;
-    event.payload_bytes = context_.roles.link.payload_bytes();
+    event.payload_bytes = context_.roles.link.payload_bytes_to(session);
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
     event.drops = config_.link_drops();
     event.action = action;
     event.endpoint = events::Endpoint::Config;
     event.claim_held = config_.claim().held();
+    return event;
+}
+
+void ConfigLinkService::record_link_down(const events::LinkEvent& down, uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Link event = link_record(diagnostics::LinkAction::Down, down.session_id, 0);
+    event.payload_bytes = down.payload_bytes;
+    event.mtu_exchange_started_by = down.mtu_exchange_started_by;
     context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
@@ -167,13 +181,13 @@ void ConfigLinkService::spend_gnss_cold_start() {
 void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     events::LinkEvent event{};
     while (context_.bus.link_events.pop(event)) {
-        const bool up = event.type == events::LinkEventType::Up;
-        if (up)
+        if (event.type == events::LinkEventType::Up) {
             config_.on_link_up(events::LinkUp{event.session_id, event.payload_bytes});
-        else
+            record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
+        } else {
             config_.on_link_down(events::LinkDown{event.session_id});
-        record_link(up ? diagnostics::LinkAction::Up : diagnostics::LinkAction::Down,
-                    event.session_id, 0, now_ms);
+            record_link_down(event, now_ms);
+        }
     }
 }
 

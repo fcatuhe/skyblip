@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FakeServer, FakeUnit, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
+import { FakeServer, FakeUnit, REGISTRATION_FRAME_BYTES, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
+import { ATT_HEADER_BYTES } from './fake_skyblip.mjs';
 import { Activator } from '#skyblip/activation';
 import { addressOf } from '#skyblip/ble';
 
@@ -149,9 +150,28 @@ test('the unit refuses what it cannot do, and the page says why', async () => {
   keyless.activator.activate();
   assert.equal((await keyless.until(settled)).notice.key, 'keyless');
 
-  const narrow = await connected({ mtu: 185 });
+  const narrow = await connected({ mtu: ATT_HEADER_BYTES + REGISTRATION_FRAME_BYTES - 1 });
   narrow.activator.activate();
   assert.equal((await narrow.until(settled)).notice.key, 'small_mtu');
+});
+
+test('an iPhone link carries the registration frame', async () => {
+  const { unit, activator, until } = await connected({ mtu: 185 });
+  activator.activate();
+  await until(confirming);
+  unit.press();
+  assert.equal((await until(state => state.address)).address, '000001');
+});
+
+test('a link whose MTU was never exchanged reads the unit, and is told small_mtu for the challenge reply', async () => {
+  const { unit, server, activator, until } = await connected({ mtu: 23 });
+  assert.equal(activator.state.address, null);
+  activator.activate();
+  assert.equal((await until(settled)).notice.key, 'small_mtu');
+  assert.deepEqual(unit.commands, ['get', 'challenge']);
+  assert.equal(unit.smallMtuRefusals, 1);
+  assert.equal(unit.refusedNotifications, 0);
+  assert.deepEqual(server.requests, []);
 });
 
 test('a link lost while the glass asks is said as such', async () => {

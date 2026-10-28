@@ -20,26 +20,35 @@ class LinkSessions {
             refused_++;
             return;
         }
+        *slot = Slot{};
         slot->used = true;
         slot->session_id = session_id;
         slot->payload_bytes = floor_payload(payload_bytes);
-        raise(events::LinkEventType::Up, slot->session_id, slot->payload_bytes);
+        slot->mtu_updates = slot->payload_bytes > ports::kMinimumLinkPayloadBytes ? 1 : 0;
+        raise(events::LinkEventType::Up, *slot);
     }
 
     // INFO: le 04aug26 The MTU exchange lands late, so this is a second Up on one session.
     void payload_changed(uint16_t session_id, uint16_t payload_bytes) {
         Slot* slot = find(session_id);
+        if (slot == nullptr) return;
+        if (slot->mtu_updates < UINT8_MAX) slot->mtu_updates++;
         const uint16_t figure = floor_payload(payload_bytes);
-        if (slot == nullptr || figure == slot->payload_bytes) return;
+        if (figure == slot->payload_bytes) return;
         slot->payload_bytes = figure;
-        raise(events::LinkEventType::Up, slot->session_id, figure);
+        raise(events::LinkEventType::Up, *slot);
+    }
+
+    void mtu_requested(uint16_t session_id, events::MtuRequest outcome, uint8_t = 0) {
+        Slot* slot = find(session_id);
+        if (slot != nullptr) slot->exchanged_by_unit = outcome == events::MtuRequest::Exchanged;
     }
 
     void disconnected(uint16_t session_id) {
         Slot* slot = find(session_id);
         if (slot == nullptr) return;
         slot->used = false;
-        raise(events::LinkEventType::Down, session_id, 0);
+        raise(events::LinkEventType::Down, *slot);
     }
 
     bool pop(events::LinkEvent& out) {
@@ -79,8 +88,18 @@ class LinkSessions {
     struct Slot {
         uint16_t session_id{0};
         uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
+        uint8_t mtu_updates{0};
+        bool exchanged_by_unit{false};
         bool used{false};
     };
+
+    static events::MtuExchangeStarter starter_of(const Slot& slot) {
+        const bool by_central = slot.mtu_updates > (slot.exchanged_by_unit ? 1 : 0);
+        if (by_central && slot.exchanged_by_unit) return events::MtuExchangeStarter::Both;
+        if (by_central) return events::MtuExchangeStarter::Central;
+        if (slot.exchanged_by_unit) return events::MtuExchangeStarter::Unit;
+        return events::MtuExchangeStarter::None;
+    }
 
     static uint16_t floor_payload(uint16_t bytes) {
         return bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
@@ -104,11 +123,12 @@ class LinkSessions {
         return nullptr;
     }
 
-    void raise(events::LinkEventType type, uint16_t session_id, uint16_t payload_bytes) {
+    void raise(events::LinkEventType type, const Slot& slot) {
         events::LinkEvent event{};
         event.type = type;
-        event.session_id = session_id;
-        event.payload_bytes = payload_bytes;
+        event.session_id = slot.session_id;
+        event.payload_bytes = slot.payload_bytes;
+        if (type == events::LinkEventType::Down) event.mtu_exchange_started_by = starter_of(slot);
         if (!is_ok(events_.push(event))) dropped_++;
     }
 

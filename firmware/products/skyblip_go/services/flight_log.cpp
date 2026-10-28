@@ -23,7 +23,7 @@ void FlightLogService::tick(uint32_t now_ms) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {
             session_.reset();
-            acknowledge(comms::LogStore::Flights, true, "erased");
+            acknowledge(comms::LogStore::Flights, true, link::Reason::Erased);
         }
         return;
     }
@@ -119,12 +119,12 @@ bool FlightLogService::on_ground() const {
     return context_.state.flight.confirmed_state == flight::FlightState::Ground;
 }
 
-void FlightLogService::acknowledge(comms::LogStore store, bool ok, const char* reason) {
+void FlightLogService::acknowledge(comms::LogStore store, bool ok, link::Reason reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(
-        reply_link_session_,
-        comms::format_log_acknowledgement(
-            pool.reply_buffer(), pool.reply_capacity(reply_link_session_), ok, reason, store));
+    pool.send(reply_link_session_,
+              comms::format_log_acknowledgement(pool.reply_buffer(), pool.reply_capacity(), ok,
+                                                reason, store),
+              store);
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {
@@ -167,7 +167,7 @@ void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t sess
     if (!context_.diagnostics.armed()) return;
     diagnostics::Link event{};
     event.link_session = session;
-    event.payload_bytes = context_.roles.link.payload_bytes();
+    event.payload_bytes = context_.roles.link.payload_bytes_to(session);
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
     event.drops = link_drops();
@@ -180,35 +180,34 @@ void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t sess
 void FlightLogService::handle(const comms::LogRequest& request) {
     reply_link_session_ = request.link_session;
     if (!config_.claim_link(request.link_session)) {
-        acknowledge(request.store, false, "claimed");
+        acknowledge(request.store, false, link::Reason::Claimed);
         return;
     }
     if (!request.understood) {
-        acknowledge(request.store, false,
-                    request.reason == nullptr ? "unknown_command" : request.reason);
+        acknowledge(request.store, false, request.reason.value_or(link::Reason::UnknownCommand));
         return;
     }
     RecordStore* store = store_for(request.store);
     if (store == nullptr) {
-        acknowledge(request.store, false, "no_diagnostics");
+        acknowledge(request.store, false, link::Reason::NoDiagnostics);
         return;
     }
     if (!store->available()) {
-        acknowledge(request.store, false, "no_storage");
+        acknowledge(request.store, false, link::Reason::NoStorage);
         return;
     }
     if (flights_.erasing()) {
-        acknowledge(request.store, false, "busy");
+        acknowledge(request.store, false, link::Reason::Busy);
         return;
     }
     if (!on_ground()) {
-        acknowledge(request.store, false, "in_flight");
+        acknowledge(request.store, false, link::Reason::InFlight);
         return;
     }
 
     if (request.command == comms::LogCommand::Erase) {
         if (request.store != comms::LogStore::Flights) {
-            acknowledge(request.store, false, "flights_only");
+            acknowledge(request.store, false, link::Reason::FlightsOnly);
             return;
         }
         config_.request_log_erase();

@@ -290,6 +290,21 @@ TEST_CASE("diagnostics record: a link event keeps the payload the central negoti
     CHECK(out.claim_held);
 }
 
+TEST_CASE("diagnostics record: a link that ended keeps who started its MTU exchange") {
+    diagnostics::Link in{};
+    in.link_session = 2;
+    in.payload_bytes = 244;
+    in.holder = 0x1234;
+    in.action = diagnostics::LinkAction::Down;
+    in.mtu_exchange_started_by = events::MtuExchangeStarter::Both;
+
+    const diagnostics::Link out = diagnostics_round_trip(in);
+    CHECK(out.payload_bytes == 244);
+    CHECK(out.holder == 0x1234);
+    CHECK(out.mtu_exchange_started_by == events::MtuExchangeStarter::Both);
+    CHECK_FALSE(out.claim_held);
+}
+
 TEST_CASE(
     "diagnostics record: a counter past what the field holds saturates rather than wrapping") {
     diagnostics::Power in{};

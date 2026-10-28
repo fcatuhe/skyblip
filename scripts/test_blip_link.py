@@ -15,6 +15,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip  # noqa: E402
+import blip_frames as frames  # noqa: E402
 import blip_records as records  # noqa: E402
 
 
@@ -123,30 +124,60 @@ class Resume(unittest.TestCase):
         self.assertEqual([entry["session"] for entry, _ in plan], [100])
 
 
+def from_the_unit(fields):
+    return frames.encode_frame(fields)
+
+
 class ReplyFraming(unittest.TestCase):
     def test_a_diagnostics_frame_saying_more_is_not_the_last_one(self):
-        self.assertTrue(blip.more_follows(
-            '{"command":"diagnostics","group":"radio","part":0,"more":true}'))
-        self.assertFalse(blip.more_follows(
-            '{"command":"diagnostics","group":"power","part":4,"more":false}'))
+        self.assertTrue(frames.more_follows(blip.decoded_or_refused(from_the_unit(
+            {"command": "diagnostics", "group": "radio", "part": 0, "more": True}))))
+        self.assertFalse(frames.more_follows(blip.decoded_or_refused(from_the_unit(
+            {"command": "diagnostics", "group": "power", "part": 4, "more": False}))))
 
     def test_a_reply_with_no_more_field_is_a_single_frame(self):
-        self.assertFalse(blip.more_follows('{"command":"status","acknowledge":true}'))
+        self.assertFalse(frames.more_follows(blip.decoded_or_refused(from_the_unit(
+            {"command": "acknowledgement", "acknowledge": True}))))
 
-    def test_a_frame_that_is_not_json_ends_the_collection_rather_than_hanging(self):
-        self.assertFalse(blip.more_follows("<truncated"))
+    def test_a_frame_outside_the_registry_stops_the_collection_rather_than_hanging(self):
+        with self.assertRaises(SystemExit) as caught:
+            blip.decoded_or_refused(b"<truncated")
+        self.assertIn("3c7472756e6361746564", str(caught.exception))
+
+    # A key 0 that is an array used to escape as a TypeError traceback, not a refusal.
+    def test_a_frame_whose_command_is_not_a_code_stops_the_collection_by_name(self):
+        for data in (bytes.fromhex("a1008100"), bytes.fromhex("a10161ff")):
+            with self.subTest(data=data.hex()), self.assertRaises(SystemExit) as caught:
+                blip.decoded_or_refused(data)
+            self.assertIn(data.hex(), str(caught.exception))
+
+    # A typed command the registry refuses is said before connecting, never a traceback.
+    def test_a_typed_command_the_registry_refuses_is_refused_by_name(self):
+        for text in ('{"command":"set","units":"imperial"}', '{"command":"challenge","nonce":"zz"}',
+                     '{"command":["set"]}', '["set"]', '{"command":'):
+            with self.subTest(text=text), self.assertRaises(SystemExit) as caught:
+                blip.command_fields(text)
+            self.assertIn(text, str(caught.exception))
+
+    def test_a_typed_command_the_registry_allows_is_handed_on_as_typed(self):
+        self.assertEqual(blip.command_fields('{"command":"set","units":"metric"}'),
+                         {"command": "set", "units": "metric"})
 
     def test_a_refused_command_raises_with_the_reason_the_device_gave(self):
         with self.assertRaises(SystemExit) as caught:
             blip.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})
         self.assertIn("in_flight", str(caught.exception))
 
+    # A refusal for width names what the pilot can do, not only the reason's code.
+    def test_a_reply_refused_as_too_wide_says_the_link_kept_its_smallest_packet(self):
+        for command in ("log", "acknowledgement"):
+            with self.subTest(command=command), self.assertRaises(SystemExit) as caught:
+                blip.refuse_if_nacked({"command": command, "acknowledge": False, "reason": "small_mtu"})
+            self.assertIn("smallest packet size, 20 bytes", str(caught.exception))
+
     def test_an_acknowledged_reply_passes_through_untouched(self):
         frame = {"command": "log", "acknowledge": True, "sessions": 2}
         self.assertIs(blip.refuse_if_nacked(frame), frame)
-
-
-
 
 
 if __name__ == "__main__":

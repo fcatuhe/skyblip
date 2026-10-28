@@ -1,0 +1,30 @@
+#ifndef SKYBLIP_SIMULATOR_WORLD_JSON_H
+#define SKYBLIP_SIMULATOR_WORLD_JSON_H
+
+#include <cstddef>
+#include <cstdint>
+
+namespace skyblip::simulator::json {
+
+class Reader {
+   public:
+    Reader(const char* data, int bytes) : data_(data), bytes_(bytes) {}
+
+    bool read_integer(const char* key, long& out) const;
+    bool read_unsigned(const char* key, uint32_t& out) const;
+    bool read_boolean(const char* key, bool& out) const;
+    bool read_string(const char* key, char* out, int capacity) const;
+    bool has(const char* key) const;
+    int key_count() const;
+
+   private:
+    const char* data_;
+    int bytes_;
+    int value_offset(const char* key) const;
+    bool next_key(int& i, int& key_start, int& key_end) const;
+    bool read_number(const char* key, int64_t& out) const;
+};
+
+}
+
+#endif

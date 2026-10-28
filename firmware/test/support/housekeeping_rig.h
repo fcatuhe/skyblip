@@ -8,6 +8,7 @@
 #include "core/events/link.h"
 #include "hardware/platform/host/platform.h"
 #include "products/skyblip_go/product.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 
@@ -98,11 +99,7 @@ struct HousekeepingRig {
     // A companion app talking to the device: the frame arrives on the link the
     // board polls, so it takes the same road a phone's would.
     void send(const char* json) {
-        events::RxFrame frame{};
-        frame.endpoint = events::Endpoint::Config;
-        frame.bytes = static_cast<uint16_t>(std::strlen(json));
-        std::memcpy(frame.data.data(), json, frame.bytes);
-        platform.link().push_rx(frame);
+        platform.link().push_rx(link_frame(events::Endpoint::Config, 0, json));
     }
 
     comms::ConfigService& config() { return product.config_link().config(); }

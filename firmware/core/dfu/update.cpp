@@ -7,16 +7,6 @@
 
 namespace skyblip::dfu {
 
-const char* to_string(ImageState state) {
-    switch (state) {
-        case ImageState::Confirmed: return "confirmed";
-        case ImageState::Probation: return "probation";
-        case ImageState::Reverted: return "reverted";
-        case ImageState::Refused: return "refused";
-    }
-    return "confirmed";
-}
-
 namespace {
 
 void put_version(uint8_t* out, const ports::ImageVersion& version) {
@@ -136,35 +126,6 @@ bool parse_version(const char* text, ports::ImageVersion& out) {
     out.revision = static_cast<uint16_t>(revision);
     out.build = build;
     return true;
-}
-
-int format_hub_image(const HubImageReport& report, char* out, size_t capacity) {
-    if (capacity < kHubImageTextBytes) {
-        if (capacity > 0) out[0] = 0;
-        return 0;
-    }
-    const char* word = nullptr;
-    switch (report.holding) {
-        case HubImage::None: word = "none"; break;
-        case HubImage::Missing: word = "missing"; break;
-        case HubImage::Corrupt: word = "corrupt"; break;
-        case HubImage::Unreadable: word = "unreadable"; break;
-        case HubImage::Writing: word = "writing"; break;
-        case HubImage::Held: break;
-    }
-    if (word != nullptr) {
-        const int written = format_string(out, word);
-        out[written] = 0;
-        return written;
-    }
-    static constexpr char kLowerHex[] = "0123456789abcdef";
-    int written = 0;
-    for (uint8_t byte : report.digest) {
-        out[written++] = kLowerHex[byte >> 4];
-        out[written++] = kLowerHex[byte & 0x0F];
-    }
-    out[written] = 0;
-    return written;
 }
 
 }  // namespace skyblip::dfu

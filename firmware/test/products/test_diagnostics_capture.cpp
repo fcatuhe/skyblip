@@ -20,18 +20,20 @@ using skyblip::reads_in;
 namespace {
 
 std::string last_log(Rig& rig) {
-    const auto& sent = rig.platform.link().sent;
-    for (size_t i = sent.size(); i > 0; i--)
-        if (sent[i - 1].endpoint == events::Endpoint::Log) return sent[i - 1].bytes;
-    return "";
+    const platform::host::Link::Frame* frame = last_log_frame(rig);
+    return frame == nullptr ? "" : frame->bytes;
 }
 
-std::string ask(Rig& rig, uint32_t& now_ms, const char* json) {
+std::string ask_frame(Rig& rig, uint32_t& now_ms, const char* json) {
     rig.platform.link().clear();
     rig.send_log(json);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     return last_log(rig);
+}
+
+std::string ask(Rig& rig, uint32_t& now_ms, const char* json) {
+    return link_text(ask_frame(rig, now_ms, json));
 }
 
 struct Capture {
@@ -51,17 +53,19 @@ Capture offload_capture(Rig& rig, uint32_t& now_ms, uint32_t session) {
         std::snprintf(command, sizeof(command),
                       "{\"command\":\"read\",\"log\":\"diagnostics\",\"session\":%u,\"from\":%u}",
                       session, from);
-        const std::string chunk = ask(rig, now_ms, command);
+        const std::string frame = ask_frame(rig, now_ms, command);
+        const std::string chunk = link_text(frame);
         if (chunk.find("\"command\":\"chunk\"") == std::string::npos) {
             walk.decoded = false;
             return walk;
         }
         if (field(chunk, "log") != "diagnostics") walk.decoded = false;
 
-        const int records = std::atoi(field(chunk, "records").c_str());
         uint8_t raw[comms::kLogChunkRawBytes];
-        const int bytes = base64_decode(field(chunk, "data"), raw, sizeof(raw));
-        if (bytes != records * static_cast<int>(diagnostics::kRecordBytes)) walk.decoded = false;
+        const int bytes = chunk_records(frame, raw, sizeof(raw));
+        if (bytes < 0 || bytes % static_cast<int>(diagnostics::kRecordBytes) != 0)
+            walk.decoded = false;
+        const int records = bytes / static_cast<int>(diagnostics::kRecordBytes);
         for (int i = 0; i < records; i++) {
             diagnostics::Record record{};
             if (diagnostics::decode_record(raw + i * diagnostics::kRecordBytes, record) !=
@@ -262,7 +266,9 @@ TEST_CASE(
     for (const auto& frame : rig.platform.link().sent) {
         if (frame.endpoint != events::Endpoint::Log) continue;
         chunks++;
-        records += static_cast<uint32_t>(std::atoi(field(frame.bytes, "records").c_str()));
+        uint8_t raw[comms::kLogChunkRawBytes];
+        records += static_cast<uint32_t>(chunk_records(frame.bytes, raw, sizeof(raw)) /
+                                         static_cast<int>(diagnostics::kRecordBytes));
     }
     CHECK(chunks == 3);
     CHECK(records == static_cast<uint32_t>(3 * per_chunk));

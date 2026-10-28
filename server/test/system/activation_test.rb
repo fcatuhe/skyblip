@@ -20,4 +20,14 @@ class ActivationTest < ApplicationSystemTestCase
     assert_selector "[data-activate-target=address]", text: "000003"
     assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
   end
+
+  test "a browser that kept the smallest Bluetooth packet is told so at the first step" do
+    visit "/activate"
+    page.execute_script("fakeUnit.mtu = 23")
+    click_button "Connect"
+    click_button "Activate"
+    assert_selector "[role=status]", text: "smallest packet size, or one too small for the answer"
+    assert_equal %w[get challenge], page.evaluate_script("fakeUnit.commands")
+    assert_nil Unit.find_by(device_id: vectors["device_id"])
+  end
 end

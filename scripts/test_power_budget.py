@@ -8,7 +8,6 @@ through the same chunk decoder and session sink blip.py fetch uses, so a Duty
 field that moves in firmware/core/diagnostics/payload.h fails here rather than reading
 as a quiet zero.
 """
-import base64
 import contextlib
 import io
 import json
@@ -117,8 +116,8 @@ def whole_run(seconds, **kwargs):
 
 def session_lines(raw_records, session=1, closed=True, truncated=False, missing=()):
     """What blip.py fetch writes for one session: the chunk decoder, then the session sink."""
-    encoded = base64.b64encode(b"".join(raw_records)).decode("ascii")
-    decoded = records.decode_chunk("diagnostics", encoded, 0, 0)
+    raw = b"".join(raw_records)
+    decoded = records.decode_chunk("diagnostics", raw, 0, 0)
     lines = []
     sink = records.SessionSink("diagnostics", {"session": session, "records": len(raw_records),
                                                "closed": closed, "truncated": truncated},

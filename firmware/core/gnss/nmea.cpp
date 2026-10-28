@@ -232,14 +232,16 @@ bool NmeaParser::apply_txt(const char* line, int bytes) {
     if (bytes - at < 3 || line[at] != 'S' || line[at + 1] != 'W' || line[at + 2] != '=')
         return false;
     at += 3;
+    char version[kVersionBytes]{};
     int written = 0;
-    for (; at < bytes && line[at] != '*' && written < kVersionBytes - 1; at++, written++)
-        firmware_version_[written] = line[at];
-    firmware_version_[written] = 0;
+    for (; at < bytes && line[at] != '*' && written < kVersionBytes - 1; at++)
+        if (line[at] >= ' ' && line[at] <= '~') version[written++] = line[at];
     last_sentence_ = Sentence::Txt;
+    if (written == 0) return false;
+    std::memcpy(firmware_version_, version, sizeof(version));
     // Not a solution: `updates` counts fixes, and the verification window that
     // reads it must not be satisfied by the receiver introducing itself.
-    return written > 0;
+    return true;
 }
 
 // INFO: fc 03aug26 RMC fields 1 and 9 are UTC as the receiver already resolved

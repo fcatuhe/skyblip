@@ -319,6 +319,35 @@ TEST_CASE("diagnostics link: a central connecting is a record, with the payload 
     CHECK(claimed.holder == 7);
 }
 
+// One record a connection, the Down it already wrote, answers whether option B is needed.
+TEST_CASE(
+    "diagnostics link: a link that ended says who started its MTU exchange and what it settled "
+    "on") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 3);
+    arm(rig, now_ms);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
+    rig.raise_link(4);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.platform.link().exchange_mtu_by_unit(4, 244);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.drop_link(4);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    stop(rig, now_ms);
+    const std::vector<diagnostics::Record> records = captured(rig);
+
+    diagnostics::Link down{};
+    REQUIRE(link_action(records, diagnostics::LinkAction::Down, down));
+    CHECK(down.link_session == 4);
+    CHECK(down.payload_bytes == 244);
+    CHECK(down.mtu_exchange_started_by == events::MtuExchangeStarter::Unit);
+}
+
 TEST_CASE(
     "diagnostics traffic: an aircraft is recorded a reception, with the margin it was graded on") {
     Rig rig;

@@ -2,11 +2,12 @@
 
 #include <cstring>
 
+#include "core/comms/link_registry.h"
 #include "core/power/battery.h"
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
-#include "core/util/json.h"
+#include "core/util/cbor.h"
 
 namespace skyblip::go {
 
@@ -331,7 +332,12 @@ bool callsign_is_typeable(const char* callsign) {
     return false;
 }
 
-bool fits_uint8(long value) { return value >= 0 && value <= UINT8_MAX; }
+template <class Value, class Assign>
+Status apply_key(const Result<Value>& read, Assign assign) {
+    if (read.status() == Status::NotFound) return Status::Ok;
+    if (!read.ok()) return read.status();
+    return assign(read.value());
+}
 
 }  // namespace
 
@@ -426,62 +432,72 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     return Status::Ok;
 }
 
-void write_json_fields(json::Writer& writer, const Settings& settings,
-                       settings::AirAddress address) {
-    writer.add_integer("version", settings.version);
-    if (address) writer.add_integer("address", static_cast<long>(*address));
-    writer.add_integer("address_mapping_table", settings::kAddressMappingTable);
-    write_json_settings(writer, settings);
+void write_config_fields(cbor::Writer& writer, const Settings& settings,
+                         settings::AirAddress address) {
+    writer.add_unsigned(link::config_key::kVersion, settings.version);
+    if (address) writer.add_unsigned(link::config_key::kAddress, *address);
+    writer.add_unsigned(link::config_key::kAddressMappingTable, settings::kAddressMappingTable);
+    write_settings_fields(writer, settings);
 }
 
-void write_json_settings(json::Writer& writer, const Settings& settings) {
-    writer.add_integer("aircraft_type", settings.aircraft_type);
-    writer.add_boolean("alarm_enabled", settings.alarm_enabled);
-    writer.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
-    writer.add_integer("units", static_cast<long>(settings.units));
-    writer.add_string("callsign", settings.callsign);
+void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
+    writer.add_unsigned(link::config_key::kAircraftType, settings.aircraft_type);
+    writer.add_boolean(link::config_key::kAlarmEnabled, settings.alarm_enabled);
+    writer.add_code(link::config_key::kAlarmVolume, settings.alarm_volume);
+    writer.add_code(link::config_key::kUnits, settings.units);
+    writer.add_text(link::config_key::kCallsign, settings.callsign);
 }
 
-int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity) {
-    json::Writer writer(out, capacity);
-    write_json_fields(writer, settings, address);
-    return writer.finish();
-}
-
-Status apply_json(Settings& settings, const char* json, int length) {
-    json::Reader reader(json, length);
-    long value;
-    bool flag;
+Status apply_settings(Settings& settings, const cbor::Reader& frame) {
     Settings next = settings;
-    if (reader.read_integer("aircraft_type", value)) {
-        if (!fits_uint8(value)) return Status::OutOfRange;
-        next.aircraft_type = static_cast<uint8_t>(value);
+    Status status =
+        apply_key(frame.read_unsigned(link::set_key::kAircraftType), [&](uint32_t value) {
+            if (value > UINT8_MAX) return Status::OutOfRange;
+            next.aircraft_type = static_cast<uint8_t>(value);
+            return Status::Ok;
+        });
+    if (status == Status::Ok)
+        status = apply_key(frame.read_boolean(link::set_key::kAlarmEnabled), [&](bool value) {
+            next.alarm_enabled = value;
+            return Status::Ok;
+        });
+    if (status == Status::Ok)
+        status = apply_key(frame.read_unsigned(link::set_key::kAlarmVolume), [&](uint32_t value) {
+            if (value > static_cast<uint32_t>(AlarmVolume::Loud)) return Status::OutOfRange;
+            next.alarm_volume = static_cast<AlarmVolume>(value);
+            return Status::Ok;
+        });
+    if (status == Status::Ok)
+        status = apply_key(frame.read_unsigned(link::set_key::kUnits), [&](uint32_t value) {
+            if (value > static_cast<uint32_t>(Units::Metric)) return Status::OutOfRange;
+            next.units = static_cast<Units>(value);
+            return Status::Ok;
+        });
+    if (status == Status::Ok)
+        status = apply_key(frame.read_integer(link::set_key::kBatteryOffsetMv), [&](int32_t value) {
+            if (value < -power::kCalibrationCeilingMv || value > power::kCalibrationCeilingMv)
+                return Status::OutOfRange;
+            next.battery_offset_mv = static_cast<int16_t>(value);
+            next.battery_offset_manual = true;
+            return Status::Ok;
+        });
+    if (status == Status::Ok)
+        status =
+            apply_key(frame.read_integer(link::set_key::kFrequencyTrimE1Ppm), [&](int32_t value) {
+                if (value < -kFrequencyTrimCeilingE1Ppm || value > kFrequencyTrimCeilingE1Ppm)
+                    return Status::OutOfRange;
+                next.frequency_trim_e1_ppm = static_cast<int16_t>(value);
+                return Status::Ok;
+            });
+    if (status == Status::Ok) {
+        char callsign[kCallsignBytes] = {0};
+        const Status read = frame.read_text(link::set_key::kCallsign, callsign, sizeof(callsign));
+        if (read == Status::Ok)
+            std::memcpy(next.callsign, callsign, kCallsignBytes);
+        else if (read != Status::NotFound)
+            status = read;
     }
-    if (reader.read_boolean("alarm_enabled", flag)) next.alarm_enabled = flag;
-    if (reader.read_integer("alarm_volume", value)) {
-        if (!fits_uint8(value)) return Status::OutOfRange;
-        next.alarm_volume = static_cast<AlarmVolume>(value);
-    }
-    if (reader.read_integer("units", value)) next.units = value ? Units::Metric : Units::Nautical;
-    // Narrowed before it is validated, not after: 65536 truncates to 0 in an
-    // int16 and would pass a bound check that never saw the value sent.
-    if (reader.read_integer("battery_offset_mv", value)) {
-        if (value < -power::kCalibrationCeilingMv || value > power::kCalibrationCeilingMv)
-            return Status::OutOfRange;
-        next.battery_offset_mv = static_cast<int16_t>(value);
-        next.battery_offset_manual = true;
-    }
-    if (reader.read_integer("frequency_trim_e1_ppm", value)) {
-        if (value < -kFrequencyTrimCeilingE1Ppm || value > kFrequencyTrimCeilingE1Ppm)
-            return Status::OutOfRange;
-        next.frequency_trim_e1_ppm = static_cast<int16_t>(value);
-    }
-    char callsign[kCallsignBytes + 1] = {0};
-    if (reader.read_string("callsign", callsign, sizeof(callsign))) {
-        if (std::strlen(callsign) >= kCallsignBytes) return Status::OutOfRange;
-        std::memcpy(next.callsign, callsign, kCallsignBytes);
-    }
-    Status status = validate(next);
+    if (status == Status::Ok) status = validate(next);
     if (status != Status::Ok) return status;
     settings = next;
     return Status::Ok;

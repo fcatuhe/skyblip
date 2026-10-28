@@ -64,7 +64,7 @@ en:
         fidelity: "Against the outline, stretched to the grid: overlap %{iou}, %{missing} of the outline missing, %{extra} drawn outside it. Black is both, orange is drawn only, grey is the outline only."
         export: "Take it to the device"
         command: "Bluetooth command, proposed"
-        command_hint: "%{bytes} bytes, one write on the config endpoint. No firmware takes it yet: it is the shape the upload would have."
+        command_hint: "%{bytes} bytes of CBOR, the link registry's ownship frame, one write on the config endpoint. A proposal: no firmware reads it yet, and a unit answers unknown_command."
         cpp: "Firmware table, for ui/widgets/skyship.cpp"
         choose: "Choose"
         draft: "This is your drawing for %{type}, kept in this browser."

@@ -10,7 +10,7 @@ const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "ins
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
-const NUMBERS = new Set(["aircraft_type", "units", "alarm_volume"])
+const NUMBERS = new Set(["aircraft_type"])
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 
 export default class extends Controller {
@@ -230,7 +230,7 @@ export default class extends Controller {
   }
 
   #choose(select, value) {
-    if (![...select.options].some(option => Number(option.value) === value)) {
+    if (![...select.options].some(option => option.value === String(value))) {
       select.add(new Option(String(value), value))
     }
     select.value = value
@@ -243,6 +243,7 @@ export default class extends Controller {
       const field = elements[key]
       if (field.type === "checkbox") edited[key] = field.checked
       else if (NUMBERS.has(key)) edited[key] = Number(field.value)
+      else if (field.tagName === "SELECT") edited[key] = field.value
       else edited[key] = field.value.toUpperCase().trimEnd()
     }
     return edited
@@ -258,7 +259,7 @@ export default class extends Controller {
   #shown(key, value) {
     const field = this.settingsTarget.elements[key]
     if (field.type === "checkbox") return value ? this.labelsValue.on : this.labelsValue.off
-    if (field.tagName === "SELECT") return [...field.options].find(option => Number(option.value) === value)?.text ?? String(value)
+    if (field.tagName === "SELECT") return [...field.options].find(option => option.value === String(value))?.text ?? String(value)
     if (value === "") return this.labelsValue.none
     return String(value)
   }

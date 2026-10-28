@@ -74,7 +74,7 @@ struct StoreRig {
         link.clear();
         store.serve(request);
         REQUIRE_FALSE(link.sent.empty());
-        return link.sent.back().bytes;
+        return link_text(link.sent.back().bytes);
     }
 
     // The radio's view of the second, published at the instant a pass began.

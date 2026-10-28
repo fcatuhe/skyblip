@@ -8,9 +8,12 @@
 #include <cstring>
 #include <initializer_list>
 #include <string>
+#include <vector>
 
 #include "core/comms/config.h"
+#include "core/comms/link_registry.h"
 #include "core/events/link.h"
+#include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "ports/dfu.h"
@@ -31,7 +34,7 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     config.on_rx(config_frame("{\"command\":\"get\"}"));
     REQUIRE(link.sent.size() == 1);
     CHECK(link.last_on(events::Endpoint::Config));
-    CHECK(link.last().bytes.find("config") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("config") != std::string::npos);
 }
 
 TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a set restores it") {
@@ -46,10 +49,10 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     config.set_flight_state(flight::FlightState::Ground);
 
     config.on_rx(config_frame("{\"command\":\"defaults\"}"));
-    const std::string body = link.last().bytes;
+    const std::string body = link_text(link.last().bytes);
     CHECK(body ==
-          "{\"command\":\"defaults\",\"aircraft_type\":1,\"alarm_enabled\":true,\"alarm_volume\":2,"
-          "\"units\":0,\"callsign\":\"\"}");
+          "{\"command\":\"defaults\",\"aircraft_type\":1,\"alarm_enabled\":true,"
+          "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"\"}");
 
     const std::string set = "{\"command\":\"set\"" + body.substr(body.find(','));
     config.on_rx(config_frame(set.c_str()));
@@ -70,14 +73,14 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
 
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::Set);
-    CHECK(link.last().bytes.find("confirm") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("confirm") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);  // not yet applied
 
     config.confirm();
     CHECK(config.pending() == Pending::None);
     CHECK(int(settings.aircraft_type) == 4);  // applied
     CHECK(config.settings_dirty());
-    CHECK(link.last().bytes.find("\"acknowledge\":true") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":true") != std::string::npos);
 }
 
 // The press authorises what the glass says, so the glass says what the phone sent.
@@ -98,6 +101,27 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
+// A set the store refuses used to stand on the glass and fail only after two presses.
+TEST_CASE("comms: a set out of range or invalid is refused at the door, never staged") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.set_flight_state(flight::FlightState::Ground);
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":300}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"out_of_range\"}");
+
+    config.on_rx(config_frame("{\"command\":\"set\",\"callsign\":\"F*JXYZ\"}"));
+    CHECK(config.pending() == Pending::None);
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"invalid\"}");
+    CHECK(int(settings.aircraft_type) == 1);
+}
+
 TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") {
     platform::host::Link link;
     link.raise_link(1);
@@ -106,13 +130,21 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    const std::string head = "{\"command\":\"set\",";
-    const std::string tail = "\"aircraft_type\":4}";
-    const std::string full =
-        head + std::string(events::RxFrame{}.data.size() - head.size() - tail.size(), ' ') + tail;
-    config.on_rx(config_frame(full.c_str()));
+    // 1 + 2 + key 1 (unread by set) with a 2-byte head and 247 bytes + the trim's 3 = 256.
+    events::RxFrame full{};
+    full.session_id = 1;
+    full.endpoint = events::Endpoint::Config;
+    cbor::Writer writer(full.data.data(), static_cast<int>(full.data.size()));
+    writer.add_code(link::kCommandKey, link::Command::Set);
+    const std::vector<uint8_t> filler(247, 0xEE);
+    writer.add_bytes(link::set_key::kVersion, ConstByteSpan(filler.data(), filler.size()));
+    writer.add_integer(link::set_key::kFrequencyTrimE1Ppm, -25);
+    full.bytes = static_cast<uint16_t>(writer.finish());
+    REQUIRE(full.bytes == full.data.size());
+    config.on_rx(full);
     REQUIRE(config.pending() == Pending::Set);
-    CHECK(std::string(config.pending_set_json()) == full);
+    config.confirm();
+    CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 }
 
 TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
@@ -124,7 +156,7 @@ TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
     config.set_flight_state(flight::FlightState::Airborne);
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);
 }
 
@@ -138,7 +170,7 @@ TEST_CASE("comms: unknown flight-state refuses") {
     config.set_flight_state(flight::FlightState::Unknown);  // never confirmed on ground
     CHECK(config.flight_state() == flight::FlightState::Unknown);
     config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 
     config.set_flight_state(flight::FlightState::Ground);
     CHECK(config.flight_state() == flight::FlightState::Ground);
@@ -155,7 +187,7 @@ TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") 
     config.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
     config.confirm();
     CHECK(int(settings.aircraft_type) == 1);  // NOT applied
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 }
 
 // Nothing used to set the gate, so it stayed Unknown and refused forever: green tests, dead device.
@@ -189,7 +221,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
 
     config.tick(1000 + kPromptForgetMs);
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("expired") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("expired") != std::string::npos);
 
     // The button pressed after the prompt came down authorises the operation
     // that was on it, or it authorises nothing. It is nothing.
@@ -209,7 +241,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
 
     config.set_flight_state(flight::FlightState::Airborne);
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("in_flight") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
 }
 
 // The prompt is the whole security boundary, so it has to say what it is: a
@@ -271,8 +303,8 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     // Refused at the door: no prompt to walk over and confirm for a write that
     // was never going to happen.
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("low_power") != std::string::npos);
-    CHECK(link.last().bytes.find("\"acknowledge\":false") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"acknowledge\":false") != std::string::npos);
     CHECK(int(settings.aircraft_type) == 1);
     CHECK_FALSE(config.settings_dirty());
 
@@ -311,7 +343,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
     CHECK(config.pending() == Pending::None);
     CHECK(int(settings.aircraft_type) == 1);
     CHECK_FALSE(config.settings_dirty());
-    CHECK(link.last().bytes.find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
 }
 
 // The power-failure comparator watches the SoC's own rail, which is at or below
@@ -334,7 +366,7 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
     CHECK_FALSE(config.settings_writable());
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
     CHECK(config.pending() == Pending::None);
-    CHECK(link.last().bytes.find("low_power") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("low_power") != std::string::npos);
 }
 
 // J. Die temperature in the status reply. The question it answers is one no other
@@ -352,11 +384,11 @@ TEST_CASE("comms: the status reply carries the die temperature, in whole degrees
 
     // Nothing has read the sensor yet: the key is absent, not zero.
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("die_temperature_c") == std::string::npos);
+    CHECK(link_text(link.last().bytes).find("die_temperature_c") == std::string::npos);
 
     config.set_die_temperature(412, /*valid=*/true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temperature_c\":41") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":41") != std::string::npos);
 }
 
 // A board with no sensor, a driver that refused a measurement and a device at
@@ -371,11 +403,11 @@ TEST_CASE("comms: no reading is no key, never a zero") {
 
     config.set_die_temperature(0, /*valid=*/true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temperature_c\":0") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":0") != std::string::npos);
 
     config.set_die_temperature(0, /*valid=*/false);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("die_temperature_c") == std::string::npos);
+    CHECK(link_text(link.last().bytes).find("die_temperature_c") == std::string::npos);
 }
 
 TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") {
@@ -389,15 +421,15 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     // afternoon must not read one cooler: -20.6 C is -21, +20.6 C is +21.
     config.set_die_temperature(-206, true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temperature_c\":-21") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":-21") != std::string::npos);
 
     config.set_die_temperature(206, true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temperature_c\":21") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":21") != std::string::npos);
 
     config.set_die_temperature(-4, true);
     config.on_rx(config_frame("{\"command\":\"status\"}"));
-    CHECK(link.last().bytes.find("\"die_temperature_c\":0") != std::string::npos);
+    CHECK(link_text(link.last().bytes).find("\"die_temperature_c\":0") != std::string::npos);
 }
 
 // J and L. A counter a bench reads is not state a pilot's screen reacts to, so it
@@ -421,30 +453,29 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     std::string idle;
     for (const platform::host::Link::Frame& frame : link.sent) {
         CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-        CHECK(frame.bytes.find("\"command\":\"radio\"") != std::string::npos);
-        CHECK(frame.bytes.find("\"group\":\"radio\"") != std::string::npos);
-        idle += frame.bytes;
+        const std::string text = link_text(frame.bytes);
+        CHECK(text.find("\"command\":\"radio\"") != std::string::npos);
+        CHECK(text.find("\"group\":\"radio\"") != std::string::npos);
+        idle += text;
     }
     CHECK(idle.find("\"range_refused\":0") != std::string::npos);
     CHECK(idle.find("\"noise_dbm\":-101") != std::string::npos);
     CHECK(idle.find("\"rx_ok\":7") != std::string::npos);
 
-    // A counter never resets, so the widest it can be is the widest the dump can
-    // carry: ten digits (test/core/test_diagnostics.cpp holds the ceiling and why).
-    // Nine of those do not fit one notification an iPhone will accept, so the
-    // answer is two whole frames rather than one short one.
-    dump.rx_ok = dump.rx_bad = dump.tx_ok = 2147483647u;
-    dump.rx_wait = dump.rx_type = dump.tx_lost = 2147483647u;
-    config.set_range_refused(2147483647u);
+    // A counter never resets, so the widest is a uint32_t's, five bytes on the link.
+    dump.rx_ok = dump.rx_bad = dump.tx_ok = 0xFFFFFFFFu;
+    dump.rx_wait = dump.rx_type = dump.tx_lost = 0xFFFFFFFFu;
+    config.set_range_refused(0xFFFFFFFFu);
     link.sent.clear();
     config.on_rx(config_frame("{\"command\":\"radio\"}"));
     std::string body;
     for (const platform::host::Link::Frame& frame : link.sent) {
         CHECK(frame.bytes.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-        CHECK(frame.bytes.back() == '}');
-        body += frame.bytes;
+        const std::string text = link_text(frame.bytes);
+        CHECK_FALSE(text.empty());
+        body += text;
     }
-    CHECK(body.find("\"range_refused\":2147483647") != std::string::npos);
+    CHECK(body.find("\"range_refused\":4294967295") != std::string::npos);
     CHECK(body.find("\"more\":false") != std::string::npos);
     CHECK(config.link_drops() == 0);
 }

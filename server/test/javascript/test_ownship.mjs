@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+import { encodeFrame } from '#skyblip/link';
 import * as ownship from '#skyblip/ownship';
 
 const LIMITS = { span: 24, rows: 16, rowsToNose: 5 };
@@ -32,12 +33,20 @@ test('the address keeps the leftmost column in the lowest bit, and the hot spot 
   assert.throws(() => ownship.fromWords(Array(200).fill(1), 200000), RangeError);
 });
 
-// 16 rows of 8 hex digits and the envelope must fit the 182 bytes an iPhone link carries.
-test('the Bluetooth command carries the type code, the hot spot and every row inside one write', () => {
-  const command = ownship.toCommand(ownship.parse(CASES[0].text), 10);
-  assert.deepEqual(Object.keys(JSON.parse(command)), ['command', 'type', 'w', 'o', 'rows']);
-  assert.equal(JSON.parse(command).rows.length, 16 * 8);
-  assert.ok(command.length <= 182, `${command.length} bytes`);
+test('the Bluetooth command is the registry\'s ownship frame, every row four bytes of one byte string', () => {
+  const g = ownship.parse(CASES[0].text);
+  const command = ownship.toCommand(g, 10);
+  const fields = JSON.parse(command.text);
+  assert.deepEqual(Object.keys(fields), ['command', 'aircraft_type', 'width', 'hot_spot', 'rows']);
+  assert.deepEqual(fields, { command: 'ownship', aircraft_type: 10, width: 24, hot_spot: ownship.hotSpot(g), rows: ownship.hexRows(g).join('') });
+  assert.equal(command.bytes, encodeFrame(fields).length);
+});
+
+// The tallest and widest drawing the editor allows must fit the 182 bytes an iPhone link carries.
+test('the widest command is 143 bytes of CBOR, one write on the narrowest link', () => {
+  const widest = ownship.glyph(Array.from({ length: ownship.MAX_HEIGHT }, () => Array(ownship.MAX_WIDTH).fill(1)), ownship.MAX_HEIGHT - 1);
+  // 1 + command 25 in 3 + type 2 + width 32 in 3 + hot spot 31 in 3 + rows 1 + 2 + 32 x 4.
+  assert.equal(ownship.toCommand(widest, 17).bytes, 143);
 });
 
 test('rows added or removed at the nose move the hot spot with the aircraft', () => {

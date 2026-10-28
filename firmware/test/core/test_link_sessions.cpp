@@ -147,3 +147,63 @@ TEST_CASE("link sessions: a lifecycle event that does not fit is counted, not lo
     CHECK(sessions.dropped() > 0);
     CHECK_FALSE(sessions.up());
 }
+
+namespace {
+
+LinkEvent down_of(LinkSessions& sessions, uint16_t session_id) {
+    LinkEvent event{};
+    while (sessions.pop(event)) {
+    }
+    sessions.disconnected(session_id);
+    REQUIRE(sessions.pop(event));
+    REQUIRE(event.type == LinkEventType::Down);
+    return event;
+}
+
+}  // namespace
+
+// The measure behind small_mtu: which side started the exchange, and what the link carried.
+TEST_CASE("link sessions: a link nobody exchanged ends at twenty bytes, neither side named") {
+    LinkSessions sessions;
+    sessions.connected(1, ports::kMinimumLinkPayloadBytes);
+    sessions.mtu_requested(1, events::MtuRequest::Refused, 0x06);
+    const LinkEvent down = down_of(sessions, 1);
+    CHECK(down.payload_bytes == ports::kMinimumLinkPayloadBytes);
+    CHECK(down.mtu_exchange_started_by == events::MtuExchangeStarter::None);
+}
+
+TEST_CASE("link sessions: an exchange the unit did not answer for is the central's") {
+    LinkSessions sessions;
+    sessions.connected(1, ports::kMinimumLinkPayloadBytes);
+    sessions.mtu_requested(1, events::MtuRequest::Pending);
+    sessions.payload_changed(1, 182);
+    sessions.mtu_requested(1, events::MtuRequest::AlreadyExchanged);
+    const LinkEvent down = down_of(sessions, 1);
+    CHECK(down.payload_bytes == 182);
+    CHECK(down.mtu_exchange_started_by == events::MtuExchangeStarter::Central);
+
+    sessions.connected(2, 244);
+    CHECK(down_of(sessions, 2).mtu_exchange_started_by == events::MtuExchangeStarter::Central);
+}
+
+// Zephyr calls att_mtu_updated for the unit's own exchange too, just before its response callback.
+TEST_CASE("link sessions: the unit's own exchange is the unit's, and a crossed one is both") {
+    LinkSessions alone;
+    alone.connected(1, ports::kMinimumLinkPayloadBytes);
+    alone.mtu_requested(1, events::MtuRequest::Pending);
+    alone.payload_changed(1, 244);
+    alone.mtu_requested(1, events::MtuRequest::Exchanged);
+    const LinkEvent by_unit = down_of(alone, 1);
+    CHECK(by_unit.payload_bytes == 244);
+    CHECK(by_unit.mtu_exchange_started_by == events::MtuExchangeStarter::Unit);
+
+    LinkSessions crossed;
+    crossed.connected(1, ports::kMinimumLinkPayloadBytes);
+    crossed.mtu_requested(1, events::MtuRequest::Pending);
+    crossed.payload_changed(1, 182);
+    crossed.payload_changed(1, 182);
+    crossed.mtu_requested(1, events::MtuRequest::Exchanged);
+    const LinkEvent both = down_of(crossed, 1);
+    CHECK(both.mtu_exchange_started_by == events::MtuExchangeStarter::Both);
+    CHECK(both.payload_bytes == 182);
+}

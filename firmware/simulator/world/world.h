@@ -118,7 +118,7 @@ class World {
     void connect_companion(uint16_t session_id = 1) { platform_.link().raise_link(session_id); }
     // What a phone says on the config endpoint, arriving where the board polls
     // it: the only path a callsign reaches this device by.
-    void send_config(const char* json);
+    bool send_config(const char* json);
     void disconnect_companion() { platform_.link().drop_link(); }
 
     int failures() const { return failures_; }

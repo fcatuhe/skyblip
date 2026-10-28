@@ -76,7 +76,7 @@ std::string last_config_frame(Rig& rig) {
     const auto& sent = rig.platform.link().sent;
     std::string joined;
     for (const auto& frame : sent)
-        if (frame.endpoint == events::Endpoint::Config) joined += frame.bytes;
+        if (frame.endpoint == events::Endpoint::Config) joined += link_text(frame.bytes);
     return joined;
 }
 

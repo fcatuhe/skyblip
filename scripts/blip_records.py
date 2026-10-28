@@ -8,7 +8,6 @@ and schemas/flight_log.v1.schema.json.
 Importable on its own: an analysis script wants these tables without the BLE
 transport in blip.py.
 """
-import base64
 import datetime
 import json
 
@@ -123,6 +122,7 @@ POWER_LEVEL = ("unknown", "normal", "critical", "flat", "low")
 CHARGE = ("unknown", "ok", "too_cold", "too_hot")
 CONTACT = ("button", "pad")
 LINK_ACTION = ("up", "down", "claim_taken", "claim_released", "received", "sent", "dropped")
+MTU_EXCHANGE_STARTER = ("none", "central", "unit", "both")
 ENDPOINT = ("config", "nmea", "log")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
@@ -189,7 +189,8 @@ DIAGNOSTICS_TYPES = {
     12: ("link", (
         ("link_session", uint16(0)), ("payload_bytes", uint16(2)), ("frame_bytes", uint16(4)),
         ("holder", uint16(6)), ("drops", uint16(8)), ("action", enum8(10, LINK_ACTION)),
-        ("endpoint", enum8(11, ENDPOINT)), ("claim_held", flag(2)))),
+        ("endpoint", enum8(11, ENDPOINT)),
+        ("mtu_exchange_started_by", enum8(12, MTU_EXCHANGE_STARTER)), ("claim_held", flag(2)))),
     13: ("traffic", (
         ("address", uint32(0)), ("distance_m", uint16(4)), ("bearing_deg", uint16(6)),
         ("relative_altitude_m", int16(8)),
@@ -343,9 +344,8 @@ def crc16_ccitt(data, crc=0):
     return crc
 
 
-def decode_chunk(store, encoded, base_utc_s, first_index):
-    """One chunk's base64 into decoded records, each stamped with its own index."""
-    raw = base64.b64decode(encoded, validate=True)
+def decode_chunk(store, raw, base_utc_s, first_index):
+    """One chunk's raw records, decoded, each stamped with its own index."""
     if len(raw) % RECORD_BYTES:
         raise ValueError("chunk of %d bytes is not whole records" % len(raw))
     out = []
