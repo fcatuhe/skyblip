@@ -108,10 +108,8 @@ constexpr const char* page_title(Page page) {
 }
 
 constexpr const char* menu_title(Page page) {
-    switch (page) {
-        case Page::Radar: return "SETTINGS";
-        default: return diagnostics_menu(page) ? "DIAGNOSTICS" : page_title(page);
-    }
+    if (page == Page::Radar) return "SETTINGS";
+    return diagnostics_menu(page) ? "DIAGNOSTICS" : page_title(page);
 }
 
 constexpr Page menu_owner(Page page) { return walked(page) ? page : Page::Nearby; }

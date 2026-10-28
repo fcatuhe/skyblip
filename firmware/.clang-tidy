@@ -21,13 +21,17 @@ Checks: >
   -readability-named-parameter,
   -readability-redundant-member-init,
   -performance-enum-size,
-  -clang-analyzer-optin.performance.Padding
+  -clang-analyzer-optin.performance.Padding,
+  -bugprone-signed-bitwise,
+  -readability-trailing-comma
 
-# The ten above are off because the tree already decided against them: braces
+# The checks above are off because the tree already decided against them: braces
 # would undo the one-line `if` .clang-format is configured to keep, every member
 # is value-initialized whether or not the initializer is redundant, an enum's
 # width is the register's or the wire's, and a struct's field order is the
-# domain's reading order, which is worth more than the padding it costs.
+# domain's reading order, which is worth more than the padding it costs. Bytes
+# are assembled from promoted uint8_t and the datasheets' formulas are signed,
+# and a trailing comma would stop .clang-format packing a braced table.
 WarningsAsErrors: '*'
 
 CheckOptions:

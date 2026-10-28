@@ -87,17 +87,17 @@ void named_at(ui::Canvas& canvas, int x_end, int y, int32_t load_mg, char positi
 
 int thrown_down_y(int32_t load_mg) {
     const int32_t from_level = load_mg - kLevelFlightMg;
-    const int offset = static_cast<int>((from_level * kNormalPerG) / kMilliPerG);
+    const int offset = (from_level * kNormalPerG) / kMilliPerG;
     return kFieldCentreY + std::clamp<int32_t>(offset, -kFieldHalfHeight, kFieldHalfHeight);
 }
 
 int lateral_x(int32_t load_mg) {
-    const int offset = static_cast<int>((load_mg * kLateralPerG) / kMilliPerG);
+    const int offset = (load_mg * kLateralPerG) / kMilliPerG;
     return kFieldCentreX + std::clamp<int32_t>(offset, -kFieldHalfWidth, kFieldHalfWidth);
 }
 
 int thrown_forward_y(int32_t accelerating_mg) {
-    const int offset = static_cast<int>((accelerating_mg * kThrownPerG) / kMilliPerG);
+    const int offset = (accelerating_mg * kThrownPerG) / kMilliPerG;
     return kFieldCentreY + std::clamp<int32_t>(offset, -kThrownPerG, kThrownPerG);
 }
 

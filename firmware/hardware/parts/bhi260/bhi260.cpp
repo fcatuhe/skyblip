@@ -247,11 +247,10 @@ void Bhi260::check_accelerometer_present(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    if (code == kParameterSensorsPresent && answered == kSensorsPresentBytes) {
-        if (!bit_set(present, kSensorAccelerometer)) {
-            fail(Status::NotFound);
-            return;
-        }
+    if (code == kParameterSensorsPresent && answered == kSensorsPresentBytes &&
+        !bit_set(present, kSensorAccelerometer)) {
+        fail(Status::NotFound);
+        return;
     }
     send_configuration(now_ms);
 }
