@@ -15,12 +15,12 @@ const DEVICE_NOTES = [
   'probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat',
   'imu_writing', 'no_key', 'not_activated',
 ];
-const NEVER_ASKED_BY_THE_PAGE = new Set(['no_cmd', 'no_version']);
+const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version']);
 
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
 const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
 // INFO: fc 18oct26 what the prompt machinery and the claim answer any command, activation included
-const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_cmd'];
+const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_command'];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
@@ -35,7 +35,7 @@ function identityRefusals() {
 
 function firmwareRefusals() {
   const source = read(CONFIG);
-  const acked = [...source.matchAll(/ack\(false, "(\w+)"\)/g)].map(match => match[1]);
+  const acked = [...source.matchAll(/acknowledge\(false, "(\w+)"\)/g)].map(match => match[1]);
   return [...new Set(acked)].filter(reason => !NEVER_ASKED_BY_THE_PAGE.has(reason));
 }
 

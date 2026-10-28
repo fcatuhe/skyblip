@@ -8,7 +8,7 @@ namespace {
 
 int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     if (hdop_e2 <= kDopUnityE2) return evidence;
-    return div_round(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
+    return divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
 
 enum class AdslG13Category : uint8_t {
@@ -28,8 +28,8 @@ enum class AdslG13Category : uint8_t {
 
 }  // namespace
 
-bool flies_at_no_ground_speed(uint8_t aircraft_cat) {
-    switch (static_cast<AdslG13Category>(aircraft_cat)) {
+bool flies_at_no_ground_speed(uint8_t aircraft_category) {
+    switch (static_cast<AdslG13Category>(aircraft_category)) {
         case AdslG13Category::LightRotorcraft:
         case AdslG13Category::LighterThanAir:
         case AdslG13Category::Paraglider:
@@ -63,8 +63,8 @@ FlightState state_from(uint8_t adsl_code) {
     return FlightState::Unknown;
 }
 
-uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_cat) {
-    if (state_from(adsl_code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_cat))
+uint8_t announced_state(uint8_t adsl_code, uint8_t aircraft_category) {
+    if (state_from(adsl_code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_category))
         return static_cast<uint8_t>(FlightState::Unknown);
     return adsl_code;
 }
@@ -74,38 +74,38 @@ bool FlightMonitor::jerky(int32_t previous_mm_s, int32_t now_mm_s) {
 }
 
 void FlightMonitor::update_rolling(int32_t speed_mm_s) {
-    if (speed_mm_s >= kTaxiSpeedMmS)
+    if (speed_mm_s >= kRollingSpeedMmS)
         rolling_ = true;
     else if (speed_mm_s < kGroundSpeedMmS)
         rolling_ = false;
 }
 
-void FlightMonitor::update_slowdown(const FlightSample& sample, uint32_t now_ms) {
+void FlightMonitor::update_taxi(const FlightSample& sample, uint32_t now_ms) {
     if (!sample.fix_valid || !taxi_evidence(sample)) {
-        slow_ = false;
+        taxiing_ = false;
         return;
     }
-    if (!slow_) {
-        slow_ = true;
-        slow_since_ms_ = now_ms;
+    if (!taxiing_) {
+        taxiing_ = true;
+        taxiing_since_ms_ = now_ms;
     }
 }
 
 bool FlightMonitor::taxi_sustained(uint32_t now_ms) const {
-    return slow_ && now_ms - slow_since_ms_ >= kLandingHoldMs;
+    return taxiing_ && now_ms - taxiing_since_ms_ >= kLandingHoldMs;
 }
 
 FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
-    update_slowdown(sample, now_ms);
+    update_taxi(sample, now_ms);
     if (!sample.fix_valid) {
-        armed_ = false;
+        previous_speed_valid_ = false;
         return FlightState::Unknown;
     }
     update_rolling(sample.speed_mm_s);
 
     const int32_t previous_speed_mm_s = last_speed_mm_s_;
-    const bool comparable = armed_;
-    armed_ = true;
+    const bool comparable = previous_speed_valid_;
+    previous_speed_valid_ = true;
     last_speed_mm_s_ = sample.speed_mm_s;
 
     if (state_ == FlightState::Unknown) {

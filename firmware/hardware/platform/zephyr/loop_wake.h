@@ -18,7 +18,7 @@ class LoopWake {
     void wake() { k_sem_give(&woken_); }
 
     void rest_after(int64_t pass_began_ticks) {
-        k_sem_take(&woken_, K_MSEC(runtime::kServiceStepMs));
+        k_sem_take(&woken_, K_MSEC(runtime::kServicePassCeilingMs));
         const int64_t earliest =
             pass_began_ticks +
             static_cast<int64_t>(k_ms_to_ticks_ceil64(runtime::kServicePassFloorMs));

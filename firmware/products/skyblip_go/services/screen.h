@@ -4,7 +4,7 @@
 #include <optional>
 
 #include "core/comms/config.h"
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/power/duty.h"
 #include "core/power/wake.h"
@@ -14,7 +14,6 @@
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/input/gesture.h"
 #include "products/skyblip_go/pages/activation.h"
-#include "products/skyblip_go/pages/boot.h"
 #include "products/skyblip_go/pages/capture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/gmeter.h"
@@ -24,7 +23,8 @@
 #include "products/skyblip_go/pages/radar.h"
 #include "products/skyblip_go/pages/radio_log.h"
 #include "products/skyblip_go/pages/raw.h"
-#include "products/skyblip_go/pages/sats.h"
+#include "products/skyblip_go/pages/satellites.h"
+#include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/pages/sixpack.h"
 #include "products/skyblip_go/pages/status.h"
 #include "products/skyblip_go/services/alarm.h"
@@ -40,20 +40,21 @@ class ScreenService : public runtime::Service {
     static constexpr uint32_t kRenderPeriodMs = 1000;
     static constexpr uint32_t kPresentFloorMs = 1000;
     // INFO: fc 03oct26 after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000
-    static constexpr uint32_t kLockedRedrawMs = 600;
-    static constexpr uint32_t kLockedRedrawEndMs = 800;
+    static constexpr uint32_t kLockedRedrawWindowStartMs = 600;
+    static constexpr uint32_t kLockedRedrawWindowEndMs = 800;
 
     // INFO: fc 20sep26 the render cadence: a capture says what was on the glass, not what was drawn
     static constexpr uint32_t kRecordPeriodMs = kRenderPeriodMs;
 
     // INFO: fc 06sep26 Good Display rates the glass 0..50 C, read on a die above ambient
-    static constexpr int16_t kHoldAboveDeciCelsius = 500;
+    static constexpr int16_t kRefreshCeilingDeciCelsius = 500;
 
     // INFO: cf 02aug26 at this level a menu in front of converging traffic is a bug, so it goes
     static constexpr traffic::Level kAlarmTakesGlass = traffic::Level::Advisory;
 
     ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                  AlarmService& alarm, const CaptureService& capture, const BootSnapshot& self_test)
+                  AlarmService& alarm, const CaptureService& capture,
+                  const SelfTestSnapshot& self_test)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
@@ -92,7 +93,7 @@ class ScreenService : public runtime::Service {
     bool powered() const { return powered_; }
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
-    const Glass& framebuffer() const { return fb_; }
+    const Glass& framebuffer() const { return framebuffer_; }
     void mark_dirty() { dirty_ = true; }
 
    private:
@@ -116,7 +117,7 @@ class ScreenService : public runtime::Service {
     void sync_receiving(uint32_t now_ms);
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
-    uint32_t micros_since(uint64_t began_us) const;
+    uint32_t microseconds_since(uint64_t began_us) const;
     void obey(Gesture gesture, uint32_t now_ms);
     void tap(uint32_t now_ms);
     void long_touch();
@@ -138,23 +139,21 @@ class ScreenService : public runtime::Service {
     void draw_parked_cell(const char* said);
     void centred_text(int y, const char* text, int scale);
     static constexpr int kParkedSaidScale = 2;
-    static constexpr int kGlyphCols = 6;
-    static constexpr int kGlyphRows = 7;
     void note_presented(uint32_t now_ms);
     void count_refresh(ports::Refresh mode);
     void accrue_backlight(uint32_t now_ms);
 
     int32_t climb_fpm() const {
-        return to_feet_per_minute(MillimetresPerSec(context_.state.indicated.climb_mm_s)).v;
+        return to_feet_per_minute(MillimetresPerSecond(context_.state.indicated.climb_mm_s)).value;
     }
 
     bool climb_measured() const {
         return context_.state.own.climb_valid &&
-               (context_.state.own.fix_valid || context_.state.baro.active);
+               (context_.state.own.fix_valid || context_.state.barometer.active);
     }
 
     bool showing_sky() const {
-        return powered_ && mode_ == Mode::Page && page_ == Page::Sats &&
+        return powered_ && mode_ == Mode::Page && page_ == Page::Satellites &&
                ports::has(context_.roles.capabilities, ports::Capability::Display);
     }
 
@@ -164,14 +163,14 @@ class ScreenService : public runtime::Service {
     bool unit_activated();
 
     bool alarm_takes_glass() const {
-        return context_.state.alarm_live >= kAlarmTakesGlass && !diagnostics_on_glass();
+        return context_.state.alarm_undismissed >= kAlarmTakesGlass && !diagnostics_on_glass();
     }
 
     bool diagnostics_on_glass() const {
         return mode_ == Mode::Menu ? diagnostics_menu(editor_.page()) : diagnostic(page_);
     }
 
-    bool alarm_stands() const { return context_.state.alarm_live != traffic::Level::None; }
+    bool alarm_stands() const { return context_.state.alarm_undismissed != traffic::Level::None; }
 
     bool alarm_flashing() const { return alarm_stands(); }
 
@@ -194,8 +193,8 @@ class ScreenService : public runtime::Service {
     comms::ConfigService& config_;
     AlarmService& alarm_;
     const CaptureService& capture_;
-    const BootSnapshot& self_test_;
-    diag::Profile capture_in_focus_{kFirstCapture};
+    const SelfTestSnapshot& self_test_;
+    diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     Controls controls_{};
     ConfirmGesture confirm_{};
@@ -212,7 +211,7 @@ class ScreenService : public runtime::Service {
     std::optional<bool> activated_{};
     uint32_t receiving_since_ms_{0};
 
-    Glass fb_{};
+    Glass framebuffer_{};
     Glass presented_{};
     RadarTarget targets_[kMaxRadarTargets]{};
     traffic::RangeRow nearby_rows_[kNearbyRows]{};
@@ -226,7 +225,7 @@ class ScreenService : public runtime::Service {
     uint32_t render_us_{0};
     uint32_t present_us_{0};
     uint32_t last_present_ms_{0};
-    traffic::Level last_live_{traffic::Level::None};
+    traffic::Level last_alarm_undismissed_{traffic::Level::None};
     bool alarm_flash_{false};
     bool dirty_{true};
     Change change_{Change::Asked};

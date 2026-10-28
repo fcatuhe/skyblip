@@ -29,36 +29,36 @@ namespace skyblip::boards {
 
 constexpr const char* kImuWithoutImage = "NOBLOB";
 
-static_assert(t_echo_plus::kGlassW == parts::Ssd1681::kGlassW &&
-                  t_echo_plus::kGlassH == parts::Ssd1681::kGlassH,
+static_assert(t_echo_plus::kGlassWidth == parts::Ssd1681::kGlassWidth &&
+                  t_echo_plus::kGlassHeight == parts::Ssd1681::kGlassHeight,
               "the glass on this board is what its controller drives");
 
-static_assert(runtime::kBaroConversionCeilingMs < runtime::kBaroConversionPeriodMs,
+static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConversionPeriodMs,
               "a barometer conversion is read or given up before the next one is triggered");
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
-                      runtime::kServiceStepMs <
-                  timing::kSlot0Start,
+                      runtime::kServicePassCeilingMs <
+                  timing::kSlot0StartMs,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
-// The T-Echo Plus, assembled once. P is the platform: silicon or host. Swapping
+// The T-Echo Plus, assembled once. Platform is silicon or host. Swapping
 // it changes which io/ backend the parts talk to and nothing else, so there is
 // no second copy of this wiring to keep in step.
-template <class P>
+template <class Platform>
 class TEchoPlus {
    public:
-    TEchoPlus(P& platform, bus::Bus& bus)
+    TEchoPlus(Platform& platform, bus::Bus& bus)
         : platform_(platform),
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
-                 t_echo_plus::kRadioBusy, t_echo_plus::kRadioRst, t_echo_plus::kRadioDio1),
-          epd_(platform.spi(io::BusId::Epd), platform.gpio(), platform.delay(), t_echo_plus::kEpdDc,
-               t_echo_plus::kEpdRst, t_echo_plus::kEpdBusy, t_echo_plus::kEpdBacklight,
-               platform.glass_rotation()),
+                 t_echo_plus::kRadioBusy, t_echo_plus::kRadioReset, t_echo_plus::kRadioDio1),
+          display_(platform.spi(io::BusId::Epd), platform.gpio(), platform.delay(),
+                   t_echo_plus::kEpdDc, t_echo_plus::kEpdReset, t_echo_plus::kEpdBusy,
+                   t_echo_plus::kEpdBacklight, platform.glass_rotation()),
           gnss_(platform.uart(io::BusId::Gnss), platform.uart_rate(io::BusId::Gnss)),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), t_echo_plus::kHapticEnable),
           imu_(platform.i2c(io::BusId::Sensor)),
-          stored_image_(platform.imu_flash()),
+          imu_store_(platform.imu_flash()),
           rf_(radio_, platform.clock(), bus.rf),
           capabilities_(platform.capabilities()) {
         platform_.wire(t_echo_plus::kPinMap);
@@ -82,9 +82,9 @@ class TEchoPlus {
     // is present but refuses to start is a degraded state, not a missing
     // capability.
     Status begin() {
-        const Status s = platform_.begin();
-        if (s != Status::Ok) return s;
-        if (ports::has(capabilities_, ports::Capability::Display)) epd_.begin();
+        const Status status = platform_.begin();
+        if (status != Status::Ok) return status;
+        if (ports::has(capabilities_, ports::Capability::Display)) display_.begin();
         read_stored_imu_image();
         if (!ports::has(capabilities_, ports::Capability::Rf)) return Status::Ok;
         return rf_.begin();
@@ -98,7 +98,7 @@ class TEchoPlus {
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }
-    uint32_t baro_faults() const { return baro_faults_; }
+    uint32_t barometer_faults() const { return barometer_faults_; }
 
     // What answered, by name and address, behind the capability bits. The
     // self-test page reads it: two BME280 addresses, five shipped e-paper
@@ -115,11 +115,11 @@ class TEchoPlus {
                 ? static_cast<ports::Link&>(platform_.link())
                 : null_.link,
             ports::has(capabilities_, ports::Capability::Display)
-                ? static_cast<ports::Display&>(epd_)
+                ? static_cast<ports::Display&>(display_)
                 : null_.display,
             ports::has(capabilities_, ports::Capability::Storage)
-                ? static_cast<ports::KvStore&>(platform_.kv())
-                : null_.kv,
+                ? static_cast<ports::KeyValueStore&>(platform_.key_value())
+                : null_.key_value,
             ports::has(capabilities_, ports::Capability::Storage)
                 ? static_cast<ports::FlashRegion&>(platform_.log_flash())
                 : null_.log_flash,
@@ -145,54 +145,55 @@ class TEchoPlus {
         };
     }
 
-    void poll_baro_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
-        if (!ports::has(capabilities_, ports::Capability::Baro)) return;
-        if (baro_converting_) settle_baro(now_ms);
-        if (baro_converting_) return;
-        if (baro_due(clock, now_ms)) {
-            last_baro_ms_ = now_ms;
-            baro_slot_ = 0;
-            trigger_baro(now_ms, true);
-        } else if (baro_filler_due(clock, now_ms)) {
-            baro_slot_ = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
-            trigger_baro(now_ms, false);
+    void poll_barometer_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
+        if (!ports::has(capabilities_, ports::Capability::Barometer)) return;
+        if (barometer_converting_) collect_barometer(now_ms);
+        if (barometer_converting_) return;
+        if (barometer_due(clock, now_ms)) {
+            last_barometer_ms_ = now_ms;
+            barometer_quarter_ = 0;
+            trigger_barometer(now_ms, true);
+        } else if (unpublished_barometer_due(clock, now_ms)) {
+            barometer_quarter_ = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+            trigger_barometer(now_ms, false);
         }
     }
 
-    void trigger_baro(uint32_t now_ms, bool published) {
-        baro_triggered_ms_ = now_ms;
-        baro_published_ = published;
-        baro_converting_ = platform_.start_baro();
-        if (!baro_converting_) baro_faults_++;
+    void trigger_barometer(uint32_t now_ms, bool published) {
+        barometer_triggered_ms_ = now_ms;
+        barometer_published_ = published;
+        barometer_converting_ = platform_.trigger_barometer();
+        if (!barometer_converting_) barometer_faults_++;
     }
 
-    void settle_baro(uint32_t now_ms) {
-        platform::BaroReading reading{};
-        if (baro_published_ && platform_.read_baro(reading)) {
-            baro_converting_ = false;
-            bus_.baro.push(events::BaroSample{
-                reading.pressure_mpa, baro_triggered_ms_ + parts::Bme280::kConversionMidpointMs,
-                reading.temperature_decicelsius, reading.temperature_valid});
+    void collect_barometer(uint32_t now_ms) {
+        platform::BarometerReading reading{};
+        if (barometer_published_ && platform_.read_barometer(reading)) {
+            barometer_converting_ = false;
+            bus_.barometer.push(events::BarometerSample{
+                reading.pressure_mpa,
+                barometer_triggered_ms_ + parts::Bme280::kConversionMidpointMs,
+                reading.temperature_dc, reading.temperature_valid});
             return;
         }
-        if (now_ms - baro_triggered_ms_ < runtime::kBaroConversionCeilingMs) return;
-        baro_converting_ = false;
-        if (baro_published_) baro_faults_++;
+        if (now_ms - barometer_triggered_ms_ < runtime::kBarometerConversionCeilingMs) return;
+        barometer_converting_ = false;
+        if (barometer_published_) barometer_faults_++;
     }
 
-    bool baro_filler_due(const timing::ClockState& clock, uint32_t now_ms) const {
+    bool unpublished_barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
         if (!clock.pps_locked)
-            return now_ms - baro_triggered_ms_ >= runtime::kBaroConversionPeriodMs;
-        const uint32_t slot = clock.ms_since_pps / runtime::kBaroConversionPeriodMs;
-        return slot > baro_slot_ && slot < kBaroConversionsPerSecond;
+            return now_ms - barometer_triggered_ms_ >= runtime::kBarometerConversionPeriodMs;
+        const uint32_t quarter = clock.since_edge_ms / runtime::kBarometerConversionPeriodMs;
+        return quarter > barometer_quarter_ && quarter < kBarometerConversionsPerSecond;
     }
 
-    bool baro_due(const timing::ClockState& clock, uint32_t now_ms) const {
-        const uint32_t since = now_ms - last_baro_ms_;
-        if (since < runtime::kBaroPeriodMs / 2) return false;
-        if (!clock.pps_locked) return since >= runtime::kBaroPeriodMs;
-        return clock.ms_since_pps < runtime::kBaroPpsWindowMs ||
-               since >= 2 * runtime::kBaroPeriodMs;
+    bool barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
+        const uint32_t since_published_ms = now_ms - last_barometer_ms_;
+        if (since_published_ms < runtime::kBarometerPublishPeriodMs / 2) return false;
+        if (!clock.pps_locked) return since_published_ms >= runtime::kBarometerPublishPeriodMs;
+        return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
+               since_published_ms >= 2 * runtime::kBarometerPublishPeriodMs;
     }
 
     void publish_contact(events::Contact which, input::Contact& contact, bool level,
@@ -207,10 +208,10 @@ class TEchoPlus {
         if (!ports::has(capabilities_, ports::Capability::Battery)) return;
         if (now_ms - last_battery_ms_ < runtime::kBatteryPeriodMs) return;
         last_battery_ms_ = now_ms;
-        uint16_t millivolts = 0;
+        uint16_t divider_mv = 0;
         // INFO: fc 05oct26 refused or not, the reading and VBUS go out: core/power judges it
-        platform_.read_battery_mv(millivolts);
-        bus_.battery.push(events::BatterySample{millivolts, platform_.external_power()});
+        platform_.read_battery_mv(divider_mv);
+        bus_.battery.push(events::BatterySample{divider_mv, platform_.external_power()});
     }
 
     // The producer side: everything hardware says arrives on the bus, and the
@@ -241,7 +242,7 @@ class TEchoPlus {
                 bus_.gnss.push(gnss_.solution());
                 state.gnss.sky = gnss_.sky();
                 state.gnss.levels_fresh = gnss_.levels_fresh();
-                state.gnss.reject = gnss_.reject_reason();
+                state.gnss.reject = gnss_.last_reject();
                 state.gnss.rejected = gnss_.rejected();
             }
             state.gnss.levels_live = gnss_.satellites_in_view_live();
@@ -253,10 +254,10 @@ class TEchoPlus {
         publish_contact(events::Contact::Button, button_, platform_.button_down(), now_ms);
         publish_contact(events::Contact::Pad, pad_, platform_.pad_down(), now_ms);
 
-        const uint64_t now_us = platform_.clock().micros();
+        const uint64_t now_us = platform_.clock().microseconds();
         state.clock.pps_locked = platform_.pps().locked();
-        state.clock.ms_since_pps = platform_.pps().ms_since(now_us);
-        poll_baro_on_pps(state.clock, now_ms);
+        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
+        poll_barometer_on_pps(state.clock, now_ms);
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding
         // it from the millisecond phase threw away up to a millisecond of the
@@ -264,39 +265,38 @@ class TEchoPlus {
         timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
         // The one place the PPS edge is owned: the bench's interval-error
         // histogram is fed here rather than by a second reader of the pin.
-        state.rf.timing_stats.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
+        state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
     }
 
-    typename P::Rf& rf() { return rf_; }
+    typename Platform::Rf& rf() { return rf_; }
     parts::L76k& gnss() { return gnss_; }
     parts::Bhi260& imu() { return imu_; }
-    parts::Bhi260ImageStore& imu_store() { return stored_image_; }
+    parts::Bhi260ImageStore& imu_store() { return imu_store_; }
     bool imu_without_image() const {
         return ports::has(capabilities_, ports::Capability::Inclinometer) && !imu_image_bootable();
     }
-    parts::Ssd1681& display() { return epd_; }
+    parts::Ssd1681& display() { return display_; }
     parts::Drv2605& haptic() { return haptic_; }
 
    private:
-    static constexpr uint32_t kBaroConversionsPerSecond =
-        runtime::kBaroPeriodMs / runtime::kBaroConversionPeriodMs;
+    static constexpr uint32_t kBarometerConversionsPerSecond =
+        runtime::kBarometerPublishPeriodMs / runtime::kBarometerConversionPeriodMs;
 
-    // ports::missing(a, b) is "b without a", which is what this board needs when a
-    // probe contradicts what the platform declared.
+    // What this board needs when a probe contradicts what the platform declared.
     ports::Capabilities without(ports::Capability bit) const {
-        return ports::missing(bit, capabilities_);
+        return ports::without(capabilities_, bit);
     }
 
-    // The fingerprint is taken where the pins are free, which on silicon is the
+    // The signature is taken where the pins are free, which on silicon is the
     // board port at PRE_KERNEL_1 and on the host is the panel model. Either way
-    // the driver is told once, before begin(), and an unread fingerprint leaves
+    // the driver is told once, before begin(), and an unread signature leaves
     // the panel Unknown - which is the safest refresh policy and, until somebody
     // reads a Plus on a bench, the honest answer for this board.
     void identify_panel() {
         parts::PanelSignature signature{};
         platform_.read_panel_signature(signature);
-        epd_.adopt(signature);
-        inventory_.panel = epd_.panel_name();
+        display_.adopt(signature);
+        inventory_.panel_name = display_.panel_name();
     }
 
     void take_bus_inventory() {
@@ -305,11 +305,12 @@ class TEchoPlus {
         // it would miss the part entirely.
         haptic_.power_up();
         inventory_ = t_echo_plus::scan_i2c(platform_.i2c(io::BusId::Sensor));
-        inventory_.baro_address = inventory_.has_i2c_address(t_echo_plus::kBaroAddrPrimary)
-                                      ? t_echo_plus::kBaroAddrPrimary
-                                  : inventory_.has_i2c_address(t_echo_plus::kBaroAddrAlternate)
-                                      ? t_echo_plus::kBaroAddrAlternate
-                                      : 0;
+        inventory_.barometer_address =
+            inventory_.has_i2c_address(parts::Bme280::kAddressPrimary)
+                ? parts::Bme280::kAddressPrimary
+            : inventory_.has_i2c_address(parts::Bme280::kAddressAlternate)
+                ? parts::Bme280::kAddressAlternate
+                : 0;
     }
 
     // The haptic is a part on a bus, not a pin. Capability::Haptic is granted by
@@ -327,7 +328,7 @@ class TEchoPlus {
     void establish_haptic() {
         capabilities_ = without(ports::Capability::Haptic);
         inventory_.haptic = ports::HapticKind::None;
-        if (!inventory_.has_i2c_address(t_echo_plus::kHapticDriverAddress)) return;
+        if (!inventory_.has_i2c_address(parts::Drv2605::kAddress)) return;
         if (haptic_.begin() != Status::Ok) return;
         platform_.annunciator().attach_haptic(haptic_);
         inventory_.haptic = ports::HapticKind::WaveformDriver;
@@ -342,8 +343,8 @@ class TEchoPlus {
 
     void establish_inclinometer() {
         capabilities_ = without(ports::Capability::Inclinometer);
-        if (!inventory_.has_i2c_address(t_echo_plus::kImuAddress) &&
-            !inventory_.has_i2c_address(t_echo_plus::kImuAddressAlternate))
+        if (!inventory_.has_i2c_address(parts::Bhi260::kAddress) &&
+            !inventory_.has_i2c_address(parts::Bhi260::kAddressAlternate))
             return;
         if (imu_.probe() != Status::Ok) return;
         capabilities_ = capabilities_ | ports::Capability::Inclinometer;
@@ -353,10 +354,10 @@ class TEchoPlus {
         state.imu.stage = imu_.stage_text();
         state.imu.fault = imu_.fault_text();
         state.imu.fifo_bytes = imu_.fifo_bytes();
-        state.imu.unparsed = imu_.unparsed_events();
+        state.imu.unparsed_events = imu_.unparsed_events();
         state.imu.error = imu_.hub_error();
         state.imu.interrupt = imu_.interrupt_status();
-        state.imu.meta = imu_.meta_event();
+        state.imu.meta_event = imu_.meta_event();
         state.imu.sensor_error = imu_.sensor_error();
         state.imu.errored_sensor = imu_.errored_sensor();
         if (ports::has(capabilities_, ports::Capability::Inclinometer)) {
@@ -365,21 +366,20 @@ class TEchoPlus {
             if (imu_.stage() == parts::Bhi260::Stage::Idle) load_imu(now_ms);
             imu_.service(now_ms);
             if (imu_.poll())
-                bus_.accel.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
+                bus_.accelerometer.push(t_echo_plus::device_frame(imu_.acceleration(), now_ms));
         }
         publish_imu_image(state);
     }
 
     void read_stored_imu_image() {
         if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return;
-        if (stored_image_.holding() == parts::Bhi260ImageStore::Holding::Unread)
-            stored_image_.check();
+        if (imu_store_.holding() == parts::Bhi260ImageStore::Holding::Unread) imu_store_.check();
     }
 
     bool imu_image_linked() const { return !platform_.imu_firmware().empty(); }
 
     bool imu_image_bootable() const {
-        return imu_image_linked() || stored_image_.holds(platform_.imu_firmware_digest());
+        return imu_image_linked() || imu_store_.holds(platform_.imu_firmware_digest());
     }
 
     void load_imu(uint32_t now_ms) {
@@ -387,24 +387,24 @@ class TEchoPlus {
             linked_image_ = parts::LinkedImage{platform_.imu_firmware()};
             imu_.load(linked_image_, now_ms);
         } else if (imu_image_bootable()) {
-            imu_.load(stored_image_, now_ms);
+            imu_.load(imu_store_, now_ms);
         }
     }
 
     // INFO: fc 03oct26 only a confirmed image writes: a reverted one must not leave its blob behind
     void keep_imu_image_stored(bus::State& state, uint32_t now_ms) {
         if (!imu_image_linked()) return;
-        if (!imu_image_store_tried_ && !stored_image_.holds(platform_.imu_firmware_digest()) &&
+        if (!imu_image_store_tried_ && !imu_store_.holds(platform_.imu_firmware_digest()) &&
             platform_.dfu().confirmed()) {
             imu_image_store_tried_ = true;
-            stored_image_.begin_write(platform_.imu_firmware(), platform_.imu_firmware_digest());
+            imu_store_.begin_write(platform_.imu_firmware(), platform_.imu_firmware_digest());
         }
-        for (uint32_t step = 0; step < kImuImageStepsPerPass && stored_image_.writing(); step++) {
-            const uint32_t cost_ms = stored_image_.next_cost_ms();
+        for (uint32_t step = 0; step < kImuImageStepsPerPass && imu_store_.writing(); step++) {
+            const uint32_t cost_ms = imu_store_.next_cost_ms();
             if (cost_ms > 0 &&
-                !state.rf.book_flash_window(now_ms, platform_.clock().millis(), cost_ms))
+                !state.rf.book_flash_window(now_ms, platform_.clock().milliseconds(), cost_ms))
                 return;
-            stored_image_.step();
+            imu_store_.step();
         }
     }
 
@@ -414,7 +414,7 @@ class TEchoPlus {
         dfu::HubImageReport& report = state.imu.image;
         report = dfu::HubImageReport{};
         if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return;
-        switch (stored_image_.holding()) {
+        switch (imu_store_.holding()) {
             case parts::Bhi260ImageStore::Holding::Unread:
             case parts::Bhi260ImageStore::Holding::Blank:
                 report.holding = dfu::HubImage::Missing;
@@ -431,7 +431,7 @@ class TEchoPlus {
             case parts::Bhi260ImageStore::Holding::Held:
                 report.holding = dfu::HubImage::Held;
                 for (size_t i = 0; i < dfu::HubImageReport::kDigestBytes; i++)
-                    report.digest[i] = stored_image_.digest()[i];
+                    report.digest[i] = imu_store_.digest()[i];
                 return;
         }
     }
@@ -439,28 +439,28 @@ class TEchoPlus {
     // INFO: fc 03oct26 as the record store's bulk erase: a window at a time, eight steps at most
     static constexpr uint32_t kImuImageStepsPerPass = 8;
 
-    P& platform_;
+    Platform& platform_;
     bus::Bus& bus_;
     parts::Sx1262 radio_;
-    parts::Ssd1681 epd_;
+    parts::Ssd1681 display_;
     parts::L76k gnss_;
     parts::Drv2605 haptic_;
     parts::Bhi260 imu_;
-    parts::Bhi260ImageStore stored_image_;
+    parts::Bhi260ImageStore imu_store_;
     parts::LinkedImage linked_image_{ConstByteSpan{}};
     bool imu_image_store_tried_{false};
-    typename P::Rf rf_;
+    typename Platform::Rf rf_;
     ports::Inventory inventory_{};
-    input::Contact button_{t_echo_plus::kButtonDebounceMs};
+    input::Contact button_{t_echo_plus::kButtonHoldMs};
     input::Contact pad_{t_echo_plus::kPadSettleMs};
     ports::NullRoles null_{};
     ports::Capabilities capabilities_;
-    uint32_t last_baro_ms_{0};
-    uint32_t baro_triggered_ms_{0};
-    uint32_t baro_slot_{0};
-    uint32_t baro_faults_{0};
-    bool baro_converting_{false};
-    bool baro_published_{false};
+    uint32_t last_barometer_ms_{0};
+    uint32_t barometer_triggered_ms_{0};
+    uint32_t barometer_quarter_{0};
+    uint32_t barometer_faults_{0};
+    bool barometer_converting_{false};
+    bool barometer_published_{false};
     uint32_t last_battery_ms_{0};
 };
 

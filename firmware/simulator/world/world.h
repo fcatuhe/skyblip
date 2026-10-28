@@ -41,7 +41,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::AdslPacket::kInfoMsgBytes + 1]{0};
+    char callsign[protocol::AdslPacket::kInformationTextBytes + 1]{0};
 };
 
 // The sky, the air and the ground the firmware flies through. It drives the part
@@ -80,30 +80,35 @@ class World {
     Air& air() { return air_; }
     models::L76k& gnss() { return platform_.chips().gnss; }
     const models::L76k& gnss() const { return platform_.chips().gnss; }
-    models::Bme280& baro() { return platform_.baro().chip; }
+    models::Bme280& barometer() { return platform_.barometer().chip; }
     models::Bhi260& imu() { return platform_.chips().imu; }
     platform::host::Platform& platform() { return platform_; }
 
-    void set_fix(bool on) { gnss().fix = on; }
-    void set_sats(int n) { gnss().sats = static_cast<uint8_t>(n < 0 ? 0 : (n > 32 ? 32 : n)); }
-    void set_altitude_m(int32_t m) { gnss().alt_m = m; }
-    void set_speed_kt(int32_t kt) { gnss().speed_mm_s = div_round(kt * 514444, 1000); }
-    void set_track_deg(int32_t deg) { gnss().track_deg = ((deg % 360) + 360) % 360; }
-    void set_turn_dps(double dps) { gnss().turn_dps = dps; }
-    void set_climb_mm_s(int32_t mm_s) { gnss().climb_mm_s = mm_s; }
+    void set_fix(bool on) { gnss().fix_valid = on; }
+    void set_satellites(int satellites) {
+        gnss().satellites =
+            static_cast<uint8_t>(satellites < 0 ? 0 : (satellites > 32 ? 32 : satellites));
+    }
+    void set_altitude_m(int32_t altitude_m) { gnss().altitude_m = altitude_m; }
+    void set_speed_kt(int32_t speed_kt) {
+        gnss().speed_mm_s = divide_rounded(speed_kt * 514444, 1000);
+    }
+    void set_track_deg(int32_t track_deg) { gnss().track_deg = ((track_deg % 360) + 360) % 360; }
+    void set_turn_dps(double turn_dps) { gnss().turn_dps = turn_dps; }
+    void set_climb_mm_s(int32_t climb_mm_s) { gnss().climb_mm_s = climb_mm_s; }
     // The weather, not a setting: the sea-level pressure of the air the aircraft
     // is flying through. The barometer reads what that implies at its altitude.
-    void set_airmass_qnh_pa(uint32_t pa) { airmass_qnh_pa_ = pa; }
-    void set_slip_mg(int32_t mg) { slip_mg_ = mg; }
+    void set_airmass_qnh_pa(uint32_t qnh_pa) { airmass_qnh_pa_ = qnh_pa; }
+    void set_slip_mg(int32_t slip_mg) { slip_mg_ = slip_mg; }
     void set_pps_locked(bool on) { platform_.pps().set_locked(on); }
     // The cell as the world holds it: what the divider reads, and whether a
     // cable is in. Everything else about the battery is the firmware's opinion.
-    void set_battery_mv(int32_t mv) {
-        platform_.battery().millivolts = static_cast<uint16_t>(mv < 0 ? 0 : mv);
+    void set_battery_mv(int32_t battery_mv) {
+        platform_.battery().divider_mv = static_cast<uint16_t>(battery_mv < 0 ? 0 : battery_mv);
     }
     void set_external_power(bool on) { platform_.battery().external_power = on; }
     void press_button() { press_pending_ = true; }
-    void hold_button(bool down) { holding_ = down; }
+    void hold_button(bool down) { button_held_ = down; }
     void tap_pad() { tap_pending_ = true; }
     void hold_pad(bool down) { pad_held_ = down; }
 
@@ -128,14 +133,14 @@ class World {
     void set_origin();
     double own_north_m() const;
     double own_east_m() const;
-    void service_aircraft(uint32_t now_ms, const model::OwnState& own);
-    void schedule_second(uint64_t epoch_us, const model::OwnState& own);
-    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::OwnState& own);
-    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc,
+    void service_aircraft(uint32_t now_ms, const model::Ownship& own);
+    void schedule_second(uint64_t epoch_us, const model::Ownship& own);
+    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own);
+    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
                      double range_m);
-    void relay(uint64_t epoch_us, const model::OwnState& own);
-    model::AircraftObs as_relayed(const VirtualAircraft& aircraft,
-                                  const model::OwnState& own) const;
+    void relay(uint64_t epoch_us, const model::Ownship& own);
+    model::AircraftObservation as_relayed(const VirtualAircraft& aircraft,
+                                          const model::Ownship& own) const;
     static int8_t rssi_at(double range_m);
     void apply_events(uint32_t now_ms, const bus::State& state);
     void fail(const char* what);
@@ -158,21 +163,21 @@ class World {
     Scenario scenario_{};
     size_t next_event_{0};
     uint32_t start_ms_{0};
-    uint32_t last_aircraft_ms_{0};
+    uint32_t aircraft_moved_ms_{0};
     uint32_t airmass_qnh_pa_{flight::kIsaSeaLevelPa};
     int32_t slip_mg_{0};
     uint32_t press_since_ms_{0};
     uint32_t tap_since_ms_{0};
-    int32_t origin_lat_1e7_{0};
-    int32_t origin_lon_1e7_{0};
-    bool origin_set_{false};
-    uint32_t scheduled_sec_{0};
+    int32_t origin_latitude_1e7_{0};
+    int32_t origin_longitude_1e7_{0};
+    bool origin_valid_{false};
+    uint32_t scheduled_second_{0};
     bool scheduled_{false};
     int failures_{0};
-    bool armed_{false};
+    bool started_{false};
     bool press_pending_{false};
     bool pressing_{false};
-    bool holding_{false};
+    bool button_held_{false};
     bool tap_pending_{false};
     bool tapping_{false};
     bool pad_held_{false};

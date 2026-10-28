@@ -18,9 +18,9 @@ constexpr uint32_t kPassMs = 10;
 
 // The uplink window plus the two M-band dwells either side of the hop guard.
 constexpr uint32_t kDwellMsPerSecond =
-    static_cast<uint32_t>((timing::kUplinkRxEnd - timing::kUplinkRxStart) +
-                          (timing::kSlot0End - timing::kHopGuardMs - timing::kSlot0Start) +
-                          (timing::kSlot1End - timing::kSlot1Start));
+    static_cast<uint32_t>((timing::kUplinkRxEndMs - timing::kUplinkRxStartMs) +
+                          (timing::kSlot0EndMs - timing::kHopGuardMs - timing::kSlot0StartMs) +
+                          (timing::kSlot1EndMs - timing::kSlot1StartMs));
 
 // The radio service alone over ports::NullRf, which answers Down to every plan.
 struct RefusingExecutor {
@@ -28,12 +28,12 @@ struct RefusingExecutor {
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
-        clock,          null.rf,          null.link, null.display,         null.kv,
+        clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
         null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio{context, settings};
@@ -44,9 +44,9 @@ struct RefusingExecutor {
     }
 
     void run(uint32_t until_ms) {
-        for (uint32_t t = 0; t <= until_ms; t += kPassMs) {
-            clock.set_millis(t);
-            radio.tick(t);
+        for (uint32_t now_ms = 0; now_ms <= until_ms; now_ms += kPassMs) {
+            clock.set_milliseconds(now_ms);
+            radio.tick(now_ms);
         }
     }
 };
@@ -56,18 +56,18 @@ struct RefusingExecutor {
 TEST_CASE("duty: a presented frame counts a partial refresh and a still glass counts none") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.run(t, t + 3000, kPassMs);
-    t += 3000;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 3000, kPassMs);
+    now_ms += 3000;
     const uint32_t presented = rig.state().duty.panel_partial_refreshes;
     CHECK(presented > 0);
 
-    rig.run(t, t + 5000, kPassMs);
-    t += 5000;
+    rig.run(now_ms, now_ms + 5000, kPassMs);
+    now_ms += 5000;
     CHECK(rig.state().duty.panel_partial_refreshes == presented);
 
-    rig.tap(t);
-    rig.run(t, t + 2000, kPassMs);
+    rig.tap(now_ms);
+    rig.run(now_ms, now_ms + 2000, kPassMs);
     CHECK(rig.state().duty.panel_partial_refreshes > presented);
 }
 
@@ -75,17 +75,17 @@ TEST_CASE("duty: a presented frame counts a partial refresh and a still glass co
 TEST_CASE("duty: the parked frame is the only full refresh a page swap or a present pays for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.run(t, t + 2000, kPassMs);
-    t += 2000;
-    rig.tap(t);
-    rig.run(t, t + 3000, kPassMs);
-    t += 3000;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 2000, kPassMs);
+    now_ms += 2000;
+    rig.tap(now_ms);
+    rig.run(now_ms, now_ms + 3000, kPassMs);
+    now_ms += 3000;
     CHECK(rig.state().duty.panel_full_refreshes == 0);
 
     const uint32_t partials = rig.state().duty.panel_partial_refreshes;
     rig.product.screen().park_for_off();
-    rig.run(t, t + 3000, kPassMs);
+    rig.run(now_ms, now_ms + 3000, kPassMs);
     CHECK(rig.state().duty.panel_full_refreshes == 1);
     CHECK(rig.state().duty.panel_partial_refreshes == partials);
 }
@@ -95,15 +95,15 @@ TEST_CASE("duty: an install or a recovery parks through black, never on a full r
     for (int recovery = 0; recovery < 2; recovery++) {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        uint32_t t = 0;
-        rig.run(t, t + 2000, kPassMs);
-        t += 2000;
+        uint32_t now_ms = 0;
+        rig.run(now_ms, now_ms + 2000, kPassMs);
+        now_ms += 2000;
         const uint32_t partials = rig.state().duty.panel_partial_refreshes;
         if (recovery)
             rig.product.screen().park_for_recovery(ports::RecoveryPath::Rebooted);
         else
             rig.product.screen().park_for_install();
-        rig.run(t, t + 3000, kPassMs);
+        rig.run(now_ms, now_ms + 3000, kPassMs);
         CHECK(rig.state().duty.panel_full_refreshes == 0);
         // the black, then the frame over it
         CHECK(rig.state().duty.panel_partial_refreshes == partials + 2);
@@ -113,20 +113,20 @@ TEST_CASE("duty: an install or a recovery parks through black, never on a full r
 TEST_CASE("duty: the backlight counter runs while the lamp is lit and stops with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.run(t, t + 2000, kPassMs);
-    t += 2000;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 2000, kPassMs);
+    now_ms += 2000;
     CHECK(rig.state().duty.backlight_ms == 0);
 
     rig.product.screen().set_backlight(true);
-    rig.run(t, t + 3000, kPassMs);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000, kPassMs);
+    now_ms += 3000;
     const uint32_t lit_ms = rig.state().duty.backlight_ms;
     CHECK(lit_ms >= 3000 - kPassMs);
     CHECK(lit_ms <= 3000 + kPassMs);
 
     rig.product.screen().set_backlight(false);
-    rig.run(t, t + 2000, kPassMs);
+    rig.run(now_ms, now_ms + 2000, kPassMs);
     CHECK(rig.state().duty.backlight_ms <= lit_ms + kPassMs);
 }
 
@@ -165,69 +165,70 @@ TEST_CASE("duty: a pass too coarse for the dwell edges still reads the slot map"
 }
 
 TEST_CASE("duty: the transmit counter is the air time the hour's own budget is spent from") {
-    simulator::Simulator sim;
-    REQUIRE(sim.setup() == Status::Ok);
-    sim.world().set_fix(true);
-    sim.world().set_speed_kt(50);
-    sim.run(gnss::kFirstFixSettleMs + 8000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    simulator.run(gnss::kFirstFixSettleMs + 8000);
 
-    const bus::State& state = sim.product().state();
+    const bus::State& state = simulator.product().state();
     REQUIRE(state.air.tx_ok > 0);
     CHECK(state.duty.tx_keyed_ms >= timing::Transmitter::kAirTimeMs);
-    CHECK(state.duty.tx_keyed_ms == sim.product().radio().transmitter().air_time().total_ms());
+    CHECK(state.duty.tx_keyed_ms ==
+          simulator.product().radio().transmitter().air_time().total_ms());
 }
 
 // F5 holds every burst until the first solutions settle: nothing on air is nothing counted.
 TEST_CASE("duty: a device that never keyed the transmitter counts no air time") {
-    simulator::Simulator sim;
-    REQUIRE(sim.setup() == Status::Ok);
-    sim.world().set_fix(true);
-    sim.world().set_pps_locked(false);
-    sim.run(gnss::kFirstFixSettleMs + 8000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_pps_locked(false);
+    simulator.run(gnss::kFirstFixSettleMs + 8000);
 
-    REQUIRE(sim.product().state().air.tx_ok == 0);
-    CHECK(sim.product().state().duty.tx_keyed_ms == 0);
+    REQUIRE(simulator.product().state().air.tx_ok == 0);
+    CHECK(simulator.product().state().duty.tx_keyed_ms == 0);
 }
 
 TEST_CASE("duty: the annunciator counter runs while it sounds and stands still while muted") {
-    simulator::Simulator sim;
-    REQUIRE(sim.setup() == Status::Ok);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
     const uint32_t step = simulator::Simulator::kStepMs;
-    for (uint32_t t = 0; t <= 3000; t += step) sim.step(t);
-    const uint32_t before = sim.product().state().duty.annunciator_ms;
+    for (uint32_t now_ms = 0; now_ms <= 3000; now_ms += step) simulator.step(now_ms);
+    const uint32_t before = simulator.product().state().duty.annunciator_ms;
 
-    sim.world().add_threat();
-    for (uint32_t t = 3000; t <= 9000; t += step) sim.step(t);
-    REQUIRE(sim.announcing_level() != traffic::Level::None);
-    const uint32_t sounded = sim.product().state().duty.annunciator_ms;
+    simulator.world().add_threat();
+    for (uint32_t now_ms = 3000; now_ms <= 9000; now_ms += step) simulator.step(now_ms);
+    REQUIRE(simulator.announcing_level() != traffic::Level::None);
+    const uint32_t sounded = simulator.product().state().duty.annunciator_ms;
     // For traffic the motor runs exactly while the tone sounds, so the advisory counts twice.
     uint32_t advisory_tone_ms = 0;
     for (const annunciation::Note& note : annunciation::kAdvisoryCall)
         advisory_tone_ms += note.tone_ms;
     CHECK(sounded - before == 2 * advisory_tone_ms);
 
-    sim.product().settings().alarm_enabled = false;
-    for (uint32_t t = 9000; t <= 15000; t += step) sim.step(t);
-    CHECK(sim.product().state().duty.annunciator_ms == sounded);
+    simulator.product().settings().alarm_enabled = false;
+    for (uint32_t now_ms = 9000; now_ms <= 15000; now_ms += step) simulator.step(now_ms);
+    CHECK(simulator.product().state().duty.annunciator_ms == sounded);
 }
 
 TEST_CASE("duty: the BLE counter runs while a central is connected and stops when it goes") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
-    rig.run(t, t + 2000, kPassMs);
-    t += 2000;
+    uint32_t now_ms = 0;
+    rig.run(now_ms, now_ms + 2000, kPassMs);
+    now_ms += 2000;
     CHECK(rig.state().duty.ble_connected_ms == 0);
 
     rig.raise_link();
-    rig.run(t, t + 3000, kPassMs);
-    t += 3000;
+    rig.run(now_ms, now_ms + 3000, kPassMs);
+    now_ms += 3000;
     REQUIRE(rig.link_up());
     const uint32_t connected_ms = rig.state().duty.ble_connected_ms;
     CHECK(connected_ms >= 3000 - 2 * kPassMs);
     CHECK(connected_ms <= 3000 + 2 * kPassMs);
 
     rig.drop_link();
-    rig.run(t, t + 3000, kPassMs);
+    rig.run(now_ms, now_ms + 3000, kPassMs);
     CHECK(rig.state().duty.ble_connected_ms <= connected_ms + 2 * kPassMs);
 }

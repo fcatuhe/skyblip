@@ -16,7 +16,7 @@ constexpr size_t kDeviceIdBytes = 8;
 constexpr size_t kNonceBytes = 16;
 constexpr size_t kServerKeyIdBytes = 4;
 // INFO: fc 18oct26 the schema's maxLength for the version, the one field of variable length
-constexpr size_t kVersionMaxBytes = 23;
+constexpr size_t kMaxVersionBytes = 23;
 
 using DeviceId = std::array<uint8_t, kDeviceIdBytes>;
 using Nonce = std::array<uint8_t, kNonceBytes>;
@@ -26,7 +26,7 @@ ServerKeyId server_key_id(const Ed25519::PublicKey& key);
 
 class Message {
    public:
-    static constexpr size_t kCap = 128;
+    static constexpr size_t kBytes = 128;
 
     ConstByteSpan bytes() const { return ConstByteSpan(bytes_, size_); }
 
@@ -34,7 +34,7 @@ class Message {
     Message& append(const char* text);
 
    private:
-    uint8_t bytes_[kCap]{};
+    uint8_t bytes_[kBytes]{};
     size_t size_{0};
 };
 

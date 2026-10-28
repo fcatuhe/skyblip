@@ -2,15 +2,31 @@
 
 The barometer converts four times a second in forced mode behind the part's IIR 8, triggered on the PPS phases 0, 250, 500 and 750 ms and read once a second on a later pass, because consumption matters most and every way of asking Zephyr's driver for a sample sleeps through the conversion in the service loop.
 
+Its address is disputed: our BOM says 0x76, LilyGO's README and SoftRF say 0x77. `Bme280::kAddressPrimary` and `kAddressAlternate` are both, the devicetree declares both, and the board takes whichever answers.
+
 ## Why not Zephyr's driver
 
 Zephyr 4.4.2's `bme280_sample_fetch_helper` (`drivers/sensor/bosch/bme280/bme280.c:164-213`) writes `ctrl_meas` in forced mode and `k_sleep`s `BME280_EXPECTED_SAMPLE_TIME_MS`, then polls the status register every 3 ms. At x16 / x2 / x1 that was 43 ms of the service loop at every PPS edge (bench loop record, worst tick 43 ms in `board_poll`, phase 950-999 ms). The async sensor API runs the same helper on an RTIO work-queue thread, which buys a 1 KB stack and a thread to stop a sleep we do not need.
 
-What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev 1.1 with each left shift on a signed term written as a multiply. Its oracle in `test/hardware/test_bme280.cpp` is the model, which builds raw words by searching DS 8.1's double-precision formulas, not the integer ones. The two Bosch paths part by up to 13 `t_fine` counts at -20 °C, about 0.45 Pa, which is the test's tolerance and a bias rather than jitter.
+What the driver costs instead is the compensation, transcribed from DS 4.2.3 rev 1.1 with each left shift on a signed term written as a multiply. Its oracle in `test/hardware/test_bme280.cpp` is the model, which builds raw words by searching DS 8.1's double-precision formulas, not the integer ones. The two Bosch paths part by up to 13 `fine_temperature` counts at -20 °C, about 0.45 Pa, which is the test's tolerance and a bias rather than jitter.
+
+## Names
+
+The compensation is the datasheet's, in full words. Where the two differ, this is the pair, the right column spelled as this tree's prose or earlier identifiers cited it.
+
+| Our name | Datasheet name |
+|---|---|
+| `Trim::temperature_1` to `temperature_3`, the model's `kTemperatureTrim1` to `kTemperatureTrim3` | t1 to t3 |
+| `Trim::pressure_1` to `pressure_9`, the model's `kPressureTrim1` to `kPressureTrim9` | p1 to p9 |
+| `raw_temperature`, `raw_pressure` | adc_t, adc_p |
+| `fine_temperature`, `fine_temperature_from()` | t_fine |
+| `first_term`, `second_term` | var1, var2 |
+| `kRegisterControlMeasurement` | ctrl_meas (0xF4) |
+| `kRegisterControlHumidity` | CtrlHum (0xF2) |
 
 ## The setting
 
-Forced mode, four conversions a second (`runtime::kBaroConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter memory advances on every forced conversion, so the three unread conversions of each second feed the one that is published.
+Forced mode, four conversions a second (`runtime::kBarometerConversionPeriodMs`): pressure x16, temperature x2, humidity skipped because nothing reads it, IIR filter 4 (`kFilter4`, config code 0b010). Standby does not apply in forced mode. The filter memory advances on every forced conversion, so the three unread conversions of each second feed the one that is published.
 
 | Figure | Value | Source |
 |---|---|---|
@@ -42,7 +58,7 @@ The filter delay and the noise are one trade as long as the part's IIR is the es
 
 ## Timing
 
-Each trigger is one write of `ctrl_meas` and the pass returns. On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, with the published one on the board's own second. A trigger waits for the previous conversion to be read or given up. Only the edge conversion is read: each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, which is about 40 ms in, well before the 250 ms trigger overwrites the result registers. The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger: the same offset from PPS every second, one sample a second as before. A published conversion not read within `runtime::kBaroConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `baro_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
+Each trigger is one write of `ctrl_meas` and the pass returns. On PPS lock the board triggers on the PPS-window pass and on the first pass into each later quarter of the second. Without lock, it triggers every 250 ms from the last trigger, with the published one on the board's own second. A trigger waits for the previous conversion to be read or given up. Only the edge conversion is read: each later pass reads three bytes from 0xF3 (status, `ctrl_meas`, config) and bursts 0xF7..0xFC once `measuring` and `im_update` are clear, which is about 40 ms in, well before the 250 ms trigger overwrites the result registers. The sample is dated `kConversionMidpointMs`, 21 ms, after the edge trigger: the same offset from PPS every second, one sample a second as before. A published conversion not read within `runtime::kBarometerConversionCeilingMs`, 150 ms like Zephyr's `BME280_MEASUREMENT_TIMEOUT_MS`, is given up and counted in `barometer_faults()`, as is any trigger the part refused. An unpublished one is deemed done at the same ceiling, unread.
 
 ## Recovery
 

@@ -14,7 +14,7 @@ class Ownship
     lines = text.lines.select { it.match?(/[#.]{3,}/) }
 
     if words.size > 2
-      width = text[/kGlyphW\s*=\s*(\d+)/, 1]&.to_i || MAX_WIDTH
+      width = text[/kGlyphWidth\s*=\s*(\d+)/, 1]&.to_i || MAX_WIDTH
       hot_spot = text[/kGlyphOriginRow\s*=\s*(\d+)/, 1]&.to_i
       from_words(words, width:, hot_spot:)
     elsif lines.size > 2
@@ -70,7 +70,7 @@ class Ownship
   def to_cpp
     table = pixels.zip(hex_rows).map { |row, hex| "    0x#{hex},  // #{row_art(row)}" }
     [
-      "constexpr int kGlyphW = #{width};",
+      "constexpr int kGlyphWidth = #{width};",
       "constexpr int kGlyphOriginRow = #{hot_spot};",
       "constexpr uint32_t kOwnshipRows[] = {",
       *table,

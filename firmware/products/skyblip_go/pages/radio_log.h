@@ -9,13 +9,13 @@
 
 namespace skyblip::go {
 
-constexpr int kRadioLogRows = radio::Log::kCapacity;
+constexpr int kRadioLogRows = radio::Log::kMaxEntries;
 
 enum class PpsState : uint8_t { None, Lock, Holdover };
 
 struct GnssReception {
     bool fix_valid{false};
-    uint8_t sats{0};
+    uint8_t satellites{0};
     PpsState pps{PpsState::None};
     uint16_t pps_age_s{0};
 };
@@ -24,13 +24,13 @@ struct RadioLogSnapshot {
     GnssReception gnss{};
     uint32_t rx_ok{0};
     uint32_t tx_ok{0};
-    uint32_t noise{0};
-    int8_t band_dbm{0};
-    int n_rows{0};
+    uint32_t rx_noise{0};
+    int8_t noise_dbm{0};
+    int row_count{0};
     const radio::Log* log{nullptr};
 };
 
-void draw_radio_log(ui::Canvas& fb, const RadioLogSnapshot& snap);
+void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

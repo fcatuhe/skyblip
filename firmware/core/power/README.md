@@ -43,7 +43,7 @@ Three of the steps are a `PowerLevel`, and the level is the one fact every reade
 
 An `Unknown` monitor has seen no believable reading yet, which is also what an unpopulated divider reads for ever, and it acts like `Normal`. Its first reading at or above `kLowMv` makes it `Normal`; one under waits for the run like any other step.
 
-The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diag/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
+The enum's values are the diagnostics record's level byte, so they are not in ladder order: `Low` joined last and took code 4, and `Critical` and `Flat` kept the codes and thresholds they had as `Low` and `Cutoff`, so every capture already on a flash decodes to the same step (`../diagnostics/README.md`). Readers therefore ask `needs_charge` or switch on the level, never compare it.
 
 ## The write rule, and the supply warning
 
@@ -55,7 +55,7 @@ A latched supply warning outranks the level entirely. POFCON compares the SoC's 
 
 `percent_from_mv` reads one table, and only off the cable. On these boards the divider cannot see the cell while USB is in: both bench units read the USB rail for the whole charge, 4670 to 4700 mV on E68BD9 from a cell switched off at 45 %, and above 4700 mV on 0B1B2C (`docs/bench/2026-10-05-power-run-E68BD9.md`, #114). A cell in constant current reads well under 4.2 V, so that reading is not the cell and no curve can make a state of charge of it. LilyGO's own wiki warns that battery readings are wrong while USB is connected.
 
-So on the cable the gauge shows no cell. `valid` is false, `percent` is 0 and `millivolts` is what the divider read, which a capture keeps as evidence of the rail. `charging` is the cable itself: this board has no charger status pin, so nothing says when the charge ends, and a full cell on the cable still reads `charging`. The status reply leaves `battery_percent` out, the status page reads `-- V --% CHG`, the six-pack retitles its battery dial `CHARGE V` over the rail to a hundredth of a volt, and the first reading off the cable starts the median over on the charged cell, which is the first number worth showing. There is no charge curve: the reading it needed never reaches the device.
+So on the cable the gauge shows no cell. `valid` is false, `percent` is 0 and `cell_mv` is what the divider read, which a capture keeps as evidence of the rail. `charging` is the cable itself: this board has no charger status pin, so nothing says when the charge ends, and a full cell on the cable still reads `charging`. The status reply leaves `battery_percent` out, the status page reads `-- V --% CHG`, the six-pack retitles its battery dial `CHARGE V` over the rail to a hundredth of a volt, and the first reading off the cable starts the median over on the charged cell, which is the first number worth showing. There is no charge curve: the reading it needed never reaches the device.
 
 The discharge table is the textbook shape for a single pouch cell, not this pack measured on this board. It is right to a few percent in the middle and worst at the ends, which is where a pilot cares. What replaces it is a logged discharge of a fitted unit under the real dwell map, which the power budget needs anyway: the shape of the table does not change, only its points. `battery.h` carries the same warning where it explains why there is no time-remaining estimate, and that estimate stays refused until the same log exists.
 
@@ -63,13 +63,13 @@ The discharge table is the textbook shape for a single pouch cell, not this pack
 
 A reading is the cell only inside `plausible_mv`: above `kImplausibleFloorMv` (1800 mV), which an unpopulated or floating divider sits under, and at most `kImplausibleCeilingMv` (4700 mV), which no 4.2 V cell reaches and a rail does. The platform's read still answers whether a reading is believable, but it hands back what the divider read either way, 0 when the ADC gave nothing, and the board publishes it on every battery pass with VBUS beside it. A refused reading never hides the cable again, so the cutoff monitor's cable override and the charge window both see it.
 
-The gauge counts each refusal, on the cable or off it (`Gauge::refused`, the `implausible` count in the `power` record and the diagnostics reply), and shows the refused value as its `millivolts` with `valid` false, so a capture says which bound a reading crossed. Off the cable a refused reading is no step on the ladder: the cutoff monitor never sees it, so it neither counts towards a level nor breaks a run.
+The gauge counts each refusal, on the cable or off it (`Gauge::refused`, the `implausible` count in the `power` record and the diagnostics reply), and shows the refused value as its `cell_mv` with `valid` false, so a capture says which bound a reading crossed. Off the cable a refused reading is no step on the ladder: the cutoff monitor never sees it, so it neither counts towards a level nor breaks a run.
 
 ## The trim, set on the line
 
-`kCalibrationLimitMv` and `settings.battery_offset_mv` exist because two 1% resistors and the SAADC's own gain error can put a reading out by more than 80 mV, which is tens of percentage points in the flat middle. The answer is one number measured against a supply on the line, and it is the only trim there is.
+`kCalibrationCeilingMv` and `settings.battery_offset_mv` exist because two 1% resistors and the SAADC's own gain error can put a reading out by more than 80 mV, which is tens of percentage points in the flat middle. The answer is one number measured against a supply on the line, and it is the only trim there is.
 
-The device cannot trim itself. A charger in constant voltage holds the cell's terminal at its float, so a reading taken there would have a known true value, but the divider reads the USB rail while the cable is in, so no float plateau ever reaches it. The learner that waited for one never learned on either bench unit, and a rail that happened to sit within `kCalibrationLimitMv` of 4.2 V would have taught it the rail's error and moved the cutoff by as much, so it is gone. `settings.battery_offset_manual` stays in the blob and in the `Config` record: every trim since is one a person set.
+The device cannot trim itself. A charger in constant voltage holds the cell's terminal at its float, so a reading taken there would have a known true value, but the divider reads the USB rail while the cable is in, so no float plateau ever reaches it. The learner that waited for one never learned on either bench unit, and a rail that happened to sit within `kCalibrationCeilingMv` of 4.2 V would have taught it the rail's error and moved the cutoff by as much, so it is gone. `settings.battery_offset_manual` stays in the blob and in the `Config` record: every trim since is one a person set.
 
 ## What the glass says about a flat cell, and when it says it
 
@@ -105,7 +105,7 @@ The refusal is complete without it. A charge mode would be a third `BootPath` va
 
 `duty.h` is one accumulator, `OnTime`: a thing was on, and this is how many milliseconds of it have gone by. It is what the backlight, the annunciator and the companion link are counted with, each by the service that drives that consumer and each published on `bus::State::duty` (`../bus/README.md`).
 
-It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::millis()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
+It takes the span between two observations rather than a pass at its nominal length, for the reason the air-time ring gives: a pass that ran long has to carry its own length, and an unsigned difference is the only arithmetic that survives the 49.7-day wrap of `ports::Clock::milliseconds()`. A state that flips between two observations is credited to the state that was latched, so the error is one pass and it does not accumulate.
 
 What these buy is the second half of a budget nothing else on this board can supply. Milliamps per consumer come from a datasheet or a bench; how long each was on comes from here, and multiplying the two is the only power figure this device can produce.
 

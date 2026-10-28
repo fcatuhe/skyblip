@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_SIMULATOR_SIM_H
-#define SKYBLIP_SIMULATOR_SIM_H
+#ifndef SKYBLIP_SIMULATOR_SIMULATOR_H
+#define SKYBLIP_SIMULATOR_SIMULATOR_H
 
 #include <cstring>
 #include <string>
@@ -20,20 +20,21 @@ class Simulator {
 
     Status setup() {
         const Status started = product_.setup();
-        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogMs);
+        const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
         return started == Status::Ok ? armed : started;
     }
 
     void step(uint32_t now_ms) {
-        platform_.clock().set_millis(now_ms);
+        platform_.clock().set_milliseconds(now_ms);
         world_.step(now_ms, product_.state());
-        product_.step(now_ms);
+        product_.run_pass(now_ms);
         // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
-        world_.air().take_own_transmission(platform_.clock().micros(), platform_.chips().radio);
+        world_.air().take_own_transmission(platform_.clock().microseconds(),
+                                           platform_.chips().radio);
     }
 
     bool park_refusal(uint32_t now_ms) {
-        platform_.clock().set_millis(now_ms);
+        platform_.clock().set_milliseconds(now_ms);
         return product_.park_refusal(now_ms);
     }
 
@@ -43,7 +44,7 @@ class Simulator {
     static constexpr uint32_t kStepMs = 5;
 
     void run(uint32_t until_ms, uint32_t step_ms = kStepMs) {
-        for (uint32_t t = 0; t <= until_ms; t += step_ms) step(t);
+        for (uint32_t now_ms = 0; now_ms <= until_ms; now_ms += step_ms) step(now_ms);
     }
 
     void load(const Scenario& scenario) {
@@ -53,9 +54,9 @@ class Simulator {
     }
 
     bool load_file(const char* path) {
-        Scenario s;
-        if (!load_scenario(path, s)) return false;
-        load(s);
+        Scenario scenario;
+        if (!load_scenario(path, scenario)) return false;
+        load(scenario);
         return true;
     }
 
@@ -68,7 +69,7 @@ class Simulator {
 
     // What the device made of the phone the world connected: true only once the
     // event has travelled platform -> board -> bus -> config service.
-    bool companion_connected() { return product_.config().config().link_up(); }
+    bool companion_connected() { return product_.config_link().config().link_up(); }
     int companion_frames(events::Endpoint endpoint) { return platform_.link().count_on(endpoint); }
 
     const parts::Ssd1681Glass& panel() { return platform_.chips().epd.framebuffer(); }
@@ -91,10 +92,10 @@ class Simulator {
     // INFO: fc 21sep26 settings are what a device was found with, not an act inside the scenario
     void name_device(const std::string& callsign) {
         char* out = product_.settings().callsign;
-        const size_t n =
-            callsign.size() < go::kCallsignCap - 1 ? callsign.size() : go::kCallsignCap - 1;
-        std::memcpy(out, callsign.c_str(), n);
-        out[n] = 0;
+        const size_t bytes =
+            callsign.size() < go::kCallsignBytes - 1 ? callsign.size() : go::kCallsignBytes - 1;
+        std::memcpy(out, callsign.c_str(), bytes);
+        out[bytes] = 0;
     }
 
     parts::Ssd1681& panel_driver() { return product_.board().display(); }

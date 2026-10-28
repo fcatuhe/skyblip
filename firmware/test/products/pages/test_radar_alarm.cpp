@@ -11,32 +11,33 @@ using skyblip::traffic::Level;
 
 namespace {
 
-int differing_in(const Glass& a, const Glass& b, int x0, int y0, int x1, int y1) {
-    int n = 0;
+int differing_in(const Glass& first, const Glass& second, int x0, int y0, int x1, int y1) {
+    int count = 0;
     for (int y = y0; y < y1; y++)
-        for (int x = x0; x < x1; x++) n += a.get_pixel(x, y) != b.get_pixel(x, y) ? 1 : 0;
-    return n;
+        for (int x = x0; x < x1; x++)
+            count += first.get_pixel(x, y) != second.get_pixel(x, y) ? 1 : 0;
+    return count;
 }
 
 RadarSnapshot with_threat(RadarTarget* one, Level level) {
-    RadarSnapshot snap = flying(0);
+    RadarSnapshot snapshot = flying(0);
     one->alarm_level = level;
-    snap.n_targets = 1;
-    snap.targets = one;
-    return snap;
+    snapshot.target_count = 1;
+    snapshot.targets = one;
+    return snapshot;
 }
 
 }  // namespace
 
 // The wedge is the whole alarm on the glass: which way to look, from the first grade.
-TEST_CASE("radar: an alarm flashes a wedge on the bearing of the threat") {
+TEST_CASE("radar page: an alarm flashes a wedge on the bearing of the threat") {
     RadarTarget east[1] = {{0, 1500, 0}};
-    RadarSnapshot snap = with_threat(east, Level::Advisory);
+    RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     CHECK(differing_in(between, lit, 130, 90, 190, 110) > 100);
     // The sky behind the pilot is not what they are being told to look at.
@@ -46,14 +47,14 @@ TEST_CASE("radar: an alarm flashes a wedge on the bearing of the threat") {
 }
 
 // A quarter of the glass flipping is seen without looking. A narrow slice has to be read.
-TEST_CASE("radar: the wedge opens 45 degrees each side of the bearing") {
+TEST_CASE("radar page: the wedge opens 45 degrees each side of the bearing") {
     RadarTarget east[1] = {{0, 1500, 0}};
-    RadarSnapshot snap = with_threat(east, Level::Advisory);
+    RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     // 5 px boxes 70 px out, on the rays 40 and 55 degrees north of a bearing due east
     CHECK(differing_in(between, lit, 152, 53, 157, 58) == 25);
@@ -61,14 +62,14 @@ TEST_CASE("radar: the wedge opens 45 degrees each side of the bearing") {
 }
 
 // A sector that inverted the ring too flashed white gaps into the one closed curve on the page.
-TEST_CASE("radar: the sector stops under the ring, which stays black through the flash") {
+TEST_CASE("radar page: the sector stops under the ring, which stays black through the flash") {
     RadarTarget east[1] = {{0, 1500, 0}};
-    RadarSnapshot snap = with_threat(east, Level::Advisory);
+    RadarSnapshot snapshot = with_threat(east, Level::Advisory);
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     // the 2 px stroke on the bearing, 16 rows of it
     CHECK(ink_in(lit, 190, 92, 192, 108) == 32);
@@ -78,20 +79,20 @@ TEST_CASE("radar: the sector stops under the ring, which stays black through the
 }
 
 // The square is own ship, and a sector that ran through it broke the box and reversed its counts.
-TEST_CASE("radar: a flashing sector keeps off the formation square, not the glass around it") {
+TEST_CASE("radar page: a flashing sector keeps off the formation square, not the glass around it") {
     RadarTarget flight[2] = {
         {0, 3000, 0, Level::Advisory},
         {900, 400, 0, Level::Advisory, 0, false, 40000, 9000, 0, false, true},
     };
-    RadarSnapshot snap = flying(0);
-    snap.n_targets = 2;
-    snap.targets = flight;
-    snap.formation_members = 1;
+    RadarSnapshot snapshot = flying(0);
+    snapshot.target_count = 2;
+    snapshot.targets = flight;
+    snapshot.formation_members = 1;
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     // the square is 86..113 on both axes: its stroke, its counts and the airframe stand as drawn
     CHECK(differing_in(between, lit, 113, 91, 114, 109) == 0);
@@ -103,76 +104,76 @@ TEST_CASE("radar: a flashing sector keeps off the formation square, not the glas
 }
 
 // The grade that fills the diamond is the grade that starts the search.
-TEST_CASE("radar: the wedge is flashing by the time a target reads as a filled diamond") {
+TEST_CASE("radar page: the wedge is flashing by the time a target reads as a filled diamond") {
     for (const Level level : {Level::Advisory, Level::Advisory, Level::Advisory}) {
         RadarTarget east[1] = {{0, 1500, 0}};
-        RadarSnapshot snap = with_threat(east, level);
+        RadarSnapshot snapshot = with_threat(east, level);
 
-        snap.alarm_flash = false;
-        const Glass between = radar(snap);
-        snap.alarm_flash = true;
-        CHECK(differing_in(between, radar(snap), 130, 90, 190, 110) > 100);
+        snapshot.alarm_flash = false;
+        const Glass between = radar(snapshot);
+        snapshot.alarm_flash = true;
+        CHECK(differing_in(between, radar(snapshot), 130, 90, 190, 110) > 100);
     }
 
-    // A contact nobody graded is a hollow diamond and no wedge at all.
+    // A target nobody graded is a hollow diamond and no wedge at all.
     RadarTarget quiet_one[1] = {{0, 1500, 0}};
     RadarSnapshot quiet = with_threat(quiet_one, Level::None);
     quiet.alarm_flash = false;
     const Glass off_phase = radar(quiet);
     quiet.alarm_flash = true;
-    CHECK(differing_in(off_phase, radar(quiet), 0, 0, Glass::kW, Glass::kH) == 0);
+    CHECK(differing_in(off_phase, radar(quiet), 0, 0, Glass::kWidth, Glass::kHeight) == 0);
 }
 
 // The silence is the whole mark: no word stands in for the sector that went out.
-TEST_CASE("radar: a dismissed aircraft keeps its symbol and takes its sector with it") {
+TEST_CASE("radar page: a dismissed aircraft keeps its symbol and takes its sector with it") {
     RadarTarget east[1] = {{0, 1500, 0}};
-    RadarSnapshot snap = with_threat(east, Level::Advisory);
+    RadarSnapshot snapshot = with_threat(east, Level::Advisory);
     east[0].alarm_dismissed = true;
 
-    snap.alarm_flash = false;
-    const Glass held = radar(snap);
-    snap.alarm_flash = true;
-    CHECK(differing_in(held, radar(snap), 0, 0, Glass::kW, Glass::kH) == 0);
+    snapshot.alarm_flash = false;
+    const Glass held = radar(snapshot);
+    snapshot.alarm_flash = true;
+    CHECK(differing_in(held, radar(snapshot), 0, 0, Glass::kWidth, Glass::kHeight) == 0);
 
     // The page is the one a target nobody graded draws, symbol apart.
     RadarTarget quiet_one[1] = {{0, 1500, 0}};
     const Glass quiet = radar(with_threat(quiet_one, Level::None));
     CHECK(differing_in(quiet, held, 130, 90, 190, 110) == 0);
-    CHECK(differing_in(quiet, held, 0, 120, Glass::kW, 171) == 0);
+    CHECK(differing_in(quiet, held, 0, 120, Glass::kWidth, 171) == 0);
 }
 
 // Two aircraft are two places to look, and a pilot told only about the louder one looks once.
-TEST_CASE("radar: every graded aircraft flashes a sector of its own") {
+TEST_CASE("radar page: every graded aircraft flashes a sector of its own") {
     RadarTarget pair[2] = {{0, 1500, 0}, {0, -1500, 0}};
     pair[1].alarm_level = Level::Advisory;
-    RadarSnapshot snap = with_threat(pair, Level::Advisory);
-    snap.n_targets = 2;
+    RadarSnapshot snapshot = with_threat(pair, Level::Advisory);
+    snapshot.target_count = 2;
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     CHECK(differing_in(between, lit, 130, 90, 190, 110) > 100);
     CHECK(differing_in(between, lit, 10, 90, 70, 110) > 100);
 
     // The one the pilot has in sight drops out, the other keeps flashing.
     pair[1].alarm_dismissed = true;
-    snap.alarm_flash = false;
-    const Glass one_left = radar(snap);
-    snap.alarm_flash = true;
-    CHECK(differing_in(one_left, radar(snap), 130, 90, 190, 110) > 100);
-    CHECK(differing_in(one_left, radar(snap), 10, 90, 70, 110) == 0);
+    snapshot.alarm_flash = false;
+    const Glass one_left = radar(snapshot);
+    snapshot.alarm_flash = true;
+    CHECK(differing_in(one_left, radar(snapshot), 130, 90, 190, 110) > 100);
+    CHECK(differing_in(one_left, radar(snapshot), 10, 90, 70, 110) == 0);
 }
 
-TEST_CASE("radar: a threat astern flashes its wedge down to the ring, around the range") {
+TEST_CASE("radar page: a threat astern flashes its wedge down to the ring, around the range") {
     RadarTarget behind[1] = {{-1500, 0, 0}};
-    RadarSnapshot snap = with_threat(behind, Level::Advisory);
+    RadarSnapshot snapshot = with_threat(behind, Level::Advisory);
 
-    snap.alarm_flash = false;
-    const Glass between = radar(snap);
-    snap.alarm_flash = true;
-    const Glass lit = radar(snap);
+    snapshot.alarm_flash = false;
+    const Glass between = radar(snapshot);
+    snapshot.alarm_flash = true;
+    const Glass lit = radar(snapshot);
 
     CHECK(differing_in(between, lit, 90, 130, 110, 165) > 100);
     // glass the old wedge stopped short of: inside the ring, left of the range plaque
@@ -184,9 +185,9 @@ TEST_CASE("radar: a threat astern flashes its wedge down to the ring, around the
     CHECK(differing_in(between, lit, 84, 178, 85, 179) == 1);
 
     // a clock wide enough to reach inside the ring: 10:59 is five cells, 4:20 is four
-    snap.flight_seconds = 10 * 3600 + 59 * 60;
-    snap.alarm_flash = false;
-    const Glass long_flight = radar(snap);
-    snap.alarm_flash = true;
-    CHECK(differing_in(long_flight, radar(snap), 4, 182, 62, 196) == 0);
+    snapshot.flight_seconds = 10 * 3600 + 59 * 60;
+    snapshot.alarm_flash = false;
+    const Glass long_flight = radar(snapshot);
+    snapshot.alarm_flash = true;
+    CHECK(differing_in(long_flight, radar(snapshot), 4, 182, 62, 196) == 0);
 }

@@ -17,28 +17,28 @@ struct StatusSnapshot {
     bool fix_valid{false};
     bool utc_valid{false};
     bool transmitting{false};
-    bool baro_valid{false};
-    uint8_t sats{0};
+    bool barometer_valid{false};
+    uint8_t satellites{0};
     gnss::Stage stage{gnss::Stage::Silent};
     uint32_t stage_s{0};
     uint8_t fix_mode{0};
-    int32_t lat_1e7{0};
-    int32_t lon_1e7{0};
-    int32_t alt_mm{0};      // GNSS, WGS-84 ellipsoid
-    int32_t alt_std_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
+    int32_t latitude_1e7{0};
+    int32_t longitude_1e7{0};
+    int32_t altitude_mm{0};           // GNSS, WGS-84 ellipsoid
+    int32_t altitude_standard_mm{0};  // pressure altitude, 1013.25 hPa datum (QNE)
     uint32_t pressure_mpa{0};
     int32_t speed_mm_s{0};  // as measured, not as transmitted
     int32_t track_cdeg{0};  // hundredths of a degree
     int32_t climb_mm_s{0};  // as measured, not as transmitted
-    uint32_t utc{0};
-    int n_targets{0};
+    uint32_t utc_s{0};
+    int heard_count{0};
     const char* imu_stage{"NONE"};
     const char* imu_fault{""};
     uint32_t imu_fifo_bytes{0};
     uint32_t imu_unparsed{0};
     uint8_t imu_error{0};
     uint8_t imu_interrupt{0};
-    uint8_t imu_meta{0};
+    uint8_t imu_meta_event{0};
     uint8_t imu_sensor_error{0};
     uint8_t imu_errored_sensor{0};
     bool slip_valid{false};
@@ -51,7 +51,7 @@ struct StatusSnapshot {
     uint8_t battery_percent{0};
 };
 
-void draw_status(ui::Canvas& fb, const StatusSnapshot& snap);
+void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

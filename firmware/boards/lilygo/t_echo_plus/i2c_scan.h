@@ -17,8 +17,10 @@
 
 #include <cstdint>
 
-#include "boards/lilygo/t_echo_plus/pins.h"
 #include "hardware/io/io.h"
+#include "hardware/parts/bhi260/bhi260.h"
+#include "hardware/parts/bme280/bme280.h"
+#include "hardware/parts/drv2605/drv2605.h"
 #include "ports/inventory.h"
 
 namespace skyblip::boards::t_echo_plus {
@@ -32,27 +34,18 @@ constexpr uint8_t kI2cLastAddress = 0x77;
 // Everything this board is documented to carry, so the page can name what it
 // found rather than printing hex at a pilot. Sources: project/2-DEVICES.md's
 // hardware matrix, and SoftRF platform/nRF52.h:136-151 for the same three parts.
-constexpr uint8_t kHapticDriverAddress = 0x5A;  // DRV2605
-constexpr uint8_t kImuAddress = 0x28;           // BHI260AP (Plus), hardware/parts/bhi260/
-constexpr uint8_t kImuAddressAlternate = 0x29;  // BHI260AP, address-select high
-constexpr uint8_t kRtcAddress = 0x51;           // PCF8563, deliberately undriven
-
-// The part the references only trust after a settling delay: "MPU9250 or
-// ICM20948 start-up time for register R/W is 11-100 ms", SoftRF
-// platform/nRF52.cpp:1145-1147, which waits 90 ms before probing an IMU at all.
-// The rails on this board go up in board.c at PRE_KERNEL_1 and the scan runs
-// after the whole driver model is initialised, which is milliseconds of clock
-// setup, flash and USB later - so the delay is paid for by construction rather
-// than by a sleep. The figure is here because that is an accident of boot order,
-// and the day a scan moves earlier it stops being true.
-constexpr uint32_t kImuSettlingMs = 90;
+constexpr uint8_t kRtcAddress = 0x51;  // PCF8563, deliberately undriven
 
 constexpr const char* i2c_role(uint8_t address) {
-    return address == kImuAddress || address == kImuAddressAlternate      ? "IMU"
-           : address == kRtcAddress                                       ? "RTC"
-           : address == kHapticDriverAddress                              ? "HAPTIC"
-           : address == kBaroAddrPrimary || address == kBaroAddrAlternate ? "BARO"
-                                                                          : nullptr;
+    switch (address) {
+        case parts::Bhi260::kAddress:
+        case parts::Bhi260::kAddressAlternate: return "IMU";
+        case kRtcAddress: return "RTC";
+        case parts::Drv2605::kAddress: return "HAPTIC";
+        case parts::Bme280::kAddressPrimary:
+        case parts::Bme280::kAddressAlternate: return "BARO";
+    }
+    return nullptr;
 }
 
 // Every address on the bus, in one pass. 112 probes at 100 kHz is about 20 ms of

@@ -11,7 +11,7 @@ class LinkSessions {
    public:
     // INFO: fc 18sep26 Never above CONFIG_BT_MAX_CONN, the controller is what admits a central.
     static constexpr size_t kMaxSessions = 3;
-    static constexpr size_t kEventCapacity = 8;
+    static constexpr size_t kMaxEvents = 8;
 
     void connected(uint16_t session_id, uint16_t payload_bytes) {
         Slot* slot = find(session_id);
@@ -53,10 +53,10 @@ class LinkSessions {
     bool up(uint16_t session_id) const { return find(session_id) != nullptr; }
 
     int count() const {
-        int n = 0;
+        int sessions = 0;
         for (const Slot& slot : slots_)
-            if (slot.used) n++;
-        return n;
+            if (slot.used) sessions++;
+        return sessions;
     }
 
     uint16_t payload_bytes() const {
@@ -64,12 +64,12 @@ class LinkSessions {
         for (const Slot& slot : slots_)
             if (slot.used && (smallest == 0 || slot.payload_bytes < smallest))
                 smallest = slot.payload_bytes;
-        return smallest == 0 ? ports::kMinimumLinkPayload : smallest;
+        return smallest == 0 ? ports::kMinimumLinkPayloadBytes : smallest;
     }
 
     uint16_t payload_bytes(uint16_t session_id) const {
         const Slot* slot = find(session_id);
-        return slot == nullptr ? ports::kMinimumLinkPayload : slot->payload_bytes;
+        return slot == nullptr ? ports::kMinimumLinkPayloadBytes : slot->payload_bytes;
     }
 
     uint32_t dropped() const { return dropped_; }
@@ -78,12 +78,12 @@ class LinkSessions {
    private:
     struct Slot {
         uint16_t session_id{0};
-        uint16_t payload_bytes{ports::kMinimumLinkPayload};
+        uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
         bool used{false};
     };
 
     static uint16_t floor_payload(uint16_t bytes) {
-        return bytes < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : bytes;
+        return bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
     }
 
     Slot* find(uint16_t session_id) {
@@ -112,7 +112,7 @@ class LinkSessions {
         if (!is_ok(events_.push(event))) dropped_++;
     }
 
-    Fifo<events::LinkEvent, kEventCapacity> events_{};
+    Fifo<events::LinkEvent, kMaxEvents> events_{};
     Slot slots_[kMaxSessions]{};
     uint32_t dropped_{0};
     uint32_t refused_{0};

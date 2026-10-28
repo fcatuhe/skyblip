@@ -11,11 +11,11 @@ Stamp stamp_of(uint64_t at_us, uint64_t pps_edge_us, bool pps_locked, uint32_t n
     stamp.at_s = now_s;
     if (!pps_locked) return stamp;
 
-    const int64_t rel_us = static_cast<int64_t>(at_us) - static_cast<int64_t>(pps_edge_us);
-    if (rel_us <= -kStampReachUs || rel_us >= kStampReachUs) return stamp;
+    const int64_t relative_us = static_cast<int64_t>(at_us) - static_cast<int64_t>(pps_edge_us);
+    if (relative_us <= -kStampReachUs || relative_us >= kStampReachUs) return stamp;
 
-    int64_t seconds = rel_us / kSecondUs;
-    int64_t into_us = rel_us % kSecondUs;
+    int64_t seconds = relative_us / kSecondUs;
+    int64_t into_us = relative_us % kSecondUs;
     if (into_us < 0) {
         seconds--;
         into_us += kSecondUs;

@@ -42,7 +42,7 @@ void encode_sector_header(const SectorHeader& header, uint8_t* out);
 // INFO: fc 20sep26 Empty for erased, Crc for torn, Unsupported for a version or owner we refuse
 Status decode_sector_header(const uint8_t* raw, SectorHeader& out);
 
-bool erased(const uint8_t* raw, uint32_t len);
+bool erased(const uint8_t* raw, uint32_t bytes);
 
 }  // namespace skyblip::store
 

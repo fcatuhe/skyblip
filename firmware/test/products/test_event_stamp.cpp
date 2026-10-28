@@ -16,55 +16,55 @@ namespace {
 
 // What the modem hands up: chips from the end of the matched window, not from
 // the start of the buffer a transmitter filled.
-void deliver(const uint8_t* chips, size_t chip_len, uint8_t* out, size_t out_len) {
+void deliver(const uint8_t* chips, size_t chip_bytes, uint8_t* out, size_t out_bytes) {
     const size_t first_bit = protocol::kSharedSyncEndChip;
-    for (size_t i = 0; i < out_len; i++) {
+    for (size_t i = 0; i < out_bytes; i++) {
         uint8_t byte = 0;
-        for (int b = 0; b < 8; b++) {
-            const size_t bit = first_bit + i * 8 + static_cast<size_t>(b);
-            const bool set = bit < chip_len * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
+        for (int bit_in_byte = 0; bit_in_byte < 8; bit_in_byte++) {
+            const size_t bit = first_bit + i * 8 + static_cast<size_t>(bit_in_byte);
+            const bool set = bit < chip_bytes * 8 && ((chips[bit >> 3] >> (7 - (bit & 7))) & 1u);
             byte = static_cast<uint8_t>((byte << 1) | (set ? 1u : 0u));
         }
         out[i] = byte;
     }
 }
 
-constexpr uint32_t kUtc = 1754092800;
+constexpr uint32_t kUtcS = 1754092800;
 constexpr uint64_t kPpsEdgeUs = 40'000'000;
 constexpr uint16_t kIntoMs = 437;
 
-struct Rig {
+struct StampRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::NullRoles null;
     ports::Roles roles{
-        clock,          null.rf,          null.link, null.display,         null.kv,
+        clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
         null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::TrafficService traffic{context, go::kFeatures};
 
-    Rig() {
+    StampRig() {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
-        state.own.utc = kUtc;
-        state.own.lat_1e7 = 485000000;
-        state.own.lon_1e7 = 85000000;
-        state.own.alt_mm = 500000;
+        state.own.utc_s = kUtcS;
+        state.own.latitude_1e7 = 485000000;
+        state.own.longitude_1e7 = 85000000;
+        state.own.altitude_hae_mm = 500000;
         state.own.vdop_e2 = 150;
         state.clock.pps_locked = true;
         state.clock.pps_edge_us = kPpsEdgeUs;
-        state.clock.utc_s = kUtc;
+        state.clock.utc_s = kUtcS;
         REQUIRE(traffic.setup() == Status::Ok);
     }
 
     void hear(uint32_t address, uint64_t at_us, uint32_t now_ms) {
-        model::OwnState sender = state.own;
-        sender.lat_1e7 += 7000;
+        model::Ownship sender = state.own;
+        sender.latitude_1e7 += 7000;
         protocol::AdslPacket tx;
         protocol::from_own(tx, sender, address, 6, 4);
         tx.scramble();
@@ -76,10 +76,10 @@ struct Rig {
         event.at_us = at_us;
         event.rssi_dbm = -80;
         uint8_t chips[protocol::kTxChipBytes] = {0};
-        const size_t chip_len = protocol::encode_mband(protocol::kAdslSyncWord, tx.Data,
-                                                       protocol::AdslPacket::kDataBytes, chips);
-        deliver(chips, chip_len, event.data.data(), protocol::kRxChipBytes);
-        event.len = protocol::kRxChipBytes;
+        const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, tx.data,
+                                                          protocol::AdslPacket::kDataBytes, chips);
+        deliver(chips, chip_bytes, event.data.data(), protocol::kRxChipBytes);
+        event.bytes = protocol::kRxChipBytes;
         bus.rf.push(event);
         traffic.tick(now_ms);
     }
@@ -88,14 +88,14 @@ struct Rig {
 }  // namespace
 
 TEST_CASE("stamp: a reception is dated by its dwell, not by the pass that drained it") {
-    Rig rig;
+    StampRig rig;
     // Heard 437 ms into the second, drained on a pass 906 ms into it.
     rig.hear(0xC5D804, kPpsEdgeUs + kIntoMs * 1000, 40906);
 
     REQUIRE(rig.state.air.rx_ok == 1);
     const traffic::Target* target = rig.state.traffic.at(0);
     REQUIRE(target != nullptr);
-    CHECK(target->obs.received.at_s == kUtc);
-    CHECK(target->obs.received.into_ms == kIntoMs);
-    CHECK(target->obs.received.phase_valid);
+    CHECK(target->observation.received.at_s == kUtcS);
+    CHECK(target->observation.received.into_ms == kIntoMs);
+    CHECK(target->observation.received.phase_valid);
 }

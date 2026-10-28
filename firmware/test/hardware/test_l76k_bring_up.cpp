@@ -27,7 +27,7 @@ TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model an
     CHECK(chip.constellations == 7);  // GPS + GLONASS + BeiDou
     CHECK(chip.sentence_set_applied);
     CHECK(chip.aviation_dynamic_model());
-    CHECK(chip.solution_period_ms == parts::L76k::kFixPeriodMs);
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
 }
 
 // I, rows "A wake byte before probing" and "Receiver identification", in one
@@ -112,14 +112,14 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     CHECK(chip.baud_changes == 0);
     CHECK(gnss.degraded());
     CHECK_FALSE(gnss.configured());
-    CHECK(gnss.updates() > 0);  // it is talking, just not listening
+    CHECK(gnss.sentences() > 0);  // it is talking, just not listening
 }
 
 TEST_CASE("l76k: a receiver that obeys is reported configured") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
     parts::L76k gnss(chip, chip);
-    CHECK(gnss.config_state() == parts::L76k::Config::Idle);
+    CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Idle);
 
     run(gnss, chip, 0, 10000);
 
@@ -131,7 +131,7 @@ TEST_CASE("l76k: a receiver that obeys is reported configured") {
 TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    REQUIRE(gnss.baud_rate() == parts::L76k::kBaudRate);
+    REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
     run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
 
@@ -141,7 +141,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     CHECK(chip.port_baud() == parts::L76k::kTargetBaudRate);
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.solution().pps_latency_ms == parts::L76k::kBurstMs);
-    CHECK(gnss.raises() == 1);
+    CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 0);
 }
 
@@ -153,12 +153,12 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
 
     run(gnss, chip, 0, kBringUpLeadMs + 3 * parts::L76k::kVerifyWindowMs);
 
-    CHECK(chip.baud == parts::L76k::kBaudRate);
-    CHECK(gnss.baud_rate() == parts::L76k::kBaudRate);
-    CHECK(chip.port_baud() == parts::L76k::kBaudRate);
+    CHECK(chip.baud == parts::L76k::kFactoryBaudRate);
+    CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
+    CHECK(chip.port_baud() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
     CHECK(gnss.solution().fix_valid);
-    CHECK(gnss.raises() == 1);
+    CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 1);
 }
 
@@ -169,10 +169,10 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
 
     run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
 
-    CHECK(chip.baud == parts::L76k::kBaudRate);
-    CHECK(gnss.baud_rate() == parts::L76k::kBaudRate);
+    CHECK(chip.baud == parts::L76k::kFactoryBaudRate);
+    CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
-    CHECK(gnss.raises() == 0);
+    CHECK(gnss.baud_raises() == 0);
 }
 
 // I, row "Baud detection and recovery". A receiver that comes up at another rate
@@ -184,7 +184,7 @@ TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
     models::L76k chip;
     chip.baud = 38400;  // not what the devicetree pins
     parts::L76k gnss(chip, chip);
-    REQUIRE(gnss.baud_rate() == parts::L76k::kBaudRate);
+    REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
     run(gnss, chip, 0, 30000);
 
@@ -208,10 +208,10 @@ TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not ha
 
     run(gnss, chip, 0, 30000);
 
-    CHECK(gnss.baud_rate() == parts::L76k::kBaudRate);
+    CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(chip.baud_changes == 0);
     CHECK(gnss.degraded());
-    CHECK(gnss.updates() == 0);
+    CHECK(gnss.sentences() == 0);
 }
 
 // I, row "Cold start and factory reset". A receiver with a poisoned almanac
@@ -227,25 +227,25 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     REQUIRE(chip.aviation_dynamic_model());
 
     gnss.request_restart(ports::Restart::Factory);
-    uint32_t t = kBringUpLeadMs + 5010;
-    chip.tick(t);
-    gnss.service(t);
+    uint32_t now_ms = kBringUpLeadMs + 5010;
+    chip.tick(now_ms);
+    gnss.service(now_ms);
     CHECK(chip.factory_resets == 1);
     CHECK(chip.heard().rfind("PCAS10,") == chip.heard().size() - 7);
     // The receiver that comes back is not the one we configured.
     CHECK_FALSE(chip.aviation_dynamic_model());
     CHECK(chip.solution_period_ms == models::L76k::kFactoryPeriodMs);
-    CHECK(gnss.config_state() == parts::L76k::Config::Restarting);
+    CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Restarting);
 
-    run(gnss, chip, t + 10, t + 15000);
+    run(gnss, chip, now_ms + 10, now_ms + 15000);
     CHECK(gnss.configured());
     CHECK(chip.aviation_dynamic_model());
-    CHECK(chip.solution_period_ms == parts::L76k::kFixPeriodMs);
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
 
     // And the fix comes back on its own once the receiver has an almanac again,
     // which is the whole point: the pilot is told to wait, not to send it back.
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, t + 15010, t + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 15010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }
 
@@ -259,18 +259,18 @@ TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac
     REQUIRE(gnss.solution().fix_valid);
 
     gnss.request_restart(ports::Restart::Cold);
-    const uint32_t t = kBringUpLeadMs + 5010;
-    chip.tick(t);
-    gnss.service(t);
+    const uint32_t now_ms = kBringUpLeadMs + 5010;
+    chip.tick(now_ms);
+    gnss.service(now_ms);
 
     CHECK(chip.restarts == 1);
     CHECK(chip.factory_resets == 0);
     CHECK(chip.aviation_dynamic_model());
-    CHECK(chip.solution_period_ms == parts::L76k::kFixPeriodMs);
-    CHECK(gnss.config_state() == parts::L76k::Config::Ready);
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+    CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Ready);
 
-    run(gnss, chip, t + 10, t + 5000);
+    run(gnss, chip, now_ms + 10, now_ms + 5000);
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, t + 5010, t + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 5010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }

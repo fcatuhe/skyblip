@@ -43,7 +43,7 @@ PAIR_WINDOW_S = 0.05
 # INFO: fc 26sep26 packet_rssi_dbm() truncates the chip's half-dB steps upwards, 0.25 dB on average
 RSSI_TRUNCATION_DB = 0.25
 
-Z95 = 1.96
+Z_SCORE_95 = 1.96
 
 OWN_VERDICTS = ("transmitted", "lost", "held", "unarmed")
 
@@ -79,14 +79,14 @@ class Side:
         self.path = path
         self.antenna = antenna
         self.runs = power_budget.read(path)
-        self.records = [r for run in self.runs for r in run.records if not r.get("error")]
+        self.records = [record for run in self.runs for record in run.records if not record.get("error")]
 
     def configs(self):
-        return {(r["address"], r["tx_power_dbm"], r["pa_rated_dbm"])
-                for r in self.records if r["type"] == "config"}
+        return {(record["address"], record["tx_power_dbm"], record["pa_rated_dbm"])
+                for record in self.records if record["type"] == "config"}
 
     def bursts(self):
-        return [r for r in self.records if r["type"] == "burst" and r["band"] == "M"]
+        return [record for record in self.records if record["type"] == "burst" and record["band"] == "M"]
 
 
 def instant(record):
@@ -103,20 +103,20 @@ def transmitter(side):
         return None, "%s holds no config record, so it cannot say who sent what" % side.path
     if len(configs) > 1:
         return None, "%s names %d transmitters, fetch one session" % (side.path, len(configs))
-    addr, power_dbm, pa_rated_dbm = configs.pop()
+    address, power_dbm, pa_rated_dbm = configs.pop()
     if pa_rated_dbm == 0:
         return None, "%s predates the transmitter fields of its config record" % side.path
-    return {"address": addr, "power_dbm": power_dbm, "pa_rated_dbm": pa_rated_dbm,
+    return {"address": address, "power_dbm": power_dbm, "pa_rated_dbm": pa_rated_dbm,
             "conducted_dbm": min(power_dbm, pa_rated_dbm)}, None
 
 
-def pair(sender, sender_addr, receiver):
+def pair(sender, sender_address, receiver):
     """Each transmission of the sender with the reception of it at the receiver, if any."""
-    sent = [r for r in sender.bursts() if r["verdict"] == "transmitted"]
-    heard = [r for r in receiver.bursts()
-             if r["verdict"] not in OWN_VERDICTS and r["address_valid"] and r["rssi_valid"]
-             and r["address"] == sender_addr]
-    dated_heard = sorted((instant(r), r) for r in heard if instant(r) is not None)
+    sent = [record for record in sender.bursts() if record["verdict"] == "transmitted"]
+    heard = [record for record in receiver.bursts()
+             if record["verdict"] not in OWN_VERDICTS and record["address_valid"] and record["rssi_valid"]
+             and record["address"] == sender_address]
+    dated_heard = sorted((instant(record), record) for record in heard if instant(record) is not None)
     at = [moment for moment, _ in dated_heard]
     taken = set()
     levels = []
@@ -127,10 +127,10 @@ def pair(sender, sender_addr, receiver):
             undated += 1
             continue
         start = bisect.bisect_left(at, moment - PAIR_WINDOW_S)
-        for k in range(start, bisect.bisect_right(at, moment + PAIR_WINDOW_S)):
-            reception = dated_heard[k][1]
-            if k not in taken and reception["channel"] == burst["channel"]:
-                taken.add(k)
+        for index in range(start, bisect.bisect_right(at, moment + PAIR_WINDOW_S)):
+            reception = dated_heard[index][1]
+            if index not in taken and reception["channel"] == burst["channel"]:
+                taken.add(index)
                 levels.append(reception["rssi_dbm"])
                 break
     return {"sent": len(sent) - undated, "undated": undated, "levels": levels,
@@ -138,17 +138,17 @@ def pair(sender, sender_addr, receiver):
             "undated_heard": len(heard) - len(dated_heard)}
 
 
-def free_space_db(distance_m, hz=MBAND_HZ):
-    return 20.0 * math.log10(4.0 * math.pi * distance_m * hz / SPEED_OF_LIGHT_M_S)
+def free_space_db(distance_m, frequency_hz=MBAND_HZ):
+    return 20.0 * math.log10(4.0 * math.pi * distance_m * frequency_hz / SPEED_OF_LIGHT_M_S)
 
 
-def ground_band(distance_m, height_m, hz=MBAND_HZ):
+def ground_band(distance_m, height_m, frequency_hz=MBAND_HZ):
     """How far a flat ground can move this path against free space, as (weakest, strongest) dB.
 
     Two rays at equal heights, the reflected one flipped in phase as grazing incidence
     flips it, with any strength between none and total.
     """
-    wavelength = SPEED_OF_LIGHT_M_S / hz
+    wavelength = SPEED_OF_LIGHT_M_S / frequency_hz
     reflected_m = math.hypot(distance_m, 2.0 * height_m)
     turn = cmath.exp(-2j * math.pi * (reflected_m - distance_m) / wavelength)
     shifts = [20.0 * math.log10(max(abs(1.0 - (step / 100.0) * distance_m / reflected_m * turn),
@@ -157,9 +157,9 @@ def ground_band(distance_m, height_m, hz=MBAND_HZ):
     return min(shifts), max(shifts)
 
 
-def quiet_distance_m(height_m, hz=MBAND_HZ):
+def quiet_distance_m(height_m, frequency_hz=MBAND_HZ):
     """Where the reflected ray arrives half a wave late: the ground can only strengthen the path."""
-    return 4.0 * height_m * height_m * hz / SPEED_OF_LIGHT_M_S
+    return 4.0 * height_m * height_m * frequency_hz / SPEED_OF_LIGHT_M_S
 
 
 def spread(figure):
@@ -172,8 +172,8 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
     if not levels:
         return None
     level = statistics.fmean(levels) - RSSI_TRUNCATION_DB
-    sd = statistics.stdev(levels) if len(levels) > 1 else 0.0
-    sampling = Z95 * sd / math.sqrt(len(levels))
+    deviation = statistics.stdev(levels) if len(levels) > 1 else 0.0
+    sampling = Z_SCORE_95 * deviation / math.sqrt(len(levels))
     free = free_space_db(distance_m)
     weakest, strongest = ground_band(distance_m, height_m)
     eirp_chain = sender_tx["conducted_dbm"] - FEED_LOSS_DB + sender_antenna.gain_dbi
@@ -182,7 +182,7 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
     erp = level + free - receive_chain - DBI_TO_DBD_DB
     erp_spread = math.hypot(spread(ERP), sampling)
     return {
-        "level": level, "median": statistics.median(levels), "sd": sd,
+        "level": level, "median": statistics.median(levels), "sd": deviation,
         "low": min(levels), "high": max(levels), "sampling": sampling,
         "free": free, "path": path, "excess": path - free,
         "path_spread": math.hypot(spread(PATH), sampling),
@@ -192,10 +192,10 @@ def direction(link, sender_tx, sender_antenna, receiver_antenna, distance_m, hei
     }
 
 
-def gnss_distance(receiver, sender_addr):
+def gnss_distance(receiver, sender_address):
     """The median distance the receiver's own traffic picture put the sender at, and how many."""
-    metres = [r["dist_m"] for r in receiver.records
-              if r["type"] == "traffic" and r["address"] == sender_addr and r["position_valid"]]
+    metres = [record["distance_m"] for record in receiver.records
+              if record["type"] == "traffic" and record["address"] == sender_address and record["position_valid"]]
     return (statistics.median(metres), len(metres)) if metres else (None, 0)
 
 
@@ -204,10 +204,10 @@ def caveats(sides, out):
     for side in sides:
         for run in side.runs:
             lines = records.caveat_lines(run.notes) + records.missing_index_lines(run.records)
-            lines += ["unreadable at index %d: %s" % (r["index"], r["error"])
-                      for r in run.unreadable]
+            lines += ["unreadable at index %d: %s" % (record["index"], record["error"])
+                      for record in run.unreadable]
             lines += ["a gap record: %d records the ring had to refuse, over %.1f s"
-                      % (g["dropped"], g["span_ms"] / 1000.0) for g in run.gaps]
+                      % (gap["dropped"], gap["span_ms"] / 1000.0) for gap in run.gaps]
             for line in lines:
                 out("  %s: %s" % (side.label, line))
     cited = sum(1 for term in TERMS if term.cited)
@@ -266,24 +266,24 @@ def settings_lines(results, tx, antenna, height_m, out):
             "%g m apart it cannot" % (height_m, round(quiet_distance_m(height_m), 1)))
 
 
-def report(a, b, distance_m, height_m, out):
-    tx_a, why = transmitter(a)
-    tx_b, why_b = transmitter(b)
+def report(side_a, side_b, distance_m, height_m, out):
+    transmitter_a, why = transmitter(side_a)
+    transmitter_b, why_b = transmitter(side_b)
     if why or why_b:
         out(why or why_b)
         return False
-    out("link  a 0x%06X %s   b 0x%06X %s" % (tx_a["address"], a.antenna, tx_b["address"], b.antenna))
+    out("link  a 0x%06X %s   b 0x%06X %s" % (transmitter_a["address"], side_a.antenna, transmitter_b["address"], side_b.antenna))
     out("      %g m apart, both %g m up" % (distance_m, height_m))
-    for receiver, sender, sender_tx in ((b, a, tx_a), (a, b, tx_b)):
+    for receiver, sender, sender_tx in ((side_b, side_a, transmitter_a), (side_a, side_b, transmitter_b)):
         metres, count = gnss_distance(receiver, sender_tx["address"])
         if count:
             out("      %s puts %s %g m away, the median of %d traffic records"
                 % (receiver.label, sender.label, metres, count))
     out("")
-    caveats((a, b), out)
+    caveats((side_a, side_b), out)
 
     results = []
-    for name, sender, receiver, sender_tx in (("a -> b", a, b, tx_a), ("b -> a", b, a, tx_b)):
+    for name, sender, receiver, sender_tx in (("a -> b", side_a, side_b, transmitter_a), ("b -> a", side_b, side_a, transmitter_b)):
         link = pair(sender, sender_tx["address"], receiver)
         result = direction(link, sender_tx, ANTENNAS[sender.antenna], ANTENNAS[receiver.antenna],
                            distance_m, height_m)
@@ -323,9 +323,9 @@ def main(argv=None):
     parser.add_argument("--antenna-b", type=antenna, required=True, help="fitted on unit b")
     args = parser.parse_args(argv)
 
-    a = Side("a", args.capture_a, args.antenna_a)
-    b = Side("b", args.capture_b, args.antenna_b)
-    return 0 if report(a, b, args.distance, args.height, print) else 1
+    side_a = Side("a", args.capture_a, args.antenna_a)
+    side_b = Side("b", args.capture_b, args.antenna_b)
+    return 0 if report(side_a, side_b, args.distance, args.height, print) else 1
 
 
 if __name__ == "__main__":

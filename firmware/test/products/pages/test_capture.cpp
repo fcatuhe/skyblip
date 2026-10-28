@@ -5,7 +5,7 @@
 
 using namespace skyblip::go;
 using skyblip::reads_in;
-using skyblip::diag::Profile;
+using skyblip::diagnostics::Profile;
 
 namespace {
 
@@ -14,55 +14,55 @@ constexpr uint32_t kFullKeepsS = 4110;
 constexpr uint32_t kPowerRunKeepsS = 678300;
 
 CaptureSnapshot disarmed_device() {
-    CaptureSnapshot snap;
-    snap.uptime_s = 812;
-    snap.capture.available = true;
-    snap.capture.pool_sectors = 330;
-    snap.capture.price_sectors = 266;
-    snap.capture.price_flights = 3;
-    snap.focus_keeps_s = kFullKeepsS;
-    return snap;
+    CaptureSnapshot snapshot;
+    snapshot.uptime_s = 812;
+    snapshot.capture.available = true;
+    snapshot.capture.pool_sectors = 330;
+    snapshot.capture.growth_sectors = 266;
+    snapshot.capture.evicted_flights = 3;
+    snapshot.focus_keeps_s = kFullKeepsS;
+    return snapshot;
 }
 
 CaptureSnapshot offering(Profile focus) {
-    CaptureSnapshot snap = disarmed_device();
-    snap.focus = focus;
-    snap.focus_keeps_s = focus == Profile::Full ? kFullKeepsS : kPowerRunKeepsS;
-    return snap;
+    CaptureSnapshot snapshot = disarmed_device();
+    snapshot.focus = focus;
+    snapshot.focus_keeps_s = focus == Profile::Full ? kFullKeepsS : kPowerRunKeepsS;
+    return snapshot;
 }
 
 CaptureSnapshot armed_device() {
-    CaptureSnapshot snap = disarmed_device();
-    snap.capture.armed = true;
-    snap.running = Profile::Full;
-    snap.capture.session_id = 1785628800;
-    snap.capture.records = 4213;
-    snap.capture.dropped = 17;
-    snap.capture.sectors = 25;
-    snap.capture.keeps_s = 3600;
-    return snap;
+    CaptureSnapshot snapshot = disarmed_device();
+    snapshot.capture.armed = true;
+    snapshot.running = Profile::Full;
+    snapshot.capture.session_id = 1785628800;
+    snapshot.capture.records = 4213;
+    snapshot.capture.dropped = 17;
+    snapshot.capture.sectors = 25;
+    snapshot.capture.keeps_s = 3600;
+    return snapshot;
 }
 
-bool focused(const Glass& fb, const char* name) {
-    return reads_in(fb, name, 0, 28, 200, 74, 1, /*ink=*/false);
+bool focused(const Glass& canvas, const char* name) {
+    return reads_in(canvas, name, 0, 28, 200, 74, 1, /*ink=*/false);
 }
 
 }  // namespace
 
 TEST_CASE("capture page: a disarmed device states the price before it is paid") {
-    Glass fb;
-    draw_capture(fb, disarmed_device());
+    Glass canvas;
+    draw_capture(canvas, disarmed_device());
 
-    CHECK(reads_in(fb, "CAPTURE", 0, 0, 200, 14));
-    CHECK(reads_in(fb, "T+812", 100, 0, 200, 14));
-    CHECK(reads_in(fb, "STATE OFF", 0, 14, 200, 40));
-    CHECK(reads_in(fb, "POWER RUN", 0, 42, 200, 70));
-    CHECK(reads_in(fb, "FLIGHT RUN", 0, 56, 200, 84));
-    CHECK(reads_in(fb, "TAKES 266 OF 330 SECTORS", 0, 70, 200, 98));
-    CHECK(reads_in(fb, "EVICTS 3 FLIGHTS", 0, 84, 200, 112));
-    CHECK(reads_in(fb, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
-    CHECK(reads_in(fb, "PAD PICKS", 0, 170, 200, 200));
-    CHECK(reads_in(fb, "PRESS TWICE TO ARM", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "CAPTURE", 0, 0, 200, 14));
+    CHECK(reads_in(canvas, "T+812", 100, 0, 200, 14));
+    CHECK(reads_in(canvas, "STATE OFF", 0, 14, 200, 40));
+    CHECK(reads_in(canvas, "POWER RUN", 0, 42, 200, 70));
+    CHECK(reads_in(canvas, "FLIGHT RUN", 0, 56, 200, 84));
+    CHECK(reads_in(canvas, "TAKES 266 OF 330 SECTORS", 0, 70, 200, 98));
+    CHECK(reads_in(canvas, "EVICTS 3 FLIGHTS", 0, 84, 200, 112));
+    CHECK(reads_in(canvas, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
+    CHECK(reads_in(canvas, "PAD PICKS", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "PRESS TWICE TO ARM", 0, 170, 200, 200));
 }
 
 TEST_CASE("capture page: the full capture and the two runs quote spans two orders apart") {
@@ -80,12 +80,12 @@ TEST_CASE("capture page: the full capture and the two runs quote spans two order
 }
 
 TEST_CASE("capture page: the flight run records power and duty, as the power run does") {
-    Glass fb;
-    draw_capture(fb, offering(Profile::FlightRun));
-    CHECK(focused(fb, "FLIGHT RUN"));
-    CHECK(reads_in(fb, "POWER AND DUTY", 100, 56, 200, 84, 1, /*ink=*/false));
-    CHECK(reads_in(fb, "POWER AND DUTY", 100, 42, 200, 70));
-    CHECK(reads_in(fb, "EVERY SUBJECT", 100, 28, 200, 56));
+    Glass canvas;
+    draw_capture(canvas, offering(Profile::FlightRun));
+    CHECK(focused(canvas, "FLIGHT RUN"));
+    CHECK(reads_in(canvas, "POWER AND DUTY", 100, 56, 200, 84, 1, /*ink=*/false));
+    CHECK(reads_in(canvas, "POWER AND DUTY", 100, 42, 200, 70));
+    CHECK(reads_in(canvas, "EVERY SUBJECT", 100, 28, 200, 56));
 }
 
 TEST_CASE("capture page: the capture in focus is the one under the bar") {
@@ -104,63 +104,63 @@ TEST_CASE("capture page: the capture in focus is the one under the bar") {
 }
 
 TEST_CASE("capture page: an armed device shows what it wrote, what it lost and what it holds") {
-    Glass fb;
-    draw_capture(fb, armed_device());
+    Glass canvas;
+    draw_capture(canvas, armed_device());
 
-    CHECK(reads_in(fb, "STATE ARMED FULL", 0, 14, 200, 40));
-    CHECK(reads_in(fb, "SESSION 1785628800", 0, 28, 200, 56));
-    CHECK(reads_in(fb, "WROTE 4213 DROP 17", 0, 42, 200, 70));
-    CHECK(reads_in(fb, "SECTORS 25 KEEPS 1H00", 0, 56, 200, 84));
-    CHECK(reads_in(fb, "PRESS TWICE TO STOP", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "STATE ARMED FULL", 0, 14, 200, 40));
+    CHECK(reads_in(canvas, "SESSION 1785628800", 0, 28, 200, 56));
+    CHECK(reads_in(canvas, "WROTE 4213 DROP 17", 0, 42, 200, 70));
+    CHECK(reads_in(canvas, "SECTORS 25 KEEPS 1H00", 0, 56, 200, 84));
+    CHECK(reads_in(canvas, "PRESS TWICE TO STOP", 0, 170, 200, 200));
 }
 
 TEST_CASE("capture page: an armed device names the capture that is running") {
-    CaptureSnapshot snap = armed_device();
-    snap.running = Profile::PowerRun;
-    Glass fb;
-    draw_capture(fb, snap);
+    CaptureSnapshot snapshot = armed_device();
+    snapshot.running = Profile::PowerRun;
+    Glass canvas;
+    draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(fb, "STATE ARMED POWER RUN", 0, 14, 200, 40));
-    CHECK_FALSE(reads_in(fb, "STATE ARMED FULL", 0, 0, 200, 200));
-    CHECK_FALSE(reads_in(fb, "PAD PICKS", 0, 0, 200, 200));
+    CHECK(reads_in(canvas, "STATE ARMED POWER RUN", 0, 14, 200, 40));
+    CHECK_FALSE(reads_in(canvas, "STATE ARMED FULL", 0, 0, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "PAD PICKS", 0, 0, 200, 200));
 
-    snap.running = Profile::FlightRun;
+    snapshot.running = Profile::FlightRun;
     Glass flight_run;
-    draw_capture(flight_run, snap);
+    draw_capture(flight_run, snapshot);
     CHECK(reads_in(flight_run, "STATE ARMED FLIGHT RUN", 0, 14, 200, 40));
 }
 
 // A capture that stopped on its own says so: the pilot did not ask for it.
 TEST_CASE("capture page: a capture the allocator refused says it stopped and why") {
-    CaptureSnapshot snap = disarmed_device();
-    snap.capture.stopped = skyblip::bus::CaptureStop::NoSectors;
-    snap.capture.records = 45220;
-    Glass fb;
-    draw_capture(fb, snap);
+    CaptureSnapshot snapshot = disarmed_device();
+    snapshot.capture.stopped = skyblip::bus::CaptureStop::NoSectors;
+    snapshot.capture.records = 45220;
+    Glass canvas;
+    draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(fb, "STATE STOPPED NO SECTORS", 0, 14, 200, 40));
-    CHECK(reads_in(fb, "WROTE 45220 DROP 0", 0, 112, 200, 140));
+    CHECK(reads_in(canvas, "STATE STOPPED NO SECTORS", 0, 14, 200, 40));
+    CHECK(reads_in(canvas, "WROTE 45220 DROP 0", 0, 112, 200, 140));
 }
 
 // A storage fault the pilot cannot see is a corpus with holes nobody accounted for.
 TEST_CASE("capture page: a refused flash write is on the glass, not only in a counter") {
-    CaptureSnapshot snap = armed_device();
-    snap.capture.faults = 3;
-    snap.capture.unreadable_sectors = 1;
-    Glass fb;
-    draw_capture(fb, snap);
+    CaptureSnapshot snapshot = armed_device();
+    snapshot.capture.faults = 3;
+    snapshot.capture.unreadable_sectors = 1;
+    Glass canvas;
+    draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(fb, "FLASH FAULTS 3 UNREAD 1", 0, 84, 200, 126));
+    CHECK(reads_in(canvas, "FLASH FAULTS 3 UNREAD 1", 0, 84, 200, 126));
 }
 
 TEST_CASE("capture page: a device with no partition offers no gesture at all") {
-    CaptureSnapshot snap;
-    snap.capture.available = false;
-    Glass fb;
-    draw_capture(fb, snap);
+    CaptureSnapshot snapshot;
+    snapshot.capture.available = false;
+    Glass canvas;
+    draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(fb, "NO FLASH FITTED", 0, 170, 200, 200));
-    CHECK_FALSE(reads_in(fb, "PRESS TWICE TO ARM", 0, 0, 200, 200));
-    CHECK_FALSE(reads_in(fb, "POWER RUN", 0, 0, 200, 200));
-    CHECK_FALSE(reads_in(fb, "FLIGHT RUN", 0, 0, 200, 200));
+    CHECK(reads_in(canvas, "NO FLASH FITTED", 0, 170, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "PRESS TWICE TO ARM", 0, 0, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "POWER RUN", 0, 0, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "FLIGHT RUN", 0, 0, 200, 200));
 }

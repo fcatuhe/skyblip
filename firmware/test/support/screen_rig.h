@@ -21,24 +21,24 @@ namespace {
 // The screen service alone: state is written by hand, so alarm level and
 // traffic are exactly what the case says, with no alarm service re-deriving
 // them.
-struct Rig {
+struct ScreenRig {
     models::Ssd1681 chip;
-    parts::Ssd1681 epd{chip, chip, chip, chip.dc, chip.rst, chip.busy};
+    parts::Ssd1681 epd{chip, chip, chip, chip.dc_pin, chip.reset_pin, chip.busy_pin};
     platform::host::Clock clock;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
     ports::Roles roles{
         clock,          null.rf,        null.link,        epd,  // epd fills Display
-        null.kv,        null.log_flash, null.annunciator, null.dfu, null.die_temperature,
+        null.key_value, null.log_flash, null.annunciator, null.dfu, null.die_temperature,
         null.indicator, null.gnss,      identity};
     bus::Bus bus{};
     bus::State state{};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{null.link, store};
-    go::BootSnapshot self_test{};
+    go::SelfTestSnapshot self_test{};
     go::AlarmService alarm_service{context, settings};
     go::RecordPool pool{context};
     go::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
@@ -46,117 +46,121 @@ struct Rig {
     go::CaptureService capture{context, capture_store, flights_store, settings, config};
     go::ScreenService screen{context, settings, config, alarm_service, capture, self_test};
 
-    Rig() {
+    ScreenRig() {
         chip.attach_clock(clock);
         roles.capabilities = ports::Capability::Display;
         state.activation.serial = platform::host::Identity::kSerial;
         // With a fix the radar page draws rings and the range label, so churn()
         // below produces real pixel changes.
         state.own.fix_valid = true;
-        state.own.sats = 9;
+        state.own.satellites = 9;
         state.flight.time_valid = true;
         epd.begin();
     }
 
     // The pass a service loop makes: the world's clock, then the service on it.
     void tick(uint32_t now_ms) {
-        clock.set_millis(now_ms);
+        clock.set_milliseconds(now_ms);
         screen.tick(now_ms);
     }
 
     // One service tick per second, the render cadence.
-    void run_seconds(uint32_t& t, int seconds) {
-        for (int i = 0; i < seconds; i++) tick(t += 1000);
+    void run_seconds(uint32_t& now_ms, int seconds) {
+        for (int i = 0; i < seconds; i++) tick(now_ms += 1000);
     }
 
     // Forces a visible change every second, orthogonal to alarm level and traffic count.
-    void churn(uint32_t& t, int seconds) { churn_at(t, 1000, seconds); }
+    void churn(uint32_t& now_ms, int seconds) { churn_at(now_ms, 1000, seconds); }
 
     // The same flip at the caller's cadence, for the policies measured in minutes.
-    void churn_at(uint32_t& t, uint32_t step_ms, int times) {
+    void churn_at(uint32_t& now_ms, uint32_t step_ms, int times) {
         for (int i = 0; i < times; i++) {
             state.flight.seconds += 60;
-            tick(t += step_ms);
+            tick(now_ms += step_ms);
         }
     }
 
     bool glass_all_black() const {
-        return chip.framebuffer().count_black() == go::kGlassW * go::kGlassH;
+        return chip.framebuffer().count_black() == go::kGlassWidth * go::kGlassHeight;
     }
 
     // The pad held past the way home, a gesture read on the tick, not the release.
-    void long_touch(uint32_t& t) {
-        bus.input.push(events::ContactEvent{events::Contact::Pad, true, t});
-        tick(t += 100);
-        tick(t += go::Controls::kLongTouchMs);
-        bus.input.push(events::ContactEvent{events::Contact::Pad, false, t});
-        tick(t += 100);
+    void long_touch(uint32_t& now_ms) {
+        bus.input.push(events::ContactEvent{events::Contact::Pad, true, now_ms});
+        tick(now_ms += 100);
+        tick(now_ms += go::Controls::kLongTouchHoldMs);
+        bus.input.push(events::ContactEvent{events::Contact::Pad, false, now_ms});
+        tick(now_ms += 100);
     }
 
     // A press of the button, read on the release: the menu, then the row under the focus.
-    void press(uint32_t& t) {
-        bus.input.push(events::ContactEvent{events::Contact::Button, true, t});
-        tick(t += 100);
-        bus.input.push(events::ContactEvent{events::Contact::Button, false, t});
-        tick(t += 100);
+    void press(uint32_t& now_ms) {
+        bus.input.push(events::ContactEvent{events::Contact::Button, true, now_ms});
+        tick(now_ms += 100);
+        bus.input.push(events::ContactEvent{events::Contact::Button, false, now_ms});
+        tick(now_ms += 100);
     }
 
     // The pad tapped: the next page along the walk, or the next row down a menu.
-    void tap(uint32_t& t) {
-        bus.input.push(events::ContactEvent{events::Contact::Pad, true, t});
-        tick(t += 100);
-        bus.input.push(events::ContactEvent{events::Contact::Pad, false, t});
-        tick(t += 100);
+    void tap(uint32_t& now_ms) {
+        bus.input.push(events::ContactEvent{events::Contact::Pad, true, now_ms});
+        tick(now_ms += 100);
+        bus.input.push(events::ContactEvent{events::Contact::Pad, false, now_ms});
+        tick(now_ms += 100);
     }
 
     // Reached the way a thumb reaches it: the pad along the walk, then the menu row that opens it.
-    void show(uint32_t& t, go::Page page) {
-        for (int i = 0; i < go::kPageCount && screen.page() != go::menu_owner(page); i++) tap(t);
+    void show(uint32_t& now_ms, go::Page page) {
+        for (int i = 0; i < go::kPageCount && screen.page() != go::menu_owner(page); i++)
+            tap(now_ms);
         if (go::walked(page)) return;
-        press(t);
+        press(now_ms);
         const go::Menu menu = go::menu_for(go::menu_owner(page));
-        for (int i = 0; i < menu.n && go::page_behind(screen.editor().focus()) != page; i++) tap(t);
-        press(t);
+        for (int i = 0; i < menu.row_count && go::page_behind(screen.editor().focus()) != page; i++)
+            tap(now_ms);
+        press(now_ms);
     }
 
     void alarm(traffic::Level level) {
         state.alarm_level = level;
-        state.alarm_live = level;
+        state.alarm_undismissed = level;
     }
 
     // The long touch as the alarm service publishes it: the sky stands, nothing is live.
     void dismiss() {
-        state.alarm_live = traffic::Level::None;
-        for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-            traffic::Target* t = state.traffic.at(i);
-            if (t && t->used) t->alarm_dismissed = true;
+        state.alarm_undismissed = traffic::Level::None;
+        for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+            traffic::Target* target = state.traffic.at(i);
+            if (target && target->used) target->alarm_dismissed = true;
         }
     }
 
-    // A contact at a bearing, graded by hand, for the page to point at.
+    // A target at a bearing, graded by hand, for the page to point at.
     void threat(traffic::Level level, int32_t north_m, int32_t east_m, uint32_t now_ms) {
-        model::AircraftObs obs{};
-        obs.address = kThreatAddress;
-        obs.address_mapping_table = kThreatTable;
-        obs.position_valid = true;
-        obs.lat_1e7 = state.own.lat_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
-        obs.lon_1e7 = state.own.lon_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
-        obs.alt_m = to_metres(Millimetres(state.own.alt_mm)).v;
-        obs.received.at_s = now_ms / 1000;
-        obs.at_ms = now_ms;
-        obs.source = model::Source::AdslDirect;
-        state.traffic.update(obs, now_ms / 1000);
-        const int at = state.traffic.find(kThreatTable, kThreatAddress);
+        model::AircraftObservation observation{};
+        observation.address = kThreatAddress;
+        observation.address_mapping_table = kThreatAddressMappingTable;
+        observation.position_valid = true;
+        observation.latitude_1e7 =
+            state.own.latitude_1e7 + static_cast<int32_t>(int64_t(north_m) * 1000000 / 11132);
+        observation.longitude_1e7 =
+            state.own.longitude_1e7 + static_cast<int32_t>(int64_t(east_m) * 1000000 / 11132);
+        observation.altitude_m = to_metres(Millimetres(state.own.altitude_hae_mm)).value;
+        observation.received.at_s = now_ms / 1000;
+        observation.at_ms = now_ms;
+        observation.source = model::Source::AdslDirect;
+        state.traffic.update(observation, now_ms / 1000);
+        const int at = state.traffic.find(kThreatAddressMappingTable, kThreatAddress);
         REQUIRE(at >= 0);
         state.traffic.at(at)->alarm_level = level;
         alarm(level);
     }
 
     static constexpr uint32_t kThreatAddress = 0x424242;
-    static constexpr uint8_t kThreatTable = 6;
+    static constexpr uint8_t kThreatAddressMappingTable = 6;
 
-    void die_temperature(int16_t decicelsius) {
-        state.power.die_dc = decicelsius;
+    void die_temperature(int16_t die_dc) {
+        state.power.die_dc = die_dc;
         state.power.die_valid = true;
     }
 };

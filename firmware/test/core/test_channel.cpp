@@ -9,27 +9,27 @@ using namespace skyblip::timing;
 
 TEST_CASE("channel: the floor starts at the seed and walks to what the receiver hears") {
     NoiseFloor floor;
-    CHECK(floor.dbm() == NoiseFloor::kSeedDbm);
+    CHECK(floor.level_dbm() == NoiseFloor::kSeedDbm);
     CHECK(floor.samples() == 0);
 
     for (int i = 0; i < 500; i++) floor.sample(-118);
-    CHECK(floor.dbm() == -118);
+    CHECK(floor.level_dbm() == -118);
     CHECK(floor.samples() == 500);
 
     // And back up again: the average has no memory of having been quiet.
     for (int i = 0; i < 500; i++) floor.sample(-96);
-    CHECK(floor.dbm() == -96);
+    CHECK(floor.level_dbm() == -96);
 }
 
 // A burst passing through does not become the floor. A minute of a jammer does.
 TEST_CASE("channel: one loud sample barely moves the average, a site full of them moves it all") {
     NoiseFloor floor;
     floor.sample(-40);
-    CHECK(floor.dbm() <= NoiseFloor::kSeedDbm + 4);
+    CHECK(floor.level_dbm() <= NoiseFloor::kSeedDbm + 4);
 
     NoiseFloor site;
     for (int i = 0; i < 200; i++) site.sample(-85);
-    CHECK(site.dbm() == -85);
+    CHECK(site.level_dbm() == -85);
 }
 
 // The chip has no averaging block and no non-LoRa activity mode, so a level is a run of reads.
@@ -72,8 +72,8 @@ TEST_CASE("channel: the floor hears the window, not the instant one read landed 
         windowed.sample(ChannelLevel::mean_dbm(window, ChannelLevel::kSamples));
         instant.sample(window[0]);
     }
-    CHECK(instant.dbm() == window[0]);
-    CHECK(windowed.dbm() > instant.dbm() + 40);
+    CHECK(instant.level_dbm() == window[0]);
+    CHECK(windowed.level_dbm() > instant.level_dbm() + 40);
 }
 
 // E2. The 1% duty cycle of EN 300 220-2 V3.3.1 Table 4 is the declared route, and the only refusal.
@@ -111,9 +111,9 @@ TEST_CASE("channel: the hour's allowance is 1% of it, and the counter stops at t
 
     AirTime air;
     uint32_t refused = 0;
-    for (uint32_t t = 0; t < AirTime::kWindowMs; t += 100) {
-        if (air.may_spend(t, Transmitter::kAirTimeMs))
-            air.spend(t, Transmitter::kAirTimeMs);
+    for (uint32_t now_ms = 0; now_ms < AirTime::kWindowMs; now_ms += 100) {
+        if (air.may_spend(now_ms, Transmitter::kAirTimeMs))
+            air.spend(now_ms, Transmitter::kAirTimeMs);
         else
             refused++;
     }

@@ -124,23 +124,25 @@ class Resume(unittest.TestCase):
 
 
 class ReplyFraming(unittest.TestCase):
-    def test_a_diag_frame_saying_more_is_not_the_last_one(self):
-        self.assertTrue(blip.more_follows('{"cmd":"diag","group":"radio","part":0,"more":true}'))
-        self.assertFalse(blip.more_follows('{"cmd":"diag","group":"screen","part":4,"more":false}'))
+    def test_a_diagnostics_frame_saying_more_is_not_the_last_one(self):
+        self.assertTrue(blip.more_follows(
+            '{"command":"diagnostics","group":"radio","part":0,"more":true}'))
+        self.assertFalse(blip.more_follows(
+            '{"command":"diagnostics","group":"power","part":4,"more":false}'))
 
     def test_a_reply_with_no_more_field_is_a_single_frame(self):
-        self.assertFalse(blip.more_follows('{"cmd":"status","ack":true}'))
+        self.assertFalse(blip.more_follows('{"command":"status","acknowledge":true}'))
 
     def test_a_frame_that_is_not_json_ends_the_collection_rather_than_hanging(self):
         self.assertFalse(blip.more_follows("<truncated"))
 
     def test_a_refused_command_raises_with_the_reason_the_device_gave(self):
         with self.assertRaises(SystemExit) as caught:
-            blip.refuse_if_nacked({"cmd": "log", "ack": False, "reason": "in_flight"})
+            blip.refuse_if_nacked({"command": "log", "acknowledge": False, "reason": "in_flight"})
         self.assertIn("in_flight", str(caught.exception))
 
     def test_an_acknowledged_reply_passes_through_untouched(self):
-        frame = {"cmd": "log", "ack": True, "sessions": 2}
+        frame = {"command": "log", "acknowledge": True, "sessions": 2}
         self.assertIs(blip.refuse_if_nacked(frame), frame)
 
 

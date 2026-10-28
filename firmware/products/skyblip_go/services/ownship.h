@@ -29,16 +29,16 @@ class OwnshipService : public runtime::Service {
 
     void tick(uint32_t now_ms) override;
 
-    bool baro_active() const { return baro_live_; }
+    bool barometer_active() const { return barometer_active_; }
 
     // ADS-L G.1.2 FlightState, decided by core/flight from the fix stream.
-    flight::FlightState flight_state_from(const model::OwnState& own, uint32_t now_ms);
+    flight::FlightState flight_state_from(const model::Ownship& own, uint32_t now_ms);
 
     // The one copy of "has the receiver settled": the transmit gate reads it
     // through state.own.tx_settled, and whoever annunciates the first fix takes
     // the edge from here rather than keeping a second watch of its own.
-    const gnss::FirstFix& first_fix() const { return settle_; }
-    bool take_fix_acquired() { return settle_.take_acquired(); }
+    const gnss::FirstFix& first_fix() const { return first_fix_; }
+    bool take_fix_acquired() { return first_fix_.take_acquired(); }
 
    private:
     const flight::FlightTimer& timer_on_glass(uint32_t now_ms);
@@ -47,26 +47,27 @@ class OwnshipService : public runtime::Service {
     void record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms);
     void record_flight(uint32_t now_ms);
     void record_pps(uint32_t now_ms);
-    void record_baro(const events::BaroSample& sample, int32_t alt_mm, int32_t climb_mm_s,
-                     bool adopted, uint32_t now_ms);
+    void record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
+                          int32_t climb_mm_s, bool adopted, uint32_t now_ms);
     void record_motion(uint32_t now_ms);
     uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) const;
     void publish_solution_phase(uint32_t now_ms);
-    void anchor_utc(const gnss::GnssSolution& solution);
+    void anchor_utc_s(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
-    void apply_baro(const events::BaroSample& sample, uint32_t now_ms);
-    void apply_accel(const events::AccelSample& sample);
+    void apply_barometer(const events::BarometerSample& sample, uint32_t now_ms);
+    void apply_accelerometer(const events::AccelerometerSample& sample);
     void publish_inertial(uint32_t now_ms);
     void update_turn_rate(uint32_t now_ms);
     void publish_turn(int16_t turn_cdps, uint32_t now_ms);
-    void update_residual(const model::OwnState& previous);
-    static gnss::Convergence convergence_of(const model::OwnState& own);
-    static bool height_solved(const model::OwnState& own);
-    void adopt_climb(int32_t mm_s, uint32_t now_ms);
+    void update_residual(const model::Ownship& previous);
+    static gnss::Convergence convergence_of(const model::Ownship& own);
+    static bool height_solved(const model::Ownship& own);
+    void adopt_climb(int32_t climb_mm_s, uint32_t now_ms);
     void withdraw_climb();
-    static bool vs_from_alt_mm(int32_t alt_mm, uint32_t now_ms, uint32_t window_ms,
-                               int32_t& ref_alt_mm, uint32_t& ref_ms, int32_t& out_mm_s);
-    bool baro_heard_within_max_age(uint32_t now_ms) const;
+    static bool climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms, uint32_t window_ms,
+                                       int32_t& reference_altitude_mm, uint32_t& reference_ms,
+                                       int32_t& out_climb_mm_s);
+    bool barometer_heard_within_max_age(uint32_t now_ms) const;
 
     flight::SlipBall ball_{};
     flight::GMeter gmeter_{};
@@ -77,24 +78,24 @@ class OwnshipService : public runtime::Service {
     flight::FlightTimer timer_{};
     flight::FlightTimer simulated_{};
     flight::GroundLatch ground_{};
-    gnss::FirstFix settle_{};
+    gnss::FirstFix first_fix_{};
     gnss::Acquisition acquisition_{};
-    int32_t vs_ref_alt_mm_{0};
-    uint32_t vs_ref_ms_{0};
-    int32_t baro_ref_alt_mm_{0};
-    uint32_t baro_ref_ms_{0};
-    uint32_t baro_heard_ms_{0};
-    bool baro_live_{false};
-    uint32_t turn_ref_ms_{0};
-    int32_t turn_ref_track_cdeg_{0};
+    int32_t gnss_reference_altitude_mm_{0};
+    uint32_t gnss_reference_ms_{0};
+    int32_t barometer_reference_altitude_mm_{0};
+    uint32_t barometer_reference_ms_{0};
+    uint32_t barometer_heard_ms_{0};
+    bool barometer_active_{false};
+    uint32_t turn_reference_ms_{0};
+    int32_t turn_reference_track_cdeg_{0};
     uint64_t pps_edge_us_{0};
     uint32_t pps_recorded_ms_{0};
     uint32_t motion_recorded_ms_{0};
 
-    static constexpr uint32_t kBaroVsWindowMs = flight::kMinWindowMs;
-    static constexpr uint32_t kGnssVsWindowMs = 2000;
+    static constexpr uint32_t kBarometerClimbWindowMs = flight::kClimbWindowFloorMs;
+    static constexpr uint32_t kGnssClimbWindowMs = 2000;
     // INFO: fc 23sep26 three missed samples: a barometer that went silent hands the climb back
-    static constexpr uint32_t kBaroMaxAgeMs = 3 * runtime::kBaroPeriodMs;
+    static constexpr uint32_t kBarometerMaxAgeMs = 3 * runtime::kBarometerPublishPeriodMs;
     // INFO: fc 20sep26 an edge is a record, and a second that brought none is the record saying so
     static constexpr uint32_t kPpsRecordPeriodMs = 1000;
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds

@@ -6,11 +6,11 @@ The board pushes one `events::ContactEvent` per settled edge, stamped when the l
 
 | What the thumb does | `go::Gesture` | On a page | In a menu |
 |---|---|---|---|
-| pad touched and released under `Controls::kLongTouchMs` | `Tap` | the next page, or on `capture` the next capture offered, and off the last one the page it was opened from | the next row, and off the last row the page it belongs to |
-| pad held past `Controls::kLongTouchMs` (1 s) | `LongTouch` | a standing alarm is dismissed, and with none standing, the radar, through black even when the radar is already on the glass | the radar |
+| pad touched and released under `Controls::kLongTouchHoldMs` | `Tap` | the next page, or on `capture` the next capture offered, and off the last one the page it was opened from | the next row, and off the last row the page it belongs to |
+| pad held past `Controls::kLongTouchHoldMs` (1 s) | `LongTouch` | a standing alarm is dismissed, and with none standing, the radar, through black even when the radar is already on the glass | the radar |
 | button pressed | `Press` | opens this page's menu | changes the focused row, or opens the page it names |
-| button pressed twice inside `ConfirmGesture::kDoublePressMs` | `Press`, twice | nothing, unless a prompt stands: then it authorises, or on `capture`, where it arms and stops the diagnostics capture | the same |
-| button held past `power::kLongPressMs` (2 s) | none | off | off |
+| button pressed twice inside `ConfirmGesture::kDoublePressWindowMs` | `Press`, twice | nothing, unless a prompt stands: then it authorises, or on `capture`, where it arms and stops the diagnostics capture | the same |
+| button held past `power::kLongPressHoldMs` (2 s) | none | off | off |
 | pad held through that press | none | off, with a blank panel: the stow | the stow |
 
 One vocabulary on two contacts: the pad is touched, the button is pressed, and the long one of each is the second thing that contact says. The pad moves, the button acts, and the long touch is the way back to the traffic picture from anywhere. Nothing a pilot learns on the pages has to be unlearned on the rows.
@@ -35,7 +35,7 @@ What a dismissal costs if it was an accident is one flight's worth of nothing: t
 
 ## The button's third meaning
 
-`ConfirmGesture` is the security boundary, not an input helper. This product ships with BLE pairing off, so nothing proves cryptographically that the phone asking for a firmware upload belongs to the pilot, and physical presence stands in for it. The gesture has to be one a thumb cannot produce by accident and one that cannot be confused with the press that opens a menu or the long press that switches the device off: a double press inside `kDoublePressMs` is the only one of the button's meanings a pilot has to mean to make.
+`ConfirmGesture` is the security boundary, not an input helper. This product ships with BLE pairing off, so nothing proves cryptographically that the phone asking for a firmware upload belongs to the pilot, and physical presence stands in for it. The gesture has to be one a thumb cannot produce by accident and one that cannot be confused with the press that opens a menu or the long press that switches the device off: a double press inside `kDoublePressWindowMs` is the only one of the button's meanings a pilot has to mean to make.
 
 It authorises nothing unless a prompt the pilot can read is on the glass, and a lone press at a prompt refuses the operation rather than leaving it standing. Fail closed, which is what makes "press twice to allow, once to refuse" true on the panel.
 

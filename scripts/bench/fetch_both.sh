@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # usage: scripts/bench/fetch_both.sh <tag>   e.g. tag=0800 (HHMM of the run start; reuse it to resume)
-# scan, diag + timing (15 tries), fetch (30 tries) for both units, into ~/skyblip-captures/<name>-<tag>.ndjson
+# scan, diagnostics + timing (15 tries), fetch (30 tries) for both units, into ~/skyblip-captures/<name>-<tag>.ndjson
 set -u
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 B="mise x uv@latest -- uv run -q --script --with bleak scripts/blip.py"
@@ -10,11 +10,11 @@ stamp=$(date +%H%M)
 $B scan > $out/scan-$tag-$stamp.log 2>&1; cat $out/scan-$tag-$stamp.log
 for pair in "0B1B2C D7:F4:67:4D:6C:B2" "E68BD9 ED:9A:32:0D:9E:54"; do
   set -- $pair; name=$1; addr=$2
-  for cmd in diag timing; do
-    f=$out/$name-$tag-$cmd-$stamp.json
+  for request in diagnostics timing; do
+    f=$out/$name-$tag-$request-$stamp.json
     for i in $(seq 1 15); do
-      $B --address $addr cmd "{\"cmd\":\"$cmd\"}" > $f 2>$f.err && { echo "$name $cmd ok try $i"; break; }
-      echo "$name $cmd try $i rc $?"; sleep 2
+      $B --address $addr command "{\"command\":\"$request\"}" > $f 2>$f.err && { echo "$name $request ok try $i"; break; }
+      echo "$name $request try $i rc $?"; sleep 2
     done
   done
   for i in $(seq 1 30); do

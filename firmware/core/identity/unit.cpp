@@ -8,8 +8,8 @@ void Unit::load() {
     activation_ = Activation{};
     activation_.bluetooth_tag = port_.bluetooth_tag();
     Ed25519::Seed seed{};
-    keyed_ = port_.seed(seed);
-    if (!keyed_) return;
+    key_provisioned_ = port_.seed(seed);
+    if (!key_provisioned_) return;
     public_key_ = Ed25519::public_key_of(seed);
     UnlockCode stored{};
     if (port_.read_unlock_code(stored) == Status::Ok && unlocks(stored))
@@ -29,7 +29,7 @@ std::optional<Ed25519::Signature> Unit::sign(ConstByteSpan message) const {
 }
 
 bool Unit::unlocks(const UnlockCode& code) const {
-    if (!keyed_ || code.serial < kFirstSerial) return false;
+    if (!key_provisioned_ || code.serial < kFirstSerial) return false;
     return Ed25519::verify(
         code.signature, port_.trusted_server_key(),
         unlock_message(device_id_, public_key_, code.serial, code.nonce).bytes());

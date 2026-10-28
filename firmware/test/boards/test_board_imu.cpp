@@ -20,18 +20,18 @@ using Board = boards::TEchoPlus<platform::host::Platform>;
 
 uint32_t run(platform::host::Platform& platform, Board& board, bus::State& state, uint32_t from_ms,
              uint32_t for_ms) {
-    uint32_t t = from_ms;
-    for (; t < from_ms + for_ms; t += runtime::kServiceStepMs) {
-        platform.clock().set_millis(t);
-        board.poll(state, t);
+    uint32_t now_ms = from_ms;
+    for (; now_ms < from_ms + for_ms; now_ms += runtime::kServicePassCeilingMs) {
+        platform.clock().set_milliseconds(now_ms);
+        board.poll(state, now_ms);
     }
-    return t;
+    return now_ms;
 }
 
-bool last_sample(bus::Bus& bus, events::AccelSample& out) {
+bool last_sample(bus::Bus& bus, events::AccelerometerSample& out) {
     bool any = false;
-    events::AccelSample sample{};
-    while (bus.accel.pop(sample)) {
+    events::AccelerometerSample sample{};
+    while (bus.accelerometer.pop(sample)) {
         out = sample;
         any = true;
     }
@@ -46,7 +46,7 @@ TEST_CASE("board: a sensor hub that answers and names itself is an inclinometer"
     Board board{platform, bus};
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer") {
@@ -56,17 +56,17 @@ TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer
     Board board{platform, bus};
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK_FALSE(board.inventory().has_i2c_address(boards::t_echo_plus::kImuAddress));
+    CHECK_FALSE(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 // The chip is a quarter turn from the case and face down with it: +X is up, +Y right, +Z forward.
@@ -79,7 +79,7 @@ TEST_CASE("board: the chip's axes are turned into the case's before anything rea
 
     run(platform, board, state, 0, 2000);
 
-    events::AccelSample sample{};
+    events::AccelerometerSample sample{};
     REQUIRE(last_sample(bus, sample));
     CHECK(sample.right_mg == doctest::Approx(-150).epsilon(0.02));
     CHECK(sample.up_mg == doctest::Approx(990).epsilon(0.02));
@@ -93,21 +93,21 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
     Board board{platform, bus};
     bus::State state;
 
-    const uint32_t t = run(platform, board, state, 0, 2000);
+    const uint32_t now_ms = run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(platform.chips().imu.booted);
 
-    events::AccelSample sample{};
+    events::AccelerometerSample sample{};
     REQUIRE(last_sample(bus, sample));
     CHECK(sample.right_mg == doctest::Approx(-150).epsilon(0.02));
     CHECK(sample.up_mg == doctest::Approx(990).epsilon(0.02));
     CHECK(sample.aft_mg == doctest::Approx(20).epsilon(0.1));
-    CHECK(sample.at_ms < t);
+    CHECK(sample.at_ms < now_ms);
 }
 
 TEST_CASE("board: nothing is asked of a bus with no hub on it") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
@@ -115,7 +115,7 @@ TEST_CASE("board: nothing is asked of a bus with no hub on it") {
     run(platform, board, state, 0, 2000);
 
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Absent);
-    events::AccelSample sample{};
+    events::AccelerometerSample sample{};
     CHECK_FALSE(last_sample(bus, sample));
 }
 
@@ -131,17 +131,17 @@ void store_on_flash(platform::host::Platform& platform, const uint8_t* image, si
 }
 
 std::string reported(const bus::State& state) {
-    char text[dfu::kHubImageTextCap];
+    char text[dfu::kHubImageTextBytes];
     dfu::format_hub_image(state.imu.image, text, sizeof(text));
     return text;
 }
 
 std::string hex_prefix(const Sha256::Digest& digest) {
-    static const char kHex[] = "0123456789abcdef";
+    static const char kHexDigits[] = "0123456789abcdef";
     std::string out;
     for (size_t i = 0; i < dfu::HubImageReport::kDigestBytes; i++) {
-        out += kHex[digest[i] >> 4];
-        out += kHex[digest[i] & 0x0F];
+        out += kHexDigits[digest[i] >> 4];
+        out += kHexDigits[digest[i] & 0x0F];
     }
     return out;
 }
@@ -155,13 +155,13 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     Board board{platform, bus};
     bus::State state;
 
-    uint32_t t = run(platform, board, state, 0, 2000);
+    uint32_t now_ms = run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(reported(state) == "missing");
     CHECK(platform.imu_flash().erases == 0);
 
     platform.dfu().image_confirmed = true;
-    run(platform, board, state, t, 2000);
+    run(platform, board, state, now_ms, 2000);
     CHECK(board.imu_store().holds(platform.imu_firmware_digest()));
     CHECK(reported(state) == hex_prefix(platform.imu_firmware_digest()));
     CHECK(state.imu.bootable);
@@ -179,7 +179,7 @@ TEST_CASE("board: a slim image boots the hub from the copy on flash") {
     run(platform, board, state, 0, 2000);
     CHECK(board.imu().stage() == parts::Bhi260::Stage::Running);
     CHECK(platform.chips().imu.booted);
-    CHECK(platform.chips().imu.uploaded() == carried.size());
+    CHECK(platform.chips().imu.uploaded_bytes() == carried.size());
     CHECK(state.imu.bootable);
     CHECK(std::string(state.imu.fault).empty());
 }
@@ -231,7 +231,7 @@ TEST_CASE("board: a full image replaces a copy that is not its own") {
 
 TEST_CASE("board: a plain T-Echo reports no hub and keeps nothing on flash") {
     platform::host::Platform platform;
-    platform.i2c_bus().answer(boards::t_echo_plus::kImuAddress, false);
+    platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;
@@ -259,7 +259,7 @@ TEST_CASE("board: the copy waits for a flash window, as the log does") {
 TEST_CASE("board: a hub that answers but whose flash does not is reported unreadable") {
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
-    platform.imu_flash().set_present(false);
+    platform.imu_flash().set_fitted(false);
     bus::Bus bus;
     Board board{platform, bus};
     bus::State state;

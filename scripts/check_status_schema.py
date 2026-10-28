@@ -2,13 +2,13 @@
 """Fail if the status frame the firmware writes and schemas/status.v1.schema.json disagree.
 
 The frame is written by one function, ConfigService::format_status in
-firmware/core/comms/config_reports.cpp, one `w.kv_<type>("key", ...)` per key. The
+firmware/core/comms/config_reports.cpp, one `writer.add_<type>("key", ...)` per key. The
 schema lists the same keys as its properties. Four things must match:
 
   keys      the schema declares every key the firmware writes, and nothing more
   order     in the order the firmware writes them, which is the order on the wire
   required  a key written under an `if` may be absent, every other one is required
-  types     kv_int is an integer, kv_bool a boolean, kv_str a string
+  types     each add_<type> writes the JSON type it is named after, which the schema must declare
 """
 import json
 import os
@@ -20,8 +20,7 @@ SOURCE = os.path.join(ROOT, "firmware", "core", "comms", "config_reports.cpp")
 SCHEMA = os.path.join(ROOT, "schemas", "status.v1.schema.json")
 
 BODY = re.compile(r"int ConfigService::format_status\([^)]*\) \{\n(.*?)\n\}", re.S)
-FIELD = re.compile(r'^\s*(if \(.*\) )?w\.kv_(int|bool|str)\("(\w+)"', re.M)
-TYPES = {"int": "integer", "bool": "boolean", "str": "string"}
+FIELD = re.compile(r'^\s*(if \(.*\)\s+)?writer\.add_(integer|boolean|string)\("(\w+)"', re.M)
 
 
 def written_fields():
@@ -29,7 +28,7 @@ def written_fields():
         body = BODY.search(source.read())
     if body is None:
         raise SystemExit(f"{SOURCE}: format_status not found")
-    return [(key, TYPES[kind], not guard) for guard, kind, key in FIELD.findall(body.group(1))]
+    return [(key, kind, not guard) for guard, kind, key in FIELD.findall(body.group(1))]
 
 
 def failures(fields, schema):

@@ -10,11 +10,11 @@ using namespace skyblip;
 namespace {
 
 std::string hex(const Sha256::Digest& digest) {
-    static const char kHex[] = "0123456789abcdef";
+    static const char kHexDigits[] = "0123456789abcdef";
     std::string out;
     for (uint8_t byte : digest) {
-        out += kHex[byte >> 4];
-        out += kHex[byte & 0x0F];
+        out += kHexDigits[byte >> 4];
+        out += kHexDigits[byte & 0x0F];
     }
     return out;
 }
@@ -43,22 +43,22 @@ TEST_CASE("sha256: the padding boundary of one block") {
 
 TEST_CASE("sha256: a message streamed in uneven chunks hashes as the whole") {
     std::string million(1000000, 'a');
-    Sha256 sha;
+    Sha256 hash;
     size_t at = 0;
     size_t chunk = 1;
     while (at < million.size()) {
         const size_t take = chunk < million.size() - at ? chunk : million.size() - at;
-        sha.update(reinterpret_cast<const uint8_t*>(million.data() + at), take);
+        hash.update(reinterpret_cast<const uint8_t*>(million.data() + at), take);
         at += take;
         chunk = chunk * 3 % 997 + 1;
     }
-    CHECK(hex(sha.finish()) == "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
+    CHECK(hex(hash.finish()) == "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
 }
 
 TEST_CASE("sha256: finishing starts the next message from scratch") {
-    Sha256 sha;
-    sha.update(reinterpret_cast<const uint8_t*>("abc"), 3);
-    (void)sha.finish();
-    sha.update(reinterpret_cast<const uint8_t*>("abc"), 3);
-    CHECK(hex(sha.finish()) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    Sha256 hash;
+    hash.update(reinterpret_cast<const uint8_t*>("abc"), 3);
+    (void)hash.finish();
+    hash.update(reinterpret_cast<const uint8_t*>("abc"), 3);
+    CHECK(hex(hash.finish()) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 }

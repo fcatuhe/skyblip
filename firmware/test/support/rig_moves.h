@@ -10,8 +10,12 @@ namespace skyblip {
 
 // A takeoff, some minutes of flight, and a landing, in the units core/flight
 // judges. 50 m/s is 200 quarter-metres per second; standing still is zero.
-inline void taxi(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 0, 300); }
-inline void fly(Rig& rig, uint32_t& t, uint32_t seconds) { rig.seconds(t, seconds, 50000, 800); }
+inline void taxi(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
+    rig.seconds(now_ms, seconds, 0, 300);
+}
+inline void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) {
+    rig.seconds(now_ms, seconds, 50000, 800);
+}
 
 }  // namespace skyblip
 

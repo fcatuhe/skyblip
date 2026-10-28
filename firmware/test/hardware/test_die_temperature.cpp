@@ -21,11 +21,11 @@ using namespace skyblip;
 TEST_CASE("die temperature: an absent sensor answers nothing and spoils nothing") {
     ports::DieTemperature absent;
 
-    int16_t decicelsius = 1234;
-    CHECK_FALSE(absent.read(decicelsius));
+    int16_t die_dc = 1234;
+    CHECK_FALSE(absent.read(die_dc));
     // Untouched, not zeroed: the caller's own initial value survives, so a
     // reading nobody took can never be mistaken for one that was.
-    CHECK(decicelsius == 1234);
+    CHECK(die_dc == 1234);
 
     int16_t fresh = 0;
     CHECK_FALSE(absent.read(fresh));

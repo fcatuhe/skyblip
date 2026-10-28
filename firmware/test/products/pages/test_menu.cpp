@@ -7,6 +7,7 @@
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/glass_text.h"
 #include "test/support/menu_bench.h"
 
 using namespace skyblip;
@@ -14,33 +15,16 @@ using namespace skyblip::go;
 
 namespace {
 
-constexpr int kGlyphH = 7;
+using ui::kCellWidth;
+using ui::kCharacterHeight;
 
-int length(const char* s) {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
-}
-
-// Draw the same text at the same place in a scratch buffer and compare the box it occupies.
-bool reads_at(const Glass& fb, int x, int y, const char* text, bool ink, int scale = 1) {
-    Glass expected;
-    expected.clear(true);
-    if (!ink) expected.clear(false);
-    expected.draw_text(x, y, text, ink, scale);
-    for (int dy = 0; dy < kGlyphH * scale; dy++)
-        for (int dx = 0; dx < length(text) * kSmallCellW * scale; dx++)
-            if (fb.get_pixel(x + dx, y + dy) != expected.get_pixel(x + dx, y + dy)) return false;
-    return true;
-}
-
-bool hint_reads(const Glass& fb, int y, const char* text, int scale) {
-    return reads_at(fb, centred_x(text, scale), y, text, true, scale);
+bool hint_reads(const Glass& canvas, int y, const char* text, int scale) {
+    return reads_at(canvas, centred_x(text, scale), y, text, scale);
 }
 
 // A menu as drawn, with the focus that decided which of its rows are on the glass.
 struct Drawn {
-    Glass fb;
+    Glass canvas;
     Page page{Page::Radar};
     MenuRow focus{MenuRow::Light};
 };
@@ -51,13 +35,14 @@ int line_of(const Drawn& drawn, MenuRow row) {
 }
 
 bool row_label_reads(const Drawn& drawn, MenuRow row, bool focused) {
-    return reads_at(drawn.fb, kMenuLeftX, menu_line_text_y(line_of(drawn, row)),
-                    menu_row_label(row), !focused, kMenuScale);
+    return reads_at(drawn.canvas, kMenuLeftX, menu_line_text_y(line_of(drawn, row)),
+                    menu_row_label(row), kMenuScale, !focused);
 }
 
 bool row_value_reads(const Drawn& drawn, MenuRow row, const char* value, bool focused) {
-    return reads_at(drawn.fb, kMenuRightX - length(value) * kMenuCellW,
-                    menu_line_text_y(line_of(drawn, row)), value, !focused, kMenuScale);
+    return reads_at(drawn.canvas,
+                    kMenuRightX - static_cast<int>(std::strlen(value)) * kMenuCellWidth,
+                    menu_line_text_y(line_of(drawn, row)), value, kMenuScale, !focused);
 }
 
 Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
@@ -68,14 +53,14 @@ Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
     Drawn drawn;
     drawn.page = page;
     drawn.focus = focus;
-    draw_menu(drawn.fb, snapshot);
+    draw_menu(drawn.canvas, snapshot);
     return drawn;
 }
 
 }  // namespace
 
 TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out") {
-    MenuValues values = fresh();
+    MenuValues values = default_menu_values();
     values.settings.aircraft_type = 4;
     values.settings.alarm_volume = go::AlarmVolume::Soft;
 
@@ -99,33 +84,33 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     for (int line = 0; line < kMenuLines; line++)
         if (row_label_reads(drawn, menu_for(Page::Radar).rows[line], true)) bars++;
     CHECK(bars == 1);
-    CHECK(reads_at(drawn.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(drawn.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 
     // And nothing falls off a 200 pixel panel, on either axis.
     CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kMenuHintY);
-    CHECK(kMenuHintY + kGlyphH < Glass::kH);
+    CHECK(kMenuHintY + kCharacterHeight < Glass::kHeight);
 
     // The hint is centred: the same air either side of it.
-    const int hint_w = length(kMenuHintText) * kSmallCellW;
+    const int hint_width = static_cast<int>(std::strlen(kMenuHintText)) * kCellWidth;
     CHECK(kMenuHintX > 0);
-    CHECK(kMenuHintX - (Glass::kW - kMenuHintX - hint_w) <= 1);
+    CHECK(kMenuHintX - (Glass::kWidth - kMenuHintX - hint_width) <= 1);
 
     // And a row's words stand in the middle of its bar, the same air above and below.
-    CHECK(2 * kMenuTextInset + kGlyphH * kMenuScale == kMenuBarH);
+    CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
 // Eight rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
-    MenuValues values = fresh();
+    MenuValues values = default_menu_values();
     values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.n == kMenuLines + 1);
+    REQUIRE(menu.row_count == kMenuLines + 1);
 
     const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
     CHECK(line_of(top, MenuRow::Light) == 0);
     CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
-    CHECK(reads_at(top.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 
     const Drawn slid = page_of(Page::Radar, values, MenuRow::Volume);
     CHECK(line_of(slid, MenuRow::Volume) == kMenuLines - 1);
@@ -133,15 +118,17 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(row_value_reads(slid, MenuRow::Volume, "SOFT", true));
     CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
     CHECK(line_of(slid, MenuRow::AircraftType) == 0);
-    CHECK(reads_at(slid.fb, kMenuHintX, kMenuHintY, kMenuHintText, true));
+    CHECK(reads_at(slid.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 }
 
-TEST_CASE("menu: no label and value a row can hold meet at double height") {
-    MenuValues values = fresh();
+TEST_CASE("menu page: no label and value a row can hold meet at double height") {
+    MenuValues values = default_menu_values();
     for (Page page : {Page::Radar, Page::Nearby}) {
         const Menu menu = menu_for(page);
-        for (int i = 0; i < menu.n; i++) {
-            const int label_end = kMenuLeftX + length(menu_row_label(menu.rows[i])) * kMenuCellW;
+        for (int i = 0; i < menu.row_count; i++) {
+            const int label_end =
+                kMenuLeftX +
+                static_cast<int>(std::strlen(menu_row_label(menu.rows[i]))) * kMenuCellWidth;
             CHECK(label_end <= kMenuRightX);
             for (uint8_t type = 0; type < kNamedAircraftTypes + 2; type++) {
                 values.settings.aircraft_type = type;
@@ -149,9 +136,9 @@ TEST_CASE("menu: no label and value a row can hold meet at double height") {
                     values.settings.units = units;
                     for (int step = 0; step < kRangeStepCount; step++) {
                         values.settings.range_step = step;
-                        char value[kMenuValueCap];
-                        const int n = menu_row_value(value, menu.rows[i], values);
-                        CHECK(label_end <= kMenuRightX - n * kMenuCellW);
+                        char value[kMenuValueBytes];
+                        const int written = menu_row_value(value, menu.rows[i], values);
+                        CHECK(label_end <= kMenuRightX - written * kMenuCellWidth);
                     }
                 }
             }
@@ -159,35 +146,36 @@ TEST_CASE("menu: no label and value a row can hold meet at double height") {
     }
 }
 
-TEST_CASE("menu: a menu is titled what it holds, not the page a thumb came from") {
+TEST_CASE("menu page: a menu is titled what it holds, not the page a thumb came from") {
     CHECK(std::strcmp(menu_title(Page::Radar), "SETTINGS") == 0);
     CHECK(std::strcmp(menu_title(Page::Nearby), "DIAGNOSTICS") == 0);
 
-    const MenuValues values = fresh();
+    const MenuValues values = default_menu_values();
     for (Page page : {Page::Radar, Page::Nearby}) {
         const Drawn drawn = page_of(page, values, menu_for(page).rows[0]);
-        CHECK(kMenuLeftX - 2 + length(menu_title(page)) * kMenuCellW <= Glass::kW);
+        CHECK(kMenuLeftX - 2 + static_cast<int>(std::strlen(menu_title(page))) * kMenuCellWidth <=
+              Glass::kWidth);
         Glass expected;
         expected.clear(true);
         expected.draw_text(kMenuLeftX - 2, 3, menu_title(page), true, 2);
-        for (int y = 3; y < 3 + kGlyphH * kMenuScale; y++)
-            for (int x = 0; x < Glass::kW; x++)
-                CHECK(drawn.fb.get_pixel(x, y) == expected.get_pixel(x, y));
+        for (int y = 3; y < 3 + kCharacterHeight * kMenuScale; y++)
+            for (int x = 0; x < Glass::kWidth; x++)
+                CHECK(drawn.canvas.get_pixel(x, y) == expected.get_pixel(x, y));
     }
 }
 
-TEST_CASE("menu: a page with nothing behind it opens no menu at all") {
-    for (Page page : {Page::SixPack, Page::GMeter, Page::Status, Page::Sats, Page::RadioLog,
+TEST_CASE("menu page: a page with nothing behind it opens no menu at all") {
+    for (Page page : {Page::SixPack, Page::GMeter, Page::Status, Page::Satellites, Page::RadioLog,
                       Page::Raw, Page::SelfTest})
-        CHECK(menu_for(page).n == 0);
+        CHECK(menu_for(page).row_count == 0);
 
     MenuEditor editor;
     editor.enter(Page::Status, 1000);
     CHECK_FALSE(editor.active());
 }
 
-TEST_CASE("menu: a category the phone stored but the page does not name is still shown") {
-    MenuValues values = fresh();
+TEST_CASE("menu page: a category the phone stored but the page does not name is still shown") {
+    MenuValues values = default_menu_values();
     values.settings.aircraft_type = 13;
     const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 13", false));
@@ -196,8 +184,8 @@ TEST_CASE("menu: a category the phone stored but the page does not name is still
     CHECK(next_aircraft_type(13) == 0);
 }
 
-TEST_CASE("menu: the UAV categories are not a choice a pilot can make on the panel") {
-    MenuValues values = fresh();
+TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {
+    MenuValues values = default_menu_values();
     values.settings.aircraft_type = 11;
     const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 11", false));
@@ -210,23 +198,23 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
     field.text = "F-JABC   ";
     field.cursor = 3;
 
-    Glass fb;
-    draw_callsign(fb, field);
-    CHECK(reads_at(fb, kMenuLeftX - 2, 3, "CALLSIGN", true, kMenuScale));
-    CHECK(reads_at(fb, kCallsignTextX, kCallsignTextY, "F-JABC", true, kCallsignScale));
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "CALLSIGN", kMenuScale));
+    CHECK(reads_at(canvas, kCallsignTextX, kCallsignTextY, "F-JABC", kCallsignScale));
 
     // The bar is under the character the pad is rolling and under no other.
-    const int at = kCallsignTextX + field.cursor * kCallsignCellW;
-    CHECK(fb.get_pixel(at, kCallsignCursorY));
-    CHECK(fb.get_pixel(at + 5 * kCallsignScale - 1, kCallsignCursorY));
-    CHECK_FALSE(fb.get_pixel(at - 2, kCallsignCursorY));
-    CHECK_FALSE(fb.get_pixel(at + kCallsignCellW, kCallsignCursorY));
+    const int at = kCallsignTextX + field.cursor * kCallsignCellWidth;
+    CHECK(canvas.get_pixel(at, kCallsignCursorY));
+    CHECK(canvas.get_pixel(at + 5 * kCallsignScale - 1, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at + kCallsignCellWidth, kCallsignCursorY));
 
     // The two gestures at double height, and under them the one way out nothing else says.
-    CHECK(hint_reads(fb, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
-    CHECK(kCallsignHelpY + kGlyphH < Glass::kH);
+    CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK(kCallsignHelpY + kCharacterHeight < Glass::kHeight);
 }
 
 // A gesture nothing says is a gesture nobody finds, and this one throws the name away.
@@ -237,33 +225,33 @@ TEST_CASE("callsign page: the foot says the button clears when the bar is on a b
     field.clears = callsign_press_clears(field.text, field.cursor);
     REQUIRE(field.clears);
 
-    Glass fb;
-    draw_callsign(fb, field);
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
     // The line that taught the gesture goes once the gesture is armed.
-    CHECK_FALSE(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK_FALSE(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
 
     field.cursor = 1;
     field.clears = callsign_press_clears(field.text, field.cursor);
     CHECK_FALSE(field.clears);
-    draw_callsign(fb, field);
-    CHECK(hint_reads(fb, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(fb, kCallsignHelpY, kCallsignClearHelpText, 1));
+    draw_callsign(canvas, field);
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
 }
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.
-TEST_CASE("menu: the callsign ring is blank, dash, A to Z, 0 to 9, and back") {
-    CHECK(next_callsign_char(' ') == '-');
-    CHECK(next_callsign_char('-') == 'A');
-    CHECK(next_callsign_char('A') == 'B');
-    CHECK(next_callsign_char('Z') == '0');
-    CHECK(next_callsign_char('0') == '1');
-    CHECK(next_callsign_char('9') == ' ');
+TEST_CASE("menu page: the callsign ring is blank, dash, A to Z, 0 to 9, and back") {
+    CHECK(next_callsign_character(' ') == '-');
+    CHECK(next_callsign_character('-') == 'A');
+    CHECK(next_callsign_character('A') == 'B');
+    CHECK(next_callsign_character('Z') == '0');
+    CHECK(next_callsign_character('0') == '1');
+    CHECK(next_callsign_character('9') == ' ');
 }
 
 // Nine characters are edited and what is stored is what a pilot typed.
-TEST_CASE("menu: a stored callsign keeps its blanks inside and drops the ones at the end") {
-    char out[kCallsignCap] = {0};
+TEST_CASE("menu page: a stored callsign keeps its blanks inside and drops the ones at the end") {
+    char out[kCallsignBytes] = {0};
     CHECK(callsign_stored(out, "F-JABC   ") == 6);
     CHECK(std::string(out) == "F-JABC");
     CHECK(callsign_stored(out, "         ") == 0);

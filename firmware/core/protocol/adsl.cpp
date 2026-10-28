@@ -12,73 +12,75 @@
 #include "core/units/units.h"
 #include "core/util/bitcount.h"
 #include "core/util/intmath.h"
-#include "core/util/varint.h"
+#include "core/util/variable_range.h"
 
 namespace skyblip::protocol {
 
-uint16_t AdslPacket::speed_q() const { return uns_vr_decode<uint16_t, 6>(Position[6]); }
-void AdslPacket::set_speed_q(uint16_t s) {
-    uint16_t w = uns_vr_encode<uint16_t, 6>(s);
-    // uns_vr_encode saturates at 4*thres-1, which for this field IS the invalid
-    // code. G.1.8: over-range "shall be encoded" as the maximum (236 m/s =
-    // 0xFE), so saturation must stop one short of "unavailable".
-    if (w >= kSpeedInvalidCode) w = kSpeedInvalidCode - 1;
-    Position[6] = static_cast<uint8_t>(w);
+uint16_t AdslPacket::speed_q() const {
+    return decode_unsigned_variable_range<uint16_t, 6>(position_bytes[6]);
+}
+void AdslPacket::set_speed_q(uint16_t speed) {
+    uint16_t code = encode_unsigned_variable_range<uint16_t, 6>(speed);
+    // encode_unsigned_variable_range saturates at 4*threshold-1, which for this field IS the
+    // invalid code. G.1.8: over-range "shall be encoded" as the maximum (236 m/s = 0xFE), so
+    // saturation must stop one short of "unavailable".
+    if (code >= kSpeedInvalidCode) code = kSpeedInvalidCode - 1;
+    position_bytes[6] = static_cast<uint8_t>(code);
 }
 
-int32_t AdslPacket::alt_m() const {
-    int32_t w = Position[8] & 0x3F;
-    w <<= 8;
-    w |= Position[7];
-    return uns_vr_decode<int32_t, 12>(w) - 320;
+int32_t AdslPacket::altitude_m() const {
+    int32_t code = position_bytes[8] & 0x3F;
+    code <<= 8;
+    code |= position_bytes[7];
+    return decode_unsigned_variable_range<int32_t, 12>(code) - kAltitudeOffsetM;
 }
-void AdslPacket::set_alt_m(int32_t alt) {
-    alt += kAltOffsetM;
-    alt = std::max(alt, 0);  // G.1.7: below -320 m encodes the limit, 0x0000
-    uint32_t w = uns_vr_encode<uint32_t, 12>(static_cast<uint32_t>(alt));
+void AdslPacket::set_altitude_m(int32_t altitude) {
+    altitude += kAltitudeOffsetM;
+    altitude = std::max(altitude, 0);  // G.1.7: below -320 m encodes the limit, 0x0000
+    uint32_t code = encode_unsigned_variable_range<uint32_t, 12>(static_cast<uint32_t>(altitude));
     // Same collision as ground speed: saturation lands on 0x3FFF, the code for
     // "no 3D fix". G.1.7 wants the limit (0x3FFE, 61104 m) instead - the
     // difference between "very high" and "no idea".
-    if (w >= kAltInvalidCode) w = kAltInvalidCode - 1;
-    Position[7] = static_cast<uint8_t>(w);
-    Position[8] = static_cast<uint8_t>((Position[8] & 0xC0) | ((w >> 8) & 0x3F));
+    if (code >= kAltitudeInvalidCode) code = kAltitudeInvalidCode - 1;
+    position_bytes[7] = static_cast<uint8_t>(code);
+    position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0xC0) | ((code >> 8) & 0x3F));
 }
 
 int16_t AdslPacket::climb_e8() const {
-    int16_t w = static_cast<int16_t>(Position[9] & 0x7F);
-    w = static_cast<int16_t>(w << 2);
-    w = static_cast<int16_t>(w | (Position[8] >> 6));
-    return sign_vr_decode<int16_t, 6>(w);
+    int16_t code = static_cast<int16_t>(position_bytes[9] & 0x7F);
+    code = static_cast<int16_t>(code << 2);
+    code = static_cast<int16_t>(code | (position_bytes[8] >> 6));
+    return decode_signed_variable_range<int16_t, 6>(code);
 }
-void AdslPacket::set_climb_e8(int16_t c) {
-    uint16_t w = static_cast<uint16_t>(sign_vr_encode<int16_t, 6>(c)) & 0x1FF;
+void AdslPacket::set_climb_e8(int16_t climb) {
+    uint16_t code = static_cast<uint16_t>(encode_signed_variable_range<int16_t, 6>(climb)) & 0x1FF;
     // A sink rate at or beyond the limit encodes sign|0xFF == 0x1FF, the code for
     // "no vertical rate". G.1.9 wants the limit (-118 m/s), so clamp the
     // magnitude one short. Positive 0x0FF is a legal +119 m/s and stays.
-    if (w == kClimbInvalidCode) w = kClimbInvalidCode - 1;
-    write_climb_code(w);
+    if (code == kClimbInvalidCode) code = kClimbInvalidCode - 1;
+    write_climb_code(code);
 }
 
-void AdslPacket::write_climb_code(uint16_t w) {
-    Position[8] = static_cast<uint8_t>((Position[8] & 0x3F) | ((w & 0x03) << 6));
-    Position[9] = static_cast<uint8_t>((Position[9] & 0x80) | ((w >> 2) & 0x7F));
+void AdslPacket::write_climb_code(uint16_t code) {
+    position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0x3F) | ((code & 0x03) << 6));
+    position_bytes[9] = static_cast<uint8_t>((position_bytes[9] & 0x80) | ((code >> 2) & 0x7F));
 }
 bool AdslPacket::has_climb() const {
-    uint16_t w = static_cast<uint16_t>(Position[9] & 0x7F);
-    w <<= 2;
-    w |= static_cast<uint16_t>(Position[8] >> 6);
-    return w != kClimbInvalidCode;
+    uint16_t code = static_cast<uint16_t>(position_bytes[9] & 0x7F);
+    code <<= 2;
+    code |= static_cast<uint16_t>(position_bytes[8] >> 6);
+    return code != kClimbInvalidCode;
 }
 
 uint16_t AdslPacket::track_c9() const {
-    int16_t w = Position[10];
-    w = static_cast<int16_t>(w << 1);
-    w = static_cast<int16_t>(w | (Position[9] >> 7));
-    return static_cast<uint16_t>(w & 0x1FF);
+    int16_t track = position_bytes[10];
+    track = static_cast<int16_t>(track << 1);
+    track = static_cast<int16_t>(track | (position_bytes[9] >> 7));
+    return static_cast<uint16_t>(track & 0x1FF);
 }
-void AdslPacket::set_track_c9(uint16_t w) {
-    Position[9] = (Position[9] & 0x7F) | ((w & 0x01) << 7);
-    Position[10] = static_cast<uint8_t>(w >> 1);
+void AdslPacket::set_track_c9(uint16_t track) {
+    position_bytes[9] = (position_bytes[9] & 0x7F) | ((track & 0x01) << 7);
+    position_bytes[10] = static_cast<uint8_t>(track >> 1);
 }
 
 // XXTEA works on 32-bit words, but this struct is packed, so it has an alignment
@@ -91,34 +93,34 @@ void AdslPacket::set_track_c9(uint16_t w) {
 // packet, against a few frames per second. GCC catches this as
 // -Waddress-of-packed-member. Clang does not, so do not rely on the compiler.
 void AdslPacket::scramble() {
-    uint32_t w[5];
-    __builtin_memcpy(w, Byte, sizeof(w));
-    fec::xxtea_scramble_key0(w, 5, 6);
-    __builtin_memcpy(Byte, w, sizeof(w));
+    uint32_t words[5];
+    __builtin_memcpy(words, payload, sizeof(words));
+    fec::xxtea_scramble_key0(words, 5, 6);
+    __builtin_memcpy(payload, words, sizeof(words));
 }
 void AdslPacket::descramble() {
-    uint32_t w[5];
-    __builtin_memcpy(w, Byte, sizeof(w));
-    fec::xxtea_descramble_key0(w, 5, 6);
-    __builtin_memcpy(Byte, w, sizeof(w));
+    uint32_t words[5];
+    __builtin_memcpy(words, payload, sizeof(words));
+    fec::xxtea_descramble_key0(words, 5, 6);
+    __builtin_memcpy(payload, words, sizeof(words));
 }
 
 void AdslPacket::set_crc() {
-    uint32_t w = fec::adsl_pi_calc(Data, kCrcCoverBytes);
-    CRC[0] = static_cast<uint8_t>(w >> 16);
-    CRC[1] = static_cast<uint8_t>(w >> 8);
-    CRC[2] = static_cast<uint8_t>(w);
+    const uint32_t crc = fec::adsl_crc_compute(data, kCrcCoverBytes);
+    crc_bytes[0] = static_cast<uint8_t>(crc >> 16);
+    crc_bytes[1] = static_cast<uint8_t>(crc >> 8);
+    crc_bytes[2] = static_cast<uint8_t>(crc);
 }
-uint32_t AdslPacket::check_crc() const { return fec::adsl_pi_check(Data, kDataBytes); }
+uint32_t AdslPacket::check_crc() const { return fec::adsl_crc_check(data, kDataBytes); }
 
 namespace {
 constexpr uint16_t kBits = AdslPacket::kDataBytes * 8;
 
-void flip_bit(uint8_t* byte, int bit_idx) {
-    int byte_idx = bit_idx >> 3;
-    bit_idx &= 7;
-    bit_idx = 7 - bit_idx;
-    byte[byte_idx] ^= static_cast<uint8_t>(1 << bit_idx);
+void flip_bit(uint8_t* bytes, int bit_index) {
+    int byte_index = bit_index >> 3;
+    bit_index &= 7;
+    bit_index = 7 - bit_index;
+    bytes[byte_index] ^= static_cast<uint8_t>(1 << bit_index);
 }
 
 uint32_t crc_syndrome(uint8_t bit) {
@@ -148,7 +150,7 @@ uint32_t crc_syndrome(uint8_t bit) {
     return kSyndrome[bit];
 }
 
-uint8_t find_crc_syndrome(uint32_t syndr) {
+uint8_t find_crc_syndrome(uint32_t syndrome) {
     static const uint32_t kSorted[kBits] = {
         0x000001BF, 0x000002BE, 0x000004BD, 0x000008BC, 0x000010BB, 0x000020BA, 0x000040B9,
         0x000080B8, 0x000100B7, 0x000200B6, 0x000400B5, 0x000800B4, 0x001000B3, 0x001C1BA6,
@@ -178,24 +180,23 @@ uint8_t find_crc_syndrome(uint32_t syndr) {
         0xE3F39574, 0xE4D7A84E, 0xE5F18662, 0xE7AEAA04, 0xEA04AD90, 0xECA33A13, 0xF1B77E52,
         0xF3E97725, 0xF526127F, 0xF9102498, 0xFA4A633A, 0xFA7D135B, 0xFA83C62E, 0xFB34F21F,
         0xFDB4446E, 0xFF38B789, 0xFFF409A7};
-    uint16_t bot = 0, top = kBits;
+    uint16_t low = 0, high = kBits;
     for (;;) {
-        uint16_t mid = (bot + top) >> 1;
-        uint32_t mid_syndr = kSorted[mid] >> 8;
-        if (syndr == mid_syndr) return static_cast<uint8_t>(kSorted[mid]);
-        if (mid == bot) break;
-        if (syndr < mid_syndr)
-            top = mid;
+        uint16_t middle = (low + high) >> 1;
+        uint32_t middle_syndrome = kSorted[middle] >> 8;
+        if (syndrome == middle_syndrome) return static_cast<uint8_t>(kSorted[middle]);
+        if (middle == low) break;
+        if (syndrome < middle_syndrome)
+            high = middle;
         else
-            bot = mid;
+            low = middle;
     }
     return 0xFF;
 }
 }
 
-int AdslPacket::correct(const uint8_t* err, int max_bad_bits) {
-    uint8_t* data = Data;
-    uint32_t crc = fec::adsl_pi_check(data, kDataBytes);
+int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
+    uint32_t crc = fec::adsl_crc_check(data, kDataBytes);
     if (crc == 0) return 0;
     uint8_t single = find_crc_syndrome(crc);
     if (single != 0xFF) {
@@ -203,68 +204,69 @@ int AdslPacket::correct(const uint8_t* err, int max_bad_bits) {
         return 1;
     }
 
-    static constexpr int kCap = 16;
-    max_bad_bits = std::min(max_bad_bits, kCap);
-    uint8_t idx[kCap];
-    uint8_t mask[kCap];
-    uint32_t syn[kCap];
-    int bad = 0;
-    for (int bi = 0; bi < kDataBytes; bi++) {
-        uint8_t byte = err[bi];
-        uint8_t m = 0x80;
-        for (int k = 0; k < 8; k++) {
-            if (byte & m) {
-                if (bad < max_bad_bits) {
-                    idx[bad] = static_cast<uint8_t>(bi);
-                    mask[bad] = m;
-                    syn[bad] = crc_syndrome(static_cast<uint8_t>(bi * 8 + k));
+    static constexpr int kMaxErasures = 16;
+    max_erasures = std::min(max_erasures, kMaxErasures);
+    uint8_t index[kMaxErasures];
+    uint8_t mask[kMaxErasures];
+    uint32_t syndromes[kMaxErasures];
+    int marked = 0;
+    for (int byte_index = 0; byte_index < kDataBytes; byte_index++) {
+        uint8_t byte = erasures[byte_index];
+        uint8_t bit_mask = 0x80;
+        for (int bit_index = 0; bit_index < 8; bit_index++) {
+            if (byte & bit_mask) {
+                if (marked < max_erasures) {
+                    index[marked] = static_cast<uint8_t>(byte_index);
+                    mask[marked] = bit_mask;
+                    syndromes[marked] =
+                        crc_syndrome(static_cast<uint8_t>(byte_index * 8 + bit_index));
                 }
-                bad++;
+                marked++;
             }
-            m >>= 1;
+            bit_mask >>= 1;
         }
-        if (bad > max_bad_bits) break;
+        if (marked > max_erasures) break;
     }
-    if (bad > max_bad_bits) return -1;
+    if (marked > max_erasures) return -1;
 
-    int loops = 1 << bad;
-    uint16_t prev_gray = 0;
+    int loops = 1 << marked;
+    uint16_t previous_gray = 0;
     for (int i = 1; i < loops; i++) {
         uint16_t gray = static_cast<uint16_t>(i ^ (i >> 1));
-        uint16_t bit_exp = gray ^ prev_gray;
+        uint16_t changed = gray ^ previous_gray;
         int bit = 0;
-        while (bit_exp >>= 1) bit++;
-        data[idx[bit]] ^= mask[bit];
-        crc ^= syn[bit];
+        while (changed >>= 1) bit++;
+        data[index[bit]] ^= mask[bit];
+        crc ^= syndromes[bit];
         if (crc == 0) return count_ones(gray);
-        uint8_t e = find_crc_syndrome(crc);
-        if (e != 0xFF) {
-            flip_bit(data, e);
+        uint8_t remaining = find_crc_syndrome(crc);
+        if (remaining != 0xFF) {
+            flip_bit(data, remaining);
             return count_ones(gray) + 1;
         }
-        prev_gray = gray;
+        previous_gray = gray;
     }
     return -1;
 }
 
-bool to_obs(const AdslPacket& p, const events::Stamp& received, int8_t rssi_dbm,
-            model::Source source, model::AircraftObs& out) {
-    out = model::AircraftObs{};
-    if (!p.is_position() || !p.has_position()) return false;
-    out.address = p.address();
-    out.address_mapping_table = p.address_mapping_table();
-    out.aircraft_cat = p.AcftCat;
-    out.flight_state = p.FlightState;
-    out.emergency = p.Emergency;
-    out.lat_1e7 = p.lat_1e7();
-    out.lon_1e7 = p.lon_1e7();
-    out.alt_valid = !p.alt_invalid();
-    out.alt_m = out.alt_valid ? p.alt_m() : 0;
-    out.climb_valid = p.has_climb();
-    out.climb_e8 = out.climb_valid ? p.climb_e8() : 0;
-    out.speed_valid = p.has_speed();
-    out.speed_q = out.speed_valid ? p.speed_q() : 0;
-    out.track_c9 = p.track_c9();
+bool to_observation(const AdslPacket& packet, const events::Stamp& received, int8_t rssi_dbm,
+                    model::Source source, model::AircraftObservation& out) {
+    out = model::AircraftObservation{};
+    if (!packet.is_position() || !packet.has_position()) return false;
+    out.address = packet.address();
+    out.address_mapping_table = packet.address_mapping_table();
+    out.aircraft_category = packet.aircraft_category;
+    out.flight_state = packet.flight_state;
+    out.emergency = packet.emergency;
+    out.latitude_1e7 = packet.latitude_1e7();
+    out.longitude_1e7 = packet.longitude_1e7();
+    out.altitude_valid = packet.has_altitude();
+    out.altitude_m = out.altitude_valid ? packet.altitude_m() : 0;
+    out.climb_valid = packet.has_climb();
+    out.climb_e8 = out.climb_valid ? packet.climb_e8() : 0;
+    out.speed_valid = packet.has_speed();
+    out.speed_q = out.speed_valid ? packet.speed_q() : 0;
+    out.track_c9 = packet.track_c9();
     out.received = received;
     out.rssi_dbm = rssi_dbm;
     out.source = source;
@@ -296,97 +298,100 @@ uint8_t AdslPacket::velocity_accuracy_code(uint8_t horizontal_code) {
 }
 
 void AdslPacket::set_integrity_unknown() {
-    SourceIntegrity = 0;
-    DesignAssurance = 0;
-    NavigIntegrity = 0;
-    HorizAccuracy = 0;
-    VertAccuracy = 0;
-    VelAccuracy = 0;
+    source_integrity = 0;
+    design_assurance = 0;
+    navigation_integrity = 0;
+    horizontal_accuracy = 0;
+    vertical_accuracy = 0;
+    velocity_accuracy = 0;
 }
 
 // INFO: fc 13sep26 no VDOP is a 2D solution, whose height is not a figure to claim accuracy for
 void AdslPacket::set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     set_integrity_unknown();
     if (hdop_e2 == 0) return;
-    const uint32_t hfom_cm = div_round<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
-    const uint32_t vfom_cm = div_round<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
-    HorizAccuracy = horizontal_accuracy_code(hfom_cm);
-    VertAccuracy = vdop_e2 == 0 ? 0 : vertical_accuracy_code(vfom_cm);
-    VelAccuracy = velocity_accuracy_code(HorizAccuracy);
+    const uint32_t hfom_cm = divide_rounded<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
+    const uint32_t vfom_cm = divide_rounded<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
+    horizontal_accuracy = horizontal_accuracy_code(hfom_cm);
+    vertical_accuracy = vdop_e2 == 0 ? 0 : vertical_accuracy_code(vfom_cm);
+    velocity_accuracy = velocity_accuracy_code(horizontal_accuracy);
 }
 
-uint8_t timestamp_code(uint32_t utc, int32_t lead_ms) {
-    constexpr int64_t kCycleMs = static_cast<int64_t>(kTimeStampCycleS) * 1000;
-    int64_t ms = static_cast<int64_t>(utc % kTimeStampCycleS) * 1000 + lead_ms;
+uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms) {
+    constexpr int64_t kCycleMs = static_cast<int64_t>(kTimestampCycleS) * 1000;
+    int64_t ms = static_cast<int64_t>(utc_s % kTimestampCycleS) * 1000 + lead_ms;
     ms %= kCycleMs;
     if (ms < 0) ms += kCycleMs;
-    return static_cast<uint8_t>(ms / kTimeStampQuarterMs);
+    return static_cast<uint8_t>(ms / kTimestampQuarterMs);
 }
 
-bool is_callsign_char(char c) {
+bool is_callsign_character(char c) {
     return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-bool from_own_callsign(AdslPacket& p, settings::AirAddress address, uint8_t address_mapping_table,
-                       const char* callsign) {
+bool from_own_callsign(AdslPacket& packet, settings::AirAddress address,
+                       uint8_t address_mapping_table, const char* callsign) {
     if (!address) return false;
-    p.init(AdslPacket::kTypeOgnDiagnostics);
-    p.set_address(*address & settings::kAddressMask);
-    p.set_address_mapping_table(address_mapping_table);
-    p.set_info_header(AdslPacket::kTelemTypeInfo, AdslPacket::kInfoTypeRegistration);
+    packet.reset(AdslPacket::kPayloadTypeOgnDiagnostics);
+    packet.set_address(*address & settings::kAddressMask);
+    packet.set_address_mapping_table(address_mapping_table);
+    packet.set_information_header(AdslPacket::kTelemetryTypeInformation,
+                                  AdslPacket::kInformationTypeRegistration);
 
-    char* msg = p.info_msg();
-    int n = 0;
-    while (n < AdslPacket::kInfoMsgBytes && callsign[n] != 0 && is_callsign_char(callsign[n])) {
-        msg[n] = callsign[n];
-        n++;
+    char* text = packet.information_text();
+    int count = 0;
+    while (count < AdslPacket::kInformationTextBytes && callsign[count] != 0 &&
+           is_callsign_character(callsign[count])) {
+        text[count] = callsign[count];
+        count++;
     }
-    while (n < AdslPacket::kInfoMsgBytes) msg[n++] = 0;
+    while (count < AdslPacket::kInformationTextBytes) text[count++] = 0;
     return true;
 }
 
-int callsign_of(const AdslPacket& p, char* out, int cap) {
+int callsign_of(const AdslPacket& packet, char* out, int capacity) {
     out[0] = 0;
-    if (!p.is_registration() || cap <= 1) return 0;
-    const char* msg = p.info_msg();
-    int n = 0;
-    while (n < AdslPacket::kInfoMsgBytes && msg[n] != 0) {
-        if (!is_callsign_char(msg[n])) return 0;
-        n++;
+    if (!packet.is_registration() || capacity <= 1) return 0;
+    const char* text = packet.information_text();
+    int count = 0;
+    while (count < AdslPacket::kInformationTextBytes && text[count] != 0) {
+        if (!is_callsign_character(text[count])) return 0;
+        count++;
     }
-    if (n >= cap) n = cap - 1;
-    for (int i = 0; i < n; i++) out[i] = msg[i];
-    out[n] = 0;
-    return n;
+    if (count >= capacity) count = capacity - 1;
+    for (int i = 0; i < count; i++) out[i] = text[i];
+    out[count] = 0;
+    return count;
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat) {
-    return from_own(p, own, address, address_mapping_table, aircraft_cat,
-                    BurstInstant{own.utc, 0, 0});
+bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_category) {
+    return from_own(packet, own, address, address_mapping_table, aircraft_category,
+                    BurstInstant{own.utc_s, 0, 0});
 }
 
-bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_cat, const BurstInstant& at) {
+bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
+              uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at) {
     if (!address) return false;
-    p.init(AdslPacket::kTypePosition);
-    p.set_address(*address & settings::kAddressMask);
-    p.set_address_mapping_table(address_mapping_table);
+    packet.reset(AdslPacket::kPayloadTypePosition);
+    packet.set_address(*address & settings::kAddressMask);
+    packet.set_address_mapping_table(address_mapping_table);
 
     // The burst leaves later than the fix was solved, so the position goes
     // forward to the instant the timestamp names. Past the model's bound the
     // fix goes out as it stands, dated when it was solved: neither half of the
     // pair is allowed to describe an instant the other does not.
     const int32_t named_ms =
-        at.into_utc_ms - at.into_utc_ms % static_cast<int32_t>(kTimeStampQuarterMs);
+        at.into_utc_ms - at.into_utc_ms % static_cast<int32_t>(kTimestampQuarterMs);
     const flight::Prediction where =
         flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
-    p.TimeStamp = timestamp_code(at.utc, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
-    p.FlightState = flight::announced_state(own.flight_state, aircraft_cat);
-    p.AcftCat = aircraft_cat;
-    p.Emergency = 1;
-    p.set_lat_1e7(where.lat_1e7);
-    p.set_lon_1e7(where.lon_1e7);
+    packet.timestamp =
+        timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
+    packet.flight_state = flight::announced_state(own.flight_state, aircraft_category);
+    packet.aircraft_category = aircraft_category;
+    packet.emergency = 1;
+    packet.set_latitude_1e7(where.latitude_1e7);
+    packet.set_longitude_1e7(where.longitude_1e7);
 
     // Altitude and ground speed come from the 3D fix, so without one they are
     // UNAVAILABLE and must say so (G.1.7, G.1.8). Transmitting a stale or zeroed
@@ -394,27 +399,27 @@ bool from_own(AdslPacket& p, const model::OwnState& own, settings::AirAddress ad
     // would compute relative vertical separation against it.
     if (own.fix_valid) {
         if (own.vdop_e2 != 0)
-            p.set_alt_m(to_metres(Millimetres(where.alt_mm)).v);
+            packet.set_altitude_m(to_metres(Millimetres(where.altitude_hae_mm)).value);
         else
-            p.set_alt_invalid();
-        p.set_speed_q(to_speed_q(MillimetresPerSec(own.speed_mm_s)).v);
-        p.set_integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
+            packet.set_altitude_invalid();
+        packet.set_speed_q(to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value);
+        packet.set_integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
     } else {
-        p.set_position_invalid();
-        p.set_alt_invalid();
-        p.set_speed_invalid();
-        p.set_integrity_unknown();
+        packet.set_position_invalid();
+        packet.set_altitude_invalid();
+        packet.set_speed_invalid();
+        packet.set_integrity_unknown();
     }
 
     // Vertical rate needs two samples over a window, so it arrives later than the
     // fix and has its own validity. Encoding 0 before then would claim level
     // flight (G.1.9).
     if (own.climb_valid)
-        p.set_climb_e8(to_climb_e8(MillimetresPerSec(own.climb_mm_s)).v);
+        packet.set_climb_e8(to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value);
     else
-        p.set_climb_invalid();
+        packet.set_climb_invalid();
 
-    p.set_track_c9(to_cordic9(CentiDegrees(where.track_cdeg)).v);
+    packet.set_track_c9(to_cordic9(CentiDegrees(where.track_cdeg)).value);
     return true;
 }
 

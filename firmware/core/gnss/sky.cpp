@@ -36,31 +36,31 @@ System system_of_gsa_id(uint8_t nmea_system_id) {
 
 void SkyView::open(System system) {
     int kept = 0;
-    for (int i = 0; i < n_; i++)
-        if (sats_[i].system != system) sats_[kept++] = sats_[i];
-    n_ = kept;
+    for (int i = 0; i < count_; i++)
+        if (satellites_[i].system != system) satellites_[kept++] = satellites_[i];
+    count_ = kept;
 }
 
-void SkyView::add(SatelliteView sat) {
-    if (n_ >= kMaxSatellitesInView) return;
-    sat.in_use = used(sat.system, sat.id);
-    sats_[n_++] = sat;
+void SkyView::add(SatelliteView satellite) {
+    if (count_ >= kMaxSatellitesInView) return;
+    satellite.in_use = used(satellite.system, satellite.id);
+    satellites_[count_++] = satellite;
 }
 
 void SkyView::solving(System system, uint8_t id) {
-    if (id == 0 || used_n_ >= kMaxSatellitesInUse) return;
+    if (id == 0 || in_use_count_ >= kMaxSatellitesInUse) return;
     if (used(system, id)) return;
-    used_[used_n_].system = system;
-    used_[used_n_].id = id;
-    used_n_++;
+    used_[in_use_count_].system = system;
+    used_[in_use_count_].id = id;
+    in_use_count_++;
 }
 
-void SkyView::clear_solution() { used_n_ = 0; }
+void SkyView::clear_solution() { in_use_count_ = 0; }
 
-void SkyView::forget_in_view() { n_ = 0; }
+void SkyView::forget_in_view() { count_ = 0; }
 
 bool SkyView::used(System system, uint8_t id) const {
-    for (int i = 0; i < used_n_; i++) {
+    for (int i = 0; i < in_use_count_; i++) {
         if (used_[i].id != id) continue;
         if (used_[i].system == system || used_[i].system == System::Unknown ||
             system == System::Unknown)
@@ -70,17 +70,17 @@ bool SkyView::used(System system, uint8_t id) const {
 }
 
 int SkyView::in_view_of(System system) const {
-    int n = 0;
-    for (int i = 0; i < n_; i++)
-        if (sats_[i].system == system) n++;
-    return n;
+    int satellites = 0;
+    for (int i = 0; i < count_; i++)
+        if (satellites_[i].system == system) satellites++;
+    return satellites;
 }
 
 int SkyView::in_use_of(System system) const {
-    int n = 0;
-    for (int i = 0; i < used_n_; i++)
-        if (used_[i].system == system) n++;
-    return n;
+    int satellites = 0;
+    for (int i = 0; i < in_use_count_; i++)
+        if (used_[i].system == system) satellites++;
+    return satellites;
 }
 
 }  // namespace skyblip::gnss

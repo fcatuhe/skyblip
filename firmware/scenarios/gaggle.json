@@ -1,9 +1,9 @@
 {
   "name": "three gliders in one thermal",
   "mode": "training",
-  "lat_1e7": 485000000,
-  "lon_1e7": 85000000,
-  "alt_m": 1500,
+  "latitude_1e7": 485000000,
+  "longitude_1e7": 85000000,
+  "altitude_m": 1500,
   "speed_kt": 58,
   "track_deg": 90,
   "duration_ms": 16000,
@@ -13,6 +13,6 @@
     {"north_m": 60, "east_m": 250, "up_m": 10, "speed_mps": 30, "track_deg": 90, "climb_mps_e1": -20}
   ],
   "events": [
-    {"at_ms": 8000, "expect_traffic_min": 3}
+    {"at_ms": 8000, "expect_traffic_minimum": 3}
   ]
 }

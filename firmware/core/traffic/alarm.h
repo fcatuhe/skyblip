@@ -15,15 +15,15 @@ constexpr uint8_t to_number(Level level) { return static_cast<uint8_t>(level); }
 
 struct AlarmAssessment {
     Level level{Level::None};
-    uint16_t rel_bearing_deg{0};
-    int32_t rel_dist_m{0};
-    int32_t rel_alt_m{0};
+    uint16_t relative_bearing_deg{0};
+    int32_t relative_distance_m{0};
+    int32_t relative_altitude_m{0};
     int32_t closing_mps{0};
     bool valid{false};
 };
 
-constexpr int32_t kAdvisoryAltM = 300;
-constexpr int32_t kAdvisoryDistM = 3000;
+constexpr int32_t kAdvisoryAltitudeM = 300;
+constexpr int32_t kAdvisoryDistanceM = 3000;
 
 // INFO: fc 14sep26 a relayed target arrives with no velocity, and zero would make it the safest dot
 constexpr int32_t kUnknownTargetSpeedMps = 30;
@@ -36,13 +36,13 @@ constexpr uint32_t kRenotifyFloorMs = 2000;
 // INFO: fc 11oct26 a touch-and-go or a stop-and-go is back in the air well inside a minute
 constexpr uint32_t kGroundRenotifyFloorMs = 60000;
 
-constexpr int kTrackedTargets = 48;
+constexpr int kMaxTrackedTargets = 48;
 
-int32_t closing_mm_s(const model::OwnState& own, const model::AircraftObs& target, int32_t north_m,
-                     int32_t east_m, int32_t dist_m);
+int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
+                     int32_t north_m, int32_t east_m, int32_t distance_m);
 
 // INFO: fc 13sep26 now_ms is the instant both sides are carried to, on ports::Clock
-AlarmAssessment assess(const model::OwnState& own_fix, const model::AircraftObs& reported,
+AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObservation& reported,
                        uint32_t now_ms);
 
 class AlarmTracker {
@@ -53,7 +53,8 @@ class AlarmTracker {
         bool dismissed{false};
     };
 
-    Decision update(const model::OwnState& own, const model::AircraftObs& target, uint32_t now_ms);
+    Decision update(const model::Ownship& own, const model::AircraftObservation& target,
+                    uint32_t now_ms);
 
     void forget_stale(uint32_t now_ms);
     void withdraw(uint8_t address_mapping_table, uint32_t address);
@@ -68,7 +69,7 @@ class AlarmTracker {
         bool used{false};
         uint8_t address_mapping_table{0};
         uint32_t address{0};
-        uint32_t obs_key{0};
+        uint32_t reception_key{0};
         uint32_t seen_ms{0};
         uint32_t forget_ms{0};
         Level notified_level{Level::None};
@@ -77,10 +78,10 @@ class AlarmTracker {
         uint32_t falling_since_ms{0};
     };
 
-    Slot* slot_for(const model::AircraftObs& target, uint32_t now_ms);
+    Slot* slot_for(const model::AircraftObservation& target, uint32_t now_ms);
     static bool notify_for(Slot& slot, Level level, uint32_t floor_ms, uint32_t now_ms);
 
-    std::array<Slot, kTrackedTargets> slots_{};
+    std::array<Slot, kMaxTrackedTargets> slots_{};
 };
 
 }  // namespace skyblip::traffic

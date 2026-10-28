@@ -28,7 +28,9 @@ struct Capture {
     std::vector<std::string> lines;
 
     bool ready() const { return attached; }
-    void line(const char* text, int len) { lines.emplace_back(text, static_cast<size_t>(len)); }
+    void line(const char* text, int characters) {
+        lines.emplace_back(text, static_cast<size_t>(characters));
+    }
 
     std::string all() const {
         std::string joined;
@@ -52,20 +54,20 @@ bool has(const std::string& haystack, const char* needle) {
 
 // The dump is driven from the shell with the product in hand, once per pass, so
 // this is what a pass looks like.
-void pass(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
-    const uint32_t until = t + ms;
-    for (; t <= until; t += 50) {
-        rig.platform.clock().set_millis(t);
-        rig.product.step(t);
-        dump.step(rig.product, t);
+void pass(Rig& rig, Dump& dump, uint32_t& now_ms, uint32_t for_ms) {
+    const uint32_t until = now_ms + for_ms;
+    for (; now_ms <= until; now_ms += 50) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        dump.step(rig.product, now_ms);
     }
 }
 
 // Seconds of flight: a solution a second, and the passes between them.
-void fly(Rig& rig, Dump& dump, uint32_t& t, uint32_t seconds) {
+void fly(Rig& rig, Dump& dump, uint32_t& now_ms, uint32_t seconds) {
     for (uint32_t i = 0; i < seconds; i++) {
         rig.push_timed_fix(50000, 500);
-        pass(rig, dump, t, 950);
+        pass(rig, dump, now_ms, 950);
         rig.utc_offset_s++;
     }
 }
@@ -73,8 +75,8 @@ void fly(Rig& rig, Dump& dump, uint32_t& t, uint32_t seconds) {
 std::string last_config_frame(Rig& rig) {
     const auto& sent = rig.platform.link().sent;
     std::string joined;
-    for (const auto& f : sent)
-        if (f.endpoint == events::Endpoint::Config) joined += f.bytes;
+    for (const auto& frame : sent)
+        if (frame.endpoint == events::Endpoint::Config) joined += frame.bytes;
     return joined;
 }
 
@@ -84,12 +86,12 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
     // Past the second dump: the receiver has been woken, identified and
     // configured, the radio has armed dwells, and consecutive fixes have produced
     // a residual. The first dump is at boot and knows none of that yet, which is
     // why every assertion below reads the LAST line for its subsystem.
-    fly(rig, dump, t, 12);
+    fly(rig, dump, now_ms, 12);
 
     const Capture& console = dump.sink();
     REQUIRE(console.lines.size() >= 10);
@@ -97,7 +99,7 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     // The receiver's own answers, which nothing else on this device reads.
     const std::string gnss = console.with("gnss ");
     REQUIRE_FALSE(gnss.empty());
-    CHECK(has(gnss, "baud=9600"));  // parts::L76k::kBaudRate, unless autobaud moved
+    CHECK(has(gnss, "baud=9600"));  // parts::L76k::kFactoryBaudRate, unless autobaud moved
     CHECK(has(gnss, "identified=true"));
     CHECK(has(gnss, "firmware=\"URANUS5,V5.1.0.0\""));
     CHECK_FALSE(has(gnss, "fixes=0"));
@@ -120,7 +122,7 @@ TEST_CASE("diagnostics: the dump reads the device, subsystem by subsystem") {
     CHECK(has(radio, "dio1_armed=false dio1_edges=0 dio1_missed=0"));
 
     // And the two the shell already knew and could not say out loud.
-    CHECK(has(console.with("sys "), "reset=\"POWER ON\""));
+    CHECK(has(console.with("system "), "reset=\"POWER ON\""));
     CHECK(has(console.with("power "), "supply_warnings=0"));
     CHECK(has(console.with("power "), "implausible=0"));
     CHECK(has(console.with("traffic "), "tracked=0"));
@@ -133,14 +135,14 @@ TEST_CASE("diagnostics: the faults nobody could see reach the console") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0;
-    pass(rig, dump, t, 1000);
+    uint32_t now_ms = 0;
+    pass(rig, dump, now_ms, 1000);
 
     // A collapsing rail, as the comparator reports it, and a divider that is not
     // connected: core/power counts both and acts on neither.
     rig.platform.system_power().supply_warning = true;
-    rig.platform.battery().millivolts = 900;
-    pass(rig, dump, t, 12000);
+    rig.platform.battery().divider_mv = 900;
+    pass(rig, dump, now_ms, 12000);
 
     const std::string power = dump.sink().with("power ");
     REQUIRE_FALSE(power.empty());
@@ -152,14 +154,14 @@ TEST_CASE("diagnostics: the air's four outcomes leave the collector as four numb
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0;
-    pass(rig, dump, t, 1000);
+    uint32_t now_ms = 0;
+    pass(rig, dump, now_ms, 1000);
 
     rig.state().air.rx_bad = 4;
     rig.state().air.rx_wait = 58;
     rig.state().air.rx_type = 19;
     rig.state().air.tx_lost = 2;
-    pass(rig, dump, t, 12000);
+    pass(rig, dump, now_ms, 12000);
 
     const std::string radio = dump.sink().with("radio ");
     REQUIRE_FALSE(radio.empty());
@@ -172,18 +174,18 @@ TEST_CASE("diagnostics: nothing is written until a host has opened the port") {
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
     dump.sink().attached = false;
-    uint32_t t = 0;
-    pass(rig, dump, t, 25000);
+    uint32_t now_ms = 0;
+    pass(rig, dump, now_ms, 25000);
 
     // Not a byte, for 25 seconds: a device in a flight bag does not talk to
     // nobody. The snapshot was still collected, so the phone that IS there gets a
     // fresh answer.
     CHECK(dump.sink().lines.empty());
-    CHECK(rig.product.config().config().diagnostics().refreshes > 20);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes > 20);
 
     rig.raise_link();
-    rig.send("{\"cmd\":\"diag\"}");
-    pass(rig, dump, t, 200);
+    rig.send("{\"command\":\"diagnostics\"}");
+    pass(rig, dump, now_ms, 200);
     CHECK(has(last_config_frame(rig), "\"group\":\"radio\""));
 }
 
@@ -194,21 +196,21 @@ TEST_CASE("diagnostics: one dump every ten seconds, one refresh every second") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
     // The first pass dumps, so a bench watching a device come up sees the reset
     // reason without waiting ten seconds for it.
-    pass(rig, dump, t, 0);
+    pass(rig, dump, now_ms, 0);
     const size_t first = dump.sink().lines.size();
     CHECK(first == 5);
-    const uint32_t refreshes = rig.product.config().config().diagnostics().refreshes;
+    const uint32_t refreshes = rig.product.config_link().config().diagnostics().refreshes;
     CHECK(refreshes == 1);
 
-    pass(rig, dump, t, 5000);
+    pass(rig, dump, now_ms, 5000);
     CHECK(dump.sink().lines.size() == first);
-    CHECK(rig.product.config().config().diagnostics().refreshes >= refreshes + 5);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes >= refreshes + 5);
 
-    pass(rig, dump, t, 5100);
+    pass(rig, dump, now_ms, 5100);
     CHECK(dump.sink().lines.size() == 2 * first);
 }
 
@@ -218,11 +220,11 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0;
-    rig.platform.battery().millivolts = 3812;
+    uint32_t now_ms = 0;
+    rig.platform.battery().divider_mv = 3812;
     for (int i = 0; i < 4; i++) {
         rig.push_timed_fix(50000, 500);
-        pass(rig, dump, t, 950);
+        pass(rig, dump, now_ms, 950);
         rig.utc_offset_s++;
     }
     rig.raise_link();
@@ -231,9 +233,9 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     // One dump and one question, close enough together that nothing between them
     // could have moved a counter: the ten-second cadence means the console's last
     // dump is otherwise older than the link's answer.
-    pass(rig, dump, t, comms::kDiagnosticsDumpMs);
-    rig.send("{\"cmd\":\"diag\"}");
-    pass(rig, dump, t, 200);
+    pass(rig, dump, now_ms, comms::kDiagnosticsDumpPeriodMs);
+    rig.send("{\"command\":\"diagnostics\"}");
+    pass(rig, dump, now_ms, 200);
 
     const std::string frames = last_config_frame(rig);
     const std::string console = dump.sink().all();
@@ -251,24 +253,24 @@ TEST_CASE("diagnostics: the console and the link cannot disagree") {
     CHECK(has(console, ("fixes=" + fixes).c_str()));
 }
 
-// M. The whole product, stepped through the instant ports::Clock::millis() turns
+// M. The whole product, stepped through the instant ports::Clock::milliseconds() turns
 // over. Two things are being pinned. One: the collector's own cadences are
 // unsigned differences, so the wrap costs one late dump and nothing else - a
 // refresh cadence that broke here would freeze every number the dump carries
-// while the device kept flying. Two: up_s is now_ms / 1000, so it counts 49 days
+// while the device kept flying. Two: uptime_s is now_ms / 1000, so it counts 49 days
 // and then starts again at zero, which is the honest answer. What would not be
 // honest is a negative age or a four-billion-second jump, and neither can happen
 // while the arithmetic is a division of the counter rather than a subtraction of
 // two instants.
 namespace {
-// The rig's own pass() helper cannot be used here: it walks t up to t + ms, which
+// The rig's own pass() helper cannot be used here: it walks now_ms up to now_ms + for_ms, which
 // is not a comparison that survives the wrap. The wrap is a value, not a wait.
-void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& t, uint32_t ms) {
-    for (uint32_t stepped = 0; stepped <= ms; stepped += 50) {
-        rig.platform.clock().set_millis(t);
-        rig.product.step(t);
-        dump.step(rig.product, t);
-        t += 50;
+void pass_across_wrap(Rig& rig, Dump& dump, uint32_t& now_ms, uint32_t for_ms) {
+    for (uint32_t stepped = 0; stepped <= for_ms; stepped += 50) {
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        dump.step(rig.product, now_ms);
+        now_ms += 50;
     }
 }
 }  // namespace
@@ -277,24 +279,24 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     Dump dump;
-    uint32_t t = 0xFFFFFF00u;  // 256 ms short of the wrap
+    uint32_t now_ms = 0xFFFFFF00u;  // 256 ms short of the wrap
 
     // The first pass always dumps, and it dumps 49.7 days of uptime.
-    pass_across_wrap(rig, dump, t, 0);
+    pass_across_wrap(rig, dump, now_ms, 0);
     REQUIRE(dump.sink().lines.size() == 5);
-    CHECK(has(dump.sink().with("sys"), "up_s=4294967"));
+    CHECK(has(dump.sink().with("system"), "uptime_s=4294967"));
 
     // Twenty seconds of passes, straddling zero: two more dumps, ten seconds
     // apart, exactly as on any other day.
-    const uint32_t refreshes_before = rig.product.config().config().diagnostics().refreshes;
-    pass_across_wrap(rig, dump, t, 20000);
+    const uint32_t refreshes_before = rig.product.config_link().config().diagnostics().refreshes;
+    pass_across_wrap(rig, dump, now_ms, 20000);
     CHECK(dump.sink().lines.size() == 15);
-    CHECK(rig.product.config().config().diagnostics().refreshes >= refreshes_before + 20);
+    CHECK(rig.product.config_link().config().diagnostics().refreshes >= refreshes_before + 20);
 
     // And the uptime is small, positive, and counting again from the wrap.
-    const uint32_t uptime_s = rig.product.config().config().diagnostics().uptime_s;
+    const uint32_t uptime_s = rig.product.config_link().config().diagnostics().uptime_s;
     CHECK(uptime_s < 60u);
-    const std::string sys = dump.sink().with("sys");
-    CHECK_FALSE(has(sys, "up_s=-"));
-    CHECK_FALSE(has(sys, "up_s=4294"));
+    const std::string system_line = dump.sink().with("system");
+    CHECK_FALSE(has(system_line, "uptime_s=-"));
+    CHECK_FALSE(has(system_line, "uptime_s=4294"));
 }

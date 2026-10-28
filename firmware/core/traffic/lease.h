@@ -14,21 +14,21 @@ constexpr uint32_t kTargetForgetReports = 6;
 constexpr uint32_t kAirborneTargetForgetS = kTargetForgetReports * flight::kAirborneReportPeriodS;
 constexpr uint32_t kGroundTargetForgetS = kTargetForgetReports * flight::kGroundReportPeriodS;
 
-inline uint32_t report_period_s(const model::AircraftObs& obs) {
-    return flight::report_period_s(flight::state_from(obs.flight_state));
+inline uint32_t report_period_s(const model::AircraftObservation& observation) {
+    return flight::report_period_s(flight::state_from(observation.flight_state));
 }
 
-inline uint32_t forget_s(const model::AircraftObs& obs) {
-    return kTargetForgetReports * report_period_s(obs);
+inline uint32_t forget_s(const model::AircraftObservation& observation) {
+    return kTargetForgetReports * report_period_s(observation);
 }
 
-inline uint32_t forget_ms(const model::AircraftObs& obs) {
-    return forget_s(obs) * kMillisecondsPerSecond;
+inline uint32_t forget_ms(const model::AircraftObservation& observation) {
+    return forget_s(observation) * kMillisecondsPerSecond;
 }
 
-inline uint32_t direct_preferred_max_age_s(const model::AircraftObs& obs) {
+inline uint32_t direct_preferred_max_age_s(const model::AircraftObservation& observation) {
     const uint32_t alert_s = kAlertMaxAgeMs / kMillisecondsPerSecond;
-    const uint32_t period_s = report_period_s(obs);
+    const uint32_t period_s = report_period_s(observation);
     return period_s > alert_s ? period_s : alert_s;
 }
 

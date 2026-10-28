@@ -59,7 +59,7 @@ enum class PowerDownStep : uint8_t {
     // The rails collapse last, and only once every part behind them has been
     // told and every line into them is at zero.
     PeripheralRailOff,
-    AuxRailOff,
+    AuxiliaryRailOff,
     // INFO: hk 03aug26 SoftRF-moshe-braner src/platform/nRF52.cpp:2055-2080
     // drives each enable pin OUTPUT LOW before switching it to input, because
     // that "clears the output latch AND actively shuts off the external
@@ -82,7 +82,7 @@ inline constexpr PowerDownStep kPowerDownOrder[kPowerDownStepCount] = {
     PowerDownStep::GnssResetAsserted,
     PowerDownStep::RadioResetAsserted,
     PowerDownStep::PeripheralRailOff,
-    PowerDownStep::AuxRailOff,
+    PowerDownStep::AuxiliaryRailOff,
     PowerDownStep::DrivenPinsReleased,
     PowerDownStep::WakePinArmed,
 };
@@ -125,7 +125,7 @@ static_assert(step_order(PowerDownStep::PanelLinesReleased) <
               "a panel line left driven high back-feeds the glass through its protection diodes");
 static_assert(step_order(PowerDownStep::PeripheralRailOff) <
                       step_order(PowerDownStep::DrivenPinsReleased) &&
-                  step_order(PowerDownStep::AuxRailOff) <
+                  step_order(PowerDownStep::AuxiliaryRailOff) <
                       step_order(PowerDownStep::DrivenPinsReleased),
               "a pin is released only once there is no rail left to back-feed");
 
@@ -157,13 +157,13 @@ constexpr uint8_t boot_magic_for_system_off(bool recovery_armed) {
 
 // Long enough that it cannot be the page press, short enough to do with gloves
 // on. A short press pages; this is the only other thing the one button does.
-constexpr uint32_t kLongPressMs = 2000;
+constexpr uint32_t kLongPressHoldMs = 2000;
 
 // A power-off parks the panel with a full refresh, which the SSD1681 clocks out
 // in about 2.5 s, and an install or a recovery through black, about a second.
 // Dropping the rails before it finishes leaves half an image on the glass,
 // which is what the device then wears until someone turns it back on.
-constexpr uint32_t kParkMs = 3000;
+constexpr uint32_t kParkSettleMs = 3000;
 
 // INFO: hk 02aug26 nRF52 SENSE is a level detect, not an edge, so arming the
 // wake pin while the button is still down wakes the device the instant SYSTEM
@@ -204,7 +204,7 @@ class ShutdownSequencer {
 
     ShutdownPhase phase_{ShutdownPhase::Running};
     ShutdownReason reason_{ShutdownReason::None};
-    uint32_t since_ms_{0};
+    uint32_t phase_since_ms_{0};
     uint32_t hold_since_ms_{0};
     ButtonRelease release_{};
     bool holding_{false};

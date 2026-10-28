@@ -8,10 +8,10 @@ namespace skyblip::io {
 
 enum class BusId : uint8_t { Radio, Epd, Gnss, Sensor };
 
-enum class PinFn : uint8_t {
+enum class PinFunction : uint8_t {
     RadioBusy,
     RadioReset,
-    RadioIrq,
+    RadioDio1,
     EpdDc,
     EpdReset,
     EpdBusy,
@@ -19,7 +19,7 @@ enum class PinFn : uint8_t {
 };
 
 struct PinRole {
-    PinFn fn;
+    PinFunction function;
     int pin;
 };
 
@@ -44,28 +44,28 @@ class Gpio {
 class Delay {
    public:
     virtual ~Delay() = default;
-    virtual void wait_at_least_us(uint32_t us) = 0;
+    virtual void wait_at_least_us(uint32_t hold_us) = 0;
 };
 
 class Spi {
    public:
     virtual ~Spi() = default;
-    virtual void transfer(const uint8_t* tx, uint8_t* rx, size_t len) = 0;
+    virtual void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) = 0;
     virtual void select(bool on) = 0;
 };
 
 class I2c {
    public:
     virtual ~I2c() = default;
-    virtual bool write(uint8_t addr, const uint8_t* data, size_t len) = 0;
-    virtual bool read(uint8_t addr, uint8_t* data, size_t len) = 0;
+    virtual bool write(uint8_t address, const uint8_t* data, size_t bytes) = 0;
+    virtual bool read(uint8_t address, uint8_t* out, size_t bytes) = 0;
 };
 
 class Uart {
    public:
     virtual ~Uart() = default;
-    virtual size_t write(const uint8_t* data, size_t len) = 0;
-    virtual size_t read(uint8_t* data, size_t cap) = 0;
+    virtual size_t write(const uint8_t* data, size_t bytes) = 0;
+    virtual size_t read(uint8_t* out, size_t capacity) = 0;
     virtual size_t available() = 0;
     virtual uint32_t overruns() const { return 0; }
 };

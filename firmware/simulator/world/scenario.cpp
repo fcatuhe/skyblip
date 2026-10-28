@@ -3,14 +3,14 @@
 #include <cstdio>
 #include <cstring>
 
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::simulator {
 
 namespace {
 
 // Split "[{...},{...}]" into its object substrings. The flat reader in
-// core/util/json_min then handles each object, so nothing here re-implements
+// core/util/json then handles each object, so nothing here re-implements
 // number or string parsing.
 std::vector<std::string> objects_in_array(const std::string& text, const char* key) {
     std::vector<std::string> out;
@@ -23,12 +23,12 @@ std::vector<std::string> objects_in_array(const std::string& text, const char* k
     int depth = 0;
     size_t start = 0;
     for (size_t i = at; i < text.size(); i++) {
-        const char c = text[i];
-        if (c == ']' && depth == 0) break;
-        if (c == '{') {
+        const char character = text[i];
+        if (character == ']' && depth == 0) break;
+        if (character == '{') {
             if (depth == 0) start = i;
             depth++;
-        } else if (c == '}') {
+        } else if (character == '}') {
             depth--;
             if (depth == 0) out.push_back(text.substr(start, i - start + 1));
         }
@@ -36,12 +36,12 @@ std::vector<std::string> objects_in_array(const std::string& text, const char* k
     return out;
 }
 
-long int_or(const json::Reader& r, const char* key, long fallback) {
-    long v = 0;
-    return r.get_int(key, v) ? v : fallback;
+long integer_or(const json::Reader& reader, const char* key, long fallback) {
+    long value = 0;
+    return reader.read_integer(key, value) ? value : fallback;
 }
 
-bool event_from(const json::Reader& r, ScenarioEvent& out) {
+bool event_from(const json::Reader& reader, ScenarioEvent& out) {
     struct Named {
         const char* key;
         EventKind kind;
@@ -49,7 +49,7 @@ bool event_from(const json::Reader& r, ScenarioEvent& out) {
     static const Named kKeys[] = {
         {"fix", EventKind::Fix},
         {"pps", EventKind::Pps},
-        {"baro", EventKind::Baro},
+        {"barometer", EventKind::Barometer},
         {"battery_mv", EventKind::BatteryMv},
         {"external_power", EventKind::ExternalPower},
         {"button", EventKind::Button},
@@ -57,14 +57,14 @@ bool event_from(const json::Reader& r, ScenarioEvent& out) {
         {"speed_kt", EventKind::Speed},
         {"track_deg", EventKind::Track},
         {"aircraft", EventKind::Aircraft},
-        {"expect_alarm_min", EventKind::ExpectAlarmMin},
-        {"expect_traffic_min", EventKind::ExpectTrafficMin},
+        {"expect_alarm_minimum", EventKind::ExpectAlarmMinimum},
+        {"expect_traffic_minimum", EventKind::ExpectTrafficMinimum},
     };
-    out.at_ms = static_cast<uint32_t>(int_or(r, "at_ms", 0));
-    for (const Named& n : kKeys) {
-        if (!r.has(n.key)) continue;
-        out.kind = n.kind;
-        out.value = int_or(r, n.key, 1);
+    out.at_ms = static_cast<uint32_t>(integer_or(reader, "at_ms", 0));
+    for (const Named& named : kKeys) {
+        if (!reader.has(named.key)) continue;
+        out.kind = named.kind;
+        out.value = integer_or(reader, named.key, 1);
         return true;
     }
     return false;
@@ -74,72 +74,73 @@ protocol::System system_from(const std::string& name) {
     if (name == "alptas") return protocol::System::Alptas;
     // Not a fit: an aircraft this device never hears for itself, reaching it
     // only through a skyPost's O-band relay.
-    if (name == "uplink") return protocol::System::AdslUplink;
+    if (name == "adsl_uplink") return protocol::System::AdslUplink;
     return protocol::System::AdslDirect;
 }
 
 Mode mode_from(const std::string& name) {
     if (name == "demo") return Mode::Demo;
     if (name == "training") return Mode::Training;
-    return Mode::Dev;
+    return Mode::Device;
 }
 
 }  // namespace
 
-bool parse_scenario(const char* json, int len, Scenario& out) {
-    if (json == nullptr || len <= 0) return false;
-    const std::string text(json, static_cast<size_t>(len));
-    const json::Reader top(json, len);
+bool parse_scenario(const char* json, int bytes, Scenario& out) {
+    if (json == nullptr || bytes <= 0) return false;
+    const std::string text(json, static_cast<size_t>(bytes));
+    const json::Reader top(json, bytes);
 
-    char buf[64] = {0};
-    if (top.get_str("name", buf, sizeof(buf))) out.name = buf;
-    if (top.get_str("callsign", buf, sizeof(buf))) out.callsign = buf;
-    if (top.get_str("mode", buf, sizeof(buf))) out.mode = mode_from(buf);
+    char buffer[64] = {0};
+    if (top.read_string("name", buffer, sizeof(buffer))) out.name = buffer;
+    if (top.read_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
+    if (top.read_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
 
-    out.lat_1e7 = static_cast<int32_t>(int_or(top, "lat_1e7", out.lat_1e7));
-    out.lon_1e7 = static_cast<int32_t>(int_or(top, "lon_1e7", out.lon_1e7));
-    out.alt_m = static_cast<int32_t>(int_or(top, "alt_m", out.alt_m));
-    out.speed_kt = static_cast<int32_t>(int_or(top, "speed_kt", out.speed_kt));
-    out.track_deg = static_cast<int32_t>(int_or(top, "track_deg", out.track_deg));
-    out.turn_dps = static_cast<int32_t>(int_or(top, "turn_dps", out.turn_dps));
-    out.duration_ms = static_cast<uint32_t>(int_or(top, "duration_ms", out.duration_ms));
+    out.latitude_1e7 = static_cast<int32_t>(integer_or(top, "latitude_1e7", out.latitude_1e7));
+    out.longitude_1e7 = static_cast<int32_t>(integer_or(top, "longitude_1e7", out.longitude_1e7));
+    out.altitude_m = static_cast<int32_t>(integer_or(top, "altitude_m", out.altitude_m));
+    out.speed_kt = static_cast<int32_t>(integer_or(top, "speed_kt", out.speed_kt));
+    out.track_deg = static_cast<int32_t>(integer_or(top, "track_deg", out.track_deg));
+    out.turn_dps = static_cast<int32_t>(integer_or(top, "turn_dps", out.turn_dps));
+    out.duration_ms = static_cast<uint32_t>(integer_or(top, "duration_ms", out.duration_ms));
 
-    for (const std::string& obj : objects_in_array(text, "aircraft")) {
-        const json::Reader r(obj.c_str(), static_cast<int>(obj.size()));
-        ScenarioAircraft a;
-        if (r.get_str("system", buf, sizeof(buf))) a.system = system_from(buf);
-        a.north_m = static_cast<double>(int_or(r, "north_m", 0));
-        a.east_m = static_cast<double>(int_or(r, "east_m", 0));
-        a.up_m = static_cast<double>(int_or(r, "up_m", 0));
-        a.speed_mps = static_cast<double>(int_or(r, "speed_mps", 30));
-        a.track_deg = static_cast<double>(int_or(r, "track_deg", 270));
-        a.turn_dps = static_cast<double>(int_or(r, "turn_dps", 0));
-        a.climb_mps = static_cast<double>(int_or(r, "climb_mps_e1", 0)) / 10.0;
-        a.phase_ms = static_cast<int>(int_or(r, "phase_ms", -1));
-        a.slot = static_cast<int>(int_or(r, "slot", -1));
-        out.aircraft.push_back(a);
+    for (const std::string& object : objects_in_array(text, "aircraft")) {
+        const json::Reader reader(object.c_str(), static_cast<int>(object.size()));
+        ScenarioAircraft aircraft;
+        if (reader.read_string("system", buffer, sizeof(buffer)))
+            aircraft.system = system_from(buffer);
+        aircraft.north_m = static_cast<double>(integer_or(reader, "north_m", 0));
+        aircraft.east_m = static_cast<double>(integer_or(reader, "east_m", 0));
+        aircraft.up_m = static_cast<double>(integer_or(reader, "up_m", 0));
+        aircraft.speed_mps = static_cast<double>(integer_or(reader, "speed_mps", 30));
+        aircraft.track_deg = static_cast<double>(integer_or(reader, "track_deg", 270));
+        aircraft.turn_dps = static_cast<double>(integer_or(reader, "turn_dps", 0));
+        aircraft.climb_mps = static_cast<double>(integer_or(reader, "climb_mps_e1", 0)) / 10.0;
+        aircraft.phase_ms = static_cast<int>(integer_or(reader, "phase_ms", -1));
+        aircraft.slot = static_cast<int>(integer_or(reader, "slot", -1));
+        out.aircraft.push_back(aircraft);
     }
 
-    for (const std::string& obj : objects_in_array(text, "events")) {
-        const json::Reader r(obj.c_str(), static_cast<int>(obj.size()));
-        ScenarioEvent e;
-        if (event_from(r, e)) out.events.push_back(e);
+    for (const std::string& object : objects_in_array(text, "events")) {
+        const json::Reader reader(object.c_str(), static_cast<int>(object.size()));
+        ScenarioEvent event;
+        if (event_from(reader, event)) out.events.push_back(event);
     }
     return true;
 }
 
 bool load_scenario(const char* path, Scenario& out) {
-    FILE* f = std::fopen(path, "rb");
-    if (!f) return false;
+    FILE* file = std::fopen(path, "rb");
+    if (!file) return false;
     std::string text;
     char chunk[512];
     for (;;) {
-        const size_t n = std::fread(chunk, 1, sizeof(chunk), f);
-        text.append(chunk, n);
-        if (n < sizeof(chunk)) break;
+        const size_t bytes = std::fread(chunk, 1, sizeof(chunk), file);
+        text.append(chunk, bytes);
+        if (bytes < sizeof(chunk)) break;
     }
-    const bool failed = std::ferror(f) != 0;
-    std::fclose(f);
+    const bool failed = std::ferror(file) != 0;
+    std::fclose(file);
     if (failed) return false;
     return parse_scenario(text.c_str(), static_cast<int>(text.size()), out);
 }

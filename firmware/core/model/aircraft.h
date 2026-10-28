@@ -30,15 +30,15 @@ constexpr char source_letter(Source source) {
     return '?';
 }
 
-struct AircraftObs {
+struct AircraftObservation {
     uint32_t address;
     uint8_t address_mapping_table;
-    uint8_t aircraft_cat;
+    uint8_t aircraft_category;
     uint8_t flight_state;
     uint8_t emergency;
-    int32_t lat_1e7;
-    int32_t lon_1e7;
-    int32_t alt_m;
+    int32_t latitude_1e7;
+    int32_t longitude_1e7;
+    int32_t altitude_m;
     int16_t climb_e8;
     uint16_t speed_q;
     uint16_t track_c9;
@@ -52,7 +52,7 @@ struct AircraftObs {
     bool speed_valid;
     bool position_valid;
     // INFO: fc 23sep26 G.1.7 lets a 2D position mark its altitude invalid, so decoders say which
-    bool alt_valid{true};
+    bool altitude_valid{true};
 };
 
 }  // namespace skyblip::model

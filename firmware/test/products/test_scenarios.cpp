@@ -17,127 +17,129 @@ using namespace skyblip;
 namespace {
 
 const char* kInlineScenario =
-    "{\"name\":\"inline\",\"mode\":\"training\",\"alt_m\":900,\"speed_kt\":50,"
+    "{\"name\":\"inline\",\"mode\":\"training\",\"altitude_m\":900,\"speed_kt\":50,"
     "\"track_deg\":90,\"duration_ms\":6000,"
     "\"aircraft\":[{\"north_m\":600,\"east_m\":200,\"up_m\":30,\"speed_mps\":40,"
     "\"track_deg\":200,\"climb_mps_e1\":-25}],"
-    "\"events\":[{\"at_ms\":3000,\"expect_traffic_min\":1},"
-    "{\"at_ms\":5000,\"expect_alarm_min\":1},{\"at_ms\":5500,\"fix\":0}]}";
+    "\"events\":[{\"at_ms\":3000,\"expect_traffic_minimum\":1},"
+    "{\"at_ms\":5000,\"expect_alarm_minimum\":1},{\"at_ms\":5500,\"fix\":0}]}";
 
-void replay(simulator::Simulator& s) {
-    const uint32_t until = s.scenario().duration_ms == 0 ? 10000 : s.scenario().duration_ms;
-    s.run(until);
+void replay(simulator::Simulator& simulator) {
+    const uint32_t until =
+        simulator.scenario().duration_ms == 0 ? 10000 : simulator.scenario().duration_ms;
+    simulator.run(until);
 }
 
 }  // namespace
 
-TEST_CASE("scenario: the parser reads ownship, traffic and events") {
-    simulator::Scenario s;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, s));
-    CHECK(s.name == "inline");
-    CHECK(s.mode == simulator::Mode::Training);
-    CHECK(s.alt_m == 900);
-    CHECK(s.track_deg == 90);
-    CHECK(s.duration_ms == 6000);
-    REQUIRE(s.aircraft.size() == 1);
-    CHECK(s.aircraft[0].north_m == doctest::Approx(600));
-    CHECK(s.aircraft[0].track_deg == doctest::Approx(200));
+TEST_CASE("scenario: the parser reads own-ship, traffic and events") {
+    simulator::Scenario scenario;
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
+    CHECK(scenario.name == "inline");
+    CHECK(scenario.mode == simulator::Mode::Training);
+    CHECK(scenario.altitude_m == 900);
+    CHECK(scenario.track_deg == 90);
+    CHECK(scenario.duration_ms == 6000);
+    REQUIRE(scenario.aircraft.size() == 1);
+    CHECK(scenario.aircraft[0].north_m == doctest::Approx(600));
+    CHECK(scenario.aircraft[0].track_deg == doctest::Approx(200));
     // Tenths of a metre per second on the wire of the file, m/s in the world.
-    CHECK(s.aircraft[0].climb_mps == doctest::Approx(-2.5));
-    REQUIRE(s.events.size() == 3);
-    CHECK(s.events[0].kind == simulator::EventKind::ExpectTrafficMin);
-    CHECK(s.events[1].kind == simulator::EventKind::ExpectAlarmMin);
-    CHECK(s.events[2].kind == simulator::EventKind::Fix);
-    CHECK(s.events[2].value == 0);
+    CHECK(scenario.aircraft[0].climb_mps == doctest::Approx(-2.5));
+    REQUIRE(scenario.events.size() == 3);
+    CHECK(scenario.events[0].kind == simulator::EventKind::ExpectTrafficMinimum);
+    CHECK(scenario.events[1].kind == simulator::EventKind::ExpectAlarmMinimum);
+    CHECK(scenario.events[2].kind == simulator::EventKind::Fix);
+    CHECK(scenario.events[2].value == 0);
 }
 
 // A simulated device is one somebody set up, so it carries a registration unless a file says not.
 TEST_CASE("scenario: a loaded scenario names the device, and a file can say which name") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
 
-    simulator::Scenario sc;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, sc));
-    s.load(sc);
-    CHECK(std::string(s.product().settings().callsign) == "S-BLIP");
+    simulator::Scenario scenario;
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
+    simulator.load(scenario);
+    CHECK(std::string(simulator.product().settings().callsign) == "S-BLIP");
 
     simulator::Scenario named;
     const char* json = "{\"name\":\"named\",\"callsign\":\"F-CBAY\"}";
     REQUIRE(simulator::parse_scenario(json, static_cast<int>(__builtin_strlen(json)), named));
-    s.load(named);
-    CHECK(std::string(s.product().settings().callsign) == "F-CBAY");
+    simulator.load(named);
+    CHECK(std::string(simulator.product().settings().callsign) == "F-CBAY");
 }
 
 // The registration goes on the air, so a scenario about a device nobody named has to say so.
 TEST_CASE("scenario: an empty callsign in the file leaves the device unnamed") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
 
-    simulator::Scenario sc;
+    simulator::Scenario scenario;
     const char* json = "{\"name\":\"quiet\",\"callsign\":\"\"}";
-    REQUIRE(simulator::parse_scenario(json, static_cast<int>(__builtin_strlen(json)), sc));
-    s.load(sc);
-    CHECK(std::string(s.product().settings().callsign).empty());
+    REQUIRE(simulator::parse_scenario(json, static_cast<int>(__builtin_strlen(json)), scenario));
+    simulator.load(scenario);
+    CHECK(std::string(simulator.product().settings().callsign).empty());
 }
 
 TEST_CASE("scenario: an unparseable scenario is refused, not half-applied") {
-    simulator::Scenario s;
-    CHECK_FALSE(simulator::parse_scenario(nullptr, 0, s));
-    CHECK_FALSE(simulator::load_scenario("scenarios/does-not-exist.json", s));
+    simulator::Scenario scenario;
+    CHECK_FALSE(simulator::parse_scenario(nullptr, 0, scenario));
+    CHECK_FALSE(simulator::load_scenario("scenarios/does-not-exist.json", scenario));
 }
 
 TEST_CASE("scenario: a training scenario's expectations hold when replayed") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    simulator::Scenario sc;
-    const int len = static_cast<int>(__builtin_strlen(kInlineScenario));
-    REQUIRE(simulator::parse_scenario(kInlineScenario, len, sc));
-    s.load(sc);
-    replay(s);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator::Scenario scenario;
+    const int bytes = static_cast<int>(__builtin_strlen(kInlineScenario));
+    REQUIRE(simulator::parse_scenario(kInlineScenario, bytes, scenario));
+    simulator.load(scenario);
+    replay(simulator);
 
-    CHECK(s.world().failures() == 0);
-    CHECK(s.product().state().air.rx_ok > 0);
+    CHECK(simulator.world().failures() == 0);
+    CHECK(simulator.product().state().air.rx_ok > 0);
     // The last event pulls the fix, and the firmware must follow it down.
-    CHECK_FALSE(s.product().state().own.fix_valid);
+    CHECK_FALSE(simulator.product().state().own.fix_valid);
 }
 
 TEST_CASE("scenario: the committed files replay with their expectations met") {
     for (const char* path :
          {"scenarios/head_on.json", "scenarios/gnss_loss.json", "scenarios/slot_timing.json"}) {
-        simulator::Simulator s;
-        REQUIRE(s.setup() == Status::Ok);
-        REQUIRE_MESSAGE(s.load_file(path), path);
-        replay(s);
-        CHECK_MESSAGE(s.world().failures() == 0, path);
-        CHECK_MESSAGE(s.product().state().traffic.count() >= 1, path);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        REQUIRE_MESSAGE(simulator.load_file(path), path);
+        replay(simulator);
+        CHECK_MESSAGE(simulator.world().failures() == 0, path);
+        CHECK_MESSAGE(simulator.product().state().traffic.count() >= 1, path);
     }
 }
 
 // The pinned-phase fixture is the slot map's regression test: two neighbours
 // inside the direct dwells are heard, the one in the uplink window is not.
 TEST_CASE("scenario: pinned transmit phases land where the dwell map says") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/slot_timing.json"));
-    replay(s);
-    CHECK(s.product().state().traffic.count() == 2);
-    CHECK(s.world().air().deaf() > 0);
-    CHECK(s.world().air().heard() > 0);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/slot_timing.json"));
+    replay(simulator);
+    CHECK(simulator.product().state().traffic.count() == 2);
+    CHECK(simulator.world().air().deaf() > 0);
+    CHECK(simulator.world().air().heard() > 0);
 }
 
 TEST_CASE("scenario: a failed expectation is reported, not swallowed") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    simulator::Scenario sc;
-    sc.duration_ms = 3000;
-    sc.events.push_back(simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMin, 3});
-    s.load(sc);
-    replay(s);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator::Scenario scenario;
+    scenario.duration_ms = 3000;
+    scenario.events.push_back(
+        simulator::ScenarioEvent{2000, simulator::EventKind::ExpectAlarmMinimum, 3});
+    simulator.load(scenario);
+    replay(simulator);
 
-    CHECK(s.world().failures() == 1);
-    REQUIRE(s.world().first_failure() != nullptr);
+    CHECK(simulator.world().failures() == 1);
+    REQUIRE(simulator.world().first_failure() != nullptr);
 }
 
 // One dwell, two systems: an ADS-L neighbour and an ALP-TAS neighbour transmit on
@@ -145,19 +147,19 @@ TEST_CASE("scenario: a failed expectation is reported, not swallowed") {
 // ALP-TAS one is the failure this fixture exists to catch, because it is silent:
 // the radar simply shows less sky than there is.
 TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/mixed_traffic.json"));
-    replay(s);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/mixed_traffic.json"));
+    replay(simulator);
 
-    CHECK(s.world().failures() == 0);
-    const traffic::TrafficTable& table = s.product().state().traffic;
+    CHECK(simulator.world().failures() == 0);
+    const traffic::TrafficTable& table = simulator.product().state().traffic;
     int adsl = 0, alptas = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used) continue;
-        if (t->obs.source == model::Source::AdslDirect) adsl++;
-        if (t->obs.source == model::Source::Alptas) alptas++;
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used) continue;
+        if (target->observation.source == model::Source::AdslDirect) adsl++;
+        if (target->observation.source == model::Source::Alptas) alptas++;
     }
     CHECK(adsl == 1);
     CHECK(alptas == 1);
@@ -167,27 +169,30 @@ TEST_CASE("scenario: ADS-L and ALP-TAS traffic are both heard in the same dwells
 // identity it was sent with, not merely as a blip: a decrypt that lands on
 // plausible-looking garbage is worse than a dropped frame.
 TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/mixed_traffic.json"));
-    s.run(5000);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/mixed_traffic.json"));
+    simulator.run(5000);
 
-    const traffic::TrafficTable& table = s.product().state().traffic;
-    const model::OwnState& own = s.product().state().own;
+    const traffic::TrafficTable& table = simulator.product().state().traffic;
+    const model::Ownship& own = simulator.product().state().own;
     int found = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used || t->obs.source != model::Source::Alptas) continue;
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used ||
+            target->observation.source != model::Source::Alptas)
+            continue;
         found++;
         // 900 m north and 250 m east of us at the start, closing from the south.
-        const int64_t dlat = t->obs.lat_1e7 - own.lat_1e7;
-        const int32_t north_m = static_cast<int32_t>((dlat * 11132) / 1000000);
+        const int64_t north_1e7 = target->observation.latitude_1e7 - own.latitude_1e7;
+        const int32_t north_m = static_cast<int32_t>((north_1e7 * 11132) / 1000000);
         CHECK(north_m > 400);
         CHECK(north_m < 1100);
-        CHECK(t->obs.alt_m < to_metres(Millimetres(own.alt_mm)).v);
+        CHECK(target->observation.altitude_m < to_metres(Millimetres(own.altitude_hae_mm)).value);
         // A FLARM-taxonomy address is reported as one, so an EFB labels it IDType 2.
-        CHECK(protocol::address_mapping_table_to_idtype(t->obs.address_mapping_table) == 2);
-        CHECK(t->obs.position_valid);
+        CHECK(protocol::address_mapping_table_to_id_type(
+                  target->observation.address_mapping_table) == 2);
+        CHECK(target->observation.position_valid);
     }
     CHECK(found == 1);
 }
@@ -199,19 +204,19 @@ TEST_CASE("scenario: an ALP-TAS target decodes to where it actually is") {
 // climb lasted. They are traffic - they belong on the screen, they must not be
 // an alarm - and the assertion is what the annunciator is allowed to say.
 TEST_CASE("scenario: a gaggle in one thermal is traffic, not three collisions") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/gaggle.json"));
-    replay(s);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/gaggle.json"));
+    replay(simulator);
 
-    CHECK(s.world().failures() == 0);
-    const traffic::TrafficTable& table = s.product().state().traffic;
+    CHECK(simulator.world().failures() == 0);
+    const traffic::TrafficTable& table = simulator.product().state().traffic;
     CHECK(table.count() == 3);
-    CHECK(s.product().state().alarm_level == traffic::Level::None);
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-        const traffic::Target* t = table.at(i);
-        if (t == nullptr || !t->used) continue;
-        CHECK(t->alarm_level == traffic::Level::None);
+    CHECK(simulator.product().state().alarm_level == traffic::Level::None);
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = table.at(i);
+        if (target == nullptr || !target->used) continue;
+        CHECK(target->alarm_level == traffic::Level::None);
     }
 }
 
@@ -234,20 +239,20 @@ struct Encounter {
     // so everything before this is the device meeting a stranger.
     static constexpr uint32_t kSettledMs = 5000;
     // What the ear gets falls one re-notification window later, because what
-    // the device has already said out loud is only taken back after the contact
+    // the device has already said out loud is only taken back after the target
     // has been outside the window for that whole time (traffic::notify_for).
     static constexpr uint32_t kQuietFromMs = kSettledMs + traffic::kRenotifyFloorMs;
 
     bool announced{false};
     uint32_t first_ms{0};
     int32_t first_range_m{0};
-    int32_t first_true_m{0};
+    int32_t first_true_separation_m{0};
     uint32_t last_spoken_ms{0};
     int beeps_before_settle{0};
     int beeps_after_settle{0};
-    int32_t min_true_m{999999};
-    uint32_t min_true_ms{0};
-    uint8_t level_at_min_true{0};
+    int32_t min_true_separation_m{999999};
+    uint32_t min_true_separation_ms{0};
+    uint8_t level_at_min_true_separation{0};
     int32_t min_reported_m{999999};
     // How far the range the device acts on sits from the truth, averaged over
     // the encounter: the one number that says whether the geometry is aligned.
@@ -256,125 +261,133 @@ struct Encounter {
 };
 
 const traffic::Target* only_target(const bus::State& state) {
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-        const traffic::Target* t = state.traffic.at(i);
-        if (t != nullptr && t->used) return t;
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = state.traffic.at(i);
+        if (target != nullptr && target->used) return target;
     }
     return nullptr;
 }
 
-Encounter measure(simulator::Simulator& s) {
-    Encounter e{};
-    const uint32_t until = s.scenario().duration_ms;
+Encounter measure(simulator::Simulator& simulator) {
+    Encounter encounter{};
+    const uint32_t until = simulator.scenario().duration_ms;
     int64_t error_sum = 0;
     int samples = 0;
     uint8_t spoken = 0;
-    for (uint32_t t = 0; t <= until; t += simulator::Simulator::kStepMs) {
-        s.step(t);
+    for (uint32_t now_ms = 0; now_ms <= until; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
 
         // Every step, not every sample: a call is a few hundred ms and a sample
         // every 100 ms would still miss which pass began it.
-        if (s.buzzer_level() != spoken) {
-            spoken = s.buzzer_level();
+        if (simulator.buzzer_level() != spoken) {
+            spoken = simulator.buzzer_level();
             if (spoken != 0) {
-                e.last_spoken_ms = t;
-                ++(t >= Encounter::kQuietFromMs ? e.beeps_after_settle : e.beeps_before_settle);
+                encounter.last_spoken_ms = now_ms;
+                ++(now_ms >= Encounter::kQuietFromMs ? encounter.beeps_after_settle
+                                                     : encounter.beeps_before_settle);
             }
         }
 
-        if (t % Encounter::kSampleMs != 0) continue;
+        if (now_ms % Encounter::kSampleMs != 0) continue;
 
-        const bus::State& state = s.product().state();
+        const bus::State& state = simulator.product().state();
         const traffic::Target* target = only_target(state);
         if (target == nullptr) continue;
 
-        const traffic::AlarmAssessment a = traffic::assess(state.own, target->obs, t);
-        if (!a.valid) continue;
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(state.own, target->observation, now_ms);
+        if (!assessment.valid) continue;
         const uint8_t level = traffic::to_number(state.alarm_level);
-        const int32_t range_m = a.rel_dist_m;
-        const int32_t true_m = static_cast<int32_t>(s.world().separation_m(0));
+        const int32_t range_m = assessment.relative_distance_m;
+        const int32_t true_separation_m = static_cast<int32_t>(simulator.world().separation_m(0));
 
-        if (level >= 1 && !e.announced) {
-            e.announced = true;
-            e.first_ms = t;
-            e.first_range_m = range_m;
-            e.first_true_m = true_m;
+        if (level >= 1 && !encounter.announced) {
+            encounter.announced = true;
+            encounter.first_ms = now_ms;
+            encounter.first_range_m = range_m;
+            encounter.first_true_separation_m = true_separation_m;
         }
-        if (range_m < e.min_reported_m) e.min_reported_m = range_m;
-        error_sum += range_m > true_m ? range_m - true_m : true_m - range_m;
+        if (range_m < encounter.min_reported_m) encounter.min_reported_m = range_m;
+        error_sum +=
+            range_m > true_separation_m ? range_m - true_separation_m : true_separation_m - range_m;
         samples++;
-        if (true_m < e.min_true_m) {
-            e.min_true_m = true_m;
-            e.min_true_ms = t;
-            e.level_at_min_true = level;
+        if (true_separation_m < encounter.min_true_separation_m) {
+            encounter.min_true_separation_m = true_separation_m;
+            encounter.min_true_separation_ms = now_ms;
+            encounter.level_at_min_true_separation = level;
         }
-        e.traffic_count = state.traffic.count();
+        encounter.traffic_count = state.traffic.count();
     }
-    if (samples > 0) e.mean_range_error_m = static_cast<int32_t>(error_sum / samples);
-    return e;
+    if (samples > 0) encounter.mean_range_error_m = static_cast<int32_t>(error_sum / samples);
+    return encounter;
 }
 
-void report(const Encounter& e) {
-    MESSAGE("first advisory: t=" << e.first_ms << " ms, model range=" << e.first_range_m
-                                 << " m, true separation=" << e.first_true_m << " m");
-    MESSAGE("beeps: " << e.beeps_before_settle << " before " << Encounter::kQuietFromMs << " ms, "
-                      << e.beeps_after_settle << " after; last at t=" << e.last_spoken_ms << " ms");
-    MESSAGE("closest approach: " << e.min_true_m << " m true at t=" << e.min_true_ms
-                                 << " ms, published level " << static_cast<int>(e.level_at_min_true)
-                                 << ", closest the model ever saw " << e.min_reported_m << " m");
-    MESSAGE("mean range error: " << e.mean_range_error_m << " m");
+void report(const Encounter& encounter) {
+    MESSAGE("first advisory: t=" << encounter.first_ms
+                                 << " ms, model range=" << encounter.first_range_m
+                                 << " m, true separation=" << encounter.first_true_separation_m
+                                 << " m");
+    MESSAGE("beeps: " << encounter.beeps_before_settle << " before " << Encounter::kQuietFromMs
+                      << " ms, " << encounter.beeps_after_settle
+                      << " after; last at t=" << encounter.last_spoken_ms << " ms");
+    MESSAGE("closest approach: " << encounter.min_true_separation_m << " m true at t="
+                                 << encounter.min_true_separation_ms << " ms, published level "
+                                 << static_cast<int>(encounter.level_at_min_true_separation)
+                                 << ", closest the model ever saw " << encounter.min_reported_m
+                                 << " m");
+    MESSAGE("mean range error: " << encounter.mean_range_error_m << " m");
 }
 
 }  // namespace
 
 // Decision 5.3, settled: cores 75 m apart, an 11 m crossing that both arcs see coming.
 TEST_CASE("scenario: two gliders sharing a thermal core are warned about the 15 m pass") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/circling_gaggle.json"));
-    const Encounter e = measure(s);
-    report(e);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/circling_gaggle.json"));
+    const Encounter encounter = measure(simulator);
+    report(encounter);
 
-    CHECK(s.world().failures() == 0);
-    CHECK(e.traffic_count == 1);
+    CHECK(simulator.world().failures() == 0);
+    CHECK(encounter.traffic_count == 1);
 
-    CHECK(e.min_true_m < 15);
-    CHECK(e.min_true_ms > 10000);
-    CHECK(e.announced);
-    CHECK(e.first_ms < e.min_true_ms);
+    CHECK(encounter.min_true_separation_m < 15);
+    CHECK(encounter.min_true_separation_ms > 10000);
+    CHECK(encounter.announced);
+    CHECK(encounter.first_ms < encounter.min_true_separation_ms);
 
     // A neighbour's turn rate is not on the wire, so each is still carried straight to now.
-    CHECK(e.min_reported_m < 60);
-    CHECK(e.mean_range_error_m < 20);
+    CHECK(encounter.min_reported_m < 60);
+    CHECK(encounter.mean_range_error_m < 20);
 }
 
 // The other side of the fence: a glider arriving straight at 45 m/s is spoken
 // about while it is still a long way out, and once.
 TEST_CASE("scenario: a glider joining the thermal on a straight line is still caught") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/thermal_joiner.json"));
-    const Encounter e = measure(s);
-    report(e);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/thermal_joiner.json"));
+    const Encounter encounter = measure(simulator);
+    report(encounter);
 
-    CHECK(s.world().failures() == 0);
-    CHECK(e.traffic_count == 1);
+    CHECK(simulator.world().failures() == 0);
+    CHECK(encounter.traffic_count == 1);
 
     // Inside the window from the first report it made, and spoken about there:
     // 2 km at 68 m/s of closure is half a minute of looking.
-    CHECK(e.announced);
-    CHECK(e.first_range_m <= traffic::kAdvisoryDistM);
-    CHECK(e.first_range_m > 1800);
-    CHECK(e.first_ms < 5000);
-    CHECK(e.min_true_ms - e.first_ms > 30000);
+    CHECK(encounter.announced);
+    CHECK(encounter.first_range_m <= traffic::kAdvisoryDistanceM);
+    CHECK(encounter.first_range_m > 1800);
+    CHECK(encounter.first_ms < 5000);
+    CHECK(encounter.min_true_separation_ms - encounter.first_ms > 30000);
 
     // One pair of beeps for the whole encounter: it arrives once.
-    CHECK(e.beeps_before_settle == 2);
-    CHECK(e.beeps_after_settle == 0);
+    CHECK(encounter.beeps_before_settle == 2);
+    CHECK(encounter.beeps_after_settle == 0);
 
     // Both sides carried to the instant the range is read at: unaligned, this encounter reads 57 m
     // out.
-    CHECK(e.mean_range_error_m < 40);
+    CHECK(encounter.mean_range_error_m < 40);
 }
 
 // The session boundary as a committed fixture: one file, replayed by the tests
@@ -382,23 +395,23 @@ TEST_CASE("scenario: a glider joining the thermal on a straight line is still ca
 // from. The device is stationary, then it flies, then it stops - and what the
 // partition holds afterwards is exactly one flight with a beginning and an end.
 TEST_CASE("scenario: a takeoff and a landing bracket one flight log session") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/takeoff_and_landing.json"));
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/takeoff_and_landing.json"));
 
     uint32_t parked_records = 0;
     uint32_t parked_writes = 0;
     uint32_t airborne_records = 0;
     bool was_recording = false;
-    for (uint32_t t = 0; t <= 130000; t += simulator::Simulator::kStepMs) {
-        s.step(t);
-        if (t == 18000) {
-            parked_records = s.product().flight_log().records_written();
-            parked_writes = s.platform().log_flash().writes;
+    for (uint32_t now_ms = 0; now_ms <= 130000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
+        if (now_ms == 18000) {
+            parked_records = simulator.product().flight_log().records_written();
+            parked_writes = simulator.platform().log_flash().writes;
         }
-        if (t == 70000) {
-            was_recording = s.product().flight_log().recording();
-            airborne_records = s.product().flight_log().records_written();
+        if (now_ms == 70000) {
+            was_recording = simulator.product().flight_log().recording();
+            airborne_records = simulator.product().flight_log().records_written();
         }
     }
 
@@ -408,10 +421,10 @@ TEST_CASE("scenario: a takeoff and a landing bracket one flight log session") {
     CHECK(was_recording);
     CHECK(airborne_records > 0);
 
-    CHECK(s.world().failures() == 0);
-    CHECK_FALSE(s.product().flight_log().recording());
-    CHECK(s.product().flight_log().records_written() > airborne_records);
-    CHECK(s.product().flight_log().sessions_on_flash() == 1);
+    CHECK(simulator.world().failures() == 0);
+    CHECK_FALSE(simulator.product().flight_log().recording());
+    CHECK(simulator.product().flight_log().records_written() > airborne_records);
+    CHECK(simulator.product().flight_log().sessions_on_flash() == 1);
 }
 
 // The ground relay as a committed fixture, so the case is reproducible in the
@@ -420,24 +433,24 @@ TEST_CASE("scenario: a takeoff and a landing bracket one flight log session") {
 // one O-band frame, alongside one neighbour it hears for itself on the M band.
 //
 // Before 2026-08-05 this scenario produced exactly one target. The uplink frame
-// went to protocol::receive_mband, which frames the M band's two systems and
+// went to protocol::receive_m_band, which frames the M band's two systems and
 // nothing else, so it failed there and was counted as rx_bad: the feature was
 // absent and its absence was indistinguishable from a noisy site.
 TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot hear") {
-    simulator::Simulator s;
-    REQUIRE(s.setup() == Status::Ok);
-    REQUIRE(s.load_file("scenarios/ground_relay.json"));
-    replay(s);
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/ground_relay.json"));
+    replay(simulator);
 
-    CHECK(s.world().failures() == 0);
-    const bus::State& state = s.product().state();
+    CHECK(simulator.world().failures() == 0);
+    const bus::State& state = simulator.product().state();
 
     int direct = 0, relayed = 0;
-    for (int i = 0; i < traffic::TrafficTable::kCapacity; i++) {
-        const traffic::Target* t = state.traffic.at(i);
-        if (t == nullptr || !t->used) continue;
-        if (t->obs.source == model::Source::AdslDirect) direct++;
-        if (t->obs.source == model::Source::AdslUplink) relayed++;
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = state.traffic.at(i);
+        if (target == nullptr || !target->used) continue;
+        if (target->observation.source == model::Source::AdslDirect) direct++;
+        if (target->observation.source == model::Source::AdslUplink) relayed++;
     }
     CHECK(direct == 1);
     CHECK(relayed == 3);
@@ -452,9 +465,9 @@ TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot h
     // The tape says what it heard and where: the relay is on 869.525 and it is
     // read as a relay, not as an unframed burst.
     bool saw_uplink_line = false;
-    for (int i = 0; i < s.world().air().record_count(); i++) {
+    for (int i = 0; i < simulator.world().air().record_count(); i++) {
         char line[128];
-        s.world().air().format(i, line, sizeof(line));
+        simulator.world().air().format(i, line, sizeof(line));
         if (std::string(line).find("869.525 RX  ") != std::string::npos &&
             std::string(line).find("UPLINK 3 aircraft") != std::string::npos)
             saw_uplink_line = true;

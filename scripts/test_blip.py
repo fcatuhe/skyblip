@@ -4,7 +4,7 @@
     python3 scripts/test_blip.py
 
 Stdlib alone and no radio: every record here is handcrafted bytes, laid out
-against firmware/core/diag/payload_*.cpp and firmware/core/flight/log_record.cpp.
+against firmware/core/diagnostics/payload_*.cpp and firmware/core/flight/log_record.cpp.
 Those two files and these tables are the same layout written twice, once on each
 side of a Bluetooth link, and nothing but a test holds them together.
 
@@ -27,7 +27,7 @@ SCHEMA = pathlib.Path(__file__).resolve().parents[1] / "schemas" / "diagnostics_
 FLIGHT_SCHEMA = SCHEMA.with_name("flight_log.v1.schema.json")
 
 
-def diag_record(type_id, payload, flags=0, into_ms=0, at_s=0):
+def diagnostics_record(type_id, payload, flags=0, into_ms=0, at_s=0):
     raw = bytearray(24)
     raw[0] = type_id
     raw[1] = flags
@@ -58,8 +58,8 @@ def event_record(kind, fields=b"", flags=0xFF, offset_s=0):
 
 class DiagnosticsEnvelope(unittest.TestCase):
     def test_the_envelope_is_type_flags_into_ms_and_at_s(self):
-        raw = diag_record(16, b"", flags=0b11, into_ms=1200, at_s=1_700_000_000)
-        decoded = records.decode_diag_record(raw)
+        raw = diagnostics_record(16, b"", flags=0b11, into_ms=1200, at_s=1_700_000_000)
+        decoded = records.decode_diagnostics_record(raw)
         self.assertEqual(decoded["type"], "gap")
         self.assertEqual(decoded["into_ms"], 1200)
         self.assertEqual(decoded["at_s"], 1_700_000_000)
@@ -68,24 +68,24 @@ class DiagnosticsEnvelope(unittest.TestCase):
 
     def test_an_all_zero_slot_is_not_a_boot_record(self):
         with self.assertRaises(records.RecordError):
-            records.decode_diag_record(bytes(24))
+            records.decode_diagnostics_record(bytes(24))
 
     def test_an_erased_slot_says_erased_rather_than_decoding(self):
         with self.assertRaises(records.RecordError) as caught:
-            records.decode_diag_record(b"\xFF" * 24)
+            records.decode_diagnostics_record(b"\xFF" * 24)
         self.assertIn("erased", str(caught.exception))
 
     def test_a_type_this_decoder_does_not_know_is_refused_not_guessed(self):
         with self.assertRaises(records.RecordError):
-            records.decode_diag_record(diag_record(99, b""))
+            records.decode_diagnostics_record(diagnostics_record(99, b""))
 
     def test_a_slot_that_is_not_24_bytes_is_refused(self):
         with self.assertRaises(records.RecordError):
-            records.decode_diag_record(diag_record(3, b"")[:20])
+            records.decode_diagnostics_record(diagnostics_record(3, b"")[:20])
 
 
 def decoded(type_id, payload, flags=0):
-    return records.decode_diag_record(diag_record(type_id, payload, flags=flags))
+    return records.decode_diagnostics_record(diagnostics_record(type_id, payload, flags=flags))
 
 
 def whole(type_name, flags, **fields):
@@ -97,7 +97,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_boot_reads_capabilities_version_reset_and_image_state(self):
         payload = struct.pack("<2IH4B", 0x1FFF, 4242, 7, 1, 2, 5, 1)
         self.assertEqual(decoded(1, payload), whole(
-            "boot", 0, capabilities=0x1FFF, fw_build=4242, fw_revision=7, fw_major=1, fw_minor=2,
+            "boot", 0, capabilities=0x1FFF, firmware_build=4242, firmware_revision=7, firmware_major=1, firmware_minor=2,
             reset="WATCHDOG", image_state="probation"))
 
     def test_boot_names_its_profile_only_where_the_flag_says_it_was_written(self):
@@ -109,7 +109,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_config_reads_signed_trims_and_its_three_flag_bits(self):
         payload = struct.pack("<I2h4B2b", 0xABCDEF, -120, -35, 9, 7, 3, 2, -9, 22)
         self.assertEqual(decoded(2, payload, 0b1_1100), whole(
-            "config", 0b1_1100, address=0xABCDEF, battery_offset_mv=-120, freq_trim_e1_ppm=-35,
+            "config", 0b1_1100, address=0xABCDEF, battery_offset_mv=-120, frequency_trim_e1_ppm=-35,
             aircraft_type=9, address_mapping_table=7, alarm_volume=3, settings_version=2,
             tx_power_dbm=-9, pa_rated_dbm=22, alarm_enabled=True, metric=True,
             battery_trim_manual=True))
@@ -117,9 +117,9 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_gnss_reads_its_five_words_two_enums_and_six_flags(self):
         payload = struct.pack("<5H5B", 350, 12, 120, 180, 900, 11, 17, 3, 4, 2)
         self.assertEqual(decoded(3, payload, 0b1111_1100), whole(
-            "gnss", 0b1111_1100, nav_ms=350, resid_m=12, hdop_e2=120, vdop_e2=180, stage_s=900,
-            sats=11, sats_in_view=17, fix_mode=3, reject="STALE", stage="solving", fix_valid=True,
-            resid_valid=True, pps_locked=True, geoid_measured=True, tx_settled=True,
+            "gnss", 0b1111_1100, solution_phase_ms=350, residual_m=12, hdop_e2=120, vdop_e2=180, stage_s=900,
+            satellites=11, satellites_in_view=17, fix_mode=3, reject="STALE", stage="solving", fix_valid=True,
+            residual_valid=True, pps_locked=True, geoid_measured=True, tx_settled=True,
             levels_fresh=True))
 
     def test_pps_error_is_signed_so_a_slow_edge_reads_negative(self):
@@ -132,7 +132,7 @@ class DiagnosticsPayloads(unittest.TestCase):
         payload = struct.pack("<I2H5B3b", 0x0102AB, 410, 960, 8, 2, 1, 1, 26, -97, -2, -23)
         self.assertEqual(decoded(5, payload, 0b0011_1100), whole(
             "burst", 0b0011_1100, address=0x0102AB, tx_keyed_us=410, tx_span_us=960,
-            verdict="miskeyed", source="alptas", band="O", channel=1, len=26, rssi_dbm=-97,
+            verdict="miskeyed", source="alptas", band="O", channel=1, bytes=26, rssi_dbm=-97,
             key_offset_s=-2, tx_stage_margin_us=-230, address_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
             callsign=False))
 
@@ -141,7 +141,7 @@ class DiagnosticsPayloads(unittest.TestCase):
         self.assertTrue(decoded(5, payload, 0b0100_0000)["callsign"])
         self.assertFalse(decoded(5, payload, 0b0000_0000)["callsign"])
 
-    # radio::Event gained Named at 5 in PR #69 and the six verdicts behind it each moved one up.
+    # radio::Verdict gained Named at 5 in PR #69 and the six verdicts behind it each moved one up.
     def test_the_verdict_behind_received_is_the_callsign_one_and_not_a_bad_crc(self):
         payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, 5, 0, 0, 0, 20, -70, 0)
         self.assertEqual(decoded(5, payload)["verdict"], "named")
@@ -151,14 +151,14 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_dwell_reads_the_slot_map_and_a_refusal(self):
         payload = struct.pack("<I4H3Bb", 868_200_000, 450, 1200, 612, 7, 4, 0, 1, -105)
         self.assertEqual(decoded(6, payload, 0b0100_0100), whole(
-            "dwell", 0b0100_0100, freq_hz=868_200_000, start_ms=450, end_ms=1200, phase_ms=612,
+            "dwell", 0b0100_0100, frequency_hz=868_200_000, start_ms=450, end_ms=1200, phase_ms=612,
             duty_permille=7, state="slot1", band="M", refusal="over_budget", noise_dbm=-105,
             tx_allowed=True, own_tx_dwell=False, listen_only=False, armed=False, burst_armed=True))
 
     def test_flight_keeps_the_margin_the_state_was_decided_on(self):
         payload = struct.pack("<2ih2H2B", 11_800, -450, 612, 130, 210, 2, 1)
         self.assertEqual(decoded(7, payload, 0b0011_1100), whole(
-            "flight", 0b0011_1100, speed_mm_s=11_800, climb_mm_s=-450, alt_msl_m=612, hdop_e2=130,
+            "flight", 0b0011_1100, speed_mm_s=11_800, climb_mm_s=-450, altitude_msl_m=612, hdop_e2=130,
             vdop_e2=210, declared="airborne", confirmed="on_ground", fix_valid=True, rolling=True,
             climb_valid=True, tx_settled=True))
 
@@ -166,39 +166,39 @@ class DiagnosticsPayloads(unittest.TestCase):
         payload = struct.pack("<4Hh3Bhb", 3987, 1, 4, 2, -53, 74, 2, 3, 0, -12)
         self.assertEqual(decoded(8, payload, 0b0011_0100), whole(
             "power", 0b0011_0100, cell_mv=3987, supply_warnings=1, implausible=4,
-            charge_warnings=2, die_dc=-53, percent=74, level="critical", charge="too_hot",
+            charge_warnings=2, die_dc=-53, percent=74, power_level="critical", charge="too_hot",
             trim_offset_mv=0, sample_offset_mv=-12, charging=True, external_power=False,
-            valid=True, die_valid=True, caution=False, trim_learned=False))
+            battery_valid=True, die_valid=True, caution=False, trim_learned=False))
 
     def test_power_reads_the_knee_as_the_level_that_joined_the_ladder_last(self):
         payload = struct.pack("<4Hh3Bhb", 3550, 0, 0, 0, 210, 11, 4, 1, 0, 0)
         self.assertEqual(decoded(8, payload, 0b0001_0000), whole(
             "power", 0b0001_0000, cell_mv=3550, supply_warnings=0, implausible=0,
-            charge_warnings=0, die_dc=210, percent=11, level="low", charge="ok",
+            charge_warnings=0, die_dc=210, percent=11, power_level="low", charge="ok",
             trim_offset_mv=0, sample_offset_mv=0, charging=False, external_power=False,
-            valid=True, die_valid=False, caution=False, trim_learned=False))
+            battery_valid=True, die_valid=False, caution=False, trim_learned=False))
 
     def test_power_reads_an_old_captures_caution_knee_and_the_trim_a_charger_taught_the_unit(self):
         payload = struct.pack("<4Hh3Bhb", 3550, 0, 0, 0, 210, 18, 1, 1, -40, -128)
         self.assertEqual(decoded(8, payload, 0b1101_0100), whole(
             "power", 0b1101_0100, cell_mv=3550, supply_warnings=0, implausible=0,
-            charge_warnings=0, die_dc=210, percent=18, level="normal", charge="ok",
+            charge_warnings=0, die_dc=210, percent=18, power_level="normal", charge="ok",
             trim_offset_mv=-40, sample_offset_mv=-128, charging=True, external_power=False,
-            valid=True, die_valid=False, caution=True, trim_learned=True))
+            battery_valid=True, die_valid=False, caution=True, trim_learned=True))
 
     # 0B1B2C on its charger: the rail over 4700 mV, refused and counted, with the cable seen (#114)
     def test_power_on_the_cable_reads_the_rail_it_refused_and_no_cell(self):
         payload = struct.pack("<4Hh3Bhb", 4812, 0, 360, 0, 305, 0, 1, 1, 0, 0)
         self.assertEqual(decoded(8, payload, 0b0010_1100), whole(
             "power", 0b0010_1100, cell_mv=4812, supply_warnings=0, implausible=360,
-            charge_warnings=0, die_dc=305, percent=0, level="normal", charge="ok",
+            charge_warnings=0, die_dc=305, percent=0, power_level="normal", charge="ok",
             trim_offset_mv=0, sample_offset_mv=0, charging=True, external_power=True,
-            valid=False, die_valid=True, caution=False, trim_learned=False))
+            battery_valid=False, die_valid=True, caution=False, trim_learned=False))
 
     def test_baro_altitude_and_climb_are_signed_millimetres(self):
         payload = struct.pack("<I2ih", 95_432_100, -1234, -2500, -104)
         self.assertEqual(decoded(9, payload, 0b0001_1100), whole(
-            "baro", 0b0001_1100, pressure_mpa=95_432_100, alt_mm=-1234, climb_mm_s=-2500,
+            "barometer", 0b0001_1100, pressure_mpa=95_432_100, altitude_mm=-1234, climb_mm_s=-2500,
             temperature_dc=-104, active=True, temperature_valid=True, climb_adopted=True))
 
     def test_motion_reads_six_signed_axes_and_two_error_bytes(self):
@@ -222,7 +222,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_traffic_reads_the_encounter_geometry_with_signed_altitude(self):
         payload = struct.pack("<I2H2h2BbB", 0xDD1234, 2450, 270, -180, 32, 1, 1, -88, 12)
         self.assertEqual(decoded(13, payload, 0b0010_0100), whole(
-            "traffic", 0b0010_0100, address=0xDD1234, dist_m=2450, bearing_deg=270, rel_alt_m=-180,
+            "traffic", 0b0010_0100, address=0xDD1234, distance_m=2450, bearing_deg=270, relative_altitude_m=-180,
             closing_mps=32, alarm=1, source="adsl_uplink", rssi_dbm=-88, tracked=12, assessed=True,
             dismissed=False, in_formation=False, position_valid=True))
 
@@ -235,7 +235,7 @@ class DiagnosticsPayloads(unittest.TestCase):
     def test_screen_reads_the_page_codes_the_product_owns(self):
         payload = struct.pack("<I4B2I", 2500, 6, 1, 4, 1, 187430, 41210)
         self.assertEqual(decoded(15, payload, 0b0001_1100), whole(
-            "screen", 0b0001_1100, since_ms=2500, page=6, mode=1, prompt=4, alarm=1,
+            "screen", 0b0001_1100, since_page_shown_ms=2500, page=6, mode=1, prompt=4, alarm=1,
             render_us=187430, present_us=41210, backlight=True, powered=True, holding=True))
 
     def test_loop_names_the_service_that_held_it(self):
@@ -261,11 +261,11 @@ class DiagnosticsPayloads(unittest.TestCase):
             backlight_ms=41_250, rx_armed_ms=58_300, tx_keyed_ms=1420, ble_connected_ms=22_700,
             annunciator_ms=640))
 
-    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to, 30 s apart.
+    # The bytes firmware/test/core/diagnostics/test_diagnostics_decided.cpp pins the encoder to, 30 s apart.
     def test_two_duty_records_a_wrap_apart_subtract_to_the_true_interval(self):
-        before = records.decode_diag_record(bytes.fromhex(
+        before = records.decode_diagnostics_record(bytes.fromhex(
             "1202000040f9a16a00000000e8fd60ea0000000000000000"))
-        after = records.decode_diag_record(bytes.fromhex(
+        after = records.decode_diagnostics_record(bytes.fromhex(
             "120200005ef9a16a000000001873905f0000000000000000"))
         self.assertEqual(after["at_s"] - before["at_s"], 30)
         self.assertEqual((before["backlight_ms"], after["backlight_ms"]), (65_000, 29_464))
@@ -273,9 +273,9 @@ class DiagnosticsPayloads(unittest.TestCase):
         self.assertEqual((after["rx_armed_ms"] - before["rx_armed_ms"]) & 0xFFFF, 30_000)
 
 
-    # The bytes firmware/test/core/diag/test_diag_decided.cpp pins the encoder to.
+    # The bytes firmware/test/core/diagnostics/test_diagnostics_decided.cpp pins the encoder to.
     def test_a_config_record_names_the_transmitter_it_was_captured_on(self):
-        decoded = records.decode_diag_record(bytes.fromhex(
+        decoded = records.decode_diagnostics_record(bytes.fromhex(
             "0202000040f9a16afeca5b0000000000000700010e160000"))
         self.assertEqual(decoded["address"], 0x5BCAFE)
         self.assertEqual(decoded["tx_power_dbm"], 14)
@@ -288,9 +288,9 @@ class TablesAgainstTheSchema(unittest.TestCase):
 
     def test_the_type_numbers_are_the_schema_enum_in_the_same_order(self):
         named = [name for name, _ in
-                 (records.DIAG_TYPES[key] for key in sorted(records.DIAG_TYPES))]
+                 (records.DIAGNOSTICS_TYPES[key] for key in sorted(records.DIAGNOSTICS_TYPES))]
         self.assertEqual(named, self.schema["properties"]["type"]["enum"])
-        self.assertEqual(sorted(records.DIAG_TYPES), list(range(1, 21)))
+        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 21)))
 
     def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
         for field, names in records.enum_fields():
@@ -305,20 +305,20 @@ class TablesAgainstTheSchema(unittest.TestCase):
 
     def test_every_decoded_key_is_a_key_the_schema_declares(self):
         allowed = set(self.schema["properties"])
-        for type_id in records.DIAG_TYPES:
-            decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16)), flags=0xFF))
+        for type_id in records.DIAGNOSTICS_TYPES:
+            decoded = records.decode_diagnostics_record(diagnostics_record(type_id, bytes(range(16)), flags=0xFF))
             self.assertLessEqual(set(decoded), allowed, "type %d" % type_id)
 
     def test_no_decoded_key_collides_with_the_keys_a_fetch_wraps_each_record_in(self):
         wrapper = {"log", "session", "index"}
-        for type_id in records.DIAG_TYPES:
-            decoded = records.decode_diag_record(diag_record(type_id, bytes(range(16))))
+        for type_id in records.DIAGNOSTICS_TYPES:
+            decoded = records.decode_diagnostics_record(diagnostics_record(type_id, bytes(range(16))))
             self.assertEqual(set(decoded) & wrapper, set(), "type %d" % type_id)
 
     def test_no_field_reads_past_the_sixteen_byte_payload(self):
-        for type_id, (name, fields) in records.DIAG_TYPES.items():
-            short = diag_record(type_id, bytes(16), flags=0xFF)[:23] + b"\x00"
-            decoded = records.decode_diag_record(short)
+        for type_id, (name, fields) in records.DIAGNOSTICS_TYPES.items():
+            short = diagnostics_record(type_id, bytes(16), flags=0xFF)[:23] + b"\x00"
+            decoded = records.decode_diagnostics_record(short)
             self.assertEqual(decoded["type"], name)
             self.assertEqual(len(decoded), len(fields) + 5)
 
@@ -327,17 +327,17 @@ class GoldenVectors(unittest.TestCase):
     """Bytes the firmware's own encoders produced, so the two layouts are pinned to each other."""
 
     def test_a_gnss_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diag_record(
+        decoded = records.decode_diagnostics_record(
             bytes.fromhex("037fb00400f153655e010c007800b40084030b1103040200"))
         self.assertEqual(decoded["at_s"], 1_700_000_000)
         self.assertEqual(decoded["into_ms"], 1200)
-        self.assertEqual(decoded["nav_ms"], 350)
+        self.assertEqual(decoded["solution_phase_ms"], 350)
         self.assertEqual(decoded["stage_s"], 900)
         self.assertEqual(decoded["reject"], "STALE")
         self.assertEqual(decoded["stage"], "solving")
 
     def test_a_burst_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diag_record(
+        decoded = records.decode_diagnostics_record(
             bytes.fromhex("053fb00400f15365ab0201009a01c003080201011a9ffe00"))
         self.assertEqual(decoded["address"], 0x0102AB)
         self.assertEqual(decoded["verdict"], "miskeyed")
@@ -345,7 +345,7 @@ class GoldenVectors(unittest.TestCase):
         self.assertEqual(decoded["key_offset_s"], -2)
 
     def test_a_pps_record_encoded_by_the_firmware(self):
-        decoded = records.decode_diag_record(
+        decoded = records.decode_diagnostics_record(
             bytes.fromhex("040fb00400f1536533420f00f3ffffff100e00000200c201"))
         self.assertEqual(decoded["interval_us"], 999_987)
         self.assertEqual(decoded["error_us"], -13)
@@ -354,10 +354,10 @@ class GoldenVectors(unittest.TestCase):
     def test_a_flight_fix_encoded_by_the_firmware(self):
         decoded = records.decode_flight_record(
             bytes.fromhex("d20400cf511c7929edffb004d090008000f0ff090ccf0209"), 1_600_000_000)
-        self.assertEqual(decoded["utc"], 1_600_001_234)
-        self.assertEqual(decoded["lat_1e7"], 475_123_456)
-        self.assertEqual(decoded["lon_1e7"], -1_234_567)
-        self.assertEqual(decoded["alt_hae_m"], 1152)
+        self.assertEqual(decoded["utc_s"], 1_600_001_234)
+        self.assertEqual(decoded["latitude_1e7"], 475_123_456)
+        self.assertEqual(decoded["longitude_1e7"], -1_234_567)
+        self.assertEqual(decoded["altitude_hae_m"], 1152)
         self.assertEqual(decoded["track_deg"], 90)
         self.assertEqual(decoded["flight_state"], "airborne")
         self.assertTrue(decoded["session_end"])
@@ -367,9 +367,9 @@ class GoldenVectors(unittest.TestCase):
         decoded = records.decode_flight_record(
             bytes.fromhex("3d00480f400401030505000000000000810000000000b84d"), 1_785_628_800)
         self.assertEqual(decoded["type"], "status")
-        self.assertEqual(decoded["utc"], 1_785_628_861)
+        self.assertEqual(decoded["utc_s"], 1_785_628_861)
         self.assertEqual(decoded["cell_mv"], 3912)
-        self.assertEqual(decoded["level"], "low")
+        self.assertEqual(decoded["power_level"], "low")
         self.assertEqual(decoded["tracked"], 3)
         self.assertEqual(decoded["tracked_peak"], 5)
         self.assertTrue(decoded["external_power"])
@@ -379,11 +379,11 @@ class GoldenVectors(unittest.TestCase):
         decoded = records.decode_flight_record(
             bytes.fromhex("2c013412dd06b400d6ff3b010c0001028300a8005f002eb1"), 1_785_628_800)
         self.assertEqual(decoded["type"], "encounter")
-        self.assertEqual(decoded["utc"], 1_785_629_100)
+        self.assertEqual(decoded["utc_s"], 1_785_629_100)
         self.assertEqual(decoded["address"], 0xDD1234)
-        self.assertEqual(decoded["dist_m"], 180)
-        self.assertEqual(decoded["rel_alt_m"], -42)
-        self.assertEqual(decoded["rel_bearing_deg"], 315)
+        self.assertEqual(decoded["distance_m"], 180)
+        self.assertEqual(decoded["relative_altitude_m"], -42)
+        self.assertEqual(decoded["relative_bearing_deg"], 315)
         self.assertEqual(decoded["alarm"], 1)
         self.assertEqual(decoded["rssi_dbm"], -88)
         self.assertEqual(decoded["heard_s"], 95)
@@ -437,7 +437,7 @@ class FlightRecords(unittest.TestCase):
         self.assertEqual(fix["track_c9"], 511)
         alarm = records.decode_flight_record(event_record(2, flags=0), 0)
         self.assertEqual(alarm["type"], "alarm")
-        self.assertNotIn("lat_1e7", alarm)
+        self.assertNotIn("latitude_1e7", alarm)
 
     def test_an_event_kind_this_decoder_does_not_know_is_unreadable_not_guessed(self):
         raw = bytearray(event_record(1))
@@ -453,22 +453,22 @@ class FlightRecords(unittest.TestCase):
 
     def test_utc_is_the_session_base_plus_the_stored_offset(self):
         decoded = records.decode_flight_record(flight_record(offset_s=1234), 1_700_000_000)
-        self.assertEqual(decoded["utc"], 1_700_001_234)
+        self.assertEqual(decoded["utc_s"], 1_700_001_234)
 
     def test_position_speed_track_and_climb_come_back_in_their_own_units(self):
         fields = struct.pack("<2ihb2Hh2B", 475_123_456, -1_234_567, 1200, -48, 144, 128, -16, 9, 12)
         decoded = records.decode_flight_record(flight_record(fields), 0)
-        self.assertEqual(decoded["lat_1e7"], 475_123_456)
-        self.assertEqual(decoded["lon_1e7"], -1_234_567)
-        self.assertEqual(decoded["alt_msl_m"], 1200)
-        self.assertEqual(decoded["alt_hae_m"], 1152)
+        self.assertEqual(decoded["latitude_1e7"], 475_123_456)
+        self.assertEqual(decoded["longitude_1e7"], -1_234_567)
+        self.assertEqual(decoded["altitude_msl_m"], 1200)
+        self.assertEqual(decoded["altitude_hae_m"], 1152)
         self.assertEqual(decoded["speed_q"], 144)
         self.assertEqual(decoded["speed_mm_s"], 36_000)
         self.assertEqual(decoded["track_c9"], 128)
         self.assertEqual(decoded["track_deg"], 90)
         self.assertEqual(decoded["climb_e8"], -16)
         self.assertEqual(decoded["climb_mm_s"], -2000)
-        self.assertEqual(decoded["sats"], 9)
+        self.assertEqual(decoded["satellites"], 9)
         self.assertEqual(decoded["hdop_e2"], 120)
 
     def test_the_flight_state_rides_in_bits_five_and_six_of_the_flag_byte(self):
@@ -487,14 +487,14 @@ class FlightRecords(unittest.TestCase):
 
 class Chunks(unittest.TestCase):
     def test_a_chunk_numbers_its_records_from_the_index_it_was_asked_for(self):
-        blob = base64.b64encode(diag_record(16, (1).to_bytes(4, "little"))
-                                + diag_record(4, bytes(16))).decode()
+        blob = base64.b64encode(diagnostics_record(16, (1).to_bytes(4, "little"))
+                                + diagnostics_record(4, bytes(16))).decode()
         decoded = records.decode_chunk("diagnostics", blob, 0, 24)
         self.assertEqual([record["index"] for record in decoded], [24, 25])
         self.assertEqual([record["type"] for record in decoded], ["gap", "pps"])
 
     def test_an_unreadable_slot_stays_in_the_stream_as_a_hole(self):
-        blob = base64.b64encode(diag_record(99, bytes(16))).decode()
+        blob = base64.b64encode(diagnostics_record(99, bytes(16))).decode()
         decoded = records.decode_chunk("diagnostics", blob, 0, 7)
         self.assertEqual(decoded[0]["type"], "unreadable")
         self.assertEqual(decoded[0]["index"], 7)
@@ -507,7 +507,7 @@ class Chunks(unittest.TestCase):
     def test_a_flights_chunk_is_decoded_against_the_session_base(self):
         blob = base64.b64encode(flight_record(offset_s=5)).decode()
         decoded = records.decode_chunk("flights", blob, 1_600_000_000, 0)
-        self.assertEqual(decoded[0]["utc"], 1_600_000_005)
+        self.assertEqual(decoded[0]["utc_s"], 1_600_000_005)
 
 
 class Summaries(unittest.TestCase):

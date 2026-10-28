@@ -31,12 +31,12 @@ class Link : public ports::Link {
     bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
     void raise_link(uint16_t session_id = 1) {
-        sessions_.connected(session_id, declared_);
+        sessions_.connected(session_id, declared_payload_bytes_);
         if (!sessions_.up(session_id)) return;
         live_.push_back(session_id);
-        last_ = session_id;
+        last_session_id_ = session_id;
     }
-    void drop_link() { drop_link(last_); }
+    void drop_link() { drop_link(last_session_id_); }
     void drop_link(uint16_t session_id) {
         sessions_.disconnected(session_id);
         for (size_t i = 0; i < live_.size(); i++) {
@@ -48,7 +48,7 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out) { return sessions_.pop(out); }
     bool up() const { return sessions_.up(); }
     int links() const { return sessions_.count(); }
-    uint16_t session_id() const { return last_; }
+    uint16_t session_id() const { return last_session_id_; }
 
     // What this link came up with. Floored the way a real one is: nothing may
     // model a central that offers less than BLE guarantees. Said while a link is
@@ -56,8 +56,9 @@ class Link : public ports::Link {
     // and it reaches the bus the same way silicon's att_mtu_updated does.
     // INFO: fc 18sep26 What every central here negotiates, said before or after one connects.
     void declare_payload_bytes(uint16_t bytes) {
-        declared_ = bytes < ports::kMinimumLinkPayload ? ports::kMinimumLinkPayload : bytes;
-        for (uint16_t session : live_) sessions_.payload_changed(session, declared_);
+        declared_payload_bytes_ =
+            bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
+        for (uint16_t session : live_) sessions_.payload_changed(session, declared_payload_bytes_);
     }
 
     void declare_payload_bytes(uint16_t session_id, uint16_t bytes) {
@@ -69,11 +70,13 @@ class Link : public ports::Link {
         return sessions_.payload_bytes(session_id);
     }
 
-    Status send(events::Endpoint ep, ConstByteSpan bytes) override { return record(0, ep, bytes); }
+    Status send(events::Endpoint endpoint, ConstByteSpan bytes) override {
+        return record(0, endpoint, bytes);
+    }
 
-    Status send_to(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) override {
+    Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) override {
         if (!sessions_.up(session_id)) return Status::Down;
-        return record(session_id, ep, bytes);
+        return record(session_id, endpoint, bytes);
     }
 
     Status advertise_as(const char* name) override {
@@ -87,27 +90,29 @@ class Link : public ports::Link {
     }
 
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
-    void hold_after(int frames) { share_ = frames; }
+    void hold_after(int frames) { notification_share_ = frames; }
     void serve() { in_flight_ = 0; }
 
-    void force_status(Status s, bool once = true) {
-        next_status_ = s;
-        once_ = once;
+    void force_status(Status status, bool once = true) {
+        next_status_ = status;
+        status_once_ = once;
     }
 
     const Frame& last() const { return sent.back(); }
-    bool last_on(events::Endpoint ep) const { return !sent.empty() && sent.back().endpoint == ep; }
-    int count_on(events::Endpoint ep) const {
-        int n = 0;
-        for (const auto& f : sent)
-            if (f.endpoint == ep) n++;
-        return n;
+    bool last_on(events::Endpoint endpoint) const {
+        return !sent.empty() && sent.back().endpoint == endpoint;
     }
-    int count_to(uint16_t session_id, events::Endpoint ep) const {
-        int n = 0;
-        for (const auto& f : sent)
-            if (f.endpoint == ep && f.session == session_id) n++;
-        return n;
+    int count_on(events::Endpoint endpoint) const {
+        int count = 0;
+        for (const auto& frame : sent)
+            if (frame.endpoint == endpoint) count++;
+        return count;
+    }
+    int count_to(uint16_t session_id, events::Endpoint endpoint) const {
+        int count = 0;
+        for (const auto& frame : sent)
+            if (frame.endpoint == endpoint && frame.session == session_id) count++;
+        return count;
     }
     void clear() { sent.clear(); }
 
@@ -118,7 +123,7 @@ class Link : public ports::Link {
     int refused_oversize{0};
 
    private:
-    Status record(uint16_t session_id, events::Endpoint ep, ConstByteSpan bytes) {
+    Status record(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) {
         // The controller's refusal, modelled: an oversized notification is not
         // shortened, it fails, so no case can pass by sending one.
         if (bytes.size() > (session_id == 0 ? payload_bytes() : payload_bytes_to(session_id))) {
@@ -126,13 +131,14 @@ class Link : public ports::Link {
             return Status::OutOfRange;
         }
         if (next_status_ != Status::Ok) {
-            Status s = next_status_;
-            if (once_) next_status_ = Status::Ok;
-            return s;
+            Status forced = next_status_;
+            if (status_once_) next_status_ = Status::Ok;
+            return forced;
         }
-        if (share_ > 0 && in_flight_ >= share_) return Status::WouldBlock;
+        if (notification_share_ > 0 && in_flight_ >= notification_share_) return Status::WouldBlock;
         in_flight_++;
-        sent.push_back({ep, std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
+        sent.push_back({endpoint,
+                        std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
                         session_id});
         return Status::Ok;
     }
@@ -140,11 +146,11 @@ class Link : public ports::Link {
     bus::Queue<events::RxFrame, 4> rx_;
     comms::LinkSessions sessions_{};
     std::vector<uint16_t> live_;
-    uint16_t declared_{kDefaultPayloadBytes};
-    uint16_t last_{0};
+    uint16_t declared_payload_bytes_{kDefaultPayloadBytes};
+    uint16_t last_session_id_{0};
     Status next_status_{Status::Ok};
-    bool once_{true};
-    int share_{0};
+    bool status_once_{true};
+    int notification_share_{0};
     int in_flight_{0};
 };
 

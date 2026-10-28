@@ -14,7 +14,8 @@ class IdentityLink {
     // INFO: fc 18oct26 #126: long enough to reach the server and back, short of a forgotten tab
     static constexpr uint32_t kNonceForgetMs = 10u * 60u * 1000u;
     // INFO: fc 18oct26 the widest registration frame: version 9.99.99+99999, release false
-    static constexpr int kRegistrationFrameBytes = 345;
+    static constexpr int kRegistrationFrameBytes = 349;
+    static constexpr int kChallengeFrameBytes = 93;
 
     explicit IdentityLink(identity::Unit& unit) : unit_(unit) {}
 
@@ -40,7 +41,8 @@ class IdentityLink {
         open_ = false;
         registering_ = false;
     }
-    // INFO: fc 18oct26 live() holds the deadline, this keeps it after millis() wraps back into it
+    // INFO: fc 18oct26 live() holds the deadline, this keeps it after milliseconds() wraps back
+    // into it
     void tick(uint32_t now_ms) {
         if (open_ && now_ms - opened_ms_ >= kNonceForgetMs) close();
     }

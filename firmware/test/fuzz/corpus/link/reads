@@ -1,8 +1,8 @@
-C{"cmd":"get"}
-C{"cmd":"status"}
-c{"cmd":"get"}
-C{"cmd":"timing"}
-C{"cmd":"radio"}
-C{"cmd":"flash"}
-C{"cmd":"update"}
-C{"cmd":"diag"}
+C{"command":"get"}
+C{"command":"status"}
+c{"command":"get"}
+C{"command":"timing"}
+C{"command":"radio"}
+C{"command":"flash"}
+C{"command":"update"}
+C{"command":"diagnostics"}

@@ -47,12 +47,12 @@ class Annunciator : public ports::Annunciator {
     }
 
     // INFO: fc 17oct26 schedule, not reschedule: a pitch change must not push the guard back
-    void tone(uint16_t hz, ports::Loudness loudness) override {
-        if (hz == 0) {
+    void tone(uint16_t pitch_hz, ports::Loudness loudness) override {
+        if (pitch_hz == 0) {
             silence();
             return;
         }
-        const uint32_t period = PWM_HZ(hz);
+        const uint32_t period = PWM_HZ(pitch_hz);
         const uint32_t divisor =
             loudness == ports::Loudness::Loud ? kLoudDutyDivisor : kSoftDutyDivisor;
         pwm_set_dt(&buzzer_, period, period / divisor);

@@ -23,18 +23,18 @@ Stage stage_of(const GnssSolution& solution) {
 void Acquisition::enter(Stage stage, uint32_t now_ms) {
     if (stage == stage_) return;
     stage_ = stage;
-    since_ms_ = now_ms;
+    stage_since_ms_ = now_ms;
 }
 
 void Acquisition::observe(const GnssSolution& solution, uint32_t now_ms) {
     enter(stage_of(solution), now_ms);
-    solution_ms_ = now_ms;
+    last_solution_ms_ = now_ms;
     heard_ = true;
 }
 
 void Acquisition::tick(uint32_t now_ms) {
     if (!heard_) return;
-    if (now_ms - solution_ms_ >= kSentenceMaxAgeMs) enter(Stage::Silent, now_ms);
+    if (now_ms - last_solution_ms_ >= kSentenceMaxAgeMs) enter(Stage::Silent, now_ms);
 }
 
 }  // namespace skyblip::gnss

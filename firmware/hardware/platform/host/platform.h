@@ -40,36 +40,36 @@ class Dfu : public ports::Dfu {
     }
     bool confirmed() override { return image_confirmed; }
     bool running_version(ports::ImageVersion& out) override {
-        if (!has_running) return false;
-        out = running;
+        if (!running_version_valid) return false;
+        out = running_image_version;
         return true;
     }
     bool staged_version(ports::ImageVersion& out) override {
-        if (!has_staged) return false;
-        out = staged;
+        if (!staged_version_valid) return false;
+        out = staged_image_version;
         return true;
     }
     bool running_hash(ports::ImageHash& out) override {
-        if (!has_running_hash) return false;
+        if (!running_hash_valid) return false;
         out = running_image_hash;
         return true;
     }
     bool staged_hash(ports::ImageHash& out) override {
-        if (!has_staged_hash) return false;
+        if (!staged_hash_valid) return false;
         out = staged_image_hash;
         return true;
     }
     bool running_key(ports::SigningKeyHash& out) override {
-        if (!has_running_key) return false;
-        out = trusted_key;
+        if (!running_key_valid) return false;
+        out = running_signer;
         return true;
     }
     bool staged_key(ports::SigningKeyHash& out) override {
-        if (!has_staged_key) return false;
+        if (!staged_key_valid) return false;
         out = staged_signer;
         return true;
     }
-    bool downgrade_allowed() const override { return downgrades; }
+    bool downgrade_allowed() const override { return allows_downgrade; }
     bool release_build() const override { return release; }
     ports::RecoveryPath recovery_path() const override {
         return watchdog_.armed() ? ports::RecoveryPath::PowerOffToFinish
@@ -88,20 +88,20 @@ class Dfu : public ports::Dfu {
     int recoveries{0};
     bool image_confirmed{true};
     bool confirm_fails{false};
-    bool has_running{false};
-    bool has_staged{false};
-    bool has_running_hash{false};
-    bool has_staged_hash{false};
+    bool running_version_valid{false};
+    bool staged_version_valid{false};
+    bool running_hash_valid{false};
+    bool staged_hash_valid{false};
     bool upload_allowed_published{false};
     bool finished_upload{false};
-    bool has_running_key{false};
-    bool has_staged_key{false};
-    bool downgrades{false};
+    bool running_key_valid{false};
+    bool staged_key_valid{false};
+    bool allows_downgrade{false};
     bool release{false};
-    ports::SigningKeyHash trusted_key{};
+    ports::SigningKeyHash running_signer{};
     ports::SigningKeyHash staged_signer{};
-    ports::ImageVersion running{};
-    ports::ImageVersion staged{};
+    ports::ImageVersion running_image_version{};
+    ports::ImageVersion staged_image_version{};
     ports::ImageHash running_image_hash{};
     ports::ImageHash staged_image_hash{};
 
@@ -109,31 +109,31 @@ class Dfu : public ports::Dfu {
     const ports::Watchdog& watchdog_;
 };
 
-class Baro : public io::I2c {
+class Barometer : public io::I2c {
    public:
-    bool write(uint8_t addr, const uint8_t* data, size_t len) override {
-        return present && chip.write(addr, data, len);
+    bool write(uint8_t address, const uint8_t* data, size_t bytes) override {
+        return fitted && chip.write(address, data, bytes);
     }
-    bool read(uint8_t addr, uint8_t* data, size_t len) override {
-        return present && chip.read(addr, data, len);
+    bool read(uint8_t address, uint8_t* out, size_t bytes) override {
+        return fitted && chip.read(address, out, bytes);
     }
 
     models::Bme280 chip;
-    bool present{true};
+    bool fitted{true};
 };
 
-// The cell the world charges and drains. Millivolts is the only thing the board
-// can read on silicon, so it is the only thing settable here.
+// The cell the world charges and drains. What the divider reads is the only thing
+// the board can read on silicon, so it is the only thing settable here.
 class Battery {
    public:
-    bool ready() const { return present; }
+    bool ready() const { return fitted; }
     bool read_mv(uint16_t& out_mv) const {
-        out_mv = present ? millivolts : 0;
-        return present && power::plausible_mv(out_mv);
+        out_mv = fitted ? divider_mv : 0;
+        return fitted && power::plausible_mv(out_mv);
     }
 
-    bool present{true};
-    uint16_t millivolts{4050};
+    bool fitted{true};
+    uint16_t divider_mv{4050};
     bool external_power{false};
 };
 
@@ -147,13 +147,13 @@ class Pps {
 
     bool locked() const { return locked_; }
     void set_locked(bool on) { locked_ = on; }
-    uint32_t ms_since(uint64_t now_us) const {
+    uint32_t since_edge_ms(uint64_t now_us) const {
         return locked_ ? static_cast<uint32_t>(now_us / 1000 % 1000) : 0;
     }
 
     uint64_t last_edge_us() const {
         if (!locked_) return 0;
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         return now_us - now_us % kSecondUs;
     }
 
@@ -172,7 +172,7 @@ class Platform {
     using Link = host::Link;
 
     static constexpr ports::Capabilities kFullyFitted =
-        ports::Capability::Display | ports::Capability::Gnss | ports::Capability::Baro |
+        ports::Capability::Display | ports::Capability::Gnss | ports::Capability::Barometer |
         ports::Capability::Link | ports::Capability::Storage | ports::Capability::Dfu |
         ports::Capability::Buzzer | ports::Capability::Haptic | ports::Capability::Contacts |
         ports::Capability::Battery | ports::Capability::Indicator | ports::Capability::Inclinometer;
@@ -184,11 +184,11 @@ class Platform {
         : identity_(serial), fitted_(fitted) {
         chips_.epd.attach_clock(clock_);
         buzzer_pin_held_low_ = ports::has(fitted, ports::Capability::Buzzer);
-        baro_.present = ports::has(fitted, ports::Capability::Baro);
-        baro_.chip.attach_clock(clock_);
-        battery_.present = ports::has(fitted, ports::Capability::Battery);
-        log_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
-        imu_flash_.set_present(ports::has(fitted, ports::Capability::Storage));
+        barometer_.fitted = ports::has(fitted, ports::Capability::Barometer);
+        barometer_.chip.attach_clock(clock_);
+        battery_.fitted = ports::has(fitted, ports::Capability::Battery);
+        log_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
+        imu_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
         wire_i2c();
     }
 
@@ -198,8 +198,8 @@ class Platform {
     }
     void wire(const io::PinMap& map) { gpio_.wire(map); }
 
-    io::Spi& spi(io::BusId id) {
-        if (id == io::BusId::Epd) return chips_.epd;
+    io::Spi& spi(io::BusId bus) {
+        if (bus == io::BusId::Epd) return chips_.epd;
         return chips_.radio;
     }
     io::Uart& uart(io::BusId) { return chips_.gnss; }
@@ -216,12 +216,12 @@ class Platform {
 
     host::Clock& clock() { return clock_; }
     host::Link& link() { return link_; }
-    host::KvStore& kv() { return kv_; }
+    host::KeyValueStore& key_value() { return key_value_; }
     host::FlashRegion& log_flash() { return log_flash_; }
     host::Annunciator& annunciator() { return annunciator_; }
     host::Indicator& indicator() { return indicator_; }
     host::Dfu& dfu() { return dfu_; }
-    host::Baro& baro() { return baro_; }
+    host::Barometer& barometer() { return barometer_; }
     host::Battery& battery() { return battery_; }
     host::DieTemperature& die_temperature() { return die_temperature_; }
     host::Pps& pps() { return pps_; }
@@ -231,15 +231,15 @@ class Platform {
     bool button_down() const { return gpio_.button_down; }
     bool pad_down() const { return gpio_.pad_down; }
 
-    static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Deg0; }
+    static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Degrees0; }
 
-    // The panel fingerprint, as the silicon platform's board port takes it: 11
+    // The panel signature, as the silicon platform's board port takes it: 11
     // bytes of register 0x2D then 10 of 0x2E. The virtual glass carries which lot
     // it is from, so a host test flies a panel that cannot be powered off after a
     // partial update without a soldering iron.
     bool read_panel_signature(parts::PanelSignature& out) const {
         out = chips_.epd.signature;
-        return out.read;
+        return out.valid;
     }
 
     ConstByteSpan imu_firmware() const {
@@ -252,12 +252,12 @@ class Platform {
 
     bool buzzer_pin_held_low() const { return buzzer_pin_held_low_; }
     void set_buzzer_pin_held_low(bool held) { buzzer_pin_held_low_ = held; }
-    bool start_baro() { return bme280_.trigger(); }
-    bool read_baro(BaroReading& out) {
+    bool trigger_barometer() { return bme280_.trigger(); }
+    bool read_barometer(BarometerReading& out) {
         parts::Bme280::Reading reading{};
         if (!bme280_.read(reading)) return false;
         out.pressure_mpa = reading.pressure_mpa;
-        out.temperature_decicelsius = reading.temperature_decicelsius;
+        out.temperature_dc = reading.temperature_dc;
         out.temperature_valid = true;
         return true;
     }
@@ -273,14 +273,14 @@ class Platform {
 
    private:
     void wire_i2c() {
-        if (ports::has(fitted_, ports::Capability::Baro))
-            i2c_.attach(models::Bme280::kAddress, baro_);
+        if (ports::has(fitted_, ports::Capability::Barometer))
+            i2c_.attach(models::Bme280::kAddress, barometer_);
         if (ports::has(fitted_, ports::Capability::Haptic))
             i2c_.attach(models::Drv2605::kAddress, chips_.haptic);
         if (ports::has(fitted_, ports::Capability::Inclinometer))
             i2c_.attach(models::Bhi260::kAddress, chips_.imu);
         else
-            i2c_.answer(kImuAddress, true);
+            i2c_.answer(models::Bhi260::kAddress, true);
         i2c_.answer(kRtcAddress, true);
     }
 
@@ -288,7 +288,6 @@ class Platform {
     inline static const Sha256::Digest kImuFirmwareDigest =
         Sha256::of(kImuFirmware, sizeof(kImuFirmware));
 
-    static constexpr uint8_t kImuAddress = 0x28;
     static constexpr uint8_t kRtcAddress = 0x51;
 
     Chips chips_{};
@@ -298,14 +297,14 @@ class Platform {
     parts::Bme280 bme280_{i2c_};
     host::Clock clock_{};
     host::Link link_{};
-    host::KvStore kv_{};
+    host::KeyValueStore key_value_{};
     host::FlashRegion log_flash_{};
     host::FlashRegion imu_flash_{kImuFlashSectors};
     host::Annunciator annunciator_{};
     host::Indicator indicator_{};
     host::Watchdog watchdog_{};
     host::Dfu dfu_{watchdog_};
-    host::Baro baro_{};
+    host::Barometer barometer_{};
     host::Battery battery_{};
     host::DieTemperature die_temperature_{};
     host::Pps pps_{clock_};

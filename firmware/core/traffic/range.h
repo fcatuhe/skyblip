@@ -21,11 +21,12 @@ struct RangeRow {
 };
 
 // INFO: fc 19sep26 ground distance, what the radar ring and the alarm mean by distance
-bool range_to(const model::OwnState& own, const model::AircraftObs& obs, RangeRow& out);
+bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
+              RangeRow& out);
 
-// Nearest first, at most cap rows. Returns how many were filled.
+// Nearest first, at most capacity rows. Returns how many were filled.
 int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
-                  const model::OwnState& own, RangeRow* out, int cap);
+                  const model::Ownship& own, RangeRow* out, int capacity);
 
 }  // namespace skyblip::traffic
 

@@ -6,10 +6,11 @@
   "type": "object",
   "properties": {
     "name": {"type": "string"},
-    "mode": {"enum": ["dev", "demo", "training"]},
-    "lat_1e7": {"type": "integer"},
-    "lon_1e7": {"type": "integer"},
-    "alt_m": {"type": "integer"},
+    "mode": {"enum": ["device", "demo", "training"]},
+    "callsign": {"type": "string", "description": "The name the simulated device transmits, S-BLIP when absent"},
+    "latitude_1e7": {"type": "integer"},
+    "longitude_1e7": {"type": "integer"},
+    "altitude_m": {"type": "integer"},
     "speed_kt": {"type": "integer", "minimum": 0},
     "track_deg": {"type": "integer", "minimum": 0, "maximum": 359},
     "turn_dps": {"type": "integer", "minimum": -50, "maximum": 50, "description": "Own-ship turn rate, degrees per second, positive to the right. A thermalling glider holds 13 to 18."},
@@ -19,7 +20,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "system": {"type": "string", "enum": ["adsl", "alptas", "uplink"], "description": "What reaches us from this aircraft: its own ADS-L or FLARM-generation burst on the M band, or a skyPost ground station's O-band relay of it, which is what 'uplink' means. An 'uplink' aircraft never transmits itself."},
+          "system": {"type": "string", "enum": ["adsl_direct", "alptas", "adsl_uplink"], "description": "What reaches us from this aircraft: its own ADS-L or FLARM-generation burst on the M band, or a skyPost ground station's O-band relay of it, which is what 'adsl_uplink' means. An 'adsl_uplink' aircraft never transmits itself. The system is the only thing that decides whether our shared sync window frames this aircraft's bursts."},
           "north_m": {"type": "integer"},
           "east_m": {"type": "integer"},
           "up_m": {"type": "integer"},
@@ -41,7 +42,7 @@
           "at_ms": {"type": "integer", "minimum": 0},
           "fix": {"type": "integer", "enum": [0, 1]},
           "pps": {"type": "integer", "enum": [0, 1]},
-          "baro": {"type": "integer", "enum": [0, 1]},
+          "barometer": {"type": "integer", "enum": [0, 1]},
           "battery_mv": {"type": "integer", "minimum": 0, "maximum": 5000},
           "external_power": {"type": "integer", "enum": [0, 1]},
           "button": {"type": "integer"},
@@ -49,8 +50,8 @@
           "speed_kt": {"type": "integer", "minimum": 0},
           "track_deg": {"type": "integer"},
           "aircraft": {"type": "integer"},
-          "expect_alarm_min": {"type": "integer", "minimum": 0, "maximum": 3},
-          "expect_traffic_min": {"type": "integer", "minimum": 0}
+          "expect_alarm_minimum": {"type": "integer", "minimum": 0, "maximum": 3},
+          "expect_traffic_minimum": {"type": "integer", "minimum": 0}
         },
         "required": ["at_ms"],
         "additionalProperties": false

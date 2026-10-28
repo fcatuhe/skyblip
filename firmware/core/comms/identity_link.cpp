@@ -5,32 +5,34 @@
 #include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/util/hex.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::comms {
 
 namespace {
 constexpr long kSerialCeiling = 0xFFFF;
 
-template <size_t N>
-bool read_hex_field(const json::Reader& r, const char* key, std::array<uint8_t, N>& out) {
-    char text[2 * N + 2] = {0};
-    return r.get_str(key, text, sizeof(text)) && hex::read(text, ByteSpan(out.data(), N));
+template <size_t Bytes>
+bool read_hex_field(const json::Reader& reader, const char* key, std::array<uint8_t, Bytes>& out) {
+    char text[2 * Bytes + 2] = {0};
+    return reader.read_string(key, text, sizeof(text)) &&
+           hex::read(text, ByteSpan(out.data(), Bytes));
 }
 
-template <size_t N>
-void write_hex_field(json::Writer& w, const char* key, const std::array<uint8_t, N>& bytes) {
-    char text[2 * N + 1];
-    text[hex::write(ConstByteSpan(bytes.data(), N), text)] = 0;
-    w.kv_str(key, text);
+template <size_t Bytes>
+void write_hex_field(json::Writer& writer, const char* key,
+                     const std::array<uint8_t, Bytes>& bytes) {
+    char text[2 * Bytes + 1];
+    text[hex::write(ConstByteSpan(bytes.data(), Bytes), text)] = 0;
+    writer.add_string(key, text);
 }
 }  // namespace
 
 // INFO: fc 18oct26 the server refuses a registration with no version, so none is ever sent
-bool ConfigService::running_version_text(char* out, size_t cap) const {
+bool ConfigService::running_version_text(char* out, size_t capacity) const {
     ports::ImageVersion running;
     if (dfu_ == nullptr || !dfu_->running_version(running)) return false;
-    return dfu::format_version(running, out, cap) > 0;
+    return dfu::format_version(running, out, capacity) > 0;
 }
 
 bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
@@ -43,14 +45,14 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
 }
 
 // INFO: fc 18oct26 each refusal is refuse("word"): the server's activation page greps them
-bool ConfigService::answer_identity(const char* cmd, const json::Reader& r) {
+bool ConfigService::answer_identity(const char* command, const json::Reader& reader) {
     if (identity_ == nullptr) return false;
-    if (std::strcmp(cmd, "challenge") == 0) {
+    if (std::strcmp(command, "challenge") == 0) {
         challenge();
-    } else if (std::strcmp(cmd, "register") == 0) {
-        register_unit(r);
-    } else if (std::strcmp(cmd, "unlock") == 0) {
-        unlock(r);
+    } else if (std::strcmp(command, "register") == 0) {
+        register_unit(reader);
+    } else if (std::strcmp(command, "unlock") == 0) {
+        unlock(reader);
     } else {
         return false;
     }
@@ -66,24 +68,29 @@ bool ConfigService::identity_refused_in_flight() {
 
 void ConfigService::challenge() {
     if (identity_refused_in_flight()) return;
-    char version[dfu::kVersionTextCap] = {0};
-    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version)) ||
+    char version[dfu::kVersionTextBytes] = {0};
+    if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version)) ||
         !identity_->open(claim_.holder(), now_ms_)) {
         refuse("keyless");
         return;
     }
-    char buf[96];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "challenge");
-    write_hex_field(w, "nonce", identity_->unit_nonce());
-    write_hex_field(w, "server_key_id", identity_->unit().server_key_id());
-    (void)reply(buf, w.finish());
+    char buffer[IdentityLink::kChallengeFrameBytes + 1];
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("command", "challenge");
+    write_hex_field(writer, "nonce", identity_->unit_nonce());
+    write_hex_field(writer, "server_key_id", identity_->unit().server_key_id());
+    const int bytes = writer.finish();
+    if (writer.overflowed()) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(buffer, bytes);
 }
 
-void ConfigService::register_unit(const json::Reader& r) {
+void ConfigService::register_unit(const json::Reader& reader) {
     if (identity_refused_in_flight()) return;
-    char version[dfu::kVersionTextCap] = {0};
-    if (!identity_->unit().keyed() || !running_version_text(version, sizeof(version))) {
+    char version[dfu::kVersionTextBytes] = {0};
+    if (!identity_->unit().key_provisioned() || !running_version_text(version, sizeof(version))) {
         refuse("keyless");
         return;
     }
@@ -91,14 +98,14 @@ void ConfigService::register_unit(const json::Reader& r) {
         refuse("no_session");
         return;
     }
-    if (payload_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
+    if (payload_bytes_to(claim_.holder()) < IdentityLink::kRegistrationFrameBytes) {
         refuse("small_mtu");
         return;
     }
     identity::Nonce server_nonce{};
     crypto::Ed25519::Signature signature{};
-    if (!read_hex_field(r, "server_nonce", server_nonce) ||
-        !read_hex_field(r, "signature", signature) ||
+    if (!read_hex_field(reader, "server_nonce", server_nonce) ||
+        !read_hex_field(reader, "signature", signature) ||
         !identity_->unit().registers(identity_->unit_nonce(), server_nonce, signature)) {
         refuse("bad_signature");
         return;
@@ -113,7 +120,7 @@ void ConfigService::send_registration() {
         return;
     }
     identity::Unit& unit = identity_->unit();
-    char version[dfu::kVersionTextCap] = {0};
+    char version[dfu::kVersionTextBytes] = {0};
     if (!running_version_text(version, sizeof(version))) {
         refuse("keyless");
         return;
@@ -128,25 +135,25 @@ void ConfigService::send_registration() {
         refuse("keyless");
         return;
     }
-    char buf[IdentityLink::kRegistrationFrameBytes + 1];
-    json::Writer w(buf, sizeof(buf));
-    w.kv_str("cmd", "registration");
-    write_hex_field(w, "device_id", unit.device_id());
-    write_hex_field(w, "public_key", unit.public_key());
-    w.kv_str("version", version);
-    write_hex_field(w, "server_key_id", unit.server_key_id());
-    w.kv_bool("release", release);
-    write_hex_field(w, "signature", *signature);
-    const int len = w.finish();
-    if (w.overflowed()) {
-        diag_.link_drops++;
+    char buffer[IdentityLink::kRegistrationFrameBytes + 1];
+    json::Writer writer(buffer, sizeof(buffer));
+    writer.add_string("command", "registration");
+    write_hex_field(writer, "device_id", unit.device_id());
+    write_hex_field(writer, "public_key", unit.public_key());
+    writer.add_string("version", version);
+    write_hex_field(writer, "server_key_id", unit.server_key_id());
+    writer.add_boolean("release", release);
+    write_hex_field(writer, "signature", *signature);
+    const int bytes = writer.finish();
+    if (writer.overflowed()) {
+        diagnostics_.link_drops++;
         return;
     }
-    (void)reply(buf, len);
+    (void)reply(buffer, bytes);
 }
 
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
-void ConfigService::unlock(const json::Reader& r) {
+void ConfigService::unlock(const json::Reader& reader) {
     if (identity_refused_in_flight()) return;
     if (!identity_->live(claim_.holder(), now_ms_)) {
         refuse("no_session");
@@ -160,8 +167,8 @@ void ConfigService::unlock(const json::Reader& r) {
     code.nonce = identity_->unit_nonce();
     identity_->close();
     long serial = -1;
-    if (!r.get_int("serial", serial) || serial < identity::kFirstSerial ||
-        serial > kSerialCeiling || !read_hex_field(r, "signature", code.signature)) {
+    if (!reader.read_integer("serial", serial) || serial < identity::kFirstSerial ||
+        serial > kSerialCeiling || !read_hex_field(reader, "signature", code.signature)) {
         refuse("bad_signature");
         return;
     }
@@ -187,7 +194,7 @@ void ConfigService::settle_unlock() {
         refuse("flash");
         return;
     }
-    ack(true, "unlock");
+    acknowledge(true, "unlock");
 }
 
 }  // namespace skyblip::comms

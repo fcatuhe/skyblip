@@ -20,9 +20,9 @@ TEST_CASE("flight log: a device parked on the ground writes nothing at all") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     const uint32_t erases_at_boot = rig.platform.log_flash().erases;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    taxi(rig, t, 120);
+    taxi(rig, now_ms, 120);
 
     CHECK_FALSE(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() == 0);
@@ -33,21 +33,21 @@ TEST_CASE("flight log: a device parked on the ground writes nothing at all") {
 TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the ground after is quiet") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    taxi(rig, t, 40);
+    taxi(rig, now_ms, 40);
     REQUIRE_FALSE(rig.product.flight_log().recording());
 
-    fly(rig, t, 120);
+    fly(rig, now_ms, 120);
     CHECK(rig.product.flight_log().recording());
     // The session is named for a sample taken before core/flight would commit
     // to the takeoff, so the ground roll is in the file.
-    CHECK(rig.product.flight_log().session_id() < Rig::kUtcBase + 45);
+    CHECK(rig.product.flight_log().session_id() < Rig::kBaseUtcS + 45);
     const uint32_t airborne_records = rig.product.flight_log().records_written();
     // Two minutes at a record a second, plus the pre-takeoff ring.
     CHECK(airborne_records >= 120);
 
-    taxi(rig, t, 40);
+    taxi(rig, now_ms, 40);
     CHECK_FALSE(rig.product.flight_log().recording());
     const uint32_t after_landing = rig.product.flight_log().records_written();
     // core/flight needs ten seconds of stillness before it will call it a
@@ -57,7 +57,7 @@ TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the groun
 
     // And then nothing: the ring goes back to being a holding pen, and nothing
     // the writer owed was lost on the way.
-    taxi(rig, t, 60);
+    taxi(rig, now_ms, 60);
     CHECK(rig.product.flight_log().records_written() == after_landing);
     CHECK(rig.product.flight_log().records_dropped() == 0);
     CHECK(rig.product.flight_log().sessions_on_flash() == 1);
@@ -68,20 +68,20 @@ TEST_CASE("flight log: a paraglider soaring at walking pace is logged, and its l
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_type = 7;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    taxi(rig, t, 30);
+    taxi(rig, now_ms, 30);
     REQUIRE_FALSE(rig.product.flight_log().recording());
 
-    rig.seconds(t, 300, 5000, 1200);
+    rig.seconds(now_ms, 300, 5000, 1200);
     CHECK(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().records_written() >= 300000 / flight::kLogRecordPeriodMs);
 
-    taxi(rig, t, flight::kLogStillHoldMs / 1000 + 5);
+    taxi(rig, now_ms, flight::kLogStillHoldMs / 1000 + 5);
     CHECK_FALSE(rig.product.flight_log().recording());
     CHECK(rig.product.flight_log().sessions_on_flash() == 1);
     const uint32_t landed = rig.product.flight_log().records_written();
-    taxi(rig, t, 60);
+    taxi(rig, now_ms, 60);
     CHECK(rig.product.flight_log().records_written() == landed);
 }
 
@@ -89,10 +89,10 @@ TEST_CASE("flight log: the sector behind the one being filled is erased before i
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     const uint32_t erases_at_boot = rig.platform.log_flash().erases;
-    uint32_t t = 0;
+    uint32_t now_ms = 0;
 
-    taxi(rig, t, 20);
-    fly(rig, t, 60);
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
     REQUIRE(rig.product.flight_log().recording());
 
     // One erase for the sector the records go into, one for the spare behind it.
@@ -108,16 +108,16 @@ TEST_CASE("flight log: the sector behind the one being filled is erased before i
 TEST_CASE("flight log: a committed record survives the cell dying, and the torn one is not a fix") {
     Rig flight;
     REQUIRE(flight.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(flight, t, 20);
-    fly(flight, t, 80);
+    uint32_t now_ms = 0;
+    taxi(flight, now_ms, 20);
+    fly(flight, now_ms, 80);
     const uint32_t committed = flight.product.flight_log().records_written();
     REQUIRE(committed > 8);
 
     // The cell gives out nine bytes into the next record. Everything before it
     // is on the part; that record is half a record.
     flight.platform.log_flash().cut_power_after(9);
-    fly(flight, t, 20);
+    fly(flight, now_ms, 20);
     REQUIRE(flight.platform.log_flash().dead());
     CHECK(flight.product.flight_log().records_written() == committed);
 
@@ -126,11 +126,11 @@ TEST_CASE("flight log: a committed record survives the cell dying, and the torn 
     rebooted.platform.log_flash().restore(flight.platform.log_flash().bytes());
     REQUIRE(rebooted.setup() == Status::Ok);
 
-    uint32_t rt = 0;
-    taxi(rebooted, rt, 20);
-    CHECK(field(list_count(rebooted, rt), "sessions") == "1");
+    uint32_t rebooted_now_ms = 0;
+    taxi(rebooted, rebooted_now_ms, 20);
+    CHECK(field(list_count(rebooted, rebooted_now_ms), "sessions") == "1");
 
-    const std::string listed = list_session(rebooted, rt, 0);
+    const std::string listed = list_session(rebooted, rebooted_now_ms, 0);
     // Every record that was committed is still offered, and the half-written one
     // is not counted: it is never read back as a position.
     CHECK(field(listed, "records") == std::to_string(committed));
@@ -143,9 +143,9 @@ TEST_CASE("flight log: a committed record survives the cell dying, and the torn 
 TEST_CASE("flight log: the next flight after a power cut does not overwrite the last one") {
     Rig flight;
     REQUIRE(flight.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(flight, t, 20);
-    fly(flight, t, 60);
+    uint32_t now_ms = 0;
+    taxi(flight, now_ms, 20);
+    fly(flight, now_ms, 60);
     const uint32_t first_session = flight.product.flight_log().session_id();
     const uint32_t committed = flight.product.flight_log().records_written();
 
@@ -155,18 +155,18 @@ TEST_CASE("flight log: the next flight after a power cut does not overwrite the 
     // The device came back up ten minutes later, which is what makes the second
     // session a second session and not a continuation of the first.
     rebooted.utc_offset_s = 600;
-    uint32_t rt = 0;
-    taxi(rebooted, rt, 20);
-    fly(rebooted, rt, 60);
-    taxi(rebooted, rt, 40);
+    uint32_t rebooted_now_ms = 0;
+    taxi(rebooted, rebooted_now_ms, 20);
+    fly(rebooted, rebooted_now_ms, 60);
+    taxi(rebooted, rebooted_now_ms, 40);
     CHECK(rebooted.product.flight_log().session_id() != first_session);
 
-    CHECK(field(list_count(rebooted, rt), "sessions") == "2");
+    CHECK(field(list_count(rebooted, rebooted_now_ms), "sessions") == "2");
 
     bool found_first = false;
     for (uint32_t i = 0; i < 2; i++) {
-        const std::string line = list_session(rebooted, rt, i);
-        REQUIRE(line.find("\"cmd\":\"session\"") != std::string::npos);
+        const std::string line = list_session(rebooted, rebooted_now_ms, i);
+        REQUIRE(line.find("\"command\":\"session\"") != std::string::npos);
         if (field(line, "session") != std::to_string(first_session)) continue;
         found_first = true;
         // The flight that was on the part before the reboot is untouched by the
@@ -179,9 +179,9 @@ TEST_CASE("flight log: the next flight after a power cut does not overwrite the 
 TEST_CASE("flight log: the write frontier is found from the labels, not by reading the partition") {
     Rig flight;
     REQUIRE(flight.setup() == Status::Ok);
-    uint32_t t = 0;
-    taxi(flight, t, 20);
-    fly(flight, t, 60);
+    uint32_t now_ms = 0;
+    taxi(flight, now_ms, 20);
+    fly(flight, now_ms, 60);
 
     Rig rebooted;
     rebooted.platform.log_flash().restore(flight.platform.log_flash().bytes());

@@ -37,20 +37,28 @@ struct Pass {
     bus::State state{};
     platform::host::Rf rf{radio, platform.clock(), bus.rf};
     ports::NullRoles null{};
-    ports::Roles roles{platform.clock(),     rf,        null.link,
-                       null.display,         null.kv,   null.log_flash,
-                       null.annunciator,     null.dfu,  null.die_temperature,
-                       null.indicator,       null.gnss, platform.identity(),
+    ports::Roles roles{platform.clock(),
+                       rf,
+                       null.link,
+                       null.display,
+                       null.key_value,
+                       null.log_flash,
+                       null.annunciator,
+                       null.dfu,
+                       null.die_temperature,
+                       null.indicator,
+                       null.gnss,
+                       platform.identity(),
                        ports::Capability::Rf};
-    diag::Recorder recorder{};
+    diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
     go::TrafficService traffic_service{context, go::kFeatures};
 
     Status begin() {
-        const Status s = rf.begin();
-        if (s != Status::Ok) return s;
+        const Status status = rf.begin();
+        if (status != Status::Ok) return status;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
@@ -62,9 +70,9 @@ struct Pass {
 
     // Exactly what boards/lilygo/t_echo_plus/board.h does at the top of a pass.
     void poll_clock(uint64_t now_us) {
-        platform.clock().set_micros(now_us);
+        platform.clock().set_microseconds(now_us);
         state.clock.pps_locked = platform.pps().locked();
-        state.clock.ms_since_pps = platform.pps().ms_since(now_us);
+        state.clock.since_edge_ms = platform.pps().since_edge_ms(now_us);
         state.clock.pps_edge_us = platform.pps().last_edge_us();
     }
 
@@ -74,10 +82,10 @@ struct Pass {
     }
 
     void services_at(uint64_t now_us) {
-        platform.clock().set_micros(now_us);
+        platform.clock().set_microseconds(now_us);
         const uint32_t now_ms = static_cast<uint32_t>(now_us / 1000);
-        state.own.utc = now_ms / 1000;
-        state.own.fix_ms = now_ms;
+        state.own.utc_s = now_ms / 1000;
+        state.own.fix_at_ms = now_ms;
         rf.service(now_ms);
         radio_service.tick(now_ms);
         traffic_service.tick(now_ms);
@@ -86,10 +94,11 @@ struct Pass {
     // The executor between service passes: it runs on its own thread on silicon,
     // so it sees time the service list does not.
     void executor_until(uint64_t until_us, uint64_t step_us = 100) {
-        for (uint64_t t = platform.clock().micros() + step_us; t <= until_us; t += step_us) {
-            platform.clock().set_micros(t);
-            rf.service(static_cast<uint32_t>(t / 1000));
-            if (chip.tx_pending && first_tx_us == 0) first_tx_us = t;
+        for (uint64_t now_us = platform.clock().microseconds() + step_us; now_us <= until_us;
+             now_us += step_us) {
+            platform.clock().set_microseconds(now_us);
+            rf.service(static_cast<uint32_t>(now_us / 1000));
+            if (chip.tx_pending && first_tx_us == 0) first_tx_us = now_us;
         }
     }
 
@@ -109,38 +118,38 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
 
     const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
-    plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.mode = ports::RfMode::RxMBand;
+    plan.frequency_hz = timing::kMBand0Hz;
     plan.start_us = 450000;
     plan.end_us = 795000;
     plan.tx = frame;
-    plan.tx_len = sizeof(frame);
+    plan.tx_bytes = sizeof(frame);
     plan.tx_at_us = 600000;
 
     chip.rssi_dbm = -50;  // a neighbour holding the channel, 55 dB over the floor
     REQUIRE(rf.arm(plan) == Status::Ok);
     uint32_t keyed_at_ms = 0;
-    for (uint32_t t = 450; t <= 800; t += 5) {
-        clock.set_millis(t);
-        rf.service(t);
-        if (chip.tx_pending && keyed_at_ms == 0) keyed_at_ms = t;
+    for (uint32_t now_ms = 450; now_ms <= 800; now_ms += 5) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
+        if (chip.tx_pending && keyed_at_ms == 0) keyed_at_ms = now_ms;
     }
     CHECK(keyed_at_ms == 600);
 
     // The same dwell one second later on a quiet channel keys at the same instant.
     uint8_t sent[protocol::kTxPayloadChipBytes];
-    uint8_t sent_len = 0;
-    REQUIRE(chip.take_tx(sent, sent_len));
+    uint8_t sent_bytes = 0;
+    REQUIRE(chip.take_tx(sent, sent_bytes));
     chip.rssi_dbm = simulator::Air::kNoiseFloorDbm;
     plan.start_us += 1000000;
     plan.end_us += 1000000;
     plan.tx_at_us += 1000000;
     REQUIRE(rf.arm(plan) == Status::Ok);
     keyed_at_ms = 0;
-    for (uint32_t t = 1450; t <= 1800; t += 5) {
-        clock.set_millis(t);
-        rf.service(t);
-        if (chip.tx_pending && keyed_at_ms == 0) keyed_at_ms = t;
+    for (uint32_t now_ms = 1450; now_ms <= 1800; now_ms += 5) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
+        if (chip.tx_pending && keyed_at_ms == 0) keyed_at_ms = now_ms;
     }
     CHECK(keyed_at_ms == 1600);
     CHECK(radio.mode() == parts::RadioMode::Tx);
@@ -164,25 +173,25 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     REQUIRE(radio.begin() == Status::Ok);
-    parts::RadioConfig cfg{};
-    cfg.freq_hz = timing::kMband0Hz;
-    cfg.sync = protocol::kSharedSync;
-    cfg.sync_bits = protocol::kSharedSyncBits;
-    cfg.payload_bytes = protocol::kRxChipBytes;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    parts::RadioConfig config{};
+    config.frequency_hz = timing::kMBand0Hz;
+    config.sync = protocol::kSharedSync;
+    config.sync_bits = protocol::kSharedSyncBits;
+    config.payload_bytes = protocol::kRxChipBytes;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
     uint8_t frame[protocol::kAdslFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     // The chip is holding a timer that expires well inside one 400 ms dwell.
-    const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx::kTimeoutStepNs / 1000000u;
+    const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx1262::kTimeoutStepNs / 1000000u;
     CHECK(timeout_ms > 0);
-    CHECK(timeout_ms < timing::kSlot0End - timing::kSlot0Start);
+    CHECK(timeout_ms < timing::kSlot0EndMs - timing::kSlot0StartMs);
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.
-    cfg.freq_hz = timing::kMband1Hz;
-    REQUIRE(radio.configure_radio(cfg) == Status::Ok);
+    config.frequency_hz = timing::kMBand1Hz;
+    REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.standby);
     CHECK_FALSE(chip.receiving);
     CHECK(radio.mode() == parts::RadioMode::Standby);
@@ -208,7 +217,7 @@ TEST_CASE("rf: a radio that will not answer over SPI is an absent capability, no
     // that names the part is painted before anything refuses.
     CHECK(dead.setup() == Status::Down);
     CHECK_FALSE(dead.flyable());
-    CHECK(ports::has(ports::missing(dead.capabilities(), go::kRequired), ports::Capability::Rf));
+    CHECK(ports::has(ports::without(go::kRequired, dead.capabilities()), ports::Capability::Rf));
 }
 
 // B3. The phase used to be whatever the board sampled at the top of the pass,
@@ -254,7 +263,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     REQUIRE(pass.begin() == Status::Ok);
 
     const uint64_t edge_us = 12'000'000;
-    pass.state.own.utc = 45296;
+    pass.state.own.utc_s = 45296;
     pass.state.clock.pps_locked = true;
     pass.state.clock.utc_s = 45296;
     pass.state.clock.utc_edge_us = edge_us;
@@ -263,7 +272,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     events::RfEvent burst{};
     burst.type = events::RfEventType::CrcError;
     burst.band = model::Band::M;
-    burst.freq_hz = timing::kMband1Hz;
+    burst.frequency_hz = timing::kMBand1Hz;
     burst.at_us = edge_us + 954'000;
     burst.rssi_dbm = -101;
     burst.rssi_valid = true;
@@ -272,7 +281,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     // The next edge is latched, and the receiver has not named its second yet.
     timing::carry_utc_to_edge(pass.state.clock, edge_us + 1'000'000);
     const uint64_t drained_us = edge_us + 1'010'000;
-    pass.platform.clock().set_micros(drained_us);
+    pass.platform.clock().set_microseconds(drained_us);
     pass.traffic_service.tick(static_cast<uint32_t>(drained_us / 1000));
 
     REQUIRE(pass.state.radio_log.count() == 1);
@@ -289,24 +298,24 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
 TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it measured") {
     Pass pass;
     REQUIRE(pass.begin() == Status::Ok);
-    CHECK(pass.radio_service.noise_floor().dbm() == timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() == timing::NoiseFloor::kSeedDbm);
 
     pass.chip.rssi_dbm = -50;  // a neighbour sitting on the channel, 55 dB over the floor
     int keyed_at_ms = 0;
-    for (uint64_t t = 0; t <= 2900000; t += 10000) {
-        pass.whole_pass(t);
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
+        pass.whole_pass(now_us);
         if (pass.chip.tx_pending && keyed_at_ms == 0)
-            keyed_at_ms = static_cast<int>(t / 1000 % 1000);
+            keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
     }
 
     // The PA keyed inside the direct slot. Nothing here completes the burst: the
     // world that takes it off the antenna is simulator::Air, and this harness has none.
-    CHECK(pass.chip.saw_cmd(parts::sx::kSetTx));
+    CHECK(pass.chip.saw_command(parts::sx1262::kSetTx));
     CHECK(timing::Scheduler::in_direct_slot(keyed_at_ms));
-    CHECK(pass.state.rf.timing_stats.refused() == 0);
+    CHECK(pass.state.rf.timing_statistics.refused() == 0);
     // The floor is a measurement, and a site this loud has walked it off the seed.
     CHECK(pass.radio_service.noise_floor().samples() > 3);
-    CHECK(pass.radio_service.noise_floor().dbm() > timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() > timing::NoiseFloor::kSeedDbm);
 }
 
 // A read at one instant used to license a burst on top of a neighbour it did not land on.
@@ -320,26 +329,27 @@ TEST_CASE("rf: the floor the service publishes is a window of reads, and moves n
     pass.chip.set_rssi_sequence(window, timing::ChannelLevel::kSamples);
 
     int keyed_at_ms = 0;
-    for (uint64_t t = 0; t <= 2900000; t += 10000) {
-        pass.whole_pass(t);
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
+        pass.whole_pass(now_us);
         if (pass.chip.tx_pending && keyed_at_ms == 0)
-            keyed_at_ms = static_cast<int>(t / 1000 % 1000);
+            keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
     }
     // The floor the service averages is the window's figure, not the quiet read.
-    CHECK(pass.radio_service.noise_floor().dbm() > window[0] + 20);
+    CHECK(pass.radio_service.noise_floor().level_dbm() > window[0] + 20);
 
     // The same channel read only at its quiet instant keys the PA at the same instant.
     Pass single;
     REQUIRE(single.begin() == Status::Ok);
     single.chip.rssi_dbm = window[0];
     int single_keyed_at_ms = 0;
-    for (uint64_t t = 0; t <= 2900000; t += 10000) {
-        single.whole_pass(t);
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
+        single.whole_pass(now_us);
         if (single.chip.tx_pending && single_keyed_at_ms == 0)
-            single_keyed_at_ms = static_cast<int>(t / 1000 % 1000);
+            single_keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
     }
-    CHECK(single.radio_service.noise_floor().dbm() < timing::NoiseFloor::kSeedDbm);
-    CHECK(pass.radio_service.noise_floor().dbm() > single.radio_service.noise_floor().dbm() + 10);
+    CHECK(single.radio_service.noise_floor().level_dbm() < timing::NoiseFloor::kSeedDbm);
+    CHECK(pass.radio_service.noise_floor().level_dbm() >
+          single.radio_service.noise_floor().level_dbm() + 10);
     CHECK(single_keyed_at_ms == keyed_at_ms);
 }
 
@@ -358,33 +368,33 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
     REQUIRE(rf.begin() == Status::Ok);
 
     ports::RfPlan plan{};
-    plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.mode = ports::RfMode::RxMBand;
+    plan.frequency_hz = timing::kMBand0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
 
-    const uint32_t deadline_ms = runtime::kRadioNoRxReinitMs;
-    for (uint32_t t = 0; t < deadline_ms; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    const uint32_t deadline_ms = runtime::kRadioRxSilenceCeilingMs;
+    for (uint32_t now_ms = 0; now_ms < deadline_ms; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
-    CHECK(radio.reinit_count() == 0);
-    for (uint32_t t = deadline_ms; t <= deadline_ms + 100; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    CHECK(radio.reinitialisations() == 0);
+    for (uint32_t now_ms = deadline_ms; now_ms <= deadline_ms + 100; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
-    CHECK(radio.reinit_count() == 1);
+    CHECK(radio.reinitialisations() == 1);
     CHECK(radio.mode() == parts::RadioMode::Rx);
 
     // A frame that arrives restarts the rope rather than shortening it.
     uint8_t burst[protocol::kAdslFrameBytes] = {0};
     chip.queue_rx(burst, sizeof(burst));
-    for (uint32_t t = deadline_ms + 100; t <= 2 * deadline_ms; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    for (uint32_t now_ms = deadline_ms + 100; now_ms <= 2 * deadline_ms; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
-    CHECK(radio.reinit_count() == 1);
+    CHECK(radio.reinitialisations() == 1);
 }
 
 // Every dwell restarts the receiver, and restarting it once zeroed the rope: no unit ever got here.
@@ -396,23 +406,23 @@ TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it he
     platform::host::Rf rf(radio, clock, events);
     REQUIRE(rf.begin() == Status::Ok);
 
-    for (uint32_t t = 0; t <= runtime::kRadioNoRxReinitMs + 1000; t += 10) {
-        if (t % 400 == 0) {
+    for (uint32_t now_ms = 0; now_ms <= runtime::kRadioRxSilenceCeilingMs + 1000; now_ms += 10) {
+        if (now_ms % 400 == 0) {
             ports::RfPlan plan{};
-            plan.mode = ports::RfMode::RxMband;
-            plan.freq_hz = timing::kMband0Hz;
-            plan.start_us = static_cast<uint64_t>(t) * 1000;
+            plan.mode = ports::RfMode::RxMBand;
+            plan.frequency_hz = timing::kMBand0Hz;
+            plan.start_us = static_cast<uint64_t>(now_ms) * 1000;
             plan.end_us = plan.start_us + 390000;
             REQUIRE(rf.arm(plan) == Status::Ok);
         }
-        clock.set_millis(t);
-        rf.service(t);
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
-    CHECK(radio.reinit_count() == 1);
-    CHECK(rf.armed_count() > runtime::kRadioNoRxReinitMs / 400);
+    CHECK(radio.reinitialisations() == 1);
+    CHECK(rf.armed_count() > runtime::kRadioRxSilenceCeilingMs / 400);
 }
 
-// A reinit that failed left the radio out of Rx, where the rope stops counting: dead for good.
+// A failed reinitialisation left the radio out of Rx, where the rope stops counting: dead for good.
 TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
@@ -422,24 +432,25 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
     REQUIRE(rf.begin() == Status::Ok);
 
     ports::RfPlan plan{};
-    plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband0Hz;
+    plan.mode = ports::RfMode::RxMBand;
+    plan.frequency_hz = timing::kMBand0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
-    for (uint32_t t = 0; t <= 400; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    for (uint32_t now_ms = 0; now_ms <= 400; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
     REQUIRE(radio.mode() == parts::RadioMode::Rx);
 
     // It resets to standby, then its reads come back as nothing: out of Rx, and failed.
     chip.miso_dead = true;
-    for (uint32_t t = 410; t <= 2 * runtime::kRadioNoRxReinitMs + 1000; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    for (uint32_t now_ms = 410; now_ms <= 2 * runtime::kRadioRxSilenceCeilingMs + 1000;
+         now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
-    CHECK(radio.reinit_count() >= 2);
+    CHECK(radio.reinitialisations() >= 2);
 }
 
 // A radio half configured may still sit on the last dwell's channel, and it keyed there.
@@ -453,29 +464,29 @@ TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so
 
     const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
-    plan.mode = ports::RfMode::RxMband;
-    plan.freq_hz = timing::kMband1Hz;
+    plan.mode = ports::RfMode::RxMBand;
+    plan.frequency_hz = timing::kMBand1Hz;
     plan.start_us = 400000;
     plan.end_us = 799000;
     plan.tx = frame;
-    plan.tx_len = sizeof(frame);
+    plan.tx_bytes = sizeof(frame);
     plan.tx_at_us = 600000;
     REQUIRE(rf.arm(plan) == Status::Ok);
 
     chip.busy_stuck = true;
-    for (uint32_t t = 390; t <= 410; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    for (uint32_t now_ms = 390; now_ms <= 410; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
     chip.busy_stuck = false;
-    for (uint32_t t = 420; t <= 800; t += 10) {
-        clock.set_millis(t);
-        rf.service(t);
+    for (uint32_t now_ms = 420; now_ms <= 800; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
     }
 
-    CHECK_FALSE(chip.saw_cmd(parts::sx::kSetTx));
-    events::RfEvent e{};
+    CHECK_FALSE(chip.saw_command(parts::sx1262::kSetTx));
+    events::RfEvent event{};
     bool missed = false;
-    while (events.pop(e)) missed = missed || e.type == events::RfEventType::Missed;
+    while (events.pop(event)) missed = missed || event.type == events::RfEventType::Missed;
     CHECK(missed);
 }

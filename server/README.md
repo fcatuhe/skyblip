@@ -89,7 +89,7 @@ legal:
   host_address: [hosting provider address]
 ```
 
-Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_fb()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
+Images live in `content_images/pages/<slug>/` and are drawn with `pages_image_tag`. The device screens under `pages/skyblip-go/` are drawn with `screen_image_tag` from whichever page shows them, and they are not artwork: each is the 200x200 framebuffer of the WASM simulator, driven to that state and read out of `simulator_panel()`, so a page that changes on the device is a capture that has to be taken again. They are stored at 200x200 in two colours and scaled by an integer factor on the page (`features.css`), because any other factor resamples a panel pixel.
 
 Every other image, a photo or an app screenshot, is AVIF, encoded by libvips from a lossless source: `vips heifsave in.png out.avif --Q 75 --compression av1 --effort 4 --strip --subsample-mode auto` for a photo, `--Q 70 --subsample-mode off` for a screenshot, whose text loses its edges to chroma subsampling. Rails registers no AVIF type, so `config/initializers/mime_types.rb` does, or the dev server sends the files without a Content-Type.
 
@@ -118,6 +118,8 @@ Release type selects the offered channel, not proof of a signing key. The update
 A GitHub failure is contained in the frame. The update page reports the unavailable list and keeps its file picker. The simulator reports an unavailable build instead of blocking the page. Requests start without a GitHub token, sharing the unauthenticated limit of 60 API calls per hour on the crooz IP. #132 tracks adding a token. #131 tracks Litestream and kamal-backup before durable device registrations.
 
 `firmware.yml` and `release.yml` publish `skyblip_simulator.js`, `skyblip_simulator.wasm`, `embed.js` and `scenarios.json` with firmware images. Older releases without those files cannot run in the simulator. Publishing or pruning firmware never deploys Rails. Changing app JS, CSS or content does.
+
+The pages speak the companion link and call `embed.js` in the words #151 gave them (`command`, `acknowledge`, `panel`, `setSatellites`), and no others. A development pre-release built before #151 no longer loads in the simulator, and a unit running one cannot be asked to install from the update page: it takes a newer build as a drag-and-drop `.uf2`. On a link that never exchanged its MTU, 23, the unit answers nothing on the config endpoint, since no reply fits 20 bytes, so the update page shows the running version SMP reports and nothing else, and a command longer than the two prepare segments the unit reassembles, an install's or an activation's, fails at its write.
 
 ## Building and deploying
 

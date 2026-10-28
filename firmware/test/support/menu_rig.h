@@ -16,64 +16,65 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kWindow = go::ConfirmGesture::kDoublePressMs;
+constexpr uint32_t kDoublePressWindowMs = go::ConfirmGesture::kDoublePressWindowMs;
 
 // Long enough for a press to have finished meaning one thing before the next
 // one is made: the pairing window, and a little.
-inline void settle(Rig& rig, uint32_t& t) {
-    rig.run(t, t + kWindow + 200);
-    t += kWindow + 200;
+inline void settle(Rig& rig, uint32_t& now_ms) {
+    rig.run(now_ms, now_ms + kDoublePressWindowMs + 200);
+    now_ms += kDoublePressWindowMs + 200;
 }
 
-inline void push_solution(Rig& rig, int32_t speed_mm_s, int32_t alt_msl_m) {
+inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {
     gnss::GnssSolution solution{};
     solution.fix_valid = true;
     solution.speed_mm_s = speed_mm_s;
-    solution.alt_msl_mm = alt_msl_m * 1000;
-    solution.updates = 1;
+    solution.altitude_msl_mm = altitude_msl_m * 1000;
+    solution.sentences = 1;
     rig.product.bus().gnss.push(solution);
 }
 
-inline void open_menu(Rig& rig, uint32_t& t) {
-    rig.press(t);
+inline void open_menu(Rig& rig, uint32_t& now_ms) {
+    rig.press(now_ms);
     REQUIRE(rig.product.screen().mode() == go::Mode::Menu);
-    settle(rig, t);
+    settle(rig, now_ms);
 }
 
 // A tap of the pad: the focus moves down a row.
-inline void move(Rig& rig, uint32_t& t) {
-    rig.tap(t);
-    settle(rig, t);
+inline void move(Rig& rig, uint32_t& now_ms) {
+    rig.tap(now_ms);
+    settle(rig, now_ms);
 }
 
 // A press of the button: the focused row is acted on, once, and the focus stays on it.
-inline void change(Rig& rig, uint32_t& t) {
-    rig.press(t);
-    rig.run(t, t + 200);
-    t += 200;
-    settle(rig, t);
+inline void change(Rig& rig, uint32_t& now_ms) {
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    settle(rig, now_ms);
 }
 
 // The blob goes to flash kSettleMs after the last tap, in the next free window.
-inline void run_past_the_write_settle(Rig& rig, uint32_t& t) {
-    const uint32_t ms = timing::DurableWriteWindow::kSettleMs + 1000;
-    rig.run(t, t + ms);
-    t += ms;
+inline void run_past_the_write_settle(Rig& rig, uint32_t& now_ms) {
+    const uint32_t settle_ms = timing::DurableWriteWindow::kSettleMs + 1000;
+    rig.run(now_ms, now_ms + settle_ms);
+    now_ms += settle_ms;
 }
 
-inline void focus_on(Rig& rig, uint32_t& t, go::MenuRow row) {
-    for (int i = 0; i < go::menu_for(go::Page::Radar).n; i++) {
+inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
+    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) {
         if (rig.product.screen().editor().focus() == row) break;
-        move(rig, t);
+        move(rig, now_ms);
     }
     REQUIRE(rig.product.screen().editor().focus() == row);
 }
 
 inline bool stored_settings(Rig& rig, go::Settings& out) {
     uint8_t blob[64];
-    size_t n = 0;
-    if (rig.platform.kv().read("settings", blob, sizeof(blob), n) != Status::Ok) return false;
-    return go::from_blob(blob, n, out) == Status::Ok;
+    size_t count = 0;
+    if (rig.platform.key_value().read("settings", blob, sizeof(blob), count) != Status::Ok)
+        return false;
+    return go::from_blob(blob, count, out) == Status::Ok;
 }
 
 }  // namespace

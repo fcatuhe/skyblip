@@ -33,23 +33,24 @@ class NmeaService : public runtime::Service {
     // it. Doubling it makes a 100 m jump on the map and delays by a second any
     // alarm the tablet raises for itself. Both SoftRF forks export at exactly
     // this rate (SoftRF.ino isTimeToExport(), 1000 ms, in both trees).
-    static constexpr uint32_t kMovingTargetRedrawMs = 1000;
+    static constexpr uint32_t kMovingTargetRedrawPeriodMs = 1000;
 
     // INFO: nm 04aug26 What the rotation below guarantees: every target in the
     // table reaches the tablet inside this. It is core/traffic's own freshness
-    // rule (kAlertMaxAgeMs), because a contact the device would no longer alarm
-    // on is exactly a contact whose position on the tablet has gone stale - the
+    // rule (kAlertMaxAgeMs), because a target the device would no longer alarm
+    // on is exactly a target whose position on the tablet has gone stale - the
     // two pictures must not be allowed to disagree by more than the device's own
     // patience with a target.
-    static constexpr uint32_t kTargetRefreshBoundMs = traffic::kAlertMaxAgeMs;
-    static constexpr int kPassesPerRefreshBound =
-        static_cast<int>(kTargetRefreshBoundMs / kMovingTargetRedrawMs);
+    static constexpr uint32_t kTargetRefreshCeilingMs = traffic::kAlertMaxAgeMs;
+    static constexpr int kPassesPerRefreshCeiling =
+        static_cast<int>(kTargetRefreshCeilingMs / kMovingTargetRedrawPeriodMs);
 
     // A full table divided over those passes, rounded up: the cap on $PFLAA per
     // pass that makes the bound arithmetic rather than hope.
     static constexpr int kTargetsPerPass =
-        (traffic::TrafficTable::kCapacity + kPassesPerRefreshBound - 1) / kPassesPerRefreshBound;
-    static_assert(kTargetsPerPass * kPassesPerRefreshBound >= traffic::TrafficTable::kCapacity,
+        (traffic::TrafficTable::kMaxTargets + kPassesPerRefreshCeiling - 1) /
+        kPassesPerRefreshCeiling;
+    static_assert(kTargetsPerPass * kPassesPerRefreshCeiling >= traffic::TrafficTable::kMaxTargets,
                   "a full table would not be refreshed inside its bound");
 
     // INFO: nm 04aug26 A pass is formatting and a handful of notifications, none
@@ -64,15 +65,15 @@ class NmeaService : public runtime::Service {
     // payload, less four for L2CAP and three for the notification header. A
     // central that negotiates more than this is still served in frames this
     // size, because no controller puts more than this in one air packet anyway.
-    static constexpr int kFrameBytesCap = 244;
+    static constexpr int kFrameBytes = 244;
 
     // Wider than the worst case test/core/test_nmea_out.cpp pins for these three
     // sentences, and checked at the point of use rather than assumed.
-    static constexpr int kSentenceBytesCap = 128;
+    static constexpr int kSentenceBytes = 128;
 
     // PFLAU, RMC, GGA, PGRMZ and LK8EX1, then the rotation's targets.
-    static constexpr int kPassSentencesMax = 5 + kTargetsPerPass;
-    static constexpr int kPassBytesCap = kPassSentencesMax * kSentenceBytesCap;
+    static constexpr int kMaxPassSentences = 5 + kTargetsPerPass;
+    static constexpr int kPassBytes = kMaxPassSentences * kSentenceBytes;
 
     NmeaService(runtime::Context& context, Feature declared, const comms::ConfigService& config)
         : runtime::Service(context), config_(config), declared_(declared) {}
@@ -93,7 +94,7 @@ class NmeaService : public runtime::Service {
     void emit_altitude();
     void emit_vario_and_battery();
     void emit_targets(uint32_t now_ms);
-    void write(const char* bytes, int len);
+    void write(const char* sentence, int bytes);
     void drain();
     void abandon_pass();
 
@@ -104,15 +105,15 @@ class NmeaService : public runtime::Service {
     };
 
     const comms::ConfigService& config_;
-    char pass_[kPassBytesCap]{};
-    char sentence_[kSentenceBytesCap]{};
+    char pass_[kPassBytes]{};
+    char sentence_[kSentenceBytes]{};
     Resume resumes_[kTargetsPerPass]{};
     int resume_count_{0};
-    int pass_len_{0};
+    int pass_bytes_{0};
     int pass_sent_{0};
     uint32_t last_pass_ms_{0};
     uint32_t link_drops_{0};
-    int payload_{ports::kMinimumLinkPayload};
+    int payload_{ports::kMinimumLinkPayloadBytes};
     // Where the rotation resumes. It advances only past a target that actually
     // went out, so a pass cut short by a refusing link resends its tail first.
     int cursor_{0};

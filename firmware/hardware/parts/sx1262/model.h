@@ -39,7 +39,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         CommandWhileBusy,
     };
 
-    // INFO: fc 26sep26 DS 8.1 and 13.1.2, as literals: parts::sx's own figures are what is on trial
+    // INFO: fc 26sep26 DS 8.1 and 13.1.2, as literals: parts::sx1262's own figures are on trial
     static constexpr uint32_t kResetLowFloorUs = 100;
     static constexpr uint32_t kSleepSettleFloorUs = 500;
 
@@ -64,7 +64,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     }
     void mode_output(int) override {}
     void mode_input(int, bool) override {}
-    void wait_at_least_us(uint32_t us) override { elapsed_us += us; }
+    void wait_at_least_us(uint32_t hold_us) override { elapsed_us += hold_us; }
 
     void select(bool on) override {
         if (on) {
@@ -78,43 +78,44 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
                 standby = true;
                 wakes++;
             }
-            seq_ = 0;
+            sequence_ = 0;
             opcode_ = 0xFF;
         }
     }
     // A part that is not fitted, or whose MISO pad never got soldered, still
     // lets the host clock bytes out and still lets BUSY be read low.
-    void transfer(const uint8_t* tx, uint8_t* rx, size_t len) override {
-        for (size_t i = 0; i < len; i++) {
+    void transfer(const uint8_t* tx, uint8_t* rx, size_t bytes) override {
+        for (size_t i = 0; i < bytes; i++) {
             uint8_t in = tx ? tx[i] : 0;
             uint8_t out = process(in);
             if (rx) rx[i] = miso_dead ? miso_level : out;
-            seq_++;
+            sequence_++;
         }
     }
 
     // A burst arrives as chips. The detector slides its configured pattern over
     // them, and what the chip reports is the bytes that follow the match: a
     // pattern the transmitter never sent is a frame this radio never saw.
-    static uint16_t deliver_after_sync(const uint8_t* chips, uint16_t chip_len, const uint8_t* sync,
-                                       uint8_t sync_bits, uint8_t* out, uint16_t cap) {
-        const int total = static_cast<int>(chip_len) * 8;
+    static uint16_t deliver_after_sync(const uint8_t* chips, uint16_t chip_bytes,
+                                       const uint8_t* sync, uint8_t sync_bits, uint8_t* out,
+                                       uint16_t capacity) {
+        const int total = static_cast<int>(chip_bytes) * 8;
         for (int start = 0; start + sync_bits <= total; start++) {
             bool match = true;
             for (int i = 0; i < sync_bits && match; i++)
                 match = bit_at(chips, start + i) == bit_at(sync, i);
             if (!match) continue;
             const int first = start + sync_bits;
-            for (uint16_t i = 0; i < cap; i++) {
+            for (uint16_t i = 0; i < capacity; i++) {
                 uint8_t byte = 0;
-                for (int b = 0; b < 8; b++) {
-                    const int idx = first + i * 8 + b;
-                    const bool set = idx < total && bit_at(chips, idx);
+                for (int bit = 0; bit < 8; bit++) {
+                    const int index = first + i * 8 + bit;
+                    const bool set = index < total && bit_at(chips, index);
                     byte = static_cast<uint8_t>((byte << 1) | (set ? 1u : 0u));
                 }
                 out[i] = byte;
             }
-            return cap;
+            return capacity;
         }
         return 0;
     }
@@ -123,42 +124,43 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     // 100 kbps does not recover a 200 kbps carrier, so a transmitter and a dwell
     // that disagree here are as deaf as a wrong sync word - and a good deal
     // harder to see, because everything else about the dwell looks right.
-    bool receive_air(const uint8_t* chips, uint16_t chip_len, bool crc_error = false,
-                     int8_t rssi = -80, uint32_t burst_bitrate = 100000) {
+    bool receive_air(const uint8_t* chips, uint16_t chip_bytes, bool crc_error = false,
+                     int8_t frame_rssi_dbm = -80, uint32_t burst_bitrate = 100000) {
         // A modem still on its reset defaults does not frame GFSK at all.
         if (!modulation_set) return false;
         if (bitrate != burst_bitrate) return false;
         if (sync_bits == 0 || payload_bytes == 0) return false;
         uint8_t payload[255];
-        const uint16_t n =
-            deliver_after_sync(chips, chip_len, sync, sync_bits, payload, payload_bytes);
-        if (n == 0) return false;
-        queue_rx(payload, static_cast<uint8_t>(n), crc_error, rssi);
+        const uint16_t delivered =
+            deliver_after_sync(chips, chip_bytes, sync, sync_bits, payload, payload_bytes);
+        if (delivered == 0) return false;
+        queue_rx(payload, static_cast<uint8_t>(delivered), crc_error, frame_rssi_dbm);
         return true;
     }
 
-    void queue_rx(const uint8_t* data, uint8_t len, bool crc_error = false, int8_t rssi = -80) {
-        rx_buf_.assign(data, data + len);
-        rx_len_ = len;
-        rx_rssi_dbm = rssi;
-        irq_flags = crc_error ? parts::sx::kIrqCrcErr : parts::sx::kIrqRxDone;
+    void queue_rx(const uint8_t* data, uint8_t bytes, bool crc_error = false,
+                  int8_t frame_rssi_dbm = -80) {
+        rx_buffer_.assign(data, data + bytes);
+        rx_bytes_ = bytes;
+        rx_rssi_dbm = frame_rssi_dbm;
+        irq_flags = crc_error ? parts::sx1262::kIrqCrcError : parts::sx1262::kIrqRxDone;
     }
     void signal_tx_done() {
-        irq_flags = parts::sx::kIrqTxDone;
+        irq_flags = parts::sx1262::kIrqTxDone;
         fall_back();
     }
 
-    void set_rssi_sequence(const int8_t* levels, uint8_t n) {
-        rssi_sequence_len = n < kRssiSequenceCap ? n : kRssiSequenceCap;
+    void set_rssi_sequence(const int8_t* levels, uint8_t count) {
+        rssi_sequence_length = count < kMaxRssiSequence ? count : kMaxRssiSequence;
         rssi_sequence_at = 0;
-        for (uint8_t i = 0; i < rssi_sequence_len; i++) rssi_sequence[i] = levels[i];
+        for (uint8_t i = 0; i < rssi_sequence_length; i++) rssi_sequence[i] = levels[i];
     }
 
     // The chip's own SetTx timeout running out. A SetTx issued with timeout 0
     // has nothing to run out, which is the PA left keyed for ever.
     bool expire_tx() {
         if (tx_timeout_ticks == 0) return false;
-        irq_flags = parts::sx::kIrqTimeout;
+        irq_flags = parts::sx1262::kIrqTimeout;
         fall_back();
         return true;
     }
@@ -167,20 +169,21 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     // tuned, whether it is listening, and what it just put on the air.
     //
     // INFO: fc 15sep26 DS 6.2.2: the part inserts its sync register on transmit as on receive
-    bool take_tx(uint8_t* out, uint8_t& len) {
+    bool take_tx(uint8_t* out, uint8_t& bytes) {
         if (!tx_pending) return false;
         tx_pending = false;
         const size_t inserted = sync_bits / 8u;
         for (size_t i = 0; i < inserted; i++) out[i] = sync[i];
-        const size_t sent = payload_bytes != 0 ? payload_bytes : tx_buf_.size();
-        for (size_t i = 0; i < sent; i++) out[inserted + i] = i < tx_buf_.size() ? tx_buf_[i] : 0;
-        len = static_cast<uint8_t>(inserted + sent);
+        const size_t sent = payload_bytes != 0 ? payload_bytes : tx_buffer_.size();
+        for (size_t i = 0; i < sent; i++)
+            out[inserted + i] = i < tx_buffer_.size() ? tx_buffer_[i] : 0;
+        bytes = static_cast<uint8_t>(inserted + sent);
         return true;
     }
 
-    bool saw_cmd(uint8_t opcode) const {
-        return std::any_of(cmds_seen.begin(), cmds_seen.end(),
-                           [opcode](uint8_t c) { return c == opcode; });
+    bool saw_command(uint8_t opcode) const {
+        return std::any_of(commands_seen.begin(), commands_seen.end(),
+                           [opcode](uint8_t seen) { return seen == opcode; });
     }
 
     int busy_pin{0}, reset_pin{1}, dio1_pin{2};
@@ -190,7 +193,7 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     bool sleeping{false};
     uint8_t sleep_config{0xFF};
     uint32_t wakes{0};
-    uint32_t freq_hz{0};
+    uint32_t frequency_hz{0};
     bool receiving{false};
     bool tx_pending{false};
     // The carrier the radio would measure on the tuned channel right now, and
@@ -198,25 +201,25 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     int8_t rssi_dbm{-110};
     int8_t rx_rssi_dbm{-80};
     // INFO: fc 15sep26 a repeating sequence, one entry per read, is a channel changing mid-window
-    static constexpr uint8_t kRssiSequenceCap = 16;
-    int8_t rssi_sequence[kRssiSequenceCap]{};
-    uint8_t rssi_sequence_len{0};
+    static constexpr uint8_t kMaxRssiSequence = 16;
+    int8_t rssi_sequence[kMaxRssiSequence]{};
+    uint8_t rssi_sequence_length{0};
     uint8_t rssi_sequence_at{0};
     uint8_t sync[8]{};
     uint8_t sync_bits{0};
     uint8_t payload_bytes{0};
     // INFO: fc 16sep26 DS 13.4.6 SetPacketParams, GFSK, in the datasheet's order
-    uint8_t packet_params[9]{};
+    uint8_t packet_parameters[9]{};
     uint16_t irq_flags{0};
     int reset_pulses{0};
     bool reset_low{false};
     uint64_t reset_low_us{0};
     bool standby{false};
     bool regulator_dcdc{false};
-    uint8_t regulator_mode{parts::sx::kRegulatorLdo};
+    uint8_t regulator_mode{parts::sx1262::kRegulatorLdo};
     // DS 9.6: the receive gain register and the retention list that decides
     // whether it survives a warm start. Reset default is the power-saving gain.
-    uint8_t rx_gain{parts::sx::kRxGainPowerSaving};
+    uint8_t rx_gain{parts::sx1262::kRxGainPowerSaving};
     uint8_t retention_list[3]{};
     // INFO: fc 05sep26 DS table 13-45: the reset values these three come up on
     static constexpr uint8_t kOcpReset = 0x18;
@@ -233,14 +236,14 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     bool tcxo_on_dio3{false};
     bool tcxo_running{false};
     uint32_t tcxo_starts{0};
-    uint8_t fallback_mode{parts::sx::kFallbackStdbyRc};
+    uint8_t fallback_mode{parts::sx1262::kFallbackStandbyOnRcOscillator};
     bool calibrated{false};
     bool image_calibrated{false};
     uint8_t image_band[2]{};
     uint8_t modulation[8]{};
     bool modulation_set{false};
     uint32_t bitrate{0};
-    uint32_t fdev_hz{0};
+    uint32_t deviation_hz{0};
     uint8_t pulse_shape{0xFF};
     uint8_t rx_bandwidth{0xFF};
     uint8_t pa_config[4]{};
@@ -253,12 +256,12 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     uint32_t tx_timeout_ticks{0};
     Fault fault{Fault::None};
     uint32_t faults{0};
-    std::vector<uint8_t> cmds_seen;
+    std::vector<uint8_t> commands_seen;
 
     // Where an opcode sits in the order it was actually issued, -1 if never.
-    int cmd_order(uint8_t opcode) const {
-        for (size_t i = 0; i < cmds_seen.size(); i++)
-            if (cmds_seen[i] == opcode) return static_cast<int>(i);
+    int command_order(uint8_t opcode) const {
+        for (size_t i = 0; i < commands_seen.size(); i++)
+            if (commands_seen[i] == opcode) return static_cast<int>(i);
         return -1;
     }
 
@@ -268,9 +271,9 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     int8_t next_rssi_dbm() {
-        if (rssi_sequence_len == 0) return rssi_dbm;
+        if (rssi_sequence_length == 0) return rssi_dbm;
         const int8_t level = rssi_sequence[rssi_sequence_at];
-        rssi_sequence_at = static_cast<uint8_t>((rssi_sequence_at + 1) % rssi_sequence_len);
+        rssi_sequence_at = static_cast<uint8_t>((rssi_sequence_at + 1) % rssi_sequence_length);
         return level;
     }
 
@@ -282,12 +285,12 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     void fall_back() {
-        standby = fallback_mode != parts::sx::kFallbackFs;
-        if (fallback_mode == parts::sx::kFallbackStdbyRc) tcxo_running = false;
+        standby = fallback_mode != parts::sx1262::kFallbackFrequencySynthesis;
+        if (fallback_mode == parts::sx1262::kFallbackStandbyOnRcOscillator) tcxo_running = false;
     }
 
-    void note_fault(Fault f) {
-        if (fault == Fault::None) fault = f;
+    void note_fault(Fault raised) {
+        if (fault == Fault::None) fault = raised;
         faults++;
     }
 
@@ -296,8 +299,8 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     // here, and losing it costs 3 dB with nothing in any log to say so.
     bool rx_gain_retained() const {
         return retention_list[0] >= 1 &&
-               retention_list[1] == static_cast<uint8_t>(parts::sx::kRxGainRegister >> 8) &&
-               retention_list[2] == static_cast<uint8_t>(parts::sx::kRxGainRegister & 0xFF);
+               retention_list[1] == static_cast<uint8_t>(parts::sx1262::kRxGainRegister >> 8) &&
+               retention_list[2] == static_cast<uint8_t>(parts::sx1262::kRxGainRegister & 0xFF);
     }
 
     // NRESET returns every block to its reset default, including the IRQ mask
@@ -306,14 +309,14 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
         standby = true;
         sleeping = false;
         regulator_dcdc = false;
-        regulator_mode = parts::sx::kRegulatorLdo;
-        rx_gain = parts::sx::kRxGainPowerSaving;
+        regulator_mode = parts::sx1262::kRegulatorLdo;
+        rx_gain = parts::sx1262::kRxGainPowerSaving;
         retention_list[0] = retention_list[1] = retention_list[2] = 0;
         ocp = kOcpReset;
         tx_clamp = kTxClampReset;
         tx_modulation = kTxModulationReset;
         tcxo_on_dio3 = tcxo_running = calibrated = image_calibrated = false;
-        fallback_mode = parts::sx::kFallbackStdbyRc;
+        fallback_mode = parts::sx1262::kFallbackStandbyOnRcOscillator;
         modulation_set = pa_set = tx_power_set = false;
         irq_mask = dio1_mask = 0;
         irq_flags = 0;
@@ -324,54 +327,58 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
     // DS 13.1: these are accepted in standby only. Issued on a chip that is
     // still receiving, they are silently dropped on silicon.
     static bool standby_only(uint8_t opcode) {
-        return opcode == parts::sx::kSetPacketType || opcode == parts::sx::kSetRfFrequency ||
-               opcode == parts::sx::kSetModulationParams || opcode == parts::sx::kSetPacketParams ||
-               opcode == parts::sx::kSetPaConfig || opcode == parts::sx::kSetTxParams ||
-               opcode == parts::sx::kWriteRegister || opcode == parts::sx::kCalibrate ||
-               opcode == parts::sx::kCalibrateImage || opcode == parts::sx::kSetRegulatorMode;
+        return opcode == parts::sx1262::kSetPacketType ||
+               opcode == parts::sx1262::kSetRfFrequency ||
+               opcode == parts::sx1262::kSetModulationParameters ||
+               opcode == parts::sx1262::kSetPacketParameters ||
+               opcode == parts::sx1262::kSetPaConfig || opcode == parts::sx1262::kSetTxParameters ||
+               opcode == parts::sx1262::kWriteRegister || opcode == parts::sx1262::kCalibrate ||
+               opcode == parts::sx1262::kCalibrateImage ||
+               opcode == parts::sx1262::kSetRegulatorMode;
     }
 
     uint8_t process(uint8_t in) {
-        if (seq_ == 0) {
+        if (sequence_ == 0) {
             opcode_ = in;
-            cmds_seen.push_back(in);
+            commands_seen.push_back(in);
             if (standby_only(in) && !standby) note_fault(Fault::ConfigOutsideStandby);
-            if (opcode_ == parts::sx::kClearIrqStatus) irq_flags = 0;
-            if (opcode_ == parts::sx::kSetStandby) standby = true;
-            if (opcode_ == parts::sx::kClearDeviceErrors) device_errors = 0;
-            if (opcode_ == parts::sx::kSetSleep) {
+            if (opcode_ == parts::sx1262::kClearIrqStatus) irq_flags = 0;
+            if (opcode_ == parts::sx1262::kSetStandby) standby = true;
+            if (opcode_ == parts::sx1262::kClearDeviceErrors) device_errors = 0;
+            if (opcode_ == parts::sx1262::kSetSleep) {
                 if (!standby) note_fault(Fault::SleepOutsideStandby);
                 sleeping = true;
                 slept_since_us_ = elapsed_us;
                 standby = false;
                 tcxo_running = false;
                 receiving = false;
-                if (!rx_gain_retained()) rx_gain = parts::sx::kRxGainPowerSaving;
+                if (!rx_gain_retained()) rx_gain = parts::sx1262::kRxGainPowerSaving;
             }
             // INFO: fc 05sep26 DS 13.3.6: a TCXO part always flags this, and must be cleared
-            if (opcode_ == parts::sx::kSetDio3AsTcxoCtrl) {
+            if (opcode_ == parts::sx1262::kSetDio3AsTcxoControl) {
                 tcxo_on_dio3 = true;
-                device_errors = static_cast<uint16_t>(device_errors | parts::sx::kErrXoscStart);
+                device_errors = static_cast<uint16_t>(device_errors |
+                                                      parts::sx1262::kErrorCrystalOscillatorStart);
             }
-            if (opcode_ == parts::sx::kCalibrate && !regulator_dcdc)
+            if (opcode_ == parts::sx1262::kCalibrate && !regulator_dcdc)
                 note_fault(Fault::RegulatorLeftOnLdo);
-            if (opcode_ == parts::sx::kCalibrate) {
+            if (opcode_ == parts::sx1262::kCalibrate) {
                 calibrated = true;
                 device_errors = static_cast<uint16_t>(device_errors | fail_calibration);
             }
-            if (opcode_ == parts::sx::kCalibrateImage) {
+            if (opcode_ == parts::sx1262::kCalibrateImage) {
                 if (!tcxo_on_dio3 || !calibrated) note_fault(Fault::ImageCalibrationTooEarly);
                 image_calibrated = true;
                 device_errors = static_cast<uint16_t>(device_errors | fail_calibration);
             }
-            if (opcode_ == parts::sx::kSetRx) {
+            if (opcode_ == parts::sx1262::kSetRx) {
                 start_tcxo();
                 if (!modulation_set) note_fault(Fault::FrameWithoutModulation);
                 if (!regulator_dcdc) note_fault(Fault::RegulatorLeftOnLdo);
                 receiving = true;
                 standby = false;
             }
-            if (opcode_ == parts::sx::kSetTx) {
+            if (opcode_ == parts::sx1262::kSetTx) {
                 start_tcxo();
                 receiving = false;
                 standby = false;
@@ -383,158 +390,164 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
                 }
                 if (!regulator_dcdc) note_fault(Fault::RegulatorLeftOnLdo);
             }
-            if (opcode_ == parts::sx::kWriteBuffer) tx_buf_.clear();
-            if (opcode_ == parts::sx::kWriteRegister || opcode_ == parts::sx::kReadRegister)
-                reg_addr_ = 0;
-            if (opcode_ == parts::sx::kSetRfFrequency) frf_ = 0;
+            if (opcode_ == parts::sx1262::kWriteBuffer) tx_buffer_.clear();
+            if (opcode_ == parts::sx1262::kWriteRegister || opcode_ == parts::sx1262::kReadRegister)
+                register_address_ = 0;
+            if (opcode_ == parts::sx1262::kSetRfFrequency) pll_word_ = 0;
             return 0;
         }
-        if (opcode_ == parts::sx::kWriteBuffer && seq_ >= 2) {
-            tx_buf_.push_back(in);
+        if (opcode_ == parts::sx1262::kWriteBuffer && sequence_ >= 2) {
+            tx_buffer_.push_back(in);
             return 0;
         }
-        if (opcode_ == parts::sx::kSetSleep) {
-            if (seq_ == 1) sleep_config = in;
+        if (opcode_ == parts::sx1262::kSetSleep) {
+            if (sequence_ == 1) sleep_config = in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetStandby) {
-            if (seq_ == 1 && in == parts::sx::kStandbyXosc) start_tcxo();
-            if (seq_ == 1 && in == parts::sx::kStandbyRc) tcxo_running = false;
+        if (opcode_ == parts::sx1262::kSetStandby) {
+            if (sequence_ == 1 && in == parts::sx1262::kStandbyOnCrystalOscillator) start_tcxo();
+            if (sequence_ == 1 && in == parts::sx1262::kStandbyOnRcOscillator) tcxo_running = false;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetRxTxFallbackMode) {
-            if (seq_ == 1) fallback_mode = in;
+        if (opcode_ == parts::sx1262::kSetRxTxFallbackMode) {
+            if (sequence_ == 1) fallback_mode = in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetRegulatorMode) {
-            if (seq_ == 1) {
+        if (opcode_ == parts::sx1262::kSetRegulatorMode) {
+            if (sequence_ == 1) {
                 regulator_mode = in;
-                regulator_dcdc = in == parts::sx::kRegulatorDcDc;
+                regulator_dcdc = in == parts::sx1262::kRegulatorDcDc;
             }
             return 0;
         }
-        if (opcode_ == parts::sx::kReadRegister) {
-            if (seq_ <= 2) {
-                reg_addr_ = static_cast<uint16_t>((reg_addr_ << 8) | in);
-                if (seq_ == 2) reg_offset_ = 0;
+        if (opcode_ == parts::sx1262::kReadRegister) {
+            if (sequence_ <= 2) {
+                register_address_ = static_cast<uint16_t>((register_address_ << 8) | in);
+                if (sequence_ == 2) register_offset_ = 0;
                 return 0;
             }
-            if (seq_ == 3) return 0;  // the NOP the chip answers nothing to
-            const uint16_t addr = static_cast<uint16_t>(reg_addr_ + reg_offset_++);
-            if (addr >= parts::sx::kSyncWordRegister &&
-                addr < parts::sx::kSyncWordRegister + sizeof(sync))
-                return sync[addr - parts::sx::kSyncWordRegister];
-            if (addr == parts::sx::kRxGainRegister) return rx_gain;
-            if (addr == parts::sx::kOcpRegister) return ocp;
-            if (addr == parts::sx::kTxClampRegister) return tx_clamp;
-            if (addr == parts::sx::kTxModulationRegister) return tx_modulation;
-            if (addr >= parts::sx::kRetentionListRegister &&
-                addr < parts::sx::kRetentionListRegister + sizeof(retention_list))
-                return retention_list[addr - parts::sx::kRetentionListRegister];
+            if (sequence_ == 3) return 0;  // the NOP the chip answers nothing to
+            const uint16_t address = static_cast<uint16_t>(register_address_ + register_offset_++);
+            if (address >= parts::sx1262::kSyncWordRegister &&
+                address < parts::sx1262::kSyncWordRegister + sizeof(sync))
+                return sync[address - parts::sx1262::kSyncWordRegister];
+            if (address == parts::sx1262::kRxGainRegister) return rx_gain;
+            if (address == parts::sx1262::kOcpRegister) return ocp;
+            if (address == parts::sx1262::kTxClampRegister) return tx_clamp;
+            if (address == parts::sx1262::kTxModulationRegister) return tx_modulation;
+            if (address >= parts::sx1262::kRetentionListRegister &&
+                address < parts::sx1262::kRetentionListRegister + sizeof(retention_list))
+                return retention_list[address - parts::sx1262::kRetentionListRegister];
             return 0;
         }
-        if (opcode_ == parts::sx::kWriteRegister) {
-            if (seq_ <= 2) {
-                reg_addr_ = static_cast<uint16_t>((reg_addr_ << 8) | in);
-                if (seq_ == 2) reg_offset_ = 0;
+        if (opcode_ == parts::sx1262::kWriteRegister) {
+            if (sequence_ <= 2) {
+                register_address_ = static_cast<uint16_t>((register_address_ << 8) | in);
+                if (sequence_ == 2) register_offset_ = 0;
                 return 0;
             }
-            const uint16_t addr = static_cast<uint16_t>(reg_addr_ + reg_offset_++);
-            if (addr >= parts::sx::kSyncWordRegister &&
-                addr < parts::sx::kSyncWordRegister + sizeof(sync))
-                sync[addr - parts::sx::kSyncWordRegister] = in;
-            if (addr == parts::sx::kRxGainRegister) rx_gain = in;
-            if (addr == parts::sx::kOcpRegister) ocp = in;
-            if (addr == parts::sx::kTxClampRegister) tx_clamp = in;
-            if (addr == parts::sx::kTxModulationRegister) tx_modulation = in;
-            if (addr >= parts::sx::kRetentionListRegister &&
-                addr < parts::sx::kRetentionListRegister + sizeof(retention_list))
-                retention_list[addr - parts::sx::kRetentionListRegister] = in;
+            const uint16_t address = static_cast<uint16_t>(register_address_ + register_offset_++);
+            if (address >= parts::sx1262::kSyncWordRegister &&
+                address < parts::sx1262::kSyncWordRegister + sizeof(sync))
+                sync[address - parts::sx1262::kSyncWordRegister] = in;
+            if (address == parts::sx1262::kRxGainRegister) rx_gain = in;
+            if (address == parts::sx1262::kOcpRegister) ocp = in;
+            if (address == parts::sx1262::kTxClampRegister) tx_clamp = in;
+            if (address == parts::sx1262::kTxModulationRegister) tx_modulation = in;
+            if (address >= parts::sx1262::kRetentionListRegister &&
+                address < parts::sx1262::kRetentionListRegister + sizeof(retention_list))
+                retention_list[address - parts::sx1262::kRetentionListRegister] = in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetModulationParams) {
-            if (seq_ >= 1 && seq_ <= 8) modulation[seq_ - 1] = in;
-            if (seq_ == 8) {
-                const uint32_t br = (static_cast<uint32_t>(modulation[0]) << 16) |
-                                    (static_cast<uint32_t>(modulation[1]) << 8) | modulation[2];
-                const uint32_t dev = (static_cast<uint32_t>(modulation[5]) << 16) |
-                                     (static_cast<uint32_t>(modulation[6]) << 8) | modulation[7];
-                bitrate = br ? static_cast<uint32_t>(32ULL * 32000000ULL / br) : 0;
-                fdev_hz = static_cast<uint32_t>((static_cast<uint64_t>(dev) * 32000000ULL) >> 25);
+        if (opcode_ == parts::sx1262::kSetModulationParameters) {
+            if (sequence_ >= 1 && sequence_ <= 8) modulation[sequence_ - 1] = in;
+            if (sequence_ == 8) {
+                const uint32_t bitrate_word = (static_cast<uint32_t>(modulation[0]) << 16) |
+                                              (static_cast<uint32_t>(modulation[1]) << 8) |
+                                              modulation[2];
+                const uint32_t deviation_word = (static_cast<uint32_t>(modulation[5]) << 16) |
+                                                (static_cast<uint32_t>(modulation[6]) << 8) |
+                                                modulation[7];
+                bitrate =
+                    bitrate_word ? static_cast<uint32_t>(32ULL * 32000000ULL / bitrate_word) : 0;
+                deviation_hz = static_cast<uint32_t>(
+                    (static_cast<uint64_t>(deviation_word) * 32000000ULL) >> 25);
                 pulse_shape = modulation[3];
                 rx_bandwidth = modulation[4];
-                modulation_set = br != 0;
+                modulation_set = bitrate_word != 0;
             }
             return 0;
         }
         // INFO: fc 05sep26 DS table 5-2: SetPaConfig rewrites OCP, so a driver owes it back
-        if (opcode_ == parts::sx::kSetPaConfig) {
-            if (seq_ >= 1 && seq_ <= 4) pa_config[seq_ - 1] = in;
-            if (seq_ == 4) {
+        if (opcode_ == parts::sx1262::kSetPaConfig) {
+            if (sequence_ >= 1 && sequence_ <= 4) pa_config[sequence_ - 1] = in;
+            if (sequence_ == 4) {
                 pa_set = true;
                 ocp = kOcpAfterPaConfigSx1262;
             }
             return 0;
         }
-        if (opcode_ == parts::sx::kSetTxParams) {
-            if (seq_ == 1) tx_power_dbm = static_cast<int8_t>(in);
-            if (seq_ == 2) {
+        if (opcode_ == parts::sx1262::kSetTxParameters) {
+            if (sequence_ == 1) tx_power_dbm = static_cast<int8_t>(in);
+            if (sequence_ == 2) {
                 ramp_time = in;
                 tx_power_set = pa_set;
             }
             return 0;
         }
-        if (opcode_ == parts::sx::kSetDioIrqParams) {
-            if (seq_ == 1) irq_mask = in;
-            if (seq_ == 2) irq_mask = static_cast<uint16_t>((irq_mask << 8) | in);
-            if (seq_ == 3) dio1_mask = in;
-            if (seq_ == 4) dio1_mask = static_cast<uint16_t>((dio1_mask << 8) | in);
+        if (opcode_ == parts::sx1262::kSetDioIrqParameters) {
+            if (sequence_ == 1) irq_mask = in;
+            if (sequence_ == 2) irq_mask = static_cast<uint16_t>((irq_mask << 8) | in);
+            if (sequence_ == 3) dio1_mask = in;
+            if (sequence_ == 4) dio1_mask = static_cast<uint16_t>((dio1_mask << 8) | in);
             return 0;
         }
-        if (opcode_ == parts::sx::kCalibrateImage) {
-            if (seq_ >= 1 && seq_ <= 2) image_band[seq_ - 1] = in;
+        if (opcode_ == parts::sx1262::kCalibrateImage) {
+            if (sequence_ >= 1 && sequence_ <= 2) image_band[sequence_ - 1] = in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetTx) {
-            if (seq_ >= 1 && seq_ <= 3) tx_timeout_ticks = (tx_timeout_ticks << 8) | in;
+        if (opcode_ == parts::sx1262::kSetTx) {
+            if (sequence_ >= 1 && sequence_ <= 3) tx_timeout_ticks = (tx_timeout_ticks << 8) | in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetPacketParams) {
-            if (seq_ >= 1 && seq_ <= sizeof(packet_params)) packet_params[seq_ - 1] = in;
-            if (seq_ == 4) sync_bits = in;
-            if (seq_ == 7) payload_bytes = in;
+        if (opcode_ == parts::sx1262::kSetPacketParameters) {
+            if (sequence_ >= 1 && sequence_ <= sizeof(packet_parameters))
+                packet_parameters[sequence_ - 1] = in;
+            if (sequence_ == 4) sync_bits = in;
+            if (sequence_ == 7) payload_bytes = in;
             return 0;
         }
-        if (opcode_ == parts::sx::kSetRfFrequency) {
-            frf_ = (frf_ << 8) | in;
+        if (opcode_ == parts::sx1262::kSetRfFrequency) {
+            pll_word_ = (pll_word_ << 8) | in;
             // The inverse of the driver's PLL word: frf = freq << 25 / 32 MHz.
-            if (seq_ == 4) freq_hz = static_cast<uint32_t>((frf_ * 32000000ULL) >> 25);
+            if (sequence_ == 4)
+                frequency_hz = static_cast<uint32_t>((pll_word_ * 32000000ULL) >> 25);
             return 0;
         }
         switch (opcode_) {
             // DS 13.3.1: the status register only ever shows unmasked bits.
-            case parts::sx::kGetIrqStatus:
-                if (seq_ == 2) return static_cast<uint8_t>((irq_flags & irq_mask) >> 8);
-                if (seq_ == 3) return static_cast<uint8_t>(irq_flags & irq_mask);
+            case parts::sx1262::kGetIrqStatus:
+                if (sequence_ == 2) return static_cast<uint8_t>((irq_flags & irq_mask) >> 8);
+                if (sequence_ == 3) return static_cast<uint8_t>(irq_flags & irq_mask);
                 return 0;
-            case parts::sx::kGetDeviceErrors:
-                if (seq_ == 2) return static_cast<uint8_t>(device_errors >> 8);
-                if (seq_ == 3) return static_cast<uint8_t>(device_errors);
+            case parts::sx1262::kGetDeviceErrors:
+                if (sequence_ == 2) return static_cast<uint8_t>(device_errors >> 8);
+                if (sequence_ == 3) return static_cast<uint8_t>(device_errors);
                 return 0;
-            case parts::sx::kGetRxBufferStatus:
-                if (seq_ == 2) return rx_len_;
-                if (seq_ == 3) return 0;
+            case parts::sx1262::kGetRxBufferStatus:
+                if (sequence_ == 2) return rx_bytes_;
+                if (sequence_ == 3) return 0;
                 return 0;
-            case parts::sx::kGetRssiInst:
-                if (seq_ == 2) return static_cast<uint8_t>(-2 * next_rssi_dbm());
+            case parts::sx1262::kGetInstantRssi:
+                if (sequence_ == 2) return static_cast<uint8_t>(-2 * next_rssi_dbm());
                 return 0;
-            case parts::sx::kGetPacketStatus:
-                if (seq_ == 4) return static_cast<uint8_t>(-2 * rx_rssi_dbm);
+            case parts::sx1262::kGetPacketStatus:
+                if (sequence_ == 4) return static_cast<uint8_t>(-2 * rx_rssi_dbm);
                 return 0;
-            case parts::sx::kReadBuffer: {
-                if (seq_ >= 3) {
-                    size_t idx = seq_ - 3;
-                    return idx < rx_buf_.size() ? rx_buf_[idx] : 0;
+            case parts::sx1262::kReadBuffer: {
+                if (sequence_ >= 3) {
+                    size_t index = sequence_ - 3;
+                    return index < rx_buffer_.size() ? rx_buffer_[index] : 0;
                 }
                 return 0;
             }
@@ -544,14 +557,14 @@ class Sx1262 : public io::Spi, public io::Gpio, public io::Delay {
 
     uint64_t reset_low_since_us_{0};
     uint64_t slept_since_us_{0};
-    size_t seq_{0};
+    size_t sequence_{0};
     uint8_t opcode_{0xFF};
-    uint16_t reg_addr_{0};
-    uint16_t reg_offset_{0};
-    uint64_t frf_{0};
-    std::vector<uint8_t> rx_buf_;
-    std::vector<uint8_t> tx_buf_;
-    uint8_t rx_len_{0};
+    uint16_t register_address_{0};
+    uint16_t register_offset_{0};
+    uint64_t pll_word_{0};
+    std::vector<uint8_t> rx_buffer_;
+    std::vector<uint8_t> tx_buffer_;
+    uint8_t rx_bytes_{0};
 };
 
 }

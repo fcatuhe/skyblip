@@ -25,10 +25,10 @@ enum class Answer : uint8_t { None, Confirm, Cancel };
 class ConfirmGesture {
    public:
     // INFO: cf 02aug26 Wider than a human double tap (~200 ms) and far narrower
-    // than core/power's kLongPressMs, so the three things the button says stay
+    // than core/power's kLongPressHoldMs, so the three things the button says stay
     // disjoint: one press pages or refuses, two inside this window authorise, a
     // hold past 2 s powers the device down.
-    static constexpr uint32_t kDoublePressMs = 600;
+    static constexpr uint32_t kDoublePressWindowMs = 600;
 
     // INFO: cf 02aug26 Disarmed is the resting state and it authorises nothing.
     // A press only ever counts towards a confirmation while a prompt the pilot
@@ -37,7 +37,7 @@ class ConfirmGesture {
     void arm(uint32_t now_ms) {
         armed_ = true;
         pressed_ = false;
-        first_ms_ = now_ms;
+        first_press_ms_ = now_ms;
     }
     void disarm() {
         armed_ = false;
@@ -48,12 +48,12 @@ class ConfirmGesture {
 
     Answer press(uint32_t now_ms) {
         if (!armed_) return Answer::None;
-        if (pressed_ && now_ms - first_ms_ <= kDoublePressMs) {
+        if (pressed_ && now_ms - first_press_ms_ <= kDoublePressWindowMs) {
             disarm();
             return Answer::Confirm;
         }
         pressed_ = true;
-        first_ms_ = now_ms;
+        first_press_ms_ = now_ms;
         return Answer::None;
     }
 
@@ -63,13 +63,13 @@ class ConfirmGesture {
     // "press twice to allow, once to refuse" true on the panel.
     Answer tick(uint32_t now_ms) {
         if (!armed_ || !pressed_) return Answer::None;
-        if (now_ms - first_ms_ < kDoublePressMs) return Answer::None;
+        if (now_ms - first_press_ms_ < kDoublePressWindowMs) return Answer::None;
         disarm();
         return Answer::Cancel;
     }
 
    private:
-    uint32_t first_ms_{0};
+    uint32_t first_press_ms_{0};
     bool armed_{false};
     bool pressed_{false};
 };

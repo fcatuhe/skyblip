@@ -21,7 +21,7 @@ namespace {
 //
 // This is the DEFAULT symbol, compiled in. The plan is for a user to load their
 // own into QSPI flash and pick one per aircraft, at which point this becomes the
-// fallback and the sprite is read from storage - which is why Ownship below is a
+// fallback and the sprite is read from storage - which is why Sprite below is a
 // value carrying its own size and hot spot, not three loose constants.
 //
 // Edit:    /briefing/ownship, then paste its text into light_aircraft.yml
@@ -34,7 +34,7 @@ namespace {
 // 20 px abeam 11 degrees off its true bearing (and 4% off in range: 435 m at
 // the 10 km setting). DO-257A's guidance is 1% of the depiction, so that was
 // twice the accepted figure.
-constexpr int kGlyphW = 24;
+constexpr int kGlyphWidth = 24;
 constexpr int kGlyphOriginRow = 5;
 constexpr uint32_t kOwnshipRows[] = {
     0x00001800,  // ...........##...........
@@ -54,35 +54,37 @@ constexpr uint32_t kOwnshipRows[] = {
     0x0000ff00,  // ........########........
     0x00001800,  // ...........##...........
 };
-constexpr int kGlyphH = static_cast<int>(sizeof(kOwnshipRows) / sizeof(kOwnshipRows[0]));
+constexpr int kGlyphHeight = static_cast<int>(sizeof(kOwnshipRows) / sizeof(kOwnshipRows[0]));
 
 // A 1-bit ownship sprite: the bitmap plus the two things a renderer cannot
 // guess - how wide a row is, and which row is the aircraft's position.
-struct Ownship {
-    int w;  // EVEN, so the sprite straddles the centre point
-    int h;
+struct Sprite {
+    int width;  // EVEN, so the sprite straddles the centre point
+    int height;
     int origin_row;        // hot spot: this row lands on the centre point
     const uint32_t* rows;  // one word per row, LSB = leftmost column
 };
-constexpr Ownship kDefaultOwnship{kGlyphW, kGlyphH, kGlyphOriginRow, kOwnshipRows};
+constexpr Sprite kDefaultSprite{kGlyphWidth, kGlyphHeight, kGlyphOriginRow, kOwnshipRows};
 
 }  // namespace
 
-// s.w is EVEN, so the fuselage straddles the pixel pair (cx-1|cx) and the sprite
-// is exactly centred. The hot-spot row is laid on cy, which puts the aircraft's
-// position on the plot origin itself, not half a pixel off it.
-void draw_skyship(Canvas& fb, int cx, int cy) {
-    const Ownship& s = kDefaultOwnship;
-    static_assert(kGlyphW % 2 == 0, "even width: the centre is a pixel PAIR");
+// sprite.width is EVEN, so the fuselage straddles the pixel pair (centre_x-1|centre_x)
+// and the sprite is exactly centred. The hot-spot row is laid on centre_y, which puts the
+// aircraft's position on the plot origin itself, not half a pixel off it.
+void draw_skyship(Canvas& canvas, int centre_x, int centre_y) {
+    const Sprite& sprite = kDefaultSprite;
+    static_assert(kGlyphWidth % 2 == 0, "even width: the centre is a pixel PAIR");
     static_assert(kGlyphOriginRow == kSkyshipRowsToNose,
                   "the nose a screen clears is this sprite's");
-    static_assert(kGlyphW == kSkyshipSpan, "the span a screen measures against is this sprite's");
-    static_assert(kGlyphH == kSkyshipRows, "the rows a screen measures against are this sprite's");
-    const int x0 = cx - s.w / 2, y0 = cy - s.origin_row;
-    for (int row = 0; row < s.h; row++) {
-        uint32_t bits = s.rows[row];
-        for (int col = 0; bits; col++, bits >>= 1) {
-            if (bits & 1) fb.set_pixel(x0 + col, y0 + row, true);
+    static_assert(kGlyphWidth == kSkyshipSpan,
+                  "the span a screen measures against is this sprite's");
+    static_assert(kGlyphHeight == kSkyshipRows,
+                  "the rows a screen measures against are this sprite's");
+    const int x0 = centre_x - sprite.width / 2, y0 = centre_y - sprite.origin_row;
+    for (int row = 0; row < sprite.height; row++) {
+        uint32_t bits = sprite.rows[row];
+        for (int column = 0; bits; column++, bits >>= 1) {
+            if (bits & 1) canvas.set_pixel(x0 + column, y0 + row, true);
         }
     }
 }

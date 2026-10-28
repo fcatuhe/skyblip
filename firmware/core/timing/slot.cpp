@@ -21,45 +21,47 @@ void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
 
 bool in_pps_holdover(const ClockState& clock) {
     return clock.utc_valid && !clock.pps_locked && clock.pps_edge_us != 0 &&
-           clock.ms_since_pps <= kPpsHoldoverMs;
+           clock.since_edge_ms <= kPpsHoldoverMs;
 }
 
 SlotState Scheduler::state_at(int phase_ms) {
     // The tail first: before anything else in a second, the radio is still in
     // the slot 1 that opened 800 ms into the previous one.
-    if (phase_ms < kSlot1Wrap) return SlotState::Slot1;
-    if (phase_ms >= kUplinkRxStart && phase_ms < kUplinkRxEnd) return SlotState::UplinkRxO;
-    if (phase_ms >= kUplinkRxEnd && phase_ms < kSlot0Start) return SlotState::SwitchOtoM;
-    if (phase_ms >= kSlot0Start && phase_ms < kSlot0End - kHopGuardMs) return SlotState::Slot0;
-    if (phase_ms >= kSlot0End - kHopGuardMs && phase_ms < kSlot1Start) return SlotState::Hop;
-    if (phase_ms >= kSlot1Start) return SlotState::Slot1;
-    return SlotState::SwitchMtoO;
+    if (phase_ms < kSlot1WrapMs) return SlotState::Slot1;
+    if (phase_ms >= kUplinkRxStartMs && phase_ms < kUplinkRxEndMs) return SlotState::UplinkRxOBand;
+    if (phase_ms >= kUplinkRxEndMs && phase_ms < kSlot0StartMs)
+        return SlotState::SwitchOBandToMBand;
+    if (phase_ms >= kSlot0StartMs && phase_ms < kSlot0EndMs - kHopGuardMs) return SlotState::Slot0;
+    if (phase_ms >= kSlot0EndMs - kHopGuardMs && phase_ms < kSlot1StartMs) return SlotState::Hop;
+    if (phase_ms >= kSlot1StartMs) return SlotState::Slot1;
+    return SlotState::SwitchMBandToOBand;
 }
 
 Band Scheduler::band_at(int phase_ms) {
-    const SlotState s = state_at(phase_ms);
-    return (s == SlotState::Slot0 || s == SlotState::Hop || s == SlotState::Slot1) ? Band::M
-                                                                                   : Band::O;
+    const SlotState state = state_at(phase_ms);
+    return (state == SlotState::Slot0 || state == SlotState::Hop || state == SlotState::Slot1)
+               ? Band::M
+               : Band::O;
 }
 
-uint32_t Scheduler::freq_at(int phase_ms) {
+uint32_t Scheduler::frequency_hz_at(int phase_ms) {
     switch (state_at(phase_ms)) {
         case SlotState::Slot0:
-        case SlotState::Hop: return kMband0Hz;
-        case SlotState::Slot1: return kMband1Hz;
-        default: return kObandHz;
+        case SlotState::Hop: return kMBand0Hz;
+        case SlotState::Slot1: return kMBand1Hz;
+        default: return kOBandHz;
     }
 }
 
 bool Scheduler::in_own_tx_dwell(int phase_ms) {
-    const SlotState s = state_at(phase_ms);
-    return s == SlotState::Slot0 || s == SlotState::Hop || s == SlotState::Slot1;
+    const SlotState state = state_at(phase_ms);
+    return state == SlotState::Slot0 || state == SlotState::Hop || state == SlotState::Slot1;
 }
 
 int Scheduler::slot_of(int phase_ms) {
-    if (phase_ms < kSlot1Wrap) return 1;
-    if (phase_ms >= kSlot0Start && phase_ms < kSlot0End) return 0;
-    if (phase_ms >= kSlot1Start) return 1;
+    if (phase_ms < kSlot1WrapMs) return 1;
+    if (phase_ms >= kSlot0StartMs && phase_ms < kSlot0EndMs) return 0;
+    if (phase_ms >= kSlot1StartMs) return 1;
     return -1;
 }
 
@@ -67,43 +69,43 @@ SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
     phase_ms = std::max(phase_ms, 0);
     if (phase_ms >= 1000) phase_ms %= 1000;
 
-    SlotPlan p{};
-    p.state = state_at(phase_ms);
-    p.band = band_at(phase_ms);
-    p.freq_hz = freq_at(phase_ms);
-    p.own_tx_dwell = in_own_tx_dwell(phase_ms);
+    SlotPlan slot_plan{};
+    slot_plan.state = state_at(phase_ms);
+    slot_plan.band = band_at(phase_ms);
+    slot_plan.frequency_hz = frequency_hz_at(phase_ms);
+    slot_plan.own_tx_dwell = in_own_tx_dwell(phase_ms);
 
-    switch (p.state) {
+    switch (slot_plan.state) {
         case SlotState::Slot0:
         case SlotState::Hop:
-            p.start_ms = kSlot0Start;
-            p.end_ms = dwell_end(0);
+            slot_plan.start_ms = kSlot0StartMs;
+            slot_plan.end_ms = dwell_end(0);
             break;
         case SlotState::Slot1:
-            p.start_ms = kSlot1Start;
-            p.end_ms = dwell_end(1);
+            slot_plan.start_ms = kSlot1StartMs;
+            slot_plan.end_ms = dwell_end(1);
             break;
         default:
             // One O-band dwell, framed 5 ms either side of the window our own
             // ground station transmits in.
-            p.start_ms = kUplinkRxStart;
-            p.end_ms = kUplinkRxEnd;
+            slot_plan.start_ms = kUplinkRxStartMs;
+            slot_plan.end_ms = kUplinkRxEndMs;
             break;
     }
 
     const bool anchored = clock.utc_valid && clock.pps_locked;
 
     if (anchored) {
-        p.listen_only = false;
-        p.tx_allowed = (p.band == Band::M) && p.own_tx_dwell;
+        slot_plan.listen_only = false;
+        slot_plan.tx_allowed = (slot_plan.band == Band::M) && slot_plan.own_tx_dwell;
     } else if (in_pps_holdover(clock)) {
-        p.listen_only = false;
-        p.tx_allowed = false;
+        slot_plan.listen_only = false;
+        slot_plan.tx_allowed = false;
     } else {
-        p.listen_only = true;
-        p.tx_allowed = false;
+        slot_plan.listen_only = true;
+        slot_plan.tx_allowed = false;
     }
-    return p;
+    return slot_plan;
 }
 
 }  // namespace skyblip::timing

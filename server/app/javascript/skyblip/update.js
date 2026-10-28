@@ -23,7 +23,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
-const SETTING_KEYS = ['aircraft_type', 'alarm', 'alarm_volume', 'units', 'callsign'];
+const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign'];
 
 class LinkLost extends Error {
   constructor() {
@@ -59,9 +59,8 @@ function settingsOf(reply) {
   return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
 }
 
-// INFO: fc 19oct26 address_mapping_table marks firmware that speaks #126: older firmware has no activation to ask for
 function identityOf(reply) {
-  return { address: addressOf(reply), activates: 'address_mapping_table' in reply };
+  return { address: addressOf(reply) };
 }
 
 function adviceOf({ image, file }) {
@@ -109,7 +108,6 @@ export class Updater {
     status: null,
     settings: null,
     address: null,
-    activates: false,
     defaults: null,
     file: null,
     advice: null,
@@ -196,7 +194,7 @@ export class Updater {
   }
 
   refresh() {
-    return this.#send({ cmd: 'update' });
+    return this.#send({ command: 'update' });
   }
 
   saveSettings(values) {
@@ -220,10 +218,10 @@ export class Updater {
   }
 
   async #learn() {
-    await this.#send({ cmd: 'update' });
-    await this.#send({ cmd: 'status' });
-    await this.#send({ cmd: 'get' });
-    await this.#send({ cmd: 'defaults' });
+    await this.#send({ command: 'update' });
+    await this.#send({ command: 'status' });
+    await this.#send({ command: 'get' });
+    await this.#send({ command: 'defaults' });
     try {
       this.#packetBytes = await packetBudget(this.#smp);
       this.#running = parseVersion(await runningVersion(this.#smp));
@@ -248,16 +246,16 @@ export class Updater {
 
   #ask(task, fields = {}) {
     this.#set({ phase: 'asking', task });
-    return this.#send({ cmd: task, ...fields });
+    return this.#send({ command: task, ...fields });
   }
 
   #receive(reply) {
     if (!reply) return;
-    if (reply.cmd === 'update') this.#set({ image: imageOf(reply) });
-    else if (reply.cmd === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.cmd === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
-    else if (reply.cmd === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if ('ack' in reply) this.#acked(reply);
+    if (reply.command === 'update') this.#set({ image: imageOf(reply) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
+    else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
+    else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
+    else if ('acknowledge' in reply) this.#acked(reply);
   }
 
   #acked(reply) {
@@ -265,8 +263,8 @@ export class Updater {
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
-    if (reply.ack && task === 'set' && !reply.reason) return this.#saved();
-    if (reply.ack && reply.reason === task) return this.#granted(task);
+    if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
+    if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
     this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
   }
@@ -282,7 +280,7 @@ export class Updater {
 
   #saved() {
     this.#set({ phase: 'ready', task: null, notice: { key: 'saved' } });
-    return this.#send({ cmd: 'get' });
+    return this.#send({ command: 'get' });
   }
 
   async #upload() {
@@ -347,11 +345,11 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, activates: false, defaults: null, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, activates: false, defaults: null,
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null,
       progress: null,
       notice,
     });

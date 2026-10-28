@@ -1,0 +1,57 @@
+#ifndef SKYBLIP_CORE_DIAGNOSTICS_PROFILE_H
+#define SKYBLIP_CORE_DIAGNOSTICS_PROFILE_H
+
+#include <cstdint>
+
+#include "core/diagnostics/payload.h"
+#include "core/diagnostics/record.h"
+
+namespace skyblip::diagnostics {
+
+constexpr bool paced(Profile profile) { return profile != Profile::Full; }
+
+constexpr bool simulates_flight(Profile profile) { return profile == Profile::FlightRun; }
+
+// INFO: fc 21sep26 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff
+constexpr uint32_t kPowerRunRecordPeriodMs = 30000;
+static_assert(kPowerRunRecordPeriodMs <= kDutyPeriodCeilingMs,
+              "two Duty records this far apart cannot be subtracted");
+
+constexpr uint32_t kPowerRunRecordsPerPass = 2;
+
+constexpr bool lists(Profile profile, Type type) {
+    if (profile == Profile::Full) return type != Type::None;
+    switch (type) {
+        case Type::Boot:
+        case Type::Config:
+        case Type::Power:
+        case Type::Duty:
+        case Type::Gap:
+        case Type::End: return true;
+        case Type::None:
+        case Type::Gnss:
+        case Type::Pps:
+        case Type::Burst:
+        case Type::Dwell:
+        case Type::Flight:
+        case Type::Barometer:
+        case Type::Motion:
+        case Type::Contact:
+        case Type::Link:
+        case Type::Traffic:
+        case Type::Write:
+        case Type::Screen:
+        case Type::Switch:
+        case Type::Loop: return false;
+    }
+    return false;
+}
+
+constexpr bool recurs(Type type) {
+    return type != Type::None && type != Type::Boot && type != Type::Config && type != Type::Gap &&
+           type != Type::End;
+}
+
+}  // namespace skyblip::diagnostics
+
+#endif

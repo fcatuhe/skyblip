@@ -14,14 +14,14 @@
 using namespace skyblip;
 using namespace skyblip::power;
 
-static events::BatterySample sample(uint16_t millivolts, bool external_power = false) {
-    return events::BatterySample{millivolts, external_power};
+static events::BatterySample sample(uint16_t divider_mv, bool external_power = false) {
+    return events::BatterySample{divider_mv, external_power};
 }
 
 // The gauge medians three readings, so a settled value takes three - which is the
 // same reason a single transmit burst cannot move the needle.
-static void settle(Gauge& gauge, uint16_t millivolts, bool external_power = false) {
-    for (int i = 0; i < 4; i++) gauge.apply(sample(millivolts, external_power));
+static void settle(Gauge& gauge, uint16_t divider_mv, bool external_power = false) {
+    for (int i = 0; i < 4; i++) gauge.apply(sample(divider_mv, external_power));
 }
 
 TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
@@ -31,8 +31,8 @@ TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
     CHECK(percent_from_mv(4500) == 100);
 
     uint8_t previous = 0;
-    for (uint16_t mv = kEmptyMv; mv <= kFullMv; mv += 10) {
-        const uint8_t percent = percent_from_mv(mv);
+    for (uint16_t cell_mv = kEmptyMv; cell_mv <= kFullMv; cell_mv += 10) {
+        const uint8_t percent = percent_from_mv(cell_mv);
         CHECK(percent >= previous);
         previous = percent;
     }
@@ -40,9 +40,9 @@ TEST_CASE("battery: the curve is monotonic and clamps at both ends") {
 
 TEST_CASE("battery: the flat middle of the cell is not a straight line") {
     // 3.70 -> 3.80 V is a quarter of the capacity; 4.10 -> 4.20 V is a twentieth.
-    const int mid = percent_from_mv(3800) - percent_from_mv(3700);
-    const int top = percent_from_mv(4200) - percent_from_mv(4100);
-    CHECK(mid > top);
+    const int middle_step = percent_from_mv(3800) - percent_from_mv(3700);
+    const int top_step = percent_from_mv(4200) - percent_from_mv(4100);
+    CHECK(middle_step > top_step);
 }
 
 // The window the gauge believes: a floating divider under it, a rail over it.
@@ -58,12 +58,12 @@ TEST_CASE("battery: a reading is the cell only between the floor and the ceiling
 TEST_CASE("gauge: nothing is reported before the first reading") {
     Gauge gauge;
     CHECK_FALSE(gauge.state().valid);
-    CHECK(gauge.state().millivolts == 0);
+    CHECK(gauge.state().cell_mv == 0);
 
     gauge.apply(sample(3900));
     CHECK(gauge.state().valid);
     // The first reading stands on its own rather than being mixed with zeroes.
-    CHECK(gauge.state().millivolts == 3900);
+    CHECK(gauge.state().cell_mv == 3900);
     CHECK(gauge.state().percent == percent_from_mv(3900));
     CHECK_FALSE(gauge.state().charging);
 }
@@ -76,12 +76,12 @@ TEST_CASE("gauge: one transmit burst does not move the gauge") {
     // A 14 dBm burst sags the rail for a single reading. The median throws it out
     // whole: 200 mV of transient must not read as a fifth of the pack gone.
     gauge.apply(sample(3700));
-    CHECK(gauge.state().millivolts == 3900);
+    CHECK(gauge.state().cell_mv == 3900);
     CHECK(gauge.state().percent == before);
 
     // Two readings in a row are the cell, not a burst.
     gauge.apply(sample(3700));
-    CHECK(gauge.state().millivolts == 3700);
+    CHECK(gauge.state().cell_mv == 3700);
     CHECK(gauge.state().percent < before);
 }
 
@@ -89,7 +89,7 @@ TEST_CASE("gauge: the reading the median threw out is still the reading the benc
     Gauge gauge;
     settle(gauge, 3900);
     gauge.apply(sample(3700));
-    CHECK(gauge.state().millivolts == 3900);
+    CHECK(gauge.state().cell_mv == 3900);
     CHECK(gauge.state().sample_mv == 3700);
 }
 
@@ -102,7 +102,7 @@ TEST_CASE("gauge: off the cable the percentage only falls") {
     // to get past the median, and the percentage still does not climb.
     gauge.apply(sample(3830));
     gauge.apply(sample(3830));
-    CHECK(gauge.state().millivolts == 3830);
+    CHECK(gauge.state().cell_mv == 3830);
     CHECK(gauge.state().percent == discharging);
 
     // Draining further does move it.
@@ -121,7 +121,7 @@ TEST_CASE("gauge: on the cable the divider reads the rail, so there is no cell t
     CHECK(gauge.state().charging);
     CHECK(gauge.state().external_power);
     CHECK(gauge.state().percent == 0);
-    CHECK(gauge.state().millivolts == 4690);
+    CHECK(gauge.state().cell_mv == 4690);
     CHECK(gauge.refused() == 0);
 }
 
@@ -134,7 +134,7 @@ TEST_CASE("gauge: unplugging starts the median over on the charged cell") {
     gauge.apply(sample(4150));
     CHECK(gauge.state().valid);
     CHECK_FALSE(gauge.state().charging);
-    CHECK(gauge.state().millivolts == 4150);
+    CHECK(gauge.state().cell_mv == 4150);
     CHECK(gauge.state().percent == percent_from_mv(4150));
 }
 
@@ -146,18 +146,18 @@ TEST_CASE("gauge: a refused reading is counted, and its value is what the gauge 
     gauge.apply(sample(4812, /*external_power=*/true));
     CHECK(gauge.refused() == 1);
     CHECK_FALSE(gauge.state().valid);
-    CHECK(gauge.state().millivolts == 4812);
+    CHECK(gauge.state().cell_mv == 4812);
     CHECK(gauge.state().sample_mv == 4812);
 
     gauge.apply(sample(312));
     CHECK(gauge.refused() == 2);
     CHECK_FALSE(gauge.state().valid);
-    CHECK(gauge.state().millivolts == 312);
+    CHECK(gauge.state().cell_mv == 312);
     CHECK_FALSE(gauge.state().external_power);
 
     gauge.apply(sample(3880));
     CHECK(gauge.state().valid);
-    CHECK(gauge.state().millivolts == 3880);
+    CHECK(gauge.state().cell_mv == 3880);
     CHECK(gauge.refused() == 2);
 }
 
@@ -191,9 +191,9 @@ TEST_CASE("cutoff: one good sample resets the count, so a transmit sag cannot ac
     CHECK_FALSE(monitor.cutoff());
 }
 
-static PowerLevel settled_at(uint16_t millivolts) {
+static PowerLevel settled_at(uint16_t divider_mv) {
     CutoffMonitor monitor;
-    for (int i = 0; i < 4; i++) monitor.apply(sample(millivolts));
+    for (int i = 0; i < 4; i++) monitor.apply(sample(divider_mv));
     return monitor.level();
 }
 
@@ -298,8 +298,8 @@ TEST_CASE("cutoff: a parked cell drifting across a step changes level once") {
     REQUIRE(previous == PowerLevel::Normal);
 
     std::vector<PowerLevel> changes;
-    for (const uint16_t millivolts : kRunMv) {
-        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(millivolts));
+    for (const uint16_t divider_mv : kRunMv) {
+        for (int i = 0; i < kLevelSamples; i++) monitor.apply(sample(divider_mv));
         if (monitor.level() != previous) changes.push_back(monitor.level());
         previous = monitor.level();
     }
@@ -462,7 +462,7 @@ TEST_CASE("write gate: a fired power-failure comparator outranks a healthy readi
 
 // It refuses writes; it does not power the device off. POFCON warns about VDD,
 // well under any healthy cell, so there is no orderly shutdown left to run: the
-// panel park alone is kParkMs and the brownout reset is milliseconds away. The
+// panel park alone is kParkSettleMs and the brownout reset is milliseconds away. The
 // voltage rule keeps the shutdown, where three consecutive samples are the
 // evidence.
 TEST_CASE("write gate: the comparator stops writes without switching the device off") {

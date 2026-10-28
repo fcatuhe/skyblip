@@ -67,7 +67,7 @@ void CutoffMonitor::on_supply_warning() {
 PowerLevel CutoffMonitor::apply(const events::BatterySample& sample) {
     if (level_ == PowerLevel::Flat) return level_;
 
-    if (sample.millivolts <= kImplausibleFloorMv) {
+    if (sample.divider_mv <= kImplausibleFloorMv) {
         implausible_++;
         forget_runs();
         return level_;
@@ -80,17 +80,17 @@ PowerLevel CutoffMonitor::apply(const events::BatterySample& sample) {
         return level_;
     }
 
-    count(sample.millivolts);
-    level_ = settled(sample.millivolts);
+    count(sample.divider_mv);
+    level_ = settled(sample.divider_mv);
     return level_;
 }
 
-void CutoffMonitor::count(uint16_t millivolts) {
+void CutoffMonitor::count(uint16_t divider_mv) {
     static_assert(std::size(kLadder) == kSteps,
                   "a step the monitor cannot count is a step nobody reaches");
     for (int i = 0; i < kSteps; i++) {
-        const bool below = millivolts < kLadder[i].entered_below_mv;
-        const bool cleared = millivolts >= kLadder[i].entered_below_mv + kRecoveryMarginMv;
+        const bool below = divider_mv < kLadder[i].entered_below_mv;
+        const bool cleared = divider_mv >= kLadder[i].entered_below_mv + kRecoveryMarginMv;
         below_[i] = below ? lengthened(below_[i]) : 0;
         cleared_[i] = cleared ? lengthened(cleared_[i]) : 0;
     }
@@ -103,13 +103,13 @@ void CutoffMonitor::forget_runs() {
     }
 }
 
-PowerLevel CutoffMonitor::settled(uint16_t millivolts) const {
+PowerLevel CutoffMonitor::settled(uint16_t divider_mv) const {
     const int current = depth(level_);
     for (int i = kSteps - 1; i >= current; i--)
         if (below_[i] >= kLevelSamples) return kLadder[i].level;
 
     if (level_ == PowerLevel::Unknown)
-        return millivolts >= kLowMv ? PowerLevel::Normal : PowerLevel::Unknown;
+        return divider_mv >= kLowMv ? PowerLevel::Normal : PowerLevel::Unknown;
 
     int risen = current;
     while (risen > 0 && cleared_[risen - 1] >= kLevelSamples) risen--;

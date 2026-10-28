@@ -10,7 +10,8 @@ namespace skyblip::go {
 constexpr ports::Capabilities kPlusParts =
     ports::Capability::Inclinometer | ports::Capability::Buzzer | ports::Capability::Haptic;
 
-static_assert(sizeof("skyBlip Go+") - 1 <= identity::kProductWordCap, "the name keeps its address");
+static_assert(sizeof("skyBlip Go+") - 1 <= identity::kProductWordBytes,
+              "the name keeps its address");
 
 constexpr const char* product_name(ports::Capabilities fitted) {
     return ports::has(fitted, kPlusParts) ? "skyBlip Go+" : "skyBlip Go";

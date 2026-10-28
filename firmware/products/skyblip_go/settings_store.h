@@ -9,27 +9,29 @@
 
 namespace skyblip::go {
 
-static_assert(comms::kPromptDetailCap >= kSettingsChangesCap, "the prompt holds every row");
+static_assert(comms::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt holds every row");
 
 class SettingsStore : public comms::ConfigStore {
    public:
     SettingsStore(Settings& settings, const identity::Activation& activation)
         : settings_(settings), activation_(activation) {}
 
-    void write_fields(json::Writer& w) const override {
-        write_json_fields(w, settings_, activation_.address());
+    void write_fields(json::Writer& writer) const override {
+        write_json_fields(writer, settings_, activation_.address());
     }
 
-    void write_default_fields(json::Writer& w) const override {
-        write_json_settings(w, defaults());
+    void write_default_fields(json::Writer& writer) const override {
+        write_json_settings(writer, defaults());
     }
 
-    Status apply(const char* json, int len) override { return apply_json(settings_, json, len); }
+    Status apply(const char* json, int bytes) override {
+        return apply_json(settings_, json, bytes);
+    }
 
-    int describe_changes(const char* json, int len, char* out, int cap) const override {
+    int describe_changes(const char* json, int bytes, char* out, int capacity) const override {
         Settings next = settings_;
-        if (apply_json(next, json, len) != Status::Ok) return 0;
-        return describe_settings_changes(settings_, next, out, cap);
+        if (apply_json(next, json, bytes) != Status::Ok) return 0;
+        return describe_settings_changes(settings_, next, out, capacity);
     }
 
    private:

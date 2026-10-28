@@ -10,15 +10,15 @@ using namespace skyblip;
 namespace {
 
 radio::Entry heard(uint32_t address, uint32_t at_s) {
-    radio::Entry e{};
-    e.event = radio::Event::Received;
-    e.source = model::Source::AdslDirect;
-    e.address = address;
-    e.at_s = at_s;
-    e.rssi_dbm = -87;
-    e.rssi_valid = true;
-    e.utc = true;
-    return e;
+    radio::Entry entry{};
+    entry.verdict = radio::Verdict::Received;
+    entry.source = model::Source::AdslDirect;
+    entry.address = address;
+    entry.at_s = at_s;
+    entry.rssi_dbm = -87;
+    entry.rssi_valid = true;
+    entry.utc_dated = true;
+    return entry;
 }
 
 }  // namespace
@@ -43,24 +43,24 @@ TEST_CASE("radio log: the burst that just happened is the one at the top") {
 // What falls off the bottom of the screen is gone: the page is a tape, not a history.
 TEST_CASE("radio log: past capacity the oldest burst is the one dropped") {
     radio::Log log;
-    for (int i = 0; i < radio::Log::kCapacity + 5; i++)
+    for (int i = 0; i < radio::Log::kMaxEntries + 5; i++)
         log.record(heard(static_cast<uint32_t>(i), static_cast<uint32_t>(i)));
 
-    CHECK(log.count() == radio::Log::kCapacity);
-    CHECK(log.newest(0).address == radio::Log::kCapacity + 4);
-    CHECK(log.newest(radio::Log::kCapacity - 1).address == 5);
+    CHECK(log.count() == radio::Log::kMaxEntries);
+    CHECK(log.newest(0).address == radio::Log::kMaxEntries + 4);
+    CHECK(log.newest(radio::Log::kMaxEntries - 1).address == 5);
 }
 
 TEST_CASE("radio log: every outcome a burst can have is one it keeps") {
     radio::Log log;
-    for (radio::Event event :
-         {radio::Event::Transmitted, radio::Event::Lost, radio::Event::Held, radio::Event::Unarmed,
-          radio::Event::Received, radio::Event::BadCrc, radio::Event::Undecoded,
-          radio::Event::Unsupported, radio::Event::Unattempted}) {
-        radio::Entry e{};
-        e.event = event;
-        log.record(e);
-        CHECK(log.newest(0).event == event);
+    for (radio::Verdict verdict :
+         {radio::Verdict::Transmitted, radio::Verdict::Lost, radio::Verdict::Held,
+          radio::Verdict::Unarmed, radio::Verdict::Received, radio::Verdict::BadCrc,
+          radio::Verdict::Undecoded, radio::Verdict::Unsupported, radio::Verdict::Unattempted}) {
+        radio::Entry entry{};
+        entry.verdict = verdict;
+        log.record(entry);
+        CHECK(log.newest(0).verdict == verdict);
     }
 }
 
@@ -105,7 +105,7 @@ TEST_CASE("radio log: a sent burst measures from the instant it was aimed at to 
 
 // A span too wide to bound is one this row must not report as a smaller one.
 TEST_CASE("radio log: a span past the column saturates rather than wrapping") {
-    CHECK(radio::tx_span_of(13'000'000, 12'000'000) == radio::kTxSpanLimitUs);
+    CHECK(radio::tx_span_of(13'000'000, 12'000'000) == radio::kTxSpanCeilingUs);
 }
 
 // A report cannot precede the instant the burst was keyed at.

@@ -24,8 +24,8 @@ struct UpdateRecord {
 constexpr size_t kVersionsOnlyRecordBytes = 16;
 constexpr size_t kUpdateRecordBytes = kVersionsOnlyRecordBytes + 2 * ports::ImageHash::kBytes;
 
-size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t cap);
-bool from_blob(const uint8_t* blob, size_t len, UpdateRecord& out);
+size_t to_blob(const UpdateRecord& record, uint8_t* out, size_t capacity);
+bool from_blob(const uint8_t* blob, size_t bytes, UpdateRecord& out);
 
 enum class Outcome : uint8_t { Landed, Reverted, Refused, Unrelated };
 
@@ -38,7 +38,7 @@ struct SlotImage {
 Outcome outcome(const UpdateRecord& record, const SlotImage& running,
                 const std::optional<SlotImage>& staged);
 
-int compare(const ports::ImageVersion& a, const ports::ImageVersion& b);
+int compare(const ports::ImageVersion& left, const ports::ImageVersion& right);
 
 const char* version_refusal(const ports::ImageVersion& running, const ports::ImageVersion& incoming,
                             bool downgrade_allowed);
@@ -51,15 +51,15 @@ struct HubImageReport {
     uint8_t digest[kDigestBytes]{};
 };
 
-constexpr size_t kHubImageTextCap = 2 * HubImageReport::kDigestBytes + 1;
+constexpr size_t kHubImageTextBytes = 2 * HubImageReport::kDigestBytes + 1;
 
-int format_hub_image(const HubImageReport& report, char* out, size_t cap);
+int format_hub_image(const HubImageReport& report, char* out, size_t capacity);
 
 // INFO: fc 03oct26 the update frame is sized for this version, build_image.sh signs nothing wider
 constexpr ports::ImageVersion kWidestVersion{9, 99, 99, 99999};
-constexpr size_t kVersionTextCap = 14;
+constexpr size_t kVersionTextBytes = 14;
 
-int format_version(const ports::ImageVersion& version, char* out, size_t cap);
+int format_version(const ports::ImageVersion& version, char* out, size_t capacity);
 
 bool parse_version(const char* text, ports::ImageVersion& out);
 

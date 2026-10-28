@@ -21,7 +21,7 @@
 MAKEFLAGS += -j$(shell nproc 2>/dev/null || echo 4)
 
 CXX      ?= c++
-# -Wconversion is intentionally OFF: fixed-point bit-math (varint/adsl) truncates
+# -Wconversion is intentionally OFF: fixed-point bit-math (variable range/adsl) truncates
 # by design. Keep the high-signal warnings on and treat them as errors.
 # -MMD -MP: emit header dependency files so editing a shared header (e.g. a
 # device model's struct) recompiles every TU that includes it. Without this, stale

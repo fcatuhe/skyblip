@@ -4,34 +4,34 @@
 #include <cstdint>
 
 #include "core/bus/state.h"
-#include "core/diag/profile.h"
+#include "core/diagnostics/profile.h"
 #include "products/skyblip_go/glass.h"
 
 namespace skyblip::go {
 
-constexpr diag::Profile kFirstCapture = diag::Profile::Full;
+constexpr diagnostics::Profile kFirstCapture = diagnostics::Profile::Full;
 
-constexpr diag::Profile next_capture(diag::Profile profile) {
+constexpr diagnostics::Profile next_capture(diagnostics::Profile profile) {
     switch (profile) {
-        case diag::Profile::Full: return diag::Profile::PowerRun;
-        case diag::Profile::PowerRun: return diag::Profile::FlightRun;
-        case diag::Profile::FlightRun: break;
+        case diagnostics::Profile::Full: return diagnostics::Profile::PowerRun;
+        case diagnostics::Profile::PowerRun: return diagnostics::Profile::FlightRun;
+        case diagnostics::Profile::FlightRun: break;
     }
     return kFirstCapture;
 }
 
-const char* capture_name(diag::Profile profile);
+const char* capture_name(diagnostics::Profile profile);
 
 struct CaptureSnapshot {
     uint32_t uptime_s{0};
     bus::CaptureState capture{};
     uint32_t focus_keeps_s{0};
-    diag::Profile focus{kFirstCapture};
-    diag::Profile running{kFirstCapture};
+    diagnostics::Profile focus{kFirstCapture};
+    diagnostics::Profile running{kFirstCapture};
     bool arming{false};
 };
 
-void draw_capture(ui::Canvas& fb, const CaptureSnapshot& snap);
+void draw_capture(ui::Canvas& canvas, const CaptureSnapshot& snapshot);
 
 }  // namespace skyblip::go
 

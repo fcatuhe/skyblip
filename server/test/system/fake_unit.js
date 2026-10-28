@@ -33,7 +33,7 @@
         encoder.encode(version),
       );
       const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
-      this.reply({ cmd: 'registration', device_id, public_key: unit_public_key, version, server_key_id, release, signature });
+      this.reply({ command: 'registration', device_id, public_key: unit_public_key, version, server_key_id, release, signature });
     },
 
     async verifies(signature, message) {
@@ -47,29 +47,29 @@
     },
 
     async write(raw) {
-      const { cmd, ...fields } = JSON.parse(decoder.decode(raw));
-      this.commands.push(cmd);
-      if (cmd === 'get') return this.reply({ cmd: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 });
-      if (cmd === 'challenge') {
+      const { command, ...fields } = JSON.parse(decoder.decode(raw));
+      this.commands.push(command);
+      if (command === 'get') return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 });
+      if (command === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
-        return this.reply({ cmd: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
+        return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
       }
-      if (cmd === 'register') {
+      if (command === 'register') {
         if (!(await this.verifies(fields.signature, join(label('register'), bytes(this.nonce, fields.server_nonce))))) {
-          return this.reply({ ack: false, reason: 'bad_signature' });
+          return this.reply({ acknowledge: false, reason: 'bad_signature' });
         }
         this.serverNonce = fields.server_nonce;
-        return this.reply({ ack: false, pending: true, reason: 'confirm_register' });
+        return this.reply({ acknowledge: false, pending: true, reason: 'confirm_register' });
       }
-      if (cmd === 'unlock') {
+      if (command === 'unlock') {
         const serial = new Uint8Array([fields.serial >> 8, fields.serial & 0xff]);
         const message = join(label('unlock'), bytes(this.vectors.device_id, this.vectors.unit_public_key), serial, bytes(this.nonce));
         this.nonce = null;
-        if (!(await this.verifies(fields.signature, message))) return this.reply({ ack: false, reason: 'bad_signature' });
+        if (!(await this.verifies(fields.signature, message))) return this.reply({ acknowledge: false, reason: 'bad_signature' });
         this.address = fields.serial;
-        return this.reply({ ack: true, reason: 'unlock' });
+        return this.reply({ acknowledge: true, reason: 'unlock' });
       }
-      return this.reply({ ack: false, reason: 'unknown_cmd' });
+      return this.reply({ acknowledge: false, reason: 'unknown_command' });
     },
   };
 

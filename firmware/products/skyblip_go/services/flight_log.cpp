@@ -1,6 +1,6 @@
 #include "products/skyblip_go/services/flight_log.h"
 
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 
@@ -23,7 +23,7 @@ void FlightLogService::tick(uint32_t now_ms) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {
             session_.reset();
-            ack(comms::LogStore::Flights, true, "erased");
+            acknowledge(comms::LogStore::Flights, true, "erased");
         }
         return;
     }
@@ -47,38 +47,41 @@ void FlightLogService::tick(uint32_t now_ms) {
 
 // INFO: fc 15oct26 sampled with the fix, so an event is dated by the second the track holds
 void FlightLogService::watch(uint32_t now_ms) {
-    const model::OwnState& own = context_.state.own;
-    events_.status(status_now(), own.utc, now_ms);
-    for (int slot = 0; slot < traffic::TrafficTable::kCapacity; slot++) {
+    const model::Ownship& own = context_.state.own;
+    events_.status(status_now(), own.utc_s, now_ms);
+    for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) {
             events_.vacant(slot);
             continue;
         }
-        const traffic::AlarmAssessment assessment = traffic::assess(own, target->obs, now_ms);
+        const traffic::AlarmAssessment assessment =
+            traffic::assess(own, target->observation, now_ms);
         if (!assessment.valid) continue;
-        flight::LogContact contact{};
-        contact.address = target->obs.address;
-        contact.address_mapping_table = target->obs.address_mapping_table;
-        contact.aircraft_cat = target->obs.aircraft_cat;
-        contact.dist_m = diag::clamp_u16(
-            assessment.rel_dist_m < 0 ? 0 : static_cast<uint32_t>(assessment.rel_dist_m));
-        contact.rel_alt_m = diag::clamp_i16(assessment.rel_alt_m);
-        contact.rel_bearing_deg = assessment.rel_bearing_deg;
-        contact.closing_mps = diag::clamp_i16(assessment.closing_mps);
-        contact.alarm = traffic::to_number(target->alarm_level);
-        contact.source = static_cast<uint8_t>(target->obs.source);
-        contact.rssi_dbm = target->obs.rssi_dbm;
-        contact.dismissed = target->alarm_dismissed;
-        contact.in_formation = target->in_formation;
-        events_.heard(slot, contact, own.utc);
+        flight::LogTarget log_target{};
+        log_target.address = target->observation.address;
+        log_target.address_mapping_table = target->observation.address_mapping_table;
+        log_target.aircraft_category = target->observation.aircraft_category;
+        log_target.distance_m =
+            clamp_uint16(assessment.relative_distance_m < 0
+                             ? 0
+                             : static_cast<uint32_t>(assessment.relative_distance_m));
+        log_target.relative_altitude_m = clamp_int16(assessment.relative_altitude_m);
+        log_target.relative_bearing_deg = assessment.relative_bearing_deg;
+        log_target.closing_mps = clamp_int16(assessment.closing_mps);
+        log_target.alarm = traffic::to_number(target->alarm_level);
+        log_target.source = static_cast<uint8_t>(target->observation.source);
+        log_target.rssi_dbm = target->observation.rssi_dbm;
+        log_target.dismissed = target->alarm_dismissed;
+        log_target.in_formation = target->in_formation;
+        events_.heard(slot, log_target, own.utc_s);
     }
 }
 
 flight::LogStatus FlightLogService::status_now() const {
     const bus::PowerState& power = context_.state.power;
     flight::LogStatus status{};
-    status.cell_mv = power.battery.millivolts;
+    status.cell_mv = power.battery.cell_mv;
     status.percent = power.battery.percent;
     status.power_level = static_cast<uint8_t>(power.level);
     status.charge = static_cast<uint8_t>(power.charge);
@@ -98,7 +101,7 @@ void FlightLogService::drain(uint32_t now_ms) {
         if (flights_.append(scratch_, now_ms) != Append::Ok) break;
         session_.commit();
     }
-    if (session_.open()) flights_.prepare_spare(now_ms);
+    if (session_.recording()) flights_.prepare_spare(now_ms);
 }
 
 // INFO: fc 15oct26 events go first, so the landing's session_end fix is still the last record
@@ -116,10 +119,12 @@ bool FlightLogService::on_ground() const {
     return context_.state.flight.confirmed_state == flight::FlightState::Ground;
 }
 
-void FlightLogService::ack(comms::LogStore store, bool ok, const char* reason) {
+void FlightLogService::acknowledge(comms::LogStore store, bool ok, const char* reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(reply_to_, comms::format_log_ack(pool.reply_buffer(), pool.reply_cap(reply_to_), ok,
-                                               reason, store));
+    pool.send(
+        reply_link_session_,
+        comms::format_log_acknowledgement(
+            pool.reply_buffer(), pool.reply_capacity(reply_link_session_), ok, reason, store));
 }
 
 RecordStore* FlightLogService::store_for(comms::LogStore store) {
@@ -137,7 +142,7 @@ void FlightLogService::serve_link(uint32_t now_ms) {
     events::RxFrame frame{};
     while (!replying() && context_.bus.log_rx.pop(frame)) {
         handle(comms::parse_log_request(frame));
-        record_link(diag::LinkAction::Received, frame.session_id, frame.len, now_ms);
+        record_link(diagnostics::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
 }
 
@@ -154,14 +159,14 @@ bool FlightLogService::replying() const {
 void FlightLogService::watch_link_drops(uint32_t now_ms) {
     if (link_drops() == recorded_drops_) return;
     recorded_drops_ = link_drops();
-    record_link(diag::LinkAction::Dropped, reply_to_, 0, now_ms);
+    record_link(diagnostics::LinkAction::Dropped, reply_link_session_, 0, now_ms);
 }
 
-void FlightLogService::record_link(diag::LinkAction action, uint16_t session, uint16_t frame_bytes,
-                                   uint32_t now_ms) {
-    if (!context_.diag.armed()) return;
-    diag::Link event{};
-    event.session = session;
+void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t session,
+                                   uint16_t frame_bytes, uint32_t now_ms) {
+    if (!context_.diagnostics.armed()) return;
+    diagnostics::Link event{};
+    event.link_session = session;
     event.payload_bytes = context_.roles.link.payload_bytes();
     event.frame_bytes = frame_bytes;
     event.holder = config_.claim().holder();
@@ -169,40 +174,41 @@ void FlightLogService::record_link(diag::LinkAction action, uint16_t session, ui
     event.action = action;
     event.endpoint = events::Endpoint::Log;
     event.claim_held = config_.claim().held();
-    context_.diag.record(event, context_.instant(now_ms));
+    context_.diagnostics.record(event, context_.instant(now_ms));
 }
 
 void FlightLogService::handle(const comms::LogRequest& request) {
-    reply_to_ = request.link_session;
+    reply_link_session_ = request.link_session;
     if (!config_.claim_link(request.link_session)) {
-        ack(request.store, false, "claimed");
+        acknowledge(request.store, false, "claimed");
         return;
     }
     if (!request.understood) {
-        ack(request.store, false, request.reason == nullptr ? "unknown_cmd" : request.reason);
+        acknowledge(request.store, false,
+                    request.reason == nullptr ? "unknown_command" : request.reason);
         return;
     }
     RecordStore* store = store_for(request.store);
     if (store == nullptr) {
-        ack(request.store, false, "no_diagnostics");
+        acknowledge(request.store, false, "no_diagnostics");
         return;
     }
     if (!store->available()) {
-        ack(request.store, false, "no_storage");
+        acknowledge(request.store, false, "no_storage");
         return;
     }
     if (flights_.erasing()) {
-        ack(request.store, false, "busy");
+        acknowledge(request.store, false, "busy");
         return;
     }
     if (!on_ground()) {
-        ack(request.store, false, "in_flight");
+        acknowledge(request.store, false, "in_flight");
         return;
     }
 
     if (request.command == comms::LogCommand::Erase) {
         if (request.store != comms::LogStore::Flights) {
-            ack(request.store, false, "flights_only");
+            acknowledge(request.store, false, "flights_only");
             return;
         }
         config_.request_log_erase();

@@ -9,19 +9,19 @@
 using namespace skyblip;
 
 namespace {
-model::AircraftObs target(uint32_t address) {
-    model::AircraftObs t{};
-    t.address = address;
-    t.address_mapping_table = 6;
-    t.aircraft_cat = 1;
-    t.flight_state = 2;
-    t.lat_1e7 = 481234500;
-    t.lon_1e7 = 81234500;
-    t.alt_m = 1200;
-    t.speed_q = 160;
-    t.speed_valid = true;
-    t.position_valid = true;
-    return t;
+model::AircraftObservation target(uint32_t address) {
+    model::AircraftObservation observation{};
+    observation.address = address;
+    observation.address_mapping_table = 6;
+    observation.aircraft_category = 1;
+    observation.flight_state = 2;
+    observation.latitude_1e7 = 481234500;
+    observation.longitude_1e7 = 81234500;
+    observation.altitude_m = 1200;
+    observation.speed_q = 160;
+    observation.speed_valid = true;
+    observation.position_valid = true;
+    return observation;
 }
 }  // namespace
 
@@ -100,31 +100,31 @@ TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 se
 // The uplink carried here is the ground station's own, on the channel and in the slot G.3 names.
 TEST_CASE(
     "ADS-L.4.SRD860.G.3: the Traffic Uplink rides the O-band HDR channel in the Uplink slot") {
-    CHECK(timing::kObandHz == 869525000u);
+    CHECK(timing::kOBandHz == 869525000u);
     CHECK(protocol::kUplinkChipRateBps == 200000u);
-    CHECK(timing::kUplinkRxStart >= 200);
-    CHECK(timing::kUplinkRxEnd <= 450);
+    CHECK(timing::kUplinkRxStartMs >= 200);
+    CHECK(timing::kUplinkRxEndMs <= 450);
     // A whole burst fits the slot it is transmitted in, with the dwell's guard either side.
-    CHECK(timing::kGroundEmitStart + static_cast<int>(protocol::kUplinkBurstUs / 1000) <=
-          timing::kGroundEmitEnd);
+    CHECK(timing::kGroundEmitStartMs + static_cast<int>(protocol::kUplinkBurstUs / 1000) <=
+          timing::kGroundEmitEndMs);
 }
 
 // A ground station reaches every aircraft in range, so what it relays is checked, not trusted.
 TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refused, not drawn") {
     protocol::AdslUplink uplink;
-    model::AircraftObs targets[4] = {target(0x300001), target(0), target(0x300003),
-                                     target(0x300004)};
-    targets[3].lat_1e7 = 1800000000;
+    model::AircraftObservation targets[4] = {target(0x300001), target(0), target(0x300003),
+                                             target(0x300004)};
+    targets[3].latitude_1e7 = 1800000000;
 
     uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
     REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);
 
-    model::AircraftObs out[4]{};
-    protocol::AdslUplink::DecodeStats stats{};
-    REQUIRE(uplink.decode(frame, out, 4, stats) == Status::Ok);
-    CHECK(stats.targets == 2);
-    CHECK(stats.rejected == 2);
-    for (int i = 0; i < stats.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
+    model::AircraftObservation out[4]{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(frame, out, 4, statistics) == Status::Ok);
+    CHECK(statistics.targets == 2);
+    CHECK(statistics.rejected == 2);
+    for (int i = 0; i < statistics.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
 }
 
 // TODO: fc 18sep26 the uplink frame is a house format: 16-byte records, no verbatim payload

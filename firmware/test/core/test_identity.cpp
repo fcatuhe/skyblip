@@ -31,17 +31,17 @@ std::string hex_of(ConstByteSpan bytes) {
 }
 
 struct Exchange {
-    ActivationVectors v;
-    Ed25519::Seed server_seed = v.bytes<32>("server_seed");
-    Ed25519::PublicKey server_key = v.bytes<32>("server_public_key");
-    Ed25519::Seed unit_seed = v.bytes<32>("unit_seed");
-    Ed25519::PublicKey unit_key = v.bytes<32>("unit_public_key");
-    identity::DeviceId device_id = v.bytes<8>("device_id");
-    identity::Nonce unit_nonce = v.bytes<16>("unit_nonce");
-    identity::Nonce server_nonce = v.bytes<16>("server_nonce");
-    std::string version = v.text("version");
-    bool release = v.flag("release");
-    uint16_t serial = static_cast<uint16_t>(v.number("serial"));
+    ActivationVectors vectors;
+    Ed25519::Seed server_seed = vectors.bytes<32>("server_seed");
+    Ed25519::PublicKey server_key = vectors.bytes<32>("server_public_key");
+    Ed25519::Seed unit_seed = vectors.bytes<32>("unit_seed");
+    Ed25519::PublicKey unit_key = vectors.bytes<32>("unit_public_key");
+    identity::DeviceId device_id = vectors.bytes<8>("device_id");
+    identity::Nonce unit_nonce = vectors.bytes<16>("unit_nonce");
+    identity::Nonce server_nonce = vectors.bytes<16>("server_nonce");
+    std::string version = vectors.text("version");
+    bool release = vectors.flag("release");
+    uint16_t serial = static_cast<uint16_t>(vectors.number("serial"));
 };
 
 }  // namespace
@@ -51,51 +51,51 @@ TEST_CASE(
     Exchange x;
     CHECK(Ed25519::public_key_of(x.server_seed) == x.server_key);
     CHECK(Ed25519::public_key_of(x.unit_seed) == x.unit_key);
-    const identity::ServerKeyId id = identity::server_key_id(x.server_key);
-    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == x.v.text("server_key_id"));
+    const identity::ServerKeyId key_id = identity::server_key_id(x.server_key);
+    CHECK(hex_of(ConstByteSpan(key_id.data(), key_id.size())) == x.vectors.text("server_key_id"));
 }
 
 TEST_CASE("identity: the register message is the label, Nu and Ns, and the server's R checks") {
     Exchange x;
-    const identity::Message m = identity::register_message(x.unit_nonce, x.server_nonce);
-    CHECK(same(m.bytes(), x.v.message("register_message")));
-    const auto r = x.v.bytes<64>("register_signature");
-    CHECK(Ed25519::sign(x.server_seed, m.bytes()) == r);
-    CHECK(Ed25519::verify(r, x.server_key, m.bytes()));
+    const identity::Message message = identity::register_message(x.unit_nonce, x.server_nonce);
+    CHECK(same(message.bytes(), x.vectors.message("register_message")));
+    const auto register_signature = x.vectors.bytes<64>("register_signature");
+    CHECK(Ed25519::sign(x.server_seed, message.bytes()) == register_signature);
+    CHECK(Ed25519::verify(register_signature, x.server_key, message.bytes()));
 }
 
 // Ed25519 is deterministic, so the unit's S comes out byte-identical to the server's.
 TEST_CASE(
     "identity: the registration message ends in the version, and the unit's S is the vectors'") {
     Exchange x;
-    const identity::Message m = identity::registration_message(
+    const identity::Message message = identity::registration_message(
         x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
         identity::server_key_id(x.server_key), x.release, x.version.c_str());
-    CHECK(same(m.bytes(), x.v.message("registration_message")));
-    const auto s = x.v.bytes<64>("registration_signature");
-    CHECK(Ed25519::sign(x.unit_seed, m.bytes()) == s);
-    CHECK(Ed25519::verify(s, x.unit_key, m.bytes()));
+    CHECK(same(message.bytes(), x.vectors.message("registration_message")));
+    const auto registration_signature = x.vectors.bytes<64>("registration_signature");
+    CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == registration_signature);
+    CHECK(Ed25519::verify(registration_signature, x.unit_key, message.bytes()));
 }
 
 TEST_CASE("identity: the unlock message carries the serial big-endian, and the server's U checks") {
     Exchange x;
     REQUIRE(x.serial == 298);
-    const identity::Message m =
+    const identity::Message message =
         identity::unlock_message(x.device_id, x.unit_key, x.serial, x.unit_nonce);
-    CHECK(same(m.bytes(), x.v.message("unlock_message")));
-    const auto u = x.v.bytes<64>("unlock_signature");
-    CHECK(Ed25519::sign(x.server_seed, m.bytes()) == u);
-    CHECK(Ed25519::verify(u, x.server_key, m.bytes()));
+    CHECK(same(message.bytes(), x.vectors.message("unlock_message")));
+    const auto unlock_signature = x.vectors.bytes<64>("unlock_signature");
+    CHECK(Ed25519::sign(x.server_seed, message.bytes()) == unlock_signature);
+    CHECK(Ed25519::verify(unlock_signature, x.server_key, message.bytes()));
 }
 
 TEST_CASE("identity: no signature passes for another purpose, the labels see to that") {
     Exchange x;
-    const auto r = x.v.bytes<64>("register_signature");
+    const auto register_signature = x.vectors.bytes<64>("register_signature");
     const identity::Message unlock =
         identity::unlock_message(x.device_id, x.unit_key, x.serial, x.unit_nonce);
-    CHECK_FALSE(Ed25519::verify(r, x.server_key, unlock.bytes()));
-    const auto u = x.v.bytes<64>("unlock_signature");
-    CHECK_FALSE(Ed25519::verify(u, x.server_key,
+    CHECK_FALSE(Ed25519::verify(register_signature, x.server_key, unlock.bytes()));
+    const auto unlock_signature = x.vectors.bytes<64>("unlock_signature");
+    CHECK_FALSE(Ed25519::verify(unlock_signature, x.server_key,
                                 identity::register_message(x.unit_nonce, x.server_nonce).bytes()));
 }
 
@@ -104,8 +104,8 @@ TEST_CASE("identity: a server key is named by the first four bytes of its SHA-25
     Ed25519::PublicKey key{};
     REQUIRE(hex::read("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
                       ByteSpan(key.data(), key.size())));
-    const identity::ServerKeyId id = identity::server_key_id(key);
-    CHECK(hex_of(ConstByteSpan(id.data(), id.size())) == "21fe31df");
+    const identity::ServerKeyId key_id = identity::server_key_id(key);
+    CHECK(hex_of(ConstByteSpan(key_id.data(), key_id.size())) == "21fe31df");
 }
 
 TEST_CASE("identity: hex is lowercase both ways, and a read takes exactly the digits it is owed") {
@@ -145,7 +145,7 @@ TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page 
 }
 
 TEST_CASE("identity: the name says activate and the tag until a serial, then product and address") {
-    char name[identity::kBluetoothNameCap + 1];
+    char name[identity::kBluetoothNameBytes + 1];
     identity::Activation blank{};
     blank.bluetooth_tag = 0x3F2A;
     identity::bluetooth_name(name, sizeof(name), "skyBlip Go+", blank);
@@ -174,19 +174,19 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
     SUBCASE("the code the vectors' server signed") {
         Exchange x;
         Identity port(std::nullopt);
-        port.stored =
-            identity::UnlockCode{x.serial, x.unit_nonce, x.v.bytes<64>("unlock_signature")};
+        port.stored_unlock_code =
+            identity::UnlockCode{x.serial, x.unit_nonce, x.vectors.bytes<64>("unlock_signature")};
         identity::Unit unit(port);
         unit.load();
-        CHECK(unit.keyed());
+        CHECK(unit.key_provisioned());
         CHECK(unit.activation().serial == x.serial);
         CHECK(unit.activation().address() == settings::AirAddress{0x00012Au});
     }
     SUBCASE("the same code with another serial in front of it") {
         Exchange x;
         Identity port(std::nullopt);
-        port.stored = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
-                                           x.v.bytes<64>("unlock_signature")};
+        port.stored_unlock_code = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
+                                                       x.vectors.bytes<64>("unlock_signature")};
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -200,7 +200,7 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                                    Ed25519::public_key_of(Identity::kUnitSeed),
                                                    code.serial, code.nonce)
                               .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -215,7 +215,7 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
             identity::unlock_message(other, Ed25519::public_key_of(Identity::kUnitSeed),
                                      code.serial, code.nonce)
                 .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
@@ -229,31 +229,31 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
             identity::unlock_message(Identity::kDeviceId, Ed25519::public_key_of(other_unit),
                                      code.serial, code.nonce)
                 .bytes());
-        port.stored = code;
+        port.stored_unlock_code = code;
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a code the trusted key signed for serial 0") {
         Identity port(std::nullopt);
-        port.stored = Identity::unlock_code_for(0, identity::Nonce{});
+        port.stored_unlock_code = Identity::unlock_code_for(0, identity::Nonce{});
         identity::Unit unit(port);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a unit whose key could not be read") {
         Identity port(Identity::kSerial);
-        port.keyed = false;
+        port.key_provisioned = false;
         identity::Unit unit(port);
         unit.load();
-        CHECK_FALSE(unit.keyed());
+        CHECK_FALSE(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("an erased page") {
         Identity port(std::nullopt);
         identity::Unit unit(port);
         unit.load();
-        CHECK(unit.keyed());
+        CHECK(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
         CHECK(unit.activation().bluetooth_tag == Identity::kBluetoothTag);
     }

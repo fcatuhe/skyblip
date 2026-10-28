@@ -26,15 +26,15 @@
 
 namespace skyblip::platform {
 
-struct BaroReading {
+struct BarometerReading {
     uint32_t pressure_mpa{0};
-    int16_t temperature_decicelsius{0};
+    int16_t temperature_dc{0};
     bool temperature_valid{false};
 };
 
-template <class P>
+template <class Platform>
 constexpr bool fills_the_platform_contract() {
-    using Self = P&;
+    using Self = Platform&;
 
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().spi(io::BusId::Radio)), io::Spi&>,
@@ -60,8 +60,9 @@ constexpr bool fills_the_platform_contract() {
                   "platform: clock() -> ports::Clock&");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().link()), ports::Link&>,
                   "platform: link() -> ports::Link&");
-    static_assert(std::is_convertible_v<decltype(std::declval<Self>().kv()), ports::KvStore&>,
-                  "platform: kv() -> ports::KvStore&");
+    static_assert(
+        std::is_convertible_v<decltype(std::declval<Self>().key_value()), ports::KeyValueStore&>,
+        "platform: key_value() -> ports::KeyValueStore&");
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().log_flash()), ports::FlashRegion&>,
         "platform: log_flash() -> ports::FlashRegion&");
@@ -93,13 +94,14 @@ constexpr bool fills_the_platform_contract() {
         "platform: identity() -> ports::Identity&, the unit's key provisioned before the link "
         "comes up");
 
-    static_assert(std::is_convertible_v<decltype(std::declval<Self>().start_baro()), bool>,
-                  "platform: start_baro() -> bool, one conversion started, never waited on");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().trigger_barometer()), bool>,
+                  "platform: trigger_barometer() -> bool, one conversion started, never waited on");
     static_assert(
         std::is_convertible_v<
-            decltype(std::declval<Self>().read_baro(std::declval<BaroReading&>())), bool>,
-        "platform: read_baro(BaroReading&) -> bool, the started conversion once it is done, "
-        "which becomes events::BaroSample. False while it is still converting. Temperature "
+            decltype(std::declval<Self>().read_barometer(std::declval<BarometerReading&>())), bool>,
+        "platform: read_barometer(BarometerReading&) -> bool, the started conversion once it is "
+        "done, "
+        "which becomes events::BarometerSample. False while it is still converting. Temperature "
         "carries its own validity: a part that answers with pressure and no temperature "
         "still answers true");
     static_assert(

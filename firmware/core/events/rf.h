@@ -22,7 +22,7 @@ struct RfEvent {
     // M by default so a queue entry nobody stamped reads as the band that
     // carries two systems and is framed rather than trusted.
     model::Band band;
-    uint8_t len;
+    uint8_t bytes;
     int8_t rssi_dbm;
     bool rssi_valid;
     uint64_t at_us;
@@ -30,7 +30,7 @@ struct RfEvent {
     uint64_t staged_at_us;
     // INFO: fc 27sep26 the instant the burst was armed for, which names it: a dwell can carry two
     uint64_t tx_at_us;
-    uint32_t freq_hz;
+    uint32_t frequency_hz;
     std::array<uint8_t, kRfEventBytes> data;
 };
 

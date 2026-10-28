@@ -7,7 +7,9 @@ import {
 import { GATT_WRITE_BYTES } from '#skyblip/ble';
 import { Updater } from '#skyblip/update';
 
-import { NEWER, IMAGE_BYTES, session, READS, asking, installing, settled, connected, chosen } from './update_session.mjs';
+import {
+  NEWER, IMAGE_BYTES, session, READS, asking, installing, settled, connected, chosen, unexchanged,
+} from './update_session.mjs';
 
 test('connecting reads the running version, the image state and the status', async () => {
   const { updater } = await connected({ running: '0.1.0.12' });
@@ -22,16 +24,10 @@ test('connecting reads the running version, the image state and the status', asy
 test('the settings carry the address, and a unit not yet activated has none', async () => {
   const { updater, until } = await connected();
   const activated = await until(state => state.settings);
-  assert.deepEqual([activated.address, activated.activates], ['00012A', true]);
+  assert.equal(activated.address, '00012A');
   const fresh = await connected({ address: null });
   const unactivated = await fresh.until(state => state.settings);
-  assert.deepEqual([unactivated.address, unactivated.activates], [null, true]);
-});
-
-test('firmware before activation is never taken for a unit waiting to be activated', async () => {
-  const { until } = await connected({ identityNames: false });
-  const legacy = await until(state => state.settings);
-  assert.deepEqual([legacy.address, legacy.activates], [null, false]);
+  assert.equal(unactivated.address, null);
 });
 
 test('an install asks once on the glass, naming the version, and installs once the image lands', async () => {
@@ -48,7 +44,7 @@ test('an install asks once on the glass, naming the version, and installs once t
   const after = await until(state => state.phase === 'rebooting');
   assert.equal(after.notice, null);
   assert.equal(after.running, null, 'the version that ran before the install is not shown as running');
-  assert.deepEqual(device.commands.filter(cmd => !READS.has(cmd)), ['dfu']);
+  assert.deepEqual(device.commands.filter(command => !READS.has(command)), ['dfu']);
 });
 
 test('a verdict that lands before the reply to the last chunk still reads as installing', async () => {
@@ -82,10 +78,16 @@ test('at an iPhone MTU the requests shrink to the 182 bytes it carries, and noth
   assert.ok(device.uploadWrites.every(writes => writes === 1));
 });
 
-test('a link whose MTU was never exchanged sends the whole buffer in 20-byte slices', async () => {
-  const { device } = await uploaded({ bufSize: 2475, mtu: 23 });
-  assert.equal(device.longestAttempt, 20);
-  assert.ok(device.longestPacket > 2000, `packet of ${device.longestPacket}`);
+test('a link whose MTU was never exchanged hears no config reply, and its install is refused at the write', async () => {
+  const { device, updater, until } = await unexchanged();
+  assert.equal(updater.state.running, '0.1.0+12');
+  assert.deepEqual([updater.state.status, updater.state.image, updater.state.settings], [null, null, null]);
+  assert.ok(device.refusedNotifications >= 3, `refused ${device.refusedNotifications}`);
+  updater.install();
+  const refused = await until(settled);
+  assert.equal(refused.notice.key, 'failed');
+  assert.match(refused.notice.detail, /Prepare queue full/);
+  assert.ok(!device.commands.includes('dfu'));
 });
 
 test('a device that does not echo is written in 20-byte slices', async () => {
@@ -99,13 +101,13 @@ test('a write the browser refuses steps down to a smaller one, and the upload ca
   assert.equal(device.overlaps, 0);
 });
 
-test('no GATT write is longer than BLE guarantees, none overlaps, no packet overflows the buffer', async () => {
-  const { device, updater, until } = await chosen({ bufSize: 300, mtu: 23 });
+test('without an echo no SMP write is longer than BLE guarantees, none overlaps, no packet overflows the buffer', async () => {
+  const { device, updater, until } = await chosen({ bufSize: 300, echo: false });
   updater.install();
   await until(asking('dfu'));
   device.press();
   await until(installing);
-  assert.equal(device.longestWrite, GATT_WRITE_BYTES);
+  assert.equal(device.smp.longestAttempt, GATT_WRITE_BYTES);
   assert.ok(device.longestPacket <= 300, `packet of ${device.longestPacket}`);
   assert.equal(device.overlaps, 0);
 });
@@ -269,7 +271,7 @@ test('an image of the running version is sent', async () => {
 
 test('a device that does not name its key refuses a foreign one once it lands, in its own words', async () => {
   const { device, updater, until } = await connected();
-  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  device.push({ command: 'update', image: 'confirmed', swap_powered: true });
   await until(state => state.image.key === null);
   await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
   updater.install();
@@ -312,21 +314,21 @@ test('an update frame pushed on connect is read without being asked', async () =
 
 test('an update frame arriving later replaces the one before it', async () => {
   const { device, until } = await connected({ image: 'probation', from: '0.1.0+12', to: '0.2.0+15' });
-  device.push({ cmd: 'update', image: 'confirmed', swap_powered: true });
+  device.push({ command: 'update', image: 'confirmed', swap_powered: true });
   const { image } = await until(state => state.image.state === 'confirmed');
   assert.equal(image.from, null);
 });
 
 test('a status frame from before #87 hides a gauge that has no divider', async () => {
   const { device, until } = await connected();
-  device.push({ cmd: 'status', reset: 'POWER ON', flight: 'ground', upload: false, battery_percent: 0, battery_valid: false, charging: false, power_level: '--' });
+  device.push({ command: 'status', reset: 'POWER ON', flight: 'ground', upload: false, battery_percent: 0, battery_valid: false, charging: false, power_level: '--' });
   const { status } = await until(state => state.status.powerLevel === '--');
   assert.equal(status.batteryPercent, null);
 });
 
 test('a status frame from #87 says the cell went flat, and has no percent until the gauge reads', async () => {
   const { device, until } = await connected();
-  device.push({ cmd: 'status', flight: 'ground', upload: false, charging: true, power_level: 'LOW', went_dark_flat: true });
+  device.push({ command: 'status', flight: 'ground', upload: false, charging: true, power_level: 'LOW', went_dark_flat: true });
   const { status } = await until(state => state.status.wentDarkFlat);
   assert.equal(status.batteryPercent, null);
   assert.equal(status.charging, true);

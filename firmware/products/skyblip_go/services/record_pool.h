@@ -2,7 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_POOL_H
 
 #include "core/comms/log_link.h"
-#include "core/diag/record.h"
+#include "core/diagnostics/record.h"
 #include "core/flight/log_record.h"
 #include "core/store/sector_allocator.h"
 #include "runtime/service.h"
@@ -10,7 +10,7 @@
 namespace skyblip::go {
 
 // INFO: fc 20sep26 both rings write 24-byte slots, so the partition has one slot geometry
-static_assert(flight::kLogRecordBytes == diag::kRecordBytes,
+static_assert(flight::kLogRecordBytes == diagnostics::kRecordBytes,
               "the two rings share a partition and must share its slot size");
 constexpr uint32_t kStoreRecordBytes = flight::kLogRecordBytes;
 
@@ -34,20 +34,20 @@ class RecordPool {
     bool book_window(uint32_t cost_ms, uint32_t pass_ms);
 
     bool read_slot(uint32_t sector, uint32_t slot, uint8_t* out);
-    bool write_slots(uint32_t sector, uint32_t first, const uint8_t* in, uint32_t count);
+    bool write_slots(uint32_t sector, uint32_t first, const uint8_t* records, uint32_t count);
     Status read_header(uint32_t sector, store::SectorHeader& out);
     bool write_header(uint32_t sector, const store::SectorHeader& header);
     bool erase(uint32_t sector);
 
-    int payload_bytes(uint16_t to) const;
-    int reply_cap(uint16_t to) const;
+    int payload_bytes(uint16_t link_session) const;
+    int reply_capacity(uint16_t link_session) const;
     char* reply_buffer() { return reply_; }
     uint8_t* chunk_buffer() { return chunk_; }
     // False when the frame was dropped. A link at its share holds it for deliver_held().
-    bool send(uint16_t to, int len);
+    bool send(uint16_t link_session, int bytes);
     // Ok once nothing is held, WouldBlock while the link still refuses, anything else a drop.
     Status deliver_held(uint32_t now_ms);
-    bool holding() const { return held_len_ > 0; }
+    bool holding() const { return held_bytes_ > 0; }
     uint32_t link_drops() const { return link_drops_; }
 
    private:
@@ -67,10 +67,10 @@ class RecordPool {
     bool opened_{false};
     bool available_{false};
 
-    char reply_[comms::kLogReplyCap]{};
-    char held_[comms::kLogReplyCap]{};
-    int held_len_{0};
-    uint16_t held_to_{0};
+    char reply_[comms::kLogReplyBytes]{};
+    char held_[comms::kLogReplyBytes]{};
+    int held_bytes_{0};
+    uint16_t held_link_session_{0};
     uint32_t held_since_ms_{0};
     uint32_t now_ms_{0};
     uint8_t chunk_[comms::kLogChunkRawBytes]{};

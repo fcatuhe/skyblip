@@ -5,9 +5,9 @@ namespace skyblip::hex {
 namespace {
 constexpr char kDigits[] = "0123456789abcdef";
 
-int nibble(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+int nibble(char digit) {
+    if (digit >= '0' && digit <= '9') return digit - '0';
+    if (digit >= 'a' && digit <= 'f') return digit - 'a' + 10;
     return -1;
 }
 }  // namespace

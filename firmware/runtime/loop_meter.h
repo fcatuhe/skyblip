@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "core/diag/payload.h"
+#include "core/diagnostics/payload.h"
 #include "ports/clock.h"
 
 namespace skyblip::runtime {
@@ -14,7 +14,7 @@ class LoopMeter {
     explicit LoopMeter(const ports::Clock& clock) : clock_(clock) {}
 
     void begin_pass(uint16_t phase_ms) {
-        const uint64_t now_us = clock_.micros();
+        const uint64_t now_us = clock_.microseconds();
         if (began_) {
             const uint64_t gap_ms = (now_us - pass_began_us_) / 1000;
             if (gap_ms > window_.worst_gap_ms) {
@@ -28,18 +28,18 @@ class LoopMeter {
     }
 
     template <class Work>
-    void timed(uint8_t who, Work&& work) {
-        const uint64_t began_us = clock_.micros();
+    void timed(uint8_t service, Work&& work) {
+        const uint64_t began_us = clock_.microseconds();
         work();
-        const uint64_t took_us = clock_.micros() - began_us;
+        const uint64_t took_us = clock_.microseconds() - began_us;
         if (took_us > worst_tick_us_) {
             worst_tick_us_ = took_us;
-            window_.worst_service = who;
+            window_.worst_service = service;
         }
     }
 
     void end_pass() {
-        const uint64_t took_us = clock_.micros() - pass_began_us_;
+        const uint64_t took_us = clock_.microseconds() - pass_began_us_;
         window_.passes++;
         busy_us_ += took_us;
         if (took_us > window_.worst_pass_us) {
@@ -49,13 +49,13 @@ class LoopMeter {
         }
     }
 
-    diag::Loop take() {
-        diag::Loop window = window_;
+    diagnostics::Loop take() {
+        diagnostics::Loop window = window_;
         const uint64_t busy_ms = busy_us_ / 1000;
         window.busy_ms = busy_ms > 0xFFFF ? 0xFFFF : static_cast<uint16_t>(busy_ms);
         const uint64_t tick_ms = worst_tick_us_ / 1000;
         window.worst_tick_ms = tick_ms > 0xFF ? 0xFF : static_cast<uint8_t>(tick_ms);
-        window_ = diag::Loop{};
+        window_ = diagnostics::Loop{};
         busy_us_ = 0;
         worst_tick_us_ = 0;
         return window;
@@ -63,7 +63,7 @@ class LoopMeter {
 
    private:
     const ports::Clock& clock_;
-    diag::Loop window_{};
+    diagnostics::Loop window_{};
     uint64_t busy_us_{0};
     uint64_t worst_tick_us_{0};
     uint64_t pass_began_us_{0};

@@ -12,269 +12,275 @@ namespace skyblip::go {
 using namespace radar;
 
 namespace {
-constexpr int kCx = kFar;  // only for centring text, which has no such nicety
-constexpr int kCellW = 6;
+constexpr int kCentreX = kFar;  // only for centring text, which has no such nicety
+using ui::kCellWidth;
 constexpr int kSecondsScale = 1;
 constexpr int kSecondsGap = 2;
 constexpr int kRangeScale = 2;
 constexpr int kTrafficScale = 3;
 constexpr int kRangePad = 4;
 constexpr int kReadingCorner = 3;
-constexpr int kFooterY = kFooterBottom - kGlyphH;
+constexpr int kFooterY = kFooterBottom - kCharacterHeight;
 constexpr int kUnitGap = 3;
-constexpr int32_t kTurn16 = 65536;
-constexpr int kWedgeInnerR = 15;
-constexpr int64_t kTanScale = 10000;
-constexpr int64_t kWedgeEdgeTanE4 = 10000;
-constexpr int kFormationD = 13;
+constexpr int kWedgeInnerRadius = 15;
+constexpr int64_t kTangentScale = 10000;
+constexpr int64_t kWedgeEdgeTangentE4 = 10000;
+constexpr int kFormationHalfSide = 13;
 constexpr int kFormationCorner = 4;
 constexpr int kFormationInset = 3;
-constexpr int kDigitW = 5;
+using ui::kCharacterWidth;
 constexpr int kBannerScale = 2;
-constexpr int kOwnShipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
+constexpr int kOwnshipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
 constexpr int kNoteScale = 1;
 constexpr int kNoteGap = 5;
 
 struct Layout {
-    int outer_r;
+    int outer_radius;
     int range_y;
     int banner_y;
     int note_y;
 };
 
-constexpr Layout layout_with(int outer_r, int range_y, int banner_y) {
-    return {outer_r, range_y, banner_y, banner_y + kGlyphH * kBannerScale + kLabelPad + kNoteGap};
+constexpr Layout layout_with(int outer_radius, int range_y, int banner_y) {
+    return {outer_radius, range_y, banner_y,
+            banner_y + kCharacterHeight * kBannerScale + kLabelPad + kNoteGap};
 }
 
 constexpr Layout kRangeOnTheRing =
-    layout_with(kToScaleR, kFooterBottom - kGlyphH * kRangeScale,
-                (kOwnShipTail + kFooterTop - kGlyphH * kBannerScale) / 2);
-constexpr int kRangeOnRimY = kFar + kAllR - kRingW / 2 - kGlyphH * kRangeScale / 2;
-constexpr Layout kRangeOnTheRim = layout_with(
-    kAllR, kRangeOnRimY, (kOwnShipTail + kRangeOnRimY - kRangePad - kGlyphH * kBannerScale) / 2);
+    layout_with(kToScaleRadius, kFooterBottom - kCharacterHeight * kRangeScale,
+                (kOwnshipTail + kFooterTop - kCharacterHeight * kBannerScale) / 2);
+constexpr int kRangeOnRimY =
+    kFar + kAllRadius - kRingWidth / 2 - kCharacterHeight * kRangeScale / 2;
+constexpr Layout kRangeOnTheRim =
+    layout_with(kAllRadius, kRangeOnRimY,
+                (kOwnshipTail + kRangeOnRimY - kRangePad - kCharacterHeight * kBannerScale) / 2);
 
-constexpr const Layout& layout_of(const RadarSnapshot& snap) {
-    return snap.plot == RadarPlot::All ? kRangeOnTheRim : kRangeOnTheRing;
+constexpr const Layout& layout_of(const RadarSnapshot& snapshot) {
+    return snapshot.plot == RadarPlot::All ? kRangeOnTheRim : kRangeOnTheRing;
 }
 
-int half_chord_in_half_pixels(int r, int b) {
-    const int32_t v = 4 * r * r - (2 * b + 1) * (2 * b + 1);
-    if (v < 0) return -1;
-    int q = isqrt<int32_t>(v);
-    while (q * q > v) q--;
-    return (q - 1) / 2;
+int half_chord_in_half_pixels(int radius, int row) {
+    const int32_t squared = 4 * radius * radius - (2 * row + 1) * (2 * row + 1);
+    if (squared < 0) return -1;
+    int root = square_root<int32_t>(squared);
+    while (root * root > squared) root--;
+    return (root - 1) / 2;
 }
 
-void ring(ui::Canvas& fb, int r) {
-    for (int b = 0; b < r; b++) {
-        const int outer = half_chord_in_half_pixels(r, b);
+void ring(ui::Canvas& canvas, int radius) {
+    for (int row = 0; row < radius; row++) {
+        const int outer = half_chord_in_half_pixels(radius, row);
         if (outer < 0) continue;
-        const int inner = half_chord_in_half_pixels(r - kRingW, b) + 1;
-        const int w = outer - inner + 1;
-        fb.hline(kFar + inner, kFar + b, w, true);
-        fb.hline(kFar + inner, kNear - b, w, true);
-        fb.hline(kNear - outer, kFar + b, w, true);
-        fb.hline(kNear - outer, kNear - b, w, true);
+        const int inner = half_chord_in_half_pixels(radius - kRingWidth, row) + 1;
+        const int width = outer - inner + 1;
+        canvas.horizontal_line(kFar + inner, kFar + row, width, true);
+        canvas.horizontal_line(kFar + inner, kNear - row, width, true);
+        canvas.horizontal_line(kNear - outer, kFar + row, width, true);
+        canvas.horizontal_line(kNear - outer, kNear - row, width, true);
     }
 }
 
-int16_t c16(int32_t deg) {
-    int32_t d = ((deg % 360) + 360) % 360;
-    if (d >= 180) d -= 360;  // keep the cordic value inside int16_t
-    return static_cast<int16_t>((d * kTurn16) / 360);
-}
-
-int text_width(const char* s, int scale) {
-    int n = 0;
-    while (s[n]) n++;
-    return n * kCellW * scale - scale;
+int text_width(const char* text, int scale) {
+    int count = 0;
+    while (text[count]) count++;
+    return count * kCellWidth * scale - scale;
 }
 
 struct Box {
     int x;
     int y;
-    int w;
-    int h;
+    int width;
+    int height;
 };
 
-Box padded(int x, int y, int w, int h, int pad = kLabelPad) {
-    return {x - pad, y - pad, w + 2 * pad, h + 2 * pad};
+Box padded(int x, int y, int width, int height, int pad = kLabelPad) {
+    return {x - pad, y - pad, width + 2 * pad, height + 2 * pad};
 }
 
-void clear_behind(ui::Canvas& fb, int x, int y, int w, int h) {
-    const Box b = padded(x, y, w, h);
-    fb.rect(b.x, b.y, b.w, b.h, false, true);
+void clear_behind(ui::Canvas& canvas, int x, int y, int width, int height) {
+    const Box box = padded(x, y, width, height);
+    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
 }
 
-bool flight_over(const RadarSnapshot& snap) { return snap.flight_time_valid && !snap.in_flight; }
-
-Box clock_box(const RadarSnapshot& snap) {
-    char buf[8];
-    fmt_flight_clock(buf, snap.flight_seconds, snap.flight_time_valid);
-    int w = text_width(buf, kClockScale);
-    if (flight_over(snap)) w += kSecondsGap + text_width("00", kSecondsScale);
-    return padded(kMargin, kClockY, w, kGlyphH * kClockScale);
+bool flight_over(const RadarSnapshot& snapshot) {
+    return snapshot.flight_time_valid && !snapshot.flight_running;
 }
 
-void flight_clock(ui::Canvas& fb, const RadarSnapshot& snap) {
-    char buf[8];
-    fmt_flight_clock(buf, snap.flight_seconds, snap.flight_time_valid);
-    const int minutes_w = text_width(buf, kClockScale);
-    clear_behind(fb, kMargin, kClockY, minutes_w, kGlyphH * kClockScale);
-    fb.draw_text(kMargin, kClockY, buf, true, kClockScale);
-    if (!flight_over(snap)) return;
+Box clock_box(const RadarSnapshot& snapshot) {
+    char text[8];
+    format_flight_clock(text, snapshot.flight_seconds, snapshot.flight_time_valid);
+    int width = text_width(text, kClockScale);
+    if (flight_over(snapshot)) width += kSecondsGap + text_width("00", kSecondsScale);
+    return padded(kMargin, kClockY, width, kCharacterHeight * kClockScale);
+}
+
+void flight_clock(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    char text[8];
+    format_flight_clock(text, snapshot.flight_seconds, snapshot.flight_time_valid);
+    const int minutes_width = text_width(text, kClockScale);
+    clear_behind(canvas, kMargin, kClockY, minutes_width, kCharacterHeight * kClockScale);
+    canvas.draw_text(kMargin, kClockY, text, true, kClockScale);
+    if (!flight_over(snapshot)) return;
 
     char seconds[4];
-    seconds[fmt_uint(seconds, snap.flight_seconds % 60, 2)] = 0;
-    const int x = kMargin + minutes_w + kSecondsGap;
-    const int y = kClockY + kGlyphH * (kClockScale - kSecondsScale);
-    clear_behind(fb, x, y, text_width(seconds, kSecondsScale), kGlyphH * kSecondsScale);
-    fb.draw_text(x, y, seconds, true, kSecondsScale);
+    seconds[format_unsigned(seconds, snapshot.flight_seconds % 60, 2)] = 0;
+    const int x = kMargin + minutes_width + kSecondsGap;
+    const int y = kClockY + kCharacterHeight * (kClockScale - kSecondsScale);
+    clear_behind(canvas, x, y, text_width(seconds, kSecondsScale),
+                 kCharacterHeight * kSecondsScale);
+    canvas.draw_text(x, y, seconds, true, kSecondsScale);
 }
 
 struct RangeText {
     char number[8];
     const char* unit;
-    int number_w;
-    int w;
+    int number_width;
+    int width;
 };
 
-RangeText range_text(const RadarSnapshot& snap) {
-    RangeText t;
-    const int n =
-        fmt_uint(t.number, static_cast<uint32_t>(range_value(snap.range_step, snap.units)));
-    t.number[n] = 0;
-    t.unit = range_unit(snap.units);
-    t.number_w = text_width(t.number, kRangeScale);
-    t.w = t.number_w + kUnitGap + text_width(t.unit, 1);
-    return t;
+RangeText range_text(const RadarSnapshot& snapshot) {
+    RangeText range;
+    const int written = format_unsigned(
+        range.number, static_cast<uint32_t>(range_value(snapshot.range_step, snapshot.units)));
+    range.number[written] = 0;
+    range.unit = range_unit(snapshot.units);
+    range.number_width = text_width(range.number, kRangeScale);
+    range.width = range.number_width + kUnitGap + text_width(range.unit, 1);
+    return range;
 }
 
-Box range_box(const RadarSnapshot& snap) {
-    const int w = range_text(snap).w;
-    return padded(kCx - w / 2, layout_of(snap).range_y, w, kGlyphH * kRangeScale, kRangePad);
+Box range_box(const RadarSnapshot& snapshot) {
+    const int width = range_text(snapshot).width;
+    return padded(kCentreX - width / 2, layout_of(snapshot).range_y, width,
+                  kCharacterHeight * kRangeScale, kRangePad);
 }
 
-void range_label(ui::Canvas& fb, const RadarSnapshot& snap) {
-    const RangeText t = range_text(snap);
-    const Layout& at = layout_of(snap);
-    const Box b = range_box(snap);
-    const int x = b.x + kRangePad;
-    fb.rect(b.x, b.y, b.w, b.h, false, true);
-    fb.draw_text(x, at.range_y, t.number, true, kRangeScale);
-    fb.draw_text(x + t.number_w + kUnitGap, at.range_y + kGlyphH * (kRangeScale - 1), t.unit, true,
-                 1);
+void range_label(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    const RangeText range = range_text(snapshot);
+    const Layout& at = layout_of(snapshot);
+    const Box box = range_box(snapshot);
+    const int x = box.x + kRangePad;
+    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
+    canvas.draw_text(x, at.range_y, range.number, true, kRangeScale);
+    canvas.draw_text(x + range.number_width + kUnitGap,
+                     at.range_y + kCharacterHeight * (kRangeScale - 1), range.unit, true, 1);
 }
 
-void flight_word(ui::Canvas& fb, const RadarSnapshot& snap) {
-    if (!snap.fix_valid || !snap.in_flight) return;
+void flight_word(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    if (!snapshot.fix_valid || !snapshot.flight_running) return;
     const char* state = "FLIGHT";
-    clear_behind(fb, kMargin, kStateY, text_width(state, kStateScale), kGlyphH * kStateScale);
-    fb.draw_text(kMargin, kStateY, state, true, kStateScale);
+    clear_behind(canvas, kMargin, kStateY, text_width(state, kStateScale),
+                 kCharacterHeight * kStateScale);
+    canvas.draw_text(kMargin, kStateY, state, true, kStateScale);
 }
 
-const char* state_word(const RadarSnapshot& snap) {
-    if (!snap.fix_valid) return "NO FIX";
-    if (snap.in_flight) return nullptr;
-    return snap.taxiing ? "TAXI" : "GROUND";
+const char* state_word(const RadarSnapshot& snapshot) {
+    if (!snapshot.fix_valid) return "NO FIX";
+    if (snapshot.flight_running) return nullptr;
+    return snapshot.taxiing ? "TAXI" : "GROUND";
 }
 
-const char* cell_word(const RadarSnapshot& snap, char* buf) {
-    if (!snap.battery_low) return nullptr;
-    int n = fmt_string(buf, "BAT ");
-    n += fmt_uint(buf + n, snap.battery_percent);
-    n += fmt_string(buf + n, "%");
-    buf[n] = 0;
-    return buf;
+const char* cell_word(const RadarSnapshot& snapshot, char* out) {
+    if (!snapshot.battery_low) return nullptr;
+    int written = format_string(out, "BAT ");
+    written += format_unsigned(out + written, snapshot.battery_percent);
+    written += format_string(out + written, "%");
+    out[written] = 0;
+    return out;
 }
 
-const char* ring_word(const RadarSnapshot& snap, char* buf) {
-    if (const char* cell = cell_word(snap, buf)) return cell;
-    return state_word(snap);
+const char* ring_word(const RadarSnapshot& snapshot, char* out) {
+    if (const char* cell = cell_word(snapshot, out)) return cell;
+    return state_word(snapshot);
 }
 
 // INFO: fc 18sep26 how far the receiver has got, under the word that says it has not got there
-const char* ring_note(const RadarSnapshot& snap, char* buf) {
-    if (cell_word(snap, buf) != nullptr) return state_word(snap);
-    return snap.fix_valid ? nullptr : gnss::stage_name(snap.stage);
+const char* ring_note(const RadarSnapshot& snapshot, char* out) {
+    if (cell_word(snapshot, out) != nullptr) return state_word(snapshot);
+    return snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
 }
 
 Box note_box(const char* note, int y) {
-    const int w = text_width(note, kNoteScale);
-    return padded(kCx - w / 2, y, w, kGlyphH * kNoteScale);
+    const int width = text_width(note, kNoteScale);
+    return padded(kCentreX - width / 2, y, width, kCharacterHeight * kNoteScale);
 }
 
-void state_note(ui::Canvas& fb, const char* note, int y) {
-    const Box b = note_box(note, y);
-    fb.rect(b.x, b.y, b.w, b.h, false, true);
-    fb.draw_text(b.x + kLabelPad, b.y + kLabelPad, note, true, kNoteScale);
+void state_note(ui::Canvas& canvas, const char* note, int y) {
+    const Box box = note_box(note, y);
+    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
+    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, kNoteScale);
 }
 
-void traffic_count(ui::Canvas& fb, int heard, bool counting) {
-    char buf[4];
+void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
+    char text[4];
     if (counting)
-        buf[fmt_uint(buf, static_cast<uint32_t>(heard))] = 0;
+        text[format_unsigned(text, static_cast<uint32_t>(heard_count))] = 0;
     else
-        buf[fmt_string(buf, "-")] = 0;
-    const int x = kGlassW - kMargin - text_width(buf, kTrafficScale);
-    fb.draw_text(x, kFooterBottom - kGlyphH * kTrafficScale, buf, true, kTrafficScale);
-    fb.draw_text(x - kUnitGap - text_width("TFC", 1), kFooterY, "TFC", true, 1);
+        text[format_string(text, "-")] = 0;
+    const int x = kGlassWidth - kMargin - text_width(text, kTrafficScale);
+    canvas.draw_text(x, kFooterBottom - kCharacterHeight * kTrafficScale, text, true,
+                     kTrafficScale);
+    canvas.draw_text(x - kUnitGap - text_width("TFC", 1), kFooterY, "TFC", true, 1);
 }
 
 Box banner_box(const char* word, int y) {
-    const int w = text_width(word, kBannerScale);
-    return padded(kCx - w / 2, y, w, kGlyphH * kBannerScale);
+    const int width = text_width(word, kBannerScale);
+    return padded(kCentreX - width / 2, y, width, kCharacterHeight * kBannerScale);
 }
 
-void state_banner(ui::Canvas& fb, const char* word, int y) {
-    const Box b = banner_box(word, y);
-    fb.rect(b.x, b.y, b.w, b.h, false, true);
-    fb.draw_text(b.x + kLabelPad, b.y + kLabelPad, word, true, kBannerScale);
+void state_banner(ui::Canvas& canvas, const char* word, int y) {
+    const Box box = banner_box(word, y);
+    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
+    canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, word, true, kBannerScale);
 }
 
 Box formation_box() {
-    return {kNear - kFormationD, kNear - kFormationD, 2 * kFormationD + 2, 2 * kFormationD + 2};
+    return {kNear - kFormationHalfSide, kNear - kFormationHalfSide, 2 * kFormationHalfSide + 2,
+            2 * kFormationHalfSide + 2};
 }
 
-void formation_square(ui::Canvas& fb) {
-    const int d = kFormationD, r = kFormationCorner;
-    const int x0 = kNear - d, x1 = kFar + d, y0 = kNear - d, y1 = kFar + d;
-    fb.hline(x0 + r + 1, y0, x1 - x0 - 2 * r - 1, true);
-    fb.hline(x0 + r + 1, y1, x1 - x0 - 2 * r - 1, true);
-    fb.vline(x0, y0 + r + 1, y1 - y0 - 2 * r - 1, true);
-    fb.vline(x1, y0 + r + 1, y1 - y0 - 2 * r - 1, true);
+void formation_square(ui::Canvas& canvas) {
+    const int half_side = kFormationHalfSide, corner = kFormationCorner;
+    const int x0 = kNear - half_side, x1 = kFar + half_side, y0 = kNear - half_side,
+              y1 = kFar + half_side;
+    canvas.horizontal_line(x0 + corner + 1, y0, x1 - x0 - 2 * corner - 1, true);
+    canvas.horizontal_line(x0 + corner + 1, y1, x1 - x0 - 2 * corner - 1, true);
+    canvas.vertical_line(x0, y0 + corner + 1, y1 - y0 - 2 * corner - 1, true);
+    canvas.vertical_line(x1, y0 + corner + 1, y1 - y0 - 2 * corner - 1, true);
     for (int step = 0; step <= 90; step++) {
-        const int16_t a = c16(step);
-        const int dx = r - (r * icos(a)) / kQ14One, dy = r - (r * isin(a)) / kQ14One;
-        fb.set_pixel(x0 + dx, y0 + dy, true);
-        fb.set_pixel(x1 - dx, y0 + dy, true);
-        fb.set_pixel(x0 + dx, y1 - dy, true);
-        fb.set_pixel(x1 - dx, y1 - dy, true);
+        const int16_t angle = angle16_of_degrees(step);
+        const int delta_x = corner - (corner * cosine(angle)) / kTrigOne,
+                  delta_y = corner - (corner * sine(angle)) / kTrigOne;
+        canvas.set_pixel(x0 + delta_x, y0 + delta_y, true);
+        canvas.set_pixel(x1 - delta_x, y0 + delta_y, true);
+        canvas.set_pixel(x0 + delta_x, y1 - delta_y, true);
+        canvas.set_pixel(x1 - delta_x, y1 - delta_y, true);
     }
 }
 
 // One digit per quadrant of own-ship's nose: how many of the formation are over there.
-void formation_counts(ui::Canvas& fb, const RadarSnapshot& snap, int16_t track) {
+void formation_counts(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_angle16) {
     int count[4] = {0, 0, 0, 0};
-    for (int i = 0; i < snap.n_targets; i++) {
-        const RadarTarget& t = snap.targets[i];
-        if (!t.in_formation) continue;
-        const HeadingUp at = heading_up(t.north_m, t.east_m, track);
+    for (int i = 0; i < snapshot.target_count; i++) {
+        const RadarTarget& target = snapshot.targets[i];
+        if (!target.in_formation) continue;
+        const HeadingUp at = heading_up(target.north_m, target.east_m, track_angle16);
         const int quadrant = (at.ahead < 0 ? 2 : 0) + (at.right >= 0 ? 1 : 0);
         count[quadrant]++;
     }
 
-    const int left = kNear - kFormationD + kFormationInset;
-    const int right = kFar + kFormationD - kFormationInset - kDigitW + 1;
-    const int fore = kNear - kFormationD + kFormationInset;
-    const int aft = kFar + kFormationD - kFormationInset - kGlyphH + 1;
+    const int left = kNear - kFormationHalfSide + kFormationInset;
+    const int right = kFar + kFormationHalfSide - kFormationInset - kCharacterWidth + 1;
+    const int fore = kNear - kFormationHalfSide + kFormationInset;
+    const int aft = kFar + kFormationHalfSide - kFormationInset - kCharacterHeight + 1;
     const int x[4] = {left, right, left, right};
     const int y[4] = {fore, fore, aft, aft};
-    for (int q = 0; q < 4; q++) {
-        if (count[q] <= 0) continue;
-        char buf[4];
-        buf[fmt_uint(buf, static_cast<uint32_t>(count[q] > 9 ? 9 : count[q]))] = 0;
-        fb.draw_text(x[q], y[q], buf, true, 1);
+    for (int quadrant = 0; quadrant < 4; quadrant++) {
+        if (count[quadrant] <= 0) continue;
+        char text[4];
+        text[format_unsigned(text,
+                             static_cast<uint32_t>(count[quadrant] > 9 ? 9 : count[quadrant]))] = 0;
+        canvas.draw_text(x[quadrant], y[quadrant], text, true, 1);
     }
 }
 
@@ -283,119 +289,122 @@ struct Wedge {
     int32_t y{0};
 };
 
-int alarm_wedges(const RadarSnapshot& snap, int16_t track, Wedge* out) {
-    if (!snap.alarm_flash) return 0;
-    int n = 0;
-    for (int i = 0; i < snap.n_targets && n < kMaxRadarTargets; i++) {
-        const RadarTarget& t = snap.targets[i];
-        if (t.alarm_level < traffic::Level::Advisory || t.alarm_dismissed) continue;
-        const HeadingUp at = heading_up(t.north_m, t.east_m, track);
+int alarm_wedges(const RadarSnapshot& snapshot, int16_t track_angle16, Wedge* out) {
+    if (!snapshot.alarm_flash) return 0;
+    int count = 0;
+    for (int i = 0; i < snapshot.target_count && count < kMaxRadarTargets; i++) {
+        const RadarTarget& target = snapshot.targets[i];
+        if (target.alarm_level < traffic::Level::Advisory || target.alarm_dismissed) continue;
+        const HeadingUp at = heading_up(target.north_m, target.east_m, track_angle16);
         if (at.ahead == 0 && at.right == 0) continue;
-        out[n++] = {at.right, -at.ahead};
+        out[count++] = {at.right, -at.ahead};
     }
-    return n;
+    return count;
 }
 
-bool in_wedge(const Wedge& w, int64_t px, int64_t py) {
-    const int64_t along = px * w.x + py * w.y;
+bool in_wedge(const Wedge& wedge, int64_t half_x, int64_t half_y) {
+    const int64_t along = half_x * wedge.x + half_y * wedge.y;
     if (along <= 0) return false;
-    const int64_t across = px * w.y - py * w.x;
-    return (across < 0 ? -across : across) * kTanScale <= kWedgeEdgeTanE4 * along;
+    const int64_t across = half_x * wedge.y - half_y * wedge.x;
+    return (across < 0 ? -across : across) * kTangentScale <= kWedgeEdgeTangentE4 * along;
 }
 
-bool in_any_wedge(const Wedge* wedges, int n, int64_t px, int64_t py) {
-    for (int i = 0; i < n; i++)
-        if (in_wedge(wedges[i], px, py)) return true;
+bool in_any_wedge(const Wedge* wedges, int wedge_count, int64_t half_x, int64_t half_y) {
+    for (int i = 0; i < wedge_count; i++)
+        if (in_wedge(wedges[i], half_x, half_y)) return true;
     return false;
 }
 
-bool inside_rounded(const Box& b, int corner, int x, int y) {
-    const int past_left = b.x + corner - x;
-    const int past_right = x - (b.x + b.w - 1 - corner);
-    const int past_top = b.y + corner - y;
-    const int past_bottom = y - (b.y + b.h - 1 - corner);
-    if (x < b.x || y < b.y || past_right > corner || past_bottom > corner) return false;
-    const int dx = past_left > 0 ? past_left : (past_right > 0 ? past_right : 0);
-    const int dy = past_top > 0 ? past_top : (past_bottom > 0 ? past_bottom : 0);
-    return dx * dx + dy * dy <= corner * corner;
+bool inside_rounded(const Box& box, int corner, int x, int y) {
+    const int past_left = box.x + corner - x;
+    const int past_right = x - (box.x + box.width - 1 - corner);
+    const int past_top = box.y + corner - y;
+    const int past_bottom = y - (box.y + box.height - 1 - corner);
+    if (x < box.x || y < box.y || past_right > corner || past_bottom > corner) return false;
+    const int delta_x = past_left > 0 ? past_left : (past_right > 0 ? past_right : 0);
+    const int delta_y = past_top > 0 ? past_top : (past_bottom > 0 ? past_bottom : 0);
+    return delta_x * delta_x + delta_y * delta_y <= corner * corner;
 }
 
-bool spared(const Box* keep_out, int n, int x, int y) {
-    for (int i = 0; i < n; i++)
+bool spared(const Box* keep_out, int keep_out_count, int x, int y) {
+    for (int i = 0; i < keep_out_count; i++)
         if (inside_rounded(keep_out[i], kReadingCorner, x, y)) return true;
     return false;
 }
 
-bool at_the_apex(const Box* formation, int64_t r2, int x, int y) {
+bool at_the_apex(const Box* formation, int64_t radius_squared, int x, int y) {
     if (formation) return inside_rounded(*formation, kFormationCorner, x, y);
-    return r2 < 4 * static_cast<int64_t>(kWedgeInnerR) * kWedgeInnerR;
+    return radius_squared < 4 * static_cast<int64_t>(kWedgeInnerRadius) * kWedgeInnerRadius;
 }
 
-void invert_wedges(ui::Canvas& fb, int outer_r, const Wedge* wedges, int n_wedges,
-                   const Box* keep_out, int n_keep_out, const Box* formation) {
-    const int inside = outer_r - kRingW;
-    const int64_t outer2 = 4 * static_cast<int64_t>(inside) * inside;
-    const int bottom = kFar + outer_r < kGlassH ? kFar + outer_r : kGlassH;
-    for (int y = kFar - outer_r; y < bottom; y++) {
-        const int64_t py = 2 * (y - kFar) + 1;
-        for (int x = kFar - outer_r; x < kFar + outer_r; x++) {
-            const int64_t px = 2 * (x - kFar) + 1;
-            const int64_t r2 = px * px + py * py;
-            if (r2 > outer2 || at_the_apex(formation, r2, x, y)) continue;
-            if (!in_any_wedge(wedges, n_wedges, px, py)) continue;
-            if (spared(keep_out, n_keep_out, x, y)) continue;
-            fb.set_pixel(x, y, !fb.get_pixel(x, y));
+void invert_wedges(ui::Canvas& canvas, int outer_radius, const Wedge* wedges, int wedge_count,
+                   const Box* keep_out, int keep_out_count, const Box* formation) {
+    const int inside = outer_radius - kRingWidth;
+    const int64_t inside_squared = 4 * static_cast<int64_t>(inside) * inside;
+    const int bottom = kFar + outer_radius < kGlassHeight ? kFar + outer_radius : kGlassHeight;
+    for (int y = kFar - outer_radius; y < bottom; y++) {
+        const int64_t half_y = 2 * (y - kFar) + 1;
+        for (int x = kFar - outer_radius; x < kFar + outer_radius; x++) {
+            const int64_t half_x = 2 * (x - kFar) + 1;
+            const int64_t radius_squared = half_x * half_x + half_y * half_y;
+            if (radius_squared > inside_squared || at_the_apex(formation, radius_squared, x, y))
+                continue;
+            if (!in_any_wedge(wedges, wedge_count, half_x, half_y)) continue;
+            if (spared(keep_out, keep_out_count, x, y)) continue;
+            canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
         }
     }
 }
 
 }  // namespace
 
-void draw_radar(ui::Canvas& fb, const RadarSnapshot& snap) {
-    fb.clear(true);
+void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    canvas.clear(true);
 
-    const Layout& layout = layout_of(snap);
-    ring(fb, layout.outer_r);
-    ui::draw_skyship(fb, kFar, kNear);
-    flight_clock(fb, snap);
-    flight_word(fb, snap);
-    range_label(fb, snap);
-    traffic_count(fb, snap.heard, snap.fix_valid && snap.receiver_listening);
+    const Layout& layout = layout_of(snapshot);
+    ring(canvas, layout.outer_radius);
+    ui::draw_skyship(canvas, kFar, kNear);
+    flight_clock(canvas, snapshot);
+    flight_word(canvas, snapshot);
+    range_label(canvas, snapshot);
+    traffic_count(canvas, snapshot.heard_count, snapshot.fix_valid && snapshot.receiver_listening);
 
-    Box readings[4] = {range_box(snap), clock_box(snap)};
-    int n_readings = 2;
-    char word_buf[12], note_buf[12];
-    if (const char* word = ring_word(snap, word_buf)) {
-        state_banner(fb, word, layout.banner_y);
-        readings[n_readings++] = banner_box(word, layout.banner_y);
+    Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
+    int reading_count = 2;
+    char word_buffer[12], note_buffer[12];
+    if (const char* word = ring_word(snapshot, word_buffer)) {
+        state_banner(canvas, word, layout.banner_y);
+        readings[reading_count++] = banner_box(word, layout.banner_y);
     }
-    if (const char* note = ring_note(snap, note_buf)) {
-        state_note(fb, note, layout.note_y);
-        readings[n_readings++] = note_box(note, layout.note_y);
+    if (const char* note = ring_note(snapshot, note_buffer)) {
+        state_note(canvas, note, layout.note_y);
+        readings[reading_count++] = note_box(note, layout.note_y);
     }
 
-    const int16_t track = c16(to_degrees(CentiDegrees(snap.track_cdeg)).v);
-    if (snap.fix_valid) {
-        plot_leaders(fb, snap, track);
-        plot_blips(fb, snap, track);
+    const int16_t track_angle16 =
+        angle16_of_degrees(to_degrees(CentiDegrees(snapshot.track_cdeg)).value);
+    if (snapshot.fix_valid) {
+        plot_leaders(canvas, snapshot, track_angle16);
+        plot_blips(canvas, snapshot, track_angle16);
     }
 
     Wedge wedges[kMaxRadarTargets];
-    const int n_wedges = alarm_wedges(snap, track, wedges);
-    if (n_wedges > 0) {
+    const int wedge_count = alarm_wedges(snapshot, track_angle16, wedges);
+    if (wedge_count > 0) {
         const Box square = formation_box();
-        invert_wedges(fb, layout.outer_r, wedges, n_wedges, readings, n_readings,
-                      snap.formation_members > 0 ? &square : nullptr);
+        invert_wedges(canvas, layout.outer_radius, wedges, wedge_count, readings, reading_count,
+                      snapshot.formation_members > 0 ? &square : nullptr);
     }
 
-    if (snap.formation_members > 0) {
-        formation_square(fb);
-        formation_counts(fb, snap, track);
+    if (snapshot.formation_members > 0) {
+        formation_square(canvas);
+        formation_counts(canvas, snapshot, track_angle16);
     }
 
-    if (snap.fix_valid && snap.plot == RadarPlot::All) {
-        const Box label = range_box(snap);
-        plot_rim(fb, snap, track, {label.x, label.y, label.x + label.w - 1, label.y + label.h - 1});
+    if (snapshot.fix_valid && snapshot.plot == RadarPlot::All) {
+        const Box label = range_box(snapshot);
+        plot_rim(canvas, snapshot, track_angle16,
+                 {label.x, label.y, label.x + label.width - 1, label.y + label.height - 1});
     }
 }
 

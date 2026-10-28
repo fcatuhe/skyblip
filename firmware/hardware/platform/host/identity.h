@@ -46,27 +46,27 @@ class Identity : public ports::Identity {
     }
 
     explicit Identity(std::optional<uint16_t> serial) {
-        if (serial) stored = unlock_code_for(*serial, identity::Nonce{});
+        if (serial) stored_unlock_code = unlock_code_for(*serial, identity::Nonce{});
     }
 
     identity::DeviceId device_id() const override { return kDeviceId; }
     uint16_t bluetooth_tag() const override { return kBluetoothTag; }
     bool seed(Ed25519::Seed& out) const override {
-        if (!keyed) return false;
+        if (!key_provisioned) return false;
         out = kUnitSeed;
         return true;
     }
     const Ed25519::PublicKey& trusted_server_key() const override { return kTestServerKey; }
 
     Status read_unlock_code(identity::UnlockCode& out) override {
-        if (!stored) return Status::NotFound;
-        out = *stored;
+        if (!stored_unlock_code) return Status::NotFound;
+        out = *stored_unlock_code;
         return Status::Ok;
     }
     Status write_unlock_code(const identity::UnlockCode& code) override {
         writes++;
         if (write_fails) return Status::Down;
-        stored = code;
+        stored_unlock_code = code;
         return Status::Ok;
     }
 
@@ -74,24 +74,24 @@ class Identity : public ports::Identity {
         draws++;
         if (random_fails) return false;
         for (size_t i = 0; i < out.size(); i++) {
-            if (queued.empty()) {
+            if (queued_random.empty()) {
                 out[i] = static_cast<uint8_t>(counter_++ * 37u + 11u);
             } else {
-                out[i] = queued.front();
-                queued.pop_front();
+                out[i] = queued_random.front();
+                queued_random.pop_front();
             }
         }
         return true;
     }
     void queue_random(const identity::Nonce& nonce) {
-        queued.insert(queued.end(), nonce.begin(), nonce.end());
+        queued_random.insert(queued_random.end(), nonce.begin(), nonce.end());
     }
 
-    std::optional<identity::UnlockCode> stored{};
-    std::deque<uint8_t> queued{};
+    std::optional<identity::UnlockCode> stored_unlock_code{};
+    std::deque<uint8_t> queued_random{};
     int writes{0};
     int draws{0};
-    bool keyed{true};
+    bool key_provisioned{true};
     bool write_fails{false};
     bool random_fails{false};
 

@@ -6,7 +6,7 @@
 #include "core/protocol/adsl.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
-#include "core/util/json_min.h"
+#include "core/util/json.h"
 
 namespace skyblip::go {
 
@@ -17,8 +17,8 @@ namespace {
 // the same layout, so a blob written then still decodes now.
 struct SettingsV1 {
     uint8_t version{1};
-    uint32_t device_addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     uint8_t region{0};
     bool alarm_enabled{true};
@@ -28,7 +28,7 @@ struct SettingsV1 {
     uint8_t rotation{0};
     uint8_t page_mask{0x0F};
     bool power_save{false};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 // The version-2 payload, byte for byte: the same members version 3 has, less
@@ -37,119 +37,119 @@ struct SettingsV1 {
 // version byte tells them apart.
 struct SettingsV2 {
     uint8_t version{1};
-    uint32_t device_addr{0};
-    uint8_t addr_table{0};
+    uint32_t address{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     bool stealth{false};
     Units units{Units::Metric};
     uint8_t page_mask{0x0F};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 // The version-3 payload, byte for byte: the same members version 4 has, less
-// freq_trim_e1_ppm.
+// frequency_trim_e1_ppm.
 struct SettingsV3 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    uint8_t addr_table{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     bool stealth{false};
     Units units{Units::Metric};
     uint8_t page_mask{0x0F};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 // The version-4 payload, byte for byte: the same members version 5 has, plus the
 // page_mask that no longer has a reader.
 struct SettingsV4 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    int16_t frequency_trim_e1_ppm{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     bool stealth{false};
     Units units{Units::Metric};
     uint8_t page_mask{0x0F};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV5 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    int16_t frequency_trim_e1_ppm{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     bool stealth{false};
     Units units{Units::Metric};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV6 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    int16_t frequency_trim_e1_ppm{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     bool stealth{false};
-    bool gyro_enabled{false};
+    bool gyroscope_enabled{false};
     Units units{Units::Metric};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV7 {
     uint8_t version{1};
-    uint32_t device_addr{0};
+    uint32_t address{0};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
-    uint8_t addr_table{0};
+    int16_t frequency_trim_e1_ppm{0};
+    uint8_t address_mapping_table{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     Units units{Units::Metric};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV8 {
     uint8_t version{1};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     Units units{Units::Metric};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV9 {
     uint8_t version{1};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     bool battery_offset_manual{false};
     uint8_t aircraft_type{4};
     bool alarm_enabled{true};
     uint8_t alarm_volume{3};
     Units units{Units::Metric};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 struct SettingsV10 {
     uint8_t version{1};
     int16_t battery_offset_mv{0};
-    int16_t freq_trim_e1_ppm{0};
+    int16_t frequency_trim_e1_ppm{0};
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
     bool alarm_enabled{true};
@@ -157,7 +157,7 @@ struct SettingsV10 {
     Units units{Units::Nautical};
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
-    char callsign[kCallsignCap]{0};
+    char callsign[kCallsignBytes]{0};
 };
 
 constexpr size_t kPayloadV1 = sizeof(SettingsV1);
@@ -187,8 +187,8 @@ void migrate_v1(const SettingsV1& old, Settings& out) {
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 // A unit that stored its settings before this firmware existed was never
@@ -202,8 +202,8 @@ void migrate_v2(const SettingsV2& old, Settings& out) {
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
     out.battery_offset_mv = 0;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 // A unit that stored its settings before the frequency trim existed was never
@@ -218,9 +218,9 @@ void migrate_v3(const SettingsV3& old, Settings& out) {
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    out.freq_trim_e1_ppm = 0;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    out.frequency_trim_e1_ppm = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 // A unit that stored a page mask stored a choice about six pages that no longer
@@ -229,39 +229,39 @@ void migrate_v4(const SettingsV4& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 void migrate_v5(const SettingsV5& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 void migrate_v6(const SettingsV6& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 void migrate_v8(const SettingsV8& old, Settings& out) {
@@ -269,13 +269,13 @@ void migrate_v8(const SettingsV8& old, Settings& out) {
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
     out.battery_offset_manual = old.battery_offset_mv != 0;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 // A unit from before the radar's range and plot were kept comes back on the ones a new unit ships
@@ -285,13 +285,13 @@ void migrate_v9(const SettingsV9& old, Settings& out) {
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
     out.battery_offset_manual = old.battery_offset_manual;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 void migrate_v10(const SettingsV10& old, Settings& out) {
@@ -299,122 +299,123 @@ void migrate_v10(const SettingsV10& old, Settings& out) {
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
     out.battery_offset_manual = old.battery_offset_manual;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
     out.range_step = old.range_step;
     out.plot = old.plot;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
 void migrate_v7(const SettingsV7& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
-    out.freq_trim_e1_ppm = old.freq_trim_e1_ppm;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
     out.alarm_enabled = old.alarm_enabled;
     out.alarm_volume = three_step_volume(old.alarm_volume);
     out.units = old.units;
-    std::memcpy(out.callsign, old.callsign, kCallsignCap);
-    out.callsign[kCallsignCap - 1] = 0;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
 }
 
-bool callsign_is_typeable(const char* s) {
-    for (size_t i = 0; i < kCallsignCap; i++) {
-        if (s[i] == 0) return true;
-        if (!protocol::is_callsign_char(s[i])) return false;
+bool callsign_is_typeable(const char* callsign) {
+    for (size_t i = 0; i < kCallsignBytes; i++) {
+        if (callsign[i] == 0) return true;
+        if (!protocol::is_callsign_character(callsign[i])) return false;
     }
     return false;
 }
 
-bool fits_u8(long v) { return v >= 0 && v <= UINT8_MAX; }
+bool fits_uint8(long value) { return value >= 0 && value <= UINT8_MAX; }
 
 }  // namespace
 
 Settings defaults() { return Settings{}; }
 
-Status validate(const Settings& s) {
-    if (s.version != Settings::kCurrentVersion) return Status::Unsupported;
-    if (s.aircraft_type > 17) return Status::OutOfRange;
-    if (s.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
-    if (s.range_step >= kRangeStepCount) return Status::OutOfRange;
-    if (s.plot != RadarPlot::All && s.plot != RadarPlot::ToScale) return Status::OutOfRange;
-    if (s.battery_offset_mv > power::kCalibrationLimitMv ||
-        s.battery_offset_mv < -power::kCalibrationLimitMv)
+Status validate(const Settings& settings) {
+    if (settings.version != Settings::kCurrentVersion) return Status::Unsupported;
+    if (settings.aircraft_type > 17) return Status::OutOfRange;
+    if (settings.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
+    if (settings.range_step >= kRangeStepCount) return Status::OutOfRange;
+    if (settings.plot != RadarPlot::All && settings.plot != RadarPlot::ToScale)
         return Status::OutOfRange;
-    if (s.freq_trim_e1_ppm > kFreqTrimLimitTenthsPpm ||
-        s.freq_trim_e1_ppm < -kFreqTrimLimitTenthsPpm)
+    if (settings.battery_offset_mv > power::kCalibrationCeilingMv ||
+        settings.battery_offset_mv < -power::kCalibrationCeilingMv)
         return Status::OutOfRange;
-    if (!callsign_is_typeable(s.callsign)) return Status::Invalid;
+    if (settings.frequency_trim_e1_ppm > kFrequencyTrimCeilingE1Ppm ||
+        settings.frequency_trim_e1_ppm < -kFrequencyTrimCeilingE1Ppm)
+        return Status::OutOfRange;
+    if (!callsign_is_typeable(settings.callsign)) return Status::Invalid;
     return Status::Ok;
 }
 
 size_t blob_size() { return settings::blob_bytes(kPayload); }
 
-void to_blob(const Settings& s, uint8_t* out, size_t cap) {
-    settings::seal(kBlobVersion, &s, kPayload, out, cap);
+void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
+    settings::seal(kBlobVersion, &settings, kPayload, out, capacity);
 }
 
-Status from_blob(const uint8_t* in, size_t len, Settings& out) {
-    if (len < settings::kBlobOverhead) return Status::Crc;
+Status from_blob(const uint8_t* in, size_t length, Settings& out) {
+    if (length < settings::kBlobOverhead) return Status::Crc;
 
     const uint8_t version = settings::blob_version(in);
     if (version == kBlobVersion) {
-        const Status st = settings::open(in, len, kPayload, &out);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayload, &out);
+        if (status != Status::Ok) return status;
     } else if (version == 10) {
         SettingsV10 old;
-        const Status st = settings::open(in, len, kPayloadV10, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV10, &old);
+        if (status != Status::Ok) return status;
         migrate_v10(old, out);
     } else if (version == 9) {
         SettingsV9 old;
-        const Status st = settings::open(in, len, kPayloadV9, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV9, &old);
+        if (status != Status::Ok) return status;
         migrate_v9(old, out);
     } else if (version == 8) {
         SettingsV8 old;
-        const Status st = settings::open(in, len, kPayloadV8, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV8, &old);
+        if (status != Status::Ok) return status;
         migrate_v8(old, out);
     } else if (version == 7) {
         SettingsV7 old;
-        const Status st = settings::open(in, len, kPayloadV7, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV7, &old);
+        if (status != Status::Ok) return status;
         migrate_v7(old, out);
     } else if (version == 6) {
         SettingsV6 old;
-        const Status st = settings::open(in, len, kPayloadV6, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV6, &old);
+        if (status != Status::Ok) return status;
         migrate_v6(old, out);
     } else if (version == 5) {
         SettingsV5 old;
-        const Status st = settings::open(in, len, kPayloadV5, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV5, &old);
+        if (status != Status::Ok) return status;
         migrate_v5(old, out);
     } else if (version == 4) {
         SettingsV4 old;
-        const Status st = settings::open(in, len, kPayloadV4, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV4, &old);
+        if (status != Status::Ok) return status;
         migrate_v4(old, out);
     } else if (version == 3) {
         SettingsV3 old;
-        const Status st = settings::open(in, len, kPayloadV3, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV3, &old);
+        if (status != Status::Ok) return status;
         migrate_v3(old, out);
     } else if (version == 2) {
         SettingsV2 old;
-        const Status st = settings::open(in, len, kPayloadV2, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV2, &old);
+        if (status != Status::Ok) return status;
         migrate_v2(old, out);
     } else if (version == 1) {
         SettingsV1 old;
-        const Status st = settings::open(in, len, kPayloadV1, &old);
-        if (st != Status::Ok) return st;
+        const Status status = settings::open(in, length, kPayloadV1, &old);
+        if (status != Status::Ok) return status;
         migrate_v1(old, out);
     } else {
         return Status::Unsupported;
@@ -425,62 +426,64 @@ Status from_blob(const uint8_t* in, size_t len, Settings& out) {
     return Status::Ok;
 }
 
-void write_json_fields(json::Writer& w, const Settings& s, settings::AirAddress address) {
-    w.kv_int("version", s.version);
-    if (address) w.kv_int("address", static_cast<long>(*address));
-    w.kv_int("address_mapping_table", settings::kAddressMappingTable);
-    write_json_settings(w, s);
+void write_json_fields(json::Writer& writer, const Settings& settings,
+                       settings::AirAddress address) {
+    writer.add_integer("version", settings.version);
+    if (address) writer.add_integer("address", static_cast<long>(*address));
+    writer.add_integer("address_mapping_table", settings::kAddressMappingTable);
+    write_json_settings(writer, settings);
 }
 
-void write_json_settings(json::Writer& w, const Settings& s) {
-    w.kv_int("aircraft_type", s.aircraft_type);
-    w.kv_bool("alarm", s.alarm_enabled);
-    w.kv_int("alarm_volume", static_cast<long>(s.alarm_volume));
-    w.kv_int("units", static_cast<long>(s.units));
-    w.kv_str("callsign", s.callsign);
+void write_json_settings(json::Writer& writer, const Settings& settings) {
+    writer.add_integer("aircraft_type", settings.aircraft_type);
+    writer.add_boolean("alarm_enabled", settings.alarm_enabled);
+    writer.add_integer("alarm_volume", static_cast<long>(settings.alarm_volume));
+    writer.add_integer("units", static_cast<long>(settings.units));
+    writer.add_string("callsign", settings.callsign);
 }
 
-int to_json(const Settings& s, settings::AirAddress address, char* buf, int cap) {
-    json::Writer w(buf, cap);
-    write_json_fields(w, s, address);
-    return w.finish();
+int to_json(const Settings& settings, settings::AirAddress address, char* out, int capacity) {
+    json::Writer writer(out, capacity);
+    write_json_fields(writer, settings, address);
+    return writer.finish();
 }
 
-Status apply_json(Settings& s, const char* json, int len) {
-    json::Reader r(json, len);
-    long v;
-    bool b;
-    Settings n = s;
-    if (r.get_int("aircraft_type", v)) {
-        if (!fits_u8(v)) return Status::OutOfRange;
-        n.aircraft_type = static_cast<uint8_t>(v);
+Status apply_json(Settings& settings, const char* json, int length) {
+    json::Reader reader(json, length);
+    long value;
+    bool flag;
+    Settings next = settings;
+    if (reader.read_integer("aircraft_type", value)) {
+        if (!fits_uint8(value)) return Status::OutOfRange;
+        next.aircraft_type = static_cast<uint8_t>(value);
     }
-    if (r.get_bool("alarm", b)) n.alarm_enabled = b;
-    if (r.get_int("alarm_volume", v)) {
-        if (!fits_u8(v)) return Status::OutOfRange;
-        n.alarm_volume = static_cast<AlarmVolume>(v);
+    if (reader.read_boolean("alarm_enabled", flag)) next.alarm_enabled = flag;
+    if (reader.read_integer("alarm_volume", value)) {
+        if (!fits_uint8(value)) return Status::OutOfRange;
+        next.alarm_volume = static_cast<AlarmVolume>(value);
     }
-    if (r.get_int("units", v)) n.units = v ? Units::Metric : Units::Nautical;
+    if (reader.read_integer("units", value)) next.units = value ? Units::Metric : Units::Nautical;
     // Narrowed before it is validated, not after: 65536 truncates to 0 in an
     // int16 and would pass a bound check that never saw the value sent.
-    if (r.get_int("battery_offset_mv", v)) {
-        if (v < -power::kCalibrationLimitMv || v > power::kCalibrationLimitMv)
+    if (reader.read_integer("battery_offset_mv", value)) {
+        if (value < -power::kCalibrationCeilingMv || value > power::kCalibrationCeilingMv)
             return Status::OutOfRange;
-        n.battery_offset_mv = static_cast<int16_t>(v);
-        n.battery_offset_manual = true;
+        next.battery_offset_mv = static_cast<int16_t>(value);
+        next.battery_offset_manual = true;
     }
-    if (r.get_int("freq_trim_e1_ppm", v)) {
-        if (v < -kFreqTrimLimitTenthsPpm || v > kFreqTrimLimitTenthsPpm) return Status::OutOfRange;
-        n.freq_trim_e1_ppm = static_cast<int16_t>(v);
+    if (reader.read_integer("frequency_trim_e1_ppm", value)) {
+        if (value < -kFrequencyTrimCeilingE1Ppm || value > kFrequencyTrimCeilingE1Ppm)
+            return Status::OutOfRange;
+        next.frequency_trim_e1_ppm = static_cast<int16_t>(value);
     }
-    char callsign[kCallsignCap + 1] = {0};
-    if (r.get_str("callsign", callsign, sizeof(callsign))) {
-        if (std::strlen(callsign) >= kCallsignCap) return Status::OutOfRange;
-        std::memcpy(n.callsign, callsign, kCallsignCap);
+    char callsign[kCallsignBytes + 1] = {0};
+    if (reader.read_string("callsign", callsign, sizeof(callsign))) {
+        if (std::strlen(callsign) >= kCallsignBytes) return Status::OutOfRange;
+        std::memcpy(next.callsign, callsign, kCallsignBytes);
     }
-    Status st = validate(n);
-    if (st != Status::Ok) return st;
-    s = n;
+    Status status = validate(next);
+    if (status != Status::Ok) return status;
+    settings = next;
     return Status::Ok;
 }
 
