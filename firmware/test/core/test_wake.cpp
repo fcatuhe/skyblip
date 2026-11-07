@@ -4,6 +4,7 @@
 
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
+#include "core/power/shutdown.h"
 #include "core/power/wake.h"
 #include "doctest/doctest.h"
 
@@ -59,9 +60,10 @@ TEST_CASE("wake: a charger plugged into a sleeping device does not switch it on"
     CHECK(std::string(to_string(ResetReason::ChargerWake)) == "CHARGER WAKE");
 }
 
-TEST_CASE("wake: a pilot holding the button while plugging in gets the device") {
+// The same thumb as any press, so the same hold before it is a device.
+TEST_CASE("wake: a pilot holding the button while plugging in is held to the wake hold") {
     const ResetCause charger = ResetCause::LowPowerWake | ResetCause::UsbVbus;
-    CHECK(boot_path(charger, /*button_down=*/true, healthy()) == BootPath::Run);
+    CHECK(boot_path(charger, /*button_down=*/true, healthy()) == BootPath::AwaitHold);
 }
 
 // The failure that would be catastrophic and silent: a unit that refuses to boot
@@ -77,15 +79,74 @@ TEST_CASE("wake: no cause that could be a first power-on refuses a boot by itsel
     CHECK(boot_path(ResetCause::PowerOn | ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
 }
 
-TEST_CASE("wake: on a cell that can run, the button and the reset pin ask for a device") {
-    // The ordinary way out of SYSTEM OFF: a press on the wake pin.
-    CHECK(boot_path(ResetCause::LowPowerWake, false, healthy()) == BootPath::Run);
+TEST_CASE("wake: on a cell that can run, the reset pin and a fault get a device at once") {
     // A deliberate reset while the cable happens to be in.
     CHECK(boot_path(ResetCause::LowPowerWake | ResetCause::UsbVbus | ResetCause::Pin, false,
                     healthy()) == BootPath::Run);
     CHECK(boot_path(ResetCause::Pin, false, healthy()) == BootPath::Run);
     // And a fault is never answered by going back to sleep, whatever else is set.
     CHECK(boot_path(ResetCause::Watchdog | ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
+    CHECK(boot_path(ResetCause::Watchdog | ResetCause::LowPowerWake, false, healthy()) ==
+          BootPath::Run);
+}
+
+// Two units woke in a bag, ran about 45 mA with nothing to switch them off, and were found flat.
+TEST_CASE(
+    "wake: a button wake becomes a device only by a hold, whatever the button reads at boot") {
+    CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/true, healthy()) ==
+          BootPath::AwaitHold);
+    CHECK(boot_path(ResetCause::LowPowerWake, /*button_down=*/false, healthy()) ==
+          BootPath::AwaitHold);
+}
+
+TEST_CASE("wake: a press held until the wake hold becomes a device") {
+    WakeHold hold;
+    CHECK(hold.step(600, /*button_down=*/true) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs - 1, true) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs, true) == BootPath::Run);
+
+    // A boot slow enough to reach the app past the hold needs no wait on top.
+    WakeHold slow;
+    CHECK(slow.step(kWakeHoldMs + 200, true) == BootPath::Run);
+}
+
+TEST_CASE("wake: a press released before the wake hold goes back to sleep") {
+    WakeHold hold;
+    CHECK(hold.step(600, true) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs - 50, false) == BootPath::AwaitHold);
+    // Released before the hold and confirmed after it: the clock does not rescue it.
+    CHECK(hold.step(kWakeHoldMs, false) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs - 50 + kReleaseSettleMs, false) == BootPath::SleepAgain);
+
+    WakeHold bump;
+    CHECK(bump.step(600, false) == BootPath::AwaitHold);
+    CHECK(bump.step(600 + kReleaseSettleMs, false) == BootPath::SleepAgain);
+}
+
+// A boot that reaches the app late reads a released button after the deadline it never met.
+TEST_CASE("wake: a button first seen up after the wake hold waits for the debounce, then sleeps") {
+    WakeHold hold;
+    CHECK(hold.step(kWakeHoldMs + 200, false) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs + 200 + kReleaseSettleMs - 1, false) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs + 200 + kReleaseSettleMs, false) == BootPath::SleepAgain);
+}
+
+// A probe on the SWD lines is a person at a bench, not a bag.
+TEST_CASE("wake: a debugger that wakes the unit gets a device without the button") {
+    CHECK(boot_path(ResetCause::Debug | ResetCause::LowPowerWake, false, healthy()) ==
+          BootPath::Run);
+    CHECK(boot_path(ResetCause::Debug, false, healthy()) == BootPath::Run);
+    CHECK(boot_path(ResetCause::Debug | ResetCause::LowPowerWake, false,
+                    healthy(kBootLockoutMv - 1)) == BootPath::SleepAgain);
+}
+
+// The wake pin is P1.10 with no debounce, and a thumb in a glove does not press evenly.
+TEST_CASE("wake: a contact that chatters under a held thumb does not end the wake hold") {
+    WakeHold hold;
+    CHECK(hold.step(600, true) == BootPath::AwaitHold);
+    CHECK(hold.step(650, false) == BootPath::AwaitHold);
+    CHECK(hold.step(660, true) == BootPath::AwaitHold);
+    CHECK(hold.step(kWakeHoldMs, true) == BootPath::Run);
 }
 
 // Left to boot, each press costs the panel and kParkSettleMs to reach the same cutoff.
@@ -175,4 +236,5 @@ TEST_CASE("wake: a charger wake is named without hiding a fault that came with i
     CHECK(classify(ResetCause::Pin | ResetCause::UsbVbus) == ResetReason::Pin);
     CHECK(std::string(to_string(BootPath::SleepAgain)) == "SLEEP AGAIN");
     CHECK(std::string(to_string(BootPath::Run)) == "RUN");
+    CHECK(std::string(to_string(BootPath::AwaitHold)) == "AWAIT HOLD");
 }

@@ -95,6 +95,7 @@ class ScreenService : public runtime::Service {
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
     void mark_dirty() { dirty_ = true; }
+    void adopt_waking_press() { controls_.adopt_waking_press(); }
 
    private:
     void render(uint32_t now_ms);

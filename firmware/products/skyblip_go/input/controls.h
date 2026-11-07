@@ -30,6 +30,12 @@ class Controls {
 
     bool touching() const { return touching_; }
 
+    // INFO: fc 07nov26 the press that woke the unit is down as the loop starts: it pages nothing
+    void adopt_waking_press() {
+        pressing_ = true;
+        press_spent_ = true;
+    }
+
    private:
     Gesture button(const events::ContactEvent& event) {
         if (event.down) {
@@ -39,6 +45,10 @@ class Controls {
             return Gesture::None;
         }
         pressing_ = false;
+        if (press_spent_) {
+            press_spent_ = false;
+            return Gesture::None;
+        }
         return released_before_the_stow(event.at_ms) ? Gesture::Press : Gesture::None;
     }
 
@@ -68,6 +78,7 @@ class Controls {
     bool pressing_{false};
     bool touching_{false};
     bool touch_spent_{false};
+    bool press_spent_{false};
 };
 
 }  // namespace skyblip::go

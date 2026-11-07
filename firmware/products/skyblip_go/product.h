@@ -77,43 +77,34 @@ class Product {
     explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {}
 
     Status setup() {
-        const Status board = board_.begin();
+        board_status_ = board_.begin();
         const power::ResetCause causes = platform_.system_power().reset_causes();
         reset_reason_ = power::classify(causes);
         // The register is read once and then only remembered, so the companion
         // link is told at boot: a watchdog bite in the field is diagnosable
         // from a phone, without the panel in hand.
         config_link_.config().set_reset_reason(reset_reason_);
-        if (board == Status::Ok) config_link_.load();
+        if (board_status_ == Status::Ok) config_link_.load();
 
         // The wake cause decides whether this boot becomes a device at all
         // (core/power/wake.h). Answered here, before the panel is painted and
         // before the loop is set up: a charger plugged into a device in a flight
-        // bag must leave no trace on the glass and start nothing. The shell drops
-        // the rails; every part is already in a known state, which is why this
-        // sits after board_.begin() rather than in front of it.
+        // bag, or a bump on its button, must leave no trace on the glass and
+        // start nothing. The shell drops the rails; every part is already in a
+        // known state, which is why this sits after board_.begin() rather than in
+        // front of it.
         boot_cell_ = read_boot_cell();
         boot_path_ = power::boot_path(causes, platform_.button_down(), boot_cell_);
         glass_remembered_ = platform_.system_power().cell_on_glass();
-        take_went_dark_flat();
-        config_link_.config().set_went_dark_flat(went_dark_flat_);
-        if (boot_path_ == power::BootPath::SleepAgain) {
+        if (boot_path_ == power::BootPath::SleepAgain)
             refused_frame_ = power::refused_frame(boot_cell_, glass_remembered_);
-            return Status::Ok;
-        }
-        flyable_ = board == Status::Ok &&
-                   ports::without(kRequired, board_.capabilities()) == ports::Capability::None;
-        // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
-        if (flyable_) config_link_.load_identity();
+        return follow_boot_path();
+    }
 
-        draw_self_test();
-        if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
-
-        if (board != Status::Ok) return board;
-        if (!flyable_) return Status::Down;
-        const Status loop = loop_.setup();
-        state_.started = loop == Status::Ok;
-        return loop;
+    // INFO: fc 07nov26 a released hold leaves refused_frame_ at Leave: a bump costs one bring-up
+    Status await_hold(uint32_t now_ms) {
+        boot_path_ = wake_hold_.step(now_ms, platform_.button_down());
+        return follow_boot_path();
     }
 
     void run_pass(uint32_t now_ms) {
@@ -183,7 +174,7 @@ class Product {
     power::ResetReason reset_reason() const { return reset_reason_; }
     bool went_dark_flat() const { return went_dark_flat_; }
     // Run, or straight back to SYSTEM OFF. The shell reads this immediately after
-    // setup() and performs the second one.
+    // setup() and performs the second one, after stepping await_hold() to either.
     power::BootPath boot_path() const { return boot_path_; }
     const power::BootCell& boot_cell() const { return boot_cell_; }
     const Glass& self_test_page() const { return self_test_page_; }
@@ -274,6 +265,31 @@ class Product {
         cell.cell_mv = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
         cell.external_power = platform_.external_power();
         return cell;
+    }
+
+    Status follow_boot_path() {
+        if (boot_path_ == power::BootPath::AwaitHold) return Status::Ok;
+        take_went_dark_flat();
+        config_link_.config().set_went_dark_flat(went_dark_flat_);
+        if (boot_path_ == power::BootPath::SleepAgain) return Status::Ok;
+        return start();
+    }
+
+    Status start() {
+        flyable_ = board_status_ == Status::Ok &&
+                   ports::without(kRequired, board_.capabilities()) == ports::Capability::None;
+        // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
+        if (flyable_) config_link_.load_identity();
+
+        draw_self_test();
+        if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
+
+        if (board_status_ != Status::Ok) return board_status_;
+        if (!flyable_) return Status::Down;
+        if (board_.adopt_waking_press()) screen_.adopt_waking_press();
+        const Status loop = loop_.setup();
+        state_.started = loop == Status::Ok;
+        return loop;
     }
 
     void take_went_dark_flat() {
@@ -449,7 +465,9 @@ class Product {
     power::ShutdownSequencer shutdown_{};
     power::ShutdownPhase acted_phase_{power::ShutdownPhase::Running};
     power::ResetReason reset_reason_{power::ResetReason::Unknown};
+    Status board_status_{Status::Ok};
     power::BootPath boot_path_{power::BootPath::Run};
+    power::WakeHold wake_hold_{};
     power::BootCell boot_cell_{};
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
     std::optional<ports::RecoveryPath> recovery_taken_{};

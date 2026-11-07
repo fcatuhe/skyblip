@@ -45,6 +45,17 @@ struct Rig {
         }
     }
 
+    Status await_hold(uint32_t from_ms = 0, uint32_t step_ms = 50) {
+        Status started = Status::Ok;
+        for (uint32_t now_ms = from_ms;
+             now_ms <= from_ms + 20000 && product.boot_path() == power::BootPath::AwaitHold;
+             now_ms += step_ms) {
+            platform.clock().set_milliseconds(now_ms);
+            started = product.await_hold(now_ms);
+        }
+        return started;
+    }
+
     // The shell's other loop: a refused boot settles the frame it owes the glass.
     void sleep_again(uint32_t step_ms = 50) {
         for (uint32_t now_ms = 0; now_ms <= 20000; now_ms += step_ms) {

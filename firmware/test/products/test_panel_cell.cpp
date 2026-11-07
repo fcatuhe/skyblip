@@ -155,6 +155,7 @@ TEST_CASE("product: a press on the cable after a cutoff starts the device and cl
     plugged.platform.system_power().causes = power::ResetCause::LowPowerWake;
     plugged.platform.board_gpio().button_down = true;
     REQUIRE(plugged.setup() == Status::Ok);
+    REQUIRE(plugged.await_hold() == Status::Ok);
     CHECK(plugged.product.boot_path() == power::BootPath::Run);
     CHECK(plugged.state().started);
 
@@ -287,6 +288,7 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
     pressed.platform.board_gpio().button_down = true;
     REQUIRE(pressed.setup() == Status::Ok);
+    REQUIRE(pressed.await_hold() == Status::Ok);
     REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
     CHECK(pressed.product.went_dark_flat());
     CHECK(reads_in(pressed.product.self_test_page(), "WAS FLAT", 0, 150, 200, 199));
@@ -295,6 +297,18 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     pressed.run(0, 200);
     CHECK(pressed.last_on(events::Endpoint::Config).find("\"went_dark_flat\":true") !=
           std::string::npos);
+}
+
+// The note names the boot that runs after the flat cell, and a bump in between is not one.
+TEST_CASE("product: a bump after a flat cell keeps the note for the boot that runs") {
+    Rig bumped;
+    bumped.platform.system_power().retained_went_dark_flat = true;
+    bumped.platform.battery().external_power = true;
+    bumped.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(bumped.setup() == Status::Ok);
+    REQUIRE(bumped.await_hold() == Status::Ok);
+    REQUIRE(bumped.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK(bumped.platform.system_power().went_dark_flat());
 }
 
 TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot has none") {

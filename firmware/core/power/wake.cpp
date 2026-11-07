@@ -5,6 +5,7 @@ namespace skyblip::power {
 const char* to_string(BootPath path) {
     switch (path) {
         case BootPath::SleepAgain: return "SLEEP AGAIN";
+        case BootPath::AwaitHold: return "AWAIT HOLD";
         case BootPath::Run: break;
     }
     return "RUN";
@@ -46,15 +47,22 @@ RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass) {
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell) {
     if (restarted(causes) ? below(cell, kFlatMv) : too_flat_to_run(cell))
         return BootPath::SleepAgain;
-    if (button_down) return BootPath::Run;
-    if (has_cause(causes, ResetCause::Pin)) return BootPath::Run;
+    if (restarted(causes) || has_cause(causes, ResetCause::Pin) ||
+        has_cause(causes, ResetCause::Debug))
+        return BootPath::Run;
     // Both, not either. VBUS alone is not enough to refuse a boot: the bit is
     // only ever set on a wake from SYSTEM OFF, and if a future silicon or a
     // future adapter reported it any other way, refusing on it alone would be a
     // device that will not switch on.
     if (!has_cause(causes, ResetCause::LowPowerWake)) return BootPath::Run;
-    if (!has_cause(causes, ResetCause::UsbVbus)) return BootPath::Run;
-    return BootPath::SleepAgain;
+    if (has_cause(causes, ResetCause::UsbVbus) && !button_down) return BootPath::SleepAgain;
+    return BootPath::AwaitHold;
+}
+
+BootPath WakeHold::step(uint32_t now_ms, bool button_down) {
+    if (release_.settled(now_ms, button_down)) return BootPath::SleepAgain;
+    if (button_down && now_ms >= kWakeHoldMs) return BootPath::Run;
+    return BootPath::AwaitHold;
 }
 
 }  // namespace skyblip::power

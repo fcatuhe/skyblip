@@ -233,25 +233,171 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
           power::kPowerDownStepCount - 1);
 }
 
-TEST_CASE("product: the same charger with the button held is a boot") {
+TEST_CASE("product: the same charger with the button held is a boot once the hold is reached") {
     Rig rig;
     rig.platform.system_power().causes =
         power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
     rig.platform.board_gpio().button_down = true;
     REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::AwaitHold);
+    CHECK_FALSE(rig.state().started);
+
+    REQUIRE(rig.await_hold() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::Run);
     CHECK(rig.state().started);
     CHECK(rig.product.self_test_page().count_black() > 0);
 }
 
-// Every other wake is a device. The one that would be catastrophic and silent is
-// a unit refusing to boot the first time its cell is connected.
-TEST_CASE("product: a button wake and a first power-on are both a device") {
-    Rig pressed;
-    pressed.platform.system_power().causes = power::ResetCause::LowPowerWake;
-    REQUIRE(pressed.setup() == Status::Ok);
-    CHECK(pressed.product.boot_path() == power::BootPath::Run);
-    CHECK(pressed.state().started);
+// Nothing heavier than the bring-up may run before the hold decides: no frame, no loop, no link.
+TEST_CASE("product: a button held through the wake hold gets a device, and nothing before it") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::AwaitHold);
+    CHECK_FALSE(rig.state().started);
+    CHECK(rig.product.self_test_page().count_black() == 0);
+    CHECK(rig.platform.chips().epd.present_count == 0);
+
+    REQUIRE(rig.await_hold() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::Run);
+    CHECK(rig.state().started);
+    CHECK(rig.product.self_test_page().count_black() > 0);
+}
+
+// A bump in a bag cost two units their cells: it must cost one bring-up and nothing else.
+TEST_CASE(
+    "product: a button released before the wake hold goes back to sleep and leaves the glass") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.platform.clock().set_milliseconds(power::kWakeHoldMs / 2);
+    REQUIRE(rig.product.await_hold(power::kWakeHoldMs / 2) == Status::Ok);
+    rig.platform.board_gpio().button_down = false;
+    REQUIRE(rig.await_hold(power::kWakeHoldMs / 2 + 50) == Status::Ok);
+
+    CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK(rig.product.refused_frame() == power::RefusedFrame::Leave);
+    CHECK_FALSE(rig.state().started);
+    rig.sleep_again();
+    CHECK(rig.platform.chips().epd.present_count == 0);
+
+    rig.platform.system_power().system_off();
+    CHECK(rig.platform.system_power().order_of(power::PowerDownStep::WakePinArmed) ==
+          power::kPowerDownStepCount - 1);
+}
+
+TEST_CASE("product: a bump on a CHARGE BATTERY glass does not repaint it") {
+    Rig rig;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Low;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.await_hold() == Status::Ok);
+    CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
+    CHECK(rig.product.refused_frame() == power::RefusedFrame::Leave);
+
+    rig.sleep_again();
+    CHECK(rig.platform.chips().epd.present_count == 0);
+    CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
+}
+
+// The press that woke the unit is still down when the loop starts, and it is not a switch-off.
+TEST_CASE("product: a wake hold carried on past the long press does not switch the device off") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.await_hold() == Status::Ok);
+    REQUIRE(rig.state().started);
+
+    rig.run(power::kWakeHoldMs, power::kWakeHoldMs + power::kLongPressHoldMs + 1000);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+}
+
+namespace {
+
+void wake_held(Rig& rig, uint32_t& now_ms) {
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.await_hold() == Status::Ok);
+    REQUIRE(rig.state().started);
+    now_ms = power::kWakeHoldMs;
+    rig.run(now_ms, now_ms + 300);
+    now_ms += 350;
+}
+
+void release_waking_press(Rig& rig, uint32_t& now_ms) {
+    rig.platform.board_gpio().button_down = false;
+    rig.run(now_ms, now_ms + 500);
+    now_ms += 550;
+}
+
+}  // namespace
+
+// The pad never pages under a held button, and the waking press is a held button.
+TEST_CASE("product: a pad touch while the waking press is still held pages nothing") {
+    Rig rig;
+    uint32_t now_ms = 0;
+    wake_held(rig, now_ms);
+    const go::Page before = rig.product.screen().page();
+
+    rig.tap(now_ms);
+    CHECK(rig.product.screen().page() == before);
+    CHECK(rig.product.screen().mode() == go::Mode::Page);
+}
+
+TEST_CASE("product: once the waking press is up, a press pages, a hold stows or switches off") {
+    Rig paged;
+    uint32_t now_ms = 0;
+    wake_held(paged, now_ms);
+    release_waking_press(paged, now_ms);
+    REQUIRE(paged.product.screen().mode() == go::Mode::Page);
+    paged.press(now_ms);
+    CHECK(paged.product.screen().mode() == go::Mode::Menu);
+
+    Rig switched_off;
+    wake_held(switched_off, now_ms);
+    release_waking_press(switched_off, now_ms);
+    switched_off.platform.board_gpio().button_down = true;
+    switched_off.run(now_ms, now_ms + power::kLongPressHoldMs + 200);
+    CHECK(switched_off.product.shutdown().reason() == power::ShutdownReason::LongPress);
+
+    Rig stowed;
+    wake_held(stowed, now_ms);
+    release_waking_press(stowed, now_ms);
+    stowed.platform.board_gpio().pad_down = true;
+    stowed.run(now_ms, now_ms + 100);
+    now_ms += 150;
+    stowed.platform.board_gpio().button_down = true;
+    stowed.run(now_ms, now_ms + power::kLongPressHoldMs + 200);
+    CHECK(stowed.product.shutdown().reason() == power::ShutdownReason::Stow);
+}
+
+// A held wake ends with the thumb on the button, and lifting it opened the menu.
+TEST_CASE("product: the press that switched the device on opens no menu when it comes up") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    rig.platform.board_gpio().button_down = true;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.await_hold() == Status::Ok);
+    REQUIRE(rig.state().activation.activated());
+
+    rig.run(power::kWakeHoldMs, power::kWakeHoldMs + 300);
+    rig.platform.board_gpio().button_down = false;
+    rig.run(power::kWakeHoldMs + 350, power::kWakeHoldMs + 3000);
+    CHECK(rig.product.screen().mode() == go::Mode::Page);
+}
+
+// The one that would be catastrophic and silent is a unit refusing to boot the first time its
+// cell is connected.
+TEST_CASE("product: a reset pin and a first power-on are both a device without the button") {
+    Rig reset;
+    reset.platform.system_power().causes = power::ResetCause::Pin;
+    REQUIRE(reset.setup() == Status::Ok);
+    CHECK(reset.product.boot_path() == power::BootPath::Run);
+    CHECK(reset.state().started);
 
     Rig fresh;
     fresh.platform.system_power().causes = power::ResetCause::PowerOn;

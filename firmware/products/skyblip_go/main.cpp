@@ -31,9 +31,16 @@ int main(void) {
     if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok)
         LOG_ERR("watchdog: not armed, the loop is unsupervised");
 
-    const Status started = g_product.setup();
+    Status started = g_product.setup();
     LOG_INF("reset reason: %s, setup done at %u ms", power::to_string(g_product.reset_reason()),
             static_cast<unsigned>(k_uptime_get()));
+
+    // INFO: fc 07nov26 a button wake waits out its hold before anything paints, advertises or loops
+    while (g_product.boot_path() == power::BootPath::AwaitHold) {
+        g_platform.watchdog().feed();
+        k_sleep(K_MSEC(runtime::kServicePassCeilingMs));
+        started = g_product.await_hold(static_cast<uint32_t>(k_uptime_get()));
+    }
 
     // INFO: fc 21sep26 the refusal performed: no service, at most one frame, and it never returns
     if (g_product.boot_path() == power::BootPath::SleepAgain) {

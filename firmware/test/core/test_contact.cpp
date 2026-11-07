@@ -76,3 +76,13 @@ TEST_CASE("contact: the settle window is the board's, so two contacts can differ
     CHECK(step(slow, true, slow_now_ms, 50) == Edge::None);
     CHECK(step(slow, true, slow_now_ms, 200) == Edge::Down);
 }
+
+// The press that woke the unit is down before the first poll, and it is not a new press.
+TEST_CASE("contact: a level adopted at boot is no edge, and leaving it is one") {
+    input::Contact contact{kSettleMs};
+    contact.adopt(true);
+    CHECK(contact.down());
+    uint32_t now_ms = 1000;
+    CHECK(step(contact, true, now_ms, 500) == Edge::None);
+    CHECK(step(contact, false, now_ms, 200) == Edge::Up);
+}

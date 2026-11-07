@@ -64,6 +64,18 @@ TEST_CASE("controls: a press lands when the thumb comes off, not when it arrives
     CHECK(controls.read(up(events::Contact::Button, 1200)) == go::Gesture::Press);
 }
 
+// The press that switched the unit on comes up in the loop, and opened the menu.
+TEST_CASE("controls: the waking press is a held button that pages nothing when it comes up") {
+    go::Controls controls;
+    controls.adopt_waking_press();
+    CHECK(touch(controls, 1100, 200) == go::Gesture::None);
+    CHECK(controls.read(up(events::Contact::Button, 1500)) == go::Gesture::None);
+
+    CHECK(controls.read(down(events::Contact::Button, 3000)) == go::Gesture::None);
+    CHECK(controls.read(up(events::Contact::Button, 3200)) == go::Gesture::Press);
+    CHECK(touch(controls, 4000, 200) == go::Gesture::Tap);
+}
+
 // A flashed unit paged under the thumb, two seconds before the rails went.
 TEST_CASE("controls: a press held into the power-off hold says nothing, then or on release") {
     go::Controls controls;

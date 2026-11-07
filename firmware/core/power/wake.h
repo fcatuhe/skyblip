@@ -12,12 +12,14 @@
 
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
+#include "core/power/shutdown.h"
 
 namespace skyblip::power {
 
 // Run: bring the device up. SleepAgain: undo the wake - drop the rails and go
-// back to SYSTEM OFF without painting the panel or starting the loop.
-enum class BootPath : uint8_t { Run, SleepAgain };
+// back to SYSTEM OFF without painting the panel or starting the loop. AwaitHold:
+// a button wake, which WakeHold settles to one of the other two.
+enum class BootPath : uint8_t { Run, SleepAgain, AwaitHold };
 
 const char* to_string(BootPath path);
 
@@ -53,6 +55,18 @@ static_assert(kImplausibleFloorMv < kFlatMv,
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);
 
 RefusedFrame refused_frame(const BootCell& cell, CellOnGlass on_glass);
+
+// INFO: fc 07nov26 app uptime, after an estimated, unmeasured 0.6-1.2 s of bootloaders: README.md
+constexpr uint32_t kWakeHoldMs = 1000;
+
+// INFO: fc 07nov26 a bump in a bag is the likeliest way two switched-off units went flat: README.md
+class WakeHold {
+   public:
+    BootPath step(uint32_t now_ms, bool button_down);
+
+   private:
+    ButtonRelease release_{};
+};
 
 }  // namespace skyblip::power
 

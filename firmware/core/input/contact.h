@@ -23,6 +23,11 @@ class Contact {
         return level ? Edge::Down : Edge::Up;
     }
 
+    void adopt(bool level) {
+        candidate_ = level;
+        stable_ = level;
+    }
+
     bool down() const { return stable_; }
 
     uint32_t edge_ms() const { return candidate_since_ms_; }

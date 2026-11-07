@@ -97,6 +97,12 @@ class TEchoPlus {
     // after the services have stopped running.
     void park() { haptic_.park(); }
 
+    bool adopt_waking_press() {
+        const bool down = platform_.button_down();
+        button_.adopt(down);
+        return down;
+    }
+
     ports::Capabilities capabilities() const { return capabilities_; }
     uint32_t barometer_faults() const { return barometer_faults_; }
 
