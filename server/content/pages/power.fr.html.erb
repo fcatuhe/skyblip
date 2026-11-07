@@ -20,7 +20,9 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
     <div>
       <h3 id="waiting">Il dit <span class="highlight">ce qu&rsquo;il attend</span>.</h3>
       <p>
-        Une pression et il est allumé, directement sur l&rsquo;image du trafic.
+        Maintenez le bouton une seconde ou deux et il est allumé, directement
+        sur l&rsquo;image du trafic. Une pression brève ne suffit pas, si bien
+        qu&rsquo;un choc dans la sacoche le laisse éteint.
         Tant qu&rsquo;il n&rsquo;a pas de position, le cercle vous le dit, et le
         mot en dessous vous donne où en est le récepteur&nbsp;: silencieux, des
         solutions qui arrivent encore sans date, ou une date lue sur un
@@ -75,8 +77,8 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
       <p>
         Le câble est la sortie, et c&rsquo;est un seul geste. Le brancher
         réveille l&rsquo;électronique, qui refuse de redevenir un appareil et
-        remet le logo&nbsp;: un appareil éteint ordinaire, en charge, que la
-        prochaine pression démarre. Une batterie qui s&rsquo;est vidée sur une
+        remet le logo&nbsp;: un appareil éteint ordinaire, en charge, que le
+        prochain appui maintenu démarre. Une batterie qui s&rsquo;est vidée sur une
         étagère n&rsquo;a rien écrit, alors c&rsquo;est la pression qui reçoit
         la réponse, avec la même ligne.
       </p>
@@ -100,7 +102,8 @@ description: Un skyBlip Go au parking et dans la sacoche · ce qu'il attend, à 
         <tr><th>Appareil éteint</th><th>Ce qui se passe</th></tr>
       </thead>
       <tbody>
-        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Bouton maintenu une seconde ou deux</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Pression brève, ou choc dans la sacoche</th><td>reste éteint&nbsp;: un choc n&rsquo;est pas une demande d&rsquo;émettre. L&rsquo;écran garde ce qu&rsquo;il montrait, sauf si la batterie est sous 3,4&nbsp;V sans chargeur et que l&rsquo;écran ne le dit pas encore&nbsp;: il affiche alors <span class="mono">FLAT BATTERY</span></td></tr>
         <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: l&rsquo;écran le dit déjà, et le câble est le chemin du retour</td></tr>
         <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
         <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">FLAT BATTERY</span></td></tr>
