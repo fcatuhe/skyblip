@@ -25,7 +25,7 @@ class Activation::Challenge < ApplicationRecord
 
   def spend
     # INFO: fc 18oct26 a server nonce counts once: only the request whose delete removed the row may use it
-    if self.class.where(id:).delete_all == 1
+    if self.class.live.where(id:).delete_all == 1
       self
     else
       raise Activation::Refusal.new(:expired)
