@@ -18,6 +18,7 @@ class Activation::Registration
   validates :release, inclusion: { in: [ true, false ] }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
+  validate :public_key_strong
 
   def unlock_code
     raise Activation::Refusal.new(:invalid) if invalid?
@@ -37,6 +38,12 @@ class Activation::Registration
   end
 
   private
+    def public_key_strong
+      if public_key.to_s.match?(Activation::PUBLIC_KEY) && Identity::PublicKey.weak?(public_key)
+        errors.add(:public_key, :weak)
+      end
+    end
+
     def signed_by_unit?(unit_nonce)
       message = Identity::Message.registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
       unit_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ public_key ].pack("H*"))

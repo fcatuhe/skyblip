@@ -71,6 +71,16 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
   end
 
+  # OpenSSL verifies this signature for any message: the identity point as key and as R, and S zero.
+  test "refuses a small-order key, whose signature anybody can make without a private key" do
+    forged = "01" + "00" * 31
+    post activation_registrations_path, params: signed_registration(@challenge).merge(public_key: forged, signature: forged + "00" * 32), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
+    assert_not Unit.exists?(device_id: vectors["device_id"])
+  end
+
   test "refuses another key for a known unit, and keeps it for an admin to look at" do
     post activation_registrations_path, params: signed_registration(@challenge, device_id: units(:bound).device_id), as: :json
 
