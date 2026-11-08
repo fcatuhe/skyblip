@@ -70,13 +70,17 @@ void Drv2605::stop() {
     write_register(kRegisterMode, kModeStandby);
 }
 
+// INFO: fc 08nov26 EN held low on a part that answered, which is its own shutdown, and released
+// otherwise, as boot raised it on every board
 void Drv2605::park() {
     stop();
     if (enable_pin_ < 0) return;
-    // Released, not driven low: SoftRF makes the same pin an input on the way
-    // down (nRF52.cpp:2911) so the rail collapsing does not have a driven output
-    // hanging off it.
-    gpio_.mode_input(enable_pin_, false);
+    if (ready_) {
+        gpio_.mode_output(enable_pin_);
+        gpio_.set(enable_pin_, false);
+    } else {
+        gpio_.mode_input(enable_pin_, false);
+    }
 }
 
 bool Drv2605::write_register(uint8_t register_address, uint8_t value) {

@@ -126,7 +126,29 @@ TEST_CASE("drv2605: parking clears the GO bit a bench session may have left set"
     haptic.park();
     CHECK_FALSE(chip.moving());
     CHECK(int(chip.registers[0x0C]) == 0);
-    // The enable line is released rather than driven low, which is what the
-    // reference does on the way down: no driven output into a collapsing rail.
+}
+
+// EN low is the part's own shutdown, and every road into SYSTEM OFF parks the board.
+TEST_CASE("drv2605: parking leaves an answering part in standby with its enable held low") {
+    models::Drv2605 chip;
+    parts::Drv2605 haptic = driver_for(chip);
+    REQUIRE(haptic.begin() == Status::Ok);
+
+    haptic.park();
+    CHECK(chip.standby());
     CHECK_FALSE(chip.enabled);
+    CHECK(chip.enable_driven);
+}
+
+// Bring-up raised P0.08 on every board, and on a plain T-Echo that pin is console RX.
+TEST_CASE("drv2605: parking releases the enable of a part that never answered") {
+    models::Drv2605 chip;
+    chip.answers = false;
+    parts::Drv2605 haptic = driver_for(chip);
+    REQUIRE(haptic.begin() != Status::Ok);
+    REQUIRE(chip.enable_driven);
+
+    haptic.park();
+    CHECK_FALSE(chip.enabled);
+    CHECK_FALSE(chip.enable_driven);
 }

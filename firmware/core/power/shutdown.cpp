@@ -21,10 +21,10 @@ const char* to_string(PowerDownStep step) {
         case PowerDownStep::ExternalFlashDeepPowerDown: return "FLASH DPD";
         case PowerDownStep::ExternalFlashLinesReleased: return "FLASH LINES";
         case PowerDownStep::PanelLinesReleased: return "PANEL LINES";
+        case PowerDownStep::SensorBusReleased: return "SENSOR BUS";
         case PowerDownStep::GnssStandby: return "GNSS STANDBY";
         case PowerDownStep::GnssLinesReleased: return "GNSS LINES";
         case PowerDownStep::PeripheralRailOff: return "RAIL OFF";
-        case PowerDownStep::PeripheralRailReleased: return "RAIL RELEASED";
         case PowerDownStep::WakePinArmed: return "WAKE ARMED";
     }
     return "NONE";

@@ -54,9 +54,13 @@ class Drv2605 : public io::I2c, public io::Gpio {
         enabled = level;
     }
     bool get(int pin) override { return pin == enable_pin ? enabled : false; }
-    void mode_output(int) override {}
+    void mode_output(int pin) override {
+        if (pin == enable_pin) enable_driven = true;
+    }
     void mode_input(int pin, bool) override {
-        if (pin == enable_pin) enabled = false;
+        if (pin != enable_pin) return;
+        enabled = false;
+        enable_driven = false;
     }
 
     uint8_t mode() const { return registers[kRegisterMode] & 0x07; }
@@ -79,6 +83,7 @@ class Drv2605 : public io::I2c, public io::Gpio {
     uint8_t pointer{0};
     int enable_pin{8};
     bool enabled{false};
+    bool enable_driven{false};
     bool answers{true};
     int enable_raises{0};
     int go_pulses{0};

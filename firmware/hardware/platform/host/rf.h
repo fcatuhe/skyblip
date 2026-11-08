@@ -22,12 +22,17 @@ class Rf : public ports::Rf {
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
+        parked_ = false;
+        running_ = false;
         Status status = radio_.begin();
         if (status != Status::Ok) return status;
-        return radio_.configure_radio(parts::RadioConfig{});
+        status = radio_.configure_radio(parts::RadioConfig{});
+        running_ = status == Status::Ok;
+        return status;
     }
 
     Status arm(const ports::RfPlan& plan) override {
+        if (parked_) return Status::Down;
         if (plan.end_us <= plan.start_us) return Status::OutOfRange;
         if (plan.tx != nullptr && (plan.tx_at_us < plan.start_us || plan.tx_at_us >= plan.end_us))
             return Status::OutOfRange;
@@ -57,7 +62,22 @@ class Rf : public ports::Rf {
         armed_ = false;
         sleeps_++;
         radio_.sleep();
+        parked_ = !defer_park;
     }
+
+    bool parked() const override { return !running_ || parked_; }
+
+    void abandon() override {
+        if (parked()) return;
+        abandons_++;
+        parked_ = true;
+    }
+
+    int abandons() const { return abandons_; }
+    void finish_park() { parked_ = true; }
+
+    // INFO: fc 08nov26 the silicon executor parks on its own thread, later than sleep() returns
+    bool defer_park{false};
 
     int sleeps() const { return sleeps_; }
 
@@ -70,6 +90,7 @@ class Rf : public ports::Rf {
     ports::RfSwitching switching() const override { return switching_; }
 
     void service(uint32_t now_ms) {
+        if (parked_) return;
         const uint64_t now_us = clock_.microseconds();
         const uint32_t elapsed_ms = now_ms - last_ms_;
         last_ms_ = now_ms;
@@ -294,6 +315,9 @@ class Rf : public ports::Rf {
     uint32_t last_ms_{0};
     uint32_t armed_count_{0};
     int sleeps_{0};
+    int abandons_{0};
+    bool running_{false};
+    bool parked_{false};
     bool armed_{false};
     bool queued_{false};
     bool started_{false};

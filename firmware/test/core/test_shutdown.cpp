@@ -312,21 +312,19 @@ TEST_CASE("power down: the panel's lines are released before its rail, not after
     RecordingSink sink;
     power_down(sink);
     CHECK(sink.at(PowerDownStep::PanelLinesReleased) < sink.at(PowerDownStep::PeripheralRailOff));
-    CHECK(sink.at(PowerDownStep::PanelLinesReleased) <
-          sink.at(PowerDownStep::PeripheralRailReleased));
 }
 
-// P0.13 enables the SoC's own regulator, and a NRESET pulse wakes a sleeping SX1262.
-TEST_CASE("power down: the order lowers one rail and contains no regulator or radio reset step") {
+// P0.13 enables the regulator that feeds the SoC and the radio, so no step may lower it.
+TEST_CASE("power down: the order lowers one rail and contains no regulator step") {
     constexpr PowerDownStep expected[] = {
         PowerDownStep::RadioSleep,
         PowerDownStep::ExternalFlashDeepPowerDown,
         PowerDownStep::ExternalFlashLinesReleased,
         PowerDownStep::PanelLinesReleased,
+        PowerDownStep::SensorBusReleased,
         PowerDownStep::GnssStandby,
         PowerDownStep::GnssLinesReleased,
         PowerDownStep::PeripheralRailOff,
-        PowerDownStep::PeripheralRailReleased,
         PowerDownStep::WakePinArmed,
     };
     RecordingSink sink;
@@ -344,17 +342,26 @@ TEST_CASE("power down: the GNSS is asked into standby before its lines and its r
     CHECK(sink.at(PowerDownStep::GnssLinesReleased) < sink.at(PowerDownStep::PeripheralRailOff));
 }
 
-TEST_CASE("power down: every part is told before the rail drops, the enable is released after") {
+// Zephyr leaves TWIM0 enabled into SYSTEM OFF, and the parts on its lines lose their rail next.
+TEST_CASE("power down: the sensor bus is let go before the rail") {
+    RecordingSink sink;
+    power_down(sink);
+    REQUIRE(sink.at(PowerDownStep::SensorBusReleased) >= 0);
+    CHECK(sink.at(PowerDownStep::SensorBusReleased) < sink.at(PowerDownStep::PeripheralRailOff));
+}
+
+TEST_CASE("power down: every part is told before the rail drops, and the wake pin is armed after") {
     RecordingSink sink;
     power_down(sink);
     const int rail = sink.at(PowerDownStep::PeripheralRailOff);
     for (const PowerDownStep step :
          {PowerDownStep::RadioSleep, PowerDownStep::ExternalFlashDeepPowerDown,
           PowerDownStep::ExternalFlashLinesReleased, PowerDownStep::PanelLinesReleased,
-          PowerDownStep::GnssStandby, PowerDownStep::GnssLinesReleased}) {
+          PowerDownStep::SensorBusReleased, PowerDownStep::GnssStandby,
+          PowerDownStep::GnssLinesReleased}) {
         CHECK(sink.at(step) < rail);
     }
-    CHECK(rail < sink.at(PowerDownStep::PeripheralRailReleased));
+    CHECK(rail == kPowerDownStepCount - 2);
     CHECK(sink.at(PowerDownStep::WakePinArmed) == kPowerDownStepCount - 1);
 }
 

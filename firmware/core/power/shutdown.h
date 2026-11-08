@@ -45,8 +45,8 @@ enum class PowerDownStep : uint8_t {
     // re-arms it as long as it is running. Nothing downstream is true until the
     // part is in SetSleep.
     //
-    // INFO: fc 08nov26 the radio's only step: its rail stays up, and a NRESET pulse restarts it
-    // into STDBY_RC
+    // INFO: fc 08nov26 NRESET is pulsed before SetSleep, never after, so the part sleeps from
+    // STDBY_RC whatever state it was in
     RadioSleep,
     // Deep Power-Down, 0xB9. It is a command over SPI, so the part has to still
     // have a supply to hear it: after the rail, it is a no-op.
@@ -55,6 +55,9 @@ enum class PowerDownStep : uint8_t {
     ExternalFlashLinesReleased,
     // INFO: fc 13sep26 the panel sleeps at the park frame, but CS, DC and RES# stay driven high
     PanelLinesReleased,
+    // INFO: fc 08nov26 the I2C peripheral stays enabled without device PM, so it is stopped and
+    // its lines let go
+    SensorBusReleased,
     // INFO: fc 08nov26 L76K WAKE_UP held low into SYSTEM OFF, as its pull-up wakes a powered
     // receiver to 29 mA
     GnssStandby,
@@ -63,13 +66,10 @@ enum class PowerDownStep : uint8_t {
     GnssLinesReleased,
     // The rail collapses last, and only once every part behind it has been told
     // and every line into it is at zero.
+    //
+    // INFO: fc 08nov26 its enable stays driven low into SYSTEM OFF, as a floating one restarted a
+    // unit (Meshtastic #10510)
     PeripheralRailOff,
-    // INFO: hk 03aug26 SoftRF-moshe-braner src/platform/nRF52.cpp:2055-2080
-    // drives each enable pin OUTPUT LOW before switching it to input, because
-    // that "clears the output latch AND actively shuts off the external
-    // regulator before we release the pin". The release is therefore its own
-    // step and it comes after the rails are already down.
-    PeripheralRailReleased,
     // Level-sensed, so it is armed only once the button is up: see
     // kReleaseSettleMs. Last, because arming it earlier races the rails.
     WakePinArmed,
@@ -82,10 +82,10 @@ inline constexpr PowerDownStep kPowerDownOrder[kPowerDownStepCount] = {
     PowerDownStep::ExternalFlashDeepPowerDown,
     PowerDownStep::ExternalFlashLinesReleased,
     PowerDownStep::PanelLinesReleased,
+    PowerDownStep::SensorBusReleased,
     PowerDownStep::GnssStandby,
     PowerDownStep::GnssLinesReleased,
     PowerDownStep::PeripheralRailOff,
-    PowerDownStep::PeripheralRailReleased,
     PowerDownStep::WakePinArmed,
 };
 
@@ -125,12 +125,18 @@ static_assert(step_order(PowerDownStep::GnssLinesReleased) <
 static_assert(step_order(PowerDownStep::PanelLinesReleased) <
                   step_order(PowerDownStep::PeripheralRailOff),
               "a panel line left driven high back-feeds the glass through its protection diodes");
-static_assert(step_order(PowerDownStep::PeripheralRailOff) <
-                  step_order(PowerDownStep::PeripheralRailReleased),
-              "the rail enable is released only once it has driven the rail down");
+static_assert(step_order(PowerDownStep::ExternalFlashLinesReleased) <
+                  step_order(PowerDownStep::PeripheralRailOff),
+              "a flash line left driven high back-feeds the flash through its protection diodes");
+static_assert(step_order(PowerDownStep::SensorBusReleased) <
+                  step_order(PowerDownStep::PeripheralRailOff),
+              "the sensor bus lets go of its lines while the parts on them still have a supply");
+static_assert(step_order(PowerDownStep::PeripheralRailOff) == kPowerDownStepCount - 2,
+              "the rail drops once every part behind it has been told and every line let go");
 
 // INFO: hk 03aug26 the 20 ms MB spends between driving the enable pins low and
 // releasing them (nRF52.cpp:2075). It is the rail's discharge, not the pin's.
+// | 08nov26 now the wait between the rail dropping and the wake pin being armed
 constexpr uint32_t kRailSettleMs = 20;
 
 const char* to_string(PowerDownStep step);
