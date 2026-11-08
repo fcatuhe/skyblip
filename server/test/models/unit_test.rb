@@ -19,6 +19,16 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal 1, key.unit.serial
   end
 
+  # The admin page reads a key's updated_at as when it was last seen.
+  test "a known device registering again with nothing new is seen again" do
+    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release, :ip_address).symbolize_keys
+
+    travel 1.hour do
+      key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, **seen)
+      assert_in_delta Time.current, key.reload.updated_at, 1.second
+    end
+  end
+
   test "a known device with another key is recorded as pending and bound to nothing" do
     key = Unit.register(device_id: units(:bound).device_id, public_key: "e5" * 32, ip_address: "203.0.113.4")
 

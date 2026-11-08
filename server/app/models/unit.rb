@@ -59,6 +59,7 @@ class Unit < ApplicationRecord
     else
       key.update!(status: bound_to?(key) ? :active : :pending, **seen)
     end
+    key.touch unless key.saved_changes?
     key
   end
 
