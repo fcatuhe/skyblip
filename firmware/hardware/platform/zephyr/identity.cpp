@@ -67,7 +67,7 @@ void Identity::Uicr::write(int word, uint32_t value) {
     irq_unlock(key);
 }
 
-bool Identity::Uicr::draw(crypto::Ed25519::Seed& out) {
+bool Identity::Uicr::draw(identity::KeySlots::Material& out) {
     return entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
 }
 
