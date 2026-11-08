@@ -167,6 +167,11 @@ void ConfigService::unlock(const cbor::Reader& frame) {
         refuse(link::Reason::BadSignature);
         return;
     }
+    // INFO: fc 08nov26 the page holds this serial, and a rewrite could lose it to a brown-out
+    if (identity_->unit().activation().serial == code.serial) {
+        acknowledge(true, link::Reason::Unlock);
+        return;
+    }
     identity_->hold_unlock(code);
     if (!identity_->activated()) settle_unlock();
 }
