@@ -8,6 +8,13 @@
   </p>
 <% end %>
 
+<% if @sharing.any? %>
+  <p class="admin-flash admin-flash--alert" role="alert">
+    These units share a key with another unit, a cloned key or a failing RNG:
+    <%= safe_join(@sharing.map { |unit| link_to unit.address, admin_unit_path(unit), class: "mono" }, ", ") %>.
+  </p>
+<% end %>
+
 <% if @server_key %>
   <dl class="admin-details">
     <dt>Server key</dt>
