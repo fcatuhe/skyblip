@@ -77,6 +77,20 @@ TEST_CASE(
     CHECK(Ed25519::verify(registration_signature, x.unit_key, message.bytes()));
 }
 
+TEST_CASE(
+    "identity: a development build's registration carries release 0, and its S is the vectors'") {
+    Exchange x;
+    const identity::Message message = identity::registration_message(
+        x.device_id, x.unit_key, x.unit_nonce, x.server_nonce,
+        identity::server_key_id(x.server_key), false, x.version.c_str());
+    CHECK(same(message.bytes(), x.vectors.message("development_registration_message")));
+    const auto signature = x.vectors.bytes<64>("development_registration_signature");
+    CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == signature);
+    const std::vector<uint8_t> release = x.vectors.message("registration_message");
+    CHECK_FALSE(
+        Ed25519::verify(signature, x.unit_key, ConstByteSpan(release.data(), release.size())));
+}
+
 TEST_CASE("identity: the unlock message carries the serial big-endian, and the server's U checks") {
     Exchange x;
     REQUIRE(x.serial == 298);
