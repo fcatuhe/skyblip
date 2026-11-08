@@ -19,4 +19,11 @@ class Activation::ChallengesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
     assert_equal({ "error" => "invalid" }, response.parsed_body)
   end
+
+  test "answers a body that is not JSON as invalid, in JSON" do
+    post activation_challenges_path, params: "{not json", headers: { "Content-Type" => "application/json", "Accept" => "application/json" }
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
+  end
 end
