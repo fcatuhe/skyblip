@@ -53,7 +53,7 @@ int main(void) {
         LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
     if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
     if (!g_platform.key_provisioned())
-        LOG_ERR("identity: no unit key, the unit can never be activated");
+        LOG_ERR("identity: no unit key, the unit cannot be activated");
     if (!g_product.state().activation.activated())
         LOG_INF("identity: not activated, the radio stays off until skyblip.eu/activate");
 

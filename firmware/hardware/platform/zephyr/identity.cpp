@@ -28,19 +28,17 @@ Status Identity::begin() {
     uint8_t hardware_id[identity::kDeviceIdBytes] = {0};
     if (hwinfo_get_device_id(hardware_id, sizeof(hardware_id)) !=
         static_cast<ssize_t>(sizeof(hardware_id))) {
-        LOG_ERR("identity: no DEVICEID, the unit cannot be activated");
+        LOG_ERR("identity: no DEVICEID, the unit has no key");
         return Status::Down;
     }
     for (size_t i = 0; i < sizeof(hardware_id); i++) device_id_[i] = hardware_id[i];
+    device_id_read_ = true;
     bluetooth_tag_ = static_cast<uint16_t>(nrf_ficr_deviceaddr_get(NRF_FICR, 0) & 0xFFFFu);
     if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0) {
         unlock_page_ = nullptr;
         LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");
     }
-    if (!device_is_ready(entropy_)) {
-        LOG_ERR("identity: no entropy, the unit has no key");
-        return Status::Down;
-    }
+    if (!device_is_ready(entropy_)) LOG_ERR("identity: no entropy, so no new key and no nonce");
     const std::optional<int> slot = identity::KeySlots::provision(uicr_);
     if (!slot) {
         LOG_ERR("identity: no UICR slot holds a key or took one, the unit has no key");
@@ -71,10 +69,12 @@ void Identity::Uicr::write(int word, uint32_t value) {
 }
 
 bool Identity::Uicr::draw(identity::KeySlots::Material& out) {
-    return entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
+    return device_is_ready(entropy_) &&
+           entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
 }
 
 bool Identity::seed(crypto::Ed25519::Seed& out) const {
+    if (!device_id_read_) return false;
     const std::optional<crypto::Ed25519::Seed> seed = identity::KeySlots::seed(uicr_);
     if (!seed) return false;
     out = *seed;
@@ -115,7 +115,8 @@ Status Identity::write_unlock_code(const identity::UnlockCode& code) {
 }
 
 bool Identity::draw_random(ByteSpan out) {
-    return entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
+    return device_is_ready(entropy_) &&
+           entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
 }
 
 }  // namespace skyblip::platform::zephyr

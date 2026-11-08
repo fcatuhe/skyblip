@@ -43,6 +43,7 @@ class Identity : public ports::Identity {
     const struct flash_area* unlock_page_{nullptr};
     identity::DeviceId device_id_{};
     uint16_t bluetooth_tag_{0};
+    bool device_id_read_{false};
 };
 
 }  // namespace skyblip::platform::zephyr
