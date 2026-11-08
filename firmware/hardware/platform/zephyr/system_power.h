@@ -3,10 +3,12 @@
 #if defined(__ZEPHYR__)
 
 #include <hal/nrf_gpio.h>
+#include <hal/nrf_uarte.h>
 #include <helpers/nrfx_reset_reason.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/spi.h>
+#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
 #include <zephyr/sys/reboot.h>
@@ -37,6 +39,29 @@ constexpr uint32_t kFlashDeepPowerDownSettleUs = 200;
 // premium, not a wait for anything. A command issued while BUSY is high is lost,
 // and the whole point of re-issuing SetSleep is that this one lands.
 constexpr uint32_t kRadioCommandSettleUs = 1000;
+
+// INFO: fc 08nov26 uart0 is never suspended without CONFIG_PM_DEVICE, so its pinctrl leaves TX
+// driven high into SYSTEM OFF
+#define SKYBLIP_GNSS_UART_GROUP(group) \
+    DT_CHILD(DT_PINCTRL_BY_NAME(DT_ALIAS(gnss_uart), default, 0), group)
+#define SKYBLIP_GNSS_UART_PSEL(group) DT_PROP_BY_IDX(SKYBLIP_GNSS_UART_GROUP(group), psels, 0)
+
+BUILD_ASSERT(DT_PROP_LEN(SKYBLIP_GNSS_UART_GROUP(group1), psels) == 1 &&
+             ((SKYBLIP_GNSS_UART_PSEL(group1) >> NRF_FUN_POS) & NRF_FUN_MSK) == NRF_FUN_UART_TX);
+BUILD_ASSERT(DT_PROP_LEN(SKYBLIP_GNSS_UART_GROUP(group2), psels) == 1 &&
+             ((SKYBLIP_GNSS_UART_PSEL(group2) >> NRF_FUN_POS) & NRF_FUN_MSK) == NRF_FUN_UART_RX);
+
+constexpr uint32_t kGnssUartTxPin = (SKYBLIP_GNSS_UART_PSEL(group1) >> NRF_PIN_POS) & NRF_PIN_MSK;
+constexpr uint32_t kGnssUartRxPin = (SKYBLIP_GNSS_UART_PSEL(group2) >> NRF_PIN_POS) & NRF_PIN_MSK;
+constexpr uint32_t kGnssResetPin = DT_PROP(DT_GPIO_CTLR(DT_ALIAS(gnss_reset), gpios), port) * 32 +
+                                   DT_GPIO_PIN(DT_ALIAS(gnss_reset), gpios);
+
+#undef SKYBLIP_GNSS_UART_PSEL
+#undef SKYBLIP_GNSS_UART_GROUP
+
+// INFO: fc 08nov26 ten 8N1 characters at 4800 baud, the slowest rate the L76K driver walks
+constexpr uint32_t kGnssUartStopTimeoutUs = 21000;
+constexpr uint32_t kGnssUartStopPollUs = 10;
 
 class SystemPower : public ports::SystemPower, private power::PowerDownSink {
    public:
@@ -190,22 +215,14 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
                 gpio_pin_configure_dt(&flash_cs_, GPIO_INPUT);
                 return;
             case power::PowerDownStep::PanelLinesReleased: release_panel_lines(); return;
-            case power::PowerDownStep::GnssBackupOff:
-                gpio_pin_configure_dt(&gnss_enable_, GPIO_OUTPUT_INACTIVE);
+            case power::PowerDownStep::GnssStandby:
+                gpio_pin_configure_dt(&gnss_wake_, GPIO_OUTPUT_INACTIVE);
                 return;
-            case power::PowerDownStep::GnssResetAsserted:
-                gpio_pin_configure_dt(&gnss_reset_, GPIO_OUTPUT_ACTIVE);
-                return;
-            case power::PowerDownStep::RadioResetAsserted:
-                gpio_pin_configure_dt(&radio_reset_, GPIO_OUTPUT_ACTIVE);
-                return;
+            case power::PowerDownStep::GnssLinesReleased: release_gnss_lines(); return;
             case power::PowerDownStep::PeripheralRailOff:
                 gpio_pin_configure_dt(&peripheral_rail_, GPIO_OUTPUT_INACTIVE);
                 return;
-            case power::PowerDownStep::AuxiliaryRailOff:
-                gpio_pin_configure_dt(&auxiliary_rail_, GPIO_OUTPUT_INACTIVE);
-                return;
-            case power::PowerDownStep::DrivenPinsReleased: release_pins(); return;
+            case power::PowerDownStep::PeripheralRailReleased: release_peripheral_rail(); return;
             case power::PowerDownStep::WakePinArmed: arm_wake(); return;
         }
     }
@@ -253,16 +270,41 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         gpio_pin_configure_dt(&epd_cs_, GPIO_INPUT);
     }
 
-    // The rails have collapsed by now, so nothing here can back-feed a part
-    // through its protection diode. A pull-down on the two enables rather than a
-    // bare input: an enable left floating is a rail that may come back.
-    void release_pins() {
+    // INFO: fc 08nov26 the L76K pulls RESET_N up itself (Hardware Design 4.2.2), so a released line
+    // never resets it
+    void release_gnss_lines() {
+        stop_gnss_uart();
+        nrf_gpio_cfg_default(kGnssUartTxPin);
+        nrf_gpio_cfg_default(kGnssUartRxPin);
+        nrf_gpio_cfg_default(kGnssResetPin);
+    }
+
+    // INFO: fc 08nov26 nRF52840 PS 6.34.7-8: stop RX and TX, wait for RXTO and TXSTOPPED, then
+    // disable the UARTE
+    static void stop_gnss_uart() {
+        NRF_UARTE_Type* uarte = reinterpret_cast<NRF_UARTE_Type*>(DT_REG_ADDR(DT_ALIAS(gnss_uart)));
+        irq_disable(DT_IRQN(DT_ALIAS(gnss_uart)));
+        nrf_uarte_shorts_disable(uarte,
+                                 NRF_UARTE_SHORT_ENDRX_STARTRX | NRF_UARTE_SHORT_ENDRX_STOPRX);
+        nrf_uarte_event_clear(uarte, NRF_UARTE_EVENT_RXTO);
+        nrf_uarte_event_clear(uarte, NRF_UARTE_EVENT_TXSTOPPED);
+        nrf_uarte_task_trigger(uarte, NRF_UARTE_TASK_STOPRX);
+        nrf_uarte_task_trigger(uarte, NRF_UARTE_TASK_STOPTX);
+        for (uint32_t waited_us = 0; waited_us < kGnssUartStopTimeoutUs;
+             waited_us += kGnssUartStopPollUs) {
+            if (nrf_uarte_event_check(uarte, NRF_UARTE_EVENT_RXTO) &&
+                nrf_uarte_event_check(uarte, NRF_UARTE_EVENT_TXSTOPPED))
+                break;
+            k_busy_wait(kGnssUartStopPollUs);
+        }
+        nrf_uarte_disable(uarte);
+    }
+
+    // A pull-down rather than a bare input: an enable left floating is a rail
+    // that may come back.
+    void release_peripheral_rail() {
         k_msleep(power::kRailSettleMs);
         gpio_pin_configure_dt(&peripheral_rail_, GPIO_INPUT | GPIO_PULL_DOWN);
-        gpio_pin_configure_dt(&auxiliary_rail_, GPIO_INPUT | GPIO_PULL_DOWN);
-        gpio_pin_configure_dt(&gnss_enable_, GPIO_INPUT);
-        gpio_pin_configure_dt(&gnss_reset_, GPIO_INPUT);
-        gpio_pin_configure_dt(&radio_reset_, GPIO_INPUT);
     }
 
     void arm_wake() {
@@ -319,14 +361,11 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     struct gpio_dt_spec radio_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(radio_spi), cs_gpios, 0);
     struct gpio_dt_spec flash_cs_ =
         GPIO_DT_SPEC_GET_BY_IDX(DT_BUS(DT_NODELABEL(ext_flash)), cs_gpios, 0);
-    struct gpio_dt_spec radio_reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(radio_reset), gpios);
     struct gpio_dt_spec peripheral_rail_ = GPIO_DT_SPEC_GET(DT_ALIAS(peripheral_rail), gpios);
-    struct gpio_dt_spec auxiliary_rail_ = GPIO_DT_SPEC_GET(DT_ALIAS(auxiliary_rail), gpios);
     struct gpio_dt_spec flash_write_protect_ =
         GPIO_DT_SPEC_GET(DT_ALIAS(flash_write_protect), gpios);
     struct gpio_dt_spec flash_hold_ = GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios);
-    struct gpio_dt_spec gnss_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_enable), gpios);
-    struct gpio_dt_spec gnss_reset_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
+    struct gpio_dt_spec gnss_wake_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_wake), gpios);
     struct gpio_dt_spec epd_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(epd_spi), cs_gpios, 0);
     struct gpio_dt_spec epd_dc_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_dc_gpio), gpios);
     struct gpio_dt_spec epd_reset_ = GPIO_DT_SPEC_GET(DT_NODELABEL(epd_reset_gpio), gpios);

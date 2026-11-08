@@ -1451,16 +1451,18 @@ The road from running to SYSTEM OFF: what starts a shutdown, and the order the r
 
 **power down**
 
+- every part is told before the rail drops, the enable is released after
 - every step runs once, in the order the table declares
 - every switch-off asks the factory bootloader to skip DFU
   > The bootloader's DFU button is ours: a press waking on any other byte lands in USB DFU.
-- the GNSS is switched off, and before its supply goes
+- the GNSS is asked into standby before its lines and its rail go
+  > Released, the L76K's WAKE_UP pull-up takes a receiver that still has a supply to continuous mode.
 - the external flash is told to sleep while it still has a rail
   > The bug this whole sequence exists to prevent: 0xB9 arrives at a part that has already lost its supply, the command does nothing, and an external flash draws its full standby current for the whole night the device spends in a flight bag looking switched off.
+- the order lowers one rail and contains no regulator or radio reset step
+  > P0.13 enables the SoC's own regulator, and a NRESET pulse wakes a sleeping SX1262.
 - the panel's lines are released before its rail, not after
   > A line left high on a panel with no rail back-feeds it, and the parked image drifts dark.
-- the radio is asleep before anything touches its reset line
-- the rails go last, and the pins are released after them
 
 **shutdown**
 

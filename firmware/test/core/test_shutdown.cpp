@@ -312,45 +312,49 @@ TEST_CASE("power down: the panel's lines are released before its rail, not after
     RecordingSink sink;
     power_down(sink);
     CHECK(sink.at(PowerDownStep::PanelLinesReleased) < sink.at(PowerDownStep::PeripheralRailOff));
-    CHECK(sink.at(PowerDownStep::PanelLinesReleased) < sink.at(PowerDownStep::DrivenPinsReleased));
+    CHECK(sink.at(PowerDownStep::PanelLinesReleased) <
+          sink.at(PowerDownStep::PeripheralRailReleased));
 }
 
-TEST_CASE("power down: the radio is asleep before anything touches its reset line") {
+// P0.13 enables the SoC's own regulator, and a NRESET pulse wakes a sleeping SX1262.
+TEST_CASE("power down: the order lowers one rail and contains no regulator or radio reset step") {
+    constexpr PowerDownStep expected[] = {
+        PowerDownStep::RadioSleep,
+        PowerDownStep::ExternalFlashDeepPowerDown,
+        PowerDownStep::ExternalFlashLinesReleased,
+        PowerDownStep::PanelLinesReleased,
+        PowerDownStep::GnssStandby,
+        PowerDownStep::GnssLinesReleased,
+        PowerDownStep::PeripheralRailOff,
+        PowerDownStep::PeripheralRailReleased,
+        PowerDownStep::WakePinArmed,
+    };
     RecordingSink sink;
     power_down(sink);
-    CHECK(sink.at(PowerDownStep::RadioSleep) < sink.at(PowerDownStep::RadioResetAsserted));
-    CHECK(sink.at(PowerDownStep::RadioSleep) < sink.at(PowerDownStep::DrivenPinsReleased));
+    REQUIRE(sink.count == static_cast<int>(sizeof(expected) / sizeof(expected[0])));
+    for (int i = 0; i < sink.count; i++) CHECK(sink.steps[i] == expected[i]);
 }
 
-TEST_CASE("power down: the GNSS is switched off, and before its supply goes") {
+// Released, the L76K's WAKE_UP pull-up takes a receiver that still has a supply to continuous mode.
+TEST_CASE("power down: the GNSS is asked into standby before its lines and its rail go") {
     RecordingSink sink;
     power_down(sink);
-    // The receiver with a fix is tens of milliamps: the one part that decides
-    // whether an 850 mAh pack survives a night.
-    REQUIRE(sink.at(PowerDownStep::GnssBackupOff) >= 0);
-    CHECK(sink.at(PowerDownStep::GnssBackupOff) < sink.at(PowerDownStep::GnssResetAsserted));
-    CHECK(sink.at(PowerDownStep::GnssResetAsserted) < sink.at(PowerDownStep::PeripheralRailOff));
+    REQUIRE(sink.at(PowerDownStep::GnssStandby) >= 0);
+    CHECK(sink.at(PowerDownStep::GnssStandby) < sink.at(PowerDownStep::GnssLinesReleased));
+    CHECK(sink.at(PowerDownStep::GnssLinesReleased) < sink.at(PowerDownStep::PeripheralRailOff));
 }
 
-TEST_CASE("power down: the rails go last, and the pins are released after them") {
+TEST_CASE("power down: every part is told before the rail drops, the enable is released after") {
     RecordingSink sink;
     power_down(sink);
     const int rail = sink.at(PowerDownStep::PeripheralRailOff);
-    const int auxiliary = sink.at(PowerDownStep::AuxiliaryRailOff);
     for (const PowerDownStep step :
          {PowerDownStep::RadioSleep, PowerDownStep::ExternalFlashDeepPowerDown,
           PowerDownStep::ExternalFlashLinesReleased, PowerDownStep::PanelLinesReleased,
-          PowerDownStep::GnssBackupOff, PowerDownStep::GnssResetAsserted,
-          PowerDownStep::RadioResetAsserted}) {
+          PowerDownStep::GnssStandby, PowerDownStep::GnssLinesReleased}) {
         CHECK(sink.at(step) < rail);
-        CHECK(sink.at(step) < auxiliary);
     }
-    // A pin driven high into a part with no supply powers it through its own
-    // protection diode, so nothing is released until both rails are down.
-    CHECK(rail < sink.at(PowerDownStep::DrivenPinsReleased));
-    CHECK(auxiliary < sink.at(PowerDownStep::DrivenPinsReleased));
-    // And the wake pin is level-sensed: armed before the rails, it wakes the
-    // device the instant they drop.
+    CHECK(rail < sink.at(PowerDownStep::PeripheralRailReleased));
     CHECK(sink.at(PowerDownStep::WakePinArmed) == kPowerDownStepCount - 1);
 }
 
