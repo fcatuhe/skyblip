@@ -59,6 +59,18 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_not Unit.exists?(device_id: vectors["device_id"])
   end
 
+  # The unit signs the key id it trusts, so a registration naming another key than its challenge did is refused before its signature.
+  test "refuses a registration for another server key than its challenge, and leaves the nonce" do
+    other_key = Activation::Challenge.new(unit_nonce: @challenge.unit_nonce, server_nonce: @challenge.server_nonce, server_key_id: "a9649d2d")
+    post activation_registrations_path, params: signed_registration(other_key), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
+
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json
+    assert_response :created
+  end
+
   test "refuses another key for a known unit, and keeps it for an admin to look at" do
     post activation_registrations_path, params: signed_registration(@challenge, device_id: units(:bound).device_id), as: :json
 
