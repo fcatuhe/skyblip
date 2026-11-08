@@ -25,7 +25,7 @@ const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
 const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_command'];
 const REPLY_REFUSALS = ['small_mtu'];
 const SERVER_REFUSALS = [
-  'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
+  'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'network_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
 const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
 

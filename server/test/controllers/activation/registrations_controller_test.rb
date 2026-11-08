@@ -133,4 +133,13 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
     assert_equal({ "error" => "invalid" }, response.parsed_body)
   end
+
+  test "refuses a new unit past the cap of the network it comes from" do
+    Unit.insert_all(Array.new(Unit::NEW_PER_NETWORK_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, enrolled_from: "203.0.113.8" } })
+
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
+
+    assert_response :too_many_requests
+    assert_equal({ "error" => "network_cap" }, response.parsed_body)
+  end
 end
