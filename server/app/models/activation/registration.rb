@@ -6,7 +6,7 @@ class Activation::Registration
   attribute :public_key, :string
   attribute :version, :string
   attribute :server_key_id, :string
-  attribute :release, :boolean
+  attribute :release
   attribute :server_nonce, :string
   attribute :signature, :string
   attribute :ip_address, :string

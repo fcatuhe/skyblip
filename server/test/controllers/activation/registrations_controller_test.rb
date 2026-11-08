@@ -29,6 +29,16 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "error" => "invalid" }, response.parsed_body)
   end
 
+  test "refuses a release that is not a JSON boolean, which a cast would have read as true" do
+    [ "this is not a boolean", "true", 1 ].each do |release|
+      post activation_registrations_path, params: signed_registration(@challenge).merge(release:), as: :json
+
+      assert_response :unprocessable_content
+      assert_equal({ "error" => "invalid" }, response.parsed_body)
+    end
+    assert_not Unit.exists?(device_id: vectors["device_id"])
+  end
+
   test "spends the server nonce, so a replay is refused" do
     registration = signed_registration(@challenge)
     post activation_registrations_path, params: registration, as: :json
