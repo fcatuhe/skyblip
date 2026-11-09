@@ -76,21 +76,22 @@ class UnitTest < ActiveSupport::TestCase
     assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key).active?
   end
 
-  test "refuses a new device past the cap of its network, an IPv6 /64 counting as one, and serves other networks" do
+  test "refuses a new device past the cap of its network, an IPv6 /56 counting as one, and serves other networks" do
     Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
       Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "2001:db8:1:2::#{index + 1}")
     end
 
-    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:2:ffff::9") }
+    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:ff:ffff::9") }
     assert_equal :network_cap, refusal.reason
-    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:3::1").active?
+    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:100::1").active?
     assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, ip_address: "2001:db8:1:2::1").active?
   end
 
-  test "names a network by its IPv4 address or its IPv6 /64, a mapped IPv4 address as itself" do
+  test "names a network by its IPv4 address or its IPv6 /56, a mapped IPv4 address as itself" do
     assert_equal "203.0.113.8", Unit.network_of("203.0.113.8")
     assert_equal "203.0.113.8", Unit.network_of("::ffff:203.0.113.8")
-    assert_equal "2001:db8:1:2::", Unit.network_of("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
+    assert_equal "2001:db8:1::", Unit.network_of("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
+    assert_equal "2001:db8:1:100::", Unit.network_of("2001:db8:1:1ff::1")
   end
 
   # Docker on crooz hands Rails its gateway, 172.18.0.1, for every IPv6 client (#205).

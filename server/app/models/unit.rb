@@ -33,7 +33,7 @@ class Unit < ApplicationRecord
 
   def self.network_cap_reached?(network) = network.present? && enrolled_today.where(enrolled_from: network).count >= NEW_PER_NETWORK_PER_DAY
 
-  # INFO: fc 08nov26 one IPv6 subscriber holds a whole /64, so a network is that /64, or one IPv4 address
+  # INFO: fc 08nov26 a home IPv6 line holds a whole /56, so a network is that /56, or one IPv4 address
   def self.network_of(ip_address)
     if ip_address.present?
       address = IPAddr.new(ip_address)
@@ -42,7 +42,7 @@ class Unit < ApplicationRecord
         Rails.logger.error "Activation: request from a private address #{address}, so it counts toward no network (#205)"
         nil
       else
-        (address.ipv6? ? address.mask(64) : address).to_s
+        (address.ipv6? ? address.mask(56) : address).to_s
       end
     end
   end
