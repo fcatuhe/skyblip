@@ -10,15 +10,5 @@ class Content::Sitemap::Entry
     Content.canonical_url(page.url_path, host: base_url)
   end
 
-  def change_frequency
-    "monthly"
-  end
-
-  def priority
-    case page.url_path
-    when "/" then "1.0"
-    when /^\/[^\/]+$/ then "0.8"
-    else "0.5"
-    end
-  end
+  def last_modified = page.updated_on.iso8601
 end

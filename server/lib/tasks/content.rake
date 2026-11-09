@@ -14,4 +14,11 @@ namespace :content do
       puts "Content sitemap and robots.txt are current"
     end
   end
+
+  namespace :share_images do
+    desc "Render the 1200x630 link preview cards into content_images/share, in Chrome"
+    task generate: :environment do
+      ShareImages.new.generate.each { |path| puts path.relative_path_from(Rails.root) }
+    end
+  end
 end

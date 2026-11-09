@@ -1,5 +1,6 @@
 {
-  "name": "Website",
+  "name": "skyBlip",
+  "short_name": "skyBlip",
   "icons": [
     {
       "src": "/icon.png",
@@ -7,16 +8,15 @@
       "sizes": "512x512"
     },
     {
-      "src": "/icon.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "maskable"
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
     }
   ],
   "start_url": "/",
   "display": "standalone",
   "scope": "/",
-  "description": "Website.",
-  "theme_color": "red",
-  "background_color": "red"
+  "description": "ADS-L electronic conspicuity for light aircraft, open source and with no subscription.",
+  "theme_color": "<%= Rails.configuration.x.theme_color %>",
+  "background_color": "<%= Rails.configuration.x.theme_color %>"
 }

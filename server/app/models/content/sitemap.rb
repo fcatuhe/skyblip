@@ -42,8 +42,7 @@ class Content::Sitemap
       sitemap_entries.each do |entry|
         xml.url do
           xml.loc entry.canonical_url
-          xml.changefreq entry.change_frequency
-          xml.priority entry.priority
+          xml.lastmod entry.last_modified
         end
       end
     end

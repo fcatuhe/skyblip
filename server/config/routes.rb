@@ -3,7 +3,12 @@ Rails.application.routes.draw do
     get "(*path)", format: false, to: redirect { |_params, request| "#{Rails.configuration.x.public_url}#{request.fullpath}" }
   end
 
+  constraints ->(request) { request.original_fullpath.match?(%r{\A/[^?]+/(\?|\z)}) } do
+    get "*path", format: false, to: redirect { |_params, request| request.original_fullpath.sub(%r{/+(\?|\z)}, '\\1') }
+  end
+
   get "up" => "rails/health#show", as: :rails_health_check
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 
   mount Ahoy::Engine, at: :hoy

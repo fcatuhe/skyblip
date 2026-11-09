@@ -1,0 +1,63 @@
+@layer card {
+  .card {
+    inline-size: 1200px;
+    block-size: 630px;
+    margin: 0;
+    padding: var(--space-3xl) var(--space-4xl) var(--space-3xl) 5rem;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 26rem 1fr;
+    justify-items: center;
+    align-items: center;
+    gap: var(--space-3xl);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .card p { margin: 0; }
+  .card-wordmark { font-size: 6rem; }
+  .card-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 4.5rem;
+    line-height: 1;
+    color: var(--ink);
+    margin-block-start: var(--space-xl);
+  }
+  .card-protocols {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 1.75rem;
+    letter-spacing: 0.06em;
+    color: var(--blip-text);
+    margin-block-start: var(--space-l);
+  }
+  .card-status {
+    inline-size: fit-content;
+    margin-block-start: var(--space-l);
+    padding: var(--space-xs) var(--space-m);
+    border-radius: var(--space-xs);
+    background: var(--blip-soft);
+    color: var(--blip-text);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 2.5rem;
+    line-height: 1.15;
+  }
+  .card-site {
+    font-family: var(--font-sans);
+    font-size: 1.5rem;
+    color: var(--ink-muted);
+    margin-block-start: var(--space-xl);
+  }
+
+  .card-words { justify-self: start; }
+  .card .shot--photo {
+    padding: var(--space-l) var(--space-3xl);
+    background: var(--card-bg);
+    border-radius: var(--space-m);
+    box-shadow: 0 14px 28px -20px color-mix(in oklch, var(--ink) 65%, transparent);
+  }
+  .card .shot--photo img { max-block-size: 480px; max-inline-size: 520px; box-shadow: none; }
+  .card .diagram svg { inline-size: 36rem; }
+}

@@ -1,8 +1,9 @@
 ---
-title: S'équiper
+title: "T-Echo 868 MHz, prix et installation du Go"
 nav_title: S'équiper
 slug: s-equiper
-description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868 MHz avec baromètre BME280. skyBlip Bravo est un Seeed SenseCAP MeshTracker X1. Où les acheter, en quoi ils diffèrent, comment installer le firmware skyBlip.
+description: "Comparez Go et Go+, dès 68 € et 84 €. Choisissez un T-Echo 868 MHz avec BME280, trouvez les vendeurs, installez et activez le firmware gratuit."
+updated_on: "2026-11-09"
 ---
 
 <header class="page-hero">
@@ -19,7 +20,7 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
 <section>
   <div class="offers offers--three">
     <article class="offer">
-      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go : un LilyGO T-Echo blanc, le radar du trafic à l'écran" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go : un LilyGO T-Echo blanc, le radar du trafic à l'écran" %>
       <h2>skyBlip Go</h2>
       <p class="offer-price"><small>à partir de</small> 68&nbsp;€</p>
       <p class="offer-tagline">LilyGO T-Echo</p>
@@ -50,7 +51,7 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
     </article>
 
     <article class="offer">
-      <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "x1-photo" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "x1-photo" %>
       <h2>skyBlip Bravo</h2>
       <p class="offer-price"><s><span class="visually-hidden">Sans code&nbsp;: </span>49,90&nbsp;$</s> <span class="visually-hidden">Avec le code&nbsp;: </span>44,91&nbsp;$<small class="offer-code">avec le code <%= seeed_promo_code %></small><small class="offer-code">55,95&nbsp;$ avec 11,04&nbsp;$ de livraison vers la France</small></p>
       <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status">Firmware en développement</span></p>
@@ -153,7 +154,7 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
 </section>
 
 <section id="install" class="band band--tint">
-  <h2 class="section-title">Un Go, prêt en quatre étapes</h2>
+  <h2 class="section-title">Un Go, prêt en cinq étapes</h2>
   <ol class="steps-grid">
     <li>
       <h3>Commande.</h3>
@@ -162,6 +163,10 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
     <li>
       <h3>Installation.</h3>
       <p>Le fichier skyBlip déposé sur le lecteur USB qui apparaît. Appareil branché en USB-C, deux pressions sur <span class="mono">RST</span> ouvrent le lecteur <span class="mono">TECHOBOOT</span>, où déposer le <span class="mono">.uf2</span> de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version</a>.</p>
+    </li>
+    <li>
+      <h3>Activation.</h3>
+      <p>Un Go neuf n&rsquo;émet ni ne reçoit avant d&rsquo;avoir son numéro de série. <%= link_to_page "activate", label: "Activez-le" %> en Bluetooth depuis Chrome ou Edge, puis autorisez-le par deux pressions sur l&rsquo;appareil.</p>
     </li>
     <li>
       <h3>Réglages.</h3>

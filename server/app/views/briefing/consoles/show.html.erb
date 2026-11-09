@@ -1,3 +1,5 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("workbench") %>
+<% content_for :title, "Bluetooth console" %>
 <section class="dev-tools dev-console" data-controller="console">
   <h1>skyBlip&nbsp;Go: Bluetooth console <span>&middot; a real device over Web Bluetooth,
     <a href="<%= briefing_simulator_path %>">the simulator</a> is next door</span></h1>

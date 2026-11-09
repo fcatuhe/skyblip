@@ -12,7 +12,16 @@ class Content::SitemapTest < ActiveSupport::TestCase
     assert_includes urls, "https://skyblip.eu/fr/a-propos"
     assert_includes urls, "https://skyblip.eu/ads-l-registry/nmea"
     assert urls.none? { |url| url.include?("/briefing") }
-    assert_empty document.xpath("//xmlns:lastmod")
+    assert_empty document.xpath("//xmlns:changefreq | //xmlns:priority")
+  end
+
+  test "each entry carries the date its page says it last changed" do
+    document = Nokogiri::XML(Content::Sitemap.new.to_xml)
+    page = Content::Page.find("radar", locale: :fr)
+    entry = document.xpath("//xmlns:url").find { |url| url.at_xpath("xmlns:loc").text == "https://skyblip.eu/fr/radar" }
+
+    assert_equal page.updated_on.iso8601, entry.at_xpath("xmlns:lastmod").text
+    assert_equal Content::Page.all.size, document.xpath("//xmlns:lastmod").size
   end
 
   test "entry URLs use translated slugs" do

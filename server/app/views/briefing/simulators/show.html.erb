@@ -1,3 +1,4 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("simulator", "workbench") %>
 <%= turbo_frame_tag :simulator_build, src: briefing_simulator_build_path(mode: :workbench), loading: :eager do %>
   <p class="note frame-note" role="status"><%= t "simulator_builds.loading" %></p>
 <% end %>

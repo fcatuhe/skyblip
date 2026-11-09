@@ -14,11 +14,16 @@ module PagesHelper
   end
 
   def pages_image_tag(path, options = {})
-    image_tag "pages/#{@page.base_slug}/#{path}", options
+    content_image_tag "pages/#{@page.base_slug}/#{path}", options
   end
 
   def screen_image_tag(path, options = {})
-    image_tag "pages/skyblip-go/#{path}", options
+    content_image_tag "pages/skyblip-go/#{path}", options
+  end
+
+  def content_image_tag(path, options = {})
+    width, height = Content::Image.dimensions(path)
+    image_tag path, { width:, height: }.merge(options)
   end
 
   def seeed_promo_code

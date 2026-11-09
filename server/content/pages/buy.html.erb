@@ -1,7 +1,8 @@
 ---
-title: Buy
+title: "T-Echo 868 MHz, Go prices and firmware install"
 nav_title: Buy
-description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MHz with the BME280 barometer. skyBlip Bravo is a Seeed SenseCAP MeshTracker X1. Where to buy them, how they differ, how to install the skyBlip firmware.
+description: "Compare Go and Go+, from €68 and €84. Choose a T-Echo 868 MHz with BME280, find sellers, then install and activate the free firmware."
+updated_on: "2026-11-09"
 ---
 
 <header class="page-hero">
@@ -17,7 +18,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
 <section>
   <div class="offers offers--three">
     <article class="offer">
-      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
       <h2>skyBlip Go</h2>
       <p class="offer-price"><small>from</small> €68</p>
       <p class="offer-tagline">LilyGO T-Echo</p>
@@ -48,7 +49,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
     </article>
 
     <article class="offer">
-      <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "x1-photo" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "x1-photo" %>
       <h2>skyBlip Bravo</h2>
       <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
       <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status">Firmware in development</span></p>
@@ -150,7 +151,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
 </section>
 
 <section id="install" class="band band--tint">
-  <h2 class="section-title">A Go, ready in four steps</h2>
+  <h2 class="section-title">A Go, ready in five steps</h2>
   <ol class="steps-grid">
     <li>
       <h3>Order.</h3>
@@ -159,6 +160,10 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
     <li>
       <h3>Install.</h3>
       <p>Drop the skyBlip file on the USB drive that shows up. With the device plugged in over USB-C, two presses of <span class="mono">RST</span> open the <span class="mono">TECHOBOOT</span> drive, where the <span class="mono">.uf2</span> of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> goes.</p>
+    </li>
+    <li>
+      <h3>Activate.</h3>
+      <p>A new Go neither transmits nor receives until it holds its serial. <%= link_to_page "activate", label: "Activate it" %> over Bluetooth from Chrome or Edge, then allow it with two presses on the device.</p>
     </li>
     <li>
       <h3>Set up.</h3>
