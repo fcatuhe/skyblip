@@ -339,13 +339,23 @@
     grid-row: span 6;
     grid-template-rows: subgrid;
     row-gap: 0;
+    margin-inline: 0;
     justify-items: center;
     padding: var(--space-xl) var(--space-inline-xl);
+  }
+
+  .offers--one { max-inline-size: 28rem; }
+
+  .offers--three {
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    max-inline-size: none;
   }
 
   .offers .offer img {
     block-size: 16rem;
     inline-size: auto;
+    max-inline-size: 100%;
+    object-fit: contain;
     margin-block-end: var(--space-m);
     mix-blend-mode: multiply;
   }

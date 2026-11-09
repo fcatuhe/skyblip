@@ -41,6 +41,7 @@ module Skyblip
 
     config.assets.paths << Rails.root.join("content_images")
     config.x.public_url = "https://skyblip.eu"
+    config.x.seeed.promo_code = "5GO3A5DD"
 
     config.i18n.available_locales = %i[ en fr ]
     config.i18n.default_locale = :en

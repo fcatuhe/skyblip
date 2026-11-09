@@ -1,34 +1,56 @@
 ---
 title: The traffic around you, in your pocket
-description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight and interoperable European standard, receives ADS-L and FLARM traffic and tells you where to look. From light aircraft to skydivers, nothing to install, no subscription.
+description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight and interoperable European standard, receives ADS-L and FLARM traffic and tells you where to look. skyBlip Bravo will add ADS-B, and a Go paired with a Bravo makes a skyBlip Tango. No subscription.
 ---
 
 <header class="page-hero">
   <p class="kicker">ADS-L &middot; open, lightweight, interoperable</p>
   <h1>The traffic around you, in your pocket.</h1>
-  <div class="page-hero-split">
-    <div>
-      <p class="page-hero-subtitle">
-        skyBlip Go broadcasts your position in ADS-L, receives ADS-L and
-        FLARM traffic and tells you where to look.
-      </p>
-      <p class="page-hero-audience">
-        From light aircraft to skydivers, by way of microlights, gliders,
-        gyroplanes and paragliders.<br>Nothing to install on board, no
-        subscription.
-      </p>
-    </div>
-
-    <figure class="hero-figure">
-      <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go: a white case with its antenna, the traffic radar on its e-paper screen" %>
-    </figure>
-  </div>
+  <p class="page-hero-subtitle">
+    skyBlip Go broadcasts your position in ADS-L and shows the ADS-L and FLARM
+    traffic, today. skyBlip Bravo will add ADS-B. Together they make a skyBlip
+    Tango.
+  </p>
 
   <%= render "shared/cta", prompt: false %>
+
+  <ul class="lineup">
+    <li>
+      <figure class="pair">
+        <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go: a white case with its antenna, the traffic radar on its e-paper screen" %>
+      </figure>
+      <h2><%= link_to_page "features", label: "skyBlip Go" %></h2>
+      <p class="status status--available">Available</p>
+      <p>Shows ADS&#8209;L and FLARM traffic. Broadcasts your position in ADS&#8209;L.</p>
+    </li>
+    <li>
+      <figure class="pair">
+        <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case" %>
+      </figure>
+      <h2><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></h2>
+      <p class="status">Firmware in development</p>
+      <p>Will receive ADS&#8209;B, airliners included. Will not broadcast your position.</p>
+    </li>
+    <li>
+      <figure class="pair">
+        <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go" %>
+        <span class="pair-plus" aria-hidden="true">+</span>
+        <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo" %>
+      </figure>
+      <h2><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></h2>
+      <p class="status">Firmware in development</p>
+      <p>Go + Bravo. Will show ADS&#8209;B, ADS&#8209;L and FLARM on one radar.</p>
+    </li>
+  </ul>
+
+  <p class="page-hero-audience">
+    From light aircraft to skydivers, by way of microlights, gliders,
+    gyroplanes and paragliders. Nothing to install on board, no subscription.
+  </p>
 </header>
 
 <section class="band band--tint">
-  <h2 class="section-title">See and be seen</h2>
+  <h2 class="section-title">See and be seen, <span class="highlight">with a Go</span></h2>
 
   <div class="feature">
     <div>
@@ -63,7 +85,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <p class="eyebrow">Be seen</p>
       <h3>Your position <span class="highlight">broadcast every second</span>.</h3>
       <p>
-        In flight, every second, it broadcasts your position in ADS-L. Every
+        In flight, every second, the Go broadcasts your position in ADS-L. Every
         aircraft fitted with it sees you, with your callsign.
       </p>
     </div>
@@ -93,39 +115,41 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
 </section>
 
 <section class="band">
-  <h2 class="section-title">At every stage <span class="highlight">of the flight</span></h2>
-  <div class="columns">
+  <h2 class="section-title">Add the <span class="highlight">airliners</span></h2>
+  <div class="feature">
     <div>
-      <h3>Before take-off</h3>
+      <p class="eyebrow">skyBlip Bravo and Tango</p>
+      <h3>ADS-B, ADS-L and FLARM, <span class="highlight">on one radar</span>.</h3>
       <p>
-        Set down in the cockpit, it looks for its position and tells you how far
-        it has got. Aircraft type and callsign are set on the device.
+        skyBlip Bravo will receive ADS-B on 1090&nbsp;MHz. Alone, it will send
+        that traffic to your navigation app. It will not broadcast your
+        position.
+      </p>
+      <p>
+        Paired with a Go as a skyBlip Tango, it will put the airliners on the
+        Go&rsquo;s radar with the ADS-L and FLARM traffic. The Go keeps
+        broadcasting your position in ADS-L.
+      </p>
+      <p class="note">
+        The Seeed SenseCAP MeshTracker X1 is on sale. The skyBlip Bravo
+        firmware is in development and has not yet been tested on this
+        hardware.
+      </p>
+      <p class="feature-guide">
+        <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> &middot;
+        <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>
       </p>
     </div>
-    <div>
-      <h3>In flight</h3>
-      <p>
-        It broadcasts your position every second, plots the traffic track up,
-        and warns you of traffic closing in. Its e-ink screen reads in full
-        sunlight.
-      </p>
-    </div>
-    <div>
-      <h3>After landing</h3>
-      <p>
-        It lets you download its last flights and updates from the browser.
-        Switched off, the screen shows the logo without drawing power.
-      </p>
-    </div>
+    <%= render "shared/tango" %>
   </div>
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title"><span class="highlight">From €68</span>, and that is all</h2>
+  <h2 class="section-title">A Go <span class="highlight">from €68</span>, and that is all</h2>
   <div class="columns">
     <div>
       <h3>Consumer hardware.</h3>
-      <p>A LilyGO T-Echo, mass-produced.</p>
+      <p>A LilyGO T-Echo for the Go, a Seeed X1 for Bravo, both mass-produced.</p>
     </div>
     <div>
       <h3>No subscription.</h3>
@@ -140,30 +164,6 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
 </section>
 
 <section class="band">
-  <h2 class="section-title">Ready in four steps</h2>
-  <ol class="steps-grid">
-    <li>
-      <h3>Order.</h3>
-      <p>A LilyGO T-Echo, in 868&nbsp;MHz with the BME280 barometer.</p>
-    </li>
-    <li>
-      <h3>Install.</h3>
-      <p>Drop the skyBlip file on the USB drive that shows up.</p>
-    </li>
-    <li>
-      <h3>Set up.</h3>
-      <p>Your aircraft type and your callsign, in the device&rsquo;s menu.</p>
-    </li>
-    <li>
-      <h3>Update.</h3>
-      <p>From the browser, over Bluetooth, each one approved on the screen.</p>
-    </li>
-  </ol>
-
-  <%= render "shared/cta" %>
-</section>
-
-<section class="band band--tint">
   <h2 class="section-title">Your questions, answered</h2>
   <div class="faq">
     <details>
@@ -173,15 +173,39 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
     <details>
       <summary>Do I see airliners?</summary>
       <p>
-        Not yet. They transmit ADS-B on 1090&nbsp;MHz, which skyBlip Go
-        does not receive. Paired with skyBlip Bravo, in development, a Go will
-        show them on its radar:
-        <%= link_to_page "roadmap", label: "skyBlip Tango", anchor: "tango" %>.
+        Not with a Go alone. Airliners transmit ADS-B on 1090&nbsp;MHz, which a
+        Go does not receive. skyBlip Bravo will receive it, alone with your
+        phone or paired with your Go as a Tango, once its firmware is released:
+        <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %>.
+      </p>
+    </details>
+    <details>
+      <summary>Will Bravo see every aircraft with a transponder?</summary>
+      <p>
+        No. Bravo will receive ADS-B, which a Mode S transponder sends only if
+        it has ADS-B out, also called Extended Squitter. A transponder without
+        it stays invisible to Bravo, as to any ADS-B receiver.
+      </p>
+    </details>
+    <details>
+      <summary>Does Bravo make me visible?</summary>
+      <p>
+        No. Bravo will receive only. Your position goes out in ADS-L from a Go,
+        alone or paired with a Bravo as a Tango.
+      </p>
+    </details>
+    <details>
+      <summary>I fly a glider with FLARM. What does skyBlip add?</summary>
+      <p>
+        A Go broadcasts your position in ADS-L, for the aircraft that receive
+        ADS-L. It does not transmit FLARM and does not replace your FLARM unit.
+        If your FLARM unit already shows ADS-B traffic, check what a Bravo
+        would add before you buy one.
       </p>
     </details>
     <details>
       <summary>Is there a subscription?</summary>
-      <p>No. Once you own the device, everything works: transmitting, receiving, the alarm, updates.</p>
+      <p>No. Once you own a Go, everything works: transmitting, receiving, the alarm, updates. The firmware is free, and Bravo&rsquo;s, in development, will be too.</p>
     </details>
     <details>
       <summary>Is it certified?</summary>
@@ -193,8 +217,9 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
     <details>
       <summary>Do I need a phone?</summary>
       <p>
-        No. The radar, the alarm and the settings are on the device. The phone
-        is for seeing the traffic in your navigation app.
+        Not with a Go. The radar, the alarm and the settings are on the device.
+        The phone is for seeing the traffic in your navigation app. A Bravo
+        alone will need one, since it has no screen.
       </p>
     </details>
     <details>
@@ -216,7 +241,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">ADS-L, <span class="highlight">the common language</span> of everything that flies</h2>
   <p class="section-intro">
     The European electronic conspicuity standard, published by EASA. It
@@ -238,10 +263,9 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <p>Its channels follow those of FLARM and PilotAware. skyBlip Go also receives FLARM traffic.</p>
     </div>
   </div>
-  <p class="more"><%= link_to_page "roadmap", label: "In development: ADS-B traffic on board, with skyBlip Tango", anchor: "tango" %></p>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Going further</h2>
   <div class="resource-cards">
     <article>

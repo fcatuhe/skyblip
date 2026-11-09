@@ -2,15 +2,16 @@
 title: À venir
 nav_title: À venir
 slug: a-venir
-description: skyBlip Go est disponible aujourd'hui. skyBlip Bravo, en développement, recevra l'ADS-B à bord, et un Go associé à un Bravo formera un skyBlip Tango. Le Panel pour les planches de bord à écrans et les stations sol skyPost sont en conception.
+description: skyBlip Go est disponible aujourd'hui. skyBlip Bravo recevra l'ADS-B à bord sur un X1 en vente aujourd'hui, et le firmware skyBlip Bravo est en développement. Un Go associé à un Bravo formera un skyBlip Tango. Le Panel pour les planches de bord à écrans et les stations sol skyPost sont en conception.
 ---
 
 <header class="page-hero">
   <h1>Aujourd&rsquo;hui skyBlip Go. Ensuite, l&rsquo;ADS-B à bord.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go et Go+ sont disponibles. skyBlip Bravo, un récepteur ADS-B, est
-    en développement. Le Panel et les stations skyPost sont en conception, sur
-    la même base de code.
+    skyBlip Go et Go+ sont disponibles. Le firmware skyBlip Bravo est en
+    développement, pour un X1 que vous pouvez acheter aujourd&rsquo;hui. Le
+    Panel et les stations skyPost sont en conception, sur la même base de
+    code.
   </p>
 </header>
 
@@ -23,60 +24,20 @@ description: skyBlip Go est disponible aujourd'hui. skyBlip Bravo, en développe
     skyBlip Bravo le recevra à bord, sans station sol.
   </p>
 
-  <div class="feature">
-    <div>
-      <p class="eyebrow">En développement</p>
-      <h3 id="tango">skyBlip Tan<span class="highlight">go</span>.</h3>
-      <p>
-        Un skyBlip Go associé à un skyBlip Bravo. Bravo recevra l&rsquo;ADS-B et
-        le transmettra au Go. Le Go l&rsquo;affichera sur son radar avec le
-        trafic ADS-L et FLARM, et vous alertera sur les trois.
-      </p>
-      <p>
-        Votre téléphone se connectera au Go et recevra tout le trafic en un seul
-        flux. Le Go continuera d&rsquo;émettre votre position en ADS-L.
-      </p>
-      <p>
-        Le pilote qui achète un Tango pour voir les avions de ligne sera aussi
-        vu en ADS-L.
-      </p>
-      <p>
-        Un Go simple n&rsquo;a pas de buzzer&nbsp;: dans un Tango,
-        l&rsquo;alarme sonnera sur Bravo.
-      </p>
-      <p class="note">
-        Le matériel de Bravo n&rsquo;a pas encore été testé avec skyBlip. La
-        réception, la portée et le traitement des altitudes restent à vérifier.
-      </p>
-      <p class="feature-guide"><small>Matériel&nbsp;: LilyGO T-Echo et Seeed SenseCAP MeshTracker X1.</small></p>
-    </div>
-    <%= render "shared/tango" %>
-  </div>
-
   <div class="columns">
     <div>
       <h3 id="bravo">skyBlip Bravo.</h3>
-      <p>
-        Format carte, sans écran. Il recevra l&rsquo;ADS-B sur 1090&nbsp;MHz,
-        en Extended Squitter (DF17) uniquement. Seul, il enverra ce trafic à
-        votre application de navigation et fera sonner l&rsquo;alarme. Il
-        n&rsquo;émettra pas votre position&nbsp;: pour être vu, associez-le à un
-        Go.
-      </p>
-      <p class="note">Seeed SenseCAP MeshTracker X1.</p>
+      <p>Le récepteur ADS-B, pour votre téléphone ou votre Go. Le matériel, un Seeed SenseCAP MeshTracker X1, est en vente. Le firmware skyBlip Bravo est en développement.</p>
+      <p class="more"><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></p>
     </div>
     <div>
-      <h3>skyBlip Tango+.</h3>
-      <p>
-        Un Go+ associé à un Bravo, avec le même trafic qu&rsquo;un Tango. Le Go+
-        a son propre buzzer et son vibreur, et prendra l&rsquo;alarme en charge
-        tant que les deux appareils fonctionnent bien ensemble.
-      </p>
-      <p class="note">LilyGO T-Echo Plus et Seeed SenseCAP MeshTracker X1.</p>
+      <h3 id="tango">skyBlip Tango.</h3>
+      <p>Un Go associé à un Bravo&nbsp;: l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM sur le radar du Go, et votre position en ADS-L. Un Go+ et un Bravo forment un Tango+.</p>
+      <p class="more"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
     </div>
   </div>
 
-  <div class="feature feature--reverse">
+  <div class="feature">
     <div>
       <p class="eyebrow">Pour les planches de bord à écrans</p>
       <h3>skyBlip <span class="highlight">Panel</span>.</h3>

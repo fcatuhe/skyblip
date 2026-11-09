@@ -1,15 +1,15 @@
 ---
 title: Coming next
 nav_title: Roadmap
-description: skyBlip Go is available today. skyBlip Bravo, in development, will receive ADS-B in the aircraft, and a Go paired with a Bravo will make a skyBlip Tango. The Panel for glass cockpits and the skyPost ground stations are in design.
+description: skyBlip Go is available today. skyBlip Bravo will receive ADS-B in the aircraft on an X1 you can buy today, and the skyBlip Bravo firmware is in development. A Go paired with a Bravo will make a skyBlip Tango. The Panel for glass cockpits and the skyPost ground stations are in design.
 ---
 
 <header class="page-hero">
   <h1>Today skyBlip Go. Next, ADS-B on board.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go and Go+ are available. skyBlip Bravo, an ADS-B receiver, is in
-    development. The Panel and the skyPost stations are in design, on the same
-    code base.
+    skyBlip Go and Go+ are available. The skyBlip Bravo firmware is in
+    development, for an X1 you can buy today. The Panel and the skyPost
+    stations are in design, on the same code base.
   </p>
 </header>
 
@@ -22,58 +22,20 @@ description: skyBlip Go is available today. skyBlip Bravo, in development, will 
     ground station.
   </p>
 
-  <div class="feature">
-    <div>
-      <p class="eyebrow">In development</p>
-      <h3 id="tango">skyBlip Tan<span class="highlight">go</span>.</h3>
-      <p>
-        A skyBlip Go paired with a skyBlip Bravo. Bravo will receive ADS-B and
-        pass it to the Go. The Go will show it on its radar with the ADS-L and
-        FLARM traffic, and warn you about all three.
-      </p>
-      <p>
-        Your phone will connect to the Go and get all the traffic in one
-        stream. The Go will keep broadcasting your position in ADS-L.
-      </p>
-      <p>
-        A pilot who buys a Tango to see the airliners will also be seen in
-        ADS-L.
-      </p>
-      <p>
-        A plain Go has no buzzer, so in a Tango the alarm will sound on Bravo.
-      </p>
-      <p class="note">
-        Bravo&rsquo;s hardware has not yet been tested with skyBlip. Reception,
-        range and altitude handling remain unverified.
-      </p>
-      <p class="feature-guide"><small>Hardware: LilyGO T-Echo and Seeed SenseCAP MeshTracker X1.</small></p>
-    </div>
-    <%= render "shared/tango" %>
-  </div>
-
   <div class="columns">
     <div>
       <h3 id="bravo">skyBlip Bravo.</h3>
-      <p>
-        Card-sized, with no screen. It will receive ADS-B on 1090&nbsp;MHz,
-        Extended Squitter (DF17) only. On its own, it will send that traffic to
-        your navigation app and sound the alarm. It will not broadcast your
-        position: to be seen, pair it with a Go.
-      </p>
-      <p class="note">Seeed SenseCAP MeshTracker X1.</p>
+      <p>The ADS-B receiver, for your phone or your Go. The hardware, a Seeed SenseCAP MeshTracker X1, is on sale. The skyBlip Bravo firmware is in development.</p>
+      <p class="more"><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></p>
     </div>
     <div>
-      <h3>skyBlip Tango+.</h3>
-      <p>
-        A Go+ paired with a Bravo, with the same traffic as a Tango. The Go+
-        has its own buzzer and vibration motor, and will take over the alarm
-        while the pair is healthy.
-      </p>
-      <p class="note">LilyGO T-Echo Plus and Seeed SenseCAP MeshTracker X1.</p>
+      <h3 id="tango">skyBlip Tango.</h3>
+      <p>A Go paired with a Bravo: ADS-B, ADS-L and FLARM on the Go&rsquo;s radar, and your position in ADS-L. A Go+ and a Bravo make a Tango+.</p>
+      <p class="more"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
     </div>
   </div>
 
-  <div class="feature feature--reverse">
+  <div class="feature">
     <div>
       <p class="eyebrow">For glass cockpits</p>
       <h3>skyBlip <span class="highlight">Panel</span>.</h3>

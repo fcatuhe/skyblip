@@ -2,7 +2,7 @@
   <nav class="site-nav" aria-label="<%= t "nav.label" %>">
     <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-nav"), class: "site-nav-brand" %>
     <ul class="site-nav-links">
-      <% %w[features buy guides about].each do |slug| %>
+      <% %w[features skyblip-bravo skyblip-tango buy guides about].each do |slug| %>
         <li><%= link_to_page slug, label_type: :nav, "aria-current": ("page" if on_page?(slug)) %></li>
       <% end %>
     </ul>
