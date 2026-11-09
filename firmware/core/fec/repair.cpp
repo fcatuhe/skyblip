@@ -89,7 +89,7 @@ int repair(uint8_t* frame, const uint8_t* marked, uint32_t residue, LinearCheck 
     bool too_many = false;
     for (uint16_t bit = 0; bit < check.bits && !too_many; bit++) {
         if ((marked[bit >> 3] & mask_of(bit)) == 0) continue;
-        too_many = suspect_count == std::min(max_marked, kMostMarked);
+        too_many = suspect_count == std::clamp(max_marked, 0, kMostMarked);
         if (!too_many) suspects[suspect_count++] = bit;
     }
     if (too_many) {

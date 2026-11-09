@@ -420,7 +420,7 @@ The ADS-L position packet end to end, a radio protocol checked with no RF hardwa
 - a flagged bit past the eighth is searched, not wrapped back onto the first
 - a frame no repair fits is left as it arrived
 - a position goes out as the nearest whole G.1.5 step
-  > G.1.5 counts 93206 steps to a degree of latitude and 46603 of longitude: a position takes the nearest.
+  > G.1.5 steps: 93206 to a degree of latitude, 46603 of longitude. A position takes the nearest.
 - an address goes out as it was handed, in whichever table
 - an over-range altitude encodes the limit, not 'unavailable'
 - an over-range ground speed encodes the limit, not 'unavailable'

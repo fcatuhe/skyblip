@@ -131,8 +131,13 @@ TEST_CASE("adsl: one unmarked error is repaired even when more bits are marked t
     packet.data[6] ^= 0x20;
     REQUIRE(packet.check_crc() != 0);
 
+    AdslPacket no_cap = packet;
     CHECK(packet.correct(error, 6) == 1);
     CHECK(std::memcmp(packet.data, sent.data, AdslPacket::kDataBytes) == 0);
+    error[1] = 0xFF;
+    error[2] = 0xFF;
+    CHECK(no_cap.correct(error, -1) == 1);
+    CHECK(std::memcmp(no_cap.data, sent.data, AdslPacket::kDataBytes) == 0);
 }
 
 TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
@@ -140,6 +145,7 @@ TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
     packet.scramble();
     packet.set_crc();
     uint8_t error[AdslPacket::kDataBytes] = {0};
+    error[0] = 0x80;
     for (int byte : {4, 9, 14}) packet.data[byte] ^= 0x03;
     const AdslPacket arrived = packet;
 
@@ -147,8 +153,7 @@ TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
     CHECK(std::memcmp(packet.data, arrived.data, AdslPacket::kDataBytes) == 0);
 }
 
-// G.1.5 counts 93206 steps to a degree of latitude and 46603 of longitude: a position takes the
-// nearest.
+// G.1.5 steps: 93206 to a degree of latitude, 46603 of longitude. A position takes the nearest.
 TEST_CASE("adsl: a position goes out as the nearest whole G.1.5 step") {
     AdslPacket packet{};
     packet.reset();
