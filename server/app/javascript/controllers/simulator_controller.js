@@ -138,7 +138,7 @@ const TRAFFIC_STAY_MAX_MS = 180_000
 const GLASS_IN_VIEW = 0.5
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "pad", "alarm", "charge",
+  static targets = ["canvas", "status", "pad", "lamp", "charge",
                     "horizonGauge", "attitudeReadout",
                     ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`, `${axis}Gauge`])]
   static values = { src: String, screens: Object }
@@ -376,7 +376,8 @@ export default class extends Controller {
     const powered = this.sim.powered() === 1
     this.element.classList.toggle("simulator--off", !powered)
     this.statusTarget.textContent = this.#screen()
-    this.alarmTarget.classList.toggle("sb-led--lit", this.sim.alarm() > 0)
+    // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
+    this.lampTarget.dataset.lamp = this.sim.lamp?.() ?? "dark"
     this.chargeTarget.classList.toggle("sb-led--lit", this.sim.batteryCharging() === 1)
   }
 

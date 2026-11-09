@@ -264,3 +264,23 @@ TEST_CASE("product: an urgent target takes the lamp off the wink") {
     run(6000, 8000);
     CHECK(lamp.shows() - shows >= 10);
 }
+
+// The browser looks once a frame, and a 30 ms wink fits between two looks 33 ms apart.
+TEST_CASE("simulator: a wink that starts and ends between two looks is still seen once") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    const platform::host::Indicator& lamp = simulator.platform().indicator();
+    uint32_t now_ms = 0;
+    for (; now_ms <= 5000; now_ms += simulator::Simulator::kStepMs) simulator.step(now_ms);
+    REQUIRE(simulator.product().alarm().indicator_condition() == indication::Condition::Alive);
+    (void)simulator.lamp_since_last_look();
+
+    for (; !lamp.lit(); now_ms += simulator::Simulator::kStepMs) simulator.step(now_ms);
+    for (; lamp.lit(); now_ms += simulator::Simulator::kStepMs) simulator.step(now_ms);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::None);
+
+    for (; !lamp.lit(); now_ms += simulator::Simulator::kStepMs) simulator.step(now_ms);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+}
