@@ -331,6 +331,7 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
     CHECK(int(alptas_type_to_adsl_category(0x9)) == 2);   // jet -> small-heavy
     CHECK(int(alptas_type_to_adsl_category(0xD)) == 11);  // UAV
     CHECK(int(alptas_type_to_adsl_category(0xF)) == 0);   // static object -> no info
+    CHECK(int(alptas_type_to_adsl_category(0xA)) == 0);
     CHECK(int(alptas_type_to_adsl_category(0x20)) == 0);  // out of range is not a crash
 
     // And the whole way round, through the wire.

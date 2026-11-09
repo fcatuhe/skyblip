@@ -180,8 +180,9 @@ Status alptas_keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& ke
 
 uint32_t alptas_address(const uint8_t* frame) { return read_bits(frame, kAddressField); }
 
+// INFO: fc 09nov26 FLARM ICD AcftType 0x0 to 0xF in order, where 0x0, 0xA and 0xE name no type
 uint8_t alptas_type_to_adsl_category(uint8_t alptas_type) {
-    static const uint8_t kCategoryOfType[16] = {0, 4, 1, 3, 8, 1, 7, 7, 1, 2, 3, 5, 5, 11, 0, 0};
+    static const uint8_t kCategoryOfType[16] = {0, 4, 1, 3, 8, 1, 7, 7, 1, 2, 0, 5, 5, 11, 0, 0};
     return alptas_type < 16 ? kCategoryOfType[alptas_type] : 0;
 }
 
