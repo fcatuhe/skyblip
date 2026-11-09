@@ -435,3 +435,47 @@ TEST_CASE("alptas: a second further out than a clock can plausibly be is not sea
     alptas_set_crc(other);
     CHECK(alptas_keyed_second(other, kUtcS, keyed) == Status::Unsupported);
 }
+
+// Pinned bytes: a codec that agrees with itself can still put a frame on air no other receiver
+// reads.
+TEST_CASE("alptas: a frame is byte for byte the frame other receivers already read") {
+    model::AircraftObservation observation{};
+    observation.address = 0xDD1234;
+    observation.address_mapping_table = 0x06;
+    observation.aircraft_category = 3;
+    observation.flight_state = 2;
+    observation.latitude_1e7 = 465432100;
+    observation.longitude_1e7 = 72345600;
+    observation.altitude_m = 3456;
+    observation.speed_q = 222;
+    observation.climb_e8 = 37;
+    observation.track_c9 = 77;
+    observation.speed_valid = true;
+    observation.climb_valid = true;
+    observation.position_valid = true;
+    uint8_t frame[kAlptasFrameBytes];
+    REQUIRE(alptas_encode(frame, observation, 1700000005, 465000000, 72000000) == Status::Ok);
+    const uint8_t north[] = {0x34, 0x12, 0xDD, 0x22, 0x00, 0x00, 0x00, 0x33, 0xD2,
+                             0x72, 0x5F, 0x76, 0x76, 0xB5, 0xFE, 0xAE, 0x91, 0x3E,
+                             0xAA, 0x14, 0x28, 0x24, 0xA2, 0x6B, 0x12, 0xCC};
+    CHECK(std::memcmp(frame, north, sizeof(north)) == 0);
+
+    observation.latitude_1e7 = -823456700;
+    observation.altitude_m = -50;
+    observation.climb_e8 = -400;
+    observation.speed_q = 900;
+    REQUIRE(alptas_encode(frame, observation, 1700000031, -823000000, 72000000) == Status::Ok);
+    const uint8_t south[] = {0x34, 0x12, 0xDD, 0x22, 0x00, 0x00, 0x00, 0x33, 0x95,
+                             0x9B, 0xFF, 0x4F, 0x6F, 0x10, 0x70, 0x9D, 0xC7, 0x22,
+                             0xCC, 0x2B, 0xBF, 0xE9, 0xB5, 0xAE, 0xD7, 0x04};
+    CHECK(std::memcmp(frame, south, sizeof(south)) == 0);
+
+    model::AircraftObservation got{};
+    REQUIRE(alptas_decode(frame, 1700000031, -823000000, 72000000, got) == Status::Ok);
+    CHECK(got.latitude_1e7 == -823456712);
+    CHECK(got.longitude_1e7 == 72345700);
+    CHECK(got.altitude_m == -50);
+    CHECK(int(got.speed_q) == 899);
+    CHECK(int(got.climb_e8) == -397);
+    CHECK(int(got.track_c9) == 77);
+}

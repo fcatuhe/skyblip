@@ -7,6 +7,7 @@
 #include <cstdlib>  // std::abs - libc++ pulls it in transitively, libstdc++ does not
 #include <cstring>
 #include <initializer_list>  // same: a braced list in a range-for needs it named
+#include <utility>
 
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
@@ -403,4 +404,67 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
     CHECK(int(packet.horizontal_accuracy) == 0);
     CHECK(int(packet.vertical_accuracy) == 0);  // beyond 150 m: no claim at all
     CHECK(int(packet.velocity_accuracy) == 0);
+}
+
+// Pinned bytes: a codec that agrees with itself can still put a frame on air no other receiver
+// reads.
+TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read") {
+    skyblip::model::Ownship own{};
+    own.fix_valid = true;
+    own.utc_valid = true;
+    own.climb_valid = true;
+    own.utc_s = 1700000007;
+    own.latitude_1e7 = -337654321;
+    own.longitude_1e7 = 1512345678;
+    own.altitude_hae_mm = 2345678;
+    own.speed_mm_s = 61000;
+    own.climb_mm_s = -3200;
+    own.track_cdeg = 27350;
+    own.hdop_e2 = 90;
+    own.vdop_e2 = 140;
+    AdslPacket packet{};
+    REQUIRE(from_own(packet, own, 0x2ABCDE, 58, 1));
+    const uint8_t clear[] = {0x72, 0x4B, 0x18, 0x00, 0x02, 0xBA, 0x37, 0xAF, 0x0A, 0x30,
+                             0x21, 0x7B, 0xFA, 0xCF, 0x31, 0x8B, 0x6B, 0x8D, 0x6A, 0x8A,
+                             0xC6, 0xC2, 0x00, 0x35, 0x00, 0x00, 0x00, 0x00};
+    CHECK(std::memcmp(&packet, clear, sizeof(clear)) == 0);
+
+    packet.scramble();
+    packet.set_crc();
+    const uint8_t air[] = {0x72, 0x4B, 0x18, 0x00, 0x5E, 0x6F, 0xC1, 0xDB, 0x84, 0x85,
+                           0x87, 0xBC, 0xBF, 0x23, 0x61, 0x44, 0x47, 0x51, 0xC5, 0xA3,
+                           0x07, 0x3D, 0xE0, 0x15, 0x22, 0x93, 0x11, 0x00};
+    CHECK(std::memcmp(&packet, air, sizeof(air)) == 0);
+
+    AdslPacket callsign{};
+    REQUIRE(from_own_callsign(callsign, 0x2ABCDE, 58, "F-JXYZ"));
+    callsign.scramble();
+    callsign.set_crc();
+    const uint8_t callsign_air[] = {0x72, 0x4B, 0x18, 0x00, 0x05, 0xE8, 0x01, 0x68, 0xD4, 0x33,
+                                    0x25, 0x91, 0xD0, 0x2C, 0x55, 0xAF, 0x9E, 0x73, 0x56, 0xE1,
+                                    0x0A, 0x2A, 0x36, 0xE7, 0xF2, 0xCC, 0x88, 0x00};
+    CHECK(std::memcmp(&callsign, callsign_air, sizeof(callsign_air)) == 0);
+}
+
+TEST_CASE("adsl: a field reads back the middle of the step its code names") {
+    AdslPacket packet{};
+    packet.reset();
+    for (auto pair : {std::pair<int, int>{0, 0}, {63, 63}, {64, 65}, {200, 202}, {5000, 948}}) {
+        packet.set_speed_q(static_cast<uint16_t>(pair.first));
+        CHECK(int(packet.speed_q()) == pair.second);
+    }
+    for (auto pair :
+         {std::pair<int, int>{-500, -320}, {0, 0}, {4000, 4001}, {20000, 20002}, {70000, 61108}}) {
+        packet.set_altitude_m(pair.first);
+        CHECK(packet.altitude_m() == pair.second);
+    }
+    for (auto pair : {std::pair<int, int>{-2000, -948},
+                      {-100, -101},
+                      {-1, -1},
+                      {0, 0},
+                      {80, 81},
+                      {2000, 956}}) {
+        packet.set_climb_e8(static_cast<int16_t>(pair.first));
+        CHECK(int(packet.climb_e8()) == pair.second);
+    }
 }
