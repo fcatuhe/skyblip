@@ -306,8 +306,7 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observati
         static_cast<uint32_t>(divide_rounded<int32_t>(observation.track_c9 * 360, 512)) % 360u;
     write_bits(frame, kCourseField, (course_deg << 1) & 0x03FFu);
 
-    // INFO: fc 09mar26 the accuracy fields and unknown bits carry the constants SoftRF and GATAS
-    // send
+    // INFO: fc 09mar26 accuracy and unknown fields carry the constants SoftRF latest_encode sends
     write_bits(frame, kGnssAccuracyFirstField, 0x12);
     write_bits(frame, kGnssAccuracySecondField, 0x0A);
     write_bits(frame, kUnknownField, 11);

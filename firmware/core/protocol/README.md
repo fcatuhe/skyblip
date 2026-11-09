@@ -18,7 +18,7 @@ An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pu
 
 ## Where the ALP-TAS frame comes from
 
-ALP-TAS has no published specification. Its field layout, the two cipher stages, their keys and the longitude step table follow the community's description of the 2024 protocol, [pastebin.com/YB1ppAbt](https://pastebin.com/raw/YB1ppAbt), and the frames `test/core/test_alptas.cpp` pins.
+ALP-TAS has no published specification. Its field layout, the two cipher stages, their keys and the longitude step table follow the community's description of the 2024 protocol, [pastebin.com/YB1ppAbt](https://pastebin.com/raw/YB1ppAbt). The frames `test/core/test_alptas.cpp` pins guard the encoder against regressions.
 
 ## What ALP-TAS costs us
 
